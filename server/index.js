@@ -443,8 +443,15 @@ import { authMiddleware, requireRole } from './middleware/auth.js';
 import auditRouter from './domains/security/routes/audit.js'; // v1.3 P3.1 — domain extraction
 import { createLicenseRouter } from './domains/security/routes/license.js'; // v1.3 P5.1
 import { createBackupRouter } from './domains/basis/routes/backup.js'; // v1.3 F1
-import { isAdminPlus, audit } from './services/authService.js';
+import { createRateRouter } from './domains/library/routes/rate.js'; // v1.3 J1 — go-live
+import { createDdlRouter } from './domains/library/routes/ddl.js'; // v1.3 J1 — go-live
+import { rateRows, ddlToCsvRows } from './platform/csv/index.js'; // v1.3 J1
+import {
+  isAdminPlus, canWrite, audit, getLibDir, safeFn,
+  siteToCsvKey, toCsvBytes,
+} from './services/authService.js';
 import { validateBody } from './middleware/validate.js';
+import { atomicWriteFileSync } from './services/atomicWrite.js';
 
 // Cost API: auth, data CRUD, library management (replaces Python server)
 // These must come BEFORE express.json() body parsing to handle raw bodies for some endpoints
@@ -532,6 +539,64 @@ const backupRouterDeps = {
 };
 app.use('/api/basis/backup', createBackupRouter(backupRouterDeps));
 app.use('/api/v1/basis/backup', createBackupRouter(backupRouterDeps));
+
+// v1.3 J1 — library/rate + library/ddl routers go LIVE.
+// Helpers are now in platform/csv (rateRows, ddlToCsvRows) so the
+// domain routers boot without coupling to costApi.js. Legacy
+// /api/rate/* + /api/ddl/* in costApi continue to serve until the
+// client UI migrates (dual-mount per ADR-0009).
+const libRouterDeps = {
+  auth: (req, res, next) => {
+    const u = getSessionUser(getTokenFromHeader(req));
+    if (!u) return res.status(401).json({ error: 'Authentication required' });
+    req.user = { user: u, role: u.role };
+    next();
+  },
+  isAdminPlus: (reqUser) => isAdminPlus(reqUser?.user || reqUser),
+  canWrite: (reqUser) => canWrite(reqUser?.user || reqUser),
+  getLibDir,
+  safeFn,
+  readJson: (fp, def = null) => {
+    try {
+      if (!fs.existsSync(fp)) return def;
+      return JSON.parse(fs.readFileSync(fp, 'utf-8'));
+    } catch { return def; }
+  },
+  writeJson: (fp, data) => {
+    fs.mkdirSync(path.dirname(fp), { recursive: true });
+    atomicWriteFileSync(fp, JSON.stringify(data, null, 2));
+  },
+  atomicWriteFileSync,
+  siteToCsvKey,
+  toCsvBytes,
+  validateBackupBody: validateBody({
+    site: { type: 'string', max: 32 },
+    data: { type: 'array', max: 500 },  // rate uses array; ddl router validates with object via second factory call
+  }),
+  validateRestoreBody: validateBody({
+    filename: { type: 'string', required: true, max: 128 },
+    site: { type: 'string', max: 32 },
+  }),
+};
+app.use('/api/library/rate', createRateRouter({ ...libRouterDeps, rateRows }));
+app.use('/api/v1/library/rate', createRateRouter({ ...libRouterDeps, rateRows }));
+app.use('/api/library/ddl', createDdlRouter({
+  ...libRouterDeps,
+  ddlToCsvRows,
+  // DDL backup body is an object, not an array
+  validateBackupBody: validateBody({
+    site: { type: 'string', max: 32 },
+    data: { type: 'object' },
+  }),
+}));
+app.use('/api/v1/library/ddl', createDdlRouter({
+  ...libRouterDeps,
+  ddlToCsvRows,
+  validateBackupBody: validateBody({
+    site: { type: 'string', max: 32 },
+    data: { type: 'object' },
+  }),
+}));
 
 // Cost API routes (auth + all cost endpoints)
 // Sprint 39 — API versioning: every router mounts at BOTH the legacy
