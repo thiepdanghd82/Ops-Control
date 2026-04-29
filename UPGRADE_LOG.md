@@ -398,3 +398,58 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 ```
 10 commits on release/v1.3, 0 on main.
 
+### Phase J — i18n cleanup + library go-live + RC.2 cut · 2026-04-29 22:35 GMT+7
+
+**J2 — Security i18n migration**
+- 33 `login.*` keys (auth form, TOTP, expired session, password-age bar, must-change banner) moved from `strings.js` into `client/src/i18n/domains/security.js`.
+- After this migration, strings.js shrunk to ~150 keys (was ~340). Domain modules now own:
+  - `security.js` ← login.* + audit.* (~40 keys)
+  - `costing.js` ← pricing.* (19 keys)
+  - `sales.js`   ← qh.* + rfq.* (33 keys)
+
+**J1 — Library/rate + library/ddl LIVE**
+- New `server/platform/csv/index.js` exports `rateRows` + `ddlToCsvRows` (lifted from costApi.js inline definitions).
+- `server/index.js` mounts both library routers via factory + injected deps. Helper extraction unblocked the live mount.
+- Boot smoke test: `/api/library/rate/backups` and `/api/library/ddl/backups` BOTH respond 401 unauth alongside the legacy `/api/rate/*` and `/api/ddl/*` (per ADR-0009 dual-mount).
+- 6 routers now live in `server/domains/{security,basis,library}/`.
+
+**J4 — ADR-0009 dual-mount-during-migration**
+- New `docs/adr/0009-dual-mount-during-migration.md` (180 LOC).
+- Captures the "mount new + keep legacy" pattern used in J1 with retirement criteria (4 conditions all must hold) + a table of 11 currently dual-mounted endpoints.
+
+**J6 — Fresh DMG build (v1.3.0-rc.2)**
+- 4 DMGs built with `OPS_BUILD_ID=v1.3.0-rc.2-ec61bfc` baked into the bundle marker via Vite define:
+  - OpsControl-CLIENT-v1.3.0-rc.2-mac-arm64.dmg (199 MB)
+  - OpsControl-CLIENT-v1.3.0-rc.2-mac-x64.dmg   (204 MB)
+  - OpsControl-SERVER-v1.3.0-rc.2-mac-arm64.dmg (199 MB)
+  - OpsControl-SERVER-v1.3.0-rc.2-mac-x64.dmg   (204 MB)
+- All 4 verified by `scripts/verify-bundle-marker.sh` — marker present + build-id matches.
+- Fixed 2 bugs in the verify script along the way:
+  1. `hdiutil` parse broke on paths with spaces (`awk $NF` → `cut -f3`).
+  2. Marker location was wrong — bundle ships via `extraResources` into `app/client/dist/`, NOT inside `app.asar`.
+- Fresh SHA-256 checksums in `dist/checksums.txt`.
+- Tagged release/v1.3 HEAD as `v1.3.0-rc.2`.
+
+**Final test totals (post-J)**
+- 50/50 v1.3 security + library suite (unchanged).
+- 89/89 gallus engine.
+
+**Git topology after Phase J**
+```
+* af3d9bb (HEAD -> release/v1.3, tag: v1.3.0-rc.2) feat(release): J4 ADR-0009 + J6 fresh DMG
+* ec61bfc                                          feat(library): mount rate + ddl routers live
+* 09c2dc3                                          refactor(security): login.* i18n
+* 060a9a3                                          docs: log Phase H
+* d7cc472                                          docs: H3 ADR-0008 + H4 coverage baseline
+* b4e966f                                          refactor(sales): qh+rfq i18n
+* e9634cc                                          feat(library): extract ddl router
+* 7fa0d80                                          docs: log Phase G
+* c78a23c                                          chore(release): G3 commitlint, G4 ADR-0007, G5 CI marker
+* a0bbf21                                          refactor(costing): pricing.* i18n
+* e2a5b26                                          feat(library): extract rate router
+* 445eba9                                          docs: log Phase F
+* 5957ec8                                          chore: husky pre-commit fix
+* a8b559f (main, tag: v1.3.0-rc.1, tag: v1.2.0-snapshot) initial git repo
+```
+13 commits on release/v1.3, 0 on main.
+
