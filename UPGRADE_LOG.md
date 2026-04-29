@@ -453,3 +453,49 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 ```
 13 commits on release/v1.3, 0 on main.
 
+### Phase K — Final cleanup + 4th domain extraction · 2026-04-29 23:00 GMT+7
+
+**K1 — chat.* i18n migration**
+- 34 chat.* keys → `client/src/i18n/domains/basis.js` (new file, SAP-BC analogue).
+- strings.js now ~115 keys (started session at ~340; ⅔ migrated).
+- Build verified Vietnamese strings ('Đóng chat', '💬 Discuss') still ship.
+
+**K4 — commitlint trailer + style rules**
+- Added: `body-leading-blank`, `footer-leading-blank`, `type-empty`, `type-case`, `subject-full-stop`.
+- `scope-empty` set to warn (1), not error — emergency commits without scope still pass with a notice.
+- Smoke verified: good messages accepted, trailing-period rejected, uppercase type rejected.
+
+**K6 — CI commit-msg smoke job**
+- New `commitlint-smoke` job in `.github/workflows/ci.yml` runs on every push.
+- Asserts 1 accept + 3 explicit rejects (empty type, bad scope, trailing period).
+- Catches commitlint.config.js drift even when no PR commits are bad.
+- YAML quoting fix: `run: echo "feat(...): ..."` triggers nested-mappings error → use multi-line `run: |`.
+
+**K3 — ADR-0010 release gate**
+- `docs/adr/0010-bundle-marker-release-gate.md` (200 LOC).
+- Build-time invariant table: 5 stages where marker must be present + verified.
+- Customer-side check via SHA-256 in `dist/checksums.txt` (marker is in the hashed bytes by construction).
+- 8-step release runbook for manual cuts.
+- Alternatives rejected: code-signing alone (we don't have certificate yet), hashing entire dist/ (already in checksums), extraMetadata Info.plist (outside chunk hash chain).
+
+**K2 — sales/released-quotation router**
+- 7th domain extraction. `server/domains/sales/routes/released-quotation.js` + 9 contract tests.
+- Mounted live at `/api/sales/quotations` + `/api/v1/sales/quotations` + `/:name`.
+- Legacy `/api/released-quotation*` + `/api/save-quotation` retained in costApi.js (dual-mount per ADR-0009).
+- ADR-0009 table updated: now 14 dual-mounted endpoints documented.
+
+**K5 — Coverage update**
+- `docs/COVERAGE_BASELINE.md` history table started.
+- 7 v1.3 modules measured (was 5). Mean lines 94 %, mean branches 71 %.
+- All above 70/60/70 gate threshold.
+
+**Final test totals (post-K)**
+- 59/59 v1.3 security + library + sales suite (was 50; +9 released-quotation).
+- 89/89 gallus engine.
+- 148 tests pass total.
+
+**Domain footprint**
+- 7 routers in `server/domains/{security,basis,library,sales}/`.
+- 4 i18n domain modules in `client/src/i18n/domains/{security,costing,sales,basis}.js` (~115 keys total).
+- 4 ADRs in `docs/adr/` (0007 license tier · 0008 extract-first · 0009 dual-mount · 0010 release gate).
+
