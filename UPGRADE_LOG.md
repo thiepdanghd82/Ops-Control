@@ -499,3 +499,43 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 - 4 i18n domain modules in `client/src/i18n/domains/{security,costing,sales,basis}.js` (~115 keys total).
 - 4 ADRs in `docs/adr/` (0007 license tier · 0008 extract-first · 0009 dual-mount · 0010 release gate).
 
+### Phase L — Pattern formalisation + 8th router + RC.3 · 2026-04-29 23:20 GMT+7
+
+**L4 — ADR-0011 router factory pattern**
+- `docs/adr/0011-domain-router-factory-pattern.md` (270 LOC).
+- Codifies the pattern proven over 7 routers: factory not class, single deps object, role checks inline (not middleware), no module state, inject everything, 2-level URL nesting max.
+- Test-file template + table of currently-conforming routers with coverage figures.
+
+**L2 — sales/quotes router (8th extraction, NOT MOUNTED)**
+- `server/domains/sales/routes/quotes.js` — 4 endpoints (POST + PATCH + DELETE + restore). Heaviest router yet: ~12 injected deps (versioning, audit, eventbus, permission groups, soft-delete tombstones).
+- 14 contract tests pass against in-memory fake quote store.
+- Per ADR-0008 leaving NOT MOUNTED until next sprint when remaining helpers (`upsertQuote` etc.) are surfaced as named exports for clean injection.
+
+**L5 — e2e smoke**
+- Boot server → curl 12 v1.3 + 4 legacy endpoints → all 401/403 unauth (correct).
+- No regression in TOTP boot probe (existing dev-env warning, not new).
+
+**L3 — mes i18n migration**
+- 90 keys (39 hw.* + 51 mode.*) → `client/src/i18n/domains/mes.js`.
+- Mechanical extraction via sed from strings.js lines 219-371.
+- Build verified `Thiết bị phần cứng` + `Chế độ kết nối` still ship.
+- strings.js: ~340 → ~265 keys (start of session) → ~75 net reduction this turn.
+- 5 i18n domain modules: security · costing · sales · basis · mes.
+
+**L1 — v1.3.0-rc.3 release**
+- Build ID `v1.3.0-rc.3-8c84f12` baked into Vite marker.
+- 4 DMGs in `dist/`, all verified by `scripts/verify-bundle-marker.sh`.
+- Fresh SHA-256 in `dist/checksums.txt`.
+- Tagged `v1.3.0-rc.3` on release/v1.3 HEAD.
+
+**Final cumulative state after L**
+
+| Metric | After P1-P5 | After J | After L |
+|---|---|---|---|
+| Domain routers | 0 | 6 | 8 (1 unmounted) |
+| i18n domain modules | 0 | 3 | 5 |
+| ADRs | 0 | 1 (0007) | 5 (0007-0011) |
+| v1.3 unit/integration tests | 13 | 50 | 73 |
+| High vulns root/client/desktop | 12 | 0/0/0 | 0/0/0 |
+| Released DMGs | 0 | 4 (rc.2) | 4 (rc.3) |
+
