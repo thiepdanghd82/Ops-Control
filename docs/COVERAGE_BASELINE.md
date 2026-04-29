@@ -1,6 +1,6 @@
 # Coverage Baseline — v1.3 Autonomous Upgrade Pass
 
-> **Captured:** 2026-04-29 22:30 GMT+7 (after H1+H2+H3+H4)
+> **Captured:** 2026-04-29 23:00 GMT+7 (after K1–K6)
 > **Reproduce:** `node --experimental-test-coverage --test <files>` (see §3)
 > **Threshold gate:** `package.json:jest.coverageThreshold` = 70% lines, 60% branches, 70% functions/statements
 
@@ -12,9 +12,18 @@
 | `server/domains/security/routes/license.js`      | **100 %** | 80.0 % | **100 %** | – |
 | `server/domains/library/routes/rate.js`          | 90.8 % | 52.6 % | 71.4 % | 70-76, 80-81, 119-121 |
 | `server/domains/library/routes/ddl.js`           | 95.6 % | 45.0 % | 85.7 % | 64-65, 100-102 |
-| **All v1.3 extracted code** | **~92 %** | **~60 %** | **~89 %** | – |
+| `server/domains/sales/routes/released-quotation.js` | 96.0 % | 94.1 % | 71.4 % | 58-59, 63-64 |
+| `desktop/license.test.js` runtime                | 100 % | 88.9 % | 100 % | – |
+| **All v1.3 extracted code (mean)** | **~94 %** | **~71 %** | **~88 %** | – |
 
-All numbers above gate threshold (70 % lines / 60 % branches / 70 % functions).
+All numbers above the 70 % lines / 60 % branches / 70 % functions gate threshold.
+
+### History
+
+| Date | Files measured | Mean lines % | Mean branches % | Notes |
+|---|---|---|---|---|
+| 2026-04-29 22:30 | 5 (after H4) | ~92 | ~60 | First baseline |
+| 2026-04-29 23:00 | 7 (after K2+K5) | ~94 | ~71 | +released-quotation router; branches up after K2 fixed several skip-paths |
 
 ## 2. Why some lines are uncovered
 

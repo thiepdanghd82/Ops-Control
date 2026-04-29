@@ -234,7 +234,7 @@ app.use((req, res, next) => {
 });
 
 // Rate limit for bulk write ops — extracted to middleware/rateLimit.js.
-import { writeRateLimit } from './middleware/rateLimit.js';
+import { writeRateLimit, saveRateLimit } from './middleware/rateLimit.js';
 
 // ─── Health & readiness ───
 // Enriched shape lets ops correlate incident timing with process state:
@@ -445,6 +445,7 @@ import { createLicenseRouter } from './domains/security/routes/license.js'; // v
 import { createBackupRouter } from './domains/basis/routes/backup.js'; // v1.3 F1
 import { createRateRouter } from './domains/library/routes/rate.js'; // v1.3 J1 — go-live
 import { createDdlRouter } from './domains/library/routes/ddl.js'; // v1.3 J1 — go-live
+import { createReleasedQuotationRouter } from './domains/sales/routes/released-quotation.js'; // v1.3 K2
 import { rateRows, ddlToCsvRows } from './platform/csv/index.js'; // v1.3 J1
 import {
   isAdminPlus, canWrite, audit, getLibDir, safeFn,
@@ -597,6 +598,21 @@ app.use('/api/v1/library/ddl', createDdlRouter({
     data: { type: 'object' },
   }),
 }));
+
+// v1.3 K2 — sales/released-quotation router (extracted from costApi.js).
+// Legacy /api/released-quotation* + /api/save-quotation in costApi.js
+// continue to serve until UI migrates (dual-mount per ADR-0009).
+const releasedQuoteDeps = {
+  auth: libRouterDeps.auth,
+  canWrite: libRouterDeps.canWrite,
+  getLibDir,
+  safeFn,
+  readJson: libRouterDeps.readJson,
+  writeJson: libRouterDeps.writeJson,
+  saveRateLimit,
+};
+app.use('/api/sales/quotations', createReleasedQuotationRouter(releasedQuoteDeps));
+app.use('/api/v1/sales/quotations', createReleasedQuotationRouter(releasedQuoteDeps));
 
 // Cost API routes (auth + all cost endpoints)
 // Sprint 39 — API versioning: every router mounts at BOTH the legacy

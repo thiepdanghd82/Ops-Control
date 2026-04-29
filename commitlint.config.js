@@ -69,5 +69,18 @@ export default {
     ],
     // Subject style — keep imperative present tense ("add", not "added")
     'subject-case': [2, 'never', ['sentence-case', 'start-case', 'pascal-case', 'upper-case']],
+    // v1.3 K4 — body must end with a blank line before any trailer
+    // (Co-Authored-By, Reviewed-By, Refs, Fixes). Standard git
+    // trailer convention; without the blank line `git interpret-trailers`
+    // misparses and tooling that consumes commit history breaks.
+    'body-leading-blank': [2, 'always'],
+    'footer-leading-blank': [2, 'always'],
+    // Limit subject prefix-noise — we've seen "feat:" being added to
+    // body/footer sections by mistake. 1 type per commit.
+    'type-empty': [2, 'never'],
+    'type-case': [2, 'always', 'lower-case'],
+    'scope-empty': [1, 'never'], // warn if missing — not always required
+    // 'subject' must NOT end with a period (Angular convention).
+    'subject-full-stop': [2, 'never', '.'],
   },
 };
