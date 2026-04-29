@@ -280,3 +280,36 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 - Required pre-merge checks (lint + test + coverage + audit + build).
 - ADR pointer + sprint migration cadence ("one domain per sprint until costApi.js < 500 LOC").
 
+### Phase F — Architectural progression + ops tooling + git · 2026-04-29 21:00 GMT+7
+
+**F1 — Basis/backup-schedule router extracted**
+- New `server/domains/basis/routes/backup.js` (`createBackupRouter` factory).
+- Mounted at `/api/basis/backup/{schedule,run-now}` + `/api/v1/basis/backup/...`.
+- Legacy `/api/admin/backup-schedule*` paths in costApi.js retained until client UI migrates (additive).
+- Boot smoke test: NEW path 401 unauth, legacy path 403 (different auth chain), audit + license routes still respond — all 5 endpoints behave correctly.
+
+**F4 — Bundle marker for post-build verification**
+- `client/vite.config.js`: new `define.__OPS_BUNDLE_MARKER__` constant baked at build time. Format: `opsctl-v1.3-marker:<OPS_BUILD_ID|local>:<ISO-timestamp>`.
+- `client/src/main.jsx`: console.info + `window.__OPS_BUNDLE_MARKER__` so the literal string ships in the JS chunk.
+- `scripts/verify-bundle-marker.sh`: bash post-build verifier — mounts DMG via hdiutil, greps `app.asar` strings, checks marker present + (optional) build-id matches expected.
+- Verified: build with `OPS_BUILD_ID=v1.3.0-build-29-04` puts the literal `opsctl-v1.3-marker:v1.3.0-build-29-04:<ISO>` in `dist/assets/index-*.js`.
+
+**F5 — git init + branching per AUTO_EXECUTE.md**
+- `git init` (project was previously not under VCS).
+- Initial commit on `main` captures full v1.2 + v1.3 autonomous-upgrade state (539 files; node_modules / dist DMGs / server-data / _legacy properly gitignored).
+- Tagged `v1.2.0-snapshot` (baseline) and `v1.3.0-rc.1` (release candidate) on the initial commit.
+- Created `release/v1.3` branch per mandate. Subsequent commits land here.
+- `husky init` activated; pre-commit hook restored to `lint-staged` (was overwritten to `npm test` by husky).
+- Conventional Commits enforced going forward (`commitlint` runs in CI per `.github/workflows/ci.yml`).
+
+**Final test totals (post-F)**
+- 36/36 security suite (auth + license unit + license integration + desktop license).
+- 89/89 gallus engine (S-FLEXO 1-5).
+- ~125 tests pass on the surface that was actually exercised.
+
+**Git topology**
+```
+* a8b559f (main, tag: v1.2.0-snapshot, tag: v1.3.0-rc.1) initial git repo from v1.2 + v1.3 autonomous upgrade snapshot
+* 5957ec8 (release/v1.3) chore: keep pre-commit hook scoped to lint-staged
+```
+
