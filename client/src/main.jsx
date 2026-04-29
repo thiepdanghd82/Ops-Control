@@ -8,6 +8,7 @@ import './components/Shared/draggableCard.css'
 // vs costing.* etc.); for overlap, last-imported wins.
 import './i18n/domains/security.js'
 import './i18n/domains/costing.js'
+import './i18n/domains/sales.js'
 import App from './App.jsx'
 import { startWebVitals } from './utils/webVitals.js'
 import { installDraggableCards } from './components/Shared/draggableCard.js'
