@@ -1,4 +1,4 @@
-9c08b93205d4422c3a9639bb6f3d7bfb7a808781343adeb3549b34ee10605adb  OpsControl-CLIENT-v1.3.0-rc.3-mac-arm64.dmg
-bfe97179bae125bc771ec04777a895d4a2087737b8b76d2d86da096fa5b9070a  OpsControl-CLIENT-v1.3.0-rc.3-mac-x64.dmg
-42f59a0a3713b33851559ee7b01f95cc8fb84a8bfe79a3a14820cc3580287443  OpsControl-SERVER-v1.3.0-rc.3-mac-arm64.dmg
-7a65a148193aead6880f733fedbd13820bc1e9e1f7d9afab5ba4db3ed7731065  OpsControl-SERVER-v1.3.0-rc.3-mac-x64.dmg
+eab619622d708457ea7668efdf2caee3714e40fb2b9080b5159fc32410cb147f  OpsControl-CLIENT-v1.3.0-rc.4-mac-arm64.dmg
+b12adc1eebd52956af1c646c9c15fb32cf88be4531bc1bf754f06e0294554baf  OpsControl-CLIENT-v1.3.0-rc.4-mac-x64.dmg
+036ae547a1e1ae57b13689c7f58366f08f40a121a62e21375b7725864be9d2c3  OpsControl-SERVER-v1.3.0-rc.4-mac-arm64.dmg
+63ba989f4d23e98510740340971418161d45ed2648eb075da8df06c63a868fa3  OpsControl-SERVER-v1.3.0-rc.4-mac-x64.dmg
