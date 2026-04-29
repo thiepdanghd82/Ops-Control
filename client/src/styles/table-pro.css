@@ -1,0 +1,69 @@
+/**
+ * Shared "pro table" pattern — extracted from Summarize.css after review.
+ *
+ * Gives every data table a consistent IBM-Carbon-style appearance:
+ *   - 12px body / 11px sticky uppercase header
+ *   - zebra striping on even rows, subtle hover
+ *   - tabular-nums on .tbl-pro-num / .right cells so decimals align
+ *   - tight vertical rhythm (8px padding, 1.4 line-height)
+ *
+ * Usage: wrap a <table> in a container and add `class="tbl-pro"`. Components
+ * that already have their own table class can also just ADD `tbl-pro` and the
+ * styling will layer on top without conflicting (we only define classes under
+ * `.tbl-pro`, no element selectors).
+ *
+ * To right-align numeric columns with tabular figures, add
+ * `class="tbl-pro-num"` on <th> and <td> (or `right` for legacy Summarize).
+ */
+
+.tbl-pro {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #ffffff;
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 12px;
+  letter-spacing: .16px;
+  color: #161616;
+}
+
+.tbl-pro thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f4f4f4;
+  color: #525252;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 10px;
+  white-space: nowrap;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  user-select: none;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.tbl-pro th:hover { background: #e8e8e8; }
+
+.tbl-pro td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e8e8e8;
+  white-space: nowrap;
+  color: #161616;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+
+.tbl-pro tbody tr:nth-child(even) td { background: #fafafa; }
+.tbl-pro tbody tr:hover td { background: #e5f0ff; }
+
+.tbl-pro-num,
+.tbl-pro .right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+.tbl-pro-bold { font-weight: 600; }
+.tbl-pro-muted { color: #6f6f6f; }

@@ -1,0 +1,88 @@
+{
+  "name": "ops-control",
+  "version": "1.2.0",
+  "description": "CCL Design Vietnam - Ops Control v1.2 (Web + Desktop, Pricing + Planning)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "nodemon server/index.js",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "start": "node server/index.js",
+    "verify-install": "node scripts/verify-install.js",
+    "preflight": "node scripts/preflight-env.js",
+    "verify-backup": "node scripts/verify-backup.js",
+    "reset-totp": "node scripts/reset-totp.js",
+    "migrate": "node scripts/migrate-planning-data.js",
+    "test": "jest --passWithNoTests && node --test 'server/**/*.test.js' 'scripts/**/*.test.js'",
+    "fix": "eslint --fix .",
+    "perf-budget": "node scripts/check-perf-budget.js",
+    "lint:client": "cd client && npm run lint",
+    "test:client": "cd client && npm test",
+    "verify": "npm run build && npm run perf-budget && npm test || (npm run fix && npm run build && npm run perf-budget && npm test)",
+    "precheck": "npm run lint:client && npm run build && npm run perf-budget && npm test && npm run test:client",
+    "desktop:install": "cd desktop && npm install",
+    "desktop:dev": "npm run build && cd desktop && npm run start:dev",
+    "desktop:build:win": "npm run build && ./scripts/build-desktop.sh win",
+    "desktop:build:mac": "npm run build && ./scripts/build-desktop.sh mac arm64",
+    "desktop:build:mac:x64": "npm run build && ./scripts/build-desktop.sh mac x64",
+    "desktop:build:all": "npm run build && cd desktop && npm run build:all",
+    "desktop:test:license": "cd desktop && node --test license.test.js",
+    "desktop:test:cache": "cd desktop && env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron cache.test.js",
+    "desktop:test": "npm run desktop:test:license && npm run desktop:test:cache",
+    "test:sync": "node --test server/routes/sync.test.js",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky || true"
+  },
+  "lint-staged": {
+    "*.{js,jsx,mjs,cjs}": ["eslint --fix", "prettier --write"],
+    "*.{json,md,css}": ["prettier --write"]
+  },
+  "dependencies": {
+    "argon2": "^0.44.0",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^12.9.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "multer": "^2.0.2",
+    "proper-lockfile": "^4.1.2",
+    "xlsx": "npm:@e965/xlsx@^0.20.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^9.0.1",
+    "docx": "^9.6.1",
+    "eslint": "^10.2.1",
+    "exceljs": "^4.4.0",
+    "globals": "^17.5.0",
+    "husky": "^9.1.7",
+    "jest": "^29.7.0",
+    "lint-staged": "^16.4.0",
+    "nodemon": "^3.1.4",
+    "prettier": "^3.8.3",
+    "puppeteer-core": "^24.42.0"
+  },
+  "jest": {
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/Backup & restore/",
+      "/client/",
+      "/server/",
+      "/scripts/",
+      "/_legacy/"
+    ],
+    "coverageReporters": ["text-summary", "lcov", "html"],
+    "coverageThreshold": {
+      "global": {
+        "lines": 70,
+        "branches": 60,
+        "functions": 70,
+        "statements": 70
+      }
+    }
+  }
+}

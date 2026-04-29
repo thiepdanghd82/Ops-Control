@@ -1,0 +1,47 @@
+/* Global drag + resize support for overlay cards.
+ *
+ * Any element marked `data-ops-draggable-card` becomes:
+ *   - Resizable (bottom-right corner grip, native browser handle).
+ *   - Draggable when the user grabs an inner `data-ops-drag-handle`.
+ *
+ * Logic lives in `draggableCard.js`.
+ */
+
+[data-ops-draggable-card] {
+  resize: both;
+  min-width: 320px;
+  min-height: 220px;
+  /* Remove hard caps so the user can resize beyond the original bound.
+     Keep !important so it wins over per-component max-width rules. */
+  max-width: none !important;
+  max-height: none !important;
+}
+
+[data-ops-drag-handle] {
+  cursor: move;
+  user-select: none;
+  touch-action: none;
+}
+
+[data-ops-dragging="true"] {
+  cursor: grabbing !important;
+  user-select: none !important;
+  /* Snappier: suppress animations while being dragged */
+  animation: none !important;
+  transition: none !important;
+}
+
+/* The resize handle is the browser native one (bottom-right triangle).
+ * Add a subtle visual hint so users know the card is resizable. */
+[data-ops-draggable-card]::after {
+  content: "";
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, transparent 50%, #94a3b8 50%, #94a3b8 58%, transparent 58%, transparent 70%, #94a3b8 70%, #94a3b8 78%, transparent 78%);
+  opacity: .55;
+}

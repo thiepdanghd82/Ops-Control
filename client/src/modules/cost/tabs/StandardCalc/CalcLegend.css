@@ -1,0 +1,523 @@
+/* CalcLegend — sticky-TOC training manual inside the Standard Calc.
+ *
+ * Layout: left sidebar TOC (240 px) + scrollable content pane. All
+ * styling is scoped under `.cl-wrap` so it cannot leak into siblings
+ * (CalcHeader / CalcLayout / etc.). */
+
+.cl-wrap {
+  display: flex;
+  gap: 16px;
+  height: calc(100vh - 180px);
+  min-height: 500px;
+  padding: 8px 16px 16px;
+  background: var(--surface-page, #f9fafb);
+}
+
+/* ── TOC sidebar ──────────────────────────────────────── */
+.cl-toc {
+  flex: 0 0 240px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-card, #fff);
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  border-radius: 8px;
+  overflow: hidden;
+  position: sticky;
+  top: 8px;
+  align-self: flex-start;
+  max-height: calc(100vh - 200px);
+}
+.cl-toc-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-subtle, #e5e7eb);
+  background: linear-gradient(180deg, #1e40af 0%, #1e3a8a 100%);
+  color: #fff;
+}
+.cl-toc-title { font-size: 14px; font-weight: 700; letter-spacing: 0.01em; }
+.cl-toc-sub   { font-size: 11px; opacity: 0.85; margin-top: 2px; }
+
+/* Export + print buttons — sit directly under the title in the
+ * sidebar header. Mirror the style of the Help tab toolbar. */
+.cl-toc-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+.cl-toc-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  border-radius: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms;
+}
+.cl-toc-btn:hover {
+  background: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+.cl-toc-btn.cl-toc-btn-ghost {
+  background: transparent;
+}
+.cl-toc-btn.cl-toc-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.cl-toc-btn:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 1px;
+}
+.cl-toc-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+.cl-toc-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 14px;
+  background: transparent;
+  border: 0;
+  border-left: 3px solid transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 100ms, border-color 100ms;
+}
+.cl-toc-item:hover { background: #eef2ff; }
+.cl-toc-item.active { background: #dbeafe; border-left-color: #1e40af; }
+.cl-toc-num {
+  flex: 0 0 24px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  padding-top: 2px;
+}
+.cl-toc-item.active .cl-toc-num { color: #1e40af; }
+.cl-toc-txt { display: flex; flex-direction: column; min-width: 0; }
+.cl-toc-en {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.25;
+}
+.cl-toc-vi {
+  font-size: 11px;
+  color: #6b7280;
+  font-style: italic;
+  margin-top: 1px;
+  line-height: 1.2;
+}
+.cl-toc-footer {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border-subtle, #e5e7eb);
+  font-size: 10.5px;
+  color: #6b7280;
+  background: #f9fafb;
+}
+.cl-toc-footer kbd {
+  font-family: ui-monospace, Menlo, monospace;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 10px;
+}
+
+/* ── Content pane ─────────────────────────────────────── */
+.cl-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px 48px;
+  background: var(--surface-card, #fff);
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  border-radius: 8px;
+  min-width: 0;
+}
+
+.cl-section {
+  margin-bottom: 32px;
+  scroll-margin-top: 16px;
+}
+.cl-section-header {
+  padding-bottom: 10px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #1e40af;
+  position: relative;
+}
+.cl-section-tag {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #9ca3af;
+  background: #f3f4f6;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.cl-section h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e40af;
+  padding-right: 50px;
+}
+.cl-section-sub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+.cl-section h3 {
+  margin: 20px 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: 0.02em;
+}
+
+/* ── Tables ───────────────────────────────────────────── */
+.cl-table-wrap {
+  margin-bottom: 14px;
+  overflow-x: auto;
+}
+.cl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.cl-table th,
+.cl-table td {
+  border: 1px solid #e5e7eb;
+  padding: 7px 10px;
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.4;
+}
+.cl-table th {
+  background: #eef2ff;
+  font-weight: 700;
+  color: #1e3a8a;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.cl-table td.mono { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+.cl-table td.center { text-align: center; }
+.cl-table td.bold { font-weight: 700; color: #111827; }
+.cl-table tbody tr:nth-child(even) { background: #fafbfc; }
+.cl-ic {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11.5px;
+  background: #f3f4f6;
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: #111827;
+}
+
+/* ── Formula blocks ───────────────────────────────────── */
+.cl-formula {
+  margin: 10px 0 14px;
+  padding: 10px 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-left: 3px solid #3b82f6;
+  border-radius: 0 6px 6px 0;
+}
+.cl-formula-name {
+  font-weight: 700;
+  color: #1e3a8a;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.cl-formula-expr {
+  margin: 0;
+  padding: 8px 12px;
+  background: #111827;
+  color: #d1fae5;
+  border-radius: 4px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  overflow-x: auto;
+  white-space: pre;
+}
+.cl-formula-note {
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: #6b7280;
+  font-style: italic;
+}
+.cl-formula-example {
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: #f0fdf4;
+  border-left: 3px solid #16a34a;
+  border-radius: 0 4px 4px 0;
+  font-size: 12px;
+  color: #14532d;
+}
+.cl-formula-example-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 3px;
+  opacity: 0.8;
+}
+.cl-formula-example code {
+  font-family: ui-monospace, Menlo, monospace;
+  white-space: pre-wrap;
+}
+
+/* ── Formula group labels in Master Formulas ──────────── */
+.cl-fgroup { margin-top: 14px; }
+.cl-fgroup-label {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 0.1em;
+  margin-bottom: 6px;
+}
+
+/* ── Callouts ─────────────────────────────────────────── */
+.cl-callout {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border-left: 4px solid;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.cl-callout-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+.cl-callout-body { font-size: 12.5px; }
+.cl-callout-note { background: #fef9c3; border-left-color: #eab308; color: #78350f; }
+.cl-callout-warn { background: #fee2e2; border-left-color: #dc2626; color: #7f1d1d; }
+.cl-callout-tip  { background: #dcfce7; border-left-color: #16a34a; color: #14532d; }
+
+/* ── Bilingual EN/VI pairs inline ─────────────────────── */
+.cl-bi-en { display: block; }
+.cl-bi-vi {
+  display: block;
+  font-size: 12px;
+  font-style: italic;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+/* ── Troubleshooting cards ────────────────────────────── */
+.cl-trouble {
+  margin-bottom: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.cl-trouble-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+.cl-trouble-num {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+}
+.cl-trouble-sev {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+.cl-trouble-sev-critical { background: #fee2e2; color: #7f1d1d; }
+.cl-trouble-sev-medium   { background: #fef3c7; color: #78350f; }
+.cl-trouble-sev-minor    { background: #dcfce7; color: #14532d; }
+.cl-trouble-sev-info     { background: #dbeafe; color: #1e3a8a; }
+.cl-trouble-symptom {
+  font-weight: 600;
+  font-size: 13px;
+  color: #111827;
+}
+.cl-trouble-body {
+  padding: 10px 14px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #1f2937;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cl-trouble-label {
+  display: inline-block;
+  min-width: 82px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cl-footer {
+  margin-top: 40px;
+  padding: 16px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 12px;
+  font-style: italic;
+  border-top: 1px solid #e5e7eb;
+}
+.cl-footer-meta { margin-top: 6px; }
+.cl-footer-note { margin-top: 4px; font-size: 11px; }
+
+/* ── Responsive — stack on narrow viewports ──────────── */
+@media (max-width: 900px) {
+  .cl-wrap { flex-direction: column; height: auto; }
+  .cl-toc { flex: 0 0 auto; position: static; max-height: 40vh; }
+  .cl-content { height: auto; }
+}
+
+/* ── Dark mode ────────────────────────────────────────── */
+[data-theme="dark"] .cl-wrap { background: #0f172a; }
+[data-theme="dark"] .cl-toc { background: #1e293b; border-color: #334155; }
+[data-theme="dark"] .cl-toc-item:hover { background: #1e3a8a; }
+[data-theme="dark"] .cl-toc-item.active { background: #1e40af; }
+[data-theme="dark"] .cl-toc-en { color: #f3f4f6; }
+[data-theme="dark"] .cl-toc-footer { background: #111827; color: #9ca3af; }
+[data-theme="dark"] .cl-content { background: #0f172a; border-color: #334155; }
+[data-theme="dark"] .cl-section h2 { color: #93c5fd; }
+[data-theme="dark"] .cl-section h3 { color: #f3f4f6; }
+[data-theme="dark"] .cl-table th { background: #1e3a8a; color: #e5e7eb; }
+[data-theme="dark"] .cl-table td { border-color: #334155; color: #e5e7eb; }
+[data-theme="dark"] .cl-table tbody tr:nth-child(even) { background: #1e293b; }
+[data-theme="dark"] .cl-formula { background: #1e293b; border-color: #334155; }
+[data-theme="dark"] .cl-formula-example { background: #14532d; color: #dcfce7; }
+[data-theme="dark"] .cl-callout-note { background: #422006; color: #fde68a; }
+[data-theme="dark"] .cl-callout-warn { background: #450a0a; color: #fecaca; }
+[data-theme="dark"] .cl-callout-tip  { background: #14532d; color: #dcfce7; }
+[data-theme="dark"] .cl-trouble { border-color: #334155; }
+[data-theme="dark"] .cl-trouble-head { background: #1e293b; border-color: #334155; }
+[data-theme="dark"] .cl-trouble-body { color: #e5e7eb; }
+
+/* ── Worked-example workflow cards (Step 6: Print + Cut) ───────── */
+.cl-wf-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 16px 0;
+}
+@media (max-width: 1200px) {
+  .cl-wf-grid { grid-template-columns: repeat(2, 1fr); }
+}
+.cl-wf-card {
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.cl-wf-inline { border-color: #86efac; }
+.cl-wf-offline { border-color: #fcd34d; }
+.cl-wf-slit { border-color: #c4b5fd; }
+.cl-wf-head {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.cl-wf-inline .cl-wf-head { background: linear-gradient(180deg, #dcfce7 0%, #f0fdf4 100%); }
+.cl-wf-offline .cl-wf-head { background: linear-gradient(180deg, #fef3c7 0%, #fffbeb 100%); }
+.cl-wf-slit .cl-wf-head { background: linear-gradient(180deg, #ede9fe 0%, #f5f3ff 100%); }
+.cl-wf-badge {
+  display: inline-block;
+  font-size: 10px; font-weight: 700;
+  padding: 2px 8px; border-radius: 4px;
+  background: #1e40af; color: #fff;
+  letter-spacing: .6px;
+  margin-bottom: 6px;
+}
+.cl-wf-inline .cl-wf-badge { background: #166534; }
+.cl-wf-offline .cl-wf-badge { background: #92400e; }
+.cl-wf-slit .cl-wf-badge { background: #6d28d9; }
+.cl-wf-title { font-size: 14px; font-weight: 700; color: #0f172a; }
+.cl-wf-sub { font-size: 12px; color: #475569; margin-top: 2px; line-height: 1.5; }
+.cl-wf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.cl-wf-table td {
+  padding: 5px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: top;
+}
+.cl-wf-table tr td:first-child {
+  color: #64748b;
+  width: 40%;
+  font-weight: 500;
+}
+.cl-wf-table tr td:last-child { color: #0f172a; }
+.cl-wf-table code {
+  background: #f1f5f9;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+.cl-wf-ok { color: #15803d; font-weight: 700; }
+.cl-wf-viz {
+  margin: 0 14px 12px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: #475569;
+  line-height: 1.4;
+  overflow-x: auto;
+  white-space: pre;
+}
+.cl-wf-btn {
+  margin: 0 14px 14px;
+  padding: 10px 14px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+}
+.cl-wf-btn:hover { background: #1d4ed8; }
+.cl-wf-inline .cl-wf-btn { background: #16a34a; }
+.cl-wf-inline .cl-wf-btn:hover { background: #15803d; }
+.cl-wf-offline .cl-wf-btn { background: #d97706; }
+.cl-wf-offline .cl-wf-btn:hover { background: #b45309; }
+.cl-wf-slit .cl-wf-btn { background: #7c3aed; }
+.cl-wf-slit .cl-wf-btn:hover { background: #6d28d9; }
+@media (max-width: 900px) {
+  .cl-wf-grid { grid-template-columns: 1fr; }
+}
+[data-theme="dark"] .cl-wf-card { background: #0f172a; border-color: #1e3a8a; }
+[data-theme="dark"] .cl-wf-table td { border-bottom-color: #1e293b; }
+[data-theme="dark"] .cl-wf-table tr td:first-child { color: #94a3b8; }
+[data-theme="dark"] .cl-wf-table tr td:last-child { color: #e5e7eb; }
+[data-theme="dark"] .cl-wf-viz { background: #020617; border-color: #1e293b; color: #cbd5e1; }

@@ -1,0 +1,144 @@
+/* ═══ WarningBar — bottom-of-screen validation indicator ═══ */
+
+/* Sticky within .app-main so it sits at the bottom of the main content
+   area — horizontally aligned with the sidebar's Sign Out button. Hides
+   completely when there are no warnings (rendered null from the
+   component). */
+.warning-bar {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 500;
+  animation: wb-slide-up 0.25s ease-out;
+  max-height: 50vh;
+  overflow: hidden;
+  z-index: 40;
+}
+
+.warning-bar.wb-error {
+  background: #fee2e2;
+  color: #991b1b;
+  border-top-color: rgba(220, 38, 38, 0.3);
+}
+
+.warning-bar.wb-expanded {
+  overflow-y: auto;
+  flex-direction: column;
+  align-items: center;
+}
+
+@keyframes wb-slide-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Inner row — the single-line collapsed summary */
+.wb-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  user-select: none;
+  min-height: 40px;
+  max-width: 1100px;
+  width: 100%;
+  justify-content: center;
+  transition: background 0.12s;
+}
+.wb-inner:hover { background: rgba(0, 0, 0, 0.04); }
+
+.wb-icon {
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.wb-count {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.wb-sep {
+  opacity: 0.5;
+}
+
+.wb-scope {
+  font-weight: 600;
+  white-space: nowrap;
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  font-size: 11px;
+}
+
+.wb-msg {
+  flex: 0 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 640px;
+}
+
+.wb-more {
+  background: rgba(0, 0, 0, 0.12);
+  color: inherit;
+  padding: 2px 8px;
+  border-radius: 24px;
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.wb-chevron {
+  opacity: 0.6;
+  font-size: 11px;
+  margin-left: 4px;
+}
+
+/* Expanded list — stacked warnings, scroll if tall */
+.wb-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 16px 14px;
+  max-width: 1100px;
+  width: 100%;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.wb-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+  line-height: 1.45;
+  border-top: 1px dashed rgba(0, 0, 0, 0.1);
+}
+.wb-item:first-child { border-top: none; }
+
+.wb-item-error  { color: #7f1d1d; }
+.wb-item-warn   { color: #78350f; }
+
+.wb-item-icon {
+  font-size: 12px;
+  width: 14px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.wb-item-scope {
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.wb-item-msg {
+  flex: 1 1 auto;
+  min-width: 0;
+}

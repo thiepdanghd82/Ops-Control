@@ -1,0 +1,41 @@
+{
+  "name": "client",
+  "private": true,
+  "version": "1.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "postinstall": "node ../scripts/patch-pdfjs-worker.mjs",
+    "prebuild": "node ../scripts/patch-pdfjs-worker.mjs && node ../scripts/help/build-all-docs.mjs",
+    "build": "vite build",
+    "build:docs": "node ../scripts/help/build-all-docs.mjs",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "test": "node --test 'src/**/*.test.js'",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "analyze": "ANALYZE=1 vite build"
+  },
+  "dependencies": {
+    "lucide-react": "^1.8.0",
+    "pdfjs-dist": "^4.10.38",
+    "qrcode": "^1.5.4",
+    "quantize": "^1.0.2",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^6.30.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.4.0",
+    "postcss": "^8.5.12",
+    "rollup-plugin-visualizer": "^7.0.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.4"
+  }
+}

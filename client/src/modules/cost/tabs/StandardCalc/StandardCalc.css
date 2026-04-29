@@ -1,0 +1,1846 @@
+/* StandardCalc — IBM Carbon Design System
+   Tokens: #0f62fe (Blue 60), #161616 (Gray 100), #525252 (Gray 70),
+   #6f6f6f (Gray 60), #c6c6c6 (Gray 30), #e0e0e0 (Gray 20),
+   #f4f4f4 (Gray 10). border-radius: 0. Depth via bg-color layering.
+   Inputs: bottom-border only. Weights: 300/400/600. */
+.sc {
+  display:flex; flex-direction:column; height:100%;
+  background:var(--surface-subtle); position:relative;
+  color:var(--text-primary);
+  font-family:'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing:0.16px;
+}
+
+/* Floating Summary Box — IBM Gray 100 flat */
+.sc-summary-float { position:fixed; top:72px; right:24px; z-index:20; }
+.sc-summary-box { background:#161616; border-radius:0; padding:16px; min-width:180px; box-shadow:none; color:white; }
+.sc-summary-moq { font-size:12px; font-weight:400; letter-spacing:.32px; color:#f1c21b; margin-bottom:6px; text-transform:uppercase; }
+.sc-summary-row { display:flex; justify-content:space-between; align-items:center; padding:2px 0; }
+.sc-summary-label { font-size:11px; color:rgba(255,255,255,.6); }
+.sc-summary-val { font-size:14px; font-weight:400; font-family:'IBM Plex Mono', monospace; }
+.sc-summary-breakdown { border-top:1px solid rgba(255,255,255,.12); margin-top:6px; padding-top:6px; }
+.sc-summary-mini { display:flex; justify-content:space-between; font-size:10px; color:rgba(255,255,255,.5); padding:1px 0; }
+.sc-summary-mini span:last-child { font-family:monospace; color:rgba(255,255,255,.7); }
+
+/* Sub-tab bar — IBM Carbon: flat surface, bottom-border active */
+.sc-subtab-bar { position:sticky; top:0; z-index:15; display:flex; align-items:center; gap:8px; padding:0 16px; background:var(--surface-card); border-bottom:1px solid var(--border-strong); box-shadow:none; }
+.sc-subtab-tabs { display:flex; align-items:center; gap:0; flex:1; min-width:0; overflow-x:auto; }
+.sc-subtab-tabs::-webkit-scrollbar { height:0; }
+.sc-subtab-btn { display:flex; align-items:center; gap:5px; padding:10px 16px; border:none; border-bottom:2px solid transparent; background:transparent; border-radius:0; font-size:14px; font-weight:400; color:var(--text-secondary); cursor:pointer; transition:color .15s, border-color .15s, background-color .15s; white-space:nowrap; letter-spacing:.16px; }
+.sc-subtab-btn:hover { color:var(--text-primary); background:var(--surface-hover); }
+.sc-subtab-btn.active { color:var(--text-primary); font-weight:600; border-bottom-color:var(--color-primary); background:transparent; }
+.sc-subtab-icon { font-size:13px; }
+.sc-subtab-label { line-height:1; }
+
+/* Toolbar — IBM Carbon buttons: 0px radius, 40px height */
+.sc-toolbar { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+/* Unsaved-changes pill — amber kept as semantic color; legible on both
+   light and dark backgrounds. Text is explicit dark because the
+   amber bg is too bright for `var(--text-primary)` in dark mode. */
+.sc-dirty-badge { font-size:12px; background:#f1c21b; color:#161616; padding:2px 8px; border-radius:0; font-weight:400; letter-spacing:.32px; }
+/* Phase 9A.2 migration — Save button now uses .op-btn.op-btn-primary
+   (tokens.css). The dark-gray "New/Reset" button keeps the .sc-btn-reset
+   override because its #393939 ink differs from the white-bordered
+   .op-btn-secondary. Retaining this as a documented one-off instead of
+   inventing an .op-btn-dark variant just for one call-site. */
+.sc-btn-reset { background:#393939; color:#ffffff; border:1px solid #393939; }
+.sc-btn-reset:hover:not(:disabled) { background:#4c4c4c; border-color:#4c4c4c; }
+
+/* Content area */
+.sc-content { flex:1; overflow-y:auto; padding:16px; }
+
+/* Sections */
+.sc-section { }
+
+/* Layout tab specifically — make the section a flex column so the
+   upload grid can claim remaining vertical space below the params card
+   (previous fixed-height layout left whitespace on tall screens). */
+.sc-section-layout { display:flex; flex-direction:column; min-height:100%; }
+
+/* RFQ + MOQ stacked layout — the MOQ pricing table is too wide (7 cols)
+   to sit next to RFQ Information without squeezing header text, so we
+   always render MOQ below RFQ. */
+.sc-rfq-moq-split { display:block; }
+.sc-rfq-moq-split .sc-rfq-col,
+.sc-rfq-moq-split .sc-moq-col { display:block; min-width:0; }
+.sc-rfq-moq-split .sc-moq-col { margin-top:12px; }
+
+/* RFQ section titles & 2-col grid */
+.sc-rfq-body { padding:16px 18px 18px; }
+.sc-rfq-section-title {
+  font-size:12px; font-weight:400; letter-spacing:.32px; text-transform:uppercase;
+  color:var(--text-secondary); padding:0 0 8px; margin:16px 0 12px;
+  border-bottom:2px solid var(--text-primary);
+  display:flex; align-items:center; gap:8px;
+}
+.sc-rfq-section-title::before {
+  content:''; width:3px; height:12px;
+  background:var(--color-primary); border-radius:0;
+}
+.sc-rfq-section-title:first-child { margin-top:0; }
+.sc-grid2 { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:10px 16px; }
+/* Field helpers — work inside any .sc-grid2 / .sc-grid3 / .sc-grid4 grid.
+   `sc-field-full` spans the full row; `sc-field-span2` spans 2 cells (used
+   in 4-col RFQ layout for wider labels like Project / Description). */
+.sc-field-full { grid-column: 1 / -1; }
+.sc-field-span2 { grid-column: span 2; }
+@media (max-width: 640px) {
+  .sc-grid2 { grid-template-columns: 1fr; }
+}
+
+/* Cards — IBM Carbon: flat, 0px radius, no shadow, bg-color layering */
+.sc-card { background:var(--surface-card); border-radius:0; overflow:hidden; box-shadow:none; border:none; }
+.sc-card + .sc-card { margin-top:16px; }
+.sc-card-header { display:flex; align-items:center; gap:8px; padding:12px 16px; color:var(--text-primary); font-size:14px; font-weight:600; letter-spacing:.16px; border-bottom:2px solid var(--border-strong); }
+/* Inline USD-rate control on the MOQ & Pricing card header.
+   Shrinks the title area so the compact input fits on the same line. */
+.sc-hdr-rate { display:flex; align-items:center; gap:6px; margin-left:auto; margin-right:8px; }
+.sc-hdr-rate label { font-size:12px; font-weight:400; letter-spacing:.32px; text-transform:uppercase; color:var(--text-secondary); }
+.sc-hdr-rate-inp { width:90px; padding:4px 8px; font-size:14px; font-weight:600; border:none; border-bottom:2px solid var(--border-strong); border-radius:0; background:var(--surface-subtle); color:var(--text-primary); outline:none; text-align:right; letter-spacing:.16px; }
+.sc-hdr-rate-inp::placeholder { color:var(--text-tertiary); font-weight:400; }
+.sc-hdr-rate-inp:focus { background:var(--surface-card); border-bottom-color:var(--color-primary); }
+.sc-card-icon { font-size:16px; color:var(--color-primary); font-weight:500; line-height:1; display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; }
+.sc-card-title { flex:1; }
+.sc-card-body { padding:14px 16px; color:var(--text-primary); }
+.sc-badge { font-size:12px; background:var(--surface-subtle); color:var(--text-primary); padding:4px 8px; border-radius:0; letter-spacing:.32px; }
+
+/* Header colors — IBM Carbon: subtle surface + primary text */
+.sc-header-navy,
+.sc-header-blue,
+.sc-header-cyan,
+.sc-header-green,
+.sc-header-teal,
+.sc-header-emerald,
+.sc-header-sky,
+.sc-header-dark,
+.sc-header-slate { background:var(--surface-subtle); color:var(--text-primary); }
+
+/* Header totals */
+.sc-header-totals { display:flex; gap:10px; align-items:center; font-size:12px; }
+.sc-header-total-item { color:var(--text-secondary); }
+.sc-header-total-item b { color:var(--text-primary); font-family:'IBM Plex Mono', monospace; }
+.sc-header-total-main { background:var(--border-strong); padding:2px 8px; border-radius:0; }
+.sc-header-total-main b { color:var(--color-primary); }
+
+/* Grid layouts */
+.sc-grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:10px 14px; }
+.sc-grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:10px 14px; }
+.sc-pack-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:stretch; }
+.sc-pack-grid > .sc-card { display:flex; flex-direction:column; margin-top:0; }
+.sc-pack-grid > .sc-card > .sc-card-body { flex:1; display:flex; flex-direction:column; }
+.sc-pack-grid > .sc-card > .sc-card-body > .sc-pack-total,
+.sc-pack-grid > .sc-card > .sc-card-body > .sc-ship-total { margin-top:auto; }
+
+/* Fields */
+.sc-field { display:flex; flex-direction:column; gap:3px; }
+.sc-field label { font-size:12px; font-weight:400; color:var(--text-secondary); letter-spacing:.32px; }
+.sc-field-sm { min-width:100px; }
+
+/* Inputs — IBM Carbon: bottom-border only, subtle bg, 0px radius */
+.sc-input {
+  display:block;
+  width:100%;
+  height:40px;
+  box-sizing:border-box;
+  padding:0 16px;
+  margin:0;
+  border:none;
+  border-bottom:2px solid var(--border-strong);
+  border-radius:0;
+  font-size:14px;
+  line-height:38px;
+  background:var(--surface-subtle);
+  color:var(--text-primary);
+  font-family:inherit;
+  vertical-align:middle;
+  letter-spacing:.16px;
+  transition:border-color .15s, background-color .15s;
+}
+input.sc-input { line-height:normal; }
+select.sc-input {
+  appearance:none;
+  -webkit-appearance:none;
+  -moz-appearance:none;
+  padding:0 28px 0 10px;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='none' stroke='%2364748b' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1l4 4 4-4'/></svg>");
+  background-repeat:no-repeat;
+  background-position:right 10px center;
+  cursor:pointer;
+}
+.sc-input:focus { outline:none; border-bottom-color:#0f62fe; box-shadow:none; }
+.sc-inp-yellow { background:var(--color-warning-50); border-color:#fcd34d; }
+.sc-inp-ghost { background:var(--color-slate-50); border-color:var(--color-slate-200); }
+.sc-inp-gold { background:var(--color-warning-100); border-color:#f59e0b; font-weight:600; }
+.sc-input-warn { border-color:#ef4444 !important; }
+
+/* Small inline "Sync from Cut" / "Sync to Cut" buttons inside warning
+   banners (Sprint 13b). Compact + low-chrome to avoid competing with
+   the warning text itself. */
+.sc-inline-btn {
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:2px 8px;
+  font-size:11px;
+  font-weight:600;
+  color:#1f2937;
+  background:#ffffff;
+  border:1px solid #d1d5db;
+  border-radius:3px;
+  cursor:pointer;
+  font-family:inherit;
+  transition:background 120ms, border-color 120ms;
+}
+.sc-inline-btn:hover { background:#f3f4f6; border-color:#9ca3af; }
+.sc-inline-btn:focus-visible { outline:2px solid #0f62fe; outline-offset:1px; }
+
+/* ── Persistent Cost Summary Bar (below sub-tab header) ── */
+.sc-sumbar {
+  background:#ffffff;
+  border:none;
+  border-radius:0;
+  box-shadow:none;
+  margin:8px 0 10px;
+  overflow-x:auto;
+}
+.sc-sumbar-table {
+  width:100%;
+  border-collapse:collapse;
+  font-size:12px;
+  table-layout:auto;
+}
+.sc-sumbar-table thead tr { background:#f4f4f4; border-bottom:2px solid #e0e0e0; }
+.sc-sumbar-table th {
+  padding:8px 10px;
+  font-size:12px;
+  font-weight:600;
+  letter-spacing:.32px;
+  color:#525252;
+  text-align:center;
+  white-space:nowrap;
+  text-transform:uppercase;
+}
+.sc-sumbar-table tbody td {
+  padding:10px 10px;
+  text-align:center;
+  font-size:14px;
+  font-weight:400;
+  color:#161616;
+  white-space:nowrap;
+  font-family:'IBM Plex Mono', Menlo, Consolas, monospace;
+  letter-spacing:.16px;
+}
+/* END CU PN cell: left-aligned, no monospace, ellipsis */
+.sc-sumbar-th-cupn { text-align:left !important; padding-left:16px !important; }
+.sc-sumbar-td-cupn {
+  text-align:left !important;
+  padding-left:16px !important;
+  font-family:inherit !important;
+  font-weight:600 !important;
+  color:var(--color-slate-700) !important;
+  max-width:160px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+/* Tier badge */
+.sc-sumbar-tier-badge {
+  display:inline-block;
+  padding:4px 12px;
+  background:#161616;
+  color:white;
+  border-radius:0;
+  font-size:12px;
+  font-weight:400;
+  letter-spacing:.32px;
+  font-family:inherit;
+}
+/* Column accents — faint header tint + colored body */
+.sc-sumbar-th-sell  { background:#eff6ff; color:#1d4ed8 !important; }
+.sc-sumbar-th-mat   { background:#eff6ff; color:#1d4ed8 !important; }
+.sc-sumbar-th-ink   { background:#ecfeff; color:#0891b2 !important; }
+.sc-sumbar-th-proc  { background:#ecfdf5; color:#059669 !important; }
+.sc-sumbar-th-pack  { background:#fef3c7; color:#b45309 !important; }
+.sc-sumbar-th-sub   { background:#fffbeb; color:#b45309 !important; }
+.sc-sumbar-th-va    { background:#ecfeff; color:#0891b2 !important; }
+.sc-sumbar-th-contr { background:#f5f3ff; color:#7c3aed !important; }
+.sc-sumbar-th-gm    { background:#ecfdf5; color:#059669 !important; }
+.sc-sumbar-td-sell  { color:#1d4ed8 !important; font-weight:600 !important; }
+.sc-sumbar-td-target { color:#64748b !important; }
+.sc-sumbar-td-mat   { color:#1d4ed8 !important; }
+.sc-sumbar-td-ink   { color:#0891b2 !important; }
+.sc-sumbar-td-proc  { color:#059669 !important; }
+.sc-sumbar-td-pack  { color:#b45309 !important; }
+.sc-sumbar-td-sub   { color:#0f2341 !important; font-weight:600 !important; }
+.sc-sumbar-td-va    { color:#0891b2 !important; font-weight:600 !important; }
+.sc-sumbar-td-contr { color:#7c3aed !important; font-weight:600 !important; }
+.sc-sumbar-td-gm    { font-weight:600 !important; font-size:13px !important; }
+
+/* Bare select — no native dropdown arrow, click anywhere to open list */
+.sc-select-bare {
+  appearance:none;
+  -webkit-appearance:none;
+  -moz-appearance:none;
+  background-image:none !important;
+  padding-right:5px !important;
+  text-align:center;
+  text-align-last:center;
+  cursor:pointer;
+}
+.sc-select-bare::-ms-expand { display:none; }
+
+/* Small inputs for tables */
+.sc-input-sm { padding:4px 8px; border:none; border-bottom:1px solid #c6c6c6; border-radius:0; font-size:14px; width:100%; background:#f4f4f4; letter-spacing:.16px; color:#161616; }
+.sc-input-sm:focus { outline:none; border-bottom-color:#0f62fe; background:#ffffff; }
+.sc-input-num { font-family:monospace; text-align:right; font-size:11px; }
+.sc-input-desc { font-size:10px; color:var(--color-slate-600); }
+.sc-input-err { border-color:#ef4444 !important; background:var(--color-danger-50); }
+
+/* Borderless inputs/selects inside Materials / Inks / Processes tables —
+   makes the tables feel airier. Border & background return on :hover /
+   :focus so users can still see what they're editing. Error highlights
+   (sc-input-err) still win via !important. Applies to both Standard
+   tables (sc-mat-table / sc-ink-table / sc-proc-table) and the inline
+   Complex tables (cc-det-tbl) in SubProductRow. */
+.sc-mat-table .sc-input-sm,
+.sc-ink-table .sc-input-sm,
+.sc-proc-table .sc-input-sm,
+.cc-det-tbl .cc-det-inp,
+.cc-det-tbl .cc-det-sel {
+  border:1px solid transparent;
+  background:transparent;
+}
+.sc-mat-table .sc-input-sm:hover,
+.sc-ink-table .sc-input-sm:hover,
+.sc-proc-table .sc-input-sm:hover,
+.cc-det-tbl .cc-det-inp:hover,
+.cc-det-tbl .cc-det-sel:hover {
+  background:rgba(241,245,249,.6);
+}
+.sc-mat-table .sc-input-sm:focus,
+.sc-ink-table .sc-input-sm:focus,
+.sc-proc-table .sc-input-sm:focus,
+.cc-det-tbl .cc-det-inp:focus,
+.cc-det-tbl .cc-det-sel:focus {
+  border-bottom-color:#0f62fe;
+  background:#ffffff;
+}
+
+/* MOQ rows (legacy — kept for backward compat) */
+.sc-moq-row { display:flex; align-items:flex-end; gap:8px; padding:8px 0; border-bottom:1px solid var(--color-slate-100); }
+.sc-moq-tab { padding:5px 12px; border:2px solid #d1d5db; background:white; border-radius:8px; font-size:11px; font-weight:600; color:var(--color-slate-500); cursor:pointer; transition:all .15s; white-space:nowrap; }
+.sc-moq-tab.active { border-color:var(--color-brand-700); background:var(--color-brand-50); color:var(--color-brand-700); }
+.sc-moq-tab:hover { border-color:#93c5fd; }
+.sc-moq-fields { display:flex; gap:8px; flex:1; flex-wrap:wrap; }
+.sc-eau-badge { margin-top:12px; background:#f1c21b; padding:8px 16px; border-radius:0; font-size:14px; font-weight:400; color:#161616; border:none; letter-spacing:.16px; }
+
+/* ── MOQ & Pricing card (table style) ── */
+.sc-moq-card-header {
+  display:flex; align-items:center; gap:10px; padding:10px 16px;
+  background:#f4f4f4; border-bottom:2px solid #e0e0e0;
+  color:#161616; font-size:14px; font-weight:600; letter-spacing:.16px;
+}
+.sc-moq-card-header .sc-card-icon { font-size:18px; }
+.sc-moq-card-header .sc-card-title { flex:0 0 auto; }
+.sc-moq-tier-count {
+  background:rgba(255,255,255,.15); color:#fff;
+  padding:3px 12px; border-radius:14px;
+  font-size:11px; font-weight:600; letter-spacing:.2px;
+  border:1px solid rgba(255,255,255,.2);
+}
+.sc-moq-card-header .sc-hdr-rate { margin-left:auto; }
+
+.sc-moq-body { padding:14px 16px 16px; }
+
+.sc-moq-table-wrap {
+  border:none;
+  border-radius:0;
+  overflow:hidden;
+  background:#ffffff;
+}
+.sc-moq-table {
+  width:100%;
+  border-collapse:collapse;
+  font-size:12px;
+  table-layout:fixed;
+}
+.sc-moq-table thead tr {
+  background:#f4f4f4;
+  border-bottom:2px solid #e0e0e0;
+}
+.sc-moq-table th {
+  padding:12px 10px;
+  font-size:12px;
+  font-weight:600;
+  letter-spacing:.32px;
+  text-transform:uppercase;
+  color:#525252;
+  text-align:center;
+  white-space:nowrap;
+}
+.sc-moq-th-tier {
+  text-align:left !important;
+  padding-left:14px !important;
+  width:18%;
+  color:var(--color-slate-700) !important;
+  font-size:11px !important;
+}
+.sc-moq-count-pill {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:20px; height:18px; padding:0 8px;
+  background:#e0e0e0; color:#161616;
+  border-radius:0;
+  font-size:12px; font-weight:400;
+  margin-left:4px; letter-spacing:.32px;
+}
+.sc-moq-th-num { width:12%; }
+.sc-moq-th-gold { color:#c2410c !important; }
+.sc-moq-req { color:#f59e0b; margin-left:3px; font-size:11px; }
+.sc-moq-th-act { width:36px; }
+.sc-moq-table th, .sc-moq-table td { padding-left:6px !important; padding-right:6px !important; }
+.sc-moq-th-tier, .sc-moq-td-tier { padding-left:14px !important; }
+.sc-moq-inp { padding:7px 6px; }
+
+.sc-moq-table tbody tr {
+  border-top:1px solid #e0e0e0;
+  transition:background .15s;
+}
+.sc-moq-table tbody tr.active { background:#edf5ff; }
+.sc-moq-table tbody tr:hover { background:#e8e8e8; }
+.sc-moq-table tbody tr.active:hover { background:#d0e2ff; }
+.sc-moq-table td {
+  padding:10px 10px;
+  vertical-align:middle;
+  text-align:center;
+}
+.sc-moq-td-tier { text-align:left !important; padding-left:18px !important; }
+.sc-moq-td-act { padding:6px 8px !important; }
+
+.sc-moq-radio {
+  display:inline-flex; align-items:center; gap:8px;
+  cursor:pointer; user-select:none;
+}
+.sc-moq-radio input[type="radio"] {
+  width:16px; height:16px;
+  accent-color:#0f62fe;
+  cursor:pointer;
+  margin:0;
+}
+.sc-moq-tier-label {
+  font-size:14px;
+  font-weight:600;
+  color:#161616;
+  letter-spacing:.16px;
+}
+.sc-moq-primary-badge {
+  background:#dbeafe;
+  color:#1d4ed8;
+  padding:2px 8px;
+  border-radius:10px;
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:.2px;
+}
+
+.sc-moq-inp {
+  width:100%;
+  padding:7px 10px;
+  border:1px solid transparent;
+  border-radius:6px;
+  background:transparent;
+  font-size:13px;
+  font-weight:600;
+  text-align:center;
+  color:var(--color-slate-800);
+  font-family:inherit;
+  outline:none;
+  transition:all .15s;
+}
+.sc-moq-inp:hover { background:#f8fafc; border-color:var(--color-slate-200); }
+.sc-moq-inp:focus { background:white; border-color:var(--color-brand-500); box-shadow:0 0 0 2px rgba(59,130,246,.15); }
+.sc-moq-inp-gold { color:#b45309; font-weight:600; }
+.sc-moq-inp-gold:focus { background:#fffbeb; border-color:#f59e0b; box-shadow:0 0 0 2px rgba(245,158,11,.15); }
+
+.sc-moq-add-btn {
+  margin-top:16px;
+  padding:10px 16px;
+  background:transparent;
+  border:1px solid #0f62fe;
+  border-radius:0;
+  color:#0f62fe;
+  font-size:14px;
+  font-weight:400;
+  cursor:pointer;
+  transition:background-color .15s;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  letter-spacing:.16px;
+}
+.sc-moq-add-btn:hover {
+  background:#edf5ff;
+  color:#0f62fe;
+}
+.sc-moq-add-icon { font-size:15px; font-weight:600; line-height:1; }
+
+/* ── Setup Data per MOQ ── */
+.sc-setup-moq-card { margin-top:16px; border:none; border-radius:0; overflow:hidden; box-shadow:none; background:#ffffff; }
+.sc-setup-moq-hdr { background:#f4f4f4; border-bottom:2px solid #e0e0e0; padding:10px 16px; display:flex; align-items:center; gap:8px; }
+.sc-setup-moq-icon { font-size:14px; }
+.sc-setup-moq-title { color:#161616; font-weight:600; font-size:14px; letter-spacing:.16px; }
+.sc-setup-moq-legend { font-size:12px; color:#525252; margin-left:auto; display:flex; align-items:center; gap:4px; letter-spacing:.32px; }
+.sc-legend-amber { display:inline-block; width:9px; height:9px; background:#fbbf24; border:1px solid #f59e0b; border-radius:2px; margin-right:3px; vertical-align:middle; }
+.sc-legend-white { display:inline-block; width:9px; height:9px; background:white; border:1px solid var(--color-slate-300); border-radius:2px; margin-right:3px; vertical-align:middle; }
+.sc-setup-moq-wrap { overflow-x:auto; background:white; }
+.sc-setup-moq-table { width:100%; border-collapse:collapse; }
+.sc-setup-moq-table thead tr { background:var(--color-slate-50); }
+.sc-smt-th-l { padding:5px 8px; text-align:left; font-size:10px; font-weight:600; color:var(--color-slate-600); border-bottom:1.5px solid var(--color-slate-200); white-space:nowrap; }
+.sc-smt-th-r { padding:5px 8px; text-align:right; font-size:10px; font-weight:600; color:#1d4ed8; background:var(--color-brand-50); border-bottom:1.5px solid #bfdbfe; min-width:80px; }
+.sc-smt-th-sub { font-size:9px; color:var(--color-slate-500); font-weight:500; margin-top:1px; }
+.sc-setup-moq-table tbody tr { border-bottom:1px solid var(--color-slate-100); }
+.sc-smt-row-moq { background:var(--color-brand-50); border-bottom:1px solid #bfdbfe !important; }
+.sc-smt-td-field { padding:5px 8px; font-size:11px; color:var(--color-slate-900); white-space:nowrap; }
+.sc-smt-td-db { padding:5px 8px; font-size:10px; color:var(--color-slate-500); white-space:nowrap; }
+.sc-smt-td-num { padding:5px 8px; text-align:right; font-size:12px; font-weight:600; }
+.sc-smt-td-moq { color:#1d4ed8; }
+.sc-smt-td-input { padding:3px 5px; text-align:right; }
+.sc-smt-td-uom { padding:5px 8px; font-size:10px; color:var(--color-slate-500); }
+.sc-smt-td-uom-mat { color:#059669; font-weight:600; }
+.sc-smt-td-uom-proc { color:#7c3aed; font-weight:600; }
+/* Borderless by default — matches the Mat/Ink/Proc table inputs. Border
+   returns on hover/focus so users can see what they're editing, and the
+   override variant (.sc-smt-inp-ovr) keeps its amber fill + border to
+   stay visually distinct as a user override. */
+.sc-smt-inp { width:68px; text-align:right; padding:3px 6px; border:1.5px solid transparent; border-radius:5px; font-size:11px; font-weight:400; background:transparent; outline:none; box-sizing:border-box; }
+.sc-smt-inp:hover { background:rgba(241,245,249,.6); }
+.sc-smt-inp:focus { border-color:var(--color-brand-500); background:white; }
+.sc-smt-inp-ovr { border-color:#f59e0b; background:var(--color-warning-50); font-weight:600; color:var(--color-warning-600); }
+.sc-smt-inp-ovr:hover { background:var(--color-warning-50); }
+/* Sprint AT — override cell wraps DecimalInput + a revert button.
+   Sprint 1.7c — moved `display: flex` from the <td> itself (which
+   broke the table column layout — Chromium ignores display:flex on td
+   in some configs and stacks cells vertically) onto an INNER wrapper
+   div. The td keeps its native table-cell behaviour so MOQ 1 / MOQ 2 /
+   MOQ 3 inputs land in their own columns horizontally, and the inner
+   wrapper still aligns the input + revert button on one line. */
+.sc-smt-td-ovr-cell {
+  padding: 3px 5px;
+  text-align: right;
+  vertical-align: middle;
+  /* width hint so each MOQ column gets equal share */
+  min-width: 80px;
+}
+.sc-smt-td-ovr-wrap {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  justify-content: flex-end;
+}
+.sc-smt-revert { width:18px; height:18px; flex-shrink:0; padding:0;
+  background:transparent; border:1px solid #d4d4d4; border-radius:3px;
+  color:#525252; font-size:11px; line-height:1; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center; }
+.sc-smt-revert:hover { background:#fef3c7; border-color:#f59e0b; color:#b45309; }
+
+/* Table */
+.sc-table-wrap { overflow-x:auto; }
+.sc-table { width:100%; border-collapse:collapse; font-size:14px; letter-spacing:.16px; }
+.sc-table th { background:#f4f4f4; color:#525252; font-weight:600; text-align:left; padding:8px 8px; border-bottom:2px solid #e0e0e0; white-space:nowrap; font-size:12px; letter-spacing:.32px; text-transform:uppercase; }
+.sc-table td { padding:6px 8px; border-bottom:1px solid #e0e0e0; vertical-align:middle; }
+.sc-table tbody tr:hover { background:#e8e8e8; }
+.sc-table .right { text-align:right; }
+.sc-table .center { text-align:center; }
+
+/* Row label cell (Materials: integrated badge+dropdown like COST V1.0) */
+.sc-row-label-cell { display:inline-flex; align-items:center; background:#f0f4f8; border-radius:6px; white-space:nowrap; letter-spacing:.2px; }
+.sc-row-label-cell.sc-row-label-empty { background:transparent; }
+.sc-row-type-sel {
+  font-size:10px; font-weight:600; background:transparent; border:none;
+  cursor:pointer; outline:none; padding:2px 0 2px 8px;
+  -webkit-appearance:none; appearance:none;
+}
+.sc-row-type-sel.sc-row-type-main { color:var(--color-brand-600); width:56px; }
+.sc-row-type-sel.sc-row-type-proc { color:#7c3aed; width:72px; }
+.sc-row-type-sel.sc-row-type-dim  { color:#d1d5db; font-weight:400; width:56px; }
+.sc-row-num { font-size:10px; font-weight:600; padding:2px 8px 2px 0; }
+.sc-row-num.sc-row-num-main { color:var(--color-brand-600); }
+.sc-row-num.sc-row-num-proc { color:#7c3aed; }
+.sc-row-num.sc-row-num-dim  { color:#d1d5db; }
+
+/* Layout-derived columns */
+.sc-col-derived { background:#f5f0ff !important; }
+/* ── Unified table cell typography (matches the .sc-td-result "RUN COST"
+      cell). Applies to body cells + inputs + selects across these tables:
+        · Materials    (sc-mat-table — Standard)
+        · Inks         (sc-ink-table — Standard)
+        · Processes    (sc-proc-table — Standard)
+        · Balancing    (pb-table — Standard only; Complex balances inline)
+        · Cost Breakdown (sc-bd-table — shared Standard + Complex)
+        · Complex sub-product tables (cc-det-tbl — Mat/Ink/Proc inline)
+      Header cells (th) keep their existing tiny-uppercase style. ── */
+.sc-mat-table td, .sc-ink-table td, .sc-proc-table td,
+.pb-table td, .sc-bd-table td,
+.cc-det-tbl td {
+  font-family: monospace;
+  font-size: 10px;
+}
+.sc-mat-table td input, .sc-mat-table td select,
+.sc-ink-table td input, .sc-ink-table td select,
+.sc-proc-table td input, .sc-proc-table td select,
+.pb-table td input, .pb-table td select,
+.sc-bd-table td input, .sc-bd-table td select,
+.cc-det-tbl td input, .cc-det-tbl td select {
+  font-family: monospace;
+  font-size: 10px;
+}
+
+/* Process Type + Workcenter are multi-word values (e.g. "Print Offset",
+   "WC-PRESS-04") that read poorly when centered. Override the default
+   .sc-select-bare center-alignment for proc-table only, in both Standard
+   and Complex. Materials' Y/N selects keep center alignment. */
+.sc-proc-table .sc-select-bare,
+.cc-det-tbl .sc-select-bare {
+  text-align: left !important;
+  text-align-last: left !important;
+  padding-left: 8px !important;
+}
+
+/* User directive — left-align EVERY cell (body + header) in the 6
+   calculator tables. Overrides the per-cell right/center text-align
+   that existed for numeric / badge columns. The inner inputs + selects
+   also have their alignment reset so pasted / typed values land at
+   the left edge, consistent with the surrounding display cells.
+   !important is intentional: individual rules like .sc-input-num
+   (text-align:right) would otherwise win by specificity. */
+.sc-mat-table td, .sc-mat-table th,
+.sc-ink-table td, .sc-ink-table th,
+.sc-proc-table td, .sc-proc-table th,
+.pb-table td,      .pb-table th,
+.sc-bd-table td,   .sc-bd-table th,
+.cc-det-tbl td,    .cc-det-tbl th {
+  text-align: left !important;
+}
+.sc-mat-table td input, .sc-mat-table td select,
+.sc-ink-table td input, .sc-ink-table td select,
+.sc-proc-table td input, .sc-proc-table td select,
+.pb-table td input, .pb-table td select,
+.sc-bd-table td input, .sc-bd-table td select,
+.cc-det-tbl td input, .cc-det-tbl td select {
+  text-align: left !important;
+  text-align-last: left !important;
+}
+
+.sc-td-derived { text-align:right; font-family:monospace; font-size:10px; color:#7c3aed; background:#faf5ff; }
+
+/* Result columns */
+.sc-col-result { background:#f0f7ff !important; }
+.sc-td-result { text-align:right; font-family:monospace; font-size:10px; color:var(--color-slate-600); }
+.sc-td-total { font-weight:600; color:var(--color-slate-900) !important; }
+.sc-td-idx { font-size:10px; color:var(--color-slate-400); font-weight:600; white-space:nowrap; }
+.sc-td-auto { font-size:10px; color:var(--color-slate-500); text-align:center; }
+.sc-row-warn { background:var(--color-warning-50); }
+
+/* Add row button */
+.sc-add-row { padding:8px 0; }
+/* Phase 9A.4 — .sc-btn-ghost replaced by .op-btn.op-btn-tertiary (tokens.css).
+   The add-row buttons in CalcProcesses/CalcMaterials/CalcInks now render
+   via the shared variant. No .sc-btn-ghost selector remains. */
+.sc-btn-sm { padding:4px 8px; border:1px solid #d1d5db; background:white; border-radius:6px; font-size:13px; cursor:pointer; color:var(--color-slate-500); }
+.sc-btn-sm:hover { background:var(--color-slate-100); }
+.sc-btn-del { background:none; border:none; color:var(--color-danger-500); font-size:16px; cursor:pointer; opacity:.5; }
+.sc-btn-del:hover { opacity:1; }
+.sc-btn-danger-sm { padding:4px 10px; border:1px solid var(--color-danger-300); background:var(--color-danger-50); color:var(--color-danger-500); border-radius:6px; font-size:13px; cursor:pointer; font-weight:600; }
+.sc-btn-del-circle { width:22px; height:22px; border-radius:50%; border:1px solid #fecaca; background:transparent; color:#fca5a5; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .15s; align-self:center; opacity:.7; }
+.sc-btn-del-circle:hover { background:var(--color-danger-500); color:#fff; border-color:var(--color-danger-500); opacity:1; }
+.sc-btn-del-circle.sc-btn-del-sm { width:18px; height:18px; font-size:11px; }
+/* Push delete buttons just outside the edge of their table row */
+.sc-table td:last-child .sc-btn-del-circle,
+.sc-table td:last-child .sc-btn-del-circle.sc-btn-del-sm {
+  margin-left:14px;
+  margin-right:-12px;
+}
+
+/* Pack/Ship totals */
+.sc-pack-total, .sc-ship-total { margin-top:10px; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:600; }
+.sc-pack-total { background:#f0fdf4; border:1px solid #86efac; color:#166534; }
+.sc-ship-total { background:var(--color-brand-50); border:1px solid #93c5fd; color:var(--color-brand-700); }
+
+/* Cost Breakdown */
+.sc-bd-table th { font-size:10px; }
+.sc-bd-table th.bd-mat { background:#dbeafe; color:var(--color-brand-700); }
+.sc-bd-table th.bd-ink { background:#cffafe; color:#0e7490; }
+.sc-bd-table th.bd-proc { background:#d1fae5; color:#047857; }
+.sc-bd-table th.bd-pack { background:#e0f2fe; color:#0369a1; }
+.sc-bd-table th.bd-sub { background:var(--color-warning-100); color:var(--color-warning-600); }
+.sc-bd-table th.bd-va { background:#cffafe; color:#0891b2; }
+.sc-bd-table th.bd-contr { background:#ede9fe; color:#7c3aed; }
+.sc-bd-table th.bd-gm { background:#dcfce7; color:#166534; }
+.sc-bd-active { background:var(--color-brand-50) !important; }
+.sc-bd-tier-badge { display:inline-block; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:600; background:var(--color-slate-100); color:var(--color-slate-500); }
+.sc-bd-tier-badge.active { background:var(--color-brand-700); color:white; }
+
+/* Detailed breakdown */
+.sc-bd-detail-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+.sc-bd-detail-group { }
+.sc-bd-detail-title { font-size:12px; font-weight:600; margin-bottom:6px; letter-spacing:.3px; }
+.sc-bd-detail-row { display:flex; justify-content:space-between; padding:3px 0; font-size:11px; border-bottom:1px solid var(--color-slate-100); }
+.sc-bd-detail-row span:first-child { color:var(--color-slate-500); }
+.sc-bd-detail-row span:last-child { font-family:monospace; font-weight:600; color:var(--color-slate-900); }
+.sc-bd-detail-total { border-top:2px solid var(--color-slate-200); border-bottom:none; font-weight:600; }
+.sc-bd-detail-total span:last-child { font-weight:600; }
+
+/* Summarize */
+.sc-sum-kpis { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; }
+.sc-sum-kpi { background:#ffffff; border-radius:0; padding:16px; border-left:4px solid; box-shadow:none; border-top:none; border-right:none; border-bottom:none; }
+.sc-sum-kpi-label { font-size:12px; font-weight:400; color:#525252; text-transform:uppercase; letter-spacing:.32px; }
+.sc-sum-kpi-val { font-size:20px; font-weight:300; color:#161616; margin:4px 0; font-family:'IBM Plex Mono', monospace; }
+.sc-sum-kpi-sub { font-size:10px; color:var(--color-slate-400); }
+
+.sc-sum-bar-row { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--color-slate-100); }
+.sc-sum-bar-label { width:160px; display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:600; color:#374151; flex-shrink:0; }
+.sc-sum-bar-track { flex:1; height:8px; background:var(--color-slate-100); border-radius:4px; overflow:hidden; }
+.sc-sum-bar-fill { height:100%; border-radius:4px; transition:width .3s; }
+.sc-sum-bar-val { width:90px; text-align:right; font-family:monospace; font-size:12px; font-weight:600; flex-shrink:0; }
+.sc-sum-bar-total { border-top:2px solid var(--color-slate-900); border-bottom:none; padding-top:10px; margin-top:4px; }
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .sc-content { padding-right:16px; }
+  .sc-summary-float { display:none; }
+  .sc-grid3 { grid-template-columns:repeat(2,1fr); }
+  .sc-grid4 { grid-template-columns:repeat(2,1fr); }
+  .sc-bd-detail-grid { grid-template-columns:repeat(2,1fr); }
+  .sc-sum-kpis { grid-template-columns:repeat(3,1fr); }
+  /* Span-2 no longer makes sense in a 2-col grid — collapse to 1. */
+  .sc-grid4 .sc-field-span2 { grid-column: auto; }
+}
+@media (max-width: 768px) {
+  .sc-grid3, .sc-grid4 { grid-template-columns:1fr; }
+  .sc-pack-grid { grid-template-columns:1fr; }
+  .sc-bd-detail-grid { grid-template-columns:1fr; }
+  .sc-sum-kpis { grid-template-columns:repeat(2,1fr); }
+}
+
+/* ─── CalcLayout ─── */
+/* Three columns: parameters (flex), Summary card (fixed), Suggestion
+ * card (fixed). On narrower viewports the two cards stack under the
+ * params card (see media query at the bottom of this section). */
+.cl-top-grid { display:grid; grid-template-columns:1fr 240px; gap:16px; align-items:start; }
+.cl-params { min-width:0; }
+/* Sprint 14n-5 — Layout Summary card upgraded to a Carbon Tile look:
+   solid border, subtle shadow, sticky on scroll so the engineer always
+   sees the derived values while editing fields below the fold. */
+.cl-summary {
+  background:#ffffff;
+  border:1px solid #e0e0e0;
+  border-radius:4px;
+  padding:14px 16px 12px;
+  box-shadow:0 1px 0 rgba(0,0,0,.04);
+  position:sticky;
+  top:16px;
+}
+.cl-sum-title {
+  font-size:11px;
+  font-weight:600;
+  color:#525252;
+  text-transform:uppercase;
+  letter-spacing:.32px;
+  padding-bottom:8px;
+  margin-bottom:6px;
+  border-bottom:1px solid #e0e0e0;
+}
+.cl-sum-row {
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  gap:12px;
+  padding:5px 0;
+  font-size:13px;
+  letter-spacing:.16px;
+  border-bottom:1px solid #f4f4f4;
+}
+.cl-sum-row:last-child { border-bottom:none; }
+.cl-sum-row span { color:#525252; flex:0 0 auto; }
+.cl-sum-row b {
+  color:#161616;
+  font-family:'IBM Plex Mono', monospace;
+  text-align:right;
+  word-break:break-word;
+  font-weight:600;
+}
+/* Mismatch sub-row — sits under the Plate Cyl row with a left rule
+   and a subtle warning tone, so the (≠ expected …) annotation reads
+   as a related fact rather than crammed inline. */
+.cl-sum-mismatch {
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  gap:12px;
+  padding:4px 0 6px 8px;
+  margin-bottom:4px;
+  font-size:11px;
+  border-left:2px solid #d97706;
+  background:linear-gradient(90deg, #fffbeb 0%, transparent 60%);
+}
+.cl-sum-mismatch .cl-sum-mismatch-label {
+  color:#92400e;
+  font-style:italic;
+  letter-spacing:.16px;
+}
+.cl-sum-mismatch b {
+  color:#161616;
+  font-family:'IBM Plex Mono', monospace;
+  font-weight:600;
+}
+.cl-sum-ok {
+  font-size:11px;
+  color:#15803d;
+  font-style:italic;
+  margin-left:4px;
+}
+
+/* ── Advanced Layout block — collapsible tuning section ── */
+.cl-adv {
+  margin-top:10px;
+  border-top:1px dashed #e2e8f0;
+  padding-top:8px;
+}
+.cl-adv-toggle {
+  background:transparent;
+  border:none;
+  padding:6px 4px;
+  font-size:12px; font-weight:600;
+  color:#475569;
+  cursor:pointer;
+  display:inline-flex; align-items:center;
+}
+.cl-adv-toggle span { color:#94a3b8; margin-right:2px; }
+.cl-adv-toggle:hover { color:#0f172a; }
+.cl-adv-open .cl-adv-toggle { color:#0c4a6e; }
+.cl-adv-dot {
+  display:inline-block;
+  width:8px; height:8px; border-radius:50%;
+  background:#f59e0b;
+  margin-left:6px;
+}
+.cl-adv-body {
+  display:flex; flex-direction:column; gap:12px;
+  padding:10px 14px;
+  background:linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  border:1px solid #e2e8f0;
+  border-radius:6px;
+  margin-top:6px;
+}
+.cl-adv-group-title {
+  font-size:10px; font-weight:700;
+  color:#64748b;
+  text-transform:uppercase; letter-spacing:.3px;
+  margin-bottom:6px;
+  padding-bottom:4px;
+  border-bottom:1px solid #e2e8f0;
+}
+.cl-adv-body input[type="checkbox"] {
+  margin-right:4px;
+  vertical-align:middle;
+}
+
+/* ── Press metadata pill — wraps the optional active-profile chip
+   surfaced for legacy quotes that already carry a machine_profile_id.
+   The Sprint 14e dropdowns + Sprint 14n Manage button + Sprint 14n-2
+   sync-button-in-body have all been removed; only the chip remains. */
+.cl-press-picker {
+  display:flex; align-items:center; gap:12px;
+  padding:10px 16px;
+  background:linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%);
+  border-bottom:1px solid #bae6fd;
+  font-size:12px;
+  flex-wrap:wrap;
+}
+.cl-press-meta {
+  font-size:11px; color:#64748b;
+  font-style:italic;
+  flex:1;
+}
+
+/* Design Tools sync buttons (Sprint 14e) — replaced the legacy press
+   dropdowns. Each button opens a search/filter picker over saved
+   designs in the Design Tools library. Two-line label so the
+   bilingual VN tag fits inline with the EN action verb. */
+.cl-design-sync-btn {
+  display:inline-flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:1px;
+  padding:6px 14px;
+  border:1px solid #c4b5fd;
+  background:#faf5ff;
+  color:#5b21b6;
+  font-size:12px; font-weight:600;
+  border-radius:6px;
+  cursor:pointer;
+  font-family:inherit;
+  text-align:left;
+  letter-spacing:.16px;
+  transition:background 120ms, border-color 120ms;
+}
+.cl-design-sync-btn:hover { background:#ede9fe; border-color:#a78bfa; }
+.cl-design-sync-vi {
+  font-size:10px;
+  font-weight:400;
+  font-style:italic;
+  color:#6b21a8;
+  letter-spacing:0;
+}
+
+/* Sprint 14n-2 / 14n-5 — sync buttons in the Design Layout headbar.
+   Carbon-style compact ghost buttons: single-line EN action verb, VN
+   translation moved to the tooltip so the headbar can hold both
+   actions + the validation pill on a 44 px row without wrapping. */
+.cl-header-sync-actions {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  margin-left:auto;
+}
+.cl-design-sync-btn--header {
+  flex-direction:row;
+  align-items:center;
+  gap:4px;
+  padding:4px 10px;
+  font-size:12px;
+  line-height:1.2;
+  white-space:nowrap;
+  letter-spacing:.16px;
+}
+/* Validation pill keeps a small left-gap when buttons precede it. */
+.cl-header-sync-actions + .cl-validation-pill { margin-left:8px; }
+/* Complex sub-product code chip on the same header. */
+.cl-sp-code {
+  font-size:11px;
+  color:var(--text-secondary, #525252);
+  letter-spacing:.16px;
+}
+
+@media (max-width: 720px) {
+  /* On narrow screens compress padding so both buttons + the pill
+     keep fitting on one line. */
+  .cl-header-sync-actions { gap:4px; }
+  .cl-design-sync-btn--header { padding:4px 8px; font-size:11px; }
+}
+
+/* Design Sync Picker — search box + press-type checkboxes + table. */
+.dsp-toolbar {
+  display:flex; flex-wrap:wrap; gap:12px;
+  align-items:center;
+  padding:10px 14px;
+  background:#f4f4f4;
+  border-bottom:1px solid #e0e0e0;
+}
+.dsp-search {
+  flex:1; min-width:240px;
+  padding:6px 10px;
+  font-size:13px;
+  border:1px solid #c6c6c6; border-radius:2px;
+  font-family:inherit;
+}
+.dsp-search:focus { outline:none; border-color:#0f62fe; box-shadow:0 0 0 1px #0f62fe; }
+.dsp-presses {
+  display:inline-flex; flex-wrap:wrap; gap:4px;
+  align-items:center;
+}
+.dsp-press {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:3px 9px;
+  font-size:11px;
+  border:1px solid #c6c6c6; border-radius:14px;
+  background:#ffffff; color:#525252;
+  cursor:pointer; user-select:none;
+  transition:background 100ms, border-color 100ms, color 100ms;
+}
+.dsp-press input { margin:0; cursor:pointer; }
+.dsp-press.on { background:#edf5ff; border-color:#0f62fe; color:#0043ce; font-weight:600; }
+.dsp-press-soon { opacity:0.5; cursor:not-allowed; }
+.dsp-press-soon input { cursor:not-allowed; }
+.dsp-press-all {
+  font-family:inherit; font-size:11px;
+  padding:3px 10px;
+  border:1px solid #c6c6c6;
+  background:#ffffff; color:#161616;
+  border-radius:2px; cursor:pointer;
+}
+.dsp-press-all:hover { background:#f4f4f4; border-color:#525252; }
+
+.dsp-table { width:100%; border-collapse:collapse; font-size:12px; }
+.dsp-table thead th {
+  position:sticky; top:0; z-index:1;
+  background:#525252; color:#fff;
+  font-size:10px; font-weight:600;
+  letter-spacing:0.4px; text-transform:uppercase;
+  text-align:left; padding:8px 10px;
+  white-space:nowrap;
+}
+.dsp-table tbody td {
+  padding:7px 10px;
+  border-bottom:1px solid #e8e8e8;
+  white-space:nowrap;
+  vertical-align:middle;
+}
+.dsp-table tbody tr:nth-child(even) td { background:#fafafa; }
+.dsp-table tbody tr:hover td { background:#e8edff; }
+.dsp-num { text-align:right; font-variant-numeric:tabular-nums; }
+
+.dsp-apply-btn {
+  padding:3px 10px;
+  background:#0f62fe; color:#fff;
+  border:none; border-radius:2px;
+  font-size:11px; font-weight:600;
+  cursor:pointer; font-family:inherit;
+}
+.dsp-apply-btn:hover { background:#0043ce; }
+
+.dsp-empty {
+  padding:32px; text-align:center;
+  color:#6f6f6f; font-style:italic;
+  font-size:12px;
+}
+.dsp-err { color:#a2191f; font-style:normal; }
+
+.cl-sug-reuse   { color:#15803d; font-size:10px; font-weight:700; margin-left:4px; }
+.cl-sug-newtool { color:#ef4444; font-size:10px; font-weight:700; margin-left:4px; }
+.cl-sug-partial { color:#d97706; font-size:10px; font-weight:700; margin-left:4px; }
+.cl-sug-order-hint {
+  margin-top:4px;
+  padding:6px 8px;
+  background:#fef3c7;
+  border-left:3px solid #d97706;
+  border-radius:4px;
+  font-size:10px; color:#92400e;
+}
+.cl-sug-order-hint b { color:#78350f; }
+
+/* ── Legend button + modal (bilingual EN-VN) ────────────────── */
+.cl-sug-legend-btn {
+  display:block; width:100%;
+  margin-top:8px;
+  padding:5px 10px;
+  background:transparent;
+  border:1px dashed #bfdbfe;
+  color:#2563eb;
+  font-size:10px; font-weight:600;
+  border-radius:4px; cursor:pointer;
+  letter-spacing:.2px;
+}
+.cl-sug-legend-btn:hover { background:#eff6ff; border-style:solid; }
+.cl-sug-legend-btn span { margin-right:4px; font-size:11px; }
+
+.cl-legend {
+  background:#fff;
+  border-radius:10px;
+  width:min(760px, 94vw);
+  max-height:85vh;
+  display:flex; flex-direction:column;
+  box-shadow:0 12px 32px rgba(0, 0, 0, .22);
+  overflow:hidden;
+}
+.cl-legend .cl-sug-modal-head h3 { font-size:14px; }
+.cl-legend-body {
+  padding:16px 24px 20px;
+  overflow-y:auto;
+  font-size:12px; line-height:1.5;
+  color:#334155;
+}
+
+.cl-legend-section {
+  padding:14px 0;
+  border-bottom:1px dashed #e2e8f0;
+}
+.cl-legend-section:last-child { border-bottom:none; }
+.cl-legend-sec-title {
+  font-size:12px; font-weight:700;
+  color:#0f172a;
+  display:flex; flex-direction:column; gap:2px;
+  margin-bottom:10px;
+}
+.cl-legend-sec-title .cl-legend-en { color:#1d4ed8; }
+.cl-legend-sec-title .cl-legend-vi { color:#64748b; font-weight:500; font-size:11px; }
+.cl-legend-sec-body { padding-left:4px; }
+
+/* Bilingual bullet — EN on top (canonical), VN under (operator-friendly) */
+.cl-legend-bi {
+  padding:4px 0 6px;
+  border-left:2px solid #bfdbfe;
+  padding-left:10px;
+  margin-bottom:6px;
+}
+.cl-legend-bi-en { color:#0f172a; font-size:12px; }
+.cl-legend-bi-vi { color:#64748b; font-size:11px; font-style:italic; margin-top:2px; }
+
+/* Inline formula block — monospace so the math aligns */
+.cl-legend-formula {
+  background:#f8fafc;
+  border:1px solid #e2e8f0;
+  border-radius:6px;
+  padding:10px 14px;
+  font-family:ui-monospace, SFMono-Regular, monospace;
+  font-size:11px; color:#0f172a;
+  margin:8px 0;
+  display:flex; flex-direction:column; gap:3px;
+}
+.cl-legend-formula span { line-height:1.6; }
+.cl-legend-formula span b { color:#1d4ed8; }
+
+.cl-legend-tie {
+  font-size:11px; margin-top:8px;
+  padding:8px 12px;
+  background:#fef3c7;
+  border-left:3px solid #d97706;
+  border-radius:4px;
+}
+.cl-legend-tie div { margin:2px 0; }
+.cl-legend-tie b { color:#b45309; }
+
+.cl-legend-why {
+  background:linear-gradient(180deg, #f0f9ff 0%, #fff 100%);
+  border:1px solid #bae6fd;
+  border-radius:6px;
+  padding:10px 14px;
+  font-size:12px;
+  display:grid; grid-template-columns:1fr 1fr; gap:4px 16px;
+}
+.cl-legend-why div { padding:3px 0; color:#0f172a; }
+.cl-legend-why b { color:#0c4a6e; }
+.cl-legend-hint { font-size:10px; color:#64748b; }
+
+.cl-legend-footer {
+  margin-top:12px;
+  padding:10px 12px;
+  background:#f0fdf4;
+  border:1px solid #bbf7d0;
+  border-radius:6px;
+  font-size:11px;
+}
+
+@media (max-width: 680px) {
+  .cl-legend-why { grid-template-columns:1fr; }
+}
+
+/* Reason-code table inside Tracker Legend */
+.cl-legend-codes { margin: 8px 0 12px; }
+.cl-legend-codes-title {
+  font-size:11px; font-weight:700;
+  color:#0c4a6e;
+  text-transform:uppercase; letter-spacing:.3px;
+  margin-bottom:4px;
+}
+.cl-legend-codes table {
+  width:100%; border-collapse:collapse;
+  background:#f8fafc;
+  border:1px solid #e2e8f0;
+  border-radius:6px; overflow:hidden;
+  font-size:11px;
+}
+.cl-legend-codes td {
+  padding:4px 10px;
+  border-bottom:1px solid #e2e8f0;
+  vertical-align:top;
+}
+.cl-legend-codes tr:last-child td { border-bottom:none; }
+.cl-legend-code {
+  font-family:ui-monospace, SFMono-Regular, monospace;
+  font-weight:700; color:#2563eb;
+  width:48px; text-align:center;
+  background:#eff6ff;
+}
+
+/* ── Machine Profile Modal (Press Library CRUD) ── */
+.mp-modal-scrim {
+  position:fixed; inset:0;
+  background:rgba(15, 23, 42, .45);
+  z-index:210;
+  display:flex; align-items:center; justify-content:center;
+  animation:mpFade .15s ease;
+}
+.mp-modal {
+  background:#fff;
+  border-radius:10px;
+  width:min(920px, 94vw);
+  max-height:84vh;
+  display:flex; flex-direction:column;
+  box-shadow:0 12px 32px rgba(0, 0, 0, .22);
+  overflow:hidden;
+}
+@keyframes mpFade { from { opacity:0; } to { opacity:1; } }
+.mp-modal-head {
+  display:flex; align-items:center; gap:12px;
+  padding:14px 20px;
+  background:linear-gradient(180deg, #f0f9ff 0%, #fff 100%);
+  border-bottom:1px solid var(--color-gray-200);
+}
+.mp-modal-head h3 {
+  margin:0; font-size:14px; font-weight:700; color:#0f172a;
+  flex:1;
+}
+.mp-close {
+  width:28px; height:28px;
+  border:none; background:transparent;
+  font-size:22px; color:#64748b;
+  cursor:pointer; border-radius:4px;
+}
+.mp-close:hover { background:#f1f5f9; color:#0f172a; }
+
+.mp-list-wrap { flex:1; overflow:auto; padding:0 0 12px; }
+.mp-table { width:100%; border-collapse:collapse; font-size:12px; }
+.mp-table thead th {
+  position:sticky; top:0;
+  background:#f8fafc;
+  padding:8px 12px;
+  text-align:left;
+  font-size:10px; font-weight:700;
+  color:#475569;
+  text-transform:uppercase; letter-spacing:.3px;
+  border-bottom:2px solid var(--color-gray-200);
+}
+.mp-table td {
+  padding:8px 12px;
+  border-bottom:1px solid var(--color-gray-200);
+  vertical-align:middle;
+}
+.mp-table tbody tr:hover td { background:#f8fafc; }
+.mp-mono { font-family:ui-monospace, SFMono-Regular, monospace; font-size:11px; color:#525252; }
+.mp-type {
+  font-size:10px; font-weight:700;
+  padding:2px 8px; border-radius:10px;
+  letter-spacing:.3px; text-transform:uppercase;
+}
+.mp-type-rotary { background:#eff6ff; color:#2563eb; }
+.mp-type-flat   { background:#fef3c7; color:#b45309; }
+.mp-dies { font-family:ui-monospace, SFMono-Regular, monospace; font-size:10px; color:#475569; }
+.mp-actions { white-space:nowrap; }
+.mp-actions button {
+  background:none; border:none;
+  padding:4px 8px; margin:0 2px;
+  cursor:pointer; color:#475569;
+  font-size:14px; border-radius:4px;
+}
+.mp-actions button:hover { background:#eff6ff; color:#2563eb; }
+.mp-actions .mp-del { color:#dc2626; }
+.mp-actions .mp-del:hover { background:#fef2f2; }
+
+.mp-empty { padding:30px; text-align:center; color:#94a3b8; font-size:12px; }
+.mp-add-bar { padding:12px 20px; border-top:1px solid var(--color-gray-200); background:#f8fafc; }
+.mp-btn {
+  padding:6px 14px;
+  border:1px solid var(--color-gray-300);
+  background:#fff; color:#334155;
+  font-size:12px; font-weight:600;
+  border-radius:6px; cursor:pointer;
+}
+.mp-btn:hover { background:#f8fafc; }
+.mp-btn-primary { background:#2563eb; color:#fff; border-color:#2563eb; }
+.mp-btn-primary:hover { background:#1d4ed8; }
+
+.mp-form { padding:16px 20px; overflow:auto; }
+.mp-grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:10px 16px; }
+.mp-form label, .mp-wide {
+  display:flex; flex-direction:column; gap:3px;
+  font-size:11px; font-weight:600; color:#475569;
+}
+.mp-form label span, .mp-wide > span { font-weight:700; color:#0f172a; }
+.mp-form input, .mp-form select, .mp-form textarea {
+  padding:6px 10px;
+  border:1px solid var(--color-gray-300);
+  border-radius:6px;
+  font-size:12px; font-family:inherit;
+  background:#fff; outline:none;
+  width:100%; box-sizing:border-box;
+}
+.mp-form input:focus, .mp-form select:focus, .mp-form textarea:focus {
+  border-color:#2563eb;
+  box-shadow:0 0 0 2px #2563eb33;
+}
+.mp-form input:disabled { background:#f1f5f9; color:#94a3b8; }
+.mp-wide { grid-column:1 / -1; margin-top:10px; }
+.mp-form-actions {
+  display:flex; justify-content:flex-end; gap:10px;
+  margin-top:16px;
+  padding-top:12px;
+  border-top:1px solid var(--color-gray-200);
+}
+
+/* ── CylinderList — row-based inventory editor ────────────── */
+.mp-cyl-list {
+  border:1px solid var(--color-gray-200);
+  border-radius:8px;
+  padding:12px;
+  background:#fafafa;
+  margin-top:10px;
+}
+.mp-cyl-head {
+  display:flex; justify-content:space-between; align-items:center;
+  font-weight:700; font-size:12px; color:#0f172a;
+  margin-bottom:6px;
+}
+.mp-cyl-count {
+  font-weight:600; font-size:11px;
+  color:#64748b;
+  background:#fff;
+  padding:2px 8px; border-radius:10px;
+  border:1px solid var(--color-gray-200);
+}
+.mp-cyl-help {
+  font-size:10px; color:#64748b;
+  font-style:italic;
+  margin-bottom:8px;
+}
+.mp-cyl-table {
+  width:100%; border-collapse:collapse;
+  background:#fff;
+  border-radius:6px;
+  overflow:hidden;
+  border:1px solid var(--color-gray-200);
+  font-size:12px;
+  margin-bottom:8px;
+}
+.mp-cyl-table th {
+  background:#f1f5f9;
+  padding:5px 10px;
+  text-align:left;
+  font-size:10px; font-weight:700;
+  color:#475569;
+  text-transform:uppercase; letter-spacing:.3px;
+  border-bottom:1px solid var(--color-gray-200);
+}
+.mp-cyl-table td {
+  padding:4px 10px;
+  border-bottom:1px solid var(--color-gray-200);
+  vertical-align:middle;
+}
+.mp-cyl-table tr:last-child td { border-bottom:none; }
+.mp-cyl-table tbody tr:hover td { background:#f8fafc; }
+.mp-cyl-table .mp-cyl-qty {
+  width:70px;
+  padding:4px 8px;
+  font-size:12px;
+  border:1px solid transparent;
+  background:transparent;
+}
+.mp-cyl-table .mp-cyl-qty:hover,
+.mp-cyl-table .mp-cyl-qty:focus {
+  background:#fff;
+  border-color:var(--color-gray-300);
+}
+
+.mp-cyl-add {
+  display:flex; align-items:center; gap:6px;
+  padding:8px 10px;
+  background:#fff;
+  border:1px dashed #bae6fd;
+  border-radius:6px;
+}
+.mp-cyl-add .mp-cyl-tooth { width:90px; }
+.mp-cyl-add .mp-cyl-qty { width:70px; }
+.mp-cyl-x {
+  font-weight:700; color:#64748b;
+  padding:0 4px;
+}
+.mp-cyl-add input[type="number"] {
+  padding:6px 10px;
+  border:1px solid var(--color-gray-300);
+  border-radius:4px;
+  font-size:12px;
+  font-family:ui-monospace, SFMono-Regular, monospace;
+  text-align:right;
+  outline:none;
+}
+.mp-cyl-add input[type="number"]:focus {
+  border-color:#2563eb;
+  box-shadow:0 0 0 2px #2563eb33;
+}
+.mp-cyl-add-btn {
+  margin-left:auto;
+  padding:6px 14px !important;
+}
+
+/* Layout validation pill + list — surfaces errors/warnings from
+ * layoutValidation.js right in the card header so operators see
+ * issues without needing to open a modal or scroll.
+ */
+.cl-validation-pill { display:inline-flex; gap:6px; align-items:center; font-size:11px; font-weight:700; }
+.cl-vp-err  { background:#fef2f2; color:#ef4444; padding:2px 8px; border-radius:10px; letter-spacing:.2px; }
+.cl-vp-warn { background:#fef3c7; color:#b45309; padding:2px 8px; border-radius:10px; letter-spacing:.2px; }
+.cl-validation-list {
+  list-style:none; margin:0; padding:8px 16px;
+  background:#fffbeb; border-bottom:1px solid #fde68a;
+  font-size:12px;
+}
+.cl-validation-list li { padding:3px 0; color:#334155; line-height:1.4; }
+.cl-validation-list li b { display:inline-block; width:18px; }
+.cl-vl-err  b { color:#ef4444; }
+.cl-vl-warn b { color:#d97706; }
+.cl-vl-field { font-family:ui-monospace, SFMono-Regular, monospace; color:#2563eb; font-weight:600; }
+
+/* Layout Suggestion card — mirrors the Summary look, overlaid with
+ * brand-blue accents so operators can immediately tell "this is
+ * OPTIMIZER output, not derived state".
+ */
+.cl-suggestion {
+  background:linear-gradient(180deg, #eff6ff 0%, #f4f9ff 100%);
+  border:1px solid #bfdbfe;
+  border-radius:6px;
+  padding:16px;
+}
+.cl-suggestion .cl-sum-title { color:#1d4ed8; }
+.cl-suggestion .cl-sum-row   { border-bottom-color:#dbeafe; }
+.cl-suggestion .cl-sum-row b { color:#0f172a; }
+.cl-sug-empty {
+  font-size:12px; color:#64748b; font-style:italic;
+  padding:12px 0;
+}
+.cl-sug-empty b { color:#0f172a; font-style:normal; font-weight:600; }
+.cl-sug-offcut b { font-weight:700; }
+
+/* MD / TD quick-reference card — sits under Summary + Suggestion.
+ * Bilingual (EN rows + VI italic grey). Full width, two columns for
+ * MD and TD, with a monospace ASCII diagram. */
+.cl-mdtd-card {
+  margin-top: 16px;
+  background: linear-gradient(180deg, #fefce8 0%, #fffbeb 100%);
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 14px 18px;
+  grid-column: 1 / -1;
+}
+.cl-mdtd-head {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: #78350f;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #fcd34d;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+/* Collapsible variant (Sprint 13b). When closed, drop the bottom border
+   + margin so the header is a clean single-row chip; when open, the
+   dashed divider + 10px gap separate it from the body. */
+.cl-mdtd-card.is-collapsed .cl-mdtd-head {
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-bottom: none;
+}
+.cl-mdtd-head-btn {
+  /* Strip default <button> chrome so the toggle blends with the old
+     div-based header. Keyboard + screen-reader still see a button. */
+  width: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0 0 8px 0;
+  margin: 0 0 10px 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  border-bottom: 1px dashed #fcd34d;
+}
+.cl-mdtd-card.is-collapsed .cl-mdtd-head-btn {
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-bottom: none;
+}
+.cl-mdtd-head-btn:hover .cl-mdtd-icon {
+  transform: scale(1.12);
+  transition: transform 150ms ease-out;
+}
+.cl-mdtd-head-btn:focus-visible {
+  outline: 2px solid #0f62fe;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.cl-mdtd-chevron {
+  margin-left: auto;
+  font-size: 12px;
+  color: #a16207;
+  transition: transform 150ms ease-out;
+}
+.cl-mdtd-icon { font-size: 18px; display: inline-block; transition: transform 150ms ease-out; }
+.cl-mdtd-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.cl-mdtd-col { font-size: 12px; color: #334155; line-height: 1.55; }
+.cl-mdtd-axis {
+  display: inline-block;
+  background: #1e40af;
+  color: #fff;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.cl-mdtd-en { margin-bottom: 6px; }
+.cl-mdtd-en b { color: #0f172a; }
+.cl-mdtd-col .cl-bi-vi { font-size: 12px; margin-bottom: 8px; }
+.cl-mdtd-fields {
+  background: #fff7ed;
+  border-left: 3px solid #d97706;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #78350f;
+}
+.cl-mdtd-fields code {
+  background: transparent;
+  color: #9a3412;
+  font-weight: 600;
+  margin: 0 2px;
+}
+.cl-mdtd-label { font-weight: 700; margin-right: 6px; color: #92400e; }
+.cl-mdtd-viz-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+.cl-mdtd-viz-col { display: flex; flex-direction: column; min-width: 0; }
+.cl-mdtd-viz-cap {
+  font-size: 11px;
+  font-weight: 700;
+  color: #92400e;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  margin-bottom: 4px;
+}
+.cl-mdtd-viz {
+  margin: 0;
+  padding: 10px 14px;
+  background: #fff;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: #475569;
+  line-height: 1.4;
+  overflow-x: auto;
+  white-space: pre;
+  flex: 1;
+}
+@media (max-width: 900px) {
+  .cl-mdtd-viz-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 820px) {
+  .cl-mdtd-grid { grid-template-columns: 1fr; }
+}
+
+.cl-sug-actions {
+  display:flex; gap:6px; margin-top:10px;
+}
+.cl-sug-apply, .cl-sug-more {
+  flex:1; padding:6px 10px;
+  font-size:11px; font-weight:700;
+  border-radius:4px; cursor:pointer;
+  border:1px solid transparent;
+}
+.cl-sug-apply { background:#2563eb; color:#fff; }
+.cl-sug-apply:hover:not(:disabled) { background:#1d4ed8; }
+.cl-sug-apply:disabled { background:#cbd5e1; cursor:not-allowed; }
+.cl-sug-more  { background:#fff; color:#2563eb; border-color:#bfdbfe; }
+.cl-sug-more:hover:not(:disabled) { background:#dbeafe; }
+.cl-sug-more:disabled { opacity:.5; cursor:not-allowed; }
+
+/* Options modal (top-5 table) */
+.cl-sug-modal-scrim {
+  position:fixed; inset:0;
+  background:rgba(15, 23, 42, .40);
+  z-index:200;
+  display:flex; align-items:center; justify-content:center;
+  animation:clSugFade .15s ease;
+}
+.cl-sug-modal {
+  background:#fff;
+  border-radius:10px;
+  width:min(880px, 94vw);
+  max-height:80vh;
+  overflow:hidden;
+  display:flex; flex-direction:column;
+  box-shadow:0 12px 32px rgba(0, 0, 0, .22);
+}
+@keyframes clSugFade { from { opacity:0; } to { opacity:1; } }
+.cl-sug-modal-head {
+  display:flex; align-items:center;
+  padding:14px 20px;
+  border-bottom:1px solid var(--color-gray-200);
+  background:linear-gradient(180deg, #eff6ff 0%, #fff 100%);
+}
+.cl-sug-modal-head h3 {
+  margin:0; font-size:14px; font-weight:700; color:#0f172a;
+  flex:1;
+}
+.cl-sug-close {
+  width:28px; height:28px;
+  border:none; background:transparent;
+  font-size:22px; color:#64748b;
+  cursor:pointer; border-radius:4px;
+}
+.cl-sug-close:hover { background:#f1f5f9; color:#0f172a; }
+.cl-sug-table {
+  width:100%; border-collapse:collapse;
+  font-size:12px;
+}
+.cl-sug-table thead th {
+  background:#f8fafc;
+  font-size:10px; font-weight:700;
+  color:#475569;
+  text-transform:uppercase; letter-spacing:.3px;
+  padding:8px 10px; text-align:left;
+  border-bottom:2px solid var(--color-gray-200);
+  position:sticky; top:0;
+}
+.cl-sug-table td {
+  padding:8px 10px;
+  border-bottom:1px solid var(--color-gray-200);
+}
+.cl-sug-table tbody tr:hover td { background:#f8fafc; }
+.cl-sug-table tr.cl-sug-best td { background:#eff6ff; font-weight:600; }
+.cl-sug-table tr.cl-sug-best:hover td { background:#dbeafe; }
+.cl-sug-table .cl-sug-apply {
+  padding:4px 10px; font-size:10px;
+}
+
+.cl-upload-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;
+  /* Grow to fill remaining tab height so the drawings claim the space
+     below the params card instead of leaving whitespace. */
+  flex:1; min-height:360px; align-items:stretch;
+}
+.cl-upload-zone { border:2px dashed #c6c6c6; border-radius:0; background:#ffffff; overflow:hidden; transition:border-color .15s; outline:none; }
+.cl-upload-zone:focus, .cl-upload-zone:hover { border-color:#0f62fe; }
+.cl-upload-label { padding:8px 14px; font-size:12px; font-weight:600; display:flex; align-items:baseline; gap:6px; min-width:0; }
+.cl-upload-filename { color:var(--color-slate-500); font-weight:500; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; }
+.cl-upload-empty { padding:20px; text-align:center; cursor:pointer; }
+.cl-upload-icon { font-size:28px; margin-bottom:6px; opacity:.5; }
+.cl-upload-text { font-size:12px; color:var(--color-slate-500); }
+.cl-upload-hint { font-size:10px; color:var(--color-slate-400); margin-top:4px; }
+.cl-preview-area { position:relative; padding:8px; text-align:center; }
+.cl-preview-img { max-width:100%; max-height:300px; border-radius:8px; border:1px solid var(--color-slate-200); }
+.cl-preview-pdf { padding:30px; font-size:14px; color:var(--color-slate-500); background:var(--color-slate-50); border-radius:8px; }
+.cl-preview-pdf-frame { width:100%; height:460px; border:1px solid var(--color-slate-200); border-radius:8px; background:var(--color-slate-50); display:block; }
+.cl-preview-clear { position:absolute; top:12px; right:12px; padding:4px 10px; border:1px solid var(--color-danger-300); background:var(--color-danger-50); color:var(--color-danger-500); border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; }
+.cl-preview-clear:hover { background:#fee2e2; }
+
+@media (max-width: 1180px) {
+  /* Fold the two narrow cards into a single row under params. */
+  .cl-top-grid { grid-template-columns: 1fr; }
+  .cl-summary, .cl-suggestion { max-width: none; }
+}
+@media (max-width: 900px) {
+  .cl-upload-grid { grid-template-columns:1fr; }
+}
+
+/* ─── Responsive tab bar (Carbon pattern) ───
+   3-tier breakpoints:
+   • ≥ 1400 px — full labels, comfortable padding (default above)
+   • 1100-1400 px — tighter padding + gap so 9 tabs fit most laptops
+   • < 1100 px — icon-only mode (label hidden); buttons show label
+     via native `title` tooltip on hover */
+@media (max-width: 1399px) {
+  .sc-subtab-btn { padding:8px 12px; font-size:13px; }
+}
+@media (max-width: 1099px) {
+  .sc-subtab-btn { padding:8px 10px; gap:0; }
+  .sc-subtab-label { display:none; }
+  .sc-subtab-icon { font-size:16px; }
+}
+
+/* ─── Tablet & Mobile (general) ───
+   Previously below 768px the tabs, toolbar and card headers would
+   overflow horizontally and the content padding stayed at 16px which
+   wasted a lot of screen real estate on a phone. */
+@media (max-width: 768px) {
+  .sc-content { padding:10px; }
+  .sc-subtab-bar { padding:4px 8px; gap:6px; }
+  .sc-subtab-btn { padding:6px 9px; font-size:11px; }
+  .sc-toolbar { gap:4px; }
+  .sc-btn { padding:5px 10px; font-size:11px; }
+  /* Totals row can't fit next to the title on mobile — push to its own line */
+  .sc-card-header { flex-wrap:wrap; row-gap:4px; }
+  .sc-header-totals { width:100%; flex-wrap:wrap; gap:6px 10px; }
+}
+
+@media (max-width: 480px) {
+  .sc { font-size:12px; }
+  .sc-content { padding:6px; }
+  .sc-card-body { padding:10px 8px; }
+  .sc-subtab-btn { padding:4px 7px; }
+  /* Let wide tables scroll edge-to-edge instead of being clipped */
+  .sc-table-wrap { margin:0 -6px; padding:0 6px; }
+  .sc-grid2 { gap:6px 10px; }
+  .sc-summary-float { display:none; }
+}
+
+/* ─── Round 10: Sticky first column for wide calc tables ─────────────
+   Materials/Inks/Processes tables can exceed 20 columns. Horizontal
+   scroll is fine for numeric cells but the row-index / code column
+   needs to stay visible so the user doesn't lose which row they're
+   editing. `left: 0` pins inside the scroll container. z-index > 1 so
+   the sticky cells paint on top of non-sticky cells during scroll. */
+.sc-mat-table thead th:first-child,
+.sc-mat-table tbody td:first-child,
+.sc-ink-table thead th:first-child,
+.sc-ink-table tbody td:first-child,
+.sc-proc-table thead th:first-child,
+.sc-proc-table tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #ffffff;
+  /* Subtle right-edge shadow so users perceive the column as "pinned"
+     when content scrolls underneath. */
+  box-shadow: 2px 0 0 0 #e0e0e0;
+}
+.sc-mat-table thead th:first-child,
+.sc-ink-table thead th:first-child,
+.sc-proc-table thead th:first-child {
+  background: #f4f4f4;
+  z-index: 3;
+}
+/* On row hover, keep the sticky cell's background consistent with the
+   rest of the row so it doesn't "escape" the hover color. */
+.sc-mat-table tbody tr:hover td:first-child,
+.sc-ink-table tbody tr:hover td:first-child,
+.sc-proc-table tbody tr:hover td:first-child { background: #e8e8e8; }
+
+/* ─── Print/Cut Layout sub-tabs (Sprint S-SPLIT) ─── */
+.cl-pc {
+  display:flex; flex-direction:column; gap:10px;
+}
+/* Sprint 14n-5 — small utility classes that finish off the inline-style
+   migration in CalcLayout.jsx without growing the per-component CSS. */
+.cl-pc-hint-eg { color:#64748b; font-style:italic; }
+.cl-pc-shared--spaced { margin-top:12px; }
+.cl-pc-checkbox { margin-right:6px; }
+.cl-bi-vi--inline { margin-left:8px; }
+
+/* Sprint 14n-5 — Carbon-style flat section instead of an inset card.
+   The outer .sc-card already provides the frame; nesting another
+   bordered card here was creating the "card-in-card" look the redesign
+   explicitly removed. Now: small section label + thin rule, no inset
+   container, fields grid sits flush with the parent surface. */
+.cl-pc-shared {
+  padding:0 0 4px;
+}
+.cl-pc-shared-title {
+  font-size:11px; font-weight:600;
+  color:#525252;
+  text-transform:uppercase; letter-spacing:.32px;
+  padding:0 0 6px;
+  margin-bottom:10px;
+  border-bottom:1px solid #e0e0e0;
+  display:flex; align-items:center; gap:10px;
+}
+.cl-pc-suggest-btn {
+  padding:3px 10px;
+  border:1px solid #c4b5fd;
+  background:#f5f3ff; color:#6d28d9;
+  font-size:11px; font-weight:600;
+  border-radius:4px;
+  cursor:pointer;
+  text-transform:none;
+  letter-spacing:normal;
+  margin-left:auto;
+}
+.cl-pc-suggest-btn:hover { background:#ede9fe; border-color:#7c3aed; }
+/* Sub-tab bar — Carbon Tabs feel: full-bleed bottom rule, active tab
+   sits ON it with a 3-px brand underline. Keeps the sub-tab change
+   visually anchored to the section break above the tab body. */
+.cl-pc-tabs {
+  display:flex; gap:0;
+  margin:18px 0 0;
+  border-bottom:1px solid #e0e0e0;
+}
+.cl-pc-tab {
+  padding:10px 16px;
+  border:none; background:transparent;
+  font-size:13px; font-weight:500;
+  color:#525252;
+  cursor:pointer;
+  border-bottom:3px solid transparent;
+  margin-bottom:-1px;
+  letter-spacing:.16px;
+  transition:color .15s, border-color .15s, background .15s;
+}
+.cl-pc-tab:hover { color:#161616; background:#f4f4f4; }
+.cl-pc-tab.active {
+  color:#0f62fe;
+  font-weight:600;
+  border-bottom-color:#0f62fe;
+}
+.cl-pc-body {
+  padding:14px 0 4px;
+}
+/* Carbon InlineNotification feel — 4 px status rule on the left, white
+   background, tight padding. Replaces the heavier full-tinted-bg hint. */
+.cl-pc-hint {
+  font-size:11px; color:#525252;
+  margin-bottom:10px;
+  padding:8px 12px 8px 14px;
+  background:#ffffff;
+  border:1px solid #e0e0e0;
+  border-left:4px solid #0f62fe;
+  border-radius:2px;
+  line-height:1.5;
+}
+.cl-pc-hint b { color:#161616; font-weight:600; }
+/* Print vs Cut size-mismatch banners — Carbon InlineNotification by
+   severity. Hoists the inline styles from PrintCutSizeMismatch into
+   CSS so the JSX stays a thin presentation layer. */
+.cl-pc-banner {
+  display:flex; flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+  margin-bottom:10px;
+  padding:8px 12px 8px 14px;
+  background:#ffffff;
+  border:1px solid #e0e0e0;
+  border-left:4px solid #525252;
+  border-radius:2px;
+  font-size:12px;
+  line-height:1.4;
+  letter-spacing:.16px;
+}
+.cl-pc-banner--ok    { border-left-color:#15803d; color:#14532d; }
+.cl-pc-banner--warn  { border-left-color:#d97706; color:#78350f; }
+.cl-pc-banner--err   { border-left-color:#dc2626; color:#7f1d1d; }
+.cl-pc-banner--info  { border-left-color:#7c3aed; color:#4c1d95; }
+.cl-pc-banner b      { color:#161616; }
+.cl-pc-banner--err b { color:#7f1d1d; }
+.cl-pc-banner code   { font-family:'IBM Plex Mono', monospace; font-size:11px; color:#161616; }
+.cl-pc-banner--md    { display:block; margin-top:6px; }
+.cl-pc-banner-actions {
+  display:inline-flex; gap:6px;
+  margin-left:auto;
+}
+
+/* Derived read-only input (plate_pitch / magnetic_pitch). */
+.sc-input.sc-derived {
+  background:#f1f5f9 !important;
+  color:#475569;
+  font-family:ui-monospace, SFMono-Regular, monospace;
+  font-weight:600;
+}
+
+/* Plate/magnetic pitch-ratio hint */
+.cl-pc-ratio {
+  margin-top:10px;
+  padding:6px 10px;
+  font-size:11px; font-weight:600;
+  border-radius:4px;
+  border-left:3px solid transparent;
+}
+.cl-pc-ratio-ok {
+  background:#f0fdf4; color:#15803d;
+  border-left-color:#22c55e;
+}
+.cl-pc-ratio-warn {
+  background:#fef2f2; color:#991b1b;
+  border-left-color:#ef4444;
+}

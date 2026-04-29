@@ -1,0 +1,153 @@
+/* AdminMetrics — IBM Carbon-style ops dashboard.
+ * Design ported from Ops Control v1.3
+ * (domains/basis/client/admin-metrics/AdminMetrics.css). */
+
+.metrics {
+  padding: 24px;
+  max-width: 1400px;
+  font-size: 13px;
+  color: var(--text-primary, #161616);
+}
+
+.metrics__head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px; flex-wrap: wrap; gap: 12px;
+}
+.metrics__title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary, #161616);
+}
+.metrics__bar {
+  display: flex; align-items: center; gap: 12px;
+}
+.metrics__when {
+  font-size: 11px; color: var(--text-tertiary, #6f6f6f);
+}
+
+/* Health pill — small status badge to the left of the timestamp.
+   Mirrors the v1.3 StatusBadge palette. */
+.metrics__health {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-transform: lowercase;
+}
+.metrics__health--ok    { background: #defbe6; color: #0e6027; border: 1px solid #a7f0ba; }
+.metrics__health--warn  { background: #fff8e1; color: #8a6d00; border: 1px solid #ffe58a; }
+.metrics__health--alert { background: #fff1f1; color: #a2191f; border: 1px solid #ffb3b8; }
+.metrics__health--idle  { background: #f4f4f4; color: #525252; border: 1px solid #d4d4d4; }
+
+.metrics__btn {
+  padding: 6px 14px;
+  background: var(--color-primary, #0f62fe);
+  color: var(--text-on-brand, #fff);
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color .15s;
+}
+.metrics__btn:hover:not(:disabled) {
+  background: var(--color-primary-deep, #0050e6);
+}
+.metrics__btn:disabled { opacity: 0.6; cursor: wait; }
+
+/* ─── KPI tiles ─── */
+.metrics__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.metrics__tile {
+  background: var(--surface-card, #fff);
+  border: 1px solid var(--border-subtle, #e0e0e0);
+  padding: 12px 14px;
+  border-left: 3px solid #0f62fe;
+}
+.metrics__tile--ok      { border-left-color: #198038; }
+.metrics__tile--warning { border-left-color: #f1c21b; }
+.metrics__tile--danger  { border-left-color: #da1e28; }
+.metrics__tile-lbl {
+  font-size: 11px; color: var(--text-secondary, #525252);
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.metrics__tile-val {
+  font-size: 24px; font-weight: 300; margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary, #161616);
+}
+
+/* ─── Section panels (fieldset + legend) ─── */
+.metrics__panel {
+  border: 1px solid var(--border-subtle, #e0e0e0);
+  background: var(--surface-card, #fff);
+  padding: 12px 16px;
+  margin: 0 0 12px;
+}
+.metrics__panel legend {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-secondary, #525252);
+  padding: 0 6px;
+  font-weight: 600;
+}
+
+/* 4-column auto-fit row — status / method / errors / users */
+.metrics__cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+/* ─── Tables ─── */
+.metrics__tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.metrics__tbl th,
+.metrics__tbl td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border-subtle, #e0e0e0);
+  text-align: left;
+}
+.metrics__tbl th {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-secondary, #525252);
+  background: var(--surface-subtle, #f4f4f4);
+  font-weight: 600;
+}
+.metrics__tbl tbody tr:hover {
+  background: var(--surface-hover, #f4f4f4);
+}
+.metrics__tbl code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+}
+
+.metrics__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.metrics__warn  { color: #b48a00; font-weight: 600; }
+.metrics__alert { color: #da1e28; font-weight: 600; }
+
+.metrics__empty {
+  color: var(--text-tertiary, #6f6f6f);
+  font-size: 12px;
+  padding: 8px 0;
+}
+.metrics__empty--err {
+  color: #a2191f;
+  font-weight: 500;
+}

@@ -1,0 +1,179 @@
+/* ProcessBalancing styles — standalone sub-tab */
+.pb { display: flex; flex-direction: column; height: 100%; }
+
+/* Header — flat blue card matching the design reference.
+   Compact single-row layout: left section has icon + title + subtitle
+   stacked; right section has 4 KPIs laid out horizontally with their
+   labels INLINE with values (not stacked) so the header is ~46px tall
+   instead of the previous ~90px. */
+.pb-header {
+  background: #f4f4f4; border-bottom: 2px solid #e0e0e0;
+  border-radius: 0; padding: 10px 16px; margin: 0 0 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  box-shadow: none; flex-wrap: wrap;
+}
+.pb-header-left { display: flex; align-items: center; gap: 10px; min-height: 30px; }
+.pb-header-icon { font-size: 20px; opacity: .95; line-height: 1; }
+.pb-header-title { font-size: 14px; font-weight: 600; color: #161616; letter-spacing: .16px; line-height: 1.29; }
+.pb-header-sub { font-size: 12px; color: #525252; margin-top: 1px; line-height: 1.2; letter-spacing: .32px; }
+
+/* KPI Cards — horizontal pills (label and value on same line) */
+.pb-kpis { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.pb-kpi {
+  padding: 6px 12px; border-radius: 0; min-height: 30px;
+  border: 1px solid #e0e0e0; background: #ffffff;
+  display: flex; flex-direction: row; align-items: center; gap: 8px;
+  white-space: nowrap;
+}
+.pb-kpi-bn {
+  background: #fff1f1; border-color: #fca5a5;
+}
+.pb-kpi-green { background: #defbe6; border-color: #a7f0ba; }
+.pb-kpi-amber { background: #fff8e1; border-color: #fde68a; }
+.pb-kpi-red   { background: #fff1f1; border-color: #fca5a5; }
+.pb-kpi-default { background: #ffffff; }
+
+.pb-kpi-dot-red {
+  width: 8px; height: 8px; border-radius: 50%; background: #da1e28; flex-shrink: 0;
+  box-shadow: none;
+}
+.pb-kpi-label {
+  font-size: 12px; font-weight: 400; color: #525252;
+  letter-spacing: .32px; text-transform: uppercase; line-height: 1;
+}
+.pb-kpi-val {
+  font-size: 14px; font-weight: 600; color: #161616;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace; line-height: 1;
+}
+.pb-kpi-val-bn  { font-size: 12px; font-weight: 600; color: #da1e28; }
+.pb-kpi-val-eff { font-size: 15px; color: #24a148; }
+.pb-kpi-green .pb-kpi-val-eff { color: #24a148; }
+.pb-kpi-amber .pb-kpi-val-eff { color: #b45309; }
+.pb-kpi-red   .pb-kpi-val-eff { color: #da1e28; }
+
+/* Target UPH — label on the left, input on the right, inline */
+.pb-kpi-target { display: flex; align-items: center; gap: 4px; }
+.pb-target-input {
+  width: 70px; padding: 4px 8px; border: none; border-bottom: 2px solid #c6c6c6; border-radius: 0;
+  background: #e0e0e0; color: #161616; font-size: 14px; font-weight: 600;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace; text-align: right; line-height: 1.2; letter-spacing: .16px;
+}
+.pb-target-input::placeholder { color: #6f6f6f; }
+.pb-target-input:focus { outline: none; border-bottom-color: #0f62fe; background: #ffffff; }
+.pb-target-unit { font-size: 12px; color: #525252; letter-spacing: .32px; }
+
+/* Table */
+.pb-table-wrap { flex: 1; overflow: auto; border: none; border-radius: 0; }
+.pb-table { width: 100%; border-collapse: collapse; min-width: 1400px; font-size: 12px; }
+
+/* Group header */
+.pb-group-row th { padding: 0; }
+.pb-group {
+  padding: 6px 10px !important; font-size: 9px; font-weight: 600; color: white;
+  letter-spacing: .8px; text-transform: uppercase; text-align: center; border: none;
+}
+.pb-group-info { background: #161616; border-radius: 0; }
+.pb-group-uph { background: #262626; }
+.pb-group-time { background: #393939; }
+.pb-group-crew { background: #262626; }
+.pb-group-speed { background: #393939; }
+.pb-group-analysis { background: #161616; border-radius: 0; }
+
+/* Column headers */
+.pb-th {
+  padding: 8px 8px; font-size: 12px; font-weight: 600; color: #525252;
+  text-transform: uppercase; letter-spacing: .32px; border-bottom: 2px solid #e0e0e0;
+  background: #f4f4f4; white-space: nowrap; text-align: left;
+}
+.pb-th.right { text-align: right; }
+.pb-th.center { text-align: center; }
+.pb-th-sub { font-size: 8px; font-weight: 600; color: var(--color-slate-400); display: block; letter-spacing: .3px; }
+
+/* Body cells */
+.pb-table tbody td { padding: 10px 8px; border-bottom: 1px solid #e0e0e0; vertical-align: middle; }
+.pb-table tbody tr { transition: background .15s; }
+.pb-table tbody tr:hover { background: #e8e8e8; box-shadow: inset 3px 0 0 #0f62fe; }
+
+.pb-proc-label {
+  display: inline-block; padding: 4px 8px; border-radius: 0;
+  background: #edf5ff; color: #0f62fe; font-size: 12px; font-weight: 400; letter-spacing: .32px;
+}
+.pb-td-type { color: var(--color-slate-500); font-size: 12px; }
+.pb-td-wc { color: #0f172a; font-weight: 600; font-size: 12px; }
+.pb-td-num { text-align: right; font-family: ui-monospace, monospace; font-size: 12px; }
+.pb-td-bold { font-weight: 600; }
+
+/* Row variants */
+.pb-row-bn { background: linear-gradient(90deg, #fff8f8, #ffffff) !important; }
+.pb-row-bn:hover { background: linear-gradient(90deg, #fff0f0, #fff8f8) !important; }
+.pb-row-slow { background: linear-gradient(90deg, #fffef5, #ffffff) !important; }
+
+/* Crew controls */
+.pb-td-crew { text-align: center; }
+.pb-crew-ctrl { display: flex; align-items: center; gap: 4px; justify-content: center; }
+.pb-crew-btn {
+  width: 22px; height: 22px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;
+}
+.pb-crew-minus { background: #fee2e2; color: #dc2626; }
+.pb-crew-minus:hover { background: #fecaca; }
+.pb-crew-plus { background: #dcfce7; color: #16a34a; }
+.pb-crew-plus:hover { background: #bbf7d0; }
+.pb-crew-val {
+  display: inline-block; min-width: 28px; padding: 2px 6px; border-radius: 6px;
+  background: #eff6ff; color: #1e40af; font-size: 14px; font-weight: 600;
+  font-family: ui-monospace, monospace; text-align: center;
+}
+.pb-crew-static { color: var(--color-slate-400); font-size: 12px; }
+
+/* Delta badge */
+.pb-delta { display: inline-block; margin-left: 4px; font-size: 9px; font-weight: 600; padding: 1px 4px; border-radius: 4px; }
+.pb-delta-down { color: #16a34a; background: rgba(22,163,74,.1); }
+.pb-delta-up { color: #dc2626; background: rgba(220,38,38,.1); }
+
+/* Load bar */
+.pb-td-load { min-width: 130px; }
+.pb-bar-wrap {
+  position: relative; height: 14px; background: var(--color-slate-100); border-radius: 4px;
+  overflow: visible; margin-bottom: 2px;
+}
+.pb-bar-fill { height: 100%; border-radius: 4px; transition: width .3s; }
+.pb-bar-target {
+  position: absolute; top: -2px; bottom: -2px; width: 2px; background: #0f172a;
+  border-radius: 1px; z-index: 1;
+}
+.pb-bar-text { font-size: 9px; font-weight: 600; }
+
+/* Status badges */
+.pb-td-status { text-align: center; }
+.pb-badge { display: inline-block; padding: 4px 8px; border-radius: 24px; font-size: 12px; font-weight: 400; white-space: nowrap; }
+.pb-badge-ok { background: #dcfce7; color: #16a34a; border: 1px solid #86efac; }
+.pb-badge-bn { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+.pb-badge-slow { background: #fef3c7; color: #d97706; border: 1px solid #fcd34d; }
+.pb-badge-none { background: var(--color-slate-50); color: var(--color-slate-400); border: 1px solid var(--color-slate-200); }
+
+/* Suggestion */
+.pb-td-sugg { font-size: 11px; white-space: nowrap; }
+
+/* Footer */
+.pb-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 16px; margin: 0; background: #f4f4f4;
+  border: none; border-top: 1px solid #e0e0e0; border-radius: 0; font-size: 12px; color: #525252;
+  flex-wrap: wrap; gap: 8px; letter-spacing: .16px;
+}
+.pb-footer-left { display: flex; align-items: center; gap: 6px; flex: 1; }
+.pb-footer-icon { font-size: 12px; }
+.pb-footer-right { font-family: ui-monospace, monospace; font-weight: 600; white-space: nowrap; }
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .pb-header { flex-direction: column; align-items: flex-start; padding: 8px 14px; }
+  .pb-kpis { width: 100%; }
+}
+@media (max-width: 640px) {
+  .pb-kpi { padding: 4px 10px; min-height: 26px; gap: 6px; }
+  .pb-kpi-val { font-size: 12px; }
+  .pb-kpi-val-eff { font-size: 13px; }
+  .pb-target-input { width: 56px; font-size: 11px; }
+}

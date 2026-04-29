@@ -1,0 +1,64 @@
+@import './styles/tokens.css';
+@import './styles/semantic-tokens.css';
+@import './styles/table-pro.css';
+
+/* ═══ Global design defaults ═══
+ * Applied first so per-component CSS can still override. Reset is handled
+ * in App.css; this file is ONLY for cross-cutting a11y/design tokens.
+ *
+ * Added after a full-package audit found that interactive elements had
+ * ~70% :hover coverage but near-zero :focus-visible — i.e. keyboard
+ * users got no focus indicator. Below provides a single, consistent
+ * focus ring for every interactive element.
+ */
+
+/* Remove the default browser outline so our own ring is the only one. */
+:focus { outline: none; }
+
+/* Keyboard-only focus ring. `:focus-visible` fires only when the browser
+ * heuristically decides the focus came from a keyboard/assistive device,
+ * so clicking a button doesn't leave a ring behind. */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[role="button"]:focus-visible,
+[role="link"]:focus-visible,
+[role="tab"]:focus-visible,
+[role="menuitem"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #3b82f6; /* matches existing focus color in .sc-smt-inp:focus */
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* For inputs that already draw a thick colored border on focus (sc-input,
+ * cc-input, etc.), switch to a box-shadow ring so the outline + border
+ * don't double up or clip. */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .25);
+}
+
+/* ── Default :active click feedback for buttons ──
+ * Many existing buttons (.sc-btn, .cc-btn, .qh-btn, …) defined :hover
+ * but no :active, so there was no visual confirmation that a click
+ * actually landed. A very subtle scale down is enough and works
+ * regardless of the button's background color. */
+button:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
+
+/* Respect reduced-motion users: the above transform is cosmetic only. */
+@media (prefers-reduced-motion: reduce) {
+  button:active:not(:disabled) { transform: none; }
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}

@@ -1,0 +1,272 @@
+/* ═══════════════════════════════════════════════════════════════════
+ * SEMANTIC TOKENS — Phase 9A.1 (Sprint 4 from audit roadmap)
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * Imported from index.css AFTER tokens.css. This file defines the
+ * canonical UI component classes + status palette so every tab can
+ * converge on a single visual language without touching call-sites.
+ *
+ * tokens.css  — variables only (colors, spacing, font sizes)
+ * semantic-tokens.css — UTILITY + COMPONENT CLASSES that reference
+ *                       the variables. Opt-in from any tab.
+ *
+ * Design philosophy: additive, not replacement. Existing CSS files
+ * keep working. When a file is touched, migrate opportunistically.
+ *
+ * Catalogue:
+ *   1. .data-table — Summarize-style data-browser table
+ *   2. .modal-*    — overlay + card + title/body/footer primitives
+ *   3. .status-*   — Carbon-inspired status pills (CSS mirror of
+ *                    StatusBadge.jsx palette for server-rendered or
+ *                    non-React callers)
+ *   4. Typography utilities (.text-muted, .text-tertiary, .tabular)
+ *   5. Focus-visible ring (.focus-ring-subtle)
+ * ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Tokens specific to this layer. Additive on top of tokens.css. */
+  --table-header-bg: #f4f4f4;
+  --table-header-fg: #525252;
+  --table-header-font-size: 11px;
+  --table-header-letter-spacing: 0.4px;
+  --table-body-font-size: 12px;
+  --table-row-hover-bg: #e5f0ff;
+  --table-row-zebra-bg: #fafafa;
+  --table-border-subtle: #e8e8e8;
+  --table-border-strong: #e0e0e0;
+
+  --modal-overlay-bg: rgba(22, 22, 22, 0.55);
+  --modal-card-bg: #ffffff;
+  --modal-card-border: #e0e0e0;
+  --modal-card-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* ───────────────────────────────────────────────────────────────────
+ * 1. DATA-TABLE — Summarize gold standard
+ *
+ * Usage: add `class="data-table"` to a <table> and wrap in a scroll
+ * container with `overflow:auto`. Sticky thead, zebra rows, hover
+ * highlight, tabular-nums on `.right` cells.
+ *
+ *   <div class="data-table-wrap">
+ *     <table class="data-table">
+ *       <thead>...</thead>
+ *       <tbody>...</tbody>
+ *     </table>
+ *   </div>
+ * ─────────────────────────────────────────────────────────────────── */
+.data-table-wrap {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+  background: #ffffff;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #ffffff;
+  font-size: var(--table-body-font-size);
+  letter-spacing: 0.16px;
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--table-header-bg);
+  color: var(--table-header-fg);
+  font-size: var(--table-header-font-size);
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 10px;
+  white-space: nowrap;
+  letter-spacing: var(--table-header-letter-spacing);
+  text-transform: uppercase;
+  user-select: none;
+  border-bottom: 2px solid var(--table-border-strong);
+}
+
+.data-table th.sortable {
+  cursor: pointer;
+}
+.data-table th.sortable:hover {
+  background: #e8e8e8;
+}
+
+.data-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--table-border-subtle);
+  white-space: nowrap;
+  color: #161616;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+
+.data-table tbody tr:nth-child(even) td {
+  background: var(--table-row-zebra-bg);
+}
+.data-table tbody tr:hover td {
+  background: var(--table-row-hover-bg);
+}
+
+.data-table .right,
+.data-table th.right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+.data-table .center,
+.data-table th.center {
+  text-align: center;
+}
+.data-table .num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* ───────────────────────────────────────────────────────────────────
+ * 2. MODAL PRIMITIVES
+ * Used by SaveChoiceModal, ApprovalHistoryModal, RejectModal etc.
+ * Existing modals still render inline styles — these classes are the
+ * migration target for new ones.
+ * ─────────────────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--modal-overlay-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.modal-card {
+  background: var(--modal-card-bg);
+  border: 1px solid var(--modal-card-border);
+  box-shadow: var(--modal-card-shadow);
+  max-width: 92vw;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-title {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--modal-card-border);
+  font-size: 14px;
+  font-weight: 600;
+  color: #161616;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-body {
+  padding: 18px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  padding: 10px 18px;
+  border-top: 1px solid var(--modal-card-border);
+  background: #f4f4f4;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.modal-close-btn {
+  width: 26px; height: 26px;
+  padding: 0;
+  border: 1px solid var(--border-strong, #e0e0e0);
+  background: #ffffff;
+  color: #6f6f6f;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: 2px;
+}
+.modal-close-btn:hover {
+  background: #f4f4f4;
+}
+
+/* ───────────────────────────────────────────────────────────────────
+ * 3. STATUS BADGES — CSS mirror of StatusBadge.jsx palette
+ * Use .status-badge + one tone class. Covers won/lost/pending/active/
+ * inactive/progress/blocked/scheduled beyond the generic tones.
+ * ─────────────────────────────────────────────────────────────────── */
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 10px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+}
+.status-badge.sm {
+  font-size: 10px;
+  padding: 2px 8px;
+}
+
+.status-success,
+.status-won       { background: #defbe6; color: #0e6027; }
+.status-warning,
+.status-scheduled { background: #fef3c7; color: #92400e; }
+.status-danger,
+.status-lost,
+.status-blocked   { background: #fee2e2; color: #991b1b; }
+.status-info,
+.status-progress,
+.status-active    { background: #dbeafe; color: #1e40af; }
+.status-neutral   { background: #e8e8e8; color: #525252; }
+.status-inactive  { background: #f4f4f4; color: #8d8d8d; }
+.status-pending   { background: #fef9c3; color: #854d0e; }
+
+/* ───────────────────────────────────────────────────────────────────
+ * 4. TYPOGRAPHY UTILITIES
+ * Adopt gradually — replace inline `style={{ color: '#6f6f6f' }}` with
+ * `className="text-muted"` on new code.
+ * ─────────────────────────────────────────────────────────────────── */
+.text-muted      { color: var(--text-secondary, #525252); }
+.text-tertiary   { color: var(--text-tertiary, #8d8d8d); }
+.text-primary    { color: var(--text-primary, #161616); }
+.text-strong     { font-weight: 600; }
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+.em-dash-muted::before {
+  content: '\2014';
+  color: var(--text-tertiary, #8d8d8d);
+}
+
+/* ───────────────────────────────────────────────────────────────────
+ * 5. FOCUS-VISIBLE
+ * WCAG AA requires a visible focus indicator. Apply by default on
+ * interactive elements via utility or override.
+ * ─────────────────────────────────────────────────────────────────── */
+.focus-ring-subtle:focus-visible {
+  outline: 2px solid var(--border-focus, #0f62fe);
+  outline-offset: 2px;
+}
+
+/* Global: ensure keyboard focus is never invisible. Opt-out on a per
+   element basis with `outline: none` if genuinely needed. */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--border-focus, #0f62fe);
+  outline-offset: 1px;
+}

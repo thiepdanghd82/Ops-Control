@@ -1,0 +1,518 @@
+/* ═══ Sidebar — IBM Carbon ═══
+ *
+ * Phase 9K.1 — every color now flows through a semantic token so the
+ * sidebar flips cleanly under [data-theme="dark"]. Structural styles
+ * (sizes, spacing, weights) stay hard-coded since they don't vary by
+ * theme. Comments mark any intentional hard-coded color + reason. */
+
+.sidebar {
+  width: 260px;
+  min-width: 260px;
+  height: 100vh;
+  background: var(--surface-card);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border-strong);
+  overflow: hidden;
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing: .16px;
+}
+
+/* ─── Header ─── */
+.sidebar-header {
+  padding: 16px 18px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.sidebar-logo {
+  flex-shrink: 0;
+}
+
+.sidebar-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-app-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+}
+
+.sidebar-app-ver {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 1px;
+}
+
+/* ─── Module Switcher ─── */
+.module-switcher {
+  display: flex;
+  gap: 4px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.module-btn {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface-subtle);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color .15s, color .15s, border-color .15s;
+}
+
+.module-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.module-btn.active {
+  background: var(--color-primary-deep, #002d9c);
+  color: var(--text-on-brand);
+  border-color: var(--color-primary-deep, #002d9c);
+}
+
+/* ─── Navigation ─── */
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 3px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 3px;
+}
+
+/* ─── Sections ─── */
+.nav-section {
+  margin-bottom: 4px;
+}
+
+/* Sprint S-COLLAPSE — section label is now a button so the operator can
+   collapse a whole section. Chevron flips when collapsed. State is
+   persisted in localStorage. */
+.nav-section-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 14px 4px 18px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-tertiary);
+  transition: color .12s ease;
+}
+.nav-section-header:hover { color: var(--text-secondary); }
+.nav-section-header:focus-visible {
+  outline: 2px solid var(--color-primary, #1e40af);
+  outline-offset: -2px;
+}
+.nav-section-header.has-active .nav-section-label {
+  color: var(--text-primary);
+}
+
+.nav-section-label {
+  flex: 1;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: inherit;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.nav-section-chevron {
+  flex-shrink: 0;
+  transition: transform .15s ease;
+  opacity: 0.7;
+}
+.nav-section-header.is-collapsed .nav-section-chevron {
+  transform: rotate(-90deg);
+}
+
+.nav-section-divider {
+  height: 1px;
+  margin: 6px 12px;
+  background: var(--border-subtle);
+}
+
+/* ─── Nav Items ─── */
+.nav-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 8px 18px;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color .12s ease, color .12s ease;
+  border-radius: 0;
+  margin: 0;
+}
+
+.nav-item:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.nav-item.active {
+  background: var(--color-primary);
+  color: var(--text-on-brand);
+  margin: 1px 10px;
+  border-radius: 0;
+  font-weight: 600;
+}
+
+.nav-item.active .nav-icon {
+  opacity: 1;
+}
+
+.nav-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.nav-icon .ops-sidebar__icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.nav-item:hover .nav-icon { color: var(--text-primary); }
+
+.nav-item.active .nav-icon {
+  color: var(--text-on-brand);
+}
+
+.nav-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+/* Approvals-inbox queue count (Sprint 6.5). Orange pill at the right
+   of the nav item so reviewers see pending items at a glance. Uses
+   Carbon warning palette to match the status badge used inside the
+   inbox. Ensures the pill sits flush with the nav padding. */
+.nav-badge {
+  margin-left: auto;
+  min-width: 20px;
+  padding: 0 6px;
+  height: 18px;
+  /* Warning amber — semantic meaning stays constant across themes;
+     dark-mode legibility is fine because #f1c21b is luminous enough
+     to read on any bg. */
+  background: #f1c21b;
+  color: #161616;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+.nav-item.active .nav-badge {
+  background: #fff1e8;
+  color: #8a3f00;
+}
+
+/* ─── Team Online card ─── */
+.sb-team-online {
+  margin: 4px 10px 6px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0;
+  overflow: hidden;
+}
+.sb-team-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 10px 4px;
+}
+.sb-team-title {
+  color: var(--text-tertiary);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+}
+.sb-team-count {
+  /* Semantic success — kept as explicit color since the "online count"
+     pill carries meaning (green = healthy team presence). Both the bg
+     + fg chosen for readability on either theme. */
+  background: #dcfce7;
+  color: #16a34a;
+  font-size: 9px;
+  padding: 1px 7px;
+  border-radius: 24px;
+  font-weight: 600;
+  border: 1px solid #bbf7d0;
+}
+.sb-team-list {
+  padding: 0 6px 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.sb-user-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 6px;
+  margin-bottom: 1px;
+  border-radius: 0;
+}
+.sb-user-row.me { background: var(--surface-hover); }
+.sb-user-avatar-wrap { position: relative; flex-shrink: 0; }
+.sb-user-avatar {
+  width: 26px; height: 26px; border-radius: 0;
+  background: var(--surface-subtle); color: var(--text-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 600;
+}
+.sb-user-avatar.me {
+  background: var(--color-primary);
+  color: var(--text-on-brand);
+}
+.sb-online-dot {
+  position: absolute;
+  bottom: -1px; right: -1px;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  border: 1.5px solid var(--surface-card);
+}
+.sb-user-info { flex: 1; min-width: 0; }
+.sb-user-name {
+  color: var(--text-primary);
+  font-size: 10.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sb-user-row.me .sb-user-name {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+.sb-admin-star { color: #d97706; font-size: 8px; }
+.sb-me-tag { color: var(--color-primary); font-size: 8px; font-weight: 600; }
+.sb-user-status {
+  color: #16a34a;
+  font-size: 8.5px;
+  margin-top: 1px;
+  font-weight: 500;
+}
+
+/* ─── Footer ─── */
+.sidebar-footer {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-zebra);
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--text-on-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.user-name {
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-role {
+  color: var(--text-tertiary);
+  font-size: 10.5px;
+  text-transform: capitalize;
+}
+
+.logout-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 0;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-card);
+  color: var(--text-tertiary);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color .15s, color .15s, border-color .15s;
+  flex-shrink: 0;
+}
+
+.logout-btn:hover {
+  color: #ef4444;
+  border-color: var(--color-danger-300);
+  background: var(--color-danger-50);
+}
+
+/* ════════════════════════════════════════════════════════════════
+ * Collapse toggle + collapsed state
+ * IBM Carbon chevron pattern — 32px icon-only sidebar with tooltips.
+ * Activated via `.sidebar.sidebar-collapsed` and the `.app-layout
+ * .sidebar-collapsed` body class; both are set by App.jsx.
+ * ════════════════════════════════════════════════════════════════ */
+
+.sidebar-collapse-btn {
+  margin-left: auto;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text-tertiary, #6b7280);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+  transition: background 120ms, color 120ms, border-color 120ms;
+}
+.sidebar-collapse-btn:hover {
+  background: var(--surface-hover, #f3f4f6);
+  color: var(--text-primary, #111827);
+  border-color: var(--border-subtle, #e5e7eb);
+}
+.sidebar-collapse-btn:focus-visible {
+  outline: 2px solid var(--color-primary, #1e40af);
+  outline-offset: 2px;
+}
+
+/* ─── Collapsed state — 56px icon-only rail ─── */
+.sidebar.sidebar-collapsed {
+  width: 56px;
+  min-width: 56px;
+}
+.sidebar.sidebar-collapsed .sidebar-header {
+  flex-direction: column;
+  padding: 12px 6px;
+  gap: 6px;
+}
+.sidebar.sidebar-collapsed .sidebar-title,
+.sidebar.sidebar-collapsed .sidebar-app-name,
+.sidebar.sidebar-collapsed .sidebar-app-ver {
+  display: none;
+}
+.sidebar.sidebar-collapsed .sidebar-collapse-btn {
+  margin-left: 0;
+}
+
+/* Module switcher: stack the two buttons vertically, hide text */
+.sidebar.sidebar-collapsed .module-switcher {
+  flex-direction: column;
+  padding: 6px 4px;
+  gap: 4px;
+}
+.sidebar.sidebar-collapsed .module-btn {
+  font-size: 0;      /* hide text, keep accessibility name via aria */
+  padding: 6px 4px;
+  min-height: 32px;
+  letter-spacing: 0;
+}
+.sidebar.sidebar-collapsed .module-btn::before {
+  content: attr(data-abbr, '');
+  font-size: 11px;
+  font-weight: 700;
+}
+.sidebar.sidebar-collapsed .module-btn:nth-child(1)::before { content: 'C'; }
+.sidebar.sidebar-collapsed .module-btn:nth-child(2)::before { content: 'P'; }
+
+/* Section labels hidden; nav items become icon-only with tooltip */
+.sidebar.sidebar-collapsed .nav-section-label { display: none; }
+.sidebar.sidebar-collapsed .nav-section {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-subtle, #e5e7eb);
+}
+.sidebar.sidebar-collapsed .nav-section:last-child { border-bottom: 0; }
+.sidebar.sidebar-collapsed .nav-item {
+  padding: 10px 0;
+  justify-content: center;
+  gap: 0;
+}
+.sidebar.sidebar-collapsed .nav-item-text,
+.sidebar.sidebar-collapsed .nav-label,
+.sidebar.sidebar-collapsed .nav-badge {
+  display: none;
+}
+.sidebar.sidebar-collapsed .nav-icon {
+  font-size: 18px;
+  margin: 0;
+}
+.sidebar.sidebar-collapsed .nav-item.active {
+  margin: 1px 4px;
+}
+
+/* Team-online card + footer hidden when collapsed — reclaim space */
+.sidebar.sidebar-collapsed .sb-team-online,
+.sidebar.sidebar-collapsed .sidebar-footer {
+  display: none;
+}
+
+/* App-layout-level tweak — when sidebar is collapsed, main content
+ * automatically reflows (flex layout handles width). No additional
+ * override needed unless a container had a hard min-width. */
+.app-layout.sidebar-collapsed {
+  /* hook available for future fine-tuning (e.g. different padding) */
+}

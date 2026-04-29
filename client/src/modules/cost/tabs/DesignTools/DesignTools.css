@@ -1,0 +1,181 @@
+/* DesignTools — top-level shell with 3 nested tab bars (Sprint 14).
+   Carbon/Fiori-flat aesthetic; sidebar already provides level-0 nav. */
+
+.dt-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #f4f4f4;
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  color: #161616;
+  overflow: hidden;       /* lock outer height; .dt-content scrolls */
+}
+
+/* Header + tab bars stay fixed at the top; only .dt-content scrolls. */
+.dt-page-hdr,
+.dt-toolset-bar,
+.dt-press-bar {
+  flex-shrink: 0;
+}
+
+/* ──────────────── Page header ──────────────── */
+.dt-page-hdr {
+  background: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 14px clamp(14px, 2vw, 22px);
+}
+.dt-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+}
+.dt-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px; height: 32px;
+  background: #edf5ff;
+  color: #0f62fe;
+  font-size: 18px;
+  border-radius: 4px;
+}
+.dt-page-sub {
+  margin-top: 6px;
+  margin-left: 44px;
+  font-size: 12px;
+  color: #525252;
+  line-height: 1.5;
+}
+.dt-bi-vi {
+  font-style: italic;
+  color: #6f6f6f;
+  font-weight: 400;
+}
+
+/* ──────────────── Level 1 — toolset bar ──────────────── */
+.dt-toolset-bar {
+  display: flex;
+  gap: 0;
+  background: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0 clamp(8px, 1vw, 16px);
+}
+.dt-toolset {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  color: #525252;
+  text-align: left;
+  position: relative;
+  transition: color 120ms, border-color 120ms, background 120ms;
+}
+.dt-toolset:hover:not(:disabled) { background: #f4f4f4; color: #161616; }
+.dt-toolset:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.dt-toolset.active {
+  color: #0f62fe;
+  border-bottom-color: #0f62fe;
+  font-weight: 600;
+}
+.dt-toolset-icon { font-size: 18px; }
+.dt-toolset-en { font-size: 13px; line-height: 1.2; }
+.dt-toolset-vi { font-size: 11px; color: #8d8d8d; font-style: italic; font-weight: 400; line-height: 1.2; }
+
+/* "soon" / "stub" pills */
+.dt-soon {
+  margin-left: 6px;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 6px;
+  background: #fef3c7;
+  color: #b45309;
+  border-radius: 8px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+/* ──────────────── Level 2 — press bar ──────────────── */
+.dt-press-bar {
+  display: flex;
+  gap: 4px;
+  background: #edf5ff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 6px clamp(8px, 1vw, 16px);
+  overflow-x: auto;
+}
+.dt-press {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 14px;
+  background: #ffffff;
+  border: 1px solid #c6c6c6;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  color: #525252;
+  text-align: left;
+  white-space: nowrap;
+  transition: border-color 120ms, color 120ms, background 120ms;
+}
+.dt-press:hover { border-color: #8d8d8d; color: #161616; }
+.dt-press.active {
+  background: #0f62fe;
+  border-color: #0f62fe;
+  color: #ffffff;
+  font-weight: 600;
+}
+.dt-press.active .dt-press-vi { color: #d4e5ff; }
+.dt-press-en { font-size: 12px; line-height: 1.2; }
+.dt-press-vi { font-size: 10px; color: #8d8d8d; font-style: italic; font-weight: 400; line-height: 1.2; }
+
+/* ──────────────── Level 3 content ──────────────── */
+.dt-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;       /* the scrollable region */
+  -webkit-overflow-scrolling: touch;
+}
+
+.dt-coming-soon {
+  margin: 24px;
+  padding: 32px clamp(20px, 3vw, 40px);
+  background: #ffffff;
+  border: 1px dashed #c6c6c6;
+  border-radius: 4px;
+  color: #525252;
+  text-align: center;
+}
+.dt-cs-icon { font-size: 40px; }
+.dt-cs-title {
+  font-size: 16px;
+  margin: 8px 0 12px;
+  color: #161616;
+}
+.dt-coming-soon p { margin: 4px 0; font-size: 13px; line-height: 1.5; }
+.dt-cs-checklist {
+  margin-top: 18px !important;
+  padding: 12px 16px;
+  background: #f4f4f4;
+  border-left: 3px solid #0f62fe;
+  font-size: 11px;
+  text-align: left;
+  color: #393939;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.dt-cs-checklist code {
+  background: #ffffff;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-size: 11px;
+  color: #0043ce;
+}

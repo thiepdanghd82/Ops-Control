@@ -1,0 +1,302 @@
+/**
+ * CplxCostBreakdown — Cost breakdown + tier comparison for Complex Calculator.
+ *
+ * Mirrors the Standard CalcCostBreakdown UI (tier comparison table → cost
+ * structure waterfall → detailed breakdown) but runs the full Complex
+ * two-pass calcAll across all sub-products for each MOQ tier, so the
+ * tier row aggregates match the FG sub-product (or fall back to a sum).
+ */
+import { useMemo } from 'react';
+import { useCalc } from '../../../../context/CalcContext';
+import { useCostLib } from '../../../../context/CostLibContext';
+import { aggregateComplex, enumerateTiers, inkCostTotal, matCostExcludingInk } from '../../../../services/calcEngine';
+import { fmtN, pct, gmClr } from '../../../../utils/format';
+import { useBomQtyFlag } from '../../../../utils/useBomQtyFlag';
+import { useSpMoqScalingFlag } from '../../../../utils/useSpMoqScalingFlag';
+import { KPI_TOOLTIPS } from '../../../../utils/kpiDefinitions';
+
+// Re-derive VA / Contribution / GM at an arbitrary price without
+// re-running aggregateComplex. Costs are price-independent so only
+// the denominator changes. Formulas mirror aggregateForTier() below
+// (CCL convention: VA excludes labor, Contribution includes it) so
+// Selling-table and Target-table values reconcile cell-for-cell.
+function kpiAtPrice(agg, price) {
+  if (!agg || !price || price <= 0) return { va: null, contribution: null, gm: null };
+  const mats = agg.s_mat_cost || 0;
+  const tool = agg.tooling || 0;
+  const ps = agg.packing_ship || 0;
+  const labor = agg.labor_cost || 0;
+  return {
+    va: 1 - (mats + tool + ps) / price,
+    contribution: 1 - (mats + tool + ps + labor) / price,
+    gm: 1 - (agg.s_ttl || 0) / price,
+  };
+}
+
+// Tier-aware aggregation wrapper — delegates the heavy two-pass calc to
+// aggregateComplex() in calcEngine and then layers tier-specific margin
+// math on top.
+//
+// Sprint 8 B.2 (audit §2.4): Contribution formula was previously
+// `1 - (material + pack) / sp` here while the Summary Bar used
+// `1 - (material + tooling + pack + labor) / sp`. Two different Contr%
+// for the same quote is a cross-tab reliability bug — Finance can't
+// tell which one to quote from. Aligned to the calcEngine CCL
+// convention (includes tooling + labor) so every surface shows the
+// same number. The tooltip on each cell (see kpiDefinitions.js)
+// documents the formula.
+function aggregateForTier(cs, sps, lib, tierIdx, opts) {
+  const { aggregate: agg } = aggregateComplex(cs, sps, lib, tierIdx, opts);
+  if (!agg) return null;
+  const tierSp = tierIdx === 0
+    ? (cs.selling_price || 0)
+    : (((cs.extra_moqs || [])[tierIdx - 1] || {}).price || cs.selling_price || 0);
+  agg.gm = tierSp > 0 ? (tierSp - (agg.s_ttl || 0)) / tierSp : null;
+  // VA% = 1 - (material + tooling + packing_ship) / sp  (labor excluded)
+  agg.va = tierSp > 0
+    ? (tierSp - (agg.s_mat_cost || 0) - (agg.tooling || 0) - (agg.packing_ship || 0)) / tierSp
+    : null;
+  // Contribution% = 1 - (material + tooling + packing_ship + labor) / sp
+  agg.contribution = tierSp > 0
+    ? (tierSp - (agg.s_mat_cost || 0) - (agg.tooling || 0) - (agg.packing_ship || 0) - (agg.labor_cost || 0)) / tierSp
+    : null;
+  return agg;
+}
+
+export default function CplxCostBreakdown() {
+  const { cplxState } = useCalc();
+  const { lib } = useCostLib();
+  const [bomQtyEnabled] = useBomQtyFlag();
+  const [spMoqScalingEnabled] = useSpMoqScalingFlag();
+  const cs = cplxState;
+  const sps = useMemo(() => cs.subproducts || [], [cs.subproducts]);
+
+  const tiers = useMemo(() => {
+    if (!lib) return [];
+    return enumerateTiers(cs).map(({ idx, moq, sp, eau }) => ({
+      idx, moq, sp, eau, result: aggregateForTier(cs, sps, lib, idx, { bomQtyEnabled, spMoqScalingEnabled }),
+    }));
+  }, [cs, sps, lib, bomQtyEnabled, spMoqScalingEnabled]);
+
+  if (!lib) {
+    return <div className="sc-section" style={{ padding: 20, color: '#94a3b8', textAlign: 'center' }}>Loading library data...</div>;
+  }
+
+  const activeIdx = cs.active_moq_idx || 0;
+  const activeResult = tiers[activeIdx]?.result;
+
+  return (
+    <div className="sc-section">
+      {/* Sprint 41 — Selling /unit (KPIs vs selling price) + Target /unit
+          (same costs, KPIs re-derived against target). Finance can see
+          margin at both prices side-by-side without tier switching. */}
+      <div className="sc-card">
+        <div className="sc-card-header sc-header-dark">
+          <span className="sc-card-icon">&#8801;</span>
+          <span className="sc-card-title">Selling /unit (USD)</span>
+        </div>
+        <div className="sc-card-body sc-table-wrap">
+          <table className="sc-table sc-bd-table">
+            <thead>
+              <tr>
+                <th>Tier</th>
+                <th className="right">MOQ</th>
+                <th className="right">EAU</th>
+                <th className="right">Sell Price</th>
+                <th className="right">Target</th>
+                <th className="right bd-mat">Material</th>
+                <th className="right bd-ink">Ink</th>
+                <th className="right bd-proc">Process</th>
+                <th className="right bd-pack">Pack &amp; Ship</th>
+                <th className="right bd-sub">Subtotal</th>
+                <th className="right bd-va" title={KPI_TOOLTIPS.va}>VA%</th>
+                <th className="right bd-contr" title={KPI_TOOLTIPS.contribution}>Contr%</th>
+                <th className="right bd-gm" title={KPI_TOOLTIPS.gm}>GM%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tiers.map(({ idx, moq, sp, eau, result: r }) => {
+                const isActive = idx === activeIdx;
+                const target = idx === 0 ? cs.target : cs.extra_moqs?.[idx - 1]?.target;
+                return (
+                  <tr key={idx} className={isActive ? 'sc-bd-active' : ''}>
+                    <td><span className={`sc-bd-tier-badge ${isActive ? 'active' : ''}`}>MOQ {idx + 1}</span></td>
+                    <td className="right">{moq ? moq.toLocaleString() : '\u2014'}</td>
+                    <td className="right">{eau ? eau.toLocaleString() : '\u2014'}</td>
+                    <td className="right" style={{ fontWeight: 700, color: '#1e40af' }}>{sp ? '$' + fmtN(sp, 4) : '\u2014'}</td>
+                    <td className="right" style={{ color: '#64748b' }}>{target ? '$' + fmtN(target, 4) : '\u2014'}</td>
+                    {r ? (
+                      <>
+                        <td className="right bd-mat">{fmtN(matCostExcludingInk(r))}</td>
+                        <td className="right bd-ink">{fmtN(inkCostTotal(r))}</td>
+                        <td className="right bd-proc">{fmtN((r.overhead || 0) + (r.labor_cost || 0) + (r.tooling || 0))}</td>
+                        <td className="right bd-pack">{fmtN(r.packing_ship)}</td>
+                        <td className="right bd-sub" style={{ fontWeight: 800 }}>{fmtN(r.s_ttl)}</td>
+                        <td className="right bd-va" style={{ color: '#0891b2', fontWeight: 700 }}>{pct(r.va)}</td>
+                        <td className="right bd-contr" style={{ color: '#7c3aed', fontWeight: 700 }}>{pct(r.contribution)}</td>
+                        <td className="right bd-gm" style={{ color: gmClr(r.gm), fontWeight: 800, fontSize: 13 }}>{pct(r.gm)}</td>
+                      </>
+                    ) : (
+                      <td className="right" colSpan={8} style={{ color: '#94a3b8' }}>Enter data to calculate</td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Target /unit — same costs, KPIs derived at target price. */}
+      <div className="sc-card" style={{ marginTop: 12 }}>
+        <div className="sc-card-header sc-header-dark">
+          <span className="sc-card-icon">&#9678;</span>
+          <span className="sc-card-title">Target /unit (USD)</span>
+        </div>
+        <div className="sc-card-body sc-table-wrap">
+          <table className="sc-table sc-bd-table">
+            <thead>
+              <tr>
+                <th>Tier</th>
+                <th className="right">MOQ</th>
+                <th className="right">EAU</th>
+                <th className="right">Sell Price</th>
+                <th className="right">Target</th>
+                <th className="right bd-mat">Material</th>
+                <th className="right bd-ink">Ink</th>
+                <th className="right bd-proc">Process</th>
+                <th className="right bd-pack">Pack &amp; Ship</th>
+                <th className="right bd-sub">Subtotal</th>
+                <th className="right bd-va" title={KPI_TOOLTIPS.va}>VA%</th>
+                <th className="right bd-contr" title={KPI_TOOLTIPS.contribution}>Contr%</th>
+                <th className="right bd-gm" title={KPI_TOOLTIPS.gm}>GM%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tiers.map(({ idx, moq, sp, eau, result: r }) => {
+                const isActive = idx === activeIdx;
+                const target = idx === 0 ? cs.target : cs.extra_moqs?.[idx - 1]?.target;
+                const tgtKpi = kpiAtPrice(r, target);
+                return (
+                  <tr key={idx} className={isActive ? 'sc-bd-active' : ''}>
+                    <td><span className={`sc-bd-tier-badge ${isActive ? 'active' : ''}`}>MOQ {idx + 1}</span></td>
+                    <td className="right">{moq ? moq.toLocaleString() : '\u2014'}</td>
+                    <td className="right">{eau ? eau.toLocaleString() : '\u2014'}</td>
+                    <td className="right" style={{ color: '#64748b' }}>{sp ? '$' + fmtN(sp, 4) : '\u2014'}</td>
+                    <td className="right" style={{ fontWeight: 700, color: '#b45309' }}>{target ? '$' + fmtN(target, 4) : '\u2014'}</td>
+                    {r ? (
+                      <>
+                        <td className="right bd-mat">{fmtN(matCostExcludingInk(r))}</td>
+                        <td className="right bd-ink">{fmtN(inkCostTotal(r))}</td>
+                        <td className="right bd-proc">{fmtN((r.overhead || 0) + (r.labor_cost || 0) + (r.tooling || 0))}</td>
+                        <td className="right bd-pack">{fmtN(r.packing_ship)}</td>
+                        <td className="right bd-sub" style={{ fontWeight: 800 }}>{fmtN(r.s_ttl)}</td>
+                        <td className="right bd-va" style={{ color: '#0891b2', fontWeight: 700 }}>{target ? pct(tgtKpi.va) : '\u2014'}</td>
+                        <td className="right bd-contr" style={{ color: '#7c3aed', fontWeight: 700 }}>{target ? pct(tgtKpi.contribution) : '\u2014'}</td>
+                        <td className="right bd-gm" style={{ color: target ? gmClr(tgtKpi.gm) : '#94a3b8', fontWeight: 800, fontSize: 13 }}>{target ? pct(tgtKpi.gm) : '\u2014'}</td>
+                      </>
+                    ) : (
+                      <td className="right" colSpan={8} style={{ color: '#94a3b8' }}>Enter data to calculate</td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Cost Structure waterfall for active tier */}
+      {activeResult && (() => {
+        const r = activeResult;
+        const rows = [
+          { label: 'Material Cost', value: matCostExcludingInk(r), color: '#2563eb', icon: '◈' },
+          { label: 'Ink Cost', value: inkCostTotal(r), color: '#0891b2', icon: '⊕' },
+          // r.overhead/r.labor_cost are RUN-only (calcEngine 635-636 strips
+          // setup). Add bd_setup_mach / bd_setup_labor so the waterfall bars
+          // sum to s_ttl and match the Detailed Breakdown's setup+run rows.
+          { label: 'Overhead (Machine)', value: (r.overhead || 0) + (r.bd_setup_mach || 0), color: '#059669', icon: '⚙' },
+          { label: 'Labor Cost', value: (r.labor_cost || 0) + (r.bd_setup_labor || 0), color: '#16a34a', icon: '⊙' },
+          { label: 'Tooling', value: r.tooling, color: '#374151', icon: '⚒' },
+          { label: 'Packing & Shipping', value: r.packing_ship, color: '#0ea5e9', icon: '▣' },
+          { label: 'VAT Loss', value: r.vat_loss, color: '#f59e0b', icon: '⊘' },
+        ];
+        const totalCost = r.s_ttl || 0;
+        const maxVal = Math.max(...rows.map(x => Math.abs(x.value || 0)), 0.001);
+        return (
+          <div className="sc-card" style={{ marginTop: 12 }}>
+            <div className="sc-card-header sc-header-dark">
+              <span className="sc-card-title">Cost Structure</span>
+            </div>
+            <div className="sc-card-body">
+              {rows.filter(x => x.value > 0).map((x, i) => {
+                const barW = Math.round((Math.abs(x.value) / maxVal) * 100);
+                const share = totalCost > 0 ? ((x.value / totalCost) * 100).toFixed(1) : 0;
+                return (
+                  <div key={i} className="sc-sum-bar-row">
+                    <div className="sc-sum-bar-label">
+                      <span>{x.icon} {x.label}</span>
+                      <span style={{ color: '#64748b', fontSize: 11 }}>{share}%</span>
+                    </div>
+                    <div className="sc-sum-bar-track">
+                      <div className="sc-sum-bar-fill" style={{ width: barW + '%', background: x.color }} />
+                    </div>
+                    <div className="sc-sum-bar-val" style={{ color: x.color }}>${fmtN(x.value)}</div>
+                  </div>
+                );
+              })}
+              <div className="sc-sum-bar-row sc-sum-bar-total">
+                <div className="sc-sum-bar-label"><b>GRAND TOTAL</b></div>
+                <div className="sc-sum-bar-track" />
+                <div className="sc-sum-bar-val" style={{ fontWeight: 900, fontSize: 14, color: '#0f2341' }}>${fmtN(totalCost)}</div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Detailed breakdown for active tier */}
+      {activeResult && (() => {
+        const r = activeResult;
+        return (
+          <div className="sc-card" style={{ marginTop: 12 }}>
+            <div className="sc-card-header sc-header-slate">
+              <span className="sc-card-title">Detailed Breakdown &mdash; MOQ {activeIdx + 1}</span>
+            </div>
+            <div className="sc-card-body">
+              <div className="sc-bd-detail-grid">
+                <div className="sc-bd-detail-group">
+                  <div className="sc-bd-detail-title" style={{ color: '#2563eb' }}>Materials</div>
+                  <div className="sc-bd-detail-row"><span>Setup Mat</span><span>{fmtN(r.bd_mat_setup)}</span></div>
+                  <div className="sc-bd-detail-row"><span>Run Mat</span><span>{fmtN(r.bd_mat_run)}</span></div>
+                  <div className="sc-bd-detail-row sc-bd-detail-total"><span>Total Mat</span><span>{fmtN(matCostExcludingInk(r))}</span></div>
+                </div>
+                <div className="sc-bd-detail-group">
+                  <div className="sc-bd-detail-title" style={{ color: '#0891b2' }}>Inks</div>
+                  <div className="sc-bd-detail-row"><span>Setup Ink</span><span>{fmtN(r.bd_ink_setup)}</span></div>
+                  <div className="sc-bd-detail-row"><span>Run Ink</span><span>{fmtN(r.bd_ink_run)}</span></div>
+                  <div className="sc-bd-detail-row sc-bd-detail-total"><span>Total Ink</span><span>{fmtN(inkCostTotal(r))}</span></div>
+                </div>
+                <div className="sc-bd-detail-group">
+                  <div className="sc-bd-detail-title" style={{ color: '#059669' }}>Processes</div>
+                  <div className="sc-bd-detail-row"><span>Setup Mach</span><span>{fmtN(r.bd_setup_mach)}</span></div>
+                  <div className="sc-bd-detail-row"><span>Setup Labor</span><span>{fmtN(r.bd_setup_labor)}</span></div>
+                  <div className="sc-bd-detail-row"><span>Overhead</span><span>{fmtN(r.overhead)}</span></div>
+                  <div className="sc-bd-detail-row"><span>Labor</span><span>{fmtN(r.labor_cost)}</span></div>
+                  <div className="sc-bd-detail-row"><span>Tooling</span><span>{fmtN(r.tooling)}</span></div>
+                  <div className="sc-bd-detail-row sc-bd-detail-total"><span>Total Proc</span><span>{fmtN((r.overhead || 0) + (r.labor_cost || 0) + (r.tooling || 0))}</span></div>
+                </div>
+                <div className="sc-bd-detail-group">
+                  <div className="sc-bd-detail-title" style={{ color: '#0ea5e9' }}>Other</div>
+                  <div className="sc-bd-detail-row"><span>Packing &amp; Ship</span><span>{fmtN(r.packing_ship)}</span></div>
+                  <div className="sc-bd-detail-row"><span>VAT Loss</span><span>{fmtN(r.vat_loss)}</span></div>
+                  <div className="sc-bd-detail-row"><span>Extra</span><span>{fmtN(r.bd_extra)}</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}

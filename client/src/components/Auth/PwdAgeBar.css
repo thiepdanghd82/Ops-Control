@@ -1,0 +1,63 @@
+/* PwdAgeBar — Phase 10L.
+ * Three-tier colored bar for password rotation policy.
+ * Tokens used mirror IBM Carbon for the container palette; the
+ * fill color is hard-coded per tier so the semantic (green / orange
+ * / red) is explicit rather than derived from generic status tokens. */
+
+.pwd-age-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: inherit;
+}
+
+.pwd-age-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 11px;
+  color: #525252;
+  letter-spacing: 0.02em;
+}
+[data-theme="dark"] .pwd-age-label { color: #c6c6c6; }
+.pwd-age-days {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.pwd-age-track {
+  height: 6px;
+  background: #e8ebef;
+  overflow: hidden;
+  border-radius: 3px;
+}
+[data-theme="dark"] .pwd-age-track { background: #393939; }
+
+.pwd-age-fill {
+  height: 100%;
+  transition: width .3s ease, background-color .3s ease;
+  border-radius: 3px;
+}
+
+/* Tier palette — hard-coded so downstream themes don't silently
+   alter the meaning. #24a148 green = Carbon success, #f1c21b orange
+   is warmer than Carbon warning to feel like a "getting close"
+   nudge, #da1e28 red = Carbon danger for "change immediately". */
+.pwd-age-bar.tier-ok     .pwd-age-fill { background: #24a148; }
+.pwd-age-bar.tier-warn   .pwd-age-fill { background: #f1862a; }
+.pwd-age-bar.tier-urgent .pwd-age-fill {
+  background: #da1e28;
+  /* Subtle pulse on the urgent tier so it draws the eye. */
+  animation: pwd-age-urgent-pulse 2.2s ease-in-out infinite;
+}
+@keyframes pwd-age-urgent-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+
+.pwd-age-bar.tier-ok     .pwd-age-days { color: #24a148; }
+.pwd-age-bar.tier-warn   .pwd-age-days { color: #f1862a; }
+.pwd-age-bar.tier-urgent .pwd-age-days { color: #da1e28; font-weight: 700; }
+
+.pwd-age-bar.compact .pwd-age-track { height: 4px; }
+.pwd-age-bar.compact .pwd-age-label { font-size: 10px; }

@@ -1,0 +1,83 @@
+.cb-status-banner,
+.cb-status-toast {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  animation: cb-slide-down 0.22s ease-out;
+}
+
+@keyframes cb-slide-down {
+  from { transform: translateY(-100%); }
+  to   { transform: translateY(0); }
+}
+
+.cb-status-warn {
+  background: #fef3c7;
+  color: #92400e;
+  border-bottom: 2px solid #f59e0b;
+}
+
+.cb-status-err {
+  background: #fee2e2;
+  color: #991b1b;
+  border-bottom: 2px solid #dc2626;
+}
+
+.cb-status-ok {
+  background: #d1fae5;
+  color: #065f46;
+  border-bottom: 2px solid #10b981;
+}
+
+.cb-status-toast {
+  /* Slightly different — auto-fading toast variant */
+  animation: cb-slide-down 0.22s ease-out;
+}
+
+.cb-status-detail {
+  opacity: 0.7;
+  font-weight: 400;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+
+.cb-status-link {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid currentColor;
+  color: inherit;
+  padding: 2px 10px;
+  font: inherit;
+  font-size: 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.cb-status-link:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.cb-status-dismiss {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 8px;
+  opacity: 0.6;
+}
+
+.cb-status-dismiss:hover { opacity: 1; }
+
+/* Push body content down by banner height when active.
+   Implemented as JS-applied class on body, OR rely on overlay (current) */

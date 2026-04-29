@@ -1,0 +1,1534 @@
+/* Print Area Calculator — tab styles.
+ * Scoped under .pa-calc so existing ink-calc classes can be re-used
+ * without bleeding. Everything specific to this tab uses the `pa-*`
+ * prefix to avoid collisions with other tabs' CSS.
+ *
+ * Design tokens — keep all theme decisions here so spacing, color, and
+ * motion stay in sync across the whole tab. Override-friendly via
+ * .pa-calc[data-density="compact"] etc. if a future density toggle
+ * is added.
+ */
+.pa-calc {
+  /* Color palette — neutral grays + brand blue + semantic accents. */
+  --pa-bg: #f8fafc;
+  --pa-surface: #ffffff;
+  --pa-surface-hover: #f9fafb;
+  --pa-border: #e5e7eb;
+  --pa-border-strong: #d1d5db;
+  --pa-text: #111827;
+  --pa-text-muted: #6b7280;
+  --pa-text-subtle: #9ca3af;
+  --pa-primary: #2563eb;
+  --pa-primary-hover: #1d4ed8;
+  --pa-primary-soft: #eff6ff;
+  --pa-primary-soft-border: #bfdbfe;
+  --pa-success: #059669;
+  --pa-success-soft: #d1fae5;
+  --pa-warn: #d97706;
+  --pa-warn-soft: #fef3c7;
+  --pa-danger: #dc2626;
+  --pa-danger-soft: #fee2e2;
+  --pa-purple: #7c3aed;
+  --pa-purple-soft: #f5f3ff;
+  /* Spacing scale — 4px base. */
+  --pa-sp-1: 4px;
+  --pa-sp-2: 8px;
+  --pa-sp-3: 12px;
+  --pa-sp-4: 16px;
+  --pa-sp-5: 20px;
+  --pa-sp-6: 24px;
+  /* Radii. */
+  --pa-r-sm: 4px;
+  --pa-r-md: 6px;
+  --pa-r-lg: 8px;
+  --pa-r-xl: 12px;
+  --pa-r-pill: 999px;
+  /* Elevation. */
+  --pa-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --pa-shadow-md: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --pa-shadow-lg: 0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.04);
+  --pa-shadow-focus: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  /* Motion — single easing, two durations. Snappy by default. */
+  --pa-ease: cubic-bezier(0.2, 0, 0, 1);
+  --pa-dur-fast: 120ms;
+  --pa-dur-med: 220ms;
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* Honour reduced-motion preference — kill transitions / animations so
+ * the tab is comfortable for users who explicitly opt out. */
+@media (prefers-reduced-motion: reduce) {
+  .pa-calc,
+  .pa-calc * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Universal focus ring — uses our brand soft shadow so it's visible
+ * on every interactive without per-element styling. */
+.pa-calc :is(button, input, select, textarea, [role="button"]):focus-visible {
+  outline: none;
+  box-shadow: var(--pa-shadow-focus);
+}
+
+/* Override .ink-panel overflow:hidden so the long Print Area form
+ * can scroll vertically inside the parent .ink-body wrapper. The
+ * shared .ink-panel rule clips content for other tabs that fit on
+ * one screen — Print Area's left column has 4 sections and needs
+ * to overflow into the page scroll. */
+.pa-calc .ink-body {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.pa-calc .ink-body > .ink-panel {
+  overflow: visible;
+  height: auto;
+}
+
+/* ── Header — self-contained so it doesn't depend on InkCalculator.css
+ * loading first. Sticky to the top of the tab so sub-tab switching
+ * stays one click away while scrolling deep into the form. */
+.pa-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--pa-surface);
+  border-bottom: 1px solid var(--pa-border);
+  padding: var(--pa-sp-3) var(--pa-sp-5);
+  flex-shrink: 0;
+  box-shadow: var(--pa-shadow-sm);
+}
+.pa-header-top {
+  display: flex;
+  align-items: center;
+  gap: var(--pa-sp-3);
+  flex-wrap: wrap;
+}
+.pa-header-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--pa-r-md);
+  background: linear-gradient(135deg, var(--pa-primary) 0%, var(--pa-primary-hover) 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: var(--pa-shadow-md);
+}
+.pa-header-icon svg {
+  width: 20px;
+  height: 20px;
+}
+.pa-header-titles {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pa-header-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--pa-text);
+  margin: 0;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.pa-header-subtitle {
+  font-size: 12px;
+  color: var(--pa-text-muted);
+  margin: 0;
+  line-height: 1.3;
+}
+
+/* Sub-tab nav — segmented pill group, same visual language as the
+ * canvas-tools toggle so the user learns one pattern. */
+.pa-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--pa-surface-hover);
+  border: 1px solid var(--pa-border);
+  border-radius: var(--pa-r-md);
+  flex-shrink: 0;
+}
+.pa-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--pa-r-sm);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pa-text-muted);
+  cursor: pointer;
+  transition: background var(--pa-dur-fast) var(--pa-ease),
+              color var(--pa-dur-fast) var(--pa-ease),
+              box-shadow var(--pa-dur-fast) var(--pa-ease);
+  font-family: inherit;
+  white-space: nowrap;
+}
+/* Responsive tab-bar — 3 sub-tabs; overflow only possible on
+ * very narrow screens (iPhone portrait). Compact sizing matches the
+ * Carbon pattern used by Pricing Std / Pricing Cpx. */
+@media (max-width: 1099px) {
+  .pa-tab { padding: 5px 12px; font-size: 12.5px; }
+}
+.pa-tab:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--pa-text);
+}
+.pa-tab.active {
+  background: var(--pa-surface);
+  color: var(--pa-primary);
+  box-shadow: var(--pa-shadow-sm);
+  font-weight: 700;
+}
+.pa-tab-count {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: var(--pa-r-pill);
+  background: var(--pa-border);
+  color: var(--pa-text-muted);
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  min-width: 18px;
+  text-align: center;
+}
+.pa-tab.active .pa-tab-count {
+  background: var(--pa-primary-soft);
+  color: var(--pa-primary);
+}
+
+/* Header collapses on narrow screens — stack title + nav vertically
+ * so the title doesn't get squeezed against the nav buttons. */
+@media (max-width: 720px) {
+  .pa-tabs { width: 100%; justify-content: stretch; }
+  .pa-tab { flex: 1; justify-content: center; }
+}
+
+.pa-body {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 16px;
+  padding: 12px 16px;
+  /* On ultra-wide monitors (≥ 1600px) nudge the sidebar slightly
+   * narrower so the canvas pair + results table breathe. minmax(0,1fr)
+   * on the right column prevents long result hex values from forcing
+   * horizontal scroll — content that overflows a cell truncates
+   * instead of blowing out the grid. */
+}
+@media (min-width: 1600px) {
+  .pa-body { grid-template-columns: 340px minmax(0, 1fr); }
+}
+@media (min-width: 1920px) {
+  .pa-body { grid-template-columns: 340px minmax(0, 1fr); padding: 14px 20px; }
+}
+
+.pa-panel {
+  background: var(--pa-surface);
+  border: 1px solid var(--pa-border);
+  border-radius: var(--pa-r-lg);
+  padding: var(--pa-sp-4);
+  box-shadow: var(--pa-shadow-sm);
+  /* No internal scroll — defer to the page-level .ink-body scroll so
+   * users only ever see one scrollbar. Avoids the trap where the inner
+   * panel scrollbar reaches the bottom but the outer page can't reach
+   * the Save button. */
+}
+
+/* Ink Plates panel — visually distinguished from the raster Results
+ * panel by a subtle amber border-left, signalling "pre-press engine"
+ * provenance (this data came from the vector stream, not the pixels).
+ * Matches the Esko/PitStop "Ink Coverage" report visual language. */
+.pa-panel.pa-panel-plates {
+  border-left: 3px solid #f59e0b;
+  background: linear-gradient(180deg, #fffbeb 0%, var(--pa-surface) 60px);
+  margin-bottom: 12px;
+}
+
+.pa-panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--pa-text);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0 0 var(--pa-sp-3);
+  padding-bottom: var(--pa-sp-2);
+  border-bottom: 1px solid var(--pa-border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Tiny dot before each panel title for visual rhythm. */
+.pa-panel-title::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--pa-primary);
+}
+
+/* Title row with a trailing action button (e.g. clear-artwork ×).
+   Keep the title text flush-left so it visually aligns with the
+   other sidebar headers (Detection, Accuracy, Canvas tools, …).
+   The trailing action button, if present, is pushed right via
+   `margin-left: auto` on the button itself — no space-between on
+   the container, which would otherwise stretch a single-child
+   row and make the title look centered when no button exists. */
+.pa-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pa-title-row > .pa-clear-btn,
+.pa-title-row > .pa-sep-btn,
+.pa-title-row > .pa-results-header-tools {
+  margin-left: auto;
+}
+
+/* Results-panel header tool row — consolidates Draw ROI / Inspect /
+   Clear ROI / Separations onto the same line as "Results · Canvas ×".
+   On narrow viewports the buttons wrap below the title but stay
+   right-aligned as a group. */
+.pa-results-header-title { min-width: 0; }
+.pa-results-header-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
+}
+/* The ROI buttons in the header should inherit the title-row's
+   smaller type so they don't dwarf the "Results · Canvas …" line.
+   Override the default pa-roi-btn sizing introduced in the sidebar
+   context — smaller padding + matching font. */
+.pa-results-header-tools .pa-roi-btn {
+  font-size: 11.5px;
+  padding: 4px 10px;
+}
+
+.pa-clear-btn {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 120ms, border-color 120ms;
+}
+.pa-clear-btn:hover {
+  background: #fecaca;
+  border-color: #f87171;
+}
+.pa-clear-btn:active {
+  background: #fca5a5;
+}
+
+/* Checkbox rows in the Detection panel (auto-crop, dieline filter). */
+.pa-check-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+.pa-check-row label {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  color: #374151;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.pa-check-row input[type="checkbox"] {
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+/* Crop-mode radio group — stacked for readability in the narrow
+   detection sidebar. Hover/active states piggyback on the system
+   radio control so we don't re-style browser chrome. */
+.pa-radio-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+.pa-radio-opt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #374151;
+  cursor: pointer;
+  line-height: 1.35;
+}
+.pa-radio-opt input[type="radio"] { cursor: pointer; }
+.pa-radio-opt input[type="radio"]:disabled + span { opacity: 0.5; cursor: not-allowed; }
+
+/* Sanity warning + info banners. Both share structure so callers can
+   treat them as one visual family; colors differentiate severity. */
+.pa-bg-warning {
+  font-size: 12px;
+  color: #8a5a00;
+  background: #fff4e5;
+  border-left: 3px solid #f5a623;
+  padding: 8px 10px;
+  margin: 8px 0;
+  line-height: 1.4;
+  border-radius: 3px;
+}
+.pa-bg-warning-meta { color: #9ca3af; font-weight: 400; }
+.pa-info-banner {
+  font-size: 12px;
+  color: #1e40af;
+  background: #eff6ff;
+  border-left: 3px solid #3b82f6;
+  padding: 8px 10px;
+  margin: 8px 0;
+  line-height: 1.4;
+  border-radius: 3px;
+}
+.pa-dieline-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pa-dieline-swatch {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03);
+}
+
+/* ─── Library table: right-click context menu ─── */
+.pa-library-row { transition: background-color 120ms; }
+.pa-library-row:hover { background-color: #f9fafb; }
+
+/* Three-dot action button lives in the last cell and doubles as a
+   left-click affordance for anyone who doesn't know about right-click. */
+.pa-library-actions-btn {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #6b7280;
+  font-size: 16px;
+  line-height: 1;
+  width: 28px;
+  height: 26px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 120ms, border-color 120ms, color 120ms;
+}
+.pa-library-actions-btn:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #0f62fe;
+}
+
+/* Floating context menu. Rendered as a sibling of the table (not a
+   table descendant) so fixed-positioning + z-index are unaffected by
+   any ancestor `overflow` setting. */
+.pa-context-menu {
+  position: fixed;
+  z-index: 9999;
+  min-width: 160px;
+  padding: 4px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12),
+              0 2px 6px  rgba(15, 23, 42, 0.08);
+  font-size: 13px;
+  color: #111827;
+  user-select: none;
+}
+.pa-context-menu-header {
+  padding: 6px 10px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid #f3f4f6;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pa-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+.pa-context-menu-item:hover,
+.pa-context-menu-item:focus-visible {
+  background: #eff6ff;
+  outline: none;
+}
+.pa-context-menu-danger { color: #b91c1c; }
+.pa-context-menu-danger:hover,
+.pa-context-menu-danger:focus-visible { background: #fef2f2; }
+.pa-context-menu-ico { width: 16px; text-align: center; }
+
+[data-theme="dark"] .pa-library-row:hover { background-color: #1f2937; }
+[data-theme="dark"] .pa-context-menu {
+  background: #1f2937;
+  border-color: #374151;
+  color: #e5e7eb;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+[data-theme="dark"] .pa-context-menu-header {
+  color: #9ca3af;
+  border-bottom-color: #374151;
+}
+[data-theme="dark"] .pa-context-menu-item:hover,
+[data-theme="dark"] .pa-context-menu-item:focus-visible { background: #374151; }
+[data-theme="dark"] .pa-context-menu-danger { color: #fca5a5; }
+[data-theme="dark"] .pa-context-menu-danger:hover,
+[data-theme="dark"] .pa-context-menu-danger:focus-visible { background: rgba(185, 28, 28, 0.25); }
+
+/* Excluded states — chips, rows, and the "ignored" tag. */
+.pa-overlay-chip.excluded {
+  opacity: 0.55;
+  text-decoration: line-through;
+  background: #fef3c7;
+  border-color: #fcd34d;
+}
+.pa-results tr.clickable {
+  cursor: pointer;
+}
+.pa-results tr.clickable:hover {
+  background: #f0f9ff;
+}
+/* Row gets a left blue rail when its overlay highlight is active.
+ * Cheap visual that survives next to the existing yellow "ignored"
+ * background — both states can coexist (you can ignore a color AND
+ * still highlight where it lands, useful for sanity-checking why
+ * something was auto-excluded). */
+.pa-results tr.overlay-on > td:first-child {
+  box-shadow: inset 3px 0 0 #2563eb;
+}
+/* The # and swatch cells own the overlay toggle — give them a hover
+ * state distinct from the row hover so the user knows these two cells
+ * do something different from the rest of the row. */
+.pa-results td.pa-show-cell {
+  cursor: pointer;
+  position: relative;
+}
+.pa-results td.pa-show-cell:hover {
+  background: #eef2ff;
+}
+.pa-results .pa-overlay-dot {
+  color: #2563eb;
+  font-size: 10px;
+  margin-left: 4px;
+  vertical-align: middle;
+  display: inline-block;
+  animation: pa-pulse 1.4s ease-in-out infinite;
+}
+@keyframes pa-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+.pa-results tr.excluded {
+  background: #fef3c7;
+  color: #78350f;
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+.pa-results tr.excluded:hover {
+  background: #fde68a;
+}
+.pa-excluded-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #fbbf24;
+  color: #78350f;
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.pa-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+.pa-field > label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #4b5563;
+}
+.pa-field input[type="text"],
+.pa-field input[type="number"],
+.pa-field select {
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: inherit;
+}
+.pa-field input[type="range"] {
+  width: 100%;
+}
+
+.pa-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.pa-dropzone {
+  border: 2px dashed var(--pa-primary-soft-border);
+  border-radius: var(--pa-r-lg);
+  padding: var(--pa-sp-5);
+  text-align: center;
+  color: var(--pa-primary);
+  font-size: 12px;
+  line-height: 1.5;
+  background: var(--pa-primary-soft);
+  cursor: pointer;
+  transition: background var(--pa-dur-fast) var(--pa-ease),
+              border-color var(--pa-dur-fast) var(--pa-ease),
+              transform var(--pa-dur-fast) var(--pa-ease);
+}
+.pa-dropzone:hover {
+  background: #dbeafe;
+  border-color: var(--pa-primary);
+}
+.pa-dropzone.dragging {
+  background: #dbeafe;
+  border-color: var(--pa-primary);
+  transform: scale(1.01);
+  box-shadow: var(--pa-shadow-md);
+}
+.pa-dropzone input {
+  display: none;
+}
+.pa-dropzone-file {
+  font-weight: 700;
+  color: #1e40af;
+  word-break: break-all;
+}
+.pa-dropzone-icon {
+  width: 28px;
+  height: 28px;
+  margin: 0 auto 6px;
+  opacity: 0.7;
+  display: block;
+}
+.pa-dropzone-hint {
+  display: block;
+  margin-top: 4px;
+  color: var(--pa-text-muted);
+  font-size: 11px;
+}
+
+/* Primary action — gradient + shadow lift, never flat. */
+.pa-analyze-btn {
+  width: 100%;
+  padding: 11px var(--pa-sp-4);
+  background: linear-gradient(180deg, var(--pa-primary) 0%, var(--pa-primary-hover) 100%);
+  color: #fff;
+  border: 0;
+  border-radius: var(--pa-r-md);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  margin-top: var(--pa-sp-2);
+  box-shadow: var(--pa-shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: transform var(--pa-dur-fast) var(--pa-ease),
+              box-shadow var(--pa-dur-fast) var(--pa-ease),
+              filter var(--pa-dur-fast) var(--pa-ease);
+}
+.pa-analyze-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--pa-shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  filter: brightness(1.05);
+}
+.pa-analyze-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: var(--pa-shadow-sm), inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+.pa-analyze-btn:disabled {
+  background: #cbd5e1;
+  color: #f1f5f9;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+/* Secondary save variant — green when ready, sticks out from the
+ * blue analyze button so the user knows the next step is "save". */
+.pa-analyze-btn.pa-save-btn {
+  background: linear-gradient(180deg, var(--pa-success) 0%, #047857 100%);
+}
+.pa-analyze-btn.pa-save-btn:disabled {
+  background: #cbd5e1;
+}
+
+/* Sticky action bar at the bottom of the left panel — keeps
+ * Analyze/Save reachable even when scrolled deep into Detection. */
+.pa-action-bar {
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, var(--pa-surface) 30%, var(--pa-surface) 100%);
+  padding: var(--pa-sp-3) 0 var(--pa-sp-1);
+  margin: var(--pa-sp-3) 0 calc(-1 * var(--pa-sp-4));
+  z-index: 2;
+}
+
+.pa-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* No height:100% — natural content flow so the outer page scrolls,
+   * not this column independently. */
+}
+/* Paired canvases (Original | Analysis area) — equal columns so both
+ * scale identically, with their captions stacked above and below.
+ * On narrow viewports we collapse to a single column so each canvas
+ * keeps a usable width. */
+.pa-canvas-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  min-width: 0;
+}
+.pa-canvas-side {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.pa-canvas-caption-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #4b5563;
+  padding: 0 2px;
+  min-height: 22px;
+}
+/* Zoom controls float right, the label + tags cluster left. */
+.pa-canvas-caption-top > .pa-zoom-controls {
+  margin-left: auto;
+}
+.pa-caption-tag {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.pa-tag-manual {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.pa-tag-auto {
+  background: #dcfce7;
+  color: #166534;
+}
+.pa-tag-full {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+/* "syncing…" tag — animated background while auto re-analyse runs
+ * after a manual ROI change. Live signal to the user that the right
+ * canvas is being recomputed without them having to click anything. */
+.pa-tag-busy {
+  background: linear-gradient(90deg, #fef3c7 0%, #fde68a 50%, #fef3c7 100%);
+  background-size: 200% 100%;
+  color: #92400e;
+  animation: pa-tag-busy-pulse 1.4s ease-in-out infinite;
+}
+@keyframes pa-tag-busy-pulse {
+  0%, 100% { background-position: 0% 0; }
+  50% { background-position: 100% 0; }
+}
+.pa-canvas-caption {
+  font-size: 11px;
+  color: #374151;
+  text-align: center;
+  padding: 4px 6px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+}
+.pa-canvas-caption-sub {
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.pa-canvas-box {
+  /* Enforce identical box dimensions for Original + Analysis Area so
+   * the two cards are always visually balanced regardless of canvas
+   * aspect ratio. Content inside centers with letterboxing when
+   * aspect doesn't match — preferable to having one box tall and
+   * the other thin when the crop extracts a wide-strip region. */
+  aspect-ratio: 3 / 2;
+  /* Cap so a very wide viewport doesn't make the pair dominate the
+   * screen; keep a floor so tiny viewports don't collapse the box. */
+  max-height: 62vh;
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: repeating-conic-gradient(#f3f4f6 0% 25%, #fff 0% 50%) 50% / 16px 16px;
+  border: 1px solid var(--pa-border);
+  border-radius: var(--pa-r-lg);
+  overflow: auto;
+  padding: var(--pa-sp-3);
+  box-shadow: var(--pa-shadow-sm);
+  transition: border-color var(--pa-dur-fast) var(--pa-ease);
+}
+.pa-canvas-box:has(canvas.pa-canvas-roi) {
+  border-color: var(--pa-primary-soft-border);
+}
+.pa-canvas-box canvas {
+  max-width: 100%;
+  max-height: 100%;
+  image-rendering: pixelated;
+  box-shadow: var(--pa-shadow-md);
+  border-radius: 2px;
+  transition: opacity var(--pa-dur-med) var(--pa-ease);
+}
+/* Zoomed state — let the canvas paint at its natural size and rely on
+   the box's `overflow: auto` to scroll. Flex-start alignment makes the
+   image anchor top-left (where the user expects) instead of centering
+   the zoomed-in canvas mid-viewport. The CSS `zoom` property on the
+   canvas is what drives the actual enlargement; this rule just makes
+   the surrounding layout cooperate. */
+.pa-canvas-box.is-zoomed {
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+.pa-canvas-box.is-zoomed canvas {
+  max-width: none;
+  max-height: none;
+}
+
+/* Compact zoom toolbar — segmented − / % / + control that sits in the
+   canvas caption row. Click the % pill to reset to 100% (fit). */
+.pa-zoom-controls {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #ffffff;
+  line-height: 1;
+}
+.pa-zoom-btn,
+.pa-zoom-value {
+  border: 0;
+  background: transparent;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  letter-spacing: 0;
+  text-transform: none;
+  min-width: 22px;
+  transition: background-color 120ms, color 120ms;
+}
+.pa-zoom-btn:hover:not(:disabled),
+.pa-zoom-value:hover {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+.pa-zoom-btn:focus-visible,
+.pa-zoom-value:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: -2px;
+  z-index: 1;
+}
+.pa-zoom-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.pa-zoom-btn {
+  font-size: 14px;
+  line-height: 1;
+}
+.pa-zoom-value {
+  border-left: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+  min-width: 48px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+[data-theme="dark"] .pa-zoom-controls {
+  border-color: #374151;
+  background: #1f2937;
+}
+[data-theme="dark"] .pa-zoom-btn,
+[data-theme="dark"] .pa-zoom-value { color: #e5e7eb; }
+[data-theme="dark"] .pa-zoom-btn:hover:not(:disabled),
+[data-theme="dark"] .pa-zoom-value:hover { background: #374151; color: #93c5fd; }
+[data-theme="dark"] .pa-zoom-value { border-left-color: #374151; border-right-color: #374151; }
+.pa-canvas-empty {
+  color: var(--pa-text-subtle);
+  font-size: 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pa-sp-2);
+  padding: var(--pa-sp-4);
+}
+.pa-canvas-empty svg {
+  width: 48px;
+  height: 48px;
+  opacity: 0.5;
+}
+.pa-canvas-empty strong {
+  color: var(--pa-text-muted);
+  font-weight: 600;
+}
+.pa-calc kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  background: var(--pa-surface);
+  border: 1px solid var(--pa-border);
+  border-radius: var(--pa-r-sm);
+  font-size: 10px;
+  font-family: ui-monospace, Menlo, monospace;
+  color: var(--pa-text-muted);
+  box-shadow: 0 1px 0 var(--pa-border);
+  vertical-align: middle;
+}
+
+.pa-overlay-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pa-overlay-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  font-size: 11px;
+  cursor: pointer;
+  user-select: none;
+}
+.pa-overlay-chip.active {
+  background: #dbeafe;
+  border-color: #60a5fa;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+.pa-overlay-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.pa-results {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.pa-results th,
+.pa-results td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f3f4f6;
+  text-align: left;
+  transition: background var(--pa-dur-fast) var(--pa-ease);
+}
+.pa-results thead th {
+  background: var(--pa-surface-hover);
+  font-weight: 700;
+  color: var(--pa-text-muted);
+  position: sticky;
+  top: 0;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--pa-border);
+}
+.pa-results .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+.pa-results tfoot td {
+  font-weight: 800;
+  background: linear-gradient(180deg, #f9fafb 0%, #f3f4f6 100%);
+  border-top: 2px solid var(--pa-border-strong);
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.pa-swatch {
+  width: 28px;
+  height: 20px;
+  border-radius: var(--pa-r-sm);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  display: inline-block;
+  vertical-align: middle;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+  transition: transform var(--pa-dur-fast) var(--pa-ease);
+}
+.pa-show-cell:hover .pa-swatch {
+  transform: scale(1.08);
+}
+
+/* Inline coverage bar — fills the Area % cell with a horizontal blue
+ * tint proportional to the row's coverage. Reads at-a-glance which
+ * inks dominate without scanning the % column. */
+.pa-results .pa-pct-cell {
+  position: relative;
+  font-weight: 600;
+  z-index: 0;
+}
+.pa-results .pa-pct-cell::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: var(--pa-pct, 0%);
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.10) 0%, rgba(37, 99, 235, 0.18) 100%);
+  border-radius: var(--pa-r-sm);
+  z-index: -1;
+  transition: width var(--pa-dur-med) var(--pa-ease);
+}
+.pa-results tr.excluded .pa-pct-cell::before {
+  background: linear-gradient(90deg, rgba(217, 119, 6, 0.10) 0%, rgba(217, 119, 6, 0.18) 100%);
+}
+
+/* Stacked total bar — shown above tfoot to visualize coverage split
+ * across all detected (non-ignored) inks at once. */
+.pa-stack-bar {
+  display: flex;
+  height: 10px;
+  margin: 0 0 var(--pa-sp-2);
+  background: var(--pa-border);
+  border-radius: var(--pa-r-pill);
+  overflow: hidden;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.08);
+}
+.pa-stack-bar > span {
+  display: block;
+  height: 100%;
+  transition: width var(--pa-dur-med) var(--pa-ease);
+  position: relative;
+}
+.pa-stack-bar > span:not(:last-child) {
+  border-right: 1px solid rgba(255, 255, 255, 0.5);
+}
+.pa-stack-legend {
+  font-size: 10px;
+  color: var(--pa-text-muted);
+  margin-bottom: var(--pa-sp-3);
+  padding: 0 var(--pa-sp-1);
+}
+
+/* Library tab — table of saved jobs keyed by SKU. */
+.pa-library-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.pa-library-table th,
+.pa-library-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.pa-library-table th {
+  background: #f9fafb;
+  text-align: left;
+  font-weight: 700;
+  color: #374151;
+}
+.pa-library-table tr.clickable {
+  cursor: pointer;
+}
+.pa-library-table tr.clickable:hover {
+  background: #f0f9ff;
+}
+
+.pa-error {
+  color: #991b1b;
+  background: linear-gradient(180deg, #fff5f5 0%, var(--pa-danger-soft) 100%);
+  border: 1px solid #fecaca;
+  padding: var(--pa-sp-2) var(--pa-sp-3);
+  border-radius: var(--pa-r-md);
+  font-size: 12px;
+  margin-top: var(--pa-sp-2);
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  animation: pa-slide-in var(--pa-dur-med) var(--pa-ease);
+}
+.pa-error::before {
+  content: '⚠';
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.pa-progress {
+  color: var(--pa-primary-hover);
+  font-size: 11px;
+  margin-top: var(--pa-sp-2);
+  display: flex;
+  align-items: center;
+  gap: var(--pa-sp-2);
+  font-weight: 600;
+}
+.pa-progress::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--pa-primary-soft-border);
+  border-top-color: var(--pa-primary);
+  border-radius: 50%;
+  animation: pa-spin 0.7s linear infinite;
+}
+@keyframes pa-spin {
+  to { transform: rotate(360deg); }
+}
+/* Mid-analysis canvas dim — dim the canvas so the user sees we're
+ * working without blocking interaction or hiding the source. */
+.pa-canvas-box.is-analyzing canvas {
+  opacity: 0.6;
+  filter: blur(0.5px);
+}
+
+.pa-legend-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.pa-legend-card h3 {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #111827;
+  margin: 0 0 8px;
+}
+.pa-legend-card p,
+.pa-legend-card li {
+  font-size: 12px;
+  color: #374151;
+  line-height: 1.55;
+}
+.pa-legend-card code {
+  background: #f3f4f6;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11.5px;
+}
+
+/* Bilingual additions */
+.pa-legend-wrap { padding: 14px; max-width: 820px; }
+.pa-bi-vi {
+  margin-top: 4px;
+  color: #64748b;
+  font-style: italic;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.pa-legend-note { font-size: 11px; }
+.pa-legend-disclaimer { font-size: 12px; font-style: italic; color: #6b7280; }
+
+/* Print method chips — radio buttons styled as press-method tiles. */
+.pa-method-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.pa-method-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 7px 9px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  background: #fff;
+  transition: background 120ms, border-color 120ms;
+  position: relative;
+}
+.pa-method-chip:hover {
+  background: #f9fafb;
+  border-color: #cbd5e1;
+}
+.pa-method-chip.active {
+  background: #eef2ff;
+  border-color: #6366f1;
+  color: #3730a3;
+  font-weight: 700;
+}
+.pa-method-chip input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.pa-method-meta {
+  font-size: 10px;
+  color: #6b7280;
+  font-weight: 400;
+}
+.pa-method-chip.active .pa-method-meta {
+  color: #4f46e5;
+}
+
+/* Drawing-scale hint — appears under the scale dropdown when not 1:1
+ * so the user always sees the resulting physical dimensions. */
+.pa-scale-hint {
+  font-size: 11px;
+  color: #4338ca;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 5px;
+  padding: 5px 8px;
+  margin-bottom: 10px;
+}
+
+/* Segmented control for canvas tools (Draw ROI / Inspect) — pill
+ * group with shared border, active segment lifts visually. */
+.pa-roi-controls {
+  display: flex;
+  gap: var(--pa-sp-1);
+  margin-bottom: var(--pa-sp-2);
+  background: var(--pa-surface-hover);
+  padding: 3px;
+  border-radius: var(--pa-r-md);
+  border: 1px solid var(--pa-border);
+}
+.pa-roi-btn {
+  flex: 1;
+  padding: 7px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--pa-r-sm);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pa-text-muted);
+  transition: background var(--pa-dur-fast) var(--pa-ease),
+              color var(--pa-dur-fast) var(--pa-ease),
+              box-shadow var(--pa-dur-fast) var(--pa-ease);
+}
+.pa-roi-btn:hover {
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--pa-text);
+}
+.pa-roi-btn.active {
+  background: var(--pa-primary);
+  border-color: var(--pa-primary-hover);
+  color: #fff;
+  box-shadow: var(--pa-shadow-sm);
+}
+.pa-roi-clear {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  background: var(--pa-danger-soft);
+  color: var(--pa-danger);
+}
+.pa-roi-clear:hover {
+  background: #fecaca;
+  color: var(--pa-danger);
+}
+.pa-roi-info {
+  font-size: 11px;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 5px 8px;
+  border-radius: 5px;
+  margin-bottom: 6px;
+}
+.pa-roi-info.pa-roi-hint {
+  color: #6b7280;
+  background: #f9fafb;
+  border-color: #e5e7eb;
+  font-style: italic;
+}
+.pa-canvas-box canvas.pa-canvas-roi {
+  cursor: crosshair;
+}
+
+/* Inspect button — purple-ish to differentiate from blue ROI button. */
+.pa-roi-btn.pa-pick-active {
+  background: #7c3aed;
+  border-color: #6d28d9;
+  color: #fff;
+}
+
+/* Pixel inspector chip — sits below the canvas tools, shows the
+ * picked color + matched cluster + cluster's coverage %. The inline
+ * × clear button replaces the picked pixel state. */
+.pa-pick-info {
+  display: flex;
+  gap: var(--pa-sp-3);
+  padding: var(--pa-sp-3);
+  border: 1px solid #ddd6fe;
+  background: linear-gradient(180deg, #faf5ff 0%, var(--pa-purple-soft) 100%);
+  border-radius: var(--pa-r-lg);
+  font-size: 11px;
+  color: #4c1d95;
+  margin-bottom: var(--pa-sp-2);
+  position: relative;
+  box-shadow: var(--pa-shadow-md);
+  animation: pa-slide-in var(--pa-dur-med) var(--pa-ease);
+}
+@keyframes pa-slide-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.pa-pick-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 5px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 2px #fff;
+}
+.pa-pick-swatch.sm {
+  width: 14px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 4px;
+  box-shadow: none;
+}
+.pa-pick-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pa-pick-row {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  word-break: break-all;
+}
+.pa-pick-row.pa-pick-sub {
+  color: #6b7280;
+  font-family: inherit;
+}
+/* "Ink #N" badge — clickable button that toggles the canvas overlay
+ * for that ink. Reset all native button defaults so it visually looks
+ * like a chip, not a button. Active state (overlay on) pushes it into
+ * a saturated blue so the user can see at a glance which ink is
+ * currently highlighted on the canvas. */
+button.pa-pick-row.pa-pick-ink {
+  font-family: inherit;
+  background: #ede9fe;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 4px 7px;
+  margin-top: 2px;
+  font-weight: 600;
+  font-size: 11px;
+  color: #4c1d95;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  transition: background 120ms, border-color 120ms;
+}
+button.pa-pick-row.pa-pick-ink:hover {
+  background: #ddd6fe;
+  border-color: #c4b5fd;
+}
+button.pa-pick-row.pa-pick-ink.overlay-on {
+  background: #2563eb;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+button.pa-pick-row.pa-pick-ink.overlay-on .pa-overlay-dot {
+  color: #fff;
+  margin-left: auto;
+}
+.pa-pick-clear {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  background: none;
+  border: 0;
+  color: #7c3aed;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.pa-pick-clear:hover {
+  color: #4c1d95;
+}
+
+/* "Pin as spot ink" — forces a hex to survive the K-color limit on
+ * future analyses. Visually related to the ink chip above it but uses
+ * amber to signal "this is an operator override" vs. an automatic
+ * detection result. Pinned state flips to a filled amber so the user
+ * can see it's armed. */
+button.pa-pick-row.pa-pick-pin {
+  font-family: inherit;
+  background: #fffbeb;
+  border: 1px dashed #fbbf24;
+  border-radius: 4px;
+  padding: 4px 7px;
+  margin-top: 2px;
+  font-weight: 600;
+  font-size: 11px;
+  color: #92400e;
+  cursor: pointer;
+  text-align: left;
+  transition: background 120ms, border-color 120ms;
+}
+button.pa-pick-row.pa-pick-pin:hover {
+  background: #fef3c7;
+  border-color: #f59e0b;
+}
+button.pa-pick-row.pa-pick-pin.pinned {
+  background: #f59e0b;
+  border-style: solid;
+  border-color: #b45309;
+  color: #fff;
+}
+
+/* Pinned-hex strip — visible above Results when the user has
+ * eyedropper-forced one or more spot inks. Same spatial band as the
+ * overlay chip row so the two read as related controls. */
+.pa-pinned-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  margin: 6px 0 0;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #78350f;
+}
+.pa-pinned-label {
+  font-weight: 700;
+}
+.pa-pinned-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px 2px 4px;
+  background: #fff;
+  border: 1px solid #fcd34d;
+  border-radius: 999px;
+  font-family: ui-monospace, Menlo, monospace;
+}
+.pa-pinned-chip code {
+  font-size: 10px;
+  color: #111827;
+}
+.pa-pinned-remove {
+  background: none;
+  border: 0;
+  color: #92400e;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.pa-pinned-remove:hover {
+  color: #7c2d12;
+}
+.pa-pinned-hint {
+  margin-left: auto;
+  font-style: italic;
+  color: #92400e;
+}
+
+/* Separation download button — sits in the Results header. */
+.pa-sep-btn {
+  background: #0ea5e9;
+  color: #fff;
+  border: 0;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+.pa-sep-btn:hover {
+  background: #0284c7;
+}
+
+.pa-results-method {
+  font-size: 11px;
+  font-weight: 600;
+  color: #4f46e5;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 4px;
+}
+
+/* Responsive — single column below 1100 px (preview stacks below). */
+@media (max-width: 1100px) {
+  .pa-body { grid-template-columns: 1fr; }
+  .pa-method-grid { grid-template-columns: 1fr 1fr 1fr; }
+}
+@media (max-width: 900px) {
+  .pa-canvas-pair { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .pa-method-grid { grid-template-columns: 1fr 1fr; }
+}

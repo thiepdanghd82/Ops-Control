@@ -1,0 +1,134 @@
+/* AppBootstrap — post-login loading overlay (Phase 10K).
+ * Reuses the login backdrop layers (.login-bg-grid, .login-bg-lines)
+ * so the transition from login → loading is one continuous surface.
+ * Card style matches the login card but leaner — this is a transient
+ * state, not a landing page. */
+
+.bootstrap-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9985;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  color: #e6ecf5;
+  background:
+    radial-gradient(ellipse at 85% 10%, rgba(15, 98, 254, 0.16), transparent 55%),
+    radial-gradient(ellipse at 10% 90%, rgba(34, 52, 110, 0.35), transparent 55%),
+    linear-gradient(160deg, #0a1220 0%, #0f1a2e 50%, #13233d 100%);
+}
+
+.bootstrap-card {
+  position: relative;
+  z-index: 1;
+  background: #ffffff;
+  color: #161616;
+  border: 1px solid #dde1e6;
+  border-radius: 2px;
+  padding: 36px 40px 28px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.18),
+    0 24px 64px rgba(8, 16, 34, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: stretch;
+}
+.bootstrap-card::before {
+  content: '';
+  position: absolute;
+  top: -1px; left: -1px; right: -1px;
+  height: 3px;
+  background: linear-gradient(90deg, #0f62fe 0%, #4589ff 100%);
+}
+[data-theme="dark"] .bootstrap-card {
+  background: #161616;
+  color: #f4f4f4;
+  border-color: #393939;
+}
+
+.bootstrap-spinner {
+  align-self: flex-start;
+  margin-bottom: 4px;
+}
+@keyframes bootstrap-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.bootstrap-title {
+  font-size: 20px;
+  font-weight: 500;
+  color: inherit;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.bootstrap-subtitle {
+  font-size: 13px;
+  color: #525252;
+  margin: 0 0 4px;
+  line-height: 1.4;
+}
+[data-theme="dark"] .bootstrap-subtitle { color: #c6c6c6; }
+
+.bootstrap-progress {
+  height: 4px;
+  background: #e0e0e0;
+  overflow: hidden;
+}
+[data-theme="dark"] .bootstrap-progress { background: #393939; }
+.bootstrap-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0f62fe 0%, #4589ff 100%);
+  transition: width .24s ease;
+}
+
+.bootstrap-tasks {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  color: #525252;
+}
+[data-theme="dark"] .bootstrap-tasks { color: #c6c6c6; }
+.bootstrap-tasks li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color .16s, opacity .16s;
+}
+.bootstrap-tasks li.pending { opacity: 0.55; }
+.bootstrap-tasks li.done    { color: #198038; }
+.bootstrap-tasks li.error   { color: #da1e28; }
+[data-theme="dark"] .bootstrap-tasks li.done  { color: #42be65; }
+[data-theme="dark"] .bootstrap-tasks li.error { color: #ff8389; }
+
+.bootstrap-task-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  background: currentColor;
+  color: #fff;
+  flex-shrink: 0;
+}
+.bootstrap-tasks li.pending .bootstrap-task-icon {
+  background: transparent;
+  color: #8d8d8d;
+  border: 1px solid #c6c6c6;
+}
+[data-theme="dark"] .bootstrap-tasks li.pending .bootstrap-task-icon {
+  color: #6f6f6f;
+  border-color: #6f6f6f;
+}

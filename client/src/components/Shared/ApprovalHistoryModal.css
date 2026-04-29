@@ -1,0 +1,70 @@
+/* ApprovalHistoryModal — timeline rows inside a shared <Modal>. */
+
+.appr-hist-empty {
+  padding: 48px 20px;
+  text-align: center;
+  color: #6f6f6f;
+  font-size: 12px;
+}
+
+.appr-hist-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.appr-hist-row {
+  display: grid;
+  grid-template-columns: 140px 90px 1fr;
+  gap: 12px;
+  padding: 12px 20px;
+  font-size: 12px;
+  color: #161616;
+  border-bottom: 1px solid #f4f4f4;
+}
+.appr-hist-row:last-child { border-bottom: none; }
+
+.appr-hist-ts {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  color: #525252;
+}
+
+.appr-hist-action {
+  color: #0043ce;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.16px;
+  text-transform: uppercase;
+}
+
+.appr-hist-transition {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: baseline;
+}
+.appr-hist-from   { color: #525252; }
+.appr-hist-arrow  { color: #8d8d8d; margin: 0 2px; }
+.appr-hist-to     { font-weight: 600; color: #161616; }
+.appr-hist-actor  { color: #6f6f6f; margin-left: 6px; }
+
+.appr-hist-reason {
+  margin-top: 4px;
+  color: #6f6f6f;
+  font-style: italic;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.appr-hist-footer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 11px;
+  color: #6f6f6f;
+}
+.appr-hist-footer-meta b { color: #161616; }
+/* Status pills come from the canonical .status-badge + .status-<tone>
+   palette in styles/semantic-tokens.css — no local overrides here so
+   badges stay in sync with the rest of the app. */

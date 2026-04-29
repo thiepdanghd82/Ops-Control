@@ -1,0 +1,250 @@
+/* FileUploadZone — IBM Carbon design tokens */
+
+.fuz-zone {
+  /* Dashed border removed per customer spec. Keep a hairline solid so
+     the card still reads as a bounded region next to the sibling zone. */
+  border: 1px solid #e0e0e0;
+  border-radius: 0;
+  background: #ffffff;
+  overflow: hidden;
+  outline: none;
+  transition: border-color .15s;
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  /* Flex column so the viewport can flex-1 fill remaining vertical
+     space when the tab has room below the params card. */
+  display: flex;
+  flex-direction: column;
+  min-height: 260px;
+  height: 100%;
+}
+.fuz-zone:focus, .fuz-zone:hover { border-color: #0f62fe; }
+
+.fuz-label {
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #161616;
+  letter-spacing: .16px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  border-bottom: 1px solid #e0e0e0;
+  /* Hint that this strip is right-clickable — matches native "right-click
+     for menu" affordance used by Finder / Explorer file title bars. */
+  cursor: context-menu;
+  transition: background .15s;
+  user-select: none;
+}
+.fuz-label:hover { background: #f8fafc; }
+[data-theme="dark"] .fuz-label:hover { background: #262626; }
+.fuz-filename {
+  color: #525252;
+  font-weight: 400;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  letter-spacing: .32px;
+}
+
+/* Head card action icon row — Open · Rotate · Upload · Delete.
+   Applies to BOTH Design Layout Drawing AND Customer Drawing (and
+   all Complex sub-products) via the shared FileUploadZone component.
+   Matches the Quote History action-icon pattern (28×28 ghost buttons). */
+.fuz-label-actions {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 4px;
+  flex-shrink: 0;
+}
+.fuz-act-btn {
+  width: 28px; height: 28px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid transparent; border-radius: 6px;
+  background: transparent; color: #525252; cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s, transform .15s;
+}
+.fuz-act-btn:disabled { opacity: .35; cursor: not-allowed; }
+/* Colored hover per action — matches Quote History action icon palette */
+.fuz-act-open:hover:not(:disabled)   { background: #eff6ff; color: #0f62fe; border-color: #bfdbfe; }
+.fuz-act-rotate:hover                { background: #eff6ff; color: #0f62fe; border-color: #bfdbfe; }
+.fuz-act-rotate:active               { transform: rotate(-90deg); }
+.fuz-act-upload:hover                { background: #ecfdf5; color: #059669; border-color: #6ee7b7; }
+.fuz-act-delete:hover:not(:disabled) { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+/* Dark theme variants */
+[data-theme="dark"] .fuz-act-btn { color: #c6c6c6; }
+[data-theme="dark"] .fuz-act-open:hover:not(:disabled),
+[data-theme="dark"] .fuz-act-rotate:hover   { background: #1e3a5f; color: #93c5fd; border-color: #3b82f6; }
+[data-theme="dark"] .fuz-act-upload:hover   { background: #14332a; color: #6ee7b7; border-color: #059669; }
+[data-theme="dark"] .fuz-act-delete:hover:not(:disabled) { background: #3b0e0e; color: #fca5a5; border-color: #dc2626; }
+
+/* ── Viewport (preview with zoom/pan) ── */
+.fuz-viewport {
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  min-height: 120px;
+  /* Expand to fill remaining height of .fuz-zone — the previous fixed
+     400px cap left dead whitespace below the image on tall screens. */
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f4f4f4;
+  user-select: none;
+}
+.fuz-viewport.fuz-panning { cursor: grabbing; }
+
+.fuz-img {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+  transition: transform .08s ease-out;
+  transform-origin: center center;
+}
+
+.fuz-pdf-frame {
+  width: 100%;
+  height: 100%;
+  min-height: 260px;
+  border: none;
+  display: block;
+  background: #f4f4f4;
+}
+
+.fuz-file-msg {
+  padding: 40px;
+  font-size: 14px;
+  color: #525252;
+  text-align: center;
+  letter-spacing: .16px;
+}
+
+/* Sprint 1.7 — drawing fetch error state. Amber to distinguish from a
+   loading state, with a follow-up hint pointing to the re-upload action
+   so operators have an obvious next step. */
+.fuz-file-err {
+  background: #fff8e1;
+  border-left: 4px solid #f0c419;
+  color: #5d4d00;
+  text-align: left;
+  padding: 18px 24px;
+  margin: 12px;
+  border-radius: 4px;
+}
+
+.fuz-file-err-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  font-style: italic;
+  color: #6b5a00;
+}
+
+[data-theme="dark"] .fuz-file-err {
+  background: rgba(240, 196, 25, 0.1);
+  border-left-color: rgba(240, 196, 25, 0.55);
+  color: #fde68a;
+}
+[data-theme="dark"] .fuz-file-err-hint { color: #fcd34d; }
+
+.fuz-zoom-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: #161616;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 400;
+  padding: 2px 8px;
+  border-radius: 0;
+  letter-spacing: .32px;
+  font-family: 'IBM Plex Mono', monospace;
+  pointer-events: none;
+}
+.fuz-rot-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 70px;  /* Left of the zoom badge so they don't overlap */
+  background: #0f62fe;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 400;
+  padding: 2px 8px;
+  border-radius: 0;
+  letter-spacing: .32px;
+  font-family: 'IBM Plex Mono', monospace;
+  pointer-events: none;
+}
+
+/* ── Empty state ── */
+.fuz-empty {
+  padding: 32px 16px;
+  text-align: center;
+  cursor: pointer;
+  /* Fill remaining height so the clickable area matches the image
+     viewport dimensions — no awkward small hit-box on tall screens. */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.fuz-empty-icon { font-size: 28px; margin-bottom: 8px; opacity: .4; }
+.fuz-empty-text { font-size: 14px; color: #525252; letter-spacing: .16px; }
+.fuz-empty-hint { font-size: 12px; color: #6f6f6f; margin-top: 4px; letter-spacing: .32px; }
+.fuz-browse { color: #0f62fe; text-decoration: underline; cursor: pointer; }
+
+/* ── Context menu — matches the Quote History dropdown style.
+   Rounded card, header row with title + subtitle, blue hover state,
+   keyboard-shortcut chips aligned right. Compatible with light + dark. */
+.fuz-ctx {
+  position: fixed;
+  z-index: 9999;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 4px 0;
+  min-width: 240px;
+  box-shadow: 0 8px 24px rgba(15,23,42,.18), 0 0 0 1px rgba(15,23,42,.05);
+  font-size: 13px;
+  letter-spacing: .16px;
+  overflow: hidden;
+}
+.fuz-ctx-header {
+  padding: 10px 14px 8px; font-size: 12px; color: #525252;
+  border-bottom: 1px solid #e0e0e0; background: #f8fafc;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fuz-ctx-header-sub { color: #94a3b8; font-weight: 400; }
+.fuz-ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  cursor: pointer;
+  color: #161616;
+  transition: background .1s, color .1s;
+  margin: 1px 4px;
+  border-radius: 5px;
+}
+.fuz-ctx-item:hover { background: #2563eb; color: #ffffff; }
+.fuz-ctx-item:hover .fuz-ctx-shortcut { color: rgba(255,255,255,.8); }
+.fuz-ctx-item.fuz-ctx-disabled {
+  color: #a8a8a8; cursor: default; pointer-events: none;
+}
+.fuz-ctx-item.fuz-ctx-disabled:hover { background: transparent; color: #a8a8a8; }
+.fuz-ctx-icon { width: 18px; text-align: center; font-size: 14px; flex-shrink: 0; }
+.fuz-ctx-label { flex: 1; }
+.fuz-ctx-shortcut {
+  margin-left: auto; color: #6f6f6f; font-size: 11px; letter-spacing: .32px;
+  font-family: 'IBM Plex Mono', 'Menlo', monospace;
+}
+.fuz-ctx-sep { border-top: 1px solid #e0e0e0; margin: 4px 0; }
+.fuz-ctx-danger { color: #da1e28; }
+.fuz-ctx-danger:hover { background: #da1e28; color: #ffffff; }
+/* Dark theme — match overall app dark styling. */
+[data-theme="dark"] .fuz-ctx { background: #262626; border-color: #393939; }
+[data-theme="dark"] .fuz-ctx-header { background: #161616; border-bottom-color: #393939; color: #c6c6c6; }
+[data-theme="dark"] .fuz-ctx-item { color: #f4f4f4; }
+[data-theme="dark"] .fuz-ctx-sep { border-top-color: #393939; }

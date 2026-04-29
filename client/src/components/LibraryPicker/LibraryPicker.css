@@ -1,0 +1,260 @@
+/* LibraryPicker (Phase 10M) — right-click library picker.
+ * Design takes cues from Apple Writing Tools (clean card, radio rows,
+ * subtle divider) but tuned down for Carbon/ERP feel: flat surfaces,
+ * muted gray hairlines, no frosted glass. */
+
+/* ── Floating right-click menu ── */
+.libp-menu {
+  position: fixed;
+  min-width: 220px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.2);
+  z-index: 9000;
+  padding: 6px;
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 13px;
+  animation: libp-menu-in 120ms ease-out;
+}
+@keyframes libp-menu-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.libp-menu-head {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  padding: 8px 10px 6px;
+}
+.libp-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
+  transition: background .12s;
+}
+.libp-menu-item:hover { background: color-mix(in oklab, var(--text-primary), transparent 92%); }
+.libp-menu-item.active { background: color-mix(in oklab, #0f62fe, transparent 90%); }
+
+.libp-radio {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid #c6c6c6;
+  flex-shrink: 0;
+  position: relative;
+  transition: border-color .12s, background-color .12s;
+}
+.libp-radio.on {
+  border-color: #0f62fe;
+  background: #0f62fe;
+}
+.libp-radio.on::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 6px; height: 6px;
+  background: #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.libp-menu-label { font-weight: 500; }
+
+/* ── Picker card (modal) ── */
+.libp-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 18, 32, 0.5);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 9100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  animation: libp-backdrop-in 160ms ease-out;
+}
+@keyframes libp-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.libp-card {
+  width: 100%;
+  max-width: 840px;
+  max-height: calc(100vh - 80px);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  overflow: hidden;
+  animation: libp-card-in 160ms ease-out;
+}
+@keyframes libp-card-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+/* Top accent bar matches the login card */
+.libp-card::before {
+  content: '';
+  height: 3px;
+  background: linear-gradient(90deg, #0f62fe 0%, #4589ff 100%);
+}
+
+.libp-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.libp-card-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+.libp-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.libp-card-back,
+.libp-card-close {
+  width: 28px; height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 50%;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .12s, color .12s;
+  padding: 0;
+  line-height: 1;
+}
+.libp-card-back { font-size: 18px; }
+.libp-card-back:hover,
+.libp-card-close:hover { background: color-mix(in oklab, var(--text-primary), transparent 90%); }
+.libp-card-back:hover { color: #0f62fe; }
+
+.libp-card-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-subtle);
+}
+.libp-card-search input {
+  flex: 1;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  border-radius: 4px;
+  outline: none;
+}
+.libp-card-search input:focus {
+  border-color: #0f62fe;
+  box-shadow: 0 0 0 2px color-mix(in oklab, #0f62fe, transparent 75%);
+}
+.libp-card-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.libp-card-tablewrap {
+  flex: 1;
+  overflow: auto;
+}
+
+.libp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.libp-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.libp-table tbody td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  vertical-align: top;
+}
+.libp-table tbody tr { cursor: pointer; transition: background .08s; }
+.libp-table tbody tr:hover { background: color-mix(in oklab, #0f62fe, transparent 94%); }
+.libp-table tbody tr:active { background: color-mix(in oklab, #0f62fe, transparent 88%); }
+
+.libp-col-code {
+  width: 180px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+}
+.libp-col-code code {
+  background: color-mix(in oklab, var(--text-primary), transparent 94%);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11.5px;
+}
+.libp-col-desc   { min-width: 200px; }
+.libp-extra      { color: var(--text-secondary); font-size: 11px; }
+.libp-col-supplier { width: 160px; color: var(--text-secondary); }
+.libp-col-price  {
+  width: 110px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: #0f62fe;
+}
+[data-theme="dark"] .libp-col-price { color: #78a9ff; }
+
+.libp-empty {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 32px 12px;
+  font-style: italic;
+}
+
+.libp-card-foot {
+  padding: 10px 20px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-subtle);
+}
+.libp-hint {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-style: italic;
+}

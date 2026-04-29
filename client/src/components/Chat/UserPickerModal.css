@@ -1,0 +1,164 @@
+/* UserPickerModal — shared by ChatDrawer and Messages tab. */
+
+.upm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 9700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: upm-fade 140ms ease-out;
+}
+@keyframes upm-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.upm-card {
+  width: 440px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 80px);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.28);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: upm-pop 180ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+@keyframes upm-pop {
+  from { transform: scale(0.92) translateY(10px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.upm-head {
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.upm-title {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+.upm-close {
+  background: transparent;
+  border: 0;
+  color: #6b7280;
+  font-size: 18px;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+.upm-close:hover { background: #f3f4f6; color: #111827; }
+
+.upm-search {
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.upm-search input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #f9fafb;
+}
+.upm-search input:focus {
+  outline: none;
+  border-color: #93c5fd;
+  background: #fff;
+}
+
+.upm-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+  max-height: 420px;
+}
+
+.upm-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #f8fafc;
+}
+.upm-row:hover { background: #f9fafb; }
+.upm-row:last-child { border-bottom: 0; }
+.upm-row.disabled { opacity: 0.55; cursor: default; }
+
+.upm-avatar {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e0e7ff;
+  color: #3730a3;
+  font-weight: 700;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.upm-dot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #22c55e;
+  border: 2px solid #fff;
+}
+
+.upm-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.upm-row-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.upm-row-meta {
+  font-size: 11px;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.upm-online {
+  font-size: 11px;
+  font-weight: 700;
+  color: #16a34a;
+  flex-shrink: 0;
+}
+.upm-meta {
+  font-size: 11px;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.upm-empty {
+  padding: 24px 20px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 12px;
+  font-style: italic;
+}
+.upm-empty.upm-err {
+  color: #b91c1c;
+  font-style: normal;
+}

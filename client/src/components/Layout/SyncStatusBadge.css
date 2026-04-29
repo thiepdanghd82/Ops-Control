@@ -1,0 +1,45 @@
+/* Smart-mode sync badge in TopBar — sits next to ActiveUsersIndicator. */
+
+.sync-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid #c6c6c6;
+  background: #ffffff;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  color: #161616;
+  transition: background-color .12s, border-color .12s;
+  white-space: nowrap;
+}
+.sync-badge:hover:not(:disabled) { background: #e8e8e8; }
+.sync-badge:disabled { cursor: wait; opacity: .7; }
+
+.sync-badge-dot {
+  font-size: 14px;
+  line-height: 1;
+  font-variant: normal;
+}
+.sync-badge-label {
+  font-family: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', 'Menlo', monospace;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sync-online .sync-badge-dot { color: #0e6027; }      /* green ● */
+.sync-online { border-color: #a7f0ba; background: #defbe6; }
+
+.sync-pending .sync-badge-dot { color: #b28100; }     /* amber ● */
+.sync-pending { border-color: #f0c419; background: #fff8e1; }
+
+.sync-offline .sync-badge-dot { color: #a2191f; }     /* red ⚠ */
+.sync-offline { border-color: #ffd7d9; background: #fff1f1; color: #6f0000; }
+
+.sync-unknown .sync-badge-dot { color: #6f6f6f; }     /* grey */
+
+[data-theme="dark"] .sync-badge { background: #262626; color: #f4f4f4; border-color: #393939; }
+[data-theme="dark"] .sync-badge:hover:not(:disabled) { background: #353535; }
+[data-theme="dark"] .sync-online { background: rgba(16,185,129,.12); border-color: rgba(16,185,129,.35); }
+[data-theme="dark"] .sync-pending { background: rgba(240,196,25,.14); border-color: rgba(240,196,25,.35); }
+[data-theme="dark"] .sync-offline { background: rgba(218,30,40,.14); border-color: rgba(218,30,40,.35); color: #ffd7d9; }

@@ -1,0 +1,154 @@
+{
+  "name": "ops-control-desktop",
+  "version": "1.2.0",
+  "description": "Ops Control Desktop — Electron shell (smart client, IBM/SAP/IFS-style 3-tier)",
+  "private": true,
+  "main": "main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "start:dev": "OPS_DESKTOP_MODE=embedded electron .",
+    "start:thin": "OPS_DESKTOP_MODE=thin OPS_REMOTE_URL=http://10.102.3.61:3000 electron .",
+    "build": "electron-builder --config.npmRebuild=false",
+    "build:win": "electron-builder --win --config.npmRebuild=false",
+    "build:mac": "electron-builder --mac --config.npmRebuild=false",
+    "build:all": "electron-builder -mw --config.npmRebuild=false",
+    "build:client:mac":  "electron-builder --mac --config.npmRebuild=false --config.extraMetadata.opsMode=client --config.productName='OpsControl CLIENT'",
+    "build:server:mac":  "electron-builder --mac --config.npmRebuild=false --config.extraMetadata.opsMode=server --config.productName='OpsControl SERVER'",
+    "build:client:win":  "electron-builder --win --config.npmRebuild=false --config.extraMetadata.opsMode=client --config.productName='OpsControl CLIENT'",
+    "build:server:win":  "electron-builder --win --config.npmRebuild=false --config.extraMetadata.opsMode=server --config.productName='OpsControl SERVER'",
+    "test:license": "node --test license.test.js",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "devDependencies": {
+    "electron": "^41.3.0",
+    "electron-builder": "^26.8.1"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "electron-log": "^5.2.0",
+    "electron-store": "^8.2.0",
+    "electron-updater": "^6.3.9",
+    "node-hid": "^3.1.2",
+    "node-machine-id": "^1.1.12",
+    "pdf-to-printer": "^5.6.0",
+    "serialport": "^12.0.0"
+  },
+  "build": {
+    "appId": "vn.ccldesign.opscontrol",
+    "productName": "Ops Control",
+    "copyright": "Copyright © 2026 CCL Design Vietnam",
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/better-sqlite3/**",
+      "**/node_modules/serialport/**",
+      "**/node_modules/node-hid/**",
+      "**/node_modules/@serialport/**"
+    ],
+    "directories": {
+      "output": "dist-electron",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "auto-update.js",
+      "smart-client.js",
+      "license.js",
+      "native/**/*",
+      "package.json",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "../server",
+        "to": "app/server",
+        "filter": [
+          "**/*",
+          "!**/*.test.js",
+          "!**/legacy/**"
+        ]
+      },
+      {
+        "from": "../client/dist",
+        "to": "app/client/dist"
+      },
+      {
+        "from": "../scripts",
+        "to": "app/scripts",
+        "filter": [
+          "**/*.js",
+          "!**/*.test.js"
+        ]
+      },
+      {
+        "from": "../package.json",
+        "to": "app/package.json"
+      },
+      {
+        "from": "../node_modules",
+        "to": "app/node_modules",
+        "filter": [
+          "**/*",
+          "!**/{*.test.js,*.md,*.markdown,*.html,test/**,tests/**,examples/**,docs/**,.bin/**,.cache/**}"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "verifyUpdateCodeSignature": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Ops Control",
+      "deleteAppDataOnUninstall": false,
+      "include": "build/installer.nsh"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "build/icon.icns",
+      "category": "public.app-category.business",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "dmg": {
+      "title": "Ops Control ${version}",
+      "icon": "build/icon.icns"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "http://10.102.3.61/updates/",
+        "channel": "latest"
+      }
+    ]
+  }
+}

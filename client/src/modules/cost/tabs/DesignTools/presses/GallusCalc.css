@@ -1,0 +1,869 @@
+/* GallusCalc — SAP-Fiori-styled press calculator (Sprint 14).
+   Keys: compact density, bilingual labels (EN bold + VI italic grey),
+   tabular nums on numeric columns, sticky table headers, status pills
+   in IBM Carbon palette. */
+
+.gc-root {
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  color: #161616;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px clamp(12px, 1.5vw, 20px);
+  background: #f4f4f4;
+  /* No min-height / overflow here — the parent `.dt-content` is the
+     scrollable region (Sprint 14 fix). Forcing height here would
+     compound with the parent's overflow:auto and create nested
+     scrollbars. */
+}
+
+/* Identifier bar — Sprint 14e. Sticky-ish at the top of the calc;
+   contains End CU PN + project + designer note + action buttons.
+   Carbon-flat aesthetic: tight padding, single-row on desktop,
+   wraps on mobile. */
+.gc-identbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+.gc-identbar-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.gc-identbar-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 180px;
+}
+.gc-identbar-field.gc-identbar-grow { flex: 1; min-width: 240px; }
+.gc-identbar-field label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.16px;
+  text-transform: uppercase;
+  color: #525252;
+}
+.gc-identbar-field label .gc-bi-vi {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  font-size: 10px;
+  margin-left: 4px;
+}
+.gc-identbar-input { font-family: inherit; text-align: left !important; }
+.gc-identbar-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.gc-action {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 2px;
+  cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  transition: background 100ms, border-color 100ms;
+}
+.gc-action:disabled { opacity: 0.4; cursor: not-allowed; }
+.gc-action-primary {
+  background: #0f62fe;
+  color: #ffffff;
+  border-color: #0f62fe;
+}
+.gc-action-primary:hover:not(:disabled) { background: #0043ce; border-color: #0043ce; }
+.gc-action-secondary {
+  background: #ffffff;
+  color: #161616;
+  border-color: #8d8d8d;
+}
+.gc-action-secondary:hover:not(:disabled) { background: #f4f4f4; border-color: #525252; }
+
+/* History panel — pops below the identbar. */
+.gc-history {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.gc-history-hdr {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  background: #f4f4f4;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 13px;
+}
+.gc-history-search {
+  flex: 1;
+  max-width: 360px;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+/* Bilingual subtitle */
+.gc-subtitle {
+  font-size: 13px;
+  color: #393939;
+  letter-spacing: 0.16px;
+  margin: 0 4px;
+}
+.gc-subtitle .gc-bi-vi {
+  color: #6f6f6f;
+  font-style: italic;
+}
+
+/* Sub-tab bar */
+.gc-subtabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid #e0e0e0;
+  background: #ffffff;
+  border-radius: 4px 4px 0 0;
+  padding: 0 4px;
+}
+.gc-subtab {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  color: #525252;
+  font-size: 13px;
+  text-align: left;
+  transition: color 120ms, border-color 120ms, background 120ms;
+}
+.gc-subtab:hover { background: #f4f4f4; color: #161616; }
+.gc-subtab.active {
+  color: #0f62fe;
+  border-bottom-color: #0f62fe;
+  font-weight: 600;
+}
+.gc-subtab-icon { font-size: 18px; }
+.gc-subtab-vi { font-size: 11px; color: #8d8d8d; font-style: italic; font-weight: 400; }
+
+/* Card frame — tight Carbon-flat aesthetic */
+.gc-card {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.gc-card-hdr {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #f4f4f4;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 13px;
+  color: #161616;
+}
+.gc-card-icon { font-size: 16px; color: #6f6f6f; }
+.gc-card-toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.gc-card-body {
+  padding: 14px;
+}
+.gc-card-body.gc-flush {
+  padding: 0;
+}
+
+/* Inputs panel — 3-column layout on desktop, 1-column on mobile */
+.gc-inputs-card .gc-card-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: clamp(10px, 1vw, 16px);
+}
+
+.gc-section {
+  display: flex;
+  flex-direction: column;
+}
+.gc-section-hdr {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #525252;
+  padding: 4px 8px;
+  background: #edf5ff;
+  border-left: 3px solid #0f62fe;
+  margin-bottom: 8px;
+}
+.gc-section-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Field: bilingual label + input */
+.gc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.gc-field label {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.gc-l-en {
+  font-size: 12px;
+  font-weight: 600;
+  color: #161616;
+  letter-spacing: 0.16px;
+}
+.gc-l-unit { font-weight: 400; color: #6f6f6f; }
+.gc-l-vi {
+  font-size: 11px;
+  color: #6f6f6f;
+  font-style: italic;
+}
+.gc-l-hint {
+  font-size: 10px;
+  color: #8d8d8d;
+}
+.gc-input {
+  font-family: 'IBM Plex Mono', 'Menlo', monospace;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid #c6c6c6;
+  border-radius: 2px;
+  background: #ffffff;
+  color: #161616;
+  outline: none;
+  transition: border-color 100ms, box-shadow 100ms;
+}
+.gc-input:focus {
+  border-color: #0f62fe;
+  box-shadow: 0 0 0 1px #0f62fe;
+}
+.gc-input[type="number"] {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+/* Required-field flag (Sprint 14b). Red ring + light pink bg for an
+   error (calc gated) — Carbon "danger" tone. Amber border for warn
+   (calc runs but result may be off-spec). Both intentionally subtle:
+   the validation banner above the form does the heavy lifting of
+   explaining WHAT'S WRONG; per-field highlight just helps the eye
+   land on the offender. */
+.gc-input-invalid {
+  border-color: #da1e28;
+  background: #fff1f1;
+}
+.gc-input-invalid:focus {
+  border-color: #da1e28;
+  box-shadow: 0 0 0 1px #da1e28;
+}
+.gc-input-warn {
+  border-color: #f1c21b;
+  background: #fffbe6;
+}
+
+.gc-l-req {
+  color: #da1e28;
+  margin-left: 2px;
+  font-weight: 700;
+}
+
+/* Validation banner — sits below the inputs card header. */
+.gc-validation {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 12px;
+}
+.gc-val-err   { background: #fff1f1; color: #7f1d1d; border-left: 3px solid #da1e28; }
+.gc-val-warn  { background: #fffbe6; color: #78350f; border-left: 3px solid #f1c21b; }
+.gc-val-hdr {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px;
+}
+.gc-val-list {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.gc-val-item {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: 6px 12px;
+  align-items: baseline;
+  padding: 4px 0;
+  font-size: 12px;
+}
+.gc-val-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  background: #161616;
+  color: #ffffff;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  border-radius: 2px;
+  text-align: center;
+  letter-spacing: 0.16px;
+}
+.gc-val-en  { color: #161616; }
+.gc-val-vi  { font-style: italic; color: #6f6f6f; font-size: 11px; grid-column: 2; }
+
+/* Gap-suggestion hint — sits below the G input field. */
+.gc-suggest {
+  margin-top: 4px;
+  padding: 6px 10px;
+  font-size: 11px;
+  border-radius: 2px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  border-left: 3px solid;
+  line-height: 1.45;
+}
+.gc-suggest-good { background: #defbe6; color: #0e6027; border-left-color: #24a148; }
+.gc-suggest-warn { background: #fff1e8; color: #8a3f00; border-left-color: #f1c21b; }
+.gc-suggest-info { background: #edf5ff; color: #002d9c; border-left-color: #0f62fe; }
+.gc-suggest .gc-bi-vi {
+  display: block;
+  width: 100%;
+  font-size: 10px;
+  color: inherit;
+  opacity: 0.8;
+}
+.gc-suggest-apply {
+  margin-left: auto;
+  padding: 3px 10px;
+  background: #0f62fe;
+  color: #ffffff;
+  border: none;
+  border-radius: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 100ms;
+}
+.gc-suggest-apply:hover { background: #0043ce; }
+.gc-suggest-apply:focus-visible { outline: 2px solid #0f62fe; outline-offset: 2px; }
+
+.gc-check {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px;
+}
+.gc-check input { margin-top: 2px; accent-color: #0f62fe; }
+
+.gc-select {
+  font-size: 12px;
+  padding: 4px 8px;
+  background: #ffffff;
+  border: 1px solid #c6c6c6;
+  border-radius: 2px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.gc-mini-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  background: #ffffff;
+  border: 1px solid #c6c6c6;
+  border-radius: 2px;
+  font-family: inherit;
+  cursor: pointer;
+  color: #161616;
+}
+.gc-mini-btn:hover { background: #f4f4f4; border-color: #8d8d8d; }
+.gc-mini-btn-danger { color: #a2191f; border-color: #ffd7d9; }
+.gc-mini-btn-danger:hover { background: #fff1f1; border-color: #da1e28; color: #a2191f; }
+
+/* Tab body wrapper */
+.gc-tab-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Data tables — sticky header, zebra rows, tabular nums on .num cells */
+.gc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.gc-table thead th {
+  position: sticky;
+  top: 0;
+  background: #525252;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  padding: 8px 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+.gc-table tbody td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #e8e8e8;
+  white-space: nowrap;
+  color: #161616;
+  vertical-align: middle;
+}
+.gc-table tbody tr:nth-child(even) td { background: #fafafa; }
+.gc-table tbody tr:hover td { background: #e8edff; }
+.gc-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+.gc-table thead .ttl.num,
+.gc-table thead th.num { text-align: right; }
+.gc-table-compact tbody td { padding: 5px 10px; font-size: 11px; }
+.gc-row-best td { background: #fff8e1 !important; font-weight: 600; }
+.gc-row-best:hover td { background: #fff3c4 !important; }
+.gc-row-dim td { color: #8d8d8d; }
+
+/* Key-Value display — used by summary cards */
+.gc-grid-kv {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 8px 16px;
+  padding: 14px;
+}
+.gc-kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 10px;
+  background: #f4f4f4;
+  border-left: 2px solid #c6c6c6;
+  border-radius: 0 2px 2px 0;
+}
+.gc-kv-hi {
+  background: #edf5ff;
+  border-left-color: #0f62fe;
+}
+.gc-k {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+}
+.gc-k > span:first-child {
+  font-size: 12px;
+  font-weight: 600;
+  color: #161616;
+}
+.gc-k .gc-bi-vi {
+  font-size: 10px;
+  color: #6f6f6f;
+  font-style: italic;
+}
+.gc-v {
+  font-family: 'IBM Plex Mono', 'Menlo', monospace;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: #161616;
+  white-space: nowrap;
+}
+
+/* Status pills — matches StatusBadge palette across the app */
+.gc-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.gc-pill-good    { background: #defbe6; color: #0e6027; border-color: #24a148; }
+.gc-pill-warn    { background: #fff1e8; color: #8a3f00; border-color: #f1c21b; }
+.gc-pill-bad     { background: #fff1f1; color: #a2191f; border-color: #da1e28; }
+.gc-pill-neutral { background: #f4f4f4; color: #525252; border-color: #c6c6c6; }
+
+.gc-empty {
+  padding: 24px;
+  text-align: center;
+  color: #6f6f6f;
+  font-size: 12px;
+  font-style: italic;
+}
+.gc-empty .gc-bi-vi { color: #8d8d8d; margin-top: 4px; }
+
+/* Multi-axis winners bar (Sprint 14h) — three picks for three job
+   profiles. Tight grid; cards collapse to single column on mobile. */
+.gc-winners {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+.gc-winner-card {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-left: 3px solid #c6c6c6;
+  border-radius: 0 4px 4px 0;
+  padding: 10px 12px;
+}
+.gc-winner-yield { border-left-color: #0e6027; }
+.gc-winner-cost  { border-left-color: #b45309; }
+.gc-winner-gap   { border-left-color: #0f62fe; }
+.gc-winner-match { border-left-color: #8a3ffc; }
+.gc-winner-empty { opacity: 0.7; }
+.gc-winner-title {
+  font-size: 11px; font-weight: 600;
+  color: #525252;
+  letter-spacing: 0.16px;
+  text-transform: uppercase;
+}
+.gc-winner-z {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 18px; font-weight: 700;
+  color: #161616;
+  margin: 2px 0;
+}
+.gc-winner-rationale {
+  font-size: 11px;
+  color: #525252;
+  line-height: 1.4;
+}
+.gc-winners-consensus {
+  background: #defbe6;
+  border: 1px solid #24a148;
+  border-radius: 4px;
+  padding: 10px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #0e6027;
+}
+.gc-winners-consensus .gc-winner-z {
+  font-size: 16px;
+  margin: 0;
+}
+.gc-winners-consensus .gc-winner-meta {
+  font-size: 11px;
+  color: #525252;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Artwork upload bar inside card header */
+.gc-artwork-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 11px;
+}
+.gc-artwork-name {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #525252;
+  font-style: italic;
+}
+
+/* Version badge in identbar — shows operator which record is loaded. */
+.gc-version-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  background: #fffbe6;
+  color: #78350f;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+}
+
+/* Change-notice block in SaveChoiceDialog — required textarea. */
+.gc-change-notice {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #e0e0e0;
+}
+.gc-change-notice-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: #161616;
+}
+.gc-change-notice-label .gc-bi-vi {
+  font-size: 11px;
+  color: #6f6f6f;
+  font-style: italic;
+}
+.gc-change-notice-label .gc-l-hint {
+  font-size: 10.5px;
+  color: #8d8d8d;
+  margin-top: 2px;
+}
+.gc-change-notice-input {
+  font-family: inherit !important;
+  text-align: left !important;
+  width: 100%;
+  resize: vertical;
+  min-height: 64px;
+  padding: 8px 10px !important;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.gc-change-notice-counter {
+  font-size: 10.5px;
+  color: #6f6f6f;
+  margin-top: 4px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Shot Layout visualization (Sprint 14f) — SVG schematic with stat
+   cards on top + interactive viewBox below. Aspect ratio preserved
+   so the operator sees the real proportions of the web at a glance. */
+.slv-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+}
+.slv-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+.slv-stat {
+  background: #f4f4f4;
+  border-left: 3px solid #0f62fe;
+  padding: 8px 12px;
+  border-radius: 0 2px 2px 0;
+}
+.slv-stat-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.16px;
+  text-transform: uppercase;
+  color: #525252;
+}
+.slv-stat-val {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f2341;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+.slv-stat-sub {
+  font-size: 10px;
+  color: #6f6f6f;
+  font-style: italic;
+}
+.slv-bi-vi {
+  font-style: italic;
+  color: #6f6f6f;
+  font-weight: 400;
+}
+
+.slv-svg-wrap {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 12px;
+  overflow: auto;
+  /* Cap height so very tall pitches don't dominate the screen. SVG
+     scales preserveAspectRatio inside, so it won't crush horizontally. */
+  max-height: min(70vh, 720px);
+}
+.slv-svg {
+  width: 100%;
+  height: auto;
+  max-height: 680px;
+  display: block;
+}
+
+.slv-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 11px;
+  color: #525252;
+  padding: 0 4px;
+}
+.slv-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.slv-swatch {
+  display: inline-block;
+  width: 14px; height: 12px;
+  border-radius: 2px;
+  border: 1px solid;
+}
+.slv-swatch-product  { background: #dbeafe; border-color: #0f62fe; }
+.slv-swatch-edge     { background: #e8edff; border-color: #4f5b91; }
+.slv-swatch-overhead { background: #fef3c7; border-color: #f1c21b; border-style: dashed; }
+
+.slv-empty {
+  padding: 32px 16px;
+  text-align: center;
+  background: #f4f4f4;
+  border: 1px dashed #c6c6c6;
+  border-radius: 4px;
+  color: #525252;
+  font-size: 13px;
+  margin: 12px;
+}
+.slv-empty-vi {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #8d8d8d;
+  font-style: italic;
+}
+
+/* Bilingual italic-grey marker shared across the page */
+.gc-bi-vi {
+  font-style: italic;
+  color: #6f6f6f;
+  font-weight: 400;
+}
+
+/* Responsive — stack KV cards on narrow screens */
+@media (max-width: 720px) {
+  .gc-grid-kv { grid-template-columns: 1fr; }
+  .gc-card-toolbar { flex-direction: column; align-items: stretch; }
+}
+
+/* ─── Sprint 1.7j — admin Master Cylinder controls ─── */
+.gc-add-cyl-form {
+  background: var(--bg-soft, #f8fafc);
+  border-bottom: 1px solid var(--border-strong, #e2e8f0);
+  padding: 12px 16px;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.gc-add-cyl-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+}
+
+.gc-add-cyl-row > span {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.gc-add-cyl-input {
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong, #cbd5e1);
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--surface-card, #ffffff);
+  color: var(--text-primary, #0f172a);
+  min-width: 120px;
+  border-radius: 0;
+}
+.gc-add-cyl-input:focus {
+  outline: none;
+  border-color: #0f62fe;
+  box-shadow: inset 0 -2px 0 #0f62fe;
+}
+
+.gc-mini-btn-primary {
+  background: #0f62fe;
+  color: #fff;
+  border-color: #0f62fe;
+}
+.gc-mini-btn-primary:hover { background: #0353e0; border-color: #0353e0; }
+
+.gc-add-cyl-hint {
+  font-size: 11px;
+  color: var(--text-tertiary, #94a3b8);
+  font-style: italic;
+}
+
+/* Click-to-toggle Y/N pill — same chip shape as the read-only one but
+   with cursor + hover/disabled states. */
+.gc-pill-toggle {
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-family: inherit;
+  font-size: inherit;
+  padding: 1px 8px;
+  border-radius: 999px;
+  transition: filter 0.12s, transform 0.05s;
+}
+.gc-pill-toggle:hover:not(:disabled) {
+  filter: brightness(0.92);
+  transform: scale(1.05);
+}
+.gc-pill-toggle:active:not(:disabled) { transform: scale(0.95); }
+.gc-pill-toggle:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+[data-theme="dark"] .gc-add-cyl-form {
+  background: #1e1e1e;
+  border-bottom-color: #393939;
+}
+[data-theme="dark"] .gc-add-cyl-input {
+  background: #262626;
+  border-color: #393939;
+  color: #f4f4f4;
+}
+
+/* Sprint S-FLEXO — banner styles for ink, die-risk, color sequence */
+.gc-banner {
+  padding: 10px 14px;
+  margin: 8px 0;
+  border-radius: 4px;
+  border: 1px solid #d0d7de;
+  background: #f4f8fb;
+  font-size: 13px;
+}
+.gc-banner-info  { background: #e8f1fa; border-color: #7eb6f0; color: #0f3b6e; }
+.gc-banner-good  { background: #defbe6; border-color: #a7f0ba; color: #0e6027; }
+.gc-banner-warn  { background: #fff8e1; border-color: #ffe58a; color: #8a6d00; }
+.gc-banner-error { background: #fff1f1; border-color: #ffb3b8; color: #a2191f; }
+
+/* SelectField input style — matches gc-input */
+.gc-field select.gc-input {
+  appearance: auto;
+}

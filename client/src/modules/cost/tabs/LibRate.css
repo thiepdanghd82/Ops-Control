@@ -1,0 +1,114 @@
+.lib-rate { display:flex; flex-direction:column; height:100%; background:#ffffff; font-family:'IBM Plex Sans','Helvetica Neue',Arial,sans-serif; letter-spacing:.16px; }
+/* IBM Carbon toolbar — flat Gray 10 with dark text */
+.lr-toolbar {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 16px; flex-wrap:wrap; flex-shrink:0;
+  background:#f4f4f4; border-bottom:2px solid #e0e0e0;
+  box-shadow:none;
+}
+.lr-title { font-size:14px; font-weight:600; color:#161616; letter-spacing:.16px; margin-right:8px; text-shadow:none; }
+.lr-sites { display:flex; gap:4px; }
+.lr-site-btn {
+  padding:6px 12px;
+  border:1px solid #c6c6c6;
+  border-radius:0;
+  background:#ffffff;
+  font-size:14px; cursor:pointer; font-weight:400;
+  color:#525252; letter-spacing:.16px; transition:background-color .15s;
+}
+.lr-site-btn.active { background:#0f62fe; color:#ffffff; border-color:#0f62fe; }
+.lr-site-btn:hover:not(.active) { background:#e8e8e8; color:#161616; }
+.lr-actions { display:flex; align-items:center; gap:8px; margin-left:auto; }
+.lr-msg { font-size:14px; color:#24a148; font-weight:400; letter-spacing:.16px; }
+.lr-btn {
+  padding:7px 16px;
+  border:1px solid #c6c6c6;
+  border-radius:0;
+  background:#ffffff;
+  color:#161616;
+  font-size:14px; cursor:pointer; font-weight:400; letter-spacing:.16px; transition:background-color .15s;
+}
+.lr-btn:hover { background:#e8e8e8; }
+.lr-btn-save { background:#0f62fe; color:#ffffff; border-color:#0f62fe; }
+.lr-btn-save:hover { background:#0353e9; }
+.lr-btn-save:disabled { opacity:.42; cursor:default; }
+.lr-btn-add { background:#0f62fe; color:#ffffff; border-color:#0f62fe; }
+.lr-btn-add:hover { background:#0353e9; }
+/* Import button sits first in the action group; mild amber tint so it's
+   visually distinct from the white Export/Backup/Restore buttons. */
+.lr-btn-import { background:#fef3c7; color:#92400e; border-color:#fde68a; }
+.lr-btn-import:hover:not(:disabled) { background:#fde68a; }
+.lr-btn-import:disabled { opacity:.6; cursor:default; }
+
+/* Add Row button lives under the table body now (not in the toolbar).
+   Full-width dashed outline gives a clear "add here" affordance and keeps
+   it visually tied to the last data row. */
+.lr-add-row-wrap { padding:10px 16px 16px; }
+.lr-add-row-btn {
+  width:100%; padding:10px;
+  border:1.5px dashed #22c55e;
+  border-radius:8px;
+  background:#f0fdf4;
+  color:#16a34a;
+  font-size:12px; font-weight:600;
+  cursor:pointer;
+  transition:background .12s, border-color .12s;
+}
+.lr-add-row-btn:hover { background:#dcfce7; border-color:#16a34a; }
+.lr-backup-panel { padding:10px 16px; border-bottom:1px solid var(--color-gray-200); background:#fefce8; }
+.lr-backup-head { display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:600; }
+.lr-backup-head button { font-size:11px; color:var(--color-danger-500); background:none; border:none; cursor:pointer; }
+.lr-backup-empty { font-size:12px; color:var(--color-gray-400); margin:8px 0 0; }
+.lr-backup-list { list-style:none; padding:0; margin:8px 0 0; }
+.lr-backup-list li { display:flex; justify-content:space-between; align-items:center; padding:4px 0; font-size:12px; border-bottom:1px solid #fef3c7; }
+.lr-backup-list button { font-size:11px; color:var(--color-brand-600); background:none; border:none; cursor:pointer; }
+.lr-table-wrap { flex:1; overflow:auto; }
+.lr-table {
+  width:100%;
+  border-collapse:collapse;
+  font-size:12px;
+  border:none;
+  /* Fixed layout so the column widths below actually stick instead of being
+     overridden by content. Balances the numeric rate columns and keeps the
+     Workcenter Name / W/C text columns proportional. */
+  table-layout:fixed;
+}
+.lr-table thead { position:sticky; top:0; z-index:1; }
+.lr-table th { padding:7px 8px; background:#f1f5f9; border:none; text-align:center; font-weight:600; color:#374151; white-space:nowrap; font-size:11px; }
+.lr-th-idx { width:42px; text-align:center; }
+
+/* Balanced column widths for the 9-column Rate Table.
+   Fixed (px): 1 = index, 9 = delete button.
+   The remaining 7 columns share 100% via percentages so the rate/number
+   columns are all the same width and the name column is just wide enough
+   to display typical workcenter names without wrapping. */
+.lr-table th:nth-child(1), .lr-table td:nth-child(1) { width:42px; }
+.lr-table th:nth-child(2), .lr-table td:nth-child(2) { width:22%; }  /* Workcenter Name */
+/* Workcenter Name column is left-aligned (names read better flush-left);
+   every other column stays centered. Override both the cell and the input
+   inside it, and defeat the !important center on text inputs. */
+.lr-table tbody td:nth-child(2) { text-align:left; }
+.lr-table tbody td:nth-child(2) input[type="text"] { text-align:left !important; padding-left:10px; }
+.lr-table th:nth-child(3), .lr-table td:nth-child(3) { width:9%;  }  /* Crew */
+.lr-table th:nth-child(4), .lr-table td:nth-child(4) { width:14%; }  /* Machine USD/H */
+.lr-table th:nth-child(5), .lr-table td:nth-child(5) { width:14%; }  /* Labor USD/H */
+.lr-table th:nth-child(6), .lr-table td:nth-child(6) { width:14%; }  /* Speed UOM */
+.lr-table th:nth-child(7), .lr-table td:nth-child(7) { width:14%; }  /* OH Cost */
+.lr-table th:nth-child(8), .lr-table td:nth-child(8) { width:13%; }  /* W/C */
+.lr-table th:nth-child(9), .lr-table td:nth-child(9) { width:44px; } /* Delete btn */
+.lr-table td { padding:4px 6px; border:none; text-align:center; }
+.lr-td-idx { text-align:center; color:var(--color-gray-400); font-size:11px; }
+/* Inputs sit flush in their cells — no borders, no outline. Text is
+   centered horizontally; number inputs keep tabular-nums but are also
+   centered. Focus is a subtle background tint. !important is used on the
+   alignment because inline browser UA styles on <input type="text"> can
+   otherwise keep it left-aligned. */
+.lr-table input[type="text"], .lr-table input[type="number"], .lr-table select {
+  width:100%; padding:4px 6px; border:none; border-radius:4px; font-size:12px;
+  background:#fff; outline:none; text-align:center !important;
+}
+.lr-table input:focus, .lr-table select:focus { background:#eff6ff; }
+.lr-table input[type="number"] { text-align:center; font-variant-numeric:tabular-nums; }
+.lr-del { background:none; border:none; color:var(--color-danger-500); cursor:pointer; font-size:16px; padding:2px 6px; }
+.lr-del:hover { background:#fef2f2; border-radius:4px; }
+.lr-empty { text-align:center; padding:40px; color:var(--color-gray-400); }

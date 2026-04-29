@@ -1,0 +1,109 @@
+/* TabBarOverflow — responsive tab-bar shell.
+ *
+ * Scoped under .tbo-root so it can't leak into existing tab bar CSS.
+ * Each host (sc-subtab-bar, cc-tab-bar, ink-sub-tabs, pa-tabs) keeps
+ * its own visual theme; this file only adds the arrows + fade +
+ * overflow container. */
+
+.tbo-root {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+/* Scrollable area — holds the host's tab buttons as-is. */
+.tbo-scroll {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  /* Mask-image provides the fade edges when overflow is scrollable.
+   * Four states:
+   *   - No overflow            → no fade
+   *   - Can scroll right only  → right fade
+   *   - Can scroll left only   → left fade
+   *   - Both                   → both fades
+   */
+  -webkit-mask-image: none;
+          mask-image: none;
+}
+.tbo-scroll::-webkit-scrollbar { height: 0; display: none; }
+
+.tbo-scroll.fade-l.fade-r {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+          mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+}
+.tbo-scroll.fade-l:not(.fade-r) {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24px);
+          mask-image: linear-gradient(90deg, transparent 0, #000 24px);
+}
+.tbo-scroll.fade-r:not(.fade-l) {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent 100%);
+          mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent 100%);
+}
+
+/* Chevron buttons — hidden by default, shown when scroll is possible. */
+.tbo-arrow {
+  flex: 0 0 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-card, #fff);
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  border-radius: 4px;
+  font-size: 10px;
+  color: var(--text-secondary, #6b7280);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms, background 120ms, color 120ms;
+  padding: 0;
+  margin: 0 2px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+.tbo-arrow.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.tbo-arrow:hover {
+  background: var(--surface-hover, #f3f4f6);
+  color: var(--text-primary, #111827);
+}
+.tbo-arrow:focus-visible {
+  outline: 2px solid var(--color-primary, #1e40af);
+  outline-offset: 2px;
+}
+
+.tbo-right-slot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border-subtle, #e5e7eb);
+}
+
+/* ── Responsive breakpoints ──────────────────────────────
+ * Generic helper classes — hosts opt in by adding
+ * `rts-` (responsive-tab-styles) modifiers on their tab-button CSS.
+ * The media queries live per-host in their own CSS (kept colocated
+ * so each tab bar's theme stays self-contained). */
+
+/* Dark mode tweaks for the arrows */
+[data-theme="dark"] .tbo-arrow {
+  background: #1e293b;
+  border-color: #334155;
+  color: #d1d5db;
+}
+[data-theme="dark"] .tbo-arrow:hover {
+  background: #334155;
+  color: #f3f4f6;
+}

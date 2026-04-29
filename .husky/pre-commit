@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+# Husky pre-commit hook — runs lint-staged on changed files.
+# Activates only when project is under git. Skip with `git commit --no-verify`
+# only as last resort.
+npx lint-staged || exit 1

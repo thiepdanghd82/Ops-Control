@@ -1,0 +1,12 @@
+node_modules/
+dist-electron/*
+!dist-electron/.gitkeep
+!dist-electron/latest*.yml
+
+# Bytenode artifacts (Sprint 4)
+*.jsc
+*.js.bak
+
+# Log
+*.log
+.DS_Store

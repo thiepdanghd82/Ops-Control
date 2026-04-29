@@ -1,0 +1,183 @@
+/* ActiveUsersIndicator — TopBar presence widget */
+
+.active-users {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.active-users-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid var(--op-border, #d0d7de);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--op-text-secondary, #525252);
+  transition: background 120ms, border-color 120ms;
+  line-height: 1.2;
+}
+.active-users-btn:hover {
+  background: var(--op-surface-hover, #f4f4f4);
+  border-color: var(--op-border-strong, #8d8d8d);
+}
+.active-users-btn:focus-visible {
+  outline: 2px solid var(--op-focus, #0f62fe);
+  outline-offset: 1px;
+}
+
+.active-users-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--op-text-tertiary, #a8a8a8);
+  flex-shrink: 0;
+}
+.active-users-btn.has-online .active-users-dot {
+  background: #24a148; /* IBM green-50 */
+  box-shadow: 0 0 0 2px rgba(36, 161, 72, 0.18);
+}
+
+.active-users-count {
+  font-weight: 600;
+  color: var(--op-text-primary, #161616);
+  font-variant-numeric: tabular-nums;
+}
+.active-users-label {
+  color: var(--op-text-secondary, #525252);
+}
+
+/* ── Popover ─────────────────────────────────────────────── */
+
+.active-users-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 240px;
+  max-width: 320px;
+  max-height: 360px;
+  overflow-y: auto;
+  background: var(--op-surface, #ffffff);
+  border: 1px solid var(--op-border, #d0d7de);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  z-index: 50;
+  padding: 8px 0;
+  font-size: 13px;
+}
+
+.active-users-pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 12px 8px;
+  border-bottom: 1px solid var(--op-border-subtle, #e8eaed);
+  margin-bottom: 4px;
+}
+.active-users-pop-head strong {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--op-text-primary, #161616);
+}
+.active-users-refresh {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: var(--op-text-secondary, #525252);
+}
+.active-users-refresh:hover { background: var(--op-surface-hover, #f4f4f4); }
+.active-users-refresh:disabled { opacity: 0.5; cursor: wait; }
+
+.active-users-pop-sep {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--op-text-tertiary, #6f6f6f);
+  padding: 8px 12px 4px;
+  margin-top: 4px;
+  border-top: 1px solid var(--op-border-subtle, #e8eaed);
+}
+
+.active-users-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.active-users-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  font-size: 13px;
+  color: var(--op-text-primary, #161616);
+}
+.active-users-item.offline { color: var(--op-text-secondary, #525252); }
+
+.active-users-item-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #24a148;
+  flex-shrink: 0;
+}
+.active-users-item-dot.offline {
+  background: var(--op-text-tertiary, #a8a8a8);
+}
+
+.active-users-item-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.active-users-item-role {
+  font-size: 10px;
+  background: var(--op-tag-bg, #f4f4f4);
+  color: var(--op-text-secondary, #525252);
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.active-users-item-when {
+  font-size: 11px;
+  color: var(--op-text-tertiary, #6f6f6f);
+  font-variant-numeric: tabular-nums;
+}
+
+.active-users-empty,
+.active-users-err {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--op-text-tertiary, #6f6f6f);
+  font-style: italic;
+}
+.active-users-err {
+  color: var(--op-danger, #a2191f);
+  font-style: normal;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .active-users-btn {
+    border-color: var(--op-border-dark, #393939);
+    color: var(--op-text-secondary-dark, #c6c6c6);
+  }
+  .active-users-btn:hover {
+    background: var(--op-surface-hover-dark, #262626);
+  }
+  .active-users-pop {
+    background: var(--op-surface-dark, #1f1f1f);
+    border-color: var(--op-border-dark, #393939);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  }
+  .active-users-item { color: var(--op-text-primary-dark, #f4f4f4); }
+}

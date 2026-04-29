@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ops Control</title>
+    <!-- Phase 9J.5 — pre-paint theme init. MUST load before main.jsx
+         so data-theme is on <html> before the first paint. Served as
+         a static /public asset so production CSP (script-src 'self')
+         allows it without 'unsafe-inline'. -->
+    <script src="/theme-init.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

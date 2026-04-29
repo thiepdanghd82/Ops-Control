@@ -1,0 +1,51 @@
+/* LibDDL — IBM Carbon style */
+.lib-ddl { display:flex; flex-direction:column; height:100%; background:#f4f4f4; font-family:'IBM Plex Sans','Helvetica Neue',Arial,sans-serif; letter-spacing:.16px; }
+
+/* Toolbar */
+.ddl-toolbar { display:flex; align-items:center; gap:10px; padding:12px 16px; background:#ffffff; border-bottom:1px solid #e0e0e0; flex-wrap:wrap; flex-shrink:0; }
+.ddl-title { font-size:14px; font-weight:600; color:#161616; margin-right:8px; letter-spacing:.16px; }
+
+/* Site tabs — IBM tab style */
+.ddl-sites { display:flex; gap:0; border-bottom:none; }
+.ddl-site-btn { padding:8px 16px; border:none; border-bottom:2px solid transparent; border-radius:0; background:transparent; font-size:14px; cursor:pointer; font-weight:400; color:#525252; letter-spacing:.16px; transition:background-color .15s, color .15s, border-color .15s; }
+.ddl-site-btn:hover:not(.active) { background:#e8e8e8; color:#161616; }
+.ddl-site-btn.active { background:transparent; color:#161616; font-weight:600; border-bottom-color:#0f62fe; }
+
+/* Action buttons */
+.ddl-actions { display:flex; align-items:center; gap:8px; margin-left:auto; }
+.ddl-msg { font-size:12px; color:#0e6027; font-weight:400; letter-spacing:.32px; }
+.ddl-btn { padding:8px 16px; border:1px solid #c6c6c6; border-radius:0; background:#ffffff; color:#161616; font-size:14px; font-weight:400; cursor:pointer; letter-spacing:.16px; transition:background-color .15s; font-family:inherit; }
+.ddl-btn:hover { background:#e8e8e8; }
+.ddl-btn-save { background:#0f62fe; color:#ffffff; border-color:#0f62fe; }
+.ddl-btn-save:hover { background:#0353e9; }
+.ddl-btn-save:disabled { opacity:.5; cursor:default; background:#0f62fe; }
+
+/* Content grid */
+.ddl-content { flex:1; overflow:auto; padding:16px; background:#f4f4f4; }
+.ddl-empty { text-align:center; padding:40px; color:#6f6f6f; font-size:13px; }
+.ddl-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px; }
+
+/* Cards — IBM flat panels */
+.ddl-card { background:#ffffff; border:none; border-radius:0; overflow:hidden; box-shadow:none; }
+.ddl-card-head { padding:12px 16px; background:#f4f4f4; font-size:12px; font-weight:600; color:#161616; border-bottom:1px solid #e0e0e0; text-transform:uppercase; letter-spacing:.32px; }
+.ddl-card-body { padding:8px 0; }
+
+/* Rows */
+.ddl-item-row, .ddl-kv-row, .ddl-cov-row { display:flex; align-items:center; gap:8px; padding:0 16px; margin:0; height:40px; border-bottom:1px solid #f4f4f4; }
+.ddl-item-row:last-child, .ddl-kv-row:last-child, .ddl-cov-row:last-child { border-bottom:none; }
+
+/* Inputs — IBM Carbon underline */
+.ddl-item-row input, .ddl-kv-row input, .ddl-cov-row input { flex:1; padding:6px 8px; border:none; border-bottom:1px solid #c6c6c6; border-radius:0; background:#f4f4f4; color:#161616; font-size:13px; outline:none; letter-spacing:.16px; font-family:inherit; transition:background-color .15s, border-color .15s; box-sizing:border-box; }
+.ddl-item-row input[type="number"], .ddl-kv-row input[type="number"], .ddl-cov-row input[type="number"] { font-family:'IBM Plex Mono',monospace; }
+.ddl-item-row input:hover, .ddl-kv-row input:hover, .ddl-cov-row input:hover { background:#e8e8e8; }
+.ddl-item-row input:focus, .ddl-kv-row input:focus, .ddl-cov-row input:focus { border-bottom-color:#0f62fe; background:#ffffff; box-shadow:none; }
+.ddl-cov-row input[type="number"] { max-width:80px; text-align:right; }
+.ddl-kv-key { font-size:12px; color:#6f6f6f; min-width:70px; font-weight:400; letter-spacing:.32px; }
+
+/* Delete button */
+.ddl-del { background:transparent; border:none; color:#6f6f6f; cursor:pointer; font-size:16px; padding:4px 6px; flex-shrink:0; border-radius:0; line-height:1; transition:color .15s, background-color .15s; }
+.ddl-del:hover { background:#f4f4f4; color:#da1e28; }
+
+/* Add row */
+.ddl-add { display:block; width:calc(100% - 32px); padding:8px 0; margin:8px 16px 8px; border:none; border-top:1px solid #e0e0e0; border-radius:0; background:transparent; font-size:13px; color:#0f62fe; cursor:pointer; font-weight:400; letter-spacing:.16px; text-align:left; transition:background-color .15s; font-family:inherit; }
+.ddl-add:hover { background:#e8e8e8; color:#0353e9; }

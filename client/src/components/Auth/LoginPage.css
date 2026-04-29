@@ -1,0 +1,823 @@
+/* ═══════════════════════════════════════════════════════════════════
+ * LoginPage — enterprise redesign (Phase 10J).
+ *
+ * Direction: "Operational command center" — Carbon-ish tokens applied
+ * to a manufacturing ERP login. Static background (no animation /
+ * particles / orbs / stock photo), solid card (no glassmorphism),
+ * SVG iconography (no emoji), sharp type hierarchy. Optimized to
+ * look credible on a factory monitor AND on a cashier laptop alike.
+ *
+ * Layers (back → front):
+ *   1. Gradient base: deep ink blue, no hue shifts.
+ *   2. Dotted blueprint grid: 1px dots on 24px spacing, 5% opacity.
+ *   3. Diagonal blueprint lines drawn as CSS gradients — evokes
+ *      schematic paper without being literal.
+ *   4. Soft radial glow from top-right: overhead pendant lighting in
+ *      a control room. One accent color, low saturation.
+ *   5. Card + form.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── Backdrop ─── */
+.login-container {
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  color: #e6ecf5;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 85% 10%, rgba(15, 98, 254, 0.16), transparent 55%),
+    radial-gradient(ellipse at 10% 90%, rgba(34, 52, 110, 0.35), transparent 55%),
+    linear-gradient(160deg, #0a1220 0%, #0f1a2e 50%, #13233d 100%);
+}
+
+/* Blueprint grid overlay — 1px dots on 24px spacing, masked so it
+   fades off the edges instead of stopping hard. */
+.login-bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: 12px 12px;
+  mask-image: radial-gradient(ellipse at center, #000 55%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 55%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Particle network canvas — sits ABOVE the grid/lines but BELOW the
+   brand stamp and card. Carbon-blue palette only (no rainbow). */
+.login-particles {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+  z-index: 0;
+}
+
+/* Two crisp diagonal lines referencing blueprint crosshatch — low
+   contrast so the eye reads them as "texture", not "decoration". */
+.login-bg-lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.55;
+  background:
+    linear-gradient(135deg, transparent 49.7%, rgba(15, 98, 254, 0.22) 49.8%, rgba(15, 98, 254, 0.22) 50.05%, transparent 50.15%) no-repeat,
+    linear-gradient(45deg,  transparent 49.7%, rgba(255, 255, 255, 0.08) 49.8%, rgba(255, 255, 255, 0.08) 50.05%, transparent 50.15%) no-repeat;
+  background-size: 100% 100%, 100% 100%;
+}
+
+/* Brand stamp — top-left of the backdrop. Establishes whose software
+   this is without relying on the card. */
+.login-brand-stamp {
+  position: absolute;
+  top: 24px;
+  left: 28px;
+  color: rgba(230, 236, 245, 0.6);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+  z-index: 1;
+}
+.login-brand-stamp-bar {
+  display: inline-block;
+  width: 3px;
+  height: 14px;
+  background: #0f62fe;
+}
+
+/* ─── Card ─── */
+.login-card {
+  position: relative;
+  z-index: 1;
+  background: #ffffff;
+  color: #161616;
+  border: 1px solid #dde1e6;
+  border-radius: 2px;              /* Carbon uses 2px sharp; not consumer 16px. */
+  padding: 44px 48px 28px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.18),
+    0 24px 64px rgba(8, 16, 34, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+[data-theme="dark"] .login-card {
+  background: #161616;
+  color: #f4f4f4;
+  border-color: #393939;
+}
+
+/* Accent bar at the top edge of the card — Carbon signature. */
+.login-card::before {
+  content: '';
+  position: absolute;
+  top: -1px; left: -1px; right: -1px;
+  height: 3px;
+  background: linear-gradient(90deg, #0f62fe 0%, #4589ff 100%);
+}
+
+/* Compact mode (session-expired re-login) — dim the running app
+   behind, keep the user's place intact. */
+.login-container-compact {
+  background: rgba(10, 18, 32, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.login-container-compact .login-card { max-width: 420px; padding: 32px 40px; }
+
+/* ─── Header ─── */
+.login-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+.login-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: #0f62fe;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(15, 98, 254, 0.32);
+  color: #fff;
+}
+.login-icon svg { display: block; }
+.login-title {
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.15;
+  margin: 0;
+  color: inherit;
+  letter-spacing: -0.01em;
+}
+.login-subtitle {
+  font-size: 14px;
+  color: #525252;
+  margin: 4px 0 0;
+  line-height: 1.4;
+}
+[data-theme="dark"] .login-subtitle { color: #a8a8a8; }
+.login-subtitle2 {
+  font-size: 13px;
+  color: #6f6f6f;
+  margin: 2px 0 0;
+  line-height: 1.4;
+}
+[data-theme="dark"] .login-subtitle2 { color: #8d8d8d; }
+
+/* ─── Form ─── */
+.login-form { display: flex; flex-direction: column; gap: 14px; }
+
+.auth-input-group { display: flex; flex-direction: column; gap: 4px; }
+.auth-input-group > label {
+  font-size: 12px;
+  font-weight: 400;
+  color: #525252;
+  line-height: 1.3;
+}
+[data-theme="dark"] .auth-input-group > label { color: #c6c6c6; }
+.auth-input-group > input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: none;
+  border-bottom: 1px solid #8d8d8d;
+  background: #f4f4f4;
+  color: #161616;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color .12s, background-color .12s;
+  border-radius: 0;
+}
+.auth-input-group > input:focus {
+  border-bottom-color: #0f62fe;
+  background: #eef0f3;
+  outline: 2px solid #0f62fe;
+  outline-offset: -2px;
+}
+.auth-input-group > input::placeholder { color: #a8a8a8; }
+.auth-input-group > input:read-only {
+  background: #e0e0e0;
+  color: #525252;
+  cursor: not-allowed;
+}
+[data-theme="dark"] .auth-input-group > input {
+  background: #262626;
+  color: #f4f4f4;
+  border-bottom-color: #6f6f6f;
+}
+[data-theme="dark"] .auth-input-group > input:focus { background: #353535; }
+[data-theme="dark"] .auth-input-group > input:read-only { background: #1f1f1f; color: #8d8d8d; }
+
+/* Remember-me row */
+.login-remember { font-size: 13px; color: #525252; margin: 2px 0 6px; }
+[data-theme="dark"] .login-remember { color: #c6c6c6; }
+.login-remember label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.login-remember input[type="checkbox"] { width: 16px; height: 16px; accent-color: #0f62fe; }
+
+/* Primary CTA — Carbon primary button: square, 48px tall. */
+.login-btn {
+  width: 100%;
+  height: 48px;
+  border: none;
+  background: #0f62fe;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  padding: 0 20px;
+  text-align: left;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background-color .12s;
+}
+.login-btn::after {
+  content: '→';
+  font-size: 18px;
+  line-height: 1;
+  transition: transform .12s;
+}
+.login-btn:hover:not(:disabled) { background: #0050e6; }
+.login-btn:hover:not(:disabled)::after { transform: translateX(3px); }
+.login-btn:active:not(:disabled) { background: #002d9c; }
+.login-btn:disabled {
+  background: #c6c6c6;
+  color: #8d8d8d;
+  cursor: not-allowed;
+}
+.login-btn:disabled::after { content: ''; }
+[data-theme="dark"] .login-btn:disabled { background: #525252; color: #8d8d8d; }
+
+/* Secondary link button (e.g. "Back to login") */
+.login-link-btn {
+  background: transparent;
+  border: none;
+  color: #0f62fe;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 0;
+  cursor: pointer;
+  text-align: center;
+  align-self: center;
+  margin-top: 4px;
+  transition: color .12s;
+}
+.login-link-btn:hover { color: #002d9c; text-decoration: underline; }
+[data-theme="dark"] .login-link-btn { color: #78a9ff; }
+[data-theme="dark"] .login-link-btn:hover { color: #a6c8ff; }
+
+/* Error banner — Carbon inline notification. */
+.login-error {
+  font-size: 13px;
+  color: #da1e28;
+  background: #fff1f1;
+  border-left: 3px solid #da1e28;
+  padding: 10px 12px;
+  line-height: 1.35;
+}
+[data-theme="dark"] .login-error {
+  color: #ff8389;
+  background: rgba(218, 30, 40, 0.15);
+  border-left-color: #ff8389;
+}
+
+/* Stuck-after-N-fails hint on the TOTP verify screen. Amber tone to
+   distinguish from the red .login-error above — this is an advisory,
+   not another error. */
+.login-totp-advisory {
+  font-size: 12.5px;
+  color: #8a5a00;
+  background: #fff4e5;
+  border-left: 3px solid #f5a623;
+  padding: 10px 12px;
+  line-height: 1.45;
+  margin-top: 6px;
+}
+.login-totp-advisory code {
+  background: rgba(245, 166, 35, 0.18);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-family: 'IBM Plex Mono', Menlo, monospace;
+  font-size: 11.5px;
+}
+[data-theme="dark"] .login-totp-advisory {
+  color: #fbd38d;
+  background: rgba(245, 166, 35, 0.14);
+  border-left-color: #f5a623;
+}
+
+/* ─── TOTP-specific ─── */
+.login-otp-head { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.login-otp-icon {
+  width: 48px;
+  height: 48px;
+  background: #0f62fe;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+  box-shadow: 0 4px 12px rgba(15, 98, 254, 0.32);
+}
+.login-otp-icon svg { display: block; }
+.login-otp-title {
+  font-size: 24px;
+  font-weight: 400;
+  color: inherit;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.login-otp-hint {
+  font-size: 13px;
+  color: #525252;
+  line-height: 1.5;
+  margin: 4px 0 0;
+}
+[data-theme="dark"] .login-otp-hint { color: #c6c6c6; }
+.login-otp-user { color: #0f62fe; font-weight: 500; }
+
+.login-otp-input {
+  letter-spacing: 0.6em !important;
+  font-variant-numeric: tabular-nums;
+  font-size: 18px !important;
+  text-align: center;
+  font-feature-settings: 'tnum';
+}
+
+/* Error-state flourish for the OTP field — a short horizontal shake
+   (iOS/Google-style) the moment the server rejects the code, plus a
+   red border. Animation only plays once because the class is toggled
+   off by the next keystroke (see onChange handler). */
+@keyframes totp-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-6px); }
+  40%      { transform: translateX(5px); }
+  60%      { transform: translateX(-3px); }
+  80%      { transform: translateX(2px); }
+}
+.totp-shake { animation: totp-shake .35s ease-in-out; }
+.totp-shake .login-otp-input {
+  border-bottom-color: #da1e28 !important;
+  outline-color: #da1e28 !important;
+  background: #fff1f1;
+  color: #da1e28;
+}
+[data-theme="dark"] .totp-shake .login-otp-input {
+  background: rgba(218, 30, 40, 0.15);
+  color: #ff8389;
+}
+
+/* ─── Footer ─── */
+.login-footer {
+  font-size: 11px;
+  color: #8d8d8d;
+  text-align: center;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+  letter-spacing: 0.04em;
+}
+[data-theme="dark"] .login-footer {
+  color: #6f6f6f;
+  border-top-color: #393939;
+}
+
+/* ═══ Sprint 41: First-time 2FA enrollment ═══
+   Shown when server returns totp_enrollment_required=true after a
+   password-only login for a role that mandates TOTP (sys/admin). */
+.login-card-enroll { max-width: 560px; padding: 32px 40px; }
+.totp-enroll { display: flex; flex-direction: column; gap: 16px; }
+.totp-enroll-title { margin: 0; font-size: 22px; font-weight: 600; color: #161616; letter-spacing: .16px; }
+.totp-enroll-sub { margin: 0; font-size: 13px; color: #525252; line-height: 1.5; }
+.totp-enroll-section { display: flex; flex-direction: column; gap: 6px; }
+.totp-enroll-label { font-size: 12px; font-weight: 500; color: #525252; letter-spacing: .32px; }
+.totp-enroll-value { font-size: 14px; font-weight: 600; color: #161616; }
+.totp-enroll-secret {
+  font-family: 'IBM Plex Mono', 'Menlo', monospace;
+  font-size: 16px; font-weight: 600; letter-spacing: 2px; color: #1d4ed8;
+  background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px;
+  padding: 10px 14px; word-break: break-all; user-select: all;
+}
+.totp-enroll-qr {
+  display: flex; align-items: center; justify-content: center;
+  background: white; border: 1px solid #e0e0e0; border-radius: 8px;
+  padding: 12px; align-self: center;
+  width: 224px; height: 224px; box-sizing: content-box;
+}
+.totp-enroll-qr > svg { display: block; width: 200px; height: 200px; }
+.totp-enroll-qr-loading { font-size: 12px; color: #6f6f6f; }
+[data-theme="dark"] .totp-enroll-qr { background: white; border-color: #393939; }
+.totp-enroll-uri {
+  display: flex; align-items: center; gap: 10px;
+  background: #f8fafc; border: 1px solid #e0e0e0; border-radius: 6px;
+  padding: 8px 12px; text-align: left; width: 100%; cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.totp-enroll-uri:hover { background: #eff6ff; border-color: #bfdbfe; }
+.totp-enroll-uri-text {
+  flex: 1; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px;
+  color: #525252; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.totp-enroll-uri-copy {
+  flex-shrink: 0; font-size: 11px; font-weight: 600; color: #0f62fe;
+  background: white; border: 1px solid #bfdbfe; border-radius: 4px;
+  padding: 3px 10px;
+}
+.totp-enroll-code {
+  width: 100%; padding: 12px 16px; font-size: 24px;
+  font-family: 'IBM Plex Mono', monospace; letter-spacing: 8px; text-align: center;
+  border: 1.5px solid #c6c6c6; border-radius: 6px; outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.totp-enroll-code:focus { border-color: #0f62fe; box-shadow: 0 0 0 3px rgba(15,98,254,.15); }
+.totp-enroll-error {
+  padding: 10px 14px; background: #fee2e2; border: 1px solid #fca5a5;
+  border-radius: 6px; color: #991b1b; font-size: 13px; font-weight: 500;
+}
+.totp-enroll-actions { display: flex; gap: 10px; margin-top: 8px; }
+.totp-enroll-btn-cancel, .totp-enroll-btn-submit {
+  flex: 1; padding: 10px 16px; border-radius: 6px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: transform .15s, box-shadow .15s; border: none;
+}
+.totp-enroll-btn-cancel {
+  background: white; color: #525252; border: 1.5px solid #c6c6c6;
+}
+.totp-enroll-btn-cancel:hover:not(:disabled) { background: #f8fafc; border-color: #94a3b8; }
+.totp-enroll-btn-submit {
+  background: #0f62fe; color: white; box-shadow: 0 1px 3px rgba(15,98,254,.3);
+}
+.totp-enroll-btn-submit:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(15,98,254,.4); }
+.totp-enroll-btn-submit:disabled { opacity: .5; cursor: not-allowed; }
+.totp-enroll-help {
+  margin: 0; font-size: 11px; color: #6f6f6f; line-height: 1.5;
+  padding-top: 12px; border-top: 1px solid #e0e0e0;
+}
+[data-theme="dark"] .totp-enroll-title { color: #f4f4f4; }
+[data-theme="dark"] .totp-enroll-sub,
+[data-theme="dark"] .totp-enroll-label { color: #c6c6c6; }
+[data-theme="dark"] .totp-enroll-value { color: #f4f4f4; }
+[data-theme="dark"] .totp-enroll-secret { background: #161616; border-color: #3b82f6; color: #93c5fd; }
+[data-theme="dark"] .totp-enroll-uri { background: #262626; border-color: #393939; }
+[data-theme="dark"] .totp-enroll-uri-text { color: #c6c6c6; }
+[data-theme="dark"] .totp-enroll-code {
+  background: #262626; border-color: #393939; color: #f4f4f4;
+}
+[data-theme="dark"] .totp-enroll-help { color: #a8a8a8; border-top-color: #393939; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Carbon split-screen redesign (v1.1)
+   Inspired by IBM Carbon + IFS Cloud + SAP Fiori. Sharp corners,
+   monospace accents, two-pane layout. Activated by `.cb-shell` wrapper
+   class — leaves all legacy `.login-*` styles intact for fallback.
+   ═══════════════════════════════════════════════════════════════════ */
+.cb-shell {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #f4f4f4;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  z-index: 9999;
+}
+
+/* ── Left hero ─────────────────────────────────────────────────── */
+/* v1.0-style: dark blue gradient + dotted blueprint grid + constellation
+   particle network on top. Replaces the v1.1 pure-black hero. */
+.cb-hero {
+  color: #e6ecf5;
+  padding: 48px 56px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 85% 10%, rgba(15, 98, 254, 0.16), transparent 55%),
+    radial-gradient(ellipse at 10% 90%, rgba(34, 52, 110, 0.35), transparent 55%),
+    linear-gradient(160deg, #0a1220 0%, #0f1a2e 50%, #13233d 100%);
+}
+
+/* Dotted blueprint grid — 1px dots on 24px spacing, masked to fade off
+   the edges. Sits BEHIND the particle canvas. */
+.cb-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: 12px 12px;
+  mask-image: radial-gradient(ellipse at center, #000 60%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 60%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Constellation particle canvas — sits ABOVE the grid but BELOW hero
+   content (brand mark, title, footer). */
+.cb-hero-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+.cb-hero-brand {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 14px; font-weight: 600;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  position: relative; z-index: 1;
+}
+.cb-hero-brand-mark {
+  width: 28px; height: 28px;
+  background: #0f62fe;
+  display: grid; place-items: center;
+  color: #fff; font-weight: 700; font-size: 16px;
+}
+.cb-hero-body { position: relative; z-index: 1; max-width: 520px; }
+.cb-hero-tag {
+  font-size: 12px;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #78a9ff;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  margin: 0 0 16px;
+}
+.cb-hero-title {
+  font-size: 40px; line-height: 1.1;
+  font-weight: 300; letter-spacing: -0.02em;
+  margin: 0 0 16px; max-width: 16ch;
+}
+.cb-hero-title strong { font-weight: 600; color: #4589ff; }
+.cb-hero-desc {
+  font-size: 15px; line-height: 1.55;
+  color: #c6c6c6; max-width: 44ch;
+  margin: 0 0 24px;
+}
+.cb-hero-arrow {
+  font-size: 20px; color: #c6c6c6;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+/* Bottom metadata block — groups version line + credit so they sit
+   together at the bottom of the dark hero pane (Carbon login pattern).
+   Without this wrapper, the parent .cb-hero (flex column,
+   justify-content: space-between) would spread the foot + credit into
+   separate slots, leaving the version line floating mid-pane. */
+.cb-hero-bottom {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.cb-hero-foot {
+  display: flex; gap: 32px; flex-wrap: wrap;
+  font-size: 11px;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: #a8a8a8;
+}
+.cb-hero-foot strong { color: #f4f4f4; font-weight: 500; }
+.cb-hero-credit {
+  font-size: 10px;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+  letter-spacing: 0.1em;
+  color: #6f6f6f;
+}
+
+/* ── Right form pane ───────────────────────────────────────────── */
+.cb-form-pane {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  overflow-y: auto;
+}
+.cb-card {
+  width: 100%; max-width: 420px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-top: 3px solid #0f62fe;
+  padding: 32px;
+  display: flex; flex-direction: column;
+  gap: 20px;
+}
+.cb-card h1 {
+  margin: 0;
+  font-size: 28px; font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #161616;
+}
+.cb-card-sub {
+  margin: -12px 0 4px;
+  font-size: 11px;
+  color: #525252;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+}
+.cb-card-hint {
+  margin: 0;
+  font-size: 13px; color: #525252; line-height: 1.5;
+}
+
+/* Sprint 1.5 — provisioning banner shown when the server forces a
+   password change (admin reset / new account). Distinguished from the
+   neutral hint by an amber accent so users register that the change
+   is mandatory, not optional. */
+.cb-must-change-banner {
+  background: #fff8e1;
+  border-left: 3px solid #f0c419;
+  padding: 10px 12px;
+  color: #5d4d00;
+}
+
+[data-theme="dark"] .cb-must-change-banner {
+  background: rgba(240, 196, 25, 0.1);
+  border-left-color: rgba(240, 196, 25, 0.55);
+  color: #fde68a;
+}
+
+.cb-field {
+  display: flex; flex-direction: column;
+  gap: 8px;
+}
+.cb-field-label {
+  font-size: 12px; font-weight: 400; color: #525252;
+}
+.cb-field-input {
+  font: inherit; font-size: 14px;
+  padding: 10px 12px; height: 40px;
+  border: 1px solid transparent;
+  border-bottom: 1px solid #8d8d8d;
+  border-radius: 0;
+  background: #f4f4f4;
+  color: #161616;
+  transition: background 0.1s, border-color 0.1s;
+  width: 100%;
+}
+.cb-field-input:hover:not(:disabled) { background: #ebebeb; }
+.cb-field-input:focus {
+  outline: 2px solid #0f62fe;
+  outline-offset: -2px;
+  background: #f4f4f4;
+}
+.cb-field-input:disabled,
+.cb-field-input[readonly] {
+  background: #e0e0e0; color: #6f6f6f; cursor: not-allowed;
+}
+
+.cb-btn {
+  margin-top: 8px;
+  font: inherit; font-size: 14px; font-weight: 400;
+  letter-spacing: 0;
+  padding: 0 16px; height: 48px;
+  background: #0f62fe; color: #fff;
+  border: none; border-radius: 0;
+  cursor: pointer;
+  transition: background 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  width: 100%;
+}
+.cb-btn::after {
+  content: '→';
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 16px;
+}
+.cb-btn:hover:not(:disabled) { background: #0050e6; }
+.cb-btn:focus-visible {
+  outline: 2px solid #0f62fe;
+  outline-offset: -4px;
+  border: 1px solid #fff;
+}
+.cb-btn:disabled { background: #c6c6c6; color: #8d8d8d; cursor: progress; }
+.cb-btn-secondary {
+  background: transparent;
+  color: #0f62fe;
+  border: 1px solid #0f62fe;
+}
+.cb-btn-secondary::after { content: ''; }
+.cb-btn-secondary:hover:not(:disabled) { background: rgba(15,98,254,0.08); }
+
+.cb-link-btn {
+  background: none; border: none; padding: 6px 0;
+  color: #0f62fe; font: inherit; font-size: 13px;
+  text-decoration: none; cursor: pointer; text-align: center;
+}
+.cb-link-btn:hover { text-decoration: underline; }
+
+.cb-err {
+  background: #fff1f1;
+  color: #a2191f;
+  border: 1px solid #ffd7d9;
+  border-left: 3px solid #da1e28;
+  border-radius: 0;
+  padding: 12px 14px;
+  font-size: 13px;
+}
+
+.cb-remember {
+  font-size: 13px; color: #525252;
+  display: flex; align-items: center; gap: 8px;
+}
+.cb-remember input { width: 16px; height: 16px; accent-color: #0f62fe; }
+
+.cb-card-foot {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+  font-size: 11px;
+  color: #6f6f6f;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+  letter-spacing: 0.04em;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* TOTP variant: input is wider, monospace, centered */
+.cb-otp-input {
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace !important;
+  font-size: 22px !important;
+  letter-spacing: 0.5em;
+  text-align: center;
+  height: 56px !important;
+}
+.cb-otp-icon {
+  width: 48px; height: 48px;
+  background: rgba(15, 98, 254, 0.1);
+  color: #0f62fe;
+  display: grid; place-items: center;
+  margin-bottom: 4px;
+}
+.cb-otp-user { color: #0f62fe; }
+
+.cb-totp-advisory {
+  background: #fff8e1;
+  color: #6d4c00;
+  border-left: 3px solid #f1c21b;
+  padding: 12px 14px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.cb-totp-advisory code {
+  background: rgba(109, 76, 0, 0.1);
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+/* Compact mode (session-expired): hide hero but still occupy the
+   viewport and center the card. Without the position:fixed + inset
+   override that used to be here, the card stuck in the top-left of a
+   huge empty window — wrong UX for a re-login page. */
+/* Compact mode (session-expired re-login) keeps the SAME two-pane layout
+   as first-run so the user doesn't experience a jarring background swap.
+   Only the form pane gets a slightly wider card (more breathing room
+   for the "you're back, type your password" message). */
+.cb-shell.cb-compact .cb-card {
+  max-width: 460px;
+}
+
+/* Responsive: collapse to single column on narrow */
+@media (max-width: 880px) {
+  .cb-shell { grid-template-columns: 1fr; }
+  .cb-hero { display: none; }
+}
+
+/* Dark mode */
+[data-theme="dark"] .cb-shell { background: #161616; }
+[data-theme="dark"] .cb-card {
+  background: #262626;
+  border-color: #393939;
+  border-top-color: #0f62fe;
+}
+[data-theme="dark"] .cb-card h1 { color: #f4f4f4; }
+[data-theme="dark"] .cb-card-sub,
+[data-theme="dark"] .cb-card-hint,
+[data-theme="dark"] .cb-field-label,
+[data-theme="dark"] .cb-remember { color: #c6c6c6; }
+[data-theme="dark"] .cb-field-input {
+  background: #393939;
+  color: #f4f4f4;
+  border-bottom-color: #6f6f6f;
+}
+[data-theme="dark"] .cb-field-input:hover:not(:disabled) { background: #4d4d4d; }
+[data-theme="dark"] .cb-card-foot { border-top-color: #393939; color: #a8a8a8; }
+[data-theme="dark"] .cb-err {
+  background: rgba(218, 30, 40, 0.1);
+  color: #ff8389;
+  border-color: rgba(255, 131, 137, 0.3);
+}

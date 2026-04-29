@@ -1,0 +1,222 @@
+.imp-section {
+  padding: 24px;
+  max-width: 980px;
+}
+
+.imp-title {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--ops-text-primary, #0f172a);
+}
+
+.imp-subtitle {
+  margin: 0 0 24px;
+  color: var(--ops-text-secondary, #64748b);
+  font-size: 13px;
+}
+
+.imp-banner-info {
+  padding: 24px;
+  background: var(--ops-bg-soft, #f8fafc);
+  border-radius: 12px;
+  border-left: 4px solid var(--ops-primary, #6366f1);
+}
+
+.imp-banner-info h3 {
+  margin: 0 0 12px;
+  color: var(--ops-text-primary);
+}
+
+.imp-card {
+  background: var(--ops-surface, #fff);
+  border: 1px solid var(--ops-border, #e2e8f0);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.imp-card-success {
+  background: #ecfdf5;
+  border-color: #86efac;
+}
+
+.imp-card-error {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.imp-card-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ops-text-primary);
+}
+
+.imp-hint {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--ops-text-secondary);
+  line-height: 1.5;
+}
+
+.imp-hint code {
+  background: var(--ops-bg-soft, #f1f5f9);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: var(--ops-font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 12px;
+}
+
+.imp-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.imp-picked code {
+  background: var(--ops-bg-soft, #f1f5f9);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.imp-btn-execute {
+  font-weight: 600;
+}
+
+/* ─── Preview table ──────────────────────────────────────── */
+.imp-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 13px;
+}
+
+.imp-table th,
+.imp-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--ops-border, #e2e8f0);
+}
+
+.imp-table th {
+  background: var(--ops-bg-soft, #f8fafc);
+  font-weight: 500;
+  color: var(--ops-text-secondary);
+}
+
+.imp-table code {
+  background: transparent;
+  font-family: var(--ops-font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 12px;
+}
+
+.imp-row-skip {
+  opacity: 0.55;
+}
+
+.imp-row-warn {
+  background: rgba(254, 243, 199, 0.4);
+}
+
+.imp-schema-warn {
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: rgba(254, 243, 199, 0.6);
+  border-radius: 4px;
+  font-size: 11px;
+  color: #92400e;
+  line-height: 1.4;
+}
+
+.imp-schema-warn code {
+  background: rgba(146, 64, 14, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: var(--ops-font-mono, ui-monospace, SFMono-Regular, monospace);
+}
+
+/* ─── Tags ──────────────────────────────────────────────── */
+.imp-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.imp-tag-copy {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.imp-tag-skip {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.imp-tag-info {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+/* ─── Result feedback ───────────────────────────────────── */
+.imp-result {
+  margin: 12px 0;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.imp-err {
+  background: #fef2f2;
+  color: #991b1b;
+  border-left: 3px solid #ef4444;
+}
+
+.imp-result-list {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  font-size: 13px;
+}
+
+.imp-result-list li {
+  margin: 4px 0;
+}
+
+.imp-result-list code {
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.imp-errors-detail {
+  margin: 12px 0;
+  padding: 8px;
+  background: rgba(239, 68, 68, 0.05);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.imp-errors-detail summary {
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.imp-errors-detail ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+/* Dark mode */
+[data-theme="dark"] .imp-card-success {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="dark"] .imp-card-error {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}

@@ -1,0 +1,220 @@
+/* ImportWizard — three-stage import dialog
+   Visual language matches the rest of the app: IBM Plex, brand blue,
+   compact card grids. Inherits .op-btn/.op-modal-* primitives. */
+
+.iw-body {
+  padding: 0 24px 16px;
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+}
+
+.iw-hidden-file-input {
+  display: none;
+}
+
+.iw-banner {
+  padding: 10px 14px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.iw-banner-err  { background: #fee2e2; color: #991b1b; border-left: 3px solid #dc2626; }
+.iw-banner-warn { background: #fef3c7; color: #92400e; border-left: 3px solid #d97706; }
+
+/* ─── STAGE 1 ─── */
+.iw-stage1 {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px 0;
+}
+.iw-drop {
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 40px 24px;
+  text-align: center;
+  color: #475569;
+  cursor: pointer;
+  transition: all 120ms ease;
+  background: #f8fafc;
+}
+.iw-drop:hover, .iw-drop:focus-visible {
+  border-color: #0f62fe;
+  background: #f0f6ff;
+  color: #0f62fe;
+  outline: none;
+}
+.iw-drop-title {
+  margin-top: 12px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.iw-drop-help {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #64748b;
+}
+.iw-roundtrip {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.iw-roundtrip .op-btn { text-decoration: none; }
+
+/* ─── STAGE 2 ─── */
+.iw-stage2 { display: flex; flex-direction: column; gap: 14px; }
+
+.iw-source {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #334155;
+}
+.iw-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+.iw-sheet-pick { display: inline-flex; align-items: center; gap: 6px; }
+.iw-sheet-pick select { padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font: inherit; }
+
+/* Diff cards */
+.iw-diff {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+.iw-diff-card {
+  padding: 12px;
+  border-radius: 6px;
+  text-align: center;
+  border: 1px solid transparent;
+}
+.iw-diff-count { font-size: 22px; font-weight: 600; line-height: 1.2; }
+.iw-diff-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.85; margin-top: 2px; }
+.iw-diff-add  { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+.iw-diff-upd  { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+.iw-diff-noop { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+.iw-diff-rm   { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+.iw-diff-dup  { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+
+/* details panels */
+.iw-issues, .iw-mapping, .iw-sample {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  padding: 0;
+  overflow: hidden;
+}
+.iw-issues > summary, .iw-mapping > summary, .iw-sample > summary {
+  cursor: pointer;
+  padding: 10px 14px;
+  background: #f8fafc;
+  font-weight: 500;
+  font-size: 13px;
+  user-select: none;
+  list-style: none;
+}
+.iw-issues > summary::-webkit-details-marker,
+.iw-mapping > summary::-webkit-details-marker,
+.iw-sample > summary::-webkit-details-marker { display: none; }
+.iw-issues > summary::before,
+.iw-mapping > summary::before,
+.iw-sample > summary::before {
+  content: '▸ ';
+  display: inline-block;
+  margin-right: 6px;
+  transition: transform 120ms;
+}
+.iw-issues[open] > summary::before,
+.iw-mapping[open] > summary::before,
+.iw-sample[open] > summary::before { content: '▾ '; }
+
+/* tables */
+.iw-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.iw-table th, .iw-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  text-align: left;
+}
+.iw-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.iw-table tr:last-child td { border-bottom: none; }
+.iw-table-scroll { overflow-x: auto; max-width: 100%; }
+.iw-issues-table td:nth-child(1) { width: 60px; }
+.iw-sample-table { white-space: nowrap; }
+
+.iw-mapping select {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font: inherit;
+  background: #fff;
+}
+.iw-mapping-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.iw-help { font-size: 12px; color: #64748b; padding: 6px 14px; }
+
+/* ─── STAGE 3 ─── */
+.iw-stage3 { display: flex; flex-direction: column; gap: 16px; padding-top: 8px; }
+.iw-step3-summary { padding: 12px 14px; background: #f0f6ff; border-radius: 6px; color: #0f172a; font-size: 13px; }
+.iw-pill { display: inline-block; padding: 2px 8px; background: #0f62fe; color: #fff; border-radius: 999px; font-size: 12px; font-weight: 500; }
+
+.iw-mode-group { border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; }
+.iw-mode-group legend { font-size: 13px; font-weight: 500; padding: 0 6px; color: #334155; }
+.iw-mode-choice {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  align-items: flex-start;
+  margin: 4px 0;
+}
+.iw-mode-choice:hover { background: #f8fafc; }
+.iw-mode-choice.is-active { background: #f0f6ff; outline: 2px solid #0f62fe; }
+.iw-mode-choice input[type=radio] { margin-top: 4px; }
+.iw-mode-label { font-size: 13px; font-weight: 500; color: #0f172a; }
+.iw-mode-help { font-size: 12px; color: #475569; line-height: 1.4; margin-top: 2px; }
+
+.iw-reason { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #334155; }
+.iw-reason textarea {
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font: inherit;
+  resize: vertical;
+}
+
+/* ─── STAGE 4 ─── */
+.iw-stage4 { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 16px; text-align: center; }
+.iw-success-icon { color: #16a34a; }
+.iw-success-title { font-size: 18px; font-weight: 600; color: #065f46; }
+.iw-success-detail { font-size: 13px; color: #334155; line-height: 1.6; }
+.iw-success-detail code { background: #f1f5f9; padding: 2px 6px; border-radius: 3px; font-size: 12px; }
+
+.iw-commit-btn { font-size: 13px; }
+
+/* Make the modal usable on small screens */
+@media (max-width: 768px) {
+  .iw-body { max-height: calc(100vh - 180px); padding: 0 16px 12px; }
+  .iw-diff { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+}

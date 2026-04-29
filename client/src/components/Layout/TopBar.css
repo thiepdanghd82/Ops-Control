@@ -1,0 +1,165 @@
+/* TopBar — matching COST V1.0 style. Phase 9K.2 tokenized for dark mode. */
+.topbar {
+  height: 48px;
+  min-height: 48px;
+  background: var(--surface-zebra);
+  border-bottom: 1px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Breadcrumb navigation */
+.topbar-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.topbar-bc-root {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.topbar-bc-sep {
+  margin: 0 8px;
+  color: var(--text-tertiary);
+  font-size: 16px;
+  font-weight: 400;
+}
+.topbar-bc-section {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.topbar-bc-current {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.topbar-npi-badge {
+  font-size: 11px;
+  /* Info-blue pill — colored tags stay theme-agnostic; the contrast
+     ratio of #0369a1 on #dbeafe is legible in both light and dark. */
+  color: #0369a1;
+  font-weight: 600;
+  background: #dbeafe;
+  padding: 3px 10px;
+  border-radius: 24px;
+  white-space: nowrap;
+}
+
+.topbar-calc-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Base button style ── */
+.tb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 0;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s, transform 0.15s;
+  line-height: 1;
+}
+.tb-btn:hover:not(:disabled) {
+  opacity: 0.82;
+  transform: translateY(-1px);
+}
+.tb-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+.tb-btn svg {
+  flex-shrink: 0;
+}
+
+/* ── Search button — pill/outline style ── */
+.tb-btn-search {
+  background: var(--surface-card);
+  color: var(--text-tertiary);
+  border: 1.5px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 6px 14px 6px 10px;
+  font-weight: 400;
+  box-shadow: var(--shadow-sm);
+  min-width: 140px;
+}
+.tb-btn-search:hover {
+  border-color: var(--text-secondary);
+  box-shadow: var(--shadow-md);
+  opacity: 1;
+  transform: none;
+}
+
+/* ── New Quote — green ── */
+.tb-btn-new {
+  background: #22c55e;
+  color: white;
+  box-shadow: 0 2px 8px rgba(34,197,94,0.35);
+}
+
+/* ── Print / Export — red/coral ── */
+.tb-btn-print {
+  background: #ef4444;
+  color: white;
+  box-shadow: 0 2px 8px rgba(239,68,68,0.3);
+}
+
+/* ── Update — gray ── */
+.tb-btn-update {
+  background: rgba(100,116,139,0.75);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+.tb-btn-update.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ── Save — blue ── */
+.tb-btn-save {
+  background: var(--color-brand-500);
+  color: white;
+  box-shadow: 0 2px 8px rgba(59,130,246,0.35);
+}
+
+.topbar-import-btn {
+  padding: 5px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface-card);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color .15s, border-color .15s, color .15s;
+}
+
+.topbar-import-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+

@@ -1,0 +1,44 @@
+# Secrets — NEVER commit. A leaked OPS_TOTP_KEY means every totp_secrets.enc
+# ever encrypted with it is decryptable by whoever sees the repo.
+.env
+.env.local
+.env.*.local
+
+# v1.3 — Ed25519 license signing keys. Production private keys NEVER
+# commit; live offline in the CCL HQ vault. Dev key is committed
+# intentionally (whitelist below) so `npm test` works out-of-the-box.
+scripts/license/*-private.pem
+!scripts/license/dev-private.pem
+desktop/license-pubkey.pem
+
+# v1.3 — autonomous-upgrade artefacts (UPGRADE_LOG.md is checked in;
+# raw backups + generated installers are not).
+backup/v1.2_pre_upgrade_*.tar.gz
+dist/*.dmg
+dist/*.exe
+_legacy/
+
+# Quarantined secrets from reset-totp / broken decrypts. Forensics-only.
+**/totp_secrets.enc.broken-*
+**/totp_secrets.enc.corrupt-*
+
+# Runtime DATA_DIR if someone sets it inside the repo by accident.
+server/data/
+!server/data/.gitkeep
+
+# Build output
+client/dist/
+client/node_modules/
+node_modules/
+
+# OS / editor noise
+.DS_Store
+*.swp
+.idea/
+.vscode/
+!.vscode/launch.json
+.claude/
+
+# Local logs
+*.log
+npm-debug.log*

@@ -1,0 +1,13 @@
+node_modules/
+client/node_modules/
+desktop/node_modules/
+client/dist/
+desktop/dist-electron/
+server/data/
+_legacy/
+backup/
+dist/
+docs/audit-2026-04-17/
+client/public/help/
+*.lock
+package-lock.json

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Ops Control — macOS entitlements
+  ──────────────────────────────────────────────────────────────────────
+  Yêu cầu khi hardenedRuntime = true (cần thiết cho notarization).
+
+  Allow JIT + unsigned executable memory:
+    Electron's V8 cần JIT, không có 2 entitlement này app sẽ crash
+    với SIGKILL ngay khi launch trên macOS có Gatekeeper.
+
+  Allow USB device access (cho serialport + node-hid):
+    Cân điện tử qua USB-Serial, scanner USB-HID. Không có entitlement
+    này thì lib serialport sẽ thấy ports nhưng open() bị deny.
+
+  Allow network client/server:
+    Smart-client gọi Tier 2 qua HTTP, embedded server bind 127.0.0.1.
+    Auto-updater gọi http://10.102.3.61/updates/.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+
+  <key>com.apple.security.device.usb</key>
+  <true/>
+
+  <key>com.apple.security.network.client</key>
+  <true/>
+
+  <key>com.apple.security.network.server</key>
+  <true/>
+
+  <key>com.apple.security.files.user-selected.read-write</key>
+  <true/>
+
+  <key>com.apple.security.files.downloads.read-write</key>
+  <true/>
+</dict>
+</plist>
