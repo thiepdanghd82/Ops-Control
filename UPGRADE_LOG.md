@@ -313,3 +313,46 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 * 5957ec8 (release/v1.3) chore: keep pre-commit hook scoped to lint-staged
 ```
 
+### Phase G — Architecture progression + governance · 2026-04-29 21:50 GMT+7
+
+**G1 — Library/rate router extracted**
+- New `server/domains/library/routes/rate.js` (`createRateRouter` factory, 4 routes: list, snapshot, restore, export-csv).
+- New `server/domains/library/routes/rate.test.js` — 8 contract tests (auth gate, role gate, file create/restore, 404, viewonly export-csv, normal export-csv writes CSV).
+- NOT mounted in server/index.js yet — full plumbing waits for `siteToCsvKey`/`rateRows`/`toCsvBytes` helpers to be lifted to platform packages. Legacy `/api/rate/*` continues to serve.
+- All 8 tests pass.
+
+**G2 — Per-domain i18n migration: pricing.\* keys**
+- 19 `pricing.*` keys MOVED from `client/src/i18n/strings.js` to `client/src/i18n/domains/costing.js`.
+- `main.jsx` side-effect-imports the costing module so `registerStrings()` puts the keys back in the global STRINGS dict at boot — runtime contract unchanged, build verified the keys still ship.
+- Pattern proven: future migrations (qh.* → sales.js, sample.* → quality.js) follow the same shape.
+
+**G3 — commitlint + commit-msg hook**
+- New `commitlint.config.js` extends `@commitlint/config-conventional`. Customisations: 100-char header, 120-char body line, scope-enum locked to SAP domain letters + platform packages.
+- New `.husky/commit-msg` hook runs `commitlint --edit "$1"`.
+- New `commitlint` job in `.github/workflows/ci.yml` re-validates on PR via `--from=base.sha --to=head.sha`.
+- Smoke test: `feat(library): ...` accepted; `blah blah` rejected with `type may not be empty`.
+
+**G4 — ADR-0007 license tier S/M/L**
+- New `docs/adr/0007-license-tier-s-m-l.md` (170 LOC).
+- Captures: tier table (15/20/50), what counts as active (excludes sys + soft-deleted), enforcement points (middleware + diagnostic endpoint), rationale (customer requirement, segmentation gaps, anti-piracy machine binding), 4 alternatives considered with rejection reasons, reversal cost.
+- Cross-references: ADR-0003 (Ed25519), `licenseService.js`, `desktop/license.js`, MIGRATION_GUIDE, SECURITY.
+
+**G5 — CI bundle-marker verification**
+- `build` job: bakes `OPS_BUILD_ID=<ref-name>-<sha>` into the Vite build via env, then greps the resulting `index-*.js` for the literal marker. Fails if missing or wrong build-id.
+- `build-installers` job: runs `scripts/verify-bundle-marker.sh` against the DMG so the **release artefact** is verified to match the **source commit**. Defends against supply-chain swap during distribution.
+
+**Final test totals (post-G)**
+- 44/44 security + library suite (rate-router 8 added).
+- 89/89 gallus engine.
+
+**Git topology**
+```
+* c78a23c (HEAD -> release/v1.3) chore(release): G3 commitlint, G4 ADR-0007, G5 CI marker
+* a0bbf21                        refactor(costing): migrate pricing.* i18n keys to domain
+* e2a5b26                        feat(library): extract rate backup/restore router
+* 445eba9                        docs: log Phase F
+* 5957ec8                        chore: keep pre-commit hook scoped to lint-staged
+* a8b559f (main, tag: v1.3.0-rc.1, tag: v1.2.0-snapshot) initial git repo
+```
+6 commits on release/v1.3, 0 on main (per AUTO_EXECUTE.md mandate).
+
