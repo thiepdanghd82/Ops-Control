@@ -59,9 +59,9 @@ jobs:
   router-test-coverage:
     # v1.3 N5 / ADR-0013 — every domain router MUST have a sibling
     # *.test.js file with at minimum auth/role/happy/error coverage.
-    # Currently in WARN mode (exit 0 even on missing); flips to error
-    # in rc.5 once basis/backup.js + security/audit.js gain sibling
-    # tests. See docs/adr/0013-no-router-without-tests.md.
+    # ENFORCING since O2: basis/backup + security/audit gained sibling
+    # tests, so the entire 7-router surface is conformant. A missing
+    # test now blocks the PR.
     name: Router has sibling tests
     runs-on: ubuntu-latest
     steps:
@@ -73,15 +73,15 @@ jobs:
           for router in $(find . -path '*/routes/*.js' -not -name '*.test.js'); do
             test_file="${router%.js}.test.js"
             if [ ! -f "$test_file" ]; then
-              echo "::warning::missing sibling test for $router"
+              echo "::error::missing sibling test for $router"
               missing=$((missing + 1))
             fi
           done
           if [ "$missing" -gt 0 ]; then
-            echo "$missing router(s) missing sibling test files (warn mode; will block in rc.5)"
-          else
-            echo "all routers have sibling tests"
+            echo "$missing router(s) missing sibling test files"
+            exit 1
           fi
+          echo "all routers have sibling tests"
 
   commitlint-smoke:
     # v1.3 K6 — prove the commitlint config actually rejects bad input.

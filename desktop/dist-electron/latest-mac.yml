@@ -1,11 +1,11 @@
 version: 1.2.0
 files:
   - url: OpsControl SERVER-1.2.0-arm64.dmg
-    sha512: AH4VJTGXmqjrBR3EEER0vssH3KUUbl2x8W9D/VWHC+p7u3EjyT91vomoCQwYO0uHtOD78da3heBsR+W/cGcLeA==
-    size: 208681867
+    sha512: aZZlpqDEhLOgz6LltEh26N01WQjyB+CXsVgs0t/ntvowiyS6VdVs8fNLduPILFAnWvVCDftiZDE1/LbJQEeILw==
+    size: 208693586
   - url: OpsControl SERVER-1.2.0.dmg
-    sha512: K4XhncODHP1lUCODlkJrWSXLa2/jVRypbcL7lC6z1B2cHbVng14U/Fgq0VYwNPz0ZO2lPeQ4U2ubveWDatgi5w==
-    size: 214139205
+    sha512: NO1nlcAZAFD+bJ3zI9ddqpnXV+XnaNunCB1c51jv+SAaMMlIyEQoCS6zK8cokYl9HF2aHqM8DP6jDoJ7p7VRpQ==
+    size: 214143974
 path: OpsControl SERVER-1.2.0-arm64.dmg
-sha512: AH4VJTGXmqjrBR3EEER0vssH3KUUbl2x8W9D/VWHC+p7u3EjyT91vomoCQwYO0uHtOD78da3heBsR+W/cGcLeA==
-releaseDate: '2026-04-29T16:18:18.104Z'
+sha512: aZZlpqDEhLOgz6LltEh26N01WQjyB+CXsVgs0t/ntvowiyS6VdVs8fNLduPILFAnWvVCDftiZDE1/LbJQEeILw==
+releaseDate: '2026-04-29T16:42:37.154Z'

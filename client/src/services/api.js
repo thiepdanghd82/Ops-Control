@@ -35,25 +35,51 @@ function getToken() {
   try {
     const fromSession = sessionStorage.getItem('ops_token');
     if (fromSession) return fromSession;
-  } catch { /* private mode / quota — fall through */ }
+  } catch {
+    /* private mode / quota — fall through */
+  }
   return localStorage.getItem('ops_token');
 }
 
 export function setToken(token, { persistent = true } = {}) {
   // Always wipe the OTHER store so we don't end up with two stale
   // copies after a "remember me" flip mid-session.
-  try { localStorage.removeItem('ops_token'); } catch { /* noop */ }
-  try { sessionStorage.removeItem('ops_token'); } catch { /* noop */ }
+  try {
+    localStorage.removeItem('ops_token');
+  } catch {
+    /* noop */
+  }
+  try {
+    sessionStorage.removeItem('ops_token');
+  } catch {
+    /* noop */
+  }
   if (persistent) {
-    try { localStorage.setItem('ops_token', token); } catch { /* quota */ }
+    try {
+      localStorage.setItem('ops_token', token);
+    } catch {
+      /* quota */
+    }
   } else {
-    try { sessionStorage.setItem('ops_token', token); } catch { /* quota */ }
+    try {
+      sessionStorage.setItem('ops_token', token);
+    } catch {
+      /* quota */
+    }
   }
 }
 
 export function clearToken() {
-  try { localStorage.removeItem('ops_token'); } catch { /* noop */ }
-  try { sessionStorage.removeItem('ops_token'); } catch { /* noop */ }
+  try {
+    localStorage.removeItem('ops_token');
+  } catch {
+    /* noop */
+  }
+  try {
+    sessionStorage.removeItem('ops_token');
+  } catch {
+    /* noop */
+  }
 }
 
 /**
@@ -69,8 +95,11 @@ function readCsrfCookie() {
     const eq = part.indexOf('=');
     if (eq <= 0) continue;
     if (part.slice(0, eq).trim() === CSRF_COOKIE) {
-      try { return decodeURIComponent(part.slice(eq + 1).trim()); }
-      catch { return part.slice(eq + 1).trim(); }
+      try {
+        return decodeURIComponent(part.slice(eq + 1).trim());
+      } catch {
+        return part.slice(eq + 1).trim();
+      }
     }
   }
   return '';
@@ -111,11 +140,15 @@ async function request(path, options = {}) {
     // handler swallows the error.
     try {
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('ops:session-expired', {
-          detail: { path, method: (options.method || 'GET').toUpperCase() },
-        }));
+        window.dispatchEvent(
+          new CustomEvent('ops:session-expired', {
+            detail: { path, method: (options.method || 'GET').toUpperCase() },
+          })
+        );
       }
-    } catch { /* window missing in SSR/test envs */ }
+    } catch {
+      /* window missing in SSR/test envs */
+    }
     throw new Error('Session expired');
   }
 
@@ -137,10 +170,13 @@ export const api = {
   // Second optional arg accepts `{ signal }` so callers can abort an
   // in-flight request — important for useEffect cleanup + tab switches.
   get: (path, opts = {}) => request(path, { signal: opts.signal }),
-  post: (path, body, opts = {}) => request(path, { method: 'POST', body: JSON.stringify(body), signal: opts.signal }),
-  put: (path, body, opts = {}) => request(path, { method: 'PUT', body: JSON.stringify(body), signal: opts.signal }),
-  patch: (path, body, opts = {}) => request(path, { method: 'PATCH', body: JSON.stringify(body), signal: opts.signal }),
-  delete: (path, opts = {}) => request(path, { method: 'DELETE', signal: opts.signal })
+  post: (path, body, opts = {}) =>
+    request(path, { method: 'POST', body: JSON.stringify(body), signal: opts.signal }),
+  put: (path, body, opts = {}) =>
+    request(path, { method: 'PUT', body: JSON.stringify(body), signal: opts.signal }),
+  patch: (path, body, opts = {}) =>
+    request(path, { method: 'PATCH', body: JSON.stringify(body), signal: opts.signal }),
+  delete: (path, opts = {}) => request(path, { method: 'DELETE', signal: opts.signal }),
 };
 
 // Multipart upload — used for CSV/XLSX imports. We can't pass through the
@@ -162,7 +198,10 @@ async function uploadFile(path, file, fieldName = 'file') {
     body: fd,
     credentials: 'include',
   });
-  if (res.status === 401) { clearToken(); throw new Error('Session expired'); }
+  if (res.status === 401) {
+    clearToken();
+    throw new Error('Session expired');
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || err.detail || 'Upload failed');
@@ -175,7 +214,8 @@ export const authApi = {
   // Sprint 1.6 — `remember` (boolean) toggles the 30-day vs 8h session.
   // Defaults to false so existing call sites that pass only (user, pwd)
   // get the original short-TTL behaviour.
-  login: (username, password, remember = false) => api.post('/auth/login', { username, password, remember: !!remember }),
+  login: (username, password, remember = false) =>
+    api.post('/auth/login', { username, password, remember: !!remember }),
   logout: () => api.post('/auth/logout', {}),
   me: (opts = {}) => api.get('/auth/me', opts),
   getUsers: () => api.get('/auth/users'),
@@ -201,11 +241,14 @@ export const importApi = {
   // CSV/XLSX parsing and writes the mapped rows to the corresponding
   // JSON file under Library/MaterialCost/.
   uploadNpiMaterials: (file) => uploadFile('/import/npi-materials', file),
-  uploadSourcingDb:   (file) => uploadFile('/import/sourcing-db', file),
+  uploadSourcingDb: (file) => uploadFile('/import/sourcing-db', file),
   // Rate Table import — ?site=<name>&mode=<replace|append>. Writes into
   // rate_sites.json[site] on the server; client refreshes the lib afterward.
   uploadRate: (file, site, mode = 'replace') =>
-    uploadFile(`/import/rate?site=${encodeURIComponent(site)}&mode=${encodeURIComponent(mode)}`, file),
+    uploadFile(
+      `/import/rate?site=${encodeURIComponent(site)}&mode=${encodeURIComponent(mode)}`,
+      file
+    ),
   // Clear-data — each endpoint wipes only its own dataset and backs up the
   // previous contents. Keeps tabs independent.
   clearBom: () => api.delete('/import/bom'),
@@ -244,7 +287,10 @@ export const importWizardApi = {
       body: fd,
       credentials: 'include',
     });
-    if (res.status === 401) { clearToken(); throw new Error('Session expired'); }
+    if (res.status === 401) {
+      clearToken();
+      throw new Error('Session expired');
+    }
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
       const err = new Error(body.error || body.hint || 'Preview failed');
@@ -255,8 +301,7 @@ export const importWizardApi = {
     return body;
   },
 
-  commit: (token, mode, reason = '') =>
-    api.post('/import-wizard/commit', { token, mode, reason }),
+  commit: (token, mode, reason = '') => api.post('/import-wizard/commit', { token, mode, reason }),
 
   // Direct download URLs (used for window.open / <a href>) — needed
   // because fetch() responses can't trigger native download UX without
@@ -268,10 +313,8 @@ export const importWizardApi = {
 
   history: (datasetKey, limit = 50) =>
     api.get(`/import-wizard/history?dataset=${encodeURIComponent(datasetKey)}&limit=${limit}`),
-  backups: (datasetKey) =>
-    api.get(`/import-wizard/backups/${encodeURIComponent(datasetKey)}`),
-  restore: (datasetKey, file) =>
-    api.post('/import-wizard/restore', { dataset: datasetKey, file }),
+  backups: (datasetKey) => api.get(`/import-wizard/backups/${encodeURIComponent(datasetKey)}`),
+  restore: (datasetKey, file) => api.post('/import-wizard/restore', { dataset: datasetKey, file }),
 };
 
 // ─── Shared Data API (Node.js reads files directly — no Python dependency) ───
@@ -279,8 +322,10 @@ export const sharedApi = {
   // IFS data
   getInventory: (opts = {}) => api.get('/shared/inventory', opts),
   getProducts: (opts = {}) => api.get('/shared/products', opts),
-  getBOM: (partNo, opts = {}) => partNo ? api.get(`/shared/bom/${partNo}`, opts) : api.get('/shared/bom', opts),
-  getRouting: (partNo, opts = {}) => partNo ? api.get(`/shared/routing/${partNo}`, opts) : api.get('/shared/routing', opts),
+  getBOM: (partNo, opts = {}) =>
+    partNo ? api.get(`/shared/bom/${partNo}`, opts) : api.get('/shared/bom', opts),
+  getRouting: (partNo, opts = {}) =>
+    partNo ? api.get(`/shared/routing/${partNo}`, opts) : api.get('/shared/routing', opts),
   getWorkCenters: (opts = {}) => api.get('/shared/work-centers', opts),
 
   // Cost data (read directly from JSON files)
@@ -291,8 +336,7 @@ export const sharedApi = {
   // under a per-quote lock. Callers MUST re-fetch quotes after resolve; the
   // response includes the authoritative new approval object.
   transitionApproval: (quoteId, action, reason) =>
-    api.post(`/shared/approvals/${quoteId}/transition`,
-      { action, ...(reason ? { reason } : {}) }),
+    api.post(`/shared/approvals/${quoteId}/transition`, { action, ...(reason ? { reason } : {}) }),
   // Sprint 6.5: lightweight poll for the Sidebar badge. Returns
   // `{ ok, count }` where count = quotes awaiting this user's action.
   getMyApprovalCount: (opts = {}) => api.get('/shared/approvals/my-count', opts),
@@ -315,41 +359,66 @@ export const sharedApi = {
   getSummarize: (opts = {}) => api.get('/shared/summarize', opts),
   getRFQTracker: (opts = {}) => api.get('/shared/rfq-tracker', opts),
   // RFQ audit log — append-only, server stamps user + ts
-  getRFQAudit: (rfqId, opts = {}) => api.get(`/shared/rfq-tracker/audit/${encodeURIComponent(rfqId)}`, opts),
-  appendRFQAudit: (rfqId, entry) => api.post(`/shared/rfq-tracker/audit/${encodeURIComponent(rfqId)}`, entry),
+  getRFQAudit: (rfqId, opts = {}) =>
+    api.get(`/shared/rfq-tracker/audit/${encodeURIComponent(rfqId)}`, opts),
+  appendRFQAudit: (rfqId, entry) =>
+    api.post(`/shared/rfq-tracker/audit/${encodeURIComponent(rfqId)}`, entry),
   // RFQ attachments
-  listRFQAttachments: (rfqId, opts = {}) => api.get(`/shared/rfq-tracker/attachments/${encodeURIComponent(rfqId)}`, opts),
-  uploadRFQAttachment: (rfqId, file) => uploadFile(`/shared/rfq-tracker/attachments/${encodeURIComponent(rfqId)}`, file, 'file'),
-  deleteRFQAttachment: (rfqId, attId) => api.delete(`/shared/rfq-tracker/attachments/${encodeURIComponent(rfqId)}/${encodeURIComponent(attId)}`),
+  listRFQAttachments: (rfqId, opts = {}) =>
+    api.get(`/shared/rfq-tracker/attachments/${encodeURIComponent(rfqId)}`, opts),
+  uploadRFQAttachment: (rfqId, file) =>
+    uploadFile(`/shared/rfq-tracker/attachments/${encodeURIComponent(rfqId)}`, file, 'file'),
+  deleteRFQAttachment: (rfqId, attId) =>
+    api.delete(
+      `/shared/rfq-tracker/attachments/${encodeURIComponent(rfqId)}/${encodeURIComponent(attId)}`
+    ),
   // Download URL — caller can put this in an <a href>
-  rfqAttachmentUrl: (rfqId, attId) => `/api/shared/rfq-tracker/attachments/${encodeURIComponent(rfqId)}/${encodeURIComponent(attId)}/download`,
+  rfqAttachmentUrl: (rfqId, attId) =>
+    `/api/shared/rfq-tracker/attachments/${encodeURIComponent(rfqId)}/${encodeURIComponent(attId)}/download`,
   getSampleTracking: (opts = {}) => api.get('/shared/sample-tracking', opts),
   // Machine profiles — press library for Layout optimizer
   getMachineProfiles: (opts = {}) => api.get('/shared/machine-profiles', opts),
   createMachineProfile: (profile) => api.post('/shared/machine-profiles', profile),
-  updateMachineProfile: (id, profile) => api.put(`/shared/machine-profiles/${encodeURIComponent(id)}`, profile),
+  updateMachineProfile: (id, profile) =>
+    api.put(`/shared/machine-profiles/${encodeURIComponent(id)}`, profile),
   deleteMachineProfile: (id) => api.delete(`/shared/machine-profiles/${encodeURIComponent(id)}`),
   // Permission groups — SAP-style authorization profiles (Sprint S1)
   getPermissionGroups: (opts = {}) => api.get('/shared/permission-groups', opts),
   createPermissionGroup: (group) => api.post('/shared/permission-groups', group),
-  updatePermissionGroup: (id, group) => api.put(`/shared/permission-groups/${encodeURIComponent(id)}`, group),
+  updatePermissionGroup: (id, group) =>
+    api.put(`/shared/permission-groups/${encodeURIComponent(id)}`, group),
   deletePermissionGroup: (id) => api.delete(`/shared/permission-groups/${encodeURIComponent(id)}`),
   // Machine Technical — equipment capability library (Sprint S-MTECH)
   getMachineTechnicalMeta: (opts = {}) => api.get('/shared/machine-technical', opts),
-  getMachineTechnical: (kind, opts = {}) => api.get(`/shared/machine-technical?kind=${encodeURIComponent(kind)}`, opts),
-  createMachineTechnical: (kind, rec) => api.post(`/shared/machine-technical/${encodeURIComponent(kind)}`, rec),
-  updateMachineTechnical: (kind, id, rec) => api.put(`/shared/machine-technical/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`, rec),
-  deleteMachineTechnical: (kind, id) => api.delete(`/shared/machine-technical/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`),
-  machineTechnicalExportUrl: (kind) => `/api/shared/machine-technical/${encodeURIComponent(kind)}/export`,
-  importMachineTechnical: (kind, file) => uploadFile(`/shared/machine-technical/${encodeURIComponent(kind)}/import`, file, 'file'),
-  updateMachineTechnicalEnum: (key, values) => api.put(`/shared/machine-technical/enums/${encodeURIComponent(key)}`, { values }),
+  getMachineTechnical: (kind, opts = {}) =>
+    api.get(`/shared/machine-technical?kind=${encodeURIComponent(kind)}`, opts),
+  createMachineTechnical: (kind, rec) =>
+    api.post(`/shared/machine-technical/${encodeURIComponent(kind)}`, rec),
+  updateMachineTechnical: (kind, id, rec) =>
+    api.put(`/shared/machine-technical/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`, rec),
+  deleteMachineTechnical: (kind, id) =>
+    api.delete(`/shared/machine-technical/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`),
+  machineTechnicalExportUrl: (kind) =>
+    `/api/shared/machine-technical/${encodeURIComponent(kind)}/export`,
+  importMachineTechnical: (kind, file) =>
+    uploadFile(`/shared/machine-technical/${encodeURIComponent(kind)}/import`, file, 'file'),
+  updateMachineTechnicalEnum: (key, values) =>
+    api.put(`/shared/machine-technical/enums/${encodeURIComponent(key)}`, { values }),
   // Sample Tracking audit + attachments (SAP parity with RFQ Tracker)
-  getSampleAudit: (id, opts = {}) => api.get(`/shared/sample-tracking/audit/${encodeURIComponent(id)}`, opts),
-  appendSampleAudit: (id, entry) => api.post(`/shared/sample-tracking/audit/${encodeURIComponent(id)}`, entry),
-  listSampleAttachments: (id, opts = {}) => api.get(`/shared/sample-tracking/attachments/${encodeURIComponent(id)}`, opts),
-  uploadSampleAttachment: (id, file) => uploadFile(`/shared/sample-tracking/attachments/${encodeURIComponent(id)}`, file, 'file'),
-  deleteSampleAttachment: (id, attId) => api.delete(`/shared/sample-tracking/attachments/${encodeURIComponent(id)}/${encodeURIComponent(attId)}`),
-  sampleAttachmentUrl: (id, attId) => `/api/shared/sample-tracking/attachments/${encodeURIComponent(id)}/${encodeURIComponent(attId)}/download`,
+  getSampleAudit: (id, opts = {}) =>
+    api.get(`/shared/sample-tracking/audit/${encodeURIComponent(id)}`, opts),
+  appendSampleAudit: (id, entry) =>
+    api.post(`/shared/sample-tracking/audit/${encodeURIComponent(id)}`, entry),
+  listSampleAttachments: (id, opts = {}) =>
+    api.get(`/shared/sample-tracking/attachments/${encodeURIComponent(id)}`, opts),
+  uploadSampleAttachment: (id, file) =>
+    uploadFile(`/shared/sample-tracking/attachments/${encodeURIComponent(id)}`, file, 'file'),
+  deleteSampleAttachment: (id, attId) =>
+    api.delete(
+      `/shared/sample-tracking/attachments/${encodeURIComponent(id)}/${encodeURIComponent(attId)}`
+    ),
+  sampleAttachmentUrl: (id, attId) =>
+    `/api/shared/sample-tracking/attachments/${encodeURIComponent(id)}/${encodeURIComponent(attId)}/download`,
   getInkCalc: (opts = {}) => api.get('/shared/ink-calc', opts),
   getFinance: (opts = {}) => api.get('/shared/finance', opts),
 
@@ -360,10 +429,8 @@ export const sharedApi = {
   // shares the same cookie+CSRF contract as importApi (see uploadFile).
   getPrintAreaJobs: (opts = {}) => api.get('/shared/print-area', opts),
   savePrintAreaJob: (job) => api.post('/shared/print-area', job),
-  deletePrintAreaJob: (sku) =>
-    api.delete(`/shared/print-area/${encodeURIComponent(sku)}`),
-  uploadPrintAreaArtwork: (file) =>
-    uploadFile('/shared/print-area/upload', file, 'artwork'),
+  deletePrintAreaJob: (sku) => api.delete(`/shared/print-area/${encodeURIComponent(sku)}`),
+  uploadPrintAreaArtwork: (file) => uploadFile('/shared/print-area/upload', file, 'artwork'),
   // Binary fetch for files under server/data/ (e.g. saved print-area
   // artworks). Uses the same session cookie + optional Bearer header
   // as JSON calls but returns a Blob. Used by Library → Open to
@@ -377,7 +444,9 @@ export const sharedApi = {
       if (typeof window !== 'undefined' && window.localStorage) {
         token = window.localStorage.getItem('ops_token') || '';
       }
-    } catch { /* storage disabled — rely on cookie */ }
+    } catch {
+      /* storage disabled — rely on cookie */
+    }
     const res = await fetch(url, {
       credentials: 'include',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -390,7 +459,7 @@ export const sharedApi = {
     return res.blob();
   },
 
-  refreshCache: () => api.post('/shared/refresh-cache', {})
+  refreshCache: () => api.post('/shared/refresh-cache', {}),
 };
 
 // Helper: server returns { ok: false, msg: '...' } on 200 for auth errors.
@@ -404,8 +473,10 @@ async function authCall(method, path, body) {
 // ─── Cost API (legacy endpoints now on Node.js — mounted at /api/) ───
 export const costApi = {
   // Password — server expects {old_pwd, new_pwd} and {new_pwd}
-  changePwd: (oldPwd, newPwd) => authCall('post', '/auth/change-pwd', { old_pwd: oldPwd, new_pwd: newPwd }),
-  resetPwd: (userId, newPwd) => authCall('post', `/auth/users/${userId}/reset-pwd`, { new_pwd: newPwd }),
+  changePwd: (oldPwd, newPwd) =>
+    authCall('post', '/auth/change-pwd', { old_pwd: oldPwd, new_pwd: newPwd }),
+  resetPwd: (userId, newPwd) =>
+    authCall('post', `/auth/users/${userId}/reset-pwd`, { new_pwd: newPwd }),
   // Sprint 1.5 — server generates a random temp pwd, sets must_change_password=true,
   // returns it ONCE so the admin can hand it over (print/copy from a modal).
   generateTempPwd: (userId) => authCall('post', `/auth/users/${userId}/temp-pwd`, {}),
@@ -429,7 +500,8 @@ export const costApi = {
   createUser: (data) => authCall('post', '/auth/users', data),
   updateUser: (id, data) => authCall('put', `/auth/users/${id}`, data),
   deleteUser: (id) => authCall('delete', `/auth/users/${id}`),
-  setSessionTtl: (id, ttlHours) => authCall('post', `/auth/users/${id}/session-ttl`, { ttl_hours: ttlHours }),
+  setSessionTtl: (id, ttlHours) =>
+    authCall('post', `/auth/users/${id}/session-ttl`, { ttl_hours: ttlHours }),
 
   // Rate — v1.3 N6 — migrated from legacy `/rate/*` to canonical
   // `/library/rate/*` (router lives at server/domains/library/routes/rate.js).
@@ -439,11 +511,13 @@ export const costApi = {
   restoreRate: (filename, site) => api.post('/library/rate/restore', { filename, site }),
   exportRateCsv: (site, data) => api.post('/library/rate/export-csv', { site, data }),
 
-  // DDL
-  getDdlBackups: (site) => api.get(`/ddl/backups?site=${encodeURIComponent(site || '')}`),
-  backupDdl: (site, data) => api.post('/ddl/backup', { site, data }),
-  restoreDdl: (filename, site) => api.post('/ddl/restore', { filename, site }),
-  exportDdlCsv: (site, data) => api.post('/ddl/export-csv', { site, data }),
+  // DDL — v1.3 O1 — migrated from legacy `/ddl/*` to canonical
+  // `/library/ddl/*` (same router shape as Rate, see N6 cutover).
+  // POST /backups creates a snapshot (was /backup singular at legacy path).
+  getDdlBackups: (site) => api.get(`/library/ddl/backups?site=${encodeURIComponent(site || '')}`),
+  backupDdl: (site, data) => api.post('/library/ddl/backups', { site, data }),
+  restoreDdl: (filename, site) => api.post('/library/ddl/restore', { filename, site }),
+  exportDdlCsv: (site, data) => api.post('/library/ddl/export-csv', { site, data }),
 
   // Finance
   getFinance: () => api.get('/shared/finance'),
@@ -472,7 +546,10 @@ export const costApi = {
       body: fd,
       credentials: 'include',
     });
-    if (res.status === 401) { clearToken(); throw new Error('Session expired'); }
+    if (res.status === 401) {
+      clearToken();
+      throw new Error('Session expired');
+    }
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
       const err = new Error(body.error || 'Upload failed');
@@ -563,5 +640,5 @@ export const planningApi = {
   updateWIP: (woId, data) => api.put(`/planning/wip/${woId}`, data),
 
   getCapacity: () => api.get('/planning/capacity'),
-  getMeta: () => api.get('/planning/meta')
+  getMeta: () => api.get('/planning/meta'),
 };
