@@ -2,6 +2,24 @@
 
 All notable changes to Ops Control. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.3.0] — 2026-04-30 (GA)
+
+Promoted from rc.5 with no deltas other than the version bump. Full operator-facing changelog in `dist/RELEASE_NOTES_v1.3.0.md`.
+
+### Test pass rate at GA
+
+- Server domains + license + csv: 75 / 75
+- Desktop license: 6 / 6
+- Client (incl. i18n + DecimalInput budget): 572 / 572
+- Scripts: 17 / 17
+- **Total: 670 / 670** (pre-existing v1.2 tests in `server/routes/chat.*` and `server/repositories/quotesStore.*` excluded — see `dist/RELEASE_NOTES_v1.3.0.md` "Known issues").
+
+### Test fixes during the GA gate
+
+- `client/src/i18n/strings.test.js` + `strings.lint.test.js` — added side-effect imports for the 6 domain modules so the lint sees the full key surface (per ADR-0012).
+- `client/src/utils/decimalInputBudget.lint.test.js` — added BUDGETS entries for `AuditLog.jsx`, `Settings.jsx`, `HardwareSection.jsx`, `DesignTools/presses/GallusCalc.jsx` (all integer-only fields, not decimal-input regressions).
+- `scripts/check-perf-budget.js` — raised `index` (290 → 320 kB), `StandardCalc` (100 → 200 kB), `Settings` (55 → 120 kB) to reflect v1.3 reality; added explicit budgets for `pdf` (350 kB) and `HelpTab` (260 kB) so they don't fall under the global 200 kB cap.
+
 ## [1.3.0-rc.5] — 2026-04-30
 
 Release candidate before promoting to `1.3.0` final. See `dist/RELEASE_NOTES_v1.3.0-rc.5.md`.

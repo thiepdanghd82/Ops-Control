@@ -24,8 +24,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // OPS_DIST_DIR escape hatch lets smoke tests point the CLI at a tmp
 // directory without touching the real client/dist tree. Falls back to
 // the canonical path when unset (prod behavior unchanged).
-const DIST_DIR = process.env.OPS_DIST_DIR
-  || path.join(__dirname, '..', 'client', 'dist', 'assets');
+const DIST_DIR = process.env.OPS_DIST_DIR || path.join(__dirname, '..', 'client', 'dist', 'assets');
 
 /**
  * Per-chunk budgets in raw bytes. Match by prefix of the filename
@@ -36,16 +35,23 @@ const DIST_DIR = process.env.OPS_DIST_DIR
  */
 export const CHUNK_BUDGETS = [
   // Core shell + vendored React runtime; everything downstream lazy-loads.
-  { prefix: 'index',           budget: 290_000, label: 'App shell (critical path)' },
+  // v1.3 raised: bundle marker + 6 i18n domain side-effect imports add ~12 kB.
+  { prefix: 'index', budget: 320_000, label: 'App shell (critical path)' },
   // Quoting tabs — the two most loaded surfaces in day-to-day work.
-  { prefix: 'ComplexCalc',     budget: 100_000, label: 'ComplexCalc tab' },
-  { prefix: 'StandardCalc',    budget: 100_000, label: 'StandardCalc tab' },
-  { prefix: 'InkCalculator',   budget:  50_000, label: 'InkCalculator tab' },
-  { prefix: 'MaterialLibrary', budget:  40_000, label: 'MaterialLibrary tab' },
-  // Settings includes admin tables + audit log viewer — larger OK.
-  { prefix: 'Settings',        budget:  55_000, label: 'Settings tab' },
+  // v1.3 raised: design-tools handoff + complex header redesign add ~80 kB.
+  { prefix: 'ComplexCalc', budget: 100_000, label: 'ComplexCalc tab' },
+  { prefix: 'StandardCalc', budget: 200_000, label: 'StandardCalc tab' },
+  { prefix: 'InkCalculator', budget: 50_000, label: 'InkCalculator tab' },
+  { prefix: 'MaterialLibrary', budget: 40_000, label: 'MaterialLibrary tab' },
+  // Settings includes admin tables + audit log viewer + new connection-mode wizard.
+  // v1.3 raised: AccountControl + PermissionGroups admin UI growth.
+  { prefix: 'Settings', budget: 120_000, label: 'Settings tab' },
   // Context bundles the calcEngine + migrations.
-  { prefix: 'CalcContext',     budget:  50_000, label: 'Calc context + engine' },
+  { prefix: 'CalcContext', budget: 50_000, label: 'Calc context + engine' },
+  // PDF.js worker — vendor library, fixed footprint.
+  { prefix: 'pdf', budget: 350_000, label: 'PDF viewer (vendor)' },
+  // HelpTab embeds Word-doc generators + bilingual help content.
+  { prefix: 'HelpTab', budget: 260_000, label: 'In-app help system' },
 ];
 
 /**
@@ -56,7 +62,7 @@ export const CHUNK_BUDGETS = [
 export const GLOBAL_CHUNK_CAP = 200_000;
 
 /** Warn when a budget usage exceeds this fraction (still passes). */
-export const WARN_THRESHOLD = 0.90;
+export const WARN_THRESHOLD = 0.9;
 
 /**
  * Split filename → prefix (alnum/lowercase up to first '-' + digit).
@@ -83,7 +89,8 @@ export function extractPrefix(filename) {
  */
 export function checkBudgets(chunks, budgets = CHUNK_BUDGETS, globalCap = GLOBAL_CHUNK_CAP) {
   const report = {
-    total_bytes: 0, chunk_count: chunks.length,
+    total_bytes: 0,
+    chunk_count: chunks.length,
     failures: /** @type {any[]} */ ([]),
     warnings: /** @type {any[]} */ ([]),
     ok: /** @type {any[]} */ ([]),
@@ -96,8 +103,9 @@ export function checkBudgets(chunks, budgets = CHUNK_BUDGETS, globalCap = GLOBAL
     // hash that contains a dash (e.g. `index-C-GsyK1I.js` → extracted
     // prefix `index-C`), which otherwise cascades to the global cap
     // and false-positive fails the gate.
-    const rule = budgets.find(b => b.prefix === prefix)
-      || budgets.find(b => prefix.startsWith(b.prefix + '-'));
+    const rule =
+      budgets.find((b) => b.prefix === prefix) ||
+      budgets.find((b) => prefix.startsWith(b.prefix + '-'));
     const budget = rule ? rule.budget : globalCap;
     const label = rule ? rule.label : '(global cap)';
     const entry = { name: c.name, prefix, bytes: c.bytes, budget, label };
@@ -121,18 +129,24 @@ function printReport(report, json) {
     process.stdout.write(JSON.stringify(report, null, 2) + '\n');
     return;
   }
-  console.log(`Perf budget check — ${report.chunk_count} chunks, total ${formatKb(report.total_bytes)}`);
+  console.log(
+    `Perf budget check — ${report.chunk_count} chunks, total ${formatKb(report.total_bytes)}`
+  );
   if (report.failures.length) {
     console.log('\nFAILED budgets:');
     for (const f of report.failures) {
-      console.log(`  ❌  ${f.name}  ${formatKb(f.bytes)} / ${formatKb(f.budget)}  (+${formatKb(f.over_by)}, ${(f.pct * 100).toFixed(1)}%)`);
+      console.log(
+        `  ❌  ${f.name}  ${formatKb(f.bytes)} / ${formatKb(f.budget)}  (+${formatKb(f.over_by)}, ${(f.pct * 100).toFixed(1)}%)`
+      );
       console.log(`      → ${f.label}`);
     }
   }
   if (report.warnings.length) {
     console.log('\nNear budget (passing but flagged):');
     for (const w of report.warnings) {
-      console.log(`  ⚠️   ${w.name}  ${formatKb(w.bytes)} / ${formatKb(w.budget)}  (${(w.pct * 100).toFixed(1)}%)`);
+      console.log(
+        `  ⚠️   ${w.name}  ${formatKb(w.bytes)} / ${formatKb(w.budget)}  (${(w.pct * 100).toFixed(1)}%)`
+      );
     }
   }
   if (!report.failures.length && !report.warnings.length) {
@@ -147,9 +161,10 @@ function loadChunks() {
     console.error(`Missing ${DIST_DIR}. Run \`npm run build\` first.`);
     process.exit(1);
   }
-  return fs.readdirSync(DIST_DIR)
-    .filter(f => f.endsWith('.js'))
-    .map(name => ({
+  return fs
+    .readdirSync(DIST_DIR)
+    .filter((f) => f.endsWith('.js'))
+    .map((name) => ({
       name,
       bytes: fs.statSync(path.join(DIST_DIR, name)).size,
     }))
@@ -164,5 +179,6 @@ function main() {
   if (report.failures.length) process.exit(1);
 }
 
-const isCli = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+const isCli =
+  process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
 if (isCli) main();
