@@ -35,11 +35,16 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "husky || true"
+    "prepare": "husky"
   },
   "lint-staged": {
-    "*.{js,jsx,mjs,cjs}": ["eslint --fix", "prettier --write"],
-    "*.{json,md,css}": ["prettier --write"]
+    "*.{js,jsx,mjs,cjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "argon2": "^0.44.0",
@@ -75,7 +80,11 @@
       "/scripts/",
       "/_legacy/"
     ],
-    "coverageReporters": ["text-summary", "lcov", "html"],
+    "coverageReporters": [
+      "text-summary",
+      "lcov",
+      "html"
+    ],
     "coverageThreshold": {
       "global": {
         "lines": 70,
