@@ -36,4 +36,20 @@ registerStrings({
   'pricing.ink_short':      { en: 'Ink',       vi: 'Mực' },
   'pricing.process_short':  { en: 'Proc',      vi: 'CĐ' },
   'pricing.packing_ship':   { en: 'Pack+Ship', vi: 'Đóng gói+VC' },
+
+  // ─── Material Library / Print Area / Inks (v1.3 M3) ───
+  // Library-side material picker shares its search-placeholder string
+  // here; the calc-side InkCalculator + PrintAreaCalc tabs use these
+  // tiny labels too.
+  'material_lib.search_placeholder': {
+    en: 'Search by material name, type, supplier…',
+    vi: 'Tìm theo tên vật liệu, loại, nhà cung cấp…',
+  },
+  'printarea.search_placeholder': {
+    en: 'Search by SKU or product name…',
+    vi: 'Tìm theo SKU hoặc tên sản phẩm…',
+  },
+  'printarea.optional': { en: 'Optional', vi: 'Tuỳ chọn' },
+  'inks.mesh_code':     { en: 'Mesh Code',   vi: 'Mã lưới' },
+  'inks.anilox_code':   { en: 'Anilox Code', vi: 'Mã Anilox' },
 });

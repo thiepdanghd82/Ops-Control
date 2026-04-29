@@ -142,6 +142,10 @@ review surface. Retirement is a value, not a cost.
 | `GET /api/released-quotations` | `GET /api/sales/quotations` | UI updates the path |
 | `GET /api/released-quotation/:name` | `GET /api/sales/quotations/:name` | UI updates the path |
 | `POST /api/save-quotation` | `POST /api/sales/quotations` | UI updates the path |
+| `POST /api/quotes` | `POST /api/sales/quotes` | UI updates the path |
+| `PATCH /api/quotes/:id` | `PATCH /api/sales/quotes/:id` | UI updates the path |
+| `DELETE /api/quotes/:id` | `DELETE /api/sales/quotes/:id` | UI updates the path |
+| `POST /api/quotes/:id/restore` | `POST /api/sales/quotes/:id/restore` | UI updates the path |
 
 Update this table whenever a new dual-mount lands.
 

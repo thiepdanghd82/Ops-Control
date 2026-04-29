@@ -89,62 +89,7 @@ export const STRINGS = {
   'nav.team_online_count': { en: '{n} online', vi: '{n} đang online' },
   'nav.badge_pending_tooltip': { en: '{n} awaiting your action', vi: '{n} đang chờ bạn xử lý' },
 
-  // ─── Dashboard ───
-  'dashboard.title': { en: 'Enterprise Dashboard', vi: 'Bảng điều khiển Doanh nghiệp' },
-  'dashboard.generated_at': { en: 'Generated {ts}', vi: 'Tạo lúc {ts}' },
-  'dashboard.kpi.total_quotes': { en: 'Total Quotes', vi: 'Tổng số Báo giá' },
-  'dashboard.kpi.win_rate': { en: 'Win Rate', vi: 'Tỷ lệ Thắng' },
-  'dashboard.kpi.avg_gm': { en: 'Avg Gross Margin', vi: 'GM trung bình' },
-  'dashboard.kpi.pending': { en: 'Pending Approvals', vi: 'Chờ phê duyệt' },
-  'dashboard.kpi.won_lost': { en: '{won} won / {lost} lost', vi: '{won} thắng / {lost} thua' },
-  'dashboard.kpi.draft_count': { en: 'Draft: {n}', vi: 'Nháp: {n}' },
-  'dashboard.panel.approval_funnel': { en: 'Approval Funnel', vi: 'Luồng Phê duyệt' },
-  'dashboard.panel.gm_distribution': { en: 'Gross Margin Distribution', vi: 'Phân bố GM' },
-  'dashboard.panel.volume_12m': { en: 'Quote Volume (last 12 months)', vi: 'Số lượng Báo giá (12 tháng)' },
-  'dashboard.panel.margin_trend_12m': { en: 'Avg Margin Trend (last 12 months)', vi: 'Xu hướng GM (12 tháng)' },
-  'dashboard.panel.top_customers': { en: 'Top Customers (by quote count)', vi: 'Top Khách hàng (theo số báo giá)' },
-  'dashboard.col.customer': { en: 'Customer', vi: 'Khách hàng' },
-  'dashboard.col.quotes': { en: 'Quotes', vi: 'Báo giá' },
-  'dashboard.col.revenue': { en: 'Revenue (USD)', vi: 'Doanh thu (USD)' },
-  'dashboard.col.won_lost': { en: 'Won / Lost', vi: 'Thắng / Thua' },
-  'dashboard.status.draft': { en: 'Draft', vi: 'Nháp' },
-  'dashboard.status.pending_sales': { en: 'Pending Sales', vi: 'Chờ Sales' },
-  'dashboard.status.pending_finance': { en: 'Pending Finance', vi: 'Chờ Tài chính' },
-  'dashboard.status.approved': { en: 'Approved', vi: 'Đã duyệt' },
-  'dashboard.status.rejected': { en: 'Rejected', vi: 'Đã từ chối' },
-  'dashboard.err.title': { en: 'Dashboard unavailable', vi: 'Không thể tải Dashboard' },
-  'dashboard.empty.no_customer': { en: 'No customer data', vi: 'Chưa có dữ liệu khách hàng' },
-  'dashboard.empty.no_volume': { en: 'No quote activity yet', vi: 'Chưa có báo giá nào' },
-  'dashboard.empty.no_margin': { en: 'No margin data yet', vi: 'Chưa có dữ liệu lợi nhuận' },
 
-  // ─── Settings → Appearance ───
-  'settings.section.user': { en: 'User', vi: 'Tài khoản' },
-  'settings.section.system': { en: 'System', vi: 'Hệ thống' },
-  'settings.section.maintenance': { en: 'Maintenance', vi: 'Bảo trì' },
-  'settings.item.profile': { en: 'My Profile', vi: 'Hồ sơ của tôi' },
-  'settings.item.mypwd': { en: 'My Password', vi: 'Mật khẩu của tôi' },
-  'settings.item.appearance': { en: 'Appearance', vi: 'Giao diện' },
-  'settings.item.account': { en: 'Account Control', vi: 'Quản lý Tài khoản' },
-  'settings.item.backup': { en: 'Backup / Restore', vi: 'Sao lưu / Khôi phục' },
-  'settings.item.syslog': { en: 'System Logs', vi: 'Nhật ký Hệ thống' },
-  'appearance.title': { en: 'Appearance', vi: 'Giao diện' },
-  'appearance.hint': {
-    en: 'Choose how Ops Control looks. The choice is saved in this browser only.',
-    vi: 'Chọn giao diện của Ops Control. Lựa chọn chỉ lưu trong trình duyệt này.',
-  },
-  'appearance.system': { en: 'Match system', vi: 'Theo hệ điều hành' },
-  'appearance.system_hint': { en: 'Follow your OS preference (currently: {active})', vi: 'Theo lựa chọn của hệ điều hành (hiện tại: {active})' },
-  'appearance.light': { en: 'Light', vi: 'Sáng' },
-  'appearance.light_hint': { en: 'Always light theme', vi: 'Luôn dùng giao diện sáng' },
-  'appearance.dark': { en: 'Dark', vi: 'Tối' },
-  'appearance.dark_hint': { en: 'Always dark theme (easier on the eyes for long sessions)', vi: 'Luôn dùng giao diện tối (dịu mắt cho các phiên làm việc dài)' },
-  'appearance.language': { en: 'Language', vi: 'Ngôn ngữ' },
-  'appearance.language_hint': {
-    en: 'Interface language. Industry terms (BOM, RFQ, MOQ) stay in English by convention.',
-    vi: 'Ngôn ngữ giao diện. Các thuật ngữ ngành (BOM, RFQ, MOQ) vẫn giữ tiếng Anh theo quy ước.',
-  },
-  'appearance.lang.en': { en: 'English', vi: 'Tiếng Anh' },
-  'appearance.lang.vi': { en: 'Tiếng Việt', vi: 'Tiếng Việt' },
 
   // ─── Library picker (Phase 10M right-click on material/ink rows) ───
   'picker.menu_title':     { en: 'Search from library', vi: 'Tìm từ thư viện' },
@@ -163,17 +108,6 @@ export const STRINGS = {
   'picker.double_click_hint': { en: 'Double-click to select', vi: 'Nhấn đúp để chọn' },
   'picker.footer_hint':    { en: 'Right-click a row in your calc to reopen this picker. Double-click a result to auto-fill code, IFS, description, and price.', vi: 'Chuột phải vào dòng trong calc để mở lại. Nhấn đúp vào kết quả để tự điền mã, IFS, mô tả và giá.' },
 
-  // ─── App bootstrap (post-login data preload) ───
-  'bootstrap.title':    { en: 'Loading your workspace…', vi: 'Đang tải dữ liệu…' },
-  'bootstrap.subtitle': {
-    en: 'Fetching the latest rates, materials, and chat data so everything is ready when you start.',
-    vi: 'Đang tải tỷ giá, vật tư và dữ liệu chat mới nhất để sẵn sàng khi bạn bắt đầu.',
-  },
-  'bootstrap.task.library':       { en: 'Cost library (rates · DDL · materials · finance · inks)', vi: 'Thư viện giá (rate · DDL · vật tư · tài chính · mực)' },
-  'bootstrap.task.approvals':     { en: 'Approvals status', vi: 'Trạng thái duyệt' },
-  'bootstrap.task.chat_rooms':    { en: 'Chat rooms',        vi: 'Phòng chat' },
-  'bootstrap.task.chat_users':    { en: 'User directory',    vi: 'Danh bạ người dùng' },
-  'bootstrap.task.chat_mentions': { en: 'Mentions inbox',    vi: 'Hộp lượt nhắc' },
 
   // ─── Chat (Phase 10A-10F) ───
   // v1.3 K1: 34 chat.* keys MOVED to client/src/i18n/domains/basis.js.
@@ -188,33 +122,7 @@ export const STRINGS = {
   // Boot order: main.jsx side-effect-imports the sales module which
   // calls registerStrings() to put them back into this dict.
 
-  // ─── Material Library + Print Area + Inks search placeholders ───
-  'material_lib.search_placeholder': {
-    en: 'Search by material name, type, supplier…',
-    vi: 'Tìm theo tên vật liệu, loại, nhà cung cấp…',
-  },
-  'printarea.search_placeholder': {
-    en: 'Search by SKU or product name…',
-    vi: 'Tìm theo SKU hoặc tên sản phẩm…',
-  },
-  'printarea.optional': { en: 'Optional', vi: 'Tuỳ chọn' },
-  'inks.mesh_code':     { en: 'Mesh Code',   vi: 'Mã lưới' },
-  'inks.anilox_code':   { en: 'Anilox Code', vi: 'Mã Anilox' },
 
-  // ─── Planning module tab titles ───
-  'planning.work_orders':        { en: 'Work Orders',       vi: 'Lệnh sản xuất' },
-  'planning.order_entry':        { en: 'Order Entry',       vi: 'Nhập đơn hàng' },
-  'planning.material_check':     { en: 'Material Check',    vi: 'Kiểm tra vật tư' },
-  'planning.bom_explosion':      { en: 'BOM Explosion',     vi: 'Phân rã BOM' },
-  'planning.capacity_planning':  { en: 'Capacity Planning', vi: 'Hoạch định công suất' },
-  'planning.wip_tracker':        { en: 'WIP Tracker',       vi: 'Theo dõi WIP' },
-
-  // ─── Settings menu labels (v1.1 + v1.2 desktop tabs) ───
-  'settings.item.hardware': { en: 'Hardware Devices', vi: 'Thiết bị phần cứng' },
-  'settings.item.mode':     { en: 'Connection Mode',  vi: 'Chế độ kết nối' },
-
-  // ─── Common (small additions for hardware / mode) ───
-  'common.lang_toggle_aria': { en: 'Switch language', vi: 'Đổi ngôn ngữ' },
 
   // ─── Hardware Devices + Connection Mode ───
   // v1.3 L3: 90 hw.* + mode.* keys MOVED to client/src/i18n/domains/mes.js.

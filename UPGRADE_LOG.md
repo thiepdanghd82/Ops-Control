@@ -539,3 +539,47 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 | High vulns root/client/desktop | 12 | 0/0/0 | 0/0/0 |
 | Released DMGs | 0 | 4 (rc.2) | 4 (rc.3) |
 
+### Phase M — i18n consolidation + quotes go-live + tooling · 2026-04-29 23:55 GMT+7
+
+**M3 — i18n migration: dashboard / settings / appearance / bootstrap / planning / library helpers**
+- 52 keys moved out of `strings.js`:
+  - 26 `dashboard.*` → `basis.js`
+  - 11 `settings.*` + 12 `appearance.*` + 1 `common.lang_toggle_aria` → `basis.js`
+  - 7 `bootstrap.*` → `basis.js`
+  - 6 `planning.*` → new `planning.js`
+  - 4 `printarea.* + inks.* + material_lib.*` → `costing.js`
+- strings.js: 116 → **72 keys** (cumulative: 340 → 72 = **80% migrated**).
+- Build verified: `dashboard.title`, `appearance.title`, `planning.work_orders`, `material_lib.*` — all still ship in chunk.
+
+**M6 — ADR-0012 per-domain i18n registration**
+- `docs/adr/0012-i18n-per-domain-registration.md` (170 LOC).
+- Codifies the pattern: 1 module per SAP domain, naming rules, what stays in strings.js (nav.* + common.* + picker.* — platform shell strings), boot order rationale.
+- Migration history table tracks the 7-step strings.js shrink.
+
+**M1 — sales/quotes CRUD router LIVE (8th go-live, 9th total)**
+- All deps now surfaced as named exports from quotesStore + eventBus + permissionService + safeError + authService.
+- Mounted at `/api/sales/quotes` + `/api/v1/sales/quotes`.
+- Boot smoke: NEW + versioned alias + LEGACY all return 401 unauth correctly.
+- ADR-0009 dual-mount table extended to 18 endpoints.
+
+**M5 — UPGRADE_LOG summariser**
+- `scripts/summarise-upgrade-log.mjs` parses `### Phase X — title · ts` headings.
+- 3 modes: plain (default), `--markdown` (table), `--json` (tooling).
+- Run: 13 phases, 47 tracked sub-tasks visible at a glance.
+
+**Deferred (called out for next sprint)**
+- M2 — Pull `/save-all` + `/load-all` (the sync-engine routes). Too risky to refactor in one autonomous turn — they're the central read/write path for the SPA. Tag for v1.3.x.
+- M4 — k6/oha load-test smoke. Requires real auth tokens or test-mode bypass; out of scope for autonomous.
+
+**Final state after M**
+
+| Metric | After L | After M |
+|---|---|---|
+| Domain routers (mounted live) | 7 | **8** (sales/quotes mounted) |
+| Domain routers (scaffolded NOT mounted) | 1 | 0 |
+| i18n domain modules | 5 | **6** (added planning.js) |
+| ADRs | 5 (0007-0011) | **6** (added 0012) |
+| strings.js key count | ~265 | **72** |
+| v1.3 unit/integration tests | 73 | 73 (no regression) |
+| Helper scripts | 5 | 6 (added log summariser) |
+

@@ -446,6 +446,14 @@ import { createBackupRouter } from './domains/basis/routes/backup.js'; // v1.3 F
 import { createRateRouter } from './domains/library/routes/rate.js'; // v1.3 J1 — go-live
 import { createDdlRouter } from './domains/library/routes/ddl.js'; // v1.3 J1 — go-live
 import { createReleasedQuotationRouter } from './domains/sales/routes/released-quotation.js'; // v1.3 K2
+import { createQuotesRouter } from './domains/sales/routes/quotes.js'; // v1.3 M1 — go-live
+import {
+  upsertQuote, loadQuotes, saveQuotes, getQuoteById, VersionConflictError,
+} from './repositories/quotesStore.js';
+import { emitDataChange } from './services/eventBus.js';
+import { resolveTabAccess } from './services/permissionService.js';
+import { redactErrorMessage, logErr } from './utils/safeError.js';
+import { isSys } from './services/authService.js';
 import { rateRows, ddlToCsvRows } from './platform/csv/index.js'; // v1.3 J1
 import {
   isAdminPlus, canWrite, audit, getLibDir, safeFn,
@@ -613,6 +621,30 @@ const releasedQuoteDeps = {
 };
 app.use('/api/sales/quotations', createReleasedQuotationRouter(releasedQuoteDeps));
 app.use('/api/v1/sales/quotations', createReleasedQuotationRouter(releasedQuoteDeps));
+
+// v1.3 M1 — sales/quotes CRUD router goes LIVE.
+// All deps now surfaced as named exports from quotesStore + eventBus +
+// permissionService + safeError + authService. Legacy /api/quotes/* in
+// costApi.js continues to serve until UI migrates (dual-mount per ADR-0009).
+const quotesDeps = {
+  auth: libRouterDeps.auth,
+  canWrite: libRouterDeps.canWrite,
+  isSys: (reqUser) => isSys(reqUser?.user || reqUser),
+  upsertQuote,
+  loadQuotes,
+  saveQuotes,
+  getQuoteById,
+  VersionConflictError,
+  resolveTabAccess: (user, tabId) => resolveTabAccess(user?.user || user, tabId),
+  emitDataChange,
+  audit,
+  clientIp: (req) => req.ip || req.connection?.remoteAddress || '-',
+  logErr,
+  redactErrorMessage,
+  saveRateLimit,
+};
+app.use('/api/sales/quotes', createQuotesRouter(quotesDeps));
+app.use('/api/v1/sales/quotes', createQuotesRouter(quotesDeps));
 
 // Cost API routes (auth + all cost endpoints)
 // Sprint 39 — API versioning: every router mounts at BOTH the legacy
