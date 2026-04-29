@@ -93,6 +93,32 @@ sudo systemctl start ops-control
 
 ⚠️ Sau bước này, license v2 đã apply trên v1.3 sẽ không tương thích với v1.2 (v1.2 chỉ verify HMAC). Nếu rollback xảy ra, liên hệ CCL HQ để được cấp license v1 (HMAC) tạm.
 
+## 8.1 Client-side URL cutover audit (v1.3 N6)
+
+After 8 routers extracted to `server/domains/`, the client's
+`services/api.js` has **9 remaining call sites** still hitting legacy
+URLs that have a NEW canonical equivalent. Cutover status as of rc.4:
+
+| Legacy URL in api.js | Canonical NEW URL | Cutover status |
+|---|---|---|
+| `/rate/backups`, `/rate/backup`, `/rate/restore`, `/rate/export-csv` | `/library/rate/*` | ✅ Cut over (N6) |
+| `/ddl/backups`, `/ddl/backup`, `/ddl/restore`, `/ddl/export-csv` | `/library/ddl/*` | ⏳ Pending (mirror of rate; same shape) |
+| `/admin/backup-schedule` (GET / PUT) | `/basis/backup/schedule` | ⏳ Pending |
+| `/admin/backup-schedule/run-now` | `/basis/backup/run-now` | ⏳ Pending |
+| `/quotes` (POST) | `/sales/quotes` | ⏳ Pending |
+| `/save-quotation` (POST) | `/sales/quotations` | ⏳ Pending |
+
+**Per ADR-0009 retirement criteria**, the legacy URL retires only
+when all 4 conditions hold:
+1. Client UI no longer hits the legacy URL.
+2. No external scripts / docs reference it.
+3. Two consecutive sprints pass without defects on the new URL.
+4. Legacy behaviour fully covered by new router contract tests.
+
+The `/rate/*` cluster meets condition 1 after this commit; the rest
+is a 2-sprint waiting period before legacy can be removed from
+costApi.js.
+
 ## 9. Deferred items (v1.3.1 follow-up)
 
 - **Windows `.exe` installers** — chưa build, cần Windows VM hoặc Wine.

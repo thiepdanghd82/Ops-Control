@@ -431,11 +431,13 @@ export const costApi = {
   deleteUser: (id) => authCall('delete', `/auth/users/${id}`),
   setSessionTtl: (id, ttlHours) => authCall('post', `/auth/users/${id}/session-ttl`, { ttl_hours: ttlHours }),
 
-  // Rate
-  getRateBackups: (site) => api.get(`/rate/backups?site=${encodeURIComponent(site || '')}`),
-  backupRate: (site, data) => api.post('/rate/backup', { site, data }),
-  restoreRate: (filename, site) => api.post('/rate/restore', { filename, site }),
-  exportRateCsv: (site, data) => api.post('/rate/export-csv', { site, data }),
+  // Rate — v1.3 N6 — migrated from legacy `/rate/*` to canonical
+  // `/library/rate/*` (router lives at server/domains/library/routes/rate.js).
+  // POST /backups creates a snapshot (was /backup singular at legacy path).
+  getRateBackups: (site) => api.get(`/library/rate/backups?site=${encodeURIComponent(site || '')}`),
+  backupRate: (site, data) => api.post('/library/rate/backups', { site, data }),
+  restoreRate: (filename, site) => api.post('/library/rate/restore', { filename, site }),
+  exportRateCsv: (site, data) => api.post('/library/rate/export-csv', { site, data }),
 
   // DDL
   getDdlBackups: (site) => api.get(`/ddl/backups?site=${encodeURIComponent(site || '')}`),
