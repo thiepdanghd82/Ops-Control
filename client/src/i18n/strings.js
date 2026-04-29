@@ -284,28 +284,10 @@ export const STRINGS = {
   'chat.discuss_title': { en: 'Discuss this quote in chat', vi: 'Thảo luận quote này trong chat' },
   'chat.unavailable': { en: 'Chat unavailable: {msg}', vi: 'Chat không khả dụng: {msg}' },
 
-  // ─── Pricing (Std/Cpx) cost-breakdown column headers (Sprint 1.6 i18n) ───
-  // Industry acronyms (MOQ, EAU, GM%, VA%) stay in EN per the convention
-  // documented at the top of this file — operators speak them in English.
-  'pricing.tier':         { en: 'Tier',         vi: 'Bậc' },
-  'pricing.moq':          { en: 'MOQ',          vi: 'MOQ' },
-  'pricing.eau':          { en: 'EAU',          vi: 'EAU' },
-  'pricing.sell_price':   { en: 'Sell Price',   vi: 'Giá bán' },
-  'pricing.target':       { en: 'Target',       vi: 'Mục tiêu' },
-  'pricing.material':     { en: 'Material',     vi: 'Vật liệu' },
-  'pricing.ink':          { en: 'Ink',          vi: 'Mực' },
-  'pricing.process':      { en: 'Process',      vi: 'Công đoạn' },
-  'pricing.pack_ship':    { en: 'Pack & Ship',  vi: 'Đóng gói & VC' },
-  'pricing.subtotal':     { en: 'Subtotal',     vi: 'Tổng phụ' },
-  'pricing.va_pct':       { en: 'VA%',          vi: 'VA%' },
-  'pricing.contr_pct':    { en: 'Contr%',       vi: 'Đóng góp%' },
-  'pricing.gm_pct':       { en: 'GM%',          vi: 'GM%' },
-  'pricing.selling_unit': { en: 'Selling /unit (USD)', vi: 'Giá bán /sản phẩm (USD)' },
-  // Summary box (compact-form labels — first 3-4 chars usually)
-  'pricing.material_short': { en: 'Mat',  vi: 'VL' },
-  'pricing.ink_short':      { en: 'Ink',  vi: 'Mực' },
-  'pricing.process_short':  { en: 'Proc', vi: 'CĐ' },
-  'pricing.packing_ship':   { en: 'Pack+Ship', vi: 'Đóng gói+VC' },
+  // ─── Pricing (Std/Cpx) cost-breakdown column headers ───
+  // v1.3 G2: 19 `pricing.*` keys MOVED to client/src/i18n/domains/costing.js.
+  // Boot order: main.jsx side-effect-imports the costing module which
+  // calls registerStrings() to put them back into this dict.
 
   // ─── Quote History column headers ───
   'qh.date':         { en: 'DATE',         vi: 'NGÀY' },

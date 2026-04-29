@@ -2,10 +2,12 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import './components/Shared/draggableCard.css'
-// v1.3 P3.3 — per-domain i18n registration. Each module side-effect-
+// v1.3 P3.3 + G2 — per-domain i18n registration. Each module side-effect-
 // imports registerStrings() to merge its slice into the global STRINGS
-// dict. Order is irrelevant for non-overlapping namespaces.
+// dict. Order is irrelevant for non-overlapping namespaces (security.*
+// vs costing.* etc.); for overlap, last-imported wins.
 import './i18n/domains/security.js'
+import './i18n/domains/costing.js'
 import App from './App.jsx'
 import { startWebVitals } from './utils/webVitals.js'
 import { installDraggableCards } from './components/Shared/draggableCard.js'
