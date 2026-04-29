@@ -356,3 +356,45 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 ```
 6 commits on release/v1.3, 0 on main (per AUTO_EXECUTE.md mandate).
 
+### Phase H — Continued migration + governance · 2026-04-29 22:35 GMT+7
+
+**H1 — DDL library router**
+- New `server/domains/library/routes/ddl.js` mirroring `rate.js` (G1).
+- 6 contract tests pass.
+- Two resources now share the factory shape (rate, ddl); awaiting third resource before lifting common parts to a generic `createBackupResourceRouter`.
+
+**H2 — Sales i18n migration**
+- 33 keys (25 `qh.*` + 8 `rfq.*`) moved to `client/src/i18n/domains/sales.js`.
+- Build verified: `qh.rfq_number` + Vietnamese `KH CUỐI` still in shipped chunk.
+- 3 domain modules now own their slice: security, costing, sales.
+
+**H3 — ADR-0008 extract-first-mount-later**
+- `docs/adr/0008-extract-first-mount-later.md` (180 LOC).
+- Codifies the pattern used in G1+H1: extract into factory + stub-tested file, leave legacy running, mount later when platform helpers are ready.
+- Includes mounting checklist for the eventual go-live PR.
+
+**H4 — Coverage baseline**
+- `docs/COVERAGE_BASELINE.md` snapshots line/branch/function coverage on every v1.3-extracted module.
+- All 5 modules above 70% lines gate; 2 hit 100% lines (license route, license route test).
+- Trend tracking: this is the FIRST measurement; subsequent sprints append rows.
+
+**Final test totals (post-H)**
+- 50/50 v1.3 security + library suite (44 + 6 ddl).
+- 89/89 gallus engine (unchanged).
+- 139 tests pass in the coverage run.
+
+**Git topology (release/v1.3)**
+```
+* (HEAD)                          docs: H3 ADR-0008 + H4 coverage baseline
+* refactor(sales): qh+rfq i18n
+* feat(library): extract ddl router
+* docs: log Phase G
+* chore(release): G3 commitlint, G4 ADR-0007, G5 CI marker
+* refactor(costing): pricing.* i18n
+* feat(library): extract rate router
+* docs: log Phase F
+* chore: husky pre-commit fix
+* (main, v1.3.0-rc.1, v1.2.0-snapshot) initial git repo
+```
+10 commits on release/v1.3, 0 on main.
+
