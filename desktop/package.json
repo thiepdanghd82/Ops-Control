@@ -55,6 +55,7 @@
       "auto-update.js",
       "smart-client.js",
       "license.js",
+      "setupWizard.js",
       "native/**/*",
       "package.json",
       "!**/*.map"
