@@ -57,6 +57,26 @@ export default [
       globals: { ...globals.node, ...globals.browser, ...globals.es2024 },
     },
   },
+  // 3c. Domain server-side + shared + tests — v1.3 vertical-slice layout.
+  // Mirrors block 3 (Node globals + ESM) for code under domains/<name>/server/,
+  // domains/<name>/shared/, and domains/<name>/tests/. Client-side domain
+  // code (domains/<name>/client/) is React + browser globals — added in a
+  // separate block when the first client-side domain file lands.
+  {
+    files: ['domains/**/server/**/*.js', 'domains/**/shared/**/*.js', 'domains/**/tests/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2024,
+      sourceType: 'module',
+      globals: { ...globals.node, ...globals.es2024 },
+    },
+    rules: {
+      eqeqeq: ['error', 'smart'],
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-console': 'off',
+      'no-debugger': 'error',
+      'no-empty': ['error', { allowEmptyCatch: true }],
+    },
+  },
   // 4. Desktop (Electron main process — CJS)
   {
     files: ['desktop/**/*.{js,cjs}'],

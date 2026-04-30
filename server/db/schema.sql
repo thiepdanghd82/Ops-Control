@@ -204,3 +204,67 @@ CREATE TABLE IF NOT EXISTS audit_log (
 CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log(ts DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_event ON audit_log(event, ts DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user, ts DESC);
+
+-- ═══════════════════════════════════════════════════════════════════
+-- Sprint MES-1 (2026-04-30) — Work Order header + operations.
+-- Production Control core. State machine guarded by inline CHECK on
+-- `status` + the pure workOrderTransition() function in
+-- domains/planning/server/domain/. See PRD §6/§8.
+-- CHECKs are inlined because SQLite has no ALTER TABLE … ADD CONSTRAINT.
+
+CREATE TABLE IF NOT EXISTS work_order (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  code            TEXT NOT NULL UNIQUE,
+  sales_order_id  INTEGER,
+  rfq_no          TEXT,
+  ccl_pn          TEXT NOT NULL,
+  customer        TEXT NOT NULL,
+  qty_planned     REAL NOT NULL,
+  qty_completed   REAL NOT NULL DEFAULT 0,
+  uom             TEXT NOT NULL,
+  priority        INTEGER NOT NULL DEFAULT 5
+                    CHECK (priority BETWEEN 1 AND 9),
+  due_date        TEXT NOT NULL,
+  status          TEXT NOT NULL CHECK (status IN (
+                    'CREATED','RELEASED','SCHEDULED','IN_PROGRESS','ON_HOLD',
+                    'COMPLETED','QC_RELEASED','CLOSED','CANCELLED'
+                  )),
+  released_at     TEXT,
+  closed_at       TEXT,
+  raw_json        TEXT NOT NULL,
+  created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+  created_by      TEXT NOT NULL,
+  updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_by      TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_wo_status   ON work_order(status, due_date);
+CREATE INDEX IF NOT EXISTS idx_wo_pn       ON work_order(ccl_pn);
+CREATE INDEX IF NOT EXISTS idx_wo_customer ON work_order(customer);
+
+CREATE TABLE IF NOT EXISTS work_order_op (
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  work_order_id       INTEGER NOT NULL REFERENCES work_order(id) ON DELETE CASCADE,
+  seq                 INTEGER NOT NULL,
+  op_type             TEXT NOT NULL CHECK (op_type IN (
+                        'PRE_PRESS','FLEXO','DIE_CUT_FLATBED','DIE_CUT_ROTARY',
+                        'LAMINATE','PACK','OUTSOURCE'
+                      )),
+  work_centre_no      TEXT NOT NULL,
+  status              TEXT NOT NULL,
+  planned_start       TEXT,
+  planned_end         TEXT,
+  actual_start        TEXT,
+  actual_end          TEXT,
+  setup_minutes_plan  REAL,
+  run_minutes_plan    REAL,
+  good_count          REAL NOT NULL DEFAULT 0,
+  scrap_count         REAL NOT NULL DEFAULT 0,
+  notes               TEXT,
+  raw_json            TEXT NOT NULL,
+  updated_at          DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (work_order_id, seq)
+);
+CREATE INDEX IF NOT EXISTS idx_woop_status ON work_order_op(status);
+CREATE INDEX IF NOT EXISTS idx_woop_wc     ON work_order_op(work_centre_no, planned_start);
+
+INSERT OR IGNORE INTO _migration_state (dataset, mode) VALUES ('work_order', 'sqlite');

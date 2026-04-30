@@ -15,7 +15,7 @@
     "verify-backup": "node scripts/verify-backup.js",
     "reset-totp": "node scripts/reset-totp.js",
     "migrate": "node scripts/migrate-planning-data.js",
-    "test": "jest --passWithNoTests && node --test server scripts && cd desktop && npm run test:license && npm run test:manifest",
+    "test": "jest --passWithNoTests && node --test server scripts domains && cd desktop && npm run test:license && npm run test:manifest",
     "fix": "eslint --fix .",
     "perf-budget": "node scripts/check-perf-budget.js",
     "lint:client": "cd client && npm run lint",
@@ -81,7 +81,8 @@
       "/server/",
       "/scripts/",
       "/_legacy/",
-      "/desktop/"
+      "/desktop/",
+      "/domains/"
     ],
     "coverageReporters": [
       "text-summary",
