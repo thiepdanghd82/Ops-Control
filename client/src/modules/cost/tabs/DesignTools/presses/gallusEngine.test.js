@@ -6,11 +6,24 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  pitchOf, bestNDown, actualGap, productFilmPct, gallusFilmPct,
-  crossDirection, rankPrintCylinders, rankMagneticCylinders,
-  jobSummary, createGallusInputs, validateInputs, suggestGap,
-  pickWinners, suggestWebWidth,
-  inkConsumption, recommendAnilox, BCM_TO_CM3_PER_M2,
+  pitchOf,
+  bestNDown,
+  actualGap,
+  productFilmPct,
+  gallusFilmPct,
+  crossDirection,
+  rankPrintCylinders,
+  rankMagneticCylinders,
+  jobSummary,
+  createGallusInputs,
+  validateInputs,
+  suggestGap,
+  pickWinners,
+  suggestWebWidth,
+  inkConsumption,
+  recommendAnilox,
+  BCM_TO_CM3_PER_M2,
+  solveLayout,
 } from './gallusEngine.js';
 
 describe('pitchOf', () => {
@@ -84,8 +97,10 @@ describe('crossDirection — Sprint 14g (Lg is target, not hard min)', () => {
     const r = crossDirection({ W: 270, Pw: 63.5, E: 5, Lg: 2.5 });
     assert.equal(r.avail, 260);
     assert.equal(r.n_across, 4);
-    assert.ok(Math.abs(r.lane_gap_actual - 2.0) < 0.001,
-      `expected 2.0 mm gap, got ${r.lane_gap_actual}`);
+    assert.ok(
+      Math.abs(r.lane_gap_actual - 2.0) < 0.001,
+      `expected 2.0 mm gap, got ${r.lane_gap_actual}`
+    );
     // Actual gap 2.0 < target 2.5 → warn flag set
     assert.equal(r.lane_gap_below_target, true);
   });
@@ -98,8 +113,11 @@ describe('crossDirection — Sprint 14g (Lg is target, not hard min)', () => {
   test('Lanes can never physically touch (HARD_MIN_GAP=1 floor)', () => {
     // Pw=60, avail=240 → 4 lanes would need 0mm gap → rejected
     const r = crossDirection({ W: 250, Pw: 60, E: 5, Lg: 0 });
-    assert.equal(r.n_across, 3,
-      'with Lg=0, formula must still reject 4 lanes (would need 0 gap, lanes touch)');
+    assert.equal(
+      r.n_across,
+      3,
+      'with Lg=0, formula must still reject 4 lanes (would need 0 gap, lanes touch)'
+    );
   });
 });
 
@@ -117,24 +135,27 @@ describe('rankPrintCylinders — Top 5 (Sprint 14h yield-first)', () => {
     // Yield must be computed and positive (flexo realistic range
     // 0.40-0.80 depending on geometry; tight presses can exceed 0.85).
     assert.ok(Number.isFinite(top.material_yield_pct), 'yield computed');
-    assert.ok(top.material_yield_pct > 0,
-      `top cylinder should have positive yield, got ${top.material_yield_pct}`);
+    assert.ok(
+      top.material_yield_pct > 0,
+      `top cylinder should have positive yield, got ${top.material_yield_pct}`
+    );
     // Top 1 by yield must beat or equal Top 2 (within OK status).
-    const okList = ranked.filter(r => r.status === 'OK');
+    const okList = ranked.filter((r) => r.status === 'OK');
     if (okList.length > 1) {
-      assert.ok(okList[0].material_yield_pct >= okList[1].material_yield_pct,
-        `Top 1 yield (${okList[0].material_yield_pct}) should be ≥ Top 2 (${okList[1].material_yield_pct})`);
+      assert.ok(
+        okList[0].material_yield_pct >= okList[1].material_yield_pct,
+        `Top 1 yield (${okList[0].material_yield_pct}) should be ≥ Top 2 (${okList[1].material_yield_pct})`
+      );
     }
   });
   test('user case: L=252.75, G=3.97, bleed=0 includes Z=85 in Top results', () => {
     // Sprint 14d K-aware regression. bleed=0 keeps the legacy maths
     // — Sprint S-FLEXO-1 added bleed inflation; tests covering bleed
     // sit in their own describe block below.
-    const inputs = { ...createGallusInputs(), bleed_mm: 0,
-      L: 252.75, G: 3.97, G_min: 3, G_max: 9 };
+    const inputs = { ...createGallusInputs(), bleed_mm: 0, L: 252.75, G: 3.97, G_min: 3, G_max: 9 };
     const ranked = rankPrintCylinders(inputs);
     // Z=85 must appear with status OK (gap=7.225 within [3,9]).
-    const z85 = ranked.find(r => r.z === 85);
+    const z85 = ranked.find((r) => r.z === 85);
     assert.ok(z85, 'Z=85 should be in ranked list');
     assert.equal(z85.status, 'OK', `Z=85 status was ${z85.status}`);
     assert.equal(z85.n_down, 1);
@@ -143,14 +164,14 @@ describe('rankPrintCylinders — Top 5 (Sprint 14h yield-first)', () => {
   test('only_available filter excludes N-stocked cylinders', () => {
     const inputs = { ...createGallusInputs(), only_available: true };
     const ranked = rankPrintCylinders(inputs);
-    assert.ok(ranked.every(r => r.available === true));
+    assert.ok(ranked.every((r) => r.available === true));
   });
 });
 
 describe('rankMagneticCylinders — die-step matching', () => {
   test('Print step ~28.046 → Z=106 die matches exactly', () => {
     const out = rankMagneticCylinders(createGallusInputs(), 28.04583333);
-    const z106 = out.find(r => r.z === 106);
+    const z106 = out.find((r) => r.z === 106);
     assert.ok(z106, 'Z=106 should appear in magnetic ranking');
     assert.equal(z106.match, '✓ MATCH');
     assert.ok(z106.step_diff < 0.05);
@@ -168,19 +189,19 @@ describe('validateInputs', () => {
   });
   test('missing L → error on L', () => {
     const issues = validateInputs({ ...createGallusInputs(), L: 0 });
-    assert.ok(issues.some(i => i.field === 'L' && i.severity === 'error'));
+    assert.ok(issues.some((i) => i.field === 'L' && i.severity === 'error'));
   });
   test('missing G → error on G', () => {
     const issues = validateInputs({ ...createGallusInputs(), G: 0 });
-    assert.ok(issues.some(i => i.field === 'G' && i.severity === 'error'));
+    assert.ok(issues.some((i) => i.field === 'G' && i.severity === 'error'));
   });
   test('G < G_min → warning', () => {
     const issues = validateInputs({ ...createGallusInputs(), G: 1, G_min: 2 });
-    assert.ok(issues.some(i => i.field === 'G' && i.severity === 'warn'));
+    assert.ok(issues.some((i) => i.field === 'G' && i.severity === 'warn'));
   });
   test('W too narrow for Pw + 2E → warning', () => {
     const issues = validateInputs({ ...createGallusInputs(), W: 50, Pw: 60, E: 5 });
-    assert.ok(issues.some(i => i.field === 'W' && i.severity === 'warn'));
+    assert.ok(issues.some((i) => i.field === 'W' && i.severity === 'warn'));
   });
 });
 
@@ -212,14 +233,17 @@ describe('suggestGap', () => {
     let G = inputs.G;
     for (let i = 0; i < 3; i++) {
       const r = rankPrintCylinders({ ...inputs, G });
-      const top = r.find(x => x.status === 'OK');
+      const top = r.find((x) => x.status === 'OK');
       if (!top) break;
-      if (Math.abs(top.actual_gap - G) < 0.005) break;  // converged
+      if (Math.abs(top.actual_gap - G) < 0.005) break; // converged
       G = top.actual_gap;
     }
     const s = suggestGap({ ...inputs, G }, rankPrintCylinders({ ...inputs, G }));
-    assert.equal(s.reason, 'already_optimal',
-      `expected already_optimal at converged G=${G}, got ${s.reason} (gap=${s.gap})`);
+    assert.equal(
+      s.reason,
+      'already_optimal',
+      `expected already_optimal at converged G=${G}, got ${s.reason} (gap=${s.gap})`
+    );
     // Suppress unused-var lint on the warm-up rank
     void ranked2pass;
   });
@@ -243,15 +267,15 @@ describe('pickWinners — multi-axis Top picks (Sprint 14h)', () => {
     const ranked = rankPrintCylinders(inputs);
     const w = pickWinners(ranked);
     assert.ok(w.yield, 'yield winner must exist');
-    assert.ok(w.cost,  'cost winner must exist');
-    assert.ok(w.gap,   'gap winner must exist');
+    assert.ok(w.cost, 'cost winner must exist');
+    assert.ok(w.gap, 'gap winner must exist');
     assert.equal(w.yield.status, 'OK');
     // Yield winner has highest yield; gap winner has lowest gap_diff;
     // cost winner has lowest cost_per_1k. They MAY be the same Z.
-    const ok = ranked.filter(r => r.status === 'OK');
-    const maxYield = Math.max(...ok.map(r => r.material_yield_pct));
+    const ok = ranked.filter((r) => r.status === 'OK');
+    const maxYield = Math.max(...ok.map((r) => r.material_yield_pct));
     assert.equal(w.yield.material_yield_pct, maxYield);
-    const minGap = Math.min(...ok.map(r => r.gap_diff));
+    const minGap = Math.min(...ok.map((r) => r.gap_diff));
     assert.equal(w.gap.gap_diff, minGap);
   });
 
@@ -326,8 +350,10 @@ describe('Sprint S-FLEXO-1: bleed inflates effective print footprint', () => {
     const r = crossDirection({ W: 250, Pw: 60, E: 5, Lg: 2.5, bleed_mm: 2 });
     assert.equal(r.n_across, 3);
     // lane gap = (240 - 3×64) / 2 = 48/2 = 24 mm
-    assert.ok(Math.abs(r.lane_gap_actual - 24) < 0.001,
-      `lane_gap should be 24mm with bleed, got ${r.lane_gap_actual}`);
+    assert.ok(
+      Math.abs(r.lane_gap_actual - 24) < 0.001,
+      `lane_gap should be 24mm with bleed, got ${r.lane_gap_actual}`
+    );
   });
 
   test('bleed=0 backwards-compat with Sprint 14g maths', () => {
@@ -342,7 +368,7 @@ describe('Sprint S-FLEXO-1: bleed inflates effective print footprint', () => {
     // Without bleed: 244.1 / 28 = 8.718 → N=9.
     const inputs = { ...createGallusInputs(), bleed_mm: 2 };
     const ranked = rankPrintCylinders(inputs);
-    const z80 = ranked.find(r => r.z === 80);
+    const z80 = ranked.find((r) => r.z === 80);
     assert.ok(z80);
     assert.equal(z80.n_down, 8, `Z=80 with L=25+bleed=2 should fit N=8, got ${z80.n_down}`);
   });
@@ -354,8 +380,8 @@ describe('Sprint S-FLEXO-1: bleed inflates effective print footprint', () => {
     const inputs2 = { ...createGallusInputs(), bleed_mm: 2 };
     const ranked0 = rankPrintCylinders(inputs0);
     const ranked2 = rankPrintCylinders(inputs2);
-    const z80_no_bleed = ranked0.find(r => r.z === 80);
-    const z80_bleed    = ranked2.find(r => r.z === 80);
+    const z80_no_bleed = ranked0.find((r) => r.z === 80);
+    const z80_bleed = ranked2.find((r) => r.z === 80);
     // With bleed, product_area = N × (L+4) × n_across × (Pw+4) ≥ trim
     // area, but N may drop too. Net yield can move either way; assert
     // both are computed and finite.
@@ -383,94 +409,105 @@ describe('Sprint S-FLEXO-1: HARD_MIN_GAP_MM = 1.5 (magnetic die min)', () => {
 describe('Sprint S-FLEXO-1: Z_die must equal print Z or integer multiple', () => {
   test('Z_die=0 (use print) → no validation issue', () => {
     const issues = validateInputs({ ...createGallusInputs(), Z_die: 0, print_z: 85 });
-    assert.equal(issues.filter(i => i.field === 'Z_die').length, 0);
+    assert.equal(issues.filter((i) => i.field === 'Z_die').length, 0);
   });
   test('Z_die=85 with print_z=85 → exact match, no issue', () => {
     const issues = validateInputs({ ...createGallusInputs(), Z_die: 85, print_z: 85 });
-    assert.equal(issues.filter(i => i.field === 'Z_die').length, 0);
+    assert.equal(issues.filter((i) => i.field === 'Z_die').length, 0);
   });
   test('Z_die=170 with print_z=85 → integer 2× multiple, no issue', () => {
     const issues = validateInputs({ ...createGallusInputs(), Z_die: 170, print_z: 85 });
-    assert.equal(issues.filter(i => i.field === 'Z_die').length, 0);
+    assert.equal(issues.filter((i) => i.field === 'Z_die').length, 0);
   });
   test('Z_die=100 with print_z=85 → mismatch (1.176×), error', () => {
     const issues = validateInputs({ ...createGallusInputs(), Z_die: 100, print_z: 85 });
-    const dieIssues = issues.filter(i => i.field === 'Z_die');
+    const dieIssues = issues.filter((i) => i.field === 'Z_die');
     assert.equal(dieIssues.length, 1);
     assert.equal(dieIssues[0].severity, 'error');
   });
   test('Z_die set without print_z → no validation (engine cant know yet)', () => {
     const issues = validateInputs({ ...createGallusInputs(), Z_die: 100 });
-    assert.equal(issues.filter(i => i.field === 'Z_die').length, 0);
+    assert.equal(issues.filter((i) => i.field === 'Z_die').length, 0);
   });
 });
 
 // ── Sprint S-FLEXO-2 — Ink consumption ───────────────────────────
-describe("Sprint S-FLEXO-2: inkConsumption", () => {
-  test("BCM 6 × 30% coverage × 100 m² → 27.9 cm³ × density 1.0 = 27.9 g", () => {
-    const r = inkConsumption({ printed_area_m2: 100, anilox_bcm: 6,
-      coverage_pct: 30, ink_density_g_cm3: 1.0 });
+describe('Sprint S-FLEXO-2: inkConsumption', () => {
+  test('BCM 6 × 30% coverage × 100 m² → 27.9 cm³ × density 1.0 = 27.9 g', () => {
+    const r = inkConsumption({
+      printed_area_m2: 100,
+      anilox_bcm: 6,
+      coverage_pct: 30,
+      ink_density_g_cm3: 1.0,
+    });
     // 100 × 6 × 1.55 × 0.30 = 279 cm³, mass = 279 g
     assert.ok(Math.abs(r.volume_cm3 - 279) < 0.001);
     assert.ok(Math.abs(r.mass_g - 279) < 0.001);
     assert.ok(Math.abs(r.mass_kg - 0.279) < 0.001);
   });
-  test("Zero area → zero ink", () => {
-    const r = inkConsumption({ printed_area_m2: 0, anilox_bcm: 6,
-      coverage_pct: 30, ink_density_g_cm3: 1.0 });
+  test('Zero area → zero ink', () => {
+    const r = inkConsumption({
+      printed_area_m2: 0,
+      anilox_bcm: 6,
+      coverage_pct: 30,
+      ink_density_g_cm3: 1.0,
+    });
     assert.equal(r.mass_kg, 0);
   });
-  test("BCM_TO_CM3_PER_M2 constant = 1.55 (1 BCM/in² → cm³/m²)", () => {
+  test('BCM_TO_CM3_PER_M2 constant = 1.55 (1 BCM/in² → cm³/m²)', () => {
     assert.equal(BCM_TO_CM3_PER_M2, 1.55);
   });
 });
 
-describe("Sprint S-FLEXO-2: recommendAnilox", () => {
-  test("Light coverage 15% → 4 BCM (fine type)", () => {
+describe('Sprint S-FLEXO-2: recommendAnilox', () => {
+  test('Light coverage 15% → 4 BCM (fine type)', () => {
     assert.equal(recommendAnilox(15).bcm, 4);
   });
-  test("Process color 30% → 5 BCM (CMYK)", () => {
+  test('Process color 30% → 5 BCM (CMYK)', () => {
     assert.equal(recommendAnilox(30).bcm, 5);
   });
-  test("Medium 50% → 6 BCM (standard)", () => {
+  test('Medium 50% → 6 BCM (standard)', () => {
     assert.equal(recommendAnilox(50).bcm, 6);
   });
-  test("Solid spot 70% → 8 BCM", () => {
+  test('Solid spot 70% → 8 BCM', () => {
     assert.equal(recommendAnilox(70).bcm, 8);
   });
-  test("Opaque 90% → 12 BCM (white/metallic)", () => {
+  test('Opaque 90% → 12 BCM (white/metallic)', () => {
     assert.equal(recommendAnilox(90).bcm, 12);
   });
 });
 
 // ── Sprint S-FLEXO-2 — Setup waste in cylinder result ───────────
-describe("Sprint S-FLEXO-2: setup_waste_pct surfaced per cylinder", () => {
-  test("setup 100m vs run 5000m → small fraction (~2%)", () => {
+describe('Sprint S-FLEXO-2: setup_waste_pct surfaced per cylinder', () => {
+  test('setup 100m vs run 5000m → small fraction (~2%)', () => {
     const inputs = { ...createGallusInputs(), setup_waste_m: 100, web_length_m: 5000 };
     const ranked = rankPrintCylinders(inputs);
-    const top = ranked.find(r => r.status === "OK");
+    const top = ranked.find((r) => r.status === 'OK');
     assert.ok(top);
     assert.ok(Number.isFinite(top.setup_waste_pct));
     // 100/(100+5000) ≈ 0.0196 — small for a 5000m job
-    assert.ok(top.setup_waste_pct < 0.05,
-      `expected setup_waste_pct < 5%, got ${top.setup_waste_pct}`);
+    assert.ok(
+      top.setup_waste_pct < 0.05,
+      `expected setup_waste_pct < 5%, got ${top.setup_waste_pct}`
+    );
   });
-  test("setup 100m vs run 500m → noticeable (~17%)", () => {
+  test('setup 100m vs run 500m → noticeable (~17%)', () => {
     const inputs = { ...createGallusInputs(), setup_waste_m: 100, web_length_m: 500 };
     const ranked = rankPrintCylinders(inputs);
-    const top = ranked.find(r => r.status === "OK");
+    const top = ranked.find((r) => r.status === 'OK');
     // 100/(100+500) ≈ 0.167
-    assert.ok(top.setup_waste_pct > 0.10 && top.setup_waste_pct < 0.20,
-      `expected ~17% setup waste for short job, got ${top.setup_waste_pct}`);
+    assert.ok(
+      top.setup_waste_pct > 0.1 && top.setup_waste_pct < 0.2,
+      `expected ~17% setup waste for short job, got ${top.setup_waste_pct}`
+    );
   });
-  test("setup_waste_m=0 → setup_waste_pct=0 (rerun, no setup)", () => {
+  test('setup_waste_m=0 → setup_waste_pct=0 (rerun, no setup)', () => {
     const inputs = { ...createGallusInputs(), setup_waste_m: 0, web_length_m: 1000 };
     const ranked = rankPrintCylinders(inputs);
-    const top = ranked.find(r => r.status === "OK");
+    const top = ranked.find((r) => r.status === 'OK');
     assert.equal(top.setup_waste_pct, 0);
   });
 });
-
 
 // ── Sprint S-FLEXO-3 — Material stretch ────────────────────────
 import { effectiveStretchPct, stretchAdjustedPitch, MATERIAL_STRETCH_PCT } from './gallusEngine.js';
@@ -513,8 +550,10 @@ describe('Sprint S-FLEXO-3: rankPrintCylinders surfaces pitch_nominal vs pitch',
     const inputs = { ...createGallusInputs(), material_type: 'bopp' };
     const ranked = rankPrintCylinders(inputs);
     const top = ranked[0];
-    assert.ok(top.pitch < top.pitch_nominal,
-      `expected stretched pitch < nominal, got ${top.pitch} vs ${top.pitch_nominal}`);
+    assert.ok(
+      top.pitch < top.pitch_nominal,
+      `expected stretched pitch < nominal, got ${top.pitch} vs ${top.pitch_nominal}`
+    );
   });
 });
 
@@ -522,13 +561,15 @@ describe('Sprint S-FLEXO-3: rankPrintCylinders surfaces pitch_nominal vs pitch',
 describe('Sprint S-FLEXO-3: plate_overhead_mm inflates plate cost', () => {
   test('overhead 0 vs 13 → cost difference > 0', () => {
     const base = { ...createGallusInputs(), plate_overhead_mm: 0 };
-    const ovh  = { ...createGallusInputs(), plate_overhead_mm: 13 };
-    const c0 = rankPrintCylinders(base).find(r => r.status === 'OK');
-    const c1 = rankPrintCylinders(ovh).find(r => r.status === 'OK');
+    const ovh = { ...createGallusInputs(), plate_overhead_mm: 13 };
+    const c0 = rankPrintCylinders(base).find((r) => r.status === 'OK');
+    const c1 = rankPrintCylinders(ovh).find((r) => r.status === 'OK');
     assert.ok(Number.isFinite(c0.cost_per_1k));
     assert.ok(Number.isFinite(c1.cost_per_1k));
-    assert.ok(c1.cost_per_1k > c0.cost_per_1k,
-      `expected overhead>0 to raise cost: c0=${c0.cost_per_1k}, c1=${c1.cost_per_1k}`);
+    assert.ok(
+      c1.cost_per_1k > c0.cost_per_1k,
+      `expected overhead>0 to raise cost: c0=${c0.cost_per_1k}, c1=${c1.cost_per_1k}`
+    );
   });
 });
 
@@ -537,30 +578,45 @@ describe('Sprint S-FLEXO-3: composite_score reorders OK cylinders', () => {
   test('default weights (yield-heavy) preserve legacy order', () => {
     const inputs = createGallusInputs();
     const ranked = rankPrintCylinders(inputs);
-    const ok = ranked.filter(r => r.status === 'OK');
+    const ok = ranked.filter((r) => r.status === 'OK');
     if (ok.length > 1) {
       // Top 1 composite_score >= Top 2 (default weights bubble yield)
-      assert.ok(ok[0].composite_score >= ok[1].composite_score,
-        `top1 score ${ok[0].composite_score} < top2 ${ok[1].composite_score}`);
+      assert.ok(
+        ok[0].composite_score >= ok[1].composite_score,
+        `top1 score ${ok[0].composite_score} < top2 ${ok[1].composite_score}`
+      );
     }
   });
   test('cost-only weighting (w_yield=0, w_cost=100) → cost winner top', () => {
-    const inputs = { ...createGallusInputs(),
-      weight_yield: 0, weight_cost: 100, weight_gap: 0, weight_match: 0 };
+    const inputs = {
+      ...createGallusInputs(),
+      weight_yield: 0,
+      weight_cost: 100,
+      weight_gap: 0,
+      weight_match: 0,
+    };
     const ranked = rankPrintCylinders(inputs);
-    const ok = ranked.filter(r => r.status === 'OK')
-                     .filter(r => Number.isFinite(r.cost_per_1k));
+    const ok = ranked
+      .filter((r) => r.status === 'OK')
+      .filter((r) => Number.isFinite(r.cost_per_1k));
     if (ok.length > 1) {
       // First OK has lowest cost_per_1k (highest cost_norm)
-      assert.ok(ok[0].cost_per_1k <= ok[1].cost_per_1k,
-        `expected cost-sorted: ${ok[0].cost_per_1k} > ${ok[1].cost_per_1k}`);
+      assert.ok(
+        ok[0].cost_per_1k <= ok[1].cost_per_1k,
+        `expected cost-sorted: ${ok[0].cost_per_1k} > ${ok[1].cost_per_1k}`
+      );
     }
   });
   test('all weights 0 → composite_score = 0 (no preference)', () => {
-    const inputs = { ...createGallusInputs(),
-      weight_yield: 0, weight_cost: 0, weight_gap: 0, weight_match: 0 };
+    const inputs = {
+      ...createGallusInputs(),
+      weight_yield: 0,
+      weight_cost: 0,
+      weight_gap: 0,
+      weight_match: 0,
+    };
     const ranked = rankPrintCylinders(inputs);
-    const ok = ranked.find(r => r.status === 'OK');
+    const ok = ranked.find((r) => r.status === 'OK');
     assert.equal(ok.composite_score, 0);
   });
 });
@@ -583,7 +639,7 @@ describe('Sprint S-FLEXO-4: dieRisk tiers', () => {
   });
   test('laser die can take 0.4mm → safe', () => {
     const r = dieRisk(0.4, 'laser');
-    assert.equal(r.tier, 'safe');  // 0.4 ≥ 0.3 × 1.3 = 0.39
+    assert.equal(r.tier, 'safe'); // 0.4 ≥ 0.3 × 1.3 = 0.39
   });
   test('flat die needs 2mm → 1.5mm gap is risk', () => {
     const r = dieRisk(1.5, 'flat');
@@ -597,8 +653,16 @@ describe('Sprint S-FLEXO-4: dieRisk tiers', () => {
 
 describe('Sprint S-FLEXO-4: captureBaseline + computeDelta', () => {
   test('baseline captures top-1 fields needed for diff', () => {
-    const top1 = { z: 80, n_down: 8, n_across: 3, actual_gap: 3.2,
-      material_yield_pct: 0.62, cost_per_1k: 0.05, setup_waste_pct: 0.02, status: 'OK' };
+    const top1 = {
+      z: 80,
+      n_down: 8,
+      n_across: 3,
+      actual_gap: 3.2,
+      material_yield_pct: 0.62,
+      cost_per_1k: 0.05,
+      setup_waste_pct: 0.02,
+      status: 'OK',
+    };
     const summary = { total_plate_cost: 30 };
     const b = captureBaseline(top1, summary);
     assert.equal(b.z, 80);
@@ -609,14 +673,28 @@ describe('Sprint S-FLEXO-4: captureBaseline + computeDelta', () => {
     assert.equal(captureBaseline(top1), null);
   });
   test('delta shows yield + cost movement', () => {
-    const baseline = { z: 80, n_down: 8, n_across: 3, actual_gap: 3.2,
-      material_yield_pct: 0.60, cost_per_1k: 0.05, plate_cost: 30 };
-    const current  = { z: 85, n_down: 1, n_across: 4, actual_gap: 7.2,
-      material_yield_pct: 0.72, cost_per_1k: 0.04, plate_cost: 33 };
+    const baseline = {
+      z: 80,
+      n_down: 8,
+      n_across: 3,
+      actual_gap: 3.2,
+      material_yield_pct: 0.6,
+      cost_per_1k: 0.05,
+      plate_cost: 30,
+    };
+    const current = {
+      z: 85,
+      n_down: 1,
+      n_across: 4,
+      actual_gap: 7.2,
+      material_yield_pct: 0.72,
+      cost_per_1k: 0.04,
+      plate_cost: 33,
+    };
     const d = computeDelta(current, baseline);
     assert.equal(d.z_changed, true);
     assert.ok(Math.abs(d.yield_pp - 0.12) < 0.001);
-    assert.ok(Math.abs(d.cost_delta - (-0.01)) < 0.001);
+    assert.ok(Math.abs(d.cost_delta - -0.01) < 0.001);
     assert.equal(d.plate_delta, 3);
     assert.equal(d.n_across_diff, 1);
   });
@@ -632,76 +710,76 @@ import { validateColorSequence } from './gallusEngine.js';
 describe('Sprint S-FLEXO-5: validateColorSequence', () => {
   test('CMYK in standard order → no issues', () => {
     const seq = [
-      { name: 'Cyan',    coverage_pct: 30, kind: 'process' },
+      { name: 'Cyan', coverage_pct: 30, kind: 'process' },
       { name: 'Magenta', coverage_pct: 30, kind: 'process' },
-      { name: 'Yellow',  coverage_pct: 30, kind: 'process' },
-      { name: 'Black',   coverage_pct: 25, kind: 'process' },
+      { name: 'Yellow', coverage_pct: 30, kind: 'process' },
+      { name: 'Black', coverage_pct: 25, kind: 'process' },
     ];
     assert.equal(validateColorSequence(seq).length, 0);
   });
 
   test('R1: Opaque White at station 3 → error (must be first)', () => {
     const seq = [
-      { name: 'Cyan',    coverage_pct: 20, kind: 'process' },
-      { name: 'Yellow',  coverage_pct: 20, kind: 'process' },
-      { name: 'White',   coverage_pct: 80, kind: 'special' },
+      { name: 'Cyan', coverage_pct: 20, kind: 'process' },
+      { name: 'Yellow', coverage_pct: 20, kind: 'process' },
+      { name: 'White', coverage_pct: 80, kind: 'special' },
     ];
     const issues = validateColorSequence(seq);
-    assert.ok(issues.some(i => i.severity === 'error' && /white/i.test(i.en)));
+    assert.ok(issues.some((i) => i.severity === 'error' && /white/i.test(i.en)));
   });
 
   test('R2: Varnish at station 2 of 4 → error (must be last)', () => {
     const seq = [
-      { name: 'Cyan',    coverage_pct: 20, kind: 'process' },
+      { name: 'Cyan', coverage_pct: 20, kind: 'process' },
       { name: 'Varnish', coverage_pct: 100, kind: 'special' },
-      { name: 'Yellow',  coverage_pct: 20, kind: 'process' },
-      { name: 'Black',   coverage_pct: 20, kind: 'process' },
+      { name: 'Yellow', coverage_pct: 20, kind: 'process' },
+      { name: 'Black', coverage_pct: 20, kind: 'process' },
     ];
     const issues = validateColorSequence(seq);
-    assert.ok(issues.some(i => i.severity === 'error' && /varnish/i.test(i.en)));
+    assert.ok(issues.some((i) => i.severity === 'error' && /varnish/i.test(i.en)));
   });
 
   test('R3: heavy spot at station 1 of 4 → warn (move to end)', () => {
     const seq = [
       { name: 'Pantone Red 032', coverage_pct: 75, kind: 'spot' },
-      { name: 'Cyan',    coverage_pct: 20, kind: 'process' },
-      { name: 'Yellow',  coverage_pct: 20, kind: 'process' },
-      { name: 'Black',   coverage_pct: 20, kind: 'process' },
+      { name: 'Cyan', coverage_pct: 20, kind: 'process' },
+      { name: 'Yellow', coverage_pct: 20, kind: 'process' },
+      { name: 'Black', coverage_pct: 20, kind: 'process' },
     ];
     const issues = validateColorSequence(seq);
-    assert.ok(issues.some(i => i.severity === 'warn' && /Pantone Red 032/.test(i.en)));
+    assert.ok(issues.some((i) => i.severity === 'warn' && /Pantone Red 032/.test(i.en)));
   });
 
   test('R4: Black before remaining CMY → warn', () => {
     const seq = [
-      { name: 'Cyan',    coverage_pct: 30, kind: 'process' },
-      { name: 'Black',   coverage_pct: 25, kind: 'process' },
+      { name: 'Cyan', coverage_pct: 30, kind: 'process' },
+      { name: 'Black', coverage_pct: 25, kind: 'process' },
       { name: 'Magenta', coverage_pct: 30, kind: 'process' },
-      { name: 'Yellow',  coverage_pct: 30, kind: 'process' },
+      { name: 'Yellow', coverage_pct: 30, kind: 'process' },
     ];
     const issues = validateColorSequence(seq);
-    assert.ok(issues.some(i => i.severity === 'warn' && /Black/.test(i.en)));
+    assert.ok(issues.some((i) => i.severity === 'warn' && /Black/.test(i.en)));
   });
 
   test('R5: Metallic Silver at station 2 of 5 → warn', () => {
     const seq = [
-      { name: 'Cyan',    coverage_pct: 30, kind: 'process' },
-      { name: 'Silver',  coverage_pct: 50, kind: 'special' },
+      { name: 'Cyan', coverage_pct: 30, kind: 'process' },
+      { name: 'Silver', coverage_pct: 50, kind: 'special' },
       { name: 'Magenta', coverage_pct: 30, kind: 'process' },
-      { name: 'Yellow',  coverage_pct: 30, kind: 'process' },
-      { name: 'Black',   coverage_pct: 25, kind: 'process' },
+      { name: 'Yellow', coverage_pct: 30, kind: 'process' },
+      { name: 'Black', coverage_pct: 25, kind: 'process' },
     ];
     const issues = validateColorSequence(seq);
-    assert.ok(issues.some(i => i.severity === 'warn' && /Silver/i.test(i.en)));
+    assert.ok(issues.some((i) => i.severity === 'warn' && /Silver/i.test(i.en)));
   });
 
   test('White first + varnish last + correct CMYK → 0 issues', () => {
     const seq = [
-      { name: 'White',   coverage_pct: 80, kind: 'special' },
-      { name: 'Cyan',    coverage_pct: 30, kind: 'process' },
+      { name: 'White', coverage_pct: 80, kind: 'special' },
+      { name: 'Cyan', coverage_pct: 30, kind: 'process' },
       { name: 'Magenta', coverage_pct: 30, kind: 'process' },
-      { name: 'Yellow',  coverage_pct: 30, kind: 'process' },
-      { name: 'Black',   coverage_pct: 25, kind: 'process' },
+      { name: 'Yellow', coverage_pct: 30, kind: 'process' },
+      { name: 'Black', coverage_pct: 25, kind: 'process' },
       { name: 'Varnish', coverage_pct: 100, kind: 'special' },
     ];
     assert.equal(validateColorSequence(seq).length, 0);
@@ -709,5 +787,163 @@ describe('Sprint S-FLEXO-5: validateColorSequence', () => {
 
   test('empty sequence → no issues', () => {
     assert.equal(validateColorSequence([]).length, 0);
+  });
+});
+
+// ── Sprint S-DESIGNER (2026-04-30) — designer-mode solver tests ─────
+describe('solveLayout — mode detection', () => {
+  test('parts_md=0, parts_td=0 → solver mode (legacy behaviour)', () => {
+    const r = solveLayout({ ...createGallusInputs(), parts_md: 0, parts_td: 0 });
+    assert.equal(r.mode, 'solver');
+    assert.equal(r.has_target_md, false);
+    assert.equal(r.has_target_td, false);
+    assert.equal(r.pitch_required, 0);
+    assert.equal(r.W_required, 0);
+  });
+
+  test('parts_md=2, parts_td=0 → designer-md mode', () => {
+    const r = solveLayout({ ...createGallusInputs(), parts_md: 2 });
+    assert.equal(r.mode, 'designer-md');
+    assert.ok(r.pitch_required > 0, 'pitch_required must be set');
+    // K=9.9 + 2 × (L_eff=29 + G=3) = 9.9 + 64 = 73.9
+    // (L=25 + bleed 2*2=4 → L_eff=29)
+    assert.ok(
+      Math.abs(r.pitch_required - 73.9) < 0.01,
+      `pitch_required expected ~73.9, got ${r.pitch_required}`
+    );
+    // z_required must be the smallest available cylinder whose pitch
+    // covers 73.9 mm. Default Z minimum in inventory is well above.
+    assert.ok(r.z_required != null && r.z_required > 0);
+  });
+
+  test('parts_md=0, parts_td=4 → designer-td mode + W_required', () => {
+    const r = solveLayout({ ...createGallusInputs(), parts_td: 4 });
+    assert.equal(r.mode, 'designer-td');
+    // 2*E (5*2=10) + 4 × Pw_eff (60+2*2=64) + 3 × max(Lg=2.5, 1.5)=2.5
+    // = 10 + 256 + 7.5 = 273.5
+    assert.ok(
+      Math.abs(r.W_required - 273.5) < 0.01,
+      `W_required expected ~273.5, got ${r.W_required}`
+    );
+  });
+
+  test('parts_md=2, parts_td=3 → designer-full', () => {
+    const r = solveLayout({ ...createGallusInputs(), parts_md: 2, parts_td: 3 });
+    assert.equal(r.mode, 'designer-full');
+    assert.ok(r.pitch_required > 0);
+    assert.ok(r.W_required > 0);
+  });
+
+  test('designer-td with W=250 (default) and target_td=4 → w_fits=false (W_req=273.5)', () => {
+    const r = solveLayout({ ...createGallusInputs(), parts_td: 4 }); // W defaults to 250
+    assert.equal(r.w_fits, false);
+  });
+
+  test('designer-td with target_td=3 (typical 3-up label) on W=250 → w_fits=true', () => {
+    // 2*5 + 3*64 + 2*2.5 = 10 + 192 + 5 = 207 ≤ 250 ✓
+    const r = solveLayout({ ...createGallusInputs(), parts_td: 3 });
+    assert.equal(r.w_fits, true);
+    assert.ok(Math.abs(r.W_required - 207) < 0.01);
+    // Lane gap on W=250 should be (250 - 10 - 3*64) / (3-1) = 24
+    assert.ok(
+      Math.abs(r.lane_gap_locked - 24) < 0.01,
+      `lane_gap_locked expected ~24, got ${r.lane_gap_locked}`
+    );
+  });
+
+  test('designer-md respects bleed (L_eff = L + 2×bleed)', () => {
+    const noBleed = solveLayout({ ...createGallusInputs(), parts_md: 1, bleed_mm: 0 });
+    const withBleed = solveLayout({ ...createGallusInputs(), parts_md: 1, bleed_mm: 2 });
+    // bleed=0: pitch_req = 9.9 + 1×(25 + 3) = 37.9
+    // bleed=2: pitch_req = 9.9 + 1×(29 + 3) = 41.9
+    assert.ok(
+      Math.abs(withBleed.pitch_required - noBleed.pitch_required - 4) < 0.01,
+      'bleed adds 2×bleed to pitch per part'
+    );
+  });
+});
+
+describe('rankPrintCylinders — designer-md locks N to target', () => {
+  test('parts_md=8 (near-natural for Z=80-85, L=25): every OK row has n_down=8 (locked)', () => {
+    // L=25, G=3, K=9.9 → Z=80 natural N = round((254-9.9)/(25+3)) = 9
+    // Locking to N=8 leaves slack absorbed as larger actual_gap, which
+    // should still pass G_max validation on the right cylinders.
+    const ranked = rankPrintCylinders({
+      ...createGallusInputs(),
+      parts_md: 8,
+      G_max: 12,
+      web_length_m: 1000,
+    });
+    const okRows = ranked.filter((r) => r.status === 'OK');
+    assert.ok(okRows.length > 0, 'at least one OK cylinder expected for parts_md=8');
+    for (const r of okRows) {
+      assert.equal(r.n_down, 8, `cylinder Z=${r.z}: n_down expected 8 locked, got ${r.n_down}`);
+    }
+  });
+
+  test('parts_md=2 with tiny G_max (8) on big cylinders: status GAP > MAX', () => {
+    // The lock works mechanically (n_down=2 even though natural ~9), but
+    // the resulting actual_gap ~93 mm overflows G_max=8 → status set
+    // accordingly. Operator sees that target N=2 is wrong for this L.
+    const ranked = rankPrintCylinders({ ...createGallusInputs(), parts_md: 2 });
+    for (const r of ranked) {
+      assert.equal(r.n_down, 2, 'lock honored even when status is GAP > MAX');
+      assert.equal(r.status, 'GAP > MAX', 'forced N=2 produces giant gap on every cyl');
+    }
+  });
+
+  test('parts_md=99 (impossible): every cylinder marked TOO SMALL with designer_reason', () => {
+    const ranked = rankPrintCylinders({ ...createGallusInputs(), parts_md: 99 });
+    const tooSmall = ranked.filter((r) => r.status === 'TOO SMALL');
+    assert.equal(tooSmall.length, ranked.length, 'no cylinder can host 99 parts of L=25');
+    assert.ok(
+      tooSmall.some((r) => /N=99/.test(r.designer_reason || '')),
+      'designer_reason must surface the target N for the operator'
+    );
+  });
+
+  test('solver mode unchanged: parts_md=0, parts_td=0 → bestNDown picks N', () => {
+    const inputs = { ...createGallusInputs(), parts_md: 0, parts_td: 0, web_length_m: 1000 };
+    const ranked = rankPrintCylinders(inputs);
+    const okRows = ranked.filter((r) => r.status === 'OK');
+    // In solver mode the engine picks varied N across cylinders. Just
+    // confirm at least 2 distinct n_down values appear (proving lock is
+    // OFF). With L=25, cylinders Z=70..96 will give 2..3 parts.
+    const distinctN = new Set(okRows.map((r) => r.n_down));
+    assert.ok(distinctN.size >= 2, `expected varied n_down across cyls, got ${[...distinctN]}`);
+  });
+});
+
+describe('rankPrintCylinders — designer-td locks n_across via crossDirection', () => {
+  test('parts_td=3 on W=250: every OK row has n_across=3', () => {
+    const ranked = rankPrintCylinders({ ...createGallusInputs(), parts_td: 3, web_length_m: 1000 });
+    const okRows = ranked.filter((r) => r.status === 'OK');
+    assert.ok(okRows.length > 0);
+    for (const r of okRows) {
+      assert.equal(
+        r.n_across,
+        3,
+        `cylinder Z=${r.z}: n_across expected 3 locked, got ${r.n_across}`
+      );
+    }
+  });
+
+  test('parts_td=4 on W=250 (too narrow): all rows status=WEB TOO NARROW', () => {
+    const ranked = rankPrintCylinders({ ...createGallusInputs(), parts_td: 4, web_length_m: 1000 });
+    const narrowRows = ranked.filter((r) => r.status === 'WEB TOO NARROW');
+    assert.ok(narrowRows.length > 0, 'WEB TOO NARROW status should appear');
+  });
+
+  test('crossDirection returns w_required + w_too_narrow flag when W insufficient', () => {
+    const cross = crossDirection({ ...createGallusInputs(), parts_td: 4 });
+    assert.equal(cross.n_locked, false);
+    assert.equal(cross.w_too_narrow, true);
+    assert.ok(cross.w_required > 250);
+  });
+
+  test('crossDirection locks n_across when target_td fits W', () => {
+    const cross = crossDirection({ ...createGallusInputs(), parts_td: 3 });
+    assert.equal(cross.n_locked, true);
+    assert.equal(cross.n_across, 3);
   });
 });
