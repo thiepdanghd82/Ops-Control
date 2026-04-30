@@ -2,7 +2,49 @@
 
 All notable changes to Ops Control. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [1.3.0] — 2026-04-30 (GA)
+## [1.3.0] — 2026-04-30 (GA, post-GA fix pass — same day)
+
+Same-day re-release after a focused 6-fix sweep landed in response to install-time issues + the post-GA regression sweep. Tag `v1.3.0` re-pointed to the fix commit.
+
+### Security
+
+- **Per-install random admin password** (`server/services/authService.js`) — Administrator first-run seed was a compile-time hardcoded string. Now random per install + `must_change_password=true` forces rotation on first login. Sidecar README + console log surface the value.
+
+### UX
+
+- **Installation-ID dialog formatter** (`desktop/license.js`) — 64-char hex now chunks into 4×16 with single-space separators (avoids the line-wrap-hyphen confusion that caused a real install-time `installation-mismatch` incident). Adds "Copy Installation ID" button.
+
+### Test infrastructure / regression guards
+
+- `desktop/build-manifest.test.js` (NEW, 2 tests) — every desktop top-level `.js` file MUST be in `package.json` `build.files` or fail CI. Would have caught the `setupWizard.js` packaging bug before initial GA. Wired into CI's desktop test step.
+- `server/repositories/dashboardStats.test.js` — fixture seeded fields into wrong shape (raw SQL columns vs raw_json blob). Now seeds full shape inside raw_json. Plus `isoMonthsAgo()` fixed for month-overflow on month-end dates.
+- `client/src/i18n/strings.test.js` + `strings.lint.test.js` — already fixed pre-GA.
+- `server/routes/rbacConsistency.test.js` — `APP_LEVEL_AUTH` map extended with `routes/sync.js` + `routes/importWizard.js` + per-file mount-path map (was deriving from filename, which broke for kebab-case mounts).
+- `npm test` script reworked: dropped `'**/*.test.js'` glob (shell wouldn't expand on path-with-spaces) in favour of directory args; chained `desktop/test:license` + `desktop/test:manifest`.
+- Jest `testPathIgnorePatterns` now includes `/desktop/`.
+- `scripts/help/self-test.mjs` renamed → `self-check.mjs` (was tripping `node --test` filename glob).
+
+### Distribution
+
+- **`scripts/install-from-dmg.sh`** (NEW, ships in `dist/`) — operator one-shot installer: verify checksum → mount DMG → copy to `/Applications` → strip `com.apple.quarantine`. App launches by double-click without Gatekeeper warning. No Apple Developer ID required (free alternative to the $99/year program).
+- `MIGRATION_GUIDE.md` §2 + §3 rewritten to point at the installer script.
+
+### Test pass rate at re-release
+
+- Server (incl. domains + license + csv): 696 / 696
+- Desktop license + manifest: 8 / 8
+- Build-manifest: 2 / 2
+- Client: 572 / 572
+- **Total: 1,278 / 1,278** ✅ (vs 670 at initial GA — the diff is the 3 pre-existing v1.2 suites now wired green)
+
+### Artefact rebuild
+
+- Both DMGs rebuilt with `OPS_BUILD_ID=v1.3.0-20260429T235836Z`.
+- New SHA-256:
+  - CLIENT `e0e74efe003bc5d6e180071b35a72c90eff5a357ab1243804cbaeab116ab6d14`
+  - SERVER `5986079f958170b905375b10908967b37c776259582c0b7d5d8c7f9f5081292c`
+
+## [1.3.0] — 2026-04-30 (GA, initial)
 
 Promoted from rc.5 with no deltas other than the version bump. Full operator-facing changelog in `dist/RELEASE_NOTES_v1.3.0.md`.
 

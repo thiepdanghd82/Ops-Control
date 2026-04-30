@@ -1,8 +1,8 @@
 # Ops Control v1.3.0 — Release notes
 
-**Status:** GA (general availability)
+**Status:** GA (general availability) — post-GA fix pass shipped 2026-04-30
 **Release date:** 2026-04-30
-**Build ID:** `v1.3.0-20260429T171448Z`
+**Build ID:** `v1.3.0-20260429T235836Z`
 **Target:** macOS Apple Silicon (M1 / M2 / M3 / M4 / M5) — arm64 only
 
 ---
@@ -11,18 +11,22 @@
 
 | File | SHA-256 | Size |
 |---|---|---|
-| `OpsControl-CLIENT-v1.3.0-mac-arm64.dmg` | `af902ca6d03a3f1271d500961f0107a241aa573651b906031296e9c026485e61` | 170 MB |
-| `OpsControl-SERVER-v1.3.0-mac-arm64.dmg` | `465dcc03510c6a72403bea2d762991fe10868d5e5f58125cb7977bfb04e885a8` | 170 MB |
+| `OpsControl-CLIENT-v1.3.0-mac-arm64.dmg` | `e0e74efe003bc5d6e180071b35a72c90eff5a357ab1243804cbaeab116ab6d14` | 170 MB |
+| `OpsControl-SERVER-v1.3.0-mac-arm64.dmg` | `5986079f958170b905375b10908967b37c776259582c0b7d5d8c7f9f5081292c` | 170 MB |
+| `install-from-dmg.sh` | (script) | 4.8 KB |
 
 ```bash
 # Download from CCL HQ Drive → ops-control/v1.3.0/
 shasum -a 256 -c checksums.txt
 # Both lines should print "OK".
 
+# Recommended install — drops Gatekeeper warning permanently:
+bash install-from-dmg.sh OpsControl-SERVER-v1.3.0-mac-arm64.dmg
+
 bash scripts/verify-bundle-marker.sh \
-  OpsControl-CLIENT-v1.3.0-mac-arm64.dmg v1.3.0-20260429T171448Z
+  OpsControl-CLIENT-v1.3.0-mac-arm64.dmg v1.3.0-20260429T235836Z
 bash scripts/verify-bundle-marker.sh \
-  OpsControl-SERVER-v1.3.0-mac-arm64.dmg v1.3.0-20260429T171448Z
+  OpsControl-SERVER-v1.3.0-mac-arm64.dmg v1.3.0-20260429T235836Z
 ```
 
 ## What's in this release
@@ -95,6 +99,21 @@ See `MIGRATION_GUIDE.md`:
 - §6 — license tier enforcement
 - §7 — verify post-install
 - §8 — rollback procedure
+
+## Post-GA fix pass (2026-04-30, same day as initial GA)
+
+After the initial v1.3.0 GA build a focused 6-fix pass landed in response to install-time issues + a comprehensive regression sweep:
+
+1. **Per-install random admin password** (`server/services/authService.js`) — the `Administrator` first-run seed was a compile-time hardcoded string (`hpu6mxWr6KLx`). Anyone who decompiled one DMG could log into every fresh CCL deploy. Now: random per install + `must_change_password=true` forces rotation on first login. Sidecar README + console log surface the value.
+2. **`desktop/build-manifest.test.js`** — regression guard so the next net-new desktop module either lands in `package.json` `build.files` or fails CI. Adds a sibling test that lists the desktop top-level `.js` files and asserts each is declared. Would have caught the `setupWizard.js` packaging bug before GA. CI job extended.
+3. **Installation-ID dialog** (`desktop/license.js`) — the 64-char hex was wrapping mid-string in the dialog with what looked like a literal hyphen. Real incident: an installation_id was emailed back with the wrap-hyphen included → signed license failed verification. Now: 4 groups of 16, single-space separators (whitespace-stripped on the signing side; no character ambiguity). Plus a "Copy Installation ID" button writes the canonical (no-space) form to the clipboard.
+4. **3 pre-existing v1.2 test failures fixed** — `chat.integration.test.js` + `quotesStore.test.js` were failing on path-with-spaces hosts because `better-sqlite3`'s native binding wasn't built (lesson #25). Solved by `prebuild-install` for Node ABI 115. `rbacConsistency.test.js` wasn't finding sync.js's auth gate because `routes/sync.js` wasn't on the `APP_LEVEL_AUTH` list — fixed + extended to use a per-file mount-path map.
+5. **Free-of-charge alternative to Apple Developer ID** — `scripts/install-from-dmg.sh` automates the install: verify checksum → mount DMG → copy to `/Applications` → strip `com.apple.quarantine` xattr. Result: app launches by double-click without the Gatekeeper "from unidentified developer" warning. No $99/year Apple program needed; trust chain anchors on the published SHA-256 + bundle marker.
+6. **Jest config hygiene** — added `/desktop/` to `testPathIgnorePatterns` so Jest no longer trips on Electron-only `cache.test.js`. `npm test` script also reworked: dropped the `'**/*.test.js'` glob (which the shell silently failed to expand on path-with-spaces hosts) in favour of directory args. `scripts/help/self-test.mjs` renamed to `self-check.mjs` to escape the `node --test` filename glob.
+
+**Cumulative test count after this pass: 1,278 / 1,278 passing** (706 root + desktop + 572 client). The 12 failures from the initial GA sweep all fixed; no remaining "known issues" carried over from v1.2.
+
+**Bundle marker `v1.3.0-20260429T171448Z` (initial GA)** was rebuilt as **`v1.3.0-20260429T235836Z`** for this fix pass. Operators should re-download. Tag `v1.3.0` re-pointed to the fix commit.
 
 ## Acknowledgements
 

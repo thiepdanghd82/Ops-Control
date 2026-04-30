@@ -47,6 +47,16 @@ export default [
       'no-empty': ['error', { allowEmptyCatch: true }],
     },
   },
+  // 3b. Puppeteer self-check — page.evaluate() callbacks ferried into
+  // the browser context legitimately reference window/document. Adding
+  // browser globals here keeps the smoke harness lint-clean without
+  // weakening the no-undef rule for real Node scripts.
+  {
+    files: ['scripts/help/self-check.mjs'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser, ...globals.es2024 },
+    },
+  },
   // 4. Desktop (Electron main process — CJS)
   {
     files: ['desktop/**/*.{js,cjs}'],

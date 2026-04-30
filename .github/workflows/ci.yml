@@ -127,7 +127,7 @@ jobs:
         with: { node-version: '20', cache: 'npm' }
       - run: npm ci
       - run: npm test
-      - run: cd desktop && npm ci && npm run test:license
+      - run: cd desktop && npm ci && npm run test:license && npm run test:manifest
 
   test-client:
     name: Client tests

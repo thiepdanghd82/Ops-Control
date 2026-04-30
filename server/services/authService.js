@@ -71,7 +71,9 @@ export function init(dataDir) {
     // leave it unset; every restart should force fresh login. Kept as
     // an opt-in for blue/green rolling deploys that can't tolerate a
     // short re-auth storm.
-    console.warn('  ⚠️  OPS_PERSIST_SESSIONS=1 is DEPRECATED — sessions will survive restart, which weakens the "bounce to kick all sessions" primitive. Prefer leaving this unset.');
+    console.warn(
+      '  ⚠️  OPS_PERSIST_SESSIONS=1 is DEPRECATED — sessions will survive restart, which weakens the "bounce to kick all sessions" primitive. Prefer leaving this unset.'
+    );
     try {
       const fp = sessionsPath();
       if (fs.existsSync(fp)) {
@@ -85,7 +87,8 @@ export function init(dataDir) {
           // a secret rotation. Tunable via OPS_SESSION_MAX_AGE_SEC.
           const maxAgeSec = Number(process.env.OPS_SESSION_MAX_AGE_SEC) || 24 * 60 * 60;
           const ageFloor = nowSec - maxAgeSec;
-          let loaded = 0, rejected = 0;
+          let loaded = 0,
+            rejected = 0;
           for (const [tok, sess] of Object.entries(raw)) {
             if (!sess || typeof sess !== 'object') continue;
             if (sess.expires_at <= nowSec) continue;
@@ -99,8 +102,12 @@ export function init(dataDir) {
             _sessions.set(tok, sess);
             loaded++;
           }
-          if (loaded > 0) console.log(`  🔓  Restored ${loaded} active session(s) from disk (OPS_PERSIST_SESSIONS=1)`);
-          if (rejected > 0) console.log(`  🚫  Rejected ${rejected} session(s) older than max-age (${maxAgeSec}s)`);
+          if (loaded > 0)
+            console.log(
+              `  🔓  Restored ${loaded} active session(s) from disk (OPS_PERSIST_SESSIONS=1)`
+            );
+          if (rejected > 0)
+            console.log(`  🚫  Rejected ${rejected} session(s) older than max-age (${maxAgeSec}s)`);
         }
       }
     } catch (err) {
@@ -112,7 +119,9 @@ export function init(dataDir) {
     try {
       const fp = sessionsPath();
       if (fs.existsSync(fp)) fs.writeFileSync(fp, '{}');
-    } catch { /* non-fatal */ }
+    } catch {
+      /* non-fatal */
+    }
     console.log('  🔒  Sessions not restored from disk — login required on every start');
   }
   // Hydrate audit log from disk so restart doesn't blank it.
@@ -122,7 +131,10 @@ export function init(dataDir) {
       const raw = JSON.parse(fs.readFileSync(fp, 'utf-8'));
       if (Array.isArray(raw)) {
         for (const e of raw.slice(-MAX_AUDIT_LOG)) _auditLog.push(e);
-        if (_auditLog.length > 0) console.log(`  📋  Restored ${_auditLog.length} audit entr${_auditLog.length === 1 ? 'y' : 'ies'} from disk`);
+        if (_auditLog.length > 0)
+          console.log(
+            `  📋  Restored ${_auditLog.length} audit entr${_auditLog.length === 1 ? 'y' : 'ies'} from disk`
+          );
       }
     }
   } catch (err) {
@@ -141,17 +153,25 @@ export function init(dataDir) {
         const usernames = new Set();
         let bad = 0;
         for (const u of users) {
-          if (!u || typeof u !== 'object' || typeof u.id !== 'number' || typeof u.username !== 'string') bad++;
+          if (
+            !u ||
+            typeof u !== 'object' ||
+            typeof u.id !== 'number' ||
+            typeof u.username !== 'string'
+          )
+            bad++;
           else {
             if (ids.has(u.id)) console.warn(`  ⚠️  duplicate user id=${u.id} in users.json`);
-            if (usernames.has(u.username.toLowerCase())) console.warn(`  ⚠️  duplicate username "${u.username}" in users.json`);
+            if (usernames.has(u.username.toLowerCase()))
+              console.warn(`  ⚠️  duplicate username "${u.username}" in users.json`);
             ids.add(u.id);
             usernames.add(u.username.toLowerCase());
           }
         }
         if (bad > 0) console.warn(`  ⚠️  users.json has ${bad} malformed record(s)`);
-        const sysCount = users.filter(u => u && u.role === 'sys').length;
-        if (sysCount === 0) console.warn('  ⚠️  No sys-role user exists — recovery will require manual file edit');
+        const sysCount = users.filter((u) => u && u.role === 'sys').length;
+        if (sysCount === 0)
+          console.warn('  ⚠️  No sys-role user exists — recovery will require manual file edit');
       }
     }
   } catch (err) {
@@ -190,7 +210,8 @@ function flushSessionsSync() {
 export function persistSessions() {
   if (!USERS_DIR) return;
   if (_sessionWriteTimer) return;
-  _sessionWriteTimer = setTimeout(() => {/* keep default ref — pending flush should delay exit by ≤2s */
+  _sessionWriteTimer = setTimeout(() => {
+    /* keep default ref — pending flush should delay exit by ≤2s */
     _sessionWriteTimer = null;
     flushSessionsSync();
   }, 2000);
@@ -204,8 +225,12 @@ export function persistSessionsNow() {
   flushSessionsSync();
 }
 
-export function getDataDir() { return DATA_DIR; }
-export function getLibDir() { return LIB_DIR; }
+export function getDataDir() {
+  return DATA_DIR;
+}
+export function getLibDir() {
+  return LIB_DIR;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // PASSWORD HELPERS
@@ -272,7 +297,7 @@ async function loadBcrypt() {
 }
 
 const ARGON2_OPTS = {
-  type: 2,           // argon2id (timing- and side-channel-resistant)
+  type: 2, // argon2id (timing- and side-channel-resistant)
   memoryCost: 65536, // 64 MiB
   timeCost: 3,
   parallelism: 4,
@@ -291,22 +316,32 @@ export async function bcryptHash(plain) {
   return bc.hashSync(plain, cost);
 }
 
-function isArgonHash(h) { return typeof h === 'string' && h.startsWith('$argon2'); }
-function isBcryptHash(h) { return typeof h === 'string' && /^\$2[aby]\$/.test(h); }
+function isArgonHash(h) {
+  return typeof h === 'string' && h.startsWith('$argon2');
+}
+function isBcryptHash(h) {
+  return typeof h === 'string' && /^\$2[aby]\$/.test(h);
+}
 
 async function verifyHash(plain, hashed) {
   if (!hashed) return false;
   if (isArgonHash(hashed)) {
     const a = await loadArgon2();
     if (!a) return false;
-    try { return await a.verify(hashed, plain); }
-    catch { return false; }
+    try {
+      return await a.verify(hashed, plain);
+    } catch {
+      return false;
+    }
   }
   if (isBcryptHash(hashed)) {
     const bc = await loadBcrypt();
     if (!bc) return false;
-    try { return bc.compareSync(plain, hashed); }
-    catch { return false; }
+    try {
+      return bc.compareSync(plain, hashed);
+    } catch {
+      return false;
+    }
   }
   return false;
 }
@@ -336,8 +371,8 @@ export async function upgradeLegacyPasswordIfNeeded(userId, plain) {
     let upgradedUsername = null;
     let upgradedFrom = null;
     let newHash = null;
-    await updateUsers(async users => {
-      const idx = users.findIndex(u => Number(u.id) === Number(userId));
+    await updateUsers(async (users) => {
+      const idx = users.findIndex((u) => Number(u.id) === Number(userId));
       if (idx === -1) return;
       const u = users[idx];
       if (isArgonHash(u.pwd_bcrypt)) return; // already on the canonical hash
@@ -346,8 +381,7 @@ export async function upgradeLegacyPasswordIfNeeded(userId, plain) {
         newHash = await bcryptHash(String(plain)); // produces argon2id (Sprint v1.3)
         if (!newHash) return;
       }
-      upgradedFrom = isBcryptHash(u.pwd_bcrypt) ? 'bcrypt'
-                   : (u.pwd ? 'legacy-jsHash' : 'unknown');
+      upgradedFrom = isBcryptHash(u.pwd_bcrypt) ? 'bcrypt' : u.pwd ? 'legacy-jsHash' : 'unknown';
       users[idx] = { ...u, pwd_bcrypt: newHash };
       delete users[idx].pwd;
       upgradedUsername = u.username;
@@ -406,14 +440,18 @@ export function computePwdAge(user) {
  * concern, require the password too and validate before returning.
  */
 export function pwdAgeForUsername(username) {
-  const name = String(username || '').trim().toLowerCase();
+  const name = String(username || '')
+    .trim()
+    .toLowerCase();
   if (!name) return null;
   try {
     const users = loadUsers();
-    const user = users.find(u => String(u.username).toLowerCase() === name);
+    const user = users.find((u) => String(u.username).toLowerCase() === name);
     if (!user) return null;
     return computePwdAge(user);
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -424,13 +462,15 @@ export function pwdAgeForUsername(username) {
 export function auditLegacyPasswords() {
   try {
     const users = loadUsers();
-    const legacy = users.filter(u => !u.pwd_bcrypt && u.pwd).map(u => u.username);
+    const legacy = users.filter((u) => !u.pwd_bcrypt && u.pwd).map((u) => u.username);
     if (legacy.length > 0) {
       console.warn(`  ⚠️   ${legacy.length} user(s) still on legacy jsHash: ${legacy.join(', ')}`);
       console.warn(`       They will auto-upgrade to bcrypt on their next login.`);
     }
     return legacy.length;
-  } catch { return -1; }
+  } catch {
+    return -1;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -444,51 +484,70 @@ function usersPath() {
 export function loadUsers() {
   const fp = usersPath();
   if (!fs.existsSync(fp)) {
-    // First-run seed: deterministic default credential so a fresh install
-    // is immediately usable. Operators MUST change the password on first
-    // login — see the warning written to a sidecar README in the same dir.
-    // Previous behaviour was a random base64 password printed only to the
-    // process console — invisible inside a packaged Electron app, which
-    // locked first-time Windows installs out (no terminal output).
-    const defaultPwd = 'hpu6mxWr6KLx';
+    // First-run seed.
+    //
+    // v1.3 hardening: every install gets its OWN random password (was
+    // a deterministic compile-time string — anyone who decompiled one
+    // installer could log into every fresh CCL deploy). The password
+    // is written to a sidecar README + still echoed to the console so
+    // packaged-Electron and headless installs both have a way to find
+    // it. must_change_password=true forces a rotation on first login;
+    // v1.3 server enforces that flag (login response carries it; UI
+    // redirects to the change-password screen before any data loads).
+    const defaultPwd = crypto.randomBytes(9).toString('base64').replace(/[+/=]/g, '').slice(0, 12);
     console.log(`\n  ${'='.repeat(55)}`);
-    console.log(`  🔑  DEFAULT ADMIN ACCOUNT (first-run seed)`);
+    console.log(`  🔑  DEFAULT ADMIN ACCOUNT (first-run seed — random)`);
     console.log(`  Username : Administrator`);
     console.log(`  Password : ${defaultPwd}`);
     console.log(`  ⚠️   CHANGE THIS PASSWORD on first login!`);
     console.log(`  ${'='.repeat(55)}\n`);
-    const defaultUsers = [{
-      id: 1, username: 'Administrator', role: 'sys',
-      pwd: jsHash(defaultPwd),
-      lastPwdChange: new Date().toISOString(),
-      permissions: { canDeleteQuote: true },
-      full_name: 'Administrator', english_name: 'Administrator',
-      id_no: '', email: '', phone: ''
-    }];
+    const defaultUsers = [
+      {
+        id: 1,
+        username: 'Administrator',
+        role: 'sys',
+        pwd: jsHash(defaultPwd),
+        lastPwdChange: new Date().toISOString(),
+        must_change_password: true,
+        permissions: { canDeleteQuote: true },
+        full_name: 'Administrator',
+        english_name: 'Administrator',
+        id_no: '',
+        email: '',
+        phone: '',
+      },
+    ];
     saveUsers(defaultUsers);
     // Sidecar README so the operator finds the default credential even
     // if they never see the console (packaged Electron, Windows service).
     try {
       const readmePath = path.join(USERS_DIR, 'README_FIRST_LOGIN.txt');
       if (!fs.existsSync(readmePath)) {
-        fs.writeFileSync(readmePath,
-`Ops Control — First-run admin credential
-==========================================
+        fs.writeFileSync(
+          readmePath,
+          `Ops Control — First-run admin credential (per-install RANDOM)
+================================================================
 
 This file was created the first time the server started and no
-users.json existed. Use it to log in once, then DELETE this file
-after you've changed the admin password.
+users.json existed. The password below is unique to this install
+and was randomly generated. Use it to log in once, then DELETE
+this file after you've changed the admin password.
 
    Username : Administrator
    Password : ${defaultPwd}
 
 Steps after first login:
-  1. Settings → My Password → set a strong password
+  1. The server forces a password change immediately
+     (must_change_password=true) — set a strong new password
   2. Settings → Account Control → create personal users
   3. Delete this file (README_FIRST_LOGIN.txt)
-`, 'utf-8');
+`,
+          'utf-8'
+        );
       }
-    } catch { /* non-fatal */ }
+    } catch {
+      /* non-fatal */
+    }
     return defaultUsers;
   }
   return JSON.parse(fs.readFileSync(fp, 'utf-8'));
@@ -534,7 +593,7 @@ export async function updateUsers(mutator) {
 }
 
 export function findUserById(uid) {
-  return loadUsers().find(u => u.id === uid) || null;
+  return loadUsers().find((u) => u.id === uid) || null;
 }
 
 export function userPublic(u) {
@@ -554,9 +613,15 @@ export function roleLevel(u) {
   return ROLE_LEVELS[(u || {}).role] || 0;
 }
 
-export function isSys(u) { return roleLevel(u) >= 5; }
-export function isAdminPlus(u) { return roleLevel(u) >= 4; }
-export function canWrite(u) { return roleLevel(u) >= 2; }
+export function isSys(u) {
+  return roleLevel(u) >= 5;
+}
+export function isAdminPlus(u) {
+  return roleLevel(u) >= 4;
+}
+export function canWrite(u) {
+  return roleLevel(u) >= 2;
+}
 
 /**
  * Route-level writer gate — one-line replacement for the pattern
@@ -578,8 +643,14 @@ export function canWrite(u) { return roleLevel(u) >= 2; }
  */
 export function requireWriter(req, res) {
   const cu = getSessionUser(getTokenFromHeader(req));
-  if (!cu) { res.status(401).json({ error: 'Unauthorized' }); return null; }
-  if (cu.role === 'viewonly') { res.status(403).json({ ok: false, msg: 'View Only' }); return null; }
+  if (!cu) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return null;
+  }
+  if (cu.role === 'viewonly') {
+    res.status(403).json({ ok: false, msg: 'View Only' });
+    return null;
+  }
   return cu;
 }
 
@@ -593,7 +664,10 @@ function genToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
-export function createSession(userId, { ttl, remember = false, totpVerified = true, totpEnrollmentPending = false } = {}) {
+export function createSession(
+  userId,
+  { ttl, remember = false, totpVerified = true, totpEnrollmentPending = false } = {}
+) {
   if (!ttl) {
     // Resolution order: explicit ttl arg > per-user override > remember-me extension > default 8h.
     // Per-user session_ttl wins over the remember flag because it's an
@@ -634,7 +708,10 @@ export function isRoleRequiringTotp(role) {
   // "no roles require TOTP" (used by tests). Using || would fall back
   // to the default and accidentally enforce TOTP in the test harness.
   const raw = (process.env.OPS_REQUIRE_2FA_ROLES ?? 'sys,admin').trim();
-  const required = raw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  const required = raw
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
   return required.includes(String(role).toLowerCase());
 }
 
@@ -760,7 +837,11 @@ export function getTokenFromHeader(req) {
       const k = part.slice(0, eq).trim();
       if (k === 'ops_session') {
         const v = part.slice(eq + 1).trim();
-        try { return decodeURIComponent(v) || null; } catch { return v || null; }
+        try {
+          return decodeURIComponent(v) || null;
+        } catch {
+          return v || null;
+        }
       }
     }
   }
@@ -776,7 +857,7 @@ export function getTokenFromHeader(req) {
 export function checkRateLimit(ip) {
   const now = Date.now() / 1000;
   const entry = _rateLimit.get(ip);
-  if (!entry || (now - entry.window_start) > RATE_LIMIT_WINDOW) {
+  if (!entry || now - entry.window_start > RATE_LIMIT_WINDOW) {
     _rateLimit.set(ip, { count: 1, window_start: now });
     return true;
   }
@@ -796,7 +877,7 @@ export function checkRateLimit(ip) {
 // restart gives users a clean slate, which is the desired behavior
 // after ops investigates an incident.
 const _loginFails = new Map(); // username (lc) → { count, locked_until }
-const LOGIN_FAIL_THRESHOLD_SOFT = 5;  // → 5-min block
+const LOGIN_FAIL_THRESHOLD_SOFT = 5; // → 5-min block
 const LOGIN_FAIL_THRESHOLD_HARD = 10; // → 30-min block
 const LOGIN_LOCK_SOFT_MS = 5 * 60 * 1000;
 const LOGIN_LOCK_HARD_MS = 30 * 60 * 1000;
@@ -835,7 +916,9 @@ function evictLoginFailsIfFull() {
  * Call this BEFORE bcrypt verification (it's the cheap path).
  */
 export function checkLoginLockout(username) {
-  const key = String(username || '').trim().toLowerCase();
+  const key = String(username || '')
+    .trim()
+    .toLowerCase();
   if (!key) return { allowed: true };
   const entry = _loginFails.get(key);
   if (!entry) return { allowed: true };
@@ -848,7 +931,9 @@ export function checkLoginLockout(username) {
 
 /** Record a failed login. Escalates the lockout window at thresholds. */
 export function recordLoginFailure(username) {
-  const key = String(username || '').trim().toLowerCase();
+  const key = String(username || '')
+    .trim()
+    .toLowerCase();
   if (!key) return;
   const now = Date.now();
   // Evict BEFORE set() so a flood of unique usernames (attacker trying
@@ -866,15 +951,21 @@ export function recordLoginFailure(username) {
 
 /** Clear failure state on successful login. */
 export function clearLoginFailures(username) {
-  const key = String(username || '').trim().toLowerCase();
+  const key = String(username || '')
+    .trim()
+    .toLowerCase();
   if (!key) return;
   _loginFails.delete(key);
 }
 
 /** Test hook — reset all lockout state. */
-export function _resetLoginLockouts() { _loginFails.clear(); }
+export function _resetLoginLockouts() {
+  _loginFails.clear();
+}
 /** Test hook — current tracked-usernames count. */
-export function _loginFailsSize() { return _loginFails.size; }
+export function _loginFailsSize() {
+  return _loginFails.size;
+}
 /** Test hook — cap exposed for assertions. */
 export const _LOGIN_FAIL_MAX_ENTRIES = LOGIN_FAIL_MAX_ENTRIES;
 
@@ -903,7 +994,10 @@ function persistAuditLog() {
 export function audit(event, user = '-', ip = '-', detail = '') {
   const row = {
     ts: new Date().toISOString(),
-    event, user, ip, detail,
+    event,
+    user,
+    ip,
+    detail,
   };
   // Sprint 30: dual-write to SQLite via fail-open async path. The
   // in-memory ring + file fallback still capture the entry even if
@@ -918,15 +1012,27 @@ let _auditStoreModule = null;
 function _auditDualWrite(row) {
   if (_auditStoreModule === false) return; // cached failure
   if (_auditStoreModule && _auditStoreModule.appendAudit) {
-    try { _auditStoreModule.appendAudit(row); } catch { /* fail-open */ }
+    try {
+      _auditStoreModule.appendAudit(row);
+    } catch {
+      /* fail-open */
+    }
     return;
   }
   // Lazy-load on first audit call. Swallows import failures so a
   // legacy deploy without the new module keeps working.
-  import('../repositories/auditStore.js').then(mod => {
-    _auditStoreModule = mod;
-    try { mod.appendAudit(row); } catch { /* fail-open */ }
-  }).catch(() => { _auditStoreModule = false; });
+  import('../repositories/auditStore.js')
+    .then((mod) => {
+      _auditStoreModule = mod;
+      try {
+        mod.appendAudit(row);
+      } catch {
+        /* fail-open */
+      }
+    })
+    .catch(() => {
+      _auditStoreModule = false;
+    });
 }
 
 /**
@@ -946,8 +1052,8 @@ export function getAuditLog(limit = 200, filter = {}) {
   }
   // Fallback: in-memory (filter client-side).
   let rows = _auditLog.slice().reverse();
-  if (filter.event) rows = rows.filter(r => r.event === filter.event);
-  if (filter.user)  rows = rows.filter(r => r.user === filter.user);
+  if (filter.event) rows = rows.filter((r) => r.event === filter.event);
+  if (filter.user) rows = rows.filter((r) => r.user === filter.user);
   return rows.slice(0, Math.min(n, MAX_AUDIT_LOG));
 }
 
@@ -966,18 +1072,22 @@ export function markOffline(userId) {
 export function getOnlineStatus() {
   const now = Date.now() / 1000;
   const users = loadUsers();
-  return users.map(u => {
-    const presence = _onlineUsers.get(u.id) || {};
-    const lastSeen = presence.last_seen || 0;
-    return {
-      id: u.id,
-      username: u.username,
-      role: u.role || 'user',
-      full_name: u.full_name || u.english_name || '',
-      online: (now - lastSeen) < ONLINE_TTL,
-      last_seen: lastSeen ? new Date(lastSeen * 1000).toISOString() : null
-    };
-  }).sort((a, b) => (a.online === b.online ? a.username.localeCompare(b.username) : (a.online ? -1 : 1)));
+  return users
+    .map((u) => {
+      const presence = _onlineUsers.get(u.id) || {};
+      const lastSeen = presence.last_seen || 0;
+      return {
+        id: u.id,
+        username: u.username,
+        role: u.role || 'user',
+        full_name: u.full_name || u.english_name || '',
+        online: now - lastSeen < ONLINE_TTL,
+        last_seen: lastSeen ? new Date(lastSeen * 1000).toISOString() : null,
+      };
+    })
+    .sort((a, b) =>
+      a.online === b.online ? a.username.localeCompare(b.username) : a.online ? -1 : 1
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -990,9 +1100,11 @@ function totpSecretsPath() {
 
 function getAdminHashBytes() {
   const users = loadUsers();
-  let admin = users.find(u => ['sys', 'admin'].includes(u.role) && u.username === 'Administrator');
-  if (!admin) admin = users.find(u => ['sys', 'admin'].includes(u.role));
-  return Buffer.from(((admin?.pwd || '') + '_totp_v1'), 'utf-8');
+  let admin = users.find(
+    (u) => ['sys', 'admin'].includes(u.role) && u.username === 'Administrator'
+  );
+  if (!admin) admin = users.find((u) => ['sys', 'admin'].includes(u.role));
+  return Buffer.from((admin?.pwd || '') + '_totp_v1', 'utf-8');
 }
 
 function totpDeriveKey(adminKeyBytes, salt) {
@@ -1005,8 +1117,11 @@ function xorStream(data, key) {
   for (let i = 0; i < data.length; i += 32) {
     const counter = Buffer.alloc(8);
     counter.writeBigUInt64BE(BigInt(i));
-    const ks = crypto.createHash('sha256').update(Buffer.concat([key, counter])).digest();
-    for (let j = 0; j < 32 && (i + j) < data.length; j++) {
+    const ks = crypto
+      .createHash('sha256')
+      .update(Buffer.concat([key, counter]))
+      .digest();
+    for (let j = 0; j < 32 && i + j < data.length; j++) {
       out[i + j] = data[i + j] ^ ks[j];
     }
   }
@@ -1042,11 +1157,19 @@ function getV2MasterKey() {
     try {
       const k = Buffer.from(envKey.slice(0, 64), 'hex');
       if (k.length === 32) return k;
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
   }
   // Fallback: derive from admin hash. Keeps deploy-without-setup working.
   const adminKb = getAdminHashBytes();
-  return crypto.pbkdf2Sync(adminKb, Buffer.from('ops-totp-v2-kdf-salt', 'utf-8'), 200000, 32, 'sha256');
+  return crypto.pbkdf2Sync(
+    adminKb,
+    Buffer.from('ops-totp-v2-kdf-salt', 'utf-8'),
+    200000,
+    32,
+    'sha256'
+  );
 }
 
 function loadV2(enc) {
@@ -1093,7 +1216,7 @@ function keyFingerprint(key) {
 }
 
 function saveV3(secretsDict) {
-  const key = getV2MasterKey();  // same key derivation as v2
+  const key = getV2MasterKey(); // same key derivation as v2
   const nonce = crypto.randomBytes(12);
   const aad = Buffer.from('ops-totp-v3', 'utf-8');
   const cipher = crypto.createCipheriv('aes-256-gcm', key, nonce, { authTagLength: 16 });
@@ -1115,10 +1238,16 @@ function saveV3(secretsDict) {
 // Distinct error classes so the caller can surface the right message
 // (admin actionable) instead of lumping all failures together.
 export class TotpWrongKeyError extends Error {
-  constructor() { super('TOTP key does not match the one used to encrypt the file'); this.code = 'TOTP_WRONG_KEY'; }
+  constructor() {
+    super('TOTP key does not match the one used to encrypt the file');
+    this.code = 'TOTP_WRONG_KEY';
+  }
 }
 export class TotpCorruptError extends Error {
-  constructor(msg) { super(`TOTP file corrupt: ${msg}`); this.code = 'TOTP_CORRUPT'; }
+  constructor(msg) {
+    super(`TOTP file corrupt: ${msg}`);
+    this.code = 'TOTP_CORRUPT';
+  }
 }
 
 function loadV3(enc) {
@@ -1147,8 +1276,11 @@ function loadV3(enc) {
 // Public: expose the current key's fingerprint so /health and the
 // reset-totp CLI can compare. 16-byte hex is short enough to log.
 export function getTotpKeyFingerprint() {
-  try { return keyFingerprint(getV2MasterKey()).toString('hex'); }
-  catch { return null; }
+  try {
+    return keyFingerprint(getV2MasterKey()).toString('hex');
+  } catch {
+    return null;
+  }
 }
 
 // Sprint 40: fail-CLOSED sentinel. When the TOTP secrets file exists
@@ -1187,11 +1319,17 @@ export function loadTotpSecrets() {
     // from non-recoverable (file corrupt — need backup / reset). Loud
     // message per case so the ops runbook can pick the right action.
     if (e?.code === 'TOTP_WRONG_KEY') {
-      console.error(`  🔑  TOTP secrets WRONG KEY: the OPS_TOTP_KEY in .env does not match the one used to encrypt ${fp}. Either restore the old key, or run: npm run reset-totp`);
+      console.error(
+        `  🔑  TOTP secrets WRONG KEY: the OPS_TOTP_KEY in .env does not match the one used to encrypt ${fp}. Either restore the old key, or run: npm run reset-totp`
+      );
     } else if (e?.code === 'TOTP_CORRUPT') {
-      console.error(`  💥  TOTP secrets CORRUPT: ${e.message}. Restore from backup or run: npm run reset-totp`);
+      console.error(
+        `  💥  TOTP secrets CORRUPT: ${e.message}. Restore from backup or run: npm run reset-totp`
+      );
     } else {
-      console.error(`  🚨  TOTP secrets decrypt FAILED: ${e.message}. Login will fail-secure (all users forced through TOTP) until resolved.`);
+      console.error(
+        `  🚨  TOTP secrets decrypt FAILED: ${e.message}. Login will fail-secure (all users forced through TOTP) until resolved.`
+      );
     }
     audit('TOTP_SECRETS_DECRYPT_FAIL', '-', '-', `${e?.code || 'UNKNOWN'}: ${e?.message || e}`);
     return { [TOTP_DECRYPT_FAILED_MARKER]: true };
@@ -1272,7 +1410,10 @@ export function totpVerify(secretB32, token) {
 // ═══════════════════════════════════════════════════════════════
 
 export function safeFn(n) {
-  const cleaned = (n || '').replace(/[^\w\s.-]/g, '_').trim().substring(0, 200);
+  const cleaned = (n || '')
+    .replace(/[^\w\s.-]/g, '_')
+    .trim()
+    .substring(0, 200);
   // Defense-in-depth: `..`, `.`, and bare-dot sequences survive the
   // regex above (the dot char class keeps them). `path.join(root, '..')`
   // then resolves OUTSIDE the jail. Reject dot-only names so every
@@ -1283,8 +1424,13 @@ export function safeFn(n) {
 }
 
 const SITE_CSV_KEYS = {
-  'VN': 'VN', '41 RDC': '41RDC', '41 Flexo': '41Flexo',
-  '55 site': '55site', '49 site': '49site', '54 site': '54site', 'India': 'India'
+  VN: 'VN',
+  '41 RDC': '41RDC',
+  '41 Flexo': '41Flexo',
+  '55 site': '55site',
+  '49 site': '49site',
+  '54 site': '54site',
+  India: 'India',
 };
 
 export function siteToCsvKey(site) {

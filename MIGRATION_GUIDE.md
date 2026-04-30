@@ -15,11 +15,22 @@
 | ☐   | Email Installation ID + tên customer + tier mong muốn (S/M/L) đến CCL HQ ops                                                                     |
 | ☐   | Nhận `license.json` v2 đã ký Ed25519 từ CCL HQ                                                                                                   |
 
-## 2. Cài đặt SERVER edition
+## 2. Cài đặt SERVER edition (Apple Silicon — M1/M2/M3/M4/M5)
 
 1. Đóng toàn bộ Ops Control client + server đang chạy.
-2. Copy DMG mới: `OpsControl-SERVER-v1.3-mac-arm64.dmg` (Apple Silicon) hoặc `-mac-x64.dmg` (Intel) — verify SHA-256 với `dist/checksums.txt`.
-3. Drag vào `/Applications`, replace bản v1.2 (data ở `~/Library/Application Support/Ops Control/` được giữ nguyên).
+2. Copy `OpsControl-SERVER-v1.3.0-mac-arm64.dmg` + `checksums.txt` + `install-from-dmg.sh` từ CCL HQ Drive về máy.
+3. **Cài bằng installer script (khuyên dùng — bỏ Gatekeeper warning vĩnh viễn):**
+
+   ```bash
+   bash install-from-dmg.sh OpsControl-SERVER-v1.3.0-mac-arm64.dmg
+   ```
+
+   Script tự verify SHA-256 → mount DMG → copy `OpsControl SERVER.app` vào `/Applications` → xóa `com.apple.quarantine` xattr. Sau đó app launch bằng double-click bình thường, không có cảnh báo "from unidentified developer".
+
+   **Cài thủ công (fallback nếu không chạy script được):** mount DMG, drag `OpsControl SERVER.app` vào `/Applications`. Lần đầu launch: macOS hiện modal "from unidentified developer" → right-click app → **Open** → **Open** lần nữa trong dialog. Lần sau double-click bình thường.
+
+   Dữ liệu cũ ở `~/Library/Application Support/ops-control-desktop/` được giữ nguyên qua mọi lần cài lại.
+
 4. Mở app → chạy **Setup Wizard** lần đầu:
    - **Bước 1 — License:** dán nội dung `license.json` đã nhận → bấm "Áp dụng license & tiếp tục". Nếu chưa có → "Dùng trial 14 ngày" (tier S, 15 user max).
    - **Bước 2 — Khởi tạo dữ liệu:** thường giữ default (`<userData>/data`).
@@ -27,10 +38,16 @@
    - **Bước 4 — Tạo admin:** username + mật khẩu ≥ 12 ký tự (chữ + số). Tài khoản được cấp role `sys`.
 5. Server boot xong → mở Settings → License để confirm tier hiển thị đúng.
 
-## 3. Cài đặt CLIENT edition
+> **Lưu ý:** v1.3.0 KHÔNG yêu cầu Apple Developer ID (CCL không trả phí $99/năm). Bù lại, mỗi DMG ship kèm `checksums.txt` để operator verify SHA-256 + bundle marker bên trong DMG (verify qua `scripts/verify-bundle-marker.sh`). Trust chain: CCL HQ ký build → publish checksums lên kênh nội bộ → operator verify trước khi cài.
 
-1. Trên mỗi máy operator: copy DMG `OpsControl-CLIENT-v1.3-mac-{arm64|x64}.dmg`.
-2. Drag vào `/Applications`.
+## 3. Cài đặt CLIENT edition (Apple Silicon)
+
+1. Trên mỗi máy operator: copy `OpsControl-CLIENT-v1.3.0-mac-arm64.dmg` + `install-from-dmg.sh` về máy.
+2. Cài bằng script (khuyên dùng):
+   ```bash
+   bash install-from-dmg.sh OpsControl-CLIENT-v1.3.0-mac-arm64.dmg
+   ```
+   Hoặc cài thủ công: mount DMG, drag vào `/Applications`, right-click → Open lần đầu.
 3. Mở app lần đầu → Setup Wizard:
    - **Bước 1 — Server URL:** nhập `http://<ip-server>:3000` → bấm "Test connection".
    - **Bước 2 — Hoàn tất:** click "Mở Ops Control" → màn hình login bình thường.

@@ -24,6 +24,13 @@ import path from 'path';
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ops-dash-stats-'));
 const dbPath = path.join(tmpDir, 'ops.sqlite');
 process.env.OPS_DB_PATH = dbPath;
+// loadQuotes() defaults to the file backend (`quote_history.json`).
+// dashboardStats.js reads via loadQuotes; this test seeds via SQL, so
+// force the sqlite backend here. Without this override every assertion
+// reads an empty fixture and reports `actual: 0` (real incident
+// 2026-04-30 — surfaced by the post-GA full sweep).
+process.env.OPS_DATA_BACKEND = 'sqlite';
+process.env.DATA_DIR = tmpDir;
 
 const { getDb } = await import('../db/connection.js');
 const {
@@ -63,25 +70,49 @@ function iso(daysAgo) {
 }
 
 function isoMonthsAgo(m) {
+  // Set day=1 BEFORE shifting the month to avoid the JS month-overflow
+  // pitfall. Naïve `setMonth(getMonth() - 2)` on April 30 → Feb 30 →
+  // rolls forward to March 2, putting the quote in the wrong bucket.
+  // Day=15 picks the middle of the target month so DST cusp dates
+  // can't shift it into a neighbour.
   const d = new Date();
+  d.setDate(1);
   d.setMonth(d.getMonth() - m);
   d.setDate(15);
   return d.toISOString();
 }
 
 function seedQuote({ id, type = 'standard', direct_cu, saved_at, gm, sp, moq, approval_status }) {
+  // dashboardStats reads via loadQuotes() which JSON.parses raw_json
+  // and ignores the per-column projections. So every field the
+  // dashboard reduces over (saved_at, direct_cu, ccl_pn, result.*,
+  // state.*) MUST live inside raw_json. The column projections below
+  // exist only for SQL filter pre-narrowing.
   const payload = {
-    result: { gm, va: gm != null ? gm + 0.05 : null, sp, contribution: sp != null && moq != null ? sp * moq : null },
+    id,
+    type,
+    saved_at,
+    direct_cu,
+    end_cu: direct_cu,
+    ccl_pn: `PN-${id}`,
+    result: {
+      gm,
+      va: gm != null ? gm + 0.05 : null,
+      sp,
+      contribution: sp != null && moq != null ? sp * moq : null,
+    },
     state: {
+      direct_cu,
+      end_cu: direct_cu,
       selling_price: sp,
       moq,
       approval: approval_status ? { status: approval_status, history: [] } : null,
     },
   };
-  db.prepare(`INSERT INTO quotes (id, type, saved_at, direct_cu, end_cu, ccl_pn, raw_json)
-              VALUES (?, ?, ?, ?, ?, ?, ?)`).run(
-    id, type, saved_at, direct_cu, direct_cu, `PN-${id}`, JSON.stringify(payload)
-  );
+  db.prepare(
+    `INSERT INTO quotes (id, type, saved_at, direct_cu, end_cu, ccl_pn, raw_json)
+              VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).run(id, type, saved_at, direct_cu, direct_cu, `PN-${id}`, JSON.stringify(payload));
 }
 
 function resetDb() {
@@ -101,23 +132,71 @@ test('getOverview: empty DB returns zeros', () => {
 
 test('getOverview: counts, revenue, pending', () => {
   resetDb();
-  seedQuote({ id: 1, direct_cu: 'Brady', saved_at: iso(5),  gm: 0.25, sp: 0.10, moq: 10000, approval_status: 'approved' });
-  seedQuote({ id: 2, direct_cu: 'Brady', saved_at: iso(5),  gm: 0.15, sp: 0.20, moq: 5000,  approval_status: 'pending_sales' });
-  seedQuote({ id: 3, direct_cu: 'CCL',   saved_at: iso(5),  gm: 0.30, sp: 0.30, moq: 2000,  approval_status: 'rejected' });
-  seedQuote({ id: 4, direct_cu: 'CCL',   saved_at: iso(5),  gm: null, sp: null, moq: null,  approval_status: 'draft' });
+  seedQuote({
+    id: 1,
+    direct_cu: 'Brady',
+    saved_at: iso(5),
+    gm: 0.25,
+    sp: 0.1,
+    moq: 10000,
+    approval_status: 'approved',
+  });
+  seedQuote({
+    id: 2,
+    direct_cu: 'Brady',
+    saved_at: iso(5),
+    gm: 0.15,
+    sp: 0.2,
+    moq: 5000,
+    approval_status: 'pending_sales',
+  });
+  seedQuote({
+    id: 3,
+    direct_cu: 'CCL',
+    saved_at: iso(5),
+    gm: 0.3,
+    sp: 0.3,
+    moq: 2000,
+    approval_status: 'rejected',
+  });
+  seedQuote({
+    id: 4,
+    direct_cu: 'CCL',
+    saved_at: iso(5),
+    gm: null,
+    sp: null,
+    moq: null,
+    approval_status: 'draft',
+  });
   const r = getOverview();
   assert.equal(r.total, 4);
   assert.equal(r.pending_count, 1);
   // revenue_total = 0.10*10000 + 0.20*5000 + 0.30*2000 = 1000 + 1000 + 600 = 2600
   assert.equal(r.revenue_total, 2600);
   // avg_gm over 3 non-null rows = (0.25+0.15+0.30)/3
-  assert.ok(Math.abs(r.avg_gm - (0.25 + 0.15 + 0.30) / 3) < 1e-9);
+  assert.ok(Math.abs(r.avg_gm - (0.25 + 0.15 + 0.3) / 3) < 1e-9);
 });
 
 test('getOverview: days=30 filters older rows out', () => {
   resetDb();
-  seedQuote({ id: 1, direct_cu: 'A', saved_at: iso(5),   gm: 0.20, sp: 1, moq: 100, approval_status: 'approved' });
-  seedQuote({ id: 2, direct_cu: 'A', saved_at: iso(100), gm: 0.30, sp: 1, moq: 100, approval_status: 'approved' });
+  seedQuote({
+    id: 1,
+    direct_cu: 'A',
+    saved_at: iso(5),
+    gm: 0.2,
+    sp: 1,
+    moq: 100,
+    approval_status: 'approved',
+  });
+  seedQuote({
+    id: 2,
+    direct_cu: 'A',
+    saved_at: iso(100),
+    gm: 0.3,
+    sp: 1,
+    moq: 100,
+    approval_status: 'approved',
+  });
   const all = getOverview();
   const recent = getOverview({ days: 30 });
   assert.equal(all.total, 2);
@@ -170,37 +249,89 @@ test('getApprovalFunnel: counts each state', () => {
   seedQuote({ id: 5, direct_cu: 'A', saved_at: iso(5), approval_status: 'rejected' });
   const f = getApprovalFunnel();
   assert.deepEqual(f, {
-    draft: 1, pending_sales: 1, pending_finance: 1, approved: 1, rejected: 1,
+    draft: 1,
+    pending_sales: 1,
+    pending_finance: 1,
+    approved: 1,
+    rejected: 1,
   });
 });
 
 test('getTopCustomers: revenue sum + win rate per customer', () => {
   resetDb();
   // Brady: 2 won, 1 lost, rev = 1000 + 500 + 200 = 1700, win_rate = 2/3
-  seedQuote({ id: 1, direct_cu: 'Brady', saved_at: iso(5), gm: 0.2, sp: 0.10, moq: 10000, approval_status: 'approved' });
-  seedQuote({ id: 2, direct_cu: 'Brady', saved_at: iso(5), gm: 0.3, sp: 0.10, moq: 5000,  approval_status: 'approved' });
-  seedQuote({ id: 3, direct_cu: 'Brady', saved_at: iso(5), gm: 0.1, sp: 0.10, moq: 2000,  approval_status: 'rejected' });
+  seedQuote({
+    id: 1,
+    direct_cu: 'Brady',
+    saved_at: iso(5),
+    gm: 0.2,
+    sp: 0.1,
+    moq: 10000,
+    approval_status: 'approved',
+  });
+  seedQuote({
+    id: 2,
+    direct_cu: 'Brady',
+    saved_at: iso(5),
+    gm: 0.3,
+    sp: 0.1,
+    moq: 5000,
+    approval_status: 'approved',
+  });
+  seedQuote({
+    id: 3,
+    direct_cu: 'Brady',
+    saved_at: iso(5),
+    gm: 0.1,
+    sp: 0.1,
+    moq: 2000,
+    approval_status: 'rejected',
+  });
   // CCL: 1 pending — no decided quotes, win_rate null
-  seedQuote({ id: 4, direct_cu: 'CCL',   saved_at: iso(5), gm: 0.4, sp: 1,    moq: 100,   approval_status: 'pending_sales' });
+  seedQuote({
+    id: 4,
+    direct_cu: 'CCL',
+    saved_at: iso(5),
+    gm: 0.4,
+    sp: 1,
+    moq: 100,
+    approval_status: 'pending_sales',
+  });
   const rows = getTopCustomers(10);
   assert.equal(rows.length, 2);
-  const brady = rows.find(r => r.customer === 'Brady');
+  const brady = rows.find((r) => r.customer === 'Brady');
   assert.equal(brady.quote_count, 3);
   assert.equal(brady.revenue, 1700);
   assert.equal(brady.won, 2);
   assert.equal(brady.lost, 1);
   assert.ok(Math.abs(brady.win_rate - 2 / 3) < 1e-9);
 
-  const ccl = rows.find(r => r.customer === 'CCL');
+  const ccl = rows.find((r) => r.customer === 'CCL');
   assert.equal(ccl.win_rate, null);
 });
 
 test('getTopCustomers: limit respected, sorted by quote_count desc', () => {
   resetDb();
   for (let i = 0; i < 3; i++) {
-    seedQuote({ id: 100 + i, direct_cu: 'A', saved_at: iso(5), gm: 0.2, sp: 1, moq: 100, approval_status: 'approved' });
+    seedQuote({
+      id: 100 + i,
+      direct_cu: 'A',
+      saved_at: iso(5),
+      gm: 0.2,
+      sp: 1,
+      moq: 100,
+      approval_status: 'approved',
+    });
   }
-  seedQuote({ id: 200, direct_cu: 'B', saved_at: iso(5), gm: 0.2, sp: 1, moq: 100, approval_status: 'approved' });
+  seedQuote({
+    id: 200,
+    direct_cu: 'B',
+    saved_at: iso(5),
+    gm: 0.2,
+    sp: 1,
+    moq: 100,
+    approval_status: 'approved',
+  });
   const rows = getTopCustomers(1);
   assert.equal(rows.length, 1);
   assert.equal(rows[0].customer, 'A');
@@ -209,9 +340,33 @@ test('getTopCustomers: limit respected, sorted by quote_count desc', () => {
 
 test('getMonthlyQuoteCount: buckets quotes into N months', () => {
   resetDb();
-  seedQuote({ id: 1, direct_cu: 'A', saved_at: isoMonthsAgo(0), gm: 0.2, sp: 1, moq: 100, approval_status: 'approved' });
-  seedQuote({ id: 2, direct_cu: 'A', saved_at: isoMonthsAgo(0), gm: 0.2, sp: 1, moq: 100, approval_status: 'approved' });
-  seedQuote({ id: 3, direct_cu: 'A', saved_at: isoMonthsAgo(2), gm: 0.2, sp: 1, moq: 100, approval_status: 'approved' });
+  seedQuote({
+    id: 1,
+    direct_cu: 'A',
+    saved_at: isoMonthsAgo(0),
+    gm: 0.2,
+    sp: 1,
+    moq: 100,
+    approval_status: 'approved',
+  });
+  seedQuote({
+    id: 2,
+    direct_cu: 'A',
+    saved_at: isoMonthsAgo(0),
+    gm: 0.2,
+    sp: 1,
+    moq: 100,
+    approval_status: 'approved',
+  });
+  seedQuote({
+    id: 3,
+    direct_cu: 'A',
+    saved_at: isoMonthsAgo(2),
+    gm: 0.2,
+    sp: 1,
+    moq: 100,
+    approval_status: 'approved',
+  });
   const series = getMonthlyQuoteCount({ months: 3 });
   assert.equal(series.length, 3);
   assert.equal(series[2].count, 2); // current month — last entry
@@ -220,13 +375,29 @@ test('getMonthlyQuoteCount: buckets quotes into N months', () => {
 
 test('getMarginTrend: avg_gm per month; null when no quotes', () => {
   resetDb();
-  seedQuote({ id: 1, direct_cu: 'A', saved_at: isoMonthsAgo(0), gm: 0.20, sp: 1, moq: 100, approval_status: 'approved' });
-  seedQuote({ id: 2, direct_cu: 'A', saved_at: isoMonthsAgo(0), gm: 0.40, sp: 1, moq: 100, approval_status: 'approved' });
+  seedQuote({
+    id: 1,
+    direct_cu: 'A',
+    saved_at: isoMonthsAgo(0),
+    gm: 0.2,
+    sp: 1,
+    moq: 100,
+    approval_status: 'approved',
+  });
+  seedQuote({
+    id: 2,
+    direct_cu: 'A',
+    saved_at: isoMonthsAgo(0),
+    gm: 0.4,
+    sp: 1,
+    moq: 100,
+    approval_status: 'approved',
+  });
   const series = getMarginTrend({ months: 3 });
   assert.equal(series.length, 3);
   const current = series[2];
   assert.equal(current.count, 2);
-  assert.ok(Math.abs(current.avg_gm - 0.30) < 1e-9);
+  assert.ok(Math.abs(current.avg_gm - 0.3) < 1e-9);
   const older = series[0];
   assert.equal(older.count, 0);
   assert.equal(older.avg_gm, null);
@@ -234,12 +405,60 @@ test('getMarginTrend: avg_gm per month; null when no quotes', () => {
 
 test('getMarginHistogram: bands match thresholds', () => {
   resetDb();
-  seedQuote({ id: 1, direct_cu: 'A', saved_at: iso(5), gm: -0.1, sp: 1, moq: 100, approval_status: 'draft' });
-  seedQuote({ id: 2, direct_cu: 'A', saved_at: iso(5), gm: 0.05, sp: 1, moq: 100, approval_status: 'draft' });
-  seedQuote({ id: 3, direct_cu: 'A', saved_at: iso(5), gm: 0.15, sp: 1, moq: 100, approval_status: 'draft' });
-  seedQuote({ id: 4, direct_cu: 'A', saved_at: iso(5), gm: 0.25, sp: 1, moq: 100, approval_status: 'draft' });
-  seedQuote({ id: 5, direct_cu: 'A', saved_at: iso(5), gm: 0.40, sp: 1, moq: 100, approval_status: 'draft' });
-  seedQuote({ id: 6, direct_cu: 'A', saved_at: iso(5), gm: null, sp: 1, moq: 100, approval_status: 'draft' });
+  seedQuote({
+    id: 1,
+    direct_cu: 'A',
+    saved_at: iso(5),
+    gm: -0.1,
+    sp: 1,
+    moq: 100,
+    approval_status: 'draft',
+  });
+  seedQuote({
+    id: 2,
+    direct_cu: 'A',
+    saved_at: iso(5),
+    gm: 0.05,
+    sp: 1,
+    moq: 100,
+    approval_status: 'draft',
+  });
+  seedQuote({
+    id: 3,
+    direct_cu: 'A',
+    saved_at: iso(5),
+    gm: 0.15,
+    sp: 1,
+    moq: 100,
+    approval_status: 'draft',
+  });
+  seedQuote({
+    id: 4,
+    direct_cu: 'A',
+    saved_at: iso(5),
+    gm: 0.25,
+    sp: 1,
+    moq: 100,
+    approval_status: 'draft',
+  });
+  seedQuote({
+    id: 5,
+    direct_cu: 'A',
+    saved_at: iso(5),
+    gm: 0.4,
+    sp: 1,
+    moq: 100,
+    approval_status: 'draft',
+  });
+  seedQuote({
+    id: 6,
+    direct_cu: 'A',
+    saved_at: iso(5),
+    gm: null,
+    sp: 1,
+    moq: 100,
+    approval_status: 'draft',
+  });
   const h = getMarginHistogram();
   assert.equal(h.negative.count, 1);
   assert.equal(h.low.count, 1);
@@ -251,8 +470,24 @@ test('getMarginHistogram: bands match thresholds', () => {
 
 test('days filter cascades to getWinRate and getTopCustomers', () => {
   resetDb();
-  seedQuote({ id: 1, direct_cu: 'A', saved_at: iso(5),   gm: 0.2, sp: 1, moq: 100, approval_status: 'approved' });
-  seedQuote({ id: 2, direct_cu: 'A', saved_at: iso(200), gm: 0.2, sp: 1, moq: 100, approval_status: 'rejected' });
+  seedQuote({
+    id: 1,
+    direct_cu: 'A',
+    saved_at: iso(5),
+    gm: 0.2,
+    sp: 1,
+    moq: 100,
+    approval_status: 'approved',
+  });
+  seedQuote({
+    id: 2,
+    direct_cu: 'A',
+    saved_at: iso(200),
+    gm: 0.2,
+    sp: 1,
+    moq: 100,
+    approval_status: 'rejected',
+  });
   // All-time: 1 won, 1 lost, rate 50%
   const allWR = getWinRate();
   assert.equal(allWR.decided, 2);
@@ -270,5 +505,9 @@ test('days filter cascades to getWinRate and getTopCustomers', () => {
 // ── Cleanup ──
 test('cleanup: remove tmp DB', () => {
   db.close();
-  try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* noop */ }
+  try {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  } catch {
+    /* noop */
+  }
 });

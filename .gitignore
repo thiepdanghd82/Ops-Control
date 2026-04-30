@@ -42,3 +42,8 @@ node_modules/
 # Local logs
 *.log
 npm-debug.log*
+
+# Runtime artefacts created by seed-admin / authService when run
+# outside the desktop sandbox (i.e. directly from the project root).
+/users.json
+/README_FIRST_LOGIN.txt

@@ -9,16 +9,26 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  createPublicKey, createPrivateKey, sign, verify, generateKeyPairSync,
+  createPublicKey,
+  createPrivateKey,
+  sign,
+  verify,
+  generateKeyPairSync,
 } = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 
 const SIGNED_FIELDS = [
-  'version', 'installation_id', 'customer', 'tier', 'max_users',
-  'issued_at', 'expires_at', 'features',
+  'version',
+  'installation_id',
+  'customer',
+  'tier',
+  'max_users',
+  'issued_at',
+  'expires_at',
+  'features',
 ];
-const norm = (v) => Array.isArray(v) ? [...v].sort().join(',') : (v ?? '');
+const norm = (v) => (Array.isArray(v) ? [...v].sort().join(',') : (v ?? ''));
 function canonicalize(payload) {
   return SIGNED_FIELDS.map((k) => `${k}=${norm(payload[k])}`).join('|');
 }
@@ -34,10 +44,10 @@ function verifyLicense(license, pubKey) {
 }
 
 const devPriv = createPrivateKey(
-  fs.readFileSync(path.join(__dirname, '..', 'scripts', 'license', 'dev-private.pem'), 'utf8'),
+  fs.readFileSync(path.join(__dirname, '..', 'scripts', 'license', 'dev-private.pem'), 'utf8')
 );
 const devPub = createPublicKey(
-  fs.readFileSync(path.join(__dirname, '..', 'scripts', 'license', 'dev-public.pem'), 'utf8'),
+  fs.readFileSync(path.join(__dirname, '..', 'scripts', 'license', 'dev-public.pem'), 'utf8')
 );
 
 const baseLicense = () => ({
@@ -88,4 +98,29 @@ test('all 3 tiers (S/M/L) sign + verify', () => {
     const lic = signLicense({ ...baseLicense(), tier, max_users: max }, devPriv);
     assert.equal(verifyLicense(lic, devPub), true, `tier ${tier} should verify`);
   }
+});
+
+// ─── Installation-ID display formatter ────────────────────────────────
+// Re-implement here so this file stays loadable without electron `app`.
+// Mirrors the helper exported from desktop/license.js.
+function formatInstallationIdForDisplay(id) {
+  if (typeof id !== 'string' || id.length !== 64) return id;
+  return id.match(/.{1,16}/g).join(' ');
+}
+
+test('installation-ID formatter chunks 64-hex into 4×16 with single-space separators', () => {
+  const id = 'ef3981e1734fee79b03cea1de206168cdfa333a7484854a041135691385a3103';
+  const out = formatInstallationIdForDisplay(id);
+  assert.equal(out, 'ef3981e1734fee79 b03cea1de206168c dfa333a7484854a0 41135691385a3103');
+  // CRITICAL invariant — the canonical form is recovered by stripping
+  // whitespace. If the formatter ever introduces a hyphen or other
+  // non-whitespace char, the signing pipeline breaks (real incident:
+  // operator emailed back an ID with a wrap-hyphen → sig mismatch).
+  assert.equal(out.replace(/\s/g, ''), id);
+});
+
+test('installation-ID formatter passes through non-64-char inputs unchanged', () => {
+  assert.equal(formatInstallationIdForDisplay(''), '');
+  assert.equal(formatInstallationIdForDisplay('short'), 'short');
+  assert.equal(formatInstallationIdForDisplay(null), null);
 });
