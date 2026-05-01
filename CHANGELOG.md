@@ -46,6 +46,18 @@ Separate Vite + React 19 PWA workspace at `apps/kiosk/`, served at `/kiosk/` fro
 
 Server suite 696 → 980 (+284 across the sprint). Atomicity verified at three layers: service-level mid-txn rollback (MES-2.4 test 12 — injected `insertOpEvent` throw → UPDATE rolled back, zero audit rows), idempotency ledger write-through with replay-via-cached-body (MES-2.5 contract test on every mutation endpoint asserting `audit_log COUNT(*) = 1` across two identical client calls), offline replay sequencing with 5-row audit chain (MES-2.8 offline spec). Property test on full state×event matrix (63 cells) for `opStatusTransition`. 3 Playwright e2e specs (happy-path, offline, revoked-session) compile-checked; runtime gated on `npx playwright install chromium`.
 
+### Post-release hotfix (commit `0bb9c93`, post-tag)
+
+Sprint-exit smoke run after the v1.4.1 tag surfaced that the Playwright e2e suite had been "compile-checked" via `playwright test --list` only — actual runtime execution had never been attempted. Five harness-level bugs cascaded out, all rooted in Playwright's process-isolation model not propagating env from the parent process to test workers or to the webServer block. Hotfix landed as a single commit (`0bb9c93`, +78 LOC across 4 harness files) on `release/v1.3` post-tag:
+
+- Bug #1 — env vars don't reach test workers. Fixed via JSON path-handoff file written at module-load time of `playwright.config.js`, read by fixtures.
+- Bug #2 — TEST_DB schema not initialized. Fixed via explicit `initSchema()` call against the isolated test DB before webServer boots.
+- Bug #3 — `OPS_KIOSK_KEY` not in worker env. Fixed by folding into the same JSON env-bag.
+- Bug #4 — webServer env propagation. Hypothesis disproven during diagnostic: `dotenv` already loads project `.env` at server boot, so `OPS_KIOSK_KEY` reaches the test webServer correctly. No fix needed.
+- Bug #5 — Playwright lifecycle race (webServer spawned before globalSetup completed → `mountPlanning()` saw an absent `feature-flags.json` → planning routes never registered). Fixed by relocating the setup to `playwright.config.js` module-load time + worker guard via `TEST_WORKER_INDEX`. `_globalSetup.js` deleted, replaced by `_globalTeardown.js` for cleanup.
+
+After the hotfix the suite progresses from line 14 of `_fixtures.js` (entry) all the way to line 37 of `kiosk-offline.spec.js` (deep UI interaction) — a verification surface that simply did not exist before. KIOSK-008 (sprint-exit smoke blocker) gates the final 3/3 green.
+
 ### Decisions worth knowing
 
 - **Option B revocation** — per-request DB SELECT on indexed `session_jti` with 30 s positive-result cache; revoked jtis bypass cache so they die on next request. Sys admin's revoke takes effect within 30 s, not 12 h (= JWT TTL).
@@ -70,7 +82,7 @@ MES-2.3 helper-extraction surfaced a `wo-terminal-edit` body-shape collision: th
 - Chromium binary required once for Playwright (`npx playwright install chromium`, ~200 MB; gated on each dev box).
 - Dev DB needs the MES-2.1 additive migration applied on first server boot via `init.js applyAdditiveMigrations()`; e2e harness sidesteps via isolated `DATA_DIR` + `OPS_DB_PATH` per run.
 
-### MES-3 backlog (9 tickets)
+### MES-3 backlog (10 tickets)
 
 Brief one-liners; full ACs in `CLAUDE.md` "## MES-3 Backlog" section.
 
@@ -83,6 +95,7 @@ Brief one-liners; full ACs in `CLAUDE.md` "## MES-3 Backlog" section.
 - **KIOSK-006a** — Kiosk health dashboard (latency / replay rate / failures) (P3, L)
 - **KIOSK-006b** — `groups.json` idempotent migration script (P1, S)
 - **KIOSK-007** — Playwright DOM port of `wo-create-flow.timed.test.js` (P3, M)
+- **KIOSK-008** — Playwright happy-path: op-btn-pause disabled in SETUP state (P2, S; sprint-exit smoke blocker; tackle first in MES-3.5)
 
 ### Sprint metrics
 

@@ -517,15 +517,17 @@ Document the off-site target machine, its credentials, and the restore drill che
 
 ## MES-3 Backlog
 
-> 9 follow-up tickets surfaced during Sprint MES-2 build phase. Two P1s (KIOSK-003 + KIOSK-006b) must lead MES-3 sprint scope to close data-integrity and deploy-automation gaps.
+> 10 follow-up tickets surfaced during Sprint MES-2 build phase + post-tag e2e harness hotfix. Two P1s (KIOSK-003 + KIOSK-006b) must lead MES-3 sprint scope to close data-integrity and deploy-automation gaps. KIOSK-008 is the sprint-exit smoke blocker that landed too late for the v1.4.1 tag — investigate first thing in MES-3 since it likely unblocks the Playwright suite with a small fix.
 
 ### Recommended MES-3 v1 scope (4 tickets)
 
 KIOSK-003 (P1, L), KIOSK-006b (P1, S), KIOSK-002 (P2, M), KIOSK-004 (P2, M). Total ~3 weeks of work assuming MES-2 pace. Closes both P1s + the operationally-visible reason-code admin gap + the Vitest coverage gap on kiosk components.
 
-### MES-3.5 polish scope (5 tickets)
+### MES-3.5 polish scope (6 tickets)
 
-MES-3-FIX-1 (P2, S), KIOSK-001 (P3, S), KIOSK-005a (P3, S), KIOSK-006a (P3, L), KIOSK-007 (P3, M). Total ~2 weeks. Wraps RFC-7807 compliance fix + branded icons + dedicated audit endpoint + health dashboard + Playwright DOM port.
+MES-3-FIX-1 (P2, S), KIOSK-001 (P3, S), KIOSK-005a (P3, S), KIOSK-006a (P3, L), KIOSK-007 (P3, M), KIOSK-008 (P2, S). Total ~2 weeks. Wraps RFC-7807 compliance fix + branded icons + dedicated audit endpoint + health dashboard + Playwright DOM port + sprint-exit smoke blocker.
+
+KIOSK-008 should be tackled FIRST in MES-3.5 because it's the gating fix for the Playwright happy-path spec — until it's resolved, the e2e harness (otherwise structurally fixed by the post-tag hotfix at commit `0bb9c93`) can't actually report green.
 
 ### Tickets
 
@@ -593,3 +595,11 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - **Acceptance**: rewrite domains/planning/tests/e2e/wo-create-flow.timed.test.js as DOM Playwright spec (apps/kiosk/tests/e2e isn't the right home; create domains/planning/tests/playwright/ or shared apps/desktop-tests/); verify ≤4 click budget for WO release flow; deprecate the Node-based contract smoke once Playwright spec is green for 7 days
 - **Effort**: M (~150 LOC port + ~30 LOC fixture extension)
 - **Priority**: P3 (current Node smoke catches ~80% of regressions; full DOM coverage is nice-to-have)
+
+#### KIOSK-008 — Playwright happy-path: op-btn-pause disabled in SETUP state
+
+- **Source**: Sprint-exit smoke after the post-v1.4.1 e2e harness hotfix (commit `0bb9c93`). All 3 specs now progress past fixture setup, render the kiosk PWA, and reach OpDetail — but fail at the Pause assertion with `getByTestId('op-btn-pause')` in DOM but `element is not enabled` after 232 Playwright retries.
+- **Hypothesis** (unverified, MES-3 should confirm): the kiosk OpDetail.jsx state-branch mapping (DISPATCHED → "Start", SETUP → "Begin Run", RUNNING → "Pause") requires TWO transitions before Pause is enabled (DISPATCHED → SETUP via "Start" tap, then SETUP → RUNNING via "Begin Run" tap or implicit /scan). The happy-path spec at `apps/kiosk/tests/e2e/kiosk-happy-path.spec.js:31` likely taps "Start" once and immediately attempts "Pause", missing the "Begin Run" step. If true, fix is a 1-line spec adjustment OR a UX decision to auto-advance SETUP → RUNNING on first Start tap (not a 2-tap sequence).
+- **Acceptance**: investigate root cause (spec bug vs product UX); if spec bug, add the missing "Begin Run" tap and re-verify happy-path wallclock stays under 60s; if product UX issue, decide whether to auto-advance SETUP → RUNNING on dispatch acceptance (changes state-machine semantics — review with product owner). Either fix path lands a green 3/3 e2e suite.
+- **Effort**: S (likely 1-3 LOC spec fix; investigation 30-60 min)
+- **Priority**: P2 (gates the e2e suite from reporting green; once fixed, the harness investment from MES-2.8 + the post-tag hotfix becomes operationally usable for ongoing regression testing)
