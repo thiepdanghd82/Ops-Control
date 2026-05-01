@@ -1,18 +1,37 @@
 // MES-2.8 — shared fixtures + UI helpers for the kiosk e2e specs.
 // Direct-DB seeding via better-sqlite3 (faster than driving the planner
-// admin UI to create a WO + op + pairing card on every test). The DB
-// path comes from OPS_E2E_TEST_DB_PATH which playwright.config.js sets.
+// admin UI to create a WO + op + pairing card on every test). Env-shaped
+// values (TEST_DB path, OPS_KIOSK_KEY, …) are written by _globalSetup to a
+// single JSON file (TEST_ENV_FILE in playwright.config.js) — process.env
+// writes from globalSetup don't propagate to forked test workers.
 import { test as base, expect } from '@playwright/test';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 
 const TEST_MACHINE = 'TEST-MACHINE-01';
 const TEST_WO_CODE = 'TEST-WO-001';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ENV_FILE = path.join(__dirname, '..', '..', '..', '..', '.playwright-tmp', '.e2e-env.json');
+
+let _envCache = null;
+function requireTestEnv(key) {
+  if (!_envCache) {
+    try {
+      _envCache = JSON.parse(fs.readFileSync(ENV_FILE, 'utf8'));
+    } catch {
+      throw new Error(`e2e env file missing at ${ENV_FILE} — globalSetup did not run`);
+    }
+  }
+  const v = _envCache[key];
+  if (!v) throw new Error(`${key} missing from e2e env file — check _globalSetup resolution`);
+  return v;
+}
 
 function openTestDb() {
-  const p = process.env.OPS_E2E_TEST_DB_PATH;
-  if (!p) throw new Error('OPS_E2E_TEST_DB_PATH not set — Playwright config must export it');
-  return new Database(p);
+  return new Database(requireTestEnv('OPS_E2E_TEST_DB_PATH'));
 }
 
 function sha256Hex(s) {
@@ -67,11 +86,9 @@ function mintKioskJwt(db, machineCode) {
     jti
   );
   // Sign the JWT with the same OPS_KIOSK_KEY the server resolved at
-  // boot. We read it from the .env the server auto-wrote on first run
-  // (resolveKioskKey() in domains/planning/server/index.js).
-  // For e2e we pull it via the env that server inherited.
-  const secret = process.env.OPS_KIOSK_KEY;
-  if (!secret) throw new Error('OPS_KIOSK_KEY missing — server must have written it to .env');
+  // boot. _globalSetup resolves it (shell env > project .env) and writes
+  // into the e2e env file.
+  const secret = requireTestEnv('OPS_KIOSK_KEY');
   const head = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
   const claims = {
     jti,
