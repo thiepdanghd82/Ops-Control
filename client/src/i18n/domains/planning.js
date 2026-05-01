@@ -178,6 +178,28 @@ registerStrings({
   'planning.workOrder.addOp.error.invalid': { en: 'Invalid', vi: 'Không hợp lệ' },
   'planning.workOrder.addOp.error.enum': { en: 'Pick a valid type', vi: 'Chọn loại hợp lệ' },
 
+  // Sprint MES-2.7 — Kiosk Admin tab (SYSTEM section).
+  'planning.kiosk_admin.title': { en: 'Kiosk Admin', vi: 'Quản trị Kiosk' },
+  'planning.kiosk_admin.empty_state': {
+    en: 'No active kiosks. Generate a pairing to get started.',
+    vi: 'Chưa có kiosk nào hoạt động. Tạo cặp ghép để bắt đầu.',
+  },
+  'planning.kiosk_admin.generate_cta': { en: 'Generate Pairing', vi: 'Tạo cặp ghép' },
+  'planning.kiosk_admin.revoke_cta': { en: 'Revoke', vi: 'Thu hồi' },
+  'planning.kiosk_admin.revoke_sys_only': { en: 'Sys role only', vi: 'Chỉ vai trò sys' },
+  'planning.kiosk_admin.revoke_confirm': {
+    en: 'Revoke this kiosk session? The device will be logged out immediately.',
+    vi: 'Thu hồi phiên kiosk này? Thiết bị sẽ bị đăng xuất ngay lập tức.',
+  },
+  'planning.kiosk_admin.col_machine': { en: 'Machine Code', vi: 'Mã máy' },
+  'planning.kiosk_admin.col_paired_since': { en: 'Paired Since', vi: 'Cặp ghép từ' },
+  'planning.kiosk_admin.col_last_seen': { en: 'Last Seen', vi: 'Lần cuối' },
+  'planning.kiosk_admin.col_status': { en: 'Status', vi: 'Trạng thái' },
+  'planning.kiosk_admin.col_action': { en: 'Action', vi: 'Hành động' },
+  'planning.kiosk_admin.modal_title': { en: 'Generate kiosk pairing', vi: 'Tạo cặp ghép kiosk' },
+  'planning.kiosk_admin.print_cta': { en: 'Print A6 card', vi: 'In thẻ A6' },
+  'planning.kiosk_admin.expires': { en: 'Expires', vi: 'Hết hạn' },
+
   // Sprint MES-2.6b — op-status display labels (shared planner + kiosk).
   'planning.kiosk_status.PENDING': { en: 'Pending', vi: 'Chờ' },
   'planning.kiosk_status.DISPATCHED': { en: 'Dispatched', vi: 'Đã phân công' },

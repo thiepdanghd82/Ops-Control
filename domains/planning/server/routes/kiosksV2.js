@@ -7,20 +7,24 @@
  *   DELETE /pairings/:id    — sys role revokes
  *   POST   /redeem          — kiosk redeems token (NO auth — token-bearing)
  *
- * Auth:
+ * Auth (finalised in MES-2.7):
  *   - Mounted OUTSIDE the parent /v2 auth middleware so /redeem can be
  *     reached without a user session. Per-route guards apply auth +
  *     role on the planner/sys endpoints.
- *   - requireTabAccess('kiosk-admin') is DEFERRED to MES-2.7 (the
- *     kiosk-admin tab catalog row doesn't exist yet). For now we use a
- *     numeric requireRole gate matching MES-1.4 (CHỐT 1 / R7-B). When
- *     MES-2.7 lands the tab catalog, swap requireRole(2) → requireTab
- *     Access('kiosk-admin') in this file (and only this file).
+ *   - POST /pairings + GET /pairings: requireRole(2) AND tab-access
+ *     gate on 'kiosk-admin' (layered defense). Both must pass.
+ *     viewonly hits the role gate; users in groups that hide
+ *     'kiosk-admin' (sales/cs/npi/purchasing/production/quality
+ *     defaults) hit the tab gate. Both rejections emit the same
+ *     `urn:ops:insufficient-role` envelope so contract tests see no
+ *     shape change.
+ *   - DELETE /pairings/:id: requireRole(5) (sys-only — pulls a kiosk's session).
  *
  * All errors via respondError() (RFC-7807 application/problem+json).
  */
 import { Router } from 'express';
 import { respondError } from '../lib/rfc7807.js';
+import { resolveTabAccess } from '../../../../server/services/permissionService.js';
 
 const ROLE_LEVELS = { viewonly: 1, user: 2, cost: 3, admin: 4, sys: 5 };
 
@@ -36,6 +40,28 @@ function requireRole(level) {
         type: 'urn:ops:insufficient-role',
         required_level: level,
         current_role: role || null,
+      });
+    }
+    next();
+  };
+}
+
+// MES-2.7 — local tab-access shim. resolveTabAccess() is the same
+// authoritative resolver the project-wide requireTabAccess uses; we read
+// `req.user.user` (set by the harness / cookie middleware) instead of
+// going through the session store so the existing kiosk contract test
+// fixtures keep working unchanged. Same envelope shape as requireRole
+// so 15/15 contract tests stay green.
+function requireTabAccess(tabId) {
+  return (req, res, next) => {
+    const u = req.user?.user || req.user;
+    const access = resolveTabAccess(u, tabId);
+    if (access !== 'edit') {
+      return respondError(res, {
+        status: 403,
+        type: 'urn:ops:insufficient-role',
+        required_tab: tabId,
+        current_access: access,
       });
     }
     next();
@@ -65,8 +91,8 @@ export function createKioskV2Router({ db, service, validateMachineCode, authMidd
   const router = Router();
   const auth = authMiddleware;
 
-  // POST /pairings — issue
-  router.post('/pairings', auth, requireRole(2), (req, res) => {
+  // POST /pairings — issue (planner role + kiosk-admin tab access)
+  router.post('/pairings', auth, requireRole(2), requireTabAccess('kiosk-admin'), (req, res) => {
     const machineCode =
       typeof req.body?.machine_code === 'string' ? req.body.machine_code.trim() : '';
     if (!machineCode) {
@@ -89,7 +115,7 @@ export function createKioskV2Router({ db, service, validateMachineCode, authMidd
   });
 
   // GET /pairings — list (?active=1 filters out revoked + expired)
-  router.get('/pairings', auth, requireRole(2), (req, res) => {
+  router.get('/pairings', auth, requireRole(2), requireTabAccess('kiosk-admin'), (req, res) => {
     const activeOnly = req.query.active === '1' || req.query.active === 'true';
     const where = activeOnly
       ? `WHERE revoked_at_utc IS NULL
