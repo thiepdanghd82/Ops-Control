@@ -20,6 +20,8 @@ export default [
       'node_modules/',
       'client/node_modules/',
       'desktop/node_modules/',
+      'apps/kiosk/node_modules/',
+      'apps/kiosk/dist/',
       'client/dist/',
       'desktop/dist-electron/',
       'server/data/',
@@ -75,6 +77,43 @@ export default [
       'no-console': 'off',
       'no-debugger': 'error',
       'no-empty': ['error', { allowEmptyCatch: true }],
+    },
+  },
+  // 3d. Kiosk PWA (browser + service-worker globals) — Sprint MES-2.6.
+  // apps/kiosk/ is a fully-separate React 19 app served at /kiosk/.
+  // src/ runs in the browser (window/localStorage/fetch); public/sw.js
+  // runs in the service-worker scope (self/caches/Response/Headers).
+  {
+    files: ['apps/kiosk/src/**/*.{js,jsx}', 'apps/kiosk/styles/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2024,
+      sourceType: 'module',
+      parserOptions: { ecmaFeatures: { jsx: true } },
+      globals: { ...globals.browser, ...globals.es2024 },
+    },
+    rules: {
+      eqeqeq: ['error', 'smart'],
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-empty': ['error', { allowEmptyCatch: true }],
+    },
+  },
+  {
+    files: ['apps/kiosk/public/sw.js'],
+    languageOptions: {
+      ecmaVersion: 2024,
+      sourceType: 'script',
+      globals: { ...globals.serviceworker, ...globals.es2024 },
+    },
+    rules: {
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    },
+  },
+  {
+    files: ['apps/kiosk/vite.config.js'],
+    languageOptions: {
+      ecmaVersion: 2024,
+      sourceType: 'module',
+      globals: { ...globals.node, ...globals.es2024 },
     },
   },
   // 4. Desktop (Electron main process — CJS)

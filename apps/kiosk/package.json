@@ -1,0 +1,20 @@
+{
+  "name": "@ops-control/kiosk",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Ops Control shop-floor kiosk PWA — Sprint MES-2.6.",
+  "scripts": {
+    "dev": "vite --port 5176 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --port 5176"
+  },
+  "dependencies": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "vite": "^8.0.4",
+    "@vitejs/plugin-react": "^6.0.1"
+  }
+}

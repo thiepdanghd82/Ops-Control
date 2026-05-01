@@ -879,6 +879,47 @@ app.use('/api/v1/events', eventsRouter);
 //       the browser won't even revalidate, saving network round-trips.
 //   (b) everything else (index.html, .ico, /help/*.docx) — no-cache so
 //       a new deploy is visible without a hard-refresh.
+// ─── Kiosk PWA (MES-2.6a) — mounted BEFORE the planner SPA ───
+//
+// Served from apps/kiosk/dist. Same two-tier caching policy as the
+// planner: hashed /kiosk/assets/* are immutable; everything else
+// (index.html, manifest, sw.js) revalidates on every request — sw.js
+// MUST always revalidate so a deploy isn't held up by an old SW.
+//
+// Mounted before the planner's express.static so /kiosk/* requests
+// don't fall through into clientDist (which would 404 instead of
+// serving the kiosk shell).
+const kioskDist = path.join(__dirname, '..', 'apps', 'kiosk', 'dist');
+app.use(
+  '/kiosk',
+  express.static(kioskDist, {
+    setHeaders(res, filePath) {
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else {
+        // index.html, manifest.webmanifest, sw.js — always revalidate.
+        res.setHeader('Cache-Control', 'no-cache');
+      }
+    },
+  })
+);
+// Kiosk asset 404 guard — clones the planner pattern below for the
+// /kiosk/ subtree. Without this, a stale kiosk client requesting a
+// no-longer-extant chunk would fall through to the kiosk SPA catch-all
+// and load index.html with `text/html`, crashing the browser with the
+// MIME-type error documented in CLAUDE.md "Stale-chunk crash recovery".
+app.get(['/kiosk/assets/*', '/kiosk/*.js', '/kiosk/*.css', '/kiosk/*.map'], (req, res) => {
+  res.status(404).type('text/plain').send('kiosk asset not found — stale chunk');
+});
+// Kiosk SPA catch-all — anything under /kiosk/ that wasn't matched by
+// the static handler or the 404 guard above falls through to here and
+// gets index.html (so client-side routes like /kiosk/pair work on hard
+// reload).
+app.get('/kiosk/*', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(path.join(kioskDist, 'index.html'));
+});
+
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
 app.use(
   express.static(clientDist, {

@@ -1,0 +1,158 @@
+/* Kiosk PWA — bespoke CSS, no framework (per Plan §3.3).
+   Carbon-aligned tokens; ≥80px touch targets; high-contrast type for
+   shop-floor lighting. */
+:root {
+  --kiosk-touch-min: 80px;
+  --kiosk-bg: #ffffff;
+  --kiosk-bg-card: #f4f4f4;
+  --kiosk-text: #161616;
+  --kiosk-text-subtle: #525252;
+  --kiosk-border: #c6c6c6;
+  --kiosk-primary: #0f62fe;
+  --kiosk-primary-hover: #0050e6;
+  --kiosk-error: #da1e28;
+  --kiosk-success: #198038;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family:
+    'IBM Plex Sans',
+    -apple-system,
+    BlinkMacSystemFont,
+    system-ui,
+    sans-serif;
+  font-weight: 400;
+  font-size: 18px;
+  line-height: 1.4;
+  background: var(--kiosk-bg);
+  color: var(--kiosk-text);
+  overscroll-behavior: none;
+}
+
+h1 {
+  font-weight: 700;
+  font-size: 2rem;
+  margin: 0 0 0.5em;
+}
+
+h2 {
+  font-weight: 600;
+  font-size: 1.5rem;
+  margin: 0 0 0.5em;
+}
+
+code {
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  font-size: 0.95em;
+  background: var(--kiosk-bg-card);
+  padding: 0.1em 0.35em;
+  border-radius: 2px;
+}
+
+/* Sprint 10 P2-3 — visible focus ring for keyboard / switch users. */
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--kiosk-primary);
+  outline-offset: 2px;
+}
+
+/* Layout */
+.kiosk-screen {
+  min-height: 100vh;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.kiosk-pair {
+  align-items: center;
+  justify-content: center;
+}
+
+.kiosk-shell-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--kiosk-border);
+  margin-bottom: 16px;
+}
+
+.kiosk-machine {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  color: var(--kiosk-text-subtle);
+}
+
+/* Card */
+.kiosk-card {
+  background: var(--kiosk-bg-card);
+  padding: 32px;
+  border-radius: 4px;
+  max-width: 640px;
+  width: 100%;
+  box-shadow: 0 1px 0 var(--kiosk-border);
+}
+
+.kiosk-card-error {
+  border-left: 4px solid var(--kiosk-error);
+}
+
+.kiosk-subtle {
+  color: var(--kiosk-text-subtle);
+  font-size: 1rem;
+}
+
+.kiosk-reason {
+  font-size: 0.95rem;
+  color: var(--kiosk-text-subtle);
+}
+
+.kiosk-cta {
+  font-weight: 600;
+  margin-top: 16px;
+}
+
+/* Buttons — minimum 80×80 touch target. */
+.kiosk-btn {
+  min-width: var(--kiosk-touch-min);
+  min-height: var(--kiosk-touch-min);
+  padding: 0 24px;
+  font-family: inherit;
+  font-size: 1.5rem;
+  font-weight: 600;
+  border: 1px solid var(--kiosk-border);
+  background: var(--kiosk-bg-card);
+  color: var(--kiosk-text);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 80ms ease;
+}
+
+.kiosk-btn:hover,
+.kiosk-btn:active {
+  background: var(--kiosk-border);
+}
+
+.kiosk-btn-primary {
+  background: var(--kiosk-primary);
+  color: #ffffff;
+  border-color: var(--kiosk-primary);
+}
+
+.kiosk-btn-primary:hover,
+.kiosk-btn-primary:active {
+  background: var(--kiosk-primary-hover);
+  border-color: var(--kiosk-primary-hover);
+}
