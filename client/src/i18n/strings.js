@@ -82,32 +82,39 @@ export const STRINGS = {
   'nav.tab.ddl': { en: 'Drop-Down Lists', vi: 'Danh sách lựa chọn' },
   'nav.tab.finance_data': { en: 'Finance Data', vi: 'Dữ liệu Tài chính' },
   'nav.tab.settings': { en: 'Settings', vi: 'Cài đặt' },
-  'nav.tab.metrics':  { en: 'Admin metrics',  vi: 'Admin metrics' },
-  'nav.tab.audit_log':{ en: 'Audit log', vi: 'Nhật ký audit' },
-  'nav.tab.help':     { en: 'Help',     vi: 'Hướng dẫn' },
+  'nav.tab.metrics': { en: 'Admin metrics', vi: 'Admin metrics' },
+  'nav.tab.audit_log': { en: 'Audit log', vi: 'Nhật ký audit' },
+  'nav.tab.kiosk_admin': { en: 'Kiosk Admin', vi: 'Quản trị Kiosk' },
+  'nav.tab.help': { en: 'Help', vi: 'Hướng dẫn' },
   'nav.team_online_title': { en: 'Team Online', vi: 'Team đang online' },
   'nav.team_online_count': { en: '{n} online', vi: '{n} đang online' },
   'nav.badge_pending_tooltip': { en: '{n} awaiting your action', vi: '{n} đang chờ bạn xử lý' },
 
-
-
   // ─── Library picker (Phase 10M right-click on material/ink rows) ───
-  'picker.menu_title':     { en: 'Search from library', vi: 'Tìm từ thư viện' },
-  'picker.lib.npi':        { en: 'NPI Material',        vi: 'NPI Material' },
-  'picker.lib.sourcing':   { en: 'Sourcing DB',         vi: 'Sourcing DB' },
-  'picker.lib.raw':        { en: 'Raw Materials (IFS)', vi: 'Raw Materials (IFS)' },
-  'picker.close':          { en: 'Close',               vi: 'Đóng' },
-  'picker.back':           { en: 'Back to library list', vi: 'Quay lại danh sách thư viện' },
-  'picker.search_placeholder': { en: 'Search by code, description, supplier…', vi: 'Tìm theo mã, mô tả, nhà cung cấp…' },
-  'picker.result_count_suffix': { en: 'results',        vi: 'kết quả' },
-  'picker.col.code':       { en: 'Code',                vi: 'Mã' },
-  'picker.col.desc':       { en: 'Description',         vi: 'Mô tả' },
-  'picker.col.supplier':   { en: 'Supplier',            vi: 'Nhà cung cấp' },
-  'picker.col.price':      { en: 'Price',               vi: 'Giá' },
-  'picker.empty':          { en: 'No matching materials found in this library', vi: 'Không tìm thấy vật liệu phù hợp' },
+  'picker.menu_title': { en: 'Search from library', vi: 'Tìm từ thư viện' },
+  'picker.lib.npi': { en: 'NPI Material', vi: 'NPI Material' },
+  'picker.lib.sourcing': { en: 'Sourcing DB', vi: 'Sourcing DB' },
+  'picker.lib.raw': { en: 'Raw Materials (IFS)', vi: 'Raw Materials (IFS)' },
+  'picker.close': { en: 'Close', vi: 'Đóng' },
+  'picker.back': { en: 'Back to library list', vi: 'Quay lại danh sách thư viện' },
+  'picker.search_placeholder': {
+    en: 'Search by code, description, supplier…',
+    vi: 'Tìm theo mã, mô tả, nhà cung cấp…',
+  },
+  'picker.result_count_suffix': { en: 'results', vi: 'kết quả' },
+  'picker.col.code': { en: 'Code', vi: 'Mã' },
+  'picker.col.desc': { en: 'Description', vi: 'Mô tả' },
+  'picker.col.supplier': { en: 'Supplier', vi: 'Nhà cung cấp' },
+  'picker.col.price': { en: 'Price', vi: 'Giá' },
+  'picker.empty': {
+    en: 'No matching materials found in this library',
+    vi: 'Không tìm thấy vật liệu phù hợp',
+  },
   'picker.double_click_hint': { en: 'Double-click to select', vi: 'Nhấn đúp để chọn' },
-  'picker.footer_hint':    { en: 'Right-click a row in your calc to reopen this picker. Double-click a result to auto-fill code, IFS, description, and price.', vi: 'Chuột phải vào dòng trong calc để mở lại. Nhấn đúp vào kết quả để tự điền mã, IFS, mô tả và giá.' },
-
+  'picker.footer_hint': {
+    en: 'Right-click a row in your calc to reopen this picker. Double-click a result to auto-fill code, IFS, description, and price.',
+    vi: 'Chuột phải vào dòng trong calc để mở lại. Nhấn đúp vào kết quả để tự điền mã, IFS, mô tả và giá.',
+  },
 
   // ─── Chat (Phase 10A-10F) ───
   // v1.3 K1: 34 chat.* keys MOVED to client/src/i18n/domains/basis.js.
@@ -122,11 +129,8 @@ export const STRINGS = {
   // Boot order: main.jsx side-effect-imports the sales module which
   // calls registerStrings() to put them back into this dict.
 
-
-
   // ─── Hardware Devices + Connection Mode ───
   // v1.3 L3: 90 hw.* + mode.* keys MOVED to client/src/i18n/domains/mes.js.
-
 };
 
 /**

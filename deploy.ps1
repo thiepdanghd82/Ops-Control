@@ -101,6 +101,9 @@ try {
 $existingKey = if ($existingEnv.ContainsKey('OPS_TOTP_KEY')) {
   ($existingEnv['OPS_TOTP_KEY'] -replace '^\s*OPS_TOTP_KEY\s*=\s*','').Trim('"').Trim("'")
 } else { $null }
+$existingKioskKey = if ($existingEnv.ContainsKey('OPS_KIOSK_KEY')) {
+  ($existingEnv['OPS_KIOSK_KEY'] -replace '^\s*OPS_KIOSK_KEY\s*=\s*','').Trim('"').Trim("'")
+} else { $null }
 if ($existingEnv.Count -gt 0) {
   Write-Ok "✓  Captured $($existingEnv.Count) existing env line(s) for merge-back"
 }
@@ -109,6 +112,13 @@ if ($existingKey) {
 } else {
   Write-Warn "⚠  No existing OPS_TOTP_KEY — operator must set one in .env before boot."
   Write-Warn "    Without it, the server refuses to start in NODE_ENV=production."
+}
+# Sprint MES-2.3 — kiosk JWT signing key (mirrors OPS_TOTP_KEY semantics).
+if ($existingKioskKey) {
+  Write-Ok "✓  Preserving existing OPS_KIOSK_KEY ($($existingKioskKey.Length) chars)"
+} else {
+  Write-Warn "⚠  No existing OPS_KIOSK_KEY — operator must set one in .env before boot."
+  Write-Warn "    Without it, kiosk pairings can't be issued in NODE_ENV=production."
 }
 Write-Host ''
 

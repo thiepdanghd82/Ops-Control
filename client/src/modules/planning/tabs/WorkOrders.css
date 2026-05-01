@@ -1,17 +1,488 @@
-.work-orders { padding: 24px; }
-.wo-col-check { width: 40px; }
-.wo-section-title { margin-top: 24px; margin-bottom: 12px; font-size: 16px; color: #334155; }
-.wo-empty-cell { padding: 0 !important; }
-.wo-generate-section {
-  background: var(--color-slate-50); border: 1px solid var(--color-slate-200); border-radius: 12px;
-  padding: 20px; margin-bottom: 8px;
+/*
+ * MES-1.5 — Work Orders v2 styles.
+ *
+ * Plain CSS (NOT modules), Carbon-aligned via tokens.css. Class prefix
+ * `wo-` to avoid collision with other modules. NO inline styles —
+ * Sprint 11 ESLint rule.
+ */
+
+.wo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 24px;
 }
-.wo-generate-section h3 { font-size: 15px; color: var(--color-slate-700); margin-bottom: 12px; }
-.wo-actions { margin-top: 12px; display: flex; justify-content: flex-end; }
-tr.selected { background: var(--color-brand-50) !important; }
-.status-planned { background: #ede9fe; color: #6d28d9; }
-.status-released { background: var(--color-warning-100); color: var(--color-warning-500); }
-.status-new { background: var(--color-brand-50); color: var(--color-brand-600); }
-.status-in-progress { background: var(--color-warning-100); color: var(--color-warning-500); }
-.status-completed { background: #dcfce7; color: #166534; }
-.status-on-hold { background: var(--color-slate-100); color: var(--color-slate-500); }
+
+.wo-toolbar {
+  display: grid;
+  grid-template-columns: minmax(160px, 200px) minmax(220px, 1fr) repeat(2, minmax(140px, 160px));
+  gap: 12px;
+  align-items: end;
+}
+
+.wo-filter-select,
+.wo-filter-q,
+.wo-filter-date {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--cds-border-subtle, #c6c6c6);
+  border-radius: 4px;
+  background: var(--cds-field, #ffffff);
+  font-size: 14px;
+  color: var(--cds-text-primary, #161616);
+}
+
+.wo-filter-q {
+  padding: 0 12px;
+}
+
+.wo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.wo-table thead th {
+  text-align: left;
+  font-weight: 600;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--cds-border-strong, #8d8d8d);
+  background: var(--cds-layer-01, #f4f4f4);
+  white-space: nowrap;
+}
+
+.wo-table tbody tr {
+  cursor: pointer;
+  border-bottom: 1px solid var(--cds-border-subtle, #e0e0e0);
+  transition: background 0.05s ease-in-out;
+}
+
+.wo-table tbody tr:hover,
+.wo-table tbody tr:focus-visible {
+  background: var(--cds-layer-hover-01, #e8e8e8);
+  outline: 2px solid var(--cds-focus, #0f62fe);
+  outline-offset: -2px;
+}
+
+.wo-td {
+  padding: 10px 12px;
+  vertical-align: middle;
+}
+.wo-td-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.wo-td-code {
+  font-family: var(--cds-mono, ui-monospace, monospace);
+}
+
+.wo-status-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--cds-tag-background-gray, #e0e0e0);
+  color: var(--cds-tag-color-gray, #393939);
+}
+
+.wo-status-CREATED {
+  background: #e8e8e8;
+  color: #525252;
+}
+.wo-status-RELEASED {
+  background: #d0e2ff;
+  color: #0043ce;
+}
+.wo-status-SCHEDULED {
+  background: #c6dbf6;
+  color: #0043ce;
+}
+.wo-status-IN_PROGRESS {
+  background: #fef0c5;
+  color: #8a3800;
+}
+.wo-status-ON_HOLD {
+  background: #f1c21b;
+  color: #8a3800;
+}
+.wo-status-COMPLETED {
+  background: #defbe6;
+  color: #0d7d3a;
+}
+.wo-status-QC_RELEASED {
+  background: #c5e8d4;
+  color: #0d7d3a;
+}
+.wo-status-CLOSED {
+  background: #e0e0e0;
+  color: #525252;
+}
+.wo-status-CANCELLED {
+  background: #ffd7d9;
+  color: #a2191f;
+}
+
+.wo-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--cds-border-subtle, #e0e0e0);
+}
+
+.wo-pagination-summary {
+  font-size: 13px;
+  color: var(--cds-text-secondary, #525252);
+}
+
+.wo-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wo-pagination-page {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  min-width: 60px;
+  text-align: center;
+}
+
+.wo-pagination-size {
+  font-size: 13px;
+  color: var(--cds-text-secondary, #525252);
+}
+
+.wo-pagination-size select {
+  height: 28px;
+  font-size: 13px;
+  padding: 0 6px;
+  border: 1px solid var(--cds-border-subtle, #c6c6c6);
+  border-radius: 4px;
+}
+
+.wo-error {
+  padding: 16px 24px;
+  background: var(--cds-notification-error-background, #fff1f1);
+  border-left: 4px solid var(--cds-support-error, #da1e28);
+  color: var(--cds-text-primary, #161616);
+}
+
+/* ── Detail page ─────────────────────────────────────────────── */
+
+.wo-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 24px;
+}
+
+.wo-back {
+  align-self: flex-start;
+}
+
+.wo-detail-loading {
+  padding: 24px;
+  color: var(--cds-text-secondary, #525252);
+}
+
+.wo-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.wo-detail-code {
+  margin: 0;
+  font-family: var(--cds-mono, ui-monospace, monospace);
+  font-size: 22px;
+}
+
+.wo-detail-grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 24px;
+  row-gap: 6px;
+  margin: 0;
+}
+
+.wo-detail-grid dt {
+  font-weight: 600;
+  color: var(--cds-text-secondary, #525252);
+}
+
+.wo-detail-grid dd {
+  margin: 0;
+}
+
+.wo-detail-ops h3 {
+  margin: 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.wo-ops-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.wo-ops-table th {
+  text-align: left;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--cds-border-strong, #8d8d8d);
+  background: var(--cds-layer-01, #f4f4f4);
+}
+
+.wo-ops-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--cds-border-subtle, #e0e0e0);
+}
+
+.wo-ops-empty {
+  color: var(--cds-text-secondary, #525252);
+  font-style: italic;
+}
+
+.wo-status-op {
+  background: #e0e0e0;
+  color: #525252;
+}
+
+.wo-detail-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--cds-border-subtle, #e0e0e0);
+  font-size: 12px;
+  color: var(--cds-text-secondary, #525252);
+}
+
+@container (max-width: 700px) {
+  .wo-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ── MES-1.6 — release / cancel modals + audit timeline ─────── */
+
+.wo-detail-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.wo-btn-danger {
+  color: var(--cds-support-error, #da1e28);
+}
+.wo-btn-danger:hover {
+  background: #fff1f1;
+}
+
+.wo-modal-text {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--cds-text-primary, #161616);
+}
+.wo-modal-warning {
+  color: var(--cds-support-error, #a2191f);
+}
+
+.wo-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+.wo-modal-field > span:first-child {
+  font-weight: 600;
+  color: var(--cds-text-secondary, #525252);
+}
+.wo-modal-required {
+  color: var(--cds-support-error, #da1e28);
+}
+
+.wo-modal-textarea {
+  resize: vertical;
+  min-height: 70px;
+  padding: 8px 10px;
+  border: 1px solid var(--cds-border-subtle, #c6c6c6);
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.wo-modal-textarea:focus {
+  outline: 2px solid var(--cds-focus, #0f62fe);
+  outline-offset: -1px;
+}
+
+.wo-modal-counter {
+  align-self: flex-end;
+  font-size: 12px;
+  color: var(--cds-text-secondary, #525252);
+  font-variant-numeric: tabular-nums;
+}
+.wo-modal-counter-err {
+  color: var(--cds-support-error, #da1e28);
+}
+
+.wo-modal-error {
+  padding: 10px 12px;
+  background: #fff1f1;
+  border-left: 4px solid var(--cds-support-error, #da1e28);
+  font-size: 13px;
+  color: var(--cds-text-primary, #161616);
+}
+.wo-modal-error-hint {
+  display: inline;
+  color: var(--cds-text-secondary, #525252);
+}
+
+.wo-detail-audit h3 {
+  margin: 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.wo-audit-loading,
+.wo-audit-empty {
+  margin: 0;
+  color: var(--cds-text-secondary, #525252);
+  font-style: italic;
+  padding: 8px 0;
+}
+
+.wo-audit-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wo-audit-entry {
+  padding: 10px 12px;
+  border-left: 3px solid var(--cds-border-strong, #8d8d8d);
+  background: var(--cds-layer-01, #f4f4f4);
+  border-radius: 0 4px 4px 0;
+}
+
+.wo-audit-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  align-items: baseline;
+}
+
+.wo-audit-ts {
+  font-family: var(--cds-mono, ui-monospace, monospace);
+  color: var(--cds-text-secondary, #525252);
+  font-variant-numeric: tabular-nums;
+}
+
+.wo-audit-event {
+  font-weight: 600;
+  color: var(--cds-text-primary, #161616);
+}
+
+.wo-audit-actor {
+  color: var(--cds-text-secondary, #525252);
+}
+
+.wo-audit-detail {
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.wo-audit-detail summary {
+  cursor: pointer;
+  color: var(--cds-link-primary, #0f62fe);
+  user-select: none;
+}
+
+.wo-audit-json {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  background: var(--cds-layer-02, #ffffff);
+  border: 1px solid var(--cds-border-subtle, #e0e0e0);
+  border-radius: 3px;
+  overflow-x: auto;
+  font-family: var(--cds-mono, ui-monospace, monospace);
+  font-size: 12px;
+  white-space: pre;
+}
+
+/* ── MES-1.7 — Create + Add-Operation modals ────────────────── */
+
+.wo-create-cta {
+  white-space: nowrap;
+}
+
+.wo-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wo-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px 16px;
+}
+.wo-form-grid-md {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.wo-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.wo-form-label {
+  font-weight: 600;
+  color: var(--cds-text-secondary, #525252);
+}
+
+.wo-form-input {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--cds-border-subtle, #c6c6c6);
+  border-radius: 4px;
+  background: var(--cds-field, #ffffff);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--cds-text-primary, #161616);
+}
+.wo-form-input:focus {
+  outline: 2px solid var(--cds-focus, #0f62fe);
+  outline-offset: -1px;
+}
+
+.wo-form-field-err .wo-form-input {
+  border-color: var(--cds-support-error, #da1e28);
+}
+
+.wo-form-err {
+  font-size: 12px;
+  color: var(--cds-support-error, #da1e28);
+}
+
+select.wo-form-input {
+  padding: 0 8px;
+}
+textarea.wo-form-input {
+  height: auto;
+  padding: 8px 10px;
+  resize: vertical;
+}

@@ -148,6 +148,24 @@ user sees stale-chunk errors.**
    a second crash means the NEW bundle is broken — investigate, don't
    just ask for another reload.
 
+## Playwright e2e (MES-2.8, 2026-05-01)
+
+The kiosk PWA has a Playwright suite at `apps/kiosk/tests/e2e/` driving
+chromium against the planner server with an isolated `DATA_DIR` +
+SQLite path.
+
+- Run all specs: `npm run test:e2e`
+- Headed (debugging): `npm run test:e2e:headed`
+- One-time chromium binary install: `npx playwright install chromium`
+- Reports land in `playwright-report/` (gitignored); failures attach
+  screenshots + traces in `test-results/`.
+- Pre-condition: `npx playwright install chromium` must run once on
+  the dev box (Playwright won't auto-download). The `webServer` block
+  in `apps/kiosk/playwright.config.js` boots an isolated server with
+  the MES feature flag pre-enabled via `_globalSetup.js`, so no
+  manual flag-flip is needed.
+- Chromium-only this sprint; cross-browser deferred to MES-3.
+
 ## Common failure mode to avoid
 
 > "I edited the source, HMR refreshed my preview, I claimed the change is live."
