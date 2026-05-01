@@ -46,3 +46,21 @@ export const WO_OP_STATUSES = Object.freeze([
   'DONE',
   'ACCEPTED',
 ]);
+
+// MES-2.2 — operation-status state machine.
+// `scan` is the alias-event for `start_run` (first kiosk /scan auto-promotes
+// SETUP → RUNNING per PRD §10 edge #9). Both names are first-class events
+// so the pure transition fn accepts whichever the route layer decides to fire.
+export const OP_STATUS_EVENTS = Object.freeze([
+  'dispatch',
+  'start',
+  'start_run',
+  'scan',
+  'pause',
+  'resume',
+  'complete',
+  'complete_from_pause',
+  'accept',
+]);
+
+export const OP_TERMINAL_STATUSES = Object.freeze(['ACCEPTED']);
