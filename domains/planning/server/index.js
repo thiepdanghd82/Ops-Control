@@ -23,8 +23,13 @@ import { createWorkOrderRepo } from './repositories/workOrderRepo.js';
 import { createWoCodeGenerator } from './services/woCodeGenerator.js';
 import { createWorkOrderService } from './services/workOrderService.js';
 import { createKioskTokenService } from './services/kioskTokenService.js';
+import { createOperationService } from './services/operationService.js';
+import { createIdempotencyStore } from './services/idempotencyStore.js';
 import { createWorkOrderV2Router } from './routes/workOrderV2.js';
 import { createKioskV2Router } from './routes/kiosksV2.js';
+import { createOperationV2Router } from './routes/operationV2.js';
+import { createIdempotencyMiddleware } from './middleware/idempotency.js';
+import { createRequireKioskSession } from './middleware/requireKioskSession.js';
 import { readFeatureFlag } from './featureFlag.js';
 import { validateReasonCodeIntegrity } from './seedReasonCodes.js';
 
@@ -182,6 +187,50 @@ export function mountPlanning(app, opts = {}) {
   });
   app.use('/api/planning/v2/kiosks', kioskRouter);
   app.use('/api/v1/planning/v2/kiosks', kioskRouter);
+
+  // ─── MES-2.5 Kiosk operations (start/pause/resume/complete/scan) ──
+  // Mount AFTER kiosks (so /redeem keeps its auth-free handler) and
+  // BEFORE the parent /v2 auth handler — these endpoints are guarded by
+  // their OWN bearer-JWT middleware, NOT the user-session cookie auth.
+  const opService = createOperationService({ db, repo, audit });
+  const idempotencyStore = createIdempotencyStore({ db });
+  const requireKioskSession = createRequireKioskSession({ kioskService, db });
+  const idempotencyMiddleware = createIdempotencyMiddleware({ store: idempotencyStore });
+  const operationRouter = createOperationV2Router({
+    db,
+    repo,
+    service: opService,
+    requireKioskSession,
+    idempotencyMiddleware,
+  });
+  app.use('/api/planning/v2/operations', operationRouter);
+  app.use('/api/v1/planning/v2/operations', operationRouter);
+
+  // Idempotency-ledger prune. 24 h cadence (the rows are 12 h-old at
+  // most by then; a sweep-every-day keeps the ledger size flat). Mirrors
+  // the chat-message prune pattern at server/index.js:868. .unref() so
+  // we never hold the process alive on shutdown. First run is immediate
+  // so a long-running dev server doesn't accumulate stale rows.
+  const runLedgerPrune = () => {
+    try {
+      const removed = idempotencyStore.prune();
+      if (removed > 0) {
+        audit({
+          ts: new Date().toISOString(),
+          event: 'IDEMPOTENCY_PRUNE',
+          user: '-',
+          ip: '-',
+          detail: JSON.stringify({ rows_removed: removed }),
+        });
+      }
+    } catch (e) {
+      console.warn('[planning] idempotency prune failed:', e.message);
+    }
+  };
+  runLedgerPrune();
+  if (typeof opts.skipCron !== 'boolean' || !opts.skipCron) {
+    setInterval(runLedgerPrune, 24 * 3600 * 1000).unref();
+  }
 
   // Mount BEFORE the legacy /api/planning router (registration order =
   // Express match order). Legacy planning has no /v2/ children, so this
