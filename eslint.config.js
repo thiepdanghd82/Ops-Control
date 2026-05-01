@@ -109,11 +109,27 @@ export default [
     },
   },
   {
-    files: ['apps/kiosk/vite.config.js'],
+    files: ['apps/kiosk/vite.config.js', 'apps/kiosk/playwright.config.js'],
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
       globals: { ...globals.node, ...globals.es2024 },
+    },
+  },
+  // Playwright e2e specs — mixed Node + browser scope. The test body runs
+  // in Node (process, Buffer, console); page.evaluate callbacks run in
+  // the browser (window, document, localStorage). Both global sets are
+  // legitimate references; eslint can't distinguish, so allow both.
+  {
+    files: ['apps/kiosk/tests/e2e/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2024,
+      sourceType: 'module',
+      globals: { ...globals.node, ...globals.browser, ...globals.es2024 },
+    },
+    rules: {
+      'no-empty-pattern': 'off',
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
   },
   // 4. Desktop (Electron main process — CJS)

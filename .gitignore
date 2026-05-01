@@ -48,3 +48,8 @@ npm-debug.log*
 /users.json
 /README_FIRST_LOGIN.txt
 client/public/help/*.docx
+
+# Sprint MES-2.8 — Playwright e2e artefacts.
+playwright-report/
+test-results/
+.playwright-tmp/

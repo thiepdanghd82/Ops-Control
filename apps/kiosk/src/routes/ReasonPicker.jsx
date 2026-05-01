@@ -45,6 +45,7 @@ export default function ReasonPicker({ onCancel, onPick }) {
             <button
               key={c.code}
               type="button"
+              data-testid={`reason-tile-${c.code}`}
               className="kiosk-reason-tile"
               onClick={() => onPick(c.code)}
             >

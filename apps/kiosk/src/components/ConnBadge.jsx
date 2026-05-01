@@ -40,7 +40,7 @@ export default function ConnBadge() {
     label = !online ? t('kiosk.conn.offline') : t('kiosk.conn.queued', { n: c.pending });
 
   return (
-    <div className={`kiosk-conn kiosk-conn-${state}`}>
+    <div className={`kiosk-conn kiosk-conn-${state}`} data-testid="conn-badge" data-state={state}>
       <button type="button" className="kiosk-conn-pill" onClick={() => setOpen((v) => !v)}>
         <span className="kiosk-conn-dot" /> {label}
       </button>

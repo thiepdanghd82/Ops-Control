@@ -119,13 +119,15 @@ export default function OpDetail({ opId }) {
   };
 
   return (
-    <main className="kiosk-screen kiosk-shell">
+    <main className="kiosk-screen kiosk-shell" data-testid="op-detail">
       <header className="kiosk-shell-header">
         <button type="button" className="kiosk-btn kiosk-btn-secondary" onClick={back}>
           {t('kiosk.op.back')}
         </button>
         <h1>{op.wo_code}</h1>
-        <span className={`kiosk-status kiosk-status-${op.status}`}>{op.status}</span>
+        <span className={`kiosk-status kiosk-status-${op.status}`} data-testid="op-status">
+          {op.status}
+        </span>
       </header>
 
       <section className="kiosk-card">
@@ -136,24 +138,40 @@ export default function OpDetail({ opId }) {
 
       <section className="kiosk-card kiosk-card-actions">
         {op.status === 'DISPATCHED' && (
-          <BigButton variant="primary" disabled={busy} onClick={() => act('start')}>
+          <BigButton
+            variant="primary"
+            disabled={busy}
+            onClick={() => act('start')}
+            data-testid="op-btn-start"
+          >
             {t('kiosk.op.start')}
           </BigButton>
         )}
         {op.status === 'SETUP' && (
-          <BigButton variant="primary" disabled={busy} onClick={() => act('start_run')}>
+          <BigButton
+            variant="primary"
+            disabled={busy}
+            onClick={() => act('start_run')}
+            data-testid="op-btn-begin-run"
+          >
             {t('kiosk.op.begin_run')}
           </BigButton>
         )}
         {op.status === 'RUNNING' && (
           <>
-            <BigButton variant="danger" disabled={busy} onClick={() => setPickReason(true)}>
+            <BigButton
+              variant="danger"
+              disabled={busy}
+              onClick={() => setPickReason(true)}
+              data-testid="op-btn-pause"
+            >
               {t('kiosk.op.pause')}
             </BigButton>
             <BigButton
               variant="primary"
               disabled={busy}
               onClick={() => setCompleting({ qty: op.qty_planned ?? 0, scrap: 0 })}
+              data-testid="op-btn-complete"
             >
               {t('kiosk.op.complete')}
             </BigButton>
@@ -161,13 +179,19 @@ export default function OpDetail({ opId }) {
         )}
         {op.status === 'PAUSED' && (
           <>
-            <BigButton variant="primary" disabled={busy} onClick={() => act('resume')}>
+            <BigButton
+              variant="primary"
+              disabled={busy}
+              onClick={() => act('resume')}
+              data-testid="op-btn-resume"
+            >
               {t('kiosk.op.resume')}
             </BigButton>
             <BigButton
               variant="secondary"
               disabled={busy}
               onClick={() => setCompleting({ qty: op.qty_planned ?? 0, scrap: 0 })}
+              data-testid="op-btn-complete"
             >
               {t('kiosk.op.complete')}
             </BigButton>
@@ -264,6 +288,7 @@ function CompleteModal({ initial, onCancel, onConfirm }) {
           </BigButton>
           <BigButton
             variant="primary"
+            data-testid="op-btn-complete-confirm"
             onClick={() =>
               onConfirm({ qty_done: qty, scrap_count: scrap, notes: notes || undefined })
             }

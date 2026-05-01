@@ -7,13 +7,12 @@
  *   - total wall-clock < 30 000 ms (FR-12)
  *   - logical button-click count ≤ 12 (FR-12)
  *
- * Substitute for the Playwright spec the plan asked for: this repo
- * doesn't have Playwright as a devDep, and adding it would balloon the
- * sprint scope (browser binaries + ~50 MB install). The Node-based
- * version exercises the same Express pipeline, the same RFC-7807 error
- * contract, and the same state-machine transitions. UI render time is
- * NOT measured here; that requires a real browser harness landed in a
- * follow-up sprint. See TODO at the bottom of the file.
+ * Node-based timed test retained as a fast contract smoke. It exercises
+ * the same Express pipeline, RFC-7807 error contract, and state-machine
+ * transitions as the kiosk Playwright suite (apps/kiosk/tests/e2e/),
+ * but doesn't measure UI render time. Sprint MES-2.8 (2026-05-01)
+ * landed Playwright; the full DOM-driven port of THIS scenario lives
+ * in MES-3 follow-up ticket KIOSK-007.
  *
  * Click model:
  *   1. open Create modal      (1)
@@ -156,8 +155,8 @@ test('FR-12 — create + add op + release happy path < 30s, ≤12 clicks', async
   assert.ok(clicks <= CLICK_BUDGET, `click count ${clicks} exceeds budget of ${CLICK_BUDGET}`);
 });
 
-// TODO(playwright-sprint): when Playwright is added as a devDep, port
-// this scenario to client/src/modules/planning/v2/tests/wo-create-flow
-// .spec.js — same script, but driving real DOM events through the
-// modal forms so we also catch UI-only regressions (focus management,
-// disabled-button state during pending, modal close on success).
+// MES-2.8 status: Playwright is now installed (devDep). The full DOM-
+// driven port of this scenario tracks under MES-3 ticket KIOSK-007.
+// Until then, this Node-based test stays the fast pre-commit smoke for
+// the WO create→add-op→release pipeline and the kiosk specs cover the
+// shop-floor flow.

@@ -61,10 +61,11 @@ export default function DispatchList() {
         </div>
       )}
       {items.length > 0 && (
-        <ul className="kiosk-list" role="list">
+        <ul className="kiosk-list" data-testid="dispatch-list" role="list">
           {items.map((op, i) => (
             <li
               key={op.id}
+              data-testid={`op-row-${op.wo_code}`}
               className={`kiosk-row${i === 0 ? ' kiosk-row-top' : ''}${isStale(op.last_pulse_at) ? ' kiosk-row-stale' : ''}`}
               onClick={() => go(op.id)}
               onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && go(op.id)}
