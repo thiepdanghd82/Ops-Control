@@ -2,6 +2,102 @@
 
 All notable changes to Ops Control. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.4.0-mes-extension] — Sprint MES-1 (Work Order Core)
+
+Branch `feature/mes-1-work-order` · 7 commits · 6,110 LOC added · 107 planning-domain tests across 38 suites, all green. Feature-flagged behind `mes.workOrder.enabled` (default `false` — production fail-closed). See `docs/MES_EXTENSION_PLAN.md` §3.1 + §4 for sprint scope and roadmap.
+
+### Added
+
+- **feat(planning)**: `work_order` + `work_order_op` SQLite schema with inline CHECK constraints (status enum, op_type enum, priority 1–9), 5 indexes, + `wo_code_seq` counter table for monotonic per-month WO codes (commits `9887e74`, `73ae753`).
+- **feat(planning)**: pure-function state machine `workOrderTransition` encoding 9 states + 13 valid edges + 9 self-loops + 59 invalid pairs (commit `b6a9b84`).
+- **feat(planning)**: factory-DI'd `workOrderRepo` + `workOrderService` + `woCodeGenerator` with `db.transaction`-wrapped state mutations and fail-closed audit injection (commit `73ae753`).
+- **feat(planning)**: 8 v2 REST endpoints under `/api/planning/v2/work-orders/*` (PRD §7 listed 7; +1 audit-fetch endpoint added in MES-1.6). All errors emit `application/problem+json` (RFC-7807). Mounted via `mountPlanning(app)` factory inside the `mes.workOrder.enabled` feature flag (commits `7e0400f`, `2de0ee9`).
+- **feat(planning)**: planner UI v2 — list page (filter + pagination URL-bound) + detail page + audit timeline + 4 mutation modals (Create / Add-Op / Release / Cancel). Reuses `Shared/Modal.jsx` primitive; flag-gated via shell pattern that preserves the legacy Order→WO generator UI when `mes.workOrder.enabled` is off (commits `0b25504`, `2de0ee9`, `051627a`).
+- **feat(infra)**: `server/data/Library/SystemConfig/feature-flags.json` convention for staged-rollout server flags. Operator-managed (file gitignored under `server/data/`).
+
+### Endpoints (8 new)
+
+- `POST /api/planning/v2/work-orders` — create (planner+)
+- `GET  /api/planning/v2/work-orders/:id` — detail
+- `GET  /api/planning/v2/work-orders` — list with filter + pagination
+- `PATCH /api/planning/v2/work-orders/:id` — edit header (forbidden_fields guard)
+- `POST /api/planning/v2/work-orders/:id/release` — CREATED → RELEASED
+- `POST /api/planning/v2/work-orders/:id/cancel` — → CANCELLED (reason required)
+- `POST /api/planning/v2/work-orders/:id/operations` — attach op
+- `GET  /api/planning/v2/config` — flag-discovery for client (returns 404 when flag off)
+- `GET  /api/planning/v2/work-orders/:id/audit` — per-WO audit timeline (added MES-1.6)
+
+### Flags
+
+- `mes.workOrder.enabled` (default `false` — production fail-closed). When off: v2 endpoints return 404, sidebar tab renders the legacy generator UI. Toggle in `server/data/Library/SystemConfig/feature-flags.json`; restart required.
+
+### Tests
+
+- 107 planning-domain tests across 38 suites, all green:
+  - 2 unit (state machine + code generator)
+  - 3 integration (schema, service, routes auth)
+  - 9 contract (one per v2 endpoint + harness + audit + config)
+  - 1 e2e timed (FR-12 — create + add-op + release in 52.6 ms / 6 clicks vs budgets 30 000 ms / 12 clicks)
+- Per-file production code coverage: 96–100% line, 100% functions on state machine + service + repo + code generator + errors.
+- Total npm test rolled from 691 → 815+ across the 7 commits.
+
+### Performance budget verification
+
+| Endpoint                                      | p50     | p95     | p99     | Budget   |
+| --------------------------------------------- | ------- | ------- | ------- | -------- |
+| `GET /v2/work-orders?limit=50`                | 0.72 ms | 1.65 ms | 4.37 ms | <1500 ms |
+| `GET /v2/work-orders?status=CREATED&limit=50` | 0.62 ms | 0.78 ms | 1.43 ms | <1500 ms |
+| `GET /v2/work-orders/:id`                     | 0.42 ms | 0.68 ms | 0.90 ms | <1500 ms |
+| `GET /v2/work-orders/:id/audit`               | 0.43 ms | 0.52 ms | 0.81 ms | n/a      |
+| `POST /v2/work-orders/:id/release`            | 0.68 ms | 1.01 ms | 2.72 ms | n/a      |
+
+Bundle delta gzipped: ~7 KB for the entire feature-flagged Work Orders v2 UI.
+
+### Deviations from PRD
+
+- `requireTabAccess` deferred to Sprint SU (catalog entry landed; enforcement pending the string-`planner` role decision).
+- Detail navigation is in-tab state (no router); list filters URL-bound. TODO(router-migration) tracked.
+- 1 audit-fetch endpoint added (8 endpoints vs 7 in PRD §7) — see commit `2de0ee9` body for the Option β rationale.
+- Browser-render smoke deferred to operator manual checklist (see Manual smoke checklist below).
+- Playwright e2e substituted with Node-based timed test exercising the same Express pipeline. UI-render coverage gap documented as TODO(playwright-sprint).
+
+### References
+
+- `docs/MES_EXTENSION_PLAN.md` §3.1 (Production Control core), §4 sprint roadmap
+- `docs/MES_PROMPTING_GUIDE.md` §4.1 MES-1 prompt template
+- `docs/MES_ANTIGRAVITY_PROMPTS.md` (Antigravity execution flow used for the sprint)
+- `docs/MES_ANTIGRAVITY_PROMPTS_SPRINT_MES-2.md` (next-sprint launch prompt, generated at retro)
+- ADR-0001 (on-prem stack — drove every "stay simple" decision)
+
+### Manual smoke checklist (must pass before staging flip)
+
+1. Login as planner role; toggle `mes.workOrder.enabled` ON → restart server.
+2. Navigate Planning → Work Orders → see v2 list (NOT legacy generator).
+3. Apply filter `status=CREATED` → URL updates to `?status=CREATED`; refresh page → filter persists.
+4. Click "+ Create work order" → fill 5 required fields → submit → modal closes, auto-navigate to detail.
+5. Click "+ Add operation" → fill `op_type=FLEXO` + `work_centre_no=WC-FX-01` → submit → ops table shows seq=10.
+6. Click Release → confirm → status badge flips to RELEASED; audit timeline shows `WO_RELEASE`, `WO_OP_ADD`, `WO_CREATE` newest-first.
+7. Toggle locale EN ↔ VN → all visible strings switch (no key leaks).
+8. Toggle flag OFF → restart → see legacy generator UI in the same tab slot.
+
+### Known follow-up (post-MES-1)
+
+- TODO(router-migration) — adopt a real router; replace `useUrlFilters` with native query-string sync.
+- TODO(playwright-sprint) — port `wo-create-flow.timed.test.js` to a real DOM Playwright spec.
+- TODO(i18n-sprint) — bilingualize `_tab_catalog` labels.
+- Consolidate the inline RFC-7807 versions of `requireRole` / `requireModule` in `workOrderV2.js` with the project-wide middleware in Sprint SU.
+- Add generated column + index for `audit_log.detail.wo_id` before MES-3's `production_event` ingest scales the table.
+
+### Commits
+
+- `9887e74` — schema (MES-1.1)
+- `b6a9b84` — state machine (MES-1.2)
+- `73ae753` — repo + service + code generator (MES-1.3)
+- `7e0400f` — REST routes v2 (MES-1.4)
+- `0b25504` — planner UI v2 read-only (MES-1.5)
+- `2de0ee9` — release/cancel modals + audit timeline (MES-1.6)
+- `051627a` — create + add-op modals (MES-1.7)
+
 ## [1.3.0] — 2026-04-30 (GA, post-GA fix pass — same day)
 
 Same-day re-release after a focused 6-fix sweep landed in response to install-time issues + the post-GA regression sweep. Tag `v1.3.0` re-pointed to the fix commit.
