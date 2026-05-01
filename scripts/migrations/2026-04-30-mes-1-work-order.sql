@@ -13,6 +13,7 @@
 -- + INSERT OR IGNORE. Re-running on a populated DB is a no-op.
 --
 -- DOWN (manual):
+--     DROP TABLE wo_code_seq;
 --     DROP TABLE work_order_op;
 --     DROP TABLE work_order;
 --     DELETE FROM _migration_state WHERE dataset='work_order';
@@ -73,5 +74,13 @@ CREATE TABLE IF NOT EXISTS work_order_op (
 );
 CREATE INDEX IF NOT EXISTS idx_woop_status ON work_order_op(status);
 CREATE INDEX IF NOT EXISTS idx_woop_wc     ON work_order_op(work_centre_no, planned_start);
+
+-- Counter table for woCodeGenerator (added MES-1.3 — retro-amend of this
+-- migration; see PR for context).
+CREATE TABLE IF NOT EXISTS wo_code_seq (
+  year_month  TEXT PRIMARY KEY,
+  last_n      INTEGER NOT NULL DEFAULT 0,
+  updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
 INSERT OR IGNORE INTO _migration_state (dataset, mode) VALUES ('work_order', 'sqlite');

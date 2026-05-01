@@ -267,4 +267,14 @@ CREATE TABLE IF NOT EXISTS work_order_op (
 CREATE INDEX IF NOT EXISTS idx_woop_status ON work_order_op(status);
 CREATE INDEX IF NOT EXISTS idx_woop_wc     ON work_order_op(work_centre_no, planned_start);
 
+-- Per-month monotonic counter used by woCodeGenerator (MES-1.3) to mint
+-- WO codes of the form WO-YYYY-MM-NNNNN. Counter resets at month
+-- boundary (UTC). Read+update inside the same db.transaction() so two
+-- concurrent generates can't collide on the same NNNNN.
+CREATE TABLE IF NOT EXISTS wo_code_seq (
+  year_month  TEXT PRIMARY KEY,
+  last_n      INTEGER NOT NULL DEFAULT 0,
+  updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 INSERT OR IGNORE INTO _migration_state (dataset, mode) VALUES ('work_order', 'sqlite');
