@@ -14,17 +14,20 @@ import WorkOrderOpsTable from './WorkOrderOpsTable';
 import AuditTimeline from './AuditTimeline';
 import ReleaseModal from './ReleaseModal';
 import CancelModal from './CancelModal';
+import AddOperationModal from './AddOperationModal';
 import { fetchWorkOrderDetail } from './api';
 
 const CANCELLABLE = new Set(['CREATED', 'RELEASED', 'SCHEDULED', 'IN_PROGRESS', 'ON_HOLD']);
+const TERMINAL = new Set(['COMPLETED', 'QC_RELEASED', 'CLOSED', 'CANCELLED']);
 
 export default function WorkOrderDetail({ id, onBack }) {
   const { t } = useI18n();
   const fetcher = useCallback((signal) => fetchWorkOrderDetail(id, signal), [id]);
-  const { data, setData, loading, error } = useAbortableFetch(fetcher, [id]);
+  const { data, setData, loading, error, refresh } = useAbortableFetch(fetcher, [id]);
 
   const [showRelease, setShowRelease] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
+  const [showAddOp, setShowAddOp] = useState(false);
   const [auditKey, setAuditKey] = useState(0);
 
   function handleMutationSuccess(updated) {
@@ -66,7 +69,14 @@ export default function WorkOrderDetail({ id, onBack }) {
   const opsCount = data.operations?.length ?? 0;
   const canRelease = data.status === 'CREATED';
   const canCancel = CANCELLABLE.has(data.status);
+  const canAddOp = !TERMINAL.has(data.status);
   const releaseDisabled = canRelease && opsCount < 1;
+
+  function handleOpAdded() {
+    setShowAddOp(false);
+    refresh();
+    setAuditKey((k) => k + 1);
+  }
 
   return (
     <div className="wo-detail">
@@ -117,7 +127,18 @@ export default function WorkOrderDetail({ id, onBack }) {
       </dl>
 
       <section className="wo-detail-ops">
-        <h3>{t('planning.workOrder.detail.operations')}</h3>
+        <div className="wo-section-header">
+          <h3>{t('planning.workOrder.detail.operations')}</h3>
+          {canAddOp ? (
+            <button
+              type="button"
+              className="op-btn op-btn-secondary"
+              onClick={() => setShowAddOp(true)}
+            >
+              + {t('planning.workOrder.addOp.submit')}
+            </button>
+          ) : null}
+        </div>
         <WorkOrderOpsTable operations={data.operations} />
       </section>
 
@@ -157,6 +178,13 @@ export default function WorkOrderDetail({ id, onBack }) {
           wo={data}
           onClose={() => setShowCancel(false)}
           onSuccess={handleMutationSuccess}
+        />
+      ) : null}
+      {showAddOp ? (
+        <AddOperationModal
+          wo={data}
+          onClose={() => setShowAddOp(false)}
+          onSuccess={handleOpAdded}
         />
       ) : null}
     </div>

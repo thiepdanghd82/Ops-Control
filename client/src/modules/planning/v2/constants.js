@@ -19,3 +19,13 @@ export const WO_STATUSES = Object.freeze([
   'CLOSED',
   'CANCELLED',
 ]);
+
+export const WO_OP_TYPES = Object.freeze([
+  'PRE_PRESS',
+  'FLEXO',
+  'DIE_CUT_FLATBED',
+  'DIE_CUT_ROTARY',
+  'LAMINATE',
+  'PACK',
+  'OUTSOURCE',
+]);

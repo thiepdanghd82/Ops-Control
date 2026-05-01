@@ -84,3 +84,25 @@ export async function cancelWorkOrder(id, { reason }) {
   if (!r.ok) throw await parseRfcError(r);
   return r.json();
 }
+
+export async function createWorkOrder(payload) {
+  const r = await fetch('/api/planning/v2/work-orders', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw await parseRfcError(r);
+  return r.json();
+}
+
+export async function addOperation(woId, payload) {
+  const r = await fetch(`/api/planning/v2/work-orders/${woId}/operations`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw await parseRfcError(r);
+  return r.json();
+}

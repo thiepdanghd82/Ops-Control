@@ -5,10 +5,11 @@
  * via the project's `useAbortableFetch` pattern (no SWR yet — see
  * useUrlFilters.js JSDoc for the router-migration TODO).
  */
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useAbortableFetch } from '../../../hooks/useAbortableFetch';
 import { useI18n } from '../../../utils/useI18n';
 import WorkOrderTable from './WorkOrderTable';
+import CreateWorkOrderModal from './CreateWorkOrderModal';
 import { useUrlFilters } from './useUrlFilters';
 import { fetchWorkOrderList } from './api';
 import { WO_STATUSES } from './constants';
@@ -16,9 +17,17 @@ import { WO_STATUSES } from './constants';
 export default function WorkOrderList({ onSelect }) {
   const { t } = useI18n();
   const [filters, setFilter] = useUrlFilters();
+  const [showCreate, setShowCreate] = useState(false);
 
   const fetcher = useCallback((signal) => fetchWorkOrderList(filters, signal), [filters]);
-  const { data, loading, error } = useAbortableFetch(fetcher, [filters]);
+  const { data, loading, error, refresh } = useAbortableFetch(fetcher, [filters]);
+
+  function handleCreated(wo) {
+    setShowCreate(false);
+    refresh();
+    // Auto-navigate to the new WO so FR-12 happy path stays under 30s.
+    onSelect(wo.id);
+  }
 
   const total = data?.total ?? 0;
   const limit = filters.pageSize;
@@ -30,6 +39,13 @@ export default function WorkOrderList({ onSelect }) {
   return (
     <div className="wo-list">
       <div className="wo-toolbar">
+        <button
+          type="button"
+          className="op-btn op-btn-primary wo-create-cta"
+          onClick={() => setShowCreate(true)}
+        >
+          + {t('planning.workOrder.create_cta')}
+        </button>
         <select
           className="wo-filter-select"
           value={filters.status}
@@ -105,6 +121,10 @@ export default function WorkOrderList({ onSelect }) {
           </label>
         </div>
       </div>
+
+      {showCreate ? (
+        <CreateWorkOrderModal onClose={() => setShowCreate(false)} onSuccess={handleCreated} />
+      ) : null}
     </div>
   );
 }

@@ -131,4 +131,50 @@ registerStrings({
   'planning.workOrder.audit.event.WO_RELEASE': { en: 'Released', vi: 'Phát lệnh' },
   'planning.workOrder.audit.event.WO_CANCEL': { en: 'Cancelled', vi: 'Huỷ lệnh' },
   'planning.workOrder.audit.event.WO_OP_ADD': { en: 'Operation added', vi: 'Thêm công đoạn' },
+
+  // Sprint MES-1.7 — create + add-operation modals.
+  'planning.workOrder.create.title': { en: 'Create work order', vi: 'Tạo lệnh sản xuất' },
+  'planning.workOrder.create.submit': { en: 'Create', vi: 'Tạo' },
+  'planning.workOrder.create.uom': { en: 'Unit of measure', vi: 'Đơn vị tính' },
+  'planning.workOrder.create.priority': { en: 'Priority (1–9)', vi: 'Ưu tiên (1–9)' },
+  'planning.workOrder.create.code_optional': {
+    en: 'Code (optional, auto-generated)',
+    vi: 'Mã LSX (không bắt buộc, server tự sinh)',
+  },
+  'planning.workOrder.create.code_placeholder': {
+    en: 'Leave blank for WO-YYYY-MM-NNNNN',
+    vi: 'Để trống để tự sinh WO-YYYY-MM-NNNNN',
+  },
+  'planning.workOrder.create.rfq_no': { en: 'RFQ # (optional)', vi: 'Mã RFQ (không bắt buộc)' },
+  'planning.workOrder.create.error.required': { en: 'Required', vi: 'Bắt buộc' },
+  'planning.workOrder.create.error.too_long': { en: 'Too long', vi: 'Quá dài' },
+  'planning.workOrder.create.error.positive_number': { en: 'Must be > 0', vi: 'Phải > 0' },
+  'planning.workOrder.create.error.past': {
+    en: 'Cannot be in the past',
+    vi: 'Không được trong quá khứ',
+  },
+  'planning.workOrder.create.error.range_1_9': { en: 'Must be 1–9', vi: 'Phải từ 1 đến 9' },
+  'planning.workOrder.create.error.invalid': { en: 'Invalid', vi: 'Không hợp lệ' },
+  'planning.workOrder.addOp.title': {
+    en: 'Add operation to {code}',
+    vi: 'Thêm công đoạn vào {code}',
+  },
+  'planning.workOrder.addOp.suggested_seq': {
+    en: 'Sequence: {seq} (auto)',
+    vi: 'Thứ tự: {seq} (tự động)',
+  },
+  'planning.workOrder.addOp.submit': { en: 'Add operation', vi: 'Thêm công đoạn' },
+  'planning.workOrder.addOp.planned_end': { en: 'Planned end', vi: 'Kết thúc KH' },
+  'planning.workOrder.addOp.setup_minutes': { en: 'Setup minutes', vi: 'Phút setup' },
+  'planning.workOrder.addOp.run_minutes': { en: 'Run minutes', vi: 'Phút chạy' },
+  'planning.workOrder.addOp.notes': { en: 'Notes (optional)', vi: 'Ghi chú (không bắt buộc)' },
+  'planning.workOrder.addOp.error.required': { en: 'Required', vi: 'Bắt buộc' },
+  'planning.workOrder.addOp.error.too_long': { en: 'Too long', vi: 'Quá dài' },
+  'planning.workOrder.addOp.error.end_before_start': {
+    en: 'End must be after start',
+    vi: 'Kết thúc phải sau bắt đầu',
+  },
+  'planning.workOrder.addOp.error.non_negative': { en: 'Must be ≥ 0', vi: 'Phải ≥ 0' },
+  'planning.workOrder.addOp.error.invalid': { en: 'Invalid', vi: 'Không hợp lệ' },
+  'planning.workOrder.addOp.error.enum': { en: 'Pick a valid type', vi: 'Chọn loại hợp lệ' },
 });
