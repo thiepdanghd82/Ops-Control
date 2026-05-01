@@ -21,6 +21,7 @@ import { createWoCodeGenerator } from './services/woCodeGenerator.js';
 import { createWorkOrderService } from './services/workOrderService.js';
 import { createWorkOrderV2Router } from './routes/workOrderV2.js';
 import { readFeatureFlag } from './featureFlag.js';
+import { validateReasonCodeIntegrity } from './seedReasonCodes.js';
 
 /**
  * @param {import('express').Express} app
@@ -34,6 +35,16 @@ export function mountPlanning(app, opts = {}) {
   const auth = opts.authMiddleware || defaultAuthMiddleware;
 
   const db = getDb();
+
+  // MES-2.1 — surface reason_code drift at boot. Warn-only; the kiosk
+  // surface (MES-2.5+) gracefully degrades when codes are missing
+  // (operator can't pause-with-reason until fixed) but the WO surface
+  // is unaffected, so we don't gate the mount on this.
+  const issues = validateReasonCodeIntegrity(db);
+  if (issues.length > 0) {
+    console.warn('[planning] reason_code integrity warnings:\n  - ' + issues.join('\n  - '));
+  }
+
   const repo = createWorkOrderRepo(db);
   const codeGen = createWoCodeGenerator(db);
   const auditStmt = db.prepare(
