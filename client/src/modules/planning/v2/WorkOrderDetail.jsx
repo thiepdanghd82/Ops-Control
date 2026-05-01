@@ -1,19 +1,40 @@
 /**
- * MES-1.5 — Work Order detail page (read-only).
+ * MES-1.5 — Work Order detail page.
+ * MES-1.6 — release / cancel buttons + modals + audit timeline.
  *
- * Header card + operations sub-table + footer audit fields. No action
- * buttons in this sprint; release/cancel modals land in MES-1.6.
+ * Action buttons are status-gated client-side; the server enforces the
+ * same rules (PRD §8 state machine + AC-1.6.3/4). On a successful
+ * mutation we update the in-memory `data` AND bump `auditRefreshKey` so
+ * the timeline below refetches without a full page reload.
  */
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useAbortableFetch } from '../../../hooks/useAbortableFetch';
 import { useI18n } from '../../../utils/useI18n';
 import WorkOrderOpsTable from './WorkOrderOpsTable';
+import AuditTimeline from './AuditTimeline';
+import ReleaseModal from './ReleaseModal';
+import CancelModal from './CancelModal';
 import { fetchWorkOrderDetail } from './api';
+
+const CANCELLABLE = new Set(['CREATED', 'RELEASED', 'SCHEDULED', 'IN_PROGRESS', 'ON_HOLD']);
 
 export default function WorkOrderDetail({ id, onBack }) {
   const { t } = useI18n();
   const fetcher = useCallback((signal) => fetchWorkOrderDetail(id, signal), [id]);
-  const { data, loading, error } = useAbortableFetch(fetcher, [id]);
+  const { data, setData, loading, error } = useAbortableFetch(fetcher, [id]);
+
+  const [showRelease, setShowRelease] = useState(false);
+  const [showCancel, setShowCancel] = useState(false);
+  const [auditKey, setAuditKey] = useState(0);
+
+  function handleMutationSuccess(updated) {
+    // updated is the WO header shape from /release or /cancel; merge with
+    // existing operations[] so the ops table doesn't blink.
+    setData((prev) => ({ ...prev, ...updated, operations: prev?.operations || [] }));
+    setShowRelease(false);
+    setShowCancel(false);
+    setAuditKey((k) => k + 1);
+  }
 
   if (loading) {
     return (
@@ -42,6 +63,11 @@ export default function WorkOrderDetail({ id, onBack }) {
     );
   }
 
+  const opsCount = data.operations?.length ?? 0;
+  const canRelease = data.status === 'CREATED';
+  const canCancel = CANCELLABLE.has(data.status);
+  const releaseDisabled = canRelease && opsCount < 1;
+
   return (
     <div className="wo-detail">
       <button type="button" className="op-btn op-btn-ghost wo-back" onClick={onBack}>
@@ -53,6 +79,28 @@ export default function WorkOrderDetail({ id, onBack }) {
         <span className={`wo-status-pill wo-status-${data.status}`}>
           {t(`planning.workOrder.status.${data.status}`)}
         </span>
+        <div className="wo-detail-actions">
+          {canRelease ? (
+            <button
+              type="button"
+              className="op-btn op-btn-primary"
+              onClick={() => setShowRelease(true)}
+              disabled={releaseDisabled}
+              title={releaseDisabled ? t('planning.workOrder.release.needs_ops') : undefined}
+            >
+              {t('planning.workOrder.release.submit')}
+            </button>
+          ) : null}
+          {canCancel ? (
+            <button
+              type="button"
+              className="op-btn op-btn-ghost wo-btn-danger"
+              onClick={() => setShowCancel(true)}
+            >
+              {t('planning.workOrder.cancel.submit')}
+            </button>
+          ) : null}
+        </div>
       </header>
 
       <dl className="wo-detail-grid">
@@ -73,6 +121,11 @@ export default function WorkOrderDetail({ id, onBack }) {
         <WorkOrderOpsTable operations={data.operations} />
       </section>
 
+      <section className="wo-detail-audit">
+        <h3>{t('planning.workOrder.audit.heading')}</h3>
+        <AuditTimeline woId={data.id} refreshKey={auditKey} />
+      </section>
+
       <footer className="wo-detail-footer">
         <span>
           {t('planning.workOrder.detail.created_by')}: {data.created_by}
@@ -91,6 +144,21 @@ export default function WorkOrderDetail({ id, onBack }) {
           </span>
         ) : null}
       </footer>
+
+      {showRelease ? (
+        <ReleaseModal
+          wo={data}
+          onClose={() => setShowRelease(false)}
+          onSuccess={handleMutationSuccess}
+        />
+      ) : null}
+      {showCancel ? (
+        <CancelModal
+          wo={data}
+          onClose={() => setShowCancel(false)}
+          onSuccess={handleMutationSuccess}
+        />
+      ) : null}
     </div>
   );
 }

@@ -48,3 +48,39 @@ export async function fetchWorkOrderDetail(id, signal) {
   if (!r.ok) throw await parseRfcError(r);
   return r.json();
 }
+
+export async function fetchAuditTimeline(woId, signal) {
+  const r = await fetch(`/api/planning/v2/work-orders/${woId}/audit`, {
+    credentials: 'include',
+    signal,
+  });
+  if (!r.ok) throw await parseRfcError(r);
+  const body = await r.json();
+  return Array.isArray(body?.rows) ? body.rows : [];
+}
+
+// MES-1.6 mutations. Both return the updated WO on success; on RFC-7807
+// failure they throw an Error with `.type` / `.status` / `.body` so the
+// caller can render inline (allowed_from, forbidden_fields, etc.).
+
+export async function releaseWorkOrder(id, { notes } = {}) {
+  const r = await fetch(`/api/planning/v2/work-orders/${id}/release`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(notes ? { notes } : {}),
+  });
+  if (!r.ok) throw await parseRfcError(r);
+  return r.json();
+}
+
+export async function cancelWorkOrder(id, { reason }) {
+  const r = await fetch(`/api/planning/v2/work-orders/${id}/cancel`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  });
+  if (!r.ok) throw await parseRfcError(r);
+  return r.json();
+}

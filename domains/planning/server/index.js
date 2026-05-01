@@ -54,6 +54,42 @@ export function mountPlanning(app, opts = {}) {
     res.json({ enabled: true });
   });
 
+  // /v2/work-orders/:id/audit — per-WO audit timeline (MES-1.6).
+  // Returns the WO_* events for one work order, newest-first. Driven by
+  // a JSON_EXTRACT filter on `detail.wo_id`; the audit_log
+  // (event, ts DESC) index makes the WO_% prefix scan cheap. Limit
+  // capped at 200 — any single WO will rarely exceed 50 events before
+  // MES-2 lands op-level events. Returns 404 RFC-7807 when the WO id
+  // is absent so the client can render its "not found" path.
+  router.get('/work-orders/:id/audit', (req, res) => {
+    const woId = Number(req.params.id);
+    if (!Number.isFinite(woId)) {
+      return res
+        .status(400)
+        .type('application/problem+json')
+        .json({
+          type: 'urn:ops:validation',
+          status: 400,
+          errors: [{ field: 'id', code: 'integer' }],
+        });
+    }
+    if (!repo.findById(woId)) {
+      return res
+        .status(404)
+        .type('application/problem+json')
+        .json({ type: 'urn:ops:wo-not-found', status: 404, wo_id: woId });
+    }
+    const rows = db
+      .prepare(
+        `SELECT ts, event, user, ip, detail FROM audit_log
+         WHERE event LIKE 'WO\\_%' ESCAPE '\\'
+           AND CAST(json_extract(detail, '$.wo_id') AS INTEGER) = ?
+         ORDER BY id DESC LIMIT 200`
+      )
+      .all(woId);
+    res.json({ ok: true, rows });
+  });
+
   // Mount BEFORE the legacy /api/planning router (registration order =
   // Express match order). Legacy planning has no /v2/ children, so this
   // ordering is belt-and-suspenders against future drift.

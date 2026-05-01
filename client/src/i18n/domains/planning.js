@@ -73,4 +73,62 @@ registerStrings({
   'planning.workOrder.status.QC_RELEASED': { en: 'QC released', vi: 'QC duyệt' },
   'planning.workOrder.status.CLOSED': { en: 'Closed', vi: 'Đã đóng' },
   'planning.workOrder.status.CANCELLED': { en: 'Cancelled', vi: 'Đã huỷ' },
+
+  // Sprint MES-1.6 — release / cancel modals + audit timeline.
+  'planning.workOrder.action.cancel': { en: 'Cancel', vi: 'Huỷ' },
+  'planning.workOrder.action.pending': { en: 'Working…', vi: 'Đang xử lý…' },
+  'planning.workOrder.release.title': {
+    en: 'Release work order {code}',
+    vi: 'Phát lệnh sản xuất {code}',
+  },
+  'planning.workOrder.release.subtitle': {
+    en: '{ops_count} operation(s) attached',
+    vi: '{ops_count} công đoạn đã gắn',
+  },
+  'planning.workOrder.release.confirm_text': {
+    en: 'This will hand the work order over to the shop floor.',
+    vi: 'Lệnh sẽ được chuyển xuống xưởng để sản xuất.',
+  },
+  'planning.workOrder.release.notes_label': {
+    en: 'Notes (optional)',
+    vi: 'Ghi chú (không bắt buộc)',
+  },
+  'planning.workOrder.release.notes_placeholder': {
+    en: 'Anything the shop floor should know…',
+    vi: 'Thông tin cần lưu ý cho xưởng…',
+  },
+  'planning.workOrder.release.submit': { en: 'Release', vi: 'Phát lệnh' },
+  'planning.workOrder.release.needs_ops': {
+    en: 'Add at least one operation before releasing',
+    vi: 'Cần ≥1 công đoạn trước khi phát lệnh',
+  },
+  'planning.workOrder.cancel.title': {
+    en: 'Cancel work order {code}',
+    vi: 'Huỷ lệnh sản xuất {code}',
+  },
+  'planning.workOrder.cancel.warning': {
+    en: 'This action cannot be undone. The work order moves to CANCELLED and cannot be re-released.',
+    vi: 'Hành động này không thể hoàn tác. Lệnh sẽ chuyển sang trạng thái CANCELLED và không thể phát lại.',
+  },
+  'planning.workOrder.cancel.reason_label': { en: 'Reason', vi: 'Lý do' },
+  'planning.workOrder.cancel.reason_placeholder': {
+    en: 'Customer pulled order, material short, …',
+    vi: 'Khách rút đơn, thiếu vật tư, …',
+  },
+  'planning.workOrder.cancel.keep': { en: 'Keep work order', vi: 'Giữ lại' },
+  'planning.workOrder.cancel.submit': { en: 'Cancel work order', vi: 'Huỷ lệnh' },
+  'planning.workOrder.error.allowed_from': { en: 'Allowed from', vi: 'Cho phép từ' },
+  'planning.workOrder.audit.heading': { en: 'Audit trail', vi: 'Lịch sử thao tác' },
+  'planning.workOrder.audit.loading': { en: 'Loading audit trail…', vi: 'Đang tải lịch sử…' },
+  'planning.workOrder.audit.empty': { en: 'No history yet', vi: 'Chưa có lịch sử' },
+  'planning.workOrder.audit.load_failed': {
+    en: 'Failed to load audit trail',
+    vi: 'Không thể tải lịch sử',
+  },
+  'planning.workOrder.audit.show_detail': { en: 'Show detail', vi: 'Xem chi tiết' },
+  'planning.workOrder.audit.event.WO_CREATE': { en: 'Created', vi: 'Tạo lệnh' },
+  'planning.workOrder.audit.event.WO_UPDATE': { en: 'Header updated', vi: 'Cập nhật header' },
+  'planning.workOrder.audit.event.WO_RELEASE': { en: 'Released', vi: 'Phát lệnh' },
+  'planning.workOrder.audit.event.WO_CANCEL': { en: 'Cancelled', vi: 'Huỷ lệnh' },
+  'planning.workOrder.audit.event.WO_OP_ADD': { en: 'Operation added', vi: 'Thêm công đoạn' },
 });
