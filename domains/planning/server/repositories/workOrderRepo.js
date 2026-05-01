@@ -167,6 +167,79 @@ export function createWorkOrderRepo(db) {
     return row?.m ?? 0;
   }
 
+  // ── MES-2.4 op-status mutators (additive). Service layer
+  //    (operationService.js) is the only caller; routes go through the
+  //    service so no atomicity / state-machine invariant can be skipped.
+
+  // JOIN work_order so the service can do barcode comparisons (scan()
+  // matches against wo.code per MES-2.4 decision) without a second
+  // round-trip per scan.
+  function findOpById(opId) {
+    return (
+      db
+        .prepare(
+          `SELECT op.*, wo.code AS wo_code
+           FROM work_order_op op
+           LEFT JOIN work_order wo ON wo.id = op.work_order_id
+           WHERE op.id = ?`
+        )
+        .get(opId) || null
+    );
+  }
+
+  // `deltas` is whatever the service's mutator returned — a plain object
+  // of column→value writes. last_pulse_at is forced on every call (kiosk
+  // online indicator depends on it). Status is always written.
+  const OP_STATUS_DELTA_COLUMNS = Object.freeze([
+    'started_at',
+    'paused_at',
+    'paused_reason_code',
+    'completed_at',
+    'accepted_at',
+    'good_count',
+    'scrap_count',
+  ]);
+  function updateOpStatus(opId, newStatus, deltas, pulseAt) {
+    const sets = ['status = ?'];
+    const params = [newStatus];
+    for (const col of OP_STATUS_DELTA_COLUMNS) {
+      if (Object.prototype.hasOwnProperty.call(deltas || {}, col)) {
+        sets.push(`${col} = ?`);
+        params.push(deltas[col]);
+      }
+    }
+    sets.push('last_pulse_at = ?');
+    params.push(pulseAt);
+    sets.push('updated_at = CURRENT_TIMESTAMP');
+    params.push(opId);
+    db.prepare(`UPDATE work_order_op SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+    return findOpById(opId);
+  }
+
+  function insertOpEvent(row) {
+    const r = db
+      .prepare(
+        `INSERT INTO op_status_event
+           (op_id, from_status, to_status, actor_user_id, kiosk_session_jti,
+            idempotency_key, payload_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        row.op_id,
+        row.from_status,
+        row.to_status,
+        row.actor_user_id ?? null,
+        row.kiosk_session_jti ?? null,
+        row.idempotency_key ?? null,
+        row.payload_json ?? null
+      );
+    return Number(r.lastInsertRowid);
+  }
+
+  function findReasonCode(code) {
+    return db.prepare(`SELECT * FROM reason_code WHERE code = ? AND active = 1`).get(code) || null;
+  }
+
   return {
     insert,
     findById,
@@ -178,5 +251,10 @@ export function createWorkOrderRepo(db) {
     findOpsByWorkOrder,
     countOps,
     maxSeq,
+    // MES-2.4 (additive — no existing exports renamed or removed)
+    findOpById,
+    updateOpStatus,
+    insertOpEvent,
+    findReasonCode,
   };
 }
