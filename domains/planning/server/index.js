@@ -14,14 +14,78 @@
  * which lets `workOrderService` roll back the status update inside
  * its single `db.transaction()` (PRD AC-1.3.3).
  */
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import { authMiddleware as defaultAuthMiddleware } from '../../../server/middleware/auth.js';
 import { getDb } from '../../../server/db/connection.js';
 import { createWorkOrderRepo } from './repositories/workOrderRepo.js';
 import { createWoCodeGenerator } from './services/woCodeGenerator.js';
 import { createWorkOrderService } from './services/workOrderService.js';
+import { createKioskTokenService } from './services/kioskTokenService.js';
 import { createWorkOrderV2Router } from './routes/workOrderV2.js';
+import { createKioskV2Router } from './routes/kiosksV2.js';
 import { readFeatureFlag } from './featureFlag.js';
 import { validateReasonCodeIntegrity } from './seedReasonCodes.js';
+
+/**
+ * Resolve OPS_KIOSK_KEY for kiosk JWT signing. Mirrors the OPS_TOTP_KEY
+ * pattern from Sprint 1.7: in dev, auto-generate + persist to .env so
+ * the developer never sees a "missing key" surprise; in production,
+ * throw loud — preflight already enforces this, but the boot-time check
+ * is belt + braces.
+ */
+function resolveKioskKey() {
+  const fromEnv = process.env.OPS_KIOSK_KEY;
+  if (fromEnv && fromEnv.length === 64) return fromEnv;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'OPS_KIOSK_KEY missing or wrong length (need 64 hex chars). ' +
+        'Set it in .env or via the deploy pipeline. Preflight (npm run preflight) ' +
+        'enforces this — re-run it before deploying.'
+    );
+  }
+  if (fromEnv) {
+    console.warn(
+      `[planning] OPS_KIOSK_KEY present but length=${fromEnv.length} (expected 64); ignoring.`
+    );
+  }
+  const generated = crypto.randomBytes(32).toString('hex');
+  process.env.OPS_KIOSK_KEY = generated;
+  try {
+    const envPath = path.resolve(process.cwd(), '.env');
+    let body = '';
+    if (fs.existsSync(envPath)) body = fs.readFileSync(envPath, 'utf-8');
+    if (!/^OPS_KIOSK_KEY=/m.test(body)) {
+      const sep = body && !body.endsWith('\n') ? '\n' : '';
+      fs.appendFileSync(envPath, `${sep}OPS_KIOSK_KEY=${generated}\n`);
+      console.warn('[planning] dev-mode: wrote auto-generated OPS_KIOSK_KEY to .env');
+    }
+  } catch (e) {
+    console.warn(
+      `[planning] dev-mode: could not persist OPS_KIOSK_KEY (${e.message}); continuing in-memory only.`
+    );
+  }
+  return generated;
+}
+
+/**
+ * Validate machine_code by lookup in Library/MachineProfiles/profiles.json.
+ * Read-on-each-call is cheap (the file is <50KB; OS file cache absorbs
+ * repeats) and avoids stale-cache bugs when an admin adds a new machine.
+ */
+function buildMachineCodeValidator() {
+  const file = path.resolve(process.cwd(), 'server/data/Library/MachineProfiles/profiles.json');
+  return (code) => {
+    try {
+      const data = JSON.parse(fs.readFileSync(file, 'utf-8'));
+      const profiles = Array.isArray(data?.profiles) ? data.profiles : [];
+      return profiles.some((p) => p && (p.id === code || p.code === code));
+    } catch {
+      return false;
+    }
+  };
+}
 
 /**
  * @param {import('express').Express} app
@@ -100,6 +164,24 @@ export function mountPlanning(app, opts = {}) {
       .all(woId);
     res.json({ ok: true, rows });
   });
+
+  // ─── MES-2.3 Kiosk pairing ────────────────────────────────────
+  // Mount BEFORE the parent /v2 auth handler so POST /redeem can be
+  // reached without a user session (the pairing token IS the credential).
+  // Per-route guards inside kiosksRouter apply auth to the planner +
+  // sys endpoints. No-op when the kiosk key can't be resolved (in dev
+  // we'd have auto-generated; in prod we throw, which surfaces to the
+  // process supervisor — no silent degradation).
+  const kioskKey = resolveKioskKey();
+  const kioskService = createKioskTokenService({ secret: kioskKey, audit });
+  const kioskRouter = createKioskV2Router({
+    db,
+    service: kioskService,
+    validateMachineCode: buildMachineCodeValidator(),
+    authMiddleware: auth,
+  });
+  app.use('/api/planning/v2/kiosks', kioskRouter);
+  app.use('/api/v1/planning/v2/kiosks', kioskRouter);
 
   // Mount BEFORE the legacy /api/planning router (registration order =
   // Express match order). Legacy planning has no /v2/ children, so this

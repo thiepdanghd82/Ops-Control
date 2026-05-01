@@ -64,6 +64,7 @@ echo "  🔐  Reading existing remote .env (preserves all operator-set values)..
 REMOTE_ENV_TMP=$(mktemp)
 ssh "$REMOTE" "cat $APP_DIR/.env 2>/dev/null" > "$REMOTE_ENV_TMP" || true
 EXISTING_TOTP_KEY=$(grep -E '^OPS_TOTP_KEY=' "$REMOTE_ENV_TMP" | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
+EXISTING_KIOSK_KEY=$(grep -E '^OPS_KIOSK_KEY=' "$REMOTE_ENV_TMP" | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
 EXISTING_KEY_COUNT=$(wc -l < "$REMOTE_ENV_TMP" | tr -d ' ')
 if [ "$EXISTING_KEY_COUNT" -gt 0 ]; then
     echo "  ✓  Captured ${EXISTING_KEY_COUNT} existing env line(s) for merge-back"
@@ -73,6 +74,17 @@ if [ -n "$EXISTING_TOTP_KEY" ]; then
 else
     echo "  ⚠   No existing OPS_TOTP_KEY — operator must set one before boot."
     echo "      Without it, the server refuses to start in NODE_ENV=production."
+fi
+# Sprint MES-2.3 — kiosk JWT signing key (mirrors OPS_TOTP_KEY semantics).
+# Whole-file merge below preserves the value automatically; this line is
+# only here to surface the state in the deploy log so a missing key
+# isn't silently inherited from .env.example on a fresh box.
+if [ -n "$EXISTING_KIOSK_KEY" ]; then
+    echo "  ✓  Preserving existing OPS_KIOSK_KEY (${#EXISTING_KIOSK_KEY} chars)"
+else
+    echo "  ⚠   No existing OPS_KIOSK_KEY — operator must set one before boot."
+    echo "      Without it, kiosk pairings can't be issued in NODE_ENV=production."
+    echo "      Generate: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
 fi
 echo ""
 

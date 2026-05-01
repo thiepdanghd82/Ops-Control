@@ -24,6 +24,15 @@ import {
   parseListQuery,
 } from '../../shared/schema/workOrderSchema.js';
 
+// Note (MES-2.3): a refactor to route through lib/rfc7807.js → respondError()
+// was attempted and ROLLED BACK (Patch N2 fallback). The wo-terminal-edit
+// payload carries `status: <wo.status>` which collides with RFC-7807's
+// reserved `status` member (HTTP code). The old emitter let body.status be
+// overwritten to e.g. 'CANCELLED' while res.status(409) kept the HTTP
+// code correct; routing through respondError destructures `status` from
+// the merged object, so the WO status leaks back into HTTP.status. Fixing
+// this is a shape change requiring its own ticket; for now keep emitting
+// inline. The kiosks router (MES-2.3) uses respondError directly.
 function problemJson(res, status, type, payload = {}) {
   return res
     .status(status)
