@@ -47,3 +47,4 @@ npm-debug.log*
 # outside the desktop sandbox (i.e. directly from the project root).
 /users.json
 /README_FIRST_LOGIN.txt
+client/public/help/*.docx
