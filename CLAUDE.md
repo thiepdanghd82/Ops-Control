@@ -514,3 +514,82 @@ journalctl -u ops-control -f             # watch for "🔐 TOTP boot probe OK"
 **RTO** (Recovery Time Objective): ~2h on a pre-provisioned hot-spare (just rsync + start), ~6h cold (fresh box install).
 
 Document the off-site target machine, its credentials, and the restore drill checklist in `MAINTAINERS.md` — update it whenever the off-site rotates. Quarterly drill: time the full sequence, fix any documentation gap revealed.
+
+## MES-3 Backlog
+
+> 9 follow-up tickets surfaced during Sprint MES-2 build phase. Two P1s (KIOSK-003 + KIOSK-006b) must lead MES-3 sprint scope to close data-integrity and deploy-automation gaps.
+
+### Recommended MES-3 v1 scope (4 tickets)
+
+KIOSK-003 (P1, L), KIOSK-006b (P1, S), KIOSK-002 (P2, M), KIOSK-004 (P2, M). Total ~3 weeks of work assuming MES-2 pace. Closes both P1s + the operationally-visible reason-code admin gap + the Vitest coverage gap on kiosk components.
+
+### MES-3.5 polish scope (5 tickets)
+
+MES-3-FIX-1 (P2, S), KIOSK-001 (P3, S), KIOSK-005a (P3, S), KIOSK-006a (P3, L), KIOSK-007 (P3, M). Total ~2 weeks. Wraps RFC-7807 compliance fix + branded icons + dedicated audit endpoint + health dashboard + Playwright DOM port.
+
+### Tickets
+
+For each, write 5 fields: ID, title, source, acceptance, effort, priority.
+
+#### MES-3-FIX-1 — wo-terminal-edit body.status field collision
+
+- **Source**: MES-2.3 helper-extraction roll-back; latent bug discovered when respondError() destructure shadowed RFC-7807 reserved status field with the BmesError payload's wo.status string.
+- **Acceptance**: rename BmesError payload field from `status` to `wo_status`, lift respondError() in workOrderV2.js per Patch N2 protocol (run all 40 MES-1.4 contract tests pre/post; halt on any fail), add 1 new test asserting body.status is integer 409 (not string state name).
+- **Effort**: S (~50 LOC + 1 new test)
+- **Priority**: P2 (RFC-7807 compliance gap; operationally invisible because no current client reads body.status, but technically non-compliant wire format)
+
+#### KIOSK-001 — Real branded PWA icons
+
+- **Source**: MES-2.6a placeholder icons (Carbon-blue squares with white "K", zlib-encoded inline)
+- **Acceptance**: 192/512/180 px PNGs from CCL Vietnam brand; replace placeholders in apps/kiosk/public/; verify Lighthouse PWA audit ≥90 on the kiosk shell; document brand-asset source in MAINTAINERS.md
+- **Effort**: S (asset swap + Lighthouse run)
+- **Priority**: P3 (operators don't care about icon aesthetics; PWA install prompt looks more polished with branded icons)
+
+#### KIOSK-002 — Reason-code admin CRUD UI
+
+- **Source**: PRD §16 R5 deferral; MES-2 ships seed-only with 8 reason codes; MES-2.6b GET /v2/reason-codes endpoint already exposes the data
+- **Acceptance**: Library/ tab "Reason Codes" with create/edit/disable (no hard delete — sets active=0); audit emit per CRUD action (REASON_CODE_CREATE / UPDATE / DISABLE); EN+VN parity enforced; pause endpoint validates against active=1 only (already does in MES-2.4)
+- **Effort**: M (~250 LOC: tab + 3 modals + API + i18n)
+- **Priority**: P2 (operators currently must SQL-edit Library/ to add a 9th code; per-line filtering still deferred to MES-4)
+
+#### KIOSK-003 — WO-level lifecycle cascade
+
+- **Source**: PRD §16 Q3; MES-2 doesn't implement WO-level cascade when all ops reach ACCEPTED, nor does WO_CANCEL cascade to op CANCELLED status
+- **Acceptance**: composite ticket — (a) op state machine adds CANCELLED state + edge `* → CANCELLED` on event 'wo_cancel', (b) workOrderService.cancelWorkOrder cascades to set all child ops to CANCELLED in same db.transaction, (c) when all ops on a WO transition to ACCEPTED, WO automatically transitions to its next state per FR (review with Thiep before implementing), (d) audit emit for every cascade write
+- **Effort**: L (~400 LOC + ~30 tests)
+- **Priority**: P1 (data-integrity gap; planner can currently cancel a WO with running ops, leaving op rows in inconsistent state)
+
+#### KIOSK-004 — Vitest harness for kiosk components
+
+- **Source**: MES-2.6a/b deferral; agent's KIOSK-004 acknowledgment in commit body
+- **Acceptance**: Vitest config in apps/kiosk/; unit tests for ReasonPicker (8-tile render + select), DispatchList (sort order + empty state + last_pulse_at staleness), OpDetail (6 status branches + optimistic dispatch), ConnBadge (3-state transitions), queue.js (enqueue + flush + exp-backoff + cap), api.js (RFC-7807 parser + 401 recovery)
+- **Effort**: M (~300 LOC + ~50 tests)
+- **Priority**: P2 (Playwright covers happy-path + offline; unit gaps are error-state edges and component-level invariants)
+
+#### KIOSK-005a — Dedicated /v2/audit/queue-evict endpoint
+
+- **Source**: MES-2.6b deferral; localStorage 'opskiosk.evicted_count' is the only forensic trail until this lands
+- **Acceptance**: kiosk POSTs evicted entries on next online via dedicated endpoint; server writes QUEUE_EVICT audit row per entry with kiosk_session_jti + original Idempotency-Key + age-at-eviction; localStorage counter clears on successful upload; rate-limited (10 entries / minute / kiosk)
+- **Effort**: S (~80 LOC server + ~30 LOC kiosk)
+- **Priority**: P3 (current console.warn + counter is acceptable for low-volume; matters more once kiosks scale to 50+)
+
+#### KIOSK-006a — Kiosk health dashboard
+
+- **Source**: agent's MES-3 backlog
+- **Acceptance**: planner SYSTEM › Kiosk Health tab; per-kiosk view of last_seen, replay rate (count idempotency_ledger entries with same key in last 24h), permanent failure count (from kiosk-side queue + KIOSK-005a audit), latency p50/p95 from /dispatch sampling; sparkline charts for last 24h activity
+- **Effort**: L (~500 LOC: tab + chart lib integration + 3 server queries + i18n)
+- **Priority**: P3 (operationally useful but not blocking; ops can debug via raw audit_log queries today)
+
+#### KIOSK-006b — groups.json idempotent migration script
+
+- **Source**: MES-2.7 gap; server/data/Library/PermissionGroups/groups.json is gitignored (operator runtime data); MES-2.7 added 'kiosk-admin' tab catalog row + 7 group entries on dev only — production deploy doesn't propagate
+- **Acceptance**: scripts/migrations/2026-XX-kiosk-admin-perms.js runs on first boot post-MES-2 deploy; reads existing groups.json; idempotent merge — adds kiosk-admin to \_tab_catalog if missing, sets kiosk-admin: edit on all_access + leader_default groups, sets hidden on the other 6 seed groups; preserves existing operator customizations; logs "kiosk-admin perms seeded" on first run, no-op on subsequent runs
+- **Effort**: S (~80 LOC script + 10 LOC mountPlanning hook)
+- **Priority**: P1 (otherwise admins assigned to non-default groups can't see kiosk-admin tab post-deploy until ops manually edits groups.json)
+
+#### KIOSK-007 — Playwright DOM port of wo-create-flow.timed.test.js
+
+- **Source**: MES-2.8 deferral
+- **Acceptance**: rewrite domains/planning/tests/e2e/wo-create-flow.timed.test.js as DOM Playwright spec (apps/kiosk/tests/e2e isn't the right home; create domains/planning/tests/playwright/ or shared apps/desktop-tests/); verify ≤4 click budget for WO release flow; deprecate the Node-based contract smoke once Playwright spec is green for 7 days
+- **Effort**: M (~150 LOC port + ~30 LOC fixture extension)
+- **Priority**: P3 (current Node smoke catches ~80% of regressions; full DOM coverage is nice-to-have)
