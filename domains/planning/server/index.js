@@ -44,6 +44,16 @@ export function mountPlanning(app, opts = {}) {
   const service = createWorkOrderService({ db, repo, codeGen, audit });
   const router = createWorkOrderV2Router({ service });
 
+  // /v2/config — minimal flag-discovery endpoint for the client. Mounted
+  // INSIDE the flag-on conditional, so flag off → endpoint absent → 404.
+  // The client's useMesWorkOrderFlag() hook treats 404 as "flag off"
+  // (fail-closed) and 200 + `{enabled: true}` as "flag on". Read-only,
+  // cheap; a stale 5-min localStorage cache on the client is fine. The
+  // prefix-level `auth` middleware already gates this; no extra guard.
+  router.get('/config', (req, res) => {
+    res.json({ enabled: true });
+  });
+
   // Mount BEFORE the legacy /api/planning router (registration order =
   // Express match order). Legacy planning has no /v2/ children, so this
   // ordering is belt-and-suspenders against future drift.
