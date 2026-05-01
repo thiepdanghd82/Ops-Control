@@ -103,13 +103,15 @@ export function createOperationV2Router({
     }
     // Sort: priority DESC, due_date ASC, op.id ASC — deterministic so
     // the kiosk's "next op" picker doesn't shuffle on tied priorities.
+    // MES-2.6b: rows include WO qty_planned + due_date + priority so
+    // the dispatch list renders without a second WO fetch.
     const items = db
       .prepare(
         `SELECT op.id, op.work_order_id, wo.code AS wo_code, op.seq, op.op_type,
                 op.work_centre_no, op.status, op.started_at, op.paused_at,
                 op.paused_reason_code, op.completed_at, op.last_pulse_at,
                 op.good_count, op.scrap_count,
-                wo.priority, wo.due_date
+                wo.priority, wo.due_date, wo.qty_planned, wo.customer
          FROM work_order_op op
          JOIN work_order wo ON wo.id = op.work_order_id
          WHERE op.work_centre_no = ?
@@ -118,7 +120,13 @@ export function createOperationV2Router({
          LIMIT 200`
       )
       .all(machineCode)
-      .map(serializeOp);
+      .map((r) => ({
+        ...serializeOp(r),
+        priority: r.priority,
+        due_date: r.due_date,
+        qty_planned: r.qty_planned,
+        customer: r.customer,
+      }));
     res.json({ items, server_time: new Date().toISOString(), cursor: null });
   });
 

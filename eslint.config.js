@@ -84,7 +84,7 @@ export default [
   // src/ runs in the browser (window/localStorage/fetch); public/sw.js
   // runs in the service-worker scope (self/caches/Response/Headers).
   {
-    files: ['apps/kiosk/src/**/*.{js,jsx}', 'apps/kiosk/styles/**/*.js'],
+    files: ['apps/kiosk/src/**/*.{js,jsx}', 'apps/kiosk/i18n/**/*.js', 'apps/kiosk/styles/**/*.js'],
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',

@@ -177,4 +177,13 @@ registerStrings({
   'planning.workOrder.addOp.error.non_negative': { en: 'Must be ≥ 0', vi: 'Phải ≥ 0' },
   'planning.workOrder.addOp.error.invalid': { en: 'Invalid', vi: 'Không hợp lệ' },
   'planning.workOrder.addOp.error.enum': { en: 'Pick a valid type', vi: 'Chọn loại hợp lệ' },
+
+  // Sprint MES-2.6b — op-status display labels (shared planner + kiosk).
+  'planning.kiosk_status.PENDING': { en: 'Pending', vi: 'Chờ' },
+  'planning.kiosk_status.DISPATCHED': { en: 'Dispatched', vi: 'Đã phân công' },
+  'planning.kiosk_status.SETUP': { en: 'Setup', vi: 'Cài đặt' },
+  'planning.kiosk_status.RUNNING': { en: 'Running', vi: 'Đang chạy' },
+  'planning.kiosk_status.PAUSED': { en: 'Paused', vi: 'Tạm dừng' },
+  'planning.kiosk_status.DONE': { en: 'Done', vi: 'Xong' },
+  'planning.kiosk_status.ACCEPTED': { en: 'Accepted', vi: 'Đã duyệt' },
 });

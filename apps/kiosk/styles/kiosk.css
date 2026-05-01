@@ -156,3 +156,235 @@ code {
   background: var(--kiosk-primary-hover);
   border-color: var(--kiosk-primary-hover);
 }
+
+.kiosk-btn-danger {
+  background: var(--kiosk-error);
+  color: #fff;
+  border-color: var(--kiosk-error);
+}
+.kiosk-btn-secondary {
+  background: transparent;
+}
+.kiosk-btn-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.kiosk-btn:active {
+  transform: scale(0.98);
+}
+
+/* Dispatch list */
+.kiosk-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kiosk-row {
+  min-height: 80px;
+  background: var(--kiosk-bg-card);
+  padding: 16px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.kiosk-row:hover,
+.kiosk-row:active {
+  border-color: var(--kiosk-primary);
+}
+.kiosk-row-top {
+  border-left: 4px solid var(--kiosk-primary);
+}
+.kiosk-row-stale {
+  opacity: 0.7;
+}
+.kiosk-row-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 1.25rem;
+  margin-bottom: 4px;
+}
+.kiosk-row-sub {
+  display: flex;
+  gap: 16px;
+  color: var(--kiosk-text-subtle);
+  font-size: 1rem;
+}
+
+/* Status badges */
+.kiosk-status {
+  font-size: 0.875rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 2px;
+  background: var(--kiosk-border);
+  color: var(--kiosk-text);
+}
+.kiosk-status-RUNNING {
+  background: var(--kiosk-success);
+  color: #fff;
+}
+.kiosk-status-PAUSED {
+  background: #f1c21b;
+  color: var(--kiosk-text);
+}
+.kiosk-status-DONE {
+  background: var(--kiosk-primary);
+  color: #fff;
+}
+.kiosk-status-DISPATCHED,
+.kiosk-status-SETUP {
+  background: #c6c6c6;
+}
+.kiosk-status-ACCEPTED {
+  background: #6929c4;
+  color: #fff;
+}
+
+.kiosk-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kiosk-label {
+  display: block;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 12px 0 4px;
+}
+.kiosk-input {
+  display: block;
+  width: 100%;
+  font-family: inherit;
+  font-size: 1.5rem;
+  padding: 12px 16px;
+  border: 2px solid var(--kiosk-border);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--kiosk-text);
+  margin-bottom: 12px;
+}
+.kiosk-input:focus-visible {
+  border-color: var(--kiosk-primary);
+  outline: none;
+}
+
+/* Modal scrim + reason tiles */
+.kiosk-modal-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(22, 22, 22, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 100;
+}
+.kiosk-reason-panel {
+  background: var(--kiosk-bg);
+  border-radius: 4px;
+  padding: 24px;
+  max-width: 800px;
+  width: 100%;
+}
+.kiosk-reason-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.kiosk-reason-tile {
+  min-height: 120px;
+  font-family: inherit;
+  border: 2px solid var(--kiosk-border);
+  background: var(--kiosk-bg-card);
+  padding: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+.kiosk-reason-tile:hover,
+.kiosk-reason-tile:active {
+  border-color: var(--kiosk-primary);
+  background: #fff;
+}
+.kiosk-reason-tile strong {
+  font-size: 1.125rem;
+  margin-bottom: 4px;
+}
+.kiosk-reason-tile small {
+  color: var(--kiosk-text-subtle);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+}
+.kiosk-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+/* Connectivity badge */
+.kiosk-conn {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 200;
+  font-size: 0.875rem;
+}
+.kiosk-conn-pill {
+  font-family: inherit;
+  font-size: inherit;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--kiosk-border);
+  background: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.kiosk-conn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--kiosk-success);
+}
+.kiosk-conn-amber .kiosk-conn-dot {
+  background: #f1c21b;
+}
+.kiosk-conn-red .kiosk-conn-dot {
+  background: var(--kiosk-error);
+}
+.kiosk-conn-panel {
+  margin-top: 6px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid var(--kiosk-border);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Toast */
+.kiosk-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--kiosk-text);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 4px;
+  font-size: 1rem;
+  z-index: 300;
+}

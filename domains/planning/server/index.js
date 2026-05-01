@@ -28,6 +28,7 @@ import { createIdempotencyStore } from './services/idempotencyStore.js';
 import { createWorkOrderV2Router } from './routes/workOrderV2.js';
 import { createKioskV2Router } from './routes/kiosksV2.js';
 import { createOperationV2Router } from './routes/operationV2.js';
+import { createReasonCodesV2Router } from './routes/reasonCodesV2.js';
 import { createIdempotencyMiddleware } from './middleware/idempotency.js';
 import { createRequireKioskSession } from './middleware/requireKioskSession.js';
 import { readFeatureFlag } from './featureFlag.js';
@@ -205,6 +206,11 @@ export function mountPlanning(app, opts = {}) {
   });
   app.use('/api/planning/v2/operations', operationRouter);
   app.use('/api/v1/planning/v2/operations', operationRouter);
+
+  // MES-2.6b Patch N1 — public reference data; no auth, 5-min Cache-Control.
+  const reasonCodesRouter = createReasonCodesV2Router({ db });
+  app.use('/api/planning/v2/reason-codes', reasonCodesRouter);
+  app.use('/api/v1/planning/v2/reason-codes', reasonCodesRouter);
 
   // Idempotency-ledger prune. 24 h cadence (the rows are 12 h-old at
   // most by then; a sweep-every-day keeps the ledger size flat). Mirrors
