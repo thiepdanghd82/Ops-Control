@@ -8,7 +8,7 @@
 >
 > **Sprint 1.7 — Audit hardening (IBM principal review).** Top-5 fixes: (1) `deploy.sh`/`deploy.ps1` MERGE remote .env instead of clobbering everything but OPS_TOTP_KEY (was silently disabling backups + CORS) + preflight gate before service restart; (2) `pruneOldBackups` wired into `runBackupCycle` + `BACKUP_FAILED` audit always emits regardless of webhook; (3) `totpVerifyRateLimit` on /totp/verify, /totp/enroll, /totp/secret + writeRateLimit on /auth/change-pwd (closes brute-force OTP); (4) deploy snapshots → `releases/<ts>/` for rollback (5-snapshot retention) + 3 new DR runbook sections in this file ("admin lockout", "rollback bad deploy", "bare-metal restore") + `scripts/recover-sys-user.js` console-only recovery; (5) `/auth/users/:id/session-ttl` switched to `updateUsers()` wrapper (closes lost-update race). Bug fixes alongside: Dashboard reads via `loadQuotes()` not direct SQL (was all-zero KPIs when default file backend); HelpTab `FlexBilingual` defensive coercion (was crashing React #31 on entries with `formulas[].name = bi(...)`); FileUploadZone Drawing fetch shows error inline instead of silent catch + server `/api/layout/:filename` uses path-traversal check (was `safeFn` stripping `(`, `)`, `#`).
 >
-> **Sprints 11 + 13 hardening landed 2026-04-25.** 560 server + 465 client tests pass (1,025 total).
+> **Sprints 11 + 13 hardening landed 2026-04-25.** 1,578 tests pass (981 server + 587 client + 10 desktop).
 >
 > **Sprint 11 — Safety Rails:** JSON schema validation on Library/_ (P0-1), optimistic locking on
 > quotes (P0-2), Windows deploy scripts (P1-3), TOTP key preservation across deploys (P2-1), CSRF
