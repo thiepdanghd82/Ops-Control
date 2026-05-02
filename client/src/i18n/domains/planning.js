@@ -56,6 +56,9 @@ registerStrings({
   'planning.workOrder.ops.col.work_centre_no': { en: 'Work centre', vi: 'Trung tâm SX' },
   'planning.workOrder.ops.col.status': { en: 'Status', vi: 'Trạng thái' },
   'planning.workOrder.ops.col.planned_start': { en: 'Planned start', vi: 'Bắt đầu KH' },
+  'planning.workOrder.ops.col.actions': { en: 'Actions', vi: 'Thao tác' },
+  'planning.workOrder.ops.action.accept': { en: 'Accept', vi: 'Chấp nhận' },
+  'planning.workOrder.ops.action.accept_busy': { en: 'Accepting…', vi: 'Đang chấp nhận…' },
   'planning.workOrder.error.load_failed': {
     en: 'Failed to load work orders',
     vi: 'Không thể tải lệnh sản xuất',
@@ -131,6 +134,12 @@ registerStrings({
   'planning.workOrder.audit.event.WO_RELEASE': { en: 'Released', vi: 'Phát lệnh' },
   'planning.workOrder.audit.event.WO_CANCEL': { en: 'Cancelled', vi: 'Huỷ lệnh' },
   'planning.workOrder.audit.event.WO_OP_ADD': { en: 'Operation added', vi: 'Thêm công đoạn' },
+  'planning.workOrder.audit.event.OP_START': { en: 'Op started (setup)', vi: 'Bắt đầu setup' },
+  'planning.workOrder.audit.event.OP_SCAN': { en: 'Op scan', vi: 'Quét mã' },
+  'planning.workOrder.audit.event.OP_PAUSE': { en: 'Op paused', vi: 'Tạm dừng' },
+  'planning.workOrder.audit.event.OP_RESUME': { en: 'Op resumed', vi: 'Tiếp tục' },
+  'planning.workOrder.audit.event.OP_COMPLETE': { en: 'Op completed', vi: 'Hoàn tất công đoạn' },
+  'planning.workOrder.audit.event.OP_ACCEPT': { en: 'Op accepted', vi: 'Chấp nhận công đoạn' },
 
   // Sprint MES-1.7 — create + add-operation modals.
   'planning.workOrder.create.title': { en: 'Create work order', vi: 'Tạo lệnh sản xuất' },

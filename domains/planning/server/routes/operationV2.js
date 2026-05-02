@@ -1,13 +1,15 @@
 /**
  * Operation REST routes (v2) — Sprint MES-2.5.
  *
- * 6 endpoints under `/api/planning/v2/operations/*`:
+ * 8 endpoints under `/api/planning/v2/operations/*`:
  *   GET    /dispatch?machine_code=X            (no idem; safe to retry)
  *   POST   /:id/start                          (idem required, body={})
+ *   POST   /:id/start_run                      (idem required, body={}) — manual SETUP→RUNNING
  *   POST   /:id/pause                          (idem required, body={reason_code})
  *   POST   /:id/resume                         (idem required, body={})
  *   POST   /:id/complete                       (idem required, body={good_count?, scrap_count?, notes?})
  *   POST   /:id/scan                           (idem required, body={barcode, client_at?})
+ *   POST   /:id/accept                         (planner-only, idem required) — DONE→ACCEPTED sign-off
  *
  * Auth: every endpoint behind requireKioskSession. Mutations also gated
  * by the idempotency middleware (which short-circuits on cache hit so
@@ -74,12 +76,32 @@ function handleServiceError(res, e) {
   });
 }
 
+// Mirrors workOrderV2.js — kept inline so RFC-7807 envelope is uniform
+// across MES-1 + MES-2 routers (the project-wide requireRole emits a
+// legacy {error} shape).
+const ROLE_LEVELS = { viewonly: 1, user: 2, cost: 3, admin: 4, sys: 5 };
+function requireRoleAtLeast(level) {
+  return (req, res, next) => {
+    const role = req.user?.user?.role || req.user?.role;
+    if ((ROLE_LEVELS[role] || 0) < level) {
+      return respondError(res, {
+        status: 403,
+        type: 'urn:ops:insufficient-role',
+        required_level: level,
+        current_role: role || null,
+      });
+    }
+    next();
+  };
+}
+
 export function createOperationV2Router({
   db,
   repo,
   service,
   requireKioskSession,
   idempotencyMiddleware,
+  auth,
 }) {
   const router = Router();
 
@@ -178,6 +200,20 @@ export function createOperationV2Router({
     }
   });
 
+  // ── POST /:id/start_run ───────────────────────────────────────
+  // Manual SETUP→RUNNING (operator-tapped "Begin Run" tile, no scan).
+  // Companion to /scan: same final state, different audit signal.
+  router.post('/:id/start_run', requireKioskSession, idempotencyMiddleware, (req, res) => {
+    const p = preludeForMutation(req, res);
+    if (!p) return;
+    try {
+      const updated = service.start_run(p.opId, p.ctx);
+      res.status(200).json({ op: serializeOp(updated) });
+    } catch (e) {
+      handleServiceError(res, e);
+    }
+  });
+
   // ── POST /:id/pause ───────────────────────────────────────────
   router.post('/:id/pause', requireKioskSession, idempotencyMiddleware, (req, res) => {
     const p = preludeForMutation(req, res);
@@ -239,6 +275,34 @@ export function createOperationV2Router({
         scan_event_id: r.scan_event_id,
         auto_transitioned: r.auto_transitioned,
       });
+    } catch (e) {
+      handleServiceError(res, e);
+    }
+  });
+
+  // ── POST /:id/accept ──────────────────────────────────────────
+  // Planner sign-off (DONE→ACCEPTED). Cookie auth + role≥user (level 2);
+  // ctx carries actor_user_id (NOT kiosk_session_jti — this isn't a kiosk
+  // action). No machine_code check — planner can accept any op regardless
+  // of which kiosk reported it.
+  router.post('/:id/accept', auth, requireRoleAtLeast(2), idempotencyMiddleware, (req, res) => {
+    const opId = Number(req.params.id);
+    if (!Number.isFinite(opId) || opId <= 0) {
+      return respondError(res, {
+        status: 400,
+        type: 'urn:ops:validation',
+        errors: [{ field: 'id', code: 'integer' }],
+      });
+    }
+    const op = repo.findOpById(opId);
+    if (!op) {
+      return respondError(res, { status: 404, type: 'urn:ops:op-not-found', op_id: opId });
+    }
+    const userId = req.user?.user?.id ?? req.user?.id;
+    const ctx = { actor_user_id: userId, idempotency_key: req.idempotencyKey };
+    try {
+      const updated = service.accept(opId, ctx);
+      res.status(200).json({ op: serializeOp(updated) });
     } catch (e) {
       handleServiceError(res, e);
     }

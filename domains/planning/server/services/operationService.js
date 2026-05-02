@@ -259,5 +259,24 @@ export function createOperationService({ db, repo, audit }) {
     return { op: finalOp, scan_event_id: scanEventId, auto_transitioned: willAutoTransition };
   }
 
-  return { start, pause, resume, complete, scan };
+  // start_run — explicit SETUP→RUNNING when the operator confirms via the
+  // "Begin Run" tile (no barcode scan). The scan() path covers the
+  // barcode-driven variant; start_run() covers the manual one. Same
+  // transaction shape, dedicated audit event so timeline distinguishes
+  // "scan-triggered" vs "operator-tapped".
+  function start_run(opId, ctx) {
+    assertCtx(ctx);
+    const op = mustExist(opId);
+    return runTransition(op, 'start_run', 'OP_START_RUN', () => ({}), ctx);
+  }
+
+  // accept — planner-only DONE→ACCEPTED (sign-off). ctx must carry
+  // actor_user_id (assertCtx enforces). Sets accepted_at; emits OP_ACCEPT.
+  function accept(opId, ctx) {
+    assertCtx(ctx);
+    const op = mustExist(opId);
+    return runTransition(op, 'accept', 'OP_ACCEPT', (_o, ts) => ({ accepted_at: ts }), ctx);
+  }
+
+  return { start, start_run, pause, resume, complete, scan, accept };
 }

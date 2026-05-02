@@ -78,6 +78,20 @@ export default function WorkOrderDetail({ id, onBack }) {
     setAuditKey((k) => k + 1);
   }
 
+  function handleOpAccepted(updatedOp) {
+    // Merge over the existing op rather than replacing — /accept's
+    // serializeOp omits fields like planned_start that the detail row
+    // depends on. Spread order keeps server's authoritative status fresh.
+    setData((prev) => {
+      if (!prev) return prev;
+      const next = (prev.operations || []).map((o) =>
+        o.id === updatedOp.id ? { ...o, ...updatedOp } : o
+      );
+      return { ...prev, operations: next };
+    });
+    setAuditKey((k) => k + 1);
+  }
+
   return (
     <div className="wo-detail">
       <button type="button" className="op-btn op-btn-ghost wo-back" onClick={onBack}>
@@ -139,7 +153,7 @@ export default function WorkOrderDetail({ id, onBack }) {
             </button>
           ) : null}
         </div>
-        <WorkOrderOpsTable operations={data.operations} />
+        <WorkOrderOpsTable operations={data.operations} onAccepted={handleOpAccepted} />
       </section>
 
       <section className="wo-detail-audit">

@@ -17,6 +17,12 @@ const EVENT_LABELS = {
   WO_RELEASE: 'planning.workOrder.audit.event.WO_RELEASE',
   WO_CANCEL: 'planning.workOrder.audit.event.WO_CANCEL',
   WO_OP_ADD: 'planning.workOrder.audit.event.WO_OP_ADD',
+  OP_START: 'planning.workOrder.audit.event.OP_START',
+  OP_SCAN: 'planning.workOrder.audit.event.OP_SCAN',
+  OP_PAUSE: 'planning.workOrder.audit.event.OP_PAUSE',
+  OP_RESUME: 'planning.workOrder.audit.event.OP_RESUME',
+  OP_COMPLETE: 'planning.workOrder.audit.event.OP_COMPLETE',
+  OP_ACCEPT: 'planning.workOrder.audit.event.OP_ACCEPT',
 };
 
 function parseDetail(s) {

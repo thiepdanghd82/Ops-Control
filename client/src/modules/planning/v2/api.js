@@ -106,3 +106,24 @@ export async function addOperation(woId, payload) {
   if (!r.ok) throw await parseRfcError(r);
   return r.json();
 }
+
+// Planner sign-off on a DONE op. Idempotency-Key is required by the
+// MES-2.5 mutation gate; we mint a fresh UUID per click — collisions are
+// astronomically unlikely and a retry naturally generates a new key.
+export async function acceptOperation(opId) {
+  const idemKey =
+    typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `accept-${opId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const r = await fetch(`/api/planning/v2/operations/${opId}/accept`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idemKey,
+    },
+    body: '{}',
+  });
+  if (!r.ok) throw await parseRfcError(r);
+  return r.json();
+}
