@@ -59,12 +59,22 @@ export function buildOpsApp(opts = {}) {
   });
   const idempotencyMiddleware = createIdempotencyMiddleware({ store: idempotencyStore });
 
+  // Stub planner-cookie auth so /accept (role≥user gate) registers without
+  // throwing at router construction. Defaults to admin so role-gated tests
+  // can assume a privileged caller; individual tests can shadow `req.user`
+  // via their own middleware before this if they want to assert 403 paths.
+  const stubAuth = (req, _res, next) => {
+    if (!req.user) req.user = { user: { role: 'admin' } };
+    next();
+  };
+
   const router = createOperationV2Router({
     db,
     repo,
     service: opService,
     requireKioskSession,
     idempotencyMiddleware,
+    auth: stubAuth,
   });
 
   const app = express();

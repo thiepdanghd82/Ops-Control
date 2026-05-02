@@ -19,6 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { authMiddleware as defaultAuthMiddleware } from '../../../server/middleware/auth.js';
 import { getDb } from '../../../server/db/connection.js';
+import { initSchema } from '../../../server/db/init.js';
 import { createWorkOrderRepo } from './repositories/workOrderRepo.js';
 import { createWoCodeGenerator } from './services/woCodeGenerator.js';
 import { createWorkOrderService } from './services/workOrderService.js';
@@ -32,7 +33,7 @@ import { createReasonCodesV2Router } from './routes/reasonCodesV2.js';
 import { createIdempotencyMiddleware } from './middleware/idempotency.js';
 import { createRequireKioskSession } from './middleware/requireKioskSession.js';
 import { readFeatureFlag } from './featureFlag.js';
-import { validateReasonCodeIntegrity } from './seedReasonCodes.js';
+import { validateReasonCodeIntegrity, seedReasonCodes } from './seedReasonCodes.js';
 
 /**
  * Resolve OPS_KIOSK_KEY for kiosk JWT signing. Mirrors the OPS_TOTP_KEY
@@ -81,7 +82,13 @@ function resolveKioskKey() {
  * repeats) and avoids stale-cache bugs when an admin adds a new machine.
  */
 function buildMachineCodeValidator() {
-  const file = path.resolve(process.cwd(), 'server/data/Library/MachineProfiles/profiles.json');
+  // Resolve relative to DATA_DIR (operator-writable, where seed/admin
+  // updates land) instead of process.cwd() — in packaged Electron the
+  // cwd points at the read-only app bundle and the file is empty.
+  const dataDir = process.env.DATA_DIR
+    ? path.resolve(process.env.DATA_DIR)
+    : path.resolve(process.cwd(), 'server/data');
+  const file = path.join(dataDir, 'Library/MachineProfiles/profiles.json');
   return (code) => {
     try {
       const data = JSON.parse(fs.readFileSync(file, 'utf-8'));
@@ -104,7 +111,20 @@ export function mountPlanning(app, opts = {}) {
 
   const auth = opts.authMiddleware || defaultAuthMiddleware;
 
+  // Self-heal schema before any MES-table query — covers fresh DBs and
+  // packaged seed DBs that predate Sprint MES-2 (reason_code, kiosk_pairing,
+  // op_status_event, idempotency_ledger). initSchema is idempotent
+  // (CREATE TABLE IF NOT EXISTS + additive migrations).
+  initSchema();
   const db = getDb();
+
+  // First-boot seed: empty reason_code table → install the 8 default codes
+  // so operators can pause-with-reason without manual SQL.
+  const reasonCount = db.prepare('SELECT COUNT(*) AS n FROM reason_code').get().n;
+  if (reasonCount === 0) {
+    seedReasonCodes(db);
+    console.log('[planning] first-boot seed: installed default reason codes');
+  }
 
   // MES-2.1 — surface reason_code drift at boot. Warn-only; the kiosk
   // surface (MES-2.5+) gracefully degrades when codes are missing
@@ -135,13 +155,14 @@ export function mountPlanning(app, opts = {}) {
     res.json({ enabled: true });
   });
 
-  // /v2/work-orders/:id/audit — per-WO audit timeline (MES-1.6).
-  // Returns the WO_* events for one work order, newest-first. Driven by
-  // a JSON_EXTRACT filter on `detail.wo_id`; the audit_log
-  // (event, ts DESC) index makes the WO_% prefix scan cheap. Limit
-  // capped at 200 — any single WO will rarely exceed 50 events before
-  // MES-2 lands op-level events. Returns 404 RFC-7807 when the WO id
-  // is absent so the client can render its "not found" path.
+  // /v2/work-orders/:id/audit — per-WO audit timeline.
+  // Returns every event that targets this WO (header lifecycle WO_* and
+  // op-level OP_*), newest-first. Filter is JSON-only: any event whose
+  // detail.wo_id matches the requested id surfaces here. operationService
+  // embeds wo_id into every OP_* detail (OP_START/SCAN/PAUSE/RESUME/
+  // COMPLETE/ACCEPT), so a single filter covers both surfaces with no
+  // event-name allowlist drift. Limit capped at 200 (a busy WO can
+  // accrue ~30 events; this leaves headroom for retries + scans).
   router.get('/work-orders/:id/audit', (req, res) => {
     const woId = Number(req.params.id);
     if (!Number.isFinite(woId)) {
@@ -160,10 +181,14 @@ export function mountPlanning(app, opts = {}) {
         .type('application/problem+json')
         .json({ type: 'urn:ops:wo-not-found', status: 404, wo_id: woId });
     }
+    // json_valid guard: legacy/non-MES audit rows (LOGIN_OK with empty
+    // detail, LOGIN_FAIL with plain-text reason) would otherwise abort
+    // the whole scan with "malformed JSON" the moment json_extract hits
+    // them. Tracking ticket MES-3-FIX-3 covers normalising those writes.
     const rows = db
       .prepare(
         `SELECT ts, event, user, ip, detail FROM audit_log
-         WHERE event LIKE 'WO\\_%' ESCAPE '\\'
+         WHERE json_valid(detail)
            AND CAST(json_extract(detail, '$.wo_id') AS INTEGER) = ?
          ORDER BY id DESC LIMIT 200`
       )
@@ -203,6 +228,7 @@ export function mountPlanning(app, opts = {}) {
     service: opService,
     requireKioskSession,
     idempotencyMiddleware,
+    auth,
   });
   app.use('/api/planning/v2/operations', operationRouter);
   app.use('/api/v1/planning/v2/operations', operationRouter);

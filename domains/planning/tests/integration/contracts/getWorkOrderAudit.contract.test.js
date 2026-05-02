@@ -1,8 +1,10 @@
 /**
- * Contract: GET /api/planning/v2/work-orders/:id/audit (MES-1.6)
+ * Contract: GET /api/planning/v2/work-orders/:id/audit
  *
- * Per-WO audit timeline. Returns newest-first WO_* events filtered by
- * detail.wo_id. 404 when WO id doesn't exist; 400 when id is non-numeric.
+ * Per-WO audit timeline. Returns newest-first events filtered by
+ * detail.wo_id — both header-level (WO_*) and op-level (OP_*) events
+ * surface, since operationService embeds wo_id into every OP_* detail
+ * payload. 404 when WO id doesn't exist; 400 when id is non-numeric.
  *
  * Mounted directly on the v2 router (next to /config) inside
  * mountPlanning's flag-on conditional.
@@ -125,5 +127,40 @@ describe('GET /api/planning/v2/work-orders/:id/audit', () => {
   test('401 — no auth header rejected at prefix level', async () => {
     const r = await req(baseUrl, 'GET', `/api/planning/v2/work-orders/${woId}/audit`);
     assert.equal(r.status, 401);
+  });
+
+  test('200 — OP_* events with matching detail.wo_id also surface; non-JSON noise rows ignored', async () => {
+    // operationService writes OP_* rows with detail.wo_id; verify the
+    // endpoint includes them alongside WO_* without a separate fetch.
+    //
+    // Noise rows reproduce the production shape (MES-3-FIX-3): legacy
+    // LOGIN_OK writes detail='' and LOGIN_FAIL writes plain text. Without
+    // the json_valid() guard in the query, SQLite aborts the whole scan
+    // with "malformed JSON" on the first invalid row — even WO/OP events
+    // never surface. With the guard those rows are silently skipped.
+    const db = connection.getDb();
+    const ins = db.prepare(
+      'INSERT INTO audit_log (ts, event, user, ip, detail) VALUES (?, ?, ?, ?, ?)'
+    );
+    ins.run(new Date().toISOString(), 'LOGIN_OK', 'administrator', '-', '');
+    ins.run(new Date().toISOString(), 'LOGIN_FAIL', 'administrator', '-', 'bad password');
+    ins.run(
+      new Date().toISOString(),
+      'OP_COMPLETE',
+      'kiosk:test',
+      '-',
+      JSON.stringify({ op_id: 1, wo_id: woId, from: 'RUNNING', to: 'DONE', event: 'complete' })
+    );
+    const r = await req(baseUrl, 'GET', `/api/planning/v2/work-orders/${woId}/audit`, {
+      user: PLANNER,
+    });
+    assert.equal(r.status, 200);
+    const events = r.json.rows.map((row) => row.event);
+    assert.ok(events.includes('OP_COMPLETE'), `expected OP_COMPLETE in ${events.join(',')}`);
+    // OP_COMPLETE was inserted last → newest-first means it's at index 0
+    assert.equal(events[0], 'OP_COMPLETE');
+    // Noise rows must not leak into the WO timeline
+    assert.ok(!events.includes('LOGIN_OK'), 'LOGIN_OK leaked into WO timeline');
+    assert.ok(!events.includes('LOGIN_FAIL'), 'LOGIN_FAIL leaked into WO timeline');
   });
 });
