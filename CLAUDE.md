@@ -523,9 +523,11 @@ Document the off-site target machine, its credentials, and the restore drill che
 
 KIOSK-003 (P1, L), KIOSK-006b (P1, S), KIOSK-002 (P2, M), KIOSK-004 (P2, M). Total ~3 weeks of work assuming MES-2 pace. Closes both P1s + the operationally-visible reason-code admin gap + the Vitest coverage gap on kiosk components.
 
-### MES-3.5 polish scope (9 tickets)
+### MES-3.5 polish scope (19 tickets)
 
-MES-3-FIX-1 (P2, S), MES-3-FIX-2 (P3, S), MES-3-FIX-3 (P3, S), MES-3-FIX-4 (P2, S), KIOSK-001 (P3, S), KIOSK-005a (P3, S), KIOSK-006a (P3, L), KIOSK-007 (P3, M), KIOSK-008 (P2, S). Total ~2 weeks. Wraps RFC-7807 compliance fix + Accept-endpoint contract test + audit detail JSON normalization + dev-host Node ABI sync + branded icons + dedicated audit endpoint + health dashboard + Playwright DOM port + sprint-exit smoke blocker.
+MES-3-FIX-1 (P2, S), MES-3-FIX-2 (P3, S), MES-3-FIX-3 (P3, S), MES-3-FIX-4 (P2, S), MES-3-FIX-6 (P3, S), MES-3-FIX-7 (P3, S), MES-3-FIX-8 (P2, S), MES-3-FIX-9 (P3, XS), MES-3-FIX-10 (P3, S), MES-3-FIX-11 (P3, M), MES-3-FIX-12 (P3, S), MES-3-FIX-13 (P2, S), MES-3-FIX-14 (P2, S), MES-3-FIX-15 (P2, S), KIOSK-001 (P3, S), KIOSK-005a (P3, S), KIOSK-006a (P3, L), KIOSK-007 (P3, M), KIOSK-008 (P2, S). Total ~3 weeks. Wraps RFC-7807 compliance fix + Accept-endpoint contract test + audit detail JSON normalization + dev-host Node ABI sync + 10 v1.4.3 audit follow-ups (FIX-6..15) + branded icons + dedicated audit endpoint + health dashboard + Playwright DOM port + sprint-exit smoke blocker.
+
+> **Numbering note**: MES-3-FIX-5 (Cost Engineer preset 403 / Create-user form modules.cost gap) was raised verbally in the v1.4.3 verify session but never filed; reserved for future ticket entry. v1.4.3 audit (2026-05-02) added FIX-6 through FIX-15.
 
 KIOSK-008 should be tackled FIRST in MES-3.5 because it's the gating fix for the Playwright happy-path spec — until it's resolved, the e2e harness (otherwise structurally fixed by the post-tag hotfix at commit `0bb9c93`) can't actually report green.
 
@@ -560,6 +562,76 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - **Acceptance**: document as CLAUDE.md lesson 27 ("Electron + CLI Node version sync"); update bare-metal restore section to specify Node 24; add `.nvmrc` at repo root with `24`; install fnm/nvm guidance in MAINTAINERS.md or `docs/onboarding.md`.
 - **Effort**: S (docs + 1 `.nvmrc` commit)
 - **Priority**: P2 (rebuild churn between `desktop:dev` and `npm test` happens daily on this branch; promoting eliminates the per-context-switch friction)
+
+#### MES-3-FIX-6 — Idempotency-Key cache per-button-instance for Accept
+
+- **Source**: v1.4.3 audit F-04 (P3). `client/src/modules/planning/v2/api.js:145` comment claims "retry naturally generates new key" but defeats idempotency contract — fast double-click creates 2 distinct UUIDs, server cannot dedupe, state-machine guard catches second click as 409 (confusing UX).
+- **Acceptance**: cache `pendingKey` in a ref keyed by `opId` in `WorkOrderOpsTable`, clear on success or 4xx error. Replay same key on retry within window. Update api.js comment to reflect new behaviour.
+- **Effort**: S (~10 LOC + 1 test asserting double-click within 1s sends same key)
+- **Priority**: P3 (race window narrow because optimistic flip hides button quickly; UX papercut not data-corrupting)
+
+#### MES-3-FIX-7 — Surface RFC-7807 body fields in Accept error inline
+
+- **Source**: v1.4.3 audit F-05 (P3). `WorkOrderOpsTable.jsx:34` `setError(e.message)` discards `e.body`'s `allowed_from` + `from`. Planner sees bare detail string instead of "DONE expected, op is now CANCELLED" type guidance.
+- **Acceptance**: extend error display to surface `body.allowed_from` + `body.from` when present, fallback to `e.message`.
+- **Effort**: S (~5 LOC)
+- **Priority**: P3
+
+#### MES-3-FIX-8 — Apply requireTabAccess('work-orders') to /accept + workOrderV2 batch
+
+- **Source**: v1.4.3 audit F-06 (originally P3, promoted P2). New `/accept` route follows existing `workOrderV2.js` convention of skipping `requireTabAccess` (deferred Sprint SU per file comment), but accumulating new mutation routes without tab-access middleware is technical debt vs CLAUDE.md "Server enforcement (defense-in-depth)" pattern.
+- **Acceptance**: audit ALL mutation routes in `domains/planning/server/routes/operationV2.js` + `workOrderV2.js` + any v2 router; add `requireTabAccess('work-orders')` after the role gate consistently. CSRF + role + state-machine guards remain; tab-access is the additional defense layer.
+- **Effort**: S (~15-20 LOC across files)
+- **Priority**: P2 (promoted from P3 because each new mutation route adds inconsistency surface; batch fix in dedicated permission-audit sprint)
+
+#### MES-3-FIX-9 — Extract csrfHeaders helper from services/api.js
+
+- **Source**: v1.4.3 audit F-08 (P3). `client/src/modules/planning/v2/api.js:17-43` duplicates `readCsrfCookie()` + `csrfHeaders()` inline (acknowledged in file comment). Hotfix-time inline was correct under deploy pressure; future drift risk.
+- **Acceptance**: export `csrfHeaders` from `client/src/services/api.js`, import in v2 `api.js`, remove the duplicate.
+- **Effort**: XS (~10 LOC change)
+- **Priority**: P3
+
+#### MES-3-FIX-10 — Extract loadOpOr404 helper for operation routes
+
+- **Source**: v1.4.3 audit F-09 (P3). `/accept` route in `operationV2.js:288-309` inlines integer-parse + `repo.findOpById` + RFC-7807 envelope work. Different middleware chain from `preludeForMutation` (no kiosk-machine check) but the parse/find/error trio could be shared.
+- **Acceptance**: extract `loadOpOr404(req, res)` helper consumable by both kiosk and planner mutation routes.
+- **Effort**: S (~15 LOC refactor + tests)
+- **Priority**: P3
+
+#### MES-3-FIX-11 — Refresh Help system for MES-1/2 v2 work-orders surface
+
+- **Source**: v1.4.3 audit F-10 (P3). `client/src/help/content.js:5920-5970` `work-orders` entry describes pre-MES-1 imagined flow ("Generate Work Orders → print routing cards"). MES-1 v2 surface (Create / Release / Cancel modals, Audit Timeline, Accept button) undocumented in user-facing help.
+- **Acceptance**: rewrite `work-orders` entry per MES-1 v2 actual UI; add Accept-button section. Capture screenshots per CLAUDE.md screenshot capture protocol. Re-run `node scripts/help/build-user-guide.mjs` to refresh `OpsControl_UserGuide.docx`.
+- **Effort**: M (~80 LOC + screenshot capture, manual)
+- **Priority**: P3
+
+#### MES-3-FIX-12 — Document canonical source-of-truth for dual-storage entities
+
+- **Source**: v1.4.3 audit F-11 (P3). Cross-list of JSON `Library/` vs SQLite tables shows 4 overlaps: `IFS_Inventory` ↔ `ifs_inventory`, `RFQTracker` ↔ `rfq_tracker`, `Routing_Operations` ↔ `routing_operations`, `SampleTracking` ↔ `sample_tracker`. Pattern may be intentional (read-from-both, write-to-one) but no audit memo documents canonical source per pair.
+- **Acceptance**: add `docs/dual-storage-audit.md` enumerating each pair, the canonical source, the read fallback chain, and any sync mechanism. Cross-link from CLAUDE.md.
+- **Effort**: S (~1 hour investigation + docs)
+- **Priority**: P3
+
+#### MES-3-FIX-13 — kiosk OpDetail optimistic-revert with snapshot fallback
+
+- **Source**: v1.4.3 audit, `stash@{0}` portion. `apps/kiosk/src/routes/OpDetail.jsx` replaces `refresh()` fallback with `prev` snapshot. Refresh pulls `/dispatch` which only lists DISPATCHED ops, so non-DISPATCHED op orphans the UI on bad optimistic state. Snapshot is authoritative. Related to KIOSK-008 investigation.
+- **Acceptance**: pop relevant portion of `stash@{0}`, ship as standalone fix branch.
+- **Effort**: S (~5 LOC, already drafted)
+- **Priority**: P2 (kiosk UX bug, KIOSK-008-adjacent)
+
+#### MES-3-FIX-14 — server HSTS gate for embedded desktop HTTP-only mode
+
+- **Source**: v1.4.3 audit, `stash@{0}` portion. `server/index.js` HSTS + `upgrade-insecure-requests` gate behind `OPS_ALLOW_SAME_ORIGIN` env. Safari WebKit upgrades `127.0.0.1:3100` asset URLs to `https` → bricks embedded kiosk.
+- **Acceptance**: pop relevant portion of `stash@{0}`, ship as desktop hardening branch.
+- **Effort**: S (~12 LOC, already drafted)
+- **Priority**: P2 (Safari-specific but desktop kiosks affected)
+
+#### MES-3-FIX-15 — desktop kiosk-key persistence + better-sqlite3 12 bump
+
+- **Source**: v1.4.3 audit, `stash@{1}`. Without kiosk-key persistence fix, every Electron restart invalidates kiosk pairings. better-sqlite3 12 bump aligns with Electron Node 24 ABI (related to MES-3-FIX-4).
+- **Acceptance**: pop `stash@{1}`, ship as desktop branch alongside Electron Node 24 alignment work.
+- **Effort**: S (changes already drafted)
+- **Priority**: P2 (operationally felt — kiosks unpair on app restart)
 
 #### KIOSK-001 — Real branded PWA icons
 
