@@ -135,6 +135,7 @@ registerStrings({
   'planning.workOrder.audit.event.WO_CANCEL': { en: 'Cancelled', vi: 'Huỷ lệnh' },
   'planning.workOrder.audit.event.WO_OP_ADD': { en: 'Operation added', vi: 'Thêm công đoạn' },
   'planning.workOrder.audit.event.OP_START': { en: 'Op started (setup)', vi: 'Bắt đầu setup' },
+  'planning.workOrder.audit.event.OP_START_RUN': { en: 'Op started (run)', vi: 'Bắt đầu chạy' },
   'planning.workOrder.audit.event.OP_SCAN': { en: 'Op scan', vi: 'Quét mã' },
   'planning.workOrder.audit.event.OP_PAUSE': { en: 'Op paused', vi: 'Tạm dừng' },
   'planning.workOrder.audit.event.OP_RESUME': { en: 'Op resumed', vi: 'Tiếp tục' },
