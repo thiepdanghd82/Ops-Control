@@ -18,6 +18,24 @@ test('fixed-hours mode (factor_unit === "h"): runHrs = runFactor regardless of q
   assert.equal(r.isFixedHours, true);
 });
 
+test('IFS-shape "Hours" (capitalized full word) is treated as fixed-hours', () => {
+  const r = computeOpHours({ setupTime: 0, runFactor: 0.25, factorUnit: 'Hours', quantity: 5000 });
+  assert.equal(r.runHrs, 0.25);
+  assert.equal(r.isFixedHours, true);
+});
+
+test('"Units/Hour" stays in UPH mode (does not start with H)', () => {
+  const r = computeOpHours({
+    setupTime: 0.25,
+    runFactor: 2400,
+    factorUnit: 'Units/Hour',
+    quantity: 5000,
+  });
+  // 5000 / 2400 ≈ 2.0833... — UPH math, not fixed
+  assert.equal(r.isFixedHours, false);
+  assert.ok(Math.abs(r.runHrs - 5000 / 2400) < 1e-9);
+});
+
 test('zero runFactor: runHrs = 0 (no divide-by-zero)', () => {
   const r = computeOpHours({ setupTime: 0.5, runFactor: 0, factorUnit: 'u', quantity: 1000 });
   assert.equal(r.runHrs, 0);
