@@ -7,7 +7,7 @@
  * mutation we update the in-memory `data` AND bump `auditRefreshKey` so
  * the timeline below refetches without a full page reload.
  */
-import { useCallback, useState } from 'react';
+import { lazy, Suspense, useCallback, useState } from 'react';
 import { useAbortableFetch } from '../../../hooks/useAbortableFetch';
 import { useI18n } from '../../../utils/useI18n';
 import WorkOrderOpsTable from './WorkOrderOpsTable';
@@ -16,6 +16,10 @@ import ReleaseModal from './ReleaseModal';
 import CancelModal from './CancelModal';
 import AddOperationModal from './AddOperationModal';
 import { fetchWorkOrderDetail } from './api';
+
+// PP-07: lazy so the print stylesheet + sharedApi BOM/routing fetch
+// only land when an operator actually opens the printable view.
+const WorkOrderPrintable = lazy(() => import('./WorkOrderPrintable'));
 
 const CANCELLABLE = new Set(['CREATED', 'RELEASED', 'SCHEDULED', 'IN_PROGRESS', 'ON_HOLD']);
 const TERMINAL = new Set(['COMPLETED', 'QC_RELEASED', 'CLOSED', 'CANCELLED']);
@@ -28,6 +32,7 @@ export default function WorkOrderDetail({ id, onBack }) {
   const [showRelease, setShowRelease] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
   const [showAddOp, setShowAddOp] = useState(false);
+  const [showPrint, setShowPrint] = useState(false);
   const [auditKey, setAuditKey] = useState(0);
 
   function handleMutationSuccess(updated) {
@@ -104,6 +109,9 @@ export default function WorkOrderDetail({ id, onBack }) {
           {t(`planning.workOrder.status.${data.status}`)}
         </span>
         <div className="wo-detail-actions">
+          <button type="button" className="op-btn op-btn-ghost" onClick={() => setShowPrint(true)}>
+            {t('planning.workOrder.print.open')}
+          </button>
           {canRelease ? (
             <button
               type="button"
@@ -200,6 +208,11 @@ export default function WorkOrderDetail({ id, onBack }) {
           onClose={() => setShowAddOp(false)}
           onSuccess={handleOpAdded}
         />
+      ) : null}
+      {showPrint ? (
+        <Suspense fallback={null}>
+          <WorkOrderPrintable wo={data} onClose={() => setShowPrint(false)} />
+        </Suspense>
       ) : null}
     </div>
   );

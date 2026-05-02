@@ -188,6 +188,36 @@ registerStrings({
   'planning.workOrder.addOp.error.invalid': { en: 'Invalid', vi: 'Không hợp lệ' },
   'planning.workOrder.addOp.error.enum': { en: 'Pick a valid type', vi: 'Chọn loại hợp lệ' },
 
+  // PP-07 — Printable Work Order document (v1.5.0).
+  'planning.workOrder.print.open': { en: 'Print Work Order', vi: 'In lệnh sản xuất' },
+  'planning.workOrder.print.close': { en: 'Close', vi: 'Đóng' },
+  'planning.workOrder.print.print_btn': { en: 'Print', vi: 'In' },
+  'planning.workOrder.print.bom_picklist': { en: 'BOM Pick List', vi: 'Danh sách vật tư BOM' },
+  'planning.workOrder.print.bom_component': { en: 'Component', vi: 'Linh kiện' },
+  'planning.workOrder.print.bom_description': { en: 'Description', vi: 'Mô tả' },
+  'planning.workOrder.print.bom_required': { en: 'Required', vi: 'Yêu cầu' },
+  'planning.workOrder.print.bom_empty': {
+    en: 'No BOM rows for this part',
+    vi: 'Không có BOM cho mã này',
+  },
+  'planning.workOrder.print.routing': { en: 'Routing Operations', vi: 'Quy trình công đoạn' },
+  'planning.workOrder.print.routing_desc': { en: 'Description', vi: 'Mô tả' },
+  'planning.workOrder.print.routing_rate': { en: 'Rate', vi: 'Tốc độ' },
+  'planning.workOrder.print.routing_total': { en: 'TOTAL TIME', vi: 'TỔNG THỜI GIAN' },
+  'planning.workOrder.print.routing_empty': {
+    en: 'No routing rows for this part',
+    vi: 'Không có quy trình cho mã này',
+  },
+  'planning.workOrder.print.summary': { en: 'Production Summary', vi: 'Tổng kết sản xuất' },
+  'planning.workOrder.print.hrs': { en: 'hrs', vi: 'giờ' },
+  'planning.workOrder.print.shifts': { en: 'shift(s)', vi: 'ca' },
+  'planning.workOrder.print.shift': { en: 'shift', vi: 'ca' },
+  'planning.workOrder.print.generated': { en: 'Generated', vi: 'Tạo lúc' },
+  'planning.workOrder.print.load_failed': {
+    en: 'Failed to load BOM/routing',
+    vi: 'Không tải được BOM/quy trình',
+  },
+
   // Sprint MES-2.7 — Kiosk Admin tab (SYSTEM section).
   'planning.kiosk_admin.title': { en: 'Kiosk Admin', vi: 'Quản trị Kiosk' },
   'planning.kiosk_admin.empty_state': {
