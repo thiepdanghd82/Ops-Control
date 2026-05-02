@@ -4,19 +4,20 @@
  */
 
 const FIELD_ALIASES = {
-  partNo:              ['Part No', 'part_no', 'PartNo', 'PART_NO'],
-  parentPartNo:        ['Parent Part No', 'parent_part_no', 'ParentPartNo'],
-  componentPart:       ['Component Part', 'component_part', 'ComponentPart'],
-  componentDescription:['Component Description', 'description', 'Description'],
-  qtyPerAssembly:      ['Qty Per Assembly', 'qty_per_assembly', 'QtyPerAssembly'],
-  componentScrap:      ['Component Scrap', 'component_scrap', 'ComponentScrap', 'Scrap %'],
-  uom:                 ['UOM', 'uom', 'Unit'],
-  qtyOnHand:           ['Qty On Hand', 'qty_on_hand', 'Stock', 'stock', 'QtyOnHand'],
-  operationNo:         ['Operation No', 'operation_no', 'OperationNo', 'Op No'],
-  operationDesc:       ['Operation Description', 'description', 'Description', 'Op Description'],
-  workCenter:          ['Work Center', 'work_center', 'WorkCenter', 'WC'],
-  setupTime:           ['Setup Time', 'setup_time', 'SetupTime'],
-  runFactor:           ['Run Factor', 'run_factor', 'RunFactor'],
+  partNo: ['Part No', 'part_no', 'PartNo', 'PART_NO'],
+  parentPartNo: ['Parent Part No', 'parent_part_no', 'ParentPartNo'],
+  componentPart: ['Component Part', 'component_part', 'ComponentPart'],
+  componentDescription: ['Component Description', 'description', 'Description'],
+  qtyPerAssembly: ['Qty Per Assembly', 'qty_per_assembly', 'QtyPerAssembly'],
+  componentScrap: ['Component Scrap', 'component_scrap', 'ComponentScrap', 'Scrap %'],
+  uom: ['UOM', 'uom', 'Unit'],
+  qtyOnHand: ['Qty On Hand', 'qty_on_hand', 'Stock', 'stock', 'QtyOnHand'],
+  operationNo: ['Operation No', 'operation_no', 'OperationNo', 'Op No'],
+  operationDesc: ['Operation Description', 'description', 'Description', 'Op Description'],
+  workCenter: ['Work Center', 'work_center', 'WorkCenter', 'WC'],
+  setupTime: ['Setup Time', 'setup_time', 'SetupTime'],
+  runFactor: ['Run Factor', 'run_factor', 'RunFactor'],
+  factorUnit: ['Factor Unit', 'factor_unit', 'FactorUnit', 'fu'],
 };
 
 // Build a reverse map: raw field name -> canonical name
