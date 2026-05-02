@@ -5,7 +5,42 @@
  * useAbortableFetch (the project's established cancellation pattern).
  * Errors are normalized into Error subclasses with the RFC-7807 body
  * attached on `.body` + `.type` + `.status` for inline display.
+ *
+ * State-changing requests (POST/PATCH/DELETE) MUST send the CSRF token
+ * header — the cookie-session double-submit pattern enforced by the
+ * global middleware at server/index.js. Mirrors readCsrfCookie() in
+ * client/src/services/api.js (private there; inlined here to avoid a
+ * cross-module export). Without it, every mutation 403s `csrf_failed`
+ * once the user is on a cookie-based session (browser default).
  */
+
+const CSRF_COOKIE = 'ops_csrf';
+
+function readCsrfCookie() {
+  if (typeof document === 'undefined') return '';
+  const raw = document.cookie || '';
+  for (const part of raw.split(';')) {
+    const eq = part.indexOf('=');
+    if (eq <= 0) continue;
+    if (part.slice(0, eq).trim() === CSRF_COOKIE) {
+      try {
+        return decodeURIComponent(part.slice(eq + 1).trim());
+      } catch {
+        return part.slice(eq + 1).trim();
+      }
+    }
+  }
+  return '';
+}
+
+function csrfHeaders(extra = {}) {
+  const csrf = readCsrfCookie();
+  return {
+    'Content-Type': 'application/json',
+    ...(csrf ? { 'X-CSRF-Token': csrf } : {}),
+    ...extra,
+  };
+}
 
 async function parseRfcError(r) {
   let body = null;
@@ -67,7 +102,7 @@ export async function releaseWorkOrder(id, { notes } = {}) {
   const r = await fetch(`/api/planning/v2/work-orders/${id}/release`, {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: csrfHeaders(),
     body: JSON.stringify(notes ? { notes } : {}),
   });
   if (!r.ok) throw await parseRfcError(r);
@@ -78,7 +113,7 @@ export async function cancelWorkOrder(id, { reason }) {
   const r = await fetch(`/api/planning/v2/work-orders/${id}/cancel`, {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: csrfHeaders(),
     body: JSON.stringify({ reason }),
   });
   if (!r.ok) throw await parseRfcError(r);
@@ -89,7 +124,7 @@ export async function createWorkOrder(payload) {
   const r = await fetch('/api/planning/v2/work-orders', {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: csrfHeaders(),
     body: JSON.stringify(payload),
   });
   if (!r.ok) throw await parseRfcError(r);
@@ -100,7 +135,7 @@ export async function addOperation(woId, payload) {
   const r = await fetch(`/api/planning/v2/work-orders/${woId}/operations`, {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: csrfHeaders(),
     body: JSON.stringify(payload),
   });
   if (!r.ok) throw await parseRfcError(r);
@@ -118,10 +153,7 @@ export async function acceptOperation(opId) {
   const r = await fetch(`/api/planning/v2/operations/${opId}/accept`, {
     method: 'POST',
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      'Idempotency-Key': idemKey,
-    },
+    headers: csrfHeaders({ 'Idempotency-Key': idemKey }),
     body: '{}',
   });
   if (!r.ok) throw await parseRfcError(r);
