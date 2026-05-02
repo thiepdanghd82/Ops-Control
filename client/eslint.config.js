@@ -1,8 +1,8 @@
-import js from '@eslint/js'
-import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
-import { defineConfig, globalIgnores } from 'eslint/config'
+import js from '@eslint/js';
+import globals from 'globals';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+import { defineConfig, globalIgnores } from 'eslint/config';
 
 export default defineConfig([
   globalIgnores(['dist']),
@@ -15,7 +15,13 @@ export default defineConfig([
     ],
     languageOptions: {
       ecmaVersion: 2020,
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        // Vite build-time injection — see client/vite.config.js `define`.
+        // Read at runtime in client/src/main.jsx; declared readonly so
+        // accidental writes still flag.
+        __OPS_BUNDLE_MARKER__: 'readonly',
+      },
       parserOptions: {
         ecmaVersion: 'latest',
         ecmaFeatures: { jsx: true },
@@ -28,10 +34,13 @@ export default defineConfig([
       // rename like `tag: Tag = 'p'` — without `eslint-plugin-react`,
       // ESLint can't see that `<Tag>` is a usage; the regex carves out
       // the convention so we don't have to disable per-line.
-      'no-unused-vars': ['error', {
-        varsIgnorePattern: '^[A-Z_]',
-        argsIgnorePattern: '^[A-Z_]',
-      }],
+      'no-unused-vars': [
+        'error',
+        {
+          varsIgnorePattern: '^[A-Z_]',
+          argsIgnorePattern: '^[A-Z_]',
+        },
+      ],
     },
   },
   // Sprint 11 quick-win: flag NEW inline-style usage so we don't add
@@ -77,4 +86,4 @@ export default defineConfig([
       ],
     },
   },
-])
+]);
