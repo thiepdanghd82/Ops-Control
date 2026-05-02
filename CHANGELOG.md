@@ -2,6 +2,30 @@
 
 All notable changes to Ops Control. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.4.3] — 2026-05-02
+
+### Fixed
+
+- CSRF token validation on /v2 mutation routes (closes 403 banner that surfaced during MES verify walk; commit `4bc4642`).
+
+## [1.4.2] — 2026-05-02
+
+### Added
+
+- Planner-side Accept button for DONE→ACCEPTED operation lifecycle close-out (M4 `c9f02d3`..`be8f4db`).
+- Audit timeline OP*\* events surface alongside WO*\* — wider filter + EN/VN labels for OP_START / OP_SCAN / OP_PAUSE / OP_RESUME / OP_COMPLETE / OP_ACCEPT.
+- `npm run seed:mes` idempotent dev fixture script for repeatable UI verify (WO-TEST-707779 DONE op + WO-DEMO-703607 ACCEPTED op).
+
+### Fixed
+
+- `json_valid()` guard on audit timeline query — prevents 500 from non-JSON detail rows (LOGIN_OK `''`, LOGIN_FAIL plaintext).
+- operations test harness now wires stub auth middleware so the new /accept route doesn't crash router construction (unblocks 6 contract tests that boot-failed).
+
+### Tooling
+
+- Jest `testPathIgnorePatterns` excludes `apps/kiosk/tests/e2e/` Playwright specs that were leaking into Jest test discovery.
+- `.husky/pre-commit` skips lint-staged on merge commits via `MERGE_HEAD` guard (constituent commits already passed lint individually).
+
 ## [1.4.1-mes-2-kiosk] — Sprint MES-2 (Shop-floor Kiosk + Dispatch)
 
 Branch `feature/mes-2-kiosk-dispatch` · 9 commits · ~3,286 code-only LOC added (+28% over plan; first-of-kind UI overhead absorbed) · 980 / 980 server tests green at sprint exit (was 696 pre-MES-2; +284 across the sprint) plus 3 Playwright e2e specs (compile-checked via `npx playwright test --list`; runtime needs `npx playwright install chromium` once on the dev box). Feature-flagged behind `mes.kiosk.enabled` (default `false` — production fail-closed; reuses `mes.workOrder.enabled` flag-file convention from MES-1). See `docs/MES_EXTENSION_PLAN.md` §3.3 for sprint scope.
