@@ -15,7 +15,7 @@ export default function BOMExplosion() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [viewMode, setViewMode] = useState('per-order'); // 'per-order' | 'consolidated'
+  const [viewMode, setViewMode] = useState('per-order'); // 'per-order' | 'stacked' | 'consolidated'
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -26,9 +26,9 @@ export default function BOMExplosion() {
         sharedApi.getBOM(),
         sharedApi.getInventory(),
         planningApi.getWIP(),
-        planningApi.getWorkOrders()
+        planningApi.getWorkOrders(),
       ]);
-      setOrders(ordersRes.filter(o => o.status !== 'Completed'));
+      setOrders(ordersRes.filter((o) => o.status !== 'Completed'));
       setBomData(bomRes);
 
       // Build inventory lookup: partNo -> quantity
@@ -36,9 +36,9 @@ export default function BOMExplosion() {
       const allParts = [
         ...(invRes.inventory || []),
         ...(invRes.rawMaterials || []),
-        ...(invRes.finishedGoods || [])
+        ...(invRes.finishedGoods || []),
       ];
-      allParts.forEach(p => {
+      allParts.forEach((p) => {
         const partNo = getField(p, 'partNo');
         const qty = getNumField(p, 'qtyOnHand');
         if (partNo) invMap[partNo] = (invMap[partNo] || 0) + qty;
@@ -47,9 +47,9 @@ export default function BOMExplosion() {
 
       // Build WIP lookup: productCode -> completedQty (already produced, reduces demand)
       const wipMap = {};
-      (woRes || []).forEach(wo => {
+      (woRes || []).forEach((wo) => {
         if (wo.status === 'Completed') return; // already counted in inventory
-        const wip = (wipRes || []).find(w => w.woId === wo.id);
+        const wip = (wipRes || []).find((w) => w.woId === wo.id);
         const completed = wip?.completedQty || 0;
         if (completed > 0 && wo.productCode) {
           wipMap[wo.productCode] = (wipMap[wo.productCode] || 0) + completed;
@@ -64,19 +64,19 @@ export default function BOMExplosion() {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // Explode BOM for a single order
   function explodeOrder(order) {
-    const components = bomData.filter(b =>
-      getField(b, 'parentPartNo') === order.productCode
-    );
+    const components = bomData.filter((b) => getField(b, 'parentPartNo') === order.productCode);
 
     // WIP completed qty for this product reduces the effective order demand
     const wipCompleted = wipByProduct[order.productCode] || 0;
     const effectiveQty = Math.max(0, order.quantity - wipCompleted);
 
-    return components.map(comp => {
+    return components.map((comp) => {
       const compPartNo = getField(comp, 'componentPart');
       const qtyPer = getNumField(comp, 'qtyPerAssembly', 1);
       const scrapPct = getNumField(comp, 'componentScrap') / 100;
@@ -97,7 +97,7 @@ export default function BOMExplosion() {
         required: Math.round(required * 100) / 100,
         onHand: Math.round(onHand * 100) / 100,
         shortage: Math.round(shortage * 100) / 100,
-        status: shortage > 0 ? 'Shortage' : onHand < required * 1.1 ? 'Low Stock' : 'OK'
+        status: shortage > 0 ? 'Shortage' : onHand < required * 1.1 ? 'Low Stock' : 'OK',
       };
     });
   }
@@ -105,9 +105,9 @@ export default function BOMExplosion() {
   // Consolidated BOM across all orders
   const consolidatedBOM = useMemo(() => {
     const map = {};
-    orders.forEach(order => {
+    orders.forEach((order) => {
       const components = explodeOrder(order);
-      components.forEach(comp => {
+      components.forEach((comp) => {
         if (!map[comp.componentPart]) {
           map[comp.componentPart] = {
             componentPart: comp.componentPart,
@@ -115,7 +115,7 @@ export default function BOMExplosion() {
             uom: comp.uom,
             totalRequired: 0,
             onHand: comp.onHand,
-            orderCount: 0
+            orderCount: 0,
           };
         }
         map[comp.componentPart].totalRequired += comp.required;
@@ -123,13 +123,19 @@ export default function BOMExplosion() {
       });
     });
 
-    return Object.values(map).map(item => ({
-      ...item,
-      totalRequired: Math.round(item.totalRequired * 100) / 100,
-      shortage: Math.round(Math.max(0, item.totalRequired - item.onHand) * 100) / 100,
-      status: item.totalRequired > item.onHand ? 'Shortage'
-        : item.onHand < item.totalRequired * 1.1 ? 'Low Stock' : 'OK'
-    })).sort((a, b) => b.shortage - a.shortage);
+    return Object.values(map)
+      .map((item) => ({
+        ...item,
+        totalRequired: Math.round(item.totalRequired * 100) / 100,
+        shortage: Math.round(Math.max(0, item.totalRequired - item.onHand) * 100) / 100,
+        status:
+          item.totalRequired > item.onHand
+            ? 'Shortage'
+            : item.onHand < item.totalRequired * 1.1
+              ? 'Low Stock'
+              : 'OK',
+      }))
+      .sort((a, b) => b.shortage - a.shortage);
     // explodeOrder is a stable local function closing over bomData;
     // including it in deps would require useCallback indirection for no gain.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -138,9 +144,9 @@ export default function BOMExplosion() {
   // Stats
   const stats = useMemo(() => {
     const total = consolidatedBOM.length;
-    const shortages = consolidatedBOM.filter(c => c.status === 'Shortage').length;
-    const lowStock = consolidatedBOM.filter(c => c.status === 'Low Stock').length;
-    const ok = consolidatedBOM.filter(c => c.status === 'OK').length;
+    const shortages = consolidatedBOM.filter((c) => c.status === 'Shortage').length;
+    const lowStock = consolidatedBOM.filter((c) => c.status === 'Low Stock').length;
+    const ok = consolidatedBOM.filter((c) => c.status === 'OK').length;
     return { total, shortages, lowStock, ok };
   }, [consolidatedBOM]);
 
@@ -155,7 +161,11 @@ export default function BOMExplosion() {
           icon="⚠️"
           title="Failed to load BOM data"
           hint={loadError}
-          action={<button className="btn btn-primary" onClick={loadData}>Retry</button>}
+          action={
+            <button className="btn btn-primary" onClick={loadData}>
+              Retry
+            </button>
+          }
         />
       </div>
     );
@@ -179,6 +189,12 @@ export default function BOMExplosion() {
               onClick={() => setViewMode('per-order')}
             >
               Per Order
+            </button>
+            <button
+              className={`toggle-btn ${viewMode === 'stacked' ? 'active' : ''}`}
+              onClick={() => setViewMode('stacked')}
+            >
+              All Orders Stacked
             </button>
             <button
               className={`toggle-btn ${viewMode === 'consolidated' ? 'active' : ''}`}
@@ -210,20 +226,20 @@ export default function BOMExplosion() {
         </div>
       </div>
 
-      {viewMode === 'per-order' ? (
+      {viewMode === 'per-order' && (
         <div className="bom-per-order">
           {/* Order selector */}
           <div className="order-selector">
             <label>Select Order:</label>
             <select
               value={selectedOrder?.id || ''}
-              onChange={e => {
-                const order = orders.find(o => o.id === parseInt(e.target.value));
+              onChange={(e) => {
+                const order = orders.find((o) => o.id === parseInt(e.target.value));
                 setSelectedOrder(order || null);
               }}
             >
               <option value="">-- Choose an order --</option>
-              {orders.map(o => (
+              {orders.map((o) => (
                 <option key={o.id} value={o.id}>
                   #{o.id} — {o.productCode} (Qty: {o.quantity?.toLocaleString()})
                 </option>
@@ -249,7 +265,11 @@ export default function BOMExplosion() {
                 </thead>
                 <tbody>
                   {selectedComponents.length === 0 ? (
-                    <tr><td colSpan="9" className="empty-state">No BOM data found for this product</td></tr>
+                    <tr>
+                      <td colSpan="9" className="empty-state">
+                        No BOM data found for this product
+                      </td>
+                    </tr>
                   ) : (
                     selectedComponents.map((comp, i) => (
                       <tr key={comp.componentPart || `sc-${i}`}>
@@ -260,8 +280,16 @@ export default function BOMExplosion() {
                         <td className="text-right">{comp.scrapPct}%</td>
                         <td className="text-right mono">{comp.required.toLocaleString()}</td>
                         <td className="text-right mono">{comp.onHand.toLocaleString()}</td>
-                        <td className="text-right mono">{comp.shortage > 0 ? comp.shortage.toLocaleString() : '—'}</td>
-                        <td><span className={`status-badge status-${comp.status.toLowerCase().replace(' ', '-')}`}>{comp.status}</span></td>
+                        <td className="text-right mono">
+                          {comp.shortage > 0 ? comp.shortage.toLocaleString() : '—'}
+                        </td>
+                        <td>
+                          <span
+                            className={`status-badge status-${comp.status.toLowerCase().replace(' ', '-')}`}
+                          >
+                            {comp.status}
+                          </span>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -270,7 +298,92 @@ export default function BOMExplosion() {
             </div>
           )}
         </div>
-      ) : (
+      )}
+
+      {viewMode === 'stacked' && (
+        <div className="bom-stacked">
+          {orders.length === 0 ? (
+            <EmptyState
+              icon="📋"
+              title="No active orders"
+              hint="Create orders in Order Entry to see their BOM breakdown stacked here."
+            />
+          ) : (
+            orders.map((order) => {
+              const components = explodeOrder(order);
+              const shortCnt = components.filter((c) => c.status === 'Shortage').length;
+              const lowCnt = components.filter((c) => c.status === 'Low Stock').length;
+              const summaryCls =
+                shortCnt > 0
+                  ? 'bom-stacked-short'
+                  : lowCnt > 0
+                    ? 'bom-stacked-low'
+                    : 'bom-stacked-ok';
+              const badgeText =
+                shortCnt > 0
+                  ? `${shortCnt} Shortage`
+                  : lowCnt > 0
+                    ? `${lowCnt} Low Stock`
+                    : 'All OK';
+              return (
+                <details key={order.id} className={`bom-stacked-row ${summaryCls}`}>
+                  <summary>
+                    <span className="bom-stacked-id">#{order.id}</span>
+                    <span className="bom-stacked-pn">{order.productCode}</span>
+                    <span className="bom-stacked-qty">Qty: {order.quantity?.toLocaleString()}</span>
+                    <span className="bom-stacked-comp">{components.length} components</span>
+                    <span
+                      className={`status-badge status-${shortCnt > 0 ? 'shortage' : lowCnt > 0 ? 'low-stock' : 'ok'}`}
+                    >
+                      {badgeText}
+                    </span>
+                  </summary>
+                  {components.length === 0 ? (
+                    <p className="bom-stacked-empty">No BOM data found for this product</p>
+                  ) : (
+                    <table className="data-table bom-stacked-table">
+                      <thead>
+                        <tr>
+                          <th>Component</th>
+                          <th>Description</th>
+                          <th>UOM</th>
+                          <th className="text-right">Required</th>
+                          <th className="text-right">On Hand</th>
+                          <th className="text-right">Shortage</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {components.map((comp, i) => (
+                          <tr key={comp.componentPart || `bs-${order.id}-${i}`}>
+                            <td className="cell-code">{comp.componentPart}</td>
+                            <td>{comp.description}</td>
+                            <td>{comp.uom}</td>
+                            <td className="text-right mono">{comp.required.toLocaleString()}</td>
+                            <td className="text-right mono">{comp.onHand.toLocaleString()}</td>
+                            <td className="text-right mono">
+                              {comp.shortage > 0 ? comp.shortage.toLocaleString() : '—'}
+                            </td>
+                            <td>
+                              <span
+                                className={`status-badge status-${comp.status.toLowerCase().replace(' ', '-')}`}
+                              >
+                                {comp.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </details>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {viewMode === 'consolidated' && (
         /* Consolidated View */
         <div className="orders-table-container">
           <table className="data-table">
@@ -288,7 +401,11 @@ export default function BOMExplosion() {
             </thead>
             <tbody>
               {consolidatedBOM.length === 0 ? (
-                <tr><td colSpan="8" className="empty-state">No BOM data. Create orders first.</td></tr>
+                <tr>
+                  <td colSpan="8" className="empty-state">
+                    No BOM data. Create orders first.
+                  </td>
+                </tr>
               ) : (
                 consolidatedBOM.map((comp, i) => (
                   <tr key={comp.componentPart || `cb-${i}`}>
@@ -297,9 +414,17 @@ export default function BOMExplosion() {
                     <td>{comp.uom}</td>
                     <td className="text-right mono">{comp.totalRequired.toLocaleString()}</td>
                     <td className="text-right mono">{comp.onHand.toLocaleString()}</td>
-                    <td className="text-right mono">{comp.shortage > 0 ? comp.shortage.toLocaleString() : '—'}</td>
+                    <td className="text-right mono">
+                      {comp.shortage > 0 ? comp.shortage.toLocaleString() : '—'}
+                    </td>
                     <td className="text-center">{comp.orderCount}</td>
-                    <td><span className={`status-badge status-${comp.status.toLowerCase().replace(' ', '-')}`}>{comp.status}</span></td>
+                    <td>
+                      <span
+                        className={`status-badge status-${comp.status.toLowerCase().replace(' ', '-')}`}
+                      >
+                        {comp.status}
+                      </span>
+                    </td>
                   </tr>
                 ))
               )}
