@@ -433,6 +433,17 @@
   gap: 8px;
 }
 
+/* PP-09: production summary banner — derived from routing standard times. */
+.wo-detail-summary {
+  margin: 8px 0 12px;
+  padding: 8px 12px;
+  background: var(--color-brand-50, #e8f4fd);
+  border-left: 4px solid var(--color-brand-500, #1e3c72);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--color-slate-800, #1e293b);
+}
+
 .wo-form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
