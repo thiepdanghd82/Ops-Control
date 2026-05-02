@@ -1,9 +1,15 @@
 /**
  * strings/translate — Phase 9P tests.
+ *
+ * v1.3 (per ADR-0012): platform shell keys live in `strings.js`; per-tab strings
+ * live in `i18n/domains/<sap>.js` and register at module load via side-effect
+ * import. The placeholders + dashboard tests below need the basis domain loaded
+ * because dashboard.* keys moved there during consolidation.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { translate, STRINGS, SUPPORTED_LOCALES, DEFAULT_LOCALE } from './strings.js';
+import './domains/basis.js';
 
 test('translate returns vi string when locale=vi', () => {
   assert.equal(translate('common.save', 'vi'), 'Lưu');
@@ -22,21 +28,12 @@ test('translate returns the key when both locale and en are missing', () => {
 });
 
 test('translate interpolates {placeholders}', () => {
-  assert.equal(
-    translate('dashboard.kpi.won_lost', 'en', { won: 3, lost: 1 }),
-    '3 won / 1 lost',
-  );
-  assert.equal(
-    translate('dashboard.kpi.won_lost', 'vi', { won: 3, lost: 1 }),
-    '3 thắng / 1 thua',
-  );
+  assert.equal(translate('dashboard.kpi.won_lost', 'en', { won: 3, lost: 1 }), '3 won / 1 lost');
+  assert.equal(translate('dashboard.kpi.won_lost', 'vi', { won: 3, lost: 1 }), '3 thắng / 1 thua');
 });
 
 test('translate preserves {placeholders} when var missing', () => {
-  assert.equal(
-    translate('dashboard.kpi.won_lost', 'en', { won: 3 }),
-    '3 won / {lost} lost',
-  );
+  assert.equal(translate('dashboard.kpi.won_lost', 'en', { won: 3 }), '3 won / {lost} lost');
 });
 
 test('translate handles no-vars call', () => {

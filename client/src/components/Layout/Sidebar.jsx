@@ -16,72 +16,76 @@ const COST_SECTIONS = [
     id: 'calculators',
     labelKey: 'nav.section.calculators',
     tabs: [
-      { id: 'standard',    icon: 'calc_std',     labelKey: 'nav.tab.standard' },
-      { id: 'complex',     icon: 'calc_cplx',    labelKey: 'nav.tab.complex' },
-      { id: 'lib-mat',     icon: 'material',     labelKey: 'nav.tab.material_cost' },
-      { id: 'ink-calc',    icon: 'ink',          labelKey: 'nav.tab.inks_calc' },
-      { id: 'print-area',  icon: 'print_area',   labelKey: 'nav.tab.print_area' },
-      { id: 'design-tools',icon: 'design',       label: 'Design Tools' },
-      { id: 'messages',    icon: 'messages',     labelKey: 'nav.tab.messages' },
-    ]
+      { id: 'standard', icon: 'calc_std', labelKey: 'nav.tab.standard' },
+      { id: 'complex', icon: 'calc_cplx', labelKey: 'nav.tab.complex' },
+      { id: 'lib-mat', icon: 'material', labelKey: 'nav.tab.material_cost' },
+      { id: 'ink-calc', icon: 'ink', labelKey: 'nav.tab.inks_calc' },
+      { id: 'print-area', icon: 'print_area', labelKey: 'nav.tab.print_area' },
+      { id: 'design-tools', icon: 'design', label: 'Design Tools' },
+      { id: 'messages', icon: 'messages', labelKey: 'nav.tab.messages' },
+    ],
   },
   {
     id: 'quoting',
     labelKey: 'nav.section.quoting',
     tabs: [
-      { id: 'summarize',       icon: 'summarize',    labelKey: 'nav.tab.cost_breakdown' },
-      { id: 'formal-quote',    icon: 'formal_quote', labelKey: 'nav.tab.formal_quotation' },
-      { id: 'quote-history',   icon: 'history',      labelKey: 'nav.tab.quote_history' },
-      { id: 'approvals-inbox', icon: 'approvals',    labelKey: 'nav.tab.pending_approvals' },
-    ]
+      { id: 'summarize', icon: 'summarize', labelKey: 'nav.tab.cost_breakdown' },
+      { id: 'formal-quote', icon: 'formal_quote', labelKey: 'nav.tab.formal_quotation' },
+      { id: 'quote-history', icon: 'history', labelKey: 'nav.tab.quote_history' },
+      { id: 'approvals-inbox', icon: 'approvals', labelKey: 'nav.tab.pending_approvals' },
+    ],
   },
   {
     id: 'manufacturing',
     labelKey: 'nav.section.manufacturing',
     tabs: [
-      { id: 'lib-mfg',       icon: 'mfg',     labelKey: 'nav.tab.mfg_structures' },
-      { id: 'lib-rop',       icon: 'routing', labelKey: 'nav.tab.routing_ops' },
-      { id: 'lib-inventory', icon: 'ifs',     labelKey: 'nav.tab.ifs_inventory' },
-    ]
+      { id: 'lib-mfg', icon: 'mfg', labelKey: 'nav.tab.mfg_structures' },
+      { id: 'lib-rop', icon: 'routing', labelKey: 'nav.tab.routing_ops' },
+      { id: 'lib-inventory', icon: 'ifs', labelKey: 'nav.tab.ifs_inventory' },
+    ],
   },
   {
     id: 'tracking',
     labelKey: 'nav.section.tracking',
     tabs: [
-      { id: 'rfq-tracker',     icon: 'rfq_tracker', labelKey: 'nav.tab.rfq_tracker' },
-      { id: 'sample-tracking', icon: 'samples',     labelKey: 'nav.tab.sample_tracking' },
-    ]
+      { id: 'rfq-tracker', icon: 'rfq_tracker', labelKey: 'nav.tab.rfq_tracker' },
+      { id: 'sample-tracking', icon: 'samples', labelKey: 'nav.tab.sample_tracking' },
+    ],
   },
   {
     id: 'reports',
     labelKey: 'nav.section.reports',
     tabs: [
-      { id: 'dashboard',      icon: 'dashboard', labelKey: 'nav.tab.dashboard', minRole: 'user' },
-      { id: 'quote-analysis', icon: 'analysis',  labelKey: 'nav.tab.quote_analysis' },
-    ]
+      { id: 'dashboard', icon: 'dashboard', labelKey: 'nav.tab.dashboard', minRole: 'user' },
+      { id: 'quote-analysis', icon: 'analysis', labelKey: 'nav.tab.quote_analysis' },
+    ],
   },
   {
     id: 'libraries',
     labelKey: 'nav.section.libraries',
     tabs: [
-      { id: 'lib-rate',         icon: 'rates',   labelKey: 'nav.tab.rate_table' },
-      { id: 'lib-ddl',          icon: 'ddl',     labelKey: 'nav.tab.ddl' },
-      { id: 'lib-finance',      icon: 'finance', labelKey: 'nav.tab.finance_data' },
+      { id: 'lib-rate', icon: 'rates', labelKey: 'nav.tab.rate_table' },
+      { id: 'lib-ddl', icon: 'ddl', labelKey: 'nav.tab.ddl' },
+      { id: 'lib-finance', icon: 'finance', labelKey: 'nav.tab.finance_data' },
       { id: 'lib-machine-tech', icon: 'machine', label: 'Machine Technical' },
-    ]
+    ],
   },
   {
     id: 'system',
     labelKey: 'nav.section.system',
     tabs: [
-      { id: 'settings',  icon: 'settings', labelKey: 'nav.tab.settings' },
-      { id: 'metrics',   icon: 'metrics',  labelKey: 'nav.tab.metrics', minRole: 'sys' },
+      { id: 'settings', icon: 'settings', labelKey: 'nav.tab.settings' },
+      { id: 'metrics', icon: 'metrics', labelKey: 'nav.tab.metrics', minRole: 'sys' },
       // Sprint S-AUDIT (2026-04-29) — append-only event stream viewer
       // ported from v1.3 (apps/client/src/AuditLog.jsx). Sys-only.
-      { id: 'audit-log', icon: 'audit',    labelKey: 'nav.tab.audit_log', minRole: 'sys' },
-      { id: 'help',      icon: 'help',     labelKey: 'nav.tab.help' },
-    ]
-  }
+      { id: 'audit-log', icon: 'audit', labelKey: 'nav.tab.audit_log', minRole: 'sys' },
+      // Sprint MES-2.7 — kiosk-admin (sys + admin via permission group). The
+      // tab-access middleware on /api/planning/v2/kiosks/pairings is the
+      // authoritative gate; this nav entry just shows the link.
+      { id: 'kiosk-admin', icon: 'settings', labelKey: 'nav.tab.kiosk_admin', minRole: 'admin' },
+      { id: 'help', icon: 'help', labelKey: 'nav.tab.help' },
+    ],
+  },
 ];
 
 const PLANNING_SECTIONS = [
@@ -89,26 +93,24 @@ const PLANNING_SECTIONS = [
     id: 'production',
     label: 'PRODUCTION',
     tabs: [
-      { id: 'order-entry',   icon: 'orders',        label: 'Order Entry' },
-      { id: 'bom-explosion', icon: 'bom',           label: 'BOM Explosion' },
-      { id: 'material-check',icon: 'materials_chk', label: 'Material Check' },
-    ]
+      { id: 'order-entry', icon: 'orders', label: 'Order Entry' },
+      { id: 'bom-explosion', icon: 'bom', label: 'BOM Explosion' },
+      { id: 'material-check', icon: 'materials_chk', label: 'Material Check' },
+    ],
   },
   {
     id: 'scheduling',
     label: 'SCHEDULING',
     tabs: [
-      { id: 'capacity',    icon: 'capacity', label: 'Capacity Planning' },
+      { id: 'capacity', icon: 'capacity', label: 'Capacity Planning' },
       { id: 'work-orders', icon: 'settings', label: 'Work Orders' },
-    ]
+    ],
   },
   {
     id: 'planning-tracking',
     label: 'TRACKING',
-    tabs: [
-      { id: 'wip-tracker', icon: 'wip', label: 'WIP Tracker' },
-    ]
-  }
+    tabs: [{ id: 'wip-tracker', icon: 'wip', label: 'WIP Tracker' }],
+  },
 ];
 
 const COLLAPSE_KEY = 'opsctl.sidebar.section-collapsed.v1';
@@ -117,10 +119,19 @@ function loadCollapsedSections() {
   try {
     const raw = localStorage.getItem(COLLAPSE_KEY);
     return raw ? new Set(JSON.parse(raw)) : new Set();
-  } catch { return new Set(); }
+  } catch {
+    return new Set();
+  }
 }
 
-export default function Sidebar({ activeModule, activeTab, onModuleChange, onTabChange, collapsed = false, onToggleCollapsed }) {
+export default function Sidebar({
+  activeModule,
+  activeTab,
+  onModuleChange,
+  onTabChange,
+  collapsed = false,
+  onToggleCollapsed,
+}) {
   const { user, hasModule, logout } = useAuth();
   const { access } = useAccess();
   const { t } = useI18n();
@@ -133,10 +144,15 @@ export default function Sidebar({ activeModule, activeTab, onModuleChange, onTab
   // operator's last layout sticks.
   const [collapsedSections, setCollapsedSections] = useState(loadCollapsedSections);
   const toggleSection = useCallback((id) => {
-    setCollapsedSections(prev => {
+    setCollapsedSections((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      try { localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...next])); } catch { /* ignore */ }
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      try {
+        localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...next]));
+      } catch {
+        /* ignore */
+      }
       return next;
     });
   }, []);
@@ -166,14 +182,19 @@ export default function Sidebar({ activeModule, activeTab, onModuleChange, onTab
         const r = await costApi.getUsersStatus({ signal: ctrl.signal });
         if (ctrl.signal.aborted) return;
         const list = Array.isArray(r?.users) ? r.users : [];
-        setOnlineUsers(list.filter(u => u.online && u.id !== user?.id));
+        setOnlineUsers(list.filter((u) => u.online && u.id !== user?.id));
       } catch (e) {
-        if (e?.name !== 'AbortError') { /* silent on real errors — badge-only UI */ }
+        if (e?.name !== 'AbortError') {
+          /* silent on real errors — badge-only UI */
+        }
       }
     }
     fetchOnline();
     const t = setInterval(fetchOnline, 30000);
-    return () => { clearInterval(t); activeCtrl?.abort(); };
+    return () => {
+      clearInterval(t);
+      activeCtrl?.abort();
+    };
   }, [user?.id]);
 
   function handleModuleSwitch(mod) {
@@ -190,10 +211,10 @@ export default function Sidebar({ activeModule, activeTab, onModuleChange, onTab
       <div className="sidebar-header">
         <div className="sidebar-logo">
           <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-            <rect width="32" height="32" rx="7" fill="#1e3a5f"/>
-            <rect x="7" y="14" width="4.5" height="12" rx="1.2" fill="#ef4444"/>
-            <rect x="13.75" y="8" width="4.5" height="18" rx="1.2" fill="#22c55e"/>
-            <rect x="20.5" y="11" width="4.5" height="15" rx="1.2" fill="#3b82f6"/>
+            <rect width="32" height="32" rx="7" fill="#1e3a5f" />
+            <rect x="7" y="14" width="4.5" height="12" rx="1.2" fill="#ef4444" />
+            <rect x="13.75" y="8" width="4.5" height="18" rx="1.2" fill="#22c55e" />
+            <rect x="20.5" y="11" width="4.5" height="15" rx="1.2" fill="#3b82f6" />
           </svg>
         </div>
         <div className="sidebar-title">
@@ -238,7 +259,7 @@ export default function Sidebar({ activeModule, activeTab, onModuleChange, onTab
       {/* Navigation */}
       <nav className="sidebar-nav">
         {sections.map((section) => {
-          const visibleTabs = section.tabs.filter(tab => {
+          const visibleTabs = section.tabs.filter((tab) => {
             // Legacy role-based gate (e.g. metrics → sys only).
             if (tab.minRole) {
               if ((ROLE_LEVELS[user?.role] || 0) < (ROLE_LEVELS[tab.minRole] || 0)) return false;
@@ -255,7 +276,7 @@ export default function Sidebar({ activeModule, activeTab, onModuleChange, onTab
           const sectionLabel = section.labelKey ? t(section.labelKey) : section.label;
           const sectionId = section.id || section.labelKey || section.label;
           const isCollapsed = !collapsed && collapsedSections.has(sectionId);
-          const hasActive = visibleTabs.some(tb => tb.id === activeTab);
+          const hasActive = visibleTabs.some((tb) => tb.id === activeTab);
           return (
             <div key={sectionId} className="nav-section">
               {collapsed ? (
@@ -284,43 +305,46 @@ export default function Sidebar({ activeModule, activeTab, onModuleChange, onTab
                   </svg>
                 </button>
               )}
-              {!isCollapsed && visibleTabs.map(tab => {
-                const badge = tab.id === 'approvals-inbox' && approvalCount > 0
-                  ? approvalCount
-                  : null;
-                const tabLabel = tab.labelKey ? t(tab.labelKey) : tab.label;
-                const badgeTitle = badge != null
-                  ? t('nav.badge_pending_tooltip', { n: badge })
-                  : null;
-                // Phase 9I.4 — preload the tab's JS chunk on hover so
-                // the click-to-render transition doesn't flash the
-                // Suspense fallback. `preloadTab` is idempotent and
-                // no-ops when the chunk is already cached.
-                const preload = () => {
-                  try {
-                    if (activeModule === 'cost') preloadCostTab(tab.id);
-                    else preloadPlanningTab(tab.id);
-                  } catch { /* ignore preload errors */ }
-                };
-                return (
-                  <button
-                    key={tab.id}
-                    className={`nav-item ${activeTab === tab.id ? 'active' : ''}`}
-                    onClick={() => onTabChange(tab.id)}
-                    onMouseEnter={preload}
-                    onFocus={preload}
-                    title={collapsed ? tabLabel : undefined}
-                  >
-                    <span className="nav-icon"><SidebarIcon name={tab.icon} /></span>
-                    <span className="nav-label">{tabLabel}</span>
-                    {badge != null && (
-                      <span className="nav-badge" title={badgeTitle}>
-                        {badge > 99 ? '99+' : badge}
+              {!isCollapsed &&
+                visibleTabs.map((tab) => {
+                  const badge =
+                    tab.id === 'approvals-inbox' && approvalCount > 0 ? approvalCount : null;
+                  const tabLabel = tab.labelKey ? t(tab.labelKey) : tab.label;
+                  const badgeTitle =
+                    badge != null ? t('nav.badge_pending_tooltip', { n: badge }) : null;
+                  // Phase 9I.4 — preload the tab's JS chunk on hover so
+                  // the click-to-render transition doesn't flash the
+                  // Suspense fallback. `preloadTab` is idempotent and
+                  // no-ops when the chunk is already cached.
+                  const preload = () => {
+                    try {
+                      if (activeModule === 'cost') preloadCostTab(tab.id);
+                      else preloadPlanningTab(tab.id);
+                    } catch {
+                      /* ignore preload errors */
+                    }
+                  };
+                  return (
+                    <button
+                      key={tab.id}
+                      className={`nav-item ${activeTab === tab.id ? 'active' : ''}`}
+                      onClick={() => onTabChange(tab.id)}
+                      onMouseEnter={preload}
+                      onFocus={preload}
+                      title={collapsed ? tabLabel : undefined}
+                    >
+                      <span className="nav-icon">
+                        <SidebarIcon name={tab.icon} />
                       </span>
-                    )}
-                  </button>
-                );
-              })}
+                      <span className="nav-label">{tabLabel}</span>
+                      {badge != null && (
+                        <span className="nav-badge" title={badgeTitle}>
+                          {badge > 99 ? '99+' : badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
             </div>
           );
         })}
@@ -331,10 +355,12 @@ export default function Sidebar({ activeModule, activeTab, onModuleChange, onTab
         <div className="sb-team-online">
           <div className="sb-team-header">
             <span className="sb-team-title">{t('nav.team_online_title')}</span>
-            <span className="sb-team-count">{t('nav.team_online_count', { n: onlineUsers.length })}</span>
+            <span className="sb-team-count">
+              {t('nav.team_online_count', { n: onlineUsers.length })}
+            </span>
           </div>
           <div className="sb-team-list">
-            {onlineUsers.map(u => {
+            {onlineUsers.map((u) => {
               const isMe = user && u.id === user.id;
               const name = u.full_name || u.username;
               const initial = (name || '?')[0].toUpperCase();
@@ -371,7 +397,9 @@ export default function Sidebar({ activeModule, activeTab, onModuleChange, onTab
             <span className="user-role">{user?.role}</span>
           </div>
         </div>
-        <button className="logout-btn" onClick={logout} title="Sign out">⏻</button>
+        <button className="logout-btn" onClick={logout} title="Sign out">
+          ⏻
+        </button>
       </div>
     </aside>
   );

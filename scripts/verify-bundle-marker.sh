@@ -27,10 +27,14 @@ if [ ! -f "$DMG" ]; then
   exit 1
 fi
 
-MOUNT=$(hdiutil attach -nobrowse -readonly "$DMG" 2>&1 | tail -1 | awk '{print $NF}') || {
-  echo "ERROR: hdiutil attach failed for $DMG" >&2
+# hdiutil's last line shape: "/dev/disk5\tApple_HFS\t/Volumes/Mount Path"
+# `awk '{print $NF}'` breaks on paths with spaces. Use cut on the final
+# tab field instead.
+MOUNT=$(hdiutil attach -nobrowse -readonly "$DMG" 2>/dev/null | tail -1 | cut -f3)
+if [ -z "$MOUNT" ] || [ ! -d "$MOUNT" ]; then
+  echo "ERROR: hdiutil attach failed or returned bad mount: '$MOUNT'" >&2
   exit 1
-}
+fi
 trap 'hdiutil detach "$MOUNT" -quiet 2>/dev/null || true' EXIT
 
 # Find the .app bundle and grep for the marker inside its asar archive
@@ -40,18 +44,23 @@ if [ -z "$APP" ]; then
   exit 2
 fi
 
-# The bundle marker lives in the client chunk inside app.asar.
-# `strings | grep` works because Vite emits it as a literal string.
-ASAR="$APP/Contents/Resources/app.asar"
-if [ ! -f "$ASAR" ]; then
-  echo "ERROR: no app.asar at $ASAR" >&2
+# The bundle marker lives in the client JS chunk. electron-builder
+# packs `client/dist/` into `app/client/dist/` via extraResources, so
+# the file path inside the DMG is:
+#   .app/Contents/Resources/app/client/dist/assets/index-*.js
+# NOT inside app.asar (asar is just main.js + preload + shared
+# server code; the client SPA lives outside asar so the user-facing
+# bundle is updateable without re-packing the asar).
+CLIENT_DIST="$APP/Contents/Resources/app/client/dist/assets"
+if [ ! -d "$CLIENT_DIST" ]; then
+  echo "ERROR: no client dist at $CLIENT_DIST" >&2
   exit 2
 fi
 
-MARKER=$(strings "$ASAR" | grep -oE 'opsctl-v1\.3-marker:[A-Za-z0-9._-]+:[A-Za-z0-9.:T-]+Z' | head -1)
+MARKER=$(grep -hoE 'opsctl-v1\.3-marker:[A-Za-z0-9._-]+:[A-Za-z0-9.:T-]+Z' "$CLIENT_DIST"/index-*.js 2>/dev/null | head -1)
 if [ -z "$MARKER" ]; then
-  echo "ERROR: bundle marker not found in $ASAR" >&2
-  echo "  Either this DMG is pre-v1.3 or the marker grep is mis-tuned." >&2
+  echo "ERROR: bundle marker not found in $CLIENT_DIST/index-*.js" >&2
+  echo "  Either this DMG is pre-v1.3 or the marker injection regressed." >&2
   exit 2
 fi
 

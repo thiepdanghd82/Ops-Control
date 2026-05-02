@@ -38,15 +38,19 @@ const PORT = process.env.OPS_PORT || process.env.PORT || 3000;
 if (process.env.NODE_ENV === 'production') {
   const missing = [];
   if (!process.env.OPS_TOTP_KEY || process.env.OPS_TOTP_KEY.length !== 64) {
-    missing.push('OPS_TOTP_KEY (64-char hex; generate with: '
-      + `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")`);
+    missing.push(
+      'OPS_TOTP_KEY (64-char hex; generate with: ' +
+        `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")`
+    );
   }
   // CORS: empty is OK only if the client + API are same-origin. If
   // operators explicitly set OPS_ALLOW_SAME_ORIGIN=1 we accept that.
   const corsSet = (process.env.OPS_CORS_ORIGINS || '').trim();
   if (!corsSet && process.env.OPS_ALLOW_SAME_ORIGIN !== '1') {
-    missing.push('OPS_CORS_ORIGINS (comma-separated origins) or explicit '
-      + 'OPS_ALLOW_SAME_ORIGIN=1 to acknowledge same-origin deploy');
+    missing.push(
+      'OPS_CORS_ORIGINS (comma-separated origins) or explicit ' +
+        'OPS_ALLOW_SAME_ORIGIN=1 to acknowledge same-origin deploy'
+    );
   }
   if (missing.length > 0) {
     console.error('\n❌  Ops Control refuses to start in production:');
@@ -73,8 +77,14 @@ if (!path.isAbsolute(DATA_DIR)) {
 }
 
 // ─── Initialize auth service ───
-import { init as initAuth, getSessionUser, getTokenFromHeader,
-         loadTotpSecrets, isTotpSecretsUnavailable, getTotpKeyFingerprint } from './services/authService.js';
+import {
+  init as initAuth,
+  getSessionUser,
+  getTokenFromHeader,
+  loadTotpSecrets,
+  isTotpSecretsUnavailable,
+  getTotpKeyFingerprint,
+} from './services/authService.js';
 initAuth(DATA_DIR);
 
 // ─── Startup TOTP health probe ───
@@ -85,13 +95,19 @@ try {
   const fpHex = getTotpKeyFingerprint();
   const probe = loadTotpSecrets();
   if (isTotpSecretsUnavailable(probe)) {
-    console.error(`  🚨  TOTP BOOT PROBE FAILED — 2FA wall is active. Resolve before users log in.`);
+    console.error(
+      `  🚨  TOTP BOOT PROBE FAILED — 2FA wall is active. Resolve before users log in.`
+    );
     console.error(`       Key fingerprint now:   ${fpHex || '(no key configured)'}`);
     console.error(`       Expected recovery:     (a) restore the .env with the old OPS_TOTP_KEY`);
-    console.error(`                              (b) npm run reset-totp   (wipes file, all users re-enroll)`);
+    console.error(
+      `                              (b) npm run reset-totp   (wipes file, all users re-enroll)`
+    );
   } else {
     const users = Object.keys(probe).length;
-    console.log(`  🔐  TOTP boot probe OK — ${users} user(s) enrolled, key fp ${fpHex?.slice(0,16) || 'n/a'}…`);
+    console.log(
+      `  🔐  TOTP boot probe OK — ${users} user(s) enrolled, key fp ${fpHex?.slice(0, 16) || 'n/a'}…`
+    );
   }
 } catch (e) {
   console.error(`  ⚠️   TOTP boot probe threw: ${e.message}`);
@@ -102,33 +118,40 @@ try {
 // OPS_CORS_ORIGINS="https://foo,https://bar" comma-separated allowlist.
 // Empty env var = same-origin only (recommended for single-box deploy).
 const corsAllowlist = (process.env.OPS_CORS_ORIGINS || '')
-  .split(',').map(s => s.trim()).filter(Boolean);
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
 if (corsAllowlist.length > 0) {
-  app.use(cors({
-    origin: (origin, cb) => {
-      // Same-origin (no Origin header) or allowlisted
-      if (!origin) return cb(null, true);
-      if (corsAllowlist.includes(origin)) return cb(null, true);
-      cb(new Error(`CORS: origin ${origin} not allowed`));
-    },
-    credentials: true,
-  }));
+  app.use(
+    cors({
+      origin: (origin, cb) => {
+        // Same-origin (no Origin header) or allowlisted
+        if (!origin) return cb(null, true);
+        if (corsAllowlist.includes(origin)) return cb(null, true);
+        cb(new Error(`CORS: origin ${origin} not allowed`));
+      },
+      credentials: true,
+    })
+  );
 } else if (process.env.NODE_ENV !== 'production') {
   // Dev convenience — Vite on :5174/:5175 needs to hit :3000 API.
   // Phase 9H — credentials:true + reflect-origin so the new cookie
   // auth flow works across the dev proxy. Default cors() with
   // wildcard * would reject credentialed requests per spec.
-  app.use(cors({
-    origin: (origin, cb) => cb(null, origin || true),
-    credentials: true,
-  }));
+  app.use(
+    cors({
+      origin: (origin, cb) => cb(null, origin || true),
+      credentials: true,
+    })
+  );
 } // production + empty allowlist → CORS disabled (same-origin only)
 
 // Request ID middleware — every request gets an ID so logs can be correlated.
 // Passed through X-Request-Id header if client sent one, else generated.
 app.use((req, res, next) => {
-  req.id = (req.headers['x-request-id'] || '').toString().slice(0, 64)
-        || crypto.randomBytes(8).toString('hex');
+  req.id =
+    (req.headers['x-request-id'] || '').toString().slice(0, 64) ||
+    crypto.randomBytes(8).toString('hex');
   res.setHeader('X-Request-Id', req.id);
   next();
 });
@@ -154,7 +177,7 @@ app.use((req, res, next) => {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader(
     'Permissions-Policy',
-    'camera=(), microphone=(), geolocation=(), payment=(), usb=(), accelerometer=(), gyroscope=(), magnetometer=(), xr-spatial-tracking=()',
+    'camera=(), microphone=(), geolocation=(), payment=(), usb=(), accelerometer=(), gyroscope=(), magnetometer=(), xr-spatial-tracking=()'
   );
   if (IS_PROD) {
     // 1 year, include all subdomains, eligible for HSTS preload.
@@ -199,16 +222,19 @@ app.use((req, res, next) => {
         "object-src 'none'",
         'upgrade-insecure-requests',
         // Phase 9M.3 — violations POST to /api/csp-report.
-        "report-uri /api/csp-report",
-      ].join('; '),
+        'report-uri /api/csp-report',
+      ].join('; ')
     );
     // Modern browsers prefer Report-To header + `report-to` directive
     // over deprecated `report-uri`. Both shipped for broadest coverage.
-    res.setHeader('Report-To', JSON.stringify({
-      group: 'csp',
-      max_age: 10886400,
-      endpoints: [{ url: '/api/csp-report' }],
-    }));
+    res.setHeader(
+      'Report-To',
+      JSON.stringify({
+        group: 'csp',
+        max_age: 10886400,
+        endpoints: [{ url: '/api/csp-report' }],
+      })
+    );
   }
   next();
 });
@@ -234,7 +260,7 @@ app.use((req, res, next) => {
 });
 
 // Rate limit for bulk write ops — extracted to middleware/rateLimit.js.
-import { writeRateLimit } from './middleware/rateLimit.js';
+import { writeRateLimit, saveRateLimit } from './middleware/rateLimit.js';
 
 // ─── Health & readiness ───
 // Enriched shape lets ops correlate incident timing with process state:
@@ -247,7 +273,9 @@ const PKG_VERSION = (() => {
   try {
     const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
     return pkg.version || 'unknown';
-  } catch { return 'unknown'; }
+  } catch {
+    return 'unknown';
+  }
 })();
 // Both `/health` (load-balancer convention) and `/api/health` (the
 // desktop client probe path) share the same handler. The desktop
@@ -262,8 +290,8 @@ app.get(['/health', '/api/health'], (req, res) => {
     node: process.version,
     pid: process.pid,
     memory_mb: {
-      rss:       Math.round(mem.rss / 1024 / 1024),
-      heapUsed:  Math.round(mem.heapUsed / 1024 / 1024),
+      rss: Math.round(mem.rss / 1024 / 1024),
+      heapUsed: Math.round(mem.heapUsed / 1024 / 1024),
       heapTotal: Math.round(mem.heapTotal / 1024 / 1024),
     },
   });
@@ -321,7 +349,9 @@ app.use((req, res, next) => {
     const route = '/' + segs.join('/');
     const statusBand = `${Math.floor(res.statusCode / 100)}xx`;
     incMetric('http_requests_total', {
-      method: req.method, route, status: statusBand,
+      method: req.method,
+      route,
+      status: statusBand,
     });
     observeLatency('http_request_duration_ms', ms, { route, method: req.method });
   });
@@ -336,27 +366,36 @@ app.use((req, res, next) => {
 // CDN attempts, and (rarely) successful XSS attempts that hit the CSP
 // wall. Intentionally UNAUTH'd: the browser sends these without cookies.
 // Body is untrusted; we cap size + pluck just the fields we want.
-app.post('/api/csp-report', express.json({
-  // CSP reports are always < 2 KB. Tight limit guards against abuse.
-  type: ['application/csp-report', 'application/json', 'application/reports+json'],
-  limit: '4kb',
-}), (req, res) => {
-  try {
-    const report = req.body?.['csp-report'] || req.body?.[0]?.body || req.body || {};
-    const entry = {
-      t: new Date().toISOString(),
-      level: 'warn',
-      msg: 'csp_violation',
-      directive: String(report['violated-directive'] || report.effectiveDirective || '').slice(0, 80),
-      blocked: String(report['blocked-uri'] || report.blockedURL || '').slice(0, 200),
-      document: String(report['document-uri'] || report.documentURL || '').slice(0, 200),
-      sample: String(report['script-sample'] || '').slice(0, 160),
-    };
-    console.warn(JSON.stringify(entry));
-    incMetric('csp_violations_total', { directive: entry.directive || 'unknown' });
-  } catch { /* malformed report — ignore */ }
-  res.status(204).end();
-});
+app.post(
+  '/api/csp-report',
+  express.json({
+    // CSP reports are always < 2 KB. Tight limit guards against abuse.
+    type: ['application/csp-report', 'application/json', 'application/reports+json'],
+    limit: '4kb',
+  }),
+  (req, res) => {
+    try {
+      const report = req.body?.['csp-report'] || req.body?.[0]?.body || req.body || {};
+      const entry = {
+        t: new Date().toISOString(),
+        level: 'warn',
+        msg: 'csp_violation',
+        directive: String(report['violated-directive'] || report.effectiveDirective || '').slice(
+          0,
+          80
+        ),
+        blocked: String(report['blocked-uri'] || report.blockedURL || '').slice(0, 200),
+        document: String(report['document-uri'] || report.documentURL || '').slice(0, 200),
+        sample: String(report['script-sample'] || '').slice(0, 160),
+      };
+      console.warn(JSON.stringify(entry));
+      incMetric('csp_violations_total', { directive: entry.directive || 'unknown' });
+    } catch {
+      /* malformed report — ignore */
+    }
+    res.status(204).end();
+  }
+);
 
 // ─── Client error beacon (Sprint T) ──────────────────────────────────
 // POST /api/telemetry/client-error — called by the ErrorBoundary when
@@ -372,8 +411,8 @@ app.post('/api/telemetry/client-error', express.json({ limit: '4kb' }), (req, re
     // into our log file via a single beacon. Metric labels get an
     // aggressive cap because Prometheus cardinality explodes otherwise.
     const boundary = String(b.boundary || 'unknown').slice(0, 40);
-    const message  = String(b.message || '').slice(0, 200);
-    const url      = String(b.url || '').slice(0, 200);
+    const message = String(b.message || '').slice(0, 200);
+    const url = String(b.url || '').slice(0, 200);
     const entry = {
       t: new Date().toISOString(),
       level: 'warn',
@@ -384,12 +423,18 @@ app.post('/api/telemetry/client-error', express.json({ limit: '4kb' }), (req, re
       url,
       // first 5 stack frames is enough to locate in source, much smaller
       // than a full stack, and bounded so a huge paste can't blow up logs
-      stack: String(b.stack || '').split('\n').slice(0, 5).join(' | ').slice(0, 600),
+      stack: String(b.stack || '')
+        .split('\n')
+        .slice(0, 5)
+        .join(' | ')
+        .slice(0, 600),
       user_agent: String(req.headers['user-agent'] || '').slice(0, 160),
     };
     console.warn(JSON.stringify(entry));
     incMetric('client_errors_total', { boundary });
-  } catch { /* malformed beacon — ignore */ }
+  } catch {
+    /* malformed beacon — ignore */
+  }
   res.status(204).end();
 });
 
@@ -407,25 +452,41 @@ const VITAL_NAMES = new Set(['LCP', 'CLS', 'INP', 'FCP', 'TTFB', 'FID']);
 app.post('/api/telemetry/web-vitals', express.json({ limit: '2kb' }), (req, res) => {
   try {
     const b = req.body || {};
-    const name = String(b.name || '').toUpperCase().slice(0, 8);
-    if (!VITAL_NAMES.has(name)) { res.status(204).end(); return; }
+    const name = String(b.name || '')
+      .toUpperCase()
+      .slice(0, 8);
+    if (!VITAL_NAMES.has(name)) {
+      res.status(204).end();
+      return;
+    }
     // CLS is a unitless ratio ~ [0, 1]; others are milliseconds.
     // Clamp to a sane ceiling so an outlier (or malicious) beacon
     // can't pollute the histogram tails. 60s covers the worst legit
     // LCP even on slow rural connections.
     const raw = Number(b.value);
-    if (!Number.isFinite(raw) || raw < 0) { res.status(204).end(); return; }
+    if (!Number.isFinite(raw) || raw < 0) {
+      res.status(204).end();
+      return;
+    }
     const ms = name === 'CLS' ? Math.min(raw, 5) * 1000 : Math.min(raw, 60_000);
     const route = String(b.route || '/').slice(0, 80);
     observeLatency('web_vitals_ms', ms, { name, route });
     // Also log structured so grep "web_vitals" shows the raw stream
     // for ad-hoc investigation without scraping /metrics.
-    console.log(JSON.stringify({
-      t: new Date().toISOString(), msg: 'web_vitals',
-      req_id: req.id, name, route, value_ms: Math.round(ms),
-      user_agent: String(req.headers['user-agent'] || '').slice(0, 160),
-    }));
-  } catch { /* malformed — ignore */ }
+    console.log(
+      JSON.stringify({
+        t: new Date().toISOString(),
+        msg: 'web_vitals',
+        req_id: req.id,
+        name,
+        route,
+        value_ms: Math.round(ms),
+        user_agent: String(req.headers['user-agent'] || '').slice(0, 160),
+      })
+    );
+  } catch {
+    /* malformed — ignore */
+  }
   res.status(204).end();
 });
 
@@ -433,6 +494,7 @@ app.post('/api/telemetry/web-vitals', express.json({ limit: '2kb' }), (req, res)
 import costApiRouter from './routes/costApi.js';
 // Legacy iframe route removed — all tabs now run natively in React
 import planningRouter from './routes/planning.js';
+import { mountPlanning } from '../domains/planning/server/index.js'; // v1.3 MES-1.4 — WO v2 routes
 import sharedRouter from './routes/shared.js';
 import importRouter from './routes/import.js';
 import importWizardRouter from './routes/importWizard.js';
@@ -443,8 +505,33 @@ import { authMiddleware, requireRole } from './middleware/auth.js';
 import auditRouter from './domains/security/routes/audit.js'; // v1.3 P3.1 — domain extraction
 import { createLicenseRouter } from './domains/security/routes/license.js'; // v1.3 P5.1
 import { createBackupRouter } from './domains/basis/routes/backup.js'; // v1.3 F1
-import { isAdminPlus, audit } from './services/authService.js';
+import { createRateRouter } from './domains/library/routes/rate.js'; // v1.3 J1 — go-live
+import { createDdlRouter } from './domains/library/routes/ddl.js'; // v1.3 J1 — go-live
+import { createReleasedQuotationRouter } from './domains/sales/routes/released-quotation.js'; // v1.3 K2
+import { createQuotesRouter } from './domains/sales/routes/quotes.js'; // v1.3 M1 — go-live
+import {
+  upsertQuote,
+  loadQuotes,
+  saveQuotes,
+  getQuoteById,
+  VersionConflictError,
+} from './repositories/quotesStore.js';
+import { emitDataChange } from './services/eventBus.js';
+import { resolveTabAccess } from './services/permissionService.js';
+import { redactErrorMessage, logErr } from './utils/safeError.js';
+import { isSys } from './services/authService.js';
+import { rateRows, ddlToCsvRows } from './platform/csv/index.js'; // v1.3 J1
+import {
+  isAdminPlus,
+  canWrite,
+  audit,
+  getLibDir,
+  safeFn,
+  siteToCsvKey,
+  toCsvBytes,
+} from './services/authService.js';
 import { validateBody } from './middleware/validate.js';
+import { atomicWriteFileSync } from './services/atomicWrite.js';
 
 // Cost API: auth, data CRUD, library management (replaces Python server)
 // These must come BEFORE express.json() body parsing to handle raw bodies for some endpoints
@@ -473,11 +560,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 //       flag + same-user match + correct OTP) provides equivalent
 //       protection against forged cross-origin requests.
 import { checkCsrf } from './utils/authCookie.js';
-const CSRF_EXEMPT_PATHS = new Set([
-  '/api/auth/login',
-  '/api/totp/verify',
-  '/api/totp/enroll',
-]);
+const CSRF_EXEMPT_PATHS = new Set(['/api/auth/login', '/api/totp/verify', '/api/totp/enroll']);
 app.use((req, res, next) => {
   if (CSRF_EXEMPT_PATHS.has(req.path)) return next();
   const r = checkCsrf(req);
@@ -507,8 +590,10 @@ const licenseStatusCount = () => {
     if (!fs.existsSync(usersFile)) return 0;
     const arr = JSON.parse(fs.readFileSync(usersFile, 'utf8'));
     if (!Array.isArray(arr)) return 0;
-    return arr.filter(u => u && !u.deleted_at && u.role !== 'sys').length;
-  } catch { return 0; }
+    return arr.filter((u) => u && !u.deleted_at && u.role !== 'sys').length;
+  } catch {
+    return 0;
+  }
 };
 app.use('/api/license', createLicenseRouter({ countActiveUsers: licenseStatusCount }));
 app.use('/api/v1/license', createLicenseRouter({ countActiveUsers: licenseStatusCount }));
@@ -532,6 +617,111 @@ const backupRouterDeps = {
 };
 app.use('/api/basis/backup', createBackupRouter(backupRouterDeps));
 app.use('/api/v1/basis/backup', createBackupRouter(backupRouterDeps));
+
+// v1.3 J1 — library/rate + library/ddl routers go LIVE.
+// Helpers are now in platform/csv (rateRows, ddlToCsvRows) so the
+// domain routers boot without coupling to costApi.js. Legacy
+// /api/rate/* + /api/ddl/* in costApi continue to serve until the
+// client UI migrates (dual-mount per ADR-0009).
+const libRouterDeps = {
+  auth: (req, res, next) => {
+    const u = getSessionUser(getTokenFromHeader(req));
+    if (!u) return res.status(401).json({ error: 'Authentication required' });
+    req.user = { user: u, role: u.role };
+    next();
+  },
+  isAdminPlus: (reqUser) => isAdminPlus(reqUser?.user || reqUser),
+  canWrite: (reqUser) => canWrite(reqUser?.user || reqUser),
+  getLibDir,
+  safeFn,
+  readJson: (fp, def = null) => {
+    try {
+      if (!fs.existsSync(fp)) return def;
+      return JSON.parse(fs.readFileSync(fp, 'utf-8'));
+    } catch {
+      return def;
+    }
+  },
+  writeJson: (fp, data) => {
+    fs.mkdirSync(path.dirname(fp), { recursive: true });
+    atomicWriteFileSync(fp, JSON.stringify(data, null, 2));
+  },
+  atomicWriteFileSync,
+  siteToCsvKey,
+  toCsvBytes,
+  validateBackupBody: validateBody({
+    site: { type: 'string', max: 32 },
+    data: { type: 'array', max: 500 }, // rate uses array; ddl router validates with object via second factory call
+  }),
+  validateRestoreBody: validateBody({
+    filename: { type: 'string', required: true, max: 128 },
+    site: { type: 'string', max: 32 },
+  }),
+};
+app.use('/api/library/rate', createRateRouter({ ...libRouterDeps, rateRows }));
+app.use('/api/v1/library/rate', createRateRouter({ ...libRouterDeps, rateRows }));
+app.use(
+  '/api/library/ddl',
+  createDdlRouter({
+    ...libRouterDeps,
+    ddlToCsvRows,
+    // DDL backup body is an object, not an array
+    validateBackupBody: validateBody({
+      site: { type: 'string', max: 32 },
+      data: { type: 'object' },
+    }),
+  })
+);
+app.use(
+  '/api/v1/library/ddl',
+  createDdlRouter({
+    ...libRouterDeps,
+    ddlToCsvRows,
+    validateBackupBody: validateBody({
+      site: { type: 'string', max: 32 },
+      data: { type: 'object' },
+    }),
+  })
+);
+
+// v1.3 K2 — sales/released-quotation router (extracted from costApi.js).
+// Legacy /api/released-quotation* + /api/save-quotation in costApi.js
+// continue to serve until UI migrates (dual-mount per ADR-0009).
+const releasedQuoteDeps = {
+  auth: libRouterDeps.auth,
+  canWrite: libRouterDeps.canWrite,
+  getLibDir,
+  safeFn,
+  readJson: libRouterDeps.readJson,
+  writeJson: libRouterDeps.writeJson,
+  saveRateLimit,
+};
+app.use('/api/sales/quotations', createReleasedQuotationRouter(releasedQuoteDeps));
+app.use('/api/v1/sales/quotations', createReleasedQuotationRouter(releasedQuoteDeps));
+
+// v1.3 M1 — sales/quotes CRUD router goes LIVE.
+// All deps now surfaced as named exports from quotesStore + eventBus +
+// permissionService + safeError + authService. Legacy /api/quotes/* in
+// costApi.js continues to serve until UI migrates (dual-mount per ADR-0009).
+const quotesDeps = {
+  auth: libRouterDeps.auth,
+  canWrite: libRouterDeps.canWrite,
+  isSys: (reqUser) => isSys(reqUser?.user || reqUser),
+  upsertQuote,
+  loadQuotes,
+  saveQuotes,
+  getQuoteById,
+  VersionConflictError,
+  resolveTabAccess: (user, tabId) => resolveTabAccess(user?.user || user, tabId),
+  emitDataChange,
+  audit,
+  clientIp: (req) => req.ip || req.connection?.remoteAddress || '-',
+  logErr,
+  redactErrorMessage,
+  saveRateLimit,
+};
+app.use('/api/sales/quotes', createQuotesRouter(quotesDeps));
+app.use('/api/v1/sales/quotes', createQuotesRouter(quotesDeps));
 
 // Cost API routes (auth + all cost endpoints)
 // Sprint 39 — API versioning: every router mounts at BOTH the legacy
@@ -558,47 +748,54 @@ app.get('/data/*', (req, res) => {
   // a Deprecation/Sunset header so operators can find + migrate
   // callers. After 30 days of zero usage, this branch can be removed.
   if (!headerToken && queryToken) {
-    console.warn(JSON.stringify({
-      t: new Date().toISOString(),
-      id: req.id,
-      level: 'warn',
-      msg: 'deprecated_query_param_token',
-      p: req.path,
-      ua: String(req.headers['user-agent'] || '').slice(0, 120),
-    }));
+    console.warn(
+      JSON.stringify({
+        t: new Date().toISOString(),
+        id: req.id,
+        level: 'warn',
+        msg: 'deprecated_query_param_token',
+        p: req.path,
+        ua: String(req.headers['user-agent'] || '').slice(0, 120),
+      })
+    );
     res.setHeader('Deprecation', 'true');
     res.setHeader('Sunset', 'Sat, 01 Nov 2026 00:00:00 GMT');
-    res.setHeader('Warning', '299 - "Query-param token auth deprecated; use Authorization: Bearer header"');
+    res.setHeader(
+      'Warning',
+      '299 - "Query-param token auth deprecated; use Authorization: Bearer header"'
+    );
   }
 
   const u = getSessionUser(token);
   if (!u) return res.status(401).json({ error: 'Unauthorized' });
 
-  const relParts = req.params[0].split('/').filter(p => p && p !== '..');
+  const relParts = req.params[0].split('/').filter((p) => p && p !== '..');
   const fpath = path.resolve(path.join(DATA_DIR, ...relParts));
   if (!fpath.startsWith(path.resolve(DATA_DIR))) {
     return res.status(403).json({ error: 'forbidden' });
   }
   if (!fs.existsSync(fpath)) return res.status(404).json({ error: 'not found' });
   const ext = path.extname(fpath).toLowerCase();
-  const mime = {
-    '.js': 'application/javascript',
-    '.json': 'application/json',
-    '.csv': 'text/csv',
-    '.png': 'image/png',
-    '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-    '.webp': 'image/webp',
-    '.gif': 'image/gif',
-    '.bmp': 'image/bmp',
-    '.svg': 'image/svg+xml',
-    '.pdf': 'application/pdf',
-    // Illustrator files embed a PDF stream when "PDF-compatible" is
-    // enabled (Illustrator's default since CS) — mapping to application/
-    // pdf lets the browser + pdf.js render them transparently. Legacy
-    // .ai files without PDF compat will fail at the pdf.js stage, not
-    // here, and the user can just re-export as PDF.
-    '.ai': 'application/pdf',
-  }[ext] || 'application/octet-stream';
+  const mime =
+    {
+      '.js': 'application/javascript',
+      '.json': 'application/json',
+      '.csv': 'text/csv',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.webp': 'image/webp',
+      '.gif': 'image/gif',
+      '.bmp': 'image/bmp',
+      '.svg': 'image/svg+xml',
+      '.pdf': 'application/pdf',
+      // Illustrator files embed a PDF stream when "PDF-compatible" is
+      // enabled (Illustrator's default since CS) — mapping to application/
+      // pdf lets the browser + pdf.js render them transparently. Legacy
+      // .ai files without PDF compat will fail at the pdf.js stage, not
+      // here, and the user can just re-export as PDF.
+      '.ai': 'application/pdf',
+    }[ext] || 'application/octet-stream';
   res.setHeader('Content-Type', mime);
   res.send(fs.readFileSync(fpath));
 });
@@ -609,6 +806,11 @@ app.get('/data/*', (req, res) => {
 import { enforceSiteAccess } from './middleware/siteAccess.js';
 app.use('/api/shared', authMiddleware, enforceSiteAccess, sharedRouter);
 app.use('/api/v1/shared', authMiddleware, enforceSiteAccess, sharedRouter);
+
+// Planning v1.3 (MES-1.4): /api/planning/v2/work-orders/* — gated by
+// the mes.workOrder.enabled feature flag. Mount BEFORE the legacy
+// /api/planning router so v2 prefix matches win on registration order.
+mountPlanning(app);
 
 // Planning module: Node.js native endpoints
 app.use('/api/planning', authMiddleware, enforceSiteAccess, planningRouter);
@@ -677,18 +879,61 @@ app.use('/api/v1/events', eventsRouter);
 //       the browser won't even revalidate, saving network round-trips.
 //   (b) everything else (index.html, .ico, /help/*.docx) — no-cache so
 //       a new deploy is visible without a hard-refresh.
+// ─── Kiosk PWA (MES-2.6a) — mounted BEFORE the planner SPA ───
+//
+// Served from apps/kiosk/dist. Same two-tier caching policy as the
+// planner: hashed /kiosk/assets/* are immutable; everything else
+// (index.html, manifest, sw.js) revalidates on every request — sw.js
+// MUST always revalidate so a deploy isn't held up by an old SW.
+//
+// Mounted before the planner's express.static so /kiosk/* requests
+// don't fall through into clientDist (which would 404 instead of
+// serving the kiosk shell).
+const kioskDist = path.join(__dirname, '..', 'apps', 'kiosk', 'dist');
+app.use(
+  '/kiosk',
+  express.static(kioskDist, {
+    setHeaders(res, filePath) {
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else {
+        // index.html, manifest.webmanifest, sw.js — always revalidate.
+        res.setHeader('Cache-Control', 'no-cache');
+      }
+    },
+  })
+);
+// Kiosk asset 404 guard — clones the planner pattern below for the
+// /kiosk/ subtree. Without this, a stale kiosk client requesting a
+// no-longer-extant chunk would fall through to the kiosk SPA catch-all
+// and load index.html with `text/html`, crashing the browser with the
+// MIME-type error documented in CLAUDE.md "Stale-chunk crash recovery".
+app.get(['/kiosk/assets/*', '/kiosk/*.js', '/kiosk/*.css', '/kiosk/*.map'], (req, res) => {
+  res.status(404).type('text/plain').send('kiosk asset not found — stale chunk');
+});
+// Kiosk SPA catch-all — anything under /kiosk/ that wasn't matched by
+// the static handler or the 404 guard above falls through to here and
+// gets index.html (so client-side routes like /kiosk/pair work on hard
+// reload).
+app.get('/kiosk/*', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(path.join(kioskDist, 'index.html'));
+});
+
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
-app.use(express.static(clientDist, {
-  setHeaders(res, filePath) {
-    if (filePath.includes(`${path.sep}assets${path.sep}`)) {
-      // Hashed immutable bundle.
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    } else {
-      // index.html, favicon, /help/*.docx — always revalidate.
-      res.setHeader('Cache-Control', 'no-cache');
-    }
-  },
-}));
+app.use(
+  express.static(clientDist, {
+    setHeaders(res, filePath) {
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        // Hashed immutable bundle.
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else {
+        // index.html, favicon, /help/*.docx — always revalidate.
+        res.setHeader('Cache-Control', 'no-cache');
+      }
+    },
+  })
+);
 // Stale-chunk protection. When a browser holds an old `index.js` after
 // a new deploy, it tries to import chunks at hashes that no longer
 // exist on disk. Without this guard, the `express.static` miss falls
@@ -704,7 +949,11 @@ app.get(['/assets/*', '/*.js', '/*.css', '/*.map'], (req, res) => {
 
 app.get('*', (req, res) => {
   // Don't serve index.html for API or data routes
-  if (req.path.startsWith('/api/') || req.path.startsWith('/data/') || req.path.startsWith('/legacy/')) {
+  if (
+    req.path.startsWith('/api/') ||
+    req.path.startsWith('/data/') ||
+    req.path.startsWith('/legacy/')
+  ) {
     return res.status(404).json({ error: 'not found' });
   }
   // Force index.html revalidation so a fresh deploy is visible on reload.
@@ -731,27 +980,27 @@ app.get('*', (req, res) => {
 //     confirmed contain no internal detail). The request_id is
 //     always returned so support can correlate with the server log.
 // Stack traces are logged server-side only.
-// eslint-disable-next-line no-unused-vars -- Express requires 4 args to detect err handler
+
 app.use((err, req, res, _next) => {
   const status = err.status || err.statusCode || 500;
   if (status >= 500) {
-    console.error(JSON.stringify({
-      t: new Date().toISOString(),
-      id: req.id,
-      level: 'error',
-      m: req.method,
-      p: req.path,
-      msg: err.message,
-      stack: err.stack?.split('\n').slice(0, 5).join(' | '),
-    }));
+    console.error(
+      JSON.stringify({
+        t: new Date().toISOString(),
+        id: req.id,
+        level: 'error',
+        m: req.method,
+        p: req.path,
+        msg: err.message,
+        stack: err.stack?.split('\n').slice(0, 5).join(' | '),
+      })
+    );
   }
   if (res.headersSent) return;
 
   const isClientError = status >= 400 && status < 500;
   const messageSafeToLeak = isClientError || err.safe === true;
-  const outMessage = messageSafeToLeak
-    ? (err.message || 'Request failed')
-    : 'Internal server error';
+  const outMessage = messageSafeToLeak ? err.message || 'Request failed' : 'Internal server error';
 
   res.status(status).json({
     ok: false,
@@ -774,8 +1023,10 @@ if (isEntryPoint) {
     // so ops see at a glance whether password migration is complete.
     // Does not block startup — users auto-upgrade on next login.
     import('./services/authService.js')
-      .then(m => m.auditLegacyPasswords?.())
-      .catch(() => { /* non-fatal */ });
+      .then((m) => m.auditLegacyPasswords?.())
+      .catch(() => {
+        /* non-fatal */
+      });
 
     // v1.3 — pick up admin user written by setupWizard. Idempotent
     // (no-op if no seed file). Runs in background so listen isn't
@@ -785,7 +1036,7 @@ if (isEntryPoint) {
         stdio: 'inherit',
         env: process.env,
       });
-      child.on('exit', code => {
+      child.on('exit', (code) => {
         if (code !== 0) console.warn(`[seed-admin] exited with ${code}`);
       });
     });
@@ -794,17 +1045,18 @@ if (isEntryPoint) {
     // in production via OPS_BACKUP_SCHEDULE=1. Runs daily at 02:00,
     // takes SQLite backup + Library tarball + verifies + alerts on fail.
     import('./services/backupScheduler.js')
-      .then(m => {
+      .then((m) => {
         const r = m.startBackupScheduler();
         if (r?.ok) console.log(`💾 Backup scheduler armed`);
-        else if (r?.skipped) console.log(`💾 Backup scheduler disabled (set OPS_BACKUP_SCHEDULE=1 to enable)`);
+        else if (r?.skipped)
+          console.log(`💾 Backup scheduler disabled (set OPS_BACKUP_SCHEDULE=1 to enable)`);
       })
       .catch((err) => console.warn('[backup] scheduler init failed:', err.message));
 
     // v1.3 P0 — Audit log retention (rotation + monthly archive).
     // Prevents audit_log.json from growing unbounded. Default OFF.
     import('./services/auditRetention.js')
-      .then(m => {
+      .then((m) => {
         const r = m.startAuditRetention();
         if (r?.ok) console.log(`📜 Audit retention armed`);
       })
@@ -832,7 +1084,7 @@ if (isEntryPoint) {
     // (1) Stop accepting new requests. existing ones keep their handler.
     const closed = new Promise((resolve) => server.close(resolve));
     const deadline = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('shutdown timeout')), SHUTDOWN_TIMEOUT_MS),
+      setTimeout(() => reject(new Error('shutdown timeout')), SHUTDOWN_TIMEOUT_MS)
     );
     try {
       await Promise.race([closed, deadline]);
@@ -865,7 +1117,7 @@ if (isEntryPoint) {
     process.exit(0);
   }
   process.on('SIGTERM', () => shutdown('SIGTERM'));
-  process.on('SIGINT',  () => shutdown('SIGINT'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 export default app;

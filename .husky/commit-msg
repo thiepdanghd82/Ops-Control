@@ -1,0 +1,8 @@
+# Husky commit-msg hook — validates commit messages against
+# commitlint.config.js. Rejects non-Conventional-Commits format
+# at typing time so the engineer fixes BEFORE the message ends up
+# in the log.
+#
+# Bypass with `git commit --no-verify` only for emergency fixes
+# during incident response. Otherwise the hook stays unconditional.
+npx --no-install commitlint --edit "$1"

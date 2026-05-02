@@ -27,6 +27,17 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { STRINGS } from './strings.js';
 
+// v1.3 / ADR-0012: per-domain strings register on module load. main.jsx
+// side-effect-imports each one at app boot. Mirror that here so the lint
+// pass sees the full key surface — otherwise every per-tab t('…') call
+// looks unknown.
+import './domains/basis.js';
+import './domains/costing.js';
+import './domains/mes.js';
+import './domains/planning.js';
+import './domains/sales.js';
+import './domains/security.js';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SRC_ROOT = path.join(__dirname, '..');
 
@@ -43,9 +54,7 @@ function walk(dir) {
 }
 
 function stripComments(src) {
-  return src
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/\/\/[^\n]*/g, '');
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
 }
 
 test('every STRINGS entry has both en and vi values', () => {
@@ -58,11 +67,10 @@ test('every STRINGS entry has both en and vi values', () => {
     if (typeof entry.en !== 'string' || entry.en.length === 0) missing.push(`${key}: missing en`);
     if (typeof entry.vi !== 'string' || entry.vi.length === 0) missing.push(`${key}: missing vi`);
   }
-  assert.deepEqual(missing, [],
-    `i18n STRINGS has incomplete entries:\n  ${missing.join('\n  ')}`);
+  assert.deepEqual(missing, [], `i18n STRINGS has incomplete entries:\n  ${missing.join('\n  ')}`);
 });
 
-test('every t(\'literal\') call in client source hits a known STRINGS key', () => {
+test("every t('literal') call in client source hits a known STRINGS key", () => {
   const files = walk(SRC_ROOT);
   const unknown = new Map(); // key → file where first seen
   // Match both single and double-quoted literal args. Skip template
@@ -84,8 +92,11 @@ test('every t(\'literal\') call in client source hits a known STRINGS key', () =
     }
   }
   const list = [...unknown.entries()].map(([k, f]) => `'${k}' (first seen in ${f})`);
-  assert.deepEqual(list, [],
-    `t('...') calls reference keys not in STRINGS (typo or missing entry?):\n  ${list.join('\n  ')}`);
+  assert.deepEqual(
+    list,
+    [],
+    `t('...') calls reference keys not in STRINGS (typo or missing entry?):\n  ${list.join('\n  ')}`
+  );
 });
 
 test('STRINGS has no duplicate keys (sanity — Object literal would coerce, but catch regression in exports)', () => {
@@ -93,6 +104,8 @@ test('STRINGS has no duplicate keys (sanity — Object literal would coerce, but
   // a sudden drop in key count (e.g. a bulk-edit typo collapsing
   // entries) surfaces rather than silently losing translations.
   const keys = Object.keys(STRINGS);
-  assert.ok(keys.length >= 50,
-    `STRINGS unexpectedly small (${keys.length} keys) — did a refactor drop entries?`);
+  assert.ok(
+    keys.length >= 50,
+    `STRINGS unexpectedly small (${keys.length} keys) — did a refactor drop entries?`
+  );
 });

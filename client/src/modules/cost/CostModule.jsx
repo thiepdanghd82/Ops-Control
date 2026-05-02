@@ -27,35 +27,36 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 //   - A tab chunk is small enough (~30-80 kB) that the fallback
 //     flashes for < 100 ms on a normal connection; SkeletonTable is
 //     there to absorb that window gracefully.
-const IFSInventory         = lazy(() => import('./tabs/IFSInventory'));
-const QuoteHistory         = lazy(() => import('./tabs/QuoteHistory'));
+const IFSInventory = lazy(() => import('./tabs/IFSInventory'));
+const QuoteHistory = lazy(() => import('./tabs/QuoteHistory'));
 const PendingApprovalsInbox = lazy(() => import('./tabs/PendingApprovalsInbox'));
-const MaterialLibrary      = lazy(() => import('./tabs/MaterialLibrary'));
-const Settings             = lazy(() => import('./tabs/Settings'));
-const LibRate              = lazy(() => import('./tabs/LibRate'));
-const LibDDL               = lazy(() => import('./tabs/LibDDL'));
-const LibFinance           = lazy(() => import('./tabs/LibFinance'));
-const MachineTechnicalTab  = lazy(() => import('./tabs/MachineTechnicalTab'));
-const LibMfg               = lazy(() => import('./tabs/LibMfg'));
-const LibRop               = lazy(() => import('./tabs/LibRop'));
-const RFQTracker           = lazy(() => import('./tabs/RFQTracker'));
-const SampleTracking       = lazy(() => import('./tabs/SampleTracking'));
-const QuoteAnalysis        = lazy(() => import('./tabs/QuoteAnalysis'));
-const Dashboard            = lazy(() => import('./tabs/Dashboard'));
-const InkCalculator        = lazy(() => import('./tabs/InkCalculator'));
-const PrintAreaCalc        = lazy(() => import('./tabs/PrintAreaCalc'));
-const DesignTools          = lazy(() => import('./tabs/DesignTools/DesignTools'));
-const MessagesTab          = lazy(() => import('./tabs/Messages/MessagesTab'));
-const StandardCalc         = lazy(() => import('./tabs/StandardCalc/StandardCalc'));
-const ComplexCalc          = lazy(() => import('./tabs/ComplexCalc/ComplexCalc'));
-const Summarize            = lazy(() => import('./tabs/Summarize'));
-const FormalQuotation      = lazy(() => import('./tabs/FormalQuotation'));
-const AdminMetrics         = lazy(() => import('./tabs/AdminMetrics'));
-const AuditLog             = lazy(() => import('./tabs/AuditLog'));
+const MaterialLibrary = lazy(() => import('./tabs/MaterialLibrary'));
+const Settings = lazy(() => import('./tabs/Settings'));
+const LibRate = lazy(() => import('./tabs/LibRate'));
+const LibDDL = lazy(() => import('./tabs/LibDDL'));
+const LibFinance = lazy(() => import('./tabs/LibFinance'));
+const MachineTechnicalTab = lazy(() => import('./tabs/MachineTechnicalTab'));
+const LibMfg = lazy(() => import('./tabs/LibMfg'));
+const LibRop = lazy(() => import('./tabs/LibRop'));
+const RFQTracker = lazy(() => import('./tabs/RFQTracker'));
+const SampleTracking = lazy(() => import('./tabs/SampleTracking'));
+const QuoteAnalysis = lazy(() => import('./tabs/QuoteAnalysis'));
+const Dashboard = lazy(() => import('./tabs/Dashboard'));
+const InkCalculator = lazy(() => import('./tabs/InkCalculator'));
+const PrintAreaCalc = lazy(() => import('./tabs/PrintAreaCalc'));
+const DesignTools = lazy(() => import('./tabs/DesignTools/DesignTools'));
+const MessagesTab = lazy(() => import('./tabs/Messages/MessagesTab'));
+const StandardCalc = lazy(() => import('./tabs/StandardCalc/StandardCalc'));
+const ComplexCalc = lazy(() => import('./tabs/ComplexCalc/ComplexCalc'));
+const Summarize = lazy(() => import('./tabs/Summarize'));
+const FormalQuotation = lazy(() => import('./tabs/FormalQuotation'));
+const AdminMetrics = lazy(() => import('./tabs/AdminMetrics'));
+const AuditLog = lazy(() => import('./tabs/AuditLog'));
+const KioskAdmin = lazy(() => import('./tabs/KioskAdmin.jsx'));
 // Help lives at the app level (not cost-specific) but routes through
 // the Cost sidebar since that's where users spend most of their time.
 // Planning module reuses the same HelpTab lazily when needed.
-const HelpTab              = lazy(() => import('../help/HelpTab'));
+const HelpTab = lazy(() => import('../help/HelpTab'));
 
 import './CostModule.css';
 
@@ -73,7 +74,7 @@ const TAB_COMPONENTS = {
   'quote-history': QuoteHistory,
   'approvals-inbox': PendingApprovalsInbox,
   'lib-mat': MaterialLibrary,
-  'settings': Settings,
+  settings: Settings,
   'lib-rate': LibRate,
   'lib-ddl': LibDDL,
   'lib-finance': LibFinance,
@@ -83,18 +84,19 @@ const TAB_COMPONENTS = {
   'rfq-tracker': RFQTracker,
   'sample-tracking': SampleTracking,
   'quote-analysis': QuoteAnalysis,
-  'dashboard': Dashboard,
+  dashboard: Dashboard,
   'ink-calc': InkCalculator,
   'print-area': PrintAreaCalc,
   'design-tools': DesignTools,
-  'messages': MessagesTab,
-  'standard': StandardCalc,
-  'complex': ComplexCalc,
-  'summarize': Summarize,
+  messages: MessagesTab,
+  standard: StandardCalc,
+  complex: ComplexCalc,
+  summarize: Summarize,
   'formal-quote': FormalQuotation,
-  'metrics': AdminMetrics,
+  metrics: AdminMetrics,
   'audit-log': AuditLog,
-  'help': HelpTab,
+  'kiosk-admin': KioskAdmin,
+  help: HelpTab,
 };
 
 // Preload helper lives in utils/tabPreload.js so this file stays a
@@ -117,7 +119,7 @@ const TAB_TITLES = {
   'quote-history': 'Quote History',
   'approvals-inbox': 'Approvals Inbox',
   'lib-mat': 'Materials Library',
-  'settings': 'Settings',
+  settings: 'Settings',
   'lib-rate': 'Rate Library',
   'lib-ddl': 'Drop-down Lists',
   'lib-finance': 'Finance Library',
@@ -127,25 +129,26 @@ const TAB_TITLES = {
   'rfq-tracker': 'RFQ Tracker',
   'sample-tracking': 'Sample Tracking',
   'quote-analysis': 'Quote Analysis',
-  'dashboard': 'Dashboard',
+  dashboard: 'Dashboard',
   'ink-calc': 'Ink Calculator',
   'print-area': 'Print Area Calc',
   'design-tools': 'Design Tools',
-  'messages': 'Messages',
-  'standard': 'Standard Calc',
-  'complex': 'Complex Calc',
-  'summarize': 'Summarize',
+  messages: 'Messages',
+  standard: 'Standard Calc',
+  complex: 'Complex Calc',
+  summarize: 'Summarize',
   'formal-quote': 'Formal Quotation',
-  'metrics': 'Admin Metrics',
+  metrics: 'Admin Metrics',
   'audit-log': 'Audit Log',
-  'help': 'Help',
+  'kiosk-admin': 'Kiosk Admin',
+  help: 'Help',
 };
 
 function humanise(id) {
   return String(id || '')
     .split(/[-_]/)
     .filter(Boolean)
-    .map(s => s.charAt(0).toUpperCase() + s.slice(1))
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
     .join(' ');
 }
 
@@ -156,7 +159,9 @@ function CostModuleInner({ activeTab }) {
   if (!Component) {
     return (
       <div className="cost-module cost-module-empty">
-        <p>Unknown tab: <b>{activeTab}</b></p>
+        <p>
+          Unknown tab: <b>{activeTab}</b>
+        </p>
         <p>Select a tab from the sidebar to get started.</p>
       </div>
     );

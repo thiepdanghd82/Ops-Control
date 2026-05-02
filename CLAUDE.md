@@ -10,10 +10,10 @@
 >
 > **Sprints 11 + 13 hardening landed 2026-04-25.** 560 server + 465 client tests pass (1,025 total).
 >
-> **Sprint 11 — Safety Rails:** JSON schema validation on Library/* (P0-1), optimistic locking on
+> **Sprint 11 — Safety Rails:** JSON schema validation on Library/_ (P0-1), optimistic locking on
 > quotes (P0-2), Windows deploy scripts (P1-3), TOTP key preservation across deploys (P2-1), CSRF
 > was already in place from Phase 9H.4 (verified — audit false-flagged), `_saved_at` server-
-> authoritative timestamp, rate-limit on reset-pwd, assets/* 404 regression test,
+> authoritative timestamp, rate-limit on reset-pwd, assets/_ 404 regression test,
 > `npm run preflight` env validator, ESLint warning on new `style={{...}}` usage.
 >
 > **Sprint 12 — Code Quality refactors DEFERRED.** PrintAreaCalc/Settings splits (28h+) and 5x
@@ -43,16 +43,15 @@
 > section below for the audit findings + "Lessons learned" for the
 > patterns that kept biting us.
 
-
 ## Deployment topology (CRITICAL)
 
 There are **two runtime surfaces** that can serve the UI. Which one the user is viewing determines what you must do after a code change.
 
-| Surface | URL | Source it serves | After-edit action |
-|---|---|---|---|
-| **Vite dev** | `http://localhost:5173` (or 5175 when auto-bumped) | `client/src/**` live, via HMR | Nothing — HMR picks it up |
-| **Prod server (local)** | `http://localhost:3000` | `client/dist/**` (pre-built bundle) | `cd client && npm run build` |
-| **Prod server (remote Windows)** | `http://10.102.3.61:3000` | `client/dist/**` on THAT machine | Build **+** deploy to the remote |
+| Surface                          | URL                                                | Source it serves                    | After-edit action                |
+| -------------------------------- | -------------------------------------------------- | ----------------------------------- | -------------------------------- |
+| **Vite dev**                     | `http://localhost:5173` (or 5175 when auto-bumped) | `client/src/**` live, via HMR       | Nothing — HMR picks it up        |
+| **Prod server (local)**          | `http://localhost:3000`                            | `client/dist/**` (pre-built bundle) | `cd client && npm run build`     |
+| **Prod server (remote Windows)** | `http://10.102.3.61:3000`                          | `client/dist/**` on THAT machine    | Build **+** deploy to the remote |
 
 The Vite dev server (`npm run dev`, defined as `client-dev` in `.claude/launch.json`) is the only surface that auto-refreshes. The node production server (`server/index.js`) serves whatever bundle is physically in `client/dist/` at request time — it does NOT watch source files.
 
@@ -69,60 +68,77 @@ user sees stale-chunk errors.**
    - `:3000` on `10.102.3.61` (remote Windows) → rebuild **and** deploy.
 
 2. **Tests first** — a broken build wastes everyone's time:
+
    ```bash
    cd "3. PROJECTS/Ops Control/client" && npm test
    ```
+
    Then server tests:
+
    ```bash
    cd "3. PROJECTS/Ops Control" && npm test
    ```
+
    Both must pass before proceeding.
 
 3. **Rebuild the client:**
+
    ```bash
    cd "3. PROJECTS/Ops Control/client" && npm run build
    ```
+
    The bundle hash (e.g. `index-BZT3rIjg.js`) MUST change when source
    changed. If it didn't, the source isn't actually in the build.
 
-4. **If server code (`server/**`) was touched, RESTART the node process:**
+4. **If server code (`server/**`) was touched, RESTART the node process:\*\*
+
    ```bash
    OLDPID=$(lsof -nP -iTCP:3000 -sTCP:LISTEN -t 2>/dev/null)
    kill $OLDPID 2>/dev/null; sleep 1
    cd "3. PROJECTS/Ops Control" && node server/index.js > /tmp/ops-server.log 2>&1 &
    sleep 2
    ```
+
    Confirm it's serving:
+
    ```bash
    curl -sS -o /dev/null -w "%{http_code}\n" http://localhost:3000/
    ```
+
    (expect `200`)
 
 5. **Self-check the deployed bundle matches the source.** Pick a
    unique string from your edit (a new comment, class name, or field
    name) and grep the built bundle — it MUST be present:
+
    ```bash
    grep -l "<new-identifier>" "3. PROJECTS/Ops Control/client/dist/assets/"*.js
    ```
+
    And the OLD behaviour string must be GONE:
+
    ```bash
    grep -l "<old-identifier>" "3. PROJECTS/Ops Control/client/dist/assets/"*.js  # should print nothing
    ```
 
 6. **Verify stale-chunk protection is intact** (crash-prevention regression
    guard — added 2026-04-23):
+
    ```bash
    curl -sS -o /dev/null -w "%{http_code}\n" http://localhost:3000/assets/THIS-DOES-NOT-EXIST.js
    ```
+
    Expect `404` (NOT 200). If this returns 200 the server is falling
    back to `index.html` for missing chunks, which causes the MIME-type
    crash. See `server/index.js` — there must be a route for
    `/assets/*` that returns 404 **before** the SPA catch-all.
 
 7. **If remote, deploy:**
+
    ```bash
    cd "3. PROJECTS/Ops Control" && ./deploy.sh user@10.102.3.61
    ```
+
    Confirm deploy target the first time each session.
 
 8. **Only AFTER all 7 checks pass, tell the user to reload** (one
@@ -131,6 +147,24 @@ user sees stale-chunk errors.**
    crash, the ErrorBoundary's auto-reload kicks in once automatically;
    a second crash means the NEW bundle is broken — investigate, don't
    just ask for another reload.
+
+## Playwright e2e (MES-2.8, 2026-05-01)
+
+The kiosk PWA has a Playwright suite at `apps/kiosk/tests/e2e/` driving
+chromium against the planner server with an isolated `DATA_DIR` +
+SQLite path.
+
+- Run all specs: `npm run test:e2e`
+- Headed (debugging): `npm run test:e2e:headed`
+- One-time chromium binary install: `npx playwright install chromium`
+- Reports land in `playwright-report/` (gitignored); failures attach
+  screenshots + traces in `test-results/`.
+- Pre-condition: `npx playwright install chromium` must run once on
+  the dev box (Playwright won't auto-download). The `webServer` block
+  in `apps/kiosk/playwright.config.js` boots an isolated server with
+  the MES feature flag pre-enabled via `_globalSetup.js`, so no
+  manual flag-flip is needed.
+- Chromium-only this sprint; cross-browser deferred to MES-3.
 
 ## Common failure mode to avoid
 
@@ -148,6 +182,7 @@ and the affected tab renders the ErrorBoundary fallback with
 **Root cause**: browser holds an old `index.js` referencing chunk hashes that no longer exist in `client/dist/`. The old `express.static` fallthrough returned `index.html` for any unknown path, so the browser loaded HTML when it expected JS and choked on the `text/html` content type.
 
 **Fix in place**:
+
 1. `server/index.js` has a `/assets/*` 404 route BEFORE the SPA catch-all. Unknown chunks now return a real 404.
 2. `components/Shared/ErrorBoundary.js` detects the three common chunk-load error messages and force-reloads the page once per session (guarded via `sessionStorage['ops_chunk_reload_done']` so a genuine bug can't melt the browser in a loop).
 3. `server/index.js` sets `Cache-Control: public, max-age=31536000, immutable` on `/assets/*` and `no-cache` on `index.html` so the browser can safely trust hashed chunks and always revalidate the entry point.
@@ -157,6 +192,7 @@ and the affected tab renders the ErrorBoundary fallback with
 ## Backend changes
 
 Server code in `server/**` is served by `node server/index.js`. It doesn't auto-restart on file changes unless the user has set up nodemon. After editing server code:
+
 - Ask the user to restart the node process, OR
 - On the remote Windows server, the systemd/service equivalent needs restarting after `./deploy.sh` pushes the new code.
 
@@ -192,6 +228,7 @@ Centralized, searchable in-app help with a Word-export mirror.
 4. `npm run build` + deploy as usual (the `.docx` is a static asset served from `client/dist/help/`).
 
 **Capturing screenshots:** the app is behind auth, so programmatic capture via Claude Preview isn't possible. After logging in:
+
 - Navigate to the tab.
 - Use OS screenshot tool (Cmd+Shift+4 on macOS) OR a browser screenshot extension.
 - Save as `<tab-id>.png` in the screenshots folder.
@@ -205,30 +242,34 @@ Centralized, searchable in-app help with a Word-export mirror.
 
 Three-layer permission system, SAP-inspired. Every access decision goes through `permissionService.resolveTabAccess(user, tabId) → 'hidden' | 'read' | 'edit'`.
 
-| Layer | Field | Purpose |
-|---|---|---|
-| **1. Role** | `user.role` (sys/admin/cost/user/viewonly) | Coarse write + admin gate. `sys` = god mode (bypasses all tab checks). |
-| **2. Department** | `user.department` (sales / cs / npi / purchasing / production / quality / finance / leader / ops) | Informational + default-group suggestion. Does NOT enforce on its own. |
-| **3. Permission Group** | `user.permission_group_id` → `Library/PermissionGroups/groups.json` | Per-tab access matrix (`tab_permissions: { tabId: 'hidden'|'read'|'edit' }`). THE enforcement layer. |
+| Layer                   | Field                                                                                             | Purpose                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------ | ---------------------------------- |
+| **1. Role**             | `user.role` (sys/admin/cost/user/viewonly)                                                        | Coarse write + admin gate. `sys` = god mode (bypasses all tab checks). |
+| **2. Department**       | `user.department` (sales / cs / npi / purchasing / production / quality / finance / leader / ops) | Informational + default-group suggestion. Does NOT enforce on its own. |
+| **3. Permission Group** | `user.permission_group_id` → `Library/PermissionGroups/groups.json`                               | Per-tab access matrix (`tab_permissions: { tabId: 'hidden'             | 'read' | 'edit' }`). THE enforcement layer. |
 
 **Client enforcement** — `AccessProvider` loads groups on login, exposes `useAccess().access(tabId)`. `Sidebar.jsx` filters hidden tabs; `<AccessGate tabId=…>` wraps every tab-level component (in `CostModule.jsx`) and renders a forbidden card (`hidden`) or read-only fieldset (`read`).
 
 **Server enforcement (defense-in-depth)** — `requireTabAccess(tabId)` middleware on every write endpoint. A curl user bypassing the client gets a `403 permission_denied { tab, required, current }`. Protected endpoints:
+
 - `POST /api/save-all` → `requireBodyTabAccess(SAVE_ALL_TAB_MAP)` — rejects whole request if any body key's tab is not 'edit'
 - `POST /api/quotes` → checks `standard` or `complex` based on quote type
 - `POST/DELETE /api/shared/rfq-tracker/{audit,attachments}` → `rfq-tracker`
 - `POST/DELETE /api/shared/sample-tracking/{audit,attachments}` → `sample-tracking`
 
 **When adding a new tab**:
+
 1. Add its id + label to `_tab_catalog` in `Library/PermissionGroups/groups.json`
 2. If the tab has a write endpoint, apply `requireTabAccess('<tab-id>')` in the route
-3. Wrap any new tab component render with `<AccessGate tabId="<tab-id>">`  (already done centrally in `CostModule.jsx` for all cost tabs — only needed if the tab lives outside CostModule)
+3. Wrap any new tab component render with `<AccessGate tabId="<tab-id>">` (already done centrally in `CostModule.jsx` for all cost tabs — only needed if the tab lives outside CostModule)
 
 **Seed groups** (non-removable system group + 7 defaults):
+
 - `all_access` (sys-gated fallback), `leader_default`, `sales_default`, `cs_default`, `npi_default`, `purchasing_default`, `production_default`, `quality_default`.
-Operators can Duplicate + Customize any seed; admins manage in **Settings → Account Control → Permission Groups**.
+  Operators can Duplicate + Customize any seed; admins manage in **Settings → Account Control → Permission Groups**.
 
 **Audit events logged** (via `audit()` → `server/data/Library/Users/audit_log.json`):
+
 - `PG_CREATE`, `PG_UPDATE`, `PG_DELETE` — group lifecycle
 - `DEPARTMENT_CHANGE`, `PERMISSION_GROUP_CHANGE` — per-user reassignment (auto-revokes active sessions so the new matrix kicks in on next login)
 - `PG_CHANGE_REVOKE` — how many sessions were killed
@@ -241,19 +282,21 @@ Senior-auditor review ran across 9 dimensions — code quality, UI/UX consistenc
 
 **Verdict: 72/100 — CONDITIONAL GO-LIVE.** Three P1 issues fixed this sprint:
 
-| # | Issue | Fix | Files touched |
-|---|---|---|---|
+| #    | Issue                                                                                          | Fix                                                                                                                                              | Files touched                                                                    |
+| ---- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
 | P1-1 | Sub-tab bars had no `role="tab"` / `aria-selected` — blind and keyboard-only operators blocked | Added ARIA roles + labels to StandardCalc, ComplexCalc, InkCalculator sub-tabs; TabBarOverflow now sets `role="tablist"` + Home/End keyboard nav | `StandardCalc.jsx`, `ComplexCalc.jsx`, `InkCalculator.jsx`, `TabBarOverflow.jsx` |
-| P2-3 | No focus-visible ring on any button — keyboard users couldn't see where focus landed | Global `:where(button, a, input, ...):focus-visible` rule added in `tokens.css`; 2 px outline in brand colour, dark-mode aware | `tokens.css` |
-| P2-4 | 28 raw `console.*` calls leaked internal state to prod bundle | Added `utils/logger.js` with DEV-only `log/warn` + always-on `err`; `utils/apiTry.js` helper wraps API calls with toast + logger | `utils/logger.js`, `utils/apiTry.js`, `deadCode.lint.test.js` |
+| P2-3 | No focus-visible ring on any button — keyboard users couldn't see where focus landed           | Global `:where(button, a, input, ...):focus-visible` rule added in `tokens.css`; 2 px outline in brand colour, dark-mode aware                   | `tokens.css`                                                                     |
+| P2-4 | 28 raw `console.*` calls leaked internal state to prod bundle                                  | Added `utils/logger.js` with DEV-only `log/warn` + always-on `err`; `utils/apiTry.js` helper wraps API calls with toast + logger                 | `utils/logger.js`, `utils/apiTry.js`, `deadCode.lint.test.js`                    |
 
 **Deferred to Sprint+1 (non-blocking, documented)**:
+
 - Component-size refactor: PrintAreaCalc (1,971 L) + Settings (1,727 L) exceed the 500-L threshold. Performance OK under normal load; monitor on prod.
 - i18n: ~40% of calc-tab strings still hardcoded (table headers, placeholders). Operators speak English; Vietnamese translations are nice-to-have.
 - Windows remote deploy script. Linux `deploy.sh` works; bat-file in next cycle.
 - Component memoization review: PrintAreaCalc has 18 `useCallback` but 1 `useMemo`; Settings has inline arrow functions triggering child re-renders.
 
 **Known operational risks** (ops must know these):
+
 - **TOTP key mismatch at boot locks out all users.** If the server restarts with a different `OPS_TOTP_KEY` env than last boot, all user 2FA secrets become undecryptable. Recovery: `npm run reset-totp` (re-enrolls every user). Deploy scripts (`deploy.sh`/`deploy.ps1`) now preserve the existing key across deploys (Sprint 11 P2-1); `npm run preflight` fails the pipeline if prod env is missing it.
 - **Admin can delete all users / data without soft-delete.** `costApi.js` deletes are hard; backup is the only recovery. Always take a backup before any admin bulk action. Sprint 13 will add soft-delete + Trash tab.
 - **~~`dataSync.js` caches legacy `window._VARNAME = {...}` files without schema validation.~~** **FIXED Sprint 11 P0-1.** Critical Library files (PermissionGroups, MachineProfiles, Rate tables) now validate via `server/services/librarySchema.js`; unknown keys are stripped in strict mode for auth-critical data. Rows failing schema are dropped with stderr log. Treat `Library/` as a trust boundary: even trusted operators can drop a malformed xlsx export, and schema validation keeps the server running.
@@ -266,10 +309,10 @@ These are patterns this codebase specifically tripped on — save future session
 2. **Orphan-module lint is enforced.** New utility files must either be imported somewhere or added to `KNOWN_ORPHANS` in `deadCode.lint.test.js`. The lint runs as part of `npm test` and will fail CI.
 3. **The xlsx training manuals drift from code.** When a user asks about formulas documented in `Use guide/CCL_Pricing_Training_EN_v3.3.xlsx`, trust `services/calcEngine.js` — not the xlsx. The 14 Sprint-9 audit corrections are all code-vs-xlsx drifts.
 4. **Emoji characters in i18n regex need care.** Sidebar nav items render as `"◇Pricing (Std)"` (icon glued to label, no space). When matching, use `text.replace(/^[^a-zA-Z]+/, '').trim()` to strip icon prefixes, or allow the icon in the regex.
-5. **Self-test harness is reusable** — run `node scripts/help/self-test.mjs` anytime to smoke-check every main tab. Requires demo user (`demo / demo1234`, role=user, TOTP off). It catches regex drift, console errors, page crashes, and aria-missing sub-tabs.
+5. **Self-check harness is reusable** — run `node scripts/help/self-check.mjs` anytime to smoke-check every main tab. Requires demo user (`demo / demo1234`, role=user, TOTP off). It catches regex drift, console errors, page crashes, and aria-missing sub-tabs. Renamed from `self-test.mjs` in v1.3 GA so the `node --test` glob doesn't try to run it as a unit test.
 6. **Inline `style={{...}}` is discouraged.** ESLint flags new inline-style usage as a warning (Sprint 11 quick win). The 5 worst offenders (PrintAreaCalc, Settings, InkCalculator, SubProductRow, Dashboard) are temporarily excluded while Sprint 12 migrates them. Don't add new inline styles — use a CSS class or hoist the literal to a `const` outside the render. This both improves theme/dark-mode support and keeps CSS cacheable across renders.
 7. **Sub-agent claims need cross-validation.** Background-spawned audit agents will sometimes flag false-positives with very specific line numbers (e.g. "stored XSS in costApi.js:856"). Spot-check at least the P0 claims with `grep -n` before quoting them in user-facing reports — `dangerouslySetInnerHTML` audit caught one such hallucination during the 2026-04 audit.
-8. **Schema-validate Library/* on read, not on write.** `server/services/librarySchema.js` provides hand-rolled (zero-dep) row validators for permission groups, machine profiles, and rate tables. Strict mode strips unknown keys for auth-critical data; passthrough keeps them for forward-compat reads. Add a schema entry for any NEW Library file driving auth or pricing.
+8. **Schema-validate Library/\* on read, not on write.** `server/services/librarySchema.js` provides hand-rolled (zero-dep) row validators for permission groups, machine profiles, and rate tables. Strict mode strips unknown keys for auth-critical data; passthrough keeps them for forward-compat reads. Add a schema entry for any NEW Library file driving auth or pricing.
 9. **Optimistic locking is opt-in.** `quotesStore.upsertQuote` checks `_version` only when the caller sends it. Server-to-server mutators (approval transitions, audit-log appends) omit it intentionally. The client tracks `activeQuoteVersion` alongside `activeQuoteId` in CalcContext and bumps it after each successful save. 409 responses carry `current` so the UI can show reload-vs-overwrite without a round-trip.
 10. **Big shared modal primitives reduce drift fast.** Migrating 16 modals to `components/Shared/Modal.jsx` (with size/severity/responsive variants) collapsed ~1500 lines of one-off CSS + JS. Future dialogs MUST use this primitive — no more `.foo-modal-scrim` from scratch. Pattern: `<Modal open size="md" severity="info"><Modal.Header title="…"/><Modal.Body>…</Modal.Body><Modal.Footer><button className="op-btn op-btn-primary">…</button></Modal.Footer></Modal>`. Drawer-style side panels (RFQTracker, SampleTracking) are a different UX — Sprint+ should add `<Drawer>` primitive separately.
 11. **Responsive design with `clamp()` + container queries beats media-query soup.** Prefer `font-size: clamp(min, fluid, max)`, `grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))`, and `@container (max-width: 500px)` over `@media`. Form grids that adapt to **modal width** (not viewport width) work consistently regardless of where they render.
@@ -292,6 +335,7 @@ These are patterns this codebase specifically tripped on — save future session
 ## Recovery playbook
 
 ### "All users are locked out of 2FA"
+
 ```bash
 # On the server where the bad OPS_TOTP_KEY was set:
 cd "3. PROJECTS/Ops Control"
@@ -318,41 +362,50 @@ compliance mandate, post-incident hygiene):
    explanation.
 
 2. **Capture the OLD key** before changing anything:
+
    ```bash
    ssh user@host "grep OPS_TOTP_KEY /opt/ops-control/.env"
    # Store this somewhere safe in case rollback is needed.
    ```
 
 3. **Generate the NEW key**:
+
    ```bash
    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    ```
+
    Must be exactly 64 hex chars. Server's preflight rejects shorter.
 
 4. **Stop the server** to prevent in-flight TOTP verifications from
    landing on a half-rotated state:
+
    ```bash
    ssh user@host "systemctl stop ops-control"   # Linux
    # OR: nssm stop ops-control                   # Windows
    ```
 
 5. **Wipe the encrypted secrets file**:
+
    ```bash
    ssh user@host "mv /opt/ops-control/server/data/Library/totp/secrets.json{,.before-rotation}"
    ```
+
    The `.before-rotation` backup lets you roll back if step 6 fails.
 
 6. **Update `.env`** with the new key:
+
    ```bash
    ssh user@host "sed -i 's|^OPS_TOTP_KEY=.*|OPS_TOTP_KEY=$NEW_KEY|' /opt/ops-control/.env"
    ssh user@host "chmod 600 /opt/ops-control/.env"
    ```
 
 7. **Start the server** + verify boot probe:
+
    ```bash
    ssh user@host "systemctl start ops-control && journalctl -u ops-control -n 20"
    # Look for: "🔐  TOTP boot probe OK — 0 user(s) enrolled, key fp …"
    ```
+
    The probe says 0 enrolled because the secrets file was wiped.
 
 8. **First user to log in** re-enrolls automatically — login-with-2FA
@@ -360,6 +413,7 @@ compliance mandate, post-incident hygiene):
    scan + verify, server stores the new encrypted secret, login completes.
 
 9. **Confirm rotation success** after first 5 users have re-enrolled:
+
    ```bash
    curl -s http://host:3000/health
    ssh user@host "ls -la /opt/ops-control/server/data/Library/totp/secrets.json"
@@ -383,9 +437,11 @@ this to confirm post-rotation that all expected users re-enrolled
 within the maintenance window.
 
 ### "All data gone after a restore"
+
 Backups are at `server/data/Library/**/*.backup.*` and `Backup & restore/`. Restore is OVERWRITE, not merge — the audit trail for who triggered it lives in `server/logs/`.
 
 ### "npm run build fails at prebuild"
+
 The prebuild hook runs Word-doc generators. If any fails, the build aborts. Check `scripts/help/build-all-docs.mjs` — common failure is missing `docx` dep (install: `npm install --save-dev docx`) or a corrupt `client/src/help/content.js`.
 
 ### "All admin / sys users lost access" (Sprint 1.7)
@@ -458,3 +514,113 @@ journalctl -u ops-control -f             # watch for "🔐 TOTP boot probe OK"
 **RTO** (Recovery Time Objective): ~2h on a pre-provisioned hot-spare (just rsync + start), ~6h cold (fresh box install).
 
 Document the off-site target machine, its credentials, and the restore drill checklist in `MAINTAINERS.md` — update it whenever the off-site rotates. Quarterly drill: time the full sequence, fix any documentation gap revealed.
+
+## MES-3 Backlog
+
+> 10 follow-up tickets surfaced during Sprint MES-2 build phase + post-tag e2e harness hotfix. Two P1s (KIOSK-003 + KIOSK-006b) must lead MES-3 sprint scope to close data-integrity and deploy-automation gaps. KIOSK-008 is the sprint-exit smoke blocker that landed too late for the v1.4.1 tag — investigate first thing in MES-3 since it likely unblocks the Playwright suite with a small fix.
+
+### Recommended MES-3 v1 scope (4 tickets)
+
+KIOSK-003 (P1, L), KIOSK-006b (P1, S), KIOSK-002 (P2, M), KIOSK-004 (P2, M). Total ~3 weeks of work assuming MES-2 pace. Closes both P1s + the operationally-visible reason-code admin gap + the Vitest coverage gap on kiosk components.
+
+### MES-3.5 polish scope (9 tickets)
+
+MES-3-FIX-1 (P2, S), MES-3-FIX-2 (P3, S), MES-3-FIX-3 (P3, S), MES-3-FIX-4 (P2, S), KIOSK-001 (P3, S), KIOSK-005a (P3, S), KIOSK-006a (P3, L), KIOSK-007 (P3, M), KIOSK-008 (P2, S). Total ~2 weeks. Wraps RFC-7807 compliance fix + Accept-endpoint contract test + audit detail JSON normalization + dev-host Node ABI sync + branded icons + dedicated audit endpoint + health dashboard + Playwright DOM port + sprint-exit smoke blocker.
+
+KIOSK-008 should be tackled FIRST in MES-3.5 because it's the gating fix for the Playwright happy-path spec — until it's resolved, the e2e harness (otherwise structurally fixed by the post-tag hotfix at commit `0bb9c93`) can't actually report green.
+
+### Tickets
+
+For each, write 5 fields: ID, title, source, acceptance, effort, priority.
+
+#### MES-3-FIX-1 — wo-terminal-edit body.status field collision
+
+- **Source**: MES-2.3 helper-extraction roll-back; latent bug discovered when respondError() destructure shadowed RFC-7807 reserved status field with the BmesError payload's wo.status string.
+- **Acceptance**: rename BmesError payload field from `status` to `wo_status`, lift respondError() in workOrderV2.js per Patch N2 protocol (run all 40 MES-1.4 contract tests pre/post; halt on any fail), add 1 new test asserting body.status is integer 409 (not string state name).
+- **Effort**: S (~50 LOC + 1 new test)
+- **Priority**: P2 (RFC-7807 compliance gap; operationally invisible because no current client reads body.status, but technically non-compliant wire format)
+
+#### MES-3-FIX-2 — acceptOperation.contract.test.js coverage
+
+- **Source**: B-ship of Accept button (2026-05-02) added /accept route to operationV2.js but didn't ship a contract test. Harness wiring fixed inline same branch (FIX D — `_operationsHarness.js` now passes a stub `auth` middleware so router construction doesn't throw on the new role-gated route); test file still net-new.
+- **Acceptance**: write `domains/planning/tests/integration/contracts/acceptOperation.contract.test.js` asserting (a) DONE → ACCEPTED transition returns 200 with updated op shape including planned_start, (b) audit emit OP_ACCEPT with wo_id in detail JSON (verify via `/audit/timeline?wo_id=`), (c) idempotent re-POST with same Idempotency-Key returns 200 without double-writing audit, (d) state-machine rejects non-DONE → ACCEPTED transitions with 409 + RFC-7807 body.
+- **Effort**: S (~80 LOC, ~5 tests)
+- **Priority**: P3 (manual UI verify covered happy path on this ship; coverage gap matters for KIOSK-003 cascade work in MES-3 which will need the harness already fixed)
+
+#### MES-3-FIX-3 — Normalize LOGIN\_\* audit detail to valid JSON
+
+- **Source**: STEP 1 verify of Accept-button branch (2026-05-02) — guarded `json_valid(detail)` in audit timeline query exposed the underlying problem: `LOGIN_OK` writes `detail=''` and `LOGIN_FAIL` writes plain-text reasons (e.g. `"bad password"`). Violates audit_log convention that `detail` MUST be valid JSON for `json_extract` filters to work. Read-side guard mitigates but doesn't fix.
+- **Acceptance**: grep `server/routes/auth*` + `server/services/auth*` for every `audit('LOGIN_OK', ...)` / `audit('LOGIN_FAIL', ...)` callsite; replace with `audit('LOGIN_OK', JSON.stringify({ user_id, ip }))` and `audit('LOGIN_FAIL', JSON.stringify({ user_id, ip, reason }))`. Backfill optional (don't rewrite history). Add lint test asserting every `audit(...)` second arg is either omitted or a JSON.stringify call (regex-based).
+- **Effort**: S (~30 LOC + 1 lint test)
+- **Priority**: P3 (read-side guard already prevents prod 500; matters for forensic-replay tooling that expects uniform JSON shape)
+
+#### MES-3-FIX-4 — Switch host Node to v24 to match Electron ABI
+
+- **Source**: STEP 1 verify (2026-05-02) — `desktop:dev` rebuilds `better-sqlite3` against Electron's bundled Node 24 (NODE_MODULE_VERSION 145), then host CLI Node 20 (NODE_MODULE_VERSION 115) can't load the binary. Every alternation between `desktop:dev` and `npm test` triggers `npm rebuild`. Documented as CLAUDE.md lesson 25 at file-system level (paths-with-spaces); ABI mismatch is a separate, more subtle root cause.
+- **Acceptance**: document as CLAUDE.md lesson 27 ("Electron + CLI Node version sync"); update bare-metal restore section to specify Node 24; add `.nvmrc` at repo root with `24`; install fnm/nvm guidance in MAINTAINERS.md or `docs/onboarding.md`.
+- **Effort**: S (docs + 1 `.nvmrc` commit)
+- **Priority**: P2 (rebuild churn between `desktop:dev` and `npm test` happens daily on this branch; promoting eliminates the per-context-switch friction)
+
+#### KIOSK-001 — Real branded PWA icons
+
+- **Source**: MES-2.6a placeholder icons (Carbon-blue squares with white "K", zlib-encoded inline)
+- **Acceptance**: 192/512/180 px PNGs from CCL Vietnam brand; replace placeholders in apps/kiosk/public/; verify Lighthouse PWA audit ≥90 on the kiosk shell; document brand-asset source in MAINTAINERS.md
+- **Effort**: S (asset swap + Lighthouse run)
+- **Priority**: P3 (operators don't care about icon aesthetics; PWA install prompt looks more polished with branded icons)
+
+#### KIOSK-002 — Reason-code admin CRUD UI
+
+- **Source**: PRD §16 R5 deferral; MES-2 ships seed-only with 8 reason codes; MES-2.6b GET /v2/reason-codes endpoint already exposes the data
+- **Acceptance**: Library/ tab "Reason Codes" with create/edit/disable (no hard delete — sets active=0); audit emit per CRUD action (REASON_CODE_CREATE / UPDATE / DISABLE); EN+VN parity enforced; pause endpoint validates against active=1 only (already does in MES-2.4)
+- **Effort**: M (~250 LOC: tab + 3 modals + API + i18n)
+- **Priority**: P2 (operators currently must SQL-edit Library/ to add a 9th code; per-line filtering still deferred to MES-4)
+
+#### KIOSK-003 — WO-level lifecycle cascade
+
+- **Source**: PRD §16 Q3; MES-2 doesn't implement WO-level cascade when all ops reach ACCEPTED, nor does WO_CANCEL cascade to op CANCELLED status
+- **Acceptance**: composite ticket — (a) op state machine adds CANCELLED state + edge `* → CANCELLED` on event 'wo_cancel', (b) workOrderService.cancelWorkOrder cascades to set all child ops to CANCELLED in same db.transaction, (c) when all ops on a WO transition to ACCEPTED, WO automatically transitions to its next state per FR (review with Thiep before implementing), (d) audit emit for every cascade write
+- **Effort**: L (~400 LOC + ~30 tests)
+- **Priority**: P1 (data-integrity gap; planner can currently cancel a WO with running ops, leaving op rows in inconsistent state)
+
+#### KIOSK-004 — Vitest harness for kiosk components
+
+- **Source**: MES-2.6a/b deferral; agent's KIOSK-004 acknowledgment in commit body
+- **Acceptance**: Vitest config in apps/kiosk/; unit tests for ReasonPicker (8-tile render + select), DispatchList (sort order + empty state + last_pulse_at staleness), OpDetail (6 status branches + optimistic dispatch), ConnBadge (3-state transitions), queue.js (enqueue + flush + exp-backoff + cap), api.js (RFC-7807 parser + 401 recovery)
+- **Effort**: M (~300 LOC + ~50 tests)
+- **Priority**: P2 (Playwright covers happy-path + offline; unit gaps are error-state edges and component-level invariants)
+
+#### KIOSK-005a — Dedicated /v2/audit/queue-evict endpoint
+
+- **Source**: MES-2.6b deferral; localStorage 'opskiosk.evicted_count' is the only forensic trail until this lands
+- **Acceptance**: kiosk POSTs evicted entries on next online via dedicated endpoint; server writes QUEUE_EVICT audit row per entry with kiosk_session_jti + original Idempotency-Key + age-at-eviction; localStorage counter clears on successful upload; rate-limited (10 entries / minute / kiosk)
+- **Effort**: S (~80 LOC server + ~30 LOC kiosk)
+- **Priority**: P3 (current console.warn + counter is acceptable for low-volume; matters more once kiosks scale to 50+)
+
+#### KIOSK-006a — Kiosk health dashboard
+
+- **Source**: agent's MES-3 backlog
+- **Acceptance**: planner SYSTEM › Kiosk Health tab; per-kiosk view of last_seen, replay rate (count idempotency_ledger entries with same key in last 24h), permanent failure count (from kiosk-side queue + KIOSK-005a audit), latency p50/p95 from /dispatch sampling; sparkline charts for last 24h activity
+- **Effort**: L (~500 LOC: tab + chart lib integration + 3 server queries + i18n)
+- **Priority**: P3 (operationally useful but not blocking; ops can debug via raw audit_log queries today)
+
+#### KIOSK-006b — groups.json idempotent migration script
+
+- **Source**: MES-2.7 gap; server/data/Library/PermissionGroups/groups.json is gitignored (operator runtime data); MES-2.7 added 'kiosk-admin' tab catalog row + 7 group entries on dev only — production deploy doesn't propagate
+- **Acceptance**: scripts/migrations/2026-XX-kiosk-admin-perms.js runs on first boot post-MES-2 deploy; reads existing groups.json; idempotent merge — adds kiosk-admin to \_tab_catalog if missing, sets kiosk-admin: edit on all_access + leader_default groups, sets hidden on the other 6 seed groups; preserves existing operator customizations; logs "kiosk-admin perms seeded" on first run, no-op on subsequent runs
+- **Effort**: S (~80 LOC script + 10 LOC mountPlanning hook)
+- **Priority**: P1 (otherwise admins assigned to non-default groups can't see kiosk-admin tab post-deploy until ops manually edits groups.json)
+
+#### KIOSK-007 — Playwright DOM port of wo-create-flow.timed.test.js
+
+- **Source**: MES-2.8 deferral
+- **Acceptance**: rewrite domains/planning/tests/e2e/wo-create-flow.timed.test.js as DOM Playwright spec (apps/kiosk/tests/e2e isn't the right home; create domains/planning/tests/playwright/ or shared apps/desktop-tests/); verify ≤4 click budget for WO release flow; deprecate the Node-based contract smoke once Playwright spec is green for 7 days
+- **Effort**: M (~150 LOC port + ~30 LOC fixture extension)
+- **Priority**: P3 (current Node smoke catches ~80% of regressions; full DOM coverage is nice-to-have)
+
+#### KIOSK-008 — Playwright happy-path: op-btn-pause disabled in SETUP state
+
+- **Source**: Sprint-exit smoke after the post-v1.4.1 e2e harness hotfix (commit `0bb9c93`). All 3 specs now progress past fixture setup, render the kiosk PWA, and reach OpDetail — but fail at the Pause assertion with `getByTestId('op-btn-pause')` in DOM but `element is not enabled` after 232 Playwright retries.
+- **Hypothesis** (unverified, MES-3 should confirm): the kiosk OpDetail.jsx state-branch mapping (DISPATCHED → "Start", SETUP → "Begin Run", RUNNING → "Pause") requires TWO transitions before Pause is enabled (DISPATCHED → SETUP via "Start" tap, then SETUP → RUNNING via "Begin Run" tap or implicit /scan). The happy-path spec at `apps/kiosk/tests/e2e/kiosk-happy-path.spec.js:31` likely taps "Start" once and immediately attempts "Pause", missing the "Begin Run" step. If true, fix is a 1-line spec adjustment OR a UX decision to auto-advance SETUP → RUNNING on first Start tap (not a 2-tap sequence).
+- **Acceptance**: investigate root cause (spec bug vs product UX); if spec bug, add the missing "Begin Run" tap and re-verify happy-path wallclock stays under 60s; if product UX issue, decide whether to auto-advance SETUP → RUNNING on dispatch acceptance (changes state-machine semantics — review with product owner). Either fix path lands a green 3/3 e2e suite.
+- **Effort**: S (likely 1-3 LOC spec fix; investigation 30-60 min)
+- **Priority**: P2 (gates the e2e suite from reporting green; once fixed, the harness investment from MES-2.8 + the post-tag hotfix becomes operationally usable for ongoing regression testing)

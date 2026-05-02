@@ -1,0 +1,98 @@
+Sprint MES-2 kick-off - Shop-floor kiosk + dispatch.
+
+Read in order (full content, do NOT skip):
+
+1. README FIRST/README.md
+2. README FIRST/ARCHITECTURE.md (focus section 5 - apps/ shells boot)
+3. CLAUDE.md (root)
+4. docs/MES_EXTENSION_PLAN.md (read carefully sections 3.1, 3.3, 6.5)
+5. docs/MES_ANTIGRAVITY_PROMPTS_SPRINT_MES-2.md (template sprint nay - full content)
+6. docs/MES_PROMPTING_GUIDE.md section 4.2
+7. server/domains/planning/README.md
+8. domains/planning/server/index.js (mountPlanning factory pattern - se extend)
+9. domains/planning/server/routes/workOrderV2.js (RFC-7807 envelope - mirror cho v2/operations/*)
+10. domains/planning/server/domain/workOrderTransition.js (pattern cho opStatusTransition)
+11. domains/planning/shared/constants/workOrderStates.js (WO_OP_STATUSES da co)
+12. domains/planning/server/services/workOrderService.js (atomic + audit pattern)
+13. server/db/schema.sql (location de append reason_code seed table)
+
+Then tra loi 6 cau (max 350 tu tong):
+
+A. Sprint MES-2 yeu cau gi cu the? (3 bullets tu MES_EXTENSION_PLAN.md section 3.3)
+
+B. Schema additions can - work_order_op status transitions PENDING -> DISPATCHED ->
+   SETUP -> RUNNING ⇄ PAUSED -> DONE -> ACCEPTED, plus reason_code seed table.
+   Cot bat buoc cho reason_code?
+
+C. 6 endpoints moi (per Plan section 3.1):
+   POST /api/planning/v2/operations/:id/start
+   POST /api/planning/v2/operations/:id/pause
+   POST /api/planning/v2/operations/:id/resume
+   POST /api/planning/v2/operations/:id/complete
+   POST /api/planning/v2/operations/:id/scan
+   GET  /api/planning/v2/dispatch-list?machineId=
+   Auth model (machine-token vs user JWT)? Idempotency-Key header?
+
+D. Op-status state machine - ve ASCII transitions day du
+   (7 states, ~10 valid edges + ON_HOLD/CANCELLED behavior)
+
+E. apps/kiosk/ deployment: separate Vite project hay same client/?
+   PWA manifest cau truc? IndexedDB queue strategy khi offline?
+   Machine-token via one-time URL?
+
+F. Reusable artifacts tu MES-1 (PHAI reuse, khong recreate):
+   - workOrderTransition pattern (clone thanh opStatusTransition)
+   - useMesWorkOrderFlag pattern (clone thanh useMesKioskFlag)
+   - api.js fetcher + RFC-7807 parser
+   - mountPlanning factory + v2/config endpoint pattern
+   - BmesError class
+   - Modal primitive (NOT cho kiosk - kiosk touch-first UX khac)
+
+DUNG de xuat, DUNG code. Chi tra loi 6 cau A-F. Toi se verify roi moi cho /spec.
+
+5 pre-spec decisions, FLAG trong cau A-F cua ban:
+
+1. Machine-token auth:
+   (a) one-time URL token issued by planner, kiosk persists in localStorage
+   (b) static per-machine API key in env
+   (c) device-bound TLS cert
+   Recommend (a) - operator-friendly, revocable.
+
+2. Offline strategy:
+   (a) IndexedDB queue, flush oldest-first when online (24h cap)
+   (b) refuse mutations when offline (read-only fallback)
+   (c) optimistic update + rollback toast on flush failure
+   Recommend (a) per Plan section 3.3.
+
+3. Op-status state machine: separate opStatusTransition function (recommend)
+   hay generic stateMachineTransition factory?
+   Recommend separate vi state sets khac.
+
+4. Kiosk UX: CSS overrides trong apps/kiosk/styles/kiosk.css (recommend)
+   hay component library moi?
+   Recommend CSS overrides - khong them dependency.
+
+5. Test infra: install @playwright/test trong sprint nay?
+   Recommend YES - kiosk inherently needs DOM testing for touch flows.
+   Effort: ~1 ngay setup + 2h per scenario.
+
+Constraints (carry from MES-1):
+- ADR-0001 stack: Express + better-sqlite3 + React 19 + Vite
+- KHONG Postgres / Redis / Kafka / Keycloak / Camunda
+- Schema changes idempotent (CREATE IF NOT EXISTS)
+- Moi state transition wrap db.transaction + audit_log
+- Routes register via mountPlanning(app)
+- i18n EN+VN parity (CI lint enforced)
+- Errors RFC-7807 application/problem+json
+- Tests: contract per endpoint + state-machine unit + atomicity integration + 1 timed e2e
+
+After toi confirm A-F, se trigger /spec voi goal:
+"Implement apps/kiosk/ MVP per MES_EXTENSION_PLAN.md section 3.3 - touch-first PWA paired
+to one machine_code, online dispatch list + offline IndexedDB queue, 6 op-status
+mutation endpoints, FR-acceptance: operator can start + pause-with-reason + resume
++ complete an operation in <=4 button-presses per action."
+
+Reference branch: feature/mes-2-kiosk-dispatch (vua branch off release/v1.3 sau merge MES-1).
+This sprint depends on MES-1 schema + service layer; chi ADD code, KHONG modify
+MES-1 files (extend qua additive pattern: them method vao workOrderService theo
+existing transition() helper).

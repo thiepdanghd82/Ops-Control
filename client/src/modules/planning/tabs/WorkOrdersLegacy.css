@@ -1,0 +1,59 @@
+.work-orders {
+  padding: 24px;
+}
+.wo-col-check {
+  width: 40px;
+}
+.wo-section-title {
+  margin-top: 24px;
+  margin-bottom: 12px;
+  font-size: 16px;
+  color: #334155;
+}
+.wo-empty-cell {
+  padding: 0 !important;
+}
+.wo-generate-section {
+  background: var(--color-slate-50);
+  border: 1px solid var(--color-slate-200);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 8px;
+}
+.wo-generate-section h3 {
+  font-size: 15px;
+  color: var(--color-slate-700);
+  margin-bottom: 12px;
+}
+.wo-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+tr.selected {
+  background: var(--color-brand-50) !important;
+}
+.status-planned {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+.status-released {
+  background: var(--color-warning-100);
+  color: var(--color-warning-500);
+}
+.status-new {
+  background: var(--color-brand-50);
+  color: var(--color-brand-600);
+}
+.status-in-progress {
+  background: var(--color-warning-100);
+  color: var(--color-warning-500);
+}
+.status-completed {
+  background: #dcfce7;
+  color: #166534;
+}
+.status-on-hold {
+  background: var(--color-slate-100);
+  color: var(--color-slate-500);
+}

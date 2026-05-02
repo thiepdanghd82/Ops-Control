@@ -35,15 +35,19 @@ const fs = require('node:fs');
 const { app, dialog } = require('electron');
 
 let machineIdSync = null;
-try { ({ machineIdSync } = require('node-machine-id')); } catch { /* optional */ }
+try {
+  ({ machineIdSync } = require('node-machine-id'));
+} catch {
+  /* optional */
+}
 
 // ─── Configuration ─────────────────────────────────────────────────
 // Tier definitions match IMPROVEMENT_BRIEF.md.
 const TIER_LIMITS = Object.freeze({ S: 15, M: 20, L: 50 });
 const VALID_TIERS = Object.freeze(['S', 'M', 'L']);
 
-const LICENSE_PATH    = () => path.join(app.getPath('userData'), 'license.json');
-const TRIAL_DAYS      = 14;
+const LICENSE_PATH = () => path.join(app.getPath('userData'), 'license.json');
+const TRIAL_DAYS = 14;
 
 // Public key (PEM/SPKI, Ed25519). At build time, electron-builder
 // injects OPS_LICENSE_PUBKEY through the env or a generated file in
@@ -59,14 +63,20 @@ MCowBQYDK2VwAyEAR2s68TfG9nR70mQXUBVALdf468fBR/RBMP9r4n9X5gY=
 function getPublicKey() {
   const fromEnv = process.env.OPS_LICENSE_PUBKEY;
   if (fromEnv) {
-    try { return crypto.createPublicKey(fromEnv); }
-    catch (e) { console.warn('[license] OPS_LICENSE_PUBKEY invalid:', e.message); }
+    try {
+      return crypto.createPublicKey(fromEnv);
+    } catch (e) {
+      console.warn('[license] OPS_LICENSE_PUBKEY invalid:', e.message);
+    }
   }
   // Resource-bundled key (preferred at runtime when packaged).
   const bundled = path.join(process.resourcesPath || __dirname, 'license-pubkey.pem');
   if (fs.existsSync(bundled)) {
-    try { return crypto.createPublicKey(fs.readFileSync(bundled, 'utf8')); }
-    catch (e) { console.warn('[license] bundled pubkey invalid:', e.message); }
+    try {
+      return crypto.createPublicKey(fs.readFileSync(bundled, 'utf8'));
+    } catch (e) {
+      console.warn('[license] bundled pubkey invalid:', e.message);
+    }
   }
   return crypto.createPublicKey(DEV_PUBKEY_PEM);
 }
@@ -75,7 +85,11 @@ function getPublicKey() {
 function getHardwareFingerprint() {
   let machineId;
   if (machineIdSync) {
-    try { machineId = machineIdSync(true); } catch { machineId = null; }
+    try {
+      machineId = machineIdSync(true);
+    } catch {
+      machineId = null;
+    }
   }
   if (!machineId) {
     const os = require('node:os');
@@ -86,32 +100,47 @@ function getHardwareFingerprint() {
 
 // ─── Canonicalisation (must match scripts/generate-license.mjs) ────
 const SIGNED_FIELDS = [
-  'version', 'installation_id', 'customer', 'tier', 'max_users',
-  'issued_at', 'expires_at', 'features',
+  'version',
+  'installation_id',
+  'customer',
+  'tier',
+  'max_users',
+  'issued_at',
+  'expires_at',
+  'features',
 ];
 
 function canonicalize(payload) {
-  const norm = (v) => Array.isArray(v) ? [...v].sort().join(',') : (v ?? '');
+  const norm = (v) => (Array.isArray(v) ? [...v].sort().join(',') : (v ?? ''));
   return SIGNED_FIELDS.map((k) => `${k}=${norm(payload[k])}`).join('|');
 }
 
 // ─── Verify (Ed25519) ──────────────────────────────────────────────
 function verifyLicense(license, currentInstallationId) {
   if (!license || typeof license !== 'object') return { valid: false, reason: 'malformed' };
-  if (license.version !== 2) return { valid: false, reason: 'unsupported-version', detail: 'License v1.x is no longer accepted; please request a v2 license from CCL HQ' };
-  if (!license.signature)   return { valid: false, reason: 'missing-signature' };
+  if (license.version !== 2)
+    return {
+      valid: false,
+      reason: 'unsupported-version',
+      detail: 'License v1.x is no longer accepted; please request a v2 license from CCL HQ',
+    };
+  if (!license.signature) return { valid: false, reason: 'missing-signature' };
 
   const tier = license.tier;
   if (!VALID_TIERS.includes(tier)) return { valid: false, reason: 'bad-tier' };
   if (license.max_users !== TIER_LIMITS[tier]) {
-    return { valid: false, reason: 'tier-mismatch', detail: `tier ${tier} expects max_users=${TIER_LIMITS[tier]}` };
+    return {
+      valid: false,
+      reason: 'tier-mismatch',
+      detail: `tier ${tier} expects max_users=${TIER_LIMITS[tier]}`,
+    };
   }
 
   // Verify signature
   let sigOk;
   try {
     const data = Buffer.from(canonicalize(license));
-    const sig  = Buffer.from(license.signature, 'base64');
+    const sig = Buffer.from(license.signature, 'base64');
     sigOk = crypto.verify(null, data, getPublicKey(), sig);
   } catch (e) {
     return { valid: false, reason: 'verify-error', detail: e.message };
@@ -120,7 +149,11 @@ function verifyLicense(license, currentInstallationId) {
 
   // Bind to this machine
   if (license.installation_id !== currentInstallationId) {
-    return { valid: false, reason: 'installation-mismatch', detail: 'license bound to different machine' };
+    return {
+      valid: false,
+      reason: 'installation-mismatch',
+      detail: 'license bound to different machine',
+    };
   }
 
   // Check expiry
@@ -175,8 +208,11 @@ function verifyTrial(license, currentInstallationId) {
     return { valid: false, reason: 'expired', expires_at: license.expires_at };
   }
   return {
-    valid: true, customer: 'TRIAL', tier: 'S',
-    max_users: license.max_users, expires_at: license.expires_at,
+    valid: true,
+    customer: 'TRIAL',
+    tier: 'S',
+    max_users: license.max_users,
+    expires_at: license.expires_at,
     features: license.features,
   };
 }
@@ -185,8 +221,11 @@ function verifyTrial(license, currentInstallationId) {
 function loadLicense() {
   const p = LICENSE_PATH();
   if (!fs.existsSync(p)) return null;
-  try { return JSON.parse(fs.readFileSync(p, 'utf8')); }
-  catch { return null; }
+  try {
+    return JSON.parse(fs.readFileSync(p, 'utf8'));
+  } catch {
+    return null;
+  }
 }
 
 function saveLicense(license) {
@@ -224,14 +263,45 @@ function applyLicense(licenseInput) {
   return { ok: true, license: v };
 }
 
+/**
+ * Format a 64-char sha256 hex into 4 groups of 16, separated by spaces.
+ * Why: a continuous 64-char hex wraps badly inside macOS dialog text and
+ * can be mis-read with the line-wrap hyphen as a literal character. Real
+ * incident: an installation_id was emailed back with the wrap hyphen
+ * inside, the signed license then failed verification with
+ * `installation-mismatch`. Spaces are visually safe (no character looks
+ * like a separator) and a one-line `replace(/\s/g, '')` recovers the
+ * canonical form on the signing side.
+ */
+function formatInstallationIdForDisplay(id) {
+  if (typeof id !== 'string' || id.length !== 64) return id;
+  return id.match(/.{1,16}/g).join(' ');
+}
+
 async function showLicenseDialog(reason, installationId) {
-  await dialog.showMessageBox({
+  const formatted = formatInstallationIdForDisplay(installationId);
+  const result = await dialog.showMessageBox({
     type: 'warning',
     title: 'Ops Control — License không hợp lệ',
     message: `License không hợp lệ: ${reason}`,
-    detail: `Installation ID của máy này:\n${installationId}\n\nGửi mã này cho admin để được cấp license mới (Ed25519), hoặc đặt file license.json hợp lệ vào:\n${LICENSE_PATH()}`,
-    buttons: ['Đóng'],
+    detail:
+      `Installation ID của máy này (4 nhóm × 16 ký tự, bỏ space khi ký):\n${formatted}\n\n` +
+      `Gửi mã này cho admin để được cấp license mới (Ed25519), hoặc đặt ` +
+      `file license.json hợp lệ vào:\n${LICENSE_PATH()}`,
+    buttons: ['Copy Installation ID', 'Đóng'],
+    defaultId: 0,
+    cancelId: 1,
   });
+  if (result.response === 0) {
+    try {
+      // clipboard is bound at module scope below — defer require so this
+      // file stays loadable in unit tests where electron isn't booted.
+      const { clipboard } = require('electron');
+      clipboard.writeText(installationId);
+    } catch {
+      /* clipboard may be unavailable in unit tests — non-fatal */
+    }
+  }
 }
 
 // ─── IPC bridge ────────────────────────────────────────────────────
@@ -256,9 +326,9 @@ function register(ipcMain) {
       features: v.features,
     };
   });
-  ipcMain.handle('ops:license.apply',       (_e, lic) => applyLicense(lic));
+  ipcMain.handle('ops:license.apply', (_e, lic) => applyLicense(lic));
   ipcMain.handle('ops:license.fingerprint', () => getHardwareFingerprint());
-  ipcMain.handle('ops:license.tiers',       () => ({ tiers: VALID_TIERS, limits: TIER_LIMITS }));
+  ipcMain.handle('ops:license.tiers', () => ({ tiers: VALID_TIERS, limits: TIER_LIMITS }));
 }
 
 module.exports = {
@@ -270,6 +340,7 @@ module.exports = {
   verifyLicense,
   verifyTrial,
   canonicalize,
+  formatInstallationIdForDisplay,
   TIER_LIMITS,
   VALID_TIERS,
 };

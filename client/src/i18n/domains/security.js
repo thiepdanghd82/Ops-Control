@@ -12,6 +12,64 @@
 import { registerStrings } from '../strings.js';
 
 registerStrings({
+  // ─── Login + TOTP (login.* — was platform/auth in v1.3 layout) ───
+  // 33 keys covering: form, totp, expired session, password-age bar,
+  // forced-change-on-first-login banner.
+  'login.app_title': { en: 'Operations Cost', vi: 'Quản lý Chi phí Sản xuất' },
+  'login.subtitle': { en: 'Server version.', vi: 'Phiên bản máy chủ.' },
+  'login.cta': { en: 'Sign in to continue', vi: 'Đăng nhập để tiếp tục' },
+  'login.username': { en: 'Username', vi: 'Tên đăng nhập' },
+  'login.username_placeholder': { en: 'Enter username', vi: 'Nhập tên đăng nhập' },
+  'login.password': { en: 'Password', vi: 'Mật khẩu' },
+  'login.password_placeholder': { en: 'Enter password', vi: 'Nhập mật khẩu' },
+  'login.remember': { en: 'Remember me', vi: 'Ghi nhớ tôi' },
+  'login.submit': { en: 'Sign in', vi: 'Đăng nhập' },
+  'login.submitting': { en: 'Signing in…', vi: 'Đang đăng nhập…' },
+  'login.expired_title': { en: 'Session expired', vi: 'Phiên đã hết hạn' },
+  'login.expired_hint': {
+    en: 'Your session timed out. Re-enter your password — we kept the username.',
+    vi: 'Phiên của bạn đã hết hạn. Nhập lại mật khẩu — chúng tôi giữ tên đăng nhập.',
+  },
+  'login.expired_keep_place': {
+    en: 'Your place in the app is preserved; you won\'t lose your current tab.',
+    vi: 'Vị trí của bạn trong ứng dụng được giữ lại; bạn sẽ không mất tab hiện tại.',
+  },
+  'login.totp_title': { en: '2-Step Verification', vi: 'Xác thực 2 lớp' },
+  'login.totp_hint_prefix': { en: 'Open', vi: 'Mở' },
+  'login.totp_hint_suffix': {
+    en: 'and enter the 6-digit code for account',
+    vi: 'và nhập mã 6 chữ số cho tài khoản',
+  },
+  'login.totp_label': { en: 'Authenticator Code', vi: 'Mã xác thực' },
+  'login.totp_submit': { en: 'Verify Code', vi: 'Xác minh' },
+  'login.totp_submitting': { en: 'Verifying…', vi: 'Đang xác minh…' },
+  'login.totp_back': { en: 'Back to login', vi: 'Quay lại đăng nhập' },
+  'login.pwd_age_label': { en: 'Password age', vi: 'Thời hạn mật khẩu' },
+  'login.change.toggle': { en: 'Change password', vi: 'Đổi mật khẩu' },
+  'login.change.cancel': { en: 'Cancel password change', vi: 'Hủy đổi mật khẩu' },
+  'login.change.new': { en: 'New password', vi: 'Mật khẩu mới' },
+  'login.change.new_placeholder': { en: 'At least 6 characters', vi: 'Tối thiểu 6 ký tự' },
+  'login.change.confirm': { en: 'Confirm new password', vi: 'Xác nhận mật khẩu mới' },
+  'login.change.confirm_placeholder': { en: 'Type it again', vi: 'Nhập lại' },
+  'login.change.submit': { en: 'Change & sign in', vi: 'Đổi mật khẩu & Đăng nhập' },
+  'login.change.too_short': {
+    en: 'New password must be at least 6 characters.',
+    vi: 'Mật khẩu mới phải có ít nhất 6 ký tự.',
+  },
+  'login.change.mismatch': {
+    en: 'The confirmation doesn\'t match the new password.',
+    vi: 'Xác nhận mật khẩu không khớp.',
+  },
+  'login.change.same': {
+    en: 'New password must be different from the current one.',
+    vi: 'Mật khẩu mới phải khác mật khẩu hiện tại.',
+  },
+  'login.must_change.title': { en: 'Set a new password', vi: 'Đặt mật khẩu mới' },
+  'login.must_change.body': {
+    en: 'Your administrator provisioned a temporary password for this account. Please choose a new password before continuing.',
+    vi: 'Quản trị viên đã cấp mật khẩu tạm cho tài khoản này. Vui lòng đặt mật khẩu mới trước khi tiếp tục.',
+  },
+
   // Audit log table
   'audit.title': { en: 'Audit log', vi: 'Nhật ký audit' },
   'audit.subtitle': {

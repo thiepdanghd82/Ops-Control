@@ -57,20 +57,32 @@ if (env === 'production') {
     process.env.OPS_TOTP_KEY && process.env.OPS_TOTP_KEY.length === 64,
     'must be a 64-char hex string. Generate with: ' +
       `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))". ` +
-      'LOSING THIS VALUE LOCKS ALL USERS OUT OF 2FA.',
+      'LOSING THIS VALUE LOCKS ALL USERS OUT OF 2FA.'
+  );
+
+  // Sprint MES-2.3 — kiosk JWT signing key. Same shape + threat model as
+  // OPS_TOTP_KEY (64 hex, deploy.sh preserves across releases). Losing
+  // it invalidates every outstanding kiosk session (operators must
+  // re-pair each device).
+  check(
+    'OPS_KIOSK_KEY',
+    process.env.OPS_KIOSK_KEY && process.env.OPS_KIOSK_KEY.length === 64,
+    'must be a 64-char hex string. Generate with: ' +
+      `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))". ` +
+      'LOSING THIS VALUE INVALIDATES ALL KIOSK SESSIONS.'
   );
 
   const corsSet = (process.env.OPS_CORS_ORIGINS || '').trim();
   check(
     'OPS_CORS_ORIGINS',
     corsSet || process.env.OPS_ALLOW_SAME_ORIGIN === '1',
-    'set to comma-separated origins, OR set OPS_ALLOW_SAME_ORIGIN=1 if client + API are same-origin.',
+    'set to comma-separated origins, OR set OPS_ALLOW_SAME_ORIGIN=1 if client + API are same-origin.'
   );
 
   check(
     'PORT / OPS_PORT',
     Number(process.env.OPS_PORT || process.env.PORT || 3000) > 0,
-    'must be a valid TCP port.',
+    'must be a valid TCP port.'
   );
 }
 
@@ -78,7 +90,7 @@ if (env === 'production') {
 if (env === 'production' && !process.env.OPS_DB_PATH) {
   console.warn(
     '  ⚠  OPS_DB_PATH not set — defaulting to server/data/ops.db. ' +
-    'Point this at a persistent volume for prod.',
+      'Point this at a persistent volume for prod.'
   );
 }
 

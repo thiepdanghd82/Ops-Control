@@ -1,0 +1,171 @@
+/* Sprint MES-2.7 — kiosk-admin tab + A6 print stylesheet for the
+   pairing card. Reuses op-* tokens; no new color variables. */
+.kiosk-admin {
+  padding: 16px 24px;
+}
+.kiosk-admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.kiosk-admin-header h2 {
+  margin: 0;
+}
+
+.kiosk-admin-empty,
+.kiosk-admin-error {
+  padding: 24px;
+  border: 1px dashed var(--op-border, #c6c6c6);
+  border-radius: 4px;
+  color: var(--op-text-subtle, #525252);
+  text-align: center;
+}
+.kiosk-admin-error {
+  border-color: #da1e28;
+  color: #da1e28;
+}
+
+.kiosk-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--op-bg-card, #fff);
+}
+.kiosk-admin-table th,
+.kiosk-admin-table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--op-border, #e0e0e0);
+}
+.kiosk-admin-table th {
+  font-weight: 600;
+  background: #f4f4f4;
+}
+
+.kiosk-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.kiosk-dot-green {
+  background: #198038;
+}
+.kiosk-dot-amber {
+  background: #f1c21b;
+}
+.kiosk-dot-red {
+  background: #da1e28;
+}
+
+.kiosk-confirm-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(22, 22, 22, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.kiosk-confirm-card {
+  background: #fff;
+  padding: 24px;
+  border-radius: 4px;
+  max-width: 400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+.kiosk-confirm-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.kiosk-admin-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #161616;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 4px;
+  z-index: 1100;
+}
+
+/* Pairing-card result inside the modal */
+.kiosk-pair-result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pairing-print-card {
+  border: 2px solid var(--op-border, #c6c6c6);
+  padding: 24px;
+  text-align: center;
+  border-radius: 4px;
+  background: #fff;
+}
+.pairing-print-card h3 {
+  margin: 0 0 12px;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 1.5rem;
+}
+.pairing-qr {
+  width: 192px;
+  height: 192px;
+  margin: 0 auto;
+  display: block;
+  image-rendering: pixelated;
+}
+.pairing-url {
+  margin: 12px 0;
+  font-family: 'IBM Plex Mono', monospace;
+  word-break: break-all;
+  font-size: 0.875rem;
+}
+.pairing-meta {
+  font-size: 0.875rem;
+  color: var(--op-text-subtle, #525252);
+}
+.pairing-footer {
+  font-size: 0.75rem;
+  color: var(--op-text-subtle, #525252);
+  margin: 12px 0 0;
+}
+.kiosk-pair-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* A6 portrait (105×148 mm) print stylesheet — Sprint 1.5 provisioning
+   card pattern. Hides everything except .pairing-print-card. */
+@media print {
+  @page {
+    size: A6 portrait;
+    margin: 6mm;
+  }
+  body * {
+    visibility: hidden !important;
+  }
+  .pairing-print-card,
+  .pairing-print-card * {
+    visibility: visible !important;
+  }
+  .pairing-print-card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 93mm;
+    padding: 4mm;
+    border: 1px solid #000;
+    box-shadow: none;
+  }
+  .pairing-qr {
+    width: 60mm;
+    height: 60mm;
+  }
+}

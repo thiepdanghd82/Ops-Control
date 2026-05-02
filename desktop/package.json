@@ -1,6 +1,6 @@
 {
   "name": "ops-control-desktop",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Ops Control Desktop — Electron shell (smart client, IBM/SAP/IFS-style 3-tier)",
   "private": true,
   "main": "main.js",
@@ -13,11 +13,12 @@
     "build:win": "electron-builder --win --config.npmRebuild=false",
     "build:mac": "electron-builder --mac --config.npmRebuild=false",
     "build:all": "electron-builder -mw --config.npmRebuild=false",
-    "build:client:mac":  "electron-builder --mac --config.npmRebuild=false --config.extraMetadata.opsMode=client --config.productName='OpsControl CLIENT'",
-    "build:server:mac":  "electron-builder --mac --config.npmRebuild=false --config.extraMetadata.opsMode=server --config.productName='OpsControl SERVER'",
-    "build:client:win":  "electron-builder --win --config.npmRebuild=false --config.extraMetadata.opsMode=client --config.productName='OpsControl CLIENT'",
-    "build:server:win":  "electron-builder --win --config.npmRebuild=false --config.extraMetadata.opsMode=server --config.productName='OpsControl SERVER'",
+    "build:client:mac": "electron-builder --mac --config.npmRebuild=false --config.extraMetadata.opsMode=client --config.productName='OpsControl CLIENT'",
+    "build:server:mac": "electron-builder --mac --config.npmRebuild=false --config.extraMetadata.opsMode=server --config.productName='OpsControl SERVER'",
+    "build:client:win": "electron-builder --win --config.npmRebuild=false --config.extraMetadata.opsMode=client --config.productName='OpsControl CLIENT'",
+    "build:server:win": "electron-builder --win --config.npmRebuild=false --config.extraMetadata.opsMode=server --config.productName='OpsControl SERVER'",
     "test:license": "node --test license.test.js",
+    "test:manifest": "node --test build-manifest.test.js",
     "postinstall": "electron-builder install-app-deps"
   },
   "devDependencies": {
@@ -55,6 +56,7 @@
       "auto-update.js",
       "smart-client.js",
       "license.js",
+      "setupWizard.js",
       "native/**/*",
       "package.json",
       "!**/*.map"
@@ -127,7 +129,6 @@
         {
           "target": "dmg",
           "arch": [
-            "x64",
             "arm64"
           ]
         }

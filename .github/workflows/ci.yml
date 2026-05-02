@@ -42,6 +42,82 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
 
+  commitlint:
+    # v1.3 G3 — re-validate Conventional Commits on PR. Catches commits
+    # that bypassed the local husky commit-msg hook with --no-verify.
+    name: Commit messages
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - run: npm ci --ignore-scripts
+      - run: npx commitlint --from=${{ github.event.pull_request.base.sha }} --to=${{ github.event.pull_request.head.sha }} --verbose
+
+  router-test-coverage:
+    # v1.3 N5 / ADR-0013 — every domain router MUST have a sibling
+    # *.test.js file with at minimum auth/role/happy/error coverage.
+    # ENFORCING since O2: basis/backup + security/audit gained sibling
+    # tests, so the entire 7-router surface is conformant. A missing
+    # test now blocks the PR.
+    name: Router has sibling tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check sibling test presence
+        run: |
+          cd server/domains
+          missing=0
+          for router in $(find . -path '*/routes/*.js' -not -name '*.test.js'); do
+            test_file="${router%.js}.test.js"
+            if [ ! -f "$test_file" ]; then
+              echo "::error::missing sibling test for $router"
+              missing=$((missing + 1))
+            fi
+          done
+          if [ "$missing" -gt 0 ]; then
+            echo "$missing router(s) missing sibling test files"
+            exit 1
+          fi
+          echo "all routers have sibling tests"
+
+  commitlint-smoke:
+    # v1.3 K6 — prove the commitlint config actually rejects bad input.
+    # Without this, a refactor that loosens commitlint.config.js silently
+    # passes the `commitlint` job above (it only checks PR commits, not
+    # the config itself). Smoke runs on every push so config drift is
+    # caught even if no PR commits are bad.
+    name: Commit-msg hook smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - run: npm ci --ignore-scripts
+      - name: Accept good message
+        run: |
+          echo "feat(security): add seat enforcement" | npx commitlint
+      - name: Reject empty type (must FAIL)
+        run: |
+          if echo "no type prefix" | npx commitlint; then
+            echo "FAIL commitlint accepted a message with no type"
+            exit 1
+          fi
+      - name: Reject bad scope (must FAIL)
+        run: |
+          if echo "feat(unknown-scope): foo" | npx commitlint; then
+            echo "FAIL commitlint accepted a non-allowed scope"
+            exit 1
+          fi
+      - name: Reject trailing period (must FAIL)
+        run: |
+          if echo "feat(security): add a thing." | npx commitlint; then
+            echo "FAIL commitlint accepted a subject with trailing period"
+            exit 1
+          fi
+
   test-server:
     name: Server tests
     runs-on: ubuntu-latest
@@ -51,7 +127,7 @@ jobs:
         with: { node-version: '20', cache: 'npm' }
       - run: npm ci
       - run: npm test
-      - run: cd desktop && npm ci && npm run test:license
+      - run: cd desktop && npm ci && npm run test:license && npm run test:manifest
 
   test-client:
     name: Client tests
@@ -67,12 +143,23 @@ jobs:
     name: Build artefacts
     runs-on: ubuntu-latest
     needs: [lint, test-server, test-client]
+    env:
+      # v1.3 G5 — bake a deterministic build identifier into the
+      # client bundle marker via Vite. Format: <ref-name>-<short-sha>.
+      OPS_BUILD_ID: ${{ github.ref_name }}-${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '20', cache: 'npm' }
       - run: npm ci
-      - run: cd client && npm ci && npm run build
+      - run: cd client && npm ci && OPS_BUILD_ID="$OPS_BUILD_ID" npm run build
+      - name: Verify bundle marker injected
+        run: |
+          MARKER=$(grep -oE 'opsctl-v1\.3-marker:[^"'\'']+' client/dist/assets/index-*.js | head -1)
+          echo "Found marker: $MARKER"
+          [ -n "$MARKER" ] || (echo "ERROR: bundle marker missing from client chunk" && exit 1)
+          echo "$MARKER" | grep -q "$OPS_BUILD_ID" \
+            || (echo "ERROR: marker does not contain OPS_BUILD_ID=$OPS_BUILD_ID" && exit 1)
       - run: npm run perf-budget
       - uses: actions/upload-artifact@v4
         with:
@@ -85,14 +172,20 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: macos-14
     needs: [build]
+    env:
+      OPS_BUILD_ID: ${{ github.ref_name }}-${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '20', cache: 'npm' }
       - run: npm ci
-      - run: cd client && npm ci && npm run build
+      - run: cd client && npm ci && OPS_BUILD_ID="$OPS_BUILD_ID" npm run build
       - run: cd desktop && npm ci
       - run: cd desktop && npx electron-builder --mac --arm64 --config.npmRebuild=false
+      - name: Verify bundle marker inside DMG
+        run: |
+          DMG=$(ls desktop/dist-electron/*.dmg | head -1)
+          bash scripts/verify-bundle-marker.sh "$DMG" "$OPS_BUILD_ID"
       - uses: actions/upload-artifact@v4
         with:
           name: installers-${{ github.ref_name }}

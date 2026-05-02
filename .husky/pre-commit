@@ -1,7 +1,6 @@
-#!/usr/bin/env sh
-# Husky pre-commit hook — runs lint-staged on changed files.
-# Activates only when project is under git. Skip with `git commit --no-verify`
-# only as last resort.
+# Husky pre-commit hook — runs lint-staged on touched files only.
+# Full `npm test` runs in CI on push (.github/workflows/ci.yml). Pre-commit
+# stays fast (~5 sec) so engineers don't bypass via --no-verify.
 
 # Skip lint-staged on merge commits — constituent commits already passed lint individually,
 # and bulk-scanning a large merge delta surfaces unrelated pre-existing issues.

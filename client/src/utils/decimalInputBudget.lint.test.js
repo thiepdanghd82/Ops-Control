@@ -39,25 +39,29 @@ const TABS_ROOT = path.join(__dirname, '..', 'modules', 'cost', 'tabs');
 // If a file is not listed, its budget is 0 — net-new files can't
 // introduce native number inputs without being whitelisted here.
 const BUDGETS = {
-  'InkCalculator.jsx':               2,  // Sprint AD: swept; 2 readonly `calc_vol`/`vol_recipe` remain
-  'ComplexCalc/SubProductRow.jsx':   6,  // Sprint AF: pitch_ovr/width/cavities/offcut_pct swept; area_pct/efficiency/scrap_pct/clicks/repeat/layout remain (int-percent × /100 or min=1 integer)
-  'StandardCalc/CalcProcesses.jsx':  4,
-  'StandardCalc/CalcMaterials.jsx':  4,
-  'LibRate.jsx':                     0,  // Sprint AE: swept
+  'InkCalculator.jsx': 2, // Sprint AD: swept; 2 readonly `calc_vol`/`vol_recipe` remain
+  'ComplexCalc/SubProductRow.jsx': 6, // Sprint AF: pitch_ovr/width/cavities/offcut_pct swept; area_pct/efficiency/scrap_pct/clicks/repeat/layout remain (int-percent × /100 or min=1 integer)
+  'StandardCalc/CalcProcesses.jsx': 4,
+  'StandardCalc/CalcMaterials.jsx': 4,
+  'LibRate.jsx': 0, // Sprint AE: swept
   'StandardCalc/CalcPackingShip.jsx': 3,
-  'StandardCalc/CalcInks.jsx':       2,
-  'StandardCalc/CalcHeader.jsx':     0,  // Sprint AT: DecimalInput + explicit ⟲ revert button preserves null-vs-0 distinction
-  'ComplexCalc/ComplexCalc.jsx':     2,
-  'StandardCalc/ProcessBalancing.jsx': 0,  // Sprint AG: swept
-  'MaterialLibrary.jsx':             0,  // Sprint AG: Field wrapper delegates to DecimalInput
-  'LibFinance.jsx':                  0,  // Sprint AE: swept
-  'LibDDL.jsx':                      0,  // Sprint AE: swept
-  'FormalQuotation.jsx':             0,  // Sprint AG: swept
-  'ComplexCalc/BomTreeView.jsx':     1,  // BOM qty is integer (step=1), no decimal-input bug
-  'RFQTracker.jsx':                  1,  // stage.sla_days is integer days (step=1), no decimal-input bug
-  'SampleTracking.jsx':              1,  // stage.sla_days is integer days (step=1), no decimal-input bug
-  'StandardCalc/MachineProfileModal.jsx': 7,  // admin CRUD form — integer/locale-free fields; no decimal-input bug
-  'MachineTechnicalTab.jsx':             1,  // single integer input (FieldInput for *_mm fields) — admin CRUD, not pricing input
+  'StandardCalc/CalcInks.jsx': 2,
+  'StandardCalc/CalcHeader.jsx': 0, // Sprint AT: DecimalInput + explicit ⟲ revert button preserves null-vs-0 distinction
+  'ComplexCalc/ComplexCalc.jsx': 2,
+  'StandardCalc/ProcessBalancing.jsx': 0, // Sprint AG: swept
+  'MaterialLibrary.jsx': 0, // Sprint AG: Field wrapper delegates to DecimalInput
+  'LibFinance.jsx': 0, // Sprint AE: swept
+  'LibDDL.jsx': 0, // Sprint AE: swept
+  'FormalQuotation.jsx': 0, // Sprint AG: swept
+  'ComplexCalc/BomTreeView.jsx': 1, // BOM qty is integer (step=1), no decimal-input bug
+  'RFQTracker.jsx': 1, // stage.sla_days is integer days (step=1), no decimal-input bug
+  'SampleTracking.jsx': 1, // stage.sla_days is integer days (step=1), no decimal-input bug
+  'StandardCalc/MachineProfileModal.jsx': 7, // admin CRUD form — integer/locale-free fields; no decimal-input bug
+  'MachineTechnicalTab.jsx': 1, // single integer input (FieldInput for *_mm fields) — admin CRUD, not pricing input
+  'AuditLog.jsx': 1, // limit selector min=1 max=10000, integer page size — no decimal input concern
+  'Settings.jsx': 1, // numeric setting field — admin CRUD, integer
+  'HardwareSection.jsx': 1, // COM/USB port + baud rate setup — integer hardware param
+  'DesignTools/presses/GallusCalc.jsx': 1, // Z-cylinder selector min=1 max=999 — integer cylinder count
 };
 
 function walk(dir) {
@@ -76,9 +80,7 @@ function walk(dir) {
  * that happens to mention the pattern won't falsely trip the budget.
  */
 function stripComments(src) {
-  return src
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/\/\/[^\n]*/g, '');
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
 }
 
 function countPattern(src, pattern) {
@@ -98,8 +100,11 @@ test('native <input type="number"> stays within per-file budget', () => {
       violations.push(`${rel}: ${count} (budget ${budget}) — prefer <DecimalInput> for decimals`);
     }
   }
-  assert.deepEqual(violations, [],
-    `Native number-input budget exceeded. Either replace with <DecimalInput> or raise the budget in decimalInputBudget.lint.test.js:\n  ${violations.join('\n  ')}`);
+  assert.deepEqual(
+    violations,
+    [],
+    `Native number-input budget exceeded. Either replace with <DecimalInput> or raise the budget in decimalInputBudget.lint.test.js:\n  ${violations.join('\n  ')}`
+  );
 });
 
 test('budget entries all point to real files', () => {
@@ -110,6 +115,9 @@ test('budget entries all point to real files', () => {
     const abs = path.join(TABS_ROOT, rel);
     if (!fs.existsSync(abs)) stale.push(rel);
   }
-  assert.deepEqual(stale, [],
-    `BUDGETS contains paths that no longer exist — remove them:\n  ${stale.join('\n  ')}`);
+  assert.deepEqual(
+    stale,
+    [],
+    `BUDGETS contains paths that no longer exist — remove them:\n  ${stale.join('\n  ')}`
+  );
 });
