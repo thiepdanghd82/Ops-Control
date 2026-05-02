@@ -523,9 +523,9 @@ Document the off-site target machine, its credentials, and the restore drill che
 
 KIOSK-003 (P1, L), KIOSK-006b (P1, S), KIOSK-002 (P2, M), KIOSK-004 (P2, M). Total ~3 weeks of work assuming MES-2 pace. Closes both P1s + the operationally-visible reason-code admin gap + the Vitest coverage gap on kiosk components.
 
-### MES-3.5 polish scope (6 tickets)
+### MES-3.5 polish scope (9 tickets)
 
-MES-3-FIX-1 (P2, S), KIOSK-001 (P3, S), KIOSK-005a (P3, S), KIOSK-006a (P3, L), KIOSK-007 (P3, M), KIOSK-008 (P2, S). Total ~2 weeks. Wraps RFC-7807 compliance fix + branded icons + dedicated audit endpoint + health dashboard + Playwright DOM port + sprint-exit smoke blocker.
+MES-3-FIX-1 (P2, S), MES-3-FIX-2 (P3, S), MES-3-FIX-3 (P3, S), MES-3-FIX-4 (P2, S), KIOSK-001 (P3, S), KIOSK-005a (P3, S), KIOSK-006a (P3, L), KIOSK-007 (P3, M), KIOSK-008 (P2, S). Total ~2 weeks. Wraps RFC-7807 compliance fix + Accept-endpoint contract test + audit detail JSON normalization + dev-host Node ABI sync + branded icons + dedicated audit endpoint + health dashboard + Playwright DOM port + sprint-exit smoke blocker.
 
 KIOSK-008 should be tackled FIRST in MES-3.5 because it's the gating fix for the Playwright happy-path spec — until it's resolved, the e2e harness (otherwise structurally fixed by the post-tag hotfix at commit `0bb9c93`) can't actually report green.
 
@@ -539,6 +539,27 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - **Acceptance**: rename BmesError payload field from `status` to `wo_status`, lift respondError() in workOrderV2.js per Patch N2 protocol (run all 40 MES-1.4 contract tests pre/post; halt on any fail), add 1 new test asserting body.status is integer 409 (not string state name).
 - **Effort**: S (~50 LOC + 1 new test)
 - **Priority**: P2 (RFC-7807 compliance gap; operationally invisible because no current client reads body.status, but technically non-compliant wire format)
+
+#### MES-3-FIX-2 — acceptOperation.contract.test.js coverage
+
+- **Source**: B-ship of Accept button (2026-05-02) added /accept route to operationV2.js but didn't ship a contract test. Harness wiring fixed inline same branch (FIX D — `_operationsHarness.js` now passes a stub `auth` middleware so router construction doesn't throw on the new role-gated route); test file still net-new.
+- **Acceptance**: write `domains/planning/tests/integration/contracts/acceptOperation.contract.test.js` asserting (a) DONE → ACCEPTED transition returns 200 with updated op shape including planned_start, (b) audit emit OP_ACCEPT with wo_id in detail JSON (verify via `/audit/timeline?wo_id=`), (c) idempotent re-POST with same Idempotency-Key returns 200 without double-writing audit, (d) state-machine rejects non-DONE → ACCEPTED transitions with 409 + RFC-7807 body.
+- **Effort**: S (~80 LOC, ~5 tests)
+- **Priority**: P3 (manual UI verify covered happy path on this ship; coverage gap matters for KIOSK-003 cascade work in MES-3 which will need the harness already fixed)
+
+#### MES-3-FIX-3 — Normalize LOGIN\_\* audit detail to valid JSON
+
+- **Source**: STEP 1 verify of Accept-button branch (2026-05-02) — guarded `json_valid(detail)` in audit timeline query exposed the underlying problem: `LOGIN_OK` writes `detail=''` and `LOGIN_FAIL` writes plain-text reasons (e.g. `"bad password"`). Violates audit_log convention that `detail` MUST be valid JSON for `json_extract` filters to work. Read-side guard mitigates but doesn't fix.
+- **Acceptance**: grep `server/routes/auth*` + `server/services/auth*` for every `audit('LOGIN_OK', ...)` / `audit('LOGIN_FAIL', ...)` callsite; replace with `audit('LOGIN_OK', JSON.stringify({ user_id, ip }))` and `audit('LOGIN_FAIL', JSON.stringify({ user_id, ip, reason }))`. Backfill optional (don't rewrite history). Add lint test asserting every `audit(...)` second arg is either omitted or a JSON.stringify call (regex-based).
+- **Effort**: S (~30 LOC + 1 lint test)
+- **Priority**: P3 (read-side guard already prevents prod 500; matters for forensic-replay tooling that expects uniform JSON shape)
+
+#### MES-3-FIX-4 — Switch host Node to v24 to match Electron ABI
+
+- **Source**: STEP 1 verify (2026-05-02) — `desktop:dev` rebuilds `better-sqlite3` against Electron's bundled Node 24 (NODE_MODULE_VERSION 145), then host CLI Node 20 (NODE_MODULE_VERSION 115) can't load the binary. Every alternation between `desktop:dev` and `npm test` triggers `npm rebuild`. Documented as CLAUDE.md lesson 25 at file-system level (paths-with-spaces); ABI mismatch is a separate, more subtle root cause.
+- **Acceptance**: document as CLAUDE.md lesson 27 ("Electron + CLI Node version sync"); update bare-metal restore section to specify Node 24; add `.nvmrc` at repo root with `24`; install fnm/nvm guidance in MAINTAINERS.md or `docs/onboarding.md`.
+- **Effort**: S (docs + 1 `.nvmrc` commit)
+- **Priority**: P2 (rebuild churn between `desktop:dev` and `npm test` happens daily on this branch; promoting eliminates the per-context-switch friction)
 
 #### KIOSK-001 — Real branded PWA icons
 
