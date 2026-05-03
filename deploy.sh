@@ -1,6 +1,6 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════
-# Ops Control v1.0 — Deploy to Production Server
+# Ops Control v1.2 — Deploy to Production Server (Linux)
 # ═══════════════════════════════════════════════════════════════
 #
 # Usage:
@@ -8,10 +8,14 @@
 #   ./deploy.sh user@server-ip     # Deploy to remote server via SSH
 #
 # Prerequisites on server:
-#   - Python 3.9+ with bcrypt, openpyxl
 #   - Node.js 18+ with npm
 #   - (Optional) nginx for reverse proxy
 #
+# Counterpart for Windows targets: deploy.ps1 (NSSM service).
+#
+# Sprint S-P0-FIX-1 (2026-05-03) — DATA_DIR is now driven by .env
+# (defaulting to ./server/data per .env.example) instead of a stale
+# systemd Environment= line that pointed at the v1.0 legacy folder.
 # ═══════════════════════════════════════════════════════════════
 
 set -e
@@ -24,7 +28,7 @@ PYTHON_PORT=5173
 
 echo ""
 echo "  ╔══════════════════════════════════════════════════╗"
-echo "  ║       Ops Control v1.0 — Deploy Script          ║"
+echo "  ║       Ops Control v1.2 — Deploy Script          ║"
 echo "  ╚══════════════════════════════════════════════════╝"
 echo ""
 
@@ -178,17 +182,20 @@ ssh "$REMOTE" "cd $APP_DIR && npm install --production"
 echo "  ⚙️   Setting up systemd service..."
 ssh "$REMOTE" "cat > /tmp/$APP_NAME.service << 'UNIT'
 [Unit]
-Description=Ops Control v1.0
+Description=Ops Control v1.2
 After=network.target
 
 [Service]
 Type=simple
 User=www-data
 WorkingDirectory=$APP_DIR
+# DATA_DIR + every other env var is read from $APP_DIR/.env at startup.
+# Sprint S-P0-FIX-1: the previous Environment=DATA_DIR=…/COST_V1.0/… was
+# a v1.0 legacy carry-over. .env (preserved across deploys per the merge
+# logic above) is now the single source of truth. dotenv default is
+# no-override, so any matching Environment= line below would still mask
+# the .env value — keep this list minimal and defer to .env.
 Environment=NODE_ENV=production
-Environment=PORT=$PORT
-Environment=PYTHON_SERVER=http://localhost:$PYTHON_PORT
-Environment=DATA_DIR=$APP_DIR/../COST_V1.0/CCL_Pricing/data
 ExecStart=/usr/bin/node server/index.js
 Restart=on-failure
 RestartSec=5
