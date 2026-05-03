@@ -7,9 +7,13 @@
  * mutation we update the in-memory `data` AND bump `auditRefreshKey` so
  * the timeline below refetches without a full page reload.
  */
-import { useCallback, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { useAbortableFetch } from '../../../hooks/useAbortableFetch';
 import { useI18n } from '../../../utils/useI18n';
+import { sharedApi } from '../../../services/api';
+import { getField, getNumField } from '../../../utils/fieldMap';
+import { computeOpHours } from '../../../utils/routingHours';
+import { err as logErr } from '../../../utils/logger';
 import WorkOrderOpsTable from './WorkOrderOpsTable';
 import AuditTimeline from './AuditTimeline';
 import ReleaseModal from './ReleaseModal';
@@ -17,8 +21,27 @@ import CancelModal from './CancelModal';
 import AddOperationModal from './AddOperationModal';
 import { fetchWorkOrderDetail } from './api';
 
+// PP-07: lazy so the print stylesheet + sharedApi BOM/routing fetch
+// only land when an operator actually opens the printable view.
+const WorkOrderPrintable = lazy(() => import('./WorkOrderPrintable'));
+
 const CANCELLABLE = new Set(['CREATED', 'RELEASED', 'SCHEDULED', 'IN_PROGRESS', 'ON_HOLD']);
 const TERMINAL = new Set(['COMPLETED', 'QC_RELEASED', 'CLOSED', 'CANCELLED']);
+
+// PP-09 helper at module scope — pure function, no hooks, no closure.
+function computeSummary(routing, qtyPlanned) {
+  if (!routing || routing.length === 0 || !qtyPlanned) return null;
+  const totalHrs = routing.reduce((s, op) => {
+    const { totalHrs: hrs } = computeOpHours({
+      setupTime: getNumField(op, 'setupTime'),
+      runFactor: getNumField(op, 'runFactor'),
+      factorUnit: getField(op, 'factorUnit'),
+      quantity: qtyPlanned,
+    });
+    return s + hrs;
+  }, 0);
+  return { totalHrs, shifts: Math.ceil(totalHrs / 8) };
+}
 
 export default function WorkOrderDetail({ id, onBack }) {
   const { t } = useI18n();
@@ -28,7 +51,40 @@ export default function WorkOrderDetail({ id, onBack }) {
   const [showRelease, setShowRelease] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
   const [showAddOp, setShowAddOp] = useState(false);
+  const [showPrint, setShowPrint] = useState(false);
   const [auditKey, setAuditKey] = useState(0);
+  // PP-09: routing rows for production-summary banner. Lazy-fetch once
+  // ccl_pn is known; ignore failures (banner just hides). Same data the
+  // printable view fetches — small duplication is fine since both are
+  // already cached by sharedApi.
+  const [routing, setRouting] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!data?.ccl_pn) return undefined;
+    (async () => {
+      try {
+        const rows = await sharedApi.getRouting();
+        if (cancelled) return;
+        // String-coerce both sides — IFS Part No is a number for purely
+        // numeric PNs (e.g. 80644500); data.ccl_pn is always a string.
+        const targetPn = String(data.ccl_pn);
+        setRouting((rows || []).filter((r) => String(getField(r, 'partNo')) === targetPn));
+      } catch (e) {
+        if (!cancelled) {
+          logErr('WorkOrderDetail routing fetch failed', e);
+          setRouting([]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [data?.ccl_pn]);
+
+  // Production summary derived from routing standard times. Inline
+  // (not useMemo) — calc is tiny, routing fetch is cached upstream by
+  // sharedApi, so re-running on every WO detail render is cheap.
+  const summary = computeSummary(routing, data?.qty_planned);
 
   function handleMutationSuccess(updated) {
     // updated is the WO header shape from /release or /cancel; merge with
@@ -104,6 +160,9 @@ export default function WorkOrderDetail({ id, onBack }) {
           {t(`planning.workOrder.status.${data.status}`)}
         </span>
         <div className="wo-detail-actions">
+          <button type="button" className="op-btn op-btn-ghost" onClick={() => setShowPrint(true)}>
+            {t('planning.workOrder.print.open')}
+          </button>
           {canRelease ? (
             <button
               type="button"
@@ -153,6 +212,15 @@ export default function WorkOrderDetail({ id, onBack }) {
             </button>
           ) : null}
         </div>
+        {summary ? (
+          <div className="wo-detail-summary" role="note">
+            <strong>{t('planning.workOrder.print.summary')}:</strong> {summary.totalHrs.toFixed(2)}{' '}
+            {t('planning.workOrder.print.hrs')} ≈ {summary.shifts}{' '}
+            {t('planning.workOrder.print.shifts')} @ 8 {t('planning.workOrder.print.hrs')}/
+            {t('planning.workOrder.print.shift')} | {t('planning.workOrder.col.qty_planned')}:{' '}
+            {data.qty_planned?.toLocaleString()} {data.uom}
+          </div>
+        ) : null}
         <WorkOrderOpsTable operations={data.operations} onAccepted={handleOpAccepted} />
       </section>
 
@@ -200,6 +268,11 @@ export default function WorkOrderDetail({ id, onBack }) {
           onClose={() => setShowAddOp(false)}
           onSuccess={handleOpAdded}
         />
+      ) : null}
+      {showPrint ? (
+        <Suspense fallback={null}>
+          <WorkOrderPrintable wo={data} onClose={() => setShowPrint(false)} />
+        </Suspense>
       ) : null}
     </div>
   );

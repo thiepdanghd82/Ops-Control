@@ -523,9 +523,9 @@ Document the off-site target machine, its credentials, and the restore drill che
 
 KIOSK-003 (P1, L), KIOSK-006b (P1, S), KIOSK-002 (P2, M), KIOSK-004 (P2, M). Total ~3 weeks of work assuming MES-2 pace. Closes both P1s + the operationally-visible reason-code admin gap + the Vitest coverage gap on kiosk components.
 
-### MES-3.5 polish scope (19 tickets)
+### MES-3.5 polish scope (20 tickets)
 
-MES-3-FIX-1 (P2, S), MES-3-FIX-2 (P3, S), MES-3-FIX-3 (P3, S), MES-3-FIX-4 (P2, S), MES-3-FIX-6 (P3, S), MES-3-FIX-7 (P3, S), MES-3-FIX-8 (P2, S), MES-3-FIX-9 (P3, XS), MES-3-FIX-10 (P3, S), MES-3-FIX-11 (P3, M), MES-3-FIX-12 (P3, S), MES-3-FIX-13 (P2, S), MES-3-FIX-14 (P2, S), MES-3-FIX-15 (P2, S), KIOSK-001 (P3, S), KIOSK-005a (P3, S), KIOSK-006a (P3, L), KIOSK-007 (P3, M), KIOSK-008 (P2, S). Total ~3 weeks. Wraps RFC-7807 compliance fix + Accept-endpoint contract test + audit detail JSON normalization + dev-host Node ABI sync + 10 v1.4.3 audit follow-ups (FIX-6..15) + branded icons + dedicated audit endpoint + health dashboard + Playwright DOM port + sprint-exit smoke blocker.
+MES-3-FIX-1 (P2, S), MES-3-FIX-2 (P3, S), MES-3-FIX-3 (P3, S), MES-3-FIX-4 (P2, S), MES-3-FIX-6 (P3, S), MES-3-FIX-7 (P3, S), MES-3-FIX-8 (P2, S), MES-3-FIX-9 (P3, XS), MES-3-FIX-10 (P3, S), MES-3-FIX-11 (P3, M), MES-3-FIX-12 (P3, S), MES-3-FIX-13 (P2, S), MES-3-FIX-14 (P2, S), MES-3-FIX-15 (P2, S), MES-3-FIX-16 (P3, S), KIOSK-001 (P3, S), KIOSK-005a (P3, S), KIOSK-006a (P3, L), KIOSK-007 (P3, M), KIOSK-008 (P2, S). Total ~3 weeks. Wraps RFC-7807 compliance fix + Accept-endpoint contract test + audit detail JSON normalization + dev-host Node ABI sync + 10 v1.4.3 audit follow-ups (FIX-6..15) + branded icons + dedicated audit endpoint + health dashboard + Playwright DOM port + sprint-exit smoke blocker.
 
 > **Numbering note**: MES-3-FIX-5 (Cost Engineer preset 403 / Create-user form modules.cost gap) was raised verbally in the v1.4.3 verify session but never filed; reserved for future ticket entry. v1.4.3 audit (2026-05-02) added FIX-6 through FIX-15.
 
@@ -632,6 +632,13 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - **Acceptance**: pop `stash@{1}`, ship as desktop branch alongside Electron Node 24 alignment work.
 - **Effort**: S (changes already drafted)
 - **Priority**: P2 (operationally felt — kiosks unpair on app restart)
+
+#### MES-3-FIX-16 — Extend seed:mes to populate orders entity for BOMExplosion verify path
+
+- **Source**: v1.5.0 SHIP-FIRST UI verify session (2026-05-02). `scripts/seed-mes-fixtures.js` only creates rows in `work_order` (the MES v2 entity); the older `orders` entity that BOMExplosion / MaterialCheck / WorkOrdersLegacy read from stays empty after seed. Manual W3 (All-Orders Stacked BOM breakdown) walkthrough was UNVERIFIABLE on a freshly-seeded dev box because BOMExplosion `useEffect` `planningApi.getOrders` returns `[]` → no orders to explode → empty stacked view.
+- **Acceptance**: extend `scripts/seed-mes-fixtures.js` to also `POST /api/planning/orders` (or write directly to the orders backing store) for each fixture, using a real ccl_pn that has both BOM + routing rows in `Library/`. Pick top candidate `80644500` (10 routing ops, 9 BOM rows, mixed Hours + Units/Hour modes — ideal for cross-feature verify). Fixture should remain idempotent (skip if order already exists for that productCode).
+- **Effort**: S (~30 LOC + 1 lookup helper for "find a real PN with both"; reuse the cross-reference script from the audit session)
+- **Priority**: P3 (verify-path enhancement, not a feature regression; W1 + W2 + W4 still verifiable on real data; W3 only blocks if dev box is fresh AND operator hasn't manually entered orders)
 
 #### KIOSK-001 — Real branded PWA icons
 
