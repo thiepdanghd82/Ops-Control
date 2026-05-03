@@ -39,9 +39,15 @@ export default function WorkOrderPrintable({ wo, onClose }) {
           sharedApi.getRouting(),
         ]);
         if (cancelled) return;
-        const bomFiltered = (bomRes || []).filter((b) => getField(b, 'parentPartNo') === wo.ccl_pn);
+        // IFS-sourced rows store Part No / Parent Part No as numbers when
+        // the PN is purely numeric (e.g. 80644500); wo.ccl_pn is always
+        // a string. Coerce both sides for the comparison.
+        const targetPn = String(wo.ccl_pn);
+        const bomFiltered = (bomRes || []).filter(
+          (b) => String(getField(b, 'parentPartNo')) === targetPn
+        );
         const routingFiltered = (routingRes || []).filter(
-          (r) => getField(r, 'partNo') === wo.ccl_pn
+          (r) => String(getField(r, 'partNo')) === targetPn
         );
         setBom(bomFiltered);
         setRouting(routingFiltered);

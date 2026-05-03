@@ -65,7 +65,10 @@ export default function WorkOrderDetail({ id, onBack }) {
       try {
         const rows = await sharedApi.getRouting();
         if (cancelled) return;
-        setRouting((rows || []).filter((r) => getField(r, 'partNo') === data.ccl_pn));
+        // String-coerce both sides — IFS Part No is a number for purely
+        // numeric PNs (e.g. 80644500); data.ccl_pn is always a string.
+        const targetPn = String(data.ccl_pn);
+        setRouting((rows || []).filter((r) => String(getField(r, 'partNo')) === targetPn));
       } catch (e) {
         if (!cancelled) {
           logErr('WorkOrderDetail routing fetch failed', e);
