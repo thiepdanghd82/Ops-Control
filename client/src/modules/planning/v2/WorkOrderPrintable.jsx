@@ -68,6 +68,15 @@ export default function WorkOrderPrintable({ wo, onClose }) {
   const fmtQty = (n) =>
     n >= 1 ? n.toLocaleString('en-US', { maximumFractionDigits: 2 }) : n.toFixed(4);
 
+  // Trim trailing zeros after toFixed for clean QPA display.
+  // 1 → "1", 0.000011 → "0.000011", 0.0098929999999999 → "0.009893".
+  const fmtQpa = (n) => {
+    if (!Number.isFinite(n)) return '0';
+    return parseFloat(Number(n).toFixed(6)).toString();
+  };
+  // Scrap always 1 decimal: 2.4000000000000004 → "2.4", 5 → "5.0".
+  const fmtScrap = (n) => (Number.isFinite(n) ? Number(n).toFixed(1) : '0.0');
+
   // Compute routing summary
   const routingRows = routing.map((op) => {
     const setupTime = getNumField(op, 'setupTime');
@@ -188,9 +197,9 @@ export default function WorkOrderPrintable({ wo, onClose }) {
                       <td>{i + 1}</td>
                       <td className="wo-printable-mono">{getField(b, 'componentPart')}</td>
                       <td>{getField(b, 'componentDescription')}</td>
-                      <td className="wo-printable-num">{qtyPer}</td>
+                      <td className="wo-printable-num">{fmtQpa(qtyPer)}</td>
                       <td>{getField(b, 'uom', 'u')}</td>
-                      <td className="wo-printable-num">{scrapPct}%</td>
+                      <td className="wo-printable-num">{fmtScrap(scrapPct)}%</td>
                       <td className="wo-printable-num">{fmtQty(required)}</td>
                     </tr>
                   );
