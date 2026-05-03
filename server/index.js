@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -238,6 +239,34 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// ─── HTTP compression (Sprint S-P0-FIX-2, 2026-05-03) ───
+// Gzip-encodes responses ≥ 1024 B for compressible MIME types. Phase 3
+// audit measured 419 KB initial JS + 102 KB CSS going over the wire raw
+// — gzip cuts both ~70 % on the LAN deploy at http://10.102.3.61:3000
+// (no reverse proxy currently in front of Express).
+//
+// SSE / streaming endpoints (`server/routes/events.js`,
+// `server/routes/chat.js`) MUST be excluded — the middleware buffers
+// until threshold and the SSE keepalive frames would never reach the
+// client. The filter checks both the request `Accept` header (covers
+// well-behaved EventSource clients) AND the response `Content-Type`
+// (defensive — covers any future route that calls `res.type('text/
+// event-stream')` instead of negotiating). The `x-no-compression`
+// header is a debug bypass.
+app.use(
+  compression({
+    filter: (req, res) => {
+      if (req.headers.accept === 'text/event-stream') return false;
+      const ct = res.getHeader('Content-Type');
+      if (ct && String(ct).includes('text/event-stream')) return false;
+      if (req.headers['x-no-compression']) return false;
+      return compression.filter(req, res);
+    },
+    threshold: 1024,
+    level: 6,
+  })
+);
 
 // Lightweight request log — one JSON line per response. Not Pino-grade but
 // zero-dependency and structured enough for grep/jq/CloudWatch ingestion.
@@ -1018,7 +1047,8 @@ if (isEntryPoint) {
   const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Ops Control server running at http://localhost:${PORT}`);
     console.log(`📁 Data directory: ${DATA_DIR}`);
-    console.log(`🔧 No Python dependency required\n`);
+    console.log(`🔧 No Python dependency required`);
+    console.log(`📦 [compression] enabled (threshold=1024, level=6, sse-excluded)\n`);
     // Critical-1 audit: log count of users still on the legacy jsHash
     // so ops see at a glance whether password migration is complete.
     // Does not block startup — users auto-upgrade on next login.
