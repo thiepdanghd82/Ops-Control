@@ -2,6 +2,56 @@
 
 All notable changes to Ops Control. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased] — Step B P0 fixes
+
+### Security
+
+- Unified login error response per **OWASP ASVS V4.0 §6.2.4** (audit finding F2-1).
+  - All credentials-failure paths return `401` + `{ok:false, error:"Invalid credentials"}` —
+    same body for unknown user, wrong password, and per-username lockout-fired
+    cases. The previous distinct messages (`"Username not found"`, `"Incorrect
+password"`, `"Too many failed attempts..."`) leaked username existence to
+    unauthenticated attackers.
+  - Timing equalised via a hardcoded argon2id dummy hash for unknown-user
+    requests. Phase 3 measured a **~370 ms** wallclock leak between real-user
+    bcrypt verify and ghost-user `users.find()` short-circuit; post-fix Δ p95
+    measured at **0.6 ms** (3 × 100-sample benchmark). Bcrypt-cost-12 legacy
+    users keep a residual ~330 ms gap until they auto-upgrade to argon2id on
+    first successful login post-deploy.
+  - Per-username lockout response also unified: was `429` + readable
+    "Too many failed attempts" (silently confirming the username exists);
+    now `401` + the same `Invalid credentials` body. The HTTP `Retry-After`
+    header is preserved (RFC 7231 §7.1.3) for proxy / monitoring back-off.
+  - Server-side `audit('LOGIN_FAIL'/'LOGIN_LOCKED', ...)` retains the rich
+    branch detail for forensics.
+  - Client side bilingual i18n: `login.error.invalid_credentials` (EN
+    "Invalid credentials" / VI "Thông tin đăng nhập không hợp lệ") plus a
+    legacy-string mapper covering the kiosk-PWA stale-cache window.
+  - Companion operator guide: `docs/Use guide/login-retry.md` (EN + VI).
+
+### Fixed
+
+- **Deploy script DATA_DIR posture** (audit finding F4-5). `deploy.sh:191`
+  hardcoded a v1.0 legacy `DATA_DIR=$APP_DIR/../COST_V1.0/CCL_Pricing/data`
+  Environment line. Removed; `.env` (default `./server/data` per
+  `.env.example`) now drives DATA_DIR uniformly. Header + banner + systemd
+  Description bumped from v1.0 → v1.2 across `deploy.sh` / `deploy.ps1` /
+  `deploy.bat`.
+
+### Performance
+
+- **HTTP compression** middleware enabled (audit finding F3-1). Initial page
+  load over the wire drops from ~2.6 MB → ~520 KB (~80 % reduction).
+  Defensive SSE filter excludes `text/event-stream` responses so streaming
+  endpoints (`/api/events`, `/api/chat/stream`) are unaffected.
+  `x-no-compression: 1` header bypass available for debugging.
+
+### Tests
+
+- +10 tests vs Step B baseline (`authService.timing.test.js` × 4 +
+  `auth.login.test.js` × 6). Total suite: **1612 pass** (was 1602; 0
+  regressions across server / client / desktop / manifest runners).
+
 ## [1.4.3] — 2026-05-02
 
 ### Fixed

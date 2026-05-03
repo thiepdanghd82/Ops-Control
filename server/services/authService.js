@@ -354,6 +354,43 @@ export async function checkPassword(user, plain) {
 }
 
 /**
+ * Dummy argon2id hash used to equalise timing between known and unknown
+ * usernames at login. OWASP ASVS V4.0 §6.2.4 — login response shape
+ * + timing must NOT differ based on whether the username exists.
+ *
+ * Pre-computed via:
+ *   argon2.hash('this-string-cannot-be-a-real-password-9d4e2f6a8b', ARGON2_OPTS)
+ * Random 16-byte salt → no plaintext is ever derivable. Verified in the
+ * companion test (authService.timing.test.js) that `verify(dummy, '<any>')`
+ * returns false. Hardcoded as a CONSTANT (not generated at boot) so the
+ * JIT cannot constant-fold the verify away.
+ *
+ * MIGRATION WINDOW NOTE: All current users (7/7) still have bcrypt cost=12
+ * hashes (~380 ms verify). The argon2 dummy below is ~38 ms. During the
+ * window where legacy users haven't logged in yet, an attacker can still
+ * distinguish "real bcrypt user" (~380 ms) vs "unknown" (~38 ms). The
+ * lazy-upgrade path in upgradeLegacyPasswordIfNeeded() converts each
+ * user to argon2id on their first successful login — closing the gap
+ * automatically. Re-evaluate if migration is incomplete > 30 d post-deploy.
+ */
+const DUMMY_ARGON2_HASH =
+  '$argon2id$v=19$m=65536,t=3,p=4$RmofuY2/u8gUc4mnYmyhng$zSZtoYGk0YOXG1lSJjisxjiv7DD/WxoevUl3sMZTxMk';
+
+/**
+ * Run a constant-time argon2 verify against the dummy hash. Always returns
+ * false. Caller uses this when the username is missing so the wallclock
+ * cost matches a real argon2 verify.
+ *
+ * Returns a Promise — caller MUST `await` for the timing equalisation
+ * to actually happen. Forgetting the await would short-circuit ~38 ms
+ * earlier and re-open the leak.
+ */
+export async function equalizeTimingForUnknownUser(plain) {
+  await verifyHash(String(plain || ''), DUMMY_ARGON2_HASH);
+  return false;
+}
+
+/**
  * v1.3 password migration ladder. Called from the login success path
  * after `checkPassword` returns true with the verified plaintext. Silent
  * to the user, idempotent under concurrent logins.
@@ -864,6 +901,11 @@ export function checkRateLimit(ip) {
   if (entry.count >= RATE_LIMIT_MAX) return false;
   entry.count++;
   return true;
+}
+
+/** Test hook — reset all IP rate-limit state. Sibling of _resetLoginLockouts. */
+export function _resetRateLimit() {
+  _rateLimit.clear();
 }
 
 // ─── Per-username login lockout (Phase 10H) ───

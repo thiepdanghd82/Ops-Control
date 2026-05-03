@@ -25,13 +25,27 @@ registerStrings({
   'login.remember': { en: 'Remember me', vi: 'Ghi nhớ tôi' },
   'login.submit': { en: 'Sign in', vi: 'Đăng nhập' },
   'login.submitting': { en: 'Signing in…', vi: 'Đang đăng nhập…' },
+  // Sprint S-P0-FIX-3 (OWASP ASVS V4.0 §6.2.4) — single unified message
+  // for every credentials-failure path (unknown user / wrong password /
+  // per-username lockout). Server-side audit log retains the rich detail.
+  // The 3 legacy keys below cover the kiosk-PWA stale-cache window where
+  // a 5-min-old client may receive the new server response while still
+  // running the old code path that displayed the original messages.
+  'login.error.invalid_credentials': {
+    en: 'Invalid credentials',
+    vi: 'Thông tin đăng nhập không hợp lệ',
+  },
+  'login.error.fallback': {
+    en: 'Login failed',
+    vi: 'Đăng nhập thất bại',
+  },
   'login.expired_title': { en: 'Session expired', vi: 'Phiên đã hết hạn' },
   'login.expired_hint': {
     en: 'Your session timed out. Re-enter your password — we kept the username.',
     vi: 'Phiên của bạn đã hết hạn. Nhập lại mật khẩu — chúng tôi giữ tên đăng nhập.',
   },
   'login.expired_keep_place': {
-    en: 'Your place in the app is preserved; you won\'t lose your current tab.',
+    en: "Your place in the app is preserved; you won't lose your current tab.",
     vi: 'Vị trí của bạn trong ứng dụng được giữ lại; bạn sẽ không mất tab hiện tại.',
   },
   'login.totp_title': { en: '2-Step Verification', vi: 'Xác thực 2 lớp' },
@@ -57,7 +71,7 @@ registerStrings({
     vi: 'Mật khẩu mới phải có ít nhất 6 ký tự.',
   },
   'login.change.mismatch': {
-    en: 'The confirmation doesn\'t match the new password.',
+    en: "The confirmation doesn't match the new password.",
     vi: 'Xác nhận mật khẩu không khớp.',
   },
   'login.change.same': {
