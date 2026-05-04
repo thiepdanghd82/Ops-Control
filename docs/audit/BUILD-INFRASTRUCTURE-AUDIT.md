@@ -283,3 +283,60 @@ The `apps/` folder structure proposed in `README FIRST/CLAUDE.md` (the v1.3 reor
 **Audit verdict:** The architectural work is done. The operational work (CI cross-platform, publish step, update server hosting) is the remaining gate to a 50-client cross-platform deployment. Estimated 6-8 hours of focused DevOps to close all P0 gaps.
 
 **End of audit. No code changed; no installs run; no builds executed.**
+
+---
+
+## 11. Phase A — Complete (closed 2026-05-04)
+
+The audit above identified 4 architectural gaps (server identity, admin
+handoff dashboard, operator-side import, update server). Phase A v2
+closed 4 of 6 planned sub-phases in a single session. A.5 (cross-compile
+from Mac with Wine + Mono) and A.3b (multi-profile picker + OS file
+association) are deferred — not blockers for v1.5.1 server-only deploy.
+
+### Sub-phases shipped
+
+| #       | Commit    | Surface                                            | LOC          | Tests                            |
+| ------- | --------- | -------------------------------------------------- | ------------ | -------------------------------- |
+| A.1     | `7e5ae38` | Server identity step in setup wizard               | +147 / -14   | +6 (serverIdentity helpers)      |
+| A.2     | `411aaf1` | Connection-info admin dashboard + GET /server-info | ~+350        | +4 (networkInfo helpers)         |
+| A.3a    | `b359381` | Test Connection + .opsconn import in ModeSection   | +1141 / -307 | +15 (opsconnImport + netProbe)   |
+| A.4     | `fe643e1` | /updates/ static endpoint with compression skip    | +126 / -1    | +3 (resolveUpdatesDir)           |
+| A.6 fix | `d0e71e1` | Pack utils/netProbe.js into desktop build          | +57 / -2     | +1 (build-manifest subdir guard) |
+
+**Cumulative test progression:** 1602 (Step B baseline) → 1647 (A.6 fix). +45 tests across Step B production-readiness pass + Phase A v2 distribution work.
+
+### Deferred sub-phases
+
+**A.5 — Cross-compile from Mac (Wine + Mono setup, ~2-3h)**
+Defer rationale: Wine/Mono setup on macOS is environment-heavy with high failure surface (signing, codesign, NSIS Mac toolchain). Better as a fresh-context session. v1.5.1 can ship server-only first via the existing deploy.ps1 path; client desktop builds follow once A.5 lands.
+
+**A.3b — Multi-profile picker + OS file association (~1.5h)**
+Defer rationale: 50-user single-server deploy doesn't require multi-profile UX (one server URL is enough). Re-evaluate post-deploy if user feedback explicitly asks for a profile picker (e.g. travelling between sites with multiple servers).
+
+### Hidden findings extracted during Phase A v2
+
+| ID     | Phase         | Finding                                                                                                                                                                                                                |
+| ------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A.0-F1 | A.0 audit     | `desktop/setupWizard.js` already exists with 4-step structure → recast A.1 as EXTEND not CREATE (scope reduction)                                                                                                      |
+| A.0-F2 | A.0 audit     | `desktop/smart-client.js` (223 LOC) + `client/src/modules/cost/tabs/ModeSection.jsx` (300 LOC) already mature → A.3 trims to wiring + import flow (scope reduction)                                                    |
+| A.0-F3 | A.0 audit     | Caddy reverse proxy script exists but was NEVER deployed on prod 10.102.3.61 → pivot from Caddy to Express static for /updates/                                                                                        |
+| A.1-F4 | A.1 implement | better-sqlite3 version drift — root `^12.9` vs desktop `^11.3` → logged as backlog, not blocking                                                                                                                       |
+| A.4-F5 | A.4 smoke     | express.static `dotfiles: 'deny'` calls `next()` instead of terminating → SPA catch-all swallows the request and returns index.html with 200 → required defensive 404 guard                                            |
+| A.4-F6 | A.4 smoke     | `curl` client-side normalizes `..` in URLs before sending → traversal probe needs `--path-as-is` to actually reach the server                                                                                          |
+| A.4-F7 | A.4 design    | Default compression filter does NOT skip `.exe` / `.dmg` / `.nupkg` (they arrive as `application/octet-stream`) → explicit path-prefix skip needed in filter callback                                                  |
+| A.6-F8 | A.6 verify    | `desktop/build-manifest.test.js` only checked TOP-LEVEL .js → utils/netProbe.js (sub-directory) regression went undetected at PR-time → fix glob to `utils/**/*` + new test assertion enumerating subdir runtime files |
+| FU-7   | A.4 commit    | Husky lint-staged silently re-stages all working-tree files into the index after commit → required `git reset HEAD` between commits when WIP held in working tree (saved to feedback memory)                           |
+
+### Recovery anchors preserved
+
+- `wip-snapshot-20260504-082812` git tag — B1+B2 deferred work (25 files, ~4,100 LOC)
+- `pre-sidebar-revert-20260504-090729` git tag
+- `/tmp/wip-backup-20260504-082812.tar.gz` filesystem snapshot
+
+### Next steps for v1.5.1 release
+
+1. **Server-only v1.5.1 deploy** — the 5 Phase A commits land on prod via existing `deploy.ps1` flow. New `/updates/` endpoint becomes available the moment the server restarts. No client-side work blocks this.
+2. **A.5 dedicated session** — schedule when a fresh-context window is available. Wine + Mono + electron-builder Windows toolchain on macOS is mental-load-heavy and benefits from an uninterrupted window.
+3. **A.3b** — only if a real user request arrives for multi-profile / OS file association.
+4. **B1/B2 review session** — the 25 deferred WIP files (planning + dashboard + server) have been held across multiple sessions. Schedule a dedicated review/triage session before the WIP outgrows the recovery anchors.
