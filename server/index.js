@@ -6,11 +6,32 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+import { describeEnvSources } from './utils/envSources.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Snapshot OS env BEFORE dotenv merges .env so we can report
+// per-variable provenance at boot (Sprint S-P0-FIX-7, Step B).
+const _envSnapshotBeforeDotenv = new Set(Object.keys(process.env));
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
+
+const TRACKED_ENV = [
+  'NODE_ENV',
+  'OPS_PORT',
+  'PORT',
+  'DATA_DIR',
+  'OPS_CORS_ORIGINS',
+  'OPS_TOTP_KEY',
+  'OPS_KIOSK_KEY',
+  'OPS_ALLOW_SAME_ORIGIN',
+];
+if (process.env.NODE_ENV !== 'test') {
+  console.log('🌱 [env] resolved sources:');
+  for (const line of describeEnvSources(_envSnapshotBeforeDotenv, TRACKED_ENV)) {
+    console.log(line);
+  }
+}
 
 // ─── Process-level safety net (Phase 10H) ───
 // An uncaughtException or unhandledRejection in a route handler can
