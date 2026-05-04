@@ -99,6 +99,18 @@ if (!path.isAbsolute(DATA_DIR)) {
   DATA_DIR = path.resolve(path.join(__dirname, '..'), DATA_DIR);
 }
 
+// ─── Initialize complete DB schema (F-BOOT-2 fix) ───
+// Without this, audit_log + other tables are only created lazily when
+// quoteVersions.js / shadowWrite.js first touch the DB. Until then,
+// every audit write silently no-ops because auditStore.js catches the
+// "no such table: audit_log" error and falls through. The TOTP boot
+// probe + auth service below could fire before that lazy init runs,
+// losing forensic trail. initSchema() is idempotent (CREATE TABLE
+// IF NOT EXISTS for everything in schema.sql), so calling it eagerly
+// here is safe regardless of DB state.
+import { initSchema } from './db/init.js';
+initSchema();
+
 // ─── Initialize auth service ───
 import {
   init as initAuth,
