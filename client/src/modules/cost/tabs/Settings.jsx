@@ -1453,7 +1453,7 @@ function AccountSection() {
             </div>
           )}
         </>
-      ) : (
+      ) : acctTab === 'perms' ? (
         /* Permissions Tab */
         <div className="settings-card">
           {/* Role cards */}
@@ -1522,7 +1522,7 @@ function AccountSection() {
             </tbody>
           </table>
         </div>
-      )}
+      ) : null}
 
       {acctTab === 'groups' && (
         <PermissionGroupsSection isAdminPlus={isAdminPlus} onFlash={flash} />
