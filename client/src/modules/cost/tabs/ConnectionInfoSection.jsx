@@ -22,7 +22,7 @@ import { useI18n } from '../../../utils/useI18n';
 import './ConnectionInfoSection.css';
 
 export default function ConnectionInfoSection() {
-  const t = useI18n();
+  const { t } = useI18n();
   const [info, setInfo] = useState(null);
   const [error, setError] = useState(null);
   const [selectedIface, setSelectedIface] = useState(null);
