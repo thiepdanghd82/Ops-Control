@@ -1,6 +1,6 @@
 @echo off
 :: ═══════════════════════════════════════════════════════════════
-:: Ops Control v1.0 — Deploy (Windows wrapper)
+:: Ops Control v1.2 — Deploy (Windows wrapper)
 :: ═══════════════════════════════════════════════════════════════
 ::
 :: Thin wrapper around deploy.ps1 so operators can double-click

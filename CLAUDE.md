@@ -205,7 +205,7 @@ Server code in `server/**` is served by `node server/index.js`. It doesn't auto-
 - `client/src/modules/help/HelpTab.jsx` — in-app Help tab component
 - `scripts/help/build-user-guide.mjs` — builds the Word user guide from content.js
 - `server/index.js` — node server entry point (serves `client/dist` + API routes)
-- `deploy.sh` — Linux SSH deploy (Windows server likely needs manual variant)
+- `deploy.sh` — Linux SSH deploy → systemd; `deploy.ps1` is the Windows counterpart (NSSM service) and was the script used for `10.102.3.61`. Both share the same .env-merge + snapshot + preflight gate; DATA_DIR is `.env`-driven on both since Sprint S-P0-FIX-1 (2026-05-03)
 - `.claude/launch.json` — defines `client-dev` and `ops-control` preview targets
 
 ## Help system
