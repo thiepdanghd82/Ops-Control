@@ -206,6 +206,15 @@ app.use((req, res, next) => {
 //       attack surface from third-party scripts (if any ever load) +
 //       limits browser fingerprinting vectors.
 const IS_PROD = process.env.NODE_ENV === 'production';
+// F-BOOT-4 (resurrects MES-3-FIX-14 from the v1.4.3 stash) — when the
+// operator opts into a plain-HTTP same-origin deploy via
+// OPS_ALLOW_SAME_ORIGIN=1, suppress HSTS and the CSP
+// upgrade-insecure-requests directive. Otherwise WebKit / Chromium
+// rewrite every JS module fetch to https://, the upgraded URLs 404
+// against the http-only Express server, and the page renders blank.
+// Caught during the v1.5.1 LAN smoke test on a Windows browser hitting
+// http://10.102.3.61:3000.
+const ALLOW_HTTP = process.env.OPS_ALLOW_SAME_ORIGIN === '1';
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
@@ -214,8 +223,10 @@ app.use((req, res, next) => {
     'Permissions-Policy',
     'camera=(), microphone=(), geolocation=(), payment=(), usb=(), accelerometer=(), gyroscope=(), magnetometer=(), xr-spatial-tracking=()'
   );
-  if (IS_PROD) {
+  if (IS_PROD && !ALLOW_HTTP) {
     // 1 year, include all subdomains, eligible for HSTS preload.
+    // Skipped under OPS_ALLOW_SAME_ORIGIN=1 — HSTS over plain HTTP would
+    // pin the browser into HTTPS forever, breaking the next dev visit.
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
 
     // Phase 9G.9 — Content-Security-Policy in production ONLY. Dev mode
@@ -242,24 +253,26 @@ app.use((req, res, next) => {
     //   form-action 'self'                — forms only POST to same origin.
     //   object-src  'none'                — no Flash/plugin embeds.
     //   upgrade-insecure-requests         — force any http:// asset to https.
-    res.setHeader(
-      'Content-Security-Policy',
-      [
-        "default-src 'self'",
-        "script-src 'self'",
-        "style-src 'self' 'unsafe-inline'",
-        "img-src 'self' data: blob:",
-        "connect-src 'self'",
-        "font-src 'self' data:",
-        "frame-ancestors 'none'",
-        "base-uri 'self'",
-        "form-action 'self'",
-        "object-src 'none'",
-        'upgrade-insecure-requests',
-        // Phase 9M.3 — violations POST to /api/csp-report.
-        'report-uri /api/csp-report',
-      ].join('; ')
-    );
+    const cspParts = [
+      "default-src 'self'",
+      "script-src 'self'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob:",
+      "connect-src 'self'",
+      "font-src 'self' data:",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "object-src 'none'",
+    ];
+    // F-BOOT-4 — only request HTTPS upgrades when we're actually fronted
+    // by HTTPS. With OPS_ALLOW_SAME_ORIGIN=1 the operator has explicitly
+    // declared a plain-HTTP deploy, so emitting upgrade-insecure-requests
+    // would brick every page load by rewriting module imports to https.
+    if (!ALLOW_HTTP) cspParts.push('upgrade-insecure-requests');
+    // Phase 9M.3 — violations POST to /api/csp-report.
+    cspParts.push('report-uri /api/csp-report');
+    res.setHeader('Content-Security-Policy', cspParts.join('; '));
     // Modern browsers prefer Report-To header + `report-to` directive
     // over deprecated `report-uri`. Both shipped for broadest coverage.
     res.setHeader(
