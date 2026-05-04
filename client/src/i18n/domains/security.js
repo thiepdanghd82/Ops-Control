@@ -39,6 +39,13 @@ registerStrings({
     en: 'Login failed',
     vi: 'Đăng nhập thất bại',
   },
+  // Sprint S-P0-FIX-4 (a11y) — explicit heading key for the login form's
+  // primary <h1>. Decoupled from `login.submit` (button text) so the two
+  // can diverge later without coupling. Closes F-FOLLOW-UP-1.
+  'login.heading.signin': {
+    en: 'Sign in',
+    vi: 'Đăng nhập',
+  },
   'login.expired_title': { en: 'Session expired', vi: 'Phiên đã hết hạn' },
   'login.expired_hint': {
     en: 'Your session timed out. Re-enter your password — we kept the username.',

@@ -494,9 +494,14 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
       </div>
       <div className="cb-hero-body">
         <div className="cb-hero-tag">Manufacturing Operations</div>
-        <h2 className="cb-hero-title">
+        {/* Sprint S-P0-FIX-4 (a11y F3-4) — was <h2>; demoted to <p> so the
+            page heading hierarchy starts cleanly at <h1>. The aside is
+            already aria-hidden so this never reached screen readers, but
+            tooling (Lighthouse, axe-core) flagged the DOM-order h2-before-h1.
+            Visual treatment is fully CSS-driven via .cb-hero-title. */}
+        <p className="cb-hero-title">
           Pricing &amp; planning, <strong>online or off.</strong>
-        </h2>
+        </p>
         <p className="cb-hero-desc">
           Quote, track, and approve from the floor. Local-first writes, automatic sync, single
           source of truth across the plant.
@@ -559,8 +564,11 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
 
             <form onSubmit={handleTOTP} className="login-form">
               <div className={`cb-field ${totpError ? 'totp-shake' : ''}`}>
-                <label className="cb-field-label">Authenticator Code</label>
+                <label className="cb-field-label" htmlFor="login-totp-code">
+                  Authenticator Code
+                </label>
                 <input
+                  id="login-totp-code"
                   className="cb-field-input cb-otp-input"
                   type="tel"
                   inputMode="numeric"
@@ -649,7 +657,7 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
                 ? t('login.must_change.title')
                 : changeMode
                   ? t('login.change.toggle')
-                  : 'Sign in'}
+                  : t('login.heading.signin')}
           </h1>
           <p className="cb-card-sub">Ops Control · {serverInfo.version}</p>
 
@@ -682,8 +690,11 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
           )}
 
           <div className="cb-field">
-            <label className="cb-field-label">{t('login.username')}</label>
+            <label className="cb-field-label" htmlFor="login-username">
+              {t('login.username')}
+            </label>
             <input
+              id="login-username"
               className="cb-field-input"
               type="text"
               value={username}
@@ -697,8 +708,11 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
           </div>
 
           <div className="cb-field">
-            <label className="cb-field-label">{t('login.password')}</label>
+            <label className="cb-field-label" htmlFor="login-password">
+              {t('login.password')}
+            </label>
             <input
+              id="login-password"
               className="cb-field-input"
               type="password"
               value={password}
@@ -723,8 +737,11 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
           {changeMode && (
             <>
               <div className="cb-field">
-                <label className="cb-field-label">{t('login.change.new')}</label>
+                <label className="cb-field-label" htmlFor="login-new-pwd">
+                  {t('login.change.new')}
+                </label>
                 <input
+                  id="login-new-pwd"
                   className="cb-field-input"
                   type="password"
                   value={newPwd}
@@ -736,8 +753,11 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
                 />
               </div>
               <div className="cb-field">
-                <label className="cb-field-label">{t('login.change.confirm')}</label>
+                <label className="cb-field-label" htmlFor="login-confirm-pwd">
+                  {t('login.change.confirm')}
+                </label>
                 <input
+                  id="login-confirm-pwd"
                   className="cb-field-input"
                   type="password"
                   value={newPwdConfirm}
