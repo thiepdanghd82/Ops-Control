@@ -57,10 +57,11 @@
       "smart-client.js",
       "license.js",
       "setupWizard.js",
-      "utils/serverIdentity.js",
+      "utils/**/*",
       "native/**/*",
       "package.json",
-      "!**/*.map"
+      "!**/*.map",
+      "!**/*.test.js"
     ],
     "extraResources": [
       {

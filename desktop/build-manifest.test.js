@@ -82,3 +82,57 @@ test('build.files entries all point to real files (no rotted entries)', () => {
     `build.files references missing file(s): ${stale.join(', ')}. Remove the entry or restore the file.`
   );
 });
+
+// Phase A.6 regression guard: utils/ subdirectory.
+//
+// Caught during Phase A.6.1 headless verify: utils/netProbe.js was
+// added in Phase A.3a but never registered in build.files (only
+// utils/serverIdentity.js was). The earlier top-level-only assertion
+// missed it because subdirectory files were out of scope. Without
+// this test, a fresh desktop build would crash at runtime with
+// `Cannot find module './utils/netProbe.js'` when setupWizard.js or
+// main.js calls `require('./utils/netProbe.js')` — same failure mode
+// as the v1.3.0 setupWizard.js incident this whole test file exists
+// to prevent.
+//
+// Subdirectories are covered by glob entries (utils/**/*, native/**/*).
+// This test asserts that EVERY non-test runtime file under utils/
+// is reachable via at least one of the declared entries — explicit
+// path OR matching glob.
+function listUtilsRuntime() {
+  const utilsDir = path.join(__dirname, 'utils');
+  if (!fs.existsSync(utilsDir)) return [];
+  return fs
+    .readdirSync(utilsDir, { withFileTypes: true })
+    .filter((e) => e.isFile() && e.name.endsWith('.js') && !isExempt(e.name))
+    .map((e) => `utils/${e.name}`);
+}
+
+function entryMatches(entry, relPath) {
+  if (entry === relPath) return true;
+  // Minimal glob support — covers `utils/**/*` and `native/**/*`.
+  if (entry.endsWith('/**/*')) {
+    const dir = entry.slice(0, -'/**/*'.length);
+    return relPath.startsWith(dir + '/');
+  }
+  if (entry.endsWith('/*')) {
+    const dir = entry.slice(0, -'/*'.length);
+    return path.dirname(relPath) === dir;
+  }
+  return false;
+}
+
+test('every desktop utils/ runtime file is covered by build.files', () => {
+  const pkg = JSON.parse(fs.readFileSync(PKG_PATH, 'utf-8'));
+  const positive = (pkg.build?.files || []).filter((e) => !e.startsWith('!'));
+  const missing = [];
+  for (const rel of listUtilsRuntime()) {
+    if (!positive.some((entry) => entryMatches(entry, rel))) missing.push(rel);
+  }
+  assert.deepEqual(
+    missing,
+    [],
+    `desktop runtime file(s) not covered by any build.files entry: ${missing.join(', ')}. ` +
+      `Add an explicit path OR widen an existing glob (e.g. "utils/**/*").`
+  );
+});
