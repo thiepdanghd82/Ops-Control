@@ -148,7 +148,7 @@
     "publish": [
       {
         "provider": "generic",
-        "url": "http://10.102.3.61/updates/",
+        "url": "http://10.102.3.61:3000/updates/",
         "channel": "latest"
       }
     ]

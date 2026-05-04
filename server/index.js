@@ -7,6 +7,7 @@ import path from 'path';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import { describeEnvSources } from './utils/envSources.js';
+import { resolveUpdatesDir } from './utils/updatesDir.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -282,6 +283,11 @@ app.use(
       const ct = res.getHeader('Content-Type');
       if (ct && String(ct).includes('text/event-stream')) return false;
       if (req.headers['x-no-compression']) return false;
+      // Phase A.4 — auto-update artifacts (/updates/*.exe, .dmg, .nupkg,
+      // .yml manifests). Binary installers are already compressed by
+      // electron-builder's NSIS/DMG packaging, so re-gzipping them just
+      // burns CPU for no win. Manifests are tiny enough to leave raw.
+      if (req.path.startsWith('/updates/')) return false;
       return compression.filter(req, res);
     },
     threshold: 1024,
@@ -875,6 +881,54 @@ app.use('/api/v1/import', authMiddleware, writeRateLimit, importRouter);
 // templates, exports, and restore. Same auth + rate-limit posture.
 app.use('/api/import-wizard', authMiddleware, writeRateLimit, importWizardRouter);
 app.use('/api/v1/import-wizard', authMiddleware, writeRateLimit, importWizardRouter);
+
+// ─── Auto-update artifact distribution (Phase A.4) ───
+// electron-builder generic provider hits this URL to fetch latest.yml
+// + the per-platform installer (.exe / .dmg / .nupkg). Public — no
+// auth — because the same URL is consumed by 50 client machines that
+// are not yet logged into the app on first launch. Path traversal is
+// blocked by express.static, dotfiles are denied, and directory
+// listing is disabled.
+//
+// Cache strategy:
+//   .yml manifests → 5 min (electron-updater polls these to find a new
+//                    version — too short and we ddos ourselves; too
+//                    long and a release rolls out slowly).
+//   everything else (binaries) → 1 year immutable, since file names
+//                                contain the version (e.g.
+//                                OpsControl-1.5.1-Setup.exe).
+//
+// Compression is intentionally skipped for /updates/* (see compression
+// filter above) — installers are already compressed.
+const updatesDir = resolveUpdatesDir(process.env, DATA_DIR);
+if (fs.existsSync(updatesDir)) {
+  app.use(
+    '/updates',
+    express.static(updatesDir, {
+      dotfiles: 'deny',
+      index: false,
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.yml')) {
+          res.setHeader('Cache-Control', 'public, max-age=300');
+        } else {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        }
+      },
+    })
+  );
+  // Defensive 404 guard for any /updates/* path the static didn't
+  // serve (dotfiles, missing files, directory roots). Without this the
+  // request falls through to the SPA catch-all and the client gets
+  // index.html with status 200, which would crash electron-updater
+  // when it tries to parse it as YAML. Mirrors the /assets/* and
+  // /kiosk/assets/* stale-chunk guards lower in this file.
+  app.use('/updates', (req, res) => {
+    res.status(404).type('text/plain').send('updates: not found');
+  });
+  console.log(`📦 [updates] serving from ${updatesDir}`);
+} else {
+  console.log(`📦 [updates] dir not found at ${updatesDir} — endpoint disabled`);
+}
 
 // Phase 10A — chat routes. Feature-gated per-route via
 // `requireChatEnabled` so the router stays mounted even when
