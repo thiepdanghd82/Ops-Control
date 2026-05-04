@@ -8,7 +8,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { getDb, getDbPath } from './connection.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -50,7 +50,9 @@ function applyAdditiveMigrations(db) {
 }
 
 // Run directly: node server/db/init.js
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Use pathToFileURL so paths containing spaces (e.g. "/Volumes/Macintosh Data/...")
+// produce URL-encoded comparisons that match import.meta.url.
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const dbPath = getDbPath();
   console.log(`Initializing SQLite at ${dbPath}`);
   initSchema();
