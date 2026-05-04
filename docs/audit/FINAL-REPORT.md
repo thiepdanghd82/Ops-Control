@@ -349,7 +349,13 @@ These are throwaway scripts (not checked into the repo) but the per-phase report
 
 ## 8. Sign-off
 
-**Verdict: ✅ GO** (upgraded from ⚠ GO WITH CONDITIONS on 2026-05-04 after Step B closure).
+**Verdict: ✅ GO — pending Step C UAT sign-off** (upgraded from ⚠ GO WITH CONDITIONS on 2026-05-04 after Step B closure).
+
+> **Pre-merge gate.** The branch `fix/pre-go-live-p0` is held off `main` until operator-side UAT (per [`STEP-C-uat-checklist.md`](STEP-C-uat-checklist.md)) returns a tester sign-off + tech-lead counter-sign per §6 of that checklist. Step B verified on the dev box; UAT verifies on the actual deploy target. They are two distinct checks. Operator request template: [`STEP-E-uat-request-template.md`](STEP-E-uat-request-template.md).
+>
+> On UAT pass: merge `fix/pre-go-live-p0` → `main` (`--no-ff` to preserve audit history) + version bump (decision deferred to post-UAT — patch `v1.5.1` if no functional regressions surface, minor `v1.6.0` if UAT scope changes warrant it).
+>
+> On UAT fail: file UAT Issue Report (§5.4 of checklist) → fix forward on the same branch (Fix 8+) → re-UAT only the failing scenarios → then merge.
 
 All 7 P0 items in §3 are completed and verified. Step D re-run (2026-05-04) confirmed:
 
