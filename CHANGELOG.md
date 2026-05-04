@@ -2,55 +2,86 @@
 
 All notable changes to Ops Control. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased] — Step B P0 fixes
+## [Unreleased] — Step B P0 fixes (Production Readiness Audit closure)
+
+Branch: `fix/pre-go-live-p0` — 7 commits + 1 commit on `main` (Fix 6 B3 disposition).
+Verdict: ⚠ GO WITH CONDITIONS → ✅ **GO** (2026-05-04). Full report: `docs/audit/STEP-B-fix-summary.md`.
 
 ### Security
 
-- Unified login error response per **OWASP ASVS V4.0 §6.2.4** (audit finding F2-1).
-  - All credentials-failure paths return `401` + `{ok:false, error:"Invalid credentials"}` —
-    same body for unknown user, wrong password, and per-username lockout-fired
-    cases. The previous distinct messages (`"Username not found"`, `"Incorrect
-password"`, `"Too many failed attempts..."`) leaked username existence to
-    unauthenticated attackers.
-  - Timing equalised via a hardcoded argon2id dummy hash for unknown-user
-    requests. Phase 3 measured a **~370 ms** wallclock leak between real-user
-    bcrypt verify and ghost-user `users.find()` short-circuit; post-fix Δ p95
-    measured at **0.6 ms** (3 × 100-sample benchmark). Bcrypt-cost-12 legacy
-    users keep a residual ~330 ms gap until they auto-upgrade to argon2id on
-    first successful login post-deploy.
-  - Per-username lockout response also unified: was `429` + readable
-    "Too many failed attempts" (silently confirming the username exists);
-    now `401` + the same `Invalid credentials` body. The HTTP `Retry-After`
-    header is preserved (RFC 7231 §7.1.3) for proxy / monitoring back-off.
-  - Server-side `audit('LOGIN_FAIL'/'LOGIN_LOCKED', ...)` retains the rich
-    branch detail for forensics.
-  - Client side bilingual i18n: `login.error.invalid_credentials` (EN
-    "Invalid credentials" / VI "Thông tin đăng nhập không hợp lệ") plus a
-    legacy-string mapper covering the kiosk-PWA stale-cache window.
-  - Companion operator guide: `docs/Use guide/login-retry.md` (EN + VI).
-
-### Fixed
-
-- **Deploy script DATA_DIR posture** (audit finding F4-5). `deploy.sh:191`
-  hardcoded a v1.0 legacy `DATA_DIR=$APP_DIR/../COST_V1.0/CCL_Pricing/data`
-  Environment line. Removed; `.env` (default `./server/data` per
-  `.env.example`) now drives DATA_DIR uniformly. Header + banner + systemd
-  Description bumped from v1.0 → v1.2 across `deploy.sh` / `deploy.ps1` /
-  `deploy.bat`.
+- **Unified login error response** per OWASP ASVS V4.0 §6.2.4 (audit finding F2-1, commit `6568eef`).
+  All credentials-failure paths return byte-identical `401` + `{ok:false, error:"Invalid credentials"}` —
+  same body for unknown user, wrong password, and per-username lockout. Previous distinct messages
+  (`"Username not found"`, `"Incorrect password"`, `"Too many failed attempts..."`) leaked username
+  existence to unauthenticated attackers. Timing equalised via a hardcoded argon2id dummy hash —
+  Phase 3 measured ~370 ms wallclock leak; post-fix Δ p95 = **0.6 ms** (3 × 100-sample benchmark).
+  Per-username lockout response also unified (was 429, now 401); `Retry-After` HTTP header preserved
+  per RFC 7231 §7.1.3. Server-side audit log keeps rich branch detail for forensics. Client i18n:
+  `login.error.invalid_credentials` (EN/VI) plus legacy-string mapper for the kiosk-PWA stale-cache
+  window. Operator guide: `docs/Use guide/login-retry.md` (EN+VI).
+- Closes per-username lockout enumeration vector as a side effect (was leaking via 429 vs 401 status
+  - readable lockout text).
 
 ### Performance
 
-- **HTTP compression** middleware enabled (audit finding F3-1). Initial page
-  load over the wire drops from ~2.6 MB → ~520 KB (~80 % reduction).
-  Defensive SSE filter excludes `text/event-stream` responses so streaming
-  endpoints (`/api/events`, `/api/chat/stream`) are unaffected.
-  `x-no-compression: 1` header bypass available for debugging.
+- **HTTP compression** middleware enabled (audit finding F3-1, commit `6a63421`). Mounted between
+  security-headers and request-log middleware with defensive SSE filter (request-side `Accept:` +
+  response-side content-type + `x-no-compression: 1` debug bypass). Threshold 1024 / level 6.
+  Verified across 9 scenarios: e.g. AdminMetrics-\*.js bundle 9 871 B → 3 221 B (−67 %); /metrics 3 980 B
+  → 414 B (−89.6 %). Real-world: login page total over the wire ~2.6 MB → ~520 KB (~80 % reduction).
+
+### Accessibility
+
+- **Login form a11y polish** (audit findings F3-3, F3-4 + bonus F-FOLLOW-UP-1, commit `6b8542f`).
+  5 input id/htmlFor pairs added (login-totp-code, login-username, login-password, login-new-pwd,
+  login-confirm-pwd) so visible labels are programmatically linked (WCAG 2.1 §4.1.2). Heading
+  hierarchy fixed: `<h2 cb-hero-title>` → `<p cb-hero-title>` so the page now starts with `<h1>`
+  (WCAG 2.1 §1.3.1, §2.4.6 — heading order). New i18n key `login.heading.signin` (EN: "Sign in" /
+  VI: "Đăng nhập") replaces hardcoded literal. Live Puppeteer probe confirmed 0 unlabelled focusables
+  (was 2+).
+
+### Operations
+
+- **Deploy script DATA_DIR posture** (audit finding F4-5, commit `e75cac9`). `deploy.sh:191`
+  hardcoded `DATA_DIR=$APP_DIR/../COST_V1.0/CCL_Pricing/data` (v1.0 legacy path). Removed the
+  systemd Environment line; `.env` (default `./server/data`, expanded precedence comment in
+  `.env.example`) now drives DATA_DIR uniformly. Headers + banner + systemd Description bumped
+  v1.0 → v1.2 across `deploy.sh` / `deploy.ps1` / `deploy.bat`. Step A established prod is Windows
+  - uses deploy.ps1 (no leak), so this was dormant in current production but real for any future
+    Linux deploy.
+- **Env-var provenance startup logging** (bonus, closes F4-5 root-cause class, commit `5fc6268`).
+  New `server/utils/envSources.js` pure helper + `server/index.js` boot block. For each tracked var
+  (NODE_ENV, OPS_PORT, PORT, DATA_DIR, OPS_CORS_ORIGINS, OPS_TOTP_KEY, OPS_KIOSK_KEY,
+  OPS_ALLOW_SAME_ORIGIN), reports source as `os env` / `.env file` / `<unset>` / `<empty> (likely
+misconfig)`. Secret-named values masked to `<N chars>` via expanded pattern
+  (`KEY|SECRET|TOKEN|PASSWORD|PWD|AUTH|HASH|PRIVATE`). Test-gated (`NODE_ENV !== 'test'`) to keep
+  test output clean. Now `grep '🌱' boot.log` answers any post-deploy "where did this var come
+  from?" question without `lsof` + manual file inspection.
+
+### Documentation
+
+- **MIGRATION_GUIDE.md refreshed** v1.2→v1.3 → v1.2→v1.5 (audit finding F4-21, commit `bed7824`).
+  12 sections (was 10); +175 / −88 LOC. New §5 Behavioral changes (operator-facing): 7 EN + 7 VI
+  rows + "What you don't need to do" subsection (no schema migration, no pwd reset, no license
+  re-issue, no client URL update, no downtime). New §9 Feature flags (`mes.workOrder.enabled`,
+  `mes.kiosk.enabled` both default-false, `OPS_KIOSK_KEY` env var). Rewritten §10 Rollback with
+  Sprint 1.7 snapshot pattern. §11 Deferred items now points to CLAUDE.md MES-3 backlog.
+- **Step B audit summary** (`docs/audit/STEP-B-fix-summary.md`) — per-fix evidence, hidden-findings
+  registry (4 items), cumulative test count, final P0 status table.
+- **Fix 6 WIP triage report** (`docs/audit/FIX-6-CLASSIFICATION.md`, commit `d48afa8`) — 42 working-
+  tree entries classified into A (audit evidence) / B1 (UI redesign sprint, deferred) / B2 (Order
+  Entry FG sync feature, deferred) / B3 (ERPAG research, committed to main as `970163a`). Triple
+  recovery anchor (git tag + tarball + git stash verify).
+- 6 verify-screenshot artifacts committed to `docs/audit/screenshots/` (Fix 3 locale switch + unified
+  error in EN/VI; Fix 4 a11y in EN/VI). Future audit replays can compare against same baseline
+  without re-running Puppeteer.
+- ERPAG market-survey research filed against `main` (`970163a`, separate from the P0 hotfix branch).
 
 ### Tests
 
-- +10 tests vs Step B baseline (`authService.timing.test.js` × 4 +
-  `auth.login.test.js` × 6). Total suite: **1612 pass** (was 1602; 0
-  regressions across server / client / desktop / manifest runners).
+- +16 tests vs Step B baseline (4 from `authService.timing.test.js`, 6 from `auth.login.test.js`,
+  6 from `envSources.test.js`). Final: **1 618 pass / 0 fail** (1 014 server + 594 client + 8 desktop
+  license + 2 desktop manifest). Was 1 602 baseline; 0 regressions.
 
 ## [1.4.3] — 2026-05-02
 

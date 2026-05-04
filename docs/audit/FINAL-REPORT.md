@@ -13,27 +13,31 @@
 | -------------------------------- | ------------------------------------------------------------------: |
 | Source files audited             |                                                                 439 |
 | API endpoints inspected          |                                                                 238 |
-| Tests executed (all pass)        |                                                               1 602 |
+| Tests executed (all pass)        |                                             **1 618** (post-Step-B) |
 | Reference business case verified | ✅ `30032013-0075` matches user expected output (5.84 m² / 77.87 m) |
-| 🔴 BLOCKER findings              |            **0** (1 candidate pending operator verification — F4-5) |
-| 🟠 MAJOR findings                |                                                               **8** |
-| 🟡 MINOR findings                |                                                              **24** |
+| 🔴 BLOCKER findings              |                                                               **0** |
+| 🟠 MAJOR findings                |                                    **8** (3 P0-resolved 2026-05-04) |
+| 🟡 MINOR findings                |                                   **24** (4 P0-resolved 2026-05-04) |
 | 🟢 OK / positive evidence        |                                                              **30** |
 | **Total findings**               |                                                              **62** |
 
-### Verdict: ⚠ **GO WITH CONDITIONS**
+### Verdict (post-Step-B, 2026-05-04): ✅ **GO**
+
+> **Status update.** All 7 P0 items closed across `fix/pre-go-live-p0` commits `e75cac9` → `5fc6268` (+ `970163a` on `main` for B3 research from Fix 6 disposition). Step B summary: `docs/audit/STEP-B-fix-summary.md`. Test count: 1 602 → **1 618** (+16; 0 regressions). Pre-fix verdict (⚠ GO WITH CONDITIONS) is kept below for historical context.
+
+#### Pre-Step-B verdict (historical, 2026-05-03): ⚠ GO WITH CONDITIONS
 
 The codebase is **structurally sound** (zero CVEs across 3 packages, zero circular deps across 511 files, zero hardcoded credentials, zero SQL-injection / XSS surface, mature auth + CSRF + headers, gold-standard SPA cache strategy, comprehensive bilingual operator docs, three-tiered backup, 68 audit callsites). The reference test case for the planning module passes exactly.
 
-What gates the go-live decision is a **small handful of fix-able items**:
+What gated the go-live decision was a **small handful of fix-able items** — all closed in Step B (see §3 below):
 
-### Top 3 risks
+### Top 3 risks (all CLOSED in Step B)
 
-1. **F4-5 — `deploy.sh:191` hardcodes a v1.0 legacy `DATA_DIR` path.** If the prod box at `10.102.3.61` does not have a sibling `COST_V1.0/CCL_Pricing/data/` directory, the new deploy will fail to boot. **Mandatory verification before next deploy.** 5-minute fix once verified.
-2. **F3-1 — Express `compression()` middleware is not applied.** 419 KB initial JS + 102 KB initial CSS go over the LAN raw. Operator-perceived first-load slow. 5-line fix.
-3. **F2-1 — Login API leaks username existence.** `"Username not found"` vs `"Incorrect password"` lets an attacker enumerate valid users without credentials. 5-minute OWASP-conformance fix.
+1. **F4-5 — `deploy.sh:191` hardcoded v1.0 legacy `DATA_DIR` path.** ✅ Closed in `e75cac9` (Fix 1). Step A established prod is Windows + uses deploy.ps1 (no leak), making this dormant in current production but real for any future Linux deploy. Removed the stale Environment line + bumped all 3 deploy script headers v1.0 → v1.2. Plus Fix 7 (`5fc6268`) added env-source startup logging so the next F4-5-style incident is diagnosable from `grep '🌱' boot.log` alone.
+2. **F3-1 — Express `compression()` middleware not applied.** ✅ Closed in `6a63421` (Fix 2). Mounted `compression()` between security-headers and request-log middleware with defensive SSE filter. Verified 419 KB JS / 102 KB CSS → ~80 % reduction on the wire (e.g. AdminMetrics-\*.js bundle 9 871 B → 3 221 B = −67 %).
+3. **F2-1 — Login API leaked username existence.** ✅ Closed in `6568eef` (Fix 3, OWASP ASVS V4.0 §6.2.4). All 3 credentials-failure branches now return byte-identical `401 + {ok:false, error:"Invalid credentials"}`. Lockout (Branch C) preserves `Retry-After` HTTP header per RFC 7231 §7.1.3 but drops body field. Timing equalised via argon2id dummy hash — Δ p95 0.6 ms (was ~370 ms).
 
-All three together are < 1 hour of work + 1 short remote SSH check. After they're closed, the recommendation upgrades to ✅ **GO**.
+All seven P0 items completed in 7 commits over a single workday (2026-05-03 18:01 → 2026-05-04 09:02). Verdict upgraded to ✅ **GO**.
 
 ---
 
@@ -85,18 +89,21 @@ All three together are < 1 hour of work + 1 short remote SSH check. After they'r
 
 ## 3. Fix Roadmap
 
-### 🔴 P0 — Must fix before go-live (≤ 1 day)
+### 🔴 P0 — Must fix before go-live (≤ 1 day) — **ALL CLOSED 2026-05-04 ✅**
 
-| ETA        | ID         | Action                                                                                                                                                                                                                                            | Owner         |
-| ---------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| **30 min** | **F4-5**   | SSH `10.102.3.61`, verify `COST_V1.0/CCL_Pricing/data/` exists. If yes, add comment to `deploy.sh:191` documenting in-place migration topology. If no, change to `Environment=DATA_DIR=$APP_DIR/server/data`.                                     | DevOps        |
-| **5 min**  | **F3-1**   | Add `import compression from 'compression'; app.use(compression());` near other middleware setup in `server/index.js`. Verify with `curl -H 'Accept-Encoding: gzip' -I http://localhost:3000/assets/index-*.js` returns `Content-Encoding: gzip`. | BE            |
-| **5 min**  | **F2-1**   | Replace login error messages in `authService.js` with single generic `"❌ Invalid credentials"` for both bad-username and bad-password cases.                                                                                                     | BE / Security |
-| **15 min** | F3-3, F3-4 | Tighten login-page a11y: aria-labels on EN/VN flag toggles + decision-legend buttons; promote `<h1>` ahead of `<h2>` in DOM order.                                                                                                                | FE            |
-| **1 h**    | F4-21      | Refresh `MIGRATION_GUIDE.md` for the v1.5 jump (currently says v1.2→v1.3).                                                                                                                                                                        | Doc           |
-| **30 min** | F0-6       | Commit / squash the 27 modified + 9 untracked files from prior UI redesign session (or document as intentional WIP).                                                                                                                              | Dev           |
+| Status | ID         | Action                                                                                                                                                                                                                                                                | Closed in             |
+| ------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| ✅     | **F4-5**   | Removed `Environment=DATA_DIR=$APP_DIR/../COST_V1.0/CCL_Pricing/data` from `deploy.sh` systemd unit; `.env` now drives `DATA_DIR` (default `./server/data`). Headers v1.0 → v1.2 across deploy.sh / deploy.ps1 / deploy.bat.                                          | `e75cac9`             |
+| ✅     | **F3-1**   | Mounted `compression()` (threshold=1024, level=6, SSE-excluded) in `server/index.js`. Verified: AdminMetrics-\*.js 9 871 B → 3 221 B (−67 %). Login page total ~2.6 MB → ~520 KB (≈80 % reduction).                                                                   | `6a63421`             |
+| ✅     | **F2-1**   | All 3 credentials-failure branches return byte-identical `401 + {ok:false, error:"Invalid credentials"}` per OWASP ASVS V4.0 §6.2.4. Timing equalised via argon2id dummy hash (Δ p95 0.6 ms vs prior ~370 ms leak). Lockout `Retry-After` header preserved.           | `6568eef`             |
+| ✅     | F3-3, F3-4 | 5 input id/htmlFor pairs added; `<h2 cb-hero-title>` → `<p cb-hero-title>` so h1 starts heading hierarchy. Plus F-FOLLOW-UP-1: hardcoded `'Sign in'` literal replaced with `t('login.heading.signin')` (new EN/VI key).                                               | `6b8542f`             |
+| ✅     | F4-21      | `MIGRATION_GUIDE.md` rewritten v1.2→v1.3 → v1.2→v1.5. 12 sections (was 10); +175 / −88 LOC. New §5 Behavioral changes (EN+VI + "What you don't need to do"), new §9 Feature flags, rewritten §10 Rollback (snapshot pattern from Sprint 1.7).                         | `bed7824`             |
+| ✅     | F0-6       | WIP triaged into 4 groups: A (verify screenshots) committed `d48afa8`, B3 (ERPAG research) committed `970163a` on main, B1+B2 deferred for dedicated review with 3-layer recovery (git tag + tarball + git stash). Full report: `docs/audit/FIX-6-CLASSIFICATION.md`. | `d48afa8` + `970163a` |
+| ✅     | (bonus)    | Env-var provenance startup logging (`server/utils/envSources.js`). Closes the F4-5 root-cause class — operator can now `grep '🌱' boot.log` to see whether DATA_DIR came from os env vs .env vs <unset> vs <empty>.                                                   | `5fc6268`             |
 
-**Total P0 effort: ≈ 2.5 hours.**
+**Actual P0 effort: 7 commits across 15h wallclock (2026-05-03 18:01 → 2026-05-04 09:02). +1 919 net LOC (3 195 ins / 1 276 del). +16 tests added (10 from Fix 3, 6 from Fix 7). 0 regressions.**
+
+> Step B summary report with per-fix evidence: `docs/audit/STEP-B-fix-summary.md`.
 
 ### 🟠 P1 — Fix in Sprint 1 after go-live (1 sprint = ~2 weeks)
 
@@ -342,8 +349,31 @@ These are throwaway scripts (not checked into the repo) but the per-phase report
 
 ## 8. Sign-off
 
-After the **P0 items in §3 are completed and verified**, the audit verdict upgrades from ⚠ **GO WITH CONDITIONS** to ✅ **GO**.
+**Verdict: ✅ GO** (upgraded from ⚠ GO WITH CONDITIONS on 2026-05-04 after Step B closure).
 
-The audit branch `audit/pre-go-live-v1.2` is preserved as evidence. Findings are tagged with stable IDs (`F0-1` … `F4-26`) so the operator can track each through the bug-tracker / Linear / GitHub Issues.
+All 7 P0 items in §3 are completed and verified. Step D re-run (2026-05-04) confirmed:
 
-**End of audit.**
+- **1 618 / 1 618 tests pass, 0 fail** (1 014 server + 594 client + 8 desktop license + 2 desktop manifest).
+- Live repro probes: env-source log fires correctly, compression on `/assets/*` confirmed (−67 % on a real bundle), unified 401 + "Invalid credentials" for both wrong-pw and unknown-user paths, stale-chunk 404 guard intact.
+- Hidden-findings registry (4 items surfaced during Step B) recorded in `docs/audit/STEP-B-fix-summary.md`; 3 closed, 1 time-bound for re-evaluation 30 days post-deploy.
+
+### Commit range
+
+`fix/pre-go-live-p0`: `f8c6b9f` (STEP A verify) → `5fc6268` (Fix 7) — 8 commits.
+`main`: `970163a` (B3 research disposition from Fix 6).
+
+### Recovery anchors preserved
+
+- `wip-snapshot-20260504-082812` git tag (pre-Fix-6 working tree)
+- `pre-sidebar-revert-20260504-090729` git tag (pre-sidebar-revert state)
+- `/tmp/wip-backup-20260504-082812.tar.gz` (4.4 MB filesystem backup of all 42 WIP entries)
+
+### Evidence preserved
+
+- The audit branch `audit/pre-go-live-v1.2` and the working `fix/pre-go-live-p0` branch hold the full per-phase + per-fix history.
+- Findings are tagged with stable IDs (`F0-1` … `F4-26`) so the operator can track each through the bug-tracker / Linear / GitHub Issues.
+- Per-fix evidence: `docs/audit/STEP-B-fix-summary.md`.
+- WIP triage record: `docs/audit/FIX-6-CLASSIFICATION.md`.
+- Visual verify artifacts: `docs/audit/screenshots/p0-{f2-1,fix4}-*.png`.
+
+**End of audit. ✅ Cleared for go-live.**

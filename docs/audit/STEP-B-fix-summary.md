@@ -1,12 +1,12 @@
 # Step B — P0 Fix Summary
 
 **Branch**: `fix/pre-go-live-p0` (cut from `audit/pre-go-live-v1.2`)
-**Sprint code**: S-P0-FIX-1 through S-P0-FIX-3 (so far)
-**Audit findings closed**: F4-5 + F3-1 + F2-1 (3 of 6 P0 items)
+**Sprint code**: S-P0-FIX-1 through S-P0-FIX-7 — **COMPLETE 🎉**
+**Audit findings closed**: F4-5, F3-1, F2-1, F3-3, F3-4, F4-21 + 1 follow-up (F-FOLLOW-UP-1) + 1 bonus (env-source logging) = **7 of 7 P0 items**
+**Status**: all 7 fixes shipped 2026-05-03 → 2026-05-04 across 7 commits on `fix/pre-go-live-p0` + 1 commit on `main` (B3 research from Fix 6 disposition).
 
-This file accumulates per-fix evidence as Step B progresses. The full
-audit context lives in `docs/audit/00-scope.md` through
-`docs/audit/FINAL-REPORT.md`.
+This file accumulates per-fix evidence. The full audit context lives
+in `docs/audit/00-scope.md` through `docs/audit/FINAL-REPORT.md`.
 
 ---
 
@@ -183,6 +183,182 @@ Raw sample data: `/tmp/p0-f2-1-timing-after.json` (transient).
 
 ---
 
+---
+
+## Fix 4 — F3-3 + F3-4 + F-FOLLOW-UP-1 login a11y polish
+
+**Commit**: [`6b8542f`](../../) — `fix(platform/ui-kit): login a11y polish + i18n the signin heading (p0 f3-3 f3-4)`
+**Files**: 2 (LoginPage.jsx, security.js i18n)
+**LOC**: +18 / −5
+
+Phase 2 audit flagged 2 separate WCAG findings on the login form:
+
+- **F3-3** — heading hierarchy: page rendered `<h2 cb-hero-title>` with no `<h1>` ancestor (WCAG 2.1 §1.3.1, §2.4.6 — heading order)
+- **F3-4** — control labels: 5 form inputs (TOTP code, username, password, new pwd, confirm pwd) had visible labels but no programmatic `for`/`id` linkage (WCAG 2.1 §4.1.2 — name/role/value)
+- **F-FOLLOW-UP-1** — `'Sign in'` literal hardcoded in JSX, bypassed i18n (Bonus from Fix 3 review)
+
+### Resolution
+
+- 5 input ids + matching `htmlFor` on each `<label>` (`login-totp-code`, `login-username`, `login-password`, `login-new-pwd`, `login-confirm-pwd`)
+- `<h2 className="cb-hero-title">` → `<p className="cb-hero-title">` (CSS verified class-only, no tag-qualified selectors so visual style preserved); h1 now starts the page heading hierarchy
+- New i18n key `login.heading.signin` (EN: "Sign in" / VI: "Đăng nhập"); replaced hardcoded `'Sign in'` literal
+
+### Verification
+
+- Live Puppeteer probe: 0 unlabelled focusable controls (was 2+); heading hierarchy starts with h1
+- Locale switch: EN h1 = "Sign in", VI h1 = "Đăng nhập" (screenshots committed in Fix 6 Group A: `p0-fix4-login-{en,vi}.png`)
+- 14/14 i18n lint tests pass; 1612 server+client+desktop tests still green
+
+---
+
+## Fix 5 — F4-21 refresh MIGRATION_GUIDE.md for v1.5
+
+**Commit**: [`bed7824`](../../) — `docs(release): refresh migration guide for v1.5 (p0 f4-21)`
+**Files**: 1 (MIGRATION_GUIDE.md)
+**LOC**: +175 / −88 (post-prettier)
+
+`MIGRATION_GUIDE.md` was titled "v1.2 → v1.3" while `package.json` shipped `1.5.0` — 3 versions stale. Operators upgrading from v1.3/v1.4 had no migration path; v1.2 path referenced shipped-then-completed work (URL cutover audit, v1.3.1 deferred items).
+
+### Resolution
+
+12-section rewrite (was 10), preserving 6 sections, rewriting 4, adding 2 NEW. Title bumped v1.3 → v1.5; 4 DMG filename refs bumped v1.3.0 → v1.5.0.
+
+**New §5** — Behavioral changes (operator-facing): 7 EN + 7 VI rows covering login unification, Carbon redesign, must_change_password, Pending Approvals badge, ~80% faster page load, MOQ tier routing, Remember-me. Plus "What you don't need to do" subsection (no schema migration, no pwd reset, no license re-issue, no client URL update, no downtime) — explicit anxiety-reducer. Bilingual layout mirrors `docs/Use guide/login-retry.md` from Fix 3.
+
+**New §9** — Feature flags (post-v1.3): `mes.workOrder.enabled` + `mes.kiosk.enabled` both default false. Documented `OPS_KIOSK_KEY` env var (only required if kiosk enabled).
+
+**Rewritten §6** — Endpoint changes: now lists MES-1 (8) + MES-2 (11) v2 routes, both behind feature flags default-off (path-stable for v1.2→v1.5 baseline).
+
+**Rewritten §10** — Rollback: split 10.1 snapshot rollback (Sprint 1.7 `releases/<ts>/` pattern, < 5 min) + 10.2 DMG fallback + 10.3 DR runbook links to CLAUDE.md.
+
+**Rewritten §11** — Deferred: drop v1.3.1 list, point to CLAUDE.md MES-3 backlog (10 tickets).
+
+### Verification
+
+- 246 LOC final, 12 sections, 8 code fences (even, balanced)
+- All 8 facts cross-checked: package.json v1.5.0, MES-1=8 + MES-2=11 endpoints (CHANGELOG line 218 + 95), `OPS_KIOSK_KEY` in deploy.ps1, `OPS_TOTP_KEY` in .env.example, `mes.workOrder.enabled` in server/index.js:840, `feature-flags.json` at `server/data/Library/SystemConfig/`
+- Manual lint pass: TOC links work, code blocks have language tags, no broken internal refs
+
+---
+
+## Fix 6 — WIP triage (Group A + B3 disposed; B1 + B2 deferred)
+
+**Commits**: [`d48afa8`](../../) on `fix/pre-go-live-p0` (Group A) + [`970163a`](../../) on `main` (Group B3)
+**Files**: 13 across both branches (7 audit evidence + 6 ERPAG research)
+**LOC**: +277 (mostly binary PNGs)
+
+The `fix/pre-go-live-p0` branch was cut from a working tree with 42 WIP entries from a pre-audit UI session (Sprint S-HOME 2026-05-03 + ERPAG-style ModuleLanding pattern + Order Entry FG sync feature). Step B audit pivoted before the work could be committed.
+
+### Triple-redundant safety net (Bước 6.1)
+
+Before any destructive operation:
+
+- **Git tag**: `wip-snapshot-20260504-082812` (anchors HEAD before triage)
+- **Tarball**: `/tmp/wip-backup-20260504-082812.tar.gz` (4.4 MB, raw filesystem backup of all 42 WIP entries via `tar -T <files-list>`)
+- **Stash verify**: `git stash push --include-untracked` → 0 files in tree → `git stash pop` → 42 files restored. Verified the stash mechanic works in this state before relying on it.
+
+### Classification (Bước 6.3 — `docs/audit/FIX-6-CLASSIFICATION.md`)
+
+| Group  | Count | Theme                                                                  | Disposition                                                 |
+| ------ | ----- | ---------------------------------------------------------------------- | ----------------------------------------------------------- |
+| **A**  | 6     | Step B verify screenshots (Fix 3 + Fix 4 evidence)                     | ✅ Committed to `fix/pre-go-live-p0` in `d48afa8`           |
+| **B1** | 20    | Pre-audit UI redesign (Sprint S-HOME + Dashboard/QuoteAnalysis reskin) | 🟡 Deferred — held for dedicated review (~3,000 LOC)        |
+| **B2** | 15    | Order Entry FG sync + Excel import (matches branch base name)          | 🟡 Deferred — natural resume on feature branch (~1,120 LOC) |
+| **B3** | 6     | ERPAG market survey + migration assessment doc                         | ✅ Committed to `main` in `970163a`                         |
+| **C**  | 0     | Cruft / delete candidates                                              | ⊘ none                                                      |
+| **D**  | 0     | Sensitive (env / secrets / PII)                                        | ⊘ none — sensitive scan clean                               |
+
+### Why defer B1 + B2 instead of disposing now
+
+- **B1** has 2 large single-file diffs (Dashboard.jsx +484, QuoteAnalysis.jsx +406) that warrant a dedicated review pass before merge — bundling them into a "cleanup" commit would hide ~3,000 LOC of UI redesign in an audit-evidence commit
+- **B2** matches the branch base name `feature/order-entry-fg-sync-and-import`. Natural disposition is to resume on that branch with these 15 files; moving them now would split the sprint context across branches
+
+### Sidebar revert (post-Fix-6 follow-up)
+
+Per operator request after Step B closure, the new ERPAG-style "sections-only" sidebar was reverted to the original v1.5 sidebar via `git checkout main -- client/src/components/Layout/Sidebar.{jsx,css}`. HomePage + Dashboard redesign + sectionDefs.js (still imported by HomePage) preserved. Pre-revert state anchored as `pre-sidebar-revert-20260504-090729` git tag. Vite build green (exit 0) post-revert.
+
+---
+
+## Fix 7 — env-var provenance startup logging (bonus)
+
+**Commit**: [`5fc6268`](../../) — `fix(platform): log env-var provenance at boot (p0 fix-7 bonus)`
+**Files**: 3 (server/utils/envSources.js NEW, envSources.test.js NEW, server/index.js +24 LOC)
+**LOC**: +167 / −0
+
+F4-5's root-cause class — operator could not tell at incident time whether `DATA_DIR` came from `.env` or a deploy-script fallback — survived the Fix 1 fix because the fix was reactive (removed the bad fallback) not preventive (didn't add visibility). Fix 7 adds the visibility so the next F4-5-style incident is diagnosable from `grep '🌱' boot.log` alone.
+
+### Implementation
+
+`server/utils/envSources.js` — pure helper, no I/O:
+
+```js
+export const SENSITIVE_PATTERN = /KEY|SECRET|TOKEN|PASSWORD|PWD|AUTH|HASH|PRIVATE/i;
+export function describeEnvSources(envSnapshotBeforeDotenv, varNames) {
+  // For each var: classify as os-env / .env-file / <unset> / <empty>
+  // Mask values of names matching SENSITIVE_PATTERN to "<N chars>"
+  // Return [string] ready to console.log
+}
+```
+
+`server/index.js`:
+
+```js
+const _envSnapshotBeforeDotenv = new Set(Object.keys(process.env));
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+
+const TRACKED_ENV = [
+  'NODE_ENV',
+  'OPS_PORT',
+  'PORT',
+  'DATA_DIR',
+  'OPS_CORS_ORIGINS',
+  'OPS_TOTP_KEY',
+  'OPS_KIOSK_KEY',
+  'OPS_ALLOW_SAME_ORIGIN',
+];
+if (process.env.NODE_ENV !== 'test') {
+  console.log('🌱 [env] resolved sources:');
+  for (const line of describeEnvSources(_envSnapshotBeforeDotenv, TRACKED_ENV)) {
+    console.log(line);
+  }
+}
+```
+
+### 2 micro-adjustments folded in (per operator-side review)
+
+1. **Mask pattern expanded** beyond conventional `KEY|SECRET|TOKEN|PASSWORD` to also catch `PWD` (legacy/Vietnamese abbreviation), `AUTH` (raw auth strings like BASIC_AUTH), `HASH` (defense-in-depth — raw hash → offline brute force), `PRIVATE` (matches `*_PRIVATE_KEY` convention).
+2. **Distinguish `<unset>` (undefined) vs `<empty>` (empty string)**: empty value `DATA_DIR=` in .env is silent misconfig that falls back to default; now flagged explicitly as `<empty> (likely misconfig)` so operator catches the typo at boot.
+
+### Verification
+
+**Normal scenario** (`OPS_PORT=3001 NODE_ENV=development`):
+
+```
+🌱 [env] resolved sources:
+  NODE_ENV: development (from os env)
+  OPS_PORT: 3001 (from os env)
+  PORT: <unset>
+  DATA_DIR: <unset>
+  OPS_CORS_ORIGINS: <unset>
+  OPS_TOTP_KEY: <unset>
+  OPS_KIOSK_KEY: <64 chars> (from .env file)
+  OPS_ALLOW_SAME_ORIGIN: <unset>
+```
+
+**Misconfig scenario** (`DATA_DIR='' OPS_TOTP_KEY=<set in os env>`):
+
+```
+🌱 [env] resolved sources:
+  ...
+  DATA_DIR: <empty> (likely misconfig)         ← caught the typo
+  OPS_TOTP_KEY: <64 chars> (from os env)       ← masked + sourced
+  OPS_KIOSK_KEY: <64 chars> (from .env file)
+```
+
+**Tests**: 6/6 pass (`server/utils/envSources.test.js` — os-env vs .env-file attribution × 2, unset / empty / secret-masked / expanded-pattern coverage).
+
+---
+
 ## Step B — running test count
 
 | Stage                                       |   Server | Client | Desktop | Manifest |    Total |
@@ -191,20 +367,41 @@ Raw sample data: `/tmp/p0-f2-1-timing-after.json` (transient).
 | Post-Fix 1 (no test changes)                |      998 |    594 |       8 |        2 |     1602 |
 | Post-Fix 2 (no test changes)                |      998 |    594 |       8 |        2 |     1602 |
 | Post-Fix 3 Bước 1 (+timing.test.js × 4)     |     1002 |    594 |       8 |        2 |     1606 |
-| Post-Fix 3 Bước 4 (+auth.login.test.js × 6) | **1008** |    594 |       8 |        2 | **1612** |
+| Post-Fix 3 Bước 4 (+auth.login.test.js × 6) |     1008 |    594 |       8 |        2 |     1612 |
+| Post-Fix 4 (no test changes)                |     1008 |    594 |       8 |        2 |     1612 |
+| Post-Fix 5 (no test changes)                |     1008 |    594 |       8 |        2 |     1612 |
+| Post-Fix 6 (no test changes)                |     1008 |    594 |       8 |        2 |     1612 |
+| Post-Fix 7 (+envSources.test.js × 6)        | **1014** |    594 |       8 |        2 | **1618** |
 
-**Net Δ from audit start: +10 tests; 0 regressions; all green.**
+**Net Δ from audit start: +16 tests; 0 regressions; all green.**
+
+(STEP D re-run on 2026-05-04 confirmed 1014 server / 594 client / 8 license / 2 manifest = 1618 pass / 0 fail.)
 
 ---
 
-## Pending P0 work
+## Hidden findings registry (4 items surfaced during Step B)
 
-| Fix                                               | Status                            | Audit ID           |
-| ------------------------------------------------- | --------------------------------- | ------------------ |
-| Fix 1 — deploy DATA_DIR sync                      | ✅ shipped (`e75cac9`)            | F4-5               |
-| Fix 2 — compression middleware                    | ✅ shipped (`6a63421`)            | F3-1               |
-| Fix 3 — login error unification                   | ✅ this commit                    | F2-1               |
-| Fix 4 — login a11y polish                         | pending                           | F3-3 + F3-4        |
-| Fix 5 — refresh MIGRATION_GUIDE.md                | pending                           | F4-21              |
-| Fix 6 — WIP cleanup (27 modified + 9 untracked)   | pending — intermediate checkpoint | (working tree)     |
-| Fix 7 — startup logging for env source visibility | pending (bonus)                   | (Step A spillover) |
+These were discovered DURING Step B as side observations — none were in the original audit report. Filed for future sprints rather than expanded scope on the P0 hotfix.
+
+| ID                | Description                                                                                                                                                                               | Severity              | Disposition                                                                |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | -------------------------------------------------------------------------- |
+| **F-FOLLOW-UP-1** | `LoginPage.jsx` h1 hardcoded `'Sign in'` literal bypassed i18n.                                                                                                                           | 🟡 MINOR              | ✅ Closed in Fix 4 (`6b8542f`). New `login.heading.signin` i18n key added. |
+| **F-FOLLOW-UP-2** | Wire-format inconsistency `msg` vs `error` field on auth response — AuthContext was already preferring `error`.                                                                           | 🟢 (latent)           | ✅ Incidentally closed by Fix 3 unification.                               |
+| **F-FOLLOW-UP-3** | bcrypt → argon2 migration window timing leak (~330 ms residual). Auto-closes per-user on first successful login post-deploy.                                                              | 🟡 MINOR (time-bound) | 📅 Re-evaluate 30 days post-deploy via `auditLegacyPasswords()` count.     |
+| **F-FOLLOW-UP-4** | Other auth-adjacent endpoints (`/auth/forgot-password`, `/auth/register`, `/users/:username`) audited in Fix 3 Bước 0. **No enumeration vector found** in any of them (admin-gated 403s). | 🟢 (verified clean)   | ✅ Negative finding documented for future endpoint additions.              |
+
+---
+
+## Final P0 status
+
+| Fix                                  | Status     | Audit ID                 | Commit                       |
+| ------------------------------------ | ---------- | ------------------------ | ---------------------------- |
+| Fix 1 — deploy DATA_DIR sync         | ✅ shipped | F4-5                     | `e75cac9`                    |
+| Fix 2 — compression middleware       | ✅ shipped | F3-1                     | `6a63421`                    |
+| Fix 3 — login error unification      | ✅ shipped | F2-1                     | `6568eef`                    |
+| Fix 4 — login a11y polish            | ✅ shipped | F3-3 + F3-4 + F-FU-1     | `6b8542f`                    |
+| Fix 5 — refresh MIGRATION_GUIDE.md   | ✅ shipped | F4-21                    | `bed7824`                    |
+| Fix 6 — WIP triage (A + B3 disposed) | ✅ shipped | (working tree hygiene)   | `d48afa8` + `970163a` (main) |
+| Fix 7 — env-source startup logging   | ✅ shipped | (bonus, F4-5 root cause) | `5fc6268`                    |
+
+**7 / 7 P0 ✅ — Step B complete.**
