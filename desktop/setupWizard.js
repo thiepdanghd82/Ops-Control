@@ -17,8 +17,10 @@ const { BrowserWindow, ipcMain, app } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const license = require('./license.js');
+const serverIdentity = require('./utils/serverIdentity.js');
 
 const SETUP_DONE_PATH = () => path.join(app.getPath('userData'), 'setup-done.json');
+const SCHEMA_VERSION = 2;
 
 function isFirstRun(mode) {
   const p = SETUP_DONE_PATH();
@@ -31,11 +33,31 @@ function isFirstRun(mode) {
   }
 }
 
+// Read setup-done.json with lazy v1 → v2 migration in memory.
+// v1: { mode, completed_at }
+// v2: { schemaVersion: 2, mode, completed_at, serverIdentity?: {...} }
+// Writes always emit v2 via markComplete().
+function loadSetup() {
+  const p = SETUP_DONE_PATH();
+  if (!fs.existsSync(p)) return null;
+  try {
+    const raw = JSON.parse(fs.readFileSync(p, 'utf8'));
+    if (raw.schemaVersion === SCHEMA_VERSION) return raw;
+    return { schemaVersion: SCHEMA_VERSION, ...raw };
+  } catch {
+    return null;
+  }
+}
+
 function markComplete(mode, payload) {
   fs.writeFileSync(
     SETUP_DONE_PATH(),
-    JSON.stringify({ mode, completed_at: new Date().toISOString(), ...payload }, null, 2),
-    'utf8',
+    JSON.stringify(
+      { schemaVersion: SCHEMA_VERSION, mode, completed_at: new Date().toISOString(), ...payload },
+      null,
+      2
+    ),
+    'utf8'
   );
 }
 
@@ -103,18 +125,31 @@ const SCRIPT_BASE = `
   }
 `;
 
-// ─── Server wizard (4 steps) ──────────────────────────────────────
-function renderServerWizard(installationId) {
+// ─── Server wizard (5 steps — v2 adds Server Identity between Network and Admin) ──
+function renderServerWizard(installationId, existingIdentity) {
+  // Identity decision at render time:
+  //   - Existing identity present (re-run): preserve serverId + createdAt;
+  //     pre-fill name / tz / lang for editing.
+  //   - Fresh install: generate one-shot UUID; auto-detect tz + lang;
+  //     leave name blank for operator entry.
+  const identity = existingIdentity || {
+    serverName: '',
+    serverId: serverIdentity.generateServerId(),
+    timezone: serverIdentity.detectTimezone(),
+    language: serverIdentity.detectLanguage(),
+  };
+  const isReRun = Boolean(existingIdentity);
+
   return `<!doctype html><html><head><meta charset="utf-8"><title>Ops Control · Setup (Server)</title>
 <style>${STYLE}</style></head><body>
   <h1>Ops Control — Server Setup</h1>
-  <p class="sub">Lần đầu khởi động — vui lòng hoàn tất 4 bước cấu hình.</p>
+  <p class="sub">Lần đầu khởi động — vui lòng hoàn tất 5 bước cấu hình.</p>
   <div class="progress">
-    <div class="pill curr"></div><div class="pill"></div><div class="pill"></div><div class="pill"></div>
+    <div class="pill curr"></div><div class="pill"></div><div class="pill"></div><div class="pill"></div><div class="pill"></div>
   </div>
 
   <div class="step active">
-    <h2>Bước 1 / 4 — License</h2>
+    <h2>Bước 1 / 5 — License</h2>
     <p class="sub">Dán license JSON do CCL HQ cấp, hoặc bỏ qua để dùng <b>trial 14 ngày</b>.</p>
     <div id="alert-license"></div>
     <div class="field">
@@ -132,7 +167,7 @@ function renderServerWizard(installationId) {
   </div>
 
   <div class="step">
-    <h2>Bước 2 / 4 — Khởi tạo dữ liệu</h2>
+    <h2>Bước 2 / 5 — Khởi tạo dữ liệu</h2>
     <p class="sub">Chọn nơi lưu dữ liệu (SQLite + JSON Library). Mặc định là thư mục userData của ứng dụng.</p>
     <div id="alert-db"></div>
     <div class="field">
@@ -146,7 +181,7 @@ function renderServerWizard(installationId) {
   </div>
 
   <div class="step">
-    <h2>Bước 3 / 4 — Kết nối mạng</h2>
+    <h2>Bước 3 / 5 — Kết nối mạng</h2>
     <p class="sub">Cấu hình port server lắng nghe cho các Client trong LAN.</p>
     <div id="alert-net"></div>
     <div class="field">
@@ -167,7 +202,55 @@ function renderServerWizard(installationId) {
   </div>
 
   <div class="step">
-    <h2>Bước 4 / 4 — Tạo tài khoản admin</h2>
+    <h2>Bước 4 / 5 — Định danh server</h2>
+    <p class="sub">
+      ${
+        isReRun
+          ? 'Tên / múi giờ / ngôn ngữ có thể chỉnh. Server ID giữ nguyên (50 client đã cache).'
+          : 'Server cần một tên + ID duy nhất. ID được tạo MỘT LẦN và lưu vĩnh viễn.'
+      }
+    </p>
+    <div id="alert-identity"></div>
+
+    <div class="field">
+      <label>Tên server (3-50 ký tự, chữ/số/khoảng trắng)</label>
+      <input id="server-name" placeholder="vd: CCL Design VN" value="${(identity.serverName || '').replace(/"/g, '&quot;')}" />
+    </div>
+
+    <div class="field">
+      <label>Server ID 🔒 (tự động sinh, không thể đổi)</label>
+      <pre id="server-id" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <span id="server-id-value">${identity.serverId}</span>
+        <button type="button" onclick="copyServerId()" class="btn-secondary"
+                style="font-size:11px;padding:4px 10px;">Copy</button>
+      </pre>
+      <small style="color:#94a3b8;font-size:11px;">
+        50 client cache ID này. Đổi = mất kết nối toàn bộ. Chỉ regenerate
+        bằng cách gỡ cài đặt + cài lại từ đầu.
+      </small>
+    </div>
+
+    <div class="field">
+      <label>Múi giờ (tự động phát hiện, có thể chỉnh)</label>
+      <input id="server-tz" value="${identity.timezone}" />
+    </div>
+
+    <div class="field">
+      <label>Ngôn ngữ (tự động phát hiện, có thể chỉnh)</label>
+      <select id="server-lang">
+        <option value="vi" ${identity.language === 'vi' ? 'selected' : ''}>Tiếng Việt</option>
+        <option value="en" ${identity.language === 'en' ? 'selected' : ''}>English</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <button class="btn-secondary" onclick="go(2)">← Quay lại</button>
+      <button class="btn-primary"   onclick="setIdentityAndNext()">Lưu & tiếp tục</button>
+    </div>
+  </div>
+
+  <div class="step">
+    <h2>Bước 5 / 5 — Tạo tài khoản admin</h2>
     <p class="sub">Tài khoản này sẽ có vai trò <b>sys</b> (god mode). Lưu mật khẩu cẩn thận — không thể recover.</p>
     <div id="alert-admin"></div>
     <div class="field">
@@ -183,7 +266,7 @@ function renderServerWizard(installationId) {
       <input id="admin-password2" type="password" />
     </div>
     <div class="row">
-      <button class="btn-secondary" onclick="go(2)">← Quay lại</button>
+      <button class="btn-secondary" onclick="go(3)">← Quay lại</button>
       <button class="btn-primary"   onclick="createAdminAndDone()">Hoàn tất setup</button>
     </div>
   </div>
@@ -224,6 +307,27 @@ async function setNetAndNext() {
   if (!r.ok) { setAlert('alert-net', 'bad', r.error); return; }
   setAlert('alert-net', 'ok', 'Cấu hình mạng đã lưu. Server sẽ lắng nghe ' + bind + ':' + port + ' khi khởi động.');
   setTimeout(() => go(3), 600);
+}
+async function setIdentityAndNext() {
+  const serverName = document.getElementById('server-name').value.trim();
+  const timezone = document.getElementById('server-tz').value.trim();
+  const language = document.getElementById('server-lang').value;
+  const r = await ipcRenderer.invoke('ops:setup.setIdentity', { serverName, timezone, language });
+  if (!r.ok) { setAlert('alert-identity', 'bad', r.error); return; }
+  setAlert('alert-identity', 'ok', 'Định danh server đã lưu.');
+  setTimeout(() => go(4), 600);
+}
+function copyServerId() {
+  const v = document.getElementById('server-id-value').textContent;
+  navigator.clipboard.writeText(v).then(() => {
+    setAlert('alert-identity', 'ok', '✓ Đã copy Server ID');
+    setTimeout(() => {
+      const el = document.getElementById('alert-identity');
+      if (el) el.innerHTML = '';
+    }, 2000);
+  }).catch((err) => {
+    setAlert('alert-identity', 'bad', 'Không copy được: ' + err.message);
+  });
 }
 async function createAdminAndDone() {
   const username = document.getElementById('admin-username').value.trim();
@@ -298,9 +402,15 @@ async function finish() {
 function showWizard(mode, deps = {}) {
   return new Promise((resolve) => {
     const installationId = license.getHardwareFingerprint();
+    // Pre-load existing identity (if any) so re-runs preserve serverId.
+    const existing = mode === 'server' ? loadSetup() : null;
+    const existingIdentity = existing?.serverIdentity || null;
+    // Pending state — accumulated by the new identity step, written by complete handler.
+    let pendingIdentity = null;
+
     const win = new BrowserWindow({
       width: 720,
-      height: 640,
+      height: 700,
       title: 'Ops Control — Setup',
       resizable: false,
       minimizable: false,
@@ -314,7 +424,10 @@ function showWizard(mode, deps = {}) {
       },
     });
 
-    const html = mode === 'server' ? renderServerWizard(installationId) : renderClientWizard();
+    const html =
+      mode === 'server'
+        ? renderServerWizard(installationId, existingIdentity)
+        : renderClientWizard();
     win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
 
     // Per-wizard IPC handlers — narrow scope, tied to this window's lifecycle.
@@ -326,10 +439,28 @@ function showWizard(mode, deps = {}) {
           fs.mkdirSync(path.join(dataPath, 'Library'), { recursive: true });
           if (deps.onSetDataPath) await deps.onSetDataPath(dataPath);
           return { ok: true };
-        } catch (e) { return { ok: false, error: e.message }; }
+        } catch (e) {
+          return { ok: false, error: e.message };
+        }
       },
       'ops:setup.setNet': async (_e, { port, bind }) => {
         if (deps.onSetNet) await deps.onSetNet({ port, bind });
+        return { ok: true };
+      },
+      'ops:setup.setIdentity': async (_e, { serverName, timezone, language }) => {
+        const v = serverIdentity.validateServerName(serverName);
+        if (!v.ok) return { ok: false, error: v.error };
+        // Re-run path: merge into existing identity (preserves serverId + createdAt).
+        // Fresh path: build new identity, then override tz/lang with operator picks.
+        const next = existingIdentity
+          ? serverIdentity.mergeIdentity(existingIdentity, {
+              serverName: v.value,
+              timezone,
+              language,
+            })
+          : { ...serverIdentity.buildFreshIdentity(v.value), timezone, language };
+        pendingIdentity = next;
+        if (deps.onSetIdentity) await deps.onSetIdentity(next);
         return { ok: true };
       },
       'ops:setup.createAdmin': async (_e, { username, password }) => {
@@ -337,7 +468,9 @@ function showWizard(mode, deps = {}) {
           if (!deps.onCreateAdmin) return { ok: false, error: 'admin creator not wired' };
           await deps.onCreateAdmin({ username, password });
           return { ok: true };
-        } catch (e) { return { ok: false, error: e.message }; }
+        } catch (e) {
+          return { ok: false, error: e.message };
+        }
       },
       'ops:setup.testServer': async (_e, { url }) => {
         try {
@@ -351,17 +484,32 @@ function showWizard(mode, deps = {}) {
               r.on('end', () => {
                 const ms = Date.now() - start;
                 let parsed = {};
-                try { parsed = JSON.parse(body); } catch { /* ignore */ }
+                try {
+                  parsed = JSON.parse(body);
+                } catch {
+                  /* ignore */
+                }
                 res({ ok: r.statusCode === 200, version: parsed?.version, ms });
               });
             });
             req.on('error', (e) => res({ ok: false, error: e.message }));
-            req.on('timeout', () => { req.destroy(); res({ ok: false, error: 'timeout' }); });
+            req.on('timeout', () => {
+              req.destroy();
+              res({ ok: false, error: 'timeout' });
+            });
           });
-        } catch (e) { return { ok: false, error: e.message }; }
+        } catch (e) {
+          return { ok: false, error: e.message };
+        }
       },
       'ops:setup.complete': async () => {
-        markComplete(mode, {});
+        // Server mode: persist identity (fresh or preserved-from-re-run).
+        // Client mode: pendingIdentity stays null — markComplete writes
+        // schemaVersion + mode + completed_at only.
+        const payload = pendingIdentity ? { serverIdentity: pendingIdentity } : {};
+        // Re-run with no edits to identity step: keep prior identity intact.
+        if (!pendingIdentity && existingIdentity) payload.serverIdentity = existingIdentity;
+        markComplete(mode, payload);
         win.close();
         resolve({ ok: true });
         return { ok: true };

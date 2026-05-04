@@ -57,6 +57,7 @@
       "smart-client.js",
       "license.js",
       "setupWizard.js",
+      "utils/serverIdentity.js",
       "native/**/*",
       "package.json",
       "!**/*.map"

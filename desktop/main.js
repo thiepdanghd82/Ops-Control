@@ -86,10 +86,12 @@ process.on('uncaughtException', (err) => {
     if (app.isReady()) {
       dialog.showErrorBox(
         'Ops Control — lỗi không mong muốn',
-        `${err.message}\n\nXem chi tiết trong log:\n${log.transports.file.getFile().path}`,
+        `${err.message}\n\nXem chi tiết trong log:\n${log.transports.file.getFile().path}`
       );
     }
-  } catch (_) { /* swallow */ }
+  } catch (_) {
+    /* swallow */
+  }
 });
 
 process.on('unhandledRejection', (reason) => {
@@ -124,7 +126,9 @@ function readBuildRole() {
     if (!fs.existsSync(fp)) return 'generic';
     const json = JSON.parse(fs.readFileSync(fp, 'utf-8'));
     return json.role || 'generic';
-  } catch { return 'generic'; }
+  } catch {
+    return 'generic';
+  }
 }
 const BUILD_ROLE = readBuildRole();
 log.info(`[main] Build role = ${BUILD_ROLE}`);
@@ -135,8 +139,7 @@ const store = new Store({
   defaults: {
     // Server-role build defaults to embedded; client-role build defaults
     // to thin. OPS_DESKTOP_MODE env var still wins (dev override).
-    mode: process.env.OPS_DESKTOP_MODE
-      || (BUILD_ROLE === 'client' ? 'thin' : 'embedded'),
+    mode: process.env.OPS_DESKTOP_MODE || (BUILD_ROLE === 'client' ? 'thin' : 'embedded'),
     // Empty by default — operator MUST configure this in Settings → Mode
     // before picking thin/smart. Hardcoding a factory IP locked every
     // out-of-factory install into trying to reach an IP they cannot route to.
@@ -184,11 +187,13 @@ function isOwnLanAddress(host) {
   try {
     const interfaces = require('os').networkInterfaces();
     for (const list of Object.values(interfaces)) {
-      for (const iface of (list || [])) {
+      for (const iface of list || []) {
         if (iface.address === host) return true;
       }
     }
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
   return false;
 }
 
@@ -200,14 +205,16 @@ function getLanIPv4Addresses() {
   try {
     const interfaces = require('os').networkInterfaces();
     for (const [name, list] of Object.entries(interfaces)) {
-      for (const iface of (list || [])) {
+      for (const iface of list || []) {
         if (iface.family !== 'IPv4') continue;
         if (iface.internal) continue;
         if (/^169\.254\./.test(iface.address)) continue; // APIPA
         out.push({ iface: name, address: iface.address });
       }
     }
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
   return out;
 }
 
@@ -324,19 +331,21 @@ async function startEmbeddedServer() {
     log.warn(`[main] Embedded server exited code=${code} signal=${signal}`);
     embeddedServer = null;
     if (mainWindow && !mainWindow.isDestroyed()) {
-      dialog.showMessageBox(mainWindow, {
-        type: 'error',
-        title: 'Ops Control',
-        message: 'Server backend đã dừng đột ngột.',
-        detail: `Exit code: ${code}\nVui lòng khởi động lại ứng dụng.`,
-        buttons: ['Khởi động lại', 'Thoát'],
-        defaultId: 0,
-      }).then(({ response }) => {
-        if (response === 0) {
-          app.relaunch();
-        }
-        app.quit();
-      });
+      dialog
+        .showMessageBox(mainWindow, {
+          type: 'error',
+          title: 'Ops Control',
+          message: 'Server backend đã dừng đột ngột.',
+          detail: `Exit code: ${code}\nVui lòng khởi động lại ứng dụng.`,
+          buttons: ['Khởi động lại', 'Thoát'],
+          defaultId: 0,
+        })
+        .then(({ response }) => {
+          if (response === 0) {
+            app.relaunch();
+          }
+          app.quit();
+        });
     }
   });
 
@@ -385,7 +394,7 @@ function getAppUrl() {
   // show the friendlier "lỗi khởi động" dialog.
   if (!embeddedPort) {
     throw new Error(
-      `embedded server has no port (mode=${mode}). startEmbeddedServer must run before createMainWindow.`,
+      `embedded server has no port (mode=${mode}). startEmbeddedServer must run before createMainWindow.`
     );
   }
   return `http://127.0.0.1:${embeddedPort}`;
@@ -429,8 +438,8 @@ function createMainWindow() {
   // Vite's dev styles; production builds already serve hashed CSS.
   const CSP = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",   // Vite + React dev needs eval; tightened in P5
-    "style-src 'self' 'unsafe-inline'",                   // Vite injects inline styles
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Vite + React dev needs eval; tightened in P5
+    "style-src 'self' 'unsafe-inline'", // Vite injects inline styles
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
     "connect-src 'self' http://127.0.0.1:* http://localhost:* ws://localhost:* ws://127.0.0.1:*",
@@ -448,10 +457,8 @@ function createMainWindow() {
   // embedded SPA, and any link click that escapes the SPA goes through
   // shell.openExternal() instead of replacing the BrowserWindow contents.
   mainWindow.webContents.on('will-navigate', (e, url) => {
-    const allowed = [
-      'http://127.0.0.1', 'http://localhost', 'file://',
-    ];
-    if (!allowed.some(p => url.startsWith(p))) {
+    const allowed = ['http://127.0.0.1', 'http://localhost', 'file://'];
+    if (!allowed.some((p) => url.startsWith(p))) {
       e.preventDefault();
       shell.openExternal(url);
     }
@@ -486,10 +493,7 @@ function createMainWindow() {
 
   // Block in-app navigation đến external origins (security hardening)
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    const allowed = [
-      `http://127.0.0.1:${embeddedPort}`,
-      store.get('remoteUrl'),
-    ];
+    const allowed = [`http://127.0.0.1:${embeddedPort}`, store.get('remoteUrl')];
     if (!allowed.some((origin) => url.startsWith(origin))) {
       log.warn('[main] Blocked navigation to', url);
       event.preventDefault();
@@ -535,21 +539,29 @@ function createTray() {
   const iconPath = path.join(
     __dirname,
     'build',
-    process.platform === 'darwin' ? 'tray-mac.png' : 'tray.png',
+    process.platform === 'darwin' ? 'tray-mac.png' : 'tray.png'
   );
   if (!fs.existsSync(iconPath)) return;
 
   const icon = nativeImage.createFromPath(iconPath);
   tray = new Tray(icon);
   tray.setToolTip('Ops Control');
-  tray.setContextMenu(Menu.buildFromTemplate([
-    { label: 'Mở Ops Control', click: () => mainWindow?.show() },
-    { type: 'separator' },
-    { label: 'Kiểm tra cập nhật', click: () => initAutoUpdater(true) },
-    { label: `Mode: ${store.get('mode')}`, enabled: false },
-    { type: 'separator' },
-    { label: 'Thoát', click: () => { app.isQuitting = true; app.quit(); } },
-  ]));
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: 'Mở Ops Control', click: () => mainWindow?.show() },
+      { type: 'separator' },
+      { label: 'Kiểm tra cập nhật', click: () => initAutoUpdater(true) },
+      { label: `Mode: ${store.get('mode')}`, enabled: false },
+      { type: 'separator' },
+      {
+        label: 'Thoát',
+        click: () => {
+          app.isQuitting = true;
+          app.quit();
+        },
+      },
+    ])
+  );
   tray.on('double-click', () => mainWindow?.show());
 }
 
@@ -589,12 +601,13 @@ function buildAppMenu() {
       submenu: [
         {
           label: 'Phiên bản',
-          click: () => dialog.showMessageBox(mainWindow, {
-            type: 'info',
-            title: 'Ops Control',
-            message: `Ops Control Desktop v${app.getVersion()}`,
-            detail: `Mode: ${store.get('mode')}\nElectron: ${process.versions.electron}\nNode: ${process.versions.node}\nChrome: ${process.versions.chrome}`,
-          }),
+          click: () =>
+            dialog.showMessageBox(mainWindow, {
+              type: 'info',
+              title: 'Ops Control',
+              message: `Ops Control Desktop v${app.getVersion()}`,
+              detail: `Mode: ${store.get('mode')}\nElectron: ${process.versions.electron}\nNode: ${process.versions.node}\nChrome: ${process.versions.chrome}`,
+            }),
         },
         {
           label: 'Kiểm tra cập nhật',
@@ -625,15 +638,18 @@ async function showServerFirstRunDialog() {
   // startEmbeddedServer() — by the time we reach here it's already set.
   const port = embeddedPort || 3100;
   const ips = getLanIPv4Addresses();
-  const ipLines = ips.length === 0
-    ? '(không tìm thấy network adapter — kiểm tra Ethernet/WiFi)'
-    : ips.map(({ iface, address }) => `   • ${address}   (${iface})`).join('\n');
-  const detail =
-`Máy này đã được cấu hình làm SERVER. Server local đang chạy port ${port}.
+  const ipLines =
+    ips.length === 0
+      ? '(không tìm thấy network adapter — kiểm tra Ethernet/WiFi)'
+      : ips.map(({ iface, address }) => `   • ${address}   (${iface})`).join('\n');
+  const detail = `Máy này đã được cấu hình làm SERVER. Server local đang chạy port ${port}.
 
 Đưa MỘT trong các URL dưới đây cho người cài máy nhân viên (Client):
 
-${ipLines.split('\n').map(l => l.replace('   • ', '   • http://') + ':' + port).join('\n')}
+${ipLines
+  .split('\n')
+  .map((l) => l.replace('   • ', '   • http://') + ':' + port)
+  .join('\n')}
 
 Lưu ý:
   • Chọn IP của Ethernet (ưu tiên) — bền hơn WiFi
@@ -659,8 +675,11 @@ async function showClientFirstRunDialog() {
   // so app boot doesn't continue until the operator confirms.
   return new Promise((resolve) => {
     const win = new BrowserWindow({
-      width: 540, height: 460,
-      resizable: false, minimizable: false, maximizable: false,
+      width: 540,
+      height: 460,
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
       title: 'Ops Control CLIENT — kết nối server',
       webPreferences: {
         nodeIntegration: false,
@@ -768,7 +787,7 @@ async function showClientFirstRunDialog() {
         }
         callback({ cancel: true });
         if (!win.isDestroyed()) win.close();
-      },
+      }
     );
     win.on('closed', () => resolve());
     win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
@@ -811,18 +830,25 @@ app.whenReady().then(async () => {
   // OPS_USE_LEGACY_FIRSTRUN=1 so existing v1.2 behaviour can be
   // re-enabled by ops if the new wizard regresses in the field.
   const useLegacyFirstRun = process.env.OPS_USE_LEGACY_FIRSTRUN === '1';
-  if (!useLegacyFirstRun
-      && (BUILD_ROLE === 'server' || BUILD_ROLE === 'client')
-      && setupWizard.isFirstRun(BUILD_ROLE)) {
+  if (
+    !useLegacyFirstRun &&
+    (BUILD_ROLE === 'server' || BUILD_ROLE === 'client') &&
+    setupWizard.isFirstRun(BUILD_ROLE)
+  ) {
     try {
       const result = await setupWizard.showWizard(BUILD_ROLE, {
         onSetDataPath: async (dp) => store.set('dataDir', dp),
-        onSetNet:      async ({ port, bind }) => {
+        onSetNet: async ({ port, bind }) => {
           store.set('embeddedPort', port);
           store.set('embeddedBind', bind);
           process.env.OPS_PORT = String(port);
           process.env.OPS_BIND = String(bind);
         },
+        // Phase A.1 — mirror server identity into electron-store so the
+        // admin dashboard (Phase A.2) reads it without re-parsing
+        // setup-done.json. Identity also lives in setup-done.json as
+        // the source-of-truth for re-runs (immutable serverId).
+        onSetIdentity: async (identity) => store.set('serverIdentity', identity),
         onCreateAdmin: async ({ username, password }) => {
           // Defer to server's authService — must run after embedded
           // server boot. We persist the request and the server reads
@@ -864,7 +890,9 @@ app.whenReady().then(async () => {
       const isLoopback = /^(localhost|127\.|::1$)/.test(remoteHost);
       const isThisMachine = isLoopback || isOwnLanAddress(remoteHost);
       if (isThisMachine) {
-        log.info(`[main] thin mode → remoteUrl ${remote} resolves to this machine — auto-starting embedded server`);
+        log.info(
+          `[main] thin mode → remoteUrl ${remote} resolves to this machine — auto-starting embedded server`
+        );
         needsEmbedded = true;
       }
     }
@@ -912,7 +940,7 @@ app.whenReady().then(async () => {
     log.error('[main] Startup failed:', err);
     dialog.showErrorBox(
       'Ops Control — lỗi khởi động',
-      `${err.message}\n\nXem log: ${log.transports.file.getFile().path}`,
+      `${err.message}\n\nXem log: ${log.transports.file.getFile().path}`
     );
     app.quit();
   }
