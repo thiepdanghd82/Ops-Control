@@ -228,7 +228,8 @@ app.use((req, res, next) => {
     // Skipped under OPS_ALLOW_SAME_ORIGIN=1 — HSTS over plain HTTP would
     // pin the browser into HTTPS forever, breaking the next dev visit.
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-
+  }
+  if (IS_PROD) {
     // Phase 9G.9 — Content-Security-Policy in production ONLY. Dev mode
     // skips CSP because Vite injects inline scripts/styles for HMR
     // that a strict CSP would block. The production Vite build is a
@@ -240,10 +241,6 @@ app.use((req, res, next) => {
     //   script-src  'self'                — no inline, no eval, no external CDNs
     //   style-src   'self' 'unsafe-inline' — React inline style={{}} is
     //       used extensively (Dashboard, LibFinance banner, etc.).
-    //       Removing this would require a codebase-wide migration to
-    //       className. Accepted tradeoff: inline styles can't inject
-    //       scripts, and CSS-based XSS (e.g. `url(javascript:)`) is
-    //       independently blocked by script-src 'self'.
     //   img-src     'self' data: blob:   — data: for EmptyState icons,
     //       blob: for PDF/image uploads in FileUploadZone previews.
     //   connect-src 'self'                — fetch/XHR same-origin only.
@@ -253,6 +250,10 @@ app.use((req, res, next) => {
     //   form-action 'self'                — forms only POST to same origin.
     //   object-src  'none'                — no Flash/plugin embeds.
     //   upgrade-insecure-requests         — force any http:// asset to https.
+    //                                       SUPPRESSED under ALLOW_HTTP so
+    //                                       plain-HTTP same-origin deploys
+    //                                       don't have their JS module
+    //                                       imports rewritten to https.
     const cspParts = [
       "default-src 'self'",
       "script-src 'self'",
@@ -265,10 +266,6 @@ app.use((req, res, next) => {
       "form-action 'self'",
       "object-src 'none'",
     ];
-    // F-BOOT-4 — only request HTTPS upgrades when we're actually fronted
-    // by HTTPS. With OPS_ALLOW_SAME_ORIGIN=1 the operator has explicitly
-    // declared a plain-HTTP deploy, so emitting upgrade-insecure-requests
-    // would brick every page load by rewriting module imports to https.
     if (!ALLOW_HTTP) cspParts.push('upgrade-insecure-requests');
     // Phase 9M.3 — violations POST to /api/csp-report.
     cspParts.push('report-uri /api/csp-report');
