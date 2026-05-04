@@ -53,6 +53,13 @@ const opsAPI = {
     onStatus: (cb) => on('ops:updater.status', cb),
   },
 
+  // ─── Network reachability (Phase A.3a) ─────────────────────────
+  // Lightweight GET /health probe used by ModeSection's "Test
+  // Connection" button. Returns { ok, version?, ms?, error? }.
+  net: {
+    testServer: (url) => invoke('ops:net.testServer', { url }),
+  },
+
   // ─── Printer (A4/A3 office printers) ───────────────────────────
   printer: {
     list: () => invoke('ops:printer.list'),

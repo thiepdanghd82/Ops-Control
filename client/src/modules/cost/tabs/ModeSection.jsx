@@ -19,8 +19,10 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import desktop from '../../../services/desktopBridge';
+import { parseOpsconn } from '../../../services/opsconnImport';
 import { useI18n } from '../../../utils/useI18n';
 import LangFlagToggle from '../../../components/Shared/LangFlagToggle';
+import Modal from '../../../components/Shared/Modal';
 import './ModeSection.css';
 
 // MODES list is intentionally just IDs + presentation hints; all
@@ -31,28 +33,28 @@ const MODES = [
     id: 'embedded',
     icon: '💻',
     titleKey: 'mode.embedded.title',
-    subKey:   'mode.embedded.subtitle',
-    descKey:  'mode.embedded.desc',
-    proKeys:  ['mode.embedded.pro1', 'mode.embedded.pro2', 'mode.embedded.pro3'],
-    conKeys:  ['mode.embedded.con1', 'mode.embedded.con2'],
+    subKey: 'mode.embedded.subtitle',
+    descKey: 'mode.embedded.desc',
+    proKeys: ['mode.embedded.pro1', 'mode.embedded.pro2', 'mode.embedded.pro3'],
+    conKeys: ['mode.embedded.con1', 'mode.embedded.con2'],
   },
   {
     id: 'thin',
     icon: '🌐',
     titleKey: 'mode.thin.title',
-    subKey:   'mode.thin.subtitle',
-    descKey:  'mode.thin.desc',
-    proKeys:  ['mode.thin.pro1', 'mode.thin.pro2', 'mode.thin.pro3'],
-    conKeys:  ['mode.thin.con1', 'mode.thin.con2'],
+    subKey: 'mode.thin.subtitle',
+    descKey: 'mode.thin.desc',
+    proKeys: ['mode.thin.pro1', 'mode.thin.pro2', 'mode.thin.pro3'],
+    conKeys: ['mode.thin.con1', 'mode.thin.con2'],
   },
   {
     id: 'smart',
     icon: '⚡',
     titleKey: 'mode.smart.title',
-    subKey:   'mode.smart.subtitle',
-    descKey:  'mode.smart.desc',
-    proKeys:  ['mode.smart.pro1', 'mode.smart.pro2', 'mode.smart.pro3'],
-    conKeys:  ['mode.smart.con1', 'mode.smart.con2'],
+    subKey: 'mode.smart.subtitle',
+    descKey: 'mode.smart.desc',
+    proKeys: ['mode.smart.pro1', 'mode.smart.pro2', 'mode.smart.pro3'],
+    conKeys: ['mode.smart.con1', 'mode.smart.con2'],
   },
 ];
 
@@ -63,6 +65,16 @@ export default function ModeSection() {
   const [pendingUrl, setPendingUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [needsRestart, setNeedsRestart] = useState(false);
+  // Phase A.3a — Test Connection button. Shape: null | { status: 'pending' |
+  // 'ok' | 'fail', message?: string }. Cleared on URL/mode change so a
+  // stale "✓ Connected" doesn't linger after the operator types a new URL.
+  const [testResult, setTestResult] = useState(null);
+  // Phase A.3a — .opsconn import status strip, same shape as testResult.
+  const [importResult, setImportResult] = useState(null);
+  // Phase A.3a — when the operator imports a .opsconn while currentMode is
+  // 'embedded' we hold the parsed profile here and open a confirmation
+  // modal (D4 decision). null when the modal is closed.
+  const [pendingImportProfile, setPendingImportProfile] = useState(null);
 
   const reload = useCallback(async () => {
     if (!desktop.isAvailable) return;
@@ -72,7 +84,9 @@ export default function ModeSection() {
     setPendingUrl(cfg.remoteUrl || '');
   }, []);
 
-  useEffect(() => { reload(); }, [reload]);
+  useEffect(() => {
+    reload();
+  }, [reload]);
 
   if (!desktop.isAvailable) {
     return (
@@ -121,22 +135,123 @@ export default function ModeSection() {
     await desktop.app.relaunch();
   };
 
-  const dirty = pendingMode !== config.mode
-    || (pendingMode !== 'embedded' && pendingUrl !== config.remoteUrl);
+  // Phase A.3a — Test Connection. Probes pendingUrl / GET /health via
+  // the desktop bridge (or fetch in web mode), surfaces version + RTT
+  // on success or the error string on failure. Pure UX hint — does NOT
+  // auto-apply the mode.
+  const handleTestConnection = async () => {
+    const url = (pendingUrl || '').trim();
+    if (!url) return;
+    setTestResult({ status: 'pending' });
+    try {
+      const r = await desktop.net.testServer(url);
+      if (r?.ok) {
+        setTestResult({
+          status: 'ok',
+          message: t('mode.test.success', { version: r.version || '?', ms: r.ms ?? 0 }),
+        });
+      } else {
+        setTestResult({
+          status: 'fail',
+          message: t('mode.test.fail', { error: r?.error || 'unknown' }),
+        });
+      }
+    } catch (e) {
+      setTestResult({ status: 'fail', message: t('mode.test.fail', { error: e.message }) });
+    }
+  };
+
+  // Phase A.3a — apply a parsed .opsconn profile. Splits out from the
+  // import handler so the confirmation-modal Confirm button can call
+  // it directly without re-parsing.
+  const applyImportedProfile = (profile) => {
+    setPendingMode('thin');
+    setPendingUrl(profile.url);
+    setTestResult(null);
+    setImportResult({
+      status: 'ok',
+      message: t('mode.opsconn.imported', { name: profile.name }),
+    });
+  };
+
+  // Phase A.3a — Import .opsconn profile. Reads through the existing
+  // desktopBridge fs namespace (which returns a Uint8Array on both
+  // desktop and web), decodes to text, validates via parseOpsconn,
+  // and applies a remote profile by switching pendingMode='thin' +
+  // pendingUrl=profile.url. The Apply button still owns the actual
+  // commit so the operator can review before persisting.
+  //
+  // D4 decision: when the CURRENT (committed) mode is 'embedded' we
+  // open a confirmation modal — the embedded operator has local data
+  // they may not realise is about to stop syncing. For thin/smart
+  // sources the switch is silent (already remote-aware).
+  const handleImportOpsconn = async () => {
+    setImportResult(null);
+    try {
+      const r = await desktop.fs.showOpenDialog({
+        title: t('mode.opsconn.import_button'),
+        filters: [{ name: 'Ops Connection Profile', extensions: ['opsconn'] }],
+        properties: ['openFile'],
+        accept: '.opsconn,application/json',
+      });
+      if (r?.canceled) return;
+
+      // Desktop returns { filePaths: [path] }; web returns { files: [File] }.
+      const fileRef = r?.filePaths?.[0] || r?.files?.[0];
+      if (!fileRef) return;
+
+      const raw = await desktop.fs.readFile(fileRef);
+      const text = typeof raw === 'string' ? raw : new TextDecoder('utf-8').decode(raw);
+
+      const parsed = parseOpsconn(text);
+      if (!parsed.ok) {
+        setImportResult({ status: 'fail', message: parsed.error });
+        return;
+      }
+      if (parsed.warnings?.length) {
+        // Soft validations — surface in console for support; user-facing
+        // strip stays focused on success/fail to avoid noise.
+        console.warn('[opsconn] warnings:', parsed.warnings);
+      }
+
+      if (config?.mode === 'embedded') {
+        setPendingImportProfile(parsed.profile);
+        return;
+      }
+      applyImportedProfile(parsed.profile);
+    } catch (e) {
+      setImportResult({ status: 'fail', message: e.message });
+    }
+  };
+
+  const confirmImport = () => {
+    if (pendingImportProfile) applyImportedProfile(pendingImportProfile);
+    setPendingImportProfile(null);
+  };
+
+  const cancelImport = () => {
+    setPendingImportProfile(null);
+    setImportResult({ status: 'info', message: t('mode.opsconn.cancelled') });
+  };
+
+  const dirty =
+    pendingMode !== config.mode || (pendingMode !== 'embedded' && pendingUrl !== config.remoteUrl);
 
   // When this build is the SERVER role AND embedded mode is active, surface
   // the LAN URL(s) prominently — operators forget where to find the IP they
   // need to give to client machines, and the once-per-install first-run
   // dialog isn't always discoverable. Show it inline + a Copy button.
   const showServerUrls =
-    config.mode === 'embedded'
-    && Array.isArray(config.lanAddresses)
-    && config.lanAddresses.length > 0
-    && config.embeddedPort;
+    config.mode === 'embedded' &&
+    Array.isArray(config.lanAddresses) &&
+    config.lanAddresses.length > 0 &&
+    config.embeddedPort;
   const copyUrl = (url) => {
     try {
       navigator.clipboard.writeText(url);
-    } catch { /* clipboard may be blocked in some Electron contexts */ }
+    } catch {
+      /* clipboard may be blocked in some Electron contexts */
+    }
   };
 
   return (
@@ -146,11 +261,23 @@ export default function ModeSection() {
         <LangFlagToggle />
       </div>
       <p className="mode-subtitle">
-        {t('mode.current')}<b>{config.mode}</b>
-        {config.mode !== 'embedded' && <> · <code>{config.remoteUrl}</code></>}
-        {' · '}{t('mode.port')}<code>{config.embeddedPort || 'N/A'}</code>
+        {t('mode.current')}
+        <b>{config.mode}</b>
+        {config.mode !== 'embedded' && (
+          <>
+            {' '}
+            · <code>{config.remoteUrl}</code>
+          </>
+        )}
+        {' · '}
+        {t('mode.port')}
+        <code>{config.embeddedPort || 'N/A'}</code>
         {config.buildRole && config.buildRole !== 'generic' && (
-          <> · {t('mode.build')}<b>{config.buildRole.toUpperCase()}</b></>
+          <>
+            {' '}
+            · {t('mode.build')}
+            <b>{config.buildRole.toUpperCase()}</b>
+          </>
         )}
       </p>
 
@@ -158,9 +285,7 @@ export default function ModeSection() {
         <div className="mode-server-urls">
           <div className="mode-server-urls-title">
             {t('mode.urls.title')}
-            <span className="mode-server-urls-hint">
-              {t('mode.urls.hint')}
-            </span>
+            <span className="mode-server-urls-hint">{t('mode.urls.hint')}</span>
             <button
               type="button"
               className="mode-server-urls-refresh"
@@ -210,7 +335,11 @@ export default function ModeSection() {
               name="mode"
               value={m.id}
               checked={pendingMode === m.id}
-              onChange={() => setPendingMode(m.id)}
+              onChange={() => {
+                setPendingMode(m.id);
+                setTestResult(null);
+                setImportResult(null);
+              }}
               disabled={loading}
             />
             <div className="mode-card-head">
@@ -218,7 +347,9 @@ export default function ModeSection() {
               <div>
                 <div className="mode-card-title">
                   {t(m.titleKey)}
-                  {config.mode === m.id && <span className="mode-card-tag-active">{t('mode.active_tag')}</span>}
+                  {config.mode === m.id && (
+                    <span className="mode-card-tag-active">{t('mode.active_tag')}</span>
+                  )}
                 </div>
                 <div className="mode-card-sub">{t(m.subKey)}</div>
               </div>
@@ -227,11 +358,19 @@ export default function ModeSection() {
             <div className="mode-card-pros-cons">
               <div>
                 <div className="mode-card-pros-label">{t('mode.pros')}</div>
-                <ul>{m.proKeys.map((k) => <li key={k}>{t(k)}</li>)}</ul>
+                <ul>
+                  {m.proKeys.map((k) => (
+                    <li key={k}>{t(k)}</li>
+                  ))}
+                </ul>
               </div>
               <div>
                 <div className="mode-card-cons-label">{t('mode.cons')}</div>
-                <ul>{m.conKeys.map((k) => <li key={k}>{t(k)}</li>)}</ul>
+                <ul>
+                  {m.conKeys.map((k) => (
+                    <li key={k}>{t(k)}</li>
+                  ))}
+                </ul>
               </div>
             </div>
           </label>
@@ -244,14 +383,51 @@ export default function ModeSection() {
         <div className="mode-url-row">
           <label>
             <span>{t('mode.url_label')}</span>
-            <input
-              type="text"
-              value={pendingUrl}
-              onChange={(e) => setPendingUrl(e.target.value)}
-              placeholder="http://10.102.3.61:3000"
-              disabled={loading}
-            />
+            <div className="mode-url-input-row">
+              <input
+                type="text"
+                value={pendingUrl}
+                onChange={(e) => {
+                  setPendingUrl(e.target.value);
+                  setTestResult(null);
+                  setImportResult(null);
+                }}
+                placeholder="http://10.102.3.61:3000"
+                disabled={loading}
+              />
+              <button
+                type="button"
+                className="op-btn mode-test-btn"
+                onClick={handleTestConnection}
+                disabled={!pendingUrl?.trim() || loading || testResult?.status === 'pending'}
+              >
+                {testResult?.status === 'pending' ? t('mode.test.testing') : t('mode.test.button')}
+              </button>
+            </div>
           </label>
+          {testResult && testResult.status !== 'pending' && (
+            <div className={`mode-test-result mode-test-${testResult.status}`}>
+              {testResult.message}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="mode-opsconn-row">
+        <button
+          type="button"
+          className="op-btn mode-opsconn-btn"
+          onClick={handleImportOpsconn}
+          disabled={loading}
+        >
+          📂 {t('mode.opsconn.import_button')}
+        </button>
+        <small className="mode-opsconn-hint">{t('mode.opsconn.import_hint')}</small>
+      </div>
+      {importResult && (
+        <div className={`mode-opsconn-result mode-opsconn-${importResult.status}`}>
+          {importResult.status === 'ok' ? '✓ ' : '✗ '}
+          {importResult.message}
         </div>
       )}
 
@@ -264,18 +440,19 @@ export default function ModeSection() {
         </div>
       ) : (
         <div className="mode-actions">
-          <button
-            className="op-btn op-btn-primary"
-            disabled={!dirty || loading}
-            onClick={apply}
-          >
+          <button className="op-btn op-btn-primary" disabled={!dirty || loading} onClick={apply}>
             {loading ? t('mode.applying') : dirty ? t('mode.apply') : t('mode.applied')}
           </button>
           {dirty && (
             <button
               className="op-btn"
               disabled={loading}
-              onClick={() => { setPendingMode(config.mode); setPendingUrl(config.remoteUrl || ''); }}
+              onClick={() => {
+                setPendingMode(config.mode);
+                setPendingUrl(config.remoteUrl || '');
+                setTestResult(null);
+                setImportResult(null);
+              }}
             >
               {t('mode.cancel')}
             </button>
@@ -286,6 +463,36 @@ export default function ModeSection() {
       <div className="mode-note" dangerouslySetInnerHTML={{ __html: t('mode.note') }} />
 
       <SetupWizardRerun />
+
+      <Modal
+        open={!!pendingImportProfile}
+        onClose={cancelImport}
+        size="sm"
+        severity="warning"
+        ariaLabelledBy="mode-opsconn-confirm-title"
+      >
+        <Modal.Header
+          id="mode-opsconn-confirm-title"
+          title={t('mode.opsconn.switch_title')}
+          severity="warning"
+        />
+        <Modal.Body>
+          <p>
+            {t('mode.opsconn.switch_message', {
+              name: pendingImportProfile?.name || '',
+              url: pendingImportProfile?.url || '',
+            })}
+          </p>
+        </Modal.Body>
+        <Modal.Footer>
+          <button type="button" className="op-btn op-btn-ghost" onClick={cancelImport}>
+            {t('mode.opsconn.switch_cancel')}
+          </button>
+          <button type="button" className="op-btn op-btn-primary" onClick={confirmImport}>
+            {t('mode.opsconn.switch_confirm')}
+          </button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }
@@ -311,16 +518,20 @@ function SetupWizardRerun() {
   if (!desktop.isAvailable) return null;
 
   const handleRerun = async () => {
-    if (!confirm(
-      'Re-run the setup wizard?\n\n' +
-      '• Connection mode + Remote URL will be cleared.\n' +
-      '• The app will restart and re-show the first-run dialog.\n' +
-      '• Your data, users, and quotes are NOT touched.\n\n' +
-      'Chạy lại wizard cài đặt? Mode + URL sẽ bị xoá; dữ liệu giữ nguyên.'
-    )) return;
+    if (
+      !confirm(
+        'Re-run the setup wizard?\n\n' +
+          '• Connection mode + Remote URL will be cleared.\n' +
+          '• The app will restart and re-show the first-run dialog.\n' +
+          '• Your data, users, and quotes are NOT touched.\n\n' +
+          'Chạy lại wizard cài đặt? Mode + URL sẽ bị xoá; dữ liệu giữ nguyên.'
+      )
+    )
+      return;
     setBusy(true);
-    try { await desktop.app.rerunFirstRun(); }
-    catch (err) {
+    try {
+      await desktop.app.rerunFirstRun();
+    } catch (err) {
       alert('Failed to relaunch: ' + err.message);
       setBusy(false);
     }
@@ -332,17 +543,12 @@ function SetupWizardRerun() {
         <div className="mode-rerun-wizard-en">Re-run the setup wizard</div>
         <div className="mode-rerun-wizard-vi">Chạy lại wizard cài đặt ban đầu</div>
         <div className="mode-rerun-wizard-hint">
-          Useful when reassigning this machine to another user or moving the server.
-          Connection settings will be wiped and the role-specific first-run dialog
-          will fire on next launch. <i>User data is preserved.</i>
+          Useful when reassigning this machine to another user or moving the server. Connection
+          settings will be wiped and the role-specific first-run dialog will fire on next launch.{' '}
+          <i>User data is preserved.</i>
         </div>
       </div>
-      <button
-        type="button"
-        className="op-btn"
-        onClick={handleRerun}
-        disabled={busy}
-      >
+      <button type="button" className="op-btn" onClick={handleRerun} disabled={busy}>
         {busy ? '↻ Relaunching…' : '↻ Re-run wizard'}
       </button>
     </div>
@@ -428,7 +634,9 @@ function ModeLegend() {
   return (
     <details className="mode-legend" open>
       <summary className="mode-legend-summary">
-        <span className="mode-legend-icon" aria-hidden="true">📖</span>
+        <span className="mode-legend-icon" aria-hidden="true">
+          📖
+        </span>
         <span>
           <span className="mode-legend-en">Legend — How to choose a mode</span>
           <span className="mode-legend-vi">Hướng dẫn — Cách chọn chế độ</span>
@@ -440,7 +648,9 @@ function ModeLegend() {
         <div className="mode-legend-quickref">
           {QUICK_REF.map((q) => (
             <div key={q.mode} className="mode-legend-quickref-item">
-              <span className={`mode-legend-pill mode-legend-pill-${q.mode.toLowerCase()}`}>{q.mode}</span>
+              <span className={`mode-legend-pill mode-legend-pill-${q.mode.toLowerCase()}`}>
+                {q.mode}
+              </span>
               <div className="mode-legend-quickref-text">
                 <div className="mode-legend-en">{q.en}</div>
                 <div className="mode-legend-vi">{q.vi}</div>
@@ -497,17 +707,17 @@ function ModeLegend() {
           <div className="mode-legend-warn-body">
             <div className="mode-legend-en">
               Smart-mode infrastructure is ready (cache + sync engine + write outbox), but
-              <b> per-tab wiring is incremental</b>. Today, no operational tab uses the offline cache yet
-              — choosing Smart will behave like Thin (network required) for Quote History, Calculators,
-              Material Library, RFQ Tracker, Dashboard, etc. Only Hardware, Connection Mode, and About
-              are usable offline because they don't make network calls.
+              <b> per-tab wiring is incremental</b>. Today, no operational tab uses the offline
+              cache yet — choosing Smart will behave like Thin (network required) for Quote History,
+              Calculators, Material Library, RFQ Tracker, Dashboard, etc. Only Hardware, Connection
+              Mode, and About are usable offline because they don't make network calls.
             </div>
             <div className="mode-legend-vi">
               Hạ tầng Smart-mode đã sẵn sàng (cache + sync engine + write outbox), nhưng
-              <b> wiring từng tab đang triển khai dần</b>. Hiện tại, chưa tab nghiệp vụ nào dùng cache offline
-              — chọn Smart sẽ hành xử y hệt Thin (cần mạng) đối với Quote History, Calculator,
-              Material Library, RFQ Tracker, Dashboard, v.v. Chỉ có Hardware, Connection Mode, About
-              dùng được offline vì không gọi network.
+              <b> wiring từng tab đang triển khai dần</b>. Hiện tại, chưa tab nghiệp vụ nào dùng
+              cache offline — chọn Smart sẽ hành xử y hệt Thin (cần mạng) đối với Quote History,
+              Calculator, Material Library, RFQ Tracker, Dashboard, v.v. Chỉ có Hardware, Connection
+              Mode, About dùng được offline vì không gọi network.
             </div>
           </div>
         </div>

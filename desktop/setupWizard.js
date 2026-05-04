@@ -18,6 +18,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const license = require('./license.js');
 const serverIdentity = require('./utils/serverIdentity.js');
+const { probeServer } = require('./utils/netProbe.js');
 
 const SETUP_DONE_PATH = () => path.join(app.getPath('userData'), 'setup-done.json');
 const SCHEMA_VERSION = 2;
@@ -472,36 +473,7 @@ function showWizard(mode, deps = {}) {
           return { ok: false, error: e.message };
         }
       },
-      'ops:setup.testServer': async (_e, { url }) => {
-        try {
-          const start = Date.now();
-          const u = new URL('/health', url);
-          const http = u.protocol === 'https:' ? require('node:https') : require('node:http');
-          return await new Promise((res) => {
-            const req = http.get(u, { timeout: 4000 }, (r) => {
-              let body = '';
-              r.on('data', (d) => (body += d));
-              r.on('end', () => {
-                const ms = Date.now() - start;
-                let parsed = {};
-                try {
-                  parsed = JSON.parse(body);
-                } catch {
-                  /* ignore */
-                }
-                res({ ok: r.statusCode === 200, version: parsed?.version, ms });
-              });
-            });
-            req.on('error', (e) => res({ ok: false, error: e.message }));
-            req.on('timeout', () => {
-              req.destroy();
-              res({ ok: false, error: 'timeout' });
-            });
-          });
-        } catch (e) {
-          return { ok: false, error: e.message };
-        }
-      },
+      'ops:setup.testServer': async (_e, { url }) => probeServer(url),
       'ops:setup.complete': async () => {
         // Server mode: persist identity (fresh or preserved-from-re-run).
         // Client mode: pendingIdentity stays null — markComplete writes

@@ -39,6 +39,7 @@ const { initAutoUpdater } = require('./auto-update.js');
 const { registerNativeBridges } = require('./native');
 const license = require('./license.js');
 const smartClient = require('./smart-client.js');
+const { probeServer } = require('./utils/netProbe.js');
 
 // ─── Logging ────────────────────────────────────────────────────────
 log.initialize({ preload: true });
@@ -1045,3 +1046,9 @@ ipcMain.handle('ops:rerun-first-run', () => {
   app.relaunch();
   app.quit();
 });
+
+// Phase A.3a — general-purpose server reachability probe.
+// Used by ModeSection's "Test Connection" button. The setup wizard
+// keeps its own 'ops:setup.testServer' channel (alias) so existing
+// renderer code there doesn't need to change.
+ipcMain.handle('ops:net.testServer', async (_e, { url } = {}) => probeServer(url));
