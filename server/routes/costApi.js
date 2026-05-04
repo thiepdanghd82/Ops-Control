@@ -12,6 +12,7 @@ import multer from 'multer';
 import XLSX from 'xlsx';
 import { atomicWriteFileSync } from '../services/atomicWrite.js';
 import { redactErrorMessage, logErr, asSafeError } from '../utils/safeError.js';
+import { listLanIPv4, pickServerUrl } from '../utils/networkInfo.js';
 
 // Shared upload tmp dir — resolved from env → OS tmpdir, mode 0700.
 // Mirrors the logic in routes/import.js so both XLSM and BOM imports
@@ -895,6 +896,72 @@ router.get('/auth/users', (req, res) => {
   const u = getSessionUser(getTokenFromHeader(req));
   if (!isAdminPlus(u)) return res.status(403).json({ error: 'Forbidden' });
   res.json({ ok: true, users: loadUsers().map(userPublic) });
+});
+
+// GET /api/server-info (admin only) — Phase A.2 connection-info dashboard.
+//
+// Surfaces the per-server identity captured by setupWizard.js v2 (Phase A.1)
+// + auto-detected LAN IPs so the admin UI can render a connection card +
+// QR code + .opsconn export for hand-off to the 50 client machines.
+//
+// Identity resolution chain:
+//   1. process.env (OPS_SERVER_NAME / OPS_SERVER_ID / OPS_SERVER_TZ / OPS_SERVER_LANG)
+//      — set by the Electron desktop launcher before spawning the embedded server.
+//   2. <DATA_DIR>/server-config.json — written by main.js onSetIdentity callback.
+//   3. null fallback — dedicated server install without wizard yet (operator
+//      may set env vars in .env or run the wizard later).
+//
+// Rate-limited via writeRateLimit (30 / 10 min) — defence-in-depth against
+// a compromised admin session enumerating identity. Audit-logged on every
+// hit so a forensic replay can spot anomalous read patterns.
+router.get('/server-info', writeRateLimit, (req, res) => {
+  const u = getSessionUser(getTokenFromHeader(req));
+  if (!isAdminPlus(u)) return res.status(403).json({ error: 'Forbidden' });
+
+  // Identity from env vars OR server-config.json (desktop launcher mirror)
+  let identity = null;
+  if (process.env.OPS_SERVER_ID) {
+    identity = {
+      serverName: process.env.OPS_SERVER_NAME || 'Ops Control',
+      serverId: process.env.OPS_SERVER_ID,
+      timezone: process.env.OPS_SERVER_TZ || 'UTC',
+      language: process.env.OPS_SERVER_LANG || 'en',
+    };
+  } else {
+    try {
+      const cfgPath = path.join(getDataDir(), 'server-config.json');
+      if (fs.existsSync(cfgPath)) {
+        const raw = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+        if (raw && raw.serverId) identity = raw;
+      }
+    } catch (e) {
+      logErr('[server-info] failed to read server-config.json', e);
+    }
+  }
+
+  const port = Number(process.env.OPS_PORT || process.env.PORT || 3000);
+  const candidates = listLanIPv4();
+  const primaryUrl = pickServerUrl(port);
+
+  // Audit trail (closes Phase A.2 enhancement 3 — forensic replay).
+  audit(
+    'SERVER_INFO_VIEWED',
+    u?.username || '-',
+    req.ip || '-',
+    `serverId=${identity?.serverId || 'unset'}`
+  );
+
+  res.json({
+    ok: true,
+    serverName: identity?.serverName || 'Ops Control',
+    serverId: identity?.serverId || null,
+    timezone: identity?.timezone || 'UTC',
+    language: identity?.language || 'en',
+    port,
+    primaryUrl,
+    candidates,
+    requesterUsername: u?.username || '-',
+  });
 });
 
 // v1.3 P5.1 — license tier seat enforcement.

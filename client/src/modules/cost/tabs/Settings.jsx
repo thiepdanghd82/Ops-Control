@@ -6,6 +6,7 @@ import Modal from '../../../components/Shared/Modal';
 import { useTheme } from '../../../utils/useTheme';
 import { useI18n } from '../../../utils/useI18n';
 import PermissionGroupsSection from './PermissionGroupsSection';
+import ConnectionInfoSection from './ConnectionInfoSection';
 import HardwareSection from './HardwareSection';
 import ImportLegacySection from './ImportLegacySection';
 import ModeSection from './ModeSection';
@@ -30,7 +31,7 @@ const MENU_SECTIONS = [
       { id: 'hardware', icon: '⌘', label: 'Thiết bị phần cứng', i18nKey: 'settings.item.hardware' },
       // v1.2 — desktop-only: chế độ kết nối (embedded/thin/smart).
       { id: 'mode', icon: '⇄', label: 'Chế độ kết nối', i18nKey: 'settings.item.mode' },
-    ]
+    ],
   },
   {
     label: 'System',
@@ -38,7 +39,7 @@ const MENU_SECTIONS = [
       { id: 'account', icon: '◍', label: 'Account Control', minRole: 'admin' },
       // v1.2 — about + diagnostics dialog cho mọi user
       { id: 'about', icon: 'ⓘ', label: 'About / Diagnostics' },
-    ]
+    ],
   },
   {
     label: 'Maintenance',
@@ -47,21 +48,39 @@ const MENU_SECTIONS = [
       { id: 'syslog', icon: '❒', label: 'System Logs', minRole: 'admin' },
       // v1.1 — desktop-only: import data từ Ops Control v1.0 cũ
       { id: 'import-legacy', icon: '⇩', label: 'Import data v1.0', minRole: 'admin' },
-    ]
-  }
+    ],
+  },
 ];
 
 const ROLE_LEVELS = { viewonly: 1, user: 2, cost: 3, admin: 4, sys: 5 };
 
 const ICON_BGS = {
-  profile: '#dbeafe', mypwd: '#fef3c7', account: '#e0e7ff',
-  data: '#fce7f3', syslog: '#f0fdf4', appearance: '#f3e8ff',
-  hardware: '#fef9c3', 'import-legacy': '#dcfce7', mode: '#fae8ff',
+  profile: '#dbeafe',
+  mypwd: '#fef3c7',
+  account: '#e0e7ff',
+  data: '#fce7f3',
+  syslog: '#f0fdf4',
+  appearance: '#f3e8ff',
+  hardware: '#fef9c3',
+  'import-legacy': '#dcfce7',
+  mode: '#fae8ff',
   about: '#cffafe',
 };
 
-const ROLE_COLORS = { sys: '#dc2626', admin: '#7c3aed', cost: '#0369a1', user: '#16a34a', viewonly: '#92400e' };
-const ROLE_LABELS = { sys: 'Super Admin', admin: 'Dept Manager', cost: 'Cost Engineer', user: 'Standard User', viewonly: 'View Only' };
+const ROLE_COLORS = {
+  sys: '#dc2626',
+  admin: '#7c3aed',
+  cost: '#0369a1',
+  user: '#16a34a',
+  viewonly: '#92400e',
+};
+const ROLE_LABELS = {
+  sys: 'Super Admin',
+  admin: 'Dept Manager',
+  cost: 'Cost Engineer',
+  user: 'Standard User',
+  viewonly: 'View Only',
+};
 
 // ═══════════════════════════════════════════════════════════
 // MAIN SETTINGS COMPONENT
@@ -78,21 +97,26 @@ export default function Settings() {
       {/* Left Menu Panel */}
       <aside className="settings-menu">
         <div className="settings-menu-header">Settings</div>
-        {MENU_SECTIONS.map(section => {
+        {MENU_SECTIONS.map((section) => {
           const visibleItems = section.items.filter(
-            it => !it.minRole || userLevel >= (ROLE_LEVELS[it.minRole] || 0)
+            (it) => !it.minRole || userLevel >= (ROLE_LEVELS[it.minRole] || 0)
           );
           if (visibleItems.length === 0) return null;
           return (
             <div key={section.label} className="smenu-section">
               <div className="smenu-section-label">{section.label}</div>
-              {visibleItems.map(it => (
+              {visibleItems.map((it) => (
                 <button
                   key={it.id}
                   className={`smenu-item ${activeSec === it.id ? 'active' : ''}`}
                   onClick={() => setActiveSec(it.id)}
                 >
-                  <span className="smenu-icon-box" style={{ background: ICON_BGS[it.id] || '#f1f5f9' }}>{it.icon}</span>
+                  <span
+                    className="smenu-icon-box"
+                    style={{ background: ICON_BGS[it.id] || '#f1f5f9' }}
+                  >
+                    {it.icon}
+                  </span>
                   <span className="smenu-label">{it.i18nKey ? t(it.i18nKey) : it.label}</span>
                 </button>
               ))}
@@ -144,19 +168,26 @@ function ProfileSection({ user }) {
   const [msg, setMsg] = useState(null);
   const [saving, setSaving] = useState(false);
   const [avatar, setAvatar] = useState(() => {
-    try { return localStorage.getItem(`ops_avatar_${user?.id}`) || ''; } catch { return ''; }
+    try {
+      return localStorage.getItem(`ops_avatar_${user?.id}`) || '';
+    } catch {
+      return '';
+    }
   });
 
-  const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+  const set = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
 
   async function handleSave() {
-    setSaving(true); setMsg(null);
+    setSaving(true);
+    setMsg(null);
     try {
       await authApi.updateProfile(form);
       setMsg({ type: 'success', text: 'Profile updated successfully' });
     } catch (e) {
       setMsg({ type: 'error', text: e.message || 'Failed to update profile' });
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleAvatarUpload(e) {
@@ -166,14 +197,22 @@ function ProfileSection({ user }) {
     reader.onload = (ev) => {
       const b64 = ev.target.result;
       setAvatar(b64);
-      try { localStorage.setItem(`ops_avatar_${user?.id}`, b64); } catch { /* localStorage may be unavailable (private mode) — non-fatal */ }
+      try {
+        localStorage.setItem(`ops_avatar_${user?.id}`, b64);
+      } catch {
+        /* localStorage may be unavailable (private mode) — non-fatal */
+      }
     };
     reader.readAsDataURL(file);
   }
 
   function clearAvatar() {
     setAvatar('');
-    try { localStorage.removeItem(`ops_avatar_${user?.id}`); } catch { /* localStorage may be unavailable (private mode) — non-fatal */ }
+    try {
+      localStorage.removeItem(`ops_avatar_${user?.id}`);
+    } catch {
+      /* localStorage may be unavailable (private mode) — non-fatal */
+    }
   }
 
   const roleColor = ROLE_COLORS[user?.role] || '#475569';
@@ -186,7 +225,10 @@ function ProfileSection({ user }) {
       <div className="settings-card">
         {/* Avatar Section */}
         <div className="prof-avatar-section">
-          <div className="prof-avatar-wrap" onClick={() => document.getElementById('avatar-input')?.click()}>
+          <div
+            className="prof-avatar-wrap"
+            onClick={() => document.getElementById('avatar-input')?.click()}
+          >
             {avatar ? (
               <img src={avatar} alt="avatar" className="prof-avatar-img" />
             ) : (
@@ -197,14 +239,31 @@ function ProfileSection({ user }) {
               <span style={{ fontSize: '8.5px', color: 'white', fontWeight: 700 }}>CHANGE</span>
             </div>
             {avatar && (
-              <button className="prof-avatar-clear" onClick={e => { e.stopPropagation(); clearAvatar(); }}>✕</button>
+              <button
+                className="prof-avatar-clear"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  clearAvatar();
+                }}
+              >
+                ✕
+              </button>
             )}
           </div>
-          <input id="avatar-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
+          <input
+            id="avatar-input"
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleAvatarUpload}
+          />
           <div className="prof-avatar-info">
             <div className="prof-name">{user?.full_name || user?.username}</div>
             <div className="prof-username">@{user?.username}</div>
-            <span className="prof-role-badge" style={{ background: `${roleColor}22`, color: roleColor }}>
+            <span
+              className="prof-role-badge"
+              style={{ background: `${roleColor}22`, color: roleColor }}
+            >
               ⚡ {roleLabel}
             </span>
             <div className="prof-avatar-hint">📷 Click on photo to upload</div>
@@ -215,19 +274,27 @@ function ProfileSection({ user }) {
         <div className="prof-form-grid">
           <div className="prof-form-field prof-field-wide">
             <label>Full Name (Vietnamese)</label>
-            <input type="text" value={form.full_name} onChange={e => set('full_name', e.target.value)} />
+            <input
+              type="text"
+              value={form.full_name}
+              onChange={(e) => set('full_name', e.target.value)}
+            />
           </div>
           <div className="prof-form-field prof-field-wide">
             <label>English Name</label>
-            <input type="text" value={form.english_name} onChange={e => set('english_name', e.target.value)} />
+            <input
+              type="text"
+              value={form.english_name}
+              onChange={(e) => set('english_name', e.target.value)}
+            />
           </div>
           <div className="prof-form-field">
             <label>Email</label>
-            <input type="email" value={form.email} onChange={e => set('email', e.target.value)} />
+            <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
           </div>
           <div className="prof-form-field">
             <label>Phone</label>
-            <input type="text" value={form.phone} onChange={e => set('phone', e.target.value)} />
+            <input type="text" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
           </div>
           <div className="prof-form-field">
             <label>Username</label>
@@ -240,15 +307,28 @@ function ProfileSection({ user }) {
         </div>
       </div>
 
-      {msg && <div className={`form-msg ${msg.type}`} style={{ marginTop: 8 }}>{msg.text}</div>}
+      {msg && (
+        <div className={`form-msg ${msg.type}`} style={{ marginTop: 8 }}>
+          {msg.text}
+        </div>
+      )}
 
-      <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={handleSave} disabled={saving}>
+      <button
+        className="btn btn-primary"
+        style={{ marginTop: 12 }}
+        onClick={handleSave}
+        disabled={saving}
+      >
         {saving ? 'Saving...' : 'Save Profile'}
       </button>
 
-      <h3 className="panel-title" style={{ marginTop: 28 }}>About</h3>
+      <h3 className="panel-title" style={{ marginTop: 28 }}>
+        About
+      </h3>
       <div className="settings-card about-card">
-        <p><strong>Ops Control</strong> v1.2.0</p>
+        <p>
+          <strong>Ops Control</strong> v1.2.0
+        </p>
         <p>CCL Design Vietnam — Integrated Cost & Planning Platform</p>
         <p className="about-tech">Henry Dang — NPI Manager · React + Node.js (Electron 33)</p>
       </div>
@@ -270,9 +350,14 @@ function AppearanceSection() {
   const { locale, setLocale, t } = useI18n();
 
   const themeOpts = [
-    { value: 'system', label: t('appearance.system'), hint: t('appearance.system_hint', { active }), icon: '🖥' },
-    { value: 'light',  label: t('appearance.light'),  hint: t('appearance.light_hint'),  icon: '☀️' },
-    { value: 'dark',   label: t('appearance.dark'),   hint: t('appearance.dark_hint'),   icon: '🌙' },
+    {
+      value: 'system',
+      label: t('appearance.system'),
+      hint: t('appearance.system_hint', { active }),
+      icon: '🖥',
+    },
+    { value: 'light', label: t('appearance.light'), hint: t('appearance.light_hint'), icon: '☀️' },
+    { value: 'dark', label: t('appearance.dark'), hint: t('appearance.dark_hint'), icon: '🌙' },
   ];
 
   const langOpts = [
@@ -282,7 +367,9 @@ function AppearanceSection() {
 
   // Shared option-card style so theme + language groups look identical.
   const cardStyle = (checked) => ({
-    display: 'flex', alignItems: 'center', gap: 12,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
     padding: '12px 14px',
     background: checked ? 'var(--color-primary-subtle, #edf5ff)' : 'var(--surface-card)',
     border: checked ? '2px solid var(--color-primary)' : '1px solid var(--border-strong)',
@@ -294,13 +381,20 @@ function AppearanceSection() {
   return (
     <div className="settings-panel">
       <div className="settings-panel-title">{t('appearance.title')}</div>
-      <div className="settings-panel-hint" style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 16 }}>
+      <div
+        className="settings-panel-hint"
+        style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 16 }}
+      >
         {t('appearance.hint')}
       </div>
 
       {/* Theme group */}
-      <div role="radiogroup" aria-label="Theme preference" style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 500 }}>
-        {themeOpts.map(o => {
+      <div
+        role="radiogroup"
+        aria-label="Theme preference"
+        style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 500 }}
+      >
+        {themeOpts.map((o) => {
           const checked = pref === o.value;
           return (
             <label key={o.value} style={cardStyle(checked)}>
@@ -315,7 +409,9 @@ function AppearanceSection() {
               <span style={{ fontSize: 20 }}>{o.icon}</span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600 }}>{o.label}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{o.hint}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+                  {o.hint}
+                </div>
               </div>
               {checked && (
                 <span style={{ fontSize: 11, color: 'var(--color-primary)', fontWeight: 600 }}>
@@ -331,14 +427,28 @@ function AppearanceSection() {
           so the keyboard tab order is theme-first → language. Industry
           acronyms (BOM/RFQ/MOQ/SGA) stay English in both locales per the
           convention documented in the strings.js header. */}
-      <div style={{ marginTop: 24, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
+      <div
+        style={{
+          marginTop: 24,
+          fontSize: 13,
+          fontWeight: 600,
+          color: 'var(--text-primary)',
+          marginBottom: 4,
+        }}
+      >
         {t('appearance.language')}
       </div>
-      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 10, maxWidth: 500 }}>
+      <div
+        style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 10, maxWidth: 500 }}
+      >
         {t('appearance.language_hint')}
       </div>
-      <div role="radiogroup" aria-label="Language preference" style={{ display: 'flex', gap: 8, maxWidth: 500 }}>
-        {langOpts.map(o => {
+      <div
+        role="radiogroup"
+        aria-label="Language preference"
+        style={{ display: 'flex', gap: 8, maxWidth: 500 }}
+      >
+        {langOpts.map((o) => {
           const checked = locale === o.value;
           return (
             <label key={o.value} style={{ ...cardStyle(checked), flex: 1 }}>
@@ -362,17 +472,19 @@ function AppearanceSection() {
         })}
       </div>
 
-      <div style={{
-        marginTop: 16, padding: 10,
-        background: 'var(--surface-subtle)',
-        fontSize: 11, color: 'var(--text-secondary)',
-        borderLeft: '3px solid var(--color-primary)',
-      }}>
-        <b>Note:</b> Most Ops Control surfaces use CSS tokens and flip
-        automatically. A few legacy tabs (Standard/Complex calculators,
-        Settings → Account Control) are still being migrated and may
-        appear light even in dark mode. Those will be addressed in a
-        follow-up sprint.
+      <div
+        style={{
+          marginTop: 16,
+          padding: 10,
+          background: 'var(--surface-subtle)',
+          fontSize: 11,
+          color: 'var(--text-secondary)',
+          borderLeft: '3px solid var(--color-primary)',
+        }}
+      >
+        <b>Note:</b> Most Ops Control surfaces use CSS tokens and flip automatically. A few legacy
+        tabs (Standard/Complex calculators, Settings → Account Control) are still being migrated and
+        may appear light even in dark mode. Those will be addressed in a follow-up sprint.
       </div>
     </div>
   );
@@ -393,13 +505,16 @@ function PasswordSection() {
   async function handleSubmit(e) {
     e.preventDefault();
     setMsg(null);
-    if (newPwd.length < 6) return setMsg({ type: 'error', text: 'Password must be at least 6 characters' });
+    if (newPwd.length < 6)
+      return setMsg({ type: 'error', text: 'Password must be at least 6 characters' });
     if (newPwd !== confirm) return setMsg({ type: 'error', text: 'Passwords do not match' });
     setSaving(true);
     try {
       await costApi.changePwd(oldPwd, newPwd);
       setMsg({ type: 'success', text: 'Password changed successfully' });
-      setOldPwd(''); setNewPwd(''); setConfirm('');
+      setOldPwd('');
+      setNewPwd('');
+      setConfirm('');
     } catch (err) {
       setMsg({ type: 'error', text: err.message || 'Failed to change password' });
     } finally {
@@ -414,15 +529,31 @@ function PasswordSection() {
         <form className="pwd-form" onSubmit={handleSubmit}>
           <div className="form-field">
             <label className="form-label-upper">Current Password</label>
-            <input type="password" value={oldPwd} onChange={e => setOldPwd(e.target.value)} required />
+            <input
+              type="password"
+              value={oldPwd}
+              onChange={(e) => setOldPwd(e.target.value)}
+              required
+            />
           </div>
           <div className="form-field">
             <label className="form-label-upper">New Password</label>
-            <input type="password" value={newPwd} onChange={e => setNewPwd(e.target.value)} required placeholder="Min 6 characters" />
+            <input
+              type="password"
+              value={newPwd}
+              onChange={(e) => setNewPwd(e.target.value)}
+              required
+              placeholder="Min 6 characters"
+            />
           </div>
           <div className="form-field">
             <label className="form-label-upper">Confirm New Password</label>
-            <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required />
+            <input
+              type="password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              required
+            />
           </div>
           {msg && <div className={`form-msg ${msg.type}`}>{msg.text}</div>}
           <button type="submit" className="btn btn-primary" disabled={saving}>
@@ -441,7 +572,13 @@ function PasswordSection() {
 // Role badges: monochrome glyphs only (matches Settings sub-tab icon style).
 // sys ⚡ = god mode | admin ★ = elevated | cost ▤ = data-write | user ◉ = standard | viewonly ◌ = read-only
 const ACCT_ROLE_ICONS = { sys: '⚡', admin: '★', cost: '▤', user: '◉', viewonly: '◌' };
-const ACCT_ROLE_COLORS = { sys: '#ff3b30', admin: '#af52de', cost: '#007aff', user: '#34c759', viewonly: '#ff9500' };
+const ACCT_ROLE_COLORS = {
+  sys: '#ff3b30',
+  admin: '#af52de',
+  cost: '#007aff',
+  user: '#34c759',
+  viewonly: '#ff9500',
+};
 const ACCT_ROLE_LABEL = {
   sys: 'SYS',
   admin: 'ADM — Dept Manager',
@@ -451,25 +588,100 @@ const ACCT_ROLE_LABEL = {
 };
 
 const PERM_MODULES = [
-  { section: 'CALCULATORS', rows: [
-    { fn: 'Standard / Complex / Inks', sys: true, admin: true, cost: true, user: true, viewonly: 'view' },
-    { fn: 'Material Cost (edit)', sys: true, admin: true, cost: true, user: false, viewonly: 'view' },
-    { fn: 'Cost Breakdown', sys: true, admin: true, cost: true, user: true, viewonly: 'view' },
-  ]},
-  { section: 'QUOTING', rows: [
-    { fn: 'Formal Quotation (create)', sys: true, admin: true, cost: true, user: true, viewonly: false },
-    { fn: 'Quote History (view all)', sys: true, admin: true, cost: true, user: 'Own', viewonly: 'view' },
-    { fn: 'Quote Analysis / Reports', sys: true, admin: true, cost: true, user: false, viewonly: 'view' },
-  ]},
-  { section: 'MANUFACTURING', rows: [
-    { fn: 'Mfg Structures / Routing', sys: true, admin: true, cost: true, user: true, viewonly: 'view' },
-    { fn: 'IFS Inventory', sys: true, admin: true, cost: true, user: true, viewonly: 'view' },
-  ]},
-  { section: 'SETTINGS', rows: [
-    { fn: 'Account / User Mgmt', sys: true, admin: true, cost: false, user: false, viewonly: false },
-    { fn: 'Rate / DDL / Finance', sys: true, admin: true, cost: false, user: false, viewonly: false },
-    { fn: 'Backup / Restore', sys: true, admin: false, cost: false, user: false, viewonly: false },
-  ]},
+  {
+    section: 'CALCULATORS',
+    rows: [
+      {
+        fn: 'Standard / Complex / Inks',
+        sys: true,
+        admin: true,
+        cost: true,
+        user: true,
+        viewonly: 'view',
+      },
+      {
+        fn: 'Material Cost (edit)',
+        sys: true,
+        admin: true,
+        cost: true,
+        user: false,
+        viewonly: 'view',
+      },
+      { fn: 'Cost Breakdown', sys: true, admin: true, cost: true, user: true, viewonly: 'view' },
+    ],
+  },
+  {
+    section: 'QUOTING',
+    rows: [
+      {
+        fn: 'Formal Quotation (create)',
+        sys: true,
+        admin: true,
+        cost: true,
+        user: true,
+        viewonly: false,
+      },
+      {
+        fn: 'Quote History (view all)',
+        sys: true,
+        admin: true,
+        cost: true,
+        user: 'Own',
+        viewonly: 'view',
+      },
+      {
+        fn: 'Quote Analysis / Reports',
+        sys: true,
+        admin: true,
+        cost: true,
+        user: false,
+        viewonly: 'view',
+      },
+    ],
+  },
+  {
+    section: 'MANUFACTURING',
+    rows: [
+      {
+        fn: 'Mfg Structures / Routing',
+        sys: true,
+        admin: true,
+        cost: true,
+        user: true,
+        viewonly: 'view',
+      },
+      { fn: 'IFS Inventory', sys: true, admin: true, cost: true, user: true, viewonly: 'view' },
+    ],
+  },
+  {
+    section: 'SETTINGS',
+    rows: [
+      {
+        fn: 'Account / User Mgmt',
+        sys: true,
+        admin: true,
+        cost: false,
+        user: false,
+        viewonly: false,
+      },
+      {
+        fn: 'Rate / DDL / Finance',
+        sys: true,
+        admin: true,
+        cost: false,
+        user: false,
+        viewonly: false,
+      },
+      {
+        fn: 'Backup / Restore',
+        sys: true,
+        admin: false,
+        cost: false,
+        user: false,
+        viewonly: false,
+      },
+    ],
+  },
 ];
 
 // SVG icons for Account Control action buttons. Each one is a stroked,
@@ -477,42 +689,107 @@ const PERM_MODULES = [
 // by the parent .acct-sq-btn rules (stroke: currentColor).
 function SqIcon({ children }) {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2.2"
-      strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       {children}
     </svg>
   );
 }
 const AcctIcon = {
   // Pencil — edit profile
-  edit:   <SqIcon><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></SqIcon>,
+  edit: (
+    <SqIcon>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+    </SqIcon>
+  ),
   // Key — reset password
-  key:    <SqIcon><circle cx="8" cy="15" r="4"/><path d="M10.85 12.15 21 2"/><path d="m18 5 3 3"/><path d="m15 8 3 3"/></SqIcon>,
+  key: (
+    <SqIcon>
+      <circle cx="8" cy="15" r="4" />
+      <path d="M10.85 12.15 21 2" />
+      <path d="m18 5 3 3" />
+      <path d="m15 8 3 3" />
+    </SqIcon>
+  ),
   // Shield with check — setup 2FA
-  shield: <SqIcon><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></SqIcon>,
+  shield: (
+    <SqIcon>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="m9 12 2 2 4-4" />
+    </SqIcon>
+  ),
   // Closed padlock — lock user
-  lock:   <SqIcon><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></SqIcon>,
+  lock: (
+    <SqIcon>
+      <rect x="4" y="11" width="16" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </SqIcon>
+  ),
   // Open padlock — unlock user
-  unlock: <SqIcon><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0"/></SqIcon>,
+  unlock: (
+    <SqIcon>
+      <rect x="4" y="11" width="16" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0" />
+    </SqIcon>
+  ),
   // Trash can — delete user
-  trash:  <SqIcon><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></SqIcon>,
+  trash: (
+    <SqIcon>
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </SqIcon>
+  ),
   // ID card — generate temp password + show provisioning card (Sprint 1.5)
-  card:   <SqIcon><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M7 11h4"/><path d="M7 14h6"/><circle cx="17" cy="12" r="2"/></SqIcon>,
+  card: (
+    <SqIcon>
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <path d="M7 11h4" />
+      <path d="M7 14h6" />
+      <circle cx="17" cy="12" r="2" />
+    </SqIcon>
+  ),
 };
 
 const TTL_OPTS = [
-  { v: 0, l: 'Def' }, { v: 1, l: '1h' }, { v: 2, l: '2h' }, { v: 4, l: '4h' },
-  { v: 8, l: '8h' }, { v: 12, l: '12h' }, { v: 16, l: '16h' }, { v: 24, l: '24h' },
-  { v: 48, l: '2d' }, { v: 72, l: '3d' }, { v: 168, l: '7d' },
+  { v: 0, l: 'Def' },
+  { v: 1, l: '1h' },
+  { v: 2, l: '2h' },
+  { v: 4, l: '4h' },
+  { v: 8, l: '8h' },
+  { v: 12, l: '12h' },
+  { v: 16, l: '16h' },
+  { v: 24, l: '24h' },
+  { v: 48, l: '2d' },
+  { v: 72, l: '3d' },
+  { v: 168, l: '7d' },
 ];
 
 function pwdAgeBadge(lastPwdChange) {
   if (!lastPwdChange) return <span style={{ color: '#c7c7cc' }}>—</span>;
   const d = Math.floor((Date.now() - new Date(lastPwdChange)) / 86400000);
   const clr = d > 90 ? '#ff3b30' : d > 60 ? '#ff9500' : '#34c759';
-  const dateStr = new Date(lastPwdChange).toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: '2-digit' });
-  return <span style={{ color: clr, fontWeight: 500 }}>{dateStr} <span style={{ opacity: .5 }}>({d}d)</span></span>;
+  const dateStr = new Date(lastPwdChange).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'numeric',
+    year: '2-digit',
+  });
+  return (
+    <span style={{ color: clr, fontWeight: 500 }}>
+      {dateStr} <span style={{ opacity: 0.5 }}>({d}d)</span>
+    </span>
+  );
 }
 
 function AccountSection() {
@@ -541,15 +818,25 @@ function AccountSection() {
   // table can show dropdowns per row without N fetches.
   useEffect(() => {
     let cancelled = false;
-    sharedApi.getPermissionGroups().then(data => {
-      if (cancelled) return;
-      setPgGroups(Array.isArray(data?.groups) ? data.groups : []);
-      setPgDepartments(Array.isArray(data?.departments) ? data.departments : []);
-    }).catch(() => { /* silent — falls back to legacy dropdowns */ });
-    return () => { cancelled = true; };
+    sharedApi
+      .getPermissionGroups()
+      .then((data) => {
+        if (cancelled) return;
+        setPgGroups(Array.isArray(data?.groups) ? data.groups : []);
+        setPgDepartments(Array.isArray(data?.departments) ? data.departments : []);
+      })
+      .catch(() => {
+        /* silent — falls back to legacy dropdowns */
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  useEffect(() => { loadUsers(); loadOnline(); }, []);
+  useEffect(() => {
+    loadUsers();
+    loadOnline();
+  }, []);
   useEffect(() => {
     const t = setInterval(loadOnline, 30000);
     return () => clearInterval(t);
@@ -561,16 +848,21 @@ function AccountSection() {
       const usersData = await authApi.getUsers();
       const list = usersData.users || usersData;
       setUsers(Array.isArray(list) ? list : []);
-    } catch (e) { console.warn('Users load failed:', e); }
-    finally { setLoading(false); }
+    } catch (e) {
+      console.warn('Users load failed:', e);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function loadOnline() {
     try {
       const r = await costApi.getUsersStatus();
       const list = Array.isArray(r?.users) ? r.users : [];
-      setOnlineList(list.filter(u => u.online));
-    } catch { /* silent */ }
+      setOnlineList(list.filter((u) => u.online));
+    } catch {
+      /* silent */
+    }
   }
 
   async function loadSessions() {
@@ -587,7 +879,12 @@ function AccountSection() {
   }
 
   async function handleRevokeSessions(username) {
-    if (!confirm(`Revoke ALL active sessions for "${username}"?\n\nUser sẽ bị logout ngay lập tức trên mọi máy. Họ phải login lại bằng password.`)) return;
+    if (
+      !confirm(
+        `Revoke ALL active sessions for "${username}"?\n\nUser sẽ bị logout ngay lập tức trên mọi máy. Họ phải login lại bằng password.`
+      )
+    )
+      return;
     try {
       const r = await costApi.revokeUserSessions(username);
       flash('success', `Revoked ${r.revoked} session(s) for ${username}`);
@@ -614,7 +911,7 @@ function AccountSection() {
 
   async function handleTogglePerm(uid, checked) {
     try {
-      const target = users.find(u => u.id === uid);
+      const target = users.find((u) => u.id === uid);
       const nextPerms = { ...(target?.permissions || {}), canDeleteQuote: checked };
       await costApi.updateUser(uid, { permissions: nextPerms });
       flash('success', `Delete permission ${checked ? 'granted' : 'revoked'}`);
@@ -625,9 +922,14 @@ function AccountSection() {
   }
 
   async function handleResetPwd(u) {
-    const newPwd = prompt(`Reset password for "${u.username}"?\n\nEnter new password (min 6 chars):`);
+    const newPwd = prompt(
+      `Reset password for "${u.username}"?\n\nEnter new password (min 6 chars):`
+    );
     if (!newPwd) return;
-    if (newPwd.length < 6) { flash('error', 'Password must be at least 6 characters'); return; }
+    if (newPwd.length < 6) {
+      flash('error', 'Password must be at least 6 characters');
+      return;
+    }
     try {
       await costApi.resetPwd(u.id, newPwd);
       flash('success', `Password reset for ${u.username}`);
@@ -642,12 +944,15 @@ function AccountSection() {
   // copy/print before closing — after that the password is gone from
   // memory and the only way to see it is to re-issue.
   async function handleGenerateTempPwd(u) {
-    if (!confirm(
-      `Generate a temporary password for "${u.username}"?\n\n` +
-      `• Their existing password (if any) will stop working immediately.\n` +
-      `• They'll be FORCED to change it on next login.\n` +
-      `• You'll see the temp password ONCE — copy or print it before closing.`
-    )) return;
+    if (
+      !confirm(
+        `Generate a temporary password for "${u.username}"?\n\n` +
+          `• Their existing password (if any) will stop working immediately.\n` +
+          `• They'll be FORCED to change it on next login.\n` +
+          `• You'll see the temp password ONCE — copy or print it before closing.`
+      )
+    )
+      return;
     try {
       const r = await costApi.generateTempPwd(u.id);
       if (!r?.ok) throw new Error(r?.msg || 'Server rejected the request');
@@ -737,10 +1042,12 @@ function AccountSection() {
   async function handleChangePermissionGroup(uid, permission_group_id) {
     try {
       await costApi.updateUser(uid, { permission_group_id });
-      flash('success',
+      flash(
+        'success',
         permission_group_id
           ? `Permission group → ${permission_group_id} (active sessions revoked)`
-          : 'Permission group cleared');
+          : 'Permission group cleared'
+      );
       loadUsers();
     } catch (e) {
       flash('error', 'Failed to update permission group: ' + (e.message || 'unknown'));
@@ -752,9 +1059,7 @@ function AccountSection() {
   // then-reload to keep the UI responsive but authoritative.
   async function handleToggleApprovalRole(u, role) {
     const current = Array.isArray(u.approval_roles) ? u.approval_roles : [];
-    const next = current.includes(role)
-      ? current.filter(r => r !== role)
-      : [...current, role];
+    const next = current.includes(role) ? current.filter((r) => r !== role) : [...current, role];
     try {
       await costApi.updateUser(u.id, { approval_roles: next });
       flash('success', `${u.username}: ${role} ${next.includes(role) ? 'granted' : 'revoked'}`);
@@ -770,256 +1075,418 @@ function AccountSection() {
     <div className="settings-panel settings-panel-wide">
       <div className="acct-header">
         <div>
-          <h3 className="panel-title" style={{ margin: 0 }}>User Accounts</h3>
-          <p className="panel-subtitle">{users.length} users · {onlineList.length} online · 5-level permissions</p>
+          <h3 className="panel-title" style={{ margin: 0 }}>
+            User Accounts
+          </h3>
+          <p className="panel-subtitle">
+            {users.length} users · {onlineList.length} online · 5-level permissions
+          </p>
         </div>
         <div className="acct-header-actions">
           <div className="acct-tabs">
-            <button className={`acct-tab-btn ${acctTab === 'users' ? 'active' : ''}`} onClick={() => setAcctTab('users')}>Users</button>
-            <button className={`acct-tab-btn ${acctTab === 'perms' ? 'active' : ''}`} onClick={() => setAcctTab('perms')}>Permissions</button>
-            <button className={`acct-tab-btn ${acctTab === 'groups' ? 'active' : ''}`} onClick={() => setAcctTab('groups')}>Permission Groups</button>
+            <button
+              className={`acct-tab-btn ${acctTab === 'users' ? 'active' : ''}`}
+              onClick={() => setAcctTab('users')}
+            >
+              Users
+            </button>
+            <button
+              className={`acct-tab-btn ${acctTab === 'perms' ? 'active' : ''}`}
+              onClick={() => setAcctTab('perms')}
+            >
+              Permissions
+            </button>
+            <button
+              className={`acct-tab-btn ${acctTab === 'groups' ? 'active' : ''}`}
+              onClick={() => setAcctTab('groups')}
+            >
+              Permission Groups
+            </button>
+            <button
+              className={`acct-tab-btn ${acctTab === 'connection' ? 'active' : ''}`}
+              onClick={() => setAcctTab('connection')}
+            >
+              Connection
+            </button>
             {isSys && (
               <button
                 className={`acct-tab-btn ${acctTab === 'sessions' ? 'active' : ''}`}
-                onClick={() => { setAcctTab('sessions'); loadSessions(); }}
-              >Sessions</button>
+                onClick={() => {
+                  setAcctTab('sessions');
+                  loadSessions();
+                }}
+              >
+                Sessions
+              </button>
             )}
           </div>
-          <button className="btn" onClick={() => { loadUsers(); loadOnline(); }}>↻ Refresh</button>
-          {isSys && <button className="btn btn-primary" onClick={() => setAddOpen(true)}>+ Add User</button>}
+          <button
+            className="btn"
+            onClick={() => {
+              loadUsers();
+              loadOnline();
+            }}
+          >
+            ↻ Refresh
+          </button>
+          {isSys && (
+            <button className="btn btn-primary" onClick={() => setAddOpen(true)}>
+              + Add User
+            </button>
+          )}
         </div>
       </div>
 
-      {msg && <div className={`form-msg ${msg.type}`} style={{ marginBottom: 10 }}>{msg.text}</div>}
+      {msg && (
+        <div className={`form-msg ${msg.type}`} style={{ marginBottom: 10 }}>
+          {msg.text}
+        </div>
+      )}
 
       {acctTab === 'users' ? (
         <>
-        <div className="settings-card acct-table-card">
-          <table className="acct-table">
-            <thead>
-              <tr>
-                <th className="acct-col-user">USERNAME / DISPLAY</th>
-                <th className="acct-col-fullname">FULL NAME (VN)</th>
-                <th className="acct-col-id text-center">ID NO.</th>
-                <th className="acct-col-email">EMAIL</th>
-                <th className="acct-col-phone">PHONE</th>
-                <th className="acct-col-role text-center">ROLE</th>
-                <th className="acct-col-dept text-center" title="Department (Sprint S2 — informational + default group assignment)">DEPT.</th>
-                <th className="acct-col-pg text-center" title="Permission Group — controls tab visibility and read/edit mode">PERM. GROUP</th>
-                <th className="acct-col-token text-center" title="Session token duration">⏱ TOKEN</th>
-                <th className="acct-col-pwd text-center">PWD C</th>
-                <th className="acct-col-del text-center" title="Can Delete Quotes">DEL?</th>
-                <th className="acct-col-approval text-center" title="Approval chain (Cost→Sales→Finance) — who can sign off at each gate">APPROVAL</th>
-                <th className="acct-col-actions text-center">ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map(u => {
-                const rc = ACCT_ROLE_COLORS[u.role] || '#64748b';
-                const isMe = u.id === currentUser?.id;
-                const ttlHours = u.session_ttl ? Math.round(u.session_ttl / 3600) : 0;
-                const permRoleAuto = ['sys', 'admin', 'cost'].includes(u.role);
-                const canDelChecked = permRoleAuto || u.permissions?.canDeleteQuote === true;
-                return (
-                  <tr key={u.id}>
-                    <td>
-                      <div className="acct-user-cell">
-                        <div className="acct-user-avatar">
-                          <svg viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                          </svg>
-                        </div>
-                        <div>
-                          <div className="acct-username">
-                            {u.username}
-                            {isMe && <span className="acct-me-badge">me</span>}
+          <div className="settings-card acct-table-card">
+            <table className="acct-table">
+              <thead>
+                <tr>
+                  <th className="acct-col-user">USERNAME / DISPLAY</th>
+                  <th className="acct-col-fullname">FULL NAME (VN)</th>
+                  <th className="acct-col-id text-center">ID NO.</th>
+                  <th className="acct-col-email">EMAIL</th>
+                  <th className="acct-col-phone">PHONE</th>
+                  <th className="acct-col-role text-center">ROLE</th>
+                  <th
+                    className="acct-col-dept text-center"
+                    title="Department (Sprint S2 — informational + default group assignment)"
+                  >
+                    DEPT.
+                  </th>
+                  <th
+                    className="acct-col-pg text-center"
+                    title="Permission Group — controls tab visibility and read/edit mode"
+                  >
+                    PERM. GROUP
+                  </th>
+                  <th className="acct-col-token text-center" title="Session token duration">
+                    ⏱ TOKEN
+                  </th>
+                  <th className="acct-col-pwd text-center">PWD C</th>
+                  <th className="acct-col-del text-center" title="Can Delete Quotes">
+                    DEL?
+                  </th>
+                  <th
+                    className="acct-col-approval text-center"
+                    title="Approval chain (Cost→Sales→Finance) — who can sign off at each gate"
+                  >
+                    APPROVAL
+                  </th>
+                  <th className="acct-col-actions text-center">ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((u) => {
+                  const rc = ACCT_ROLE_COLORS[u.role] || '#64748b';
+                  const isMe = u.id === currentUser?.id;
+                  const ttlHours = u.session_ttl ? Math.round(u.session_ttl / 3600) : 0;
+                  const permRoleAuto = ['sys', 'admin', 'cost'].includes(u.role);
+                  const canDelChecked = permRoleAuto || u.permissions?.canDeleteQuote === true;
+                  return (
+                    <tr key={u.id}>
+                      <td>
+                        <div className="acct-user-cell">
+                          <div className="acct-user-avatar">
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              aria-hidden="true"
+                            >
+                              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                            </svg>
                           </div>
-                          <div className="acct-display">{u.english_name || u.username}</div>
+                          <div>
+                            <div className="acct-username">
+                              {u.username}
+                              {isMe && <span className="acct-me-badge">me</span>}
+                            </div>
+                            <div className="acct-display">{u.english_name || u.username}</div>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="acct-cell-fullname">{u.full_name || '—'}</td>
-                    <td className="text-center mono">{u.id_no || '—'}</td>
-                    <td className="acct-cell-muted acct-cell-ellipsis" title={u.email || ''}>{u.email || '—'}</td>
-                    <td className="acct-cell-muted">{u.phone || '—'}</td>
-                    <td className="text-center">
-                      {isSys && !isMe ? (
-                        <select
-                          value={u.role}
-                          onChange={e => handleChangeRole(u.id, e.target.value)}
-                          className="acct-role-select"
-                          style={{ color: rc, borderColor: rc + '55' }}
-                        >
-                          {Object.keys(ACCT_ROLE_COLORS).map(r => (
-                            <option key={r} value={r}>{ACCT_ROLE_LABEL[r] || r}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span className="acct-role-pill" style={{ color: rc }}>
-                          {ACCT_ROLE_ICONS[u.role]} {ACCT_ROLE_LABEL[u.role] || u.role}
-                        </span>
-                      )}
-                    </td>
-                    {/* Sprint S2 — Department + Permission Group cells */}
-                    <td className="text-center">
-                      {isAdminPlus ? (
-                        <select
-                          value={u.department || ''}
-                          onChange={e => handleChangeDepartment(u.id, e.target.value)}
-                          className="acct-pg-select"
-                          title={`Department for ${u.username}`}
-                        >
-                          <option value="">—</option>
-                          {pgDepartments.map(d => <option key={d} value={d}>{d}</option>)}
-                        </select>
-                      ) : (
-                        <span className="acct-cell-muted">{u.department || '—'}</span>
-                      )}
-                    </td>
-                    <td className="text-center">
-                      {isAdminPlus ? (
-                        <select
-                          value={u.permission_group_id || ''}
-                          onChange={e => handleChangePermissionGroup(u.id, e.target.value)}
-                          className="acct-pg-select"
-                          title={`Permission group for ${u.username}. Changing it will revoke the user's sessions.`}
-                        >
-                          <option value="">— (role only)</option>
-                          {pgGroups.map(g => (
-                            <option key={g.id} value={g.id}>{g.name}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span className="acct-cell-muted">
-                          {pgGroups.find(g => g.id === u.permission_group_id)?.name || '—'}
-                        </span>
-                      )}
-                    </td>
-                    <td className="text-center">
-                      {isSys ? (
-                        <select
-                          value={ttlHours}
-                          onChange={e => handleSetTtl(u.id, e.target.value)}
-                          className="acct-ttl-select"
-                          title={`Session token duration for ${u.username}`}
-                        >
-                          {TTL_OPTS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
-                        </select>
-                      ) : (
-                        <span className="acct-cell-muted">{ttlHours > 0 ? ttlHours + 'h' : 'Def'}</span>
-                      )}
-                    </td>
-                    <td className="text-center">{pwdAgeBadge(u.lastPwdChange)}</td>
-                    <td className="text-center">
-                      {isAdminPlus ? (
-                        <input
-                          type="checkbox"
-                          checked={canDelChecked}
-                          disabled={permRoleAuto}
-                          onChange={e => handleTogglePerm(u.id, e.target.checked)}
-                          title={permRoleAuto ? 'Role already has delete access' : 'Toggle delete permission'}
-                          style={{ width: 16, height: 16, cursor: permRoleAuto ? 'not-allowed' : 'pointer', accentColor: '#0f62fe' }}
-                        />
-                      ) : '—'}
-                    </td>
-                    <td className="text-center acct-cell-approval">
-                      {(() => {
-                        const roles = Array.isArray(u.approval_roles) ? u.approval_roles : [];
-                        const hasSales = roles.includes('sales_mgr');
-                        const hasFinance = roles.includes('finance_dir');
-                        if (!isSys) {
-                          // Read-only badges for non-sys. Admin+ can see
-                          // but only sys can grant (matches server auth).
-                          if (!hasSales && !hasFinance) return <span className="acct-cell-muted">—</span>;
+                      </td>
+                      <td className="acct-cell-fullname">{u.full_name || '—'}</td>
+                      <td className="text-center mono">{u.id_no || '—'}</td>
+                      <td className="acct-cell-muted acct-cell-ellipsis" title={u.email || ''}>
+                        {u.email || '—'}
+                      </td>
+                      <td className="acct-cell-muted">{u.phone || '—'}</td>
+                      <td className="text-center">
+                        {isSys && !isMe ? (
+                          <select
+                            value={u.role}
+                            onChange={(e) => handleChangeRole(u.id, e.target.value)}
+                            className="acct-role-select"
+                            style={{ color: rc, borderColor: rc + '55' }}
+                          >
+                            {Object.keys(ACCT_ROLE_COLORS).map((r) => (
+                              <option key={r} value={r}>
+                                {ACCT_ROLE_LABEL[r] || r}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="acct-role-pill" style={{ color: rc }}>
+                            {ACCT_ROLE_ICONS[u.role]} {ACCT_ROLE_LABEL[u.role] || u.role}
+                          </span>
+                        )}
+                      </td>
+                      {/* Sprint S2 — Department + Permission Group cells */}
+                      <td className="text-center">
+                        {isAdminPlus ? (
+                          <select
+                            value={u.department || ''}
+                            onChange={(e) => handleChangeDepartment(u.id, e.target.value)}
+                            className="acct-pg-select"
+                            title={`Department for ${u.username}`}
+                          >
+                            <option value="">—</option>
+                            {pgDepartments.map((d) => (
+                              <option key={d} value={d}>
+                                {d}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="acct-cell-muted">{u.department || '—'}</span>
+                        )}
+                      </td>
+                      <td className="text-center">
+                        {isAdminPlus ? (
+                          <select
+                            value={u.permission_group_id || ''}
+                            onChange={(e) => handleChangePermissionGroup(u.id, e.target.value)}
+                            className="acct-pg-select"
+                            title={`Permission group for ${u.username}. Changing it will revoke the user's sessions.`}
+                          >
+                            <option value="">— (role only)</option>
+                            {pgGroups.map((g) => (
+                              <option key={g.id} value={g.id}>
+                                {g.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="acct-cell-muted">
+                            {pgGroups.find((g) => g.id === u.permission_group_id)?.name || '—'}
+                          </span>
+                        )}
+                      </td>
+                      <td className="text-center">
+                        {isSys ? (
+                          <select
+                            value={ttlHours}
+                            onChange={(e) => handleSetTtl(u.id, e.target.value)}
+                            className="acct-ttl-select"
+                            title={`Session token duration for ${u.username}`}
+                          >
+                            {TTL_OPTS.map((o) => (
+                              <option key={o.v} value={o.v}>
+                                {o.l}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="acct-cell-muted">
+                            {ttlHours > 0 ? ttlHours + 'h' : 'Def'}
+                          </span>
+                        )}
+                      </td>
+                      <td className="text-center">{pwdAgeBadge(u.lastPwdChange)}</td>
+                      <td className="text-center">
+                        {isAdminPlus ? (
+                          <input
+                            type="checkbox"
+                            checked={canDelChecked}
+                            disabled={permRoleAuto}
+                            onChange={(e) => handleTogglePerm(u.id, e.target.checked)}
+                            title={
+                              permRoleAuto
+                                ? 'Role already has delete access'
+                                : 'Toggle delete permission'
+                            }
+                            style={{
+                              width: 16,
+                              height: 16,
+                              cursor: permRoleAuto ? 'not-allowed' : 'pointer',
+                              accentColor: '#0f62fe',
+                            }}
+                          />
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td className="text-center acct-cell-approval">
+                        {(() => {
+                          const roles = Array.isArray(u.approval_roles) ? u.approval_roles : [];
+                          const hasSales = roles.includes('sales_mgr');
+                          const hasFinance = roles.includes('finance_dir');
+                          if (!isSys) {
+                            // Read-only badges for non-sys. Admin+ can see
+                            // but only sys can grant (matches server auth).
+                            if (!hasSales && !hasFinance)
+                              return <span className="acct-cell-muted">—</span>;
+                            return (
+                              <span className="acct-approval-pills">
+                                {hasSales && (
+                                  <span
+                                    className="acct-approval-pill acct-approval-sales"
+                                    title="Sales manager approval"
+                                  >
+                                    S
+                                  </span>
+                                )}
+                                {hasFinance && (
+                                  <span
+                                    className="acct-approval-pill acct-approval-finance"
+                                    title="Finance director approval"
+                                  >
+                                    F
+                                  </span>
+                                )}
+                              </span>
+                            );
+                          }
                           return (
                             <span className="acct-approval-pills">
-                              {hasSales && <span className="acct-approval-pill acct-approval-sales" title="Sales manager approval">S</span>}
-                              {hasFinance && <span className="acct-approval-pill acct-approval-finance" title="Finance director approval">F</span>}
+                              <button
+                                type="button"
+                                className={`acct-approval-pill acct-approval-sales ${hasSales ? 'on' : 'off'}`}
+                                onClick={() => handleToggleApprovalRole(u, 'sales_mgr')}
+                                title={`Sales manager gate — ${hasSales ? 'click to revoke' : 'click to grant'}`}
+                              >
+                                S
+                              </button>
+                              <button
+                                type="button"
+                                className={`acct-approval-pill acct-approval-finance ${hasFinance ? 'on' : 'off'}`}
+                                onClick={() => handleToggleApprovalRole(u, 'finance_dir')}
+                                title={`Finance director gate — ${hasFinance ? 'click to revoke' : 'click to grant'}`}
+                              >
+                                F
+                              </button>
                             </span>
                           );
-                        }
-                        return (
-                          <span className="acct-approval-pills">
+                        })()}
+                      </td>
+                      <td className="text-center">
+                        <div className="acct-action-btns">
+                          {(isMe || isAdminPlus) && (
                             <button
-                              type="button"
-                              className={`acct-approval-pill acct-approval-sales ${hasSales ? 'on' : 'off'}`}
-                              onClick={() => handleToggleApprovalRole(u, 'sales_mgr')}
-                              title={`Sales manager gate — ${hasSales ? 'click to revoke' : 'click to grant'}`}
-                            >S</button>
+                              className="acct-sq-btn acct-sq-edit"
+                              onClick={() => handleEdit(u)}
+                              title="Edit profile"
+                            >
+                              {AcctIcon.edit}
+                            </button>
+                          )}
+                          {(isMe || isAdminPlus) && (
                             <button
-                              type="button"
-                              className={`acct-approval-pill acct-approval-finance ${hasFinance ? 'on' : 'off'}`}
-                              onClick={() => handleToggleApprovalRole(u, 'finance_dir')}
-                              title={`Finance director gate — ${hasFinance ? 'click to revoke' : 'click to grant'}`}
-                            >F</button>
-                          </span>
-                        );
-                      })()}
-                    </td>
-                    <td className="text-center">
-                      <div className="acct-action-btns">
-                        {(isMe || isAdminPlus) && (
-                          <button className="acct-sq-btn acct-sq-edit" onClick={() => handleEdit(u)} title="Edit profile">{AcctIcon.edit}</button>
-                        )}
-                        {(isMe || isAdminPlus) && (
-                          <button className="acct-sq-btn acct-sq-key" onClick={() => handleResetPwd(u)} title="Reset password">{AcctIcon.key}</button>
-                        )}
-                        {/* Sprint 1.5 — SAP/IFS handover. Generates a random
+                              className="acct-sq-btn acct-sq-key"
+                              onClick={() => handleResetPwd(u)}
+                              title="Reset password"
+                            >
+                              {AcctIcon.key}
+                            </button>
+                          )}
+                          {/* Sprint 1.5 — SAP/IFS handover. Generates a random
                             temp pwd + opens the Provisioning Card modal so
                             the admin can copy/print the credentials. Only
                             available to admins acting on OTHER users (you
                             don't reset your own pwd through this flow). */}
-                        {!isMe && isAdminPlus && (
-                          <button className="acct-sq-btn acct-sq-card" onClick={() => handleGenerateTempPwd(u)} title="Generate temp password & provisioning card">{AcctIcon.card}</button>
-                        )}
-                        {(isMe || isSys) && (
-                          <button className="acct-sq-btn acct-sq-shield" onClick={() => flash('info', '2FA / TOTP setup coming soon')} title="Setup 2FA">{AcctIcon.shield}</button>
-                        )}
-                        {!isMe && isSys && (
-                          <button className="acct-sq-btn acct-sq-lock" onClick={() => flash('info', 'Lock / unlock coming soon')} title={u.locked ? 'Unlock user' : 'Lock user'}>{u.locked ? AcctIcon.unlock : AcctIcon.lock}</button>
-                        )}
-                        {!isMe && isSys && (
-                          <button className="acct-sq-btn acct-sq-trash" onClick={() => handleDelete(u)} title="Delete user">{AcctIcon.trash}</button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        {!isSys && (
-          <div className="acct-warn-banner">
-            ⚠️ Only <b>SYS</b> can create/delete users and change roles. You are logged in as <b>{currentUser?.role || 'unknown'}</b>.
+                          {!isMe && isAdminPlus && (
+                            <button
+                              className="acct-sq-btn acct-sq-card"
+                              onClick={() => handleGenerateTempPwd(u)}
+                              title="Generate temp password & provisioning card"
+                            >
+                              {AcctIcon.card}
+                            </button>
+                          )}
+                          {(isMe || isSys) && (
+                            <button
+                              className="acct-sq-btn acct-sq-shield"
+                              onClick={() => flash('info', '2FA / TOTP setup coming soon')}
+                              title="Setup 2FA"
+                            >
+                              {AcctIcon.shield}
+                            </button>
+                          )}
+                          {!isMe && isSys && (
+                            <button
+                              className="acct-sq-btn acct-sq-lock"
+                              onClick={() => flash('info', 'Lock / unlock coming soon')}
+                              title={u.locked ? 'Unlock user' : 'Lock user'}
+                            >
+                              {u.locked ? AcctIcon.unlock : AcctIcon.lock}
+                            </button>
+                          )}
+                          {!isMe && isSys && (
+                            <button
+                              className="acct-sq-btn acct-sq-trash"
+                              onClick={() => handleDelete(u)}
+                              title="Delete user"
+                            >
+                              {AcctIcon.trash}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        )}
+          {!isSys && (
+            <div className="acct-warn-banner">
+              ⚠️ Only <b>SYS</b> can create/delete users and change roles. You are logged in as{' '}
+              <b>{currentUser?.role || 'unknown'}</b>.
+            </div>
+          )}
         </>
       ) : (
         /* Permissions Tab */
         <div className="settings-card">
           {/* Role cards */}
           <div className="perm-role-cards">
-            {['sys','admin','cost','user','viewonly'].map(r => (
+            {['sys', 'admin', 'cost', 'user', 'viewonly'].map((r) => (
               <div key={r} className="perm-role-card">
-                <div className="perm-role-icon" style={{ background: `${ACCT_ROLE_COLORS[r]}15`, color: ACCT_ROLE_COLORS[r] }}>
+                <div
+                  className="perm-role-icon"
+                  style={{ background: `${ACCT_ROLE_COLORS[r]}15`, color: ACCT_ROLE_COLORS[r] }}
+                >
                   {ACCT_ROLE_ICONS[r]}
                 </div>
                 <div className="perm-role-name">{r.toUpperCase()}</div>
                 <div className="perm-role-label">{ROLE_LABELS[r]}</div>
-                <div className="perm-role-level" style={{ color: ACCT_ROLE_COLORS[r] }}>Level {ROLE_LEVELS[r]}</div>
+                <div className="perm-role-level" style={{ color: ACCT_ROLE_COLORS[r] }}>
+                  Level {ROLE_LEVELS[r]}
+                </div>
               </div>
             ))}
           </div>
 
           {/* Permission Matrix */}
-          <h4 style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', margin: '20px 0 4px' }}>Permission Matrix</h4>
-          <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 12px' }}>Module access by role</p>
+          <h4 style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', margin: '20px 0 4px' }}>
+            Permission Matrix
+          </h4>
+          <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 12px' }}>
+            Module access by role
+          </p>
           <table className="perm-matrix">
             <thead>
               <tr>
                 <th>MODULE / FUNCTION</th>
-                {['sys','admin','cost','user','viewonly'].map(r => (
+                {['sys', 'admin', 'cost', 'user', 'viewonly'].map((r) => (
                   <th key={r} style={{ textAlign: 'center', color: ACCT_ROLE_COLORS[r] }}>
                     {ACCT_ROLE_ICONS[r]} {r.toUpperCase()}
                   </th>
@@ -1027,18 +1494,25 @@ function AccountSection() {
               </tr>
             </thead>
             <tbody>
-              {PERM_MODULES.map(sec => (
+              {PERM_MODULES.map((sec) => (
                 <React.Fragment key={sec.section}>
-                  <tr className="perm-section-row"><td colSpan={6}>{sec.section}</td></tr>
-                  {sec.rows.map(row => (
+                  <tr className="perm-section-row">
+                    <td colSpan={6}>{sec.section}</td>
+                  </tr>
+                  {sec.rows.map((row) => (
                     <tr key={row.fn}>
                       <td className="perm-fn">{row.fn}</td>
-                      {['sys','admin','cost','user','viewonly'].map(r => (
+                      {['sys', 'admin', 'cost', 'user', 'viewonly'].map((r) => (
                         <td key={r} className="perm-cell">
-                          {row[r] === true ? <span className="perm-check">✓</span>
-                           : row[r] === 'view' ? <span className="perm-view">👁</span>
-                           : row[r] === 'Own' ? <span className="perm-own">Own</span>
-                           : <span className="perm-no">—</span>}
+                          {row[r] === true ? (
+                            <span className="perm-check">✓</span>
+                          ) : row[r] === 'view' ? (
+                            <span className="perm-view">👁</span>
+                          ) : row[r] === 'Own' ? (
+                            <span className="perm-own">Own</span>
+                          ) : (
+                            <span className="perm-no">—</span>
+                          )}
                         </td>
                       ))}
                     </tr>
@@ -1050,13 +1524,26 @@ function AccountSection() {
         </div>
       )}
 
-      {acctTab === 'groups' && <PermissionGroupsSection isAdminPlus={isAdminPlus} onFlash={flash} />}
+      {acctTab === 'groups' && (
+        <PermissionGroupsSection isAdminPlus={isAdminPlus} onFlash={flash} />
+      )}
+
+      {acctTab === 'connection' && <ConnectionInfoSection />}
 
       {acctTab === 'sessions' && isSys && (
         <div className="settings-card acct-table-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderBottom: '1px solid var(--op-border-subtle, #e8eaed)' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '8px 12px',
+              borderBottom: '1px solid var(--op-border-subtle, #e8eaed)',
+            }}
+          >
             <div style={{ fontSize: 12, color: 'var(--op-text-secondary, #525252)' }}>
-              {sessions.length} active session(s) · token prefix shown for sys audit; full token nằm trong cookie/localStorage của user
+              {sessions.length} active session(s) · token prefix shown for sys audit; full token nằm
+              trong cookie/localStorage của user
             </div>
             <button className="btn" onClick={loadSessions} disabled={sessionsLoading}>
               {sessionsLoading ? '⏳' : '↻'} Refresh
@@ -1075,43 +1562,70 @@ function AccountSection() {
             </thead>
             <tbody>
               {sessions.length === 0 ? (
-                <tr><td colSpan="6" style={{ padding: 20, textAlign: 'center', color: 'var(--op-text-tertiary, #6f6f6f)' }}>
-                  {sessionsLoading ? 'Loading…' : 'No active sessions'}
-                </td></tr>
-              ) : sessions.map(s => {
-                const exp = new Date(s.expires_at);
-                const remainMin = Math.max(0, Math.floor((exp.getTime() - Date.now()) / 60000));
-                const expLbl = remainMin > 60 ? `${Math.floor(remainMin / 60)}h ${remainMin % 60}m` : `${remainMin}m`;
-                return (
-                  <tr key={s.token_prefix + s.user_id}>
-                    <td><strong>{s.username}</strong></td>
-                    <td className="text-center">
-                      <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 3, background: 'var(--op-tag-bg, #f4f4f4)' }}>
-                        {s.role}
-                      </span>
-                    </td>
-                    <td className="text-center">
-                      {s.totp_verified
-                        ? <span style={{ color: '#24a148' }}>✓</span>
-                        : <span style={{ color: '#da1e28' }}>✗</span>}
-                    </td>
-                    <td className="mono" style={{ fontSize: 11 }}>{s.token_prefix}…</td>
-                    <td style={{ fontSize: 11 }}>
-                      <span title={exp.toLocaleString()}>{expLbl}</span>
-                    </td>
-                    <td className="text-center">
-                      <button
-                        className="btn btn-sm"
-                        onClick={() => handleRevokeSessions(s.username)}
-                        title={`Revoke all sessions for ${s.username}`}
-                        style={{ color: '#a2191f', borderColor: '#fecdd3' }}
-                      >
-                        Revoke
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+                <tr>
+                  <td
+                    colSpan="6"
+                    style={{
+                      padding: 20,
+                      textAlign: 'center',
+                      color: 'var(--op-text-tertiary, #6f6f6f)',
+                    }}
+                  >
+                    {sessionsLoading ? 'Loading…' : 'No active sessions'}
+                  </td>
+                </tr>
+              ) : (
+                sessions.map((s) => {
+                  const exp = new Date(s.expires_at);
+                  const remainMin = Math.max(0, Math.floor((exp.getTime() - Date.now()) / 60000));
+                  const expLbl =
+                    remainMin > 60
+                      ? `${Math.floor(remainMin / 60)}h ${remainMin % 60}m`
+                      : `${remainMin}m`;
+                  return (
+                    <tr key={s.token_prefix + s.user_id}>
+                      <td>
+                        <strong>{s.username}</strong>
+                      </td>
+                      <td className="text-center">
+                        <span
+                          style={{
+                            fontSize: 11,
+                            padding: '2px 6px',
+                            borderRadius: 3,
+                            background: 'var(--op-tag-bg, #f4f4f4)',
+                          }}
+                        >
+                          {s.role}
+                        </span>
+                      </td>
+                      <td className="text-center">
+                        {s.totp_verified ? (
+                          <span style={{ color: '#24a148' }}>✓</span>
+                        ) : (
+                          <span style={{ color: '#da1e28' }}>✗</span>
+                        )}
+                      </td>
+                      <td className="mono" style={{ fontSize: 11 }}>
+                        {s.token_prefix}…
+                      </td>
+                      <td style={{ fontSize: 11 }}>
+                        <span title={exp.toLocaleString()}>{expLbl}</span>
+                      </td>
+                      <td className="text-center">
+                        <button
+                          className="btn btn-sm"
+                          onClick={() => handleRevokeSessions(s.username)}
+                          title={`Revoke all sessions for ${s.username}`}
+                          style={{ color: '#a2191f', borderColor: '#fecdd3' }}
+                        >
+                          Revoke
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -1137,18 +1651,31 @@ function AccountSection() {
 // ── Add User Modal — mirrors COST V1.0's _newUserModal ──────
 function AddUserModal({ onClose, onCreate }) {
   const [form, setForm] = useState({
-    username: '', password: '', full_name: '', english_name: '',
-    id_no: '', email: '', phone: '', role: 'user', canDelete: false,
+    username: '',
+    password: '',
+    full_name: '',
+    english_name: '',
+    id_no: '',
+    email: '',
+    phone: '',
+    role: 'user',
+    canDelete: false,
   });
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
-  const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+  const set = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
 
   async function handleSubmit(e) {
     e.preventDefault();
     setErr('');
-    if (!form.username.trim() || !form.password) { setErr('⚠️ Username and Password are required.'); return; }
-    if (form.password.length < 6) { setErr('❌ Password must be at least 6 chars.'); return; }
+    if (!form.username.trim() || !form.password) {
+      setErr('⚠️ Username and Password are required.');
+      return;
+    }
+    if (form.password.length < 6) {
+      setErr('❌ Password must be at least 6 chars.');
+      return;
+    }
     setBusy(true);
     try {
       await onCreate({
@@ -1171,41 +1698,92 @@ function AddUserModal({ onClose, onCreate }) {
 
   return (
     <Modal open onClose={onClose} size="md" severity="info" ariaLabelledBy="add-user-title">
-      <Modal.Header id="add-user-title" title="Create New User" subtitle="Required fields marked with ★" severity="info" />
+      <Modal.Header
+        id="add-user-title"
+        title="Create New User"
+        subtitle="Required fields marked with ★"
+        severity="info"
+      />
       <Modal.Body>
         <form id="add-user-form" onSubmit={handleSubmit}>
           <div className="op-form-grid">
             <div className="op-form-field">
               <label>Username ★</label>
-              <input className="op-form-input" type="text" value={form.username} onChange={e => set('username', e.target.value)} placeholder="Login username" autoFocus />
+              <input
+                className="op-form-input"
+                type="text"
+                value={form.username}
+                onChange={(e) => set('username', e.target.value)}
+                placeholder="Login username"
+                autoFocus
+              />
             </div>
             <div className="op-form-field">
               <label>Password ★</label>
-              <input className="op-form-input" type="password" value={form.password} onChange={e => set('password', e.target.value)} placeholder="Min 6 chars" />
+              <input
+                className="op-form-input"
+                type="password"
+                value={form.password}
+                onChange={(e) => set('password', e.target.value)}
+                placeholder="Min 6 chars"
+              />
             </div>
             <div className="op-form-field">
               <label>Full Name (VN)</label>
-              <input className="op-form-input" type="text" value={form.full_name} onChange={e => set('full_name', e.target.value)} />
+              <input
+                className="op-form-input"
+                type="text"
+                value={form.full_name}
+                onChange={(e) => set('full_name', e.target.value)}
+              />
             </div>
             <div className="op-form-field">
               <label>English Name</label>
-              <input className="op-form-input" type="text" value={form.english_name} onChange={e => set('english_name', e.target.value)} placeholder="For NPI Owner" />
+              <input
+                className="op-form-input"
+                type="text"
+                value={form.english_name}
+                onChange={(e) => set('english_name', e.target.value)}
+                placeholder="For NPI Owner"
+              />
             </div>
             <div className="op-form-field">
               <label>ID No.</label>
-              <input className="op-form-input" type="text" value={form.id_no} onChange={e => set('id_no', e.target.value)} placeholder="CCCD / Employee ID" />
+              <input
+                className="op-form-input"
+                type="text"
+                value={form.id_no}
+                onChange={(e) => set('id_no', e.target.value)}
+                placeholder="CCCD / Employee ID"
+              />
             </div>
             <div className="op-form-field">
               <label>Email</label>
-              <input className="op-form-input" type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="email@company.com" />
+              <input
+                className="op-form-input"
+                type="email"
+                value={form.email}
+                onChange={(e) => set('email', e.target.value)}
+                placeholder="email@company.com"
+              />
             </div>
             <div className="op-form-field">
               <label>Phone</label>
-              <input className="op-form-input" type="text" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+84..." />
+              <input
+                className="op-form-input"
+                type="text"
+                value={form.phone}
+                onChange={(e) => set('phone', e.target.value)}
+                placeholder="+84..."
+              />
             </div>
             <div className="op-form-field">
               <label>Role</label>
-              <select className="op-form-input" value={form.role} onChange={e => set('role', e.target.value)}>
+              <select
+                className="op-form-input"
+                value={form.role}
+                onChange={(e) => set('role', e.target.value)}
+              >
                 <option value="user">USER — Standard</option>
                 <option value="cost">COST — Cost Engineer</option>
                 <option value="admin">ADMIN — Dept Manager</option>
@@ -1215,18 +1793,33 @@ function AddUserModal({ onClose, onCreate }) {
             </div>
             <div className="op-form-field">
               <label>Can Delete Quotes?</label>
-              <select className="op-form-input" value={form.canDelete ? '1' : '0'} onChange={e => set('canDelete', e.target.value === '1')}>
+              <select
+                className="op-form-input"
+                value={form.canDelete ? '1' : '0'}
+                onChange={(e) => set('canDelete', e.target.value === '1')}
+              >
                 <option value="0">No</option>
                 <option value="1">Yes</option>
               </select>
             </div>
           </div>
-          {err && <div className="form-msg error" style={{ marginTop: 12 }}>{err}</div>}
+          {err && (
+            <div className="form-msg error" style={{ marginTop: 12 }}>
+              {err}
+            </div>
+          )}
         </form>
       </Modal.Body>
       <Modal.Footer>
-        <button type="button" className="op-btn op-btn-ghost" onClick={onClose}>Cancel</button>
-        <button type="submit" form="add-user-form" className="op-btn op-btn-primary" disabled={busy}>
+        <button type="button" className="op-btn op-btn-ghost" onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          type="submit"
+          form="add-user-form"
+          className="op-btn op-btn-primary"
+          disabled={busy}
+        >
           {busy ? 'Creating…' : 'Create User'}
         </button>
       </Modal.Footer>
@@ -1250,14 +1843,16 @@ function BackupSection() {
   const [uploading, setUploading] = useState(false);
   const uploadInputRef = useRef(null);
 
-  useEffect(() => { loadBackups(); }, []);
+  useEffect(() => {
+    loadBackups();
+  }, []);
 
   async function loadBackups() {
     setLoading(true);
     try {
       const [dataRes, codeRes] = await Promise.all([
         costApi.getBackupList().catch(() => ({ files: [], dir: '' })),
-        costApi.getCodeBackupList().catch(() => ({ files: [], dir: '' }))
+        costApi.getCodeBackupList().catch(() => ({ files: [], dir: '' })),
       ]);
       setDataBackups(dataRes.files || []);
       setCodeBackups(codeRes.files || []);
@@ -1293,7 +1888,7 @@ function BackupSection() {
         // can fix the underlying cause (re-sign-in to the File Provider,
         // clear a permission issue, etc.) rather than wondering why the
         // size looks smaller than expected.
-        const list = res.skipped.map(s => `${s.entry} (${s.reason})`).join('; ');
+        const list = res.skipped.map((s) => `${s.entry} (${s.reason})`).join('; ');
         setMsg({ type: 'warn', text: `${base}. Skipped ${res.skipped.length}: ${list}` });
       } else {
         setMsg({ type: 'success', text: base });
@@ -1305,20 +1900,26 @@ function BackupSection() {
   }
 
   async function restoreDataBackup(filename) {
-    if (!confirm(
-      `Restore data from "${filename}"?\n\n` +
-      `This will OVERWRITE all current library data (quotes, materials, rates, ` +
-      `DDL, finance, ink calc, etc.) with the contents of this backup.\n\n` +
-      `A safety snapshot of the current state will be saved as pre_restore_<timestamp>.json ` +
-      `before the restore runs, so you can roll back if needed.\n\n` +
-      `Proceed?`
-    )) return;
+    if (
+      !confirm(
+        `Restore data from "${filename}"?\n\n` +
+          `This will OVERWRITE all current library data (quotes, materials, rates, ` +
+          `DDL, finance, ink calc, etc.) with the contents of this backup.\n\n` +
+          `A safety snapshot of the current state will be saved as pre_restore_<timestamp>.json ` +
+          `before the restore runs, so you can roll back if needed.\n\n` +
+          `Proceed?`
+      )
+    )
+      return;
     setMsg(null);
     try {
       const res = await costApi.restoreBackup(filename);
       const summary = res.restored ? `${res.restored.length} datasets restored` : 'restored';
       const warn = res.partial ? ` ⚠️ ${res.failed?.length || 0} datasets failed` : '';
-      setMsg({ type: res.partial ? 'error' : 'success', text: `${summary}${warn}. Safety snapshot: ${res.pre_backup}` });
+      setMsg({
+        type: res.partial ? 'error' : 'success',
+        text: `${summary}${warn}. Safety snapshot: ${res.pre_backup}`,
+      });
       loadBackups();
     } catch (e) {
       setMsg({ type: 'error', text: e.message });
@@ -1326,19 +1927,25 @@ function BackupSection() {
   }
 
   async function restoreCodeBackup(filename) {
-    if (!confirm(
-      `Restore code from "${filename}"?\n\n` +
-      `⚠️  This will OVERWRITE all source files in the package (client/src, server/, ` +
-      `package.json, etc.) with the contents of this snapshot.\n\n` +
-      `A safety snapshot of the current source tree will be saved first.\n\n` +
-      `IMPORTANT: after the restore, you may need to restart the Node server ` +
-      `(since its own .js files will have been replaced while it was running).\n\n` +
-      `Proceed?`
-    )) return;
+    if (
+      !confirm(
+        `Restore code from "${filename}"?\n\n` +
+          `⚠️  This will OVERWRITE all source files in the package (client/src, server/, ` +
+          `package.json, etc.) with the contents of this snapshot.\n\n` +
+          `A safety snapshot of the current source tree will be saved first.\n\n` +
+          `IMPORTANT: after the restore, you may need to restart the Node server ` +
+          `(since its own .js files will have been replaced while it was running).\n\n` +
+          `Proceed?`
+      )
+    )
+      return;
     setMsg(null);
     try {
       const res = await costApi.restoreCode(filename);
-      setMsg({ type: 'success', text: `Code restored: ${res.restored_files || '?'} files. Safety snapshot: ${res.pre_backup}. Restart the server.` });
+      setMsg({
+        type: 'success',
+        text: `Code restored: ${res.restored_files || '?'} files. Safety snapshot: ${res.pre_backup}. Restart the server.`,
+      });
       loadBackups();
     } catch (e) {
       setMsg({ type: 'error', text: e.message });
@@ -1351,12 +1958,14 @@ function BackupSection() {
       setMsg({ type: 'error', text: 'Chỉ chấp nhận file .json (data backup snapshot)' });
       return;
     }
-    setUploading(true); setMsg(null);
+    setUploading(true);
+    setMsg(null);
     try {
       const res = await costApi.uploadBackup(file);
-      const sizeLbl = res.size > 1024 * 1024
-        ? `${(res.size / 1024 / 1024).toFixed(1)} MB`
-        : `${(res.size / 1024).toFixed(1)} KB`;
+      const sizeLbl =
+        res.size > 1024 * 1024
+          ? `${(res.size / 1024 / 1024).toFixed(1)} MB`
+          : `${(res.size / 1024).toFixed(1)} KB`;
       setMsg({
         type: 'success',
         text: `Đã upload "${res.filename}" (${sizeLbl}). Click Restore trong list để áp dụng.`,
@@ -1397,11 +2006,17 @@ function BackupSection() {
       {hasRole('admin') && <BackupScheduleCard onRunDone={loadBackups} />}
 
       <div className="ifs-tabs" style={{ marginBottom: 12 }}>
-        <button className={`ifs-tab ${activeTab === 'data' ? 'active' : ''}`} onClick={() => setActiveTab('data')}>
+        <button
+          className={`ifs-tab ${activeTab === 'data' ? 'active' : ''}`}
+          onClick={() => setActiveTab('data')}
+        >
           Data Backups
           <span className="ifs-tab-count">{dataBackups.length}</span>
         </button>
-        <button className={`ifs-tab ${activeTab === 'code' ? 'active' : ''}`} onClick={() => setActiveTab('code')}>
+        <button
+          className={`ifs-tab ${activeTab === 'code' ? 'active' : ''}`}
+          onClick={() => setActiveTab('code')}
+        >
           Code Backups
           <span className="ifs-tab-count">{codeBackups.length}</span>
         </button>
@@ -1410,7 +2025,9 @@ function BackupSection() {
       <div className="backup-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {activeTab === 'data' && (
           <>
-            <button className="btn btn-primary" onClick={createDataBackup}>Create Data Backup</button>
+            <button className="btn btn-primary" onClick={createDataBackup}>
+              Create Data Backup
+            </button>
             {hasRole('sys') && (
               <>
                 <input
@@ -1433,13 +2050,18 @@ function BackupSection() {
           </>
         )}
         {activeTab === 'code' && hasRole('admin') && (
-          <button className="btn btn-primary" onClick={createCodeBackup}>Create Code Backup</button>
+          <button className="btn btn-primary" onClick={createCodeBackup}>
+            Create Code Backup
+          </button>
         )}
       </div>
 
       {/* Backup folder path — mirrors the IFS dataset path row so the user can
           see (and copy) the exact on-disk location where snapshots are stored. */}
-      <div className="di-row-path bk-path-row" title="Folder where backups are stored on the server">
+      <div
+        className="di-row-path bk-path-row"
+        title="Folder where backups are stored on the server"
+      >
         <span className="di-path-icon">📂</span>
         <input
           type="text"
@@ -1448,11 +2070,9 @@ function BackupSection() {
           readOnly
           spellCheck={false}
         />
-        <button
-          className="di-path-copy"
-          title="Reload backup list"
-          onClick={() => loadBackups()}
-        >↺</button>
+        <button className="di-path-copy" title="Reload backup list" onClick={() => loadBackups()}>
+          ↺
+        </button>
         <button
           className="di-path-copy"
           title="Copy path"
@@ -1463,7 +2083,9 @@ function BackupSection() {
               setMsg({ type: 'success', text: 'Path copied to clipboard' });
             }
           }}
-        >⧉</button>
+        >
+          ⧉
+        </button>
       </div>
 
       {msg && <div className={`form-msg ${msg.type}`}>{msg.text}</div>}
@@ -1482,55 +2104,78 @@ function BackupSection() {
             </thead>
             <tbody>
               {backups.length === 0 ? (
-                <tr><td colSpan="5" style={{ padding: 0 }}>
-                  <EmptyState icon="💾" title="No backups yet" hint="Trigger a manual backup from the button above or wait for the daily auto-backup." />
-                </td></tr>
-              ) : backups.map((b, i) => {
-                const sizeLbl = b.size != null
-                  ? (b.size > 1024 * 1024
-                      ? `${(b.size / 1024 / 1024).toFixed(1)} MB`
-                      : `${(b.size / 1024).toFixed(1)} KB`)
-                  : '—';
-                const fileLbl = activeTab === 'code' && b.files ? ` (${b.files} files)` : '';
-                return (
-                <tr key={b.filename}>
-                  <td className="row-num">{i + 1}</td>
-                  <td className="cell-code">{b.filename}{fileLbl}</td>
-                  <td className="text-right mono">{sizeLbl}</td>
-                  <td className="cell-date">{b.date || '—'}</td>
-                  <td className="cell-actions" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {activeTab === 'data' && (
-                      <a
-                        href={costApi.downloadBackup(b.filename)}
-                        className="btn btn-sm"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Download
-                      </a>
-                    )}
-                    {hasRole('sys') && (
-                      <button
-                        className="btn btn-sm"
-                        onClick={() => (activeTab === 'data' ? restoreDataBackup(b.filename) : restoreCodeBackup(b.filename))}
-                        title={activeTab === 'data' ? 'Restore data from this backup' : 'Restore source code from this snapshot'}
-                      >
-                        Restore
-                      </button>
-                    )}
-                    {hasRole('sys') && (
-                      <button
-                        className="btn btn-sm"
-                        onClick={() => deleteBackup(b.filename)}
-                        style={{ color: '#dc2626' }}
-                      >
-                        Delete
-                      </button>
-                    )}
+                <tr>
+                  <td colSpan="5" style={{ padding: 0 }}>
+                    <EmptyState
+                      icon="💾"
+                      title="No backups yet"
+                      hint="Trigger a manual backup from the button above or wait for the daily auto-backup."
+                    />
                   </td>
                 </tr>
-                );
-              })}
+              ) : (
+                backups.map((b, i) => {
+                  const sizeLbl =
+                    b.size != null
+                      ? b.size > 1024 * 1024
+                        ? `${(b.size / 1024 / 1024).toFixed(1)} MB`
+                        : `${(b.size / 1024).toFixed(1)} KB`
+                      : '—';
+                  const fileLbl = activeTab === 'code' && b.files ? ` (${b.files} files)` : '';
+                  return (
+                    <tr key={b.filename}>
+                      <td className="row-num">{i + 1}</td>
+                      <td className="cell-code">
+                        {b.filename}
+                        {fileLbl}
+                      </td>
+                      <td className="text-right mono">{sizeLbl}</td>
+                      <td className="cell-date">{b.date || '—'}</td>
+                      <td
+                        className="cell-actions"
+                        style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}
+                      >
+                        {activeTab === 'data' && (
+                          <a
+                            href={costApi.downloadBackup(b.filename)}
+                            className="btn btn-sm"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Download
+                          </a>
+                        )}
+                        {hasRole('sys') && (
+                          <button
+                            className="btn btn-sm"
+                            onClick={() =>
+                              activeTab === 'data'
+                                ? restoreDataBackup(b.filename)
+                                : restoreCodeBackup(b.filename)
+                            }
+                            title={
+                              activeTab === 'data'
+                                ? 'Restore data from this backup'
+                                : 'Restore source code from this snapshot'
+                            }
+                          >
+                            Restore
+                          </button>
+                        )}
+                        {hasRole('sys') && (
+                          <button
+                            className="btn btn-sm"
+                            onClick={() => deleteBackup(b.filename)}
+                            style={{ color: '#dc2626' }}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -1573,8 +2218,11 @@ function fmtDuration(ms) {
 
 function fmtTime(iso) {
   if (!iso) return '—';
-  try { return new Date(iso).toLocaleString(); }
-  catch { return iso; }
+  try {
+    return new Date(iso).toLocaleString();
+  } catch {
+    return iso;
+  }
 }
 
 function BackupScheduleCard({ onRunDone }) {
@@ -1607,7 +2255,9 @@ function BackupScheduleCard({ onRunDone }) {
     }
   }, []);
 
-  useEffect(() => { reload(); }, [reload]);
+  useEffect(() => {
+    reload();
+  }, [reload]);
 
   const flash = (type, text) => {
     setMsg({ type, text });
@@ -1617,7 +2267,11 @@ function BackupScheduleCard({ onRunDone }) {
   async function handleSave() {
     setSaving(true);
     try {
-      await costApi.setBackupSchedule({ enabled, hour: Number(hour), retentionDays: Number(retentionDays) });
+      await costApi.setBackupSchedule({
+        enabled,
+        hour: Number(hour),
+        retentionDays: Number(retentionDays),
+      });
       flash('success', 'Schedule updated. Timer re-armed.');
       await reload();
     } catch (err) {
@@ -1628,15 +2282,23 @@ function BackupScheduleCard({ onRunDone }) {
   }
 
   async function handleRunNow() {
-    if (!confirm('Run backup cycle right now?\n\nThis runs the same SQLite + Library backup the scheduler would. Takes ~5–30s depending on data size. Safe to run any time — backups are atomic.')) return;
+    if (
+      !confirm(
+        'Run backup cycle right now?\n\nThis runs the same SQLite + Library backup the scheduler would. Takes ~5–30s depending on data size. Safe to run any time — backups are atomic.'
+      )
+    )
+      return;
     setRunning(true);
     try {
       const r = await costApi.runBackupNow();
       const ok = r?.summary?.ok;
       const dur = fmtDuration(r?.summary?.durationMs);
-      flash(ok ? 'success' : 'error',
-        ok ? `Backup complete (${dur}). Check the list below.`
-           : `Backup FAILED: ${r?.summary?.steps?.find(s => !s.ok)?.error || 'unknown'}`);
+      flash(
+        ok ? 'success' : 'error',
+        ok
+          ? `Backup complete (${dur}). Check the list below.`
+          : `Backup FAILED: ${r?.summary?.steps?.find((s) => !s.ok)?.error || 'unknown'}`
+      );
       await reload();
       onRunDone?.();
     } catch (err) {
@@ -1648,11 +2310,11 @@ function BackupScheduleCard({ onRunDone }) {
 
   if (loading) return <div className="bk-sched-card bk-sched-loading">Loading schedule…</div>;
 
-  const dirty = status && (
-    enabled !== !!status.enabled
-    || Number(hour) !== Number(status.hour ?? 2)
-    || Number(retentionDays) !== Number(status.retentionDays ?? 30)
-  );
+  const dirty =
+    status &&
+    (enabled !== !!status.enabled ||
+      Number(hour) !== Number(status.hour ?? 2) ||
+      Number(retentionDays) !== Number(status.retentionDays ?? 30));
 
   // Hour options 00-23 — show as HH:00 24-hour format.
   const hourOpts = Array.from({ length: 24 }, (_, i) => i);
@@ -1682,18 +2344,31 @@ function BackupScheduleCard({ onRunDone }) {
 
       <div className="bk-sched-form">
         <label className="bk-sched-row">
-          <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />
-          <span><b>Enable nightly backup</b><br /><small>Server runs the backup cycle once per day at the chosen hour.</small></span>
+          <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
+          <span>
+            <b>Enable nightly backup</b>
+            <br />
+            <small>Server runs the backup cycle once per day at the chosen hour.</small>
+          </span>
         </label>
 
         <label className="bk-sched-row">
           <span className="bk-sched-label">Run at hour</span>
-          <select value={hour} onChange={e => setHour(e.target.value)} disabled={!enabled} className="bk-sched-input">
-            {hourOpts.map(h => (
-              <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+          <select
+            value={hour}
+            onChange={(e) => setHour(e.target.value)}
+            disabled={!enabled}
+            className="bk-sched-input"
+          >
+            {hourOpts.map((h) => (
+              <option key={h} value={h}>
+                {String(h).padStart(2, '0')}:00
+              </option>
             ))}
           </select>
-          <small className="bk-sched-hint">Server local time. 02:00 is the default — pick low-activity hours.</small>
+          <small className="bk-sched-hint">
+            Server local time. 02:00 is the default — pick low-activity hours.
+          </small>
         </label>
 
         <label className="bk-sched-row">
@@ -1703,26 +2378,34 @@ function BackupScheduleCard({ onRunDone }) {
             min="1"
             max="3650"
             value={retentionDays}
-            onChange={e => setRetentionDays(e.target.value)}
+            onChange={(e) => setRetentionDays(e.target.value)}
             className="bk-sched-input"
           />
-          <small className="bk-sched-hint">Snapshots older than this are pruned after each run (min 10 most-recent always kept).</small>
+          <small className="bk-sched-hint">
+            Snapshots older than this are pruned after each run (min 10 most-recent always kept).
+          </small>
         </label>
       </div>
 
       <div className="bk-sched-last-run">
         <b>Last run:</b>{' '}
-        {status?.lastRun
-          ? <>
-              <span className={`bk-sched-badge ${status.lastRun.ok ? 'ok' : 'fail'}`}>
-                {status.lastRun.ok ? '✓ OK' : '✗ FAILED'}
-              </span>{' '}
-              {fmtTime(status.lastRun.startedAt)}{' '}
-              <small>({fmtDuration(status.lastRun.durationMs)}, {status.lastRun.steps?.length || 0} steps)</small>
-            </>
-          : <small>Never run on this server</small>}
+        {status?.lastRun ? (
+          <>
+            <span className={`bk-sched-badge ${status.lastRun.ok ? 'ok' : 'fail'}`}>
+              {status.lastRun.ok ? '✓ OK' : '✗ FAILED'}
+            </span>{' '}
+            {fmtTime(status.lastRun.startedAt)}{' '}
+            <small>
+              ({fmtDuration(status.lastRun.durationMs)}, {status.lastRun.steps?.length || 0} steps)
+            </small>
+          </>
+        ) : (
+          <small>Never run on this server</small>
+        )}
         {status?.lastError && (
-          <div className="bk-sched-err"><b>Last error:</b> {status.lastError}</div>
+          <div className="bk-sched-err">
+            <b>Last error:</b> {status.lastError}
+          </div>
         )}
       </div>
 
@@ -1733,7 +2416,7 @@ function BackupScheduleCard({ onRunDone }) {
           onClick={handleSave}
           disabled={!dirty || saving}
         >
-          {saving ? 'Saving…' : (dirty ? 'Save changes' : 'No changes')}
+          {saving ? 'Saving…' : dirty ? 'Save changes' : 'No changes'}
         </button>
         {dirty && (
           <button type="button" className="btn" onClick={reload} disabled={saving}>
@@ -1767,12 +2450,12 @@ function LogsSection() {
     try {
       const [statusRes, importRes] = await Promise.all([
         costApi.getUsersStatus().catch(() => ({ users: [] })),
-        api.get('/import/status').catch(() => null)
+        api.get('/import/status').catch(() => null),
       ]);
       // Server returns `users: [{id, username, role, online, last_seen, full_name}, ...]`
       const list = Array.isArray(statusRes?.users) ? statusRes.users : [];
       // Only keep users who are actually online (filtered by the online flag)
-      setOnlineUsers(list.filter(u => u && u.online));
+      setOnlineUsers(list.filter((u) => u && u.online));
       setImportStatus(importRes);
     } catch (e) {
       console.error('Logs load failed:', e);
@@ -1789,19 +2472,22 @@ function LogsSection() {
 
       {/* Online Users */}
       <section className="log-section">
-        <h4>Online Users {onlineUsers.length > 0 && <span className="log-count-badge">{onlineUsers.length}</span>}</h4>
+        <h4>
+          Online Users{' '}
+          {onlineUsers.length > 0 && <span className="log-count-badge">{onlineUsers.length}</span>}
+        </h4>
         <div className="settings-card">
           {onlineUsers.length === 0 ? (
-            <p className="empty-state" style={{ padding: 12 }}>No users online</p>
+            <p className="empty-state" style={{ padding: 12 }}>
+              No users online
+            </p>
           ) : (
             <div className="online-grid">
-              {onlineUsers.map(u => (
+              {onlineUsers.map((u) => (
                 <div key={u.id} className="online-user">
                   <span className="status-dot online" />
                   <span className="online-user-name">{u.full_name || u.username}</span>
-                  {u.role && (
-                    <span className={`role-badge role-${u.role}`}>{u.role}</span>
-                  )}
+                  {u.role && <span className={`role-badge role-${u.role}`}>{u.role}</span>}
                 </div>
               ))}
             </div>
@@ -1819,7 +2505,9 @@ function LogsSection() {
                 <div key={key} className={`data-status-item ${info.exists ? 'ds-ok' : 'ds-fail'}`}>
                   <div className="ds-row-top">
                     <span className={`ds-dot ${info.exists ? 'ok' : 'fail'}`} />
-                    <span className="ds-label">{IFS_LABELS[key] || key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                    <span className="ds-label">
+                      {IFS_LABELS[key] || key.replace(/([A-Z])/g, ' $1').trim()}
+                    </span>
                     <span className={`ds-badge ${info.exists ? 'ok' : 'fail'}`}>
                       {info.exists ? 'OK' : 'Not found'}
                     </span>
@@ -1827,7 +2515,9 @@ function LogsSection() {
                   {info.exists && (
                     <div className="ds-row-meta">
                       <span className="ds-size">{info.sizeHuman}</span>
-                      <span className="ds-date">{new Date(info.modified).toLocaleString('vi-VN')}</span>
+                      <span className="ds-date">
+                        {new Date(info.modified).toLocaleString('vi-VN')}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -1905,7 +2595,9 @@ function AuditLogSection() {
     }
   }, [isSys, limit, appliedEv, appliedUser, appliedSince]);
 
-  useEffect(() => { loadAudit(); /* fire on applied-filter change only */ }, [loadAudit]);
+  useEffect(() => {
+    loadAudit(); /* fire on applied-filter change only */
+  }, [loadAudit]);
 
   if (!isSys) {
     return (
@@ -1927,13 +2619,15 @@ function AuditLogSection() {
         {entries.length > 0 && <span className="log-count-badge">{entries.length}</span>}
       </h4>
       <div className="settings-card" style={{ padding: 12 }}>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10, alignItems: 'end' }}>
+        <div
+          style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10, alignItems: 'end' }}
+        >
           <label style={{ fontSize: 11, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ color: '#64748b' }}>Event contains</span>
             <input
               type="text"
               value={evFilter}
-              onChange={e => setEvFilter(e.target.value)}
+              onChange={(e) => setEvFilter(e.target.value)}
               placeholder="e.g. LOGIN / APPROVE"
               style={{ padding: '4px 8px', width: 160 }}
             />
@@ -1943,7 +2637,7 @@ function AuditLogSection() {
             <input
               type="text"
               value={userFilter}
-              onChange={e => setUserFilter(e.target.value)}
+              onChange={(e) => setUserFilter(e.target.value)}
               placeholder="username"
               style={{ padding: '4px 8px', width: 140 }}
             />
@@ -1953,7 +2647,7 @@ function AuditLogSection() {
             <input
               type="date"
               value={sinceFilter}
-              onChange={e => setSinceFilter(e.target.value)}
+              onChange={(e) => setSinceFilter(e.target.value)}
               style={{ padding: '4px 8px' }}
             />
           </label>
@@ -1961,7 +2655,7 @@ function AuditLogSection() {
             <span style={{ color: '#64748b' }}>Limit</span>
             <select
               value={limit}
-              onChange={e => setLimit(Number(e.target.value))}
+              onChange={(e) => setLimit(Number(e.target.value))}
               style={{ padding: '4px 8px' }}
             >
               <option value={50}>50</option>
@@ -1970,12 +2664,21 @@ function AuditLogSection() {
               <option value={5000}>5000 (max)</option>
             </select>
           </label>
-          <button className="op-btn op-btn-primary op-btn-sm" onClick={loadAudit} disabled={loading}>
+          <button
+            className="op-btn op-btn-primary op-btn-sm"
+            onClick={loadAudit}
+            disabled={loading}
+          >
             {loading ? 'Loading…' : 'Apply'}
           </button>
           <button
             className="op-btn op-btn-ghost op-btn-sm"
-            onClick={() => { setEvFilter(''); setUserFilter(''); setSinceFilter(''); setLimit(100); }}
+            onClick={() => {
+              setEvFilter('');
+              setUserFilter('');
+              setSinceFilter('');
+              setLimit(100);
+            }}
             disabled={loading}
           >
             Reset
@@ -1983,16 +2686,26 @@ function AuditLogSection() {
         </div>
 
         {error && (
-          <div role="alert" style={{
-            padding: '6px 10px', marginBottom: 8, background: '#fee2e2',
-            color: '#991b1b', border: '1px solid #991b1b', borderRadius: 2, fontSize: 12,
-          }}>
+          <div
+            role="alert"
+            style={{
+              padding: '6px 10px',
+              marginBottom: 8,
+              background: '#fee2e2',
+              color: '#991b1b',
+              border: '1px solid #991b1b',
+              borderRadius: 2,
+              fontSize: 12,
+            }}
+          >
             {error}
           </div>
         )}
 
         {entries.length === 0 && !loading && !error ? (
-          <p className="empty-state" style={{ padding: 12 }}>No matching audit entries.</p>
+          <p className="empty-state" style={{ padding: 12 }}>
+            No matching audit entries.
+          </p>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse' }}>
@@ -2008,13 +2721,24 @@ function AuditLogSection() {
               <tbody>
                 {entries.map((e, i) => (
                   <tr key={`${e.ts}-${i}`} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '4px 6px', whiteSpace: 'nowrap', color: '#64748b', fontFamily: 'monospace' }}>
+                    <td
+                      style={{
+                        padding: '4px 6px',
+                        whiteSpace: 'nowrap',
+                        color: '#64748b',
+                        fontFamily: 'monospace',
+                      }}
+                    >
                       {new Date(e.ts).toLocaleString('vi-VN')}
                     </td>
                     <td style={{ padding: '4px 6px', fontWeight: 600 }}>{e.event}</td>
                     <td style={{ padding: '4px 6px' }}>{e.user || '-'}</td>
-                    <td style={{ padding: '4px 6px', color: '#64748b', fontFamily: 'monospace' }}>{e.ip || '-'}</td>
-                    <td style={{ padding: '4px 6px', color: '#475569', wordBreak: 'break-word' }}>{e.detail || ''}</td>
+                    <td style={{ padding: '4px 6px', color: '#64748b', fontFamily: 'monospace' }}>
+                      {e.ip || '-'}
+                    </td>
+                    <td style={{ padding: '4px 6px', color: '#475569', wordBreak: 'break-word' }}>
+                      {e.detail || ''}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -2096,7 +2820,7 @@ function DataImportSection({ importStatus, onRefresh }) {
   // Seed path inputs from importStatus when it arrives / refreshes.
   useEffect(() => {
     if (!importStatus) return;
-    setPaths(prev => {
+    setPaths((prev) => {
       const next = { ...prev };
       for (const ds of DATA_IMPORT_DATASETS) {
         const info = importStatus[ds.key];
@@ -2113,7 +2837,7 @@ function DataImportSection({ importStatus, onRefresh }) {
   }
 
   function setBusyFor(key, flag) {
-    setBusy(prev => ({ ...prev, [key]: flag }));
+    setBusy((prev) => ({ ...prev, [key]: flag }));
   }
 
   async function handleUpload(ds, file) {
@@ -2141,7 +2865,7 @@ function DataImportSection({ importStatus, onRefresh }) {
       const typed = (paths[ds.key] || '').trim();
       // If the user left the input as the current data file path,
       // pass undefined so the server auto-generates a timestamp name.
-      const destPath = (typed && typed !== info?.absPath) ? typed : undefined;
+      const destPath = typed && typed !== info?.absPath ? typed : undefined;
       const r = await importApi.backup(ds.key, destPath);
       if (r?.ok) {
         flash('success', `${ds.label} backup saved to ${r.path}`);
@@ -2156,7 +2880,12 @@ function DataImportSection({ importStatus, onRefresh }) {
   }
 
   async function handleClear(ds) {
-    if (!confirm(`Reset "${ds.label}" data?\n\nThe current dataset will be cleared. The server will auto-backup to /data/Backup/Data/ before wiping.\n\nThis cannot be undone via UI — restore must go through the server's Backup folder.`)) return;
+    if (
+      !confirm(
+        `Reset "${ds.label}" data?\n\nThe current dataset will be cleared. The server will auto-backup to /data/Backup/Data/ before wiping.\n\nThis cannot be undone via UI — restore must go through the server's Backup folder.`
+      )
+    )
+      return;
     setBusyFor(ds.key, 'clear');
     try {
       await ds.clear();
@@ -2176,10 +2905,14 @@ function DataImportSection({ importStatus, onRefresh }) {
         Each dataset below can be imported from a CSV/XLSX file, backed up as a local JSON snapshot,
         or reset. Import and reset require <b>Admin</b>+ role.
       </p>
-      {msg && <div className={`form-msg ${msg.type}`} style={{ marginBottom: 10 }}>{msg.text}</div>}
+      {msg && (
+        <div className={`form-msg ${msg.type}`} style={{ marginBottom: 10 }}>
+          {msg.text}
+        </div>
+      )}
       <div className="settings-card di-card">
         <div className="di-list">
-          {DATA_IMPORT_DATASETS.map(ds => {
+          {DATA_IMPORT_DATASETS.map((ds) => {
             const info = importStatus?.[ds.key];
             const state = busy[ds.key];
             return (
@@ -2191,22 +2924,27 @@ function DataImportSection({ importStatus, onRefresh }) {
                     {info?.exists && <span className="di-size">{info.sizeHuman}</span>}
                   </div>
                   <div className="di-row-desc">{ds.desc}</div>
-                  <div className="di-row-path" title="Path used by both Import (source) and Backup (destination). Click to edit.">
+                  <div
+                    className="di-row-path"
+                    title="Path used by both Import (source) and Backup (destination). Click to edit."
+                  >
                     <span className="di-path-icon">📂</span>
                     <input
                       type="text"
                       className="di-path-input"
                       value={paths[ds.key] || ''}
                       placeholder={info?.absPath || info?.path || '(file not found — set a path)'}
-                      onChange={e => setPaths(prev => ({ ...prev, [ds.key]: e.target.value }))}
+                      onChange={(e) => setPaths((prev) => ({ ...prev, [ds.key]: e.target.value }))}
                       spellCheck={false}
                     />
                     <button
                       className="di-path-copy"
                       title="Reset to default path"
                       disabled={!info?.absPath}
-                      onClick={() => setPaths(prev => ({ ...prev, [ds.key]: info.absPath }))}
-                    >↺</button>
+                      onClick={() => setPaths((prev) => ({ ...prev, [ds.key]: info.absPath }))}
+                    >
+                      ↺
+                    </button>
                     <button
                       className="di-path-copy"
                       title="Copy path"
@@ -2215,16 +2953,20 @@ function DataImportSection({ importStatus, onRefresh }) {
                         if (p) navigator.clipboard?.writeText(p);
                         flash('success', 'Path copied to clipboard');
                       }}
-                    >⧉</button>
+                    >
+                      ⧉
+                    </button>
                   </div>
                 </div>
                 <div className="di-row-actions">
                   <input
-                    ref={el => { fileRefs.current[ds.key] = el; }}
+                    ref={(el) => {
+                      fileRefs.current[ds.key] = el;
+                    }}
                     type="file"
                     accept={ds.accept}
                     style={{ display: 'none' }}
-                    onChange={e => {
+                    onChange={(e) => {
                       const f = e.target.files?.[0];
                       if (f) handleUpload(ds, f);
                       e.target.value = '';

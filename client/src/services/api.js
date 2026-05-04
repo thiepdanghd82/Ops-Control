@@ -495,6 +495,9 @@ export const costApi = {
   addMasterCylinder: (data) => authCall('post', '/admin/master-cylinders', data),
   deleteMasterCylinder: (z) => authCall('delete', `/admin/master-cylinders/${z}`),
 
+  // Phase A.2 — server connection-info dashboard (admin-only)
+  getServerInfo: () => api.get('/server-info'),
+
   // User management
   getUsers: () => api.get('/auth/users'),
   createUser: (data) => authCall('post', '/auth/users', data),

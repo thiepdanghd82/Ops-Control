@@ -1,0 +1,171 @@
+/* ConnectionInfoSection — Phase A.2 admin dashboard.
+   Mirrors PermissionGroupsSection.css conventions: section padding,
+   uppercase labels, monospace values, Carbon-blue primary action. */
+
+.conn-info-section {
+  padding: 16px 20px 24px;
+  border: 1px solid var(--op-border, #e2e8f0);
+  border-radius: 6px;
+  background: var(--op-surface, #fff);
+  margin-bottom: 16px;
+}
+
+.conn-info-h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--op-text-strong, #0f172a);
+  margin: 0 0 4px;
+}
+
+.conn-info-sub {
+  color: var(--op-text-muted, #64748b);
+  font-size: 13px;
+  margin: 0 0 16px;
+}
+
+.conn-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 24px;
+  align-items: start;
+}
+
+@container (max-width: 600px) {
+  .conn-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.conn-info-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.conn-info-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--op-text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin: 6px 0 0;
+}
+
+.conn-info-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.conn-info-value {
+  flex: 1;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 13px;
+  background: var(--op-surface-subtle, #f1f5f9);
+  padding: 6px 10px;
+  border-radius: 3px;
+  border: 1px solid var(--op-border-subtle, #e2e8f0);
+  word-break: break-all;
+}
+
+.conn-info-id {
+  font-size: 12px;
+  letter-spacing: 0.3px;
+}
+
+.conn-info-copy {
+  font-size: 11px;
+  padding: 4px 10px;
+  background: var(--op-surface, #fff);
+  border: 1px solid var(--op-border, #cbd5e1);
+  border-radius: 3px;
+  color: var(--op-text-muted, #475569);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.conn-info-copy:hover {
+  background: var(--op-surface-subtle, #f1f5f9);
+}
+
+.conn-info-select {
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--op-border, #cbd5e1);
+  border-radius: 3px;
+  background: var(--op-surface, #fff);
+  font-family: inherit;
+}
+
+.conn-info-toast {
+  font-size: 12px;
+  color: var(--op-text-success, #166534);
+  background: var(--op-surface-success, #dcfce7);
+  padding: 4px 10px;
+  border-radius: 3px;
+  display: inline-block;
+  margin-top: 4px;
+  align-self: flex-start;
+}
+
+.conn-info-actions {
+  margin-top: 16px;
+}
+
+.conn-info-export {
+  font-size: 13px;
+  padding: 8px 18px;
+}
+
+.conn-info-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--op-surface-subtle, #f8fafc);
+  border-radius: 6px;
+  border: 1px solid var(--op-border-subtle, #e2e8f0);
+}
+
+.conn-info-qr-img {
+  width: 200px;
+  height: 200px;
+  background: #fff;
+  border-radius: 3px;
+}
+
+.conn-info-qr-placeholder {
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px dashed var(--op-border, #cbd5e1);
+  border-radius: 3px;
+  color: var(--op-text-muted, #94a3b8);
+  font-size: 14px;
+}
+
+.conn-info-qr-caption {
+  font-size: 11px;
+  color: var(--op-text-muted, #64748b);
+  text-align: center;
+  margin: 0;
+}
+
+.conn-info-loading {
+  padding: 16px;
+  color: var(--op-text-muted, #64748b);
+  font-size: 13px;
+}
+
+.conn-info-error {
+  padding: 12px;
+  background: var(--op-surface-error, #fee2e2);
+  border: 1px solid var(--op-border-error, #fca5a5);
+  border-radius: 4px;
+  color: var(--op-text-error, #991b1b);
+  font-size: 13px;
+}

@@ -114,4 +114,31 @@ registerStrings({
     en: 'No audit events match the current filter.',
     vi: 'Không có sự kiện audit khớp bộ lọc hiện tại.',
   },
+
+  // ─── Connection info (Phase A.2 admin dashboard) ───
+  // Surfaces serverName / serverId / autodetected URL + QR for hand-off
+  // to client machines. Admin-only via server-side requireRole gate.
+  'conn_info.title': { en: 'Connection info', vi: 'Thông tin kết nối' },
+  'conn_info.subtitle': {
+    en: 'Hand this off to client machines for first-time setup.',
+    vi: 'Cung cấp cho máy client để cấu hình lần đầu.',
+  },
+  'conn_info.server_name': { en: 'Server name', vi: 'Tên server' },
+  'conn_info.server_id': { en: 'Server ID', vi: 'Mã server' },
+  'conn_info.server_url': { en: 'Server URL', vi: 'Địa chỉ server' },
+  'conn_info.multi_nic_hint': {
+    en: 'Multiple network interfaces detected — pick the LAN-facing one:',
+    vi: 'Phát hiện nhiều card mạng — chọn card LAN:',
+  },
+  'conn_info.export_opsconn': {
+    en: 'Export .opsconn profile',
+    vi: 'Xuất file .opsconn',
+  },
+  'conn_info.qr_caption': {
+    en: 'Scan with mobile to copy the URL',
+    vi: 'Quét bằng điện thoại để copy URL',
+  },
+  'conn_info.copy': { en: 'Copy', vi: 'Copy' },
+  'conn_info.copied': { en: 'Copied', vi: 'Đã copy' },
+  'conn_info.loading': { en: 'Loading…', vi: 'Đang tải…' },
 });
