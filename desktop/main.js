@@ -300,6 +300,21 @@ async function startEmbeddedServer() {
     process.env.OPS_TOTP_KEY = totpKey;
   }
 
+  // OPS_KIOSK_KEY — required by domains/planning/server/index.js (MES-2).
+  // Same electron-store pattern as TOTP key: generate once, persist across
+  // app restarts so kiosk JWTs remain valid. resolveKioskKey() throws fatal
+  // in NODE_ENV=production if missing — must populate before spawning server.
+  if (!process.env.OPS_KIOSK_KEY) {
+    let kioskKey = store.get('kioskKey');
+    if (!kioskKey || kioskKey.length !== 64) {
+      const crypto = require('node:crypto');
+      kioskKey = crypto.randomBytes(32).toString('hex');
+      store.set('kioskKey', kioskKey);
+      log.info('[main] Generated new OPS_KIOSK_KEY (saved to electron-store)');
+    }
+    process.env.OPS_KIOSK_KEY = kioskKey;
+  }
+
   // Require Express server hiện tại — KHÔNG sửa code gốc
   const serverEntry = path.join(APP_ROOT, 'server', 'index.js');
   if (!fs.existsSync(serverEntry)) {

@@ -53,3 +53,6 @@ client/public/help/*.docx
 playwright-report/
 test-results/
 .playwright-tmp/
+dist-release/
+desktop/dist-electron/
+desktop/package.json.backup-*
