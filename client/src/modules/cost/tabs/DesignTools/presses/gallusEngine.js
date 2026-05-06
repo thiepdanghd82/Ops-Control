@@ -38,6 +38,13 @@ const {
   plate_cost_default,
 } = GALLUS_DEFAULTS;
 
+// Forward-compat anchor. Bump on any change that affects engine numerics
+// (Z / pitch / actual_gap / yield / cost). Saved designs without this
+// field are implicit "v1" — same numerics, only the renderer differed
+// (gaps used to render as residual whitespace under the last cell).
+// Do NOT rebump just because the renderer changed.
+export const GALLUS_ALGO_VERSION = 'v2.0-even-gap';
+
 // ── Default inputs (what the form starts with on first open) ──────
 export function createGallusInputs() {
   return {
@@ -59,6 +66,14 @@ export function createGallusInputs() {
     Pw: 60, // product width (cross-web, mm)
     E: E_default, // edge margin per side (mm)
     Lg: Lg_default, // target lane gap (mm)
+
+    // S-AUTO-E (2026-05-05) — when true, E is auto-computed from
+    // W, Pw_eff, Lg and the chosen n_across so the layout is centered
+    // and lane gaps match Lg exactly. Engineer override: typing into
+    // the E field flips this to false (manual mode); the "↻ Auto" link
+    // restores it. Defaults true so new designs get a centered layout
+    // without manual math.
+    E_auto: true,
 
     // Sprint S-PARTS (2026-04-29) — operator-supplied LAYOUT TARGETS.
     // Optional reference values. When > 0, the ranking algorithm
@@ -598,6 +613,30 @@ function effectiveL(inputs) {
   return L + 2 * bleed;
 }
 
+// S-AUTO-E (2026-05-05) — derive a centered E from W, Pw_eff, Lg.
+// If parts_td > 0 the operator has locked n_across; otherwise we pick
+// the largest n that fits with E ≥ E_MIN_AUTO_MM margin, matching the
+// engine's solver bias toward more lanes. Returns { E, n } so callers
+// can sanity-check before persisting.
+export const E_MIN_AUTO_MM = 2;
+export function computeAutoE(inputs) {
+  const W = Number(inputs.W) || 0;
+  const Lg = Math.max(0, Number(inputs.Lg) || 0);
+  const Pw_eff = effectivePw(inputs);
+  if (Pw_eff <= 0 || W <= 0) return { E: 0, n: 0 };
+
+  const target_td = Math.max(0, Math.floor(Number(inputs.parts_td) || 0));
+  let n;
+  if (target_td > 0) {
+    n = target_td;
+  } else {
+    const room = W - 2 * E_MIN_AUTO_MM + Lg;
+    n = Math.max(1, Math.floor(room / (Pw_eff + Lg)));
+  }
+  const E = (W - n * Pw_eff - (n - 1) * Lg) / 2;
+  return { E: Math.max(0, E), n };
+}
+
 export function crossDirection(inputs) {
   const { W, E, Lg } = inputs;
   const Pw_eff = effectivePw(inputs);
@@ -763,6 +802,7 @@ export function rankPrintCylinders(inputs) {
     if (usable < L_eff) {
       out.push({
         ...cyl,
+        _algo_v: GALLUS_ALGO_VERSION,
         pitch,
         n_down: 0,
         actual_gap: 0,
@@ -788,6 +828,7 @@ export function rankPrintCylinders(inputs) {
         // Cylinder cannot host target_md parts even at the minimum gap.
         out.push({
           ...cyl,
+          _algo_v: GALLUS_ALGO_VERSION,
           pitch,
           pitch_nominal,
           n_down: 0,
@@ -872,8 +913,15 @@ export function rankPrintCylinders(inputs) {
     const setup_waste_pct =
       setup_imp + sellable_imp > 0 ? setup_imp / (setup_imp + sellable_imp) : 0;
 
+    // Sprint S-LAYOUT-VIZ-1 — MD axis waste, surfaced in the ranking
+    // table so the operator can spot a too-large pitch at a glance.
+    // Formula: (pitch − N×L_eff) / pitch — the K band + N gaps that
+    // are NOT product. Lower = better cylinder fit.
+    const waste_md_pct = pitch > 0 ? (pitch - N * L_eff) / pitch : 0;
+
     out.push({
       ...cyl,
+      _algo_v: GALLUS_ALGO_VERSION,
       pitch, // stretch-adjusted (operative pitch)
       pitch_nominal, // unstretched (= plate spec)
       rl_inch: cyl.z / 8,
@@ -881,6 +929,7 @@ export function rankPrintCylinders(inputs) {
       n_across,
       actual_gap: gap,
       gap_diff: diff,
+      waste_md_pct,
       // Film percentages reflect the stretched pitch since they describe
       // the runtime print zone, not the cold cylinder.
       product_film_pct: productFilmPct(N, L_eff, pitch),
@@ -1256,6 +1305,7 @@ export function jobSummary(top1, cross, inputs) {
   const materialAreaM2 = (effWebM * W) / 1000;
 
   return {
+    _algo_v: GALLUS_ALGO_VERSION,
     cylinder_z: top1.z,
     pitch: top1.pitch,
     step: top1.step_lay,
