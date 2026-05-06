@@ -45,12 +45,21 @@ export const WO_OP_STATUSES = Object.freeze([
   'PAUSED',
   'DONE',
   'ACCEPTED',
+  // MES-3-V1 (KIOSK-003 a): CANCELLED is the cascade target when the
+  // parent WO is cancelled while ops are still alive. Terminal — no
+  // event escapes once an op is here.
+  'CANCELLED',
 ]);
 
 // MES-2.2 — operation-status state machine.
 // `scan` is the alias-event for `start_run` (first kiosk /scan auto-promotes
 // SETUP → RUNNING per PRD §10 edge #9). Both names are first-class events
 // so the pure transition fn accepts whichever the route layer decides to fire.
+//
+// MES-3-V1 (KIOSK-003 a): `wo_cancel` is the cascade event fired by
+// workOrderService.cancelWorkOrder for every non-terminal child op.
+// Multi-source: any of {PENDING,DISPATCHED,SETUP,RUNNING,PAUSED,DONE} →
+// CANCELLED. Operators never fire it directly; emitted only via WO cancel.
 export const OP_STATUS_EVENTS = Object.freeze([
   'dispatch',
   'start',
@@ -61,6 +70,9 @@ export const OP_STATUS_EVENTS = Object.freeze([
   'complete',
   'complete_from_pause',
   'accept',
+  'wo_cancel',
 ]);
 
-export const OP_TERMINAL_STATUSES = Object.freeze(['ACCEPTED']);
+// MES-3-V1: CANCELLED joins ACCEPTED as terminal — the property-sweep
+// invariant "no-change never fires from a terminal state" still holds.
+export const OP_TERMINAL_STATUSES = Object.freeze(['ACCEPTED', 'CANCELLED']);

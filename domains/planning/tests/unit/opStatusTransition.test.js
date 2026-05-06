@@ -2,14 +2,15 @@
  * MES-2.2 — Operation-status state-machine pure-function tests.
  *
  * Coverage layout (mirrors MES-1.2 workOrderTransition.test.js):
- *   - 9 named valid edges (PRD §10 happy path, incl. scan/start_run alias)
- *   - 7 named invalid representative pairs (allowed_from inverse-lookup)
+ *   - 15 named valid edges (PRD §10 happy path + 6 wo_cancel cascade edges)
+ *   - 8 named invalid representative pairs (allowed_from inverse-lookup,
+ *     incl. wo_cancel from a terminal state)
  *   - 8 no-change assertions (one per (state, event) where event.to === state)
- *   - 9 boundary cases: ACCEPTED + every event → invalid + allowed_from=[]
+ *   - 10 boundary cases: ACCEPTED + every event → invalid + allowed_from=[]
+ *   - 10 boundary cases: CANCELLED + every event → invalid + allowed_from=[]
+ *     (MES-3-V1 — cascade target is terminal too)
  *   - 5 defensive cases (unknown state/event, null, undefined, ctx-ignored)
- *   - 1 property sweep over all 7 × 9 = 63 pairs asserting 9 / 8 / 46 split
- *
- * Total: 39 tests.
+ *   - 1 property sweep over all 8 × 10 = 80 pairs asserting 15 / 8 / 57 split
  *
  * Runner:
  *   node --test domains/planning/tests/unit/opStatusTransition.test.js
@@ -24,6 +25,11 @@ import {
   OP_TERMINAL_STATUSES,
 } from '../../shared/constants/workOrderStates.js';
 
+// MES-3-V1: WO_CANCEL_SOURCES is the canonical multi-source list for the
+// `wo_cancel` event. Six non-terminal states cascade to CANCELLED on a
+// parent WO cancel; ACCEPTED + CANCELLED are excluded (terminal, no edges).
+const WO_CANCEL_SOURCES = ['PENDING', 'DISPATCHED', 'SETUP', 'RUNNING', 'PAUSED', 'DONE'];
+
 const VALID_EDGES = [
   // [from, event, to]
   ['PENDING', 'dispatch', 'DISPATCHED'],
@@ -35,6 +41,8 @@ const VALID_EDGES = [
   ['RUNNING', 'complete', 'DONE'],
   ['PAUSED', 'complete_from_pause', 'DONE'],
   ['DONE', 'accept', 'ACCEPTED'],
+  // MES-3-V1: 6 wo_cancel cascade edges (multi-source event).
+  ...WO_CANCEL_SOURCES.map((from) => [from, 'wo_cancel', 'CANCELLED']),
 ];
 
 const INVALID_REPRESENTATIVE = [
@@ -46,6 +54,11 @@ const INVALID_REPRESENTATIVE = [
   ['RUNNING', 'start', ['DISPATCHED']],
   ['PAUSED', 'start_run', ['SETUP']],
   ['DONE', 'dispatch', ['PENDING']],
+  // MES-3-V1: from a non-source state, wo_cancel returns the full
+  // 6-source list (operator never fires it directly anyway, but the
+  // inverse-lookup contract still applies for forensics).
+  // Note: ACCEPTED is terminal so it returns allowed_from=[] via the
+  // terminal short-circuit, NOT the multi-source list. Tested below.
 ];
 
 const NO_CHANGE_CASES = [
@@ -92,10 +105,12 @@ describe('opStatusTransition — no-change / idempotent retry (8)', () => {
   }
 });
 
-describe('opStatusTransition — boundary: ACCEPTED is terminal (9)', () => {
+describe('opStatusTransition — boundary: ACCEPTED is terminal', () => {
   // PRD §10: ACCEPTED has no outgoing edges. Every event from ACCEPTED
   // must return op-invalid-transition with allowed_from=[] (terminal
-  // beats no-change for ACCEPTED+accept).
+  // beats no-change for ACCEPTED+accept). MES-3-V1 added wo_cancel —
+  // ACCEPTED is also terminal w.r.t. cascade (an op already ACCEPTED
+  // cannot be retroactively un-accepted by cancelling the WO).
   for (const event of OP_STATUS_EVENTS) {
     test(`ACCEPTED + ${event} → op-invalid-transition + allowed_from=[]`, () => {
       const r = opStatusTransition('ACCEPTED', event);
@@ -104,6 +119,41 @@ describe('opStatusTransition — boundary: ACCEPTED is terminal (9)', () => {
       assert.deepEqual([...r.error.allowed_from], []);
     });
   }
+});
+
+describe('opStatusTransition — boundary: CANCELLED is terminal (MES-3-V1)', () => {
+  // KIOSK-003 a: CANCELLED joins ACCEPTED as terminal. Every event from
+  // CANCELLED returns op-invalid-transition + allowed_from=[]. Notably:
+  // CANCELLED + wo_cancel does NOT return no-change despite from === edge.to;
+  // the terminal short-circuit fires first so a re-cancel attempt is a hard
+  // 409 not a quiet 304.
+  for (const event of OP_STATUS_EVENTS) {
+    test(`CANCELLED + ${event} → op-invalid-transition + allowed_from=[]`, () => {
+      const r = opStatusTransition('CANCELLED', event);
+      assert.equal(r.ok, false);
+      assert.equal(r.error.type, 'op-invalid-transition');
+      assert.deepEqual([...r.error.allowed_from], []);
+    });
+  }
+});
+
+describe('opStatusTransition — wo_cancel cascade edges (MES-3-V1)', () => {
+  // The 6 valid sources (already covered by the VALID_EDGES sweep) — these
+  // tests assert the multi-source allowed_from contract for the negative
+  // case: a non-source, non-terminal state (impossible today since the 6
+  // sources cover all non-terminal states, but the contract should still
+  // surface the full source list if a future state is added without a
+  // corresponding wo_cancel edge).
+  test('multi-source allowed_from list is the full 6-state set', () => {
+    // No state outside {ACCEPTED, CANCELLED, ...WO_CANCEL_SOURCES} exists
+    // today, so we exercise the inverse-lookup via a synthetic call with
+    // an unknown source. The terminal check passes (unknown ≠ terminal),
+    // edge.to !== from, and we land on the array branch.
+    const r = opStatusTransition('SOME_FUTURE_STATE', 'wo_cancel');
+    assert.equal(r.ok, false);
+    assert.equal(r.error.type, 'op-invalid-transition');
+    assert.deepEqual([...r.error.allowed_from].sort(), [...WO_CANCEL_SOURCES].sort());
+  });
 });
 
 describe('opStatusTransition — defensive: unknown / null / undefined / ctx-ignored', () => {
@@ -144,8 +194,8 @@ describe('opStatusTransition — defensive: unknown / null / undefined / ctx-ign
   });
 });
 
-describe('opStatusTransition — property sweep (7 states × 9 events = 63 pairs)', () => {
-  test('every pair returns one of 3 shapes; counts: 9 valid + 8 no-change + 46 invalid; sweep < 50ms', () => {
+describe('opStatusTransition — property sweep (8 states × 10 events = 80 pairs)', () => {
+  test('every pair returns one of 3 shapes; counts: 15 valid + 8 no-change + 57 invalid; sweep < 50ms', () => {
     const t0 = process.hrtime.bigint();
     let validCount = 0;
     let noChangeCount = 0;
@@ -185,9 +235,13 @@ describe('opStatusTransition — property sweep (7 states × 9 events = 63 pairs
     }
 
     const elapsedMs = Number(process.hrtime.bigint() - t0) / 1e6;
-    assert.equal(validCount, 9, `expected 9 valid, got ${validCount}`);
+    // MES-3-V1: 80 pairs (8 states × 10 events).
+    //   valid     = 9 (existing) + 6 (wo_cancel cascade) = 15
+    //   no-change = 8 (unchanged — wo_cancel from CANCELLED hits terminal first)
+    //   invalid   = 80 − 15 − 8 = 57
+    assert.equal(validCount, 15, `expected 15 valid, got ${validCount}`);
     assert.equal(noChangeCount, 8, `expected 8 no-change, got ${noChangeCount}`);
-    assert.equal(invalidCount, 46, `expected 46 invalid, got ${invalidCount}`);
-    assert.ok(elapsedMs < 50, `63-pair sweep took ${elapsedMs.toFixed(2)}ms (budget 50ms)`);
+    assert.equal(invalidCount, 57, `expected 57 invalid, got ${invalidCount}`);
+    assert.ok(elapsedMs < 50, `80-pair sweep took ${elapsedMs.toFixed(2)}ms (budget 50ms)`);
   });
 });
