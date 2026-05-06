@@ -251,12 +251,27 @@
 
 .qa-kpi {
   background: var(--qa-surface);
-  padding: 16px 20px;
-  border-top: 3px solid var(--qa-tile-accent, var(--qa-neutral));
+  border: 1px solid var(--qa-border);
+  padding: 16px 18px 14px 22px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-height: 110px;
+  gap: 6px;
+  min-height: 100px;
+  position: relative;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+.qa-kpi::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--qa-tile-accent, var(--qa-neutral));
+  opacity: 0.9;
+}
+.qa-kpi:hover {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .qa-kpi-primary {
@@ -267,6 +282,38 @@
 }
 .qa-kpi-neutral {
   --qa-tile-accent: var(--qa-neutral);
+}
+
+/* S-DESIGN-1 — Dashboard-aligned tone classes. Replaces the decorative
+   qa-kpi-primary / qa-kpi-cyan / qa-kpi-neutral set. The 3px left rail
+   color now carries semantic meaning (good/warn/bad/neutral) matching
+   Dashboard's `tone-*` system, so a glance across both Reports tabs
+   tells the same story. Value text on GM tile inherits the tone for
+   extra emphasis. */
+.qa-kpi-tone-good {
+  --qa-tile-accent: var(--qa-positive);
+}
+.qa-kpi-tone-warn {
+  --qa-tile-accent: var(--qa-warning);
+}
+.qa-kpi-tone-bad {
+  --qa-tile-accent: var(--qa-negative);
+}
+.qa-kpi-tone-neutral {
+  --qa-tile-accent: var(--qa-neutral);
+}
+
+.qa-kpi-tone-good .qa-kpi-val {
+  color: var(--qa-positive);
+}
+.qa-kpi-tone-warn .qa-kpi-val {
+  color: var(--qa-warning);
+}
+.qa-kpi-tone-bad .qa-kpi-val {
+  color: var(--qa-negative);
+}
+.qa-kpi-tone-neutral .qa-kpi-val {
+  color: var(--qa-text);
 }
 
 .qa-kpi-row {
@@ -328,6 +375,12 @@
 }
 .qa-delta-flat {
   color: var(--qa-text-3);
+}
+/* S-DESIGN-1 — neutral pill for non-directional metrics (count tiles).
+   Total Parts going up is neither "good" nor "bad" without context. */
+.qa-delta-neutral {
+  color: var(--qa-text-2);
+  background: rgba(82, 82, 82, 0.08);
 }
 
 /* Sparkline */
