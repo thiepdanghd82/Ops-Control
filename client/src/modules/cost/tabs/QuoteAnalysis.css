@@ -11,48 +11,74 @@
  */
 
 :root {
-  --qa-bg:           #f4f4f4;
-  --qa-surface:      #ffffff;
-  --qa-border:       #e0e0e0;
-  --qa-border-dark:  #c6c6c6;
-  --qa-text:         #161616;
-  --qa-text-2:       #525252;
-  --qa-text-3:       #8d8d8d;
-  --qa-primary:      #0f62fe;
-  --qa-primary-hov:  #0353e0;
-  --qa-positive:     #198038;
-  --qa-warning:      #d97706;
-  --qa-negative:     #da1e28;
-  --qa-neutral:      #525252;
-  --qa-cyan:         #0e7490;
-  --qa-purple:       #6929c4;
-  --qa-amber:        #b78800;
-  --qa-green:        #198038;
+  --qa-bg: #f4f4f4;
+  --qa-surface: #ffffff;
+  --qa-border: #e0e0e0;
+  --qa-border-dark: #c6c6c6;
+  --qa-text: #161616;
+  --qa-text-2: #525252;
+  --qa-text-3: #8d8d8d;
+  --qa-primary: #0f62fe;
+  --qa-primary-hov: #0353e0;
+  --qa-positive: #198038;
+  --qa-warning: #d97706;
+  --qa-negative: #da1e28;
+  --qa-neutral: #525252;
+  --qa-cyan: #0e7490;
+  --qa-purple: #6929c4;
+  --qa-amber: #b78800;
+  --qa-green: #198038;
 }
 
-[data-theme="dark"] {
-  --qa-bg:           #161616;
-  --qa-surface:      #262626;
-  --qa-border:       #393939;
-  --qa-border-dark:  #525252;
-  --qa-text:         #f4f4f4;
-  --qa-text-2:       #a8a8a8;
-  --qa-text-3:       #6f6f6f;
-  --qa-primary:      #4589ff;
-  --qa-primary-hov:  #78a9ff;
-  --qa-positive:     #42be65;
-  --qa-warning:      #f1c21b;
-  --qa-negative:     #fa4d56;
+[data-theme='dark'] {
+  --qa-bg: #161616;
+  --qa-surface: #262626;
+  --qa-border: #393939;
+  --qa-border-dark: #525252;
+  --qa-text: #f4f4f4;
+  --qa-text-2: #a8a8a8;
+  --qa-text-3: #6f6f6f;
+  --qa-primary: #4589ff;
+  --qa-primary-hov: #78a9ff;
+  --qa-positive: #42be65;
+  --qa-warning: #f1c21b;
+  --qa-negative: #fa4d56;
 }
 
 /* ── Page chrome ──────────────────────────────────────────────── */
+/* Mirrors Dashboard's visual language (Sprint S-DASH-CONSIST 2026-05-03):
+   max-width container, left-rail KPI accents, panel header tint,
+   16px row gap. The previous full-bleed Carbon look was visually
+   different from Dashboard — operators jumping between Reports tabs
+   want a unified shell. */
 .qa {
   display: flex;
   flex-direction: column;
   height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: var(--qa-bg);
   color: var(--qa-text);
-  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    'IBM Plex Sans',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+}
+/* S-RESP-1 (2026-05-06) — fluid container. Was: max-width: 1440px hard
+   cap, leaving 400-600px white margins on 27"/4K/ultrawide. Now scales
+   up to 2400px with viewport-relative gutters. min() prevents over-
+   stretch on absurd widths; clamp() picks a pleasant gutter at every
+   breakpoint. */
+.qa-inner {
+  max-width: min(2400px, calc(100vw - 48px));
+  padding-inline: clamp(16px, 2vw, 48px);
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
 }
 
 .qa-loading {
@@ -63,89 +89,105 @@
   font-style: italic;
 }
 
-/* ── Object-page header (SAP Fiori) ───────────────────────────── */
-.qa-objhdr {
+/* ── Page toolbar (single row: filters + meta + actions) ─────── */
+.qa-toolbar {
   background: var(--qa-surface);
   border-bottom: 1px solid var(--qa-border);
-  padding: 20px 32px 18px;
+  padding: 12px 24px;
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
+  flex-wrap: wrap;
   flex-shrink: 0;
 }
-
-.qa-breadcrumb {
-  font-size: 11px;
-  color: var(--qa-text-3);
-  letter-spacing: 0.16px;
-  text-transform: uppercase;
-  margin-bottom: 4px;
+.qa-toolbar-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
 }
-
-.qa-objhdr-title {
-  font-size: 24px;
-  font-weight: 400;
-  letter-spacing: -0.16px;
-  margin: 0;
-  color: var(--qa-text);
-}
-
-.qa-objhdr-sub {
-  font-size: 13px;
-  color: var(--qa-text-2);
-  margin-top: 4px;
-}
-
-.qa-objhdr-actions {
+.qa-toolbar-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.qa-toolbar-count {
+  font-size: 13px;
+  color: var(--qa-text);
+}
+.qa-toolbar-count strong {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.qa-toolbar-period {
+  color: var(--qa-text-2);
+  font-weight: 500;
+}
+.qa-toolbar-note {
+  font-size: 11px;
+  color: var(--qa-text-3);
+  font-style: italic;
+  border-left: 1px solid var(--qa-border);
+  padding-left: 12px;
+}
+.qa-toolbar-spacer {
+  flex: 1;
+  min-width: 0;
 }
 
 .qa-btn {
   background: var(--qa-surface);
   color: var(--qa-text);
   border: 1px solid var(--qa-border-dark);
-  padding: 7px 14px;
-  font-size: 13px;
+  padding: 6px 12px;
+  font-size: 12px;
   font-family: inherit;
   cursor: pointer;
   border-radius: 0;
-  transition: background 0.12s, border-color 0.12s;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
-.qa-btn:hover { background: #e8e8e8; border-color: var(--qa-text-3); }
-.qa-btn-ghost { background: transparent; }
-.qa-btn-primary { background: var(--qa-primary); color: #fff; border-color: var(--qa-primary); }
-.qa-btn-primary:hover { background: var(--qa-primary-hov); border-color: var(--qa-primary-hov); }
+.qa-btn:hover {
+  background: #e8e8e8;
+  border-color: var(--qa-text-3);
+}
+.qa-btn-ghost {
+  background: transparent;
+}
+.qa-btn-primary {
+  background: var(--qa-primary);
+  color: #fff;
+  border-color: var(--qa-primary);
+}
+.qa-btn-primary:hover {
+  background: var(--qa-primary-hov);
+  border-color: var(--qa-primary-hov);
+}
 
-[data-theme="dark"] .qa-btn:hover { background: #393939; }
-
-/* ── Filter bar (IFS Aurena smart filter) ─────────────────────── */
-.qa-filterbar {
-  background: var(--qa-surface);
-  border-bottom: 1px solid var(--qa-border);
-  padding: 12px 32px;
-  display: flex;
-  align-items: flex-end;
-  gap: 16px;
-  flex-wrap: wrap;
-  flex-shrink: 0;
+[data-theme='dark'] .qa-btn:hover {
+  background: #393939;
 }
 
 .qa-filter {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-width: 160px;
+  gap: 3px;
+  min-width: 150px;
 }
 
 .qa-filter-lbl {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--qa-text-2);
-  font-weight: 500;
-  letter-spacing: 0.16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .qa-filter-input {
@@ -153,7 +195,7 @@
   color: var(--qa-text);
   border: 1px solid var(--qa-border-dark);
   border-radius: 0;
-  padding: 7px 10px;
+  padding: 5px 10px;
   font-size: 13px;
   font-family: inherit;
   height: 32px;
@@ -168,33 +210,43 @@
 .qa-filter-reset {
   background: transparent;
   color: var(--qa-primary);
-  border: none;
-  padding: 8px 4px;
-  font-size: 13px;
+  border: 1px solid transparent;
+  padding: 0 8px;
+  font-size: 12px;
   font-family: inherit;
   cursor: pointer;
-  text-decoration: underline;
   height: 32px;
+  align-self: flex-end;
 }
-.qa-filter-reset:hover { color: var(--qa-primary-hov); }
-
-.qa-filter-result {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--qa-text-2);
-  align-self: center;
-  font-style: italic;
+.qa-filter-reset:hover {
+  color: var(--qa-primary-hov);
+  border-color: var(--qa-border);
 }
 
-/* ── KPI tiles (Carbon "small data tile") ─────────────────────── */
+/* ── KPI tiles — Dashboard-aligned (left rail accent, hover lift). */
+/* S-RESP-1 — KPI grid driven by CONTAINER queries, not viewport. So
+   when sidebar collapses or panel resizes, tiles re-flow against
+   their actual available width — not the screen. Wrap with .qa-kpis-
+   container so @container can target inline-size. */
+.qa-kpis-container {
+  container-type: inline-size;
+}
 .qa-kpis {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1px;
-  background: var(--qa-border);
-  padding: 0;
-  margin: 0;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin: 16px 24px 0;
   flex-shrink: 0;
+}
+@container (min-width: 1400px) {
+  .qa-kpis {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+@container (min-width: 2000px) {
+  .qa-kpis {
+    grid-template-columns: repeat(6, 1fr);
+  }
 }
 
 .qa-kpi {
@@ -207,9 +259,15 @@
   min-height: 110px;
 }
 
-.qa-kpi-primary { --qa-tile-accent: var(--qa-primary); }
-.qa-kpi-cyan    { --qa-tile-accent: var(--qa-cyan); }
-.qa-kpi-neutral { --qa-tile-accent: var(--qa-neutral); }
+.qa-kpi-primary {
+  --qa-tile-accent: var(--qa-primary);
+}
+.qa-kpi-cyan {
+  --qa-tile-accent: var(--qa-cyan);
+}
+.qa-kpi-neutral {
+  --qa-tile-accent: var(--qa-neutral);
+}
 
 .qa-kpi-row {
   display: flex;
@@ -227,12 +285,13 @@
 }
 
 .qa-kpi-val {
-  font-size: 28px;
-  font-weight: 300;
-  letter-spacing: -0.16px;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
   color: var(--qa-text);
   line-height: 1.1;
   font-family: 'IBM Plex Sans', sans-serif;
+  font-variant-numeric: tabular-nums;
 }
 
 .qa-kpi-unit {
@@ -259,9 +318,17 @@
   letter-spacing: 0.16px;
   white-space: nowrap;
 }
-.qa-delta-up   { color: var(--qa-positive); background: rgba(25, 128, 56, 0.08); }
-.qa-delta-down { color: var(--qa-negative); background: rgba(218, 30, 40, 0.08); }
-.qa-delta-flat { color: var(--qa-text-3); }
+.qa-delta-up {
+  color: var(--qa-positive);
+  background: rgba(25, 128, 56, 0.08);
+}
+.qa-delta-down {
+  color: var(--qa-negative);
+  background: rgba(218, 30, 40, 0.08);
+}
+.qa-delta-flat {
+  color: var(--qa-text-3);
+}
 
 /* Sparkline */
 .qa-sparkline {
@@ -282,62 +349,255 @@
 .qa-sparkline-fill {
   opacity: 0.18;
 }
-.qa-sparkline-blue     .qa-sparkline-line { stroke: var(--qa-primary); }
-.qa-sparkline-blue     .qa-sparkline-fill { fill: var(--qa-primary); }
-.qa-sparkline-primary  .qa-sparkline-line { stroke: var(--qa-primary); }
-.qa-sparkline-primary  .qa-sparkline-fill { fill: var(--qa-primary); }
-.qa-sparkline-cyan     .qa-sparkline-line { stroke: var(--qa-cyan); }
-.qa-sparkline-cyan     .qa-sparkline-fill { fill: var(--qa-cyan); }
-.qa-sparkline-positive .qa-sparkline-line { stroke: var(--qa-positive); }
-.qa-sparkline-positive .qa-sparkline-fill { fill: var(--qa-positive); }
-.qa-sparkline-warning  .qa-sparkline-line { stroke: var(--qa-warning); }
-.qa-sparkline-warning  .qa-sparkline-fill { fill: var(--qa-warning); }
-.qa-sparkline-negative .qa-sparkline-line { stroke: var(--qa-negative); }
-.qa-sparkline-negative .qa-sparkline-fill { fill: var(--qa-negative); }
+.qa-sparkline-blue .qa-sparkline-line {
+  stroke: var(--qa-primary);
+}
+.qa-sparkline-blue .qa-sparkline-fill {
+  fill: var(--qa-primary);
+}
+.qa-sparkline-primary .qa-sparkline-line {
+  stroke: var(--qa-primary);
+}
+.qa-sparkline-primary .qa-sparkline-fill {
+  fill: var(--qa-primary);
+}
+.qa-sparkline-cyan .qa-sparkline-line {
+  stroke: var(--qa-cyan);
+}
+.qa-sparkline-cyan .qa-sparkline-fill {
+  fill: var(--qa-cyan);
+}
+.qa-sparkline-positive .qa-sparkline-line {
+  stroke: var(--qa-positive);
+}
+.qa-sparkline-positive .qa-sparkline-fill {
+  fill: var(--qa-positive);
+}
+.qa-sparkline-warning .qa-sparkline-line {
+  stroke: var(--qa-warning);
+}
+.qa-sparkline-warning .qa-sparkline-fill {
+  fill: var(--qa-warning);
+}
+.qa-sparkline-negative .qa-sparkline-line {
+  stroke: var(--qa-negative);
+}
+.qa-sparkline-negative .qa-sparkline-fill {
+  fill: var(--qa-negative);
+}
 
 /* ── Body grid ─────────────────────────────────────────────────── */
 .qa-body {
   flex: 1;
   overflow: auto;
-  padding: 24px 32px 32px;
+  padding: 16px 24px 32px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
 .qa-grid {
   display: grid;
-  gap: 24px;
+  gap: 16px;
 }
-.qa-grid-2 { grid-template-columns: 1fr 1fr; }
-.qa-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.qa-grid-2 {
+  grid-template-columns: 1fr 1fr;
+}
+.qa-grid-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+/* Sprint S-QA-CONSOL — primary breakdown 60/40 split: pivot table on
+   left, GM mix sidecar on right. Stacks on narrow viewports. */
+/* S-RESP-1 — breakdown 3-tier responsive. sm/md: stack. lg: 60/40.
+   xl+ (≥1920): 3 columns so widescreen surfaces the GM% distribution
+   side-by-side with the breakdown table + leaves room for a future
+   "Top variance" panel. */
+.qa-grid-breakdown {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 1280px) {
+  .qa-grid-breakdown {
+    grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
+  }
+}
+@media (min-width: 1920px) {
+  .qa-grid-breakdown {
+    grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr) minmax(280px, 1.5fr);
+  }
+}
 
 @media (max-width: 1100px) {
-  .qa-grid-2, .qa-grid-3 { grid-template-columns: 1fr; }
-  .qa-kpis { grid-template-columns: repeat(2, 1fr); }
+  .qa-grid-2,
+  .qa-grid-3,
+  .qa-grid-breakdown {
+    grid-template-columns: 1fr;
+  }
+  .qa-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
-/* ── Section panels (Carbon flat card) ────────────────────────── */
+/* ── Pivot tabs (Customer / Process / NPI Owner toggle in panel head). */
+.qa-pivot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.qa-pivot-group {
+  display: inline-flex;
+  border: 1px solid var(--qa-border-dark);
+  background: var(--qa-surface);
+}
+.qa-pivot-btn {
+  padding: 5px 12px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--qa-border);
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--qa-text-2);
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    color 0.12s;
+  white-space: nowrap;
+}
+.qa-pivot-btn:last-child {
+  border-right: none;
+}
+.qa-pivot-btn:hover {
+  background: var(--qa-bg);
+  color: var(--qa-text);
+}
+.qa-pivot-btn.is-active {
+  background: var(--qa-primary);
+  color: #fff;
+}
+.qa-pivot-group-sm .qa-pivot-btn {
+  padding: 5px 10px;
+  font-size: 11px;
+}
+
+/* ── GM stack bar (compact horizontal distribution chart). */
+.qa-gm {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.qa-gm-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--qa-text-3);
+  font-size: 12px;
+  font-style: italic;
+}
+.qa-gm-bar {
+  display: flex;
+  height: 28px;
+  background: var(--qa-bg);
+  border: 1px solid var(--qa-border);
+  overflow: hidden;
+}
+.qa-gm-seg {
+  height: 100%;
+  transition:
+    width 0.3s ease,
+    opacity 0.12s;
+}
+.qa-gm-seg:hover {
+  opacity: 0.85;
+}
+.qa-gm-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+}
+.qa-gm-leg {
+  display: grid;
+  grid-template-columns: 12px 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  padding: 2px 0;
+}
+.qa-gm-leg .qa-bucket-dot {
+  width: 10px;
+  height: 10px;
+}
+.qa-gm-leg-label {
+  color: var(--qa-text);
+  white-space: nowrap;
+}
+.qa-bucket-positive .qa-gm-leg-label {
+  color: var(--qa-positive);
+  font-weight: 600;
+}
+.qa-bucket-warning .qa-gm-leg-label {
+  color: var(--qa-warning);
+  font-weight: 600;
+}
+.qa-bucket-negative .qa-gm-leg-label {
+  color: var(--qa-negative);
+  font-weight: 600;
+}
+.qa-gm-leg-val {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--qa-text);
+}
+.qa-gm-leg-pct {
+  font-variant-numeric: tabular-nums;
+  color: var(--qa-text-3);
+  font-size: 11px;
+  min-width: 32px;
+  text-align: right;
+}
+
+@media (max-width: 700px) {
+  .qa-gm-legend {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Section panels — Dashboard-aligned (no top accent, surface-subtle header). */
 .qa-section {
   background: var(--qa-surface);
   border: 1px solid var(--qa-border);
-  border-top: 3px solid var(--qa-section-accent, var(--qa-neutral));
   display: flex;
   flex-direction: column;
 }
 
-.qa-accent-blue   { --qa-section-accent: var(--qa-primary); }
-.qa-accent-cyan   { --qa-section-accent: var(--qa-cyan); }
-.qa-accent-green  { --qa-section-accent: var(--qa-green); }
-.qa-accent-purple { --qa-section-accent: var(--qa-purple); }
-.qa-accent-amber  { --qa-section-accent: var(--qa-amber); }
+/* Accent classes preserved for backwards-compat with .qa-tone-* and
+   sparkline strokes; section top-border accent removed for visual
+   consistency with the Dashboard. */
+.qa-accent-blue {
+  --qa-section-accent: var(--qa-primary);
+}
+.qa-accent-cyan {
+  --qa-section-accent: var(--qa-cyan);
+}
+.qa-accent-green {
+  --qa-section-accent: var(--qa-green);
+}
+.qa-accent-purple {
+  --qa-section-accent: var(--qa-purple);
+}
+.qa-accent-amber {
+  --qa-section-accent: var(--qa-amber);
+}
 
 .qa-section-head {
-  padding: 14px 20px 12px;
+  padding: 10px 18px;
   border-bottom: 1px solid var(--qa-border);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  background: var(--qa-bg);
+  flex-wrap: wrap;
 }
 
 .qa-section-titles {
@@ -347,10 +607,12 @@
 
 .qa-section-title {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--qa-text);
-  letter-spacing: -0.08px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
 .qa-section-sub {
@@ -359,6 +621,8 @@
   color: var(--qa-text-3);
   margin-top: 2px;
   font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .qa-section-badge {
@@ -384,14 +648,14 @@
 }
 
 .qa-table thead th {
-  padding: 10px 16px;
-  font-size: 11px;
+  padding: 8px 14px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--qa-text-2);
   text-align: left;
   background: var(--qa-bg);
-  border-bottom: 1px solid var(--qa-border);
-  letter-spacing: 0.32px;
+  border-bottom: 1px solid var(--qa-border-dark);
+  letter-spacing: 0.5px;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -410,10 +674,11 @@
 }
 
 .qa-table tbody td {
-  padding: 10px 16px;
+  padding: 8px 14px;
   border-bottom: 1px solid var(--qa-border);
   vertical-align: middle;
   color: var(--qa-text);
+  font-size: 12.5px;
 }
 
 .qa-table tbody tr:last-child td {
@@ -424,9 +689,17 @@
   background: var(--qa-bg);
 }
 
-.qa-td-num    { text-align: right; font-variant-numeric: tabular-nums; }
-.qa-td-strong { font-weight: 600; color: var(--qa-text); }
-.qa-td-muted  { color: var(--qa-text-3); }
+.qa-td-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.qa-td-strong {
+  font-weight: 600;
+  color: var(--qa-text);
+}
+.qa-td-muted {
+  color: var(--qa-text-3);
+}
 
 .qa-td-idx {
   text-align: center;
@@ -489,15 +762,33 @@
   transition: width 0.3s ease;
 }
 
-.qa-tone-blue     { background: var(--qa-primary); }
-.qa-tone-cyan     { background: var(--qa-cyan); }
-.qa-tone-green    { background: var(--qa-green); }
-.qa-tone-purple   { background: var(--qa-purple); }
-.qa-tone-amber    { background: var(--qa-amber); }
-.qa-tone-positive { background: var(--qa-positive); }
-.qa-tone-warning  { background: var(--qa-warning); }
-.qa-tone-negative { background: var(--qa-negative); }
-.qa-tone-neutral  { background: var(--qa-neutral); }
+.qa-tone-blue {
+  background: var(--qa-primary);
+}
+.qa-tone-cyan {
+  background: var(--qa-cyan);
+}
+.qa-tone-green {
+  background: var(--qa-green);
+}
+.qa-tone-purple {
+  background: var(--qa-purple);
+}
+.qa-tone-amber {
+  background: var(--qa-amber);
+}
+.qa-tone-positive {
+  background: var(--qa-positive);
+}
+.qa-tone-warning {
+  background: var(--qa-warning);
+}
+.qa-tone-negative {
+  background: var(--qa-negative);
+}
+.qa-tone-neutral {
+  background: var(--qa-neutral);
+}
 
 /* ── GM bucket dots (status indicator) ────────────────────────── */
 .qa-table-buckets td:first-child {
@@ -515,9 +806,15 @@
   font-weight: 500;
   color: var(--qa-text);
 }
-.qa-bucket-row.qa-bucket-positive .qa-bucket-label { color: var(--qa-positive); }
-.qa-bucket-row.qa-bucket-warning  .qa-bucket-label { color: var(--qa-warning); }
-.qa-bucket-row.qa-bucket-negative .qa-bucket-label { color: var(--qa-negative); }
+.qa-bucket-row.qa-bucket-positive .qa-bucket-label {
+  color: var(--qa-positive);
+}
+.qa-bucket-row.qa-bucket-warning .qa-bucket-label {
+  color: var(--qa-warning);
+}
+.qa-bucket-row.qa-bucket-negative .qa-bucket-label {
+  color: var(--qa-negative);
+}
 
 /* ── Trend table (clickable rows) ─────────────────────────────── */
 .qa-table-trend tbody tr {
@@ -584,11 +881,161 @@
   margin-right: auto;
 }
 
+/* S-RESP-1 — period chip toolbar. Carbon-style outlined pills, active
+   state inverts to brand blue. Chips wrap to next line on narrow
+   viewports (< 1100px) without falling off-screen. */
+.qa-period {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.qa-period-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.qa-chip {
+  background: #ffffff;
+  color: #525252;
+  border: 1px solid #c6c6c6;
+  border-radius: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.16px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background-color 0.12s,
+    color 0.12s,
+    border-color 0.12s;
+}
+.qa-chip:hover {
+  background: #f4f4f4;
+}
+.qa-chip.is-active {
+  background: var(--qa-primary, #0f62fe);
+  color: #ffffff;
+  border-color: var(--qa-primary, #0f62fe);
+  font-weight: 500;
+}
+.qa-chip:focus-visible {
+  outline: 2px solid var(--qa-primary, #0f62fe);
+  outline-offset: 1px;
+}
+
+/* S-RESP-1 — sticky filterbar. CSS does the pinning; JS only flips
+   the .is-pinned class for the shadow. The 1px sentinel sits at the
+   natural-flow position; when it scrolls under the bar, observer
+   reports !isIntersecting and we add the shadow. */
+.qa-filterbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--qa-bg, #ffffff);
+  box-shadow: 0 1px 0 transparent;
+  transition: box-shadow 0.12s;
+}
+.qa-filterbar.is-pinned {
+  box-shadow:
+    0 1px 0 var(--qa-border, #e0e0e0),
+    0 4px 8px -6px rgba(15, 23, 42, 0.12);
+}
+.qa-filterbar-sentinel {
+  height: 1px;
+  width: 100%;
+  pointer-events: none;
+  margin-bottom: -1px;
+}
+
+/* S-RESP-1 — fluid typography for KPI values + labels. clamp() with
+   a viewport-vw component so on 4K monitors the numbers grow legibly
+   instead of staying at 28px. tabular-nums keeps digits monospace
+   so columns of numbers align without manual padding. */
+.qa-kpi-val {
+  font-size: clamp(22px, 1.6vw + 8px, 32px);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.qa-kpi-label {
+  font-size: clamp(11px, 0.4vw + 9px, 13px);
+}
+
+/* S-RESP-1 — Custom range modal. Reuses .qa-btn-* tokens already
+   defined; scrim + card sized for 2 month inputs side-by-side. */
+.qa-modal-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+.qa-modal-card {
+  background: #ffffff;
+  padding: 20px 24px;
+  border-radius: 4px;
+  min-width: min(440px, 92vw);
+  max-width: 560px;
+  box-shadow: 0 16px 32px -8px rgba(15, 23, 42, 0.35);
+}
+.qa-modal-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--qa-text, #161616);
+}
+.qa-modal-sub {
+  margin: 0 0 16px;
+  font-size: 12px;
+  color: var(--qa-text-muted, #6f6f6f);
+  line-height: 1.4;
+}
+.qa-modal-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.qa-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
 /* ── Print stylesheet ─────────────────────────────────────────── */
 @media print {
-  .qa { background: white; }
-  .qa-objhdr-actions, .qa-filter-reset { display: none !important; }
-  .qa-filterbar { background: transparent; border: none; }
-  .qa-section { break-inside: avoid; box-shadow: none; }
-  .qa-table tbody tr:hover { background: transparent !important; }
+  /* S-RESP-1 — A4 landscape, container drops max-width so content
+     uses the full page width. Filterbar and chrome hide entirely;
+     breakdown collapses to 2 columns to fit landscape. */
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+  .qa {
+    background: white;
+  }
+  .qa-inner {
+    max-width: 100%;
+    padding: 0;
+  }
+  .qa-objhdr-actions,
+  .qa-filter-reset,
+  .qa-filterbar,
+  .qa-filterbar-sentinel {
+    display: none !important;
+  }
+  .qa-grid-breakdown {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .qa-section {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+  .qa-table tbody tr:hover {
+    background: transparent !important;
+  }
 }

@@ -1,0 +1,318 @@
+/* ─── Enterprise Dashboard ───
+   Owns its own scroll because the parent .cost-module sets
+   overflow:hidden (full-bleed shell). Without an internal scroller the
+   user is locked to whatever fits the viewport.
+
+   Visual language: IBM Carbon-inspired — flat surfaces, 1 px borders,
+   dense numerics, accent only on actionable elements. */
+
+.dashboard-root {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* S-RESP-1 (2026-05-06) — fluid container, replaces hard cap at 1440px.
+   See QuoteAnalysis.css for the matching pattern + reasoning. */
+.dashboard-inner {
+  max-width: min(2400px, calc(100vw - 48px));
+  margin: 0 auto;
+  padding-block: 24px 48px;
+  padding-inline: clamp(16px, 2vw, 48px);
+}
+
+/* Sticky header strip — title, range badge, controls, export. */
+.dashboard-head {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0 16px;
+  margin: -8px 0 16px;
+  background: linear-gradient(
+    to bottom,
+    var(--surface-subtle) 0%,
+    var(--surface-subtle) 80%,
+    transparent 100%
+  );
+  flex-wrap: wrap;
+}
+
+.dashboard-head-left {
+  min-width: 0;
+}
+
+.dashboard-title {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.dashboard-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dashboard-range-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.2px;
+}
+
+.dashboard-generated {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+/* Controls cluster — preset segmented buttons + month/year selects + export. */
+.dashboard-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dashboard-control-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dashboard-control-label {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dashboard-segmented {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-card);
+}
+
+.dashboard-segmented button {
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--border-strong);
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.12s,
+    color 0.12s;
+  white-space: nowrap;
+}
+.dashboard-segmented button:last-child {
+  border-right: none;
+}
+.dashboard-segmented button:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+.dashboard-segmented button.is-active {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.dashboard-select {
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  padding: 5px 8px;
+  font-size: 12px;
+  color: var(--text-primary);
+  font-family: inherit;
+  cursor: pointer;
+  min-width: 64px;
+}
+.dashboard-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* KPI tiles — 4-up grid that collapses gracefully. */
+/* S-RESP-1 — container-based responsive (matches QuoteAnalysis pattern).
+   The container is .dashboard-inner (declared inline-size below) so the
+   grid reacts to actual panel width, not viewport. Sidebar collapse
+   triggers a re-flow naturally. */
+.dashboard-inner {
+  container-type: inline-size;
+}
+.dashboard-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+@container (min-width: 1400px) {
+  .dashboard-kpi-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+@container (min-width: 2000px) {
+  .dashboard-kpi-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+.dashboard-kpi {
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  padding: 18px 20px;
+  position: relative;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+.dashboard-kpi:hover {
+  box-shadow: var(--shadow-sm, 0 1px 4px rgba(0, 0, 0, 0.06));
+}
+.dashboard-kpi::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--color-primary);
+  opacity: 0.85;
+}
+.dashboard-kpi.tone-good::before {
+  background: #16a34a;
+}
+.dashboard-kpi.tone-warn::before {
+  background: #d97706;
+}
+.dashboard-kpi.tone-bad::before {
+  background: #dc2626;
+}
+.dashboard-kpi.tone-neutral::before {
+  background: var(--text-tertiary);
+  opacity: 0.5;
+}
+
+.dashboard-kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.dashboard-kpi-value {
+  font-size: 28px;
+  font-weight: 600;
+  margin-top: 8px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+.dashboard-kpi-value.tone-good {
+  color: #16a34a;
+}
+.dashboard-kpi-value.tone-warn {
+  color: #d97706;
+}
+.dashboard-kpi-value.tone-bad {
+  color: #dc2626;
+}
+.dashboard-kpi-sub {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 6px;
+}
+
+/* Two-up rows for charts/panels. Stack on narrow viewports. */
+.dashboard-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+@media (max-width: 920px) {
+  .dashboard-row-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dashboard-panel {
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  display: flex;
+  flex-direction: column;
+}
+.dashboard-panel-head {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border-strong);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--surface-subtle);
+}
+.dashboard-panel-head .hint {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.dashboard-panel-body {
+  padding: 12px 18px 16px;
+}
+
+/* Last full-width panel needs bottom breathing room from the scroll edge. */
+.dashboard-row-1 {
+  margin-bottom: 24px;
+}
+
+/* S-RESP-1 — fluid typography for KPI value + label. Matches the
+   pattern used in QuoteAnalysis.css; numbers grow on widescreen. */
+.dashboard-kpi-value {
+  font-size: clamp(22px, 1.4vw + 8px, 30px);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+/* S-RESP-1 — print stylesheet. A4 landscape, container drops
+   max-width, sidebar/filterbar hide, charts compress to 2-up. */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+  .dashboard-inner {
+    max-width: 100%;
+    padding: 0;
+  }
+  .sidebar,
+  .topbar {
+    display: none !important;
+  }
+  .dashboard-panel {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+}
