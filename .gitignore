@@ -56,3 +56,4 @@ test-results/
 dist-release/
 desktop/dist-electron/
 desktop/package.json.backup-*
+Data for import/

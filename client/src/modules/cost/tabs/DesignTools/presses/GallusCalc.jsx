@@ -38,6 +38,8 @@ import {
   recommendAnilox,
   dieRisk,
   validateColorSequence,
+  GALLUS_ALGO_VERSION,
+  computeAutoE,
 } from './gallusEngine';
 import { setRuntimePrintCylinders } from './gallusInventory';
 import DecimalInput from '../../../../../utils/DecimalInput';
@@ -120,6 +122,17 @@ export default function GallusCalc() {
   // string handling here. See utils/DecimalInput.jsx header for the
   // 3 native-input bugs this avoids.
   const setNum = (k) => (v) => set(k, Number.isFinite(Number(v)) ? Number(v) : 0);
+
+  // S-AUTO-E (2026-05-05) — when E_auto is true, recompute E whenever
+  // its inputs change so the layout stays centered + lane gaps match Lg.
+  // Typing into E flips E_auto=false (handled inline at the field).
+  useEffect(() => {
+    if (!inputs.E_auto) return;
+    const { E } = computeAutoE(inputs);
+    const cur = Number(inputs.E) || 0;
+    if (Math.abs(E - cur) > 1e-3) set('E', Number(E.toFixed(3)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputs.E_auto, inputs.W, inputs.Pw, inputs.Lg, inputs.parts_td, inputs.bleed_mm]);
 
   // Sprint 1.7j — `cylVersion` bumps when admin saves edits → re-rank
   // immediately so the Top-5 + Master table reflect the new availability.
@@ -325,12 +338,27 @@ export default function GallusCalc() {
     else saveAsNew();
   }, [activeDesignId, saveAsNew]);
 
+  // Sprint S-LAYOUT-VIZ-1 — legacy badge state. Set when a loaded
+  // design predates the current engine stamp; cleared by user dismiss
+  // or on next "New". No data is recomputed or auto-resaved — the
+  // pill is informational only (renderer fix is backward-compat).
+  const [legacyPillVisible, setLegacyPillVisible] = useState(false);
   const loadFromHistory = (rec) => {
     if (rec?.inputs) {
-      setInputs({ ...createGallusInputs(), ...rec.inputs });
+      // S-AUTO-E — historical records pre-date E_auto; preserve their
+      // saved E by defaulting E_auto=false unless the record explicitly
+      // has it set. Engineer can click "↻ Auto" to recenter.
+      const hasAutoFlag = Object.prototype.hasOwnProperty.call(rec.inputs, 'E_auto');
+      setInputs({
+        ...createGallusInputs(),
+        ...rec.inputs,
+        E_auto: hasAutoFlag ? rec.inputs.E_auto : false,
+      });
       setActiveDesignId(rec.id || null);
       setActiveVersion(Number(rec.version) || 1);
       setHistoryOpen(false);
+      const stamp = rec?.result?._algo_v;
+      setLegacyPillVisible(!stamp || stamp !== GALLUS_ALGO_VERSION);
       showToast(`Loaded · Đã tải ${rec.end_cu_pn} (v${rec.version || 1})`);
     }
   };
@@ -347,6 +375,7 @@ export default function GallusCalc() {
     setInputs(createGallusInputs());
     setActiveDesignId(null);
     setActiveVersion(0);
+    setLegacyPillVisible(false);
   };
 
   const deleteFromHistory = useCallback(
@@ -578,6 +607,7 @@ export default function GallusCalc() {
       {/* INPUTS panel — drives both sub-tabs */}
       <InputsPanel
         inputs={inputs}
+        setInputs={setInputs}
         setNum={setNum}
         set={set}
         issues={issues}
@@ -611,6 +641,8 @@ export default function GallusCalc() {
           artworkLoading={artworkLoading}
           isAdmin={isAdmin}
           onReloadCylinders={reloadCylinders}
+          legacyPillVisible={legacyPillVisible}
+          onDismissLegacy={() => setLegacyPillVisible(false)}
         />
       ) : (
         <CuttingDesignTab
@@ -632,6 +664,7 @@ export default function GallusCalc() {
 // ─── Inputs panel (shared between Print + Cut) ──────────────────────
 function InputsPanel({
   inputs,
+  setInputs,
   setNum,
   set,
   issues,
@@ -767,9 +800,40 @@ function InputsPanel({
             en="E — Edge margin per side"
             vi="Vùng mép web không in"
             unit="mm"
-            hint="Default 5 mm/side"
+            hint={inputs.E_auto ? 'AUTO · centered from W, Pw, Lg' : 'Manual · type to override'}
             value={inputs.E}
-            onChange={setNum('E')}
+            onChange={(v) => {
+              // Typing flips to manual mode so the engineer's value sticks.
+              setInputs((prev) => ({
+                ...prev,
+                E_auto: false,
+                E: Number.isFinite(Number(v)) ? Number(v) : 0,
+              }));
+            }}
+            footer={
+              <div className="gc-l-hint" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {inputs.E_auto ? (
+                  <span style={{ color: '#198038', fontWeight: 600 }}>● AUTO</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => set('E_auto', true)}
+                    style={{
+                      background: 'transparent',
+                      border: '1px solid #c6c6c6',
+                      borderRadius: 4,
+                      padding: '1px 8px',
+                      fontSize: 11,
+                      color: '#0f62fe',
+                      cursor: 'pointer',
+                    }}
+                    title="Restore auto-centered E"
+                  >
+                    ↻ Auto
+                  </button>
+                )}
+              </div>
+            }
           />
           <Field
             en="Lg — Target lane gap (cross-direction)"
@@ -961,6 +1025,8 @@ function PrintDesignTab({
   artworkLoading,
   isAdmin,
   onReloadCylinders,
+  legacyPillVisible,
+  onDismissLegacy,
 }) {
   return (
     <div className="gc-tab-body">
@@ -1023,6 +1089,26 @@ function PrintDesignTab({
                 : ` · Designer mode — N down và n across đã LOCK theo target của bạn`}
             </span>
           </div>
+          {legacyPillVisible && (
+            <button
+              type="button"
+              onClick={onDismissLegacy}
+              title="Dismiss"
+              style={{
+                marginLeft: 'auto',
+                padding: '2px 10px',
+                fontSize: 11,
+                fontWeight: 500,
+                color: '#525252',
+                background: '#f1f5f9',
+                border: 'none',
+                borderRadius: 12,
+                cursor: 'pointer',
+              }}
+            >
+              Legacy render — gaps now display as N uniform stripes ✕
+            </button>
+          )}
         </div>
         <div className="gc-card-body gc-flush">
           {top5.length === 0 ? (
@@ -1039,6 +1125,12 @@ function PrintDesignTab({
                   <th className="ttl">Pitch (mm)</th>
                   <th className="ttl">N down</th>
                   <th className="ttl">Actual gap</th>
+                  <th
+                    className="ttl"
+                    title="MD axis waste = (pitch − N×L) / pitch. Lower is better."
+                  >
+                    Waste %
+                  </th>
                   <th className="ttl">★ Yield %</th>
                   <th className="ttl">Cost / 1k imp</th>
                   <th className="ttl">Step / Lay</th>
@@ -1056,6 +1148,14 @@ function PrintDesignTab({
                     <td className="num">{fmt.n(r.pitch, 2)}</td>
                     <td className="num">{r.n_down}</td>
                     <td className="num">{fmt.n(r.actual_gap, 3)}</td>
+                    <td
+                      className="num"
+                      style={
+                        r.waste_md_pct > 0.1 ? { color: '#b91c1c', fontWeight: 600 } : undefined
+                      }
+                    >
+                      {fmt.pct(r.waste_md_pct)}
+                    </td>
                     <td className="num">
                       <b style={{ color: '#0e6027' }}>{fmt.pct(r.material_yield_pct)}</b>
                     </td>
