@@ -43,11 +43,13 @@
 > section below for the audit findings + "Lessons learned" for the
 > patterns that kept biting us.
 >
-> sprint/inv-1a-cohort-1-reason-codes-server
-> **S-INVENTORY-1a Cohort 1 — reason-codes admin CRUD + perms migration shipped 2026-05-06 (SHA: d61c8e7).** Server-only `/v2/reason-codes` POST/PATCH/disable/enable with role gate, RFC-7807 errors, audit emit, and idempotent groups.json migration for the new admin tab. UI deferred to S-INVENTORY-1c (entangled with S-HOME chain). Endpoints dormant on main until UI ships — no client calls these yet.
-
-> **S-INVENTORY-1a Cohort 6 — DesignTools / Gallus calibration shipped 2026-05-06 (SHA: 190be0b).** ShotLayoutViz algo version stamp + closure invariant + even-gap distribution + dimension chains + zoom/pan; gallus engine `bleed_mm` parameter + `effectiveL`/`effectivePw` (lesson 22); GallusCalc legacy pill fix + auto-E badge; Layout default sub-tab `'cut'` → `'print'` in StandardCalc + ComplexCalc (S-LAYOUT-DEFAULT, 2026-05-05). 109/109 gallusEngine tests pass; 5/5 closure invariant guards pass.
-> main
+> **Sprint history — newest first** (SHA-discipline per Lesson 0):
+>
+> **S-INVENTORY-1b Cohort 2 — Reports tab redesign (S-RESP-1 + S-QA-CONSOL) shipped 2026-05-06 (SHA: `<COHORT-2-SHA>`).** Period picker (7-chip toolbar + Custom range modal), responsive container queries (4-up @1400, 6-up @2000), fluid typography, sticky filterbar with IntersectionObserver, A4 landscape print stylesheet. Breakdown panel consolidation (4 stacked tables → 1 pivot + GmStackBar) bundled per data-layer entanglement (`applyFilters` range refactor). Smart KPI tile redesign deferred to Cohort 3.
+>
+> **S-INVENTORY-1a Cohort 6 — DesignTools / Gallus calibration shipped 2026-05-06 (SHA: `190be0b`).** ShotLayoutViz algo version stamp + closure invariant + even-gap distribution + dimension chains + zoom/pan; gallus engine `bleed_mm` parameter + `effectiveL`/`effectivePw` (lesson 22); GallusCalc legacy pill fix + auto-E badge; Layout default sub-tab `'cut'` → `'print'` in StandardCalc + ComplexCalc (S-LAYOUT-DEFAULT, 2026-05-05). 109/109 gallusEngine tests pass; 5/5 closure invariant guards pass.
+>
+> **S-INVENTORY-1a Cohort 1 — reason-codes admin CRUD + perms migration shipped 2026-05-06 (SHA: `d61c8e7`).** Server-only `/v2/reason-codes` POST/PATCH/disable/enable with role gate, RFC-7807 errors, audit emit, and idempotent groups.json migration for the new admin tab. UI deferred to S-INVENTORY-1c (entangled with S-HOME chain). Endpoints dormant on main until UI ships — no client calls these yet.
 
 ## Deployment topology (CRITICAL)
 
@@ -211,7 +213,7 @@ Server code in `server/**` is served by `node server/index.js`. It doesn't auto-
 - `client/src/modules/help/HelpTab.jsx` — in-app Help tab component
 - `scripts/help/build-user-guide.mjs` — builds the Word user guide from content.js
 - `server/index.js` — node server entry point (serves `client/dist` + API routes)
-- `deploy.sh` — Linux SSH deploy → systemd; `deploy.ps1` is the Windows counterpart (NSSM service) and was the script used for `10.102.3.61`. Both share the same .env-merge + snapshot + preflight gate; DATA_DIR is `.env`-driven on both since Sprint S-P0-FIX-1 (2026-05-03)
+- `deploy.sh` — Linux SSH deploy → systemd; `deploy.ps1` is the Windows counterpart (NSSM service) and was the script used for `10.102.3.61`. Both share the same .env-merge + snapshot + preflight gate; DATA_DIR is `.env`-driven on both since Sprint S-P0-FIX-1 (2026-05-03, SHA: `e75cac9`)
 - `.claude/launch.json` — defines `client-dev` and `ops-control` preview targets
 
 ## Help system
@@ -311,6 +313,11 @@ Senior-auditor review ran across 9 dimensions — code quality, UI/UX consistenc
 
 These are patterns this codebase specifically tripped on — save future sessions from re-learning them.
 
+0. **Sprint claims in CLAUDE.md require commit SHAs.** Every "Sprint S-XXX shipped" or "landed" claim MUST cite the commit SHA on `main` that proves the work was committed. Format: `Sprint S-XXX shipped YYYY-MM-DD (SHA: <abc1234>)`. Date alone is insufficient — the S-INVENTORY-1 audit (2026-05-06) found that working-tree CLAUDE.md edits drifted ahead of code (e.g., Sprint S-RESP-1 referenced as shipped in Lesson 27 while the implementation sat uncommitted on local branches for days). SHA-tied claims are verifiable in 1 second via `git show <SHA>`; date-only claims must be cross-checked against a tree snapshot. Verification command (run pre-commit on any CLAUDE.md edit):
+   ```bash
+   grep -nE "shipped|landed [0-9]" CLAUDE.md | grep -v "SHA:" | grep -v "tests pass\b" || echo "PASS: all ship claims have SHAs"
+   ```
+   Some pre-import-commit lessons (S-FLEXO-1, S-COLLAPSE, S-PROJFIX) reference sprints whose code came in via the bulk `a8b559f chore: initial git repo` snapshot; those keep date-only references because pointing to the bulk SHA adds no forensic value.
 1. **Dev vs prod surfaces serve different bundles.** `:5173/5175` (Vite HMR) auto-refreshes from source; `:3000` serves the dist bundle and NEEDS a rebuild. When a user reports "I don't see the change", always ask the URL first.
 2. **Orphan-module lint is enforced.** New utility files must either be imported somewhere or added to `KNOWN_ORPHANS` in `deadCode.lint.test.js`. The lint runs as part of `npm test` and will fail CI.
 3. **The xlsx training manuals drift from code.** When a user asks about formulas documented in `Use guide/CCL_Pricing_Training_EN_v3.3.xlsx`, trust `services/calcEngine.js` — not the xlsx. The 14 Sprint-9 audit corrections are all code-vs-xlsx drifts.
@@ -337,6 +344,7 @@ These are patterns this codebase specifically tripped on — save future session
 24. **Magnetic die min lane gap is 1.5 mm, not 1.0 mm** — Sprint S-FLEXO-1 changed `HARD_MIN_GAP_MM` from 1.0 to 1.5 (rotary magnetic blade width 0.7 + 0.3 mm tolerance/side). Laser dies can take 0.3 mm; flat dies need 2.0 mm. The new `DIE_MIN_GAP_MM` lookup table makes this configurable per die-cut technology. Older audits that asserted "lane_gap 1.0 mm is OK" were physically wrong — chips kẹt giữa lanes on long runs.
 25. **Native modules + paths with spaces = `electron-builder` fails on rebuild** — `/Volumes/Macintosh Data/...` breaks node-gyp's makefile generation for `node-hid` + `serialport` (see node-gyp issue #65). Use `--config.npmRebuild=false` to skip rebuild during `electron-builder` (existing native binaries from `npm install` are reused). The DMG ships fine because the binaries packaged into `app.asar.unpacked/node_modules/**` were already compiled at install time. Don't fix this with workspace move unless the user has time to relocate the project tree.
 26. **Sidebar collapse persistence key matters per-feature** — Sprint S-COLLAPSE (2026-04-29) added section-level collapse via `localStorage` key `opsctl.sidebar.section-collapsed.v1`. The mini-collapse (240px ↔ 64px rail) used different keys in v1.3. Don't reuse one key for two semantically different collapse states or operators lose either preference when the other one toggles.
+27. **Fluid container + container queries beat viewport media queries for cards/grids** — KPI tiles và breakdown panels phải responsive theo CONTAINER width (sidebar collapse/expand, panel resize) chứ không phải viewport. Pattern: wrap với `container-type: inline-size`, dùng `@container (min-width: …)`. Cho root container, dùng `max-width: min(2400px, calc(100vw - 48px))` thay vì hard cap `1440px` — màn 27"/4K/ultrawide không còn dải trắng 400-600px mỗi bên. Browser baseline yêu cầu Chrome 105+/Safari 16+ (đủ cho Electron 41 + web access trình duyệt mới). **Reference impl**: QuoteAnalysis + Dashboard (Sprint S-RESP-1 shipped 2026-05-06, SHA: `<COHORT-2-SHA>`). Khi sprint sau touch Cost Breakdown / Quote History / Settings, pull pattern này theo (giống approach Sprint 12 inline-style migration). Companion patterns: fluid typography via `clamp(min, vw-component, max)` cho KPI numbers, sticky filterbar via `position: sticky` + IntersectionObserver toggle `.is-pinned` class (Carbon Tearsheet pattern), print rules `@page { size: A4 landscape }` để report fit landscape khi Cmd+P.
 
 ## Recovery playbook
 
