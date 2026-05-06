@@ -37,6 +37,8 @@ import { validateReasonCodeIntegrity, seedReasonCodes } from './seedReasonCodes.
 // MES-3-V1 (KIOSK-006b) — backfills kiosk-admin tab perms into operator
 // runtime groups.json on first boot post-deploy. Idempotent + fail-safe.
 import { migrate as migrateKioskAdminPerms } from '../../../scripts/migrations/2026-05-kiosk-admin-perms.js';
+// MES-3-V2 (KIOSK-002) — same pattern for the reason-codes admin tab.
+import { migrate as migrateReasonCodesTab } from '../../../scripts/migrations/2026-05-reason-codes-tab.js';
 
 /**
  * Resolve OPS_KIOSK_KEY for kiosk JWT signing. Mirrors the OPS_TOTP_KEY
@@ -154,6 +156,14 @@ export function mountPlanning(app, opts = {}) {
       err && err.message ? err.message : err
     );
   }
+  try {
+    migrateReasonCodesTab(_dataDir);
+  } catch (err) {
+    console.error(
+      '[planning] reason-codes-tab migration failed (non-fatal):',
+      err && err.message ? err.message : err
+    );
+  }
 
   const repo = createWorkOrderRepo(db);
   const codeGen = createWoCodeGenerator(db);
@@ -254,7 +264,9 @@ export function mountPlanning(app, opts = {}) {
   app.use('/api/v1/planning/v2/operations', operationRouter);
 
   // MES-2.6b Patch N1 — public reference data; no auth, 5-min Cache-Control.
-  const reasonCodesRouter = createReasonCodesV2Router({ db });
+  // MES-3-V2 KIOSK-002 — `audit` + `authMiddleware` wire in admin CRUD
+  // (POST/PATCH/disable/enable). GET stays auth-free for the kiosk picker.
+  const reasonCodesRouter = createReasonCodesV2Router({ db, audit, authMiddleware: auth });
   app.use('/api/planning/v2/reason-codes', reasonCodesRouter);
   app.use('/api/v1/planning/v2/reason-codes', reasonCodesRouter);
 
