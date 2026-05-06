@@ -13,6 +13,7 @@
  * (swallows errors) so we cannot wrap it for atomicity — see PR notes.
  */
 import { workOrderTransition } from '../domain/workOrderTransition.js';
+import { opStatusTransition } from '../domain/opStatusTransition.js';
 import { WO_TERMINAL } from '../../shared/constants/workOrderStates.js';
 import { HEADER_PATCHABLE_FIELDS } from '../repositories/workOrderRepo.js';
 import { BmesError } from '../errors.js';
@@ -134,12 +135,137 @@ export function createWorkOrderService({ db, repo, codeGen, audit }) {
     });
   }
 
+  /**
+   * Cancel a Work Order — MES-3-V1 (KIOSK-003 b+d) cascade behaviour.
+   *
+   * The single-transaction shape:
+   *   1. validate `reason` (existing contract — 1..500 chars)
+   *   2. load WO; 404 if missing
+   *   3. idempotent return when wo.status is already 'CANCELLED' — no
+   *      second cascade, no second audit row. The response shape mirrors
+   *      a fresh cancel (carries `cascaded_ops`) so re-POST is invisible
+   *      to clients downstream.
+   *   4. workOrderTransition guard (existing — 409 from non-cancellable)
+   *   5. inside one db.transaction:
+   *        - for each non-terminal child op (status NOT IN {ACCEPTED,CANCELLED}):
+   *            * opStatusTransition(op.status, 'wo_cancel') guard
+   *            * repo.updateOpStatus(op.id, 'CANCELLED', {}, ts)
+   *            * insertOpEvent (forensic replay)
+   *            * audit OP_CANCEL_CASCADE
+   *        - repo.updateStatus(wo.id, 'CANCELLED', ts)
+   *        - audit WO_CANCEL with cascaded_op_count
+   *   6. return wo + cascaded_ops list
+   *
+   * Atomicity (PRD §4): if ANY op transition fails, the whole transaction
+   * rolls back. A WO with broken state-machine state in any child op
+   * stays in its original status — operator + audit see no half-cancel.
+   *
+   * Skipped statuses on cascade:
+   *   - ACCEPTED — operator already signed off; un-accepting is a separate
+   *     business decision (deferred KIOSK-003 c).
+   *   - CANCELLED — already there; no-op (also unreachable in practice
+   *     because step 3's idempotent guard catches the re-cancel case).
+   */
   function cancelWorkOrder(id, reason, actor) {
     if (typeof reason !== 'string' || reason.length === 0 || reason.length > 500) {
       throw new BmesError('urn:ops:wo-reason-required', { max_length: 500 });
     }
-    void mustExist(id);
-    return transition(id, 'CANCELLED', actor, 'WO_CANCEL', { reason });
+    const wo = mustExist(id);
+
+    // Idempotent: a second cancel on an already-CANCELLED WO returns the
+    // current row with cascaded_ops:[]. No new audit, no new state event.
+    if (wo.status === 'CANCELLED') {
+      return { ...wo, cascaded_ops: [] };
+    }
+
+    // Pre-flight WO transition guard. Throws urn:ops:wo-no-change for
+    // self-loops (caught above) or urn:ops:wo-invalid-transition for
+    // non-cancellable terminal states (COMPLETED/QC_RELEASED/CLOSED).
+    const t = workOrderTransition(wo.status, 'CANCELLED');
+    if (!t.ok) {
+      throw new BmesError(t.error.type, {
+        wo_id: id,
+        from: wo.status,
+        to: 'CANCELLED',
+        ...(t.error.allowed_from ? { allowed_from: [...t.error.allowed_from] } : {}),
+      });
+    }
+
+    const ts = new Date().toISOString();
+    const ops = repo.findOpsByWorkOrder(id);
+    const cascaded = [];
+    let updatedWo;
+
+    db.transaction(() => {
+      for (const op of ops) {
+        // Skip already-terminal ops. ACCEPTED stays as-is per cascade
+        // contract; CANCELLED is unreachable here (idempotent guard caught
+        // re-cancel) but the check is cheap defensive insurance.
+        if (op.status === 'ACCEPTED' || op.status === 'CANCELLED') continue;
+
+        const opT = opStatusTransition(op.status, 'wo_cancel');
+        if (!opT.ok) {
+          // Should be unreachable: wo_cancel is valid from every non-
+          // terminal op status. If the state machine evolves and a non-
+          // cascade-able state appears, fail loud + roll back the txn.
+          throw new BmesError('urn:ops:op-invalid-transition', {
+            wo_id: id,
+            op_id: op.id,
+            from: op.status,
+            event: 'wo_cancel',
+            ...(opT.error.allowed_from ? { allowed_from: [...opT.error.allowed_from] } : {}),
+          });
+        }
+
+        repo.updateOpStatus(op.id, opT.to, {}, ts);
+        // Forensic replay row — same shape operationService.runTransition
+        // writes for kiosk-driven transitions. payload_json carries the
+        // cascade-only fields a forensic auditor would need (wo_id, reason).
+        repo.insertOpEvent({
+          op_id: op.id,
+          from_status: op.status,
+          to_status: opT.to,
+          actor_user_id: null,
+          kiosk_session_jti: null,
+          idempotency_key: null,
+          payload_json: JSON.stringify({ event: 'wo_cancel', wo_id: id, reason }),
+        });
+        emit(
+          'OP_CANCEL_CASCADE',
+          actor,
+          {
+            wo_id: id,
+            op_id: op.id,
+            from: op.status,
+            to: opT.to,
+            event: 'wo_cancel',
+            reason,
+          },
+          ts
+        );
+        cascaded.push({ op_id: op.id, prev_status: op.status, new_status: opT.to });
+      }
+
+      // Update the WO last so cascade rows precede the WO_CANCEL row in
+      // audit order — chronological replay reads "ops cancelled, then WO
+      // cancelled" instead of the inverse.
+      updatedWo = repo.updateStatus(id, 'CANCELLED', ts);
+      emit(
+        'WO_CANCEL',
+        actor,
+        {
+          wo_id: id,
+          code: wo.code,
+          from: wo.status,
+          to: 'CANCELLED',
+          reason,
+          cascaded_op_count: cascaded.length,
+        },
+        ts
+      );
+    })();
+
+    return { ...updatedWo, cascaded_ops: cascaded };
   }
 
   function attachOperation(woId, opInput, actor) {

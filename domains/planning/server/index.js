@@ -34,6 +34,9 @@ import { createIdempotencyMiddleware } from './middleware/idempotency.js';
 import { createRequireKioskSession } from './middleware/requireKioskSession.js';
 import { readFeatureFlag } from './featureFlag.js';
 import { validateReasonCodeIntegrity, seedReasonCodes } from './seedReasonCodes.js';
+// MES-3-V1 (KIOSK-006b) — backfills kiosk-admin tab perms into operator
+// runtime groups.json on first boot post-deploy. Idempotent + fail-safe.
+import { migrate as migrateKioskAdminPerms } from '../../../scripts/migrations/2026-05-kiosk-admin-perms.js';
 
 /**
  * Resolve OPS_KIOSK_KEY for kiosk JWT signing. Mirrors the OPS_TOTP_KEY
@@ -133,6 +136,23 @@ export function mountPlanning(app, opts = {}) {
   const issues = validateReasonCodeIntegrity(db);
   if (issues.length > 0) {
     console.warn('[planning] reason_code integrity warnings:\n  - ' + issues.join('\n  - '));
+  }
+
+  // MES-3-V1 (KIOSK-006b) — first-boot migration. Idempotent: subsequent
+  // boots log "no-op (already applied)" and return without touching the
+  // file. Wrapped in try/catch so a malformed groups.json or filesystem
+  // glitch logs but never blocks server start. Resolution mirrors the
+  // pattern used by buildMachineCodeValidator() above.
+  const _dataDir = process.env.DATA_DIR
+    ? path.resolve(process.env.DATA_DIR)
+    : path.resolve(process.cwd(), 'server/data');
+  try {
+    migrateKioskAdminPerms(_dataDir);
+  } catch (err) {
+    console.error(
+      '[planning] kiosk-admin perms migration failed (non-fatal):',
+      err && err.message ? err.message : err
+    );
   }
 
   const repo = createWorkOrderRepo(db);

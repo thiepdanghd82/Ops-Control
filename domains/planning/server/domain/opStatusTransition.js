@@ -40,6 +40,10 @@
 
 import { OP_TERMINAL_STATUSES } from '../../shared/constants/workOrderStates.js';
 
+// MES-3-V1 (KIOSK-003 a): edges may now carry an array `from` for
+// multi-source events. `wo_cancel` is the only multi-source event today
+// (cascade from any non-terminal state). The rest stay single-source so
+// existing inverse-lookup semantics are preserved.
 const TRANSITIONS = Object.freeze({
   dispatch: Object.freeze({ from: 'PENDING', to: 'DISPATCHED' }),
   start: Object.freeze({ from: 'DISPATCHED', to: 'SETUP' }),
@@ -50,6 +54,13 @@ const TRANSITIONS = Object.freeze({
   complete: Object.freeze({ from: 'RUNNING', to: 'DONE' }),
   complete_from_pause: Object.freeze({ from: 'PAUSED', to: 'DONE' }),
   accept: Object.freeze({ from: 'DONE', to: 'ACCEPTED' }),
+  // ACCEPTED + CANCELLED are NOT in the source set — both are terminal,
+  // and the early TERMINAL_SET check returns invalid_empty before this
+  // edge is consulted regardless.
+  wo_cancel: Object.freeze({
+    from: Object.freeze(['PENDING', 'DISPATCHED', 'SETUP', 'RUNNING', 'PAUSED', 'DONE']),
+    to: 'CANCELLED',
+  }),
 });
 
 const TERMINAL_SET = new Set(OP_TERMINAL_STATUSES);
@@ -93,17 +104,20 @@ export function opStatusTransition(from, eventType, _ctx) {
   if (from === edge.to) {
     return NO_CHANGE;
   }
-  // Valid edge.
-  if (from === edge.from) {
+  // MES-3-V1: edge.from may be a single state OR an array (multi-source
+  // events like wo_cancel). Normalise to an array once and let the rest
+  // of the logic stay shape-agnostic.
+  const allowedSources = Array.isArray(edge.from) ? edge.from : [edge.from];
+  if (allowedSources.includes(from)) {
     return { ok: true, to: edge.to };
   }
-  // Caller is in the wrong source state for this event. allowed_from is
-  // exactly [edge.from] because each event has a single valid source.
+  // Caller is in the wrong source state for this event. allowed_from
+  // surfaces the full set of states from which this event is legal.
   return {
     ok: false,
     error: {
       type: 'op-invalid-transition',
-      allowed_from: Object.freeze([edge.from]),
+      allowed_from: Object.freeze([...allowedSources]),
     },
   };
 }
