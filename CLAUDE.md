@@ -42,6 +42,8 @@
 > new code path MUST preserve this bar — see the "Go-live readiness"
 > section below for the audit findings + "Lessons learned" for the
 > patterns that kept biting us.
+>
+> **S-INVENTORY-1a Cohort 6 — DesignTools / Gallus calibration shipped 2026-05-06 (SHA: 190be0b).** ShotLayoutViz algo version stamp + closure invariant + even-gap distribution + dimension chains + zoom/pan; gallus engine `bleed_mm` parameter + `effectiveL`/`effectivePw` (lesson 22); GallusCalc legacy pill fix + auto-E badge; Layout default sub-tab `'cut'` → `'print'` in StandardCalc + ComplexCalc (S-LAYOUT-DEFAULT, 2026-05-05). 109/109 gallusEngine tests pass; 5/5 closure invariant guards pass.
 
 ## Deployment topology (CRITICAL)
 
