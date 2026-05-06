@@ -169,22 +169,53 @@ function computeKpis(quotes) {
   };
 }
 
-// Delta indicator — IBM Carbon convention: ↑/↓ glyph + colored text.
-// `unit` = 'pp' (percentage points, for GM/VA) | 'pct' (relative %) | null (raw)
-function Delta({ now, prev, unit, invert }) {
-  if (now == null || prev == null) return <span className="qa-delta qa-delta-flat">—</span>;
+// S-DESIGN-1 — Smart KPI delta. Conditional render:
+//   - hide when prev is null/0 (no anchor → "↑6300%" type vanity)
+//   - hide when |Δ| < 1% relative (or < 0.5pp absolute) — within noise
+// Polarity decides delta-pill color:
+//   - 'higher_better' (revenue, GM, VA): up=green, down=red
+//   - 'lower_better'  (lead time, defect rate): up=red, down=green
+//   - 'neutral'       (count metrics — total parts, active rfqs):
+//                     gray pill regardless of direction
+function shouldShowDelta(now, prev, unit) {
+  if (now == null || prev == null) return false;
+  if (unit === 'pp') {
+    const ppDiff = (now - prev) * 100;
+    return Math.abs(ppDiff) >= 0.5;
+  }
+  if (!(prev > 0)) return false;
+  return Math.abs((now - prev) / prev) >= 0.01;
+}
+
+function Delta({ now, prev, unit, polarity = 'neutral' }) {
+  if (!shouldShowDelta(now, prev, unit)) return null;
   const diff = unit === 'pp' ? (now - prev) * 100 : ((now - prev) / Math.abs(prev || 1)) * 100;
-  if (Math.abs(diff) < 0.05) return <span className="qa-delta qa-delta-flat">±0</span>;
-  const positive = invert ? diff < 0 : diff > 0;
   const sign = diff > 0 ? '↑' : '↓';
-  const cls = positive ? 'qa-delta-up' : 'qa-delta-down';
   const suffix = unit === 'pp' ? 'pp' : '%';
+  let cls = 'qa-delta-neutral';
+  if (polarity === 'higher_better') cls = diff > 0 ? 'qa-delta-up' : 'qa-delta-down';
+  else if (polarity === 'lower_better') cls = diff < 0 ? 'qa-delta-up' : 'qa-delta-down';
   return (
     <span className={`qa-delta ${cls}`}>
       {sign} {Math.abs(diff).toFixed(1)}
       {suffix}
     </span>
   );
+}
+
+// Smart sparkline gate — only render when we have a real trend
+// (≥4 non-null points). Below that the "trend" is mostly noise and
+// adds visual weight without insight.
+function hasSparklineData(values) {
+  if (!values || values.length < 4) return false;
+  return values.filter((v) => v != null && v !== 0).length >= 4;
+}
+
+// Tile tone — Dashboard convention. Drives the 3px left-rail color.
+// GM has hard thresholds (industry-known); other metrics stay neutral.
+function toneOfGM(v) {
+  if (v == null) return 'neutral';
+  return v >= 0.2 ? 'good' : v >= 0.1 ? 'warn' : 'bad';
 }
 
 // Reusable section panel. `headRight` is for actions/segmented controls
@@ -266,9 +297,11 @@ function BarCell({ label, value, total, tone = 'blue', bold }) {
 }
 
 // Sparkline — inline SVG mini chart for KPI tiles. Carbon convention:
-// muted fill + accent stroke, no axis, no labels.
+// muted fill + accent stroke, no axis, no labels. S-DESIGN-1: gated by
+// hasSparklineData() at the call site so this never renders on a thin
+// slice (1-3 points = noise, not a trend).
 function Sparkline({ values, accent = 'blue', height = 28 }) {
-  if (!values || values.length < 2) return <div className="qa-sparkline qa-sparkline-empty">—</div>;
+  if (!hasSparklineData(values)) return null;
   const max = Math.max(...values, 1);
   const min = Math.min(...values, 0);
   const range = max - min || 1;
@@ -596,17 +629,19 @@ export default function QuoteAnalysis() {
         </div>
         {/* /qa-filterbar */}
 
-        {/* ── KPI tile strip with delta + sparkline ─────────────────── */}
-        {/* S-RESP-1 — `qa-kpis-container` wrapper enables container queries
-            on `.qa-kpis` so the tile grid re-flows against panel width
-            (sidebar collapse / panel resize), not viewport width. The
-            Smart KPI tile redesign is deferred to S-DESIGN-1 (next PR). */}
+        {/* ── KPI tile strip — Smart KPI pattern (S-DESIGN-1).
+            • Tile tone follows Dashboard (good/warn/bad/neutral, drives
+              3px left rail). Removed decorative qa-kpi-primary/cyan/
+              neutral variants — operator metrics > brand colors.
+            • <Delta/> hides itself when prev=0 or |Δ|<1%.
+            • <Sparkline/> hides itself when fewer than 4 points.
+            • qa-kpi-v2 marker class — bundle grep target. */}
         <div className="qa-kpis-container">
           <div className="qa-kpis">
-            <article className="qa-kpi qa-kpi-neutral">
+            <article className="qa-kpi qa-kpi-v2 qa-kpi-tone-neutral">
               <div className="qa-kpi-row">
                 <span className="qa-kpi-label">Total Parts</span>
-                <Delta now={totalParts} prev={prevKpis.totalParts} unit="pct" />
+                <Delta now={totalParts} prev={prevKpis.totalParts} unit="pct" polarity="neutral" />
               </div>
               <div className="qa-kpi-val">{totalParts.toLocaleString()}</div>
               <div className="qa-kpi-row qa-kpi-foot">
@@ -617,10 +652,15 @@ export default function QuoteAnalysis() {
               </div>
             </article>
 
-            <article className="qa-kpi qa-kpi-primary">
+            <article className="qa-kpi qa-kpi-v2 qa-kpi-tone-neutral">
               <div className="qa-kpi-row">
                 <span className="qa-kpi-label">Estimated Revenue</span>
-                <Delta now={totalRev} prev={prevKpis.totalRev} unit="pct" />
+                <Delta
+                  now={totalRev}
+                  prev={prevKpis.totalRev}
+                  unit="pct"
+                  polarity="higher_better"
+                />
               </div>
               <div className="qa-kpi-val">
                 {qaFmt(totalRev)} <span className="qa-kpi-unit">k.CAD</span>
@@ -635,13 +675,10 @@ export default function QuoteAnalysis() {
               </div>
             </article>
 
-            <article
-              className="qa-kpi"
-              style={{ '--qa-tile-accent': avgGM != null ? qaGmClr(avgGM) : 'var(--qa-neutral)' }}
-            >
+            <article className={`qa-kpi qa-kpi-v2 qa-kpi-tone-${toneOfGM(avgGM)}`}>
               <div className="qa-kpi-row">
                 <span className="qa-kpi-label">Avg GM%</span>
-                <Delta now={avgGM} prev={prevKpis.avgGM} unit="pp" />
+                <Delta now={avgGM} prev={prevKpis.avgGM} unit="pp" polarity="higher_better" />
               </div>
               <div className="qa-kpi-val">{avgGM != null ? qaPct(avgGM) : '—'}</div>
               <div className="qa-kpi-row qa-kpi-foot">
@@ -661,10 +698,10 @@ export default function QuoteAnalysis() {
               </div>
             </article>
 
-            <article className="qa-kpi qa-kpi-cyan">
+            <article className="qa-kpi qa-kpi-v2 qa-kpi-tone-neutral">
               <div className="qa-kpi-row">
                 <span className="qa-kpi-label">Avg VA%</span>
-                <Delta now={avgVA} prev={prevKpis.avgVA} unit="pp" />
+                <Delta now={avgVA} prev={prevKpis.avgVA} unit="pp" polarity="higher_better" />
               </div>
               <div className="qa-kpi-val">{avgVA != null ? qaPct(avgVA) : '—'}</div>
               <div className="qa-kpi-row qa-kpi-foot">
