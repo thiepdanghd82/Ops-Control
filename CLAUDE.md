@@ -42,6 +42,8 @@
 > new code path MUST preserve this bar — see the "Go-live readiness"
 > section below for the audit findings + "Lessons learned" for the
 > patterns that kept biting us.
+>
+> **S-INVENTORY-1a Cohort 1 — reason-codes admin CRUD + perms migration shipped 2026-05-06 (SHA: d61c8e7).** Server-only `/v2/reason-codes` POST/PATCH/disable/enable with role gate, RFC-7807 errors, audit emit, and idempotent groups.json migration for the new admin tab. UI deferred to S-INVENTORY-1c (entangled with S-HOME chain). Endpoints dormant on main until UI ships — no client calls these yet.
 
 ## Deployment topology (CRITICAL)
 
