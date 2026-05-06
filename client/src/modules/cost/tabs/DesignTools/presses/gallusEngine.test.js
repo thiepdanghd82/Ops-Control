@@ -947,3 +947,96 @@ describe('rankPrintCylinders — designer-td locks n_across via crossDirection',
     assert.equal(cross.n_across, 3);
   });
 });
+
+// Sprint S-LAYOUT-VIZ-1 — even-gap distribution acceptance tests.
+// Engine math (actualGap = (pitch−K)/N − L) was already correct; the
+// regression was in the SVG renderer which left residual whitespace
+// after the Nth product. Tests pin engine outputs so a future
+// refactor can't reintroduce the "dump-at-bottom" bug at math layer.
+describe('Even-gap distribution (Sprint S-LAYOUT-VIZ-1)', () => {
+  const baseInputs = (overrides) => ({
+    ...createGallusInputs(),
+    L: 63.5,
+    Pw: 252.75,
+    W: 270,
+    E: 5,
+    bleed_mm: 0,
+    only_available: false,
+    ...overrides,
+  });
+
+  test('L=63.5 N=4 K=4 G=2.9375 G_max=3 → Z=85, gap≈2.969, closure exact', () => {
+    const inputs = baseInputs({ K: 4, G: 2.9375, G_min: 2, G_max: 3, parts_md: 4 });
+    const ranked = rankPrintCylinders(inputs);
+    const top = ranked.filter((r) => r.status === 'OK')[0];
+    assert.ok(top, 'expected at least one OK cylinder');
+    assert.equal(top.z, 85);
+    assert.equal(top.n_down, 4);
+    assert.ok(
+      Math.abs(top.actual_gap - 2.969) < 0.01,
+      `gap expected ≈ 2.969, got ${top.actual_gap.toFixed(3)}`
+    );
+    // Closure invariant: K + N×L + N×gap === pitch (no residual at bottom)
+    const closure = inputs.K + top.n_down * inputs.L + top.n_down * top.actual_gap;
+    assert.ok(
+      Math.abs(closure - top.pitch) < 0.001,
+      `closure ${closure.toFixed(3)} ≠ pitch ${top.pitch}`
+    );
+  });
+
+  test('L=63.5 N=4 K=0 G=4.0 → Z=85, gap≈3.969 (no overhead)', () => {
+    const inputs = baseInputs({ K: 0, G: 4.0, G_min: 2, G_max: 9, parts_md: 4 });
+    const ranked = rankPrintCylinders(inputs);
+    const top = ranked.filter((r) => r.status === 'OK')[0];
+    assert.equal(top.z, 85);
+    assert.ok(
+      Math.abs(top.actual_gap - 3.969) < 0.01,
+      `gap expected ≈ 3.969, got ${top.actual_gap.toFixed(3)}`
+    );
+  });
+
+  test('L=63.5 N=4 K=4 G=2.0 G_min=2 → Z=81 infeasible, OK pick has gap ≥ 2', () => {
+    // Z=81 (pitch=257.175): usable=253.175, gap=(253.175/4)−63.5=−0.21,
+    // below G_min so must NOT be OK; engine should pick a larger Z.
+    const inputs = baseInputs({ K: 4, G: 2.0, G_min: 2, G_max: 9, parts_md: 4 });
+    const ranked = rankPrintCylinders(inputs);
+    const z81 = ranked.find((r) => r.z === 81);
+    assert.ok(z81, 'Z=81 should appear in ranked list');
+    assert.notEqual(z81.status, 'OK', 'Z=81 should NOT be OK with G_min=2');
+    const top = ranked.filter((r) => r.status === 'OK')[0];
+    assert.ok(top, 'an OK cylinder should still exist (Z≥84 should pass)');
+    assert.ok(
+      top.actual_gap >= 2.0,
+      `picked cylinder gap ${top.actual_gap.toFixed(3)} must be ≥ G_min=2`
+    );
+  });
+
+  test('L=100 N=3 K=0 G=5.0 → Z=99, gap≈4.775', () => {
+    // Z=99 pitch = 99 × 3.175 = 314.325 mm; gap = 314.325/3 − 100 = 4.775.
+    // (Spec table mentioned 4.792 but that's slightly off — exact math
+    // gives 4.775; pinning to the actual computed value.)
+    const inputs = baseInputs({ L: 100, K: 0, G: 5.0, G_min: 3, G_max: 9, parts_md: 3 });
+    const ranked = rankPrintCylinders(inputs);
+    const top = ranked.filter((r) => r.status === 'OK')[0];
+    assert.equal(top.z, 99);
+    assert.ok(
+      Math.abs(top.actual_gap - 4.775) < 0.01,
+      `gap expected ≈ 4.775, got ${top.actual_gap.toFixed(3)}`
+    );
+  });
+
+  test('waste_md_pct exposed and matches (pitch − N×L) / pitch', () => {
+    // The new ranking column. Engine MUST compute this so the table
+    // can warn (red) when waste > 10 %.
+    const inputs = baseInputs({ K: 4, G: 2.9375, G_min: 2, G_max: 9, parts_md: 4 });
+    const ranked = rankPrintCylinders(inputs);
+    for (const r of ranked.filter((x) => x.status === 'OK')) {
+      assert.ok(Number.isFinite(r.waste_md_pct), `Z=${r.z} waste_md_pct missing`);
+      const expected = (r.pitch - r.n_down * inputs.L) / r.pitch;
+      assert.ok(
+        Math.abs(r.waste_md_pct - expected) < 1e-9,
+        `Z=${r.z} waste_md_pct mismatch: got ${r.waste_md_pct}, expected ${expected}`
+      );
+    }
+  });
+});
