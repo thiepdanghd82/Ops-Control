@@ -86,14 +86,19 @@ export function listInventoryAll() {
 // agnostic: just filter the full list. Still O(n) but n < 40k and
 // these endpoints are rarely called (quote detail views only).
 export function listBomForPart(partNo) {
+  // String-coerce: IFS exports purely numeric Part Nos as JS numbers
+  // (80640087), but every caller passes a string. Strict equality
+  // returned 0 rows for any numeric PN (CLAUDE.md lesson #21).
+  const target = String(partNo);
   return listBom().filter(r =>
-    r['Parent Part No'] === partNo || r['parent_part_no'] === partNo
+    String(r['Parent Part No'] ?? r['parent_part_no'] ?? '') === target
   );
 }
 
 export function listRoutingForPart(partNo) {
+  const target = String(partNo);
   return listRouting().filter(r =>
-    r['Part No'] === partNo || r['part_no'] === partNo
+    String(r['Part No'] ?? r['part_no'] ?? '') === target
   );
 }
 

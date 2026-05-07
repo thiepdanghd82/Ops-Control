@@ -57,3 +57,6 @@ dist-release/
 desktop/dist-electron/
 desktop/package.json.backup-*
 Data for import/
+
+# Claude Code session output (never commit)
+4. CLAUDE OUTPUT/

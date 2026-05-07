@@ -193,13 +193,17 @@ router.get('/dashboard', async (req, res) => {
       getOverview, getWinRate, getApprovalFunnel, getTopCustomers,
       getMonthlyQuoteCount, getMarginHistogram, getMarginTrend,
     } = await import('../repositories/dashboardStats.js');
-    // Validate days: 30 | 90 | 365 | omitted/'all' (all history). Any
-    // other value is ignored (falls through to all-history) rather than
-    // 400'd — the client dropdown only emits the four values, but a
-    // bookmarked URL with junk shouldn't break the page.
+    // Range filter precedence: from/to > month > year > days > all-history.
+    // `days` is preset (30 | 90 | 365). `month` is YYYY-MM, `year` is YYYY,
+    // `from`/`to` are ISO YYYY-MM-DD. Any malformed value is ignored
+    // rather than 400'd — bookmarked URLs with junk shouldn't break the page.
     const raw = req.query.days;
     const days = (raw === '30' || raw === '90' || raw === '365') ? Number(raw) : null;
-    const opts = days ? { days } : {};
+    const month = typeof req.query.month === 'string' && /^\d{4}-\d{2}$/.test(req.query.month) ? req.query.month : null;
+    const year  = typeof req.query.year  === 'string' && /^\d{4}$/.test(req.query.year)        ? req.query.year  : null;
+    const from  = typeof req.query.from  === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.query.from) ? req.query.from : null;
+    const to    = typeof req.query.to    === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.query.to)   ? req.query.to   : null;
+    const opts = { ...(days ? { days } : {}), ...(month ? { month } : {}), ...(year ? { year } : {}), ...(from ? { from } : {}), ...(to ? { to } : {}) };
 
     // Phase 9F.3 + 9N.1 — single-scan-per-window optimization. We do
     // AT MOST two full-table scans per /dashboard request:
@@ -210,8 +214,9 @@ router.get('/dashboard', async (req, res) => {
     // When `days` is null (all-time range) these are the same array and
     // we avoid double-scanning by reusing the reference. 10k quote DB:
     // 3 scans → 1-2 scans; 100k DB: ~350ms → ~70-140ms.
+    const hasFilter = !!(days || month || year || from || to);
     const metrics = collectMetrics(opts);
-    const metricsAll = opts.days ? collectMetrics() : metrics;
+    const metricsAll = hasFilter ? collectMetrics() : metrics;
     const aggOpts = { ...opts, _metrics: metrics };
 
     res.json({
@@ -226,7 +231,14 @@ router.get('/dashboard', async (req, res) => {
       monthly_quotes: getMonthlyQuoteCount({ months: 12, _metrics: metricsAll }),
       margin_trend: getMarginTrend({ months: 12, _metrics: metricsAll }),
       margin_histogram: getMarginHistogram(aggOpts),
-      range: { days, since: days ? new Date(Date.now() - days * 86400000).toISOString() : null },
+      range: {
+        days,
+        month,
+        year,
+        from,
+        to,
+        since: days ? new Date(Date.now() - days * 86400000).toISOString() : null,
+      },
       generated_at: new Date().toISOString(),
     });
   } catch (err) {
@@ -2247,7 +2259,7 @@ router.post('/design-tools', async (req, res) => {
       return record;
     });
     audit('DESIGN_TOOLS_SAVE', cu.username, clientIp(req),
-          `${saved.press} · ${saved.end_cu_pn} (#${saved.id}${parentId ? ` ← branch of #${parentId}` : ''})`);
+          `${saved.press} · ${saved.end_cu_pn} (#${saved.id}${parentId ? ` ← branch of #${parentId}` : ''}) · algo_v=${saved.result?._algo_v || 'v1-implicit'}`);
     res.json({ ok: true, design: saved });
   } catch (err) {
     logErr(req, 'design_tools_save', err);

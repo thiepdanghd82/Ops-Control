@@ -139,12 +139,19 @@ export function getManufacturingStructures() {
 }
 
 /**
- * Get BOM for a specific part number
+ * Get BOM for a specific part number.
+ *
+ * IFS exports purely numeric Part Nos as JS numbers (e.g. 80640087)
+ * but every caller passes a string (WO.ccl_pn / order.productCode are
+ * always strings). String-coerce both sides — same pattern that
+ * unbroke WorkOrderPrintable's BOM filter (CLAUDE.md lesson #21
+ * "Number-vs-string PN comparison").
  */
 export function getBOMForPart(partNo) {
+  const target = String(partNo);
   const structures = getManufacturingStructures();
   return structures.filter(s =>
-    s['Parent Part No'] === partNo || s['parent_part_no'] === partNo
+    String(s['Parent Part No'] ?? s['parent_part_no'] ?? '') === target
   );
 }
 
@@ -164,12 +171,15 @@ export function getRoutingOperations() {
 }
 
 /**
- * Get Routing for a specific part number
+ * Get Routing for a specific part number.
+ * Same number-vs-string coercion as getBOMForPart — IFS routing rows
+ * also store purely numeric Part Nos as JS numbers.
  */
 export function getRoutingForPart(partNo) {
+  const target = String(partNo);
   const operations = getRoutingOperations();
   return operations.filter(op =>
-    op['Part No'] === partNo || op['part_no'] === partNo
+    String(op['Part No'] ?? op['part_no'] ?? '') === target
   );
 }
 
@@ -213,18 +223,43 @@ export function getWorkCenters() {
 
 /**
  * Get Products (from IFS Finished Goods)
+ *
+ * Finished Goods raw rows use IFS field names — `Catalog No`, `Catalog Desc`,
+ * `Association No` — NOT the `Part No` / `Part Description` shape used by
+ * generic Inventory rows. Earlier mapping silently produced empty strings
+ * for every product, breaking the Order Entry autocomplete. Fallback chain
+ * preserves any legacy callers that happen to feed Inventory-shaped rows.
+ *
+ * `customer` carries the English short form (`Association No`); planning
+ * uses it for auto-fill when an operator picks a product code.
  */
 export function getProducts() {
   const cached = getCached('products');
   if (cached) return cached;
 
+  // Dedupe by partNo — IFS Finished Goods rows are price-list entries
+  // (one row per Site × Agreement × Customer), so the same Catalog No
+  // can appear 5–10 times. Operator autocomplete cares about unique
+  // products, not raw rows. First occurrence wins (preserves the row
+  // order from the upstream xlsx export).
   const inv = getInventory();
-  const products = (inv.finishedGoods || []).map(fg => ({
-    partNo: fg['Part No'] || fg['part_no'] || '',
-    description: fg['Part Description'] || fg['description'] || '',
-    type: fg['Type'] || fg['type'] || '',
-    uom: fg['UOM'] || fg['uom'] || ''
-  }));
+  const seen = new Set();
+  const products = [];
+  for (const fg of (inv.finishedGoods || [])) {
+    const partNo = String(
+      fg['Catalog No'] ?? fg['catalog_no'] ?? fg['Part No'] ?? fg['part_no'] ?? ''
+    );
+    if (!partNo || seen.has(partNo)) continue;
+    seen.add(partNo);
+    products.push({
+      partNo,
+      description:
+        fg['Catalog Desc'] ?? fg['catalog_desc'] ?? fg['Part Description'] ?? fg['description'] ?? '',
+      customer: fg['Association No'] ?? fg['association_no'] ?? fg['Name'] ?? fg['name'] ?? '',
+      type: fg['Type'] ?? fg['type'] ?? '',
+      uom: fg['UOM'] ?? fg['uom'] ?? '',
+    });
+  }
 
   setCache('products', products); // inherits invalidation from inventory cache
   return products;

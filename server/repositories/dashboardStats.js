@@ -24,15 +24,46 @@ import { getStatus as getApprovalStatus } from './approvalWorkflow.js';
 function isNum(v) { return typeof v === 'number' && Number.isFinite(v); }
 
 /**
- * Normalize time-range. Accepts number-of-days (30 | 90 | 365) or
- * null/undefined/0/'all' for the full history. Returns `{ days, sinceMs }`
- * — sinceMs is the epoch cutoff (inclusive); null means "no cutoff".
+ * Normalize time-range. Accepts:
+ *   - { days } number — last N days (30 | 90 | 365)
+ *   - { month: 'YYYY-MM' } — calendar month window
+ *   - { year: 'YYYY' } — calendar year window
+ *   - { from, to } ISO date strings (inclusive day boundaries)
+ *   - null/undefined/0/'all' → no cutoff (full history)
+ * Returns `{ days, sinceMs, untilMs }`. `untilMs` is exclusive upper bound
+ * (null means "now"). Last-write-wins precedence: from/to > month > year > days.
  */
-function normalizeRange(days) {
-  if (days == null || days === 'all' || days === 0) return { days: null, sinceMs: null };
+function normalizeRange(opts = {}) {
+  if (typeof opts === 'number' || typeof opts === 'string') opts = { days: opts };
+  const out = { days: null, sinceMs: null, untilMs: null };
+  const { days, month, year, from, to } = opts;
+
+  if (from || to) {
+    const fromMs = from ? Date.parse(from) : null;
+    const toMs   = to   ? Date.parse(to)   : null;
+    out.sinceMs = Number.isFinite(fromMs) ? fromMs : null;
+    // Inclusive: extend `to` to end-of-day so YYYY-MM-DD captures the full day.
+    out.untilMs = Number.isFinite(toMs) ? toMs + 86_400_000 - 1 : null;
+    return out;
+  }
+  if (typeof month === 'string' && /^\d{4}-\d{2}$/.test(month)) {
+    const [y, m] = month.split('-').map(Number);
+    out.sinceMs = new Date(y, m - 1, 1).getTime();
+    out.untilMs = new Date(y, m, 1).getTime() - 1;
+    return out;
+  }
+  if (typeof year === 'string' && /^\d{4}$/.test(year)) {
+    const y = Number(year);
+    out.sinceMs = new Date(y, 0, 1).getTime();
+    out.untilMs = new Date(y + 1, 0, 1).getTime() - 1;
+    return out;
+  }
+  if (days == null || days === 'all' || days === 0) return out;
   const n = Number(days);
-  if (!Number.isFinite(n) || n <= 0) return { days: null, sinceMs: null };
-  return { days: n, sinceMs: Date.now() - n * 24 * 60 * 60 * 1000 };
+  if (!Number.isFinite(n) || n <= 0) return out;
+  out.days = n;
+  out.sinceMs = Date.now() - n * 24 * 60 * 60 * 1000;
+  return out;
 }
 
 /**
@@ -56,8 +87,8 @@ function normalizeRange(days) {
  * in QuoteHistory (Sprint 13 added soft-delete; quotes flagged
  * `deleted_at` are hidden everywhere except the Trash bin).
  */
-export function collectMetrics({ days } = {}) {
-  const { sinceMs } = normalizeRange(days);
+export function collectMetrics(opts = {}) {
+  const { sinceMs, untilMs } = normalizeRange(opts);
   let quotes;
   try { quotes = loadQuotes(); }
   catch { return []; }
@@ -73,6 +104,9 @@ export function collectMetrics({ days } = {}) {
     }
     if (sinceMs != null) {
       if (savedMs == null || savedMs < sinceMs) continue;
+    }
+    if (untilMs != null) {
+      if (savedMs == null || savedMs > untilMs) continue;
     }
 
     const state = q.state || {};

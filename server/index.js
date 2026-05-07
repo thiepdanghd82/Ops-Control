@@ -262,9 +262,13 @@ app.use((req, res, next) => {
       "connect-src 'self'",
       "font-src 'self' data:",
       "frame-ancestors 'none'",
+      // FileUploadZone renders inline PDF previews via `<iframe src=blob:...>`.
+      // default-src would otherwise restrict frames to 'self', blocking the
+      // Blob URLs we generate from base64-loaded files.
+      "frame-src 'self' blob:",
       "base-uri 'self'",
       "form-action 'self'",
-      "object-src 'none'",
+      "object-src 'self'",
     ];
     if (!ALLOW_HTTP) cspParts.push('upgrade-insecure-requests');
     // Phase 9M.3 — violations POST to /api/csp-report.
