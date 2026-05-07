@@ -75,7 +75,10 @@ export default function WorkOrders() {
       for (const orderId of selectedOrders) {
         const order = orders.find((o) => o.id === orderId);
         if (!order) continue;
-        const ops = routing.filter((r) => getField(r, 'partNo') === order.productCode);
+        // String-coerce: IFS exports Part No as number for numeric
+        // PNs but order.productCode is always a string (lesson #21).
+        const targetPn = String(order.productCode);
+        const ops = routing.filter((r) => String(getField(r, 'partNo')) === targetPn);
         woPayloads.push({
           orderId: order.id,
           payload: {

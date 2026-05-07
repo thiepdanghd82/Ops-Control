@@ -80,9 +80,12 @@ export default function CapacityPlanning() {
       };
     });
 
-    // Calculate hours from routing
+    // Calculate hours from routing.
+    // String-coerce — IFS routing rows export Part No as a number for
+    // purely numeric PNs (CLAUDE.md lesson #21).
     activeOrders.forEach((order) => {
-      const ops = routing.filter((r) => getField(r, 'partNo') === order.productCode);
+      const targetPn = String(order.productCode);
+      const ops = routing.filter((r) => String(getField(r, 'partNo')) === targetPn);
       ops.forEach((op) => {
         const wc = getField(op, 'workCenter');
         const { totalHrs } = computeOpHours({

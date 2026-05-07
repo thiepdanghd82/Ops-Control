@@ -57,7 +57,8 @@ export function createOrder(order) {
     const newOrder = {
       id: nextId,
       ...order,
-      status: order.status || 'New',
+      orderNumber: order?.orderNumber || `ORD-${nextId}`,
+      status: order?.status || 'New',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };

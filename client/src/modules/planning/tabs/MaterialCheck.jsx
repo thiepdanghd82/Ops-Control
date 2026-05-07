@@ -53,8 +53,11 @@ export default function MaterialCheck() {
   const materials = useMemo(() => {
     const map = {};
     orders.forEach(order => {
+      // String-coerce — IFS Part Nos export as numbers, productCode is
+      // always a string (CLAUDE.md lesson #21).
+      const targetPn = String(order.productCode);
       const components = bomData.filter(b =>
-        getField(b, 'parentPartNo') === order.productCode
+        String(getField(b, 'parentPartNo')) === targetPn
       );
       components.forEach(comp => {
         const partNo = getField(comp, 'componentPart');

@@ -2,6 +2,13 @@ import { lazy, Suspense } from 'react';
 import SkeletonTable from '../../components/Shared/SkeletonTable';
 import ErrorBoundary from '../../components/Shared/ErrorBoundary';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import ModuleLanding from '../../components/Layout/ModuleLanding.jsx';
+import HomePage from '../home/HomePage.jsx';
+import {
+  PLANNING_SECTIONS,
+  isLanding,
+  landingSectionId,
+} from '../../components/Layout/sectionDefs.js';
 import './PlanningModule.css';
 
 // Phase 9I — lazy-load each planning tab. Most users hit Order Entry
@@ -43,8 +50,41 @@ function TabLoadingFallback() {
   );
 }
 
-export default function PlanningModule({ activeTab }) {
+export default function PlanningModule({ activeTab, onTabChange }) {
   useDocumentTitle(TAB_TITLES[activeTab] || activeTab, 'Planning');
+
+  // Sprint S-HOME — operator dashboard at activeTab='home'.
+  if (activeTab === 'home') {
+    return (
+      <div className="planning-module">
+        <ErrorBoundary label="Planning → home" resetKey="home">
+          <HomePage onTabChange={onTabChange} />
+        </ErrorBoundary>
+      </div>
+    );
+  }
+
+  // Sprint S-LANDING — `landing:<sectionId>` renders the feature grid
+  // for the section instead of a specific tab. See ModuleLanding.jsx.
+  if (isLanding(activeTab)) {
+    const sid = landingSectionId(activeTab);
+    const section = PLANNING_SECTIONS.find((s) => s.id === sid);
+    if (!section) {
+      return (
+        <div className="tab-placeholder">
+          <p>Unknown section: <b>{sid}</b></p>
+        </div>
+      );
+    }
+    return (
+      <div className="planning-module">
+        <ErrorBoundary label={`Planning → landing/${sid}`} resetKey={activeTab}>
+          <ModuleLanding section={section} onTabChange={onTabChange} />
+        </ErrorBoundary>
+      </div>
+    );
+  }
+
   const TabComponent = TAB_COMPONENTS[activeTab];
 
   if (!TabComponent) {

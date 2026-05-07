@@ -6,6 +6,35 @@ import { err as logErr } from '../../../utils/logger';
 import EmptyState from '../../../components/Shared/EmptyState';
 import './BOMExplosion.css';
 
+// Extract slitted width from a component description string.
+// Component descriptions follow IFS convention "(<sku>) <width>mm x <length>M"
+// e.g. "(FLD/RPC5/GZD/H0) 75mm x 1000M" → 75
+//      "(BW15) / BW-0153 (68mm x 1000M)" → 68
+// Returns null when no mm pattern is found (caller hides the column value).
+function extractWidthMm(description) {
+  if (!description) return null;
+  const m = String(description).match(/(\d+(?:\.\d+)?)\s*mm\s*[x×]/i);
+  return m ? parseFloat(m[1]) : null;
+}
+
+// Linear meters of slitted roll needed to cover the m² requirement.
+// m² = length_m × width_m → length_m = m² / (width_mm / 1000)
+// Returns null when width unknown or required is zero.
+function calcLinearM(requiredM2, widthMm) {
+  if (!Number.isFinite(requiredM2) || !Number.isFinite(widthMm) || widthMm <= 0) return null;
+  if (requiredM2 <= 0) return 0;
+  return requiredM2 / (widthMm / 1000);
+}
+
+// Float-precision helper — IFS qty-per-assembly often arrives as
+// 0.011550000000000001 from xlsx parsing; show 6 sig figs and strip
+// trailing zeros so operators don't see noise. Same pattern as
+// WorkOrderPrintable's fmtQpa.
+function fmtQpa(n) {
+  if (!Number.isFinite(n)) return '0';
+  return parseFloat(Number(n).toFixed(6)).toString();
+}
+
 export default function BOMExplosion() {
   const { t } = useI18n();
   const [orders, setOrders] = useState([]);
@@ -68,9 +97,16 @@ export default function BOMExplosion() {
     loadData();
   }, [loadData]);
 
-  // Explode BOM for a single order
+  // Explode BOM for a single order.
+  // String-coerce both sides — IFS exports purely numeric Part Nos as
+  // numbers (80640087), but order.productCode is always a string. The
+  // strict-equality version matched 0 BOM rows for any numeric PN
+  // (CLAUDE.md lesson #21).
   function explodeOrder(order) {
-    const components = bomData.filter((b) => getField(b, 'parentPartNo') === order.productCode);
+    const targetPn = String(order.productCode);
+    const components = bomData.filter(
+      (b) => String(getField(b, 'parentPartNo')) === targetPn
+    );
 
     // WIP completed qty for this product reduces the effective order demand
     const wipCompleted = wipByProduct[order.productCode] || 0;
@@ -78,23 +114,28 @@ export default function BOMExplosion() {
 
     return components.map((comp) => {
       const compPartNo = getField(comp, 'componentPart');
+      const description = getField(comp, 'componentDescription');
       const qtyPer = getNumField(comp, 'qtyPerAssembly', 1);
       const scrapPct = getNumField(comp, 'componentScrap') / 100;
       const required = effectiveQty * qtyPer * (1 + scrapPct);
       const onHand = inventory[compPartNo] || 0;
       const shortage = Math.max(0, required - onHand);
+      const widthMm = extractWidthMm(description);
+      const linearM = calcLinearM(required, widthMm);
 
       return {
         orderId: order.id,
         productCode: order.productCode,
         componentPart: compPartNo,
-        description: getField(comp, 'componentDescription'),
+        description,
         uom: getField(comp, 'uom', 'u'),
         qtyPer,
         scrapPct: scrapPct * 100,
         orderQty: order.quantity,
         wipCompleted,
         required: Math.round(required * 100) / 100,
+        widthMm,
+        linearM: linearM != null ? Math.round(linearM * 100) / 100 : null,
         onHand: Math.round(onHand * 100) / 100,
         shortage: Math.round(shortage * 100) / 100,
         status: shortage > 0 ? 'Shortage' : onHand < required * 1.1 ? 'Low Stock' : 'OK',
@@ -113,6 +154,7 @@ export default function BOMExplosion() {
             componentPart: comp.componentPart,
             description: comp.description,
             uom: comp.uom,
+            widthMm: comp.widthMm,
             totalRequired: 0,
             onHand: comp.onHand,
             orderCount: 0,
@@ -124,17 +166,22 @@ export default function BOMExplosion() {
     });
 
     return Object.values(map)
-      .map((item) => ({
-        ...item,
-        totalRequired: Math.round(item.totalRequired * 100) / 100,
-        shortage: Math.round(Math.max(0, item.totalRequired - item.onHand) * 100) / 100,
-        status:
-          item.totalRequired > item.onHand
-            ? 'Shortage'
-            : item.onHand < item.totalRequired * 1.1
-              ? 'Low Stock'
-              : 'OK',
-      }))
+      .map((item) => {
+        const totalRequired = Math.round(item.totalRequired * 100) / 100;
+        const totalLinearM = calcLinearM(totalRequired, item.widthMm);
+        return {
+          ...item,
+          totalRequired,
+          totalLinearM: totalLinearM != null ? Math.round(totalLinearM * 100) / 100 : null,
+          shortage: Math.round(Math.max(0, totalRequired - item.onHand) * 100) / 100,
+          status:
+            totalRequired > item.onHand
+              ? 'Shortage'
+              : item.onHand < totalRequired * 1.1
+                ? 'Low Stock'
+                : 'OK',
+        };
+      })
       .sort((a, b) => b.shortage - a.shortage);
     // explodeOrder is a stable local function closing over bomData;
     // including it in deps would require useCallback indirection for no gain.
@@ -258,6 +305,8 @@ export default function BOMExplosion() {
                     <th>Qty/Assy</th>
                     <th>Scrap %</th>
                     <th className="text-right">Required</th>
+                    <th className="text-right">Width(mm)</th>
+                    <th className="text-right">Linear M</th>
                     <th className="text-right">On Hand</th>
                     <th className="text-right">Shortage</th>
                     <th>Status</th>
@@ -266,7 +315,7 @@ export default function BOMExplosion() {
                 <tbody>
                   {selectedComponents.length === 0 ? (
                     <tr>
-                      <td colSpan="9" className="empty-state">
+                      <td colSpan="11" className="empty-state">
                         No BOM data found for this product
                       </td>
                     </tr>
@@ -276,9 +325,13 @@ export default function BOMExplosion() {
                         <td className="cell-code">{comp.componentPart}</td>
                         <td>{comp.description}</td>
                         <td>{comp.uom}</td>
-                        <td className="text-right">{comp.qtyPer}</td>
-                        <td className="text-right">{comp.scrapPct}%</td>
+                        <td className="text-right">{fmtQpa(comp.qtyPer)}</td>
+                        <td className="text-right">{comp.scrapPct.toFixed(1)}%</td>
                         <td className="text-right mono">{comp.required.toLocaleString()}</td>
+                        <td className="text-right mono">{comp.widthMm ?? '—'}</td>
+                        <td className="text-right mono">
+                          {comp.linearM != null ? comp.linearM.toLocaleString() : '—'}
+                        </td>
                         <td className="text-right mono">{comp.onHand.toLocaleString()}</td>
                         <td className="text-right mono">
                           {comp.shortage > 0 ? comp.shortage.toLocaleString() : '—'}
@@ -348,6 +401,8 @@ export default function BOMExplosion() {
                           <th>Description</th>
                           <th>UOM</th>
                           <th className="text-right">Required</th>
+                          <th className="text-right">Width(mm)</th>
+                          <th className="text-right">Linear M</th>
                           <th className="text-right">On Hand</th>
                           <th className="text-right">Shortage</th>
                           <th>Status</th>
@@ -360,6 +415,10 @@ export default function BOMExplosion() {
                             <td>{comp.description}</td>
                             <td>{comp.uom}</td>
                             <td className="text-right mono">{comp.required.toLocaleString()}</td>
+                            <td className="text-right mono">{comp.widthMm ?? '—'}</td>
+                            <td className="text-right mono">
+                              {comp.linearM != null ? comp.linearM.toLocaleString() : '—'}
+                            </td>
                             <td className="text-right mono">{comp.onHand.toLocaleString()}</td>
                             <td className="text-right mono">
                               {comp.shortage > 0 ? comp.shortage.toLocaleString() : '—'}
@@ -393,6 +452,8 @@ export default function BOMExplosion() {
                 <th>Description</th>
                 <th>UOM</th>
                 <th className="text-right">Total Required</th>
+                <th className="text-right">Width(mm)</th>
+                <th className="text-right">Linear M</th>
                 <th className="text-right">On Hand</th>
                 <th className="text-right">Shortage</th>
                 <th>Orders</th>
@@ -402,7 +463,7 @@ export default function BOMExplosion() {
             <tbody>
               {consolidatedBOM.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="empty-state">
+                  <td colSpan="10" className="empty-state">
                     No BOM data. Create orders first.
                   </td>
                 </tr>
@@ -413,6 +474,10 @@ export default function BOMExplosion() {
                     <td>{comp.description}</td>
                     <td>{comp.uom}</td>
                     <td className="text-right mono">{comp.totalRequired.toLocaleString()}</td>
+                    <td className="text-right mono">{comp.widthMm ?? '—'}</td>
+                    <td className="text-right mono">
+                      {comp.totalLinearM != null ? comp.totalLinearM.toLocaleString() : '—'}
+                    </td>
                     <td className="text-right mono">{comp.onHand.toLocaleString()}</td>
                     <td className="text-right mono">
                       {comp.shortage > 0 ? comp.shortage.toLocaleString() : '—'}
