@@ -34,6 +34,11 @@
 .ink-save-btn { display:flex; align-items:center; gap:5px; background:#0f62fe; color:#ffffff; border:none; border-radius:0; padding:7px 16px; font-size:14px; font-weight:400; cursor:pointer; box-shadow:none; letter-spacing:.16px; }
 .ink-save-btn:hover { background:#0353e9; }
 
+/* S-INK-IO (2026-05-05) — Import/Export CSV buttons. Outlined secondary
+   style; sits between the search input and the primary Save DB button. */
+.ink-io-btn { display:flex; align-items:center; gap:5px; background:#ffffff; color:#0f62fe; border:1px solid #0f62fe; border-radius:0; padding:7px 12px; font-size:13px; font-weight:400; cursor:pointer; letter-spacing:.16px; white-space:nowrap; }
+.ink-io-btn:hover { background:#edf5ff; }
+
 .ink-body { flex:1; overflow:auto; padding:16px; }
 .ink-panel { background:#ffffff; border-radius:0; overflow:hidden; box-shadow:none; }
 
@@ -131,3 +136,14 @@
 .ink-formula-name { font-weight:700; color:#0f172a; margin-bottom:2px; }
 .ink-formula-name-vi { color:#64748b; font-style:italic; font-size:10.5px; margin-bottom:2px; }
 .ink-formula-expr { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; }
+
+/* S-INK-LEGEND (2026-05-05) — Column Impact reference card. Tag chips
+   above + 3-col table mapping each DB column to its formula role. */
+.ink-impact-tag-row { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.ink-impact-tag { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; letter-spacing:.2px; white-space:nowrap; }
+.ink-impact-table { width:100%; border-collapse:collapse; font-size:12px; }
+.ink-impact-table thead th { text-align:left; padding:6px 10px; background:#f4f4f4; color:#161616; font-weight:600; border-bottom:1px solid #c6c6c6; font-size:11px; text-transform:uppercase; letter-spacing:.4px; }
+.ink-impact-table tbody td { padding:8px 10px; border-bottom:1px solid #e0e0e0; vertical-align:top; }
+.ink-impact-table tbody tr:last-child td { border-bottom:none; }
+.ink-impact-col { font-weight:600; color:#0f172a; white-space:nowrap; }
+.ink-impact-vi { color:#64748b; font-style:italic; font-size:11px; margin-top:2px; }

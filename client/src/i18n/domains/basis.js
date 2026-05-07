@@ -94,6 +94,12 @@ registerStrings({
   'dashboard.empty.no_customer': { en: 'No customer data', vi: 'Chưa có dữ liệu khách hàng' },
   'dashboard.empty.no_volume': { en: 'No quote activity yet', vi: 'Chưa có báo giá nào' },
   'dashboard.empty.no_margin': { en: 'No margin data yet', vi: 'Chưa có dữ liệu lợi nhuận' },
+  'dashboard.range.month': { en: 'Month', vi: 'Tháng' },
+  'dashboard.range.year': { en: 'Year', vi: 'Năm' },
+  'dashboard.range.full_year_on': { en: 'Full year', vi: 'Cả năm' },
+  'dashboard.range.full_year_off': { en: 'Use year', vi: 'Theo năm' },
+  'dashboard.range.full_year_tip': { en: 'Toggle between selected month and the full year', vi: 'Chuyển giữa tháng đã chọn và cả năm' },
+  'dashboard.panel.fixed_12m_hint': { en: 'always last 12 months', vi: 'luôn 12 tháng gần nhất' },
 
   // ─── Settings + Appearance ───
   'settings.section.user': { en: 'User', vi: 'Tài khoản' },

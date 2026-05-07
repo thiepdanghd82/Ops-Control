@@ -38,6 +38,35 @@
 }
 .fuz-label:hover { background: #f8fafc; }
 [data-theme="dark"] .fuz-label:hover { background: #262626; }
+
+/* Collapsible header — clickable to toggle the body. The chevron
+   rotates 0 (open) ↔ -90deg (collapsed). When collapsed the .fuz-zone
+   shrinks to header height (no body) so the Layout grid reflows
+   tightly. Persisted choice in localStorage per label. */
+.fuz-label-collapsible { cursor: pointer; }
+.fuz-label-collapsible:focus-visible { outline: 2px solid #0f62fe; outline-offset: -2px; }
+/* Collapsed zone overrides the default min-height/height-100% so the
+   card shrinks to its header. Header keeps its border-bottom even
+   without a body so the strip still reads as a card edge. */
+.fuz-zone-collapsed {
+  min-height: 0;
+  height: auto;
+  align-self: start;
+}
+.fuz-zone-collapsed .fuz-label { border-bottom: none; }
+.fuz-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-right: 2px;
+  color: #525252;
+  transition: transform .15s ease;
+  flex-shrink: 0;
+}
+.fuz-label.fuz-collapsed .fuz-chevron { transform: rotate(-90deg); }
+[data-theme="dark"] .fuz-chevron { color: #a8a8a8; }
 .fuz-filename {
   color: #525252;
   font-weight: 400;
@@ -67,6 +96,7 @@
 }
 .fuz-act-btn:disabled { opacity: .35; cursor: not-allowed; }
 /* Colored hover per action — matches Quote History action icon palette */
+.fuz-act-fullscreen:hover:not(:disabled) { background: #eff6ff; color: #0f62fe; border-color: #bfdbfe; }
 .fuz-act-open:hover:not(:disabled)   { background: #eff6ff; color: #0f62fe; border-color: #bfdbfe; }
 .fuz-act-rotate:hover                { background: #eff6ff; color: #0f62fe; border-color: #bfdbfe; }
 .fuz-act-rotate:active               { transform: rotate(-90deg); }
@@ -74,6 +104,7 @@
 .fuz-act-delete:hover:not(:disabled) { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
 /* Dark theme variants */
 [data-theme="dark"] .fuz-act-btn { color: #c6c6c6; }
+[data-theme="dark"] .fuz-act-fullscreen:hover:not(:disabled),
 [data-theme="dark"] .fuz-act-open:hover:not(:disabled),
 [data-theme="dark"] .fuz-act-rotate:hover   { background: #1e3a5f; color: #93c5fd; border-color: #3b82f6; }
 [data-theme="dark"] .fuz-act-upload:hover   { background: #14332a; color: #6ee7b7; border-color: #059669; }
@@ -248,3 +279,17 @@
 [data-theme="dark"] .fuz-ctx-header { background: #161616; border-bottom-color: #393939; color: #c6c6c6; }
 [data-theme="dark"] .fuz-ctx-item { color: #f4f4f4; }
 [data-theme="dark"] .fuz-ctx-sep { border-top-color: #393939; }
+
+/* ── Fullscreen modal preview ── */
+.fuz-fs-img,
+.fuz-fs-pdf {
+  display: block;
+  width: 100%;
+  background: #f4f4f4;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+}
+.fuz-fs-img { max-height: 75vh; object-fit: contain; transition: transform 120ms ease; }
+.fuz-fs-pdf { height: 75vh; }
+[data-theme="dark"] .fuz-fs-img,
+[data-theme="dark"] .fuz-fs-pdf { background: #161616; border-color: #393939; }

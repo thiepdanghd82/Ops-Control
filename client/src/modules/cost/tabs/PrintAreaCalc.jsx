@@ -2058,16 +2058,8 @@ export default function PrintAreaCalc() {
     <div className="ink-calc pa-calc">
       <header className="pa-header">
         <div className="pa-header-top">
-          <div className="pa-header-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="9" />
-              <path d="M12 3 a9 9 0 0 1 0 18z" fill="currentColor" stroke="none" />
-            </svg>
-          </div>
-          <div className="pa-header-titles">
-            <h1 className="pa-header-title">Print Area Calculator</h1>
-            <p className="pa-header-subtitle">Detect per-color print coverage from artwork + product dimensions</p>
-          </div>
+          {/* Title block removed 2026-05-03 — TopBar already shows
+              "Pricing Worksheet › Print Area". Sub-tabs sit alone here. */}
           <nav className="pa-tabs" role="tablist" aria-label="Print Area sub-tabs">
             <TabBarOverflow ariaLabel="Print Area sub-tabs">
               <button role="tab" aria-selected={sub === 'new'}

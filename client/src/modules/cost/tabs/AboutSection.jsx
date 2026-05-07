@@ -14,9 +14,10 @@
 
 import React, { useEffect, useState } from 'react';
 import desktop from '../../../services/desktopBridge';
+import { api } from '../../../services/api';
 import './AboutSection.css';
 
-const APP_VERSION = '1.2.0';
+const APP_VERSION = __APP_VERSION__;
 const BUILD_TIMESTAMP = '2026-04-27 13:15 GMT+7';
 
 export default function AboutSection() {
@@ -36,11 +37,19 @@ export default function AboutSection() {
   }, []);
 
   // ─── Diagnostic test buttons ──────────────────────────────────
-  const runDiag = async (key, fn) => {
+  const runDiag = async (key, t) => {
+    // S-DIAG-FIX — platform-aware skip (gray pill, no IPC call). The
+    // test config can declare `skip: () => string|false` to opt out
+    // on platforms where the underlying API isn't supported.
+    const skipReason = typeof t.skip === 'function' ? t.skip() : null;
+    if (skipReason) {
+      setDiagnostics((d) => ({ ...d, [key]: { skipped: true, reason: skipReason } }));
+      return;
+    }
     setDiagnostics((d) => ({ ...d, [key]: { running: true } }));
     try {
       const start = Date.now();
-      const result = await fn();
+      const result = await t.run();
       setDiagnostics((d) => ({
         ...d,
         [key]: { ok: true, ms: Date.now() - start, result },
@@ -57,8 +66,20 @@ export default function AboutSection() {
     {
       key: 'printer',
       label: 'Liệt kê máy in',
+      // S-DIAG-FIX (2026-05-05) — pdf-to-printer is Windows-only
+      // (despite its self-description). Whitelist win32 so Linux is
+      // also surfaced as "skipped" rather than crashing with "OS not
+      // supported". Linux printer support tracked separately.
+      skip: () => (desktop.platform !== 'win32') && 'Windows-only feature (pdf-to-printer)',
       run: () => desktop.printer.list(),
-      summary: (r) => r.result?.length != null ? `${r.result.length} máy in` : '?',
+      summary: (r) => {
+        const list = r.result;
+        if (!Array.isArray(list)) return '?';
+        if (list.length === 0) return 'no printers · check Windows print spooler';
+        return `${list.length} máy in`;
+      },
+      // Empty list isn't a failure — it's a config warning.
+      warnIf: (r) => Array.isArray(r.result) && r.result.length === 0,
     },
     {
       key: 'cache',
@@ -113,12 +134,13 @@ export default function AboutSection() {
     {
       key: 'sse',
       label: 'SSE event stream',
-      run: async () => {
-        const r = await fetch('/api/events/status');
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return await r.json();
-      },
-      summary: (r) => r.result?.ok ? `${r.result.subscribers} subscriber(s)` : '?',
+      // S-DIAG-FIX (2026-05-05) — was bare fetch() that bypassed the
+      // auth wrapper and got 401. Now uses api.get() which attaches
+      // the Bearer token + cookies, matching how dataEventBus.js
+      // (the production SSE consumer driving the "1 online" badge)
+      // authenticates against /api/events/stream.
+      run: () => api.get('/events/status'),
+      summary: (r) => r.result?.ok ? `${r.result.subscribers ?? 0} subscriber(s)` : '?',
     },
     {
       key: 'users',
@@ -234,7 +256,7 @@ export default function AboutSection() {
                 <div key={t.key} className="about-diag-row">
                   <button
                     className="op-btn op-btn-ghost about-diag-btn"
-                    onClick={() => runDiag(t.key, t.run)}
+                    onClick={() => runDiag(t.key, t)}
                     disabled={r?.running}
                   >
                     {r?.running ? '…' : '▶ Run'}
@@ -243,6 +265,8 @@ export default function AboutSection() {
                   <div className="about-diag-result">
                     {!r ? <span className="about-diag-pending">— chưa chạy —</span>
                       : r.running ? 'running…'
+                      : r.skipped ? <span className="about-diag-skip">⊘ Skipped · {r.reason}</span>
+                      : r.ok && t.warnIf?.(r) ? <span className="about-diag-warn">⚠ {t.summary(r)} <small>({r.ms}ms)</small></span>
                       : r.ok ? <span className="about-diag-ok">✓ {t.summary(r)} <small>({r.ms}ms)</small></span>
                       : <span className="about-diag-err">✗ {r.error}</span>}
                   </div>

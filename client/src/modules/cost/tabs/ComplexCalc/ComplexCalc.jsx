@@ -11,6 +11,7 @@ import { addSubProduct, removeSubProduct, setSpField, setSpMaterialField, setSpP
 import { useBomQtyFlag } from '../../../../utils/useBomQtyFlag';
 import { useSpMoqScalingFlag } from '../../../../utils/useSpMoqScalingFlag';
 import { costApi, sharedApi } from '../../../../services/api';
+import { genRfqNum } from '../../../../utils/rfqGen';
 import { chatApi, openChatRoom } from '../../../../services/chatApi';
 import { useI18n } from '../../../../utils/useI18n';
 import CplxHeader from './CplxHeader';
@@ -53,7 +54,7 @@ export default function ComplexCalc() {
   // window.confirm() with a 3-button modal that preserves edits.
   const [conflict, setConflict] = useState(null);
   const { t } = useI18n();
-  const { cplxState, isDirty, markClean, dispatch, loadQuote, pendingQuote, clearPendingQuote, activeQuoteId, activeQuoteVersion } = useCalc();
+  const { stdState, cplxState, isDirty, markClean, dispatch, loadQuote, setCplxField, pendingQuote, clearPendingQuote, activeQuoteId, activeQuoteVersion } = useCalc();
   const { lib } = useCostLib();
   const [bomQtyEnabled] = useBomQtyFlag();
   const [spMoqScalingEnabled] = useSpMoqScalingFlag();
@@ -67,14 +68,25 @@ export default function ComplexCalc() {
   // shows empty default state instead of the requested quote.
   useEffect(() => {
     if (!pendingQuote || pendingQuote.type !== 'complex') return;
-    const { id } = pendingQuote;
+    const { id, action } = pendingQuote;
     let cancelled = false;
     sharedApi.getQuotes().then(quotes => {
       if (cancelled) return;
       const q = (quotes || []).find(x => String(x.id) === String(id));
       if (q?.state) {
-        // Pass `_version` through for optimistic locking on subsequent saves.
-        loadQuote('cplx', q.state, q.id, q._version || 0);
+        if (action === 'copy') {
+          // Duplicate: drop server-side identity (id, version, rfq_number)
+          // so the next save creates a new row with a freshly-allocated
+          // RFQ. Sub-product structure + ccl_pn are preserved.
+          const fresh = { ...q.state };
+          delete fresh.rfq_number;
+          loadQuote('cplx', fresh, null, 0);
+          setCplxField('rfq_number', genRfqNum('C', quotes, stdState, fresh));
+          showToast(`Copied from quote #${id} — saved as a new quote`);
+        } else {
+          // Pass `_version` through for optimistic locking on subsequent saves.
+          loadQuote('cplx', q.state, q.id, q._version || 0);
+        }
       } else {
         showToast(`Quote #${id} not found`, 'err');
       }
@@ -86,6 +98,9 @@ export default function ComplexCalc() {
       clearPendingQuote();
     });
     return () => { cancelled = true; };
+    // setCplxField + stdState aren't dependencies on purpose — see same
+    // comment in StandardCalc.jsx pendingQuote effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingQuote, loadQuote, clearPendingQuote]);
 
   // Sprint 14e — handle 'rfq-sync' prefill push from Design Tools
@@ -249,8 +264,17 @@ export default function ComplexCalc() {
   }, [handleSave, isDirty, saving]);
 
   // `saving` is wired into the Save button below so the user can't double-fire.
-  const handleReset = useCallback(() => { dispatch({ type: 'RESET_CPLX' }); }, [dispatch]);
-  const setCplxField = useCallback((f, v) => dispatch({ type: 'SET_CPLX_FIELD', payload: { field: f, value: v } }), [dispatch]);
+  const handleReset = useCallback(async () => {
+    dispatch({ type: 'RESET_CPLX' });
+    // SAP/IFS pattern — reserve the next sequential RFQ number at quote
+    // creation so the operator can quote it on the phone before saving.
+    try {
+      const quotes = await sharedApi.getQuotes();
+      setCplxField('rfq_number', genRfqNum('C', quotes, stdState, {}));
+    } catch (err) {
+      console.warn('[ComplexCalc] auto-RFQ on New failed:', err);
+    }
+  }, [dispatch, setCplxField, stdState]);
 
   const packTotal = useMemo(() => { try { return calcPacking(cs); } catch { return 0; } }, [cs]);
   const shipTotal = useMemo(() => { try { return calcShipping(cs); } catch { return 0; } }, [cs]);

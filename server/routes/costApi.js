@@ -212,10 +212,12 @@ import { validateBody } from '../middleware/validate.js';
 import { writeRateLimit, saveRateLimit, totpVerifyRateLimit } from '../middleware/rateLimit.js';
 import { requireTabAccess, requireBodyTabAccess } from '../services/permissionService.js';
 import {
+  loadQuotes as loadQuotesStore,
   saveQuotes as saveQuotesStore,
   upsertQuote,
   VersionConflictError,
 } from '../repositories/quotesStore.js';
+import { withLock } from '../utils/asyncLock.js';
 import {
   setAuthCookies,
   clearAuthCookies,
@@ -579,11 +581,55 @@ function rateRows(rate) {
 }
 
 // Backup helpers
+// S-BACKUP-V2 (2026-05-05) — _meta envelope schema.
+//   v0  legacy snapshot (no _meta, just _backup_at + _version=3 informally)
+//   v1  Phase 1: _meta with backend mode, parity-safe quote read via facade
+//   v2  Phase 2: + permissionGroupsDB + savedDesignsDB
+// Restore must reject backups with version > BACKUP_SCHEMA_VERSION; v0
+// is accepted with a default _meta synthesized at restore time.
+const BACKUP_SCHEMA_VERSION = 2;
+
+function detectBackendMode() {
+  // quotesStore shadow-writes to BOTH JSON + SQLite when file is master,
+  // so 'shadow' is the accurate label even if env var says 'file'. The
+  // strict-sqlite mode (Sprint 7.4 cutover) is the only single-backend state.
+  if (String(process.env.OPS_QUOTES_STRICT_SQLITE || '').toLowerCase() === '1') return 'sqlite';
+  const override = String(process.env.OPS_BACKEND_QUOTES || '').toLowerCase();
+  if (override === 'sqlite') return 'sqlite';
+  return 'shadow';
+}
+
+// S-BACKUP-V2 — exported for unit tests (see scripts/test-backup-*.mjs).
+// Not part of the public API surface; consumers should still go through
+// the /backup/data and /backup/restore endpoints.
+export { buildBackupSnapshot, restoreFromSnapshot, validateBackupVersion, BACKUP_SCHEMA_VERSION };
 function buildBackupSnapshot() {
   const LIB_DIR = getLibDir();
-  const snap = { _backup_at: new Date().toISOString(), _version: 3 };
+  // S-BACKUP-V2 — quotes via facade (loadQuotes auto-picks SQLite or
+  // file with fallback). Direct file read here was a latent bug: if
+  // SQLite ever became master and JSON drifted, backups would have
+  // stale quotes. loadQuotes() resolves that.
+  const quoteHistoryFromFacade = loadQuotesStore();
+
+  // Debug-only parity check. Logs (doesn't block) when the JSON file
+  // count differs from the facade count — early warning for shadow-
+  // write drift. Production (NODE_ENV=production) skips to avoid disk hit.
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      const filePath = path.join(LIB_DIR, 'QuoteHistory', 'quote_history.json');
+      if (fs.existsSync(filePath)) {
+        const fromFile = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        if (Array.isArray(fromFile) && fromFile.length !== quoteHistoryFromFacade.length) {
+          console.warn(
+            `  ⚠️  [backup parity] facade=${quoteHistoryFromFacade.length} ` +
+            `file=${fromFile.length} — possible shadow-write drift`
+          );
+        }
+      }
+    } catch { /* parity check is best-effort */ }
+  }
+
   const map = {
-    quoteHistory: path.join(LIB_DIR, 'QuoteHistory', 'quote_history.json'),
     summarizeDB: path.join(LIB_DIR, 'SummarizeDB', 'summarize_db.json'),
     matDB: path.join(LIB_DIR, 'MaterialCost', 'materials.json'),
     npiDB: path.join(LIB_DIR, 'MaterialCost', 'npi_materials.json'),
@@ -597,18 +643,90 @@ function buildBackupSnapshot() {
     financeWCDB: path.join(LIB_DIR, 'Finance', 'finance_wc.json'),
     financeSumDB: path.join(LIB_DIR, 'Finance', 'finance_sum.json'),
     inkCalcDB: path.join(LIB_DIR, 'InkCalc', 'ink_calc.json'),
+    // S-BACKUP-V2 — Phase 2 additions:
+    //   permissionGroupsDB: role names + tab matrix (no user IDs → no
+    //     reconciliation needed on restore). Lets ops snapshot before
+    //     mass permission edits, undo if wrong.
+    //   savedDesignsDB: Gallus / press design history. Drawing files
+    //     (Library/Drawings/) intentionally NOT included — too large
+    //     (>100 MB typical). Restore-time check flags designs whose
+    //     drawingRefs no longer resolve on disk.
+    permissionGroupsDB: path.join(LIB_DIR, 'PermissionGroups', 'groups.json'),
+    savedDesignsDB: path.join(LIB_DIR, 'DesignTools', 'designs.json'),
   };
+
+  const snap = {
+    _meta: {
+      version: BACKUP_SCHEMA_VERSION,
+      createdAt: new Date().toISOString(),
+      appVersion: process.env.npm_package_version || 'unknown',
+      backend: detectBackendMode(),
+      datasetCount: 1 /* quoteHistory */ + Object.keys(map).length,
+      hasDrawings: false,
+      hasSavedDesigns: false, // mutated below if file exists
+      hasPermissionGroups: false, // mutated below if file exists
+    },
+    // Legacy fields kept for v0-aware tools.
+    _backup_at: new Date().toISOString(),
+    _version: 3,
+    quoteHistory: quoteHistoryFromFacade,
+  };
+
   for (const [key, fp] of Object.entries(map)) {
     const data = readJson(fp);
     if (data != null) snap[key] = data;
   }
+  if (snap.permissionGroupsDB) snap._meta.hasPermissionGroups = true;
+  if (snap.savedDesignsDB) snap._meta.hasSavedDesigns = true;
   return snap;
 }
 
-function restoreFromSnapshot(snap) {
+// S-BACKUP-V2 — group → keys mapping for per-group restore.
+const RESTORE_GROUPS = {
+  quotes: ['quoteHistory', 'summarizeDB', 'matDB', 'npiDB', 'sourcingDB'],
+  rateDdl: ['rateDB', 'rateSitesDB', 'ddlDB', 'ddlSitesDB'],
+  trackers: ['rfqTracker', 'sampleTracker'],
+  financeInk: ['financeWCDB', 'financeSumDB', 'inkCalcDB'],
+  // Phase 2 keys land here:
+  permissions: ['permissionGroupsDB'],
+  designs: ['savedDesignsDB'],
+};
+
+// REJECT if the backup's schema version is newer than this app supports.
+// Returns { ok: true } when accepted (synthesizing _meta for v0 legacy
+// snapshots) or { ok: false, error } to abort the restore.
+function validateBackupVersion(snap) {
+  if (!snap._meta) {
+    // v0 legacy: no _meta envelope. Accept and synthesize.
+    return { ok: true, version: 0, legacy: true };
+  }
+  const v = Number(snap._meta.version);
+  if (!Number.isFinite(v)) return { ok: false, error: 'Backup _meta.version is not a number' };
+  if (v > BACKUP_SCHEMA_VERSION) {
+    return {
+      ok: false,
+      error: `Backup created in newer app version (schema v${v}); this app supports up to v${BACKUP_SCHEMA_VERSION}. Upgrade the app to restore this backup.`,
+    };
+  }
+  return { ok: true, version: v };
+}
+
+function restoreFromSnapshot(snap, opts = {}) {
   const LIB_DIR = getLibDir();
-  const map = {
-    quoteHistory: path.join(LIB_DIR, 'QuoteHistory', 'quote_history.json'),
+  // selectedGroups: array of group keys to restore. null/undefined → all groups.
+  const selectedGroups = Array.isArray(opts.selectedGroups) ? opts.selectedGroups : null;
+  const groupAllowed = (groupKey) => selectedGroups === null || selectedGroups.includes(groupKey);
+
+  // Resolve which dataset keys are eligible based on group selection.
+  const allowedKeys = new Set();
+  for (const [groupKey, keys] of Object.entries(RESTORE_GROUPS)) {
+    if (groupAllowed(groupKey)) for (const k of keys) allowedKeys.add(k);
+  }
+
+  // Path map for direct-file datasets. quoteHistory is intentionally NOT
+  // here — it routes through saveQuotes() so SQLite stays in sync via
+  // shadow-write. Same for any future dataset with shadow semantics.
+  const filePathMap = {
     summarizeDB: path.join(LIB_DIR, 'SummarizeDB', 'summarize_db.json'),
     matDB: path.join(LIB_DIR, 'MaterialCost', 'materials.json'),
     npiDB: path.join(LIB_DIR, 'MaterialCost', 'npi_materials.json'),
@@ -622,21 +740,42 @@ function restoreFromSnapshot(snap) {
     financeWCDB: path.join(LIB_DIR, 'Finance', 'finance_wc.json'),
     financeSumDB: path.join(LIB_DIR, 'Finance', 'finance_sum.json'),
     inkCalcDB: path.join(LIB_DIR, 'InkCalc', 'ink_calc.json'),
+    permissionGroupsDB: path.join(LIB_DIR, 'PermissionGroups', 'groups.json'),
+    savedDesignsDB: path.join(LIB_DIR, 'DesignTools', 'designs.json'),
   };
+
   const restored = [];
   const failed = [];
-  for (const [key, fp] of Object.entries(map)) {
-    if (key in snap) {
-      try {
-        writeJson(fp, snap[key]);
-        restored.push(key);
-      } catch (e) {
-        console.warn(`  ⚠️  Restore ${key}: ${e.message}`);
-        failed.push({ key, error: e.message || String(e) });
-      }
+  const skippedByGroup = [];
+
+  // Quotes via facade (saveQuotes shadow-writes to SQLite). Routed
+  // first because it's the largest dataset; failure here is the
+  // riskiest so we want a clear error before touching others.
+  if (allowedKeys.has('quoteHistory') && 'quoteHistory' in snap) {
+    try {
+      const list = Array.isArray(snap.quoteHistory) ? snap.quoteHistory : [];
+      saveQuotesStore(list);
+      restored.push('quoteHistory');
+    } catch (e) {
+      console.warn(`  ⚠️  Restore quoteHistory: ${e.message}`);
+      failed.push({ key: 'quoteHistory', error: e.message || String(e) });
+    }
+  } else if ('quoteHistory' in snap) {
+    skippedByGroup.push('quoteHistory');
+  }
+
+  for (const [key, fp] of Object.entries(filePathMap)) {
+    if (!(key in snap)) continue;
+    if (!allowedKeys.has(key)) { skippedByGroup.push(key); continue; }
+    try {
+      writeJson(fp, snap[key]);
+      restored.push(key);
+    } catch (e) {
+      console.warn(`  ⚠️  Restore ${key}: ${e.message}`);
+      failed.push({ key, error: e.message || String(e) });
     }
   }
-  return { restored, failed };
+  return { restored, failed, skippedByGroup };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -3172,7 +3311,7 @@ router.get('/backup/code', (req, res) => {
 router.post('/backup/restore', writeRateLimit, (req, res) => {
   const u = getSessionUser(getTokenFromHeader(req));
   if (!isSys(u)) return res.status(403).json({ error: 'Admin only' });
-  const { filename } = req.body;
+  const { filename, selectedGroups } = req.body;
   const fpath = path.join(PKG_BACKUP_DIR, 'Data', safeFn(filename));
   if (!fs.existsSync(fpath)) return res.status(404).json({ error: 'Not found' });
   // Parse + validate the snapshot BEFORE touching any real data file.
@@ -3185,13 +3324,28 @@ router.post('/backup/restore', writeRateLimit, (req, res) => {
       .status(400)
       .json({ ok: false, error: 'Backup file is corrupted or not a valid snapshot object' });
   }
+  // S-BACKUP-V2 — schema version gate. Reject newer-than-supported
+  // before touching anything; legacy v0 (no _meta) is accepted with
+  // synthesized metadata.
+  const v = validateBackupVersion(snap);
+  if (!v.ok) {
+    audit('BACKUP_RESTORE_FAIL', u.username, clientIp(req), `${filename}: ${v.error}`);
+    return res.status(400).json({ ok: false, error: v.error });
+  }
   // Pre-backup current state into the same Backup & restore/Data folder so
   // the user can roll back if the restore produces an inconsistent state.
   ensurePkgBackupDirs();
   const preBak = `pre_restore_${timestampTag()}.json`;
   const preSnap = buildBackupSnapshot();
   atomicWriteFileSync(path.join(PKG_BACKUP_DIR, 'Data', preBak), JSON.stringify(preSnap));
-  const { restored, failed } = restoreFromSnapshot(snap);
+  // selectedGroups: optional array of group keys (quotes/rateDdl/trackers/
+  // financeInk/permissions/designs). Missing/null → restore everything.
+  const groups = Array.isArray(selectedGroups) && selectedGroups.length > 0 ? selectedGroups : null;
+  const { restored, failed, skippedByGroup } = restoreFromSnapshot(snap, { selectedGroups: groups });
+  if (groups) {
+    audit('BACKUP_RESTORE', u.username, clientIp(req),
+      `${filename} groups=[${groups.join(',')}] restored=${restored.length} skipped=${skippedByGroup.length}`);
+  }
   console.log(
     `  ↩  Restored from ${filename} (${restored.length} datasets, ${failed.length} failed)`
   );
@@ -3204,6 +3358,7 @@ router.post('/backup/restore', writeRateLimit, (req, res) => {
     partial: failed.length > 0,
     restored,
     failed,
+    skippedByGroup,
     pre_backup: preBak,
   });
 });

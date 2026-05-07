@@ -21,6 +21,7 @@ export default defineConfig([
         // Read at runtime in client/src/main.jsx; declared readonly so
         // accidental writes still flag.
         __OPS_BUNDLE_MARKER__: 'readonly',
+        __APP_VERSION__: 'readonly',
       },
       parserOptions: {
         ecmaVersion: 'latest',

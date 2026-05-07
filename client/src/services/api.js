@@ -530,7 +530,12 @@ export const costApi = {
   getCodeBackupList: () => api.get('/backup/code-list'),
   createDataBackup: () => api.post('/backup/data', {}),
   createCodeBackup: () => api.post('/backup/code-server', {}),
-  restoreBackup: (filename) => api.post('/backup/restore', { filename }),
+  // S-BACKUP-V2 — selectedGroups: optional array of group keys.
+  // Server defaults to ALL groups when omitted/empty (back-compat).
+  restoreBackup: (filename, selectedGroups = null) =>
+    api.post('/backup/restore', selectedGroups && selectedGroups.length > 0
+      ? { filename, selectedGroups }
+      : { filename }),
   deleteBackup: (filename, type) => api.post('/backup/delete', { filename, type }),
   // Upload a backup snapshot file from disk into Backup & restore/Data/.
   // Sys-only on the server; returns { ok, filename, size }. Caller can
@@ -634,6 +639,37 @@ export const planningApi = {
   createOrder: (order) => api.post('/planning/orders', order),
   updateOrder: (id, data) => api.put(`/planning/orders/${id}`, data),
   deleteOrder: (id) => api.delete(`/planning/orders/${id}`),
+
+  // Orders Excel import — two-phase: preview parses + matches against
+  // Finished Goods (no writes), then confirm creates one order per row.
+  importOrdersPreview: async (file) => {
+    const token = getToken();
+    const csrf = readCsrfCookie();
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(`${BASE_URL}/planning/orders/import-preview`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(csrf ? { 'X-CSRF-Token': csrf } : {}),
+      },
+      body: fd,
+      credentials: 'include',
+    });
+    if (res.status === 401) {
+      clearToken();
+      throw new Error('Session expired');
+    }
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const err = new Error(body.message || body.error || 'Preview failed');
+      err.status = res.status;
+      err.body = body;
+      throw err;
+    }
+    return body;
+  },
+  importOrdersConfirm: (rows) => api.post('/planning/orders/import-confirm', { rows }),
 
   getWorkOrders: () => api.get('/planning/work-orders'),
   createWorkOrder: (wo) => api.post('/planning/work-orders', wo),

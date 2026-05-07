@@ -1609,9 +1609,15 @@ select.sc-input {
 .cl-upload-grid {
   display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;
   /* Grow to fill remaining tab height so the drawings claim the space
-     below the params card instead of leaving whitespace. */
-  flex:1; min-height:360px; align-items:stretch;
+     below the params card instead of leaving whitespace. align-items:
+     start lets a collapsed FileUploadZone shrink to header height
+     instead of stretching to match its sibling — the grid row collapses
+     when both children are collapsed, expands to the open one when one
+     is expanded. min-height:0 removes the floor that previously forced
+     a 360px gap even when both panels were folded. */
+  flex:1; align-items:start;
 }
+.cl-upload-grid:has(> .fuz-zone:not(.fuz-zone-collapsed)) { min-height:360px; }
 .cl-upload-zone { border:2px dashed #c6c6c6; border-radius:0; background:#ffffff; overflow:hidden; transition:border-color .15s; outline:none; }
 .cl-upload-zone:focus, .cl-upload-zone:hover { border-color:#0f62fe; }
 .cl-upload-label { padding:8px 14px; font-size:12px; font-weight:600; display:flex; align-items:baseline; gap:6px; min-width:0; }

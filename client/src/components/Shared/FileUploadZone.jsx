@@ -20,9 +20,90 @@
  *   onFileChange : fn      — called with { name, type, dataUrl }
  *   onClear      : fn      — called to remove the file
  */
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { costApi } from '../../services/api';
+import Modal from './Modal';
 import './FileUploadZone.css';
+
+// PDF.js renderer — Electron 41's built-in Chromium PDF Viewer renders
+// <embed type="application/pdf"> as blank inside the renderer process even
+// with `plugins: true`, and Safari's WebKit refuses to paint <iframe>-PDF
+// when an ancestor has CSS transform (Modal entrance animation triggers
+// this). pdfjs-dist works on both surfaces because it renders to canvas
+// in JS — no browser plugin involvement. Same loader pattern as
+// services/printAreaCore.js.
+let _pdfjsModule = null;
+async function loadPdfjs() {
+  if (_pdfjsModule) return _pdfjsModule;
+  const pdfjs = await import('pdfjs-dist');
+  const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
+  pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+  _pdfjsModule = pdfjs;
+  return pdfjs;
+}
+
+function PdfCanvasPreview({ bytes, className, title }) {
+  const containerRef = useRef(null);
+  const [status, setStatus] = useState('loading');
+  useEffect(() => {
+    if (!bytes) return undefined;
+    let cancelled = false;
+    let pdfDoc = null;
+    setStatus('loading');
+    (async () => {
+      try {
+        const pdfjs = await loadPdfjs();
+        // pdfjs mutates the buffer on parse — clone so a re-mount/HMR cycle
+        // doesn't see a detached buffer the second time.
+        const data = bytes.slice(0);
+        if (cancelled) return;
+        pdfDoc = await pdfjs.getDocument({ data, disableFontFace: false }).promise;
+        if (cancelled || !containerRef.current) return;
+        containerRef.current.replaceChildren();
+        for (let i = 1; i <= pdfDoc.numPages; i++) {
+          if (cancelled) break;
+          const page = await pdfDoc.getPage(i);
+          const baseVp = page.getViewport({ scale: 1 });
+          const containerW = containerRef.current.clientWidth || 800;
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          const scale = (containerW / baseVp.width) * dpr;
+          const vp = page.getViewport({ scale });
+          const canvas = document.createElement('canvas');
+          canvas.width = vp.width;
+          canvas.height = vp.height;
+          canvas.style.width = '100%';
+          canvas.style.display = 'block';
+          canvas.style.marginBottom = '8px';
+          containerRef.current.appendChild(canvas);
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+        }
+        if (!cancelled) setStatus('ready');
+      } catch (e) {
+        console.warn('[PdfCanvasPreview] render failed:', e);
+        if (!cancelled) setStatus('error');
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (pdfDoc) pdfDoc.destroy();
+    };
+  }, [bytes]);
+  return (
+    <div className={className} style={{ overflow: 'auto', position: 'relative', background: '#f4f4f4' }} title={title}>
+      <div ref={containerRef} />
+      {status === 'loading' && (
+        <div className="fuz-file-msg" style={{ position: 'absolute', top: 8, left: 8 }}>
+          Rendering PDF…
+        </div>
+      )}
+      {status === 'error' && (
+        <div className="fuz-file-msg fuz-file-err" role="alert" style={{ padding: 16 }}>
+          ⚠ Failed to render PDF. Use “Open in new window” instead.
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Helpers ──
 function normalizeFile(f) {
@@ -64,10 +145,36 @@ export default function FileUploadZone({
   label, file: rawFile,
   endCu, directCu, endCuPn, cclPn, nameSuffix,
   onFileChange, onClear,
+  collapsible = false, defaultCollapsed = true, storageKey,
 }) {
   const inputRef = useRef(null);
   const viewportRef = useRef(null);
   const file = normalizeFile(rawFile);
+
+  // Collapse state. Persisted per-storageKey so reopening the tab returns
+  // the operator to their last choice. Default collapsed when the prop is
+  // enabled — keeps the Layout tab's drawing zones folded out of the way
+  // until the operator explicitly clicks the header to inspect.
+  const collapseStorageKey = storageKey || (collapsible ? `fuz.collapsed.${label}` : '');
+  const [collapsed, setCollapsed] = useState(() => {
+    if (!collapsible) return false;
+    if (!collapseStorageKey) return defaultCollapsed;
+    try {
+      const v = localStorage.getItem(collapseStorageKey);
+      if (v === '1') return true;
+      if (v === '0') return false;
+    } catch { /* localStorage unavailable */ }
+    return defaultCollapsed;
+  });
+  const toggleCollapsed = useCallback(() => {
+    setCollapsed((c) => {
+      const next = !c;
+      if (collapseStorageKey) {
+        try { localStorage.setItem(collapseStorageKey, next ? '1' : '0'); } catch { /* ignore */ }
+      }
+      return next;
+    });
+  }, [collapseStorageKey]);
   // Fall back to file-extension check when MIME type is missing/unset —
   // legacy saves or server-fetched files sometimes have empty `type`
   // even though the content is clearly an image. Without this fallback
@@ -81,6 +188,40 @@ export default function FileUploadZone({
 
   // ── Context menu ──
   const [ctxMenu, setCtxMenu] = useState(null);
+
+  // ── Fullscreen modal ──
+  const [fullscreenOpen, setFullscreenOpen] = useState(false);
+
+  // ── Blob URL ──
+  // Browsers (Chrome 60+, Safari 14+) block `data:` URLs in `<iframe>` and
+  // `window.open()` for security. Convert the base64 data URL to a Blob URL
+  // once per file change — Blob URLs work in both contexts and only require
+  // CSP `frame-src blob:` (which we set in server/index.js).
+  // Without this fix: Customer Drawing PDF iframe is blank, "Open in new
+  // window" produces a blank popup. F-DRAW-1 + F-DRAW-2.
+  // Decoded once per file change; both the blob URL ("Open in new window")
+  // and PdfCanvasPreview (PDF.js needs raw bytes — fetch(blob:) is blocked
+  // by Electron's CSP `connect-src`) read from this.
+  const pdfBytes = useMemo(() => {
+    if (!file?.dataUrl || typeof file.dataUrl !== 'string') return null;
+    const m = /^data:([^;]+);base64,(.+)$/.exec(file.dataUrl);
+    if (!m) return null;
+    try {
+      const bin = atob(m[2]);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      return { bytes: arr, mime: m[1] };
+    } catch {
+      return null;
+    }
+  }, [file?.dataUrl]);
+  const blobUrl = useMemo(() => {
+    if (!pdfBytes) return '';
+    return URL.createObjectURL(new Blob([pdfBytes.bytes], { type: pdfBytes.mime }));
+  }, [pdfBytes]);
+  useEffect(() => {
+    return () => { if (blobUrl) URL.revokeObjectURL(blobUrl); };
+  }, [blobUrl]);
 
   // ── Zoom & Pan (image only) ──
   const [zoom, setZoom] = useState(1);
@@ -204,9 +345,32 @@ export default function FileUploadZone({
     return () => { window.removeEventListener('click', close); window.removeEventListener('contextmenu', close); };
   }, [ctxMenu]);
 
-  const ctxOpen = () => {
+  const ctxOpen = async () => {
     setCtxMenu(null);
-    if (file?.dataUrl) window.open(file.dataUrl, '_blank');
+    // Desktop (Electron): hand off to the OS default handler so PDFs open
+    // in Adobe Acrobat / Preview / system browser — operators get print
+    // dialog, annotations, etc. that the embedded Chromium PDF viewer
+    // doesn't expose. Falls back to web-style window.open() when the
+    // bridge isn't available (regular browser).
+    const bridge = window.ops?.shell?.openExternalFile;
+    if (bridge && file?.dataUrl) {
+      const m = /^data:([^;]+);base64,(.+)$/.exec(file.dataUrl);
+      if (m) {
+        const ext =
+          m[1] === 'application/pdf'
+            ? '.pdf'
+            : m[1].startsWith('image/')
+              ? '.' + m[1].slice(6).split('+')[0]
+              : '.bin';
+        try {
+          await bridge(m[2], ext);
+          return;
+        } catch (err) {
+          console.warn('[FileUploadZone] openExternalFile failed, falling back:', err);
+        }
+      }
+    }
+    if (blobUrl) window.open(blobUrl, '_blank', 'noopener,noreferrer');
   };
   const ctxDelete = () => {
     setCtxMenu(null);
@@ -225,9 +389,12 @@ export default function FileUploadZone({
     setRotation(r => (r + 90) % 360);
   };
 
-  // ── Double-click → open in new tab ──
+  // ── Double-click → fullscreen modal ──
+  // Was: window.open(dataUrl) which (a) is blocked for data: URLs by modern
+  // browsers, (b) loses the in-app context. Now opens an in-app modal at
+  // xl size — operators can still hit the Open button for a real new tab.
   const handleDoubleClick = useCallback(() => {
-    if (file?.dataUrl) window.open(file.dataUrl, '_blank');
+    if (file?.dataUrl) setFullscreenOpen(true);
   }, [file]);
 
   // ── Zoom (wheel) ──
@@ -261,7 +428,7 @@ export default function FileUploadZone({
   }, [dragging, handleMouseMove, handleMouseUp]);
 
   return (
-    <div className="fuz-zone"
+    <div className={`fuz-zone${collapsed ? ' fuz-zone-collapsed' : ''}`}
       onDrop={handleDrop} onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
       onPaste={handlePaste} onContextMenu={handleContextMenu} tabIndex={0}>
 
@@ -272,11 +439,40 @@ export default function FileUploadZone({
           pattern — icon buttons with tooltips + hover color feedback.
           Disabled states: Open + Delete when no file; Rotate only for
           images (PDF iframe ignores CSS transform). */}
-      <div className="fuz-label" onContextMenu={handleContextMenu}
-           title="Right-click for the full menu">
+      <div
+        className={`fuz-label${collapsible ? ' fuz-label-collapsible' : ''}${collapsed ? ' fuz-collapsed' : ''}`}
+        onContextMenu={handleContextMenu}
+        onClick={collapsible ? toggleCollapsed : undefined}
+        title={collapsible ? (collapsed ? 'Click to show drawing' : 'Click to hide drawing') : 'Right-click for the full menu'}
+        role={collapsible ? 'button' : undefined}
+        tabIndex={collapsible ? 0 : undefined}
+        onKeyDown={collapsible ? (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCollapsed(); }
+        } : undefined}
+      >
+        {collapsible && (
+          <span className="fuz-chevron" aria-hidden="true">
+            <svg width="10" height="10" viewBox="0 0 10 10">
+              <path d="M2 3 L5 7 L8 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+        )}
         <span className="fuz-label-text">{label}</span>
         {file?.name && <span className="fuz-filename" title={file.name}> — {file.name}</span>}
-        <div className="fuz-label-actions">
+        <div className="fuz-label-actions" onClick={(e) => e.stopPropagation()}>
+          <button type="button" className="fuz-act-btn fuz-act-fullscreen"
+            onClick={(e) => { e.stopPropagation(); if (file?.dataUrl) setFullscreenOpen(true); }}
+            disabled={!file}
+            title="Fullscreen (double-click)"
+            aria-label="Open drawing fullscreen">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 3 21 3 21 9"/>
+              <polyline points="9 21 3 21 3 15"/>
+              <line x1="21" y1="3" x2="14" y2="10"/>
+              <line x1="3" y1="21" x2="10" y2="14"/>
+            </svg>
+          </button>
           <button type="button" className="fuz-act-btn fuz-act-open"
             onClick={(e) => { e.stopPropagation(); ctxOpen(); }}
             disabled={!file}
@@ -327,8 +523,10 @@ export default function FileUploadZone({
         </div>
       </div>
 
-      {/* Preview or Empty */}
-      {file ? (
+      {/* Preview or Empty — body hidden when collapsible+collapsed. We
+          conditionally render rather than CSS-hide so PdfCanvasPreview
+          doesn't run pdfjs while the panel is folded away. */}
+      {!collapsed && (file ? (
         <div className={`fuz-viewport ${dragging ? 'fuz-panning' : ''}`}
           ref={viewportRef}
           onDoubleClick={handleDoubleClick}
@@ -339,8 +537,8 @@ export default function FileUploadZone({
               style={{ transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px) rotate(${rotation}deg)` }}
               draggable={false} />
           )}
-          {hasPreview && isPDF && (
-            <iframe src={file.dataUrl} title={file.name} className="fuz-pdf-frame" />
+          {hasPreview && isPDF && blobUrl && (
+            <PdfCanvasPreview bytes={pdfBytes?.bytes} title={file.name} className="fuz-pdf-frame" />
           )}
           {hasPreview && !isImage && !isPDF && <div className="fuz-file-msg">File attached</div>}
           {!hasPreview && !fetchError && <div className="fuz-file-msg">Loading preview…</div>}
@@ -367,7 +565,7 @@ export default function FileUploadZone({
           <div className="fuz-empty-text">Drop file, paste (Ctrl+V), or <span className="fuz-browse">browse</span></div>
           <div className="fuz-empty-hint">PNG, JPG, SVG, PDF</div>
         </div>
-      )}
+      ))}
 
       {/* Hidden file input */}
       <input ref={inputRef} type="file" accept="image/*,.pdf,.svg" style={{ display: 'none' }}
@@ -411,6 +609,38 @@ export default function FileUploadZone({
           </div>
         </div>
       )}
+
+      {/* Fullscreen viewer — XL modal showing the file at large size.
+          Triggered by the new fullscreen button OR double-click on the
+          preview. PDFs use blob URL iframe (avoids CSP/data-URL block).
+          Images respect rotation but reset zoom/pan inside the modal. */}
+      <Modal open={fullscreenOpen} onClose={() => setFullscreenOpen(false)}
+             size="xl" severity="info">
+        <Modal.Header title={label} subtitle={file?.name || ''} />
+        <Modal.Body>
+          {file && hasPreview && isImage && (
+            <img src={blobUrl || file.dataUrl} alt={file.name}
+              className="fuz-fs-img"
+              style={{ transform: `rotate(${rotation}deg)` }} />
+          )}
+          {file && hasPreview && isPDF && blobUrl && (
+            <PdfCanvasPreview bytes={pdfBytes?.bytes} title={file.name} className="fuz-fs-pdf" />
+          )}
+          {file && !hasPreview && (
+            <div className="fuz-file-msg">No preview available.</div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <button type="button" className="op-btn op-btn-secondary"
+                  onClick={ctxOpen} disabled={!blobUrl}>
+            Open in new window
+          </button>
+          <button type="button" className="op-btn op-btn-primary"
+                  onClick={() => setFullscreenOpen(false)}>
+            Close
+          </button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }

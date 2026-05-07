@@ -1,4 +1,4 @@
-import { useState, useEffect, useDeferredValue } from 'react';
+import { useState, useEffect, useDeferredValue, useRef } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AccessProvider } from './context/AccessContext';
 import { CalcProvider } from './context/CalcContext';
@@ -53,7 +53,10 @@ function writeLS(key, value) {
 function AppContent() {
   const { isAuthenticated, loading, hasRole, sessionExpired } = useAuth();
   const [activeModule, setActiveModule] = useState(() => readLS(LS_MODULE_KEY, 'cost'));
-  const [activeTab, setActiveTab] = useState(() => readLS(LS_TAB_KEY, 'standard'));
+  // Sprint S-HOME — first-time login lands on the Home dashboard.
+  // Returning users keep their last activeTab (LS persists); only the
+  // initial empty-LS fallback changed from 'standard' → 'home'.
+  const [activeTab, setActiveTab] = useState(() => readLS(LS_TAB_KEY, 'home'));
   // Sprint 1.7i — UI lag fix when switching to a heavy tab (Mfg Structures
   // 6 MB, Routing Ops 16 MB, IFS Inventory 2.8 MB).
   // The previous behaviour batched the sidebar's "active tab highlight"
@@ -85,6 +88,18 @@ function AppContent() {
   useEffect(() => { writeLS(LS_MODULE_KEY, activeModule); }, [activeModule]);
   useEffect(() => { writeLS(LS_TAB_KEY, activeTab); }, [activeTab]);
   useEffect(() => { writeLS(LS_SIDEBAR_COLLAPSED, sidebarCollapsed ? '1' : '0'); }, [sidebarCollapsed]);
+
+  // Sprint S-HOME — every fresh login lands on the Home dashboard.
+  // Detect the false → true transition of `isAuthenticated` (don't fire
+  // on every render where the user is already logged in, so a page
+  // reload still preserves the operator's last tab via LS).
+  const wasAuthenticatedRef = useRef(isAuthenticated);
+  useEffect(() => {
+    if (isAuthenticated && !wasAuthenticatedRef.current) {
+      setActiveTab('home');
+    }
+    wasAuthenticatedRef.current = isAuthenticated;
+  }, [isAuthenticated]);
 
   // Listen for tab switch events from native components (e.g., Quote History -> Open quote)
   useEffect(() => {
@@ -201,9 +216,11 @@ function AppContent() {
               happens AFTER the sidebar paint, not before. Sidebar above
               gets the immediate `activeTab` so its highlight is instant. */}
           {activeModule === 'cost' && (
-            <CostModule activeTab={deferredActiveTab} />
+            <CostModule activeTab={deferredActiveTab} onTabChange={setActiveTab} />
           )}
-          {activeModule === 'planning' && <PlanningModule activeTab={deferredActiveTab} />}
+          {activeModule === 'planning' && (
+            <PlanningModule activeTab={deferredActiveTab} onTabChange={setActiveTab} />
+          )}
         </div>
         {/* Bottom-of-screen validation status bar — renders null unless
             the active tab is Standard or Complex AND warnings > 0. Sits

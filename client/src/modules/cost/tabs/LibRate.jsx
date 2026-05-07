@@ -8,7 +8,23 @@ import { costApi, importApi } from '../../../services/api';
 import EmptyState from '../../../components/Shared/EmptyState';
 import { SITES } from '../../../utils/sites';
 import DecimalInput from '../../../utils/DecimalInput';
+import { toCSV, downloadCSV } from '../../../utils/csvIO';
 import './LibRate.css';
+
+// S-RATE-DL (2026-05-05) — column map for the local Download CSV button.
+// Mirrors server-side rateRows() in routes/costApi.js so the file an
+// operator gets via Download is byte-identical (same headers + cell order)
+// to the server-mirror file written by Export CSV. Adding a column here
+// requires the same change in costApi.js:rateRows.
+const RATE_CSV_COLUMNS = [
+  { key: 'workcenter',    header: 'workcenter',    type: 'string' },
+  { key: 'crew',          header: 'crew',          type: 'number' },
+  { key: 'machine_rate',  header: 'machine_rate',  type: 'number' },
+  { key: 'labor_rate',    header: 'labor_rate',    type: 'number' },
+  { key: 'speed_uom',     header: 'speed_uom',     type: 'string' },
+  { key: 'oh_cost',       header: 'oh_cost',       type: 'number' },
+  { key: 'mc_cost',       header: 'W/C',           type: 'number' },
+];
 const DEFAULT_SPEED_UOMS = ['', 'M/min', 'Mtr/Hr', 'Stamp/min', 'Pcs/H', 'Sheets/H', 'Sheet/H'];
 const ADD_NEW_SENTINEL = '__add_new__';
 
@@ -101,27 +117,54 @@ export default function LibRate() {
     }
   }, [site]);
 
+  // S-RATE-RESTORE-FIX (2026-05-05) — server returns the snapshot's
+  // {data} but does NOT touch rate_sites.json; the client must load
+  // those rows into the editor and let the user Save to commit. Prior
+  // version called refreshLib() which threw away the response and
+  // re-pulled the LIVE table — the "Restore" toast appeared but
+  // nothing actually restored. Now: setRows(data) → setDirty(true)
+  // → user reviews → user clicks Save to persist.
   const handleRestore = useCallback(async (filename) => {
-    if (!confirm(`Restore rate from ${filename}?`)) return;
+    if (dirty && !confirm('You have unsaved changes. Restoring will discard them. Continue?')) return;
+    if (!confirm(`Load snapshot ${filename} into editor? You must click Save to commit.`)) return;
     try {
-      await costApi.restoreRate(filename, site);
+      const res = await costApi.restoreRate(filename, site);
+      const data = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+      if (data.length === 0) {
+        setMsg('Restore failed: snapshot is empty');
+        return;
+      }
+      setRows(data.map((r) => ({ ...r })));
+      setDirty(true);
       setShowBackups(false);
-      setMsg('Restored');
-      refreshLib();
-      setTimeout(() => setMsg(''), 2000);
+      setMsg(`Loaded ${data.length} rows from ${filename} — click Save to commit`);
+      setTimeout(() => setMsg(''), 5000);
     } catch (err) {
       setMsg('Restore failed: ' + err.message);
     }
-  }, [site, refreshLib]);
+  }, [site, dirty]);
 
   const handleExportCsv = useCallback(async () => {
     try {
       await costApi.exportRateCsv(site, rows);
-      setMsg('CSV exported');
-      setTimeout(() => setMsg(''), 2000);
+      setMsg('CSV mirrored to server · Library/Rate/');
+      setTimeout(() => setMsg(''), 3000);
     } catch (err) {
       setMsg('Export failed: ' + err.message);
     }
+  }, [site, rows]);
+
+  // S-RATE-DL — local Download CSV: same column shape as the server
+  // mirror, but writes to the operator's machine via Blob URL. Useful
+  // when the engineer wants the file directly without SSH'ing to the
+  // server. No round-trip; works offline / read-only sessions too.
+  const handleDownloadCsv = useCallback(() => {
+    const csv = toCSV(rows || [], RATE_CSV_COLUMNS);
+    const csvKey = String(site || '').toLowerCase().replace(/\s+/g, '');
+    const ts = new Date().toISOString().slice(0, 10);
+    downloadCSV(`rate_${csvKey}_${ts}.csv`, csv);
+    setMsg('CSV downloaded · Tải xuống xong');
+    setTimeout(() => setMsg(''), 3000);
   }, [site, rows]);
 
   // CSV/XLSX import → POST /api/import/rate?site=<site>. Server auto-maps
@@ -180,7 +223,20 @@ export default function LibRate() {
           >
             {importing ? 'Importing…' : '⭡ Import'}
           </button>
-          <button className="lr-btn lr-btn-csv" onClick={handleExportCsv}>Export CSV</button>
+          <button
+            className="lr-btn lr-btn-csv"
+            onClick={handleExportCsv}
+            title="Write CSV mirror to server (DATA_DIR/Library/Rate/) — for git / backup / external tooling"
+          >
+            Export CSV
+          </button>
+          <button
+            className="lr-btn lr-btn-csv"
+            onClick={handleDownloadCsv}
+            title="Download CSV to your local machine (Downloads folder)"
+          >
+            ⬇ Download CSV
+          </button>
           <button className="lr-btn lr-btn-backup" onClick={handleBackup}>Backup</button>
           <button className="lr-btn lr-btn-restore" onClick={loadBackups}>Restore</button>
           <button className="lr-btn lr-btn-save" onClick={handleSave} disabled={!dirty || saving}>

@@ -7,6 +7,7 @@ import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import { calcAll, getActiveTierState, serializeResultForPersist } from '../../../../services/calcEngine';
 import { costApi, sharedApi } from '../../../../services/api';
+import { genRfqNum } from '../../../../utils/rfqGen';
 import { chatApi, openChatRoom } from '../../../../services/chatApi';
 import { useI18n } from '../../../../utils/useI18n';
 import { showToast } from '../../../../utils/toast';
@@ -44,7 +45,7 @@ const SUB_TABS = [
 export default function StandardCalc() {
   const [activeSubTab, setActiveSubTab] = useState('header');
   const { t } = useI18n();
-  const { stdState, isDirty, markClean, dispatch, loadQuote, pendingQuote, clearPendingQuote, activeQuoteId, activeQuoteVersion } = useCalc();
+  const { stdState, cplxState, isDirty, markClean, dispatch, loadQuote, setStdField, pendingQuote, clearPendingQuote, activeQuoteId, activeQuoteVersion } = useCalc();
   const { lib } = useCostLib();
   const [saveChoiceOpen, setSaveChoiceOpen] = useState(false);
   // v1.3 Đợt 2 — replace blunt window.confirm() with ConflictModal.
@@ -66,15 +67,27 @@ export default function StandardCalc() {
   // and loadQuote has been dispatched, then clear it.
   useEffect(() => {
     if (!pendingQuote || pendingQuote.type !== 'standard') return;
-    const { id } = pendingQuote;
+    const { id, action } = pendingQuote;
     let cancelled = false;
     sharedApi.getQuotes().then(quotes => {
       if (cancelled) return;
       const q = (quotes || []).find(x => String(x.id) === String(id));
       if (q?.state) {
-        // Pass `_version` through so subsequent Update-existing saves
-        // include it in the PATCH for optimistic-locking enforcement.
-        loadQuote('std', q.state, q.id, q._version || 0);
+        if (action === 'copy') {
+          // Duplicate: drop server-side identity (id, version, rfq_number)
+          // so the next save creates a new row with a freshly-allocated
+          // RFQ. ccl_pn is left intact — operators usually want to start
+          // from the same SKU shape and edit from there.
+          const fresh = { ...q.state };
+          delete fresh.rfq_number;
+          loadQuote('std', fresh, null, 0);
+          setStdField('rfq_number', genRfqNum('S', quotes, fresh, cplxState));
+          showToast(`Copied from quote #${id} — saved as a new quote`);
+        } else {
+          // Pass `_version` through so subsequent Update-existing saves
+          // include it in the PATCH for optimistic-locking enforcement.
+          loadQuote('std', q.state, q.id, q._version || 0);
+        }
       } else {
         showToast(`Quote #${id} not found`, 'err');
       }
@@ -86,6 +99,10 @@ export default function StandardCalc() {
       clearPendingQuote();
     });
     return () => { cancelled = true; };
+    // setStdField + cplxState aren't dependencies on purpose — we want the
+    // generation to use the snapshot at the moment the copy was requested,
+    // not re-fire on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingQuote, loadQuote, clearPendingQuote]);
 
   // RFQ Tracker → Pricing Worksheet handoff. The RFQ Tracker pushes
@@ -238,9 +255,18 @@ export default function StandardCalc() {
     return () => window.removeEventListener('keydown', onKey);
   }, [handleSave, isDirty, saving]);
 
-  const handleReset = useCallback(() => {
+  const handleReset = useCallback(async () => {
     dispatch({ type: 'RESET_STD' });
-  }, [dispatch]);
+    // Auto-allocate next sequential RFQ number so the operator never sees
+    // a blank field on a fresh quote. Mirrors SAP/IFS behaviour where the
+    // document number is reserved at creation, not at first save.
+    try {
+      const quotes = await sharedApi.getQuotes();
+      setStdField('rfq_number', genRfqNum('S', quotes, {}, cplxState));
+    } catch (err) {
+      console.warn('[StandardCalc] auto-RFQ on New failed:', err);
+    }
+  }, [dispatch, setStdField, cplxState]);
 
   let content;
   switch (activeSubTab) {

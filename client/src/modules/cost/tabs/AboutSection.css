@@ -158,6 +158,13 @@
   color: #b91c1c;
 }
 
+/* S-DIAG-FIX (2026-05-05) — Skipped (gray) + warning (amber) pills.
+   "Skipped" means the test was deliberately not run on this platform
+   (e.g. printer list on macOS); "warning" means it ran successfully
+   but a non-fatal config issue was detected (e.g. zero printers). */
+.about-diag-skip { color: #6b7280; }
+.about-diag-warn { color: #b45309; }
+
 /* ─── Footer ──────────────────────────────────────── */
 .about-foot {
   margin-top: 24px;

@@ -358,7 +358,7 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
             .map((s) => s.trim())
             .find((s) => s.startsWith('ops_csrf='))
             ?.split('=')[1] || '';
-        const r = await fetch('/api/auth/change-password', {
+        const r = await fetch('/api/auth/change-pwd', {
           method: 'POST',
           credentials: 'include',
           headers: {
@@ -456,7 +456,7 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
               ? `localhost:${cfg.embeddedPort || ''} (this machine)`
               : remoteHost || loadHost;
           setServerInfo({
-            version: cfg?.version || '1.2.0',
+            version: cfg?.version || __APP_VERSION__,
             buildLabel: 'build 2026.04',
             mode,
             label: classify(mode, displayHost),
@@ -465,7 +465,7 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
         })
         .catch(() => {
           setServerInfo({
-            version: '1.2.0',
+            version: __APP_VERSION__,
             buildLabel: 'build 2026.04',
             mode: 'embedded',
             label: classify('embedded', loadHost),
@@ -474,7 +474,7 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
         });
     } else {
       setServerInfo({
-        version: '1.2.0',
+        version: __APP_VERSION__,
         buildLabel: 'build 2026.04',
         mode: 'web',
         label: classify('web', loadHost),

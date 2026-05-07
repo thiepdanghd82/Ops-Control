@@ -47,7 +47,7 @@ const MENU_SECTIONS = [
       { id: 'data', icon: '⊞', label: 'Backup / Restore', minRole: 'admin' },
       { id: 'syslog', icon: '❒', label: 'System Logs', minRole: 'admin' },
       // v1.1 — desktop-only: import data từ Ops Control v1.0 cũ
-      { id: 'import-legacy', icon: '⇩', label: 'Import data v1.0', minRole: 'admin' },
+      { id: 'import-legacy', icon: '⇩', label: 'Import data', minRole: 'admin' },
     ],
   },
 ];
@@ -327,7 +327,7 @@ function ProfileSection({ user }) {
       </h3>
       <div className="settings-card about-card">
         <p>
-          <strong>Ops Control</strong> v1.2.0
+          <strong>Ops Control</strong> v{__APP_VERSION__}
         </p>
         <p>CCL Design Vietnam — Integrated Cost & Planning Platform</p>
         <p className="about-tech">Henry Dang — NPI Manager · React + Node.js (Electron 33)</p>
@@ -810,6 +810,12 @@ function AccountSection() {
   // password isn't kept in memory longer than needed (it's already hashed
   // server-side and we don't show it again).
   const [provisioning, setProvisioning] = useState(null);
+  // Reset-password + Edit-profile modals replace native prompt() — Electron
+  // renderer doesn't implement window.prompt(), so the legacy prompt-based
+  // flows silently no-op'd on desktop. Modal-based input works on both web
+  // (Safari pop-up blocker can't suppress) and desktop.
+  const [resetPwdTarget, setResetPwdTarget] = useState(null);
+  const [editProfileTarget, setEditProfileTarget] = useState(null);
 
   const isSys = currentUser?.role === 'sys';
   const isAdminPlus = currentUser?.role === 'sys' || currentUser?.role === 'admin';
@@ -921,18 +927,16 @@ function AccountSection() {
     }
   }
 
-  async function handleResetPwd(u) {
-    const newPwd = prompt(
-      `Reset password for "${u.username}"?\n\nEnter new password (min 6 chars):`
-    );
-    if (!newPwd) return;
-    if (newPwd.length < 6) {
-      flash('error', 'Password must be at least 6 characters');
-      return;
-    }
+  function handleResetPwd(u) {
+    setResetPwdTarget(u);
+  }
+  async function submitResetPwd(newPwd) {
+    if (!resetPwdTarget) return;
+    const u = resetPwdTarget;
     try {
       await costApi.resetPwd(u.id, newPwd);
       flash('success', `Password reset for ${u.username}`);
+      setResetPwdTarget(null);
     } catch (e) {
       flash('error', 'Failed to reset password: ' + (e.message || 'unknown'));
     }
@@ -983,27 +987,16 @@ function AccountSection() {
     }
   }
 
-  async function handleEdit(u) {
-    // Matches COST V1.0's authEditUserDialog — sequential prompts.
-    const newFull = prompt('Full Name (VN):', u.full_name || '');
-    if (newFull === null) return;
-    const newEng = prompt('English Name:', u.english_name || '');
-    if (newEng === null) return;
-    const newIdNo = prompt('ID No.:', u.id_no || '');
-    if (newIdNo === null) return;
-    const newEmail = prompt('Email:', u.email || '');
-    if (newEmail === null) return;
-    const newPhone = prompt('Phone:', u.phone || '');
-    if (newPhone === null) return;
+  function handleEdit(u) {
+    setEditProfileTarget(u);
+  }
+  async function submitEditProfile(fields) {
+    if (!editProfileTarget) return;
+    const u = editProfileTarget;
     try {
-      await costApi.updateUser(u.id, {
-        full_name: newFull.trim(),
-        english_name: newEng.trim(),
-        id_no: newIdNo.trim(),
-        email: newEmail.trim(),
-        phone: newPhone.trim(),
-      });
+      await costApi.updateUser(u.id, fields);
       flash('success', 'User updated');
+      setEditProfileTarget(null);
       loadUsers();
     } catch (e) {
       flash('error', 'Failed to update user: ' + (e.message || 'unknown'));
@@ -1644,6 +1637,22 @@ function AccountSection() {
         tempPassword={provisioning?.tempPassword || ''}
         serverUrl={provisioning?.serverUrl || ''}
       />
+
+      {resetPwdTarget && (
+        <ResetPwdModal
+          user={resetPwdTarget}
+          onClose={() => setResetPwdTarget(null)}
+          onSubmit={submitResetPwd}
+        />
+      )}
+
+      {editProfileTarget && (
+        <EditProfileModal
+          user={editProfileTarget}
+          onClose={() => setEditProfileTarget(null)}
+          onSubmit={submitEditProfile}
+        />
+      )}
     </div>
   );
 }
@@ -1827,6 +1836,174 @@ function AddUserModal({ onClose, onCreate }) {
   );
 }
 
+// Reset-password modal — replaces the legacy prompt() flow that no-op'd
+// in Electron (renderer doesn't implement window.prompt).
+function ResetPwdModal({ user, onClose, onSubmit }) {
+  const [pwd, setPwd] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  async function submit(e) {
+    e.preventDefault();
+    if (pwd.length < 6) {
+      setErr('Password must be at least 6 characters');
+      return;
+    }
+    setBusy(true);
+    setErr('');
+    try {
+      await onSubmit(pwd);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Modal open onClose={onClose} size="sm" severity="warn" ariaLabelledBy="reset-pwd-title">
+      <Modal.Header
+        id="reset-pwd-title"
+        title={`Reset password — ${user.username}`}
+        subtitle="Existing sessions for this user will be revoked."
+        severity="warn"
+      />
+      <Modal.Body>
+        <form id="reset-pwd-form" onSubmit={submit}>
+          <div className="op-form-field">
+            <label>New password</label>
+            <input
+              className="op-form-input"
+              type="password"
+              value={pwd}
+              onChange={(e) => setPwd(e.target.value)}
+              placeholder="Min 6 chars"
+              autoFocus
+            />
+          </div>
+          {err && (
+            <div className="form-msg error" style={{ marginTop: 12 }}>
+              {err}
+            </div>
+          )}
+        </form>
+      </Modal.Body>
+      <Modal.Footer>
+        <button type="button" className="op-btn op-btn-ghost" onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          type="submit"
+          form="reset-pwd-form"
+          className="op-btn op-btn-primary"
+          disabled={busy}
+        >
+          {busy ? 'Resetting…' : 'Reset password'}
+        </button>
+      </Modal.Footer>
+    </Modal>
+  );
+}
+
+// Edit-profile modal — replaces the 5-prompt() chain. Same field set as
+// the legacy flow; trims whitespace before sending.
+function EditProfileModal({ user, onClose, onSubmit }) {
+  const [form, setForm] = useState({
+    full_name: user.full_name || '',
+    english_name: user.english_name || '',
+    id_no: user.id_no || '',
+    email: user.email || '',
+    phone: user.phone || '',
+  });
+  const [busy, setBusy] = useState(false);
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await onSubmit({
+        full_name: form.full_name.trim(),
+        english_name: form.english_name.trim(),
+        id_no: form.id_no.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Modal open onClose={onClose} size="md" severity="info" ariaLabelledBy="edit-profile-title">
+      <Modal.Header
+        id="edit-profile-title"
+        title={`Edit profile — ${user.username}`}
+        severity="info"
+      />
+      <Modal.Body>
+        <form id="edit-profile-form" onSubmit={submit}>
+          <div className="op-form-grid">
+            <div className="op-form-field">
+              <label>Full Name (VN)</label>
+              <input
+                className="op-form-input"
+                type="text"
+                value={form.full_name}
+                onChange={(e) => set('full_name', e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="op-form-field">
+              <label>English Name</label>
+              <input
+                className="op-form-input"
+                type="text"
+                value={form.english_name}
+                onChange={(e) => set('english_name', e.target.value)}
+              />
+            </div>
+            <div className="op-form-field">
+              <label>ID No.</label>
+              <input
+                className="op-form-input"
+                type="text"
+                value={form.id_no}
+                onChange={(e) => set('id_no', e.target.value)}
+              />
+            </div>
+            <div className="op-form-field">
+              <label>Email</label>
+              <input
+                className="op-form-input"
+                type="email"
+                value={form.email}
+                onChange={(e) => set('email', e.target.value)}
+              />
+            </div>
+            <div className="op-form-field">
+              <label>Phone</label>
+              <input
+                className="op-form-input"
+                type="text"
+                value={form.phone}
+                onChange={(e) => set('phone', e.target.value)}
+              />
+            </div>
+          </div>
+        </form>
+      </Modal.Body>
+      <Modal.Footer>
+        <button type="button" className="op-btn op-btn-ghost" onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          type="submit"
+          form="edit-profile-form"
+          className="op-btn op-btn-primary"
+          disabled={busy}
+        >
+          {busy ? 'Saving…' : 'Save'}
+        </button>
+      </Modal.Footer>
+    </Modal>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════
 // BACKUP / RESTORE SECTION
 // ═══════════════════════════════════════════════════════════
@@ -1842,6 +2019,12 @@ function BackupSection() {
   const [msg, setMsg] = useState(null);
   const [uploading, setUploading] = useState(false);
   const uploadInputRef = useRef(null);
+  // S-BACKUP-V2 — restore-groups modal state. `restoreTarget` = filename
+  // being restored (null = modal closed). `restoreGroups` = checkbox map.
+  const [restoreTarget, setRestoreTarget] = useState(null);
+  const [restoreGroups, setRestoreGroups] = useState({
+    quotes: true, rateDdl: true, trackers: true, financeInk: true, permissions: true, designs: true,
+  });
 
   useEffect(() => {
     loadBackups();
@@ -1899,27 +2082,33 @@ function BackupSection() {
     }
   }
 
+  // S-BACKUP-V2 (2026-05-05) — per-group restore. Defaults to ALL groups
+  // checked so existing flows (full restore) work with one extra click.
+  // Operator can untick groups they don't want overwritten — useful when
+  // restoring just Quotes after a bulk-edit accident, leaving Rate/DDL alone.
   async function restoreDataBackup(filename) {
-    if (
-      !confirm(
-        `Restore data from "${filename}"?\n\n` +
-          `This will OVERWRITE all current library data (quotes, materials, rates, ` +
-          `DDL, finance, ink calc, etc.) with the contents of this backup.\n\n` +
-          `A safety snapshot of the current state will be saved as pre_restore_<timestamp>.json ` +
-          `before the restore runs, so you can roll back if needed.\n\n` +
-          `Proceed?`
-      )
-    )
+    setRestoreTarget(filename);
+    setRestoreGroups({ quotes: true, rateDdl: true, trackers: true, financeInk: true, permissions: true, designs: true });
+  }
+
+  async function performRestore() {
+    if (!restoreTarget) return;
+    const selected = Object.entries(restoreGroups).filter(([, v]) => v).map(([k]) => k);
+    if (selected.length === 0) {
+      setMsg({ type: 'error', text: 'Select at least one group to restore.' });
       return;
+    }
     setMsg(null);
     try {
-      const res = await costApi.restoreBackup(filename);
+      const res = await costApi.restoreBackup(restoreTarget, selected);
       const summary = res.restored ? `${res.restored.length} datasets restored` : 'restored';
-      const warn = res.partial ? ` ⚠️ ${res.failed?.length || 0} datasets failed` : '';
+      const warn = res.partial ? ` ⚠️ ${res.failed?.length || 0} failed` : '';
+      const skip = res.skippedByGroup?.length ? ` · ${res.skippedByGroup.length} skipped by group` : '';
       setMsg({
         type: res.partial ? 'error' : 'success',
-        text: `${summary}${warn}. Safety snapshot: ${res.pre_backup}`,
+        text: `${summary}${warn}${skip}. Safety snapshot: ${res.pre_backup}`,
       });
+      setRestoreTarget(null);
       loadBackups();
     } catch (e) {
       setMsg({ type: 'error', text: e.message });
@@ -2021,6 +2210,28 @@ function BackupSection() {
           <span className="ifs-tab-count">{codeBackups.length}</span>
         </button>
       </div>
+
+      {activeTab === 'data' && (
+        <div className="backup-disclaimer" style={{
+          background: '#fef3c7', border: '1px solid #fcd34d', padding: '10px 14px',
+          marginBottom: 12, fontSize: 12, lineHeight: 1.55, color: '#78350f', borderRadius: 4,
+        }}>
+          <b>ℹ️ Data Backup này KHÔNG bao gồm</b> · <b>Backup does NOT include:</b>
+          <ul style={{ margin: '6px 0 0 20px', padding: 0 }}>
+            <li>Customer Drawings — kích thước lớn, dùng "Drawings Archive" riêng / large files, use a separate Drawings Archive</li>
+            <li>User accounts / TOTP / License — bảo mật / security-sensitive</li>
+            <li>Audit log — bất biến, không được restore / immutable, must not be restored</li>
+          </ul>
+          <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px dashed #fcd34d' }}>
+            <b>Lưu ý / Note:</b> Saved Designs (Gallus, v.v.) <b>CÓ</b> trong file backup này — kèm artwork base64 nhúng trực tiếp vào record. File backup có thể lớn (vài MB → hàng chục MB) nếu nhiều design có artwork PDF/PNG.
+            <br/>
+            <i>Saved Designs <b>ARE</b> included with their inline base64 artwork. Backup size may grow significantly (a few MB → tens of MB) when many designs carry embedded PDF/PNG artwork.</i>
+          </div>
+          <div style={{ marginTop: 6 }}>
+            Để DR đầy đủ: dùng nightly auto-backup ở <code>server/data/Backup/</code> · For full DR use the nightly auto-backup.
+          </div>
+        </div>
+      )}
 
       <div className="backup-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {activeTab === 'data' && (
@@ -2180,6 +2391,50 @@ function BackupSection() {
           </table>
         </div>
       </div>
+      {/* S-BACKUP-V2 — restore-groups modal. Open when restoreTarget is
+          set (clicking Restore on a row). User picks which groups to
+          overwrite; default ALL checked. Closes on Cancel or success. */}
+      {restoreTarget && (
+        <div className="modal-scrim" style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }} onClick={() => setRestoreTarget(null)}>
+          <div className="modal-card" style={{
+            background: '#fff', padding: 20, borderRadius: 6, minWidth: 480, maxWidth: 600,
+          }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 8px 0' }}>Restore from backup</h3>
+            <div style={{ fontSize: 12, color: '#525252', marginBottom: 14 }}>
+              <code>{restoreTarget}</code><br/>
+              Pick groups to overwrite. Unchecked groups stay untouched. A safety snapshot is taken first.<br/>
+              <i>Bỏ chọn nhóm nào thì nhóm đó giữ nguyên. Hệ thống tự backup trước khi restore.</i>
+            </div>
+            {[
+              { key: 'quotes',      label: 'Quotes & Calculations',  hint: 'quoteHistory, summarizeDB, matDB, npiDB, sourcingDB' },
+              { key: 'rateDdl',     label: 'Rate & DDL',             hint: 'rateDB, rateSitesDB, ddlDB, ddlSitesDB' },
+              { key: 'trackers',    label: 'RFQ & Sample Tracking',  hint: 'rfqTracker, sampleTracker' },
+              { key: 'financeInk',  label: 'Finance & Ink Calc',     hint: 'financeWCDB, financeSumDB, inkCalcDB' },
+              { key: 'permissions', label: 'Permission Groups',      hint: 'groups.json (v2+)' },
+              { key: 'designs',     label: 'Saved Designs',          hint: 'DesignTools/designs.json (v2+)' },
+            ].map(g => (
+              <label key={g.key} style={{ display: 'flex', gap: 10, padding: '6px 0', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={!!restoreGroups[g.key]}
+                  onChange={(e) => setRestoreGroups(s => ({ ...s, [g.key]: e.target.checked }))}
+                />
+                <div>
+                  <div style={{ fontWeight: 600 }}>{g.label}</div>
+                  <div style={{ fontSize: 11, color: '#6f6f6f' }}>{g.hint}</div>
+                </div>
+              </label>
+            ))}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+              <button className="btn" onClick={() => setRestoreTarget(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={performRestore}>Restore selected</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

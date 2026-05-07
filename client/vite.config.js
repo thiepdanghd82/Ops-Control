@@ -2,6 +2,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { visualizer } from 'rollup-plugin-visualizer'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
+const APP_VERSION = JSON.parse(
+  readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf8'),
+).version;
 
 // Sprint 32 — opt-in bundle analyzer. `ANALYZE=1 npm run build` emits
 // dist/bundle-stats.html (interactive treemap) + dist/bundle-stats.json
@@ -50,6 +56,7 @@ export default defineConfig({
     __OPS_BUNDLE_MARKER__: JSON.stringify(
       `opsctl-v1.3-marker:${process.env.OPS_BUILD_ID || 'local'}:${new Date().toISOString()}`,
     ),
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
   },
   server: {
     port: 5174,

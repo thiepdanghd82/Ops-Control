@@ -5,10 +5,42 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { sharedApi, costApi } from '../../../services/api';
 import { useCalc } from '../../../context/CalcContext';
+import { useAuth } from '../../../context/AuthContext';
 import { meshRecalc, aniloxRecalc, runInkCalc } from '../../../services/inkCalcCore';
 import DecimalInput from '../../../utils/DecimalInput';
 import TabBarOverflow from '../../../components/Shared/TabBarOverflow';
+import { toCSV, parseCSV, downloadCSV, pickCSVFile } from '../../../utils/csvIO';
 import './InkCalculator.css';
+
+// S-INK-IO (2026-05-05) — CSV column maps used for both export + import.
+// Calculated columns (open_area_recipe, theo_ink_volume, calc_vol, vol_recipe)
+// are EXPORTED for visibility but RECOMPUTED on import via meshRecalc /
+// aniloxRecalc, so an out-of-date file can't pollute the live values.
+const MESH_COLUMNS = [
+  { key: 'mesh_code', header: 'Mesh Code', type: 'string' },
+  { key: 'mesh_count', header: 'Mesh Count (n/cm)', type: 'number' },
+  { key: 'thread_dia', header: 'Thread Dia (um)', type: 'number' },
+  { key: 'mesh_thickness', header: 'Mesh Thickness (um)', type: 'number' },
+  { key: 'tolerance', header: 'Tolerance', type: 'string' },
+  { key: 'mesh_opening', header: 'Mesh Opening (um)', type: 'number' },
+  { key: 'open_area', header: 'Open Area (%)', type: 'number' },
+  { key: 'open_area_recipe', header: 'Open Area Calc (%)', type: 'number' },
+  { key: 'theo_ink_volume', header: 'Theo Ink Vol (cm3/m2)', type: 'number' },
+  { key: 'volume_recipe', header: 'Volume Recipe (cm3/m2)', type: 'number' },
+];
+
+const ANILOX_COLUMNS = [
+  { key: 'anilox_code', header: 'Anilox Code', type: 'string' },
+  { key: 'lpi', header: 'Line Count (lpi)', type: 'number' },
+  { key: 'bcm', header: 'BCM', type: 'number' },
+  { key: 'depth_um', header: 'Cell Depth (um)', type: 'number' },
+  { key: 'tolerance', header: 'Tolerance', type: 'string' },
+  { key: 'cell_opening_um', header: 'Cell Opening (um)', type: 'number' },
+  { key: 'open_area_pct', header: 'Open Area (%)', type: 'number' },
+  { key: 'calc_vol', header: 'Calc Volume (cm3/m2)', type: 'number' },
+  { key: 'transfer_eff', header: 'Transfer Eff (%)', type: 'number' },
+  { key: 'vol_recipe', header: 'V_R Recipe (cm3/m2)', type: 'number' },
+];
 
 function fmtN(v, d = 3) {
   if (v === undefined || v === '' || isNaN(v)) return '';
@@ -313,8 +345,48 @@ function QPACostTab({ data, type, onRun }) {
 // Each formula row is [col, nameEn, nameVi, formula, bg, fg]; the legend
 // renders bilingual names so VN-first operators can scan the column letter
 // against the field they remember from the worksheet header.
+// S-INK-LEGEND (2026-05-05) — column-impact reference: which DB columns
+// actually drive the ink calculation vs which are pure reference. Helps
+// engineers focus on the right cells when editing or importing CSV.
+// Tags: 'use' = drives formula · 'derived' = auto-computed output ·
+// 'key' = lookup key · 'ref' = reference only.
+const COLUMN_IMPACT = {
+  flexo: [
+    { col: 'Anilox Code',         tag: 'key',     en: 'Lookup key (matches ik.mesh_spec)',         vi: 'Khóa tra cứu (khớp với card mực)' },
+    { col: 'Line Count (lpi)',    tag: 'ref',     en: 'Displayed in QPA output only',              vi: 'Chỉ hiện ở QPA, không vào công thức' },
+    { col: 'BCM',                 tag: 'use',     en: 'Drives Calc Vol = BCM × 1.55',              vi: 'Tham gia Calc Vol = BCM × 1.55' },
+    { col: 'Cell Depth (μm)',     tag: 'ref',     en: 'Physical reference, not in formula',        vi: 'Tham khảo vật lý, không vào công thức' },
+    { col: 'Tolerance',           tag: 'ref',     en: 'Text note',                                 vi: 'Ghi chú text' },
+    { col: 'Cell Opening (μm)',   tag: 'ref',     en: 'Physical reference, not in formula',        vi: 'Tham khảo vật lý, không vào công thức' },
+    { col: 'Open Area α (%)',     tag: 'ref',     en: 'Physical reference, not in formula',        vi: 'Tham khảo vật lý, không vào công thức' },
+    { col: 'Calc Volume',         tag: 'derived', en: 'Auto = BCM × 1.55',                         vi: 'Tự tính = BCM × 1.55' },
+    { col: 'Transfer Eff. (%)',   tag: 'use',     en: 'Drives V_R = Calc Vol × Eff / 100',         vi: 'Tham gia V_R = Calc Vol × Eff / 100' },
+    { col: 'V_R Recipe',          tag: 'derived', en: 'Final value read by Ink Calc',              vi: 'Giá trị Ink Calc thực sự dùng' },
+  ],
+  silkscreen: [
+    { col: 'Mesh Code',           tag: 'key',     en: 'Lookup key (matches ik.mesh_spec)',         vi: 'Khóa tra cứu (khớp với card mực)' },
+    { col: 'Mesh Count (n/cm)',   tag: 'ref',     en: 'Displayed in QPA output only',              vi: 'Chỉ hiện ở QPA, không vào công thức' },
+    { col: 'Thread Dia d (μm)',   tag: 'use',     en: 'Drives Open Area Calc = w²/(w+d)² × 100',   vi: 'Tham gia Open Area Calc = w²/(w+d)² × 100' },
+    { col: 'Mesh Thickness D (μm)', tag: 'use',   en: 'Drives Volume Recipe = α_calc × D / 100',   vi: 'Tham gia Volume Recipe = α_calc × D / 100' },
+    { col: 'Tolerance',           tag: 'ref',     en: 'Text note',                                 vi: 'Ghi chú text' },
+    { col: 'Mesh Opening w (μm)', tag: 'use',     en: 'Drives Open Area Calc = w²/(w+d)² × 100',   vi: 'Tham gia Open Area Calc = w²/(w+d)² × 100' },
+    { col: 'Open Area α (%)',     tag: 'ref',     en: 'Measured value — Open Area Calc is used',   vi: 'Giá trị đo — engine dùng Open Area Calc' },
+    { col: 'Open Area (Calc)',    tag: 'derived', en: 'Auto = w² / (w+d)² × 100',                  vi: 'Tự tính = w² / (w+d)² × 100' },
+    { col: 'Theo Ink Vol',        tag: 'derived', en: 'Auto = α_calc × D / 100 (alias of V_r)',    vi: 'Tự tính = α_calc × D / 100 (alias V_r)' },
+    { col: 'Volume Recipe V_r',   tag: 'derived', en: 'Final value read by Ink Calc',              vi: 'Giá trị Ink Calc thực sự dùng' },
+  ],
+};
+
+const TAG_META = {
+  use:     { label: 'In formula',  vi: 'Vào công thức', bg: '#defbe6', fg: '#0e6027' },
+  derived: { label: 'Auto-derived', vi: 'Tự tính',      bg: '#edf5ff', fg: '#0043ce' },
+  key:     { label: 'Lookup key',  vi: 'Khóa tra cứu', bg: '#f6f2ff', fg: '#6929c4' },
+  ref:     { label: 'Reference',   vi: 'Tham khảo',    bg: '#f4f4f4', fg: '#525252' },
+};
+
 function LegendTab({ type }) {
   const isSilk = type === 'silkscreen';
+  const impactRows = COLUMN_IMPACT[isSilk ? 'silkscreen' : 'flexo'];
   const formulas = isSilk ? [
     ['J', 'Total Mat Area (mm²)',     'Tổng diện tích vật liệu (mm²)', '= Mat Width × Pitch',                  '#dbeafe', '#1e40af'],
     ['K', 'Ink Vol Max (cm³)',         'Thể tích mực tối đa (cm³)',     '= V_r × Area / 1,000,000',             '#ede9fe', '#6d28d9'],
@@ -390,6 +462,54 @@ function LegendTab({ type }) {
         </div>
       </div>
       <div className="ink-legend-card ink-legend-formulas-card">
+        <div className="ink-legend-card-title">
+          {isSilk ? 'Mesh Spec — Column Impact / Cột ảnh hưởng tính mực'
+                  : 'Anilox DB — Column Impact / Cột ảnh hưởng tính mực'}
+        </div>
+        <div className="ink-impact-tag-row">
+          {Object.entries(TAG_META).map(([k, m]) => (
+            <span
+              key={k}
+              className="ink-impact-tag"
+              style={{ background: m.bg, color: m.fg }}
+            >
+              {m.label} · {m.vi}
+            </span>
+          ))}
+        </div>
+        <table className="ink-impact-table">
+          <thead>
+            <tr>
+              <th>Column / Cột</th>
+              <th>Status</th>
+              <th>Notes / Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody>
+            {impactRows.map((r) => {
+              const meta = TAG_META[r.tag];
+              return (
+                <tr key={r.col}>
+                  <td className="ink-impact-col">{r.col}</td>
+                  <td>
+                    <span
+                      className="ink-impact-tag"
+                      style={{ background: meta.bg, color: meta.fg }}
+                    >
+                      {meta.label}
+                    </span>
+                  </td>
+                  <td>
+                    <div>{r.en}</div>
+                    <div className="ink-impact-vi">{r.vi}</div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="ink-legend-card ink-legend-formulas-card">
         <div className="ink-legend-card-title">Main Formulas / Công thức chính</div>
         <div className="ink-formula-grid">
           {formulas.map(([col, nameEn, nameVi, formula, bg, color]) => (
@@ -411,6 +531,11 @@ function LegendTab({ type }) {
 // ── Main Component ──
 export default function InkCalculator() {
   const { stdState, cplxState } = useCalc();
+  const { user } = useAuth();
+  // S-INK-IO — sys + admin can replace the DB via CSV; everyone else
+  // sees the buttons hidden. The /save-all endpoint also enforces tab
+  // access server-side, so this is UX-only (defense-in-depth elsewhere).
+  const canEditDB = !!user && (user.role === 'sys' || user.role === 'admin');
   const [inkCalc, setInkCalc] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mainTab, setMainTab] = useState('silkscreen');
@@ -477,6 +602,71 @@ export default function InkCalculator() {
     setInkCalc(newData);
   }, [inkCalc]);
 
+  // S-INK-IO — export current rows to CSV, named with today's date.
+  const handleExportMesh = useCallback(() => {
+    const rows = inkCalc?.silkscreen?.meshSpec || [];
+    const csv = toCSV(rows, MESH_COLUMNS);
+    const ts = new Date().toISOString().slice(0, 10);
+    downloadCSV(`mesh-spec-${ts}.csv`, csv);
+  }, [inkCalc]);
+
+  const handleExportAnilox = useCallback(() => {
+    const rows = inkCalc?.flexo?.aniloxDB || [];
+    const csv = toCSV(rows, ANILOX_COLUMNS);
+    const ts = new Date().toISOString().slice(0, 10);
+    downloadCSV(`anilox-db-${ts}.csv`, csv);
+  }, [inkCalc]);
+
+  // Import: REPLACES the active table (matches IFS Inventory "Import"
+  // semantics — full re-import). Calculated columns are recomputed via
+  // meshRecalc / aniloxRecalc so an out-of-date export can't poison
+  // derived values. Confirms before write so a bad pick is recoverable.
+  const handleImportMesh = useCallback(async () => {
+    const f = await pickCSVFile();
+    if (!f) return;
+    const { rows, skipped } = parseCSV(f.text, MESH_COLUMNS);
+    if (rows.length === 0) {
+      window.alert('No data rows found in CSV.\nKhông có dữ liệu trong file CSV.');
+      return;
+    }
+    const ok = window.confirm(
+      `Replace ${(inkCalc?.silkscreen?.meshSpec || []).length} existing Mesh Spec rows with ${rows.length} new rows from "${f.name}"?` +
+        (skipped ? `\n(${skipped} blank rows skipped)` : '') +
+        `\n\nThao tác này sẽ THAY THẾ toàn bộ Mesh Spec hiện tại.`,
+    );
+    if (!ok) return;
+    const recalced = rows.map((r) => meshRecalc(r));
+    const newData = {
+      ...inkCalc,
+      silkscreen: { ...inkCalc.silkscreen, meshSpec: recalced },
+    };
+    setInkCalc(newData);
+    saveData(newData);
+  }, [inkCalc, saveData]);
+
+  const handleImportAnilox = useCallback(async () => {
+    const f = await pickCSVFile();
+    if (!f) return;
+    const { rows, skipped } = parseCSV(f.text, ANILOX_COLUMNS);
+    if (rows.length === 0) {
+      window.alert('No data rows found in CSV.\nKhông có dữ liệu trong file CSV.');
+      return;
+    }
+    const ok = window.confirm(
+      `Replace ${(inkCalc?.flexo?.aniloxDB || []).length} existing Anilox DB rows with ${rows.length} new rows from "${f.name}"?` +
+        (skipped ? `\n(${skipped} blank rows skipped)` : '') +
+        `\n\nThao tác này sẽ THAY THẾ toàn bộ Anilox DB hiện tại.`,
+    );
+    if (!ok) return;
+    const recalced = rows.map((r) => aniloxRecalc(r));
+    const newData = {
+      ...inkCalc,
+      flexo: { ...inkCalc.flexo, aniloxDB: recalced },
+    };
+    setInkCalc(newData);
+    saveData(newData);
+  }, [inkCalc, saveData]);
+
   const handleSave = useCallback(() => {
     if (inkCalc) saveData(inkCalc);
   }, [inkCalc, saveData]);
@@ -539,6 +729,42 @@ export default function InkCalculator() {
             </button>
           </div>
           <input className="ink-search" type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} />
+          {canEditDB && mainTab === 'silkscreen' && silkSub === 'meshSpec' && (
+            <>
+              <button
+                className="ink-io-btn"
+                onClick={handleExportMesh}
+                title="Export Mesh Spec to CSV (Excel compatible)"
+              >
+                {'⬇ Export CSV'}
+              </button>
+              <button
+                className="ink-io-btn"
+                onClick={handleImportMesh}
+                title="Import Mesh Spec from CSV (replaces all rows; admin/sys only)"
+              >
+                {'⬆ Import CSV'}
+              </button>
+            </>
+          )}
+          {canEditDB && mainTab === 'flexo' && flexoSub === 'aniloxDB' && (
+            <>
+              <button
+                className="ink-io-btn"
+                onClick={handleExportAnilox}
+                title="Export Anilox DB to CSV (Excel compatible)"
+              >
+                {'⬇ Export CSV'}
+              </button>
+              <button
+                className="ink-io-btn"
+                onClick={handleImportAnilox}
+                title="Import Anilox DB from CSV (replaces all rows; admin/sys only)"
+              >
+                {'⬆ Import CSV'}
+              </button>
+            </>
+          )}
           <button className="ink-save-btn" onClick={handleSave}>Save DB</button>
         </div>
         {/* Sub tabs — wrapped in TabBarOverflow for uniform responsive
