@@ -45,6 +45,8 @@
 >
 > **Sprint history — newest first** (SHA-discipline per Lesson 0):
 >
+> **S-INVENTORY-1c Cohort 4 — HomePage landing + module section grids (S-HOME) shipped 2026-05-07 (SHA: `e6434f4`).** New `HomePage.jsx` operator dashboard (greeting + 4 KPIs + my-queue + recent activity + quick actions) + reusable `ModuleLanding.jsx` section grid + `sectionDefs.js` shared metadata (COST_SECTIONS / PLANNING_SECTIONS + landing helpers). `CostModule.jsx` short-circuits `activeTab='home'` to HomePage and `activeTab='landing:<sid>'` to ModuleLanding. ~21 `home.*` i18n keys + `nav.tab.home`. Cohort 5 (ReasonCodes UI) deferred to PR-9 — entanglements rolled back from CostModule + strings + sectionDefs + decimalInputBudget lint.
+>
 > **S-INVENTORY-1b Cohort 3 — Smart KPI tiles unify with Dashboard (S-DESIGN-1) shipped 2026-05-06 (SHA: `fe49369`).** `shouldShowDelta` (hide when prev=0 or |Δ|<1%), `hasSparklineData` (≥4 non-null+non-zero gate), `toneOfGM` thresholds, polarity-aware Delta (higher_better/lower_better/neutral), `qa-kpi-v2` + `qa-kpi-tone-good/warn/bad/neutral` rail classes, `qa-delta-neutral` pill, `.qa-kpi { ::before }` rail redesign with hover lift. HomePage tile redesign deferred to S-INVENTORY-1c (Cohort 4 entangled with S-HOME chain).
 >
 > **S-INVENTORY-1b Cohort 2 — Reports tab redesign (S-RESP-1 + S-QA-CONSOL) shipped 2026-05-06 (SHA: `d4f5894`).** Period picker (7-chip toolbar + Custom range modal), responsive container queries (4-up @1400, 6-up @2000), fluid typography, sticky filterbar with IntersectionObserver, A4 landscape print stylesheet. Breakdown panel consolidation (4 stacked tables → 1 pivot + GmStackBar) bundled per data-layer entanglement (`applyFilters` range refactor). Smart KPI tile redesign deferred to Cohort 3.

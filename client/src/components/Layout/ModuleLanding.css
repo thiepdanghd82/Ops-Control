@@ -1,0 +1,114 @@
+/* ModuleLanding — ERPAG-style landing grid, theme-aware via tokens. */
+
+.module-landing {
+  padding: 24px 32px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* Grid — auto-fit cards, ~220px each, mirrors ERPAG SALES landing modal */
+.module-landing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.module-landing-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 18px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: var(--text-primary);
+  transition:
+    background-color 0.12s,
+    border-color 0.12s,
+    transform 0.12s,
+    box-shadow 0.12s;
+  min-height: 64px;
+}
+
+.module-landing-card:hover {
+  background: var(--surface-hover);
+  border-color: var(--color-primary, #1976d2);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.module-landing-card:focus-visible {
+  outline: 2px solid var(--color-primary, #1976d2);
+  outline-offset: 2px;
+}
+
+.module-landing-card:active {
+  transform: translateY(0);
+}
+
+.module-landing-card-icon {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--color-primary, #1976d2);
+}
+
+.module-landing-card-icon .ops-sidebar__icon {
+  width: 24px;
+  height: 24px;
+}
+
+.module-landing-card-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: inherit;
+  flex: 1;
+}
+
+/* Live counter pill — same Carbon-warning palette as the sidebar
+   .nav-badge so the two stay visually synchronised (operators tracking
+   the same number in two places shouldn't see two different colors). */
+.module-landing-card-badge {
+  min-width: 22px;
+  padding: 0 8px;
+  height: 20px;
+  background: #f1c21b;
+  color: #161616;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* ── Dark theme — matches ERPAG SALES landing modal ── */
+[data-theme='dark'] .module-landing-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.92);
+}
+[data-theme='dark'] .module-landing-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: #4dabf7;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+[data-theme='dark'] .module-landing-card-icon {
+  color: #4dabf7;
+}
+
+/* Responsive — narrow viewport stacks cards 1 column */
+@container (max-width: 600px) {
+  .module-landing-grid {
+    grid-template-columns: 1fr;
+  }
+}
