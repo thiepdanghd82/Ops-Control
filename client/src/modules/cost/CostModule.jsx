@@ -53,6 +53,8 @@ const FormalQuotation = lazy(() => import('./tabs/FormalQuotation'));
 const AdminMetrics = lazy(() => import('./tabs/AdminMetrics'));
 const AuditLog = lazy(() => import('./tabs/AuditLog'));
 const KioskAdmin = lazy(() => import('./tabs/KioskAdmin.jsx'));
+// MES-3-V2 (KIOSK-002) — admin CRUD for kiosk reason codes.
+const ReasonCodes = lazy(() => import('./tabs/ReasonCodes.jsx'));
 // Help lives at the app level (not cost-specific) but routes through
 // the Cost sidebar since that's where users spend most of their time.
 // Planning module reuses the same HelpTab lazily when needed.
@@ -99,6 +101,7 @@ const TAB_COMPONENTS = {
   metrics: AdminMetrics,
   'audit-log': AuditLog,
   'kiosk-admin': KioskAdmin,
+  'reason-codes': ReasonCodes,
   help: HelpTab,
 };
 

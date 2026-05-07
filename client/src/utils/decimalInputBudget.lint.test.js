@@ -62,6 +62,7 @@ const BUDGETS = {
   'Settings.jsx': 1, // numeric setting field — admin CRUD, integer
   'HardwareSection.jsx': 1, // COM/USB port + baud rate setup — integer hardware param
   'DesignTools/presses/GallusCalc.jsx': 1, // Z-cylinder selector min=1 max=999 — integer cylinder count
+  'ReasonCodeFormModal.jsx': 1, // MES-3-V2: sort_order min=0 max=9999 — integer admin CRUD, no decimal concern
 };
 
 function walk(dir) {

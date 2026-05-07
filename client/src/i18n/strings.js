@@ -28,6 +28,7 @@ export const STRINGS = {
   'common.cancel': { en: 'Cancel', vi: 'Hủy' },
   'common.new': { en: 'New', vi: 'Mới' },
   'common.edit': { en: 'Edit', vi: 'Sửa' },
+  'common.actions': { en: 'Actions', vi: 'Thao tác' },
   'common.delete': { en: 'Delete', vi: 'Xóa' },
   'common.refresh': { en: 'Refresh', vi: 'Làm mới' },
   'common.retry': { en: 'Retry', vi: 'Thử lại' },
@@ -85,6 +86,7 @@ export const STRINGS = {
   'nav.tab.metrics': { en: 'Admin metrics', vi: 'Admin metrics' },
   'nav.tab.audit_log': { en: 'Audit log', vi: 'Nhật ký audit' },
   'nav.tab.kiosk_admin': { en: 'Kiosk Admin', vi: 'Quản trị Kiosk' },
+  'nav.tab.reason_codes': { en: 'Reason Codes', vi: 'Mã lý do' },
   'nav.tab.help': { en: 'Help', vi: 'Hướng dẫn' },
   'nav.tab.home': { en: 'Home', vi: 'Trang chủ' },
   'nav.team_online_title': { en: 'Team Online', vi: 'Team đang online' },
@@ -140,6 +142,92 @@ export const STRINGS = {
   'picker.footer_hint': {
     en: 'Right-click a row in your calc to reopen this picker. Double-click a result to auto-fill code, IFS, description, and price.',
     vi: 'Chuột phải vào dòng trong calc để mở lại. Nhấn đúp vào kết quả để tự điền mã, IFS, mô tả và giá.',
+  },
+
+  // ─── Reason Codes admin (MES-3-V2 KIOSK-002) ─────────────────────
+  'library.reasonCodes.title': { en: 'Reason Codes', vi: 'Mã lý do' },
+  'library.reasonCodes.subtitle': {
+    en: 'Codes available to operators when pausing an operation on the kiosk.',
+    vi: 'Mã hiển thị trên kiosk khi vận hành tạm dừng công đoạn.',
+  },
+  'library.reasonCodes.searchPlaceholder': {
+    en: 'Search by code or label…',
+    vi: 'Tìm theo mã hoặc nhãn…',
+  },
+  'library.reasonCodes.showDisabled': { en: 'Show disabled', vi: 'Hiện đã vô hiệu' },
+  'library.reasonCodes.add': { en: 'Add Reason Code', vi: 'Thêm mã lý do' },
+  'library.reasonCodes.edit': { en: 'Edit Reason Code', vi: 'Sửa mã lý do' },
+  'library.reasonCodes.disable': { en: 'Disable', vi: 'Vô hiệu hoá' },
+  'library.reasonCodes.enable': { en: 'Enable', vi: 'Kích hoạt' },
+  'library.reasonCodes.code': { en: 'Code', vi: 'Mã' },
+  'library.reasonCodes.codeHint': {
+    en: 'Uppercase letters/digits/underscore. 2–32 chars.',
+    vi: 'Chữ in hoa/số/dấu gạch dưới. 2–32 ký tự.',
+  },
+  'library.reasonCodes.labelEn': { en: 'Label (English)', vi: 'Nhãn (Tiếng Anh)' },
+  'library.reasonCodes.labelVi': { en: 'Label (Vietnamese)', vi: 'Nhãn (Tiếng Việt)' },
+  'library.reasonCodes.category': { en: 'Category', vi: 'Phân loại' },
+  'library.reasonCodes.sortOrder': { en: 'Sort', vi: 'Thứ tự' },
+  'library.reasonCodes.status': { en: 'Status', vi: 'Trạng thái' },
+  'library.reasonCodes.statusActive': { en: 'Active', vi: 'Đang dùng' },
+  'library.reasonCodes.statusDisabled': { en: 'Disabled', vi: 'Đã vô hiệu' },
+  'library.reasonCodes.formSubtitle': {
+    en: 'All four label fields are required (EN + VN parity).',
+    vi: 'Bắt buộc đủ 4 trường nhãn (song ngữ EN + VN).',
+  },
+  'library.reasonCodes.disableTitle': {
+    en: 'Disable {code}?',
+    vi: 'Vô hiệu {code}?',
+  },
+  'library.reasonCodes.disableSubtitle': {
+    en: 'Soft-delete only. Historical pause events keep their label.',
+    vi: 'Chỉ xoá mềm. Sự kiện cũ vẫn giữ nguyên nhãn.',
+  },
+  'library.reasonCodes.confirmDisable': {
+    en: 'Disable {code}? It will hide from kiosk pickers but stay in history.',
+    vi: 'Vô hiệu {code}? Mã sẽ ẩn khỏi kiosk nhưng vẫn lưu trong lịch sử.',
+  },
+  'library.reasonCodes.disableEffect.kiosk': {
+    en: 'Operators will no longer see this code on kiosk pause pickers.',
+    vi: 'Vận hành sẽ không còn thấy mã này trên kiosk khi tạm dừng.',
+  },
+  'library.reasonCodes.disableEffect.history': {
+    en: 'Audit log + historical events keep their reference to this code.',
+    vi: 'Nhật ký kiểm toán và sự kiện cũ vẫn giữ tham chiếu đến mã này.',
+  },
+  'library.reasonCodes.disableEffect.reenable': {
+    en: 'You can re-enable it anytime — Show Disabled toggle reveals all rows.',
+    vi: 'Có thể kích hoạt lại bất kỳ lúc nào — bật "Hiện đã vô hiệu" để xem.',
+  },
+  'library.reasonCodes.empty.title': { en: 'No reason codes yet', vi: 'Chưa có mã lý do' },
+  'library.reasonCodes.empty.hint': {
+    en: 'Add your first code to seed the kiosk picker.',
+    vi: 'Thêm mã đầu tiên để hiển thị trên kiosk.',
+  },
+  'library.reasonCodes.category.downtime': { en: 'Downtime', vi: 'Dừng máy' },
+  'library.reasonCodes.category.quality': { en: 'Quality', vi: 'Chất lượng' },
+  'library.reasonCodes.category.planned': { en: 'Planned', vi: 'Có kế hoạch' },
+  'library.reasonCodes.category.other': { en: 'Other', vi: 'Khác' },
+  'library.reasonCodes.err.codePattern': {
+    en: 'Code must be uppercase letters/digits/underscore (2–32 chars).',
+    vi: 'Mã phải là chữ in hoa/số/gạch dưới (2–32 ký tự).',
+  },
+  'library.reasonCodes.err.required': { en: 'Required', vi: 'Bắt buộc' },
+  'library.reasonCodes.err.range': {
+    en: 'Sort must be 0–9999.',
+    vi: 'Thứ tự phải từ 0 đến 9999.',
+  },
+  'library.reasonCodes.err.collision': {
+    en: 'Code already exists. Pick a different code.',
+    vi: 'Mã đã tồn tại. Hãy chọn mã khác.',
+  },
+  'library.reasonCodes.err.pattern': {
+    en: 'Invalid format.',
+    vi: 'Định dạng không hợp lệ.',
+  },
+  'library.reasonCodes.err.enum': {
+    en: 'Invalid value.',
+    vi: 'Giá trị không hợp lệ.',
   },
 
   // ─── Chat (Phase 10A-10F) ───
