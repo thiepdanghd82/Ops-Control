@@ -58,6 +58,9 @@ const KioskAdmin = lazy(() => import('./tabs/KioskAdmin.jsx'));
 // Planning module reuses the same HelpTab lazily when needed.
 const HelpTab = lazy(() => import('../help/HelpTab'));
 
+import ModuleLanding from '../../components/Layout/ModuleLanding.jsx';
+import HomePage from '../home/HomePage.jsx';
+import { COST_SECTIONS, isLanding, landingSectionId } from '../../components/Layout/sectionDefs.js';
 import './CostModule.css';
 
 // TabErrorBoundary was extracted to components/Shared/ErrorBoundary so
@@ -152,8 +155,44 @@ function humanise(id) {
     .join(' ');
 }
 
-function CostModuleInner({ activeTab }) {
+function CostModuleInner({ activeTab, onTabChange }) {
   useDocumentTitle(TAB_TITLES[activeTab] || humanise(activeTab), 'Cost');
+
+  // Sprint S-HOME — operator dashboard at activeTab='home'.
+  if (activeTab === 'home') {
+    return (
+      <div className="cost-module">
+        <ErrorBoundary label="Cost → home" resetKey="home">
+          <HomePage onTabChange={onTabChange} />
+        </ErrorBoundary>
+      </div>
+    );
+  }
+
+  // Sprint S-LANDING — when activeTab is `landing:<sectionId>`, render
+  // the ERPAG-style feature grid for that section. Click on a card
+  // sets activeTab to the real lazy-loaded tab id.
+  if (isLanding(activeTab)) {
+    const sid = landingSectionId(activeTab);
+    const section = COST_SECTIONS.find((s) => s.id === sid);
+    if (!section) {
+      return (
+        <div className="cost-module cost-module-empty">
+          <p>
+            Unknown section: <b>{sid}</b>
+          </p>
+        </div>
+      );
+    }
+    return (
+      <div className="cost-module">
+        <ErrorBoundary label={`Cost → landing/${sid}`} resetKey={activeTab}>
+          <ModuleLanding section={section} onTabChange={onTabChange} />
+        </ErrorBoundary>
+      </div>
+    );
+  }
+
   const Component = TAB_COMPONENTS[activeTab];
 
   if (!Component) {

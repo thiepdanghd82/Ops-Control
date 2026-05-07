@@ -1,0 +1,486 @@
+/* HomePage — IBM Carbon-aligned, theme-aware via tokens.
+ * Operator dashboard. Card grid, generous whitespace, subtle hierarchy.
+ *
+ * Layout breakpoints handled by CSS Grid auto-fit; no media queries
+ * needed for mid-size viewports. The KPI strip + module grid both
+ * collapse to single column under ~600px naturally. */
+
+.home-page {
+  padding: 28px 32px 48px;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Greeting ── */
+.home-greeting {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.home-greeting-title {
+  margin: 0 0 6px;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: var(--text-primary);
+}
+
+.home-greeting-meta {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.home-greeting-sep {
+  color: var(--text-tertiary);
+}
+
+.home-greeting-org {
+  font-weight: 600;
+  color: var(--color-primary, #1976d2);
+}
+
+.home-greeting-role {
+  text-transform: capitalize;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  background: var(--surface-subtle);
+  padding: 2px 8px;
+  border-radius: 12px;
+  letter-spacing: 0.2px;
+}
+
+.home-greeting-clock {
+  font-family: var(--cds-mono, ui-monospace, 'SFMono-Regular', monospace);
+  font-size: 36px;
+  font-weight: 300;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+}
+
+/* ── KPI Strip ── */
+.home-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+/* S-DESIGN-1 — Dashboard-aligned KPI tile.
+   Vertical layout: label-on-top → big number → optional caption.
+   3px left rail accent (tone-driven), no icon, no delta pill, no
+   sparkline. Operational counters live by terseness; the icon next
+   to a 28px number was just visual noise duplicating the sidebar. */
+.home-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  position: relative;
+  transition:
+    transform 0.12s,
+    box-shadow 0.12s,
+    border-color 0.12s;
+}
+
+.home-kpi::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--text-tertiary);
+  opacity: 0.5;
+}
+
+.home-kpi:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.home-kpi:focus-visible {
+  outline: 2px solid var(--color-primary, #1976d2);
+  outline-offset: 2px;
+}
+
+.home-kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.home-kpi-value {
+  font-size: clamp(22px, 1.4vw + 8px, 30px);
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+.home-kpi-sub {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+/* Tone rail (Dashboard convention). Replaces severity-icon backgrounds —
+   now only the 3px left rail and the tone of the caption carry meaning. */
+.home-kpi-tone-ok::before {
+  background: #16a34a;
+  opacity: 0.85;
+}
+.home-kpi-tone-info::before {
+  background: var(--color-primary, #1976d2);
+  opacity: 0.85;
+}
+.home-kpi-tone-warn::before {
+  background: #d97706;
+  opacity: 0.9;
+}
+.home-kpi-tone-urgent::before {
+  background: #dc2626;
+  opacity: 0.9;
+}
+.home-kpi-tone-neutral::before {
+  background: var(--text-tertiary);
+  opacity: 0.5;
+}
+
+.home-kpi-tone-warn .home-kpi-sub {
+  color: #b45309;
+  font-weight: 600;
+}
+.home-kpi-tone-urgent .home-kpi-value {
+  color: #dc2626;
+}
+
+/* ── Two-column main ── */
+.home-main {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 14px;
+}
+
+@container (max-width: 900px) {
+  .home-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+.home-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.home-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.home-card h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.home-card-link {
+  border: 0;
+  background: none;
+  color: var(--color-primary, #1976d2);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: inherit;
+}
+.home-card-link:hover {
+  background: var(--surface-hover);
+}
+
+.home-empty {
+  margin: 0;
+  padding: 24px 8px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  text-align: center;
+  font-style: italic;
+}
+
+/* My Queue list */
+.home-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.home-list-item {
+  display: grid;
+  grid-template-columns: 110px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background-color 0.1s,
+    border-color 0.1s;
+}
+.home-list-item:hover {
+  background: var(--surface-hover);
+  border-color: var(--color-primary, #1976d2);
+}
+.home-list-item:focus-visible {
+  outline: 2px solid var(--color-primary, #1976d2);
+  outline-offset: 1px;
+}
+.home-list-item.is-overdue {
+  border-left: 3px solid #dc2626;
+}
+.home-list-item.is-today {
+  border-left: 3px solid #f59e0b;
+}
+
+.home-list-code {
+  font-family: var(--cds-mono, ui-monospace, monospace);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.home-list-meta {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-list-due {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.home-list-due.overdue {
+  color: #dc2626;
+  font-weight: 600;
+}
+.home-list-due.today {
+  color: #b45309;
+  font-weight: 600;
+}
+
+/* Module shortcuts grid */
+.home-module-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.home-module-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition:
+    background-color 0.1s,
+    border-color 0.1s,
+    transform 0.1s;
+}
+.home-module-card:hover {
+  background: var(--surface-hover);
+  border-color: var(--color-primary, #1976d2);
+  transform: translateY(-1px);
+}
+
+.home-module-icon {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: var(--surface-card);
+  color: var(--color-primary, #1976d2);
+}
+.home-module-icon .ops-sidebar__icon {
+  width: 18px;
+  height: 18px;
+}
+
+.home-module-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ── Quick Actions ── */
+.home-section-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.home-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.home-quick-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 18px 12px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  min-height: 96px;
+  transition:
+    transform 0.1s,
+    border-color 0.1s,
+    box-shadow 0.1s;
+}
+.home-quick-card:hover {
+  border-color: var(--color-primary, #1976d2);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.home-quick-icon {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary, #1976d2);
+}
+.home-quick-icon .ops-sidebar__icon {
+  width: 26px;
+  height: 26px;
+}
+
+.home-quick-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+  line-height: 1.25;
+}
+
+/* ── Dark theme ── */
+[data-theme='dark'] .home-greeting-clock {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+[data-theme='dark'] .home-kpi {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+[data-theme='dark'] .home-kpi:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+[data-theme='dark'] .home-kpi-tone-warn::before {
+  background: #fbbf24;
+}
+[data-theme='dark'] .home-kpi-tone-warn .home-kpi-sub {
+  color: #fbbf24;
+}
+[data-theme='dark'] .home-kpi-tone-urgent::before {
+  background: #f87171;
+}
+[data-theme='dark'] .home-kpi-tone-urgent .home-kpi-value {
+  color: #f87171;
+}
+
+[data-theme='dark'] .home-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .home-list-item {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+[data-theme='dark'] .home-list-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #4dabf7;
+}
+[data-theme='dark'] .home-list-due.overdue {
+  color: #f87171;
+}
+[data-theme='dark'] .home-list-due.today {
+  color: #fbbf24;
+}
+
+[data-theme='dark'] .home-module-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+[data-theme='dark'] .home-module-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: #4dabf7;
+}
+[data-theme='dark'] .home-module-icon {
+  background: rgba(255, 255, 255, 0.05);
+  color: #4dabf7;
+}
+
+[data-theme='dark'] .home-quick-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+[data-theme='dark'] .home-quick-card:hover {
+  border-color: #4dabf7;
+}
+[data-theme='dark'] .home-quick-icon {
+  color: #4dabf7;
+}
