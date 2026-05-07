@@ -326,7 +326,25 @@ function register(ipcMain) {
       features: v.features,
     };
   });
-  ipcMain.handle('ops:license.apply', (_e, lic) => applyLicense(lic));
+  ipcMain.handle('ops:license.apply', (_e, lic) => {
+    // S-DIAG-FIX (2026-05-05) — defense-in-depth: validate the
+    // renderer's payload before handing it to verifyLicense. License
+    // envelope is a JSON object (see verifyLicense at line 119); cap
+    // serialized size at 8 KB to block memory-abuse via a compromised
+    // renderer. Bad shapes return a structured reason instead of
+    // crashing the IPC handler.
+    if (!lic || typeof lic !== 'object' || Array.isArray(lic)) {
+      return { ok: false, reason: 'malformed', detail: 'License must be a JSON object' };
+    }
+    try {
+      if (JSON.stringify(lic).length > 8192) {
+        return { ok: false, reason: 'too-large', detail: 'License envelope exceeds 8 KB' };
+      }
+    } catch {
+      return { ok: false, reason: 'malformed', detail: 'License is not serializable' };
+    }
+    return applyLicense(lic);
+  });
   ipcMain.handle('ops:license.fingerprint', () => getHardwareFingerprint());
   ipcMain.handle('ops:license.tiers', () => ({ tiers: VALID_TIERS, limits: TIER_LIMITS }));
 }
