@@ -80,6 +80,8 @@ export const COST_SECTIONS = [
       { id: 'lib-ddl', icon: 'ddl', labelKey: 'nav.tab.ddl' },
       { id: 'lib-finance', icon: 'finance', labelKey: 'nav.tab.finance_data' },
       { id: 'lib-machine-tech', icon: 'machine', label: 'Machine Technical' },
+      // MES-3-V2 (KIOSK-002) — kiosk reason codes admin CRUD.
+      { id: 'reason-codes', icon: 'rates', labelKey: 'nav.tab.reason_codes', minRole: 'admin' },
     ],
   },
   {
