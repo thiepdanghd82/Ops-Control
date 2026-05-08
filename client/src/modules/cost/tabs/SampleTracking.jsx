@@ -1538,19 +1538,9 @@ function DetailDrawer({
   const pendingResyncRef = useRef(false);
   useEffect(() => {
     if (pendingResyncRef.current) {
-      console.log(
-        '[SAMPLE:SNAPSHOT] resync triggered by structural op @',
-        new Date().toISOString()
-      );
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSnapshot(structuredClone(row));
       pendingResyncRef.current = false;
-    } else {
-      console.log(
-        '[SAMPLE:SNAPSHOT] row prop changed but resync SKIPPED @',
-        new Date().toISOString(),
-        '— sample_id=' + (row.sample_id || row.id)
-      );
     }
   }, [row]);
   const openStage = override ?? snapshot.pipeline_stage ?? 'request';
