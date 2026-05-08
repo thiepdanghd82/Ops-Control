@@ -163,6 +163,7 @@ export const GLOSSARY = [
 ];
 
 export const HELP_SECTIONS = [
+  { key: 'HOME', label: bi('Home', 'Trang chủ') },
   { key: 'CALCULATORS', label: bi('Pricing Worksheet', 'Bảng tính giá') },
   { key: 'QUOTING', label: bi('Quoting', 'Báo giá') },
   { key: 'MANUFACTURING', label: bi('Manufacturing', 'Sản xuất') },
@@ -238,6 +239,111 @@ const appendix = (titleEn, titleVi, columns, rows) => ({
 });
 
 export const HELP_CONTENT = {
+  // ─────────────────────────────────────────────────────────────
+  // HOME
+  // ─────────────────────────────────────────────────────────────
+
+  home: {
+    id: 'home',
+    section: 'HOME',
+    title: bi('Home — your starting page', 'Home — trang khởi đầu'),
+    function: bi(
+      'Post-login dashboard with KPIs, due-soon list, module shortcuts',
+      'Dashboard sau đăng nhập với KPI, danh sách đến hạn, shortcut module'
+    ),
+    path: 'Ops Cost > Home',
+    purpose: bi(
+      'The dashboard you see right after logging in. Shows your current workload at a glance + quick actions for common tasks. Layout responds fluidly to window size + sidebar collapse — works from a 13" laptop to a 4K / ultrawide monitor.',
+      'Trang dashboard ngay sau khi đăng nhập. Hiển thị khối lượng công việc hiện tại + quick actions cho thao tác thường dùng. Bố cục co giãn theo kích thước cửa sổ và trạng thái sidebar — chạy mượt từ laptop 13" đến màn 4K / ultrawide.'
+    ),
+    whenToUse: bi(
+      'Every login. Daily morning routine to scan workload + open the day plan. Click the "Ops Control" logo (top-left of the sidebar) anytime to return here from any other tab.',
+      'Mỗi lần đăng nhập. Routine buổi sáng để quét khối lượng công việc + mở kế hoạch ngày. Click logo "Ops Control" (góc trên-trái sidebar) bất cứ lúc nào để quay về Home từ bất kỳ tab nào.'
+    ),
+    preRequisites: [],
+    features: [
+      feat(
+        'Greeting + live clock + role chip — time-aware (morning / afternoon / evening), refreshes every minute.',
+        'Lời chào + đồng hồ thời gian thực + nhãn role — đổi theo buổi (sáng / chiều / tối), refresh mỗi phút.'
+      ),
+      feat(
+        '4 KPI tiles — Active Work Orders (open + assigned to you), Due Today (color-coded: red overdue, amber today), My Approvals (gated by permission), Open Orders (active customer orders in your scope). Click any tile to drill into its source list.',
+        '4 ô KPI — Active Work Orders (đang mở + giao cho bạn), Due Today (màu hoá: đỏ quá hạn, vàng đến hạn hôm nay), My Approvals (theo quyền), Open Orders (đơn hàng khách đang chạy trong phạm vi). Click bất kỳ ô nào để drill xuống danh sách nguồn.'
+      ),
+      feat(
+        "Today's Focus — top 6 due/overdue work orders sorted by due date. Click any row to open the WO detail.",
+        "Today's Focus — top 6 work order đến/quá hạn sắp xếp theo ngày due. Click dòng bất kỳ để mở chi tiết WO."
+      ),
+      feat(
+        'Modules grid (4 cards) — Pricing Worksheet (Std + Cpx, MOQ tiers, formal quotes), Manufacturing (Routing, Mfg Structures, IFS Inventory), Tracking (RFQ Tracker, Sample Tracking), Reports (Dashboard, Quote Analysis). Click any card to land on its first sub-tab.',
+        'Lưới module (4 thẻ) — Pricing Worksheet (Std + Cpx, MOQ, báo giá chính thức), Manufacturing (Routing, Mfg Structures, IFS Inventory), Tracking (RFQ Tracker, Sample Tracking), Reports (Dashboard, Quote Analysis). Click thẻ nào sẽ vào sub-tab đầu tiên của module đó.'
+      ),
+      feat(
+        'Quick Actions (6 buttons) — New Quote · New Order · RFQ Tracker · Approvals · IFS Inventory · Help. Permission-gated: hidden if your role lacks access.',
+        'Quick Actions (6 nút) — New Quote · New Order · RFQ Tracker · Approvals · IFS Inventory · Help. Theo quyền: ẩn nếu role không có truy cập.'
+      ),
+      feat(
+        'Sidebar logo → Home — click the "Ops Control" wordmark in the sidebar header to return to Home from any tab.',
+        'Logo sidebar → Home — click chữ "Ops Control" ở phần đầu sidebar để quay về Home từ tab bất kỳ.'
+      ),
+      feat(
+        'Auto-redirect after login — successful sign-in lands you on Home regardless of last-active-tab. Covers fresh logins + post-logout returns.',
+        'Tự chuyển về Home sau đăng nhập — đăng nhập thành công đưa bạn về Home không phụ thuộc tab vừa mở. Áp dụng cho login mới + trở lại sau logout.'
+      ),
+    ],
+    workflow: [
+      bs(
+        'Open the app → login screen → enter credentials + 2FA code if enrolled.',
+        'Mở app → màn hình đăng nhập → nhập tài khoản + mã 2FA nếu đã enroll.'
+      ),
+      bs('Successful login lands on Home automatically.', 'Đăng nhập thành công sẽ tự về Home.'),
+      bs(
+        'Scan the 4 KPI tiles — focus on red / amber states first.',
+        'Quét 4 ô KPI — ưu tiên các trạng thái đỏ / vàng trước.'
+      ),
+      bs(
+        "Review Today's Focus — open any due / overdue WO that needs attention.",
+        "Xem Today's Focus — mở các WO đến hạn / quá hạn cần xử lý."
+      ),
+      bs(
+        'Use the Modules grid OR Quick Actions to jump into a workflow (e.g. New Quote).',
+        'Dùng lưới Modules HOẶC Quick Actions để vào workflow (vd New Quote).'
+      ),
+      bs(
+        'Click the "Ops Control" logo in the sidebar header anytime to return here.',
+        'Click logo "Ops Control" ở đầu sidebar bất kỳ lúc nào để quay lại đây.'
+      ),
+    ],
+    keyFields: [],
+    formulas: [],
+    tips: [
+      bt(
+        'Page reload (Cmd+R / F5) preserves your last-active-tab if "Remember me" was checked at login. Without Remember me, reload returns you to Home.',
+        'Reload (Cmd+R / F5) sẽ giữ tab đang mở nếu đăng nhập có tick "Remember me". Không tick thì reload đưa về Home.'
+      ),
+      bt(
+        'KPI tiles refresh on every page navigation — they are always current when you return to Home, no manual refresh needed.',
+        'Ô KPI refresh khi đổi trang — luôn cập nhật khi bạn quay lại Home, không cần refresh tay.'
+      ),
+      bt(
+        'Quick Actions buttons honour your permission group — admins see all 6, viewonly users may see only Help. Talk to your admin if a button is missing.',
+        'Nút Quick Actions theo permission group — admin thấy đủ 6 nút, viewonly có thể chỉ thấy Help. Hỏi admin nếu thiếu nút.'
+      ),
+    ],
+    pitfalls: [
+      bp(
+        'KPI tiles read from your assignment scope — if your user account has no work orders / orders / approvals assigned, tiles show 0. That is correct, not a bug. Ask a planner to assign work to you.',
+        'Ô KPI đọc theo phạm vi user — nếu tài khoản chưa được giao WO / Order / Approval, ô sẽ về 0. Đây là đúng, không phải lỗi. Nhờ planner phân công.'
+      ),
+      bp(
+        'A blank "Today\'s Focus" section means no due / overdue WOs in your scope — also normal, not a bug. The section hides itself when empty.',
+        'Khu "Today\'s Focus" trống nghĩa là không có WO đến / quá hạn trong phạm vi — cũng bình thường. Khu này tự ẩn khi rỗng.'
+      ),
+    ],
+    relatedTabs: ['settings-profile', 'work-orders', 'rfq-tracker', 'standard'],
+    screenshot: 'home.png',
+  },
+
   // ─────────────────────────────────────────────────────────────
   // CALCULATORS
   // ─────────────────────────────────────────────────────────────
