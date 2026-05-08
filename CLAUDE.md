@@ -45,6 +45,12 @@
 >
 > **Sprint history — newest first** (SHA-discipline per Lesson 0):
 >
+> **PR #20 — server `req` undefined in print-area catch block shipped 2026-05-08 (SHA: `be33a15`).** 1-char semantic fix (`_req` → `req` at server/routes/shared.js:1933). Husky lint-staged also reformatted ~1300 lines of pre-existing single-line catch blocks via prettier — purely stylistic, no behavior change. Same fix exists in PR #13 (sprint/inv-1d-server-infra) bundled with cohort-C WIP work; that PR remains deferred.
+>
+> **PR #19 — main CI lint plugin resolution (MES-3-FIX-17) shipped 2026-05-08 (SHA: `5a1a630`).** Added `eslint-plugin-react-hooks@^7.0.1` + `eslint-plugin-react-refresh@^0.5.2` to root devDeps so `npm run lint` from root resolves `client/eslint.config.js` correctly. Closes FIX-17. Side effect: lint now actually runs and exposes 24 pre-existing React-hooks rule violations across 11 client files — tracked as new backlog ticket MES-3-FIX-20.
+>
+> **PR #18 — Home page polish + auto-redirect + responsive (Lesson 27) + sidebar logo→Home shipped 2026-05-08 (SHA: `9a81c47`).** Cherry-picked auto-redirect logic from PR #11 (3 snippets in App.jsx — false→true auth transition watcher → setActiveTab('home')). HomePage.css refactored per Lesson 27: removed hard 1400px max-width, added container-type: inline-size + container queries, fluid clamp typography on greeting/clock/section titles. Sidebar logo wrapped as clickable button → onTabChange('home') for return-to-Home affordance after navigating away. Test verified: 6/6 pass on DMG v13 (SHA `628270e6`).
+>
 > **PR #16 — RFQ snapshot + Layout PDF + ABI overlay + build-role packaging shipped 2026-05-08 (SHA: `5e9d152`).** Bundles 10 fixes from PR #14 hardware-test session: extraResources better-sqlite3 ABI overlay (NMV 137→145), build-role.json packaging gap, Layout PDF preview (cherry-picked FileUploadZone improvements from draft PR #11 — blob URL conversion + 5th fullscreen toolbar icon), RFQ Tracker drawer snapshot pattern (insulates from auto-refresh) + parent SkeletonTable guard (prevents tree unmount), SampleTracking parity backport, ensureShape index-based merge (preserves user-edited text + required), stage-advance blocker chip. User hardware-tested DMG v10 (SHA `6fbcb66b`) — all 4 critical scenarios pass. Lesson 28 amended (host Node misdirection corrected) + Lesson 29 added (SkeletonTable parent unmount).
 >
 > **PR #15 — Lesson 28 docs (electron-builder Node ABI trap) shipped 2026-05-08 (SHA: `a8dca0a`).** Originally blamed host Node version; PR #16 amended after deeper investigation. Kept for audit trail.
@@ -697,6 +703,22 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - Acceptance: write a build-time pre-pack step that walks `asarUnpack` patterns + auto-generates an overlay extraResources entry for each native module. Codifies Lesson 28's fix as a reusable check.
 - Effort: M
 - Priority: P3
+
+#### MES-3-FIX-20 — fix existing React-hooks rule violations exposed by FIX-17
+
+- **Source**: surfaced after PR #19 merge (SHA `5a1a630`) on 2026-05-08. With root lint resolution fixed, `eslint-plugin-react-hooks@7.x` runs against client code for the first time and reports **24 violations across 11 files**. v7 includes React Compiler analysis rules stricter than v6 (the version earlier sprints built against). Rules firing:
+  - 15 `react-hooks/exhaustive-deps` — useEffect/useMemo/useCallback dependency arrays missing referenced values
+  - 8 `react-hooks/set-state-in-effect` — `setState` called synchronously inside `useEffect` body (cascading-render risk per React Compiler)
+  - 1 `react-hooks/purity` — impure function call during render
+- **Top offenders by file**:
+  - 9 client/src/modules/cost/tabs/ComplexCalc/ProcessFlowChart.jsx
+  - 3 client/src/components/Shared/FileUploadZone.jsx
+  - 3 client/src/hooks/useCachedFetch.js
+  - 2 client/src/modules/cost/tabs/AuditLog.jsx
+  - 1 each: ConnectionBanner.jsx, AdminMetrics.jsx, GallusCalc.jsx, HardwareSection.jsx, PrintAreaCalc.jsx, QuoteAnalysis.jsx, DesignSyncPicker.jsx
+- **Acceptance**: per-file fix campaign — for each violation, decide whether (a) the code is actually buggy and needs refactor, OR (b) the rule fires false-positive on intentional pattern → use `eslint-disable-next-line` with comment justifying. NO blanket rule demotion (warn level) — that masks real React anti-patterns.
+- **Effort**: M (~24 violations × ~5 min each = ~2 h spread across multiple PRs as each affected file is otherwise touched)
+- **Priority**: P3 (CI signal is honest now — red on real anti-patterns is BETTER than green-by-suppression. Fix at leisure as each affected file is otherwise touched.)
 
 #### KIOSK-001 — Real branded PWA icons
 
