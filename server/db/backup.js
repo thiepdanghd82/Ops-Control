@@ -34,7 +34,7 @@ export async function backupOpsDb({ force = false } = {}) {
 
   // One backup per day. If force=false and today's file exists, skip.
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const existing = fs.readdirSync(dir).filter(f => f.startsWith(`ops_${today}`));
+  const existing = fs.readdirSync(dir).filter((f) => f.startsWith(`ops_${today}`));
   if (existing.length > 0 && !force) {
     return { ok: true, skipped: true, reason: 'daily backup already taken' };
   }
@@ -58,11 +58,20 @@ export async function backupOpsDb({ force = false } = {}) {
       if (!f.startsWith('ops_') || !f.endsWith('.sqlite')) continue;
       const fp = path.join(dir, f);
       try {
-        if (fs.statSync(fp).mtimeMs < cutoffMs) { fs.unlinkSync(fp); pruned++; }
-      } catch { /* best-effort */ }
+        if (fs.statSync(fp).mtimeMs < cutoffMs) {
+          fs.unlinkSync(fp);
+          pruned++;
+        }
+      } catch {
+        /* best-effort */
+      }
     }
 
-    return { ok: true, file: fname, size_mb: sizeMb, pruned_old: pruned };
+    // `file` is the basename (legacy callers); `path` is the absolute path
+    // (added 2026-05-08 — verifyBackup needs the full path to call
+    // `new Database(...)` from a child process whose cwd is APP_ROOT,
+    // not the backup directory).
+    return { ok: true, file: fname, path: dest, size_mb: sizeMb, pruned_old: pruned };
   } catch (err) {
     return { ok: false, error: err.message };
   }

@@ -54,8 +54,10 @@ function readPersistedConfig() {
   try {
     const txt = fs.readFileSync(configPath(), 'utf-8');
     const j = JSON.parse(txt);
-    return (j && typeof j === 'object') ? j : null;
-  } catch { return null; }
+    return j && typeof j === 'object' ? j : null;
+  } catch {
+    return null;
+  }
 }
 
 function writePersistedConfig(cfg) {
@@ -69,15 +71,18 @@ function writePersistedConfig(cfg) {
 function effectiveSettings() {
   const persisted = readPersistedConfig() || {};
   // env fallback when persisted file is absent
-  const enabled = persisted.enabled != null
-    ? persisted.enabled === true
-    : process.env.OPS_BACKUP_SCHEDULE === '1';
-  const hour = persisted.hour != null
-    ? Math.max(0, Math.min(23, parseInt(persisted.hour, 10) || 2))
-    : (parseInt(process.env.OPS_BACKUP_HOUR, 10) || 2);
-  const retentionDays = persisted.retentionDays != null
-    ? Math.max(1, parseInt(persisted.retentionDays, 10) || 30)
-    : (parseInt(process.env.OPS_BACKUP_RETENTION_DAYS, 10) || 30);
+  const enabled =
+    persisted.enabled != null
+      ? persisted.enabled === true
+      : process.env.OPS_BACKUP_SCHEDULE === '1';
+  const hour =
+    persisted.hour != null
+      ? Math.max(0, Math.min(23, parseInt(persisted.hour, 10) || 2))
+      : parseInt(process.env.OPS_BACKUP_HOUR, 10) || 2;
+  const retentionDays =
+    persisted.retentionDays != null
+      ? Math.max(1, parseInt(persisted.retentionDays, 10) || 30)
+      : parseInt(process.env.OPS_BACKUP_RETENTION_DAYS, 10) || 30;
   return { enabled, hour, retentionDays };
 }
 
@@ -168,9 +173,15 @@ function compareToLive(backupCounts) {
       const liveCount = live.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get().n;
       const drop = liveCount - backupCount;
       if (liveCount > 0 && drop / liveCount > 0.1) {
-        drops[table] = { backup: backupCount, live: liveCount, dropPct: +(drop * 100 / liveCount).toFixed(1) };
+        drops[table] = {
+          backup: backupCount,
+          live: liveCount,
+          dropPct: +((drop * 100) / liveCount).toFixed(1),
+        };
       }
-    } catch (_) { /* ignore */ }
+    } catch (_) {
+      /* ignore */
+    }
   }
   return drops;
 }
@@ -222,10 +233,14 @@ export async function runBackupCycle({ force = false } = {}) {
   const libResult = tarLibrary();
   summary.steps.push({ name: 'library', ...libResult });
 
-  // Step 3: Verify the SQLite backup if just created
-  if (sqliteResult?.file && !sqliteResult.skipped) {
+  // Step 3: Verify the SQLite backup if just created.
+  // `sqliteResult.path` is the absolute path (added in backup.js 2026-05-08
+  // alongside the legacy `file` basename). Fall back to `file` only as a
+  // defensive last resort — any caller that still relies on basename will
+  // hit the same SQLITE_CANTOPEN we are fixing here.
+  if (sqliteResult?.path && !sqliteResult.skipped) {
     try {
-      const verify = await verifyBackup(sqliteResult.file);
+      const verify = await verifyBackup(sqliteResult.path);
       summary.steps.push({ name: 'verify', ...verify });
       if (verify.ok && verify.counts) {
         const drops = compareToLive(verify.counts);
@@ -269,7 +284,10 @@ export async function runBackupCycle({ force = false } = {}) {
   summary.ok = summary.steps.every((s) => s.ok !== false);
   _lastRun = summary;
   if (!summary.ok) {
-    _lastError = summary.steps.filter((s) => !s.ok).map((s) => s.error).join('; ');
+    _lastError = summary.steps
+      .filter((s) => !s.ok)
+      .map((s) => s.error)
+      .join('; ');
     // Sprint 1.7 — emit a single BACKUP_FAILED audit row summarising the
     // step that failed, even when no webhook is configured.
     audit('BACKUP_FAILED', '-', '-', _lastError || 'cycle returned non-ok');
@@ -306,12 +324,17 @@ export function startBackupScheduler() {
   // First run scheduled for next HH:00
   const ms = msUntilNext(hour);
   _timer = setTimeout(tick, ms);
-  console.log(`[backup] scheduler started — next run in ${(ms / 1000 / 60).toFixed(0)} minutes (target ${hour}:00)`);
+  console.log(
+    `[backup] scheduler started — next run in ${(ms / 1000 / 60).toFixed(0)} minutes (target ${hour}:00)`
+  );
   return { ok: true, nextRunMs: ms };
 }
 
 export function stopBackupScheduler() {
-  if (_timer) { clearTimeout(_timer); _timer = null; }
+  if (_timer) {
+    clearTimeout(_timer);
+    _timer = null;
+  }
 }
 
 export function getStatus() {
@@ -361,7 +384,11 @@ export function setSchedule({ enabled, hour, retentionDays } = {}) {
   // Re-arm the timer so the new schedule kicks in without a server restart.
   stopBackupScheduler();
   const startResult = startBackupScheduler();
-  audit('BACKUP_SCHEDULE_CHANGE', '-', '-',
-    `enabled=${effectiveSettings().enabled} hour=${effectiveSettings().hour} retentionDays=${effectiveSettings().retentionDays}`);
+  audit(
+    'BACKUP_SCHEDULE_CHANGE',
+    '-',
+    '-',
+    `enabled=${effectiveSettings().enabled} hour=${effectiveSettings().hour} retentionDays=${effectiveSettings().retentionDays}`
+  );
   return { ok: true, status: getStatus(), startResult };
 }
