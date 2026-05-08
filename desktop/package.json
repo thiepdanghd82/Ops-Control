@@ -104,7 +104,8 @@
         "to": "app/node_modules",
         "filter": [
           "**/*",
-          "!**/{*.test.js,*.md,*.markdown,*.html,test/**,tests/**,examples/**,docs/**,.bin/**,.cache/**}"
+          "!**/{*.test.js,*.md,*.markdown,*.html,test/**,tests/**,examples/**,docs/**,.bin/**,.cache/**}",
+          "!**/better-sqlite3/**"
         ]
       },
       {
