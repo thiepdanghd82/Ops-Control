@@ -15,7 +15,7 @@
   border-right: 1px solid var(--border-strong);
   overflow: hidden;
   font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
-  letter-spacing: .16px;
+  letter-spacing: 0.16px;
 }
 
 /* ─── Header ─── */
@@ -27,13 +27,47 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
+/* Brand button — wraps logo + title; clicking it routes to Home.
+   Reset native button chrome so it inherits the surrounding flex
+   context exactly the way the old <div> did. */
+.sidebar-brand {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+  transition:
+    opacity 0.12s,
+    background-color 0.12s;
+}
+.sidebar-brand:hover {
+  opacity: 0.85;
+}
+.sidebar-brand:focus-visible {
+  outline: 2px solid var(--color-primary, #0f62fe);
+  outline-offset: 2px;
+}
+
 .sidebar-logo {
+  display: inline-flex;
+  align-items: center;
   flex-shrink: 0;
 }
 
 .sidebar-title {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .sidebar-app-name {
@@ -67,7 +101,10 @@
   font-weight: 600;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background-color .15s, color .15s, border-color .15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .module-btn:hover {
@@ -116,9 +153,11 @@
   cursor: pointer;
   text-align: left;
   color: var(--text-tertiary);
-  transition: color .12s ease;
+  transition: color 0.12s ease;
 }
-.nav-section-header:hover { color: var(--text-secondary); }
+.nav-section-header:hover {
+  color: var(--text-secondary);
+}
 .nav-section-header:focus-visible {
   outline: 2px solid var(--color-primary, #1e40af);
   outline-offset: -2px;
@@ -138,7 +177,7 @@
 
 .nav-section-chevron {
   flex-shrink: 0;
-  transition: transform .15s ease;
+  transition: transform 0.15s ease;
   opacity: 0.7;
 }
 .nav-section-header.is-collapsed .nav-section-chevron {
@@ -165,7 +204,9 @@
   font-weight: 500;
   cursor: pointer;
   text-align: left;
-  transition: background-color .12s ease, color .12s ease;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
   border-radius: 0;
   margin: 0;
 }
@@ -203,7 +244,9 @@
   display: block;
 }
 
-.nav-item:hover .nav-icon { color: var(--text-primary); }
+.nav-item:hover .nav-icon {
+  color: var(--text-primary);
+}
 
 .nav-item.active .nav-icon {
   color: var(--text-on-brand);
@@ -253,7 +296,9 @@
   overflow: hidden;
 }
 .sb-team-header {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 7px 10px 4px;
 }
 .sb-team-title {
@@ -288,13 +333,24 @@
   margin-bottom: 1px;
   border-radius: 0;
 }
-.sb-user-row.me { background: var(--surface-hover); }
-.sb-user-avatar-wrap { position: relative; flex-shrink: 0; }
+.sb-user-row.me {
+  background: var(--surface-hover);
+}
+.sb-user-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
 .sb-user-avatar {
-  width: 26px; height: 26px; border-radius: 0;
-  background: var(--surface-subtle); color: var(--text-primary);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 600;
+  width: 26px;
+  height: 26px;
+  border-radius: 0;
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
 }
 .sb-user-avatar.me {
   background: var(--color-primary);
@@ -302,13 +358,18 @@
 }
 .sb-online-dot {
   position: absolute;
-  bottom: -1px; right: -1px;
-  width: 7px; height: 7px;
+  bottom: -1px;
+  right: -1px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #22c55e;
   border: 1.5px solid var(--surface-card);
 }
-.sb-user-info { flex: 1; min-width: 0; }
+.sb-user-info {
+  flex: 1;
+  min-width: 0;
+}
 .sb-user-name {
   color: var(--text-primary);
   font-size: 10.5px;
@@ -321,8 +382,15 @@
   color: var(--color-primary);
   font-weight: 600;
 }
-.sb-admin-star { color: #d97706; font-size: 8px; }
-.sb-me-tag { color: var(--color-primary); font-size: 8px; font-weight: 600; }
+.sb-admin-star {
+  color: #d97706;
+  font-size: 8px;
+}
+.sb-me-tag {
+  color: var(--color-primary);
+  font-size: 8px;
+  font-weight: 600;
+}
 .sb-user-status {
   color: #16a34a;
   font-size: 8.5px;
@@ -395,7 +463,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color .15s, color .15s, border-color .15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s,
+    border-color 0.15s;
   flex-shrink: 0;
 }
 
@@ -428,7 +499,10 @@
   font-size: 12px;
   line-height: 1;
   padding: 0;
-  transition: background 120ms, color 120ms, border-color 120ms;
+  transition:
+    background 120ms,
+    color 120ms,
+    border-color 120ms;
 }
 .sidebar-collapse-btn:hover {
   background: var(--surface-hover, #f3f4f6);
@@ -455,6 +529,13 @@
 .sidebar.sidebar-collapsed .sidebar-app-ver {
   display: none;
 }
+/* Collapsed: brand button is just the logo — center it in the column. */
+.sidebar.sidebar-collapsed .sidebar-brand {
+  flex: 0 0 auto;
+  justify-content: center;
+  width: 100%;
+  gap: 0;
+}
 .sidebar.sidebar-collapsed .sidebar-collapse-btn {
   margin-left: 0;
 }
@@ -466,7 +547,7 @@
   gap: 4px;
 }
 .sidebar.sidebar-collapsed .module-btn {
-  font-size: 0;      /* hide text, keep accessibility name via aria */
+  font-size: 0; /* hide text, keep accessibility name via aria */
   padding: 6px 4px;
   min-height: 32px;
   letter-spacing: 0;
@@ -476,16 +557,24 @@
   font-size: 11px;
   font-weight: 700;
 }
-.sidebar.sidebar-collapsed .module-btn:nth-child(1)::before { content: 'C'; }
-.sidebar.sidebar-collapsed .module-btn:nth-child(2)::before { content: 'P'; }
+.sidebar.sidebar-collapsed .module-btn:nth-child(1)::before {
+  content: 'C';
+}
+.sidebar.sidebar-collapsed .module-btn:nth-child(2)::before {
+  content: 'P';
+}
 
 /* Section labels hidden; nav items become icon-only with tooltip */
-.sidebar.sidebar-collapsed .nav-section-label { display: none; }
+.sidebar.sidebar-collapsed .nav-section-label {
+  display: none;
+}
 .sidebar.sidebar-collapsed .nav-section {
   padding: 4px 0;
   border-bottom: 1px solid var(--border-subtle, #e5e7eb);
 }
-.sidebar.sidebar-collapsed .nav-section:last-child { border-bottom: 0; }
+.sidebar.sidebar-collapsed .nav-section:last-child {
+  border-bottom: 0;
+}
 .sidebar.sidebar-collapsed .nav-item {
   padding: 10px 0;
   justify-content: center;
