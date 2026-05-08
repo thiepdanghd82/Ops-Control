@@ -61,6 +61,7 @@
       "utils/**/*",
       "native/**/*",
       "package.json",
+      "build-role.json",
       "!**/*.map",
       "!**/*.test.js"
     ],
@@ -104,8 +105,13 @@
         "to": "app/node_modules",
         "filter": [
           "**/*",
-          "!**/{*.test.js,*.md,*.markdown,*.html,test/**,tests/**,examples/**,docs/**,.bin/**,.cache/**}"
+          "!**/{*.test.js,*.md,*.markdown,*.html,test/**,tests/**,examples/**,docs/**,.bin/**,.cache/**}",
+          "!**/better-sqlite3/**"
         ]
+      },
+      {
+        "from": "node_modules/better-sqlite3",
+        "to": "app/node_modules/better-sqlite3"
       }
     ],
     "win": {

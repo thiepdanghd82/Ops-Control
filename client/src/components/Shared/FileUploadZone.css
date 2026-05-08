@@ -8,7 +8,7 @@
   background: #ffffff;
   overflow: hidden;
   outline: none;
-  transition: border-color .15s;
+  transition: border-color 0.15s;
   font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
   /* Flex column so the viewport can flex-1 fill remaining vertical
      space when the tab has room below the params card. */
@@ -17,14 +17,17 @@
   min-height: 260px;
   height: 100%;
 }
-.fuz-zone:focus, .fuz-zone:hover { border-color: #0f62fe; }
+.fuz-zone:focus,
+.fuz-zone:hover {
+  border-color: #0f62fe;
+}
 
 .fuz-label {
   padding: 10px 16px;
   font-size: 14px;
   font-weight: 600;
   color: #161616;
-  letter-spacing: .16px;
+  letter-spacing: 0.16px;
   display: flex;
   align-items: baseline;
   gap: 6px;
@@ -33,11 +36,55 @@
   /* Hint that this strip is right-clickable — matches native "right-click
      for menu" affordance used by Finder / Explorer file title bars. */
   cursor: context-menu;
-  transition: background .15s;
+  transition: background 0.15s;
   user-select: none;
 }
-.fuz-label:hover { background: #f8fafc; }
-[data-theme="dark"] .fuz-label:hover { background: #262626; }
+.fuz-label:hover {
+  background: #f8fafc;
+}
+[data-theme='dark'] .fuz-label:hover {
+  background: #262626;
+}
+
+/* Collapsible header — clickable to toggle the body. The chevron
+   rotates 0 (open) ↔ -90deg (collapsed). When collapsed the .fuz-zone
+   shrinks to header height (no body) so the Layout grid reflows
+   tightly. Persisted choice in localStorage per label. */
+.fuz-label-collapsible {
+  cursor: pointer;
+}
+.fuz-label-collapsible:focus-visible {
+  outline: 2px solid #0f62fe;
+  outline-offset: -2px;
+}
+/* Collapsed zone overrides the default min-height/height-100% so the
+   card shrinks to its header. Header keeps its border-bottom even
+   without a body so the strip still reads as a card edge. */
+.fuz-zone-collapsed {
+  min-height: 0;
+  height: auto;
+  align-self: start;
+}
+.fuz-zone-collapsed .fuz-label {
+  border-bottom: none;
+}
+.fuz-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-right: 2px;
+  color: #525252;
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+.fuz-label.fuz-collapsed .fuz-chevron {
+  transform: rotate(-90deg);
+}
+[data-theme='dark'] .fuz-chevron {
+  color: #a8a8a8;
+}
 .fuz-filename {
   color: #525252;
   font-weight: 400;
@@ -47,7 +94,7 @@
   white-space: nowrap;
   flex: 1;
   min-width: 0;
-  letter-spacing: .32px;
+  letter-spacing: 0.32px;
 }
 
 /* Head card action icon row — Open · Rotate · Upload · Delete.
@@ -55,29 +102,84 @@
    all Complex sub-products) via the shared FileUploadZone component.
    Matches the Quote History action-icon pattern (28×28 ghost buttons). */
 .fuz-label-actions {
-  margin-left: auto; display: inline-flex; align-items: center; gap: 4px;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   flex-shrink: 0;
 }
 .fuz-act-btn {
-  width: 28px; height: 28px; padding: 0;
-  display: inline-flex; align-items: center; justify-content: center;
-  border: 1px solid transparent; border-radius: 6px;
-  background: transparent; color: #525252; cursor: pointer;
-  transition: background .15s, color .15s, border-color .15s, transform .15s;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #525252;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s,
+    transform 0.15s;
 }
-.fuz-act-btn:disabled { opacity: .35; cursor: not-allowed; }
+.fuz-act-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
 /* Colored hover per action — matches Quote History action icon palette */
-.fuz-act-open:hover:not(:disabled)   { background: #eff6ff; color: #0f62fe; border-color: #bfdbfe; }
-.fuz-act-rotate:hover                { background: #eff6ff; color: #0f62fe; border-color: #bfdbfe; }
-.fuz-act-rotate:active               { transform: rotate(-90deg); }
-.fuz-act-upload:hover                { background: #ecfdf5; color: #059669; border-color: #6ee7b7; }
-.fuz-act-delete:hover:not(:disabled) { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+.fuz-act-fullscreen:hover:not(:disabled) {
+  background: #eff6ff;
+  color: #0f62fe;
+  border-color: #bfdbfe;
+}
+.fuz-act-open:hover:not(:disabled) {
+  background: #eff6ff;
+  color: #0f62fe;
+  border-color: #bfdbfe;
+}
+.fuz-act-rotate:hover {
+  background: #eff6ff;
+  color: #0f62fe;
+  border-color: #bfdbfe;
+}
+.fuz-act-rotate:active {
+  transform: rotate(-90deg);
+}
+.fuz-act-upload:hover {
+  background: #ecfdf5;
+  color: #059669;
+  border-color: #6ee7b7;
+}
+.fuz-act-delete:hover:not(:disabled) {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
 /* Dark theme variants */
-[data-theme="dark"] .fuz-act-btn { color: #c6c6c6; }
-[data-theme="dark"] .fuz-act-open:hover:not(:disabled),
-[data-theme="dark"] .fuz-act-rotate:hover   { background: #1e3a5f; color: #93c5fd; border-color: #3b82f6; }
-[data-theme="dark"] .fuz-act-upload:hover   { background: #14332a; color: #6ee7b7; border-color: #059669; }
-[data-theme="dark"] .fuz-act-delete:hover:not(:disabled) { background: #3b0e0e; color: #fca5a5; border-color: #dc2626; }
+[data-theme='dark'] .fuz-act-btn {
+  color: #c6c6c6;
+}
+[data-theme='dark'] .fuz-act-fullscreen:hover:not(:disabled),
+[data-theme='dark'] .fuz-act-open:hover:not(:disabled),
+[data-theme='dark'] .fuz-act-rotate:hover {
+  background: #1e3a5f;
+  color: #93c5fd;
+  border-color: #3b82f6;
+}
+[data-theme='dark'] .fuz-act-upload:hover {
+  background: #14332a;
+  color: #6ee7b7;
+  border-color: #059669;
+}
+[data-theme='dark'] .fuz-act-delete:hover:not(:disabled) {
+  background: #3b0e0e;
+  color: #fca5a5;
+  border-color: #dc2626;
+}
 
 /* ── Viewport (preview with zoom/pan) ── */
 .fuz-viewport {
@@ -94,13 +196,15 @@
   background: #f4f4f4;
   user-select: none;
 }
-.fuz-viewport.fuz-panning { cursor: grabbing; }
+.fuz-viewport.fuz-panning {
+  cursor: grabbing;
+}
 
 .fuz-img {
   max-width: 100%;
   max-height: 100%;
   display: block;
-  transition: transform .08s ease-out;
+  transition: transform 0.08s ease-out;
   transform-origin: center center;
 }
 
@@ -118,7 +222,7 @@
   font-size: 14px;
   color: #525252;
   text-align: center;
-  letter-spacing: .16px;
+  letter-spacing: 0.16px;
 }
 
 /* Sprint 1.7 — drawing fetch error state. Amber to distinguish from a
@@ -141,12 +245,14 @@
   color: #6b5a00;
 }
 
-[data-theme="dark"] .fuz-file-err {
+[data-theme='dark'] .fuz-file-err {
   background: rgba(240, 196, 25, 0.1);
   border-left-color: rgba(240, 196, 25, 0.55);
   color: #fde68a;
 }
-[data-theme="dark"] .fuz-file-err-hint { color: #fcd34d; }
+[data-theme='dark'] .fuz-file-err-hint {
+  color: #fcd34d;
+}
 
 .fuz-zoom-badge {
   position: absolute;
@@ -158,21 +264,21 @@
   font-weight: 400;
   padding: 2px 8px;
   border-radius: 0;
-  letter-spacing: .32px;
+  letter-spacing: 0.32px;
   font-family: 'IBM Plex Mono', monospace;
   pointer-events: none;
 }
 .fuz-rot-badge {
   position: absolute;
   bottom: 8px;
-  right: 70px;  /* Left of the zoom badge so they don't overlap */
+  right: 70px; /* Left of the zoom badge so they don't overlap */
   background: #0f62fe;
   color: #ffffff;
   font-size: 12px;
   font-weight: 400;
   padding: 2px 8px;
   border-radius: 0;
-  letter-spacing: .32px;
+  letter-spacing: 0.32px;
   font-family: 'IBM Plex Mono', monospace;
   pointer-events: none;
 }
@@ -190,10 +296,27 @@
   align-items: center;
   justify-content: center;
 }
-.fuz-empty-icon { font-size: 28px; margin-bottom: 8px; opacity: .4; }
-.fuz-empty-text { font-size: 14px; color: #525252; letter-spacing: .16px; }
-.fuz-empty-hint { font-size: 12px; color: #6f6f6f; margin-top: 4px; letter-spacing: .32px; }
-.fuz-browse { color: #0f62fe; text-decoration: underline; cursor: pointer; }
+.fuz-empty-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+  opacity: 0.4;
+}
+.fuz-empty-text {
+  font-size: 14px;
+  color: #525252;
+  letter-spacing: 0.16px;
+}
+.fuz-empty-hint {
+  font-size: 12px;
+  color: #6f6f6f;
+  margin-top: 4px;
+  letter-spacing: 0.32px;
+}
+.fuz-browse {
+  color: #0f62fe;
+  text-decoration: underline;
+  cursor: pointer;
+}
 
 /* ── Context menu — matches the Quote History dropdown style.
    Rounded card, header row with title + subtitle, blue hover state,
@@ -206,17 +329,27 @@
   border-radius: 10px;
   padding: 4px 0;
   min-width: 240px;
-  box-shadow: 0 8px 24px rgba(15,23,42,.18), 0 0 0 1px rgba(15,23,42,.05);
+  box-shadow:
+    0 8px 24px rgba(15, 23, 42, 0.18),
+    0 0 0 1px rgba(15, 23, 42, 0.05);
   font-size: 13px;
-  letter-spacing: .16px;
+  letter-spacing: 0.16px;
   overflow: hidden;
 }
 .fuz-ctx-header {
-  padding: 10px 14px 8px; font-size: 12px; color: #525252;
-  border-bottom: 1px solid #e0e0e0; background: #f8fafc;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding: 10px 14px 8px;
+  font-size: 12px;
+  color: #525252;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.fuz-ctx-header-sub { color: #94a3b8; font-weight: 400; }
+.fuz-ctx-header-sub {
+  color: #94a3b8;
+  font-weight: 400;
+}
 .fuz-ctx-item {
   display: flex;
   align-items: center;
@@ -224,27 +357,91 @@
   padding: 7px 14px;
   cursor: pointer;
   color: #161616;
-  transition: background .1s, color .1s;
+  transition:
+    background 0.1s,
+    color 0.1s;
   margin: 1px 4px;
   border-radius: 5px;
 }
-.fuz-ctx-item:hover { background: #2563eb; color: #ffffff; }
-.fuz-ctx-item:hover .fuz-ctx-shortcut { color: rgba(255,255,255,.8); }
-.fuz-ctx-item.fuz-ctx-disabled {
-  color: #a8a8a8; cursor: default; pointer-events: none;
+.fuz-ctx-item:hover {
+  background: #2563eb;
+  color: #ffffff;
 }
-.fuz-ctx-item.fuz-ctx-disabled:hover { background: transparent; color: #a8a8a8; }
-.fuz-ctx-icon { width: 18px; text-align: center; font-size: 14px; flex-shrink: 0; }
-.fuz-ctx-label { flex: 1; }
+.fuz-ctx-item:hover .fuz-ctx-shortcut {
+  color: rgba(255, 255, 255, 0.8);
+}
+.fuz-ctx-item.fuz-ctx-disabled {
+  color: #a8a8a8;
+  cursor: default;
+  pointer-events: none;
+}
+.fuz-ctx-item.fuz-ctx-disabled:hover {
+  background: transparent;
+  color: #a8a8a8;
+}
+.fuz-ctx-icon {
+  width: 18px;
+  text-align: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.fuz-ctx-label {
+  flex: 1;
+}
 .fuz-ctx-shortcut {
-  margin-left: auto; color: #6f6f6f; font-size: 11px; letter-spacing: .32px;
+  margin-left: auto;
+  color: #6f6f6f;
+  font-size: 11px;
+  letter-spacing: 0.32px;
   font-family: 'IBM Plex Mono', 'Menlo', monospace;
 }
-.fuz-ctx-sep { border-top: 1px solid #e0e0e0; margin: 4px 0; }
-.fuz-ctx-danger { color: #da1e28; }
-.fuz-ctx-danger:hover { background: #da1e28; color: #ffffff; }
+.fuz-ctx-sep {
+  border-top: 1px solid #e0e0e0;
+  margin: 4px 0;
+}
+.fuz-ctx-danger {
+  color: #da1e28;
+}
+.fuz-ctx-danger:hover {
+  background: #da1e28;
+  color: #ffffff;
+}
 /* Dark theme — match overall app dark styling. */
-[data-theme="dark"] .fuz-ctx { background: #262626; border-color: #393939; }
-[data-theme="dark"] .fuz-ctx-header { background: #161616; border-bottom-color: #393939; color: #c6c6c6; }
-[data-theme="dark"] .fuz-ctx-item { color: #f4f4f4; }
-[data-theme="dark"] .fuz-ctx-sep { border-top-color: #393939; }
+[data-theme='dark'] .fuz-ctx {
+  background: #262626;
+  border-color: #393939;
+}
+[data-theme='dark'] .fuz-ctx-header {
+  background: #161616;
+  border-bottom-color: #393939;
+  color: #c6c6c6;
+}
+[data-theme='dark'] .fuz-ctx-item {
+  color: #f4f4f4;
+}
+[data-theme='dark'] .fuz-ctx-sep {
+  border-top-color: #393939;
+}
+
+/* ── Fullscreen modal preview ── */
+.fuz-fs-img,
+.fuz-fs-pdf {
+  display: block;
+  width: 100%;
+  background: #f4f4f4;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+}
+.fuz-fs-img {
+  max-height: 75vh;
+  object-fit: contain;
+  transition: transform 120ms ease;
+}
+.fuz-fs-pdf {
+  height: 75vh;
+}
+[data-theme='dark'] .fuz-fs-img,
+[data-theme='dark'] .fuz-fs-pdf {
+  background: #161616;
+  border-color: #393939;
+}

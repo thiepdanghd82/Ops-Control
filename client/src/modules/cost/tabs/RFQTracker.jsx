@@ -52,11 +52,11 @@ const PIPELINE = [
     // Required items that BLOCK advance until ticked:
     required_fields: ['rfq_no', 'customer', 'product', 'eau_qty', 'deadline'],
     default_checklist: [
-      { text: 'Design file received (AI / PDF)',    required: true },
-      { text: 'Size and shape confirmed',           required: true },
-      { text: 'EAU and MOQ stated',                 required: true },
-      { text: 'Special material / finish noted',    required: false },
-      { text: 'Deadline agreed with customer',      required: true },
+      { text: 'Design file received (AI / PDF)', required: true },
+      { text: 'Size and shape confirmed', required: true },
+      { text: 'EAU and MOQ stated', required: true },
+      { text: 'Special material / finish noted', required: false },
+      { text: 'Deadline agreed with customer', required: true },
     ],
   },
   {
@@ -70,10 +70,10 @@ const PIPELINE = [
     sla_days: 1,
     required_fields: ['specs.print_type'],
     default_checklist: [
-      { text: 'Feasibility reviewed',                       required: true },
+      { text: 'Feasibility reviewed', required: true },
       { text: 'Print type classified (Offset/Flexo/Digital)', required: true },
-      { text: 'Risks logged (tolerance, ink, material)',    required: false },
-      { text: 'Approved for costing',                       required: true },
+      { text: 'Risks logged (tolerance, ink, material)', required: false },
+      { text: 'Approved for costing', required: true },
     ],
   },
   {
@@ -87,10 +87,10 @@ const PIPELINE = [
     sla_days: 2,
     required_fields: ['specs.width_mm', 'specs.height_mm'],
     default_checklist: [
-      { text: 'Imposition / layout done',      required: true },
-      { text: 'Dieline prepared',              required: true },
-      { text: 'Wastage estimated',             required: false },
-      { text: 'Layout approved by NPI',        required: true },
+      { text: 'Imposition / layout done', required: true },
+      { text: 'Dieline prepared', required: true },
+      { text: 'Wastage estimated', required: false },
+      { text: 'Layout approved by NPI', required: true },
     ],
   },
   {
@@ -104,11 +104,11 @@ const PIPELINE = [
     sla_days: 3,
     required_fields: [],
     default_checklist: [
-      { text: 'Paper / film priced',            required: true },
-      { text: 'Ink priced',                     required: true },
-      { text: 'Foil / lamination priced',       required: false },
-      { text: 'Die / tooling priced',           required: true },
-      { text: 'Prices updated in Library',      required: true },
+      { text: 'Paper / film priced', required: true },
+      { text: 'Ink priced', required: true },
+      { text: 'Foil / lamination priced', required: false },
+      { text: 'Die / tooling priced', required: true },
+      { text: 'Prices updated in Library', required: true },
     ],
   },
   {
@@ -122,22 +122,27 @@ const PIPELINE = [
     sla_days: 1,
     required_fields: [],
     default_checklist: [
-      { text: 'Labour costs computed',          required: true },
-      { text: 'Machine depreciation applied',   required: true },
-      { text: 'Margin reviewed',                required: true },
-      { text: 'Quote released to customer',     required: true },
+      { text: 'Labour costs computed', required: true },
+      { text: 'Machine depreciation applied', required: true },
+      { text: 'Margin reviewed', required: true },
+      { text: 'Quote released to customer', required: true },
     ],
   },
 ];
 
-const PIPELINE_KEYS = PIPELINE.map(p => p.key);
+const PIPELINE_KEYS = PIPELINE.map((p) => p.key);
 
 const STATUS_OPTS = ['pending', 'active', 'done', 'blocked'];
 const STATUS_LABEL = { pending: 'Pending', active: 'Active', done: 'Done', blocked: 'Blocked' };
 const STATUS_COLOR = { pending: '#9ca3af', active: '#2563eb', done: '#22c55e', blocked: '#ef4444' };
 
 const RESULT_OPTS = ['PENDING', 'WIN', 'LOSS', 'NEGOTIATING'];
-const RESULT_COLORS = { WIN: '#22c55e', LOSS: '#ef4444', PENDING: '#f59e0b', NEGOTIATING: '#3b82f6' };
+const RESULT_COLORS = {
+  WIN: '#22c55e',
+  LOSS: '#ef4444',
+  PENDING: '#f59e0b',
+  NEGOTIATING: '#3b82f6',
+};
 
 const PRINT_TYPES = ['', 'Offset', 'Flexo', 'Digital', 'Hybrid'];
 
@@ -187,23 +192,29 @@ function defaultStageBlock(cfg) {
     // immutable until a Reopen action explicitly clears them.
     signed_by: '',
     signed_at: '',
-    checklist: cfg.default_checklist.map(it => (
+    checklist: cfg.default_checklist.map((it) =>
       typeof it === 'string'
         ? { text: it, checked: false, required: false }
         : { text: it.text, checked: false, required: !!it.required }
-    )),
+    ),
   };
 }
 
 function defaultPipeline() {
-  return Object.fromEntries(PIPELINE.map(cfg => [cfg.key, defaultStageBlock(cfg)]));
+  return Object.fromEntries(PIPELINE.map((cfg) => [cfg.key, defaultStageBlock(cfg)]));
 }
 
 function defaultSpecs() {
   return {
-    print_type: '', width_mm: 0, height_mm: 0,
-    material: '', ink_spec: '', foil: '', die_type: '',
-    dieline_file: '', layout_file: '',
+    print_type: '',
+    width_mm: 0,
+    height_mm: 0,
+    material: '',
+    ink_spec: '',
+    foil: '',
+    die_type: '',
+    dieline_file: '',
+    layout_file: '',
   };
 }
 
@@ -216,22 +227,36 @@ function ensureShape(r) {
     // Merge checklist item-by-item so legacy strings / missing `required`
     // flags get upgraded without losing the saved `checked` state.
     const existingCL = Array.isArray(s.checklist) ? s.checklist : [];
+    // Index-based merge: existingCL[i] is the source of truth for slot i.
+    // Earlier `find-by-text` strategy clobbered user-edited text (re-wrote
+    // text: d.text on every render) AND the trailing ad-hoc loop then
+    // pushed the user-edited item as a duplicate, compounding state per
+    // refresh cycle. Position-based matching preserves text/required/
+    // checked atomically for slots [0..defaults.length-1] and treats
+    // anything beyond that as ad-hoc.
     const merged = defaults.checklist.map((d, i) => {
-      const found = existingCL.find(e => e && (e.text || '') === d.text)
-        || existingCL[i]
-        || null;
+      const found = existingCL[i];
       if (found && typeof found === 'object') {
-        return { text: d.text, required: d.required, checked: !!found.checked };
+        return {
+          text: typeof found.text === 'string' && found.text ? found.text : d.text,
+          required: typeof found.required === 'boolean' ? found.required : d.required,
+          checked: !!found.checked,
+        };
       }
       if (typeof found === 'string') return { text: d.text, required: d.required, checked: false };
       return d;
     });
-    // Preserve any ad-hoc items the operator added (not in defaults).
-    for (const e of existingCL) {
+    // Preserve any ad-hoc items the operator added BEYOND the defaults
+    // length. Items inside [0..defaults.length-1] are already produced by
+    // the merged.map above; pushing them here would duplicate.
+    for (let i = defaults.checklist.length; i < existingCL.length; i++) {
+      const e = existingCL[i];
       if (!e || typeof e !== 'object') continue;
-      if (!merged.some(m => m.text === e.text)) {
-        merged.push({ text: e.text, checked: !!e.checked, required: !!e.required });
-      }
+      merged.push({
+        text: typeof e.text === 'string' ? e.text : '',
+        checked: !!e.checked,
+        required: !!e.required,
+      });
     }
     pipeline[cfg.key] = {
       ...defaults,
@@ -276,7 +301,7 @@ function fmtMoney(v) {
 // Check if a stage can be advanced. Returns null if OK, or a string
 // describing what's missing (shown in a tooltip on the disabled button).
 function stageAdvanceBlocker(row, stageKey) {
-  const cfg = PIPELINE.find(p => p.key === stageKey);
+  const cfg = PIPELINE.find((p) => p.key === stageKey);
   if (!cfg) return 'Unknown stage';
   // Missing top-level fields
   for (const fieldPath of cfg.required_fields) {
@@ -287,7 +312,7 @@ function stageAdvanceBlocker(row, stageKey) {
   }
   // Missing required checklist ticks
   const stage = row.pipeline[stageKey];
-  const unchecked = (stage.checklist || []).filter(it => it.required && !it.checked);
+  const unchecked = (stage.checklist || []).filter((it) => it.required && !it.checked);
   if (unchecked.length) return `${unchecked.length} required task(s) unticked`;
   return null;
 }
@@ -311,18 +336,31 @@ function buildPrefillPayload(r) {
 // T3.9 Saved filter variants — localStorage key.
 const FILTER_VARIANT_KEY = 'ops-rfq-variants-v1';
 function loadVariants() {
-  try { return JSON.parse(localStorage.getItem(FILTER_VARIANT_KEY) || '[]'); }
-  catch { return []; }
+  try {
+    return JSON.parse(localStorage.getItem(FILTER_VARIANT_KEY) || '[]');
+  } catch {
+    return [];
+  }
 }
 function saveVariants(list) {
-  try { localStorage.setItem(FILTER_VARIANT_KEY, JSON.stringify(list)); } catch { /* quota */ }
+  try {
+    localStorage.setItem(FILTER_VARIANT_KEY, JSON.stringify(list));
+  } catch {
+    /* quota */
+  }
 }
 
 // ── component ───────────────────────────────────────────────────
 
 export default function RFQTracker() {
   const { t } = useI18n();
-  const [filter, setFilter] = useState({ text: '', result: 'all', owner: 'all', stage: 'all', myInbox: false });
+  const [filter, setFilter] = useState({
+    text: '',
+    result: 'all',
+    owner: 'all',
+    stage: 'all',
+    myInbox: false,
+  });
   const [view, setView] = useState('kanban');
   const [detailId, setDetailId] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -336,16 +374,21 @@ export default function RFQTracker() {
 
   useEscapeToClose(detailId != null ? () => setDetailId(null) : null);
 
-  const { data: rawData, setData, loading, refresh } = useAbortableFetch(
-    (signal) => sharedApi.getRFQTracker({ signal }),
-    [],
-    { onError: (err) => console.error('Failed to load RFQ data:', err) },
-  );
+  const {
+    data: rawData,
+    setData,
+    loading,
+    refresh,
+  } = useAbortableFetch((signal) => sharedApi.getRFQTracker({ signal }), [], {
+    onError: (err) => console.error('Failed to load RFQ data:', err),
+  });
   // v1.3 P0 — auto-refresh every 60s khi tab visible
   useAutoRefresh(refresh, { intervalMs: 60000, pauseWhenHidden: true });
   // v1.3 Đợt 2 — instant refetch on SSE rfq.updated push
   useEffect(() => {
-    const unsub = subscribeDataEvents(['rfq.updated'], () => { refresh(); });
+    const unsub = subscribeDataEvents(['rfq.updated'], () => {
+      refresh();
+    });
     return unsub;
   }, [refresh]);
 
@@ -369,20 +412,30 @@ export default function RFQTracker() {
   }, [data]);
 
   const filtered = useMemo(() => {
-    return data.filter(r => {
+    return data.filter((r) => {
       if (filter.myInbox && myUsername) {
         // "My Inbox" = I am the owner of the current active stage OR
         // any of the identity-level owner fields.
         const activeOwner = r.pipeline?.[r.pipeline_stage]?.owner || '';
-        if (![activeOwner, r.owner, r.sale_owner, r.npi_owner]
-          .some(v => v && v.toLowerCase() === myUsername.toLowerCase())) return false;
+        if (
+          ![activeOwner, r.owner, r.sale_owner, r.npi_owner].some(
+            (v) => v && v.toLowerCase() === myUsername.toLowerCase()
+          )
+        )
+          return false;
       }
       if (filter.result !== 'all' && r.result !== filter.result) return false;
-      if (filter.owner !== 'all' && ![r.owner, r.sale_owner, r.npi_owner].includes(filter.owner)) return false;
+      if (filter.owner !== 'all' && ![r.owner, r.sale_owner, r.npi_owner].includes(filter.owner))
+        return false;
       if (filter.stage !== 'all' && r.pipeline_stage !== filter.stage) return false;
       if (filter.text) {
         const q = filter.text.toLowerCase();
-        if (![r.rfq_no, r.customer, r.product, r.owner].some(f => (f || '').toLowerCase().includes(q))) return false;
+        if (
+          ![r.rfq_no, r.customer, r.product, r.owner].some((f) =>
+            (f || '').toLowerCase().includes(q)
+          )
+        )
+          return false;
       }
       return true;
     });
@@ -390,27 +443,35 @@ export default function RFQTracker() {
 
   const kpis = useMemo(() => {
     const total = data.length;
-    const wins = data.filter(r => r.result === 'WIN').length;
-    const losses = data.filter(r => r.result === 'LOSS').length;
-    const active = data.filter(r => r.result !== 'WIN' && r.result !== 'LOSS').length;
-    const nego = data.filter(r => r.result === 'NEGOTIATING').length;
+    const wins = data.filter((r) => r.result === 'WIN').length;
+    const losses = data.filter((r) => r.result === 'LOSS').length;
+    const active = data.filter((r) => r.result !== 'WIN' && r.result !== 'LOSS').length;
+    const nego = data.filter((r) => r.result === 'NEGOTIATING').length;
     const today = new Date();
-    const breach = data.filter(r => {
+    const breach = data.filter((r) => {
       if (r.result === 'WIN' || r.result === 'LOSS') return false;
       if (r.deadline) {
         const d = new Date(r.deadline);
         if (!isNaN(d) && d < today) return true;
       }
-      return PIPELINE_KEYS.some(k => r.pipeline?.[k]?.status === 'blocked');
+      return PIPELINE_KEYS.some((k) => r.pipeline?.[k]?.status === 'blocked');
     }).length;
     const value = data.reduce((s, r) => s + (Number(r.quote_value) || 0), 0);
     const closed = wins + losses;
-    return { total, wins, losses, active, nego, breach,
-      winRate: closed ? Math.round(wins / closed * 100) : 0, value };
+    return {
+      total,
+      wins,
+      losses,
+      active,
+      nego,
+      breach,
+      winRate: closed ? Math.round((wins / closed) * 100) : 0,
+      value,
+    };
   }, [data]);
 
   const stageCounts = useMemo(() => {
-    const m = Object.fromEntries(PIPELINE.map(p => [p.key, 0]));
+    const m = Object.fromEntries(PIPELINE.map((p) => [p.key, 0]));
     m.done = 0;
     for (const r of filtered) {
       if (r.result === 'WIN' || r.result === 'LOSS') m.done++;
@@ -420,34 +481,37 @@ export default function RFQTracker() {
   }, [filtered]);
 
   const detailRow = useMemo(
-    () => (detailId != null ? data.find(r => r.id === detailId) || null : null),
-    [detailId, data],
+    () => (detailId != null ? data.find((r) => r.id === detailId) || null : null),
+    [detailId, data]
   );
 
   // T1.1 Audit helper. Fire-and-forget from the UI — if the network
   // call fails we log but don't block the save. The authoritative
   // effect of the audit is on the server file, not in React state.
   const appendAudit = useCallback((rfqId, entry) => {
-    sharedApi.appendRFQAudit(rfqId, entry).catch(err => {
+    sharedApi.appendRFQAudit(rfqId, entry).catch((err) => {
       console.warn('Audit append failed:', err?.message || err);
     });
   }, []);
 
-  const saveData = useCallback(async (newData, auditBatch) => {
-    setSaving(true);
-    try {
-      await costApi.saveAll({ rfqTracker: newData });
-      setData(newData);
-      if (auditBatch && auditBatch.length) {
-        for (const { rfqId, entry } of auditBatch) appendAudit(rfqId, entry);
+  const saveData = useCallback(
+    async (newData, auditBatch) => {
+      setSaving(true);
+      try {
+        await costApi.saveAll({ rfqTracker: newData });
+        setData(newData);
+        if (auditBatch && auditBatch.length) {
+          for (const { rfqId, entry } of auditBatch) appendAudit(rfqId, entry);
+        }
+      } catch (err) {
+        console.error('Save failed:', err);
+        showToast('Save failed: ' + (err.message || 'Unknown error'), 'err');
+      } finally {
+        setSaving(false);
       }
-    } catch (err) {
-      console.error('Save failed:', err);
-      showToast('Save failed: ' + (err.message || 'Unknown error'), 'err');
-    } finally {
-      setSaving(false);
-    }
-  }, [setData, appendAudit]);
+    },
+    [setData, appendAudit]
+  );
 
   // Diff helper: compute a list of audit entries for what changed
   // between the current row and the next. Called from upsertRow so
@@ -456,38 +520,55 @@ export default function RFQTracker() {
     const out = [];
     // Scalar top-level fields we track
     const tracked = [
-      'rfq_no', 'customer', 'product', 'eau_qty', 'moq', 'quote_value',
-      'rfq_date', 'deadline', 'owner', 'sale_owner', 'npi_owner',
-      'result', 'remarks', 'reason_code',
+      'rfq_no',
+      'customer',
+      'product',
+      'eau_qty',
+      'moq',
+      'quote_value',
+      'rfq_date',
+      'deadline',
+      'owner',
+      'sale_owner',
+      'npi_owner',
+      'result',
+      'remarks',
+      'reason_code',
     ];
     for (const k of tracked) {
       if (String(oldRow?.[k] ?? '') !== String(newRow?.[k] ?? '')) {
-        out.push({ rfqId, entry: { kind: 'field_change', field: k,
-          from: oldRow?.[k] ?? '', to: newRow?.[k] ?? '' } });
+        out.push({
+          rfqId,
+          entry: { kind: 'field_change', field: k, from: oldRow?.[k] ?? '', to: newRow?.[k] ?? '' },
+        });
       }
     }
     // specs.*
     for (const k of Object.keys(defaultSpecs())) {
-      const a = oldRow?.specs?.[k]; const b = newRow?.specs?.[k];
+      const a = oldRow?.specs?.[k];
+      const b = newRow?.specs?.[k];
       if (String(a ?? '') !== String(b ?? '')) {
-        out.push({ rfqId, entry: { kind: 'field_change', field: 'specs.' + k,
-          from: a ?? '', to: b ?? '' } });
+        out.push({
+          rfqId,
+          entry: { kind: 'field_change', field: 'specs.' + k, from: a ?? '', to: b ?? '' },
+        });
       }
     }
     return out;
   }, []);
 
-  const upsertRow = useCallback((row, extraAudit = []) => {
-    const next = ensureShape(row);
-    next.pipeline_stage = deriveCurrentStage(next.pipeline, next.result);
-    const prev = data.find(r => r.id === next.id);
-    const auditBatch = [...diffForAudit(next.id, prev, next), ...extraAudit];
-    const exists = data.findIndex(r => r.id === next.id);
-    const newData = exists >= 0
-      ? data.map((r, i) => (i === exists ? next : r))
-      : [...data, next];
-    return saveData(newData, auditBatch);
-  }, [data, saveData, diffForAudit]);
+  const upsertRow = useCallback(
+    (row, extraAudit = []) => {
+      const next = ensureShape(row);
+      next.pipeline_stage = deriveCurrentStage(next.pipeline, next.result);
+      const prev = data.find((r) => r.id === next.id);
+      const auditBatch = [...diffForAudit(next.id, prev, next), ...extraAudit];
+      const exists = data.findIndex((r) => r.id === next.id);
+      const newData = exists >= 0 ? data.map((r, i) => (i === exists ? next : r)) : [...data, next];
+      return saveData(newData, auditBatch);
+    },
+    [data, saveData, diffForAudit]
+  );
 
   const handleAdd = useCallback(() => {
     const maxId = data.reduce((max, r) => Math.max(max, r.id || 0), 0);
@@ -522,166 +603,241 @@ export default function RFQTracker() {
     ]).then(() => setDetailId(fresh.id));
   }, [data, saveData, myUsername]);
 
-  const handleDelete = useCallback((id) => {
-    if (!confirm('Delete this RFQ?')) return;
-    saveData(data.filter(r => r.id !== id), [
-      { rfqId: id, entry: { kind: 'deleted' } },
-    ]);
-    if (detailId === id) setDetailId(null);
-    setSelected(s => { const n = new Set(s); n.delete(id); return n; });
-  }, [data, saveData, detailId]);
+  const handleDelete = useCallback(
+    (id) => {
+      if (!confirm('Delete this RFQ?')) return;
+      saveData(
+        data.filter((r) => r.id !== id),
+        [{ rfqId: id, entry: { kind: 'deleted' } }]
+      );
+      if (detailId === id) setDetailId(null);
+      setSelected((s) => {
+        const n = new Set(s);
+        n.delete(id);
+        return n;
+      });
+    },
+    [data, saveData, detailId]
+  );
 
   // T1.2 gated moveStage — refuses advance if requirements unmet.
-  const moveStage = useCallback((id, direction) => {
-    const r = data.find(x => x.id === id);
-    if (!r) return;
-    const idx = PIPELINE_KEYS.indexOf(r.pipeline_stage);
-    if (idx < 0) return;
-    const nextIdx = direction === 'next' ? Math.min(idx + 1, PIPELINE_KEYS.length - 1) : Math.max(idx - 1, 0);
-    if (nextIdx === idx) return;
-    const now = new Date().toISOString().slice(0, 10);
-    const pipeline = { ...r.pipeline };
-    const curKey = PIPELINE_KEYS[idx];
-    const nxtKey = PIPELINE_KEYS[nextIdx];
-    if (direction === 'next') {
-      const blocker = stageAdvanceBlocker(r, curKey);
-      if (blocker) {
-        showToast('Cannot advance: ' + blocker, 'err');
-        return;
+  const moveStage = useCallback(
+    (id, direction) => {
+      const r = data.find((x) => x.id === id);
+      if (!r) return;
+      const idx = PIPELINE_KEYS.indexOf(r.pipeline_stage);
+      if (idx < 0) return;
+      const nextIdx =
+        direction === 'next' ? Math.min(idx + 1, PIPELINE_KEYS.length - 1) : Math.max(idx - 1, 0);
+      if (nextIdx === idx) return;
+      const now = new Date().toISOString().slice(0, 10);
+      const pipeline = { ...r.pipeline };
+      const curKey = PIPELINE_KEYS[idx];
+      const nxtKey = PIPELINE_KEYS[nextIdx];
+      if (direction === 'next') {
+        const blocker = stageAdvanceBlocker(r, curKey);
+        if (blocker) {
+          showToast('Cannot advance: ' + blocker, 'err');
+          return;
+        }
+        // Mark current done + stamp signature.
+        pipeline[curKey] = {
+          ...pipeline[curKey],
+          status: 'done',
+          done: pipeline[curKey].done || now,
+          signed_by: myUsername || '-',
+          signed_at: new Date().toISOString(),
+        };
+        // Activate next.
+        pipeline[nxtKey] = {
+          ...pipeline[nxtKey],
+          status: 'active',
+          start: pipeline[nxtKey].start || now,
+        };
+      } else {
+        // Back = demote current to pending; activate previous.
+        pipeline[curKey] = { ...pipeline[curKey], status: 'pending' };
+        pipeline[nxtKey] = { ...pipeline[nxtKey], status: 'active' };
       }
-      // Mark current done + stamp signature.
-      pipeline[curKey] = {
-        ...pipeline[curKey],
-        status: 'done',
-        done: pipeline[curKey].done || now,
-        signed_by: myUsername || '-',
-        signed_at: new Date().toISOString(),
-      };
-      // Activate next.
-      pipeline[nxtKey] = {
-        ...pipeline[nxtKey],
-        status: 'active',
-        start: pipeline[nxtKey].start || now,
-      };
-    } else {
-      // Back = demote current to pending; activate previous.
-      pipeline[curKey] = { ...pipeline[curKey], status: 'pending' };
-      pipeline[nxtKey] = { ...pipeline[nxtKey], status: 'active' };
-    }
-    upsertRow({ ...r, pipeline, pipeline_stage: nxtKey }, [
-      { rfqId: id, entry: {
-        kind: direction === 'next' ? 'stage_advanced' : 'stage_reverted',
-        from: curKey, to: nxtKey,
-      } },
-    ]);
-  }, [data, upsertRow, myUsername]);
+      upsertRow({ ...r, pipeline, pipeline_stage: nxtKey }, [
+        {
+          rfqId: id,
+          entry: {
+            kind: direction === 'next' ? 'stage_advanced' : 'stage_reverted',
+            from: curKey,
+            to: nxtKey,
+          },
+        },
+      ]);
+    },
+    [data, upsertRow, myUsername]
+  );
 
   // T2.4 Reopen — clears signature on a 'done' stage, forces stage
   // back to 'active', and logs the reopen event.
-  const reopenStage = useCallback((id, stageKey) => {
-    const r = data.find(x => x.id === id);
-    if (!r) return;
-    const stage = r.pipeline[stageKey];
-    if (!stage || stage.status !== 'done') return;
-    if (!confirm(`Reopen the "${stageKey}" stage? This clears the signature and logs a reopen event.`)) return;
-    const pipeline = {
-      ...r.pipeline,
-      [stageKey]: { ...stage, status: 'active', signed_by: '', signed_at: '', done: '' },
-    };
-    upsertRow({ ...r, pipeline, pipeline_stage: stageKey }, [
-      { rfqId: id, entry: { kind: 'stage_reopened', field: stageKey,
-        from: stage.signed_by || '?', to: myUsername } },
-    ]);
-  }, [data, upsertRow, myUsername]);
+  const reopenStage = useCallback(
+    (id, stageKey) => {
+      const r = data.find((x) => x.id === id);
+      if (!r) return;
+      const stage = r.pipeline[stageKey];
+      if (!stage || stage.status !== 'done') return;
+      if (
+        !confirm(
+          `Reopen the "${stageKey}" stage? This clears the signature and logs a reopen event.`
+        )
+      )
+        return;
+      const pipeline = {
+        ...r.pipeline,
+        [stageKey]: { ...stage, status: 'active', signed_by: '', signed_at: '', done: '' },
+      };
+      upsertRow({ ...r, pipeline, pipeline_stage: stageKey }, [
+        {
+          rfqId: id,
+          entry: {
+            kind: 'stage_reopened',
+            field: stageKey,
+            from: stage.signed_by || '?',
+            to: myUsername,
+          },
+        },
+      ]);
+    },
+    [data, upsertRow, myUsername]
+  );
 
-  const updateStageField = useCallback((id, stageKey, field, value) => {
-    const r = data.find(x => x.id === id);
-    if (!r) return;
-    const stage = r.pipeline[stageKey];
-    // Block edits to a done stage's checklist / status without Reopen.
-    if (stage.status === 'done' && (field === 'status' || field === 'notes')) {
-      // Allow notes through (audit-safe), but status change requires reopen.
-      if (field === 'status' && value !== 'done') {
-        showToast('Reopen the stage before changing its status', 'err');
+  const updateStageField = useCallback(
+    (id, stageKey, field, value) => {
+      const r = data.find((x) => x.id === id);
+      if (!r) return;
+      const stage = r.pipeline[stageKey];
+      // Block edits to a done stage's checklist / status without Reopen.
+      if (stage.status === 'done' && (field === 'status' || field === 'notes')) {
+        // Allow notes through (audit-safe), but status change requires reopen.
+        if (field === 'status' && value !== 'done') {
+          showToast('Reopen the stage before changing its status', 'err');
+          return;
+        }
+      }
+      const pipeline = {
+        ...r.pipeline,
+        [stageKey]: { ...stage, [field]: value },
+      };
+      upsertRow({ ...r, pipeline });
+    },
+    [data, upsertRow]
+  );
+
+  const updateChecklistItem = useCallback(
+    (id, stageKey, idx, patch) => {
+      const r = data.find((x) => x.id === id);
+      if (!r) return;
+      const stage = r.pipeline[stageKey];
+      if (stage.status === 'done' && patch.checked !== undefined) {
+        showToast('Reopen the stage before editing its checklist', 'err');
         return;
       }
-    }
-    const pipeline = {
-      ...r.pipeline,
-      [stageKey]: { ...stage, [field]: value },
-    };
-    upsertRow({ ...r, pipeline });
-  }, [data, upsertRow]);
+      const checklist = stage.checklist.map((it, i) => (i === idx ? { ...it, ...patch } : it));
+      const pipeline = { ...r.pipeline, [stageKey]: { ...stage, checklist } };
+      upsertRow(
+        { ...r, pipeline },
+        patch.checked !== undefined
+          ? [
+              {
+                rfqId: id,
+                entry: {
+                  kind: patch.checked ? 'checklist_checked' : 'checklist_unchecked',
+                  field: stageKey,
+                  to: stage.checklist[idx]?.text || '',
+                },
+              },
+            ]
+          : []
+      );
+    },
+    [data, upsertRow]
+  );
 
-  const updateChecklistItem = useCallback((id, stageKey, idx, patch) => {
-    const r = data.find(x => x.id === id);
-    if (!r) return;
-    const stage = r.pipeline[stageKey];
-    if (stage.status === 'done' && patch.checked !== undefined) {
-      showToast('Reopen the stage before editing its checklist', 'err');
-      return;
-    }
-    const checklist = stage.checklist.map((it, i) => i === idx ? { ...it, ...patch } : it);
-    const pipeline = { ...r.pipeline, [stageKey]: { ...stage, checklist } };
-    upsertRow({ ...r, pipeline }, patch.checked !== undefined ? [
-      { rfqId: id, entry: { kind: patch.checked ? 'checklist_checked' : 'checklist_unchecked',
-        field: stageKey, to: stage.checklist[idx]?.text || '' } },
-    ] : []);
-  }, [data, upsertRow]);
+  const addChecklistItem = useCallback(
+    (id, stageKey, text) => {
+      if (!text || !text.trim()) return;
+      const r = data.find((x) => x.id === id);
+      if (!r) return;
+      const stage = r.pipeline[stageKey];
+      const checklist = [
+        ...stage.checklist,
+        { text: text.trim(), checked: false, required: false },
+      ];
+      const pipeline = { ...r.pipeline, [stageKey]: { ...stage, checklist } };
+      upsertRow({ ...r, pipeline });
+    },
+    [data, upsertRow]
+  );
 
-  const addChecklistItem = useCallback((id, stageKey, text) => {
-    if (!text || !text.trim()) return;
-    const r = data.find(x => x.id === id);
-    if (!r) return;
-    const stage = r.pipeline[stageKey];
-    const checklist = [...stage.checklist, { text: text.trim(), checked: false, required: false }];
-    const pipeline = { ...r.pipeline, [stageKey]: { ...stage, checklist } };
-    upsertRow({ ...r, pipeline });
-  }, [data, upsertRow]);
+  const removeChecklistItem = useCallback(
+    (id, stageKey, idx) => {
+      const r = data.find((x) => x.id === id);
+      if (!r) return;
+      const stage = r.pipeline[stageKey];
+      const checklist = stage.checklist.filter((_, i) => i !== idx);
+      const pipeline = { ...r.pipeline, [stageKey]: { ...stage, checklist } };
+      upsertRow({ ...r, pipeline });
+    },
+    [data, upsertRow]
+  );
 
-  const removeChecklistItem = useCallback((id, stageKey, idx) => {
-    const r = data.find(x => x.id === id);
-    if (!r) return;
-    const stage = r.pipeline[stageKey];
-    const checklist = stage.checklist.filter((_, i) => i !== idx);
-    const pipeline = { ...r.pipeline, [stageKey]: { ...stage, checklist } };
-    upsertRow({ ...r, pipeline });
-  }, [data, upsertRow]);
-
-  const syncToPricing = useCallback((row) => {
-    const payload = buildPrefillPayload(row);
-    setPendingQuote(row.id, 'rfq-sync', 'prefill', payload);
-    // Add a linked_quotes entry so the document-flow strip can display
-    // where this RFQ handed off. The Pricing save hook pushes the
-    // real quote id back later (out of scope here).
-    const linked_quotes = [...(row.linked_quotes || []),
-      { ts: new Date().toISOString(), action: 'sync', rfq_number: row.rfq_no, user: myUsername }];
-    upsertRow({ ...row, linked_quotes }, [
-      { rfqId: row.id, entry: { kind: 'synced_to_pricing', meta: payload } },
-    ]);
-    window.dispatchEvent(new CustomEvent('ops-switch-tab', { detail: 'standard' }));
-    setDetailId(null);
-  }, [setPendingQuote, upsertRow, myUsername]);
+  const syncToPricing = useCallback(
+    (row) => {
+      const payload = buildPrefillPayload(row);
+      setPendingQuote(row.id, 'rfq-sync', 'prefill', payload);
+      // Add a linked_quotes entry so the document-flow strip can display
+      // where this RFQ handed off. The Pricing save hook pushes the
+      // real quote id back later (out of scope here).
+      const linked_quotes = [
+        ...(row.linked_quotes || []),
+        { ts: new Date().toISOString(), action: 'sync', rfq_number: row.rfq_no, user: myUsername },
+      ];
+      upsertRow({ ...row, linked_quotes }, [
+        { rfqId: row.id, entry: { kind: 'synced_to_pricing', meta: payload } },
+      ]);
+      window.dispatchEvent(new CustomEvent('ops-switch-tab', { detail: 'standard' }));
+      setDetailId(null);
+    },
+    [setPendingQuote, upsertRow, myUsername]
+  );
 
   // T3.10 Bulk ops
   const toggleSelect = useCallback((id) => {
-    setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSelected((s) => {
+      const n = new Set(s);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
   }, []);
 
-  const bulkClose = useCallback((result) => {
-    if (!selected.size) return;
-    if (!confirm(`Mark ${selected.size} RFQ(s) as ${result}?`)) return;
-    const ids = [...selected];
-    const newData = data.map(r => ids.includes(r.id) ? ensureShape({ ...r, result }) : r);
-    saveData(newData, ids.map(id => ({ rfqId: id, entry: { kind: 'bulk_result_set', to: result } })));
-    setSelected(new Set());
-  }, [selected, data, saveData]);
+  const bulkClose = useCallback(
+    (result) => {
+      if (!selected.size) return;
+      if (!confirm(`Mark ${selected.size} RFQ(s) as ${result}?`)) return;
+      const ids = [...selected];
+      const newData = data.map((r) => (ids.includes(r.id) ? ensureShape({ ...r, result }) : r));
+      saveData(
+        newData,
+        ids.map((id) => ({ rfqId: id, entry: { kind: 'bulk_result_set', to: result } }))
+      );
+      setSelected(new Set());
+    },
+    [selected, data, saveData]
+  );
 
   const bulkDelete = useCallback(() => {
     if (!selected.size) return;
     if (!confirm(`Delete ${selected.size} RFQ(s)? This cannot be undone.`)) return;
     const ids = new Set(selected);
-    saveData(data.filter(r => !ids.has(r.id)), [...ids].map(id => ({ rfqId: id, entry: { kind: 'deleted' } })));
+    saveData(
+      data.filter((r) => !ids.has(r.id)),
+      [...ids].map((id) => ({ rfqId: id, entry: { kind: 'deleted' } }))
+    );
     setSelected(new Set());
   }, [selected, data, saveData]);
 
@@ -689,22 +845,39 @@ export default function RFQTracker() {
   const saveCurrentVariant = useCallback(() => {
     const name = prompt('Save this filter as:');
     if (!name) return;
-    const next = [...variants.filter(v => v.name !== name), { name, filter }];
-    setVariants(next); saveVariants(next);
+    const next = [...variants.filter((v) => v.name !== name), { name, filter }];
+    setVariants(next);
+    saveVariants(next);
     showToast(`Saved "${name}"`);
   }, [filter, variants]);
 
-  const applyVariant = useCallback((name) => {
-    const v = variants.find(x => x.name === name);
-    if (v) setFilter(v.filter);
-  }, [variants]);
+  const applyVariant = useCallback(
+    (name) => {
+      const v = variants.find((x) => x.name === name);
+      if (v) setFilter(v.filter);
+    },
+    [variants]
+  );
 
-  const deleteVariant = useCallback((name) => {
-    const next = variants.filter(v => v.name !== name);
-    setVariants(next); saveVariants(next);
-  }, [variants]);
+  const deleteVariant = useCallback(
+    (name) => {
+      const next = variants.filter((v) => v.name !== name);
+      setVariants(next);
+      saveVariants(next);
+    },
+    [variants]
+  );
 
-  if (loading) {
+  // Show the skeleton ONLY on initial load (rawData not yet populated).
+  // useAbortableFetch's refresh() also flips `loading` to true on every
+  // 60s poll tick + every SSE-driven refetch. If we early-return the
+  // skeleton on those ticks, the entire tree (including the open
+  // DetailDrawer) UNMOUNTS, then REMOUNTS when loading flips back to
+  // false — destroying the drawer's snapshot state every refresh and
+  // re-initializing it from the post-refresh row prop, which manifests
+  // as the "checkbox flashes and reverts at 60s" bug. Keeping the
+  // tree mounted across refreshes preserves the snapshot.
+  if (loading && rawData == null) {
     return (
       <div style={{ padding: 24 }}>
         <SkeletonTable rows={10} cols={8} />
@@ -724,27 +897,55 @@ export default function RFQTracker() {
           className="rfq2-search"
           placeholder={t('rfq.search_placeholder')}
           value={filter.text}
-          onChange={e => setFilter(f => ({ ...f, text: e.target.value }))}
+          onChange={(e) => setFilter((f) => ({ ...f, text: e.target.value }))}
         />
         <button
           className={'rfq2-chip-btn' + (filter.myInbox ? ' active' : '')}
-          onClick={() => setFilter(f => ({ ...f, myInbox: !f.myInbox }))}
-          title={myUsername ? `Show RFQs where ${myUsername} is the active-stage owner` : 'Log in to enable'}
+          onClick={() => setFilter((f) => ({ ...f, myInbox: !f.myInbox }))}
+          title={
+            myUsername
+              ? `Show RFQs where ${myUsername} is the active-stage owner`
+              : 'Log in to enable'
+          }
           disabled={!myUsername}
         >
           📥 My Inbox
         </button>
-        <select value={filter.stage} onChange={e => setFilter(f => ({ ...f, stage: e.target.value }))} aria-label="Filter stage">
+        <select
+          value={filter.stage}
+          onChange={(e) => setFilter((f) => ({ ...f, stage: e.target.value }))}
+          aria-label="Filter stage"
+        >
           <option value="all">All Stages</option>
-          {PIPELINE.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+          {PIPELINE.map((p) => (
+            <option key={p.key} value={p.key}>
+              {p.label}
+            </option>
+          ))}
         </select>
-        <select value={filter.result} onChange={e => setFilter(f => ({ ...f, result: e.target.value }))} aria-label="Filter result">
+        <select
+          value={filter.result}
+          onChange={(e) => setFilter((f) => ({ ...f, result: e.target.value }))}
+          aria-label="Filter result"
+        >
           <option value="all">All Results</option>
-          {RESULT_OPTS.map(r => <option key={r} value={r}>{r}</option>)}
+          {RESULT_OPTS.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
         </select>
-        <select value={filter.owner} onChange={e => setFilter(f => ({ ...f, owner: e.target.value }))} aria-label="Filter owner">
+        <select
+          value={filter.owner}
+          onChange={(e) => setFilter((f) => ({ ...f, owner: e.target.value }))}
+          aria-label="Filter owner"
+        >
           <option value="all">All Owners</option>
-          {owners.map(o => <option key={o} value={o}>{o}</option>)}
+          {owners.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
         </select>
 
         <VariantMenu
@@ -755,12 +956,34 @@ export default function RFQTracker() {
         />
 
         <div className="rfq2-view-toggle" role="tablist" aria-label="View mode">
-          <button role="tab" aria-selected={view === 'kanban'} className={view === 'kanban' ? 'active' : ''} onClick={() => setView('kanban')}>Kanban</button>
-          <button role="tab" aria-selected={view === 'list'}   className={view === 'list'   ? 'active' : ''} onClick={() => setView('list')}>List</button>
+          <button
+            role="tab"
+            aria-selected={view === 'kanban'}
+            className={view === 'kanban' ? 'active' : ''}
+            onClick={() => setView('kanban')}
+          >
+            Kanban
+          </button>
+          <button
+            role="tab"
+            aria-selected={view === 'list'}
+            className={view === 'list' ? 'active' : ''}
+            onClick={() => setView('list')}
+          >
+            List
+          </button>
         </div>
 
-        <button className="rfq2-chip-btn" onClick={() => setLegendOpen(true)} title="Field Legend / Chú giải trường">📖 Legend</button>
-        <button className="rfq2-btn rfq2-btn-primary" onClick={handleAdd} disabled={saving}>+ New RFQ</button>
+        <button
+          className="rfq2-chip-btn"
+          onClick={() => setLegendOpen(true)}
+          title="Field Legend / Chú giải trường"
+        >
+          📖 Legend
+        </button>
+        <button className="rfq2-btn rfq2-btn-primary" onClick={handleAdd} disabled={saving}>
+          + New RFQ
+        </button>
       </div>
 
       {/* Bulk action bar */}
@@ -770,7 +993,9 @@ export default function RFQTracker() {
           <button onClick={() => bulkClose('WIN')}>{t('rfq.mark_win')}</button>
           <button onClick={() => bulkClose('LOSS')}>{t('rfq.mark_loss')}</button>
           <button onClick={() => bulkClose('NEGOTIATING')}>{t('rfq.mark_negotiating')}</button>
-          <button className="rfq2-btn-danger" onClick={bulkDelete}>Delete</button>
+          <button className="rfq2-btn-danger" onClick={bulkDelete}>
+            Delete
+          </button>
           <button onClick={() => setSelected(new Set())}>Clear</button>
         </div>
       )}
@@ -796,7 +1021,11 @@ export default function RFQTracker() {
 
       {filtered.length === 0 && (
         <div style={{ padding: 0 }}>
-          <EmptyState icon="☑" title="No RFQ records match the filters" hint="Clear the filters or add a new RFQ to get started." />
+          <EmptyState
+            icon="☑"
+            title="No RFQ records match the filters"
+            hint="Clear the filters or add a new RFQ to get started."
+          />
         </div>
       )}
 
@@ -812,10 +1041,18 @@ export default function RFQTracker() {
           onMoveNext={() => moveStage(detailRow.id, 'next')}
           onMoveBack={() => moveStage(detailRow.id, 'back')}
           onReopen={(stageKey) => reopenStage(detailRow.id, stageKey)}
-          onUpdateStage={(stageKey, field, value) => updateStageField(detailRow.id, stageKey, field, value)}
-          onToggleChecklist={(stageKey, idx, checked) => updateChecklistItem(detailRow.id, stageKey, idx, { checked })}
-          onEditChecklist={(stageKey, idx, text) => updateChecklistItem(detailRow.id, stageKey, idx, { text })}
-          onToggleRequired={(stageKey, idx, required) => updateChecklistItem(detailRow.id, stageKey, idx, { required })}
+          onUpdateStage={(stageKey, field, value) =>
+            updateStageField(detailRow.id, stageKey, field, value)
+          }
+          onToggleChecklist={(stageKey, idx, checked) =>
+            updateChecklistItem(detailRow.id, stageKey, idx, { checked })
+          }
+          onEditChecklist={(stageKey, idx, text) =>
+            updateChecklistItem(detailRow.id, stageKey, idx, { text })
+          }
+          onToggleRequired={(stageKey, idx, required) =>
+            updateChecklistItem(detailRow.id, stageKey, idx, { required })
+          }
           onAddChecklist={(stageKey, text) => addChecklistItem(detailRow.id, stageKey, text)}
           onRemoveChecklist={(stageKey, idx) => removeChecklistItem(detailRow.id, stageKey, idx)}
           onSync={() => syncToPricing(detailRow)}
@@ -848,10 +1085,19 @@ function KpiBar({ kpis, data }) {
         <Kpi label="Total RFQ" value={kpis.total} />
         <Kpi label="Active" value={kpis.active} tone="brand" />
         <Kpi label="SLA Breach" value={kpis.breach} tone="danger" />
-        <Kpi label="Win Rate" value={kpis.winRate + '%'} tone="good" sub={`${kpis.wins} win / ${kpis.losses} loss`} />
+        <Kpi
+          label="Win Rate"
+          value={kpis.winRate + '%'}
+          tone="good"
+          sub={`${kpis.wins} win / ${kpis.losses} loss`}
+        />
         <Kpi label="Negotiating" value={kpis.nego} tone="info" />
         <Kpi label="Pipeline Value" value={fmtMoney(kpis.value)} tone="amber" />
-        <button className="rfq2-trend-toggle" onClick={() => setTrendOpen(v => !v)} aria-expanded={trendOpen}>
+        <button
+          className="rfq2-trend-toggle"
+          onClick={() => setTrendOpen((v) => !v)}
+          aria-expanded={trendOpen}
+        >
           {trendOpen ? '▲ Hide trend' : '▼ Show 6-mo trend'}
         </button>
       </div>
@@ -870,31 +1116,39 @@ function TrendChart({ data }) {
       months.push({
         key: d.toISOString().slice(0, 7),
         label: d.toLocaleString('en', { month: 'short' }),
-        wins: 0, losses: 0, cycle_sum: 0, cycle_n: 0,
+        wins: 0,
+        losses: 0,
+        cycle_sum: 0,
+        cycle_n: 0,
       });
     }
     for (const r of data) {
       const dateStr = r.pipeline?.pricing?.done || r.rfq_date;
       if (!dateStr) continue;
       const m = dateStr.slice(0, 7);
-      const b = months.find(x => x.key === m);
+      const b = months.find((x) => x.key === m);
       if (!b) continue;
       if (r.result === 'WIN') b.wins++;
       if (r.result === 'LOSS') b.losses++;
       if (r.rfq_date && r.pipeline?.pricing?.done) {
         const d = daysBetween(r.rfq_date, r.pipeline.pricing.done);
-        if (d != null && d >= 0) { b.cycle_sum += d; b.cycle_n++; }
+        if (d != null && d >= 0) {
+          b.cycle_sum += d;
+          b.cycle_n++;
+        }
       }
     }
-    return months.map(b => ({
+    return months.map((b) => ({
       ...b,
-      winRate: (b.wins + b.losses) ? Math.round(b.wins / (b.wins + b.losses) * 100) : 0,
-      cycle:   b.cycle_n ? Math.round(b.cycle_sum / b.cycle_n) : 0,
+      winRate: b.wins + b.losses ? Math.round((b.wins / (b.wins + b.losses)) * 100) : 0,
+      cycle: b.cycle_n ? Math.round(b.cycle_sum / b.cycle_n) : 0,
     }));
   }, [data]);
 
-  const maxCycle = Math.max(10, ...buckets.map(b => b.cycle));
-  const W = 560, H = 110, PAD = 24;
+  const maxCycle = Math.max(10, ...buckets.map((b) => b.cycle));
+  const W = 560,
+    H = 110,
+    PAD = 24;
   const colW = (W - 2 * PAD) / buckets.length;
 
   return (
@@ -912,9 +1166,27 @@ function TrendChart({ data }) {
             <g key={b.key}>
               <rect x={x} y={H - PAD - wrH} width={barW} height={wrH} fill="#2563eb" />
               <rect x={x + barW + 2} y={H - PAD - cyH} width={barW} height={cyH} fill="#d97706" />
-              <text x={x + barW} y={H - PAD + 12} textAnchor="middle" fontSize="10" fill="#475569">{b.label}</text>
-              <text x={x + barW/2} y={H - PAD - wrH - 2} textAnchor="middle" fontSize="9" fill="#2563eb">{b.winRate}%</text>
-              <text x={x + barW + 2 + barW/2} y={H - PAD - cyH - 2} textAnchor="middle" fontSize="9" fill="#d97706">{b.cycle}d</text>
+              <text x={x + barW} y={H - PAD + 12} textAnchor="middle" fontSize="10" fill="#475569">
+                {b.label}
+              </text>
+              <text
+                x={x + barW / 2}
+                y={H - PAD - wrH - 2}
+                textAnchor="middle"
+                fontSize="9"
+                fill="#2563eb"
+              >
+                {b.winRate}%
+              </text>
+              <text
+                x={x + barW + 2 + barW / 2}
+                y={H - PAD - cyH - 2}
+                textAnchor="middle"
+                fontSize="9"
+                fill="#d97706"
+              >
+                {b.cycle}d
+              </text>
             </g>
           );
         })}
@@ -929,21 +1201,45 @@ function VariantMenu({ variants, onApply, onSave, onDelete }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
-    function onClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    function onClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
     if (open) document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, [open]);
   return (
     <div className="rfq2-variant" ref={ref}>
-      <button className="rfq2-chip-btn" onClick={() => setOpen(v => !v)} aria-haspopup>⭐ Views ({variants.length})</button>
+      <button className="rfq2-chip-btn" onClick={() => setOpen((v) => !v)} aria-haspopup>
+        ⭐ Views ({variants.length})
+      </button>
       {open && (
         <div className="rfq2-variant-menu">
-          <button onClick={() => { onSave(); setOpen(false); }}>+ Save current</button>
+          <button
+            onClick={() => {
+              onSave();
+              setOpen(false);
+            }}
+          >
+            + Save current
+          </button>
           {variants.length > 0 && <div className="rfq2-variant-sep" />}
-          {variants.map(v => (
+          {variants.map((v) => (
             <div key={v.name} className="rfq2-variant-item">
-              <button onClick={() => { onApply(v.name); setOpen(false); }}>{v.name}</button>
-              <button className="rfq2-variant-del" onClick={() => onDelete(v.name)} aria-label="Delete">×</button>
+              <button
+                onClick={() => {
+                  onApply(v.name);
+                  setOpen(false);
+                }}
+              >
+                {v.name}
+              </button>
+              <button
+                className="rfq2-variant-del"
+                onClick={() => onDelete(v.name)}
+                aria-label="Delete"
+              >
+                ×
+              </button>
             </div>
           ))}
           {variants.length === 0 && <div className="rfq2-variant-empty">No saved views</div>}
@@ -957,7 +1253,7 @@ function VariantMenu({ variants, onApply, onSave, onDelete }) {
 
 function KanbanBoard({ data, stageCounts, onOpen, onMoveNext, onMoveBack }) {
   const grouped = useMemo(() => {
-    const buckets = Object.fromEntries(PIPELINE.map(p => [p.key, []]));
+    const buckets = Object.fromEntries(PIPELINE.map((p) => [p.key, []]));
     buckets.done = [];
     for (const r of data) {
       if (r.result === 'WIN' || r.result === 'LOSS') buckets.done.push(r);
@@ -976,7 +1272,7 @@ function KanbanBoard({ data, stageCounts, onOpen, onMoveNext, onMoveBack }) {
             <span className="rfq2-col-count">{stageCounts[cfg.key] || 0}</span>
           </div>
           <div className="rfq2-col-body">
-            {(grouped[cfg.key] || []).map(r => (
+            {(grouped[cfg.key] || []).map((r) => (
               <KanbanCard
                 key={r.id}
                 row={r}
@@ -986,7 +1282,9 @@ function KanbanBoard({ data, stageCounts, onOpen, onMoveNext, onMoveBack }) {
                 onMoveBack={i > 0 ? () => onMoveBack(r.id) : null}
               />
             ))}
-            {(grouped[cfg.key] || []).length === 0 && <div className="rfq2-col-empty">No items</div>}
+            {(grouped[cfg.key] || []).length === 0 && (
+              <div className="rfq2-col-empty">No items</div>
+            )}
           </div>
         </div>
       ))}
@@ -997,8 +1295,14 @@ function KanbanBoard({ data, stageCounts, onOpen, onMoveNext, onMoveBack }) {
           <span className="rfq2-col-count">{stageCounts.done || 0}</span>
         </div>
         <div className="rfq2-col-body">
-          {(grouped.done || []).map(r => (
-            <KanbanCard key={r.id} row={r} stageCfg={PIPELINE[PIPELINE.length - 1]} done onOpen={() => onOpen(r.id)} />
+          {(grouped.done || []).map((r) => (
+            <KanbanCard
+              key={r.id}
+              row={r}
+              stageCfg={PIPELINE[PIPELINE.length - 1]}
+              done
+              onOpen={() => onOpen(r.id)}
+            />
           ))}
           {(grouped.done || []).length === 0 && <div className="rfq2-col-empty">No items</div>}
         </div>
@@ -1012,22 +1316,37 @@ function KanbanCard({ row, stageCfg, onOpen, onMoveNext, onMoveBack, done }) {
   const daysInStage = daysBetween(stage.start);
   const daysToDeadline = daysBetween(new Date().toISOString().slice(0, 10), row.deadline);
   const breached = daysToDeadline != null && daysToDeadline < 0 && !done;
-  const checklistDone = (stage.checklist || []).filter(i => i.checked).length;
+  const checklistDone = (stage.checklist || []).filter((i) => i.checked).length;
   const checklistTotal = (stage.checklist || []).length;
-  const pct = checklistTotal ? Math.round(checklistDone / checklistTotal * 100) : 0;
+  const pct = checklistTotal ? Math.round((checklistDone / checklistTotal) * 100) : 0;
   const blocker = !done ? stageAdvanceBlocker(row, row.pipeline_stage) : null;
 
   return (
-    <div className={'rfq2-card' + (breached ? ' rfq2-card-breach' : '') + (done ? ' rfq2-card-done' : '')}
+    <div
+      className={
+        'rfq2-card' + (breached ? ' rfq2-card-breach' : '') + (done ? ' rfq2-card-done' : '')
+      }
       onClick={onOpen}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}
-      role="button" tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      role="button"
+      tabIndex={0}
       style={{ borderLeftColor: stageCfg.color }}
     >
       <div className="rfq2-card-head">
         <span className="rfq2-card-no">{row.rfq_no || 'RFQ?'}</span>
         {row.result && row.result !== 'PENDING' && (
-          <span className="rfq2-chip" style={{ background: RESULT_COLORS[row.result] + '20', color: RESULT_COLORS[row.result] }}>
+          <span
+            className="rfq2-chip"
+            style={{
+              background: RESULT_COLORS[row.result] + '20',
+              color: RESULT_COLORS[row.result],
+            }}
+          >
             {row.result}
           </span>
         )}
@@ -1041,22 +1360,37 @@ function KanbanCard({ row, stageCfg, onOpen, onMoveNext, onMoveBack, done }) {
       {!done && (
         <>
           <div className="rfq2-card-bar">
-            <div className="rfq2-card-bar-fill" style={{ width: pct + '%', background: stageCfg.color }} />
+            <div
+              className="rfq2-card-bar-fill"
+              style={{ width: pct + '%', background: stageCfg.color }}
+            />
           </div>
           <div className="rfq2-card-foot">
-            <span>{checklistDone}/{checklistTotal} tasks</span>
-            {daysInStage != null && <span className={daysInStage > stageCfg.sla_days ? 'rfq2-card-sla-bad' : ''}>{daysInStage}d in stage</span>}
+            <span>
+              {checklistDone}/{checklistTotal} tasks
+            </span>
+            {daysInStage != null && (
+              <span className={daysInStage > stageCfg.sla_days ? 'rfq2-card-sla-bad' : ''}>
+                {daysInStage}d in stage
+              </span>
+            )}
             {breached && <span className="rfq2-card-breach-tag">Over deadline</span>}
           </div>
           {(onMoveBack || onMoveNext) && (
-            <div className="rfq2-card-nav" onClick={e => e.stopPropagation()}>
-              {onMoveBack && <button onClick={onMoveBack} title="Move back">&larr;</button>}
+            <div className="rfq2-card-nav" onClick={(e) => e.stopPropagation()}>
+              {onMoveBack && (
+                <button onClick={onMoveBack} title="Move back">
+                  &larr;
+                </button>
+              )}
               {onMoveNext && (
                 <button
                   onClick={onMoveNext}
                   disabled={!!blocker}
                   title={blocker ? blocker : 'Advance stage'}
-                >Next →</button>
+                >
+                  Next →
+                </button>
               )}
             </div>
           )}
@@ -1065,7 +1399,11 @@ function KanbanCard({ row, stageCfg, onOpen, onMoveNext, onMoveBack, done }) {
       {done && row.quote_value != null && (
         <div className="rfq2-card-foot">
           <span>{fmtMoney(row.quote_value)}</span>
-          {row.reason_code && <span className="rfq2-chip" style={{ background: '#f3f4f6', color: '#374151' }}>{row.reason_code}</span>}
+          {row.reason_code && (
+            <span className="rfq2-chip" style={{ background: '#f3f4f6', color: '#374151' }}>
+              {row.reason_code}
+            </span>
+          )}
         </div>
       )}
     </div>
@@ -1096,32 +1434,54 @@ function ListView({ data, selected, onToggleSelect, onOpen, onDelete }) {
           </tr>
         </thead>
         <tbody>
-          {data.map(r => {
-            const cfg = PIPELINE.find(p => p.key === r.pipeline_stage) || PIPELINE[0];
+          {data.map((r) => {
+            const cfg = PIPELINE.find((p) => p.key === r.pipeline_stage) || PIPELINE[0];
             const stage = r.pipeline[r.pipeline_stage];
             const age = daysBetween(r.rfq_date);
             const daysToDeadline = daysBetween(new Date().toISOString().slice(0, 10), r.deadline);
             return (
               <tr key={r.id} onClick={() => onOpen(r.id)} style={{ cursor: 'pointer' }}>
-                <td onClick={e => e.stopPropagation()}>
-                  <input type="checkbox" checked={selected.has(r.id)} onChange={() => onToggleSelect(r.id)} aria-label={`Select ${r.rfq_no}`} />
+                <td onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={selected.has(r.id)}
+                    onChange={() => onToggleSelect(r.id)}
+                    aria-label={`Select ${r.rfq_no}`}
+                  />
                 </td>
                 <td className="rfq2-mono">{r.rfq_no}</td>
                 <td>{r.customer}</td>
                 <td className="rfq2-truncate">{r.product}</td>
                 <td className="rfq2-num">{(Number(r.eau_qty) || 0).toLocaleString()}</td>
                 <td>
-                  <span className="rfq2-stage-pill" style={{ background: cfg.bg, color: cfg.color }}>
+                  <span
+                    className="rfq2-stage-pill"
+                    style={{ background: cfg.bg, color: cfg.color }}
+                  >
                     {cfg.short} · {STATUS_LABEL[stage.status] || ''}
                   </span>
                 </td>
                 <td className="rfq2-num">{age != null ? age + 'd' : ''}</td>
-                <td className={daysToDeadline != null && daysToDeadline < 0 ? 'rfq2-bad' : ''}>{r.deadline || '—'}</td>
+                <td className={daysToDeadline != null && daysToDeadline < 0 ? 'rfq2-bad' : ''}>
+                  {r.deadline || '—'}
+                </td>
                 <td>{r.owner}</td>
                 <td className="rfq2-num">{fmtMoney(r.quote_value)}</td>
-                <td><span className="rfq2-chip" style={{ color: RESULT_COLORS[r.result], background: (RESULT_COLORS[r.result] || '#888') + '18' }}>{r.result}</span></td>
-                <td onClick={e => e.stopPropagation()} className="rfq2-list-actions">
-                  <button onClick={() => onDelete(r.id)} title="Delete">&times;</button>
+                <td>
+                  <span
+                    className="rfq2-chip"
+                    style={{
+                      color: RESULT_COLORS[r.result],
+                      background: (RESULT_COLORS[r.result] || '#888') + '18',
+                    }}
+                  >
+                    {r.result}
+                  </span>
+                </td>
+                <td onClick={(e) => e.stopPropagation()} className="rfq2-list-actions">
+                  <button onClick={() => onDelete(r.id)} title="Delete">
+                    &times;
+                  </button>
                 </td>
               </tr>
             );
@@ -1135,28 +1495,70 @@ function ListView({ data, selected, onToggleSelect, onOpen, onDelete }) {
 // ── Detail drawer ───────────────────────────────────────────────
 
 function DetailDrawer({
-  row, saving, myUsername,
-  onClose, onChange, onDelete,
-  onMoveNext, onMoveBack, onReopen,
+  row,
+  saving,
+  myUsername,
+  onClose,
+  onChange,
+  onDelete,
+  onMoveNext,
+  onMoveBack,
+  onReopen,
   onUpdateStage,
-  onToggleChecklist, onEditChecklist, onToggleRequired, onAddChecklist, onRemoveChecklist,
+  onToggleChecklist,
+  onEditChecklist,
+  onToggleRequired,
+  onAddChecklist,
+  onRemoveChecklist,
   onSync,
 }) {
   const [tab, setTab] = useState('detail'); // detail | history | attachments
-  // openStage is DERIVED from row.pipeline_stage with an explicit
-  // user-override layer. When the row's active stage advances
-  // (operator clicks Next/Back), the derived value auto-tracks. When
-  // the user manually expands a different stage, `override` wins.
-  // Passing `null` to setOverride collapses to the row's active stage.
-  // (The outer `<DetailDrawer key={row.id}>` handles cross-row reset.)
+  // Snapshot pattern (insulates pipeline UI from auto-refresh flash).
+  //
+  // Why: drawer's pipeline section (status fields + checklists) was
+  // bound to `row.pipeline.*` which is a slice of the parent's auto-
+  // refreshed `data` state. Every 60s polling tick (and every SSE
+  // rfq.updated push) ran setData(serverResponse) → parent re-render
+  // → row prop changed → checklist re-rendered with new values, even
+  // mid-edit. Visible as flash + occasional revert.
+  //
+  // Fix: snapshot the row on mount via useState lazy initializer.
+  // Pipeline UI reads from `snapshot.pipeline.*`; edit handlers update
+  // snapshot locally AND call the parent handlers (which still POST
+  // to the server). Auto-refresh continues updating parent — kanban
+  // cards re-render normally — but the open drawer is insulated.
+  //
+  // For structural ops (Next/Back/Reopen) the canonical state lives
+  // in the parent's moveStage/reopenStage logic; after parent's
+  // setData propagates, we explicitly resync snapshot from the new
+  // row. The pendingResyncRef flag ensures we resync ONLY after such
+  // user-triggered ops, not after every auto-refresh.
+  //
+  // openStage uses snapshot.pipeline_stage so the active-stage rail
+  // accent doesn't jump on auto-refresh either. setOpenStage compares
+  // against the same snapshot value.
   const [override, setOverride] = useState(null);
-  const openStage = override ?? row.pipeline_stage ?? 'sale';
-  const setOpenStage = (k) => setOverride(k === (row.pipeline_stage ?? 'sale') ? null : k);
+  const [snapshot, setSnapshot] = useState(() => structuredClone(row));
+  const pendingResyncRef = useRef(false);
+  // Resync snapshot from `row` only after user-triggered structural
+  // ops set the flag. Auto-refresh / SSE re-renders flow through here
+  // too but skip the sync (flag is false), preserving the snapshot.
+  useEffect(() => {
+    if (pendingResyncRef.current) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSnapshot(structuredClone(row));
+      pendingResyncRef.current = false;
+    }
+  }, [row]);
+  const openStage = override ?? snapshot.pipeline_stage ?? 'sale';
+  const setOpenStage = (k) => setOverride(k === (snapshot.pipeline_stage ?? 'sale') ? null : k);
 
   // Draft state re-initialises on cross-row mount (via key) — no
   // useEffect needed.
   const [draft, setDraft] = useState(() => pickEditable(row));
-  function commit(field, value) { setDraft(d => ({ ...d, [field]: value })); }
+  function commit(field, value) {
+    setDraft((d) => ({ ...d, [field]: value }));
+  }
   function flush() {
     const patch = {};
     for (const k of Object.keys(draft)) {
@@ -1166,22 +1568,127 @@ function DetailDrawer({
     if (Object.keys(patch).length) onChange(patch);
   }
 
+  // Wrapped pipeline edit handlers: optimistically mutate snapshot so
+  // the UI reflects the change immediately + insulates from auto-
+  // refresh, then forward to parent for server save.
+  const handleUpdateStage = (stageKey, field, value) => {
+    setSnapshot((prev) => {
+      const next = structuredClone(prev);
+      next.pipeline[stageKey] = { ...next.pipeline[stageKey], [field]: value };
+      return next;
+    });
+    onUpdateStage(stageKey, field, value);
+  };
+  const handleToggleCheck = (stageKey, idx, checked) => {
+    setSnapshot((prev) => {
+      const next = structuredClone(prev);
+      const cl = next.pipeline[stageKey].checklist;
+      if (cl[idx]) cl[idx].checked = checked;
+      return next;
+    });
+    onToggleChecklist(stageKey, idx, checked);
+  };
+  const handleEditCheck = (stageKey, idx, text) => {
+    setSnapshot((prev) => {
+      const next = structuredClone(prev);
+      const cl = next.pipeline[stageKey].checklist;
+      if (cl[idx]) cl[idx].text = text;
+      return next;
+    });
+    onEditChecklist(stageKey, idx, text);
+  };
+  const handleToggleRequired = (stageKey, idx, required) => {
+    setSnapshot((prev) => {
+      const next = structuredClone(prev);
+      const cl = next.pipeline[stageKey].checklist;
+      if (cl[idx]) cl[idx].required = required;
+      return next;
+    });
+    onToggleRequired(stageKey, idx, required);
+  };
+  const handleAddCheck = (stageKey, text) => {
+    setSnapshot((prev) => {
+      const next = structuredClone(prev);
+      next.pipeline[stageKey].checklist.push({
+        text,
+        checked: false,
+        required: false,
+      });
+      return next;
+    });
+    onAddChecklist(stageKey, text);
+  };
+  const handleRemoveCheck = (stageKey, idx) => {
+    setSnapshot((prev) => {
+      const next = structuredClone(prev);
+      next.pipeline[stageKey].checklist.splice(idx, 1);
+      return next;
+    });
+    onRemoveChecklist(stageKey, idx);
+  };
+  // Structural ops — parent owns the canonical mutation; we set the
+  // resync flag so the next row-prop change syncs snapshot to the new
+  // truth.
+  const handleMoveNext = () => {
+    pendingResyncRef.current = true;
+    onMoveNext();
+  };
+  const handleMoveBack = () => {
+    pendingResyncRef.current = true;
+    onMoveBack();
+  };
+  const handleReopen = (stageKey) => {
+    pendingResyncRef.current = true;
+    onReopen(stageKey);
+  };
+
   return (
     <>
       <div className="rfq2-drawer-scrim" onClick={onClose} />
-      <aside className="rfq2-drawer" data-ops-draggable-card role="dialog" aria-label="RFQ detail" onBlur={flush}>
+      <aside
+        className="rfq2-drawer"
+        data-ops-draggable-card
+        role="dialog"
+        aria-label="RFQ detail"
+        onBlur={flush}
+      >
         <header className="rfq2-drawer-head" data-ops-drag-handle>
           <div>
             <div className="rfq2-drawer-title">{row.rfq_no || 'New RFQ'}</div>
-            <div className="rfq2-drawer-sub">{row.customer || ''} {row.product ? '· ' + row.product : ''}</div>
+            <div className="rfq2-drawer-sub">
+              {row.customer || ''} {row.product ? '· ' + row.product : ''}
+            </div>
           </div>
-          <button className="rfq2-drawer-close" onClick={onClose} aria-label="Close">×</button>
+          <button className="rfq2-drawer-close" onClick={onClose} aria-label="Close">
+            ×
+          </button>
         </header>
 
         <nav className="rfq2-drawer-tabs" role="tablist">
-          <button role="tab" aria-selected={tab === 'detail'} className={tab === 'detail' ? 'active' : ''} onClick={() => setTab('detail')}>Detail</button>
-          <button role="tab" aria-selected={tab === 'history'} className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>History</button>
-          <button role="tab" aria-selected={tab === 'attachments'} className={tab === 'attachments' ? 'active' : ''} onClick={() => setTab('attachments')}>Attachments</button>
+          <button
+            role="tab"
+            aria-selected={tab === 'detail'}
+            className={tab === 'detail' ? 'active' : ''}
+            onClick={() => setTab('detail')}
+          >
+            Detail
+          </button>
+          <button
+            role="tab"
+            aria-selected={tab === 'history'}
+            className={tab === 'history' ? 'active' : ''}
+            onClick={() => setTab('history')}
+          >
+            History
+          </button>
+          <button
+            role="tab"
+            aria-selected={tab === 'attachments'}
+            className={tab === 'attachments' ? 'active' : ''}
+            onClick={() => setTab('attachments')}
+          >
+            Attachments
+          </button>
         </nav>
 
         {tab === 'detail' && (
@@ -1189,21 +1696,91 @@ function DetailDrawer({
             <section className="rfq2-drawer-section">
               <h4>Identity</h4>
               <div className="rfq2-grid-2">
-                <Field label="RFQ No."  value={draft.rfq_no} onChange={v => commit('rfq_no', v)} onBlur={flush} />
-                <Field label="Customer" value={draft.customer} onChange={v => commit('customer', v)} onBlur={flush} />
-                <Field label="Product"  value={draft.product} onChange={v => commit('product', v)} onBlur={flush} />
-                <Field label="EAU Qty"  type="number" value={draft.eau_qty} onChange={v => commit('eau_qty', v)} onBlur={flush} />
-                <Field label="MOQ"      type="number" value={draft.moq} onChange={v => commit('moq', v)} onBlur={flush} />
-                <Field label="Quote Value (USD)" type="number" value={draft.quote_value} onChange={v => commit('quote_value', v)} onBlur={flush} />
-                <Field label="RFQ Date" type="date"   value={draft.rfq_date} onChange={v => commit('rfq_date', v)} onBlur={flush} />
-                <Field label="Deadline" type="date"   value={draft.deadline} onChange={v => commit('deadline', v)} onBlur={flush} />
-                <Field label="Sales Owner" value={draft.sale_owner} onChange={v => commit('sale_owner', v)} onBlur={flush} />
-                <Field label="NPI Owner" value={draft.npi_owner} onChange={v => commit('npi_owner', v)} onBlur={flush} />
-                <Field label="Owner (overall)" value={draft.owner} onChange={v => commit('owner', v)} onBlur={flush} />
+                <Field
+                  label="RFQ No."
+                  value={draft.rfq_no}
+                  onChange={(v) => commit('rfq_no', v)}
+                  onBlur={flush}
+                />
+                <Field
+                  label="Customer"
+                  value={draft.customer}
+                  onChange={(v) => commit('customer', v)}
+                  onBlur={flush}
+                />
+                <Field
+                  label="Product"
+                  value={draft.product}
+                  onChange={(v) => commit('product', v)}
+                  onBlur={flush}
+                />
+                <Field
+                  label="EAU Qty"
+                  type="number"
+                  value={draft.eau_qty}
+                  onChange={(v) => commit('eau_qty', v)}
+                  onBlur={flush}
+                />
+                <Field
+                  label="MOQ"
+                  type="number"
+                  value={draft.moq}
+                  onChange={(v) => commit('moq', v)}
+                  onBlur={flush}
+                />
+                <Field
+                  label="Quote Value (USD)"
+                  type="number"
+                  value={draft.quote_value}
+                  onChange={(v) => commit('quote_value', v)}
+                  onBlur={flush}
+                />
+                <Field
+                  label="RFQ Date"
+                  type="date"
+                  value={draft.rfq_date}
+                  onChange={(v) => commit('rfq_date', v)}
+                  onBlur={flush}
+                />
+                <Field
+                  label="Deadline"
+                  type="date"
+                  value={draft.deadline}
+                  onChange={(v) => commit('deadline', v)}
+                  onBlur={flush}
+                />
+                <Field
+                  label="Sales Owner"
+                  value={draft.sale_owner}
+                  onChange={(v) => commit('sale_owner', v)}
+                  onBlur={flush}
+                />
+                <Field
+                  label="NPI Owner"
+                  value={draft.npi_owner}
+                  onChange={(v) => commit('npi_owner', v)}
+                  onBlur={flush}
+                />
+                <Field
+                  label="Owner (overall)"
+                  value={draft.owner}
+                  onChange={(v) => commit('owner', v)}
+                  onBlur={flush}
+                />
                 <label className="rfq2-field">
                   <span>Result</span>
-                  <select value={draft.result || 'PENDING'} onChange={e => { commit('result', e.target.value); setTimeout(flush, 0); }}>
-                    {RESULT_OPTS.map(r => <option key={r} value={r}>{r}</option>)}
+                  <select
+                    value={draft.result || 'PENDING'}
+                    onChange={(e) => {
+                      commit('result', e.target.value);
+                      setTimeout(flush, 0);
+                    }}
+                  >
+                    {RESULT_OPTS.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
                   </select>
                 </label>
               </div>
@@ -1211,17 +1788,30 @@ function DetailDrawer({
               {(draft.result === 'WIN' || draft.result === 'LOSS') && (
                 <label className="rfq2-field rfq2-field-wide">
                   <span>Reason Code ({draft.result})</span>
-                  <select value={draft.reason_code || ''} onChange={e => { commit('reason_code', e.target.value); setTimeout(flush, 0); }}>
+                  <select
+                    value={draft.reason_code || ''}
+                    onChange={(e) => {
+                      commit('reason_code', e.target.value);
+                      setTimeout(flush, 0);
+                    }}
+                  >
                     <option value="">(select)</option>
-                    {(REASON_CODES[draft.result === 'WIN' ? 'win' : 'loss']).map(c => (
-                      <option key={c.code} value={c.code}>{c.code} — {c.label}</option>
+                    {REASON_CODES[draft.result === 'WIN' ? 'win' : 'loss'].map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.code} — {c.label}
+                      </option>
                     ))}
                   </select>
                 </label>
               )}
               <label className="rfq2-field rfq2-field-wide">
                 <span>Remarks</span>
-                <textarea rows={2} value={draft.remarks || ''} onChange={e => commit('remarks', e.target.value)} onBlur={flush} />
+                <textarea
+                  rows={2}
+                  value={draft.remarks || ''}
+                  onChange={(e) => commit('remarks', e.target.value)}
+                  onBlur={flush}
+                />
               </label>
             </section>
 
@@ -1230,17 +1820,64 @@ function DetailDrawer({
               <div className="rfq2-grid-2">
                 <label className="rfq2-field">
                   <span>Print Type</span>
-                  <select value={draft.specs?.print_type || ''} onChange={e => { commit('specs', { ...draft.specs, print_type: e.target.value }); setTimeout(flush, 0); }}>
-                    {PRINT_TYPES.map(p => <option key={p} value={p}>{p || '(none)'}</option>)}
+                  <select
+                    value={draft.specs?.print_type || ''}
+                    onChange={(e) => {
+                      commit('specs', { ...draft.specs, print_type: e.target.value });
+                      setTimeout(flush, 0);
+                    }}
+                  >
+                    {PRINT_TYPES.map((p) => (
+                      <option key={p} value={p}>
+                        {p || '(none)'}
+                      </option>
+                    ))}
                   </select>
                 </label>
-                <Field label="Width (mm)"  type="number" value={draft.specs?.width_mm}  onChange={v => commit('specs', { ...draft.specs, width_mm: v })} onBlur={flush} />
-                <Field label="Height (mm)" type="number" value={draft.specs?.height_mm} onChange={v => commit('specs', { ...draft.specs, height_mm: v })} onBlur={flush} />
-                <Field label="Material"    value={draft.specs?.material} onChange={v => commit('specs', { ...draft.specs, material: v })} onBlur={flush} />
-                <Field label="Ink Spec"    value={draft.specs?.ink_spec} onChange={v => commit('specs', { ...draft.specs, ink_spec: v })} onBlur={flush} />
-                <Field label="Foil / Finish" value={draft.specs?.foil} onChange={v => commit('specs', { ...draft.specs, foil: v })} onBlur={flush} />
-                <Field label="Die Type"    value={draft.specs?.die_type} onChange={v => commit('specs', { ...draft.specs, die_type: v })} onBlur={flush} />
-                <Field label="Dieline File" value={draft.specs?.dieline_file} onChange={v => commit('specs', { ...draft.specs, dieline_file: v })} onBlur={flush} />
+                <Field
+                  label="Width (mm)"
+                  type="number"
+                  value={draft.specs?.width_mm}
+                  onChange={(v) => commit('specs', { ...draft.specs, width_mm: v })}
+                  onBlur={flush}
+                />
+                <Field
+                  label="Height (mm)"
+                  type="number"
+                  value={draft.specs?.height_mm}
+                  onChange={(v) => commit('specs', { ...draft.specs, height_mm: v })}
+                  onBlur={flush}
+                />
+                <Field
+                  label="Material"
+                  value={draft.specs?.material}
+                  onChange={(v) => commit('specs', { ...draft.specs, material: v })}
+                  onBlur={flush}
+                />
+                <Field
+                  label="Ink Spec"
+                  value={draft.specs?.ink_spec}
+                  onChange={(v) => commit('specs', { ...draft.specs, ink_spec: v })}
+                  onBlur={flush}
+                />
+                <Field
+                  label="Foil / Finish"
+                  value={draft.specs?.foil}
+                  onChange={(v) => commit('specs', { ...draft.specs, foil: v })}
+                  onBlur={flush}
+                />
+                <Field
+                  label="Die Type"
+                  value={draft.specs?.die_type}
+                  onChange={(v) => commit('specs', { ...draft.specs, die_type: v })}
+                  onBlur={flush}
+                />
+                <Field
+                  label="Dieline File"
+                  value={draft.specs?.dieline_file}
+                  onChange={(v) => commit('specs', { ...draft.specs, dieline_file: v })}
+                  onBlur={flush}
+                />
               </div>
             </section>
 
@@ -1248,33 +1885,55 @@ function DetailDrawer({
             <DocumentFlowStrip row={row} />
 
             <section className="rfq2-drawer-section">
-              <div className="rfq2-drawer-sec-head">
-                <h4>Pipeline</h4>
-                <div className="rfq2-move">
-                  <button onClick={onMoveBack} disabled={row.pipeline_stage === PIPELINE_KEYS[0]}>← Back</button>
-                  <button
-                    onClick={onMoveNext}
-                    disabled={row.pipeline_stage === PIPELINE_KEYS[PIPELINE_KEYS.length - 1]
-                      || !!stageAdvanceBlocker(row, row.pipeline_stage)}
-                    title={stageAdvanceBlocker(row, row.pipeline_stage) || 'Advance stage'}
-                  >Next →</button>
-                </div>
-              </div>
-              {PIPELINE.map(cfg => (
+              {(() => {
+                const isLastStage =
+                  snapshot.pipeline_stage === PIPELINE_KEYS[PIPELINE_KEYS.length - 1];
+                const blocker = isLastStage
+                  ? null
+                  : stageAdvanceBlocker(snapshot, snapshot.pipeline_stage);
+                return (
+                  <>
+                    <div className="rfq2-drawer-sec-head">
+                      <h4>Pipeline</h4>
+                      <div className="rfq2-move">
+                        <button
+                          onClick={handleMoveBack}
+                          disabled={snapshot.pipeline_stage === PIPELINE_KEYS[0]}
+                        >
+                          ← Back
+                        </button>
+                        <button
+                          onClick={handleMoveNext}
+                          disabled={isLastStage || !!blocker}
+                          title={blocker || 'Advance stage'}
+                        >
+                          Next →
+                        </button>
+                      </div>
+                    </div>
+                    {blocker && (
+                      <div className="rfq2-stage-blocker" role="alert">
+                        ⚠ Cannot advance: {blocker}. Fill this and the Next button enables.
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+              {PIPELINE.map((cfg) => (
                 <StageBlock
                   key={cfg.key}
                   cfg={cfg}
                   open={openStage === cfg.key}
-                  active={row.pipeline_stage === cfg.key}
-                  stage={row.pipeline[cfg.key]}
+                  active={snapshot.pipeline_stage === cfg.key}
+                  stage={snapshot.pipeline[cfg.key]}
                   onToggle={() => setOpenStage(openStage === cfg.key ? '' : cfg.key)}
-                  onUpdate={(field, value) => onUpdateStage(cfg.key, field, value)}
-                  onReopen={() => onReopen(cfg.key)}
-                  onToggleCheck={(idx, checked) => onToggleChecklist(cfg.key, idx, checked)}
-                  onEditCheck={(idx, text) => onEditChecklist(cfg.key, idx, text)}
-                  onToggleRequired={(idx, required) => onToggleRequired(cfg.key, idx, required)}
-                  onAddCheck={(text) => onAddChecklist(cfg.key, text)}
-                  onRemoveCheck={(idx) => onRemoveChecklist(cfg.key, idx)}
+                  onUpdate={(field, value) => handleUpdateStage(cfg.key, field, value)}
+                  onReopen={() => handleReopen(cfg.key)}
+                  onToggleCheck={(idx, checked) => handleToggleCheck(cfg.key, idx, checked)}
+                  onEditCheck={(idx, text) => handleEditCheck(cfg.key, idx, text)}
+                  onToggleRequired={(idx, required) => handleToggleRequired(cfg.key, idx, required)}
+                  onAddCheck={(text) => handleAddCheck(cfg.key, text)}
+                  onRemoveCheck={(idx) => handleRemoveCheck(cfg.key, idx)}
                 />
               ))}
             </section>
@@ -1285,7 +1944,9 @@ function DetailDrawer({
         {tab === 'attachments' && <AttachmentsTab rfqId={row.id} myUsername={myUsername} />}
 
         <footer className="rfq2-drawer-foot">
-          <button className="rfq2-btn rfq2-btn-danger" onClick={onDelete}>Delete</button>
+          <button className="rfq2-btn rfq2-btn-danger" onClick={onDelete}>
+            Delete
+          </button>
           <div style={{ flex: 1 }} />
           <button
             className="rfq2-btn rfq2-btn-primary"
@@ -1331,33 +1992,55 @@ function DocumentFlowStrip({ row }) {
       <div className="rfq2-flow-strip">
         <div className="rfq2-flow-node active" title="This RFQ">
           <span className="rfq2-flow-icon">📋</span>
-          <span className="rfq2-flow-label">RFQ<br /><b>{row.rfq_no || '—'}</b></span>
+          <span className="rfq2-flow-label">
+            RFQ
+            <br />
+            <b>{row.rfq_no || '—'}</b>
+          </span>
         </div>
         <div className="rfq2-flow-arrow">→</div>
         <div className={'rfq2-flow-node' + (linked.length ? ' linked' : ' empty')}>
           <span className="rfq2-flow-icon">💰</span>
-          <span className="rfq2-flow-label">Pricing Worksheet<br />
-            {linked.length
-              ? <b>{linked.length} handoff{linked.length > 1 ? 's' : ''}</b>
-              : <i>not synced</i>}
+          <span className="rfq2-flow-label">
+            Pricing Worksheet
+            <br />
+            {linked.length ? (
+              <b>
+                {linked.length} handoff{linked.length > 1 ? 's' : ''}
+              </b>
+            ) : (
+              <i>not synced</i>
+            )}
           </span>
           {linked.length > 0 && (
             <button
               className="rfq2-flow-goto"
-              onClick={() => window.dispatchEvent(new CustomEvent('ops-switch-tab', { detail: 'q-hist' }))}
+              onClick={() =>
+                window.dispatchEvent(new CustomEvent('ops-switch-tab', { detail: 'q-hist' }))
+              }
               title="Open Quote History"
-            >Open ↗</button>
+            >
+              Open ↗
+            </button>
           )}
         </div>
         <div className="rfq2-flow-arrow">→</div>
         <div className="rfq2-flow-node empty">
           <span className="rfq2-flow-icon">📦</span>
-          <span className="rfq2-flow-label">Sample Request<br /><i>future</i></span>
+          <span className="rfq2-flow-label">
+            Sample Request
+            <br />
+            <i>future</i>
+          </span>
         </div>
         <div className="rfq2-flow-arrow">→</div>
         <div className="rfq2-flow-node empty">
           <span className="rfq2-flow-icon">🧾</span>
-          <span className="rfq2-flow-label">Customer Order<br /><i>future</i></span>
+          <span className="rfq2-flow-label">
+            Customer Order
+            <br />
+            <i>future</i>
+          </span>
         </div>
       </div>
     </section>
@@ -1365,24 +2048,48 @@ function DocumentFlowStrip({ row }) {
 }
 
 function StageBlock({
-  cfg, open, active, stage,
-  onToggle, onUpdate, onReopen,
-  onToggleCheck, onEditCheck, onToggleRequired, onAddCheck, onRemoveCheck,
+  cfg,
+  open,
+  active,
+  stage,
+  onToggle,
+  onUpdate,
+  onReopen,
+  onToggleCheck,
+  onEditCheck,
+  onToggleRequired,
+  onAddCheck,
+  onRemoveCheck,
 }) {
   const [newItem, setNewItem] = useState('');
-  const checklistDone = (stage.checklist || []).filter(i => i.checked).length;
+  const checklistDone = (stage.checklist || []).filter((i) => i.checked).length;
   const checklistTotal = (stage.checklist || []).length;
-  const missingReq = (stage.checklist || []).filter(i => i.required && !i.checked).length;
+  const missingReq = (stage.checklist || []).filter((i) => i.required && !i.checked).length;
   const isDone = stage.status === 'done';
 
   return (
-    <div className={'rfq2-stage' + (active ? ' rfq2-stage-active' : '') + (isDone ? ' rfq2-stage-signed' : '')}>
-      <button className="rfq2-stage-head" onClick={onToggle} aria-expanded={open} style={{ borderLeftColor: cfg.color }}>
-        <span className="rfq2-stage-badge" style={{ background: cfg.bg, color: cfg.color }}>{cfg.short}</span>
+    <div
+      className={
+        'rfq2-stage' + (active ? ' rfq2-stage-active' : '') + (isDone ? ' rfq2-stage-signed' : '')
+      }
+    >
+      <button
+        className="rfq2-stage-head"
+        onClick={onToggle}
+        aria-expanded={open}
+        style={{ borderLeftColor: cfg.color }}
+      >
+        <span className="rfq2-stage-badge" style={{ background: cfg.bg, color: cfg.color }}>
+          {cfg.short}
+        </span>
         <span className="rfq2-stage-label">{cfg.label}</span>
-        <span className="rfq2-stage-status" style={{ color: STATUS_COLOR[stage.status] }}>● {STATUS_LABEL[stage.status]}</span>
+        <span className="rfq2-stage-status" style={{ color: STATUS_COLOR[stage.status] }}>
+          ● {STATUS_LABEL[stage.status]}
+        </span>
         {missingReq > 0 && !isDone && <span className="rfq2-stage-req">{missingReq} req</span>}
-        <span className="rfq2-stage-progress">{checklistDone}/{checklistTotal}</span>
+        <span className="rfq2-stage-progress">
+          {checklistDone}/{checklistTotal}
+        </span>
         <span className="rfq2-stage-chevron">{open ? '▾' : '▸'}</span>
       </button>
       {open && (
@@ -1394,9 +2101,12 @@ function StageBlock({
             <div className="rfq2-signature">
               <span className="rfq2-signature-stamp">✓ Signed</span>
               <span className="rfq2-signature-meta">
-                by <b>{stage.signed_by || '—'}</b> on {(stage.signed_at || '').slice(0, 19).replace('T', ' ')}
+                by <b>{stage.signed_by || '—'}</b> on{' '}
+                {(stage.signed_at || '').slice(0, 19).replace('T', ' ')}
               </span>
-              <button className="rfq2-signature-reopen" onClick={onReopen}>⟲ Reopen</button>
+              <button className="rfq2-signature-reopen" onClick={onReopen}>
+                ⟲ Reopen
+              </button>
             </div>
           )}
 
@@ -1404,25 +2114,45 @@ function StageBlock({
             <div className="rfq2-grid-2">
               <label className="rfq2-field">
                 <span>Status</span>
-                <select value={stage.status} onChange={e => onUpdate('status', e.target.value)}>
-                  {STATUS_OPTS.map(s => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+                <select value={stage.status} onChange={(e) => onUpdate('status', e.target.value)}>
+                  {STATUS_OPTS.map((s) => (
+                    <option key={s} value={s}>
+                      {STATUS_LABEL[s]}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="rfq2-field">
                 <span>Owner ({cfg.role})</span>
-                <input type="text" value={stage.owner || ''} onChange={e => onUpdate('owner', e.target.value)} />
+                <input
+                  type="text"
+                  value={stage.owner || ''}
+                  onChange={(e) => onUpdate('owner', e.target.value)}
+                />
               </label>
               <label className="rfq2-field">
                 <span>Start</span>
-                <input type="date" value={stage.start || ''} onChange={e => onUpdate('start', e.target.value)} />
+                <input
+                  type="date"
+                  value={stage.start || ''}
+                  onChange={(e) => onUpdate('start', e.target.value)}
+                />
               </label>
               <label className="rfq2-field">
                 <span>Done</span>
-                <input type="date" value={stage.done || ''} onChange={e => onUpdate('done', e.target.value)} />
+                <input
+                  type="date"
+                  value={stage.done || ''}
+                  onChange={(e) => onUpdate('done', e.target.value)}
+                />
               </label>
               <label className="rfq2-field">
                 <span>SLA (days)</span>
-                <input type="number" value={stage.sla_days || 0} onChange={e => onUpdate('sla_days', Number(e.target.value) || 0)} />
+                <input
+                  type="number"
+                  value={stage.sla_days || 0}
+                  onChange={(e) => onUpdate('sla_days', Number(e.target.value) || 0)}
+                />
               </label>
             </div>
 
@@ -1430,10 +2160,15 @@ function StageBlock({
             {stage.status === 'blocked' && (
               <label className="rfq2-field rfq2-field-wide">
                 <span>Blocked reason</span>
-                <select value={stage.reason_code || ''} onChange={e => onUpdate('reason_code', e.target.value)}>
+                <select
+                  value={stage.reason_code || ''}
+                  onChange={(e) => onUpdate('reason_code', e.target.value)}
+                >
                   <option value="">(select)</option>
-                  {REASON_CODES.blocked.map(c => (
-                    <option key={c.code} value={c.code}>{c.code} — {c.label}</option>
+                  {REASON_CODES.blocked.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.code} — {c.label}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -1441,20 +2176,43 @@ function StageBlock({
 
             <label className="rfq2-field rfq2-field-wide">
               <span>Notes</span>
-              <textarea rows={2} value={stage.notes || ''} onChange={e => onUpdate('notes', e.target.value)} />
+              <textarea
+                rows={2}
+                value={stage.notes || ''}
+                onChange={(e) => onUpdate('notes', e.target.value)}
+              />
             </label>
 
             <div className="rfq2-checklist">
               <div className="rfq2-checklist-title">Checklist</div>
               {(stage.checklist || []).map((it, i) => (
                 <div key={i} className={'rfq2-checklist-item' + (it.required ? ' required' : '')}>
-                  <input type="checkbox" checked={!!it.checked} onChange={e => onToggleCheck(i, e.target.checked)} />
-                  <input type="text" value={it.text} onChange={e => onEditCheck(i, e.target.value)} className={it.checked ? 'rfq2-check-done' : ''} />
+                  <input
+                    type="checkbox"
+                    checked={!!it.checked}
+                    onChange={(e) => onToggleCheck(i, e.target.checked)}
+                  />
+                  <input
+                    type="text"
+                    value={it.text}
+                    onChange={(e) => onEditCheck(i, e.target.value)}
+                    className={it.checked ? 'rfq2-check-done' : ''}
+                  />
                   <label className="rfq2-checklist-req" title="Mark as required to advance">
-                    <input type="checkbox" checked={!!it.required} onChange={e => onToggleRequired(i, e.target.checked)} />
+                    <input
+                      type="checkbox"
+                      checked={!!it.required}
+                      onChange={(e) => onToggleRequired(i, e.target.checked)}
+                    />
                     <span>req</span>
                   </label>
-                  <button className="rfq2-checklist-del" onClick={() => onRemoveCheck(i)} aria-label="Remove">×</button>
+                  <button
+                    className="rfq2-checklist-del"
+                    onClick={() => onRemoveCheck(i)}
+                    aria-label="Remove"
+                  >
+                    ×
+                  </button>
                 </div>
               ))}
               <div className="rfq2-checklist-add">
@@ -1462,10 +2220,24 @@ function StageBlock({
                   type="text"
                   placeholder="+ Add task"
                   value={newItem}
-                  onChange={e => setNewItem(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && newItem.trim()) { onAddCheck(newItem); setNewItem(''); } }}
+                  onChange={(e) => setNewItem(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newItem.trim()) {
+                      onAddCheck(newItem);
+                      setNewItem('');
+                    }
+                  }}
                 />
-                <button onClick={() => { if (newItem.trim()) { onAddCheck(newItem); setNewItem(''); } }}>Add</button>
+                <button
+                  onClick={() => {
+                    if (newItem.trim()) {
+                      onAddCheck(newItem);
+                      setNewItem('');
+                    }
+                  }}
+                >
+                  Add
+                </button>
               </div>
             </div>
           </fieldset>
@@ -1482,7 +2254,9 @@ function Field({ label, value, onChange, onBlur, type = 'text' }) {
       <input
         type={type}
         value={value ?? ''}
-        onChange={e => onChange(type === 'number' ? (parseLocaleNumber(e.target.value) || 0) : e.target.value)}
+        onChange={(e) =>
+          onChange(type === 'number' ? parseLocaleNumber(e.target.value) || 0 : e.target.value)
+        }
         onBlur={onBlur}
       />
     </label>
@@ -1503,16 +2277,34 @@ function HistoryTab({ rfqId }) {
 
   useEffect(() => {
     let cancelled = false;
-    sharedApi.getRFQAudit(rfqId).then(list => {
-      if (!cancelled) setEntries(Array.isArray(list) ? list : []);
-    }).catch(e => {
-      if (!cancelled) { setErr(e?.message || 'Load failed'); setEntries([]); }
-    });
-    return () => { cancelled = true; };
+    sharedApi
+      .getRFQAudit(rfqId)
+      .then((list) => {
+        if (!cancelled) setEntries(Array.isArray(list) ? list : []);
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setErr(e?.message || 'Load failed');
+          setEntries([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [rfqId]);
 
-  if (entries === null) return <div className="rfq2-drawer-scroll" style={{ padding: 20 }}>Loading…</div>;
-  if (err) return <div className="rfq2-drawer-scroll" style={{ padding: 20, color: '#ef4444' }}>Error: {err}</div>;
+  if (entries === null)
+    return (
+      <div className="rfq2-drawer-scroll" style={{ padding: 20 }}>
+        Loading…
+      </div>
+    );
+  if (err)
+    return (
+      <div className="rfq2-drawer-scroll" style={{ padding: 20, color: '#ef4444' }}>
+        Error: {err}
+      </div>
+    );
 
   return (
     <div className="rfq2-drawer-scroll">
@@ -1527,12 +2319,23 @@ function HistoryTab({ rfqId }) {
                 <div className="rfq2-audit-ts">{(e.ts || '').slice(0, 19).replace('T', ' ')}</div>
                 <div className="rfq2-audit-body">
                   <b>{e.user || '—'}</b> <span className="rfq2-audit-kind">{e.kind || ''}</span>
-                  {e.field && <> · <span className="rfq2-audit-field">{e.field}</span></>}
+                  {e.field && (
+                    <>
+                      {' '}
+                      · <span className="rfq2-audit-field">{e.field}</span>
+                    </>
+                  )}
                   {(e.from !== undefined || e.to !== undefined) && (
                     <div className="rfq2-audit-delta">
-                      {e.from !== undefined && <span className="rfq2-audit-from">{String(e.from).slice(0, 80) || '∅'}</span>}
+                      {e.from !== undefined && (
+                        <span className="rfq2-audit-from">
+                          {String(e.from).slice(0, 80) || '∅'}
+                        </span>
+                      )}
                       {e.from !== undefined && e.to !== undefined && <span> → </span>}
-                      {e.to !== undefined && <span className="rfq2-audit-to">{String(e.to).slice(0, 80) || '∅'}</span>}
+                      {e.to !== undefined && (
+                        <span className="rfq2-audit-to">{String(e.to).slice(0, 80) || '∅'}</span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1554,34 +2357,44 @@ function AttachmentsTab({ rfqId, myUsername }) {
 
   const reload = useCallback(() => {
     setList(null);
-    sharedApi.listRFQAttachments(rfqId).then(arr => setList(Array.isArray(arr) ? arr : []))
+    sharedApi
+      .listRFQAttachments(rfqId)
+      .then((arr) => setList(Array.isArray(arr) ? arr : []))
       .catch(() => setList([]));
   }, [rfqId]);
-  useEffect(() => { reload(); }, [reload]);
+  useEffect(() => {
+    reload();
+  }, [reload]);
 
-  const handleUpload = useCallback(async (file) => {
-    if (!file) return;
-    setBusy(true);
-    try {
-      await sharedApi.uploadRFQAttachment(rfqId, file);
-      showToast('Uploaded ' + file.name);
-      reload();
-    } catch (e) {
-      showToast('Upload failed: ' + (e.message || 'Unknown error'), 'err');
-    } finally {
-      setBusy(false);
-    }
-  }, [rfqId, reload]);
+  const handleUpload = useCallback(
+    async (file) => {
+      if (!file) return;
+      setBusy(true);
+      try {
+        await sharedApi.uploadRFQAttachment(rfqId, file);
+        showToast('Uploaded ' + file.name);
+        reload();
+      } catch (e) {
+        showToast('Upload failed: ' + (e.message || 'Unknown error'), 'err');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [rfqId, reload]
+  );
 
-  const handleDelete = useCallback(async (attId, name) => {
-    if (!confirm(`Remove attachment "${name}" from this RFQ?`)) return;
-    try {
-      await sharedApi.deleteRFQAttachment(rfqId, attId);
-      reload();
-    } catch (e) {
-      showToast('Delete failed: ' + (e.message || 'Unknown error'), 'err');
-    }
-  }, [rfqId, reload]);
+  const handleDelete = useCallback(
+    async (attId, name) => {
+      if (!confirm(`Remove attachment "${name}" from this RFQ?`)) return;
+      try {
+        await sharedApi.deleteRFQAttachment(rfqId, attId);
+        reload();
+      } catch (e) {
+        showToast('Delete failed: ' + (e.message || 'Unknown error'), 'err');
+      }
+    },
+    [rfqId, reload]
+  );
 
   return (
     <div className="rfq2-drawer-scroll">
@@ -1591,7 +2404,10 @@ function AttachmentsTab({ rfqId, myUsername }) {
           <input
             ref={fileInput}
             type="file"
-            onChange={e => { if (e.target.files?.[0]) handleUpload(e.target.files[0]); e.target.value = ''; }}
+            onChange={(e) => {
+              if (e.target.files?.[0]) handleUpload(e.target.files[0]);
+              e.target.value = '';
+            }}
           />
           {busy && <span className="rfq2-save-status">Uploading…</span>}
           {myUsername && <span className="rfq2-save-status">Uploading as {myUsername}</span>}
@@ -1603,19 +2419,37 @@ function AttachmentsTab({ rfqId, myUsername }) {
         ) : (
           <table className="rfq2-attach-list">
             <thead>
-              <tr><th>File</th><th>Size</th><th>Uploaded by</th><th>When</th><th /></tr>
+              <tr>
+                <th>File</th>
+                <th>Size</th>
+                <th>Uploaded by</th>
+                <th>When</th>
+                <th />
+              </tr>
             </thead>
             <tbody>
-              {list.map(a => (
+              {list.map((a) => (
                 <tr key={a.id}>
                   <td>
-                    <a href={sharedApi.rfqAttachmentUrl(rfqId, a.id)}
-                       target="_blank" rel="noreferrer">{a.original}</a>
+                    <a
+                      href={sharedApi.rfqAttachmentUrl(rfqId, a.id)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {a.original}
+                    </a>
                   </td>
                   <td className="rfq2-num">{fmtBytes(a.size)}</td>
                   <td>{a.uploaded_by}</td>
                   <td>{(a.uploaded_at || '').slice(0, 19).replace('T', ' ')}</td>
-                  <td><button onClick={() => handleDelete(a.id, a.original)} className="rfq2-checklist-del">×</button></td>
+                  <td>
+                    <button
+                      onClick={() => handleDelete(a.id, a.original)}
+                      className="rfq2-checklist-del"
+                    >
+                      ×
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
