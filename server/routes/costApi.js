@@ -39,14 +39,23 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Package root = two levels up from this file (server/routes → package/).
-// Used for code backups that snapshot the source tree into the package.
+// Used for the code-snapshot operation that copies the source tree.
 const PKG_ROOT = path.resolve(__dirname, '..', '..');
-const PKG_BACKUP_DIR = path.join(PKG_ROOT, 'Backup & restore');
+
+// Package backups (data + code) used to land at <PKG_ROOT>/Backup & restore/,
+// which inside a packaged Electron .app on macOS resolves to the read-only
+// signed bundle and produced "unable to open database file" / EROFS errors
+// (Day-1 hardware test, 2026-05-08). Resolve lazily off DATA_DIR so the
+// backup target is always the writable user-data tree.
+function getPkgBackupDir() {
+  return path.join(getDataDir(), 'Backup', 'PackageBackups');
+}
 
 function ensurePkgBackupDirs() {
-  fs.mkdirSync(path.join(PKG_BACKUP_DIR, 'Code'), { recursive: true });
-  fs.mkdirSync(path.join(PKG_BACKUP_DIR, 'Data'), { recursive: true });
-  return PKG_BACKUP_DIR;
+  const root = getPkgBackupDir();
+  fs.mkdirSync(path.join(root, 'Code'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'Data'), { recursive: true });
+  return root;
 }
 
 // Source tree filter — used by both backup (copy out) and restore (copy back).
@@ -3014,7 +3023,7 @@ router.get('/backup/list', (req, res) => {
   const u = getSessionUser(getTokenFromHeader(req));
   if (!u) return res.status(401).json({ error: 'Unauthorized' });
   ensurePkgBackupDirs();
-  const bdir = path.join(PKG_BACKUP_DIR, 'Data');
+  const bdir = path.join(getPkgBackupDir(), 'Data');
   try {
     const files = fs
       .readdirSync(bdir)
@@ -3043,7 +3052,7 @@ router.get('/backup/code-list', (req, res) => {
   const u = getSessionUser(getTokenFromHeader(req));
   if (!u) return res.status(401).json({ error: 'Unauthorized' });
   ensurePkgBackupDirs();
-  const bdir = path.join(PKG_BACKUP_DIR, 'Code');
+  const bdir = path.join(getPkgBackupDir(), 'Code');
   try {
     const entries = fs
       .readdirSync(bdir, { withFileTypes: true })
@@ -3074,7 +3083,7 @@ router.get('/backup/download/:name', (req, res) => {
   const u = getSessionUser(getTokenFromHeader(req));
   if (!u) return res.status(401).json({ error: 'Unauthorized' });
   const fname = safeFn(decodeURIComponent(req.params.name));
-  const fpath = path.join(PKG_BACKUP_DIR, 'Data', fname);
+  const fpath = path.join(getPkgBackupDir(), 'Data', fname);
   if (!fs.existsSync(fpath)) return res.status(404).json({ error: 'Not found' });
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
@@ -3094,7 +3103,7 @@ router.post('/backup/data', writeRateLimit, (req, res) => {
     ensurePkgBackupDirs();
     const snap = buildBackupSnapshot();
     const fname = `manual_${timestampTag()}.json`;
-    atomicWriteFileSync(path.join(PKG_BACKUP_DIR, 'Data', fname), JSON.stringify(snap));
+    atomicWriteFileSync(path.join(getPkgBackupDir(), 'Data', fname), JSON.stringify(snap));
     console.log(`  📦  Data backup → Backup & restore/Data/${fname}`);
     res.json({ ok: true, filename: fname });
   } catch (e) {
@@ -3118,7 +3127,7 @@ router.post('/backup/code-server', (req, res) => {
   try {
     ensurePkgBackupDirs();
     const name = `code_${timestampTag()}`;
-    const destDir = path.join(PKG_BACKUP_DIR, 'Code', name);
+    const destDir = path.join(getPkgBackupDir(), 'Code', name);
     const { copied, skipped } = copyPackageSource(PKG_ROOT, destDir);
     if (copied === 0) {
       // Total failure — every single top-level threw. Clean up the empty
@@ -3173,7 +3182,7 @@ router.post('/backup/restore', writeRateLimit, (req, res) => {
   const u = getSessionUser(getTokenFromHeader(req));
   if (!isSys(u)) return res.status(403).json({ error: 'Admin only' });
   const { filename } = req.body;
-  const fpath = path.join(PKG_BACKUP_DIR, 'Data', safeFn(filename));
+  const fpath = path.join(getPkgBackupDir(), 'Data', safeFn(filename));
   if (!fs.existsSync(fpath)) return res.status(404).json({ error: 'Not found' });
   // Parse + validate the snapshot BEFORE touching any real data file.
   // If the JSON is corrupted or the shape is wrong, we abort cleanly rather
@@ -3190,7 +3199,7 @@ router.post('/backup/restore', writeRateLimit, (req, res) => {
   ensurePkgBackupDirs();
   const preBak = `pre_restore_${timestampTag()}.json`;
   const preSnap = buildBackupSnapshot();
-  atomicWriteFileSync(path.join(PKG_BACKUP_DIR, 'Data', preBak), JSON.stringify(preSnap));
+  atomicWriteFileSync(path.join(getPkgBackupDir(), 'Data', preBak), JSON.stringify(preSnap));
   const { restored, failed } = restoreFromSnapshot(snap);
   console.log(
     `  ↩  Restored from ${filename} (${restored.length} datasets, ${failed.length} failed)`
@@ -3272,7 +3281,7 @@ router.post('/backup/upload', writeRateLimit, backupUpload.single('file'), (req,
     const original = safeFn(req.file.originalname || 'uploaded.json');
     const tag = timestampTag();
     const fname = `uploaded_${tag}_${original}`;
-    const dest = path.join(PKG_BACKUP_DIR, 'Data', fname);
+    const dest = path.join(getPkgBackupDir(), 'Data', fname);
     atomicWriteFileSync(dest, buf);
     audit(
       'BACKUP_UPLOAD',
@@ -3302,7 +3311,7 @@ router.post('/backup/delete', writeRateLimit, (req, res) => {
   try {
     const { filename, type: btype = 'data' } = req.body;
     const subdir = btype === 'code' ? 'Code' : 'Data';
-    const fpath = path.join(PKG_BACKUP_DIR, subdir, safeFn(filename));
+    const fpath = path.join(getPkgBackupDir(), subdir, safeFn(filename));
     if (!fs.existsSync(fpath)) return res.status(404).json({ error: 'Not found' });
     // Data backups are single JSON files → unlink. Code backups are folders → rmSync recursive.
     const stat = fs.statSync(fpath);
@@ -3564,7 +3573,7 @@ router.post('/backup/code-restore', writeRateLimit, (req, res) => {
     const fname = safeFn(filename || '');
     if (!fname) return res.status(400).json({ error: 'filename required' });
 
-    const srcDir = path.join(PKG_BACKUP_DIR, 'Code', fname);
+    const srcDir = path.join(getPkgBackupDir(), 'Code', fname);
     if (!fs.existsSync(srcDir) || !fs.statSync(srcDir).isDirectory()) {
       return res.status(404).json({ error: 'Backup snapshot not found' });
     }
@@ -3573,7 +3582,7 @@ router.post('/backup/code-restore', writeRateLimit, (req, res) => {
 
     // 1. Safety backup of the current source tree before we overwrite it.
     const preBak = `pre_restore_${timestampTag()}`;
-    const preBakDir = path.join(PKG_BACKUP_DIR, 'Code', preBak);
+    const preBakDir = path.join(getPkgBackupDir(), 'Code', preBak);
     copyPackageSource(PKG_ROOT, preBakDir);
 
     // 2. Copy the snapshot back onto the package root. copyPackageSource
