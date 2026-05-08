@@ -20,19 +20,22 @@
  */
 
 import { Router } from 'express';
-import { getSessionUser } from '../services/authService.js';
+import { getSessionUser, getTokenFromHeader } from '../services/authService.js';
 import { subscribeEvents, getSubscriberCount } from '../services/eventBus.js';
 
 const router = Router();
 
+// Mirror chat.js's SSE auth pattern: getTokenFromHeader manually parses the
+// `ops_session` cookie + Authorization Bearer header (no cookie-parser
+// middleware required — and none is mounted in server/index.js). The
+// previous `req.cookies?.ops_session` path was permanently undefined,
+// causing every cookie-only EventSource client to get 401.
 function requireUser(req) {
-  const tokenFromHeader = req.headers.authorization?.startsWith('Bearer ')
-    ? req.headers.authorization.slice(7) : null;
-  const tokenFromCookie = req.cookies?.ops_session;
-  const tokenFromQuery = req.query.t ? String(req.query.t) : null;
-  const token = tokenFromHeader || tokenFromCookie || tokenFromQuery;
-  if (!token) return null;
-  return getSessionUser(token);
+  let user = getSessionUser(getTokenFromHeader(req));
+  if (!user && req.query.t) {
+    user = getSessionUser(String(req.query.t));
+  }
+  return user;
 }
 
 router.get('/stream', (req, res) => {
@@ -51,8 +54,11 @@ router.get('/stream', (req, res) => {
 
   // Heartbeat every 25s — keeps proxy connection from timing out
   const heartbeat = setInterval(() => {
-    try { res.write(`: keepalive ${Date.now()}\n\n`); }
-    catch { /* stream closed */ }
+    try {
+      res.write(`: keepalive ${Date.now()}\n\n`);
+    } catch {
+      /* stream closed */
+    }
   }, 25000);
 
   // Subscribe to event bus
@@ -63,7 +69,8 @@ router.get('/stream', (req, res) => {
         `event: ${event.type}`,
         `id: ${event.seq}`,
         `data: ${JSON.stringify(event)}`,
-        '', '',
+        '',
+        '',
       ];
       res.write(lines.join('\n'));
     } catch (err) {
@@ -83,7 +90,11 @@ router.get('/stream', (req, res) => {
 
   function cleanup() {
     clearInterval(heartbeat);
-    try { unsubscribe(); } catch { /* swallow */ }
+    try {
+      unsubscribe();
+    } catch {
+      /* swallow */
+    }
   }
 
   // Cleanup on client disconnect
