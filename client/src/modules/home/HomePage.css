@@ -1,17 +1,20 @@
 /* HomePage — IBM Carbon-aligned, theme-aware via tokens.
  * Operator dashboard. Card grid, generous whitespace, subtle hierarchy.
  *
- * Layout breakpoints handled by CSS Grid auto-fit; no media queries
- * needed for mid-size viewports. The KPI strip + module grid both
- * collapse to single column under ~600px naturally. */
+ * S-RESP-1 reference: container queries + clamp() typography scale
+ * gracefully from 13" laptop to 32" 4K to ultrawide. Root acts as the
+ * size container so child grids/typography respond to actual layout
+ * width (post-sidebar collapse), not viewport. No @media rules. */
 
 .home-page {
-  padding: 28px 32px 48px;
-  max-width: 1400px;
+  max-width: min(2400px, calc(100vw - 48px));
   margin: 0 auto;
+  padding: clamp(20px, 2vw, 36px) clamp(20px, 2.4vw, 48px) clamp(36px, 4vw, 64px);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: clamp(18px, 1.6vw, 28px);
+  container-type: inline-size;
+  container-name: home;
 }
 
 /* ── Greeting ── */
@@ -26,10 +29,11 @@
 
 .home-greeting-title {
   margin: 0 0 6px;
-  font-size: 28px;
+  font-size: clamp(22px, 1.4vw + 14px, 34px);
   font-weight: 700;
   letter-spacing: -0.4px;
   color: var(--text-primary);
+  line-height: 1.15;
 }
 
 .home-greeting-meta {
@@ -63,18 +67,25 @@
 
 .home-greeting-clock {
   font-family: var(--cds-mono, ui-monospace, 'SFMono-Regular', monospace);
-  font-size: 36px;
+  font-size: clamp(26px, 1.6vw + 14px, 44px);
   font-weight: 300;
   color: var(--text-tertiary);
   font-variant-numeric: tabular-nums;
   letter-spacing: -1px;
+  line-height: 1;
 }
 
 /* ── KPI Strip ── */
 .home-kpis {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: clamp(10px, 0.8vw, 18px);
+}
+
+@container home (min-width: 1400px) {
+  .home-kpis {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 /* S-DESIGN-1 — Dashboard-aligned KPI tile.
@@ -128,7 +139,7 @@
 }
 
 .home-kpi-value {
-  font-size: clamp(22px, 1.4vw + 8px, 30px);
+  font-size: clamp(24px, 1.6vw + 10px, 36px);
   font-weight: 600;
   letter-spacing: -0.5px;
   color: var(--text-primary);
@@ -177,13 +188,20 @@
 /* ── Two-column main ── */
 .home-main {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 14px;
+  grid-template-columns: 1fr;
+  gap: clamp(12px, 1vw, 22px);
 }
 
-@container (max-width: 900px) {
+@container home (min-width: 900px) {
   .home-main {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1.2fr 1fr;
+  }
+}
+
+@container home (min-width: 1800px) {
+  .home-main {
+    grid-template-columns: 1.4fr 1fr;
+    gap: 24px;
   }
 }
 
@@ -307,8 +325,8 @@
 /* Module shortcuts grid */
 .home-module-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: clamp(8px, 0.7vw, 14px);
 }
 
 .home-module-card {
@@ -368,8 +386,8 @@
 
 .home-quick-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: clamp(10px, 0.9vw, 16px);
 }
 
 .home-quick-card {
@@ -483,4 +501,39 @@
 }
 [data-theme='dark'] .home-quick-icon {
   color: #4dabf7;
+}
+
+/* ── Narrow container — stack greeting block, hide clock to keep
+       headline + meta line readable on tablet / split-screen. ── */
+@container home (max-width: 600px) {
+  .home-greeting {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .home-greeting-clock {
+    display: none;
+  }
+}
+
+/* ── Print — operator wants a clean snapshot of today's queue.
+       Hide quick-actions grid (not actionable on paper) and force the
+       two-column main into single column so widths are predictable. ── */
+@media print {
+  .home-page {
+    max-width: none;
+    padding: 0;
+  }
+  .home-greeting-clock,
+  .home-quick {
+    display: none;
+  }
+  .home-main {
+    grid-template-columns: 1fr;
+  }
+  .home-card,
+  .home-kpi {
+    break-inside: avoid;
+    box-shadow: none;
+  }
 }

@@ -207,19 +207,27 @@ export default function Sidebar({
 
   return (
     <aside className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''}`}>
-      {/* Header */}
+      {/* Header — logo + title click → Home (S-HOME, 2026-05-08) */}
       <div className="sidebar-header">
-        <div className="sidebar-logo">
-          <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-            <rect width="32" height="32" rx="7" fill="#1e3a5f" />
-            <rect x="7" y="14" width="4.5" height="12" rx="1.2" fill="#ef4444" />
-            <rect x="13.75" y="8" width="4.5" height="18" rx="1.2" fill="#22c55e" />
-            <rect x="20.5" y="11" width="4.5" height="15" rx="1.2" fill="#3b82f6" />
-          </svg>
-        </div>
-        <div className="sidebar-title">
-          <span className="sidebar-app-name">Ops Control</span>
-        </div>
+        <button
+          type="button"
+          className="sidebar-brand"
+          onClick={() => onTabChange('home')}
+          aria-label={t('home.go_to_home') || 'Go to Home'}
+          title={t('home.go_to_home') || 'Home'}
+        >
+          <span className="sidebar-logo" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="7" fill="#1e3a5f" />
+              <rect x="7" y="14" width="4.5" height="12" rx="1.2" fill="#ef4444" />
+              <rect x="13.75" y="8" width="4.5" height="18" rx="1.2" fill="#22c55e" />
+              <rect x="20.5" y="11" width="4.5" height="15" rx="1.2" fill="#3b82f6" />
+            </svg>
+          </span>
+          <span className="sidebar-title">
+            <span className="sidebar-app-name">Ops Control</span>
+          </span>
+        </button>
         {/* Collapse toggle — IBM Carbon chevron pattern. Sits at the
             right edge of the header when expanded; moves below the logo
             when collapsed. Persisted via App.jsx → localStorage. */}
