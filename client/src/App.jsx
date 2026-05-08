@@ -1,4 +1,4 @@
-import { useState, useEffect, useDeferredValue } from 'react';
+import { useState, useEffect, useDeferredValue, useRef } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AccessProvider } from './context/AccessContext';
 import { CalcProvider } from './context/CalcContext';
@@ -44,16 +44,25 @@ function readLS(key, fallback) {
   try {
     const v = localStorage.getItem(key);
     return v == null ? fallback : v;
-  } catch { return fallback; }
+  } catch {
+    return fallback;
+  }
 }
 function writeLS(key, value) {
-  try { localStorage.setItem(key, value); } catch { /* private mode */ }
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* private mode */
+  }
 }
 
 function AppContent() {
   const { isAuthenticated, loading, hasRole, sessionExpired } = useAuth();
   const [activeModule, setActiveModule] = useState(() => readLS(LS_MODULE_KEY, 'cost'));
-  const [activeTab, setActiveTab] = useState(() => readLS(LS_TAB_KEY, 'standard'));
+  // Sprint S-HOME — first-time login lands on the Home dashboard.
+  // Returning users keep their last activeTab (LS persists); only the
+  // initial empty-LS fallback changed from 'standard' → 'home'.
+  const [activeTab, setActiveTab] = useState(() => readLS(LS_TAB_KEY, 'home'));
   // Sprint 1.7i — UI lag fix when switching to a heavy tab (Mfg Structures
   // 6 MB, Routing Ops 16 MB, IFS Inventory 2.8 MB).
   // The previous behaviour batched the sidebar's "active tab highlight"
@@ -82,9 +91,27 @@ function AppContent() {
 
   // Mirror module/tab back to localStorage so subsequent reloads land
   // on the same screen.
-  useEffect(() => { writeLS(LS_MODULE_KEY, activeModule); }, [activeModule]);
-  useEffect(() => { writeLS(LS_TAB_KEY, activeTab); }, [activeTab]);
-  useEffect(() => { writeLS(LS_SIDEBAR_COLLAPSED, sidebarCollapsed ? '1' : '0'); }, [sidebarCollapsed]);
+  useEffect(() => {
+    writeLS(LS_MODULE_KEY, activeModule);
+  }, [activeModule]);
+  useEffect(() => {
+    writeLS(LS_TAB_KEY, activeTab);
+  }, [activeTab]);
+  useEffect(() => {
+    writeLS(LS_SIDEBAR_COLLAPSED, sidebarCollapsed ? '1' : '0');
+  }, [sidebarCollapsed]);
+
+  // Sprint S-HOME — every fresh login lands on the Home dashboard.
+  // Detect the false → true transition of `isAuthenticated` (don't fire
+  // on every render where the user is already logged in, so a page
+  // reload still preserves the operator's last tab via LS).
+  const wasAuthenticatedRef = useRef(isAuthenticated);
+  useEffect(() => {
+    if (isAuthenticated && !wasAuthenticatedRef.current) {
+      setActiveTab('home');
+    }
+    wasAuthenticatedRef.current = isAuthenticated;
+  }, [isAuthenticated]);
 
   // Listen for tab switch events from native components (e.g., Quote History -> Open quote)
   useEffect(() => {
@@ -136,11 +163,13 @@ function AppContent() {
         const ips = (p.concurrentIps || []).join(', ');
         showToast(
           `🛡 Security: ${p.username || '?'} — ${reasons}${ips ? ` (IPs: ${ips})` : ''}`,
-          'warn',
+          'warn'
         );
       });
     })();
-    return () => { if (unsub) unsub(); };
+    return () => {
+      if (unsub) unsub();
+    };
   }, [isAuthenticated, hasRole]);
 
   if (loading) {
@@ -166,77 +195,81 @@ function AppContent() {
   // until every dataset is in. Once ready, children render normally.
   return (
     <AppBootstrap>
-    <LibraryPickerProvider>
-    <div className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-      {/* Shell widgets each wrapped so a crash in one (e.g. Sidebar
+      <LibraryPickerProvider>
+        <div className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+          {/* Shell widgets each wrapped so a crash in one (e.g. Sidebar
           context desync, TopBar notification poll, WarningBar selector)
           doesn't blank the whole app. Fallback renders null — losing a
           chrome widget is better than losing the module content. */}
-      <ErrorBoundary label="Sidebar" fallback={() => null}>
-        <Sidebar
-          activeModule={activeModule}
-          activeTab={activeTab}
-          onModuleChange={setActiveModule}
-          onTabChange={setActiveTab}
-          collapsed={sidebarCollapsed}
-          onToggleCollapsed={() => setSidebarCollapsed(c => !c)}
-        />
-      </ErrorBoundary>
-      <div className="app-main">
-        <ErrorBoundary label="TopBar" fallback={() => null}>
-          <TopBar
-            activeModule={activeModule}
-            activeTab={activeTab}
-            onImportClick={hasRole('admin') ? () => setShowImport(true) : null}
-          />
-        </ErrorBoundary>
-        <ErrorBoundary label="PwdAgeBanner" fallback={() => null}>
-          <PwdAgeBanner onOpenSettings={() => {
-            setActiveModule('cost');
-            setActiveTab('settings');
-          }} />
-        </ErrorBoundary>
-        <div className="app-content">
-          {/* Sprint 1.7i — pass deferredActiveTab so the heavy tab remount
+          <ErrorBoundary label="Sidebar" fallback={() => null}>
+            <Sidebar
+              activeModule={activeModule}
+              activeTab={activeTab}
+              onModuleChange={setActiveModule}
+              onTabChange={setActiveTab}
+              collapsed={sidebarCollapsed}
+              onToggleCollapsed={() => setSidebarCollapsed((c) => !c)}
+            />
+          </ErrorBoundary>
+          <div className="app-main">
+            <ErrorBoundary label="TopBar" fallback={() => null}>
+              <TopBar
+                activeModule={activeModule}
+                activeTab={activeTab}
+                onImportClick={hasRole('admin') ? () => setShowImport(true) : null}
+              />
+            </ErrorBoundary>
+            <ErrorBoundary label="PwdAgeBanner" fallback={() => null}>
+              <PwdAgeBanner
+                onOpenSettings={() => {
+                  setActiveModule('cost');
+                  setActiveTab('settings');
+                }}
+              />
+            </ErrorBoundary>
+            <div className="app-content">
+              {/* Sprint 1.7i — pass deferredActiveTab so the heavy tab remount
               happens AFTER the sidebar paint, not before. Sidebar above
               gets the immediate `activeTab` so its highlight is instant. */}
-          {activeModule === 'cost' && (
-            <CostModule activeTab={deferredActiveTab} />
-          )}
-          {activeModule === 'planning' && <PlanningModule activeTab={deferredActiveTab} />}
-        </div>
-        {/* Bottom-of-screen validation status bar — renders null unless
+              {activeModule === 'cost' && (
+                <CostModule activeTab={deferredActiveTab} onTabChange={setActiveTab} />
+              )}
+              {activeModule === 'planning' && (
+                <PlanningModule activeTab={deferredActiveTab} onTabChange={setActiveTab} />
+              )}
+            </div>
+            {/* Bottom-of-screen validation status bar — renders null unless
             the active tab is Standard or Complex AND warnings > 0. Sits
             here (as a sibling of .app-content) so it's horizontally
             aligned with the sidebar's Sign Out button. */}
-        <ErrorBoundary label="WarningBar" fallback={() => null}>
-          <WarningBar activeModule={activeModule} activeTab={activeTab} />
-        </ErrorBoundary>
-      </div>
-      <ImportDialog
-        isOpen={showImport}
-        onClose={() => setShowImport(false)}
-        onImportComplete={() => {
-          // no-op: ImportDialog handles its own success UI
-        }}
-      />
-      {/* Phase 10A — floating chat. Self-contained; renders nothing
+            <ErrorBoundary label="WarningBar" fallback={() => null}>
+              <WarningBar activeModule={activeModule} activeTab={activeTab} />
+            </ErrorBoundary>
+          </div>
+          <ImportDialog
+            isOpen={showImport}
+            onClose={() => setShowImport(false)}
+            onImportComplete={() => {
+              // no-op: ImportDialog handles its own success UI
+            }}
+          />
+          {/* Phase 10A — floating chat. Self-contained; renders nothing
           if the server returns 503 (chat_disabled) so users on a
           pre-chat deploy see the app unchanged. Wrapped in its own
           boundary so a chat crash (e.g. bad payload from the poller)
           doesn't take down the quoting UI. */}
-      <ErrorBoundary label="Chat" fallback={() => null}>
-        <ChatDrawer />
-      </ErrorBoundary>
-      {/* Phase 11 — one-shot unread-on-login popup. Self-contained:
+          <ErrorBoundary label="Chat" fallback={() => null}>
+            <ChatDrawer />
+          </ErrorBoundary>
+          {/* Phase 11 — one-shot unread-on-login popup. Self-contained:
           renders null unless the user has just logged in AND has at
           least one unread conversation. A crash here must not blank
           the shell, hence the dedicated boundary. */}
-      <ErrorBoundary label="UnreadLoginPopup" fallback={() => null}>
-        <UnreadLoginPopup />
-      </ErrorBoundary>
-    </div>
-    </LibraryPickerProvider>
+          <ErrorBoundary label="UnreadLoginPopup" fallback={() => null}>
+            <UnreadLoginPopup />
+          </ErrorBoundary>
+        </div>
+      </LibraryPickerProvider>
     </AppBootstrap>
   );
 }
