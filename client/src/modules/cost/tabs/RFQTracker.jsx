@@ -1504,15 +1504,45 @@ function DetailDrawer({
   onSync,
 }) {
   const [tab, setTab] = useState('detail'); // detail | history | attachments
-  // openStage is DERIVED from row.pipeline_stage with an explicit
-  // user-override layer. When the row's active stage advances
-  // (operator clicks Next/Back), the derived value auto-tracks. When
-  // the user manually expands a different stage, `override` wins.
-  // Passing `null` to setOverride collapses to the row's active stage.
-  // (The outer `<DetailDrawer key={row.id}>` handles cross-row reset.)
+  // Snapshot pattern (insulates pipeline UI from auto-refresh flash).
+  //
+  // Why: drawer's pipeline section (status fields + checklists) was
+  // bound to `row.pipeline.*` which is a slice of the parent's auto-
+  // refreshed `data` state. Every 60s polling tick (and every SSE
+  // rfq.updated push) ran setData(serverResponse) → parent re-render
+  // → row prop changed → checklist re-rendered with new values, even
+  // mid-edit. Visible as flash + occasional revert.
+  //
+  // Fix: snapshot the row on mount via useState lazy initializer.
+  // Pipeline UI reads from `snapshot.pipeline.*`; edit handlers update
+  // snapshot locally AND call the parent handlers (which still POST
+  // to the server). Auto-refresh continues updating parent — kanban
+  // cards re-render normally — but the open drawer is insulated.
+  //
+  // For structural ops (Next/Back/Reopen) the canonical state lives
+  // in the parent's moveStage/reopenStage logic; after parent's
+  // setData propagates, we explicitly resync snapshot from the new
+  // row. The pendingResyncRef flag ensures we resync ONLY after such
+  // user-triggered ops, not after every auto-refresh.
+  //
+  // openStage uses snapshot.pipeline_stage so the active-stage rail
+  // accent doesn't jump on auto-refresh either. setOpenStage compares
+  // against the same snapshot value.
   const [override, setOverride] = useState(null);
-  const openStage = override ?? row.pipeline_stage ?? 'sale';
-  const setOpenStage = (k) => setOverride(k === (row.pipeline_stage ?? 'sale') ? null : k);
+  const [snapshot, setSnapshot] = useState(() => structuredClone(row));
+  const pendingResyncRef = useRef(false);
+  // Resync snapshot from `row` only after user-triggered structural
+  // ops set the flag. Auto-refresh / SSE re-renders flow through here
+  // too but skip the sync (flag is false), preserving the snapshot.
+  useEffect(() => {
+    if (pendingResyncRef.current) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSnapshot(structuredClone(row));
+      pendingResyncRef.current = false;
+    }
+  }, [row]);
+  const openStage = override ?? snapshot.pipeline_stage ?? 'sale';
+  const setOpenStage = (k) => setOverride(k === (snapshot.pipeline_stage ?? 'sale') ? null : k);
 
   // Draft state re-initialises on cross-row mount (via key) — no
   // useEffect needed.
@@ -1528,6 +1558,80 @@ function DetailDrawer({
     }
     if (Object.keys(patch).length) onChange(patch);
   }
+
+  // Wrapped pipeline edit handlers: optimistically mutate snapshot so
+  // the UI reflects the change immediately + insulates from auto-
+  // refresh, then forward to parent for server save.
+  const handleUpdateStage = (stageKey, field, value) => {
+    setSnapshot((prev) => {
+      const next = structuredClone(prev);
+      next.pipeline[stageKey] = { ...next.pipeline[stageKey], [field]: value };
+      return next;
+    });
+    onUpdateStage(stageKey, field, value);
+  };
+  const handleToggleCheck = (stageKey, idx, checked) => {
+    setSnapshot((prev) => {
+      const next = structuredClone(prev);
+      const cl = next.pipeline[stageKey].checklist;
+      if (cl[idx]) cl[idx].checked = checked;
+      return next;
+    });
+    onToggleChecklist(stageKey, idx, checked);
+  };
+  const handleEditCheck = (stageKey, idx, text) => {
+    setSnapshot((prev) => {
+      const next = structuredClone(prev);
+      const cl = next.pipeline[stageKey].checklist;
+      if (cl[idx]) cl[idx].text = text;
+      return next;
+    });
+    onEditChecklist(stageKey, idx, text);
+  };
+  const handleToggleRequired = (stageKey, idx, required) => {
+    setSnapshot((prev) => {
+      const next = structuredClone(prev);
+      const cl = next.pipeline[stageKey].checklist;
+      if (cl[idx]) cl[idx].required = required;
+      return next;
+    });
+    onToggleRequired(stageKey, idx, required);
+  };
+  const handleAddCheck = (stageKey, text) => {
+    setSnapshot((prev) => {
+      const next = structuredClone(prev);
+      next.pipeline[stageKey].checklist.push({
+        text,
+        checked: false,
+        required: false,
+      });
+      return next;
+    });
+    onAddChecklist(stageKey, text);
+  };
+  const handleRemoveCheck = (stageKey, idx) => {
+    setSnapshot((prev) => {
+      const next = structuredClone(prev);
+      next.pipeline[stageKey].checklist.splice(idx, 1);
+      return next;
+    });
+    onRemoveChecklist(stageKey, idx);
+  };
+  // Structural ops — parent owns the canonical mutation; we set the
+  // resync flag so the next row-prop change syncs snapshot to the new
+  // truth.
+  const handleMoveNext = () => {
+    pendingResyncRef.current = true;
+    onMoveNext();
+  };
+  const handleMoveBack = () => {
+    pendingResyncRef.current = true;
+    onMoveBack();
+  };
+  const handleReopen = (stageKey) => {
+    pendingResyncRef.current = true;
+    onReopen(stageKey);
+  };
 
   return (
     <>
@@ -1773,21 +1877,24 @@ function DetailDrawer({
 
             <section className="rfq2-drawer-section">
               {(() => {
-                const isLastStage = row.pipeline_stage === PIPELINE_KEYS[PIPELINE_KEYS.length - 1];
-                const blocker = isLastStage ? null : stageAdvanceBlocker(row, row.pipeline_stage);
+                const isLastStage =
+                  snapshot.pipeline_stage === PIPELINE_KEYS[PIPELINE_KEYS.length - 1];
+                const blocker = isLastStage
+                  ? null
+                  : stageAdvanceBlocker(snapshot, snapshot.pipeline_stage);
                 return (
                   <>
                     <div className="rfq2-drawer-sec-head">
                       <h4>Pipeline</h4>
                       <div className="rfq2-move">
                         <button
-                          onClick={onMoveBack}
-                          disabled={row.pipeline_stage === PIPELINE_KEYS[0]}
+                          onClick={handleMoveBack}
+                          disabled={snapshot.pipeline_stage === PIPELINE_KEYS[0]}
                         >
                           ← Back
                         </button>
                         <button
-                          onClick={onMoveNext}
+                          onClick={handleMoveNext}
                           disabled={isLastStage || !!blocker}
                           title={blocker || 'Advance stage'}
                         >
@@ -1808,16 +1915,16 @@ function DetailDrawer({
                   key={cfg.key}
                   cfg={cfg}
                   open={openStage === cfg.key}
-                  active={row.pipeline_stage === cfg.key}
-                  stage={row.pipeline[cfg.key]}
+                  active={snapshot.pipeline_stage === cfg.key}
+                  stage={snapshot.pipeline[cfg.key]}
                   onToggle={() => setOpenStage(openStage === cfg.key ? '' : cfg.key)}
-                  onUpdate={(field, value) => onUpdateStage(cfg.key, field, value)}
-                  onReopen={() => onReopen(cfg.key)}
-                  onToggleCheck={(idx, checked) => onToggleChecklist(cfg.key, idx, checked)}
-                  onEditCheck={(idx, text) => onEditChecklist(cfg.key, idx, text)}
-                  onToggleRequired={(idx, required) => onToggleRequired(cfg.key, idx, required)}
-                  onAddCheck={(text) => onAddChecklist(cfg.key, text)}
-                  onRemoveCheck={(idx) => onRemoveChecklist(cfg.key, idx)}
+                  onUpdate={(field, value) => handleUpdateStage(cfg.key, field, value)}
+                  onReopen={() => handleReopen(cfg.key)}
+                  onToggleCheck={(idx, checked) => handleToggleCheck(cfg.key, idx, checked)}
+                  onEditCheck={(idx, text) => handleEditCheck(cfg.key, idx, text)}
+                  onToggleRequired={(idx, required) => handleToggleRequired(cfg.key, idx, required)}
+                  onAddCheck={(text) => handleAddCheck(cfg.key, text)}
+                  onRemoveCheck={(idx) => handleRemoveCheck(cfg.key, idx)}
                 />
               ))}
             </section>
