@@ -730,12 +730,11 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - **Effort**: M (~24 violations × ~5 min each = ~2 h spread across multiple PRs as each affected file is otherwise touched)
 - **Priority**: P3 (CI signal is honest now — red on real anti-patterns is BETTER than green-by-suppression. Fix at leisure as each affected file is otherwise touched.)
 
-#### MES-3-FIX-21 — audit SQLite + cwd-sensitive callsites for absolute path usage
+#### MES-3-FIX-21 — audit SQLite + cwd-sensitive callsites for absolute path usage (CLOSED)
 
-- **Source**: discovered during PR #22 (SHA `7e8de54`) on 2026-05-08. `verifyBackup` had a basename-only path that worked in dev mode (cwd = repo root) but failed in packaged Electron (cwd = `.app/Contents/Resources/app/`). Lesson 30 added.
-- **Acceptance**: grep all of `server/`, `scripts/`, `domains/` for: `new Database(`, `fs.openSync(`, `fs.readFileSync(` without absolute path prefix, `child_process.spawn` / `execFile` without `cwd:` option, `path.join` chains that don't start from `process.env.DATA_DIR` or `__dirname`. For each, verify the input is absolute or resolved against a known-absolute base. Fix any callsite that could fail under packaged-Electron cwd context.
-- **Effort**: M (~3-5h audit + per-callsite review)
-- **Priority**: P3 (PR #22 fixed the only known-broken instance; this is preventive cleanup before more cwd-sensitive bugs surface)
+- **Source**: discovered during PR #22 (SHA `7e8de54`) on 2026-05-08. Lesson 30 added.
+- **Audit completed**: 2026-05-08 — 12 callsites reviewed across server/, scripts/, domains/. Result: 0 SUSPECT callsites. PR #22's verifyBackup was the only instance. All other `new Database(...)` calls pass absolute paths or use `:memory:`; the one `execSync` in production server code uses absolute paths + tar's `-C` flag; build scripts use `path.resolve(__dirname, ...)` consistently. **No further action needed**.
+- **Status**: CLOSED 2026-05-08 (audit complete, codebase clean of Lesson 30 footgun)
 
 #### KIOSK-001 — Real branded PWA icons
 
