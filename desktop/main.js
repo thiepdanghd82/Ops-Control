@@ -90,7 +90,7 @@ process.on('uncaughtException', (err) => {
         `${err.message}\n\nXem chi tiết trong log:\n${log.transports.file.getFile().path}`
       );
     }
-  } catch (_) {
+  } catch {
     /* swallow */
   }
 });
@@ -254,6 +254,18 @@ async function startEmbeddedServer() {
   process.env.DATA_DIR = userDataDir;
   log.info('[main] DATA_DIR:', userDataDir);
 
+  // F-LIC-1 — point server-side licenseService at desktop's license.json.
+  // desktop/license.js writes the trial license to `<userData>/license.json`
+  // (one level above DATA_DIR). server/services/licenseService.js falls back
+  // to OPS_DATA_DIR/license.json which is wrong path here. Setting
+  // OPS_LICENSE_FILE explicitly avoids the mismatch — fixes LICENSE_INVALID
+  // on Create User + Reset Password flows that go through requireSeatAvailable.
+  const licenseFile = path.join(app.getPath('userData'), 'license.json');
+  if (fs.existsSync(licenseFile)) {
+    process.env.OPS_LICENSE_FILE = licenseFile;
+    log.info('[main] OPS_LICENSE_FILE:', licenseFile);
+  }
+
   // Bootstrap DB: nếu lần đầu chạy, copy ops.db seed từ resources
   const seedDb = path.join(APP_ROOT, 'server', 'data', 'ops.db');
   const targetDb = path.join(userDataDir, 'ops.db');
@@ -376,7 +388,7 @@ async function startEmbeddedServer() {
           log.info('[main] Embedded server ready in', Date.now() - start, 'ms');
           return;
         }
-      } catch (_) {
+      } catch {
         // not ready yet
       }
       await new Promise((r) => setTimeout(r, 200));
@@ -442,6 +454,11 @@ function createMainWindow() {
       webSecurity: true,
       webviewTag: false,
       allowRunningInsecureContent: false,
+      // F-DRAW-6 — enable Chromium's built-in PDF viewer plugin. Without
+      // this, `<iframe src="blob:application/pdf">` renders as a black
+      // void (no PDF reader plugin loaded). Customer Drawing PDFs in
+      // FileUploadZone need this to render inline + in fullscreen modal.
+      plugins: true,
     },
   });
 
@@ -459,7 +476,10 @@ function createMainWindow() {
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
     "connect-src 'self' http://127.0.0.1:* http://localhost:* ws://localhost:* ws://127.0.0.1:*",
-    "frame-src 'none'",
+    // FileUploadZone renders inline PDF previews via `<iframe src=blob:...>`.
+    // Without `blob:` here Electron blocks the iframe even though the server
+    // CSP already allows it. Same fix as server/index.js (F-DRAW-1).
+    "frame-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -479,11 +499,6 @@ function createMainWindow() {
       shell.openExternal(url);
     }
   });
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
-    return { action: 'deny' };
-  });
-
   // Save window bounds khi user resize/move
   const saveBounds = () => {
     if (!mainWindow.isMaximized() && !mainWindow.isMinimized()) {
@@ -498,9 +513,19 @@ function createMainWindow() {
     mainWindow.webContents.setZoomFactor(store.get('zoomFactor'));
   });
 
-  // Mở external links bằng default browser thay vì cửa sổ Electron mới
+  // Mở external links bằng default browser thay vì cửa sổ Electron mới.
+  // blob: URLs (FileUploadZone "Open in new window" for drawing previews)
+  // are session-scoped and can ONLY be opened by the same Electron renderer
+  // — shell.openExternal can't open them. Allow blob: + same-origin to open
+  // a new Electron BrowserWindow; everything else routes to the OS browser.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('http://127.0.0.1') || url.startsWith(store.get('remoteUrl'))) {
+    const remote = store.get('remoteUrl') || '';
+    if (
+      url.startsWith('blob:') ||
+      url.startsWith('http://127.0.0.1') ||
+      url.startsWith('http://localhost') ||
+      (remote && url.startsWith(remote))
+    ) {
       return { action: 'allow' };
     }
     shell.openExternal(url);
@@ -707,7 +732,6 @@ async function showClientFirstRunDialog() {
     // Inline HTML — Vietnamese, IBM Carbon-ish styling to match the rest
     // of the app. Posts to the parent via window.postMessage emulated
     // through an IPC channel registered just for this dialog.
-    const channel = `client-firstrun-${Date.now()}`;
     const html = `<!doctype html><html><head><meta charset="utf-8">
 <style>
   body{margin:0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f4f4f4;color:#161616}
@@ -1067,3 +1091,19 @@ ipcMain.handle('ops:rerun-first-run', () => {
 // keeps its own 'ops:setup.testServer' channel (alias) so existing
 // renderer code there doesn't need to change.
 ipcMain.handle('ops:net.testServer', async (_e, { url } = {}) => probeServer(url));
+
+// Open a base64-encoded file with the OS default handler (Adobe Acrobat,
+// Preview, browser, etc.). Used by FileUploadZone "Open in new window" so
+// operators get a real native PDF reader instead of an embedded Electron
+// child window. Blob URLs can't cross processes — we reify to a temp file.
+ipcMain.handle('ops:shell.openExternalFile', async (_e, { b64Data, ext } = {}) => {
+  if (typeof b64Data !== 'string' || b64Data.length === 0) {
+    throw new Error('openExternalFile: b64Data is required');
+  }
+  const safeExt = typeof ext === 'string' && /^\.[a-z0-9]{1,8}$/i.test(ext) ? ext : '.bin';
+  const tmpPath = path.join(app.getPath('temp'), `ops-preview-${Date.now()}${safeExt}`);
+  fs.writeFileSync(tmpPath, Buffer.from(b64Data, 'base64'));
+  const errMsg = await shell.openPath(tmpPath);
+  if (errMsg) throw new Error(`shell.openPath: ${errMsg}`);
+  return { path: tmpPath };
+});

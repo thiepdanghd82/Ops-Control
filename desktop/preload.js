@@ -60,6 +60,14 @@ const opsAPI = {
     testServer: (url) => invoke('ops:net.testServer', { url }),
   },
 
+  // ─── Shell (open with OS default handler) ──────────────────────
+  // Used by FileUploadZone's "Open in new window" so PDFs go to Adobe
+  // Acrobat / Preview / system browser instead of an embedded Electron
+  // child window with no print dialog or annotation tools.
+  shell: {
+    openExternalFile: (b64Data, ext) => invoke('ops:shell.openExternalFile', { b64Data, ext }),
+  },
+
   // ─── Printer (A4/A3 office printers) ───────────────────────────
   printer: {
     list: () => invoke('ops:printer.list'),
@@ -118,6 +126,20 @@ const opsAPI = {
     pickFolder: (opts) => invoke('ops:import.pickFolder', opts),
     scanFolder: (path) => invoke('ops:import.scanFolder', path),
     execute: (path, opts) => invoke('ops:import.execute', path, opts),
+  },
+
+  // ─── License (S-DIAG-FIX 2026-05-05) ──────────────────────────
+  // Handlers registered in desktop/license.js:309-331; the bridge
+  // was missing here, so renderer's window.ops.license was undefined
+  // and About / Diagnostics threw "Cannot read properties of
+  // undefined" on every license check. Each method is its own
+  // explicit handle (no generic invoke passthrough — keeps the
+  // attack surface limited to these 4 channels).
+  license: {
+    status:      () => ipcRenderer.invoke('ops:license.status'),
+    fingerprint: () => ipcRenderer.invoke('ops:license.fingerprint'),
+    apply:       (lic) => ipcRenderer.invoke('ops:license.apply', lic),
+    tiers:       () => ipcRenderer.invoke('ops:license.tiers'),
   },
 };
 

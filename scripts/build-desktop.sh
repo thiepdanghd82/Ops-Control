@@ -46,6 +46,11 @@ rsync -aL --delete \
   --exclude='*.test.js' \
   --exclude='legacy' \
   "$PROJECT_ROOT/server" "$TMP_DIR/"
+rsync -aL --delete \
+  --exclude='node_modules' \
+  --exclude='**/tests/**' \
+  --exclude='*.test.js' \
+  "$PROJECT_ROOT/domains" "$TMP_DIR/"
 rsync -aL --delete "$PROJECT_ROOT/client/dist/" "$TMP_DIR/client-dist/"
 rsync -aL --delete --exclude='*.test.js' "$PROJECT_ROOT/scripts" "$TMP_DIR/"
 
@@ -61,6 +66,7 @@ const path = '$TMP_DIR/desktop/package.json';
 const p = JSON.parse(fs.readFileSync(path, 'utf8'));
 p.build.extraResources = [
   { from: '$TMP_DIR/server', to: 'app/server', filter: ['**/*', '!**/*.test.js', '!**/legacy/**'] },
+  { from: '$TMP_DIR/domains', to: 'app/domains', filter: ['**/*', '!**/*.test.js', '!**/tests/**'] },
   { from: '$TMP_DIR/client-dist', to: 'app/client/dist' },
   { from: '$TMP_DIR/scripts', to: 'app/scripts', filter: ['**/*.js', '!**/*.test.js'] },
   { from: '$TMP_DIR/package.json', to: 'app/package.json' },
