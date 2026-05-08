@@ -1760,24 +1760,37 @@ function DetailDrawer({
             <DocumentFlowStrip row={row} />
 
             <section className="rfq2-drawer-section">
-              <div className="rfq2-drawer-sec-head">
-                <h4>Pipeline</h4>
-                <div className="rfq2-move">
-                  <button onClick={onMoveBack} disabled={row.pipeline_stage === PIPELINE_KEYS[0]}>
-                    ← Back
-                  </button>
-                  <button
-                    onClick={onMoveNext}
-                    disabled={
-                      row.pipeline_stage === PIPELINE_KEYS[PIPELINE_KEYS.length - 1] ||
-                      !!stageAdvanceBlocker(row, row.pipeline_stage)
-                    }
-                    title={stageAdvanceBlocker(row, row.pipeline_stage) || 'Advance stage'}
-                  >
-                    Next →
-                  </button>
-                </div>
-              </div>
+              {(() => {
+                const isLastStage = row.pipeline_stage === PIPELINE_KEYS[PIPELINE_KEYS.length - 1];
+                const blocker = isLastStage ? null : stageAdvanceBlocker(row, row.pipeline_stage);
+                return (
+                  <>
+                    <div className="rfq2-drawer-sec-head">
+                      <h4>Pipeline</h4>
+                      <div className="rfq2-move">
+                        <button
+                          onClick={onMoveBack}
+                          disabled={row.pipeline_stage === PIPELINE_KEYS[0]}
+                        >
+                          ← Back
+                        </button>
+                        <button
+                          onClick={onMoveNext}
+                          disabled={isLastStage || !!blocker}
+                          title={blocker || 'Advance stage'}
+                        >
+                          Next →
+                        </button>
+                      </div>
+                    </div>
+                    {blocker && (
+                      <div className="rfq2-stage-blocker" role="alert">
+                        ⚠ Cannot advance: {blocker}. Fill this and the Next button enables.
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
               {PIPELINE.map((cfg) => (
                 <StageBlock
                   key={cfg.key}
