@@ -808,7 +808,11 @@ export default function SampleTracking() {
     [variants]
   );
 
-  if (loading)
+  // Initial-load only — see RFQTracker.jsx for the full rationale.
+  // Showing the skeleton on every refresh tick unmounts the open
+  // DetailDrawer and destroys its snapshot, re-creating the
+  // "flashes and reverts at 60s" bug.
+  if (loading && rawData == null)
     return (
       <div style={{ padding: 24 }}>
         <SkeletonTable rows={10} cols={8} />
@@ -1534,9 +1538,19 @@ function DetailDrawer({
   const pendingResyncRef = useRef(false);
   useEffect(() => {
     if (pendingResyncRef.current) {
+      console.log(
+        '[SAMPLE:SNAPSHOT] resync triggered by structural op @',
+        new Date().toISOString()
+      );
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSnapshot(structuredClone(row));
       pendingResyncRef.current = false;
+    } else {
+      console.log(
+        '[SAMPLE:SNAPSHOT] row prop changed but resync SKIPPED @',
+        new Date().toISOString(),
+        '— sample_id=' + (row.sample_id || row.id)
+      );
     }
   }, [row]);
   const openStage = override ?? snapshot.pipeline_stage ?? 'request';

@@ -868,7 +868,16 @@ export default function RFQTracker() {
     [variants]
   );
 
-  if (loading) {
+  // Show the skeleton ONLY on initial load (rawData not yet populated).
+  // useAbortableFetch's refresh() also flips `loading` to true on every
+  // 60s poll tick + every SSE-driven refetch. If we early-return the
+  // skeleton on those ticks, the entire tree (including the open
+  // DetailDrawer) UNMOUNTS, then REMOUNTS when loading flips back to
+  // false — destroying the drawer's snapshot state every refresh and
+  // re-initializing it from the post-refresh row prop, which manifests
+  // as the "checkbox flashes and reverts at 60s" bug. Keeping the
+  // tree mounted across refreshes preserves the snapshot.
+  if (loading && rawData == null) {
     return (
       <div style={{ padding: 24 }}>
         <SkeletonTable rows={10} cols={8} />
@@ -1536,9 +1545,17 @@ function DetailDrawer({
   // too but skip the sync (flag is false), preserving the snapshot.
   useEffect(() => {
     if (pendingResyncRef.current) {
+      console.log('[RFQ:SNAPSHOT] resync triggered by structural op @', new Date().toISOString());
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSnapshot(structuredClone(row));
       pendingResyncRef.current = false;
+    } else {
+      console.log(
+        '[RFQ:SNAPSHOT] row prop changed but resync SKIPPED @',
+        new Date().toISOString(),
+        '— row.rfq_no=' + (row.rfq_no || row.id),
+        'row.sale.req[3]=' + JSON.stringify(row.pipeline?.sale?.checklist?.[3]?.required)
+      );
     }
   }, [row]);
   const openStage = override ?? snapshot.pipeline_stage ?? 'sale';
