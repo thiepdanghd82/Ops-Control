@@ -45,6 +45,16 @@
 >
 > **Sprint history — newest first** (SHA-discipline per Lesson 0):
 >
+> **PR #16 — RFQ snapshot + Layout PDF + ABI overlay + build-role packaging shipped 2026-05-08 (SHA: `5e9d152`).** Bundles 10 fixes from PR #14 hardware-test session: extraResources better-sqlite3 ABI overlay (NMV 137→145), build-role.json packaging gap, Layout PDF preview (cherry-picked FileUploadZone improvements from draft PR #11 — blob URL conversion + 5th fullscreen toolbar icon), RFQ Tracker drawer snapshot pattern (insulates from auto-refresh) + parent SkeletonTable guard (prevents tree unmount), SampleTracking parity backport, ensureShape index-based merge (preserves user-edited text + required), stage-advance blocker chip. User hardware-tested DMG v10 (SHA `6fbcb66b`) — all 4 critical scenarios pass. Lesson 28 amended (host Node misdirection corrected) + Lesson 29 added (SkeletonTable parent unmount).
+>
+> **PR #15 — Lesson 28 docs (electron-builder Node ABI trap) shipped 2026-05-08 (SHA: `a8dca0a`).** Originally blamed host Node version; PR #16 amended after deeper investigation. Kept for audit trail.
+>
+> **PR #14 — Desktop hardening shipped 2026-05-08 (SHA: `130f969`).** Despite original title "kiosk-key persistence (mes-3-fix-15b)", actual content is 5 desktop fixes: F-LIC-1 license file path env, F-DRAW-6 PDF plugin enable, CSP frame-src blob: relax, window-open allowlist, new IPC `ops:shell.openExternalFile`, S-DIAG-FIX license validation hardening, MISSING preload license bridge added (was crashing About/Diagnostics), build-desktop.sh `domains/` packaging. **MES-3-FIX-15b kiosk-key persistence remains OPEN** — original title was wrong.
+>
+> **PR #10 — better-sqlite3 v12 bump (MES-3-FIX-15a) shipped 2026-05-08 (SHA: `3401f40`).** Required for Electron 41 (Node 24 ABI). Closes 15a portion of FIX-15.
+>
+> **PR #9 — Cohort 5 ReasonCodes UI shipped 2026-05-07 (SHA: `3a93a18`).** Library tab admin CRUD + i18n + permission gating.
+>
 > **S-INVENTORY-1c Cohort 5 — Reason codes admin UI (MES-3-V2 client) shipped 2026-05-07 (SHA: `b4ed580`).** `ReasonCodes.jsx` + `.css` Library tab with table + filter row, `ReasonCodeFormModal` (create/edit), `ReasonCodeDisableModal` (confirm), `reasonCodesApi.js` client wrapper. Wiring: CostModule lazy import + tab-map, sectionDefs libraries entry (`minRole='admin'`), ~36 `library.reasonCodes.*` i18n keys + `common.actions` + `nav.tab.reason_codes`, decimalInputBudget budget for `ReasonCodeFormModal`. Server endpoints from PR-3 (Cohort 1) no longer dormant.
 >
 > **S-INVENTORY-1c Cohort 4 — HomePage landing + module section grids (S-HOME) shipped 2026-05-07 (SHA: `e6434f4`).** New `HomePage.jsx` operator dashboard (greeting + 4 KPIs + my-queue + recent activity + quick actions) + reusable `ModuleLanding.jsx` section grid + `sectionDefs.js` shared metadata (COST_SECTIONS / PLANNING_SECTIONS + landing helpers). `CostModule.jsx` short-circuits `activeTab='home'` to HomePage and `activeTab='landing:<sid>'` to ModuleLanding. ~21 `home.*` i18n keys + `nav.tab.home`. Cohort 5 (ReasonCodes UI) deferred to PR-9 — entanglements rolled back from CostModule + strings + sectionDefs + decimalInputBudget lint.
@@ -351,15 +361,8 @@ These are patterns this codebase specifically tripped on — save future session
 25. **Native modules + paths with spaces = `electron-builder` fails on rebuild** — `/Volumes/Macintosh Data/...` breaks node-gyp's makefile generation for `node-hid` + `serialport` (see node-gyp issue #65). Use `--config.npmRebuild=false` to skip rebuild during `electron-builder` (existing native binaries from `npm install` are reused). The DMG ships fine **ONLY IF the host Node version matches Electron's bundled Node** — otherwise the install-time binaries have the wrong NODE_MODULE_VERSION and runtime fails. See Lesson 28 for the ABI trap. Don't fix this with workspace move unless the user has time to relocate the project tree.
 26. **Sidebar collapse persistence key matters per-feature** — Sprint S-COLLAPSE (2026-04-29) added section-level collapse via `localStorage` key `opsctl.sidebar.section-collapsed.v1`. The mini-collapse (240px ↔ 64px rail) used different keys in v1.3. Don't reuse one key for two semantically different collapse states or operators lose either preference when the other one toggles.
 27. **Fluid container + container queries beat viewport media queries for cards/grids** — KPI tiles và breakdown panels phải responsive theo CONTAINER width (sidebar collapse/expand, panel resize) chứ không phải viewport. Pattern: wrap với `container-type: inline-size`, dùng `@container (min-width: …)`. Cho root container, dùng `max-width: min(2400px, calc(100vw - 48px))` thay vì hard cap `1440px` — màn 27"/4K/ultrawide không còn dải trắng 400-600px mỗi bên. Browser baseline yêu cầu Chrome 105+/Safari 16+ (đủ cho Electron 41 + web access trình duyệt mới). **Reference impl**: QuoteAnalysis + Dashboard (Sprint S-RESP-1 shipped 2026-05-06, SHA: `d4f5894`). Khi sprint sau touch Cost Breakdown / Quote History / Settings, pull pattern này theo (giống approach Sprint 12 inline-style migration). Companion patterns: fluid typography via `clamp(min, vw-component, max)` cho KPI numbers, sticky filterbar via `position: sticky` + IntersectionObserver toggle `.is-pinned` class (Carbon Tearsheet pattern), print rules `@page { size: A4 landscape }` để report fit landscape khi Cmd+P.
-28. **Electron-builder DMG: verify host Node ABI matches Electron's bundled Node BEFORE `npm install`** — Electron 41 bundles Node 24 (NODE_MODULE_VERSION 145). If the host CLI is Node 20 (NMV 115), `npm install` compiles `better-sqlite3` (and any other native dep) against the wrong ABI. Combined with Lesson 25's mandatory `--config.npmRebuild=false` (paths-with-spaces breaks node-gyp during electron-builder rebuild), the resulting DMG packs Node-20-ABI binaries that the bundled Node 24 cannot load. **Symptom on the kiosk**: app launches but the embedded Express server never reaches `LISTEN`; the renderer shows the "Không kết nối được tới http://127.0.0.1:3100" / `ERR_CONNECTION_REFUSED` dialog with the "Reset về Embedded + Restart" button. Server crash log will say `was compiled against a different Node.js version using NODE_MODULE_VERSION 115. This version requires NODE_MODULE_VERSION 145`. **Mandatory pre-build check** (run BEFORE `npm install`):
-    ```bash
-    # Expect Node 24.x. If you see Node 20.x, switch first:
-    node --version
-    # If wrong: nvm install 24 && nvm use 24   (or fnm use 24)
-    # Verify Electron's bundled Node (expected NMV 145 for Electron 41):
-    npx electron --version
-    ```
-    Already-installed `desktop/node_modules/better-sqlite3/build/Release/better_sqlite3.node` from a prior wrong-Node install will silently survive the next install if the package version didn't change — `rm -rf desktop/node_modules` before reinstalling on the new Node version. This trap is also the root cause of MES-3-FIX-4 backlog ticket; if you fix the .nvmrc + onboarding doc parts of FIX-4, mark this lesson "satisfied" instead of duplicating it. Incident: PR #14 hardware-test DMG (2026-05-08) was packaged with Node-20-ABI binaries; user hit the dialog above on first launch.
+28. **electron-builder DMG: native-module duplicate-binary trap — embedded server outside asar resolves WRONG copy** — Electron 41 has its own NMV (145), different from standalone Node 24 (NMV 137) and Node 20 (NMV 115). The bug: `desktop/package.json` `extraResources` copied root `../node_modules` → `app/node_modules`, putting host-CLI-rebuilt better-sqlite3 (NMV 137 or 115) where the embedded Express server resolves first. Meanwhile, `desktop/node_modules/better-sqlite3` rebuilt by `electron-rebuild` (NMV 145, correct for Electron) sits at `app.asar.unpacked/node_modules/` — only reachable by code INSIDE asar. Server code at `app/server/` (outside asar) — Node's resolver walks up and finds the wrong copy first. **Symptom**: app launches, renderer shows ERR_CONNECTION_REFUSED dialog. Server crash log: `compiled against NMV 137, requires NMV 145`. **Fix** (`desktop/package.json` `extraResources`): (a) add `!**/better-sqlite3/**` filter on `../node_modules` entry; (b) add new entry copying `desktop/node_modules/better-sqlite3` → `app/node_modules/better-sqlite3`. **Diagnostic** for any built DMG — both hashes must be identical: `shasum -a 256 "<App.app>/Contents/Resources/app/node_modules/better-sqlite3/build/Release/better_sqlite3.node" "<App.app>/Contents/Resources/app.asar.unpacked/node_modules/better-sqlite3/build/Release/better_sqlite3.node"`. **Host Node version is INCIDENTAL** — original Lesson 28 (PR #15 SHA `a8dca0a`) misattributed to host Node. Fix in PR #16 SHA `5e9d152`. PR #14 hardware-test DMGs v1+v2 both hit this; manual binary swap of `app/node_modules/.../better_sqlite3.node` ← `app.asar.unpacked/.../better_sqlite3.node` confirmed diagnosis on May 8 2026.
+29. **`if (loading) return <Skeleton/>` in parent unmounts the entire tree on every refresh tick — kills drawer snapshot patterns** — `useAbortableFetch.refresh()` flips `loading=true` at the start of EVERY fetch (including 60s polling tick, not just initial load). If parent does `if (loading) return <SkeletonTable />` early-return, the kanban + open detail drawer get unmounted; when fetch resolves ~50ms later, tree REMOUNTS — drawer's `useState(() => structuredClone(row))` initializer runs again, replacing the user's optimistic-edit snapshot with a fresh clone of the (now refreshed) row. User sees flash + revert even when snapshot logic is 100% correct. **Fix**: gate skeleton on initial load only — `if (loading && rawData == null) return <SkeletonTable />`. Verified in RFQTracker.jsx + SampleTracking.jsx (PR #16 SHA `5e9d152`). **General rule**: in components with auto-refresh polling + persistent UI (drawers, modals, expanded rows), NEVER let the polling-driven `loading` flag drive an early-return. The skeleton state is for INITIAL data load only.
 
 ## Recovery playbook
 
@@ -655,12 +658,17 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - **Effort**: S (~12 LOC, already drafted)
 - **Priority**: P2 (Safari-specific but desktop kiosks affected)
 
-#### MES-3-FIX-15 — desktop kiosk-key persistence + better-sqlite3 12 bump
+#### MES-3-FIX-15a — better-sqlite3 v12 bump (DONE)
 
-- **Source**: v1.4.3 audit, `stash@{1}`. Without kiosk-key persistence fix, every Electron restart invalidates kiosk pairings. better-sqlite3 12 bump aligns with Electron Node 24 ABI (related to MES-3-FIX-4).
-- **Acceptance**: pop `stash@{1}`, ship as desktop branch alongside Electron Node 24 alignment work.
-- **Effort**: S (changes already drafted)
-- **Priority**: P2 (operationally felt — kiosks unpair on app restart)
+- Source: PR #10, shipped 2026-05-08 (SHA: `3401f40`)
+- Status: CLOSED
+
+#### MES-3-FIX-15b — desktop kiosk-key persistence (OPEN)
+
+- Source: original FIX-15, the second half. Without kiosk-key persistence fix, every Electron restart invalidates kiosk pairings.
+- Acceptance: pop the original `stash@{1}` referenced in the v1.4.3 audit OR re-implement kiosk-key persistence. Ship as desktop branch.
+- Effort: S
+- Priority: P2
 
 #### MES-3-FIX-16 — Extend seed:mes to populate orders entity for BOMExplosion verify path
 
@@ -668,6 +676,27 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - **Acceptance**: extend `scripts/seed-mes-fixtures.js` to also `POST /api/planning/orders` (or write directly to the orders backing store) for each fixture, using a real ccl_pn that has both BOM + routing rows in `Library/`. Pick top candidate `80644500` (10 routing ops, 9 BOM rows, mixed Hours + Units/Hour modes — ideal for cross-feature verify). Fixture should remain idempotent (skip if order already exists for that productCode).
 - **Effort**: S (~30 LOC + 1 lookup helper for "find a real PN with both"; reuse the cross-reference script from the audit session)
 - **Priority**: P3 (verify-path enhancement, not a feature regression; W1 + W2 + W4 still verifiable on real data; W3 only blocks if dev box is fresh AND operator hasn't manually entered orders)
+
+#### MES-3-FIX-17 — main CI Lint+format failure (eslint-plugin-react-hooks resolution)
+
+- Source: discovered during PR #14 hardware-test session. Root npm run lint script invokes `eslint .` from repo root, which evaluates `client/eslint.config.js`; that file imports `eslint-plugin-react-hooks` which is in `client/package.json` but NOT in root `package.json`. Result: every PR's "Lint + format" check fails the same way.
+- Acceptance: either (a) move `eslint-plugin-react-hooks` + `eslint-plugin-react-refresh` to root devDeps, OR (b) change root lint script to `cd client && npm run lint && cd .. && npx eslint server/ desktop/` (per-package).
+- Effort: S
+- Priority: P2 (blocks meaningful CI signal across all open PRs)
+
+#### MES-3-FIX-18 — vite prebuild hook hardcoded path
+
+- Source: discovered during PR #14 hardware-test DMG builds. `client/package.json`'s prebuild hook runs `node ../scripts/help/build-all-docs.mjs`, which writes to `OUT_DIR = path.join(ROOT, '..', '..', '4. CLAUDE OUTPUT')`. From any non-canonical worktree (e.g. `/tmp/ops-build-pr14/`), this resolves outside the worktree tree (e.g. `/private/4. CLAUDE OUTPUT/`) — not writable without sudo.
+- Acceptance: change OUT_DIR resolution to use a path INSIDE the worktree (e.g. `path.join(ROOT, 'help-output')`) OR make the script gracefully skip when the dir isn't writable.
+- Effort: S
+- Priority: P3
+
+#### MES-3-FIX-19 — build-script generalization for native module overlays
+
+- Source: discovered during PR #16 investigation. Only better-sqlite3 currently needs the `app/node_modules` overlay (because only it's required from outside asar at `app/server/`). If kiosk planner code under `domains/planning/` (now packaged via PR #14 build-desktop.sh change) ever requires node-hid or serialport from outside asar, the same overlay pattern applies and the bug repeats.
+- Acceptance: write a build-time pre-pack step that walks `asarUnpack` patterns + auto-generates an overlay extraResources entry for each native module. Codifies Lesson 28's fix as a reusable check.
+- Effort: M
+- Priority: P3
 
 #### KIOSK-001 — Real branded PWA icons
 
