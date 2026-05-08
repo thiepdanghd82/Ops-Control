@@ -19,16 +19,24 @@ import {
   getRoutingForPart,
   getWorkCenters,
   getProducts,
-  clearCache
+  clearCache,
 } from '../services/dataSync.js';
 import * as repo from '../repositories/index.js';
 import {
-  audit, getSessionUser, getTokenFromHeader, loadUsers, isAdminPlus, canWrite,
+  audit,
+  getSessionUser,
+  getTokenFromHeader,
+  loadUsers,
+  isAdminPlus,
+  canWrite,
   requireWriter,
 } from '../services/authService.js';
 import { withLock } from '../utils/asyncLock.js';
 import { requireTabAccess } from '../services/permissionService.js';
-import { transition as approvalTransition, countActionable } from '../repositories/approvalWorkflow.js';
+import {
+  transition as approvalTransition,
+  countActionable,
+} from '../repositories/approvalWorkflow.js';
 import { validateBody } from '../middleware/validate.js';
 import { toCsvRow } from '../utils/csvSafe.js';
 import { sanitizeReason } from '../utils/sanitize.js';
@@ -41,7 +49,12 @@ import { validateRows, machineProfileSchema } from '../services/librarySchema.js
 // the 400 response then lists valid actions instead of surfacing the
 // internal machine error.
 const APPROVAL_ACTIONS = [
-  'SUBMIT', 'APPROVE_SALES', 'APPROVE_FINANCE', 'APPROVE', 'REJECT', 'REVOKE',
+  'SUBMIT',
+  'APPROVE_SALES',
+  'APPROVE_FINANCE',
+  'APPROVE',
+  'REJECT',
+  'REVOKE',
 ];
 
 // sanitizeReason moved to utils/sanitize.js (Phase 9E.2) so it's
@@ -52,7 +65,12 @@ import {
   runDigest as runNotificationDigest,
   markDelivered as markNotificationsDelivered,
 } from '../services/notifications.js';
-import { loadQuotes, saveQuotes, getQuoteById, quotesBackendStatus } from '../repositories/quotesStore.js';
+import {
+  loadQuotes,
+  saveQuotes,
+  getQuoteById,
+  quotesBackendStatus,
+} from '../repositories/quotesStore.js';
 import { emitDataChange } from '../services/eventBus.js';
 
 import { fileURLToPath } from 'url';
@@ -70,7 +88,9 @@ function readJson(filePath) {
   try {
     if (!fs.existsSync(filePath)) return null;
     return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 const router = Router();
@@ -190,15 +210,20 @@ router.get('/dashboard', async (req, res) => {
   try {
     const {
       collectMetrics,
-      getOverview, getWinRate, getApprovalFunnel, getTopCustomers,
-      getMonthlyQuoteCount, getMarginHistogram, getMarginTrend,
+      getOverview,
+      getWinRate,
+      getApprovalFunnel,
+      getTopCustomers,
+      getMonthlyQuoteCount,
+      getMarginHistogram,
+      getMarginTrend,
     } = await import('../repositories/dashboardStats.js');
     // Validate days: 30 | 90 | 365 | omitted/'all' (all history). Any
     // other value is ignored (falls through to all-history) rather than
     // 400'd — the client dropdown only emits the four values, but a
     // bookmarked URL with junk shouldn't break the page.
     const raw = req.query.days;
-    const days = (raw === '30' || raw === '90' || raw === '365') ? Number(raw) : null;
+    const days = raw === '30' || raw === '90' || raw === '365' ? Number(raw) : null;
     const opts = days ? { days } : {};
 
     // Phase 9F.3 + 9N.1 — single-scan-per-window optimization. We do
@@ -241,12 +266,13 @@ router.get('/dashboard', async (req, res) => {
 router.get('/dashboard/export', async (req, res) => {
   const user = getSessionUser(getTokenFromHeader(req));
   if (!user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
-  if (!isAdminPlus(user)) return res.status(403).json({ ok: false, error: 'Forbidden — admin only' });
+  if (!isAdminPlus(user))
+    return res.status(403).json({ ok: false, error: 'Forbidden — admin only' });
   try {
     const { collectMetrics, getOverview, getWinRate, getTopCustomers } =
       await import('../repositories/dashboardStats.js');
     const raw = req.query.days;
-    const days = (raw === '30' || raw === '90' || raw === '365') ? Number(raw) : null;
+    const days = raw === '30' || raw === '90' || raw === '365' ? Number(raw) : null;
     const opts = days ? { days } : {};
     // 9F.3 — share one scan across overview/winRate/topCustomers.
     const metrics = collectMetrics(opts);
@@ -318,37 +344,41 @@ router.get('/dashboard/export', async (req, res) => {
 // New callers should use POST /api/shared/approvals/:quoteId/transition
 // which applies + persists the transition atomically. This endpoint
 // is kept for backwards compatibility with clients still on v1.
-router.post('/approval/transition', validateBody({
-  action: { type: 'enum', required: true, values: APPROVAL_ACTIONS },
-  reason: { type: 'string', max: 500 },
-  current_approval: { type: 'object' },
-}), async (req, res) => {
-  // Phase 9M.2 — deprecation metric. Counts every call to the legacy
-  // v1 endpoint so ops can see usage trend. When this drops to 0 for
-  // a full week, we delete the route. Labels capture the actor so we
-  // can tell which client / integration is still using it.
-  const actorName = req.user?.user?.username || req.user?.username || 'unknown';
-  incMetric('deprecated_calls_total', {
-    endpoint: '/api/shared/approval/transition',
-    actor: actorName,
-  });
-  try {
-    const userWrapper = req.user;
-    const actorUser = userWrapper?.user || userWrapper;
-    const { current_approval, action, reason } = req.body;
-    const result = approvalTransition({
-      approval: current_approval,
-      action: String(action).toUpperCase(),
-      actorUser,
-      reason: sanitizeReason(reason),
+router.post(
+  '/approval/transition',
+  validateBody({
+    action: { type: 'enum', required: true, values: APPROVAL_ACTIONS },
+    reason: { type: 'string', max: 500 },
+    current_approval: { type: 'object' },
+  }),
+  async (req, res) => {
+    // Phase 9M.2 — deprecation metric. Counts every call to the legacy
+    // v1 endpoint so ops can see usage trend. When this drops to 0 for
+    // a full week, we delete the route. Labels capture the actor so we
+    // can tell which client / integration is still using it.
+    const actorName = req.user?.user?.username || req.user?.username || 'unknown';
+    incMetric('deprecated_calls_total', {
+      endpoint: '/api/shared/approval/transition',
+      actor: actorName,
     });
-    if (!result.ok) return res.status(400).json(result);
-    res.json(result);
-  } catch (err) {
-    logErr(req, 'legacy_approval_transition', err);
-    res.status(500).json({ ok: false, error: redactErrorMessage(err) });
+    try {
+      const userWrapper = req.user;
+      const actorUser = userWrapper?.user || userWrapper;
+      const { current_approval, action, reason } = req.body;
+      const result = approvalTransition({
+        approval: current_approval,
+        action: String(action).toUpperCase(),
+        actorUser,
+        reason: sanitizeReason(reason),
+      });
+      if (!result.ok) return res.status(400).json(result);
+      res.json(result);
+    } catch (err) {
+      logErr(req, 'legacy_approval_transition', err);
+      res.status(500).json({ ok: false, error: redactErrorMessage(err) });
+    }
   }
-});
+);
 
 // ── Atomic approval endpoint (Sprint 6.2) ────────────────────────────
 //
@@ -380,7 +410,9 @@ router.post('/approval/transition', validateBody({
 // duplicating the write logic.
 function clientIp(req) {
   return (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '-')
-    .toString().split(',')[0].trim();
+    .toString()
+    .split(',')[0]
+    .trim();
 }
 
 // ── Approval → notification routing (Sprint 6.6) ─────────────────────
@@ -390,15 +422,16 @@ function clientIp(req) {
 // users; if that grows we'll cache with an mtime check.
 function notificationRecipients({ toStatus, prevApproval, actorUsername }) {
   const users = loadUsers();
-  const usersWithRole = (role) => users
-    .filter(u => u && Array.isArray(u.approval_roles) && u.approval_roles.includes(role))
-    .map(u => u.username);
+  const usersWithRole = (role) =>
+    users
+      .filter((u) => u && Array.isArray(u.approval_roles) && u.approval_roles.includes(role))
+      .map((u) => u.username);
 
   const submitter = prevApproval?.submitted_by;
   const out = [];
   const addDistinct = (username, reason) => {
     if (!username || username === actorUsername) return; // never notify the actor
-    if (out.some(r => r.recipient === username)) return;
+    if (out.some((r) => r.recipient === username)) return;
     out.push({ recipient: username, recipient_reason: reason });
   };
 
@@ -413,8 +446,10 @@ function notificationRecipients({ toStatus, prevApproval, actorUsername }) {
   } else if (toStatus === 'draft') {
     // REVOKE path — tell the submitter + previous approvers their sign-off is cleared.
     if (submitter) addDistinct(submitter, 'approval revoked — quote returned to draft');
-    if (prevApproval?.sales_approved_by) addDistinct(prevApproval.sales_approved_by, 'sales approval revoked');
-    if (prevApproval?.finance_approved_by) addDistinct(prevApproval.finance_approved_by, 'finance approval revoked');
+    if (prevApproval?.sales_approved_by)
+      addDistinct(prevApproval.sales_approved_by, 'sales approval revoked');
+    if (prevApproval?.finance_approved_by)
+      addDistinct(prevApproval.finance_approved_by, 'finance approval revoked');
   }
   return out;
 }
@@ -436,163 +471,176 @@ router.get('/approvals/my-count', (req, res) => {
   }
 });
 
-router.post('/approvals/:quoteId/transition', validateBody({
-  action: { type: 'enum', required: true, values: APPROVAL_ACTIONS },
-  reason: { type: 'string', max: 500 },
-}), async (req, res) => {
-  const quoteId = parseInt(req.params.quoteId, 10);
-  if (!Number.isFinite(quoteId)) {
-    return res.status(400).json({ ok: false, error: 'invalid quote id' });
-  }
-  const actorUser = getSessionUser(getTokenFromHeader(req));
-  if (!actorUser) return res.status(401).json({ ok: false, error: 'Unauthorized' });
-
-  const { action, reason: rawReason } = req.body;
-  const reason = sanitizeReason(rawReason);
-  const normalizedAction = String(action).toUpperCase();
-
-  try {
-    const result = await withLock(`quote:${quoteId}`, async () => {
-      const quotes = loadQuotes();
-      const idx = quotes.findIndex(q => q && q.id === quoteId);
-      if (idx === -1) {
-        return { status: 404, body: { ok: false, error: `Quote ${quoteId} not found` } };
-      }
-      const quote = quotes[idx];
-      const prevApproval = quote.state?.approval || null;
-
-      // Phase 9E.4 — when APPROVE_FINANCE fires, freeze the pricing
-      // basis (site + live SGA rate) into the approval record. Read
-      // live Finance config on the server so we don't trust a client-
-      // provided value; this guarantees the snapshot reflects what
-      // Finance actually had at the approval moment.
-      let snapshot = null;
-      if (normalizedAction === 'APPROVE_FINANCE' || normalizedAction === 'APPROVE') {
-        const site = quote.state?.site || 'VN';
-        try {
-          const finSum = readJson(path.join(LIB, 'Finance', 'finance_sum.json')) || {};
-          const ratesBySite = finSum?.sga_rate_pct_by_site || {};
-          // Case-insensitive lookup matches client computeSga behavior.
-          let rate = ratesBySite[site];
-          if (rate == null) {
-            const nkey = String(site).trim().toLowerCase();
-            for (const [k, v] of Object.entries(ratesBySite)) {
-              if (String(k).trim().toLowerCase() === nkey) { rate = v; break; }
-            }
-          }
-          snapshot = { site, sga_rate_pct: Number(rate) || 0 };
-        } catch (err) {
-          // Finance config unreadable → graceful-degrade to 0% so the
-          // approval isn't blocked. Sprint 12: log loudly so Ops sees
-          // the silent fallback. Without this the margin reporting on
-          // the approved quote looks fine to the user but uses 0% SGA
-          // when the live rate might have been 5%.
-          console.error(`  ❌  APPROVE_FINANCE snapshot read failed (quote=${quoteId}, site=${site}): ${err?.message || err}. Falling back to 0% SGA.`);
-          snapshot = { site, sga_rate_pct: 0 };
-        }
-      }
-
-      const tr = approvalTransition({
-        approval: prevApproval,
-        action: normalizedAction,
-        actorUser,
-        reason,
-        snapshot,
-      });
-      if (!tr.ok) {
-        return { status: 400, body: tr };
-      }
-
-      if (!quote.state || typeof quote.state !== 'object') quote.state = {};
-      quote.state.approval = tr.approval;
-      // saveQuotes handles atomic JSON write + SQLite shadow mirror.
-      saveQuotes(quotes);
-
-      // Append a version row so the full approval trail is queryable
-      // via GET /api/shared/quotes/:id/versions. Non-fatal: a failed
-      // version append should not rollback the approval — the JSON
-      // file is already the source of truth.
-      try {
-        const { appendQuoteVersion } = await import('../repositories/quoteVersions.js');
-        appendQuoteVersion(quoteId, quote.state, {
-          savedAt: new Date().toISOString(),
-          savedBy: actorUser.username,
-        });
-      } catch (e) {
-        console.warn('  ⚠️  approvals append version:', e.message);
-      }
-
-      // Sprint 12: include the frozen SGA snapshot in the audit entry
-      // when APPROVE_FINANCE fires. The snapshot is ALSO persisted on
-      // the quote (approval.rates_snapshot), but Finance/compliance
-      // auditors typically look at the append-only audit log first —
-      // having the rate inline makes "who signed off at what rate"
-      // traceable without cross-referencing quote state that could
-      // later be REVOKEd.
-      const snapSuffix = snapshot
-        ? ` sga=${snapshot.sga_rate_pct}% site=${snapshot.site}`
-        : '';
-      audit(
-        'APPROVAL_TRANSITION',
-        actorUser.username,
-        clientIp(req),
-        `quote=${quoteId} ${normalizedAction} ${prevApproval?.status || 'draft'}→${tr.approval.status}${snapSuffix}${reason ? ' reason=' + String(reason).slice(0, 200) : ''}`,
-      );
-
-      // Sprint 6.6: enqueue notification records for the next reviewer
-      // (or the submitter on terminal transitions). Best-effort —
-      // notification IO failures must not fail the transition, which
-      // is already durable on disk + audited above.
-      try {
-        const label = quote.state?.ccl_pn || quote.state?.rfq_number || `#${quoteId}`;
-        const recipients = notificationRecipients({
-          toStatus: tr.approval.status,
-          prevApproval,
-          actorUsername: actorUser.username,
-        });
-        if (recipients.length > 0) {
-          await enqueueNotifications(recipients.map(r => ({
-            quote_id: quoteId,
-            quote_label: label,
-            action: normalizedAction,
-            from_status: prevApproval?.status || 'draft',
-            to_status: tr.approval.status,
-            actor: actorUser.username,
-            ...(reason ? { reason } : {}),
-            recipient: r.recipient,
-            recipient_reason: r.recipient_reason,
-          })));
-        }
-      } catch (notifyErr) {
-        console.warn('  ⚠️  notification enqueue failed:', notifyErr?.message || notifyErr);
-      }
-
-      return {
-        status: 200,
-        body: { ok: true, approval: tr.approval, quote_id: quoteId },
-        emit: {
-          quoteId,
-          from: prevApproval?.status || 'draft',
-          to: tr.approval.status,
-          action: normalizedAction,
-          by: actorUser.username,
-        },
-      };
-    });
-    if (result?.emit) {
-      try {
-        emitDataChange('approval.transition', result.emit);
-        emitDataChange('quote.saved', {
-          id: result.emit.quoteId, savedBy: result.emit.by, approval: true,
-        });
-      } catch { /* event bus best-effort */ }
+router.post(
+  '/approvals/:quoteId/transition',
+  validateBody({
+    action: { type: 'enum', required: true, values: APPROVAL_ACTIONS },
+    reason: { type: 'string', max: 500 },
+  }),
+  async (req, res) => {
+    const quoteId = parseInt(req.params.quoteId, 10);
+    if (!Number.isFinite(quoteId)) {
+      return res.status(400).json({ ok: false, error: 'invalid quote id' });
     }
-    return res.status(result.status).json(result.body);
-  } catch (err) {
-    logErr(req, 'approval_transition', err);
-    return res.status(500).json({ ok: false, error: redactErrorMessage(err) });
+    const actorUser = getSessionUser(getTokenFromHeader(req));
+    if (!actorUser) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+
+    const { action, reason: rawReason } = req.body;
+    const reason = sanitizeReason(rawReason);
+    const normalizedAction = String(action).toUpperCase();
+
+    try {
+      const result = await withLock(`quote:${quoteId}`, async () => {
+        const quotes = loadQuotes();
+        const idx = quotes.findIndex((q) => q && q.id === quoteId);
+        if (idx === -1) {
+          return { status: 404, body: { ok: false, error: `Quote ${quoteId} not found` } };
+        }
+        const quote = quotes[idx];
+        const prevApproval = quote.state?.approval || null;
+
+        // Phase 9E.4 — when APPROVE_FINANCE fires, freeze the pricing
+        // basis (site + live SGA rate) into the approval record. Read
+        // live Finance config on the server so we don't trust a client-
+        // provided value; this guarantees the snapshot reflects what
+        // Finance actually had at the approval moment.
+        let snapshot = null;
+        if (normalizedAction === 'APPROVE_FINANCE' || normalizedAction === 'APPROVE') {
+          const site = quote.state?.site || 'VN';
+          try {
+            const finSum = readJson(path.join(LIB, 'Finance', 'finance_sum.json')) || {};
+            const ratesBySite = finSum?.sga_rate_pct_by_site || {};
+            // Case-insensitive lookup matches client computeSga behavior.
+            let rate = ratesBySite[site];
+            if (rate == null) {
+              const nkey = String(site).trim().toLowerCase();
+              for (const [k, v] of Object.entries(ratesBySite)) {
+                if (String(k).trim().toLowerCase() === nkey) {
+                  rate = v;
+                  break;
+                }
+              }
+            }
+            snapshot = { site, sga_rate_pct: Number(rate) || 0 };
+          } catch (err) {
+            // Finance config unreadable → graceful-degrade to 0% so the
+            // approval isn't blocked. Sprint 12: log loudly so Ops sees
+            // the silent fallback. Without this the margin reporting on
+            // the approved quote looks fine to the user but uses 0% SGA
+            // when the live rate might have been 5%.
+            console.error(
+              `  ❌  APPROVE_FINANCE snapshot read failed (quote=${quoteId}, site=${site}): ${err?.message || err}. Falling back to 0% SGA.`
+            );
+            snapshot = { site, sga_rate_pct: 0 };
+          }
+        }
+
+        const tr = approvalTransition({
+          approval: prevApproval,
+          action: normalizedAction,
+          actorUser,
+          reason,
+          snapshot,
+        });
+        if (!tr.ok) {
+          return { status: 400, body: tr };
+        }
+
+        if (!quote.state || typeof quote.state !== 'object') quote.state = {};
+        quote.state.approval = tr.approval;
+        // saveQuotes handles atomic JSON write + SQLite shadow mirror.
+        saveQuotes(quotes);
+
+        // Append a version row so the full approval trail is queryable
+        // via GET /api/shared/quotes/:id/versions. Non-fatal: a failed
+        // version append should not rollback the approval — the JSON
+        // file is already the source of truth.
+        try {
+          const { appendQuoteVersion } = await import('../repositories/quoteVersions.js');
+          appendQuoteVersion(quoteId, quote.state, {
+            savedAt: new Date().toISOString(),
+            savedBy: actorUser.username,
+          });
+        } catch (e) {
+          console.warn('  ⚠️  approvals append version:', e.message);
+        }
+
+        // Sprint 12: include the frozen SGA snapshot in the audit entry
+        // when APPROVE_FINANCE fires. The snapshot is ALSO persisted on
+        // the quote (approval.rates_snapshot), but Finance/compliance
+        // auditors typically look at the append-only audit log first —
+        // having the rate inline makes "who signed off at what rate"
+        // traceable without cross-referencing quote state that could
+        // later be REVOKEd.
+        const snapSuffix = snapshot ? ` sga=${snapshot.sga_rate_pct}% site=${snapshot.site}` : '';
+        audit(
+          'APPROVAL_TRANSITION',
+          actorUser.username,
+          clientIp(req),
+          `quote=${quoteId} ${normalizedAction} ${prevApproval?.status || 'draft'}→${tr.approval.status}${snapSuffix}${reason ? ' reason=' + String(reason).slice(0, 200) : ''}`
+        );
+
+        // Sprint 6.6: enqueue notification records for the next reviewer
+        // (or the submitter on terminal transitions). Best-effort —
+        // notification IO failures must not fail the transition, which
+        // is already durable on disk + audited above.
+        try {
+          const label = quote.state?.ccl_pn || quote.state?.rfq_number || `#${quoteId}`;
+          const recipients = notificationRecipients({
+            toStatus: tr.approval.status,
+            prevApproval,
+            actorUsername: actorUser.username,
+          });
+          if (recipients.length > 0) {
+            await enqueueNotifications(
+              recipients.map((r) => ({
+                quote_id: quoteId,
+                quote_label: label,
+                action: normalizedAction,
+                from_status: prevApproval?.status || 'draft',
+                to_status: tr.approval.status,
+                actor: actorUser.username,
+                ...(reason ? { reason } : {}),
+                recipient: r.recipient,
+                recipient_reason: r.recipient_reason,
+              }))
+            );
+          }
+        } catch (notifyErr) {
+          console.warn('  ⚠️  notification enqueue failed:', notifyErr?.message || notifyErr);
+        }
+
+        return {
+          status: 200,
+          body: { ok: true, approval: tr.approval, quote_id: quoteId },
+          emit: {
+            quoteId,
+            from: prevApproval?.status || 'draft',
+            to: tr.approval.status,
+            action: normalizedAction,
+            by: actorUser.username,
+          },
+        };
+      });
+      if (result?.emit) {
+        try {
+          emitDataChange('approval.transition', result.emit);
+          emitDataChange('quote.saved', {
+            id: result.emit.quoteId,
+            savedBy: result.emit.by,
+            approval: true,
+          });
+        } catch {
+          /* event bus best-effort */
+        }
+      }
+      return res.status(result.status).json(result.body);
+    } catch (err) {
+      logErr(req, 'approval_transition', err);
+      return res.status(500).json({ ok: false, error: redactErrorMessage(err) });
+    }
   }
-});
+);
 
 // ── Notification inbox + digest (Sprint 6.6) ─────────────────────────
 // GET /api/shared/notifications/my — pending records for the current
@@ -634,7 +682,7 @@ router.post('/notifications/digest/run', async (req, res) => {
       clientIp(req),
       `mode=${r.mode} recipients=${r.digests?.length || 0} delivered=${ackCount}` +
         (r.error ? ' error=' + String(r.error).slice(0, 200) : '') +
-        (r.status ? ' status=' + r.status : ''),
+        (r.status ? ' status=' + r.status : '')
     );
     res.json({ ok: true, ...r, delivered: ackCount });
   } catch (err) {
@@ -671,11 +719,11 @@ router.get('/quotes', (req, res) => {
     const include = (req.query.include || '').toString().toLowerCase();
     const trashed = req.query.trashed === '1' || req.query.trashed === 'true';
     if (trashed) {
-      res.json(all.filter(q => q && q.deleted_at));
+      res.json(all.filter((q) => q && q.deleted_at));
     } else if (include === 'deleted' || include === 'all') {
       res.json(all);
     } else {
-      res.json(all.filter(q => q && !q.deleted_at));
+      res.json(all.filter((q) => q && !q.deleted_at));
     }
   } catch (err) {
     console.error('  ❌  load quotes failed:', err);
@@ -737,8 +785,12 @@ router.get('/quotes/:id/versions/diff', async (req, res) => {
     res.json({
       ok: true,
       quote_id: id,
-      from: { version_num: fromRow.version_num, saved_at: fromRow.saved_at, saved_by: fromRow.saved_by },
-      to:   { version_num: toRow.version_num,   saved_at: toRow.saved_at,   saved_by: toRow.saved_by   },
+      from: {
+        version_num: fromRow.version_num,
+        saved_at: fromRow.saved_at,
+        saved_by: fromRow.saved_by,
+      },
+      to: { version_num: toRow.version_num, saved_at: toRow.saved_at, saved_by: toRow.saved_by },
       change_count: changes.length,
       changes,
     });
@@ -831,11 +883,20 @@ const RFQ_ATTACH_TMP = path.join(RFQ_DIR, '_attach_tmp');
 function rfqEnsureDirs() {
   fs.mkdirSync(RFQ_DIR, { recursive: true });
   fs.mkdirSync(RFQ_ATTACH_DIR, { recursive: true });
-  try { fs.mkdirSync(RFQ_ATTACH_TMP, { recursive: true, mode: 0o700 }); } catch { /* ignore */ }
+  try {
+    fs.mkdirSync(RFQ_ATTACH_TMP, { recursive: true, mode: 0o700 });
+  } catch {
+    /* ignore */
+  }
 }
 
 function rfqReadAudit() {
-  try { rfqEnsureDirs(); return readJson(RFQ_AUDIT_FILE) || {}; } catch { return {}; }
+  try {
+    rfqEnsureDirs();
+    return readJson(RFQ_AUDIT_FILE) || {};
+  } catch {
+    return {};
+  }
 }
 
 function rfqWriteAudit(obj) {
@@ -844,7 +905,12 @@ function rfqWriteAudit(obj) {
 }
 
 function rfqReadAttachments() {
-  try { rfqEnsureDirs(); return readJson(RFQ_ATTACH_FILE) || {}; } catch { return {}; }
+  try {
+    rfqEnsureDirs();
+    return readJson(RFQ_ATTACH_FILE) || {};
+  } catch {
+    return {};
+  }
 }
 
 function rfqWriteAttachments(obj) {
@@ -868,7 +934,8 @@ router.get('/rfq-tracker/audit/:id', (req, res) => {
 // ts — clients can't forge either. We use a lock so concurrent
 // appends don't lose each other under load.
 router.post('/rfq-tracker/audit/:id', requireTabAccess('rfq-tracker'), async (req, res) => {
-  const cu = requireWriter(req, res); if (!cu) return;
+  const cu = requireWriter(req, res);
+  if (!cu) return;
   const rfqId = String(req.params.id);
   const body = req.body || {};
   const kind = typeof body.kind === 'string' ? body.kind.slice(0, 40) : '';
@@ -878,8 +945,12 @@ router.post('/rfq-tracker/audit/:id', requireTabAccess('rfq-tracker'), async (re
     user: cu.username || '-',
     kind,
     ...(body.field ? { field: String(body.field).slice(0, 80) } : {}),
-    ...(body.from !== undefined ? { from: typeof body.from === 'string' ? body.from.slice(0, 200) : body.from } : {}),
-    ...(body.to !== undefined ? { to: typeof body.to === 'string' ? body.to.slice(0, 200) : body.to } : {}),
+    ...(body.from !== undefined
+      ? { from: typeof body.from === 'string' ? body.from.slice(0, 200) : body.from }
+      : {}),
+    ...(body.to !== undefined
+      ? { to: typeof body.to === 'string' ? body.to.slice(0, 200) : body.to }
+      : {}),
     ...(body.meta && typeof body.meta === 'object' ? { meta: body.meta } : {}),
   };
   try {
@@ -893,7 +964,9 @@ router.post('/rfq-tracker/audit/:id', requireTabAccess('rfq-tracker'), async (re
     });
     try {
       emitDataChange('rfq.updated', { id: rfqId, kind, savedBy: cu.username });
-    } catch { /* event bus best-effort */ }
+    } catch {
+      /* event bus best-effort */
+    }
     res.json({ ok: true, entry });
   } catch (err) {
     logErr(req, 'rfq:audit:append', err);
@@ -928,54 +1001,86 @@ router.get('/rfq-tracker/attachments/:id', (req, res) => {
 
 // POST /api/shared/rfq-tracker/attachments/:id — upload one file.
 // Multipart with field name "file". Returns the saved pointer entry.
-router.post('/rfq-tracker/attachments/:id', requireTabAccess('rfq-tracker'), rfqUpload.single('file'), async (req, res) => {
-  const cu = requireWriter(req, res);
-  if (!cu) { if (req.file) try { fs.unlinkSync(req.file.path); } catch { /* ignore */ } return; }
-  if (!req.file) return res.status(400).json({ error: 'no_file' });
-  const rfqId = String(req.params.id);
-  try {
-    rfqEnsureDirs();
-    const sha = rfqHashFile(req.file.path);
-    const ext = (path.extname(req.file.originalname || '') || '').toLowerCase().slice(0, 8);
-    const finalName = sha + ext;
-    const finalPath = path.join(RFQ_ATTACH_DIR, finalName);
-    if (!fs.existsSync(finalPath)) {
-      try { fs.renameSync(req.file.path, finalPath); }
-      catch { fs.copyFileSync(req.file.path, finalPath); try { fs.unlinkSync(req.file.path); } catch { /* ignore */ } }
-    } else {
-      try { fs.unlinkSync(req.file.path); } catch { /* ignore */ }
+router.post(
+  '/rfq-tracker/attachments/:id',
+  requireTabAccess('rfq-tracker'),
+  rfqUpload.single('file'),
+  async (req, res) => {
+    const cu = requireWriter(req, res);
+    if (!cu) {
+      if (req.file)
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {
+          /* ignore */
+        }
+      return;
     }
-    const entry = {
-      id: crypto.randomBytes(6).toString('hex'),
-      original: String(req.file.originalname || 'file').slice(0, 200),
-      stored: finalName,
-      size: req.file.size,
-      uploaded_by: cu.username || '-',
-      uploaded_at: new Date().toISOString(),
-    };
-    await withLock('rfq:attach', async () => {
-      const all = rfqReadAttachments();
-      if (!Array.isArray(all[rfqId])) all[rfqId] = [];
-      all[rfqId].push(entry);
-      rfqWriteAttachments(all);
-    });
+    if (!req.file) return res.status(400).json({ error: 'no_file' });
+    const rfqId = String(req.params.id);
     try {
-      emitDataChange('rfq.updated', { id: rfqId, attachment: 'add', savedBy: cu.username });
-    } catch { /* event bus best-effort */ }
-    res.json({ ok: true, entry });
-  } catch (err) {
-    if (req.file) try { fs.unlinkSync(req.file.path); } catch { /* ignore */ }
-    logErr(req, 'rfq:attach:upload', err);
-    res.status(500).json({ error: redactErrorMessage(err) });
+      rfqEnsureDirs();
+      const sha = rfqHashFile(req.file.path);
+      const ext = (path.extname(req.file.originalname || '') || '').toLowerCase().slice(0, 8);
+      const finalName = sha + ext;
+      const finalPath = path.join(RFQ_ATTACH_DIR, finalName);
+      if (!fs.existsSync(finalPath)) {
+        try {
+          fs.renameSync(req.file.path, finalPath);
+        } catch {
+          fs.copyFileSync(req.file.path, finalPath);
+          try {
+            fs.unlinkSync(req.file.path);
+          } catch {
+            /* ignore */
+          }
+        }
+      } else {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {
+          /* ignore */
+        }
+      }
+      const entry = {
+        id: crypto.randomBytes(6).toString('hex'),
+        original: String(req.file.originalname || 'file').slice(0, 200),
+        stored: finalName,
+        size: req.file.size,
+        uploaded_by: cu.username || '-',
+        uploaded_at: new Date().toISOString(),
+      };
+      await withLock('rfq:attach', async () => {
+        const all = rfqReadAttachments();
+        if (!Array.isArray(all[rfqId])) all[rfqId] = [];
+        all[rfqId].push(entry);
+        rfqWriteAttachments(all);
+      });
+      try {
+        emitDataChange('rfq.updated', { id: rfqId, attachment: 'add', savedBy: cu.username });
+      } catch {
+        /* event bus best-effort */
+      }
+      res.json({ ok: true, entry });
+    } catch (err) {
+      if (req.file)
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {
+          /* ignore */
+        }
+      logErr(req, 'rfq:attach:upload', err);
+      res.status(500).json({ error: redactErrorMessage(err) });
+    }
   }
-});
+);
 
 // GET /api/shared/rfq-tracker/attachments/:id/:attId/download — stream file.
 router.get('/rfq-tracker/attachments/:id/:attId/download', (req, res) => {
   try {
     const all = rfqReadAttachments();
     const entries = all[req.params.id] || [];
-    const entry = entries.find(e => e.id === req.params.attId);
+    const entry = entries.find((e) => e.id === req.params.attId);
     if (!entry) return res.status(404).json({ error: 'not_found' });
     const filePath = path.join(RFQ_ATTACH_DIR, entry.stored);
     // path-traversal guard — stored names are sha1 + safe ext only,
@@ -995,24 +1100,35 @@ router.get('/rfq-tracker/attachments/:id/:attId/download', (req, res) => {
 // DELETE /api/shared/rfq-tracker/attachments/:id/:attId — unlink pointer.
 // (Physical file is left on disk so other RFQs sharing the same sha1
 // aren't broken. A nightly GC job could sweep orphans; out of scope.)
-router.delete('/rfq-tracker/attachments/:id/:attId', requireTabAccess('rfq-tracker'), async (req, res) => {
-  const cu = requireWriter(req, res); if (!cu) return;
-  try {
-    await withLock('rfq:attach', async () => {
-      const all = rfqReadAttachments();
-      const entries = all[req.params.id] || [];
-      all[req.params.id] = entries.filter(e => e.id !== req.params.attId);
-      rfqWriteAttachments(all);
-    });
+router.delete(
+  '/rfq-tracker/attachments/:id/:attId',
+  requireTabAccess('rfq-tracker'),
+  async (req, res) => {
+    const cu = requireWriter(req, res);
+    if (!cu) return;
     try {
-      emitDataChange('rfq.updated', { id: req.params.id, attachment: 'remove', savedBy: cu.username });
-    } catch { /* event bus best-effort */ }
-    res.json({ ok: true });
-  } catch (err) {
-    logErr(req, 'rfq:attach:delete', err);
-    res.status(500).json({ error: redactErrorMessage(err) });
+      await withLock('rfq:attach', async () => {
+        const all = rfqReadAttachments();
+        const entries = all[req.params.id] || [];
+        all[req.params.id] = entries.filter((e) => e.id !== req.params.attId);
+        rfqWriteAttachments(all);
+      });
+      try {
+        emitDataChange('rfq.updated', {
+          id: req.params.id,
+          attachment: 'remove',
+          savedBy: cu.username,
+        });
+      } catch {
+        /* event bus best-effort */
+      }
+      res.json({ ok: true });
+    } catch (err) {
+      logErr(req, 'rfq:attach:delete', err);
+      res.status(500).json({ error: redactErrorMessage(err) });
+    }
   }
-});
+);
 
 // ═══════════════════════════════════════════════════════════════════
 // Machine Profiles — press library for Layout Optimizer.
@@ -1041,7 +1157,9 @@ function mpRead() {
       source: 'MachineProfiles/profiles.json',
     });
     return rows;
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 function mpWrite(profiles) {
@@ -1058,13 +1176,15 @@ function mpNormalizeDieList(list) {
   const seen = new Set();
   for (const item of list) {
     let tooth, qty;
-    if (typeof item === 'number') { tooth = item; qty = 1; }
-    else if (item && typeof item === 'object') {
+    if (typeof item === 'number') {
+      tooth = item;
+      qty = 1;
+    } else if (item && typeof item === 'object') {
       tooth = Number(item.tooth) || 0;
       qty = Number(item.qty) || 1;
     } else continue;
     if (!tooth || tooth <= 0) continue;
-    if (seen.has(tooth)) continue;   // dedupe
+    if (seen.has(tooth)) continue; // dedupe
     seen.add(tooth);
     out.push({ tooth, qty: Math.max(1, qty) });
   }
@@ -1078,12 +1198,17 @@ function mpNormalize(p) {
   // v2 schema (2026-04-23): plate_dies and magnetic_dies separately.
   // Legacy common_dies (single flat list) is accepted for read-only
   // compatibility but writes always persist the new shape.
-  const plate_dies = mpNormalizeDieList(p?.plate_dies
-    || (Array.isArray(p?.common_dies) ? p.common_dies : []));
+  const plate_dies = mpNormalizeDieList(
+    p?.plate_dies || (Array.isArray(p?.common_dies) ? p.common_dies : [])
+  );
   const magnetic_dies = mpNormalizeDieList(p?.magnetic_dies || []);
   return {
-    id: String(p?.id || '').trim().slice(0, 64),
-    name: String(p?.name || '').trim().slice(0, 120),
+    id: String(p?.id || '')
+      .trim()
+      .slice(0, 64),
+    name: String(p?.name || '')
+      .trim()
+      .slice(0, 120),
     press_type: p?.press_type === 'flat' ? 'flat' : 'rotary',
     tooth_count_max: Number(p?.tooth_count_max) || 0,
     tooth_pitch_mm: Number(p?.tooth_pitch_mm) || 3.175,
@@ -1099,25 +1224,30 @@ function mpNormalize(p) {
     // Preserve legacy field for older clients: intersection (tooth
     // counts where BOTH a plate + magnetic cylinder are in stock).
     common_dies: plate_dies
-      .filter(d => magnetic_dies.some(m => m.tooth === d.tooth))
-      .map(d => d.tooth),
+      .filter((d) => magnetic_dies.some((m) => m.tooth === d.tooth))
+      .map((d) => d.tooth),
     notes: String(p?.notes || '').slice(0, 500),
   };
 }
 
 router.get('/machine-profiles', (_req, res) => {
-  try { res.json(mpRead()); }
-  catch (err) { logErr(_req, 'mp:list', err); res.status(500).json({ error: 'Failed to load profiles' }); }
+  try {
+    res.json(mpRead());
+  } catch (err) {
+    logErr(_req, 'mp:list', err);
+    res.status(500).json({ error: 'Failed to load profiles' });
+  }
 });
 
 router.post('/machine-profiles', async (req, res) => {
-  const cu = requireWriter(req, res); if (!cu) return;
+  const cu = requireWriter(req, res);
+  if (!cu) return;
   const profile = mpNormalize(req.body);
   if (!profile.id || !profile.name) return res.status(400).json({ error: 'id_and_name_required' });
   try {
     await withLock('machine-profiles', async () => {
       const profiles = mpRead();
-      if (profiles.some(p => p.id === profile.id)) {
+      if (profiles.some((p) => p.id === profile.id)) {
         throw Object.assign(new Error('duplicate_id'), { safe: true });
       }
       profiles.push(profile);
@@ -1132,7 +1262,8 @@ router.post('/machine-profiles', async (req, res) => {
 });
 
 router.put('/machine-profiles/:id', async (req, res) => {
-  const cu = requireWriter(req, res); if (!cu) return;
+  const cu = requireWriter(req, res);
+  if (!cu) return;
   const id = String(req.params.id);
   const profile = mpNormalize({ ...req.body, id });
   if (!profile.name) return res.status(400).json({ error: 'name_required' });
@@ -1140,8 +1271,12 @@ router.put('/machine-profiles/:id', async (req, res) => {
     let found = false;
     await withLock('machine-profiles', async () => {
       const profiles = mpRead();
-      const idx = profiles.findIndex(p => p.id === id);
-      if (idx >= 0) { profiles[idx] = profile; found = true; mpWrite(profiles); }
+      const idx = profiles.findIndex((p) => p.id === id);
+      if (idx >= 0) {
+        profiles[idx] = profile;
+        found = true;
+        mpWrite(profiles);
+      }
     });
     if (!found) return res.status(404).json({ error: 'not_found' });
     res.json({ ok: true, profile });
@@ -1152,14 +1287,18 @@ router.put('/machine-profiles/:id', async (req, res) => {
 });
 
 router.delete('/machine-profiles/:id', async (req, res) => {
-  const cu = requireWriter(req, res); if (!cu) return;
+  const cu = requireWriter(req, res);
+  if (!cu) return;
   const id = String(req.params.id);
   try {
     let removed = false;
     await withLock('machine-profiles', async () => {
       const profiles = mpRead();
-      const next = profiles.filter(p => p.id !== id);
-      if (next.length !== profiles.length) { removed = true; mpWrite(next); }
+      const next = profiles.filter((p) => p.id !== id);
+      if (next.length !== profiles.length) {
+        removed = true;
+        mpWrite(next);
+      }
     });
     if (!removed) return res.status(404).json({ error: 'not_found' });
     res.json({ ok: true });
@@ -1192,7 +1331,9 @@ function pgRead() {
       };
     }
     return { groups: [], tab_catalog: [], departments: [] };
-  } catch { return { groups: [], tab_catalog: [], departments: [] }; }
+  } catch {
+    return { groups: [], tab_catalog: [], departments: [] };
+  }
 }
 
 function pgWrite(next) {
@@ -1215,9 +1356,15 @@ function pgNormalize(g) {
     }
   }
   return {
-    id: String(g?.id || '').trim().slice(0, 64),
-    name: String(g?.name || '').trim().slice(0, 120),
-    default_department: String(g?.default_department || '').trim().slice(0, 40),
+    id: String(g?.id || '')
+      .trim()
+      .slice(0, 64),
+    name: String(g?.name || '')
+      .trim()
+      .slice(0, 120),
+    default_department: String(g?.default_department || '')
+      .trim()
+      .slice(0, 40),
     is_system: !!g?.is_system,
     tab_permissions: tabPerms,
     notes: String(g?.notes || '').slice(0, 500),
@@ -1226,20 +1373,25 @@ function pgNormalize(g) {
 
 // GET /api/shared/permission-groups — returns { groups, tab_catalog, departments }
 router.get('/permission-groups', (_req, res) => {
-  try { res.json(pgRead()); }
-  catch (err) { logErr(_req, 'pg:list', err); res.status(500).json({ error: 'Failed to load groups' }); }
+  try {
+    res.json(pgRead());
+  } catch (err) {
+    logErr(_req, 'pg:list', err);
+    res.status(500).json({ error: 'Failed to load groups' });
+  }
 });
 
 // POST /api/shared/permission-groups — create new group.
 router.post('/permission-groups', async (req, res) => {
-  const cu = requireWriter(req, res); if (!cu) return;
+  const cu = requireWriter(req, res);
+  if (!cu) return;
   if (!isAdminPlus(cu)) return res.status(403).json({ error: 'admin_or_sys_required' });
   const group = pgNormalize(req.body);
   if (!group.id || !group.name) return res.status(400).json({ error: 'id_and_name_required' });
   try {
     await withLock('permission-groups', async () => {
       const data = pgRead();
-      if (data.groups.some(g => g.id === group.id)) {
+      if (data.groups.some((g) => g.id === group.id)) {
         throw Object.assign(new Error('duplicate_id'), { safe: true });
       }
       data.groups.push(group);
@@ -1256,7 +1408,8 @@ router.post('/permission-groups', async (req, res) => {
 
 // PUT /api/shared/permission-groups/:id — update.
 router.put('/permission-groups/:id', async (req, res) => {
-  const cu = requireWriter(req, res); if (!cu) return;
+  const cu = requireWriter(req, res);
+  if (!cu) return;
   if (!isAdminPlus(cu)) return res.status(403).json({ error: 'admin_or_sys_required' });
   const id = String(req.params.id);
   const group = pgNormalize({ ...req.body, id });
@@ -1265,7 +1418,7 @@ router.put('/permission-groups/:id', async (req, res) => {
     let found = false;
     await withLock('permission-groups', async () => {
       const data = pgRead();
-      const idx = data.groups.findIndex(g => g.id === id);
+      const idx = data.groups.findIndex((g) => g.id === id);
       if (idx >= 0) {
         // Preserve is_system flag — can't be flipped via PUT.
         const prev = data.groups[idx];
@@ -1285,7 +1438,8 @@ router.put('/permission-groups/:id', async (req, res) => {
 
 // DELETE /api/shared/permission-groups/:id — remove. System groups protected.
 router.delete('/permission-groups/:id', async (req, res) => {
-  const cu = requireWriter(req, res); if (!cu) return;
+  const cu = requireWriter(req, res);
+  if (!cu) return;
   if (!isAdminPlus(cu)) return res.status(403).json({ error: 'admin_or_sys_required' });
   const id = String(req.params.id);
   try {
@@ -1293,9 +1447,12 @@ router.delete('/permission-groups/:id', async (req, res) => {
     let wasSystem = false;
     await withLock('permission-groups', async () => {
       const data = pgRead();
-      const g = data.groups.find(x => x.id === id);
-      if (g && g.is_system) { wasSystem = true; return; }
-      const next = data.groups.filter(x => x.id !== id);
+      const g = data.groups.find((x) => x.id === id);
+      if (g && g.is_system) {
+        wasSystem = true;
+        return;
+      }
+      const next = data.groups.filter((x) => x.id !== id);
       if (next.length !== data.groups.length) {
         removed = true;
         pgWrite({ ...data, groups: next });
@@ -1303,7 +1460,7 @@ router.delete('/permission-groups/:id', async (req, res) => {
       }
     });
     if (wasSystem) return res.status(403).json({ error: 'system_group_protected' });
-    if (!removed)  return res.status(404).json({ error: 'not_found' });
+    if (!removed) return res.status(404).json({ error: 'not_found' });
     res.json({ ok: true });
   } catch (err) {
     logErr(req, 'pg:delete', err);
@@ -1335,10 +1492,12 @@ function mtRead() {
     const data = readJson(MT_FILE);
     return {
       printing: Array.isArray(data?.printing) ? data.printing : [],
-      cutting:  Array.isArray(data?.cutting)  ? data.cutting  : [],
+      cutting: Array.isArray(data?.cutting) ? data.cutting : [],
       _meta: data || {},
     };
-  } catch { return { printing: [], cutting: [], _meta: {} }; }
+  } catch {
+    return { printing: [], cutting: [], _meta: {} };
+  }
 }
 
 function mtWrite(next) {
@@ -1347,11 +1506,17 @@ function mtWrite(next) {
   atomicWriteFileSync(MT_FILE, JSON.stringify({ ...current, ...next }, null, 2));
 }
 
-function mtKindOk(kind) { return kind === 'printing' || kind === 'cutting'; }
+function mtKindOk(kind) {
+  return kind === 'printing' || kind === 'cutting';
+}
 
 function mtNormalize(rec) {
   if (!rec || typeof rec !== 'object') return null;
-  const id = String(rec.id || '').trim().replace(/\s+/g, '-').toLowerCase().slice(0, 80);
+  const id = String(rec.id || '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .toLowerCase()
+    .slice(0, 80);
   if (!id) return null;
   const out = { ...rec, id };
   // Trim long strings + coerce numeric-looking fields
@@ -1375,7 +1540,8 @@ router.get('/machine-technical', (req, res) => {
 });
 
 router.post('/machine-technical/:kind', async (req, res) => {
-  const cu = requireWriter(req, res); if (!cu) return;
+  const cu = requireWriter(req, res);
+  if (!cu) return;
   if (!isAdminPlus(cu)) return res.status(403).json({ error: 'admin_or_sys_required' });
   const kind = req.params.kind;
   if (!mtKindOk(kind)) return res.status(400).json({ error: 'bad_kind' });
@@ -1385,7 +1551,8 @@ router.post('/machine-technical/:kind', async (req, res) => {
     await withLock('machine-technical', async () => {
       const data = mtRead();
       const list = data[kind];
-      if (list.some(x => x.id === rec.id)) throw Object.assign(new Error('duplicate_id'), { safe: true });
+      if (list.some((x) => x.id === rec.id))
+        throw Object.assign(new Error('duplicate_id'), { safe: true });
       list.push(rec);
       mtWrite({ [kind]: list });
       audit('MT_CREATE', cu.username, req.ip, `${kind}:${rec.id}`);
@@ -1407,17 +1574,21 @@ router.post('/machine-technical/:kind', async (req, res) => {
 //
 // MUST be registered BEFORE the generic `/:kind/:id` PUT below,
 // otherwise Express matches first and interprets kind="enums" → 400.
-const MT_ENUM_KEYS = new Set([
-  '_cutting_types', '_departments',
-]);
+const MT_ENUM_KEYS = new Set(['_cutting_types', '_departments']);
 router.put('/machine-technical/enums/:key', async (req, res) => {
-  const cu = requireWriter(req, res); if (!cu) return;
+  const cu = requireWriter(req, res);
+  if (!cu) return;
   if (!isAdminPlus(cu)) return res.status(403).json({ error: 'admin_or_sys_required' });
   const key = String(req.params.key || '').trim();
-  if (!MT_ENUM_KEYS.has(key)) return res.status(400).json({ error: 'bad_enum_key', allowed: [...MT_ENUM_KEYS] });
+  if (!MT_ENUM_KEYS.has(key))
+    return res.status(400).json({ error: 'bad_enum_key', allowed: [...MT_ENUM_KEYS] });
   const values = Array.isArray(req.body?.values)
     ? req.body.values
-        .map(v => String(v || '').trim().slice(0, 60))
+        .map((v) =>
+          String(v || '')
+            .trim()
+            .slice(0, 60)
+        )
         .filter(Boolean)
     : null;
   if (!values) return res.status(400).json({ error: 'values_array_required' });
@@ -1445,7 +1616,8 @@ router.put('/machine-technical/enums/:key', async (req, res) => {
 // PUT /machine-technical/:kind/:id — update a machine record.
 // Registered AFTER /enums/:key so the specific route wins.
 router.put('/machine-technical/:kind/:id', async (req, res) => {
-  const cu = requireWriter(req, res); if (!cu) return;
+  const cu = requireWriter(req, res);
+  if (!cu) return;
   if (!isAdminPlus(cu)) return res.status(403).json({ error: 'admin_or_sys_required' });
   const kind = req.params.kind;
   const id = String(req.params.id);
@@ -1457,8 +1629,13 @@ router.put('/machine-technical/:kind/:id', async (req, res) => {
     await withLock('machine-technical', async () => {
       const data = mtRead();
       const list = data[kind];
-      const idx = list.findIndex(x => x.id === id);
-      if (idx >= 0) { list[idx] = rec; found = true; mtWrite({ [kind]: list }); audit('MT_UPDATE', cu.username, req.ip, `${kind}:${id}`); }
+      const idx = list.findIndex((x) => x.id === id);
+      if (idx >= 0) {
+        list[idx] = rec;
+        found = true;
+        mtWrite({ [kind]: list });
+        audit('MT_UPDATE', cu.username, req.ip, `${kind}:${id}`);
+      }
     });
     if (!found) return res.status(404).json({ error: 'not_found' });
     res.json({ ok: true, machine: rec });
@@ -1469,7 +1646,8 @@ router.put('/machine-technical/:kind/:id', async (req, res) => {
 });
 
 router.delete('/machine-technical/:kind/:id', async (req, res) => {
-  const cu = requireWriter(req, res); if (!cu) return;
+  const cu = requireWriter(req, res);
+  if (!cu) return;
   if (!isAdminPlus(cu)) return res.status(403).json({ error: 'admin_or_sys_required' });
   const kind = req.params.kind;
   const id = String(req.params.id);
@@ -1479,8 +1657,12 @@ router.delete('/machine-technical/:kind/:id', async (req, res) => {
     await withLock('machine-technical', async () => {
       const data = mtRead();
       const list = data[kind];
-      const next = list.filter(x => x.id !== id);
-      if (next.length !== list.length) { removed = true; mtWrite({ [kind]: next }); audit('MT_DELETE', cu.username, req.ip, `${kind}:${id}`); }
+      const next = list.filter((x) => x.id !== id);
+      if (next.length !== list.length) {
+        removed = true;
+        mtWrite({ [kind]: next });
+        audit('MT_DELETE', cu.username, req.ip, `${kind}:${id}`);
+      }
     });
     if (!removed) return res.status(404).json({ error: 'not_found' });
     res.json({ ok: true });
@@ -1502,24 +1684,34 @@ router.get('/machine-technical/:kind/export', async (req, res) => {
     const fields = data._meta[`_${kind}_fields`] || Object.keys(items[0] || {});
     // Transposed sheet: first column = field name, then one column per machine.
     const sheet = [];
-    sheet.push(['Attribute', ...items.map(m => m.model || m.id)]);
+    sheet.push(['Attribute', ...items.map((m) => m.model || m.id)]);
     for (const f of fields) {
       if (f === 'notes') continue;
-      const row = [f, ...items.map(m => {
-        const v = m[f];
-        if (v === null || v === undefined) return '';
-        if (Array.isArray(v)) return v.join(', ');
-        if (typeof v === 'boolean') return v ? 'Yes' : 'No';
-        return v;
-      })];
+      const row = [
+        f,
+        ...items.map((m) => {
+          const v = m[f];
+          if (v === null || v === undefined) return '';
+          if (Array.isArray(v)) return v.join(', ');
+          if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+          return v;
+        }),
+      ];
       sheet.push(row);
     }
     const ws = XLSX.utils.aoa_to_sheet(sheet);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, kind === 'printing' ? 'Printing Equipment' : 'Cutting Equipment');
+    XLSX.utils.book_append_sheet(
+      wb,
+      ws,
+      kind === 'printing' ? 'Printing Equipment' : 'Cutting Equipment'
+    );
     const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
     const fname = `machine-technical-${kind}-${new Date().toISOString().slice(0, 10)}.xlsx`;
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
     res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
     res.send(buf);
   } catch (err) {
@@ -1532,7 +1724,11 @@ router.get('/machine-technical/:kind/export', async (req, res) => {
 // Accepts the canonical transposed shape (attribute rows × machine cols)
 // OR a flat rows-are-machines shape. UPSERTs by id (or brand-model slug).
 const mtImportTmp = path.join(LIB, 'MachineTechnical', '_import_tmp');
-try { fs.mkdirSync(mtImportTmp, { recursive: true, mode: 0o700 }); } catch { /* ignore */ }
+try {
+  fs.mkdirSync(mtImportTmp, { recursive: true, mode: 0o700 });
+} catch {
+  /* ignore */
+}
 const mtUpload = multer({
   dest: mtImportTmp,
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -1540,13 +1736,34 @@ const mtUpload = multer({
 
 router.post('/machine-technical/:kind/import', mtUpload.single('file'), async (req, res) => {
   const cu = requireWriter(req, res);
-  if (!cu) { if (req.file) try { fs.unlinkSync(req.file.path); } catch { /* ignore */ } return; }
+  if (!cu) {
+    if (req.file)
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch {
+        /* ignore */
+      }
+    return;
+  }
   if (!isAdminPlus(cu)) {
-    if (req.file) try { fs.unlinkSync(req.file.path); } catch { /* ignore */ }
+    if (req.file)
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch {
+        /* ignore */
+      }
     return res.status(403).json({ error: 'admin_or_sys_required' });
   }
   const kind = req.params.kind;
-  if (!mtKindOk(kind)) { if (req.file) try { fs.unlinkSync(req.file.path); } catch { /* ignore */ } return res.status(400).json({ error: 'bad_kind' }); }
+  if (!mtKindOk(kind)) {
+    if (req.file)
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch {
+        /* ignore */
+      }
+    return res.status(400).json({ error: 'bad_kind' });
+  }
   if (!req.file) return res.status(400).json({ error: 'no_file' });
 
   try {
@@ -1559,10 +1776,10 @@ router.post('/machine-technical/:kind/import', mtUpload.single('file'), async (r
     // attribute names → transposed (attribute × machine).
     // Else → rows-are-machines with first row as header.
     let imported = [];
-    const FIELD_LIST = (mtRead()._meta[`_${kind}_fields`]) || [];
+    const FIELD_LIST = mtRead()._meta[`_${kind}_fields`] || [];
     if (rows.length > 0 && FIELD_LIST.includes(String(rows[1]?.[0] || ''))) {
       // Transposed — rebuild records.
-      const numCols = Math.max(...rows.map(r => r.length));
+      const numCols = Math.max(...rows.map((r) => r.length));
       for (let col = 1; col < numCols; col++) {
         const rec = {};
         for (let r = 1; r < rows.length; r++) {
@@ -1570,14 +1787,14 @@ router.post('/machine-technical/:kind/import', mtUpload.single('file'), async (r
           if (!FIELD_LIST.includes(key)) continue;
           let val = rows[r]?.[col];
           if (val === '' || val === undefined) continue;
-          if (key.startsWith('has_')) val = (val === 'Yes' || val === true);
+          if (key.startsWith('has_')) val = val === 'Yes' || val === true;
           rec[key] = val;
         }
         if (rec.brand || rec.model) imported.push(rec);
       }
     } else {
       // Flat rows — header row + data rows.
-      const header = rows[0].map(h => String(h || '').trim());
+      const header = rows[0].map((h) => String(h || '').trim());
       for (let r = 1; r < rows.length; r++) {
         const rec = {};
         header.forEach((h, i) => {
@@ -1589,26 +1806,46 @@ router.post('/machine-technical/:kind/import', mtUpload.single('file'), async (r
     }
 
     // Upsert by id (or synthesize id from brand-model).
-    const slug = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
-    let created = 0, updated = 0;
+    const slug = (s) =>
+      String(s || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 80);
+    let created = 0,
+      updated = 0;
     await withLock('machine-technical', async () => {
       const data = mtRead();
       const list = data[kind];
       for (const incoming of imported) {
         const rec = { ...incoming };
         if (!rec.id) rec.id = slug(`${rec.brand || 'unknown'}-${rec.model || Date.now()}`);
-        const idx = list.findIndex(x => x.id === rec.id);
-        if (idx >= 0) { list[idx] = { ...list[idx], ...rec }; updated++; }
-        else { list.push(rec); created++; }
+        const idx = list.findIndex((x) => x.id === rec.id);
+        if (idx >= 0) {
+          list[idx] = { ...list[idx], ...rec };
+          updated++;
+        } else {
+          list.push(rec);
+          created++;
+        }
       }
       mtWrite({ [kind]: list });
       audit('MT_IMPORT', cu.username, req.ip, `${kind}: +${created} created, ~${updated} updated`);
     });
 
-    try { fs.unlinkSync(req.file.path); } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(req.file.path);
+    } catch {
+      /* ignore */
+    }
     res.json({ ok: true, created, updated, total: imported.length });
   } catch (err) {
-    if (req.file) try { fs.unlinkSync(req.file.path); } catch { /* ignore */ }
+    if (req.file)
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch {
+        /* ignore */
+      }
     logErr(req, 'mt:import', err);
     res.status(500).json({ error: redactErrorMessage(err) });
   }
@@ -1641,18 +1878,32 @@ const ST_ATTACH_TMP = path.join(ST_DIR, '_attach_tmp');
 function stEnsureDirs() {
   fs.mkdirSync(ST_DIR, { recursive: true });
   fs.mkdirSync(ST_ATTACH_DIR, { recursive: true });
-  try { fs.mkdirSync(ST_ATTACH_TMP, { recursive: true, mode: 0o700 }); } catch { /* ignore */ }
+  try {
+    fs.mkdirSync(ST_ATTACH_TMP, { recursive: true, mode: 0o700 });
+  } catch {
+    /* ignore */
+  }
 }
 
 function stReadAudit() {
-  try { stEnsureDirs(); return readJson(ST_AUDIT_FILE) || {}; } catch { return {}; }
+  try {
+    stEnsureDirs();
+    return readJson(ST_AUDIT_FILE) || {};
+  } catch {
+    return {};
+  }
 }
 function stWriteAudit(obj) {
   stEnsureDirs();
   atomicWriteFileSync(ST_AUDIT_FILE, JSON.stringify(obj, null, 2));
 }
 function stReadAttachments() {
-  try { stEnsureDirs(); return readJson(ST_ATTACH_FILE) || {}; } catch { return {}; }
+  try {
+    stEnsureDirs();
+    return readJson(ST_ATTACH_FILE) || {};
+  } catch {
+    return {};
+  }
 }
 function stWriteAttachments(obj) {
   stEnsureDirs();
@@ -1670,7 +1921,8 @@ router.get('/sample-tracking/audit/:id', (req, res) => {
 });
 
 router.post('/sample-tracking/audit/:id', requireTabAccess('sample-tracking'), async (req, res) => {
-  const cu = requireWriter(req, res); if (!cu) return;
+  const cu = requireWriter(req, res);
+  if (!cu) return;
   const stId = String(req.params.id);
   const body = req.body || {};
   const kind = typeof body.kind === 'string' ? body.kind.slice(0, 40) : '';
@@ -1680,8 +1932,12 @@ router.post('/sample-tracking/audit/:id', requireTabAccess('sample-tracking'), a
     user: cu.username || '-',
     kind,
     ...(body.field ? { field: String(body.field).slice(0, 80) } : {}),
-    ...(body.from !== undefined ? { from: typeof body.from === 'string' ? body.from.slice(0, 200) : body.from } : {}),
-    ...(body.to !== undefined ? { to: typeof body.to === 'string' ? body.to.slice(0, 200) : body.to } : {}),
+    ...(body.from !== undefined
+      ? { from: typeof body.from === 'string' ? body.from.slice(0, 200) : body.from }
+      : {}),
+    ...(body.to !== undefined
+      ? { to: typeof body.to === 'string' ? body.to.slice(0, 200) : body.to }
+      : {}),
     ...(body.meta && typeof body.meta === 'object' ? { meta: body.meta } : {}),
   };
   try {
@@ -1694,7 +1950,9 @@ router.post('/sample-tracking/audit/:id', requireTabAccess('sample-tracking'), a
     });
     try {
       emitDataChange('sample.updated', { id: stId, kind, savedBy: cu.username });
-    } catch { /* event bus best-effort */ }
+    } catch {
+      /* event bus best-effort */
+    }
     res.json({ ok: true, entry });
   } catch (err) {
     logErr(req, 'sample:audit:append', err);
@@ -1724,53 +1982,85 @@ router.get('/sample-tracking/attachments/:id', (req, res) => {
   }
 });
 
-router.post('/sample-tracking/attachments/:id', requireTabAccess('sample-tracking'), stUpload.single('file'), async (req, res) => {
-  const cu = requireWriter(req, res);
-  if (!cu) { if (req.file) try { fs.unlinkSync(req.file.path); } catch { /* ignore */ } return; }
-  if (!req.file) return res.status(400).json({ error: 'no_file' });
-  const stId = String(req.params.id);
-  try {
-    stEnsureDirs();
-    const sha = stHashFile(req.file.path);
-    const ext = (path.extname(req.file.originalname || '') || '').toLowerCase().slice(0, 8);
-    const finalName = sha + ext;
-    const finalPath = path.join(ST_ATTACH_DIR, finalName);
-    if (!fs.existsSync(finalPath)) {
-      try { fs.renameSync(req.file.path, finalPath); }
-      catch { fs.copyFileSync(req.file.path, finalPath); try { fs.unlinkSync(req.file.path); } catch { /* ignore */ } }
-    } else {
-      try { fs.unlinkSync(req.file.path); } catch { /* ignore */ }
+router.post(
+  '/sample-tracking/attachments/:id',
+  requireTabAccess('sample-tracking'),
+  stUpload.single('file'),
+  async (req, res) => {
+    const cu = requireWriter(req, res);
+    if (!cu) {
+      if (req.file)
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {
+          /* ignore */
+        }
+      return;
     }
-    const entry = {
-      id: crypto.randomBytes(6).toString('hex'),
-      original: String(req.file.originalname || 'file').slice(0, 200),
-      stored: finalName,
-      size: req.file.size,
-      uploaded_by: cu.username || '-',
-      uploaded_at: new Date().toISOString(),
-    };
-    await withLock('sample:attach', async () => {
-      const all = stReadAttachments();
-      if (!Array.isArray(all[stId])) all[stId] = [];
-      all[stId].push(entry);
-      stWriteAttachments(all);
-    });
+    if (!req.file) return res.status(400).json({ error: 'no_file' });
+    const stId = String(req.params.id);
     try {
-      emitDataChange('sample.updated', { id: stId, attachment: 'add', savedBy: cu.username });
-    } catch { /* event bus best-effort */ }
-    res.json({ ok: true, entry });
-  } catch (err) {
-    if (req.file) try { fs.unlinkSync(req.file.path); } catch { /* ignore */ }
-    logErr(req, 'sample:attach:upload', err);
-    res.status(500).json({ error: redactErrorMessage(err) });
+      stEnsureDirs();
+      const sha = stHashFile(req.file.path);
+      const ext = (path.extname(req.file.originalname || '') || '').toLowerCase().slice(0, 8);
+      const finalName = sha + ext;
+      const finalPath = path.join(ST_ATTACH_DIR, finalName);
+      if (!fs.existsSync(finalPath)) {
+        try {
+          fs.renameSync(req.file.path, finalPath);
+        } catch {
+          fs.copyFileSync(req.file.path, finalPath);
+          try {
+            fs.unlinkSync(req.file.path);
+          } catch {
+            /* ignore */
+          }
+        }
+      } else {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {
+          /* ignore */
+        }
+      }
+      const entry = {
+        id: crypto.randomBytes(6).toString('hex'),
+        original: String(req.file.originalname || 'file').slice(0, 200),
+        stored: finalName,
+        size: req.file.size,
+        uploaded_by: cu.username || '-',
+        uploaded_at: new Date().toISOString(),
+      };
+      await withLock('sample:attach', async () => {
+        const all = stReadAttachments();
+        if (!Array.isArray(all[stId])) all[stId] = [];
+        all[stId].push(entry);
+        stWriteAttachments(all);
+      });
+      try {
+        emitDataChange('sample.updated', { id: stId, attachment: 'add', savedBy: cu.username });
+      } catch {
+        /* event bus best-effort */
+      }
+      res.json({ ok: true, entry });
+    } catch (err) {
+      if (req.file)
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {
+          /* ignore */
+        }
+      logErr(req, 'sample:attach:upload', err);
+      res.status(500).json({ error: redactErrorMessage(err) });
+    }
   }
-});
+);
 
 router.get('/sample-tracking/attachments/:id/:attId/download', (req, res) => {
   try {
     const all = stReadAttachments();
     const entries = all[req.params.id] || [];
-    const entry = entries.find(e => e.id === req.params.attId);
+    const entry = entries.find((e) => e.id === req.params.attId);
     if (!entry) return res.status(404).json({ error: 'not_found' });
     const filePath = path.join(ST_ATTACH_DIR, entry.stored);
     const resolved = path.resolve(filePath);
@@ -1785,24 +2075,35 @@ router.get('/sample-tracking/attachments/:id/:attId/download', (req, res) => {
   }
 });
 
-router.delete('/sample-tracking/attachments/:id/:attId', requireTabAccess('sample-tracking'), async (req, res) => {
-  const cu = requireWriter(req, res); if (!cu) return;
-  try {
-    await withLock('sample:attach', async () => {
-      const all = stReadAttachments();
-      const entries = all[req.params.id] || [];
-      all[req.params.id] = entries.filter(e => e.id !== req.params.attId);
-      stWriteAttachments(all);
-    });
+router.delete(
+  '/sample-tracking/attachments/:id/:attId',
+  requireTabAccess('sample-tracking'),
+  async (req, res) => {
+    const cu = requireWriter(req, res);
+    if (!cu) return;
     try {
-      emitDataChange('sample.updated', { id: req.params.id, attachment: 'remove', savedBy: cu.username });
-    } catch { /* event bus best-effort */ }
-    res.json({ ok: true });
-  } catch (err) {
-    logErr(req, 'sample:attach:delete', err);
-    res.status(500).json({ error: redactErrorMessage(err) });
+      await withLock('sample:attach', async () => {
+        const all = stReadAttachments();
+        const entries = all[req.params.id] || [];
+        all[req.params.id] = entries.filter((e) => e.id !== req.params.attId);
+        stWriteAttachments(all);
+      });
+      try {
+        emitDataChange('sample.updated', {
+          id: req.params.id,
+          attachment: 'remove',
+          savedBy: cu.username,
+        });
+      } catch {
+        /* event bus best-effort */
+      }
+      res.json({ ok: true });
+    } catch (err) {
+      logErr(req, 'sample:attach:delete', err);
+      res.status(500).json({ error: redactErrorMessage(err) });
+    }
   }
-});
+);
 
 // GET /api/shared/ink-calc - Ink calculator data
 router.get('/ink-calc', (req, res) => {
@@ -1829,8 +2130,11 @@ const PA_ARTWORK_DIR = path.join(PA_DIR, 'artworks');
 const PA_JOBS_FILE = path.join(PA_DIR, 'print_area_jobs.json');
 
 function paEnsureDirs() {
-  try { fs.mkdirSync(PA_ARTWORK_DIR, { recursive: true }); }
-  catch (e) { /* racing mkdir under concurrent first-boot — ignore */ void e; }
+  try {
+    fs.mkdirSync(PA_ARTWORK_DIR, { recursive: true });
+  } catch (e) {
+    /* racing mkdir under concurrent first-boot — ignore */ void e;
+  }
 }
 
 // Safe read — returns { jobs: [] } on missing/corrupt file so downstream
@@ -1857,11 +2161,14 @@ function paWriteJobs(data) {
 // the footgun; the upload handler also has a copy+unlink fallback
 // for defense-in-depth when admins override OPS_UPLOAD_TMPDIR to a
 // path on a different disk.
-const PA_TMP_DIR = process.env.OPS_PRINT_AREA_TMPDIR
-  || path.join(PA_DIR, '_uploads_tmp');
+const PA_TMP_DIR = process.env.OPS_PRINT_AREA_TMPDIR || path.join(PA_DIR, '_uploads_tmp');
 try {
   fs.mkdirSync(PA_TMP_DIR, { recursive: true, mode: 0o700 });
-  try { fs.chmodSync(PA_TMP_DIR, 0o700); } catch { /* windows no-op */ }
+  try {
+    fs.chmodSync(PA_TMP_DIR, 0o700);
+  } catch {
+    /* windows no-op */
+  }
 } catch (e) {
   console.warn('[print-area] tmp dir prepare failed:', e?.message || e);
 }
@@ -1877,10 +2184,13 @@ const paUpload = multer({
     const mime = (file.mimetype || '').toLowerCase();
     const name = (file.originalname || '').toLowerCase();
     if (/^image\//.test(mime)) return cb(null, true);
-    if (mime === 'application/pdf'
-      || mime === 'application/illustrator'
-      || mime === 'application/postscript'
-      || mime === '' || mime === 'application/octet-stream') {
+    if (
+      mime === 'application/pdf' ||
+      mime === 'application/illustrator' ||
+      mime === 'application/postscript' ||
+      mime === '' ||
+      mime === 'application/octet-stream'
+    ) {
       if (/\.(pdf|ai|png|jpe?g|webp|gif|bmp|svg)$/.test(name)) return cb(null, true);
     }
     cb(new Error('Unsupported file type'));
@@ -1896,10 +2206,13 @@ function paVerifyImageMagic(filePath, ext) {
     fd = fs.openSync(filePath, 'r');
     const buf = Buffer.alloc(12);
     fs.readSync(fd, buf, 0, 12, 0);
-    if (ext === '.png') return buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
-    if (ext === '.jpg' || ext === '.jpeg') return buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
+    if (ext === '.png')
+      return buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+    if (ext === '.jpg' || ext === '.jpeg')
+      return buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
     if (ext === '.gif') return buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46;
-    if (ext === '.webp') return buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[8] === 0x57;
+    if (ext === '.webp')
+      return buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[8] === 0x57;
     if (ext === '.bmp') return buf[0] === 0x42 && buf[1] === 0x4d;
     if (ext === '.svg') {
       const head = buf.toString('utf-8').trim().toLowerCase();
@@ -1917,8 +2230,16 @@ function paVerifyImageMagic(filePath, ext) {
       return head.startsWith('%!PS');
     }
     return false;
-  } catch { return false; }
-  finally { if (fd !== undefined) try { fs.closeSync(fd); } catch { /* ignore */ } }
+  } catch {
+    return false;
+  } finally {
+    if (fd !== undefined)
+      try {
+        fs.closeSync(fd);
+      } catch {
+        /* ignore */
+      }
+  }
 }
 
 // Sha1 file hash — streaming so a 15 MB upload doesn't blow memory.
@@ -1930,7 +2251,7 @@ function paHashFile(filePath) {
 }
 
 // GET /api/shared/print-area — list jobs keyed by SKU
-router.get('/print-area', (_req, res) => {
+router.get('/print-area', (req, res) => {
   try {
     res.json(paReadJobs());
   } catch (err) {
@@ -1963,16 +2284,24 @@ router.post('/print-area', async (req, res) => {
       // malformed ROI to crash the analyse pipeline on reload.
       let manualRoi = null;
       const r = req.body.manual_roi;
-      if (r && typeof r === 'object'
-          && Number.isFinite(r.x) && Number.isFinite(r.y)
-          && Number.isFinite(r.w) && Number.isFinite(r.h)
-          && r.w > 0 && r.h > 0) {
+      if (
+        r &&
+        typeof r === 'object' &&
+        Number.isFinite(r.x) &&
+        Number.isFinite(r.y) &&
+        Number.isFinite(r.w) &&
+        Number.isFinite(r.h) &&
+        r.w > 0 &&
+        r.h > 0
+      ) {
         manualRoi = { x: r.x, y: r.y, w: r.w, h: r.h };
       }
-      const printMethod = typeof req.body.print_method === 'string'
-        ? req.body.print_method.slice(0, 32) : null;
-      const scaleRatio = Number.isFinite(req.body.scale_ratio) && req.body.scale_ratio > 0
-        ? Number(req.body.scale_ratio) : 1;
+      const printMethod =
+        typeof req.body.print_method === 'string' ? req.body.print_method.slice(0, 32) : null;
+      const scaleRatio =
+        Number.isFinite(req.body.scale_ratio) && req.body.scale_ratio > 0
+          ? Number(req.body.scale_ratio)
+          : 1;
       const record = {
         id,
         sku,
@@ -2035,7 +2364,11 @@ router.post('/print-area/upload', paUpload.single('artwork'), (req, res) => {
   if (!requireWriter(req, res)) {
     // We've consumed a multipart upload — best-effort cleanup of the
     // disk artifact so a viewonly probe can't fill the tmpdir.
-    try { if (req.file?.path) fs.unlinkSync(req.file.path); } catch { /* ignore */ }
+    try {
+      if (req.file?.path) fs.unlinkSync(req.file.path);
+    } catch {
+      /* ignore */
+    }
     return;
   }
   if (!req.file) return res.status(400).json({ error: 'no_file' });
@@ -2060,14 +2393,22 @@ router.post('/print-area/upload', paUpload.single('artwork'), (req, res) => {
       } catch (err) {
         if (err?.code === 'EXDEV') {
           fs.copyFileSync(tmpPath, finalPath);
-          try { fs.unlinkSync(tmpPath); } catch { /* ignore cleanup */ }
+          try {
+            fs.unlinkSync(tmpPath);
+          } catch {
+            /* ignore cleanup */
+          }
         } else {
           throw err;
         }
       }
     } else {
       // File is already stored — discard the upload's tmp copy.
-      try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+      try {
+        fs.unlinkSync(tmpPath);
+      } catch {
+        /* ignore */
+      }
     }
     res.json({
       ok: true,
@@ -2079,7 +2420,11 @@ router.post('/print-area/upload', paUpload.single('artwork'), (req, res) => {
   } catch (err) {
     // Always try to clean up tmp on error — a failed handler should
     // not leave artifacts under /tmp.
-    try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(tmpPath);
+    } catch {
+      /* ignore */
+    }
     logErr(req, 'print-area:upload', err);
     res.status(500).json({ error: redactErrorMessage(err) });
   }
@@ -2093,7 +2438,9 @@ function parseJsDataFile(filePath) {
     const match = content.match(/window\.\w+\s*=\s*(\{[\s\S]*\}|\[[\s\S]*\])\s*;?\s*$/);
     if (match) return JSON.parse(match[1]);
     return null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 // GET /api/shared/finance - Finance data (reads both .json and .js data files)
@@ -2105,7 +2452,9 @@ router.get('/finance', (req, res) => {
 
     // Parse .js baseline data files (Finance DB, WC by year, Summary by year)
     const years = {};
-    const jsFiles = fs.existsSync(finDir) ? fs.readdirSync(finDir).filter(f => f.endsWith('_data.js')) : [];
+    const jsFiles = fs.existsSync(finDir)
+      ? fs.readdirSync(finDir).filter((f) => f.endsWith('_data.js'))
+      : [];
     for (const f of jsFiles) {
       const data = parseJsDataFile(path.join(finDir, f));
       if (!data) continue;
@@ -2179,7 +2528,7 @@ router.get('/design-tools', (req, res) => {
   try {
     const press = (req.query.press || '').toString().toLowerCase();
     let list = dtRead();
-    if (press) list = list.filter(d => (d.press || '').toLowerCase() === press);
+    if (press) list = list.filter((d) => (d.press || '').toLowerCase() === press);
     // Newest first.
     list.sort((a, b) => String(b.saved_at || '').localeCompare(String(a.saved_at || '')));
     res.json(list);
@@ -2190,7 +2539,8 @@ router.get('/design-tools', (req, res) => {
 });
 
 router.post('/design-tools', async (req, res) => {
-  const cu = requireWriter(req, res); if (!cu) return;
+  const cu = requireWriter(req, res);
+  if (!cu) return;
   const body = req.body || {};
   // Minimal validation — `press` and `end_cu_pn` are the only hard
   // requirements. Inputs / result are stored as-is so future schema
@@ -2216,38 +2566,45 @@ router.post('/design-tools', async (req, res) => {
       const list = dtRead();
       const maxId = list.reduce((m, d) => Math.max(m, Number(d.id) || 0), 0);
       const nowIso = new Date().toISOString();
-      const initialNotice = notice || (parentId > 0
-        ? `Branched from #${parentId}`
-        : 'Initial version');
+      const initialNotice =
+        notice || (parentId > 0 ? `Branched from #${parentId}` : 'Initial version');
       const record = {
-        id:                    maxId + 1,
-        press:                 String(body.press).toLowerCase(),
-        end_cu_pn:             String(body.end_cu_pn).trim().slice(0, 80),
-        project:               String(body.project || '').trim().slice(0, 120),
-        designer_note:         String(body.designer_note || '').slice(0, 500),
-        inputs:                body.inputs && typeof body.inputs === 'object' ? body.inputs : {},
-        result:                body.result && typeof body.result === 'object' ? body.result : null,
-        version:               1,
-        parent_id:             parentId || null,
-        design_change_notice:  initialNotice.slice(0, 1000),
-        change_log: [{
-          version:   1,
-          notice:    initialNotice.slice(0, 1000),
-          saved_at:  nowIso,
-          saved_by:  cu.username,
-          op:        parentId > 0 ? 'branch' : 'create',
-          parent_id: parentId || null,
-        }],
-        saved_at:       nowIso,
+        id: maxId + 1,
+        press: String(body.press).toLowerCase(),
+        end_cu_pn: String(body.end_cu_pn).trim().slice(0, 80),
+        project: String(body.project || '')
+          .trim()
+          .slice(0, 120),
+        designer_note: String(body.designer_note || '').slice(0, 500),
+        inputs: body.inputs && typeof body.inputs === 'object' ? body.inputs : {},
+        result: body.result && typeof body.result === 'object' ? body.result : null,
+        version: 1,
+        parent_id: parentId || null,
+        design_change_notice: initialNotice.slice(0, 1000),
+        change_log: [
+          {
+            version: 1,
+            notice: initialNotice.slice(0, 1000),
+            saved_at: nowIso,
+            saved_by: cu.username,
+            op: parentId > 0 ? 'branch' : 'create',
+            parent_id: parentId || null,
+          },
+        ],
+        saved_at: nowIso,
         saved_at_first: nowIso,
-        saved_by:       cu.username,
+        saved_by: cu.username,
       };
       list.push(record);
       dtWrite(list);
       return record;
     });
-    audit('DESIGN_TOOLS_SAVE', cu.username, clientIp(req),
-          `${saved.press} · ${saved.end_cu_pn} (#${saved.id}${parentId ? ` ← branch of #${parentId}` : ''})`);
+    audit(
+      'DESIGN_TOOLS_SAVE',
+      cu.username,
+      clientIp(req),
+      `${saved.press} · ${saved.end_cu_pn} (#${saved.id}${parentId ? ` ← branch of #${parentId}` : ''})`
+    );
     res.json({ ok: true, design: saved });
   } catch (err) {
     logErr(req, 'design_tools_save', err);
@@ -2263,7 +2620,8 @@ router.post('/design-tools', async (req, res) => {
 // dialog's "Update existing" path; "Save as new version" still POSTs
 // a fresh row.
 router.put('/design-tools/:id', async (req, res) => {
-  const cu = requireWriter(req, res); if (!cu) return;
+  const cu = requireWriter(req, res);
+  if (!cu) return;
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid_id' });
   const body = req.body || {};
@@ -2285,7 +2643,7 @@ router.put('/design-tools/:id', async (req, res) => {
   try {
     const updated = await withLock('design-tools', async () => {
       const list = dtRead();
-      const idx = list.findIndex(d => Number(d.id) === id);
+      const idx = list.findIndex((d) => Number(d.id) === id);
       if (idx === -1) return null;
       const prev = list[idx];
       const nowIso = new Date().toISOString();
@@ -2293,36 +2651,42 @@ router.put('/design-tools/:id', async (req, res) => {
       const log = Array.isArray(prev.change_log) ? prev.change_log : [];
       const next = {
         ...prev,
-        end_cu_pn:     String(body.end_cu_pn).trim().slice(0, 80),
-        project:       String(body.project || '').trim().slice(0, 120),
+        end_cu_pn: String(body.end_cu_pn).trim().slice(0, 80),
+        project: String(body.project || '')
+          .trim()
+          .slice(0, 120),
         designer_note: String(body.designer_note || '').slice(0, 500),
-        inputs:        body.inputs && typeof body.inputs === 'object' ? body.inputs : prev.inputs,
-        result:        body.result && typeof body.result === 'object' ? body.result : prev.result,
-        version:       newVersion,
+        inputs: body.inputs && typeof body.inputs === 'object' ? body.inputs : prev.inputs,
+        result: body.result && typeof body.result === 'object' ? body.result : prev.result,
+        version: newVersion,
         // Latest notice surfaced for the History list "why was this
         // changed?" column. Full audit lineage lives in change_log.
         design_change_notice: notice.slice(0, 1000),
         change_log: [
           ...log,
           {
-            version:  newVersion,
-            notice:   notice.slice(0, 1000),
+            version: newVersion,
+            notice: notice.slice(0, 1000),
             saved_at: nowIso,
             saved_by: cu.username,
-            op:       'update',
+            op: 'update',
           },
         ],
         saved_at_first: prev.saved_at_first || prev.saved_at,
-        saved_at:       nowIso,
-        saved_by:       cu.username,
+        saved_at: nowIso,
+        saved_by: cu.username,
       };
       list[idx] = next;
       dtWrite(list);
       return next;
     });
     if (!updated) return res.status(404).json({ error: 'not_found' });
-    audit('DESIGN_TOOLS_UPDATE', cu.username, clientIp(req),
-          `${updated.press} · ${updated.end_cu_pn} (#${updated.id} → v${updated.version}) · ${notice.slice(0, 80)}`);
+    audit(
+      'DESIGN_TOOLS_UPDATE',
+      cu.username,
+      clientIp(req),
+      `${updated.press} · ${updated.end_cu_pn} (#${updated.id} → v${updated.version}) · ${notice.slice(0, 80)}`
+    );
     res.json({ ok: true, design: updated });
   } catch (err) {
     logErr(req, 'design_tools_update', err);
@@ -2331,14 +2695,15 @@ router.put('/design-tools/:id', async (req, res) => {
 });
 
 router.delete('/design-tools/:id', async (req, res) => {
-  const cu = requireWriter(req, res); if (!cu) return;
+  const cu = requireWriter(req, res);
+  if (!cu) return;
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid_id' });
   try {
     const removed = await withLock('design-tools', async () => {
       const list = dtRead();
       const before = list.length;
-      const filtered = list.filter(d => Number(d.id) !== id);
+      const filtered = list.filter((d) => Number(d.id) !== id);
       if (filtered.length === before) return null;
       dtWrite(filtered);
       return id;
