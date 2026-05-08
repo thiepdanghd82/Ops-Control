@@ -227,11 +227,18 @@ function ensureShape(r) {
     // Merge checklist item-by-item so legacy strings / missing `required`
     // flags get upgraded without losing the saved `checked` state.
     const existingCL = Array.isArray(s.checklist) ? s.checklist : [];
+    // Index-based merge: existingCL[i] is the source of truth for slot i.
+    // Earlier `find-by-text` strategy clobbered user-edited text (re-wrote
+    // text: d.text on every render) AND the trailing ad-hoc loop then
+    // pushed the user-edited item as a duplicate, compounding state per
+    // refresh cycle. Position-based matching preserves text/required/
+    // checked atomically for slots [0..defaults.length-1] and treats
+    // anything beyond that as ad-hoc.
     const merged = defaults.checklist.map((d, i) => {
-      const found = existingCL.find((e) => e && (e.text || '') === d.text) || existingCL[i] || null;
+      const found = existingCL[i];
       if (found && typeof found === 'object') {
         return {
-          text: d.text,
+          text: typeof found.text === 'string' && found.text ? found.text : d.text,
           required: typeof found.required === 'boolean' ? found.required : d.required,
           checked: !!found.checked,
         };
@@ -239,12 +246,17 @@ function ensureShape(r) {
       if (typeof found === 'string') return { text: d.text, required: d.required, checked: false };
       return d;
     });
-    // Preserve any ad-hoc items the operator added (not in defaults).
-    for (const e of existingCL) {
+    // Preserve any ad-hoc items the operator added BEYOND the defaults
+    // length. Items inside [0..defaults.length-1] are already produced by
+    // the merged.map above; pushing them here would duplicate.
+    for (let i = defaults.checklist.length; i < existingCL.length; i++) {
+      const e = existingCL[i];
       if (!e || typeof e !== 'object') continue;
-      if (!merged.some((m) => m.text === e.text)) {
-        merged.push({ text: e.text, checked: !!e.checked, required: !!e.required });
-      }
+      merged.push({
+        text: typeof e.text === 'string' ? e.text : '',
+        checked: !!e.checked,
+        required: !!e.required,
+      });
     }
     pipeline[cfg.key] = {
       ...defaults,
