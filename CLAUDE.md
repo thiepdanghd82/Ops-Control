@@ -700,12 +700,11 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - Effort: S
 - Priority: P2 (blocks meaningful CI signal across all open PRs)
 
-#### MES-3-FIX-18 — vite prebuild hook hardcoded path
+#### MES-3-FIX-18 — vite prebuild hook hardcoded path (CLOSED)
 
-- Source: discovered during PR #14 hardware-test DMG builds. `client/package.json`'s prebuild hook runs `node ../scripts/help/build-all-docs.mjs`, which writes to `OUT_DIR = path.join(ROOT, '..', '..', '4. CLAUDE OUTPUT')`. From any non-canonical worktree (e.g. `/tmp/ops-build-pr14/`), this resolves outside the worktree tree (e.g. `/private/4. CLAUDE OUTPUT/`) — not writable without sudo.
-- Acceptance: change OUT_DIR resolution to use a path INSIDE the worktree (e.g. `path.join(ROOT, 'help-output')`) OR make the script gracefully skip when the dir isn't writable.
-- Effort: S
-- Priority: P3
+- Source: discovered during PR #14 hardware-test DMG builds. `scripts/help/build-go-live-docx.mjs` wrote ONLY to `OUT_DIR = path.join(ROOT, '..', '..', '4. CLAUDE OUTPUT')`, which resolves outside the worktree from non-canonical layouts (e.g. `/tmp/ops-build-pr14/` → `/private/4. CLAUDE OUTPUT/`, not writable without sudo) and crashed the prebuild hook.
+- Fix: Go-Live generator now writes a canonical `client/public/help/OpsControl_GoLiveGuide_v1.2.docx` (always inside the worktree) AND optionally mirrors to `4. CLAUDE OUTPUT/` when the parent is writable. Skip is silent with a single log line; build never crashes. `OPS_DOCS_MIRROR_DIR` env override accepted for explicit targeting. User Guide + Pricing Legend generators were already try/catch-wrapped; only Go-Live needed the fix.
+- Status: CLOSED 2026-05-09
 
 #### MES-3-FIX-19 — build-script generalization for native module overlays
 
