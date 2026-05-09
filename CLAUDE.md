@@ -736,13 +736,11 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - **Audit completed**: 2026-05-08 — 12 callsites reviewed across server/, scripts/, domains/. Result: 0 SUSPECT callsites. PR #22's verifyBackup was the only instance. All other `new Database(...)` calls pass absolute paths or use `:memory:`; the one `execSync` in production server code uses absolute paths + tar's `-C` flag; build scripts use `path.resolve(__dirname, ...)` consistently. **No further action needed**.
 - **Status**: CLOSED 2026-05-08 (audit complete, codebase clean of Lesson 30 footgun)
 
-#### MES-3-FIX-24 — User Guide generator: render `features` array (currently dropped from Word output)
+#### MES-3-FIX-24 — User Guide generator: render `features` array (CLOSED)
 
-- **Source**: discovered during PR #26 (SHA `09ec48c`) on 2026-05-09. The User Guide generator at `scripts/help/build-user-guide.mjs:170-339` renders `tips` and `pitfalls` from each entry but NOT the `features` array. Result: feature bullets appear in the in-app Help tab UI but disappear from the offline OpsControl_UserGuide.docx.
-- **Workaround applied**: PR #26 duplicated the 3 new RFQ Tracker feature bullets into `tips` so the Word guide carries them. Suboptimal — content duplication risks future drift.
-- **Acceptance**: add a "Features" section to the User Guide generator that renders each entry's `features` array (matching the formatting style of `tips` and `pitfalls`). Backfill: remove duplicated bullets from `tips` once `features` rendering ships, so each piece of content has a single canonical home.
-- **Effort**: S (~30 min generator code + ~10 min cleanup of any duplicated content)
-- **Priority**: P3 (in-app Help tab is the primary surface; Word guide is offline mirror)
+- **Source**: discovered during PR #26 (SHA `09ec48c`) on 2026-05-09. Generator at `scripts/help/build-user-guide.mjs` only rendered tips + pitfalls; the features array was silently dropped from Word output.
+- **Fix**: `scripts/help/build-user-guide.mjs` now renders `entry.features` between `whenToUse` and `preRequisites` as a "Features · Tính năng" bullet list, mirroring the bilingual `bullet()` helper used by `preRequisites`. Backfilled by removing the 3 duplicated tips PR #26 added to RFQ Tracker as workaround — feature bullets now have a single canonical home.
+- **Status**: CLOSED 2026-05-09
 
 #### KIOSK-001 — Real branded PWA icons
 

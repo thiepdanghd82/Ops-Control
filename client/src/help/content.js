@@ -2700,18 +2700,6 @@ export const HELP_CONTENT = {
         'Move-back is for corrections only — do NOT use it to "skip" a stage backwards; use the Status = Blocked field to represent a real hold.',
         'Chỉ dùng Move-back để sửa lỗi — KHÔNG dùng để "nhảy lùi" giai đoạn; dùng Status = Blocked để thể hiện hold thật.'
       ),
-      bt(
-        'Drawer edits save automatically as you toggle checkboxes / type — no Save button to remember. Close the drawer with × to confirm; the list view will catch up to the latest server state on close.',
-        'Drawer edit tự save khi bạn toggle checkbox / gõ — không có nút Save phải nhớ. Đóng drawer bằng × để xác nhận; list view sẽ sync state mới nhất khi đóng.'
-      ),
-      bt(
-        'To force-refresh a single RFQ to the latest server state (e.g. teammate just hit Next on the same record), close the drawer and reopen it — the snapshot is rebuilt from fresh data.',
-        'Để force-refresh 1 RFQ về state mới nhất từ server (vd đồng nghiệp vừa Next cùng record), đóng drawer và mở lại — snapshot dựng lại từ dữ liệu mới.'
-      ),
-      bt(
-        'When the SSE live banner shows a teammate updating an RFQ, your Kanban / List card updates within ~1 second. The detail drawer (if open on a different RFQ) is unaffected — no surprise re-render.',
-        'Khi banner SSE live báo đồng nghiệp đang update 1 RFQ, card Kanban / List của bạn cập nhật trong ~1s. Drawer chi tiết (nếu đang mở RFQ khác) không bị ảnh hưởng — không có re-render bất ngờ.'
-      ),
     ],
     pitfalls: [
       bp(
