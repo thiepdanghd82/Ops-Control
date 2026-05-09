@@ -22,37 +22,54 @@ export default function AuditLog() {
   const isSys = user?.role === 'sys';
 
   const [filter, setFilter] = useState({
-    event: '', user: '', from: '', to: '', limit: DEFAULT_LIMIT,
+    event: '',
+    user: '',
+    from: '',
+    to: '',
+    limit: DEFAULT_LIMIT,
   });
   const [state, setState] = useState({
-    loading: false, rows: [], total: null, error: null, fetched: false,
+    loading: false,
+    rows: [],
+    total: null,
+    error: null,
+    fetched: false,
   });
 
-  const fetchRows = useCallback(async (f = filter) => {
-    setState(s => ({ ...s, loading: true, error: null }));
-    try {
-      const qs = new URLSearchParams();
-      for (const [k, v] of Object.entries(f)) {
-        if (v !== '' && v != null) qs.set(k, String(v));
+  const fetchRows = useCallback(
+    async (f = filter) => {
+      setState((s) => ({ ...s, loading: true, error: null }));
+      try {
+        const qs = new URLSearchParams();
+        for (const [k, v] of Object.entries(f)) {
+          if (v !== '' && v != null) qs.set(k, String(v));
+        }
+        const r = await fetch('/api/audit?' + qs.toString(), { credentials: 'include' });
+        const body = await r.json();
+        if (!r.ok || body?.error) {
+          throw new Error(body?.error?.message || body?.error || 'HTTP ' + r.status);
+        }
+        const rows = Array.isArray(body?.data?.rows) ? body.data.rows : [];
+        const total = body?.data?.total ?? rows.length;
+        setState({ loading: false, rows, total, error: null, fetched: true });
+      } catch (err) {
+        setState({
+          loading: false,
+          rows: [],
+          total: null,
+          error: String(err?.message || err),
+          fetched: true,
+        });
       }
-      const r = await fetch('/api/audit?' + qs.toString(), { credentials: 'include' });
-      const body = await r.json();
-      if (!r.ok || body?.error) {
-        throw new Error(body?.error?.message || body?.error || ('HTTP ' + r.status));
-      }
-      const rows = Array.isArray(body?.data?.rows) ? body.data.rows : [];
-      const total = body?.data?.total ?? rows.length;
-      setState({ loading: false, rows, total, error: null, fetched: true });
-    } catch (err) {
-      setState({
-        loading: false, rows: [], total: null,
-        error: String(err?.message || err), fetched: true,
-      });
-    }
-  }, [filter]);
+    },
+    [filter]
+  );
 
   // Initial load on mount.
-  useEffect(() => { if (isSys) fetchRows(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only sys probe
+  useEffect(() => {
+    if (isSys) fetchRows();
+  }, []);
 
   if (!isSys) {
     return (
@@ -65,7 +82,7 @@ export default function AuditLog() {
     );
   }
 
-  const upd = (k, v) => setFilter(f => ({ ...f, [k]: v }));
+  const upd = (k, v) => setFilter((f) => ({ ...f, [k]: v }));
 
   return (
     <section className="audit">
@@ -76,34 +93,54 @@ export default function AuditLog() {
 
       <fieldset className="audit__filter">
         <Field label="Event">
-          <input className="audit__input" value={filter.event}
-                 onChange={e => upd('event', e.target.value)}
-                 placeholder="UPPER_SNAKE" />
+          <input
+            className="audit__input"
+            value={filter.event}
+            onChange={(e) => upd('event', e.target.value)}
+            placeholder="UPPER_SNAKE"
+          />
         </Field>
         <Field label="User">
-          <input className="audit__input" value={filter.user}
-                 onChange={e => upd('user', e.target.value)}
-                 placeholder="username or id" />
+          <input
+            className="audit__input"
+            value={filter.user}
+            onChange={(e) => upd('user', e.target.value)}
+            placeholder="username or id"
+          />
         </Field>
         <Field label="From (ISO ts)">
-          <input className="audit__input" value={filter.from}
-                 onChange={e => upd('from', e.target.value)}
-                 placeholder="2026-04-01T00:00:00Z" />
+          <input
+            className="audit__input"
+            value={filter.from}
+            onChange={(e) => upd('from', e.target.value)}
+            placeholder="2026-04-01T00:00:00Z"
+          />
         </Field>
         <Field label="To (ISO ts)">
-          <input className="audit__input" value={filter.to}
-                 onChange={e => upd('to', e.target.value)}
-                 placeholder="2026-04-30T00:00:00Z" />
+          <input
+            className="audit__input"
+            value={filter.to}
+            onChange={(e) => upd('to', e.target.value)}
+            placeholder="2026-04-30T00:00:00Z"
+          />
         </Field>
         <Field label="Limit">
-          <input type="number" min="1" max="10000"
-                 className="audit__input audit__input--num"
-                 value={filter.limit}
-                 onChange={e => upd('limit', e.target.value === '' ? '' : Number(e.target.value))} />
+          <input
+            type="number"
+            min="1"
+            max="10000"
+            className="audit__input audit__input--num"
+            value={filter.limit}
+            onChange={(e) => upd('limit', e.target.value === '' ? '' : Number(e.target.value))}
+          />
         </Field>
         <div className="audit__actions">
-          <button type="button" className="audit__btn"
-                  onClick={() => fetchRows()} disabled={state.loading}>
+          <button
+            type="button"
+            className="audit__btn"
+            onClick={() => fetchRows()}
+            disabled={state.loading}
+          >
             {state.loading ? 'Refreshing…' : 'Refresh'}
           </button>
         </div>
@@ -186,7 +223,8 @@ function truncate(s, n) {
 function inferResult(row) {
   const ev = String(row.event || row.action || '').toUpperCase();
   const detail = String(row.detail || '').toLowerCase();
-  const bad = /_FAIL$|FAILED|DENIED|ERROR|REJECT|LOCKOUT/.test(ev)
-    || /\berror\b|\bdenied\b|\bfailed\b/.test(detail);
+  const bad =
+    /_FAIL$|FAILED|DENIED|ERROR|REJECT|LOCKOUT/.test(ev) ||
+    /\berror\b|\bdenied\b|\bfailed\b/.test(detail);
   return bad ? { label: 'fail', tone: 'danger' } : { label: 'ok', tone: 'ok' };
 }

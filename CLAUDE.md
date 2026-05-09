@@ -713,21 +713,19 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - **Findings surfaced**: running the new check against current main reveals **2 missing overlays**: `node-hid` and `@serialport/bindings-cpp`. Neither is currently loaded from outside-asar code, so the trap is latent — but per Lesson 28 the fix is one `require()` away. Filed as MES-3-FIX-26 (separate ticket) for the actual overlay additions; this PR ships the detection infrastructure only.
 - **Status**: CLOSED 2026-05-09
 
-#### MES-3-FIX-20 — fix existing React-hooks rule violations exposed by FIX-17
+#### MES-3-FIX-20 — fix existing React-hooks rule violations exposed by FIX-17 (CLOSED)
 
-- **Source**: surfaced after PR #19 merge (SHA `5a1a630`) on 2026-05-08. With root lint resolution fixed, `eslint-plugin-react-hooks@7.x` runs against client code for the first time and reports **24 violations across 11 files**. v7 includes React Compiler analysis rules stricter than v6 (the version earlier sprints built against). Rules firing:
-  - 15 `react-hooks/exhaustive-deps` — useEffect/useMemo/useCallback dependency arrays missing referenced values
-  - 8 `react-hooks/set-state-in-effect` — `setState` called synchronously inside `useEffect` body (cascading-render risk per React Compiler)
-  - 1 `react-hooks/purity` — impure function call during render
-- **Top offenders by file**:
-  - 9 client/src/modules/cost/tabs/ComplexCalc/ProcessFlowChart.jsx
-  - 3 client/src/components/Shared/FileUploadZone.jsx
-  - 3 client/src/hooks/useCachedFetch.js
-  - 2 client/src/modules/cost/tabs/AuditLog.jsx
-  - 1 each: ConnectionBanner.jsx, AdminMetrics.jsx, GallusCalc.jsx, HardwareSection.jsx, PrintAreaCalc.jsx, QuoteAnalysis.jsx, DesignSyncPicker.jsx
-- **Acceptance**: per-file fix campaign — for each violation, decide whether (a) the code is actually buggy and needs refactor, OR (b) the rule fires false-positive on intentional pattern → use `eslint-disable-next-line` with comment justifying. NO blanket rule demotion (warn level) — that masks real React anti-patterns.
-- **Effort**: M (~24 violations × ~5 min each = ~2 h spread across multiple PRs as each affected file is otherwise touched)
-- **Priority**: P3 (CI signal is honest now — red on real anti-patterns is BETTER than green-by-suppression. Fix at leisure as each affected file is otherwise touched.)
+- **Source**: surfaced after PR #19 merge (SHA `5a1a630`) on 2026-05-08. `eslint-plugin-react-hooks@7.x` exposed pre-existing violations once root lint resolution was fixed.
+- **Phase 1 audit**: 16 active violations across 8 files (drifted from original 24/11 estimate as files were touched in interim PRs). Categorized: 12 (a) real bugs, 4 (b) intentional patterns, 0 (c) refactor. Plus 9 stale eslint-disable comments needing cleanup.
+- **Phase 2 fixes**:
+  - (a) `ProcessFlowChart.jsx`: `useMemo` wrap on `overrides` — single fix resolves 9 cascade violations and restores downstream memoization
+  - (a) `ConnectionBanner.jsx`: state-driven 1Hz clock replaces `Date.now()` in render path (purity rule)
+  - (a) `GallusCalc.jsx`: `set` wrapped in `useCallback` so `[set]` dep on `handleArtworkUpload` stays stable
+  - (b) `PrintAreaCalc.jsx`: `eslint-disable-next-line` on the Library-hydration effect — adding `onFileSelected` to deps would TDZ since the const is declared after the effect (downgraded from Phase 1 (a) to (b) on discovery)
+  - (b) `FileUploadZone.jsx` / `HardwareSection.jsx` / `AuditLog.jsx` / `QuoteAnalysis.jsx`: `eslint-disable-next-line` with documented justifications (mount-only fetches, applyFilters identity churn)
+  - Bonus: 9 stale-disable comments removed (`useCachedFetch.js`, `main.jsx`, `AdminMetrics.jsx`, `DesignSyncPicker.jsx`, plus the misplaced ones in `AuditLog.jsx` and `FileUploadZone.jsx` that got re-placed)
+- **Result**: 0 react-hooks violations, 0 stale-disable warnings. CI lint signal for this rule family is meaningfully green. Test suite: 607/608 pass (the 1 failure is the pre-existing PR #18 `home.go_to_home` i18n-key gap, unrelated).
+- **Status**: CLOSED 2026-05-09
 
 #### MES-3-FIX-21 — audit SQLite + cwd-sensitive callsites for absolute path usage (CLOSED)
 

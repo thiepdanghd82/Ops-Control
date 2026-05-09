@@ -30,9 +30,9 @@ const CACHE_KEY = 'hardware-config';
 
 const DEFAULT_CONFIG = {
   labelPrinter: { host: '', port: 9100 },
-  scale:        { portPath: '', baudRate: 9600 },
-  scanner:      { vendorId: 0, productId: 0, useKeyboardWedge: true },
-  officePrinter:{ defaultName: '', defaultPaper: 'A4' },
+  scale: { portPath: '', baudRate: 9600 },
+  scanner: { vendorId: 0, productId: 0, useKeyboardWedge: true },
+  officePrinter: { defaultName: '', defaultPaper: 'A4' },
 };
 
 export default function HardwareSection() {
@@ -93,10 +93,7 @@ export default function HardwareSection() {
         onChange={(next) => saveConfig({ ...cfg, labelPrinter: next })}
       />
 
-      <ScaleCard
-        config={cfg.scale}
-        onChange={(next) => saveConfig({ ...cfg, scale: next })}
-      />
+      <ScaleCard config={cfg.scale} onChange={(next) => saveConfig({ ...cfg, scale: next })} />
 
       <ScannerCard
         config={cfg.scanner}
@@ -208,7 +205,9 @@ function ScaleCard({ config, onChange }) {
     }
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   const open = async () => {
     try {
@@ -230,7 +229,12 @@ function ScaleCard({ config, onChange }) {
   };
 
   // Cleanup on unmount
-  useEffect(() => () => { if (unsubRef.current) unsubRef.current(); }, []);
+  useEffect(
+    () => () => {
+      if (unsubRef.current) unsubRef.current();
+    },
+    []
+  );
 
   return (
     <div className="hw-card">
@@ -270,7 +274,11 @@ function ScaleCard({ config, onChange }) {
       </div>
       {weight && (
         <div className="hw-result ok">
-          {t('hw.sc.weight')}<b>{weight.value} {weight.unit}</b> &nbsp; <small>(raw: {weight.raw})</small>
+          {t('hw.sc.weight')}
+          <b>
+            {weight.value} {weight.unit}
+          </b>{' '}
+          &nbsp; <small>(raw: {weight.raw})</small>
         </div>
       )}
     </div>
@@ -292,7 +300,10 @@ function ScannerCard({ config, onChange }) {
     setDevices(list);
   };
 
-  useEffect(() => { refresh(); }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-only device list fetch
+  useEffect(() => {
+    refresh();
+  }, []);
 
   const startListen = async () => {
     if (unsubRef.current) unsubRef.current();
@@ -320,23 +331,36 @@ function ScannerCard({ config, onChange }) {
   };
 
   const stopListen = async () => {
-    if (unsubRef.current) { unsubRef.current(); unsubRef.current = null; }
-    if (wedgeUnsubRef.current) { wedgeUnsubRef.current(); wedgeUnsubRef.current = null; }
+    if (unsubRef.current) {
+      unsubRef.current();
+      unsubRef.current = null;
+    }
+    if (wedgeUnsubRef.current) {
+      wedgeUnsubRef.current();
+      wedgeUnsubRef.current = null;
+    }
     await desktop.scanner.close();
     setLastScan(null);
   };
 
-  useEffect(() => () => {
-    if (unsubRef.current) unsubRef.current();
-    if (wedgeUnsubRef.current) wedgeUnsubRef.current();
-  }, []);
+  useEffect(
+    () => () => {
+      if (unsubRef.current) unsubRef.current();
+      if (wedgeUnsubRef.current) wedgeUnsubRef.current();
+    },
+    []
+  );
 
   return (
     <div className="hw-card">
       <h3 className="hw-card-title">{t('hw.sn.title')}</h3>
       <div className="hw-row">
         <label className="hw-checkbox">
-          <input type="checkbox" checked={useWedge} onChange={(e) => setUseWedge(e.target.checked)} />
+          <input
+            type="checkbox"
+            checked={useWedge}
+            onChange={(e) => setUseWedge(e.target.checked)}
+          />
           <span dangerouslySetInnerHTML={{ __html: t('hw.sn.wedge_label') }} />
         </label>
       </div>
@@ -348,28 +372,40 @@ function ScannerCard({ config, onChange }) {
               value={`${vendorId}:${productId}`}
               onChange={(e) => {
                 const [v, p] = e.target.value.split(':').map(Number);
-                setVendorId(v); setProductId(p);
+                setVendorId(v);
+                setProductId(p);
               }}
             >
               <option value="0:0">{t('hw.sn.choose')}</option>
               {devices.map((d) => (
                 <option key={`${d.vendorId}:${d.productId}`} value={`${d.vendorId}:${d.productId}`}>
-                  {d.product || d.manufacturer || `VID:${d.vendorId.toString(16)} PID:${d.productId.toString(16)}`}
+                  {d.product ||
+                    d.manufacturer ||
+                    `VID:${d.vendorId.toString(16)} PID:${d.productId.toString(16)}`}
                 </option>
               ))}
             </select>
           </label>
-          <button className="op-btn op-btn-ghost" onClick={refresh}>{t('hw.sn.scan')}</button>
+          <button className="op-btn op-btn-ghost" onClick={refresh}>
+            {t('hw.sn.scan')}
+          </button>
         </div>
       )}
       <div className="hw-actions">
-        <button className="op-btn op-btn-primary" onClick={startListen}>{t('hw.sn.start_listen')}</button>
-        <button className="op-btn" onClick={stopListen}>{t('hw.sn.stop')}</button>
+        <button className="op-btn op-btn-primary" onClick={startListen}>
+          {t('hw.sn.start_listen')}
+        </button>
+        <button className="op-btn" onClick={stopListen}>
+          {t('hw.sn.stop')}
+        </button>
       </div>
       {lastScan && (
         <div className="hw-result ok">
-          {t('hw.sn.scanned')}<b>{lastScan.code}</b> &nbsp;
-          <small>({lastScan.source || 'hid'} — {new Date(lastScan.timestamp).toLocaleTimeString()})</small>
+          {t('hw.sn.scanned')}
+          <b>{lastScan.code}</b> &nbsp;
+          <small>
+            ({lastScan.source || 'hid'} — {new Date(lastScan.timestamp).toLocaleTimeString()})
+          </small>
         </div>
       )}
     </div>
@@ -383,9 +419,12 @@ function OfficePrinterCard({ config, onChange }) {
   const [defaultPaper, setDefaultPaper] = useState(config.defaultPaper || 'A4');
 
   useEffect(() => {
-    desktop.printer.list().then(setPrinters).catch((err) => {
-      console.warn('Cannot list printers:', err.message);
-    });
+    desktop.printer
+      .list()
+      .then(setPrinters)
+      .catch((err) => {
+        console.warn('Cannot list printers:', err.message);
+      });
   }, []);
 
   return (

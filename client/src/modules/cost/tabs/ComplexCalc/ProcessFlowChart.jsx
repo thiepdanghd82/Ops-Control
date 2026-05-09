@@ -55,9 +55,9 @@ function mkId() {
 //            to the legacy leading-boxes layout only when there is
 //            no process to attach to.
 function deriveGroup(src, spIdx, fallbackTitle, kind = 'cplx') {
-  const visibleMats = (src.materials || []).filter(m => m && !m.hidden);
+  const visibleMats = (src.materials || []).filter((m) => m && !m.hidden);
   const mainMats = visibleMats
-    .filter(m => m.row_type === 'Main.Mat')
+    .filter((m) => m.row_type === 'Main.Mat')
     .map((m, i) => ({
       key: matKey(spIdx, m, i),
       label: m.desc || m.code || `Material ${i + 1}`,
@@ -65,7 +65,7 @@ function deriveGroup(src, spIdx, fallbackTitle, kind = 'cplx') {
       type: 'mp',
     }));
   const otherMats = visibleMats
-    .filter(m => m.row_type !== 'Main.Mat')
+    .filter((m) => m.row_type !== 'Main.Mat')
     .map((m, i) => ({
       key: `x_${spIdx}_${i}_${(m.code || 'x').replace(/\W/g, '')}`,
       label: m.desc || m.code || `Extra ${i + 1}`,
@@ -73,7 +73,7 @@ function deriveGroup(src, spIdx, fallbackTitle, kind = 'cplx') {
       type: 'o',
     }));
   const procs = (src.processes || [])
-    .filter(p => p && !p.hidden && p.workcenter)
+    .filter((p) => p && !p.hidden && p.workcenter)
     .map((p, i) => ({
       key: procKey(spIdx, p, i),
       label: p.workcenter,
@@ -109,12 +109,12 @@ function deriveGroups(state, kind) {
     // Override title to prefer ccl_pn when available (single-product UX)
     g.title = title;
     const hasExtras = (g.procs[0]?.extras?.length || 0) > 0;
-    return (g.mats.length || g.procs.length || hasExtras) ? [g] : [];
+    return g.mats.length || g.procs.length || hasExtras ? [g] : [];
   }
   // Complex: one group per sub-product
   const sps = Array.isArray(state?.subproducts) ? state.subproducts : [];
   return sps.map((sp, spIdx) =>
-    deriveGroup(sp, spIdx, `SP ${String.fromCharCode(65 + spIdx)}`, 'cplx'),
+    deriveGroup(sp, spIdx, `SP ${String.fromCharCode(65 + spIdx)}`, 'cplx')
   );
 }
 
@@ -129,21 +129,21 @@ function mergeOverrides(groups, ov) {
   // automatically). Persisted so the view follows the quote.
   const hideMaterials = !!ov?.hide_materials;
 
-  return groups.map(g => {
-    const filterHidden = (list) => list.filter(n => !hidden[n.key]);
-    const applyLabel = (n) => labels[n.key] ? { ...n, label: labels[n.key] } : n;
+  return groups.map((g) => {
+    const filterHidden = (list) => list.filter((n) => !hidden[n.key]);
+    const applyLabel = (n) => (labels[n.key] ? { ...n, label: labels[n.key] } : n);
     return {
       ...g,
       title: groupTitles[g.groupKey] || g.title,
       mats: hideMaterials ? [] : filterHidden(g.mats).map(applyLabel),
-      procs: filterHidden(g.procs).map(p => ({
+      procs: filterHidden(g.procs).map((p) => ({
         ...applyLabel(p),
         // Extras = the vertical material list attached to the first
         // proc. Hide them alongside mats when the toggle is off so the
         // full "NVL list" disappears, not just the leading boxes.
         extras: hideMaterials ? [] : filterHidden(p.extras || []).map(applyLabel),
       })),
-      _adminExtras: (extraNodes[g.groupKey] || []).filter(n => !hidden[n.key]).map(applyLabel),
+      _adminExtras: (extraNodes[g.groupKey] || []).filter((n) => !hidden[n.key]).map(applyLabel),
     };
   });
 }
@@ -156,7 +156,8 @@ function flattenNodes(groups) {
   for (const g of groups) {
     for (const m of g.mats) out.push({ key: m.key, label: m.label, groupKey: g.groupKey });
     for (const p of g.procs) out.push({ key: p.key, label: p.label, groupKey: g.groupKey });
-    for (const n of (g._adminExtras || [])) out.push({ key: n.key, label: n.label, groupKey: g.groupKey });
+    for (const n of g._adminExtras || [])
+      out.push({ key: n.key, label: n.label, groupKey: g.groupKey });
   }
   return out;
 }
@@ -175,13 +176,13 @@ export default function ProcessFlowChart({ kind = 'cplx' } = {}) {
   const role = auth?.user?.role || 'user';
   const isAdmin = (ROLE_LEVELS[role] || 0) >= ROLE_LEVELS.admin;
 
-  const overrides = state?.flow_chart_overrides || {};
+  const overrides = useMemo(() => state?.flow_chart_overrides || {}, [state]);
   const autoGroups = useMemo(() => deriveGroups(state, kind), [state, kind]);
   const groups = useMemo(() => mergeOverrides(autoGroups, overrides), [autoGroups, overrides]);
   const flatNodes = useMemo(() => flattenNodes(groups), [groups]);
 
   const [editMode, setEditMode] = useState(false);
-  const [linkMode, setLinkMode] = useState(null);   // null | { stage: 'pick-from' | 'pick-to', from_key? }
+  const [linkMode, setLinkMode] = useState(null); // null | { stage: 'pick-from' | 'pick-to', from_key? }
   const [groupMode, setGroupMode] = useState(null); // null | { selected: Set<key> }
 
   // ── Override writers ──
@@ -189,27 +190,40 @@ export default function ProcessFlowChart({ kind = 'cplx' } = {}) {
   // calculator rendered us. Previously these hardcoded cplxState, so
   // Standard-side edits silently no-op'd (and worse, overwrote complex
   // flow-chart state when both were open in the same session).
-  const updateOverrides = useCallback((patch) => {
-    const cur = state?.flow_chart_overrides || {};
-    setField('flow_chart_overrides', { ...cur, ...patch });
-  }, [state, setField]);
+  const updateOverrides = useCallback(
+    (patch) => {
+      const cur = state?.flow_chart_overrides || {};
+      setField('flow_chart_overrides', { ...cur, ...patch });
+    },
+    [state, setField]
+  );
 
-  const setLabel = useCallback((key, label) => {
-    const cur = overrides.labels || {};
-    updateOverrides({ labels: { ...cur, [key]: label } });
-  }, [overrides, updateOverrides]);
+  const setLabel = useCallback(
+    (key, label) => {
+      const cur = overrides.labels || {};
+      updateOverrides({ labels: { ...cur, [key]: label } });
+    },
+    [overrides, updateOverrides]
+  );
 
-  const setGroupTitle = useCallback((groupKey, title) => {
-    const cur = overrides.groupTitles || {};
-    updateOverrides({ groupTitles: { ...cur, [groupKey]: title } });
-  }, [overrides, updateOverrides]);
+  const setGroupTitle = useCallback(
+    (groupKey, title) => {
+      const cur = overrides.groupTitles || {};
+      updateOverrides({ groupTitles: { ...cur, [groupKey]: title } });
+    },
+    [overrides, updateOverrides]
+  );
 
-  const toggleHidden = useCallback((key) => {
-    const cur = overrides.hidden || {};
-    const next = { ...cur };
-    if (next[key]) delete next[key]; else next[key] = true;
-    updateOverrides({ hidden: next });
-  }, [overrides, updateOverrides]);
+  const toggleHidden = useCallback(
+    (key) => {
+      const cur = overrides.hidden || {};
+      const next = { ...cur };
+      if (next[key]) delete next[key];
+      else next[key] = true;
+      updateOverrides({ hidden: next });
+    },
+    [overrides, updateOverrides]
+  );
 
   // View-only toggle (available to all roles — it's a visibility
   // preference, not a structural edit). Persists to the quote so a
@@ -219,68 +233,89 @@ export default function ProcessFlowChart({ kind = 'cplx' } = {}) {
     updateOverrides({ hide_materials: !hideMaterials });
   }, [hideMaterials, updateOverrides]);
 
-  const addExtraNode = useCallback((groupKey, spec) => {
-    const cur = overrides.extraNodes || {};
-    const existing = cur[groupKey] || [];
-    const key = `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    const node = { key, ...spec };
-    updateOverrides({
-      extraNodes: { ...cur, [groupKey]: [...existing, node] },
-    });
-  }, [overrides, updateOverrides]);
+  const addExtraNode = useCallback(
+    (groupKey, spec) => {
+      const cur = overrides.extraNodes || {};
+      const existing = cur[groupKey] || [];
+      const key = `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const node = { key, ...spec };
+      updateOverrides({
+        extraNodes: { ...cur, [groupKey]: [...existing, node] },
+      });
+    },
+    [overrides, updateOverrides]
+  );
 
-  const addAssemblyLink = useCallback((from_key, to_key) => {
-    if (!from_key || !to_key || from_key === to_key) return;
-    const cur = overrides.assembly_links || [];
-    // De-dup: skip if link already exists
-    if (cur.some(l => l.from_key === from_key && l.to_key === to_key)) return;
-    updateOverrides({
-      assembly_links: [...cur, { id: mkId(), from_key, to_key }],
-    });
-  }, [overrides, updateOverrides]);
+  const addAssemblyLink = useCallback(
+    (from_key, to_key) => {
+      if (!from_key || !to_key || from_key === to_key) return;
+      const cur = overrides.assembly_links || [];
+      // De-dup: skip if link already exists
+      if (cur.some((l) => l.from_key === from_key && l.to_key === to_key)) return;
+      updateOverrides({
+        assembly_links: [...cur, { id: mkId(), from_key, to_key }],
+      });
+    },
+    [overrides, updateOverrides]
+  );
 
-  const removeAssemblyLink = useCallback((id) => {
-    const cur = overrides.assembly_links || [];
-    updateOverrides({ assembly_links: cur.filter(l => l.id !== id) });
-  }, [overrides, updateOverrides]);
+  const removeAssemblyLink = useCallback(
+    (id) => {
+      const cur = overrides.assembly_links || [];
+      updateOverrides({ assembly_links: cur.filter((l) => l.id !== id) });
+    },
+    [overrides, updateOverrides]
+  );
 
-  const addSameProcessGroup = useCallback((node_keys, label) => {
-    if (!node_keys || node_keys.length < 2) return;
-    const cur = overrides.same_process_groups || [];
-    updateOverrides({
-      same_process_groups: [
-        ...cur,
-        { id: mkId(), label: label || 'Same Process', node_keys: Array.from(node_keys) },
-      ],
-    });
-  }, [overrides, updateOverrides]);
+  const addSameProcessGroup = useCallback(
+    (node_keys, label) => {
+      if (!node_keys || node_keys.length < 2) return;
+      const cur = overrides.same_process_groups || [];
+      updateOverrides({
+        same_process_groups: [
+          ...cur,
+          { id: mkId(), label: label || 'Same Process', node_keys: Array.from(node_keys) },
+        ],
+      });
+    },
+    [overrides, updateOverrides]
+  );
 
-  const removeSameProcessGroup = useCallback((id) => {
-    const cur = overrides.same_process_groups || [];
-    updateOverrides({ same_process_groups: cur.filter(g => g.id !== id) });
-  }, [overrides, updateOverrides]);
+  const removeSameProcessGroup = useCallback(
+    (id) => {
+      const cur = overrides.same_process_groups || [];
+      updateOverrides({ same_process_groups: cur.filter((g) => g.id !== id) });
+    },
+    [overrides, updateOverrides]
+  );
 
   const resetAllOverrides = useCallback(() => {
     if (!window.confirm('Reset tất cả chỉnh sửa chart về auto-generated?')) return;
     setField('flow_chart_overrides', {});
-    setEditMode(false); setLinkMode(null); setGroupMode(null);
+    setEditMode(false);
+    setLinkMode(null);
+    setGroupMode(null);
   }, [setField]);
 
   // ── Node click handler when in link-mode or group-mode ──
-  const handleNodeClick = useCallback((key) => {
-    if (linkMode) {
-      if (!linkMode.from_key) {
-        setLinkMode({ stage: 'pick-to', from_key: key });
-      } else {
-        addAssemblyLink(linkMode.from_key, key);
-        setLinkMode(null);
+  const handleNodeClick = useCallback(
+    (key) => {
+      if (linkMode) {
+        if (!linkMode.from_key) {
+          setLinkMode({ stage: 'pick-to', from_key: key });
+        } else {
+          addAssemblyLink(linkMode.from_key, key);
+          setLinkMode(null);
+        }
+      } else if (groupMode) {
+        const next = new Set(groupMode.selected);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        setGroupMode({ selected: next });
       }
-    } else if (groupMode) {
-      const next = new Set(groupMode.selected);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      setGroupMode({ selected: next });
-    }
-  }, [linkMode, groupMode, addAssemblyLink]);
+    },
+    [linkMode, groupMode, addAssemblyLink]
+  );
 
   // ── Geometry tracking for arrows + brackets ──
   // Each node registers its DOM ref under its key. We snapshot each
@@ -288,7 +323,7 @@ export default function ProcessFlowChart({ kind = 'cplx' } = {}) {
   // render + window resize so SVG overlay can draw lines.
   const chartRef = useRef(null);
   const nodeRefs = useRef({}); // { [key]: HTMLElement }
-  const [positions, setPositions] = useState({});  // { [key]: { top, left, right, bottom, cx, cy, w, h } }
+  const [positions, setPositions] = useState({}); // { [key]: { top, left, right, bottom, cx, cy, w, h } }
 
   const registerNodeRef = useCallback((key, el) => {
     if (el) nodeRefs.current[key] = el;
@@ -354,20 +389,37 @@ export default function ProcessFlowChart({ kind = 'cplx' } = {}) {
       <div className="cc-card-hdr pfc-hdr">
         <span>🔀 Process Flow Chart · Sơ đồ quy trình sản xuất</span>
         <span className="pfc-legend">
-          <span className="pfc-legend-item pfc-mp" title="Material — Vật liệu chính">[mp] Material · Vật liệu</span>
-          <span className="pfc-legend-item pfc-p" title="Process — Công đoạn">[p] Process · Công đoạn</span>
-          <span className="pfc-legend-item pfc-o" title="Other material — Vật liệu phụ">[o] Other · VL phụ</span>
-          <span className="pfc-legend-item pfc-h" title="Half-finished — Bán thành phẩm">[h] Half-finished · Bán TP</span>
+          <span className="pfc-legend-item pfc-mp" title="Material — Vật liệu chính">
+            [mp] Material · Vật liệu
+          </span>
+          <span className="pfc-legend-item pfc-p" title="Process — Công đoạn">
+            [p] Process · Công đoạn
+          </span>
+          <span className="pfc-legend-item pfc-o" title="Other material — Vật liệu phụ">
+            [o] Other · VL phụ
+          </span>
+          <span className="pfc-legend-item pfc-h" title="Half-finished — Bán thành phẩm">
+            [h] Half-finished · Bán TP
+          </span>
         </span>
         {isAdmin && (
           <span className="pfc-admin-bar">
             <button
               className={`pfc-edit-btn ${editMode ? 'active' : ''}`}
-              onClick={() => { setEditMode(m => !m); setLinkMode(null); setGroupMode(null); }}>
+              onClick={() => {
+                setEditMode((m) => !m);
+                setLinkMode(null);
+                setGroupMode(null);
+              }}
+            >
               {editMode ? '✓ Done editing' : '✏ Edit chart'}
             </button>
             {editMode && Object.keys(overrides).length > 0 && (
-              <button className="pfc-reset-btn" onClick={resetAllOverrides} title="Xoá tất cả chỉnh sửa, quay về auto-generated">
+              <button
+                className="pfc-reset-btn"
+                onClick={resetAllOverrides}
+                title="Xoá tất cả chỉnh sửa, quay về auto-generated"
+              >
                 ↺ Reset
               </button>
             )}
@@ -377,8 +429,10 @@ export default function ProcessFlowChart({ kind = 'cplx' } = {}) {
 
       {editMode && (
         <EditToolbar
-          linkMode={linkMode} setLinkMode={setLinkMode}
-          groupMode={groupMode} setGroupMode={setGroupMode}
+          linkMode={linkMode}
+          setLinkMode={setLinkMode}
+          groupMode={groupMode}
+          setGroupMode={setGroupMode}
           onCommitGroup={(label) => {
             if (groupMode && groupMode.selected.size >= 2) {
               addSameProcessGroup(groupMode.selected, label);
@@ -395,7 +449,7 @@ export default function ProcessFlowChart({ kind = 'cplx' } = {}) {
 
       <div className="cc-card-body pfc-body">
         <div className="pfc-chart" ref={chartRef}>
-          {groups.map(g => (
+          {groups.map((g) => (
             <FlowRow
               key={g.groupKey}
               group={g}
@@ -418,12 +472,19 @@ export default function ProcessFlowChart({ kind = 'cplx' } = {}) {
           {assemblyLinks.length > 0 && (
             <svg className="pfc-svg-overlay" aria-hidden>
               <defs>
-                <marker id="pfc-arrowhead" viewBox="0 0 10 10" refX="9" refY="5"
-                  markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <marker
+                  id="pfc-arrowhead"
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="7"
+                  markerHeight="7"
+                  orient="auto-start-reverse"
+                >
                   <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569" />
                 </marker>
               </defs>
-              {assemblyLinks.map(l => {
+              {assemblyLinks.map((l) => {
                 const a = positions[l.from_key];
                 const b = positions[l.to_key];
                 if (!a || !b) return null;
@@ -439,7 +500,13 @@ export default function ProcessFlowChart({ kind = 'cplx' } = {}) {
                 const d = `M ${x1} ${y1} L ${x1} ${midY} L ${x2} ${midY} L ${x2} ${y2}`;
                 return (
                   <g key={l.id}>
-                    <path d={d} stroke="#475569" strokeWidth="1.5" fill="none" markerEnd="url(#pfc-arrowhead)" />
+                    <path
+                      d={d}
+                      stroke="#475569"
+                      strokeWidth="1.5"
+                      fill="none"
+                      markerEnd="url(#pfc-arrowhead)"
+                    />
                   </g>
                 );
               })}
@@ -447,21 +514,26 @@ export default function ProcessFlowChart({ kind = 'cplx' } = {}) {
           )}
 
           {/* ── Same-Process brackets (dashed) ────────────────── */}
-          {sameProcessGroups.map(sg => {
+          {sameProcessGroups.map((sg) => {
             const keys = sg.node_keys || [];
-            const rects = keys.map(k => positions[k]).filter(Boolean);
+            const rects = keys.map((k) => positions[k]).filter(Boolean);
             if (rects.length < 2) return null;
             const pad = 8;
-            const top = Math.min(...rects.map(r => r.top)) - pad;
-            const left = Math.min(...rects.map(r => r.left)) - pad;
-            const right = Math.max(...rects.map(r => r.right)) + pad;
-            const bottom = Math.max(...rects.map(r => r.bottom)) + pad;
+            const top = Math.min(...rects.map((r) => r.top)) - pad;
+            const left = Math.min(...rects.map((r) => r.left)) - pad;
+            const right = Math.max(...rects.map((r) => r.right)) + pad;
+            const bottom = Math.max(...rects.map((r) => r.bottom)) + pad;
             return (
-              <div key={sg.id} className="pfc-same-bracket"
+              <div
+                key={sg.id}
+                className="pfc-same-bracket"
                 style={{
-                  top: top + 'px', left: left + 'px',
-                  width: (right - left) + 'px', height: (bottom - top) + 'px',
-                }}>
+                  top: top + 'px',
+                  left: left + 'px',
+                  width: right - left + 'px',
+                  height: bottom - top + 'px',
+                }}
+              >
                 <span className="pfc-same-label">{sg.label || 'Same Process'}</span>
               </div>
             );
@@ -470,7 +542,8 @@ export default function ProcessFlowChart({ kind = 'cplx' } = {}) {
 
         {!isAdmin && Object.keys(overrides).length === 0 && (
           <div style={{ marginTop: 10, fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>
-            ℹ Chart này tự động tạo từ dữ liệu tab Processes + Materials của từng sub-product. Admin có thể chỉnh sửa nội dung.
+            ℹ Chart này tự động tạo từ dữ liệu tab Processes + Materials của từng sub-product. Admin
+            có thể chỉnh sửa nội dung.
           </div>
         )}
       </div>
@@ -480,12 +553,20 @@ export default function ProcessFlowChart({ kind = 'cplx' } = {}) {
 
 // ─── Edit toolbar ──────────────────────────────────────────────
 function EditToolbar({
-  linkMode, setLinkMode, groupMode, setGroupMode, onCommitGroup,
-  assemblyLinks, sameProcessGroups, onRemoveLink, onRemoveGroup, flatNodes,
+  linkMode,
+  setLinkMode,
+  groupMode,
+  setGroupMode,
+  onCommitGroup,
+  assemblyLinks,
+  sameProcessGroups,
+  onRemoveLink,
+  onRemoveGroup,
+  flatNodes,
 }) {
   const [groupLabel, setGroupLabel] = useState('Same Process');
   const labelFor = (key) => {
-    const n = flatNodes.find(x => x.key === key);
+    const n = flatNodes.find((x) => x.key === key);
     return n ? n.label : key;
   };
   return (
@@ -496,9 +577,13 @@ function EditToolbar({
           onClick={() => {
             setGroupMode(null);
             setLinkMode(linkMode ? null : { from_key: null });
-          }}>
-          🔗 {linkMode
-            ? (linkMode.from_key ? `Click target node... (source: ${labelFor(linkMode.from_key)})` : 'Click source node...')
+          }}
+        >
+          🔗{' '}
+          {linkMode
+            ? linkMode.from_key
+              ? `Click target node... (source: ${labelFor(linkMode.from_key)})`
+              : 'Click source node...'
             : 'Add vertical arrow'}
         </button>
         <button
@@ -506,15 +591,21 @@ function EditToolbar({
           onClick={() => {
             setLinkMode(null);
             setGroupMode(groupMode ? null : { selected: new Set() });
-          }}>
-          📦 {groupMode ? `Group mode — ${groupMode.selected.size} nodes selected` : 'Add Same-Process bracket'}
+          }}
+        >
+          📦{' '}
+          {groupMode
+            ? `Group mode — ${groupMode.selected.size} nodes selected`
+            : 'Add Same-Process bracket'}
         </button>
         {groupMode && groupMode.selected.size >= 2 && (
           <>
-            <input className="pfc-group-label-input"
+            <input
+              className="pfc-group-label-input"
               value={groupLabel}
-              onChange={e => setGroupLabel(e.target.value)}
-              placeholder="Label (default: Same Process)" />
+              onChange={(e) => setGroupLabel(e.target.value)}
+              placeholder="Label (default: Same Process)"
+            />
             <button className="pfc-commit-btn" onClick={() => onCommitGroup(groupLabel)}>
               ✓ Create group
             </button>
@@ -527,10 +618,12 @@ function EditToolbar({
           {assemblyLinks.length > 0 && (
             <div className="pfc-edit-list">
               <b>Vertical arrows:</b>
-              {assemblyLinks.map(l => (
+              {assemblyLinks.map((l) => (
                 <span key={l.id} className="pfc-edit-item">
                   {labelFor(l.from_key)} → {labelFor(l.to_key)}
-                  <button className="pfc-del-mini" onClick={() => onRemoveLink(l.id)}>×</button>
+                  <button className="pfc-del-mini" onClick={() => onRemoveLink(l.id)}>
+                    ×
+                  </button>
                 </span>
               ))}
             </div>
@@ -538,10 +631,12 @@ function EditToolbar({
           {sameProcessGroups.length > 0 && (
             <div className="pfc-edit-list">
               <b>Groups:</b>
-              {sameProcessGroups.map(g => (
+              {sameProcessGroups.map((g) => (
                 <span key={g.id} className="pfc-edit-item">
                   {g.label} ({g.node_keys.length} nodes)
-                  <button className="pfc-del-mini" onClick={() => onRemoveGroup(g.id)}>×</button>
+                  <button className="pfc-del-mini" onClick={() => onRemoveGroup(g.id)}>
+                    ×
+                  </button>
                 </span>
               ))}
             </div>
@@ -553,10 +648,19 @@ function EditToolbar({
 }
 
 function FlowRow({
-  group, editMode, linkMode, groupMode, lib,
-  hideMaterials, onToggleHideMaterials,
-  onSetLabel, onSetGroupTitle, onToggleHidden, onAddNode,
-  onNodeClick, registerNodeRef,
+  group,
+  editMode,
+  linkMode,
+  groupMode,
+  lib,
+  hideMaterials,
+  onToggleHideMaterials,
+  onSetLabel,
+  onSetGroupTitle,
+  onToggleHidden,
+  onAddNode,
+  onNodeClick,
+  registerNodeRef,
 }) {
   return (
     <div className="pfc-row">
@@ -568,16 +672,21 @@ function FlowRow({
         />
       </div>
       <div className="pfc-row-flow">
-        {group.mats.map(m => (
-          <FlowNode key={m.key} nodeKey={m.key} type="mp"
-            label={m.label} code="mp"
+        {group.mats.map((m) => (
+          <FlowNode
+            key={m.key}
+            nodeKey={m.key}
+            type="mp"
+            label={m.label}
+            code="mp"
             editMode={editMode}
             linkMode={linkMode}
             groupMode={groupMode}
             onSetLabel={(v) => onSetLabel(m.key, v)}
             onDelete={() => onToggleHidden(m.key)}
             onClick={() => onNodeClick(m.key)}
-            registerRef={registerNodeRef} />
+            registerRef={registerNodeRef}
+          />
         ))}
         {group.mats.length > 0 && group.procs.length > 0 && <Arrow />}
         {group.procs.map((p, idx) => (
@@ -588,36 +697,46 @@ function FlowRow({
                 layout is untouched. */}
             {idx === 0 ? (
               <div className="pfc-node-stack">
-                <FlowNode nodeKey={p.key} type="p"
-                  label={p.label} code="p"
+                <FlowNode
+                  nodeKey={p.key}
+                  type="p"
+                  label={p.label}
+                  code="p"
                   editMode={editMode}
                   linkMode={linkMode}
                   groupMode={groupMode}
                   onSetLabel={(v) => onSetLabel(p.key, v)}
                   onDelete={() => onToggleHidden(p.key)}
                   onClick={() => onNodeClick(p.key)}
-                  registerRef={registerNodeRef} />
+                  registerRef={registerNodeRef}
+                />
                 <label className="pfc-mat-toggle" title="Ẩn/hiện danh sách Material ở đầu flow">
-                  <input type="checkbox"
+                  <input
+                    type="checkbox"
                     checked={!hideMaterials}
-                    onChange={onToggleHideMaterials} />
+                    onChange={onToggleHideMaterials}
+                  />
                   <span>Hiện Material list</span>
                 </label>
               </div>
             ) : (
-              <FlowNode nodeKey={p.key} type="p"
-                label={p.label} code="p"
+              <FlowNode
+                nodeKey={p.key}
+                type="p"
+                label={p.label}
+                code="p"
                 editMode={editMode}
                 linkMode={linkMode}
                 groupMode={groupMode}
                 onSetLabel={(v) => onSetLabel(p.key, v)}
                 onDelete={() => onToggleHidden(p.key)}
                 onClick={() => onNodeClick(p.key)}
-                registerRef={registerNodeRef} />
+                registerRef={registerNodeRef}
+              />
             )}
             {p.extras && p.extras.length > 0 && (
               <div className="pfc-extras">
-                {p.extras.map(x => {
+                {p.extras.map((x) => {
                   const typeCode = x.type || 'o';
                   return (
                     <div key={x.key} className={`pfc-extra-line pfc-extra-${typeCode}`}>
@@ -627,7 +746,9 @@ function FlowRow({
                         onCommit={(v) => onSetLabel(x.key, v)}
                       />
                       {editMode && (
-                        <button className="pfc-del-mini" onClick={() => onToggleHidden(x.key)}>×</button>
+                        <button className="pfc-del-mini" onClick={() => onToggleHidden(x.key)}>
+                          ×
+                        </button>
                       )}
                     </div>
                   );
@@ -640,24 +761,26 @@ function FlowRow({
         {group._adminExtras && group._adminExtras.length > 0 && (
           <>
             {(group.mats.length > 0 || group.procs.length > 0) && <Arrow />}
-            {group._adminExtras.map(n => (
-              <FlowNode key={n.key} nodeKey={n.key} type={n.type || 'p'}
-                label={n.label} code={n.type || 'p'}
+            {group._adminExtras.map((n) => (
+              <FlowNode
+                key={n.key}
+                nodeKey={n.key}
+                type={n.type || 'p'}
+                label={n.label}
+                code={n.type || 'p'}
                 editMode={editMode}
                 linkMode={linkMode}
                 groupMode={groupMode}
                 onSetLabel={(v) => onSetLabel(n.key, v)}
                 onDelete={() => onToggleHidden(n.key)}
                 onClick={() => onNodeClick(n.key)}
-                registerRef={registerNodeRef} />
+                registerRef={registerNodeRef}
+              />
             ))}
           </>
         )}
         {editMode && (
-          <AddProcessDropdown
-            lib={lib}
-            onAdd={(spec) => onAddNode(group.groupKey, spec)}
-          />
+          <AddProcessDropdown lib={lib} onAdd={(spec) => onAddNode(group.groupKey, spec)} />
         )}
       </div>
     </div>
@@ -673,22 +796,28 @@ function AddProcessDropdown({ lib, onAdd }) {
   const processTypes = useMemo(() => getProcessOptions(), []);
   const workcenters = useMemo(() => {
     if (!lib || !processType) return [];
-    try { return getWCOptionsByType(lib, processType); } catch { return []; }
+    try {
+      return getWCOptionsByType(lib, processType);
+    } catch {
+      return [];
+    }
   }, [lib, processType]);
 
   const addNonProcess = (type) => {
     const label = type === 'mp' ? 'New Material' : type === 'o' ? '+new extra' : 'Half-finished';
     onAdd({ label, type });
-    setOpen(false); setProcessType('');
+    setOpen(false);
+    setProcessType('');
   };
   const addProcess = (wc) => {
     onAdd({ label: wc, type: 'p', process_type: processType, workcenter: wc });
-    setOpen(false); setProcessType('');
+    setOpen(false);
+    setProcessType('');
   };
 
   return (
     <span className="pfc-add-bar">
-      <button className="pfc-add-toggle" onClick={() => setOpen(o => !o)}>
+      <button className="pfc-add-toggle" onClick={() => setOpen((o) => !o)}>
         {open ? '× Close' : '+ Add node'}
       </button>
       {open && (
@@ -696,24 +825,48 @@ function AddProcessDropdown({ lib, onAdd }) {
           {!processType && (
             <>
               <span className="pfc-add-label">Process type:</span>
-              <select value="" onChange={e => setProcessType(e.target.value)} className="pfc-add-select">
+              <select
+                value=""
+                onChange={(e) => setProcessType(e.target.value)}
+                className="pfc-add-select"
+              >
                 <option value="">(pick process type)</option>
-                {processTypes.map(pt => <option key={pt} value={pt}>{pt}</option>)}
+                {processTypes.map((pt) => (
+                  <option key={pt} value={pt}>
+                    {pt}
+                  </option>
+                ))}
               </select>
               <span className="pfc-add-or">or</span>
-              <button className="pfc-add-btn pfc-add-mp" onClick={() => addNonProcess('mp')}>+mp</button>
-              <button className="pfc-add-btn pfc-add-o"  onClick={() => addNonProcess('o')}>+o</button>
-              <button className="pfc-add-btn pfc-add-h"  onClick={() => addNonProcess('h')}>+h</button>
+              <button className="pfc-add-btn pfc-add-mp" onClick={() => addNonProcess('mp')}>
+                +mp
+              </button>
+              <button className="pfc-add-btn pfc-add-o" onClick={() => addNonProcess('o')}>
+                +o
+              </button>
+              <button className="pfc-add-btn pfc-add-h" onClick={() => addNonProcess('h')}>
+                +h
+              </button>
             </>
           )}
           {processType && (
             <>
               <span className="pfc-add-label">{processType} workcenter:</span>
-              <select value="" onChange={e => e.target.value && addProcess(e.target.value)} className="pfc-add-select">
+              <select
+                value=""
+                onChange={(e) => e.target.value && addProcess(e.target.value)}
+                className="pfc-add-select"
+              >
                 <option value="">(pick workcenter)</option>
-                {workcenters.map(wc => <option key={wc} value={wc}>{wc}</option>)}
+                {workcenters.map((wc) => (
+                  <option key={wc} value={wc}>
+                    {wc}
+                  </option>
+                ))}
               </select>
-              <button className="pfc-add-btn-back" onClick={() => setProcessType('')}>← back</button>
+              <button className="pfc-add-btn-back" onClick={() => setProcessType('')}>
+                ← back
+              </button>
             </>
           )}
         </span>
@@ -723,9 +876,17 @@ function AddProcessDropdown({ lib, onAdd }) {
 }
 
 function FlowNode({
-  nodeKey, type, label, code, editMode,
-  linkMode, groupMode,
-  onSetLabel, onDelete, onClick, registerRef,
+  nodeKey,
+  type,
+  label,
+  code,
+  editMode,
+  linkMode,
+  groupMode,
+  onSetLabel,
+  onDelete,
+  onClick,
+  registerRef,
 }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -734,8 +895,7 @@ function FlowNode({
   }, [nodeKey, registerRef]);
 
   const interactive = !!(linkMode || groupMode);
-  const highlighted = groupMode?.selected?.has?.(nodeKey)
-    || (linkMode?.from_key === nodeKey);
+  const highlighted = groupMode?.selected?.has?.(nodeKey) || linkMode?.from_key === nodeKey;
 
   const handleNodeClick = (e) => {
     if (interactive) {
@@ -748,20 +908,34 @@ function FlowNode({
     <div
       ref={ref}
       className={`pfc-node pfc-node-${type} ${interactive ? 'pfc-node-clickable' : ''} ${highlighted ? 'pfc-node-selected' : ''}`}
-      onClick={handleNodeClick}>
+      onClick={handleNodeClick}
+    >
       <div className="pfc-node-label">
         <EditableText value={label} editable={editMode && !interactive} onCommit={onSetLabel} />
         <span className="pfc-node-code">[{code}]</span>
       </div>
       {editMode && !interactive && (
-        <button className="pfc-del-btn" onClick={(e) => { e.stopPropagation(); onDelete(); }} title="Ẩn node này">×</button>
+        <button
+          className="pfc-del-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          title="Ẩn node này"
+        >
+          ×
+        </button>
       )}
     </div>
   );
 }
 
 function Arrow() {
-  return <span className="pfc-arrow" aria-hidden>→</span>;
+  return (
+    <span className="pfc-arrow" aria-hidden>
+      →
+    </span>
+  );
 }
 
 function EditableText({ value, editable, onCommit }) {
@@ -784,7 +958,10 @@ function EditableText({ value, editable, onCommit }) {
   };
 
   const handleKey = (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); ref.current?.blur(); }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      ref.current?.blur();
+    }
     if (e.key === 'Escape') {
       if (ref.current) ref.current.textContent = value;
       setIsEditing(false);

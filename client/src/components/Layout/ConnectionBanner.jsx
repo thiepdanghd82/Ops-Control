@@ -21,6 +21,15 @@ import './ConnectionBanner.css';
 export default function ConnectionBanner() {
   const [status, setStatus] = useState({ online: true });
   const [showReconnect, setShowReconnect] = useState(false);
+  // 1Hz tick driving the offline-duration display. Owning the clock in
+  // state keeps the render pure (no Date.now() in render path) and lets
+  // React Compiler memoize correctly.
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     let prevOnline = true;
@@ -43,10 +52,7 @@ export default function ConnectionBanner() {
     return (
       <div className="cb-status-toast cb-status-ok" role="status" aria-live="polite">
         <span>✓ Kết nối lại — </span>
-        <button
-          className="cb-status-link"
-          onClick={() => window.location.reload()}
-        >
+        <button className="cb-status-link" onClick={() => window.location.reload()}>
           Refresh trang
         </button>
         <button
@@ -62,27 +68,19 @@ export default function ConnectionBanner() {
 
   // Offline state
   const downSec = status.downSince
-    ? Math.floor((Date.now() - new Date(status.downSince).getTime()) / 1000)
+    ? Math.floor((now - new Date(status.downSince).getTime()) / 1000)
     : 0;
   const severity = downSec > 30 ? 'err' : 'warn';
-  const msg = severity === 'err'
-    ? `⚠ Mất kết nối server (${formatDuration(downSec)}). Đang thử lại...`
-    : `Đang kiểm tra kết nối...`;
+  const msg =
+    severity === 'err'
+      ? `⚠ Mất kết nối server (${formatDuration(downSec)}). Đang thử lại...`
+      : `Đang kiểm tra kết nối...`;
 
   return (
-    <div
-      className={`cb-status-banner cb-status-${severity}`}
-      role="alert"
-      aria-live="assertive"
-    >
+    <div className={`cb-status-banner cb-status-${severity}`} role="alert" aria-live="assertive">
       <span>{msg}</span>
-      {status.lastError && (
-        <small className="cb-status-detail"> · {status.lastError}</small>
-      )}
-      <button
-        className="cb-status-link"
-        onClick={() => forceProbeConnection()}
-      >
+      {status.lastError && <small className="cb-status-detail"> · {status.lastError}</small>}
+      <button className="cb-status-link" onClick={() => forceProbeConnection()}>
         Thử lại ngay
       </button>
     </div>
