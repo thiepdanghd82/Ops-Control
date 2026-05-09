@@ -884,6 +884,11 @@ app.whenReady().then(async () => {
           process.env.OPS_PORT = String(port);
           process.env.OPS_BIND = String(bind);
         },
+        onSetRemoteUrl: async (url) => {
+          store.set('mode', 'thin');
+          store.set('remoteUrl', url);
+          log.info('[main] setup wizard (client) saved remoteUrl=' + url);
+        },
         // Phase A.1 — mirror server identity into electron-store so the
         // admin dashboard (Phase A.2) reads it without re-parsing
         // setup-done.json. Identity also lives in setup-done.json as
