@@ -706,12 +706,12 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - Fix: Go-Live generator now writes a canonical `client/public/help/OpsControl_GoLiveGuide_v1.2.docx` (always inside the worktree) AND optionally mirrors to `4. CLAUDE OUTPUT/` when the parent is writable. Skip is silent with a single log line; build never crashes. `OPS_DOCS_MIRROR_DIR` env override accepted for explicit targeting. User Guide + Pricing Legend generators were already try/catch-wrapped; only Go-Live needed the fix.
 - Status: CLOSED 2026-05-09
 
-#### MES-3-FIX-19 — build-script generalization for native module overlays
+#### MES-3-FIX-19 — build-script generalization for native module overlays (CLOSED)
 
-- Source: discovered during PR #16 investigation. Only better-sqlite3 currently needs the `app/node_modules` overlay (because only it's required from outside asar at `app/server/`). If kiosk planner code under `domains/planning/` (now packaged via PR #14 build-desktop.sh change) ever requires node-hid or serialport from outside asar, the same overlay pattern applies and the bug repeats.
-- Acceptance: write a build-time pre-pack step that walks `asarUnpack` patterns + auto-generates an overlay extraResources entry for each native module. Codifies Lesson 28's fix as a reusable check.
-- Effort: M
-- Priority: P3
+- **Source**: discovered during PR #16 investigation. P3 preventive cleanup.
+- **Fix**: `scripts/build-native-overlay-check.mjs` walks the `asarUnpack` patterns in `desktop/package.json`, expands scoped patterns by enumerating their scope dir, filters to packages that actually contain `*.node` binaries (skipping pure-JS siblings under broad scope patterns), and verifies each has a matching `extraResources` overlay entry. Wired as preflight in both `build-mac-installers.mjs` and `build-windows-installers.mjs` before electron-builder runs. Build aborts at config-check time instead of producing artifacts that crash with `ERR_DLOPEN_FAILED` on first launch. `OPS_SKIP_NATIVE_OVERLAY_CHECK=1` env var bypasses the gate for emergency builds.
+- **Findings surfaced**: running the new check against current main reveals **2 missing overlays**: `node-hid` and `@serialport/bindings-cpp`. Neither is currently loaded from outside-asar code, so the trap is latent — but per Lesson 28 the fix is one `require()` away. Filed as MES-3-FIX-26 (separate ticket) for the actual overlay additions; this PR ships the detection infrastructure only.
+- **Status**: CLOSED 2026-05-09
 
 #### MES-3-FIX-20 — fix existing React-hooks rule violations exposed by FIX-17
 
@@ -747,6 +747,16 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - **Fix**: `commitlint.config.js` sets `footer-leading-blank: [0]` (was `[2, 'always']`). Authors can now write `Closes MES-3-FIX-N` or `Refs PR #N` inline mid-prose without that specific rule failure. Real footer trailers (with proper blank line) still pass — just no longer required.
 - **Caveat — sibling trap**: empirical testing during the fix showed `footer-max-line-length` (default 100 chars) ALSO applies once the parser misclassifies a prose paragraph containing `Closes` as a footer. Body lines longer than 100 chars containing inline ticket refs can still fail. Mitigation: keep prose lines ≤ 100 chars OR avoid leading `Closes` in long body paragraphs. Filed as a follow-up if the friction recurs; the original rule (the common failure) is closed by this PR.
 - **Status**: CLOSED 2026-05-09
+
+#### MES-3-FIX-26 — add extraResources overlays for node-hid + @serialport/bindings-cpp
+
+- **Source**: surfaced by the new `build-native-overlay-check.mjs` preflight (MES-3-FIX-19, 2026-05-09). Both packages appear in `desktop/package.json` `asarUnpack` patterns and ship native `.node` binaries, but neither has a corresponding `extraResources` overlay entry. Today this is latent — neither is loaded from outside-asar code — but per Lesson 28 the bug surfaces the moment any code at `app/server/` (or another outside-asar path) does `require('node-hid')` or `require('@serialport/bindings-cpp')`.
+- **Acceptance**: add to `desktop/package.json` `build.extraResources`:
+  - `{ "from": "node_modules/node-hid", "to": "app/node_modules/node-hid" }`
+  - `{ "from": "node_modules/@serialport/bindings-cpp", "to": "app/node_modules/@serialport/bindings-cpp" }`
+  - And add `"!**/node-hid/**"` and `"!**/@serialport/bindings-cpp/**"` to the filter on the root `../node_modules` entry. Verify the existing PR #16 `better-sqlite3` overlay's diagnostic command (`shasum -a 256` on both copies must match) on a built DMG. After the overlay lands, the FIX-19 preflight check will pass cleanly.
+- **Effort**: XS (~5 min config edit + a build to verify)
+- **Priority**: P3 (latent — only bites if/when outside-asar code touches these modules)
 
 #### KIOSK-001 — Real branded PWA icons
 
