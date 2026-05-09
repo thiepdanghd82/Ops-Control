@@ -106,12 +106,22 @@
         "filter": [
           "**/*",
           "!**/{*.test.js,*.md,*.markdown,*.html,test/**,tests/**,examples/**,docs/**,.bin/**,.cache/**}",
-          "!**/better-sqlite3/**"
+          "!**/better-sqlite3/**",
+          "!**/node-hid/**",
+          "!**/@serialport/bindings-cpp/**"
         ]
       },
       {
         "from": "node_modules/better-sqlite3",
         "to": "app/node_modules/better-sqlite3"
+      },
+      {
+        "from": "node_modules/node-hid",
+        "to": "app/node_modules/node-hid"
+      },
+      {
+        "from": "node_modules/@serialport/bindings-cpp",
+        "to": "app/node_modules/@serialport/bindings-cpp"
       }
     ],
     "win": {
