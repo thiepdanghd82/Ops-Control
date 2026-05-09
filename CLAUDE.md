@@ -748,15 +748,11 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - **Caveat — sibling trap**: empirical testing during the fix showed `footer-max-line-length` (default 100 chars) ALSO applies once the parser misclassifies a prose paragraph containing `Closes` as a footer. Body lines longer than 100 chars containing inline ticket refs can still fail. Mitigation: keep prose lines ≤ 100 chars OR avoid leading `Closes` in long body paragraphs. Filed as a follow-up if the friction recurs; the original rule (the common failure) is closed by this PR.
 - **Status**: CLOSED 2026-05-09
 
-#### MES-3-FIX-26 — add extraResources overlays for node-hid + @serialport/bindings-cpp
+#### MES-3-FIX-26 — add extraResources overlays for node-hid + @serialport/bindings-cpp (CLOSED)
 
-- **Source**: surfaced by the new `build-native-overlay-check.mjs` preflight (MES-3-FIX-19, 2026-05-09). Both packages appear in `desktop/package.json` `asarUnpack` patterns and ship native `.node` binaries, but neither has a corresponding `extraResources` overlay entry. Today this is latent — neither is loaded from outside-asar code — but per Lesson 28 the bug surfaces the moment any code at `app/server/` (or another outside-asar path) does `require('node-hid')` or `require('@serialport/bindings-cpp')`.
-- **Acceptance**: add to `desktop/package.json` `build.extraResources`:
-  - `{ "from": "node_modules/node-hid", "to": "app/node_modules/node-hid" }`
-  - `{ "from": "node_modules/@serialport/bindings-cpp", "to": "app/node_modules/@serialport/bindings-cpp" }`
-  - And add `"!**/node-hid/**"` and `"!**/@serialport/bindings-cpp/**"` to the filter on the root `../node_modules` entry. Verify the existing PR #16 `better-sqlite3` overlay's diagnostic command (`shasum -a 256` on both copies must match) on a built DMG. After the overlay lands, the FIX-19 preflight check will pass cleanly.
-- **Effort**: XS (~5 min config edit + a build to verify)
-- **Priority**: P3 (latent — only bites if/when outside-asar code touches these modules)
+- **Source**: surfaced by `build-native-overlay-check.mjs` preflight (MES-3-FIX-19) on 2026-05-09. Both packages appeared in `desktop/package.json` `asarUnpack` patterns and ship native `.node` binaries but lacked a corresponding `extraResources` overlay entry. Latent today — neither is loaded from outside-asar code — but per Lesson 28 the bug surfaces the moment any code at `app/server/` (or another outside-asar path) does `require('node-hid')` or `require('@serialport/bindings-cpp')`.
+- **Fix**: added 2 explicit overlay entries mirroring the `better-sqlite3` shape and extended the root `../node_modules` filter with `!**/node-hid/**` and `!**/@serialport/bindings-cpp/**` exclusions. The FIX-19 preflight check now reports OK on all 3 native packages (better-sqlite3, node-hid, @serialport/bindings-cpp).
+- **Status**: CLOSED 2026-05-09
 
 #### KIOSK-001 — Real branded PWA icons
 
