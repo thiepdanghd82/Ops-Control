@@ -348,7 +348,7 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
       }
       // Phase 10L — if the user opted in to change-password on login,
       // swap the password with the freshly issued session. Same
-      // /auth/change-password endpoint the Settings page uses; it's
+      // /auth/change-pwd endpoint the Settings page uses; it's
       // session-authenticated so the token we just received works.
       if (changeMode) {
         const tok = localStorage.getItem('ops_token');
@@ -358,7 +358,7 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
             .map((s) => s.trim())
             .find((s) => s.startsWith('ops_csrf='))
             ?.split('=')[1] || '';
-        const r = await fetch('/api/auth/change-password', {
+        const r = await fetch('/api/auth/change-pwd', {
           method: 'POST',
           credentials: 'include',
           headers: {
