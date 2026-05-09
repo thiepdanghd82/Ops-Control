@@ -389,6 +389,8 @@ async function testAndNext() {
   if (!/^https?:\\/\\/.+/.test(url)) { setAlert('alert-conn', 'bad', 'URL không hợp lệ.'); return; }
   const r = await ipcRenderer.invoke('ops:setup.testServer', { url });
   if (!r.ok) { setAlert('alert-conn', 'bad', 'Kết nối thất bại: ' + r.error); return; }
+  const s = await ipcRenderer.invoke('ops:setup.setRemoteUrl', { url });
+  if (!s.ok) { setAlert('alert-conn', 'bad', 'Không lưu được URL: ' + s.error); return; }
   setAlert('alert-conn', 'ok', 'Server v' + (r.version || '?') + ' phản hồi OK (' + r.ms + ' ms).');
   setTimeout(() => go(1), 800);
 }
@@ -474,6 +476,14 @@ function showWizard(mode, deps = {}) {
         }
       },
       'ops:setup.testServer': async (_e, { url }) => probeServer(url),
+      'ops:setup.setRemoteUrl': async (_e, { url }) => {
+        try {
+          if (deps.onSetRemoteUrl) await deps.onSetRemoteUrl(url);
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: e.message };
+        }
+      },
       'ops:setup.complete': async () => {
         // Server mode: persist identity (fresh or preserved-from-re-run).
         // Client mode: pendingIdentity stays null — markComplete writes
