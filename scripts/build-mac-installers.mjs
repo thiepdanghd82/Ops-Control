@@ -42,7 +42,7 @@ function spawnP(cmd, args, opts) {
     const child = spawn(cmd, args, { stdio: 'inherit', ...opts });
     child.on('error', reject);
     child.on('exit', (code) =>
-      code === 0 ? resolve() : reject(new Error(`${cmd} ${args.join(' ')} exited ${code}`)),
+      code === 0 ? resolve() : reject(new Error(`${cmd} ${args.join(' ')} exited ${code}`))
     );
   });
 }
@@ -57,13 +57,18 @@ async function buildRole(role) {
 
   fs.writeFileSync(ROLE_FILE, JSON.stringify({ role }, null, 2) + '\n');
 
-  await spawnP('npx', [
-    'electron-builder',
-    '--mac', 'dmg',
-    '--arm64',
-    '--config.npmRebuild=false',
-    `--config.mac.artifactName=${cfg.artifactName}`,
-  ], { cwd: DESKTOP });
+  await spawnP(
+    'npx',
+    [
+      'electron-builder',
+      '--mac',
+      'dmg',
+      '--arm64',
+      '--config.npmRebuild=false',
+      `--config.mac.artifactName=${cfg.artifactName}`,
+    ],
+    { cwd: DESKTOP }
+  );
 }
 
 async function main() {
@@ -75,6 +80,19 @@ async function main() {
       console.error(`Unknown role "${t}". Choices: server, client`);
       process.exit(1);
     }
+  }
+
+  // Preflight — verify every asar-unpacked native package has its
+  // extraResources overlay. Without this, outside-asar code (the
+  // embedded server) loads the wrong-ABI binary at runtime. See
+  // CLAUDE.md "Lesson 28" / MES-3-FIX-19.
+  if (!process.env.OPS_SKIP_NATIVE_OVERLAY_CHECK) {
+    console.log('Preflight: native module overlay check...');
+    await spawnP('node', [path.join(__dirname, 'build-native-overlay-check.mjs')], { cwd: ROOT });
+  } else {
+    console.warn(
+      '⚠  OPS_SKIP_NATIVE_OVERLAY_CHECK=1 — skipping native overlay preflight (emergency override).'
+    );
   }
 
   let firstErr = null;
@@ -90,7 +108,9 @@ async function main() {
 
   // Restore clean state — remove role marker so dev mode + manual builds
   // don't accidentally pick up a stale role.
-  try { fs.unlinkSync(ROLE_FILE); } catch {}
+  try {
+    fs.unlinkSync(ROLE_FILE);
+  } catch {}
 
   if (firstErr) process.exit(1);
 
@@ -110,6 +130,8 @@ async function main() {
 
 main().catch((err) => {
   console.error(err);
-  try { fs.unlinkSync(ROLE_FILE); } catch {}
+  try {
+    fs.unlinkSync(ROLE_FILE);
+  } catch {}
   process.exit(1);
 });
