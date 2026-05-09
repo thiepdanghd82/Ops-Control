@@ -2457,6 +2457,18 @@ export const HELP_CONTENT = {
         'Move-stage buttons — "Next →" auto-stamps done date + signature on current stage, activates next. Disabled with a tooltip when requirements are unmet.',
         'Nút chuyển giai đoạn — "Next →" tự đóng dấu done + chữ ký, kích hoạt stage kế. Bị disable + tooltip khi chưa đủ điều kiện.'
       ),
+      feat(
+        'Drawer edits insulated from background sync — once you open an RFQ, your in-progress edits (checklist toggles, text fields, req badges) stay local and are not overwritten by the 60-second background refresh. No flash, no reset mid-edit.',
+        'Drawer edit cách ly với background sync — khi đã mở RFQ, các edit dở (toggle checklist, text fields, req badge) giữ nguyên cục bộ và không bị 60s background refresh ghi đè. Không nhấp nháy, không reset giữa chừng.'
+      ),
+      feat(
+        'Background list auto-refresh + SSE live events — Kanban / List view refreshes every 60 seconds; teammate updates pushed via SSE land within ~1 second. Both run alongside an open drawer without disturbing your edits.',
+        'Background list auto-refresh + SSE live event — Kanban / List view refresh mỗi 60s; cập nhật của đồng nghiệp đẩy qua SSE đến trong ~1s. Cả 2 chạy song song với drawer đang mở mà không phá edit của bạn.'
+      ),
+      feat(
+        'Checklist user-edits preserved across refresh — when you rename a default checklist task or toggle its "req" badge, your change is kept after the next sync (per-item index merge). Custom tasks added via "+ Add task" survive too.',
+        'User-edit checklist giữ qua refresh — khi bạn đổi tên task checklist mặc định hoặc toggle nhãn "req", thay đổi được giữ sau lần sync kế (merge theo chỉ số từng item). Custom task thêm qua "+ Add task" cũng được giữ.'
+      ),
     ],
     procedures: [
       proc('Stage 1 — Sale (Input)', 'Giai đoạn 1 — Sale (Nhập)', null, [
@@ -2688,6 +2700,18 @@ export const HELP_CONTENT = {
         'Move-back is for corrections only — do NOT use it to "skip" a stage backwards; use the Status = Blocked field to represent a real hold.',
         'Chỉ dùng Move-back để sửa lỗi — KHÔNG dùng để "nhảy lùi" giai đoạn; dùng Status = Blocked để thể hiện hold thật.'
       ),
+      bt(
+        'Drawer edits save automatically as you toggle checkboxes / type — no Save button to remember. Close the drawer with × to confirm; the list view will catch up to the latest server state on close.',
+        'Drawer edit tự save khi bạn toggle checkbox / gõ — không có nút Save phải nhớ. Đóng drawer bằng × để xác nhận; list view sẽ sync state mới nhất khi đóng.'
+      ),
+      bt(
+        'To force-refresh a single RFQ to the latest server state (e.g. teammate just hit Next on the same record), close the drawer and reopen it — the snapshot is rebuilt from fresh data.',
+        'Để force-refresh 1 RFQ về state mới nhất từ server (vd đồng nghiệp vừa Next cùng record), đóng drawer và mở lại — snapshot dựng lại từ dữ liệu mới.'
+      ),
+      bt(
+        'When the SSE live banner shows a teammate updating an RFQ, your Kanban / List card updates within ~1 second. The detail drawer (if open on a different RFQ) is unaffected — no surprise re-render.',
+        'Khi banner SSE live báo đồng nghiệp đang update 1 RFQ, card Kanban / List của bạn cập nhật trong ~1s. Drawer chi tiết (nếu đang mở RFQ khác) không bị ảnh hưởng — không có re-render bất ngờ.'
+      ),
     ],
     pitfalls: [
       bp(
@@ -2701,6 +2725,10 @@ export const HELP_CONTENT = {
       bp(
         'Deleting an RFQ is permanent — no soft-delete audit trail. Back up before bulk cleanup.',
         'Xoá RFQ là vĩnh viễn — không có audit trail soft-delete. Backup trước khi dọn hàng loạt.'
+      ),
+      bp(
+        'Drawer is a snapshot the moment you opened it — if you leave it open for 10+ minutes while teammates are editing the same RFQ, you may save over their changes. For long edit sessions on shared RFQs, close + reopen periodically to pick up server state.',
+        'Drawer là snapshot tại thời điểm mở — nếu để mở 10+ phút trong khi đồng nghiệp cũng đang edit cùng RFQ, bạn có thể save đè lên thay đổi của họ. Với phiên edit dài trên RFQ chung, nên đóng + mở lại định kỳ để lấy state mới từ server.'
       ),
     ],
     constraints: [
