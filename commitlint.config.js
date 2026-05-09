@@ -74,7 +74,15 @@ export default {
     // trailer convention; without the blank line `git interpret-trailers`
     // misparses and tooling that consumes commit history breaks.
     'body-leading-blank': [2, 'always'],
-    'footer-leading-blank': [2, 'always'],
+    // footer-leading-blank intentionally OFF — see MES-3-FIX-25 (closed
+    // 2026-05-09). The conventional-commits parser detects inline phrases
+    // like "Closes MES-3-FIX-N" or "Refs PR #N" written mid-prose as
+    // malformed footer trailers and demands a blank line before them.
+    // Authors writing naturally hit the rule constantly. Real footer
+    // trailers (BREAKING CHANGE, Co-Authored-By, etc.) still parse
+    // correctly when authored with the proper blank line — this just
+    // stops the false-positive on conversational ticket references.
+    'footer-leading-blank': [0],
     // Limit subject prefix-noise — we've seen "feat:" being added to
     // body/footer sections by mistake. 1 type per commit.
     'type-empty': [2, 'never'],

@@ -741,16 +741,12 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - **Fix**: `scripts/help/build-user-guide.mjs` now renders `entry.features` between `whenToUse` and `preRequisites` as a "Features · Tính năng" bullet list, mirroring the bilingual `bullet()` helper used by `preRequisites`. Backfilled by removing the 3 duplicated tips PR #26 added to RFQ Tracker as workaround — feature bullets now have a single canonical home.
 - **Status**: CLOSED 2026-05-09
 
-#### MES-3-FIX-25 — commit message style: avoid Closes/PR/FIX trailers in body
+#### MES-3-FIX-25 — commit message style: avoid Closes/PR/FIX trailers in body (CLOSED)
 
-- **Source**: discovered during PR #28 (SHA `2dc04c5`) on 2026-05-09. commitlint's `footer-leading-blank` rule treats `Closes`, `PR #N`, and `MES-3-FIX-N` patterns inside commit body as conventional-commit footer trailers. Once detected, the rule requires a leading blank line BEFORE the trailer block — but most authors write these inline as prose ("Closes MES-3-FIX-24" mid-paragraph), failing the rule.
-- **Workaround applied since**: keep ticket references (Closes / PR #N / FIX-N) OUT of commit body, put them in PR description only. PR #29 (SHA `3f3b797`) used this pattern successfully.
-- **Acceptance** (one of):
-  - (a) Document the convention in CONTRIBUTING.md or commitlint.config.js comments — "ticket refs go in PR body, not commit body"
-  - (b) Relax the commitlint rule for these patterns (config tweak) so authors can write naturally
-  - (c) Add a pre-commit hook helper that auto-formats footer trailers with the required blank line
-- **Effort**: XS (option a docs note) to S (option b/c config/hook)
-- **Priority**: P3 (workaround works; just an author-friction issue)
+- **Source**: discovered during PR #28 (SHA `2dc04c5`) on 2026-05-09. commitlint's `footer-leading-blank` rule misfired on inline ticket references inside commit body.
+- **Fix**: `commitlint.config.js` sets `footer-leading-blank: [0]` (was `[2, 'always']`). Authors can now write `Closes MES-3-FIX-N` or `Refs PR #N` inline mid-prose without that specific rule failure. Real footer trailers (with proper blank line) still pass — just no longer required.
+- **Caveat — sibling trap**: empirical testing during the fix showed `footer-max-line-length` (default 100 chars) ALSO applies once the parser misclassifies a prose paragraph containing `Closes` as a footer. Body lines longer than 100 chars containing inline ticket refs can still fail. Mitigation: keep prose lines ≤ 100 chars OR avoid leading `Closes` in long body paragraphs. Filed as a follow-up if the friction recurs; the original rule (the common failure) is closed by this PR.
+- **Status**: CLOSED 2026-05-09
 
 #### KIOSK-001 — Real branded PWA icons
 
