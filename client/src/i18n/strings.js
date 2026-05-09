@@ -99,6 +99,7 @@ export const STRINGS = {
   'home.evening': { en: 'Good evening', vi: 'Chào buổi tối' },
   'home.loading': { en: 'Loading…', vi: 'Đang tải…' },
   'home.view_all': { en: 'View all', vi: 'Xem tất cả' },
+  'home.go_to_home': { en: 'Go to Home', vi: 'Về trang chủ' },
   'home.kpi.active_wos': { en: 'Active Work Orders', vi: 'Lệnh sản xuất đang hoạt động' },
   'home.kpi.due_today': { en: 'Due Today', vi: 'Đến hạn hôm nay' },
   'home.kpi.my_approvals': { en: 'My Approvals', vi: 'Đang chờ tôi duyệt' },
