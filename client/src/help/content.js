@@ -2865,6 +2865,18 @@ export const HELP_CONTENT = {
         'Document Flow — RFQ → Sample → Production Order → Spec Released. Fill Linked RFQ / Linked Production Order in Identity to activate.',
         'Document Flow — RFQ → Mẫu → Production Order → SPEC. Điền Linked RFQ / Linked Production Order trong Identity để kích hoạt.'
       ),
+      feat(
+        'Drawer is insulated from background sync — your in-progress edits stay intact through the 60-second auto-refresh tick (no flash, no revert mid-edit).',
+        'Panel chi tiết được cách ly khỏi background sync — edits đang làm giữ nguyên qua mỗi 60 giây auto-refresh (không nhấp nháy, không revert giữa chừng).'
+      ),
+      feat(
+        'Background list (Kanban cards / List view) auto-refreshes every 60 seconds with the latest server state — your drawer-local edits remain protected, and teammate updates pushed via SSE land within ~1 second.',
+        'Background list (Kanban / List view) tự refresh mỗi 60 giây từ server — edits trong drawer vẫn được bảo vệ, và cập nhật của đồng nghiệp đẩy qua SSE đến trong ~1 giây.'
+      ),
+      feat(
+        'Checklist user-edits preserved across refresh — when you rename a default checklist task or toggle its "req" badge, your change is kept after the next sync (per-item index merge). Custom tasks added via "+ Add task" survive too.',
+        'User-edit checklist giữ qua refresh — khi bạn đổi tên task checklist mặc định hoặc toggle nhãn "req", thay đổi được giữ sau lần sync kế (merge theo chỉ số từng item). Custom task thêm qua "+ Add task" cũng được giữ.'
+      ),
     ],
     procedures: [
       proc('Stage 1 — Request (Intake)', 'Giai đoạn 1 — Request (Nhập)', null, [
@@ -3147,6 +3159,18 @@ export const HELP_CONTENT = {
         'When a sample is NG, fill BOTH the reason code AND a short notes line — the code drives the dashboard; the note helps the next person.',
         'Khi mẫu NG, điền CẢ reason code VÀ 1 dòng notes ngắn — code cho dashboard; notes cho người kế tiếp.'
       ),
+      bt(
+        'Click × on the drawer header to close — the list view catches up to the latest server state on close.',
+        'Click × ở header panel để đóng — list view sẽ sync state mới nhất khi đóng.'
+      ),
+      bt(
+        'To force-refresh a single sample to the latest server state (e.g. teammate just hit Next on the same record), close the drawer and reopen it — the snapshot is rebuilt from fresh data.',
+        'Để force-refresh 1 sample về state mới nhất từ server (vd đồng nghiệp vừa Next cùng record), đóng drawer và mở lại — snapshot dựng lại từ dữ liệu mới.'
+      ),
+      bt(
+        'When the SSE live banner shows a teammate updating a sample, your Kanban / List card updates within ~1 second. The detail drawer (if open on a different sample) is unaffected — no surprise re-render.',
+        'Khi banner SSE live báo đồng nghiệp đang update 1 sample, card Kanban / List của bạn cập nhật trong ~1 giây. Drawer chi tiết (nếu đang mở sample khác) không bị ảnh hưởng — không có re-render bất ngờ.'
+      ),
     ],
     pitfalls: [
       bp(
@@ -3160,6 +3184,10 @@ export const HELP_CONTENT = {
       bp(
         'Per-NPI-Owner summary counts only top 5 owners. Rare owners roll into "(unassigned)".',
         'Strip NPI Owner chỉ đếm top 5. Owner hiếm vào "(unassigned)".'
+      ),
+      bp(
+        'Drawer is a snapshot the moment you opened it — if you leave it open for 10+ minutes while teammates are editing the same sample, you may save over their changes. For long edit sessions on shared samples, close + reopen periodically to pick up server state.',
+        'Drawer là snapshot tại thời điểm mở — nếu để mở 10+ phút trong khi đồng nghiệp cũng đang edit cùng sample, bạn có thể save đè lên thay đổi của họ. Với phiên edit dài trên sample chung, nên đóng + mở lại định kỳ để lấy state mới từ server.'
       ),
     ],
     constraints: [
