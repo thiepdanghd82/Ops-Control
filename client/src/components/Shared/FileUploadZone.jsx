@@ -264,8 +264,8 @@ export default function FileUploadZone({
   // of the effect — rewriting via subscribe adds complexity for zero
   // behavior change. Consistent with AuthContext / useMyApprovalCount
   // pattern elsewhere in the codebase.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional viewport reset on file change
     setZoom(1);
     setPan({ x: 0, y: 0 });
     setRotation(0);

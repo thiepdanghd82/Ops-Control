@@ -1,26 +1,26 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import './components/Shared/draggableCard.css'
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './index.css';
+import './components/Shared/draggableCard.css';
 // v1.3 P3.3 + G2 — per-domain i18n registration. Each module side-effect-
 // imports registerStrings() to merge its slice into the global STRINGS
 // dict. Order is irrelevant for non-overlapping namespaces (security.*
 // vs costing.* etc.); for overlap, last-imported wins.
-import './i18n/domains/security.js'
-import './i18n/domains/costing.js'
-import './i18n/domains/sales.js'
-import './i18n/domains/basis.js'
-import './i18n/domains/mes.js'
-import './i18n/domains/planning.js'
-import App from './App.jsx'
-import { startWebVitals } from './utils/webVitals.js'
-import { installDraggableCards } from './components/Shared/draggableCard.js'
+import './i18n/domains/security.js';
+import './i18n/domains/costing.js';
+import './i18n/domains/sales.js';
+import './i18n/domains/basis.js';
+import './i18n/domains/mes.js';
+import './i18n/domains/planning.js';
+import App from './App.jsx';
+import { startWebVitals } from './utils/webVitals.js';
+import { installDraggableCards } from './components/Shared/draggableCard.js';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
-  </StrictMode>,
-)
+  </StrictMode>
+);
 
 // Sprint AW — Core Web Vitals beacon. Fires once per page at hide
 // time; server aggregates into `web_vitals_ms` histogram visible in
@@ -36,7 +36,9 @@ installDraggableCards();
 // time (see vite.config.js define block). Print to console once + expose
 // on window so post-build `grep` finds the literal string in the chunk.
 // Format: opsctl-v1.3-marker:<build-id>:<ISO-timestamp>.
-// eslint-disable-next-line no-undef
-const __marker = typeof __OPS_BUNDLE_MARKER__ !== 'undefined' ? __OPS_BUNDLE_MARKER__ : 'opsctl-v1.3-marker:dev:unknown';
+const __marker =
+  typeof __OPS_BUNDLE_MARKER__ !== 'undefined'
+    ? __OPS_BUNDLE_MARKER__
+    : 'opsctl-v1.3-marker:dev:unknown';
 if (typeof window !== 'undefined') window.__OPS_BUNDLE_MARKER__ = __marker;
 console.info('[ops-control]', __marker);

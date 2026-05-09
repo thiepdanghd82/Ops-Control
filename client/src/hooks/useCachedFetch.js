@@ -50,8 +50,9 @@ let _smartModePromise = null;
 function isSmartMode() {
   if (!desktop.isAvailable) return Promise.resolve(false);
   if (_smartModePromise == null) {
-    _smartModePromise = desktop.app.getConfig()
-      .then(cfg => cfg?.mode === 'smart')
+    _smartModePromise = desktop.app
+      .getConfig()
+      .then((cfg) => cfg?.mode === 'smart')
       .catch(() => false);
   }
   return _smartModePromise;
@@ -63,16 +64,21 @@ function isSmartMode() {
 // degrades to fetch-from-server.
 const SNAPSHOT_PREFIX = 'snapshot:';
 async function readSnapshot(key) {
-  if (!await isSmartMode()) return null;
+  if (!(await isSmartMode())) return null;
   try {
     const v = await desktop.cache.get(SNAPSHOT_PREFIX + key);
-    return v && typeof v === 'object' ? v.data ?? v : null;
-  } catch { return null; }
+    return v && typeof v === 'object' ? (v.data ?? v) : null;
+  } catch {
+    return null;
+  }
 }
 async function writeSnapshot(key, data) {
-  if (!await isSmartMode()) return;
-  try { await desktop.cache.set(SNAPSHOT_PREFIX + key, { data, ts: Date.now() }); }
-  catch { /* electron-store quota / disk full — non-critical */ }
+  if (!(await isSmartMode())) return;
+  try {
+    await desktop.cache.set(SNAPSHOT_PREFIX + key, { data, ts: Date.now() });
+  } catch {
+    /* electron-store quota / disk full — non-critical */
+  }
 }
 
 // External invalidation hook — call after any write that should bust the
@@ -110,40 +116,42 @@ export function useCachedFetch(cacheKey, fetcher, deps = []) {
   const [isFromCache, setIsFromCache] = useState(() => _cache.has(cacheKey));
   const abortRef = useRef(null);
 
-  const doFetch = useCallback(async ({ silent = false } = {}) => {
-    abortRef.current?.abort();
-    const ctrl = new AbortController();
-    abortRef.current = ctrl;
-    if (!silent) setLoading(true);
-    setError(null);
-    try {
-      const result = await fetcher(ctrl.signal);
-      if (ctrl.signal.aborted) return;
-      _cache.set(cacheKey, { data: result, ts: Date.now() });
-      // Phase 3 — persist to electron-store snapshot (Smart mode only).
-      // Fire-and-forget; failure to persist doesn't break the in-memory
-      // path. Survives app restart so cold start of the same tab is
-      // instant when Smart mode is on.
-      writeSnapshot(cacheKey, result);
-      setData(prev => {
-        // Skip the state update if shape signature matches AND it was
-        // already from cache — keeps the SAME object reference so memo'd
-        // selectors downstream don't re-compute.
-        if (prev && shapeSignature(prev) === shapeSignature(result)) {
-          return prev;
-        }
-        return result;
-      });
-      setIsFromCache(false);
-      setLoading(false);
-    } catch (err) {
-      if (err?.name === 'AbortError') return;
-      setError(err);
-      setLoading(false);
-      // eslint-disable-next-line no-console
-      console.warn('[useCachedFetch] fetch failed for', cacheKey, err);
-    }
-  }, [cacheKey, fetcher]);
+  const doFetch = useCallback(
+    async ({ silent = false } = {}) => {
+      abortRef.current?.abort();
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
+      if (!silent) setLoading(true);
+      setError(null);
+      try {
+        const result = await fetcher(ctrl.signal);
+        if (ctrl.signal.aborted) return;
+        _cache.set(cacheKey, { data: result, ts: Date.now() });
+        // Phase 3 — persist to electron-store snapshot (Smart mode only).
+        // Fire-and-forget; failure to persist doesn't break the in-memory
+        // path. Survives app restart so cold start of the same tab is
+        // instant when Smart mode is on.
+        writeSnapshot(cacheKey, result);
+        setData((prev) => {
+          // Skip the state update if shape signature matches AND it was
+          // already from cache — keeps the SAME object reference so memo'd
+          // selectors downstream don't re-compute.
+          if (prev && shapeSignature(prev) === shapeSignature(result)) {
+            return prev;
+          }
+          return result;
+        });
+        setIsFromCache(false);
+        setLoading(false);
+      } catch (err) {
+        if (err?.name === 'AbortError') return;
+        setError(err);
+        setLoading(false);
+        console.warn('[useCachedFetch] fetch failed for', cacheKey, err);
+      }
+    },
+    [cacheKey, fetcher]
+  );
 
   useEffect(() => {
     const cached = _cache.get(cacheKey);
@@ -162,11 +170,8 @@ export function useCachedFetch(cacheKey, fetcher, deps = []) {
       const snap = await readSnapshot(cacheKey);
       if (cancelled) return;
       if (snap != null) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setData(snap);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoading(false);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setIsFromCache(true);
         _cache.set(cacheKey, { data: snap, ts: Date.now() });
         // Background revalidate so a server-side change still propagates.
@@ -175,7 +180,10 @@ export function useCachedFetch(cacheKey, fetcher, deps = []) {
         doFetch();
       }
     })();
-    return () => { cancelled = true; abortRef.current?.abort(); };
+    return () => {
+      cancelled = true;
+      abortRef.current?.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cacheKey, ...deps]);
 

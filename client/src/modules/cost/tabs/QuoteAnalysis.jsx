@@ -440,6 +440,7 @@ export default function QuoteAnalysis() {
 
   const mq = useMemo(
     () => applyFilters(quoteHistory, range),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- applyFilters reads filterSite/filterNpi from closure (listed); function identity changes every render
     [quoteHistory, range, filterSite, filterNpi]
   );
   // Delta arrows only meaningful when the period is a single month

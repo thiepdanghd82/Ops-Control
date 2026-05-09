@@ -114,7 +114,7 @@ export default function GallusCalc() {
     reloadCylinders();
   }, [reloadCylinders]);
 
-  const set = (k, v) => setInputs((prev) => ({ ...prev, [k]: v }));
+  const set = useCallback((k, v) => setInputs((prev) => ({ ...prev, [k]: v })), [setInputs]);
   // setNum returns the onChange handler shape DecimalInput expects:
   // it gets the parsed Number directly, not the synthetic event.
   // DecimalInput handles locale-aware parsing + the partial-decimal
@@ -174,36 +174,39 @@ export default function GallusCalc() {
   // for sessionStorage persistence; bigger files still display but
   // operator gets a heads-up they won't survive tab switch.
   const [artworkLoading, setArtworkLoading] = useState(false);
-  const handleArtworkUpload = useCallback(async (file) => {
-    if (!file) return;
-    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
-    const isImage = /^image\//.test(file.type || '');
-    if (!isPdf && !isImage) {
-      showToast('Artwork must be an image (PNG / JPG / SVG / WebP) or a PDF', 'err');
-      return;
-    }
-    if (file.size > 1.5 * 1024 * 1024) {
-      showToast(
-        `Large file (${(file.size / 1024 / 1024).toFixed(1)} MB) — preview works but may not persist on tab switch`,
-        'warning'
-      );
-    }
-    setArtworkLoading(true);
-    try {
-      const { dataUrl, kind } = await loadArtwork(file);
-      set('artwork_data_url', dataUrl);
-      set('artwork_filename', file.name || (kind === 'pdf-page' ? 'document.pdf' : 'image'));
-      showToast(
-        kind === 'pdf-page'
-          ? `PDF page 1 rendered · ${file.name || 'document.pdf'}`
-          : `Artwork loaded · ${file.name || 'image'}`
-      );
-    } catch (err) {
-      showToast('Artwork load failed: ' + (err.message || 'unknown'), 'err');
-    } finally {
-      setArtworkLoading(false);
-    }
-  }, []);
+  const handleArtworkUpload = useCallback(
+    async (file) => {
+      if (!file) return;
+      const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+      const isImage = /^image\//.test(file.type || '');
+      if (!isPdf && !isImage) {
+        showToast('Artwork must be an image (PNG / JPG / SVG / WebP) or a PDF', 'err');
+        return;
+      }
+      if (file.size > 1.5 * 1024 * 1024) {
+        showToast(
+          `Large file (${(file.size / 1024 / 1024).toFixed(1)} MB) — preview works but may not persist on tab switch`,
+          'warning'
+        );
+      }
+      setArtworkLoading(true);
+      try {
+        const { dataUrl, kind } = await loadArtwork(file);
+        set('artwork_data_url', dataUrl);
+        set('artwork_filename', file.name || (kind === 'pdf-page' ? 'document.pdf' : 'image'));
+        showToast(
+          kind === 'pdf-page'
+            ? `PDF page 1 rendered · ${file.name || 'document.pdf'}`
+            : `Artwork loaded · ${file.name || 'image'}`
+        );
+      } catch (err) {
+        showToast('Artwork load failed: ' + (err.message || 'unknown'), 'err');
+      } finally {
+        setArtworkLoading(false);
+      }
+    },
+    [set]
+  );
   const clearArtwork = () => {
     set('artwork_data_url', '');
     set('artwork_filename', '');
