@@ -45,6 +45,20 @@
 >
 > **Sprint history — newest first** (SHA-discipline per Lesson 0):
 >
+> **Sprint S-ALT-MAT — Alternative materials 3-PR series (PR #39 SHA: `c1e96be` / PR #40 SHA: `90efa9b` / PR #41 SHA: `449099d`), shipped 2026-05-11.** Pricing now supports a parallel "Alternative" material set per quote with a Maint.Mat / Alternative.Mat toggle. Calc engine reads the active set; legacy `state.materials` (Std) and `sp.materials` (Cpx) kept as a MIRROR of the active set so 15+ existing readers (calcAll, getActiveTierState, buildTierState, validators, ink base-mat lookups, QuoteHistory) stay green without callsite churn. Gated behind server env `OPS_FEATURE_ALT_MATERIALS` (default OFF) exposed to client via `GET /api/runtime-config` + `useFeatureFlag('alt_materials')` hook.
+>
+> - **PR #A — Std toggle + copy shipped 2026-05-11 (SHA: `c1e96be` via PR #39).** Schema gains `materials_main` / `materials_alt` / `materials_active` + legacy mirror. `stdMigration` v1→v2 lazy-maps old `materials` field → `materials_main`. Reducer adds `SET_MATERIALS_ACTIVE` + `COPY_MATERIALS` (structuredClone deep-clone). `<AltMaterialsToggle>` component (semantic radio + ARIA + popover + confirm modal + empty-state CTA). Server `emitAltMaterialsAuditAndStrip` emits `MATERIALS_COPY` + `MATERIALS_ACTIVE_SWITCH` on save (JSON.stringify per Lesson FIX-3); ephemeral `_alt_materials_op` signal stripped before persist. 22 new tests (608 → 630 total). `AppConfigContext` split into 3 files (`AppConfigContext.jsx` + `appConfigInternal.js` + `useAppConfig.js`) to satisfy react-refresh — react-refresh discipline lesson worth carrying forward.
+> - **PR #B — Cpx per-subproduct shipped 2026-05-11 (SHA: `90efa9b` via PR #40).** Ports pattern to Complex. Each `cplxState.subproducts[spi]` carries own main/alt/active triple. `cplxMigration` v2→v3 with per-SP lazy migration + healing pass. Helper `getActiveSPMaterials(sp)` parallel to `getActiveMaterials(state)`. Reducer adds `SET_SP_MATERIALS_ACTIVE` + `COPY_SP_MATERIALS` (per-SP `_alt_materials_op`). `<AltMaterialsToggle>` rendered per-SP in `SubProductRow.jsx`. Server audit extended to loop subproducts + emit per-SP events with `sp_index` + `sp_code` in detail JSON. 19 new tests including Std reverse-regression guard (630 → 649). Zero new i18n keys / no new component — full reuse from PR #A.
+> - **PR #C — Per-tier MOQ alt overrides + Quote History badge shipped 2026-05-11 (SHA: `449099d` via PR #41).** Field-level `_alt` suffix design (Option Y) — `extra_moqs[i].mat_setup_lm_alt`, `mat_rows_alt` (Std); `sp_mat_setup_lm_alt[spi]` (Cpx, per-SP branching per amendment A). Calc engine + UI handlers branch on `materials_active` for material-row tier overrides; ink/process/packing tier overrides remain shared (orthogonal). `_alt` fields default undefined → calc treats as no override → alt rows fall back to base `setup_lm`. **No schema migration needed** — backward compatible with PR #A/#B saved quotes. Quote History row gains `<MaterialActiveBadge>` (Main / Alt / Mixed (N alt / M main)) with 4 edge cases per amendment B (no SPs, 1 SP, all-same, mixed). 30 new tests (649 → 679). Bundle delta +2.6 kB (under +10 kB target).
+>
+> **Architectural decisions worth remembering**:
+>
+> - **Mirror approach** instead of clean-rewrite saved 15+ reader callsite changes. Reducer enforces `state.materials = active_set` on every write; calcAll + validators + QuoteHistory keep reading `state.materials` directly.
+> - **No new feature flag for PR #C**: tier overrides + badge use existing `OPS_FEATURE_ALT_MATERIALS`. Std + Cpx + tier must release together so operators see a coherent feature, not partial.
+> - **Pure helper extracted to `.js`**: `summariseMaterialActive` lives in `materialActiveBadgeSummary.js` separate from `MaterialActiveBadge.jsx` so node:test imports without JSX loader config. Same pattern as `useAppConfig.js` split in PR #A — react-refresh demands `.jsx` exports only components.
+>
+> **Hardware test gate (post-merge, NOT in PR series)**: set `OPS_FEATURE_ALT_MATERIALS=1` on prod `.env` + restart server. Operator verify Std + Cpx + per-tier override + badge end-to-end. If green, follow-up PR flips flag default to `true`. Until then, prod UI behavior unchanged from v1.5.2 baseline.
+>
 > **PR #22 — Phase 2 Day 1 regressions: printer.list + SSE + backup paths + verifyBackup shipped 2026-05-08 (SHA: `7e8de54`).** Hardware test on first official Mac DMG (v14, built post-PR-21) exposed 3+ pre-existing bugs not visible in dev mode:
 >
 > 1. `ops:printer.list` IPC returned "Operating System not supported" on macOS — `pdf-to-printer@5.6.0` is Windows-only despite README. Added macOS/Linux branch shelling to `lpstat -p`.
@@ -751,6 +765,41 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - **Source**: surfaced by `build-native-overlay-check.mjs` preflight (MES-3-FIX-19) on 2026-05-09. Both packages appeared in `desktop/package.json` `asarUnpack` patterns and ship native `.node` binaries but lacked a corresponding `extraResources` overlay entry. Latent today — neither is loaded from outside-asar code — but per Lesson 28 the bug surfaces the moment any code at `app/server/` (or another outside-asar path) does `require('node-hid')` or `require('@serialport/bindings-cpp')`.
 - **Fix**: added 2 explicit overlay entries mirroring the `better-sqlite3` shape and extended the root `../node_modules` filter with `!**/node-hid/**` and `!**/@serialport/bindings-cpp/**` exclusions. The FIX-19 preflight check now reports OK on all 3 native packages (better-sqlite3, node-hid, @serialport/bindings-cpp).
 - **Status**: CLOSED 2026-05-09
+
+#### MES-3-FIX-27 — Hardware-test gate for `OPS_FEATURE_ALT_MATERIALS` flip
+
+- **Source**: deferred from Sprint S-ALT-MAT 3-PR series (PR #39 / #40 / #41 merged 2026-05-11). Feature flag default OFF on prod; flip to `true` only after operator hardware-test verifies the full alt-materials workflow end-to-end.
+- **Acceptance**: (1) Set `OPS_FEATURE_ALT_MATERIALS=1` in prod `.env`, restart server. (2) Operator verify on real Mac SERVER + Win CLIENT install: Std toggle + copy + per-tier override + save round-trip; Cpx per-SP toggle + per-SP tier override + mixed-state save (SP-A main + SP-B alt at same MOQ tier); Quote History badge correct for 4 case types (no badge / single Main / single Alt / Mixed N/M). (3) Inspect `audit_log.json` after toggle + copy actions — verify `MATERIALS_ACTIVE_SWITCH` and `MATERIALS_COPY` events emit with correct JSON detail shape (quote_id, sp_index where applicable, direction, from/to, source_count, dest_count_before, user_id). (4) Diff Cost Breakdown numbers pre/post toggle on 2-3 fixture quotes — round-trip should produce identical output when toggle is back to original active set. (5) If all green, ship follow-up PR flipping `OPS_FEATURE_ALT_MATERIALS` default to `true` in `server/index.js` `runtime-config` endpoint + document in CLAUDE.md sprint history.
+- **Effort**: S (operator session ~2 hours + 1-line code flip PR)
+- **Priority**: P2 (gates the 3-PR series from being operator-visible on prod)
+
+#### MES-3-FIX-28 — Audit log filter UI for MATERIALS\_\* events
+
+- **Source**: deferred from PR #C scope (amendment C, 2026-05-11). PR #A/#B/#C all emit `MATERIALS_COPY` and `MATERIALS_ACTIVE_SWITCH` audit events via `emitAltMaterialsAuditAndStrip` in `server/routes/costApi.js`, but the audit timeline filter dropdown (`AuditLog.jsx`) doesn't expose them — admins must hand-query via `/api/audit?event=MATERIALS_COPY` or grep the raw log file.
+- **Acceptance**: add `MATERIALS_COPY` + `MATERIALS_ACTIVE_SWITCH` entries to the event filter dropdown options in `client/src/modules/cost/tabs/AuditLog.jsx`. Verify timeline correctly filters when selected. Add display label + tooltip explaining what each event represents (per spec: "operator switched the active set" vs "operator copied between main/alt"). Add ability to filter by `quote_id` substring (some events carry it in JSON detail) for forensic tracing of a specific quote.
+- **Effort**: S (~30 LOC + 1 test)
+- **Priority**: P3 (operationally useful for compliance audits but not blocking — raw audit endpoint still works)
+
+#### MES-3-FIX-29 — Tier override active-toggle mid-edit UX edge case
+
+- **Source**: identified during PR #C Bước 3 design analysis but acknowledged as known limitation in v1. If operator is editing a per-MOQ Setup LM override field (focused input with pending value not yet blurred) and clicks the Maint.Mat ↔ Alternative.Mat toggle, the value gets dispatched on blur with the NEW active flag — landing in `mat_setup_lm_alt[i]` when the operator intended `mat_setup_lm[i]` (or vice versa).
+- **Acceptance**: 1 of 2 approaches: (A) Add `onChange` blur-before-toggle in the DecimalInput component when a tier override is focused — toggle button click handler first commits the pending input via `.blur()` then dispatches `SET_MATERIALS_ACTIVE`. (B) Capture the active flag at TIME OF KEYSTROKE (not blur) into the input's local state, dispatch with captured flag on blur regardless of current `materials_active`. Option A simpler + matches React commit-on-blur convention; Option B more robust but adds local state to DecimalInput. Pick A; add 1 component test confirming toggle button click forces blur on focused tier-override input.
+- **Effort**: S (~15 LOC + 1 component test)
+- **Priority**: P3 (real but narrow — operator must do specific click sequence; standard React UX expectation is blur-then-toggle)
+
+#### MES-3-FIX-30 — Quote History badge column header + filter
+
+- **Source**: PR #C (SHA: `449099d`) delivered the badge as an inline pill next to the STD/CPX type tag with no dedicated column or filter. Operators reviewing 50+ saved quotes can't filter by Main/Alt/Mixed without scrolling and eyeballing each row.
+- **Acceptance**: (1) Add `material_active` to `SORT_KEYS` in `QuoteHistory.jsx` mapping to `materialActiveBadgeSummary.summariseMaterialActive(q.state, q.type)?.kind ?? 'main'` so column can be sorted. (2) Add filter dropdown (above the table next to the existing search box) with options `All / Main / Alt / Mixed`. (3) Optional: dedicated column header showing the badge instead of crammed-in next to STD/CPX. (4) Wire filter state to `useMemo` filtering of the quotes list.
+- **Effort**: S (~50 LOC + 2 tests for filter + sort)
+- **Priority**: P3 (UX improvement, not gating workflow)
+
+#### MES-3-FIX-31 — Ink + process tier overrides parity with material alt-mode
+
+- **Source**: PR #C design decision (Option Y) — only material-row tier overrides (`mat_setup_lm`, `mat_rows`) got `_alt` variants. Ink + process + packing tier overrides remain shared between main/alt active states because they are orthogonal to which material set is active. **However**, in some operator workflows the alt material set drives different ink consumption (different substrate → different setup_kg) or different process speeds (different lamination time for alt face). Today those operators have to manually switch ink/process tier overrides each time they toggle materials.
+- **Acceptance**: investigate whether enough operator workflows need ink/process tier overrides to track alt materials. If yes, extend Option Y to: `extra_moqs[i].ink_setup_kg_alt`, `ink_area_pct_alt`, `proc_setup_h_alt`, `ink_rows_alt`, `proc_rows_alt`, `sp_proc_setup_h_alt` (Cpx). Same calc engine branch pattern as material overrides. If no, document the limitation in help docs `complex` + `standard-material` entries so operators don't expect ink/process tier customization to auto-track.
+- **Effort**: M (~100 LOC + ~10 tests if needed; alternatively S docs-only)
+- **Priority**: P3 (deferred from PR #C explicitly; operator-driven scoping needed before code)
 
 #### KIOSK-001 — Real branded PWA icons
 
