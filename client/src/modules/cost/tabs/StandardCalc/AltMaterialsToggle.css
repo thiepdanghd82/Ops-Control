@@ -1,0 +1,187 @@
+/* Alt-materials toggle pills + copy popover — Sprint S-ALT-MAT, PR #A.
+ * Styled to match the materials-tab visual language (Carbon pill +
+ * IBM Plex sans labels, brand-blue accent on active state). */
+
+.alt-mat-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-slate-200, #e2e8f0);
+  background: transparent;
+}
+
+.alt-mat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border: 1px solid var(--color-slate-300, #cbd5e1);
+  border-radius: 999px;
+  background: #ffffff;
+  font-size: 13px;
+  color: var(--color-slate-700, #334155);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background 120ms,
+    border-color 120ms,
+    color 120ms;
+}
+
+.alt-mat-pill:hover:not([disabled]) {
+  background: var(--color-slate-50, #f8fafc);
+}
+
+.alt-mat-pill > input[type='radio'] {
+  /* The visible dot is .alt-mat-pill-dot; hide the native radio but
+   * keep it in the focus order for keyboard arrow nav. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  border: 0;
+  padding: 0;
+  margin: -1px;
+  white-space: nowrap;
+}
+
+.alt-mat-pill > input[type='radio']:focus-visible + .alt-mat-pill-dot {
+  outline: 2px solid var(--color-blue-500, #2563eb);
+  outline-offset: 2px;
+}
+
+.alt-mat-pill-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-slate-400, #94a3b8);
+  background: #ffffff;
+  display: inline-block;
+  flex-shrink: 0;
+  transition:
+    border-color 120ms,
+    background 120ms;
+}
+
+.alt-mat-pill-on {
+  background: var(--color-blue-50, #eff6ff);
+  border-color: var(--color-blue-500, #2563eb);
+  color: var(--color-blue-700, #1d4ed8);
+  font-weight: 600;
+}
+
+.alt-mat-pill-on .alt-mat-pill-dot {
+  border-color: var(--color-blue-500, #2563eb);
+  background: radial-gradient(circle, var(--color-blue-500, #2563eb) 0 4px, #ffffff 5px);
+}
+
+.alt-mat-pill-label {
+  font-family:
+    'IBM Plex Sans',
+    -apple-system,
+    system-ui,
+    sans-serif;
+  letter-spacing: 0.01em;
+}
+
+.alt-mat-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--color-slate-200, #e2e8f0);
+  color: var(--color-slate-700, #334155);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.alt-mat-pill-on .alt-mat-pill-badge {
+  background: var(--color-blue-100, #dbeafe);
+  color: var(--color-blue-700, #1d4ed8);
+}
+
+.alt-mat-copy-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.alt-mat-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-slate-300, #cbd5e1);
+  border-radius: 4px;
+  background: #ffffff;
+  color: var(--color-slate-700, #334155);
+  cursor: pointer;
+  transition:
+    background 120ms,
+    border-color 120ms;
+}
+
+.alt-mat-copy-btn:hover:not(:disabled) {
+  background: var(--color-slate-50, #f8fafc);
+  border-color: var(--color-slate-400, #94a3b8);
+}
+
+.alt-mat-copy-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.alt-mat-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 50;
+  min-width: 240px;
+  background: #ffffff;
+  border: 1px solid var(--color-slate-300, #cbd5e1);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.alt-mat-popover-item {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--color-slate-800, #1e293b);
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.alt-mat-popover-item:hover:not(:disabled) {
+  background: var(--color-slate-50, #f8fafc);
+}
+
+.alt-mat-popover-item:disabled {
+  color: var(--color-slate-400, #94a3b8);
+  cursor: not-allowed;
+}
+
+/* Empty-state CTA for materials_alt — rendered by CalcMaterials.jsx
+ * when active='alt' AND the alt set is empty. */
+.alt-mat-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--color-slate-600, #475569);
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
