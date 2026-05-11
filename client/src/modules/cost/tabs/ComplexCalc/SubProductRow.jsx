@@ -44,6 +44,7 @@ import {
   MdTdLegendCard,
 } from '../StandardCalc/CalcLayout';
 import { validateLayout } from '../../../../services/layoutValidation';
+import { primaryRowTypeLabel } from '../../../../services/altMaterialsLabels';
 import '../StandardCalc/StandardCalc.css';
 
 export default function SubProductRow({ sp, spi, result, allSps }) {
@@ -139,6 +140,10 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
   // extra_moqs[ei].sp_mat_setup_lm_alt[spi][mi]. Different SPs at the
   // same tier with different active flags pick independent maps.
   const tierSpLmField = spMaterialsActive === 'alt' ? 'sp_mat_setup_lm_alt' : 'sp_mat_setup_lm';
+
+  // Bug 6 / FIX-35 — per-SP display label for the primary-row type.
+  // row_type DATA stays 'Main.Mat'; only displayed option label flips.
+  const primaryLabel = primaryRowTypeLabel(spMaterialsActive);
 
   const setSpSetupLmActive = useCallback(
     (mi, value) => {
@@ -762,7 +767,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                                 onChange={(e) => setMat(mi, 'row_type', e.target.value)}
                                 className={`sc-row-type-sel ${selClass}`}
                               >
-                                <option value="Main.Mat">Main.Mat</option>
+                                <option value="Main.Mat">{primaryLabel}</option>
                                 <option value="Process Mat">Process Mat</option>
                               </select>
                               <span className={`sc-row-num ${numClass}`}>{isMain ? mc : pc}</span>

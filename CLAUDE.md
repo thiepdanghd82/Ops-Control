@@ -45,6 +45,8 @@
 >
 > **Sprint history — newest first** (SHA-discipline per Lesson 0):
 >
+> **Sprint S-ALT-MAT flag flip + cosmetic fix shipped 2026-05-11 (SHA: `e5f88f5` via PR #N).** Hardware test 2026-05-11 by Đặng Thế Thiệp on quote `RFQ-2026-S0012` (build SHA256 `e3b8f800…b2d0`) verified alt-materials feature end-to-end: Std + Cpx toggle, copy, switch, edit, per-tier MOQ override, Quote History badge, save round-trip. All 9 functional tests PASSED. Feature default flipped from OFF to ON in `/api/runtime-config` — operator can still emergency-disable via `OPS_FEATURE_ALT_MATERIALS=0`/`false`/`off`/`no`; anything else (including absent env) leaves it ON. Bug 6 bundled (cosmetic regression — row-type dropdown rendered "Main.Mat" on the Alternative.Mat tab; helper `primaryRowTypeLabel(active)` in `client/src/services/altMaterialsLabels.js` now flips the displayed label to "Alt.Mat" while the underlying `row_type` data value stays `'Main.Mat'` so calcEngine classification + audit shape are unchanged). Closes MES-3-FIX-27 + MES-3-FIX-35. 3 unrelated calc-engine bugs surfaced during hardware test filed as MES-3-FIX-32 (Run material cost missing despite Layout filled), MES-3-FIX-33 (Indigo CLICKS column not enterable + ink calc broken), MES-3-FIX-34 (validator/display field mismatch). Operator confirmed via Maint.Mat ↔ Alternative.Mat toggle that these bugs reproduce identically on both material sets → pre-existing calc-engine gaps, NOT regressions from PR #A/#B/#C.
+>
 > **Sprint S-ALT-MAT — Alternative materials 3-PR series (PR #39 SHA: `c1e96be` / PR #40 SHA: `90efa9b` / PR #41 SHA: `449099d`), shipped 2026-05-11.** Pricing now supports a parallel "Alternative" material set per quote with a Maint.Mat / Alternative.Mat toggle. Calc engine reads the active set; legacy `state.materials` (Std) and `sp.materials` (Cpx) kept as a MIRROR of the active set so 15+ existing readers (calcAll, getActiveTierState, buildTierState, validators, ink base-mat lookups, QuoteHistory) stay green without callsite churn. Gated behind server env `OPS_FEATURE_ALT_MATERIALS` (default OFF) exposed to client via `GET /api/runtime-config` + `useFeatureFlag('alt_materials')` hook.
 >
 > - **PR #A — Std toggle + copy shipped 2026-05-11 (SHA: `c1e96be` via PR #39).** Schema gains `materials_main` / `materials_alt` / `materials_active` + legacy mirror. `stdMigration` v1→v2 lazy-maps old `materials` field → `materials_main`. Reducer adds `SET_MATERIALS_ACTIVE` + `COPY_MATERIALS` (structuredClone deep-clone). `<AltMaterialsToggle>` component (semantic radio + ARIA + popover + confirm modal + empty-state CTA). Server `emitAltMaterialsAuditAndStrip` emits `MATERIALS_COPY` + `MATERIALS_ACTIVE_SWITCH` on save (JSON.stringify per Lesson FIX-3); ephemeral `_alt_materials_op` signal stripped before persist. 22 new tests (608 → 630 total). `AppConfigContext` split into 3 files (`AppConfigContext.jsx` + `appConfigInternal.js` + `useAppConfig.js`) to satisfy react-refresh — react-refresh discipline lesson worth carrying forward.
@@ -800,6 +802,33 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - **Acceptance**: investigate whether enough operator workflows need ink/process tier overrides to track alt materials. If yes, extend Option Y to: `extra_moqs[i].ink_setup_kg_alt`, `ink_area_pct_alt`, `proc_setup_h_alt`, `ink_rows_alt`, `proc_rows_alt`, `sp_proc_setup_h_alt` (Cpx). Same calc engine branch pattern as material overrides. If no, document the limitation in help docs `complex` + `standard-material` entries so operators don't expect ink/process tier customization to auto-track.
 - **Effort**: M (~100 LOC + ~10 tests if needed; alternatively S docs-only)
 - **Priority**: P3 (deferred from PR #C explicitly; operator-driven scoping needed before code)
+
+#### MES-3-FIX-32 — Run Material cost missing despite Layout filled
+
+- **Source**: hardware test 2026-05-11 by Đặng Thế Thiệp on quote `RFQ-2026-S0012` (Indigo, EAU 5000, MOQ 500). After filling Layout (Web Width 300, Sheet Length 480, Print Cav 2, Print Total/Shot 4, Bleed 3/3), TTL.MAT changed from 0.12493 → 0.20419 (Setup cascade triggered) but Run Material cost column remained "—" for all material rows. WEBS column in Materials also stayed "—" despite Layout's # Webs = 1.
+- **Acceptance**: trace `calcEngine.js` Run Material formula — likely depends on a `webs_per_row` field that isn't being propagated from Layout. Fix the dependency OR document the missing input (e.g., is Processes tab required for Run cost? Is web-to-material assignment a separate step?). Verify against an older quote that successfully shows Run cost — diff state.
+- **Effort**: M (~80 LOC + 5 tests, calc-engine archaeology)
+- **Priority**: P1 (PROMOTED — operator misdiagnosed as alt-materials regression during FIX-27 hardware test; blocks any new quote from showing complete cost breakdown)
+
+#### MES-3-FIX-33 — Indigo CLICKS column not enterable + Ink calc broken
+
+- **Source**: hardware test 2026-05-11. Quote `RFQ-2026-S0012` (Design Process = Indigo) had CLICKS column showing "—" with cells unfocusable. SETUP / RUN / TOTAL columns also "—" despite INK PRICE manually entered (50/21/21/76). REF PRICE = "—" suggests Library ref-price lookup not running. BASE MAT column shows "300" — looks like display bug (should be material code, not a number).
+- **Acceptance**: investigate Indigo ink calc path — (a) why CLICKS unfocusable (cell `disabled` conditional?), (b) why REF PRICE lookup fails (Library/Inks/Indigo entries missing? Lookup key mismatch?), (c) why BASE MAT renders "300" instead of material code (joined-field display bug?). Document the expected ink data flow + fix the broken layer.
+- **Effort**: M (~100 LOC + 5 tests)
+- **Priority**: P1 (PROMOTED — Indigo is primary digital print method at CCL Vietnam; if ink cost doesn't compute, formal quotation is wrong)
+
+#### MES-3-FIX-34 — Material width validator vs display column mismatch
+
+- **Source**: hardware test 2026-05-11. Materials table WIDTH column displayed 300 for all rows but validator footer said "Material row N: Width must be greater than 0" for N=1..5. Field mismatch between display source (`material.width`?) and validator source (possibly derived `web_width`).
+- **Acceptance**: trace validator + display sources. Either align them on same field, or rename validator message to clarify which "width" it means (e.g., "Material row N: web width derived from layout must be > 0").
+- **Effort**: S (~10 LOC + 1 test)
+- **Priority**: P3 (confusing but not blocking)
+
+#### MES-3-FIX-35 — Alternative.Mat row label said "Main.MatN" (CLOSED)
+
+- **Source**: hardware test 2026-05-11. Operator on Alternative.Mat tab saw row labels "Main.Mat1" through "Main.Mat5" instead of "Alt.MatN". Cosmetic only; calc was correct.
+- **Fix**: bundled with flag-flip PR. Material-row label JSX now branches on `materials_active` via shared helper `primaryRowTypeLabel` in `client/src/services/altMaterialsLabels.js` and renders "Main.Mat" or "Alt.Mat" prefix accordingly. `row_type` data value remains stable as `'Main.Mat'` so calcEngine classification + audit JSON shape are unchanged.
+- **Status**: CLOSED 2026-05-11 (SHA: `e5f88f5`)
 
 #### KIOSK-001 — Real branded PWA icons
 
