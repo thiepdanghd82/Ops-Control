@@ -33,6 +33,9 @@ export const CALC_ACTIONS = {
   SET_PROCESS_FIELD: 'SET_PROCESS_FIELD',
   ADD_MATERIAL_ROW: 'ADD_MATERIAL_ROW',
   REMOVE_MATERIAL_ROW: 'REMOVE_MATERIAL_ROW',
+  // Alt-materials feature (Sprint S-ALT-MAT, PR #A)
+  SET_MATERIALS_ACTIVE: 'SET_MATERIALS_ACTIVE',
+  COPY_MATERIALS: 'COPY_MATERIALS',
   ADD_INK_ROW: 'ADD_INK_ROW',
   REMOVE_INK_ROW: 'REMOVE_INK_ROW',
   ADD_PROCESS_ROW: 'ADD_PROCESS_ROW',
@@ -156,11 +159,46 @@ export function addSubProduct(payload) {
 
 // ── Helpers ──
 export function updateAt(arr, idx, updates) {
-  return arr.map((item, i) => i === idx ? { ...item, ...updates } : item);
+  return arr.map((item, i) => (i === idx ? { ...item, ...updates } : item));
 }
 
 export function updateSP(subproducts, spIdx, updates) {
-  return subproducts.map((sp, i) => i === spIdx ? { ...sp, ...updates } : sp);
+  return subproducts.map((sp, i) => (i === spIdx ? { ...sp, ...updates } : sp));
+}
+
+/**
+ * Alt-materials feature (Sprint S-ALT-MAT, PR #A).
+ *
+ * Std state carries three persistent fields — materials_main, materials_alt,
+ * materials_active — plus a legacy `materials` MIRROR that always reflects
+ * the active set. Existing readers (calcAll, getActiveTierState, validators,
+ * ink base-mat lookups, UI tables) keep using `state.materials` without
+ * change; the mirror invariant is enforced by every reducer action that
+ * touches materials.
+ *
+ * stdWithMaterials(stdState, nextActive) — set the active-set array and
+ * recompute the mirror so the two stay in sync. Pass an array (replacement
+ * for the active set) and optionally a new active flag.
+ */
+function stdWithMaterials(stdState, nextActive, opts = {}) {
+  const active = opts.active || stdState.materials_active || 'main';
+  const next = { ...stdState, materials_active: active };
+  if (active === 'alt') {
+    next.materials_alt = nextActive;
+    next.materials_main = stdState.materials_main || [];
+  } else {
+    next.materials_main = nextActive;
+    next.materials_alt = stdState.materials_alt || [];
+  }
+  next.materials = nextActive;
+  return next;
+}
+
+// Read the current active set from a Std state. Helper used by reducer
+// actions that need to dispatch updates against whichever set is live.
+function stdActiveMaterials(stdState) {
+  if (stdState.materials_active === 'alt') return stdState.materials_alt || [];
+  return stdState.materials_main || stdState.materials || [];
 }
 
 // ── Initial state factory ──
@@ -189,47 +227,136 @@ export function calcReducer(state, action) {
   switch (type) {
     // ── Standard ──
     case A.SET_STD_FIELD:
-      return { ...state, isDirty: true, stdState: { ...state.stdState, [payload.field]: payload.value } };
+      return {
+        ...state,
+        isDirty: true,
+        stdState: { ...state.stdState, [payload.field]: payload.value },
+      };
 
     case A.SET_STD_STATE:
       return { ...state, isDirty: true, stdState: { ...state.stdState, ...payload } };
 
-    case A.SET_MATERIAL_FIELD:
-      return { ...state, isDirty: true, stdState: {
-        ...state.stdState,
-        materials: updateAt(state.stdState.materials, payload.idx, { [payload.field]: payload.value })
-      }};
+    case A.SET_MATERIAL_FIELD: {
+      // Route to active set (main or alt) AND keep state.materials mirror
+      // in sync via stdWithMaterials. Mirror keeps legacy readers green.
+      const current = stdActiveMaterials(state.stdState);
+      const next = updateAt(current, payload.idx, { [payload.field]: payload.value });
+      return { ...state, isDirty: true, stdState: stdWithMaterials(state.stdState, next) };
+    }
 
     case A.SET_INK_FIELD:
-      return { ...state, isDirty: true, stdState: {
-        ...state.stdState,
-        inks: updateAt(state.stdState.inks, payload.idx, { [payload.field]: payload.value })
-      }};
+      return {
+        ...state,
+        isDirty: true,
+        stdState: {
+          ...state.stdState,
+          inks: updateAt(state.stdState.inks, payload.idx, { [payload.field]: payload.value }),
+        },
+      };
 
     case A.SET_PROCESS_FIELD:
-      return { ...state, isDirty: true, stdState: {
-        ...state.stdState,
-        processes: updateAt(state.stdState.processes, payload.idx, { [payload.field]: payload.value })
-      }};
+      return {
+        ...state,
+        isDirty: true,
+        stdState: {
+          ...state.stdState,
+          processes: updateAt(state.stdState.processes, payload.idx, {
+            [payload.field]: payload.value,
+          }),
+        },
+      };
 
     case A.ADD_MATERIAL_ROW: {
-      const mats = [...state.stdState.materials];
+      // Route to active set + sync mirror (alt-materials, PR #A).
+      const current = stdActiveMaterials(state.stdState);
+      const mats = [...current];
       if (mats.length < 20) {
         mats.push({
           _mid: `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           row_type: mats.length < 10 ? 'Main.Mat' : 'Process Mat',
-          code: '', ifs_code: '', desc: '', usage: 0, setup_lm: 0, cavities: 0,
-          free_liner: 0, width: 0, log_width: 0, pitch_ovr: 0,
-          offcut_yn: '', slitting_yn: '', df_yn: '', offcut_pct: 0,
-          import_duty: 0, s_price: 0, g_price: 0, latest: 0
+          code: '',
+          ifs_code: '',
+          desc: '',
+          usage: 0,
+          setup_lm: 0,
+          cavities: 0,
+          free_liner: 0,
+          width: 0,
+          log_width: 0,
+          pitch_ovr: 0,
+          offcut_yn: '',
+          slitting_yn: '',
+          df_yn: '',
+          offcut_pct: 0,
+          import_duty: 0,
+          s_price: 0,
+          g_price: 0,
+          latest: 0,
         });
       }
-      return { ...state, isDirty: true, stdState: { ...state.stdState, materials: mats } };
+      return { ...state, isDirty: true, stdState: stdWithMaterials(state.stdState, mats) };
     }
 
     case A.REMOVE_MATERIAL_ROW: {
-      const mats = state.stdState.materials.filter((_, i) => i !== payload.idx);
-      return { ...state, isDirty: true, stdState: { ...state.stdState, materials: mats } };
+      const current = stdActiveMaterials(state.stdState);
+      const mats = current.filter((_, i) => i !== payload.idx);
+      return { ...state, isDirty: true, stdState: stdWithMaterials(state.stdState, mats) };
+    }
+
+    // ── Alt-materials toggle + copy (Sprint S-ALT-MAT, PR #A) ──
+    // SET_MATERIALS_ACTIVE: switch the active discriminator and remirror
+    // state.materials to the new active set. Data of the inactive set is
+    // preserved (just hidden from the UI). isDirty=true so the next save
+    // round-trips materials_active to the server.
+    case A.SET_MATERIALS_ACTIVE: {
+      const want = payload?.value === 'alt' ? 'alt' : 'main';
+      if ((state.stdState.materials_active || 'main') === want) return state;
+      const ss = state.stdState;
+      const nextActive = want === 'alt' ? ss.materials_alt || [] : ss.materials_main || [];
+      return {
+        ...state,
+        isDirty: true,
+        stdState: { ...ss, materials_active: want, materials: nextActive },
+      };
+    }
+
+    // COPY_MATERIALS: deep-clone one set onto the other. Direction is
+    // 'main_to_alt' | 'alt_to_main'. Source MUST be non-empty (caller
+    // already disables the action otherwise). When the destination set
+    // is also the active set, refresh the mirror. Carries an audit
+    // signal (_alt_materials_op) the server inspects on next save.
+    case A.COPY_MATERIALS: {
+      const direction = payload?.direction;
+      if (direction !== 'main_to_alt' && direction !== 'alt_to_main') return state;
+      const ss = state.stdState;
+      const src = direction === 'main_to_alt' ? ss.materials_main || [] : ss.materials_alt || [];
+      const destBeforeKey = direction === 'main_to_alt' ? 'materials_alt' : 'materials_main';
+      const destBefore = ss[destBeforeKey] || [];
+      // structuredClone keeps rows decoupled — mutate-after-copy on one set
+      // must NOT bleed into the other (spec §2.1).
+      const cloned =
+        typeof structuredClone === 'function'
+          ? structuredClone(src)
+          : JSON.parse(JSON.stringify(src));
+      const next = { ...ss };
+      if (direction === 'main_to_alt') next.materials_alt = cloned;
+      else next.materials_main = cloned;
+      // If the destination is currently active, refresh the mirror.
+      const active = ss.materials_active || 'main';
+      const destIsActive =
+        (direction === 'main_to_alt' && active === 'alt') ||
+        (direction === 'alt_to_main' && active === 'main');
+      if (destIsActive) next.materials = cloned;
+      // Server-side audit signal (stripped before persist). Carries the
+      // detail needed for MATERIALS_COPY without round-tripping prev state.
+      next._alt_materials_op = {
+        type: 'copy',
+        direction,
+        source_count: src.length,
+        dest_count_before: destBefore.length,
+        ts: Date.now(),
+      };
+      return { ...state, isDirty: true, stdState: next };
     }
 
     case A.ADD_INK_ROW: {
@@ -237,9 +364,19 @@ export function calcReducer(state, action) {
       if (inks.length < 10) {
         inks.push({
           label: `Ink ${inks.length + 1}`,
-          ifs_code: '', color: '', print_type: '', mesh_spec: '', pitch_mm: 0, base_mat: '', coverage: 0,
-          setup_kg: 0, area_pct: 0, clicks: 0,
-          s_price: 0, g_price: 0, latest: 0
+          ifs_code: '',
+          color: '',
+          print_type: '',
+          mesh_spec: '',
+          pitch_mm: 0,
+          base_mat: '',
+          coverage: 0,
+          setup_kg: 0,
+          area_pct: 0,
+          clicks: 0,
+          s_price: 0,
+          g_price: 0,
+          latest: 0,
         });
       }
       return { ...state, isDirty: true, stdState: { ...state.stdState, inks } };
@@ -254,13 +391,27 @@ export function calcReducer(state, action) {
       // layout: 0 means "empty" — UI shows blank, engine falls back to 1
       // (calcEngine L345). Machine-UPH workcenters require explicit layout;
       // validation gates that per workcenter's Rate Table machine_rate.
-      const procs = [...state.stdState.processes, {
-        label: `Process ${state.stdState.processes.length + 1}`,
-        process_type: '', workcenter: '', speed: 0, layout: 0,
-        efficiency: 0.85, setup_h: 0, scrap_pct: 0.03,
-        manual_uph: 0, tool_cost: 0, tool_type: '', tool_life: 0,
-        extra_cost: 0, product_life: 1, eau_ovr: 0, repeat: 1
-      }];
+      const procs = [
+        ...state.stdState.processes,
+        {
+          label: `Process ${state.stdState.processes.length + 1}`,
+          process_type: '',
+          workcenter: '',
+          speed: 0,
+          layout: 0,
+          efficiency: 0.85,
+          setup_h: 0,
+          scrap_pct: 0.03,
+          manual_uph: 0,
+          tool_cost: 0,
+          tool_type: '',
+          tool_life: 0,
+          extra_cost: 0,
+          product_life: 1,
+          eau_ovr: 0,
+          repeat: 1,
+        },
+      ];
       return { ...state, isDirty: true, stdState: { ...state.stdState, processes: procs } };
     }
 
@@ -271,6 +422,15 @@ export function calcReducer(state, action) {
 
     case A.TOGGLE_ROW_HIDDEN: {
       const { section, idx } = payload;
+      // section='materials' must route to the active set (alt-materials,
+      // PR #A) so toggling hidden on the visible row updates the same
+      // array the UI reads. inks/processes stay on the field directly.
+      if (section === 'materials') {
+        const current = stdActiveMaterials(state.stdState);
+        const arr = [...current];
+        arr[idx] = { ...arr[idx], hidden: !arr[idx].hidden };
+        return { ...state, isDirty: true, stdState: stdWithMaterials(state.stdState, arr) };
+      }
       const arr = [...state.stdState[section]];
       arr[idx] = { ...arr[idx], hidden: !arr[idx].hidden };
       return { ...state, isDirty: true, stdState: { ...state.stdState, [section]: arr } };
@@ -282,8 +442,13 @@ export function calcReducer(state, action) {
     case A.SET_NUM_MOQ: {
       const num = payload.value;
       const extra = [...(state.stdState.extra_moqs || [])];
-      while (extra.length < num - 1) extra.push({ moq: 0, price: 0, eau: '', target: null, price_vnd: 0, target_vnd: null });
-      return { ...state, isDirty: true, stdState: { ...state.stdState, num_moq: num, extra_moqs: extra.slice(0, num - 1) } };
+      while (extra.length < num - 1)
+        extra.push({ moq: 0, price: 0, eau: '', target: null, price_vnd: 0, target_vnd: null });
+      return {
+        ...state,
+        isDirty: true,
+        stdState: { ...state.stdState, num_moq: num, extra_moqs: extra.slice(0, num - 1) },
+      };
     }
 
     case A.SET_EXTRA_MOQ: {
@@ -294,17 +459,26 @@ export function calcReducer(state, action) {
 
     // ── Complex ──
     case A.SET_CPLX_FIELD:
-      return { ...state, isDirty: true, cplxState: { ...state.cplxState, [payload.field]: payload.value } };
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: { ...state.cplxState, [payload.field]: payload.value },
+      };
 
     case A.SET_CPLX_STATE:
       return { ...state, isDirty: true, cplxState: { ...state.cplxState, ...payload } };
 
     case A.ADD_SUBPRODUCT: {
-      const code = payload.code || `SP ${String.fromCharCode(65 + state.cplxState.subproducts.length)}`;
-      return { ...state, isDirty: true, cplxState: {
-        ...state.cplxState,
-        subproducts: [...state.cplxState.subproducts, createSubProduct(code)]
-      }};
+      const code =
+        payload.code || `SP ${String.fromCharCode(65 + state.cplxState.subproducts.length)}`;
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          subproducts: [...state.cplxState.subproducts, createSubProduct(code)],
+        },
+      };
     }
 
     case A.REMOVE_SUBPRODUCT: {
@@ -323,97 +497,171 @@ export function calcReducer(state, action) {
         return entry;
       };
       const prevBom = Array.isArray(state.cplxState.bom) ? state.cplxState.bom : [];
-      const prevAlloc = Array.isArray(state.cplxState.tooling_alloc) ? state.cplxState.tooling_alloc : [];
+      const prevAlloc = Array.isArray(state.cplxState.tooling_alloc)
+        ? state.cplxState.tooling_alloc
+        : [];
       const nextBom = prevBom.map(shiftIndex).filter(Boolean);
       const nextAlloc = prevAlloc.map(shiftIndex).filter(Boolean);
-      return { ...state, isDirty: true, cplxState: {
-        ...state.cplxState,
-        subproducts: nextSps,
-        bom: nextBom,
-        tooling_alloc: nextAlloc,
-      }};
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          subproducts: nextSps,
+          bom: nextBom,
+          tooling_alloc: nextAlloc,
+        },
+      };
     }
 
     case A.SET_SP_FIELD:
-      return { ...state, isDirty: true, cplxState: {
-        ...state.cplxState,
-        subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, { [payload.field]: payload.value })
-      }};
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, {
+            [payload.field]: payload.value,
+          }),
+        },
+      };
 
     case A.SET_SP_MATERIAL_FIELD: {
       const sp = state.cplxState.subproducts[payload.spIdx];
-      return { ...state, isDirty: true, cplxState: {
-        ...state.cplxState,
-        subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, {
-          materials: updateAt(sp.materials, payload.idx, { [payload.field]: payload.value })
-        })
-      }};
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, {
+            materials: updateAt(sp.materials, payload.idx, { [payload.field]: payload.value }),
+          }),
+        },
+      };
     }
 
     case A.SET_SP_INK_FIELD: {
       const sp = state.cplxState.subproducts[payload.spIdx];
-      return { ...state, isDirty: true, cplxState: {
-        ...state.cplxState,
-        subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, {
-          inks: updateAt(sp.inks, payload.idx, { [payload.field]: payload.value })
-        })
-      }};
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, {
+            inks: updateAt(sp.inks, payload.idx, { [payload.field]: payload.value }),
+          }),
+        },
+      };
     }
 
     case A.SET_SP_PROCESS_FIELD: {
       const sp = state.cplxState.subproducts[payload.spIdx];
-      return { ...state, isDirty: true, cplxState: {
-        ...state.cplxState,
-        subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, {
-          processes: updateAt(sp.processes, payload.idx, { [payload.field]: payload.value })
-        })
-      }};
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, {
+            processes: updateAt(sp.processes, payload.idx, { [payload.field]: payload.value }),
+          }),
+        },
+      };
     }
 
     case A.ADD_SP_MATERIAL_ROW: {
       const sp = state.cplxState.subproducts[payload.spIdx];
-      const mats = [...sp.materials, {
-        _mid: `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        row_type: 'Main.Mat', code: '', ifs_code: '', desc: '', qpa: 0, usage: 0, setup_lm: 0, free_liner: 0,
-        pitch: 0, width: 0, log_width: 0, pitch_ovr: 0, offcut_yn: '', slitting_yn: '',
-        df_yn: '', offcut_pct: 0, import_duty: 0, s_price: 0, g_price: 0, latest: 0
-      }];
-      return { ...state, isDirty: true, cplxState: {
-        ...state.cplxState,
-        subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, { materials: mats })
-      }};
+      const mats = [
+        ...sp.materials,
+        {
+          _mid: `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          row_type: 'Main.Mat',
+          code: '',
+          ifs_code: '',
+          desc: '',
+          qpa: 0,
+          usage: 0,
+          setup_lm: 0,
+          free_liner: 0,
+          pitch: 0,
+          width: 0,
+          log_width: 0,
+          pitch_ovr: 0,
+          offcut_yn: '',
+          slitting_yn: '',
+          df_yn: '',
+          offcut_pct: 0,
+          import_duty: 0,
+          s_price: 0,
+          g_price: 0,
+          latest: 0,
+        },
+      ];
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, { materials: mats }),
+        },
+      };
     }
 
     case A.REMOVE_SP_MATERIAL_ROW: {
       const sp = state.cplxState.subproducts[payload.spIdx];
-      return { ...state, isDirty: true, cplxState: {
-        ...state.cplxState,
-        subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, {
-          materials: sp.materials.filter((_, i) => i !== payload.idx)
-        })
-      }};
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, {
+            materials: sp.materials.filter((_, i) => i !== payload.idx),
+          }),
+        },
+      };
     }
 
     case A.ADD_SP_INK_ROW: {
       const sp = state.cplxState.subproducts[payload.spIdx];
-      const inks = [...sp.inks, {
-        label: `Ink ${sp.inks.length + 1}`, ifs_code: '', color: '', print_type: '', mesh_spec: '', pitch_mm: 0, base_mat: '',
-        coverage: 0, setup_kg: 0, area_pct: 0, s_price: 0, g_price: 0, latest: 0
-      }];
-      return { ...state, isDirty: true, cplxState: {
-        ...state.cplxState,
-        subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, { inks })
-      }};
+      const inks = [
+        ...sp.inks,
+        {
+          label: `Ink ${sp.inks.length + 1}`,
+          ifs_code: '',
+          color: '',
+          print_type: '',
+          mesh_spec: '',
+          pitch_mm: 0,
+          base_mat: '',
+          coverage: 0,
+          setup_kg: 0,
+          area_pct: 0,
+          s_price: 0,
+          g_price: 0,
+          latest: 0,
+        },
+      ];
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, { inks }),
+        },
+      };
     }
 
     case A.REMOVE_SP_INK_ROW: {
       const sp = state.cplxState.subproducts[payload.spIdx];
-      return { ...state, isDirty: true, cplxState: {
-        ...state.cplxState,
-        subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, {
-          inks: sp.inks.filter((_, i) => i !== payload.idx)
-        })
-      }};
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, {
+            inks: sp.inks.filter((_, i) => i !== payload.idx),
+          }),
+        },
+      };
     }
 
     case A.ADD_SP_PROCESS_ROW: {
@@ -421,26 +669,49 @@ export function calcReducer(state, action) {
       // layout: 0 = empty (see Standard ADD_PROCESS_ROW). Engine falls
       // back to 1 for labor-only workcenters; machine workcenters fail
       // validation until the user fills it.
-      const procs = [...sp.processes, {
-        label: `Process ${sp.processes.length + 1}`, process_type: '', workcenter: '',
-        speed: 0, layout: 0, efficiency: 0.85, setup_h: 0,
-        scrap_pct: 0.03, manual_uph: 0, tool_cost: 0, tool_type: '', tool_life: 0,
-        extra_cost: 0, product_life: 1, eau_ovr: 0, repeat: 1
-      }];
-      return { ...state, isDirty: true, cplxState: {
-        ...state.cplxState,
-        subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, { processes: procs })
-      }};
+      const procs = [
+        ...sp.processes,
+        {
+          label: `Process ${sp.processes.length + 1}`,
+          process_type: '',
+          workcenter: '',
+          speed: 0,
+          layout: 0,
+          efficiency: 0.85,
+          setup_h: 0,
+          scrap_pct: 0.03,
+          manual_uph: 0,
+          tool_cost: 0,
+          tool_type: '',
+          tool_life: 0,
+          extra_cost: 0,
+          product_life: 1,
+          eau_ovr: 0,
+          repeat: 1,
+        },
+      ];
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, { processes: procs }),
+        },
+      };
     }
 
     case A.REMOVE_SP_PROCESS_ROW: {
       const sp = state.cplxState.subproducts[payload.spIdx];
-      return { ...state, isDirty: true, cplxState: {
-        ...state.cplxState,
-        subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, {
-          processes: sp.processes.filter((_, i) => i !== payload.idx)
-        })
-      }};
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, {
+            processes: sp.processes.filter((_, i) => i !== payload.idx),
+          }),
+        },
+      };
     }
 
     // ── BOM tree ──
@@ -462,27 +733,39 @@ export function calcReducer(state, action) {
     case A.ADD_BOM_ENTRY: {
       const { sp_index, qty = 1, notes = '' } = payload;
       const bom = Array.isArray(state.cplxState.bom) ? state.cplxState.bom : [];
-      if (bom.some(e => e && e.sp_index === sp_index)) return state; // dedupe
-      return { ...state, isDirty: true, cplxState: {
-        ...state.cplxState,
-        bom: [...bom, { sp_index, qty, notes }]
-      }};
+      if (bom.some((e) => e && e.sp_index === sp_index)) return state; // dedupe
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          bom: [...bom, { sp_index, qty, notes }],
+        },
+      };
     }
 
     case A.REMOVE_BOM_ENTRY: {
       const bom = Array.isArray(state.cplxState.bom) ? state.cplxState.bom : [];
-      return { ...state, isDirty: true, cplxState: {
-        ...state.cplxState,
-        bom: bom.filter((_, i) => i !== payload.idx)
-      }};
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          bom: bom.filter((_, i) => i !== payload.idx),
+        },
+      };
     }
 
     case A.SET_BOM_ENTRY_FIELD: {
       const bom = Array.isArray(state.cplxState.bom) ? state.cplxState.bom : [];
-      return { ...state, isDirty: true, cplxState: {
-        ...state.cplxState,
-        bom: updateAt(bom, payload.idx, { [payload.field]: payload.value })
-      }};
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          bom: updateAt(bom, payload.idx, { [payload.field]: payload.value }),
+        },
+      };
     }
 
     // ── Global ──
@@ -514,10 +797,13 @@ export function calcReducer(state, action) {
       const newMidForLegacy = () => `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       const mergedCplx = { ...createCplxState(), ...qState };
       if (Array.isArray(mergedCplx.subproducts)) {
-        mergedCplx.subproducts = mergedCplx.subproducts.map(sp => {
+        mergedCplx.subproducts = mergedCplx.subproducts.map((sp) => {
           if (!sp) return sp;
           const mats = Array.isArray(sp.materials) ? sp.materials : [];
-          return { ...sp, materials: mats.map(m => (m && !m._mid) ? { ...m, _mid: newMidForLegacy() } : m) };
+          return {
+            ...sp,
+            materials: mats.map((m) => (m && !m._mid ? { ...m, _mid: newMidForLegacy() } : m)),
+          };
         });
       }
       const next = upgradeCplxState(mergedCplx);
@@ -562,7 +848,15 @@ export function calcReducer(state, action) {
       };
 
     case A.SET_PENDING_QUOTE:
-      return { ...state, pendingQuote: { id: payload.id, type: payload.type, action: payload.action || 'load', data: payload.data || null } };
+      return {
+        ...state,
+        pendingQuote: {
+          id: payload.id,
+          type: payload.type,
+          action: payload.action || 'load',
+          data: payload.data || null,
+        },
+      };
 
     case A.CLEAR_PENDING_QUOTE:
       return { ...state, pendingQuote: null };

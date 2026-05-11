@@ -2189,6 +2189,68 @@ router.post(
 // callers see consistent state. The client still sends only the
 // single quote it's creating/updating; the server does the merge.
 
+// Alt-materials feature (Sprint S-ALT-MAT, PR #A) — emit audit events
+// when an operator switches the active set or copies between main/alt,
+// then strip the ephemeral _alt_materials_op signal so it never lands on
+// disk. Returns the cleansed `state` for upsertQuote. The caller passes
+// `prevQuote` (null on POST/new) so we can diff materials_active.
+function emitAltMaterialsAuditAndStrip(body, prevQuote, cu, ipAddr) {
+  const state = body?.state;
+  if (!state || typeof state !== 'object') return body;
+  const cleaned = { ...state };
+  const op = cleaned._alt_materials_op;
+  // Always strip before persist regardless of validity.
+  delete cleaned._alt_materials_op;
+  const quoteId = body?.id ?? prevQuote?.id ?? null;
+  // MATERIALS_COPY — fires whenever the client signals a copy op. Detail
+  // is JSON.stringify per Lesson MES-3-FIX-3 (uniform audit detail shape).
+  if (
+    op &&
+    op.type === 'copy' &&
+    (op.direction === 'main_to_alt' || op.direction === 'alt_to_main')
+  ) {
+    try {
+      audit(
+        'MATERIALS_COPY',
+        cu?.username || '-',
+        ipAddr || '-',
+        JSON.stringify({
+          quote_id: quoteId,
+          direction: op.direction,
+          source_count: Number(op.source_count) || 0,
+          dest_count_before: Number(op.dest_count_before) || 0,
+          user_id: cu?.id ?? null,
+        })
+      );
+    } catch {
+      /* audit failures must never block save */
+    }
+  }
+  // MATERIALS_ACTIVE_SWITCH — diff against prev. POSTs have no prev so
+  // only fire on PATCH. A new quote that starts on 'alt' is rare but
+  // captured indirectly via the COPY event when applicable.
+  const prevActive = prevQuote?.state?.materials_active || 'main';
+  const newActive = cleaned.materials_active || 'main';
+  if (prevQuote && prevActive !== newActive) {
+    try {
+      audit(
+        'MATERIALS_ACTIVE_SWITCH',
+        cu?.username || '-',
+        ipAddr || '-',
+        JSON.stringify({
+          quote_id: quoteId,
+          from: prevActive,
+          to: newActive,
+          user_id: cu?.id ?? null,
+        })
+      );
+    } catch {
+      /* swallow */
+    }
+  }
+  return { ...body, state: cleaned };
+}
+
 router.post('/quotes', saveRateLimit, async (req, res) => {
   const cu = getSessionUser(getTokenFromHeader(req));
   if (!cu) return res.status(401).json({ error: 'Unauthorized' });
@@ -2210,10 +2272,14 @@ router.post('/quotes', saveRateLimit, async (req, res) => {
     return res.status(400).json({ ok: false, error: 'Body must be a quote object' });
   }
   try {
+    // Strip + audit alt-materials op (PR #A). No prev quote on POST so
+    // MATERIALS_ACTIVE_SWITCH naturally skips; MATERIALS_COPY can still
+    // fire if the operator copied before first save.
+    const cleansed = emitAltMaterialsAuditAndStrip(body, null, cu, clientIp(req));
     // Drop any client-provided id on POST — the server assigns next-free.
     // Also drop _version: POST is for NEW quotes, so there's nothing
     // to collide with.
-    const saved = await upsertQuote({ ...body, id: undefined, _version: undefined });
+    const saved = await upsertQuote({ ...cleansed, id: undefined, _version: undefined });
     emitDataChange('quote.saved', {
       id: saved?.id,
       version: saved?._version,
@@ -2353,7 +2419,12 @@ router.patch('/quotes/:id', saveRateLimit, async (req, res) => {
     return res.status(400).json({ ok: false, error: 'Body must be a quote patch object' });
   }
   try {
-    const saved = await upsertQuote({ ...body, id });
+    // Alt-materials audit + strip (PR #A). Load prev so MATERIALS_ACTIVE_SWITCH
+    // can diff old vs new. getQuoteById is cheap (in-memory cache).
+    const { getQuoteById } = await import('../repositories/quotesStore.js');
+    const prevQuote = getQuoteById(id);
+    const cleansed = emitAltMaterialsAuditAndStrip({ ...body, id }, prevQuote, cu, clientIp(req));
+    const saved = await upsertQuote({ ...cleansed });
     emitDataChange('quote.saved', {
       id: saved?.id,
       version: saved?._version,

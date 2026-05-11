@@ -1,6 +1,7 @@
 import { useState, useEffect, useDeferredValue, useRef } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AccessProvider } from './context/AccessContext';
+import { AppConfigProvider } from './context/AppConfigContext';
 import { CalcProvider } from './context/CalcContext';
 import LoginPage from './components/Auth/LoginPage';
 import AppBootstrap from './components/Auth/AppBootstrap';
@@ -290,13 +291,20 @@ export default function App() {
             OUTSIDE CalcProvider so useAccess() is available to the
             shell chrome (Sidebar, TopBar) as well as tab content. */}
         <AccessProvider>
-          {/* CalcProvider lives at the App level (rather than scoped to
-              CostModule) so the WarningBar in the layout chrome can read
-              the calculator state. It holds only in-memory state — no
-              network side effects — so widening its scope is cheap. */}
-          <CalcProvider>
-            <AppContent />
-          </CalcProvider>
+          {/* AppConfigProvider (Sprint S-ALT-MAT, PR #A) — exposes
+              server-driven feature flags to descendants via useFeatureFlag().
+              Sits inside AccessProvider so flag-gated UI can also use
+              useAccess() for permission gating. No network side effects
+              beyond a single /api/runtime-config fetch at mount. */}
+          <AppConfigProvider>
+            {/* CalcProvider lives at the App level (rather than scoped to
+                CostModule) so the WarningBar in the layout chrome can read
+                the calculator state. It holds only in-memory state — no
+                network side effects — so widening its scope is cheap. */}
+            <CalcProvider>
+              <AppContent />
+            </CalcProvider>
+          </AppConfigProvider>
         </AccessProvider>
       </AuthProvider>
     </ErrorBoundary>

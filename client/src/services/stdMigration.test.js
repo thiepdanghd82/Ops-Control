@@ -25,7 +25,8 @@ test('upgradeStdState: null / non-object / array pass through unchanged', () => 
 
 test('upgradeStdState: legacy state without _schema_version gets version 1', () => {
   const legacy = {
-    moq: 1000, selling_price: 0.2,
+    moq: 1000,
+    selling_price: 0.2,
     materials: [{ code: 'M001' }],
     inks: [],
     processes: [],
@@ -39,7 +40,7 @@ test('upgradeStdState: legacy state without _schema_version gets version 1', () 
 test('upgradeStdState: _mid back-filled on every material row', () => {
   const legacy = {
     materials: [
-      { code: 'M001' },           // missing _mid
+      { code: 'M001' }, // missing _mid
       { code: 'M002', _mid: 'existing-mid' },
       { code: 'M003' },
     ],
@@ -63,7 +64,9 @@ test('upgradeStdState: numeric defaults filled when missing', () => {
 
 test('upgradeStdState: preserves explicit numeric values (no clobber)', () => {
   const explicit = {
-    active_moq_idx: 2, num_moq: 3, extra_moqs: [{ moq: 1000 }],
+    active_moq_idx: 2,
+    num_moq: 3,
+    extra_moqs: [{ moq: 1000 }],
   };
   const next = upgradeStdState(explicit);
   assert.equal(next.active_moq_idx, 2);
@@ -74,7 +77,9 @@ test('upgradeStdState: preserves explicit numeric values (no clobber)', () => {
 test('upgradeStdState: already-current state returned by reference (short-circuit)', () => {
   const current = {
     _schema_version: STD_SHAPE_VERSION,
-    active_moq_idx: 0, num_moq: 1, extra_moqs: [],
+    active_moq_idx: 0,
+    num_moq: 1,
+    extra_moqs: [],
     materials: [{ code: 'M001', _mid: 'm_0_a' }],
   };
   const next = upgradeStdState(current);
@@ -99,7 +104,9 @@ test('upgradeStdState: v1-stamped but materials missing _mid → re-backfills', 
   // without running ensureMids. upgradeStdState notices + heals.
   const halfMigrated = {
     _schema_version: 1,
-    active_moq_idx: 0, num_moq: 1, extra_moqs: [],
+    active_moq_idx: 0,
+    num_moq: 1,
+    extra_moqs: [],
     materials: [{ code: 'M001' }], // no _mid despite version stamp
   };
   const next = upgradeStdState(halfMigrated);
@@ -108,7 +115,9 @@ test('upgradeStdState: v1-stamped but materials missing _mid → re-backfills', 
 
 test('upgradeStdState: preserves user fields untouched through migration', () => {
   const legacy = {
-    rfq_number: 'RFQ-001', ccl_pn: 'T9999', selling_price: 0.05,
+    rfq_number: 'RFQ-001',
+    ccl_pn: 'T9999',
+    selling_price: 0.05,
     description: 'Test part',
     materials: [{ code: 'M001', usage: 2, s_price: 5 }],
   };
@@ -119,4 +128,87 @@ test('upgradeStdState: preserves user fields untouched through migration', () =>
   assert.equal(next.description, 'Test part');
   assert.equal(next.materials[0].usage, 2);
   assert.equal(next.materials[0].s_price, 5);
+});
+
+// ─── Alt-materials feature (Sprint S-ALT-MAT, PR #A) ──────────────────
+// Splits the single materials list into materials_main + materials_alt
+// + materials_active. Old quotes lazy-migrate on load: their materials
+// field becomes materials_main, alt starts empty, active defaults 'main'.
+// state.materials is kept as a mirror of the active set so legacy readers
+// (calcAll, validators, ink base-mat lookups) work without callsite churn.
+
+test('upgradeStdState v2: pre-v2 quote with materials gets split into _main + _alt + active=main', () => {
+  const v1 = {
+    _schema_version: 1,
+    active_moq_idx: 0,
+    num_moq: 1,
+    extra_moqs: [],
+    materials: [
+      { _mid: 'm_existing_a', code: 'M001', usage: 1 },
+      { _mid: 'm_existing_b', code: 'M002', usage: 2 },
+    ],
+  };
+  const next = upgradeStdState(v1);
+  assert.equal(next._schema_version, 2);
+  assert.ok(Array.isArray(next.materials_main));
+  assert.equal(next.materials_main.length, 2);
+  assert.equal(next.materials_main[0].code, 'M001');
+  assert.equal(next.materials_main[1].code, 'M002');
+  assert.deepEqual(next.materials_alt, []);
+  assert.equal(next.materials_active, 'main');
+  // Mirror points at the active set so existing readers stay green.
+  assert.equal(next.materials, next.materials_main);
+});
+
+test('upgradeStdState v2: unversioned legacy quote also splits to _main', () => {
+  const legacy = {
+    materials: [{ code: 'M001', usage: 1, s_price: 5 }],
+  };
+  const next = upgradeStdState(legacy);
+  assert.equal(next._schema_version, 2);
+  assert.equal(next.materials_main.length, 1);
+  assert.equal(next.materials_main[0].code, 'M001');
+  assert.deepEqual(next.materials_alt, []);
+  assert.equal(next.materials_active, 'main');
+  assert.equal(next.materials, next.materials_main);
+});
+
+test('upgradeStdState v2: post-v2 quote with active=alt keeps the alt set + mirrors correctly', () => {
+  // A quote that was saved on a build with the feature flag ON and the
+  // operator chose Alternative. The migrator must respect the saved
+  // active flag and point the mirror at materials_alt.
+  const v2 = {
+    _schema_version: 2,
+    active_moq_idx: 0,
+    num_moq: 1,
+    extra_moqs: [],
+    materials_main: [{ _mid: 'm_main_a', code: 'M001' }],
+    materials_alt: [
+      { _mid: 'm_alt_a', code: 'ALT001' },
+      { _mid: 'm_alt_b', code: 'ALT002' },
+    ],
+    materials_active: 'alt',
+    materials: [
+      { _mid: 'm_alt_a', code: 'ALT001' },
+      { _mid: 'm_alt_b', code: 'ALT002' },
+    ],
+  };
+  const next = upgradeStdState(v2);
+  assert.equal(next.materials_active, 'alt');
+  assert.equal(next.materials_main[0].code, 'M001');
+  assert.equal(next.materials_alt.length, 2);
+  assert.equal(next.materials_alt[1].code, 'ALT002');
+  // Mirror tracks alt set when active='alt'.
+  assert.equal(next.materials[0].code, 'ALT001');
+});
+
+test('upgradeStdState v2: pre-v2 quote with no materials field at all → empty _main + empty _alt', () => {
+  // A blank quote (createStdState round-trip on a fresh install) before
+  // any rows are added. Migration must not crash on missing materials.
+  const empty = { _schema_version: 1, active_moq_idx: 0, num_moq: 1, extra_moqs: [] };
+  const next = upgradeStdState(empty);
+  assert.equal(next._schema_version, 2);
+  assert.deepEqual(next.materials_main, []);
+  assert.deepEqual(next.materials_alt, []);
+  assert.equal(next.materials_active, 'main');
 });

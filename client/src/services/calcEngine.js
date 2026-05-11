@@ -57,46 +57,57 @@
 // ── Helpers ──
 
 export function getRateByWC(lib, wc) {
-  return (lib.rate || []).find(r => r.workcenter === wc) || null;
+  return (lib.rate || []).find((r) => r.workcenter === wc) || null;
 }
 
 export function getToolLife(lib, toolType) {
-  return (lib.ddl && lib.ddl.tool_life) ? (lib.ddl.tool_life[toolType] || 0) : 0;
+  return lib.ddl && lib.ddl.tool_life ? lib.ddl.tool_life[toolType] || 0 : 0;
 }
 
 export function getMatByCode(lib, code) {
   if (!code) return null;
   const c = String(code).trim().toLowerCase();
-  return (lib.mat || []).find(m => String(m.code).trim().toLowerCase() === c) || null;
+  return (lib.mat || []).find((m) => String(m.code).trim().toLowerCase() === c) || null;
 }
 
 export function getAllWorkcenters(lib) {
-  return (lib.rate || []).filter(r => r.machine_rate > 0 || r.labor_rate > 0).map(r => r.workcenter);
+  return (lib.rate || [])
+    .filter((r) => r.machine_rate > 0 || r.labor_rate > 0)
+    .map((r) => r.workcenter);
 }
 
 export function getProcessOptions() {
-  return ['Pre_Cut', 'Die_Cut', 'Print', 'Assembly', 'Special_cut', 'Inspection', 'ManualWork', 'Others'];
+  return [
+    'Pre_Cut',
+    'Die_Cut',
+    'Print',
+    'Assembly',
+    'Special_cut',
+    'Inspection',
+    'ManualWork',
+    'Others',
+  ];
 }
 
 const TYPE_TO_DDL = {
-  'Pre_Cut':     'pre_cut',
-  'Die_Cut':     'die_cut',
-  'Print':       'print_type_list',
-  'Assembly':    'assembly',
-  'Special_cut': 'special_cut',
-  'Inspection':  'inspection',
-  'ManualWork':  'manual_work',
-  'Others':      'others',
+  Pre_Cut: 'pre_cut',
+  Die_Cut: 'die_cut',
+  Print: 'print_type_list',
+  Assembly: 'assembly',
+  Special_cut: 'special_cut',
+  Inspection: 'inspection',
+  ManualWork: 'manual_work',
+  Others: 'others',
 };
 
 export function getWCOptionsByType(lib, processType) {
   const ddlKey = TYPE_TO_DDL[processType];
   if (!ddlKey || !processType) {
-    return (lib.rate || []).map(r => r.workcenter);
+    return (lib.rate || []).map((r) => r.workcenter);
   }
   const items = (lib.ddl && lib.ddl[ddlKey]) || [];
   if (!items.length) {
-    return (lib.rate || []).map(r => r.workcenter);
+    return (lib.rate || []).map((r) => r.workcenter);
   }
   return items;
 }
@@ -115,11 +126,11 @@ export function getWCOptionsByType(lib, processType) {
 // drives the base UPH; the factor degrades it to reflect real-world
 // throughput. Empty cut_type → factor 1.00 (no change, backward-compat).
 export const CUT_TYPE_SPEED_FACTOR = Object.freeze({
-  'kiss-cut':    1.00,
-  'through-cut': 0.70,
-  'both':        0.50,
-  'perf-only':   0.80,
-  'emboss':      0.60,
+  'kiss-cut': 1.0,
+  'through-cut': 0.7,
+  both: 0.5,
+  'perf-only': 0.8,
+  emboss: 0.6,
 });
 
 export function getCutTypeSpeedFactor(cutType) {
@@ -137,8 +148,8 @@ export function calcPitch(st) {
     // that doesn't exist. Shave off a tiny epsilon before ceil so exact
     // multiples don't falsely snap (matches layoutValidation rotary_snap).
     const toothPitch = Number(st.tooth_pitch_mm) || 3.175;
-    const z = Math.ceil(((st.sheet_length + st.min_gap_md) * st.rotary_cols / toothPitch) - 1e-9);
-    return z * toothPitch / st.rotary_cols;
+    const z = Math.ceil(((st.sheet_length + st.min_gap_md) * st.rotary_cols) / toothPitch - 1e-9);
+    return (z * toothPitch) / st.rotary_cols;
   }
   return st.sheet_length + st.min_gap_md;
 }
@@ -158,15 +169,15 @@ export function calcPcsPerRoll(st) {
 }
 
 export function calcQPA_LM(st, mat) {
-  const cavities = (mat && mat.cavities > 0) ? mat.cavities : calcLayoutPerSheet(st);
-  const pitch = (mat && mat.pitch_ovr && mat.pitch_ovr > 0) ? mat.pitch_ovr : calcPitch(st);
+  const cavities = mat && mat.cavities > 0 ? mat.cavities : calcLayoutPerSheet(st);
+  const pitch = mat && mat.pitch_ovr && mat.pitch_ovr > 0 ? mat.pitch_ovr : calcPitch(st);
   if (!cavities || !st.num_webs) return 0;
   if (!mat.free_liner || mat.free_liner === 0) {
-    return (pitch / 1000) / cavities / st.num_webs;
+    return pitch / 1000 / cavities / st.num_webs;
   }
   const maxFL = mat.free_liner;
   const pcsRoll = st.parts_in_md > 0 ? st.parts_in_md * st.num_webs : 1;
-  const rollLen = pcsRoll / cavities * (pitch / 1000) + maxFL * (pitch / 1000);
+  const rollLen = (pcsRoll / cavities) * (pitch / 1000) + maxFL * (pitch / 1000);
   return rollLen / pcsRoll / st.num_webs;
 }
 
@@ -185,8 +196,8 @@ function calcOffcut(mat, st) {
   // This gives the fraction of cavities that can't be cleanly sliced out
   // of the log at the current width. We resolve cavities/width against
   // layout defaults so blank material rows still compute correctly.
-  const width    = mat.width > 0 ? mat.width : (st && st.web_width_td ? st.web_width_td : 0);
-  const cavities = mat.cavities > 0 ? mat.cavities : (st ? calcLayoutPerSheet(st) : 0);
+  const width = mat.width > 0 ? mat.width : st && st.web_width_td ? st.web_width_td : 0;
+  const cavities = mat.cavities > 0 ? mat.cavities : st ? calcLayoutPerSheet(st) : 0;
   if (width > 0 && cavities > 0) {
     const rem = cavities % width;
     return Math.min(rem / cavities, 0.999);
@@ -209,7 +220,7 @@ function calcOffcut(mat, st) {
 export function calcMatScrapFactor(st) {
   let y = 1;
   for (const p of st.processes) {
-    if (p.workcenter) y *= (1 - (p.scrap_pct || 0));
+    if (p.workcenter) y *= 1 - (p.scrap_pct || 0);
   }
   return 1 - y;
 }
@@ -231,158 +242,265 @@ export function calcMat(mat, st, moq, allSpResults, subproducts) {
   // in black when not overridden; the engine MUST use the same fallback
   // so a visually-populated cell actually contributes to the formulas
   // (otherwise mat.width=0 silently zeroes qpa_m2, run_s, etc.).
-  const effWidth    = mat.width > 0 ? mat.width : (st.web_width_td || 0);
-  const effCavities = mat.cavities > 0 ? mat.cavities : (calcLayoutPerSheet(st) || 1);
-  const pitch        = (mat.pitch_ovr && mat.pitch_ovr > 0) ? mat.pitch_ovr : calcPitch(st);
+  const effWidth = mat.width > 0 ? mat.width : st.web_width_td || 0;
+  const effCavities = mat.cavities > 0 ? mat.cavities : calcLayoutPerSheet(st) || 1;
+  const pitch = mat.pitch_ovr && mat.pitch_ovr > 0 ? mat.pitch_ovr : calcPitch(st);
   const layout_sheet = calcLayoutPerSheet(st);
-  const webs         = st.num_webs || 1;
-  const cavities     = effCavities;
+  const webs = st.num_webs || 1;
+  const cavities = effCavities;
   const scrap_factor = calcMatScrapFactor(st);
-  const pcs_roll     = st.pcs_per_roll || 0;
-  const qpa_lm_raw   = calcQPA_LM(st, mat);
+  const pcs_roll = st.pcs_per_roll || 0;
+  const qpa_lm_raw = calcQPA_LM(st, mat);
 
   // SP sub-product reference (FG Z assembly)
   if (allSpResults && mat.code) {
     const sps = subproducts || [];
-    const spIdx = sps.findIndex(sp => sp.code === mat.code);
+    const spIdx = sps.findIndex((sp) => sp.code === mat.code);
     if (spIdx >= 0) {
       const spRes = allSpResults[spIdx];
       // Validate that the referenced SP result was actually computed.
       // A missing/empty result means upstream calc failed — we must NOT
       // silently treat it as zero cost, that would hide data integrity bugs.
       if (!spRes || typeof spRes !== 'object' || !('g_mat_cost' in spRes)) {
-        console.warn(`[calcMat] SP reference "${mat.code}" (idx=${spIdx}) has no computed result; returning error marker.`);
+        console.warn(
+          `[calcMat] SP reference "${mat.code}" (idx=${spIdx}) has no computed result; returning error marker.`
+        );
         return {
-          setup_s: 0, setup_g: 0, run_s: 0, run_g: 0, vat: 0, total_s: 0, total_g: 0,
-          qpa_m2: 0, qpa_lm: 0, mat_po_lm: 0, pitch: 0, qpa_lm_raw: 0,
-          scrap_factor, webs, layout_sheet, pcs_roll, meter_roll: 0,
-          isSPRef: true, spCost: 0,
-          _spOvhd: 0, _spLabor: 0, _spTooling: 0, _spVat: 0,
+          setup_s: 0,
+          setup_g: 0,
+          run_s: 0,
+          run_g: 0,
+          vat: 0,
+          total_s: 0,
+          total_g: 0,
+          qpa_m2: 0,
+          qpa_lm: 0,
+          mat_po_lm: 0,
+          pitch: 0,
+          qpa_lm_raw: 0,
+          scrap_factor,
+          webs,
+          layout_sheet,
+          pcs_roll,
+          meter_roll: 0,
+          isSPRef: true,
+          spCost: 0,
+          _spOvhd: 0,
+          _spLabor: 0,
+          _spTooling: 0,
+          _spVat: 0,
           error: `SP reference "${mat.code}" not computed`,
         };
       }
-      const sf         = safeYieldDivisor(scrap_factor);
-      const usage      = (mat.usage && mat.usage > 0) ? mat.usage : 1;
-      const run_s      = (spRes.g_mat_cost  || 0) / sf * usage;
-      const _spOvhd    = (spRes.bd_overhead || 0) / sf * usage;
-      const _spLabor   = (spRes.bd_labor    || 0) / sf * usage;
-      const _spTooling = (spRes.tooling      || 0) / sf * usage;
-      const _spVat     = (spRes.vat_loss    || 0) / sf * usage;
-      const setup_s    = (mat.setup_lm > 0 && moq)
-        ? (spRes.g_ttl || 0) * (mat.setup_lm || 0) / moq : 0;
+      const sf = safeYieldDivisor(scrap_factor);
+      const usage = mat.usage && mat.usage > 0 ? mat.usage : 1;
+      const run_s = ((spRes.g_mat_cost || 0) / sf) * usage;
+      const _spOvhd = ((spRes.bd_overhead || 0) / sf) * usage;
+      const _spLabor = ((spRes.bd_labor || 0) / sf) * usage;
+      const _spTooling = ((spRes.tooling || 0) / sf) * usage;
+      const _spVat = ((spRes.vat_loss || 0) / sf) * usage;
+      const setup_s =
+        mat.setup_lm > 0 && moq ? ((spRes.g_ttl || 0) * (mat.setup_lm || 0)) / moq : 0;
       return {
-        setup_s, setup_g: setup_s, run_s, run_g: run_s, vat: 0,
-        total_s: setup_s + run_s, total_g: setup_s + run_s,
-        qpa_m2: 0, qpa_lm: 0, mat_po_lm: 0, pitch: 0, qpa_lm_raw: 0,
-        scrap_factor, webs, layout_sheet, pcs_roll, meter_roll: 0,
-        isSPRef: true, spCost: spRes.g_mat_cost || 0,
-        _spOvhd, _spLabor, _spTooling, _spVat
+        setup_s,
+        setup_g: setup_s,
+        run_s,
+        run_g: run_s,
+        vat: 0,
+        total_s: setup_s + run_s,
+        total_g: setup_s + run_s,
+        qpa_m2: 0,
+        qpa_lm: 0,
+        mat_po_lm: 0,
+        pitch: 0,
+        qpa_lm_raw: 0,
+        scrap_factor,
+        webs,
+        layout_sheet,
+        pcs_roll,
+        meter_roll: 0,
+        isSPRef: true,
+        spCost: spRes.g_mat_cost || 0,
+        _spOvhd,
+        _spLabor,
+        _spTooling,
+        _spVat,
       };
     }
   }
 
-  const _webs      = st.num_webs || 1;
-  const qpa_m2     = (mat.code && effWidth) ? pitch * effWidth / 1e6 / cavities / _webs * (mat.usage || 1) : 0;
-  const qpa_lm     = mat.code ? pitch / 1000 / cavities / _webs * (mat.usage || 1) : 0;
-  const mat_po_lm  = mat.code ? (moq * 1.1 * pitch / 1000 / cavities / _webs) * (mat.usage || 1) + (mat.setup_lm || 0) : 0;
-  const meter_roll = (cavities > 0 && pcs_roll > 0) ? pcs_roll / cavities * pitch / 1000 : 0;
+  const _webs = st.num_webs || 1;
+  const qpa_m2 =
+    mat.code && effWidth ? ((pitch * effWidth) / 1e6 / cavities / _webs) * (mat.usage || 1) : 0;
+  const qpa_lm = mat.code ? (pitch / 1000 / cavities / _webs) * (mat.usage || 1) : 0;
+  const mat_po_lm = mat.code
+    ? ((moq * 1.1 * pitch) / 1000 / cavities / _webs) * (mat.usage || 1) + (mat.setup_lm || 0)
+    : 0;
+  const meter_roll = cavities > 0 && pcs_roll > 0 ? ((pcs_roll / cavities) * pitch) / 1000 : 0;
 
   const _blank = {
-    setup_s: 0, setup_g: 0, run_s: 0, run_g: 0, vat: 0, total_s: 0, total_g: 0,
-    qpa_m2, qpa_lm, mat_po_lm, pitch, qpa_lm_raw, scrap_factor, webs, layout_sheet, pcs_roll, meter_roll
+    setup_s: 0,
+    setup_g: 0,
+    run_s: 0,
+    run_g: 0,
+    vat: 0,
+    total_s: 0,
+    total_g: 0,
+    qpa_m2,
+    qpa_lm,
+    mat_po_lm,
+    pitch,
+    qpa_lm_raw,
+    scrap_factor,
+    webs,
+    layout_sheet,
+    pcs_roll,
+    meter_roll,
   };
   // Need a code AND a resolvable width (either on the row or from layout).
   if (!mat.code || !effWidth) return _blank;
 
-  const offcut   = mat.offcut_yn === 'Y' ? calcOffcut(mat, st) : mat.offcut_yn === 'N' ? 0 : 0.05;
-  const sp       = mat.latest || mat.s_price || 0;
-  const gp       = mat.latest || mat.g_price || mat.s_price || 0;
+  const offcut = mat.offcut_yn === 'Y' ? calcOffcut(mat, st) : mat.offcut_yn === 'N' ? 0 : 0.05;
+  const sp = mat.latest || mat.s_price || 0;
+  const gp = mat.latest || mat.g_price || mat.s_price || 0;
   const slit_adj = mat.slitting_yn === 'Y' ? 0.5 : mat.slitting_yn === 'N' ? 0 : 0.1;
 
   const offcutDiv = safeYieldDivisor(offcut);
-  const scrapDiv  = safeYieldDivisor(scrap_factor);
-  const setup_s = moq ? (sp + slit_adj) * (mat.setup_lm || 0) * (mat.usage || 1) / offcutDiv * (effWidth / 1000) / moq : 0;
-  const setup_g = moq ? (gp + slit_adj) * (mat.setup_lm || 0) * (mat.usage || 1) / offcutDiv * (effWidth / 1000) / moq : 0;
+  const scrapDiv = safeYieldDivisor(scrap_factor);
+  const setup_s = moq
+    ? ((((sp + slit_adj) * (mat.setup_lm || 0) * (mat.usage || 1)) / offcutDiv) *
+        (effWidth / 1000)) /
+      moq
+    : 0;
+  const setup_g = moq
+    ? ((((gp + slit_adj) * (mat.setup_lm || 0) * (mat.usage || 1)) / offcutDiv) *
+        (effWidth / 1000)) /
+      moq
+    : 0;
 
-  const run_s = (sp + slit_adj) * (effWidth / 1000) * qpa_lm_raw / scrapDiv / offcutDiv * (mat.usage || 1);
-  const run_g = (gp + slit_adj) * (effWidth / 1000) * qpa_lm_raw / scrapDiv / offcutDiv * (mat.usage || 1);
+  const run_s =
+    (((sp + slit_adj) * (effWidth / 1000) * qpa_lm_raw) / scrapDiv / offcutDiv) * (mat.usage || 1);
+  const run_g =
+    (((gp + slit_adj) * (effWidth / 1000) * qpa_lm_raw) / scrapDiv / offcutDiv) * (mat.usage || 1);
 
   const total_s = setup_s + run_s;
   const total_g = setup_g + run_g;
-  const vat = (st.trade_mode === 'USD(Book)') ? total_s * 0.15 : 0;
+  const vat = st.trade_mode === 'USD(Book)' ? total_s * 0.15 : 0;
 
   return {
-    setup_s, setup_g, run_s, run_g, vat, total_s, total_g,
-    qpa_m2, qpa_lm, mat_po_lm, pitch, qpa_lm_raw, scrap_factor, webs, layout_sheet, pcs_roll, meter_roll
+    setup_s,
+    setup_g,
+    run_s,
+    run_g,
+    vat,
+    total_s,
+    total_g,
+    qpa_m2,
+    qpa_lm,
+    mat_po_lm,
+    pitch,
+    qpa_lm_raw,
+    scrap_factor,
+    webs,
+    layout_sheet,
+    pcs_roll,
+    meter_roll,
   };
 }
 
 // ── Ink Cost ──
 
 export function calcInk(ink, st, moq, lib) {
-  if (!ink.color) return { setup_s: 0, run_s: 0, vat: 0, ink_cover_disp: '', layout_indigo_disp: '', total: 0 };
+  if (!ink.color)
+    return { setup_s: 0, run_s: 0, vat: 0, ink_cover_disp: '', layout_indigo_disp: '', total: 0 };
   const price = ink.latest || ink.s_price || 0;
   const isIndigo = (ink.print_type || '') === 'Indigo';
   const pitch = calcPitch(st);
   const layout_per_sheet = calcLayoutPerSheet(st);
   const covArr = (lib.ddl && lib.ddl.coverage) || [];
-  const covObj = covArr.find(c => c.pt === ink.print_type);
-  const ink_cover_val = (ink.coverage_override > 0) ? ink.coverage_override : (covObj ? covObj.cov : 0);
-  const ink_cover_disp = isIndigo ? '' : (ink_cover_val || '');
-  const layout_indigo_val = (isIndigo && pitch > 0) ? Math.floor(980 / pitch) * layout_per_sheet * (st.num_webs || 1) : 0;
+  const covObj = covArr.find((c) => c.pt === ink.print_type);
+  const ink_cover_val = ink.coverage_override > 0 ? ink.coverage_override : covObj ? covObj.cov : 0;
+  const ink_cover_disp = isIndigo ? '' : ink_cover_val || '';
+  const layout_indigo_val =
+    isIndigo && pitch > 0 ? Math.floor(980 / pitch) * layout_per_sheet * (st.num_webs || 1) : 0;
   const layout_indigo_disp = isIndigo ? layout_indigo_val : '';
   const scrapF = safeYieldDivisor(calcMatScrapFactor(st));
 
-  const _baseMatRef = st.materials.find(m => m.code === ink.base_mat);
+  const _baseMatRef = st.materials.find((m) => m.code === ink.base_mat);
   // Fallback: extract rightmost positive numeric substring from base_mat code.
   // Guard against codes like "ABC-200" where slice(-4) would return "-200"
   // and produce a NEGATIVE width that silently breaks downstream calcs.
   const _widthMatch = String(ink.base_mat || '').match(/(\d+(?:\.\d+)?)\s*$/);
   const _widthFromCode = _widthMatch ? Math.max(0, parseFloat(_widthMatch[1])) : 0;
-  const width_m = (_baseMatRef && _baseMatRef.width > 0)
-    ? _baseMatRef.width / 1000
-    : _widthFromCode / 1000;
+  const width_m =
+    _baseMatRef && _baseMatRef.width > 0 ? _baseMatRef.width / 1000 : _widthFromCode / 1000;
 
-  let run_s = 0, setup_s = 0;
+  let run_s = 0,
+    setup_s = 0;
   if (isIndigo) {
     const clicks = ink.clicks || 0;
     const _ccTbl = (lib.ddl && lib.ddl.click_charges) || {};
-    const _ccKeys = Object.keys(_ccTbl).map(Number).filter(k => !isNaN(k) && k > 0).sort((a, b) => a - b);
+    const _ccKeys = Object.keys(_ccTbl)
+      .map(Number)
+      .filter((k) => !isNaN(k) && k > 0)
+      .sort((a, b) => a - b);
     let click_charge = 0;
-    for (const k of _ccKeys) { if (k <= clicks) click_charge = parseFloat(_ccTbl[String(k)]) || 0; else break; }
-    run_s = layout_indigo_val > 0 ? click_charge * clicks / layout_indigo_val / scrapF : 0;
-    const baseMat = st.materials.find(m => m.code === ink.base_mat);
-    const baseMat_usage = baseMat ? (baseMat.usage || 1) : 1;
+    for (const k of _ccKeys) {
+      if (k <= clicks) click_charge = parseFloat(_ccTbl[String(k)]) || 0;
+      else break;
+    }
+    run_s = layout_indigo_val > 0 ? (click_charge * clicks) / layout_indigo_val / scrapF : 0;
+    const baseMat = st.materials.find((m) => m.code === ink.base_mat);
+    const baseMat_usage = baseMat ? baseMat.usage || 1 : 1;
     const setup_sheets = Math.ceil(baseMat_usage / 0.98);
-    setup_s = moq ? click_charge * clicks * setup_sheets / moq : 0;
+    setup_s = moq ? (click_charge * clicks * setup_sheets) / moq : 0;
   } else {
-    const qpa_lm = (pitch / 1000) / layout_per_sheet / (st.num_webs || 1);
-    run_s = (ink_cover_val > 0 && width_m > 0) ? price * qpa_lm * (ink.area_pct || 0) * width_m / ink_cover_val / scrapF : 0;
-    const baseMat = st.materials.find(m => m.code === ink.base_mat);
-    const baseMat_usage = baseMat ? (baseMat.usage || 1) : 1;
+    const qpa_lm = pitch / 1000 / layout_per_sheet / (st.num_webs || 1);
+    run_s =
+      ink_cover_val > 0 && width_m > 0
+        ? (price * qpa_lm * (ink.area_pct || 0) * width_m) / ink_cover_val / scrapF
+        : 0;
+    const baseMat = st.materials.find((m) => m.code === ink.base_mat);
+    const baseMat_usage = baseMat ? baseMat.usage || 1 : 1;
     // Guard setup_ink_qty the same way as run_s: when coverage data is
     // missing (ink_cover_val = 0) the coverage-based portion of setup
     // should also be zero — otherwise we divide by 1 and produce an
     // economically meaningless number while run_s is zero.
-    const setup_ink_qty = (ink.setup_kg || 0) +
-      ((ink_cover_val > 0 && width_m > 0)
-        ? (ink.area_pct || 0) * width_m * baseMat_usage / ink_cover_val
+    const setup_ink_qty =
+      (ink.setup_kg || 0) +
+      (ink_cover_val > 0 && width_m > 0
+        ? ((ink.area_pct || 0) * width_m * baseMat_usage) / ink_cover_val
         : 0);
-    setup_s = moq ? price * setup_ink_qty / moq : 0;
+    setup_s = moq ? (price * setup_ink_qty) / moq : 0;
   }
   const total = setup_s + run_s;
-  const vat = (st.trade_mode === 'USD(Book)') ? total * 0.15 : 0;
+  const vat = st.trade_mode === 'USD(Book)' ? total * 0.15 : 0;
   return { setup_s, run_s, vat, ink_cover_disp, layout_indigo_disp, total };
 }
 
 // ── Process Cost ──
 
 export function calcProcess(proc, st, moq, lib) {
-  if (!proc.workcenter) return { setup_mach: 0, setup_labor: 0, run_mach: 0, run_labor: 0, tooling: 0, extra: 0, extra_vat: 0, uph: 0, mach_rate: 0, labor_rate: 0, speed_uom: '', total_time: 0, pitch: 0 };
+  if (!proc.workcenter)
+    return {
+      setup_mach: 0,
+      setup_labor: 0,
+      run_mach: 0,
+      run_labor: 0,
+      tooling: 0,
+      extra: 0,
+      extra_vat: 0,
+      uph: 0,
+      mach_rate: 0,
+      labor_rate: 0,
+      speed_uom: '',
+      total_time: 0,
+      pitch: 0,
+    };
   const rate = getRateByWC(lib, proc.workcenter) || { machine_rate: 0, labor_rate: 0 };
-  const mach_rate  = rate.machine_rate || 0;
-  const labor_rate = rate.labor_rate   || 0;
-  const crew       = rate.crew         || 1;
+  const mach_rate = rate.machine_rate || 0;
+  const labor_rate = rate.labor_rate || 0;
+  const crew = rate.crew || 1;
   const manual_rate = (getRateByWC(lib, 'Manual') || {}).labor_rate || 2.54;
   const speed_uom = rate.speed_uom || '';
   const pitch = calcPitch(st);
@@ -395,12 +513,13 @@ export function calcProcess(proc, st, moq, lib) {
   const sp = proc.speed || 0;
   const eff = proc.efficiency || 0.85;
   const _suom = (speed_uom || '').replace(/\s/g, '').toLowerCase();
-  if      (_suom === 'm/min')                          uph = sp * eff * 60 * 1000 / Math.max(1, pitch) * layout;
-  else if (_suom === 'mtr/hr' || _suom === 'm/hr')    uph = sp * eff * 1000 / Math.max(1, pitch) * layout;
-  else if (_suom === 'stamp/min')                      uph = sp * eff * 60 * layout;
-  else if (_suom === 'pcs/h'  || _suom === 'pcs/hr')  uph = sp * eff;
+  if (_suom === 'm/min') uph = ((sp * eff * 60 * 1000) / Math.max(1, pitch)) * layout;
+  else if (_suom === 'mtr/hr' || _suom === 'm/hr')
+    uph = ((sp * eff * 1000) / Math.max(1, pitch)) * layout;
+  else if (_suom === 'stamp/min') uph = sp * eff * 60 * layout;
+  else if (_suom === 'pcs/h' || _suom === 'pcs/hr') uph = sp * eff;
   else if (_suom === 'sheets/h' || _suom === 'sheets/hr') uph = sp * eff * layout;
-  else if (_suom === 'sheet/h'  || _suom === 'sheet/hr')  uph = sp * eff * layout;
+  else if (_suom === 'sheet/h' || _suom === 'sheet/hr') uph = sp * eff * layout;
 
   // Sprint S-DFM-P3 — cut_type speed factor for Die_Cut rows.
   // Through / both / perf / emboss all run slower than kiss-cut due
@@ -411,50 +530,75 @@ export function calcProcess(proc, st, moq, lib) {
   }
 
   const setup_h = proc.setup_h || 0;
-  const setup_mach  = moq ? setup_h * mach_rate / moq * repeat : 0;
-  const setup_labor = moq ? setup_h * labor_rate * crew / moq * repeat : 0;
-  const run_mach  = uph > 0 ? mach_rate / uph / Math.max(0.001, scrapFactor) * repeat : 0;
-  const run_labor = ((uph > 0 ? labor_rate * crew / uph / Math.max(0.001, scrapFactor) : 0) +
-                     (proc.manual_uph > 0 ? manual_rate / proc.manual_uph / Math.max(0.001, scrapFactor) : 0)) * repeat;
+  const setup_mach = moq ? ((setup_h * mach_rate) / moq) * repeat : 0;
+  const setup_labor = moq ? ((setup_h * labor_rate * crew) / moq) * repeat : 0;
+  const run_mach = uph > 0 ? (mach_rate / uph / Math.max(0.001, scrapFactor)) * repeat : 0;
+  const run_labor =
+    ((uph > 0 ? (labor_rate * crew) / uph / Math.max(0.001, scrapFactor) : 0) +
+      (proc.manual_uph > 0 ? manual_rate / proc.manual_uph / Math.max(0.001, scrapFactor) : 0)) *
+    repeat;
 
   const _totalQtyAuto = (st.annual_qty || moq) * (st.product_lifetime || 1);
-  const eau = (proc.eau_ovr && proc.eau_ovr > 0) ? proc.eau_ovr : _totalQtyAuto;
+  const eau = proc.eau_ovr && proc.eau_ovr > 0 ? proc.eau_ovr : _totalQtyAuto;
 
   // Tooling
   let tooling = 0;
   if (proc.tool_cost > 0) {
-    const tlife = (proc.tool_life_ovr && proc.tool_life_ovr !== false) ? (proc.tool_life || 1) : (getToolLife(lib, proc.tool_type) || proc.tool_life || 1);
+    const tlife =
+      proc.tool_life_ovr && proc.tool_life_ovr !== false
+        ? proc.tool_life || 1
+        : getToolLife(lib, proc.tool_type) || proc.tool_life || 1;
     // DDL data uses "Jig" but legacy code shipped with "Jig& Fixture".
     // Normalize both to match any variant (whitespace/casing/ampersand) but
     // require EXACT match after normalization so we don't accidentally
     // classify user-entered values like "jigsaw" / "jigging" as Jig.
-    const ttNorm = String(proc.tool_type || '').toLowerCase().replace(/[\s&]/g, '');
+    const ttNorm = String(proc.tool_type || '')
+      .toLowerCase()
+      .replace(/[\s&]/g, '');
     const isJig = ttNorm === 'jig' || ttNorm === 'jigfixture';
     if (isJig) {
-      tooling = (tlife > eau) ? proc.tool_cost / eau : proc.tool_cost / tlife;
+      tooling = tlife > eau ? proc.tool_cost / eau : proc.tool_cost / tlife;
     } else {
       const totalToolPcs = tlife * layout;
-      tooling = (totalToolPcs > eau)
-        ? proc.tool_cost / eau
-        : proc.tool_cost / totalToolPcs;
+      tooling = totalToolPcs > eau ? proc.tool_cost / eau : proc.tool_cost / totalToolPcs;
     }
   }
 
   const extra_raw = proc.extra_cost || 0;
   const extra = extra_raw > 0 ? extra_raw / Math.max(0.001, scrapFactor) : 0;
-  const extra_vat = (st.trade_mode === 'USD(Book)') ? extra * 0.15 : 0;
+  const extra_vat = st.trade_mode === 'USD(Book)' ? extra * 0.15 : 0;
 
-  const total_time = ((uph > 0 ? moq / uph : 0) + (proc.manual_uph > 0 ? moq / proc.manual_uph : 0) + setup_h) * 60 * repeat;
-  return { setup_mach, setup_labor, run_mach, run_labor, tooling, extra, extra_vat, uph, mach_rate, labor_rate, speed_uom, eau, pitch, total_time };
+  const total_time =
+    ((uph > 0 ? moq / uph : 0) + (proc.manual_uph > 0 ? moq / proc.manual_uph : 0) + setup_h) *
+    60 *
+    repeat;
+  return {
+    setup_mach,
+    setup_labor,
+    run_mach,
+    run_labor,
+    tooling,
+    extra,
+    extra_vat,
+    uph,
+    mach_rate,
+    labor_rate,
+    speed_uom,
+    eau,
+    pitch,
+    total_time,
+  };
 }
 
 // ── Packing & Shipping ──
 
 export function calcPacking(st) {
   if (!st.pcs_per_bag) return 0;
-  return (st.container_cost || 0) / st.pcs_per_bag +
-         (st.box_cost || 0) / Math.max(1, st.bags_per_box) / st.pcs_per_bag +
-         (st.other_packing || 0);
+  return (
+    (st.container_cost || 0) / st.pcs_per_bag +
+    (st.box_cost || 0) / Math.max(1, st.bags_per_box) / st.pcs_per_bag +
+    (st.other_packing || 0)
+  );
 }
 
 export function calcShipping(st) {
@@ -494,8 +638,10 @@ export function computeSga({ g_ttl, sp_price, lib, site, snapshot }) {
     const snapTtl = (Number(g_ttl) || 0) + snapSga;
     const snapGm = sp_price > 0 ? 1 - snapTtl / sp_price : null;
     return {
-      sga: snapSga, sga_rate_pct: pct,
-      g_ttl_with_sga: snapTtl, gm_after_sga: snapGm,
+      sga: snapSga,
+      sga_rate_pct: pct,
+      g_ttl_with_sga: snapTtl,
+      gm_after_sga: snapGm,
       site: snapshot.site || siteKey,
       from_snapshot: true,
     };
@@ -511,7 +657,10 @@ export function computeSga({ g_ttl, sp_price, lib, site, snapshot }) {
   if (rawValue == null) {
     const normalizedKey = String(siteKey).trim().toLowerCase();
     for (const [k, v] of Object.entries(rates)) {
-      if (String(k).trim().toLowerCase() === normalizedKey) { rawValue = v; break; }
+      if (String(k).trim().toLowerCase() === normalizedKey) {
+        rawValue = v;
+        break;
+      }
     }
   }
   const parsed = Number(rawValue);
@@ -519,31 +668,69 @@ export function computeSga({ g_ttl, sp_price, lib, site, snapshot }) {
   const sga = sgaRatePct > 0 ? (Number(g_ttl) || 0) * (sgaRatePct / 100) : 0;
   const g_ttl_with_sga = (Number(g_ttl) || 0) + sga;
   const gm_after_sga = sp_price > 0 ? 1 - g_ttl_with_sga / sp_price : null;
-  return { sga, sga_rate_pct: sgaRatePct, g_ttl_with_sga, gm_after_sga, site: siteKey, from_snapshot: false };
+  return {
+    sga,
+    sga_rate_pct: sgaRatePct,
+    g_ttl_with_sga,
+    gm_after_sga,
+    site: siteKey,
+    from_snapshot: false,
+  };
 }
 
 // ── Aggregate: calcAll ──
 
 export function calcAll(st, allSpResults, lib, subproducts) {
-  const moq = (st.moq && st.moq > 0) ? st.moq : (st.annual_qty && st.annual_qty > 0 ? st.annual_qty : 1);
+  const moq =
+    st.moq && st.moq > 0 ? st.moq : st.annual_qty && st.annual_qty > 0 ? st.annual_qty : 1;
 
   // Materials
-  let s_mat_setup = 0, g_mat_setup = 0, s_mat_run = 0, g_mat_run = 0, vat_mat = 0;
-  const matResults = st.materials.map(m => {
-    if (m.hidden) return { setup_s: 0, setup_g: 0, run_s: 0, run_g: 0, vat: 0, total_s: 0, total_g: 0, qpa_m2: 0, qpa_lm: 0, mat_po_lm: 0, pitch: 0, qpa_lm_raw: 0, scrap_factor: 0, webs: 0, layout_sheet: 0, pcs_roll: 0, meter_roll: 0 };
+  let s_mat_setup = 0,
+    g_mat_setup = 0,
+    s_mat_run = 0,
+    g_mat_run = 0,
+    vat_mat = 0;
+  const matResults = st.materials.map((m) => {
+    if (m.hidden)
+      return {
+        setup_s: 0,
+        setup_g: 0,
+        run_s: 0,
+        run_g: 0,
+        vat: 0,
+        total_s: 0,
+        total_g: 0,
+        qpa_m2: 0,
+        qpa_lm: 0,
+        mat_po_lm: 0,
+        pitch: 0,
+        qpa_lm_raw: 0,
+        scrap_factor: 0,
+        webs: 0,
+        layout_sheet: 0,
+        pcs_roll: 0,
+        meter_roll: 0,
+      };
     const r = calcMat(m, st, moq, allSpResults, subproducts);
-    s_mat_setup += r.setup_s || 0; g_mat_setup += r.setup_g || 0;
-    s_mat_run += r.run_s || 0;     g_mat_run += r.run_g || 0;
+    s_mat_setup += r.setup_s || 0;
+    g_mat_setup += r.setup_g || 0;
+    s_mat_run += r.run_s || 0;
+    g_mat_run += r.run_g || 0;
     vat_mat += r.vat || 0;
     return r;
   });
 
   // Inks
-  let s_ink_setup = 0, s_ink_run = 0, vat_ink = 0;
-  const inkResults = st.inks.map(ik => {
-    if (ik.hidden) return { setup_s: 0, run_s: 0, vat: 0, ink_cover_disp: '', layout_indigo_disp: '', total: 0 };
+  let s_ink_setup = 0,
+    s_ink_run = 0,
+    vat_ink = 0;
+  const inkResults = st.inks.map((ik) => {
+    if (ik.hidden)
+      return { setup_s: 0, run_s: 0, vat: 0, ink_cover_disp: '', layout_indigo_disp: '', total: 0 };
     const r = calcInk(ik, st, moq, lib);
-    s_ink_setup += r.setup_s || 0; s_ink_run += r.run_s || 0; vat_ink += r.vat || 0;
+    s_ink_setup += r.setup_s || 0;
+    s_ink_run += r.run_s || 0;
+    vat_ink += r.vat || 0;
     return r;
   });
 
@@ -552,35 +739,71 @@ export function calcAll(st, allSpResults, lib, subproducts) {
   let vat_loss = vat_mat + vat_ink;
 
   // Processes
-  let overhead = 0, labor_cost = 0, tooling = 0;
-  let setup_mach_total = 0, setup_labor_total = 0, proc_extra = 0, proc_extra_vat = 0;
-  const procResults = st.processes.map(p => {
-    if (p.hidden) return { setup_mach: 0, setup_labor: 0, run_mach: 0, run_labor: 0, tooling: 0, extra: 0, extra_vat: 0, uph: 0, mach_rate: 0, labor_rate: 0, speed_uom: '', total_time: 0, pitch: 0 };
+  let overhead = 0,
+    labor_cost = 0,
+    tooling = 0;
+  let setup_mach_total = 0,
+    setup_labor_total = 0,
+    proc_extra = 0,
+    proc_extra_vat = 0;
+  const procResults = st.processes.map((p) => {
+    if (p.hidden)
+      return {
+        setup_mach: 0,
+        setup_labor: 0,
+        run_mach: 0,
+        run_labor: 0,
+        tooling: 0,
+        extra: 0,
+        extra_vat: 0,
+        uph: 0,
+        mach_rate: 0,
+        labor_rate: 0,
+        speed_uom: '',
+        total_time: 0,
+        pitch: 0,
+      };
     const r = calcProcess(p, st, moq, lib);
-    overhead += (r.run_mach || 0);
-    labor_cost += (r.run_labor || 0);
-    tooling += (r.tooling || 0);
-    setup_mach_total += (r.setup_mach || 0);
-    setup_labor_total += (r.setup_labor || 0);
-    overhead += (r.setup_mach || 0);
-    labor_cost += (r.setup_labor || 0);
-    proc_extra += (r.extra || 0);
-    proc_extra_vat += (r.extra_vat || 0);
+    overhead += r.run_mach || 0;
+    labor_cost += r.run_labor || 0;
+    tooling += r.tooling || 0;
+    setup_mach_total += r.setup_mach || 0;
+    setup_labor_total += r.setup_labor || 0;
+    overhead += r.setup_mach || 0;
+    labor_cost += r.setup_labor || 0;
+    proc_extra += r.extra || 0;
+    proc_extra_vat += r.extra_vat || 0;
     return r;
   });
 
   // SP sub-product pass-through
-  matResults.forEach(r => {
+  matResults.forEach((r) => {
     if (!r.isSPRef) return;
-    overhead   += r._spOvhd    || 0;
-    labor_cost += r._spLabor   || 0;
-    tooling    += r._spTooling || 0;
-    vat_loss   += r._spVat     || 0;
+    overhead += r._spOvhd || 0;
+    labor_cost += r._spLabor || 0;
+    tooling += r._spTooling || 0;
+    vat_loss += r._spVat || 0;
   });
 
   const packing_ship = calcPacking(st) + calcShipping(st);
-  const s_ttl = s_mat_cost + overhead + labor_cost + vat_loss + proc_extra_vat + tooling + proc_extra + packing_ship;
-  const g_ttl = g_mat_cost + overhead + labor_cost + vat_loss + proc_extra_vat + tooling + proc_extra + packing_ship;
+  const s_ttl =
+    s_mat_cost +
+    overhead +
+    labor_cost +
+    vat_loss +
+    proc_extra_vat +
+    tooling +
+    proc_extra +
+    packing_ship;
+  const g_ttl =
+    g_mat_cost +
+    overhead +
+    labor_cost +
+    vat_loss +
+    proc_extra_vat +
+    tooling +
+    proc_extra +
+    packing_ship;
   const sp_price = st.selling_price || 0;
 
   // VA% (Value Add) = Price − Material − tooling − packing/ship, / Price.
@@ -606,7 +829,8 @@ export function calcAll(st, allSpResults, lib, subproducts) {
   //    aligns with the "Labor" column users see.
   const run_labor_only = labor_cost - setup_labor_total;
   const va = sp_price > 0 ? 1 - (s_mat_cost + tooling + packing_ship) / sp_price : null;
-  const contribution = sp_price > 0 ? 1 - (s_mat_cost + tooling + packing_ship + run_labor_only) / sp_price : null;
+  const contribution =
+    sp_price > 0 ? 1 - (s_mat_cost + tooling + packing_ship + run_labor_only) / sp_price : null;
   // GM uses s_ttl / sp_price — s_ttl is the full supplier-price subtotal
   // (material + run + setup + tooling + packing + vat_loss).
   const gm = sp_price > 0 ? 1 - s_ttl / sp_price : null;
@@ -615,8 +839,12 @@ export function calcAll(st, allSpResults, lib, subproducts) {
   // Pass the approval snapshot when the quote is in an approved state
   // so the frozen rate wins over live Finance data (Phase 9E.4).
   const approvalSnapshot = st.approval?.rates_snapshot || null;
-  const { sga, sga_rate_pct: sgaRatePct, g_ttl_with_sga, site } =
-    computeSga({ g_ttl, sp_price, lib, site: st.site, snapshot: approvalSnapshot });
+  const {
+    sga,
+    sga_rate_pct: sgaRatePct,
+    g_ttl_with_sga,
+    site,
+  } = computeSga({ g_ttl, sp_price, lib, site: st.site, snapshot: approvalSnapshot });
   // Sprint 21 follow-up: gm uses s_ttl (supplier basis). gm_after_sga
   // must also use s_ttl so the delta gm - gm_after_sga isolates JUST
   // the SGA burden. Pre-fix, gm_after_sga was s_ttl-vs-g_ttl AND SGA
@@ -626,32 +854,49 @@ export function calcAll(st, allSpResults, lib, subproducts) {
   const gm_after_sga = sp_price > 0 ? 1 - s_ttl_with_sga / sp_price : null;
 
   const warnings = [];
-  if (st.processes && st.processes.some(p => !p.hidden && p.scrap_pct >= 0.95)) {
-    warnings.push('Some processes have scrap_pct >= 95% — possible data entry error (95 entered instead of 0.95)?');
+  if (st.processes && st.processes.some((p) => !p.hidden && p.scrap_pct >= 0.95)) {
+    warnings.push(
+      'Some processes have scrap_pct >= 95% — possible data entry error (95 entered instead of 0.95)?'
+    );
   }
 
   return {
-    s_mat_cost, g_mat_cost,
+    s_mat_cost,
+    g_mat_cost,
     overhead: overhead - setup_mach_total,
     labor_cost: labor_cost - setup_labor_total,
-    vat_loss, tooling, packing_ship, s_ttl, g_ttl,
-    va, contribution, gm, sp: sp_price,
+    vat_loss,
+    tooling,
+    packing_ship,
+    s_ttl,
+    g_ttl,
+    va,
+    contribution,
+    gm,
+    sp: sp_price,
     // Phase 9D.3 — SGA + post-SGA margin. When sga_rate_pct=0 (default)
     // sga=0 and gm_after_sga === gm, so no consumer sees a change.
-    sga, sga_rate_pct: sgaRatePct, g_ttl_with_sga, gm_after_sga, site,
-    matResults, inkResults, procResults,
-    s_setup_mat: s_mat_setup, g_setup_mat: g_mat_setup,
+    sga,
+    sga_rate_pct: sgaRatePct,
+    g_ttl_with_sga,
+    gm_after_sga,
+    site,
+    matResults,
+    inkResults,
+    procResults,
+    s_setup_mat: s_mat_setup,
+    g_setup_mat: g_mat_setup,
     // Granular breakdown for Cost Breakdown tab
-    bd_mat_setup:     g_mat_setup,
-    bd_mat_run:       g_mat_run,
-    bd_ink_setup:     s_ink_setup,
-    bd_ink_run:       s_ink_run,
-    bd_overhead:      overhead,
-    bd_labor:         labor_cost,
-    bd_extra:         proc_extra,
-    bd_extra_vat:     proc_extra_vat,
-    bd_setup_mach:    setup_mach_total,
-    bd_setup_labor:   setup_labor_total,
+    bd_mat_setup: g_mat_setup,
+    bd_mat_run: g_mat_run,
+    bd_ink_setup: s_ink_setup,
+    bd_ink_run: s_ink_run,
+    bd_overhead: overhead,
+    bd_labor: labor_cost,
+    bd_extra: proc_extra,
+    bd_extra_vat: proc_extra_vat,
+    bd_setup_mach: setup_mach_total,
+    bd_setup_labor: setup_labor_total,
     warnings,
   };
 }
@@ -676,15 +921,34 @@ export function calcAll(st, allSpResults, lib, subproducts) {
  * the quote_history.json size by ~5-10×.
  */
 const PERSISTED_RESULT_FIELDS = [
-  'sp', 's_ttl', 'g_ttl', 'gm', 'va', 'contribution',
-  's_mat_cost', 'g_mat_cost',
-  'overhead', 'labor_cost', 'tooling', 'packing_ship', 'vat_loss',
-  'bd_mat_setup', 'bd_mat_run',
-  'bd_ink_setup', 'bd_ink_run',
-  'bd_overhead', 'bd_labor',
-  'bd_extra', 'bd_extra_vat',
-  'bd_setup_mach', 'bd_setup_labor',
-  'sga', 'sga_rate_pct', 'g_ttl_with_sga', 'gm_after_sga', 'site',
+  'sp',
+  's_ttl',
+  'g_ttl',
+  'gm',
+  'va',
+  'contribution',
+  's_mat_cost',
+  'g_mat_cost',
+  'overhead',
+  'labor_cost',
+  'tooling',
+  'packing_ship',
+  'vat_loss',
+  'bd_mat_setup',
+  'bd_mat_run',
+  'bd_ink_setup',
+  'bd_ink_run',
+  'bd_overhead',
+  'bd_labor',
+  'bd_extra',
+  'bd_extra_vat',
+  'bd_setup_mach',
+  'bd_setup_labor',
+  'sga',
+  'sga_rate_pct',
+  'g_ttl_with_sga',
+  'gm_after_sga',
+  'site',
   'warnings',
 ];
 
@@ -735,17 +999,30 @@ export function matCostExcludingInk(result) {
 
 // ── MOQ Tier helpers ──
 
-const _matStruct  = new Set(['code', 'desc', 'row_type', 'offcut_yn', 'slitting_yn', 'df_yn', 'free_liner', 'hidden']);
-const _inkStruct  = new Set(['color', 'print_type', 'base_mat', 'hidden']);
+const _matStruct = new Set([
+  'code',
+  'desc',
+  'row_type',
+  'offcut_yn',
+  'slitting_yn',
+  'df_yn',
+  'free_liner',
+  'hidden',
+]);
+const _inkStruct = new Set(['color', 'print_type', 'base_mat', 'hidden']);
 const _procStruct = new Set(['workcenter', 'process_type', 'label', 'hidden']);
-const _filterOvr  = (ovr, skip) => { const o = {}; for (const k in ovr) if (!skip.has(k)) o[k] = ovr[k]; return o; };
+const _filterOvr = (ovr, skip) => {
+  const o = {};
+  for (const k in ovr) if (!skip.has(k)) o[k] = ovr[k];
+  return o;
+};
 
 export function buildTierState(st, tierIdx, price, moq, eau) {
   const em = tierIdx === 0 ? null : (st.extra_moqs || [])[tierIdx - 1];
   const base = Object.assign({}, st, {
     moq: moq || 1,
     annual_qty: eau || st.annual_qty || 1,
-    selling_price: price
+    selling_price: price,
   });
   if (!em) return base;
   if (em.mat_setup_lm && em.mat_setup_lm.length) {
@@ -806,7 +1083,7 @@ export function getActiveTierState(st) {
   const base = Object.assign({}, st, {
     moq: em.moq || st.moq,
     selling_price: em.price || st.selling_price,
-    annual_qty: (em.eau != null && em.eau !== '') ? em.eau : st.annual_qty
+    annual_qty: em.eau != null && em.eau !== '' ? em.eau : st.annual_qty,
   });
   // Apply per-MOQ setup overrides (legacy single-field system)
   if (em.mat_setup_lm && em.mat_setup_lm.length) {
@@ -851,6 +1128,25 @@ export function getActiveTierState(st) {
   }
   if (em.packing) Object.assign(base, em.packing);
   return base;
+}
+
+// ── Alt Materials helper (PR #A — Sprint S-ALT-MAT) ──
+//
+// Std state carries three fields: materials_main (canonical "main" set),
+// materials_alt (alternative set, default empty), and materials_active
+// ('main' | 'alt'). The legacy `state.materials` field is kept as a MIRROR
+// of the active set so existing readers (calcAll, getActiveTierState,
+// buildTierState, UI cells, validators, ink base-mat lookups) continue
+// working without callsite churn. New code SHOULD prefer getActiveMaterials
+// for clarity, especially when reading from a state shape that may have
+// been hand-crafted in tests where the mirror could lag.
+//
+// PR #B (Cpx) will extend this helper to look at per-subproduct active
+// fields; the function signature stays stable.
+export function getActiveMaterials(state) {
+  if (!state || typeof state !== 'object') return [];
+  if (state.materials_active === 'alt') return state.materials_alt || [];
+  return state.materials_main || state.materials || [];
 }
 
 // ── State Factories ──
@@ -928,35 +1224,35 @@ export function createStdState() {
     print_part_length_md: 0,
     part_net_width: 0,
     part_net_length: 0,
-    bleed_td_mm: 0,          // bleed each side TD (operator-entered)
-    bleed_md_mm: 0,          // bleed each side MD
-    plate_tooth: 0,          // explicit plate cylinder tooth (0 = follow magnetic)
-    plate_pitch_mm: 0,       // derived if 0, else authoritative
+    bleed_td_mm: 0, // bleed each side TD (operator-entered)
+    bleed_md_mm: 0, // bleed each side MD
+    plate_tooth: 0, // explicit plate cylinder tooth (0 = follow magnetic)
+    plate_pitch_mm: 0, // derived if 0, else authoritative
     // ── Cutting Design Layout sub-tab ──
-    cut_type: '',            // 'kiss-cut'|'through-cut'|'both'|'perf-only'|'emboss'
+    cut_type: '', // 'kiss-cut'|'through-cut'|'both'|'perf-only'|'emboss'
     corner_radius_mm: 0,
-    magnetic_tooth: 0,       // explicit magnetic cylinder tooth (0 = optimizer picks)
-    magnetic_pitch_mm: 0,    // derived if 0
+    magnetic_tooth: 0, // explicit magnetic cylinder tooth (0 = optimizer picks)
+    magnetic_pitch_mm: 0, // derived if 0
     // Slit-after-print workflow — print wide web → slit into N lanes →
     // die-cut each lane. Informational fields the UI uses to show
     // print-cavities-across vs cut-cavities-across. When slit is on,
     // operator sets `num_webs` in the shared header to `slit_lane_count`.
     slit_after_print: false,
     slit_lane_count: 1,
-    cutter_cavity: 0,        // parts per cutter stamp (per die). 0 = auto = parts_web_across × parts_in_md.
+    cutter_cavity: 0, // parts per cutter stamp (per die). 0 = auto = parts_web_across × parts_in_md.
     // ── DFM guards (Sprint S-DFM) ──
-    color_count: 0,          // # of colors/inks to print (0 = unset, don't validate)
-    die_quiet_zone_mm: 0,    // clearance around die for reg marks / bearer (0 = none)
-    tol_p2p_mm: 0,           // print-to-print (color registration) tolerance
+    color_count: 0, // # of colors/inks to print (0 = unset, don't validate)
+    die_quiet_zone_mm: 0, // clearance around die for reg marks / bearer (0 = none)
+    tol_p2p_mm: 0, // print-to-print (color registration) tolerance
     min_slit_lane_width_mm: 0, // override default min slit lane width (0 = 25mm default)
     // ── Phase 4 UX polish ──
-    unwind_direction: '',       // '' | 'face-in' | 'face-out' — label orientation on roll
-    print_direction_md: '',     // '' | 'head-first' | 'tail-first' — text reading direction
-    include_reg_marks: false,   // reg-mark / color bar strip (typ. 5 mm) embedded at lane edge
-    reg_mark_width_mm: 0,       // width of reg mark strip when include_reg_marks = true (0 = 5 default)
-    plate_thickness_mm: 0,      // 1.14 / 1.70 mm flexo · 0 = unspecified
-    anilox_bcm: 0,              // anilox volume (BCM, billion cubic microns) · typ. 4.0-6.5
-    print_to_cut_offset_mm: 0,  // MD offset between print and cut cylinders (for layout drawing)
+    unwind_direction: '', // '' | 'face-in' | 'face-out' — label orientation on roll
+    print_direction_md: '', // '' | 'head-first' | 'tail-first' — text reading direction
+    include_reg_marks: false, // reg-mark / color bar strip (typ. 5 mm) embedded at lane edge
+    reg_mark_width_mm: 0, // width of reg mark strip when include_reg_marks = true (0 = 5 default)
+    plate_thickness_mm: 0, // 1.14 / 1.70 mm flexo · 0 = unspecified
+    anilox_bcm: 0, // anilox volume (BCM, billion cubic microns) · typ. 4.0-6.5
+    print_to_cut_offset_mm: 0, // MD offset between print and cut cylinders (for layout drawing)
     // Layout optimizer inputs (Phase 2 — used by layoutValidation +
     // layoutOptimizer). All optional with sensible defaults so old
     // quotes hydrate without migration.
@@ -968,19 +1264,19 @@ export function createStdState() {
     edge_margin_td_right: 0,
     // Advanced layout tuning (optional). Defaults are no-op so legacy
     // quotes hydrate unchanged.
-    parts_per_die: 1,          // compound die multiplier (2-up / 3-up)
-    orient_locked: false,      // if true, optimizer MUST NOT rotate 90°
-    perf_offset_mm: 0,         // adds to MD gap when perforation line present
-    tol_p2c_mm: 0,             // customer tolerance print-to-cut
-    tol_c2c_mm: 0,             // customer tolerance cut-to-cut
-    tol_slit_mm: 0,            // customer tolerance slitting edge
+    parts_per_die: 1, // compound die multiplier (2-up / 3-up)
+    orient_locked: false, // if true, optimizer MUST NOT rotate 90°
+    perf_offset_mm: 0, // adds to MD gap when perforation line present
+    tol_p2c_mm: 0, // customer tolerance print-to-cut
+    tol_c2c_mm: 0, // customer tolerance cut-to-cut
+    tol_slit_mm: 0, // customer tolerance slitting edge
     min_gap_td: 3,
     allow_rotate_90: true,
     tooth_pitch_mm: 3.175,
-    tooth_count_options: [],          // empty = optimizer uses DEFAULT_TOOTH_COUNTS
-    machine_profile_id: '',            // FK into Library/MachineProfiles — drives optimizer constraints when set
-    die_policy: 'new_allowed',        // reuse_existing | new_allowed | specific_tooth
-    target_pcs_per_roll: 0,           // 0 = no constraint
+    tooth_count_options: [], // empty = optimizer uses DEFAULT_TOOTH_COUNTS
+    machine_profile_id: '', // FK into Library/MachineProfiles — drives optimizer constraints when set
+    die_policy: 'new_allowed', // reuse_existing | new_allowed | specific_tooth
+    target_pcs_per_roll: 0, // 0 = no constraint
     max_roll_od_mm: 0,
     // layout_validation_ack: 'warning acknowledged by {user, ts, codes[]}'
     // is set ONCE when the operator confirms a save with warnings, so
@@ -989,30 +1285,103 @@ export function createStdState() {
     // Sprint S-PFC — admin-editable Process Flow Chart overrides in the
     // Summarize tab. Same schema as Complex. Empty = auto-generated.
     flow_chart_overrides: {},
-    // Materials: start with 2 rows (add more via + button, max 20)
-    materials: Array(2).fill(null).map((_, i) => ({
-      _mid: newMid(),
-      row_type: i < 10 ? 'Main.Mat' : 'Process Mat',
-      code: '', desc: '', usage: 0, setup_lm: 0, cavities: 0,
-      free_liner: 0, width: 0, log_width: 0, pitch_ovr: 0,
-      offcut_yn: '', slitting_yn: '', df_yn: '', offcut_pct: 0,
-      import_duty: 0, s_price: 0, g_price: 0, latest: 0
-    })),
+    // Materials — alt-materials feature (Sprint S-ALT-MAT, PR #A).
+    // materials_main is the canonical set seeded with 2 starter rows.
+    // materials_alt is the parallel "Alternative" set, empty by default
+    // until operator clicks the Alternative.Mat toggle and adds rows
+    // (or copies from main). materials_active discriminates which set
+    // calc engine + UI render. `materials` is kept as a MIRROR of the
+    // active set so legacy readers (calcAll, getActiveTierState, validators,
+    // ink base-mat lookups) continue working without callsite churn —
+    // reducer keeps the three fields consistent.
+    materials_main: Array(2)
+      .fill(null)
+      .map((_, i) => ({
+        _mid: newMid(),
+        row_type: i < 10 ? 'Main.Mat' : 'Process Mat',
+        code: '',
+        desc: '',
+        usage: 0,
+        setup_lm: 0,
+        cavities: 0,
+        free_liner: 0,
+        width: 0,
+        log_width: 0,
+        pitch_ovr: 0,
+        offcut_yn: '',
+        slitting_yn: '',
+        df_yn: '',
+        offcut_pct: 0,
+        import_duty: 0,
+        s_price: 0,
+        g_price: 0,
+        latest: 0,
+      })),
+    materials_alt: [],
+    materials_active: 'main',
+    materials: Array(2)
+      .fill(null)
+      .map((_, i) => ({
+        _mid: newMid(),
+        row_type: i < 10 ? 'Main.Mat' : 'Process Mat',
+        code: '',
+        desc: '',
+        usage: 0,
+        setup_lm: 0,
+        cavities: 0,
+        free_liner: 0,
+        width: 0,
+        log_width: 0,
+        pitch_ovr: 0,
+        offcut_yn: '',
+        slitting_yn: '',
+        df_yn: '',
+        offcut_pct: 0,
+        import_duty: 0,
+        s_price: 0,
+        g_price: 0,
+        latest: 0,
+      })),
     // Inks: start with 2 rows (add more via + button, max 10)
-    inks: Array(2).fill(null).map((_, i) => ({
-      label: `Ink ${i + 1}`,
-      ifs_code: '', color: '', print_type: '', mesh_spec: '', pitch_mm: 0, base_mat: '', coverage: 0,
-      setup_kg: 0, area_pct: 0, clicks: 0,
-      s_price: 0, g_price: 0, latest: 0
-    })),
+    inks: Array(2)
+      .fill(null)
+      .map((_, i) => ({
+        label: `Ink ${i + 1}`,
+        ifs_code: '',
+        color: '',
+        print_type: '',
+        mesh_spec: '',
+        pitch_mm: 0,
+        base_mat: '',
+        coverage: 0,
+        setup_kg: 0,
+        area_pct: 0,
+        clicks: 0,
+        s_price: 0,
+        g_price: 0,
+        latest: 0,
+      })),
     // Processes: 1 row default
-    processes: Array(1).fill(null).map((_, i) => ({
-      label: `Process ${i + 1}`,
-      process_type: '', workcenter: '', speed: 0, layout: 1,
-      efficiency: 0.85, setup_h: 0, scrap_pct: 0.03,
-      manual_uph: 0, tool_cost: 0, tool_type: '', tool_life: 0,
-      extra_cost: 0, product_life: 1, eau_ovr: 0, repeat: 1
-    })),
+    processes: Array(1)
+      .fill(null)
+      .map((_, i) => ({
+        label: `Process ${i + 1}`,
+        process_type: '',
+        workcenter: '',
+        speed: 0,
+        layout: 1,
+        efficiency: 0.85,
+        setup_h: 0,
+        scrap_pct: 0.03,
+        manual_uph: 0,
+        tool_cost: 0,
+        tool_type: '',
+        tool_life: 0,
+        extra_cost: 0,
+        product_life: 1,
+        eau_ovr: 0,
+        repeat: 1,
+      })),
     // Packing (clean — operator fills per SKU).
     packing_method: 'Sheet',
     pcs_per_bag: 0,
@@ -1036,43 +1405,138 @@ export function createEmptyStdState() {
   return {
     _schema_version: 1,
     rfq_number: '',
-    ccl_pn: '', direct_cu: '', project: '', project_name: '', end_cu_pn: '',
-    direct_cu_pn: '', description: '',
-    npi_owner: '', sale_owner: '',
-    moq: 0, annual_qty: 0, product_lifetime: 0,
-    trade_mode: '', site: 'VN',
-    selling_price: 0, selling_price_vnd: 0, usd_rate: 0, currency: '', target: null, target_vnd: null, target_contr: 25,
-    part_width: 0, part_length_md: 0, web_width_td: 0,
-    sheet_length: 0, num_webs: 0, parts_in_md: 0,
-    parts_web_across: 0, min_gap_md: 0,
-    rotary_cols: 0, pcs_per_roll: 0,
-    materials: Array(1).fill(null).map(() => ({
-      _mid: newMid(),
-      row_type: 'Main.Mat',
-      code: '', desc: '', usage: 0, setup_lm: 0, cavities: 0,
-      free_liner: 0, width: 0, log_width: 0, pitch_ovr: 0,
-      offcut_yn: '', slitting_yn: '', df_yn: '', offcut_pct: 0,
-      import_duty: 0, s_price: 0, g_price: 0, latest: 0
-    })),
-    inks: Array(1).fill(null).map((_, i) => ({
-      label: `Ink ${i + 1}`,
-      ifs_code: '', color: '', print_type: '', mesh_spec: '', pitch_mm: 0, base_mat: '', coverage: 0,
-      setup_kg: 0, area_pct: 0, clicks: 0,
-      s_price: 0, g_price: 0, latest: 0
-    })),
-    processes: Array(1).fill(null).map((_, i) => ({
-      label: `Process ${i + 1}`,
-      process_type: '', workcenter: '', speed: 0, layout: 0,
-      efficiency: 0, setup_h: 0, scrap_pct: 0,
-      manual_uph: 0, tool_cost: 0, tool_type: '', tool_life: 0,
-      extra_cost: 0, product_life: 0, eau_ovr: 0, repeat: 0
-    })),
+    ccl_pn: '',
+    direct_cu: '',
+    project: '',
+    project_name: '',
+    end_cu_pn: '',
+    direct_cu_pn: '',
+    description: '',
+    npi_owner: '',
+    sale_owner: '',
+    moq: 0,
+    annual_qty: 0,
+    product_lifetime: 0,
+    trade_mode: '',
+    site: 'VN',
+    selling_price: 0,
+    selling_price_vnd: 0,
+    usd_rate: 0,
+    currency: '',
+    target: null,
+    target_vnd: null,
+    target_contr: 25,
+    part_width: 0,
+    part_length_md: 0,
+    web_width_td: 0,
+    sheet_length: 0,
+    num_webs: 0,
+    parts_in_md: 0,
+    parts_web_across: 0,
+    min_gap_md: 0,
+    rotary_cols: 0,
+    pcs_per_roll: 0,
+    // Alt-materials feature (Sprint S-ALT-MAT, PR #A). See createStdState
+    // for the full contract — materials field is a mirror of the active set.
+    materials_main: Array(1)
+      .fill(null)
+      .map(() => ({
+        _mid: newMid(),
+        row_type: 'Main.Mat',
+        code: '',
+        desc: '',
+        usage: 0,
+        setup_lm: 0,
+        cavities: 0,
+        free_liner: 0,
+        width: 0,
+        log_width: 0,
+        pitch_ovr: 0,
+        offcut_yn: '',
+        slitting_yn: '',
+        df_yn: '',
+        offcut_pct: 0,
+        import_duty: 0,
+        s_price: 0,
+        g_price: 0,
+        latest: 0,
+      })),
+    materials_alt: [],
+    materials_active: 'main',
+    materials: Array(1)
+      .fill(null)
+      .map(() => ({
+        _mid: newMid(),
+        row_type: 'Main.Mat',
+        code: '',
+        desc: '',
+        usage: 0,
+        setup_lm: 0,
+        cavities: 0,
+        free_liner: 0,
+        width: 0,
+        log_width: 0,
+        pitch_ovr: 0,
+        offcut_yn: '',
+        slitting_yn: '',
+        df_yn: '',
+        offcut_pct: 0,
+        import_duty: 0,
+        s_price: 0,
+        g_price: 0,
+        latest: 0,
+      })),
+    inks: Array(1)
+      .fill(null)
+      .map((_, i) => ({
+        label: `Ink ${i + 1}`,
+        ifs_code: '',
+        color: '',
+        print_type: '',
+        mesh_spec: '',
+        pitch_mm: 0,
+        base_mat: '',
+        coverage: 0,
+        setup_kg: 0,
+        area_pct: 0,
+        clicks: 0,
+        s_price: 0,
+        g_price: 0,
+        latest: 0,
+      })),
+    processes: Array(1)
+      .fill(null)
+      .map((_, i) => ({
+        label: `Process ${i + 1}`,
+        process_type: '',
+        workcenter: '',
+        speed: 0,
+        layout: 0,
+        efficiency: 0,
+        setup_h: 0,
+        scrap_pct: 0,
+        manual_uph: 0,
+        tool_cost: 0,
+        tool_type: '',
+        tool_life: 0,
+        extra_cost: 0,
+        product_life: 0,
+        eau_ovr: 0,
+        repeat: 0,
+      })),
     packing_method: 'Sheet',
-    pcs_per_bag: 0, bags_per_box: 0,
-    container_cost: 0, box_cost: 0, other_packing: 0,
-    delivery_term: '', ship_qty: 0, shipping_cost: 0, other_ship: 0,
+    pcs_per_bag: 0,
+    bags_per_box: 0,
+    container_cost: 0,
+    box_cost: 0,
+    other_packing: 0,
+    delivery_term: '',
+    ship_qty: 0,
+    shipping_cost: 0,
+    other_ship: 0,
     design_process: '',
-    request_ul: 'N', ul_description: '',
+    request_ul: 'N',
+    ul_description: '',
     layout_file: null,
     num_moq: 1,
     extra_moqs: [],
@@ -1084,19 +1548,44 @@ export function createEmptyStdState() {
 export function createCplxState() {
   return {
     rfq_number: '',
-    ccl_pn: '', direct_cu: '', project: '', description: '',
-    moq: 0, annual_qty: 0, product_lifetime: 0,
-    trade_mode: 'USD', site: 'VN',
-    selling_price: 0, currency: 'USD', target: null,
-    selling_price_vnd: 0, target_vnd: null, usd_rate: 0,
-    sale_owner: '', direct_cu_pn: '', end_cu: '', end_cu_pn: '',
-    project_name: '', ul: '', npi_owner: '',
-    request_ul: 'N', ul_description: '',
-    num_moq: 1, extra_moqs: [], active_moq_idx: 0,
+    ccl_pn: '',
+    direct_cu: '',
+    project: '',
+    description: '',
+    moq: 0,
+    annual_qty: 0,
+    product_lifetime: 0,
+    trade_mode: 'USD',
+    site: 'VN',
+    selling_price: 0,
+    currency: 'USD',
+    target: null,
+    selling_price_vnd: 0,
+    target_vnd: null,
+    usd_rate: 0,
+    sale_owner: '',
+    direct_cu_pn: '',
+    end_cu: '',
+    end_cu_pn: '',
+    project_name: '',
+    ul: '',
+    npi_owner: '',
+    request_ul: 'N',
+    ul_description: '',
+    num_moq: 1,
+    extra_moqs: [],
+    active_moq_idx: 0,
     layout_file: null,
-    packing_method: 'Sheet', pcs_per_bag: 0, bags_per_box: 0,
-    container_cost: 0, box_cost: 0, other_packing: 0,
-    delivery_term: '', ship_qty: 0, shipping_cost: 0, other_ship: 0,
+    packing_method: 'Sheet',
+    pcs_per_bag: 0,
+    bags_per_box: 0,
+    container_cost: 0,
+    box_cost: 0,
+    other_packing: 0,
+    delivery_term: '',
+    ship_qty: 0,
+    shipping_cost: 0,
+    other_ship: 0,
     subproducts: [createSubProduct('SP A')],
     // v2 shape additions (see cplxMigration.js). Populated here so new
     // quotes start at version 2 without needing the lazy migrator.
@@ -1112,54 +1601,140 @@ export function createCplxState() {
 
 export function createSubProduct(code) {
   return {
-    code, description: '', main_process: '',
+    code,
+    description: '',
+    main_process: '',
     // v2 shape: explicit assembly flag. Default false; BOM tree UI
     // toggles this to true for FG/parent SPs. Migration back-fills
     // from FG code prefix for legacy quotes.
     is_assembly: typeof code === 'string' && code.toUpperCase().startsWith('FG'),
-    materials: Array(1).fill(null).map(() => ({
-      _mid: newMid(),
-      row_type: 'Main.Mat',
-      code: '', desc: '', qpa: 0, usage: 0, setup_lm: 0, free_liner: 0,
-      pitch: 0, width: 0, log_width: 0, pitch_ovr: 0, offcut_yn: '', slitting_yn: '',
-      df_yn: '', offcut_pct: 0, import_duty: 0, s_price: 0, g_price: 0, latest: 0
-    })),
-    inks: Array(1).fill(null).map((_, i) => ({
-      label: `Ink ${i + 1}`, ifs_code: '', color: '', print_type: '', mesh_spec: '', pitch_mm: 0, base_mat: '',
-      coverage: 0, setup_kg: 0, area_pct: 0, s_price: 0, g_price: 0, latest: 0
-    })),
-    processes: Array(1).fill(null).map((_, i) => ({
-      label: `Process ${i + 1}`, process_type: '', workcenter: '',
-      speed: 0, layout: 1, efficiency: 0.85, setup_h: 0,
-      scrap_pct: 0.03, manual_uph: 0, tool_cost: 0, tool_type: '', tool_life: 0,
-      extra_cost: 0, product_life: 1, eau_ovr: 0, repeat: 1
-    })),
-    packing_method: 'Sheet', pcs_per_bag: 0, bags_per_box: 0,
-    container_cost: 0, box_cost: 0, other_packing: 0,
-    delivery_term: '', ship_qty: 0, shipping_cost: 0, other_ship: 0,
+    materials: Array(1)
+      .fill(null)
+      .map(() => ({
+        _mid: newMid(),
+        row_type: 'Main.Mat',
+        code: '',
+        desc: '',
+        qpa: 0,
+        usage: 0,
+        setup_lm: 0,
+        free_liner: 0,
+        pitch: 0,
+        width: 0,
+        log_width: 0,
+        pitch_ovr: 0,
+        offcut_yn: '',
+        slitting_yn: '',
+        df_yn: '',
+        offcut_pct: 0,
+        import_duty: 0,
+        s_price: 0,
+        g_price: 0,
+        latest: 0,
+      })),
+    inks: Array(1)
+      .fill(null)
+      .map((_, i) => ({
+        label: `Ink ${i + 1}`,
+        ifs_code: '',
+        color: '',
+        print_type: '',
+        mesh_spec: '',
+        pitch_mm: 0,
+        base_mat: '',
+        coverage: 0,
+        setup_kg: 0,
+        area_pct: 0,
+        s_price: 0,
+        g_price: 0,
+        latest: 0,
+      })),
+    processes: Array(1)
+      .fill(null)
+      .map((_, i) => ({
+        label: `Process ${i + 1}`,
+        process_type: '',
+        workcenter: '',
+        speed: 0,
+        layout: 1,
+        efficiency: 0.85,
+        setup_h: 0,
+        scrap_pct: 0.03,
+        manual_uph: 0,
+        tool_cost: 0,
+        tool_type: '',
+        tool_life: 0,
+        extra_cost: 0,
+        product_life: 1,
+        eau_ovr: 0,
+        repeat: 1,
+      })),
+    packing_method: 'Sheet',
+    pcs_per_bag: 0,
+    bags_per_box: 0,
+    container_cost: 0,
+    box_cost: 0,
+    other_packing: 0,
+    delivery_term: '',
+    ship_qty: 0,
+    shipping_cost: 0,
+    other_ship: 0,
     // Layout — die geometry. Clean defaults (Sprint S-CLEAN).
-    part_width: 0, part_length_md: 0, web_width_td: 0, sheet_length: 0, num_webs: 1, parts_in_md: 1,
-    parts_web_across: 1, min_gap_md: 0, rotary_cols: 0, pcs_per_roll: 0,
+    part_width: 0,
+    part_length_md: 0,
+    web_width_td: 0,
+    sheet_length: 0,
+    num_webs: 1,
+    parts_in_md: 1,
+    parts_web_across: 1,
+    min_gap_md: 0,
+    rotary_cols: 0,
+    pcs_per_roll: 0,
     // Asymmetric edges (Sprint v3)
-    edge_margin_td: 3, edge_margin_td_left: 0, edge_margin_td_right: 0, min_gap_td: 3,
+    edge_margin_td: 3,
+    edge_margin_td_left: 0,
+    edge_margin_td_right: 0,
+    min_gap_td: 3,
     // Advanced (parts_per_die, orient_locked, perf_offset, tolerances)
-    parts_per_die: 1, orient_locked: false, perf_offset_mm: 0,
-    tol_p2c_mm: 0, tol_c2c_mm: 0, tol_slit_mm: 0,
-    target_pcs_per_roll: 0, max_roll_od_mm: 0,
+    parts_per_die: 1,
+    orient_locked: false,
+    perf_offset_mm: 0,
+    tol_p2c_mm: 0,
+    tol_c2c_mm: 0,
+    tol_slit_mm: 0,
+    target_pcs_per_roll: 0,
+    max_roll_od_mm: 0,
     // Machine profile (Sprint Press Library)
     machine_profile_id: '',
-    tooth_pitch_mm: 3.175, tooth_count_options: [], allow_rotate_90: true,
+    tooth_pitch_mm: 3.175,
+    tooth_count_options: [],
+    allow_rotate_90: true,
     // Print Design Layout sub-tab (Sprint S-SPLIT)
-    part_net_width: 0, part_net_length: 0,
-    bleed_td_mm: 0, bleed_md_mm: 0,
-    plate_tooth: 0, plate_pitch_mm: 0,
+    part_net_width: 0,
+    part_net_length: 0,
+    bleed_td_mm: 0,
+    bleed_md_mm: 0,
+    plate_tooth: 0,
+    plate_pitch_mm: 0,
     // Cutting Design Layout sub-tab
-    cut_type: '', corner_radius_mm: 0,
-    magnetic_tooth: 0, magnetic_pitch_mm: 0,
-    slit_after_print: false, slit_lane_count: 1, cutter_cavity: 0,
-    color_count: 0, die_quiet_zone_mm: 0, tol_p2p_mm: 0, min_slit_lane_width_mm: 0,
-    unwind_direction: '', print_direction_md: '', include_reg_marks: false, reg_mark_width_mm: 0,
-    plate_thickness_mm: 0, anilox_bcm: 0, print_to_cut_offset_mm: 0,
+    cut_type: '',
+    corner_radius_mm: 0,
+    magnetic_tooth: 0,
+    magnetic_pitch_mm: 0,
+    slit_after_print: false,
+    slit_lane_count: 1,
+    cutter_cavity: 0,
+    color_count: 0,
+    die_quiet_zone_mm: 0,
+    tol_p2p_mm: 0,
+    min_slit_lane_width_mm: 0,
+    unwind_direction: '',
+    print_direction_md: '',
+    include_reg_marks: false,
+    reg_mark_width_mm: 0,
+    plate_thickness_mm: 0,
+    anilox_bcm: 0,
+    print_to_cut_offset_mm: 0,
     layout_file: null,
     _layoutOpen: true,
     _bodyOpen: true,
@@ -1228,9 +1803,8 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
   if (!lib || !sps || !sps.length) {
     return { aggregate: null, pass2: [], errors: [] };
   }
-  const activeMoq = tierIdx === 0
-    ? cs.moq
-    : (((cs.extra_moqs || [])[tierIdx - 1] || {}).moq || cs.moq);
+  const activeMoq =
+    tierIdx === 0 ? cs.moq : ((cs.extra_moqs || [])[tierIdx - 1] || {}).moq || cs.moq;
   const tieredSps = sps.map((sp, spi) => applyCplxTierToSp(cs, sp, spi, tierIdx));
 
   // Build the "is referenced by another SP" set once — used by both
@@ -1239,7 +1813,7 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
   if (spMoqScalingEnabled) {
     for (let i = 0; i < tieredSps.length; i++) {
       const sp = tieredSps[i];
-      for (const m of (sp?.materials || [])) {
+      for (const m of sp?.materials || []) {
         if (!m?.code) continue;
         const refIdx = tieredSps.findIndex((s, j) => j !== i && s?.code === m.code);
         if (refIdx >= 0) referencedIdxs.add(refIdx);
@@ -1248,7 +1822,7 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
   }
   const effectiveMoqFor = (spi, sp) => {
     if (spMoqScalingEnabled && referencedIdxs.has(spi)) {
-      return activeMoq;  // parent context — ignore child's ship_qty
+      return activeMoq; // parent context — ignore child's ship_qty
     }
     return sp.ship_qty || activeMoq;
   };
@@ -1256,7 +1830,13 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
   const errors = [];
   const pass1 = tieredSps.map((sp, spi) => {
     try {
-      const spSt = { ...sp, moq: effectiveMoqFor(spi, sp), selling_price: cs.selling_price, trade_mode: cs.trade_mode, site: cs.site };
+      const spSt = {
+        ...sp,
+        moq: effectiveMoqFor(spi, sp),
+        selling_price: cs.selling_price,
+        trade_mode: cs.trade_mode,
+        site: cs.site,
+      };
       return calcAll(spSt, null, lib, null);
     } catch (err) {
       errors.push({ spi, code: sp.code, pass: 1, message: err?.message || String(err) });
@@ -1264,12 +1844,20 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
     }
   });
   const pass2 = tieredSps.map((sp, spi) => {
-    const hasRef = sp.materials?.some(m => m.code && tieredSps.some((s, si2) => si2 !== spi && s.code === m.code));
+    const hasRef = sp.materials?.some(
+      (m) => m.code && tieredSps.some((s, si2) => si2 !== spi && s.code === m.code)
+    );
     if (!hasRef) return pass1[spi];
     try {
-      const spSt = { ...sp, moq: effectiveMoqFor(spi, sp), selling_price: cs.selling_price, trade_mode: cs.trade_mode, site: cs.site };
+      const spSt = {
+        ...sp,
+        moq: effectiveMoqFor(spi, sp),
+        selling_price: cs.selling_price,
+        trade_mode: cs.trade_mode,
+        site: cs.site,
+      };
       const res = calcAll(spSt, pass1, lib, tieredSps);
-      const matErrs = (res?.matResults || []).filter(r => r?.error).map(r => r.error);
+      const matErrs = (res?.matResults || []).filter((r) => r?.error).map((r) => r.error);
       if (matErrs.length) errors.push({ spi, code: sp.code, pass: 2, message: matErrs.join('; ') });
       return res;
     } catch (err) {
@@ -1296,19 +1884,28 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
   //     empty, every non-assembly SP contributes with implicit qty=1 so
   //     legacy quotes without an explicit BOM keep the same sum.
   const aggregateKeys = [
-    's_ttl', 's_mat_cost',
-    'bd_mat_setup', 'bd_mat_run',
-    'bd_ink_setup', 'bd_ink_run',
-    'overhead', 'labor_cost', 'tooling',
-    'bd_setup_mach', 'bd_setup_labor',
-    'packing_ship', 'vat_loss', 'bd_extra',
+    's_ttl',
+    's_mat_cost',
+    'bd_mat_setup',
+    'bd_mat_run',
+    'bd_ink_setup',
+    'bd_ink_run',
+    'overhead',
+    'labor_cost',
+    'tooling',
+    'bd_setup_mach',
+    'bd_setup_labor',
+    'packing_ship',
+    'vat_loss',
+    'bd_extra',
   ];
   let aggregate;
   if (bomQtyEnabled) {
-    const asmWithFlag = sps.findIndex(s => s && s.is_assembly === true);
-    const asmIdx = asmWithFlag >= 0
-      ? asmWithFlag
-      : sps.findIndex(s => (s?.code || '').toUpperCase().startsWith('FG'));
+    const asmWithFlag = sps.findIndex((s) => s && s.is_assembly === true);
+    const asmIdx =
+      asmWithFlag >= 0
+        ? asmWithFlag
+        : sps.findIndex((s) => (s?.code || '').toUpperCase().startsWith('FG'));
     if (asmIdx >= 0 && pass2[asmIdx]) {
       aggregate = { ...pass2[asmIdx] };
     } else {
@@ -1337,15 +1934,15 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
         }
         return acc;
       };
-      aggregate = Object.fromEntries(aggregateKeys.map(k => [k, wsum(k)]));
+      aggregate = Object.fromEntries(aggregateKeys.map((k) => [k, wsum(k)]));
     }
   } else {
-    const fgIdx = sps.findIndex(s => (s.code || '').toUpperCase().startsWith('FG'));
+    const fgIdx = sps.findIndex((s) => (s.code || '').toUpperCase().startsWith('FG'));
     if (fgIdx >= 0 && pass2[fgIdx]) {
       aggregate = { ...pass2[fgIdx] };
     } else {
       const sum = (key) => pass2.reduce((a, r) => a + (r?.[key] || 0), 0);
-      aggregate = Object.fromEntries(aggregateKeys.map(k => [k, sum(k)]));
+      aggregate = Object.fromEntries(aggregateKeys.map((k) => [k, sum(k)]));
     }
   }
 
@@ -1374,15 +1971,20 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
   if (aggregate) {
     try {
       const parentPsSt = { ...cs, moq: activeMoq };
-      const parentPacking  = calcPacking(parentPsSt) || 0;
+      const parentPacking = calcPacking(parentPsSt) || 0;
       const parentShipping = calcShipping(parentPsSt) || 0;
       const parentPs = parentPacking + parentShipping;
       if (Number.isFinite(parentPs) && parentPs > 0) {
         aggregate.packing_ship = (aggregate.packing_ship || 0) + parentPs;
-        aggregate.s_ttl        = (aggregate.s_ttl        || 0) + parentPs;
+        aggregate.s_ttl = (aggregate.s_ttl || 0) + parentPs;
       }
     } catch (err) {
-      errors.push({ spi: -1, code: '(assembly)', pass: 'parent-ps', message: err?.message || String(err) });
+      errors.push({
+        spi: -1,
+        code: '(assembly)',
+        pass: 'parent-ps',
+        message: err?.message || String(err),
+      });
     }
   }
 

@@ -374,6 +374,23 @@ app.get(['/health', '/api/health'], (req, res) => {
     },
   });
 });
+
+// /api/runtime-config — exposes server-side feature flags to the client
+// (Sprint S-ALT-MAT, PR #A). Client fetches once at app boot, stashes in
+// AppConfigContext, and gates UI affordances behind the appropriate flag.
+// Defaults to false so a fresh install ships with new features disabled
+// until the operator/admin explicitly turns them on via env var.
+app.get('/api/runtime-config', (req, res) => {
+  const truthy = (v) => v === '1' || v === 'true' || v === 'on' || v === 'yes';
+  res.set('Cache-Control', 'no-cache');
+  res.json({
+    ok: true,
+    version: PKG_VERSION,
+    features: {
+      alt_materials: truthy(process.env.OPS_FEATURE_ALT_MATERIALS),
+    },
+  });
+});
 app.get('/ready', async (req, res) => {
   // Phase 10H deep probe: ready iff (a) data dir R+W, (b) SQLite
   // responds to SELECT 1, (c) the critical tables exist. A corrupt

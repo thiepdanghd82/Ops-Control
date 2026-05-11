@@ -4972,6 +4972,33 @@ export const HELP_CONTENT = {
           'Hover dòng bất kỳ để xem công thức + reference dòng library.'
         ),
       ]),
+      proc(
+        'Alternative materials (Maint.Mat ↔ Alternative.Mat)',
+        'Vật tư thay thế (Maint.Mat ↔ Alternative.Mat)',
+        null,
+        [
+          bs(
+            'Each quote can carry TWO parallel material sets — Maint.Mat (default) and Alternative.Mat — for what-if pricing or substrate-swap proposals.',
+            'Mỗi báo giá có thể lưu HAI bộ vật tư song song — Maint.Mat (mặc định) và Alternative.Mat — phục vụ phân tích what-if hoặc đề xuất đổi substrate.'
+          ),
+          bs(
+            'Click the radio toggle at the top of the table to switch. The badge on each pill shows the row count so you can tell which set has data.',
+            'Click radio toggle ở đầu bảng để chuyển. Badge trên mỗi pill hiển thị số dòng để biết bộ nào đã có data.'
+          ),
+          bs(
+            'Only the ACTIVE set drives TTL.MAT, Cost Breakdown, Summarize, Formal Quotation. The inactive set is stored but ignored.',
+            'Chỉ bộ ĐANG ACTIVE driver TTL.MAT, Cost Breakdown, Summarize, Formal Quotation. Bộ còn lại được lưu nhưng không tính.'
+          ),
+          bs(
+            'Use the ⇄ icon next to the toggle to copy one set onto the other (Main → Alt or Alt → Main). When the destination already has rows, a confirm modal warns before overwriting.',
+            'Dùng icon ⇄ cạnh toggle để copy bộ này đè bộ kia (Main → Alt hoặc Alt → Main). Khi đích đã có dòng, modal confirm sẽ cảnh báo trước khi ghi đè.'
+          ),
+          bs(
+            'Feature is gated by the OPS_FEATURE_ALT_MATERIALS server env var — when off (prod default), the toggle is hidden and only Maint.Mat is shown, matching legacy behavior. Ask your admin to flip the flag when the workflow is approved for your site.',
+            'Tính năng được gate bằng env var OPS_FEATURE_ALT_MATERIALS trên server — khi off (mặc định prod), toggle bị ẩn và chỉ hiển thị Maint.Mat, hành vi giống cũ. Liên hệ admin để bật khi workflow được phê duyệt cho site.'
+          ),
+        ]
+      ),
     ],
     relatedTabs: ['standard', 'standard-layout', 'lib-mat'],
     screenshot: null,
