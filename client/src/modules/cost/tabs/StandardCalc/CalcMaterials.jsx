@@ -16,6 +16,7 @@ import {
 import { useI18n } from '../../../../utils/useI18n';
 import { fmtN } from '../../../../utils/format';
 import DecimalInput from '../../../../utils/DecimalInput';
+import { primaryRowTypeLabel } from '../../../../services/altMaterialsLabels';
 import AltMaterialsToggle from './AltMaterialsToggle';
 
 export default function CalcMaterials() {
@@ -133,6 +134,12 @@ export default function CalcMaterials() {
   // while in main, in mat_setup_lm. Calc engine + getSetupLmActive +
   // isSetupLmOverride consume the matching variant.
   const tierLmField = materialsActive === 'alt' ? 'mat_setup_lm_alt' : 'mat_setup_lm';
+
+  // Bug 6 / FIX-35 — row_type DATA value stays 'Main.Mat' for the
+  // primary-layer semantic; only the DISPLAYED option label flips to
+  // 'Alt.Mat' when the alternative set is active. Keeps schema +
+  // calcEngine.row_type === 'Main.Mat' check stable across the toggle.
+  const primaryLabel = primaryRowTypeLabel(materialsActive);
 
   const setSetupLmActive = useCallback(
     (matIdx, value) => {
@@ -401,7 +408,7 @@ export default function CalcMaterials() {
                                 onChange={(e) => handleField(i, 'row_type', e.target.value)}
                                 className={`sc-row-type-sel ${selClass}`}
                               >
-                                <option value="Main.Mat">Main.Mat</option>
+                                <option value="Main.Mat">{primaryLabel}</option>
                                 <option value="Process Mat">Process Mat</option>
                               </select>
                               <span className={`sc-row-num ${numClass}`}>{isMain ? mc : pc}</span>

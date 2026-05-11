@@ -378,16 +378,18 @@ app.get(['/health', '/api/health'], (req, res) => {
 // /api/runtime-config — exposes server-side feature flags to the client
 // (Sprint S-ALT-MAT, PR #A). Client fetches once at app boot, stashes in
 // AppConfigContext, and gates UI affordances behind the appropriate flag.
-// Defaults to false so a fresh install ships with new features disabled
-// until the operator/admin explicitly turns them on via env var.
+// alt_materials: default ON post-hardware-test 2026-05-11 (MES-3-FIX-27
+// closed). Operator can still emergency-disable via OPS_FEATURE_ALT_MATERIALS=0
+// (or 'false'/'off'/'no'). Anything else, including absent env var, leaves
+// the feature enabled.
 app.get('/api/runtime-config', (req, res) => {
-  const truthy = (v) => v === '1' || v === 'true' || v === 'on' || v === 'yes';
+  const falsy = (v) => v === '0' || v === 'false' || v === 'off' || v === 'no';
   res.set('Cache-Control', 'no-cache');
   res.json({
     ok: true,
     version: PKG_VERSION,
     features: {
-      alt_materials: truthy(process.env.OPS_FEATURE_ALT_MATERIALS),
+      alt_materials: !falsy(process.env.OPS_FEATURE_ALT_MATERIALS),
     },
   });
 });
