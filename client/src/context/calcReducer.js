@@ -20,6 +20,7 @@ import {
 } from '../services/calcEngine.js';
 import { upgradeCplxState } from '../services/cplxMigration.js';
 import { upgradeStdState } from '../services/stdMigration.js';
+import { applyPrintToCutSync } from '../services/layoutFieldSync.js';
 
 // ── Action Types ──
 // Exported so tests + advanced callers can reference canonical strings
@@ -266,12 +267,17 @@ export function calcReducer(state, action) {
 
   switch (type) {
     // ── Standard ──
-    case A.SET_STD_FIELD:
+    case A.SET_STD_FIELD: {
+      // FIX-32: writing a print_part_* field while the canonical part_*
+      // is still 0 also mirrors into the canonical field. See
+      // services/layoutFieldSync.js for the rationale.
+      const patch = applyPrintToCutSync(state.stdState, payload.field, payload.value);
       return {
         ...state,
         isDirty: true,
-        stdState: { ...state.stdState, [payload.field]: payload.value },
+        stdState: { ...state.stdState, ...patch },
       };
+    }
 
     case A.SET_STD_STATE:
       return { ...state, isDirty: true, stdState: { ...state.stdState, ...payload } };
@@ -554,17 +560,21 @@ export function calcReducer(state, action) {
       };
     }
 
-    case A.SET_SP_FIELD:
+    case A.SET_SP_FIELD: {
+      // FIX-32: same print → cut lazy mirror as SET_STD_FIELD, scoped to
+      // THIS subproduct (Complex's PrintSubTab reuses the shared
+      // AdvancedLayoutBlock so the same trap surfaces per-SP).
+      const sp = state.cplxState.subproducts[payload.spIdx];
+      const patch = applyPrintToCutSync(sp, payload.field, payload.value);
       return {
         ...state,
         isDirty: true,
         cplxState: {
           ...state.cplxState,
-          subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, {
-            [payload.field]: payload.value,
-          }),
+          subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, patch),
         },
       };
+    }
 
     case A.SET_SP_MATERIAL_FIELD: {
       // PR #B: route to active set + sync mirror (parallel to Std's
