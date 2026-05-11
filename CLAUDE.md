@@ -45,7 +45,7 @@
 >
 > **Sprint history — newest first** (SHA-discipline per Lesson 0):
 >
-> **Sprint S-ALT-MAT flag flip + cosmetic fix shipped 2026-05-11 (SHA: `e5f88f5` via PR #N).** Hardware test 2026-05-11 by Đặng Thế Thiệp on quote `RFQ-2026-S0012` (build SHA256 `e3b8f800…b2d0`) verified alt-materials feature end-to-end: Std + Cpx toggle, copy, switch, edit, per-tier MOQ override, Quote History badge, save round-trip. All 9 functional tests PASSED. Feature default flipped from OFF to ON in `/api/runtime-config` — operator can still emergency-disable via `OPS_FEATURE_ALT_MATERIALS=0`/`false`/`off`/`no`; anything else (including absent env) leaves it ON. Bug 6 bundled (cosmetic regression — row-type dropdown rendered "Main.Mat" on the Alternative.Mat tab; helper `primaryRowTypeLabel(active)` in `client/src/services/altMaterialsLabels.js` now flips the displayed label to "Alt.Mat" while the underlying `row_type` data value stays `'Main.Mat'` so calcEngine classification + audit shape are unchanged). Closes MES-3-FIX-27 + MES-3-FIX-35. 3 unrelated calc-engine bugs surfaced during hardware test filed as MES-3-FIX-32 (Run material cost missing despite Layout filled), MES-3-FIX-33 (Indigo CLICKS column not enterable + ink calc broken), MES-3-FIX-34 (validator/display field mismatch). Operator confirmed via Maint.Mat ↔ Alternative.Mat toggle that these bugs reproduce identically on both material sets → pre-existing calc-engine gaps, NOT regressions from PR #A/#B/#C.
+> **Sprint S-ALT-MAT flag flip + cosmetic fix shipped 2026-05-11 (SHA: `7cbeb4f` via PR #43).** Hardware test 2026-05-11 by Đặng Thế Thiệp on quote `RFQ-2026-S0012` (build SHA256 `e3b8f800…b2d0`) verified alt-materials feature end-to-end: Std + Cpx toggle, copy, switch, edit, per-tier MOQ override, Quote History badge, save round-trip. All 9 functional tests PASSED. Feature default flipped from OFF to ON in `/api/runtime-config` — operator can still emergency-disable via `OPS_FEATURE_ALT_MATERIALS=0`/`false`/`off`/`no`; anything else (including absent env) leaves it ON. Bug 6 bundled (cosmetic regression — row-type dropdown rendered "Main.Mat" on the Alternative.Mat tab; helper `primaryRowTypeLabel(active)` in `client/src/services/altMaterialsLabels.js` now flips the displayed label to "Alt.Mat" while the underlying `row_type` data value stays `'Main.Mat'` so calcEngine classification + audit shape are unchanged). Closes MES-3-FIX-27 + MES-3-FIX-35. 3 unrelated calc-engine bugs surfaced during hardware test filed as MES-3-FIX-32 (Run material cost missing despite Layout filled), MES-3-FIX-33 (Indigo CLICKS column not enterable + ink calc broken), MES-3-FIX-34 (validator/display field mismatch). Operator confirmed via Maint.Mat ↔ Alternative.Mat toggle that these bugs reproduce identically on both material sets → pre-existing calc-engine gaps, NOT regressions from PR #A/#B/#C.
 >
 > **Sprint S-ALT-MAT — Alternative materials 3-PR series (PR #39 SHA: `c1e96be` / PR #40 SHA: `90efa9b` / PR #41 SHA: `449099d`), shipped 2026-05-11.** Pricing now supports a parallel "Alternative" material set per quote with a Maint.Mat / Alternative.Mat toggle. Calc engine reads the active set; legacy `state.materials` (Std) and `sp.materials` (Cpx) kept as a MIRROR of the active set so 15+ existing readers (calcAll, getActiveTierState, buildTierState, validators, ink base-mat lookups, QuoteHistory) stay green without callsite churn. Gated behind server env `OPS_FEATURE_ALT_MATERIALS` (default OFF) exposed to client via `GET /api/runtime-config` + `useFeatureFlag('alt_materials')` hook.
 >
@@ -828,7 +828,35 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 
 - **Source**: hardware test 2026-05-11. Operator on Alternative.Mat tab saw row labels "Main.Mat1" through "Main.Mat5" instead of "Alt.MatN". Cosmetic only; calc was correct.
 - **Fix**: bundled with flag-flip PR. Material-row label JSX now branches on `materials_active` via shared helper `primaryRowTypeLabel` in `client/src/services/altMaterialsLabels.js` and renders "Main.Mat" or "Alt.Mat" prefix accordingly. `row_type` data value remains stable as `'Main.Mat'` so calcEngine classification + audit JSON shape are unchanged.
-- **Status**: CLOSED 2026-05-11 (SHA: `e5f88f5`)
+- **Status**: CLOSED 2026-05-11 (SHA: `7cbeb4f`)
+
+#### MES-3-FIX-36 — CI: client tests glob not expanded on Node 20
+
+- **Source**: PR #43 CI run 25654201841 (2026-05-11). `node --test 'src/**/*.test.js'` returns "Could not find" because Node 20 doesn't auto-expand glob in `--test` arg; local Node 24 does. Pre-existing — script unchanged in PR #43, verified red on PRs #39/#40/#41/#42.
+- **Acceptance**: bump `.github/workflows/ci.yml` Node version 20 → 22. OR change `client/package.json` test script to enumerate files via the `glob` package. Verify all 684 tests run + pass on CI.
+- **Effort**: XS (1-line yaml change + retest)
+- **Priority**: P1 (gates every PR; current admin-merge culture risky)
+
+#### MES-3-FIX-37 — CI: kiosk JSX tests fail Jest parse
+
+- **Source**: PR #43 CI run 25654201841. `apps/kiosk/src/**/*.test.{js,jsx}` fail with `Cannot use import statement outside a module` + `Support for the experimental syntax 'jsx' isn't currently enabled`. Pre-existing — KIOSK-004 Vitest config deferred, never landed.
+- **Acceptance**: implement KIOSK-004 (Vitest config + unit tests). Close FIX-37 as duplicate of KIOSK-004 when done.
+- **Effort**: M (defer to KIOSK-004 scope)
+- **Priority**: P2 (gates Server tests CI)
+
+#### MES-3-FIX-38 — CI: react-compiler lint violations across 10+ files
+
+- **Source**: PR #43 CI run 25654201841. `npm run lint` reports 20+ errors from `eslint-plugin-react-compiler` rules: `Calling setState synchronously within an effect`, `Cannot create components during render`, `Cannot access refs during render`, `Cannot call impure function during render`. Pre-existing — PR #43's 16-line helper doesn't trigger any of these.
+- **Acceptance**: triage each violation per MES-3-FIX-20 methodology — classify as (a) real bug, (b) intentional pattern needing `eslint-disable-next-line` with justification, (c) rule too strict → disable selectively. Document each decision.
+- **Effort**: L (~200 LOC + investigation)
+- **Priority**: P2 (gates Lint CI)
+
+#### MES-3-FIX-39 — CI: vulnerability scan exit 1
+
+- **Source**: PR #43 CI run 25654201841. Vulnerability scan job exits 1 with no detail in `--log-failed` output. Likely `npm audit` high-severity finding or Trivy config issue.
+- **Acceptance**: read `.github/workflows/*.yml` to identify the tool, capture full output, either patch vuln (`npm audit fix`) or allowlist false-positive with rationale.
+- **Effort**: S (~30 min)
+- **Priority**: P3 (least critical of 4)
 
 #### KIOSK-001 — Real branded PWA icons
 
