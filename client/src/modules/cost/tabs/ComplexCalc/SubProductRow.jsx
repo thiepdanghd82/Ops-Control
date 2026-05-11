@@ -45,6 +45,7 @@ import {
 } from '../StandardCalc/CalcLayout';
 import { validateLayout } from '../../../../services/layoutValidation';
 import { primaryRowTypeLabel } from '../../../../services/altMaterialsLabels';
+import { isIndigoPrintType } from '../../../../services/printTypeUtils';
 import '../StandardCalc/StandardCalc.css';
 
 export default function SubProductRow({ sp, spi, result, allSps }) {
@@ -1096,7 +1097,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                 {inks.map((ik, ii) => {
                   const origIdx = (sp.inks || []).indexOf(ik);
                   const r = inkResults[origIdx] || null;
-                  const isIndigo = (ik.print_type || '') === 'Indigo';
+                  const isIndigo = isIndigoPrintType(ik.print_type);
                   return (
                     <tr key={ii} onContextMenu={(e) => openInkMenu(ii, e)}>
                       <td className="sc-td-idx">Ink {ii + 1}</td>

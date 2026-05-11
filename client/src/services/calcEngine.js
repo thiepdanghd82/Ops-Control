@@ -6,6 +6,7 @@
  *
  * lib shape: { rate: [], ddl: { coverage: [], click_charges: {}, tool_life: {} } }
  */
+import { isIndigoPrintType } from './printTypeUtils.js';
 
 /**
  * @typedef {Object} CalcResult
@@ -414,7 +415,7 @@ export function calcInk(ink, st, moq, lib) {
   if (!ink.color)
     return { setup_s: 0, run_s: 0, vat: 0, ink_cover_disp: '', layout_indigo_disp: '', total: 0 };
   const price = ink.latest || ink.s_price || 0;
-  const isIndigo = (ink.print_type || '') === 'Indigo';
+  const isIndigo = isIndigoPrintType(ink.print_type);
   const pitch = calcPitch(st);
   const layout_per_sheet = calcLayoutPerSheet(st);
   const covArr = (lib.ddl && lib.ddl.coverage) || [];
@@ -1477,9 +1478,17 @@ export function createEmptyStdState() {
     part_length_md: 0,
     web_width_td: 0,
     sheet_length: 0,
-    num_webs: 0,
-    parts_in_md: 0,
-    parts_web_across: 0,
+    // MES-3-FIX-32 follow-up — num_webs / parts_in_md / parts_web_across
+    // MUST default to 1 (not 0). `calcQPA_LM` early-returns 0 when
+    // `!st.num_webs`, which propagates into `run_s = 0` and the UI shows
+    // Run Cost = "—" even when every other input is populated. Same trap
+    // would surface for parts_in_md / parts_web_across via
+    // `calcLayoutPerSheet` (their product = layout_per_sheet, and 0×0 = 0
+    // kills cavities everywhere). `createStdState()` documents this same
+    // invariant — keep both factories aligned.
+    num_webs: 1,
+    parts_in_md: 1,
+    parts_web_across: 1,
     min_gap_md: 0,
     rotary_cols: 0,
     pcs_per_roll: 0,
