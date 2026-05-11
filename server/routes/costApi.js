@@ -2248,6 +2248,69 @@ function emitAltMaterialsAuditAndStrip(body, prevQuote, cu, ipAddr) {
       /* swallow */
     }
   }
+  // PR #B (Sprint S-ALT-MAT) — per-SP alt-materials events for Complex.
+  // cplxState.subproducts each carry their own materials_active +
+  // optional _alt_materials_op signal. Loop, emit MATERIALS_COPY +
+  // MATERIALS_ACTIVE_SWITCH per-SP with sp_index + sp_code in detail,
+  // strip _alt_materials_op from each SP before persist.
+  if (Array.isArray(cleaned.subproducts)) {
+    const prevSps = Array.isArray(prevQuote?.state?.subproducts) ? prevQuote.state.subproducts : [];
+    cleaned.subproducts = cleaned.subproducts.map((sp, spi) => {
+      if (!sp || typeof sp !== 'object') return sp;
+      const cleanedSp = { ...sp };
+      const spOp = cleanedSp._alt_materials_op;
+      delete cleanedSp._alt_materials_op;
+      // MATERIALS_COPY per-SP
+      if (
+        spOp &&
+        spOp.type === 'copy' &&
+        (spOp.direction === 'main_to_alt' || spOp.direction === 'alt_to_main')
+      ) {
+        try {
+          audit(
+            'MATERIALS_COPY',
+            cu?.username || '-',
+            ipAddr || '-',
+            JSON.stringify({
+              quote_id: quoteId,
+              sp_index: spi,
+              sp_code: cleanedSp.code || '',
+              direction: spOp.direction,
+              source_count: Number(spOp.source_count) || 0,
+              dest_count_before: Number(spOp.dest_count_before) || 0,
+              user_id: cu?.id ?? null,
+            })
+          );
+        } catch {
+          /* audit failures must never block save */
+        }
+      }
+      // MATERIALS_ACTIVE_SWITCH per-SP — diff against prev SP at same idx
+      const prevSp = prevSps[spi] || null;
+      const prevSpActive = prevSp?.materials_active || 'main';
+      const newSpActive = cleanedSp.materials_active || 'main';
+      if (prevSp && prevSpActive !== newSpActive) {
+        try {
+          audit(
+            'MATERIALS_ACTIVE_SWITCH',
+            cu?.username || '-',
+            ipAddr || '-',
+            JSON.stringify({
+              quote_id: quoteId,
+              sp_index: spi,
+              sp_code: cleanedSp.code || '',
+              from: prevSpActive,
+              to: newSpActive,
+              user_id: cu?.id ?? null,
+            })
+          );
+        } catch {
+          /* swallow */
+        }
+      }
+      return cleanedSp;
+    });
+  }
   return { ...body, state: cleaned };
 }
 

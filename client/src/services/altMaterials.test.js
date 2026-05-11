@@ -23,8 +23,11 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { upgradeStdState } from './stdMigration.js';
 import {
   getActiveMaterials,
+  getActiveSPMaterials,
+  createStdState,
   createCplxState,
   createSubProduct,
   aggregateComplex,
@@ -232,25 +235,97 @@ test('Cpx regression: aggregateComplex output for 2-SP fixture stays stable', ()
   }
 });
 
-test('Cpx regression: createCplxState defaults unchanged by PR #A', () => {
-  // PR #A must NOT mutate the Cpx default state shape. PR #B will add
-  // alt-materials per-subproduct; until then the Cpx state ships with
-  // its original fields only.
+test('cplxState: alt-materials lives PER-SUBPRODUCT, not at top level', () => {
+  // PR #B (Sprint S-ALT-MAT) put alt-materials on EACH subproduct, not
+  // on the top-level cplxState. Top-level fields would mix semantics
+  // (which SP does state.materials_active apply to?). The regression
+  // guard from PR #A is now flipped: ensure no top-level leak made it
+  // in via PR #B's reducer / migration paths.
   const cs = createCplxState();
-  // The top-level cplxState does NOT carry materials_main/_alt/_active
-  // (that's per-subproduct in PR #B). If those fields appear here in
-  // PR #A, it's a leak — fail loudly.
   assert.equal(cs.materials_main, undefined, 'no top-level materials_main on cplxState');
   assert.equal(cs.materials_alt, undefined, 'no top-level materials_alt on cplxState');
   assert.equal(cs.materials_active, undefined, 'no top-level materials_active on cplxState');
 });
 
-test('Cpx regression: createSubProduct defaults unchanged by PR #A', () => {
+test('createSubProduct: PR #B seeds materials_main + empty alt + active=main + legacy mirror', () => {
+  // PR #B contract: each SP carries main/alt/active. sp.materials is a
+  // MIRROR of the active set so calcEngine readers (aggregateComplex,
+  // applyCplxTierToSp) keep working without callsite churn.
   const sp = createSubProduct('SP-X');
-  // Subproduct materials list is the SP's per-SP base. PR #B will add
-  // materials_main/_alt/_active here; PR #A must leave it untouched.
+  assert.ok(Array.isArray(sp.materials_main), 'materials_main is an array');
+  assert.ok(sp.materials_main.length > 0, 'materials_main has seed rows');
+  assert.deepEqual(sp.materials_alt, [], 'materials_alt empty');
+  assert.equal(sp.materials_active, 'main');
+  // Mirror matches active set row count — exact reference equality is
+  // not required (createSubProduct generates per-array _mid values), but
+  // length parity is the load-bearing invariant for calcEngine readers.
   assert.ok(Array.isArray(sp.materials));
-  assert.equal(sp.materials_main, undefined);
-  assert.equal(sp.materials_alt, undefined);
-  assert.equal(sp.materials_active, undefined);
+  assert.equal(sp.materials.length, sp.materials_main.length);
+});
+
+// ─── getActiveSPMaterials helper (PR #B) ──────────────────────────────
+
+test('getActiveSPMaterials: returns sp.materials_main when active=main', () => {
+  const sp = {
+    materials_main: [{ code: 'M001' }],
+    materials_alt: [{ code: 'ALT-001' }],
+    materials_active: 'main',
+  };
+  const out = getActiveSPMaterials(sp);
+  assert.equal(out[0].code, 'M001');
+});
+
+test('getActiveSPMaterials: returns sp.materials_alt when active=alt', () => {
+  const sp = {
+    materials_main: [{ code: 'M001' }],
+    materials_alt: [{ code: 'ALT-001' }],
+    materials_active: 'alt',
+  };
+  const out = getActiveSPMaterials(sp);
+  assert.equal(out[0].code, 'ALT-001');
+});
+
+test('getActiveSPMaterials: falls back to legacy sp.materials when _main missing', () => {
+  const sp = { materials: [{ code: 'LEGACY' }] };
+  const out = getActiveSPMaterials(sp);
+  assert.equal(out[0].code, 'LEGACY');
+});
+
+test('getActiveSPMaterials: returns [] for null / non-object input', () => {
+  assert.deepEqual(getActiveSPMaterials(null), []);
+  assert.deepEqual(getActiveSPMaterials(undefined), []);
+  assert.deepEqual(getActiveSPMaterials('not-an-object'), []);
+});
+
+// ─── Std regression guard (PR #B reverse-direction check) ─────────────
+// PR #B touches cplxState code paths only. A subtle bug in cplxMigration
+// could spill into Std (e.g., if stdMigration shares a helper function
+// that PR #B accidentally generalised). This test exercises Std end-to-end
+// post-PR-B to catch any cross-contamination.
+
+test('Std regression: PR #B does NOT alter Std factory / migration output', () => {
+  // Std state factory must still produce the PR #A shape — three explicit
+  // fields plus the legacy mirror. PR #B should NOT have leaked through.
+  const fresh = createStdState();
+  assert.ok(Array.isArray(fresh.materials_main), 'stdState.materials_main');
+  assert.ok(Array.isArray(fresh.materials_alt), 'stdState.materials_alt');
+  assert.equal(fresh.materials_active, 'main');
+  assert.equal(fresh._schema_version, 1);
+  assert.ok(Array.isArray(fresh.materials), 'legacy mirror still present');
+
+  // Migration of a pre-v2 (legacy) Std quote produces the canonical
+  // materials_main + mirror without surfacing any cplx-only fields.
+  const legacyStd = {
+    moq: 1000,
+    materials: [{ _mid: 'm_a', code: 'PET-50' }],
+  };
+  const migrated = upgradeStdState(legacyStd);
+  assert.equal(migrated._schema_version, 2);
+  assert.equal(migrated.materials_main.length, 1);
+  assert.equal(migrated.materials_main[0].code, 'PET-50');
+  assert.equal(migrated.materials_active, 'main');
+  // No cplx-only fields should sneak in — subproducts is purely Cpx.
+  assert.equal(migrated.subproducts, undefined);
+  assert.equal(migrated.tooling_alloc, undefined);
+  assert.equal(migrated.bom, undefined);
 });
