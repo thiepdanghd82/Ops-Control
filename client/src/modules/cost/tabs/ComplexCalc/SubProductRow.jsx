@@ -287,7 +287,10 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
   );
 
   const processOpts = useMemo(() => getProcessOptions(), []);
-  const printTypeOpts = useMemo(() => (lib?.ddl?.print_type_list || []).filter(Boolean), [lib]);
+  // FIX-40: same as Std CalcInks — Ink rows want lib.ddl.print_type
+  // (coverage-keyed: SS / Flexo / Indigo / Indigo(Primer)…), NOT
+  // lib.ddl.print_type_list (Process tab Workcenter list).
+  const printTypeOpts = useMemo(() => (lib?.ddl?.print_type || []).filter(Boolean), [lib]);
   const meshOpts = useMemo(
     () => (lib?.inkCalc?.silkscreen?.meshSpec || []).map((m) => m.mesh_code).filter(Boolean),
     [lib]
@@ -1062,8 +1065,18 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                   <th style={{ width: 70 }}>Color</th>
                   <th style={{ width: 80 }}>Print Type</th>
                   <th style={{ width: 70 }}>Mesh</th>
-                  <th style={{ width: 55 }}>Pitch mm</th>
-                  <th style={{ width: 70 }}>Base Mat</th>
+                  <th
+                    style={{ width: 55 }}
+                    title="Pitch (mm) — defaults to SP Layout's Pitch when blank"
+                  >
+                    Pitch mm
+                  </th>
+                  <th
+                    style={{ width: 70 }}
+                    title="Width (mm) — defaults to SP Layout's Web Width TD when blank"
+                  >
+                    Width
+                  </th>
                   <th style={{ width: 55 }}>Setup kg</th>
                   <th style={{ width: 50 }}>Area%</th>
                   <th style={{ width: 55 }} title="Coverage override — disabled for Indigo">
@@ -1142,15 +1155,24 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                         <DecimalInput
                           value={ik.pitch_mm}
                           onChange={(v) => setInk(ii, 'pitch_mm', v)}
+                          placeholder={pitch > 0 ? String(Math.round(pitch * 100) / 100) : '—'}
+                          title="Pitch (mm). Empty = inherit from SP Layout. Type to override."
                           className="cc-det-inp cc-det-num"
+                          style={
+                            ik.pitch_mm > 0 ? { color: '#7c3aed', fontWeight: 700 } : undefined
+                          }
                         />
                       </td>
                       <td>
-                        <input
-                          type="text"
-                          value={ik.base_mat || ''}
-                          onChange={(e) => setInk(ii, 'base_mat', e.target.value)}
-                          className="cc-det-inp"
+                        <DecimalInput
+                          value={ik.width}
+                          onChange={(v) => setInk(ii, 'width', v)}
+                          placeholder={
+                            Number(sp.web_width_td) > 0 ? String(Number(sp.web_width_td)) : '—'
+                          }
+                          title="Width (mm). Empty = inherit Web Width TD from SP Layout. Type to override."
+                          className="cc-det-inp cc-det-num"
+                          style={ik.width > 0 ? { color: '#7c3aed', fontWeight: 700 } : undefined}
                         />
                       </td>
                       <td>

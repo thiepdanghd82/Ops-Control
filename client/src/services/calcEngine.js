@@ -416,7 +416,11 @@ export function calcInk(ink, st, moq, lib) {
     return { setup_s: 0, run_s: 0, vat: 0, ink_cover_disp: '', layout_indigo_disp: '', total: 0 };
   const price = ink.latest || ink.s_price || 0;
   const isIndigo = isIndigoPrintType(ink.print_type);
-  const pitch = calcPitch(st);
+  // Pitch resolution (2026-05-11): per-row `ink.pitch_mm` overrides the
+  // layout-derived pitch when > 0. Lets operators model a different
+  // pitch per ink (e.g. offset register variant) without forking the
+  // whole layout. Empty = follow Layout's computed pitch.
+  const pitch = Number(ink.pitch_mm) > 0 ? Number(ink.pitch_mm) : calcPitch(st);
   const layout_per_sheet = calcLayoutPerSheet(st);
   const covArr = (lib.ddl && lib.ddl.coverage) || [];
   const covObj = covArr.find((c) => c.pt === ink.print_type);
@@ -427,14 +431,25 @@ export function calcInk(ink, st, moq, lib) {
   const layout_indigo_disp = isIndigo ? layout_indigo_val : '';
   const scrapF = safeYieldDivisor(calcMatScrapFactor(st));
 
-  const _baseMatRef = st.materials.find((m) => m.code === ink.base_mat);
-  // Fallback: extract rightmost positive numeric substring from base_mat code.
-  // Guard against codes like "ABC-200" where slice(-4) would return "-200"
-  // and produce a NEGATIVE width that silently breaks downstream calcs.
-  const _widthMatch = String(ink.base_mat || '').match(/(\d+(?:\.\d+)?)\s*$/);
-  const _widthFromCode = _widthMatch ? Math.max(0, parseFloat(_widthMatch[1])) : 0;
-  const width_m =
-    _baseMatRef && _baseMatRef.width > 0 ? _baseMatRef.width / 1000 : _widthFromCode / 1000;
+  // Width resolution (2026-05-11 FIX-40 follow-up): operator-facing
+  // column renamed "Base Mat" → "Width" with layout sync. Priority:
+  //   1. Explicit per-row `ink.width` (mm) — operator override
+  //   2. Layout `web_width_td` (the press web's effective TD width)
+  //   3. Legacy `ink.base_mat`: material lookup by code, then trailing
+  //      numeric substring (e.g. "Mat-300" → 300). Kept so saved
+  //      pre-rename quotes still calc correctly without a migration.
+  let _widthMm = Number(ink.width) || 0;
+  if (_widthMm <= 0) _widthMm = Number(st.web_width_td) || 0;
+  if (_widthMm <= 0) {
+    const baseMatRef = (st.materials || []).find((m) => m.code === ink.base_mat);
+    if (baseMatRef && baseMatRef.width > 0) {
+      _widthMm = baseMatRef.width;
+    } else {
+      const m = String(ink.base_mat || '').match(/(\d+(?:\.\d+)?)\s*$/);
+      _widthMm = m ? Math.max(0, parseFloat(m[1])) : 0;
+    }
+  }
+  const width_m = _widthMm / 1000;
 
   let run_s = 0,
     setup_s = 0;
@@ -1400,7 +1415,13 @@ export function createStdState() {
         print_type: '',
         mesh_spec: '',
         pitch_mm: 0,
+        // `base_mat` legacy (pre-2026-05-11): string holding a material
+        // code or a trailing numeric width. Replaced by `width` (mm,
+        // numeric) that mirrors Layout's web_width_td when unset.
+        // Kept in schema so saved quotes still resolve their width via
+        // calcInk's legacy fallback chain.
         base_mat: '',
+        width: 0,
         coverage: 0,
         setup_kg: 0,
         area_pct: 0,
@@ -1551,7 +1572,13 @@ export function createEmptyStdState() {
         print_type: '',
         mesh_spec: '',
         pitch_mm: 0,
+        // `base_mat` legacy (pre-2026-05-11): string holding a material
+        // code or a trailing numeric width. Replaced by `width` (mm,
+        // numeric) that mirrors Layout's web_width_td when unset.
+        // Kept in schema so saved quotes still resolve their width via
+        // calcInk's legacy fallback chain.
         base_mat: '',
+        width: 0,
         coverage: 0,
         setup_kg: 0,
         area_pct: 0,
@@ -1727,7 +1754,13 @@ export function createSubProduct(code) {
         print_type: '',
         mesh_spec: '',
         pitch_mm: 0,
+        // `base_mat` legacy (pre-2026-05-11): string holding a material
+        // code or a trailing numeric width. Replaced by `width` (mm,
+        // numeric) that mirrors Layout's web_width_td when unset.
+        // Kept in schema so saved quotes still resolve their width via
+        // calcInk's legacy fallback chain.
         base_mat: '',
+        width: 0,
         coverage: 0,
         setup_kg: 0,
         area_pct: 0,
