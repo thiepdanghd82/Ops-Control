@@ -6,7 +6,7 @@ import { useCallback, useMemo } from 'react';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import { useLibraryPicker } from '../../../../components/LibraryPicker/LibraryPicker';
-import { calcInk, getActiveTierState } from '../../../../services/calcEngine';
+import { calcInk, calcPitch, getActiveTierState } from '../../../../services/calcEngine';
 import { isIndigoPrintType } from '../../../../services/printTypeUtils';
 import { fmtN, parseLocaleNumber } from '../../../../utils/format';
 import DecimalInput from '../../../../utils/DecimalInput';
@@ -17,6 +17,17 @@ export default function CalcInks() {
   const { openMenu } = useLibraryPicker();
   const st = stdState;
   const inks = useMemo(() => st.inks || [], [st.inks]);
+
+  // Layout-synced defaults for the Pitch + Width columns. Operator-typed
+  // per-row values override; empty falls back to these placeholders.
+  const layoutPitch = useMemo(() => {
+    try {
+      return Number(calcPitch(st)) || 0;
+    } catch {
+      return 0;
+    }
+  }, [st]);
+  const layoutWebWidth = Number(st.web_width_td) || 0;
 
   const tierSt = useMemo(() => getActiveTierState(st), [st]);
 
@@ -89,9 +100,18 @@ export default function CalcInks() {
 
   const visibleInks = inks.map((ik, i) => ({ ...ik, _idx: i })).filter((ik) => !ik.hidden);
 
+  // FIX-40: Ink rows read print_type from lib.ddl.print_type (the
+  // coverage/click-charge keyed list: SS / SS(Glue) / Flexo / LP /
+  // Indigo / Indigo(Primer) / Indigo(Spot) / Indigo(oil)), NOT
+  // lib.ddl.print_type_list (which is the Process tab Workcenter list
+  // with press subtypes like Indigo6800, SS(Sheet), Flexo(Gallus4C)…
+  // and is consumed by Processes via TYPE_TO_DDL.Print). Two distinct
+  // library lists with names that differ by a single suffix — easy to
+  // mis-wire and the cascade silently zeroes Ink Run cost because the
+  // Coverage Table key lookup misses.
   const printTypeOpts = useMemo(() => {
-    if (!lib?.ddl?.print_type_list) return [];
-    return Array.isArray(lib.ddl.print_type_list) ? lib.ddl.print_type_list : [];
+    if (!lib?.ddl?.print_type) return [];
+    return Array.isArray(lib.ddl.print_type) ? lib.ddl.print_type : [];
   }, [lib]);
 
   const meshOpts = useMemo(() => {
@@ -141,7 +161,12 @@ export default function CalcInks() {
                 <th style={{ width: 100 }}>Print Type</th>
                 <th style={{ width: 90 }}>Mesh Spec</th>
                 <th style={{ width: 70 }}>Pitch (mm)</th>
-                <th style={{ width: 80 }}>Base Mat</th>
+                <th
+                  style={{ width: 80 }}
+                  title="Web width (mm) — defaults to Layout's Web Width TD when blank"
+                >
+                  Width
+                </th>
                 <th style={{ width: 55 }}>Setup kg</th>
                 <th style={{ width: 55 }}>Area %</th>
                 <th style={{ width: 55 }} title="Coverage override (non-Indigo)">
@@ -226,16 +251,22 @@ export default function CalcInks() {
                       <DecimalInput
                         value={ink.pitch_mm}
                         onChange={(v) => setInkField(i, 'pitch_mm', v)}
-                        placeholder="—"
+                        placeholder={
+                          layoutPitch > 0 ? String(Math.round(layoutPitch * 100) / 100) : '—'
+                        }
+                        title="Pitch (mm). Empty = inherit from Layout. Type to override per ink."
                         className="sc-input-sm sc-input-num"
+                        style={ink.pitch_mm > 0 ? { color: '#7c3aed', fontWeight: 700 } : undefined}
                       />
                     </td>
                     <td>
-                      <input
-                        type="text"
-                        value={ink.base_mat || ''}
-                        onChange={(e) => handleField(i, 'base_mat', e.target.value)}
-                        className="sc-input-sm"
+                      <DecimalInput
+                        value={ink.width}
+                        onChange={(v) => setInkField(i, 'width', v)}
+                        placeholder={layoutWebWidth > 0 ? String(layoutWebWidth) : '—'}
+                        title="Width (mm). Empty = inherit Web Width TD from Layout. Type to override per ink."
+                        className="sc-input-sm sc-input-num"
+                        style={ink.width > 0 ? { color: '#7c3aed', fontWeight: 700 } : undefined}
                       />
                     </td>
                     <td>

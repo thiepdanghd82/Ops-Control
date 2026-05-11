@@ -29,8 +29,21 @@ const SECTION_LABELS = {
 
 // Keys that are objects (not simple arrays)
 const OBJECT_KEYS = new Set(['click_charges', 'tool_life', 'coverage']);
-// Internal keys to skip
-const SKIP_KEYS = new Set(['_custom_sections', '_custom_names', '_custom_colors', 'npi_design_owner']);
+// Internal keys to skip.
+//   `print` (2026-05-11): redundant press-subtype panel — duplicated
+//   `print_type_list` semantics with parens/spacing variations (e.g.
+//   "Flexo(4C Gallus)" vs "Flexo(Gallus4C)"). No code consumer in
+//   client/server; hidden from the operator UI to avoid confusion
+//   with `print_type` (coverage-keyed: Indigo / SS / Flexo / LP) and
+//   `print_type_list` (process Workcenter list). Data row stays in
+//   ddl_sites.json for forensic trail; can be safely deleted later.
+const SKIP_KEYS = new Set([
+  '_custom_sections',
+  '_custom_names',
+  '_custom_colors',
+  'npi_design_owner',
+  'print',
+]);
 
 export default function LibDDL() {
   const { rawDDL, setRawDDL } = useCostLib();
@@ -55,7 +68,10 @@ export default function LibDDL() {
     if (siteData && typeof siteData === 'object') {
       const clone = {};
       for (const [k, v] of Object.entries(siteData)) {
-        if (SKIP_KEYS.has(k)) { clone[k] = v; continue; }
+        if (SKIP_KEYS.has(k)) {
+          clone[k] = v;
+          continue;
+        }
         if (Array.isArray(v)) clone[k] = [...v];
         else if (typeof v === 'object' && v !== null) clone[k] = { ...v };
         else clone[k] = v;
@@ -70,7 +86,7 @@ export default function LibDDL() {
   }, [site, rawDDL, sections]);
 
   const updateItem = useCallback((key, idx, value) => {
-    setSections(prev => {
+    setSections((prev) => {
       const arr = [...(prev[key] || [])];
       arr[idx] = value;
       return { ...prev, [key]: arr };
@@ -79,7 +95,7 @@ export default function LibDDL() {
   }, []);
 
   const addItem = useCallback((key) => {
-    setSections(prev => {
+    setSections((prev) => {
       const arr = [...(prev[key] || []), ''];
       return { ...prev, [key]: arr };
     });
@@ -87,7 +103,7 @@ export default function LibDDL() {
   }, []);
 
   const deleteItem = useCallback((key, idx) => {
-    setSections(prev => {
+    setSections((prev) => {
       const arr = (prev[key] || []).filter((_, i) => i !== idx);
       return { ...prev, [key]: arr };
     });
@@ -95,9 +111,9 @@ export default function LibDDL() {
   }, []);
 
   const updateObjectEntry = useCallback((key, entryKey, value) => {
-    setSections(prev => ({
+    setSections((prev) => ({
       ...prev,
-      [key]: { ...(prev[key] || {}), [entryKey]: value }
+      [key]: { ...(prev[key] || {}), [entryKey]: value },
     }));
     setDirty(true);
   }, []);
@@ -105,15 +121,15 @@ export default function LibDDL() {
   const addObjectEntry = useCallback((key) => {
     const newKey = prompt('Enter key name:');
     if (!newKey) return;
-    setSections(prev => ({
+    setSections((prev) => ({
       ...prev,
-      [key]: { ...(prev[key] || {}), [newKey]: '' }
+      [key]: { ...(prev[key] || {}), [newKey]: '' },
     }));
     setDirty(true);
   }, []);
 
   const deleteObjectEntry = useCallback((key, entryKey) => {
-    setSections(prev => {
+    setSections((prev) => {
       const obj = { ...(prev[key] || {}) };
       delete obj[entryKey];
       return { ...prev, [key]: obj };
@@ -158,22 +174,28 @@ export default function LibDDL() {
   }, [site, sections]);
 
   // Determine section order: known sections first, then custom
-  const sectionKeys = Object.keys(sections).filter(k => !SKIP_KEYS.has(k));
+  const sectionKeys = Object.keys(sections).filter((k) => !SKIP_KEYS.has(k));
 
   return (
     <div className="lib-ddl">
       <div className="ddl-toolbar">
         <div className="ddl-title">Drop-Down Lists</div>
         <div className="ddl-sites">
-          {SITES.map(s => (
-            <button key={s} className={`ddl-site-btn ${site === s ? 'active' : ''}`} onClick={() => setSite(s)}>
+          {SITES.map((s) => (
+            <button
+              key={s}
+              className={`ddl-site-btn ${site === s ? 'active' : ''}`}
+              onClick={() => setSite(s)}
+            >
               {s}
             </button>
           ))}
         </div>
         <div className="ddl-actions">
           {msg && <span className="ddl-msg">{msg}</span>}
-          <button className="ddl-btn" onClick={handleBackup}>Backup</button>
+          <button className="ddl-btn" onClick={handleBackup}>
+            Backup
+          </button>
           <button className="ddl-btn ddl-btn-save" onClick={handleSave} disabled={!dirty || saving}>
             {saving ? 'Saving...' : 'Save'}
           </button>
@@ -182,11 +204,15 @@ export default function LibDDL() {
 
       <div className="ddl-content">
         {sectionKeys.length === 0 && (
-          <EmptyState icon="⏷" title={`No DDL data for ${site}`} hint="Add a section above to define drop-down options for this site." />
+          <EmptyState
+            icon="⏷"
+            title={`No DDL data for ${site}`}
+            hint="Add a section above to define drop-down options for this site."
+          />
         )}
         <div className="ddl-grid">
-          {sectionKeys.map(key => {
-            const label = SECTION_LABELS[key] || (sections._custom_names?.[key]) || key;
+          {sectionKeys.map((key) => {
+            const label = SECTION_LABELS[key] || sections._custom_names?.[key] || key;
             const value = sections[key];
 
             // Coverage is an array of objects {pt, cov}
@@ -197,30 +223,50 @@ export default function LibDDL() {
                   <div className="ddl-card-body">
                     {value.map((item, i) => (
                       <div key={i} className="ddl-cov-row">
-                        <input type="text" value={item.pt || ''} placeholder="Print Type"
-                          onChange={e => {
+                        <input
+                          type="text"
+                          value={item.pt || ''}
+                          placeholder="Print Type"
+                          onChange={(e) => {
                             const arr = [...value];
                             arr[i] = { ...arr[i], pt: e.target.value };
-                            setSections(prev => ({ ...prev, [key]: arr }));
+                            setSections((prev) => ({ ...prev, [key]: arr }));
                             setDirty(true);
-                          }} />
-                        <DecimalInput value={item.cov} placeholder="Coverage"
-                          onChange={v => {
+                          }}
+                        />
+                        <DecimalInput
+                          value={item.cov}
+                          placeholder="Coverage"
+                          onChange={(v) => {
                             const arr = [...value];
                             arr[i] = { ...arr[i], cov: v };
-                            setSections(prev => ({ ...prev, [key]: arr }));
+                            setSections((prev) => ({ ...prev, [key]: arr }));
                             setDirty(true);
-                          }} />
-                        <button className="ddl-del" onClick={() => {
-                          setSections(prev => ({ ...prev, [key]: value.filter((_, j) => j !== i) }));
-                          setDirty(true);
-                        }}>&times;</button>
+                          }}
+                        />
+                        <button
+                          className="ddl-del"
+                          onClick={() => {
+                            setSections((prev) => ({
+                              ...prev,
+                              [key]: value.filter((_, j) => j !== i),
+                            }));
+                            setDirty(true);
+                          }}
+                        >
+                          &times;
+                        </button>
                       </div>
                     ))}
-                    <button className="ddl-add" onClick={() => {
-                      setSections(prev => ({ ...prev, [key]: [...value, { pt: '', cov: 0 }] }));
-                      setDirty(true);
-                    }}>+ Add</button>
+                    <button
+                      className="ddl-add"
+                      onClick={() => {
+                        setSections((prev) => ({ ...prev, [key]: [...value, { pt: '', cov: 0 }] }));
+                        setDirty(true);
+                      }}
+                    >
+                      + Add
+                    </button>
                   </div>
                 </div>
               );
@@ -235,11 +281,19 @@ export default function LibDDL() {
                     {Object.entries(value).map(([ek, ev]) => (
                       <div key={ek} className="ddl-kv-row">
                         <span className="ddl-kv-key">{ek}</span>
-                        <input type="text" value={ev ?? ''} onChange={e => updateObjectEntry(key, ek, e.target.value)} />
-                        <button className="ddl-del" onClick={() => deleteObjectEntry(key, ek)}>&times;</button>
+                        <input
+                          type="text"
+                          value={ev ?? ''}
+                          onChange={(e) => updateObjectEntry(key, ek, e.target.value)}
+                        />
+                        <button className="ddl-del" onClick={() => deleteObjectEntry(key, ek)}>
+                          &times;
+                        </button>
                       </div>
                     ))}
-                    <button className="ddl-add" onClick={() => addObjectEntry(key)}>+ Add</button>
+                    <button className="ddl-add" onClick={() => addObjectEntry(key)}>
+                      + Add
+                    </button>
                   </div>
                 </div>
               );
@@ -253,12 +307,19 @@ export default function LibDDL() {
                   <div className="ddl-card-body">
                     {value.map((item, i) => (
                       <div key={i} className="ddl-item-row">
-                        <input type="text" value={typeof item === 'string' ? item : JSON.stringify(item)}
-                          onChange={e => updateItem(key, i, e.target.value)} />
-                        <button className="ddl-del" onClick={() => deleteItem(key, i)}>&times;</button>
+                        <input
+                          type="text"
+                          value={typeof item === 'string' ? item : JSON.stringify(item)}
+                          onChange={(e) => updateItem(key, i, e.target.value)}
+                        />
+                        <button className="ddl-del" onClick={() => deleteItem(key, i)}>
+                          &times;
+                        </button>
                       </div>
                     ))}
-                    <button className="ddl-add" onClick={() => addItem(key)}>+ Add</button>
+                    <button className="ddl-add" onClick={() => addItem(key)}>
+                      + Add
+                    </button>
                   </div>
                 </div>
               );
