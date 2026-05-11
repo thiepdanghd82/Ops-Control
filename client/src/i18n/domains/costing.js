@@ -89,4 +89,20 @@ registerStrings({
   },
   'pricing.materials.copy.btn_overwrite': { en: 'Overwrite', vi: 'Ghi đè' },
   'pricing.materials.copy.btn_cancel': { en: 'Cancel', vi: 'Hủy' },
+
+  // ─── PR #C — Quote History badge + tier override hint ───
+  'pricing.materials.badge.main': { en: 'Main', vi: 'Main' },
+  'pricing.materials.badge.alt': { en: 'Alt', vi: 'Alt' },
+  'pricing.materials.badge.mixed': {
+    en: 'Mixed ({altCount} alt / {mainCount} main)',
+    vi: 'Trộn ({altCount} alt / {mainCount} main)',
+  },
+  'pricing.materials.badge.tooltip': {
+    en: 'Which materials set drives this quote’s cost',
+    vi: 'Bộ vật tư nào đang driver chi phí báo giá',
+  },
+  'pricing.materials.tier.alt_override_hint': {
+    en: 'Per-tier Setup LM override applies to the ACTIVE material set (currently {set}). Switch the Maint.Mat / Alternative.Mat toggle to edit the other set.',
+    vi: 'Setup LM ghi đè theo tier áp dụng vào bộ vật tư ĐANG ACTIVE ({set}). Chuyển toggle Maint.Mat / Alternative.Mat để edit bộ kia.',
+  },
 });

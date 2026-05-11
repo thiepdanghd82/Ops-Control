@@ -808,6 +808,14 @@ export const HELP_CONTENT = {
             'Feature is gated by the same OPS_FEATURE_ALT_MATERIALS env var as Standard. When off (prod default), the toggle is hidden and only the main set renders, matching legacy behavior.',
             'Tính năng gate cùng env var OPS_FEATURE_ALT_MATERIALS như Standard. Khi off (mặc định prod), toggle ẩn và chỉ render main set, hành vi giống cũ.'
           ),
+          bs(
+            "Per-tier Setup LM overrides (PR #C) — sp_mat_setup_lm vs sp_mat_setup_lm_alt branch PER SP. SP-A active=main + SP-B active=alt at the same MOQ tier pick independent override maps. Switching one SP's toggle does not affect another SP's tier overrides.",
+            'Setup LM ghi đè theo tier (PR #C) — sp_mat_setup_lm vs sp_mat_setup_lm_alt branch PER SP. SP-A active=main + SP-B active=alt cùng MOQ tier pick các override map độc lập. Toggle 1 SP không ảnh hưởng tier override của SP khác.'
+          ),
+          bs(
+            'Quote History badge for Cpx: shows "Main" if all SPs are main, "Alt" if all alt, "Mixed (N alt / M main)" otherwise. Counts give reviewers a fast snapshot of the quote\'s composition.',
+            'Badge Quote History cho Cpx: "Main" nếu tất cả SP main, "Alt" nếu tất cả alt, "Mixed (N alt / M main)" khi có cả 2. Số đếm cho reviewer snapshot nhanh thành phần quote.'
+          ),
         ]
       ),
       proc('Per-level routing', 'Routing theo cấp', null, [
@@ -5026,6 +5034,14 @@ export const HELP_CONTENT = {
           bs(
             'Feature is gated by the OPS_FEATURE_ALT_MATERIALS server env var — when off (prod default), the toggle is hidden and only Maint.Mat is shown, matching legacy behavior. Ask your admin to flip the flag when the workflow is approved for your site.',
             'Tính năng được gate bằng env var OPS_FEATURE_ALT_MATERIALS trên server — khi off (mặc định prod), toggle bị ẩn và chỉ hiển thị Maint.Mat, hành vi giống cũ. Liên hệ admin để bật khi workflow được phê duyệt cho site.'
+          ),
+          bs(
+            'Per-tier Setup LM overrides (PR #C) — editing the per-MOQ-tier Setup LM in the header table writes to the ACTIVE set only. Switch to Alternative.Mat first if you want different per-tier values for the alt rows; otherwise the alt rows inherit their base Setup LM values when alt-mode active and no _alt-tier override is set.',
+            'Setup LM ghi đè theo tier MOQ (PR #C) — chỉnh Setup LM trong bảng per-MOQ ở header chỉ ghi vào bộ ĐANG ACTIVE. Switch sang Alternative.Mat trước nếu muốn per-tier values khác cho alt rows; nếu không, alt rows kế thừa Setup LM gốc khi alt-mode active mà chưa có _alt-tier override.'
+          ),
+          bs(
+            'Quote History row shows a Main / Alt / Mixed badge so reviewers spot which set was driving each saved quote without opening it. Cpx quote with mixed per-SP active states shows "Mixed (N alt / M main)" with the SP counts.',
+            'Row Quote History hiển thị badge Main / Alt / Mixed để reviewer biết bộ nào đang driver giá báo mỗi quote mà không cần mở. Cpx quote với trạng thái mixed per-SP hiển thị "Mixed (N alt / M main)" với số SP tương ứng.'
           ),
         ]
       ),

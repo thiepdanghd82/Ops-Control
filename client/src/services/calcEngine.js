@@ -1025,9 +1025,18 @@ export function buildTierState(st, tierIdx, price, moq, eau) {
     selling_price: price,
   });
   if (!em) return base;
-  if (em.mat_setup_lm && em.mat_setup_lm.length) {
+  // PR #C (Sprint S-ALT-MAT) — per-tier alt-materials override fields.
+  // When state.materials_active === 'alt', material-row tier overrides
+  // index against materials_alt (= st.materials mirror). Use the _alt
+  // variant field; fall back to undefined (no override) when not set so
+  // alt rows render with their base setup_lm. Ink + process + packing
+  // tier overrides remain shared between main/alt (orthogonal to which
+  // material set is active).
+  const isMatAlt = st.materials_active === 'alt';
+  const lmOvr = isMatAlt ? em.mat_setup_lm_alt : em.mat_setup_lm;
+  if (lmOvr && lmOvr.length) {
     base.materials = st.materials.map((m, i) =>
-      em.mat_setup_lm[i] != null ? Object.assign({}, m, { setup_lm: em.mat_setup_lm[i] }) : m
+      lmOvr[i] != null ? Object.assign({}, m, { setup_lm: lmOvr[i] }) : m
     );
   }
   if ((em.ink_setup_kg && em.ink_setup_kg.length) || (em.ink_area_pct && em.ink_area_pct.length)) {
@@ -1048,15 +1057,30 @@ export function buildTierState(st, tierIdx, price, moq, eau) {
 
 /**
  * Apply Complex per-MOQ overrides to a single subproduct.
- * Reads from cs.extra_moqs[tierIdx-1].sp_mat_setup_lm[spi][mi] and .sp_proc_setup_h[spi][pi].
- * Returns a new sp with overridden materials/processes (or the original sp if no overrides apply).
+ *
+ * PR #B (mirror invariant): reads `sp.materials` directly which is kept
+ * in sync with sp.materials_active by the reducer.
+ *
+ * PR #C (per-tier alt overrides, amendment A — per-SP branching):
+ * The material setup_lm override map is per-SP-active, so a Cpx quote
+ * with SP-A active='main' and SP-B active='alt' at the SAME tier picks
+ * sp_mat_setup_lm for SP-A and sp_mat_setup_lm_alt for SP-B. Process
+ * overrides remain shared (sp_proc_setup_h) since they are orthogonal
+ * to the active material set choice.
+ *
+ * Reads from:
+ *   cs.extra_moqs[tierIdx-1].sp_mat_setup_lm[spi][mi]       (main rows)
+ *   cs.extra_moqs[tierIdx-1].sp_mat_setup_lm_alt[spi][mi]   (alt rows)
+ *   cs.extra_moqs[tierIdx-1].sp_proc_setup_h[spi][pi]       (shared)
  */
 export function applyCplxTierToSp(cs, sp, spi, tierIdx) {
   if (!tierIdx || tierIdx === 0) return sp;
   const em = (cs.extra_moqs || [])[tierIdx - 1];
   if (!em) return sp;
   let out = sp;
-  const matOvr = em.sp_mat_setup_lm && em.sp_mat_setup_lm[spi];
+  const isSpMatAlt = sp && sp.materials_active === 'alt';
+  const matOvrTable = isSpMatAlt ? em.sp_mat_setup_lm_alt : em.sp_mat_setup_lm;
+  const matOvr = matOvrTable && matOvrTable[spi];
   if (matOvr && Array.isArray(matOvr) && matOvr.length) {
     out = Object.assign({}, out, {
       materials: (out.materials || []).map((m, mi) =>
@@ -1085,10 +1109,16 @@ export function getActiveTierState(st) {
     selling_price: em.price || st.selling_price,
     annual_qty: em.eau != null && em.eau !== '' ? em.eau : st.annual_qty,
   });
-  // Apply per-MOQ setup overrides (legacy single-field system)
-  if (em.mat_setup_lm && em.mat_setup_lm.length) {
+  // PR #C (Sprint S-ALT-MAT) — per-tier alt-materials override fields.
+  // Material-row tier overrides branch on state.materials_active (alt
+  // vs main). When _alt variant is undefined, fall back to no override
+  // so alt rows render with their base setup_lm / per-row fields. Ink +
+  // process + packing tier overrides remain shared.
+  const isMatAlt = st.materials_active === 'alt';
+  const lmOvr = isMatAlt ? em.mat_setup_lm_alt : em.mat_setup_lm;
+  if (lmOvr && lmOvr.length) {
     base.materials = st.materials.map((m, i) =>
-      em.mat_setup_lm[i] != null ? Object.assign({}, m, { setup_lm: em.mat_setup_lm[i] }) : m
+      lmOvr[i] != null ? Object.assign({}, m, { setup_lm: lmOvr[i] }) : m
     );
   }
   if ((em.ink_setup_kg && em.ink_setup_kg.length) || (em.ink_area_pct && em.ink_area_pct.length)) {
@@ -1104,11 +1134,13 @@ export function getActiveTierState(st) {
       em.proc_setup_h[i] != null ? Object.assign({}, p, { setup_h: em.proc_setup_h[i] }) : p
     );
   }
-  // Apply full per-MOQ row overrides (new system)
-  if (em.mat_rows && em.mat_rows.length) {
+  // Apply full per-MOQ row overrides (new system). Material rows pick
+  // the _alt variant when active='alt'; ink/proc rows shared.
+  const matRowsOvr = isMatAlt ? em.mat_rows_alt : em.mat_rows;
+  if (matRowsOvr && matRowsOvr.length) {
     base.materials = (base.materials || st.materials).map((m, i) => {
-      if (!em.mat_rows[i]) return m;
-      const ovr = _filterOvr(em.mat_rows[i], _matStruct);
+      if (!matRowsOvr[i]) return m;
+      const ovr = _filterOvr(matRowsOvr[i], _matStruct);
       return Object.keys(ovr).length ? Object.assign({}, m, ovr) : m;
     });
   }

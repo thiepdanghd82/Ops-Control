@@ -127,6 +127,13 @@ export default function CalcMaterials() {
   // override slot otherwise. Read path mirrors getActiveTierState.
   const activeMoqIdx = st.active_moq_idx || 0;
 
+  // PR #C (Sprint S-ALT-MAT) — tier override field name routes through
+  // materials_active. When operator edits a Setup LM override at MOQ
+  // tier > 0 while in alt mode, the value lands in mat_setup_lm_alt;
+  // while in main, in mat_setup_lm. Calc engine + getSetupLmActive +
+  // isSetupLmOverride consume the matching variant.
+  const tierLmField = materialsActive === 'alt' ? 'mat_setup_lm_alt' : 'mat_setup_lm';
+
   const setSetupLmActive = useCallback(
     (matIdx, value) => {
       if (activeMoqIdx === 0) {
@@ -135,7 +142,7 @@ export default function CalcMaterials() {
       }
       const ei = activeMoqIdx - 1;
       const em = (st.extra_moqs || [])[ei] || {};
-      const arr = Array.isArray(em.mat_setup_lm) ? [...em.mat_setup_lm] : [];
+      const arr = Array.isArray(em[tierLmField]) ? [...em[tierLmField]] : [];
       // Empty / null → revert to base (drop the override). Number → store.
       arr[matIdx] =
         value === '' || value == null
@@ -143,31 +150,33 @@ export default function CalcMaterials() {
           : Number.isFinite(Number(value))
             ? Number(value)
             : null;
-      dispatch({ type: 'SET_EXTRA_MOQ', payload: { idx: ei, field: 'mat_setup_lm', value: arr } });
+      dispatch({ type: 'SET_EXTRA_MOQ', payload: { idx: ei, field: tierLmField, value: arr } });
     },
-    [activeMoqIdx, st.extra_moqs, setMaterialField, dispatch]
+    [activeMoqIdx, st.extra_moqs, setMaterialField, dispatch, tierLmField]
   );
 
   const getSetupLmActive = useCallback(
     (mat, matIdx) => {
       if (activeMoqIdx === 0) return mat.setup_lm;
       const em = (st.extra_moqs || [])[activeMoqIdx - 1];
-      const ovr = em?.mat_setup_lm?.[matIdx];
+      const ovr = em?.[tierLmField]?.[matIdx];
       return ovr != null ? ovr : mat.setup_lm;
     },
-    [activeMoqIdx, st.extra_moqs]
+    [activeMoqIdx, st.extra_moqs, tierLmField]
   );
 
   // True when the active MOQ has its own override for this row — drives
   // the amber visual cue so operators can see "this is a per-MOQ value"
   // at a glance, matching the legend in the Setup Data per MOQ table.
+  // Active-aware so the marker reflects the alt-side override when in
+  // alt mode (PR #C).
   const isSetupLmOverride = useCallback(
     (matIdx) => {
       if (activeMoqIdx === 0) return false;
       const em = (st.extra_moqs || [])[activeMoqIdx - 1];
-      return em?.mat_setup_lm?.[matIdx] != null;
+      return em?.[tierLmField]?.[matIdx] != null;
     },
-    [activeMoqIdx, st.extra_moqs]
+    [activeMoqIdx, st.extra_moqs, tierLmField]
   );
 
   const lookupMat = useCallback(
