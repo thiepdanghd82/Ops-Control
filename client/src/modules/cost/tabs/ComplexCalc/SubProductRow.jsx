@@ -132,6 +132,14 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
   // the base material/process. Reverted by clearing the input.
   const activeMoqIdxCpx = cplxState?.active_moq_idx || 0;
 
+  // PR #C (Sprint S-ALT-MAT) — per-SP material-row tier override field
+  // name routes through THIS subproduct's materials_active (amendment A
+  // — per-SP branching, not global). When the operator edits a Setup LM
+  // override at MOQ tier > 0 while SP active='alt', the value lands in
+  // extra_moqs[ei].sp_mat_setup_lm_alt[spi][mi]. Different SPs at the
+  // same tier with different active flags pick independent maps.
+  const tierSpLmField = spMaterialsActive === 'alt' ? 'sp_mat_setup_lm_alt' : 'sp_mat_setup_lm';
+
   const setSpSetupLmActive = useCallback(
     (mi, value) => {
       if (activeMoqIdxCpx === 0) {
@@ -141,7 +149,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
       const ei = activeMoqIdxCpx - 1;
       const extra = [...((cplxState && cplxState.extra_moqs) || [])];
       const em = { ...(extra[ei] || {}) };
-      const map = { ...(em.sp_mat_setup_lm || {}) };
+      const map = { ...(em[tierSpLmField] || {}) };
       const arr = Array.isArray(map[spi]) ? [...map[spi]] : [];
       arr[mi] =
         value === '' || value == null
@@ -150,11 +158,11 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
             ? Number(value)
             : null;
       map[spi] = arr;
-      em.sp_mat_setup_lm = map;
+      em[tierSpLmField] = map;
       extra[ei] = em;
       dispatch({ type: 'SET_CPLX_FIELD', payload: { field: 'extra_moqs', value: extra } });
     },
-    [activeMoqIdxCpx, cplxState, setMat, dispatch, spi]
+    [activeMoqIdxCpx, cplxState, setMat, dispatch, spi, tierSpLmField]
   );
 
   const setSpSetupHActive = useCallback(
@@ -186,10 +194,10 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
     (m, mi) => {
       if (activeMoqIdxCpx === 0) return m.setup_lm;
       const em = ((cplxState && cplxState.extra_moqs) || [])[activeMoqIdxCpx - 1];
-      const ovr = em?.sp_mat_setup_lm?.[spi]?.[mi];
+      const ovr = em?.[tierSpLmField]?.[spi]?.[mi];
       return ovr != null ? ovr : m.setup_lm;
     },
-    [activeMoqIdxCpx, cplxState, spi]
+    [activeMoqIdxCpx, cplxState, spi, tierSpLmField]
   );
 
   const getSpSetupHActive = useCallback(
@@ -206,9 +214,9 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
     (mi) => {
       if (activeMoqIdxCpx === 0) return false;
       const em = ((cplxState && cplxState.extra_moqs) || [])[activeMoqIdxCpx - 1];
-      return em?.sp_mat_setup_lm?.[spi]?.[mi] != null;
+      return em?.[tierSpLmField]?.[spi]?.[mi] != null;
     },
-    [activeMoqIdxCpx, cplxState, spi]
+    [activeMoqIdxCpx, cplxState, spi, tierSpLmField]
   );
 
   const isSpSetupHOverride = useCallback(

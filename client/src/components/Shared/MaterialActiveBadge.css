@@ -1,0 +1,42 @@
+/* MaterialActiveBadge — Quote History row badge (Sprint S-ALT-MAT, PR #C).
+ * Compact pill — Carbon-blue for main (matches alt-toggle active state
+ * in StandardCalc), amber for alt (signals "different from default"),
+ * slate for mixed (neutral, informational). */
+
+.mab {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  margin-left: 4px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 14px;
+  font-family:
+    'IBM Plex Sans',
+    -apple-system,
+    system-ui,
+    sans-serif;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.mab-main {
+  background: var(--color-blue-100, #dbeafe);
+  color: var(--color-blue-700, #1d4ed8);
+  border: 1px solid var(--color-blue-300, #93c5fd);
+}
+
+.mab-alt {
+  background: var(--color-amber-100, #fef3c7);
+  color: var(--color-amber-700, #b45309);
+  border: 1px solid var(--color-amber-300, #fcd34d);
+}
+
+.mab-mixed {
+  background: var(--color-slate-100, #f1f5f9);
+  color: var(--color-slate-700, #334155);
+  border: 1px solid var(--color-slate-300, #cbd5e1);
+}
