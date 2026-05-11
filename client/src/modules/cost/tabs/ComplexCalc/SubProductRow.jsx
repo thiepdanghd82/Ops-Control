@@ -6,7 +6,10 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
+import { useFeatureFlag } from '../../../../context/useAppConfig';
+import { useI18n } from '../../../../utils/useI18n';
 import { useLibraryPicker } from '../../../../components/LibraryPicker/LibraryPicker';
+import AltMaterialsToggle from '../StandardCalc/AltMaterialsToggle';
 import { sharedApi } from '../../../../services/api';
 import {
   getProcessOptions,
@@ -45,6 +48,12 @@ import '../StandardCalc/StandardCalc.css';
 
 export default function SubProductRow({ sp, spi, result, allSps }) {
   const { dispatch, cplxState } = useCalc();
+  const { t } = useI18n();
+  // Alt-materials feature flag (Sprint S-ALT-MAT, PR #B). When OFF, the
+  // per-SP toggle is not rendered; sp.materials reads (the active-set
+  // mirror) work exactly as before. Calc engine respects materials_active
+  // regardless of the flag — flag only gates the UI affordance.
+  const altMaterialsEnabled = useFeatureFlag('alt_materials');
   // Parent-level customer info used by FileUploadZone to auto-name
   // drawings {Customer}_{EndCuPN}_{stamp}[suffix]. These live on the
   // top-level cplxState, not per-sub-product.
@@ -53,6 +62,36 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
   const parentEndCuPn = cplxState?.end_cu_pn;
   const { lib, getMatByCode } = useCostLib();
   const { openMenu } = useLibraryPicker();
+
+  // Alt-materials per-SP UI state (PR #B). Active flag + row counts feed
+  // the AltMaterialsToggle component; toggle/copy dispatch carries spIdx
+  // so the reducer targets the correct subproduct.
+  const spMaterialsActive = altMaterialsEnabled
+    ? sp.materials_active === 'alt'
+      ? 'alt'
+      : 'main'
+    : 'main';
+  const spMainCount = Array.isArray(sp.materials_main)
+    ? sp.materials_main.length
+    : (sp.materials || []).length;
+  const spAltCount = Array.isArray(sp.materials_alt) ? sp.materials_alt.length : 0;
+  const handleSpSwitchActive = useCallback(
+    (next) => {
+      dispatch({ type: 'SET_SP_MATERIALS_ACTIVE', payload: { spIdx: spi, value: next } });
+    },
+    [dispatch, spi]
+  );
+  const handleSpCopyMaterials = useCallback(
+    (direction) => {
+      dispatch({ type: 'COPY_SP_MATERIALS', payload: { spIdx: spi, direction } });
+    },
+    [dispatch, spi]
+  );
+  const handleSpCopyAltFromMain = useCallback(() => {
+    dispatch({ type: 'COPY_SP_MATERIALS', payload: { spIdx: spi, direction: 'main_to_alt' } });
+  }, [dispatch, spi]);
+  const showSpAltEmptyState =
+    altMaterialsEnabled && spMaterialsActive === 'alt' && spAltCount === 0;
 
   // Per-row calc results piggybacking on the pass2 result object built in
   // ComplexCalc.jsx. These were already computed for the SP totals; we
@@ -592,158 +631,181 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
             </div>
           </div>
           <div className="sc-card-body cc-det-tw">
-            <table className="cc-det-tbl">
-              <thead>
-                <tr>
-                  <th style={{ width: 120 }}>Row</th>
-                  <th style={{ width: 80 }}>IFS Code</th>
-                  <th style={{ width: 120 }}>Desc.</th>
-                  <th style={{ width: 50 }}>Usage</th>
-                  <th style={{ width: 55 }}>Setup LM</th>
-                  <th style={{ width: 60 }} title="Override pitch from layout">
-                    Pitch
-                  </th>
-                  <th style={{ width: 50 }}>Width</th>
-                  <th style={{ width: 45 }}>Cav</th>
-                  <th style={{ width: 50 }}>Offcut</th>
-                  <th
-                    style={{ width: 55 }}
-                    title="Offcut % — matches COST V1.0 Sheet 1 formula MOD(Cavities, Width) / Cavities. Type to override."
-                  >
-                    Offcut %
-                  </th>
-                  <th style={{ width: 45 }}>Slit</th>
-                  <th style={{ width: 60 }}>Ref Price</th>
-                  <th style={{ width: 60 }}>Mat Price</th>
-                  <th className="sc-col-derived" style={{ width: 60 }}>
-                    QPA (m²)
-                  </th>
-                  <th className="sc-col-derived" style={{ width: 60 }}>
-                    QPA (lm)
-                  </th>
-                  <th className="sc-col-derived" style={{ width: 50 }}>
-                    L/Sheet
-                  </th>
-                  <th className="sc-col-derived" style={{ width: 45 }}>
-                    Webs
-                  </th>
-                  <th className="sc-col-derived" style={{ width: 55 }}>
-                    Scrap%
-                  </th>
-                  <th className="sc-col-result" style={{ width: 65 }}>
-                    Setup Cost
-                  </th>
-                  <th className="sc-col-result" style={{ width: 65 }}>
-                    Run Cost
-                  </th>
-                  <th className="sc-col-result" style={{ width: 65 }}>
-                    Total
-                  </th>
-                  <th style={{ width: 30 }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {(() => {
-                  let mc = 0,
-                    pc = 0;
-                  return mats.map((m, mi) => {
-                    const isRef = allSps.some((s, si) => si !== spi && s.code === m.code);
-                    // Look up the matching calc result by original (unfiltered)
-                    // position in sp.materials — the calc engine runs on the
-                    // full materials array including hidden rows.
-                    const origIdx = (sp.materials || []).indexOf(m);
-                    const r = matResults[origIdx] || null;
-                    const isMain = m.row_type === 'Main.Mat';
-                    if (isMain) mc++;
-                    else pc++;
-                    // Warn row when user has entered an IFS code but is still
-                    // missing one of the required geometry fields — same rule
-                    // as Standard CalcMaterials.
-                    const hasCode = !!m.code;
-                    const hasErr =
-                      hasCode &&
-                      (!m.usage ||
-                        !(m.width > 0 || sp.web_width_td > 0) ||
-                        !(m.cavities > 0 || layoutSheet > 0));
-                    const selClass = !hasCode
-                      ? 'sc-row-type-dim'
-                      : isMain
-                        ? 'sc-row-type-main'
-                        : 'sc-row-type-proc';
-                    const numClass = !hasCode
-                      ? 'sc-row-num-dim'
-                      : isMain
-                        ? 'sc-row-num-main'
-                        : 'sc-row-num-proc';
-                    const rowBg = isRef ? { background: 'var(--color-violet-50)' } : {};
-                    return (
-                      <tr
-                        key={m._mid || mi}
-                        className={hasErr ? 'sc-row-warn' : ''}
-                        style={rowBg}
-                        onContextMenu={(e) => openMatMenu(mi, e)}
-                      >
-                        <td>
-                          <span
-                            className={`sc-row-label-cell${hasCode ? '' : ' sc-row-label-empty'}`}
-                          >
-                            <select
-                              value={m.row_type || 'Main.Mat'}
-                              onChange={(e) => setMat(mi, 'row_type', e.target.value)}
-                              className={`sc-row-type-sel ${selClass}`}
+            {altMaterialsEnabled && (
+              <AltMaterialsToggle
+                active={spMaterialsActive}
+                mainCount={spMainCount}
+                altCount={spAltCount}
+                onSwitch={handleSpSwitchActive}
+                onCopy={handleSpCopyMaterials}
+              />
+            )}
+            {showSpAltEmptyState && (
+              <div className="alt-mat-empty">
+                <span>{t('pricing.materials.alt.empty')}</span>
+                <button
+                  type="button"
+                  className="op-btn op-btn-secondary"
+                  onClick={handleSpCopyAltFromMain}
+                  disabled={spMainCount === 0}
+                >
+                  {t('pricing.materials.alt.copy_from_main')}
+                </button>
+              </div>
+            )}
+            {!showSpAltEmptyState && (
+              <table className="cc-det-tbl">
+                <thead>
+                  <tr>
+                    <th style={{ width: 120 }}>Row</th>
+                    <th style={{ width: 80 }}>IFS Code</th>
+                    <th style={{ width: 120 }}>Desc.</th>
+                    <th style={{ width: 50 }}>Usage</th>
+                    <th style={{ width: 55 }}>Setup LM</th>
+                    <th style={{ width: 60 }} title="Override pitch from layout">
+                      Pitch
+                    </th>
+                    <th style={{ width: 50 }}>Width</th>
+                    <th style={{ width: 45 }}>Cav</th>
+                    <th style={{ width: 50 }}>Offcut</th>
+                    <th
+                      style={{ width: 55 }}
+                      title="Offcut % — matches COST V1.0 Sheet 1 formula MOD(Cavities, Width) / Cavities. Type to override."
+                    >
+                      Offcut %
+                    </th>
+                    <th style={{ width: 45 }}>Slit</th>
+                    <th style={{ width: 60 }}>Ref Price</th>
+                    <th style={{ width: 60 }}>Mat Price</th>
+                    <th className="sc-col-derived" style={{ width: 60 }}>
+                      QPA (m²)
+                    </th>
+                    <th className="sc-col-derived" style={{ width: 60 }}>
+                      QPA (lm)
+                    </th>
+                    <th className="sc-col-derived" style={{ width: 50 }}>
+                      L/Sheet
+                    </th>
+                    <th className="sc-col-derived" style={{ width: 45 }}>
+                      Webs
+                    </th>
+                    <th className="sc-col-derived" style={{ width: 55 }}>
+                      Scrap%
+                    </th>
+                    <th className="sc-col-result" style={{ width: 65 }}>
+                      Setup Cost
+                    </th>
+                    <th className="sc-col-result" style={{ width: 65 }}>
+                      Run Cost
+                    </th>
+                    <th className="sc-col-result" style={{ width: 65 }}>
+                      Total
+                    </th>
+                    <th style={{ width: 30 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    let mc = 0,
+                      pc = 0;
+                    return mats.map((m, mi) => {
+                      const isRef = allSps.some((s, si) => si !== spi && s.code === m.code);
+                      // Look up the matching calc result by original (unfiltered)
+                      // position in sp.materials — the calc engine runs on the
+                      // full materials array including hidden rows.
+                      const origIdx = (sp.materials || []).indexOf(m);
+                      const r = matResults[origIdx] || null;
+                      const isMain = m.row_type === 'Main.Mat';
+                      if (isMain) mc++;
+                      else pc++;
+                      // Warn row when user has entered an IFS code but is still
+                      // missing one of the required geometry fields — same rule
+                      // as Standard CalcMaterials.
+                      const hasCode = !!m.code;
+                      const hasErr =
+                        hasCode &&
+                        (!m.usage ||
+                          !(m.width > 0 || sp.web_width_td > 0) ||
+                          !(m.cavities > 0 || layoutSheet > 0));
+                      const selClass = !hasCode
+                        ? 'sc-row-type-dim'
+                        : isMain
+                          ? 'sc-row-type-main'
+                          : 'sc-row-type-proc';
+                      const numClass = !hasCode
+                        ? 'sc-row-num-dim'
+                        : isMain
+                          ? 'sc-row-num-main'
+                          : 'sc-row-num-proc';
+                      const rowBg = isRef ? { background: 'var(--color-violet-50)' } : {};
+                      return (
+                        <tr
+                          key={m._mid || mi}
+                          className={hasErr ? 'sc-row-warn' : ''}
+                          style={rowBg}
+                          onContextMenu={(e) => openMatMenu(mi, e)}
+                        >
+                          <td>
+                            <span
+                              className={`sc-row-label-cell${hasCode ? '' : ' sc-row-label-empty'}`}
                             >
-                              <option value="Main.Mat">Main.Mat</option>
-                              <option value="Process Mat">Process Mat</option>
-                            </select>
-                            <span className={`sc-row-num ${numClass}`}>{isMain ? mc : pc}</span>
-                          </span>
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            value={m.code || ''}
-                            onChange={(e) => setMat(mi, 'code', e.target.value)}
-                            onBlur={(e) => {
-                              const f = getMatByCode(e.target.value);
-                              if (f) setMat(mi, 'desc', f.description || f.desc || '');
-                            }}
-                            className="cc-det-inp"
-                            style={
-                              isRef ? { color: 'var(--color-violet-500)', fontWeight: 700 } : {}
-                            }
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            value={m.desc || ''}
-                            onChange={(e) => setMat(mi, 'desc', e.target.value)}
-                            className="cc-det-inp cc-det-desc"
-                          />
-                        </td>
-                        <td>
-                          <DecimalInput
-                            value={m.usage}
-                            onChange={(v) => setMat(mi, 'usage', v)}
-                            className={`cc-det-inp cc-det-num ${!m.usage && hasCode ? 'sc-input-err' : ''}`}
-                          />
-                        </td>
-                        {/* Sprint 1.6 — per-MOQ Setup LM (mirrors Standard fix). */}
-                        <td>
-                          <DecimalInput
-                            value={getSpSetupLmActive(m, mi)}
-                            onChange={(v) => setSpSetupLmActive(mi, v)}
-                            title={
-                              isSpSetupLmOverride(mi)
-                                ? `MOQ ${activeMoqIdxCpx + 1} override (base = ${m.setup_lm ?? 0})`
-                                : activeMoqIdxCpx === 0
-                                  ? 'Base value (MOQ 1)'
-                                  : `Inherits MOQ 1 base (${m.setup_lm ?? 0}) — type to override`
-                            }
-                            className={`cc-det-inp cc-det-num ${isSpSetupLmOverride(mi) ? 'sc-smt-inp-ovr' : ''}`}
-                          />
-                        </td>
-                        {/* Pitch OVR / Width / Cav auto-sync from Layout tab.
+                              <select
+                                value={m.row_type || 'Main.Mat'}
+                                onChange={(e) => setMat(mi, 'row_type', e.target.value)}
+                                className={`sc-row-type-sel ${selClass}`}
+                              >
+                                <option value="Main.Mat">Main.Mat</option>
+                                <option value="Process Mat">Process Mat</option>
+                              </select>
+                              <span className={`sc-row-num ${numClass}`}>{isMain ? mc : pc}</span>
+                            </span>
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              value={m.code || ''}
+                              onChange={(e) => setMat(mi, 'code', e.target.value)}
+                              onBlur={(e) => {
+                                const f = getMatByCode(e.target.value);
+                                if (f) setMat(mi, 'desc', f.description || f.desc || '');
+                              }}
+                              className="cc-det-inp"
+                              style={
+                                isRef ? { color: 'var(--color-violet-500)', fontWeight: 700 } : {}
+                              }
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              value={m.desc || ''}
+                              onChange={(e) => setMat(mi, 'desc', e.target.value)}
+                              className="cc-det-inp cc-det-desc"
+                            />
+                          </td>
+                          <td>
+                            <DecimalInput
+                              value={m.usage}
+                              onChange={(v) => setMat(mi, 'usage', v)}
+                              className={`cc-det-inp cc-det-num ${!m.usage && hasCode ? 'sc-input-err' : ''}`}
+                            />
+                          </td>
+                          {/* Sprint 1.6 — per-MOQ Setup LM (mirrors Standard fix). */}
+                          <td>
+                            <DecimalInput
+                              value={getSpSetupLmActive(m, mi)}
+                              onChange={(v) => setSpSetupLmActive(mi, v)}
+                              title={
+                                isSpSetupLmOverride(mi)
+                                  ? `MOQ ${activeMoqIdxCpx + 1} override (base = ${m.setup_lm ?? 0})`
+                                  : activeMoqIdxCpx === 0
+                                    ? 'Base value (MOQ 1)'
+                                    : `Inherits MOQ 1 base (${m.setup_lm ?? 0}) — type to override`
+                              }
+                              className={`cc-det-inp cc-det-num ${isSpSetupLmOverride(mi) ? 'sc-smt-inp-ovr' : ''}`}
+                            />
+                          </td>
+                          {/* Pitch OVR / Width / Cav auto-sync from Layout tab.
                         Display the layout-derived value in BLACK when the
                         row hasn't been overridden; switch to PURPLE (bold)
                         as soon as the user types a non-zero value. Clearing
@@ -751,7 +813,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                         which the display logic treats as "use the layout
                         default" — so users can revert to auto by emptying
                         the cell. */}
-                        {/* Sprint AF — switched to DecimalInput so partial decimals
+                          {/* Sprint AF — switched to DecimalInput so partial decimals
                         like "0.1" aren't clobbered mid-typing. DecimalInput
                         treats value === 0 as "display empty", which works
                         perfectly with the override semantics: we pass the
@@ -759,191 +821,198 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                         always shows SOMETHING (layout pitch, computed
                         width, or layout sheet), and the user can override
                         by typing or revert to auto by clearing. */}
-                        <td>
-                          <DecimalInput
-                            value={
-                              m.pitch_ovr > 0
-                                ? m.pitch_ovr
-                                : pitch > 0
-                                  ? Number(pitch.toFixed(1))
-                                  : 0
-                            }
-                            onChange={(v) => setMat(mi, 'pitch_ovr', v)}
-                            className="cc-det-inp cc-det-num"
-                            style={
-                              m.pitch_ovr > 0
-                                ? { color: 'var(--color-violet-500)', fontWeight: 700 }
-                                : { color: 'var(--color-slate-900)' }
-                            }
-                            title={
-                              m.pitch_ovr > 0
-                                ? 'Override — clear to revert to layout pitch'
-                                : 'Auto-synced from Layout'
-                            }
-                          />
-                        </td>
-                        <td>
-                          <DecimalInput
-                            value={
-                              m.width > 0 ? m.width : sp.web_width_td > 0 ? sp.web_width_td : 0
-                            }
-                            onChange={(v) => setMat(mi, 'width', v)}
-                            className={`cc-det-inp cc-det-num ${!(m.width > 0) && !(sp.web_width_td > 0) && hasCode ? 'sc-input-err' : ''}`}
-                            style={
-                              m.width > 0
-                                ? { color: 'var(--color-violet-500)', fontWeight: 700 }
-                                : { color: 'var(--color-slate-900)' }
-                            }
-                            title={
-                              m.width > 0
-                                ? 'Override — clear to revert to layout Web Width TD'
-                                : 'Auto-synced from Layout Web Width TD'
-                            }
-                          />
-                        </td>
-                        <td>
-                          <DecimalInput
-                            value={m.cavities > 0 ? m.cavities : layoutSheet > 0 ? layoutSheet : 0}
-                            onChange={(v) => setMat(mi, 'cavities', v)}
-                            className={`cc-det-inp cc-det-num ${!(m.cavities > 0) && !(layoutSheet > 0) && hasCode ? 'sc-input-err' : ''}`}
-                            style={
-                              m.cavities > 0
-                                ? { color: 'var(--color-violet-500)', fontWeight: 700 }
-                                : { color: 'var(--color-slate-900)' }
-                            }
-                            title={
-                              m.cavities > 0
-                                ? 'Override — clear to revert to Layout/Sheet'
-                                : 'Auto-synced from Layout/Sheet'
-                            }
-                          />
-                        </td>
-                        <td>
-                          <select
-                            value={m.offcut_yn || ''}
-                            onChange={(e) => setMat(mi, 'offcut_yn', e.target.value)}
-                            className="cc-det-sel cc-select-bare"
-                          >
-                            <option value="Y">Y</option>
-                            <option value="N">N</option>
-                            <option value=""></option>
-                          </select>
-                        </td>
-                        {/* Offcut % display — mirror Offcut Y/N selection:
+                          <td>
+                            <DecimalInput
+                              value={
+                                m.pitch_ovr > 0
+                                  ? m.pitch_ovr
+                                  : pitch > 0
+                                    ? Number(pitch.toFixed(1))
+                                    : 0
+                              }
+                              onChange={(v) => setMat(mi, 'pitch_ovr', v)}
+                              className="cc-det-inp cc-det-num"
+                              style={
+                                m.pitch_ovr > 0
+                                  ? { color: 'var(--color-violet-500)', fontWeight: 700 }
+                                  : { color: 'var(--color-slate-900)' }
+                              }
+                              title={
+                                m.pitch_ovr > 0
+                                  ? 'Override — clear to revert to layout pitch'
+                                  : 'Auto-synced from Layout'
+                              }
+                            />
+                          </td>
+                          <td>
+                            <DecimalInput
+                              value={
+                                m.width > 0 ? m.width : sp.web_width_td > 0 ? sp.web_width_td : 0
+                              }
+                              onChange={(v) => setMat(mi, 'width', v)}
+                              className={`cc-det-inp cc-det-num ${!(m.width > 0) && !(sp.web_width_td > 0) && hasCode ? 'sc-input-err' : ''}`}
+                              style={
+                                m.width > 0
+                                  ? { color: 'var(--color-violet-500)', fontWeight: 700 }
+                                  : { color: 'var(--color-slate-900)' }
+                              }
+                              title={
+                                m.width > 0
+                                  ? 'Override — clear to revert to layout Web Width TD'
+                                  : 'Auto-synced from Layout Web Width TD'
+                              }
+                            />
+                          </td>
+                          <td>
+                            <DecimalInput
+                              value={
+                                m.cavities > 0 ? m.cavities : layoutSheet > 0 ? layoutSheet : 0
+                              }
+                              onChange={(v) => setMat(mi, 'cavities', v)}
+                              className={`cc-det-inp cc-det-num ${!(m.cavities > 0) && !(layoutSheet > 0) && hasCode ? 'sc-input-err' : ''}`}
+                              style={
+                                m.cavities > 0
+                                  ? { color: 'var(--color-violet-500)', fontWeight: 700 }
+                                  : { color: 'var(--color-slate-900)' }
+                              }
+                              title={
+                                m.cavities > 0
+                                  ? 'Override — clear to revert to Layout/Sheet'
+                                  : 'Auto-synced from Layout/Sheet'
+                              }
+                            />
+                          </td>
+                          <td>
+                            <select
+                              value={m.offcut_yn || ''}
+                              onChange={(e) => setMat(mi, 'offcut_yn', e.target.value)}
+                              className="cc-det-sel cc-select-bare"
+                            >
+                              <option value="Y">Y</option>
+                              <option value="N">N</option>
+                              <option value=""></option>
+                            </select>
+                          </td>
+                          {/* Offcut % display — mirror Offcut Y/N selection:
                         - Y      → auto-compute via MOD(cavities, width) / cavities
                                    (or user override when m.offcut_pct > 0)
                         - N      → always 0% (force, calc branch returns 0)
                         - empty  → Default = 5% (calc branch returns 0.05)
                         Black = auto/computed, purple bold = user override. */}
-                        {(() => {
-                          const yn = m.offcut_yn || '';
-                          const effW = m.width > 0 ? m.width : sp.web_width_td || 0;
-                          const effCav = m.cavities > 0 ? m.cavities : layoutSheet || 0;
-                          const overridden = yn === 'Y' && m.offcut_pct > 0;
-                          // Computed auto-default when user hasn't overridden.
-                          // Only the yn='Y' (editable) branch routes through the
-                          // editable input; other branches render a read-only
-                          // value because they represent forced/default states.
-                          let autoDefault = 0;
-                          if (yn === 'Y' && !overridden && effW > 0 && effCav > 0) {
-                            autoDefault = Number((((effCav % effW) / effCav) * 100).toFixed(1));
-                          }
-                          let shown;
-                          if (yn === 'N') shown = '0';
-                          else if (yn === '') shown = '5';
-                          else if (overridden) shown = m.offcut_pct;
-                          else if (effW > 0 && effCav > 0)
-                            shown = (((effCav % effW) / effCav) * 100).toFixed(1);
-                          else shown = '';
-                          return (
-                            <td>
-                              {yn === 'Y' ? (
-                                <DecimalInput
-                                  value={overridden ? m.offcut_pct : autoDefault}
-                                  onChange={(v) => setMat(mi, 'offcut_pct', v)}
-                                  className="cc-det-inp cc-det-num"
-                                  style={
-                                    overridden
-                                      ? { color: 'var(--color-violet-500)', fontWeight: 700 }
-                                      : { color: 'var(--color-slate-900)' }
-                                  }
-                                  title={
-                                    overridden
-                                      ? 'Override — clear to revert to auto'
-                                      : 'Auto = MOD(Cavities, Width) / Cavities'
-                                  }
-                                />
-                              ) : (
-                                <input
-                                  type="text"
-                                  value={shown}
-                                  readOnly
-                                  className="cc-det-inp cc-det-num"
-                                  style={{ color: 'var(--color-slate-900)' }}
-                                  title={yn === 'N' ? 'Offcut=N → 0%' : 'Default → 5%'}
-                                />
-                              )}
-                            </td>
-                          );
-                        })()}
-                        <td>
-                          <select
-                            value={m.slitting_yn || ''}
-                            onChange={(e) => setMat(mi, 'slitting_yn', e.target.value)}
-                            className="cc-det-sel cc-select-bare"
-                          >
-                            <option value="Y">Y</option>
-                            <option value="N">N</option>
-                            <option value=""></option>
-                          </select>
-                        </td>
-                        <td>
-                          <DecimalInput
-                            value={m.g_price}
-                            onChange={(v) => setMat(mi, 'g_price', v)}
-                            className="cc-det-inp cc-det-num"
-                          />
-                        </td>
-                        <td>
-                          <DecimalInput
-                            value={m.latest}
-                            onChange={(v) => setMat(mi, 'latest', v)}
-                            className="cc-det-inp cc-det-num"
-                            style={
-                              m.latest ? { color: 'var(--color-violet-500)', fontWeight: 700 } : {}
+                          {(() => {
+                            const yn = m.offcut_yn || '';
+                            const effW = m.width > 0 ? m.width : sp.web_width_td || 0;
+                            const effCav = m.cavities > 0 ? m.cavities : layoutSheet || 0;
+                            const overridden = yn === 'Y' && m.offcut_pct > 0;
+                            // Computed auto-default when user hasn't overridden.
+                            // Only the yn='Y' (editable) branch routes through the
+                            // editable input; other branches render a read-only
+                            // value because they represent forced/default states.
+                            let autoDefault = 0;
+                            if (yn === 'Y' && !overridden && effW > 0 && effCav > 0) {
+                              autoDefault = Number((((effCav % effW) / effCav) * 100).toFixed(1));
                             }
-                          />
-                        </td>
-                        <td className="sc-td-derived">{fmtN(r?.qpa_m2)}</td>
-                        <td className="sc-td-derived">{fmtN(r?.qpa_lm)}</td>
-                        <td className="sc-td-derived">{r?.layout_sheet || '\u2014'}</td>
-                        <td className="sc-td-derived">{r?.webs || '\u2014'}</td>
-                        <td className="sc-td-derived" style={{ color: '#059669' }}>
-                          {r ? (scrapDisplay * 100).toFixed(1) + '%' : '\u2014'}
-                        </td>
-                        <td className="sc-td-result">{fmtN(r?.setup_s)}</td>
-                        <td className="sc-td-result">{fmtN(r?.run_s)}</td>
-                        <td className="sc-td-result sc-td-total">{fmtN(r?.total_s)}</td>
-                        <td>
-                          <button
-                            className="sc-btn-del-circle sc-btn-del-sm"
-                            onClick={() => removeMat(mi)}
-                            title="Remove"
-                          >
-                            &times;
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  });
-                })()}
-              </tbody>
-            </table>
-            <div className="sc-add-row">
-              <button className="sc-btn-ghost" onClick={addMat}>
-                + Add Material Row
-              </button>
-            </div>
+                            let shown;
+                            if (yn === 'N') shown = '0';
+                            else if (yn === '') shown = '5';
+                            else if (overridden) shown = m.offcut_pct;
+                            else if (effW > 0 && effCav > 0)
+                              shown = (((effCav % effW) / effCav) * 100).toFixed(1);
+                            else shown = '';
+                            return (
+                              <td>
+                                {yn === 'Y' ? (
+                                  <DecimalInput
+                                    value={overridden ? m.offcut_pct : autoDefault}
+                                    onChange={(v) => setMat(mi, 'offcut_pct', v)}
+                                    className="cc-det-inp cc-det-num"
+                                    style={
+                                      overridden
+                                        ? { color: 'var(--color-violet-500)', fontWeight: 700 }
+                                        : { color: 'var(--color-slate-900)' }
+                                    }
+                                    title={
+                                      overridden
+                                        ? 'Override — clear to revert to auto'
+                                        : 'Auto = MOD(Cavities, Width) / Cavities'
+                                    }
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    value={shown}
+                                    readOnly
+                                    className="cc-det-inp cc-det-num"
+                                    style={{ color: 'var(--color-slate-900)' }}
+                                    title={yn === 'N' ? 'Offcut=N → 0%' : 'Default → 5%'}
+                                  />
+                                )}
+                              </td>
+                            );
+                          })()}
+                          <td>
+                            <select
+                              value={m.slitting_yn || ''}
+                              onChange={(e) => setMat(mi, 'slitting_yn', e.target.value)}
+                              className="cc-det-sel cc-select-bare"
+                            >
+                              <option value="Y">Y</option>
+                              <option value="N">N</option>
+                              <option value=""></option>
+                            </select>
+                          </td>
+                          <td>
+                            <DecimalInput
+                              value={m.g_price}
+                              onChange={(v) => setMat(mi, 'g_price', v)}
+                              className="cc-det-inp cc-det-num"
+                            />
+                          </td>
+                          <td>
+                            <DecimalInput
+                              value={m.latest}
+                              onChange={(v) => setMat(mi, 'latest', v)}
+                              className="cc-det-inp cc-det-num"
+                              style={
+                                m.latest
+                                  ? { color: 'var(--color-violet-500)', fontWeight: 700 }
+                                  : {}
+                              }
+                            />
+                          </td>
+                          <td className="sc-td-derived">{fmtN(r?.qpa_m2)}</td>
+                          <td className="sc-td-derived">{fmtN(r?.qpa_lm)}</td>
+                          <td className="sc-td-derived">{r?.layout_sheet || '\u2014'}</td>
+                          <td className="sc-td-derived">{r?.webs || '\u2014'}</td>
+                          <td className="sc-td-derived" style={{ color: '#059669' }}>
+                            {r ? (scrapDisplay * 100).toFixed(1) + '%' : '\u2014'}
+                          </td>
+                          <td className="sc-td-result">{fmtN(r?.setup_s)}</td>
+                          <td className="sc-td-result">{fmtN(r?.run_s)}</td>
+                          <td className="sc-td-result sc-td-total">{fmtN(r?.total_s)}</td>
+                          <td>
+                            <button
+                              className="sc-btn-del-circle sc-btn-del-sm"
+                              onClick={() => removeMat(mi)}
+                              title="Remove"
+                            >
+                              &times;
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
+                </tbody>
+              </table>
+            )}
+            {!showSpAltEmptyState && (
+              <div className="sc-add-row">
+                <button className="sc-btn-ghost" onClick={addMat}>
+                  + Add Material Row
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

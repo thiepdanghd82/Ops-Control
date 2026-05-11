@@ -1149,6 +1149,21 @@ export function getActiveMaterials(state) {
   return state.materials_main || state.materials || [];
 }
 
+// Per-subproduct variant for Complex calculator (Sprint S-ALT-MAT, PR #B).
+// Same contract as getActiveMaterials but reads from a subproduct object.
+// Each SP carries its own materials_main / materials_alt / materials_active
+// fields with `sp.materials` as a mirror; this helper is the explicit
+// reader new code SHOULD prefer over `sp.materials` (which may lag if a
+// test fixture or buggy migration produces an out-of-sync mirror).
+//
+// aggregateComplex + applyCplxTierToSp continue reading `sp.materials`
+// directly — the reducer maintains the mirror invariant on every write.
+export function getActiveSPMaterials(sp) {
+  if (!sp || typeof sp !== 'object') return [];
+  if (sp.materials_active === 'alt') return sp.materials_alt || [];
+  return sp.materials_main || sp.materials || [];
+}
+
 // ── State Factories ──
 
 // Generate a stable unique id for list rows (React key stability across edits).
@@ -1608,6 +1623,36 @@ export function createSubProduct(code) {
     // toggles this to true for FG/parent SPs. Migration back-fills
     // from FG code prefix for legacy quotes.
     is_assembly: typeof code === 'string' && code.toUpperCase().startsWith('FG'),
+    // Alt-materials feature (Sprint S-ALT-MAT, PR #B). See createStdState
+    // for the full contract — sp.materials field is a mirror of the active
+    // set; calcEngine readers (aggregateComplex, applyCplxTierToSp) keep
+    // reading sp.materials so no callsite churn is needed.
+    materials_main: Array(1)
+      .fill(null)
+      .map(() => ({
+        _mid: newMid(),
+        row_type: 'Main.Mat',
+        code: '',
+        desc: '',
+        qpa: 0,
+        usage: 0,
+        setup_lm: 0,
+        free_liner: 0,
+        pitch: 0,
+        width: 0,
+        log_width: 0,
+        pitch_ovr: 0,
+        offcut_yn: '',
+        slitting_yn: '',
+        df_yn: '',
+        offcut_pct: 0,
+        import_duty: 0,
+        s_price: 0,
+        g_price: 0,
+        latest: 0,
+      })),
+    materials_alt: [],
+    materials_active: 'main',
     materials: Array(1)
       .fill(null)
       .map(() => ({

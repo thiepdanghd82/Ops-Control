@@ -56,6 +56,9 @@ export const CALC_ACTIONS = {
   SET_SP_PROCESS_FIELD: 'SET_SP_PROCESS_FIELD',
   ADD_SP_MATERIAL_ROW: 'ADD_SP_MATERIAL_ROW',
   REMOVE_SP_MATERIAL_ROW: 'REMOVE_SP_MATERIAL_ROW',
+  // Alt-materials per-subproduct (Sprint S-ALT-MAT, PR #B)
+  SET_SP_MATERIALS_ACTIVE: 'SET_SP_MATERIALS_ACTIVE',
+  COPY_SP_MATERIALS: 'COPY_SP_MATERIALS',
   ADD_SP_INK_ROW: 'ADD_SP_INK_ROW',
   REMOVE_SP_INK_ROW: 'REMOVE_SP_INK_ROW',
   ADD_SP_PROCESS_ROW: 'ADD_SP_PROCESS_ROW',
@@ -199,6 +202,43 @@ function stdWithMaterials(stdState, nextActive, opts = {}) {
 function stdActiveMaterials(stdState) {
   if (stdState.materials_active === 'alt') return stdState.materials_alt || [];
   return stdState.materials_main || stdState.materials || [];
+}
+
+/**
+ * SP-scoped mirror helpers (Sprint S-ALT-MAT, PR #B).
+ *
+ * Each subproduct now carries its own materials_main / materials_alt /
+ * materials_active triple plus a legacy `sp.materials` MIRROR. Existing
+ * calcEngine readers (aggregateComplex, applyCplxTierToSp) keep reading
+ * `sp.materials`; reducer enforces the mirror invariant on every per-SP
+ * material mutation.
+ *
+ * spWithMaterials(sp, nextActive, { active })
+ *   Set the active-set array on a SP and recompute the mirror so the
+ *   two stay in sync. Pass an array (replacement for the active set)
+ *   and optionally a new active flag. Returns a NEW sp object.
+ *
+ * spActiveMaterials(sp)
+ *   Read the SP's currently-live materials array — main when
+ *   materials_active='main' (default), else alt.
+ */
+function spWithMaterials(sp, nextActive, opts = {}) {
+  const active = opts.active || sp.materials_active || 'main';
+  const next = { ...sp, materials_active: active };
+  if (active === 'alt') {
+    next.materials_alt = nextActive;
+    next.materials_main = sp.materials_main || [];
+  } else {
+    next.materials_main = nextActive;
+    next.materials_alt = sp.materials_alt || [];
+  }
+  next.materials = nextActive;
+  return next;
+}
+
+function spActiveMaterials(sp) {
+  if (sp.materials_active === 'alt') return sp.materials_alt || [];
+  return sp.materials_main || sp.materials || [];
 }
 
 // ── Initial state factory ──
@@ -527,15 +567,23 @@ export function calcReducer(state, action) {
       };
 
     case A.SET_SP_MATERIAL_FIELD: {
+      // PR #B: route to active set + sync mirror (parallel to Std's
+      // SET_MATERIAL_FIELD pattern). Existing readers of sp.materials
+      // (aggregateComplex, applyCplxTierToSp) continue to work — the
+      // mirror invariant is enforced by spWithMaterials.
       const sp = state.cplxState.subproducts[payload.spIdx];
+      const current = spActiveMaterials(sp);
+      const nextMats = updateAt(current, payload.idx, { [payload.field]: payload.value });
       return {
         ...state,
         isDirty: true,
         cplxState: {
           ...state.cplxState,
-          subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, {
-            materials: updateAt(sp.materials, payload.idx, { [payload.field]: payload.value }),
-          }),
+          subproducts: updateSP(
+            state.cplxState.subproducts,
+            payload.spIdx,
+            spWithMaterials(sp, nextMats)
+          ),
         },
       };
     }
@@ -569,9 +617,11 @@ export function calcReducer(state, action) {
     }
 
     case A.ADD_SP_MATERIAL_ROW: {
+      // PR #B: route to active set + sync mirror.
       const sp = state.cplxState.subproducts[payload.spIdx];
+      const current = spActiveMaterials(sp);
       const mats = [
-        ...sp.materials,
+        ...current,
         {
           _mid: `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           row_type: 'Main.Mat',
@@ -601,21 +651,99 @@ export function calcReducer(state, action) {
         isDirty: true,
         cplxState: {
           ...state.cplxState,
-          subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, { materials: mats }),
+          subproducts: updateSP(
+            state.cplxState.subproducts,
+            payload.spIdx,
+            spWithMaterials(sp, mats)
+          ),
         },
       };
     }
 
     case A.REMOVE_SP_MATERIAL_ROW: {
+      // PR #B: filter active set + sync mirror.
       const sp = state.cplxState.subproducts[payload.spIdx];
+      const current = spActiveMaterials(sp);
+      const mats = current.filter((_, i) => i !== payload.idx);
       return {
         ...state,
         isDirty: true,
         cplxState: {
           ...state.cplxState,
-          subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, {
-            materials: sp.materials.filter((_, i) => i !== payload.idx),
+          subproducts: updateSP(
+            state.cplxState.subproducts,
+            payload.spIdx,
+            spWithMaterials(sp, mats)
+          ),
+        },
+      };
+    }
+
+    // ── Alt-materials per-subproduct toggle + copy (PR #B) ──
+    // SET_SP_MATERIALS_ACTIVE: switch the SP's active discriminator and
+    // remirror sp.materials to the new active set. Data of the inactive
+    // set is preserved. isDirty=true so the next save round-trips.
+    case A.SET_SP_MATERIALS_ACTIVE: {
+      const { spIdx } = payload;
+      const want = payload?.value === 'alt' ? 'alt' : 'main';
+      const sp = state.cplxState.subproducts[spIdx];
+      if (!sp) return state;
+      if ((sp.materials_active || 'main') === want) return state;
+      const nextActive = want === 'alt' ? sp.materials_alt || [] : sp.materials_main || [];
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          subproducts: updateSP(state.cplxState.subproducts, spIdx, {
+            materials_active: want,
+            materials: nextActive,
           }),
+        },
+      };
+    }
+
+    // COPY_SP_MATERIALS: deep-clone one set onto the other for a single SP.
+    // Mirrors the Std-side COPY_MATERIALS contract: structuredClone source
+    // onto dest, refresh mirror when dest is active, attach an ephemeral
+    // _alt_materials_op (NESTED per-SP — server iterates subproducts to
+    // emit MATERIALS_COPY with sp_index in the detail JSON).
+    case A.COPY_SP_MATERIALS: {
+      const { spIdx, direction } = payload || {};
+      if (direction !== 'main_to_alt' && direction !== 'alt_to_main') return state;
+      const sp = state.cplxState.subproducts[spIdx];
+      if (!sp) return state;
+      const src = direction === 'main_to_alt' ? sp.materials_main || [] : sp.materials_alt || [];
+      const destBeforeKey = direction === 'main_to_alt' ? 'materials_alt' : 'materials_main';
+      const destBefore = sp[destBeforeKey] || [];
+      const cloned =
+        typeof structuredClone === 'function'
+          ? structuredClone(src)
+          : JSON.parse(JSON.stringify(src));
+      const patch = {};
+      if (direction === 'main_to_alt') patch.materials_alt = cloned;
+      else patch.materials_main = cloned;
+      const active = sp.materials_active || 'main';
+      const destIsActive =
+        (direction === 'main_to_alt' && active === 'alt') ||
+        (direction === 'alt_to_main' && active === 'main');
+      if (destIsActive) patch.materials = cloned;
+      // Per-SP audit signal — stripped server-side before persist. Server
+      // loops subproducts on save to emit one MATERIALS_COPY per SP that
+      // carries the op.
+      patch._alt_materials_op = {
+        type: 'copy',
+        direction,
+        source_count: src.length,
+        dest_count_before: destBefore.length,
+        ts: Date.now(),
+      };
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          subproducts: updateSP(state.cplxState.subproducts, spIdx, patch),
         },
       };
     }

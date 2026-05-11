@@ -780,6 +780,36 @@ export const HELP_CONTENT = {
           ),
         ]
       ),
+      proc(
+        'Alternative materials per subproduct (Maint.Mat ↔ Alternative.Mat)',
+        'Vật tư thay thế theo subproduct (Maint.Mat ↔ Alternative.Mat)',
+        bi(
+          'Each subproduct carries its own Maint and Alternative material sets independently — useful for what-if pricing on multi-substrate assemblies where only one level changes substrate.',
+          'Mỗi subproduct mang bộ Maint và Alternative riêng biệt — phù hợp phân tích what-if cho assembly nhiều lớp khi chỉ 1 cấp đổi substrate.'
+        ),
+        [
+          bs(
+            'Same toggle UI as Standard calc (radio Maint/Alt + ⇄ copy icon + confirm modal) but rendered PER subproduct in the SP expandable row.',
+            'UI toggle giống Standard (radio Maint/Alt + icon ⇄ copy + modal confirm) nhưng render TRÊN MỖI subproduct trong row SP mở rộng.'
+          ),
+          bs(
+            'Only the active set per SP drives aggregateComplex output (Cost Breakdown, Summarize, Formal Quotation). Inactive sets are stored alongside but ignored.',
+            'Chỉ bộ active của mỗi SP driver output aggregateComplex (Cost Breakdown, Summarize, Formal Quotation). Bộ inactive lưu nhưng không tính.'
+          ),
+          bs(
+            'Mixed active sets across SPs are supported: e.g., SP-A active=main while SP-B active=alt produces a valid hybrid quote.',
+            'Cho phép trộn bộ active giữa các SP: vd SP-A active=main còn SP-B active=alt vẫn ra báo giá hợp lệ.'
+          ),
+          bs(
+            'Audit events MATERIALS_COPY and MATERIALS_ACTIVE_SWITCH include sp_index + sp_code in the detail JSON for per-SP forensic tracing.',
+            'Audit MATERIALS_COPY và MATERIALS_ACTIVE_SWITCH có sp_index + sp_code trong detail JSON cho forensic tracing theo từng SP.'
+          ),
+          bs(
+            'Feature is gated by the same OPS_FEATURE_ALT_MATERIALS env var as Standard. When off (prod default), the toggle is hidden and only the main set renders, matching legacy behavior.',
+            'Tính năng gate cùng env var OPS_FEATURE_ALT_MATERIALS như Standard. Khi off (mặc định prod), toggle ẩn và chỉ render main set, hành vi giống cũ.'
+          ),
+        ]
+      ),
       proc('Per-level routing', 'Routing theo cấp', null, [
         bs(
           'Click the Routing column of any level → LOV of operations from Routing Ops library.',
