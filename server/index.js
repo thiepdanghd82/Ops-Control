@@ -606,6 +606,7 @@ import { createRateRouter } from './domains/library/routes/rate.js'; // v1.3 J1 
 import { createDdlRouter } from './domains/library/routes/ddl.js'; // v1.3 J1 — go-live
 import { createReleasedQuotationRouter } from './domains/sales/routes/released-quotation.js'; // v1.3 K2
 import { createQuotesRouter } from './domains/sales/routes/quotes.js'; // v1.3 M1 — go-live
+import { createQuoteExportRouter } from './routes/quoteExport.js'; // Quote-export MVP-1
 import {
   upsertQuote,
   loadQuotes,
@@ -819,6 +820,26 @@ const quotesDeps = {
 };
 app.use('/api/sales/quotes', createQuotesRouter(quotesDeps));
 app.use('/api/v1/sales/quotes', createQuotesRouter(quotesDeps));
+
+// Quote export MVP-1 — POST /api/quotes/:id/export
+// Mounted on legacy + v1 prefixes per ADR-0009 dual-mount convention.
+// Read-only (no state mutation), so it shares the `quote-history` tab
+// permission and reuses the same auth/getQuoteById/audit/etc deps.
+const quoteExportDeps = {
+  auth: libRouterDeps.auth,
+  getQuoteById,
+  resolveTabAccess: (user, tabId) => resolveTabAccess(user?.user || user, tabId),
+  audit,
+  clientIp: (req) => req.ip || req.connection?.remoteAddress || '-',
+  logErr,
+  redactErrorMessage,
+  // engineSha + rateLookup are optional; populated when available so
+  // exported workbooks can stamp Engine SHA on the Cover sheet and
+  // surface machine_rate / labor_rate / crew on the Processes sheet.
+  engineSha: process.env.OPS_BUILD_SHA || undefined,
+};
+app.use('/api/quotes', createQuoteExportRouter(quoteExportDeps));
+app.use('/api/v1/quotes', createQuoteExportRouter(quoteExportDeps));
 
 // Cost API routes (auth + all cost endpoints)
 // Sprint 39 — API versioning: every router mounts at BOTH the legacy
