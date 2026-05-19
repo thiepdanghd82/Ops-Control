@@ -144,6 +144,8 @@ export async function exportQuote(quote, opts) {
       hmacKey,
       lib: opts?.lib,
       now: opts?.now,
+      // dev-only escape hatch — see buildOneXlsx return shape
+      includePassword: opts?.includePassword === true,
     });
     const filename = build1TierName({
       rfq: quote.state?.rfq_number || quote.label,
@@ -334,6 +336,11 @@ async function buildOneXlsx(ctx) {
       wbPasswordHash: passwordHash,
       schemaSha256: encoded.sha256,
       hmac,
+      // Dev-only: sample.gen.js sets includePassword=true so the
+      // generator can print the password for manual Excel inspection.
+      // Prod route MUST NOT set this flag — the audit log only stores
+      // the hash; raw passwords are not retrievable post-export.
+      ...(ctx.includePassword ? { _devPassword: password } : {}),
     },
   };
 }

@@ -110,17 +110,30 @@ async function main() {
       lang: 'bilingual',
       tiers: 'all',
       exportedBy: 'sample-gen',
+      // Dev-only: surface the per-export password so the operator can
+      // unlock sheets in Excel for inspection. Prod routes MUST NOT set
+      // this flag — production audit trail stores only the password hash.
+      includePassword: true,
     });
     if (out.kind !== 'xlsx') {
       console.log(`Quote has ${out.kind} — would be ${out.filename}, len=${out.buffer.length}`);
       const p = path.join(OUT_DIR, out.filename);
       fs.writeFileSync(p, out.buffer);
       console.log(`Wrote ${p} (${out.buffer.length} bytes)`);
+      // Multi-tier: one password per tier file.
+      for (const m of out.auditMeta || []) {
+        console.log(`  🔑  ${m.filename} → password: ${m._devPassword}`);
+      }
       continue;
     }
     const p = path.join(OUT_DIR, out.filename);
     fs.writeFileSync(p, out.buffer);
     console.log(`Wrote ${p} (${out.buffer.length} bytes)`);
+    const pwd = out.auditMeta?.[0]?._devPassword;
+    if (pwd) {
+      console.log(`  🔑  Sheet-unprotect password: ${pwd}`);
+      console.log(`     (Excel → Review → Unprotect Sheet → paste this value)`);
+    }
   }
 }
 
