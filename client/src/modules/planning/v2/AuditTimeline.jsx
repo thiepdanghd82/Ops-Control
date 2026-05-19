@@ -41,9 +41,12 @@ export default function AuditTimeline({ woId, refreshKey = 0 }) {
   // mutation. Not read in the callback body — that's intentional.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetcher = useCallback((signal) => fetchAuditTimeline(woId, signal), [woId, refreshKey]);
-  const { data, loading, error } = useAbortableFetch(fetcher, [woId, refreshKey]);
+  const { data, initialLoading, error } = useAbortableFetch(fetcher, [woId, refreshKey]);
 
-  if (loading) {
+  // Skeleton only on INITIAL load. Mutation flow bumps refreshKey →
+  // re-fetch; stale-while-revalidate keeps the existing timeline rows
+  // visible until the new audit lands (no flash).
+  if (initialLoading) {
     return <p className="wo-audit-loading">{t('planning.workOrder.audit.loading')}</p>;
   }
   if (error) {

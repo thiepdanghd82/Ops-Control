@@ -34,7 +34,12 @@ export default function CalcInks() {
   const results = useMemo(() => {
     if (!lib) return [];
     return inks.map((ink) => {
-      if (ink.hidden || !ink.color) return null;
+      // Identity-gate parity with calcInk: a row is "real" if any of
+      // color (Desc), ifs_code, or print_type is filled. Pre-fix code
+      // bypassed calcInk entirely when only IFS Code or only Print Type
+      // was set — operator saw Setup/Run/Total = "—" with no signal why.
+      if (ink.hidden) return null;
+      if (!ink.color && !ink.ifs_code && !ink.print_type) return null;
       try {
         const moq = tierSt.moq || st.moq || 0;
         return calcInk(ink, tierSt, moq, lib);
@@ -119,6 +124,31 @@ export default function CalcInks() {
     return lib.inkCalc.silkscreen.meshSpec.map((m) => m.mesh_code).filter(Boolean);
   }, [lib]);
 
+  // Cov Ovr placeholder syncs from lib.ddl.coverage keyed by the row's
+  // print_type so the operator can see the actual value calcInk uses
+  // (e.g. SS → 30, Flexo → 300). Override still goes into coverage_override
+  // and renders in violet. Indigo returns '' so the disabled cell stays
+  // blank — Indigo uses click-charges, not coverage.
+  const covLookup = useMemo(() => {
+    const arr = lib?.ddl?.coverage || [];
+    const m = new Map();
+    for (const c of arr) {
+      if (c && c.pt) m.set(c.pt, c.cov);
+    }
+    return m;
+  }, [lib]);
+
+  // Clicks dropdown options come from lib.ddl.click_charges keys (1, 2, 4,
+  // 6, 7, 8, 10, 12, …) — matches V3.3 behaviour and prevents operators
+  // from typing a click count the rate-card doesn't actually cover.
+  const clickOpts = useMemo(() => {
+    const ccTbl = lib?.ddl?.click_charges || {};
+    return Object.keys(ccTbl)
+      .map(Number)
+      .filter((k) => !Number.isNaN(k) && k > 0)
+      .sort((a, b) => a - b);
+  }, [lib]);
+
   const totals = useMemo(() => {
     let setup = 0,
       run = 0,
@@ -199,7 +229,7 @@ export default function CalcInks() {
                 const i = ink._idx;
                 const r = results[i];
                 return (
-                  <tr key={i} onContextMenu={(e) => handleRowContextMenu(i, e)}>
+                  <tr key={ink._mid || `idx-${i}`} onContextMenu={(e) => handleRowContextMenu(i, e)}>
                     <td className="sc-td-idx">Ink {vi + 1}</td>
                     <td>
                       <input
@@ -298,19 +328,41 @@ export default function CalcInks() {
                         className="sc-input-sm sc-input-num"
                         disabled={isIndigoPrintType(ink.print_type)}
                         style={ink.coverage_override ? { color: '#7c3aed', fontWeight: 700 } : {}}
-                        placeholder="auto"
+                        placeholder={(() => {
+                          if (isIndigoPrintType(ink.print_type)) return '';
+                          const cov = covLookup.get(ink.print_type);
+                          return cov != null && cov !== '' ? String(cov) : 'auto';
+                        })()}
+                        title={
+                          isIndigoPrintType(ink.print_type)
+                            ? 'Indigo uses click-charges, not coverage'
+                            : covLookup.get(ink.print_type) != null
+                              ? `Auto-synced from Coverage Table (${covLookup.get(ink.print_type)}). Type to override.`
+                              : 'Pick a Print Type to load coverage'
+                        }
                       />
                     </td>
                     <td>
-                      <input
-                        type="number"
-                        min="0"
-                        value={ink.clicks || ''}
-                        onChange={(e) => handleField(i, 'clicks', e.target.value, true)}
-                        placeholder="—"
-                        className="sc-input-sm sc-input-num"
+                      <select
+                        value={ink.clicks ? String(ink.clicks) : ''}
+                        onChange={(e) =>
+                          handleField(i, 'clicks', e.target.value ? Number(e.target.value) : 0)
+                        }
+                        className="sc-input-sm sc-select-bare"
                         disabled={!isIndigoPrintType(ink.print_type)}
-                      />
+                        title={
+                          isIndigoPrintType(ink.print_type)
+                            ? 'Pick the click count — charges come from Click Charges table'
+                            : 'Indigo only'
+                        }
+                      >
+                        <option value="">—</option>
+                        {clickOpts.map((k) => (
+                          <option key={k} value={k}>
+                            {k}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td className="sc-td-derived" style={{ color: '#059669' }}>
                       {(scrapDisplay * 100).toFixed(1) + '%'}

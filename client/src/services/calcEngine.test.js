@@ -199,6 +199,53 @@ test('calcMat: produces positive run cost for a normal material', () => {
   assert.ok(Number.isFinite(r.run_s), 'run_s must be a finite number');
 });
 
+// MES-3-FIX-40 follow-up: when num_webs=0 (legacy quote or operator
+// cleared the field), Setup Cost computed but Run Cost rendered "—"
+// because qpa_lm_raw bottomed to 0. Operator hardware-test 2026-05-11:
+// 6-row Std quote at MOQ=500, all rows with MAT.PRICE filled in, every
+// SETUP COST visible but every RUN COST showing "—". The fix makes
+// calcQPA_LM webs-fallback consistent with display columns + calcOffcut.
+test('calcMat [num_webs=0 fix]: run_s stays positive when num_webs=0', () => {
+  const st = makeState({
+    processes: [{ workcenter: 'Flexo-A', scrap_pct: 0.03 }],
+    num_webs: 0,
+  });
+  const mat = {
+    code: 'M001', width: 100, usage: 1, cavities: 4,
+    g_price: 2.5, s_price: 2.5, latest: 0,
+    offcut_yn: 'N', slitting_yn: 'N',
+    setup_lm: 50,
+  };
+  const r = calcMat(mat, st, 100_000, null, null);
+  assert.ok(r.setup_s > 0, `setup_s should be > 0 (got ${r.setup_s}) — sanity guard`);
+  assert.ok(
+    r.run_s > 0,
+    `run_s should be > 0 (got ${r.run_s}) — num_webs=0 used to zero this`
+  );
+  assert.ok(Number.isFinite(r.run_s));
+});
+
+test('calcMat [num_webs=0 fix]: num_webs=2 and num_webs=0(→1) produce different run_s', () => {
+  const base = {
+    processes: [{ workcenter: 'Flexo-A', scrap_pct: 0 }],
+    parts_in_md: 1, parts_web_across: 4,
+    sheet_length: 52, min_gap_md: 2, rotary_cols: 0,
+  };
+  const mat = {
+    code: 'M001', width: 100, usage: 1, cavities: 4,
+    g_price: 2.5, s_price: 2.5, latest: 0,
+    offcut_yn: 'N', slitting_yn: 'N',
+    setup_lm: 0,
+  };
+  const r1 = calcMat(mat, makeState({ ...base, num_webs: 1 }), 100_000, null, null);
+  const r0 = calcMat(mat, makeState({ ...base, num_webs: 0 }), 100_000, null, null);
+  const r2 = calcMat(mat, makeState({ ...base, num_webs: 2 }), 100_000, null, null);
+  // num_webs=0 should behave identical to num_webs=1 (the fallback).
+  assert.ok(Math.abs(r0.run_s - r1.run_s) < 1e-12, 'num_webs=0 must equal num_webs=1');
+  // num_webs=2 must be HALF of num_webs=1 (divides by 2 webs).
+  assert.ok(Math.abs(r2.run_s - r1.run_s / 2) < 1e-12, 'num_webs=2 should be half of num_webs=1');
+});
+
 // ── calcMat — SP-reference fix (#2) regression ───────────────────────
 
 test('calcMat [fix #2]: SP ref with missing result returns error marker, NOT silent zero', () => {
@@ -310,10 +357,64 @@ test('calcProcess: empty workcenter returns the zero shape', () => {
 
 // ── calcInk smoke ────────────────────────────────────────────────────
 
-test('calcInk: empty color short-circuits to zero', () => {
-  const r = calcInk({ color: '' }, makeState(), 100_000, makeLib());
+test('calcInk: fully empty row short-circuits to zero (all 3 identity fields blank)', () => {
+  const r = calcInk({ color: '', ifs_code: '', print_type: '' }, makeState(), 100_000, makeLib());
   assert.equal(r.total, 0);
   assert.equal(r.run_s, 0);
+});
+
+// Operator hardware-test 2026-05-11 (Inks tab): operator filled IFS Code +
+// Print Type + Clicks but left Desc blank → Setup/Run/Total = "—" for the
+// entire row. Pre-fix calcInk had `if (!ink.color) return zeros` which
+// V3.3 carried over from a build that only had a single "Color name"
+// field. After Ops Control added a separate IFS Code column the gate
+// became too tight. New behavior: any of color, ifs_code, or print_type
+// qualifies the row as real and triggers the compute path.
+test('calcInk [identity gate]: ifs_code alone is enough to trigger compute (Indigo)', () => {
+  const st = makeState({
+    processes: [{ workcenter: 'Indigo-A', scrap_pct: 0.03 }],
+    materials: [{ code: 'M001', width: 200, usage: 1, cavities: 8 }],
+  });
+  const ink = {
+    color: '', // operator left Desc blank
+    ifs_code: 'INK-WHITE-01',
+    print_type: 'Indigo',
+    clicks: 4,
+    s_price: 50, latest: 50,
+  };
+  const r = calcInk(ink, st, 100_000, makeLib());
+  assert.ok(r.run_s > 0, `Indigo run_s should be > 0 when ifs_code+clicks set, got ${r.run_s}`);
+  assert.ok(r.total > 0, `total should be > 0`);
+});
+
+test('calcInk [identity gate]: print_type alone is enough to trigger compute (Flexo)', () => {
+  const st = makeState({
+    processes: [{ workcenter: 'Flexo-A', scrap_pct: 0.03 }],
+    materials: [{ code: 'M001', width: 200, usage: 1, cavities: 8 }],
+  });
+  const ink = {
+    color: '',
+    ifs_code: '',
+    print_type: 'Flexo',
+    base_mat: 'M001',
+    area_pct: 0.30,
+    s_price: 65, latest: 65,
+  };
+  const r = calcInk(ink, st, 100_000, makeLib());
+  // Flexo coverage in makeLib = 300; run_s = price × qpa_lm × area_pct × width_m / cov / scrap_F
+  assert.ok(r.run_s > 0, `Flexo run_s should be > 0 when print_type set, got ${r.run_s}`);
+});
+
+test('calcInk [identity gate]: color alone still works (backward compat)', () => {
+  const ink = { color: 'Red', ifs_code: '', print_type: 'Flexo', area_pct: 0.2, s_price: 8 };
+  const st = makeState({
+    processes: [{ workcenter: 'Flexo-A', scrap_pct: 0.03 }],
+    materials: [{ code: 'M001', width: 200, usage: 1, cavities: 8 }],
+  });
+  // Set base_mat to lookup material width
+  ink.base_mat = 'M001';
+  const r = calcInk(ink, st, 100_000, makeLib());
+  assert.ok(r.run_s > 0, `Flexo run_s with color set should be > 0 (regression guard)`);
 });
 
 test('calcInk: flexo path produces finite non-negative cost', () => {
@@ -467,6 +568,45 @@ test('calcQPA_LM: layout = 0 and webs = 0 → no NaN or Infinity', () => {
   const mat = { usage: 1 };
   const qpa = calcQPA_LM(st, mat);
   assert.ok(Number.isFinite(qpa), 'QPA_LM must be finite even with layout/webs = 0');
+});
+
+// MES-3-FIX-40 follow-up: num_webs=0 must NOT zero qpa_lm_raw — the rest
+// of the engine (qpa_m2, qpa_lm display, calcOffcut, CalcLayout shotPlan)
+// all fall back to webs=1 when num_webs is empty. Without the same
+// fallback here, Setup Cost computes normally but Run Cost renders "—"
+// — surfaced on operator hardware test 2026-05-11 (6-row Std quote with
+// MOQ=500 + WEBS column showing "—").
+test('calcQPA_LM: num_webs=0 falls back to 1 (matches display column behavior)', () => {
+  const st = {
+    sheet_length: 52, min_gap_md: 2, rotary_cols: 0,
+    num_webs: 0, parts_in_md: 1, parts_web_across: 4,
+  };
+  // mat.cavities explicit so the only zero in the calc is num_webs.
+  const mat = { cavities: 4, usage: 1 };
+  const qpa = calcQPA_LM(st, mat);
+  // pitch = 54, cavities = 4, webs fallback = 1 → 54/1000/4/1 = 0.0135
+  assert.ok(Math.abs(qpa - 0.0135) < 1e-9, `expected 0.0135 got ${qpa}`);
+});
+
+test('calcQPA_LM: num_webs=null also falls back to 1', () => {
+  const st = {
+    sheet_length: 52, min_gap_md: 2, rotary_cols: 0,
+    num_webs: null, parts_in_md: 1, parts_web_across: 4,
+  };
+  const mat = { cavities: 4, usage: 1 };
+  const qpa = calcQPA_LM(st, mat);
+  assert.ok(Math.abs(qpa - 0.0135) < 1e-9, `expected 0.0135 got ${qpa}`);
+});
+
+test('calcQPA_LM: num_webs=2 still divides by 2 (regression guard)', () => {
+  const st = {
+    sheet_length: 52, min_gap_md: 2, rotary_cols: 0,
+    num_webs: 2, parts_in_md: 1, parts_web_across: 4,
+  };
+  const mat = { cavities: 4, usage: 1 };
+  const qpa = calcQPA_LM(st, mat);
+  // pitch = 54, cavities = 4, webs = 2 → 54/1000/4/2 = 0.00675
+  assert.ok(Math.abs(qpa - 0.00675) < 1e-9, `expected 0.00675 got ${qpa}`);
 });
 
 // ── buildTierState ──────────────────────────────────────────────

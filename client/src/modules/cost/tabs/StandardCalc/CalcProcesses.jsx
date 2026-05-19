@@ -185,7 +185,7 @@ export default function CalcProcesses() {
                 const r = results[i];
                 const wcOpts = lib ? getWCOptionsByType(lib, proc.process_type) : [];
                 return (
-                  <tr key={i}>
+                  <tr key={proc._mid || `idx-${i}`}>
                     <td className="sc-td-idx">Process {vi + 1}</td>
                     <td>
                       <select value={proc.process_type || ''} onChange={e => handleProcessType(i, e.target.value)} className="sc-input-sm sc-select-bare">

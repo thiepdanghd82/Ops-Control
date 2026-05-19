@@ -12,7 +12,17 @@ import { sharedApi } from '../../services/api';
 import { showToast } from '../../utils/toast';
 import { availableActions, actionDisplay, getStatus } from '../../utils/approvalWorkflow';
 
-export default function ApprovalActionsCell({ quote, user, onAfterTransition }) {
+export default function ApprovalActionsCell({
+  quote,
+  user,
+  onAfterTransition,
+  // Optimistic UI hooks (Option 3 anti-flash): parent removes the row
+  // from its local list BEFORE the network round-trip so the operator
+  // sees the result immediately. On 4xx/5xx the parent should restore
+  // (typically via refresh()) — wired through onTransitionRollback.
+  onOptimisticTransition,
+  onTransitionRollback,
+}) {
   const approval = quote?.state?.approval || null;
   const actions = availableActions(approval, user);
   const [busy, setBusy] = useState(null);            // current action being dispatched
@@ -25,6 +35,10 @@ export default function ApprovalActionsCell({ quote, user, onAfterTransition }) 
       return;
     }
     setBusy(action);
+    // Optimistic remove BEFORE the network call. If the API rejects we
+    // restore via onTransitionRollback below. Avoids the ~300-500ms
+    // gap where the row sits with "…" before vanishing.
+    onOptimisticTransition?.(quote.id, action);
     try {
       await sharedApi.transitionApproval(quote.id, action, reason);
       showToast(`Quote #${quote.id}: ${action} recorded`);
@@ -34,10 +48,13 @@ export default function ApprovalActionsCell({ quote, user, onAfterTransition }) 
       onAfterTransition?.(quote.id);
     } catch (err) {
       showToast(`Transition failed: ${err?.message || 'unknown'}`, 'err');
+      // Rollback: ask parent to re-fetch so the optimistically-removed
+      // row reappears with its correct status from the server.
+      onTransitionRollback?.(quote.id, err);
     } finally {
       setBusy(null);
     }
-  }, [quote?.id, onAfterTransition]);
+  }, [quote?.id, onAfterTransition, onOptimisticTransition, onTransitionRollback]);
 
   const confirmReject = useCallback(async () => {
     const reason = rejectReason.trim();

@@ -70,7 +70,7 @@ export default function PendingApprovalsInbox() {
   // transition entrypoint; internally it aborts any stale in-flight
   // load so a slow /shared/quotes never overwrites fresh post-action
   // state.
-  const { data: rawQuotes, loading, error: loadError, refresh } = useAbortableFetch(
+  const { data: rawQuotes, setData: setQuotesData, initialLoading, error: loadError, refresh } = useAbortableFetch(
     (signal) => sharedApi.getQuotes({ signal }),
     [],
     { onError: (err) => err?.name !== 'AbortError' && logErr('Failed to load quotes for inbox:', err) },
@@ -90,6 +90,24 @@ export default function PendingApprovalsInbox() {
   const quotes = useMemo(() => Array.isArray(rawQuotes) ? rawQuotes : [], [rawQuotes]);
 
   const reloadAfterTransition = useCallback(() => { refresh(); }, [refresh]);
+
+  // Option 3 anti-flash: optimistic remove on Approve/Reject. Drops
+  // the row from the local list IMMEDIATELY so the operator doesn't
+  // stare at a "…" button for 300-500ms while the network round-trip
+  // completes. On error the rollback handler triggers a full refresh
+  // which re-fetches the canonical server state (row reappears with
+  // its real status). Idempotent because the SSE listener + 30s poll
+  // would refresh anyway — we just shift the user-visible result
+  // ahead of the network.
+  const optimisticRemove = useCallback(
+    (quoteId) => {
+      setQuotesData((prev) =>
+        Array.isArray(prev) ? prev.filter((q) => q.id !== quoteId) : prev
+      );
+    },
+    [setQuotesData]
+  );
+  const rollbackOnError = useCallback(() => { refresh(); }, [refresh]);
 
   const items = useMemo(() => {
     if (!Array.isArray(quotes)) return [];
@@ -143,7 +161,11 @@ export default function PendingApprovalsInbox() {
       { detail: t === 'complex' ? 'complex' : 'standard' }));
   }
 
-  if (loading) {
+  // Skeleton only on INITIAL load. Stale-while-revalidate (Lesson 29):
+  // polling/SSE refresh keeps existing rows visible while the next
+  // /shared/quotes call resolves, then swaps in the new data without
+  // unmounting the table (preserves scroll position, no flash).
+  if (initialLoading) {
     return (
       <div style={{ padding: 24 }}>
         <SkeletonTable rows={8} cols={9} />
@@ -309,6 +331,8 @@ export default function PendingApprovalsInbox() {
                           quote={q}
                           user={user}
                           onAfterTransition={reloadAfterTransition}
+                          onOptimisticTransition={optimisticRemove}
+                          onTransitionRollback={rollbackOnError}
                         />
                       ) : (
                         <span style={{ fontSize: 10, color: '#8d8d8d', fontStyle: 'italic' }}>

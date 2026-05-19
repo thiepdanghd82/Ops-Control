@@ -111,3 +111,47 @@ test('multiple concurrent calls each get a distinct signal', async () => {
   assert.equal(c1.signal.aborted, true);
   assert.equal(c2.signal.aborted, false, 'second controller must not be affected');
 });
+
+// ── initialLoading derivation contract ─────────────────────────
+// Stale-while-revalidate gate (Lesson 29). Callers gate their skeleton
+// on `initialLoading` instead of raw `loading` so polling/refresh ticks
+// don't unmount the tree. The derivation is pure — test it directly.
+function deriveInitialLoading({ loading, data, error }) {
+  return loading && data === null && error === null;
+}
+
+test('initialLoading: true on first load (loading=true, data=null, error=null)', () => {
+  assert.equal(deriveInitialLoading({ loading: true, data: null, error: null }), true);
+});
+
+test('initialLoading: false on refresh (loading=true but data already loaded)', () => {
+  assert.equal(
+    deriveInitialLoading({ loading: true, data: [{ id: 1 }], error: null }),
+    false,
+    'stale-while-revalidate must keep skeleton off when data already shown'
+  );
+});
+
+test('initialLoading: false after error (no skeleton over error state)', () => {
+  assert.equal(
+    deriveInitialLoading({ loading: true, data: null, error: new Error('500') }),
+    false,
+    'error UX takes precedence over skeleton'
+  );
+});
+
+test('initialLoading: false when not loading (idle state)', () => {
+  assert.equal(deriveInitialLoading({ loading: false, data: null, error: null }), false);
+  assert.equal(deriveInitialLoading({ loading: false, data: [], error: null }), false);
+});
+
+test('initialLoading: empty array data DOES count as loaded (no flash on empty result)', () => {
+  // A successful fetch returning [] is still a load — don't show
+  // skeleton if the server says "no rows". Otherwise admin staring at
+  // an empty Library see infinite skeleton.
+  assert.equal(
+    deriveInitialLoading({ loading: true, data: [], error: null }),
+    false,
+    'empty array is data, not absence — no skeleton'
+  );
+});

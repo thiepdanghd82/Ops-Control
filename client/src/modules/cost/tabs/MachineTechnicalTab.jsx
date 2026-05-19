@@ -103,6 +103,11 @@ export default function MachineTechnicalTab() {
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState({});
   const [loading, setLoading] = useState(true);
+  // Tracks whether the initial load has completed (success OR error).
+  // Gates the skeleton render — stale-while-revalidate keeps the
+  // existing table visible on subsequent refreshes instead of flashing
+  // through the skeleton state. Lesson 29.
+  const [firstLoadDone, setFirstLoadDone] = useState(false);
   const [editing, setEditing] = useState(null);   // null | record (new or existing)
   const [search, setSearch] = useState('');
   const [importing, setImporting] = useState(false);
@@ -119,7 +124,10 @@ export default function MachineTechnicalTab() {
       setItems(Array.isArray(listResp?.items) ? listResp.items : []);
     } catch (e) {
       showToast('Failed to load machines: ' + (e.message || 'Unknown'), 'err');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+      setFirstLoadDone(true);
+    }
   }, [kind]);
 
   useEffect(() => { reload(); }, [reload]);
@@ -175,7 +183,7 @@ export default function MachineTechnicalTab() {
     } finally { setImporting(false); }
   }, [kind, reload]);
 
-  if (loading) return <div style={{ padding: 24 }}><SkeletonTable rows={8} cols={7} /></div>;
+  if (loading && !firstLoadDone) return <div style={{ padding: 24 }}><SkeletonTable rows={8} cols={7} /></div>;
 
   return (
     <div className="mt-tab">
