@@ -33,7 +33,13 @@
  * toward v3 over time without needing a bulk migration pass.
  */
 
-export const CPLX_SHAPE_VERSION = 3;
+// v4 (MES-3-FIX-41): adds optional `result.subproducts[spi].rows` +
+// `result.subproducts[spi].tiers[N].rows` for per-row Setup/Run/Total
+// export visibility. Heal is on save — calcEngine is client-only and
+// read-side heal would need orchestration. Pre-v4 quotes export with
+// em-dash placeholders; route returns 422 `legacy_no_rows` to prompt
+// re-save in the calculator.
+export const CPLX_SHAPE_VERSION = 4;
 
 function startsWithFG(code) {
   return typeof code === 'string' && code.toUpperCase().startsWith('FG');
@@ -99,6 +105,15 @@ export function upgradeCplxState(state) {
         Array.isArray(sp.materials_main) &&
         Array.isArray(sp.materials_alt) &&
         (sp.materials_active === 'main' || sp.materials_active === 'alt')
+    ) &&
+    // _mid coverage on per-SP inks + processes — needed for stable
+    // React keys (Option 2 anti-flash). Don't short-circuit if any
+    // row is missing _mid; the heal pass below back-fills.
+    state.subproducts.every(
+      (sp) =>
+        (!Array.isArray(sp?.inks) || sp.inks.every((r) => !r || typeof r !== 'object' || r._mid)) &&
+        (!Array.isArray(sp?.processes) ||
+          sp.processes.every((r) => !r || typeof r !== 'object' || r._mid))
     )
   ) {
     return state; // already upgraded
@@ -117,6 +132,23 @@ export function upgradeCplxState(state) {
     }
     // Alt-materials (PR #B): per-SP main/alt/active + legacy mirror.
     out = upgradeSubProductAltMaterials(out, sourceVersion);
+    // _mid back-fill on inks + processes (Option 2 anti-flash). Stable
+    // React keys prevent row remount on data refresh. Inline ID gen so
+    // this module stays zero-dep (mirror of stdMigration.ensureMids).
+    const fillMid = (rows) =>
+      Array.isArray(rows)
+        ? rows.map((r) =>
+            r && typeof r === 'object' && !r._mid
+              ? { ...r, _mid: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}` }
+              : r
+          )
+        : rows;
+    if (Array.isArray(out.inks) && out.inks.some((r) => r && !r._mid)) {
+      out = { ...out, inks: fillMid(out.inks) };
+    }
+    if (Array.isArray(out.processes) && out.processes.some((r) => r && !r._mid)) {
+      out = { ...out, processes: fillMid(out.processes) };
+    }
     return out;
   });
 

@@ -85,6 +85,12 @@ function makeQuote() {
       bd_ink_run: 0.03,
       bd_setup_labor: 0.005,
       bd_setup_mach: 0.005,
+      rows: {
+        materials_main: [{ setup_cost: 0.05, run_cost: 0.1, total: 0.15 }],
+        materials_alt: [],
+        inks: [{ setup_cost: 0.02, run_cost: 0.03, total: 0.05, clicks: 4 }],
+        processes: [{ setup_cost: 0.01, run_cost: 0.02, total: 0.03 }],
+      },
     },
   };
 }

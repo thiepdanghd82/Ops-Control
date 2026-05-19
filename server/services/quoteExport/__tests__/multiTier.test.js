@@ -57,6 +57,38 @@ function makeThreeTierQuote() {
       contribution: 0.35,
       bd_mat_setup: 0.05,
       bd_mat_run: 0.1,
+      rows: {
+        materials_main: [{ setup_cost: 0.05, run_cost: 0.1, total: 0.15 }],
+        materials_alt: [],
+        inks: [{ setup_cost: 0, run_cost: 0, total: 0 }],
+        processes: [],
+      },
+      tiers: [
+        {
+          rows: {
+            materials_main: [{ setup_cost: 0.05, run_cost: 0.1, total: 0.15 }],
+            materials_alt: [],
+            inks: [{ setup_cost: 0, run_cost: 0, total: 0 }],
+            processes: [],
+          },
+        },
+        {
+          rows: {
+            materials_main: [{ setup_cost: 0.04, run_cost: 0.09, total: 0.13 }],
+            materials_alt: [],
+            inks: [{ setup_cost: 0, run_cost: 0, total: 0 }],
+            processes: [],
+          },
+        },
+        {
+          rows: {
+            materials_main: [{ setup_cost: 0.03, run_cost: 0.08, total: 0.11 }],
+            materials_alt: [],
+            inks: [{ setup_cost: 0, run_cost: 0, total: 0 }],
+            processes: [],
+          },
+        },
+      ],
     },
   };
 }

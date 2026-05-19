@@ -29,7 +29,12 @@
  *   - Robust to null / non-object input (returns input unchanged).
  */
 
-export const STD_SHAPE_VERSION = 2;
+// v3 (MES-3-FIX-41): adds optional `result.rows` + `result.tiers[N].rows`
+// for per-row Setup/Run/Total export visibility. Heal is on save (next
+// time operator re-saves), not on read — calcEngine is client-only and
+// reading-side heal would need orchestration. Quotes saved before v3
+// stay readable; export route returns 422 `legacy_no_rows` to prompt re-save.
+export const STD_SHAPE_VERSION = 3;
 
 // Stable _mid generator — duplicated from createStdState() so this
 // module doesn't import calcEngine (keeps migrator pure + zero-dep).
@@ -57,11 +62,20 @@ export function upgradeStdState(state) {
   if (!state || typeof state !== 'object' || Array.isArray(state)) return state;
   const current = Number(state._schema_version) || 0;
   if (current >= STD_SHAPE_VERSION) {
-    // Still verify _mid coverage AND alt-materials shape — legacy quotes
-    // stamped at an earlier version in dev builds may have skipped the
-    // backfill. Defensive re-check is a no-op when shape is current.
+    // Still verify _mid coverage on ALL row types (materials + inks +
+    // processes) AND alt-materials shape AND print/cut canonical fields
+    // — legacy quotes stamped at an earlier version in dev builds may
+    // have skipped the backfill. _mid is required for stable React keys
+    // so list-row inputs don't remount on data refresh (Option 2 of the
+    // anti-flash work).
     const live = getLiveMaterials(state);
-    const hasMids = Array.isArray(live) && live.every((m) => m && m._mid);
+    const allMidsOnRows = (arr) =>
+      !Array.isArray(arr) || arr.every((r) => !r || typeof r !== 'object' || r._mid);
+    const hasMids =
+      Array.isArray(live) &&
+      live.every((m) => m && m._mid) &&
+      allMidsOnRows(state.inks) &&
+      allMidsOnRows(state.processes);
     const hasAltShape =
       Array.isArray(state.materials_main) &&
       Array.isArray(state.materials_alt) &&
@@ -72,15 +86,23 @@ export function upgradeStdState(state) {
   let next = state;
   if (current < 1) next = migrateTo_v1(next);
   if (current < 2) next = migrateTo_v2(next);
+  if (current < 3) next = migrateTo_v3(next);
   // Heal: a quote stamped with the current version but missing _mid on
   // some rows (e.g. stale dev-build artifact) still gets the back-fill.
   // Cheap no-op when every row is complete — ensureMids returns the
-  // same refs.
+  // same refs. Covers inks + processes too (Option 2 anti-flash: stable
+  // React keys avoid input remount on data refresh).
   if (Array.isArray(next.materials_main) && next.materials_main.some((m) => m && !m._mid)) {
     next = { ...next, materials_main: ensureMids(next.materials_main) };
   }
   if (Array.isArray(next.materials_alt) && next.materials_alt.some((m) => m && !m._mid)) {
     next = { ...next, materials_alt: ensureMids(next.materials_alt) };
+  }
+  if (Array.isArray(next.inks) && next.inks.some((r) => r && !r._mid)) {
+    next = { ...next, inks: ensureMids(next.inks) };
+  }
+  if (Array.isArray(next.processes) && next.processes.some((r) => r && !r._mid)) {
+    next = { ...next, processes: ensureMids(next.processes) };
   }
   // Keep the legacy `materials` mirror in sync with the active set so
   // existing readers (calcAll, CalcHeader, validators, ink base-mat
@@ -164,4 +186,17 @@ function migrateTo_v2(state) {
     materials: mirror,
     _schema_version: 2,
   };
+}
+
+/**
+ * v2 → v3 (MES-3-FIX-41): no state changes. The quote shape stays the
+ * same; v3 marks "this quote was saved AFTER per-row breakdown landed."
+ * On read, legacy v2 quotes (or earlier) won't have `result.rows` so the
+ * export route returns 422 `legacy_no_rows` — operator re-saves in the
+ * calculator and v3 stamps + populates rows in one step.
+ *
+ * Idempotent: bumps `_schema_version` only; state fields untouched.
+ */
+function migrateTo_v3(state) {
+  return { ...state, _schema_version: 3 };
 }

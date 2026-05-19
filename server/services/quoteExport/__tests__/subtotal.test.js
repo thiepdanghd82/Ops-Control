@@ -77,6 +77,12 @@ function makeQuote(resultOverrides = {}) {
       bd_overhead: 0.02,
       bd_labor: 0.015,
       tooling: 0.003,
+      rows: {
+        materials_main: [{ setup_cost: 0.002, run_cost: 0.073, total: 0.075 }],
+        materials_alt: [],
+        inks: [{ setup_cost: 0.01, run_cost: 0.025, total: 0.035 }],
+        processes: [{ setup_cost: 0.009, run_cost: 0.029, total: 0.038 }],
+      },
       ...resultOverrides,
     },
   };
@@ -145,8 +151,17 @@ test('subtotal: Processes derives Setup + Run + Total from bd_setup_*/bd_labor/b
 
 test('subtotal: omitted when result has no aggregate (legacy/empty quote)', async () => {
   const q = makeQuote();
-  // Strip all bd_ keys
-  q.result = { sp: 0.5, s_ttl: 0.35 };
+  // Strip all bd_ keys but keep `rows` so the legacy_no_rows gate passes.
+  q.result = {
+    sp: 0.5,
+    s_ttl: 0.35,
+    rows: {
+      materials_main: [{ setup_cost: 0, run_cost: 0, total: 0 }],
+      materials_alt: [],
+      inks: [{ setup_cost: 0, run_cost: 0, total: 0 }],
+      processes: [{ setup_cost: 0, run_cost: 0, total: 0 }],
+    },
+  };
   const out = await exportQuote(q, { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
   const mat = wb.getWorksheet('03 Materials');

@@ -110,6 +110,12 @@ function makeFixtureQuote(overrides = {}) {
       bd_extra: 0,
       bd_extra_vat: 0,
       warnings: [],
+      rows: {
+        materials_main: [{ setup_cost: 0.05, run_cost: 0.1, total: 0.15 }],
+        materials_alt: [],
+        inks: [{ setup_cost: 0.02, run_cost: 0.03, total: 0.05 }],
+        processes: [{ setup_cost: 0.01, run_cost: 0.02, total: 0.03 }],
+      },
     },
     ...overrides,
   };

@@ -235,3 +235,90 @@ test('upgradeCplxState v3: mixed active sets across SPs handled independently', 
   assert.equal(next.subproducts[1].materials_active, 'alt');
   assert.equal(next.subproducts[1].materials[0].code, 'B-ALT');
 });
+
+// Option 2 anti-flash: per-SP inks + processes _mid heal.
+test('upgradeCplxState: heals missing _mid on per-SP inks + processes', () => {
+  const cplx = {
+    _shape_version: 3,
+    bom: [],
+    tooling_alloc: [],
+    subproducts: [
+      {
+        code: 'SP-A',
+        is_assembly: false,
+        materials_main: [],
+        materials_alt: [],
+        materials_active: 'main',
+        materials: [],
+        inks: [{ color: 'Red' }, { color: 'Blue', _mid: 'i_already' }],
+        processes: [{ workcenter: 'X' }],
+        part_width: 100,
+        part_length_md: 50,
+      },
+    ],
+  };
+  const next = upgradeCplxState(cplx);
+  const sp = next.subproducts[0];
+  assert.ok(sp.inks[0]._mid, 'SP ink[0] should be back-filled');
+  assert.equal(sp.inks[1]._mid, 'i_already', 'SP ink[1] _mid preserved');
+  assert.ok(sp.processes[0]._mid, 'SP process[0] should be back-filled');
+});
+
+// v4 (MES-3-FIX-41): per-row breakdown shape bump. State-shape-wise this
+// is a NOP; `result.subproducts[spi].rows` lands on save via
+// buildCpxRowsPayload, not via the state migrator.
+test('upgradeCplxState v4: legacy v3 quote bumps to v4 without state changes', () => {
+  const v3 = {
+    _shape_version: 3,
+    is_assembly: false,
+    bom: [],
+    tooling_alloc: [],
+    subproducts: [
+      {
+        code: 'SP1',
+        is_assembly: false,
+        materials_main: [{ _mid: 'm1', code: 'M1' }],
+        materials_alt: [],
+        materials_active: 'main',
+        materials: [{ _mid: 'm1', code: 'M1' }],
+        inks: [{ _mid: 'i1', color: 'R' }],
+        processes: [{ _mid: 'p1', workcenter: 'X' }],
+        part_width: 100,
+        part_length_md: 50,
+      },
+    ],
+  };
+  const next = upgradeCplxState(v3);
+  assert.equal(next._shape_version, CPLX_SHAPE_VERSION);
+  assert.equal(next.subproducts[0].code, 'SP1');
+  assert.deepEqual(next.subproducts[0].materials_main, v3.subproducts[0].materials_main);
+  assert.deepEqual(next.subproducts[0].inks, v3.subproducts[0].inks);
+});
+
+test('upgradeCplxState v4: idempotent — applying twice returns same shape', () => {
+  const v3 = {
+    _shape_version: 3,
+    is_assembly: false,
+    bom: [],
+    tooling_alloc: [],
+    subproducts: [
+      {
+        code: 'SP1',
+        is_assembly: false,
+        materials_main: [{ _mid: 'm1', code: 'M1' }],
+        materials_alt: [],
+        materials_active: 'main',
+        materials: [{ _mid: 'm1', code: 'M1' }],
+        inks: [{ _mid: 'i1', color: 'R' }],
+        processes: [{ _mid: 'p1', workcenter: 'X' }],
+        part_width: 100,
+        part_length_md: 50,
+      },
+    ],
+  };
+  const once = upgradeCplxState(v3);
+  const twice = upgradeCplxState(once);
+  assert.equal(once._shape_version, CPLX_SHAPE_VERSION);
+  assert.equal(twice._shape_version, CPLX_SHAPE_VERSION);
+  assert.equal(twice, once, 'second call short-circuits when at current version');
+});

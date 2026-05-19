@@ -51,7 +51,25 @@ export function buildInksSheet(wb, ctx) {
   });
 
   const state = quote.state || {};
-  const inks = Array.isArray(state.inks) ? state.inks : [];
+  const result = quote.result || {};
+  const isCpx = quote.type === 'complex';
+
+  // For Cpx: render one block per SP, each with its own ink rows.
+  // For Std: single inks array at top level.
+  const inkGroups =
+    isCpx && Array.isArray(state.subproducts) && state.subproducts.length > 0
+      ? state.subproducts.map((sp, spi) => ({
+          label: `${L('ink.section', lang)} — ${sp.code || `SP${spi + 1}`}`,
+          inks: Array.isArray(sp.inks) ? sp.inks : [],
+          rowBreakdown: result.subproducts?.[spi]?.rows?.inks ?? null,
+        }))
+      : [
+          {
+            label: null,
+            inks: Array.isArray(state.inks) ? state.inks : [],
+            rowBreakdown: result.rows?.inks ?? null,
+          },
+        ];
 
   // Header row
   let r = 3;
@@ -63,21 +81,30 @@ export function buildInksSheet(wb, ctx) {
   sheet.getRow(r).height = 36;
   r += 1;
 
-  if (inks.length === 0) {
-    sheet.mergeCells(`A${r}:P${r}`);
-    sheet.getCell(`A${r}`).value = '—';
-    applyStyle(sheet.getCell(`A${r}`), 'body');
-    r += 1;
-  } else {
-    for (let i = 0; i < inks.length; i++) {
-      const ink = inks[i];
+  for (const group of inkGroups) {
+    if (group.label) {
+      sheet.mergeCells(`A${r}:P${r}`);
+      sheet.getCell(`A${r}`).value = group.label;
+      applyStyle(sheet.getCell(`A${r}`), 'section');
+      r += 1;
+    }
+    if (group.inks.length === 0) {
+      sheet.mergeCells(`A${r}:P${r}`);
+      sheet.getCell(`A${r}`).value = '—';
+      applyStyle(sheet.getCell(`A${r}`), 'body');
+      r += 1;
+      continue;
+    }
+    for (let i = 0; i < group.inks.length; i++) {
+      const ink = group.inks[i];
       if (!ink || ink.hidden) continue;
+      const rowCost = Array.isArray(group.rowBreakdown) ? group.rowBreakdown[i] : null;
       INK_COLS.forEach((c, ci) => {
         const cell = sheet.getCell(r, ci + 1);
-        cell.value = extractCellValue(c, ink, i);
-        applyStyle(cell, c.numeric ? 'num' : 'body');
-        if (c.computedOnly) {
-          cell.note = 'Computed at calc time, not persisted.';
+        cell.value = extractCellValue(c, ink, i, rowCost);
+        applyStyle(cell, c.numeric ? (c.computedOnly ? 'numCost' : 'num') : 'body');
+        if (c.computedOnly && !rowCost) {
+          cell.note = 'Computed at calc time, not persisted (legacy quote — re-save to refresh).';
         }
         if (c.key === 'cov_ovr') {
           cell.note = buildCovNote(ink, lang);
@@ -87,9 +114,7 @@ export function buildInksSheet(wb, ctx) {
     }
   }
 
-  // Aggregate subtotal — per-row breakdown not persisted (MES-3-FIX-41)
-  // but the total survives in quote.result.
-  const result = quote.result || {};
+  // Aggregate subtotal — tier-level total from snapshot aggregates.
   const setupTotal = Number(result.bd_ink_setup);
   const runTotal = Number(result.bd_ink_run);
   if (Number.isFinite(setupTotal) || Number.isFinite(runTotal)) {
@@ -120,8 +145,14 @@ export function buildInksSheet(wb, ctx) {
   freezeTop(sheet, 1);
 }
 
-function extractCellValue(col, ink, idx) {
-  if (col.computedOnly) return '—';
+function extractCellValue(col, ink, idx, rowCost) {
+  if (col.computedOnly) {
+    if (!rowCost) return '—';
+    if (col.key === 'setup_cost') return rowCost.setup_cost ?? '—';
+    if (col.key === 'run_cost') return rowCost.run_cost ?? '—';
+    if (col.key === 'total') return rowCost.total ?? '—';
+    return '—';
+  }
   switch (col.key) {
     case 'label':
       return ink.label || `Ink ${idx + 1}`;
@@ -144,6 +175,12 @@ function extractCellValue(col, ink, idx) {
     case 'cov_ovr':
       return numCell(ink.coverage_override);
     case 'clicks':
+      // Indigo subtypes — calcRowBreakdown only attaches clicks when
+      // print_type starts with 'Indigo'. Fall back to ink.clicks for
+      // legacy quotes (pre-FIX-41) where rowCost is absent.
+      if (rowCost && Object.prototype.hasOwnProperty.call(rowCost, 'clicks')) {
+        return rowCost.clicks ?? '—';
+      }
       return numCell(ink.clicks);
     case 'ref_price':
       return numCell(ink.s_price ?? ink.g_price);

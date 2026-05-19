@@ -172,14 +172,21 @@ export function calcPcsPerRoll(st) {
 export function calcQPA_LM(st, mat) {
   const cavities = mat && mat.cavities > 0 ? mat.cavities : calcLayoutPerSheet(st);
   const pitch = mat && mat.pitch_ovr && mat.pitch_ovr > 0 ? mat.pitch_ovr : calcPitch(st);
-  if (!cavities || !st.num_webs) return 0;
+  // num_webs falls back to 1 — matches the display columns (qpa_lm, qpa_m2)
+  // and the rest of the engine (CalcLayout shotPlan, calcOffcut). Without
+  // this fallback a quote with num_webs=0 produced run_s=0 while qpa_m2/
+  // qpa_lm columns showed positive values — Setup Cost computed normally
+  // (no num_webs dep) but Run Cost rendered "—". Operator hardware-test
+  // 2026-05-11 surfaced this on a 6-row Std quote with MOQ=500 + WEBS="—".
+  const webs = Math.max(1, Number(st.num_webs) || 0);
+  if (!cavities) return 0;
   if (!mat.free_liner || mat.free_liner === 0) {
-    return pitch / 1000 / cavities / st.num_webs;
+    return pitch / 1000 / cavities / webs;
   }
   const maxFL = mat.free_liner;
-  const pcsRoll = st.parts_in_md > 0 ? st.parts_in_md * st.num_webs : 1;
+  const pcsRoll = st.parts_in_md > 0 ? st.parts_in_md * webs : 1;
   const rollLen = (pcsRoll / cavities) * (pitch / 1000) + maxFL * (pitch / 1000);
-  return rollLen / pcsRoll / st.num_webs;
+  return rollLen / pcsRoll / webs;
 }
 
 function calcOffcut(mat, st) {
@@ -412,7 +419,13 @@ export function calcMat(mat, st, moq, allSpResults, subproducts) {
 // ── Ink Cost ──
 
 export function calcInk(ink, st, moq, lib) {
-  if (!ink.color)
+  // Row identity gate — V3.3 only checked `ink.color` because that build
+  // had a single "Color name" input. Ops Control v1.2 added a separate
+  // "IFS Code" column; operators who typed only the IFS code (leaving
+  // Desc blank) saw Setup/Run/Total = "—" with no hint why. Accept any
+  // of color (Desc), ifs_code, or print_type as evidence the row is
+  // real. If all three are empty the row is genuinely a placeholder.
+  if (!ink.color && !ink.ifs_code && !ink.print_type)
     return { setup_s: 0, run_s: 0, vat: 0, ink_cover_disp: '', layout_indigo_disp: '', total: 0 };
   const price = ink.latest || ink.s_price || 0;
   const isIndigo = isIndigoPrintType(ink.print_type);
@@ -966,6 +979,13 @@ const PERSISTED_RESULT_FIELDS = [
   'gm_after_sga',
   'site',
   'warnings',
+  // MES-3-FIX-41: per-row breakdown for export visibility. `rows` carries
+  // active-tier rows at top level for fast read; `tiers` carries per-tier
+  // rows (including non-active) so multi-tier xlsx exports show real
+  // numbers everywhere. Cpx adds `subproducts[spi].rows`/.tiers[].rows.
+  'rows',
+  'tiers',
+  'subproducts',
 ];
 
 /**
@@ -2108,4 +2128,160 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
   }
 
   return { aggregate, pass2, errors };
+}
+
+// ── Per-row breakdown for export (MES-3-FIX-41) ──
+//
+// `quote.result` historically captured only aggregate KPIs; per-row Setup/
+// Run/Total were computed in calcAll's `matResults / inkResults / procResults`
+// arrays and discarded by serializeResultForPersist (intentionally — full
+// row detail would inflate quote_history.json ~5-10×). For xlsx export
+// visibility we need a *small* subset of those rows: just the three money
+// columns (+ Indigo clicks for ink rows). This helper pulls exactly that.
+//
+// Shape (index-aligned to state arrays):
+//   {
+//     materials_main: [{setup_cost, run_cost, total}, ...],
+//     materials_alt:  [{setup_cost, run_cost, total}, ...],
+//     inks:           [{setup_cost, run_cost, total, clicks?}, ...],
+//     processes:      [{setup_cost, run_cost, total}, ...],
+//   }
+//
+// The Material `total` includes vat (matches `total_s` from calcMat).
+// The Ink `total` is setup_s + run_s (vat tracked separately at aggregate).
+// The Process `total` includes tooling + extra (the full per-row line cost
+// operators see in the Processes UI).
+//
+// Computes BOTH material sets via a swap-and-recompute when the inactive
+// set is non-empty — otherwise non-active material rows would always be
+// em-dash in exports, defeating the point.
+const _num = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+const _matRowFromResult = (r) => ({
+  setup_cost: _num(r && r.setup_s),
+  run_cost: _num(r && r.run_s),
+  total: _num(r && r.total_s),
+});
+const _inkRowFromResult = (r, ink) => {
+  const row = {
+    setup_cost: _num(r && r.setup_s),
+    run_cost: _num(r && r.run_s),
+    total: _num(r && r.total),
+  };
+  // Indigo subtypes display clicks; non-Indigo omit the field.
+  if (ink && String(ink.print_type || '').startsWith('Indigo')) {
+    row.clicks = _num(ink.clicks);
+  }
+  return row;
+};
+const _procRowFromResult = (r) => {
+  const setup = _num(r && r.setup_mach) + _num(r && r.setup_labor);
+  const run = _num(r && r.run_mach) + _num(r && r.run_labor);
+  const tooling = _num(r && r.tooling);
+  const extra = _num(r && r.extra);
+  return {
+    setup_cost: setup,
+    run_cost: run + tooling + extra,
+    total: setup + run + tooling + extra,
+  };
+};
+
+/**
+ * Extract per-row Setup/Run/Total from a state by running calcAll for
+ * BOTH active and (if non-empty) inactive material sets.
+ *
+ * @param {object} state — Std-shaped state (must have `materials` mirror)
+ * @param {object} lib   — library reference (calcAll requires it)
+ * @param {object[]} [allSpResults] — Cpx pass1 results (Std passes null)
+ * @param {object[]} [subproducts]  — Cpx subproducts (Std passes null)
+ */
+export function calcRowBreakdown(state, lib, allSpResults, subproducts) {
+  if (!state || !lib) {
+    return { materials_main: [], materials_alt: [], inks: [], processes: [] };
+  }
+  const activeKey = state.materials_active === 'alt' ? 'materials_alt' : 'materials_main';
+  const inactiveKey = activeKey === 'materials_main' ? 'materials_alt' : 'materials_main';
+
+  const activeResult = calcAll(state, allSpResults, lib, subproducts);
+  const out = {
+    materials_main: [],
+    materials_alt: [],
+    inks: (activeResult.inkResults || []).map((r, i) =>
+      _inkRowFromResult(r, (state.inks || [])[i])
+    ),
+    processes: (activeResult.procResults || []).map(_procRowFromResult),
+  };
+  out[activeKey] = (activeResult.matResults || []).map(_matRowFromResult);
+
+  const inactiveSet = state[inactiveKey] || [];
+  if (Array.isArray(inactiveSet) && inactiveSet.length > 0) {
+    const swapped = {
+      ...state,
+      materials: inactiveSet,
+      materials_active: activeKey === 'materials_main' ? 'alt' : 'main',
+    };
+    const inactiveResult = calcAll(swapped, allSpResults, lib, subproducts);
+    out[inactiveKey] = (inactiveResult.matResults || []).map(_matRowFromResult);
+  }
+  return out;
+}
+
+/**
+ * Build {rows, tiers} for a Std quote (multi-tier). Walks 0..N tiers via
+ * buildTierState + calcRowBreakdown. Returns:
+ *   { rows: <active-tier rows>, tiers: [{rows}, ...] }
+ *
+ * @param {object} state — Std state
+ * @param {object} lib
+ */
+export function buildStdRowsPayload(state, lib) {
+  if (!state || !lib) return { rows: null, tiers: [] };
+  const tierCount = 1 + (Array.isArray(state.extra_moqs) ? state.extra_moqs.length : 0);
+  const activeIdx = Number(state.active_moq_idx) || 0;
+  const tiers = [];
+  for (let t = 0; t < tierCount; t++) {
+    const em = t === 0 ? null : (state.extra_moqs || [])[t - 1];
+    const price = t === 0 ? state.selling_price : (em?.selling_price ?? state.selling_price);
+    const moq = t === 0 ? state.moq : (em?.moq ?? state.moq);
+    const eau = t === 0 ? state.annual_qty : (em?.eau ?? state.annual_qty);
+    const tierSt = buildTierState(state, t, price, moq, eau);
+    tiers.push({ rows: calcRowBreakdown(tierSt, lib, null, null) });
+  }
+  return { rows: tiers[activeIdx]?.rows ?? null, tiers };
+}
+
+/**
+ * Build {subproducts: [{rows, tiers}]} for a Cpx quote. Each SP gets its
+ * own per-tier walk. Returns the full subproducts payload — caller bundles
+ * it into the persisted result alongside the aggregate KPIs.
+ *
+ * @param {object} cs  — Cpx top-level state
+ * @param {object[]} sps — array of subproduct states
+ * @param {object} lib
+ */
+export function buildCpxRowsPayload(cs, sps, lib) {
+  if (!cs || !Array.isArray(sps) || !sps.length || !lib) return { subproducts: [] };
+  const tierCount = 1 + (Array.isArray(cs.extra_moqs) ? cs.extra_moqs.length : 0);
+  const activeIdx = Number(cs.active_moq_idx) || 0;
+  const activeMoqFor = (tIdx) =>
+    tIdx === 0 ? cs.moq : ((cs.extra_moqs || [])[tIdx - 1] || {}).moq || cs.moq;
+
+  const subproducts = sps.map((sp, spi) => {
+    const tiers = [];
+    for (let t = 0; t < tierCount; t++) {
+      const tieredSp = applyCplxTierToSp(cs, sp, spi, t);
+      const spSt = {
+        ...tieredSp,
+        moq: tieredSp.ship_qty || activeMoqFor(t),
+        selling_price: cs.selling_price,
+        trade_mode: cs.trade_mode,
+        site: cs.site,
+      };
+      tiers.push({ rows: calcRowBreakdown(spSt, lib, null, null) });
+    }
+    return { rows: tiers[activeIdx]?.rows ?? null, tiers };
+  });
+  return { subproducts };
 }

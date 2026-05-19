@@ -73,6 +73,20 @@ export async function exportQuote(quote, opts) {
       422
     );
   }
+  // MES-3-FIX-41: distinct error code for quotes saved BEFORE per-row
+  // breakdown landed. UI catches this code separately + prompts re-save.
+  // Std: result.rows is the top-level shape. Cpx: result.subproducts is.
+  const isCpx = quote.type === 'complex';
+  const hasRows = isCpx
+    ? Array.isArray(quote.result.subproducts) && quote.result.subproducts.length > 0
+    : quote.result.rows && typeof quote.result.rows === 'object';
+  if (!hasRows) {
+    throw new QuoteExportError(
+      'legacy_no_rows',
+      'This quote was saved before per-row tracking was added. Open the calculator and re-save to refresh export data.',
+      422
+    );
+  }
   const variant = opts?.variant;
   if (variant !== 'customer' && variant !== 'internal') {
     throw new QuoteExportError('missing-variant', 'variant must be "customer" or "internal"', 400);

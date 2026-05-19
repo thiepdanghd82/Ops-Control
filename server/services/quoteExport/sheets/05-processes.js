@@ -47,7 +47,24 @@ export function buildProcessesSheet(wb, ctx) {
   });
 
   const state = quote.state || {};
-  const procs = Array.isArray(state.processes) ? state.processes : [];
+  const result = quote.result || {};
+  const isCpx = quote.type === 'complex';
+
+  // Cpx: one block per SP; Std: single processes array.
+  const procGroups =
+    isCpx && Array.isArray(state.subproducts) && state.subproducts.length > 0
+      ? state.subproducts.map((sp, spi) => ({
+          label: `${L('proc.section', lang)} — ${sp.code || `SP${spi + 1}`}`,
+          procs: Array.isArray(sp.processes) ? sp.processes : [],
+          rowBreakdown: result.subproducts?.[spi]?.rows?.processes ?? null,
+        }))
+      : [
+          {
+            label: null,
+            procs: Array.isArray(state.processes) ? state.processes : [],
+            rowBreakdown: result.rows?.processes ?? null,
+          },
+        ];
 
   let r = 3;
   PROC_COLS.forEach((c, i) => {
@@ -58,30 +75,41 @@ export function buildProcessesSheet(wb, ctx) {
   sheet.getRow(r).height = 36;
   r += 1;
 
-  if (procs.length === 0) {
-    sheet.mergeCells(`A${r}:S${r}`);
-    sheet.getCell(`A${r}`).value = '—';
-    applyStyle(sheet.getCell(`A${r}`), 'body');
-    r += 1;
-  } else {
-    for (const proc of procs) {
+  for (const group of procGroups) {
+    if (group.label) {
+      sheet.mergeCells(`A${r}:S${r}`);
+      sheet.getCell(`A${r}`).value = group.label;
+      applyStyle(sheet.getCell(`A${r}`), 'section');
+      r += 1;
+    }
+    if (group.procs.length === 0) {
+      sheet.mergeCells(`A${r}:S${r}`);
+      sheet.getCell(`A${r}`).value = '—';
+      applyStyle(sheet.getCell(`A${r}`), 'body');
+      r += 1;
+      continue;
+    }
+    for (let i = 0; i < group.procs.length; i++) {
+      const proc = group.procs[i];
       if (!proc || proc.hidden) continue;
       const rate = rateLookup ? rateLookup(proc.workcenter) : null;
+      const rowCost = Array.isArray(group.rowBreakdown) ? group.rowBreakdown[i] : null;
       PROC_COLS.forEach((c, ci) => {
         const cell = sheet.getCell(r, ci + 1);
-        cell.value = extractCellValue(c, proc, rate);
-        applyStyle(cell, c.numeric ? 'num' : 'body');
-        if (c.computedOnly) cell.note = 'Computed at calc time, not persisted.';
+        cell.value = extractCellValue(c, proc, rate, rowCost);
+        applyStyle(cell, c.numeric ? (c.computedOnly ? 'numCost' : 'num') : 'body');
+        if (c.computedOnly && !rowCost) {
+          cell.note = 'Computed at calc time, not persisted (legacy quote — re-save to refresh).';
+        }
       });
       r += 1;
     }
   }
 
-  // Aggregate subtotal — per-row breakdown not persisted (MES-3-FIX-41).
+  // Aggregate subtotal — tier-level total from snapshot aggregates.
   // Setup = setup_mach + setup_labor; Run = (overhead + labor + tooling)
   // minus the setup portion that's folded into bd_labor/bd_overhead per
   // calcEngine.js:856 comment. Total = setup + run.
-  const result = quote.result || {};
   const setupMach = Number(result.bd_setup_mach) || 0;
   const setupLabor = Number(result.bd_setup_labor) || 0;
   const overhead = Number(result.bd_overhead) || 0;
@@ -116,8 +144,14 @@ export function buildProcessesSheet(wb, ctx) {
   freezeTop(sheet, 1);
 }
 
-function extractCellValue(col, proc, rate) {
-  if (col.computedOnly) return '—';
+function extractCellValue(col, proc, rate, rowCost) {
+  if (col.computedOnly) {
+    if (!rowCost) return '—';
+    if (col.key === 'setup_cost') return rowCost.setup_cost ?? '—';
+    if (col.key === 'run_cost') return rowCost.run_cost ?? '—';
+    if (col.key === 'total') return rowCost.total ?? '—';
+    return '—';
+  }
   switch (col.key) {
     case 'process_type':
       return proc.process_type || '';
