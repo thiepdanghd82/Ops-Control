@@ -871,6 +871,14 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - **Effort**: S (~30 min)
 - **Priority**: P3 (least critical of 4)
 
+#### MES-3-FIX-41 — Quote Export: persist per-row Setup/Run/Total breakdown for xlsx export
+
+- **Source**: Quote Export MVP-1 (PR #47, 2026-05-18) shipped 10-sheet xlsx pipeline but renders per-row Setup/Run/Total cells in Materials/Inks/Processes sheets as em-dash with Excel comments explaining the gap. Reason: server intentionally does NOT recompute via calcEngine (single source of truth lives in the client), and `quote.result` snapshot persisted today is aggregate-only (sp, s_ttl, gm, va, bd_mat_setup, bd_mat_run, bd_ink_setup, bd_ink_run, …) — no per-row breakdown survives the save. Customer variant cost-credibility is operationally weak: customers see total Mat cost ($0.20 / unit) but the "$0.05 setup + $0.10 run per row" derivation is missing. Internal variant is mostly fine because operators can mentally cross-check against PricingBreakdown UI.
+- **Acceptance**: (1) Add `result.rows` block to persisted quote shape with stable keys: `{materials: [{mid, setup, run, total, webs, qpa_lm}], inks: [{mid, setup, run, total, clicks}], processes: [{pid, setup, run, total, run_h, run_kg}]}` (mid/pid stable across versions). (2) Client `saveQuote()` populates these from current calcEngine output before POST `/api/quotes`. (3) Server-side `calcAll()` REJECTED — keep calcEngine client-only (architectural invariant). (4) Per-tier `result.tiers[N].rows` for non-active tiers too (each tier reads from `getActiveTierState`/`buildTierState`). (5) Optional schema migration v3→v4 in `stdMigration` + `cplxMigration`: backfill `result.rows` lazily on first read by re-running calcEngine on legacy saved quotes (one-shot heal pass, idempotent). (6) `server/services/quoteExport/sheets/03-materials.js + 04-inks.js + 05-processes.js`: when `quote.result.rows.<sheet>[i]` present, render the real numbers; otherwise keep em-dash fallback for forward-compat with pre-FIX-41 quotes. (7) Cross-check: PricingBreakdown tab in client UI shows same numbers as exported xlsx for the same quote. (8) Tests: ≥10 new tests covering shape persist, multi-tier rows, legacy heal pass, exporter render path.
+- **Effort**: M (~300 LOC client save-path + ~80 LOC exporter render + ~50 LOC migration + ~150 LOC tests)
+- **Priority**: P2 (customer-variant credibility gap; internal variant works around with aggregate KPIs but operators have asked for full transparency since MVP-1 ship)
+- **Bundle with**: MVP-2 (HMAC/\_Audit/\_Schema work) since `result.rows` is part of `payload_sha256` input — order matters for hash stability.
+
 #### KIOSK-001 — Real branded PWA icons
 
 - **Source**: MES-2.6a placeholder icons (Carbon-blue squares with white "K", zlib-encoded inline)
