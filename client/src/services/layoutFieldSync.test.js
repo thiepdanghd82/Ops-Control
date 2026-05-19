@@ -10,7 +10,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyPrintToCutSync } from './layoutFieldSync.js';
+import { applyPrintToCutSync, healPrintCutMissingCanonical } from './layoutFieldSync.js';
 
 test('FIX-32: writing print_part_width fills canonical part_width when canonical is 0', () => {
   const prev = { part_width: 0, part_length_md: 0 };
@@ -65,6 +65,69 @@ test('FIX-32: writing print_part_width with non-numeric string is treated as no-
   const patch = applyPrintToCutSync(prev, 'print_part_width', 'abc');
   assert.equal(patch.print_part_width, 'abc');
   assert.equal(patch.part_width, undefined);
+});
+
+// ── healPrintCutMissingCanonical ──────────────────────────────────
+// Load-path companion: applyPrintToCutSync only fires on live keystrokes.
+// A quote saved on pre-FIX-32 build (or saved mid-edit) carries
+// print_part_* with canonical part_* = 0 → Layout validator complains
+// "Part Width TD là bắt buộc" on load. heal mirrors at upgrade-time.
+
+test('heal: state with print_part_* set + part_* = 0 → mirrors canonical', () => {
+  const state = {
+    print_part_width: 462,
+    part_width: 0,
+    print_part_length_md: 135,
+    part_length_md: 0,
+  };
+  const next = healPrintCutMissingCanonical(state);
+  assert.equal(next.part_width, 462);
+  assert.equal(next.part_length_md, 135);
+  // Print fields preserved
+  assert.equal(next.print_part_width, 462);
+  assert.equal(next.print_part_length_md, 135);
+});
+
+test('heal: state with both canonical AND print set → no change (divergence preserved)', () => {
+  const state = {
+    print_part_width: 462,
+    part_width: 460,
+    print_part_length_md: 135,
+    part_length_md: 130,
+  };
+  const next = healPrintCutMissingCanonical(state);
+  assert.equal(next.part_width, 460);
+  assert.equal(next.part_length_md, 130);
+  assert.equal(next, state, 'returns same ref when nothing to heal');
+});
+
+test('heal: width only — heals width, leaves length untouched', () => {
+  const state = { print_part_width: 462, part_width: 0, part_length_md: 0 };
+  const next = healPrintCutMissingCanonical(state);
+  assert.equal(next.part_width, 462);
+  // print_part_length_md unset → part_length_md stays 0
+  assert.equal(next.part_length_md, 0);
+});
+
+test('heal: idempotent — running twice yields the same result', () => {
+  const state = { print_part_width: 462, part_width: 0 };
+  const once = healPrintCutMissingCanonical(state);
+  const twice = healPrintCutMissingCanonical(once);
+  assert.equal(twice.part_width, 462);
+  assert.equal(twice, once, 'second pass is a no-op (returns same ref)');
+});
+
+test('heal: null/undefined/non-object inputs → returned unchanged', () => {
+  assert.equal(healPrintCutMissingCanonical(null), null);
+  assert.equal(healPrintCutMissingCanonical(undefined), undefined);
+  assert.equal(healPrintCutMissingCanonical(42), 42);
+});
+
+test('heal: zero/empty print_part_* → no heal (does not write 0 over 0)', () => {
+  const state = { part_width: 0, print_part_width: 0 };
+  const next = healPrintCutMissingCanonical(state);
+  assert.equal(next.part_width, 0);
+  assert.equal(next, state, 'no-op when nothing to mirror');
 });
 
 test('FIX-32: prev=null returns trivial patch (defensive — should never happen in reducer)', () => {

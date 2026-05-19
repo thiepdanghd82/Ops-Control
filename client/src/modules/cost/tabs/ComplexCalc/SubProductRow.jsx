@@ -295,6 +295,26 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
     () => (lib?.inkCalc?.silkscreen?.meshSpec || []).map((m) => m.mesh_code).filter(Boolean),
     [lib]
   );
+  // Cov Ovr placeholder + Clicks dropdown — mirror of CalcInks.jsx
+  // (Std). Cov Ovr placeholder shows the synced Coverage Table value so
+  // operators can see what the engine uses; Clicks is a select sourced
+  // from lib.ddl.click_charges keys (V3.3 behaviour). Indigo subtype
+  // gating reuses isIndigoPrintType().
+  const covLookup = useMemo(() => {
+    const arr = lib?.ddl?.coverage || [];
+    const m = new Map();
+    for (const c of arr) {
+      if (c && c.pt) m.set(c.pt, c.cov);
+    }
+    return m;
+  }, [lib]);
+  const clickOpts = useMemo(() => {
+    const ccTbl = lib?.ddl?.click_charges || {};
+    return Object.keys(ccTbl)
+      .map(Number)
+      .filter((k) => !Number.isNaN(k) && k > 0)
+      .sort((a, b) => a - b);
+  }, [lib]);
   const toolTypeOpts = useMemo(
     () => (lib?.ddl?.tool_life ? Object.keys(lib.ddl.tool_life) : []),
     [lib]
@@ -1112,7 +1132,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                   const r = inkResults[origIdx] || null;
                   const isIndigo = isIndigoPrintType(ik.print_type);
                   return (
-                    <tr key={ii} onContextMenu={(e) => openInkMenu(ii, e)}>
+                    <tr key={ik._mid || `idx-${ii}`} onContextMenu={(e) => openInkMenu(ii, e)}>
                       <td className="sc-td-idx">Ink {ii + 1}</td>
                       <td>
                         <input
@@ -1198,18 +1218,44 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                           onChange={(v) => setInk(ii, 'coverage_override', v)}
                           className="cc-det-inp cc-det-num"
                           disabled={isIndigo}
-                          title={isIndigo ? 'Not used for Indigo' : 'Coverage override'}
+                          style={
+                            ik.coverage_override ? { color: '#7c3aed', fontWeight: 700 } : undefined
+                          }
+                          placeholder={(() => {
+                            if (isIndigo) return '';
+                            const cov = covLookup.get(ik.print_type);
+                            return cov != null && cov !== '' ? String(cov) : 'auto';
+                          })()}
+                          title={
+                            isIndigo
+                              ? 'Indigo uses click-charges, not coverage'
+                              : covLookup.get(ik.print_type) != null
+                                ? `Auto-synced from Coverage Table (${covLookup.get(ik.print_type)}). Type to override.`
+                                : 'Pick a Print Type to load coverage'
+                          }
                         />
                       </td>
                       <td>
-                        <input
-                          type="number"
-                          value={ik.clicks || ''}
-                          onChange={(e) => setInk(ii, 'clicks', numF(e.target.value))}
-                          className="cc-det-inp cc-det-num"
+                        <select
+                          value={ik.clicks ? String(ik.clicks) : ''}
+                          onChange={(e) =>
+                            setInk(ii, 'clicks', e.target.value ? Number(e.target.value) : 0)
+                          }
+                          className="cc-det-sel"
                           disabled={!isIndigo}
-                          title={isIndigo ? 'Indigo clicks' : 'Indigo only'}
-                        />
+                          title={
+                            isIndigo
+                              ? 'Pick the click count — charges come from Click Charges table'
+                              : 'Indigo only'
+                          }
+                        >
+                          <option value="">—</option>
+                          {clickOpts.map((k) => (
+                            <option key={k} value={k}>
+                              {k}
+                            </option>
+                          ))}
+                        </select>
                       </td>
                       <td className="sc-td-derived" style={{ color: '#059669' }}>
                         {(scrapDisplay * 100).toFixed(1) + '%'}
@@ -1354,7 +1400,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                   const origIdx = (sp.processes || []).indexOf(p);
                   const r = procResults[origIdx] || null;
                   return (
-                    <tr key={pi}>
+                    <tr key={p._mid || `idx-${pi}`}>
                       <td className="sc-td-idx">Process {pi + 1}</td>
                       <td>
                         <select

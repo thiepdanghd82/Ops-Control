@@ -409,6 +409,12 @@ export function calcReducer(state, action) {
       const inks = [...state.stdState.inks];
       if (inks.length < 10) {
         inks.push({
+          // Row-identity for React key stability. Without _mid the JSX
+          // keyed by index remounts the input on reorder/delete — losing
+          // focus + cursor pos mid-typing, and contributing to the
+          // "flash" perception during data sync. Same pattern as
+          // materials (Sprint 11 _mid back-fill).
+          _mid: `i_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           label: `Ink ${inks.length + 1}`,
           ifs_code: '',
           color: '',
@@ -441,6 +447,9 @@ export function calcReducer(state, action) {
       const procs = [
         ...state.stdState.processes,
         {
+          // Row-identity for React key stability (same rationale as
+          // inks/materials _mid).
+          _mid: `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           label: `Process ${state.stdState.processes.length + 1}`,
           process_type: '',
           workcenter: '',
@@ -764,6 +773,8 @@ export function calcReducer(state, action) {
       const inks = [
         ...sp.inks,
         {
+          // Row-identity for React key stability (mirrors Std ADD_INK_ROW).
+          _mid: `i_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           label: `Ink ${sp.inks.length + 1}`,
           ifs_code: '',
           color: '',
@@ -812,6 +823,8 @@ export function calcReducer(state, action) {
       const procs = [
         ...sp.processes,
         {
+          // Row-identity for React key stability (mirrors Std ADD_PROCESS_ROW).
+          _mid: `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           label: `Process ${sp.processes.length + 1}`,
           process_type: '',
           workcenter: '',
