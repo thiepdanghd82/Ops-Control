@@ -1977,10 +1977,20 @@ export const HELP_CONTENT = {
       field('Owner', 'user', 'Cost engineer who owns the quote.'),
     ],
     formulas: [],
+    features: [
+      feat(
+        'Export to xlsx — download icon in each row opens a dialog to pick variant (Customer / Internal), language (EN / VI / EN+VI), and which MOQ tiers to include. Multi-tier exports come back as a single zip.',
+        'Xuất ra xlsx — biểu tượng download ở mỗi dòng mở hộp thoại chọn phiên bản (Khách / Nội bộ), ngôn ngữ (EN / VI / Song ngữ), và các bậc MOQ cần xuất. Xuất nhiều bậc trả về một file zip.'
+      ),
+    ],
     tips: [
       bt(
         'Set a status of Won/Lost for closed loops — drives Dashboard win-rate KPI.',
         'Đặt trạng thái Won/Lost cho deal đã đóng — ảnh hưởng KPI tỉ lệ thắng trên Dashboard.'
+      ),
+      bt(
+        'If the export dialog shows "saved before per-row tracking", open the quote in the calculator and Save once to refresh export data — pre-v1.5 quotes need a re-save before Materials / Inks / Processes sheets can render real numbers.',
+        'Nếu hộp thoại xuất hiện thông báo "lưu trước khi có theo dõi từng dòng", mở báo giá trong calculator và Save một lần để cập nhật dữ liệu xuất — báo giá lưu trước v1.5 cần lưu lại để các sheet Vật liệu / Mực / Quy trình hiển thị số liệu thực.'
       ),
     ],
     pitfalls: [

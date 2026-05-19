@@ -18,7 +18,10 @@ import { getStatus as getApprovalStatus } from '../../../utils/approvalWorkflow'
 import { useAbortableFetch } from '../../../hooks/useAbortableFetch';
 import { useAutoRefresh, formatLastRefresh } from '../../../utils/useAutoRefresh';
 import { subscribeDataEvents } from '../../../services/dataEventBus';
+import { useAccess } from '../../../context/useAccess';
+import ExportModal from './QuoteHistory/ExportModal';
 import './QuoteHistory.css';
+import './QuoteHistory/ExportModal.css';
 
 const PAGE_SIZE = 100;
 
@@ -162,6 +165,13 @@ export default function QuoteHistory() {
   // Sprint 13 UI — Trash modal. Lazy-loads on open: `null` = closed,
   // `{ loading: true }` while fetching, `{ items: [...] }` once loaded.
   const [trashModal, setTrashModal] = useState(null);
+  // Sprint S-EXPORT-UI — export dialog. `null` = closed; `{ quote }` = open
+  // for that row. Permission gate handled at trigger render — `useAccess`
+  // returns 'edit' as fallback when AccessProvider is mid-load (matches
+  // existing tab gating).
+  const [exportModal, setExportModal] = useState(null);
+  const { access: tabAccess } = useAccess();
+  const canExport = tabAccess('quote-history') !== 'hidden';
   const ctxRef = useRef(null);
   const rfqColors = useRfqColors();
 
@@ -729,9 +739,36 @@ export default function QuoteHistory() {
                         />
                       </td>
                       <td className="qh-d qh-d-acts">
-                        {/* Layout badge only — Open/Copy/Delete moved to
-                          the right-click context menu (see Context Menu
-                          block below). */}
+                        {/* Layout badge + Export trigger. Open/Copy/Delete
+                          moved to the right-click context menu. */}
+                        {canExport && (
+                          <button
+                            type="button"
+                            className="qe-trigger"
+                            title={t('qexp.button.tooltip')}
+                            aria-label={t('qexp.button.tooltip')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExportModal({ quote: q });
+                            }}
+                          >
+                            <svg
+                              width="13"
+                              height="13"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                              <polyline points="7 10 12 15 17 10" />
+                              <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                          </button>
+                        )}
                         {q.has_layout || s.layout_file?.name ? (
                           <span className="qh-act-layout qh-layout-yes" title="Layout attached">
                             <svg
@@ -807,6 +844,20 @@ export default function QuoteHistory() {
         onClose={() => setHistoryModal(null)}
         approval={historyModal?.approval}
         quoteLabel={historyModal?.label}
+      />
+
+      {/* ══ Export Modal (Sprint S-EXPORT-UI) ══ */}
+      <ExportModal
+        open={!!exportModal}
+        quote={exportModal?.quote || null}
+        onClose={() => setExportModal(null)}
+        onSuccess={(filename) => {
+          // Inline alert is the existing toast surrogate in this tab
+          // (handleDelete also uses alert). Future polish: lift to the
+          // shared toast service once one exists.
+
+          alert(t('qexp.success.downloaded', { f: filename }));
+        }}
       />
 
       {/* ══ Sprint 13 UI: Trash bin modal ══ */}

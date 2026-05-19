@@ -1,0 +1,139 @@
+/* ExportModal — visual tokens layered on top of Modal.css primitives.
+ *
+ * Class prefix: qe- (Quote Export). Avoids collision with the wider
+ * .qh- (Quote History) + .op- (operator chrome) namespaces.
+ */
+
+.qe-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0 0 18px 0;
+}
+.qe-fieldset:last-of-type {
+  margin-bottom: 0;
+}
+.qe-legend {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ops-text-secondary, #555);
+  margin: 0 0 8px 0;
+  padding: 0;
+}
+
+.qe-radio-row {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.qe-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ops-text-primary, #161616);
+}
+.qe-radio input[type='radio'] {
+  margin: 0;
+  accent-color: var(--ops-brand-blue, #0f62fe);
+}
+
+.qe-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ops-text-primary, #161616);
+  padding: 4px 0;
+}
+.qe-check input[type='checkbox'] {
+  margin: 0;
+  accent-color: var(--ops-brand-blue, #0f62fe);
+}
+.qe-check-all {
+  font-weight: 600;
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--ops-border, #e0e0e0);
+}
+.qe-check-disabled {
+  color: var(--ops-text-disabled, #a8a8a8);
+  cursor: not-allowed;
+}
+
+.qe-tier-list {
+  padding-left: 4px;
+}
+
+.qe-single-tier {
+  font-size: 13px;
+  color: var(--ops-text-secondary, #555);
+  background: var(--ops-surface-secondary, #f4f4f4);
+  border-left: 3px solid var(--ops-brand-blue, #0f62fe);
+  padding: 8px 12px;
+  border-radius: 2px;
+}
+
+.qe-error-banner {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #fff1f1;
+  border-left: 3px solid #da1e28;
+  color: #750e13;
+  font-size: 13px;
+  border-radius: 2px;
+}
+
+.qe-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: qe-spin 0.8s linear infinite;
+  margin-right: 8px;
+  vertical-align: -1px;
+}
+@keyframes qe-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Trigger button — small icon-style anchor inside the row's qh-d-acts
+ * cell. Hover/focus visuals match the existing layout-badge buttons.
+ */
+.qe-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-left: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--ops-text-secondary, #555);
+  transition:
+    background 0.1s,
+    color 0.1s,
+    border-color 0.1s;
+}
+.qe-trigger:hover {
+  background: var(--ops-surface-hover, #e8e8e8);
+  color: var(--ops-brand-blue, #0f62fe);
+  border-color: var(--ops-border, #d0d0d0);
+}
+.qe-trigger:focus-visible {
+  outline: 2px solid var(--ops-brand-blue, #0f62fe);
+  outline-offset: 1px;
+}
+.qe-trigger svg {
+  pointer-events: none;
+}

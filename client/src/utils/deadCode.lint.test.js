@@ -86,22 +86,28 @@ test('no un-listed orphan modules in client source', () => {
   const importedAbs = new Set();
   for (const file of files) {
     const src = fs.readFileSync(file, 'utf-8');
-    // Two forms: static `from '…'` and dynamic `import('…')` (React
-    // lazy() uses the latter for tab chunks). Both count as a real
-    // reference for dead-code purposes.
-    const staticRe  = /from\s+['"]([^'"]+)['"]/g;
+    // Three forms: static `from '…'`, dynamic `import('…')` (React
+    // lazy() uses the latter for tab chunks), and side-effect static
+    // `import '…'` (i18n domain registration, polyfills). All count
+    // as a real reference for dead-code purposes.
+    const staticRe = /from\s+['"]([^'"]+)['"]/g;
     const dynamicRe = /import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+    const sideEffectRe = /^\s*import\s+['"]([^'"]+)['"]\s*;?\s*$/gm;
     const specs = [
-      ...[...src.matchAll(staticRe)].map(m => m[1]),
-      ...[...src.matchAll(dynamicRe)].map(m => m[1]),
+      ...[...src.matchAll(staticRe)].map((m) => m[1]),
+      ...[...src.matchAll(dynamicRe)].map((m) => m[1]),
+      ...[...src.matchAll(sideEffectRe)].map((m) => m[1]),
     ];
     for (const spec of specs) {
       if (!spec.startsWith('.')) continue; // external dep, skip
       const resolved = path.resolve(path.dirname(file), spec);
       // Vite resolves extension automatically — try .js / .jsx / index
       const candidates = [
-        resolved, resolved + '.js', resolved + '.jsx',
-        path.join(resolved, 'index.js'), path.join(resolved, 'index.jsx'),
+        resolved,
+        resolved + '.js',
+        resolved + '.jsx',
+        path.join(resolved, 'index.js'),
+        path.join(resolved, 'index.jsx'),
       ];
       for (const c of candidates) importedAbs.add(c);
     }
@@ -123,8 +129,11 @@ test('no un-listed orphan modules in client source', () => {
     orphans.push(rel);
   }
 
-  assert.deepEqual(orphans, [],
-    `Found orphan modules (nothing imports them). Either delete, wire them up, or add to KNOWN_ORPHANS in deadCode.lint.test.js:\n  ${orphans.join('\n  ')}`);
+  assert.deepEqual(
+    orphans,
+    [],
+    `Found orphan modules (nothing imports them). Either delete, wire them up, or add to KNOWN_ORPHANS in deadCode.lint.test.js:\n  ${orphans.join('\n  ')}`
+  );
 });
 
 test('KNOWN_ORPHANS entries still exist (no rot)', () => {
@@ -133,6 +142,9 @@ test('KNOWN_ORPHANS entries still exist (no rot)', () => {
     const abs = path.join(SRC_ROOT, rel);
     if (!fs.existsSync(abs)) stale.push(rel);
   }
-  assert.deepEqual(stale, [],
-    `KNOWN_ORPHANS contains paths that no longer exist — remove them:\n  ${stale.join('\n  ')}`);
+  assert.deepEqual(
+    stale,
+    [],
+    `KNOWN_ORPHANS contains paths that no longer exist — remove them:\n  ${stale.join('\n  ')}`
+  );
 });
