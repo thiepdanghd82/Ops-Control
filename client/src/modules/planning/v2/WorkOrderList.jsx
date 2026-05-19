@@ -20,7 +20,7 @@ export default function WorkOrderList({ onSelect }) {
   const [showCreate, setShowCreate] = useState(false);
 
   const fetcher = useCallback((signal) => fetchWorkOrderList(filters, signal), [filters]);
-  const { data, loading, error, refresh } = useAbortableFetch(fetcher, [filters]);
+  const { data, loading, initialLoading, error, refresh } = useAbortableFetch(fetcher, [filters]);
 
   function handleCreated(wo) {
     setShowCreate(false);
@@ -82,7 +82,12 @@ export default function WorkOrderList({ onSelect }) {
         />
       </div>
 
-      <WorkOrderTable items={data?.items} loading={loading} error={error} onSelect={onSelect} />
+      <WorkOrderTable
+        items={data?.items}
+        loading={initialLoading}
+        error={error}
+        onSelect={onSelect}
+      />
 
       <div className="wo-pagination">
         <span className="wo-pagination-summary">

@@ -46,7 +46,7 @@ function computeSummary(routing, qtyPlanned) {
 export default function WorkOrderDetail({ id, onBack }) {
   const { t } = useI18n();
   const fetcher = useCallback((signal) => fetchWorkOrderDetail(id, signal), [id]);
-  const { data, setData, loading, error, refresh } = useAbortableFetch(fetcher, [id]);
+  const { data, setData, initialLoading, error, refresh } = useAbortableFetch(fetcher, [id]);
 
   const [showRelease, setShowRelease] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
@@ -95,7 +95,12 @@ export default function WorkOrderDetail({ id, onBack }) {
     setAuditKey((k) => k + 1);
   }
 
-  if (loading) {
+  // Skeleton only on INITIAL load. Refresh after release/cancel/op
+  // mutations keeps the detail panel visible until the new data lands
+  // (stale-while-revalidate, Lesson 29). handleMutationSuccess above
+  // already does the optimistic merge — the refresh that follows must
+  // not blank out the panel.
+  if (initialLoading) {
     return (
       <div className="wo-detail">
         <button type="button" className="op-btn op-btn-ghost wo-back" onClick={onBack}>
