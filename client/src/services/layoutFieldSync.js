@@ -55,3 +55,38 @@ export function applyPrintToCutSync(prev, field, value) {
   }
   return patch;
 }
+
+/**
+ * Load-time companion to `applyPrintToCutSync`. The reducer-side helper
+ * only fires on LIVE writes — a quote loaded from history that already
+ * has `print_part_*` populated but `part_*` = 0 (created on a pre-fix
+ * build, or saved mid-edit before the operator clicked "Sync to Cut")
+ * never triggers the auto-mirror. Result: layout validator complains
+ * "Part Width TD là bắt buộc" even though the Print sub-tab clearly
+ * has the value.
+ *
+ * This heal pass mirrors `print_part_*` → `part_*` when canonical is 0
+ * and print is > 0. Idempotent + cheap when nothing needs healing.
+ * Used by `upgradeStdState` (Std) and per-SP inside `upgradeCplxState`
+ * (Cpx), so both calculator types are covered. Does NOT bump schema
+ * version — this is a defensive heal, not a shape change.
+ *
+ * @param {object|null|undefined} state  Std state or single Cpx subproduct.
+ * @returns {object}                     State with canonical fields filled
+ *                                       if they were missing.
+ */
+export function healPrintCutMissingCanonical(state) {
+  if (!state || typeof state !== 'object') return state;
+  let next = state;
+  const pw = Number(next.part_width) || 0;
+  const printPw = Number(next.print_part_width) || 0;
+  if (pw <= 0 && printPw > 0) {
+    next = { ...next, part_width: printPw };
+  }
+  const pl = Number(next.part_length_md) || 0;
+  const printPl = Number(next.print_part_length_md) || 0;
+  if (pl <= 0 && printPl > 0) {
+    next = { ...next, part_length_md: printPl };
+  }
+  return next;
+}

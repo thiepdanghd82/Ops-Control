@@ -51,13 +51,13 @@ import {
 function makeLib(overrides = {}) {
   return {
     rate: [
-      { workcenter: 'Manual',    machine_rate: 0,  labor_rate: 2.54, crew: 1, speed_uom: '' },
-      { workcenter: 'Flexo-A',   machine_rate: 40, labor_rate: 10,   crew: 2, speed_uom: 'm/min' },
-      { workcenter: 'RDC-1',     machine_rate: 30, labor_rate: 8,    crew: 1, speed_uom: 'm/min' },
+      { workcenter: 'Manual', machine_rate: 0, labor_rate: 2.54, crew: 1, speed_uom: '' },
+      { workcenter: 'Flexo-A', machine_rate: 40, labor_rate: 10, crew: 2, speed_uom: 'm/min' },
+      { workcenter: 'RDC-1', machine_rate: 30, labor_rate: 8, crew: 1, speed_uom: 'm/min' },
     ],
     ddl: {
       coverage: [
-        { pt: 'Flexo',  cov: 300 },
+        { pt: 'Flexo', cov: 300 },
         { pt: 'Indigo', cov: 400 },
       ],
       click_charges: { 1: 0.03, 4: 0.0074, 8: 0.0084 },
@@ -123,17 +123,17 @@ test('calcPcsPerRoll multiplies by num_webs', () => {
 
 test('safeYieldDivisor: normal loss returns 1 - loss', () => {
   assert.equal(safeYieldDivisor(0.1), 0.9);
-  assert.equal(safeYieldDivisor(0),    1);
+  assert.equal(safeYieldDivisor(0), 1);
 });
 
 test('safeYieldDivisor: loss >= 1 clamps to 0.001 (prevents /0)', () => {
-  assert.equal(safeYieldDivisor(1),   0.001);
+  assert.equal(safeYieldDivisor(1), 0.001);
   assert.equal(safeYieldDivisor(1.5), 0.001);
 });
 
 test('safeYieldDivisor: null/undefined treated as 0', () => {
   assert.equal(safeYieldDivisor(undefined), 1);
-  assert.equal(safeYieldDivisor(null),       1);
+  assert.equal(safeYieldDivisor(null), 1);
 });
 
 // ── calcMatScrapFactor ───────────────────────────────────────────────
@@ -154,7 +154,7 @@ test('calcMatScrapFactor: compounding across multiple processes', () => {
   const sf = calcMatScrapFactor({
     processes: [
       { workcenter: 'Flexo-A', scrap_pct: 0.03 },
-      { workcenter: 'RDC-1',   scrap_pct: 0.05 },
+      { workcenter: 'RDC-1', scrap_pct: 0.05 },
     ],
   });
   assert.ok(Math.abs(sf - 0.0785) < 1e-9);
@@ -163,7 +163,7 @@ test('calcMatScrapFactor: compounding across multiple processes', () => {
 test('calcMatScrapFactor: processes without a workcenter are ignored', () => {
   const sf = calcMatScrapFactor({
     processes: [
-      { workcenter: '',        scrap_pct: 0.10 }, // ignored
+      { workcenter: '', scrap_pct: 0.1 }, // ignored
       { workcenter: 'Flexo-A', scrap_pct: 0.03 },
     ],
   });
@@ -178,7 +178,7 @@ test('calcMat: empty material code returns the blank shape (no NaN)', () => {
   assert.equal(r.total_s, 0);
   assert.equal(r.run_s, 0);
   // Shape sanity: every expected key should be defined.
-  for (const k of ['setup_s','run_s','total_s','total_g','qpa_m2','qpa_lm','scrap_factor']) {
+  for (const k of ['setup_s', 'run_s', 'total_s', 'total_g', 'qpa_m2', 'qpa_lm', 'scrap_factor']) {
     assert.ok(k in r, `missing key ${k}`);
   }
 });
@@ -188,15 +188,80 @@ test('calcMat: produces positive run cost for a normal material', () => {
     processes: [{ workcenter: 'Flexo-A', scrap_pct: 0.03 }],
   });
   const mat = {
-    code: 'M001', width: 100, usage: 1, cavities: 4,
-    g_price: 2.5, s_price: 2.5, latest: 0,
-    offcut_yn: 'N', slitting_yn: 'N',
+    code: 'M001',
+    width: 100,
+    usage: 1,
+    cavities: 4,
+    g_price: 2.5,
+    s_price: 2.5,
+    latest: 0,
+    offcut_yn: 'N',
+    slitting_yn: 'N',
     setup_lm: 0,
   };
   const r = calcMat(mat, st, 100_000, null, null);
   assert.ok(r.run_s > 0, 'run cost should be positive');
   assert.ok(r.qpa_lm > 0, 'qpa_lm should be positive');
   assert.ok(Number.isFinite(r.run_s), 'run_s must be a finite number');
+});
+
+// MES-3-FIX-40 follow-up: when num_webs=0 (legacy quote or operator
+// cleared the field), Setup Cost computed but Run Cost rendered "—"
+// because qpa_lm_raw bottomed to 0. Operator hardware-test 2026-05-11:
+// 6-row Std quote at MOQ=500, all rows with MAT.PRICE filled in, every
+// SETUP COST visible but every RUN COST showing "—". The fix makes
+// calcQPA_LM webs-fallback consistent with display columns + calcOffcut.
+test('calcMat [num_webs=0 fix]: run_s stays positive when num_webs=0', () => {
+  const st = makeState({
+    processes: [{ workcenter: 'Flexo-A', scrap_pct: 0.03 }],
+    num_webs: 0,
+  });
+  const mat = {
+    code: 'M001',
+    width: 100,
+    usage: 1,
+    cavities: 4,
+    g_price: 2.5,
+    s_price: 2.5,
+    latest: 0,
+    offcut_yn: 'N',
+    slitting_yn: 'N',
+    setup_lm: 50,
+  };
+  const r = calcMat(mat, st, 100_000, null, null);
+  assert.ok(r.setup_s > 0, `setup_s should be > 0 (got ${r.setup_s}) — sanity guard`);
+  assert.ok(r.run_s > 0, `run_s should be > 0 (got ${r.run_s}) — num_webs=0 used to zero this`);
+  assert.ok(Number.isFinite(r.run_s));
+});
+
+test('calcMat [num_webs=0 fix]: num_webs=2 and num_webs=0(→1) produce different run_s', () => {
+  const base = {
+    processes: [{ workcenter: 'Flexo-A', scrap_pct: 0 }],
+    parts_in_md: 1,
+    parts_web_across: 4,
+    sheet_length: 52,
+    min_gap_md: 2,
+    rotary_cols: 0,
+  };
+  const mat = {
+    code: 'M001',
+    width: 100,
+    usage: 1,
+    cavities: 4,
+    g_price: 2.5,
+    s_price: 2.5,
+    latest: 0,
+    offcut_yn: 'N',
+    slitting_yn: 'N',
+    setup_lm: 0,
+  };
+  const r1 = calcMat(mat, makeState({ ...base, num_webs: 1 }), 100_000, null, null);
+  const r0 = calcMat(mat, makeState({ ...base, num_webs: 0 }), 100_000, null, null);
+  const r2 = calcMat(mat, makeState({ ...base, num_webs: 2 }), 100_000, null, null);
+  // num_webs=0 should behave identical to num_webs=1 (the fallback).
+  assert.ok(Math.abs(r0.run_s - r1.run_s) < 1e-12, 'num_webs=0 must equal num_webs=1');
+  // num_webs=2 must be HALF of num_webs=1 (divides by 2 webs).
+  assert.ok(Math.abs(r2.run_s - r1.run_s / 2) < 1e-12, 'num_webs=2 should be half of num_webs=1');
 });
 
 // ── calcMat — SP-reference fix (#2) regression ───────────────────────
@@ -222,14 +287,16 @@ test('calcMat [fix #2]: SP ref with a valid upstream result inlines the costs', 
     processes: [{ workcenter: 'Flexo-A', scrap_pct: 0.05 }],
   });
   const subproducts = [{ code: 'SP A' }];
-  const allSpResults = [{
-    g_mat_cost: 0.5,
-    bd_overhead: 0.1,
-    bd_labor: 0.2,
-    tooling: 0.05,
-    vat_loss: 0,
-    g_ttl: 1.0,
-  }];
+  const allSpResults = [
+    {
+      g_mat_cost: 0.5,
+      bd_overhead: 0.1,
+      bd_labor: 0.2,
+      tooling: 0.05,
+      vat_loss: 0,
+      g_ttl: 1.0,
+    },
+  ];
 
   const mat = { code: 'SP A', usage: 2, setup_lm: 0 };
   const r = calcMat(mat, st, 100_000, allSpResults, subproducts);
@@ -249,9 +316,13 @@ test('calcProcess [fix #8]: "Jig" normalizes to the isJig branch', () => {
     workcenter: 'Flexo-A',
     tool_type: 'Jig',
     tool_cost: 10_000,
-    tool_life: 0,          // force DDL lookup
+    tool_life: 0, // force DDL lookup
     tool_life_ovr: false,
-    speed: 0, layout: 1, efficiency: 0.85, setup_h: 0, scrap_pct: 0,
+    speed: 0,
+    layout: 1,
+    efficiency: 0.85,
+    setup_h: 0,
+    scrap_pct: 0,
   };
   const r = calcProcess(proc, st, 1000, makeLib());
   // Jig formula: tool_cost / min(tlife, eau). eau = 1000, tlife (from DDL) = 1_000_000
@@ -265,8 +336,13 @@ test('calcProcess [fix #8]: legacy "Jig& Fixture" still hits isJig branch', () =
     workcenter: 'Flexo-A',
     tool_type: 'Jig& Fixture', // legacy spelling
     tool_cost: 10_000,
-    tool_life_ovr: true, tool_life: 2000,
-    speed: 0, layout: 5, efficiency: 0.85, setup_h: 0, scrap_pct: 0,
+    tool_life_ovr: true,
+    tool_life: 2000,
+    speed: 0,
+    layout: 5,
+    efficiency: 0.85,
+    setup_h: 0,
+    scrap_pct: 0,
   };
   const r = calcProcess(proc, st, 1000, makeLib());
   // isJig → tlife (2000) > eau (1000) → tool_cost / eau = 10
@@ -279,8 +355,13 @@ test('calcProcess [fix #8]: spaced/cased "jig & fixture" also normalizes', () =>
     workcenter: 'Flexo-A',
     tool_type: 'jig & fixture',
     tool_cost: 10_000,
-    tool_life_ovr: true, tool_life: 2000,
-    speed: 0, layout: 5, efficiency: 0.85, setup_h: 0, scrap_pct: 0,
+    tool_life_ovr: true,
+    tool_life: 2000,
+    speed: 0,
+    layout: 5,
+    efficiency: 0.85,
+    setup_h: 0,
+    scrap_pct: 0,
   };
   const r = calcProcess(proc, st, 1000, makeLib());
   assert.equal(r.tooling, 10);
@@ -292,8 +373,13 @@ test('calcProcess: non-Jig tool uses tlife × layout formula', () => {
     workcenter: 'Flexo-A',
     tool_type: 'Metal',
     tool_cost: 5000,
-    tool_life_ovr: true, tool_life: 1000,
-    speed: 0, layout: 2, efficiency: 0.85, setup_h: 0, scrap_pct: 0,
+    tool_life_ovr: true,
+    tool_life: 1000,
+    speed: 0,
+    layout: 2,
+    efficiency: 0.85,
+    setup_h: 0,
+    scrap_pct: 0,
   };
   const r = calcProcess(proc, st, 10_000, makeLib());
   // non-Jig: totalToolPcs = tlife * layout = 2000
@@ -310,10 +396,66 @@ test('calcProcess: empty workcenter returns the zero shape', () => {
 
 // ── calcInk smoke ────────────────────────────────────────────────────
 
-test('calcInk: empty color short-circuits to zero', () => {
-  const r = calcInk({ color: '' }, makeState(), 100_000, makeLib());
+test('calcInk: fully empty row short-circuits to zero (all 3 identity fields blank)', () => {
+  const r = calcInk({ color: '', ifs_code: '', print_type: '' }, makeState(), 100_000, makeLib());
   assert.equal(r.total, 0);
   assert.equal(r.run_s, 0);
+});
+
+// Operator hardware-test 2026-05-11 (Inks tab): operator filled IFS Code +
+// Print Type + Clicks but left Desc blank → Setup/Run/Total = "—" for the
+// entire row. Pre-fix calcInk had `if (!ink.color) return zeros` which
+// V3.3 carried over from a build that only had a single "Color name"
+// field. After Ops Control added a separate IFS Code column the gate
+// became too tight. New behavior: any of color, ifs_code, or print_type
+// qualifies the row as real and triggers the compute path.
+test('calcInk [identity gate]: ifs_code alone is enough to trigger compute (Indigo)', () => {
+  const st = makeState({
+    processes: [{ workcenter: 'Indigo-A', scrap_pct: 0.03 }],
+    materials: [{ code: 'M001', width: 200, usage: 1, cavities: 8 }],
+  });
+  const ink = {
+    color: '', // operator left Desc blank
+    ifs_code: 'INK-WHITE-01',
+    print_type: 'Indigo',
+    clicks: 4,
+    s_price: 50,
+    latest: 50,
+  };
+  const r = calcInk(ink, st, 100_000, makeLib());
+  assert.ok(r.run_s > 0, `Indigo run_s should be > 0 when ifs_code+clicks set, got ${r.run_s}`);
+  assert.ok(r.total > 0, `total should be > 0`);
+});
+
+test('calcInk [identity gate]: print_type alone is enough to trigger compute (Flexo)', () => {
+  const st = makeState({
+    processes: [{ workcenter: 'Flexo-A', scrap_pct: 0.03 }],
+    materials: [{ code: 'M001', width: 200, usage: 1, cavities: 8 }],
+  });
+  const ink = {
+    color: '',
+    ifs_code: '',
+    print_type: 'Flexo',
+    base_mat: 'M001',
+    area_pct: 0.3,
+    s_price: 65,
+    latest: 65,
+  };
+  const r = calcInk(ink, st, 100_000, makeLib());
+  // Flexo coverage in makeLib = 300; run_s = price × qpa_lm × area_pct × width_m / cov / scrap_F
+  assert.ok(r.run_s > 0, `Flexo run_s should be > 0 when print_type set, got ${r.run_s}`);
+});
+
+test('calcInk [identity gate]: color alone still works (backward compat)', () => {
+  const ink = { color: 'Red', ifs_code: '', print_type: 'Flexo', area_pct: 0.2, s_price: 8 };
+  const st = makeState({
+    processes: [{ workcenter: 'Flexo-A', scrap_pct: 0.03 }],
+    materials: [{ code: 'M001', width: 200, usage: 1, cavities: 8 }],
+  });
+  // Set base_mat to lookup material width
+  ink.base_mat = 'M001';
+  const r = calcInk(ink, st, 100_000, makeLib());
+  assert.ok(r.run_s > 0, `Flexo run_s with color set should be > 0 (regression guard)`);
 });
 
 test('calcInk: flexo path produces finite non-negative cost', () => {
@@ -322,9 +464,14 @@ test('calcInk: flexo path produces finite non-negative cost', () => {
     materials: [{ code: 'M001', width: 200, usage: 1, cavities: 8 }],
   });
   const ink = {
-    color: 'Red', print_type: 'Flexo', base_mat: 'M001',
-    area_pct: 0.25, setup_kg: 0.1,
-    s_price: 8, g_price: 8, latest: 0,
+    color: 'Red',
+    print_type: 'Flexo',
+    base_mat: 'M001',
+    area_pct: 0.25,
+    setup_kg: 0.1,
+    s_price: 8,
+    g_price: 8,
+    latest: 0,
   };
   const r = calcInk(ink, st, 100_000, makeLib());
   assert.ok(Number.isFinite(r.total));
@@ -342,7 +489,7 @@ test('getRateByWC returns the row or null', () => {
 test('getToolLife returns 0 for unknown types, not undefined', () => {
   const lib = makeLib();
   assert.equal(getToolLife(lib, 'Knife'), 20000);
-  assert.equal(getToolLife(lib, 'Jig'),   1_000_000);
+  assert.equal(getToolLife(lib, 'Jig'), 1_000_000);
   assert.equal(getToolLife(lib, 'Unknown'), 0);
 });
 
@@ -350,12 +497,30 @@ test('getToolLife returns 0 for unknown types, not undefined', () => {
 
 test('calcAll: minimal realistic state returns a complete result shape', () => {
   const st = makeState({
-    selling_price: 0.20,
+    selling_price: 0.2,
     materials: [
-      { code: 'M001', width: 100, usage: 1, cavities: 4, g_price: 2.5, s_price: 2.5, offcut_yn: 'N', slitting_yn: 'N' },
+      {
+        code: 'M001',
+        width: 100,
+        usage: 1,
+        cavities: 4,
+        g_price: 2.5,
+        s_price: 2.5,
+        offcut_yn: 'N',
+        slitting_yn: 'N',
+      },
     ],
     processes: [
-      { workcenter: 'Flexo-A', tool_type: '', tool_cost: 0, speed: 100, layout: 4, efficiency: 0.85, setup_h: 0.5, scrap_pct: 0.03 },
+      {
+        workcenter: 'Flexo-A',
+        tool_type: '',
+        tool_cost: 0,
+        speed: 100,
+        layout: 4,
+        efficiency: 0.85,
+        setup_h: 0.5,
+        scrap_pct: 0.03,
+      },
     ],
     inks: [],
   });
@@ -393,7 +558,18 @@ test('calcAll: MOQ = 0 → s_ttl is finite (setup divides by moq guard)', () => 
   const st = makeState({
     moq: 0,
     materials: [{ code: 'M001', width: 100, usage: 1, cavities: 4, g_price: 2.5, s_price: 2.5 }],
-    processes: [{ workcenter: 'Flexo-A', speed: 60, layout: 4, efficiency: 0.85, setup_h: 1, scrap_pct: 0.03, tool_type: 'Metal', tool_cost: 500 }],
+    processes: [
+      {
+        workcenter: 'Flexo-A',
+        speed: 60,
+        layout: 4,
+        efficiency: 0.85,
+        setup_h: 1,
+        scrap_pct: 0.03,
+        tool_type: 'Metal',
+        tool_cost: 500,
+      },
+    ],
     inks: [],
   });
   const r = calcAll(st, null, makeLib(), null);
@@ -421,7 +597,13 @@ test('calcAll: null lib → throws or returns fallback (does not produce NaN)', 
 // ── calcPacking (returns a single number, not an object) ────────
 
 test('calcPacking: standard computation', () => {
-  const st = { pcs_per_bag: 50, bags_per_box: 10, container_cost: 0.20, box_cost: 0.60, other_packing: 0 };
+  const st = {
+    pcs_per_bag: 50,
+    bags_per_box: 10,
+    container_cost: 0.2,
+    box_cost: 0.6,
+    other_packing: 0,
+  };
   const r = calcPacking(st);
   // container_cost/pcs_per_bag + box_cost/bags_per_box/pcs_per_bag + other
   // = 0.20/50 + 0.60/10/50 + 0 = 0.004 + 0.0012 = 0.0052
@@ -429,7 +611,13 @@ test('calcPacking: standard computation', () => {
 });
 
 test('calcPacking: pcs_per_bag = 0 → returns 0 (guarded)', () => {
-  const st = { pcs_per_bag: 0, bags_per_box: 10, container_cost: 0.20, box_cost: 0.60, other_packing: 0 };
+  const st = {
+    pcs_per_bag: 0,
+    bags_per_box: 10,
+    container_cost: 0.2,
+    box_cost: 0.6,
+    other_packing: 0,
+  };
   const r = calcPacking(st);
   assert.equal(r, 0, 'pcs_per_bag=0 should short-circuit to 0');
 });
@@ -454,7 +642,14 @@ test('calcShipping: ship_qty = 0 → falls back to moq or 1 (finite)', () => {
 // ── calcQPA_LM ──────────────────────────────────────────────────
 
 test('calcQPA_LM: standard dimensions', () => {
-  const st = { sheet_length: 52, min_gap_md: 2, rotary_cols: 0, num_webs: 1, parts_in_md: 1, parts_web_across: 4 };
+  const st = {
+    sheet_length: 52,
+    min_gap_md: 2,
+    rotary_cols: 0,
+    num_webs: 1,
+    parts_in_md: 1,
+    parts_web_across: 4,
+  };
   const mat = { usage: 1 };
   const qpa = calcQPA_LM(st, mat);
   // pitch = 54, layout = 4, webs = 1
@@ -463,10 +658,68 @@ test('calcQPA_LM: standard dimensions', () => {
 });
 
 test('calcQPA_LM: layout = 0 and webs = 0 → no NaN or Infinity', () => {
-  const st = { sheet_length: 52, min_gap_md: 2, rotary_cols: 0, num_webs: 0, parts_in_md: 0, parts_web_across: 0 };
+  const st = {
+    sheet_length: 52,
+    min_gap_md: 2,
+    rotary_cols: 0,
+    num_webs: 0,
+    parts_in_md: 0,
+    parts_web_across: 0,
+  };
   const mat = { usage: 1 };
   const qpa = calcQPA_LM(st, mat);
   assert.ok(Number.isFinite(qpa), 'QPA_LM must be finite even with layout/webs = 0');
+});
+
+// MES-3-FIX-40 follow-up: num_webs=0 must NOT zero qpa_lm_raw — the rest
+// of the engine (qpa_m2, qpa_lm display, calcOffcut, CalcLayout shotPlan)
+// all fall back to webs=1 when num_webs is empty. Without the same
+// fallback here, Setup Cost computes normally but Run Cost renders "—"
+// — surfaced on operator hardware test 2026-05-11 (6-row Std quote with
+// MOQ=500 + WEBS column showing "—").
+test('calcQPA_LM: num_webs=0 falls back to 1 (matches display column behavior)', () => {
+  const st = {
+    sheet_length: 52,
+    min_gap_md: 2,
+    rotary_cols: 0,
+    num_webs: 0,
+    parts_in_md: 1,
+    parts_web_across: 4,
+  };
+  // mat.cavities explicit so the only zero in the calc is num_webs.
+  const mat = { cavities: 4, usage: 1 };
+  const qpa = calcQPA_LM(st, mat);
+  // pitch = 54, cavities = 4, webs fallback = 1 → 54/1000/4/1 = 0.0135
+  assert.ok(Math.abs(qpa - 0.0135) < 1e-9, `expected 0.0135 got ${qpa}`);
+});
+
+test('calcQPA_LM: num_webs=null also falls back to 1', () => {
+  const st = {
+    sheet_length: 52,
+    min_gap_md: 2,
+    rotary_cols: 0,
+    num_webs: null,
+    parts_in_md: 1,
+    parts_web_across: 4,
+  };
+  const mat = { cavities: 4, usage: 1 };
+  const qpa = calcQPA_LM(st, mat);
+  assert.ok(Math.abs(qpa - 0.0135) < 1e-9, `expected 0.0135 got ${qpa}`);
+});
+
+test('calcQPA_LM: num_webs=2 still divides by 2 (regression guard)', () => {
+  const st = {
+    sheet_length: 52,
+    min_gap_md: 2,
+    rotary_cols: 0,
+    num_webs: 2,
+    parts_in_md: 1,
+    parts_web_across: 4,
+  };
+  const mat = { cavities: 4, usage: 1 };
+  const qpa = calcQPA_LM(st, mat);
+  // pitch = 54, cavities = 4, webs = 2 → 54/1000/4/2 = 0.00675
+  assert.ok(Math.abs(qpa - 0.00675) < 1e-9, `expected 0.00675 got ${qpa}`);
 });
 
 // ── buildTierState ──────────────────────────────────────────────
@@ -475,7 +728,10 @@ test('buildTierState: tier 0 returns base state with price/moq/eau overrides', (
   // Post Sprint S-CLEAN — createStdState now defaults ship_qty=0, so
   // tests that need a non-zero ship_qty must set it explicitly.
   const base = makeState({
-    selling_price: 0.10, moq: 100_000, annual_qty: 500_000, ship_qty: 250_000,
+    selling_price: 0.1,
+    moq: 100_000,
+    annual_qty: 500_000,
+    ship_qty: 250_000,
   });
   const ts = buildTierState(base, 0, 0.099, 250_000, 3_000_000);
   assert.equal(ts.selling_price, 0.099);
@@ -487,7 +743,7 @@ test('buildTierState: tier 0 returns base state with price/moq/eau overrides', (
 
 test('buildTierState: tier > 0 pulls from extra_moqs', () => {
   const base = makeState({
-    selling_price: 0.10,
+    selling_price: 0.1,
     moq: 100_000,
     annual_qty: 500_000,
     num_moq: 2,
@@ -577,9 +833,14 @@ test('calcInk: Indigo path with clicks > 0 produces finite cost', () => {
     materials: [{ code: 'M001', width: 200, usage: 1, cavities: 8 }],
   });
   const ink = {
-    color: 'CMYK', print_type: 'Indigo', base_mat: 'M001',
-    area_pct: 1.0, clicks: 4,
-    s_price: 0, g_price: 0, latest: 0,
+    color: 'CMYK',
+    print_type: 'Indigo',
+    base_mat: 'M001',
+    area_pct: 1.0,
+    clicks: 4,
+    s_price: 0,
+    g_price: 0,
+    latest: 0,
   };
   const r = calcInk(ink, st, 100_000, makeLib());
   assert.ok(Number.isFinite(r.total), 'Indigo total must be finite');
@@ -591,8 +852,11 @@ test('calcInk: Indigo with clicks = 0 → cost = 0', () => {
     materials: [{ code: 'M001', width: 200, usage: 1, cavities: 8 }],
   });
   const ink = {
-    color: 'CMYK', print_type: 'Indigo', base_mat: 'M001',
-    area_pct: 1.0, clicks: 0,
+    color: 'CMYK',
+    print_type: 'Indigo',
+    base_mat: 'M001',
+    area_pct: 1.0,
+    clicks: 0,
   };
   const r = calcInk(ink, st, 100_000, makeLib());
   assert.equal(r.total, 0);
@@ -614,9 +878,14 @@ test('calcInk: Flexo with coverage = 0 → both run and setup are 0', () => {
     materials: [{ code: 'M001', width: 200, usage: 1, cavities: 8 }],
   });
   const ink = {
-    color: 'Red', print_type: 'Flexo', base_mat: 'M001',
-    area_pct: 0.5, setup_kg: 0.2,
-    s_price: 8, g_price: 8, latest: 0,
+    color: 'Red',
+    print_type: 'Flexo',
+    base_mat: 'M001',
+    area_pct: 0.5,
+    setup_kg: 0.2,
+    s_price: 8,
+    g_price: 8,
+    latest: 0,
   };
   const r = calcInk(ink, st, 100_000, lib);
   assert.equal(r.run_s, 0, 'run_s must be 0 when coverage is missing');
@@ -624,7 +893,10 @@ test('calcInk: Flexo with coverage = 0 → both run and setup are 0', () => {
   // setup_ink_qty = setup_kg + 0 (because ink_cover_val guard) = 0.2
   // setup_s = 8 * 0.2 / 100000 = 0.000016
   assert.ok(r.setup_s >= 0, 'setup_s must be non-negative');
-  assert.ok(r.setup_s < 0.001, 'setup_s should be tiny (just setup_kg), not inflated by coverage / 1');
+  assert.ok(
+    r.setup_s < 0.001,
+    'setup_s should be tiny (just setup_kg), not inflated by coverage / 1'
+  );
 });
 
 // ── REGRESSION: calcInk base_mat width parsing ───────────────────────
@@ -638,9 +910,14 @@ test('calcInk [regression]: base_mat code ending in "-200" does NOT produce nega
     materials: [{ code: '', width: 0, usage: 1, cavities: 8 }],
   });
   const ink = {
-    color: 'Red', print_type: 'Flexo', base_mat: 'ABC-200',
-    area_pct: 0.5, setup_kg: 0.2,
-    s_price: 8, g_price: 8, latest: 0,
+    color: 'Red',
+    print_type: 'Flexo',
+    base_mat: 'ABC-200',
+    area_pct: 0.5,
+    setup_kg: 0.2,
+    s_price: 8,
+    g_price: 8,
+    latest: 0,
   };
   const r = calcInk(ink, st, 100_000, lib);
   // Cost must be non-negative and finite — if width_m went to -0.2 we'd see
@@ -658,9 +935,14 @@ test('calcInk [regression]: base_mat "M200" (trailing number, no dash) still par
     materials: [{ code: '', width: 0, usage: 1, cavities: 8 }],
   });
   const ink = {
-    color: 'Red', print_type: 'Flexo', base_mat: 'M200',
-    area_pct: 0.5, setup_kg: 0.2,
-    s_price: 8, g_price: 8, latest: 0,
+    color: 'Red',
+    print_type: 'Flexo',
+    base_mat: 'M200',
+    area_pct: 0.5,
+    setup_kg: 0.2,
+    s_price: 8,
+    g_price: 8,
+    latest: 0,
   };
   const r = calcInk(ink, st, 100_000, lib);
   assert.ok(r.run_s >= 0 && Number.isFinite(r.run_s));
@@ -672,12 +954,23 @@ test('calcProcess [regression]: tool_type "jigging" does NOT hit Jig branch', ()
   const lib = makeLib();
   const st = makeState({
     materials: [{ code: 'M001', width: 200, usage: 1 }],
-    processes: [{
-      process_type: 'RDC', workcenter: 'RDC-1',
-      speed: 10, layout: 4, efficiency: 0.85, setup_h: 0.5,
-      scrap_pct: 0.03, tool_cost: 1000, tool_type: 'jigging', tool_life: 100,
-      product_life: 1, eau_ovr: 0, repeat: 1,
-    }],
+    processes: [
+      {
+        process_type: 'RDC',
+        workcenter: 'RDC-1',
+        speed: 10,
+        layout: 4,
+        efficiency: 0.85,
+        setup_h: 0.5,
+        scrap_pct: 0.03,
+        tool_cost: 1000,
+        tool_type: 'jigging',
+        tool_life: 100,
+        product_life: 1,
+        eau_ovr: 0,
+        repeat: 1,
+      },
+    ],
   });
   const r = calcProcess(st.processes[0], st, 10_000, lib);
   // If classified as Jig, tooling = 1000 / eau (very small). If classified
@@ -690,13 +983,25 @@ test('calcProcess [regression]: tool_type "Jig" (exact) still hits Jig branch', 
   const lib = makeLib();
   const st = makeState({
     materials: [{ code: 'M001', width: 200, usage: 1 }],
-    annual_qty: 1_000_000, product_lifetime: 1,
-    processes: [{
-      process_type: 'RDC', workcenter: 'RDC-1',
-      speed: 10, layout: 4, efficiency: 0.85, setup_h: 0.5,
-      scrap_pct: 0.03, tool_cost: 1000, tool_type: 'Jig', tool_life: 100,
-      product_life: 1, eau_ovr: 0, repeat: 1,
-    }],
+    annual_qty: 1_000_000,
+    product_lifetime: 1,
+    processes: [
+      {
+        process_type: 'RDC',
+        workcenter: 'RDC-1',
+        speed: 10,
+        layout: 4,
+        efficiency: 0.85,
+        setup_h: 0.5,
+        scrap_pct: 0.03,
+        tool_cost: 1000,
+        tool_type: 'Jig',
+        tool_life: 100,
+        product_life: 1,
+        eau_ovr: 0,
+        repeat: 1,
+      },
+    ],
   });
   const r = calcProcess(st.processes[0], st, 10_000, lib);
   // Jig branch: tlife (1_000_000) > eau (1_000_000) → tooling = cost/eau
@@ -724,22 +1029,53 @@ test('aggregateComplex: single SP without FG falls back to sum shape', () => {
   const lib = makeLib();
   const sp = createSubProduct('SP A');
   // Give SP enough inputs so calcAll returns a non-null result.
-  sp.materials = [{
-    row_type: 'Main.Mat', code: 'M001', desc: 'mat', qpa: 0, usage: 1,
-    pitch: 20, width: 200, s_price: 5, g_price: 5, latest: 0, offcut_pct: 0,
-  }];
-  sp.processes = [{
-    process_type: 'Flexo', workcenter: 'Flexo-A',
-    speed: 10, layout: 4, efficiency: 0.85, setup_h: 0.5,
-    scrap_pct: 0.03, tool_cost: 0, tool_type: '', tool_life: 0,
-    product_life: 1, eau_ovr: 0, repeat: 1,
-  }];
-  sp.part_width = 20; sp.part_length_md = 20; sp.web_width_td = 200;
-  sp.num_webs = 1; sp.parts_in_md = 1; sp.parts_web_across = 4;
+  sp.materials = [
+    {
+      row_type: 'Main.Mat',
+      code: 'M001',
+      desc: 'mat',
+      qpa: 0,
+      usage: 1,
+      pitch: 20,
+      width: 200,
+      s_price: 5,
+      g_price: 5,
+      latest: 0,
+      offcut_pct: 0,
+    },
+  ];
+  sp.processes = [
+    {
+      process_type: 'Flexo',
+      workcenter: 'Flexo-A',
+      speed: 10,
+      layout: 4,
+      efficiency: 0.85,
+      setup_h: 0.5,
+      scrap_pct: 0.03,
+      tool_cost: 0,
+      tool_type: '',
+      tool_life: 0,
+      product_life: 1,
+      eau_ovr: 0,
+      repeat: 1,
+    },
+  ];
+  sp.part_width = 20;
+  sp.part_length_md = 20;
+  sp.web_width_td = 200;
+  sp.num_webs = 1;
+  sp.parts_in_md = 1;
+  sp.parts_web_across = 4;
   const cs = {
-    moq: 10000, annual_qty: 100_000, product_lifetime: 1,
-    selling_price: 0.2, trade_mode: 'USD', site: 'VN',
-    active_moq_idx: 0, extra_moqs: [],
+    moq: 10000,
+    annual_qty: 100_000,
+    product_lifetime: 1,
+    selling_price: 0.2,
+    trade_mode: 'USD',
+    site: 'VN',
+    active_moq_idx: 0,
+    extra_moqs: [],
   };
   const r = aggregateComplex(cs, [sp], lib, 0);
   assert.ok(r.aggregate, 'aggregate must be set for non-empty SPs');
@@ -755,25 +1091,56 @@ test('aggregateComplex: single SP without FG falls back to sum shape', () => {
 test('aggregateComplex: FG SP becomes the aggregate (FG-prefix heuristic)', () => {
   const lib = makeLib();
   const spA = createSubProduct('SP A');
-  const fg  = createSubProduct('FG Z');
+  const fg = createSubProduct('FG Z');
   for (const sp of [spA, fg]) {
-    sp.materials = [{
-      row_type: 'Main.Mat', code: 'M001', desc: 'mat', qpa: 0, usage: 1,
-      pitch: 20, width: 200, s_price: 5, g_price: 5, latest: 0, offcut_pct: 0,
-    }];
-    sp.processes = [{
-      process_type: 'Flexo', workcenter: 'Flexo-A',
-      speed: 10, layout: 4, efficiency: 0.85, setup_h: 0.5,
-      scrap_pct: 0.03, tool_cost: 0, tool_type: '', tool_life: 0,
-      product_life: 1, eau_ovr: 0, repeat: 1,
-    }];
-    sp.part_width = 20; sp.part_length_md = 20; sp.web_width_td = 200;
-    sp.num_webs = 1; sp.parts_in_md = 1; sp.parts_web_across = 4;
+    sp.materials = [
+      {
+        row_type: 'Main.Mat',
+        code: 'M001',
+        desc: 'mat',
+        qpa: 0,
+        usage: 1,
+        pitch: 20,
+        width: 200,
+        s_price: 5,
+        g_price: 5,
+        latest: 0,
+        offcut_pct: 0,
+      },
+    ];
+    sp.processes = [
+      {
+        process_type: 'Flexo',
+        workcenter: 'Flexo-A',
+        speed: 10,
+        layout: 4,
+        efficiency: 0.85,
+        setup_h: 0.5,
+        scrap_pct: 0.03,
+        tool_cost: 0,
+        tool_type: '',
+        tool_life: 0,
+        product_life: 1,
+        eau_ovr: 0,
+        repeat: 1,
+      },
+    ];
+    sp.part_width = 20;
+    sp.part_length_md = 20;
+    sp.web_width_td = 200;
+    sp.num_webs = 1;
+    sp.parts_in_md = 1;
+    sp.parts_web_across = 4;
   }
   const cs = {
-    moq: 10000, annual_qty: 100_000, product_lifetime: 1,
-    selling_price: 0.2, trade_mode: 'USD', site: 'VN',
-    active_moq_idx: 0, extra_moqs: [],
+    moq: 10000,
+    annual_qty: 100_000,
+    product_lifetime: 1,
+    selling_price: 0.2,
+    trade_mode: 'USD',
+    site: 'VN',
+    active_moq_idx: 0,
+    extra_moqs: [],
   };
   const r = aggregateComplex(cs, [spA, fg], lib, 0);
   // FG is at index 1 — aggregate should be a spread of pass2[1], not a sum.
@@ -793,36 +1160,78 @@ test('aggregateComplex: FG SP becomes the aggregate (FG-prefix heuristic)', () =
 test('aggregateComplex: parent-level packing raises aggregate.packing_ship + s_ttl', () => {
   const lib = makeLib();
   const sp = createSubProduct('SP A');
-  sp.materials = [{
-    row_type: 'Main.Mat', code: 'M001', desc: 'mat', qpa: 0, usage: 1,
-    pitch: 20, width: 200, s_price: 5, g_price: 5, latest: 0, offcut_pct: 0,
-  }];
-  sp.processes = [{
-    process_type: 'Flexo', workcenter: 'Flexo-A',
-    speed: 10, layout: 4, efficiency: 0.85, setup_h: 0.5,
-    scrap_pct: 0.03, tool_cost: 0, tool_type: '', tool_life: 0,
-    product_life: 1, eau_ovr: 0, repeat: 1,
-  }];
-  sp.part_width = 20; sp.part_length_md = 20; sp.web_width_td = 200;
-  sp.num_webs = 1; sp.parts_in_md = 1; sp.parts_web_across = 4;
+  sp.materials = [
+    {
+      row_type: 'Main.Mat',
+      code: 'M001',
+      desc: 'mat',
+      qpa: 0,
+      usage: 1,
+      pitch: 20,
+      width: 200,
+      s_price: 5,
+      g_price: 5,
+      latest: 0,
+      offcut_pct: 0,
+    },
+  ];
+  sp.processes = [
+    {
+      process_type: 'Flexo',
+      workcenter: 'Flexo-A',
+      speed: 10,
+      layout: 4,
+      efficiency: 0.85,
+      setup_h: 0.5,
+      scrap_pct: 0.03,
+      tool_cost: 0,
+      tool_type: '',
+      tool_life: 0,
+      product_life: 1,
+      eau_ovr: 0,
+      repeat: 1,
+    },
+  ];
+  sp.part_width = 20;
+  sp.part_length_md = 20;
+  sp.web_width_td = 200;
+  sp.num_webs = 1;
+  sp.parts_in_md = 1;
+  sp.parts_web_across = 4;
 
   const baseCs = {
-    moq: 10000, annual_qty: 100_000, product_lifetime: 1,
-    selling_price: 0.2, trade_mode: 'USD', site: 'VN',
-    active_moq_idx: 0, extra_moqs: [],
+    moq: 10000,
+    annual_qty: 100_000,
+    product_lifetime: 1,
+    selling_price: 0.2,
+    trade_mode: 'USD',
+    site: 'VN',
+    active_moq_idx: 0,
+    extra_moqs: [],
     // Baseline: no parent Pack&Ship
-    packing_method: 'Sheet', pcs_per_bag: 0, bags_per_box: 0,
-    container_cost: 0, box_cost: 0, other_packing: 0,
-    ship_qty: 0, shipping_cost: 0, other_ship: 0,
+    packing_method: 'Sheet',
+    pcs_per_bag: 0,
+    bags_per_box: 0,
+    container_cost: 0,
+    box_cost: 0,
+    other_packing: 0,
+    ship_qty: 0,
+    shipping_cost: 0,
+    other_ship: 0,
   };
   const baseR = aggregateComplex(baseCs, [sp], lib, 0);
 
   // Same inputs PLUS parent-level packing + shipping.
   const withPs = {
     ...baseCs,
-    pcs_per_bag: 50, bags_per_box: 100,
-    container_cost: 0.2, box_cost: 1.0, other_packing: 0.001,
-    ship_qty: 10000, shipping_cost: 50, other_ship: 5,
+    pcs_per_bag: 50,
+    bags_per_box: 100,
+    container_cost: 0.2,
+    box_cost: 1.0,
+    other_packing: 0.001,
+    ship_qty: 10000,
+    shipping_cost: 50,
+    other_ship: 5,
   };
   const withR = aggregateComplex(withPs, [sp], lib, 0);
 
@@ -831,30 +1240,77 @@ test('aggregateComplex: parent-level packing raises aggregate.packing_ship + s_t
   //   shipping = (50 + 5) / 10000 = 0.0055
   //   total parent = 0.0107
   const delta = (withR.aggregate.packing_ship || 0) - (baseR.aggregate.packing_ship || 0);
-  assert.ok(delta > 0.010 && delta < 0.011,
-    `parent packing_ship delta should be ~0.0107, got ${delta}`);
+  assert.ok(
+    delta > 0.01 && delta < 0.011,
+    `parent packing_ship delta should be ~0.0107, got ${delta}`
+  );
 
   // s_ttl must increase by the same amount — gm/va are derived from it.
   const sttlDelta = withR.aggregate.s_ttl - baseR.aggregate.s_ttl;
-  assert.ok(Math.abs(sttlDelta - delta) < 1e-9,
-    `s_ttl must increase by the same amount as packing_ship; got ${sttlDelta} vs ${delta}`);
+  assert.ok(
+    Math.abs(sttlDelta - delta) < 1e-9,
+    `s_ttl must increase by the same amount as packing_ship; got ${sttlDelta} vs ${delta}`
+  );
 });
 
 test('aggregateComplex: zero parent P&S fields → no change vs legacy (no regression)', () => {
   const lib = makeLib();
   const sp = createSubProduct('SP A');
-  sp.materials = [{ row_type: 'Main.Mat', code: 'M001', desc: 'mat', qpa: 0, usage: 1, pitch: 20, width: 200, s_price: 5, g_price: 5, latest: 0, offcut_pct: 0 }];
-  sp.processes = [{ process_type: 'Flexo', workcenter: 'Flexo-A', speed: 10, layout: 4, efficiency: 0.85, setup_h: 0.5, scrap_pct: 0.03, tool_cost: 0, tool_type: '', tool_life: 0, product_life: 1, eau_ovr: 0, repeat: 1 }];
-  sp.part_width = 20; sp.part_length_md = 20; sp.web_width_td = 200;
-  sp.num_webs = 1; sp.parts_in_md = 1; sp.parts_web_across = 4;
+  sp.materials = [
+    {
+      row_type: 'Main.Mat',
+      code: 'M001',
+      desc: 'mat',
+      qpa: 0,
+      usage: 1,
+      pitch: 20,
+      width: 200,
+      s_price: 5,
+      g_price: 5,
+      latest: 0,
+      offcut_pct: 0,
+    },
+  ];
+  sp.processes = [
+    {
+      process_type: 'Flexo',
+      workcenter: 'Flexo-A',
+      speed: 10,
+      layout: 4,
+      efficiency: 0.85,
+      setup_h: 0.5,
+      scrap_pct: 0.03,
+      tool_cost: 0,
+      tool_type: '',
+      tool_life: 0,
+      product_life: 1,
+      eau_ovr: 0,
+      repeat: 1,
+    },
+  ];
+  sp.part_width = 20;
+  sp.part_length_md = 20;
+  sp.web_width_td = 200;
+  sp.num_webs = 1;
+  sp.parts_in_md = 1;
+  sp.parts_web_across = 4;
 
   const cs = {
-    moq: 10000, selling_price: 0.2, trade_mode: 'USD', site: 'VN',
-    active_moq_idx: 0, extra_moqs: [],
+    moq: 10000,
+    selling_price: 0.2,
+    trade_mode: 'USD',
+    site: 'VN',
+    active_moq_idx: 0,
+    extra_moqs: [],
     // All parent P&S zero → calcPacking short-circuits (no pcs_per_bag) and calcShipping returns (0+0)/qty = 0
-    pcs_per_bag: 0, bags_per_box: 0,
-    container_cost: 0, box_cost: 0, other_packing: 0,
-    ship_qty: 0, shipping_cost: 0, other_ship: 0,
+    pcs_per_bag: 0,
+    bags_per_box: 0,
+    container_cost: 0,
+    box_cost: 0,
+    other_packing: 0,
+    ship_qty: 0,
+    shipping_cost: 0,
+    other_ship: 0,
   };
   const r = aggregateComplex(cs, [sp], lib, 0);
   // When nothing's configured, parent P&S adds exactly 0.
@@ -867,20 +1323,69 @@ test('aggregateComplex: parent P&S stacks on top of per-SP P&S (no replacement)'
   // that sum so existing saved quotes don't silently lose cost data.
   const lib = makeLib();
   const sp = createSubProduct('SP A');
-  sp.materials = [{ row_type: 'Main.Mat', code: 'M001', desc: 'mat', qpa: 0, usage: 1, pitch: 20, width: 200, s_price: 5, g_price: 5, latest: 0, offcut_pct: 0 }];
-  sp.processes = [{ process_type: 'Flexo', workcenter: 'Flexo-A', speed: 10, layout: 4, efficiency: 0.85, setup_h: 0.5, scrap_pct: 0.03, tool_cost: 0, tool_type: '', tool_life: 0, product_life: 1, eau_ovr: 0, repeat: 1 }];
-  sp.part_width = 20; sp.part_length_md = 20; sp.web_width_td = 200;
-  sp.num_webs = 1; sp.parts_in_md = 1; sp.parts_web_across = 4;
+  sp.materials = [
+    {
+      row_type: 'Main.Mat',
+      code: 'M001',
+      desc: 'mat',
+      qpa: 0,
+      usage: 1,
+      pitch: 20,
+      width: 200,
+      s_price: 5,
+      g_price: 5,
+      latest: 0,
+      offcut_pct: 0,
+    },
+  ];
+  sp.processes = [
+    {
+      process_type: 'Flexo',
+      workcenter: 'Flexo-A',
+      speed: 10,
+      layout: 4,
+      efficiency: 0.85,
+      setup_h: 0.5,
+      scrap_pct: 0.03,
+      tool_cost: 0,
+      tool_type: '',
+      tool_life: 0,
+      product_life: 1,
+      eau_ovr: 0,
+      repeat: 1,
+    },
+  ];
+  sp.part_width = 20;
+  sp.part_length_md = 20;
+  sp.web_width_td = 200;
+  sp.num_webs = 1;
+  sp.parts_in_md = 1;
+  sp.parts_web_across = 4;
   // Per-SP values configured (legacy pattern)
-  sp.pcs_per_bag = 100; sp.bags_per_box = 10;
-  sp.container_cost = 0.5; sp.box_cost = 2; sp.other_packing = 0;
-  sp.ship_qty = 0; sp.shipping_cost = 0; sp.other_ship = 0;
+  sp.pcs_per_bag = 100;
+  sp.bags_per_box = 10;
+  sp.container_cost = 0.5;
+  sp.box_cost = 2;
+  sp.other_packing = 0;
+  sp.ship_qty = 0;
+  sp.shipping_cost = 0;
+  sp.other_ship = 0;
 
   const csZeroParent = {
-    moq: 10000, selling_price: 0.2, trade_mode: 'USD', site: 'VN',
-    active_moq_idx: 0, extra_moqs: [],
-    pcs_per_bag: 0, bags_per_box: 0, container_cost: 0, box_cost: 0, other_packing: 0,
-    ship_qty: 0, shipping_cost: 0, other_ship: 0,
+    moq: 10000,
+    selling_price: 0.2,
+    trade_mode: 'USD',
+    site: 'VN',
+    active_moq_idx: 0,
+    extra_moqs: [],
+    pcs_per_bag: 0,
+    bags_per_box: 0,
+    container_cost: 0,
+    box_cost: 0,
+    other_packing: 0,
+    ship_qty: 0,
+    shipping_cost: 0,
+    other_ship: 0,
   };
   const rNoParent = aggregateComplex(csZeroParent, [sp], lib, 0);
 
@@ -893,8 +1398,10 @@ test('aggregateComplex: parent P&S stacks on top of per-SP P&S (no replacement)'
   assert.ok(spOnlyPs > 0, 'per-SP packing still flows through');
   assert.ok(combinedPs > spOnlyPs, 'parent P&S must ADD to per-SP, not replace');
   // Parent adds 0.2/50 = 0.004 (no box_cost so just container)
-  assert.ok(Math.abs((combinedPs - spOnlyPs) - 0.004) < 1e-9,
-    `parent delta should be exactly 0.004 (0.2/50), got ${combinedPs - spOnlyPs}`);
+  assert.ok(
+    Math.abs(combinedPs - spOnlyPs - 0.004) < 1e-9,
+    `parent delta should be exactly 0.004 (0.2/50), got ${combinedPs - spOnlyPs}`
+  );
 });
 
 test('aggregateComplex: calc error on one SP is captured in errors[] not thrown', () => {
@@ -916,12 +1423,23 @@ test('aggregateComplex: FG SP fallback when FG pass2 returned null', () => {
   const lib = makeLib();
   const fg = createSubProduct('FG Z');
   // Force FG to fail by giving it an invalid workcenter AND no materials.
-  fg.processes = [{
-    process_type: '', workcenter: '',
-    speed: 0, layout: 0, efficiency: 0, setup_h: 0, scrap_pct: 0,
-    tool_cost: 0, tool_type: '', tool_life: 0,
-    product_life: 1, eau_ovr: 0, repeat: 1,
-  }];
+  fg.processes = [
+    {
+      process_type: '',
+      workcenter: '',
+      speed: 0,
+      layout: 0,
+      efficiency: 0,
+      setup_h: 0,
+      scrap_pct: 0,
+      tool_cost: 0,
+      tool_type: '',
+      tool_life: 0,
+      product_life: 1,
+      eau_ovr: 0,
+      repeat: 1,
+    },
+  ];
   const cs = { moq: 100, selling_price: 0, trade_mode: 'USD', site: 'VN', extra_moqs: [] };
   const r = aggregateComplex(cs, [fg], lib, 0);
   // FG SP present → aggregate = pass2[fgIdx] (even if degenerate).
@@ -931,22 +1449,62 @@ test('aggregateComplex: FG SP fallback when FG pass2 returned null', () => {
 test('aggregateComplex: tier > 0 reads moq from extra_moqs', () => {
   const lib = makeLib();
   const sp = createSubProduct('SP A');
-  sp.materials = [{ row_type: 'Main.Mat', code: 'M001', qpa: 0, usage: 1, pitch: 20, width: 200, s_price: 5, g_price: 5, latest: 0, offcut_pct: 0 }];
-  sp.processes = [{ process_type: 'Flexo', workcenter: 'Flexo-A', speed: 10, layout: 4, efficiency: 0.85, setup_h: 0.5, scrap_pct: 0.03, tool_cost: 0, tool_type: '', tool_life: 0, product_life: 1, eau_ovr: 0, repeat: 1 }];
-  sp.part_width = 20; sp.part_length_md = 20; sp.web_width_td = 200;
-  sp.num_webs = 1; sp.parts_in_md = 1; sp.parts_web_across = 4;
+  sp.materials = [
+    {
+      row_type: 'Main.Mat',
+      code: 'M001',
+      qpa: 0,
+      usage: 1,
+      pitch: 20,
+      width: 200,
+      s_price: 5,
+      g_price: 5,
+      latest: 0,
+      offcut_pct: 0,
+    },
+  ];
+  sp.processes = [
+    {
+      process_type: 'Flexo',
+      workcenter: 'Flexo-A',
+      speed: 10,
+      layout: 4,
+      efficiency: 0.85,
+      setup_h: 0.5,
+      scrap_pct: 0.03,
+      tool_cost: 0,
+      tool_type: '',
+      tool_life: 0,
+      product_life: 1,
+      eau_ovr: 0,
+      repeat: 1,
+    },
+  ];
+  sp.part_width = 20;
+  sp.part_length_md = 20;
+  sp.web_width_td = 200;
+  sp.num_webs = 1;
+  sp.parts_in_md = 1;
+  sp.parts_web_across = 4;
   const cs = {
-    moq: 1000, annual_qty: 100_000, product_lifetime: 1,
-    selling_price: 0.2, trade_mode: 'USD', site: 'VN',
-    active_moq_idx: 0, extra_moqs: [{ moq: 50_000, price: 0.15, eau: 500_000 }],
+    moq: 1000,
+    annual_qty: 100_000,
+    product_lifetime: 1,
+    selling_price: 0.2,
+    trade_mode: 'USD',
+    site: 'VN',
+    active_moq_idx: 0,
+    extra_moqs: [{ moq: 50_000, price: 0.15, eau: 500_000 }],
   };
   // Tier 0 vs tier 1 should produce different s_ttl (setup amortization differs).
   const tier0 = aggregateComplex(cs, [sp], lib, 0);
   const tier1 = aggregateComplex(cs, [sp], lib, 1);
   assert.ok(tier0.aggregate && tier1.aggregate);
   // Larger MOQ → smaller per-unit setup → lower s_ttl (usually).
-  assert.ok(tier1.aggregate.s_ttl <= tier0.aggregate.s_ttl + 1e-6,
-    `tier1.s_ttl=${tier1.aggregate.s_ttl} should be ≤ tier0.s_ttl=${tier0.aggregate.s_ttl}`);
+  assert.ok(
+    tier1.aggregate.s_ttl <= tier0.aggregate.s_ttl + 1e-6,
+    `tier1.s_ttl=${tier1.aggregate.s_ttl} should be ≤ tier0.s_ttl=${tier0.aggregate.s_ttl}`
+  );
 });
 
 // ── Scrap compounding through FG assembly (audit §2.1 regression) ────
@@ -963,28 +1521,101 @@ test('aggregateComplex [audit §2.1]: FG assembly compounds its scrap_pct over S
   const lib = makeLib();
   // Sub-product SP-A with a known cost.
   const spA = createSubProduct('SP A');
-  spA.materials = [{ row_type: 'Main.Mat', code: 'M001', qpa: 0, usage: 1, pitch: 20, width: 200, s_price: 5, g_price: 5, latest: 0, offcut_pct: 0 }];
-  spA.processes = [{ process_type: 'Flexo', workcenter: 'Flexo-A', speed: 10, layout: 4, efficiency: 0.85, setup_h: 0.5, scrap_pct: 0, tool_cost: 0, tool_type: '', tool_life: 0, product_life: 1, eau_ovr: 0, repeat: 1 }];
-  spA.part_width = 20; spA.part_length_md = 20; spA.web_width_td = 200;
-  spA.num_webs = 1; spA.parts_in_md = 1; spA.parts_web_across = 4;
+  spA.materials = [
+    {
+      row_type: 'Main.Mat',
+      code: 'M001',
+      qpa: 0,
+      usage: 1,
+      pitch: 20,
+      width: 200,
+      s_price: 5,
+      g_price: 5,
+      latest: 0,
+      offcut_pct: 0,
+    },
+  ];
+  spA.processes = [
+    {
+      process_type: 'Flexo',
+      workcenter: 'Flexo-A',
+      speed: 10,
+      layout: 4,
+      efficiency: 0.85,
+      setup_h: 0.5,
+      scrap_pct: 0,
+      tool_cost: 0,
+      tool_type: '',
+      tool_life: 0,
+      product_life: 1,
+      eau_ovr: 0,
+      repeat: 1,
+    },
+  ];
+  spA.part_width = 20;
+  spA.part_length_md = 20;
+  spA.web_width_td = 200;
+  spA.num_webs = 1;
+  spA.parts_in_md = 1;
+  spA.parts_web_across = 4;
   // Post Sprint S-CLEAN — subproduct defaults are now clean (sheet_length=0,
   // min_gap_md=0). Set them explicitly so calcPitch > 0 and material cost
   // math has a finite pitch to divide by.
-  spA.sheet_length = 20; spA.min_gap_md = 2;
+  spA.sheet_length = 20;
+  spA.min_gap_md = 2;
 
   // FG assembly that references SP A. FG has its own 5% assembly scrap
   // via its process — that scrap must compound the sub-product cost.
   const fg = createSubProduct('FG Z');
-  fg.materials = [{ row_type: 'Main.Mat', code: 'SP A', qpa: 0, usage: 1, pitch: 20, width: 200, s_price: 0, g_price: 0, latest: 0, offcut_pct: 0 }];
-  fg.processes = [{ process_type: 'Flexo', workcenter: 'Flexo-A', speed: 10, layout: 4, efficiency: 0.85, setup_h: 0.5, scrap_pct: 0.05, tool_cost: 0, tool_type: '', tool_life: 0, product_life: 1, eau_ovr: 0, repeat: 1 }];
-  fg.part_width = 20; fg.part_length_md = 20; fg.web_width_td = 200;
-  fg.num_webs = 1; fg.parts_in_md = 1; fg.parts_web_across = 4;
-  fg.sheet_length = 20; fg.min_gap_md = 2;
+  fg.materials = [
+    {
+      row_type: 'Main.Mat',
+      code: 'SP A',
+      qpa: 0,
+      usage: 1,
+      pitch: 20,
+      width: 200,
+      s_price: 0,
+      g_price: 0,
+      latest: 0,
+      offcut_pct: 0,
+    },
+  ];
+  fg.processes = [
+    {
+      process_type: 'Flexo',
+      workcenter: 'Flexo-A',
+      speed: 10,
+      layout: 4,
+      efficiency: 0.85,
+      setup_h: 0.5,
+      scrap_pct: 0.05,
+      tool_cost: 0,
+      tool_type: '',
+      tool_life: 0,
+      product_life: 1,
+      eau_ovr: 0,
+      repeat: 1,
+    },
+  ];
+  fg.part_width = 20;
+  fg.part_length_md = 20;
+  fg.web_width_td = 200;
+  fg.num_webs = 1;
+  fg.parts_in_md = 1;
+  fg.parts_web_across = 4;
+  fg.sheet_length = 20;
+  fg.min_gap_md = 2;
 
   const cs = {
-    moq: 10_000, annual_qty: 100_000, product_lifetime: 1,
-    selling_price: 0.2, trade_mode: 'USD', site: 'VN',
-    active_moq_idx: 0, extra_moqs: [],
+    moq: 10_000,
+    annual_qty: 100_000,
+    product_lifetime: 1,
+    selling_price: 0.2,
+    trade_mode: 'USD',
+    site: 'VN',
+    active_moq_idx: 0,
+    extra_moqs: [],
   };
   const r = aggregateComplex(cs, [spA, fg], lib, 0);
   assert.ok(r.aggregate, 'aggregate must be set');
@@ -999,14 +1630,15 @@ test('aggregateComplex [audit §2.1]: FG assembly compounds its scrap_pct over S
   // minus tolerance because setup rows aren't scrap-compounded.
   const matA = r.aggregate.s_mat_cost || 0;
   const mat0 = r0.aggregate.s_mat_cost || 0;
-  assert.ok(matA > mat0,
-    `s_mat_cost with 5% scrap (${matA}) must exceed with 0% scrap (${mat0})`);
+  assert.ok(matA > mat0, `s_mat_cost with 5% scrap (${matA}) must exceed with 0% scrap (${mat0})`);
   // The ratio should be close to 1/0.95 for the run portion.
   // Using tier0 with a single FG ref at usage=1, the lower bound is
   // close to 1.05 (minus setup + packing/ship fixed costs which don't scale).
   const ratio = matA / Math.max(mat0, 1e-9);
-  assert.ok(ratio >= 1.03 && ratio <= 1.08,
-    `compound ratio ${ratio.toFixed(4)} should be near 1/(1-0.05)=1.053`);
+  assert.ok(
+    ratio >= 1.03 && ratio <= 1.08,
+    `compound ratio ${ratio.toFixed(4)} should be near 1/(1-0.05)=1.053`
+  );
 });
 
 test('aggregateComplex [audit §2.1]: sum-fallback path (no assembly) does NOT implicit-compound', () => {
@@ -1017,32 +1649,114 @@ test('aggregateComplex [audit §2.1]: sum-fallback path (no assembly) does NOT i
   const spA = createSubProduct('SP A');
   const spB = createSubProduct('SP B');
   for (const sp of [spA, spB]) {
-    sp.materials = [{ row_type: 'Main.Mat', code: 'M001', qpa: 0, usage: 1, pitch: 20, width: 200, s_price: 5, g_price: 5, latest: 0, offcut_pct: 0 }];
-    sp.processes = [{ process_type: 'Flexo', workcenter: 'Flexo-A', speed: 10, layout: 4, efficiency: 0.85, setup_h: 0.5, scrap_pct: 0.05, tool_cost: 0, tool_type: '', tool_life: 0, product_life: 1, eau_ovr: 0, repeat: 1 }];
-    sp.part_width = 20; sp.part_length_md = 20; sp.web_width_td = 200;
-    sp.num_webs = 1; sp.parts_in_md = 1; sp.parts_web_across = 4;
+    sp.materials = [
+      {
+        row_type: 'Main.Mat',
+        code: 'M001',
+        qpa: 0,
+        usage: 1,
+        pitch: 20,
+        width: 200,
+        s_price: 5,
+        g_price: 5,
+        latest: 0,
+        offcut_pct: 0,
+      },
+    ];
+    sp.processes = [
+      {
+        process_type: 'Flexo',
+        workcenter: 'Flexo-A',
+        speed: 10,
+        layout: 4,
+        efficiency: 0.85,
+        setup_h: 0.5,
+        scrap_pct: 0.05,
+        tool_cost: 0,
+        tool_type: '',
+        tool_life: 0,
+        product_life: 1,
+        eau_ovr: 0,
+        repeat: 1,
+      },
+    ];
+    sp.part_width = 20;
+    sp.part_length_md = 20;
+    sp.web_width_td = 200;
+    sp.num_webs = 1;
+    sp.parts_in_md = 1;
+    sp.parts_web_across = 4;
   }
   const cs = {
-    moq: 10_000, annual_qty: 100_000, product_lifetime: 1,
-    selling_price: 0.2, trade_mode: 'USD', site: 'VN',
-    active_moq_idx: 0, extra_moqs: [],
+    moq: 10_000,
+    annual_qty: 100_000,
+    product_lifetime: 1,
+    selling_price: 0.2,
+    trade_mode: 'USD',
+    site: 'VN',
+    active_moq_idx: 0,
+    extra_moqs: [],
   };
   const r = aggregateComplex(cs, [spA, spB], lib, 0);
   assert.ok(r.aggregate);
   // s_ttl ≈ pass2[0].s_ttl + pass2[1].s_ttl (no extra compounding).
   const expected = (r.pass2[0]?.s_ttl || 0) + (r.pass2[1]?.s_ttl || 0);
-  assert.ok(Math.abs(r.aggregate.s_ttl - expected) < 1e-6,
-    `sum-fallback s_ttl=${r.aggregate.s_ttl} must equal plain sum=${expected} (no implicit compound)`);
+  assert.ok(
+    Math.abs(r.aggregate.s_ttl - expected) < 1e-6,
+    `sum-fallback s_ttl=${r.aggregate.s_ttl} must equal plain sum=${expected} (no implicit compound)`
+  );
 });
 
 test('aggregateComplex: no SP refs → pass2 === pass1 (no re-compute)', () => {
   const lib = makeLib();
   const sp = createSubProduct('SP A');
-  sp.materials = [{ row_type: 'Main.Mat', code: 'M001', qpa: 0, usage: 1, pitch: 20, width: 200, s_price: 5, g_price: 5, latest: 0, offcut_pct: 0 }];
-  sp.processes = [{ process_type: 'Flexo', workcenter: 'Flexo-A', speed: 10, layout: 4, efficiency: 0.85, setup_h: 0.5, scrap_pct: 0.03, tool_cost: 0, tool_type: '', tool_life: 0, product_life: 1, eau_ovr: 0, repeat: 1 }];
-  sp.part_width = 20; sp.part_length_md = 20; sp.web_width_td = 200;
-  sp.num_webs = 1; sp.parts_in_md = 1; sp.parts_web_across = 4;
-  const cs = { moq: 1000, annual_qty: 100_000, product_lifetime: 1, selling_price: 0.2, trade_mode: 'USD', site: 'VN', active_moq_idx: 0, extra_moqs: [] };
+  sp.materials = [
+    {
+      row_type: 'Main.Mat',
+      code: 'M001',
+      qpa: 0,
+      usage: 1,
+      pitch: 20,
+      width: 200,
+      s_price: 5,
+      g_price: 5,
+      latest: 0,
+      offcut_pct: 0,
+    },
+  ];
+  sp.processes = [
+    {
+      process_type: 'Flexo',
+      workcenter: 'Flexo-A',
+      speed: 10,
+      layout: 4,
+      efficiency: 0.85,
+      setup_h: 0.5,
+      scrap_pct: 0.03,
+      tool_cost: 0,
+      tool_type: '',
+      tool_life: 0,
+      product_life: 1,
+      eau_ovr: 0,
+      repeat: 1,
+    },
+  ];
+  sp.part_width = 20;
+  sp.part_length_md = 20;
+  sp.web_width_td = 200;
+  sp.num_webs = 1;
+  sp.parts_in_md = 1;
+  sp.parts_web_across = 4;
+  const cs = {
+    moq: 1000,
+    annual_qty: 100_000,
+    product_lifetime: 1,
+    selling_price: 0.2,
+    trade_mode: 'USD',
+    site: 'VN',
+    active_moq_idx: 0,
+    extra_moqs: [],
+  };
   const r = aggregateComplex(cs, [sp], lib, 0);
   // SP has no code references to other SPs, so pass2[0] should be the pass1
   // result (shortcut path: `if (!hasRef) return pass1[spi]`). We can't
@@ -1057,10 +1771,43 @@ test('aggregateComplex: no SP refs → pass2 === pass1 (no re-compute)', () => {
 // materials setup each time.
 function makeSimpleSp(code) {
   const sp = createSubProduct(code);
-  sp.materials = [{ row_type: 'Main.Mat', code: 'M001', qpa: 0, usage: 1, pitch: 20, width: 200, s_price: 5, g_price: 5, latest: 0, offcut_pct: 0 }];
-  sp.processes = [{ process_type: 'Flexo', workcenter: 'Flexo-A', speed: 10, layout: 4, efficiency: 0.85, setup_h: 0.5, scrap_pct: 0.03, tool_cost: 0, tool_type: '', tool_life: 0, product_life: 1, eau_ovr: 0, repeat: 1 }];
-  sp.part_width = 20; sp.part_length_md = 20; sp.web_width_td = 200;
-  sp.num_webs = 1; sp.parts_in_md = 1; sp.parts_web_across = 4;
+  sp.materials = [
+    {
+      row_type: 'Main.Mat',
+      code: 'M001',
+      qpa: 0,
+      usage: 1,
+      pitch: 20,
+      width: 200,
+      s_price: 5,
+      g_price: 5,
+      latest: 0,
+      offcut_pct: 0,
+    },
+  ];
+  sp.processes = [
+    {
+      process_type: 'Flexo',
+      workcenter: 'Flexo-A',
+      speed: 10,
+      layout: 4,
+      efficiency: 0.85,
+      setup_h: 0.5,
+      scrap_pct: 0.03,
+      tool_cost: 0,
+      tool_type: '',
+      tool_life: 0,
+      product_life: 1,
+      eau_ovr: 0,
+      repeat: 1,
+    },
+  ];
+  sp.part_width = 20;
+  sp.part_length_md = 20;
+  sp.web_width_td = 200;
+  sp.num_webs = 1;
+  sp.parts_in_md = 1;
+  sp.parts_web_across = 4;
   return sp;
 }
 
@@ -1069,11 +1816,19 @@ test('aggregateComplex: flag OFF is byte-identical to pre-4.4 behavior', () => {
   const spA = makeSimpleSp('SP A');
   const spB = makeSimpleSp('SP B');
   const cs = {
-    moq: 10000, annual_qty: 100_000, product_lifetime: 1,
-    selling_price: 0.2, trade_mode: 'USD', site: 'VN',
-    active_moq_idx: 0, extra_moqs: [],
+    moq: 10000,
+    annual_qty: 100_000,
+    product_lifetime: 1,
+    selling_price: 0.2,
+    trade_mode: 'USD',
+    site: 'VN',
+    active_moq_idx: 0,
+    extra_moqs: [],
     // bom populated with qty=5 — flag OFF must ignore this entirely.
-    bom: [{ sp_index: 0, qty: 5, notes: '' }, { sp_index: 1, qty: 5, notes: '' }],
+    bom: [
+      { sp_index: 0, qty: 5, notes: '' },
+      { sp_index: 1, qty: 5, notes: '' },
+    ],
   };
   const off1 = aggregateComplex(cs, [spA, spB], lib, 0); // default opts
   const off2 = aggregateComplex(cs, [spA, spB], lib, 0, { bomQtyEnabled: false });
@@ -1084,8 +1839,10 @@ test('aggregateComplex: flag OFF is byte-identical to pre-4.4 behavior', () => {
   }
   // Legacy sum = pass2[0] + pass2[1] with qty=1 (no multiplication).
   const expected = (off1.pass2[0].s_ttl || 0) + (off1.pass2[1].s_ttl || 0);
-  assert.ok(Math.abs(off1.aggregate.s_ttl - expected) < 1e-9,
-    `off-path s_ttl=${off1.aggregate.s_ttl} should equal plain sum=${expected}`);
+  assert.ok(
+    Math.abs(off1.aggregate.s_ttl - expected) < 1e-9,
+    `off-path s_ttl=${off1.aggregate.s_ttl} should equal plain sum=${expected}`
+  );
 });
 
 test('aggregateComplex: flag ON + bom qty=3 multiplies that SP contribution', () => {
@@ -1093,35 +1850,54 @@ test('aggregateComplex: flag ON + bom qty=3 multiplies that SP contribution', ()
   const spA = makeSimpleSp('SP A');
   const spB = makeSimpleSp('SP B');
   const cs = {
-    moq: 10000, annual_qty: 100_000, product_lifetime: 1,
-    selling_price: 0.2, trade_mode: 'USD', site: 'VN',
-    active_moq_idx: 0, extra_moqs: [],
-    bom: [{ sp_index: 0, qty: 3, notes: '' }, { sp_index: 1, qty: 1, notes: '' }],
+    moq: 10000,
+    annual_qty: 100_000,
+    product_lifetime: 1,
+    selling_price: 0.2,
+    trade_mode: 'USD',
+    site: 'VN',
+    active_moq_idx: 0,
+    extra_moqs: [],
+    bom: [
+      { sp_index: 0, qty: 3, notes: '' },
+      { sp_index: 1, qty: 1, notes: '' },
+    ],
   };
   const on = aggregateComplex(cs, [spA, spB], lib, 0, { bomQtyEnabled: true });
   assert.ok(on.aggregate);
   const p0 = on.pass2[0].s_ttl || 0;
   const p1 = on.pass2[1].s_ttl || 0;
   const expected = 3 * p0 + 1 * p1;
-  assert.ok(Math.abs(on.aggregate.s_ttl - expected) < 1e-9,
-    `on-path weighted s_ttl=${on.aggregate.s_ttl} should equal ${expected}`);
+  assert.ok(
+    Math.abs(on.aggregate.s_ttl - expected) < 1e-9,
+    `on-path weighted s_ttl=${on.aggregate.s_ttl} should equal ${expected}`
+  );
 });
 
 test('aggregateComplex: flag ON + is_assembly flag wins over FG prefix', () => {
   const lib = makeLib();
-  const spA = makeSimpleSp('SP A'); spA.is_assembly = true;
+  const spA = makeSimpleSp('SP A');
+  spA.is_assembly = true;
   const spFg = makeSimpleSp('FG Z'); // normally would be assembly under legacy
   const cs = {
-    moq: 10000, annual_qty: 100_000, product_lifetime: 1,
-    selling_price: 0.2, trade_mode: 'USD', site: 'VN',
-    active_moq_idx: 0, extra_moqs: [],
+    moq: 10000,
+    annual_qty: 100_000,
+    product_lifetime: 1,
+    selling_price: 0.2,
+    trade_mode: 'USD',
+    site: 'VN',
+    active_moq_idx: 0,
+    extra_moqs: [],
     bom: [{ sp_index: 1, qty: 2, notes: '' }],
   };
   const on = aggregateComplex(cs, [spA, spFg], lib, 0, { bomQtyEnabled: true });
   // Assembly picked = index 0 (is_assembly=true). aggregate = pass2[0], ignore bom qty.
   assert.ok(on.aggregate);
-  assert.equal(on.aggregate.s_ttl, on.pass2[0].s_ttl,
-    'is_assembly=true SP becomes the aggregate directly');
+  assert.equal(
+    on.aggregate.s_ttl,
+    on.pass2[0].s_ttl,
+    'is_assembly=true SP becomes the aggregate directly'
+  );
 });
 
 test('aggregateComplex: flag ON + bom empty → implicit qty=1 for every non-assembly SP', () => {
@@ -1129,16 +1905,23 @@ test('aggregateComplex: flag ON + bom empty → implicit qty=1 for every non-ass
   const spA = makeSimpleSp('SP A');
   const spB = makeSimpleSp('SP B');
   const cs = {
-    moq: 10000, annual_qty: 100_000, product_lifetime: 1,
-    selling_price: 0.2, trade_mode: 'USD', site: 'VN',
-    active_moq_idx: 0, extra_moqs: [],
+    moq: 10000,
+    annual_qty: 100_000,
+    product_lifetime: 1,
+    selling_price: 0.2,
+    trade_mode: 'USD',
+    site: 'VN',
+    active_moq_idx: 0,
+    extra_moqs: [],
     bom: [], // explicit empty
   };
   const on = aggregateComplex(cs, [spA, spB], lib, 0, { bomQtyEnabled: true });
   const off = aggregateComplex(cs, [spA, spB], lib, 0); // legacy sum
   // Empty bom + no assembly → flag-on sum must match flag-off sum.
-  assert.ok(Math.abs(on.aggregate.s_ttl - off.aggregate.s_ttl) < 1e-9,
-    `empty-bom on-path s_ttl=${on.aggregate.s_ttl} should match legacy=${off.aggregate.s_ttl}`);
+  assert.ok(
+    Math.abs(on.aggregate.s_ttl - off.aggregate.s_ttl) < 1e-9,
+    `empty-bom on-path s_ttl=${on.aggregate.s_ttl} should match legacy=${off.aggregate.s_ttl}`
+  );
 });
 
 // ── Sprint 8 B.4: spMoqScalingEnabled (audit §2.2) ───────────────────
@@ -1153,12 +1936,28 @@ test('aggregateComplex [audit §2.2]: spMoqScalingEnabled forces referenced SP t
   // inherits activeMoq from cs.
   const parent = makeSimpleSp('FG PARENT');
   parent.materials = [
-    { row_type: 'Main.Mat', code: 'SP CHILD', qpa: 0, usage: 1, pitch: 20, width: 200, s_price: 0, g_price: 0, latest: 0, offcut_pct: 0 },
+    {
+      row_type: 'Main.Mat',
+      code: 'SP CHILD',
+      qpa: 0,
+      usage: 1,
+      pitch: 20,
+      width: 200,
+      s_price: 0,
+      g_price: 0,
+      latest: 0,
+      offcut_pct: 0,
+    },
   ];
   const cs = {
-    moq: 10000, annual_qty: 100_000, product_lifetime: 1,
-    selling_price: 0.2, trade_mode: 'USD', site: 'VN',
-    active_moq_idx: 0, extra_moqs: [],
+    moq: 10000,
+    annual_qty: 100_000,
+    product_lifetime: 1,
+    selling_price: 0.2,
+    trade_mode: 'USD',
+    site: 'VN',
+    active_moq_idx: 0,
+    extra_moqs: [],
   };
 
   // Flag OFF: child computes at ship_qty=100 → high per-unit setup.
@@ -1171,8 +1970,10 @@ test('aggregateComplex [audit §2.2]: spMoqScalingEnabled forces referenced SP t
   assert.ok(childOff && childOn, 'both paths produce a pass2 result for the child');
   // The child's s_ttl under flag-on should be ≤ under flag-off because
   // setup amortizes over 100× more units.
-  assert.ok(childOn.s_ttl <= childOff.s_ttl,
-    `flag-on child s_ttl (${childOn.s_ttl}) should be ≤ flag-off (${childOff.s_ttl})`);
+  assert.ok(
+    childOn.s_ttl <= childOff.s_ttl,
+    `flag-on child s_ttl (${childOn.s_ttl}) should be ≤ flag-off (${childOff.s_ttl})`
+  );
   // And the aggregate (FG path — pass2[fgIdx]) should reflect the
   // cheaper per-unit cost under flag-on.
   assert.ok(on.aggregate);
@@ -1185,20 +1986,39 @@ test('aggregateComplex [audit §2.2]: flag OFF preserves legacy ship_qty semanti
   child.ship_qty = 50;
   const parent = makeSimpleSp('FG PARENT');
   parent.materials = [
-    { row_type: 'Main.Mat', code: 'SP CHILD', qpa: 0, usage: 1, pitch: 20, width: 200, s_price: 0, g_price: 0, latest: 0, offcut_pct: 0 },
+    {
+      row_type: 'Main.Mat',
+      code: 'SP CHILD',
+      qpa: 0,
+      usage: 1,
+      pitch: 20,
+      width: 200,
+      s_price: 0,
+      g_price: 0,
+      latest: 0,
+      offcut_pct: 0,
+    },
   ];
   const cs = {
-    moq: 5000, annual_qty: 100_000, product_lifetime: 1,
-    selling_price: 0.2, trade_mode: 'USD', site: 'VN',
-    active_moq_idx: 0, extra_moqs: [],
+    moq: 5000,
+    annual_qty: 100_000,
+    product_lifetime: 1,
+    selling_price: 0.2,
+    trade_mode: 'USD',
+    site: 'VN',
+    active_moq_idx: 0,
+    extra_moqs: [],
   };
 
   // Flag off (default) — child uses ship_qty, same as before Sprint 8.
   const off = aggregateComplex(cs, [child, parent], lib, 0);
   const offExplicit = aggregateComplex(cs, [child, parent], lib, 0, { spMoqScalingEnabled: false });
   assert.ok(off.aggregate && offExplicit.aggregate);
-  assert.equal(off.aggregate.s_ttl, offExplicit.aggregate.s_ttl,
-    'default and explicit-off must match byte-for-byte');
+  assert.equal(
+    off.aggregate.s_ttl,
+    offExplicit.aggregate.s_ttl,
+    'default and explicit-off must match byte-for-byte'
+  );
 });
 
 test('aggregateComplex [audit §2.2]: flag ON does NOT touch un-referenced SPs (ship_qty respected)', () => {
@@ -1208,17 +2028,25 @@ test('aggregateComplex [audit §2.2]: flag ON does NOT touch un-referenced SPs (
   const lonely = makeSimpleSp('SP LONELY');
   lonely.ship_qty = 200;
   const cs = {
-    moq: 10000, annual_qty: 100_000, product_lifetime: 1,
-    selling_price: 0.2, trade_mode: 'USD', site: 'VN',
-    active_moq_idx: 0, extra_moqs: [],
+    moq: 10000,
+    annual_qty: 100_000,
+    product_lifetime: 1,
+    selling_price: 0.2,
+    trade_mode: 'USD',
+    site: 'VN',
+    active_moq_idx: 0,
+    extra_moqs: [],
   };
 
   const off = aggregateComplex(cs, [lonely], lib, 0, { spMoqScalingEnabled: false });
   const on = aggregateComplex(cs, [lonely], lib, 0, { spMoqScalingEnabled: true });
   assert.ok(off.aggregate && on.aggregate);
   // Standalone SP is not referenced → flag is a no-op.
-  assert.equal(off.aggregate.s_ttl, on.aggregate.s_ttl,
-    'standalone SP with ship_qty should be unchanged by flag');
+  assert.equal(
+    off.aggregate.s_ttl,
+    on.aggregate.s_ttl,
+    'standalone SP with ship_qty should be unchanged by flag'
+  );
 });
 
 test('aggregateComplex: flag ON + bom lists only one SP → orphan SP does NOT contribute', () => {
@@ -1226,14 +2054,21 @@ test('aggregateComplex: flag ON + bom lists only one SP → orphan SP does NOT c
   const spA = makeSimpleSp('SP A');
   const spB = makeSimpleSp('SP B');
   const cs = {
-    moq: 10000, annual_qty: 100_000, product_lifetime: 1,
-    selling_price: 0.2, trade_mode: 'USD', site: 'VN',
-    active_moq_idx: 0, extra_moqs: [],
+    moq: 10000,
+    annual_qty: 100_000,
+    product_lifetime: 1,
+    selling_price: 0.2,
+    trade_mode: 'USD',
+    site: 'VN',
+    active_moq_idx: 0,
+    extra_moqs: [],
     bom: [{ sp_index: 0, qty: 1, notes: '' }], // SP B is orphan
   };
   const on = aggregateComplex(cs, [spA, spB], lib, 0, { bomQtyEnabled: true });
-  assert.ok(Math.abs(on.aggregate.s_ttl - on.pass2[0].s_ttl) < 1e-9,
-    'orphan SP must contribute 0 to aggregate under flag-on');
+  assert.ok(
+    Math.abs(on.aggregate.s_ttl - on.pass2[0].s_ttl) < 1e-9,
+    'orphan SP must contribute 0 to aggregate under flag-on'
+  );
 });
 
 // ── enumerateTiers ────────────────────────────────────────────────────
@@ -1249,10 +2084,12 @@ test('enumerateTiers: single tier → one entry with idx=0 + base fields', () =>
 test('enumerateTiers: 3 tiers → reads extra_moqs[0] + extra_moqs[1]', () => {
   const st = {
     num_moq: 3,
-    moq: 10_000, selling_price: 0.2, annual_qty: 500_000,
+    moq: 10_000,
+    selling_price: 0.2,
+    annual_qty: 500_000,
     extra_moqs: [
       { moq: 50_000, price: 0.15, eau: 600_000 },
-      { moq: 100_000, price: 0.10, eau: 800_000 },
+      { moq: 100_000, price: 0.1, eau: 800_000 },
     ],
   };
   const t = enumerateTiers(st);
@@ -1272,7 +2109,10 @@ test('enumerateTiers: missing extra_moqs entry is skipped, not an error', () => 
 
 test('enumerateTiers: tier EAU falls back to state.annual_qty if empty', () => {
   const st = {
-    num_moq: 2, moq: 1000, selling_price: 0.5, annual_qty: 12_000,
+    num_moq: 2,
+    moq: 1000,
+    selling_price: 0.5,
+    annual_qty: 12_000,
     extra_moqs: [{ moq: 5000, price: 0.4 }], // no eau
   };
   const t = enumerateTiers(st);
@@ -1288,8 +2128,26 @@ test('enumerateTiers: empty / missing state → []', () => {
 test('calcAll contribution: zero selling_price → null (not Infinity/NaN)', () => {
   const lib = makeLib();
   const st = makeState({
-    materials: [{ code: 'M001', width: 200, usage: 1, cavities: 4, g_price: 2.5, s_price: 2.5, latest: 0 }],
-    processes: [{ process_type: 'Flexo', workcenter: 'Flexo-A', speed: 10, layout: 4, efficiency: 0.85, setup_h: 0.5, scrap_pct: 0.03, tool_cost: 0, tool_type: '', tool_life: 0, product_life: 1, eau_ovr: 0, repeat: 1 }],
+    materials: [
+      { code: 'M001', width: 200, usage: 1, cavities: 4, g_price: 2.5, s_price: 2.5, latest: 0 },
+    ],
+    processes: [
+      {
+        process_type: 'Flexo',
+        workcenter: 'Flexo-A',
+        speed: 10,
+        layout: 4,
+        efficiency: 0.85,
+        setup_h: 0.5,
+        scrap_pct: 0.03,
+        tool_cost: 0,
+        tool_type: '',
+        tool_life: 0,
+        product_life: 1,
+        eau_ovr: 0,
+        repeat: 1,
+      },
+    ],
     selling_price: 0, // zero SP
   });
   const r = calcAll(st, null, lib, null);
@@ -1311,7 +2169,8 @@ test('calcAll contribution: negative selling_price → null (nonsense input guar
 test('calcAll contribution: positive sp with near-zero costs → contribution ≈ 1.0', () => {
   const lib = makeLib();
   const st = makeState({
-    materials: [], processes: [],
+    materials: [],
+    processes: [],
     selling_price: 1.0,
   });
   const r = calcAll(st, null, lib, null);
@@ -1335,13 +2194,30 @@ test('serializeResultForPersist: null/undefined passthrough', () => {
 
 test('serializeResultForPersist: includes money breakdown fields', () => {
   const r = {
-    sp: 0.2, s_ttl: 0.05, g_ttl: 0.06, gm: 0.75, va: 0.8, contribution: 0.7,
-    s_mat_cost: 0.03, g_mat_cost: 0.04,
-    overhead: 0.005, labor_cost: 0.003, tooling: 0.002, packing_ship: 0.01, vat_loss: 0,
-    bd_mat_setup: 0.02, bd_mat_run: 0.01,
-    bd_ink_setup: 0.003, bd_ink_run: 0.001,
-    bd_setup_mach: 0.0005, bd_setup_labor: 0.0005,
-    sga: 0.002, sga_rate_pct: 4, g_ttl_with_sga: 0.062, gm_after_sga: 0.69, site: 'VN',
+    sp: 0.2,
+    s_ttl: 0.05,
+    g_ttl: 0.06,
+    gm: 0.75,
+    va: 0.8,
+    contribution: 0.7,
+    s_mat_cost: 0.03,
+    g_mat_cost: 0.04,
+    overhead: 0.005,
+    labor_cost: 0.003,
+    tooling: 0.002,
+    packing_ship: 0.01,
+    vat_loss: 0,
+    bd_mat_setup: 0.02,
+    bd_mat_run: 0.01,
+    bd_ink_setup: 0.003,
+    bd_ink_run: 0.001,
+    bd_setup_mach: 0.0005,
+    bd_setup_labor: 0.0005,
+    sga: 0.002,
+    sga_rate_pct: 4,
+    g_ttl_with_sga: 0.062,
+    gm_after_sga: 0.69,
+    site: 'VN',
     warnings: [],
     // Heavy arrays — must NOT be persisted.
     matResults: [{ qpa_m2: 0.01 }],
@@ -1351,10 +2227,25 @@ test('serializeResultForPersist: includes money breakdown fields', () => {
   const out = serializeResultForPersist(r);
   // Money + KPI fields present.
   for (const k of [
-    'sp', 's_ttl', 'gm', 'va', 'contribution',
-    's_mat_cost', 'tooling', 'packing_ship', 'labor_cost', 'overhead',
-    'bd_mat_setup', 'bd_mat_run', 'bd_ink_setup', 'bd_ink_run',
-    'sga', 'sga_rate_pct', 'gm_after_sga', 'site', 'warnings',
+    'sp',
+    's_ttl',
+    'gm',
+    'va',
+    'contribution',
+    's_mat_cost',
+    'tooling',
+    'packing_ship',
+    'labor_cost',
+    'overhead',
+    'bd_mat_setup',
+    'bd_mat_run',
+    'bd_ink_setup',
+    'bd_ink_run',
+    'sga',
+    'sga_rate_pct',
+    'gm_after_sga',
+    'site',
+    'warnings',
   ]) {
     assert.ok(k in out, `persisted result missing ${k}`);
   }
@@ -1367,11 +2258,20 @@ test('serializeResultForPersist: includes money breakdown fields', () => {
 test('serializeResultForPersist: downstream can recompute canonical VA from persisted fields', () => {
   // Stored record — simulate what /api/quotes POST would write.
   const stored = serializeResultForPersist({
-    sp: 0.05, s_ttl: 0.04, gm: 0.2,
-    s_mat_cost: 0.025, tooling: 0.001, packing_ship: 0.003, labor_cost: 0.004,
-    overhead: 0.001, vat_loss: 0, g_mat_cost: 0.025,
-    bd_mat_setup: 0.01, bd_mat_run: 0.015,
-    bd_ink_setup: 0, bd_ink_run: 0,
+    sp: 0.05,
+    s_ttl: 0.04,
+    gm: 0.2,
+    s_mat_cost: 0.025,
+    tooling: 0.001,
+    packing_ship: 0.003,
+    labor_cost: 0.004,
+    overhead: 0.001,
+    vat_loss: 0,
+    g_mat_cost: 0.025,
+    bd_mat_setup: 0.01,
+    bd_mat_run: 0.015,
+    bd_ink_setup: 0,
+    bd_ink_run: 0,
   });
   // Canonical VA per kpiDefinitions: 1 - (mat + tooling + packing) / sp.
   const canonicalVa = 1 - (stored.s_mat_cost + stored.tooling + stored.packing_ship) / stored.sp;
@@ -1381,7 +2281,9 @@ test('serializeResultForPersist: downstream can recompute canonical VA from pers
 
 test('serializeResultForPersist: only cherry-picks declared fields (no client-private fields leak)', () => {
   const r = {
-    gm: 0.5, va: 0.5, s_ttl: 0.05,
+    gm: 0.5,
+    va: 0.5,
+    s_ttl: 0.05,
     _internalDebug: 'should not land on disk',
     private_cache: { enormous: 'object' },
   };
@@ -1408,14 +2310,16 @@ test('inkCostTotal: setup + run ink (both or either)', () => {
 test('matCostExcludingInk: s_mat_cost minus ink total', () => {
   // s_mat_cost (0.025) already includes ink (0.005) → mat-only = 0.020.
   const r = { s_mat_cost: 0.025, bd_ink_setup: 0.003, bd_ink_run: 0.002 };
-  assert.ok(Math.abs(matCostExcludingInk(r) - 0.020) < 1e-9);
+  assert.ok(Math.abs(matCostExcludingInk(r) - 0.02) < 1e-9);
 });
 
 test('matCostExcludingInk + inkCostTotal: reconstruct s_mat_cost (columns sum to subtotal invariant)', () => {
   const r = { s_mat_cost: 0.0789, bd_ink_setup: 0.012, bd_ink_run: 0.003 };
   const reconstructed = matCostExcludingInk(r) + inkCostTotal(r);
-  assert.ok(Math.abs(reconstructed - r.s_mat_cost) < 1e-9,
-    'Mat-only + Ink-total must equal s_mat_cost (no double-count + no drop)');
+  assert.ok(
+    Math.abs(reconstructed - r.s_mat_cost) < 1e-9,
+    'Mat-only + Ink-total must equal s_mat_cost (no double-count + no drop)'
+  );
 });
 
 test('matCostExcludingInk: null/bad input → 0 (no crash, no NaN)', () => {
