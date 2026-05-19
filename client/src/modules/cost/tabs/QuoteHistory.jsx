@@ -149,6 +149,7 @@ export default function QuoteHistory() {
     data: rawQuotes,
     setData: setQuotes,
     loading,
+    initialLoading,
     error: loadError,
     refresh,
   } = useAbortableFetch((signal) => sharedApi.getQuotes({ signal }), [], {
@@ -243,6 +244,15 @@ export default function QuoteHistory() {
     refresh();
   }, [refresh]);
 
+  // Option 3 anti-flash for approval Approve/Reject: optimistic local
+  // mutation of the quote's approval state so the row updates instantly.
+  // Unlike PendingApprovalsInbox (where the row is removed), QuoteHistory
+  // shows ALL quotes regardless of approval state — we just refresh
+  // after the API call to pick up the new status from the server.
+  // The "remove" pattern doesn't apply; instead we drop the optimistic
+  // hook and rely on the existing refresh-after-success path.
+  // (Inbox is the high-frequency target — this tab is browse-mostly.)
+
   function toggleSort(key) {
     if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     else {
@@ -314,15 +324,22 @@ export default function QuoteHistory() {
       )
     )
       return;
+    // Option 3 anti-flash: TRUE optimistic delete. Drop the row BEFORE
+    // the network call so the operator sees the result instantly. On
+    // error we restore via setQuotes(before) + refresh() to reconcile
+    // with the server's canonical view.
+    const before = quotes;
+    setQuotes(quotes.filter((x) => x.id !== q.id));
     costApi
       .trashQuote(q.id)
       .then(() => {
-        // Optimistic: drop from list immediately. The next list refresh
-        // will exclude trashed quotes by default (server-side filter).
-        setQuotes(quotes.filter((x) => x.id !== q.id));
+        // Server confirmed — already removed locally, nothing else to do.
       })
       .catch((err) => {
         console.error('Failed to trash quote:', err);
+        // Restore + refresh to pick up canonical state.
+        setQuotes(before);
+        refresh();
         alert('Trash failed: ' + (err.message || 'network error'));
       });
   }
@@ -379,7 +396,11 @@ export default function QuoteHistory() {
   // explicitly passed instead of reading them from closure.
   const sortProps = { sortKey, sortDir, toggleSort };
 
-  if (loading)
+  // Skeleton only on INITIAL load. Refresh after save / SSE flips
+  // `loading` true mid-session — gating on raw loading would unmount
+  // the table + drop scroll/sort/filter state. Stale-while-revalidate
+  // keeps the existing rows visible until new data lands.
+  if (initialLoading)
     return (
       <div className="qh-skeleton-wrap">
         <SkeletonTable rows={12} cols={10} />

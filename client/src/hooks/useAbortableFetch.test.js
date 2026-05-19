@@ -24,7 +24,8 @@ import assert from 'node:assert/strict';
 // so we can validate the abort semantics without mounting React.
 // Mirrors the logic in useAbortableFetch's refresh() closure.
 async function runOnce(fetcher, { onError, signal }) {
-  let data = null, error = null;
+  let data = null,
+    error = null;
   try {
     data = await fetcher(signal);
   } catch (err) {
@@ -32,7 +33,13 @@ async function runOnce(fetcher, { onError, signal }) {
     error = err;
     // Matches real hook: wrap onError in try/catch so a buggy
     // handler can't propagate and take down the component.
-    if (onError) { try { onError(err); } catch { /* never crash */ } }
+    if (onError) {
+      try {
+        onError(err);
+      } catch {
+        /* never crash */
+      }
+    }
   }
   return { data, error, aborted: signal.aborted };
 }
@@ -40,7 +47,13 @@ async function runOnce(fetcher, { onError, signal }) {
 test('fetcher receives the AbortSignal', async () => {
   const ctrl = new AbortController();
   let received = null;
-  await runOnce((signal) => { received = signal; return Promise.resolve('ok'); }, { signal: ctrl.signal });
+  await runOnce(
+    (signal) => {
+      received = signal;
+      return Promise.resolve('ok');
+    },
+    { signal: ctrl.signal }
+  );
   assert.equal(received, ctrl.signal);
 });
 
@@ -58,7 +71,9 @@ test('AbortError is swallowed, not surfaced as error', async () => {
   err.name = 'AbortError';
   const r = await runOnce(() => Promise.reject(err), {
     signal: ctrl.signal,
-    onError: () => { onErrorCalled = true; },
+    onError: () => {
+      onErrorCalled = true;
+    },
   });
   assert.equal(r.error, null, 'AbortError must not populate error state');
   assert.equal(onErrorCalled, false, 'onError must not fire for AbortError');
@@ -70,7 +85,9 @@ test('non-abort error surfaces as error AND calls onError', async () => {
   const err = new Error('network down');
   const r = await runOnce(() => Promise.reject(err), {
     signal: ctrl.signal,
-    onError: (e) => { captured = e; },
+    onError: (e) => {
+      captured = e;
+    },
   });
   assert.equal(r.error, err);
   assert.equal(captured, err);
@@ -91,7 +108,9 @@ test('onError that throws does not break the error path', async () => {
   const err = new Error('db unavailable');
   const r = await runOnce(() => Promise.reject(err), {
     signal: ctrl.signal,
-    onError: () => { throw new Error('boom in onError'); },
+    onError: () => {
+      throw new Error('boom in onError');
+    },
   });
   // The hook swallows onError exceptions (see try/catch in
   // useAbortableFetch.js refresh() → onErrorRef.current). This test
@@ -110,4 +129,48 @@ test('multiple concurrent calls each get a distinct signal', async () => {
   c1.abort();
   assert.equal(c1.signal.aborted, true);
   assert.equal(c2.signal.aborted, false, 'second controller must not be affected');
+});
+
+// ── initialLoading derivation contract ─────────────────────────
+// Stale-while-revalidate gate (Lesson 29). Callers gate their skeleton
+// on `initialLoading` instead of raw `loading` so polling/refresh ticks
+// don't unmount the tree. The derivation is pure — test it directly.
+function deriveInitialLoading({ loading, data, error }) {
+  return loading && data === null && error === null;
+}
+
+test('initialLoading: true on first load (loading=true, data=null, error=null)', () => {
+  assert.equal(deriveInitialLoading({ loading: true, data: null, error: null }), true);
+});
+
+test('initialLoading: false on refresh (loading=true but data already loaded)', () => {
+  assert.equal(
+    deriveInitialLoading({ loading: true, data: [{ id: 1 }], error: null }),
+    false,
+    'stale-while-revalidate must keep skeleton off when data already shown'
+  );
+});
+
+test('initialLoading: false after error (no skeleton over error state)', () => {
+  assert.equal(
+    deriveInitialLoading({ loading: true, data: null, error: new Error('500') }),
+    false,
+    'error UX takes precedence over skeleton'
+  );
+});
+
+test('initialLoading: false when not loading (idle state)', () => {
+  assert.equal(deriveInitialLoading({ loading: false, data: null, error: null }), false);
+  assert.equal(deriveInitialLoading({ loading: false, data: [], error: null }), false);
+});
+
+test('initialLoading: empty array data DOES count as loaded (no flash on empty result)', () => {
+  // A successful fetch returning [] is still a load — don't show
+  // skeleton if the server says "no rows". Otherwise admin staring at
+  // an empty Library see infinite skeleton.
+  assert.equal(
+    deriveInitialLoading({ loading: true, data: [], error: null }),
+    false,
+    'empty array is data, not absence — no skeleton'
+  );
 });
