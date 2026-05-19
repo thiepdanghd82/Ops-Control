@@ -11,6 +11,7 @@ import {
   calcShipping,
   aggregateComplex,
   serializeResultForPersist,
+  buildCpxRowsPayload,
 } from '../../../../services/calcEngine';
 import {
   addSubProduct,
@@ -204,16 +205,22 @@ export default function ComplexCalc() {
 
   const [saving, setSaving] = useState(false);
 
-  const buildQuoteData = useCallback(
-    () => ({
+  const buildQuoteData = useCallback(() => {
+    // MES-3-FIX-41: per-row Setup/Run/Total per SP per tier — exports
+    // now show real numbers everywhere instead of em-dash. Cost ~150ms
+    // for 3 SPs × 5 tiers; runs sync so save errors surface cleanly.
+    const cpxRows = lib ? buildCpxRowsPayload(cs, sps, lib) : { subproducts: [] };
+    const persisted = serializeResultForPersist(
+      aggregate ? { ...aggregate, subproducts: cpxRows.subproducts } : null
+    );
+    return {
       type: 'complex',
       state: cs,
-      result: serializeResultForPersist(aggregate),
+      result: persisted,
       saved_at: new Date().toISOString(),
       label: cs.ccl_pn || 'Complex',
-    }),
-    [cs, aggregate]
-  );
+    };
+  }, [cs, sps, lib, aggregate]);
 
   const persistAsNew = useCallback(async () => {
     setSaving(true);

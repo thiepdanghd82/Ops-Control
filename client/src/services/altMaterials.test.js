@@ -23,7 +23,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { upgradeStdState } from './stdMigration.js';
+import { upgradeStdState, STD_SHAPE_VERSION } from './stdMigration.js';
 import {
   getActiveMaterials,
   getActiveSPMaterials,
@@ -320,7 +320,9 @@ test('Std regression: PR #B does NOT alter Std factory / migration output', () =
     materials: [{ _mid: 'm_a', code: 'PET-50' }],
   };
   const migrated = upgradeStdState(legacyStd);
-  assert.equal(migrated._schema_version, 2);
+  // Stamped at current version (was 2 pre-FIX-41; 3 after MES-3-FIX-41
+  // bumped Std shape for per-row breakdown).
+  assert.equal(migrated._schema_version, STD_SHAPE_VERSION);
   assert.equal(migrated.materials_main.length, 1);
   assert.equal(migrated.materials_main[0].code, 'PET-50');
   assert.equal(migrated.materials_active, 'main');

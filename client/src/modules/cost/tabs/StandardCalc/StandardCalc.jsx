@@ -5,7 +5,12 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
-import { calcAll, getActiveTierState, serializeResultForPersist } from '../../../../services/calcEngine';
+import {
+  calcAll,
+  getActiveTierState,
+  serializeResultForPersist,
+  buildStdRowsPayload,
+} from '../../../../services/calcEngine';
 import { costApi, sharedApi } from '../../../../services/api';
 import { chatApi, openChatRoom } from '../../../../services/chatApi';
 import { useI18n } from '../../../../utils/useI18n';
@@ -44,7 +49,17 @@ const SUB_TABS = [
 export default function StandardCalc() {
   const [activeSubTab, setActiveSubTab] = useState('header');
   const { t } = useI18n();
-  const { stdState, isDirty, markClean, dispatch, loadQuote, pendingQuote, clearPendingQuote, activeQuoteId, activeQuoteVersion } = useCalc();
+  const {
+    stdState,
+    isDirty,
+    markClean,
+    dispatch,
+    loadQuote,
+    pendingQuote,
+    clearPendingQuote,
+    activeQuoteId,
+    activeQuoteVersion,
+  } = useCalc();
   const { lib } = useCostLib();
   const [saveChoiceOpen, setSaveChoiceOpen] = useState(false);
   // v1.3 Đợt 2 — replace blunt window.confirm() with ConflictModal.
@@ -68,24 +83,29 @@ export default function StandardCalc() {
     if (!pendingQuote || pendingQuote.type !== 'standard') return;
     const { id } = pendingQuote;
     let cancelled = false;
-    sharedApi.getQuotes().then(quotes => {
-      if (cancelled) return;
-      const q = (quotes || []).find(x => String(x.id) === String(id));
-      if (q?.state) {
-        // Pass `_version` through so subsequent Update-existing saves
-        // include it in the PATCH for optimistic-locking enforcement.
-        loadQuote('std', q.state, q.id, q._version || 0);
-      } else {
-        showToast(`Quote #${id} not found`, 'err');
-      }
-      clearPendingQuote();
-    }).catch(err => {
-      if (cancelled) return;
-      console.error('Failed to load pending quote:', err);
-      showToast('Failed to load quote: ' + (err.message || 'network error'), 'err');
-      clearPendingQuote();
-    });
-    return () => { cancelled = true; };
+    sharedApi
+      .getQuotes()
+      .then((quotes) => {
+        if (cancelled) return;
+        const q = (quotes || []).find((x) => String(x.id) === String(id));
+        if (q?.state) {
+          // Pass `_version` through so subsequent Update-existing saves
+          // include it in the PATCH for optimistic-locking enforcement.
+          loadQuote('std', q.state, q.id, q._version || 0);
+        } else {
+          showToast(`Quote #${id} not found`, 'err');
+        }
+        clearPendingQuote();
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error('Failed to load pending quote:', err);
+        showToast('Failed to load quote: ' + (err.message || 'network error'), 'err');
+        clearPendingQuote();
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [pendingQuote, loadQuote, clearPendingQuote]);
 
   // RFQ Tracker → Pricing Worksheet handoff. The RFQ Tracker pushes
@@ -117,10 +137,17 @@ export default function StandardCalc() {
   const buildQuoteData = useCallback(() => {
     const tierSt = getActiveTierState(stdState);
     const result = lib ? calcAll(tierSt, null, lib, null) : null;
+    // MES-3-FIX-41: bundle per-row Setup/Run/Total for active tier +
+    // every tier so exports can render real numbers per Material/Ink/
+    // Process row instead of em-dash. ~50ms for typical 5-tier quote.
+    const rowsPayload = lib ? buildStdRowsPayload(stdState, lib) : { rows: null, tiers: [] };
+    const persisted = serializeResultForPersist(
+      result ? { ...result, rows: rowsPayload.rows, tiers: rowsPayload.tiers } : null
+    );
     return {
       type: 'standard',
       state: stdState,
-      result: serializeResultForPersist(result),
+      result: persisted,
       saved_at: new Date().toISOString(),
       label: stdState.ccl_pn || stdState.rfq_number || 'Untitled',
     };
@@ -134,7 +161,10 @@ export default function StandardCalc() {
       // Mark the new id + version as active so subsequent Update saves
       // can Update it with the correct version for optimistic locking.
       if (saved?.id != null) {
-        dispatch({ type: 'SET_ACTIVE_QUOTE_ID', payload: { id: saved.id, version: saved._version || 1 } });
+        dispatch({
+          type: 'SET_ACTIVE_QUOTE_ID',
+          payload: { id: saved.id, version: saved._version || 1 },
+        });
       }
       showToast('Quote saved as new version');
     } catch (err) {
@@ -156,7 +186,10 @@ export default function StandardCalc() {
       markClean();
       // Bump local version so the next save uses the fresh number.
       if (saved?._version != null) {
-        dispatch({ type: 'SET_ACTIVE_QUOTE_ID', payload: { id: activeQuoteId, version: saved._version } });
+        dispatch({
+          type: 'SET_ACTIVE_QUOTE_ID',
+          payload: { id: activeQuoteId, version: saved._version },
+        });
       }
       showToast(`Quote #${activeQuoteId} updated`);
     } catch (err) {
@@ -199,7 +232,10 @@ export default function StandardCalc() {
       const saved = await costApi.updateQuote(activeQuoteId, payload);
       markClean();
       if (saved?._version != null) {
-        dispatch({ type: 'SET_ACTIVE_QUOTE_ID', payload: { id: activeQuoteId, version: saved._version } });
+        dispatch({
+          type: 'SET_ACTIVE_QUOTE_ID',
+          payload: { id: activeQuoteId, version: saved._version },
+        });
       }
       showToast(`Quote #${activeQuoteId} overwritten`);
     } catch (forceErr) {
@@ -244,17 +280,38 @@ export default function StandardCalc() {
 
   let content;
   switch (activeSubTab) {
-    case 'header': content = <CalcHeader />; break;
-    case 'layout': content = <CalcLayout />; break;
-    case 'materials': content = <CalcMaterials />; break;
-    case 'inks': content = <CalcInks />; break;
-    case 'processes': content = <CalcProcesses />; break;
-    case 'balancing': content = <ProcessBalancing />; break;
-    case 'packing': content = <CalcPackingShip />; break;
-    case 'breakdown': content = <CalcCostBreakdown />; break;
-    case 'summarize': content = <CalcSummarize />; break;
-    case 'legend':    content = <CalcLegend />; break;
-    default: content = <CalcHeader />;
+    case 'header':
+      content = <CalcHeader />;
+      break;
+    case 'layout':
+      content = <CalcLayout />;
+      break;
+    case 'materials':
+      content = <CalcMaterials />;
+      break;
+    case 'inks':
+      content = <CalcInks />;
+      break;
+    case 'processes':
+      content = <CalcProcesses />;
+      break;
+    case 'balancing':
+      content = <ProcessBalancing />;
+      break;
+    case 'packing':
+      content = <CalcPackingShip />;
+      break;
+    case 'breakdown':
+      content = <CalcCostBreakdown />;
+      break;
+    case 'summarize':
+      content = <CalcSummarize />;
+      break;
+    case 'legend':
+      content = <CalcLegend />;
+      break;
+    default:
+      content = <CalcHeader />;
   }
 
   return (
@@ -263,30 +320,44 @@ export default function StandardCalc() {
           appear automatically when the bar is wider than viewport
           (common on 14" laptops with sidebar expanded). */}
       <div className="sc-subtab-bar">
-        <TabBarOverflow ariaLabel="Pricing Worksheet sub-tabs" rightSlot={
-          <div className="sc-toolbar">
-            {isDirty && <span className="sc-dirty-badge">Unsaved</span>}
-            {activeQuoteId != null && (
+        <TabBarOverflow
+          ariaLabel="Pricing Worksheet sub-tabs"
+          rightSlot={
+            <div className="sc-toolbar">
+              {isDirty && <span className="sc-dirty-badge">Unsaved</span>}
+              {activeQuoteId != null && (
+                <button
+                  className="op-btn op-btn-secondary op-btn-sm"
+                  onClick={async () => {
+                    try {
+                      const r = await chatApi.openQuote(activeQuoteId);
+                      openChatRoom(r.room.id);
+                    } catch (e) {
+                      showToast(t('chat.unavailable', { msg: e.message || 'error' }), 'warning');
+                    }
+                  }}
+                  title={t('chat.discuss_title')}
+                >
+                  {t('chat.discuss')}
+                </button>
+              )}
               <button
-                className="op-btn op-btn-secondary op-btn-sm"
-                onClick={async () => {
-                  try {
-                    const r = await chatApi.openQuote(activeQuoteId);
-                    openChatRoom(r.room.id);
-                  } catch (e) {
-                    showToast(t('chat.unavailable', { msg: e.message || 'error' }), 'warning');
-                  }
-                }}
-                title={t('chat.discuss_title')}
+                className="op-btn op-btn-secondary op-btn-sm sc-btn-reset"
+                onClick={handleReset}
               >
-                {t('chat.discuss')}
+                New
               </button>
-            )}
-            <button className="op-btn op-btn-secondary op-btn-sm sc-btn-reset" onClick={handleReset}>New</button>
-            <button className="op-btn op-btn-primary op-btn-sm" onClick={handleSave} disabled={!isDirty || saving}>{saving ? 'Saving...' : 'Save'}</button>
-          </div>
-        }>
-          {SUB_TABS.map(tab => (
+              <button
+                className="op-btn op-btn-primary op-btn-sm"
+                onClick={handleSave}
+                disabled={!isDirty || saving}
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          }
+        >
+          {SUB_TABS.map((tab) => (
             <button
               key={tab.id}
               role="tab"
@@ -296,7 +367,9 @@ export default function StandardCalc() {
               onClick={() => setActiveSubTab(tab.id)}
               title={tab.label}
             >
-              <span className="sc-subtab-icon" aria-hidden="true">{tab.icon}</span>
+              <span className="sc-subtab-icon" aria-hidden="true">
+                {tab.icon}
+              </span>
               <span className="sc-subtab-label">{tab.label}</span>
             </button>
           ))}
@@ -307,17 +380,21 @@ export default function StandardCalc() {
       <CalcSummaryBar />
 
       {/* Content */}
-      <div className="sc-content">
-        {content}
-      </div>
+      <div className="sc-content">{content}</div>
 
       <SaveChoiceModal
         open={saveChoiceOpen}
         quoteId={activeQuoteId}
         quoteLabel={stdState.ccl_pn || stdState.rfq_number}
         onCancel={() => setSaveChoiceOpen(false)}
-        onUpdate={() => { setSaveChoiceOpen(false); persistUpdate(); }}
-        onSaveAsNew={() => { setSaveChoiceOpen(false); persistAsNew(); }}
+        onUpdate={() => {
+          setSaveChoiceOpen(false);
+          persistUpdate();
+        }}
+        onSaveAsNew={() => {
+          setSaveChoiceOpen(false);
+          persistAsNew();
+        }}
       />
       <ConflictModal
         conflict={conflict}

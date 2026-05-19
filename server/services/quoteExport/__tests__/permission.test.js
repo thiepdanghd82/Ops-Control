@@ -36,7 +36,12 @@ function makeFixtureQuote() {
       processes: [],
       extra_moqs: [],
     },
-    result: { sp: 1, s_ttl: 0.5, gm: 0.5 },
+    result: {
+      sp: 1,
+      s_ttl: 0.5,
+      gm: 0.5,
+      rows: { materials_main: [], materials_alt: [], inks: [], processes: [] },
+    },
   };
 }
 

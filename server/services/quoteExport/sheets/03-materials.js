@@ -56,20 +56,65 @@ export function buildMaterialsSheet(wb, ctx) {
   });
 
   const state = quote.state || {};
-  const main = Array.isArray(state.materials_main) ? state.materials_main : state.materials || [];
-  const alt = Array.isArray(state.materials_alt) ? state.materials_alt : [];
+  const result = quote.result || {};
+  const isCpx = quote.type === 'complex';
 
   let r = 3;
-  r = writeMaterialSection(sheet, r, L('mat.section_main', lang), main, lang);
 
-  if (alt.length > 0) {
-    r += 1;
-    r = writeMaterialSection(sheet, r, L('mat.section_alt', lang), alt, lang);
+  if (isCpx && Array.isArray(state.subproducts) && state.subproducts.length > 0) {
+    // Complex: one section pair (main + alt) per subproduct.
+    state.subproducts.forEach((sp, spi) => {
+      const spRows = result.subproducts?.[spi]?.rows ?? null;
+      const spLabel = `${L('mat.section_main', lang)} — ${sp.code || `SP${spi + 1}`}`;
+      r = writeMaterialSection(
+        sheet,
+        r,
+        spLabel,
+        sp.materials_main || sp.materials || [],
+        lang,
+        spRows?.materials_main
+      );
+      if (Array.isArray(sp.materials_alt) && sp.materials_alt.length > 0) {
+        r += 1;
+        r = writeMaterialSection(
+          sheet,
+          r,
+          `${L('mat.section_alt', lang)} — ${sp.code || `SP${spi + 1}`}`,
+          sp.materials_alt,
+          lang,
+          spRows?.materials_alt
+        );
+      }
+      r += 1;
+    });
+  } else {
+    // Standard: top-level main + alt arrays.
+    const main = Array.isArray(state.materials_main) ? state.materials_main : state.materials || [];
+    const alt = Array.isArray(state.materials_alt) ? state.materials_alt : [];
+    r = writeMaterialSection(
+      sheet,
+      r,
+      L('mat.section_main', lang),
+      main,
+      lang,
+      result.rows?.materials_main
+    );
+    if (alt.length > 0) {
+      r += 1;
+      r = writeMaterialSection(
+        sheet,
+        r,
+        L('mat.section_alt', lang),
+        alt,
+        lang,
+        result.rows?.materials_alt
+      );
+    }
   }
 
-  // Aggregate subtotal row from snapshot — per-row breakdown not persisted
-  // (tracked as MES-3-FIX-41) but the total survives in quote.result.
-  const result = quote.result || {};
+  // Aggregate subtotal row from snapshot. Even after per-row hydration
+  // (MES-3-FIX-41) the bd_mat_* aggregate stays authoritative for the
+  // tier-level total (rounding-free).
   const setupTotal = Number(result.bd_mat_setup);
   const runTotal = Number(result.bd_mat_run);
   if (Number.isFinite(setupTotal) || Number.isFinite(runTotal)) {
@@ -102,7 +147,7 @@ export function buildMaterialsSheet(wb, ctx) {
   freezeTop(sheet, 1);
 }
 
-function writeMaterialSection(sheet, startRow, title, rows, lang) {
+function writeMaterialSection(sheet, startRow, title, rows, lang, rowBreakdown) {
   let r = startRow;
 
   // Section banner
@@ -128,14 +173,18 @@ function writeMaterialSection(sheet, startRow, title, rows, lang) {
     return r + 1;
   }
 
-  for (const mat of rows) {
+  for (let ri = 0; ri < rows.length; ri++) {
+    const mat = rows[ri];
     if (!mat || mat.hidden) continue;
+    const rowCost = Array.isArray(rowBreakdown) ? rowBreakdown[ri] : null;
     MAT_COLS.forEach((c, i) => {
       const cell = sheet.getCell(r, i + 1);
-      cell.value = extractCellValue(c, mat);
-      applyStyle(cell, c.numeric ? 'num' : 'body');
-      if (c.computedOnly) {
-        cell.note = 'Computed at calc time, not persisted.';
+      cell.value = extractCellValue(c, mat, rowCost);
+      // Computed cells use 5-decimal precision when hydrated; em-dash
+      // when no rowCost (legacy quote).
+      applyStyle(cell, c.numeric ? (c.computedOnly ? 'numCost' : 'num') : 'body');
+      if (c.computedOnly && !rowCost) {
+        cell.note = 'Computed at calc time, not persisted (legacy quote — re-save to refresh).';
       }
     });
     r += 1;
@@ -144,8 +193,14 @@ function writeMaterialSection(sheet, startRow, title, rows, lang) {
   return r;
 }
 
-function extractCellValue(col, mat) {
-  if (col.computedOnly) return '—';
+function extractCellValue(col, mat, rowCost) {
+  if (col.computedOnly) {
+    if (!rowCost) return '—';
+    if (col.key === 'setup_cost') return rowCost.setup_cost ?? '—';
+    if (col.key === 'run_cost') return rowCost.run_cost ?? '—';
+    if (col.key === 'total') return rowCost.total ?? '—';
+    return '—';
+  }
   switch (col.key) {
     case 'row_type':
       return mat.row_type || 'Main.Mat';

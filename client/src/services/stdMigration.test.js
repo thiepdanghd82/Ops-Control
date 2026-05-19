@@ -149,7 +149,7 @@ test('upgradeStdState v2: pre-v2 quote with materials gets split into _main + _a
     ],
   };
   const next = upgradeStdState(v1);
-  assert.equal(next._schema_version, 2);
+  assert.equal(next._schema_version, STD_SHAPE_VERSION);
   assert.ok(Array.isArray(next.materials_main));
   assert.equal(next.materials_main.length, 2);
   assert.equal(next.materials_main[0].code, 'M001');
@@ -165,7 +165,7 @@ test('upgradeStdState v2: unversioned legacy quote also splits to _main', () => 
     materials: [{ code: 'M001', usage: 1, s_price: 5 }],
   };
   const next = upgradeStdState(legacy);
-  assert.equal(next._schema_version, 2);
+  assert.equal(next._schema_version, STD_SHAPE_VERSION);
   assert.equal(next.materials_main.length, 1);
   assert.equal(next.materials_main[0].code, 'M001');
   assert.deepEqual(next.materials_alt, []);
@@ -207,8 +207,116 @@ test('upgradeStdState v2: pre-v2 quote with no materials field at all → empty 
   // any rows are added. Migration must not crash on missing materials.
   const empty = { _schema_version: 1, active_moq_idx: 0, num_moq: 1, extra_moqs: [] };
   const next = upgradeStdState(empty);
-  assert.equal(next._schema_version, 2);
+  assert.equal(next._schema_version, STD_SHAPE_VERSION);
   assert.deepEqual(next.materials_main, []);
   assert.deepEqual(next.materials_alt, []);
   assert.equal(next.materials_active, 'main');
+});
+
+test('upgradeStdState: already-upgraded quote → returns same ref', () => {
+  const quote = {
+    _schema_version: STD_SHAPE_VERSION,
+    materials_main: [{ _mid: 'm1', code: 'M001' }],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [{ _mid: 'm1', code: 'M001' }],
+    part_width: 462,
+    part_length_md: 135,
+  };
+  const next = upgradeStdState(quote);
+  assert.equal(next, quote, 'short-circuit when nothing needs healing');
+});
+
+// Option 2 anti-flash: _mid back-fill on inks + processes (in addition
+// to materials). Without _mid, React keys fall back to index and rows
+// remount on data refresh / save / sync → input loses focus mid-typing,
+// row visually flashes. Heal pass ensures legacy quotes get IDs on load.
+test('upgradeStdState: heals missing _mid on inks rows', () => {
+  const quote = {
+    _schema_version: 2,
+    materials_main: [],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [],
+    inks: [
+      { color: 'Red', ifs_code: 'I001' },
+      { color: 'Blue', _mid: 'i_already' },
+    ],
+    processes: [],
+  };
+  const next = upgradeStdState(quote);
+  assert.ok(next.inks[0]._mid, 'first ink should be back-filled with _mid');
+  assert.equal(next.inks[1]._mid, 'i_already', 'second ink _mid preserved');
+});
+
+test('upgradeStdState: heals missing _mid on processes rows', () => {
+  const quote = {
+    _schema_version: 2,
+    materials_main: [],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [],
+    inks: [],
+    processes: [{ workcenter: 'Flexo-A' }, { workcenter: 'RDC-1', _mid: 'p_already' }],
+  };
+  const next = upgradeStdState(quote);
+  assert.ok(next.processes[0]._mid, 'first process should be back-filled');
+  assert.equal(next.processes[1]._mid, 'p_already', 'second process _mid preserved');
+});
+
+test('upgradeStdState: short-circuit when all _mid populated (no churn)', () => {
+  const quote = {
+    _schema_version: STD_SHAPE_VERSION,
+    materials_main: [{ _mid: 'm1', code: 'M1' }],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [{ _mid: 'm1', code: 'M1' }],
+    inks: [{ _mid: 'i1', color: 'R' }],
+    processes: [{ _mid: 'p1', workcenter: 'X' }],
+    part_width: 100,
+    part_length_md: 50,
+  };
+  const next = upgradeStdState(quote);
+  assert.equal(next, quote, 'no _mid gaps + no print-cut mismatch → same ref');
+});
+
+// v3 (MES-3-FIX-41): per-row breakdown shape bump. Migration is idempotent
+// and adds NO state fields — `result.rows` is populated on save, not on
+// read (calcEngine is client-only, read-side heal needs orchestration).
+test('upgradeStdState v3: legacy v2 quote bumps to v3 without state changes', () => {
+  const v2 = {
+    _schema_version: 2,
+    materials_main: [{ _mid: 'm1', code: 'M1' }],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [{ _mid: 'm1', code: 'M1' }],
+    inks: [{ _mid: 'i1', color: 'R' }],
+    processes: [{ _mid: 'p1', workcenter: 'X' }],
+    part_width: 100,
+    part_length_md: 50,
+  };
+  const next = upgradeStdState(v2);
+  assert.equal(next._schema_version, 3);
+  assert.deepEqual(next.materials_main, v2.materials_main);
+  assert.deepEqual(next.inks, v2.inks);
+  assert.deepEqual(next.processes, v2.processes);
+});
+
+test('upgradeStdState v3: idempotent — applying twice returns same shape', () => {
+  const v2 = {
+    _schema_version: 2,
+    materials_main: [{ _mid: 'm1', code: 'M1' }],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [{ _mid: 'm1', code: 'M1' }],
+    inks: [{ _mid: 'i1', color: 'R' }],
+    processes: [{ _mid: 'p1', workcenter: 'X' }],
+    part_width: 100,
+    part_length_md: 50,
+  };
+  const once = upgradeStdState(v2);
+  const twice = upgradeStdState(once);
+  assert.equal(once._schema_version, 3);
+  assert.equal(twice._schema_version, 3);
+  assert.equal(twice, once, 'second call returns same ref (short-circuit at v3)');
 });

@@ -880,6 +880,7 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - **Effort**: M (~300 LOC client save-path + ~80 LOC exporter render + ~50 LOC migration + ~150 LOC tests)
 - **Priority**: P2 (customer-variant credibility gap; internal variant works around with aggregate KPIs but operators have asked for full transparency since MVP-1 ship)
 - **Bundle with**: MVP-2 (HMAC/\_Audit/\_Schema work) since `result.rows` is part of `payload_sha256` input — order matters for hash stability.
+- **Status**: CLOSED 2026-05-19 via PR #48 (MVP-1.5). `calcRowBreakdown` extracts per-row Setup/Run/Total from `calcAll`'s existing `matResults/inkResults/procResults`; `buildStdRowsPayload` / `buildCpxRowsPayload` walk all tiers + SPs. Save path in StandardCalc + ComplexCalc populates `result.rows` / `result.tiers[N].rows` / `result.subproducts[spi].rows`. Schema bumps idempotent: std v2→v3, cpx v3→v4. Server route returns 422 `legacy_no_rows` (distinct from `no-snapshot`) so pre-FIX-41 quotes prompt operator re-save. 30 new tests (21 client + 9 server). Sum invariant holds: `Σ rows.materials_main[i].setup_cost === bd_mat_setup`.
 
 #### KIOSK-001 — Real branded PWA icons
 
