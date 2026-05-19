@@ -1,22 +1,22 @@
 // @ts-check
 /**
  * Quote-export public entry. `exportQuote(quote, opts)` returns one of:
- *   - { kind: 'xlsx', filename, buffer } when opts.tiers resolves to 1
- *   - { kind: 'zip',  filename, buffer } when 2+ tiers (or 'all' with N>1)
+ *   - { kind: 'xlsx', filename, buffer, auditMeta } — single tier
+ *   - { kind: 'zip',  filename, buffer, auditMeta } — multi-tier
  *
- * The caller (route handler) maps kind → Content-Type and dispatches.
+ * `auditMeta` is `{wbPasswordHash, schemaSha256, hmac}[]` (one entry
+ * per tier) so the route layer can stamp every workbook's forensic
+ * trace into the audit log without re-cracking the xlsx bytes.
  *
- * Per task decision #1: NO calcEngine on server. We rely on the quote
- * row's persisted `result` (== task's `derived`). If absent, the route
- * layer is expected to fail-fast with 422; we throw an error here too
- * as a defense-in-depth.
+ * Per locked decision #1: NO calcEngine on server.
+ * Per locked decision #4: NO layout diagram embed.
  *
- * Per task decision #4: NO layout diagram embed.
- *
- * MVP-2 scope (NOT shipped here): _Audit hidden sheet, _Schema gzip
- * payload, workbook protection, watermark, re-import.
+ * MVP-2 (this PR): adds _Audit + _Schema hidden sheets, HMAC, per-sheet
+ * password protection, customer watermark.
+ * MVP-3 (not yet): re-import + diff + apply flow.
  */
 
+import crypto from 'node:crypto';
 import { createWorkbook } from './workbook.js';
 import { buildZip } from './zip.js';
 import { build1TierName, buildZipName } from './filenames.js';
@@ -31,6 +31,12 @@ import { buildBalancingSheet } from './sheets/06-balancing.js';
 import { buildPackShipSheet } from './sheets/07-pack-ship.js';
 import { buildCostBreakdownSheet } from './sheets/08-cost-breakdown.js';
 import { buildSummarySheet } from './sheets/09-summary.js';
+// MVP-2 tamper-resistance pipeline
+import { buildAuditSheet } from './audit.js';
+import { encodeSchemaPayload, buildSchemaSheet } from './schema.js';
+import { assertHmacKey, stampHmac } from './hmac.js';
+import { generateWorkbookPassword, protectAllSheets } from './protect.js';
+import { applyWatermark } from './watermark.js';
 
 export class QuoteExportError extends Error {
   /**
@@ -55,12 +61,23 @@ export class QuoteExportError extends Error {
  * @property {string} [engineSha]
  * @property {Date|string} [now]
  * @property {(wc:string) => any} [rateLookup]
+ * @property {string} [hmacKey]  Override env-derived key (tests).
+ * @property {object} [lib]      Optional library for fingerprint stamp.
+ */
+
+/**
+ * @typedef {object} TierAudit
+ * @property {string} wbPasswordHash  sha256(password) — forensic trace
+ * @property {string} schemaSha256    sha256 of decoded payload bytes
+ * @property {string} hmac            HMAC-SHA256 stamp (matches _Schema!A2)
+ * @property {number} tierIdx
+ * @property {string} filename
  */
 
 /**
  * @param {object} quote
  * @param {ExportOpts} opts
- * @returns {Promise<{ kind:'xlsx'|'zip', filename:string, buffer:Buffer }>}
+ * @returns {Promise<{ kind:'xlsx'|'zip', filename:string, buffer:Buffer, auditMeta: TierAudit[] }>}
  */
 export async function exportQuote(quote, opts) {
   if (!quote || typeof quote !== 'object') {
@@ -73,9 +90,6 @@ export async function exportQuote(quote, opts) {
       422
     );
   }
-  // MES-3-FIX-41: distinct error code for quotes saved BEFORE per-row
-  // breakdown landed. UI catches this code separately + prompts re-save.
-  // Std: result.rows is the top-level shape. Cpx: result.subproducts is.
   const isCpx = quote.type === 'complex';
   const hasRows = isCpx
     ? Array.isArray(quote.result.subproducts) && quote.result.subproducts.length > 0
@@ -96,6 +110,19 @@ export async function exportQuote(quote, opts) {
     throw new QuoteExportError('bad-lang', `lang must be 'en'|'vi'|'bilingual', got ${lang}`, 400);
   }
 
+  // MVP-2: HMAC key is REQUIRED. Tests pass an override; route gets it
+  // via deps wiring; preflight rejects boot if env missing.
+  const hmacKey = opts?.hmacKey || process.env.OPS_EXPORT_HMAC_KEY;
+  try {
+    assertHmacKey(hmacKey);
+  } catch (err) {
+    throw new QuoteExportError(
+      'missing_hmac_key',
+      err instanceof Error ? err.message : String(err),
+      500
+    );
+  }
+
   const tiers = enumerateTiers(quote.state || {});
   const requestedIdxs = resolveTierIdxs(opts?.tiers, tiers.length);
 
@@ -104,7 +131,7 @@ export async function exportQuote(quote, opts) {
   for (const idx of requestedIdxs) {
     const tier = tiers[idx];
     const kpis = pickKpisForTier(quote, idx, tier);
-    const buf = await buildOneXlsx({
+    const { buffer, audit } = await buildOneXlsx({
       quote,
       tier,
       tierIdx: idx,
@@ -114,6 +141,9 @@ export async function exportQuote(quote, opts) {
       exportedBy: opts?.exportedBy || '-',
       engineSha: opts?.engineSha,
       rateLookup: opts?.rateLookup,
+      hmacKey,
+      lib: opts?.lib,
+      now: opts?.now,
     });
     const filename = build1TierName({
       rfq: quote.state?.rfq_number || quote.label,
@@ -123,15 +153,19 @@ export async function exportQuote(quote, opts) {
       version: quote._version ?? 1,
       now: opts?.now,
     });
-    builtPerTier.push({ idx, filename, buffer: buf });
+    builtPerTier.push({ idx, filename, buffer, audit: { ...audit, tierIdx: idx, filename } });
   }
 
   if (builtPerTier.length === 1) {
     const only = builtPerTier[0];
-    return { kind: 'xlsx', filename: only.filename, buffer: only.buffer };
+    return {
+      kind: 'xlsx',
+      filename: only.filename,
+      buffer: only.buffer,
+      auditMeta: [only.audit],
+    };
   }
 
-  // ZIP for 2+ tiers
   const zipName = buildZipName({
     rfq: quote.state?.rfq_number || quote.label,
     customer: quote.state?.end_cu || quote.state?.direct_cu,
@@ -141,7 +175,12 @@ export async function exportQuote(quote, opts) {
   const zipBuf = await buildZip(
     builtPerTier.map((e) => ({ filename: e.filename, buffer: e.buffer }))
   );
-  return { kind: 'zip', filename: zipName, buffer: zipBuf };
+  return {
+    kind: 'zip',
+    filename: zipName,
+    buffer: zipBuf,
+    auditMeta: builtPerTier.map((e) => e.audit),
+  };
 }
 
 /**
@@ -211,13 +250,41 @@ function num(v, fallback = null) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+/**
+ * Compute a stable fingerprint for the library snapshot so MVP-3 can
+ * detect "exported against a different library version" without
+ * embedding the whole lib (200KB+) in the xlsx.
+ */
+function libraryFingerprint(lib) {
+  if (!lib) return '-';
+  try {
+    const json = JSON.stringify(lib);
+    return crypto.createHash('sha256').update(json).digest('hex').slice(0, 16);
+  } catch {
+    return '-';
+  }
+}
+
 async function buildOneXlsx(ctx) {
-  const { quote, tierIdx, tierKpis, variant, lang, exportedBy, engineSha, rateLookup } = ctx;
+  const {
+    quote,
+    tierIdx,
+    tierKpis,
+    variant,
+    lang,
+    exportedBy,
+    engineSha,
+    rateLookup,
+    hmacKey,
+    lib,
+    now,
+  } = ctx;
   const wb = createWorkbook({
     title: `Quote ${quote.label || quote.id} · MOQ ${tierIdx + 1}`,
     exportedBy,
   });
 
+  // 1. Visible sheets (existing MVP-1 + MVP-1.5 pipeline)
   buildCoverSheet(wb, { quote, tierIdx, tierKpis, variant, lang, exportedBy, engineSha });
   buildRfqMoqSheet(wb, { quote, lang });
   buildLayoutSheet(wb, { quote, lang });
@@ -229,8 +296,47 @@ async function buildOneXlsx(ctx) {
   buildCostBreakdownSheet(wb, { quote, variant, lang });
   buildSummarySheet(wb, { quote, tierIdx, tierKpis, variant, lang });
 
-  return Buffer.from(await wb.xlsx.writeBuffer());
+  // 2. MVP-2 Item E — customer watermark BEFORE _Audit/_Schema so the
+  //    watermark style is applied to visible sheets only (the items
+  //    check sheet.state internally but defense in depth).
+  applyWatermark(wb, variant);
+
+  // 3. MVP-2 Item B — _Schema payload sheet. Encode + build before
+  //    Item A so Item A can stamp the same sha256 into _Audit.
+  const encoded = encodeSchemaPayload(quote.state || {});
+  buildSchemaSheet(wb, encoded);
+
+  // 4. MVP-2 Item A — _Audit metadata sheet (reads payload_sha256 from
+  //    Item B's manifest).
+  buildAuditSheet(wb, {
+    quote,
+    variant,
+    exportedBy,
+    engineSha,
+    libraryFingerprint: libraryFingerprint(lib),
+    payloadSha256: encoded.sha256,
+    now,
+  });
+
+  // 5. MVP-2 Item C — HMAC sign the payload bytes (stamps _Schema!A2)
+  const hmac = stampHmac(wb, encoded.payload, hmacKey);
+
+  // 6. MVP-2 Item D — per-sheet password protection. MUST run last so
+  //    no later mutation is silently rejected. Sheet protection is
+  //    cosmetic; the real defense is HMAC above.
+  const password = generateWorkbookPassword();
+  const { passwordHash } = await protectAllSheets(wb, password);
+
+  const buffer = Buffer.from(await wb.xlsx.writeBuffer());
+  return {
+    buffer,
+    audit: {
+      wbPasswordHash: passwordHash,
+      schemaSha256: encoded.sha256,
+      hmac,
+    },
+  };
 }
 
 // Test surface
-export { resolveTierIdxs, pickKpisForTier };
+export { resolveTierIdxs, pickKpisForTier, libraryFingerprint };

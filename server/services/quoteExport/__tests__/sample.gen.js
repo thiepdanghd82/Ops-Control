@@ -12,6 +12,13 @@
  * NOT run as part of `npm test` — manual deliverable per task spec.
  */
 
+// MVP-2: exporter requires OPS_EXPORT_HMAC_KEY at call time. The sample
+// generator runs ad-hoc by a developer (not under preflight), so seed
+// a deterministic dev key if the env doesn't already provide one. The
+// resulting xlsx is signed against THIS key — verify.js round-trip
+// works as long as the same key is used to verify.
+process.env.OPS_EXPORT_HMAC_KEY = process.env.OPS_EXPORT_HMAC_KEY || 'a'.repeat(64);
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

@@ -5,6 +5,9 @@
  * key cell contents WITHOUT booting the route stack.
  */
 
+// MVP-2: ensure HMAC key is set for tests that pre-date MVP-2.
+process.env.OPS_EXPORT_HMAC_KEY = process.env.OPS_EXPORT_HMAC_KEY || 'a'.repeat(64);
+
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import ExcelJS from 'exceljs';
@@ -146,13 +149,17 @@ test('exportQuote: customer variant → single xlsx with 10 sheets', async () =>
   assert.ok(out.buffer.length > 5000, `expected >5KB xlsx, got ${out.buffer.length}`);
 
   const wb = await parseBuffer(out.buffer);
-  const sheetNames = wb.worksheets.map((s) => s.name);
+  const visibleNames = wb.worksheets
+    .filter((s) => s.state !== 'hidden' && s.state !== 'veryHidden')
+    .map((s) => s.name);
+  // MVP-1 baseline = 10 visible sheets. MVP-2 adds _Audit + _Schema
+  // as hidden sheets; they don't count toward the visible-sheet contract.
   assert.equal(
-    sheetNames.length,
+    visibleNames.length,
     10,
-    `expected 10 sheets, got ${sheetNames.length}: ${sheetNames}`
+    `expected 10 visible sheets, got ${visibleNames.length}: ${visibleNames}`
   );
-  assert.deepEqual(sheetNames, [
+  assert.deepEqual(visibleNames, [
     '00 Cover',
     '01 RFQ MOQ',
     '02 Layout',
@@ -175,7 +182,8 @@ test('exportQuote: internal variant produces same sheet count, different filenam
   assert.equal(out.kind, 'xlsx');
   assert.match(out.filename, /_internal_v2_/);
   const wb = await parseBuffer(out.buffer);
-  assert.equal(wb.worksheets.length, 10);
+  const visible = wb.worksheets.filter((s) => s.state !== 'hidden' && s.state !== 'veryHidden');
+  assert.equal(visible.length, 10);
 });
 
 test('exportQuote: Cover sheet contains quote label + version + customer name', async () => {

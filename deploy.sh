@@ -69,6 +69,7 @@ REMOTE_ENV_TMP=$(mktemp)
 ssh "$REMOTE" "cat $APP_DIR/.env 2>/dev/null" > "$REMOTE_ENV_TMP" || true
 EXISTING_TOTP_KEY=$(grep -E '^OPS_TOTP_KEY=' "$REMOTE_ENV_TMP" | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
 EXISTING_KIOSK_KEY=$(grep -E '^OPS_KIOSK_KEY=' "$REMOTE_ENV_TMP" | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
+EXISTING_EXPORT_HMAC_KEY=$(grep -E '^OPS_EXPORT_HMAC_KEY=' "$REMOTE_ENV_TMP" | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
 EXISTING_KEY_COUNT=$(wc -l < "$REMOTE_ENV_TMP" | tr -d ' ')
 if [ "$EXISTING_KEY_COUNT" -gt 0 ]; then
     echo "  ✓  Captured ${EXISTING_KEY_COUNT} existing env line(s) for merge-back"
@@ -88,6 +89,17 @@ if [ -n "$EXISTING_KIOSK_KEY" ]; then
 else
     echo "  ⚠   No existing OPS_KIOSK_KEY — operator must set one before boot."
     echo "      Without it, kiosk pairings can't be issued in NODE_ENV=production."
+    echo "      Generate: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+fi
+# Sprint S-EXPORT-MVP-2 — HMAC key for quote xlsx tamper detection.
+# Same preservation semantics. Whole-file merge below carries the value;
+# this block surfaces missing-key state in the deploy log.
+if [ -n "$EXISTING_EXPORT_HMAC_KEY" ]; then
+    echo "  ✓  Preserving existing OPS_EXPORT_HMAC_KEY (${#EXISTING_EXPORT_HMAC_KEY} chars)"
+else
+    echo "  ⚠   No existing OPS_EXPORT_HMAC_KEY — operator must set one before boot."
+    echo "      Without it, quote xlsx exports cannot be HMAC-signed. Server"
+    echo "      refuses to start in NODE_ENV=production (see preflight)."
     echo "      Generate: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
 fi
 echo ""
