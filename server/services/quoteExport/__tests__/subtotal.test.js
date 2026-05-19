@@ -5,6 +5,9 @@
  * isn't persisted (MES-3-FIX-41 hardening for MVP-1).
  */
 
+// MVP-2: ensure HMAC key is set for tests that pre-date MVP-2.
+process.env.OPS_EXPORT_HMAC_KEY = process.env.OPS_EXPORT_HMAC_KEY || 'a'.repeat(64);
+
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import ExcelJS from 'exceljs';

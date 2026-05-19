@@ -12,6 +12,13 @@
  * NOT run as part of `npm test` — manual deliverable per task spec.
  */
 
+// MVP-2: exporter requires OPS_EXPORT_HMAC_KEY at call time. The sample
+// generator runs ad-hoc by a developer (not under preflight), so seed
+// a deterministic dev key if the env doesn't already provide one. The
+// resulting xlsx is signed against THIS key — verify.js round-trip
+// works as long as the same key is used to verify.
+process.env.OPS_EXPORT_HMAC_KEY = process.env.OPS_EXPORT_HMAC_KEY || 'a'.repeat(64);
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -103,17 +110,30 @@ async function main() {
       lang: 'bilingual',
       tiers: 'all',
       exportedBy: 'sample-gen',
+      // Dev-only: surface the per-export password so the operator can
+      // unlock sheets in Excel for inspection. Prod routes MUST NOT set
+      // this flag — production audit trail stores only the password hash.
+      includePassword: true,
     });
     if (out.kind !== 'xlsx') {
       console.log(`Quote has ${out.kind} — would be ${out.filename}, len=${out.buffer.length}`);
       const p = path.join(OUT_DIR, out.filename);
       fs.writeFileSync(p, out.buffer);
       console.log(`Wrote ${p} (${out.buffer.length} bytes)`);
+      // Multi-tier: one password per tier file.
+      for (const m of out.auditMeta || []) {
+        console.log(`  🔑  ${m.filename} → password: ${m._devPassword}`);
+      }
       continue;
     }
     const p = path.join(OUT_DIR, out.filename);
     fs.writeFileSync(p, out.buffer);
     console.log(`Wrote ${p} (${out.buffer.length} bytes)`);
+    const pwd = out.auditMeta?.[0]?._devPassword;
+    if (pwd) {
+      console.log(`  🔑  Sheet-unprotect password: ${pwd}`);
+      console.log(`     (Excel → Review → Unprotect Sheet → paste this value)`);
+    }
   }
 }
 

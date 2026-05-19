@@ -72,6 +72,21 @@ if (env === 'production') {
       'LOSING THIS VALUE INVALIDATES ALL KIOSK SESSIONS.'
   );
 
+  // Sprint S-EXPORT-MVP-2 — HMAC key for quote xlsx export tamper
+  // detection. Same shape + preservation semantics as OPS_TOTP_KEY +
+  // OPS_KIOSK_KEY. Losing it doesn't break customer-facing exports
+  // (visible sheets still open + read fine; _Audit + _Schema are
+  // forensic-only) but any pre-loss export can no longer be HMAC-
+  // verified, so the MVP-3 re-importer refuses them. Routine
+  // compliance unaffected; fraud detection breaks.
+  check(
+    'OPS_EXPORT_HMAC_KEY',
+    process.env.OPS_EXPORT_HMAC_KEY && /^[0-9a-fA-F]{64}$/.test(process.env.OPS_EXPORT_HMAC_KEY),
+    'must be a 64-char hex string. Generate with: ' +
+      `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))". ` +
+      'LOSING THIS VALUE INVALIDATES TAMPER-DETECTION ON ALL PRE-LOSS QUOTE EXPORTS.'
+  );
+
   const corsSet = (process.env.OPS_CORS_ORIGINS || '').trim();
   check(
     'OPS_CORS_ORIGINS',

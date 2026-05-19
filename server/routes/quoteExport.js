@@ -89,11 +89,29 @@ export function createQuoteExportRouter(deps) {
         exportedBy: cu.username || '-',
         engineSha: deps.engineSha,
         rateLookup: deps.rateLookup,
+        // MVP-2: override env-derived HMAC key when deps supplies one
+        // (tests inject; prod relies on env via assertHmacKey fallback).
+        hmacKey: deps.hmacKey,
+        lib: deps.lib,
       });
 
       // Audit emit BEFORE setHeader — audit failures must not break
-      // the response stream, but we want the event recorded.
+      // the response stream, but we want the event recorded. MVP-2
+      // adds two forensic fields per tier:
+      //   - wb_password_hash: sha256(per-export password). NEVER log
+      //     the raw password — operators must not be able to re-print
+      //     a customer copy from the audit trail.
+      //   - schema_sha256: hash of decoded _Schema payload bytes. The
+      //     MVP-3 importer cross-checks this against the xlsx's
+      //     embedded sha256 to detect post-export tampering.
       try {
+        const tierAudit = (out.auditMeta || []).map((m) => ({
+          tier_idx: m.tierIdx,
+          filename: m.filename,
+          wb_password_hash: m.wbPasswordHash,
+          schema_sha256: m.schemaSha256,
+          hmac: m.hmac,
+        }));
         deps.audit(
           'QUOTE_EXPORT',
           cu.username || '-',
@@ -107,6 +125,8 @@ export function createQuoteExportRouter(deps) {
             kind: out.kind,
             filename: out.filename,
             size: out.buffer.length,
+            // MVP-2 forensic trace — one entry per tier in zip case
+            tier_audit: tierAudit,
           })
         );
       } catch (auditErr) {

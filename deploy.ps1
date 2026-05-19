@@ -104,6 +104,9 @@ $existingKey = if ($existingEnv.ContainsKey('OPS_TOTP_KEY')) {
 $existingKioskKey = if ($existingEnv.ContainsKey('OPS_KIOSK_KEY')) {
   ($existingEnv['OPS_KIOSK_KEY'] -replace '^\s*OPS_KIOSK_KEY\s*=\s*','').Trim('"').Trim("'")
 } else { $null }
+$existingExportHmacKey = if ($existingEnv.ContainsKey('OPS_EXPORT_HMAC_KEY')) {
+  ($existingEnv['OPS_EXPORT_HMAC_KEY'] -replace '^\s*OPS_EXPORT_HMAC_KEY\s*=\s*','').Trim('"').Trim("'")
+} else { $null }
 if ($existingEnv.Count -gt 0) {
   Write-Ok "✓  Captured $($existingEnv.Count) existing env line(s) for merge-back"
 }
@@ -119,6 +122,13 @@ if ($existingKioskKey) {
 } else {
   Write-Warn "⚠  No existing OPS_KIOSK_KEY — operator must set one in .env before boot."
   Write-Warn "    Without it, kiosk pairings can't be issued in NODE_ENV=production."
+}
+# Sprint S-EXPORT-MVP-2 — quote-export HMAC key (mirrors OPS_TOTP_KEY semantics).
+if ($existingExportHmacKey) {
+  Write-Ok "✓  Preserving existing OPS_EXPORT_HMAC_KEY ($($existingExportHmacKey.Length) chars)"
+} else {
+  Write-Warn "⚠  No existing OPS_EXPORT_HMAC_KEY — operator must set one in .env before boot."
+  Write-Warn "    Without it, quote xlsx exports can't be HMAC-signed; preflight blocks server boot."
 }
 Write-Host ''
 

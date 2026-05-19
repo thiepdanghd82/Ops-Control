@@ -408,6 +408,50 @@ These are patterns this codebase specifically tripped on — save future session
 
 ## Recovery playbook
 
+### "OPS_EXPORT_HMAC_KEY lost or rotated mid-cycle" (Sprint S-EXPORT-MVP-2)
+
+**Default policy**: do NOT rotate `OPS_EXPORT_HMAC_KEY` once production
+quotes have been exported. Every signed xlsx becomes unverifiable on
+key change. `deploy.sh` / `deploy.ps1` preserve the key automatically;
+preflight refuses prod boot without it.
+
+**Symptom (key missing on prod boot)**:
+
+```
+PREFLIGHT FAIL: OPS_EXPORT_HMAC_KEY — must be a 64-char hex string.
+```
+
+**Fix**: capture the existing key from a `.env` backup OR generate
+a new one, set it on the box, restart:
+
+```bash
+ssh user@host
+# Inspect backup
+grep OPS_EXPORT_HMAC_KEY /opt/ops-control/releases/<prev>/.env  # if recoverable
+# OR generate fresh (only if no backups exist)
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+# Set in .env
+sed -i 's|^OPS_EXPORT_HMAC_KEY=.*|OPS_EXPORT_HMAC_KEY='<key>'|' /opt/ops-control/.env
+chmod 600 /opt/ops-control/.env
+systemctl restart ops-control
+```
+
+**What if the key is genuinely lost (no backup, regenerated fresh)?**
+
+| Surface affected                      | Impact                                                                                                                                                                              |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Customer xlsx files (issued pre-loss) | **Still open + read fine.** Visible sheets are unencrypted; only sheet-edit-lock uses XOR. Customer never re-imports.                                                               |
+| Internal xlsx files (issued pre-loss) | Same — still readable by humans + by spreadsheet tools.                                                                                                                             |
+| Audit-log forensic trace              | Still intact: `wb_password_hash` + `schema_sha256` + `hmac` were logged per export. Auditors can match hash to xlsx file even without verifying signature.                          |
+| MVP-3 re-import (when shipped)        | **Refuses pre-loss exports.** HMAC verify will fail because the new key produces a different digest. Operator must re-export from source quote, OR auditor falls back to audit log. |
+| Post-loss exports                     | Work normally with the new key. Tamper detection resumes.                                                                                                                           |
+
+Routine compliance (read + audit-trail review) survives key loss.
+Fraud detection (HMAC verification of historical xlsx) does NOT —
+file an incident memo if a key-loss event happens in a regulated
+context. Treat the key with the same operational discipline as
+`OPS_TOTP_KEY` + `OPS_KIOSK_KEY`.
+
 ### "All users are locked out of 2FA"
 
 ```bash

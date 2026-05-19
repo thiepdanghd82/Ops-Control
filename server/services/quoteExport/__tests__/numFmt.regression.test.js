@@ -9,6 +9,9 @@
  * saw `4000000.0%` instead of `4,000,000.00` for MOQ etc.
  */
 
+// MVP-2: ensure HMAC key is set for tests that pre-date MVP-2.
+process.env.OPS_EXPORT_HMAC_KEY = process.env.OPS_EXPORT_HMAC_KEY || 'a'.repeat(64);
+
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import ExcelJS from 'exceljs';
