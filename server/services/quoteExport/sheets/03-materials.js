@@ -67,6 +67,22 @@ export function buildMaterialsSheet(wb, ctx) {
     r = writeMaterialSection(sheet, r, L('mat.section_alt', lang), alt, lang);
   }
 
+  // Aggregate subtotal row from snapshot — per-row breakdown not persisted
+  // (tracked as MES-3-FIX-41) but the total survives in quote.result.
+  const result = quote.result || {};
+  const setupTotal = Number(result.bd_mat_setup);
+  const runTotal = Number(result.bd_mat_run);
+  if (Number.isFinite(setupTotal) || Number.isFinite(runTotal)) {
+    r += 1;
+    writeSubtotalRow(sheet, r, MAT_COLS, L('common.subtotal', lang), {
+      setup_cost: Number.isFinite(setupTotal) ? setupTotal : null,
+      run_cost: Number.isFinite(runTotal) ? runTotal : null,
+      total:
+        (Number.isFinite(setupTotal) ? setupTotal : 0) + (Number.isFinite(runTotal) ? runTotal : 0),
+    });
+    r += 1;
+  }
+
   // Footnote
   r += 1;
   sheet.mergeCells(`A${r}:P${r}`);
@@ -165,6 +181,26 @@ function extractCellValue(col, mat) {
 function numCell(v) {
   const n = Number(v);
   return Number.isFinite(n) && n !== 0 ? n : n === 0 ? 0 : '—';
+}
+
+function writeSubtotalRow(sheet, r, cols, label, values) {
+  // Label spans the first 3 cols, then aggregate values land in their
+  // matching columns (setup_cost / run_cost / total).
+  sheet.mergeCells(`A${r}:C${r}`);
+  const labelCell = sheet.getCell(`A${r}`);
+  labelCell.value = label;
+  applyStyle(labelCell, 'subtotal');
+  cols.forEach((c, i) => {
+    if (i < 3) return; // skipped, merged into label
+    const cell = sheet.getCell(r, i + 1);
+    if (Object.prototype.hasOwnProperty.call(values, c.key)) {
+      const v = values[c.key];
+      cell.value = v == null ? '—' : v;
+    } else {
+      cell.value = '';
+    }
+    applyStyle(cell, 'subtotal');
+  });
 }
 
 function colLetter(idx) {

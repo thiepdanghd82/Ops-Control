@@ -92,13 +92,29 @@ export const STYLES = {
     border: BORDER_THIN,
     numFmt: '0.0%;[Red]-0.0%',
   },
-  // Subtotal row — bold, slight background tint
+  // Body percent — right-aligned, smaller. Cost Breakdown pct-of-total col.
+  numPct: {
+    font: { name: 'Calibri', size: 10, color: { argb: COLORS.bodyText } },
+    alignment: { vertical: 'top', horizontal: 'right' },
+    border: BORDER_THIN,
+    numFmt: '0.0%;-0.0%;—',
+  },
+  // Cost-per-unit ($) — higher precision than `num` because aggregates
+  // routinely sit at sub-cent magnitudes (e.g. $0.00239/unit).
+  numCost: {
+    font: { name: 'Calibri', size: 10, color: { argb: COLORS.bodyText } },
+    alignment: { vertical: 'top', horizontal: 'right' },
+    border: BORDER_THIN,
+    numFmt: '#,##0.00000;-#,##0.00000;—',
+  },
+  // Subtotal row — bold, slight background tint. Higher precision than
+  // body `num` because $/unit aggregates routinely sit below $0.01.
   subtotal: {
     font: { name: 'Calibri', size: 10, bold: true, color: { argb: COLORS.bodyText } },
     alignment: { vertical: 'middle', horizontal: 'right' },
     fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.fillAlt } },
     border: BORDER_THIN,
-    numFmt: '#,##0.00;-#,##0.00;—',
+    numFmt: '#,##0.00000;-#,##0.00000;—',
   },
   // Footnote — small muted text below tables
   footnote: {
@@ -120,7 +136,11 @@ export function applyStyle(cell, preset, overrides) {
   if (!base) {
     throw new Error(`Unknown style preset: ${preset}`);
   }
-  cell.style = overrides ? { ...base, ...overrides } : base;
+  // Always shallow-clone the preset. ExcelJS mutates `cell.style.numFmt`
+  // in place when callers do `cell.numFmt = x` later, so a shared
+  // reference would leak the override into every other cell that
+  // used the same preset earlier — see __tests__/numFmt.regression.test.js
+  cell.style = { ...base, ...(overrides || {}) };
 }
 
 /**

@@ -78,8 +78,11 @@ export function buildRfqMoqSheet(wb, ctx) {
   sheet.getRow(headerRow).height = 32;
   r += 1;
 
-  // Tier rows — pulled from extra_moqs + base
+  // Tier rows — pulled from extra_moqs + base. KPIs (VA/CONTR/GM) only
+  // exist in quote.result for the active tier; other tiers stay em-dash.
   const tiers = enumerateTiers(state);
+  const activeIdx = Number(state.active_moq_idx) || 0;
+  const result = quote.result || {};
   for (const t of tiers) {
     const row = sheet.getRow(r);
     row.getCell(1).value = t.label;
@@ -89,17 +92,16 @@ export function buildRfqMoqSheet(wb, ctx) {
     row.getCell(3).value = numOrDash(t.eau);
     applyStyle(row.getCell(3), 'num');
     row.getCell(4).value = numOrDash(t.sellingPrice);
-    applyStyle(row.getCell(4), 'num');
+    applyStyle(row.getCell(4), 'numCost');
     row.getCell(5).value = numOrDash(state.target_margin, 0.25);
-    applyStyle(row.getCell(5), 'num');
-    // VA / CONTR / GM left blank for non-active tiers (we only persist
-    // top-level result for the active tier); active row gets stamped
-    // from the snapshot during export.
-    ['F', 'G', 'H'].forEach((col) => {
-      const cell = sheet.getCell(`${col}${r}`);
-      cell.value = '—';
-      applyStyle(cell, 'num');
-    });
+    applyStyle(row.getCell(5), 'numPct');
+    const isActive = t.idx === activeIdx;
+    row.getCell(6).value = isActive ? numOrDash(result.va) : '—';
+    applyStyle(row.getCell(6), 'numPct');
+    row.getCell(7).value = isActive ? numOrDash(result.contribution) : '—';
+    applyStyle(row.getCell(7), 'numPct');
+    row.getCell(8).value = isActive ? numOrDash(result.gm) : '—';
+    applyStyle(row.getCell(8), 'numPct');
     r += 1;
   }
 

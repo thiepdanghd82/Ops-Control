@@ -57,9 +57,8 @@ export function buildCostBreakdownSheet(wb, ctx) {
     b.value = value;
     c.value = sTotal && Number.isFinite(value) ? value / sTotal : '—';
     applyStyle(a, 'body');
-    applyStyle(b, 'num');
-    applyStyle(c, 'num');
-    c.numFmt = '0.0%;-0.0%;—';
+    applyStyle(b, 'numCost');
+    applyStyle(c, 'numPct');
     r += 1;
   }
 

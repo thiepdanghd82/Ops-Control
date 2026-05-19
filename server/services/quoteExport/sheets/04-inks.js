@@ -87,6 +87,22 @@ export function buildInksSheet(wb, ctx) {
     }
   }
 
+  // Aggregate subtotal — per-row breakdown not persisted (MES-3-FIX-41)
+  // but the total survives in quote.result.
+  const result = quote.result || {};
+  const setupTotal = Number(result.bd_ink_setup);
+  const runTotal = Number(result.bd_ink_run);
+  if (Number.isFinite(setupTotal) || Number.isFinite(runTotal)) {
+    r += 1;
+    writeSubtotalRow(sheet, r, INK_COLS, L('common.subtotal', lang), {
+      setup_cost: Number.isFinite(setupTotal) ? setupTotal : null,
+      run_cost: Number.isFinite(runTotal) ? runTotal : null,
+      total:
+        (Number.isFinite(setupTotal) ? setupTotal : 0) + (Number.isFinite(runTotal) ? runTotal : 0),
+    });
+    r += 1;
+  }
+
   // Footnote
   r += 1;
   sheet.mergeCells(`A${r}:P${r}`);
@@ -151,6 +167,24 @@ function buildCovNote(ink, lang) {
 function numCell(v) {
   const n = Number(v);
   return Number.isFinite(n) && n !== 0 ? n : n === 0 ? 0 : '—';
+}
+
+function writeSubtotalRow(sheet, r, cols, label, values) {
+  sheet.mergeCells(`A${r}:C${r}`);
+  const labelCell = sheet.getCell(`A${r}`);
+  labelCell.value = label;
+  applyStyle(labelCell, 'subtotal');
+  cols.forEach((c, i) => {
+    if (i < 3) return;
+    const cell = sheet.getCell(r, i + 1);
+    if (Object.prototype.hasOwnProperty.call(values, c.key)) {
+      const v = values[c.key];
+      cell.value = v == null ? '—' : v;
+    } else {
+      cell.value = '';
+    }
+    applyStyle(cell, 'subtotal');
+  });
 }
 
 function letterFor(idx) {

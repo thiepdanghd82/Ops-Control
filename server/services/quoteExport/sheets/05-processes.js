@@ -77,6 +77,29 @@ export function buildProcessesSheet(wb, ctx) {
     }
   }
 
+  // Aggregate subtotal — per-row breakdown not persisted (MES-3-FIX-41).
+  // Setup = setup_mach + setup_labor; Run = (overhead + labor + tooling)
+  // minus the setup portion that's folded into bd_labor/bd_overhead per
+  // calcEngine.js:856 comment. Total = setup + run.
+  const result = quote.result || {};
+  const setupMach = Number(result.bd_setup_mach) || 0;
+  const setupLabor = Number(result.bd_setup_labor) || 0;
+  const overhead = Number(result.bd_overhead) || 0;
+  const labor = Number(result.bd_labor) || 0;
+  const tooling = Number(result.tooling) || 0;
+  const procSetup = setupMach + setupLabor;
+  const procTotal = overhead + labor + tooling;
+  const procRun = procTotal - procSetup;
+  if (procSetup > 0 || procTotal > 0) {
+    r += 1;
+    writeSubtotalRow(sheet, r, PROC_COLS, L('common.subtotal', lang), {
+      setup_cost: procSetup,
+      run_cost: procRun >= 0 ? procRun : null,
+      total: procTotal,
+    });
+    r += 1;
+  }
+
   r += 1;
   sheet.mergeCells(`A${r}:S${r}`);
   const note = sheet.getCell(`A${r}`);
@@ -136,6 +159,24 @@ function extractCellValue(col, proc, rate) {
 function numCell(v) {
   const n = Number(v);
   return Number.isFinite(n) && n !== 0 ? n : n === 0 ? 0 : '—';
+}
+
+function writeSubtotalRow(sheet, r, cols, label, values) {
+  sheet.mergeCells(`A${r}:C${r}`);
+  const labelCell = sheet.getCell(`A${r}`);
+  labelCell.value = label;
+  applyStyle(labelCell, 'subtotal');
+  cols.forEach((c, i) => {
+    if (i < 3) return;
+    const cell = sheet.getCell(r, i + 1);
+    if (Object.prototype.hasOwnProperty.call(values, c.key)) {
+      const v = values[c.key];
+      cell.value = v == null ? '—' : v;
+    } else {
+      cell.value = '';
+    }
+    applyStyle(cell, 'subtotal');
+  });
 }
 
 function letterFor(idx) {
