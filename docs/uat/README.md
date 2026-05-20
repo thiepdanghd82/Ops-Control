@@ -9,15 +9,16 @@ input for MVP-3 (re-import + apply).
 This folder ships the **framework only** — checklists, risk register,
 test-data picker guide, feedback form, schedule. The actual UAT runs
 LIVE with the operator (Đặng Thế Thiệp) on prod hardware in a window
-allocated by you. Nothing in this folder writes to or reads from prod
-state.
+allocated by you. **Framework docs trong folder này không touch prod
+state. UAT execution thì chạy trên prod — xem
+[risk-register.md](risk-register.md) cho mitigations.**
 
 ## Files
 
 | File                                         | Purpose                                                              |
 | -------------------------------------------- | -------------------------------------------------------------------- |
 | [uat-export-flow.md](uat-export-flow.md)     | 8 scenarios with Steps / Expected / Acceptance / Bug-report stub     |
-| [risk-register.md](risk-register.md)         | 3 risks flagged at MVP-2 close, not covered by automated tests       |
+| [risk-register.md](risk-register.md)         | 5 risks flagged at MVP-2 close, not covered by automated tests       |
 | [test-quotes.md](test-quotes.md)             | How to pick 5 representative prod quotes safely + anonymisation rule |
 | [feedback-template.md](feedback-template.md) | Per-scenario operator + customer feedback form                       |
 | [timeline.md](timeline.md)                   | 2-day execution plan (4 sessions)                                    |
@@ -51,11 +52,20 @@ File chỉ được gửi customer khi:
 - SCN1-5 tất cả PASS (functional + integrity)
 - SCN6-8 không có P0/P1 bug (file behavior on customer side)
 - Decision-maker (xem Decision Authority) approve "go" trong vòng 1h sau khi SCN8 xong
+- **Default nếu không phản hồi trong 1h:** HOLD. Operator không tự gửi customer. Reschedule với decision-maker sáng hôm sau.
+- **Cách notify decision-maker:** Slack DM + tag trong `#ops-control-uat` channel với prefix `🟢 GO REQUEST:` để dễ search sau này
 
 Nếu gửi rồi mới phát hiện bug:
-- P0 (data wrong/leaked): notify customer + recall trong 1h
-- P1 (UX confusion): note in MVP-3 input, không recall
-- P2 (cosmetic): log only
+- **P0 (data wrong/leaked):** notify customer + recall trong 1h
+  - **Procedure:**
+    1. Phone call customer contact ngay (không email — quá chậm)
+    2. Request customer delete file + confirm bằng email reply
+    3. Nếu customer đã forward nội bộ: request forwarding list + delete confirmation từng người
+    4. Send corrected file CHỈ KHI bug đã fix + re-verified (không "vá nhanh")
+    5. Log incident vào CLAUDE.md sprint history dưới `S-EXPORT-UAT-INCIDENT`
+  - **Escalation:** P0 leak = legal/compliance review trước khi gửi corrected file. Tag <decision-maker> trong incident log.
+- **P1 (UX confusion):** note in MVP-3 input, không recall
+- **P2 (cosmetic):** log only
 
 ## After UAT day
 
