@@ -9,7 +9,16 @@ Severity scoring:
 
 - **Probability**: Low / Medium / High (qualitative — engineer's gut against the codebase + Lesson log)
 - **Impact**: Low (cosmetic) / Medium (operator workaround needed) / High (blocks customer-share until fix)
+Severity scoring:
+- **Probability**: Low / Medium / High ...
+- **Impact**: Low (cosmetic) / Medium (...) / High (...)
+- **Risk Owner**: person who decides whether mitigation is sufficient + escalation point if risk materialises during UAT. See Decision Authority in [README.md](README.md).
 
+Owner assignments:
+- R1 (Sheet-protection UX): <fill in>
+- R2 (Watermark fidelity): <fill in>  
+- R3 (HMAC key drift): <fill in>
+- R4 (PROD data leak): <fill in>  ← new, see suggested addition above
 ---
 
 ## R1 — Sheet-protection UX inconsistent between Mac Excel and Windows Excel
@@ -26,7 +35,7 @@ Severity scoring:
 
 1. SCN3 of [uat-export-flow.md](uat-export-flow.md) explicitly tests Mac + Windows + LibreOffice in sequence — surfaces drift immediately.
 2. **Pre-customer-send rule**: send via the same platform family as the customer where possible (Vietnamese customers overwhelmingly Windows → operator-side test on Windows is the load-bearing one).
-3. If a platform shows unacceptable wording, document under MES-3-FIX-<n> and warn the operator to send a one-line note alongside the file ("This file is read-only by design — to make edits, please ask us for a revision").
+3. If a platform shows unacceptable wording, document under MVP-2.1-FIX-<n> and warn the operator to send a one-line note alongside the file ("This file is read-only by design — to make edits, please ask us for a revision").
 4. **Watch for**: Excel's "Protected View" yellow banner. That's a SmartScreen / origin warning, NOT a sheet-protection thing. If it appears it means the file was downloaded from an untrusted zone — fix is server-side `Content-Type` + signed download, NOT in MVP-2 scope.
 
 ### Pre-existing context
@@ -91,9 +100,9 @@ So R3 doesn't break the UAT — but discovering a key-mismatch mid-UAT undermine
 
 ### Mitigation
 
-1. SCN5 of [uat-export-flow.md](uat-export-flow.md) is a server-admin sub-task that round-trips one fresh export through `verify.js` BEFORE the operator starts the customer-facing scenarios. If it fails, halt and run the recovery playbook before continuing.
-2. Capture the prod `OPS_EXPORT_HMAC_KEY` fingerprint (first 8 chars of sha256 of the key value, NOT the key itself) into the UAT report so future audits can cross-check.
-3. After UAT, store one signed-and-verified xlsx in `/4. CLAUDE OUTPUT/uat-2026-XX-XX/golden.xlsx` as a forever-reference sample for catching future key drift.
+1. SCN5 of [uat-export-flow.md](uat-export-flow.md) is an **engineer-run task** (NOT operator) that round-trips one fresh export through `verify.js` BEFORE the operator starts SCN1. Engineer logs PASS/FAIL into SCN5 acceptance row. If FAIL, halt and run the recovery playbook before operator starts.
+3. Capture the prod `OPS_EXPORT_HMAC_KEY` fingerprint (first 8 chars of sha256 of the key value, NOT the key itself) into the UAT report so future audits can cross-check.
+4. After UAT, store one signed-and-verified xlsx in `/4. CLAUDE OUTPUT/uat-2026-XX-XX/golden.xlsx` as a forever-reference sample for catching future key drift.
 
 ### Pre-existing context
 
@@ -102,7 +111,45 @@ So R3 doesn't break the UAT — but discovering a key-mismatch mid-UAT undermine
 - Symmetric HMAC chosen over Ed25519 because we're proving "came from THIS server install", not building a multi-party trust chain. Same box signs + verifies.
 
 ---
+## R4 — PROD data leak via operator artifacts (screenshots, bug reports, Slack)
 
+### Probability
+**Medium-High.** UAT uses 5 real prod quotes with real customer names, real PO numbers, real pricing. Bug-stub template (in feedback-template.md) asks for "actual output" — natural temptation is to screenshot or paste raw output. Slack/PR comments persist forever.
+
+### Impact
+**High.** Customer NDA breach + GDPR/PDPA-equivalent risk. Single screenshot in #ops-control Slack channel = permanent leak even after deletion (members may have backed up).
+
+### Mitigation
+1. Bug-stub template MUST require "anonymised reference" not raw quote ID (e.g. "Quote A" instead of "QT-2026-00347")
+2. Screenshots: crop OUT customer name, PO, pricing before paste. If can't crop cleanly → describe in text only.
+3. Sensitive fields (customer name, PO, total amount) flagged with placeholder in feedback-template.md
+4. Slack channel: pin "PROD UAT — no screenshots of customer data" reminder at top of channel
+5. Post-UAT: review all PR comments + Slack messages from UAT window, redact any leaked data
+
+### Pre-existing context
+- Anonymisation rule defined in test-quotes.md
+- 5 test quotes chosen specifically because they're representative of typical patterns, not high-value/sensitive accounts
+
+---
+## R5 — Customer rejects format ("not enough to quote")
+
+### Probability
+**Medium.** First customer exposure to MVP-2 output format. Customer expectations may not match our internal mental model (e.g. customer expects PDF, expects single-page summary, expects pricing not in protected sheet).
+
+### Impact
+**Medium.** Doesn't break UAT (we still learn), but blocks "ship MVP-2 to all customers" decision until format adjustment. If customer reaction is strongly negative, may require MVP-2.1 format iteration before broader rollout.
+
+### Mitigation
+1. Frame the customer ask as feedback request, not deliverable: "We're piloting a new quote format — your reaction will shape v2"
+2. Capture customer feedback in feedback-template.md Layer 2 with structured prompts (not just "any feedback?")
+3. If customer rejects: log under MVP-2.1-FIX or defer-MVP-3 per triage rule. Do NOT promise immediate fix.
+4. Have a fallback ready: if customer demands the old format mid-UAT, send old-format quote separately. Don't pressure customer to accept new format.
+
+### Pre-existing context
+- Customer agreed in advance to receive pilot artifact (per README pre-flight)
+- Only 1-2 customers in UAT scope — small enough that bespoke recovery is feasible
+
+---
 ## Risks NOT in this register (and why)
 
 - **Re-import / round-trip fidelity** — MVP-3 scope; not yet built.
