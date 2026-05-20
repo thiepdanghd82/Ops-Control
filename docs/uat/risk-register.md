@@ -64,7 +64,7 @@ The defence-in-depth gradient is:
 ### Mitigation
 
 1. SCN4 captures fidelity per renderer with screenshots — documents drift rather than fixing.
-2. If LibreOffice drift unacceptable, consider follow-up MVP-2.1-FIX to add a second watermark via Excel's actual `header/footer` mechanism (cross-renderer-strong) in MVP-2.1. Out of UAT scope.
+2. If LibreOffice drift unacceptable, consider follow-up MVP-2.1-FIX-<n> to add a second watermark via Excel's actual `header/footer` mechanism (cross-renderer-strong). Out of UAT scope.
 3. **Pre-customer-send rule**: assume the customer opens in Excel for Windows. If they're known to be on LibreOffice or Numbers, attach a PDF render of the cover page as a second confirmation that they have the customer variant.
 
 ### Pre-existing context
@@ -122,7 +122,7 @@ So R3 doesn't break the UAT — but discovering a key-mismatch mid-UAT undermine
 1. Bug-stub template MUST require "anonymised reference" not raw quote ID (e.g. "Quote A" instead of "QT-2026-00347")
 2. Screenshots: crop OUT customer name, PO, pricing before paste. If can't crop cleanly → describe in text only.
 3. Sensitive fields (customer name, PO, total amount) flagged with placeholder in feedback-template.md
-4. Slack channel: pin "PROD UAT — no screenshots of customer data" reminder at top of channel
+4. Slack channel `#ops-control-uat`: pin "PROD UAT — no screenshots of customer data" reminder at top of channel
 5. Post-UAT: review all PR comments + Slack messages from UAT window, redact any leaked data
 
 ### Pre-existing context
@@ -146,7 +146,7 @@ So R3 doesn't break the UAT — but discovering a key-mismatch mid-UAT undermine
 
 1. Frame the customer ask as feedback request, not deliverable: "We're piloting a new quote format — your reaction will shape v2"
 2. Capture customer feedback in feedback-template.md Layer 2 with structured prompts (not just "any feedback?")
-3. If customer rejects: log under MVP-2.1-FIX or defer-MVP-3 per triage rule. Do NOT promise immediate fix.
+3. If customer rejects: log under MVP-2.1-FIX-<n> or defer-MVP-3 per triage rule. Do NOT promise immediate fix.
 4. Have a fallback ready: if customer demands the old format mid-UAT, send old-format quote separately. Don't pressure customer to accept new format.
 
 ### Pre-existing context
