@@ -7,7 +7,6 @@ Surfaces in scope: Quote History download icon → modal → POST /api/quotes/:i
 ## How to use this checklist
 
 Each scenario has 4 fields the operator fills in real time:
-
 - **Steps** — exact click path; assume cold browser session
 - **Expected** — what the UI / file should do
 - **Acceptance** — Pass / Fail binary; partial-pass = Fail with notes
@@ -15,17 +14,41 @@ Each scenario has 4 fields the operator fills in real time:
 
 If a scenario fails, fill the bug stub at the end of that scenario. Don't try to fix during UAT — collect, triage at the end.
 
-**Bug stub format** (copy under any failing scenario):
+### Execution order (NOT document order)
+
+- **SCN5 runs FIRST** as a pre-flight engineer task. If FAIL, halt and run the HMAC recovery playbook before operator starts SCN1.
+- **SCN1-4** runs in document order by operator.
+- **SCN6-8** runs after SCN1-4 PASS (edge cases + customer-share readiness).
+
+Document order kept as SCN1 → SCN8 for readability (operator scenarios grouped first); execution sequence is `SCN5 → SCN1 → SCN2 → SCN3 → SCN4 → SCN6 → SCN7 → SCN8`.
+
+### Screenshot anonymisation rule (per risk-register R4)
+
+Trước khi commit screenshot vào `screenshots/` folder:
+- **CROP** vùng có customer name, PO number, total amount, tier pricing
+- Nếu không crop được sạch → ghi mô tả text, KHÔNG attach screenshot
+- Cover sheet screenshots: ưu tiên crop ra vùng "CUSTOMER COPY" watermark + sheet structure, BỎ vùng KPI numbers
+- Watermark screenshots (SCN4): crop xung quanh AA1 cell, không cần show full sheet
+
+Operator self-check trước commit: "Nếu screenshot này leak ra ngoài, customer có nhận ra quote của họ không?" Nếu YES → re-crop hoặc thay bằng text description.
+
+### Bug stub format
+
+Copy under any failing scenario:
 
 ```
 ### Bug — SCN<n>: <short title>
 - Severity: P0 blocker / P1 fix-before-customer-send / P2 MVP-2.1 / P3 defer-MVP-3
 - Surface: <browser/OS/spreadsheet app + version>
-- Reproduce: <step-by-step from current quote state>
-- Expected vs actual: <one line each>
+- Quote reference: Quote A / B / C / D / E (per test-quotes.md mapping — DO NOT paste raw QT-ID)
+- Reproduce: <step-by-step from current quote state — anonymise customer name + PO + pricing>
+- Expected vs actual: <one line each — no real numbers, use "TIER-N value" or "~$X-range">
 - Workaround for the customer demo (if any):
-- Filed as: MES-3-FIX-<n> (raise after UAT)
+- Filed as: MVP-2.1-FIX-<n> (raise after UAT)
+- Screenshots: cropped to exclude customer name/PO/pricing per R4 mitigation
 ```
+
+**Triage mapping** (sau UAT, decision-maker triage theo): P0 → halt + review trước · P1 → fix-before-customer-send · P2 → fix-MVP-2.1 · P3 → defer-MVP-3 · No-repro hoặc out-of-scope → wontfix
 
 ---
 
@@ -35,7 +58,7 @@ Smoke baseline. If this fails, halt UAT and triage.
 
 ### Steps
 
-1. Login to prod as operator (`demo` is fine for read-level test, but use real account to test access gating end-to-end)
+1. Login to prod with **operator's real account** (NOT `demo` — UAT phải test access gating end-to-end, demo account bypass một số check)
 2. Navigate Cost → Quoting → Quote History
 3. Locate test quote #1 (per [test-quotes.md](test-quotes.md); should be a single-tier Std quote)
 4. Click the download icon (⬇) in the row's Actions cell
@@ -145,7 +168,7 @@ Per MVP-2 Item E: customer variant stamps `CUSTOMER COPY` at cell AA1 (col 27) o
 
 1. Export the same test quote as SCN1 but pick `Customer copy` variant
 2. Open in Excel (Mac) — locate AA1 on Cover sheet; verify visible
-3. Repeat on Materials, Inks, Processes, Summary — watermark present
+3. Lặp lại trên TẤT CẢ 10 visible sheets: Cover, RFQ/MOQ, Layout, Materials, Inks, Processes, Balancing, Pack&Ship, Cost Breakdown, Summary — watermark present ở AA1 mỗi sheet
 4. Confirm `_Audit` + `_Schema` (hidden sheets) do NOT have the watermark (operator: unhide via Format → Sheet → Unhide, check, then re-hide)
 5. Open same file in LibreOffice Calc — re-verify AA1 watermark across sheets
 6. AirDrop file to iPhone → open in Numbers iOS — re-verify
@@ -160,9 +183,10 @@ Per MVP-2 Item E: customer variant stamps `CUSTOMER COPY` at cell AA1 (col 27) o
 
 ### Acceptance
 
-- [ ] Excel — fidelity acceptable
-- [ ] LibreOffice — fidelity acceptable
+- [ ] Excel — fidelity acceptable (10/10 sheets có watermark AA1)
+- [ ] LibreOffice — fidelity acceptable (10/10 sheets có watermark AA1)
 - [ ] Numbers iOS — fidelity acceptable (Numbers may flatten styling — document any drift)
+- [ ] Hidden sheets (`_Audit` + `_Schema`) confirmed NO watermark
 - [ ] Fail (fill bug stub)
 
 ### Screenshot
@@ -174,37 +198,41 @@ Per MVP-2 Item E: customer variant stamps `CUSTOMER COPY` at cell AA1 (col 27) o
 
 ---
 
-## SCN5 — HMAC verify on prod env key (server-admin sub-task)
+## SCN5 — HMAC verify on prod env key (server-admin pre-flight)
 
-**Not operator-facing.** Verifies that a file signed by the prod server can be round-tripped through `verify.js` using the same prod `OPS_EXPORT_HMAC_KEY`. Run from a server shell with key access.
+**Not operator-facing. RUN AS PRE-FLIGHT BEFORE operator starts SCN1.** Verifies that a file signed by the prod server can be round-tripped through `verify.js` using the same prod `OPS_EXPORT_HMAC_KEY`. Run from a server shell with key access.
+
+If SCN5 FAILS, halt UAT and run the HMAC recovery playbook (CLAUDE.md section "OPS_EXPORT_HMAC_KEY lost or rotated mid-cycle") before operator starts any other scenario.
 
 ### Steps
 
 1. SSH to prod server
-2. Download a recent SCN1 export to the server (or `cp` from operator's mac via scp)
+2. **Engineer**: trigger 1 throwaway export (any quote, internal variant, default settings) from operator account TRƯỚC khi operator bắt đầu SCN1. Save file về `/tmp/scn5-preflight.xlsx`. (Hoặc nếu SCN1 đã chạy rồi với engineer-on-call standing by, dùng SCN1 output — nhưng preferred order là throwaway export riêng.)
 3. Run:
    ```bash
    cd /opt/ops-control
    node -e "
      import('./server/services/quoteExport/verify.js').then(async (mod) => {
        const fs = await import('node:fs');
-       const buf = fs.readFileSync('/tmp/scn1.xlsx');
+       const buf = fs.readFileSync('/tmp/scn5-preflight.xlsx');
        const r = await mod.verifyExport(buf, process.env.OPS_EXPORT_HMAC_KEY);
        console.log('OK:', { audit: r.audit.quote_id, schemaSha: r.manifest.sha256.slice(0,8) });
      }).catch(e => { console.error('FAIL:', e.message); process.exit(1); });
    "
    ```
 4. Repeat with the key flipped to a random 64-hex string — should print `FAIL: HMAC verification failed`
+5. Capture HMAC fingerprint per risk-register R3 mit#2: `node -e "console.log(require('crypto').createHash('sha256').update(process.env.OPS_EXPORT_HMAC_KEY).digest('hex').slice(0,8))"` → log into post-UAT summary as `HMAC-FP: <8 hex chars>`
 
 ### Expected
 
 - Step 3 prints `OK: { audit: <id>, schemaSha: <8-char> }`
 - Step 4 prints `FAIL` (proves tamper detection works against wrong key)
+- Step 5 captures 8-char fingerprint successfully
 
 ### Acceptance
 
-- [ ] Pass
-- [ ] Fail (fill bug stub — likely a deploy-time `.env` merge issue per Sprint 11 P2-1)
+- [ ] Pass — proceed to operator-led SCN1
+- [ ] Fail (fill bug stub — likely a deploy-time `.env` merge issue per Sprint 11 P2-1) — HALT UAT, run recovery playbook
 
 ### Screenshot
 
@@ -233,7 +261,9 @@ Pick the largest Cpx quote available (most sub-products × most ink/process rows
 
 ### Acceptance
 
-- [ ] Pass
+- [ ] Export time ≤ 10s (note actual: ___ s)
+- [ ] File size ≤ 5 MB (note actual: ___ MB)
+- [ ] All sheets render no #REF, no truncation
 - [ ] Fail (fill bug stub; capture file size + tier count)
 
 ### Screenshot
