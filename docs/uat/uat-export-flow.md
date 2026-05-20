@@ -40,7 +40,7 @@ Copy under any failing scenario:
 ### Bug — SCN<n>: <short title>
 - Severity: P0 blocker / P1 fix-before-customer-send / P2 MVP-2.1 / P3 defer-MVP-3
 - Surface: <browser/OS/spreadsheet app + version>
-- Quote reference: Quote A / B / C / D / E (per test-quotes.md mapping — DO NOT paste raw QT-ID)
+- Quote reference: #1 / #2 / #3 / #4 / #5 (per test-quotes.md slot numbering — DO NOT paste raw QT-ID)
 - Reproduce: <step-by-step from current quote state — anonymise customer name + PO + pricing>
 - Expected vs actual: <one line each — no real numbers, use "TIER-N value" or "~$X-range">
 - Workaround for the customer demo (if any):
@@ -73,7 +73,7 @@ Smoke baseline. If this fails, halt UAT and triage.
 - File size 80-300 KB (single-tier Std)
 - Open in Excel (Mac) — 10 sheets visible: Cover, RFQ/MOQ, Layout, Materials, Inks, Processes, Balancing, Pack&Ship, Cost Breakdown, Summary
 - `_Audit` + `_Schema` sheets NOT visible in the tab strip
-- KPI numbers on Cover + Summary match what Quote History row shows (sp, gm%, va%)
+- KPI numbers on Cover + Summary match what Quote History row shows (SP, GM%, VA%, Contr%)
 
 ### Acceptance
 
