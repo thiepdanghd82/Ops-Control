@@ -27,12 +27,12 @@ state. UAT execution thì chạy trên prod — xem
 
 | Quyết định | Người quyết | Trigger escalation |
 |---|---|---|
-| Halt vs continue UAT khi bug | <fill in> | P0 bug (data loss/security), hoặc 2+ P1 bug cùng phiên |
-| Gửi file cho customer hay hold | <fill in> | Bất kỳ bug nào liên quan SCN6-8 (file integrity) |
-| Bug severity classification | <fill in> | Borderline P1/P2 |
-| Final triage (fix-before-send / fix-MVP-2.1 / defer / wontfix) | <fill in> | Tất cả bugs sau UAT |
+| Halt vs continue UAT khi bug | Đặng Thế Thiệp | P0 bug (data loss/security), hoặc 2+ P1 bug cùng phiên |
+| Gửi file cho customer hay hold | Đặng Thế Thiệp | Bất kỳ bug nào liên quan SCN6-8 (file integrity) |
+| Bug severity classification | Đặng Thế Thiệp | Borderline P1/P2 |
+| Final triage (fix-before-send / fix-MVP-2.1 / defer / wontfix) | Đặng Thế Thiệp | Tất cả bugs sau UAT |
 
-Backup nếu decision-maker unavailable: <fill in>
+Backup nếu decision-maker unavailable: N/A — solo project. Defer non-urgent decisions 24h until available. P0 leak = halt UAT, không proceed mà không có decision.
 
 ## Pre-flight before UAT day
 
