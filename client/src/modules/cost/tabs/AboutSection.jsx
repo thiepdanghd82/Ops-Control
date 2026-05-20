@@ -3,7 +3,7 @@
  *
  * Hiển thị thông tin runtime + diagnostics buttons cho IT troubleshooting:
  *
- *   Version & build:     Ops Control 1.2.0, build timestamp, Electron/Node/Chrome
+ *   Version & build:     Ops Control 1.5.9, build timestamp, Electron/Node/Chrome
  *   System:              Platform (macOS/Win/Linux), Mode hiện tại, embedded port
  *   License:             Customer, expires_at, installation_id (16 chars), features
  *   Live diagnostics:    4 test buttons (printer list, cache R/W, license check, HW fp)
@@ -16,8 +16,8 @@ import React, { useEffect, useState } from 'react';
 import desktop from '../../../services/desktopBridge';
 import './AboutSection.css';
 
-const APP_VERSION = '1.2.0';
-const BUILD_TIMESTAMP = '2026-04-27 13:15 GMT+7';
+const APP_VERSION = '1.5.9';
+const BUILD_TIMESTAMP = '2026-05-20 15:31 GMT+7';
 
 export default function AboutSection() {
   const [config, setConfig] = useState(null);
@@ -27,11 +27,17 @@ export default function AboutSection() {
 
   useEffect(() => {
     if (!desktop.isAvailable) return;
-    desktop.app.getConfig().then(setConfig).catch(() => {});
+    desktop.app
+      .getConfig()
+      .then(setConfig)
+      .catch(() => {});
     setRuntime(typeof window !== 'undefined' && window.opsRuntime ? window.opsRuntime : null);
     // Best-effort fetch license info (only available in installed mode)
     if (window.ops?.license?.status) {
-      window.ops.license.status().then(setLicense).catch(() => {});
+      window.ops.license
+        .status()
+        .then(setLicense)
+        .catch(() => {});
     }
   }, []);
 
@@ -58,7 +64,7 @@ export default function AboutSection() {
       key: 'printer',
       label: 'Liệt kê máy in',
       run: () => desktop.printer.list(),
-      summary: (r) => r.result?.length != null ? `${r.result.length} máy in` : '?',
+      summary: (r) => (r.result?.length != null ? `${r.result.length} máy in` : '?'),
     },
     {
       key: 'cache',
@@ -75,13 +81,14 @@ export default function AboutSection() {
       key: 'license',
       label: 'License status',
       run: () => window.ops.license.status(),
-      summary: (r) => r.result?.valid ? `valid · ${r.result.customer}` : `invalid: ${r.result?.reason || '?'}`,
+      summary: (r) =>
+        r.result?.valid ? `valid · ${r.result.customer}` : `invalid: ${r.result?.reason || '?'}`,
     },
     {
       key: 'hw',
       label: 'HW fingerprint',
       run: () => window.ops.license.fingerprint(),
-      summary: (r) => r.result ? `${r.result.slice(0, 16)}…` : '?',
+      summary: (r) => (r.result ? `${r.result.slice(0, 16)}…` : '?'),
     },
     {
       key: 'health',
@@ -91,7 +98,7 @@ export default function AboutSection() {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return await r.json();
       },
-      summary: (r) => r.result?.ok ? `OK · v${r.result.version}` : '?',
+      summary: (r) => (r.result?.ok ? `OK · v${r.result.version}` : '?'),
     },
     {
       key: 'backend',
@@ -104,9 +111,10 @@ export default function AboutSection() {
       summary: (r) => {
         const b = r.result;
         if (!b) return '?';
-        const total = b.sqlite_count != null
-          ? `sqlite=${b.sqlite_count}, file=${b.file_count}`
-          : `file=${b.file_count ?? '?'}`;
+        const total =
+          b.sqlite_count != null
+            ? `sqlite=${b.sqlite_count}, file=${b.file_count}`
+            : `file=${b.file_count ?? '?'}`;
         return `${b.backend || '?'} · ${total}`;
       },
     },
@@ -118,7 +126,7 @@ export default function AboutSection() {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return await r.json();
       },
-      summary: (r) => r.result?.ok ? `${r.result.subscribers} subscriber(s)` : '?',
+      summary: (r) => (r.result?.ok ? `${r.result.subscribers} subscriber(s)` : '?'),
     },
     {
       key: 'users',
@@ -130,7 +138,7 @@ export default function AboutSection() {
       },
       summary: (r) => {
         const u = r.result?.users || [];
-        const online = u.filter(x => x.online).length;
+        const online = u.filter((x) => x.online).length;
         return `${online} / ${u.length} online`;
       },
     },
@@ -146,20 +154,23 @@ export default function AboutSection() {
       embeddedPort: config?.embeddedPort,
     },
     runtime: runtime || { isElectron: false, platform: 'web' },
-    license: license ? {
-      hasLicense: license.hasLicense,
-      valid: license.valid,
-      customer: license.customer,
-      expires_at: license.expires_at,
-      installation_id: license.installationId?.slice(0, 16) + '…',
-    } : null,
+    license: license
+      ? {
+          hasLicense: license.hasLicense,
+          valid: license.valid,
+          customer: license.customer,
+          expires_at: license.expires_at,
+          installation_id: license.installationId?.slice(0, 16) + '…',
+        }
+      : null,
     diagnostics,
     capturedAt: new Date().toISOString(),
   };
 
   const copyReport = () => {
     const text = JSON.stringify(snapshot, null, 2);
-    navigator.clipboard?.writeText(text)
+    navigator.clipboard
+      ?.writeText(text)
       .then(() => alert('Đã copy diagnostic report vào clipboard'))
       .catch(() => alert('Copy thất bại — copy thủ công từ console'));
     console.log('=== Ops Control diagnostic snapshot ===\n' + text);
@@ -202,15 +213,21 @@ export default function AboutSection() {
           <h3 className="about-card-title">License</h3>
           <div className="about-grid">
             <Row label="Status">
-              {license.valid
-                ? <span className="about-tag-ok">valid</span>
-                : <span className="about-tag-err">{license.reason || 'invalid'}</span>}
+              {license.valid ? (
+                <span className="about-tag-ok">valid</span>
+              ) : (
+                <span className="about-tag-err">{license.reason || 'invalid'}</span>
+              )}
             </Row>
             <Row label="Customer">{license.customer || '—'}</Row>
-            <Row label="Expires">{license.expires_at ? new Date(license.expires_at).toLocaleDateString('vi-VN') : '—'}</Row>
+            <Row label="Expires">
+              {license.expires_at ? new Date(license.expires_at).toLocaleDateString('vi-VN') : '—'}
+            </Row>
             <Row label="Features">
               {(license.features || []).map((f) => (
-                <span key={f} className="about-tag-feature">{f}</span>
+                <span key={f} className="about-tag-feature">
+                  {f}
+                </span>
               ))}
             </Row>
             <Row label="Installation ID">
@@ -241,10 +258,17 @@ export default function AboutSection() {
                   </button>
                   <div className="about-diag-label">{t.label}</div>
                   <div className="about-diag-result">
-                    {!r ? <span className="about-diag-pending">— chưa chạy —</span>
-                      : r.running ? 'running…'
-                      : r.ok ? <span className="about-diag-ok">✓ {t.summary(r)} <small>({r.ms}ms)</small></span>
-                      : <span className="about-diag-err">✗ {r.error}</span>}
+                    {!r ? (
+                      <span className="about-diag-pending">— chưa chạy —</span>
+                    ) : r.running ? (
+                      'running…'
+                    ) : r.ok ? (
+                      <span className="about-diag-ok">
+                        ✓ {t.summary(r)} <small>({r.ms}ms)</small>
+                      </span>
+                    ) : (
+                      <span className="about-diag-err">✗ {r.error}</span>
+                    )}
                   </div>
                 </div>
               );
@@ -257,9 +281,8 @@ export default function AboutSection() {
       <div className="about-card">
         <h3 className="about-card-title">Bug report</h3>
         <p className="about-card-desc">
-          Copy diagnostic snapshot dạng JSON để gửi cho vendor khi báo lỗi.
-          Sẽ chứa version, runtime, license info, và kết quả diagnostics đã chạy
-          (KHÔNG chứa password / TOTP secret).
+          Copy diagnostic snapshot dạng JSON để gửi cho vendor khi báo lỗi. Sẽ chứa version,
+          runtime, license info, và kết quả diagnostics đã chạy (KHÔNG chứa password / TOTP secret).
         </p>
         <button className="op-btn op-btn-primary" onClick={copyReport}>
           ⎘ Copy diagnostic report

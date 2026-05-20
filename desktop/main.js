@@ -694,7 +694,7 @@ ${ipLines
 
 Lưu ý:
   • Chọn IP của Ethernet (ưu tiên) — bền hơn WiFi
-  • Cài máy nhân viên: dùng "Ops Control CLIENT Setup 1.2.0.exe" → app sẽ tự hỏi URL này
+  • Cài máy nhân viên: dùng "Ops Control CLIENT Setup 1.5.9.exe" → app sẽ tự hỏi URL này
   • Để cố định IP máy chủ, vào Network Settings → Static IP (hướng dẫn ở Go-Live Guide §2.4)
   • Để app server tự chạy 24/7 không cần login, cài NSSM service (Go-Live Guide §2.3)`;
 
