@@ -10,12 +10,12 @@ Severity scoring:
 - **Impact**: Low (cosmetic) / Medium (operator workaround needed) / High (blocks customer-share until fix)
 - **Risk Owner**: person who decides whether mitigation is sufficient + escalation point if risk materialises during UAT. See Decision Authority in [README.md](README.md).
 
-Owner assignments:
-- R1 (Sheet-protection UX): <fill in>
-- R2 (Watermark fidelity): <fill in>
-- R3 (HMAC key drift): <fill in>
-- R4 (PROD data leak): <fill in>
-- R5 (Customer rejection): <fill in>
+Owner assignments (solo project — single owner across all risks):
+- R1 (Sheet-protection UX): Đặng Thế Thiệp
+- R2 (Watermark fidelity): Đặng Thế Thiệp
+- R3 (HMAC key drift): Đặng Thế Thiệp
+- R4 (PROD data leak): Đặng Thế Thiệp
+- R5 (Customer rejection): Đặng Thế Thiệp
 
 ---
 
