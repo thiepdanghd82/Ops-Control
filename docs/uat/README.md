@@ -40,7 +40,6 @@ Backup nếu decision-maker unavailable: <fill in>
   - **Hoặc:** check footer của Quote History page có hiện build hash không
 - [ ] `OPS_EXPORT_HMAC_KEY` set on prod (preflight passes — `npm run preflight`)
 - [ ] Operator account has `read` access to `quote-history` tab (sufficient for export — `edit` not needed)
-- [ ] 5 test quotes picked + IDs noted in [test-quotes.md](test-quotes.md)
 - [ ] Mac + Windows test machines lined up; one with LibreOffice; one iPad/iPhone for Numbers test
 - [ ] Customer recipient agreed in advance (one customer, one Cpx-type quote, with NDA in place)
 - [ ] 5 test quotes picked + IDs noted in `test-quotes.md`
