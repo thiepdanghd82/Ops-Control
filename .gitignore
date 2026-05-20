@@ -57,3 +57,8 @@ dist-release/
 desktop/dist-electron/
 desktop/package.json.backup-*
 Data for import/
+
+# UAT raw feedback — contains customer PII, never commit
+   docs/uat/runs/*/feedback.md
+   docs/uat/runs/*/screenshots/
+
