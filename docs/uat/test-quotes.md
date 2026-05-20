@@ -8,7 +8,16 @@ multi-tier zip path, and large-file edge case.
 The actual quote IDs are filled in by the operator BEFORE the UAT
 session (this file is the picker spec, not the picker output).
 
+**Slot usage in scenarios:**
+- **Slot 1** (single-tier Std): SCN1, SCN2, SCN3, SCN4, SCN5 (throwaway), SCN7
+- **Slot 2** (multi-tier Std with mixed materials): **optional / engineer's choice** — use for SCN8 alt-materials coverage if `OPS_FEATURE_ALT_MATERIALS=1`
+- **Slot 3** (Cpx multi-subproduct, single-tier): **optional / engineer's choice** — for ad-hoc Cpx inspection beyond Slot 4
+- **Slot 4** (multi-tier Cpx, matrix-heaviest): SCN8
+- **Slot 5** (large worst-case): SCN6
+
 ## Safe-query guide
+
+**Owner: Engineer** (NOT operator). Operator picks the 5 quotes by browsing Quote History UI; engineer runs the queries below to verify selections + extract metadata for the slot tables. Engineer hands the filled tables back to operator before UAT day.
 
 Prod data backend is the SQLite file at `server/data/Library/QuoteHistory/quote_history.json` (NOT a relational DB; flat JSON). Two safe ways to inspect without writing:
 
@@ -44,15 +53,16 @@ The test quotes may be sent to customers (Scenario "feedback collection"). If a 
 1. Pick a different quote, OR
 2. Use a synthetic copy: open the quote in the calculator, click "Copy", rename the customer fields to "UAT Customer" + a fake RFQ like "UAT-2026-001", save as a NEW quote (gets a fresh ID), and use the new ID for UAT
 
-PII to scrub if synthesizing:
+**Caveat:** Synthetic quotes (`UAT-2026-XXX` prefix) sẽ tạm tồn tại trong PROD database trong suốt UAT window + 30 ngày retention. Nếu có dashboard / report aggregate nào chạy trên all-quotes, có thể bị pollute. Note với BI/reporting team trước UAT day để filter exclude `UAT-2026-` prefix nếu cần.
 
+PII to scrub if synthesizing:
 - `state.end_cu` / `state.direct_cu` — customer names
 - `state.project_name` / `state.project` — project labels
 - `state.rfq_number` — RFQ codes
 - `state.npi_owner` / `_owner` fields — internal staff names
+- **Any free-text fields** (`notes`, `comments`, `description`) — may contain customer-specific context; scan + redact
 
 NOT in scope to scrub (don't break the math):
-
 - Material codes, ink names, process types — these are library entries, not PII
 - IFS codes — product code, not customer-identifying
 
@@ -74,9 +84,11 @@ The smoke baseline. Pick the most "boring" Std quote — typical Vietnamese labe
 | Has rows          | true ✓                                    |
 | Notes             | (e.g. "typical Indigo single-tier label") |
 
-### Slot 2 — Multi-tier Standard with mixed-set materials (for SCN8)
+### Slot 2 — Multi-tier Standard with mixed-set materials (optional, for SCN8 alt-materials path)
 
 Three-MOQ-tier Std quote with extra_moqs populated. If the alt-materials feature flag is on in prod (`OPS_FEATURE_ALT_MATERIALS=1`), prefer a quote with BOTH main + alt material sets populated and `materials_active` set to one of them.
+
+**Skip this slot if alt-materials feature is OFF in prod, or if engineer chooses not to extend SCN8 coverage.**
 
 | Field                     | Value                           |
 | ------------------------- | ------------------------------- |
@@ -88,9 +100,11 @@ Three-MOQ-tier Std quote with extra_moqs populated. If the alt-materials feature
 | Has alt set populated     | yes / no                        |
 | Notes                     |                                 |
 
-### Slot 3 — Complex (multi-subproduct) quote (for inspection completeness)
+### Slot 3 — Complex (multi-subproduct) quote (optional, for ad-hoc Cpx inspection)
 
-A real Cpx quote with ≥ 2 sub-products. Verifies that the export pipeline's Cpx branches (per-SP Materials/Inks/Processes sections on sheets 03/04/05) render correctly.
+A real Cpx quote with ≥ 2 sub-products. Verifies that the export pipeline's Cpx branches (per-SP Materials/Inks/Processes sections on sheets 03/04/05) render correctly. Slot 4 already covers multi-tier Cpx for SCN8; Slot 3 is single-tier Cpx for spot-checking edge cases without the matrix complexity.
+
+**Skip this slot unless engineer wants ad-hoc Cpx single-tier inspection beyond Slot 4 coverage.**
 
 | Field                  | Value  |
 | ---------------------- | ------ |
@@ -138,7 +152,7 @@ Before sending ANY exported file to a customer, run this short check:
 1. Re-export the same quote → file size should be deterministic ± 1 KB (xlsx-zip compression non-determinism is normal at the byte level)
 2. Open the exported file → confirm Cover sheet "Generated on" timestamp matches export wallclock ± 10 s
 3. Confirm watermark presence matches the variant picked (Customer = yes, Internal = no)
-4. Cross-check Summary sheet KPIs against the Quote History row's GM% / VA% / Contr% — must match exactly
+4. Cross-check Summary sheet KPIs against the Quote History row's **SP / GM% / VA% / Contr%** — must match exactly
 5. Spot-check a Materials per-row Setup cost against the same row in PricingBreakdown — must match (this is the MVP-1.5 invariant)
 
 If any of (1)-(5) fails, halt the customer-share and file a P0 bug.
@@ -148,5 +162,5 @@ If any of (1)-(5) fails, halt the customer-share and file a P0 bug.
 If synthetic quotes were created (per anonymisation), the operator should:
 
 - Move them to Trash (Quote History → Move to Trash) once UAT is closed
-- Note their IDs in the UAT report so a future audit can confirm they were not real customer data
+- Note their IDs in the post-UAT summary under sprint history `S-EXPORT-UAT` in CLAUDE.md, format: `SYNTHETIC-QUOTES: <id1>, <id2>, ...`
 - Do NOT purge — keep them recoverable for ≥ 30 days as the UAT forensic trail
