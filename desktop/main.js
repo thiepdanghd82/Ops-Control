@@ -234,8 +234,41 @@ async function findFreePort(startPort = 3100, endPort = 3199) {
   throw new Error(`No free port in range ${startPort}-${endPort}`);
 }
 
+// ─── Operator runtime config (<userData>/.env) ─────────────────────
+// Ops can drop a `.env` file in app.getPath('userData') to inject env
+// vars (OPS_EXPORT_HMAC_KEY, etc.) without rebuilding the DMG. OS env
+// always wins — this only fills in keys that aren't already present.
+// Values are never logged; we only report how many keys merged.
+function loadUserEnv() {
+  try {
+    const envFile = path.join(app.getPath('userData'), '.env');
+    if (!fs.existsSync(envFile)) return;
+    const raw = fs.readFileSync(envFile, 'utf-8');
+    let added = 0;
+    for (const line of raw.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eq = trimmed.indexOf('=');
+      if (eq <= 0) continue;
+      const k = trimmed.slice(0, eq).trim();
+      let v = trimmed.slice(eq + 1).trim();
+      if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+        v = v.slice(1, -1);
+      }
+      if (k && !(k in process.env)) {
+        process.env[k] = v;
+        added++;
+      }
+    }
+    if (added > 0) log.info(`[main] userData/.env merged ${added} key(s)`);
+  } catch (err) {
+    log.warn('[main] userData/.env load failed:', err.message);
+  }
+}
+
 // ─── Khởi động Express server in-process (mode embedded) ──────────
 async function startEmbeddedServer() {
+  loadUserEnv();
   embeddedPort = await findFreePort();
   log.info('[main] Starting embedded server on port', embeddedPort);
 
@@ -852,6 +885,35 @@ app.whenReady().then(async () => {
   buildAppMenu();
   registerNativeBridges(ipcMain, log);
   license.register(ipcMain);
+
+  // Electron 41 + blob: URLs triggered via `a.download = filename` don't
+  // always finalize the rename from Chromium's temp file
+  // ("<appBundleId>.<random>", leading-dot hidden) to the suggested
+  // filename. Force-apply the suggested filename + drop into ~/Downloads
+  // so quote-export xlsx/zip files land where operators expect.
+  const { session } = require('electron');
+  session.defaultSession.on('will-download', (_event, item) => {
+    try {
+      const suggested = item.getFilename();
+      if (!suggested) return;
+      const downloadsDir = app.getPath('downloads');
+      let target = path.join(downloadsDir, suggested);
+      // Avoid overwriting an existing file — suffix with timestamp.
+      if (fs.existsSync(target)) {
+        const ext = path.extname(suggested);
+        const stem = suggested.slice(0, suggested.length - ext.length);
+        const ts = new Date()
+          .toISOString()
+          .replace(/[-:T.]/g, '')
+          .slice(0, 14);
+        target = path.join(downloadsDir, `${stem}_${ts}${ext}`);
+      }
+      item.setSavePath(target);
+      log.info('[main] will-download →', path.basename(target));
+    } catch (err) {
+      log.warn('[main] will-download handler failed:', err.message);
+    }
+  });
 
   // License boot probe — chỉ enforce khi packaged (dev mode bỏ qua
   // để dev không bị chặn). Trong PoC chạy local cho phép trial.

@@ -286,16 +286,22 @@ async function buildOneXlsx(ctx) {
     exportedBy,
   });
 
-  // 1. Visible sheets (existing MVP-1 + MVP-1.5 pipeline)
+  // 1. Visible sheets (existing MVP-1 + MVP-1.5 pipeline).
+  //    Sheets that render per-tier data (Materials / Inks / Processes /
+  //    Cost Breakdown) MUST receive `tierIdx` so the multi-tier zip
+  //    contains genuinely different numbers per file. Without it the
+  //    sheets fall through to `result.rows.*` which is the active-tier
+  //    mirror — every xlsx in the zip ends up identical (P0 data bug
+  //    surfaced 2026-05-20).
   buildCoverSheet(wb, { quote, tierIdx, tierKpis, variant, lang, exportedBy, engineSha });
   buildRfqMoqSheet(wb, { quote, lang });
   buildLayoutSheet(wb, { quote, lang });
-  buildMaterialsSheet(wb, { quote, variant, lang });
-  buildInksSheet(wb, { quote, variant, lang });
-  buildProcessesSheet(wb, { quote, variant, lang, rateLookup });
+  buildMaterialsSheet(wb, { quote, tierIdx, variant, lang });
+  buildInksSheet(wb, { quote, tierIdx, variant, lang });
+  buildProcessesSheet(wb, { quote, tierIdx, variant, lang, rateLookup });
   buildBalancingSheet(wb, { quote, tierIdx, lang });
   buildPackShipSheet(wb, { quote, lang });
-  buildCostBreakdownSheet(wb, { quote, variant, lang });
+  buildCostBreakdownSheet(wb, { quote, tierIdx, variant, lang });
   buildSummarySheet(wb, { quote, tierIdx, tierKpis, variant, lang });
 
   // 2. MVP-2 Item E — customer watermark BEFORE _Audit/_Schema so the

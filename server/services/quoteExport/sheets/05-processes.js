@@ -6,7 +6,14 @@
 
 import { createSheet, freezeTop, hideColumns } from '../workbook.js';
 import { applyStyle } from '../styles.js';
-import { L } from '../i18n.js';
+import { L, biLabel } from '../i18n.js';
+import {
+  pickStdTierRows,
+  pickCpxTierRows,
+  sumRowCosts,
+  getActiveIdx,
+  getTierMoq,
+} from '../tierRows.js';
 
 const PROC_COLS = [
   { key: 'process_type', label: 'proc.process_type', width: 14 },
@@ -32,10 +39,13 @@ const PROC_COLS = [
 
 /**
  * @param {import('exceljs').Workbook} wb
- * @param {{ quote: any, variant: 'customer'|'internal', lang: 'en'|'vi'|'bilingual', rateLookup?: (wc:string) => any }} ctx
+ * @param {{ quote: any, tierIdx?: number, variant: 'customer'|'internal', lang: 'en'|'vi'|'bilingual', rateLookup?: (wc:string) => any }} ctx
  */
 export function buildProcessesSheet(wb, ctx) {
   const { quote, variant, lang, rateLookup } = ctx;
+  const tierIdx = Number.isInteger(ctx.tierIdx) ? ctx.tierIdx : getActiveIdx(quote);
+  const activeIdx = getActiveIdx(quote);
+  const isActive = tierIdx === activeIdx;
   const sheet = createSheet(wb, {
     name: '05 Processes',
     bannerText: L('proc.section', lang),
@@ -50,19 +60,20 @@ export function buildProcessesSheet(wb, ctx) {
   const result = quote.result || {};
   const isCpx = quote.type === 'complex';
 
-  // Cpx: one block per SP; Std: single processes array.
+  // Cpx: one block per SP; Std: single processes array. Row breakdown
+  // resolved per requested tier (active or otherwise).
   const procGroups =
     isCpx && Array.isArray(state.subproducts) && state.subproducts.length > 0
       ? state.subproducts.map((sp, spi) => ({
           label: `${L('proc.section', lang)} — ${sp.code || `SP${spi + 1}`}`,
           procs: Array.isArray(sp.processes) ? sp.processes : [],
-          rowBreakdown: result.subproducts?.[spi]?.rows?.processes ?? null,
+          rowBreakdown: pickCpxTierRows(result, spi, tierIdx, 'processes'),
         }))
       : [
           {
             label: null,
             procs: Array.isArray(state.processes) ? state.processes : [],
-            rowBreakdown: result.rows?.processes ?? null,
+            rowBreakdown: pickStdTierRows(result, tierIdx, 'processes'),
           },
         ];
 
@@ -106,18 +117,46 @@ export function buildProcessesSheet(wb, ctx) {
     }
   }
 
-  // Aggregate subtotal — tier-level total from snapshot aggregates.
-  // Setup = setup_mach + setup_labor; Run = (overhead + labor + tooling)
-  // minus the setup portion that's folded into bd_labor/bd_overhead per
-  // calcEngine.js:856 comment. Total = setup + run.
-  const setupMach = Number(result.bd_setup_mach) || 0;
-  const setupLabor = Number(result.bd_setup_labor) || 0;
-  const overhead = Number(result.bd_overhead) || 0;
-  const labor = Number(result.bd_labor) || 0;
-  const tooling = Number(result.tooling) || 0;
-  const procSetup = setupMach + setupLabor;
-  const procTotal = overhead + labor + tooling;
-  const procRun = procTotal - procSetup;
+  // Subtotal. Two distinct paths:
+  //   - Active tier: keep the snapshot-driven derivation that combines
+  //     setup_mach + setup_labor + overhead + labor + tooling. These
+  //     buckets are the calcEngine result for the active tier; they
+  //     account for the full per-process cost including labor + OH
+  //     that aren't visible in the per-row Setup/Run cells.
+  //   - Non-active tier: labor / overhead / tooling are NOT recomputed
+  //     server-side (calcEngine is locked client-only). Derive the
+  //     subtotal from the per-tier row sums instead so the cell totals
+  //     match what's rendered. The footnote below explains the gap.
+  let procSetup;
+  let procRun;
+  let procTotal;
+  if (isActive) {
+    const setupMach = Number(result.bd_setup_mach) || 0;
+    const setupLabor = Number(result.bd_setup_labor) || 0;
+    const overhead = Number(result.bd_overhead) || 0;
+    const labor = Number(result.bd_labor) || 0;
+    const tooling = Number(result.tooling) || 0;
+    procSetup = setupMach + setupLabor;
+    procTotal = overhead + labor + tooling;
+    procRun = procTotal - procSetup;
+  } else {
+    const combined = procGroups
+      .map((g) => g.rowBreakdown)
+      .filter((arr) => Array.isArray(arr))
+      .reduce(
+        (acc, arr) => {
+          const t = sumRowCosts(arr);
+          acc.setup += t.setup;
+          acc.run += t.run;
+          acc.any = acc.any || t.hasAny;
+          return acc;
+        },
+        { setup: 0, run: 0, any: false }
+      );
+    procSetup = combined.any ? combined.setup : 0;
+    procRun = combined.any ? combined.run : 0;
+    procTotal = procSetup + procRun;
+  }
   if (procSetup > 0 || procTotal > 0) {
     r += 1;
     writeSubtotalRow(sheet, r, PROC_COLS, L('common.subtotal', lang), {
@@ -133,6 +172,21 @@ export function buildProcessesSheet(wb, ctx) {
   const note = sheet.getCell(`A${r}`);
   note.value = L('common.computed_at_calc', lang);
   applyStyle(note, 'footnote');
+
+  // Non-active tier disclosure — labor + overhead + tooling reflect the
+  // active tier's calc result, not this tier's. Material/ink/process
+  // setup-run row data IS tier-specific (rendered above). The footnote
+  // calls this out so operators don't conflate the row sums with the
+  // active-tier aggregates surfaced on the Cost Breakdown sheet.
+  if (!isActive) {
+    r += 1;
+    sheet.mergeCells(`A${r}:S${r}`);
+    const fn = sheet.getCell(`A${r}`);
+    fn.value = renderActiveTierFootnote(quote, activeIdx, tierIdx, lang);
+    fn.alignment = { wrapText: true, vertical: 'top' };
+    applyStyle(fn, 'footnote');
+    sheet.getRow(r).height = lang === 'bilingual' ? 60 : 36;
+  }
 
   if (variant === 'customer') {
     const letters = PROC_COLS.map((c, i) => (c.customerHidden ? letterFor(i + 1) : null)).filter(
@@ -222,4 +276,39 @@ function letterFor(idx) {
     n = Math.floor((n - 1) / 26);
   }
   return s;
+}
+
+/**
+ * Render the [active-tier] footnote with substituted MOQ values. Shared
+ * with sheet 08-cost-breakdown via the same i18n key.
+ *
+ * @param {object} quote
+ * @param {number} activeIdx
+ * @param {number} tierIdx
+ * @param {'en'|'vi'|'bilingual'} lang
+ * @returns {string}
+ */
+export function renderActiveTierFootnote(quote, activeIdx, tierIdx, lang) {
+  const activeMoq = getTierMoq(quote, activeIdx);
+  const thisMoq = getTierMoq(quote, tierIdx);
+  const en = LABEL_ACTIVE_FOOTNOTE.en
+    .replace('{active_moq}', formatMoq(activeMoq))
+    .replace('{this_tier_moq}', formatMoq(thisMoq));
+  const vi = LABEL_ACTIVE_FOOTNOTE.vi
+    .replace('{active_moq}', formatMoq(activeMoq))
+    .replace('{this_tier_moq}', formatMoq(thisMoq));
+  return biLabel(en, vi, lang);
+}
+
+// Inlined copy of the i18n LABELS entry so the renderer is self-contained
+// (the i18n.js L() helper doesn't support placeholder substitution).
+const LABEL_ACTIVE_FOOTNOTE = {
+  en: '[active-tier] — Labor, overhead, and tooling costs reflect the active tier (MOQ {active_moq}). Material, ink, and process costs are tier-specific (MOQ {this_tier_moq}).',
+  vi: '[tier-hoạt-động] — Chi phí nhân công, overhead, và tooling phản ánh tier đang active (MOQ {active_moq}). Chi phí vật tư, mực, công đoạn được tính theo tier này (MOQ {this_tier_moq}).',
+};
+
+function formatMoq(n) {
+  if (n == null) return '—';
+  if (n >= 1000) return n.toLocaleString('en-US');
+  return String(n);
 }

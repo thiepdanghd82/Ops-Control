@@ -14,6 +14,7 @@
 import { createSheet, freezeTop, hideColumns } from '../workbook.js';
 import { applyStyle } from '../styles.js';
 import { L } from '../i18n.js';
+import { pickStdTierRows, pickCpxTierRows, sumRowCosts, getActiveIdx } from '../tierRows.js';
 
 /** @typedef {{en:string,vi:string}} ColMeta */
 
@@ -40,10 +41,13 @@ const MAT_COLS = [
 
 /**
  * @param {import('exceljs').Workbook} wb
- * @param {{ quote: any, variant: 'customer'|'internal', lang: 'en'|'vi'|'bilingual' }} ctx
+ * @param {{ quote: any, tierIdx?: number, variant: 'customer'|'internal', lang: 'en'|'vi'|'bilingual' }} ctx
  */
 export function buildMaterialsSheet(wb, ctx) {
   const { quote, variant, lang } = ctx;
+  const tierIdx = Number.isInteger(ctx.tierIdx) ? ctx.tierIdx : getActiveIdx(quote);
+  const activeIdx = getActiveIdx(quote);
+  const isActive = tierIdx === activeIdx;
   const sheet = createSheet(wb, {
     name: '03 Materials',
     bannerText: L('mat.section_main', lang),
@@ -61,10 +65,17 @@ export function buildMaterialsSheet(wb, ctx) {
 
   let r = 3;
 
+  // Track per-tier row arrays so we can derive a subtotal that matches
+  // the cells actually rendered (the result.bd_mat_* aggregates are
+  // active-tier only and would mis-state non-active tiers).
+  const renderedMainArrays = [];
+  const renderedAltArrays = [];
+
   if (isCpx && Array.isArray(state.subproducts) && state.subproducts.length > 0) {
     // Complex: one section pair (main + alt) per subproduct.
     state.subproducts.forEach((sp, spi) => {
-      const spRows = result.subproducts?.[spi]?.rows ?? null;
+      const mainRows = pickCpxTierRows(result, spi, tierIdx, 'materials_main');
+      const altRows = pickCpxTierRows(result, spi, tierIdx, 'materials_alt');
       const spLabel = `${L('mat.section_main', lang)} — ${sp.code || `SP${spi + 1}`}`;
       r = writeMaterialSection(
         sheet,
@@ -72,8 +83,9 @@ export function buildMaterialsSheet(wb, ctx) {
         spLabel,
         sp.materials_main || sp.materials || [],
         lang,
-        spRows?.materials_main
+        mainRows
       );
+      renderedMainArrays.push(mainRows);
       if (Array.isArray(sp.materials_alt) && sp.materials_alt.length > 0) {
         r += 1;
         r = writeMaterialSection(
@@ -82,8 +94,9 @@ export function buildMaterialsSheet(wb, ctx) {
           `${L('mat.section_alt', lang)} — ${sp.code || `SP${spi + 1}`}`,
           sp.materials_alt,
           lang,
-          spRows?.materials_alt
+          altRows
         );
+        renderedAltArrays.push(altRows);
       }
       r += 1;
     });
@@ -91,39 +104,50 @@ export function buildMaterialsSheet(wb, ctx) {
     // Standard: top-level main + alt arrays.
     const main = Array.isArray(state.materials_main) ? state.materials_main : state.materials || [];
     const alt = Array.isArray(state.materials_alt) ? state.materials_alt : [];
-    r = writeMaterialSection(
-      sheet,
-      r,
-      L('mat.section_main', lang),
-      main,
-      lang,
-      result.rows?.materials_main
-    );
+    const mainRows = pickStdTierRows(result, tierIdx, 'materials_main');
+    r = writeMaterialSection(sheet, r, L('mat.section_main', lang), main, lang, mainRows);
+    renderedMainArrays.push(mainRows);
     if (alt.length > 0) {
+      const altRows = pickStdTierRows(result, tierIdx, 'materials_alt');
       r += 1;
-      r = writeMaterialSection(
-        sheet,
-        r,
-        L('mat.section_alt', lang),
-        alt,
-        lang,
-        result.rows?.materials_alt
-      );
+      r = writeMaterialSection(sheet, r, L('mat.section_alt', lang), alt, lang, altRows);
+      renderedAltArrays.push(altRows);
     }
   }
 
-  // Aggregate subtotal row from snapshot. Even after per-row hydration
-  // (MES-3-FIX-41) the bd_mat_* aggregate stays authoritative for the
-  // tier-level total (rounding-free).
-  const setupTotal = Number(result.bd_mat_setup);
-  const runTotal = Number(result.bd_mat_run);
-  if (Number.isFinite(setupTotal) || Number.isFinite(runTotal)) {
+  // Subtotal row. For the active tier we keep the legacy behaviour —
+  // `result.bd_mat_*` is the rounding-free tier-level aggregate. For
+  // non-active tiers those aggregates are stale, so we derive setup/run
+  // from the rendered row arrays (matches the cells above).
+  let setupTotal;
+  let runTotal;
+  if (isActive) {
+    const setup = Number(result.bd_mat_setup);
+    const run = Number(result.bd_mat_run);
+    setupTotal = Number.isFinite(setup) ? setup : null;
+    runTotal = Number.isFinite(run) ? run : null;
+  } else {
+    const combined = [...renderedMainArrays, ...renderedAltArrays]
+      .filter((arr) => Array.isArray(arr))
+      .reduce(
+        (acc, arr) => {
+          const t = sumRowCosts(arr);
+          acc.setup += t.setup;
+          acc.run += t.run;
+          acc.any = acc.any || t.hasAny;
+          return acc;
+        },
+        { setup: 0, run: 0, any: false }
+      );
+    setupTotal = combined.any ? combined.setup : null;
+    runTotal = combined.any ? combined.run : null;
+  }
+  if (setupTotal != null || runTotal != null) {
     r += 1;
     writeSubtotalRow(sheet, r, MAT_COLS, L('common.subtotal', lang), {
-      setup_cost: Number.isFinite(setupTotal) ? setupTotal : null,
-      run_cost: Number.isFinite(runTotal) ? runTotal : null,
-      total:
-        (Number.isFinite(setupTotal) ? setupTotal : 0) + (Number.isFinite(runTotal) ? runTotal : 0),
+      setup_cost: setupTotal,
+      run_cost: runTotal,
+      total: (setupTotal ?? 0) + (runTotal ?? 0),
     });
     r += 1;
   }
