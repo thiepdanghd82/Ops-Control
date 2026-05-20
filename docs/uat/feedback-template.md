@@ -25,22 +25,18 @@ One block per scenario. Skip scenarios that didn't run.
 - **Software versions**: `<Excel build / LibreOffice version / Numbers iOS version>`
 
 **Steps that worked smoothly**:
-
 - (1-3 bullets)
 
 **Steps that felt slow / awkward / confusing**:
-
 - (UX friction — not necessarily bugs)
 
 **Bugs surfaced**:
-
 - (if any — full stub already in uat-export-flow.md)
 
 **Operator notes (free-text)**:
-
 > (e.g. "Sheet protection dialog wording on Win Excel 365 says 'protected' clearly but Mac Excel says 'on a protected sheet' — slightly less obvious. Operator opinion: rewording isn't worth a fix.")
 
-**Screenshots captured**: list filenames under `docs/uat/runs/<date>/screenshots/`
+**Screenshots captured**: list filenames (saved under `docs/uat/runs/<date>/screenshots/<file>.png` — operator copies the per-scenario screenshots referenced in uat-export-flow.md into this per-run folder)
 
 ---
 
@@ -71,8 +67,8 @@ we're gathering signal.
 
 ### Customer response capture (operator fills during the phone call)
 
-- **Customer name** (internal-only, NOT shared back): `<fill in>`
-- **Quote ID sent**: `<fill in>` (slot 1 / slot 2 / slot 3 / etc.)
+- **Customer name** (internal-only, NOT shared back — store ONLY in gitignored feedback.md): `<fill in>`
+- **Quote ID sent**: `<fill in>` (slot #1 / #2 / #3 / #4 / #5 — per test-quotes.md)
 - **Variant sent**: Customer copy
 - **Date sent**: `<fill in>`
 - **Date called back**: `<fill in>`
@@ -85,7 +81,6 @@ we're gathering signal.
 - [ ] Could not open
 
 Notes:
-
 > `<fill in>`
 
 #### Q2 — Sufficient information
@@ -95,7 +90,6 @@ Notes:
 - [ ] No, would need additional info: `<fill in>`
 
 Free text (anything customer specifically mentioned wanting):
-
 > `<fill in>`
 
 #### Q3 — Anything looks odd?
@@ -105,7 +99,6 @@ Free text (anything customer specifically mentioned wanting):
 - [ ] Looks wrong (capture below)
 
 Free text:
-
 > `<fill in>`
 
 #### Bonus — customer-volunteered observations
@@ -126,18 +119,20 @@ wrap-up.
 - [ ] No — needs more work before any customer-facing use
 
 Reasoning:
-
 > `<fill in>`
 
 ### Q-B: What's the single biggest gap operators feel between this xlsx and their hand-built Excel quotes?
 
 > `<fill in>`
 
-### Q-C: Of the bugs surfaced during UAT, which 1-3 are blocking customer share?
+### Q-C: Of the bugs surfaced during UAT, which 1-3 are blocking customer share (P0-P1 severity)?
 
-1. `<fill in>`
-2. `<fill in>`
-3. `<fill in>`
+List only **P0** (data wrong/leaked) or **P1** (UX confusion that would cause customer to re-quote). 
+P2/P3 belong in Q-D backlog discussion, not here.
+
+1. `<fill in>` — severity, 1-line description
+2. `<fill in>` — severity, 1-line description
+3. `<fill in>` — severity, 1-line description
 
 ### Q-D: What features did the customer say they wanted that we don't have?
 
@@ -151,10 +146,13 @@ Reasoning:
 
 ## What to do with this feedback after UAT
 
-1. Layer 1 + Layer 2 raw entries → check into `docs/uat/runs/<date>/feedback.md` (private — may contain partner names; gitignore if needed)
-2. Layer 3 answers → summarize in 1-paragraph note appended to CLAUDE.md sprint history under "S-EXPORT-UAT"
-3. Each Layer 3 / Q-C bug → file as MES-3-FIX-`<n>` with severity
-4. Each Layer 3 / Q-D feature → add to MES-3 backlog with effort estimate
+1. Layer 1 + Layer 2 raw entries → save dưới `docs/uat/runs/<date>/feedback.md`.
+   **MANDATORY gitignore** — file contains customer PII (name, quote details, free-text responses).
+   Add `docs/uat/runs/*/feedback.md` to `.gitignore` BEFORE committing UAT outputs.
+   Only Layer 3 summary (anonymised) gets committed to git.
+2. Layer 3 answers → summarize in 1-paragraph note appended to CLAUDE.md sprint history under "S-EXPORT-UAT" (anonymised — no customer names, no raw quote IDs)
+3. Each Layer 3 / Q-C bug → file as MVP-2.1-FIX-`<n>` with severity per triage mapping (P0 halt · P1 fix-before-customer-send · P2 fix-MVP-2.1 · P3 defer-MVP-3)
+4. Each Layer 3 / Q-D feature → add to MVP-3 backlog with effort estimate
 5. Schedule a 30-minute MVP-3 kickoff using Q-E as the agenda anchor
 
 ## Anti-patterns to avoid
@@ -162,3 +160,4 @@ Reasoning:
 - **Don't argue with the customer's "looks odd"** — capture it verbatim. They may be wrong about the math but right about the perception, and perception is what causes a re-quote phone call.
 - **Don't aggregate Layer 2 across multiple customers** — n=1 is fine for UAT, n=2-3 is great, n>5 starts to need real survey design.
 - **Don't let UAT turn into bug-fix sprint mid-session** — collect, triage at the end. Mid-session debugging eats the whole window.
+- **Don't commit raw feedback.md to git** — customer PII risk (per R4 in risk-register.md). Only commit Layer 3 anonymised summary.
