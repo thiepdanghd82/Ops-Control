@@ -24,12 +24,18 @@ import path from 'node:path';
 
 const TIER_LIMITS = Object.freeze({ S: 15, M: 20, L: 50 });
 const SIGNED_FIELDS = [
-  'version', 'installation_id', 'customer', 'tier', 'max_users',
-  'issued_at', 'expires_at', 'features',
+  'version',
+  'installation_id',
+  'customer',
+  'tier',
+  'max_users',
+  'issued_at',
+  'expires_at',
+  'features',
 ];
 
 function canonicalize(payload) {
-  const norm = (v) => Array.isArray(v) ? [...v].sort().join(',') : (v ?? '');
+  const norm = (v) => (Array.isArray(v) ? [...v].sort().join(',') : (v ?? ''));
   return SIGNED_FIELDS.map((k) => `${k}=${norm(payload[k])}`).join('|');
 }
 
@@ -38,14 +44,20 @@ let cachedLicense = null;
 function loadPublicKey() {
   const envKey = process.env.OPS_LICENSE_PUBKEY;
   if (envKey) {
-    try { return createPublicKey(envKey); }
-    catch (e) { console.warn('[license] OPS_LICENSE_PUBKEY invalid:', e.message); }
+    try {
+      return createPublicKey(envKey);
+    } catch (e) {
+      console.warn('[license] OPS_LICENSE_PUBKEY invalid:', e.message);
+    }
   }
   // Fallback to bundled dev key — same one paired with desktop/license.js.
   const devPath = path.resolve(process.cwd(), 'scripts/license/dev-public.pem');
   if (fs.existsSync(devPath)) {
-    try { return createPublicKey(fs.readFileSync(devPath, 'utf8')); }
-    catch (e) { console.warn('[license] dev key load failed:', e.message); }
+    try {
+      return createPublicKey(fs.readFileSync(devPath, 'utf8'));
+    } catch (e) {
+      console.warn('[license] dev key load failed:', e.message);
+    }
   }
   return null;
 }
@@ -72,8 +84,14 @@ export function getLicense() {
       console.warn('[license] no license file at', p, '— tier S fallback (dev only)');
       cachedLicense = {
         ok: true,
-        license: { customer: 'UNLICENSED', tier: 'S', max_users: TIER_LIMITS.S,
-          expires_at: null, features: ['costing'], isUnlicensed: true },
+        license: {
+          customer: 'UNLICENSED',
+          tier: 'S',
+          max_users: TIER_LIMITS.S,
+          expires_at: null,
+          features: ['costing'],
+          isUnlicensed: true,
+        },
       };
       return cachedLicense;
     }
@@ -82,8 +100,9 @@ export function getLicense() {
   }
 
   let raw;
-  try { raw = JSON.parse(fs.readFileSync(p, 'utf8')); }
-  catch (e) {
+  try {
+    raw = JSON.parse(fs.readFileSync(p, 'utf8'));
+  } catch (e) {
     cachedLicense = { ok: false, reason: 'parse-error', detail: e.message };
     return cachedLicense;
   }
@@ -97,8 +116,14 @@ export function getLicense() {
     }
     cachedLicense = {
       ok: true,
-      license: { customer: 'TRIAL', tier: raw.tier || 'S', max_users: raw.max_users || TIER_LIMITS.S,
-        expires_at: raw.expires_at, features: raw.features || [], isTrial: true },
+      license: {
+        customer: 'TRIAL',
+        tier: raw.tier || 'S',
+        max_users: raw.max_users || TIER_LIMITS.S,
+        expires_at: raw.expires_at,
+        features: raw.features || [],
+        isTrial: true,
+      },
     };
     return cachedLicense;
   }
@@ -121,7 +146,7 @@ export function getLicense() {
     cachedLicense = { ok: false, reason: 'no-pubkey' };
     return cachedLicense;
   }
-  let sigOk = false;
+  let sigOk;
   try {
     const { signature, ...payload } = raw;
     sigOk = verify(null, Buffer.from(canonicalize(payload)), pub, Buffer.from(signature, 'base64'));
@@ -156,7 +181,9 @@ export function getLicense() {
 }
 
 /** Force re-read on next getLicense() call — for tests + `apply` flow. */
-export function invalidateLicenseCache() { cachedLicense = null; }
+export function invalidateLicenseCache() {
+  cachedLicense = null;
+}
 
 /**
  * Express middleware: rejects user-creation requests when the customer
@@ -183,8 +210,9 @@ export function requireSeatAvailable({ countActiveUsers }) {
         tier: lic.license.tier,
         max_users: lic.license.max_users,
         active_users: active,
-        message: `License tier ${lic.license.tier} cho phép tối đa ${lic.license.max_users} user. ` +
-                 `Hiện đã có ${active} user. Liên hệ CCL HQ để nâng cấp tier.`,
+        message:
+          `License tier ${lic.license.tier} cho phép tối đa ${lic.license.max_users} user. ` +
+          `Hiện đã có ${active} user. Liên hệ CCL HQ để nâng cấp tier.`,
       });
     }
     next();

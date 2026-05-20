@@ -1,3 +1,4 @@
+/* global console, process */
 /**
  * Data Consolidation Test — COST V1.0 vs Ops Cost Flow
  * Compares data served by the Ops Control API endpoints against
@@ -21,7 +22,9 @@ function readJson(fp) {
   try {
     if (!fs.existsSync(fp)) return null;
     return JSON.parse(fs.readFileSync(fp, 'utf-8'));
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function assert(label, condition, detail = '') {
@@ -57,9 +60,12 @@ assert('sourcing_db.json is array', Array.isArray(sourcingDB));
 if (matDB && matDB.length > 0) {
   const sample = matDB[0];
   const expectedFields = ['code', 'type', 's_price', 'g_price', 'thickness', 'supplier', 'width'];
-  const hasFields = expectedFields.every(f => f in sample);
-  assert('materials has expected fields (code, type, s_price, g_price, thickness, supplier, width)', hasFields,
-    hasFields ? '' : `missing: ${expectedFields.filter(f => !(f in sample)).join(', ')}`);
+  const hasFields = expectedFields.every((f) => f in sample);
+  assert(
+    'materials has expected fields (code, type, s_price, g_price, thickness, supplier, width)',
+    hasFields,
+    hasFields ? '' : `missing: ${expectedFields.filter((f) => !(f in sample)).join(', ')}`
+  );
 }
 
 // ─── 2. IFS Inventory ───
@@ -101,14 +107,21 @@ assert('rate.json is array', Array.isArray(rate));
 assert('rate_sites.json exists', rateSites !== null);
 if (rateSites) {
   const sites = Object.keys(rateSites);
-  assert('rate_sites.json is valid object (may be empty if single-site)', typeof rateSites === 'object');
+  assert(
+    'rate_sites.json is valid object (may be empty if single-site)',
+    typeof rateSites === 'object'
+  );
   // rate_sites may be empty if only default VN site — fallback is rate.json
   if (sites.length === 0 && rate && rate.length > 0) {
     assert('rate.json serves as fallback for default site', true);
   }
   for (const site of sites) {
     const siteData = rateSites[site];
-    assert(`rate site "${site}" has data`, Array.isArray(siteData) && siteData.length > 0, `count: ${siteData?.length || 0}`);
+    assert(
+      `rate site "${site}" has data`,
+      Array.isArray(siteData) && siteData.length > 0,
+      `count: ${siteData?.length || 0}`
+    );
     if (siteData && siteData.length > 0) {
       const sample = siteData[0];
       assert(`rate site "${site}" has workcenter field`, 'workcenter' in sample);
@@ -125,7 +138,7 @@ assert('ddl.json exists', ddl !== null);
 assert('ddl.json is object', ddl && typeof ddl === 'object');
 assert('ddl_sites.json exists', ddlSites !== null);
 if (ddl) {
-  const sections = Object.keys(ddl).filter(k => !k.startsWith('_'));
+  const sections = Object.keys(ddl).filter((k) => !k.startsWith('_'));
   assert('ddl has sections', sections.length > 0, `sections: ${sections.length}`);
   const expectedDDLKeys = ['site', 'print_type', 'trade_mode'];
   for (const key of expectedDDLKeys) {
@@ -183,8 +196,14 @@ assert('Backup/Code directory exists', fs.existsSync(backupCodeDir));
 
 // ─── 13. API Route Coverage ───
 console.log('\n📦 API Route Coverage (React ↔ Server)');
-const apiFile = fs.readFileSync(path.join(__dirname, 'client', 'src', 'services', 'api.js'), 'utf-8');
-const costApiFile = fs.readFileSync(path.join(__dirname, 'server', 'routes', 'costApi.js'), 'utf-8');
+const apiFile = fs.readFileSync(
+  path.join(__dirname, 'client', 'src', 'services', 'api.js'),
+  'utf-8'
+);
+const costApiFile = fs.readFileSync(
+  path.join(__dirname, 'server', 'routes', 'costApi.js'),
+  'utf-8'
+);
 const sharedFile = fs.readFileSync(path.join(__dirname, 'server', 'routes', 'shared.js'), 'utf-8');
 
 // Check that key endpoints exist in both client and server
@@ -211,22 +230,43 @@ for (const ep of endpointChecks) {
 
 // ─── 14. Settings Component Verification ───
 console.log('\n📦 Settings Component Structure');
-const settingsFile = fs.readFileSync(path.join(__dirname, 'client', 'src', 'modules', 'cost', 'tabs', 'Settings.jsx'), 'utf-8');
+const settingsFile = fs.readFileSync(
+  path.join(__dirname, 'client', 'src', 'modules', 'cost', 'tabs', 'Settings.jsx'),
+  'utf-8'
+);
 
-const expectedSections = ['ProfileSection', 'PasswordSection', 'AccountSection', 'RateSection', 'DDLSection', 'FinanceSection', 'BackupSection', 'LogsSection'];
+const expectedSections = [
+  'ProfileSection',
+  'PasswordSection',
+  'AccountSection',
+  'RateSection',
+  'DDLSection',
+  'FinanceSection',
+  'BackupSection',
+  'LogsSection',
+];
 for (const sec of expectedSections) {
   assert(`Settings has ${sec} component`, settingsFile.includes(`function ${sec}`));
 }
 
-assert('Settings has split-pane layout (settings-layout)', settingsFile.includes('settings-layout'));
+assert(
+  'Settings has split-pane layout (settings-layout)',
+  settingsFile.includes('settings-layout')
+);
 assert('Settings has left menu (settings-menu)', settingsFile.includes('settings-menu'));
 assert('Settings uses costApi', settingsFile.includes('costApi'));
 assert('Settings uses sharedApi', settingsFile.includes('sharedApi'));
 
 // ─── 15. Sidebar Access ───
 console.log('\n📦 Sidebar Configuration');
-const sidebarFile = fs.readFileSync(path.join(__dirname, 'client', 'src', 'components', 'Layout', 'Sidebar.jsx'), 'utf-8');
-assert('Settings tab is accessible to all users (no minRole)', !sidebarFile.includes("id: 'settings', icon: '⚙', label: 'Settings', minRole"));
+const sidebarFile = fs.readFileSync(
+  path.join(__dirname, 'client', 'src', 'components', 'Layout', 'Sidebar.jsx'),
+  'utf-8'
+);
+assert(
+  'Settings tab is accessible to all users (no minRole)',
+  !sidebarFile.includes("id: 'settings', icon: '⚙', label: 'Settings', minRole")
+);
 
 // ═════════════════════════════���═════════════════════���═══════
 // SUMMARY
@@ -238,9 +278,15 @@ console.log('══════════════════════�
 
 if (failed > 0) {
   console.log('\n⚠️  Failed checks:');
-  errors.forEach(e => console.log(e));
+  errors.forEach((e) => console.log(e));
 }
 
-console.log('\n' + (failed === 0 ? '🎉 All checks passed! Data consolidation is complete.' : `⚠️  ${failed} issue(s) need attention.`) + '\n');
+console.log(
+  '\n' +
+    (failed === 0
+      ? '🎉 All checks passed! Data consolidation is complete.'
+      : `⚠️  ${failed} issue(s) need attention.`) +
+    '\n'
+);
 
 process.exit(failed > 0 ? 1 : 0);
