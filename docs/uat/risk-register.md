@@ -115,7 +115,7 @@ So R3 doesn't break the UAT — but discovering a key-mismatch mid-UAT undermine
 
 ### Impact
 
-**High.** Customer NDA breach + GDPR/PDPA-equivalent risk. Single screenshot in #ops-control Slack channel = permanent leak even after deletion (members may have backed up).
+**High.** Customer NDA breach + GDPR/PDPA-equivalent risk. Single screenshot in `#ops-control-uat` Slack channel = permanent leak even after deletion (members may have backed up).
 
 ### Mitigation
 
