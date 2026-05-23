@@ -3,7 +3,7 @@
  *
  * Hiển thị thông tin runtime + diagnostics buttons cho IT troubleshooting:
  *
- *   Version & build:     Ops Control 1.5.9, build timestamp, Electron/Node/Chrome
+ *   Version & build:     Ops Control 1.5.10, build timestamp, Electron/Node/Chrome
  *   System:              Platform (macOS/Win/Linux), Mode hiện tại, embedded port
  *   License:             Customer, expires_at, installation_id (16 chars), features
  *   Live diagnostics:    4 test buttons (printer list, cache R/W, license check, HW fp)
@@ -16,7 +16,7 @@ import React, { useEffect, useState } from 'react';
 import desktop from '../../../services/desktopBridge';
 import './AboutSection.css';
 
-const APP_VERSION = '1.5.9';
+const APP_VERSION = '1.5.10';
 const BUILD_TIMESTAMP = '2026-05-20 15:31 GMT+7';
 
 export default function AboutSection() {
