@@ -15,6 +15,7 @@
     "verify-install": "node scripts/verify-install.js",
     "preflight": "node scripts/preflight-env.js",
     "verify-backup": "node scripts/verify-backup.js",
+    "check:deps": "node scripts/check-runtime-deps.js",
     "reset-totp": "node scripts/reset-totp.js",
     "migrate": "node scripts/migrate-planning-data.js",
     "seed:mes": "node scripts/seed-mes-fixtures.js",

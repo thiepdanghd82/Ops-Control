@@ -42,6 +42,22 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
 
+  runtime-deps:
+    # Issue #60 — regression guard against the exceljs/jszip class of bug
+    # from PR #58. Verifies every bare-name import in server/, domains/,
+    # scripts/ (the runtime surface packaged into the DMG via build-desktop.sh
+    # extraResources) is declared in root dependencies — not devDependencies,
+    # and not undeclared-but-hoisted. Without this gate, an import that
+    # resolves via npm hoisting in dev passes review, then crashes the
+    # embedded server in the packaged DMG with ERR_MODULE_NOT_FOUND.
+    name: Runtime deps declared
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - run: node scripts/check-runtime-deps.js
+
   commitlint:
     # v1.3 G3 — re-validate Conventional Commits on PR. Catches commits
     # that bypassed the local husky commit-msg hook with --no-verify.
