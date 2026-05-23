@@ -14,6 +14,7 @@
 import { createSheet, freezeTop, hideColumns } from '../workbook.js';
 import { applyStyle } from '../styles.js';
 import { L } from '../i18n.js';
+import { pickStdTierRows, pickCpxTierRows, sumRowCosts, getActiveIdx } from '../tierRows.js';
 
 const INK_COLS = [
   { key: 'label', label: 'common.label', width: 9 },
@@ -36,10 +37,13 @@ const INK_COLS = [
 
 /**
  * @param {import('exceljs').Workbook} wb
- * @param {{ quote: any, variant: 'customer'|'internal', lang: 'en'|'vi'|'bilingual' }} ctx
+ * @param {{ quote: any, tierIdx?: number, variant: 'customer'|'internal', lang: 'en'|'vi'|'bilingual' }} ctx
  */
 export function buildInksSheet(wb, ctx) {
   const { quote, variant, lang } = ctx;
+  const tierIdx = Number.isInteger(ctx.tierIdx) ? ctx.tierIdx : getActiveIdx(quote);
+  const activeIdx = getActiveIdx(quote);
+  const isActive = tierIdx === activeIdx;
   const sheet = createSheet(wb, {
     name: '04 Inks',
     bannerText: L('ink.section', lang),
@@ -55,19 +59,21 @@ export function buildInksSheet(wb, ctx) {
   const isCpx = quote.type === 'complex';
 
   // For Cpx: render one block per SP, each with its own ink rows.
-  // For Std: single inks array at top level.
+  // For Std: single inks array at top level. Row breakdown comes from
+  // the requested tier — non-active tiers fall back to active-mirror
+  // via pickStd/CpxTierRows when no per-tier payload exists (legacy).
   const inkGroups =
     isCpx && Array.isArray(state.subproducts) && state.subproducts.length > 0
       ? state.subproducts.map((sp, spi) => ({
           label: `${L('ink.section', lang)} — ${sp.code || `SP${spi + 1}`}`,
           inks: Array.isArray(sp.inks) ? sp.inks : [],
-          rowBreakdown: result.subproducts?.[spi]?.rows?.inks ?? null,
+          rowBreakdown: pickCpxTierRows(result, spi, tierIdx, 'inks'),
         }))
       : [
           {
             label: null,
             inks: Array.isArray(state.inks) ? state.inks : [],
-            rowBreakdown: result.rows?.inks ?? null,
+            rowBreakdown: pickStdTierRows(result, tierIdx, 'inks'),
           },
         ];
 
@@ -114,16 +120,39 @@ export function buildInksSheet(wb, ctx) {
     }
   }
 
-  // Aggregate subtotal — tier-level total from snapshot aggregates.
-  const setupTotal = Number(result.bd_ink_setup);
-  const runTotal = Number(result.bd_ink_run);
-  if (Number.isFinite(setupTotal) || Number.isFinite(runTotal)) {
+  // Subtotal row — active tier reads the rounding-free aggregate;
+  // non-active tier derives from the per-tier rows we just rendered so
+  // the cells and the subtotal stay consistent.
+  let setupTotal;
+  let runTotal;
+  if (isActive) {
+    const s = Number(result.bd_ink_setup);
+    const ru = Number(result.bd_ink_run);
+    setupTotal = Number.isFinite(s) ? s : null;
+    runTotal = Number.isFinite(ru) ? ru : null;
+  } else {
+    const combined = inkGroups
+      .map((g) => g.rowBreakdown)
+      .filter((arr) => Array.isArray(arr))
+      .reduce(
+        (acc, arr) => {
+          const t = sumRowCosts(arr);
+          acc.setup += t.setup;
+          acc.run += t.run;
+          acc.any = acc.any || t.hasAny;
+          return acc;
+        },
+        { setup: 0, run: 0, any: false }
+      );
+    setupTotal = combined.any ? combined.setup : null;
+    runTotal = combined.any ? combined.run : null;
+  }
+  if (setupTotal != null || runTotal != null) {
     r += 1;
     writeSubtotalRow(sheet, r, INK_COLS, L('common.subtotal', lang), {
-      setup_cost: Number.isFinite(setupTotal) ? setupTotal : null,
-      run_cost: Number.isFinite(runTotal) ? runTotal : null,
-      total:
-        (Number.isFinite(setupTotal) ? setupTotal : 0) + (Number.isFinite(runTotal) ? runTotal : 0),
+      setup_cost: setupTotal,
+      run_cost: runTotal,
+      total: (setupTotal ?? 0) + (runTotal ?? 0),
     });
     r += 1;
   }

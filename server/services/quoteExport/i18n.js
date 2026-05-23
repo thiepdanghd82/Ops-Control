@@ -221,6 +221,16 @@ export const LABELS = {
   'status.approved': { en: 'Approved', vi: 'Đã duyệt' },
   'status.rejected': { en: 'Rejected', vi: 'Từ chối' },
   'status.draft': { en: 'Draft', vi: 'Nháp' },
+
+  // Multi-tier export footnotes — used when a non-active tier is exported.
+  // Labor / overhead / tooling come from the active-tier snapshot because
+  // recomputing them per tier requires calcEngine (locked server-side).
+  // `{active_moq}` and `{this_tier_moq}` are substituted via simple
+  // string replacement at render time.
+  'cb.active_tier_footnote': {
+    en: '[active-tier] — Labor, overhead, and tooling costs reflect the active tier (MOQ {active_moq}). Material, ink, and process costs are tier-specific (MOQ {this_tier_moq}).',
+    vi: '[tier-hoạt-động] — Chi phí nhân công, overhead, và tooling phản ánh tier đang active (MOQ {active_moq}). Chi phí vật tư, mực, công đoạn được tính theo tier này (MOQ {this_tier_moq}).',
+  },
 };
 
 /**

@@ -327,7 +327,7 @@ function ProfileSection({ user }) {
       </h3>
       <div className="settings-card about-card">
         <p>
-          <strong>Ops Control</strong> v1.2.0
+          <strong>Ops Control</strong> v1.5.10
         </p>
         <p>CCL Design Vietnam — Integrated Cost & Planning Platform</p>
         <p className="about-tech">Henry Dang — NPI Manager · React + Node.js (Electron 33)</p>

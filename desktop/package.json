@@ -1,6 +1,6 @@
 {
   "name": "ops-control-desktop",
-  "version": "1.5.9",
+  "version": "1.5.10",
   "description": "Ops Control Desktop — Electron shell (smart client, IBM/SAP/IFS-style 3-tier)",
   "private": true,
   "main": "main.js",
