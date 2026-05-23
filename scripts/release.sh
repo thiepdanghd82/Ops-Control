@@ -2,16 +2,22 @@
 #
 # release.sh — build + publish 1 release lên server auto-update (10.102.3.61).
 #
-# Workflow (Sprint 5):
+# Workflow:
 #   1. Bump version trong root + desktop/ package.json
 #   2. Build client (Vite)
-#   3. Bytenode compile 4 file IP
-#   4. Build installer Windows (.exe) + macOS (.dmg) qua electron-builder
-#   5. rsync 3 file lên http://10.102.3.61/updates/:
+#   3. Build installer Windows (.exe) + macOS (.dmg) qua electron-builder
+#   4. rsync 3 file lên http://10.102.3.61/updates/:
 #        - Ops-Control-Setup-${VERSION}.exe
 #        - Ops-Control-${VERSION}.dmg (arm64)
 #        - latest.yml + latest-mac.yml (electron-updater manifest)
-#   6. Restore source code (revert bytenode shim)
+#   5. Git tag + push reminder
+#
+# History: a bytenode-compile step (formerly [3/6]) protected 4 IP files
+# at server/services/* with V8 bytecode shims. The target paths went stale
+# (those files moved to client/src/services/ years ago) and the step never
+# completed successfully — no .jsc artifacts ever shipped. Removed
+# 2026-05-23 alongside `scripts/build-bytecode.js` to close Issue #60's
+# runtime-dep audit (bytenode was undeclared in any package.json).
 #
 # Pre-req:
 #   - SSH key vào ops@10.102.3.61
@@ -30,7 +36,7 @@ set -euo pipefail
 # ─── Args & validation ───────────────────────────────────────────────
 VERSION="${1:-}"
 if [[ -z "$VERSION" ]]; then
-  echo "Usage: $0 <version> [--mac-only|--win-only] [--skip-publish] [--skip-bytecode]"
+  echo "Usage: $0 <version> [--mac-only|--win-only] [--skip-publish]"
   exit 1
 fi
 
@@ -42,13 +48,11 @@ fi
 MAC_ONLY=false
 WIN_ONLY=false
 SKIP_PUBLISH=false
-SKIP_BYTECODE=false
 for arg in "$@"; do
   case "$arg" in
     --mac-only)      MAC_ONLY=true ;;
     --win-only)      WIN_ONLY=true ;;
     --skip-publish)  SKIP_PUBLISH=true ;;
-    --skip-bytecode) SKIP_BYTECODE=true ;;
   esac
 done
 
@@ -76,7 +80,7 @@ if ! ssh -o ConnectTimeout=5 -o BatchMode=yes "$PUBLISH_HOST" exit 2>/dev/null; 
 fi
 
 # ─── 1. Bump version ─────────────────────────────────────────────────
-echo "[1/6] Bumping version → $VERSION"
+echo "[1/5] Bumping version → $VERSION"
 node -e "
 const fs = require('fs');
 for (const f of ['package.json', 'desktop/package.json', 'client/package.json']) {
@@ -88,26 +92,17 @@ for (const f of ['package.json', 'desktop/package.json', 'client/package.json'])
 "
 
 # ─── 2. Build client ─────────────────────────────────────────────────
-echo "[2/6] Building client (Vite)…"
+echo "[2/5] Building client (Vite)…"
 (cd client && npm run build) > /tmp/release-build-client.log 2>&1
 echo "  ✓ client/dist ($(du -sh client/dist | cut -f1))"
 
-# ─── 3. Bytecode compile IP files ────────────────────────────────────
-if [[ "$SKIP_BYTECODE" == "false" ]]; then
-  echo "[3/6] Bytenode compile IP files…"
-  node scripts/build-bytecode.js
-  trap 'echo "Restoring bytecode source files..."; node scripts/build-bytecode.js --restore || true' EXIT
-else
-  echo "[3/6] Skipping bytecode (--skip-bytecode)"
-fi
-
-# ─── 4. Build installers ─────────────────────────────────────────────
+# ─── 3. Build installers ─────────────────────────────────────────────
 # Note: Mặc định CHẠY UNSIGNED + post-build sign bằng self-signed
 # (Win: PowerShell script, Mac: ad-hoc). Xem docs/INTERNAL_TRUST_SETUP.md
 # để hiểu cách push trust qua GPO / IT-distribute.
 # Nếu sau này có EV cert thật: set CSC_LINK + CSC_KEY_PASSWORD trước
 # khi chạy release.sh, electron-builder sẽ ưu tiên dùng cert đó.
-echo "[4/6] Building installers…"
+echo "[3/5] Building installers…"
 cd desktop
 
 ELECTRON_BUILDER_FLAGS="--publish never"
@@ -128,9 +123,9 @@ env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron-builder $ELECTRON_BUILD
 
 cd "$PROJECT_ROOT"
 
-# ─── 4b. Post-build sign (free alternative khi không có paid cert) ──
+# ─── 3b. Post-build sign (free alternative khi không có paid cert) ──
 if [[ -z "${CSC_LINK:-}" ]]; then
-  echo "[4b/6] Post-build sign với free alternative (CSC_LINK not set)…"
+  echo "[3b/5] Post-build sign với free alternative (CSC_LINK not set)…"
 
   # macOS: ad-hoc sign + clear quarantine
   if [[ "$WIN_ONLY" != "true" ]]; then
@@ -155,15 +150,15 @@ fi
 
 ls -lh desktop/dist-electron/ | head -20
 
-# ─── 5. Publish ──────────────────────────────────────────────────────
+# ─── 4. Publish ──────────────────────────────────────────────────────
 if [[ "$SKIP_PUBLISH" == "true" ]]; then
-  echo "[5/6] Skipping publish (--skip-publish)"
+  echo "[4/5] Skipping publish (--skip-publish)"
   echo
   echo "Local artifacts at: desktop/dist-electron/"
   exit 0
 fi
 
-echo "[5/6] Publishing to $PUBLISH_HOST:$PUBLISH_DIR"
+echo "[4/5] Publishing to $PUBLISH_HOST:$PUBLISH_DIR"
 PUBLISH_FILES=()
 [[ -f "desktop/dist-electron/Ops-Control-Setup-$VERSION.exe" ]] && PUBLISH_FILES+=("desktop/dist-electron/Ops-Control-Setup-$VERSION.exe")
 [[ -f "desktop/dist-electron/Ops-Control-$VERSION.dmg" ]] && PUBLISH_FILES+=("desktop/dist-electron/Ops-Control-$VERSION.dmg")
@@ -191,8 +186,8 @@ else
   echo "  ⚠ Manifest HTTP returned v$HTTP_VERSION instead of v$VERSION (cache?)"
 fi
 
-# ─── 6. Tag + summary ────────────────────────────────────────────────
-echo "[6/6] Git tag v$VERSION"
+# ─── 5. Tag + summary ────────────────────────────────────────────────
+echo "[5/5] Git tag v$VERSION"
 git add package.json desktop/package.json client/package.json
 git commit -m "chore: release v$VERSION"
 git tag -a "v$VERSION" -m "Ops Control v$VERSION"
