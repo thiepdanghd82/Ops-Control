@@ -121,12 +121,21 @@ function tarLibrary() {
     if (fs.existsSync(outFile)) {
       return { ok: true, skipped: true, file: outFile };
     }
-    // Skip Users folder TOTP secrets aren't useful in backup context
-    // (encrypted with same key — restore won't break, but document why)
-    execSync(`tar czf "${outFile}" -C "${dataRoot}" Library`, {
-      stdio: 'pipe',
-      timeout: 60_000,
-    });
+    // P1-8 FIX: actually exclude TOTP secrets from tarball (the prior
+    // comment lied — the tar command included Library/Users/totp_secrets*).
+    // Restoring a backup on a host with a different OPS_TOTP_KEY would
+    // brick all 2FA because the encrypted secrets won't decrypt with
+    // the new key. Excluding them means users re-enroll on restore —
+    // operationally cleaner than half-broken 2FA.
+    execSync(
+      `tar czf "${outFile}" -C "${dataRoot}" ` +
+        `--exclude='Library/Users/totp_secrets*' ` +
+        `Library`,
+      {
+        stdio: 'pipe',
+        timeout: 60_000,
+      }
+    );
     const size = fs.statSync(outFile).size;
     return { ok: true, file: outFile, sizeBytes: size, sizeMB: +(size / 1024 / 1024).toFixed(2) };
   } catch (err) {
