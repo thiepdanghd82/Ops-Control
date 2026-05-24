@@ -2147,6 +2147,27 @@ router.post(
         npiDB: 'library.imported',
         sourcingDB: 'library.imported',
       };
+      // Audit emit per successfully-saved dataset (P0-8b): forensic
+      // trail for VN Law on Accounting Art. 41 (10-yr retention).
+      // One audit row per dataset key (NOT one per request) — so
+      // multi-key /save-all yields N audit rows with key + timestamp.
+      for (const k of succeeded) {
+        try {
+          audit(
+            'LIBRARY_SAVE',
+            cu?.username || '-',
+            clientIp(req) || '-',
+            JSON.stringify({
+              key: k,
+              timestamp: ts,
+              removed_unknown_keys: unknownKeys.length > 0 ? unknownKeys : undefined,
+            })
+          );
+        } catch {
+          /* audit failures must never block save */
+        }
+      }
+
       const emittedTypes = new Set();
       for (const k of succeeded) {
         const t = SAVE_ALL_EVENT_MAP[k];
@@ -2343,6 +2364,26 @@ router.post('/quotes', saveRateLimit, async (req, res) => {
     // Also drop _version: POST is for NEW quotes, so there's nothing
     // to collide with.
     const saved = await upsertQuote({ ...cleansed, id: undefined, _version: undefined });
+    // Audit emit (P0-8a): compliance forensic trail for VN Decree 13/2023
+    // PII + Law on Accounting Art. 41 (10-yr retention). Wrapped in try/catch
+    // so audit failures never block the save — mirrors existing pattern at
+    // QUOTE_TRASH (line 2421) + QUOTE_RESTORE (line 2460).
+    try {
+      audit(
+        'QUOTE_SAVE',
+        cu?.username || '-',
+        clientIp(req) || '-',
+        JSON.stringify({
+          id: saved?.id,
+          version: saved?._version,
+          type: quoteType,
+          label: cleansed?.label || null,
+          is_new: true,
+        })
+      );
+    } catch {
+      /* audit failures must never block save */
+    }
     emitDataChange('quote.saved', {
       id: saved?.id,
       version: saved?._version,
@@ -2488,6 +2529,24 @@ router.patch('/quotes/:id', saveRateLimit, async (req, res) => {
     const prevQuote = getQuoteById(id);
     const cleansed = emitAltMaterialsAuditAndStrip({ ...body, id }, prevQuote, cu, clientIp(req));
     const saved = await upsertQuote({ ...cleansed });
+    // Audit emit (P0-8a): compliance forensic trail — update path.
+    // is_new: false distinguishes from POST create.
+    try {
+      audit(
+        'QUOTE_SAVE',
+        cu?.username || '-',
+        clientIp(req) || '-',
+        JSON.stringify({
+          id: saved?.id,
+          version: saved?._version,
+          type: cleansed?.type || prevQuote?.type || 'standard',
+          label: cleansed?.label || prevQuote?.label || null,
+          is_new: false,
+        })
+      );
+    } catch {
+      /* audit failures must never block save */
+    }
     emitDataChange('quote.saved', {
       id: saved?.id,
       version: saved?._version,
