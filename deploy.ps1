@@ -137,6 +137,33 @@ Write-Step "📂  Preparing $RemoteDir on $Remote…"
 ssh $Remote "if not exist `"$RemoteDir\server`" mkdir `"$RemoteDir\server`""
 ssh $Remote "if not exist `"$RemoteDir\client\dist`" mkdir `"$RemoteDir\client\dist`""
 
+# ── 4.5 Snapshot live install to releases/<ts>/ for rollback (P1-2) ───
+# Mirrors Linux deploy.sh snapshot pattern. Without this, Rollback
+# Runbook A is impossible — there's no prior version to rollback to.
+# 5-snapshot retention; older pruned. Exit codes 0-7 from robocopy
+# are success per Microsoft convention.
+
+$DEPLOY_TS = Get-Date -Format yyyyMMdd-HHmmss
+Write-Host "  🗄  Snapshotting $RemoteDir → releases\$DEPLOY_TS for rollback..."
+
+# Ensure releases directory exists on remote
+ssh $Remote "if not exist $RemoteDir\releases mkdir $RemoteDir\releases"
+
+# Mirror live tree EXCLUDING releases\, data\, node_modules\
+# (data accumulates across releases; node_modules rebuilds on each deploy)
+ssh $Remote "robocopy $RemoteDir $RemoteDir\releases\$DEPLOY_TS /E /XD releases data node_modules /R:1 /W:5 /NFL /NDL"
+$rc = $LASTEXITCODE
+if ($rc -gt 7) {
+    Write-Error "  ❌  Snapshot failed (robocopy exit code: $rc)"
+    exit 1
+}
+Write-Host "  ✓  Snapshot created: releases\$DEPLOY_TS"
+
+# Retention: keep 5 most recent snapshots, prune older
+ssh $Remote "powershell -Command `"(Get-ChildItem $RemoteDir\releases -Directory | Sort-Object Name -Descending | Select-Object -Skip 5) | Remove-Item -Recurse -Force`""
+
+Write-Host ''
+
 # ── 5. Upload files ────────────────────────────────────────────
 # Windows has no rsync by default. We use SCP, which is slower
 # but universally available with OpenSSH. For large deltas,
