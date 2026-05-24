@@ -610,6 +610,48 @@ journalctl -u ops-control -n 30   # confirm clean boot
 
 Retention: deploy.sh keeps the **5 most recent snapshots**. Disk fill is unlikely with 5 × ~150 MB.
 
+### "Bad deploy — need to roll back" (Windows, P1-2 patch landed 2026-05-27)
+
+`deploy.ps1` now snapshots live `<RemoteDir>` to `releases\<ts>\` before SCP upload (mirror of Linux `deploy.sh` pattern). To roll back:
+
+```powershell
+# 1. SSH to Windows prod
+ssh user@10.102.3.61
+
+# 2. List snapshots (newest first)
+dir C:\opt\ops-control\releases | sort Name -Descending
+
+# 3. Pick most recent snapshot BEFORE the bad deploy
+$PREV = "20260527-110000"  # adjust per actual timestamp
+
+# 4. Stop NSSM service
+nssm stop ops-control
+
+# 5. Take emergency backup of bad state
+$BAD_TS = Get-Date -Format yyyyMMdd-HHmmss
+robocopy C:\opt\ops-control C:\opt\ops-control\releases\BAD-$BAD_TS /E /XD releases data node_modules /R:1
+
+# 6. Restore prior snapshot (EXCLUDES releases\, data\, node_modules\)
+robocopy C:\opt\ops-control\releases\$PREV C:\opt\ops-control /E /XD releases data node_modules /MIR
+
+# 7. Verify package.json reverted
+type C:\opt\ops-control\package.json | findstr version
+
+# 8. Re-run preflight
+cd C:\opt\ops-control
+node scripts\preflight-env.js
+# Must exit 0
+
+# 9. Start NSSM
+nssm start ops-control
+
+# 10. Verify /health
+sleep 5
+curl http://localhost:3000/health
+```
+
+Retention: 5 most recent snapshots, automatically pruned by `deploy.ps1`.
+
 ### "Bare-metal restore — disk dies / fresh box" (Sprint 1.7)
 
 When the server hardware/disk is gone:
