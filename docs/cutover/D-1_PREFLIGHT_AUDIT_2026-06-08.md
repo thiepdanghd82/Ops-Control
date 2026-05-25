@@ -6,6 +6,8 @@
 > **Scaffold prefilled from PROMPT chain merge history.** Engineer
 > re-verifies prod-side rows during 13:00-15:00 D-1 self-check.
 
+> **Role clarification (2026-05-25 discovery)**: At CCL Vietnam Yen Phong, "Sysadmin" is a functional role held by the Lead Engineer (Đặng Thế Thiệp), not a separate person. Wherever this audit references "sysadmin Part B" or "sysadmin work", read as "Lead Engineer Part B" or "Lead Engineer work (sysadmin function)". Backup Engineer (Trần Thị Hương) covers BOTH engineering + sysadmin scope during incidents when Lead unreachable.
+
 ## P0 closures (8 total)
 
 | #    | Finding                                    | Closed by                                         | Verify                                                                              |

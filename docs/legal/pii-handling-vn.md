@@ -82,7 +82,7 @@ Per Decree 13 Art. 23: any incident risking PII confidentiality must be notified
 1. Detect → engineer triages within 4 hours
 2. Confirm PII exposure → notify Plant Manager + legal counsel
 3. Plant Manager files MPS notification within 72-hour window
-4. Engineer + sysadmin write incident report → `docs/incidents/YYYY-MM-DD-<short-title>.md`
+4. Lead Engineer (= sysadmin function) writes incident report; Backup Engineer (Hương) co-signs if she was incident first-responder → `docs/incidents/YYYY-MM-DD-<short-title>.md`
 
 Reference: `docs/cutover/ROLLBACK-RUNBOOK-20260522.md` §B.7-B.8 (operational communication during outage).
 
