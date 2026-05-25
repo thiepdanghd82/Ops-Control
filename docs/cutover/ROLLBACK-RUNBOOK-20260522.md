@@ -3,6 +3,8 @@
 **Date**: 2026-05-22 | **Go-live**: 2026-05-30 | **Site**: CCL Design Vietnam, Yen Phong
 **Audience**: bilingual (engineer steps in English; operator-facing in Vietnamese)
 
+> **Role clarification (2026-05-25 discovery — see `docs/cutover/SYSADMIN_DISCOVERY_NOTE_2026-05-25.md`)**: At CCL Vietnam Yen Phong, "Sysadmin" is a functional role held by the Lead Engineer (Đặng Thế Thiệp, `+84965191991`, `thiepdt@cclind.com`). Wherever this runbook references "Sysadmin", read as "Lead Engineer executing sysadmin function". Backup Engineer (Trần Thị Hương, `+84988749869`, `huongtt@cclind.com`) covers BOTH engineering + sysadmin scopes during Lead unreachable incidents.
+
 > ⚠️ **First-time go-live**. There is NO prior version of Ops Control in production at Yen Phong. "Rollback" therefore means TWO different things:
 >
 > - **Runbook A — Software rollback within v1.5.x**: revert prod from a bad v1.5.10 patch to a prior `releases/<ts>/` snapshot. Useful when v1.5.10 had a deploy regression that ships within hours, not days.
@@ -127,7 +129,7 @@ Post in Zalo group "OpsControl GoLive 2026-05-30" and broadcast verbally to floo
 > 3. QA sẽ test 1 quote đã save trước outage — nếu hiển thị đúng số liệu, mọi người tiếp tục nhập.
 > 4. **Quan trọng**: dữ liệu anh chị đã nhập TRƯỚC outage không bị mất; những gì đang dở giữa chừng cần nhập lại sau khi phục hồi.
 >
-> Câu hỏi gấp: gọi **<Lead Engineer mobile>** hoặc **<Sysadmin mobile>**.
+> Câu hỏi gấp: gọi **Lead Engineer Đặng Thế Thiệp `+84965191991`** hoặc **Backup Engineer Trần Thị Hương `+84988749869`** (sysadmin function backup per 2026-05-25 discovery).
 
 ## A.8 Retention
 
@@ -145,7 +147,7 @@ Invoke Runbook B when ANY of the following is true:
 2. SQLite database is corrupted and last backup is unusable
 3. Server hardware failed and no spare provisioned
 4. Network/LAN failure isolating server from operator subnet for >30 minutes
-5. Lead Engineer + Sysadmin both unreachable + on-floor engineer cannot diagnose within 15 minutes
+5. Lead Engineer + Backup Engineer (Hương — sysadmin function backup) both unreachable + on-floor engineer cannot diagnose within 15 minutes
 
 ## B.2 Decision authority
 
@@ -250,7 +252,7 @@ mv ./tmp/Fallback_*.xlsx server/data/Library/FallbackRuns/$(date +%Y%m%d-%H%M%S)
 > 🟢 **HỆ THỐNG OPS CONTROL ĐÃ PHỤC HỒI** — chuyển từ quy trình tạm sang nhập trực tiếp.
 >
 > 1. IT đã import dữ liệu Excel tạm vào hệ thống — kiểm tra Quote History thấy quote/WO của anh chị xuất hiện đầy đủ chưa.
-> 2. Nếu **THIẾU** quote/WO nào: báo IT NGAY (gọi <Lead Engineer> hoặc Zalo nhóm "OpsControl GoLive").
+> 2. Nếu **THIẾU** quote/WO nào: báo IT NGAY (gọi Lead Engineer Đặng Thế Thiệp `+84965191991` hoặc Zalo nhóm "OpsControl GoLive").
 > 3. Nếu **DƯ** quote/WO (import nhầm trùng): cũng báo IT NGAY.
 > 4. **TỪ GIỜ**, nhập trực tiếp vào hệ thống — KHÔNG dùng Excel `Fallback_*` nữa.
 > 5. IT sẽ archive file Excel tạm; anh chị không cần xóa.
@@ -396,17 +398,17 @@ See CLAUDE.md section "Bare-metal restore — disk dies / fresh box". Summary:
 
 # OWNER ASSIGNMENTS
 
-| Section                   | Owner                                              | Backup                                              |
-| ------------------------- | -------------------------------------------------- | --------------------------------------------------- |
-| A.1-A.7 Software rollback | Sysadmin                                           | Lead Engineer                                       |
-| B.3 Pre-conditions met    | Lead Engineer (D-5 deliverables)                   | Sales Lead (xlsx templates)                         |
-| B.4 Operator workflow     | Floor supervisor (each shift)                      | Sales Lead office-side                              |
-| B.5 Re-import             | Lead Engineer                                      | Backup Engineer                                     |
-| B.6-B.7 Communication     | Plant Manager (authority) + Sales Lead (execution) | Lead Engineer (technical narrative)                 |
-| Backup recovery           | Sysadmin                                           | Lead Engineer                                       |
-| TOTP rotation             | Lead Engineer                                      | (no backup — single-engineer playbook in CLAUDE.md) |
-| Sys-user recovery         | Sysadmin (with OS shell)                           | —                                                   |
-| Bare-metal restore        | Lead Engineer + Sysadmin (joint)                   | —                                                   |
+| Section                   | Owner                                                 | Backup                                                                    |
+| ------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------- |
+| A.1-A.7 Software rollback | Sysadmin                                              | Lead Engineer                                                             |
+| B.3 Pre-conditions met    | Lead Engineer (D-5 deliverables)                      | Sales Lead (xlsx templates)                                               |
+| B.4 Operator workflow     | Floor supervisor (each shift)                         | Sales Lead office-side                                                    |
+| B.5 Re-import             | Lead Engineer                                         | Backup Engineer                                                           |
+| B.6-B.7 Communication     | Plant Manager (authority) + Sales Lead (execution)    | Lead Engineer (technical narrative)                                       |
+| Backup recovery           | Sysadmin                                              | Lead Engineer                                                             |
+| TOTP rotation             | Lead Engineer                                         | Backup Engineer (Hương — can execute per CLAUDE.md TOTP rotation runbook) |
+| Sys-user recovery         | Sysadmin (with OS shell)                              | —                                                                         |
+| Bare-metal restore        | Lead Engineer (joint engineering + sysadmin function) | Backup Engineer (Hương — escalates to vendor if hardware fault)           |
 
 ---
 
