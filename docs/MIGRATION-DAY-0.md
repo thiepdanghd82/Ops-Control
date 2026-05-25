@@ -4,9 +4,11 @@
 > Run on D-1 of any cutover; verify success criteria at each step
 > before proceeding to next. Closes audit finding P0-6.
 
+> **Role clarification (2026-05-25 discovery)**: At CCL Vietnam Yen Phong, "Sysadmin" is a functional role held by the Lead Engineer (Đặng Thế Thiệp). Every "Owner: Sysadmin" line in this playbook = Lead Engineer executing the sysadmin function. Backup Engineer (Trần Thị Hương) is the standby for sysadmin tasks during Lead unreachable incidents — she has SSH + NSSM + cron skills confirmed via phone 2026-05-25.
+
 ## Audience
 
-- **Sysadmin** (executor — SSH + runs commands)
+- **Sysadmin** (= Lead Engineer Đặng Thế Thiệp at CCL Vietnam; functional role only — see role-clarification above)
 - **Lead Engineer** (approver — verifies each step gate before next)
 - **Plant Manager** (sign-off — receives final OK email)
 
@@ -88,7 +90,7 @@ The OS account running `ops-control` is the trust boundary — anyone with shell
 
 ## Step 4 — Dry-run migration to SQLite
 
-**Owner**: Sysadmin + Lead Engineer (joint)
+**Owner**: Lead Engineer (joint sysadmin + decision-maker function)
 **Acceptance**: Parity report shows zero conflicts. Exit code 0.
 
 ```bash
@@ -188,7 +190,7 @@ Open client UI in browser (`http://10.102.3.61:3000`):
 | Rate                     | Finance Lead                      | Rate sub-tab                                            |
 | ReleasedQuotation        | Sales Lead                        | Quote History → Released filter                         |
 
-Owner is the operational owner — first point of contact if that entity's data looks wrong post-migration. Sysadmin escalates by entity, not by user.
+Owner is the operational owner — first point of contact if that entity's data looks wrong post-migration. Lead Engineer (sysadmin function) escalates by entity, not by user. Backup Engineer (Hương) covers if Lead unreachable.
 
 ## Rollback chain
 

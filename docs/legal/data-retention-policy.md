@@ -22,7 +22,7 @@
 | ---------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------ |
 | `OPS_BACKUP_RETENTION_DAYS=30` (hot)           | ✓ Configured           | Sufficient for operational rollback (24-720h window)                                             |
 | `OPS_AUDIT_RETENTION=1` (daily scheduler)      | ✓ Configured           | Rotates audit_log to gzip monthly archives, 12 mo kept                                           |
-| `OPS_OFFSITE_TARGET` (off-site backup)         | ✓ Configured           | Sysadmin enables on D-8 per PROMPT 7 Part B                                                      |
+| `OPS_OFFSITE_TARGET` (off-site backup)         | ✓ Configured           | Lead Engineer (sysadmin function) enables on D-8 per PROMPT 7 Part B                             |
 | **Cold-archive media (LTO tape / S3 Glacier)** | ❌ **NOT PROVISIONED** | **Procurement required within 30 days post-go-live for 10-yr quote + 5-yr production retention** |
 
 ## 3. Cold-Archive Procurement Spec (post-go-live)
