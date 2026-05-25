@@ -61,14 +61,14 @@ Lead Engineer retains all go/no-go authority. Backup Engineer:
   - Zalo: `+84988749869`
   - Email: `huongtt@cclind.com`
 - **Plant Manager**:
-  - Phone: `<TBD>`
-  - Email: `<TBD>`
+  - Phone: `N/A - direct channel with Lead Engineer (Lead handles PM comms)`
+  - Email: `N/A - direct channel with Lead Engineer`
 - **Sysadmin**:
-  - Phone: `<TBD>`
-  - Email: `<TBD>`
+  - Phone: `+84965191991 (= Lead Engineer Đặng Thế Thiệp; no separate sysadmin role exists)`
+  - Email: `thiepdt@cclind.com (= Lead Engineer)`
 
 ## Sign-off
 
-- Lead Engineer briefed Backup on: `<date>`
+- Lead Engineer briefed Backup on: `TBD - pending Hương Zalo confirm walk-through date (target D-14 2026-05-26)`
 - Backup Engineer name: `Trần Thị Hương`
-- Backup Engineer acknowledged scope: `<date>`
+- Backup Engineer acknowledged scope: `2026-05-25 (via phone, confirmed accept role + SSH/NSSM/cron skills present)`

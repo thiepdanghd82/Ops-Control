@@ -107,7 +107,7 @@ go-live, Win CLIENT in D+1..D+7 patch
 
 ### Blocker 2 — Sysadmin Part B backup activation (P0)
 
-**Owner**: Sysadmin (TBD per Call #3 above)
+**Owner**: Lead Engineer (= Sysadmin; per discovery 2026-05-25 — no separate sysadmin role exists at CCL Vietnam)
 **Task**: SSH to prod `10.102.3.61`, run preflight, activate
 `OPS_BACKUP_SCHEDULE=daily` cron per `docs/MIGRATION-DAY-0.md`
 **ETA**: D-1 night (2026-06-08) for first backup landed
@@ -116,7 +116,7 @@ file <24h old by D-0 morning
 
 ### Blocker 3 — Delete `ops_test_user` on prod (P1, Issue #69)
 
-**Owner**: Sysadmin (same as above)
+**Owner**: Lead Engineer (= Sysadmin; same person as Blocker 2)
 **Task**: Edit `server/data/Library/Users/users.json` on prod box
 to remove `ops_test_user` entry (file gitignored — must edit on prod)
 **ETA**: D-1 same window as Blocker 2
@@ -151,15 +151,15 @@ D-15   D-14 D-13 D-12 D-11 D-10 D-9  D-8  D-7  D-6  D-5  D-4  D-3  D-2  D-1  D-0
 
 ### Key milestones this week (D-15 → D-9)
 
-| Day  | Date  | Owner     | Milestone                                  |
-| ---- | ----- | --------- | ------------------------------------------ |
-| D-15 | 05-25 | Lead      | Backup engineer phone calls (this brief)   |
-| D-14 | 05-26 | Lead      | STOP triggers sign-off + Hương 30-min prep |
-| D-13 | 05-27 | Sysadmin  | SSH access confirmed for Hương             |
-| D-12 | 05-28 | Lead      | Win EXE build attempt #1 (Windows host)    |
-| D-11 | 05-29 | Lead      | Smoke quote fill session (PROMPT 6 scope)  |
-| D-10 | 05-30 | Operators | Refresher webinar #1 (60 ops, 2 sessions)  |
-| D-9  | 05-31 | (buffer)  | Catch-up day                               |
+| Day  | Date  | Owner     | Milestone                                                    |
+| ---- | ----- | --------- | ------------------------------------------------------------ |
+| D-15 | 05-25 | Lead      | Backup engineer phone calls (this brief)                     |
+| D-14 | 05-26 | Lead      | STOP triggers sign-off + Hương 30-min prep                   |
+| D-13 | 05-27 | Lead      | SSH access provisioned for Hương (= Sysadmin self-provision) |
+| D-12 | 05-28 | Lead      | Win EXE build attempt #1 (Windows host)                      |
+| D-11 | 05-29 | Lead      | Smoke quote fill session (PROMPT 6 scope)                    |
+| D-10 | 05-30 | Operators | Refresher webinar #1 (60 ops, 2 sessions)                    |
+| D-9  | 05-31 | (buffer)  | Catch-up day                                                 |
 
 ### Critical path next 2 weeks (D-8 → D-0)
 
