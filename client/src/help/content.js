@@ -4223,12 +4223,12 @@ export const HELP_CONTENT = {
         'Save. User gán group này nhận thay đổi khi login kế tiếp.'
       ),
       bs(
-        'Reset password (admin types one): user row → Reset (key icon) → enter new pwd. must_change_password is auto-set, all sessions revoked.',
-        'Reset mật khẩu (admin gõ tay): dòng user → Reset (icon chìa khoá) → nhập pwd mới. must_change_password tự bật, mọi session bị revoke.'
+        'Password reset for another user: admin uses the Provisioning Card flow (ID-card icon, next row). The legacy "Reset password" key-icon button was removed — its window.prompt() did not work in the Electron desktop shell.',
+        'Reset mật khẩu cho user khác: admin dùng Provisioning Card (icon ID-card, mục kế tiếp). Nút "Reset password" hình chìa khoá đã bị bỏ — window.prompt() không hoạt động trong vỏ Electron.'
       ),
       bs(
-        'SAP/IFS handover (Sprint 1.5): user row → Provisioning Card (ID-card icon) → confirm → modal opens with auto-generated temp pwd. Click Print for an A6 paper card OR Copy for a multi-line text block to send via secure channel. Hand to the new user. Temp pwd is gone the moment you close the modal — re-issue if lost.',
-        'Bàn giao SAP/IFS (Sprint 1.5): dòng user → Provisioning Card (icon ID-card) → confirm → modal hiện với temp pwd tự tạo. Click Print để in thẻ giấy A6 HOẶC Copy để có text gửi qua kênh bảo mật. Đưa cho user. Temp pwd biến mất ngay khi đóng modal — phải re-issue nếu mất.'
+        'SAP/IFS handover (Sprint 1.5): user row → Provisioning Card (ID-card icon) → confirm → modal opens with auto-generated temp pwd. Click Print for an A6 paper card OR Copy for a multi-line text block to send via secure channel. Hand to the new user. Temp pwd is gone the moment you close the modal — re-issue if lost. This is also the canonical "reset another user\'s password" path.',
+        'Bàn giao SAP/IFS (Sprint 1.5): dòng user → Provisioning Card (icon ID-card) → confirm → modal hiện với temp pwd tự tạo. Click Print để in thẻ giấy A6 HOẶC Copy để có text gửi qua kênh bảo mật. Đưa cho user. Temp pwd biến mất ngay khi đóng modal — phải re-issue nếu mất. Đây cũng là đường chính để "reset password cho user khác".'
       ),
       bs(
         'Disable user: toggle Active OFF. For immediate session kill, click "Sign out sessions".',

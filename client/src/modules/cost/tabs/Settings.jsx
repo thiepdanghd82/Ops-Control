@@ -711,15 +711,6 @@ const AcctIcon = {
       <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
     </SqIcon>
   ),
-  // Key — reset password
-  key: (
-    <SqIcon>
-      <circle cx="8" cy="15" r="4" />
-      <path d="M10.85 12.15 21 2" />
-      <path d="m18 5 3 3" />
-      <path d="m15 8 3 3" />
-    </SqIcon>
-  ),
   // Shield with check — setup 2FA
   shield: (
     <SqIcon>
@@ -918,23 +909,6 @@ function AccountSection() {
       loadUsers();
     } catch (e) {
       flash('error', 'Failed to update permission: ' + (e.message || 'unknown'));
-    }
-  }
-
-  async function handleResetPwd(u) {
-    const newPwd = prompt(
-      `Reset password for "${u.username}"?\n\nEnter new password (min 6 chars):`
-    );
-    if (!newPwd) return;
-    if (newPwd.length < 6) {
-      flash('error', 'Password must be at least 6 characters');
-      return;
-    }
-    try {
-      await costApi.resetPwd(u.id, newPwd);
-      flash('success', `Password reset for ${u.username}`);
-    } catch (e) {
-      flash('error', 'Failed to reset password: ' + (e.message || 'unknown'));
     }
   }
 
@@ -1388,15 +1362,11 @@ function AccountSection() {
                               {AcctIcon.edit}
                             </button>
                           )}
-                          {(isMe || isAdminPlus) && (
-                            <button
-                              className="acct-sq-btn acct-sq-key"
-                              onClick={() => handleResetPwd(u)}
-                              title="Reset password"
-                            >
-                              {AcctIcon.key}
-                            </button>
-                          )}
+                          {/* MES-3-FIX-43: legacy "Reset password" (key icon)
+                              hidden — used window.prompt() which returns null
+                              in Electron. Admins use the card-icon Provisioning
+                              Card flow below (works in Electron). Self-password
+                              change lives in SETTINGS → My Password sub-tab. */}
                           {/* Sprint 1.5 — SAP/IFS handover. Generates a random
                             temp pwd + opens the Provisioning Card modal so
                             the admin can copy/print the credentials. Only
