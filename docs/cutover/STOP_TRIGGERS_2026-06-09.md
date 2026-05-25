@@ -18,14 +18,14 @@ authority under pressure.
 
 ### Technical triggers (engineer detects)
 
-| #   | Trigger                                                                               | Action                                                                   | Recovery target                |
-| --- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------ |
-| T1  | D-1 UAT P0 found, cannot fix in 2h                                                    | HALT cutover. Slip 3-5 days.                                             | Email Plant Manager within 1h. |
-| T2  | D-0 06:00 `/health` fails continuously 15 min after restart                           | HALT. Execute Runbook A rollback to v1.5.9.                              | Restore service within 30 min. |
-| T3  | D-0 first quote save returns data corruption signature (NaN, undefined, blank fields) | HALT all save operations. Investigate calcEngine before allowing resume. | Confirm root cause within 1h.  |
-| T4  | D+1..D+3 parallel-run delta Excel-vs-system >5% on >3 quotes                          | Halt active use. Switch to Excel-only until investigated.                | Diff analysis within 4h.       |
-| T5  | Backup không run trên prod tối D-1 (`server/data/Backup/SQLite/` file >24h cũ)        | HALT cutover. Backup MUST be running before any new data lands.          | Sysadmin fix within 2h.        |
-| T6  | Sysadmin unreachable >15 min during active outage window                              | HALT. Operate fallback xlsx per Runbook B until sysadmin reachable.      | —                              |
+| #   | Trigger                                                                                                                                | Action                                                                                  | Recovery target                                         |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| T1  | D-1 UAT P0 found, cannot fix in 2h                                                                                                     | HALT cutover. Slip 3-5 days.                                                            | Email Plant Manager within 1h.                          |
+| T2  | D-0 06:00 `/health` fails continuously 15 min after restart                                                                            | HALT. Execute Runbook A rollback to v1.5.9.                                             | Restore service within 30 min.                          |
+| T3  | D-0 first quote save returns data corruption signature (NaN, undefined, blank fields)                                                  | HALT all save operations. Investigate calcEngine before allowing resume.                | Confirm root cause within 1h.                           |
+| T4  | D+1..D+3 parallel-run delta Excel-vs-system >5% on >3 quotes                                                                           | Halt active use. Switch to Excel-only until investigated.                               | Diff analysis within 4h.                                |
+| T5  | Backup không run trên prod tối D-1 (`server/data/Backup/SQLite/` file >24h cũ)                                                         | HALT cutover. Backup MUST be running before any new data lands.                         | Sysadmin fix within 2h.                                 |
+| T6  | Backup Engineer (Trần Thị Hương) unreachable >2h during active outage window WHEN Lead Engineer also unreachable (double-failure case) | HALT. Operate fallback xlsx per Runbook B. Plant Manager escalation via direct channel. | Recovery contingent on either Lead OR Backup reachable. |
 
 ### Operational triggers (anh self-detect)
 
@@ -88,9 +88,12 @@ When ANY trigger fires:
 ## Sign-off
 
 - **Lead Engineer**: Đặng Thế Thiệp
-- **Date signed**: 2026-05-24
+- **Date signed**: 2026-05-25 (re-signed post-discovery; original 2026-05-24)
 - **Authority basis**: Plant Manager verbal delegation 2026-05-24
 - **Binding period**: 2026-06-08 (D-1) through 2026-06-16 (D+7 end of parallel run)
+- **Decision**: AGREE all 11 triggers + T6 updated per Option B (sysadmin discovery)
+- **T6 amendment reason**: Sysadmin = Lead Engineer (same person, no separate role at CCL Vietnam). Original T6 ("sysadmin unreachable") was tautological with implicit Lead-unreachable trigger. Amended T6 captures the actual failure mode: double-failure (both Lead AND Backup Engineer Hương unreachable) — Plant Manager direct-channel escalation is the only remaining recovery path.
+- **Backup Engineer confirmed**: Trần Thị Hương (huongtt@cclind.com, +84988749869), SSH/NSSM/cron skills confirmed via phone 2026-05-25.
 
 ---
 
