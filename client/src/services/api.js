@@ -472,13 +472,13 @@ async function authCall(method, path, body) {
 
 // ─── Cost API (legacy endpoints now on Node.js — mounted at /api/) ───
 export const costApi = {
-  // Password — server expects {old_pwd, new_pwd} and {new_pwd}
+  // Password — server expects {old_pwd, new_pwd}
   changePwd: (oldPwd, newPwd) =>
     authCall('post', '/auth/change-pwd', { old_pwd: oldPwd, new_pwd: newPwd }),
-  resetPwd: (userId, newPwd) =>
-    authCall('post', `/auth/users/${userId}/reset-pwd`, { new_pwd: newPwd }),
-  // Sprint 1.5 — server generates a random temp pwd, sets must_change_password=true,
-  // returns it ONCE so the admin can hand it over (print/copy from a modal).
+  // Admin-side reset uses generateTempPwd (Provisioning Card flow). The
+  // legacy resetPwd wrapper was removed alongside the broken key-icon button
+  // (window.prompt() returns null in Electron). The server endpoint
+  // /auth/users/:id/reset-pwd still exists for non-UI callers if needed.
   generateTempPwd: (userId) => authCall('post', `/auth/users/${userId}/temp-pwd`, {}),
 
   // Sprint 1.7b — admin-editable backup schedule. Persists to a JSON
