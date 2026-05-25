@@ -61,8 +61,10 @@ Lead Engineer retains all go/no-go authority. Backup Engineer:
   - Zalo: `+84988749869`
   - Email: `huongtt@cclind.com`
 - **Plant Manager**:
-  - Phone: `N/A - direct channel with Lead Engineer (Lead handles PM comms)`
-  - Email: `N/A - direct channel with Lead Engineer`
+  - Phone: `<TBD — pending HR call 2026-05-25 Monday AM>` (fill via amendment PR after HR confirms)
+  - Email: `<TBD — pending HR call 2026-05-25 Monday AM>`
+  - **Escape hatch (D-1 Lead Engineer briefing → Backup Engineer)**: PM phone/email recorded on physical card stored in sealed envelope labeled `OPS-EMERGENCY-PM-CONTACT-2026-06-09` at Lead Engineer's workstation, opened by Backup Engineer ONLY during T6 double-failure incident OR when Lead Engineer incapacitated. Lead Engineer prepares envelope D-2 (2026-06-07) after HR contact captured; physical handoff to Hương during D-1 prep session.
+  - **Backup channel**: until envelope handoff complete, Backup Engineer routes PM escalation through Sales Lead (whose contact she already has access to via her existing CCL Vietnam directory).
 - **Sysadmin**:
   - Phone: `+84965191991 (= Lead Engineer Đặng Thế Thiệp; no separate sysadmin role exists)`
   - Email: `thiepdt@cclind.com (= Lead Engineer)`
