@@ -53,13 +53,13 @@ Lead Engineer retains all go/no-go authority. Backup Engineer:
 ## Contact info
 
 - **Lead Engineer (Đặng Thế Thiệp)**:
-  - Mobile: `<TBD>`
-  - Zalo: `<TBD>`
-  - Email: `<TBD>`
+  - Mobile: `+84965191991`
+  - Zalo: `+84965191991`
+  - Email: `thiepdt@cclind.com`
 - **Backup Engineer (TO BE NAMED)**:
-  - Mobile: `<TBD>`
-  - Zalo: `<TBD>`
-  - Email: `<TBD>`
+  - Mobile: `+84988749869`
+  - Zalo: `+84988749869`
+  - Email: `huongtt@cclind.com`
 - **Plant Manager**:
   - Phone: `<TBD>`
   - Email: `<TBD>`
@@ -70,5 +70,5 @@ Lead Engineer retains all go/no-go authority. Backup Engineer:
 ## Sign-off
 
 - Lead Engineer briefed Backup on: `<date>`
-- Backup Engineer name: `<TO BE NAMED>`
+- Backup Engineer name: `Trần Thị Hương`
 - Backup Engineer acknowledged scope: `<date>`
