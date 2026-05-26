@@ -46,6 +46,11 @@ import {
 import { validateLayout } from '../../../../services/layoutValidation';
 import { primaryRowTypeLabel } from '../../../../services/altMaterialsLabels';
 import { isIndigoPrintType } from '../../../../services/printTypeUtils';
+import {
+  getCovOvrState,
+  getCovOvrTooltip,
+  MANUAL_OVERRIDE_COLOR,
+} from '../../../../services/covOvrState';
 import '../StandardCalc/StandardCalc.css';
 
 export default function SubProductRow({ sp, spi, result, allSps }) {
@@ -1213,27 +1218,46 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                         />
                       </td>
                       <td>
-                        <DecimalInput
-                          value={ik.coverage_override}
-                          onChange={(v) => setInk(ii, 'coverage_override', v)}
-                          className="cc-det-inp cc-det-num"
-                          disabled={isIndigo}
-                          style={
-                            ik.coverage_override ? { color: '#7c3aed', fontWeight: 700 } : undefined
-                          }
-                          placeholder={(() => {
-                            if (isIndigo) return '';
-                            const cov = covLookup.get(ik.print_type);
-                            return cov != null && cov !== '' ? String(cov) : 'auto';
-                          })()}
-                          title={
-                            isIndigo
-                              ? 'Indigo uses click-charges, not coverage'
-                              : covLookup.get(ik.print_type) != null
-                                ? `Auto-synced from Coverage Table (${covLookup.get(ik.print_type)}). Type to override.`
-                                : 'Pick a Print Type to load coverage'
-                          }
-                        />
+                        {(() => {
+                          const cov = getCovOvrState({
+                            override: ik.coverage_override,
+                            printType: ik.print_type,
+                            covLookup,
+                            isIndigo,
+                          });
+                          const cls =
+                            cov.state === 'auto'
+                              ? 'cc-det-inp cc-det-num sc-cov-auto'
+                              : 'cc-det-inp cc-det-num';
+                          return (
+                            <div className="sc-cov-cell">
+                              <DecimalInput
+                                value={ik.coverage_override}
+                                onChange={(v) => setInk(ii, 'coverage_override', v)}
+                                className={cls}
+                                disabled={cov.state === 'indigo'}
+                                style={
+                                  cov.state === 'manual'
+                                    ? { color: MANUAL_OVERRIDE_COLOR, fontWeight: 700 }
+                                    : undefined
+                                }
+                                placeholder={cov.displayPlaceholder}
+                                title={getCovOvrTooltip(cov)}
+                              />
+                              {cov.showReset && (
+                                <button
+                                  type="button"
+                                  className="sc-cov-reset"
+                                  onClick={() => setInk(ii, 'coverage_override', null)}
+                                  title="Reset to default coverage"
+                                  aria-label="Reset to default coverage"
+                                >
+                                  ↻
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td>
                         <select
