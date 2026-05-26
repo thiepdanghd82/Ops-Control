@@ -1,27 +1,35 @@
 // @ts-check
 /**
- * MES-3-FIX-33 — Indigo subtype gating.
+ * MES-3-FIX-33 + FIX-46 — Indigo PRESS detection (click-charges path).
  *
- * The CCL Vietnam library lists specific Indigo press subtypes
- * (`Indigo6800`, `Indigo7800`, etc.), NOT the bare `Indigo` literal.
- * Pre-fix code did `ink.print_type === 'Indigo'` in 4 places
- * (calcEngine.calcInk, CalcInks.jsx, ComplexCalc/SubProductRow.jsx ×3),
- * so every operator quote that picked the actual library workcenter
- * fell through to the non-Indigo branch:
+ * Returns true ONLY for the main `Indigo` ink and Indigo press-subtype
+ * literals (`Indigo6800`, `Indigo7800`, future `Indigo Vmax`, etc.) —
+ * the categories that use the click-charges formula in calcInk.
  *
- *   • CLICKS column disabled (gated `print_type !== 'Indigo'`)
- *   • coverage_override input disabled
- *   • calcInk used the non-Indigo formula which needs ink_cover_val > 0;
- *     Indigo entries have no `coverage` lib row → run_s = 0 →
- *     `fmtN(0) === '—'` displayed
+ * Returns FALSE for the paren-suffixed CONSUMABLE subtypes
+ * (`Indigo(Primer)`, `Indigo(oil)`, `Indigo(Spot)`) — these have
+ * dedicated rows in `lib.ddl.coverage` (400 / 400 / 176) and must
+ * flow through the non-Indigo coverage-based formula in calcInk.
  *
- * This helper centralises the check so a new subtype (Indigo Vmax /
- * IndigoXXX) automatically opts in without hunting every callsite.
+ * Original FIX-33 used `.startsWith('Indigo')` which swept the
+ * consumable subtypes into the click branch by mistake, so their
+ * coverage entries were ignored, CLICKS column was wrongly enabled,
+ * and the COV OVR placeholder stayed blank instead of XLOOKUP'ing.
+ * Operator RFQ-2026-S0013 (2026-05-26) hit this: Ink 2-4 picked
+ * `Indigo(Primer)` / `Indigo(oil)` / `Indigo(Spot)`, COV OVR cell
+ * blank, Setup/Run = '—'. Coverage entries existed all along.
+ *
+ * Detection rule: exact 'Indigo' OR Indigo followed by digits/space
+ * (press model name). Anything in parens is a consumable subtype.
  *
  * @param {string|null|undefined} printType
  * @returns {boolean}
  */
 export function isIndigoPrintType(printType) {
   if (!printType) return false;
-  return String(printType).startsWith('Indigo');
+  const s = String(printType);
+  if (s === 'Indigo') return true;
+  // Press subtype: 'Indigo' followed by digit (Indigo6800) or space
+  // (Indigo Vmax). Parens (Indigo(Primer)) intentionally NOT matched.
+  return /^Indigo[\d ]/.test(s);
 }
