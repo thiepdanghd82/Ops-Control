@@ -58,3 +58,24 @@ test('isIndigoPrintType("indigo6800") → false (case-sensitive — library data
 test('isIndigoPrintType("ZIndigo") → false (prefix anchored)', () => {
   assert.equal(isIndigoPrintType('ZIndigo'), false);
 });
+
+// FIX-46 regression suite — paren-suffixed consumable subtypes must
+// NOT match the Indigo press detection. They have their own rows in
+// lib.ddl.coverage and need the coverage-based formula in calcInk.
+test('isIndigoPrintType("Indigo(Primer)") → false (coverage subtype)', () => {
+  assert.equal(isIndigoPrintType('Indigo(Primer)'), false);
+});
+
+test('isIndigoPrintType("Indigo(oil)") → false (coverage subtype)', () => {
+  assert.equal(isIndigoPrintType('Indigo(oil)'), false);
+});
+
+test('isIndigoPrintType("Indigo(Spot)") → false (coverage subtype)', () => {
+  assert.equal(isIndigoPrintType('Indigo(Spot)'), false);
+});
+
+test('isIndigoPrintType("Indigo(WHATEVER)") → false (any paren suffix)', () => {
+  // Future consumable subtypes that get added to lib.ddl.coverage will
+  // auto-flow through the coverage branch without needing a code change.
+  assert.equal(isIndigoPrintType('Indigo(WHATEVER)'), false);
+});

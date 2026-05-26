@@ -8,6 +8,11 @@ import { useCostLib } from '../../../../context/CostLibContext';
 import { useLibraryPicker } from '../../../../components/LibraryPicker/LibraryPicker';
 import { calcInk, calcPitch, getActiveTierState } from '../../../../services/calcEngine';
 import { isIndigoPrintType } from '../../../../services/printTypeUtils';
+import {
+  getCovOvrState,
+  getCovOvrTooltip,
+  MANUAL_OVERRIDE_COLOR,
+} from '../../../../services/covOvrState';
 import { fmtN, parseLocaleNumber } from '../../../../utils/format';
 import DecimalInput from '../../../../utils/DecimalInput';
 
@@ -325,25 +330,46 @@ export default function CalcInks() {
                       />
                     </td>
                     <td>
-                      <DecimalInput
-                        value={ink.coverage_override}
-                        onChange={(v) => setInkField(i, 'coverage_override', v)}
-                        className="sc-input-sm sc-input-num"
-                        disabled={isIndigoPrintType(ink.print_type)}
-                        style={ink.coverage_override ? { color: '#7c3aed', fontWeight: 700 } : {}}
-                        placeholder={(() => {
-                          if (isIndigoPrintType(ink.print_type)) return '';
-                          const cov = covLookup.get(ink.print_type);
-                          return cov != null && cov !== '' ? String(cov) : 'auto';
-                        })()}
-                        title={
-                          isIndigoPrintType(ink.print_type)
-                            ? 'Indigo uses click-charges, not coverage'
-                            : covLookup.get(ink.print_type) != null
-                              ? `Auto-synced from Coverage Table (${covLookup.get(ink.print_type)}). Type to override.`
-                              : 'Pick a Print Type to load coverage'
-                        }
-                      />
+                      {(() => {
+                        const cov = getCovOvrState({
+                          override: ink.coverage_override,
+                          printType: ink.print_type,
+                          covLookup,
+                          isIndigo: isIndigoPrintType(ink.print_type),
+                        });
+                        const cls =
+                          cov.state === 'auto'
+                            ? 'sc-input-sm sc-input-num sc-cov-auto'
+                            : 'sc-input-sm sc-input-num';
+                        return (
+                          <div className="sc-cov-cell">
+                            <DecimalInput
+                              value={ink.coverage_override}
+                              onChange={(v) => setInkField(i, 'coverage_override', v)}
+                              className={cls}
+                              disabled={cov.state === 'indigo'}
+                              style={
+                                cov.state === 'manual'
+                                  ? { color: MANUAL_OVERRIDE_COLOR, fontWeight: 700 }
+                                  : {}
+                              }
+                              placeholder={cov.displayPlaceholder}
+                              title={getCovOvrTooltip(cov)}
+                            />
+                            {cov.showReset && (
+                              <button
+                                type="button"
+                                className="sc-cov-reset"
+                                onClick={() => setInkField(i, 'coverage_override', null)}
+                                title="Reset to default coverage"
+                                aria-label="Reset to default coverage"
+                              >
+                                ↻
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td>
                       <select
