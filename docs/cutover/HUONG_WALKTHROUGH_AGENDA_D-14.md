@@ -12,19 +12,19 @@
 
 ## State snapshot — what is ready by D-15 evening (2026-05-25)
 
-| Item                               | Status                | Notes                                                                   |
-| ---------------------------------- | --------------------- | ----------------------------------------------------------------------- |
-| Backup scheduler activated         | ✅ DONE               | PR #74 — `OPS_BACKUP_SCHEDULE` honored + TOTP excluded from tarball     |
-| STOP triggers documented           | ✅ DONE               | PR #78 — 11 triggers (T1-T6, O1-O3, C1-C2)                              |
-| BACKUP_ENGINEER_BRIEF              | ✅ DONE               | PR #78 — Hương contact filled; PM contact still `<TBD>` per HR call     |
-| Sysadmin discovery cascade         | ✅ DONE               | PRs #80/#81/#82/#83 — Lead Engineer = Sysadmin = same person documented |
-| Mac DMG SERVER + CLIENT            | ✅ DONE               | Built + smoke-tested; license pubkey shipped in bundle                  |
-| Win EXE CLIENT                     | ⚠️ FIELD TEST PENDING | Built locally; field-test deferred per user (will run pre-D-7)          |
-| BL-4 smoke-quote baseline helper   | ✅ DONE               | PR #84 — `scripts/cutover/dump-baseline-numbers.mjs`                    |
-| Settings reset-pwd button (broken) | ✅ FIXED              | PR #85 — hidden; admins use Provisioning Card flow                      |
-| Prod box `10.102.3.61` provisioned | ⚠️ NOT YET            | Dev currently runs on Lead's Mac; affects Block 5 drill                 |
-| HR call for PM direct contact      | ⏳ SCHEDULED          | 2026-05-25 Monday AM (today) — fill BRIEF via amendment PR              |
-| MAC_INSTALL_GUIDE.md               | ⏳ TBD                | Apple Gatekeeper `xattr` instructions before D-6 UAT                    |
+| Item                               | Status                | Notes                                                                        |
+| ---------------------------------- | --------------------- | ---------------------------------------------------------------------------- |
+| Backup scheduler activated         | ✅ DONE               | PR #74 — `OPS_BACKUP_SCHEDULE` honored + TOTP excluded from tarball          |
+| STOP triggers documented           | ✅ DONE               | PR #78 — 11 triggers (T1-T6, O1-O3, C1-C2)                                   |
+| BACKUP_ENGINEER_BRIEF              | ✅ DONE               | PR #78 — Hương contact filled; PM contact still `<TBD>` per HR call          |
+| Sysadmin discovery cascade         | ✅ DONE               | PRs #80/#81/#82/#83 — Lead Engineer = Sysadmin = same person documented      |
+| Mac DMG SERVER + CLIENT            | ✅ DONE               | Built + smoke-tested; license pubkey shipped in bundle                       |
+| Win EXE CLIENT                     | ⚠️ FIELD TEST PENDING | Built locally; field-test deferred per user (will run pre-D-7)               |
+| BL-4 smoke-quote baseline helper   | ✅ DONE               | PR #84 — `scripts/cutover/dump-baseline-numbers.mjs`                         |
+| Settings reset-pwd button (broken) | ✅ FIXED              | PR #85 — hidden; admins use Provisioning Card flow                           |
+| Prod box `10.102.3.61` provisioned | ⚠️ NOT YET            | Dev currently runs on Lead's Mac; affects Block 5 drill                      |
+| HR call for PM direct contact      | ⏳ SCHEDULED          | 2026-05-25 Monday AM (today) — fill BRIEF via amendment PR                   |
+| MAC_INSTALL_GUIDE.md               | ✅ DONE               | `docs/cutover/MAC_INSTALL_GUIDE.md` — install + Gatekeeper + troubleshooting |
 
 ---
 
@@ -445,14 +445,14 @@ After Hương session done:
 
 ## Open risks Hương should know
 
-| Risk                                                                   | Mitigation                                                                             |
-| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Win EXE not built by D-7                                               | Mac-only first go-live (~7 Mac operators); Win operators wait D+1..D+7 patch           |
-| Prod box at `10.102.3.61` not yet provisioned (dev runs on Lead's Mac) | Block 5 live drill pivots to talk-through; schedule post-prod-standup drill before D-7 |
-| PM contact `<TBD>` in BACKUP_BRIEF until HR call done                  | Sales Lead is interim escalation channel (per BRIEF line 67)                           |
-| Hương's SSH key never tested before D-1                                | Live drill (Block 5) is the test — fail-fast catch in session                          |
-| Mac DMG Apple Gatekeeper warning on operator first-launch              | `xattr -dr com.apple.quarantine` one-line fix; MAC_INSTALL_GUIDE.md TBD before D-6 UAT |
-| 20 operator accounts (13 still pending provision)                      | Lead schedules provision session per Sprint 1.5 flow before D-1                        |
+| Risk                                                                   | Mitigation                                                                                          |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Win EXE not built by D-7                                               | Mac-only first go-live (~7 Mac operators); Win operators wait D+1..D+7 patch                        |
+| Prod box at `10.102.3.61` not yet provisioned (dev runs on Lead's Mac) | Block 5 live drill pivots to talk-through; schedule post-prod-standup drill before D-7              |
+| PM contact `<TBD>` in BACKUP_BRIEF until HR call done                  | Sales Lead is interim escalation channel (per BRIEF line 67)                                        |
+| Hương's SSH key never tested before D-1                                | Live drill (Block 5) is the test — fail-fast catch in session                                       |
+| Mac DMG Apple Gatekeeper warning on operator first-launch              | `docs/cutover/MAC_INSTALL_GUIDE.md` — operator one-pager with `xattr` bypass + System Settings flow |
+| 20 operator accounts (13 still pending provision)                      | Lead schedules provision session per Sprint 1.5 flow before D-1                                     |
 
 Hương should be aware of these but NOT responsible for fixing — Lead drives.
 
