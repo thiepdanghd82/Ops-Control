@@ -267,10 +267,18 @@
 .sum-select-col {
   width: 32px;
   padding: 4px 6px;
+  text-align: center;
 }
 .sum-select-col input[type='checkbox'] {
   cursor: pointer;
   margin: 0;
+  vertical-align: middle;
+}
+/* Select-all header TH lives in the column-label row via rowSpan=2 so
+   the column count matches data rows. Match the column-header styling
+   (not the lighter italic hint row) so it visually anchors the column. */
+.sum-select-header {
+  cursor: pointer;
   vertical-align: middle;
 }
 .sum-select-header-row > th {
@@ -283,10 +291,6 @@
   border-bottom: 1px solid #e2e8f0;
   text-align: left;
   cursor: default;
-}
-.sum-select-header-row > th.sum-select-col {
-  cursor: pointer;
-  text-align: center;
 }
 .sum-select-hint {
   letter-spacing: 0.01em;

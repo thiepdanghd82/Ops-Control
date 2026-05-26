@@ -240,6 +240,19 @@ export default function Summarize() {
               st.part_width && st.part_length_md
                 ? `${st.part_width}\u00D7${st.part_length_md}`
                 : '',
+            // `production_size` = Print sub-tab dimensions (print_part_*).
+            // What the layout calc + plate use; matches the artwork area
+            // operator engages with daily. Falls back to canonical Cut
+            // when Print fields are not populated (legacy + Print-only quotes).
+            production_size: (() => {
+              const pw = Number(st.print_part_width) || 0;
+              const pl = Number(st.print_part_length_md) || 0;
+              if (pw > 0 && pl > 0) return pw + '×' + pl;
+              const cw = Number(st.part_width) || 0;
+              const cl = Number(st.part_length_md) || 0;
+              if (cw > 0 && cl > 0) return cw + '×' + cl;
+              return '';
+            })(),
             moq,
             annual_qty: eau,
             yield_pct,
@@ -354,6 +367,9 @@ export default function Summarize() {
       'end_cu_pn',
       'description',
       'size',
+      // Inserted between `size` and `moq` so CSV column order matches the
+      // visible table. `size` stays for backward-compat (legacy exports).
+      'production_size',
       'moq',
       'annual_qty',
       'yield_pct',
@@ -416,6 +432,14 @@ export default function Summarize() {
     { key: 'project', label: 'End Customer', auto: true },
     { key: 'end_cu_pn', label: 'End CU PN', auto: true },
     { key: 'description', label: 'Description', auto: true },
+    {
+      key: 'production_size',
+      label: 'Production Size',
+      w: 110,
+      // Centered + tabular numerals so 220×395 vs 60×120 align under each other.
+      // Sourced from `print_part_*` (Print sub-tab) with fallback to canonical
+      // `part_*` per row computation above.
+    },
     { key: 'moq', label: 'MOQ', w: 60, right: true },
     { key: 'yield_pct', label: 'Yield%', w: 55, right: true, fmt: (v) => pct(v) },
     { key: 's_mat_cost', label: 'Material', w: 70, right: true, fmt: (v) => fmtN(v) },
@@ -481,23 +505,12 @@ export default function Summarize() {
         <table className="sum-table">
           <thead>
             <tr>
-              {columns.map((c) => (
-                <th
-                  key={c.key}
-                  // `auto: true` columns get no width + nowrap so the
-                  // browser sizes them to their widest content.
-                  style={{ width: c.auto ? 'auto' : c.w, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                  className={c.right ? 'right' : ''}
-                  onClick={() => handleSort(c.key)}
-                >
-                  {c.label} {sortCol === c.key ? (sortAsc ? '\u25B2' : '\u25BC') : ''}
-                </th>
-              ))}
-            </tr>
-            <tr className="sum-select-header-row">
+              {/* Checkbox column header — rowSpan=2 so this TH spans both
+                  the column-label row and the hint row below, keeping the
+                  N+1 cell count aligned with the data rows. */}
               <th
-                className="sum-select-col"
-                style={{ width: 32, textAlign: 'center', cursor: 'pointer' }}
+                className="sum-select-col sum-select-header"
+                rowSpan={2}
                 title={
                   allVisibleSelected
                     ? 'Clear selection'
@@ -516,7 +529,22 @@ export default function Summarize() {
                   onChange={toggleSelectAll}
                 />
               </th>
-              <th colSpan={columns.length - 1} className="sum-select-hint">
+              {columns.map((c) => (
+                <th
+                  key={c.key}
+                  // `auto: true` columns get no width + nowrap so the
+                  // browser sizes them to their widest content.
+                  style={{ width: c.auto ? 'auto' : c.w, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  className={c.right ? 'right' : ''}
+                  onClick={() => handleSort(c.key)}
+                >
+                  {c.label} {sortCol === c.key ? (sortAsc ? '\u25B2' : '\u25BC') : ''}
+                </th>
+              ))}
+            </tr>
+            <tr className="sum-select-header-row">
+              {/* Checkbox column already occupies leftmost via rowSpan=2 above. */}
+              <th colSpan={columns.length} className="sum-select-hint">
                 {selectedVisibleCount > 0
                   ? `${selectedVisibleCount} row(s) selected — only those will be exported${selected.size > selectedVisibleCount ? ` (${selected.size - selectedVisibleCount} more hidden by filter)` : ''}`
                   : 'No rows selected — export will include all visible rows'}
