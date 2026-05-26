@@ -2,6 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { csvEscape, buildCsv } from './csvExport.js';
 
+// UTF-8 BOM that buildCsv prepends so Excel decodes correctly on
+// non-UTF-8 default code pages. Strip it in tests that compare body.
+const BOM = '﻿';
+
 test('csvEscape — null + undefined → empty string', () => {
   assert.equal(csvEscape(null), '');
   assert.equal(csvEscape(undefined), '');
@@ -43,9 +47,15 @@ test('csvEscape — combination: comma + quote + newline', () => {
   assert.equal(csvEscape('a, "b", c\n'), '"a, ""b"", c\n"');
 });
 
+test('buildCsv — starts with UTF-8 BOM (Excel encoding hint)', () => {
+  const csv = buildCsv([], ['a', 'b']);
+  assert.equal(csv.charCodeAt(0), 0xfeff, 'first code unit is U+FEFF BOM');
+  assert.equal(csv, BOM + 'a,b');
+});
+
 test('buildCsv — empty rows still emits header', () => {
   const csv = buildCsv([], ['a', 'b', 'c']);
-  assert.equal(csv, 'a,b,c');
+  assert.equal(csv, BOM + 'a,b,c');
 });
 
 test('buildCsv — picks fields by column keys', () => {
@@ -53,16 +63,16 @@ test('buildCsv — picks fields by column keys', () => {
     { a: 1, b: 2, c: 3 },
     { a: 4, b: 5, c: 6 },
   ];
-  assert.equal(buildCsv(rows, ['a', 'c']), 'a,c\n1,3\n4,6');
+  assert.equal(buildCsv(rows, ['a', 'c']), BOM + 'a,c\n1,3\n4,6');
 });
 
 test('buildCsv — missing field becomes empty cell', () => {
   const rows = [{ a: 1 }];
-  assert.equal(buildCsv(rows, ['a', 'b']), 'a,b\n1,');
+  assert.equal(buildCsv(rows, ['a', 'b']), BOM + 'a,b\n1,');
 });
 
 test('buildCsv — null row defensively handled', () => {
-  assert.equal(buildCsv([null], ['a']), 'a\n');
+  assert.equal(buildCsv([null], ['a']), BOM + 'a\n');
 });
 
 test('buildCsv — operator-style row with all quoting cases', () => {
@@ -78,7 +88,8 @@ test('buildCsv — operator-style row with all quoting cases', () => {
   const csv = buildCsv(rows, ['rfq_no', 'direct_cu', 'description', 'moq', 'gm_pct']);
   const lines = csv.split('\n');
   assert.equal(lines.length, 2);
-  assert.equal(lines[0], 'rfq_no,direct_cu,description,moq,gm_pct');
+  // BOM is prepended to the header line, so the slice starts after it.
+  assert.equal(lines[0], BOM + 'rfq_no,direct_cu,description,moq,gm_pct');
   assert.equal(lines[1], 'RFQ-2026-S0019,Panasonic,"BODY STICKER, FC AS ""TL1G""",1000,0.158');
 });
 
@@ -90,6 +101,7 @@ test('buildCsv — pre-fix bug regression: embedded quote no longer leaks', () =
   // Round-trip parse check: regex-based naïve CSV parser
   const lines = csv.split('\n');
   assert.equal(lines.length, 2);
-  // The data row should have exactly 1 field (1 cell, properly quoted)
+  // The data row should have exactly 1 field (1 cell, properly quoted).
+  // BOM only on header line (line 0), data line is unaffected.
   assert.equal(lines[1], '"BODY,STICKER ""BX"""');
 });

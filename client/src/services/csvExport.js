@@ -26,7 +26,20 @@ export function csvEscape(value) {
 }
 
 /**
+ * UTF-8 BOM. Prepended to CSV so Excel on Vietnamese / Windows
+ * locales detects UTF-8 encoding and renders `×` / `Đ` / etc.
+ * correctly. Without it, Excel falls back to the system code page
+ * (often Windows-1252) and a UTF-8 `×` (0xC3 0x97) gets shown as
+ * `Ã—` or `√ó` depending on the misread. macOS Numbers + LibreOffice
+ * also honor the BOM. Cost: +3 bytes per file.
+ */
+const UTF8_BOM = '﻿';
+
+/**
  * Build a CSV string from an array of records + column key list.
+ *
+ * The output starts with a UTF-8 BOM so spreadsheet apps that
+ * default to legacy code pages still decode it correctly.
  *
  * @param {Array<Object>} rows
  * @param {Array<string>} cols column keys (used as header row + field lookup)
@@ -35,7 +48,7 @@ export function csvEscape(value) {
 export function buildCsv(rows, cols) {
   const header = cols.map(csvEscape).join(',');
   const body = rows.map((r) => cols.map((c) => csvEscape(r?.[c])).join(','));
-  return [header, ...body].join('\n');
+  return UTF8_BOM + [header, ...body].join('\n');
 }
 
 /**

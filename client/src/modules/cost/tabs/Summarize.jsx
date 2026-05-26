@@ -366,9 +366,10 @@ export default function Summarize() {
       'project',
       'end_cu_pn',
       'description',
-      'size',
-      // Inserted between `size` and `moq` so CSV column order matches the
-      // visible table. `size` stays for backward-compat (legacy exports).
+      // `size` (canonical Cut dimensions) removed from CSV per operator
+      // feedback 2026-05-26 — it duplicates `production_size` for most
+      // quotes and confused readers on the rows where canonical Cut was
+      // never populated (showed `2x3` placeholder).
       'production_size',
       'moq',
       'annual_qty',
