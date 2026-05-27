@@ -19,7 +19,7 @@
 | BACKUP_ENGINEER_BRIEF              | ✅ DONE               | PR #78 — Hương contact filled; PM contact still `<TBD>` per HR call          |
 | Sysadmin discovery cascade         | ✅ DONE               | PRs #80/#81/#82/#83 — Lead Engineer = Sysadmin = same person documented      |
 | Mac DMG SERVER + CLIENT            | ✅ DONE               | Built + smoke-tested; license pubkey shipped in bundle                       |
-| Win EXE CLIENT                     | ⚠️ FIELD TEST PENDING | Built locally; field-test deferred per user (will run pre-D-7)               |
+| Win EXE CLIENT                     | ⚠️ FIELD TEST PENDING | Built locally; checklist at `docs/cutover/WIN_EXE_FIELD_TEST_D-7.md` for D-7 |
 | BL-4 smoke-quote baseline helper   | ✅ DONE               | PR #84 — `scripts/cutover/dump-baseline-numbers.mjs`                         |
 | Settings reset-pwd button (broken) | ✅ FIXED              | PR #85 — hidden; admins use Provisioning Card flow                           |
 | Prod box `10.102.3.61` provisioned | ⚠️ NOT YET            | Dev currently runs on Lead's Mac; affects Block 5 drill                      |
