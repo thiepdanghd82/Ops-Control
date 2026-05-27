@@ -1,80 +1,301 @@
-.sum { display:flex; flex-direction:column; height:100%; background:#f4f4f4; position:relative; font-family:'IBM Plex Sans','Helvetica Neue',Arial,sans-serif; letter-spacing:.16px; }
-.sum-empty-cell { padding: 16px !important; text-align: center; color: #94a3b8; }
-.sum-header { display:flex; align-items:center; gap:10px; padding:10px 16px; background:#f4f4f4; border-bottom:2px solid #e0e0e0; box-shadow:none; }
-.sum-header-icon { width:26px; height:26px; border-radius:0; background:#e0e0e0; border:none; display:flex; align-items:center; justify-content:center; color:#161616; flex-shrink:0; }
-.sum-header-icon svg { width:14px; height:14px; }
-.sum-header-title { font-size:14px; font-weight:600; color:#161616; letter-spacing:.16px; flex-shrink:0; }
-.sum-header-spacer { flex:1; }
-.sum-search { padding:0 16px; height:32px; border:none; border-bottom:2px solid #c6c6c6; border-radius:0; font-size:14px; width:240px; background:#ffffff; color:#161616; outline:none; letter-spacing:.16px; }
-.sum-search::placeholder { color:#6f6f6f; }
-.sum-search:focus { border-bottom-color:#0f62fe; }
-.sum-export-btn { padding:7px 16px; background:#0f62fe; color:#ffffff; border:none; border-radius:0; font-size:14px; font-weight:400; cursor:pointer; transition:background-color .15s; letter-spacing:.16px; }
-.sum-export-btn:hover { background:#0353e9; }
-.sum-table-wrap { flex:1; overflow:auto; padding:0; }
+.sum {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #f4f4f4;
+  position: relative;
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing: 0.16px;
+}
+.sum-empty-cell {
+  padding: 16px !important;
+  text-align: center;
+  color: #94a3b8;
+}
+.sum-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: #f4f4f4;
+  border-bottom: 2px solid #e0e0e0;
+  box-shadow: none;
+}
+.sum-header-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 0;
+  background: #e0e0e0;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #161616;
+  flex-shrink: 0;
+}
+.sum-header-icon svg {
+  width: 14px;
+  height: 14px;
+}
+.sum-header-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #161616;
+  letter-spacing: 0.16px;
+  flex-shrink: 0;
+}
+.sum-header-spacer {
+  flex: 1;
+}
+.sum-search {
+  padding: 0 16px;
+  height: 32px;
+  border: none;
+  border-bottom: 2px solid #c6c6c6;
+  border-radius: 0;
+  font-size: 14px;
+  width: 240px;
+  background: #ffffff;
+  color: #161616;
+  outline: none;
+  letter-spacing: 0.16px;
+}
+.sum-search::placeholder {
+  color: #6f6f6f;
+}
+.sum-search:focus {
+  border-bottom-color: #0f62fe;
+}
+.sum-export-btn {
+  padding: 7px 16px;
+  background: #0f62fe;
+  color: #ffffff;
+  border: none;
+  border-radius: 0;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  letter-spacing: 0.16px;
+}
+.sum-export-btn:hover {
+  background: #0353e9;
+}
+.sum-table-wrap {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+}
 /* border-collapse:separate lets us use sticky positioning on <th> —
    with border-collapse:collapse the header cell borders collide with
    the sticky layer and flicker during scroll. We fake the collapsed
    look with border-bottom only and a shared outer frame via box-shadow. */
-.sum-table { width:100%; border-collapse:separate; border-spacing:0; background:#ffffff; box-shadow:none; font-size:12px; letter-spacing:.16px; }
-.sum-table thead th {
-  position:sticky;
-  top:0;
-  z-index:2;
-  background:#f4f4f4; color:#525252; font-size:11px; font-weight:600;
-  text-align:left; padding:10px 10px; white-space:nowrap; letter-spacing:.4px;
-  text-transform:uppercase; user-select:none;
-  border-bottom:2px solid #e0e0e0;
-  box-shadow:none;
+.sum-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #ffffff;
+  box-shadow: none;
+  font-size: 12px;
+  letter-spacing: 0.16px;
 }
-.sum-table th:hover { background:#e8e8e8; }
-.sum-table td { padding:8px 10px; border-bottom:1px solid #e8e8e8; white-space:nowrap; color:#161616; line-height:1.4; vertical-align:middle; }
-.sum-table tbody tr { cursor:pointer; }
-.sum-table tbody tr:nth-child(even) td { background:#fafafa; }
-.sum-table tbody tr:hover td { background:#e5f0ff; }
-.sum-table .right { text-align:right; font-variant-numeric:tabular-nums; font-feature-settings:'tnum'; }
+.sum-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f4f4f4;
+  color: #525252;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 10px;
+  white-space: nowrap;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  user-select: none;
+  border-bottom: 2px solid #e0e0e0;
+  box-shadow: none;
+}
+.sum-table th:hover {
+  background: #e8e8e8;
+}
+.sum-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e8e8e8;
+  white-space: nowrap;
+  color: #161616;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+.sum-table tbody tr {
+  cursor: pointer;
+}
+.sum-table tbody tr:nth-child(even) td {
+  background: #fafafa;
+}
+.sum-table tbody tr:hover td {
+  background: #e5f0ff;
+}
+.sum-table .right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
 
 /* ─── Right-click context menu (macOS Finder style) ─── */
-.sum-row-ctx { background:#e0edff !important; }
+.sum-row-ctx {
+  background: #e0edff !important;
+}
 .sum-ctx-menu {
-  position:absolute; z-index:9999; min-width:220px;
-  background:rgba(255,255,255,.96);
-  backdrop-filter:blur(20px) saturate(180%);
-  -webkit-backdrop-filter:blur(20px) saturate(180%);
-  border:1px solid rgba(0,0,0,.12); border-radius:8px;
-  box-shadow:0 8px 30px rgba(0,0,0,.12),0 2px 8px rgba(0,0,0,.06);
-  padding:4px 0; animation:sum-ctx-in .12s ease-out;
-  font-family:'IBM Plex Sans','Helvetica Neue',Arial,sans-serif;
+  position: absolute;
+  z-index: 9999;
+  min-width: 220px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 4px 0;
+  animation: sum-ctx-in 0.12s ease-out;
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
 }
-@keyframes sum-ctx-in { from { opacity:0; transform:scale(.96); } to { opacity:1; transform:scale(1); } }
+@keyframes sum-ctx-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
 .sum-ctx-header {
-  padding:6px 12px 4px; font-size:10px; font-weight:600;
-  color:var(--color-slate-400); letter-spacing:.2px;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:260px;
+  padding: 6px 12px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-slate-400);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
 }
-.sum-ctx-divider { height:1px; background:rgba(0,0,0,.08); margin:3px 0; }
+.sum-ctx-divider {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.08);
+  margin: 3px 0;
+}
 .sum-ctx-item {
-  display:flex; align-items:center; gap:8px; width:100%;
-  padding:5px 12px; border:none; background:none;
-  font-size:13px; color:#1e293b; cursor:pointer; text-align:left;
-  transition:background .08s; white-space:nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 12px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: #1e293b;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.08s;
+  white-space: nowrap;
 }
 .sum-ctx-item:hover {
-  background:#2563eb; color:white; border-radius:4px;
-  margin:0 4px; width:calc(100% - 8px); padding-left:8px; padding-right:8px;
+  background: #2563eb;
+  color: white;
+  border-radius: 4px;
+  margin: 0 4px;
+  width: calc(100% - 8px);
+  padding-left: 8px;
+  padding-right: 8px;
 }
-.sum-ctx-item:hover .sum-ctx-shortcut { color:rgba(255,255,255,.6); }
-.sum-ctx-icon { width:16px; text-align:center; font-size:13px; flex-shrink:0; }
-.sum-ctx-shortcut { margin-left:auto; font-size:11px; color:var(--color-slate-400); font-weight:500; letter-spacing:.3px; }
+.sum-ctx-item:hover .sum-ctx-shortcut {
+  color: rgba(255, 255, 255, 0.6);
+}
+.sum-ctx-icon {
+  width: 16px;
+  text-align: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.sum-ctx-shortcut {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--color-slate-400);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
 
-.sum-ctx-colorbar { display:flex; align-items:center; gap:6px; padding:6px 12px; }
-.sum-ctx-dot {
-  width:16px; height:16px; border-radius:50%;
-  border:1px solid rgba(0,0,0,.15); cursor:pointer; padding:0;
-  transition:transform .08s;
+.sum-ctx-colorbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
 }
-.sum-ctx-dot:hover { transform:scale(1.18); }
-.sum-ctx-dot.active { box-shadow:0 0 0 2px #fff,0 0 0 3px #2563eb; }
+.sum-ctx-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.08s;
+}
+.sum-ctx-dot:hover {
+  transform: scale(1.18);
+}
+.sum-ctx-dot.active {
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 3px #2563eb;
+}
 .sum-ctx-dot-clear {
-  background:#fff; color:#94a3b8; font-size:12px; line-height:1; font-weight:600;
-  display:inline-flex; align-items:center; justify-content:center;
+  background: #fff;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Selection column (FIX-47 follow-up — operator picks rows to export). */
+.sum-select-col {
+  width: 32px;
+  padding: 4px 6px;
+  text-align: center;
+}
+.sum-select-col input[type='checkbox'] {
+  cursor: pointer;
+  margin: 0;
+  vertical-align: middle;
+}
+/* Select-all header TH lives in the column-label row via rowSpan=2 so
+   the column count matches data rows. Match the column-header styling
+   (not the lighter italic hint row) so it visually anchors the column. */
+.sum-select-header {
+  cursor: pointer;
+  vertical-align: middle;
+}
+.sum-select-header-row > th {
+  background: #f8fafc;
+  font-weight: 400;
+  font-style: italic;
+  color: #475569;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  cursor: default;
+}
+.sum-select-hint {
+  letter-spacing: 0.01em;
+}
+.sum-export-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
 }

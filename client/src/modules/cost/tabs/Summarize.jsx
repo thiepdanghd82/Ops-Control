@@ -17,6 +17,7 @@ import { fmtN, pct, gmClr } from '../../../utils/format';
 import { useAbortableFetch } from '../../../hooks/useAbortableFetch';
 import EmptyState from '../../../components/Shared/EmptyState';
 import { err as logErr } from '../../../utils/logger';
+import { buildCsv, saveCsv } from '../../../services/csvExport';
 import './Summarize.css';
 
 // Yield = 1 - Σ(scrap_pct) across every process in a state. Uses a simple
@@ -25,7 +26,7 @@ import './Summarize.css';
 function yieldFromProcesses(st) {
   const procs = (st && st.processes) || [];
   const sumScrap = procs.reduce((acc, p) => {
-    return acc + (p && p.workcenter ? (Number(p.scrap_pct) || 0) : 0);
+    return acc + (p && p.workcenter ? Number(p.scrap_pct) || 0 : 0);
   }, 0);
   return 1 - sumScrap;
 }
@@ -34,9 +35,9 @@ function yieldFromProcesses(st) {
 // so the displayed yield reflects the whole assembly, not just SP0.
 function yieldFromSubproducts(sps) {
   let sumScrap = 0;
-  for (const sp of (sps || [])) {
-    for (const p of (sp.processes || [])) {
-      if (p && p.workcenter) sumScrap += (Number(p.scrap_pct) || 0);
+  for (const sp of sps || []) {
+    for (const p of sp.processes || []) {
+      if (p && p.workcenter) sumScrap += Number(p.scrap_pct) || 0;
     }
   }
   return 1 - sumScrap;
@@ -47,32 +48,49 @@ function yieldFromSubproducts(sps) {
 // more modules; the logic is small and self-contained.
 function aggregateCplxTier(cs, sps, lib, tierIdx) {
   if (!lib || !sps.length) return null;
-  const activeMoq = tierIdx === 0
-    ? cs.moq
-    : (((cs.extra_moqs || [])[tierIdx - 1] || {}).moq || cs.moq);
+  const activeMoq =
+    tierIdx === 0 ? cs.moq : ((cs.extra_moqs || [])[tierIdx - 1] || {}).moq || cs.moq;
   const tieredSps = sps.map((sp, spi) => applyCplxTierToSp(cs, sp, spi, tierIdx));
   const pass1 = tieredSps.map((sp) => {
     try {
-      const spSt = { ...sp, moq: sp.ship_qty || activeMoq, selling_price: cs.selling_price, trade_mode: cs.trade_mode, site: cs.site };
+      const spSt = {
+        ...sp,
+        moq: sp.ship_qty || activeMoq,
+        selling_price: cs.selling_price,
+        trade_mode: cs.trade_mode,
+        site: cs.site,
+      };
       return calcAll(spSt, null, lib, null);
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   });
   const pass2 = tieredSps.map((sp, spi) => {
-    const hasRef = sp.materials?.some(m => m.code && tieredSps.some((s, si2) => si2 !== spi && s.code === m.code));
+    const hasRef = sp.materials?.some(
+      (m) => m.code && tieredSps.some((s, si2) => si2 !== spi && s.code === m.code)
+    );
     if (!hasRef) return pass1[spi];
     try {
-      const spSt = { ...sp, moq: sp.ship_qty || activeMoq, selling_price: cs.selling_price, trade_mode: cs.trade_mode, site: cs.site };
+      const spSt = {
+        ...sp,
+        moq: sp.ship_qty || activeMoq,
+        selling_price: cs.selling_price,
+        trade_mode: cs.trade_mode,
+        site: cs.site,
+      };
       return calcAll(spSt, pass1, lib, tieredSps);
-    } catch { return pass1[spi]; }
+    } catch {
+      return pass1[spi];
+    }
   });
   // If any SP calc failed (null result), bail out of the whole aggregation
   // rather than silently treating the failed SP's cost as $0 — a silent
   // understatement is worse than a missing row.
-  if (pass2.some(r => r == null)) {
+  if (pass2.some((r) => r == null)) {
     console.warn('aggregateCplxTier: one or more SPs failed to calc — skipping this tier');
     return null;
   }
-  const fgIdx = sps.findIndex(s => (s.code || '').toUpperCase().startsWith('FG'));
+  const fgIdx = sps.findIndex((s) => (s.code || '').toUpperCase().startsWith('FG'));
   if (fgIdx >= 0 && pass2[fgIdx]) return pass2[fgIdx];
   const sum = (key) => pass2.reduce((a, r) => a + (r?.[key] || 0), 0);
   return {
@@ -97,12 +115,15 @@ export default function Summarize() {
   // Sprint AR — hook-managed fetch with isDirty + activeQuoteId as
   // refresh triggers. Hook internally aborts stale in-flight loads on
   // rapid save/load switching so the table never flashes old rows.
-  const { data: rawQuotes, loading, error: loadError, refresh } = useAbortableFetch(
-    (signal) => sharedApi.getQuotes({ signal }),
-    [isDirty, activeQuoteId],
-    { onError: (err) => err?.name !== 'AbortError' && logErr('Summarize getQuotes failed:', err) },
-  );
-  const quotes = useMemo(() => Array.isArray(rawQuotes) ? rawQuotes : [], [rawQuotes]);
+  const {
+    data: rawQuotes,
+    loading,
+    error: loadError,
+    refresh,
+  } = useAbortableFetch((signal) => sharedApi.getQuotes({ signal }), [isDirty, activeQuoteId], {
+    onError: (err) => err?.name !== 'AbortError' && logErr('Summarize getQuotes failed:', err),
+  });
+  const quotes = useMemo(() => (Array.isArray(rawQuotes) ? rawQuotes : []), [rawQuotes]);
   const [ctxMenu, setCtxMenu] = useState(null); // { x, y, row }
   const ctxRef = useRef(null);
   const rfqColors = useRfqColors();
@@ -110,8 +131,12 @@ export default function Summarize() {
   // Close context menu on outside click / Escape
   useEffect(() => {
     if (!ctxMenu) return;
-    const onDown = e => { if (ctxRef.current && !ctxRef.current.contains(e.target)) setCtxMenu(null); };
-    const onKey = e => { if (e.key === 'Escape') setCtxMenu(null); };
+    const onDown = (e) => {
+      if (ctxRef.current && !ctxRef.current.contains(e.target)) setCtxMenu(null);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setCtxMenu(null);
+    };
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
     return () => {
@@ -161,7 +186,8 @@ export default function Summarize() {
           target = em.target;
         }
         try {
-          let r, yield_pct = 1;
+          let r,
+            yield_pct = 1;
           if (isCplx) {
             const sps = st.subproducts || [];
             r = aggregateCplxTier(st, sps, lib, t);
@@ -182,8 +208,19 @@ export default function Summarize() {
           // omitted tooling + labor from Contribution — quotes with
           // non-trivial tooling cost looked 3–8% better here than on
           // the Cost Breakdown tab. Aligned 2026-04-19 audit.
-          const va = tierSp > 0 ? (tierSp - (r.s_mat_cost || 0) - (r.tooling || 0) - (r.packing_ship || 0)) / tierSp : null;
-          const contr = tierSp > 0 ? (tierSp - (r.s_mat_cost || 0) - (r.tooling || 0) - (r.packing_ship || 0) - (r.labor_cost || 0)) / tierSp : null;
+          const va =
+            tierSp > 0
+              ? (tierSp - (r.s_mat_cost || 0) - (r.tooling || 0) - (r.packing_ship || 0)) / tierSp
+              : null;
+          const contr =
+            tierSp > 0
+              ? (tierSp -
+                  (r.s_mat_cost || 0) -
+                  (r.tooling || 0) -
+                  (r.packing_ship || 0) -
+                  (r.labor_cost || 0)) /
+                tierSp
+              : null;
           rows.push({
             id: `${q.id}-${t + 1}`,
             quote_id: q.id,
@@ -199,7 +236,23 @@ export default function Summarize() {
             project: st.project || '',
             end_cu_pn: st.end_cu_pn || '',
             description: st.description || '',
-            size: (st.part_width && st.part_length_md) ? `${st.part_width}\u00D7${st.part_length_md}` : '',
+            size:
+              st.part_width && st.part_length_md
+                ? `${st.part_width}\u00D7${st.part_length_md}`
+                : '',
+            // `production_size` = Print sub-tab dimensions (print_part_*).
+            // What the layout calc + plate use; matches the artwork area
+            // operator engages with daily. Falls back to canonical Cut
+            // when Print fields are not populated (legacy + Print-only quotes).
+            production_size: (() => {
+              const pw = Number(st.print_part_width) || 0;
+              const pl = Number(st.print_part_length_md) || 0;
+              if (pw > 0 && pl > 0) return pw + '×' + pl;
+              const cw = Number(st.part_width) || 0;
+              const cl = Number(st.part_length_md) || 0;
+              if (cw > 0 && cl > 0) return cw + '×' + cl;
+              return '';
+            })(),
             moq,
             annual_qty: eau,
             yield_pct,
@@ -231,9 +284,17 @@ export default function Summarize() {
   const filtered = useMemo(() => {
     if (!filter) return records;
     const q = filter.toLowerCase();
-    return records.filter(r =>
-      [r.direct_cu, r.direct_cu_pn, r.project, r.end_cu_pn, r.description, r.size, r.trade_mode, r.npi_owner]
-        .some(f => (f || '').toLowerCase().includes(q))
+    return records.filter((r) =>
+      [
+        r.direct_cu,
+        r.direct_cu_pn,
+        r.project,
+        r.end_cu_pn,
+        r.description,
+        r.size,
+        r.trade_mode,
+        r.npi_owner,
+      ].some((f) => (f || '').toLowerCase().includes(q))
     );
   }, [records, filter]);
 
@@ -247,27 +308,115 @@ export default function Summarize() {
     });
   }, [filtered, sortCol, sortAsc]);
 
-  const handleSort = useCallback((col) => {
-    if (sortCol === col) setSortAsc(!sortAsc);
-    else { setSortCol(col); setSortAsc(true); }
-  }, [sortCol, sortAsc]);
+  const handleSort = useCallback(
+    (col) => {
+      if (sortCol === col) setSortAsc(!sortAsc);
+      else {
+        setSortCol(col);
+        setSortAsc(true);
+      }
+    },
+    [sortCol, sortAsc]
+  );
 
-  const exportCSV = useCallback(() => {
-    const cols = ['rfq_no', 'quote_id', 'tier', 'update_date', 'type', 'direct_cu', 'direct_cu_pn', 'project', 'end_cu_pn', 'description', 'size', 'moq', 'annual_qty', 'yield_pct', 's_mat_cost', 'overhead', 'labor_cost', 'vat_loss', 'tooling', 'pack_ship', 'g_ttl_cost', 'target', 'usd_price', 'va_pct', 'contr_pct', 'gm_pct', 'trade_mode', 'delivery_term', 'npi_owner', 'sale_owner'];
-    const header = cols.join(',');
-    const rows = sorted.map(r => cols.map(c => {
-      const v = r[c];
-      return typeof v === 'string' && v.includes(',') ? `"${v}"` : (v ?? '');
-    }).join(','));
-    const csv = [header, ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `summarize_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  // Per-row selection for CSV export. `selected` keyed by `r.id`
+  // (= `${quote_id}-${tier}`, unique per row). Operator can pick
+  // specific quotes to export; if none picked we export everything
+  // visible. Selections persist across filter changes — a row hidden
+  // by the search box stays in `selected` and reappears when the
+  // filter is cleared. Export rows = selected ∩ currently-visible,
+  // so the operator never accidentally writes hidden rows to disk.
+  const [selected, setSelected] = useState(() => new Set());
+
+  const toggleSelected = useCallback((id) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const allVisibleSelected = sorted.length > 0 && sorted.every((r) => selected.has(r.id));
+  const someVisibleSelected = !allVisibleSelected && sorted.some((r) => selected.has(r.id));
+  const toggleSelectAll = useCallback(() => {
+    setSelected((prev) => {
+      if (sorted.every((r) => prev.has(r.id))) {
+        // All visible already selected → clear (intersect with non-visible)
+        const next = new Set(prev);
+        for (const r of sorted) next.delete(r.id);
+        return next;
+      }
+      // Otherwise add all visible
+      const next = new Set(prev);
+      for (const r of sorted) next.add(r.id);
+      return next;
+    });
   }, [sorted]);
+
+  const exportCSV = useCallback(async () => {
+    const cols = [
+      'rfq_no',
+      'quote_id',
+      'tier',
+      'update_date',
+      'type',
+      'direct_cu',
+      'direct_cu_pn',
+      'project',
+      'end_cu_pn',
+      'description',
+      // `size` (canonical Cut dimensions) removed from CSV per operator
+      // feedback 2026-05-26 — it duplicates `production_size` for most
+      // quotes and confused readers on the rows where canonical Cut was
+      // never populated (showed `2x3` placeholder).
+      'production_size',
+      'moq',
+      'annual_qty',
+      'yield_pct',
+      's_mat_cost',
+      'overhead',
+      'labor_cost',
+      'vat_loss',
+      'tooling',
+      'pack_ship',
+      'g_ttl_cost',
+      'target',
+      'usd_price',
+      'va_pct',
+      'contr_pct',
+      'gm_pct',
+      'trade_mode',
+      'delivery_term',
+      'npi_owner',
+      'sale_owner',
+    ];
+    // Export selected-and-visible if any selections; otherwise the full
+    // visible set. Hidden selections (filtered out) are never written.
+    const visibleSelected = sorted.filter((r) => selected.has(r.id));
+    const rowsToExport = visibleSelected.length > 0 ? visibleSelected : sorted;
+    if (rowsToExport.length === 0) return; // nothing to write
+    const csv = buildCsv(rowsToExport, cols);
+    const suggested = `summarize_${new Date().toISOString().slice(0, 10)}${visibleSelected.length > 0 ? `_${visibleSelected.length}rows` : ''}.csv`;
+    try {
+      await saveCsv(csv, suggested);
+    } catch (err) {
+      logErr('CSV export failed:', err);
+      // Surface a friendly hint — operator sees this rarely (only on
+      // permission-denied or disk-full); user-cancel is caught silently
+      // inside saveCsv.
+      window.alert(`Export failed: ${err?.message || err}`);
+    }
+  }, [sorted, selected]);
+
+  // selectedVisibleCount = how many currently-visible rows are selected.
+  // Used for the button label so it never lies about "N rows" when
+  // some selections are hidden by the search filter.
+  const selectedVisibleCount = useMemo(
+    () => sorted.reduce((n, r) => n + (selected.has(r.id) ? 1 : 0), 0),
+    [sorted, selected]
+  );
+  const exportCount = selectedVisibleCount > 0 ? selectedVisibleCount : sorted.length;
 
   // Column layout per user spec:
   // # → Direct Customer → End Customer (project field, legacy naming) →
@@ -284,19 +433,27 @@ export default function Summarize() {
     { key: 'project', label: 'End Customer', auto: true },
     { key: 'end_cu_pn', label: 'End CU PN', auto: true },
     { key: 'description', label: 'Description', auto: true },
+    {
+      key: 'production_size',
+      label: 'Production Size',
+      w: 110,
+      // Centered + tabular numerals so 220×395 vs 60×120 align under each other.
+      // Sourced from `print_part_*` (Print sub-tab) with fallback to canonical
+      // `part_*` per row computation above.
+    },
     { key: 'moq', label: 'MOQ', w: 60, right: true },
-    { key: 'yield_pct', label: 'Yield%', w: 55, right: true, fmt: v => pct(v) },
-    { key: 's_mat_cost', label: 'Material', w: 70, right: true, fmt: v => fmtN(v) },
-    { key: 'overhead', label: 'Overhead', w: 70, right: true, fmt: v => fmtN(v) },
-    { key: 'labor_cost', label: 'Labor', w: 70, right: true, fmt: v => fmtN(v) },
-    { key: 'tooling', label: 'Tooling', w: 65, right: true, fmt: v => fmtN(v) },
-    { key: 'pack_ship', label: 'Pack&Ship', w: 65, right: true, fmt: v => fmtN(v) },
-    { key: 'g_ttl_cost', label: 'G.Total', w: 70, right: true, fmt: v => fmtN(v), bold: true },
-    { key: 'target', label: 'Target Price', w: 75, right: true, fmt: v => fmtN(v, 4) },
-    { key: 'usd_price', label: 'Price', w: 65, right: true, fmt: v => fmtN(v, 4) },
-    { key: 'va_pct', label: 'VA%', w: 55, right: true, fmt: v => pct(v) },
-    { key: 'contr_pct', label: 'Contr. %', w: 65, right: true, fmt: v => pct(v) },
-    { key: 'gm_pct', label: 'GM%', w: 55, right: true, fmt: v => pct(v), color: true },
+    { key: 'yield_pct', label: 'Yield%', w: 55, right: true, fmt: (v) => pct(v) },
+    { key: 's_mat_cost', label: 'Material', w: 70, right: true, fmt: (v) => fmtN(v) },
+    { key: 'overhead', label: 'Overhead', w: 70, right: true, fmt: (v) => fmtN(v) },
+    { key: 'labor_cost', label: 'Labor', w: 70, right: true, fmt: (v) => fmtN(v) },
+    { key: 'tooling', label: 'Tooling', w: 65, right: true, fmt: (v) => fmtN(v) },
+    { key: 'pack_ship', label: 'Pack&Ship', w: 65, right: true, fmt: (v) => fmtN(v) },
+    { key: 'g_ttl_cost', label: 'G.Total', w: 70, right: true, fmt: (v) => fmtN(v), bold: true },
+    { key: 'target', label: 'Target Price', w: 75, right: true, fmt: (v) => fmtN(v, 4) },
+    { key: 'usd_price', label: 'Price', w: 65, right: true, fmt: (v) => fmtN(v, 4) },
+    { key: 'va_pct', label: 'VA%', w: 55, right: true, fmt: (v) => pct(v) },
+    { key: 'contr_pct', label: 'Contr. %', w: 65, right: true, fmt: (v) => pct(v) },
+    { key: 'gm_pct', label: 'GM%', w: 55, right: true, fmt: (v) => pct(v), color: true },
     { key: 'trade_mode', label: 'Trade', w: 60 },
     { key: 'npi_owner', label: 'NPI Owner', w: 90 },
   ];
@@ -305,23 +462,75 @@ export default function Summarize() {
     <div className="sum">
       <div className="sum-header">
         <div className="sum-header-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 3v18h18"/>
-            <rect x="7" y="12" width="3" height="6"/>
-            <rect x="12" y="8" width="3" height="10"/>
-            <rect x="17" y="5" width="3" height="13"/>
+          <svg
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M3 3v18h18" />
+            <rect x="7" y="12" width="3" height="6" />
+            <rect x="12" y="8" width="3" height="10" />
+            <rect x="17" y="5" width="3" height="13" />
           </svg>
         </div>
         <div className="sum-header-title">Summarize &mdash; Cost Records</div>
-        <input className="sum-search" type="text" placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} />
+        <input
+          className="sum-search"
+          type="text"
+          placeholder="Search..."
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
         <div className="sum-header-spacer" />
-        <button className="sum-export-btn" onClick={exportCSV}>CSV Export</button>
+        <button
+          className="sum-export-btn"
+          onClick={exportCSV}
+          disabled={exportCount === 0}
+          title={
+            selectedVisibleCount > 0
+              ? `Export ${selectedVisibleCount} selected row(s) — native Save dialog`
+              : sorted.length > 0
+                ? `Export all ${sorted.length} visible row(s) — native Save dialog`
+                : 'No rows to export'
+          }
+        >
+          CSV Export{exportCount > 0 ? ` (${exportCount})` : ''}
+        </button>
       </div>
       <div className="sum-table-wrap">
         <table className="sum-table">
           <thead>
             <tr>
-              {columns.map(c => (
+              {/* Checkbox column header — rowSpan=2 so this TH spans both
+                  the column-label row and the hint row below, keeping the
+                  N+1 cell count aligned with the data rows. */}
+              <th
+                className="sum-select-col sum-select-header"
+                rowSpan={2}
+                title={
+                  allVisibleSelected
+                    ? 'Clear selection'
+                    : someVisibleSelected
+                      ? 'Select all visible rows'
+                      : 'Select all visible rows for export'
+                }
+              >
+                <input
+                  type="checkbox"
+                  aria-label="Select all visible rows"
+                  checked={allVisibleSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = someVisibleSelected;
+                  }}
+                  onChange={toggleSelectAll}
+                />
+              </th>
+              {columns.map((c) => (
                 <th
                   key={c.key}
                   // `auto: true` columns get no width + nowrap so the
@@ -334,45 +543,78 @@ export default function Summarize() {
                 </th>
               ))}
             </tr>
+            <tr className="sum-select-header-row">
+              {/* Checkbox column already occupies leftmost via rowSpan=2 above. */}
+              <th colSpan={columns.length} className="sum-select-hint">
+                {selectedVisibleCount > 0
+                  ? `${selectedVisibleCount} row(s) selected — only those will be exported${selected.size > selectedVisibleCount ? ` (${selected.size - selectedVisibleCount} more hidden by filter)` : ''}`
+                  : 'No rows selected — export will include all visible rows'}
+              </th>
+            </tr>
           </thead>
           <tbody>
             {sorted.length === 0 && (
-              <tr><td colSpan={columns.length} className="sum-empty-cell">
-                {loadError ? (
-                  <EmptyState
-                    icon="⚠️"
-                    title="Failed to load summary"
-                    hint={loadError.message || String(loadError)}
-                    action={<button className="op-btn op-btn-primary" onClick={refresh}>Retry</button>}
-                  />
-                ) : loading ? 'Loading…' : (
-                  <EmptyState
-                    icon="📊"
-                    title="No summary records"
-                    hint="Save Standard or Complex quotes to populate this table."
-                  />
-                )}
-              </td></tr>
+              <tr>
+                <td colSpan={columns.length + 1} className="sum-empty-cell">
+                  {loadError ? (
+                    <EmptyState
+                      icon="⚠️"
+                      title="Failed to load summary"
+                      hint={loadError.message || String(loadError)}
+                      action={
+                        <button className="op-btn op-btn-primary" onClick={refresh}>
+                          Retry
+                        </button>
+                      }
+                    />
+                  ) : loading ? (
+                    'Loading…'
+                  ) : (
+                    <EmptyState
+                      icon="📊"
+                      title="No summary records"
+                      hint="Save Standard or Complex quotes to populate this table."
+                    />
+                  )}
+                </td>
+              </tr>
             )}
             {sorted.map((r, ri) => {
               const rowCtx = ctxMenu?.row?.id === r.id;
               return (
-              <tr key={r.id || ri} className={rowCtx ? 'sum-row-ctx' : ''} onContextMenu={e => handleContextMenu(e, r)}>
-                {columns.map(c => {
-                  // RFQ NO gets its own color override from the rfqColors store;
-                  // other "color: true" columns (GM%) still use gmClr.
-                  const rfqTint = c.key === 'rfq_no' ? rfqColors[r.rfq_no] : null;
-                  return (
-                  <td key={c.key} className={c.right ? 'right' : ''} style={{
-                    fontWeight: c.bold ? 700 : undefined,
-                    color: rfqTint || (c.color ? gmClr(r[c.key]) : undefined),
-                    whiteSpace: c.auto ? 'nowrap' : undefined,
-                  }}>
-                    {c.fmt ? c.fmt(r[c.key]) : (r[c.key] ?? '\u2014')}
+                <tr
+                  key={r.id || ri}
+                  className={rowCtx ? 'sum-row-ctx' : ''}
+                  onContextMenu={(e) => handleContextMenu(e, r)}
+                >
+                  <td className="sum-select-col" style={{ textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      aria-label={`Select row ${r.rfq_no} tier ${r.tier} for export`}
+                      checked={selected.has(r.id)}
+                      onChange={() => toggleSelected(r.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
                   </td>
-                  );
-                })}
-              </tr>
+                  {columns.map((c) => {
+                    // RFQ NO gets its own color override from the rfqColors store;
+                    // other "color: true" columns (GM%) still use gmClr.
+                    const rfqTint = c.key === 'rfq_no' ? rfqColors[r.rfq_no] : null;
+                    return (
+                      <td
+                        key={c.key}
+                        className={c.right ? 'right' : ''}
+                        style={{
+                          fontWeight: c.bold ? 700 : undefined,
+                          color: rfqTint || (c.color ? gmClr(r[c.key]) : undefined),
+                          whiteSpace: c.auto ? 'nowrap' : undefined,
+                        }}
+                      >
+                        {c.fmt ? c.fmt(r[c.key]) : (r[c.key] ?? '\u2014')}
+                      </td>
+                    );
+                  })}
+                </tr>
               );
             })}
           </tbody>
@@ -394,7 +636,7 @@ export default function Summarize() {
           <div className="sum-ctx-divider" />
           {/* Color bar — tints RFQ NO text only */}
           <div className="sum-ctx-colorbar">
-            {RFQ_COLOR_PALETTE.map(c => {
+            {RFQ_COLOR_PALETTE.map((c) => {
               const active = rfqColors[ctxMenu.row.rfq_no] === c.color;
               return (
                 <button
@@ -402,23 +644,34 @@ export default function Summarize() {
                   className={`sum-ctx-dot ${active ? 'active' : ''}`}
                   style={{ background: c.color }}
                   title={c.label}
-                  onClick={() => { setRfqColor(ctxMenu.row.rfq_no, c.color); setCtxMenu(null); }}
+                  onClick={() => {
+                    setRfqColor(ctxMenu.row.rfq_no, c.color);
+                    setCtxMenu(null);
+                  }}
                 />
               );
             })}
             <button
               className="sum-ctx-dot sum-ctx-dot-clear"
               title="Clear color"
-              onClick={() => { setRfqColor(ctxMenu.row.rfq_no, null); setCtxMenu(null); }}
-            >×</button>
+              onClick={() => {
+                setRfqColor(ctxMenu.row.rfq_no, null);
+                setCtxMenu(null);
+              }}
+            >
+              ×
+            </button>
           </div>
           <div className="sum-ctx-divider" />
-          <button className="sum-ctx-item" onClick={() => {
-            const r = ctxMenu.row;
-            const text = `${r.rfq_no} | ${r.direct_cu||''} | ${r.project||''} | ${r.end_cu_pn||''}`;
-            navigator.clipboard?.writeText(text);
-            setCtxMenu(null);
-          }}>
+          <button
+            className="sum-ctx-item"
+            onClick={() => {
+              const r = ctxMenu.row;
+              const text = `${r.rfq_no} | ${r.direct_cu || ''} | ${r.project || ''} | ${r.end_cu_pn || ''}`;
+              navigator.clipboard?.writeText(text);
+              setCtxMenu(null);
+            }}
+          >
             <span className="sum-ctx-icon">📑</span>
             <span>Copy</span>
             <span className="sum-ctx-shortcut">⌘C</span>
