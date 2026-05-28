@@ -47,8 +47,9 @@ If ANY pre-condition fails → halt + resolve before running the field test.
 
 ### Phase 1 — Install the EXE (5 min)
 
-- [ ] Double-click `Ops Control CLIENT 1.5.10-x64.exe` (or whatever the
-      NSIS installer is named)
+- [ ] Double-click `Ops Control CLIENT Setup 1.5.10.exe` (the NSIS
+      installer built by `node scripts/build-windows-installers.mjs client`;
+      `Setup` suffix is electron-builder's NSIS default and is intentional)
 - [ ] Windows SmartScreen banner appears: "Microsoft Defender SmartScreen
       prevented an unrecognized app from starting"
   - Click **More info** → **Run anyway**

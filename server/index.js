@@ -393,6 +393,39 @@ app.get('/api/runtime-config', (req, res) => {
     },
   });
 });
+
+// /api/version — version probe consumed by client <ClientUpdateIndicator>
+// (P0 visibility-only nudge). Distinct from /health (which is the LB +
+// network reachability probe) so callers don't have to parse the bigger
+// payload. `min_supported_client` is informational at P0 — present so a
+// P1 flip to enforce doesn't break the API contract.
+//
+// `released_at` = server boot time. Across version bumps this is the
+// deploy timestamp; within a single version a restart will move it, but
+// the banner compares `version` only, so the drift is irrelevant.
+// `audit`, `getSessionUser`, `getTokenFromHeader` are already imported
+// elsewhere in this module; ESM hoists all top-level imports before any
+// statement runs, so the route mount below sees them at runtime.
+import { createVersionHandler, createClientEventHandler } from './routes/clientVersionRoutes.js';
+const SERVER_BOOTED_AT = new Date().toISOString();
+app.get(
+  '/api/version',
+  createVersionHandler({
+    version: PKG_VERSION,
+    minSupportedClient: '1.5.0',
+    releasedAt: SERVER_BOOTED_AT,
+  })
+);
+// POST /api/audit/client-event — allowlisted client-originated audit
+// emission. The only place client code is permitted to write to the
+// audit log. Allowlist + session + JSON.stringify(detail) enforced in
+// createClientEventHandler. See server/routes/clientVersionRoutes.js
+// for the security contract.
+app.post(
+  '/api/audit/client-event',
+  createClientEventHandler({ audit, getSessionUser, getTokenFromHeader })
+);
+
 app.get('/ready', async (req, res) => {
   // Phase 10H deep probe: ready iff (a) data dir R+W, (b) SQLite
   // responds to SELECT 1, (c) the critical tables exist. A corrupt

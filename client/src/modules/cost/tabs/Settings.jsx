@@ -12,6 +12,10 @@ import ImportLegacySection from './ImportLegacySection';
 import ModeSection from './ModeSection';
 import AboutSection from './AboutSection';
 import ProvisioningCard from '../../../components/Auth/ProvisioningCard';
+import {
+  getClientVersionBadge,
+  groupClientVersionEventsByUser,
+} from '../../../services/clientVersionBadge';
 import './Settings.css';
 
 // ─── Settings menu structure (matches COST V1.0) ───
@@ -801,6 +805,13 @@ function AccountSection() {
   // password isn't kept in memory longer than needed (it's already hashed
   // server-side and we don't show it again).
   const [provisioning, setProvisioning] = useState(null);
+  // P0 client-version banner — keep the latest CLIENT_UPGRADE_NUDGE_SHOWN
+  // + CLIENT_VERSION_MATCH_AFTER_UPGRADE audit rows around so the
+  // "Phiên bản client" column can render per-operator badges. Empty
+  // map = no events yet (gray badges everywhere) which is the legitimate
+  // pre-banner-rollout state.
+  const [clientVersionEvents, setClientVersionEvents] = useState(new Map());
+  const [currentServerVersion, setCurrentServerVersion] = useState(null);
 
   const isSys = currentUser?.role === 'sys';
   const isAdminPlus = currentUser?.role === 'sys' || currentUser?.role === 'admin';
@@ -827,6 +838,7 @@ function AccountSection() {
   useEffect(() => {
     loadUsers();
     loadOnline();
+    loadClientVersions();
   }, []);
   useEffect(() => {
     const t = setInterval(loadOnline, 30000);
@@ -853,6 +865,20 @@ function AccountSection() {
       setOnlineList(list.filter((u) => u.online));
     } catch {
       /* silent */
+    }
+  }
+
+  async function loadClientVersions() {
+    // Pulls raw client-version audit rows from /api/users/client-versions.
+    // Server returns gracefully empty when audit DB is offline, so we
+    // don't need a separate error path for first-boot dev runs.
+    try {
+      const r = await authApi.getUsersClientVersions();
+      const rows = Array.isArray(r?.rows) ? r.rows : [];
+      setClientVersionEvents(groupClientVersionEventsByUser(rows));
+      if (r?.server_version) setCurrentServerVersion(r.server_version);
+    } catch {
+      /* silent — badges fall back to gray when the map is empty */
     }
   }
 
@@ -1154,6 +1180,12 @@ function AccountSection() {
                   >
                     APPROVAL
                   </th>
+                  <th
+                    className="acct-col-client-ver text-center"
+                    title="Phiên bản client của operator — xanh: khớp server, cam: cũ, xám: chưa có audit trong 7 ngày"
+                  >
+                    CLIENT VER
+                  </th>
                   <th className="acct-col-actions text-center">ACTIONS</th>
                 </tr>
               </thead>
@@ -1347,6 +1379,36 @@ function AccountSection() {
                               >
                                 F
                               </button>
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      <td className="text-center acct-cell-client-ver">
+                        {(() => {
+                          const events = clientVersionEvents.get(u.username) || [];
+                          const badge = getClientVersionBadge(
+                            events,
+                            currentServerVersion,
+                            Date.now()
+                          );
+                          const titleParts = [];
+                          if (badge.client_version)
+                            titleParts.push(`Client: ${badge.client_version}`);
+                          if (badge.server_version)
+                            titleParts.push(`Server: ${badge.server_version}`);
+                          if (badge.ts) titleParts.push(`Last event: ${badge.ts}`);
+                          if (badge.kind === 'gray' && !badge.client_version)
+                            titleParts.push('Chưa có dữ liệu audit trong 7 ngày qua');
+                          const cls = `cui-badge cui-badge-${badge.kind}`;
+                          const label =
+                            badge.kind === 'gray' && !badge.client_version
+                              ? '? offline'
+                              : badge.kind === 'green'
+                                ? `✓ ${badge.client_version}`
+                                : `⚠ ${badge.client_version || '?'}`;
+                          return (
+                            <span className={cls} title={titleParts.join(' • ')}>
+                              {label}
                             </span>
                           );
                         })()}

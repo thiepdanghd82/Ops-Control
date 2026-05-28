@@ -13,6 +13,21 @@ import XLSX from 'xlsx';
 import { atomicWriteFileSync } from '../services/atomicWrite.js';
 import { redactErrorMessage, logErr, asSafeError } from '../utils/safeError.js';
 import { listLanIPv4, pickServerUrl } from '../utils/networkInfo.js';
+import { readFileSync as readFileSyncPkg } from 'fs';
+
+// Local copy of PKG_VERSION resolution (server/index.js owns the same
+// constant — we duplicate one-liner here to avoid a circular import
+// between costApi.js and index.js).
+const PKG_VERSION = (() => {
+  try {
+    const pkg = JSON.parse(
+      readFileSyncPkg(new URL('../../package.json', import.meta.url), 'utf-8')
+    );
+    return pkg.version || 'unknown';
+  } catch {
+    return 'unknown';
+  }
+})();
 
 // Shared upload tmp dir — resolved from env → OS tmpdir, mode 0700.
 // Mirrors the logic in routes/import.js so both XLSM and BOM imports
@@ -905,6 +920,36 @@ router.get('/auth/users', (req, res) => {
   const u = getSessionUser(getTokenFromHeader(req));
   if (!isAdminPlus(u)) return res.status(403).json({ error: 'Forbidden' });
   res.json({ ok: true, users: loadUsers().map(userPublic) });
+});
+
+// GET /api/users/client-versions — admin+, returns raw client-version
+// audit events for the Settings "Phiên bản client" column. Client-side
+// pure helpers (clientVersionBadge.js) compute the badge from these
+// rows. We deliberately surface the raw audit data instead of the
+// computed badge so the same endpoint can support different freshness
+// thresholds or display variants without an API contract change.
+//
+// Returns the union of the 2 P0 client event types, capped at 5000 rows
+// (~last 30 days for 6 operators given daily app opens). Detail is
+// returned as a JSON string (caller parses); matches the audit-log
+// transport convention.
+router.get('/users/client-versions', (req, res) => {
+  const u = getSessionUser(getTokenFromHeader(req));
+  if (!isAdminPlus(u)) return res.status(403).json({ error: 'Forbidden' });
+  try {
+    // Lazy-import so the route still mounts when the audit DB module
+    // isn't wired (test harnesses + early-boot). Falls through to [].
+
+    import('../repositories/auditStore.js')
+      .then(({ tailAudit }) => {
+        const a = tailAudit(2500, { event: 'CLIENT_UPGRADE_NUDGE_SHOWN' });
+        const b = tailAudit(2500, { event: 'CLIENT_VERSION_MATCH_AFTER_UPGRADE' });
+        res.json({ ok: true, rows: [...a, ...b], server_version: PKG_VERSION });
+      })
+      .catch(() => res.json({ ok: true, rows: [], server_version: PKG_VERSION }));
+  } catch {
+    res.json({ ok: true, rows: [], server_version: PKG_VERSION });
+  }
 });
 
 // GET /api/server-info (admin only) — Phase A.2 connection-info dashboard.

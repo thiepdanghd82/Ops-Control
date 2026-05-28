@@ -17,6 +17,7 @@ import ChatDrawer from './components/Chat/ChatDrawer';
 import UnreadLoginPopup from './components/Chat/UnreadLoginPopup';
 import ErrorBoundary from './components/Shared/ErrorBoundary';
 import ConnectionBanner from './components/Layout/ConnectionBanner';
+import ClientUpdateIndicator from './components/Layout/ClientUpdateIndicator';
 import { startConnectionMonitor } from './services/connectionHealth';
 import { startDataEventStream } from './services/dataEventBus';
 import './App.css';
@@ -285,6 +286,12 @@ export default function App() {
     <ErrorBoundary label="Ops Control">
       {/* Top-of-app connection status (overlay; doesn't push content) */}
       <ConnectionBanner />
+      {/* P0 client version nudge. Polls /api/version every 5 min; renders
+          null when client matches server. Wrapped in its own boundary so
+          a crash here can't blank the shell. */}
+      <ErrorBoundary label="ClientUpdateIndicator" fallback={() => null}>
+        <ClientUpdateIndicator />
+      </ErrorBoundary>
       <AuthProvider>
         {/* AccessProvider (Sprint S2) must live INSIDE AuthProvider so
             it can read the logged-in user's permission_group_id, but
