@@ -70,7 +70,9 @@ function srgbToLinear(c) {
 const _labCache = new Map();
 const _LAB_CACHE_CAP = 50_000; // bound memory; evict all on overflow
 export function rgbToLab(rgb) {
-  const r = rgb[0] | 0, g = rgb[1] | 0, b = rgb[2] | 0;
+  const r = rgb[0] | 0,
+    g = rgb[1] | 0,
+    b = rgb[2] | 0;
   const key = (r << 16) | (g << 8) | b;
   const hit = _labCache.get(key);
   if (hit !== undefined) return hit;
@@ -81,21 +83,21 @@ export function rgbToLab(rgb) {
   const bl = srgbToLinear(b);
   // sRGB → XYZ (D65 white, matrix from IEC 61966-2-1).
   const X = 0.4124564 * rl + 0.3575761 * gl + 0.1804375 * bl;
-  const Y = 0.2126729 * rl + 0.7151522 * gl + 0.0721750 * bl;
-  const Z = 0.0193339 * rl + 0.1191920 * gl + 0.9503041 * bl;
+  const Y = 0.2126729 * rl + 0.7151522 * gl + 0.072175 * bl;
+  const Z = 0.0193339 * rl + 0.119192 * gl + 0.9503041 * bl;
   // Normalize by D65 reference white.
   const xn = X / 0.95047;
-  const yn = Y / 1.00000;
+  const yn = Y / 1.0;
   const zn = Z / 1.08883;
-  const EPS = 216 / 24389;        // (6/29)^3
-  const KAPPA = 24389 / 27;       // (29/3)^3
+  const EPS = 216 / 24389; // (6/29)^3
+  const KAPPA = 24389 / 27; // (29/3)^3
   const fx = xn > EPS ? Math.cbrt(xn) : (KAPPA * xn + 16) / 116;
   const fy = yn > EPS ? Math.cbrt(yn) : (KAPPA * yn + 16) / 116;
   const fz = zn > EPS ? Math.cbrt(zn) : (KAPPA * zn + 16) / 116;
   const lab = [
-    116 * fy - 16,        // L
-    500 * (fx - fy),      // a
-    200 * (fy - fz),      // b
+    116 * fy - 16, // L
+    500 * (fx - fy), // a
+    200 * (fy - fz), // b
   ];
   _labCache.set(key, lab);
   return lab;
@@ -131,7 +133,9 @@ export function chromaOfRgb(rgb) {
 // short form — the pinned-spot use case always stores the full hex from
 // rgbToHex, so we don't need the expansion.
 export function hexToRgb(hex) {
-  const h = String(hex || '').replace(/^#/, '').trim();
+  const h = String(hex || '')
+    .replace(/^#/, '')
+    .trim();
   if (h.length !== 6 || /[^0-9a-fA-F]/.test(h)) return null;
   const n = parseInt(h, 16);
   if (!Number.isFinite(n)) return null;
@@ -146,7 +150,10 @@ export function distance(a, b, opts = {}) {
 }
 
 export function rgbToHex([r, g, b]) {
-  const hex = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+  const hex = (n) =>
+    Math.max(0, Math.min(255, Math.round(n)))
+      .toString(16)
+      .padStart(2, '0');
   return `#${hex(r)}${hex(g)}${hex(b)}`.toUpperCase();
 }
 
@@ -155,20 +162,20 @@ export function rgbToHex([r, g, b]) {
 // Ink Calculator can auto-link "Black" → black ink without the user
 // typing it each time.
 const BASIC_PALETTE = [
-  { name: 'Black',   rgb: [0, 0, 0] },
-  { name: 'White',   rgb: [255, 255, 255] },
-  { name: 'Red',     rgb: [220, 38, 38] },
-  { name: 'Green',   rgb: [22, 163, 74] },
-  { name: 'Blue',    rgb: [37, 99, 235] },
-  { name: 'Yellow',  rgb: [250, 204, 21] },
-  { name: 'Cyan',    rgb: [6, 182, 212] },
+  { name: 'Black', rgb: [0, 0, 0] },
+  { name: 'White', rgb: [255, 255, 255] },
+  { name: 'Red', rgb: [220, 38, 38] },
+  { name: 'Green', rgb: [22, 163, 74] },
+  { name: 'Blue', rgb: [37, 99, 235] },
+  { name: 'Yellow', rgb: [250, 204, 21] },
+  { name: 'Cyan', rgb: [6, 182, 212] },
   { name: 'Magenta', rgb: [217, 70, 239] },
-  { name: 'Orange',  rgb: [249, 115, 22] },
-  { name: 'Purple',  rgb: [147, 51, 234] },
-  { name: 'Brown',   rgb: [120, 53, 15] },
-  { name: 'Gray',    rgb: [107, 114, 128] },
-  { name: 'Silver',  rgb: [203, 213, 225] },
-  { name: 'Gold',    rgb: [212, 175, 55] },
+  { name: 'Orange', rgb: [249, 115, 22] },
+  { name: 'Purple', rgb: [147, 51, 234] },
+  { name: 'Brown', rgb: [120, 53, 15] },
+  { name: 'Gray', rgb: [107, 114, 128] },
+  { name: 'Silver', rgb: [203, 213, 225] },
+  { name: 'Gold', rgb: [212, 175, 55] },
 ];
 
 export function nearestColorName(rgb) {
@@ -176,7 +183,10 @@ export function nearestColorName(rgb) {
   let bestDist = Infinity;
   for (const entry of BASIC_PALETTE) {
     const d = colorDist(rgb, entry.rgb);
-    if (d < bestDist) { bestDist = d; best = entry; }
+    if (d < bestDist) {
+      bestDist = d;
+      best = entry;
+    }
   }
   return best.name;
 }
@@ -188,12 +198,18 @@ export function nearestColorName(rgb) {
 // label/sticker artwork.
 export function meanBlock(imgData, x, y, w, h) {
   const { data, width } = imgData;
-  let r = 0, g = 0, b = 0, n = 0;
+  let r = 0,
+    g = 0,
+    b = 0,
+    n = 0;
   for (let dy = 0; dy < h; dy++) {
     for (let dx = 0; dx < w; dx++) {
       const i = ((y + dy) * width + (x + dx)) * 4;
       if (i < 0 || i + 2 >= data.length) continue;
-      r += data[i]; g += data[i + 1]; b += data[i + 2]; n++;
+      r += data[i];
+      g += data[i + 1];
+      b += data[i + 2];
+      n++;
     }
   }
   if (n === 0) return [0, 0, 0];
@@ -219,7 +235,10 @@ export function detectBackground(imgData, blockSize = 5) {
   for (const c of corners) {
     let sum = 0;
     for (const other of corners) sum += colorDist(c, other);
-    if (sum < bestSum) { bestSum = sum; best = c; }
+    if (sum < bestSum) {
+      bestSum = sum;
+      best = c;
+    }
   }
   return [Math.round(best[0]), Math.round(best[1]), Math.round(best[2])];
 }
@@ -269,7 +288,10 @@ export function erodePrintableMask(imgData, bg, tolerance = 12) {
 }
 
 export function boundsOfMask(mask, w, h, pad = 3) {
-  let minX = w, minY = h, maxX = -1, maxY = -1;
+  let minX = w,
+    minY = h,
+    maxX = -1,
+    maxY = -1;
   for (let y = 0; y < h; y++) {
     const row = y * w;
     for (let x = 0; x < w; x++) {
@@ -318,12 +340,17 @@ export function dilateMask(mask, w, h) {
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const p = y * w + x;
-      if (mask[p]) { out[p] = 1; continue; }
+      if (mask[p]) {
+        out[p] = 1;
+        continue;
+      }
       // 4-neighbor: if any neighbor is set, this pixel becomes set.
-      if ((y > 0       && mask[p - w]) ||
-          (y < h - 1   && mask[p + w]) ||
-          (x > 0       && mask[p - 1]) ||
-          (x < w - 1   && mask[p + 1])) {
+      if (
+        (y > 0 && mask[p - w]) ||
+        (y < h - 1 && mask[p + w]) ||
+        (x > 0 && mask[p - 1]) ||
+        (x < w - 1 && mask[p + 1])
+      ) {
         out[p] = 1;
       }
     }
@@ -358,11 +385,17 @@ export function openMask(mask, w, h, iterations = 1) {
 // tracks the bulk of the content rather than being pulled toward
 // outlier annotations far from the main label.
 export function centroidOfMask(mask, w, h) {
-  let sumX = 0, sumY = 0, n = 0;
+  let sumX = 0,
+    sumY = 0,
+    n = 0;
   for (let y = 0; y < h; y++) {
     const row = y * w;
     for (let x = 0; x < w; x++) {
-      if (mask[row + x]) { sumX += x; sumY += y; n++; }
+      if (mask[row + x]) {
+        sumX += x;
+        sumY += y;
+        n++;
+      }
     }
   }
   if (n === 0) return null;
@@ -400,7 +433,7 @@ export function pickDielineBbox(imgData, bg, opts = {}) {
   const bgCmp = metric === 'lab' ? rgbToLab(bg) : bg;
   const minRelSize = opts.minRelSize ?? 0.1;
   const minPixels = opts.minPixels ?? 50;
-  const ignore = new Set((opts.ignoreHex || []).map(h => String(h).toUpperCase()));
+  const ignore = new Set((opts.ignoreHex || []).map((h) => String(h).toUpperCase()));
   // Bucket non-BG pixels by quantized color (4 bits per channel so
   // JPG-adjacent colors fall into the same bucket). Each bucket tracks
   // running bbox + count; we score after the single scan.
@@ -408,7 +441,9 @@ export function pickDielineBbox(imgData, bg, opts = {}) {
   for (let y = 0, p = 0; y < h; y++) {
     for (let x = 0; x < w; x++, p += 4) {
       if (data[p + 3] < 8) continue;
-      const r = data[p], g = data[p + 1], b = data[p + 2];
+      const r = data[p],
+        g = data[p + 1],
+        b = data[p + 2];
       const px = [r, g, b];
       const d = metric === 'lab' ? deltaE76(rgbToLab(px), bgCmp) : colorDist(px, bg);
       if (d <= tol) continue;
@@ -418,9 +453,14 @@ export function pickDielineBbox(imgData, bg, opts = {}) {
         bkt = { sumR: 0, sumG: 0, sumB: 0, n: 0, minX: x, minY: y, maxX: x, maxY: y };
         buckets.set(key, bkt);
       }
-      bkt.sumR += r; bkt.sumG += g; bkt.sumB += b; bkt.n++;
-      if (x < bkt.minX) bkt.minX = x; else if (x > bkt.maxX) bkt.maxX = x;
-      if (y < bkt.minY) bkt.minY = y; else if (y > bkt.maxY) bkt.maxY = y;
+      bkt.sumR += r;
+      bkt.sumG += g;
+      bkt.sumB += b;
+      bkt.n++;
+      if (x < bkt.minX) bkt.minX = x;
+      else if (x > bkt.maxX) bkt.maxX = x;
+      if (y < bkt.minY) bkt.minY = y;
+      else if (y > bkt.maxY) bkt.maxY = y;
     }
   }
   // Score candidates.
@@ -463,7 +503,11 @@ export function dielineBboxByColor(imgData, targetHex, opts = {}) {
     parseInt(targetHex.slice(5, 7), 16),
   ];
   const targetCmp = metric === 'lab' ? rgbToLab(target) : target;
-  let minX = w, minY = h, maxX = -1, maxY = -1, n = 0;
+  let minX = w,
+    minY = h,
+    maxX = -1,
+    maxY = -1,
+    n = 0;
   for (let y = 0, p = 0; y < h; y++) {
     for (let x = 0; x < w; x++, p += 4) {
       if (data[p + 3] < 8) continue;
@@ -586,12 +630,16 @@ export function maskPrintable(imgData, bg, tolerance = 12, opts = {}) {
   const tol = metric === 'lab' && tolerance > 10 ? tolerance / 4 : tolerance;
   for (let i = 0; i < data.length; i += 4) {
     const a = data[i + 3];
-    if (a < 8) { bgCount++; continue; }
+    if (a < 8) {
+      bgCount++;
+      continue;
+    }
     const px = [data[i], data[i + 1], data[i + 2]];
-    const d = metric === 'lab'
-      ? deltaE76(rgbToLab(px), bgColor)
-      : colorDist(px, bg);
-    if (d <= tol) { bgCount++; continue; }
+    const d = metric === 'lab' ? deltaE76(rgbToLab(px), bgColor) : colorDist(px, bg);
+    if (d <= tol) {
+      bgCount++;
+      continue;
+    }
     let w = 1;
     if (aa) {
       // Partial ink band: `tol < d < 2×tol`. Map linearly to (0,1];
@@ -599,7 +647,10 @@ export function maskPrintable(imgData, bg, tolerance = 12, opts = {}) {
       w = Math.min(1, Math.max(0, (d - tol) / tol));
       // Guard: a hair above the tol boundary (w ≈ 0) contributes nothing
       // meaningful and still takes a quantize slot. Fold those into BG.
-      if (w < 0.05) { bgCount++; continue; }
+      if (w < 0.05) {
+        bgCount++;
+        continue;
+      }
     }
     pixels.push(px);
     weights.push(w);
@@ -646,7 +697,10 @@ export function quantizeColors(pixels, k, weights, opts = {}) {
   const weighted = Array.isArray(weights) && weights.length === pixels.length;
   // k=1 short-circuits to the mean of all pixels.
   if (clamped === 1) {
-    let r = 0, g = 0, b = 0, wSum = 0;
+    let r = 0,
+      g = 0,
+      b = 0,
+      wSum = 0;
     for (let i = 0; i < pixels.length; i++) {
       const w = weighted ? weights[i] : 1;
       r += pixels[i][0] * w;
@@ -654,9 +708,7 @@ export function quantizeColors(pixels, k, weights, opts = {}) {
       b += pixels[i][2] * w;
       wSum += w;
     }
-    return wSum > 0
-      ? [{ rgb: [r / wSum, g / wSum, b / wSum], count: wSum }]
-      : [];
+    return wSum > 0 ? [{ rgb: [r / wSum, g / wSum, b / wSum], count: wSum }] : [];
   }
 
   // ── Chroma-weighted sampling (Sprint 9) ────────────────────────────
@@ -702,7 +754,10 @@ export function quantizeColors(pixels, k, weights, opts = {}) {
     let bestDist = Infinity;
     for (let i = 0; i < palette.length; i++) {
       const d = dist(px, palette[i]);
-      if (d < bestDist) { bestDist = d; bestIdx = i; }
+      if (d < bestDist) {
+        bestDist = d;
+        bestIdx = i;
+      }
     }
     counts[bestIdx] += weighted ? weights[p] : 1;
   }
@@ -710,9 +765,7 @@ export function quantizeColors(pixels, k, weights, opts = {}) {
   // when the input has very tight clusters — filter the zero-count
   // noise so downstream consumers (mergeClusters, buildResult, UI)
   // don't see phantom rows that confuse coverage math.
-  return palette
-    .map((rgb, i) => ({ rgb, count: counts[i] }))
-    .filter(c => c.count > 0);
+  return palette.map((rgb, i) => ({ rgb, count: counts[i] })).filter((c) => c.count > 0);
 }
 
 // Merge clusters whose centroids are within `threshold` of each other.
@@ -732,14 +785,12 @@ export function mergeClusters(clusters, threshold = 18, opts = {}) {
   // UI slider was calibrated in RGB units (0-40). When the metric
   // flips to Lab, map that range onto ΔE76 (0-10) so existing saved
   // values still produce roughly the expected merge behavior.
-  const t = metric === 'lab' && threshold > 10
-    ? Math.max(0, threshold / 4)
-    : threshold;
+  const t = metric === 'lab' && threshold > 10 ? Math.max(0, threshold / 4) : threshold;
   if (t <= 0 || clusters.length <= 1) return [...clusters];
   const sorted = [...clusters].sort((a, b) => b.count - a.count);
   const out = [];
   for (const c of sorted) {
-    const match = out.find(o => dist(o.rgb, c.rgb) <= t);
+    const match = out.find((o) => dist(o.rgb, c.rgb) <= t);
     if (match) {
       const total = match.count + c.count;
       match.rgb = [
@@ -785,19 +836,21 @@ export function rescueOutlierClusters(pixels, weights, clusters, opts = {}) {
   const dist = metric === 'lab' ? labDist : colorDist;
   const outlierThreshold = Number.isFinite(opts.outlierThreshold)
     ? opts.outlierThreshold
-    : (metric === 'lab' ? 15 : 60);
+    : metric === 'lab'
+      ? 15
+      : 60;
   const weighted = Array.isArray(weights) && weights.length === pixels.length;
-  const totalWeight = weighted
-    ? weights.reduce((a, b) => a + b, 0)
-    : pixels.length;
+  const totalWeight = weighted ? weights.reduce((a, b) => a + b, 0) : pixels.length;
   const minPct = Number.isFinite(opts.minOutlierPct) ? opts.minOutlierPct : 0.001;
   const minWeight = totalWeight * minPct;
   // NaN-guard the rescue k — `??` only coalesces null/undefined, so
   // opts.maxNewClusters = NaN would slip through and poison the clamp
   // and the sub-quantize call. Explicit finite check keeps this robust
   // against malformed saved jobs.
-  const maxNew = Math.max(1, Math.min(6,
-    Number.isFinite(opts.maxNewClusters) ? opts.maxNewClusters : 3));
+  const maxNew = Math.max(
+    1,
+    Math.min(6, Number.isFinite(opts.maxNewClusters) ? opts.maxNewClusters : 3)
+  );
 
   // Pass 1: collect pixels beyond the outlier threshold.
   const outliers = [];
@@ -821,26 +874,32 @@ export function rescueOutlierClusters(pixels, weights, clusters, opts = {}) {
   // outliers are already colour-selected, boosting would skew the
   // sub-palette toward the vividest of the outliers and miss e.g. a
   // gold-foil cluster that's warm but low chroma.
-  const subClusters = quantizeColors(
-    outliers, maxNew, outlierWeights,
-    { metric, chromaBoost: false },
-  );
-  const kept = subClusters.filter(c => c.count >= minWeight);
+  const subClusters = quantizeColors(outliers, maxNew, outlierWeights, {
+    metric,
+    chromaBoost: false,
+  });
+  const kept = subClusters.filter((c) => c.count >= minWeight);
   if (kept.length === 0) return clusters;
 
   // Pass 3: merge+re-count so totals add up exactly to the printable set.
-  const merged = [...clusters.map(c => ({ rgb: [...c.rgb], count: 0 })),
-                  ...kept.map(c => ({ rgb: [...c.rgb], count: 0, rescued: true }))];
+  const merged = [
+    ...clusters.map((c) => ({ rgb: [...c.rgb], count: 0 })),
+    ...kept.map((c) => ({ rgb: [...c.rgb], count: 0, rescued: true })),
+  ];
   for (let p = 0; p < pixels.length; p++) {
     const px = pixels[p];
-    let bestIdx = 0, bestD = Infinity;
+    let bestIdx = 0,
+      bestD = Infinity;
     for (let i = 0; i < merged.length; i++) {
       const d = dist(px, merged[i].rgb);
-      if (d < bestD) { bestD = d; bestIdx = i; }
+      if (d < bestD) {
+        bestD = d;
+        bestIdx = i;
+      }
     }
     merged[bestIdx].count += weighted ? weights[p] : 1;
   }
-  return merged.filter(c => c.count > 0);
+  return merged.filter((c) => c.count > 0);
 }
 
 // ── Pinned spot-color injection (Sprint 9, eyedropper) ─────────────
@@ -864,25 +923,29 @@ export function injectPinnedClusters(pixels, weights, clusters, pinnedHexes, opt
   for (const hex of pinnedHexes) {
     const rgb = hexToRgb(hex);
     if (!rgb) continue;
-    const already = clusters.some(c => dist(c.rgb, rgb) <= nearTol);
+    const already = clusters.some((c) => dist(c.rgb, rgb) <= nearTol);
     if (!already) pinnedRgbs.push(rgb);
   }
   if (pinnedRgbs.length === 0) return clusters;
 
   const merged = [
-    ...clusters.map(c => ({ rgb: [...c.rgb], count: 0 })),
-    ...pinnedRgbs.map(rgb => ({ rgb: [...rgb], count: 0, pinned: true })),
+    ...clusters.map((c) => ({ rgb: [...c.rgb], count: 0 })),
+    ...pinnedRgbs.map((rgb) => ({ rgb: [...rgb], count: 0, pinned: true })),
   ];
   for (let p = 0; p < pixels.length; p++) {
     const px = pixels[p];
-    let bestIdx = 0, bestD = Infinity;
+    let bestIdx = 0,
+      bestD = Infinity;
     for (let i = 0; i < merged.length; i++) {
       const d = dist(px, merged[i].rgb);
-      if (d < bestD) { bestD = d; bestIdx = i; }
+      if (d < bestD) {
+        bestD = d;
+        bestIdx = i;
+      }
     }
     merged[bestIdx].count += weighted ? weights[p] : 1;
   }
-  return merged.filter(c => c.count > 0);
+  return merged.filter((c) => c.count > 0);
 }
 
 // ── Ink profiles (print method) ───────────────────────────────────
@@ -925,7 +988,7 @@ export const INK_PROFILES = {
   silkscreen: {
     key: 'silkscreen',
     label: 'Silkscreen',
-    transfer_factor: 1.30,
+    transfer_factor: 1.3,
     film_thickness_um: 15.0,
     dot_gain_pct_at_50: 8,
     note: 'Through-mesh deposit — heaviest film, opaque coverage. Mesh + emulsion holds back ~25–30% of ink.',
@@ -941,7 +1004,7 @@ export const INK_PROFILES = {
   digital: {
     key: 'digital',
     label: 'Digital',
-    transfer_factor: 1.00,
+    transfer_factor: 1.0,
     film_thickness_um: 1.0,
     dot_gain_pct_at_50: 3,
     note: 'Inkjet / toner — no transfer loss. Volume reflects only printed area.',
@@ -977,8 +1040,8 @@ export function inkVolumeMicroliters(areaMm2, profile) {
 export function applyDotGain(filePct, gainAt50Pct) {
   if (!(filePct > 0) || !(gainAt50Pct > 0)) return filePct || 0;
   const scale = filePct > 1.01 ? 100 : 1; // auto-detect pct vs fraction
-  const f = filePct / scale;              // 0..1
-  const g = gainAt50Pct / 100;            // e.g. 0.18
+  const f = filePct / scale; // 0..1
+  const g = gainAt50Pct / 100; // e.g. 0.18
   const press = f + g * Math.sin(Math.PI * f);
   return Math.max(0, Math.min(1, press)) * scale;
 }
@@ -994,7 +1057,7 @@ export function applyDotGain(filePct, gainAt50Pct) {
 export function applyInkProfile(colors, profileKey, opts = {}) {
   const profile = getInkProfile(profileKey);
   const useDotGain = opts.applyDotGain !== false;
-  const gain = useDotGain ? (profile.dot_gain_pct_at_50 || 0) : 0;
+  const gain = useDotGain ? profile.dot_gain_pct_at_50 || 0 : 0;
   return (colors || []).map((c) => {
     const filePct = c.print_area_pct || 0;
     const pressPct = gain > 0 ? applyDotGain(filePct, gain) : filePct;
@@ -1008,7 +1071,7 @@ export function applyInkProfile(colors, profileKey, opts = {}) {
     return {
       ...c,
       ink_uL_per_label: uL,
-      ink_mL_per_1k: uL,            // 1000 labels × µL = mL (1 µL × 1000 = 1 mL)
+      ink_mL_per_1k: uL, // 1000 labels × µL = mL (1 µL × 1000 = 1 mL)
       dot_gain_pct: useDotGain ? Math.max(0, pressPct - filePct) : 0,
       press_area_pct: pressPct,
     };
@@ -1043,21 +1106,28 @@ export function detectRotation(bitmapW, bitmapH, labelWmm, labelHmm) {
 // when `detectRotation` suggests a flip, before feeding the image
 // into BG/crop/analyze.
 export function rotateImageData(imgData, degrees) {
-  const deg = ((Math.round(degrees / 90) * 90) % 360 + 360) % 360;
+  const deg = (((Math.round(degrees / 90) * 90) % 360) + 360) % 360;
   if (deg === 0) return imgData;
   const { data, width: w, height: h } = imgData;
-  const newW = (deg === 180) ? w : h;
-  const newH = (deg === 180) ? h : w;
+  const newW = deg === 180 ? w : h;
+  const newH = deg === 180 ? h : w;
   const out = new Uint8ClampedArray(newW * newH * 4);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const srcIdx = (y * w + x) * 4;
       let nx, ny;
-      if (deg === 90)      { nx = h - 1 - y; ny = x; }
-      else if (deg === 180) { nx = w - 1 - x; ny = h - 1 - y; }
-      else /* 270 */       { nx = y; ny = w - 1 - x; }
+      if (deg === 90) {
+        nx = h - 1 - y;
+        ny = x;
+      } else if (deg === 180) {
+        nx = w - 1 - x;
+        ny = h - 1 - y;
+      } else /* 270 */ {
+        nx = y;
+        ny = w - 1 - x;
+      }
       const dstIdx = (ny * newW + nx) * 4;
-      out[dstIdx]     = data[srcIdx];
+      out[dstIdx] = data[srcIdx];
       out[dstIdx + 1] = data[srcIdx + 1];
       out[dstIdx + 2] = data[srcIdx + 2];
       out[dstIdx + 3] = data[srcIdx + 3];
@@ -1075,12 +1145,20 @@ export function bgSanityCheck(total, bgCount) {
   if (!(total > 0)) return { ok: false, reason: 'empty', printable_ratio: 0 };
   const printableRatio = 1 - bgCount / total;
   if (printableRatio < 0.05) {
-    return { ok: false, reason: 'low_printable', printable_ratio: printableRatio,
-      hint: 'Very little non-background content detected — try picking BG manually from a margin.' };
+    return {
+      ok: false,
+      reason: 'low_printable',
+      printable_ratio: printableRatio,
+      hint: 'Very little non-background content detected — try picking BG manually from a margin.',
+    };
   }
   if (printableRatio > 0.95) {
-    return { ok: false, reason: 'high_printable', printable_ratio: printableRatio,
-      hint: 'Almost every pixel classified as ink — the detected BG may be wrong. Pick BG from a clear margin.' };
+    return {
+      ok: false,
+      reason: 'high_printable',
+      printable_ratio: printableRatio,
+      hint: 'Almost every pixel classified as ink — the detected BG may be wrong. Pick BG from a clear margin.',
+    };
   }
   return { ok: true, printable_ratio: printableRatio };
 }
@@ -1105,9 +1183,12 @@ export function buildColorSeparation(imgData, targetRgb, threshold = 18) {
     const dr = data[i] - targetRgb[0];
     const dg = data[i + 1] - targetRgb[1];
     const db = data[i + 2] - targetRgb[2];
-    const isMatch = (dr * dr + dg * dg + db * db) <= t2;
+    const isMatch = dr * dr + dg * dg + db * db <= t2;
     const v = isMatch ? 0 : 255;
-    out[i] = v; out[i + 1] = v; out[i + 2] = v; out[i + 3] = 255;
+    out[i] = v;
+    out[i + 1] = v;
+    out[i + 2] = v;
+    out[i + 3] = 255;
   }
   return { data: out, width, height };
 }
@@ -1124,10 +1205,18 @@ export function buildColorSeparation(imgData, targetRgb, threshold = 18) {
 // strings via `opts.userExcludedHex = ['#FF00FF', '#000000']` to mark
 // additional clusters as excluded (reason='user'). Use for varnish /
 // foil / secondary dielines that don't match the magenta heuristic.
-export function buildResult(clusters, total, bgCount, widthMm, heightMm, excludePredicate, opts = {}) {
+export function buildResult(
+  clusters,
+  total,
+  bgCount,
+  widthMm,
+  heightMm,
+  excludePredicate,
+  opts = {}
+) {
   const areaMm2 = widthMm * heightMm;
   const sorted = [...clusters].sort((a, b) => b.count - a.count);
-  const userSet = new Set((opts.userExcludedHex || []).map(h => String(h).toUpperCase()));
+  const userSet = new Set((opts.userExcludedHex || []).map((h) => String(h).toUpperCase()));
   const colors = sorted.map((c, i) => {
     const rgb = [Math.round(c.rgb[0]), Math.round(c.rgb[1]), Math.round(c.rgb[2])];
     const hex = rgbToHex(rgb);
@@ -1145,7 +1234,7 @@ export function buildResult(clusters, total, bgCount, widthMm, heightMm, exclude
       excluded,
       // Reason precedence: user pick overrides auto heuristic so the
       // UI can show "why excluded" and let the user flip it back.
-      excluded_reason: userMark ? 'user' : (dielineAuto ? 'dieline' : null),
+      excluded_reason: userMark ? 'user' : dielineAuto ? 'dieline' : null,
     };
   });
   return recomputeTotals(colors, total, bgCount, widthMm, heightMm);
@@ -1191,7 +1280,12 @@ export function recomputeTotals(colors, total, bgCount, widthMm, heightMm) {
 function isPdfLike(file) {
   if (!file) return false;
   const mime = (file.type || '').toLowerCase();
-  if (mime === 'application/pdf' || mime === 'application/illustrator' || mime === 'application/postscript') return true;
+  if (
+    mime === 'application/pdf' ||
+    mime === 'application/illustrator' ||
+    mime === 'application/postscript'
+  )
+    return true;
   const name = (file.name || '').toLowerCase();
   return name.endsWith('.pdf') || name.endsWith('.ai');
 }
@@ -1210,8 +1304,14 @@ async function loadPdfjs() {
   // when e is a plain Array (some PDFs hand the trailer /ID parser one).
   // Forcing the fallback path by deleting the prototype methods on both the
   // main thread AND inside the worker realm sidesteps the engine bug.
-  try { delete Uint8Array.prototype.toHex; } catch {}
-  try { delete Uint8Array.prototype.toBase64; } catch {}
+  // eslint-disable-next-line no-empty -- pre-existing tech debt: intentional empty fallback
+  try {
+    delete Uint8Array.prototype.toHex;
+  } catch {}
+  // eslint-disable-next-line no-empty -- pre-existing tech debt: intentional empty fallback
+  try {
+    delete Uint8Array.prototype.toBase64;
+  } catch {}
 
   const pdfjs = await import('pdfjs-dist');
   const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
@@ -1269,7 +1369,11 @@ async function renderPdfLike(file, widthMm, heightMm, dpi, pageIndex = 1) {
     }).promise;
     return ctx.getImageData(0, 0, targetW, targetH);
   } finally {
-    try { await doc.destroy(); } catch { /* ignore cleanup failure */ }
+    try {
+      await doc.destroy();
+    } catch {
+      /* ignore cleanup failure */
+    }
   }
 }
 
@@ -1287,7 +1391,8 @@ export async function renderArtwork(file, widthMm, heightMm, dpi = 300, pageInde
     ctx = canvas.getContext('2d', { willReadFrequently: true });
   } else {
     canvas = document.createElement('canvas');
-    canvas.width = w; canvas.height = h;
+    canvas.width = w;
+    canvas.height = h;
     ctx = canvas.getContext('2d', { willReadFrequently: true });
   }
   // Paint white under the artwork so transparent-PNG edges don't
@@ -1310,7 +1415,14 @@ export async function renderArtwork(file, widthMm, heightMm, dpi = 300, pageInde
 // *effective* physical span of the rendered bitmap assuming the source
 // was authored at `dpi` — lets the caller compute where widthMm×heightMm
 // falls inside the oversized canvas.
-export async function renderArtworkNative(file, widthMm, heightMm, dpi = 300, maxPx = 2400, pageIndex = 1) {
+export async function renderArtworkNative(
+  file,
+  widthMm,
+  heightMm,
+  dpi = 300,
+  maxPx = 2400,
+  pageIndex = 1
+) {
   if (isPdfLike(file)) {
     // PDF: render at the PDF's native px density. Scale so the long
     // edge hits maxPx (prevents memory blowouts on large AI files).
@@ -1333,7 +1445,11 @@ export async function renderArtworkNative(file, widthMm, heightMm, dpi = 300, ma
       await page.render({ canvas, canvasContext: ctx, viewport: vp }).promise;
       return ctx.getImageData(0, 0, canvas.width, canvas.height);
     } finally {
-      try { await doc.destroy(); } catch { /* ignore */ }
+      try {
+        await doc.destroy();
+      } catch {
+        /* ignore */
+      }
     }
   }
   const bitmap = await createImageBitmap(file);
@@ -1356,7 +1472,8 @@ export async function renderArtworkNative(file, widthMm, heightMm, dpi = 300, ma
     ctx = canvas.getContext('2d', { willReadFrequently: true });
   } else {
     canvas = document.createElement('canvas');
-    canvas.width = w; canvas.height = h;
+    canvas.width = w;
+    canvas.height = h;
     ctx = canvas.getContext('2d', { willReadFrequently: true });
   }
   ctx.fillStyle = '#FFFFFF';
@@ -1394,8 +1511,14 @@ export function normalizeRoi(roi, canvasW, canvasH) {
   let y = Math.round(roi.y);
   let w = Math.round(roi.w);
   let h = Math.round(roi.h);
-  if (w < 0) { x += w; w = -w; }
-  if (h < 0) { y += h; h = -h; }
+  if (w < 0) {
+    x += w;
+    w = -w;
+  }
+  if (h < 0) {
+    y += h;
+    h = -h;
+  }
   x = Math.max(0, Math.min(canvasW - 1, x));
   y = Math.max(0, Math.min(canvasH - 1, y));
   w = Math.max(1, Math.min(canvasW - x, w));
@@ -1432,9 +1555,10 @@ export function normalizeRoi(roi, canvasW, canvasH) {
 // Correctness hinges on P representing the LABEL area only — no margins
 // or callouts. That's what the crop modes above guarantee.
 export async function runPrintAreaAnalysis(file, cfg) {
-  const mode = cfg.cropMode || (cfg.manualRoi ? 'manual' : (cfg.autoCrop !== false ? 'auto' : 'none'));
+  const mode =
+    cfg.cropMode || (cfg.manualRoi ? 'manual' : cfg.autoCrop !== false ? 'auto' : 'none');
   const metric = cfg.colorMetric === 'rgb' ? 'rgb' : 'lab'; // Lab default
-  const aaWeighting = cfg.aaWeighting !== false;            // on by default
+  const aaWeighting = cfg.aaWeighting !== false; // on by default
   const bleedMm = Math.max(0, Number(cfg.bleedMm) || 0);
   const pageIndex = Math.max(1, Number(cfg.pageIndex) || 1);
 
@@ -1455,16 +1579,26 @@ export async function runPrintAreaAnalysis(file, cfg) {
   if (vectorMode !== 'off' && isPdfLike(file)) {
     try {
       const { analyzePdfVectorInk } = await import('./pdfVectorInk.js');
-      vectorInk = await analyzePdfVectorInk(file, cfg.widthMm + 2 * bleedMm, cfg.heightMm + 2 * bleedMm, {
-        pageIndex,
-      });
+      vectorInk = await analyzePdfVectorInk(
+        file,
+        cfg.widthMm + 2 * bleedMm,
+        cfg.heightMm + 2 * bleedMm,
+        {
+          pageIndex,
+        }
+      );
     } catch (e) {
       // Non-fatal: raster path continues and is still authoritative
       // for visual clusters. Surface the failure reason in warnings so
       // operators know the plate view is unavailable.
-      vectorInk = { mode: 'vector', plates: [], warnings: [
-        `Vector ink analysis failed: ${e.message || e}. Plate-level coverage is unavailable; raster clusters below are the only data.`,
-      ], error: true };
+      vectorInk = {
+        mode: 'vector',
+        plates: [],
+        warnings: [
+          `Vector ink analysis failed: ${e.message || e}. Plate-level coverage is unavailable; raster clusters below are the only data.`,
+        ],
+        error: true,
+      };
       if (vectorMode === 'force') throw e;
     }
   }
@@ -1477,9 +1611,10 @@ export async function runPrintAreaAnalysis(file, cfg) {
   const frameWmm = cfg.widthMm + 2 * bleedMm;
   const frameHmm = cfg.heightMm + 2 * bleedMm;
 
-  const fullImg = (mode === 'physical' && !cfg.manualRoi)
-    ? await renderArtworkNative(file, frameWmm, frameHmm, cfg.dpi, 2400, pageIndex)
-    : await renderArtwork(file, frameWmm, frameHmm, cfg.dpi, pageIndex);
+  const fullImg =
+    mode === 'physical' && !cfg.manualRoi
+      ? await renderArtworkNative(file, frameWmm, frameHmm, cfg.dpi, 2400, pageIndex)
+      : await renderArtwork(file, frameWmm, frameHmm, cfg.dpi, pageIndex);
 
   // Rotation: either user-forced via cfg.rotation ∈ {0,90,180,270,'auto'}
   // or auto-detected from aspect mismatch. Applied BEFORE BG detection
@@ -1495,15 +1630,16 @@ export async function runPrintAreaAnalysis(file, cfg) {
 
   // BG sampled from the uncropped+rotated canvas — paper/whitespace
   // outside the label anchors the detection. Manual override still wins.
-  const bg = cfg.bgMode === 'manual' && cfg.bgColor
-    ? [cfg.bgColor[0], cfg.bgColor[1], cfg.bgColor[2]]
-    : detectBackground(rotated);
+  const bg =
+    cfg.bgMode === 'manual' && cfg.bgColor
+      ? [cfg.bgColor[0], cfg.bgColor[1], cfg.bgColor[2]]
+      : detectBackground(rotated);
 
   let imgData = rotated;
   let crop = null;
-  let cropSource = null;        // 'manual' | 'physical' | 'auto' | null
+  let cropSource = null; // 'manual' | 'physical' | 'auto' | null
 
-  let dielinePick = null;   // { rgb, bbox, n, score, hex } when auto-picked
+  let dielinePick = null; // { rgb, bbox, n, score, hex } when auto-picked
   if (cfg.manualRoi) {
     // Manual ROI wins — user explicitly scoped the measurement.
     const roi = normalizeRoi(cfg.manualRoi, rotated.width, rotated.height);
@@ -1555,8 +1691,10 @@ export async function runPrintAreaAnalysis(file, cfg) {
     }
   }
 
-  let { pixels, weights, bgCount, total } = maskPrintable(
-    imgData, bg, cfg.bgTolerance, { aaWeighting, metric });
+  let { pixels, weights, bgCount, total } = maskPrintable(imgData, bg, cfg.bgTolerance, {
+    aaWeighting,
+    metric,
+  });
 
   // Optional morphological opening — removes thin dim-callout strokes
   // even when their color matches legit content. Rebuilds pixels/weights
@@ -1578,17 +1716,29 @@ export async function runPrintAreaAnalysis(file, cfg) {
     const newWeights = [];
     let newBgCount = 0;
     for (let i = 0, p = 0; i < data.length; i += 4, p++) {
-      if (data[i + 3] < 8) { newBgCount++; continue; }
+      if (data[i + 3] < 8) {
+        newBgCount++;
+        continue;
+      }
       const px = [data[i], data[i + 1], data[i + 2]];
       const d = metric === 'lab' ? deltaE76(rgbToLab(px), rgbToLab(bg)) : colorDist(px, bg);
       const tol = metric === 'lab' && cfg.bgTolerance > 10 ? cfg.bgTolerance / 4 : cfg.bgTolerance;
-      if (d <= tol) { newBgCount++; continue; }
-      if (!opened[p]) { newBgCount++; continue; }
+      if (d <= tol) {
+        newBgCount++;
+        continue;
+      }
+      if (!opened[p]) {
+        newBgCount++;
+        continue;
+      }
       // Re-derive weight for kept pixels so AA band is respected.
       let w = 1;
       if (aaWeighting) {
         w = Math.min(1, Math.max(0, (d - tol) / tol));
-        if (w < 0.05) { newBgCount++; continue; }
+        if (w < 0.05) {
+          newBgCount++;
+          continue;
+        }
       }
       newPixels.push(px);
       newWeights.push(w);
@@ -1604,8 +1754,10 @@ export async function runPrintAreaAnalysis(file, cfg) {
 
   // Sprint 9: chroma-boosted MMCQ so rare spot inks aren't eaten by the
   // dominant dark/gray regions. Flag-off via cfg.chromaBoost=false.
-  let clusters = quantizeColors(pixels, cfg.kColors, weights,
-    { metric, chromaBoost: cfg.chromaBoost !== false });
+  let clusters = quantizeColors(pixels, cfg.kColors, weights, {
+    metric,
+    chromaBoost: cfg.chromaBoost !== false,
+  });
   clusters = mergeClusters(clusters, cfg.mergeThreshold, { metric });
 
   // Sprint 9: outlier rescue — catches spot inks that even chroma-boost
@@ -1631,17 +1783,21 @@ export async function runPrintAreaAnalysis(file, cfg) {
   // the magenta heuristic so a green stroke is still caught, and the
   // stroke color we just detected is caught too.
   const detectedDielineRgb = dielinePick?.rgb || null;
-  const exclude = cfg.autoExcludeDieline !== false
-    ? (rgb) => {
-        if (isDielineColor(rgb)) return true;
-        if (detectedDielineRgb) {
-          const d = metric === 'lab' ? labDist(rgb, detectedDielineRgb) : colorDist(rgb, detectedDielineRgb);
-          const nearTol = metric === 'lab' ? 5 : 20;
-          if (d <= nearTol) return true;
+  const exclude =
+    cfg.autoExcludeDieline !== false
+      ? (rgb) => {
+          if (isDielineColor(rgb)) return true;
+          if (detectedDielineRgb) {
+            const d =
+              metric === 'lab'
+                ? labDist(rgb, detectedDielineRgb)
+                : colorDist(rgb, detectedDielineRgb);
+            const nearTol = metric === 'lab' ? 5 : 20;
+            if (d <= nearTol) return true;
+          }
+          return false;
         }
-        return false;
-      }
-    : null;
+      : null;
   // Scale ratio applies to the PHYSICAL (mm) dimensions the user
   // entered. Pixel ratios are scale-invariant.
   const phys = effectivePhysicalDims(cfg.widthMm, cfg.heightMm, cfg.scaleRatio);
@@ -1651,8 +1807,12 @@ export async function runPrintAreaAnalysis(file, cfg) {
   // after cropping, so mm²/% numbers are self-consistent. For the
   // trim-only metric the caller multiplies by (trim_area / frame_area).
   let result = buildResult(
-    clusters, total, bgCount,
-    physFrame.widthMm, physFrame.heightMm, exclude,
+    clusters,
+    total,
+    bgCount,
+    physFrame.widthMm,
+    physFrame.heightMm,
+    exclude,
     { userExcludedHex: cfg.userExcludedHex || [] }
   );
 
@@ -1669,8 +1829,9 @@ export async function runPrintAreaAnalysis(file, cfg) {
   // cfg.applyDotGain=false to reproduce pre-Sprint-8 ink numbers.
   result = {
     ...result,
-    colors: applyInkProfile(result.colors, cfg.printMethod,
-      { applyDotGain: cfg.applyDotGain !== false }),
+    colors: applyInkProfile(result.colors, cfg.printMethod, {
+      applyDotGain: cfg.applyDotGain !== false,
+    }),
   };
 
   return {
@@ -1684,18 +1845,20 @@ export async function runPrintAreaAnalysis(file, cfg) {
     // its implied physical dimensions (inverse of mmToPx at cfg.dpi).
     // UI can show "Die-line detected: #EC4444, 29.2×15.8 mm — update
     // product dims?" and offer a one-click override.
-    dieline: dielinePick ? {
-      hex: dielinePick.hex,
-      rgb: dielinePick.rgb,
-      bbox: dielinePick.bbox,
-      pixel_count: dielinePick.n,
-      stroke_score: dielinePick.score,
-      detected_width_mm: pxToMm(dielinePick.bbox.w, cfg.dpi),
-      detected_height_mm: pxToMm(dielinePick.bbox.h, cfg.dpi),
-    } : null,
+    dieline: dielinePick
+      ? {
+          hex: dielinePick.hex,
+          rgb: dielinePick.rgb,
+          bbox: dielinePick.bbox,
+          pixel_count: dielinePick.n,
+          stroke_score: dielinePick.score,
+          detected_width_mm: pxToMm(dielinePick.bbox.w, cfg.dpi),
+          detected_height_mm: pxToMm(dielinePick.bbox.h, cfg.dpi),
+        }
+      : null,
     rotation_applied: rotation,
-    rotation_source: rotation === 0 ? 'none'
-      : (rotCfg === 90 || rotCfg === 180 || rotCfg === 270) ? 'user' : 'auto',
+    rotation_source:
+      rotation === 0 ? 'none' : rotCfg === 90 || rotCfg === 180 || rotCfg === 270 ? 'user' : 'auto',
     thin_stroke_iterations: cfg.thinStrokeIterations || 0,
     color_metric: metric,
     aa_weighting: aaWeighting,

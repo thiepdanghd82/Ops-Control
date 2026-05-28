@@ -28,6 +28,7 @@ export function sanitizeReason(input) {
   // Strip HTML/XML tags entirely — quote system never renders markup.
   s = s.replace(/<[^>]*>/g, '');
   // Strip null bytes and ANSI escape sequences (log-injection defense).
+  // eslint-disable-next-line no-control-regex -- intentional null-byte strip for security
   s = s.replace(/\u0000/g, '');
   // eslint-disable-next-line no-control-regex -- intentional: ANSI esc
   s = s.replace(/\u001b\[[0-9;]*m/g, '');

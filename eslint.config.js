@@ -29,6 +29,18 @@ export default [
       'backup/',
       'dist/',
       'docs/audit-2026-04-17/',
+      // Claude Code Agent worktrees — temporary on-disk clones used by
+      // sub-agents (see Agent tool docs). Treating them as source rots
+      // lint output with duplicates of files that already get linted
+      // in the primary working tree. CI is unaffected (worktrees are
+      // local-only, never committed).
+      '.claude/worktrees/',
+      // Legacy data dump for one-off import — committed `*_data.js`
+      // files use a `window._VARNAME = {...}` IIFE pattern from v1.1
+      // (see CLAUDE.md `dataSync.js` notes). Not runtime source, never
+      // imported by code paths today; lint surfaces `no-undef` on
+      // window which is irrelevant for these fixture files.
+      'Data for import/',
     ],
   },
   // 2. Base recommended
@@ -49,12 +61,18 @@ export default [
       'no-empty': ['error', { allowEmptyCatch: true }],
     },
   },
-  // 3b. Puppeteer self-check — page.evaluate() callbacks ferried into
-  // the browser context legitimately reference window/document. Adding
-  // browser globals here keeps the smoke harness lint-clean without
-  // weakening the no-undef rule for real Node scripts.
+  // 3b. Puppeteer self-check + screenshot capture scripts — page.evaluate()
+  // callbacks ferried into the browser context legitimately reference
+  // window/document. Adding browser globals here keeps the smoke harness
+  // + capture tooling lint-clean without weakening the no-undef rule for
+  // real Node scripts.
   {
-    files: ['scripts/help/self-check.mjs'],
+    files: [
+      'scripts/help/self-check.mjs',
+      'scripts/help/capture-screenshots.mjs',
+      'scripts/help/capture-subtabs.mjs',
+      'scripts/help/capture-with-demo.mjs',
+    ],
     languageOptions: {
       globals: { ...globals.node, ...globals.browser, ...globals.es2024 },
     },
@@ -130,6 +148,38 @@ export default [
     rules: {
       'no-empty-pattern': 'off',
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    },
+  },
+  // 3e. Client (React + Vite, browser globals). client/eslint.config.js
+  // owns the per-package lint when run from inside client/; this block
+  // applies when ESLint is invoked at the repo root (`npm run lint`)
+  // so client files aren't linted under the bare js.configs.recommended
+  // defaults (which would flag every `window`, `document`, and the
+  // legitimate `_` placeholder vars). Rules mirror the client config
+  // intentionally — keep both in sync until the client config is
+  // consolidated here.
+  {
+    files: ['client/src/**/*.{js,jsx}'],
+    languageOptions: {
+      ecmaVersion: 2024,
+      sourceType: 'module',
+      parserOptions: { ecmaFeatures: { jsx: true } },
+      globals: {
+        ...globals.browser,
+        ...globals.es2024,
+        __OPS_BUNDLE_MARKER__: 'readonly',
+        __APP_VERSION__: 'readonly',
+      },
+    },
+    rules: {
+      'no-unused-vars': [
+        'error',
+        {
+          varsIgnorePattern: '^[A-Z_]',
+          argsIgnorePattern: '^[A-Z_]',
+          caughtErrorsIgnorePattern: '^[A-Z_]',
+        },
+      ],
     },
   },
   // 4. Desktop (Electron main process — CJS)

@@ -49,6 +49,7 @@ export function sanitizeChatBody(raw) {
   if (raw == null) return '';
   let s = String(raw);
   s = s.replace(/<[^>]*>/g, '');
+  // eslint-disable-next-line no-control-regex -- intentional null-byte strip for security
   s = s.replace(/\u0000/g, '');
   // eslint-disable-next-line no-control-regex -- intentional: strip ANSI esc
   s = s.replace(/\u001b\[[0-9;]*m/g, '');

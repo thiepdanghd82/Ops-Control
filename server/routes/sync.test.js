@@ -36,8 +36,13 @@ async function spawnApp(routes) {
 async function fetchJson(url, opts = {}) {
   const res = await fetch(url, opts);
   const text = await res.text();
+  // eslint-disable-next-line no-useless-assignment -- pre-existing tech debt
   let body = null;
-  try { body = JSON.parse(text); } catch (_) { body = text; }
+  try {
+    body = JSON.parse(text);
+  } catch (_) {
+    body = text;
+  }
   return { status: res.status, body, headers: res.headers };
 }
 

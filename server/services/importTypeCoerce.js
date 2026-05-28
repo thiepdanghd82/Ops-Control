@@ -15,8 +15,9 @@
  * preview step can flag bad cells without throwing.
  */
 
-const NBSP = / /g;
-const ZERO_WIDTH = /[​‌‍﻿]/g;
+const NBSP = /\u00A0/g;
+// eslint-disable-next-line no-misleading-character-class -- zero-width sequences are intentional sanitization (escaped via \uXXXX)
+const ZERO_WIDTH = /[\u200B\u200C\u200D\uFEFF]/g;
 
 export function trimCell(v) {
   if (v == null) return '';
@@ -45,9 +46,15 @@ export function coerceNumber(v, opts = {}) {
     return { ok: false, value: null, raw: v, reason: 'empty' };
   }
   // Strip currency symbols, percent, plus sign, parentheses (negative).
-  let cleaned = s.replace(/[$€£¥₫]/g, '').replace(/%$/, '').trim();
+  let cleaned = s
+    .replace(/[$€£¥₫]/g, '')
+    .replace(/%$/, '')
+    .trim();
   let negative = false;
-  if (/^\(.*\)$/.test(cleaned)) { negative = true; cleaned = cleaned.slice(1, -1); }
+  if (/^\(.*\)$/.test(cleaned)) {
+    negative = true;
+    cleaned = cleaned.slice(1, -1);
+  }
   if (cleaned.startsWith('+')) cleaned = cleaned.slice(1);
 
   // Detect locale: if BOTH "," and "." present, the LAST one is decimal.
@@ -68,8 +75,13 @@ export function coerceNumber(v, opts = {}) {
     }
   } else if (hasComma) {
     const parts = cleaned.split(',');
-    if (parts.length === 2 && parts[1].length > 0 && parts[1].length <= 3
-        && /^\d+$/.test(parts[0]) && /^\d+$/.test(parts[1])) {
+    if (
+      parts.length === 2 &&
+      parts[1].length > 0 &&
+      parts[1].length <= 3 &&
+      /^\d+$/.test(parts[0]) &&
+      /^\d+$/.test(parts[1])
+    ) {
       // Could be "1,5" (decimal) or "1,234" (thousand).
       // Heuristic: if integer part ≤ 3 digits AND fractional part ≤ 2 digits → decimal.
       // Otherwise (e.g. "1,234") → thousand separator.
@@ -128,10 +140,12 @@ export function coerceDate(v, opts = {}) {
     }
   }
   // dd/mm/yyyy or dd-mm-yyyy or dd.mm.yyyy
-  const dmyMatch = /^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/.exec(s);
+  const dmyMatch = /^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})$/.exec(s);
   if (dmyMatch) {
     let [, d, m, y] = dmyMatch;
-    let dd = Number(d), mm = Number(m), yyyy = Number(y);
+    let dd = Number(d),
+      mm = Number(m),
+      yyyy = Number(y);
     if (yyyy < 100) yyyy += yyyy < 50 ? 2000 : 1900;
     if (dd > 12 && mm <= 12) {
       // Definitely dd/mm

@@ -41,7 +41,12 @@ let healthEndpoint = '/health';
 
 function notify() {
   for (const fn of listeners) {
-    try { fn({ ...state }); } catch (_) { /* swallow */ }
+    // eslint-disable-next-line no-unused-vars -- pre-existing tech debt: unused catch param `_`
+    try {
+      fn({ ...state });
+    } catch (_) {
+      /* swallow */
+    }
   }
 }
 
@@ -120,12 +125,19 @@ function onVisibilityChange() {
     // Tab visible — probe immediately + resume polling
     probe().then(scheduleNext);
   } else {
-    if (timer) { clearTimeout(timer); timer = null; }
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
   }
 }
 
-function onOnline()  { probe().then(scheduleNext); }
-function onOffline() { setOffline('navigator.offline'); }
+function onOnline() {
+  probe().then(scheduleNext);
+}
+function onOffline() {
+  setOffline('navigator.offline');
+}
 
 let started = false;
 export function startConnectionMonitor(opts = {}) {
@@ -145,7 +157,10 @@ export function startConnectionMonitor(opts = {}) {
 
 export function stopConnectionMonitor() {
   started = false;
-  if (timer) { clearTimeout(timer); timer = null; }
+  if (timer) {
+    clearTimeout(timer);
+    timer = null;
+  }
   if (typeof document !== 'undefined') {
     document.removeEventListener('visibilitychange', onVisibilityChange);
   }
@@ -162,7 +177,12 @@ export function getConnectionStatus() {
 export function subscribeConnection(fn) {
   listeners.add(fn);
   // Send current state immediately so subscriber doesn't wait for first poll
-  try { fn({ ...state }); } catch (_) { /* swallow */ }
+  // eslint-disable-next-line no-unused-vars -- pre-existing tech debt: unused catch param `_`
+  try {
+    fn({ ...state });
+  } catch (_) {
+    /* swallow */
+  }
   return () => listeners.delete(fn);
 }
 

@@ -7,10 +7,16 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import {
-  resolveBackupTarget, getBackupRoot, getDirectoryBytes, checkQuota,
-  writeBackupChecksum, pruneOldBackups, getRetentionSettings,
+  resolveBackupTarget,
+  getBackupRoot,
+  getDirectoryBytes,
+  checkQuota,
+  writeBackupChecksum,
+  pruneOldBackups,
+  getRetentionSettings,
   verifyBackupChecksum,
-  BACKUP_SUBDIR, DEFAULT_QUOTA_MB,
+  BACKUP_SUBDIR,
+  DEFAULT_QUOTA_MB,
 } from './backupPath.js';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ops-bkup-'));
@@ -40,7 +46,9 @@ test('empty/whitespace destPath same as omitted', () => {
 
 test('absolute path rejected', () => {
   const r = resolveBackupTarget({
-    backupRoot: root, defaultFileName: 'foo.js', destPath: '/etc/passwd.bak',
+    backupRoot: root,
+    defaultFileName: 'foo.js',
+    destPath: '/etc/passwd.bak',
   });
   assert.equal(r.ok, false);
   assert.ok(r.error.includes('must be relative'));
@@ -48,7 +56,9 @@ test('absolute path rejected', () => {
 
 test('~ expansion rejected', () => {
   const r = resolveBackupTarget({
-    backupRoot: root, defaultFileName: 'foo.js', destPath: '~/passwd.bak',
+    backupRoot: root,
+    defaultFileName: 'foo.js',
+    destPath: '~/passwd.bak',
   });
   assert.equal(r.ok, false);
   assert.ok(r.error.includes('~'));
@@ -56,7 +66,9 @@ test('~ expansion rejected', () => {
 
 test('relative .. escape rejected', () => {
   const r = resolveBackupTarget({
-    backupRoot: root, defaultFileName: 'foo.js', destPath: '../../etc/passwd.bak',
+    backupRoot: root,
+    defaultFileName: 'foo.js',
+    destPath: '../../etc/passwd.bak',
   });
   assert.equal(r.ok, false);
   assert.ok(r.error.toLowerCase().includes('escape'));
@@ -64,14 +76,18 @@ test('relative .. escape rejected', () => {
 
 test('deeply-nested .. eventually escaping also rejected', () => {
   const r = resolveBackupTarget({
-    backupRoot: root, defaultFileName: 'foo.js', destPath: 'legit/sub/../../../outside.bak',
+    backupRoot: root,
+    defaultFileName: 'foo.js',
+    destPath: 'legit/sub/../../../outside.bak',
   });
   assert.equal(r.ok, false);
 });
 
 test('relative subdir allowed + file under root', () => {
   const r = resolveBackupTarget({
-    backupRoot: root, defaultFileName: 'foo.js', destPath: 'sub/dir/file.bak',
+    backupRoot: root,
+    defaultFileName: 'foo.js',
+    destPath: 'sub/dir/file.bak',
   });
   assert.equal(r.ok, true);
   assert.equal(r.target, path.join(root, 'sub/dir/file.bak'));
@@ -81,7 +97,9 @@ test('existing directory causes defaultFileName to be appended', () => {
   const subDir = path.join(root, 'subA');
   fs.mkdirSync(subDir, { recursive: true });
   const r = resolveBackupTarget({
-    backupRoot: root, defaultFileName: 'auto.js', destPath: 'subA',
+    backupRoot: root,
+    defaultFileName: 'auto.js',
+    destPath: 'subA',
   });
   assert.equal(r.ok, true);
   assert.equal(r.target, path.join(subDir, 'auto.js'));
@@ -89,7 +107,9 @@ test('existing directory causes defaultFileName to be appended', () => {
 
 test('trailing separator treated as directory', () => {
   const r = resolveBackupTarget({
-    backupRoot: root, defaultFileName: 'auto.js', destPath: 'newDir/',
+    backupRoot: root,
+    defaultFileName: 'auto.js',
+    destPath: 'newDir/',
   });
   assert.equal(r.ok, true);
   assert.equal(r.target, path.join(root, 'newDir', 'auto.js'));
@@ -97,14 +117,17 @@ test('trailing separator treated as directory', () => {
 
 test('defaultFileName without separators required', () => {
   const r = resolveBackupTarget({
-    backupRoot: root, defaultFileName: '../evil', destPath: 'sub',
+    backupRoot: root,
+    defaultFileName: '../evil',
+    destPath: 'sub',
   });
   assert.equal(r.ok, false);
 });
 
 test('non-absolute backupRoot rejected', () => {
   const r = resolveBackupTarget({
-    backupRoot: 'relative/root', defaultFileName: 'foo.js',
+    backupRoot: 'relative/root',
+    defaultFileName: 'foo.js',
   });
   assert.equal(r.ok, false);
 });
@@ -157,6 +180,7 @@ test('writeBackupChecksum: creates .sha256 sidecar matching file content', () =>
   assert.equal(r.sidecar, f + '.sha256');
   const sidecar = fs.readFileSync(r.sidecar, 'utf-8');
   // Format: "<hex>  <basename>\n"
+  // eslint-disable-next-line no-regex-spaces -- pre-existing tech debt: intentional multi-space match in fixture
   assert.match(sidecar, /^[a-f0-9]{64}  checksum-me\.bin\n$/);
   assert.ok(sidecar.startsWith(r.hex));
 });
@@ -182,7 +206,7 @@ test('verifyBackupChecksum: mismatch when file mutated after sidecar', () => {
   const f = path.join(root, 'verify-tamper.bin');
   fs.writeFileSync(f, 'original');
   writeBackupChecksum(f);
-  fs.writeFileSync(f, 'tampered');  // no new sidecar
+  fs.writeFileSync(f, 'tampered'); // no new sidecar
   const v = verifyBackupChecksum(f);
   assert.equal(v.ok, false);
   assert.equal(v.reason, 'mismatch');
@@ -251,7 +275,7 @@ test('pruneOldBackups: keepMin protects newest even if all expired', () => {
   const r = pruneOldBackups({ backupRoot: sub, keepDays: 30, keepMin: 3 });
   assert.equal(r.kept, 3);
   assert.equal(r.deleted, 2);
-  assert.equal(fs.readdirSync(sub).filter(n => n.endsWith('.json')).length, 3);
+  assert.equal(fs.readdirSync(sub).filter((n) => n.endsWith('.json')).length, 3);
 });
 
 test('pruneOldBackups: missing dir returns empty result, no throw', () => {
@@ -307,5 +331,9 @@ test('getRetentionSettings: invalid env falls back to defaults', () => {
 // ── cleanup ──
 
 test('cleanup: remove tmp dir', () => {
-  try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* noop */ }
+  try {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  } catch {
+    /* noop */
+  }
 });
