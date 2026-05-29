@@ -45,7 +45,9 @@ export default function CalcProcesses() {
 
   const handleField = useCallback(
     (idx, field, value, isNum = false) => {
-      setProcessField(idx, field, isNum ? parseFloat(value) || 0 : value);
+      // VN locale: parseLocaleNumber accepts "12,5" (truncated to 12 by
+      // raw parseFloat — operator-reported regression).
+      setProcessField(idx, field, isNum ? parseLocaleNumber(value) || 0 : value);
     },
     [setProcessField]
   );
@@ -57,19 +59,21 @@ export default function CalcProcesses() {
 
   const setSetupHActive = useCallback(
     (procIdx, value) => {
+      // VN locale: parseLocaleNumber handles "12,5" (raw Number returns NaN).
       if (activeMoqIdx === 0) {
-        setProcessField(procIdx, 'setup_h', value === '' || value == null ? 0 : Number(value));
+        setProcessField(
+          procIdx,
+          'setup_h',
+          value === '' || value == null ? 0 : parseLocaleNumber(value) || 0
+        );
         return;
       }
       const ei = activeMoqIdx - 1;
       const em = (st.extra_moqs || [])[ei] || {};
       const arr = Array.isArray(em.proc_setup_h) ? [...em.proc_setup_h] : [];
+      const parsedH = parseLocaleNumber(value);
       arr[procIdx] =
-        value === '' || value == null
-          ? null
-          : Number.isFinite(Number(value))
-            ? Number(value)
-            : null;
+        value === '' || value == null ? null : Number.isFinite(parsedH) ? parsedH : null;
       dispatch({ type: 'SET_EXTRA_MOQ', payload: { idx: ei, field: 'proc_setup_h', value: arr } });
     },
     [activeMoqIdx, st.extra_moqs, setProcessField, dispatch]

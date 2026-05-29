@@ -14,7 +14,7 @@ import {
   getActiveTierState,
 } from '../../../../services/calcEngine';
 import { useI18n } from '../../../../utils/useI18n';
-import { fmtN } from '../../../../utils/format';
+import { fmtN, parseLocaleNumber } from '../../../../utils/format';
 import DecimalInput from '../../../../utils/DecimalInput';
 import { primaryRowTypeLabel } from '../../../../services/altMaterialsLabels';
 import AltMaterialsToggle from './AltMaterialsToggle';
@@ -115,7 +115,8 @@ export default function CalcMaterials() {
 
   const handleField = useCallback(
     (idx, field, value, isNum = false) => {
-      setMaterialField(idx, field, isNum ? parseFloat(value) || 0 : value);
+      // VN locale support: parseLocaleNumber accepts "12,5" → 12.5.
+      setMaterialField(idx, field, isNum ? parseLocaleNumber(value) || 0 : value);
     },
     [setMaterialField]
   );

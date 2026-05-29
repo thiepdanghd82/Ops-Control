@@ -10,6 +10,7 @@ import { getDesignProcessList } from '../../../../utils/ddl';
 import { genRfqNum } from '../../../../utils/rfqGen';
 import { sharedApi } from '../../../../services/api';
 import RfqInfoCard from '../../../../components/Shared/RfqInfoCard';
+import { parseLocaleNumber } from '../../../../utils/format';
 
 export default function CplxHeader() {
   const { stdState, cplxState, setCplxField } = useCalc();
@@ -19,7 +20,9 @@ export default function CplxHeader() {
   const handleField = useCallback(
     (field, value, isNum = false) => {
       // Accept number (from DecimalInput in RfqInfoCard) or string (legacy).
-      const v = isNum ? (typeof value === 'number' ? value : parseFloat(value) || 0) : value;
+      // VN locale support: parseLocaleNumber accepts "12,5" → 12.5
+      // (raw parseFloat truncated to 12 — operator-reported regression).
+      const v = isNum ? (typeof value === 'number' ? value : parseLocaleNumber(value) || 0) : value;
       setCplxField(field, v);
       if (field === 'site') setActiveSite(v);
     },
