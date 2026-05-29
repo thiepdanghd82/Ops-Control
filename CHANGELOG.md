@@ -2,6 +2,39 @@
 
 All notable changes to Ops Control. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [v1.5.12] — Hotfix: Std Processes decimal-input mid-typing trap
+
+Patch release closing operator-reported follow-up to PR #95.
+
+### Fixed (PR #96)
+
+- **Std Processes Tool Cost / Speed / Tool Life rejected decimal input
+  during typing.** Operator typed `12.5`, the `.` was dropped before
+  the `5` keystroke landed → only integer values committed.
+
+  Root cause: PR #95's `parseLocaleNumber` swap fixed the COMMIT path
+  (blur of `"12,5"` → 12.5) but not the mid-typing trap. The raw
+  `<input type="text" inputMode="numeric">` re-renders on every
+  keystroke — `parseLocaleNumber("12.")` returns `12`, state stores
+  `12`, the input re-renders to `"12"`, and the trailing dot vanishes
+  before the operator can type the next digit.
+
+  Fix: swap to `<DecimalInput>` (existing component at
+  `client/src/utils/DecimalInput.jsx`) which keeps a local string
+  buffer during edit and commits parsed number on blur. Matches what
+  ComplexCalc `SubProductRow` already does for the same three fields
+  (`SubProductRow.jsx:1467,1531,1558`).
+
+  Three fields swapped in `CalcProcesses.jsx`: `speed`, `tool_cost`,
+  `tool_life`. Integer-only fields (efficiency %, scrap %, layout
+  count, repeat) left as `<input type="number">` — no trailing-dot
+  need.
+
+### Release plumbing
+
+- Version bump `1.5.11 → 1.5.12` across root + client + desktop
+  package.json + lockfiles.
+
 ## [v1.5.11] — P0 client version banner + repo cleanup + costing fixes
 
 Release rolls up four PRs shipped between 2026-05-28 and 2026-05-29:
