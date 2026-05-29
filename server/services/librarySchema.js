@@ -35,13 +35,13 @@
  */
 
 const TYPE_CHECKERS = {
-  string:  (v) => typeof v === 'string',
-  number:  (v) => typeof v === 'number' && Number.isFinite(v),
+  string: (v) => typeof v === 'string',
+  number: (v) => typeof v === 'number' && Number.isFinite(v),
   integer: (v) => Number.isInteger(v),
   boolean: (v) => typeof v === 'boolean',
-  array:   (v) => Array.isArray(v),
-  object:  (v) => v !== null && typeof v === 'object' && !Array.isArray(v),
-  any:     () => true,
+  array: (v) => Array.isArray(v),
+  object: (v) => v !== null && typeof v === 'object' && !Array.isArray(v),
+  any: () => true,
 };
 
 function coerceValue(v, type) {
@@ -83,12 +83,16 @@ function validateField(row, key, spec, errors, path) {
     }
   }
   if (!typeOk) {
-    errors.push(`${path}.${key} expected ${spec.type}, got ${typeof raw} (${JSON.stringify(raw).slice(0, 60)})`);
+    errors.push(
+      `${path}.${key} expected ${spec.type}, got ${typeof raw} (${JSON.stringify(raw).slice(0, 60)})`
+    );
     return { ok: false, value: undefined };
   }
 
   if (spec.enum && !spec.enum.includes(value)) {
-    errors.push(`${path}.${key} must be one of [${spec.enum.join(', ')}], got ${JSON.stringify(value)}`);
+    errors.push(
+      `${path}.${key} must be one of [${spec.enum.join(', ')}], got ${JSON.stringify(value)}`
+    );
     return { ok: false, value: undefined };
   }
   if (spec.type === 'string' && spec.maxLen != null && value.length > spec.maxLen) {
@@ -149,7 +153,9 @@ export function validateRows(rows, schema, opts = {}) {
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     if (row === null || typeof row !== 'object' || Array.isArray(row)) {
-      errors.push(`${source}[${i}]: expected object, got ${Array.isArray(row) ? 'array' : typeof row}`);
+      errors.push(
+        `${source}[${i}]: expected object, got ${Array.isArray(row) ? 'array' : typeof row}`
+      );
       dropped++;
       continue;
     }
@@ -197,9 +203,14 @@ export function validateRows(rows, schema, opts = {}) {
   }
 
   if (errors.length > 0 && !silent) {
-    const head = errors.slice(0, 5).map(e => `  · ${e}`).join('\n');
+    const head = errors
+      .slice(0, 5)
+      .map((e) => `  · ${e}`)
+      .join('\n');
     const tail = errors.length > 5 ? `\n  · …and ${errors.length - 5} more` : '';
-    console.error(`[librarySchema] ${source}: ${errors.length} validation issue(s), ${dropped} row(s) dropped\n${head}${tail}`);
+    console.error(
+      `[librarySchema] ${source}: ${errors.length} validation issue(s), ${dropped} row(s) dropped\n${head}${tail}`
+    );
   }
 
   return { rows: out, dropped, errors };
@@ -213,41 +224,41 @@ export function validateRows(rows, schema, opts = {}) {
 
 /** PermissionGroups/groups.json — drives auth. STRICT. */
 export const permissionGroupSchema = {
-  id:                 { type: 'string', required: true, maxLen: 64 },
-  name:               { type: 'string', required: true, maxLen: 128 },
+  id: { type: 'string', required: true, maxLen: 64 },
+  name: { type: 'string', required: true, maxLen: 128 },
   default_department: { type: 'string', maxLen: 64 },
-  notes:              { type: 'string', maxLen: 2000 },
-  is_system:          { type: 'boolean' },
-  tab_permissions:    { type: 'object' }, // { [tabId: string]: 'hidden'|'read'|'edit' }
+  notes: { type: 'string', maxLen: 2000 },
+  is_system: { type: 'boolean' },
+  tab_permissions: { type: 'object' }, // { [tabId: string]: 'hidden'|'read'|'edit' }
 };
 
 /** MachineProfiles rows — drive layout optimizer + pricing. */
 export const machineProfileSchema = {
-  id:                  { type: 'string', required: true, maxLen: 64 },
-  name:                { type: 'string', required: true, maxLen: 128 },
-  press_type:          { type: 'string', enum: ['rotary', 'flat'] },
-  tooth_count_max:     { type: 'integer', min: 0, max: 2000 },
-  tooth_pitch_mm:      { type: 'number', min: 0, max: 100 },
-  web_width_min_mm:    { type: 'number', min: 0, max: 10000 },
-  web_width_max_mm:    { type: 'number', min: 0, max: 10000 },
-  max_pitch_mm:        { type: 'number', min: 0, max: 10000 },
-  speed_max_m_min:     { type: 'number', min: 0, max: 10000 },
-  num_print_stations:  { type: 'integer', min: 0, max: 50 },
+  id: { type: 'string', required: true, maxLen: 64 },
+  name: { type: 'string', required: true, maxLen: 128 },
+  press_type: { type: 'string', enum: ['rotary', 'flat'] },
+  tooth_count_max: { type: 'integer', min: 0, max: 2000 },
+  tooth_pitch_mm: { type: 'number', min: 0, max: 100 },
+  web_width_min_mm: { type: 'number', min: 0, max: 10000 },
+  web_width_max_mm: { type: 'number', min: 0, max: 10000 },
+  max_pitch_mm: { type: 'number', min: 0, max: 10000 },
+  speed_max_m_min: { type: 'number', min: 0, max: 10000 },
+  num_print_stations: { type: 'integer', min: 0, max: 50 },
   num_diecut_stations: { type: 'integer', min: 0, max: 50 },
-  plate_dies:          { type: 'array' },
-  magnetic_dies:       { type: 'array' },
-  notes:               { type: 'string', maxLen: 4000 },
+  plate_dies: { type: 'array' },
+  magnetic_dies: { type: 'array' },
+  notes: { type: 'string', maxLen: 4000 },
 };
 
 /** Rate/rate_sites.json site entries — drive pricing. */
 export const rateRowSchema = {
-  workcenter:      { type: 'string', required: true, maxLen: 128 },
-  rate:            { type: 'number', required: true, min: 0 },
-  currency:        { type: 'string', maxLen: 8 },
-  capacity_min_h:  { type: 'number', min: 0 },
-  setup_min:       { type: 'number', min: 0 },
-  effective_from:  { type: 'string', maxLen: 40 },
-  notes:           { type: 'string', maxLen: 1000 },
+  workcenter: { type: 'string', required: true, maxLen: 128 },
+  rate: { type: 'number', required: true, min: 0 },
+  currency: { type: 'string', maxLen: 8 },
+  capacity_min_h: { type: 'number', min: 0 },
+  setup_min: { type: 'number', min: 0 },
+  effective_from: { type: 'string', maxLen: 40 },
+  notes: { type: 'string', maxLen: 1000 },
 };
 
 /**

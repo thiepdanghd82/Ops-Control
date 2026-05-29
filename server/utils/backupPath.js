@@ -97,10 +97,12 @@ export function resolveBackupTarget({ backupRoot, defaultFileName, destPath }) {
   // the final file path.
   const endsWithSep = raw.endsWith('/') || raw.endsWith('\\');
   let isDir = false;
-  try { isDir = fs.statSync(candidate).isDirectory(); } catch { /* not an existing dir */ }
-  const target = (isDir || endsWithSep)
-    ? path.join(candidate, defaultFileName)
-    : candidate;
+  try {
+    isDir = fs.statSync(candidate).isDirectory();
+  } catch {
+    /* not an existing dir */
+  }
+  const target = isDir || endsWithSep ? path.join(candidate, defaultFileName) : candidate;
 
   // Double-check — composing the filename mustn't escape root either.
   const targetResolved = path.resolve(target);
@@ -119,14 +121,21 @@ export function resolveBackupTarget({ backupRoot, defaultFileName, destPath }) {
 export function getDirectoryBytes(dir) {
   let total = 0;
   let entries;
-  try { entries = fs.readdirSync(dir, { withFileTypes: true }); }
-  catch { return 0; }
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return 0;
+  }
   for (const ent of entries) {
     const p = path.join(dir, ent.name);
     if (ent.isDirectory()) {
       total += getDirectoryBytes(p);
     } else if (ent.isFile()) {
-      try { total += fs.statSync(p).size; } catch { /* ignore */ }
+      try {
+        total += fs.statSync(p).size;
+      } catch {
+        /* ignore */
+      }
     }
   }
   return total;
@@ -144,7 +153,8 @@ export function checkQuota(backupRoot, incomingBytes) {
     return {
       ok: false,
       error: `Backup quota exceeded: ${(used / 1024 / 1024).toFixed(1)} MB used + ${(incomingBytes / 1024 / 1024).toFixed(1)} MB incoming > ${(quota / 1024 / 1024).toFixed(0)} MB limit`,
-      used, quota,
+      used,
+      quota,
     };
   }
   return { ok: true, used, quota };
@@ -191,8 +201,11 @@ export function writeBackupChecksum(filePath) {
 export function verifyBackupChecksum(filePath) {
   const sidecar = filePath + '.sha256';
   let raw;
-  try { raw = fs.readFileSync(sidecar, 'utf-8'); }
-  catch { return { ok: false, reason: 'no_sidecar' }; }
+  try {
+    raw = fs.readFileSync(sidecar, 'utf-8');
+  } catch {
+    return { ok: false, reason: 'no_sidecar' };
+  }
   const first = raw.split(/\r?\n/, 1)[0] || '';
   const m = first.match(/^([a-f0-9]{64})\b/i);
   if (!m) return { ok: false, reason: 'sidecar_parse' };
@@ -230,8 +243,11 @@ export function verifyBackupChecksum(filePath) {
 export function pruneOldBackups({ backupRoot, keepDays = 30, keepMin = 10 } = {}) {
   const result = { ok: true, scanned: 0, deleted: 0, kept: 0, errors: [] };
   let entries;
-  try { entries = fs.readdirSync(backupRoot, { withFileTypes: true }); }
-  catch { return result; }  // dir doesn't exist yet — nothing to prune
+  try {
+    entries = fs.readdirSync(backupRoot, { withFileTypes: true });
+  } catch {
+    return result;
+  } // dir doesn't exist yet — nothing to prune
 
   // Gather regular backup files (exclude .sha256 sidecars — they trail
   // their parent and get deleted when the parent is deleted).
@@ -252,18 +268,27 @@ export function pruneOldBackups({ backupRoot, keepDays = 30, keepMin = 10 } = {}
   // Sort newest → oldest so slice(0, keepMin) always keeps the N
   // most recent regardless of age.
   files.sort((a, b) => b.mtimeMs - a.mtimeMs);
-  const protectedMin = new Set(files.slice(0, keepMin).map(f => f.path));
+  const protectedMin = new Set(files.slice(0, keepMin).map((f) => f.path));
 
   const cutoff = Date.now() - keepDays * 24 * 60 * 60 * 1000;
   for (const f of files) {
-    if (protectedMin.has(f.path)) { result.kept++; continue; }
-    if (f.mtimeMs >= cutoff) { result.kept++; continue; }
+    if (protectedMin.has(f.path)) {
+      result.kept++;
+      continue;
+    }
+    if (f.mtimeMs >= cutoff) {
+      result.kept++;
+      continue;
+    }
     // Eligible for deletion. Remove sidecar first (best-effort) then
     // the file itself — so a crash in-between leaves a file without
     // a dangling sidecar, which is harmless.
     const sidecar = f.path + '.sha256';
-    try { if (fs.existsSync(sidecar)) fs.unlinkSync(sidecar); }
-    catch (err) { result.errors.push({ path: sidecar, error: err?.message || 'unlink_sidecar_failed' }); }
+    try {
+      if (fs.existsSync(sidecar)) fs.unlinkSync(sidecar);
+    } catch (err) {
+      result.errors.push({ path: sidecar, error: err?.message || 'unlink_sidecar_failed' });
+    }
     try {
       fs.unlinkSync(f.path);
       result.deleted++;
@@ -278,9 +303,9 @@ export function pruneOldBackups({ backupRoot, keepDays = 30, keepMin = 10 } = {}
 /** Resolve retention settings from env with sane defaults. */
 export function getRetentionSettings() {
   const days = Number(process.env.OPS_BACKUP_RETENTION_DAYS);
-  const min  = Number(process.env.OPS_BACKUP_RETENTION_MIN);
+  const min = Number(process.env.OPS_BACKUP_RETENTION_MIN);
   return {
     keepDays: Number.isFinite(days) && days > 0 ? Math.floor(days) : 30,
-    keepMin:  Number.isFinite(min)  && min  > 0 ? Math.floor(min)  : 10,
+    keepMin: Number.isFinite(min) && min > 0 ? Math.floor(min) : 10,
   };
 }

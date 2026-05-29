@@ -67,14 +67,14 @@ registerStrings({
 
 ### Module ownership table
 
-| Domain module | Owns prefixes | SAP analogue |
-|---|---|---|
-| `security.js` | `login.* totp.* audit.*` | SU + BC (auth/audit) |
-| `costing.js`  | `pricing.* material_lib.* printarea.* inks.*` | CO |
-| `sales.js`    | `qh.* rfq.*` | SD |
-| `basis.js`    | `chat.* dashboard.* settings.* appearance.* bootstrap.* common.lang_toggle_aria` | BC |
-| `mes.js`      | `hw.* mode.*` | MES |
-| `planning.js` | `planning.*` | PP |
+| Domain module | Owns prefixes                                                                    | SAP analogue         |
+| ------------- | -------------------------------------------------------------------------------- | -------------------- |
+| `security.js` | `login.* totp.* audit.*`                                                         | SU + BC (auth/audit) |
+| `costing.js`  | `pricing.* material_lib.* printarea.* inks.*`                                    | CO                   |
+| `sales.js`    | `qh.* rfq.*`                                                                     | SD                   |
+| `basis.js`    | `chat.* dashboard.* settings.* appearance.* bootstrap.* common.lang_toggle_aria` | BC                   |
+| `mes.js`      | `hw.* mode.*`                                                                    | MES                  |
+| `planning.js` | `planning.*`                                                                     | PP                   |
 
 ### What stays in strings.js
 
@@ -82,10 +82,10 @@ registerStrings({
 shell (sidebar, app chrome, top-bar) and for keys without an
 obvious domain home:
 
-| Prefix | Why kept platform-level |
-|---|---|
-| `nav.*` | Sidebar IS the platform shell — module/section/tab labels are the shell's vocabulary |
-| `common.*` | Cross-domain UI atoms (Save, Cancel, Loading...) |
+| Prefix     | Why kept platform-level                                                                |
+| ---------- | -------------------------------------------------------------------------------------- |
+| `nav.*`    | Sidebar IS the platform shell — module/section/tab labels are the shell's vocabulary   |
+| `common.*` | Cross-domain UI atoms (Save, Cancel, Loading...)                                       |
 | `picker.*` | Library picker is shared between costing + library + sales — owned by no single domain |
 
 These can later move to `client/src/i18n/domains/platform.js` if
@@ -97,12 +97,12 @@ the platform shell across two files for no win.
 `main.jsx` imports modules in this order:
 
 ```js
-import './i18n/domains/security.js'
-import './i18n/domains/costing.js'
-import './i18n/domains/sales.js'
-import './i18n/domains/basis.js'
-import './i18n/domains/mes.js'
-import './i18n/domains/planning.js'
+import './i18n/domains/security.js';
+import './i18n/domains/costing.js';
+import './i18n/domains/sales.js';
+import './i18n/domains/basis.js';
+import './i18n/domains/mes.js';
+import './i18n/domains/planning.js';
 ```
 
 Order doesn't matter for non-overlapping prefixes (each domain
@@ -122,7 +122,7 @@ rule above prevents this in practice.
   into the same chunk. No runtime overhead vs the monolith.
 - **strings.js as a thin shell.** It's now a 72-key registry +
   the `translate()`/`registerStrings()` API. Down from ~340 keys
-  + the entire data block.
+  - the entire data block.
 
 ### Negative
 
@@ -174,19 +174,19 @@ who can edit JS.
 
 ## Migration history
 
-| Phase | Module added | Keys moved | strings.js after |
-|---|---|---|---|
-| Start of session | – | – | ~340 keys |
-| P3.3 | security.js | audit.* (15) | ~325 |
-| G2 | costing.js | pricing.* (19) | ~306 |
-| H2 | sales.js | qh.* + rfq.* (33) | ~273 |
-| J2 | (extend security) | login.* (33) | ~240 |
-| K1 | basis.js | chat.* (34) | ~206 |
-| L3 | mes.js | hw.* + mode.* (90) | ~116 |
-| M3 | (extend basis + costing) + planning.js | dashboard.* + appearance.* + settings.* + bootstrap.* + planning.* + printarea.* + inks.* + material_lib.* (~52) | **72** |
+| Phase            | Module added                           | Keys moved                                                                                                       | strings.js after |
+| ---------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------- |
+| Start of session | –                                      | –                                                                                                                | ~340 keys        |
+| P3.3             | security.js                            | audit.\* (15)                                                                                                    | ~325             |
+| G2               | costing.js                             | pricing.\* (19)                                                                                                  | ~306             |
+| H2               | sales.js                               | qh._ + rfq._ (33)                                                                                                | ~273             |
+| J2               | (extend security)                      | login.\* (33)                                                                                                    | ~240             |
+| K1               | basis.js                               | chat.\* (34)                                                                                                     | ~206             |
+| L3               | mes.js                                 | hw._ + mode._ (90)                                                                                               | ~116             |
+| M3               | (extend basis + costing) + planning.js | dashboard._ + appearance._ + settings._ + bootstrap._ + planning._ + printarea._ + inks._ + material_lib._ (~52) | **72**           |
 
-Net: 80 % of keys now domain-owned. Remaining 72 keys (nav.* +
-common.* + picker.*) are platform-shell strings — kept in
+Net: 80 % of keys now domain-owned. Remaining 72 keys (nav._ +
+common._ + picker.\*) are platform-shell strings — kept in
 strings.js by design.
 
 ## References

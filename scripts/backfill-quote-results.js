@@ -60,8 +60,11 @@ function parseArgs(argv) {
 }
 
 function readJsonSafe(p, fallback = null) {
-  try { return JSON.parse(fs.readFileSync(p, 'utf-8')); }
-  catch { return fallback; }
+  try {
+    return JSON.parse(fs.readFileSync(p, 'utf-8'));
+  } catch {
+    return fallback;
+  }
 }
 
 /**
@@ -71,9 +74,9 @@ function readJsonSafe(p, fallback = null) {
  */
 export function loadLib(dataDir = DATA_DIR) {
   return {
-    rate:    readJsonSafe(path.join(dataDir, 'Rate', 'rate.json'), []),
-    mat:     readJsonSafe(path.join(dataDir, 'MaterialCost', 'materials.json'), []),
-    ddl:     readJsonSafe(path.join(dataDir, 'DDL', 'ddl.json'), {}),
+    rate: readJsonSafe(path.join(dataDir, 'Rate', 'rate.json'), []),
+    mat: readJsonSafe(path.join(dataDir, 'MaterialCost', 'materials.json'), []),
+    ddl: readJsonSafe(path.join(dataDir, 'DDL', 'ddl.json'), {}),
     finance: { summary: readJsonSafe(path.join(dataDir, 'Finance', 'finance_sum.json'), {}) },
     inkCalc: readJsonSafe(path.join(dataDir, 'InkCalc', 'ink_calc.json'), {}),
   };
@@ -105,8 +108,19 @@ export function recomputeQuote(quote, lib) {
       if (sp > 0) {
         aggregate.sp = sp;
         aggregate.gm = (sp - (aggregate.s_ttl || 0)) / sp;
-        aggregate.va = (sp - (aggregate.s_mat_cost || 0) - (aggregate.tooling || 0) - (aggregate.packing_ship || 0)) / sp;
-        aggregate.contribution = 1 - ((aggregate.s_mat_cost || 0) + (aggregate.tooling || 0) + (aggregate.packing_ship || 0) + (aggregate.labor_cost || 0)) / sp;
+        aggregate.va =
+          (sp -
+            (aggregate.s_mat_cost || 0) -
+            (aggregate.tooling || 0) -
+            (aggregate.packing_ship || 0)) /
+          sp;
+        aggregate.contribution =
+          1 -
+          ((aggregate.s_mat_cost || 0) +
+            (aggregate.tooling || 0) +
+            (aggregate.packing_ship || 0) +
+            (aggregate.labor_cost || 0)) /
+            sp;
       }
       return serializeResultForPersist(aggregate);
     }
@@ -120,12 +134,28 @@ export function recomputeQuote(quote, lib) {
 }
 
 export function backfillQuotes(quotes, lib) {
-  const report = { total: quotes.length, already_full: 0, updated: 0, skipped: 0, errors: [], changes: [] };
-  const next = quotes.map(q => {
-    if (!q) { report.skipped++; return q; }
-    if (!isThinResult(q.result)) { report.already_full++; return q; }
+  const report = {
+    total: quotes.length,
+    already_full: 0,
+    updated: 0,
+    skipped: 0,
+    errors: [],
+    changes: [],
+  };
+  const next = quotes.map((q) => {
+    if (!q) {
+      report.skipped++;
+      return q;
+    }
+    if (!isThinResult(q.result)) {
+      report.already_full++;
+      return q;
+    }
     const fresh = recomputeQuote(q, lib);
-    if (!fresh) { report.skipped++; return q; }
+    if (!fresh) {
+      report.skipped++;
+      return q;
+    }
     if (fresh.__error) {
       report.errors.push({ id: q.id, type: q.type, error: fresh.__error });
       report.skipped++;
@@ -134,17 +164,22 @@ export function backfillQuotes(quotes, lib) {
     report.updated++;
     const before = q.result || {};
     report.changes.push({
-      id: q.id, type: q.type,
+      id: q.id,
+      type: q.type,
       before: { gm: before.gm ?? null, va: before.va ?? null, s_ttl: before.s_ttl ?? null },
-      after:  { gm: fresh.gm ?? null, va: fresh.va ?? null, s_ttl: fresh.s_ttl ?? null },
+      after: { gm: fresh.gm ?? null, va: fresh.va ?? null, s_ttl: fresh.s_ttl ?? null },
     });
     return { ...q, result: fresh };
   });
   return { next, report };
 }
 
-function pctStr(v) { return v == null ? '—' : (v * 100).toFixed(2) + '%'; }
-function moneyStr(v) { return v == null ? '—' : '$' + Number(v).toFixed(5); }
+function pctStr(v) {
+  return v == null ? '—' : (v * 100).toFixed(2) + '%';
+}
+function moneyStr(v) {
+  return v == null ? '—' : '$' + Number(v).toFixed(5);
+}
 
 function printReport(report, apply) {
   console.log(`${apply ? '' : '[DRY-RUN] '}Quote result backfill report`);
@@ -160,7 +195,9 @@ function printReport(report, apply) {
   if (report.changes.length) {
     console.log('\n  Backfilled quotes:');
     for (const c of report.changes.slice(0, 20)) {
-      console.log(`    #${c.id} (${c.type})  gm ${pctStr(c.before.gm)}→${pctStr(c.after.gm)}  va ${pctStr(c.before.va)}→${pctStr(c.after.va)}  sTtl ${moneyStr(c.before.s_ttl)}→${moneyStr(c.after.s_ttl)}`);
+      console.log(
+        `    #${c.id} (${c.type})  gm ${pctStr(c.before.gm)}→${pctStr(c.after.gm)}  va ${pctStr(c.before.va)}→${pctStr(c.after.va)}  sTtl ${moneyStr(c.before.s_ttl)}→${moneyStr(c.after.s_ttl)}`
+      );
     }
     if (report.changes.length > 20) console.log(`    … and ${report.changes.length - 20} more`);
   }
@@ -197,7 +234,11 @@ async function main() {
   console.log(`Wrote: ${args.file}`);
 }
 
-const isCli = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+const isCli =
+  process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
 if (isCli) {
-  main().catch(err => { console.error(err); process.exit(1); });
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
 }

@@ -52,7 +52,9 @@ export default function Button({
     busy ? 'op-btn-busy' : '',
     block ? 'op-btn-block' : '',
     className,
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <button

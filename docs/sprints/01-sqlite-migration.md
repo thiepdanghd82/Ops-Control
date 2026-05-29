@@ -13,14 +13,14 @@ Replace the `.js` file-as-database pattern with SQLite at `server/data/ops.db` *
 
 ## 2. Why now
 
-| Current pain | Impact today | After SQLite |
-|---|---|---|
-| `Routing_Operations/routing_ops_data.js` = 17 MB, parsed on every request | ~200ms cold read per tab load | <5ms indexed query |
-| Two users hit `POST /save-all` simultaneously → last-write-wins, silent data loss | Happens ~monthly based on audit log | Transaction isolation, `BEGIN IMMEDIATE` |
-| No schema — any field drift is silent | Already caused `ddlSites` vs `ddlSitesDB` bug | `CREATE TABLE` enforces shape |
-| No partial recovery if write fails mid-way through `/save-all`'s 14 files | Manual restore from `Backup/Data/auto_*.json` | Atomic TX → all-or-nothing |
-| Can't query: "materials updated in last 7 days" without full-file scan | Reports are manual | SQL `WHERE updated_at > ?` |
-| Files grow unbounded (17 MB today → 50 MB in 2 years) | Server memory pressure | Pagination on demand |
+| Current pain                                                                      | Impact today                                  | After SQLite                             |
+| --------------------------------------------------------------------------------- | --------------------------------------------- | ---------------------------------------- |
+| `Routing_Operations/routing_ops_data.js` = 17 MB, parsed on every request         | ~200ms cold read per tab load                 | <5ms indexed query                       |
+| Two users hit `POST /save-all` simultaneously → last-write-wins, silent data loss | Happens ~monthly based on audit log           | Transaction isolation, `BEGIN IMMEDIATE` |
+| No schema — any field drift is silent                                             | Already caused `ddlSites` vs `ddlSitesDB` bug | `CREATE TABLE` enforces shape            |
+| No partial recovery if write fails mid-way through `/save-all`'s 14 files         | Manual restore from `Backup/Data/auto_*.json` | Atomic TX → all-or-nothing               |
+| Can't query: "materials updated in last 7 days" without full-file scan            | Reports are manual                            | SQL `WHERE updated_at > ?`               |
+| Files grow unbounded (17 MB today → 50 MB in 2 years)                             | Server memory pressure                        | Pagination on demand                     |
 
 ## 3. Non-goals (out of scope)
 
@@ -33,12 +33,12 @@ Replace the `.js` file-as-database pattern with SQLite at `server/data/ops.db` *
 
 ### 4.1 Library choice: `better-sqlite3`
 
-| Option | Rejected? | Reason |
-|---|---|---|
-| `better-sqlite3` | ✅ Selected | Sync API matches existing code style (everything is `fs.readFileSync`). No callback/promise refactor. Compiled for Node, ~10× faster than node-sqlite3 |
-| `sqlite3` (node-sqlite3) | ❌ | Async callbacks require rewriting every handler |
-| `knex`/`drizzle` | ❌ | ORM overhead + learning curve; we don't need it for 8 tables |
-| `SQLite via WASM` | ❌ | Dev experience hit for marginal portability gain |
+| Option                   | Rejected?   | Reason                                                                                                                                                 |
+| ------------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `better-sqlite3`         | ✅ Selected | Sync API matches existing code style (everything is `fs.readFileSync`). No callback/promise refactor. Compiled for Node, ~10× faster than node-sqlite3 |
+| `sqlite3` (node-sqlite3) | ❌          | Async callbacks require rewriting every handler                                                                                                        |
+| `knex`/`drizzle`         | ❌          | ORM overhead + learning curve; we don't need it for 8 tables                                                                                           |
+| `SQLite via WASM`        | ❌          | Dev experience hit for marginal portability gain                                                                                                       |
 
 ### 4.2 Rollout model: **shadow-write → shadow-read → cutover**
 
@@ -50,6 +50,7 @@ Single backend switch `process.env.OPS_DATA_BACKEND` with values:
 - `sqlite` (target) — read & write SQLite only. JS files become backups.
 
 **Daily rotation during week 2**:
+
 - Day 6 AM: promote 1 dataset (materials) from `shadow-write` → `shadow-read`. Monitor 24h.
 - Day 7: next dataset (BOM). Etc.
 - Day 10: flip to `sqlite` mode. JS files kept untouched for 14 more days as emergency rollback.
@@ -272,9 +273,15 @@ Each repo exports the same methods regardless of backend:
 
 ```js
 // repositories/materialsRepo.js
-export function listMaterials() { return backend.listMaterials(); }
-export function upsertMaterials(rows) { return backend.upsertMaterials(rows); }
-export function getMaterialByCode(code) { return backend.getMaterialByCode(code); }
+export function listMaterials() {
+  return backend.listMaterials();
+}
+export function upsertMaterials(rows) {
+  return backend.upsertMaterials(rows);
+}
+export function getMaterialByCode(code) {
+  return backend.getMaterialByCode(code);
+}
 ```
 
 Route handlers import from `repositories/`, never from file paths. Swapping backends = flip env var.
@@ -285,25 +292,25 @@ Route handlers import from `repositories/`, never from file paths. Swapping back
 
 ### Week 1 — Foundation + shadow-write
 
-| Day | Deliverable | Exit criteria |
-|---|---|---|
-| **1** | `better-sqlite3` dep added; `server/db/init.js` creates `ops.db` with full DDL; repository skeleton (materials, bom, routing) with file backend wired | `node scripts/init-db.js` creates empty DB with all tables. All existing tests still green. |
-| **2** | Migration script `scripts/migrate-to-sqlite.js` for Materials + IFS Inventory. Dry-run mode prints insert count + SHA256 checksum without writing DB | Dry-run matches source file row count exactly. Checksum stable across 3 runs. |
-| **3** | Same for BOM + Routing Operations. Shadow-write wired: `upsertMaterials` writes to BOTH file AND SQLite when mode=`shadow-write` | `POST /api/import/materials` writes to `materials_data.js` + `materials` table. Both have identical row count + checksums. |
-| **4** | Shadow-write for Rate tables, DDL, Trackers, Quotes. Atomic TX wrapper for `/save-all` (only around the SQLite side) | `POST /save-all` touches all 14 datasets; SQLite transaction rolls back on any write error. |
-| **5** | `scripts/verify-parity.js` script: walks every dataset, compares row count + SHA256 checksum between file vs DB; emits HTML report with drift rows | Report shows 0 drift on fresh data. Seed 10 known-bad rows → report flags them. |
+| Day   | Deliverable                                                                                                                                           | Exit criteria                                                                                                              |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **1** | `better-sqlite3` dep added; `server/db/init.js` creates `ops.db` with full DDL; repository skeleton (materials, bom, routing) with file backend wired | `node scripts/init-db.js` creates empty DB with all tables. All existing tests still green.                                |
+| **2** | Migration script `scripts/migrate-to-sqlite.js` for Materials + IFS Inventory. Dry-run mode prints insert count + SHA256 checksum without writing DB  | Dry-run matches source file row count exactly. Checksum stable across 3 runs.                                              |
+| **3** | Same for BOM + Routing Operations. Shadow-write wired: `upsertMaterials` writes to BOTH file AND SQLite when mode=`shadow-write`                      | `POST /api/import/materials` writes to `materials_data.js` + `materials` table. Both have identical row count + checksums. |
+| **4** | Shadow-write for Rate tables, DDL, Trackers, Quotes. Atomic TX wrapper for `/save-all` (only around the SQLite side)                                  | `POST /save-all` touches all 14 datasets; SQLite transaction rolls back on any write error.                                |
+| **5** | `scripts/verify-parity.js` script: walks every dataset, compares row count + SHA256 checksum between file vs DB; emits HTML report with drift rows    | Report shows 0 drift on fresh data. Seed 10 known-bad rows → report flags them.                                            |
 
 **End of week 1 gate:** Stakeholder (user + Hana) signs off on the parity report. If drift > 0 rows, sprint pauses until resolved.
 
 ### Week 2 — Shadow-read + cutover
 
-| Day | Deliverable | Exit criteria |
-|---|---|---|
-| **6** | Materials dataset: flip mode=`shadow-read`. All Material Cost tab reads come from SQLite. Writes still dual-write. 24h monitoring of `/api/ping` library_sizes + error logs | 24h with 0 elevated errors, response time /api/shared/materials < 50ms (currently ~200ms). |
-| **7** | Same rotation: BOM → shadow-read. Mfg Structures tab served from SQLite. | Zero regression in Mfg Structures tab. Cost engineer signs off after running 3 test quotes. |
-| **8** | Routing Operations → shadow-read. Quotes table → shadow-read (read list from SQLite, load state_json when opening). | Quote History tab loads 500 quotes in < 500ms. |
-| **9** | Remaining datasets: Rates, DDL, Trackers, Finance, InkCalc → shadow-read. Full regression: run all saved quotes through the calc engine, compare totals against pre-migration snapshot | 0 quote delta > $0.001/unit. |
-| **10** | Flip env var to `sqlite` mode. Disable shadow-write for speed. File backend kept loaded but unused. Remove `_CCL_*_DATA` file refreshes from `/save-all`. Announce to team. | Production running on SQLite for 4 hours with no rollback event. |
+| Day    | Deliverable                                                                                                                                                                            | Exit criteria                                                                               |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| **6**  | Materials dataset: flip mode=`shadow-read`. All Material Cost tab reads come from SQLite. Writes still dual-write. 24h monitoring of `/api/ping` library_sizes + error logs            | 24h with 0 elevated errors, response time /api/shared/materials < 50ms (currently ~200ms).  |
+| **7**  | Same rotation: BOM → shadow-read. Mfg Structures tab served from SQLite.                                                                                                               | Zero regression in Mfg Structures tab. Cost engineer signs off after running 3 test quotes. |
+| **8**  | Routing Operations → shadow-read. Quotes table → shadow-read (read list from SQLite, load state_json when opening).                                                                    | Quote History tab loads 500 quotes in < 500ms.                                              |
+| **9**  | Remaining datasets: Rates, DDL, Trackers, Finance, InkCalc → shadow-read. Full regression: run all saved quotes through the calc engine, compare totals against pre-migration snapshot | 0 quote delta > $0.001/unit.                                                                |
+| **10** | Flip env var to `sqlite` mode. Disable shadow-write for speed. File backend kept loaded but unused. Remove `_CCL_*_DATA` file refreshes from `/save-all`. Announce to team.            | Production running on SQLite for 4 hours with no rollback event.                            |
 
 **Post-sprint (Week 3 observation)**: file backend stays loaded as fallback for 14 more days. Any critical issue → flip `OPS_DATA_BACKEND=file` and JS files catch writes again. Day 24: delete the fallback code.
 
@@ -339,12 +346,12 @@ node scripts/migrate-to-sqlite.js --dataset=materials --commit
 
 ## 7. Rollback plan (per-day)
 
-| Day | How to roll back |
-|---|---|
-| 1-5 | Just set `OPS_DATA_BACKEND=file`. SQLite was write-shadow only; discard `ops.db`. |
-| 6-9 | Same env flip. Shadow-write was active → JS files have current data. No rollback data loss. |
-| 10 | Shadow-write turned off. Rollback needs the `auto_*.json` backup from the hour before cutover + re-run migration from fresh. Worst case: 1 hour of quote edits replayed from audit log. |
-| Post-day 10 | JS files no longer updated. Full rollback = restore JS files from SQLite via `scripts/export-sqlite-to-files.js` (write this on day 9 as insurance). |
+| Day         | How to roll back                                                                                                                                                                        |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1-5         | Just set `OPS_DATA_BACKEND=file`. SQLite was write-shadow only; discard `ops.db`.                                                                                                       |
+| 6-9         | Same env flip. Shadow-write was active → JS files have current data. No rollback data loss.                                                                                             |
+| 10          | Shadow-write turned off. Rollback needs the `auto_*.json` backup from the hour before cutover + re-run migration from fresh. Worst case: 1 hour of quote edits replayed from audit log. |
+| Post-day 10 | JS files no longer updated. Full rollback = restore JS files from SQLite via `scripts/export-sqlite-to-files.js` (write this on day 9 as insurance).                                    |
 
 ---
 
@@ -362,16 +369,16 @@ Scripts go in `scripts/verify/` and produce HTML reports in `logs/verify/*.html`
 
 ## 9. Risk register
 
-| Risk | Probability | Impact | Mitigation |
-|---|---|---|---|
-| Migration script misses rows due to malformed regex parse | Med | High | Parity check blocks cutover; dry-run compares counts |
-| Quote state_json blob too large for SQLite TEXT column | Low | Med | SQLite TEXT is unlimited in practice (supports up to 1 GB). Confirm largest quote < 1 MB. |
-| Concurrent writes exceed WAL capacity under peak load | Low | High | `PRAGMA busy_timeout = 5000`; stress test on day 9 |
-| `better-sqlite3` native build fails on some OS at deploy | Med | Med | Pre-build + cache in node_modules; document manual rebuild step |
-| SQLite DB file corruption (disk issue) | Very Low | Very High | Daily `.backup` to `Backup/ops_db_<date>.sqlite`; retain 30 days |
-| Cutover day 10 hits an unknown bug → user can't save | Low | Very High | Keep shadow-write enabled for 24h post-cutover; 1-flip env var rollback ready |
-| Reporting queries get slow on 100k+ quotes | Low | Med | Indexes listed above; add FTS5 virtual table later if needed |
-| Silent duplicate primary keys during migration | Low | High | UNIQUE constraints will raise; migration aborts; operator fixes source then re-runs |
+| Risk                                                      | Probability | Impact    | Mitigation                                                                                |
+| --------------------------------------------------------- | ----------- | --------- | ----------------------------------------------------------------------------------------- |
+| Migration script misses rows due to malformed regex parse | Med         | High      | Parity check blocks cutover; dry-run compares counts                                      |
+| Quote state_json blob too large for SQLite TEXT column    | Low         | Med       | SQLite TEXT is unlimited in practice (supports up to 1 GB). Confirm largest quote < 1 MB. |
+| Concurrent writes exceed WAL capacity under peak load     | Low         | High      | `PRAGMA busy_timeout = 5000`; stress test on day 9                                        |
+| `better-sqlite3` native build fails on some OS at deploy  | Med         | Med       | Pre-build + cache in node_modules; document manual rebuild step                           |
+| SQLite DB file corruption (disk issue)                    | Very Low    | Very High | Daily `.backup` to `Backup/ops_db_<date>.sqlite`; retain 30 days                          |
+| Cutover day 10 hits an unknown bug → user can't save      | Low         | Very High | Keep shadow-write enabled for 24h post-cutover; 1-flip env var rollback ready             |
+| Reporting queries get slow on 100k+ quotes                | Low         | Med       | Indexes listed above; add FTS5 virtual table later if needed                              |
+| Silent duplicate primary keys during migration            | Low         | High      | UNIQUE constraints will raise; migration aborts; operator fixes source then re-runs       |
 
 ---
 

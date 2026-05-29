@@ -19,32 +19,41 @@
 ## Cutover runbook (when ready)
 
 ### Phase A — Shadow observation (1–2 days)
+
 No code change. Just monitor:
+
 - `/api/ping` response — check `uptime_sec` + `memory_mb` stable
 - Server log — `grep -c "shadowWrite.*failed"` = 0
 - Parity check: `node scripts/verify-parity.js` daily — expect 0 drift
 
 ### Phase B — Per-dataset cutover (1 dataset/day)
+
 Flip one dataset at a time via env, restart, monitor 24h:
+
 ```bash
 export OPS_BACKEND_BOM=sqlite        # day 1
 export OPS_BACKEND_ROUTING=sqlite    # day 2
 export OPS_BACKEND_INVENTORY=sqlite  # day 3
 # …etc. Keep other datasets on file backend until proven.
 ```
+
 Rollback at any point: unset the env var, restart, done.
 
 ### Phase C — Master switch
+
 After all per-dataset overrides are green for 3+ days:
+
 ```bash
 export OPS_DATA_BACKEND=sqlite
 # unset per-dataset overrides (master takes precedence)
 ```
 
 ### Phase D — Fallback removal (this sprint 2.6, deferred)
+
 Only after `OPS_DATA_BACKEND=sqlite` has run **14 continuous days** with zero rollback event.
 
 **What to remove:**
+
 1. Delete `dataSync.js` functions that repo no longer needs:
    - `getManufacturingStructures()`, `getRoutingOperations()`, `getInventory()` — repo handles these
    - Keep: `getProducts()`, `getWorkCenters()`, `getBOMForPart()`, `getRoutingForPart()` (still used by non-repo callers)
@@ -53,6 +62,7 @@ Only after `OPS_DATA_BACKEND=sqlite` has run **14 continuous days** with zero ro
 4. Optionally archive `server/data/Library/*.js` source files to `server/data/Library/.archive/` — still useful for audit/history but shouldn't be in hot path.
 
 **DO NOT:**
+
 - Delete `Backup/Data/auto_*.json` — those are independent from SQLite, part of broader backup chain.
 - Remove `OPS_DATA_BACKEND` env var — keep for emergency rollback (default → `sqlite` after cutover).
 
@@ -60,15 +70,15 @@ Only after `OPS_DATA_BACKEND=sqlite` has run **14 continuous days** with zero ro
 
 ## Observation period — what to watch
 
-| Metric | Tool | Target |
-|---|---|---|
-| SQLite read latency p95 | `/api/ping` (add if needed) | < 50 ms |
-| Shadow-write failure rate | `grep 'shadowWrite' server.log \| wc -l` | 0 |
-| Parity drift | `node scripts/verify-parity.js` | 7/7 match |
-| `/save-all` daily backup success | Check `Backup/SQLite/ops_*.sqlite` | 1 new file per day |
-| ops.db file growth | `du -h server/data/ops.db` | < 200 MB (alerts > 500 MB) |
-| WAL file size | `du -h server/data/ops.db-wal` | < 64 MB (checkpoints auto) |
-| Memory RSS | `/api/ping` `memory_mb` | < 300 MB baseline |
+| Metric                           | Tool                                     | Target                     |
+| -------------------------------- | ---------------------------------------- | -------------------------- |
+| SQLite read latency p95          | `/api/ping` (add if needed)              | < 50 ms                    |
+| Shadow-write failure rate        | `grep 'shadowWrite' server.log \| wc -l` | 0                          |
+| Parity drift                     | `node scripts/verify-parity.js`          | 7/7 match                  |
+| `/save-all` daily backup success | Check `Backup/SQLite/ops_*.sqlite`       | 1 new file per day         |
+| ops.db file growth               | `du -h server/data/ops.db`               | < 200 MB (alerts > 500 MB) |
+| WAL file size                    | `du -h server/data/ops.db-wal`           | < 64 MB (checkpoints auto) |
+| Memory RSS                       | `/api/ping` `memory_mb`                  | < 300 MB baseline          |
 
 ---
 
@@ -83,6 +93,7 @@ Flip back to file backend **immediately** if any of these:
 5. **Memory leak** (`memory_mb` grows > 500 MB without new load)
 
 Rollback command:
+
 ```bash
 # Stop server
 unset OPS_DATA_BACKEND
@@ -93,6 +104,7 @@ unset OPS_BACKEND_BOM OPS_BACKEND_ROUTING OPS_BACKEND_INVENTORY \
 # Start server
 npm run dev:server
 ```
+
 JS source files were never modified — file backend resumes transparently.
 
 ---
@@ -100,6 +112,7 @@ JS source files were never modified — file backend resumes transparently.
 ## Sprint 2.6 — Ready-to-execute script (after 14 days)
 
 Save the following as `scripts/remove-sqlite-fallback.sh` when it's time:
+
 ```bash
 #!/usr/bin/env bash
 set -e

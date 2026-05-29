@@ -38,34 +38,84 @@ import './Modal.css';
 
 const SEVERITY_ICONS = {
   question: (
-    <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      viewBox="0 0 20 20"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <circle cx="10" cy="10" r="8" />
       <path d="M7.5 7.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.5V12" />
       <circle cx="10" cy="15" r=".5" fill="currentColor" />
     </svg>
   ),
   info: (
-    <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      viewBox="0 0 20 20"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <circle cx="10" cy="10" r="8" />
       <path d="M10 9v5" />
       <circle cx="10" cy="6" r=".5" fill="currentColor" />
     </svg>
   ),
   success: (
-    <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      viewBox="0 0 20 20"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <circle cx="10" cy="10" r="8" />
       <path d="m6.5 10.5 2.5 2.5L14 8" />
     </svg>
   ),
   warning: (
-    <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      viewBox="0 0 20 20"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <path d="M10 2 2 17h16L10 2Z" />
       <path d="M10 8v4" />
       <circle cx="10" cy="14.5" r=".5" fill="currentColor" />
     </svg>
   ),
   danger: (
-    <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      viewBox="0 0 20 20"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <circle cx="10" cy="10" r="8" />
       <path d="m7 7 6 6M13 7l-6 6" />
     </svg>
@@ -76,7 +126,7 @@ export default function Modal({
   open,
   onClose,
   size = 'md',
-  severity,          // 'question' | 'info' | 'success' | 'warning' | 'danger' | undefined
+  severity, // 'question' | 'info' | 'success' | 'warning' | 'danger' | undefined
   dismissable = true,
   closable = true,
   ariaLabelledBy,
@@ -116,7 +166,11 @@ export default function Modal({
       document.body.style.overflow = prevOverflow;
       const toRestore = restoreFocusRef.current;
       if (toRestore && typeof toRestore.focus === 'function') {
-        try { toRestore.focus(); } catch { /* noop */ }
+        try {
+          toRestore.focus();
+        } catch {
+          /* noop */
+        }
       }
     };
   }, [open, dismissable, onClose]);
@@ -131,11 +185,7 @@ export default function Modal({
   const severityClass = severity ? ` op-modal--${severity}` : '';
 
   return (
-    <div
-      className="op-modal-overlay"
-      role="presentation"
-      onMouseDown={handleOverlayMouseDown}
-    >
+    <div className="op-modal-overlay" role="presentation" onMouseDown={handleOverlayMouseDown}>
       <div
         ref={cardRef}
         className={`op-modal-card size-${size}${severityClass}`}
@@ -152,7 +202,16 @@ export default function Modal({
             aria-label="Close dialog"
             onClick={() => onClose?.()}
           >
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
+            <svg
+              viewBox="0 0 16 16"
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
               <path d="M3 3l10 10M13 3 3 13" />
             </svg>
           </button>
@@ -166,9 +225,15 @@ Modal.Header = function ModalHeader({ title, subtitle, severity, id, children })
   const icon = severity ? SEVERITY_ICONS[severity] : null;
   return (
     <header className="op-modal-header">
-      {icon && <span className={`op-modal-header-icon op-modal-header-icon--${severity}`}>{icon}</span>}
+      {icon && (
+        <span className={`op-modal-header-icon op-modal-header-icon--${severity}`}>{icon}</span>
+      )}
       <div className="op-modal-header-text">
-        {title && <h2 id={id} className="op-modal-title">{title}</h2>}
+        {title && (
+          <h2 id={id} className="op-modal-title">
+            {title}
+          </h2>
+        )}
         {subtitle && <div className="op-modal-subtitle">{subtitle}</div>}
         {children}
       </div>

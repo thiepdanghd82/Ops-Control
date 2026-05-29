@@ -23,12 +23,12 @@ export const STORAGE_JSON_AOO = 'json-array-of-objects';
 
 // ─── Helper alias-block generators ───
 const VN = {
-  partNo:   ['Part No', 'Part Number', 'Part #', 'Mã hàng', 'Mã vật tư', 'Số part', 'PartNo'],
+  partNo: ['Part No', 'Part Number', 'Part #', 'Mã hàng', 'Mã vật tư', 'Số part', 'PartNo'],
   partDesc: ['Part Description', 'Description', 'Tên hàng', 'Mô tả', 'Tên vật tư'],
-  qty:      ['Qty Per Assembly', 'Quantity', 'Qty', 'Số lượng', 'SL', 'SL/Cụm'],
-  uom:      ['UOM', 'Unit', 'Đơn vị', 'ĐVT', 'Unit of Measure'],
+  qty: ['Qty Per Assembly', 'Quantity', 'Qty', 'Số lượng', 'SL', 'SL/Cụm'],
+  uom: ['UOM', 'Unit', 'Đơn vị', 'ĐVT', 'Unit of Measure'],
   supplier: ['Supplier', 'Vendor', 'NCC', 'Nhà cung cấp'],
-  site:     ['Site', 'Plant', 'Nhà máy', 'Location'],
+  site: ['Site', 'Plant', 'Nhà máy', 'Location'],
 };
 
 // Build canonical → [aliases...]. Note canonical itself is included so the
@@ -45,7 +45,10 @@ function aliasMap(spec) {
 }
 
 export function normKey(s) {
-  return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  return String(s || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -61,20 +64,29 @@ const BOM_DATASET = {
     varName: 'window._CCL_MFG_DATA',
   },
   canonicalHeaders: [
-    'Parent Part No', 'Parent Part Description',
-    'Component Part', 'Component Part Description',
-    'Qty Per Assembly', 'UOM',
-    'Component Scrap', 'Scrap Factor (%)',
-    'Pitch', 'Cavity', 'Color Nums',
-    'Structure Type', 'Alternative No', 'Structure Effectivity', 'Planner',
+    'Parent Part No',
+    'Parent Part Description',
+    'Component Part',
+    'Component Part Description',
+    'Qty Per Assembly',
+    'UOM',
+    'Component Scrap',
+    'Scrap Factor (%)',
+    'Pitch',
+    'Cavity',
+    'Color Nums',
+    'Structure Type',
+    'Alternative No',
+    'Structure Effectivity',
+    'Planner',
   ],
   requiredHeaders: ['Parent Part No', 'Component Part'],
   naturalKey: ['Parent Part No', 'Component Part', 'Alternative No'],
   columnTypes: {
     'Qty Per Assembly': 'number',
     'Scrap Factor (%)': 'number',
-    'Pitch': 'number',
-    'Cavity': 'integer',
+    Pitch: 'number',
+    Cavity: 'integer',
     'Color Nums': 'integer',
   },
   aliases: aliasMap({
@@ -83,16 +95,16 @@ const BOM_DATASET = {
     'Component Part': ['Component', 'Comp Part', 'Comp', 'Mã con', 'Part con'],
     'Component Part Description': ['Component Desc', 'Comp Description', 'Tên con'],
     'Qty Per Assembly': VN.qty,
-    'UOM': VN.uom,
+    UOM: VN.uom,
     'Component Scrap': ['Comp Scrap', 'Scrap', 'Hao hụt'],
     'Scrap Factor (%)': ['Scrap %', 'Scrap Pct', 'Scrap Factor', '% Hao hụt'],
-    'Pitch': ['Pitch', 'Bước'],
-    'Cavity': ['Cavity', 'Số khuôn'],
+    Pitch: ['Pitch', 'Bước'],
+    Cavity: ['Cavity', 'Số khuôn'],
     'Color Nums': ['Colors', 'Color Count', 'Số màu'],
     'Structure Type': ['Type', 'Loại'],
     'Alternative No': ['Alternative', 'Alt', 'Alt No', 'Phương án'],
     'Structure Effectivity': ['Effectivity', 'Effective', 'Hiệu lực'],
-    'Planner': ['Planner', 'NV kế hoạch'],
+    Planner: ['Planner', 'NV kế hoạch'],
   }),
   shadow: { writer: 'shadowWriteBom', clearer: 'shadowClearBom' },
 };
@@ -110,23 +122,35 @@ const ROUTING_DATASET = {
     varName: 'window._CCL_ROP_DATA',
   },
   canonicalHeaders: [
-    'Part No', 'Part Description',
-    'Operation No', 'Operation Description',
-    'Work Centre No', 'Work Centre Desc',
-    'Mach Setup Time', 'Labour Setup Time',
-    'Mach Run Factor', 'Labour Run Factor', 'Factor Unit',
-    'Crew Size', 'Setup Crew Size', 'Labour Class',
-    'Alternative', 'Routing Effectivity', 'Efficiency Factor', 'Site', 'Routing Type',
+    'Part No',
+    'Part Description',
+    'Operation No',
+    'Operation Description',
+    'Work Centre No',
+    'Work Centre Desc',
+    'Mach Setup Time',
+    'Labour Setup Time',
+    'Mach Run Factor',
+    'Labour Run Factor',
+    'Factor Unit',
+    'Crew Size',
+    'Setup Crew Size',
+    'Labour Class',
+    'Alternative',
+    'Routing Effectivity',
+    'Efficiency Factor',
+    'Site',
+    'Routing Type',
   ],
   requiredHeaders: ['Part No', 'Operation No', 'Work Centre No'],
   naturalKey: ['Part No', 'Operation No', 'Work Centre No', 'Alternative'],
   columnTypes: {
-    'Mach Setup Time':  'number',
+    'Mach Setup Time': 'number',
     'Labour Setup Time': 'number',
-    'Mach Run Factor':   'number',
+    'Mach Run Factor': 'number',
     'Labour Run Factor': 'number',
-    'Crew Size':         'number',
-    'Setup Crew Size':   'number',
+    'Crew Size': 'number',
+    'Setup Crew Size': 'number',
     'Efficiency Factor': 'number',
   },
   aliases: aliasMap({
@@ -134,7 +158,16 @@ const ROUTING_DATASET = {
     'Part Description': VN.partDesc,
     'Operation No': ['Op No', 'Op', 'Operation', 'Số nguyên công'],
     'Operation Description': ['Op Desc', 'Op Description', 'Mô tả công đoạn'],
-    'Work Centre No': ['Work Center No', 'Work Center', 'Workcenter', 'Workcenter No', 'WC', 'WC No', 'Work Centre', 'Trạm'],
+    'Work Centre No': [
+      'Work Center No',
+      'Work Center',
+      'Workcenter',
+      'Workcenter No',
+      'WC',
+      'WC No',
+      'Work Centre',
+      'Trạm',
+    ],
     'Work Centre Desc': ['Work Center Desc', 'WC Desc', 'WC Description', 'Mô tả trạm'],
     'Mach Setup Time': ['Machine Setup', 'Setup Mach', 'Mach Setup', 'Setup máy'],
     'Labour Setup Time': ['Labor Setup', 'Setup Labor', 'Labour Setup', 'Setup nhân công'],
@@ -144,10 +177,10 @@ const ROUTING_DATASET = {
     'Crew Size': ['Crew', 'Operators', 'Số người'],
     'Setup Crew Size': ['Setup Crew', 'Setup Operators'],
     'Labour Class': ['Labor Class', 'Class', 'Bậc'],
-    'Alternative': ['Alt', 'Alternative No', 'Phương án'],
+    Alternative: ['Alt', 'Alternative No', 'Phương án'],
     'Routing Effectivity': ['Effectivity', 'Hiệu lực'],
     'Efficiency Factor': ['Efficiency', 'Eff', 'Eff Factor', 'Hiệu suất'],
-    'Site': VN.site,
+    Site: VN.site,
     'Routing Type': ['Type', 'Loại'],
   }),
   shadow: { writer: 'shadowWriteRouting', clearer: 'shadowClearRouting' },
@@ -157,17 +190,17 @@ const ROUTING_DATASET = {
 // IFS Inventory (Full / Finished Goods / Raw Materials)
 // ═══════════════════════════════════════════════════════════════════
 const INVENTORY_BASE_ALIASES = aliasMap({
-  'Part No':          VN.partNo,
+  'Part No': VN.partNo,
   'Part Description': VN.partDesc,
-  'Site':             VN.site,
-  'Lot/Batch No':     ['Lot No', 'Batch No', 'Lot', 'Batch', 'Số lô'],
-  'Location No':      ['Location', 'Bin', 'Vị trí'],
-  'Qty On Hand':      ['Qty', 'On Hand', 'OH', 'SL Tồn', 'Tồn kho'],
-  'UOM':              VN.uom,
-  'Unit Cost':        ['Cost', 'Standard Cost', 'Giá vốn', 'Đơn giá'],
-  'Total Cost':       ['Value', 'Stock Value', 'Giá trị tồn'],
-  'Receipt Date':     ['Date Received', 'Receipt', 'Ngày nhập'],
-  'Expiry Date':      ['Expiry', 'Expiration', 'Ngày hết hạn'],
+  Site: VN.site,
+  'Lot/Batch No': ['Lot No', 'Batch No', 'Lot', 'Batch', 'Số lô'],
+  'Location No': ['Location', 'Bin', 'Vị trí'],
+  'Qty On Hand': ['Qty', 'On Hand', 'OH', 'SL Tồn', 'Tồn kho'],
+  UOM: VN.uom,
+  'Unit Cost': ['Cost', 'Standard Cost', 'Giá vốn', 'Đơn giá'],
+  'Total Cost': ['Value', 'Stock Value', 'Giá trị tồn'],
+  'Receipt Date': ['Date Received', 'Receipt', 'Ngày nhập'],
+  'Expiry Date': ['Expiry', 'Expiration', 'Ngày hết hạn'],
 });
 
 const INVENTORY_DATASET = {
@@ -180,8 +213,17 @@ const INVENTORY_DATASET = {
     varName: 'window._CCL_INV_DATA',
   },
   canonicalHeaders: [
-    'Part No', 'Part Description', 'Site', 'Lot/Batch No', 'Location No',
-    'Qty On Hand', 'UOM', 'Unit Cost', 'Total Cost', 'Receipt Date', 'Expiry Date',
+    'Part No',
+    'Part Description',
+    'Site',
+    'Lot/Batch No',
+    'Location No',
+    'Qty On Hand',
+    'UOM',
+    'Unit Cost',
+    'Total Cost',
+    'Receipt Date',
+    'Expiry Date',
   ],
   requiredHeaders: ['Part No'],
   naturalKey: ['Part No', 'Site', 'Lot/Batch No', 'Location No'],
@@ -193,7 +235,12 @@ const INVENTORY_DATASET = {
     'Expiry Date': 'date',
   },
   aliases: INVENTORY_BASE_ALIASES,
-  shadow: { writer: 'shadowWriteInventory', writerArg: 'inventory', clearer: 'shadowClearInventory', clearerArg: 'inventory' },
+  shadow: {
+    writer: 'shadowWriteInventory',
+    writerArg: 'inventory',
+    clearer: 'shadowClearInventory',
+    clearerArg: 'inventory',
+  },
 };
 
 const FINISHED_GOODS_DATASET = {
@@ -206,7 +253,12 @@ const FINISHED_GOODS_DATASET = {
     file: 'finished_good_data.js',
     varName: 'window._CCL_FG_DATA',
   },
-  shadow: { writer: 'shadowWriteInventory', writerArg: 'finished_goods', clearer: 'shadowClearInventory', clearerArg: 'finished_goods' },
+  shadow: {
+    writer: 'shadowWriteInventory',
+    writerArg: 'finished_goods',
+    clearer: 'shadowClearInventory',
+    clearerArg: 'finished_goods',
+  },
 };
 
 const RAW_MATERIALS_DATASET = {
@@ -219,7 +271,12 @@ const RAW_MATERIALS_DATASET = {
     file: 'raw_materials_data.js',
     varName: 'window._CCL_RM_DATA',
   },
-  shadow: { writer: 'shadowWriteInventory', writerArg: 'raw_materials', clearer: 'shadowClearInventory', clearerArg: 'raw_materials' },
+  shadow: {
+    writer: 'shadowWriteInventory',
+    writerArg: 'raw_materials',
+    clearer: 'shadowClearInventory',
+    clearerArg: 'raw_materials',
+  },
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -234,19 +291,42 @@ const NPI_DATASET = {
     file: 'npi_materials.json',
   },
   canonicalHeaders: [
-    'date', 'name', 'price', 'type', 'thick', 'color', 'surface',
-    'adhesive', 'moq', 'lt', 'supplier', 'note',
+    'date',
+    'name',
+    'price',
+    'type',
+    'thick',
+    'color',
+    'surface',
+    'adhesive',
+    'moq',
+    'lt',
+    'supplier',
+    'note',
   ],
   // Pretty label per canonical key (used for the export template header row)
   prettyLabels: {
-    date: 'Date', name: 'Material Name', price: 'Price (USD/m²)', type: 'Type / Description',
-    thick: 'Thickness (mm)', color: 'Color', surface: 'Surface', adhesive: 'Adhesive',
-    moq: 'MOQ (m²)', lt: 'Lead Time (days)', supplier: 'Supplier', note: 'Note',
+    date: 'Date',
+    name: 'Material Name',
+    price: 'Price (USD/m²)',
+    type: 'Type / Description',
+    thick: 'Thickness (mm)',
+    color: 'Color',
+    surface: 'Surface',
+    adhesive: 'Adhesive',
+    moq: 'MOQ (m²)',
+    lt: 'Lead Time (days)',
+    supplier: 'Supplier',
+    note: 'Note',
   },
   requiredHeaders: ['name'],
   naturalKey: ['name', 'supplier'],
   columnTypes: {
-    price: 'number', thick: 'number', moq: 'number', lt: 'number', date: 'date',
+    price: 'number',
+    thick: 'number',
+    moq: 'number',
+    lt: 'number',
+    date: 'date',
   },
   aliases: aliasMap({
     date: ['Date', 'Update Date', 'Updated', 'Ngày'],
@@ -277,19 +357,39 @@ const SOURCING_DATASET = {
     file: 'sourcing_db.json',
   },
   canonicalHeaders: [
-    'month', 'req', 'cust', 'material', 'size', 'exw', 'dap',
-    'moq', 'lt', 'supplier', 'status',
+    'month',
+    'req',
+    'cust',
+    'material',
+    'size',
+    'exw',
+    'dap',
+    'moq',
+    'lt',
+    'supplier',
+    'status',
   ],
   prettyLabels: {
-    month: 'Req. Date', req: 'Requester', cust: 'Customer / Project',
-    material: 'Material Inquiry', size: 'Size / Spec',
-    exw: 'EXW Price (USD/m²)', dap: 'DAP Price (USD/m²)',
-    moq: 'MOQ', lt: 'Lead Time (days)', supplier: 'Supplier', status: 'Status / Remark',
+    month: 'Req. Date',
+    req: 'Requester',
+    cust: 'Customer / Project',
+    material: 'Material Inquiry',
+    size: 'Size / Spec',
+    exw: 'EXW Price (USD/m²)',
+    dap: 'DAP Price (USD/m²)',
+    moq: 'MOQ',
+    lt: 'Lead Time (days)',
+    supplier: 'Supplier',
+    status: 'Status / Remark',
   },
   requiredHeaders: ['material'],
   naturalKey: ['cust', 'material', 'supplier'],
   columnTypes: {
-    exw: 'number', dap: 'number', moq: 'number', lt: 'number', month: 'date',
+    exw: 'number',
+    dap: 'number',
+    moq: 'number',
+    lt: 'number',
+    month: 'date',
   },
   aliases: aliasMap({
     month: ['Month', 'Req. Date', 'Req Date', 'Request Date', 'Date'],
@@ -325,7 +425,7 @@ export function getDataset(key) {
 }
 
 export function listDatasets() {
-  return Object.values(DATASETS).map(d => ({
+  return Object.values(DATASETS).map((d) => ({
     key: d.key,
     label: d.label,
     storageKind: d.storage.kind,

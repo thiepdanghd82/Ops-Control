@@ -35,8 +35,13 @@ const MIN_NODE_MAJOR = 18;
 
 const failures = [];
 const checks = [];
-function pass(label)        { checks.push({ ok: true,  label }); }
-function fail(label, reason) { checks.push({ ok: false, label, reason }); failures.push(`${label}: ${reason}`); }
+function pass(label) {
+  checks.push({ ok: true, label });
+}
+function fail(label, reason) {
+  checks.push({ ok: false, label, reason });
+  failures.push(`${label}: ${reason}`);
+}
 
 // 1. Node version
 {
@@ -81,14 +86,19 @@ if (!fs.existsSync(DIST)) {
     if (fs.existsSync(indexHtml)) {
       const html = fs.readFileSync(indexHtml, 'utf-8');
       // Match both /assets/*.js and /assets/*.css in href/src attrs
-      const refs = [...html.matchAll(/(?:href|src)="(\/assets\/[^"]+)"/g)].map(m => m[1]);
+      const refs = [...html.matchAll(/(?:href|src)="(\/assets\/[^"]+)"/g)].map((m) => m[1]);
       const missing = [];
       for (const ref of refs) {
         const diskPath = path.join(DIST, ref.replace(/^\//, ''));
         if (!fs.existsSync(diskPath)) missing.push(ref);
       }
-      if (refs.length === 0) fail('index.html asset refs', 'no /assets/* references found (unexpected build output)');
-      else if (missing.length) fail('asset references', `broken refs in index.html: ${missing.slice(0, 3).join(', ')}${missing.length > 3 ? ` (+${missing.length - 3} more)` : ''}`);
+      if (refs.length === 0)
+        fail('index.html asset refs', 'no /assets/* references found (unexpected build output)');
+      else if (missing.length)
+        fail(
+          'asset references',
+          `broken refs in index.html: ${missing.slice(0, 3).join(', ')}${missing.length > 3 ? ` (+${missing.length - 3} more)` : ''}`
+        );
       else pass(`asset references (${refs.length} refs, all resolve)`);
     }
   }

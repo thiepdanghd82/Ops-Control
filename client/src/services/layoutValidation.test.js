@@ -16,7 +16,7 @@ const goodState = {
   parts_web_across: 4,
   parts_in_md: 6,
   web_width_td: 4 * 26 + 3 * 3 + 2 * 3, // = 119
-  sheet_length: 6 * 12 + 5 * 3,         // = 87
+  sheet_length: 6 * 12 + 5 * 3, // = 87
   min_gap_md: 3,
   min_gap_td: 3,
   edge_margin_td: 3,
@@ -26,7 +26,7 @@ const goodState = {
 
 test('validateLayout: required fields raise errors on empty state', () => {
   const res = validateLayout({});
-  const codes = res.errors.map(e => e.code);
+  const codes = res.errors.map((e) => e.code);
   assert.ok(codes.includes('required'));
   assert.ok(res.hasBlockers);
 });
@@ -40,26 +40,26 @@ test('validateLayout: clean state produces no errors, no warnings', () => {
 });
 
 test('validateLayout: web too narrow → TD overlap ERROR', () => {
-  const st = { ...goodState, web_width_td: 80 };  // way too small for 4×26
+  const st = { ...goodState, web_width_td: 80 }; // way too small for 4×26
   const res = validateLayout(st);
-  const td = res.errors.find(e => e.code === 'td_overlap');
+  const td = res.errors.find((e) => e.code === 'td_overlap');
   assert.ok(td, 'expected td_overlap error');
   assert.ok(td.detail.delta < 0);
   assert.equal(res.hasBlockers, true);
 });
 
 test('validateLayout: web way too wide → TD waste WARNING (not error)', () => {
-  const st = { ...goodState, web_width_td: 300 };  // ~2.5× the need
+  const st = { ...goodState, web_width_td: 300 }; // ~2.5× the need
   const res = validateLayout(st);
   assert.equal(res.errors.length, 0);
-  const td = res.warnings.find(w => w.code === 'td_waste');
+  const td = res.warnings.find((w) => w.code === 'td_waste');
   assert.ok(td, 'expected td_waste warning');
 });
 
 test('validateLayout: sheet too short → MD overlap ERROR', () => {
-  const st = { ...goodState, sheet_length: 40 };  // < 6×12 = 72
+  const st = { ...goodState, sheet_length: 40 }; // < 6×12 = 72
   const res = validateLayout(st);
-  const md = res.errors.find(e => e.code === 'md_overlap');
+  const md = res.errors.find((e) => e.code === 'md_overlap');
   assert.ok(md);
   assert.ok(md.detail.delta < 0);
 });
@@ -69,7 +69,7 @@ test('validateLayout: rotary pitch that does not snap → WARNING', () => {
   // 103 / 3.175 = 32.44 → round to 33 → snapped = 104.775 mm → delta 1.775
   const st = { ...goodState, rotary_cols: 1, sheet_length: 100 };
   const res = validateLayout(st);
-  const snap = res.warnings.find(w => w.code === 'rotary_snap');
+  const snap = res.warnings.find((w) => w.code === 'rotary_snap');
   assert.ok(snap, 'expected rotary_snap warning');
   assert.ok(snap.detail.delta > 0.05);
 });
@@ -78,30 +78,30 @@ test('validateLayout: rotary pitch that DOES snap → no warning', () => {
   // tooth = 33, cols = 1 → pitch = 33 × 3.175 = 104.775 → sheet_length = pitch - gap = 101.775
   const st = { ...goodState, rotary_cols: 1, sheet_length: 101.775, min_gap_md: 3 };
   const res = validateLayout(st);
-  const snap = res.warnings.find(w => w.code === 'rotary_snap');
+  const snap = res.warnings.find((w) => w.code === 'rotary_snap');
   assert.equal(snap, undefined, `unexpected rotary warn: ${JSON.stringify(snap)}`);
 });
 
 test('validateLayout: num_webs × web_width_td > log_width → ERROR', () => {
-  const st = { ...goodState, num_webs: 2 };   // 2 × 119 = 238
+  const st = { ...goodState, num_webs: 2 }; // 2 × 119 = 238
   const mats = [{ row_type: 'Main.Mat', log_width: 200, width: 119 }];
   const res = validateLayout(st, mats);
-  const lo = res.errors.find(e => e.code === 'log_overflow');
+  const lo = res.errors.find((e) => e.code === 'log_overflow');
   assert.ok(lo);
 });
 
 test('validateLayout: num_webs × web_width_td <= log_width → no error', () => {
-  const st = { ...goodState, num_webs: 2 };   // 2 × 119 = 238
+  const st = { ...goodState, num_webs: 2 }; // 2 × 119 = 238
   const mats = [{ row_type: 'Main.Mat', log_width: 250, width: 119 }];
   const res = validateLayout(st, mats);
-  const lo = res.errors.find(e => e.code === 'log_overflow');
+  const lo = res.errors.find((e) => e.code === 'log_overflow');
   assert.equal(lo, undefined);
 });
 
 test('validateLayout: high offcut_pct → WARNING', () => {
   const mats = [{ row_type: 'Main.Mat', width: 119, log_width: 250, offcut_pct: 0.35 }];
   const res = validateLayout(goodState, mats);
-  const off = res.warnings.find(w => w.code === 'offcut_high');
+  const off = res.warnings.find((w) => w.code === 'offcut_high');
   assert.ok(off);
 });
 
@@ -118,12 +118,12 @@ test('validateLayout: custom thresholds via opts', () => {
   // Default waste tolerance is 20%. Tighten to 5% — the clean state
   // now falls into waste WARNING.
   const st = { ...goodState, web_width_td: goodState.web_width_td + 10 };
-  const loose = validateLayout(st, [], { maxWasteTdPct: 0.20 });
+  const loose = validateLayout(st, [], { maxWasteTdPct: 0.2 });
   const tight = validateLayout(st, [], { maxWasteTdPct: 0.05 });
   // loose should not flag; tight might flag (depends on delta / need ratio)
   // We just verify the threshold IS applied.
-  const looseWarn = loose.warnings.filter(w => w.code === 'td_waste').length;
-  const tightWarn = tight.warnings.filter(w => w.code === 'td_waste').length;
+  const looseWarn = loose.warnings.filter((w) => w.code === 'td_waste').length;
+  const tightWarn = tight.warnings.filter((w) => w.code === 'td_waste').length;
   assert.ok(tightWarn >= looseWarn);
 });
 
@@ -141,7 +141,9 @@ test('validateLayout: die_quiet_zone with symmetric edges does not throw', () =>
     // branch (was edgeSym, now edgeTd) runs.
   };
   const res = validateLayout(st);
-  const codes = res.warnings.map(w => w.code);
-  assert.ok(codes.includes('quiet_zone_too_tight'),
-    `expected quiet_zone_too_tight in warnings, got: ${codes.join(',')}`);
+  const codes = res.warnings.map((w) => w.code);
+  assert.ok(
+    codes.includes('quiet_zone_too_tight'),
+    `expected quiet_zone_too_tight in warnings, got: ${codes.join(',')}`
+  );
 });

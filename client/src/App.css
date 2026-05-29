@@ -1,7 +1,9 @@
 /* ═══ Ops Control — Global Styles ═══ */
 
 /* ─── Reset ─── */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -43,7 +45,9 @@
    pref === 'system'. A raw @media override would kick in regardless
    of the user's selection and fight the data-theme mechanism. */
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   width: 100%;
   margin: 0;
@@ -112,7 +116,7 @@ html, body, #root {
   justify-content: center;
   height: 100vh;
   background: url('/login-bg.jpg') center/cover no-repeat;
-  color: rgba(255,255,255,0.6);
+  color: rgba(255, 255, 255, 0.6);
   gap: 16px;
 }
 
@@ -140,7 +144,9 @@ html, body, #root {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ─── Shared table styles (used across modules) ─── */
@@ -203,7 +209,9 @@ html, body, #root {
   color: var(--text-primary);
 }
 
-.btn:hover { background: var(--bg-secondary); }
+.btn:hover {
+  background: var(--bg-secondary);
+}
 
 .btn-primary {
   background: var(--accent);
@@ -211,8 +219,13 @@ html, body, #root {
   border-color: var(--accent);
 }
 
-.btn-primary:hover { background: var(--accent-hover); }
-.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 /* ─── Tables ─── */
 .orders-table-container {
@@ -227,7 +240,9 @@ html, body, #root {
   font-size: 13px;
 }
 
-.data-table thead { background: var(--bg-secondary); }
+.data-table thead {
+  background: var(--bg-secondary);
+}
 
 .data-table th {
   padding: 10px 14px;
@@ -246,12 +261,26 @@ html, body, #root {
   color: var(--text-primary);
 }
 
-.data-table tbody tr:hover { background: var(--bg-secondary); }
-.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table tbody tr:hover {
+  background: var(--bg-secondary);
+}
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
 
-.cell-id { font-family: 'SF Mono', Monaco, monospace; color: var(--text-tertiary); font-size: 12px; }
-.cell-code { font-weight: 500; font-family: 'SF Mono', Monaco, monospace; }
-.cell-qty { text-align: right; font-family: 'SF Mono', Monaco, monospace; }
+.cell-id {
+  font-family: 'SF Mono', Monaco, monospace;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.cell-code {
+  font-weight: 500;
+  font-family: 'SF Mono', Monaco, monospace;
+}
+.cell-qty {
+  text-align: right;
+  font-family: 'SF Mono', Monaco, monospace;
+}
 
 .empty-state {
   text-align: center;
@@ -260,9 +289,16 @@ html, body, #root {
   font-style: italic;
 }
 
-.text-right { text-align: right; }
-.text-center { text-align: center; }
-.mono { font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 12px; }
+.text-right {
+  text-align: right;
+}
+.text-center {
+  text-align: center;
+}
+.mono {
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  font-size: 12px;
+}
 
 /* ─── Status badges ─── */
 .status-badge {
@@ -274,15 +310,42 @@ html, body, #root {
   white-space: nowrap;
 }
 
-.status-ok { background: #dcfce7; color: #166534; }
-.status-low-stock { background: #fef3c7; color: #92400e; }
-.status-shortage { background: #fee2e2; color: #991b1b; }
-.status-new { background: #eff6ff; color: #2563eb; }
-.status-planned { background: #ede9fe; color: #6d28d9; }
-.status-released { background: #fef3c7; color: #d97706; }
-.status-in-progress { background: #fef3c7; color: #d97706; }
-.status-completed { background: #dcfce7; color: #166534; }
-.status-on-hold { background: #f1f5f9; color: #64748b; }
+.status-ok {
+  background: #dcfce7;
+  color: #166534;
+}
+.status-low-stock {
+  background: #fef3c7;
+  color: #92400e;
+}
+.status-shortage {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.status-new {
+  background: #eff6ff;
+  color: #2563eb;
+}
+.status-planned {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+.status-released {
+  background: #fef3c7;
+  color: #d97706;
+}
+.status-in-progress {
+  background: #fef3c7;
+  color: #d97706;
+}
+.status-completed {
+  background: #dcfce7;
+  color: #166534;
+}
+.status-on-hold {
+  background: #f1f5f9;
+  color: #64748b;
+}
 
 .status-select {
   padding: 4px 8px;
@@ -304,12 +367,31 @@ html, body, #root {
   gap: 4px;
 }
 
-.kpi-value { font-size: 24px; font-weight: 600; }
-.kpi-label { font-size: 12px; font-weight: 500; opacity: 0.8; }
-.kpi-total { background: var(--bg-tertiary); color: var(--text-primary); }
-.kpi-ok { background: #f0fdf4; color: #166534; }
-.kpi-low { background: #fffbeb; color: #92400e; }
-.kpi-shortage { background: #fef2f2; color: #991b1b; }
+.kpi-value {
+  font-size: 24px;
+  font-weight: 600;
+}
+.kpi-label {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.8;
+}
+.kpi-total {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+.kpi-ok {
+  background: #f0fdf4;
+  color: #166534;
+}
+.kpi-low {
+  background: #fffbeb;
+  color: #92400e;
+}
+.kpi-shortage {
+  background: #fef2f2;
+  color: #991b1b;
+}
 
 /* ─── Priority Badges ─── */
 .priority-badge {
@@ -319,24 +401,46 @@ html, body, #root {
   font-weight: 600;
 }
 
-.priority-low { background: #f1f5f9; color: #64748b; }
-.priority-normal { background: #eff6ff; color: #3b82f6; }
-.priority-high { background: #fef3c7; color: #d97706; }
-.priority-urgent { background: #fee2e2; color: #dc2626; }
+.priority-low {
+  background: #f1f5f9;
+  color: #64748b;
+}
+.priority-normal {
+  background: #eff6ff;
+  color: #3b82f6;
+}
+.priority-high {
+  background: #fef3c7;
+  color: #d97706;
+}
+.priority-urgent {
+  background: #fee2e2;
+  color: #dc2626;
+}
 
 /* ─── Hide number input spinners (up/down arrows) globally ─── */
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
-input[type="number"] {
+input[type='number'] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
 
 /* ─── Scrollbar ─── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}

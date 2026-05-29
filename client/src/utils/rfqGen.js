@@ -21,7 +21,7 @@ export function genRfqNum(type, quotes, stdState, cplxState) {
     }
   };
 
-  (quotes || []).forEach(q => pushIfMatch(q?.state?.rfq_number || ''));
+  (quotes || []).forEach((q) => pushIfMatch(q?.state?.rfq_number || ''));
   pushIfMatch(stdState?.rfq_number || '');
   pushIfMatch(cplxState?.rfq_number || '');
 
@@ -29,7 +29,10 @@ export function genRfqNum(type, quotes, stdState, cplxState) {
   if (usedSet.size > 0) {
     const max = Math.max(...usedSet);
     for (let i = 1; i <= max; i++) {
-      if (!usedSet.has(i)) { next = i; break; }
+      if (!usedSet.has(i)) {
+        next = i;
+        break;
+      }
       if (i === max) next = max + 1;
     }
   }

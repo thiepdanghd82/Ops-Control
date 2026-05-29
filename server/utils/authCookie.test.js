@@ -7,8 +7,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  parseCookies, generateCsrfToken, readSessionToken, checkCsrf,
-  SESSION_COOKIE, CSRF_COOKIE, CSRF_HEADER,
+  parseCookies,
+  generateCsrfToken,
+  readSessionToken,
+  checkCsrf,
+  SESSION_COOKIE,
+  CSRF_COOKIE,
+  CSRF_HEADER,
 } from './authCookie.js';
 
 function req(cookieHeader, extraHeaders = {}, method = 'GET') {
@@ -120,7 +125,9 @@ test('checkCsrf: cookie-auth POST without header → 403 missing_csrf_header', (
 });
 
 test('checkCsrf: cookie-auth POST with matching header → ok', () => {
-  const r = checkCsrf(req('ops_session=s; ops_csrf=matching', { [CSRF_HEADER]: 'matching' }, 'POST'));
+  const r = checkCsrf(
+    req('ops_session=s; ops_csrf=matching', { [CSRF_HEADER]: 'matching' }, 'POST')
+  );
   assert.equal(r.ok, true);
 });
 

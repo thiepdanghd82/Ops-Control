@@ -33,10 +33,14 @@ export function appendQuoteVersion(quoteId, state, { savedAt, savedBy } = {}) {
     const stateHash = hashState(stateJson);
 
     // Skip if the latest version has identical hash → nothing to record.
-    const latest = db.prepare(`
+    const latest = db
+      .prepare(
+        `
       SELECT version_num, state_hash FROM quote_versions
       WHERE quote_id = ? ORDER BY version_num DESC LIMIT 1
-    `).get(quoteId);
+    `
+      )
+      .get(quoteId);
 
     if (latest && latest.state_hash === stateHash) {
       return { ok: true, skipped: true, reason: 'no changes since last version' };
@@ -48,16 +52,21 @@ export function appendQuoteVersion(quoteId, state, { savedAt, savedBy } = {}) {
     // Insert + prune in one transaction so concurrent saves don't create
     // gaps in version_num or leave stale rows behind.
     const tx = db.transaction(() => {
-      db.prepare(`
+      db.prepare(
+        `
         INSERT INTO quote_versions (quote_id, version_num, state_json, saved_at, saved_by, state_hash)
         VALUES (?, ?, ?, ?, ?, ?)
-      `).run(quoteId, nextVer, stateJson, savedAtISO, savedBy || null, stateHash);
+      `
+      ).run(quoteId, nextVer, stateJson, savedAtISO, savedBy || null, stateHash);
 
       // Retention: keep only the most recent MAX_VERSIONS rows per quote.
-      const count = db.prepare(`SELECT COUNT(*) AS n FROM quote_versions WHERE quote_id = ?`).get(quoteId).n;
+      const count = db
+        .prepare(`SELECT COUNT(*) AS n FROM quote_versions WHERE quote_id = ?`)
+        .get(quoteId).n;
       if (count > MAX_VERSIONS) {
         const excess = count - MAX_VERSIONS;
-        db.prepare(`
+        db.prepare(
+          `
           DELETE FROM quote_versions
           WHERE id IN (
             SELECT id FROM quote_versions
@@ -65,7 +74,8 @@ export function appendQuoteVersion(quoteId, state, { savedAt, savedBy } = {}) {
             ORDER BY version_num ASC
             LIMIT ?
           )
-        `).run(quoteId, excess);
+        `
+        ).run(quoteId, excess);
       }
     });
     tx();
@@ -82,13 +92,17 @@ export function listQuoteVersions(quoteId, { limit = MAX_VERSIONS } = {}) {
   try {
     if (!fs.existsSync(getDbPath())) return [];
     const db = getDb();
-    return db.prepare(`
+    return db
+      .prepare(
+        `
       SELECT version_num, saved_at, saved_by, state_hash
       FROM quote_versions
       WHERE quote_id = ?
       ORDER BY version_num DESC
       LIMIT ?
-    `).all(quoteId, Math.max(1, Math.min(limit, 100)));
+    `
+      )
+      .all(quoteId, Math.max(1, Math.min(limit, 100)));
   } catch (err) {
     console.warn(`[quoteVersions] list failed:`, err.message);
     return [];
@@ -113,19 +127,27 @@ export function diffQuoteStates(fromState, toState, { maxDepth = 12 } = {}) {
 
   function walk(a, b, prefix, depth) {
     if (depth > maxDepth) {
-      if (JSON.stringify(a) !== JSON.stringify(b)) changes.push({ path: prefix || '(root)', op: 'changed', from: '…', to: '…' });
+      if (JSON.stringify(a) !== JSON.stringify(b))
+        changes.push({ path: prefix || '(root)', op: 'changed', from: '…', to: '…' });
       return;
     }
     if (a === b) return;
     // Both null/undefined-ish
     if (a == null && b == null) return;
     // One side missing
-    if (a == null) { changes.push({ path: prefix || '(root)', op: 'added', to: b }); return; }
-    if (b == null) { changes.push({ path: prefix || '(root)', op: 'removed', from: a }); return; }
+    if (a == null) {
+      changes.push({ path: prefix || '(root)', op: 'added', to: b });
+      return;
+    }
+    if (b == null) {
+      changes.push({ path: prefix || '(root)', op: 'removed', from: a });
+      return;
+    }
     // Array vs array
     if (Array.isArray(a) && Array.isArray(b)) {
       const maxLen = Math.max(a.length, b.length);
-      for (let i = 0; i < maxLen; i++) walk(a[i], b[i], prefix ? `${prefix}.${i}` : String(i), depth + 1);
+      for (let i = 0; i < maxLen; i++)
+        walk(a[i], b[i], prefix ? `${prefix}.${i}` : String(i), depth + 1);
       return;
     }
     // Object vs object
@@ -144,14 +166,22 @@ export function getQuoteVersion(quoteId, versionNum) {
   try {
     if (!fs.existsSync(getDbPath())) return null;
     const db = getDb();
-    const row = db.prepare(`
+    const row = db
+      .prepare(
+        `
       SELECT version_num, state_json, saved_at, saved_by
       FROM quote_versions
       WHERE quote_id = ? AND version_num = ?
-    `).get(quoteId, versionNum);
+    `
+      )
+      .get(quoteId, versionNum);
     if (!row) return null;
     let state;
-    try { state = JSON.parse(row.state_json); } catch { state = row.state_json; }
+    try {
+      state = JSON.parse(row.state_json);
+    } catch {
+      state = row.state_json;
+    }
     return { version_num: row.version_num, saved_at: row.saved_at, saved_by: row.saved_by, state };
   } catch (err) {
     console.warn(`[quoteVersions] get failed:`, err.message);

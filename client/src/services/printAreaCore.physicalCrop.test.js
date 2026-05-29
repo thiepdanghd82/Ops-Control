@@ -26,12 +26,19 @@ import {
 function makeImg(w, h, paint) {
   const data = new Uint8ClampedArray(w * h * 4);
   for (let i = 0; i < data.length; i += 4) {
-    data[i] = 255; data[i + 1] = 255; data[i + 2] = 255; data[i + 3] = 255;
+    data[i] = 255;
+    data[i + 1] = 255;
+    data[i + 2] = 255;
+    data[i + 3] = 255;
   }
-  if (typeof paint === 'function') paint((x, y, r, g, b) => {
-    const i = (y * w + x) * 4;
-    data[i] = r; data[i + 1] = g; data[i + 2] = b; data[i + 3] = 255;
-  });
+  if (typeof paint === 'function')
+    paint((x, y, r, g, b) => {
+      const i = (y * w + x) * 4;
+      data[i] = r;
+      data[i + 1] = g;
+      data[i + 2] = b;
+      data[i + 3] = 255;
+    });
   return { data, width: w, height: h };
 }
 
@@ -89,7 +96,8 @@ test('dilateMask: single pixel → 5 pixels (self + 4-neighbors)', () => {
 });
 
 test('openMask: 1-px horizontal line is destroyed; 5×5 solid block survives', () => {
-  const w = 15, h = 15;
+  const w = 15,
+    h = 15;
   const m = new Uint8Array(w * h);
   // A 1-px-tall line across the middle (y=7, x=1..13)
   for (let x = 1; x < 14; x++) m[7 * w + x] = 1;
@@ -111,7 +119,8 @@ test('openMask: 2 iterations drops a 3-px-wide stroke but keeps an 8×8 block', 
   // Separate the stroke from the block by a margin so dilation can't
   // reconstitute the stroke from the block's expanding edge. Opening
   // is a LOCAL operation — touching features interact.
-  const w = 30, h = 30;
+  const w = 30,
+    h = 30;
   const m = new Uint8Array(w * h);
   // 3-px-wide vertical stroke at x=22..24 (isolated from the block)
   for (let y = 2; y < 28; y++) for (let x = 22; x <= 24; x++) m[y * w + x] = 1;
@@ -121,12 +130,18 @@ test('openMask: 2 iterations drops a 3-px-wide stroke but keeps an 8×8 block', 
   // Stroke gone entirely.
   let strokeLeft = 0;
   for (let y = 2; y < 28; y++) for (let x = 22; x <= 24; x++) if (opened[y * w + x]) strokeLeft++;
-  assert.equal(strokeLeft, 0,
-    `3-px stroke should be fully destroyed by 2-iter opening when isolated; kept ${strokeLeft} px`);
+  assert.equal(
+    strokeLeft,
+    0,
+    `3-px stroke should be fully destroyed by 2-iter opening when isolated; kept ${strokeLeft} px`
+  );
   // Block mostly intact.
   let blockLeft = 0;
   for (let y = 2; y <= 9; y++) for (let x = 2; x <= 9; x++) if (opened[y * w + x]) blockLeft++;
-  assert.ok(blockLeft >= 40, `8×8 block should mostly survive 2-iter opening, kept ${blockLeft}/64`);
+  assert.ok(
+    blockLeft >= 40,
+    `8×8 block should mostly survive 2-iter opening, kept ${blockLeft}/64`
+  );
 });
 
 // ── physicalAnchoredCrop ──────────────────────────────────────────
@@ -139,7 +154,7 @@ test('physicalAnchoredCrop: returns null when image is already ≤ target dims',
 });
 
 test('physicalAnchoredCrop: geometric center when content is empty (BG-only image)', () => {
-  const img = makeImg(1000, 800);  // pure white
+  const img = makeImg(1000, 800); // pure white
   const bg = [255, 255, 255];
   // Target 30mm×20mm @ 300 DPI → 354×236 px. Image 1000×800 → plenty of room.
   const crop = physicalAnchoredCrop(img, bg, 30, 20, 300, 12);
@@ -175,7 +190,9 @@ test('physicalAnchoredCrop end-to-end: dim-line margin is removed, math is corre
   // with a 50%-coverage black fill, plus SYMMETRIC dimension lines top
   // and bottom. Symmetric margins mean the content centroid stays on
   // the label's y-axis, so the crop lands exactly on the label.
-  const W = 600, H = 400, bg = [255, 255, 255];
+  const W = 600,
+    H = 400,
+    bg = [255, 255, 255];
   const labelW = mmToPx(30, 300); // 354
   const labelH = mmToPx(20, 300); // 236
   const labelX0 = Math.round((W - labelW) / 2); // 123
@@ -212,25 +229,37 @@ test('physicalAnchoredCrop end-to-end: dim-line margin is removed, math is corre
   const cropCover = (maskedCrop.total - maskedCrop.bgCount) / maskedCrop.total;
   const maskedFull = maskPrintable(img, bg, 12);
   const fullCover = (maskedFull.total - maskedFull.bgCount) / maskedFull.total;
-  assert.ok(cropCover > fullCover,
-    `physical-crop coverage (${(cropCover * 100).toFixed(1)}%) must exceed full-canvas (${(fullCover * 100).toFixed(1)}%) — cropping BG/dim margins inflates the numerator fraction`);
-  assert.ok(cropCover > 0.35,
-    `crop coverage ${(cropCover * 100).toFixed(1)}% should be ≥35% (captures most of the half-fill)`);
+  assert.ok(
+    cropCover > fullCover,
+    `physical-crop coverage (${(cropCover * 100).toFixed(1)}%) must exceed full-canvas (${(fullCover * 100).toFixed(1)}%) — cropping BG/dim margins inflates the numerator fraction`
+  );
+  assert.ok(
+    cropCover > 0.35,
+    `crop coverage ${(cropCover * 100).toFixed(1)}% should be ≥35% (captures most of the half-fill)`
+  );
 
   // buildResult end-to-end: mm² output uses the USER's 30×20=600 mm²
   // as denominator regardless of crop pixel count.
-  const res = buildResult([{ rgb: [0, 0, 0], count: maskedCrop.pixels.length }],
-    maskedCrop.total, maskedCrop.bgCount, 30, 20, null);
+  const res = buildResult(
+    [{ rgb: [0, 0, 0], count: maskedCrop.pixels.length }],
+    maskedCrop.total,
+    maskedCrop.bgCount,
+    30,
+    20,
+    null
+  );
   assert.equal(res.totals.total_pixels, maskedCrop.total);
-  assert.ok(Math.abs(res.totals.total_print_mm2 - 600 * cropCover) < 0.5,
-    `total_print_mm2=${res.totals.total_print_mm2.toFixed(2)} should equal 600×coverage=${(600 * cropCover).toFixed(2)}`);
+  assert.ok(
+    Math.abs(res.totals.total_print_mm2 - 600 * cropCover) < 0.5,
+    `total_print_mm2=${res.totals.total_print_mm2.toFixed(2)} should equal 600×coverage=${(600 * cropCover).toFixed(2)}`
+  );
 });
 
 // ── Sanity: mmToPx round-trip ─────────────────────────────────────
 
 test('mmToPx: 30mm @ 300dpi = 354 px (matches user spec in Sprint 7 brief)', () => {
-  assert.equal(mmToPx(30, 300), 354);  // 30/25.4 × 300 = 354.33 → round
-  assert.equal(mmToPx(20, 300), 236);  // 20/25.4 × 300 = 236.22 → round
+  assert.equal(mmToPx(30, 300), 354); // 30/25.4 × 300 = 354.33 → round
+  assert.equal(mmToPx(20, 300), 236); // 20/25.4 × 300 = 236.22 → round
 });
 
 // ── Regression guard: buildResult math keeps the label area as the
@@ -246,8 +275,12 @@ test('buildResult: color_mm² sums to total_print_mm² (within rounding)', () =>
   ];
   const res = buildResult(clusters, total, bgCount, 30, 20, null);
   const sumMm2 = res.colors.reduce((a, c) => a + c.print_area_mm2, 0);
-  assert.ok(Math.abs(sumMm2 - res.totals.total_print_mm2) < 0.01,
-    `Σ color mm² (${sumMm2}) should equal total_print_mm² (${res.totals.total_print_mm2})`);
-  assert.ok(Math.abs(res.totals.total_print_mm2 - 600 * 0.8) < 0.01,
-    `total_print_mm² should be 80% of 30×20=600 mm² = 480, got ${res.totals.total_print_mm2}`);
+  assert.ok(
+    Math.abs(sumMm2 - res.totals.total_print_mm2) < 0.01,
+    `Σ color mm² (${sumMm2}) should equal total_print_mm² (${res.totals.total_print_mm2})`
+  );
+  assert.ok(
+    Math.abs(res.totals.total_print_mm2 - 600 * 0.8) < 0.01,
+    `total_print_mm² should be 80% of 30×20=600 mm² = 480, got ${res.totals.total_print_mm2}`
+  );
 });

@@ -52,16 +52,18 @@ function walk(dir) {
  * literal forms (double quotes, single quotes, backtick templates).
  */
 function stripCommentsAndStrings(src) {
-  return src
-    // Block comments
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    // Line comments
-    .replace(/\/\/[^\n]*/g, '')
-    // Triple-backtick / template literals — simple pass, may eat JSX-adjacent backticks
-    .replace(/`(?:\\.|[^\\`])*`/g, '')
-    // Double / single quoted strings
-    .replace(/"(?:\\.|[^\\"])*"/g, '')
-    .replace(/'(?:\\.|[^\\'])*'/g, '');
+  return (
+    src
+      // Block comments
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      // Line comments
+      .replace(/\/\/[^\n]*/g, '')
+      // Triple-backtick / template literals — simple pass, may eat JSX-adjacent backticks
+      .replace(/`(?:\\.|[^\\`])*`/g, '')
+      // Double / single quoted strings
+      .replace(/"(?:\\.|[^\\"])*"/g, '')
+      .replace(/'(?:\\.|[^\\'])*'/g, '')
+  );
 }
 
 test('no raw parseFloat(e.target.value) in client source (use parseLocaleNumber)', () => {
@@ -76,8 +78,11 @@ test('no raw parseFloat(e.target.value) in client source (use parseLocaleNumber)
       offenders.push(relFromUtils);
     }
   }
-  assert.deepEqual(offenders, [],
-    `Found raw parseFloat(e.target.value) — use parseLocaleNumber from utils/format instead:\n  ${offenders.join('\n  ')}`);
+  assert.deepEqual(
+    offenders,
+    [],
+    `Found raw parseFloat(e.target.value) — use parseLocaleNumber from utils/format instead:\n  ${offenders.join('\n  ')}`
+  );
 });
 
 test('allowlist entries all point to real files (no rot)', () => {
@@ -89,8 +94,11 @@ test('allowlist entries all point to real files (no rot)', () => {
     const abs = path.join(SRC_ROOT, rel);
     if (!fs.existsSync(abs)) stale.push(rel);
   }
-  assert.deepEqual(stale, [],
-    `ALLOWLIST contains paths that no longer exist — remove them:\n  ${stale.join('\n  ')}`);
+  assert.deepEqual(
+    stale,
+    [],
+    `ALLOWLIST contains paths that no longer exist — remove them:\n  ${stale.join('\n  ')}`
+  );
 });
 
 test('allowlist entries actually NEED allowlisting (no redundant entries)', () => {
@@ -108,6 +116,9 @@ test('allowlist entries actually NEED allowlisting (no redundant entries)', () =
       redundant.push(rel);
     }
   }
-  assert.deepEqual(redundant, [],
-    `ALLOWLIST has entries whose files no longer contain the pattern — remove them:\n  ${redundant.join('\n  ')}`);
+  assert.deepEqual(
+    redundant,
+    [],
+    `ALLOWLIST has entries whose files no longer contain the pattern — remove them:\n  ${redundant.join('\n  ')}`
+  );
 });

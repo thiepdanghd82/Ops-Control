@@ -6,9 +6,14 @@
   try {
     var p = localStorage.getItem('ops_theme_pref') || 'system';
     if (p !== 'light' && p !== 'dark' && p !== 'system') p = 'system';
-    var active = p === 'system'
-      ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-      : p;
+    var active =
+      p === 'system'
+        ? window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light'
+        : p;
     if (active === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-  } catch (_e) { /* localStorage unavailable; default to light */ void _e; }
+  } catch (_e) {
+    /* localStorage unavailable; default to light */ void _e;
+  }
 })();

@@ -38,8 +38,11 @@ function buildApp() {
     getLibDir: () => tmpDir,
     safeFn: (s) => String(s).replace(/[^\w.-]/g, '_'),
     readJson: (p, def) => {
-      try { return JSON.parse(fs.readFileSync(p, 'utf8')); }
-      catch { return def !== undefined ? def : null; }
+      try {
+        return JSON.parse(fs.readFileSync(p, 'utf8'));
+      } catch {
+        return def !== undefined ? def : null;
+      }
     },
     writeJson: (p, data) => fs.writeFileSync(p, JSON.stringify(data, null, 2)),
     atomicWriteFileSync: (p, data) => fs.writeFileSync(p, data),
@@ -104,7 +107,7 @@ describe('ddl library router — factory contract', () => {
     const fname = 'ddl_vn_20260429120000.json';
     fs.writeFileSync(
       path.join(tmpDir, 'DDL', 'backups', fname),
-      JSON.stringify({ site: 'VN', data: { material_grade: ['A'] } }),
+      JSON.stringify({ site: 'VN', data: { material_grade: ['A'] } })
     );
     const r = await request(buildApp(), {
       method: 'POST',

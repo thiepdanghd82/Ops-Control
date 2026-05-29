@@ -30,7 +30,9 @@ export default function LangFlagToggle({ className = '' }) {
         aria-label="English"
         title="English"
       >
-        <span className="lang-flag-emoji" aria-hidden="true">🇬🇧</span>
+        <span className="lang-flag-emoji" aria-hidden="true">
+          🇬🇧
+        </span>
         <span className="lang-flag-code">EN</span>
       </button>
       <button
@@ -41,7 +43,9 @@ export default function LangFlagToggle({ className = '' }) {
         aria-label="Tiếng Việt"
         title="Tiếng Việt"
       >
-        <span className="lang-flag-emoji" aria-hidden="true">🇻🇳</span>
+        <span className="lang-flag-emoji" aria-hidden="true">
+          🇻🇳
+        </span>
         <span className="lang-flag-code">VN</span>
       </button>
     </div>

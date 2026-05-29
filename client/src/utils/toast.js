@@ -15,8 +15,8 @@
  */
 
 const STACK = [];
-const GAP = 8;        // px between stacked toasts
-const BASE = 24;      // px from bottom for the first toast
+const GAP = 8; // px between stacked toasts
+const BASE = 24; // px from bottom for the first toast
 const DURATION = 2500;
 
 function reflow() {
@@ -32,7 +32,10 @@ function remove(el) {
   const idx = STACK.indexOf(el);
   if (idx >= 0) STACK.splice(idx, 1);
   el.style.opacity = '0';
-  setTimeout(() => { el.remove(); reflow(); }, 300);
+  setTimeout(() => {
+    el.remove();
+    reflow();
+  }, 300);
 }
 
 export function showToast(msg, type = 'ok') {
@@ -54,9 +57,7 @@ export function showToast(msg, type = 'ok') {
     zIndex: '9999',
     color: '#fff',
     background: type === 'ok' ? '#16a34a' : '#dc2626',
-    boxShadow: type === 'ok'
-      ? '0 6px 20px rgba(22,163,74,.35)'
-      : '0 6px 20px rgba(220,38,38,.35)',
+    boxShadow: type === 'ok' ? '0 6px 20px rgba(22,163,74,.35)' : '0 6px 20px rgba(220,38,38,.35)',
     transition: 'opacity .3s, bottom .2s',
     opacity: '1',
     bottom: `${BASE}px`,

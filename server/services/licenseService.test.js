@@ -8,21 +8,31 @@ import { createPrivateKey, sign } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { getLicense, invalidateLicenseCache, requireSeatAvailable, TIERS }
-  from './licenseService.js';
+import {
+  getLicense,
+  invalidateLicenseCache,
+  requireSeatAvailable,
+  TIERS,
+} from './licenseService.js';
 
 const SIGNED_FIELDS = [
-  'version', 'installation_id', 'customer', 'tier', 'max_users',
-  'issued_at', 'expires_at', 'features',
+  'version',
+  'installation_id',
+  'customer',
+  'tier',
+  'max_users',
+  'issued_at',
+  'expires_at',
+  'features',
 ];
-const norm = (v) => Array.isArray(v) ? [...v].sort().join(',') : (v ?? '');
+const norm = (v) => (Array.isArray(v) ? [...v].sort().join(',') : (v ?? ''));
 const canonicalize = (p) => SIGNED_FIELDS.map((k) => `${k}=${norm(p[k])}`).join('|');
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ops-lic-test-'));
 const licPath = path.join(tmpDir, 'license.json');
 
 const devPriv = createPrivateKey(
-  fs.readFileSync(path.resolve('scripts/license/dev-private.pem'), 'utf8'),
+  fs.readFileSync(path.resolve('scripts/license/dev-private.pem'), 'utf8')
 );
 
 function writeSignedLicense(overrides = {}) {
@@ -89,10 +99,22 @@ describe('licenseService.requireSeatAvailable', () => {
     let nextCalled = false;
     let statusCode = null;
     let body = null;
-    mw({}, {
-      status(c) { statusCode = c; return this; },
-      json(b) { body = b; return this; },
-    }, () => { nextCalled = true; });
+    mw(
+      {},
+      {
+        status(c) {
+          statusCode = c;
+          return this;
+        },
+        json(b) {
+          body = b;
+          return this;
+        },
+      },
+      () => {
+        nextCalled = true;
+      }
+    );
     assert.equal(nextCalled, false);
     assert.equal(statusCode, 402);
     assert.equal(body.error, 'LICENSE_LIMIT_EXCEEDED');
@@ -102,7 +124,9 @@ describe('licenseService.requireSeatAvailable', () => {
     writeSignedLicense({ tier: 'M', max_users: TIERS.M });
     const mw = requireSeatAvailable({ countActiveUsers: () => 10 });
     let nextCalled = false;
-    mw({}, {}, () => { nextCalled = true; });
+    mw({}, {}, () => {
+      nextCalled = true;
+    });
     assert.equal(nextCalled, true);
   });
   test('blocks when license invalid', () => {
@@ -110,10 +134,19 @@ describe('licenseService.requireSeatAvailable', () => {
     invalidateLicenseCache();
     const mw = requireSeatAvailable({ countActiveUsers: () => 0 });
     let statusCode = null;
-    mw({}, {
-      status(c) { statusCode = c; return this; },
-      json() { return this; },
-    }, () => {});
+    mw(
+      {},
+      {
+        status(c) {
+          statusCode = c;
+          return this;
+        },
+        json() {
+          return this;
+        },
+      },
+      () => {}
+    );
     assert.equal(statusCode, 402);
   });
 });

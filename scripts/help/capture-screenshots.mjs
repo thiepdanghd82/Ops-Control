@@ -31,7 +31,7 @@ const USERNAME = process.env.HELP_USERNAME || 'Administrator';
 const PASSWORD = process.env.HELP_PASSWORD || 'Vicky@1982';
 
 // Parse --otp=NNNNNN from argv
-const otpArg = process.argv.find(a => a.startsWith('--otp='));
+const otpArg = process.argv.find((a) => a.startsWith('--otp='));
 const OTP = otpArg ? otpArg.split('=')[1].trim() : null;
 if (!OTP || !/^\d{6}$/.test(OTP)) {
   console.error('ERROR: pass --otp=<6-digit Google Authenticator code>');
@@ -41,19 +41,19 @@ if (!OTP || !/^\d{6}$/.test(OTP)) {
 // Tabs to capture. `match` is a case-insensitive substring of the
 // sidebar nav-item text (VN or EN — whichever is more specific).
 const TABS = [
-  { id: 'standard',        match: 'Standard',          waitMs: 1400 },
-  { id: 'complex',         match: 'Complex',           waitMs: 1400 },
-  { id: 'ink-calc',        match: 'Inks',              waitMs: 1400 },
-  { id: 'print-area',      match: 'Print Area',        waitMs: 1600 },
-  { id: 'summarize',       match: 'Cost Breakdown',    waitMs: 1200 },
-  { id: 'formal-quote',    match: 'Formal Quot',       waitMs: 1200 },
-  { id: 'approvals-inbox', match: 'Pending Approval',  waitMs: 1200 },
-  { id: 'sample-tracking', match: 'Sample Track',      waitMs: 1200 },
-  { id: 'dashboard',       match: 'Dashboard',         waitMs: 1500 },
-  { id: 'quote-analysis',  match: 'Quote Analysis',    waitMs: 1500 },
-  { id: 'settings',        match: 'Settings',          waitMs: 1200 },
+  { id: 'standard', match: 'Standard', waitMs: 1400 },
+  { id: 'complex', match: 'Complex', waitMs: 1400 },
+  { id: 'ink-calc', match: 'Inks', waitMs: 1400 },
+  { id: 'print-area', match: 'Print Area', waitMs: 1600 },
+  { id: 'summarize', match: 'Cost Breakdown', waitMs: 1200 },
+  { id: 'formal-quote', match: 'Formal Quot', waitMs: 1200 },
+  { id: 'approvals-inbox', match: 'Pending Approval', waitMs: 1200 },
+  { id: 'sample-tracking', match: 'Sample Track', waitMs: 1200 },
+  { id: 'dashboard', match: 'Dashboard', waitMs: 1500 },
+  { id: 'quote-analysis', match: 'Quote Analysis', waitMs: 1500 },
+  { id: 'settings', match: 'Settings', waitMs: 1200 },
   // Help tab itself — closes the loop: the user guide shows its own Help screen.
-  { id: 'help',            match: 'Help',              waitMs: 1200 },
+  { id: 'help', match: 'Help', waitMs: 1200 },
 ];
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -78,11 +78,16 @@ try {
   // Fill username — robust to placeholder variants.
   await page.evaluate((u) => {
     const inputs = [...document.querySelectorAll('input')];
-    const user = inputs.find(i =>
-      i.type !== 'password' &&
-      /user|name/i.test(i.placeholder + ' ' + i.name + ' ' + (i.labels?.[0]?.innerText || '')));
+    const user = inputs.find(
+      (i) =>
+        i.type !== 'password' &&
+        /user|name/i.test(i.placeholder + ' ' + i.name + ' ' + (i.labels?.[0]?.innerText || ''))
+    );
     if (user) {
-      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        'value'
+      ).set;
       setter.call(user, u);
       user.dispatchEvent(new Event('input', { bubbles: true }));
     }
@@ -95,14 +100,17 @@ try {
   }, PASSWORD);
 
   await page.evaluate(() => {
-    const btn = [...document.querySelectorAll('button')].find(b =>
-      /sign\s*in/i.test(b.textContent) && !/change/i.test(b.textContent));
+    const btn = [...document.querySelectorAll('button')].find(
+      (b) => /sign\s*in/i.test(b.textContent) && !/change/i.test(b.textContent)
+    );
     btn?.click();
   });
 
   // 2FA page
-  await page.waitForFunction(() => /2-Step|Authenticator|Verification/i.test(document.body.innerText),
-    { timeout: 10000 });
+  await page.waitForFunction(
+    () => /2-Step|Authenticator|Verification/i.test(document.body.innerText),
+    { timeout: 10000 }
+  );
   console.log(`→ Entering 2FA code …`);
   await page.evaluate((code) => {
     const inp = document.querySelector('input[type=text], input[type=tel], input[type=number]');
@@ -112,13 +120,13 @@ try {
     inp.dispatchEvent(new Event('input', { bubbles: true }));
   }, OTP);
   await page.evaluate(() => {
-    const btn = [...document.querySelectorAll('button')].find(b => /verify/i.test(b.textContent));
+    const btn = [...document.querySelectorAll('button')].find((b) => /verify/i.test(b.textContent));
     btn?.click();
   });
 
   // Wait for the sidebar to appear — signals a successful login.
   await page.waitForSelector('.sidebar', { timeout: 15000 });
-  await new Promise(r => setTimeout(r, 800));
+  await new Promise((r) => setTimeout(r, 800));
   console.log(`→ Login OK.`);
 
   // ── Capture loop ─────────────────────────────────────────────
@@ -129,10 +137,10 @@ try {
     // with another tab (e.g. "Quote History" vs "Quote Analysis").
     await page.evaluate((m) => {
       const items = [...document.querySelectorAll('.nav-item')];
-      const match = items.find(b => new RegExp(m, 'i').test(b.textContent));
+      const match = items.find((b) => new RegExp(m, 'i').test(b.textContent));
       match?.click();
     }, tab.match);
-    await new Promise(r => setTimeout(r, tab.waitMs));
+    await new Promise((r) => setTimeout(r, tab.waitMs));
     const out = path.join(OUT_DIR, `${tab.id}.png`);
     await page.screenshot({ path: out, fullPage: false });
   }

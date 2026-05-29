@@ -29,16 +29,23 @@ const { app, dialog, BrowserWindow } = require('electron');
 // Subfolders trong Library/ user thường có. Dùng để verify folder pick
 // trông GIỐNG data folder thật, tránh user pick nhầm folder bừa.
 const EXPECTED_LIBRARY_FOLDERS = [
-  'IFS_Inventory', 'MaterialCost', 'MachineProfiles', 'PermissionGroups',
-  'QuoteHistory', 'Manufacturing_Structures', 'Routing_Operations',
-  'InkCalc', 'Rate', 'PrintArea',
+  'IFS_Inventory',
+  'MaterialCost',
+  'MachineProfiles',
+  'PermissionGroups',
+  'QuoteHistory',
+  'Manufacturing_Structures',
+  'Routing_Operations',
+  'InkCalc',
+  'Rate',
+  'PrintArea',
 ];
 
 // Folder/file KHÔNG copy (để giữ login admin hiện tại + tránh conflict)
 const SKIP_PATTERNS = [
-  'Users',           // user accounts — current login bị mất nếu overwrite
-  'totp',            // TOTP secrets — encrypted với key của system khác
-  'audit_log.json',  // audit log — append-only, KHÔNG overwrite
+  'Users', // user accounts — current login bị mất nếu overwrite
+  'totp', // TOTP secrets — encrypted với key của system khác
+  'audit_log.json', // audit log — append-only, KHÔNG overwrite
   '.DS_Store',
 ];
 
@@ -50,7 +57,9 @@ function dirSizeBytes(p) {
       if (entry.isDirectory()) total += dirSizeBytes(full);
       else if (entry.isFile()) total += fs.statSync(full).size;
     }
-  } catch (_) { /* swallow */ }
+  } catch (_) {
+    /* swallow */
+  }
   return total;
 }
 
@@ -61,7 +70,9 @@ function dirFileCount(p) {
       if (entry.isDirectory()) n += dirFileCount(path.join(p, entry.name));
       else if (entry.isFile()) n++;
     }
-  } catch (_) { /* swallow */ }
+  } catch (_) {
+    /* swallow */
+  }
   return n;
 }
 
@@ -85,9 +96,7 @@ function validateSource(srcPath) {
   if (!fs.existsSync(libDir)) {
     return { ok: false, reason: 'missing_library_subfolder' };
   }
-  const found = EXPECTED_LIBRARY_FOLDERS.filter((f) =>
-    fs.existsSync(path.join(libDir, f)),
-  );
+  const found = EXPECTED_LIBRARY_FOLDERS.filter((f) => fs.existsSync(path.join(libDir, f)));
   if (found.length < 3) {
     return {
       ok: false,
@@ -148,7 +157,9 @@ function scanFolder(srcPath) {
     try {
       const Database = require('better-sqlite3');
       const db = new Database(opsDbPath, { readonly: true, fileMustExist: true });
-      const rows = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' ORDER BY name`).all();
+      const rows = db
+        .prepare(`SELECT name FROM sqlite_master WHERE type='table' ORDER BY name`)
+        .all();
       db.close();
       const tableNames = rows.map((r) => r.name);
       const REQUIRED_TABLES = ['quotes', 'materials', 'ifs_inventory', 'bom', 'routing_operations'];
@@ -163,8 +174,9 @@ function scanFolder(srcPath) {
     }
   }
 
-  const totalImportBytes = summary.filter((s) => !s.skip).reduce((acc, s) => acc + (s.sizeBytes || 0), 0)
-    + (opsDbInfo?.sizeBytes || 0);
+  const totalImportBytes =
+    summary.filter((s) => !s.skip).reduce((acc, s) => acc + (s.sizeBytes || 0), 0) +
+    (opsDbInfo?.sizeBytes || 0);
 
   return {
     ok: true,
@@ -272,9 +284,14 @@ function register(ipcMain, log) {
   ipcMain.handle('ops:import.execute', async (_e, srcPath, opts) => {
     log.info('[import] Executing import from:', srcPath);
     const r = await executeImport(srcPath, opts);
-    log.info('[import] Result:', JSON.stringify({
-      ok: r.ok, copiedCount: r.copied.length, errors: r.errors.length,
-    }));
+    log.info(
+      '[import] Result:',
+      JSON.stringify({
+        ok: r.ok,
+        copiedCount: r.copied.length,
+        errors: r.errors.length,
+      })
+    );
     return r;
   });
 }

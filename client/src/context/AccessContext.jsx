@@ -45,7 +45,9 @@ export function AccessProvider({ children }) {
     } catch {
       // No profile → fallback to 'edit' everywhere. Silent.
       setGroups([]);
-    } finally { setLoaded(true); }
+    } finally {
+      setLoaded(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -55,47 +57,50 @@ export function AccessProvider({ children }) {
 
   // Listen for admin-triggered group updates so other tabs refresh.
   useEffect(() => {
-    function onReload() { reload(); }
+    function onReload() {
+      reload();
+    }
     window.addEventListener('ops-permission-groups-changed', onReload);
     return () => window.removeEventListener('ops-permission-groups-changed', onReload);
   }, [reload]);
 
   const activeGroup = useMemo(() => {
     if (!user?.permission_group_id) return null;
-    return groups.find(g => g.id === user.permission_group_id) || null;
+    return groups.find((g) => g.id === user.permission_group_id) || null;
   }, [groups, user?.permission_group_id]);
 
-  const access = useCallback((tabId) => {
-    // Sys is omnipotent. Admin with no explicit group assignment is
-    // treated as all-access too (common for small teams).
-    if (!user) return 'hidden';     // not logged in — nothing
-    if (user.role === 'sys') return 'edit';
-    if (!activeGroup) {
-      // Admin users with no explicit group → edit all. Lower roles
-      // fall back to edit too for backward compat (explicit hardening
-      // via permission_group_id is opt-in until Pha 4 migration).
-      return 'edit';
-    }
-    const perm = activeGroup.tab_permissions?.[tabId];
-    return perm || 'edit';   // unlisted tabs default to edit
-  }, [user, activeGroup]);
-
-  const value = useMemo(() => ({
-    loaded,
-    activeGroup,
-    groups,
-    access,
-    // Short-hand queries used by AccessGate
-    canView: (tabId) => access(tabId) !== 'hidden',
-    canEdit: (tabId) => access(tabId) === 'edit',
-    // Expose reload for admin modals that just mutated a group.
-    reloadGroups: reload,
-  }), [loaded, activeGroup, groups, access, reload]);
-
-  return (
-    <AccessContext.Provider value={value}>
-      {children}
-    </AccessContext.Provider>
+  const access = useCallback(
+    (tabId) => {
+      // Sys is omnipotent. Admin with no explicit group assignment is
+      // treated as all-access too (common for small teams).
+      if (!user) return 'hidden'; // not logged in — nothing
+      if (user.role === 'sys') return 'edit';
+      if (!activeGroup) {
+        // Admin users with no explicit group → edit all. Lower roles
+        // fall back to edit too for backward compat (explicit hardening
+        // via permission_group_id is opt-in until Pha 4 migration).
+        return 'edit';
+      }
+      const perm = activeGroup.tab_permissions?.[tabId];
+      return perm || 'edit'; // unlisted tabs default to edit
+    },
+    [user, activeGroup]
   );
-}
 
+  const value = useMemo(
+    () => ({
+      loaded,
+      activeGroup,
+      groups,
+      access,
+      // Short-hand queries used by AccessGate
+      canView: (tabId) => access(tabId) !== 'hidden',
+      canEdit: (tabId) => access(tabId) === 'edit',
+      // Expose reload for admin modals that just mutated a group.
+      reloadGroups: reload,
+    }),
+    [loaded, activeGroup, groups, access, reload]
+  );
+
+  return <AccessContext.Provider value={value}>{children}</AccessContext.Provider>;
+}

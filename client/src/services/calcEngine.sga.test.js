@@ -152,7 +152,12 @@ test('snapshot wins over live lib rate — protects approved quotes from Finance
   // Live Finance now says 10%, but the quote was approved when it was 5%.
   // Snapshot must be the authoritative source for margin reporting.
   const lib = { finance: { summary: { sga_rate_pct_by_site: { VN: 10 } } } };
-  const snapshot = { site: 'VN', sga_rate_pct: 5, frozen_at: '2026-04-01', frozen_by: 'finance_dir_alice' };
+  const snapshot = {
+    site: 'VN',
+    sga_rate_pct: 5,
+    frozen_at: '2026-04-01',
+    frozen_by: 'finance_dir_alice',
+  };
   const r = computeSga({ g_ttl: 100, sp_price: 200, lib, site: 'VN', snapshot });
   assert.equal(r.sga_rate_pct, 5, 'snapshot rate wins, not the 10% live rate');
   assert.ok(Math.abs(r.sga - 5) < EPS);
@@ -177,8 +182,20 @@ test('no snapshot → falls back to live lib rate', () => {
 
 test('snapshot with malformed rate (null/NaN) clamped to 0, still marked from_snapshot', () => {
   const lib = { finance: { summary: { sga_rate_pct_by_site: { VN: 10 } } } };
-  const r1 = computeSga({ g_ttl: 100, sp_price: 200, lib, site: 'VN', snapshot: { site: 'VN', sga_rate_pct: null } });
-  const r2 = computeSga({ g_ttl: 100, sp_price: 200, lib, site: 'VN', snapshot: { site: 'VN', sga_rate_pct: 'abc' } });
+  const r1 = computeSga({
+    g_ttl: 100,
+    sp_price: 200,
+    lib,
+    site: 'VN',
+    snapshot: { site: 'VN', sga_rate_pct: null },
+  });
+  const r2 = computeSga({
+    g_ttl: 100,
+    sp_price: 200,
+    lib,
+    site: 'VN',
+    snapshot: { site: 'VN', sga_rate_pct: 'abc' },
+  });
   assert.equal(r1.sga_rate_pct, 0);
   assert.equal(r1.from_snapshot, true);
   assert.equal(r2.sga_rate_pct, 0);

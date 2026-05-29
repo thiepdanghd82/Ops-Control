@@ -20,7 +20,7 @@ export default function WIPTracker() {
     try {
       const [woRes, wipRes] = await Promise.all([
         planningApi.getWorkOrders(),
-        planningApi.getWIP()
+        planningApi.getWIP(),
       ]);
       setWorkOrders(woRes);
       setWipData(wipRes);
@@ -32,14 +32,16 @@ export default function WIPTracker() {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // Merge WO + WIP data
   const wipRows = useMemo(() => {
     return workOrders
-      .filter(wo => wo.status !== 'Completed')
-      .map(wo => {
-        const wip = wipData.find(w => w.woId === wo.id) || {};
+      .filter((wo) => wo.status !== 'Completed')
+      .map((wo) => {
+        const wip = wipData.find((w) => w.woId === wo.id) || {};
         const completedQty = wip.completedQty || 0;
         const progress = wo.quantity > 0 ? Math.round((completedQty / wo.quantity) * 100) : 0;
         return {
@@ -48,11 +50,11 @@ export default function WIPTracker() {
           progress: Math.min(100, progress),
           currentOp: wip.currentOperation || '',
           notes: wip.notes || '',
-          lastUpdate: wip.updatedAt || null
+          lastUpdate: wip.updatedAt || null,
         };
       })
       .sort((a, b) => {
-        const statusOrder = { 'In Progress': 0, 'New': 1, 'On Hold': 2 };
+        const statusOrder = { 'In Progress': 0, New: 1, 'On Hold': 2 };
         return (statusOrder[a.status] || 3) - (statusOrder[b.status] || 3);
       });
   }, [workOrders, wipData]);
@@ -74,18 +76,27 @@ export default function WIPTracker() {
     try {
       await planningApi.updateWIP(wo.id, { completedQty: qty });
       // Patch local state without a full reload
-      setWipData(prev => {
+      setWipData((prev) => {
         const next = [...prev];
-        const idx = next.findIndex(w => w.woId === wo.id);
+        const idx = next.findIndex((w) => w.woId === wo.id);
         const stamp = new Date().toISOString();
         if (idx >= 0) next[idx] = { ...next[idx], completedQty: qty, updatedAt: stamp };
-        else next.push({ woId: wo.id, completedQty: qty, currentOperation: '', notes: '', updatedAt: stamp });
+        else
+          next.push({
+            woId: wo.id,
+            completedQty: qty,
+            currentOperation: '',
+            notes: '',
+            updatedAt: stamp,
+          });
         return next;
       });
       // Auto-complete WO if quota reached
       if (qty >= wo.quantity) {
         await planningApi.updateWorkOrder(wo.id, { status: 'Completed' });
-        setWorkOrders(prev => prev.map(w => w.id === wo.id ? { ...w, status: 'Completed' } : w));
+        setWorkOrders((prev) =>
+          prev.map((w) => (w.id === wo.id ? { ...w, status: 'Completed' } : w))
+        );
         showToast(`${wo.woNumber} marked Completed`, 'ok');
       } else {
         showToast(`${wo.woNumber} updated`, 'ok');
@@ -101,7 +112,9 @@ export default function WIPTracker() {
   const startWO = useCallback(async (woId) => {
     try {
       await planningApi.updateWorkOrder(woId, { status: 'In Progress' });
-      setWorkOrders(prev => prev.map(w => w.id === woId ? { ...w, status: 'In Progress' } : w));
+      setWorkOrders((prev) =>
+        prev.map((w) => (w.id === woId ? { ...w, status: 'In Progress' } : w))
+      );
       showToast('Work order started', 'ok');
     } catch (e) {
       logErr('Start WO failed', e);
@@ -111,9 +124,9 @@ export default function WIPTracker() {
 
   // Stats
   const stats = useMemo(() => {
-    const inProgress = wipRows.filter(w => w.status === 'In Progress').length;
-    const waiting = wipRows.filter(w => w.status === 'New').length;
-    const onHold = wipRows.filter(w => w.status === 'On Hold').length;
+    const inProgress = wipRows.filter((w) => w.status === 'In Progress').length;
+    const waiting = wipRows.filter((w) => w.status === 'New').length;
+    const onHold = wipRows.filter((w) => w.status === 'On Hold').length;
     const totalQty = wipRows.reduce((s, w) => s + (w.quantity || 0), 0);
     const completedQty = wipRows.reduce((s, w) => s + (w.completedQty || 0), 0);
     const overallProgress = totalQty > 0 ? Math.round((completedQty / totalQty) * 100) : 0;
@@ -129,7 +142,11 @@ export default function WIPTracker() {
           icon="⚠️"
           title="Failed to load WIP data"
           hint={loadError}
-          action={<button className="btn btn-primary" onClick={loadData}>Retry</button>}
+          action={
+            <button className="btn btn-primary" onClick={loadData}>
+              Retry
+            </button>
+          }
         />
       </div>
     );
@@ -180,16 +197,18 @@ export default function WIPTracker() {
               hint="Generate work orders from the Work Orders tab."
             />
           </div>
-        ) : wipRows.map(wo => (
-          <WipCard
-            key={wo.id}
-            wo={wo}
-            saving={savingId === wo.id}
-            onUpdate={handleProgressUpdate}
-            onStart={startWO}
-            getProgressColor={getProgressColor}
-          />
-        ))}
+        ) : (
+          wipRows.map((wo) => (
+            <WipCard
+              key={wo.id}
+              wo={wo}
+              saving={savingId === wo.id}
+              onUpdate={handleProgressUpdate}
+              onStart={startWO}
+              getProgressColor={getProgressColor}
+            />
+          ))
+        )}
       </div>
     </div>
   );
@@ -223,7 +242,9 @@ const WipCard = memo(function WipCard({ wo, saving, onUpdate, onStart, getProgre
     <div className={`wip-card wip-status-${wo.status?.toLowerCase().replace(' ', '-')}`}>
       <div className="wip-card-header">
         <span className="wip-wo-number">{wo.woNumber}</span>
-        <span className={`status-badge status-${wo.status?.toLowerCase().replace(' ','-')}`}>{wo.status}</span>
+        <span className={`status-badge status-${wo.status?.toLowerCase().replace(' ', '-')}`}>
+          {wo.status}
+        </span>
       </div>
 
       <div className="wip-card-body">
@@ -242,8 +263,12 @@ const WipCard = memo(function WipCard({ wo, saving, onUpdate, onStart, getProgre
 
         <div className="wip-progress-section">
           <div className="wip-progress-header">
-            <span>{wo.completedQty.toLocaleString()} / {wo.quantity?.toLocaleString()}</span>
-            <span className="wip-progress-pct" style={{ color: getProgressColor(wo.progress) }}>{wo.progress}%</span>
+            <span>
+              {wo.completedQty.toLocaleString()} / {wo.quantity?.toLocaleString()}
+            </span>
+            <span className="wip-progress-pct" style={{ color: getProgressColor(wo.progress) }}>
+              {wo.progress}%
+            </span>
           </div>
           <div className="wip-progress-bar">
             <div
@@ -262,12 +287,18 @@ const WipCard = memo(function WipCard({ wo, saving, onUpdate, onStart, getProgre
             placeholder="Completed qty"
             value={draft}
             disabled={saving}
-            onChange={e => setDraft(e.target.value)}
+            onChange={(e) => setDraft(e.target.value)}
             onBlur={commit}
-            onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.target.blur();
+            }}
             aria-label={`Completed quantity for ${wo.woNumber}`}
           />
-          {saving && <span className="wip-saving" aria-live="polite">Saving…</span>}
+          {saving && (
+            <span className="wip-saving" aria-live="polite">
+              Saving…
+            </span>
+          )}
           {wo.status === 'New' && !saving && (
             <button className="btn btn-primary btn-sm" onClick={() => onStart(wo.id)}>
               Start

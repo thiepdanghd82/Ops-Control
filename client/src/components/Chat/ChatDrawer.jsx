@@ -34,9 +34,10 @@ function fmtTime(iso) {
   const d = new Date(iso);
   if (!isFinite(d)) return '';
   const today = new Date();
-  const sameDay = d.getFullYear() === today.getFullYear()
-    && d.getMonth() === today.getMonth()
-    && d.getDate() === today.getDate();
+  const sameDay =
+    d.getFullYear() === today.getFullYear() &&
+    d.getMonth() === today.getMonth() &&
+    d.getDate() === today.getDate();
   if (sameDay) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
@@ -51,12 +52,15 @@ function fmtTimeDivider(iso) {
   if (!isFinite(d)) return '';
   const now = new Date();
   const sameDay = d.toDateString() === now.toDateString();
-  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
   const isYesterday = d.toDateString() === yesterday.toDateString();
   const hm = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   if (sameDay) return hm;
   if (isYesterday) return `Yesterday ${hm}`;
-  return d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' + hm;
+  return (
+    d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' + hm
+  );
 }
 
 // Unicode-aware emoji-only check for "jumbomoji" rendering (iOS parity).
@@ -76,14 +80,70 @@ function isEmojiOnly(s) {
 // in business chat (thumbs, smileys first). Intentionally ~60 so it
 // fits an 8-col grid in roughly 8 rows — no scrolling for most users.
 const EMOJI_PALETTE = [
-  '👍', '👎', '🙏', '👏', '🙌', '✅', '❌', '⚠️',
-  '😀', '😄', '😅', '😂', '🤣', '😊', '😉', '😍',
-  '🤔', '🤨', '😐', '😬', '🙄', '😔', '😢', '😭',
-  '😤', '😡', '🥲', '🤝', '👌', '🤞', '💪', '🫡',
-  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍',
-  '🎉', '🎊', '🔥', '⭐', '✨', '💯', '💡', '🚀',
-  '📌', '📎', '📝', '📊', '📈', '📉', '💰', '💸',
-  '🏷️', '📦', '🛠️', '🔧', '⚙️', '🧪', '🧾', '🧰',
+  '👍',
+  '👎',
+  '🙏',
+  '👏',
+  '🙌',
+  '✅',
+  '❌',
+  '⚠️',
+  '😀',
+  '😄',
+  '😅',
+  '😂',
+  '🤣',
+  '😊',
+  '😉',
+  '😍',
+  '🤔',
+  '🤨',
+  '😐',
+  '😬',
+  '🙄',
+  '😔',
+  '😢',
+  '😭',
+  '😤',
+  '😡',
+  '🥲',
+  '🤝',
+  '👌',
+  '🤞',
+  '💪',
+  '🫡',
+  '❤️',
+  '🧡',
+  '💛',
+  '💚',
+  '💙',
+  '💜',
+  '🖤',
+  '🤍',
+  '🎉',
+  '🎊',
+  '🔥',
+  '⭐',
+  '✨',
+  '💯',
+  '💡',
+  '🚀',
+  '📌',
+  '📎',
+  '📝',
+  '📊',
+  '📈',
+  '📉',
+  '💰',
+  '💸',
+  '🏷️',
+  '📦',
+  '🛠️',
+  '🔧',
+  '⚙️',
+  '🧪',
+  '🧾',
+  '🧰',
 ];
 
 export default function ChatDrawer() {
@@ -123,13 +183,13 @@ export default function ChatDrawer() {
   const composerRef = useRef(null);
 
   const activeRoom = useMemo(
-    () => rooms.find(r => r.id === activeRoomId) || null,
-    [rooms, activeRoomId],
+    () => rooms.find((r) => r.id === activeRoomId) || null,
+    [rooms, activeRoomId]
   );
 
   const totalUnread = useMemo(
     () => rooms.reduce((acc, r) => acc + (r.unread_count || 0), 0),
-    [rooms],
+    [rooms]
   );
 
   // ─── Initial load ───
@@ -150,20 +210,25 @@ export default function ChatDrawer() {
       const r = await chatApi.mentions({ limit: 50 });
       setMentions(r.mentions || []);
       setMentionsUnread(r.unread_count || 0);
-    } catch { /* chat disabled or unauthorized */ }
+    } catch {
+      /* chat disabled or unauthorized */
+    }
   }, []);
 
   useEffect(() => {
     if (!isAuthenticated) return;
     refreshRooms();
     refreshMentions();
-    chatApi.users()
-      .then(r => {
+    chatApi
+      .users()
+      .then((r) => {
         const map = new Map();
         for (const u of r.users || []) map.set(u.id, u);
         setUsersIndex(map);
       })
-      .catch(() => { /* chat disabled or unauthorized */ });
+      .catch(() => {
+        /* chat disabled or unauthorized */
+      });
   }, [isAuthenticated, refreshRooms, refreshMentions]);
 
   // ─── SSE stream ───
@@ -175,47 +240,52 @@ export default function ChatDrawer() {
           // Append to messages IF the event is for the active room;
           // always bump the unread count in the room list.
           if (evt.room_id === activeRoomId) {
-            setMessages(prev => [...prev, evt.message]);
+            setMessages((prev) => [...prev, evt.message]);
           }
           refreshRooms();
         } else if (evt.type === 'mention') {
           // Targeted to the mentioned user. Bump the badge + refresh
           // the inbox lazily — user may not have opened it yet.
-          setMentionsUnread(n => n + 1);
+          setMentionsUnread((n) => n + 1);
           refreshMentions();
         } else if (evt.type === 'message_edited') {
           // Replace the row in-place so the edit mark shows up.
-          setMessages(prev => prev.map(m =>
-            m.id === evt.message.id ? evt.message : m));
+          setMessages((prev) => prev.map((m) => (m.id === evt.message.id ? evt.message : m)));
         } else if (evt.type === 'message_deleted') {
-          setMessages(prev => prev.map(m =>
-            m.id === evt.message_id
-              ? { ...m, deleted_at: evt.deleted_at }
-              : m));
+          setMessages((prev) =>
+            prev.map((m) => (m.id === evt.message_id ? { ...m, deleted_at: evt.deleted_at } : m))
+          );
         } else if (evt.type === 'message_purged') {
           // Hard delete — row is gone from the DB. Drop it from local
           // state entirely (no tombstone). Rooms list's last_message
           // catches up on the next refreshRooms tick.
-          setMessages(prev => prev.filter(m => m.id !== evt.message_id));
+          setMessages((prev) => prev.filter((m) => m.id !== evt.message_id));
           refreshRooms();
         }
       },
-      onError: () => { /* EventSource auto-reconnects; no-op here */ },
+      onError: () => {
+        /* EventSource auto-reconnects; no-op here */
+      },
     });
     return close;
   }, [isAuthenticated, activeRoomId, refreshRooms, refreshMentions]);
 
   // ─── Load messages when active room changes ───
   useEffect(() => {
-    if (activeRoomId == null) { setMessages([]); setHasMoreOlder(true); return undefined; }
+    if (activeRoomId == null) {
+      setMessages([]);
+      setHasMoreOlder(true);
+      return undefined;
+    }
     // AbortController cancels the previous room's fetch when the user
     // clicks a different room before the first response arrived —
     // otherwise messages from room A could overwrite room B's list.
     const ctrl = new AbortController();
     setMessagesLoading(true);
     setHasMoreOlder(true);
-    chatApi.messages(activeRoomId, { limit: 50, signal: ctrl.signal })
-      .then(r => {
+    chatApi
+      .messages(activeRoomId, { limit: 50, signal: ctrl.signal })
+      .then((r) => {
         if (ctrl.signal.aborted) return;
         const msgs = r.messages || [];
         setMessages(msgs);
@@ -231,8 +301,12 @@ export default function ChatDrawer() {
           if (el) el.scrollTop = el.scrollHeight;
         });
       })
-      .catch(e => { if (e?.name !== 'AbortError') setErr(e.message); })
-      .finally(() => { if (!ctrl.signal.aborted) setMessagesLoading(false); });
+      .catch((e) => {
+        if (e?.name !== 'AbortError') setErr(e.message);
+      })
+      .finally(() => {
+        if (!ctrl.signal.aborted) setMessagesLoading(false);
+      });
     return () => ctrl.abort();
   }, [activeRoomId]);
 
@@ -255,7 +329,7 @@ export default function ChatDrawer() {
         // time they paginate — unusable.
         const el = feedRef.current;
         const prevHeight = el ? el.scrollHeight : 0;
-        setMessages(prev => [...older, ...prev]);
+        setMessages((prev) => [...older, ...prev]);
         if (el) {
           // Wait one frame for DOM update before measuring.
           requestAnimationFrame(() => {
@@ -316,9 +390,11 @@ export default function ChatDrawer() {
     chatApi.markSeen(activeRoomId, latestId).catch(() => {});
     // Optimistic local update so the badge clears without waiting
     // for the next /rooms refresh.
-    setRooms(prev => prev.map(r => r.id === activeRoomId
-      ? { ...r, unread_count: 0, last_seen_id: latestId }
-      : r));
+    setRooms((prev) =>
+      prev.map((r) =>
+        r.id === activeRoomId ? { ...r, unread_count: 0, last_seen_id: latestId } : r
+      )
+    );
   }, [activeRoomId, messages]);
 
   // Close any open overlay (context menu / emoji picker) on outside
@@ -344,38 +420,59 @@ export default function ChatDrawer() {
     };
   }, [openMenuFor, emojiOpen]);
 
-  const insertEmoji = useCallback((emoji) => {
-    const el = composerRef.current;
-    if (!el) { setComposer(c => c + emoji); return; }
-    const start = el.selectionStart ?? composer.length;
-    const end   = el.selectionEnd   ?? composer.length;
-    const next  = composer.slice(0, start) + emoji + composer.slice(end);
-    setComposer(next);
-    // Restore caret after React updates the value.
-    requestAnimationFrame(() => {
-      try {
-        el.focus();
-        el.selectionStart = el.selectionEnd = start + emoji.length;
-      } catch { /* textarea may have unmounted */ }
-    });
-  }, [composer]);
+  const insertEmoji = useCallback(
+    (emoji) => {
+      const el = composerRef.current;
+      if (!el) {
+        setComposer((c) => c + emoji);
+        return;
+      }
+      const start = el.selectionStart ?? composer.length;
+      const end = el.selectionEnd ?? composer.length;
+      const next = composer.slice(0, start) + emoji + composer.slice(end);
+      setComposer(next);
+      // Restore caret after React updates the value.
+      requestAnimationFrame(() => {
+        try {
+          el.focus();
+          el.selectionStart = el.selectionEnd = start + emoji.length;
+        } catch {
+          /* textarea may have unmounted */
+        }
+      });
+    },
+    [composer]
+  );
 
   // Debounced search — 250ms after the last keystroke.
   useEffect(() => {
     const q = searchQuery.trim();
-    if (q.length < 2) { setSearchResults([]); return undefined; }
+    if (q.length < 2) {
+      setSearchResults([]);
+      return undefined;
+    }
     // AbortController cancels the in-flight search when the user types
     // another character mid-request — avoids out-of-order responses
     // painting stale results on top of newer ones.
     const ctrl = new AbortController();
     setSearchLoading(true);
     const handle = setTimeout(() => {
-      chatApi.search(q, { limit: 50, signal: ctrl.signal })
-        .then(r => { if (!ctrl.signal.aborted) setSearchResults(r.results || []); })
-        .catch(e => { if (e?.name !== 'AbortError' && !ctrl.signal.aborted) setSearchResults([]); })
-        .finally(() => { if (!ctrl.signal.aborted) setSearchLoading(false); });
+      chatApi
+        .search(q, { limit: 50, signal: ctrl.signal })
+        .then((r) => {
+          if (!ctrl.signal.aborted) setSearchResults(r.results || []);
+        })
+        .catch((e) => {
+          if (e?.name !== 'AbortError' && !ctrl.signal.aborted) setSearchResults([]);
+        })
+        .finally(() => {
+          if (!ctrl.signal.aborted) setSearchLoading(false);
+        });
     }, 250);
-    return () => { clearTimeout(handle); ctrl.abort(); };
+    return () => {
+      clearTimeout(handle);
+      ctrl.abort();
+    };
   }, [searchQuery]);
 
   const handleEditStart = useCallback((m) => {
@@ -385,7 +482,10 @@ export default function ChatDrawer() {
 
   const handleEditSave = useCallback(async () => {
     const body = editDraft.trim();
-    if (!body || editingId == null) { setEditingId(null); return; }
+    if (!body || editingId == null) {
+      setEditingId(null);
+      return;
+    }
     try {
       await chatApi.editMessage(editingId, body);
       // Actual replacement flows through SSE 'message_edited' — no
@@ -399,37 +499,44 @@ export default function ChatDrawer() {
     }
   }, [editingId, editDraft]);
 
-  const handleDelete = useCallback(async (messageId) => {
-    // iMessage calls this "Unsend"; we use the same cue on the
-    // confirm dialog so the user understands the message will
-    // disappear for all recipients (replaced with a tombstone).
-    const ok = window.confirm(t('chat.recall_confirm'));
-    if (!ok) return;
-    try {
-      await chatApi.deleteMessage(messageId);
-      // SSE fanout will flip deleted_at locally; same fail-open rule.
-    } catch (e) {
-      setErr(e.message || 'recall failed');
-    }
-  }, [t]);
+  const handleDelete = useCallback(
+    async (messageId) => {
+      // iMessage calls this "Unsend"; we use the same cue on the
+      // confirm dialog so the user understands the message will
+      // disappear for all recipients (replaced with a tombstone).
+      const ok = window.confirm(t('chat.recall_confirm'));
+      if (!ok) return;
+      try {
+        await chatApi.deleteMessage(messageId);
+        // SSE fanout will flip deleted_at locally; same fail-open rule.
+      } catch (e) {
+        setErr(e.message || 'recall failed');
+      }
+    },
+    [t]
+  );
 
   // Hard delete — purges the row entirely. Stronger confirmation since
   // it leaves no tombstone and no audit trace via the API.
-  const handlePurge = useCallback(async (messageId) => {
-    const ok = window.confirm(t('chat.purge_confirm'));
-    if (!ok) return;
-    try {
-      await chatApi.purgeMessage(messageId);
-      // SSE `message_purged` handles removal from state.
-    } catch (e) {
-      setErr(e.message || 'delete failed');
-    }
-  }, [t]);
+  const handlePurge = useCallback(
+    async (messageId) => {
+      const ok = window.confirm(t('chat.purge_confirm'));
+      if (!ok) return;
+      try {
+        await chatApi.purgeMessage(messageId);
+        // SSE `message_purged` handles removal from state.
+      } catch (e) {
+        setErr(e.message || 'delete failed');
+      }
+    },
+    [t]
+  );
 
   const handleSend = useCallback(async () => {
     const body = composer.trim();
     if (!body || sending || activeRoomId == null) return;
-    setSending(true); setErr(null);
+    setSending(true);
+    setErr(null);
     try {
       await chatApi.send(activeRoomId, body);
       setComposer('');
@@ -488,18 +595,25 @@ export default function ChatDrawer() {
     <aside className="chat-drawer" data-ops-draggable-card role="complementary" aria-label="Chat">
       <header className="chat-drawer-head" data-ops-drag-handle>
         <strong>
-          {mentionsOpen ? t('chat.header_mentions')
-            : activeRoom ? activeRoom.title
-            : t('chat.header_rooms')}
+          {mentionsOpen
+            ? t('chat.header_mentions')
+            : activeRoom
+              ? activeRoom.title
+              : t('chat.header_rooms')}
         </strong>
         <div className="chat-drawer-head-actions">
           {(activeRoom || mentionsOpen) && (
             <button
               className="chat-head-btn"
-              onClick={() => { setActiveRoomId(null); setMentionsOpen(false); }}
+              onClick={() => {
+                setActiveRoomId(null);
+                setMentionsOpen(false);
+              }}
               title={t('chat.back_to_rooms')}
               aria-label={t('chat.back_to_rooms')}
-            >←</button>
+            >
+              ←
+            </button>
           )}
           {!activeRoom && !mentionsOpen && (
             <>
@@ -509,7 +623,9 @@ export default function ChatDrawer() {
                 title="New chat"
                 aria-label="New chat"
                 style={{ fontWeight: 700 }}
-              >+</button>
+              >
+                +
+              </button>
               <button
                 className="chat-head-btn"
                 onClick={openMentions}
@@ -518,7 +634,9 @@ export default function ChatDrawer() {
               >
                 @
                 {mentionsUnread > 0 && (
-                  <span className="chat-head-badge">{mentionsUnread > 9 ? '9+' : mentionsUnread}</span>
+                  <span className="chat-head-badge">
+                    {mentionsUnread > 9 ? '9+' : mentionsUnread}
+                  </span>
                 )}
               </button>
             </>
@@ -528,16 +646,16 @@ export default function ChatDrawer() {
             onClick={() => setOpen(false)}
             title={t('chat.close')}
             aria-label={t('chat.close')}
-          >✕</button>
+          >
+            ✕
+          </button>
         </div>
       </header>
 
       {mentionsOpen && (
         <ul className="chat-room-list">
-          {mentions.length === 0 && (
-            <li className="chat-empty">{t('chat.mentions_empty')}</li>
-          )}
-          {mentions.map(m => {
+          {mentions.length === 0 && <li className="chat-empty">{t('chat.mentions_empty')}</li>}
+          {mentions.map((m) => {
             const unread = m.read_at == null;
             const author = usersIndex.get(m.author_id);
             return (
@@ -552,16 +670,17 @@ export default function ChatDrawer() {
                   }}
                 >
                   <span className="chat-room-kind">@</span>
-                  <span className="chat-room-title">
-                    {m.room_title || m.room_key}
-                  </span>
+                  <span className="chat-room-title">{m.room_title || m.room_key}</span>
                   <div className="chat-room-preview">
                     <span className="chat-room-preview-author">
                       {author?.username || `user#${m.author_id}`}:
                     </span>
-                    <span> {m.message_deleted_at
-                      ? t('chat.deleted_body')
-                      : String(m.message_body || '').slice(0, 80)}</span>
+                    <span>
+                      {' '}
+                      {m.message_deleted_at
+                        ? t('chat.deleted_body')
+                        : String(m.message_body || '').slice(0, 80)}
+                    </span>
                   </div>
                 </button>
               </li>
@@ -575,7 +694,7 @@ export default function ChatDrawer() {
           <input
             type="search"
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('chat.search_placeholder')}
             aria-label={t('chat.search_placeholder')}
           />
@@ -585,31 +704,32 @@ export default function ChatDrawer() {
               {!searchLoading && searchResults.length === 0 && (
                 <li className="chat-empty">{t('chat.search_no_match')}</li>
               )}
-              {!searchLoading && searchResults.map(r => {
-                const author = usersIndex.get(r.author_id);
-                return (
-                  <li key={r.id}>
-                    <button
-                      className="chat-room-item"
-                      onClick={() => {
-                        setSearchQuery('');
-                        setActiveRoomId(r.room_id);
-                      }}
-                    >
-                      <span className="chat-room-kind">
-                        {r.room_kind === 'dm' ? '👤' : r.room_kind === 'quote' ? '📄' : '#'}
-                      </span>
-                      <span className="chat-room-title">{r.room_title || r.room_key}</span>
-                      <div className="chat-room-preview">
-                        <span className="chat-room-preview-author">
-                          {author?.username || `user#${r.author_id}`}:
+              {!searchLoading &&
+                searchResults.map((r) => {
+                  const author = usersIndex.get(r.author_id);
+                  return (
+                    <li key={r.id}>
+                      <button
+                        className="chat-room-item"
+                        onClick={() => {
+                          setSearchQuery('');
+                          setActiveRoomId(r.room_id);
+                        }}
+                      >
+                        <span className="chat-room-kind">
+                          {r.room_kind === 'dm' ? '👤' : r.room_kind === 'quote' ? '📄' : '#'}
                         </span>
-                        <span> {String(r.body || '').slice(0, 100)}</span>
-                      </div>
-                    </button>
-                  </li>
-                );
-              })}
+                        <span className="chat-room-title">{r.room_title || r.room_key}</span>
+                        <div className="chat-room-preview">
+                          <span className="chat-room-preview-author">
+                            {author?.username || `user#${r.author_id}`}:
+                          </span>
+                          <span> {String(r.body || '').slice(0, 100)}</span>
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
             </ul>
           )}
         </div>
@@ -617,30 +737,26 @@ export default function ChatDrawer() {
 
       {!activeRoom && !mentionsOpen && searchQuery.trim().length < 2 && (
         <ul className="chat-room-list">
-          {rooms.length === 0 && (
-            <li className="chat-empty">{t('chat.rooms_empty')}</li>
-          )}
-          {rooms.map(r => (
+          {rooms.length === 0 && <li className="chat-empty">{t('chat.rooms_empty')}</li>}
+          {rooms.map((r) => (
             <li key={r.id}>
-              <button
-                className="chat-room-item"
-                onClick={() => setActiveRoomId(r.id)}
-              >
+              <button className="chat-room-item" onClick={() => setActiveRoomId(r.id)}>
                 <span className="chat-room-kind">
                   {r.kind === 'dm' ? '👤' : r.kind === 'quote' ? '📄' : '#'}
                 </span>
                 <span className="chat-room-title">{r.title || r.key}</span>
-                {r.unread_count > 0 && (
-                  <span className="chat-room-unread">{r.unread_count}</span>
-                )}
+                {r.unread_count > 0 && <span className="chat-room-unread">{r.unread_count}</span>}
                 {r.last_message && (
                   <div className="chat-room-preview">
                     <span className="chat-room-preview-author">
                       {usersIndex.get(r.last_message.author_id)?.username || 'user'}:
                     </span>
-                    <span> {r.last_message.deleted_at
-                      ? t('chat.deleted_body')
-                      : (r.last_message.body || '').slice(0, 60)}</span>
+                    <span>
+                      {' '}
+                      {r.last_message.deleted_at
+                        ? t('chat.deleted_body')
+                        : (r.last_message.body || '').slice(0, 60)}
+                    </span>
                   </div>
                 )}
               </button>
@@ -668,26 +784,28 @@ export default function ChatDrawer() {
               const isSelf = m.author_id === user?.id;
               const author = usersIndex.get(m.author_id);
               const isDeleted = !!m.deleted_at;
-              const isEdited  = !!m.edited_at && !isDeleted;
+              const isEdited = !!m.edited_at && !isDeleted;
               const isEditing = editingId === m.id;
               // iMessage grouping: same author + <2min gap = grouped.
               const sameAuthorPrev = prev && prev.author_id === m.author_id;
               const sameAuthorNext = next && next.author_id === m.author_id;
-              const closePrev = prev && (Date.parse(m.created_at) - Date.parse(prev.created_at)) < 2 * 60 * 1000;
-              const closeNext = next && (Date.parse(next.created_at) - Date.parse(m.created_at)) < 2 * 60 * 1000;
-              const groupedTop    = sameAuthorPrev && closePrev;
+              const closePrev =
+                prev && Date.parse(m.created_at) - Date.parse(prev.created_at) < 2 * 60 * 1000;
+              const closeNext =
+                next && Date.parse(next.created_at) - Date.parse(m.created_at) < 2 * 60 * 1000;
+              const groupedTop = sameAuthorPrev && closePrev;
               const groupedBottom = sameAuthorNext && closeNext;
               // Time divider: first message OR gap > 10 min from prev.
               const tenMin = 10 * 60 * 1000;
-              const showDivider = !prev
-                || (Date.parse(m.created_at) - Date.parse(prev.created_at)) > tenMin;
+              const showDivider =
+                !prev || Date.parse(m.created_at) - Date.parse(prev.created_at) > tenMin;
               // Show sender name for others ONLY on the first msg of a group.
               const showAuthor = !isSelf && !groupedTop;
               // Jumbomoji: emoji-only bubble grows to 44px, no background.
               const jumbo = !isDeleted && !isEditing && isEmojiOnly(m.body);
               // 15-min recall/edit window — matches server-side guard.
-              const canAct = isSelf && !isDeleted &&
-                (Date.now() - Date.parse(m.created_at)) < 15 * 60 * 1000;
+              const canAct =
+                isSelf && !isDeleted && Date.now() - Date.parse(m.created_at) < 15 * 60 * 1000;
 
               return (
                 <div key={m.id}>
@@ -696,9 +814,9 @@ export default function ChatDrawer() {
                   )}
                   <div
                     className={
-                      `chat-msg-row ${isSelf ? 'self' : 'other'}`
-                      + (groupedTop ? ' grouped-top' : '')
-                      + (groupedBottom ? ' grouped-bottom' : '')
+                      `chat-msg-row ${isSelf ? 'self' : 'other'}` +
+                      (groupedTop ? ' grouped-top' : '') +
+                      (groupedBottom ? ' grouped-bottom' : '')
                     }
                   >
                     {showAuthor && (
@@ -710,11 +828,15 @@ export default function ChatDrawer() {
                       <div className="chat-msg-edit">
                         <textarea
                           value={editDraft}
-                          onChange={e => setEditDraft(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Escape') { setEditingId(null); setEditDraft(''); }
+                          onChange={(e) => setEditDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                              setEditingId(null);
+                              setEditDraft('');
+                            }
                             if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault(); handleEditSave();
+                              e.preventDefault();
+                              handleEditSave();
                             }
                           }}
                           rows={2}
@@ -723,25 +845,37 @@ export default function ChatDrawer() {
                         <div className="chat-msg-edit-actions">
                           <button
                             className="chat-msg-action"
-                            onClick={() => { setEditingId(null); setEditDraft(''); }}
-                          >{t('chat.edit_cancel')}</button>
+                            onClick={() => {
+                              setEditingId(null);
+                              setEditDraft('');
+                            }}
+                          >
+                            {t('chat.edit_cancel')}
+                          </button>
                           <button
                             className="chat-msg-action primary"
                             onClick={handleEditSave}
                             disabled={!editDraft.trim()}
-                          >{t('chat.edit_save')}</button>
+                          >
+                            {t('chat.edit_save')}
+                          </button>
                         </div>
                       </div>
                     ) : (
                       <div
                         className={
-                          `chat-msg ${isSelf ? 'self' : 'other'}`
-                          + (isDeleted ? ' deleted' : '')
-                          + (jumbo ? ' jumbomoji' : '')
+                          `chat-msg ${isSelf ? 'self' : 'other'}` +
+                          (isDeleted ? ' deleted' : '') +
+                          (jumbo ? ' jumbomoji' : '')
                         }
-                        onContextMenu={canAct ? (e) => {
-                          e.preventDefault(); setOpenMenuFor(m.id);
-                        } : undefined}
+                        onContextMenu={
+                          canAct
+                            ? (e) => {
+                                e.preventDefault();
+                                setOpenMenuFor(m.id);
+                              }
+                            : undefined
+                        }
                       >
                         <span className={`chat-msg-body${isDeleted ? ' deleted' : ''}`}>
                           {isDeleted ? t('chat.deleted_body') : m.body}
@@ -754,27 +888,42 @@ export default function ChatDrawer() {
                         title={t('chat.more_actions')}
                         aria-label={t('chat.more_actions')}
                         onClick={() => setOpenMenuFor(openMenuFor === m.id ? null : m.id)}
-                      >⋯</button>
+                      >
+                        ⋯
+                      </button>
                     )}
                     {openMenuFor === m.id && canAct && (
                       <div
                         className="chat-msg-menu"
-                        style={isSelf
-                          ? { right: 0, top: 'calc(100% + 4px)' }
-                          : { left: 0, top: 'calc(100% + 4px)' }}
+                        style={
+                          isSelf
+                            ? { right: 0, top: 'calc(100% + 4px)' }
+                            : { left: 0, top: 'calc(100% + 4px)' }
+                        }
                         role="menu"
                       >
-                        <button onClick={() => { setOpenMenuFor(null); handleEditStart(m); }}>
+                        <button
+                          onClick={() => {
+                            setOpenMenuFor(null);
+                            handleEditStart(m);
+                          }}
+                        >
                           ✏️&nbsp;{t('chat.edit')}
                         </button>
                         <button
-                          onClick={() => { setOpenMenuFor(null); handleDelete(m.id); }}
+                          onClick={() => {
+                            setOpenMenuFor(null);
+                            handleDelete(m.id);
+                          }}
                         >
                           ↩️&nbsp;{t('chat.recall')}
                         </button>
                         <button
                           className="danger"
-                          onClick={() => { setOpenMenuFor(null); handlePurge(m.id); }}
+                          onClick={() => {
+                            setOpenMenuFor(null);
+                            handlePurge(m.id);
+                          }}
                         >
                           🗑&nbsp;{t('chat.delete_forever')}
                         </button>
@@ -782,7 +931,9 @@ export default function ChatDrawer() {
                     )}
                     <div className="chat-msg-meta">
                       <span>{fmtTime(m.created_at)}</span>
-                      {isEdited && <span className="chat-msg-edited-mark">{t('chat.edited_mark')}</span>}
+                      {isEdited && (
+                        <span className="chat-msg-edited-mark">{t('chat.edited_mark')}</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -794,28 +945,35 @@ export default function ChatDrawer() {
             {emojiOpen && (
               <div className="chat-emoji-picker" role="dialog" aria-label={t('chat.emoji_picker')}>
                 <div className="chat-emoji-picker-header">{t('chat.emoji_picker')}</div>
-                {EMOJI_PALETTE.map(e => (
+                {EMOJI_PALETTE.map((e) => (
                   <button
                     key={e}
                     type="button"
-                    onClick={() => { insertEmoji(e); setEmojiOpen(false); }}
+                    onClick={() => {
+                      insertEmoji(e);
+                      setEmojiOpen(false);
+                    }}
                     aria-label={`emoji ${e}`}
-                  >{e}</button>
+                  >
+                    {e}
+                  </button>
                 ))}
               </div>
             )}
             <button
               className="chat-composer-btn"
-              onClick={() => setEmojiOpen(o => !o)}
+              onClick={() => setEmojiOpen((o) => !o)}
               title={t('chat.emoji_picker')}
               aria-label={t('chat.emoji_picker')}
               type="button"
-            >😊</button>
+            >
+              😊
+            </button>
             <div className="chat-composer-input-wrap">
               <textarea
                 ref={composerRef}
                 value={composer}
-                onChange={e => setComposer(e.target.value)}
+                onChange={(e) => setComposer(e.target.value)}
                 onKeyDown={handleComposerKey}
                 placeholder={t('chat.compose_placeholder')}
                 rows={1}
@@ -836,7 +994,11 @@ export default function ChatDrawer() {
         </>
       )}
 
-      {err && <div className="chat-err" role="alert">{err}</div>}
+      {err && (
+        <div className="chat-err" role="alert">
+          {err}
+        </div>
+      )}
 
       {/* Phase 11 — shared New Chat picker. Opens a DM then jumps into
           it by setting `activeRoomId`. usersIndex entries carry the

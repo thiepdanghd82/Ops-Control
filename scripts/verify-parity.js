@@ -26,7 +26,7 @@ async function loadBackend(name) {
 
 function checksum(rows) {
   const h = crypto.createHash('sha256');
-  const sorted = rows.map(r => JSON.stringify(r)).sort();
+  const sorted = rows.map((r) => JSON.stringify(r)).sort();
   for (const s of sorted) h.update(s).update('\n');
   return h.digest('hex');
 }
@@ -50,8 +50,12 @@ async function main() {
   ];
 
   let fail = 0;
-  console.log('Dataset             File rows   DB rows     File cksum       DB cksum         Match');
-  console.log('─────────────────── ─────────── ─────────── ──────────────── ──────────────── ─────');
+  console.log(
+    'Dataset             File rows   DB rows     File cksum       DB cksum         Match'
+  );
+  console.log(
+    '─────────────────── ─────────── ─────────── ──────────────── ──────────────── ─────'
+  );
   for (const [name, fn] of datasets) {
     const fRows = file[fn]();
     const sRows = sqlite[fn]();
@@ -76,7 +80,7 @@ async function main() {
   console.log('All datasets parity-match.');
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('Parity check crashed:', err);
   process.exit(3);
 });

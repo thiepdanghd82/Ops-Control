@@ -74,15 +74,19 @@ export function createQuotesRouter(deps) {
     const access = deps.resolveTabAccess(cu, quoteType);
     if (access !== 'edit') {
       return res.status(403).json({
-        error: 'permission_denied', tab: quoteType, current: access,
+        error: 'permission_denied',
+        tab: quoteType,
+        current: access,
       });
     }
     try {
       // Drop client-provided id + _version on POST — server assigns next-free.
       const saved = await deps.upsertQuote({ ...body, id: undefined, _version: undefined });
       deps.emitDataChange('quote.saved', {
-        id: saved?.id, version: saved?._version,
-        type: quoteType, savedBy: cu.username,
+        id: saved?.id,
+        version: saved?._version,
+        type: quoteType,
+        savedBy: cu.username,
       });
       res.json({ ok: true, quote: saved });
     } catch (err) {
@@ -106,15 +110,19 @@ export function createQuotesRouter(deps) {
     try {
       const saved = await deps.upsertQuote({ ...body, id });
       deps.emitDataChange('quote.saved', {
-        id: saved?.id, version: saved?._version,
-        patch: true, savedBy: cu.username,
+        id: saved?.id,
+        version: saved?._version,
+        patch: true,
+        savedBy: cu.username,
       });
       res.json({ ok: true, quote: saved });
     } catch (err) {
       if (err instanceof deps.VersionConflictError) {
         return res.status(409).json({
-          ok: false, error: 'version_conflict',
-          actual_version: err.actualVersion, current: err.current,
+          ok: false,
+          error: 'version_conflict',
+          actual_version: err.actualVersion,
+          current: err.current,
         });
       }
       deps.logErr(req, 'quote_patch', err);
@@ -145,8 +153,12 @@ export function createQuotesRouter(deps) {
         }
         deps.saveQuotes(after);
         const tomb = before.find((q) => q.id === id)?.deleted_at || 'null';
-        deps.audit('QUOTE_PURGE', cu.username, deps.clientIp(req),
-          `purged quote #${id} (deleted_at=${tomb})`);
+        deps.audit(
+          'QUOTE_PURGE',
+          cu.username,
+          deps.clientIp(req),
+          `purged quote #${id} (deleted_at=${tomb})`
+        );
         deps.emitDataChange('quote.deleted', { id, purged: true, savedBy: cu.username });
         return res.json({ ok: true, purged: true });
       } catch (err) {
@@ -171,8 +183,10 @@ export function createQuotesRouter(deps) {
     } catch (err) {
       if (err instanceof deps.VersionConflictError) {
         return res.status(409).json({
-          ok: false, error: 'version_conflict',
-          actual_version: err.actualVersion, current: err.current,
+          ok: false,
+          error: 'version_conflict',
+          actual_version: err.actualVersion,
+          current: err.current,
         });
       }
       deps.logErr(req, 'quote_trash', err);
@@ -200,7 +214,10 @@ export function createQuotesRouter(deps) {
       });
       deps.audit('QUOTE_RESTORE', cu.username, deps.clientIp(req), `restored quote #${id}`);
       deps.emitDataChange('quote.saved', {
-        id, version: saved?._version, restored: true, savedBy: cu.username,
+        id,
+        version: saved?._version,
+        restored: true,
+        savedBy: cu.username,
       });
       res.json({ ok: true, quote: saved });
     } catch (err) {

@@ -9,6 +9,7 @@ The actual quote IDs are filled in by the operator BEFORE the UAT
 session (this file is the picker spec, not the picker output).
 
 **Slot usage in scenarios:**
+
 - **Slot 1** (single-tier Std): SCN1, SCN2, SCN3, SCN4, SCN5 (throwaway), SCN7
 - **Slot 2** (multi-tier Std with mixed materials): **optional / engineer's choice** — use for SCN8 alt-materials coverage if `OPS_FEATURE_ALT_MATERIALS=1`
 - **Slot 3** (Cpx multi-subproduct, single-tier): **optional / engineer's choice** — for ad-hoc Cpx inspection beyond Slot 4
@@ -56,6 +57,7 @@ The test quotes may be sent to customers (Scenario "feedback collection"). If a 
 **Caveat:** Synthetic quotes (`UAT-2026-XXX` prefix) sẽ tạm tồn tại trong PROD database trong suốt UAT window + 30 ngày retention. Nếu có dashboard / report aggregate nào chạy trên all-quotes, có thể bị pollute. Note với BI/reporting team trước UAT day để filter exclude `UAT-2026-` prefix nếu cần.
 
 PII to scrub if synthesizing:
+
 - `state.end_cu` / `state.direct_cu` — customer names
 - `state.project_name` / `state.project` — project labels
 - `state.rfq_number` — RFQ codes
@@ -63,6 +65,7 @@ PII to scrub if synthesizing:
 - **Any free-text fields** (`notes`, `comments`, `description`) — may contain customer-specific context; scan + redact
 
 NOT in scope to scrub (don't break the math):
+
 - Material codes, ink names, process types — these are library entries, not PII
 - IFS codes — product code, not customer-identifying
 

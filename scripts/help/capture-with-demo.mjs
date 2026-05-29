@@ -31,20 +31,20 @@ const PASSWORD = process.env.HELP_DEMO_PASS || 'demo1234';
 // Administrator account. Help tab itself is captured to show the new
 // procedure/appendix rendering.
 const TABS = [
-  { id: 'standard',        match: 'Standard',          waitMs: 1500 },
-  { id: 'complex',         match: 'Complex',           waitMs: 1500 },
-  { id: 'ink-calc',        match: 'Inks|Tính Mực',     waitMs: 1500 },
-  { id: 'print-area',      match: 'Print Area|Diện tích In', waitMs: 1700 },
-  { id: 'summarize',       match: 'Cost Breakdown|Cơ cấu', waitMs: 1300 },
-  { id: 'formal-quote',    match: 'Formal Quot|Báo giá Chính', waitMs: 1300 },
-  { id: 'quote-history',   match: 'Quote History|Lịch sử', waitMs: 1300 },
+  { id: 'standard', match: 'Standard', waitMs: 1500 },
+  { id: 'complex', match: 'Complex', waitMs: 1500 },
+  { id: 'ink-calc', match: 'Inks|Tính Mực', waitMs: 1500 },
+  { id: 'print-area', match: 'Print Area|Diện tích In', waitMs: 1700 },
+  { id: 'summarize', match: 'Cost Breakdown|Cơ cấu', waitMs: 1300 },
+  { id: 'formal-quote', match: 'Formal Quot|Báo giá Chính', waitMs: 1300 },
+  { id: 'quote-history', match: 'Quote History|Lịch sử', waitMs: 1300 },
   { id: 'approvals-inbox', match: 'Pending Approval|Chờ Phê', waitMs: 1300 },
-  { id: 'sample-tracking', match: 'Sample|Mẫu',        waitMs: 1300 },
-  { id: 'dashboard',       match: 'Dashboard|Bảng điều', waitMs: 1600 },
-  { id: 'quote-analysis',  match: 'Quote Analysis|Phân tích', waitMs: 1600 },
-  { id: 'lib-mat',         match: 'Material Cost|Giá Vật', waitMs: 1300 },
-  { id: 'settings',        match: 'Settings|Cài đặt',  waitMs: 1300 },
-  { id: 'help',            match: '^Help$|Hướng dẫn',  waitMs: 1400 },
+  { id: 'sample-tracking', match: 'Sample|Mẫu', waitMs: 1300 },
+  { id: 'dashboard', match: 'Dashboard|Bảng điều', waitMs: 1600 },
+  { id: 'quote-analysis', match: 'Quote Analysis|Phân tích', waitMs: 1600 },
+  { id: 'lib-mat', match: 'Material Cost|Giá Vật', waitMs: 1300 },
+  { id: 'settings', match: 'Settings|Cài đặt', waitMs: 1300 },
+  { id: 'help', match: '^Help$|Hướng dẫn', waitMs: 1400 },
 ];
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -62,11 +62,16 @@ try {
   await page.goto(BASE, { waitUntil: 'networkidle2', timeout: 30000 });
   await page.waitForSelector('input[type=password]', { timeout: 10000 });
   await page.evaluate((u) => {
-    const input = [...document.querySelectorAll('input')].find(i =>
-      i.type !== 'password' &&
-      /user|name/i.test(i.placeholder + ' ' + i.name + ' ' + (i.labels?.[0]?.innerText || '')));
+    const input = [...document.querySelectorAll('input')].find(
+      (i) =>
+        i.type !== 'password' &&
+        /user|name/i.test(i.placeholder + ' ' + i.name + ' ' + (i.labels?.[0]?.innerText || ''))
+    );
     if (input) {
-      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        'value'
+      ).set;
       setter.call(input, u);
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }
@@ -78,8 +83,9 @@ try {
     pw.dispatchEvent(new Event('input', { bubbles: true }));
   }, PASSWORD);
   await page.evaluate(() => {
-    const btn = [...document.querySelectorAll('button')].find(b =>
-      /sign\s*in/i.test(b.textContent) && !/change/i.test(b.textContent));
+    const btn = [...document.querySelectorAll('button')].find(
+      (b) => /sign\s*in/i.test(b.textContent) && !/change/i.test(b.textContent)
+    );
     btn?.click();
   });
 
@@ -87,10 +93,15 @@ try {
   // Guard: if we DO hit a 2FA page, bail cleanly.
   await Promise.race([
     page.waitForSelector('.sidebar', { timeout: 12000 }),
-    page.waitForFunction(() => /2-Step|Authenticator/i.test(document.body.innerText), { timeout: 12000 })
-      .then(() => { throw new Error('demo user has 2FA enabled — disable it first'); }),
+    page
+      .waitForFunction(() => /2-Step|Authenticator/i.test(document.body.innerText), {
+        timeout: 12000,
+      })
+      .then(() => {
+        throw new Error('demo user has 2FA enabled — disable it first');
+      }),
   ]);
-  await new Promise(r => setTimeout(r, 800));
+  await new Promise((r) => setTimeout(r, 800));
   console.log(`✓ Logged in.`);
 
   // ── Dismiss the "unread messages" popup + chat bubble ───────
@@ -105,47 +116,67 @@ try {
       const didSomething = await page.evaluate(() => {
         let found = false;
         // Specific: "Để sau" / "Later" / "Maybe later" / "Not now"
-        const later = [...document.querySelectorAll('button')].find(b => {
-          if (b.offsetParent === null) return false;  // hidden
+        const later = [...document.querySelectorAll('button')].find((b) => {
+          if (b.offsetParent === null) return false; // hidden
           const t = b.textContent.trim().toLowerCase();
           return /^(để sau|later|maybe later|not now|dismiss|sau)$/i.test(t);
         });
-        if (later) { later.click(); found = true; }
+        if (later) {
+          later.click();
+          found = true;
+        }
         // Generic close × inside a modal/dialog container
-        const closeX = [...document.querySelectorAll('button')].find(b => {
+        const closeX = [...document.querySelectorAll('button')].find((b) => {
           if (b.offsetParent === null) return false;
           const t = b.textContent.trim();
           if (!/^[×✕✖xX]$/.test(t)) return false;
-          return !!b.closest('[role=dialog], .modal, [class*="modal"], [class*="popup"], [class*="overlay"]');
+          return !!b.closest(
+            '[role=dialog], .modal, [class*="modal"], [class*="popup"], [class*="overlay"]'
+          );
         });
-        if (closeX) { closeX.click(); found = true; }
+        if (closeX) {
+          closeX.click();
+          found = true;
+        }
         // Hide chat-bubble launcher (bottom-right). Cover common class + id
         // patterns without knowing the exact framework used.
         const hideSelectors = [
-          '.chat-launcher', '[class*="chat-launcher"]',
-          '[class*="chat-bubble"]', '.chat-widget',
-          '[class*="chat-launch"]', '[class*="ChatLaunch"]',
-          '[id*="intercom"]', '[id*="drift"]', '[class*="messenger-bubble"]',
+          '.chat-launcher',
+          '[class*="chat-launcher"]',
+          '[class*="chat-bubble"]',
+          '.chat-widget',
+          '[class*="chat-launch"]',
+          '[class*="ChatLaunch"]',
+          '[id*="intercom"]',
+          '[id*="drift"]',
+          '[class*="messenger-bubble"]',
           // Tailwind/positioned floating buttons in bottom-right with badges
         ];
         for (const sel of hideSelectors) {
           for (const el of document.querySelectorAll(sel)) {
-            if (el.style.display !== 'none') { el.style.display = 'none'; found = true; }
+            if (el.style.display !== 'none') {
+              el.style.display = 'none';
+              found = true;
+            }
           }
         }
         return found;
       });
       if (!didSomething) break;
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise((r) => setTimeout(r, 200));
     }
     // Inject a global CSS rule to keep the chat bubble hidden across
     // route changes (chat launcher re-mounts on SPA nav).
-    await page.addStyleTag({ content: `
+    await page
+      .addStyleTag({
+        content: `
       [class*="chat-launcher"], [class*="chat-bubble"], [class*="ChatLaunch"],
       .chat-widget, [id*="intercom"], [id*="drift"], [class*="messenger-bubble"] {
         display: none !important;
       }
-    `}).catch(() => {});
+    `,
+      })
+      .catch(() => {});
   }
   await dismissOverlays();
 
@@ -158,10 +189,10 @@ try {
     await page.evaluate((m) => {
       const re = new RegExp(m, 'i');
       const items = [...document.querySelectorAll('.nav-item')];
-      const match = items.find(b => re.test(b.textContent));
+      const match = items.find((b) => re.test(b.textContent));
       match?.click();
     }, tab.match);
-    await new Promise(r => setTimeout(r, tab.waitMs));
+    await new Promise((r) => setTimeout(r, tab.waitMs));
     // Dismiss any fresh popups that appeared after navigation (Messages
     // modal sometimes re-fires; toast notifications can linger).
     await dismissOverlays();
@@ -171,19 +202,27 @@ try {
   // ── Quote History — open a real quote for a non-empty screenshot ──
   console.log('  · quote-history-detail (opening a real quote)');
   await page.evaluate(() => {
-    const item = [...document.querySelectorAll('.nav-item')].find(b => /Quote History|Lịch sử/i.test(b.textContent));
+    const item = [...document.querySelectorAll('.nav-item')].find((b) =>
+      /Quote History|Lịch sử/i.test(b.textContent)
+    );
     item?.click();
   });
-  await new Promise(r => setTimeout(r, 1200));
+  await new Promise((r) => setTimeout(r, 1200));
   const opened = await page.evaluate(() => {
     // Click the first row in the quote history table.
     const row = document.querySelector('table tbody tr, .quote-history-row, [data-quote-id]');
-    if (row) { row.click(); return true; }
+    if (row) {
+      row.click();
+      return true;
+    }
     return false;
   });
   if (opened) {
-    await new Promise(r => setTimeout(r, 1400));
-    await page.screenshot({ path: path.join(OUT_DIR, 'quote-history-opened.png'), fullPage: false });
+    await new Promise((r) => setTimeout(r, 1400));
+    await page.screenshot({
+      path: path.join(OUT_DIR, 'quote-history-opened.png'),
+      fullPage: false,
+    });
   }
 
   console.log(`\n✓ Saved ${TABS.length + 2} screenshots to ${OUT_DIR}`);

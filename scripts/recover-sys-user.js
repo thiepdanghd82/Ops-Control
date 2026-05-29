@@ -39,19 +39,26 @@ const USERS_PATH = path.join(DATA_DIR, 'Library', 'Users', 'users.json');
 const AUDIT_PATH = path.join(DATA_DIR, 'Library', 'Users', 'audit_log.json');
 
 function ask(rl, q) {
-  return new Promise(resolve => rl.question(q, a => resolve(a.trim())));
+  return new Promise((resolve) => rl.question(q, (a) => resolve(a.trim())));
 }
 
 function loadJson(p, fallback) {
-  try { return JSON.parse(fs.readFileSync(p, 'utf-8')); }
-  catch { return fallback; }
+  try {
+    return JSON.parse(fs.readFileSync(p, 'utf-8'));
+  } catch {
+    return fallback;
+  }
 }
 
 function saveJsonAtomic(p, data) {
   const tmp = p + '.tmp.' + process.pid;
   fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
   fs.renameSync(tmp, p);
-  try { fs.chmodSync(p, 0o600); } catch { /* non-POSIX FS */ }
+  try {
+    fs.chmodSync(p, 0o600);
+  } catch {
+    /* non-POSIX FS */
+  }
 }
 
 function appendAudit(event, actor, detail) {
@@ -110,12 +117,15 @@ async function main() {
     process.exit(1);
   }
 
-  const mode = await ask(rl, '\n[1] Reset existing user pwd  [2] Create new "recovery-sys" user\nChoose 1 or 2: ');
+  const mode = await ask(
+    rl,
+    '\n[1] Reset existing user pwd  [2] Create new "recovery-sys" user\nChoose 1 or 2: '
+  );
   let target;
 
   if (mode === '1') {
     const username = await ask(rl, 'Existing username to reset: ');
-    target = users.find(u => String(u.username).toLowerCase() === username.toLowerCase());
+    target = users.find((u) => String(u.username).toLowerCase() === username.toLowerCase());
     if (!target) {
       console.error(`✘ User "${username}" not found.`);
       rl.close();
@@ -129,7 +139,7 @@ async function main() {
     const baseName = 'recovery-sys';
     let name = baseName;
     let suffix = 1;
-    while (users.some(u => u.username.toLowerCase() === name.toLowerCase())) {
+    while (users.some((u) => u.username.toLowerCase() === name.toLowerCase())) {
       name = `${baseName}-${suffix++}`;
     }
     const newId = (users.reduce((m, u) => Math.max(m, u.id || 0), 0) || 0) + 1;
@@ -161,7 +171,11 @@ async function main() {
   target.must_change_password = true; // SAP/IFS pattern — forced change on login
 
   saveJsonAtomic(USERS_PATH, users);
-  appendAudit('SYS_RECOVERY', target.username, `console recovery; mode=${mode === '1' ? 'reset' : 'create'}`);
+  appendAudit(
+    'SYS_RECOVERY',
+    target.username,
+    `console recovery; mode=${mode === '1' ? 'reset' : 'create'}`
+  );
 
   console.log('');
   console.log('═══════════════════════════════════════════════════════════');
@@ -183,7 +197,7 @@ async function main() {
   rl.close();
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('Fatal:', err);
   process.exit(1);
 });

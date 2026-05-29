@@ -9,8 +9,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  recordLoginFailure, checkLoginLockout, clearLoginFailures,
-  _resetLoginLockouts, _loginFailsSize, _LOGIN_FAIL_MAX_ENTRIES,
+  recordLoginFailure,
+  checkLoginLockout,
+  clearLoginFailures,
+  _resetLoginLockouts,
+  _loginFailsSize,
+  _LOGIN_FAIL_MAX_ENTRIES,
 } from './authService.js';
 
 test('recordLoginFailure: single user stays below cap', () => {

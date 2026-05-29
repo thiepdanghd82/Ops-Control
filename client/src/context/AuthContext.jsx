@@ -53,14 +53,20 @@ export function AuthProvider({ children }) {
       currentCtrl?.abort();
       const ctrl = new AbortController();
       currentCtrl = ctrl;
-      try { await authApi.heartbeat({ signal: ctrl.signal }); }
-      catch (e) {
-        if (e?.name !== 'AbortError') { /* silent — heartbeat failures are not user-facing */ }
+      try {
+        await authApi.heartbeat({ signal: ctrl.signal });
+      } catch (e) {
+        if (e?.name !== 'AbortError') {
+          /* silent — heartbeat failures are not user-facing */
+        }
       }
     }
     ping(); // immediate first ping
     const t = setInterval(ping, 25000);
-    return () => { clearInterval(t); currentCtrl?.abort(); };
+    return () => {
+      clearInterval(t);
+      currentCtrl?.abort();
+    };
   }, [user]);
 
   // Phase 9L.3 — listen for mid-session 401s from the API helper.
@@ -81,10 +87,14 @@ export function AuthProvider({ children }) {
   // stale provider instance.
   useEffect(() => {
     const token = localStorage.getItem('ops_token');
-    if (!token) { setLoading(false); return undefined; }
+    if (!token) {
+      setLoading(false);
+      return undefined;
+    }
     const ctrl = new AbortController();
-    authApi.me({ signal: ctrl.signal })
-      .then(data => {
+    authApi
+      .me({ signal: ctrl.signal })
+      .then((data) => {
         if (ctrl.signal.aborted) return;
         const userData = data.user || data;
         if (data.totp_pending) {
@@ -105,7 +115,9 @@ export function AuthProvider({ children }) {
         clearToken();
         setUser(null);
       })
-      .finally(() => { if (!ctrl.signal.aborted) setLoading(false); });
+      .finally(() => {
+        if (!ctrl.signal.aborted) setLoading(false);
+      });
     return () => ctrl.abort();
   }, []);
 
@@ -132,8 +144,9 @@ export function AuthProvider({ children }) {
       const meData = await authApi.me();
       if (meData.totp_pending) {
         setTotpPending(true);
-        setTotpEnrollmentRequired(!!meData.totp_enrollment_required ||
-                                  !!result?.totp_enrollment_required);
+        setTotpEnrollmentRequired(
+          !!meData.totp_enrollment_required || !!result?.totp_enrollment_required
+        );
         setTotpUsername(meData.user?.username || username);
         setUser(null);
         return {
@@ -181,7 +194,11 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
-    try { await authApi.logout(); } catch { /* logout is best-effort */ }
+    try {
+      await authApi.logout();
+    } catch {
+      /* logout is best-effort */
+    }
     clearToken();
     setUser(null);
     setPwdAge(null);
@@ -204,25 +221,34 @@ export function AuthProvider({ children }) {
     setTotpUsername('');
   }, []);
 
-  const hasRole = useCallback((minRole) => {
-    if (!user) return false;
-    return (ROLE_LEVELS[user.role] || 0) >= (ROLE_LEVELS[minRole] || 0);
-  }, [user]);
+  const hasRole = useCallback(
+    (minRole) => {
+      if (!user) return false;
+      return (ROLE_LEVELS[user.role] || 0) >= (ROLE_LEVELS[minRole] || 0);
+    },
+    [user]
+  );
 
-  const hasModule = useCallback((moduleName) => {
-    if (!user) return false;
-    const modules = user.modules || { cost: true, planning: true };
-    return modules[moduleName] !== false;
-  }, [user]);
+  const hasModule = useCallback(
+    (moduleName) => {
+      if (!user) return false;
+      const modules = user.modules || { cost: true, planning: true };
+      return modules[moduleName] !== false;
+    },
+    [user]
+  );
 
   // Phase 9L.3 — exposes re-login state. After a successful re-login
   // we clear `sessionExpired` so consumers can hide the banner.
   const dismissSessionExpired = useCallback(() => setSessionExpired(false), []);
-  const loginAndDismissBanner = useCallback(async (username, password) => {
-    const r = await login(username, password);
-    if (r && (r.success || r.totp_required)) setSessionExpired(false);
-    return r;
-  }, [login]);
+  const loginAndDismissBanner = useCallback(
+    async (username, password) => {
+      const r = await login(username, password);
+      if (r && (r.success || r.totp_required)) setSessionExpired(false);
+      return r;
+    },
+    [login]
+  );
 
   // Stable reference for cancelTotp — previously an inline arrow in the
   // Provider value which allocated a new function on every render and
@@ -241,29 +267,47 @@ export function AuthProvider({ children }) {
   // component (heartbeat, session-expired event, etc.) allocated a new
   // value object and re-rendered every consumer regardless of which
   // field they read.
-  const value = useMemo(() => ({
-    user, loading, login, logout, verifyTOTP,
-    hasRole, hasModule, totpPending, totpUsername,
-    totpEnrollmentRequired, completeTotpEnrollment,
-    cancelTotp,
-    isAuthenticated: !!user && !totpPending,
-    sessionExpired,
-    dismissSessionExpired,
-    reLogin: loginAndDismissBanner,
-    pwdAge,
-  }), [
-    user, loading, login, logout, verifyTOTP,
-    hasRole, hasModule, totpPending, totpUsername,
-    totpEnrollmentRequired, completeTotpEnrollment,
-    cancelTotp, sessionExpired, dismissSessionExpired, loginAndDismissBanner,
-    pwdAge,
-  ]);
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({
+      user,
+      loading,
+      login,
+      logout,
+      verifyTOTP,
+      hasRole,
+      hasModule,
+      totpPending,
+      totpUsername,
+      totpEnrollmentRequired,
+      completeTotpEnrollment,
+      cancelTotp,
+      isAuthenticated: !!user && !totpPending,
+      sessionExpired,
+      dismissSessionExpired,
+      reLogin: loginAndDismissBanner,
+      pwdAge,
+    }),
+    [
+      user,
+      loading,
+      login,
+      logout,
+      verifyTOTP,
+      hasRole,
+      hasModule,
+      totpPending,
+      totpUsername,
+      totpEnrollmentRequired,
+      completeTotpEnrollment,
+      cancelTotp,
+      sessionExpired,
+      dismissSessionExpired,
+      loginAndDismissBanner,
+      pwdAge,
+    ]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

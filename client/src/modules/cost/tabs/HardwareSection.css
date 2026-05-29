@@ -152,12 +152,12 @@
 }
 
 /* ─── Dark mode overrides ───────────────────────────────── */
-[data-theme="dark"] .hw-result.ok {
+[data-theme='dark'] .hw-result.ok {
   background: rgba(16, 185, 129, 0.1);
   color: #6ee7b7;
 }
 
-[data-theme="dark"] .hw-result.err {
+[data-theme='dark'] .hw-result.err {
   background: rgba(239, 68, 68, 0.1);
   color: #fca5a5;
 }

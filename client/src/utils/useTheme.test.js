@@ -11,9 +11,15 @@ import assert from 'node:assert/strict';
 // Pre-stub globals the module reads at import time.
 globalThis.localStorage = {
   _store: {},
-  getItem(k) { return this._store[k] ?? null; },
-  setItem(k, v) { this._store[k] = String(v); },
-  removeItem(k) { delete this._store[k]; },
+  getItem(k) {
+    return this._store[k] ?? null;
+  },
+  setItem(k, v) {
+    this._store[k] = String(v);
+  },
+  removeItem(k) {
+    delete this._store[k];
+  },
 };
 globalThis.window = {
   matchMedia(q) {

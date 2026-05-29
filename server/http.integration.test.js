@@ -43,7 +43,10 @@ function jsHashForSeed(pwd) {
   const digits = '0123456789abcdefghijklmnopqrstuvwxyz';
   let r = '';
   let n = hU;
-  while (n > 0) { r = digits[n % 36] + r; n = Math.floor(n / 36); }
+  while (n > 0) {
+    r = digits[n % 36] + r;
+    n = Math.floor(n / 36);
+  }
   return r;
 }
 
@@ -51,13 +54,28 @@ const TEST_USER = 'golden-user';
 const TEST_PASS = 'TestGolden123!';
 const seedUsersPath = path.join(tmp, 'Library', 'Users', 'users.json');
 fs.mkdirSync(path.dirname(seedUsersPath), { recursive: true });
-fs.writeFileSync(seedUsersPath, JSON.stringify([{
-  id: 1, username: TEST_USER, role: 'sys',
-  pwd: jsHashForSeed(TEST_PASS),
-  lastPwdChange: new Date().toISOString(),
-  permissions: { canDeleteQuote: true },
-  full_name: 'Golden Test User', english_name: 'Golden', id_no: '', email: '', phone: '',
-}], null, 2));
+fs.writeFileSync(
+  seedUsersPath,
+  JSON.stringify(
+    [
+      {
+        id: 1,
+        username: TEST_USER,
+        role: 'sys',
+        pwd: jsHashForSeed(TEST_PASS),
+        lastPwdChange: new Date().toISOString(),
+        permissions: { canDeleteQuote: true },
+        full_name: 'Golden Test User',
+        english_name: 'Golden',
+        id_no: '',
+        email: '',
+        phone: '',
+      },
+    ],
+    null,
+    2
+  )
+);
 
 const { default: app } = await import('./index.js');
 // Sprint 30 — auth audit dual-writes to SQLite. The test env shares
@@ -91,12 +109,17 @@ test('GET /health — 200 with uptime + security headers', async () => {
   assert.equal(r.headers.get('referrer-policy'), 'strict-origin-when-cross-origin');
   // Phase 9G.2 headers
   const pp = r.headers.get('permissions-policy');
-  assert.ok(pp && pp.includes('camera=()') && pp.includes('geolocation=()'),
-    'Permissions-Policy denies sensitive APIs');
+  assert.ok(
+    pp && pp.includes('camera=()') && pp.includes('geolocation=()'),
+    'Permissions-Policy denies sensitive APIs'
+  );
   // HSTS only in production; NODE_ENV=test should omit it to avoid
   // breaking dev localhost flows.
-  assert.equal(r.headers.get('strict-transport-security'), null,
-    'HSTS must NOT be set in non-production NODE_ENV');
+  assert.equal(
+    r.headers.get('strict-transport-security'),
+    null,
+    'HSTS must NOT be set in non-production NODE_ENV'
+  );
   assert.ok(r.headers.get('x-request-id'));
   const body = await r.json();
   assert.equal(body.ok, true);
@@ -172,8 +195,10 @@ test('missing /assets/* returns 404 (not SPA fallback HTML)', async () => {
   const r = await fetch(`${baseUrl}/assets/THIS-DOES-NOT-EXIST-0000.js`);
   assert.equal(r.status, 404, 'unknown assets MUST 404');
   const ct = r.headers.get('content-type') || '';
-  assert.ok(!ct.includes('text/html'),
-    `content-type must not be HTML (got "${ct}") — otherwise browsers crash with MIME errors`);
+  assert.ok(
+    !ct.includes('text/html'),
+    `content-type must not be HTML (got "${ct}") — otherwise browsers crash with MIME errors`
+  );
 });
 
 test('missing top-level .js/.css returns 404 (not SPA fallback HTML)', async () => {
@@ -371,14 +396,16 @@ test('2FA enforcement: sys role with OPS_REQUIRE_2FA_ROLES → enrollment_requir
     const body = await r.json();
     assert.equal(r.status, 200, 'password still correct → 200');
     assert.ok(body.token, 'still issues a token so client can move to enrollment');
-    assert.equal(body.totp_enrollment_required, true,
-      'sys role with no secret MUST trigger enrollment flow — closes the bypass');
+    assert.equal(
+      body.totp_enrollment_required,
+      true,
+      'sys role with no secret MUST trigger enrollment flow — closes the bypass'
+    );
 
     // The enrollment-pending token must NOT grant app access — getSessionUser
     // rejects it. Fetching a protected route should 401.
     const probe = await fetch(`${baseUrl}/api/shared/quotes`, authed(body.token));
-    assert.equal(probe.status, 401,
-      'protected routes MUST reject enrollment-pending sessions');
+    assert.equal(probe.status, 401, 'protected routes MUST reject enrollment-pending sessions');
   } finally {
     if (savedPolicy !== undefined) process.env.OPS_REQUIRE_2FA_ROLES = savedPolicy;
     else delete process.env.OPS_REQUIRE_2FA_ROLES;
@@ -401,8 +428,11 @@ test('2FA enforcement: /api/auth/me exposes totp_enrollment_required flag', asyn
     assert.equal(me.status, 200);
     const meBody = await me.json();
     assert.equal(meBody.totp_pending, true);
-    assert.equal(meBody.totp_enrollment_required, true,
-      'client uses this to show QR-setup UI instead of OTP-entry UI');
+    assert.equal(
+      meBody.totp_enrollment_required,
+      true,
+      'client uses this to show QR-setup UI instead of OTP-entry UI'
+    );
   } finally {
     if (savedPolicy !== undefined) process.env.OPS_REQUIRE_2FA_ROLES = savedPolicy;
     else delete process.env.OPS_REQUIRE_2FA_ROLES;
@@ -426,12 +456,18 @@ test('2FA enforcement: enrollment-pending session rejected by /totp/secret (rota
     const body = await r.json();
     assert.equal(body.totp_enrollment_required, true);
 
-    const save = await fetch(`${baseUrl}/api/totp/secret`, authed(body.token, {
-      method: 'POST',
-      body: JSON.stringify({ username: TEST_USER, secret: 'JBSWY3DPEHPK3PXP' }),
-    }));
-    assert.equal(save.status, 401,
-      '/totp/secret must reject enrollment-pending sessions — forces use of atomic /totp/enroll');
+    const save = await fetch(
+      `${baseUrl}/api/totp/secret`,
+      authed(body.token, {
+        method: 'POST',
+        body: JSON.stringify({ username: TEST_USER, secret: 'JBSWY3DPEHPK3PXP' }),
+      })
+    );
+    assert.equal(
+      save.status,
+      401,
+      '/totp/secret must reject enrollment-pending sessions — forces use of atomic /totp/enroll'
+    );
   } finally {
     if (savedPolicy !== undefined) process.env.OPS_REQUIRE_2FA_ROLES = savedPolicy;
     else delete process.env.OPS_REQUIRE_2FA_ROLES;
@@ -445,12 +481,24 @@ test('lifecycle: POST /api/quotes creates quote + GET /api/shared/quotes round-t
   const payload = {
     type: 'standard',
     state: { rfq_number: 'GOLD-HTTP-001', ccl_pn: 'HT-01', selling_price: 0.08 },
-    result: { sp: 0.08, s_ttl: 0.05, gm: 0.375, va: 0.4, s_mat_cost: 0.03, tooling: 0, packing_ship: 0.01 },
+    result: {
+      sp: 0.08,
+      s_ttl: 0.05,
+      gm: 0.375,
+      va: 0.4,
+      s_mat_cost: 0.03,
+      tooling: 0,
+      packing_ship: 0.01,
+    },
     label: 'HTTP golden quote',
   };
-  const rCreate = await fetch(`${baseUrl}/api/quotes`, authed(token, {
-    method: 'POST', body: JSON.stringify(payload),
-  }));
+  const rCreate = await fetch(
+    `${baseUrl}/api/quotes`,
+    authed(token, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  );
   assert.equal(rCreate.status, 200);
   const bodyCreate = await rCreate.json();
   assert.equal(bodyCreate.ok, true);
@@ -465,7 +513,7 @@ test('lifecycle: POST /api/quotes creates quote + GET /api/shared/quotes round-t
   assert.equal(rList.status, 200);
   const list = await rList.json();
   assert.ok(Array.isArray(list), 'shared/quotes returns array');
-  const found = list.find(q => q.id === saved.id);
+  const found = list.find((q) => q.id === saved.id);
   assert.ok(found, 'new quote visible via GET');
   assert.equal(found.label, 'HTTP golden quote');
   assert.equal(found.state.ccl_pn, 'HT-01');
@@ -474,17 +522,27 @@ test('lifecycle: POST /api/quotes creates quote + GET /api/shared/quotes round-t
 
 test('lifecycle: PATCH /api/quotes/:id replaces fields + preserves untouched ones', async () => {
   const token = await login();
-  const create = await fetch(`${baseUrl}/api/quotes`, authed(token, {
-    method: 'POST',
-    body: JSON.stringify({ type: 'standard', state: { ccl_pn: 'PATCH-TEST', selling_price: 0.1 }, label: 'pre-patch' }),
-  }));
+  const create = await fetch(
+    `${baseUrl}/api/quotes`,
+    authed(token, {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'standard',
+        state: { ccl_pn: 'PATCH-TEST', selling_price: 0.1 },
+        label: 'pre-patch',
+      }),
+    })
+  );
   const { quote } = await create.json();
 
   // Patch — update state + label; result untouched.
-  const rPatch = await fetch(`${baseUrl}/api/quotes/${quote.id}`, authed(token, {
-    method: 'PATCH',
-    body: JSON.stringify({ state: { ccl_pn: 'PATCH-TEST-v2' }, label: 'post-patch' }),
-  }));
+  const rPatch = await fetch(
+    `${baseUrl}/api/quotes/${quote.id}`,
+    authed(token, {
+      method: 'PATCH',
+      body: JSON.stringify({ state: { ccl_pn: 'PATCH-TEST-v2' }, label: 'post-patch' }),
+    })
+  );
   assert.equal(rPatch.status, 200);
   const bodyPatch = await rPatch.json();
   assert.equal(bodyPatch.quote.id, quote.id, 'same id preserved');
@@ -502,31 +560,43 @@ test('lifecycle: parallel POST /api/quotes yields N unique ids (race-free)', asy
   const N = 8;
   const promises = [];
   for (let i = 0; i < N; i++) {
-    promises.push(fetch(`${baseUrl}/api/quotes`, authed(token, {
-      method: 'POST',
-      body: JSON.stringify({
-        type: 'standard',
-        state: { rfq_number: `PARALLEL-${i}`, selling_price: 0.05 },
-        label: `Parallel #${i}`,
-      }),
-    })).then(r => r.json()));
+    promises.push(
+      fetch(
+        `${baseUrl}/api/quotes`,
+        authed(token, {
+          method: 'POST',
+          body: JSON.stringify({
+            type: 'standard',
+            state: { rfq_number: `PARALLEL-${i}`, selling_price: 0.05 },
+            label: `Parallel #${i}`,
+          }),
+        })
+      ).then((r) => r.json())
+    );
   }
   const results = await Promise.all(promises);
-  const ids = results.map(r => r.quote?.id).filter(Boolean).sort((a, b) => a - b);
+  const ids = results
+    .map((r) => r.quote?.id)
+    .filter(Boolean)
+    .sort((a, b) => a - b);
   assert.equal(ids.length, N, `all ${N} POSTs returned an id`);
   assert.equal(new Set(ids).size, N, 'all ids unique — no lost updates');
 
   // Verify all landed on disk.
-  const list = await fetch(`${baseUrl}/api/shared/quotes`, authed(token)).then(r => r.json());
-  const rfqs = new Set(list.map(q => q.state?.rfq_number));
+  const list = await fetch(`${baseUrl}/api/shared/quotes`, authed(token)).then((r) => r.json());
+  const rfqs = new Set(list.map((q) => q.state?.rfq_number));
   for (let i = 0; i < N; i++) assert.ok(rfqs.has(`PARALLEL-${i}`), `RFQ PARALLEL-${i} persisted`);
 });
 
 test('lifecycle: POST /api/quotes rejects non-object body', async () => {
   const token = await login();
-  const r = await fetch(`${baseUrl}/api/quotes`, authed(token, {
-    method: 'POST', body: JSON.stringify([1, 2, 3]),
-  }));
+  const r = await fetch(
+    `${baseUrl}/api/quotes`,
+    authed(token, {
+      method: 'POST',
+      body: JSON.stringify([1, 2, 3]),
+    })
+  );
   assert.equal(r.status, 400);
   const body = await r.json();
   assert.ok(body.error, 'error message present');
@@ -534,9 +604,13 @@ test('lifecycle: POST /api/quotes rejects non-object body', async () => {
 
 test('lifecycle: PATCH /api/quotes/:id with non-numeric id → 400', async () => {
   const token = await login();
-  const r = await fetch(`${baseUrl}/api/quotes/abc`, authed(token, {
-    method: 'PATCH', body: JSON.stringify({ label: 'x' }),
-  }));
+  const r = await fetch(
+    `${baseUrl}/api/quotes/abc`,
+    authed(token, {
+      method: 'PATCH',
+      body: JSON.stringify({ label: 'x' }),
+    })
+  );
   assert.equal(r.status, 400);
 });
 
@@ -597,8 +671,11 @@ test('audit-log: sys user pulls tail + filter by event substring', async () => {
   const r2 = await fetch(`${baseUrl}/api/auth/audit-log?limit=20&event=login`, authed(token));
   const body2 = await r2.json();
   for (const e of body2.entries) {
-    assert.match(e.event.toLowerCase(), /login/,
-      `event filter should only return rows with 'login' substring, got ${e.event}`);
+    assert.match(
+      e.event.toLowerCase(),
+      /login/,
+      `event filter should only return rows with 'login' substring, got ${e.event}`
+    );
   }
 });
 
@@ -616,7 +693,10 @@ test('audit-log: filter by exact user pushes to SQL WHERE', async () => {
 test('audit-log: since filter drops older entries', async () => {
   const token = await sysToken();
   const futureIso = '2099-01-01T00:00:00Z';
-  const r = await fetch(`${baseUrl}/api/auth/audit-log?limit=100&since=${encodeURIComponent(futureIso)}`, authed(token));
+  const r = await fetch(
+    `${baseUrl}/api/auth/audit-log?limit=100&since=${encodeURIComponent(futureIso)}`,
+    authed(token)
+  );
   const body = await r.json();
   assert.equal(body.entries.length, 0, 'future since filter must drop all historical entries');
 });
@@ -660,10 +740,17 @@ test('api-v1: /api/v1/auth/login works identically to /api/auth/login', async ()
 test('api-v1: /api/v1/quotes POST + GET shares storage with /api/quotes', async () => {
   const token = await sysToken();
   // Create via v1 prefix.
-  const rCreate = await fetch(`${baseUrl}/api/v1/quotes`, authed(token, {
-    method: 'POST',
-    body: JSON.stringify({ type: 'standard', state: { rfq_number: 'V1-TEST' }, label: 'v1 test' }),
-  }));
+  const rCreate = await fetch(
+    `${baseUrl}/api/v1/quotes`,
+    authed(token, {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'standard',
+        state: { rfq_number: 'V1-TEST' },
+        label: 'v1 test',
+      }),
+    })
+  );
   const { quote } = await rCreate.json();
   assert.ok(quote.id);
 
@@ -671,7 +758,7 @@ test('api-v1: /api/v1/quotes POST + GET shares storage with /api/quotes', async 
   // storage, two URL aliases).
   const rList = await fetch(`${baseUrl}/api/shared/quotes`, authed(token));
   const list = await rList.json();
-  const found = list.find(q => q.id === quote.id);
+  const found = list.find((q) => q.id === quote.id);
   assert.ok(found, 'quote created via /api/v1/ visible via /api/shared/quotes');
   assert.equal(found.state.rfq_number, 'V1-TEST');
 });
@@ -705,26 +792,29 @@ test('approval-e2e: full lifecycle submit → sales → finance → approve → 
   // 1) Create a draft quote with enough state that the approval
   //    machine's pre-transition validators are happy. Golden path
   //    only — edge cases live in approvalWorkflow.test.js.
-  const create = await fetch(`${baseUrl}/api/quotes`, authed(token, {
-    method: 'POST',
-    body: JSON.stringify({
-      type: 'standard',
-      label: 'e2e approval',
-      state: {
-        rfq_number: 'E2E-APPR-001',
-        ccl_pn: 'E2E-001',
-        site: 'VN',
-        direct_cu: 'Test CU',
-        end_cu: 'Test End',
-        npi_owner: 'tester',
-        sale_owner: 'tester',
-        project: 'e2e',
-        moq: 1000,
-        selling_price: 0.5,
-        annual_qty: 10000,
-      },
-    }),
-  }));
+  const create = await fetch(
+    `${baseUrl}/api/quotes`,
+    authed(token, {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'standard',
+        label: 'e2e approval',
+        state: {
+          rfq_number: 'E2E-APPR-001',
+          ccl_pn: 'E2E-001',
+          site: 'VN',
+          direct_cu: 'Test CU',
+          end_cu: 'Test End',
+          npi_owner: 'tester',
+          sale_owner: 'tester',
+          project: 'e2e',
+          moq: 1000,
+          selling_price: 0.5,
+          annual_qty: 10000,
+        },
+      }),
+    })
+  );
   assert.equal(create.status, 200, 'create quote must succeed');
   const { quote } = await create.json();
   const quoteId = quote.id;
@@ -733,10 +823,13 @@ test('approval-e2e: full lifecycle submit → sales → finance → approve → 
   // Helper — hit the atomic transition endpoint and return the new
   // approval object. Status 200 = applied + persisted.
   async function transition(action, reason) {
-    const r = await fetch(`${baseUrl}/api/shared/approvals/${quoteId}/transition`, authed(token, {
-      method: 'POST',
-      body: JSON.stringify({ action, ...(reason ? { reason } : {}) }),
-    }));
+    const r = await fetch(
+      `${baseUrl}/api/shared/approvals/${quoteId}/transition`,
+      authed(token, {
+        method: 'POST',
+        body: JSON.stringify({ action, ...(reason ? { reason } : {}) }),
+      })
+    );
     const body = await r.json();
     assert.equal(r.status, 200, `${action} must succeed, got ${r.status}: ${JSON.stringify(body)}`);
     return body.approval;
@@ -759,11 +852,14 @@ test('approval-e2e: full lifecycle submit → sales → finance → approve → 
   // 5) Full-list read must reflect the final state — the atomic
   //    endpoint only returns the one changed approval, so we verify
   //    the full-fetch sees the same thing (tests single-source-of-truth).
-  const list = await fetch(`${baseUrl}/api/shared/quotes`, authed(token)).then(r => r.json());
-  const persisted = list.find(q => q.id === quoteId);
+  const list = await fetch(`${baseUrl}/api/shared/quotes`, authed(token)).then((r) => r.json());
+  const persisted = list.find((q) => q.id === quoteId);
   assert.ok(persisted, 'quote visible in list after approval');
-  assert.equal(persisted.state.approval.status, 'approved',
-    'persisted approval status matches atomic-endpoint response');
+  assert.equal(
+    persisted.state.approval.status,
+    'approved',
+    'persisted approval status matches atomic-endpoint response'
+  );
 
   // 6) REVOKE → draft. Sys role is allowed from any state.
   appr = await transition('REVOKE', 'e2e cleanup');
@@ -775,56 +871,96 @@ test('approval-e2e: SUBMIT on non-draft quote rejected with 400', async () => {
   // already in flight. Regression in approvalWorkflow.js could let
   // a double-submit pass and produce a weird half-transitioned state.
   const token = await login();
-  const create = await fetch(`${baseUrl}/api/quotes`, authed(token, {
-    method: 'POST',
-    body: JSON.stringify({
-      type: 'standard', label: 'e2e guard',
-      state: {
-        rfq_number: 'E2E-GUARD', ccl_pn: 'E2E-G', site: 'VN',
-        direct_cu: 'CU', end_cu: 'E', npi_owner: 't', sale_owner: 't',
-        project: 'g', moq: 1000, selling_price: 0.5, annual_qty: 10000,
-      },
-    }),
-  }));
+  const create = await fetch(
+    `${baseUrl}/api/quotes`,
+    authed(token, {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'standard',
+        label: 'e2e guard',
+        state: {
+          rfq_number: 'E2E-GUARD',
+          ccl_pn: 'E2E-G',
+          site: 'VN',
+          direct_cu: 'CU',
+          end_cu: 'E',
+          npi_owner: 't',
+          sale_owner: 't',
+          project: 'g',
+          moq: 1000,
+          selling_price: 0.5,
+          annual_qty: 10000,
+        },
+      }),
+    })
+  );
   const { quote } = await create.json();
   const id = quote.id;
 
   // First SUBMIT: success.
-  const r1 = await fetch(`${baseUrl}/api/shared/approvals/${id}/transition`, authed(token, {
-    method: 'POST', body: JSON.stringify({ action: 'SUBMIT' }),
-  }));
+  const r1 = await fetch(
+    `${baseUrl}/api/shared/approvals/${id}/transition`,
+    authed(token, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'SUBMIT' }),
+    })
+  );
   assert.equal(r1.status, 200);
 
   // Second SUBMIT from pending_sales: machine rejects.
-  const r2 = await fetch(`${baseUrl}/api/shared/approvals/${id}/transition`, authed(token, {
-    method: 'POST', body: JSON.stringify({ action: 'SUBMIT' }),
-  }));
+  const r2 = await fetch(
+    `${baseUrl}/api/shared/approvals/${id}/transition`,
+    authed(token, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'SUBMIT' }),
+    })
+  );
   assert.equal(r2.status, 400, 'duplicate SUBMIT must be rejected');
 });
 
 test('approval-e2e: REJECT carries reason text through to persistence', async () => {
   const token = await login();
-  const create = await fetch(`${baseUrl}/api/quotes`, authed(token, {
-    method: 'POST',
-    body: JSON.stringify({
-      type: 'standard', label: 'e2e reject',
-      state: {
-        rfq_number: 'E2E-REJ', ccl_pn: 'E2E-R', site: 'VN',
-        direct_cu: 'CU', end_cu: 'E', npi_owner: 't', sale_owner: 't',
-        project: 'r', moq: 1000, selling_price: 0.5, annual_qty: 10000,
-      },
-    }),
-  }));
+  const create = await fetch(
+    `${baseUrl}/api/quotes`,
+    authed(token, {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'standard',
+        label: 'e2e reject',
+        state: {
+          rfq_number: 'E2E-REJ',
+          ccl_pn: 'E2E-R',
+          site: 'VN',
+          direct_cu: 'CU',
+          end_cu: 'E',
+          npi_owner: 't',
+          sale_owner: 't',
+          project: 'r',
+          moq: 1000,
+          selling_price: 0.5,
+          annual_qty: 10000,
+        },
+      }),
+    })
+  );
   const { quote } = await create.json();
   const id = quote.id;
 
   // SUBMIT then REJECT with a reason.
-  await fetch(`${baseUrl}/api/shared/approvals/${id}/transition`, authed(token, {
-    method: 'POST', body: JSON.stringify({ action: 'SUBMIT' }),
-  }));
-  const reject = await fetch(`${baseUrl}/api/shared/approvals/${id}/transition`, authed(token, {
-    method: 'POST', body: JSON.stringify({ action: 'REJECT', reason: 'price too low' }),
-  }));
+  await fetch(
+    `${baseUrl}/api/shared/approvals/${id}/transition`,
+    authed(token, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'SUBMIT' }),
+    })
+  );
+  const reject = await fetch(
+    `${baseUrl}/api/shared/approvals/${id}/transition`,
+    authed(token, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'REJECT', reason: 'price too low' }),
+    })
+  );
   assert.equal(reject.status, 200);
   const { approval } = await reject.json();
   assert.equal(approval.status, 'rejected');
@@ -832,6 +968,8 @@ test('approval-e2e: REJECT carries reason text through to persistence', async ()
   // a simple alphanumeric message. Locks the sanitizer not stripping
   // legitimate input. Field name is `reason` on the approval object
   // (see approvalWorkflow.js line ~231).
-  assert.ok(approval.reason && approval.reason.includes('price too low'),
-    `approval.reason should include original text, got: ${approval.reason}`);
+  assert.ok(
+    approval.reason && approval.reason.includes('price too low'),
+    `approval.reason should include original text, got: ${approval.reason}`
+  );
 });

@@ -26,7 +26,13 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DECIMAL_RE, toDisplay, toDisplayFixed, formatThousand, normalizeDecimalInput } from './DecimalInput.helpers.js';
+import {
+  DECIMAL_RE,
+  toDisplay,
+  toDisplayFixed,
+  formatThousand,
+  normalizeDecimalInput,
+} from './DecimalInput.helpers.js';
 
 // ── DECIMAL_RE: grammar of accepted inputs ──
 
@@ -39,10 +45,10 @@ test('DECIMAL_RE: accepts partial inputs that are in-progress', () => {
   // If any of them is rejected, the keystroke gets dropped and the
   // user can't complete the value — the exact bug Sprint Y fixed.
   assert.equal(DECIMAL_RE.test('0'), true);
-  assert.equal(DECIMAL_RE.test('0.'), true);   // "0." mid-typing
-  assert.equal(DECIMAL_RE.test('.'), true);    // ".5" user started with dot
+  assert.equal(DECIMAL_RE.test('0.'), true); // "0." mid-typing
+  assert.equal(DECIMAL_RE.test('.'), true); // ".5" user started with dot
   assert.equal(DECIMAL_RE.test('.5'), true);
-  assert.equal(DECIMAL_RE.test('-'), true);    // negative in-progress
+  assert.equal(DECIMAL_RE.test('-'), true); // negative in-progress
   assert.equal(DECIMAL_RE.test('-0.'), true);
   assert.equal(DECIMAL_RE.test('-.5'), true);
 });
@@ -56,11 +62,11 @@ test('DECIMAL_RE: accepts complete decimal numbers', () => {
 
 test('DECIMAL_RE: rejects non-decimal garbage', () => {
   assert.equal(DECIMAL_RE.test('abc'), false);
-  assert.equal(DECIMAL_RE.test('1.2.3'), false);  // double-dot
+  assert.equal(DECIMAL_RE.test('1.2.3'), false); // double-dot
   assert.equal(DECIMAL_RE.test('1a'), false);
-  assert.equal(DECIMAL_RE.test('--1'), false);    // double-minus
-  assert.equal(DECIMAL_RE.test('1-2'), false);    // minus-in-middle
-  assert.equal(DECIMAL_RE.test(' 1'), false);     // whitespace rejected
+  assert.equal(DECIMAL_RE.test('--1'), false); // double-minus
+  assert.equal(DECIMAL_RE.test('1-2'), false); // minus-in-middle
+  assert.equal(DECIMAL_RE.test(' 1'), false); // whitespace rejected
   assert.equal(DECIMAL_RE.test('1 '), false);
 });
 
@@ -114,7 +120,7 @@ test('formatThousand: null / undefined pass through', () => {
 test('formatThousand: integer gets comma grouping', () => {
   assert.equal(formatThousand('1000'), '1,000');
   assert.equal(formatThousand('1000000'), '1,000,000');
-  assert.equal(formatThousand('999'), '999');        // under 1k unchanged
+  assert.equal(formatThousand('999'), '999'); // under 1k unchanged
 });
 
 test('formatThousand: decimal part preserved verbatim', () => {
@@ -203,7 +209,11 @@ test('normalizeDecimalInput: paste flow end-to-end — all cases reach valid reg
   const pastes = ['0.1352\r\n', '1,234.56', '0,1352', '  42  ', '-3,14', '1.5'];
   for (const p of pastes) {
     const norm = normalizeDecimalInput(p);
-    assert.equal(DECIMAL_RE.test(norm), true, `DECIMAL_RE should accept normalized form of "${p}" → "${norm}"`);
+    assert.equal(
+      DECIMAL_RE.test(norm),
+      true,
+      `DECIMAL_RE should accept normalized form of "${p}" → "${norm}"`
+    );
   }
 });
 
@@ -211,9 +221,9 @@ test('normalizeDecimalInput: paste flow end-to-end — all cases reach valid reg
 // fields (Min Gap MD, etc.) where operators rely on seeing 3 decimal
 // places consistently rather than JS's default trailing-zero strip.
 test('toDisplayFixed: pads short decimals up to the budget', () => {
-  assert.equal(toDisplayFixed(7.2, 3),    '7.200');
-  assert.equal(toDisplayFixed(7,   3),    '7.000');
-  assert.equal(toDisplayFixed(7.225, 3),  '7.225');
+  assert.equal(toDisplayFixed(7.2, 3), '7.200');
+  assert.equal(toDisplayFixed(7, 3), '7.000');
+  assert.equal(toDisplayFixed(7.225, 3), '7.225');
 });
 
 test('toDisplayFixed: rounds longer decimals to the budget (display-only)', () => {
@@ -222,7 +232,7 @@ test('toDisplayFixed: rounds longer decimals to the budget (display-only)', () =
 });
 
 test('toDisplayFixed: respects toDisplay zero-as-empty', () => {
-  assert.equal(toDisplayFixed(0,   3), '');
+  assert.equal(toDisplayFixed(0, 3), '');
   assert.equal(toDisplayFixed(null, 3), '');
   assert.equal(toDisplayFixed(undefined, 3), '');
   assert.equal(toDisplayFixed(NaN, 3), '');

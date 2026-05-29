@@ -50,7 +50,8 @@ export function aniloxRecalc(row) {
   const bcm = row.bcm || 0;
   row.calc_vol = bcm > 0 ? parseFloat((bcm * 1.55).toFixed(5)) : 0;
   const eff = row.transfer_eff || 0;
-  row.vol_recipe = row.calc_vol > 0 && eff > 0 ? parseFloat((row.calc_vol * eff / 100).toFixed(5)) : 0;
+  row.vol_recipe =
+    row.calc_vol > 0 && eff > 0 ? parseFloat(((row.calc_vol * eff) / 100).toFixed(5)) : 0;
   return row;
 }
 
@@ -70,12 +71,17 @@ export function aniloxRecalc(row) {
  */
 export function runInkCalc(kind, source, stdState, cplxState, inkCalc, prevRows) {
   const isFlexo = kind === 'flexo';
-  const db = isFlexo ? (inkCalc.flexo?.aniloxDB || []) : (inkCalc.silkscreen?.meshSpec || []);
+  const db = isFlexo ? inkCalc.flexo?.aniloxDB || [] : inkCalc.silkscreen?.meshSpec || [];
   const specKey = isFlexo ? 'anilox_spec' : 'mesh_spec';
 
   const prevMap = (prevRows || []).reduce((acc, r) => {
     const k = (r.sp_label || '') + '|' + (r.color || '') + '|' + (r[specKey] || '');
-    acc[k] = { repeat: r.repeat || 1, ink_price_ovr: r.ink_price_ovr || 0, density: r.density || 0, setup_kg_ovr: r.setup_kg_ovr || 0 };
+    acc[k] = {
+      repeat: r.repeat || 1,
+      ink_price_ovr: r.ink_price_ovr || 0,
+      density: r.density || 0,
+      setup_kg_ovr: r.setup_kg_ovr || 0,
+    };
     return acc;
   }, {});
 
@@ -84,7 +90,7 @@ export function runInkCalc(kind, source, stdState, cplxState, inkCalc, prevRows)
     stArr.push({ st: stdState, label: 'Standard' });
   } else {
     (cplxState?.subproducts || []).forEach((sp, si) => {
-      if (sp && (sp.inks || []).some(ik => !ik.hidden && ik.color))
+      if (sp && (sp.inks || []).some((ik) => !ik.hidden && ik.color))
         stArr.push({ st: sp, label: 'SP' + (si + 1) });
     });
     if (stArr.length === 0 && (cplxState?.subproducts || [])[0]) {
@@ -97,22 +103,25 @@ export function runInkCalc(kind, source, stdState, cplxState, inkCalc, prevRows)
     const scrapFactor = calcMatScrapFactor(st);
     const layoutCavities = calcLayoutPerSheet(st);
     const globalPitch = calcPitch(st);
-    const visInks = (st.inks || []).filter(ik => {
+    const visInks = (st.inks || []).filter((ik) => {
       if (ik.hidden || !ik.color) return false;
       if (!isFlexo) return true; // silkscreen: all visible inks
       // flexo: match print_type or any anilox code in DB
-      return (ik.print_type === 'Flexo') || db.some(a => a.anilox_code === ik.mesh_spec);
+      return ik.print_type === 'Flexo' || db.some((a) => a.anilox_code === ik.mesh_spec);
     });
     visInks.forEach((ik, idx) => {
       const dbRow = isFlexo
-        ? db.find(a => a.anilox_code === ik.mesh_spec)
-        : db.find(m => m.mesh_code === ik.mesh_spec);
-      const mesh_count = !isFlexo && dbRow ? (parseFloat(dbRow.mesh_count) || 0) : 0;
-      const lpi = isFlexo && dbRow ? (parseFloat(dbRow.lpi) || 0) : 0;
+        ? db.find((a) => a.anilox_code === ik.mesh_spec)
+        : db.find((m) => m.mesh_code === ik.mesh_spec);
+      const mesh_count = !isFlexo && dbRow ? parseFloat(dbRow.mesh_count) || 0 : 0;
+      const lpi = isFlexo && dbRow ? parseFloat(dbRow.lpi) || 0 : 0;
       const vol_recipe = dbRow
-        ? (parseFloat(dbRow.volume_recipe) || parseFloat(dbRow.theo_ink_volume) || parseFloat(dbRow.vol_recipe) || 0)
+        ? parseFloat(dbRow.volume_recipe) ||
+          parseFloat(dbRow.theo_ink_volume) ||
+          parseFloat(dbRow.vol_recipe) ||
+          0
         : 0;
-      const matRow = (st.materials || []).find(m => m.code === ik.base_mat);
+      const matRow = (st.materials || []).find((m) => m.code === ik.base_mat);
       // Fallback: extract rightmost positive numeric substring from base_mat code.
       // Uses the same regex approach as calcEngine.calcInk — slice(-4) +
       // parseFloat would return -200 for codes like "ABC-200" because
@@ -120,7 +129,7 @@ export function runInkCalc(kind, source, stdState, cplxState, inkCalc, prevRows)
       // width that propagates through total_area → ink_volume → cost.
       const _widthMatch = !isFlexo ? String(ik.base_mat || '').match(/(\d+(?:\.\d+)?)\s*$/) : null;
       const _widthFromCode = _widthMatch ? Math.max(0, parseFloat(_widthMatch[1])) : 0;
-      const mat_width = matRow ? (parseFloat(matRow.width) || 0) : _widthFromCode;
+      const mat_width = matRow ? parseFloat(matRow.width) || 0 : _widthFromCode;
       const pitch_mm = ik.pitch_mm > 0 ? ik.pitch_mm : globalPitch;
       const total_area = mat_width * pitch_mm;
       const ink_volume_max = vol_recipe * total_area * 1e-6;
@@ -135,31 +144,54 @@ export function runInkCalc(kind, source, stdState, cplxState, inkCalc, prevRows)
       const repeat = prev.repeat || 1;
       const theo_supply = weight_per_time * repeat;
       const unit_per_kg = theo_supply > 0 ? Math.round(1000 / theo_supply) : 0;
-      const m2_per_kg = Math.floor((total_area * 1e-6) * unit_per_kg);
-      const qpa_kg = layoutCavities > 0 && weight_per_time > 0 ? (weight_per_time / 1000) / layoutCavities : 0;
-      const auto_price = ik.latest > 0 ? ik.latest : (ik.s_price || 0);
+      const m2_per_kg = Math.floor(total_area * 1e-6 * unit_per_kg);
+      const qpa_kg =
+        layoutCavities > 0 && weight_per_time > 0 ? weight_per_time / 1000 / layoutCavities : 0;
+      const auto_price = ik.latest > 0 ? ik.latest : ik.s_price || 0;
       const ink_price_ovr = prev.ink_price_ovr || 0;
       const ink_price = ink_price_ovr > 0 ? ink_price_ovr : auto_price;
       const unit_price = qpa_kg * ink_price;
       const auto_setup_kg = parseFloat(ik.setup_kg) || 0;
       const setup_kg_ovr = prev.setup_kg_ovr || 0;
       const setup_kg_val = setup_kg_ovr > 0 ? setup_kg_ovr : auto_setup_kg;
-      const moq = parseFloat(st.moq) || (source === 'cplx' ? (parseFloat(cplxState?.moq) || 2000) : 2000);
-      const setup_cost = moq > 0 ? (setup_kg_val * ink_price / moq) : 0;
+      const moq =
+        parseFloat(st.moq) || (source === 'cplx' ? parseFloat(cplxState?.moq) || 2000 : 2000);
+      const setup_cost = moq > 0 ? (setup_kg_val * ink_price) / moq : 0;
       const total_cost = unit_price + setup_cost;
       newRows.push({
-        sp_label: spLabel, row_label: 'Ink ' + (idx + 1),
+        sp_label: spLabel,
+        row_label: 'Ink ' + (idx + 1),
         color: ik.color || '',
         [specKey]: ik.mesh_spec || '',
         ...(isFlexo ? { lpi } : { mesh_count }),
-        repeat, mat_width, pitch_mm, print_area_pct: area_pct, density, total_area,
-        ink_volume: ink_volume_max, actual_ink_vol,
+        repeat,
+        mat_width,
+        pitch_mm,
+        print_area_pct: area_pct,
+        density,
+        total_area,
+        ink_volume: ink_volume_max,
+        actual_ink_vol,
         ink_weight: actual_ink_wt,
-        process_lost: scrapFactor, auto_setup_kg, setup_kg_ovr, setup_kg_val,
-        waste, weight_per_time, theo_supply,
-        unit_per_kg, m2_per_kg, layout_cavities: layoutCavities,
-        qpa_kg, auto_price, ink_price_ovr, ink_price,
-        unit_price, moq, setup_cost, total_cost, source,
+        process_lost: scrapFactor,
+        auto_setup_kg,
+        setup_kg_ovr,
+        setup_kg_val,
+        waste,
+        weight_per_time,
+        theo_supply,
+        unit_per_kg,
+        m2_per_kg,
+        layout_cavities: layoutCavities,
+        qpa_kg,
+        auto_price,
+        ink_price_ovr,
+        ink_price,
+        unit_price,
+        moq,
+        setup_cost,
+        total_cost,
+        source,
       });
     });
   });

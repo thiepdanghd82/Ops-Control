@@ -8,18 +8,18 @@ import './PlanningModule.css';
 // daily and the other tabs rarely; shipping WorkOrders + WIPTracker
 // code in the initial bundle for a sales user who never visits
 // Planning is pure waste.
-const OrderEntry      = lazy(() => import('./tabs/OrderEntry'));
-const BOMExplosion    = lazy(() => import('./tabs/BOMExplosion'));
-const MaterialCheck   = lazy(() => import('./tabs/MaterialCheck'));
+const OrderEntry = lazy(() => import('./tabs/OrderEntry'));
+const BOMExplosion = lazy(() => import('./tabs/BOMExplosion'));
+const MaterialCheck = lazy(() => import('./tabs/MaterialCheck'));
 const CapacityPlanning = lazy(() => import('./tabs/CapacityPlanning'));
-const WorkOrders      = lazy(() => import('./tabs/WorkOrders'));
-const WIPTracker      = lazy(() => import('./tabs/WIPTracker'));
+const WorkOrders = lazy(() => import('./tabs/WorkOrders'));
+const WIPTracker = lazy(() => import('./tabs/WIPTracker'));
 
 const TAB_COMPONENTS = {
   'order-entry': OrderEntry,
   'bom-explosion': BOMExplosion,
   'material-check': MaterialCheck,
-  'capacity': CapacityPlanning,
+  capacity: CapacityPlanning,
   'work-orders': WorkOrders,
   'wip-tracker': WIPTracker,
 };
@@ -28,7 +28,7 @@ const TAB_TITLES = {
   'order-entry': 'Order Entry',
   'bom-explosion': 'BOM Explosion',
   'material-check': 'Material Check',
-  'capacity': 'Capacity Planning',
+  capacity: 'Capacity Planning',
   'work-orders': 'Work Orders',
   'wip-tracker': 'WIP Tracker',
 };

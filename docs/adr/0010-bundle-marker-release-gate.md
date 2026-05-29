@@ -38,13 +38,13 @@ be:
 
 ### Build-time invariants
 
-| Stage | Required | Where enforced |
-|---|---|---|
-| Vite build | `OPS_BUILD_ID` env set, embedded into chunk via `define.__OPS_BUNDLE_MARKER__` | `client/vite.config.js` |
-| Local dev | Fallback to `local`-tagged marker so dev boot doesn't crash | same |
-| CI build | `OPS_BUILD_ID=<ref>-<sha>`, post-build grep verifies presence + match | `.github/workflows/ci.yml` build job (G5) |
-| CI release | `scripts/verify-bundle-marker.sh` runs against the DMG, fails the job if marker missing or build-id mismatch | `.github/workflows/ci.yml` build-installers job |
-| Manual release | Engineer runs `bash scripts/verify-bundle-marker.sh dist/<dmg> <expected-build-id>` for each DMG before publishing | release runbook |
+| Stage          | Required                                                                                                           | Where enforced                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| Vite build     | `OPS_BUILD_ID` env set, embedded into chunk via `define.__OPS_BUNDLE_MARKER__`                                     | `client/vite.config.js`                         |
+| Local dev      | Fallback to `local`-tagged marker so dev boot doesn't crash                                                        | same                                            |
+| CI build       | `OPS_BUILD_ID=<ref>-<sha>`, post-build grep verifies presence + match                                              | `.github/workflows/ci.yml` build job (G5)       |
+| CI release     | `scripts/verify-bundle-marker.sh` runs against the DMG, fails the job if marker missing or build-id mismatch       | `.github/workflows/ci.yml` build-installers job |
+| Manual release | Engineer runs `bash scripts/verify-bundle-marker.sh dist/<dmg> <expected-build-id>` for each DMG before publishing | release runbook                                 |
 
 ### Customer-side invariants
 

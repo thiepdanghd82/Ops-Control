@@ -33,7 +33,9 @@ function buildPlainText({ serverUrl, username, fullName, tempPassword }) {
     '   Phải đổi mật khẩu khi đăng nhập lần đầu',
     '',
     'Generated: ' + new Date().toLocaleString(),
-  ].filter(Boolean).join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 export default function ProvisioningCard({
@@ -67,8 +69,13 @@ export default function ProvisioningCard({
       ta.value = plain;
       document.body.appendChild(ta);
       ta.select();
-      try { document.execCommand('copy'); setCopied(true); setTimeout(() => setCopied(false), 2500); }
-      catch { /* nothing else to try */ }
+      try {
+        document.execCommand('copy');
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+      } catch {
+        /* nothing else to try */
+      }
       document.body.removeChild(ta);
     }
   };
@@ -117,28 +124,32 @@ export default function ProvisioningCard({
             </dl>
 
             <div className="prov-card-warn">
-              <b>⚠ Must change password on first login</b><br />
+              <b>⚠ Must change password on first login</b>
+              <br />
               <span className="prov-card-warn-vi">Phải đổi mật khẩu khi đăng nhập lần đầu</span>
             </div>
 
             <ol className="prov-card-steps">
               <li>
-                <b>Open</b> the Ops Control app<br />
+                <b>Open</b> the Ops Control app
+                <br />
                 <span className="prov-card-steps-vi">Mở ứng dụng Ops Control</span>
               </li>
               <li>
-                <b>Sign in</b> with the username and temp password above<br />
-                <span className="prov-card-steps-vi">Đăng nhập bằng tên + mật khẩu tạm phía trên</span>
+                <b>Sign in</b> with the username and temp password above
+                <br />
+                <span className="prov-card-steps-vi">
+                  Đăng nhập bằng tên + mật khẩu tạm phía trên
+                </span>
               </li>
               <li>
-                <b>Choose</b> a new password (min. 6 chars)<br />
+                <b>Choose</b> a new password (min. 6 chars)
+                <br />
                 <span className="prov-card-steps-vi">Đặt mật khẩu mới (tối thiểu 6 ký tự)</span>
               </li>
             </ol>
 
-            <div className="prov-card-foot">
-              Generated · Tạo lúc {new Date().toLocaleString()}
-            </div>
+            <div className="prov-card-foot">Generated · Tạo lúc {new Date().toLocaleString()}</div>
           </div>
         </div>
       </Modal.Body>

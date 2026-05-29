@@ -64,11 +64,14 @@ test('toCsvRow joins cells with commas', () => {
 });
 
 test('toCsvRow escapes each cell', () => {
-  assert.equal(toCsvRow(['=A1', 'plain', 'a,b']), "'=A1,plain,\"a,b\"");
+  assert.equal(toCsvRow(['=A1', 'plain', 'a,b']), '\'=A1,plain,"a,b"');
 });
 
 test('toCsvDocument prepends UTF-8 BOM + uses CRLF', () => {
-  const doc = toCsvDocument([['h1', 'h2'], ['v1', 'v2']]);
+  const doc = toCsvDocument([
+    ['h1', 'h2'],
+    ['v1', 'v2'],
+  ]);
   assert.ok(doc.startsWith('\uFEFF'), 'must start with BOM');
   assert.ok(doc.includes('\r\n'), 'must use CRLF between rows');
   assert.equal(doc, '\uFEFFh1,h2\r\nv1,v2');

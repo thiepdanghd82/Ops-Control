@@ -36,11 +36,15 @@ test('LoginPage: submit button declared as type="submit" (Enter + click both wor
   for (const m of matches) {
     const snippet = m[0];
     // Must NOT be type="button" (the Phase 10N regression).
-    assert.ok(!/type="button"/.test(snippet),
-      'cb-btn must not be type="button" — breaks Enter + form semantics');
+    assert.ok(
+      !/type="button"/.test(snippet),
+      'cb-btn must not be type="button" — breaks Enter + form semantics'
+    );
     // Must be type="submit" so browser's implicit Enter-submit picks it up.
-    assert.ok(/type="submit"/.test(snippet),
-      'cb-btn must be type="submit" so pressing Enter inside any input submits the form');
+    assert.ok(
+      /type="submit"/.test(snippet),
+      'cb-btn must be type="submit" so pressing Enter inside any input submits the form'
+    );
   }
 });
 
@@ -50,12 +54,15 @@ test('LoginPage: form onSubmit wired to handleLogin (not a no-op preventDefault)
   //   - Main login form binds handleLogin (the Phase-10N regression site)
   //   - TOTP form binds handleTOTP (pre-existing — guarded here for free)
   // And globally: no form.onSubmit may be a bare preventDefault no-op.
-  assert.ok(/onSubmit=\{handleLogin\}/.test(SRC),
-    'somewhere in LoginPage.jsx, the main form must bind onSubmit={handleLogin}');
-  assert.ok(/onSubmit=\{handleTOTP\}/.test(SRC),
-    'TOTP form must still bind onSubmit={handleTOTP}');
-  assert.ok(!/onSubmit=\{\s*e\s*=>\s*e\.preventDefault\(\)\s*\}/.test(SRC),
-    'no form.onSubmit may be a bare `e => e.preventDefault()` no-op — that kills every submit path');
+  assert.ok(
+    /onSubmit=\{handleLogin\}/.test(SRC),
+    'somewhere in LoginPage.jsx, the main form must bind onSubmit={handleLogin}'
+  );
+  assert.ok(/onSubmit=\{handleTOTP\}/.test(SRC), 'TOTP form must still bind onSubmit={handleTOTP}');
+  assert.ok(
+    !/onSubmit=\{\s*e\s*=>\s*e\.preventDefault\(\)\s*\}/.test(SRC),
+    'no form.onSubmit may be a bare `e => e.preventDefault()` no-op — that kills every submit path'
+  );
 });
 
 test('LoginPage: no onKeyDown handler that blocks Enter on input elements', () => {
@@ -63,6 +70,8 @@ test('LoginPage: no onKeyDown handler that blocks Enter on input elements', () =
   //   onKeyDown={e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.preventDefault(); }}
   // Guard against any revival across the whole file — both the Carbon
   // login form (cb-card) and the TOTP form must remain Enter-friendly.
-  assert.ok(!/onKeyDown[\s\S]{0,200}?Enter[\s\S]{0,200}?preventDefault/.test(SRC),
-    'LoginPage must not block Enter via onKeyDown — the browser\'s implicit form submit is the intended keyboard path');
+  assert.ok(
+    !/onKeyDown[\s\S]{0,200}?Enter[\s\S]{0,200}?preventDefault/.test(SRC),
+    "LoginPage must not block Enter via onKeyDown — the browser's implicit form submit is the intended keyboard path"
+  );
 });

@@ -15,7 +15,13 @@
  * the Help tab and this component reads __helpTarget on mount.
  */
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { HELP_SECTIONS, HELP_CONTENT, HELP_META, GLOSSARY, getHelpIndex } from '../../help/content.js';
+import {
+  HELP_SECTIONS,
+  HELP_CONTENT,
+  HELP_META,
+  GLOSSARY,
+  getHelpIndex,
+} from '../../help/content.js';
 import './HelpTab.css';
 
 // Default entry when nothing is selected. 'help' is its own entry —
@@ -27,14 +33,39 @@ const DEFAULT_ID = 'help';
 // (see ROLE_LEVELS in Sidebar.jsx): viewonly < user < cost < admin < sys.
 // Entries can override by setting authorization on their content record.
 const DEFAULT_AUTH_BY_SECTION = {
-  CALCULATORS:   { roleRequired: 'User', notes: 'Quote authoring — Cost role required to commit. · Soạn báo giá — cần role Cost để Save.' },
-  QUOTING:       { roleRequired: 'User', notes: 'Cost / Admin to approve or send. · Cost / Admin để duyệt hoặc gửi.' },
-  MANUFACTURING: { roleRequired: 'User', notes: 'Cost / Admin to edit templates + routing. · Cost / Admin để sửa template + routing.' },
-  TRACKING:      { roleRequired: 'User', notes: 'Everyone can view their own records. · Mọi người xem được record của mình.' },
-  REPORTS:       { roleRequired: 'User', notes: 'Admin required to export CSV. · Cần Admin để export CSV.' },
-  LIBRARIES:     { roleRequired: 'User', notes: 'Cost / Admin to edit master data. · Cost / Admin để sửa master data.' },
-  SYSTEM:        { roleRequired: 'Admin', notes: 'Sys role only for select subscreens. · Chỉ role Sys cho một số sub-screen.' },
-  PLANNING:      { roleRequired: 'User', notes: 'Cost / Admin to release work orders. · Cost / Admin để release work order.' },
+  CALCULATORS: {
+    roleRequired: 'User',
+    notes:
+      'Quote authoring — Cost role required to commit. · Soạn báo giá — cần role Cost để Save.',
+  },
+  QUOTING: {
+    roleRequired: 'User',
+    notes: 'Cost / Admin to approve or send. · Cost / Admin để duyệt hoặc gửi.',
+  },
+  MANUFACTURING: {
+    roleRequired: 'User',
+    notes: 'Cost / Admin to edit templates + routing. · Cost / Admin để sửa template + routing.',
+  },
+  TRACKING: {
+    roleRequired: 'User',
+    notes: 'Everyone can view their own records. · Mọi người xem được record của mình.',
+  },
+  REPORTS: {
+    roleRequired: 'User',
+    notes: 'Admin required to export CSV. · Cần Admin để export CSV.',
+  },
+  LIBRARIES: {
+    roleRequired: 'User',
+    notes: 'Cost / Admin to edit master data. · Cost / Admin để sửa master data.',
+  },
+  SYSTEM: {
+    roleRequired: 'Admin',
+    notes: 'Sys role only for select subscreens. · Chỉ role Sys cho một số sub-screen.',
+  },
+  PLANNING: {
+    roleRequired: 'User',
+    notes: 'Cost / Admin to release work orders. · Cost / Admin để release work order.',
+  },
 };
 function resolveAuth(entry) {
   if (entry?.authorization) return entry.authorization;
@@ -58,16 +89,26 @@ function matchesQuery(entry, q) {
   if (!q) return true;
   const needle = q.toLowerCase();
   const haystack = [
-    entry.title?.en, entry.title?.vi,
-    entry.purpose?.en, entry.purpose?.vi,
-    entry.whenToUse?.en, entry.whenToUse?.vi,
+    entry.title?.en,
+    entry.title?.vi,
+    entry.purpose?.en,
+    entry.purpose?.vi,
+    entry.whenToUse?.en,
+    entry.whenToUse?.vi,
     ...(entry.workflow || []).map(flatten),
     ...(entry.tips || []).map(flatten),
     ...(entry.pitfalls || []).map(flatten),
     ...(entry.features || []).map(flatten),
-    ...(entry.keyFields || []).map(f => `${flatten(f.field || f.name)} ${flatten(f.label)} ${flatten(f.notes || f.desc)}`),
-    ...(entry.formulas || []).map(f => `${flatten(f.name)} ${flatten(f.expr || f.formula)} ${flatten(f.notes)}`),
-  ].filter(Boolean).join(' ').toLowerCase();
+    ...(entry.keyFields || []).map(
+      (f) => `${flatten(f.field || f.name)} ${flatten(f.label)} ${flatten(f.notes || f.desc)}`
+    ),
+    ...(entry.formulas || []).map(
+      (f) => `${flatten(f.name)} ${flatten(f.expr || f.formula)} ${flatten(f.notes)}`
+    ),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
   return haystack.includes(needle);
 }
 
@@ -100,7 +141,12 @@ function asText(v) {
 // use the other. Returns null if both halves are empty.
 function FlexBilingual({ value, tag: Tag = 'div' }) {
   if (!value) return null;
-  if (typeof value === 'string') return <Tag className="help-bilingual"><span className="help-bi-en">{value}</span></Tag>;
+  if (typeof value === 'string')
+    return (
+      <Tag className="help-bilingual">
+        <span className="help-bi-en">{value}</span>
+      </Tag>
+    );
   return <Bilingual en={value.en} vi={value.vi} tag={Tag} />;
 }
 
@@ -135,7 +181,7 @@ function HelpContentView({ entry, onRelatedClick }) {
   if (!entry) {
     return <div className="help-empty">Select a topic from the left.</div>;
   }
-  const sectionLabel = HELP_SECTIONS.find(s => s.key === entry.section);
+  const sectionLabel = HELP_SECTIONS.find((s) => s.key === entry.section);
 
   // SAP Help layout — section order:
   //   1. Header (title, breadcrumb, function, path)
@@ -182,7 +228,9 @@ function HelpContentView({ entry, onRelatedClick }) {
             {entry.path && (
               <>
                 <dt>Path · Đường dẫn</dt>
-                <dd><code className="help-path">{entry.path}</code></dd>
+                <dd>
+                  <code className="help-path">{entry.path}</code>
+                </dd>
               </>
             )}
             {(() => {
@@ -220,7 +268,9 @@ function HelpContentView({ entry, onRelatedClick }) {
       {entry.preRequisites?.length > 0 && (
         <SectionBlock heading="Prerequisites · Điều kiện tiên quyết" id="prereq">
           <ul className="help-list">
-            {entry.preRequisites.map((s, i) => <BiItem key={i} value={s} />)}
+            {entry.preRequisites.map((s, i) => (
+              <BiItem key={i} value={s} />
+            ))}
           </ul>
         </SectionBlock>
       )}
@@ -229,7 +279,9 @@ function HelpContentView({ entry, onRelatedClick }) {
       {entry.features?.length > 0 && (
         <SectionBlock heading="Features · Tính năng" id="features">
           <ul className="help-list">
-            {entry.features.map((f, i) => <BiItem key={i} value={f} icon="▸" />)}
+            {entry.features.map((f, i) => (
+              <BiItem key={i} value={f} icon="▸" />
+            ))}
           </ul>
         </SectionBlock>
       )}
@@ -239,7 +291,9 @@ function HelpContentView({ entry, onRelatedClick }) {
       {entry.workflow?.length > 0 && (
         <SectionBlock heading="Procedure · Thao tác" id="workflow">
           <ol className="help-list help-list-num">
-            {entry.workflow.map((s, i) => <BiItem key={i} value={s} />)}
+            {entry.workflow.map((s, i) => (
+              <BiItem key={i} value={s} />
+            ))}
           </ol>
         </SectionBlock>
       )}
@@ -264,14 +318,18 @@ function HelpContentView({ entry, onRelatedClick }) {
                   </div>
                 )}
                 <ol className="help-list help-list-num">
-                  {prc.steps.map((s, j) => <BiItem key={j} value={s} />)}
+                  {prc.steps.map((s, j) => (
+                    <BiItem key={j} value={s} />
+                  ))}
                 </ol>
                 {prc.screenshot && (
                   <img
                     src={`/help/screenshots/${prc.screenshot}`}
                     alt={prc.title.en}
                     className="help-screenshot help-screenshot-sm"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
                 )}
               </div>
@@ -285,7 +343,8 @@ function HelpContentView({ entry, onRelatedClick }) {
           {entry.appendices.map((app, i) => (
             <div key={i} className="help-appendix">
               <div className="help-appendix-title">
-                {String.fromCharCode(65 + i)}. {app.title.vi} <span className="help-title-en">({app.title.en})</span>
+                {String.fromCharCode(65 + i)}. {app.title.vi}{' '}
+                <span className="help-title-en">({app.title.en})</span>
               </div>
               <table className="help-table">
                 <thead>
@@ -319,11 +378,19 @@ function HelpContentView({ entry, onRelatedClick }) {
             src={`/help/screenshots/${entry.screenshot}`}
             alt={entry.title.en}
             className="help-screenshot"
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
           />
           <div className="help-screenshot-caption">
-            <div>Screenshot for <code>{entry.id}</code>. If missing, run the screenshot capture script (see CLAUDE.md).</div>
-            <div className="help-caption-vi">Ảnh minh hoạ cho <code>{entry.id}</code>. Nếu thiếu, chạy script chụp screenshot (xem CLAUDE.md).</div>
+            <div>
+              Screenshot for <code>{entry.id}</code>. If missing, run the screenshot capture script
+              (see CLAUDE.md).
+            </div>
+            <div className="help-caption-vi">
+              Ảnh minh hoạ cho <code>{entry.id}</code>. Nếu thiếu, chạy script chụp screenshot (xem
+              CLAUDE.md).
+            </div>
           </div>
         </SectionBlock>
       )}
@@ -333,9 +400,15 @@ function HelpContentView({ entry, onRelatedClick }) {
           <table className="help-table">
             <thead>
               <tr>
-                <th>Field<div className="help-col-en">Trường</div></th>
-                <th>Type<div className="help-col-en">Kiểu</div></th>
-                <th>Description<div className="help-col-en">Mô tả</div></th>
+                <th>
+                  Field<div className="help-col-en">Trường</div>
+                </th>
+                <th>
+                  Type<div className="help-col-en">Kiểu</div>
+                </th>
+                <th>
+                  Description<div className="help-col-en">Mô tả</div>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -347,13 +420,20 @@ function HelpContentView({ entry, onRelatedClick }) {
                   instead of crashing the page. */}
               {entry.keyFields.map((f, i) => (
                 <tr key={i}>
-                  <td><code>{asText(f.field) || asText(f.name)}</code>
-                    {f.label && (typeof f.label === 'object' || (asText(f.label) !== (asText(f.field) || asText(f.name)))) && (
-                      <div className="help-col-en">{asText(f.label)}</div>
-                    )}
+                  <td>
+                    <code>{asText(f.field) || asText(f.name)}</code>
+                    {f.label &&
+                      (typeof f.label === 'object' ||
+                        asText(f.label) !== (asText(f.field) || asText(f.name))) && (
+                        <div className="help-col-en">{asText(f.label)}</div>
+                      )}
                   </td>
-                  <td><span className="help-type">{asText(f.type)}</span></td>
-                  <td><FlexBilingual value={f.notes ?? f.desc} tag="div" /></td>
+                  <td>
+                    <span className="help-type">{asText(f.type)}</span>
+                  </td>
+                  <td>
+                    <FlexBilingual value={f.notes ?? f.desc} tag="div" />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -371,17 +451,21 @@ function HelpContentView({ entry, onRelatedClick }) {
                     asText() / FlexBilingual coerce safely so the page
                     no longer crashes on the bilingual variants. */}
                 <div className="help-formula-name">{asText(f.name)}</div>
-                <pre className="help-formula-expr"><code>{asText(f.expr) || asText(f.formula)}</code></pre>
+                <pre className="help-formula-expr">
+                  <code>{asText(f.expr) || asText(f.formula)}</code>
+                </pre>
                 {f.meaning && (
                   <div className="help-formula-meaning">
                     <span className="help-formula-label">Ý nghĩa · Meaning:</span>
-                    {typeof f.meaning === 'string' ? f.meaning : (f.meaning.vi || f.meaning.en)}
+                    {typeof f.meaning === 'string' ? f.meaning : f.meaning.vi || f.meaning.en}
                   </div>
                 )}
                 {f.example && (
                   <div className="help-formula-example">
                     <span className="help-formula-label">Ví dụ · Example:</span>
-                    <pre><code>{asText(f.example)}</code></pre>
+                    <pre>
+                      <code>{asText(f.example)}</code>
+                    </pre>
                   </div>
                 )}
                 {f.notes && <FlexBilingual value={f.notes} tag="div" />}
@@ -398,22 +482,28 @@ function HelpContentView({ entry, onRelatedClick }) {
             {entry.example.scenario && (
               <div className="help-example-scenario">
                 <span className="help-example-label">Scenario · Tình huống:</span>
-                {typeof entry.example.scenario === 'object'
-                  ? <Bilingual en={entry.example.scenario.en} vi={entry.example.scenario.vi} />
-                  : entry.example.scenario}
+                {typeof entry.example.scenario === 'object' ? (
+                  <Bilingual en={entry.example.scenario.en} vi={entry.example.scenario.vi} />
+                ) : (
+                  entry.example.scenario
+                )}
               </div>
             )}
             {Array.isArray(entry.example.steps) && entry.example.steps.length > 0 && (
               <ol className="help-list help-list-num">
-                {entry.example.steps.map((s, i) => <BiItem key={i} value={s} />)}
+                {entry.example.steps.map((s, i) => (
+                  <BiItem key={i} value={s} />
+                ))}
               </ol>
             )}
             {entry.example.expected && (
               <div className="help-example-expected">
                 <span className="help-example-label">Expected result · Kết quả mong đợi:</span>
-                {typeof entry.example.expected === 'object'
-                  ? <Bilingual en={entry.example.expected.en} vi={entry.example.expected.vi} />
-                  : entry.example.expected}
+                {typeof entry.example.expected === 'object' ? (
+                  <Bilingual en={entry.example.expected.en} vi={entry.example.expected.vi} />
+                ) : (
+                  entry.example.expected
+                )}
               </div>
             )}
           </div>
@@ -431,8 +521,12 @@ function HelpContentView({ entry, onRelatedClick }) {
       {(entry.constraints?.length > 0 || entry.pitfalls?.length > 0) && (
         <SectionBlock heading="Constraints · Hạn chế & lỗi thường gặp" id="constraints">
           <ul className="help-list help-list-pit">
-            {(entry.constraints || []).map((s, i) => <BiItem key={`c-${i}`} value={s} icon="⚠️" />)}
-            {(entry.pitfalls || []).map((s, i) => <BiItem key={`p-${i}`} value={s} icon="⚠️" />)}
+            {(entry.constraints || []).map((s, i) => (
+              <BiItem key={`c-${i}`} value={s} icon="⚠️" />
+            ))}
+            {(entry.pitfalls || []).map((s, i) => (
+              <BiItem key={`p-${i}`} value={s} icon="⚠️" />
+            ))}
           </ul>
         </SectionBlock>
       )}
@@ -441,7 +535,9 @@ function HelpContentView({ entry, onRelatedClick }) {
       {entry.tips?.length > 0 && (
         <SectionBlock heading="Best practices · Thực hành tốt" id="tips">
           <ul className="help-list help-list-tips">
-            {entry.tips.map((s, i) => <BiItem key={i} value={s} icon="💡" />)}
+            {entry.tips.map((s, i) => (
+              <BiItem key={i} value={s} icon="💡" />
+            ))}
           </ul>
         </SectionBlock>
       )}
@@ -477,7 +573,7 @@ function HelpContentView({ entry, onRelatedClick }) {
 function GlossaryView({ query }) {
   const q = (query || '').trim().toLowerCase();
   const filtered = q
-    ? GLOSSARY.filter(g => `${g.term} ${g.en} ${g.vi}`.toLowerCase().includes(q))
+    ? GLOSSARY.filter((g) => `${g.term} ${g.en} ${g.vi}`.toLowerCase().includes(q))
     : GLOSSARY;
   return (
     <article className="help-content">
@@ -489,12 +585,14 @@ function GlossaryView({ query }) {
         </h2>
         <dl className="help-meta-row">
           <dt>Count · Số lượng</dt>
-          <dd>{filtered.length} / {GLOSSARY.length} terms · thuật ngữ</dd>
+          <dd>
+            {filtered.length} / {GLOSSARY.length} terms · thuật ngữ
+          </dd>
         </dl>
       </header>
       <SectionBlock heading="Domain terms · Thuật ngữ" id="glossary-terms">
         <dl className="help-glossary">
-          {filtered.map(g => (
+          {filtered.map((g) => (
             <div key={g.term} className="help-glossary-entry">
               <dt className="help-glossary-term">{g.term}</dt>
               <dd>
@@ -519,9 +617,10 @@ export default function HelpTab() {
   // Deep-link: any tab can set window.__helpTarget to a help entry id
   // before navigating here via F1. We read it on mount + on each focus
   // to support the use-F1-twice case (close + re-open with a new target).
-  const initialId = (typeof window !== 'undefined' && window.__helpTarget && HELP_CONTENT[window.__helpTarget])
-    ? window.__helpTarget
-    : DEFAULT_ID;
+  const initialId =
+    typeof window !== 'undefined' && window.__helpTarget && HELP_CONTENT[window.__helpTarget]
+      ? window.__helpTarget
+      : DEFAULT_ID;
   const [selected, setSelected] = useState(initialId);
   const [query, setQuery] = useState('');
   const contentRef = useRef(null);
@@ -545,7 +644,7 @@ export default function HelpTab() {
     if (!query.trim()) return null;
     const out = {};
     for (const section of Object.keys(index)) {
-      const hits = index[section].filter(e => matchesQuery(e, query));
+      const hits = index[section].filter((e) => matchesQuery(e, query));
       if (hits.length > 0) out[section] = hits;
     }
     return out;
@@ -575,7 +674,8 @@ export default function HelpTab() {
         <div className="help-toolbar-left">
           <h2 className="help-page-title">Help · Hướng dẫn sử dụng</h2>
           <span className="help-tip-pill">
-            Tip · Mẹo: press <kbd>F1</kbd> inside any tab to jump here · nhấn <kbd>F1</kbd> ở bất kỳ tab nào để mở Help
+            Tip · Mẹo: press <kbd>F1</kbd> inside any tab to jump here · nhấn <kbd>F1</kbd> ở bất kỳ
+            tab nào để mở Help
           </span>
           <span className="help-version-pill" title={`Updated · Cập nhật ${HELP_META.lastUpdated}`}>
             {HELP_META.version} · {HELP_META.totalEntries} entries · mục
@@ -648,9 +748,11 @@ export default function HelpTab() {
         </aside>
 
         <main className="help-main" ref={contentRef}>
-          {selected === '__glossary'
-            ? <GlossaryView query={query} />
-            : <HelpContentView entry={selectedEntry} onRelatedClick={setSelected} />}
+          {selected === '__glossary' ? (
+            <GlossaryView query={query} />
+          ) : (
+            <HelpContentView entry={selectedEntry} onRelatedClick={setSelected} />
+          )}
         </main>
       </div>
     </div>

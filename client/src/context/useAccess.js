@@ -12,8 +12,12 @@ export function useAccess() {
   if (!ctx) {
     // Graceful fallback when provider not mounted (e.g., early boot).
     return {
-      loaded: false, activeGroup: null, groups: [],
-      access: () => 'edit', canView: () => true, canEdit: () => true,
+      loaded: false,
+      activeGroup: null,
+      groups: [],
+      access: () => 'edit',
+      canView: () => true,
+      canEdit: () => true,
       reloadGroups: () => {},
     };
   }

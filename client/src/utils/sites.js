@@ -35,5 +35,5 @@ export const DEFAULT_SITE = 'VN';
 export function isKnownSite(site) {
   if (!site) return false;
   const needle = String(site).trim().toLowerCase();
-  return SITES.some(s => s.toLowerCase() === needle);
+  return SITES.some((s) => s.toLowerCase() === needle);
 }

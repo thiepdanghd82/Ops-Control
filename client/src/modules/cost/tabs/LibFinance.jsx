@@ -18,7 +18,10 @@ import { SITES as SGA_SITES } from '../../../utils/sites';
 
 function fmtNum(v, decimals = 0) {
   if (v == null || v === '' || isNaN(v)) return '\u2014';
-  return Number(v).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  return Number(v).toLocaleString(undefined, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
 }
 
 function fmtPct(v) {
@@ -57,10 +60,8 @@ export default function LibFinance() {
   // number (DecimalInput emits numbers directly). Empty string keeps
   // the draft field blank so callers can represent "cleared".
   const handleSgaChange = (site, val) => {
-    const n = val === '' || val == null
-      ? ''
-      : (typeof val === 'number' ? val : Number(val));
-    setSgaDraft(prev => ({ ...prev, [site]: n }));
+    const n = val === '' || val == null ? '' : typeof val === 'number' ? val : Number(val);
+    setSgaDraft((prev) => ({ ...prev, [site]: n }));
     setSgaDirty(true);
     touchedSitesRef.current.add(site);
     if (sgaBanner) setSgaBanner(null);
@@ -99,7 +100,8 @@ export default function LibFinance() {
     } catch (err) {
       setSgaBanner({
         kind: 'error',
-        message: 'Reload failed: ' + (err.message || 'network error') + '. Try again or switch tabs.',
+        message:
+          'Reload failed: ' + (err.message || 'network error') + '. Try again or switch tabs.',
       });
     }
   };
@@ -112,7 +114,7 @@ export default function LibFinance() {
   const storedSgaKey = JSON.stringify(storedSga);
   useEffect(() => {
     const touched = touchedSitesRef.current;
-    setSgaDraft(prev => {
+    setSgaDraft((prev) => {
       const next = { ...storedSga };
       // Overlay user's unsaved edits back on top — only for sites
       // they actually typed into.
@@ -150,7 +152,7 @@ export default function LibFinance() {
       // Server increments version on successful write; re-fetch via
       // context refresh would be cleaner but we don't have that hook
       // here. Bump our local copy to stay in sync for the next save.
-      setFinance(prev => ({
+      setFinance((prev) => ({
         ...(prev || {}),
         summary: { ...nextSummary, version: currentVersion + 1 },
       }));
@@ -168,7 +170,8 @@ export default function LibFinance() {
       if (msg.includes('finance_sum_conflict') || msg.includes('modified by another user')) {
         setSgaBanner({
           kind: 'conflict',
-          message: 'Another admin saved SGA rates while you were editing. Click "Reload server values" to pull the latest, then re-apply your change.',
+          message:
+            'Another admin saved SGA rates while you were editing. Click "Reload server values" to pull the latest, then re-apply your change.',
         });
         setSgaDirty(false);
       } else {
@@ -185,13 +188,15 @@ export default function LibFinance() {
 
   // Auto-select latest year if available
   const selectedYear = activeYear || yearKeys[0] || null;
-  const yearData = selectedYear ? (years[selectedYear] || {}) : {};
+  const yearData = selectedYear ? years[selectedYear] || {} : {};
 
   // WC table data
   const wcFiltered = useMemo(() => {
     if (!search.trim()) return wc;
     const q = search.toLowerCase();
-    return wc.filter(r => (r.w || '').toLowerCase().includes(q) || (r.n || '').toLowerCase().includes(q));
+    return wc.filter(
+      (r) => (r.w || '').toLowerCase().includes(q) || (r.n || '').toLowerCase().includes(q)
+    );
   }, [wc, search]);
 
   return (
@@ -199,14 +204,33 @@ export default function LibFinance() {
       <div className="lf-toolbar">
         <div className="lf-title">Finance Data</div>
         <div className="lf-tabs">
-          <button className={`lf-tab ${activeTab === 'wc' ? 'active' : ''}`} onClick={() => setActiveTab('wc')}>Work Center Rates</button>
-          <button className={`lf-tab ${activeTab === 'db' ? 'active' : ''}`} onClick={() => setActiveTab('db')}>DB Finance Data</button>
-          <button className={`lf-tab ${activeTab === 'expenses' ? 'active' : ''}`} onClick={() => setActiveTab('expenses')}>Expenses</button>
+          <button
+            className={`lf-tab ${activeTab === 'wc' ? 'active' : ''}`}
+            onClick={() => setActiveTab('wc')}
+          >
+            Work Center Rates
+          </button>
+          <button
+            className={`lf-tab ${activeTab === 'db' ? 'active' : ''}`}
+            onClick={() => setActiveTab('db')}
+          >
+            DB Finance Data
+          </button>
+          <button
+            className={`lf-tab ${activeTab === 'expenses' ? 'active' : ''}`}
+            onClick={() => setActiveTab('expenses')}
+          >
+            Expenses
+          </button>
         </div>
         {yearKeys.length > 1 && (
           <div className="lf-years">
-            {yearKeys.map(y => (
-              <button key={y} className={`lf-year-btn ${selectedYear === y ? 'active' : ''}`} onClick={() => setActiveYear(y)}>
+            {yearKeys.map((y) => (
+              <button
+                key={y}
+                className={`lf-year-btn ${selectedYear === y ? 'active' : ''}`}
+                onClick={() => setActiveYear(y)}
+              >
                 {y}
               </button>
             ))}
@@ -216,9 +240,14 @@ export default function LibFinance() {
 
       {/* SGA Overhead by Site — Phase 9D.2. Admin-editable; others see read-only.
           A non-zero rate applies at calc time to every quote for that site. */}
-      <div className="lf-sga-panel" style={{ margin: '8px 16px', padding: 12, background: '#fff', border: '1px solid #e0e0e0' }}>
+      <div
+        className="lf-sga-panel"
+        style={{ margin: '8px 16px', padding: 12, background: '#fff', border: '1px solid #e0e0e0' }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#161616' }}>SGA Overhead by Site</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#161616' }}>
+            SGA Overhead by Site
+          </div>
           <div style={{ fontSize: 11, color: '#6f6f6f' }}>
             Applied as a percent of COGS (g_ttl) per quote. 0 = no SGA burden.
           </div>
@@ -238,63 +267,89 @@ export default function LibFinance() {
             by kind: amber for conflict (recoverable via reload), red
             for error. Dismissible via X; conflicts also offer a direct
             Reload button so the user doesn't have to leave the tab. */}
-        {sgaBanner && (() => {
-          // Sprint 33: added 'info' kind (post-reload merge notice).
-          // Three palettes keep visual distinction sharp so Finance
-          // users parse "action-required vs OK" at a glance.
-          const palette = sgaBanner.kind === 'conflict'
-            ? { bg: '#fff4e0', border: '#d97706', fg: '#7c2d12', label: '⚠ Conflict' }
-            : sgaBanner.kind === 'info'
-            ? { bg: '#e0f2fe', border: '#0284c7', fg: '#075985', label: 'ℹ Info' }
-            : { bg: '#fee2e2', border: '#991b1b', fg: '#991b1b', label: '⚠ Error' };
-          return (
-          <div
-            role="alert"
-            style={{
-              marginBottom: 10,
-              padding: '8px 12px',
-              borderRadius: 2,
-              background: palette.bg,
-              border: `1px solid ${palette.border}`,
-              color: palette.fg,
-              display: 'flex', alignItems: 'center', gap: 10, fontSize: 12,
-            }}
-          >
-            <span style={{ fontWeight: 600 }}>{palette.label}</span>
-            <span style={{ flex: 1 }}>{sgaBanner.message}</span>
-            {sgaBanner.kind === 'conflict' && (
-              <button
-                onClick={handleSgaReloadAfterConflict}
-                className="op-btn op-btn-secondary op-btn-sm"
+        {sgaBanner &&
+          (() => {
+            // Sprint 33: added 'info' kind (post-reload merge notice).
+            // Three palettes keep visual distinction sharp so Finance
+            // users parse "action-required vs OK" at a glance.
+            const palette =
+              sgaBanner.kind === 'conflict'
+                ? { bg: '#fff4e0', border: '#d97706', fg: '#7c2d12', label: '⚠ Conflict' }
+                : sgaBanner.kind === 'info'
+                  ? { bg: '#e0f2fe', border: '#0284c7', fg: '#075985', label: 'ℹ Info' }
+                  : { bg: '#fee2e2', border: '#991b1b', fg: '#991b1b', label: '⚠ Error' };
+            return (
+              <div
+                role="alert"
+                style={{
+                  marginBottom: 10,
+                  padding: '8px 12px',
+                  borderRadius: 2,
+                  background: palette.bg,
+                  border: `1px solid ${palette.border}`,
+                  color: palette.fg,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  fontSize: 12,
+                }}
               >
-                Reload server values
-              </button>
-            )}
-            <button
-              onClick={() => setSgaBanner(null)}
-              className="op-btn op-btn-ghost op-btn-sm"
-              aria-label="Dismiss"
-              style={{ padding: '2px 8px' }}
-            >
-              ✕
-            </button>
-          </div>
-          );
-        })()}
+                <span style={{ fontWeight: 600 }}>{palette.label}</span>
+                <span style={{ flex: 1 }}>{sgaBanner.message}</span>
+                {sgaBanner.kind === 'conflict' && (
+                  <button
+                    onClick={handleSgaReloadAfterConflict}
+                    className="op-btn op-btn-secondary op-btn-sm"
+                  >
+                    Reload server values
+                  </button>
+                )}
+                <button
+                  onClick={() => setSgaBanner(null)}
+                  className="op-btn op-btn-ghost op-btn-sm"
+                  aria-label="Dismiss"
+                  style={{ padding: '2px 8px' }}
+                >
+                  ✕
+                </button>
+              </div>
+            );
+          })()}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
-          {SGA_SITES.map(site => (
-            <label key={site} style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11 }}>
-              <span style={{ color: '#525252', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.3 }}>{site}</span>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+            gap: 8,
+          }}
+        >
+          {SGA_SITES.map((site) => (
+            <label
+              key={site}
+              style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11 }}
+            >
+              <span
+                style={{
+                  color: '#525252',
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.3,
+                }}
+              >
+                {site}
+              </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <DecimalInput
                   value={sgaDraft[site]}
-                  onChange={v => handleSgaChange(site, v)}
+                  onChange={(v) => handleSgaChange(site, v)}
                   disabled={!canEditSga}
                   placeholder="0"
                   style={{
-                    width: '100%', padding: '4px 6px', border: '1px solid #c6c6c6',
-                    fontSize: 12, fontVariantNumeric: 'tabular-nums',
+                    width: '100%',
+                    padding: '4px 6px',
+                    border: '1px solid #c6c6c6',
+                    fontSize: 12,
+                    fontVariantNumeric: 'tabular-nums',
                     background: canEditSga ? '#fff' : '#f4f4f4',
                   }}
                 />
@@ -313,8 +368,13 @@ export default function LibFinance() {
       {activeTab === 'wc' && (
         <div className="lf-wc">
           <div className="lf-search-bar">
-            <input type="text" placeholder="Search by WC code or name..." value={search}
-              onChange={e => setSearch(e.target.value)} className="lf-search" />
+            <input
+              type="text"
+              placeholder="Search by WC code or name..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="lf-search"
+            />
             <span className="lf-count">{wcFiltered.length} work centers</span>
           </div>
           <div className="lf-table-wrap">
@@ -345,23 +405,51 @@ export default function LibFinance() {
                     <td style={{ color: '#065f46', fontWeight: 600 }}>{r.w || ''}</td>
                     <td>{r.n || ''}</td>
                     <td className="lf-num">{fmtNum(r.hrs)}</td>
-                    <td className="lf-num" style={{ color: '#0369a1' }}>{fmtNum(r.labor)}</td>
-                    <td className="lf-num" style={{ color: '#0369a1' }}>{fmtNum(r.dep_m)}</td>
-                    <td className="lf-num" style={{ color: '#0369a1' }}>{fmtNum(r.dep_b)}</td>
-                    <td className="lf-num" style={{ color: '#0369a1' }}>{fmtNum(r.oh)}</td>
-                    <td className="lf-num" style={{ color: '#b45309' }}>{fmtNum(r.power)}</td>
-                    <td className="lf-num" style={{ color: '#059669' }}>{fmtNum(r.oh_sx)}</td>
-                    <td className="lf-num" style={{ color: '#1d4ed8' }}>{fmtNum(r.total_alloc)}</td>
-                    <td className="lf-num" style={{ color: '#7c3aed' }}>{fmtNum(r.lr, 0)}</td>
-                    <td className="lf-num" style={{ color: '#7c3aed' }}>{fmtNum(r.dr, 0)}</td>
-                    <td className="lf-num" style={{ color: '#7c3aed' }}>{fmtNum(r.or_, 0)}</td>
-                    <td className="lf-num" style={{ color: '#059669', fontWeight: 700 }}>{fmtNum(r.tr, 0)}</td>
+                    <td className="lf-num" style={{ color: '#0369a1' }}>
+                      {fmtNum(r.labor)}
+                    </td>
+                    <td className="lf-num" style={{ color: '#0369a1' }}>
+                      {fmtNum(r.dep_m)}
+                    </td>
+                    <td className="lf-num" style={{ color: '#0369a1' }}>
+                      {fmtNum(r.dep_b)}
+                    </td>
+                    <td className="lf-num" style={{ color: '#0369a1' }}>
+                      {fmtNum(r.oh)}
+                    </td>
+                    <td className="lf-num" style={{ color: '#b45309' }}>
+                      {fmtNum(r.power)}
+                    </td>
+                    <td className="lf-num" style={{ color: '#059669' }}>
+                      {fmtNum(r.oh_sx)}
+                    </td>
+                    <td className="lf-num" style={{ color: '#1d4ed8' }}>
+                      {fmtNum(r.total_alloc)}
+                    </td>
+                    <td className="lf-num" style={{ color: '#7c3aed' }}>
+                      {fmtNum(r.lr, 0)}
+                    </td>
+                    <td className="lf-num" style={{ color: '#7c3aed' }}>
+                      {fmtNum(r.dr, 0)}
+                    </td>
+                    <td className="lf-num" style={{ color: '#7c3aed' }}>
+                      {fmtNum(r.or_, 0)}
+                    </td>
+                    <td className="lf-num" style={{ color: '#059669', fontWeight: 700 }}>
+                      {fmtNum(r.tr, 0)}
+                    </td>
                   </tr>
                 ))}
                 {wcFiltered.length === 0 && (
-                  <tr><td colSpan={15} style={{ padding: 0 }}>
-                    <EmptyState icon="💰" title="No work-center cost data" hint="Try a different year or verify Finance data was imported." />
-                  </td></tr>
+                  <tr>
+                    <td colSpan={15} style={{ padding: 0 }}>
+                      <EmptyState
+                        icon="💰"
+                        title="No work-center cost data"
+                        hint="Try a different year or verify Finance data was imported."
+                      />
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -377,7 +465,14 @@ export default function LibFinance() {
                 <div className="lf-section">
                   <h3 className="lf-section-title">KPI Summary</h3>
                   <table className="lf-table lf-table-compact">
-                    <thead><tr><th>Item</th><th>YTD</th><th>%</th><th>Note</th></tr></thead>
+                    <thead>
+                      <tr>
+                        <th>Item</th>
+                        <th>YTD</th>
+                        <th>%</th>
+                        <th>Note</th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {yearData.db.kpi.map((r, i) => (
                         <tr key={i} className={r.isBold ? 'lf-bold' : ''}>
@@ -395,13 +490,24 @@ export default function LibFinance() {
                 <div className="lf-section">
                   <h3 className="lf-section-title">Cost Groups</h3>
                   <table className="lf-table lf-table-compact">
-                    <thead><tr><th>Group</th><th>Item</th><th>YTD</th><th>Rate</th><th>%</th></tr></thead>
+                    <thead>
+                      <tr>
+                        <th>Group</th>
+                        <th>Item</th>
+                        <th>YTD</th>
+                        <th>Rate</th>
+                        <th>%</th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {yearData.db.costGroups.map((r, i) => (
                         <tr key={i} className={r.isTotal ? 'lf-total' : ''}>
-                          <td>{r.group}</td><td>{r.item}</td>
+                          <td>{r.group}</td>
+                          <td>{r.item}</td>
                           <td className="lf-num">{fmtNum(r.ytd)}</td>
-                          <td className="lf-num">{r.rate != null ? fmtNum(r.rate, 2) : '\u2014'}</td>
+                          <td className="lf-num">
+                            {r.rate != null ? fmtNum(r.rate, 2) : '\u2014'}
+                          </td>
                           <td className="lf-num">{r.pct != null ? fmtPct(r.pct) : '\u2014'}</td>
                         </tr>
                       ))}
@@ -413,13 +519,28 @@ export default function LibFinance() {
                 <div className="lf-section">
                   <h3 className="lf-section-title">WC Cost Summary</h3>
                   <table className="lf-table lf-table-compact">
-                    <thead><tr><th>Group</th><th>Item</th><th>YTD</th><th>Rate</th><th>%</th><th>Basis</th></tr></thead>
+                    <thead>
+                      <tr>
+                        <th>Group</th>
+                        <th>Item</th>
+                        <th>YTD</th>
+                        <th>Rate</th>
+                        <th>%</th>
+                        <th>Basis</th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {yearData.db.wcSummary.map((r, i) => (
-                        <tr key={i} className={r.isTotal ? 'lf-total' : r.isSubtotal ? 'lf-subtotal' : ''}>
-                          <td>{r.group}</td><td>{r.item}</td>
+                        <tr
+                          key={i}
+                          className={r.isTotal ? 'lf-total' : r.isSubtotal ? 'lf-subtotal' : ''}
+                        >
+                          <td>{r.group}</td>
+                          <td>{r.item}</td>
                           <td className="lf-num">{fmtNum(r.ytd)}</td>
-                          <td className="lf-num">{r.rate != null ? fmtNum(r.rate, 2) : '\u2014'}</td>
+                          <td className="lf-num">
+                            {r.rate != null ? fmtNum(r.rate, 2) : '\u2014'}
+                          </td>
                           <td className="lf-num">{r.pct != null ? fmtPct(r.pct) : '\u2014'}</td>
                           <td>{r.basis || ''}</td>
                         </tr>
@@ -430,7 +551,11 @@ export default function LibFinance() {
               )}
             </>
           ) : (
-            <EmptyState icon="📊" title="No DB Finance data" hint={`Verify Finance dataset was imported${selectedYear ? ` for ${selectedYear}` : ''}.`} />
+            <EmptyState
+              icon="📊"
+              title="No DB Finance data"
+              hint={`Verify Finance dataset was imported${selectedYear ? ` for ${selectedYear}` : ''}.`}
+            />
           )}
         </div>
       )}
@@ -439,30 +564,67 @@ export default function LibFinance() {
         <div className="lf-expenses-content">
           {yearData.db ? (
             <>
-              {['operations', 'production', 'sdAdmin', 'headcount'].map(section => {
+              {['operations', 'production', 'sdAdmin', 'headcount'].map((section) => {
                 const key = `expenses_${section}`;
                 const data = yearData.db[key] || yearData.db[section];
                 if (!data || !Array.isArray(data)) return null;
                 return (
                   <div key={section} className="lf-section">
-                    <h3 className="lf-section-title">{section.charAt(0).toUpperCase() + section.slice(1)}</h3>
+                    <h3 className="lf-section-title">
+                      {section.charAt(0).toUpperCase() + section.slice(1)}
+                    </h3>
                     <div className="lf-table-wrap">
                       <table className="lf-table lf-table-compact">
                         <thead>
                           <tr>
                             <th>Item</th>
-                            {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map(m => <th key={m}>{m}</th>)}
+                            {[
+                              'Jan',
+                              'Feb',
+                              'Mar',
+                              'Apr',
+                              'May',
+                              'Jun',
+                              'Jul',
+                              'Aug',
+                              'Sep',
+                              'Oct',
+                              'Nov',
+                              'Dec',
+                            ].map((m) => (
+                              <th key={m}>{m}</th>
+                            ))}
                             <th style={{ fontWeight: 700 }}>YTD</th>
                           </tr>
                         </thead>
                         <tbody>
                           {data.map((r, i) => (
-                            <tr key={i} className={r.isTotal ? 'lf-total' : r.isBold ? 'lf-bold' : ''}>
+                            <tr
+                              key={i}
+                              className={r.isTotal ? 'lf-total' : r.isBold ? 'lf-bold' : ''}
+                            >
                               <td>{r.label}</td>
-                              {['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].map(m => (
-                                <td key={m} className="lf-num">{r[m] != null ? fmtNum(r[m]) : '\u2014'}</td>
+                              {[
+                                'jan',
+                                'feb',
+                                'mar',
+                                'apr',
+                                'may',
+                                'jun',
+                                'jul',
+                                'aug',
+                                'sep',
+                                'oct',
+                                'nov',
+                                'dec',
+                              ].map((m) => (
+                                <td key={m} className="lf-num">
+                                  {r[m] != null ? fmtNum(r[m]) : '\u2014'}
+                                </td>
                               ))}
-                              <td className="lf-num" style={{ fontWeight: 600 }}>{r.ytd != null ? fmtNum(r.ytd) : '\u2014'}</td>
+                              <td className="lf-num" style={{ fontWeight: 600 }}>
+                                {r.ytd != null ? fmtNum(r.ytd) : '\u2014'}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -473,7 +635,11 @@ export default function LibFinance() {
               })}
             </>
           ) : (
-            <EmptyState icon="💵" title="No expense data" hint={`Verify P&L/expense sheet was imported${selectedYear ? ` for ${selectedYear}` : ''}.`} />
+            <EmptyState
+              icon="💵"
+              title="No expense data"
+              hint={`Verify P&L/expense sheet was imported${selectedYear ? ` for ${selectedYear}` : ''}.`}
+            />
           )}
         </div>
       )}

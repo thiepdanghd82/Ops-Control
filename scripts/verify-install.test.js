@@ -25,7 +25,11 @@ const hasBuild = fs.existsSync(path.join(DIST, 'index.html'));
 
 test('verify-install: exits 0 with all checks passing on a good build', { skip: !hasBuild }, () => {
   const r = spawnSync(process.execPath, [SCRIPT], { cwd: ROOT, encoding: 'utf-8' });
-  assert.equal(r.status, 0, `expected exit 0, got ${r.status}\nstdout:\n${r.stdout}\nstderr:\n${r.stderr}`);
+  assert.equal(
+    r.status,
+    0,
+    `expected exit 0, got ${r.status}\nstdout:\n${r.stdout}\nstderr:\n${r.stderr}`
+  );
   assert.match(r.stdout, /OK: \d+ checks passed/);
   // Spot-check the specific bucket labels so a future drop in coverage is
   // visible in test failures rather than silently expanding pass count.
@@ -46,7 +50,11 @@ test('verify-install: OPS_VERIFY_ROOT=empty-dir → exit 1, reports missing file
       encoding: 'utf-8',
       env: { ...process.env, OPS_VERIFY_ROOT: tmp, DATA_DIR: '' },
     });
-    assert.equal(r.status, 1, `expected exit 1 in empty dir; stdout:\n${r.stdout}\nstderr:\n${r.stderr}`);
+    assert.equal(
+      r.status,
+      1,
+      `expected exit 1 in empty dir; stdout:\n${r.stdout}\nstderr:\n${r.stderr}`
+    );
     assert.match(r.stderr, /FAILED/);
     assert.match(r.stdout, /server\/index\.js.*missing|✗/);
   } finally {

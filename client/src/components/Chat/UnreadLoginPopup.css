@@ -16,8 +16,12 @@
 }
 
 @keyframes ulp-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .ulp-card {
@@ -34,8 +38,14 @@
 }
 
 @keyframes ulp-pop {
-  from { transform: scale(0.92) translateY(10px); opacity: 0; }
-  to   { transform: scale(1) translateY(0); opacity: 1; }
+  from {
+    transform: scale(0.92) translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
 }
 
 .ulp-head {
@@ -82,7 +92,10 @@
   border-radius: 6px;
   flex-shrink: 0;
 }
-.ulp-close:hover { background: #f3f4f6; color: #111827; }
+.ulp-close:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
 
 .ulp-list {
   flex: 1;
@@ -99,8 +112,12 @@
   border-bottom: 1px solid #f8fafc;
   align-items: flex-start;
 }
-.ulp-row:hover { background: #f9fafb; }
-.ulp-row:last-child { border-bottom: 0; }
+.ulp-row:hover {
+  background: #f9fafb;
+}
+.ulp-row:last-child {
+  border-bottom: 0;
+}
 
 .ulp-avatar {
   width: 40px;
@@ -116,9 +133,15 @@
   flex-shrink: 0;
   position: relative;
 }
-.ulp-avatar.quote { background: #dcfce7; color: #166534; }
+.ulp-avatar.quote {
+  background: #dcfce7;
+  color: #166534;
+}
 .ulp-avatar.team,
-.ulp-avatar.group { background: #fce7f3; color: #9f1239; }
+.ulp-avatar.group {
+  background: #fce7f3;
+  color: #9f1239;
+}
 .ulp-avatar .dot {
   position: absolute;
   bottom: -1px;
@@ -193,7 +216,9 @@
   font-weight: 600;
   border-top: 1px solid #e5e7eb;
 }
-.ulp-more:hover { background: #eff6ff; }
+.ulp-more:hover {
+  background: #eff6ff;
+}
 
 .ulp-foot {
   padding: 10px 20px;
@@ -213,10 +238,14 @@
   cursor: pointer;
   color: #374151;
 }
-.ulp-btn:hover { background: #f9fafb; }
+.ulp-btn:hover {
+  background: #f9fafb;
+}
 .ulp-btn.primary {
   background: #1d4ed8;
   color: #fff;
   border-color: #1d4ed8;
 }
-.ulp-btn.primary:hover { background: #1e40af; }
+.ulp-btn.primary:hover {
+  background: #1e40af;
+}

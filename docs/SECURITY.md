@@ -98,22 +98,22 @@
 
 ## 8. Dependency vulnerability gate
 
-| Package | Pre-v1.3 | Post-v1.3 |
-|---|---|---|
-| `desktop/` | 10 high | **0** |
-| `client/`  | 1 moderate | **0** |
+| Package    | Pre-v1.3                      | Post-v1.3                       |
+| ---------- | ----------------------------- | ------------------------------- |
+| `desktop/` | 10 high                       | **0**                           |
+| `client/`  | 1 moderate                    | **0**                           |
 | `root/`    | 2 moderate (uuid via exceljs) | 2 moderate (dev-only, accepted) |
 
 CI workflow `.github/workflows/ci.yml` runs `npm audit --audit-level=high` on push/PR — high vulns block merge.
 
 ## 9. What is NOT in v1.3 (deferred)
 
-| Item | Why deferred | Tracked in |
-|---|---|---|
-| TLS / mTLS Client–Server | Needs cert lifecycle plan + self-signed UX | v1.3.1 backlog |
-| `costApi.js` full split | 2891 LOC; multi-week scope | per-sprint pull-out |
-| `exceljs` moderate vuln fix | Requires major downgrade to 3.4 | upstream wait |
-| Windows `.exe` | No Windows host or Wine | CI workflow has `windows-latest` matrix path |
+| Item                        | Why deferred                               | Tracked in                                   |
+| --------------------------- | ------------------------------------------ | -------------------------------------------- |
+| TLS / mTLS Client–Server    | Needs cert lifecycle plan + self-signed UX | v1.3.1 backlog                               |
+| `costApi.js` full split     | 2891 LOC; multi-week scope                 | per-sprint pull-out                          |
+| `exceljs` moderate vuln fix | Requires major downgrade to 3.4            | upstream wait                                |
+| Windows `.exe`              | No Windows host or Wine                    | CI workflow has `windows-latest` matrix path |
 
 ## 10. Audit checklist (review before next release)
 

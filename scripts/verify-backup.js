@@ -31,14 +31,22 @@ const REPO_ROOT = path.resolve(__dirname, '..');
 
 const args = process.argv.slice(2);
 const strictMode = args.includes('--strict');
-const target = args.find(a => !a.startsWith('--'));
+const target = args.find((a) => !a.startsWith('--'));
 
 const errors = [];
 const warnings = [];
 
-function err(msg) { errors.push(msg); console.error('  ✗ ' + msg); }
-function warn(msg) { warnings.push(msg); console.warn('  ⚠ ' + msg); }
-function ok(msg)  { console.log('  ✓ ' + msg); }
+function err(msg) {
+  errors.push(msg);
+  console.error('  ✗ ' + msg);
+}
+function warn(msg) {
+  warnings.push(msg);
+  console.warn('  ⚠ ' + msg);
+}
+function ok(msg) {
+  console.log('  ✓ ' + msg);
+}
 
 console.log('');
 console.log('  ╔══════════════════════════════════════════════════╗');
@@ -54,7 +62,10 @@ if (!backupRoot) {
     path.join(REPO_ROOT, 'server', 'data', 'Library'),
   ];
   for (const c of candidates) {
-    if (fs.existsSync(c)) { backupRoot = c; break; }
+    if (fs.existsSync(c)) {
+      backupRoot = c;
+      break;
+    }
   }
 }
 if (!backupRoot || !fs.existsSync(backupRoot)) {
@@ -77,11 +88,11 @@ function findSnapshotFile(root) {
   // backup convention) or directly under root.
   const dataDir = path.join(root, 'Data');
   if (fs.existsSync(dataDir) && fs.statSync(dataDir).isDirectory()) {
-    const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json'));
+    const files = fs.readdirSync(dataDir).filter((f) => f.endsWith('.json'));
     if (files.length > 0) {
       // Newest by mtime — operators care about the most recent snapshot.
       const newest = files
-        .map(f => ({ f, m: fs.statSync(path.join(dataDir, f)).mtimeMs }))
+        .map((f) => ({ f, m: fs.statSync(path.join(dataDir, f)).mtimeMs }))
         .sort((a, b) => b.m - a.m)[0];
       return path.join(dataDir, newest.f);
     }
@@ -114,11 +125,11 @@ const CRITICAL_FILES = [
 ];
 
 const SNAPSHOT_KEYS = {
-  'quoteHistory':     'QuoteHistory',
-  'users':            'Users',
-  'permissionGroups': 'PermissionGroups',
-  'machineProfiles':  'MachineProfiles',
-  'rate':             'Rate',
+  quoteHistory: 'QuoteHistory',
+  users: 'Users',
+  permissionGroups: 'PermissionGroups',
+  machineProfiles: 'MachineProfiles',
+  rate: 'Rate',
 };
 
 let missing = 0;
@@ -145,7 +156,7 @@ if (snapshot) {
       path.join(backupRoot, 'Library', rel),
       path.join(backupRoot, 'Data', 'Library', rel),
     ];
-    const found = candidates.find(p => fs.existsSync(p));
+    const found = candidates.find((p) => fs.existsSync(p));
     if (!found) {
       err(`Missing critical file: ${rel}`);
       missing++;
@@ -162,14 +173,14 @@ if (snapshot) {
 }
 
 // ── 3. JSON parse-ability ─────────────────────────────────────
-const JSON_FILES = CRITICAL_FILES.filter(f => f.endsWith('.json'));
+const JSON_FILES = CRITICAL_FILES.filter((f) => f.endsWith('.json'));
 for (const rel of JSON_FILES) {
   const candidates = [
     path.join(backupRoot, rel),
     path.join(backupRoot, 'Library', rel),
     path.join(backupRoot, 'Data', 'Library', rel),
   ];
-  const found = candidates.find(p => fs.existsSync(p));
+  const found = candidates.find((p) => fs.existsSync(p));
   if (!found) continue;
   try {
     const txt = fs.readFileSync(found, 'utf-8');
@@ -183,12 +194,25 @@ for (const rel of JSON_FILES) {
 if (strictMode) {
   console.log('\n  Strict schema validation:');
   try {
-    const { validateRows, permissionGroupSchema, machineProfileSchema, rateRowSchema, safeParseJson } =
-      await import('../server/services/librarySchema.js');
+    const {
+      validateRows,
+      permissionGroupSchema,
+      machineProfileSchema,
+      rateRowSchema,
+      safeParseJson,
+    } = await import('../server/services/librarySchema.js');
 
     const checks = [
-      { rel: 'PermissionGroups/groups.json', schema: permissionGroupSchema, getter: (j) => Array.isArray(j?.groups) ? j.groups : [] },
-      { rel: 'MachineProfiles/profiles.json', schema: machineProfileSchema, getter: (j) => Array.isArray(j?.profiles) ? j.profiles : [] },
+      {
+        rel: 'PermissionGroups/groups.json',
+        schema: permissionGroupSchema,
+        getter: (j) => (Array.isArray(j?.groups) ? j.groups : []),
+      },
+      {
+        rel: 'MachineProfiles/profiles.json',
+        schema: machineProfileSchema,
+        getter: (j) => (Array.isArray(j?.profiles) ? j.profiles : []),
+      },
     ];
 
     for (const c of checks) {
@@ -197,13 +221,15 @@ if (strictMode) {
         path.join(backupRoot, 'Library', c.rel),
         path.join(backupRoot, 'Data', 'Library', c.rel),
       ];
-      const found = candidates.find(p => fs.existsSync(p));
+      const found = candidates.find((p) => fs.existsSync(p));
       if (!found) continue;
       const raw = safeParseJson(fs.readFileSync(found, 'utf-8'), c.rel);
       const rows = c.getter(raw);
       const result = validateRows(rows, c.schema, { source: c.rel, silent: true });
       if (result.errors.length > 0) {
-        warn(`${c.rel}: ${result.errors.length} schema warnings, ${result.dropped} row(s) would be dropped`);
+        warn(
+          `${c.rel}: ${result.errors.length} schema warnings, ${result.dropped} row(s) would be dropped`
+        );
       } else {
         ok(`${c.rel}: ${rows.length} row(s) validate clean`);
       }
@@ -217,12 +243,16 @@ if (strictMode) {
 console.log('');
 console.log('  ══════════════════════════════════════════════');
 if (errors.length > 0) {
-  console.error(`  ❌  Backup verification FAILED — ${errors.length} error(s), ${warnings.length} warning(s)`);
+  console.error(
+    `  ❌  Backup verification FAILED — ${errors.length} error(s), ${warnings.length} warning(s)`
+  );
   console.error(`     DO NOT use this backup for restore.`);
   process.exit(2);
 }
 if (warnings.length > 0) {
-  console.warn(`  ⚠   Backup verification passed with ${warnings.length} warning(s) — review before restore`);
+  console.warn(
+    `  ⚠   Backup verification passed with ${warnings.length} warning(s) — review before restore`
+  );
   process.exit(1);
 }
 ok(`Backup verification PASSED`);

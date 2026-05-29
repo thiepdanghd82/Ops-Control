@@ -35,9 +35,12 @@ export function useOverflow(ref) {
     const canScrollLeft = el.scrollLeft > 1;
     const canScrollRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
     setState((prev) => {
-      if (prev.hasOverflow === hasOverflow
-          && prev.canScrollLeft === canScrollLeft
-          && prev.canScrollRight === canScrollRight) return prev;
+      if (
+        prev.hasOverflow === hasOverflow &&
+        prev.canScrollLeft === canScrollLeft &&
+        prev.canScrollRight === canScrollRight
+      )
+        return prev;
       return { hasOverflow, canScrollLeft, canScrollRight };
     });
   }, [ref]);
@@ -63,12 +66,16 @@ export function useOverflow(ref) {
   // Convenience helpers for scroll-by-button interaction. Amount is
   // proportional to the container's client width — feels natural at
   // any breakpoint.
-  const scrollBy = useCallback((direction) => {
-    const el = ref.current;
-    if (!el) return;
-    const amount = Math.max(120, Math.floor(el.clientWidth * 0.7)) * (direction === 'left' ? -1 : 1);
-    el.scrollBy({ left: amount, behavior: 'smooth' });
-  }, [ref]);
+  const scrollBy = useCallback(
+    (direction) => {
+      const el = ref.current;
+      if (!el) return;
+      const amount =
+        Math.max(120, Math.floor(el.clientWidth * 0.7)) * (direction === 'left' ? -1 : 1);
+      el.scrollBy({ left: amount, behavior: 'smooth' });
+    },
+    [ref]
+  );
 
   return { ...state, scrollBy, remeasure: measure };
 }

@@ -48,7 +48,7 @@ function readAudit() {
     const txt = fs.readFileSync(p, 'utf8');
     if (!txt.trim()) return [];
     const arr = JSON.parse(txt);
-    return Array.isArray(arr) ? arr : (arr.events || arr.entries || []);
+    return Array.isArray(arr) ? arr : arr.events || arr.entries || [];
   } catch (err) {
     console.warn('[audit-retention] read failed:', err.message);
     return [];
@@ -108,7 +108,12 @@ function pruneOldArchives() {
     const m = f.match(/^audit_(\d{6})\.json\.gz$/);
     if (!m) continue;
     if (m[1] < cutoffKey) {
-      try { fs.unlinkSync(path.join(dir, f)); pruned++; } catch (_) { /* swallow */ }
+      try {
+        fs.unlinkSync(path.join(dir, f));
+        pruned++;
+      } catch (_) {
+        /* swallow */
+      }
     }
   }
   return { pruned };
@@ -123,7 +128,14 @@ export function runRotationCycle() {
   const cutoffMs = Date.now() - RETENTION_DAYS * 86400_000;
   const all = readAudit();
   if (all.length === 0) {
-    return { ok: true, rotated: 0, kept: 0, archives: 0, pruned: 0, durationMs: Date.now() - start };
+    return {
+      ok: true,
+      rotated: 0,
+      kept: 0,
+      archives: 0,
+      pruned: 0,
+      durationMs: Date.now() - start,
+    };
   }
 
   const oldEvents = [];
@@ -139,7 +151,14 @@ export function runRotationCycle() {
   }
 
   if (oldEvents.length === 0) {
-    return { ok: true, rotated: 0, kept: keepEvents.length, archives: 0, pruned: 0, durationMs: Date.now() - start };
+    return {
+      ok: true,
+      rotated: 0,
+      kept: keepEvents.length,
+      archives: 0,
+      pruned: 0,
+      durationMs: Date.now() - start,
+    };
   }
 
   // Group + write to per-month archives
@@ -170,7 +189,9 @@ export function runRotationCycle() {
     runAt: new Date().toISOString(),
   };
   _lastRun = summary;
-  console.log(`[audit-retention] rotated ${summary.rotated} events → ${summary.archives} archives, kept ${summary.kept}, pruned ${summary.pruned} old archives in ${summary.durationMs}ms`);
+  console.log(
+    `[audit-retention] rotated ${summary.rotated} events → ${summary.archives} archives, kept ${summary.kept}, pruned ${summary.pruned} old archives in ${summary.durationMs}ms`
+  );
   return summary;
 }
 
@@ -190,17 +211,26 @@ export function startAuditRetention() {
   }
   const hour = Number(process.env.OPS_AUDIT_HOUR) || 3;
   const tick = () => {
-    try { runRotationCycle(); } catch (err) { console.error('[audit-retention] cycle err:', err); }
+    try {
+      runRotationCycle();
+    } catch (err) {
+      console.error('[audit-retention] cycle err:', err);
+    }
     _timer = setTimeout(tick, 24 * 60 * 60 * 1000);
   };
   const ms = msUntilHour(hour);
   _timer = setTimeout(tick, ms);
-  console.log(`[audit-retention] scheduler armed — next run in ${(ms / 1000 / 60).toFixed(0)} minutes (target ${hour}:00)`);
+  console.log(
+    `[audit-retention] scheduler armed — next run in ${(ms / 1000 / 60).toFixed(0)} minutes (target ${hour}:00)`
+  );
   return { ok: true, nextRunMs: ms };
 }
 
 export function stopAuditRetention() {
-  if (_timer) { clearTimeout(_timer); _timer = null; }
+  if (_timer) {
+    clearTimeout(_timer);
+    _timer = null;
+  }
 }
 
 export function getStatus() {

@@ -18,7 +18,7 @@
  * all of them.
  */
 
-const subscribersByUser = new Map();  // user_id → Set<{ id, send }>
+const subscribersByUser = new Map(); // user_id → Set<{ id, send }>
 let _subId = 0;
 
 // Phase 10H — per-user subscriber cap. A pathological client (tab
@@ -41,8 +41,11 @@ export function onPresenceChange(fn) {
 }
 function emitPresence(userId, online) {
   for (const fn of presenceListeners) {
-    try { fn({ userId, online, at: new Date().toISOString() }); }
-    catch { /* listener shouldn't break the fan-out */ }
+    try {
+      fn({ userId, online, at: new Date().toISOString() });
+    } catch {
+      /* listener shouldn't break the fan-out */
+    }
   }
 }
 
@@ -50,7 +53,7 @@ function emitPresence(userId, online) {
 // can render "Last seen 5 min ago" for offline users without touching
 // users.json on every tab close. Also exported for the /api/chat/users
 // directory endpoint to project into the response.
-const lastSeenByUser = new Map();  // user_id → ISO timestamp
+const lastSeenByUser = new Map(); // user_id → ISO timestamp
 export function getLastSeenAt(userId) {
   return lastSeenByUser.get(Number(userId)) || null;
 }
@@ -73,8 +76,11 @@ export function subscribe(userId, send) {
   while (set.size >= MAX_SUBSCRIBERS_PER_USER) {
     const eldest = set.values().next().value;
     set.delete(eldest);
-    try { eldest.send({ type: 'session_evicted', reason: 'too_many_connections' }); }
-    catch { /* stream already dead */ }
+    try {
+      eldest.send({ type: 'session_evicted', reason: 'too_many_connections' });
+    } catch {
+      /* stream already dead */
+    }
   }
   set.add(entry);
   // Fire the "came online" transition only when this user went from 0
@@ -116,8 +122,13 @@ export function publish(userIds, event, opts = {}) {
     if (!set) continue;
     let userHit = false;
     for (const entry of set) {
-      try { entry.send(event); delivered++; userHit = true; }
-      catch { /* dead stream — cleanup happens when res.on('close') fires */ }
+      try {
+        entry.send(event);
+        delivered++;
+        userHit = true;
+      } catch {
+        /* dead stream — cleanup happens when res.on('close') fires */
+      }
     }
     if (userHit && perUser) perUser.add(Number(uid));
   }

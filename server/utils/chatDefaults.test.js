@@ -7,9 +7,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  normalizeApprovalRoles, MAX_DEFAULT_ROOMS_PER_USER,
-} from './chatDefaults.js';
+import { normalizeApprovalRoles, MAX_DEFAULT_ROOMS_PER_USER } from './chatDefaults.js';
 
 test('normalizeApprovalRoles: empty input → empty roles, not truncated', () => {
   assert.deepEqual(normalizeApprovalRoles([]), { roles: [], truncated: false });
@@ -24,7 +22,12 @@ test('normalizeApprovalRoles: non-array inputs coerce to empty', () => {
 
 test('normalizeApprovalRoles: preserves insertion order, dedupes', () => {
   const { roles, truncated } = normalizeApprovalRoles([
-    'sales', 'finance', 'sales', 'pe', 'finance', 'sales',
+    'sales',
+    'finance',
+    'sales',
+    'pe',
+    'finance',
+    'sales',
   ]);
   assert.deepEqual(roles, ['sales', 'finance', 'pe']);
   assert.equal(truncated, false);
@@ -32,7 +35,14 @@ test('normalizeApprovalRoles: preserves insertion order, dedupes', () => {
 
 test('normalizeApprovalRoles: filters non-strings and empty strings', () => {
   const { roles } = normalizeApprovalRoles([
-    'sales', '', null, 42, undefined, 'pe', false, 'finance',
+    'sales',
+    '',
+    null,
+    42,
+    undefined,
+    'pe',
+    false,
+    'finance',
   ]);
   assert.deepEqual(roles, ['sales', 'pe', 'finance']);
 });
@@ -76,5 +86,8 @@ test('MAX_DEFAULT_ROOMS_PER_USER is a sane cap', () => {
   // Defensive check — if someone tries to loosen this to a huge
   // number, the test fails so the PR conversation surfaces the risk.
   assert.ok(MAX_DEFAULT_ROOMS_PER_USER >= 10, 'must accommodate real users with multiple roles');
-  assert.ok(MAX_DEFAULT_ROOMS_PER_USER <= 100, 'must stay small enough to bound the /rooms fetch cost');
+  assert.ok(
+    MAX_DEFAULT_ROOMS_PER_USER <= 100,
+    'must stay small enough to bound the /rooms fetch cost'
+  );
 });

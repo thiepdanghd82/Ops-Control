@@ -12,7 +12,14 @@ import path from 'node:path';
 import * as connection from '../db/connection.js';
 import { initSchema } from '../db/init.js';
 import { _resetDbReadyForTests } from './backends/sqliteBackend.js';
-import { loadQuotes, saveQuotes, getQuoteById, quotesBackendStatus, upsertQuote, VersionConflictError } from './quotesStore.js';
+import {
+  loadQuotes,
+  saveQuotes,
+  getQuoteById,
+  quotesBackendStatus,
+  upsertQuote,
+  VersionConflictError,
+} from './quotesStore.js';
 
 function setupTmp() {
   connection._resetForTests();
@@ -36,8 +43,7 @@ function sampleQuote(id, overrides = {}) {
 }
 
 function dbQuoteCount() {
-  return connection.getDb()
-    .prepare('SELECT COUNT(*) as n FROM quotes').get().n;
+  return connection.getDb().prepare('SELECT COUNT(*) as n FROM quotes').get().n;
 }
 
 test('loadQuotes: missing file → []', () => {
@@ -70,8 +76,7 @@ test('saveQuotes: SQLite mirror reflects deletes (full-sync semantics)', () => {
   saveQuotes([sampleQuote(1), sampleQuote(2), sampleQuote(3)]);
   saveQuotes([sampleQuote(1), sampleQuote(3, { version: 2 })]);
   assert.equal(dbQuoteCount(), 2);
-  const q3 = connection.getDb()
-    .prepare('SELECT raw_json FROM quotes WHERE id = 3').get();
+  const q3 = connection.getDb().prepare('SELECT raw_json FROM quotes WHERE id = 3').get();
   assert.equal(JSON.parse(q3.raw_json).version, 2);
 });
 
@@ -96,7 +101,9 @@ test('saveQuotes: SQLite failure does not throw (file is authoritative)', () => 
   // Capture the console.warn call so we can assert the diagnostic fires.
   const origWarn = console.warn;
   let warned = '';
-  console.warn = (...args) => { warned += args.join(' ') + '\n'; };
+  console.warn = (...args) => {
+    warned += args.join(' ') + '\n';
+  };
   try {
     const r = saveQuotes([sampleQuote(1)]);
     assert.equal(r.file, true);
@@ -134,10 +141,15 @@ test('OPS_BACKEND_QUOTES=file: reads come from JSON even if SQLite has different
   // DB to set a different row. Simulates drift during cutover.
   saveQuotes([sampleQuote(1)]);
   connection.getDb().prepare('DELETE FROM quotes').run();
-  connection.getDb().prepare(`
+  connection
+    .getDb()
+    .prepare(
+      `
     INSERT INTO quotes (id, type, state_json, raw_json)
     VALUES (99, 'standard', '{}', ?)
-  `).run(JSON.stringify({ id: 99, state: { ccl_pn: 'CCL-99' } }));
+  `
+    )
+    .run(JSON.stringify({ id: 99, state: { ccl_pn: 'CCL-99' } }));
   // Force file backend
   process.env.OPS_BACKEND_QUOTES = 'file';
   try {
@@ -156,10 +168,15 @@ test('OPS_BACKEND_QUOTES=sqlite: reads come from SQLite', () => {
   saveQuotes([sampleQuote(1)]);
   // Fiddle DB to set different content.
   connection.getDb().prepare('DELETE FROM quotes').run();
-  connection.getDb().prepare(`
+  connection
+    .getDb()
+    .prepare(
+      `
     INSERT INTO quotes (id, type, state_json, raw_json)
     VALUES (99, 'standard', '{}', ?)
-  `).run(JSON.stringify({ id: 99, state: { ccl_pn: 'CCL-99' } }));
+  `
+    )
+    .run(JSON.stringify({ id: 99, state: { ccl_pn: 'CCL-99' } }));
   process.env.OPS_BACKEND_QUOTES = 'sqlite';
   try {
     const list = loadQuotes();
@@ -225,8 +242,10 @@ test('strict mode: loadQuotes reads ONLY SQLite, ignores file drift', () => {
   setupTmp();
   saveQuotes([sampleQuote(1)]);
   // Introduce drift — file says [7,8], SQLite still holds [1].
-  fs.writeFileSync(process.env.OPS_QUOTE_HISTORY_FILE,
-    JSON.stringify([sampleQuote(7), sampleQuote(8)]));
+  fs.writeFileSync(
+    process.env.OPS_QUOTE_HISTORY_FILE,
+    JSON.stringify([sampleQuote(7), sampleQuote(8)])
+  );
   process.env.OPS_BACKEND_QUOTES = 'sqlite';
   process.env.OPS_QUOTES_STRICT_SQLITE = '1';
   try {
@@ -243,8 +262,10 @@ test('strict mode: getQuoteById returns SQLite match, no file fallback', () => {
   setupTmp();
   saveQuotes([sampleQuote(42)]);
   // File diverges with id=42 but different content.
-  fs.writeFileSync(process.env.OPS_QUOTE_HISTORY_FILE,
-    JSON.stringify([sampleQuote(42, { state: { ccl_pn: 'CCL-STALE' } })]));
+  fs.writeFileSync(
+    process.env.OPS_QUOTE_HISTORY_FILE,
+    JSON.stringify([sampleQuote(42, { state: { ccl_pn: 'CCL-STALE' } })])
+  );
   process.env.OPS_BACKEND_QUOTES = 'sqlite';
   process.env.OPS_QUOTES_STRICT_SQLITE = '1';
   try {
@@ -265,8 +286,10 @@ test('strict mode: DB missing → loadQuotes throws (fail-loud, not silent stale
   process.env.OPS_QUOTE_HISTORY_FILE = path.join(dir, 'quote_history.json');
   process.env.OPS_DB_PATH = path.join(dir, 'never-created.db');
   // Put content in file so we can verify it's NOT returned.
-  fs.writeFileSync(process.env.OPS_QUOTE_HISTORY_FILE,
-    JSON.stringify([sampleQuote(1), sampleQuote(2)]));
+  fs.writeFileSync(
+    process.env.OPS_QUOTE_HISTORY_FILE,
+    JSON.stringify([sampleQuote(1), sampleQuote(2)])
+  );
   process.env.OPS_BACKEND_QUOTES = 'sqlite';
   process.env.OPS_QUOTES_STRICT_SQLITE = '1';
   try {
@@ -336,7 +359,12 @@ test('upsertQuote: assigns next-free id when id is missing', async () => {
 
 test('upsertQuote: replaces existing quote by id (merge with current)', async () => {
   setupTmp();
-  const first = await upsertQuote({ type: 'standard', state: { rfq_number: 'A' }, version: 0, label: 'first' });
+  const first = await upsertQuote({
+    type: 'standard',
+    state: { rfq_number: 'A' },
+    version: 0,
+    label: 'first',
+  });
   await upsertQuote({ id: first.id, state: { rfq_number: 'A-REV' } });
   const list = loadQuotes();
   assert.equal(list.length, 1);
@@ -357,19 +385,23 @@ test('upsertQuote: concurrent creates never lose a row (lost-update guard)', asy
     promises.push(upsertQuote({ type: 'standard', state: { rfq_number: `R-${i}` } }));
   }
   const saved = await Promise.all(promises);
-  const ids = saved.map(q => q.id).sort((a, b) => a - b);
-  assert.deepEqual(ids, Array.from({ length: N }, (_, i) => i + 1));
+  const ids = saved.map((q) => q.id).sort((a, b) => a - b);
+  assert.deepEqual(
+    ids,
+    Array.from({ length: N }, (_, i) => i + 1)
+  );
   const onDisk = loadQuotes();
   assert.equal(onDisk.length, N);
   // Every rfq_number should have landed — no silent drops.
-  const rfqs = new Set(onDisk.map(q => q.state.rfq_number));
+  const rfqs = new Set(onDisk.map((q) => q.state.rfq_number));
   for (let i = 0; i < N; i++) assert.ok(rfqs.has(`R-${i}`), `missing R-${i}`);
 });
 
 test('upsertQuote: concurrent updates to different ids all land', async () => {
   setupTmp();
   // Seed 5 quotes.
-  for (let i = 0; i < 5; i++) await upsertQuote({ type: 'standard', state: { rfq_number: `A-${i}` } });
+  for (let i = 0; i < 5; i++)
+    await upsertQuote({ type: 'standard', state: { rfq_number: `A-${i}` } });
   // 5 concurrent PATCHes, each on a different row.
   const patches = [];
   for (let i = 1; i <= 5; i++) {
@@ -379,7 +411,7 @@ test('upsertQuote: concurrent updates to different ids all land', async () => {
   const list = loadQuotes();
   assert.equal(list.length, 5);
   for (let i = 1; i <= 5; i++) {
-    const q = list.find(x => x.id === i);
+    const q = list.find((x) => x.id === i);
     assert.ok(q, `id ${i} missing after concurrent patches`);
     assert.equal(q.state.rfq_number, `PATCHED-${i}`);
   }
@@ -431,16 +463,16 @@ test('upsertQuote: stale _version throws VersionConflictError', async () => {
       assert.equal(err.actualVersion, 2);
       assert.equal(err.current.state.rfq, 'B');
       return true;
-    },
+    }
   );
 });
 
 test('upsertQuote: omitting _version opts out of the check (legacy callers)', async () => {
   setupTmp();
   const created = await upsertQuote({ type: 'standard', state: { rfq: 'A' } });
-  await upsertQuote({ id: created.id, _version: 1, state: { rfq: 'B' } });  // v2
+  await upsertQuote({ id: created.id, _version: 1, state: { rfq: 'B' } }); // v2
   // No _version on the patch → no conflict raised even though cache is stale.
   const patched = await upsertQuote({ id: created.id, state: { rfq: 'C' } });
   assert.equal(patched.state.rfq, 'C');
-  assert.equal(patched._version, 3);  // still bumps
+  assert.equal(patched._version, 3); // still bumps
 });

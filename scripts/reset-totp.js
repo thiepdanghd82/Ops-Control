@@ -54,18 +54,34 @@ function fingerprintHex() {
   if (envKey.length < 64) return null;
   const key = Buffer.from(envKey.slice(0, 64), 'hex');
   if (key.length !== 32) return null;
-  return crypto.createHmac('sha256', key).update('ops-totp-fp-v1').digest().subarray(0, 16).toString('hex');
+  return crypto
+    .createHmac('sha256', key)
+    .update('ops-totp-fp-v1')
+    .digest()
+    .subarray(0, 16)
+    .toString('hex');
 }
 
-function bold(s) { return `\x1b[1m${s}\x1b[0m`; }
-function red(s)  { return `\x1b[31m${s}\x1b[0m`; }
-function green(s){ return `\x1b[32m${s}\x1b[0m`; }
-function dim(s)  { return `\x1b[90m${s}\x1b[0m`; }
+function bold(s) {
+  return `\x1b[1m${s}\x1b[0m`;
+}
+function red(s) {
+  return `\x1b[31m${s}\x1b[0m`;
+}
+function green(s) {
+  return `\x1b[32m${s}\x1b[0m`;
+}
+function dim(s) {
+  return `\x1b[90m${s}\x1b[0m`;
+}
 
 function ask(question) {
-  return new Promise(res => {
+  return new Promise((res) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    rl.question(question, ans => { rl.close(); res(ans); });
+    rl.question(question, (ans) => {
+      rl.close();
+      res(ans);
+    });
   });
 }
 
@@ -81,7 +97,9 @@ async function main() {
   console.log(`  Secrets file:   ${dim(SECRETS_PATH)}`);
 
   const fp = fingerprintHex();
-  console.log(`  Key fingerprint:${fp ? ' ' + green(fp.slice(0,16) + '…') : ' ' + red('(OPS_TOTP_KEY not set or invalid)')}`);
+  console.log(
+    `  Key fingerprint:${fp ? ' ' + green(fp.slice(0, 16) + '…') : ' ' + red('(OPS_TOTP_KEY not set or invalid)')}`
+  );
 
   if (!fs.existsSync(SECRETS_PATH)) {
     console.log('');
@@ -101,7 +119,9 @@ async function main() {
 
   if (header) {
     console.log(`  File version:   ${dim('v' + (header.v || '?'))}`);
-    console.log(`  File fp:        ${dim(header.fp ? Buffer.from(header.fp,'base64').toString('hex').slice(0,16) + '…' : '(v<3, no fp)')}`);
+    console.log(
+      `  File fp:        ${dim(header.fp ? Buffer.from(header.fp, 'base64').toString('hex').slice(0, 16) + '…' : '(v<3, no fp)')}`
+    );
     if (header.fp && fp) {
       const fpMatches = Buffer.from(header.fp, 'base64').toString('hex') === fp;
       console.log(`  Key matches:    ${fpMatches ? green('✓ yes') : red('✗ NO — wrong key')}`);
@@ -109,8 +129,10 @@ async function main() {
   }
 
   console.log('');
-  console.log(red(bold('  ⚠  Quarantining this file will DESTROY all users\' 2FA enrollment.')));
-  console.log(red(bold('     Every user who had 2FA must re-scan the QR with Google Authenticator.')));
+  console.log(red(bold("  ⚠  Quarantining this file will DESTROY all users' 2FA enrollment.")));
+  console.log(
+    red(bold('     Every user who had 2FA must re-scan the QR with Google Authenticator.'))
+  );
   console.log('');
 
   if (!force) {
@@ -131,14 +153,18 @@ async function main() {
   try {
     const line = `${new Date().toISOString()}\tTOTP_SECRETS_RESET\t-\t-\tcli\tquarantined=${quarantinePath}\tfp=${fp || 'none'}\n`;
     fs.appendFileSync(AUDIT_PATH, line);
-  } catch { /* audit file might not be initialized; that's fine */ }
+  } catch {
+    /* audit file might not be initialized; that's fine */
+  }
 
   console.log('');
   console.log(green('  ✓ File quarantined:'));
   console.log(`    ${dim(quarantinePath)}`);
   console.log('');
   console.log(bold('  Next steps:'));
-  console.log('   1. Verify .env has a stable OPS_TOTP_KEY (so the NEXT save uses a persistent key).');
+  console.log(
+    '   1. Verify .env has a stable OPS_TOTP_KEY (so the NEXT save uses a persistent key).'
+  );
   console.log('   2. Restart the server.');
   console.log('   3. Tell admins + sys users to log in (now password-only, no TOTP gate) and');
   console.log('      Settings → Account Control → Setup 2FA → scan new QR.');
@@ -147,7 +173,9 @@ async function main() {
   return 0;
 }
 
-main().then(code => process.exit(code)).catch(err => {
-  console.error('reset-totp failed:', err);
-  process.exit(1);
-});
+main()
+  .then((code) => process.exit(code))
+  .catch((err) => {
+    console.error('reset-totp failed:', err);
+    process.exit(1);
+  });

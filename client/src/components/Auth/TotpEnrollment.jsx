@@ -51,17 +51,36 @@ export default function TotpEnrollment({ username, onComplete, onCancel }) {
   const otpauthUri = useMemo(() => {
     const issuer = 'Ops Control';
     const label = `${issuer}:${username}`;
-    const params = new URLSearchParams({ secret, issuer, algorithm: 'SHA1', digits: '6', period: '30' });
+    const params = new URLSearchParams({
+      secret,
+      issuer,
+      algorithm: 'SHA1',
+      digits: '6',
+      period: '30',
+    });
     return `otpauth://totp/${encodeURIComponent(label)}?${params.toString()}`;
   }, [secret, username]);
 
   useEffect(() => {
     let cancelled = false;
-    import('qrcode').then(({ default: QRCode }) =>
-      QRCode.toString(otpauthUri, { type: 'svg', errorCorrectionLevel: 'M', margin: 1, width: 200 })
-    ).then(svg => { if (!cancelled) setQrSvg(svg); })
-     .catch(() => { /* fall back to URI + secret */ });
-    return () => { cancelled = true; };
+    import('qrcode')
+      .then(({ default: QRCode }) =>
+        QRCode.toString(otpauthUri, {
+          type: 'svg',
+          errorCorrectionLevel: 'M',
+          margin: 1,
+          width: 200,
+        })
+      )
+      .then((svg) => {
+        if (!cancelled) setQrSvg(svg);
+      })
+      .catch(() => {
+        /* fall back to URI + secret */
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [otpauthUri]);
 
   const copyUri = useCallback(async () => {
@@ -69,31 +88,39 @@ export default function TotpEnrollment({ username, onComplete, onCancel }) {
       await navigator.clipboard.writeText(otpauthUri);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch { /* clipboard may not be available */ }
+    } catch {
+      /* clipboard may not be available */
+    }
   }, [otpauthUri]);
 
-  const handleSubmit = useCallback(async (e) => {
-    e?.preventDefault?.();
-    if (code.length !== 6 || busy) return;
-    setBusy(true);
-    setError('');
-    try {
-      // Atomic: server verifies the code against the proposed secret BEFORE
-      // persisting. A bad code is a no-op — no stale secret left on disk,
-      // so the user can retry on the same page (and the same QR/secret)
-      // without an admin CLI reset. Replaces the legacy save-then-verify
-      // flow that could leave enrollment half-committed.
-      const result = await authApi.enrollTotp(username, secret, code);
-      if (!result?.ok) {
-        throw new Error(result?.msg || 'The 6-digit code did not match. Try the NEXT code in your authenticator app (they rotate every 30 seconds).');
+  const handleSubmit = useCallback(
+    async (e) => {
+      e?.preventDefault?.();
+      if (code.length !== 6 || busy) return;
+      setBusy(true);
+      setError('');
+      try {
+        // Atomic: server verifies the code against the proposed secret BEFORE
+        // persisting. A bad code is a no-op — no stale secret left on disk,
+        // so the user can retry on the same page (and the same QR/secret)
+        // without an admin CLI reset. Replaces the legacy save-then-verify
+        // flow that could leave enrollment half-committed.
+        const result = await authApi.enrollTotp(username, secret, code);
+        if (!result?.ok) {
+          throw new Error(
+            result?.msg ||
+              'The 6-digit code did not match. Try the NEXT code in your authenticator app (they rotate every 30 seconds).'
+          );
+        }
+        onComplete?.();
+      } catch (err) {
+        setError(err?.message || 'Enrollment failed — try again.');
+      } finally {
+        setBusy(false);
       }
-      onComplete?.();
-    } catch (err) {
-      setError(err?.message || 'Enrollment failed — try again.');
-    } finally {
-      setBusy(false);
-    }
-  }, [code, busy, secret, username, onComplete]);
+    },
+    [code, busy, secret, username, onComplete]
+  );
 
   const handleCodeChange = useCallback((e) => {
     // Digits only, auto-strip spaces / dashes so pastes from authenticator
@@ -107,9 +134,9 @@ export default function TotpEnrollment({ username, onComplete, onCancel }) {
     <form className="totp-enroll" onSubmit={handleSubmit}>
       <h2 className="totp-enroll-title">Set up 2-Step Verification</h2>
       <p className="totp-enroll-sub">
-        Your account role requires 2FA. Add this account to your authenticator
-        app (Google Authenticator, Authy, 1Password, Microsoft Authenticator)
-        using the secret below, then enter the 6-digit code to finish.
+        Your account role requires 2FA. Add this account to your authenticator app (Google
+        Authenticator, Authy, 1Password, Microsoft Authenticator) using the secret below, then enter
+        the 6-digit code to finish.
       </p>
 
       <div className="totp-enroll-section">
@@ -130,7 +157,10 @@ export default function TotpEnrollment({ username, onComplete, onCancel }) {
 
       <div className="totp-enroll-section">
         <div className="totp-enroll-label">Can&rsquo;t scan? Enter this secret manually</div>
-        <div className="totp-enroll-secret" title="Paste this into the authenticator's manual-entry field">
+        <div
+          className="totp-enroll-secret"
+          title="Paste this into the authenticator's manual-entry field"
+        >
           {secret.match(/.{1,4}/g).join(' ')}
         </div>
       </div>
@@ -163,23 +193,35 @@ export default function TotpEnrollment({ username, onComplete, onCancel }) {
         />
       </div>
 
-      {error && <div className="totp-enroll-error" role="alert">{error}</div>}
+      {error && (
+        <div className="totp-enroll-error" role="alert">
+          {error}
+        </div>
+      )}
 
       <div className="totp-enroll-actions">
         {onCancel && (
-          <button type="button" className="totp-enroll-btn-cancel" onClick={onCancel} disabled={busy}>
+          <button
+            type="button"
+            className="totp-enroll-btn-cancel"
+            onClick={onCancel}
+            disabled={busy}
+          >
             Back to login
           </button>
         )}
-        <button type="submit" className="totp-enroll-btn-submit" disabled={code.length !== 6 || busy}>
+        <button
+          type="submit"
+          className="totp-enroll-btn-submit"
+          disabled={code.length !== 6 || busy}
+        >
           {busy ? 'Activating…' : 'Activate 2FA'}
         </button>
       </div>
 
       <p className="totp-enroll-help">
-        Save this secret in your password manager as a backup — if you lose
-        your authenticator device, IT can re-enroll you but your existing codes
-        will stop working.
+        Save this secret in your password manager as a backup — if you lose your authenticator
+        device, IT can re-enroll you but your existing codes will stop working.
       </p>
     </form>
   );

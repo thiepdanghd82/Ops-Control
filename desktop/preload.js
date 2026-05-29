@@ -136,10 +136,10 @@ const opsAPI = {
   // explicit handle (no generic invoke passthrough — keeps the
   // attack surface limited to these 4 channels).
   license: {
-    status:      () => ipcRenderer.invoke('ops:license.status'),
+    status: () => ipcRenderer.invoke('ops:license.status'),
     fingerprint: () => ipcRenderer.invoke('ops:license.fingerprint'),
-    apply:       (lic) => ipcRenderer.invoke('ops:license.apply', lic),
-    tiers:       () => ipcRenderer.invoke('ops:license.tiers'),
+    apply: (lic) => ipcRenderer.invoke('ops:license.apply', lic),
+    tiers: () => ipcRenderer.invoke('ops:license.tiers'),
   },
 };
 

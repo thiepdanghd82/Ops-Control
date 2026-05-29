@@ -13,7 +13,9 @@
  */
 
 /* Remove the default browser outline so our own ring is the only one. */
-:focus { outline: none; }
+:focus {
+  outline: none;
+}
 
 /* Keyboard-only focus ring. `:focus-visible` fires only when the browser
  * heuristically decides the focus came from a keyboard/assistive device,
@@ -24,10 +26,10 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 summary:focus-visible,
-[role="button"]:focus-visible,
-[role="link"]:focus-visible,
-[role="tab"]:focus-visible,
-[role="menuitem"]:focus-visible,
+[role='button']:focus-visible,
+[role='link']:focus-visible,
+[role='tab']:focus-visible,
+[role='menuitem']:focus-visible,
 [tabindex]:focus-visible {
   outline: 2px solid #3b82f6; /* matches existing focus color in .sc-smt-inp:focus */
   outline-offset: 2px;
@@ -41,7 +43,7 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, .25);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
 }
 
 /* ── Default :active click feedback for buttons ──
@@ -55,10 +57,14 @@ button:active:not(:disabled) {
 
 /* Respect reduced-motion users: the above transform is cosmetic only. */
 @media (prefers-reduced-motion: reduce) {
-  button:active:not(:disabled) { transform: none; }
-  *, *::before, *::after {
-    animation-duration: .001ms !important;
+  button:active:not(:disabled) {
+    transform: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: .001ms !important;
+    transition-duration: 0.001ms !important;
   }
 }

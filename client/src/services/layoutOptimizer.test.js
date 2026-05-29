@@ -22,7 +22,7 @@ const luxshare = {
   edge_margin_td: 3,
   tooth_pitch_mm: 3.175,
   rotary_cols: 1,
-  allow_rotate_90: false,  // sample orientation is fixed
+  allow_rotate_90: false, // sample orientation is fixed
 };
 
 const luxshareMat = { log_width: 131 };
@@ -38,8 +38,10 @@ test('suggestLayouts: top-5 by density/score favours higher pcs_per_shot', () =>
   // are fine but the TOP must dominate.
   const out = suggestLayouts(luxshare, luxshareMat);
   assert.ok(out.length > 0);
-  assert.ok(out[0].pcs_per_shot >= out[out.length - 1].pcs_per_shot,
-    `top pcs_per_shot ${out[0].pcs_per_shot} < bottom ${out[out.length - 1].pcs_per_shot}`);
+  assert.ok(
+    out[0].pcs_per_shot >= out[out.length - 1].pcs_per_shot,
+    `top pcs_per_shot ${out[0].pcs_per_shot} < bottom ${out[out.length - 1].pcs_per_shot}`
+  );
 });
 
 test('suggestLayouts: Luxshare 90-tooth 1-web×4-across×19-md is recoverable when tooth count is constrained', () => {
@@ -48,22 +50,30 @@ test('suggestLayouts: Luxshare 90-tooth 1-web×4-across×19-md is recoverable wh
   // num_webs value — the 1-web/4-across/19-md is the intended one.
   const out = suggestLayouts(luxshare, luxshareMat, { toothCountOptions: [90] });
   assert.ok(out.length >= 1);
-  const hit = out.find(c => c.num_webs === 1 && c.parts_web_across === 4
-    && c.parts_in_md >= 18 && c.parts_in_md <= 20 && c.tooth === 90);
+  const hit = out.find(
+    (c) =>
+      c.num_webs === 1 &&
+      c.parts_web_across === 4 &&
+      c.parts_in_md >= 18 &&
+      c.parts_in_md <= 20 &&
+      c.tooth === 90
+  );
   assert.ok(hit, `expected 1-web 4×19 90-tooth layout — got ${JSON.stringify(out)}`);
 });
 
 test('suggestLayouts: topN=50 also surfaces the Luxshare 90-tooth layout', () => {
   const out = suggestLayouts(luxshare, luxshareMat, { topN: 50 });
-  const hit = out.find(c => c.tooth === 90 && c.parts_web_across === 4);
+  const hit = out.find((c) => c.tooth === 90 && c.parts_web_across === 4);
   assert.ok(hit, 'expected 90-tooth 4×N layout in top 50');
 });
 
 test('suggestLayouts: top-N is sorted desc by score', () => {
   const out = suggestLayouts(luxshare, luxshareMat);
   for (let i = 1; i < out.length; i++) {
-    assert.ok(out[i - 1].score >= out[i].score,
-      `score order broken at ${i}: ${out[i - 1].score} < ${out[i].score}`);
+    assert.ok(
+      out[i - 1].score >= out[i].score,
+      `score order broken at ${i}: ${out[i - 1].score} < ${out[i].score}`
+    );
   }
 });
 
@@ -71,8 +81,10 @@ test('suggestLayouts: respects maxAcross PER WEB from logWidth', () => {
   // Narrow log — 1-web candidates fit 2 across; multi-web candidates fit 1 across per web.
   const out = suggestLayouts(luxshare, { log_width: 64 });
   for (const c of out) {
-    assert.ok(c.parts_web_across * c.num_webs * (26 + 3) <= 64 + 5,
-      `${c.num_webs}-web × ${c.parts_web_across}-across exceeds narrow log`);
+    assert.ok(
+      c.parts_web_across * c.num_webs * (26 + 3) <= 64 + 5,
+      `${c.num_webs}-web × ${c.parts_web_across}-across exceeds narrow log`
+    );
   }
 });
 
@@ -84,13 +96,18 @@ test('suggestLayouts v2: LG 4-web flat-press layout is recoverable when maxPitch
   // short pitch for per-part artwork reasons. We model that with a
   // maxPitchMm ≈ 80mm constraint.
   const lg = {
-    part_width: 12, part_length_md: 12,
-    min_gap_md: 3, min_gap_td: 3, edge_margin_td: 4,
-    press_type: 'flat', allow_rotate_90: false, rotary_cols: 1,
+    part_width: 12,
+    part_length_md: 12,
+    min_gap_md: 3,
+    min_gap_td: 3,
+    edge_margin_td: 4,
+    press_type: 'flat',
+    allow_rotate_90: false,
+    rotary_cols: 1,
   };
   const out = suggestLayouts(lg, { log_width: 320 }, { maxPitchMm: 80, topN: 30 });
   assert.ok(out.length > 0, 'no candidates for flat press');
-  const hit = out.find(c => c.num_webs === 4 && c.parts_web_across === 5 && c.parts_in_md === 5);
+  const hit = out.find((c) => c.num_webs === 4 && c.parts_web_across === 5 && c.parts_in_md === 5);
   assert.ok(hit, `expected 4w×5×5 flat layout in top 30, got ${JSON.stringify(out.slice(0, 3))}`);
   assert.equal(hit.press_type, 'flat');
   assert.equal(hit.tooth, null, 'flat press should not have tooth');
@@ -100,16 +117,23 @@ test('suggestLayouts v2: LG 4-web flat-press layout is recoverable when maxPitch
 test('suggestLayouts v2: num_webs search enumerates multiple candidates for same part', () => {
   // Given a wide log (300mm) for a small part (12×12), we expect the
   // optimizer to produce candidates with 1, 2, 3, 4... webs.
-  const st = { part_width: 12, part_length_md: 12, min_gap_td: 3, min_gap_md: 3, edge_margin_td: 3, rotary_cols: 1 };
+  const st = {
+    part_width: 12,
+    part_length_md: 12,
+    min_gap_td: 3,
+    min_gap_md: 3,
+    edge_margin_td: 3,
+    rotary_cols: 1,
+  };
   const out = suggestLayouts(st, { log_width: 300 }, { topN: 50, toothCountOptions: [90] });
-  const webs = new Set(out.map(c => c.num_webs));
+  const webs = new Set(out.map((c) => c.num_webs));
   assert.ok(webs.size >= 2, `expected multiple num_webs values, got ${[...webs]}`);
 });
 
 test('suggestLayouts: allow_rotate_90 exposes rotated candidates', () => {
   const rotatable = { ...luxshare, allow_rotate_90: true };
   const out = suggestLayouts(rotatable, luxshareMat);
-  const hasRotated = out.some(c => c.rotated);
+  const hasRotated = out.some((c) => c.rotated);
   // 26×12 vs 12×26: both orientations are distinct grids, so at least
   // one rotated candidate should appear in the top 5 if rotation helps.
   // If it never helps, it's fine that `rotated` is all false — the
@@ -137,10 +161,7 @@ test('suggestLayouts: sheet_length + web_width_td fit inside log', () => {
 });
 
 test('suggestLayouts: targetPcsPerRoll flags meetsTarget', () => {
-  const out = suggestLayouts(
-    { ...luxshare, target_pcs_per_roll: 1000 },
-    luxshareMat,
-  );
+  const out = suggestLayouts({ ...luxshare, target_pcs_per_roll: 1000 }, luxshareMat);
   for (const c of out) {
     assert.notEqual(c.meetsTarget, null);
   }
@@ -167,17 +188,23 @@ test('suggestLayouts: offcut metrics are between 0 and 1', () => {
 
 test('suggestLayouts v2: profile caps tooth count + constrains web width', () => {
   const gallus135 = {
-    id: 'gallus-em340', name: 'Gallus EM340',
-    press_type: 'rotary', tooth_count_max: 135,
+    id: 'gallus-em340',
+    name: 'Gallus EM340',
+    press_type: 'rotary',
+    tooth_count_max: 135,
     tooth_pitch_mm: 3.175,
-    web_width_min_mm: 100, web_width_max_mm: 340,
+    web_width_min_mm: 100,
+    web_width_max_mm: 340,
     common_dies: [60, 72, 90, 104, 120],
   };
   const out = suggestLayouts(luxshare, luxshareMat, { profile: gallus135, topN: 20 });
   for (const c of out) {
     if (c.tooth != null) {
       assert.ok(c.tooth <= 135, `tooth ${c.tooth} exceeds Gallus 135T cap`);
-      assert.ok(gallus135.common_dies.includes(c.tooth), `tooth ${c.tooth} not in Gallus die inventory`);
+      assert.ok(
+        gallus135.common_dies.includes(c.tooth),
+        `tooth ${c.tooth} not in Gallus die inventory`
+      );
     }
     // web_width per lane must be between 100-340mm (our log is 131mm → only 1-web layouts feasible)
     assert.ok(c.web_width_td >= 100, `web ${c.web_width_td} below Gallus min`);
@@ -187,8 +214,11 @@ test('suggestLayouts v2: profile caps tooth count + constrains web width', () =>
 
 test('suggestLayouts v2: reuse flag set when tooth matches common_dies (legacy)', () => {
   const profile = {
-    press_type: 'rotary', tooth_count_max: 200, tooth_pitch_mm: 3.175,
-    web_width_min_mm: 50, web_width_max_mm: 400,
+    press_type: 'rotary',
+    tooth_count_max: 200,
+    tooth_pitch_mm: 3.175,
+    web_width_min_mm: 50,
+    web_width_max_mm: 400,
     common_dies: [90],
   };
   const out = suggestLayouts(luxshare, luxshareMat, { profile, topN: 5 });
@@ -206,27 +236,44 @@ test('suggestLayouts v3: plate+magnetic inventory → full/partial/none reuse_st
   // → tooth 120 = none (neither) — but 120 not in union, so would not appear
   // → tooth outside union (say 72) wouldn't be in toothCountOptions at all
   const profile = {
-    press_type: 'rotary', tooth_count_max: 200, tooth_pitch_mm: 3.175,
-    web_width_min_mm: 50, web_width_max_mm: 400,
-    plate_dies:    [{ tooth: 80, qty: 1 }, { tooth: 90, qty: 1 }, { tooth: 100, qty: 1 }],
-    magnetic_dies: [{ tooth: 80, qty: 1 },                        { tooth: 100, qty: 1 }],
+    press_type: 'rotary',
+    tooth_count_max: 200,
+    tooth_pitch_mm: 3.175,
+    web_width_min_mm: 50,
+    web_width_max_mm: 400,
+    plate_dies: [
+      { tooth: 80, qty: 1 },
+      { tooth: 90, qty: 1 },
+      { tooth: 100, qty: 1 },
+    ],
+    magnetic_dies: [
+      { tooth: 80, qty: 1 },
+      { tooth: 100, qty: 1 },
+    ],
   };
   const out = suggestLayouts(luxshare, luxshareMat, { profile, topN: 10 });
-  const t80  = out.find(c => c.tooth === 80);
-  const t90  = out.find(c => c.tooth === 90);
-  const t100 = out.find(c => c.tooth === 100);
-  assert.ok(t80);  assert.equal(t80.reuse_status, 'full');
-  assert.ok(t90);  assert.equal(t90.reuse_status, 'partial_plate');
+  const t80 = out.find((c) => c.tooth === 80);
+  const t90 = out.find((c) => c.tooth === 90);
+  const t100 = out.find((c) => c.tooth === 100);
+  assert.ok(t80);
+  assert.equal(t80.reuse_status, 'full');
+  assert.ok(t90);
+  assert.equal(t90.reuse_status, 'partial_plate');
   assert.deepEqual(t90.needs_order, ['magnetic-90T']);
-  assert.ok(t100); assert.equal(t100.reuse_status, 'full');
+  assert.ok(t100);
+  assert.equal(t100.reuse_status, 'full');
 });
 
 test('suggestLayouts v3: asymmetric edge margins honoured in offcut calc', () => {
   const st = {
-    part_width: 20, part_length_md: 20,
-    min_gap_md: 3, min_gap_td: 3,
-    edge_margin_td_left: 5, edge_margin_td_right: 2,
-    allow_rotate_90: false, rotary_cols: 1,
+    part_width: 20,
+    part_length_md: 20,
+    min_gap_md: 3,
+    min_gap_td: 3,
+    edge_margin_td_left: 5,
+    edge_margin_td_right: 2,
+    allow_rotate_90: false,
+    rotary_cols: 1,
   };
   const out = suggestLayouts(st, { log_width: 100 }, { toothCountOptions: [72], topN: 20 });
   // Verify that the 1-web candidate uses the 7mm total edge (5+2)
@@ -234,7 +281,7 @@ test('suggestLayouts v3: asymmetric edge margins honoured in offcut calc', () =>
   //   availTd = 100 − 7 = 93 → maxAcross = floor((93+3)/(20+3)) = 4
   //   partsSpan = 4·20 + 3·3 = 89
   //   logUsedTd = 1 · (89 + 7) = 96 → offcutTd = 4/100 = 4%
-  const oneWeb = out.find(c => c.num_webs === 1);
+  const oneWeb = out.find((c) => c.num_webs === 1);
   assert.ok(oneWeb, 'expected a 1-web candidate');
   assert.equal(oneWeb.parts_web_across, 4);
   assert.ok(oneWeb.offcut_td >= 0.03 && oneWeb.offcut_td <= 0.05, `offcut_td ${oneWeb.offcut_td}`);
@@ -242,10 +289,21 @@ test('suggestLayouts v3: asymmetric edge margins honoured in offcut calc', () =>
 
 test('suggestLayouts v2: profile with press_type=flat overrides default rotary', () => {
   const hpIndigo = {
-    press_type: 'flat', web_width_min_mm: 150, web_width_max_mm: 340,
-    max_pitch_mm: 320, common_dies: [],
+    press_type: 'flat',
+    web_width_min_mm: 150,
+    web_width_max_mm: 340,
+    max_pitch_mm: 320,
+    common_dies: [],
   };
-  const lg = { part_width: 12, part_length_md: 12, min_gap_md: 3, min_gap_td: 3, edge_margin_td: 4, allow_rotate_90: false, rotary_cols: 1 };
+  const lg = {
+    part_width: 12,
+    part_length_md: 12,
+    min_gap_md: 3,
+    min_gap_td: 3,
+    edge_margin_td: 4,
+    allow_rotate_90: false,
+    rotary_cols: 1,
+  };
   const out = suggestLayouts(lg, { log_width: 320 }, { profile: hpIndigo });
   assert.ok(out.length > 0);
   for (const c of out) {

@@ -29,13 +29,28 @@ process.env.OPS_TOTP_KEY = crypto.randomBytes(32).toString('hex');
 
 const seedUsersPath = path.join(tmp, 'Library', 'Users', 'users.json');
 fs.mkdirSync(path.dirname(seedUsersPath), { recursive: true });
-fs.writeFileSync(seedUsersPath, JSON.stringify([{
-  id: 1, username: 'Administrator', role: 'sys',
-  pwd_bcrypt: '$2b$10$dummyBcryptNeverVerified',
-  lastPwdChange: new Date().toISOString(),
-  permissions: { canDeleteQuote: true },
-  full_name: 'Admin', english_name: 'Admin', id_no: '', email: '', phone: '',
-}], null, 2));
+fs.writeFileSync(
+  seedUsersPath,
+  JSON.stringify(
+    [
+      {
+        id: 1,
+        username: 'Administrator',
+        role: 'sys',
+        pwd_bcrypt: '$2b$10$dummyBcryptNeverVerified',
+        lastPwdChange: new Date().toISOString(),
+        permissions: { canDeleteQuote: true },
+        full_name: 'Admin',
+        english_name: 'Admin',
+        id_no: '',
+        email: '',
+        phone: '',
+      },
+    ],
+    null,
+    2
+  )
+);
 
 const { default: app } = await import('../index.js');
 const { initSchema } = await import('../db/init.js');
@@ -43,12 +58,15 @@ initSchema();
 const { createSession, loadTotpSecrets } = await import('../services/authService.js');
 
 let server, baseUrl;
-test.before(() => new Promise((resolve) => {
-  server = app.listen(0, '127.0.0.1', () => {
-    baseUrl = `http://127.0.0.1:${server.address().port}`;
-    resolve();
-  });
-}));
+test.before(
+  () =>
+    new Promise((resolve) => {
+      server = app.listen(0, '127.0.0.1', () => {
+        baseUrl = `http://127.0.0.1:${server.address().port}`;
+        resolve();
+      });
+    })
+);
 test.after(() => new Promise((resolve) => server.close(resolve)));
 
 function genSecret() {
@@ -57,7 +75,8 @@ function genSecret() {
   let bits = '';
   for (const b of bytes) bits += b.toString(2).padStart(8, '0');
   let out = '';
-  for (let i = 0; i + 5 <= bits.length; i += 5) out += alphabet[parseInt(bits.substring(i, i + 5), 2)];
+  for (let i = 0; i + 5 <= bits.length; i += 5)
+    out += alphabet[parseInt(bits.substring(i, i + 5), 2)];
   return out;
 }
 
@@ -77,7 +96,7 @@ function currentCode(secret) {
 async function postEnroll(token, body) {
   const res = await fetch(`${baseUrl}/api/totp/enroll`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Cookie': `ops_session=${token}` },
+    headers: { 'Content-Type': 'application/json', Cookie: `ops_session=${token}` },
     body: JSON.stringify(body),
   });
   return { status: res.status, body: await res.json() };
@@ -95,7 +114,11 @@ test('wrong code does NOT persist a secret (atomicity)', async () => {
 test('correct code persists secret and finalizes session', async () => {
   const token = createSession(1, { totpVerified: false, totpEnrollmentPending: true });
   const secret = genSecret();
-  const r = await postEnroll(token, { username: 'Administrator', secret, code: currentCode(secret) });
+  const r = await postEnroll(token, {
+    username: 'Administrator',
+    secret,
+    code: currentCode(secret),
+  });
   assert.equal(r.status, 200);
   assert.equal(r.body.ok, true);
   const disk = loadTotpSecrets();
@@ -103,7 +126,7 @@ test('correct code persists secret and finalizes session', async () => {
 
   // Same session should now pass /auth/me (totp_verified flipped).
   const me = await fetch(`${baseUrl}/api/auth/me`, {
-    headers: { 'Cookie': `ops_session=${token}` },
+    headers: { Cookie: `ops_session=${token}` },
   });
   assert.equal(me.status, 200, 'session must be fully authenticated after atomic enroll');
 });
@@ -111,13 +134,21 @@ test('correct code persists secret and finalizes session', async () => {
 test('second enroll on an already-enrolled account → 409', async () => {
   const token = createSession(1, { totpVerified: false, totpEnrollmentPending: true });
   const secret = genSecret();
-  const r = await postEnroll(token, { username: 'Administrator', secret, code: currentCode(secret) });
+  const r = await postEnroll(token, {
+    username: 'Administrator',
+    secret,
+    code: currentCode(secret),
+  });
   assert.equal(r.status, 409, 'must refuse re-enroll via enrollment endpoint');
 });
 
 test('fully-verified session cannot use /enroll (must use rotation path)', async () => {
   const token = createSession(1, { totpVerified: true, totpEnrollmentPending: false });
   const secret = genSecret();
-  const r = await postEnroll(token, { username: 'Administrator', secret, code: currentCode(secret) });
+  const r = await postEnroll(token, {
+    username: 'Administrator',
+    secret,
+    code: currentCode(secret),
+  });
   assert.equal(r.status, 403);
 });

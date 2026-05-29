@@ -14,12 +14,14 @@ per-SAP-domain routers under `server/domains/<sap>/routes/`. Two
 approaches are possible for each cohesive group of endpoints:
 
 **(A) Big-bang extract-and-mount:**
+
 - Pull endpoints into a new file.
 - Mount the new file under `/api/<domain>/<resource>`.
 - Remove the old endpoints from `costApi.js`.
 - Update the client UI in the same PR if any URL changed.
 
 **(B) Extract first, mount later:**
+
 - Pull endpoints into a new file with a factory pattern
   (`createXxxRouter({ ...injected deps })`).
 - Add unit tests that drive the factory through stubbed deps.
@@ -79,7 +81,7 @@ hybrid — new URL `/api/basis/backup/schedule` AND legacy
 - **Dead code window.** The new router file lives in the repo without
   being mounted — a code reviewer who skims a file isn't sure if it's
   in production. Mitigation: mark with `// NOT MOUNTED YET — see
-  CONTRIBUTING.md §F1` at the top of each unmounted router file.
+CONTRIBUTING.md §F1` at the top of each unmounted router file.
 - **Tests drift.** If costApi.js changes the legacy endpoint
   behaviour, the new router's tests aren't enforcing parity. We
   rely on the legacy endpoint's existing tests to catch behaviour

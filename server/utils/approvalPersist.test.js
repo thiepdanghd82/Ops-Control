@@ -37,7 +37,7 @@ function writeHistory(p, quotes) {
 async function applyTransition(filePath, quoteId, action, actorUser, reason) {
   return withLock(`quote:${quoteId}`, async () => {
     const quotes = readHistory(filePath);
-    const idx = quotes.findIndex(q => q.id === quoteId);
+    const idx = quotes.findIndex((q) => q.id === quoteId);
     if (idx === -1) return { ok: false, error: 'not found' };
     const prev = quotes[idx].state?.approval || null;
     const tr = approvalTransition({ approval: prev, action, actorUser, reason });
@@ -49,9 +49,9 @@ async function applyTransition(filePath, quoteId, action, actorUser, reason) {
   });
 }
 
-const costEng  = { username: 'hana',  role: 'cost',  approval_roles: [] };
-const salesMgr = { username: 'sonia', role: 'user',  approval_roles: ['sales_mgr'] };
-const finDir   = { username: 'felix', role: 'user',  approval_roles: ['finance_dir'] };
+const costEng = { username: 'hana', role: 'cost', approval_roles: [] };
+const salesMgr = { username: 'sonia', role: 'user', approval_roles: ['sales_mgr'] };
+const finDir = { username: 'felix', role: 'user', approval_roles: ['finance_dir'] };
 
 test('end-to-end: full Cost→Sales→Finance chain persists to file', async () => {
   const file = tmpHistoryFile();
@@ -108,8 +108,8 @@ test('concurrent duplicate APPROVE_SALES: second one hits invalid-state error', 
     applyTransition(file, 1, 'APPROVE_SALES', salesMgr),
     applyTransition(file, 1, 'APPROVE_SALES', salesMgr),
   ]);
-  const okCount = [a, b].filter(r => r.ok).length;
-  const failCount = [a, b].filter(r => !r.ok).length;
+  const okCount = [a, b].filter((r) => r.ok).length;
+  const failCount = [a, b].filter((r) => !r.ok).length;
   assert.equal(okCount, 1, 'exactly one transition succeeds');
   assert.equal(failCount, 1, 'the loser is rejected, not silently dropped');
   // Final state on disk is pending_finance, history length = 2 (SUBMIT + one APPROVE_SALES).
@@ -143,8 +143,10 @@ test('concurrent APPROVE_SALES + REJECT on same pending_sales quote: determinist
   const final = readHistory(file)[0].state.approval;
   assert.equal(final.status, 'rejected', `lock must converge to rejected; got ${final.status}`);
   // Whichever ordering, history entries are either SUBMIT+APPROVE_SALES+REJECT or SUBMIT+REJECT.
-  assert.ok([2, 3].includes(final.history.length),
-    `history length ${final.history.length} must be 2 or 3`);
+  assert.ok(
+    [2, 3].includes(final.history.length),
+    `history length ${final.history.length} must be 2 or 3`
+  );
   const last = final.history[final.history.length - 1];
   assert.equal(last.action, 'REJECT');
   assert.equal(last.to, 'rejected');
@@ -170,14 +172,22 @@ test('100 concurrent SUBMITs on rejected quote: exactly 1 succeeds per turn', as
     status: 'rejected',
     rejected_by: 'sonia',
     reason: 'fix',
-    history: [{ ts: new Date().toISOString(), from: 'pending_sales', to: 'rejected', action: 'REJECT', actor: 'sonia' }],
+    history: [
+      {
+        ts: new Date().toISOString(),
+        from: 'pending_sales',
+        to: 'rejected',
+        action: 'REJECT',
+        actor: 'sonia',
+      },
+    ],
   };
   writeHistory(file, [{ id: 1, state: { approval: rejected } }]);
 
   const results = await Promise.all(
     Array.from({ length: 100 }, () => applyTransition(file, 1, 'SUBMIT', costEng))
   );
-  const ok = results.filter(r => r.ok).length;
+  const ok = results.filter((r) => r.ok).length;
   assert.equal(ok, 1, `exactly one SUBMIT wins, got ${ok}`);
   const final = readHistory(file)[0].state.approval;
   assert.equal(final.status, 'pending_sales');

@@ -29,24 +29,24 @@
 
 **Máy chủ (server) — host cho 6-20 user:**
 
-| Thành phần | Tối thiểu | Khuyến nghị |
-|---|---|---|
-| CPU | 4 core / 2.5 GHz | 8 core / 3.0 GHz (Intel i7 / Apple M2 / Ryzen 7) |
-| RAM | 8 GB | 16 GB |
-| Disk | 50 GB SSD trống | 200 GB NVMe SSD (SQLite + 30 ngày backup + Library files) |
-| Mạng | Ethernet 1 Gbps (KHÔNG dùng WiFi cho server) | Ethernet 1 Gbps + IP tĩnh trong LAN |
-| OS | Windows 10/11 Pro · macOS 13+ (Ventura) · Ubuntu 22.04+ | Windows 11 Pro · macOS 14 (Sonoma) Apple Silicon |
-| Uptime | Bật 24/7 (hoặc giờ làm việc + cron) | 24/7 + UPS chống mất điện |
+| Thành phần | Tối thiểu                                               | Khuyến nghị                                               |
+| ---------- | ------------------------------------------------------- | --------------------------------------------------------- |
+| CPU        | 4 core / 2.5 GHz                                        | 8 core / 3.0 GHz (Intel i7 / Apple M2 / Ryzen 7)          |
+| RAM        | 8 GB                                                    | 16 GB                                                     |
+| Disk       | 50 GB SSD trống                                         | 200 GB NVMe SSD (SQLite + 30 ngày backup + Library files) |
+| Mạng       | Ethernet 1 Gbps (KHÔNG dùng WiFi cho server)            | Ethernet 1 Gbps + IP tĩnh trong LAN                       |
+| OS         | Windows 10/11 Pro · macOS 13+ (Ventura) · Ubuntu 22.04+ | Windows 11 Pro · macOS 14 (Sonoma) Apple Silicon          |
+| Uptime     | Bật 24/7 (hoặc giờ làm việc + cron)                     | 24/7 + UPS chống mất điện                                 |
 
 **Máy client (5-20 máy):**
 
-| Thành phần | Tối thiểu | Khuyến nghị |
-|---|---|---|
-| CPU | 2 core | 4 core |
-| RAM | 4 GB | 8 GB |
-| Disk | 1 GB trống cho app | 5 GB |
-| OS | Windows 10/11 · macOS 12+ (Monterey) | Windows 11 · macOS 14 |
-| Mạng | Cùng LAN với server (subnet 192.168.x.x hoặc 10.x.x.x) | Ethernet ưu tiên hơn WiFi |
+| Thành phần | Tối thiểu                                              | Khuyến nghị               |
+| ---------- | ------------------------------------------------------ | ------------------------- |
+| CPU        | 2 core                                                 | 4 core                    |
+| RAM        | 4 GB                                                   | 8 GB                      |
+| Disk       | 1 GB trống cho app                                     | 5 GB                      |
+| OS         | Windows 10/11 · macOS 12+ (Monterey)                   | Windows 11 · macOS 14     |
+| Mạng       | Cùng LAN với server (subnet 192.168.x.x hoặc 10.x.x.x) | Ethernet ưu tiên hơn WiFi |
 
 ### 1.2 Quyết định kiến trúc
 
@@ -73,19 +73,20 @@
 
 **Vị trí file installer trong package** (`<project-root>/desktop/dist-electron/`):
 
-| Platform | Vai trò | File | Size |
-|---|---|---|---|
-| Windows x64 | **MÁY CHỦ** (1 máy duy nhất) | `Ops Control SERVER Setup 1.2.0.exe` | ~160 MB |
-| Windows x64 | **MÁY NHÂN VIÊN** (5–20 máy) | `Ops Control CLIENT Setup 1.2.0.exe` | ~160 MB |
-| Windows x64 | (legacy / generic, không khuyên) | `Ops Control Setup 1.2.0.exe` | ~167 MB |
-| Windows x64 | Portable (không cần admin) | `Ops Control-1.2.0-win.zip` | ~209 MB |
-| Mac Apple Silicon | (chưa tách Server/Client) | `Ops Control-1.2.0-arm64.dmg` | ~188 MB |
+| Platform          | Vai trò                          | File                                 | Size    |
+| ----------------- | -------------------------------- | ------------------------------------ | ------- |
+| Windows x64       | **MÁY CHỦ** (1 máy duy nhất)     | `Ops Control SERVER Setup 1.2.0.exe` | ~160 MB |
+| Windows x64       | **MÁY NHÂN VIÊN** (5–20 máy)     | `Ops Control CLIENT Setup 1.2.0.exe` | ~160 MB |
+| Windows x64       | (legacy / generic, không khuyên) | `Ops Control Setup 1.2.0.exe`        | ~167 MB |
+| Windows x64       | Portable (không cần admin)       | `Ops Control-1.2.0-win.zip`          | ~209 MB |
+| Mac Apple Silicon | (chưa tách Server/Client)        | `Ops Control-1.2.0-arm64.dmg`        | ~188 MB |
 
 > **Cách chọn:** Trong nhà máy có **1 máy chủ** + **5–20 máy nhân viên**.
 > Cài SERVER lên đúng 1 máy → cài CLIENT lên các máy nhân viên còn lại.
 > Đừng cài SERVER lên 2 máy — sẽ tạo 2 nguồn data tách rời, không sync.
 
 Đường dẫn đầy đủ trên máy build:
+
 ```
 <project-root>/desktop/dist-electron/
 ├── Ops Control SERVER Setup 1.2.0.exe   ← Cài máy chủ (mở firewall 3100, server defaults)
@@ -96,16 +97,17 @@
 
 **Khác biệt SERVER vs CLIENT EXE:**
 
-| | SERVER Setup | CLIENT Setup |
-|---|---|---|
-| Default mode khi cài xong | `embedded` (chạy server local port 3100) | `thin` (kết nối server LAN) |
-| First-run dialog | Hiện IP máy này — dán cho người cài Client | Hỏi URL server + nút "Test kết nối" |
-| Firewall TCP 3100 inbound | Tự mở (cho LAN clients connect) | KHÔNG mở (không cần) |
-| Firewall TCP 9100 outbound (Zebra) | Tự mở | Tự mở |
-| Windows Defender whitelist | Tự thêm | Tự thêm |
-| Registry `HKLM\Software\CCL Design Vietnam\Ops Control\Role` | `"server"` | `"client"` |
+|                                                              | SERVER Setup                               | CLIENT Setup                        |
+| ------------------------------------------------------------ | ------------------------------------------ | ----------------------------------- |
+| Default mode khi cài xong                                    | `embedded` (chạy server local port 3100)   | `thin` (kết nối server LAN)         |
+| First-run dialog                                             | Hiện IP máy này — dán cho người cài Client | Hỏi URL server + nút "Test kết nối" |
+| Firewall TCP 3100 inbound                                    | Tự mở (cho LAN clients connect)            | KHÔNG mở (không cần)                |
+| Firewall TCP 9100 outbound (Zebra)                           | Tự mở                                      | Tự mở                               |
+| Windows Defender whitelist                                   | Tự thêm                                    | Tự thêm                             |
+| Registry `HKLM\Software\CCL Design Vietnam\Ops Control\Role` | `"server"`                                 | `"client"`                          |
 
 **Build từ source** (chỉ khi cần tạo lại, ví dụ sau update):
+
 ```bash
 cd <project-root>
 node scripts/build-windows-installers.mjs           # build cả 2
@@ -153,6 +155,7 @@ hiện IP máy chủ ngay sau khi cài.
 (per-user install, không cần admin rights — tương thích máy corporate bị lock)
 
 **Audit registry IT inventory tool đọc được:**
+
 ```
 HKLM\Software\CCL Design Vietnam\Ops Control
 ├── Version       = "1.2.0"
@@ -240,16 +243,19 @@ nssm status OpsControlServer
 **2 cách (ưu tiên cách A — chỉnh từ router):**
 
 **Cách A — DHCP Reservation trên router (ưu tiên):**
+
 ```
 1. Login router admin (vd 192.168.1.1)
 2. Vào DHCP → Reserved IPs (hoặc "Address Reservation" / "Static DHCP")
 3. Pick MAC address của máy chủ → bind cố định IP 192.168.1.16
 4. Save → restart router (1 lần) → từ giờ máy chủ luôn nhận IP này
 ```
+
 → Ưu điểm: máy chủ không cần config gì, chỉ chạy DHCP bình thường.
-   Đổi router ⇒ chỉ phải set lại reservation ở router mới.
+Đổi router ⇒ chỉ phải set lại reservation ở router mới.
 
 **Cách B — Static IP trên Windows:**
+
 ```
 1. Settings → Network & Internet → Ethernet (hoặc WiFi)
 2. Click connection → IP assignment → Edit → Manual → IPv4: ON
@@ -259,6 +265,7 @@ nssm status OpsControlServer
 6. Preferred DNS: 8.8.8.8
 7. Save → restart network adapter
 ```
+
 Verify: `ipconfig` → đảm bảo IPv4 Address là 192.168.1.16.
 
 ⚠ **Đổi mạng = đổi IP**: Nếu bê máy chủ sang LAN khác (vd Wi-Fi nhà/văn
@@ -370,6 +377,7 @@ defaults write com.ccldesign.opscontrol NSAppSleepDisabled -bool YES
 **Cách A (ưu tiên) — DHCP Reservation trên router:** xem mục 2.4.
 
 **Cách B — Static IP từ macOS:**
+
 ```
 1. System Settings → Network → Ethernet (hoặc WiFi) → Details
 2. TCP/IP → Configure IPv4: Manually
@@ -403,6 +411,7 @@ netsh advfirewall firewall add rule name="Ops Control LAN Server" dir=in action=
 ```
 
 Hoặc qua GUI:
+
 1. Windows Defender Firewall → Advanced Settings
 2. Inbound Rules → New Rule → Port → TCP → 3100 → Allow → Private profile only
 3. Name: "Ops Control LAN Server"
@@ -429,6 +438,7 @@ Invoke-WebRequest -Uri http://192.168.1.16:3100/api/health
 ```
 
 Nếu không kết nối được:
+
 - Ping `192.168.1.16` xem có thông không
 - Kiểm tra firewall server (mục 4.1)
 - Kiểm tra cùng subnet (`ipconfig` / `ifconfig` so sánh)
@@ -445,10 +455,12 @@ Vào router admin → DHCP → Reserved IPs → bind MAC address của máy ch�
 
 Copy 2 file installer từ `<package>/desktop/dist-electron/` lên shared folder
 (vd `\\<server>\Public\OpsControl\`):
-- `Ops Control SERVER Setup 1.2.0.exe`  (chỉ cài 1 lần lên máy chủ)
-- `Ops Control CLIENT Setup 1.2.0.exe`  (cài lên 5-20 máy nhân viên)
+
+- `Ops Control SERVER Setup 1.2.0.exe` (chỉ cài 1 lần lên máy chủ)
+- `Ops Control CLIENT Setup 1.2.0.exe` (cài lên 5-20 máy nhân viên)
 
 **Windows x64** (máy nhân viên):
+
 ```
 1. Tải "Ops Control CLIENT Setup 1.2.0.exe" từ \\<server>\Public\OpsControl\
 2. Double-click → Smart Screen "More info" → "Run anyway" (1 lần)
@@ -462,6 +474,7 @@ Copy 2 file installer từ `<package>/desktop/dist-electron/` lên shared folder
 ```
 
 **macOS** (Apple Silicon — chưa tách Server/Client):
+
 ```
 1. Tải "Ops Control-1.2.0-arm64.dmg" từ \\<server>\Public\OpsControl\
 2. Mount DMG + drag "Ops Control" → /Applications
@@ -488,6 +501,7 @@ Nếu server đổi IP (vd dời máy chủ sang VLAN khác) — đổi URL tron
 ```
 
 Hoặc reset hoàn toàn first-run wizard:
+
 ```powershell
 # Quit app trước
 Remove-Item "$env:APPDATA\Ops Control\ops-control-config.json"
@@ -508,22 +522,24 @@ Remove-Item "$env:APPDATA\Ops Control\ops-control-config.json"
 
 **Default credential (lần đầu chạy server, chưa có `users.json`):**
 
-| Field | Value |
-|---|---|
-| Username | `Administrator` |
-| Password | `admin1234` |
-| Role | `sys` (god mode) |
+| Field    | Value            |
+| -------- | ---------------- |
+| Username | `Administrator`  |
+| Password | `admin1234`      |
+| Role     | `sys` (god mode) |
 
 > ⚠️ **BẮT BUỘC đổi password ngay sau lần login đầu tiên.** Default này
 > deterministic để onboarding nhanh — KHÔNG bao giờ để nguyên trên prod LAN.
 
 App tạo file sidecar tự động nhắc:
+
 ```
 %APPDATA%\Ops Control\data\Library\Users\README_FIRST_LOGIN.txt   (Windows)
 ~/Library/Application Support/Ops Control/data/Library/Users/README_FIRST_LOGIN.txt   (Mac)
 ```
 
 **Quy trình lần đầu:**
+
 ```
 1. Login: Administrator / admin1234
 2. Settings → ⚿ My Password → đổi password mạnh (≥10 ký tự, có số + ký tự đặc biệt)
@@ -556,7 +572,9 @@ App tạo file sidecar tự động nhắc:
        "permissions": { "canDeleteQuote": true },
        "full_name": "Administrator",
        "english_name": "Administrator",
-       "id_no": "", "email": "", "phone": ""
+       "id_no": "",
+       "email": "",
+       "phone": ""
      }
    ]
    ```
@@ -581,16 +599,16 @@ App tạo file sidecar tự động nhắc:
 
 Settings → Account Control → Users → "+ Add User":
 
-| Field | Note |
-|---|---|
-| Username | viết thường, không dấu, không khoảng trắng (vd: `quynh.tran`) |
-| Full Name (VN) | Tên có dấu (vd: "Trần Thị Quỳnh") |
-| English Name | Tên không dấu cho audit log |
-| Email | Để gửi notification |
-| Role | viewonly < user < cost < admin < sys |
-| Department | sales / cs / npi / purchasing / production / quality / finance / leader |
-| Permission Group | Pick group có sẵn (sales_default, npi_default, …) |
-| Password | Tạm — user đổi khi login đầu |
+| Field            | Note                                                                    |
+| ---------------- | ----------------------------------------------------------------------- |
+| Username         | viết thường, không dấu, không khoảng trắng (vd: `quynh.tran`)           |
+| Full Name (VN)   | Tên có dấu (vd: "Trần Thị Quỳnh")                                       |
+| English Name     | Tên không dấu cho audit log                                             |
+| Email            | Để gửi notification                                                     |
+| Role             | viewonly < user < cost < admin < sys                                    |
+| Department       | sales / cs / npi / purchasing / production / quality / finance / leader |
+| Permission Group | Pick group có sẵn (sales_default, npi_default, …)                       |
+| Password         | Tạm — user đổi khi login đầu                                            |
 
 ### 6.3 Kích hoạt 2FA bắt buộc cho admin / sys
 
@@ -608,6 +626,7 @@ User role admin/sys BẮT BUỘC enroll 2FA — server enforce. Lần login đ�
 Settings → Account Control → Permission Groups → Choose group → matrix 23 tab × 3 mode (Hidden / Read / Edit).
 
 Seed groups có sẵn:
+
 - `all_access` (sys-only fallback)
 - `leader_default`, `sales_default`, `cs_default`, `npi_default`, `purchasing_default`, `production_default`, `quality_default`
 
@@ -626,6 +645,7 @@ Settings → Account Control → Sessions tab — xem mọi user đang đăng nh
 > **3** copies dữ liệu, **2** loại media khác nhau, **1** off-site.
 
 Ops Control v1.2 satisfies:
+
 - **Copy 1:** Live data ở `~/Library/Application Support/ops-control-desktop/data` (macOS) hoặc `%APPDATA%\ops-control-desktop\data` (Windows)
 - **Copy 2:** Auto daily backup trong `data/Backup & restore/Data/auto_*.json` (giữ 30 ngày, prune tự động) + SQLite backup `data/Backup/SQLite/ops_*.sqlite`
 - **Copy 3:** Off-site qua `scripts/backup-offsite.sh` (rsync sang NAS / USB / SSH)
@@ -695,13 +715,13 @@ Tháng 1 lần, làm restore drill:
 
 ### 7.5 Recovery scenarios
 
-| Sự cố | Cách phục hồi |
-|---|---|
-| Server crash, không boot lại | Cài lại app trên máy mới + copy folder `data/` từ backup mới nhất |
-| Database corrupt | Settings → Backup/Restore → restore từ SQLite backup gần nhất `data/Backup/SQLite/ops_*.sqlite` |
-| User xoá nhầm quote | Quote History → tab Trash → click Restore (soft-delete giữ 30 ngày) |
-| Mất TOTP key (lock all 2FA) | SSH server → `OPS_TOTP_KEY=$(new_key) node scripts/reset-totp.js` (xem CLAUDE.md TOTP runbook) |
-| Library file (rate.json, ddl.json) bị wipe | Restore từ `data/Backup/Library/library_*.tar.gz` daily snapshot |
+| Sự cố                                      | Cách phục hồi                                                                                   |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| Server crash, không boot lại               | Cài lại app trên máy mới + copy folder `data/` từ backup mới nhất                               |
+| Database corrupt                           | Settings → Backup/Restore → restore từ SQLite backup gần nhất `data/Backup/SQLite/ops_*.sqlite` |
+| User xoá nhầm quote                        | Quote History → tab Trash → click Restore (soft-delete giữ 30 ngày)                             |
+| Mất TOTP key (lock all 2FA)                | SSH server → `OPS_TOTP_KEY=$(new_key) node scripts/reset-totp.js` (xem CLAUDE.md TOTP runbook)  |
+| Library file (rate.json, ddl.json) bị wipe | Restore từ `data/Backup/Library/library_*.tar.gz` daily snapshot                                |
 
 ---
 
@@ -754,11 +774,13 @@ Sau đó: trên client app → Settings → Mode → Thin → URL = `https://192
 ### 8.2 Login anomaly monitoring
 
 Server tự stamp `LOGIN_ANOMALY` event khi:
+
 - Cùng user login từ 2+ IP trong 5min
 - Login từ IP mới (chưa thấy trong 30 ngày)
 - Login giờ bất thường (22h-6h) khi user không có history ca đêm
 
 **Admin xem real-time:**
+
 - Login tài khoản admin/sys → khi anomaly trigger → toast vàng top-right "🛡 Security: <username> — <reasons>"
 - Settings → Account Control → Sessions → click Revoke nếu phát hiện hijack
 
@@ -775,6 +797,7 @@ findstr /c:"LOGIN_ANOMALY" "%APPDATA%\ops-control-desktop\data\Library\Users\aud
 ### 8.3 Per-user rate limit + lockout
 
 Đã active mặc định:
+
 - 60 saves / 10 phút / user
 - 30 writes / 10 phút / user
 - 5 fail logins → lock 5 phút
@@ -799,27 +822,27 @@ Không cần config thêm.
 
 ### 9.1 Daily ops checklist (cho IT/admin)
 
-| Tần suất | Task | Lệnh |
-|---|---|---|
-| Hằng ngày | Verify server uptime | `curl http://192.168.1.16:3100/api/health` |
-| Hằng ngày | Verify auto backup chạy | Check size `data/Backup/SQLite/` mới hơn 24h |
-| Hằng tuần | Smoke test toàn bộ infra | `./scripts/smoke-runtime.sh http://192.168.1.16:3100` |
-| Hằng tuần | Review LOGIN_ANOMALY | `grep LOGIN_ANOMALY data/Library/Users/audit_log.json | tail -50` |
-| Hằng tháng | Test restore (drill) | Mục 7.4 |
-| Hằng quý | Đổi sys account password + 2FA secret | Settings → My Password + 2FA toggle |
+| Tần suất   | Task                                  | Lệnh                                                  |
+| ---------- | ------------------------------------- | ----------------------------------------------------- | --------- |
+| Hằng ngày  | Verify server uptime                  | `curl http://192.168.1.16:3100/api/health`            |
+| Hằng ngày  | Verify auto backup chạy               | Check size `data/Backup/SQLite/` mới hơn 24h          |
+| Hằng tuần  | Smoke test toàn bộ infra              | `./scripts/smoke-runtime.sh http://192.168.1.16:3100` |
+| Hằng tuần  | Review LOGIN_ANOMALY                  | `grep LOGIN_ANOMALY data/Library/Users/audit_log.json | tail -50` |
+| Hằng tháng | Test restore (drill)                  | Mục 7.4                                               |
+| Hằng quý   | Đổi sys account password + 2FA secret | Settings → My Password + 2FA toggle                   |
 
 ### 9.2 Common errors & fixes
 
-| Lỗi user thấy | Nguyên nhân | Cách fix |
-|---|---|---|
-| "Mất kết nối server" banner đỏ liên tục | Server không reachable | Ping IP server; check NSSM/launchd service status |
-| `ERR_CONNECTION_REFUSED` ở client | Port 3100 chưa mở firewall | Mục 4.1 mở port |
-| `ERR_CERT_AUTHORITY_INVALID` | HTTPS Caddy CA chưa trust trên client | Mục 8.1 trust CA |
-| "Too many failed attempts" | Login fail 5+ lần | Đợi 5 phút HOẶC admin reset password |
-| TOTP "Invalid code" liên tục | Đồng hồ máy lệch giờ > 30s | Settings OS → Date & Time → Set automatically |
-| "Conflict — quote đã bị sửa bởi người khác" modal | 2 user cùng update 1 quote | Click "↻ Reload" để lấy bản mới (an toàn) |
-| Tab trắng / chunk loading error | Cache cũ sau update | Cmd+Shift+R / Ctrl+Shift+R hard reload |
-| Login từ IP mới toast vàng | User login từ máy khác | Bình thường nếu là user; suspicious nếu không phải họ → admin Revoke session |
+| Lỗi user thấy                                     | Nguyên nhân                           | Cách fix                                                                     |
+| ------------------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------- |
+| "Mất kết nối server" banner đỏ liên tục           | Server không reachable                | Ping IP server; check NSSM/launchd service status                            |
+| `ERR_CONNECTION_REFUSED` ở client                 | Port 3100 chưa mở firewall            | Mục 4.1 mở port                                                              |
+| `ERR_CERT_AUTHORITY_INVALID`                      | HTTPS Caddy CA chưa trust trên client | Mục 8.1 trust CA                                                             |
+| "Too many failed attempts"                        | Login fail 5+ lần                     | Đợi 5 phút HOẶC admin reset password                                         |
+| TOTP "Invalid code" liên tục                      | Đồng hồ máy lệch giờ > 30s            | Settings OS → Date & Time → Set automatically                                |
+| "Conflict — quote đã bị sửa bởi người khác" modal | 2 user cùng update 1 quote            | Click "↻ Reload" để lấy bản mới (an toàn)                                    |
+| Tab trắng / chunk loading error                   | Cache cũ sau update                   | Cmd+Shift+R / Ctrl+Shift+R hard reload                                       |
+| Login từ IP mới toast vàng                        | User login từ máy khác                | Bình thường nếu là user; suspicious nếu không phải họ → admin Revoke session |
 
 ### 9.3 Smoke test sau update
 
@@ -830,7 +853,7 @@ Sau mỗi lần update DMG/EXE, chạy smoke test:
 # Pass: 8/8 green
 ```
 
-Test endpoints: /health, /assets/*404, /api/events/stream auth, /api/users/status auth, /api/backup/list auth, /api/shared/admin/quotes-backend auth.
+Test endpoints: /health, /assets/\*404, /api/events/stream auth, /api/users/status auth, /api/backup/list auth, /api/shared/admin/quotes-backend auth.
 
 ### 9.4 Deploy update
 
@@ -852,15 +875,15 @@ Test endpoints: /health, /assets/*404, /api/events/stream auth, /api/users/statu
 
 ### 10.1 Đường dẫn chính
 
-| Loại | macOS | Windows |
-|---|---|---|
-| App | `/Applications/Ops Control.app` | `%LOCALAPPDATA%\Programs\OpsControl` |
-| Server source | `/Applications/Ops Control.app/Contents/Resources/app/server/` | `%LOCALAPPDATA%\Programs\OpsControl\resources\app\server\` |
-| Data dir | `~/Library/Application Support/ops-control-desktop/data` | `%APPDATA%\ops-control-desktop\data` |
-| Config | `~/Library/Application Support/ops-control-desktop/ops-control-config.json` | `%APPDATA%\ops-control-desktop\ops-control-config.json` |
-| Logs | `~/Library/Logs/ops-control-desktop/main.log` | `%APPDATA%\ops-control-desktop\logs\main.log` |
-| Audit log | `<data>/Library/Users/audit_log.json` | `<data>\Library\Users\audit_log.json` |
-| Backups | `<data>/Backup & restore/Data/` + `<data>/Backup/SQLite/` | `<data>\Backup & restore\Data\` + `<data>\Backup\SQLite\` |
+| Loại          | macOS                                                                       | Windows                                                    |
+| ------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| App           | `/Applications/Ops Control.app`                                             | `%LOCALAPPDATA%\Programs\OpsControl`                       |
+| Server source | `/Applications/Ops Control.app/Contents/Resources/app/server/`              | `%LOCALAPPDATA%\Programs\OpsControl\resources\app\server\` |
+| Data dir      | `~/Library/Application Support/ops-control-desktop/data`                    | `%APPDATA%\ops-control-desktop\data`                       |
+| Config        | `~/Library/Application Support/ops-control-desktop/ops-control-config.json` | `%APPDATA%\ops-control-desktop\ops-control-config.json`    |
+| Logs          | `~/Library/Logs/ops-control-desktop/main.log`                               | `%APPDATA%\ops-control-desktop\logs\main.log`              |
+| Audit log     | `<data>/Library/Users/audit_log.json`                                       | `<data>\Library\Users\audit_log.json`                      |
+| Backups       | `<data>/Backup & restore/Data/` + `<data>/Backup/SQLite/`                   | `<data>\Backup & restore\Data\` + `<data>\Backup\SQLite\`  |
 
 ### 10.2 Lệnh cứu hộ nhanh
 
@@ -890,17 +913,17 @@ ELECTRON_RUN_AS_NODE=1 /Applications/Ops\ Control.app/Contents/MacOS/Ops\ Contro
 
 ### 10.3 Environment variables (advanced)
 
-| Env | Default | Purpose |
-|---|---|---|
-| `OPS_PORT` | 3100 | Server bind port |
-| `OPS_DATA_BACKEND` | `sqlite` (đợt 5) | `sqlite` hoặc `file` |
-| `OPS_BACKUP_SCHEDULE` | `1` (đợt 5) | Bật scheduled backup |
-| `OPS_AUDIT_RETENTION` | `1` (đợt 5) | Bật audit rotation |
-| `OPS_BACKUP_RETENTION_DAYS` | 30 | Số ngày giữ auto backup |
-| `OPS_TOTP_KEY` | tự sinh | 64-hex AES key cho TOTP secrets (BACKUP NẾU MUỐN ROTATE) |
-| `OPS_BACKUP_WEBHOOK` | (none) | Slack/Teams URL cho backup alert |
-| `OPS_OFFSITE_TARGET` | (none) | rsync target cho off-site script |
-| `OPS_OFFSITE_RETAIN` | 14 | Số ngày giữ off-site backup |
+| Env                         | Default          | Purpose                                                  |
+| --------------------------- | ---------------- | -------------------------------------------------------- |
+| `OPS_PORT`                  | 3100             | Server bind port                                         |
+| `OPS_DATA_BACKEND`          | `sqlite` (đợt 5) | `sqlite` hoặc `file`                                     |
+| `OPS_BACKUP_SCHEDULE`       | `1` (đợt 5)      | Bật scheduled backup                                     |
+| `OPS_AUDIT_RETENTION`       | `1` (đợt 5)      | Bật audit rotation                                       |
+| `OPS_BACKUP_RETENTION_DAYS` | 30               | Số ngày giữ auto backup                                  |
+| `OPS_TOTP_KEY`              | tự sinh          | 64-hex AES key cho TOTP secrets (BACKUP NẾU MUỐN ROTATE) |
+| `OPS_BACKUP_WEBHOOK`        | (none)           | Slack/Teams URL cho backup alert                         |
+| `OPS_OFFSITE_TARGET`        | (none)           | rsync target cho off-site script                         |
+| `OPS_OFFSITE_RETAIN`        | 14               | Số ngày giữ off-site backup                              |
 
 ### 10.4 Tài liệu liên quan
 
@@ -911,12 +934,12 @@ ELECTRON_RUN_AS_NODE=1 /Applications/Ops\ Control.app/Contents/MacOS/Ops\ Contro
 
 ### 10.5 Liên hệ hỗ trợ
 
-| Tình huống | Liên hệ |
-|---|---|
+| Tình huống                             | Liên hệ                  |
+| -------------------------------------- | ------------------------ |
 | Bug critical (server crash, data loss) | Henry Dang — NPI Manager |
-| User onboarding | Internal IT/admin |
-| Permission group config | Admin/sys role user |
-| Backup/restore issue | Sys role user |
+| User onboarding                        | Internal IT/admin        |
+| Permission group config                | Admin/sys role user      |
+| Backup/restore issue                   | Sys role user            |
 
 ---
 
@@ -925,6 +948,7 @@ ELECTRON_RUN_AS_NODE=1 /Applications/Ops\ Control.app/Contents/MacOS/Ops\ Contro
 Trước khi tuyên bố production:
 
 **Infrastructure**
+
 - [ ] Server hardware đáp ứng spec (mục 1.1)
 - [ ] OS update + patch đầy đủ
 - [ ] IP tĩnh đã set (mục 2.4 / 3.5)
@@ -933,30 +957,35 @@ Trước khi tuyên bố production:
 - [ ] App Nap disable (macOS chỉ)
 
 **App config**
+
 - [ ] Mode = `embedded` trên server
 - [ ] Default Administrator password đã đổi
 - [ ] OPS_TOTP_KEY đã backup file riêng (KHÔNG mất)
 - [ ] OPS_DATA_BACKEND = sqlite (verify trong AboutSection)
 
 **Users & Permissions**
+
 - [ ] Tất cả user trong danh sách đã được tạo
 - [ ] Tất cả admin/sys đã enroll 2FA
 - [ ] Permission groups assign rõ ràng (không ai còn all_access trừ sys)
 - [ ] User được hướng dẫn install + first-login (LAN_CLIENT_QUICKSTART.md)
 
 **Backup**
+
 - [ ] Auto daily backup chạy được 3+ ngày liên tiếp
 - [ ] Off-site backup cron set + verify file đến đích
 - [ ] Test restore drill thành công (mục 7.4)
 - [ ] Backup webhook (Slack/Teams) optional config
 
 **Security**
+
 - [ ] HTTPS Caddy enable (nếu cần)
 - [ ] Tất cả client trust CA cert (nếu HTTPS)
 - [ ] Login anomaly verified (test login từ 2 IP cùng user → toast bật)
 - [ ] Sessions admin tab tested (revoke session test user → verified họ bị logout)
 
 **Documentation**
+
 - [ ] Tài liệu này đã in + lưu trên server
 - [ ] LAN_CLIENT_QUICKSTART.md đã share cho 5-20 user
 - [ ] Số liên hệ ops/IT có trên app (Settings → About)
@@ -965,4 +994,4 @@ Trước khi tuyên bố production:
 
 **Kết thúc tài liệu — Ops Control v1.2 sẵn sàng go-live cho 6-20 user trong LAN.**
 
-*Henry Dang — NPI Manager · CCL Design Vietnam · 2026-04-27*
+_Henry Dang — NPI Manager · CCL Design Vietnam · 2026-04-27_

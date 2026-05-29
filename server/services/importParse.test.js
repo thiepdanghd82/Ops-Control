@@ -9,14 +9,20 @@ import { parseCSVContent } from './importParse.js';
 test('CSV: comma-delimited basic', () => {
   const r = parseCSVContent('a,b,c\n1,2,3\n4,5,6');
   assert.deepEqual(r.headers, ['a', 'b', 'c']);
-  assert.deepEqual(r.rows, [['1', '2', '3'], ['4', '5', '6']]);
+  assert.deepEqual(r.rows, [
+    ['1', '2', '3'],
+    ['4', '5', '6'],
+  ]);
   assert.equal(r.delimiter, ',');
 });
 
 test('CSV: CRLF line endings', () => {
   const r = parseCSVContent('a,b\r\n1,2\r\n3,4\r\n');
   assert.deepEqual(r.headers, ['a', 'b']);
-  assert.deepEqual(r.rows, [['1', '2'], ['3', '4']]);
+  assert.deepEqual(r.rows, [
+    ['1', '2'],
+    ['3', '4'],
+  ]);
 });
 
 test('CSV: quoted fields with embedded delimiter', () => {

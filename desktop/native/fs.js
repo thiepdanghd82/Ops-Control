@@ -82,7 +82,9 @@ function register(ipcMain, log) {
 
   ipcMain.handle('ops:fs.writeFile', async (_evt, filePath, data) => {
     if (!isAllowed(filePath)) {
-      throw new Error(`Path not allowed: ${filePath} (must come from showSaveDialog or be inside userData)`);
+      throw new Error(
+        `Path not allowed: ${filePath} (must come from showSaveDialog or be inside userData)`
+      );
     }
     // data có thể là Buffer (Uint8Array sau IPC marshalling) hoặc string
     const buf = data instanceof Uint8Array ? Buffer.from(data) : Buffer.from(String(data), 'utf8');

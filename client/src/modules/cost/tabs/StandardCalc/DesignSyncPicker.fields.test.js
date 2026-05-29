@@ -21,8 +21,13 @@ import assert from 'node:assert/strict';
 // keeping this test self-contained lets it run against any future
 // refactor of the picker. When the source mapper changes shape, this
 // test will fail loud — exactly the regression guard we want.
-function num(v) { const n = Number(v); return Number.isFinite(n) ? n : undefined; }
-function str(v) { return typeof v === 'string' && v.trim() ? v : undefined; }
+function num(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+function str(v) {
+  return typeof v === 'string' && v.trim() ? v : undefined;
+}
 function clean(obj) {
   const out = {};
   for (const [k, v] of Object.entries(obj)) {
@@ -34,36 +39,36 @@ function clean(obj) {
 function mapFields(rec, side) {
   const i = rec.inputs || {};
   const r = rec.result || {};
-  const _gap   = num(r.actual_gap) || num(i.G) || 0;
+  const _gap = num(r.actual_gap) || num(i.G) || 0;
   const _pitch = num(r.pitch) || 0;
   const _sheet = _pitch > 0 ? _pitch - _gap : undefined;
   const common = {
-    end_cu_pn:           str(i.end_cu_pn),
-    project:             str(i.project),
-    part_length_md:      num(i.L),
-    part_width:          num(i.Pw),
-    web_width_td:        num(i.W),
-    edge_margin_td:      num(i.E),
-    parts_in_md:         num(r.n_down) || undefined,
-    parts_web_across:    num(r.n_across) || undefined,
-    sheet_length:        _sheet,
-    min_gap_md:          num(r.actual_gap) || num(i.G),
-    min_gap_td:          num(i.Lg),
+    end_cu_pn: str(i.end_cu_pn),
+    project: str(i.project),
+    part_length_md: num(i.L),
+    part_width: num(i.Pw),
+    web_width_td: num(i.W),
+    edge_margin_td: num(i.E),
+    parts_in_md: num(r.n_down) || undefined,
+    parts_web_across: num(r.n_across) || undefined,
+    sheet_length: _sheet,
+    min_gap_md: num(r.actual_gap) || num(i.G),
+    min_gap_td: num(i.Lg),
   };
   if (side === 'print') {
     return clean({
       ...common,
-      print_part_width:      num(i.Pw),
-      print_part_length_md:  num(i.L),
-      plate_tooth:           num(r.cylinder_z),
-      plate_pitch_mm:        num(r.pitch),
-      color_count:           num(i.n_colors),
+      print_part_width: num(i.Pw),
+      print_part_length_md: num(i.L),
+      plate_tooth: num(r.cylinder_z),
+      plate_pitch_mm: num(r.pitch),
+      color_count: num(i.n_colors),
     });
   }
   return clean({
     ...common,
-    magnetic_tooth:  num(i.Z_die) || num(r.cylinder_z),
-    cutter_cavity:   (num(r.n_down) || 1) * (num(r.n_across) || 1),
+    magnetic_tooth: num(i.Z_die) || num(r.cylinder_z),
+    cutter_cavity: (num(r.n_down) || 1) * (num(r.n_across) || 1),
   });
 }
 
@@ -80,9 +85,16 @@ const SAMPLE_RECORD = {
     // round-trip preserves both halves).
     end_cu_pn: 'AWW9917',
     project: 'BOSE Q2',
-    L: 252.75, G: 3.97, K: 9.9,
-    W: 270, Pw: 63.5, E: 5, Lg: 2.5,
-    Z_die: 0, n_colors: 4, web_length_m: 5000,
+    L: 252.75,
+    G: 3.97,
+    K: 9.9,
+    W: 270,
+    Pw: 63.5,
+    E: 5,
+    Lg: 2.5,
+    Z_die: 0,
+    n_colors: 4,
+    web_length_m: 5000,
   },
   result: {
     cylinder_z: 85,
@@ -127,8 +139,11 @@ describe('Print sync mapping', () => {
 
   test('min_gap_md prefers actual_gap (full precision) over input G', () => {
     const f = mapFields(SAMPLE_RECORD, 'print');
-    assert.equal(f.min_gap_md, 7.225,
-      'should pull computed actual_gap from result, not the original target G');
+    assert.equal(
+      f.min_gap_md,
+      7.225,
+      'should pull computed actual_gap from result, not the original target G'
+    );
   });
 
   test('sheet_length = pitch − min_gap_md (round-trips to cylinder pitch)', () => {
@@ -136,11 +151,15 @@ describe('Print sync mapping', () => {
     // For the round-trip to recover the cylinder circumference, the
     // mapper must subtract gap from pitch when emitting sheet_length.
     const f = mapFields(SAMPLE_RECORD, 'print');
-    assert.ok(Math.abs(f.sheet_length - (269.875 - 7.225)) < 1e-9,
-      `sheet_length = pitch − gap = ${269.875 - 7.225}, got ${f.sheet_length}`);
+    assert.ok(
+      Math.abs(f.sheet_length - (269.875 - 7.225)) < 1e-9,
+      `sheet_length = pitch − gap = ${269.875 - 7.225}, got ${f.sheet_length}`
+    );
     // Round-trip check: sheet_length + min_gap_md === pitch
-    assert.ok(Math.abs((f.sheet_length + f.min_gap_md) - 269.875) < 1e-9,
-      'round-trip pitch check failed');
+    assert.ok(
+      Math.abs(f.sheet_length + f.min_gap_md - 269.875) < 1e-9,
+      'round-trip pitch check failed'
+    );
   });
 
   test('falls back to input G when result.actual_gap missing', () => {
@@ -203,9 +222,15 @@ describe('Defensive cleaning', () => {
   });
 
   test('preserves raw float precision (no rounding)', () => {
-    const r = { ...SAMPLE_RECORD, result: { ...SAMPLE_RECORD.result, actual_gap: 3.0458333333333307 } };
+    const r = {
+      ...SAMPLE_RECORD,
+      result: { ...SAMPLE_RECORD.result, actual_gap: 3.0458333333333307 },
+    };
     const f = mapFields(r, 'print');
-    assert.equal(f.min_gap_md, 3.0458333333333307,
-      'mapper must NOT round — operator pasted this expecting full precision');
+    assert.equal(
+      f.min_gap_md,
+      3.0458333333333307,
+      'mapper must NOT round — operator pasted this expecting full precision'
+    );
   });
 });

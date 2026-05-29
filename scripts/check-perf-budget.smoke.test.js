@@ -43,7 +43,11 @@ test('perf-budget CLI: all chunks under budget → exit 0', () => {
   // Small fake index.js well under the 290kB budget.
   const dist = setupTmpDist({ 'index-AbCd1234.js': 50_000 });
   const r = runCli(dist);
-  assert.equal(r.status, 0, `expected exit 0, got ${r.status}\nstdout: ${r.stdout}\nstderr: ${r.stderr}`);
+  assert.equal(
+    r.status,
+    0,
+    `expected exit 0, got ${r.status}\nstdout: ${r.stdout}\nstderr: ${r.stderr}`
+  );
   assert.match(r.stdout, /within budget/);
 });
 

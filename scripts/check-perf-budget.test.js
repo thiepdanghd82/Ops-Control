@@ -21,19 +21,19 @@ test('extractPrefix: no hash present → full name minus extension', () => {
 });
 
 test('checkBudgets: under-budget chunks land in ok[]', () => {
-  const chunks = [
-    { name: 'index-AbCd1234.js', bytes: 100_000 },
-  ];
-  const report = checkBudgets(chunks, [{ prefix: 'index', budget: 200_000, label: 'shell' }], 300_000);
+  const chunks = [{ name: 'index-AbCd1234.js', bytes: 100_000 }];
+  const report = checkBudgets(
+    chunks,
+    [{ prefix: 'index', budget: 200_000, label: 'shell' }],
+    300_000
+  );
   assert.equal(report.ok.length, 1);
   assert.equal(report.failures.length, 0);
   assert.equal(report.warnings.length, 0);
 });
 
 test('checkBudgets: over-budget chunk fails with over_by + pct', () => {
-  const chunks = [
-    { name: 'ComplexCalc-XyZ12345.js', bytes: 120_000 },
-  ];
+  const chunks = [{ name: 'ComplexCalc-XyZ12345.js', bytes: 120_000 }];
   const budgets = [{ prefix: 'ComplexCalc', budget: 100_000, label: 'cplx' }];
   const report = checkBudgets(chunks, budgets, 500_000);
   assert.equal(report.failures.length, 1);
@@ -46,13 +46,14 @@ test('checkBudgets: prefix-with-suffix falls back to base-prefix rule', () => {
   // prefix ends up as `index-C` instead of `index`. The matcher should
   // still apply the `index` budget rather than cascading to the global
   // cap (which would falsely fail the gate on routine code growth).
-  const chunks = [
-    { name: 'index-C-GsyK1I.js', bytes: 240_000 },
-  ];
+  const chunks = [{ name: 'index-C-GsyK1I.js', bytes: 240_000 }];
   const budgets = [{ prefix: 'index', budget: 290_000, label: 'shell' }];
   const report = checkBudgets(chunks, budgets, 200_000);
-  assert.equal(report.failures.length, 0,
-    'index-with-dashed-hash should use the index budget, not the global cap');
+  assert.equal(
+    report.failures.length,
+    0,
+    'index-with-dashed-hash should use the index budget, not the global cap'
+  );
   assert.equal(report.ok.length, 1);
   assert.equal(report.ok[0].budget, 290_000);
 });
@@ -69,9 +70,7 @@ test('checkBudgets: >=90% budget triggers warning (but not failure)', () => {
 });
 
 test('checkBudgets: 89% of budget → ok (just under warn threshold)', () => {
-  const chunks = [
-    { name: 'StandardCalc-AbCd1234.js', bytes: 89_000 },
-  ];
+  const chunks = [{ name: 'StandardCalc-AbCd1234.js', bytes: 89_000 }];
   const budgets = [{ prefix: 'StandardCalc', budget: 100_000, label: 'std' }];
   const report = checkBudgets(chunks, budgets, 500_000);
   assert.equal(report.warnings.length, 0);
@@ -79,9 +78,7 @@ test('checkBudgets: 89% of budget → ok (just under warn threshold)', () => {
 });
 
 test('checkBudgets: chunk without explicit budget uses global cap', () => {
-  const chunks = [
-    { name: 'RandomTab-AbCd1234.js', bytes: 250_000 },
-  ];
+  const chunks = [{ name: 'RandomTab-AbCd1234.js', bytes: 250_000 }];
   const budgets = [{ prefix: 'ComplexCalc', budget: 100_000, label: 'cplx' }];
   // Global cap 200k → 250k chunk fails.
   const report = checkBudgets(chunks, budgets, 200_000);
@@ -112,14 +109,14 @@ test('checkBudgets: empty chunks input → zero counts, no failures', () => {
 
 test('checkBudgets: mixed set produces per-bucket classification', () => {
   const chunks = [
-    { name: 'shell-X123456.js', bytes: 200_000 },       // fails (cap 180k)
-    { name: 'warn-X123456.js',  bytes: 95_000 },        // warn (95% of 100k)
-    { name: 'fine-X123456.js',  bytes: 10_000 },        // ok
+    { name: 'shell-X123456.js', bytes: 200_000 }, // fails (cap 180k)
+    { name: 'warn-X123456.js', bytes: 95_000 }, // warn (95% of 100k)
+    { name: 'fine-X123456.js', bytes: 10_000 }, // ok
   ];
   const budgets = [
     { prefix: 'shell', budget: 180_000, label: 's' },
-    { prefix: 'warn',  budget: 100_000, label: 'w' },
-    { prefix: 'fine',  budget: 100_000, label: 'f' },
+    { prefix: 'warn', budget: 100_000, label: 'w' },
+    { prefix: 'fine', budget: 100_000, label: 'f' },
   ];
   const report = checkBudgets(chunks, budgets, 500_000);
   assert.equal(report.failures.length, 1);

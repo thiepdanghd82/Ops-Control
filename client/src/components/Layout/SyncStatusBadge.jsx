@@ -30,10 +30,15 @@ export default function SyncStatusBadge() {
   useEffect(() => {
     let cancelled = false;
     if (!desktop.isAvailable) return undefined;
-    desktop.app.getConfig().then((cfg) => {
-      if (!cancelled) setMode(cfg?.mode || null);
-    }).catch(() => {});
-    return () => { cancelled = true; };
+    desktop.app
+      .getConfig()
+      .then((cfg) => {
+        if (!cancelled) setMode(cfg?.mode || null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (!desktop.isAvailable) return null;
@@ -49,9 +54,10 @@ export default function SyncStatusBadge() {
     label = pending > 0 ? `Offline · ${pending} queued` : 'Offline';
   } else if (online === true) {
     cls += pending > 0 ? ' sync-pending' : ' sync-online';
-    label = pending > 0
-      ? `${pending} queued · ${relativeTime(lastSyncAt)}`
-      : `Online · ${relativeTime(lastSyncAt)}`;
+    label =
+      pending > 0
+        ? `${pending} queued · ${relativeTime(lastSyncAt)}`
+        : `Online · ${relativeTime(lastSyncAt)}`;
   } else {
     cls += ' sync-unknown';
     label = 'Connecting…';
@@ -60,8 +66,13 @@ export default function SyncStatusBadge() {
   const handleClick = async () => {
     if (busy) return;
     setBusy(true);
-    try { await desktop.cache.triggerSync(); } catch { /* surfaced via broadcast */ }
-    finally { setBusy(false); }
+    try {
+      await desktop.cache.triggerSync();
+    } catch {
+      /* surfaced via broadcast */
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (

@@ -34,12 +34,24 @@ function isBlank(v) {
 // completeness — an untouched blank row shouldn't produce 8 warnings.
 function materialStarted(m) {
   if (!m) return false;
-  return !isBlank(m.code) || num(m.usage) > 0 || num(m.width) > 0 || num(m.s_price) > 0 || num(m.setup_lm) > 0;
+  return (
+    !isBlank(m.code) ||
+    num(m.usage) > 0 ||
+    num(m.width) > 0 ||
+    num(m.s_price) > 0 ||
+    num(m.setup_lm) > 0
+  );
 }
 
 function processStarted(p) {
   if (!p) return false;
-  return !isBlank(p.process_type) || !isBlank(p.workcenter) || num(p.speed) > 0 || num(p.setup_h) > 0 || num(p.tool_cost) > 0;
+  return (
+    !isBlank(p.process_type) ||
+    !isBlank(p.workcenter) ||
+    num(p.speed) > 0 ||
+    num(p.setup_h) > 0 ||
+    num(p.tool_cost) > 0
+  );
 }
 
 // ── Per-section validators ────────────────────────────────────────
@@ -47,26 +59,61 @@ function processStarted(p) {
 function validateHeader(st, scopeLabel = 'Header') {
   const out = [];
   if (isBlank(st.ccl_pn)) {
-    out.push({ id: 'hdr-ccl-pn', severity: 'error', scope: scopeLabel, message: 'CCL Part Number is required' });
+    out.push({
+      id: 'hdr-ccl-pn',
+      severity: 'error',
+      scope: scopeLabel,
+      message: 'CCL Part Number is required',
+    });
   }
   if (num(st.moq) < 0) {
-    out.push({ id: 'hdr-moq-neg', severity: 'error', scope: scopeLabel, message: 'MOQ is negative — must be a positive number' });
+    out.push({
+      id: 'hdr-moq-neg',
+      severity: 'error',
+      scope: scopeLabel,
+      message: 'MOQ is negative — must be a positive number',
+    });
   } else if (num(st.moq) <= 0) {
-    out.push({ id: 'hdr-moq', severity: 'error', scope: scopeLabel, message: 'MOQ must be greater than 0 (MOQ = 0 inflates Setup/Tooling)' });
+    out.push({
+      id: 'hdr-moq',
+      severity: 'error',
+      scope: scopeLabel,
+      message: 'MOQ must be greater than 0 (MOQ = 0 inflates Setup/Tooling)',
+    });
   }
   if (num(st.annual_qty) < 0) {
-    out.push({ id: 'hdr-eau-neg', severity: 'error', scope: scopeLabel, message: 'Annual Qty (EAU) is negative — must be a positive number' });
+    out.push({
+      id: 'hdr-eau-neg',
+      severity: 'error',
+      scope: scopeLabel,
+      message: 'Annual Qty (EAU) is negative — must be a positive number',
+    });
   } else if (num(st.annual_qty) <= 0) {
-    out.push({ id: 'hdr-eau', severity: 'error', scope: scopeLabel, message: 'Annual Qty (EAU) must be greater than 0' });
+    out.push({
+      id: 'hdr-eau',
+      severity: 'error',
+      scope: scopeLabel,
+      message: 'Annual Qty (EAU) must be greater than 0',
+    });
   }
   if (isBlank(st.trade_mode)) {
-    out.push({ id: 'hdr-trade', severity: 'error', scope: scopeLabel, message: 'Trade Mode is required (USD Normal / USD Book)' });
+    out.push({
+      id: 'hdr-trade',
+      severity: 'error',
+      scope: scopeLabel,
+      message: 'Trade Mode is required (USD Normal / USD Book)',
+    });
   }
   if (isBlank(st.site)) {
     out.push({ id: 'hdr-site', severity: 'error', scope: scopeLabel, message: 'Site is required' });
   }
   if (num(st.selling_price) <= 0) {
-    out.push({ id: 'hdr-sp', severity: 'warn', scope: scopeLabel, message: 'Selling Price is 0 — GM% / VA% / Contr% will show as N/A' });
+    out.push({
+      id: 'hdr-sp',
+      severity: 'warn',
+      scope: scopeLabel,
+      message: 'Selling Price is 0 — GM% / VA% / Contr% will show as N/A',
+    });
   }
   return out;
 }
@@ -74,17 +121,37 @@ function validateHeader(st, scopeLabel = 'Header') {
 function validateLayout(st, scopeLabel = 'Layout') {
   const out = [];
   if (num(st.part_width) <= 0) {
-    out.push({ id: 'lay-width', severity: 'error', scope: scopeLabel, message: 'Part Width (TD) must be greater than 0' });
+    out.push({
+      id: 'lay-width',
+      severity: 'error',
+      scope: scopeLabel,
+      message: 'Part Width (TD) must be greater than 0',
+    });
   }
   // Either sheet_length or part_length_md drives Pitch — require at least one
   if (num(st.sheet_length) <= 0 && num(st.part_length_md) <= 0) {
-    out.push({ id: 'lay-length', severity: 'error', scope: scopeLabel, message: 'Part Length (MD) must be greater than 0' });
+    out.push({
+      id: 'lay-length',
+      severity: 'error',
+      scope: scopeLabel,
+      message: 'Part Length (MD) must be greater than 0',
+    });
   }
   if (num(st.parts_in_md) <= 0) {
-    out.push({ id: 'lay-parts-md', severity: 'warn', scope: scopeLabel, message: 'Parts in MD is 0 — Layout/Sheet will be 0' });
+    out.push({
+      id: 'lay-parts-md',
+      severity: 'warn',
+      scope: scopeLabel,
+      message: 'Parts in MD is 0 — Layout/Sheet will be 0',
+    });
   }
   if (num(st.parts_web_across) <= 0) {
-    out.push({ id: 'lay-parts-td', severity: 'warn', scope: scopeLabel, message: 'Parts across TD is 0 — Layout/Sheet will be 0' });
+    out.push({
+      id: 'lay-parts-td',
+      severity: 'warn',
+      scope: scopeLabel,
+      message: 'Parts across TD is 0 — Layout/Sheet will be 0',
+    });
   }
   return out;
 }
@@ -148,13 +215,13 @@ function validateMaterials(materials, scopeLabel = 'Materials', layoutWidth = 0)
 
 function getUomForWC(lib, wc) {
   if (!lib || !wc) return '';
-  const rate = (lib.rate || []).find(r => r.workcenter === wc);
+  const rate = (lib.rate || []).find((r) => r.workcenter === wc);
   return (rate?.speed_uom || '').replace(/\s/g, '').toLowerCase();
 }
 
 function getMachineRateForWC(lib, wc) {
   if (!lib || !wc) return 0;
-  const rate = (lib.rate || []).find(r => r.workcenter === wc);
+  const rate = (lib.rate || []).find((r) => r.workcenter === wc);
   return num(rate?.machine_rate);
 }
 
@@ -326,15 +393,15 @@ export function validateComplex(cplxState, lib = null) {
   sps.forEach((sp, idx) => {
     const spLabel = `SP ${sp.code || String.fromCharCode(65 + idx)}`;
     // Layout
-    validateLayout(sp, `${spLabel} · Layout`).forEach(w => {
+    validateLayout(sp, `${spLabel} · Layout`).forEach((w) => {
       out.push({ ...w, id: `${w.id}-sp${idx}` });
     });
     // Materials
-    validateMaterials(sp.materials, `${spLabel} · Materials`, num(sp.part_width)).forEach(w => {
+    validateMaterials(sp.materials, `${spLabel} · Materials`, num(sp.part_width)).forEach((w) => {
       out.push({ ...w, id: `${w.id}-sp${idx}` });
     });
     // Processes
-    validateProcesses(sp.processes, `${spLabel} · Processes`, lib).forEach(w => {
+    validateProcesses(sp.processes, `${spLabel} · Processes`, lib).forEach((w) => {
       out.push({ ...w, id: `${w.id}-sp${idx}` });
     });
   });
@@ -346,6 +413,6 @@ export function validateComplex(cplxState, lib = null) {
 
 export function validateByActiveTab(activeTab, stdState, cplxState, lib = null) {
   if (activeTab === 'standard') return validateStandard(stdState, lib);
-  if (activeTab === 'complex')  return validateComplex(cplxState, lib);
+  if (activeTab === 'complex') return validateComplex(cplxState, lib);
   return [];
 }

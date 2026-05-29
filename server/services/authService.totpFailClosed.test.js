@@ -21,7 +21,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {
-  init as initAuth, loadTotpSecrets, saveTotpSecrets, isTotpSecretsUnavailable,
+  init as initAuth,
+  loadTotpSecrets,
+  saveTotpSecrets,
+  isTotpSecretsUnavailable,
 } from './authService.js';
 
 function setupTmpDataDir() {
@@ -29,9 +32,14 @@ function setupTmpDataDir() {
   fs.mkdirSync(path.join(dir, 'Library', 'Users'), { recursive: true });
   // Seed a users.json with an Administrator having a bcrypt (so the
   // deployment looks "normal" and v1 fallback key derivation can run).
-  fs.writeFileSync(path.join(dir, 'Library', 'Users', 'users.json'), JSON.stringify([
-    { id: 1, username: 'Administrator', role: 'sys', pwd_bcrypt: '$2b$12$x', pwd: 'seed-pwd' },
-  ], null, 2));
+  fs.writeFileSync(
+    path.join(dir, 'Library', 'Users', 'users.json'),
+    JSON.stringify(
+      [{ id: 1, username: 'Administrator', role: 'sys', pwd_bcrypt: '$2b$12$x', pwd: 'seed-pwd' }],
+      null,
+      2
+    )
+  );
   initAuth(dir);
   return dir;
 }
@@ -50,7 +58,7 @@ test('loadTotpSecrets: valid file round-trips without marker', () => {
   delete process.env.OPS_TOTP_KEY;
   try {
     setupTmpDataDir();
-    saveTotpSecrets({ 'alice': 'JBSWY3DPEHPK3PXP' });
+    saveTotpSecrets({ alice: 'JBSWY3DPEHPK3PXP' });
     const out = loadTotpSecrets();
     assert.equal(isTotpSecretsUnavailable(out), false);
     assert.equal(out['alice'], 'JBSWY3DPEHPK3PXP');
@@ -63,16 +71,22 @@ test('loadTotpSecrets: corrupt file → marker dict (NOT plain empty)', () => {
   const dir = setupTmpDataDir();
   // Write garbage that parses as JSON but fails HMAC/AEAD. Use a v1
   // shape with a randomly-bogus mac so the HMAC check rejects.
-  fs.writeFileSync(path.join(dir, 'Library', 'Users', 'totp_secrets.enc'), JSON.stringify({
-    v: 1,
-    salt: Buffer.alloc(16).toString('base64'),
-    nonce: Buffer.alloc(12).toString('base64'),
-    mac:   Buffer.alloc(32, 0xAB).toString('base64'),
-    data:  Buffer.alloc(32).toString('base64'),
-  }));
+  fs.writeFileSync(
+    path.join(dir, 'Library', 'Users', 'totp_secrets.enc'),
+    JSON.stringify({
+      v: 1,
+      salt: Buffer.alloc(16).toString('base64'),
+      nonce: Buffer.alloc(12).toString('base64'),
+      mac: Buffer.alloc(32, 0xab).toString('base64'),
+      data: Buffer.alloc(32).toString('base64'),
+    })
+  );
   const out = loadTotpSecrets();
-  assert.equal(isTotpSecretsUnavailable(out), true,
-    'decrypt fail MUST return marker so login path can fail-CLOSED');
+  assert.equal(
+    isTotpSecretsUnavailable(out),
+    true,
+    'decrypt fail MUST return marker so login path can fail-CLOSED'
+  );
   // Sanity: the old code returned `{}`. Make sure we have NOT regressed.
   assert.notDeepEqual(out, {}, 'must NOT be plain {} — that was the Sprint-40 bug');
 });
@@ -107,7 +121,9 @@ test('v3: new saves include a key fingerprint; load with same key succeeds', asy
   try {
     const dir = setupTmpDataDir();
     saveTotpSecrets({ alice: 'JBSWY3DPEHPK3PXP' });
-    const raw = JSON.parse(fs.readFileSync(path.join(dir, 'Library', 'Users', 'totp_secrets.enc'), 'utf-8'));
+    const raw = JSON.parse(
+      fs.readFileSync(path.join(dir, 'Library', 'Users', 'totp_secrets.enc'), 'utf-8')
+    );
     assert.equal(raw.v, 3, 'new saves must be v3');
     assert.ok(raw.fp, 'v3 must include a fp field');
     // Fingerprint matches what the service reports for the current key
@@ -127,12 +143,11 @@ test('v3: key rotated → loadTotpSecrets returns fail-CLOSED marker (wrong key)
   process.env.OPS_TOTP_KEY = 'b'.repeat(64);
   try {
     const dir = setupTmpDataDir();
-    saveTotpSecrets({ alice: 'JBSWY3DPEHPK3PXP' });  // saved with 'bb...'
+    saveTotpSecrets({ alice: 'JBSWY3DPEHPK3PXP' }); // saved with 'bb...'
     // Rotate the key — caller now has a DIFFERENT OPS_TOTP_KEY.
     process.env.OPS_TOTP_KEY = 'c'.repeat(64);
     const out = loadTotpSecrets();
-    assert.equal(isTotpSecretsUnavailable(out), true,
-      'wrong key must trigger fail-CLOSED marker');
+    assert.equal(isTotpSecretsUnavailable(out), true, 'wrong key must trigger fail-CLOSED marker');
   } finally {
     if (savedEnv) process.env.OPS_TOTP_KEY = savedEnv;
     else delete process.env.OPS_TOTP_KEY;
@@ -148,7 +163,7 @@ test('v3: corrupt data with matching fp → fail-CLOSED marker (separate path)',
     const fp = path.join(dir, 'Library', 'Users', 'totp_secrets.enc');
     // Keep fp valid, scramble the AEAD tag to simulate bit-rot.
     const enc = JSON.parse(fs.readFileSync(fp, 'utf-8'));
-    enc.tag = Buffer.alloc(16, 0xff).toString('base64');  // valid length, wrong bytes
+    enc.tag = Buffer.alloc(16, 0xff).toString('base64'); // valid length, wrong bytes
     fs.writeFileSync(fp, JSON.stringify(enc, null, 2));
     const out = loadTotpSecrets();
     assert.equal(isTotpSecretsUnavailable(out), true, 'AEAD tampering still fail-CLOSED');
@@ -181,12 +196,18 @@ test('userMustHaveTotp: sys role required by default policy', async () => {
 test('userMustHaveTotp: per-user totp_required overrides missing policy', async () => {
   const { userMustHaveTotp } = await import('./authService.js');
   const savedPolicy = process.env.OPS_REQUIRE_2FA_ROLES;
-  process.env.OPS_REQUIRE_2FA_ROLES = '';  // disable role-based policy
+  process.env.OPS_REQUIRE_2FA_ROLES = ''; // disable role-based policy
   try {
-    assert.equal(userMustHaveTotp({ role: 'user', totp_required: true }), true,
-      'explicit per-user flag ALWAYS wins even when role policy is off');
-    assert.equal(userMustHaveTotp({ role: 'sys', totp_required: false }), false,
-      'empty policy + no per-user flag → sys bypass allowed (test mode)');
+    assert.equal(
+      userMustHaveTotp({ role: 'user', totp_required: true }),
+      true,
+      'explicit per-user flag ALWAYS wins even when role policy is off'
+    );
+    assert.equal(
+      userMustHaveTotp({ role: 'sys', totp_required: false }),
+      false,
+      'empty policy + no per-user flag → sys bypass allowed (test mode)'
+    );
   } finally {
     if (savedPolicy !== undefined) process.env.OPS_REQUIRE_2FA_ROLES = savedPolicy;
     else delete process.env.OPS_REQUIRE_2FA_ROLES;
@@ -213,8 +234,11 @@ test('userMustHaveTotp: empty string "" means NO enforcement (test harness path)
   try {
     // The "" case must NOT fall back to default — otherwise the
     // integration-test harness would lock out its own sys test user.
-    assert.equal(userMustHaveTotp({ role: 'sys' }), false,
-      'empty string disables the role policy (?? not ||)');
+    assert.equal(
+      userMustHaveTotp({ role: 'sys' }),
+      false,
+      'empty string disables the role policy (?? not ||)'
+    );
   } finally {
     if (savedPolicy !== undefined) process.env.OPS_REQUIRE_2FA_ROLES = savedPolicy;
     else delete process.env.OPS_REQUIRE_2FA_ROLES;
@@ -225,7 +249,7 @@ test('getTotpKeyFingerprint: stable for same key, differs for different keys', a
   const { getTotpKeyFingerprint } = await import('./authService.js');
   const savedEnv = process.env.OPS_TOTP_KEY;
   try {
-    setupTmpDataDir();  // initAuth so USERS_DIR is set
+    setupTmpDataDir(); // initAuth so USERS_DIR is set
     process.env.OPS_TOTP_KEY = 'a'.repeat(64);
     const fp1 = getTotpKeyFingerprint();
     const fp2 = getTotpKeyFingerprint();

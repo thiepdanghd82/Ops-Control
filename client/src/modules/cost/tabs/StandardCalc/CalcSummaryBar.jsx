@@ -20,14 +20,18 @@ export default function CalcSummaryBar() {
   const tierSt = useMemo(() => getActiveTierState(st), [st]);
   const result = useMemo(() => {
     if (!lib) return null;
-    try { return calcAll(tierSt, null, lib, null); } catch { return null; }
+    try {
+      return calcAll(tierSt, null, lib, null);
+    } catch {
+      return null;
+    }
   }, [tierSt, lib]);
 
   const moqIdx = st.active_moq_idx || 0;
-  const moqQty = moqIdx === 0 ? (st.moq || 0) : (st.extra_moqs?.[moqIdx - 1]?.moq || 0);
-  const eau    = moqIdx === 0 ? (st.annual_qty || 0) : (st.extra_moqs?.[moqIdx - 1]?.eau || 0);
-  const sp     = moqIdx === 0 ? (st.selling_price || 0) : (st.extra_moqs?.[moqIdx - 1]?.price || 0);
-  const target = moqIdx === 0 ? (st.target || 0) : (st.extra_moqs?.[moqIdx - 1]?.target || 0);
+  const moqQty = moqIdx === 0 ? st.moq || 0 : st.extra_moqs?.[moqIdx - 1]?.moq || 0;
+  const eau = moqIdx === 0 ? st.annual_qty || 0 : st.extra_moqs?.[moqIdx - 1]?.eau || 0;
+  const sp = moqIdx === 0 ? st.selling_price || 0 : st.extra_moqs?.[moqIdx - 1]?.price || 0;
+  const target = moqIdx === 0 ? st.target || 0 : st.extra_moqs?.[moqIdx - 1]?.target || 0;
 
   return (
     <CostSummaryBar

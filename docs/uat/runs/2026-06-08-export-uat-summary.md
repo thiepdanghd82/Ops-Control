@@ -39,9 +39,9 @@
 
 ## Sign-off
 
-- **Lead Engineer**: ********\_\_\_\_******** Date: 2026-06-08
-- **QA Operator**: ********\_\_\_\_******** Date: 2026-06-08
-- **Plant Manager (informed)**: ********\_\_\_\_******** Date: 2026-06-08
+- **Lead Engineer**: **\*\*\*\***\_\_\_\_**\*\*\*\*** Date: 2026-06-08
+- **QA Operator**: **\*\*\*\***\_\_\_\_**\*\*\*\*** Date: 2026-06-08
+- **Plant Manager (informed)**: **\*\*\*\***\_\_\_\_**\*\*\*\*** Date: 2026-06-08
 
 ## Companion artifacts
 

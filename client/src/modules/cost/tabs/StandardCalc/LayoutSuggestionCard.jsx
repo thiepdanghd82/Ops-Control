@@ -24,8 +24,11 @@ export default function LayoutSuggestionCard({ state, material, profile, onApply
   const [showLegend, setShowLegend] = useState(false);
 
   const candidates = useMemo(() => {
-    try { return suggestLayouts(state, material, { topN: 5, profile }); }
-    catch { return []; }
+    try {
+      return suggestLayouts(state, material, { topN: 5, profile });
+    } catch {
+      return [];
+    }
   }, [state, material, profile]);
 
   const top = candidates[0] || null;
@@ -39,7 +42,9 @@ export default function LayoutSuggestionCard({ state, material, profile, onApply
   return (
     <div className="cl-suggestion">
       <div className="cl-sum-title">
-        <span role="img" aria-label="Optimizer">&#9889;</span>
+        <span role="img" aria-label="Optimizer">
+          &#9889;
+        </span>
         &nbsp;Layout Suggestion
       </div>
 
@@ -60,7 +65,10 @@ export default function LayoutSuggestionCard({ state, material, profile, onApply
           </div>
           {top.needs_order?.length > 0 && (
             <div className="cl-sug-order-hint">
-              <b>Need to order:</b> {top.needs_order.map(s => s.replace('-', ' ').replace('T', 'T cylinder')).join(' + ')}
+              <b>Need to order:</b>{' '}
+              {top.needs_order
+                .map((s) => s.replace('-', ' ').replace('T', 'T cylinder'))
+                .join(' + ')}
             </div>
           )}
           <div className="cl-sum-row">
@@ -69,11 +77,15 @@ export default function LayoutSuggestionCard({ state, material, profile, onApply
           </div>
           <div className="cl-sum-row">
             <span>Web / Log</span>
-            <b>{top.num_webs} × {top.web_width_td}mm</b>
+            <b>
+              {top.num_webs} × {top.web_width_td}mm
+            </b>
           </div>
           <div className="cl-sum-row">
             <span>Grid / web</span>
-            <b>{top.parts_web_across} × {top.parts_in_md}</b>
+            <b>
+              {top.parts_web_across} × {top.parts_in_md}
+            </b>
           </div>
           <div className="cl-sum-row">
             <span>Pcs / shot</span>
@@ -86,12 +98,22 @@ export default function LayoutSuggestionCard({ state, material, profile, onApply
             </b>
           </div>
           <div className="cl-sug-actions">
-            <button className="cl-sug-apply" onClick={() => onApply?.(top)}>Apply</button>
-            <button className="cl-sug-more" onClick={() => setShowAll(true)} disabled={candidates.length <= 1}>
+            <button className="cl-sug-apply" onClick={() => onApply?.(top)}>
+              Apply
+            </button>
+            <button
+              className="cl-sug-more"
+              onClick={() => setShowAll(true)}
+              disabled={candidates.length <= 1}
+            >
               {candidates.length} options
             </button>
           </div>
-          <button className="cl-sug-legend-btn" onClick={() => setShowLegend(true)} title="How this suggestion is calculated">
+          <button
+            className="cl-sug-legend-btn"
+            onClick={() => setShowLegend(true)}
+            title="How this suggestion is calculated"
+          >
             <span>ⓘ</span> How it works / Cách tính
           </button>
         </>
@@ -104,7 +126,10 @@ export default function LayoutSuggestionCard({ state, material, profile, onApply
       {showAll && (
         <OptionsModal
           candidates={candidates}
-          onApply={(c) => { onApply?.(c); setShowAll(false); }}
+          onApply={(c) => {
+            onApply?.(c);
+            setShowAll(false);
+          }}
           onClose={() => setShowAll(false)}
         />
       )}
@@ -115,8 +140,8 @@ export default function LayoutSuggestionCard({ state, material, profile, onApply
 }
 
 function offcutColor(pct) {
-  if (pct < 0.10) return '#15803d';
-  if (pct < 0.20) return '#d97706';
+  if (pct < 0.1) return '#15803d';
+  if (pct < 0.2) return '#d97706';
   return '#ef4444';
 }
 
@@ -130,11 +155,27 @@ function offcutColor(pct) {
  */
 function ReuseBadge({ status, reuse }) {
   if (status === 'full') return <span className="cl-sug-reuse">✓ reuse</span>;
-  if (status === 'partial_plate')    return <span className="cl-sug-partial" title="Plate cylinder in stock — magnetic die must be ordered">◐ partial (order magnetic)</span>;
-  if (status === 'partial_magnetic') return <span className="cl-sug-partial" title="Magnetic die in stock — plate cylinder must be ordered">◐ partial (order plate)</span>;
-  if (status === 'none')             return <span className="cl-sug-newtool">⚠ order both</span>;
+  if (status === 'partial_plate')
+    return (
+      <span
+        className="cl-sug-partial"
+        title="Plate cylinder in stock — magnetic die must be ordered"
+      >
+        ◐ partial (order magnetic)
+      </span>
+    );
+  if (status === 'partial_magnetic')
+    return (
+      <span
+        className="cl-sug-partial"
+        title="Magnetic die in stock — plate cylinder must be ordered"
+      >
+        ◐ partial (order plate)
+      </span>
+    );
+  if (status === 'none') return <span className="cl-sug-newtool">⚠ order both</span>;
   // Legacy fallback when profile lacks plate/magnetic split.
-  if (reuse === true)  return <span className="cl-sug-reuse">✓ reuse</span>;
+  if (reuse === true) return <span className="cl-sug-reuse">✓ reuse</span>;
   if (reuse === false) return <span className="cl-sug-newtool">⚠ new die</span>;
   return null;
 }
@@ -166,32 +207,55 @@ function OptionsModal({ candidates, onApply, onClose }) {
           <tbody>
             {candidates.map((c, i) => (
               <tr key={i} className={i === 0 ? 'cl-sug-best' : ''}>
-                <td><b>{i + 1}</b></td>
+                <td>
+                  <b>{i + 1}</b>
+                </td>
                 <td>
                   {c.press_type === 'flat' ? 'Flat' : `${c.tooth}T`}
                   {c.reuse_status === 'full' && <span className="cl-sug-reuse"> ✓</span>}
-                  {(c.reuse_status === 'partial_plate' || c.reuse_status === 'partial_magnetic') && (
-                    <span className="cl-sug-partial" title={c.needs_order.join(', ')}> ◐</span>
+                  {(c.reuse_status === 'partial_plate' ||
+                    c.reuse_status === 'partial_magnetic') && (
+                    <span className="cl-sug-partial" title={c.needs_order.join(', ')}>
+                      {' '}
+                      ◐
+                    </span>
                   )}
                   {c.reuse_status === 'none' && <span className="cl-sug-newtool"> ⚠</span>}
                   {/* Legacy fallback */}
                   {!c.reuse_status && c.reuse === true && <span className="cl-sug-reuse"> ✓</span>}
-                  {!c.reuse_status && c.reuse === false && <span className="cl-sug-newtool"> ⚠</span>}
+                  {!c.reuse_status && c.reuse === false && (
+                    <span className="cl-sug-newtool"> ⚠</span>
+                  )}
                 </td>
                 <td>{c.pitch.toFixed(1)}</td>
-                <td>{c.num_webs}w × {c.web_width_td}</td>
-                <td>{c.parts_web_across} × {c.parts_in_md}{c.rotated ? ' (rot.)' : ''}</td>
-                <td><b>{c.pcs_per_shot}</b></td>
-                <td style={{ color: offcutColor(c.offcut_total) }}>{(c.offcut_total * 100).toFixed(1)}%</td>
+                <td>
+                  {c.num_webs}w × {c.web_width_td}
+                </td>
+                <td>
+                  {c.parts_web_across} × {c.parts_in_md}
+                  {c.rotated ? ' (rot.)' : ''}
+                </td>
+                <td>
+                  <b>{c.pcs_per_shot}</b>
+                </td>
+                <td style={{ color: offcutColor(c.offcut_total) }}>
+                  {(c.offcut_total * 100).toFixed(1)}%
+                </td>
                 <td>{c.score.toFixed(1)}</td>
-                <td><button className="cl-sug-apply" onClick={() => onApply(c)}>Apply</button></td>
+                <td>
+                  <button className="cl-sug-apply" onClick={() => onApply(c)}>
+                    Apply
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </Modal.Body>
       <Modal.Footer>
-        <button type="button" className="op-btn op-btn-primary" onClick={onClose}>Close</button>
+        <button type="button" className="op-btn op-btn-primary" onClick={onClose}>
+          Close
+        </button>
       </Modal.Footer>
     </Modal>
   );
@@ -215,7 +279,6 @@ function LegendModal({ top, onClose }) {
       />
       <Modal.Body>
         <div className="cl-legend-body">
-
           <Section
             titleEn="1. What the optimizer searches over (5 axes)"
             titleVi="1. Các biến optimizer tìm kiếm (5 trục)"
@@ -263,11 +326,15 @@ function LegendModal({ top, onClose }) {
             titleVi="3. Offcut (% hao phí) tính theo CẢ LOG"
           >
             <Formula>
-              <span>used_td = num_webs × (parts_web_across × part_w + gaps + 2·edge_margin_td)</span>
+              <span>
+                used_td = num_webs × (parts_web_across × part_w + gaps + 2·edge_margin_td)
+              </span>
               <span>offcut_td = 1 − used_td / log_width</span>
               <span>used_md = parts_in_md × part_l + (parts_in_md − 1) × min_gap_md</span>
               <span>offcut_md = 1 − used_md / pitch</span>
-              <span><b>offcut_total = 1 − (1 − offcut_td) × (1 − offcut_md)</b></span>
+              <span>
+                <b>offcut_total = 1 − (1 − offcut_td) × (1 − offcut_md)</b>
+              </span>
             </Formula>
             <Bi
               en="Per-log (not per-shot) scoring lets a 4-web × 25-part layout compete fairly against a 1-web × 95-part layout — density is measured where operators actually pay: on the substrate."
@@ -275,12 +342,11 @@ function LegendModal({ top, onClose }) {
             />
           </Section>
 
-          <Section
-            titleEn="4. Score (ranking formula)"
-            titleVi="4. Score (công thức xếp hạng)"
-          >
+          <Section titleEn="4. Score (ranking formula)" titleVi="4. Score (công thức xếp hạng)">
             <Formula>
-              <span><b>score = pcs_per_shot × (1 − offcut_total)</b></span>
+              <span>
+                <b>score = pcs_per_shot × (1 − offcut_total)</b>
+              </span>
               <span>pcs_per_shot = num_webs × parts_web_across × parts_in_md</span>
             </Formula>
             <Bi
@@ -406,20 +472,35 @@ function LegendModal({ top, onClose }) {
                 {top.needs_order?.length > 0 && (
                   <div style={{ gridColumn: '1 / -1' }}>
                     <b>Order / Cần đặt:</b>{' '}
-                    {top.needs_order.map(s => s.replace('-', ' ').replace('T', 'T cylinder')).join(' + ')}
+                    {top.needs_order
+                      .map((s) => s.replace('-', ' ').replace('T', 'T cylinder'))
+                      .join(' + ')}
                   </div>
                 )}
-                <div><b>Pitch:</b> {top.pitch.toFixed(2)} mm</div>
-                <div><b>Layout:</b> {top.num_webs} web × {top.parts_web_across} across × {top.parts_in_md} MD = <b>{top.pcs_per_shot}</b> parts/shot</div>
-                <div><b>Offcut TD:</b> {(top.offcut_td * 100).toFixed(1)}%</div>
-                <div><b>Offcut MD:</b> {(top.offcut_md * 100).toFixed(1)}%</div>
-                <div><b>Total offcut:</b>{' '}
+                <div>
+                  <b>Pitch:</b> {top.pitch.toFixed(2)} mm
+                </div>
+                <div>
+                  <b>Layout:</b> {top.num_webs} web × {top.parts_web_across} across ×{' '}
+                  {top.parts_in_md} MD = <b>{top.pcs_per_shot}</b> parts/shot
+                </div>
+                <div>
+                  <b>Offcut TD:</b> {(top.offcut_td * 100).toFixed(1)}%
+                </div>
+                <div>
+                  <b>Offcut MD:</b> {(top.offcut_md * 100).toFixed(1)}%
+                </div>
+                <div>
+                  <b>Total offcut:</b>{' '}
                   <span style={{ color: offcutColor(top.offcut_total), fontWeight: 700 }}>
                     {(top.offcut_total * 100).toFixed(1)}%
                   </span>
                 </div>
-                <div><b>Score:</b> {top.score.toFixed(1)}
-                  {' '}<span className="cl-legend-hint">(= {top.pcs_per_shot} × {(1 - top.offcut_total).toFixed(4)})</span>
+                <div>
+                  <b>Score:</b> {top.score.toFixed(1)}{' '}
+                  <span className="cl-legend-hint">
+                    (= {top.pcs_per_shot} × {(1 - top.offcut_total).toFixed(4)})
+                  </span>
                 </div>
               </div>
             </Section>
@@ -434,7 +515,9 @@ function LegendModal({ top, onClose }) {
         </div>
       </Modal.Body>
       <Modal.Footer>
-        <button type="button" className="op-btn op-btn-primary" onClick={onClose}>Close</button>
+        <button type="button" className="op-btn op-btn-primary" onClick={onClose}>
+          Close
+        </button>
       </Modal.Footer>
     </Modal>
   );
@@ -464,8 +547,12 @@ function Bi({ en, vi }) {
 function Tiebreakers({ en, vi }) {
   return (
     <div className="cl-legend-tie">
-      <div><b>Tiebreaker:</b> {en}</div>
-      <div><b>Phá tie:</b> {vi}</div>
+      <div>
+        <b>Tiebreaker:</b> {en}
+      </div>
+      <div>
+        <b>Phá tie:</b> {vi}
+      </div>
     </div>
   );
 }

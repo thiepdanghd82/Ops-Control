@@ -20,8 +20,8 @@
  * can surface "1 quote skipped: invalid state".
  */
 
-const MAX_QUOTES = 50_000;        // per-request cap; more than any realistic client save
-const MAX_STRING_FIELD = 512;     // string fields shouldn't exceed this; mega-strings are junk
+const MAX_QUOTES = 50_000; // per-request cap; more than any realistic client save
+const MAX_STRING_FIELD = 512; // string fields shouldn't exceed this; mega-strings are junk
 const MAX_STATE_JSON_BYTES = 2 * 1024 * 1024; // 2 MB per quote state — big but finite
 
 export function validateQuote(q) {
@@ -42,8 +42,11 @@ export function validateQuote(q) {
     return { ok: false, reason: 'state_not_object' };
   }
   // approval within state: same story.
-  if (q.state && q.state.approval != null
-      && (typeof q.state.approval !== 'object' || Array.isArray(q.state.approval))) {
+  if (
+    q.state &&
+    q.state.approval != null &&
+    (typeof q.state.approval !== 'object' || Array.isArray(q.state.approval))
+  ) {
     return { ok: false, reason: 'approval_not_object' };
   }
   // Rough size guard — if one quote's serialized state is > 2 MB

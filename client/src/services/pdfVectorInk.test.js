@@ -21,22 +21,47 @@ import {
 // ── shoelaceArea ─────────────────────────────────────────────
 
 test('shoelaceArea: 10×10 square → 100 (or -100 depending on winding)', () => {
-  const square = [[0, 0], [10, 0], [10, 10], [0, 10]];
+  const square = [
+    [0, 0],
+    [10, 0],
+    [10, 10],
+    [0, 10],
+  ];
   assert.equal(Math.abs(shoelaceArea(square)), 100);
 });
 
 test('shoelaceArea: triangle (0,0)-(4,0)-(0,3) → 6', () => {
-  const tri = [[0, 0], [4, 0], [0, 3]];
+  const tri = [
+    [0, 0],
+    [4, 0],
+    [0, 3],
+  ];
   assert.equal(Math.abs(shoelaceArea(tri)), 6);
 });
 
 test('shoelaceArea: degenerate 2-point polygon → 0', () => {
-  assert.equal(shoelaceArea([[0, 0], [1, 1]]), 0);
+  assert.equal(
+    shoelaceArea([
+      [0, 0],
+      [1, 1],
+    ]),
+    0
+  );
 });
 
 test('shoelaceArea: clockwise vs counter-clockwise — sign differs', () => {
-  const ccw = [[0, 0], [10, 0], [10, 10], [0, 10]];
-  const cw  = [[0, 0], [0, 10], [10, 10], [10, 0]];
+  const ccw = [
+    [0, 0],
+    [10, 0],
+    [10, 10],
+    [0, 10],
+  ];
+  const cw = [
+    [0, 0],
+    [0, 10],
+    [10, 10],
+    [10, 0],
+  ];
   assert.equal(shoelaceArea(ccw), -shoelaceArea(cw));
 });
 
@@ -51,7 +76,7 @@ test('flattenCubic: straight line (all control points collinear) → polyline on
 
 test('flattenCubic: segments count matches request + 1', () => {
   const flat = flattenCubic([0, 0], [10, 10], [20, 10], [30, 0], 8);
-  assert.equal(flat.length, 9);  // segments + 1 endpoints
+  assert.equal(flat.length, 9); // segments + 1 endpoints
 });
 
 // ── matrix ops ───────────────────────────────────────────────
@@ -64,7 +89,7 @@ test('matrixDet: 2× uniform scale → 4', () => {
 });
 test('matrixMul: identity × M = M', () => {
   const id = [1, 0, 0, 1, 0, 0];
-  const m  = [2, 0, 0, 3, 5, 7];
+  const m = [2, 0, 0, 3, 5, 7];
   assert.deepEqual(matrixMul(id, m), m);
 });
 test('applyMatrix: translate (10, 20) applied to origin → (10, 20)', () => {
@@ -86,7 +111,7 @@ test('plateKey: identical CMYK produces identical key (clusters together)', () =
 test('plateKey: different CMYK produces different keys', () => {
   assert.notEqual(
     plateKey({ cs: 'DeviceCMYK', values: [1, 0, 0, 0] }),
-    plateKey({ cs: 'DeviceCMYK', values: [0, 1, 0, 0] }),
+    plateKey({ cs: 'DeviceCMYK', values: [0, 1, 0, 0] })
   );
 });
 
@@ -96,7 +121,10 @@ test('plateName: CMYK with only magenta → "M95"', () => {
 });
 
 test('plateName: Separation → the spot name verbatim', () => {
-  assert.equal(plateName({ cs: 'Separation', name: 'PANTONE Reflex Blue C' }), 'PANTONE Reflex Blue C');
+  assert.equal(
+    plateName({ cs: 'Separation', name: 'PANTONE Reflex Blue C' }),
+    'PANTONE Reflex Blue C'
+  );
 });
 
 // ── accumulatePlates ─────────────────────────────────────────
@@ -106,24 +134,41 @@ test('plateName: Separation → the spot name verbatim', () => {
 // Verify the resulting plate has areaPdfUnits = 10000.
 
 const FAKE_OPS = {
-  save: 1, restore: 2, transform: 3,
-  moveTo: 10, lineTo: 11, curveTo: 12, curveTo2: 13, curveTo3: 14,
-  rectangle: 15, closePath: 16,
-  fill: 20, eoFill: 21, fillStroke: 22, eoFillStroke: 23,
-  closeFillStroke: 24, closeEOFillStroke: 25, endPath: 26,
-  setFillRGBColor: 30, setStrokeRGBColor: 31,
-  setFillCMYKColor: 32, setStrokeCMYKColor: 33,
-  setFillGray: 34, setStrokeGray: 35,
-  setFillColorN: 36, setStrokeColorN: 37,
-  paintImageXObject: 40, paintJpegXObject: 41,
+  save: 1,
+  restore: 2,
+  transform: 3,
+  moveTo: 10,
+  lineTo: 11,
+  curveTo: 12,
+  curveTo2: 13,
+  curveTo3: 14,
+  rectangle: 15,
+  closePath: 16,
+  fill: 20,
+  eoFill: 21,
+  fillStroke: 22,
+  eoFillStroke: 23,
+  closeFillStroke: 24,
+  closeEOFillStroke: 25,
+  endPath: 26,
+  setFillRGBColor: 30,
+  setStrokeRGBColor: 31,
+  setFillCMYKColor: 32,
+  setStrokeCMYKColor: 33,
+  setFillGray: 34,
+  setStrokeGray: 35,
+  setFillColorN: 36,
+  setStrokeColorN: 37,
+  paintImageXObject: 40,
+  paintJpegXObject: 41,
 };
 
 test('accumulatePlates: 100×100 CMYK red square → one plate, area 10000', () => {
   const ops = [FAKE_OPS.setFillCMYKColor, FAKE_OPS.rectangle, FAKE_OPS.fill];
   const args = [
-    [0, 1, 1, 0],      // setFillCMYKColor: C=0, M=1, Y=1, K=0
-    [0, 0, 100, 100],  // rectangle: x, y, w, h
-    [],                // fill
+    [0, 1, 1, 0], // setFillCMYKColor: C=0, M=1, Y=1, K=0
+    [0, 0, 100, 100], // rectangle: x, y, w, h
+    [], // fill
   ];
   const plates = accumulatePlates({ fnArray: ops, argsArray: args }, FAKE_OPS);
   assert.equal(plates.size, 1);
@@ -136,14 +181,12 @@ test('accumulatePlates: 100×100 CMYK red square → one plate, area 10000', () 
 test('accumulatePlates: two rectangles same colour → one plate, summed area', () => {
   const ops = [
     FAKE_OPS.setFillCMYKColor,
-    FAKE_OPS.rectangle, FAKE_OPS.fill,
-    FAKE_OPS.rectangle, FAKE_OPS.fill,
+    FAKE_OPS.rectangle,
+    FAKE_OPS.fill,
+    FAKE_OPS.rectangle,
+    FAKE_OPS.fill,
   ];
-  const args = [
-    [0, 1, 1, 0],
-    [0, 0, 10, 10],  [],
-    [20, 0, 5, 5],   [],
-  ];
+  const args = [[0, 1, 1, 0], [0, 0, 10, 10], [], [20, 0, 5, 5], []];
   const plates = accumulatePlates({ fnArray: ops, argsArray: args }, FAKE_OPS);
   assert.equal(plates.size, 1);
   const p = [...plates.values()][0];
@@ -153,27 +196,30 @@ test('accumulatePlates: two rectangles same colour → one plate, summed area', 
 
 test('accumulatePlates: two different colours → two plates', () => {
   const ops = [
-    FAKE_OPS.setFillCMYKColor, FAKE_OPS.rectangle, FAKE_OPS.fill,
-    FAKE_OPS.setFillRGBColor,  FAKE_OPS.rectangle, FAKE_OPS.fill,
+    FAKE_OPS.setFillCMYKColor,
+    FAKE_OPS.rectangle,
+    FAKE_OPS.fill,
+    FAKE_OPS.setFillRGBColor,
+    FAKE_OPS.rectangle,
+    FAKE_OPS.fill,
   ];
-  const args = [
-    [0, 1, 1, 0],  [0, 0, 10, 10],  [],
-    [0, 0, 0],     [20, 0, 10, 10], [],
-  ];
+  const args = [[0, 1, 1, 0], [0, 0, 10, 10], [], [0, 0, 0], [20, 0, 10, 10], []];
   const plates = accumulatePlates({ fnArray: ops, argsArray: args }, FAKE_OPS);
   assert.equal(plates.size, 2);
 });
 
 test('accumulatePlates: CTM scale 2× multiplies area by 4', () => {
   const ops = [
-    FAKE_OPS.transform,               // scale 2× uniform
+    FAKE_OPS.transform, // scale 2× uniform
     FAKE_OPS.setFillCMYKColor,
-    FAKE_OPS.rectangle, FAKE_OPS.fill,
+    FAKE_OPS.rectangle,
+    FAKE_OPS.fill,
   ];
   const args = [
-    [2, 0, 0, 2, 0, 0],               // CTM = 2× uniform
+    [2, 0, 0, 2, 0, 0], // CTM = 2× uniform
     [0, 1, 1, 0],
-    [0, 0, 10, 10], [],
+    [0, 0, 10, 10],
+    [],
   ];
   const plates = accumulatePlates({ fnArray: ops, argsArray: args }, FAKE_OPS);
   const p = [...plates.values()][0];
@@ -183,27 +229,32 @@ test('accumulatePlates: CTM scale 2× multiplies area by 4', () => {
 
 test('accumulatePlates: q/Q save+restore isolates CTM', () => {
   const ops = [
-    FAKE_OPS.save,                    // q
-    FAKE_OPS.transform,               // scale 2×
+    FAKE_OPS.save, // q
+    FAKE_OPS.transform, // scale 2×
     FAKE_OPS.setFillCMYKColor,
-    FAKE_OPS.rectangle, FAKE_OPS.fill,
-    FAKE_OPS.restore,                 // Q — CTM reverts
+    FAKE_OPS.rectangle,
+    FAKE_OPS.fill,
+    FAKE_OPS.restore, // Q — CTM reverts
     FAKE_OPS.setFillRGBColor,
-    FAKE_OPS.rectangle, FAKE_OPS.fill,
+    FAKE_OPS.rectangle,
+    FAKE_OPS.fill,
   ];
   const args = [
     [],
     [2, 0, 0, 2, 0, 0],
     [0, 1, 1, 0],
-    [0, 0, 10, 10], [],
+    [0, 0, 10, 10],
+    [],
     [],
     [0, 0, 0],
-    [0, 0, 10, 10], [],
+    [0, 0, 10, 10],
+    [],
   ];
   const plates = accumulatePlates({ fnArray: ops, argsArray: args }, FAKE_OPS);
   assert.equal(plates.size, 2);
-  const [scaledPlate, normalPlate] = [...plates.values()]
-    .sort((a, b) => b.areaPdfUnits - a.areaPdfUnits);
+  const [scaledPlate, normalPlate] = [...plates.values()].sort(
+    (a, b) => b.areaPdfUnits - a.areaPdfUnits
+  );
   // Scaled 10×10 = 400; normal 10×10 = 100
   assert.ok(Math.abs(scaledPlate.areaPdfUnits - 400) < 1e-6);
   assert.ok(Math.abs(normalPlate.areaPdfUnits - 100) < 1e-6);

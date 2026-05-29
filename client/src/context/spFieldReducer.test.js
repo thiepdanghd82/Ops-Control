@@ -38,23 +38,35 @@ function makeState() {
 // ── Happy path — correct payload shape ──
 
 test('SET_SP_FIELD {spIdx, field, value}: updates the SP layout field', () => {
-  const s = calcReducer(makeState(), { type: A.SET_SP_FIELD, payload: { spIdx: 0, field: 'part_width', value: 82 } });
+  const s = calcReducer(makeState(), {
+    type: A.SET_SP_FIELD,
+    payload: { spIdx: 0, field: 'part_width', value: 82 },
+  });
   assert.equal(s.cplxState.subproducts[0].part_width, 82);
   assert.equal(s.isDirty, true);
 });
 
 test('SET_SP_MATERIAL_FIELD {spIdx, idx, field, value}: updates the target mat row', () => {
-  const s = calcReducer(makeState(), { type: A.SET_SP_MATERIAL_FIELD, payload: { spIdx: 0, idx: 0, field: 'width', value: 100 } });
+  const s = calcReducer(makeState(), {
+    type: A.SET_SP_MATERIAL_FIELD,
+    payload: { spIdx: 0, idx: 0, field: 'width', value: 100 },
+  });
   assert.equal(s.cplxState.subproducts[0].materials[0].width, 100);
 });
 
 test('SET_SP_INK_FIELD {spIdx, idx, field, value}: updates the target ink row', () => {
-  const s = calcReducer(makeState(), { type: A.SET_SP_INK_FIELD, payload: { spIdx: 0, idx: 0, field: 'area_pct', value: 0.3 } });
+  const s = calcReducer(makeState(), {
+    type: A.SET_SP_INK_FIELD,
+    payload: { spIdx: 0, idx: 0, field: 'area_pct', value: 0.3 },
+  });
   assert.equal(s.cplxState.subproducts[0].inks[0].area_pct, 0.3);
 });
 
 test('SET_SP_PROCESS_FIELD {spIdx, idx, field, value}: updates the target process row', () => {
-  const s = calcReducer(makeState(), { type: A.SET_SP_PROCESS_FIELD, payload: { spIdx: 0, idx: 0, field: 'speed', value: 25 } });
+  const s = calcReducer(makeState(), {
+    type: A.SET_SP_PROCESS_FIELD,
+    payload: { spIdx: 0, idx: 0, field: 'speed', value: 25 },
+  });
   assert.equal(s.cplxState.subproducts[0].processes[0].speed, 25);
 });
 
@@ -63,14 +75,24 @@ test('SET_SP_PROCESS_FIELD {spIdx, idx, field, value}: updates the target proces
 
 test('SET_SP_FIELD {spi, field, value}: legacy key is a silent no-op (contract guard)', () => {
   const before = makeState();
-  const after = calcReducer(before, { type: A.SET_SP_FIELD, payload: { spi: 0, field: 'part_width', value: 82 } });
-  assert.equal(after.cplxState.subproducts[0].part_width ?? 0, before.cplxState.subproducts[0].part_width ?? 0,
-    'wrong key must not update state');
+  const after = calcReducer(before, {
+    type: A.SET_SP_FIELD,
+    payload: { spi: 0, field: 'part_width', value: 82 },
+  });
+  assert.equal(
+    after.cplxState.subproducts[0].part_width ?? 0,
+    before.cplxState.subproducts[0].part_width ?? 0,
+    'wrong key must not update state'
+  );
 });
 
 test('SET_SP_MATERIAL_FIELD {spi, mi}: legacy key throws TypeError (contract guard)', () => {
   assert.throws(
-    () => calcReducer(makeState(), { type: A.SET_SP_MATERIAL_FIELD, payload: { spi: 0, mi: 0, field: 'width', value: 100 } }),
+    () =>
+      calcReducer(makeState(), {
+        type: A.SET_SP_MATERIAL_FIELD,
+        payload: { spi: 0, mi: 0, field: 'width', value: 100 },
+      }),
     /Cannot read properties of undefined/
   );
 });
@@ -85,14 +107,21 @@ test('REMOVE_SUBPRODUCT {idx: 1}: removes the target SP', () => {
   s = calcReducer(s, { type: A.ADD_SUBPRODUCT, payload: { code: 'FG Z' } });
   assert.equal(s.cplxState.subproducts.length, 3);
   const after = calcReducer(s, { type: A.REMOVE_SUBPRODUCT, payload: { idx: 1 } });
-  assert.deepEqual(after.cplxState.subproducts.map(sp => sp.code), ['SP A', 'FG Z']);
+  assert.deepEqual(
+    after.cplxState.subproducts.map((sp) => sp.code),
+    ['SP A', 'FG Z']
+  );
 });
 
 test('REMOVE_SUBPRODUCT bare number: legacy payload is a silent no-op (contract guard)', () => {
   let s = makeState();
   s = calcReducer(s, { type: A.ADD_SUBPRODUCT, payload: { code: 'SP B' } });
   const after = calcReducer(s, { type: A.REMOVE_SUBPRODUCT, payload: 1 });
-  assert.equal(after.cplxState.subproducts.length, 2, 'bare-number payload must not remove anything');
+  assert.equal(
+    after.cplxState.subproducts.length,
+    2,
+    'bare-number payload must not remove anything'
+  );
 });
 
 // ── Integration test — full Complex workflow exercised through the
@@ -107,11 +136,20 @@ test('Cplx workflow: add SP → edit layout → add material → edit material �
 
   // 1. Add SP B
   s = calcReducer(s, { type: A.ADD_SUBPRODUCT, payload: { code: 'SP B' } });
-  assert.deepEqual(s.cplxState.subproducts.map(sp => sp.code), ['SP A', 'SP B']);
+  assert.deepEqual(
+    s.cplxState.subproducts.map((sp) => sp.code),
+    ['SP A', 'SP B']
+  );
 
   // 2. Edit SP A layout (part_width + sheet_length)
-  s = calcReducer(s, { type: A.SET_SP_FIELD, payload: { spIdx: 0, field: 'part_width', value: 82 } });
-  s = calcReducer(s, { type: A.SET_SP_FIELD, payload: { spIdx: 0, field: 'sheet_length', value: 52 } });
+  s = calcReducer(s, {
+    type: A.SET_SP_FIELD,
+    payload: { spIdx: 0, field: 'part_width', value: 82 },
+  });
+  s = calcReducer(s, {
+    type: A.SET_SP_FIELD,
+    payload: { spIdx: 0, field: 'sheet_length', value: 52 },
+  });
   assert.equal(s.cplxState.subproducts[0].part_width, 82);
   assert.equal(s.cplxState.subproducts[0].sheet_length, 52);
 
@@ -122,8 +160,14 @@ test('Cplx workflow: add SP → edit layout → add material → edit material �
 
   // 4. Edit the newly-added material (last one)
   const newMatIdx = matsBefore; // 0-indexed
-  s = calcReducer(s, { type: A.SET_SP_MATERIAL_FIELD, payload: { spIdx: 0, idx: newMatIdx, field: 'code', value: 'M001' } });
-  s = calcReducer(s, { type: A.SET_SP_MATERIAL_FIELD, payload: { spIdx: 0, idx: newMatIdx, field: 'width', value: 200 } });
+  s = calcReducer(s, {
+    type: A.SET_SP_MATERIAL_FIELD,
+    payload: { spIdx: 0, idx: newMatIdx, field: 'code', value: 'M001' },
+  });
+  s = calcReducer(s, {
+    type: A.SET_SP_MATERIAL_FIELD,
+    payload: { spIdx: 0, idx: newMatIdx, field: 'width', value: 200 },
+  });
   assert.equal(s.cplxState.subproducts[0].materials[newMatIdx].code, 'M001');
   assert.equal(s.cplxState.subproducts[0].materials[newMatIdx].width, 200);
 
@@ -149,7 +193,7 @@ test('Cplx workflow: BOM entries survive SP removal with index shift', () => {
   // Remove SP B (idx=1). BOM entry pointing at 1 drops; entry pointing at 2
   // decrements to 1. Entry pointing at 0 is unchanged.
   s = calcReducer(s, { type: A.REMOVE_SUBPRODUCT, payload: { idx: 1 } });
-  const shifted = s.cplxState.bom.map(e => ({ sp_index: e.sp_index, qty: e.qty }));
+  const shifted = s.cplxState.bom.map((e) => ({ sp_index: e.sp_index, qty: e.qty }));
   assert.deepEqual(shifted, [
     { sp_index: 0, qty: 1 }, // SP A
     { sp_index: 1, qty: 3 }, // was FG Z at 2, now at 1

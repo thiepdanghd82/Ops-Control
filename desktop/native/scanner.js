@@ -36,16 +36,55 @@ let activeBuffer = '';
 // in được + Enter. Scanner thường chỉ phát ASCII printable + CR.
 // Tham chiếu: HID Usage Tables 1.4, section 10 (Keyboard/Keypad page).
 const HID_KEY_MAP = {
-  4: 'a', 5: 'b', 6: 'c', 7: 'd', 8: 'e', 9: 'f', 10: 'g', 11: 'h',
-  12: 'i', 13: 'j', 14: 'k', 15: 'l', 16: 'm', 17: 'n', 18: 'o', 19: 'p',
-  20: 'q', 21: 'r', 22: 's', 23: 't', 24: 'u', 25: 'v', 26: 'w', 27: 'x',
-  28: 'y', 29: 'z',
-  30: '1', 31: '2', 32: '3', 33: '4', 34: '5',
-  35: '6', 36: '7', 37: '8', 38: '9', 39: '0',
+  4: 'a',
+  5: 'b',
+  6: 'c',
+  7: 'd',
+  8: 'e',
+  9: 'f',
+  10: 'g',
+  11: 'h',
+  12: 'i',
+  13: 'j',
+  14: 'k',
+  15: 'l',
+  16: 'm',
+  17: 'n',
+  18: 'o',
+  19: 'p',
+  20: 'q',
+  21: 'r',
+  22: 's',
+  23: 't',
+  24: 'u',
+  25: 'v',
+  26: 'w',
+  27: 'x',
+  28: 'y',
+  29: 'z',
+  30: '1',
+  31: '2',
+  32: '3',
+  33: '4',
+  34: '5',
+  35: '6',
+  36: '7',
+  37: '8',
+  38: '9',
+  39: '0',
   40: '\n', // Enter — terminator
   44: ' ',
-  45: '-', 46: '=', 47: '[', 48: ']', 49: '\\',
-  51: ';', 52: "'", 53: '`', 54: ',', 55: '.', 56: '/',
+  45: '-',
+  46: '=',
+  47: '[',
+  48: ']',
+  49: '\\',
+  51: ';',
+  52: "'",
+  53: '`',
+  54: ',',
+  55: '.',
+  56: '/',
 };
 
 function decodeHidPacket(buf) {
@@ -75,27 +114,34 @@ function register(ipcMain, log) {
     if (!HID) throw new Error('node-hid module not available');
     // Filter chỉ giữ thiết bị có usagePage = 0x01 (Generic Desktop)
     // và usage = 0x06 (Keyboard) — đa số scanner báo cáo như keyboard.
-    return HID.devices().filter((d) => {
-      // Một số driver không expose usage; ta giữ luôn nếu manufacturer
-      // string chứa keyword scanner phổ biến.
-      const isKeyboardLike = d.usagePage === 0x01 && d.usage === 0x06;
-      const looksLikeScanner = /honeywell|symbol|datalogic|zebra|newland|opticon/i
-        .test(`${d.manufacturer || ''} ${d.product || ''}`);
-      return isKeyboardLike || looksLikeScanner;
-    }).map((d) => ({
-      vendorId: d.vendorId,
-      productId: d.productId,
-      manufacturer: d.manufacturer,
-      product: d.product,
-      serialNumber: d.serialNumber,
-      path: d.path,
-    }));
+    return HID.devices()
+      .filter((d) => {
+        // Một số driver không expose usage; ta giữ luôn nếu manufacturer
+        // string chứa keyword scanner phổ biến.
+        const isKeyboardLike = d.usagePage === 0x01 && d.usage === 0x06;
+        const looksLikeScanner = /honeywell|symbol|datalogic|zebra|newland|opticon/i.test(
+          `${d.manufacturer || ''} ${d.product || ''}`
+        );
+        return isKeyboardLike || looksLikeScanner;
+      })
+      .map((d) => ({
+        vendorId: d.vendorId,
+        productId: d.productId,
+        manufacturer: d.manufacturer,
+        product: d.product,
+        serialNumber: d.serialNumber,
+        path: d.path,
+      }));
   });
 
   ipcMain.handle('ops:scanner.open', async (evt, vendorId, productId) => {
     if (!HID) throw new Error('node-hid module not available');
     if (activeDevice) {
-      try { activeDevice.close(); } catch (_) { /* swallow */ }
+      try {
+        activeDevice.close();
+      } catch (_) {
+        /* swallow */
+      }
       activeDevice = null;
     }
     activeBuffer = '';
@@ -122,7 +168,11 @@ function register(ipcMain, log) {
     });
     activeDevice.on('error', (err) => {
       log.error('[scanner] Error:', err);
-      try { activeDevice?.close(); } catch (_) { /* swallow */ }
+      try {
+        activeDevice?.close();
+      } catch (_) {
+        /* swallow */
+      }
       activeDevice = null;
     });
 
@@ -132,7 +182,11 @@ function register(ipcMain, log) {
 
   ipcMain.handle('ops:scanner.close', async () => {
     if (activeDevice) {
-      try { activeDevice.close(); } catch (_) { /* swallow */ }
+      try {
+        activeDevice.close();
+      } catch (_) {
+        /* swallow */
+      }
       activeDevice = null;
       activeBuffer = '';
       log.info('[scanner] Closed');

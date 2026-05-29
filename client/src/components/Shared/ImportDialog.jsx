@@ -8,11 +8,11 @@ import Modal from './Modal';
 import './ImportDialog.css';
 
 const IMPORT_TARGETS = {
-  inventory:     { label: 'IFS Inventory (Full)',              endpoint: '/api/import/inventory',      icon: '📊' },
-  finishedGoods: { label: 'Finished Goods',                    endpoint: '/api/import/finished-goods', icon: '📦' },
-  rawMaterials:  { label: 'Raw Materials',                     endpoint: '/api/import/raw-materials',  icon: '🧱' },
-  bom:           { label: 'Manufacturing Structures (BOM)',    endpoint: '/api/import/bom',            icon: '⚙️' },
-  routing:       { label: 'Routing Operations',                endpoint: '/api/import/routing',        icon: '🔄' },
+  inventory: { label: 'IFS Inventory (Full)', endpoint: '/api/import/inventory', icon: '📊' },
+  finishedGoods: { label: 'Finished Goods', endpoint: '/api/import/finished-goods', icon: '📦' },
+  rawMaterials: { label: 'Raw Materials', endpoint: '/api/import/raw-materials', icon: '🧱' },
+  bom: { label: 'Manufacturing Structures (BOM)', endpoint: '/api/import/bom', icon: '⚙️' },
+  routing: { label: 'Routing Operations', endpoint: '/api/import/routing', icon: '🔄' },
 };
 
 export default function ImportDialog({ isOpen, onClose, onImportComplete }) {
@@ -85,7 +85,11 @@ export default function ImportDialog({ isOpen, onClose, onImportComplete }) {
                 key={key}
                 type="button"
                 className={`import-target ${target === key ? 'active' : ''}`}
-                onClick={() => { setTarget(key); setResult(null); setError(''); }}
+                onClick={() => {
+                  setTarget(key);
+                  setResult(null);
+                  setError('');
+                }}
               >
                 <span className="target-icon">{cfg.icon}</span>
                 <span className="target-label">{cfg.label}</span>
@@ -100,9 +104,12 @@ export default function ImportDialog({ isOpen, onClose, onImportComplete }) {
           <div
             className={`import-dropzone ${file ? 'has-file' : ''}`}
             onClick={() => fileRef.current?.click()}
-            onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }}
-            onDragLeave={e => e.currentTarget.classList.remove('drag-over')}
-            onDrop={e => {
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.currentTarget.classList.add('drag-over');
+            }}
+            onDragLeave={(e) => e.currentTarget.classList.remove('drag-over')}
+            onDrop={(e) => {
               e.preventDefault();
               e.currentTarget.classList.remove('drag-over');
               const f = e.dataTransfer.files[0];
@@ -113,7 +120,7 @@ export default function ImportDialog({ isOpen, onClose, onImportComplete }) {
               ref={fileRef}
               type="file"
               accept=".csv,.xlsx,.xls"
-              onChange={e => setFile(e.target.files[0])}
+              onChange={(e) => setFile(e.target.files[0])}
               style={{ display: 'none' }}
             />
             {file ? (
@@ -126,9 +133,14 @@ export default function ImportDialog({ isOpen, onClose, onImportComplete }) {
                 <button
                   type="button"
                   className="file-remove"
-                  onClick={e => { e.stopPropagation(); setFile(null); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFile(null);
+                  }}
                   aria-label="Remove selected file"
-                >✕</button>
+                >
+                  ✕
+                </button>
               </div>
             ) : (
               <div className="dropzone-text">
@@ -148,7 +160,9 @@ export default function ImportDialog({ isOpen, onClose, onImportComplete }) {
 
         {result && (
           <div className="import-success" role="status">
-            <div><span aria-hidden>✅</span> Imported successfully</div>
+            <div>
+              <span aria-hidden>✅</span> Imported successfully
+            </div>
             <div className="import-stats">
               <span>{result.stats?.headers} columns</span>
               <span>•</span>

@@ -117,7 +117,9 @@ function ensureSchema() {
   // DBs get the additions after the initial CREATE. SQLite throws
   // "duplicate column" when the column already exists — swallow.
   for (const stmt of COLUMN_ADDS) {
-    try { db.exec(stmt); } catch (e) {
+    try {
+      db.exec(stmt);
+    } catch (e) {
       if (!/duplicate column/i.test(String(e?.message || ''))) throw e;
     }
   }
@@ -160,12 +162,14 @@ export function getOrCreateRoom({ kind, key, title = null, site = null }) {
   if (existing) return existing;
 
   const now = new Date().toISOString();
-  const info = db.prepare(
-    `INSERT INTO chat_rooms (kind, key, title, site, created_at, updated_at)
+  const info = db
+    .prepare(
+      `INSERT INTO chat_rooms (kind, key, title, site, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?)
      ON CONFLICT(key) DO UPDATE SET updated_at = excluded.updated_at
-     RETURNING id`,
-  ).get(kind, key, title, site, now, now);
+     RETURNING id`
+    )
+    .get(kind, key, title, site, now, now);
   return db.prepare(`SELECT * FROM chat_rooms WHERE id = ?`).get(info.id);
 }
 
@@ -184,33 +188,37 @@ export function getRoomByKey(key) {
 export function addMember({ roomId, userId }) {
   ensureSchema();
   const now = new Date().toISOString();
-  getDb().prepare(
-    `INSERT OR IGNORE INTO chat_room_members (room_id, user_id, joined_at)
-     VALUES (?, ?, ?)`,
-  ).run(Number(roomId), Number(userId), now);
+  getDb()
+    .prepare(
+      `INSERT OR IGNORE INTO chat_room_members (room_id, user_id, joined_at)
+     VALUES (?, ?, ?)`
+    )
+    .run(Number(roomId), Number(userId), now);
 }
 
 export function removeMember({ roomId, userId }) {
   ensureSchema();
-  getDb().prepare(
-    `DELETE FROM chat_room_members WHERE room_id = ? AND user_id = ?`,
-  ).run(Number(roomId), Number(userId));
+  getDb()
+    .prepare(`DELETE FROM chat_room_members WHERE room_id = ? AND user_id = ?`)
+    .run(Number(roomId), Number(userId));
 }
 
 export function isMember({ roomId, userId }) {
   ensureSchema();
-  const row = getDb().prepare(
-    `SELECT 1 FROM chat_room_members WHERE room_id = ? AND user_id = ? LIMIT 1`,
-  ).get(Number(roomId), Number(userId));
+  const row = getDb()
+    .prepare(`SELECT 1 FROM chat_room_members WHERE room_id = ? AND user_id = ? LIMIT 1`)
+    .get(Number(roomId), Number(userId));
   return !!row;
 }
 
 export function listMembers(roomId) {
   ensureSchema();
-  return getDb().prepare(
-    `SELECT user_id, joined_at, last_seen_id, muted
-     FROM chat_room_members WHERE room_id = ? ORDER BY joined_at ASC`,
-  ).all(Number(roomId));
+  return getDb()
+    .prepare(
+      `SELECT user_id, joined_at, last_seen_id, muted
+     FROM chat_room_members WHERE room_id = ? ORDER BY joined_at ASC`
+    )
+    .all(Number(roomId));
 }
 
 // ── Listing rooms for a user ──────────────────────────────────────────
@@ -234,45 +242,51 @@ export function listRoomsForUser(userId) {
   // updated_at. Without the id tiebreaker, SQLite falls back to
   // arbitrary b-tree order and the "recent" sort flickers. Higher
   // id = later-created room, matching the user's intuitive sort.
-  const rooms = db.prepare(
-    `SELECT r.*, m.last_seen_id, m.muted
+  const rooms = db
+    .prepare(
+      `SELECT r.*, m.last_seen_id, m.muted
      FROM chat_rooms r
      JOIN chat_room_members m ON m.room_id = r.id
      WHERE m.user_id = ?
-     ORDER BY r.updated_at DESC, r.id DESC`,
-  ).all(Number(userId));
+     ORDER BY r.updated_at DESC, r.id DESC`
+    )
+    .all(Number(userId));
 
   if (rooms.length === 0) return [];
 
   // Bulk fetch unread counts + last messages per room in one query each.
   // For 100 rooms that's 2 queries instead of 200.
-  const ids = rooms.map(r => r.id);
+  const ids = rooms.map((r) => r.id);
   const placeholders = ids.map(() => '?').join(',');
 
-  const unreadRows = db.prepare(
-    `SELECT msg.room_id, COUNT(*) AS unread
+  const unreadRows = db
+    .prepare(
+      `SELECT msg.room_id, COUNT(*) AS unread
      FROM chat_messages msg
      JOIN chat_room_members m ON m.room_id = msg.room_id
      WHERE m.user_id = ? AND msg.room_id IN (${placeholders}) AND msg.id > m.last_seen_id
-     GROUP BY msg.room_id`,
-  ).all(Number(userId), ...ids);
-  const unreadByRoom = new Map(unreadRows.map(r => [r.room_id, r.unread]));
+     GROUP BY msg.room_id`
+    )
+    .all(Number(userId), ...ids);
+  const unreadByRoom = new Map(unreadRows.map((r) => [r.room_id, r.unread]));
 
-  const lastRows = db.prepare(
-    `SELECT msg.room_id, msg.id, msg.author_id, msg.body, msg.created_at,
+  const lastRows = db
+    .prepare(
+      `SELECT msg.room_id, msg.id, msg.author_id, msg.body, msg.created_at,
             msg.deleted_at, msg.delivered_at
      FROM chat_messages msg
      WHERE msg.id IN (
        SELECT MAX(id) FROM chat_messages WHERE room_id IN (${placeholders}) GROUP BY room_id
-     )`,
-  ).all(...ids);
+     )`
+    )
+    .all(...ids);
   // Scrub bodies on the preview shown in the rooms list — the list
   // is a broadcast surface shown beside each room title, and leaking
   // the content of a just-deleted message there would be a visible
   // regression of the delete promise.
-  const lastByRoom = new Map(lastRows.map(r => [r.room_id, sanitizeDeletedRow(r)]));
+  const lastByRoom = new Map(lastRows.map((r) => [r.room_id, sanitizeDeletedRow(r)]));
 
-  return rooms.map(r => ({
+  return rooms.map((r) => ({
     ...r,
     unread_count: unreadByRoom.get(r.id) || 0,
     last_message: lastByRoom.get(r.id) || null,
@@ -296,23 +310,24 @@ export function insertMessage({ roomId, authorId, body, mentions = null }) {
   ensureSchema();
   const db = getDb();
   const now = new Date().toISOString();
-  const mentionsJson = Array.isArray(mentions) && mentions.length > 0
-    ? JSON.stringify(mentions) : null;
+  const mentionsJson =
+    Array.isArray(mentions) && mentions.length > 0 ? JSON.stringify(mentions) : null;
 
   const tx = db.transaction(() => {
-    const info = db.prepare(
-      `INSERT INTO chat_messages (room_id, author_id, body, mentions, created_at)
-       VALUES (?, ?, ?, ?, ?)`,
-    ).run(Number(roomId), Number(authorId), String(body), mentionsJson, now);
-    db.prepare(`UPDATE chat_rooms SET updated_at = ? WHERE id = ?`)
-      .run(now, Number(roomId));
+    const info = db
+      .prepare(
+        `INSERT INTO chat_messages (room_id, author_id, body, mentions, created_at)
+       VALUES (?, ?, ?, ?, ?)`
+      )
+      .run(Number(roomId), Number(authorId), String(body), mentionsJson, now);
+    db.prepare(`UPDATE chat_rooms SET updated_at = ? WHERE id = ?`).run(now, Number(roomId));
     // Phase 10C — fan out mention rows. Skip self-mentions (no point
     // in filling your own inbox). Dedup via a Set in case the client
     // somehow sends duplicate ids.
     if (Array.isArray(mentions) && mentions.length > 0) {
       const ins = db.prepare(
         `INSERT INTO chat_mentions (user_id, message_id, room_id, author_id, created_at)
-         VALUES (?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?)`
       );
       const seen = new Set();
       for (const uid of mentions) {
@@ -380,8 +395,8 @@ export function editMessage({ messageId, userId, body, mentions = null }) {
   if (!newBody) return { ok: false, reason: 'empty_body' };
 
   const now = new Date().toISOString();
-  const mentionsJson = Array.isArray(mentions) && mentions.length > 0
-    ? JSON.stringify(mentions) : null;
+  const mentionsJson =
+    Array.isArray(mentions) && mentions.length > 0 ? JSON.stringify(mentions) : null;
 
   // Wrap the UPDATE + mention fan-out in one tx so callers don't
   // observe a half-applied edit (edited body but stale mentions).
@@ -393,7 +408,7 @@ export function editMessage({ messageId, userId, body, mentions = null }) {
            mentions = ?,
            edited_at = ?,
            original_body = COALESCE(original_body, ?)
-       WHERE id = ?`,
+       WHERE id = ?`
     ).run(newBody, mentionsJson, now, row.body, Number(messageId));
 
     // #2 fan out NEW mentions only. Users who were already mentioned
@@ -405,13 +420,14 @@ export function editMessage({ messageId, userId, body, mentions = null }) {
     // on.
     if (Array.isArray(mentions) && mentions.length > 0) {
       const existing = new Set(
-        db.prepare(
-          `SELECT user_id FROM chat_mentions WHERE message_id = ?`,
-        ).all(Number(messageId)).map(r => Number(r.user_id)),
+        db
+          .prepare(`SELECT user_id FROM chat_mentions WHERE message_id = ?`)
+          .all(Number(messageId))
+          .map((r) => Number(r.user_id))
       );
       const ins = db.prepare(
         `INSERT INTO chat_mentions (user_id, message_id, room_id, author_id, created_at)
-         VALUES (?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?)`
       );
       const seen = new Set();
       for (const uid of mentions) {
@@ -465,9 +481,7 @@ export function deleteMessage({ messageId, userId }) {
   if (ageMs(row.created_at) > EDIT_WINDOW_MS) return { ok: false, reason: 'window_expired' };
 
   const now = new Date().toISOString();
-  db.prepare(
-    `UPDATE chat_messages SET deleted_at = ? WHERE id = ?`,
-  ).run(now, Number(messageId));
+  db.prepare(`UPDATE chat_messages SET deleted_at = ? WHERE id = ?`).run(now, Number(messageId));
   return { ok: true, room_id: row.room_id, deleted_at: now };
 }
 
@@ -491,14 +505,15 @@ export function searchMessages({ userId, query, limit = 50 }) {
   if (q.length < 2) return [];
   // Escape LIKE meta-characters (_, %, \). Needed so a search for
   // "50%" doesn't match "50 foo" via pattern-wildcard interpretation.
-  const escaped = q.replace(/[\\%_]/g, c => `\\${c}`);
+  const escaped = q.replace(/[\\%_]/g, (c) => `\\${c}`);
   const pattern = `%${escaped}%`;
   const safeLimit = Math.min(Math.max(1, Number(limit) || 50), 200);
   // Phase 10G — exclude soft-deleted messages entirely. Their body
   // is withheld from API responses, so matching them via LIKE would
   // imply their content without returning it (a side-channel leak).
-  return getDb().prepare(
-    `SELECT msg.id, msg.room_id, msg.author_id, msg.body, msg.created_at,
+  return getDb()
+    .prepare(
+      `SELECT msg.id, msg.room_id, msg.author_id, msg.body, msg.created_at,
             r.kind AS room_kind, r.title AS room_title, r.key AS room_key
      FROM chat_messages msg
      JOIN chat_rooms r ON r.id = msg.room_id
@@ -506,8 +521,9 @@ export function searchMessages({ userId, query, limit = 50 }) {
      WHERE msg.deleted_at IS NULL
        AND msg.body LIKE ? ESCAPE '\\'
      ORDER BY msg.id DESC
-     LIMIT ?`,
-  ).all(Number(userId), pattern, safeLimit);
+     LIMIT ?`
+    )
+    .all(Number(userId), pattern, safeLimit);
 }
 
 // ── Mentions inbox (Phase 10C) ────────────────────────────────────────
@@ -521,15 +537,14 @@ export function searchMessages({ userId, query, limit = 50 }) {
 export function listMentionsForUser({ userId, unreadOnly = false, limit = 50 }) {
   ensureSchema();
   const safeLimit = Math.min(Math.max(1, Number(limit) || 50), 200);
-  const where = unreadOnly
-    ? `WHERE mn.user_id = ? AND mn.read_at IS NULL`
-    : `WHERE mn.user_id = ?`;
+  const where = unreadOnly ? `WHERE mn.user_id = ? AND mn.read_at IS NULL` : `WHERE mn.user_id = ?`;
   // If the mentioned message was later deleted, return `null` for
   // `message_body` instead of the original text. Mention row stays so
   // the inbox keeps its notification history, but the preview snippet
   // respects the delete.
-  return getDb().prepare(
-    `SELECT mn.id, mn.message_id, mn.room_id, mn.author_id,
+  return getDb()
+    .prepare(
+      `SELECT mn.id, mn.message_id, mn.room_id, mn.author_id,
             mn.created_at, mn.read_at,
             CASE WHEN msg.deleted_at IS NULL THEN msg.body ELSE NULL END AS message_body,
             msg.deleted_at AS message_deleted_at,
@@ -539,16 +554,19 @@ export function listMentionsForUser({ userId, unreadOnly = false, limit = 50 }) 
      JOIN chat_rooms r ON r.id = mn.room_id
      ${where}
      ORDER BY mn.id DESC
-     LIMIT ?`,
-  ).all(Number(userId), safeLimit);
+     LIMIT ?`
+    )
+    .all(Number(userId), safeLimit);
 }
 
 export function countUnreadMentions(userId) {
   ensureSchema();
-  const row = getDb().prepare(
-    `SELECT COUNT(*) AS n FROM chat_mentions
-     WHERE user_id = ? AND read_at IS NULL`,
-  ).get(Number(userId));
+  const row = getDb()
+    .prepare(
+      `SELECT COUNT(*) AS n FROM chat_mentions
+     WHERE user_id = ? AND read_at IS NULL`
+    )
+    .get(Number(userId));
   return row ? Number(row.n) : 0;
 }
 
@@ -563,16 +581,20 @@ export function markMentionsRead({ userId, ids = null }) {
   const now = new Date().toISOString();
   if (Array.isArray(ids) && ids.length > 0) {
     const placeholders = ids.map(() => '?').join(',');
-    const info = db.prepare(
-      `UPDATE chat_mentions SET read_at = ?
-       WHERE user_id = ? AND read_at IS NULL AND id IN (${placeholders})`,
-    ).run(now, Number(userId), ...ids.map(Number));
+    const info = db
+      .prepare(
+        `UPDATE chat_mentions SET read_at = ?
+       WHERE user_id = ? AND read_at IS NULL AND id IN (${placeholders})`
+      )
+      .run(now, Number(userId), ...ids.map(Number));
     return info.changes;
   }
-  const info = db.prepare(
-    `UPDATE chat_mentions SET read_at = ?
-     WHERE user_id = ? AND read_at IS NULL`,
-  ).run(now, Number(userId));
+  const info = db
+    .prepare(
+      `UPDATE chat_mentions SET read_at = ?
+     WHERE user_id = ? AND read_at IS NULL`
+    )
+    .run(now, Number(userId));
   return info.changes;
 }
 
@@ -586,14 +608,18 @@ export function listMessages({ roomId, before = null, limit = 50 }) {
   const safeLimit = Math.min(Math.max(1, Number(limit) || 50), 200);
   const db = getDb();
   const rows = before
-    ? db.prepare(
-        `SELECT * FROM chat_messages WHERE room_id = ? AND id < ?
-         ORDER BY id DESC LIMIT ?`,
-      ).all(Number(roomId), Number(before), safeLimit)
-    : db.prepare(
-        `SELECT * FROM chat_messages WHERE room_id = ?
-         ORDER BY id DESC LIMIT ?`,
-      ).all(Number(roomId), safeLimit);
+    ? db
+        .prepare(
+          `SELECT * FROM chat_messages WHERE room_id = ? AND id < ?
+         ORDER BY id DESC LIMIT ?`
+        )
+        .all(Number(roomId), Number(before), safeLimit)
+    : db
+        .prepare(
+          `SELECT * FROM chat_messages WHERE room_id = ?
+         ORDER BY id DESC LIMIT ?`
+        )
+        .all(Number(roomId), safeLimit);
   return rows.reverse().map(sanitizeDeletedRow); // ascending + scrub deleted bodies
 }
 
@@ -607,12 +633,14 @@ export function listMessagesSince({ roomIds, sinceId, limit = 500 }) {
   if (!Array.isArray(roomIds) || roomIds.length === 0) return [];
   const safeLimit = Math.min(Math.max(1, Number(limit) || 500), 2000);
   const placeholders = roomIds.map(() => '?').join(',');
-  return getDb().prepare(
-    `SELECT * FROM chat_messages
+  return getDb()
+    .prepare(
+      `SELECT * FROM chat_messages
      WHERE room_id IN (${placeholders}) AND id > ?
-     ORDER BY id ASC LIMIT ?`,
-  ).all(...roomIds.map(Number), Number(sinceId) || 0, safeLimit)
-  .map(sanitizeDeletedRow);
+     ORDER BY id ASC LIMIT ?`
+    )
+    .all(...roomIds.map(Number), Number(sinceId) || 0, safeLimit)
+    .map(sanitizeDeletedRow);
 }
 
 /**
@@ -621,11 +649,13 @@ export function listMessagesSince({ roomIds, sinceId, limit = 500 }) {
  */
 export function markSeen({ roomId, userId, messageId }) {
   ensureSchema();
-  getDb().prepare(
-    `UPDATE chat_room_members
+  getDb()
+    .prepare(
+      `UPDATE chat_room_members
      SET last_seen_id = MAX(last_seen_id, ?)
-     WHERE room_id = ? AND user_id = ?`,
-  ).run(Number(messageId), Number(roomId), Number(userId));
+     WHERE room_id = ? AND user_id = ?`
+    )
+    .run(Number(messageId), Number(roomId), Number(userId));
 }
 
 /**
@@ -636,11 +666,13 @@ export function markSeen({ roomId, userId, messageId }) {
  */
 export function markDelivered({ messageId, at = new Date().toISOString() }) {
   ensureSchema();
-  getDb().prepare(
-    `UPDATE chat_messages
+  getDb()
+    .prepare(
+      `UPDATE chat_messages
      SET delivered_at = COALESCE(delivered_at, ?)
-     WHERE id = ?`,
-  ).run(String(at), Number(messageId));
+     WHERE id = ?`
+    )
+    .run(String(at), Number(messageId));
 }
 
 // ── Test hook ─────────────────────────────────────────────────────────
@@ -661,9 +693,7 @@ export function pruneOldMessages({ ttlDays }) {
     return { pruned: 0, skipped: true, reason: 'invalid_ttl' };
   }
   const cutoff = new Date(Date.now() - n * 86400 * 1000).toISOString();
-  const info = getDb().prepare(
-    `DELETE FROM chat_messages WHERE created_at < ?`,
-  ).run(cutoff);
+  const info = getDb().prepare(`DELETE FROM chat_messages WHERE created_at < ?`).run(cutoff);
   return { pruned: info.changes, cutoff };
 }
 
@@ -675,6 +705,6 @@ export function _wipeChatForTests() {
     `DELETE FROM chat_mentions;
      DELETE FROM chat_messages;
      DELETE FROM chat_room_members;
-     DELETE FROM chat_rooms;`,
+     DELETE FROM chat_rooms;`
   );
 }

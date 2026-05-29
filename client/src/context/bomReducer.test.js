@@ -19,7 +19,7 @@ import assert from 'node:assert/strict';
 
 // Replica of BOM-slice reducer, kept in sync with CalcContext.jsx
 function updateAt(arr, idx, updates) {
-  return arr.map((item, i) => i === idx ? { ...item, ...updates } : item);
+  return arr.map((item, i) => (i === idx ? { ...item, ...updates } : item));
 }
 function bomReducer(state, action) {
   switch (action.type) {
@@ -37,16 +37,31 @@ function bomReducer(state, action) {
     case 'ADD_BOM_ENTRY': {
       const { sp_index, qty = 1, notes = '' } = action.payload;
       const bom = Array.isArray(state.cplxState.bom) ? state.cplxState.bom : [];
-      if (bom.some(e => e && e.sp_index === sp_index)) return state;
-      return { ...state, isDirty: true, cplxState: { ...state.cplxState, bom: [...bom, { sp_index, qty, notes }] } };
+      if (bom.some((e) => e && e.sp_index === sp_index)) return state;
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: { ...state.cplxState, bom: [...bom, { sp_index, qty, notes }] },
+      };
     }
     case 'REMOVE_BOM_ENTRY': {
       const bom = Array.isArray(state.cplxState.bom) ? state.cplxState.bom : [];
-      return { ...state, isDirty: true, cplxState: { ...state.cplxState, bom: bom.filter((_, i) => i !== action.payload.idx) } };
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: { ...state.cplxState, bom: bom.filter((_, i) => i !== action.payload.idx) },
+      };
     }
     case 'SET_BOM_ENTRY_FIELD': {
       const bom = Array.isArray(state.cplxState.bom) ? state.cplxState.bom : [];
-      return { ...state, isDirty: true, cplxState: { ...state.cplxState, bom: updateAt(bom, action.payload.idx, { [action.payload.field]: action.payload.value }) } };
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          bom: updateAt(bom, action.payload.idx, { [action.payload.field]: action.payload.value }),
+        },
+      };
     }
     case 'REMOVE_SUBPRODUCT': {
       // Mirror of CalcContext's REMOVE_SUBPRODUCT v2-shape adjustment:
@@ -61,13 +76,19 @@ function bomReducer(state, action) {
         return entry;
       };
       const prevBom = Array.isArray(state.cplxState.bom) ? state.cplxState.bom : [];
-      const prevAlloc = Array.isArray(state.cplxState.tooling_alloc) ? state.cplxState.tooling_alloc : [];
-      return { ...state, isDirty: true, cplxState: {
-        ...state.cplxState,
-        subproducts: nextSps,
-        bom: prevBom.map(shiftIndex).filter(Boolean),
-        tooling_alloc: prevAlloc.map(shiftIndex).filter(Boolean),
-      }};
+      const prevAlloc = Array.isArray(state.cplxState.tooling_alloc)
+        ? state.cplxState.tooling_alloc
+        : [];
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          subproducts: nextSps,
+          bom: prevBom.map(shiftIndex).filter(Boolean),
+          tooling_alloc: prevAlloc.map(shiftIndex).filter(Boolean),
+        },
+      };
     }
     default:
       return state;
@@ -128,7 +149,10 @@ test('ADD_BOM_ENTRY: dedupes on existing sp_index', () => {
 
 test('ADD_BOM_ENTRY: honors provided qty and notes', () => {
   const s0 = { ...baseState(), cplxState: { ...baseState().cplxState, bom: [] } };
-  const s1 = bomReducer(s0, { type: 'ADD_BOM_ENTRY', payload: { sp_index: 1, qty: 5, notes: 'outer' } });
+  const s1 = bomReducer(s0, {
+    type: 'ADD_BOM_ENTRY',
+    payload: { sp_index: 1, qty: 5, notes: 'outer' },
+  });
   assert.equal(s1.cplxState.bom[0].qty, 5);
   assert.equal(s1.cplxState.bom[0].notes, 'outer');
 });
@@ -148,20 +172,29 @@ test('REMOVE_BOM_ENTRY: out-of-range idx is a no-op on content', () => {
 
 test('SET_BOM_ENTRY_FIELD: updates qty', () => {
   const s0 = baseState();
-  const s1 = bomReducer(s0, { type: 'SET_BOM_ENTRY_FIELD', payload: { idx: 0, field: 'qty', value: 3 } });
+  const s1 = bomReducer(s0, {
+    type: 'SET_BOM_ENTRY_FIELD',
+    payload: { idx: 0, field: 'qty', value: 3 },
+  });
   assert.equal(s1.cplxState.bom[0].qty, 3);
   assert.equal(s1.cplxState.bom[1].qty, 1, 'other entries untouched');
 });
 
 test('SET_BOM_ENTRY_FIELD: updates notes', () => {
   const s0 = baseState();
-  const s1 = bomReducer(s0, { type: 'SET_BOM_ENTRY_FIELD', payload: { idx: 1, field: 'notes', value: 'inner' } });
+  const s1 = bomReducer(s0, {
+    type: 'SET_BOM_ENTRY_FIELD',
+    payload: { idx: 1, field: 'notes', value: 'inner' },
+  });
   assert.equal(s1.cplxState.bom[1].notes, 'inner');
 });
 
 test('SET_BOM_ENTRY_FIELD: missing bom array → starts fresh, no crash', () => {
   const s0 = { ...baseState(), cplxState: { ...baseState().cplxState, bom: undefined } };
-  const s1 = bomReducer(s0, { type: 'SET_BOM_ENTRY_FIELD', payload: { idx: 0, field: 'qty', value: 5 } });
+  const s1 = bomReducer(s0, {
+    type: 'SET_BOM_ENTRY_FIELD',
+    payload: { idx: 0, field: 'qty', value: 5 },
+  });
   assert.equal(Array.isArray(s1.cplxState.bom), true);
 });
 
@@ -189,16 +222,12 @@ test('REMOVE_SUBPRODUCT: shifts references above the removed idx', () => {
     ...baseState(),
     cplxState: {
       ...baseState().cplxState,
-      subproducts: [
-        { code: 'SP A' }, { code: 'SP B' }, { code: 'SP C' }, { code: 'FG' },
-      ],
+      subproducts: [{ code: 'SP A' }, { code: 'SP B' }, { code: 'SP C' }, { code: 'FG' }],
       bom: [
         { sp_index: 0, qty: 1, notes: '' },
         { sp_index: 2, qty: 3, notes: '' },
       ],
-      tooling_alloc: [
-        { tool_id: 'die_a', sp_index: 2, share_pct: 100 },
-      ],
+      tooling_alloc: [{ tool_id: 'die_a', sp_index: 2, share_pct: 100 }],
     },
   };
   const s1 = bomReducer(s0, { type: 'REMOVE_SUBPRODUCT', payload: { idx: 1 } });

@@ -27,33 +27,36 @@
 
 const RULES = [
   // SQLite — column / table / constraint
-  { re: /\bno such (table|column)\b/i,                repl: 'database_shape_mismatch' },
-  { re: /\bSQLITE_CONSTRAINT\b|\bUNIQUE constraint failed\b/i, repl: 'database_constraint_violation' },
-  { re: /\bSQLITE_BUSY\b|\bdatabase is locked\b/i,    repl: 'database_busy' },
-  { re: /\bSQLITE_READONLY\b/i,                       repl: 'database_readonly' },
+  { re: /\bno such (table|column)\b/i, repl: 'database_shape_mismatch' },
+  {
+    re: /\bSQLITE_CONSTRAINT\b|\bUNIQUE constraint failed\b/i,
+    repl: 'database_constraint_violation',
+  },
+  { re: /\bSQLITE_BUSY\b|\bdatabase is locked\b/i, repl: 'database_busy' },
+  { re: /\bSQLITE_READONLY\b/i, repl: 'database_readonly' },
   { re: /\bSQLITE_CORRUPT\b|\bfile is not a database\b/i, repl: 'database_unavailable' },
   // Filesystem — ENOENT, EACCES, EEXIST etc
-  { re: /\bENOENT\b/i,                                repl: 'file_not_found' },
-  { re: /\bEACCES\b|\bEPERM\b/i,                      repl: 'permission_denied' },
-  { re: /\bEEXIST\b/i,                                repl: 'file_already_exists' },
-  { re: /\bEISDIR\b|\bENOTDIR\b/i,                    repl: 'path_type_mismatch' },
-  { re: /\bENOSPC\b/i,                                repl: 'disk_full' },
+  { re: /\bENOENT\b/i, repl: 'file_not_found' },
+  { re: /\bEACCES\b|\bEPERM\b/i, repl: 'permission_denied' },
+  { re: /\bEEXIST\b/i, repl: 'file_already_exists' },
+  { re: /\bEISDIR\b|\bENOTDIR\b/i, repl: 'path_type_mismatch' },
+  { re: /\bENOSPC\b/i, repl: 'disk_full' },
   // Network / timeouts — common when filesystem is fronted by a cloud
   // file provider (iCloud Drive, OneDrive, Dropbox) whose daemon is
   // offline. Happens on macOS with `com.apple.fileprovider.fpfs#P` xattr.
-  { re: /\bETIMEDOUT\b/i,                             repl: 'remote_unavailable' },
-  { re: /\bECONNREFUSED\b|\bECONNRESET\b/i,           repl: 'remote_unreachable' },
+  { re: /\bETIMEDOUT\b/i, repl: 'remote_unavailable' },
+  { re: /\bECONNREFUSED\b|\bECONNRESET\b/i, repl: 'remote_unreachable' },
   // Cross-filesystem rename — `fs.renameSync` throws EXDEV when source
   // and destination are on different volumes. Classic macOS gotcha
   // (/tmp on system disk, user data on a data volume). Actionable
   // bucket so the handler can fall back to copy+unlink.
-  { re: /\bEXDEV\b/i,                                 repl: 'cross_device_move' },
+  { re: /\bEXDEV\b/i, repl: 'cross_device_move' },
   // Upload / multer
-  { re: /\bLIMIT_FILE_SIZE\b/i,                       repl: 'file_too_large' },
-  { re: /\bLIMIT_UNEXPECTED_FILE\b/i,                 repl: 'unexpected_upload_field' },
+  { re: /\bLIMIT_FILE_SIZE\b/i, repl: 'file_too_large' },
+  { re: /\bLIMIT_UNEXPECTED_FILE\b/i, repl: 'unexpected_upload_field' },
   // JSON / parse
-  { re: /\bUnexpected token\b.*\bin JSON\b/i,         repl: 'invalid_json_payload' },
-  { re: /\bUnexpected end of JSON input\b/i,          repl: 'invalid_json_payload' },
+  { re: /\bUnexpected token\b.*\bin JSON\b/i, repl: 'invalid_json_payload' },
+  { re: /\bUnexpected end of JSON input\b/i, repl: 'invalid_json_payload' },
 ];
 
 /**
@@ -87,13 +90,15 @@ export function redactErrorMessage(err) {
  * strings alone.
  */
 export function stripAbsolutePaths(s) {
-  return String(s)
-    // Windows: drive letter + backslash
-    .replace(/\b[A-Z]:\\[^\s'"]+/gi, '<path>')
-    // POSIX: leading slash (not preceded by ./, //, ://, letter, digit,
-    // or another slash) with at least one segment. Keeps relative
-    // paths like `./data/x` and URLs like `https://...` intact.
-    .replace(/(?<![./\w:])\/(?:[\w.-]+\/)+[\w.-]+/g, '<path>');
+  return (
+    String(s)
+      // Windows: drive letter + backslash
+      .replace(/\b[A-Z]:\\[^\s'"]+/gi, '<path>')
+      // POSIX: leading slash (not preceded by ./, //, ://, letter, digit,
+      // or another slash) with at least one segment. Keeps relative
+      // paths like `./data/x` and URLs like `https://...` intact.
+      .replace(/(?<![./\w:])\/(?:[\w.-]+\/)+[\w.-]+/g, '<path>')
+  );
 }
 
 /**

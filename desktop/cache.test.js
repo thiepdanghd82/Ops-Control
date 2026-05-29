@@ -22,14 +22,21 @@ const os = require('node:os');
 const assert = require('node:assert');
 const { app } = require('electron');
 
-let pass = 0, fail = 0;
+let pass = 0,
+  fail = 0;
 const results = [];
 
 function test(name, fn) {
   return Promise.resolve()
     .then(() => fn())
-    .then(() => { pass++; results.push(`✔ ${name}`); })
-    .catch((err) => { fail++; results.push(`✖ ${name}\n  ${err.message}`); });
+    .then(() => {
+      pass++;
+      results.push(`✔ ${name}`);
+    })
+    .catch((err) => {
+      fail++;
+      results.push(`✖ ${name}\n  ${err.message}`);
+    });
 }
 
 async function main() {
@@ -139,12 +146,19 @@ async function main() {
   console.log(`\nPassed: ${pass} | Failed: ${fail}`);
 
   // Cleanup
-  try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (_) { /* swallow */ }
+  try {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  } catch (_) {
+    /* swallow */
+  }
 
   app.exit(fail > 0 ? 1 : 0);
 }
 
-app.whenReady().then(main).catch((err) => {
-  console.error('Test bootstrap failed:', err);
-  app.exit(2);
-});
+app
+  .whenReady()
+  .then(main)
+  .catch((err) => {
+    console.error('Test bootstrap failed:', err);
+    app.exit(2);
+  });

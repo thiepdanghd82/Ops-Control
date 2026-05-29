@@ -56,7 +56,10 @@ function parsePhases(md) {
 
     // Result line
     if (/^\s*\*\*Result:?\*\*/.test(line) || /^\s*Result:/.test(line)) {
-      current.result = line.replace(/^\s*\*\*Result:?\*\*\s*/, '').replace(/^\s*Result:\s*/, '').trim();
+      current.result = line
+        .replace(/^\s*\*\*Result:?\*\*\s*/, '')
+        .replace(/^\s*Result:\s*/, '')
+        .trim();
     }
   }
   if (current) out.push(current);
@@ -65,20 +68,25 @@ function parsePhases(md) {
 
 function formatPlain(phases) {
   const w = phases.reduce((m, p) => Math.max(m, p.title.length + p.id.length), 0);
-  return phases.map((p) => {
-    const head = `Phase ${p.id} — ${p.title}`;
-    const pad = ' '.repeat(Math.max(2, w - head.length + 6));
-    return `${head}${pad}· ${p.timestamp}  (${p.tasks.length} task${p.tasks.length !== 1 ? 's' : ''})`;
-  }).join('\n');
+  return phases
+    .map((p) => {
+      const head = `Phase ${p.id} — ${p.title}`;
+      const pad = ' '.repeat(Math.max(2, w - head.length + 6));
+      return `${head}${pad}· ${p.timestamp}  (${p.tasks.length} task${p.tasks.length !== 1 ? 's' : ''})`;
+    })
+    .join('\n');
 }
 
 function formatMarkdown(phases) {
-  const rows = phases.map((p) => {
-    const taskList = p.tasks.length > 0
-      ? p.tasks.map((t) => `${t.id}: ${t.title.replace(/\|/g, '\\|')}`).join(' · ')
-      : '—';
-    return `| ${p.id} | ${p.title.replace(/\|/g, '\\|')} | ${p.timestamp} | ${p.tasks.length} | ${taskList} |`;
-  }).join('\n');
+  const rows = phases
+    .map((p) => {
+      const taskList =
+        p.tasks.length > 0
+          ? p.tasks.map((t) => `${t.id}: ${t.title.replace(/\|/g, '\\|')}`).join(' · ')
+          : '—';
+      return `| ${p.id} | ${p.title.replace(/\|/g, '\\|')} | ${p.timestamp} | ${p.tasks.length} | ${taskList} |`;
+    })
+    .join('\n');
   return [
     '| Phase | Title | Timestamp | Tasks | Sub-task IDs |',
     '|---|---|---|---|---|',
@@ -110,7 +118,9 @@ function main() {
   }
   console.log(formatPlain(phases));
   console.log('');
-  console.log(`Total: ${phases.length} phases · ${phases.reduce((s, p) => s + p.tasks.length, 0)} tracked sub-tasks`);
+  console.log(
+    `Total: ${phases.length} phases · ${phases.reduce((s, p) => s + p.tasks.length, 0)} tracked sub-tasks`
+  );
 }
 
 main();

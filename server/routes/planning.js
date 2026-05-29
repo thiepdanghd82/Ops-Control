@@ -168,9 +168,7 @@ router.get('/capacity', (req, res) => {
   try {
     // Calculate capacity from work orders and routing data
     const workOrders = store.getWorkOrders();
-    const activeWOs = workOrders.filter(wo =>
-      wo.status === 'New' || wo.status === 'In Progress'
-    );
+    const activeWOs = workOrders.filter((wo) => wo.status === 'New' || wo.status === 'In Progress');
 
     // Group by work center
     const capacityMap = {};

@@ -44,15 +44,15 @@ const SYNC_TABLES = [
   'library_materials',
 ];
 
-const PULL_INTERVAL_MS = 5 * 60 * 1000;   // 5 phút
-const PING_INTERVAL_MS = 15 * 1000;       // 15 giây
+const PULL_INTERVAL_MS = 5 * 60 * 1000; // 5 phút
+const PING_INTERVAL_MS = 15 * 1000; // 15 giây
 const PUSH_BATCH_SIZE = 25;
 
 let remoteUrl = null;
-let authToken = null;             // session token nếu cần (HttpOnly cookie không qua được fetch)
+let authToken = null; // session token nếu cần (HttpOnly cookie không qua được fetch)
 let pullTimer = null;
 let pingTimer = null;
-let lastOnline = null;            // null = chưa biết, true/false sau lần ping đầu
+let lastOnline = null; // null = chưa biết, true/false sau lần ping đầu
 let lastSyncAt = 0;
 let pushInFlight = false;
 
@@ -61,8 +61,11 @@ function broadcastStatus() {
   // module didn't load (cross-platform build w/ npmRebuild=false skipped
   // the per-Electron-ABI native rebuild), don't let it eat the broadcast.
   let pending = 0;
-  try { pending = cache.pendingCount(); }
-  catch (err) { log.warn('[smart-client] cache.pendingCount unavailable:', err.message); }
+  try {
+    pending = cache.pendingCount();
+  } catch (err) {
+    log.warn('[smart-client] cache.pendingCount unavailable:', err.message);
+  }
   const status = {
     online: lastOnline,
     pending,
@@ -71,8 +74,11 @@ function broadcastStatus() {
   };
   for (const win of BrowserWindow.getAllWindows()) {
     if (!win.isDestroyed()) {
-      try { win.webContents.send('ops:cache.syncStatus', status); }
-      catch { /* window destroyed mid-iteration */ }
+      try {
+        win.webContents.send('ops:cache.syncStatus', status);
+      } catch {
+        /* window destroyed mid-iteration */
+      }
     }
   }
 }
@@ -141,7 +147,8 @@ async function push() {
   if (lastOnline === false) return { skipped: 'offline' };
   if (pushInFlight) return { skipped: 'in-flight' };
   pushInFlight = true;
-  let pushed = 0, failed = 0;
+  let pushed = 0,
+    failed = 0;
   try {
     const batch = cache.listPending(PUSH_BATCH_SIZE);
     for (const item of batch) {
@@ -195,16 +202,26 @@ function start({ remoteUrl: url, authToken: token }) {
 
   // Ping ngay để biết online status, rồi setInterval
   ping().catch(() => {});
-  pingTimer = setInterval(() => { ping().catch(() => {}); }, PING_INTERVAL_MS);
-  pullTimer = setInterval(() => { pull().catch((e) => log.warn('[smart-client] pull err:', e.message)); }, PULL_INTERVAL_MS);
+  pingTimer = setInterval(() => {
+    ping().catch(() => {});
+  }, PING_INTERVAL_MS);
+  pullTimer = setInterval(() => {
+    pull().catch((e) => log.warn('[smart-client] pull err:', e.message));
+  }, PULL_INTERVAL_MS);
 
   // Pull lần đầu sau 2s (cho server warm up)
   setTimeout(() => pull().catch(() => {}), 2000);
 }
 
 function stop() {
-  if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
-  if (pullTimer) { clearInterval(pullTimer); pullTimer = null; }
+  if (pingTimer) {
+    clearInterval(pingTimer);
+    pingTimer = null;
+  }
+  if (pullTimer) {
+    clearInterval(pullTimer);
+    pullTimer = null;
+  }
   log.info('[smart-client] Stopped');
 }
 
@@ -216,7 +233,11 @@ function setAuthToken(token) {
 // badge isn't stuck on the placeholder until the next ping cycle.
 function getStatus() {
   let pending = 0;
-  try { pending = cache.pendingCount(); } catch { /* native lib missing */ }
+  try {
+    pending = cache.pendingCount();
+  } catch {
+    /* native lib missing */
+  }
   return { online: lastOnline, pending, lastSyncAt, remoteUrl };
 }
 

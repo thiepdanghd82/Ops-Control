@@ -28,11 +28,11 @@ import './AppBootstrap.css';
 // the whole bootstrap.
 function makeBootstrapTasks() {
   return [
-    { key: 'approvals', label: 'Approvals status',   run: () => sharedApi.getMyApprovalCount?.() },
-    { key: 'chat_rooms', label: 'Chat rooms',         run: () => chatApi.rooms() },
-    { key: 'chat_users', label: 'User directory',     run: () => chatApi.users() },
-    { key: 'chat_mentions', label: 'Mentions inbox',  run: () => chatApi.mentions({ limit: 50 }) },
-  ].filter(t => typeof t.run === 'function');
+    { key: 'approvals', label: 'Approvals status', run: () => sharedApi.getMyApprovalCount?.() },
+    { key: 'chat_rooms', label: 'Chat rooms', run: () => chatApi.rooms() },
+    { key: 'chat_users', label: 'User directory', run: () => chatApi.users() },
+    { key: 'chat_mentions', label: 'Mentions inbox', run: () => chatApi.mentions({ limit: 50 }) },
+  ].filter((t) => typeof t.run === 'function');
 }
 
 // Hard ceiling so one flaky endpoint doesn't hold the whole app
@@ -47,8 +47,8 @@ function BootstrapInner({ children }) {
   // Lazy-init: every task starts "pending" before the first render,
   // so the useEffect below doesn't need a setState to seed the list
   // (which would trigger a useless second render + a lint warning).
-  const [taskStatus, setTaskStatus] = useState(
-    () => Object.fromEntries(tasks.map(t => [t.key, 'pending'])),
+  const [taskStatus, setTaskStatus] = useState(() =>
+    Object.fromEntries(tasks.map((t) => [t.key, 'pending']))
   );
   const [timedOut, setTimedOut] = useState(false);
   const { t } = useI18n();
@@ -59,12 +59,14 @@ function BootstrapInner({ children }) {
     let cancelled = false;
     const started = Date.now();
 
-    const promises = tasks.map(task =>
+    const promises = tasks.map((task) =>
       Promise.resolve()
         .then(() => task.run())
-        .then(() => { if (!cancelled) setTaskStatus(s => ({ ...s, [task.key]: 'done' })); })
-        .catch(err => {
-          if (!cancelled) setTaskStatus(s => ({ ...s, [task.key]: 'error' }));
+        .then(() => {
+          if (!cancelled) setTaskStatus((s) => ({ ...s, [task.key]: 'done' }));
+        })
+        .catch((err) => {
+          if (!cancelled) setTaskStatus((s) => ({ ...s, [task.key]: 'error' }));
           // Log but don't reject — a single failure shouldn't block boot.
           console.warn(`[bootstrap] ${task.key} failed:`, err?.message);
         })
@@ -78,9 +80,14 @@ function BootstrapInner({ children }) {
     });
 
     // Timeout watchdog — let the user in after MAX_WAIT_MS.
-    const watchdog = setTimeout(() => { if (!cancelled) setTimedOut(true); }, MAX_WAIT_MS);
+    const watchdog = setTimeout(() => {
+      if (!cancelled) setTimedOut(true);
+    }, MAX_WAIT_MS);
 
-    return () => { cancelled = true; clearTimeout(watchdog); };
+    return () => {
+      cancelled = true;
+      clearTimeout(watchdog);
+    };
   }, [tasks]);
 
   // Ready when the library loader AND the aux tasks are done, OR the
@@ -91,10 +98,10 @@ function BootstrapInner({ children }) {
 
   if (ready) return children;
 
-  const completedCount = Object.values(taskStatus).filter(s => s !== 'pending').length;
-  const totalCount     = tasks.length + 1; // +1 for the library load
-  const libDone        = !libLoading || !!libError;
-  const progress       = Math.round(((completedCount + (libDone ? 1 : 0)) / totalCount) * 100);
+  const completedCount = Object.values(taskStatus).filter((s) => s !== 'pending').length;
+  const totalCount = tasks.length + 1; // +1 for the library load
+  const libDone = !libLoading || !!libError;
+  const progress = Math.round(((completedCount + (libDone ? 1 : 0)) / totalCount) * 100);
 
   return (
     <div className="bootstrap-overlay">
@@ -106,11 +113,19 @@ function BootstrapInner({ children }) {
         <div className="bootstrap-spinner" aria-hidden>
           <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
             <circle cx="22" cy="22" r="18" stroke="rgba(15,98,254,0.18)" strokeWidth="3" />
-            <circle cx="22" cy="22" r="18"
-              stroke="#0f62fe" strokeWidth="3"
+            <circle
+              cx="22"
+              cy="22"
+              r="18"
+              stroke="#0f62fe"
+              strokeWidth="3"
               strokeLinecap="round"
               strokeDasharray="28 90"
-              style={{ transformOrigin: '22px 22px', animation: 'bootstrap-spin 1s linear infinite' }} />
+              style={{
+                transformOrigin: '22px 22px',
+                animation: 'bootstrap-spin 1s linear infinite',
+              }}
+            />
           </svg>
         </div>
         <p className="bootstrap-title">{t('bootstrap.title')}</p>
@@ -125,7 +140,7 @@ function BootstrapInner({ children }) {
             </span>
             <span>{t('bootstrap.task.library')}</span>
           </li>
-          {tasks.map(task => {
+          {tasks.map((task) => {
             const s = taskStatus[task.key] || 'pending';
             // t() returns the raw key when the string isn't registered,
             // so detect that as "no translation" and fall back to the

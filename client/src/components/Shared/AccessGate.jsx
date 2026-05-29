@@ -53,7 +53,12 @@ export default function AccessGate({ tabId, children, label }) {
           <span className="ag-ro-icon">👁</span>
           <span>
             <b>Read-only.</b> Your permission group grants view access to this tab only.
-            {activeGroup && <> Group: <code>{activeGroup.id}</code>.</>}
+            {activeGroup && (
+              <>
+                {' '}
+                Group: <code>{activeGroup.id}</code>.
+              </>
+            )}
           </span>
         </div>
         <fieldset className="ag-readonly-fieldset" disabled>

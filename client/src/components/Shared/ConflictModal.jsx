@@ -58,16 +58,33 @@ export default function ConflictModal({ conflict, onReload, onOverwrite, onCance
   const ourVersion = attempted?._version ?? '?';
 
   return (
-    <div className="conflict-scrim" role="dialog" aria-modal="true" aria-labelledby="conflict-title">
+    <div
+      className="conflict-scrim"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="conflict-title"
+    >
       <div className="conflict-modal">
-        <div className="conflict-icon" aria-hidden>⚠</div>
+        <div className="conflict-icon" aria-hidden>
+          ⚠
+        </div>
         <h2 id="conflict-title" className="conflict-title">
           Quote #{itemId} đã bị sửa bởi người khác
         </h2>
         <p className="conflict-desc">
           Trong khi anh đang sửa, một user khác đã save lại quote này.
-          {savedBy && <> Người đó: <b>{savedBy}</b>.</>}
-          {savedAt && <> Lúc: <b>{new Date(savedAt).toLocaleString('vi-VN')}</b>.</>}
+          {savedBy && (
+            <>
+              {' '}
+              Người đó: <b>{savedBy}</b>.
+            </>
+          )}
+          {savedAt && (
+            <>
+              {' '}
+              Lúc: <b>{new Date(savedAt).toLocaleString('vi-VN')}</b>.
+            </>
+          )}
         </p>
 
         <div className="conflict-meta">
@@ -92,10 +109,12 @@ export default function ConflictModal({ conflict, onReload, onOverwrite, onCance
           <button
             className="conflict-btn conflict-btn-danger"
             onClick={() => {
-              if (confirm(
-                `CẢNH BÁO: Overwrite sẽ XÓA thay đổi của user khác.\n\n` +
-                `Anh chắc chắn muốn ghi đè?`,
-              )) {
+              if (
+                confirm(
+                  `CẢNH BÁO: Overwrite sẽ XÓA thay đổi của user khác.\n\n` +
+                    `Anh chắc chắn muốn ghi đè?`
+                )
+              ) {
                 onOverwrite?.();
               }
             }}
@@ -108,8 +127,8 @@ export default function ConflictModal({ conflict, onReload, onOverwrite, onCance
         </div>
 
         <div className="conflict-hint">
-          <b>Khuyến nghị:</b> Click <i>Reload</i> → app load bản mới từ server →
-          xem thay đổi của người kia → áp dụng sửa của anh lên trên → save lại.
+          <b>Khuyến nghị:</b> Click <i>Reload</i> → app load bản mới từ server → xem thay đổi của
+          người kia → áp dụng sửa của anh lên trên → save lại.
           <br />
           <i>Overwrite</i> chỉ dùng nếu chắc chắn sửa của người kia là sai.
         </div>

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { redactErrorMessage, stripAbsolutePaths, asSafeError } from './safeError.js';
 
 test('redactErrorMessage: SQLite no-such-column → database_shape_mismatch', () => {
-  const err = new Error("no such column: secret_token");
+  const err = new Error('no such column: secret_token');
   assert.equal(redactErrorMessage(err), 'database_shape_mismatch');
 });
 
@@ -61,17 +61,11 @@ test('redactErrorMessage: invalid JSON → invalid_json_payload', () => {
 });
 
 test('stripAbsolutePaths: posix path replaced with <path>', () => {
-  assert.equal(
-    stripAbsolutePaths("open '/srv/ops/data/secret.json'"),
-    "open '<path>'"
-  );
+  assert.equal(stripAbsolutePaths("open '/srv/ops/data/secret.json'"), "open '<path>'");
 });
 
 test('stripAbsolutePaths: Windows path replaced with <path>', () => {
-  assert.equal(
-    stripAbsolutePaths('copy C:\\app\\config.ini done'),
-    'copy <path> done'
-  );
+  assert.equal(stripAbsolutePaths('copy C:\\app\\config.ini done'), 'copy <path> done');
 });
 
 test('stripAbsolutePaths: relative paths + URLs left alone', () => {

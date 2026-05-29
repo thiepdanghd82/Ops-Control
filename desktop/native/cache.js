@@ -38,7 +38,8 @@ let db = null;
 
 function ensureDb() {
   if (db) return db;
-  if (!Database) throw new Error('better-sqlite3 not available — run electron-builder install-app-deps');
+  if (!Database)
+    throw new Error('better-sqlite3 not available — run electron-builder install-app-deps');
 
   const cacheDir = path.join(app.getPath('userData'), 'cache');
   if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
@@ -101,27 +102,39 @@ function ensureDb() {
 function kvGet(key) {
   const row = ensureDb().prepare('SELECT value FROM kv WHERE key = ?').get(key);
   if (!row) return null;
-  try { return JSON.parse(row.value); } catch (_) { return row.value; }
+  try {
+    return JSON.parse(row.value);
+  } catch (_) {
+    return row.value;
+  }
 }
 
 function kvSet(key, value) {
   const json = typeof value === 'string' ? value : JSON.stringify(value);
-  ensureDb().prepare(`
+  ensureDb()
+    .prepare(
+      `
     INSERT INTO kv (key, value, saved_at) VALUES (?, ?, ?)
     ON CONFLICT(key) DO UPDATE SET value = excluded.value, saved_at = excluded.saved_at
-  `).run(key, json, Date.now());
+  `
+    )
+    .run(key, json, Date.now());
   return { ok: true };
 }
 
 // ─── Master cache (Library/Customers/Products/...) ──────────────────
 function cacheUpsert(tableName, rowId, payload) {
   const json = typeof payload === 'string' ? payload : JSON.stringify(payload);
-  ensureDb().prepare(`
+  ensureDb()
+    .prepare(
+      `
     INSERT INTO master_cache (table_name, row_id, payload, saved_at)
     VALUES (?, ?, ?, ?)
     ON CONFLICT(table_name, row_id)
     DO UPDATE SET payload = excluded.payload, saved_at = excluded.saved_at
-  `).run(tableName, String(rowId), json, Date.now());
+  `
+    )
+    .run(tableName, String(rowId), json, Date.now());
 }
 
 function cacheGet(tableName, rowId) {
@@ -129,38 +142,56 @@ function cacheGet(tableName, rowId) {
     .prepare('SELECT payload FROM master_cache WHERE table_name = ? AND row_id = ?')
     .get(tableName, String(rowId));
   if (!row) return null;
-  try { return JSON.parse(row.payload); } catch (_) { return null; }
+  try {
+    return JSON.parse(row.payload);
+  } catch (_) {
+    return null;
+  }
 }
 
 function cacheList(tableName) {
   const rows = ensureDb()
     .prepare('SELECT row_id, payload FROM master_cache WHERE table_name = ? ORDER BY row_id')
     .all(tableName);
-  return rows.map((r) => {
-    try { return JSON.parse(r.payload); } catch (_) { return null; }
-  }).filter(Boolean);
+  return rows
+    .map((r) => {
+      try {
+        return JSON.parse(r.payload);
+      } catch (_) {
+        return null;
+      }
+    })
+    .filter(Boolean);
 }
 
 // ─── Outbox / write queue ───────────────────────────────────────────
 function enqueue({ method, url, body, headers }) {
-  const r = ensureDb().prepare(`
+  const r = ensureDb()
+    .prepare(
+      `
     INSERT INTO outbox (method, url, body, headers, created_at)
     VALUES (?, ?, ?, ?, ?)
-  `).run(
-    method,
-    url,
-    body == null ? null : (typeof body === 'string' ? body : JSON.stringify(body)),
-    headers ? JSON.stringify(headers) : null,
-    Date.now(),
-  );
+  `
+    )
+    .run(
+      method,
+      url,
+      body == null ? null : typeof body === 'string' ? body : JSON.stringify(body),
+      headers ? JSON.stringify(headers) : null,
+      Date.now()
+    );
   return { id: r.lastInsertRowid, queued_at: Date.now() };
 }
 
 function listPending(limit = 100) {
-  return ensureDb().prepare(`
+  return ensureDb()
+    .prepare(
+      `
     SELECT * FROM outbox WHERE status = 'pending'
     ORDER BY created_at ASC LIMIT ?
-  `).all(limit);
+  `
+    )
+    .all(limit);
 }
 
 function markDone(id) {
@@ -168,36 +199,40 @@ function markDone(id) {
 }
 
 function markFailed(id, error) {
-  ensureDb().prepare(`
+  ensureDb()
+    .prepare(
+      `
     UPDATE outbox
        SET attempts = attempts + 1,
            last_error = ?,
            status = CASE WHEN attempts + 1 >= 5 THEN 'failed' ELSE 'pending' END
      WHERE id = ?
-  `).run(String(error).slice(0, 500), id);
+  `
+    )
+    .run(String(error).slice(0, 500), id);
 }
 
 function pendingCount() {
-  return ensureDb()
-    .prepare(`SELECT COUNT(*) AS n FROM outbox WHERE status = 'pending'`)
-    .get().n;
+  return ensureDb().prepare(`SELECT COUNT(*) AS n FROM outbox WHERE status = 'pending'`).get().n;
 }
 
 // ─── Sync state ─────────────────────────────────────────────────────
 function getSyncState(tableName) {
-  return ensureDb()
-    .prepare('SELECT * FROM sync_state WHERE table_name = ?')
-    .get(tableName) || null;
+  return ensureDb().prepare('SELECT * FROM sync_state WHERE table_name = ?').get(tableName) || null;
 }
 
 function setSyncState(tableName, lastSavedAt) {
-  ensureDb().prepare(`
+  ensureDb()
+    .prepare(
+      `
     INSERT INTO sync_state (table_name, last_pulled_at, last_saved_at)
     VALUES (?, ?, ?)
     ON CONFLICT(table_name) DO UPDATE SET
       last_pulled_at = excluded.last_pulled_at,
       last_saved_at  = excluded.last_saved_at
-  `).run(tableName, Date.now(), lastSavedAt);
+  `
+    )
+    .run(tableName, Date.now(), lastSavedAt);
 }
 
 // ─── IPC ────────────────────────────────────────────────────────────
@@ -207,29 +242,66 @@ function register(ipcMain, log) {
   // of rejecting the IPC call. The renderer's badge / cache layer then
   // degrades to "no-cache" mode (engine still pings + broadcasts online
   // status) instead of being stuck in the initial "connecting" placeholder.
-  const safe = (label, fn, fallback) => (...args) => {
-    try { return fn(...args); }
-    catch (err) {
-      log.warn(`[cache.${label}] unavailable:`, err.message);
-      return typeof fallback === 'function' ? fallback() : fallback;
-    }
-  };
-  ipcMain.handle('ops:cache.get',        safe('get',        (_e, key) => kvGet(key), null));
-  ipcMain.handle('ops:cache.set',        safe('set',        (_e, key, value) => kvSet(key, value), { ok: false }));
-  ipcMain.handle('ops:cache.queueWrite', safe('queueWrite', (_e, op) => enqueue(op), { ok: false, queued: false }));
-  ipcMain.handle('ops:cache.list',       safe('list',       (_e, t) => cacheList(String(t)), []));
-  ipcMain.handle('ops:cache.read',       safe('read',       (_e, t, id) => cacheGet(String(t), String(id)), null));
-  ipcMain.handle('ops:cache.upsert',     safe('upsert',     (_e, t, id, p) => { cacheUpsert(String(t), String(id), p); return { ok: true }; }, { ok: false }));
-  ipcMain.handle('ops:cache.syncStatus', safe('syncStatus', () => {
-    // Prefer smart-client's live state (knows online/offline + lastSyncAt).
-    // Falls back to cache-only stats if smart-client isn't loaded (eg in
-    // embedded mode the engine never starts — badge is hidden anyway).
-    try {
-      const sc = require('../smart-client.js');
-      if (typeof sc.getStatus === 'function') return sc.getStatus();
-    } catch { /* not running */ }
-    return { pending: pendingCount(), online: undefined };
-  }, { pending: 0, online: undefined }));
+  const safe =
+    (label, fn, fallback) =>
+    (...args) => {
+      try {
+        return fn(...args);
+      } catch (err) {
+        log.warn(`[cache.${label}] unavailable:`, err.message);
+        return typeof fallback === 'function' ? fallback() : fallback;
+      }
+    };
+  ipcMain.handle(
+    'ops:cache.get',
+    safe('get', (_e, key) => kvGet(key), null)
+  );
+  ipcMain.handle(
+    'ops:cache.set',
+    safe('set', (_e, key, value) => kvSet(key, value), { ok: false })
+  );
+  ipcMain.handle(
+    'ops:cache.queueWrite',
+    safe('queueWrite', (_e, op) => enqueue(op), { ok: false, queued: false })
+  );
+  ipcMain.handle(
+    'ops:cache.list',
+    safe('list', (_e, t) => cacheList(String(t)), [])
+  );
+  ipcMain.handle(
+    'ops:cache.read',
+    safe('read', (_e, t, id) => cacheGet(String(t), String(id)), null)
+  );
+  ipcMain.handle(
+    'ops:cache.upsert',
+    safe(
+      'upsert',
+      (_e, t, id, p) => {
+        cacheUpsert(String(t), String(id), p);
+        return { ok: true };
+      },
+      { ok: false }
+    )
+  );
+  ipcMain.handle(
+    'ops:cache.syncStatus',
+    safe(
+      'syncStatus',
+      () => {
+        // Prefer smart-client's live state (knows online/offline + lastSyncAt).
+        // Falls back to cache-only stats if smart-client isn't loaded (eg in
+        // embedded mode the engine never starts — badge is hidden anyway).
+        try {
+          const sc = require('../smart-client.js');
+          if (typeof sc.getStatus === 'function') return sc.getStatus();
+        } catch {
+          /* not running */
+        }
+        return { pending: pendingCount(), online: undefined };
+      },
+      { pending: 0, online: undefined }
+    )
+  );
   ipcMain.handle('ops:cache.triggerSync', async () => {
     try {
       const { triggerSync } = require('../smart-client.js');
@@ -244,8 +316,16 @@ function register(ipcMain, log) {
 module.exports = {
   register,
   // export internal API cho smart-client.js dùng
-  kvGet, kvSet,
-  cacheUpsert, cacheGet, cacheList,
-  enqueue, listPending, markDone, markFailed, pendingCount,
-  getSyncState, setSyncState,
+  kvGet,
+  kvSet,
+  cacheUpsert,
+  cacheGet,
+  cacheList,
+  enqueue,
+  listPending,
+  markDone,
+  markFailed,
+  pendingCount,
+  getSyncState,
+  setSyncState,
 };

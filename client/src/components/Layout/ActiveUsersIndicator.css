@@ -18,7 +18,9 @@
   font-size: 12px;
   font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   color: var(--op-text-secondary, #525252);
-  transition: background 120ms, border-color 120ms;
+  transition:
+    background 120ms,
+    border-color 120ms;
   line-height: 1.2;
 }
 .active-users-btn:hover {
@@ -92,8 +94,13 @@
   border-radius: 3px;
   color: var(--op-text-secondary, #525252);
 }
-.active-users-refresh:hover { background: var(--op-surface-hover, #f4f4f4); }
-.active-users-refresh:disabled { opacity: 0.5; cursor: wait; }
+.active-users-refresh:hover {
+  background: var(--op-surface-hover, #f4f4f4);
+}
+.active-users-refresh:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
 
 .active-users-pop-sep {
   font-size: 11px;
@@ -118,7 +125,9 @@
   font-size: 13px;
   color: var(--op-text-primary, #161616);
 }
-.active-users-item.offline { color: var(--op-text-secondary, #525252); }
+.active-users-item.offline {
+  color: var(--op-text-secondary, #525252);
+}
 
 .active-users-item-dot {
   width: 7px;
@@ -179,5 +188,7 @@
     border-color: var(--op-border-dark, #393939);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   }
-  .active-users-item { color: var(--op-text-primary-dark, #f4f4f4); }
+  .active-users-item {
+    color: var(--op-text-primary-dark, #f4f4f4);
+  }
 }

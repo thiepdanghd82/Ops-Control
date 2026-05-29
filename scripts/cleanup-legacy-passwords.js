@@ -23,10 +23,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DEFAULT_FILE = path.join(
-  __dirname, '..',
-  'server', 'data', 'Library', 'Users', 'users.json',
-);
+const DEFAULT_FILE = path.join(__dirname, '..', 'server', 'data', 'Library', 'Users', 'users.json');
 
 function parseArgs(argv) {
   const args = { apply: false, file: DEFAULT_FILE };
@@ -52,7 +49,7 @@ function parseArgs(argv) {
 export function cleanupUsers(users) {
   if (!Array.isArray(users)) return { next: users, report: { cleaned: [], clean: [], atRisk: [] } };
   const report = { cleaned: [], clean: [], atRisk: [] };
-  const next = users.map(u => {
+  const next = users.map((u) => {
     if (!u || typeof u !== 'object') return u;
     const hasPwd = typeof u.pwd === 'string' && u.pwd.length > 0;
     const hasBcrypt = typeof u.pwd_bcrypt === 'string' && u.pwd_bcrypt.length > 0;
@@ -65,7 +62,7 @@ export function cleanupUsers(users) {
       return u; // leave untouched — don't lock them out
     }
     // Both set: safe to drop plaintext. Preserve everything else.
-    const { pwd, ...cleaned } = u;  // eslint-disable-line no-unused-vars
+    const { pwd, ...cleaned } = u; // eslint-disable-line no-unused-vars
     report.cleaned.push(u.username);
     return cleaned;
   });
@@ -111,5 +108,10 @@ async function main() {
   console.log(`Wrote: ${args.file}`);
 }
 
-const isCli = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
-if (isCli) main().catch(err => { console.error(err); process.exit(1); });
+const isCli =
+  process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+if (isCli)
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });

@@ -27,7 +27,9 @@ export function readStoredLocale() {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
     if (v && SUPPORTED_LOCALES.includes(v)) return v;
-  } catch { /* quota / private mode */ }
+  } catch {
+    /* quota / private mode */
+  }
   // Auto-detect from browser. navigator.language is like 'vi-VN' or 'en-US'.
   if (typeof navigator !== 'undefined' && navigator.language) {
     const prefix = String(navigator.language).toLowerCase().split('-')[0];
@@ -41,7 +43,11 @@ export function useI18n() {
 
   const setLocale = useCallback((next) => {
     if (!SUPPORTED_LOCALES.includes(next)) return;
-    try { localStorage.setItem(STORAGE_KEY, next); } catch { /* quota */ }
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      /* quota */
+    }
     setLocaleState(next);
   }, []);
 

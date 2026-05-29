@@ -38,13 +38,28 @@ process.env.OPS_TOTP_KEY = crypto.randomBytes(32).toString('hex');
 // Seed an admin user so isAdminPlus() passes.
 const seedUsersPath = path.join(tmp, 'Library', 'Users', 'users.json');
 fs.mkdirSync(path.dirname(seedUsersPath), { recursive: true });
-fs.writeFileSync(seedUsersPath, JSON.stringify([{
-  id: 1, username: 'admin', role: 'sys',
-  pwd_bcrypt: '$2b$10$dummy',
-  lastPwdChange: new Date().toISOString(),
-  permissions: {},
-  full_name: 'Admin', english_name: 'Admin', id_no: '', email: '', phone: '',
-}], null, 2));
+fs.writeFileSync(
+  seedUsersPath,
+  JSON.stringify(
+    [
+      {
+        id: 1,
+        username: 'admin',
+        role: 'sys',
+        pwd_bcrypt: '$2b$10$dummy',
+        lastPwdChange: new Date().toISOString(),
+        permissions: {},
+        full_name: 'Admin',
+        english_name: 'Admin',
+        id_no: '',
+        email: '',
+        phone: '',
+      },
+    ],
+    null,
+    2
+  )
+);
 
 const { default: app } = await import('../index.js');
 const { initSchema } = await import('../db/init.js');
@@ -52,18 +67,21 @@ initSchema();
 const { createSession } = await import('../services/authService.js');
 
 let server, baseUrl;
-test.before(() => new Promise((resolve) => {
-  server = app.listen(0, '127.0.0.1', () => {
-    baseUrl = `http://127.0.0.1:${server.address().port}`;
-    resolve();
-  });
-}));
+test.before(
+  () =>
+    new Promise((resolve) => {
+      server = app.listen(0, '127.0.0.1', () => {
+        baseUrl = `http://127.0.0.1:${server.address().port}`;
+        resolve();
+      });
+    })
+);
 test.after(() => new Promise((resolve) => server.close(resolve)));
 
 async function post(path, token) {
   const res = await fetch(`${baseUrl}${path}`, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}` }, // header-auth bypasses CSRF
+    headers: { Authorization: `Bearer ${token}` }, // header-auth bypasses CSRF
   });
   return { status: res.status, body: await res.json() };
 }
@@ -80,10 +98,16 @@ test('code-backup succeeds end-to-end for the real package (sanity check)', asyn
 
   // Clean up the generated backup — test leaves no artifacts in the repo.
   try {
-    const pkgRoot = path.resolve(decodeURIComponent(path.dirname(new URL(import.meta.url).pathname)), '..', '..');
+    const pkgRoot = path.resolve(
+      decodeURIComponent(path.dirname(new URL(import.meta.url).pathname)),
+      '..',
+      '..'
+    );
     const destDir = path.join(pkgRoot, 'Backup & restore', 'Code', r.body.filename);
     fs.rmSync(destDir, { recursive: true, force: true });
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
 });
 
 test('per-entry ETIMEDOUT is isolated — other entries still copy, response is 200 partial', async () => {
@@ -112,17 +136,26 @@ test('per-entry ETIMEDOUT is isolated — other entries still copy, response is 
     assert.ok(Array.isArray(r.body.skipped), 'skipped must be an array');
     if (r.body.skipped.length > 0) {
       assert.equal(r.body.partial, true);
-      const hit = r.body.skipped.find(s => s.entry === poison);
-      assert.ok(hit, `expected skipped entry for ${poison}, got: ${JSON.stringify(r.body.skipped)}`);
+      const hit = r.body.skipped.find((s) => s.entry === poison);
+      assert.ok(
+        hit,
+        `expected skipped entry for ${poison}, got: ${JSON.stringify(r.body.skipped)}`
+      );
       assert.equal(hit.code, 'ETIMEDOUT');
       assert.match(hit.reason, /placeholder|timeout|timed out/i);
     }
     // Clean up the generated backup.
     try {
-      const pkgRoot = path.resolve(decodeURIComponent(path.dirname(new URL(import.meta.url).pathname)), '..', '..');
+      const pkgRoot = path.resolve(
+        decodeURIComponent(path.dirname(new URL(import.meta.url).pathname)),
+        '..',
+        '..'
+      );
       const destDir = path.join(pkgRoot, 'Backup & restore', 'Code', r.body.filename);
       fs.rmSync(destDir, { recursive: true, force: true });
-    } catch { /* best-effort */ }
+    } catch {
+      /* best-effort */
+    }
   } finally {
     fs.cpSync = realCpSync;
   }
@@ -132,9 +165,17 @@ test('non-admin gets 403 (role gate still enforced)', async () => {
   // Seed a non-admin user and mint a session for them.
   const users = JSON.parse(fs.readFileSync(seedUsersPath, 'utf-8'));
   users.push({
-    id: 2, username: 'viewer', role: 'viewonly',
-    pwd_bcrypt: '$2b$10$dummy', lastPwdChange: new Date().toISOString(),
-    permissions: {}, full_name: 'V', english_name: 'V', id_no: '', email: '', phone: '',
+    id: 2,
+    username: 'viewer',
+    role: 'viewonly',
+    pwd_bcrypt: '$2b$10$dummy',
+    lastPwdChange: new Date().toISOString(),
+    permissions: {},
+    full_name: 'V',
+    english_name: 'V',
+    id_no: '',
+    email: '',
+    phone: '',
   });
   fs.writeFileSync(seedUsersPath, JSON.stringify(users, null, 2));
   const token = createSession(2);

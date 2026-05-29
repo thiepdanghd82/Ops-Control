@@ -75,7 +75,9 @@
   letter-spacing: 0.02em;
   transition: background 120ms;
 }
-.help-btn:hover { background: #1d4ed8; }
+.help-btn:hover {
+  background: #1d4ed8;
+}
 .help-btn.help-btn-ghost {
   background: #fff;
   color: #374151;
@@ -149,7 +151,9 @@
   text-align: left;
   cursor: pointer;
   border-radius: 0 4px 4px 0;
-  transition: background 100ms, border-color 100ms;
+  transition:
+    background 100ms,
+    border-color 100ms;
 }
 .help-index-item:hover {
   background: #eef2ff;
@@ -264,10 +268,14 @@
   color: #1f2937;
   line-height: 1.55;
 }
-.help-list li { margin-bottom: 6px; }
+.help-list li {
+  margin-bottom: 6px;
+}
 /* When a list item contains both EN + VI spans (bilingual), show EN
  * inline and VI on a new line as an italic gray sub-line. */
-.help-list li .help-bi-en { display: inline; }
+.help-list li .help-bi-en {
+  display: inline;
+}
 .help-list li .help-bi-vi {
   display: block;
   font-size: 11.5px;
@@ -276,9 +284,16 @@
   margin-top: 1px;
   line-height: 1.4;
 }
-.help-item-icon { margin-right: 4px; }
-.help-list.help-list-num { padding-left: 22px; }
-.help-list.help-list-tips { list-style: none; padding-left: 0; }
+.help-item-icon {
+  margin-right: 4px;
+}
+.help-list.help-list-num {
+  padding-left: 22px;
+}
+.help-list.help-list-tips {
+  list-style: none;
+  padding-left: 0;
+}
 .help-list.help-list-tips li {
   background: #fffbeb;
   border-left: 3px solid #f59e0b;
@@ -286,7 +301,10 @@
   margin-bottom: 6px;
   border-radius: 0 4px 4px 0;
 }
-.help-list.help-list-pit { list-style: none; padding-left: 0; }
+.help-list.help-list-pit {
+  list-style: none;
+  padding-left: 0;
+}
 .help-list.help-list-pit li {
   background: #fef2f2;
   border-left: 3px solid #dc2626;
@@ -378,7 +396,7 @@
 .help-formula-example pre {
   margin: 4px 0 0;
   padding: 4px 8px;
-  background: rgba(255,255,255,0.7);
+  background: rgba(255, 255, 255, 0.7);
   border-radius: 3px;
   font-size: 11.5px;
   overflow-x: auto;
@@ -395,15 +413,25 @@
   margin-bottom: 4px;
   opacity: 0.8;
 }
-[data-theme="dark"] .help-formula-meaning { background: #1e3a8a; color: #dbeafe; border-left-color: #60a5fa; }
-[data-theme="dark"] .help-formula-example { background: #14532d; color: #dcfce7; border-left-color: #22c55e; }
-[data-theme="dark"] .help-formula-example pre { background: rgba(0,0,0,0.3); }
+[data-theme='dark'] .help-formula-meaning {
+  background: #1e3a8a;
+  color: #dbeafe;
+  border-left-color: #60a5fa;
+}
+[data-theme='dark'] .help-formula-example {
+  background: #14532d;
+  color: #dcfce7;
+  border-left-color: #22c55e;
+}
+[data-theme='dark'] .help-formula-example pre {
+  background: rgba(0, 0, 0, 0.3);
+}
 
 .help-screenshot {
   max-width: 100%;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 .help-screenshot.help-screenshot-sm {
   max-width: 620px;
@@ -538,16 +566,34 @@
   text-align: center;
 }
 @media (max-width: 700px) {
-  .help-glossary-entry { grid-template-columns: 1fr; gap: 4px; }
+  .help-glossary-entry {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
 }
 
 /* Dark mode tweaks for new blocks */
-[data-theme="dark"] .help-role-badge { background: #1e3a8a; color: #dbeafe; border-color: #1d4ed8; }
-[data-theme="dark"] .help-example { background: #14532d; border-color: #22c55e; }
-[data-theme="dark"] .help-example-scenario,
-[data-theme="dark"] .help-example-expected { color: #dcfce7; }
-[data-theme="dark"] .help-glossary-entry { background: #1e293b; border-color: #334155; border-left-color: #60a5fa; }
-[data-theme="dark"] .help-glossary-term { color: #93c5fd; }
+[data-theme='dark'] .help-role-badge {
+  background: #1e3a8a;
+  color: #dbeafe;
+  border-color: #1d4ed8;
+}
+[data-theme='dark'] .help-example {
+  background: #14532d;
+  border-color: #22c55e;
+}
+[data-theme='dark'] .help-example-scenario,
+[data-theme='dark'] .help-example-expected {
+  color: #dcfce7;
+}
+[data-theme='dark'] .help-glossary-entry {
+  background: #1e293b;
+  border-color: #334155;
+  border-left-color: #60a5fa;
+}
+[data-theme='dark'] .help-glossary-term {
+  color: #93c5fd;
+}
 
 /* Procedures block — IFS-style: numbered sub-sections, each with its
  * own Note + ordered steps + optional per-section screenshot. */
@@ -602,9 +648,20 @@
   color: #78350f;
   font-style: italic;
 }
-.help-procedure-note-vi { margin-top: 2px; opacity: 0.85; }
-.help-caption-vi { color: #6b7280; font-style: italic; margin-top: 4px; }
-.help-empty-vi { color: #6b7280; font-style: italic; margin-top: 4px; }
+.help-procedure-note-vi {
+  margin-top: 2px;
+  opacity: 0.85;
+}
+.help-caption-vi {
+  color: #6b7280;
+  font-style: italic;
+  margin-top: 4px;
+}
+.help-empty-vi {
+  color: #6b7280;
+  font-style: italic;
+  margin-top: 4px;
+}
 
 /* Appendix block — reference table with lettered title */
 .help-appendix {
@@ -624,13 +681,34 @@
 }
 
 /* Dark mode */
-[data-theme="dark"] .help-meta-row { background: #1e293b; border-left-color: #60a5fa; }
-[data-theme="dark"] .help-meta-row dt { color: #93c5fd; }
-[data-theme="dark"] .help-meta-row dd { color: #e5e7eb; }
-[data-theme="dark"] .help-path { background: #0f172a; color: #e5e7eb; border-color: #334155; }
-[data-theme="dark"] .help-procedure { background: #1e293b; border-color: #334155; border-left-color: #60a5fa; }
-[data-theme="dark"] .help-procedure-title { color: #93c5fd; }
-[data-theme="dark"] .help-procedure-note { background: #422006; color: #fde68a; border-left-color: #ca8a04; }
+[data-theme='dark'] .help-meta-row {
+  background: #1e293b;
+  border-left-color: #60a5fa;
+}
+[data-theme='dark'] .help-meta-row dt {
+  color: #93c5fd;
+}
+[data-theme='dark'] .help-meta-row dd {
+  color: #e5e7eb;
+}
+[data-theme='dark'] .help-path {
+  background: #0f172a;
+  color: #e5e7eb;
+  border-color: #334155;
+}
+[data-theme='dark'] .help-procedure {
+  background: #1e293b;
+  border-color: #334155;
+  border-left-color: #60a5fa;
+}
+[data-theme='dark'] .help-procedure-title {
+  color: #93c5fd;
+}
+[data-theme='dark'] .help-procedure-note {
+  background: #422006;
+  color: #fde68a;
+  border-left-color: #ca8a04;
+}
 
 .help-related {
   display: flex;
@@ -678,18 +756,55 @@
 }
 
 /* ── Dark mode ────────────────────────────────────────────── */
-[data-theme="dark"] .help-tab { background: #0f172a; color: #e5e7eb; }
-[data-theme="dark"] .help-toolbar { background: #1e293b; border-color: #334155; }
-[data-theme="dark"] .help-page-title { color: #f3f4f6; }
-[data-theme="dark"] .help-sidebar { background: #111827; border-color: #334155; }
-[data-theme="dark"] .help-search { background: #1e293b; color: #e5e7eb; border-color: #334155; }
-[data-theme="dark"] .help-index-item:hover { background: #1e3a8a; }
-[data-theme="dark"] .help-index-item.active { background: #1e40af; }
-[data-theme="dark"] .help-index-vi { color: #f3f4f6; }
-[data-theme="dark"] .help-main { background: #0f172a; }
-[data-theme="dark"] .help-content-title { color: #f3f4f6; }
-[data-theme="dark"] .help-bi-en { color: #e5e7eb; }
-[data-theme="dark"] .help-list { color: #e5e7eb; }
-[data-theme="dark"] .help-table th { background: #1e3a8a; color: #e5e7eb; }
-[data-theme="dark"] .help-table td { border-color: #334155; }
-[data-theme="dark"] .help-formula { background: #1e293b; border-color: #334155; }
+[data-theme='dark'] .help-tab {
+  background: #0f172a;
+  color: #e5e7eb;
+}
+[data-theme='dark'] .help-toolbar {
+  background: #1e293b;
+  border-color: #334155;
+}
+[data-theme='dark'] .help-page-title {
+  color: #f3f4f6;
+}
+[data-theme='dark'] .help-sidebar {
+  background: #111827;
+  border-color: #334155;
+}
+[data-theme='dark'] .help-search {
+  background: #1e293b;
+  color: #e5e7eb;
+  border-color: #334155;
+}
+[data-theme='dark'] .help-index-item:hover {
+  background: #1e3a8a;
+}
+[data-theme='dark'] .help-index-item.active {
+  background: #1e40af;
+}
+[data-theme='dark'] .help-index-vi {
+  color: #f3f4f6;
+}
+[data-theme='dark'] .help-main {
+  background: #0f172a;
+}
+[data-theme='dark'] .help-content-title {
+  color: #f3f4f6;
+}
+[data-theme='dark'] .help-bi-en {
+  color: #e5e7eb;
+}
+[data-theme='dark'] .help-list {
+  color: #e5e7eb;
+}
+[data-theme='dark'] .help-table th {
+  background: #1e3a8a;
+  color: #e5e7eb;
+}
+[data-theme='dark'] .help-table td {
+  border-color: #334155;
+}
+[data-theme='dark'] .help-formula {
+  background: #1e293b;
+  border-color: #334155;
+}

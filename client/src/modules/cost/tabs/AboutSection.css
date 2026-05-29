@@ -49,7 +49,9 @@
   font-size: 13px;
 }
 
-.about-row:last-child { border-bottom: none; }
+.about-row:last-child {
+  border-bottom: none;
+}
 
 .about-row-label {
   color: var(--ops-text-secondary);
@@ -121,7 +123,9 @@
   font-size: 13px;
 }
 
-.about-diag-row:last-child { border-bottom: none; }
+.about-diag-row:last-child {
+  border-bottom: none;
+}
 
 .about-diag-btn {
   font-size: 12px !important;
@@ -171,22 +175,22 @@
 }
 
 /* Dark mode */
-[data-theme="dark"] .about-card {
+[data-theme='dark'] .about-card {
   background: #262626;
   border-color: #393939;
 }
-[data-theme="dark"] .about-row {
+[data-theme='dark'] .about-row {
   border-bottom-color: #393939;
 }
-[data-theme="dark"] .about-row-value code {
+[data-theme='dark'] .about-row-value code {
   background: #393939;
   color: #c6c6c6;
 }
-[data-theme="dark"] .about-tag-ok {
+[data-theme='dark'] .about-tag-ok {
   background: rgba(16, 185, 129, 0.15);
   color: #6ee7b7;
 }
-[data-theme="dark"] .about-tag-err {
+[data-theme='dark'] .about-tag-err {
   background: rgba(239, 68, 68, 0.15);
   color: #fca5a5;
 }

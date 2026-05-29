@@ -1,7 +1,9 @@
 .order-entry {
   padding: 24px;
 }
-.oe-empty-cell { padding: 0 !important; }
+.oe-empty-cell {
+  padding: 0 !important;
+}
 
 .tab-header {
   display: flex;

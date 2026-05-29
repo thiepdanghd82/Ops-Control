@@ -81,6 +81,7 @@ npm run dev:server
 ## Rollback procedure
 
 ### Full rollback (worst case)
+
 ```bash
 cd "server/data"
 # 1. stop server
@@ -93,7 +94,9 @@ rm -f ops.db ops.db-shm ops.db-wal
 The Library snapshot at `server/data/.pre-sqlite-20260417_231938/` exists as a **belt-and-suspenders** safety net but should not be needed because no JS file was overwritten.
 
 ### Code rollback
+
 Revert these commits:
+
 - `server/db/**` (new dir)
 - `server/repositories/**` (new dir)
 - `scripts/migrate-to-sqlite.js`, `scripts/verify-parity.js` (new files)
@@ -121,6 +124,7 @@ These items are documented in [01-sqlite-migration.md](./01-sqlite-migration.md)
 ## Verification evidence
 
 ### Parity checker output
+
 ```
 Dataset             File rows   DB rows     File cksum       DB cksum         Match
 ─────────────────── ─────────── ─────────── ──────────────── ──────────────── ─────
@@ -136,6 +140,7 @@ All datasets parity-match.
 ```
 
 ### Byte-level spot check
+
 ```
 BOM first-3 sorted rows equal: true
 Materials first-3 sorted rows equal: true
@@ -143,6 +148,7 @@ BOM row #10000 byte-equal: true
 ```
 
 ### Client test suite
+
 ```
 ℹ tests 85
 ℹ pass 85
@@ -154,6 +160,7 @@ BOM row #10000 byte-equal: true
 ## Files changed
 
 **New:**
+
 - `server/db/schema.sql`
 - `server/db/connection.js`
 - `server/db/init.js`
@@ -166,10 +173,12 @@ BOM row #10000 byte-equal: true
 - `server/data/.pre-sqlite-20260417_231938/` (safety snapshot, 46 MB, can delete after 30 days)
 
 **Modified:**
+
 - `package.json` + `package-lock.json` (better-sqlite3 dep)
 - `server/routes/shared.js` — `/bom` and `/routing` handlers call `repo.*`
 
 **Not modified:**
+
 - Any `server/data/Library/*.js` or `*.json` source file
 - Any client-side code
 - Any `calcEngine.js`, `dataSync.js` internals (only imported by new code)

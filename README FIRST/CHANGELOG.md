@@ -36,7 +36,7 @@ better-sqlite3 actually ships in Electron's ABI.
 - `scripts/build/build-desktop.sh` now wipes
   `node_modules/better-sqlite3/{build,prebuilds}` before invoking
   `electron-rebuild`. Without that, electron-rebuild reports `Rebuild
-  Complete` but doesn't overwrite the `.node` binary (it caches the
+Complete` but doesn't overwrite the `.node` binary (it caches the
   stock-Node prebuild). The packed installer ships the wrong ABI and
   login explodes with `NODE_MODULE_VERSION mismatch`.
 - After packaging, `npm rebuild better-sqlite3` restores the stock-Node
@@ -79,17 +79,17 @@ with login working out of the box, no terminal step required.
 
 #### apps/desktop — 6 main.cjs bugs + 3 build-config bugs fixed
 
-| # | Bug                                                            | Fix                                                                                                |
-|---|----------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
-| 1 | `extraMetadata.opsMode` merged top-level → MODE='client'       | main.cjs reads `PKG.opsMode` first                                                                 |
-| 2 | `loadFile` path wrong for packaged builds                      | Use `process.resourcesPath/app/apps/client/dist/index.html`                                        |
-| 3 | Spawn cwd `/` → server crashed `mkdir '/data'`                 | Pass `cwd: app.getPath('userData')` + `DATA_DIR` env                                              |
-| 4 | `stdio: 'inherit'` → EPIPE crash dialog                        | Pipe to `userData/server.log` + `desktop.log`; uncaughtException handlers log instead of crash    |
-| 5 | `JWT_SECRET` / `TOTP_KEY` missing → fail-closed                | Auto-provision under `userData/secrets/` (32 bytes each, 0600). Persisted across boots.            |
-| 6 | Server `/` → 404 (blank window)                                | apps/server now mounts `express.static(CLIENT_DIST)` from extraResources                           |
-| 7 | electron/electron-builder carets → version-detection failed    | Pinned to exact `33.4.11` / `25.1.8`                                                              |
-| 8 | `..` paths in `files` glob dropped → asar shipped 6.9 KB       | Switched cross-project content to `extraResources` (preserves the `process.resourcesPath/app/...` layout main.cjs expects) |
-| 9 | electron-builder's install-prod step wiped hoisted root deps   | Pass `--config.npmRebuild=false`                                                                  |
+| #   | Bug                                                          | Fix                                                                                                                        |
+| --- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `extraMetadata.opsMode` merged top-level → MODE='client'     | main.cjs reads `PKG.opsMode` first                                                                                         |
+| 2   | `loadFile` path wrong for packaged builds                    | Use `process.resourcesPath/app/apps/client/dist/index.html`                                                                |
+| 3   | Spawn cwd `/` → server crashed `mkdir '/data'`               | Pass `cwd: app.getPath('userData')` + `DATA_DIR` env                                                                       |
+| 4   | `stdio: 'inherit'` → EPIPE crash dialog                      | Pipe to `userData/server.log` + `desktop.log`; uncaughtException handlers log instead of crash                             |
+| 5   | `JWT_SECRET` / `TOTP_KEY` missing → fail-closed              | Auto-provision under `userData/secrets/` (32 bytes each, 0600). Persisted across boots.                                    |
+| 6   | Server `/` → 404 (blank window)                              | apps/server now mounts `express.static(CLIENT_DIST)` from extraResources                                                   |
+| 7   | electron/electron-builder carets → version-detection failed  | Pinned to exact `33.4.11` / `25.1.8`                                                                                       |
+| 8   | `..` paths in `files` glob dropped → asar shipped 6.9 KB     | Switched cross-project content to `extraResources` (preserves the `process.resourcesPath/app/...` layout main.cjs expects) |
+| 9   | electron-builder's install-prod step wiped hoisted root deps | Pass `--config.npmRebuild=false`                                                                                           |
 
 #### Operator workflow this enables
 
@@ -168,9 +168,9 @@ shift to spot orders that can't run yet.
     rendered as red chips inline so planners can copy-paste.
   - **No BOM** — order's `product_code` has no Manufacturing Structure.
   - **Empty BOM** — structure exists but has zero lines.
-  Top-of-page summary tiles count each outcome. Rows colour-banded
-  (red / yellow / white) by severity. On-demand `Refresh` button only
-  (no auto-poll — the underlying datasets change rarely).
+    Top-of-page summary tiles count each outcome. Rows colour-banded
+    (red / yellow / white) by severity. On-demand `Refresh` button only
+    (no auto-poll — the underlying datasets change rarely).
 - **`shared/i18n.js`** — 16 new `planning.matcheck.*` keys (en + vi).
 
 #### Plumbing
@@ -294,7 +294,7 @@ typed and validated.
 - **`machineProfile.test.js`** — 11 tests covering schema validation, enum
   rejection, unknown-key stripping, default-status, create/get round-trip,
   duplicate rejection, update + version bump, optimistic-lock 409, soft-delete
-  + list filtering, type/status filter combinations, exported enum stability.
+  - list filtering, type/status filter combinations, exported enum stability.
 
 #### domains/mes/client/machine-technical
 
@@ -369,7 +369,7 @@ Sprint 1.3.13 → 1.3.22 build-out (10 sprints, 12+ new screens, +38 tests,
 
 #### Version propagation
 
-- All 36 `package.json` files across the workspace bumped (root + apps/* +
+- All 36 `package.json` files across the workspace bumped (root + apps/\* +
   domains/{8}/{client,server,shared} + platform/{9}).
 - `package-lock.json` updated to match.
 - `apps/server/index.js` `VERSION` constant: `'1.3.0-alpha.0'` → `'1.3.0-beta.1'`.
@@ -733,8 +733,8 @@ into the hash router and Sidebar.
   `Math.floor` for cols/rows — over-fit is an honest mistake, under-fit is the
   safe call.
 - **`shared/calcInk.js`** — pure engine. Per-colour layer cost from coverage_pct
-  + unit_cost_usd_per_kg + ink_yield_g_per_cm2 (default 0.0035). Returns
-  per-colour breakdown + totals. NEVER rounds — display layer applies `.toFixed()`.
+  - unit_cost_usd_per_kg + ink_yield_g_per_cm2 (default 0.0035). Returns
+    per-colour breakdown + totals. NEVER rounds — display layer applies `.toFixed()`.
 - **`client/print-area/PrintAreaCalcForm.jsx`** + **`client/ink/InkCalculatorForm.jsx`** —
   live-recompute forms following the StandardCalcForm pattern (`useMemo` + engine,
   no "Calculate" button). Ink form supports add/remove layers; print-area form
@@ -816,6 +816,7 @@ bash scripts/build/build-desktop.sh client mac # one variant
 ```
 
 What it does:
+
 1. `npm run build` (fresh client bundle).
 2. Auto-`npm install` `apps/desktop` if Electron deps missing.
 3. Loop matrix `{client,server} × {mac,win}`, calling `electron-builder` per cell with
@@ -841,15 +842,15 @@ What it does:
 
 #### Verified
 
-| Gate | Result |
-| --- | --- |
-| Syntax check (.js + .cjs across all apps/platform/domains/scripts) | ✅ 0 errors |
-| `bash -n` on build-desktop.sh | ✅ shell parse OK |
-| JSON parse on apps/desktop/package.json | ✅ |
-| Bundle marker present in main.cjs | ✅ |
-| Cross-domain isolation | ✅ 0 violations |
-| Vite client build | ✅ 95 modules → 287 KB JS / 83 KB gzipped (unchanged) |
-| **Full test suite** | ✅ **246/246 still pass** (no regression — desktop is wiring-only) |
+| Gate                                                               | Result                                                             |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| Syntax check (.js + .cjs across all apps/platform/domains/scripts) | ✅ 0 errors                                                        |
+| `bash -n` on build-desktop.sh                                      | ✅ shell parse OK                                                  |
+| JSON parse on apps/desktop/package.json                            | ✅                                                                 |
+| Bundle marker present in main.cjs                                  | ✅                                                                 |
+| Cross-domain isolation                                             | ✅ 0 violations                                                    |
+| Vite client build                                                  | ✅ 95 modules → 287 KB JS / 83 KB gzipped (unchanged)              |
+| **Full test suite**                                                | ✅ **246/246 still pass** (no regression — desktop is wiring-only) |
 
 #### Not done in this sprint (deliberate, documented)
 
@@ -941,15 +942,15 @@ multi-site safety in place; client-error beacons land in audit + metrics.
 
 #### Verified
 
-| Gate | Result |
-| --- | --- |
-| Syntax check | ✅ 0 errors |
-| Cross-domain isolation | ✅ 0 violations |
-| **Full test suite** | ✅ **246/246 pass** (was 225 — +21 from siteAccess 9 + permissionGroup 12) |
-| `npm run build` | 95 modules → 287 KB JS / **83 KB gzipped** (was 92/268/79) |
-| Telemetry HTTP smoke | ✅ POST /api/telemetry/client-error → 204 + audit entry |
-| Permission Groups smoke | ✅ auto-seed 8 groups, GET _routes catalogue, PUT custom group v=1, mutate readonly seed → 409 GROUP_READONLY |
-| User admin smoke | ✅ list users (sys-only auth), create user via sys → 201 with `must_change_password: true` |
+| Gate                    | Result                                                                                                         |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Syntax check            | ✅ 0 errors                                                                                                    |
+| Cross-domain isolation  | ✅ 0 violations                                                                                                |
+| **Full test suite**     | ✅ **246/246 pass** (was 225 — +21 from siteAccess 9 + permissionGroup 12)                                     |
+| `npm run build`         | 95 modules → 287 KB JS / **83 KB gzipped** (was 92/268/79)                                                     |
+| Telemetry HTTP smoke    | ✅ POST /api/telemetry/client-error → 204 + audit entry                                                        |
+| Permission Groups smoke | ✅ auto-seed 8 groups, GET \_routes catalogue, PUT custom group v=1, mutate readonly seed → 409 GROUP_READONLY |
+| User admin smoke        | ✅ list users (sys-only auth), create user via sys → 201 with `must_change_password: true`                     |
 
 #### Caught + fixed
 
@@ -1040,19 +1041,20 @@ audit log.
 
 #### Verified
 
-| Gate | Result |
-| --- | --- |
-| Syntax check | ✅ 0 errors |
-| Cross-domain isolation | ✅ 0 violations |
-| **Full test suite** | ✅ **225/225 pass** (was 209; +16 from calcComplex 7 + quotesStore 9) |
-| `npm run build` | 92 modules → 268 KB JS / **79 KB gzipped** (was 86/250/75) |
-| Save round-trip via HTTP | ✅ PUT 200 v=1 → list strips input → GET full input → PUT if-match v=1 200 v=2 → PUT if-match v=1 → **409 CONFLICT** |
-| Sidebar role-gating | ✅ admin-only items hidden for non-admin (client-side; server still enforces) |
-| Hash navigation in Vite dev | ✅ `#/cost/standard` etc. resolve via ROUTES map |
+| Gate                        | Result                                                                                                               |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Syntax check                | ✅ 0 errors                                                                                                          |
+| Cross-domain isolation      | ✅ 0 violations                                                                                                      |
+| **Full test suite**         | ✅ **225/225 pass** (was 209; +16 from calcComplex 7 + quotesStore 9)                                                |
+| `npm run build`             | 92 modules → 268 KB JS / **79 KB gzipped** (was 86/250/75)                                                           |
+| Save round-trip via HTTP    | ✅ PUT 200 v=1 → list strips input → GET full input → PUT if-match v=1 200 v=2 → PUT if-match v=1 → **409 CONFLICT** |
+| Sidebar role-gating         | ✅ admin-only items hidden for non-admin (client-side; server still enforces)                                        |
+| Hash navigation in Vite dev | ✅ `#/cost/standard` etc. resolve via ROUTES map                                                                     |
 
 #### What v1.3.0 stable still needs (revised after Sprint 1.3.10)
 
 P0 closed: 3 of 5 (ComplexCalc, real router, quote persistence). Remaining P0:
+
 - **Permission Groups admin UI** — backend `requireRole` works, but no UI for sys
   to assign per-tab access matrix.
 - **`siteAccess` middleware** — referenced in `rules/security.md` but not implemented.
@@ -1112,14 +1114,14 @@ change-password on first login, and drive the Standard quote calculator with liv
 
 #### Verified
 
-| Gate | Result |
-| --- | --- |
-| Syntax check | OK — 0 errors |
-| Cross-domain isolation | OK — 0 violations |
-| **Full test suite** | **209/209 still pass** (calc move didn't break anything) |
-| `npm run build` | 86 modules → 250 KB JS / 75 KB gzipped (was 79 / 231 / 70 — +7 modules for the new UIs) |
-| HTTP login round-trip | OK — cookie set, /me returns user with `must_change_password: true` |
-| AuthGate wired | OK — main.jsx renders LoginForm when no session |
+| Gate                   | Result                                                                                  |
+| ---------------------- | --------------------------------------------------------------------------------------- |
+| Syntax check           | OK — 0 errors                                                                           |
+| Cross-domain isolation | OK — 0 violations                                                                       |
+| **Full test suite**    | **209/209 still pass** (calc move didn't break anything)                                |
+| `npm run build`        | 86 modules → 250 KB JS / 75 KB gzipped (was 79 / 231 / 70 — +7 modules for the new UIs) |
+| HTTP login round-trip  | OK — cookie set, /me returns user with `must_change_password: true`                     |
+| AuthGate wired         | OK — main.jsx renders LoginForm when no session                                         |
 
 #### Backlog still pending for v1.3.0 stable
 
@@ -1190,7 +1192,7 @@ because every operator-facing entry point can authenticate.
 - **`platform/auth/lockout.js`** + **`platform/audit/auditStore.js`** — the `_initialised`
   schema cache flag at module scope was preventing tests that swap DATA_DIR + closeDb
   between cases from getting the schema in the new DB. Removed the flag; `CREATE TABLE
-  IF NOT EXISTS` is cheap. This unblocked 4 auth tests that were failing with
+IF NOT EXISTS` is cheap. This unblocked 4 auth tests that were failing with
   "no such table: auth_lockout".
 
 #### End-to-end login round-trip verified via HTTP
@@ -1205,15 +1207,15 @@ GET  /api/auth/me                                      → 401 (no cookie)
 
 #### Verified
 
-| Gate | Result |
-| --- | --- |
-| Syntax check | OK — 0 errors |
-| Cross-domain isolation | OK — 0 violations |
-| **Full test suite** | **209/209 pass** in ~6 s |
-| `npm run build` | OK — 79 modules → 231 KB / 70 KB gzipped |
-| HTTP login round-trip | OK — full flow incl. cookie + /me + logout |
-| Library endpoints | 25 (was 17) |
-| HTTP endpoints total | 51 (was 46) |
+| Gate                   | Result                                     |
+| ---------------------- | ------------------------------------------ |
+| Syntax check           | OK — 0 errors                              |
+| Cross-domain isolation | OK — 0 violations                          |
+| **Full test suite**    | **209/209 pass** in ~6 s                   |
+| `npm run build`        | OK — 79 modules → 231 KB / 70 KB gzipped   |
+| HTTP login round-trip  | OK — full flow incl. cookie + /me + logout |
+| Library endpoints      | 25 (was 17)                                |
+| HTTP endpoints total   | 51 (was 46)                                |
 
 ### Added — Sprint 1.3.7 (2026-04-28) — Library expansion + costing engine + backup runner + CI
 
@@ -1268,15 +1270,15 @@ GET  /api/auth/me                                      → 401 (no cookie)
 
 #### Verified
 
-| Gate                             | Result                              |
-| -------------------------------- | ----------------------------------- |
-| Syntax check                     | OK — 0 errors                       |
-| Cross-domain import scan         | OK — 0 violations                   |
-| **Full test suite**              | **182/182 pass** in ~1 s            |
-| `npm run build`                  | OK — 79 modules → 231 KB JS / 6.8 KB CSS / 70 KB gzipped |
-| Boot smoke (clean state)         | OK — `backup.armed` event for next 03:00 local |
-| New endpoints reject without auth| 401 on /rates, /finance, /ddl       |
-| Library router has 17 endpoints  | OK (up from 5 in 1.3.2)             |
+| Gate                              | Result                                                   |
+| --------------------------------- | -------------------------------------------------------- |
+| Syntax check                      | OK — 0 errors                                            |
+| Cross-domain import scan          | OK — 0 violations                                        |
+| **Full test suite**               | **182/182 pass** in ~1 s                                 |
+| `npm run build`                   | OK — 79 modules → 231 KB JS / 6.8 KB CSS / 70 KB gzipped |
+| Boot smoke (clean state)          | OK — `backup.armed` event for next 03:00 local           |
+| New endpoints reject without auth | 401 on /rates, /finance, /ddl                            |
+| Library router has 17 endpoints   | OK (up from 5 in 1.3.2)                                  |
 
 #### One bug caught + fixed during verification
 
@@ -1293,7 +1295,7 @@ End-to-end validation against the freshly-installed workspace. Three caught-and-
    `sed` fix renamed all 9 call sites to `audit(...)`.
 2. **Top-level `const FILE = libraryPath(...)`** computed at module load — didn't honour
    `setDataDir()` between tests. Refactored 9 stores/services to lazy `const fileOf = () =>
-   libraryPath(...)` getter pattern, then bulk-replaced `FILE` references with `fileOf()`
+libraryPath(...)` getter pattern, then bulk-replaced `FILE` references with `fileOf()`
    calls (via node regex; BSD sed doesn't support `\b`).
 3. **`AppError.message` didn't contain code** — `assert.rejects(promise, /CYLINDER_DUPLICATE/)`
    couldn't match because messages contained only human prose. Updated `AppError` to
@@ -1314,20 +1316,20 @@ with most-specific keys first.
 
 #### Verification results
 
-| Gate                                | Result                              |
-| ----------------------------------- | ----------------------------------- |
-| `npm install`                       | OK — 965 packages (project-local cache to bypass ~/.npm permission issue) |
-| Syntax check (all .js + .cjs)       | OK — 0 errors across 100+ files     |
-| Cross-domain import scan            | OK — 0 violations (8 domains)       |
-| Full test suite (`node --test`)     | **144/144 pass** in ~1 s            |
-| `npm run build` (Vite)              | OK — 79 modules → 231 KB JS / 6.8 KB CSS / gzipped 70 KB |
-| Server boot smoke (`PORT=4099`)     | OK — all 8 domain routers mounted   |
-| `GET /api/health`                   | 200 with version + uptime + dataDir |
-| `GET /api/dashboard/metrics` (no auth) | 401 (auth gate works)            |
-| `GET /api/costing/cylinders` (no auth) | 401                              |
-| `POST /api/_smoke/echo` (empty body)| 400 INVALID_INPUT (validate gate works) |
-| Structured JSON logs                | OK — correlationId on every entry   |
-| Boot log lists 8 mounted domains    | OK — `boot.domains` event           |
+| Gate                                   | Result                                                                    |
+| -------------------------------------- | ------------------------------------------------------------------------- |
+| `npm install`                          | OK — 965 packages (project-local cache to bypass ~/.npm permission issue) |
+| Syntax check (all .js + .cjs)          | OK — 0 errors across 100+ files                                           |
+| Cross-domain import scan               | OK — 0 violations (8 domains)                                             |
+| Full test suite (`node --test`)        | **144/144 pass** in ~1 s                                                  |
+| `npm run build` (Vite)                 | OK — 79 modules → 231 KB JS / 6.8 KB CSS / gzipped 70 KB                  |
+| Server boot smoke (`PORT=4099`)        | OK — all 8 domain routers mounted                                         |
+| `GET /api/health`                      | 200 with version + uptime + dataDir                                       |
+| `GET /api/dashboard/metrics` (no auth) | 401 (auth gate works)                                                     |
+| `GET /api/costing/cylinders` (no auth) | 401                                                                       |
+| `POST /api/_smoke/echo` (empty body)   | 400 INVALID_INPUT (validate gate works)                                   |
+| Structured JSON logs                   | OK — correlationId on every entry                                         |
+| Boot log lists 8 mounted domains       | OK — `boot.domains` event                                                 |
 
 #### Known release-blockers for v1.3.0 stable (post-alpha)
 
@@ -1363,13 +1365,13 @@ with most-specific keys first.
   cross-domain `/api/dashboard/metrics` (owned by apps/server, not a domain — see ADR-0003).
   `apps/client/src/App.jsx` shell now exposes 8 + 1 views including Connection Mode.
   `boot.domains` log line lists `[costing, library, planning, sales, quality, security,
-  basis, mes]`.
+basis, mes]`.
 
 ### Added — Sprint 1.3.4 (2026-04-28) — Security + Basis (Approvals + Dashboard + Backup)
 
 - **`domains/security`** — Approval workflow slice.
   - `shared/schema/approval.js` — state machine `Pending → InReview → Approved | Rejected
-    | Recalled`; `Recalled` is the requester withdrawing.
+| Recalled`; `Recalled` is the requester withdrawing.
   - `server/repositories/approvalStore.js` — JSON-on-disk store with optimistic locking,
     soft-delete, **and the `countActionable(actor)` helper that the v1.2 sidebar badge bug
     came from missing the `deleted_at` filter**. v1.3 keeps the filter as a load-bearing
@@ -1427,8 +1429,8 @@ locking + audit dual-write + ETag-cached reads.
 #### domains/sales — Quote envelope slice (SD)
 
 - `shared/schema/quote.js` — state machine `Draft → InReview → Approved → Released → Archived`
-  + `Cancelled` terminal. Currency cross-sync (USD ↔ VND from `fx_rate` snapshot).
-  `withDerived()` computes `contr_pct` on read (never persisted — v1.2 lesson).
+  - `Cancelled` terminal. Currency cross-sync (USD ↔ VND from `fx_rate` snapshot).
+    `withDerived()` computes `contr_pct` on read (never persisted — v1.2 lesson).
 - `server/repositories/quoteStore.js` — store at `data/library/sales/quotes.json`. Auto-syncs
   currencies on create. Stamps `released_at` on `Released`. Refuses `softDelete` on `Released`
   (archive instead). Optimistic lock + soft-delete + version bump per transition.
@@ -1444,7 +1446,7 @@ locking + audit dual-write + ETag-cached reads.
 #### domains/quality — Sample tracking slice (QM)
 
 - `shared/schema/sample.js` — state machine `Requested → InProduction → ReadyForReview →
-  Approved | Rejected` with rework path back from ReadyForReview to InProduction.
+Approved | Rejected` with rework path back from ReadyForReview to InProduction.
 - `server/repositories/sampleStore.js` — same patterns as orders/quotes. `Rejected` requires a
   `rejectReason`; sanitised via `@platform/http/sanitizeReason` before persist.
 - `server/routes/qualityRouter.js` — 5 endpoints. Audit events
@@ -1472,7 +1474,7 @@ locking + audit dual-write + ETag-cached reads.
 ### Added — Sprint 1.3.2 (2026-04-28) — First two domain ports (vertical slices)
 
 Two complete vertical slices proving the v1.3 architecture end-to-end. Each slice
-exercises **client → @platform/* → @domains/<name> → @platform/storage → JSON store**
+exercises **client → @platform/\* → @domains/<name> → @platform/storage → JSON store**
 plus role check, audit dual-write, validation, ETag (where applicable), i18n
 registration, and optimistic locking.
 
@@ -1493,8 +1495,8 @@ registration, and optimistic locking.
   `mountCosting(app)` from the server.
 - `client/design-tools/master-cylinder/MasterCylinderTable.jsx` + `.css` — UI with
   `useAuth().hasRole('admin')` gating. Y/N pill toggle (admin only), inline
-  + Add cylinder form (admin only), Delete button (only on admin-added rows).
-  Marker class `gc-pill-toggle` preserved from v1.2 for installer grep verification.
+  - Add cylinder form (admin only), Delete button (only on admin-added rows).
+    Marker class `gc-pill-toggle` preserved from v1.2 for installer grep verification.
 - `shared/i18n.js` — 14 EN/VN keys under `costing.cylinder.*` namespace.
 - `tests/cylinderService.test.js` — 8 unit tests (factory baseline, toggle, add/delete
   round-trip, factory-protect, duplicate rejection, optimistic-lock semantics).
@@ -1527,7 +1529,7 @@ registration, and optimistic locking.
 - `apps/server/index.js` — calls `mountCosting(app)` + `mountLibrary(app)`,
   logs `boot.domains` event listing mounted modules.
 - `apps/client/vite.config.js` — workspace aliases for `@platform/{auth,cache,i18n,ui-kit}/client`
-  + `@domains/{costing,library}-client`.
+  - `@domains/{costing,library}-client`.
 - `apps/client/src/main.jsx` — wraps `<App />` in `<AuthProvider>`, calls
   `registerCostingI18n()` + `registerLibraryI18n()` once at boot.
 - `apps/client/src/App.jsx` — three-view shell (Material library / Master cylinder

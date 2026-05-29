@@ -31,7 +31,9 @@ function dbReady() {
   try {
     const p = getDbPath();
     return !!p && fs.existsSync(p);
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -69,14 +71,22 @@ export function tailAudit(limit, filter = {}) {
     const db = getDb();
     const n = Math.max(1, Math.min(limit | 0, 10000));
     if (filter.event) {
-      return db.prepare('SELECT ts, event, user, ip, detail FROM audit_log WHERE event = ? ORDER BY id DESC LIMIT ?')
+      return db
+        .prepare(
+          'SELECT ts, event, user, ip, detail FROM audit_log WHERE event = ? ORDER BY id DESC LIMIT ?'
+        )
         .all(filter.event, n);
     }
     if (filter.user) {
-      return db.prepare('SELECT ts, event, user, ip, detail FROM audit_log WHERE user = ? ORDER BY id DESC LIMIT ?')
+      return db
+        .prepare(
+          'SELECT ts, event, user, ip, detail FROM audit_log WHERE user = ? ORDER BY id DESC LIMIT ?'
+        )
         .all(filter.user, n);
     }
-    return db.prepare('SELECT ts, event, user, ip, detail FROM audit_log ORDER BY id DESC LIMIT ?').all(n);
+    return db
+      .prepare('SELECT ts, event, user, ip, detail FROM audit_log ORDER BY id DESC LIMIT ?')
+      .all(n);
   } catch (err) {
     console.warn('  ⚠️  audit DB read failed:', err?.message || err);
     return [];
@@ -93,7 +103,9 @@ export function auditRowCount() {
   try {
     const row = getDb().prepare('SELECT COUNT(*) as n FROM audit_log').get();
     return row && typeof row.n === 'number' ? row.n : 0;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -107,9 +119,12 @@ export function bulkAppendAudit(rows) {
   if (!dbReady() || !Array.isArray(rows) || rows.length === 0) return 0;
   try {
     const db = getDb();
-    const ins = db.prepare('INSERT INTO audit_log (ts, event, user, ip, detail) VALUES (?, ?, ?, ?, ?)');
+    const ins = db.prepare(
+      'INSERT INTO audit_log (ts, event, user, ip, detail) VALUES (?, ?, ?, ?, ?)'
+    );
     const tx = db.transaction((rs) => {
-      for (const r of rs) ins.run(r.ts || '', r.event || '', r.user || '-', r.ip || '-', r.detail || '');
+      for (const r of rs)
+        ins.run(r.ts || '', r.event || '', r.user || '-', r.ip || '-', r.detail || '');
     });
     tx(rows);
     return rows.length;

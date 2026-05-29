@@ -60,11 +60,18 @@ function buildApp({ tabAccess = 'edit' } = {}) {
     },
     getQuoteById: (id) => store.find((q) => q.id === id) || null,
     loadQuotes: () => store.slice(),
-    saveQuotes: (qs) => { store.length = 0; store.push(...qs); },
+    saveQuotes: (qs) => {
+      store.length = 0;
+      store.push(...qs);
+    },
     VersionConflictError: FakeVersionConflictError,
     resolveTabAccess: () => tabAccess,
-    emitDataChange: (event, data) => { dataChangeEvents.push({ event, data }); },
-    audit: (action, user, ip, detail) => { auditEvents.push({ action, user, ip, detail }); },
+    emitDataChange: (event, data) => {
+      dataChangeEvents.push({ event, data });
+    },
+    audit: (action, user, ip, detail) => {
+      auditEvents.push({ action, user, ip, detail });
+    },
     clientIp: () => '127.0.0.1',
     logErr: () => {},
     redactErrorMessage: (err) => err.message,
@@ -152,7 +159,7 @@ describe('quotes router — POST /', () => {
       body: { id: 999, type: 'standard' },
     });
     assert.equal(r.status, 200);
-    assert.equal(r.body.quote.id, 1);  // server-assigned, not 999
+    assert.equal(r.body.quote.id, 1); // server-assigned, not 999
   });
 });
 
@@ -246,8 +253,11 @@ describe('quotes router — POST /:id/restore', () => {
   test('clears deleted_at + audit QUOTE_RESTORE', async () => {
     const app = buildApp();
     store.push({
-      id: 10, type: 'standard', _version: 2,
-      deleted_at: '2026-04-29T00:00:00Z', deleted_by: 'someone',
+      id: 10,
+      type: 'standard',
+      _version: 2,
+      deleted_at: '2026-04-29T00:00:00Z',
+      deleted_by: 'someone',
     });
     const r = await request(app, {
       method: 'POST',

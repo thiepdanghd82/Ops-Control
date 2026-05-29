@@ -22,7 +22,10 @@ import crypto from 'crypto';
 export function atomicWriteFileSync(targetPath, data, encoding) {
   const dir = path.dirname(targetPath);
   const base = path.basename(targetPath);
-  const tmp = path.join(dir, `.${base}.tmp.${process.pid}.${crypto.randomBytes(4).toString('hex')}`);
+  const tmp = path.join(
+    dir,
+    `.${base}.tmp.${process.pid}.${crypto.randomBytes(4).toString('hex')}`
+  );
   try {
     // Write payload. For strings, pass encoding (defaults to utf-8). For
     // Buffers, encoding is ignored by writeFileSync — safe to always pass.
@@ -34,10 +37,18 @@ export function atomicWriteFileSync(targetPath, data, encoding) {
     // Flush OS buffers to disk before rename so the rename-atomicity guarantee
     // also covers "disk content survives a crash right after rename".
     const fd = fs.openSync(tmp, 'r+');
-    try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+    try {
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
     fs.renameSync(tmp, targetPath);
   } catch (err) {
-    try { fs.unlinkSync(tmp); } catch { /* best-effort cleanup */ }
+    try {
+      fs.unlinkSync(tmp);
+    } catch {
+      /* best-effort cleanup */
+    }
     throw err;
   }
 }

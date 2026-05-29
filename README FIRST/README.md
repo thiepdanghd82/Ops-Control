@@ -18,17 +18,17 @@ functional baseline. v1.3 changes WHERE code lives, not WHAT it does.
 By the end of v1.2 the repository hit several scale limits familiar to anyone who has shipped a
 SAP/IFS-class app:
 
-| Symptom (v1.2)                                                     | Root cause                                                  |
-| ------------------------------------------------------------------ | ----------------------------------------------------------- |
-| `client/src/modules/cost/tabs/` had 30+ unrelated `.jsx` files     | "Cost" was used as a junk drawer for every non-planning tab |
-| `server/routes/costApi.js` exceeded ~3 000 LOC                     | All HTTP handlers — pricing, library, master-data — colocated |
-| `i18n/strings.js` was a single ~5 000-line module                  | No per-domain ownership of translation keys                 |
-| `scripts/` mixed build, recovery, migration and dev tools          | No separation by purpose or audit risk                      |
-| `.claude/` only contained `launch.json`                            | Agent workflow not codified                                 |
-| Cross-cutting concerns (ETag, audit, sync) lived next to features  | Hard to reuse across domains, easy to fork accidentally     |
+| Symptom (v1.2)                                                    | Root cause                                                    |
+| ----------------------------------------------------------------- | ------------------------------------------------------------- |
+| `client/src/modules/cost/tabs/` had 30+ unrelated `.jsx` files    | "Cost" was used as a junk drawer for every non-planning tab   |
+| `server/routes/costApi.js` exceeded ~3 000 LOC                    | All HTTP handlers — pricing, library, master-data — colocated |
+| `i18n/strings.js` was a single ~5 000-line module                 | No per-domain ownership of translation keys                   |
+| `scripts/` mixed build, recovery, migration and dev tools         | No separation by purpose or audit risk                        |
+| `.claude/` only contained `launch.json`                           | Agent workflow not codified                                   |
+| Cross-cutting concerns (ETag, audit, sync) lived next to features | Hard to reuse across domains, easy to fork accidentally       |
 
 v1.3 fixes those by adopting the **vertical-slice / bounded-context** layout used in mature ERPs
-(SAP modules CO/MM/PP/SD/QM/HR/BC; IFS *components*).
+(SAP modules CO/MM/PP/SD/QM/HR/BC; IFS _components_).
 
 ---
 
@@ -74,34 +74,34 @@ domains/costing/
 
 ## Modules → SAP analogue
 
-| Module       | Analogue   | Owns                                                                        |
-| ------------ | ---------- | --------------------------------------------------------------------------- |
-| **costing**  | SAP CO     | Standard/Complex pricing, Print Area, Ink, Design Tools (Gallus calc, Master Cylinder) |
-| **library**  | SAP MM     | Master data: Materials, Rates, Finance, DDL, Mfg Structure, Routing Ops, Machine Profiles |
-| **planning** | SAP PP     | Order Entry, Work Orders, WIP Tracker, Capacity Planning, BOM Explosion, Material Check |
-| **sales**    | SAP SD     | RFQ Tracker, Quote History, Quote Analysis, Formal Quotation, Released Quotation |
-| **quality**  | SAP QM     | Sample Tracking                                                             |
-| **security** | SAP SU/HR  | Auth (login, TOTP, lockout), Users, Permission Groups, Audit log, Approval Workflow |
-| **basis**    | SAP BC     | Settings, Backup/Restore + Schedule, Sync (Smart/Thin), Notifications, Import wizard, Health |
-| **mes**      | MES/PLM    | IFS Inventory mirror, Machine Technical, Hardware Devices, Connection Mode  |
+| Module       | Analogue  | Owns                                                                                         |
+| ------------ | --------- | -------------------------------------------------------------------------------------------- |
+| **costing**  | SAP CO    | Standard/Complex pricing, Print Area, Ink, Design Tools (Gallus calc, Master Cylinder)       |
+| **library**  | SAP MM    | Master data: Materials, Rates, Finance, DDL, Mfg Structure, Routing Ops, Machine Profiles    |
+| **planning** | SAP PP    | Order Entry, Work Orders, WIP Tracker, Capacity Planning, BOM Explosion, Material Check      |
+| **sales**    | SAP SD    | RFQ Tracker, Quote History, Quote Analysis, Formal Quotation, Released Quotation             |
+| **quality**  | SAP QM    | Sample Tracking                                                                              |
+| **security** | SAP SU/HR | Auth (login, TOTP, lockout), Users, Permission Groups, Audit log, Approval Workflow          |
+| **basis**    | SAP BC    | Settings, Backup/Restore + Schedule, Sync (Smart/Thin), Notifications, Import wizard, Health |
+| **mes**      | MES/PLM   | IFS Inventory mirror, Machine Technical, Hardware Devices, Connection Mode                   |
 
 ---
 
 ## Tech stack (unchanged from v1.2)
 
-| Layer            | Tech                                            |
-| ---------------- | ----------------------------------------------- |
-| Frontend         | React 19, Vite, lazy/Suspense, useDeferredValue |
-| State / data     | Hooks + SWR-style cached fetch (`platform/cache`) |
-| Styling          | Plain CSS modules per component (IBM Carbon-aligned) |
-| i18n             | Custom `useI18n()` hook, dot-namespaced keys, EN/VN |
-| Backend          | Express 4, better-sqlite3, JSON-on-disk shadow-write |
-| Auth             | bcrypt + AES-256-GCM TOTP + JWT cookie          |
-| Desktop          | Electron + electron-builder (CLIENT/SERVER variants) |
-| Tests            | `node --test` for server, Jest for shared, Vitest for client |
-| Build            | `vite build` for client, `electron-builder` for installers |
+| Layer        | Tech                                                         |
+| ------------ | ------------------------------------------------------------ |
+| Frontend     | React 19, Vite, lazy/Suspense, useDeferredValue              |
+| State / data | Hooks + SWR-style cached fetch (`platform/cache`)            |
+| Styling      | Plain CSS modules per component (IBM Carbon-aligned)         |
+| i18n         | Custom `useI18n()` hook, dot-namespaced keys, EN/VN          |
+| Backend      | Express 4, better-sqlite3, JSON-on-disk shadow-write         |
+| Auth         | bcrypt + AES-256-GCM TOTP + JWT cookie                       |
+| Desktop      | Electron + electron-builder (CLIENT/SERVER variants)         |
+| Tests        | `node --test` for server, Jest for shared, Vitest for client |
+| Build        | `vite build` for client, `electron-builder` for installers   |
 
-> v1.3 does NOT switch to Next.js / Prisma / Postgres (the README's *recommended* stack). The
+> v1.3 does NOT switch to Next.js / Prisma / Postgres (the README's _recommended_ stack). The
 > production deployment is a small-LAN, on-prem app with one admin per site — Postgres + Redis
 > would add ops burden without payback. ADR-0001 records this decision.
 
@@ -167,16 +167,16 @@ Mandatory rules in `.claude/rules/` are loaded into every session — the most i
 
 ## Documentation index
 
-| Doc                                                          | Audience                              |
-| ------------------------------------------------------------ | ------------------------------------- |
-| [ARCHITECTURE.md](ARCHITECTURE.md)                           | Engineers — module map, dependency rules |
-| [MIGRATION.md](MIGRATION.md)                                 | Engineers — v1.2 → v1.3 file mapping  |
-| [CLAUDE.md](CLAUDE.md)                                       | AI agents — entry-point context       |
-| [CHANGELOG.md](CHANGELOG.md)                                 | Everyone — release history            |
-| [docs/adr/](docs/adr/)                                       | Engineers — architecture decisions    |
-| [docs/runbooks/](docs/runbooks/)                             | Ops — DR, backup, recovery procedures |
-| [docs/user-guide/](docs/user-guide/)                         | End users — bilingual EN/VN guide     |
-| [docs/sprints/](docs/sprints/)                               | Engineers + PMs — sprint history      |
+| Doc                                  | Audience                                 |
+| ------------------------------------ | ---------------------------------------- |
+| [ARCHITECTURE.md](ARCHITECTURE.md)   | Engineers — module map, dependency rules |
+| [MIGRATION.md](MIGRATION.md)         | Engineers — v1.2 → v1.3 file mapping     |
+| [CLAUDE.md](CLAUDE.md)               | AI agents — entry-point context          |
+| [CHANGELOG.md](CHANGELOG.md)         | Everyone — release history               |
+| [docs/adr/](docs/adr/)               | Engineers — architecture decisions       |
+| [docs/runbooks/](docs/runbooks/)     | Ops — DR, backup, recovery procedures    |
+| [docs/user-guide/](docs/user-guide/) | End users — bilingual EN/VN guide        |
+| [docs/sprints/](docs/sprints/)       | Engineers + PMs — sprint history         |
 
 ---
 

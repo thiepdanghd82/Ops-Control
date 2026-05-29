@@ -30,11 +30,12 @@ export default function WarningBar({ activeModule, activeTab }) {
 
   // Only validate when we're actually on a calculator tab — avoids
   // flashing warnings at people browsing History, Settings, etc.
-  const isCalcTab = activeModule === 'cost' && (activeTab === 'standard' || activeTab === 'complex');
+  const isCalcTab =
+    activeModule === 'cost' && (activeTab === 'standard' || activeTab === 'complex');
 
   const warnings = useMemo(
     () => (isCalcTab ? validateByActiveTab(activeTab, stdState, cplxState, lib) : []),
-    [isCalcTab, activeTab, stdState, cplxState, lib],
+    [isCalcTab, activeTab, stdState, cplxState, lib]
   );
 
   // Expandable: click the bar to see all warnings stacked; otherwise it
@@ -45,15 +46,24 @@ export default function WarningBar({ activeModule, activeTab }) {
 
   if (!isCalcTab || warnings.length === 0) return null;
 
-  const errors = warnings.filter(w => w.severity === 'error');
-  const warns  = warnings.filter(w => w.severity === 'warn');
+  const errors = warnings.filter((w) => w.severity === 'error');
+  const warns = warnings.filter((w) => w.severity === 'warn');
   const primary = errors[0] || warns[0];
   const extraCount = warnings.length - 1;
 
   return (
-    <div className={`warning-bar ${errors.length > 0 ? 'wb-error' : 'wb-warn'} ${expanded ? 'wb-expanded' : ''}`}>
-      <div className="wb-inner" onClick={() => setExpanded(x => !x)} role="button" tabIndex={0}
-        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setExpanded(x => !x); }}>
+    <div
+      className={`warning-bar ${errors.length > 0 ? 'wb-error' : 'wb-warn'} ${expanded ? 'wb-expanded' : ''}`}
+    >
+      <div
+        className="wb-inner"
+        onClick={() => setExpanded((x) => !x)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') setExpanded((x) => !x);
+        }}
+      >
         <span className="wb-icon" aria-hidden="true">
           {errors.length > 0 ? '⚠' : '!'}
         </span>
@@ -65,14 +75,12 @@ export default function WarningBar({ activeModule, activeTab }) {
         <span className="wb-sep">·</span>
         <span className="wb-scope">[{primary.scope}]</span>
         <span className="wb-msg">{primary.message}</span>
-        {extraCount > 0 && !expanded && (
-          <span className="wb-more">+{extraCount} more</span>
-        )}
+        {extraCount > 0 && !expanded && <span className="wb-more">+{extraCount} more</span>}
         <span className="wb-chevron">{expanded ? '▾' : '▸'}</span>
       </div>
       {expanded && (
         <ul className="wb-list">
-          {warnings.map(w => (
+          {warnings.map((w) => (
             <li key={w.id} className={`wb-item wb-item-${w.severity}`}>
               <span className="wb-item-icon">{w.severity === 'error' ? '⚠' : '!'}</span>
               <span className="wb-item-scope">[{w.scope}]</span>

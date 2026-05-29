@@ -61,20 +61,24 @@ export default class ErrorBoundary extends React.Component {
     try {
       const msg = String(error?.message || error || '');
       const isChunkLoadError =
-        /Failed to fetch dynamically imported module/i.test(msg)
-        || /Importing a module script failed/i.test(msg)
-        || /'text\/html' is not a valid JavaScript MIME type/i.test(msg)
-        || /Loading chunk \d+ failed/i.test(msg);
+        /Failed to fetch dynamically imported module/i.test(msg) ||
+        /Importing a module script failed/i.test(msg) ||
+        /'text\/html' is not a valid JavaScript MIME type/i.test(msg) ||
+        /Loading chunk \d+ failed/i.test(msg);
       if (isChunkLoadError && typeof window !== 'undefined' && window.sessionStorage) {
         if (!window.sessionStorage.getItem('ops_chunk_reload_done')) {
           window.sessionStorage.setItem('ops_chunk_reload_done', '1');
-          console.warn('[ErrorBoundary] stale chunk detected — force-reloading page to fetch fresh bundle map');
+          console.warn(
+            '[ErrorBoundary] stale chunk detected — force-reloading page to fetch fresh bundle map'
+          );
           // Give React a tick to render the fallback first, then reload.
           setTimeout(() => window.location.reload(), 0);
           return;
         }
       }
-    } catch { /* never crash the boundary itself */ }
+    } catch {
+      /* never crash the boundary itself */
+    }
 
     // Sprint T — beacon the crash to the server so ops can see client
     // errors in the request log even when the user never reports them.
@@ -86,24 +90,36 @@ export default class ErrorBoundary extends React.Component {
       const payload = JSON.stringify({
         boundary: String(label).slice(0, 40),
         message: String(error?.message || error || '').slice(0, 200),
-        url: typeof window !== 'undefined' ? String(window.location?.pathname || '').slice(0, 200) : '',
+        url:
+          typeof window !== 'undefined'
+            ? String(window.location?.pathname || '').slice(0, 200)
+            : '',
         stack: String(error?.stack || '').slice(0, 600),
       });
       const blob = new Blob([payload], { type: 'application/json' });
-      const sent = typeof navigator !== 'undefined'
-        && typeof navigator.sendBeacon === 'function'
-        && navigator.sendBeacon('/api/telemetry/client-error', blob);
+      const sent =
+        typeof navigator !== 'undefined' &&
+        typeof navigator.sendBeacon === 'function' &&
+        navigator.sendBeacon('/api/telemetry/client-error', blob);
       if (!sent && typeof fetch === 'function') {
         fetch('/api/telemetry/client-error', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: payload,
           keepalive: true,
-        }).catch(() => { /* telemetry best-effort */ });
+        }).catch(() => {
+          /* telemetry best-effort */
+        });
       }
-    } catch { /* never crash the boundary itself */ }
+    } catch {
+      /* never crash the boundary itself */
+    }
     if (typeof onError === 'function') {
-      try { onError(error, info); } catch { /* never crash the boundary itself */ }
+      try {
+        onError(error, info);
+      } catch {
+        /* never crash the boundary itself */
+      }
     }
   }
 
@@ -127,32 +143,62 @@ export default class ErrorBoundary extends React.Component {
       return fallback({ error: this.state.error, reset: this.reset });
     }
     const msg = this.state.error?.message || 'An unexpected error occurred';
-    return h('div', {
-      role: 'alert',
-      style: {
-        padding: 24, margin: 16, border: '1px solid #fca5a5', background: '#fef2f2',
-        borderRadius: 8, color: '#7f1d1d', fontFamily: 'system-ui, sans-serif',
+    return h(
+      'div',
+      {
+        role: 'alert',
+        style: {
+          padding: 24,
+          margin: 16,
+          border: '1px solid #fca5a5',
+          background: '#fef2f2',
+          borderRadius: 8,
+          color: '#7f1d1d',
+          fontFamily: 'system-ui, sans-serif',
+        },
       },
-    },
-      h('div', { style: { fontWeight: 700, fontSize: 15, marginBottom: 6 } },
-        `\u26A0\uFE0F ${label} crashed`),
-      h('div', {
-        style: {
-          fontSize: 12, marginBottom: 12, fontFamily: 'monospace',
-          whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+      h(
+        'div',
+        { style: { fontWeight: 700, fontSize: 15, marginBottom: 6 } },
+        `\u26A0\uFE0F ${label} crashed`
+      ),
+      h(
+        'div',
+        {
+          style: {
+            fontSize: 12,
+            marginBottom: 12,
+            fontFamily: 'monospace',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+          },
         },
-      }, msg),
-      h('button', {
-        type: 'button',
-        onClick: this.reset,
-        style: {
-          padding: '6px 14px', background: '#dc2626', color: 'white',
-          border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 600,
+        msg
+      ),
+      h(
+        'button',
+        {
+          type: 'button',
+          onClick: this.reset,
+          style: {
+            padding: '6px 14px',
+            background: '#dc2626',
+            color: 'white',
+            border: 'none',
+            borderRadius: 4,
+            cursor: 'pointer',
+            fontWeight: 600,
+          },
         },
-      }, 'Retry'),
-      h('div', {
-        style: { fontSize: 11, color: '#991b1b', marginTop: 8 },
-      }, 'If this keeps happening, copy the error above and report it.'),
+        'Retry'
+      ),
+      h(
+        'div',
+        {
+          style: { fontSize: 11, color: '#991b1b', marginTop: 8 },
+        },
+        'If this keeps happening, copy the error above and report it.'
+      )
     );
   }
 }

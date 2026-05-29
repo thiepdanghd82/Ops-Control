@@ -91,8 +91,8 @@ export function pct(v) {
 /** Gross-margin color thresholds (>=20% green, >=10% amber, else red). */
 export function gmClr(v) {
   if (v == null) return '#94a3b8';
-  if (v >= 0.20) return '#16a34a';
-  if (v >= 0.10) return '#d97706';
+  if (v >= 0.2) return '#16a34a';
+  if (v >= 0.1) return '#d97706';
   return '#dc2626';
 }
 

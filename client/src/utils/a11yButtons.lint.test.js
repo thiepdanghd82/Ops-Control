@@ -43,7 +43,8 @@ function walk(dir) {
 // small and focused — only matches characters a human can't read
 // aloud as a word. Emoji with intrinsic meaning (⚠️, 🚨) are excluded
 // because they double as a visual + semantic cue.
-const ICON_CHARS = /^[\s]*(?:✕|✖|×|&times;|&#215;|⟲|↑|↓|◀|▶|◁|▷|⇦|⇨|‹|›|«|»|⊞|⊟|⊕|⊖|→|←|•|·|…|⟳|⟴|↻)[\s]*$/;
+const ICON_CHARS =
+  /^[\s]*(?:✕|✖|×|&times;|&#215;|⟲|↑|↓|◀|▶|◁|▷|⇦|⇨|‹|›|«|»|⊞|⊟|⊕|⊖|→|←|•|·|…|⟳|⟴|↻)[\s]*$/;
 // Match <button ...>INNER</button>. Greedy-safe for single-button
 // tags because INNER regex excludes `<` so nesting can't confuse us.
 const BUTTON_RE = /<button\b([^>]*)>([^<]*)<\/button>/g;
@@ -52,9 +53,7 @@ const BUTTON_RE = /<button\b([^>]*)>([^<]*)<\/button>/g;
 const ACCESSIBLE_NAME = /\b(aria-label|aria-labelledby|title)\b\s*=/;
 
 function stripComments(src) {
-  return src
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/\/\/[^\n]*/g, '');
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
 }
 
 test('all icon-only <button> elements have an accessible name', () => {
@@ -65,14 +64,17 @@ test('all icon-only <button> elements have an accessible name', () => {
     for (const m of src.matchAll(BUTTON_RE)) {
       const attrs = m[1] || '';
       const inner = m[2] || '';
-      if (!ICON_CHARS.test(inner)) continue;       // text/expression child — OK
-      if (ACCESSIBLE_NAME.test(attrs)) continue;   // has aria-label/title — OK
+      if (!ICON_CHARS.test(inner)) continue; // text/expression child — OK
+      if (ACCESSIBLE_NAME.test(attrs)) continue; // has aria-label/title — OK
       const rel = path.relative(SRC_ROOT, file).replace(/\\/g, '/');
       // Include the matched glyph in the report so the maintainer can
       // grep the exact offender quickly.
       offenders.push(`${rel}: <button>${inner.trim()}</button>`);
     }
   }
-  assert.deepEqual(offenders, [],
-    `Icon-only <button> elements need aria-label or title:\n  ${offenders.join('\n  ')}`);
+  assert.deepEqual(
+    offenders,
+    [],
+    `Icon-only <button> elements need aria-label or title:\n  ${offenders.join('\n  ')}`
+  );
 });

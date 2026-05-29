@@ -57,15 +57,24 @@ export default function TabBarOverflow({ children, className = '', rightSlot = n
         onKeyDown={(e) => {
           // Left/Right arrow: scroll the container (tab-bar level nav).
           // Home/End: jump to first/last tab for keyboard power users.
-          if (e.key === 'ArrowLeft')  { e.preventDefault(); scrollBy('left'); }
-          if (e.key === 'ArrowRight') { e.preventDefault(); scrollBy('right'); }
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            scrollBy('left');
+          }
+          if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            scrollBy('right');
+          }
           if (e.key === 'Home') {
             e.preventDefault();
             scrollRef.current?.scrollTo({ left: 0, behavior: 'smooth' });
           }
           if (e.key === 'End') {
             e.preventDefault();
-            scrollRef.current?.scrollTo({ left: scrollRef.current.scrollWidth, behavior: 'smooth' });
+            scrollRef.current?.scrollTo({
+              left: scrollRef.current.scrollWidth,
+              behavior: 'smooth',
+            });
           }
         }}
         tabIndex={-1}

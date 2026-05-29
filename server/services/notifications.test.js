@@ -20,9 +20,7 @@ function setupTmpFile() {
 // Dynamically import after env is set so the module doesn't cache an
 // earlier path. Each test imports fresh via a cache-bust query.
 async function loadModule() {
-  return await import(
-    './notifications.js?t=' + Date.now() + '_' + Math.random()
-  );
+  return await import('./notifications.js?t=' + Date.now() + '_' + Math.random());
 }
 
 test('enqueue: stamps id + created_at, persists list', async () => {
@@ -31,9 +29,16 @@ test('enqueue: stamps id + created_at, persists list', async () => {
   await mod._resetForTests([]);
 
   const written = await mod.enqueue([
-    { quote_id: 1, quote_label: 'CP-A', action: 'SUBMIT',
-      from_status: 'draft', to_status: 'pending_sales',
-      actor: 'hana', recipient: 'sonia', recipient_reason: 'sales_mgr' },
+    {
+      quote_id: 1,
+      quote_label: 'CP-A',
+      action: 'SUBMIT',
+      from_status: 'draft',
+      to_status: 'pending_sales',
+      actor: 'hana',
+      recipient: 'sonia',
+      recipient_reason: 'sales_mgr',
+    },
   ]);
   assert.equal(written.length, 1);
   assert.equal(written[0].id, 1);
@@ -47,16 +52,38 @@ test('enqueue: ids monotonic across calls', async () => {
   setupTmpFile();
   const mod = await loadModule();
   await mod._resetForTests([]);
-  await mod.enqueue([{ quote_id: 1, action: 'SUBMIT',
-    from_status: 'draft', to_status: 'pending_sales',
-    actor: 'hana', recipient: 'sonia' }]);
-  const second = await mod.enqueue([
-    { quote_id: 2, action: 'SUBMIT', from_status: 'draft',
-      to_status: 'pending_sales', actor: 'hana', recipient: 'sonia' },
-    { quote_id: 3, action: 'SUBMIT', from_status: 'draft',
-      to_status: 'pending_sales', actor: 'hana', recipient: 'sonia' },
+  await mod.enqueue([
+    {
+      quote_id: 1,
+      action: 'SUBMIT',
+      from_status: 'draft',
+      to_status: 'pending_sales',
+      actor: 'hana',
+      recipient: 'sonia',
+    },
   ]);
-  assert.deepEqual(second.map(r => r.id), [2, 3]);
+  const second = await mod.enqueue([
+    {
+      quote_id: 2,
+      action: 'SUBMIT',
+      from_status: 'draft',
+      to_status: 'pending_sales',
+      actor: 'hana',
+      recipient: 'sonia',
+    },
+    {
+      quote_id: 3,
+      action: 'SUBMIT',
+      from_status: 'draft',
+      to_status: 'pending_sales',
+      actor: 'hana',
+      recipient: 'sonia',
+    },
+  ]);
+  assert.deepEqual(
+    second.map((r) => r.id),
+    [2, 3]
+  );
 });
 
 test('enqueue: empty / invalid input is a no-op', async () => {
@@ -75,8 +102,13 @@ test('listPendingFor: filters by recipient and excludes delivered', async () => 
   await mod._resetForTests([
     { id: 1, quote_id: 10, recipient: 'sonia', created_at: '2026-04-18T09:00:00Z' },
     { id: 2, quote_id: 11, recipient: 'felix', created_at: '2026-04-18T09:01:00Z' },
-    { id: 3, quote_id: 12, recipient: 'sonia', created_at: '2026-04-18T09:02:00Z',
-      delivered_at: '2026-04-18T12:00:00Z' },
+    {
+      id: 3,
+      quote_id: 12,
+      recipient: 'sonia',
+      created_at: '2026-04-18T09:02:00Z',
+      delivered_at: '2026-04-18T12:00:00Z',
+    },
   ]);
   assert.equal(mod.listPendingFor('sonia').length, 1);
   assert.equal(mod.listPendingFor('sonia')[0].quote_id, 10);
@@ -102,9 +134,13 @@ test('markDelivered: idempotent — already-delivered entries not double-counted
   setupTmpFile();
   const mod = await loadModule();
   await mod._resetForTests([
-    { id: 1, quote_id: 10, recipient: 'sonia',
+    {
+      id: 1,
+      quote_id: 10,
+      recipient: 'sonia',
       created_at: '2026-04-18T09:00:00Z',
-      delivered_at: '2026-04-18T12:00:00Z' },
+      delivered_at: '2026-04-18T12:00:00Z',
+    },
   ]);
   const n = await mod.markDelivered([1]);
   assert.equal(n, 0);
@@ -170,7 +206,10 @@ test('runDigest (webhook): POSTs + reports delivered_ids when 200', async () => 
   try {
     const r = await mod.runDigest();
     assert.equal(r.mode, 'webhook');
-    assert.deepEqual(r.delivered_ids.sort((a, b) => a - b), [1, 2]);
+    assert.deepEqual(
+      r.delivered_ids.sort((a, b) => a - b),
+      [1, 2]
+    );
     assert.ok(captured);
     assert.equal(captured.url, 'https://hooks.example/ops-digest');
     const body = JSON.parse(captured.opts.body);
@@ -209,7 +248,9 @@ test('runDigest (webhook): fetch throws → mode=webhook-failed with error', asy
     { id: 1, quote_id: 10, recipient: 'sonia', created_at: '2026-04-18T09:00:00Z' },
   ]);
   const origFetch = globalThis.fetch;
-  globalThis.fetch = async () => { throw new Error('ENETDOWN'); };
+  globalThis.fetch = async () => {
+    throw new Error('ENETDOWN');
+  };
   process.env.OPS_NOTIFY_WEBHOOK = 'https://hooks.example/network-down';
   try {
     const r = await mod.runDigest();
@@ -246,9 +287,12 @@ test('runDigest (webhook, signed): adds X-Ops-Timestamp + X-Ops-Signature header
     assert.match(headers['X-Ops-Signature'], /^sha256=[0-9a-f]{64}$/);
     // Signature is deterministic given body + secret + timestamp.
     const crypto = await import('crypto');
-    const expected = 'sha256=' + crypto.createHmac('sha256', 'super-secret-key-123')
-      .update(headers['X-Ops-Timestamp'] + '.' + captured.opts.body)
-      .digest('hex');
+    const expected =
+      'sha256=' +
+      crypto
+        .createHmac('sha256', 'super-secret-key-123')
+        .update(headers['X-Ops-Timestamp'] + '.' + captured.opts.body)
+        .digest('hex');
     assert.equal(headers['X-Ops-Signature'], expected);
   } finally {
     globalThis.fetch = origFetch;
@@ -291,8 +335,12 @@ test('verifyWebhookSignature: accepts a freshly signed payload', async () => {
     const body = '{"hello":"world"}';
     const ts = String(Date.now());
     const crypto = await import('crypto');
-    const sig = 'sha256=' + crypto.createHmac('sha256', 'verify-secret')
-      .update(ts + '.' + body).digest('hex');
+    const sig =
+      'sha256=' +
+      crypto
+        .createHmac('sha256', 'verify-secret')
+        .update(ts + '.' + body)
+        .digest('hex');
     const r = mod.verifyWebhookSignature({ body, timestamp: ts, signature: sig });
     assert.equal(r.ok, true);
   } finally {
@@ -307,7 +355,9 @@ test('verifyWebhookSignature: rejects wrong signature', async () => {
     const body = '{"hello":"world"}';
     const ts = String(Date.now());
     const r = mod.verifyWebhookSignature({
-      body, timestamp: ts, signature: 'sha256=' + '0'.repeat(64),
+      body,
+      timestamp: ts,
+      signature: 'sha256=' + '0'.repeat(64),
     });
     assert.equal(r.ok, false);
     assert.match(r.reason, /signature-mismatch/);
@@ -323,8 +373,12 @@ test('verifyWebhookSignature: rejects replay > 5min', async () => {
     const body = '{"hello":"world"}';
     const oldTs = String(Date.now() - 10 * 60 * 1000); // 10min ago
     const crypto = await import('crypto');
-    const sig = 'sha256=' + crypto.createHmac('sha256', 'verify-secret')
-      .update(oldTs + '.' + body).digest('hex');
+    const sig =
+      'sha256=' +
+      crypto
+        .createHmac('sha256', 'verify-secret')
+        .update(oldTs + '.' + body)
+        .digest('hex');
     const r = mod.verifyWebhookSignature({ body, timestamp: oldTs, signature: sig });
     assert.equal(r.ok, false);
     assert.match(r.reason, /timestamp/);
@@ -337,7 +391,9 @@ test('verifyWebhookSignature: rejects when secret unset', async () => {
   const mod = await loadModule();
   delete process.env.OPS_NOTIFY_WEBHOOK_SECRET;
   const r = mod.verifyWebhookSignature({
-    body: '{}', timestamp: String(Date.now()), signature: 'sha256=abc',
+    body: '{}',
+    timestamp: String(Date.now()),
+    signature: 'sha256=abc',
   });
   assert.equal(r.ok, false);
   assert.match(r.reason, /not-configured/);
@@ -348,9 +404,13 @@ test('verifyWebhookSignature: rejects missing headers', async () => {
   process.env.OPS_NOTIFY_WEBHOOK_SECRET = 'verify-secret';
   try {
     assert.match(mod.verifyWebhookSignature({ body: '{}' }).reason, /missing-headers/);
-    assert.match(mod.verifyWebhookSignature({
-      body: '{}', timestamp: String(Date.now()),
-    }).reason, /missing-headers/);
+    assert.match(
+      mod.verifyWebhookSignature({
+        body: '{}',
+        timestamp: String(Date.now()),
+      }).reason,
+      /missing-headers/
+    );
   } finally {
     delete process.env.OPS_NOTIFY_WEBHOOK_SECRET;
   }
@@ -365,15 +425,21 @@ test('cap: queue trimmed to OPS_NOTIFICATIONS_CAP after enqueue', async () => {
     // Enqueue 8 items — only the last 5 should remain.
     await mod.enqueue(
       Array.from({ length: 8 }, (_, i) => ({
-        quote_id: i + 1, action: 'SUBMIT',
-        from_status: 'draft', to_status: 'pending_sales',
-        actor: 'hana', recipient: 'sonia',
+        quote_id: i + 1,
+        action: 'SUBMIT',
+        from_status: 'draft',
+        to_status: 'pending_sales',
+        actor: 'hana',
+        recipient: 'sonia',
       }))
     );
     assert.equal(mod.listAllPending().length, 5);
     // Oldest 3 evicted.
     assert.deepEqual(
-      mod.listAllPending().map(n => n.quote_id).sort((a, b) => a - b),
+      mod
+        .listAllPending()
+        .map((n) => n.quote_id)
+        .sort((a, b) => a - b),
       [4, 5, 6, 7, 8]
     );
   } finally {

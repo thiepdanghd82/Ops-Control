@@ -27,30 +27,30 @@ the shared piece to `platform/`.
 
 ## Where things live (quick lookup)
 
-| You want to touch…              | Look in…                                             |
-| ------------------------------- | ---------------------------------------------------- |
-| Cost calculator (Std / Cpx)     | `domains/costing/`                                   |
-| Print Area / Ink / Design Tools | `domains/costing/client/{print-area,ink,design-tools}/` |
-| Master cylinder admin           | `domains/costing/{client,server}/design-tools/master-cylinder/` |
-| Material / Rate / Finance / DDL | `domains/library/`                                   |
-| Manufacturing structure / Routing Ops | `domains/library/client/{mfg-structure,routing-ops}/` |
-| Order Entry / WIP / Capacity    | `domains/planning/`                                  |
-| RFQ Tracker / Quote History     | `domains/sales/`                                     |
-| Quote Analysis (Carbon redesign)| `domains/sales/client/quote-analysis/`               |
-| Sample Tracking                 | `domains/quality/`                                   |
-| Login, TOTP, lockout            | `platform/auth/`                                     |
-| Permission Groups, Approvals    | `domains/security/`                                  |
-| Settings, Backup schedule       | `domains/basis/client/settings/`                     |
-| Dashboard, Admin Metrics        | `domains/basis/client/{dashboard,admin-metrics}/`    |
-| Hardware Devices, Connection Mode | `domains/mes/client/{hardware,mode}/`              |
-| IFS Inventory, Machine Technical| `domains/mes/client/{ifs-inventory,machine-technical}/` |
-| ETag, SWR cached fetch          | `platform/cache/`                                    |
-| Sync / Smart-mode               | `platform/sync/`                                     |
-| Shared React UI (Button, Modal) | `platform/ui-kit/`                                   |
-| Validate / rate-limit middleware| `platform/http/`                                     |
-| Atomic file writes / SQLite     | `platform/storage/`                                  |
-| Audit log                       | `platform/audit/`                                    |
-| i18n (per-domain)               | `domains/<name>/shared/i18n.js` + `platform/i18n/`   |
+| You want to touch…                    | Look in…                                                        |
+| ------------------------------------- | --------------------------------------------------------------- |
+| Cost calculator (Std / Cpx)           | `domains/costing/`                                              |
+| Print Area / Ink / Design Tools       | `domains/costing/client/{print-area,ink,design-tools}/`         |
+| Master cylinder admin                 | `domains/costing/{client,server}/design-tools/master-cylinder/` |
+| Material / Rate / Finance / DDL       | `domains/library/`                                              |
+| Manufacturing structure / Routing Ops | `domains/library/client/{mfg-structure,routing-ops}/`           |
+| Order Entry / WIP / Capacity          | `domains/planning/`                                             |
+| RFQ Tracker / Quote History           | `domains/sales/`                                                |
+| Quote Analysis (Carbon redesign)      | `domains/sales/client/quote-analysis/`                          |
+| Sample Tracking                       | `domains/quality/`                                              |
+| Login, TOTP, lockout                  | `platform/auth/`                                                |
+| Permission Groups, Approvals          | `domains/security/`                                             |
+| Settings, Backup schedule             | `domains/basis/client/settings/`                                |
+| Dashboard, Admin Metrics              | `domains/basis/client/{dashboard,admin-metrics}/`               |
+| Hardware Devices, Connection Mode     | `domains/mes/client/{hardware,mode}/`                           |
+| IFS Inventory, Machine Technical      | `domains/mes/client/{ifs-inventory,machine-technical}/`         |
+| ETag, SWR cached fetch                | `platform/cache/`                                               |
+| Sync / Smart-mode                     | `platform/sync/`                                                |
+| Shared React UI (Button, Modal)       | `platform/ui-kit/`                                              |
+| Validate / rate-limit middleware      | `platform/http/`                                                |
+| Atomic file writes / SQLite           | `platform/storage/`                                             |
+| Audit log                             | `platform/audit/`                                               |
+| i18n (per-domain)                     | `domains/<name>/shared/i18n.js` + `platform/i18n/`              |
 
 ## Conventions you must follow
 
@@ -58,12 +58,12 @@ the shared piece to `platform/`.
 
 Workspace aliases (configured in root `tsconfig.base.json` + Vite alias):
 
-| Alias                | Resolves to              |
-| -------------------- | ------------------------ |
-| `@apps/*`            | `apps/*`                 |
-| `@domains/*`         | `domains/*`              |
-| `@platform/*`        | `platform/*`             |
-| `@data/*`            | `data/*` (server-side only) |
+| Alias         | Resolves to                 |
+| ------------- | --------------------------- |
+| `@apps/*`     | `apps/*`                    |
+| `@domains/*`  | `domains/*`                 |
+| `@platform/*` | `platform/*`                |
+| `@data/*`     | `data/*` (server-side only) |
 
 Never import via deep relative paths (`../../../platform/...`). If your editor suggests one,
 rewrite it as an alias.
@@ -78,16 +78,16 @@ rewrite it as an alias.
 
 ### File naming
 
-| Kind                          | Pattern                          |
-| ----------------------------- | -------------------------------- |
-| React component               | `PascalCase.jsx` + `PascalCase.css` |
-| Hook                          | `useThing.js`                    |
-| Domain pure logic             | `camelCase.js` (no React, no Express) |
-| Service (orchestration)       | `nameService.js`                 |
-| Repository                    | `nameStore.js` or `nameRepo.js`  |
-| Route                         | `nameRouter.js` (export `router`) |
-| Test                          | `<sibling>.test.js` (node --test) |
-| Integration test              | `<feature>.integration.test.js`  |
+| Kind                    | Pattern                               |
+| ----------------------- | ------------------------------------- |
+| React component         | `PascalCase.jsx` + `PascalCase.css`   |
+| Hook                    | `useThing.js`                         |
+| Domain pure logic       | `camelCase.js` (no React, no Express) |
+| Service (orchestration) | `nameService.js`                      |
+| Repository              | `nameStore.js` or `nameRepo.js`       |
+| Route                   | `nameRouter.js` (export `router`)     |
+| Test                    | `<sibling>.test.js` (node --test)     |
+| Integration test        | `<feature>.integration.test.js`       |
 
 ### i18n
 

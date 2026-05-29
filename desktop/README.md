@@ -27,17 +27,18 @@ env -u ELECTRON_RUN_AS_NODE OPS_DESKTOP_MODE=thin OPS_REMOTE_URL=http://10.102.3
 ```
 
 Lưu ý:
+
 - Server prod v1.0 thường chạy ở port 3000. Embedded server PoC tự pick port trong dải **3100-3199** (xem `findFreePort` trong `main.js`).
 - `node-hid` dùng N-API prebuild, không cần rebuild cho Electron ABI.
 - `--ignore-scripts` tránh gặp bug node-gyp trên Node 24+ (Python 3.12+ không còn `distutils`).
 
 ## 3 mode vận hành
 
-| Mode | Khi nào dùng | Cấu hình |
-|---|---|---|
-| `embedded` | Single-user, demo, làm tại nhà | Server chạy in-process, DB ở `~/Library/Application Support/Ops Control/data/` |
-| `thin` | Production nhà máy, mạng LAN ổn | UI gọi thẳng `http://10.102.3.61:3000` |
-| `smart` | Phase 2 — offline + cache | Local cache SQLite + sync queue (xem `smart-client.js`) |
+| Mode       | Khi nào dùng                    | Cấu hình                                                                       |
+| ---------- | ------------------------------- | ------------------------------------------------------------------------------ |
+| `embedded` | Single-user, demo, làm tại nhà  | Server chạy in-process, DB ở `~/Library/Application Support/Ops Control/data/` |
+| `thin`     | Production nhà máy, mạng LAN ổn | UI gọi thẳng `http://10.102.3.61:3000`                                         |
+| `smart`    | Phase 2 — offline + cache       | Local cache SQLite + sync queue (xem `smart-client.js`)                        |
 
 Đổi mode: env var `OPS_DESKTOP_MODE=<thin|embedded|smart>` hoặc Settings UI (Sprint 2).
 
@@ -50,6 +51,7 @@ npm run build:all        # Cả Windows + macOS
 ```
 
 Build production cần:
+
 - **Windows:** EV Code Signing Cert (Sectigo ~290 USD/năm). Đặt biến `CSC_LINK` + `CSC_KEY_PASSWORD` trước khi build.
 - **macOS:** Apple Developer ID (99 USD/năm). Đặt `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` để notarize.
 
@@ -81,15 +83,15 @@ desktop/
 
 ## Phần cứng được hỗ trợ
 
-| Thiết bị | Giao thức | Module | Cần cài driver? |
-|---|---|---|---|
-| Zebra ZD/ZT/GX | ZPL qua TCP:9100 | built-in `net` | Không |
-| TSC TTP/TE | TSPL qua TCP:9100 | built-in `net` | Không |
-| Máy in A4/A3 | OS print spooler | `pdf-to-printer` | Driver Windows mặc định OK |
-| Cân Mettler PB | RS232 9600 baud | `serialport` | USB-Serial driver (Prolific/FTDI) |
-| Cân Ohaus | RS232 4800 baud | `serialport` | Như trên |
-| Scanner USB-HID | Raw HID | `node-hid` | Không (HID generic) |
-| Scanner USB-Keyboard | keydown wedge | `desktopBridge.js` fallback | Không |
+| Thiết bị             | Giao thức         | Module                      | Cần cài driver?                   |
+| -------------------- | ----------------- | --------------------------- | --------------------------------- |
+| Zebra ZD/ZT/GX       | ZPL qua TCP:9100  | built-in `net`              | Không                             |
+| TSC TTP/TE           | TSPL qua TCP:9100 | built-in `net`              | Không                             |
+| Máy in A4/A3         | OS print spooler  | `pdf-to-printer`            | Driver Windows mặc định OK        |
+| Cân Mettler PB       | RS232 9600 baud   | `serialport`                | USB-Serial driver (Prolific/FTDI) |
+| Cân Ohaus            | RS232 4800 baud   | `serialport`                | Như trên                          |
+| Scanner USB-HID      | Raw HID           | `node-hid`                  | Không (HID generic)               |
+| Scanner USB-Keyboard | keydown wedge     | `desktopBridge.js` fallback | Không                             |
 
 ## Test plan PoC
 
@@ -99,10 +101,10 @@ Trên máy dev (sau `npm install` + `npm start`):
 2. **Tray** — close window → app vẫn chạy (icon ở tray) → double-click tray → window mở lại.
 3. **Native bridge** — mở DevTools console:
    ```js
-   await window.ops.printer.list()         // [{ name, deviceId, ... }]
-   await window.ops.labelPrinter.ping('192.168.1.50', 9100)
-   await window.ops.scale.listPorts()      // [{ path, manufacturer, ... }]
-   await window.ops.scanner.listDevices()  // HID devices
+   await window.ops.printer.list(); // [{ name, deviceId, ... }]
+   await window.ops.labelPrinter.ping('192.168.1.50', 9100);
+   await window.ops.scale.listPorts(); // [{ path, manufacturer, ... }]
+   await window.ops.scanner.listDevices(); // HID devices
    ```
 4. **Cache** — gọi `await window.ops.cache.set('foo', { bar: 1 })` rồi `get('foo')` → ra cùng object.
 5. **Auto-update (chỉ trong build packaged)** — Help menu → "Kiểm tra cập nhật" → dialog hiển thị.
@@ -128,13 +130,13 @@ if (desktop.isAvailable) {
 
 ## Troubleshooting
 
-| Symptom | Nguyên nhân | Cách fix |
-|---|---|---|
-| `better-sqlite3 not available — run electron-builder install-app-deps` | Native module chưa rebuild cho Electron ABI | `cd desktop && npm run postinstall` |
-| Cân không trả weight | Wrong baud rate hoặc protocol | DevTools: `await window.ops.scale.read()` để xem raw data; chỉnh regex parser trong `native/scale.js` |
-| Zebra timeout sau 5 s | Sai IP/port hoặc firewall block | `await window.ops.labelPrinter.ping(host, port)` để verify; kiểm tra firewall trên cả PC + máy in |
-| App refuse to start sau update | asar integrity check fail | Restore từ backup, verify nguồn installer |
-| macOS "App is damaged" | Notarization chưa pass hoặc Gatekeeper cache cũ | `xattr -cr "/Applications/Ops Control.app"` |
+| Symptom                                                                | Nguyên nhân                                     | Cách fix                                                                                              |
+| ---------------------------------------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `better-sqlite3 not available — run electron-builder install-app-deps` | Native module chưa rebuild cho Electron ABI     | `cd desktop && npm run postinstall`                                                                   |
+| Cân không trả weight                                                   | Wrong baud rate hoặc protocol                   | DevTools: `await window.ops.scale.read()` để xem raw data; chỉnh regex parser trong `native/scale.js` |
+| Zebra timeout sau 5 s                                                  | Sai IP/port hoặc firewall block                 | `await window.ops.labelPrinter.ping(host, port)` để verify; kiểm tra firewall trên cả PC + máy in     |
+| App refuse to start sau update                                         | asar integrity check fail                       | Restore từ backup, verify nguồn installer                                                             |
+| macOS "App is damaged"                                                 | Notarization chưa pass hoặc Gatekeeper cache cũ | `xattr -cr "/Applications/Ops Control.app"`                                                           |
 
 ## Liên kết
 
