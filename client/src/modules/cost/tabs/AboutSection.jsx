@@ -16,7 +16,12 @@ import React, { useEffect, useState } from 'react';
 import desktop from '../../../services/desktopBridge';
 import './AboutSection.css';
 
-const APP_VERSION = '1.5.10';
+// Sourced from Vite define block (see client/vite.config.js) — reads
+// client/package.json#version at build time. Fallback 'dev' guards
+// against a missing inject (e.g. dev server outside Vite). PR #92 P0
+// banner introduced the global; this About card was the last hand-
+// maintained version mirror in the codebase.
+const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev';
 const BUILD_TIMESTAMP = '2026-05-20 15:31 GMT+7';
 
 export default function AboutSection() {

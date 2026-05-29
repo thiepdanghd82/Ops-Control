@@ -2,7 +2,20 @@
 
 All notable changes to Ops Control. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [v1.5.11] — P0 client version banner (visibility only)
+## [v1.5.11] — P0 client version banner + repo cleanup + costing fixes
+
+Release rolls up four PRs shipped between 2026-05-28 and 2026-05-29:
+
+- **#92** — P0 Client Version Banner (visibility-only nudge)
+- **#93** — Repo-wide `prettier --write .` cleanup (329 files, format-only)
+- **#95** — VN-locale decimal input fix + ProcessFlowChart `.replace`
+  crash on numeric material codes
+- **#94** — Version bump to 1.5.11 + wire About / Login version to
+  Vite `__APP_VERSION__` SSoT (closes the "Settings → About still
+  shows v1.5.10" gap surfaced during the 2026-05-29 Mac DMG smoke
+  test)
+
+### Banner (PR #92)
 
 Visibility-only nudge to close the silent version-drift gap surfaced during D-15 (Sprint S-D15
 hardware tests). Lead-controlled rollout: no auto-update, no download button. Operator who is
@@ -45,6 +58,48 @@ upgrade status per operator in Settings → Account Control.
 - IPC `window.ops.shell.openExternal(url)` bridge.
 - E2E Playwright happy-path (the main app has no existing Playwright harness; kiosk-only).
 - `min_supported_client` enforcement.
+
+### Tooling (PR #93)
+
+- `prettier --write .` across the entire repo. 329 files reformatted,
+  zero logic change. Restores CI `Lint + format` signal that had been
+  red on `main` for 8+ PRs during the D-15 admin-merge culture.
+  Prettier + `.prettierignore` configs unchanged — only source files.
+
+### Fixed (PR #95)
+
+- **Decimal input on VN-locale keyboard.** Operator typing `12,5` (or
+  even `12.5`) in Std Processes → Tool Cost (also Materials / Inks /
+  Packing / MOQ tier overrides; also Complex header + per-SP tier
+  overrides) saw the value truncated to `12`. Root cause: 7
+  `handleField` callsites used raw `parseFloat(value)` which truncates
+  at the first non-digit byte. Complex `SubProductRow` used raw
+  `Number(value)` which returns `NaN` on `"12,5"` → coerced to `0` /
+  `null`. All swapped to `parseLocaleNumber` from `utils/format.js`
+  which already handled both locales.
+- **ProcessFlowChart crash on numeric `code`.** Standard → Summarize
+  (or any tab rendering the diagram) crashed with
+  `(t.code || t.desc || "mat").replace is not a function` when a
+  material row's `code` was loaded as a number (typical for numeric
+  SKUs from library import). 3 callsites in
+  `ProcessFlowChart.jsx:35/38/70` now wrap the value in `String(...)`
+  before `.replace()`.
+
+### Release plumbing (PR #94)
+
+- `package.json` / `client/package.json` / `desktop/package.json`
+  bumped from 1.5.10 to 1.5.11. PR #92 introduced the v1.5.11
+  CHANGELOG entry but the actual package.json bump was skipped; this
+  closes the gap so the DMG/EXE filename + electron-builder version
+  stamp + Vite `__APP_VERSION__` all carry the correct version.
+- Wires `Settings → About`, `AboutSection` diagnostics card, and the
+  `LoginPage` 3 fallback paths to read `__APP_VERSION__` instead of
+  the hand-maintained `'1.5.10'` literal that surfaced during the
+  2026-05-29 Mac DMG smoke test ("Settings → About still shows
+  v1.5.10" while `/health` correctly reported 1.5.11).
+- `client/eslint.config.js` declares `__APP_VERSION__` as a readonly
+  global so the `cd client && npm run lint` path doesn't `no-undef`
+  on the new references.
 
 ## [Unreleased] — Step B P0 fixes (Production Readiness Audit closure)
 
