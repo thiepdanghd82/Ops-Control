@@ -2,6 +2,50 @@
 
 All notable changes to Ops Control. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [v1.5.11] — P0 client version banner (visibility only)
+
+Visibility-only nudge to close the silent version-drift gap surfaced during D-15 (Sprint S-D15
+hardware tests). Lead-controlled rollout: no auto-update, no download button. Operator who is
+behind sees a red banner pointing them at the Lead (Zalo) for the new installer. Lead tracks
+upgrade status per operator in Settings → Account Control.
+
+### Added
+
+- `GET /api/version` — exposes `{ version, min_supported_client, released_at }` with
+  `Cache-Control: no-store`. `min_supported_client` is informational at P0; reserved for P1
+  enforcement without API churn.
+- `POST /api/audit/client-event` — allowlisted client-originated audit emission. Only accepts
+  `CLIENT_UPGRADE_NUDGE_SHOWN` + `CLIENT_VERSION_MATCH_AFTER_UPGRADE`. Anything else returns
+  `400`. Missing session returns `401`. Detail JSON.stringify'd per Lesson FIX-3.
+- `GET /api/users/client-versions` (admin+) — surfaces raw client-version audit rows so the
+  Settings → Account Control column can compute green/orange/gray badges per operator.
+- Client `<ClientUpdateIndicator>` — mounts at App root, polls `/api/version` every 5 minutes.
+  Renders red banner ("Phiên bản client đã cũ. Server đã lên vX, bạn đang dùng vY. Vui lòng
+  liên hệ Lead…") or collapsed chip after operator hits "Thu gọn". Collapse persists per-
+  server-version in localStorage; a fresh server bump re-expands the banner. **No download
+  button — defer to P0.1** alongside `/downloads/` static-serve + path-traversal review.
+- Vite define block injects `__APP_VERSION__` from `client/package.json#version` so the
+  client knows what version it shipped as without a hand-maintained constant. (Scoped to the
+  banner; the larger Vite-define SSoT sync remains a separate follow-up.)
+- Settings → Account Control: new "CLIENT VER" column with per-operator badge (green when
+  the operator's last MATCH event aligns with the current server version, orange when stale
+  or still nudged, gray when no event in 7 days).
+
+### Operations
+
+- New runbook `docs/operations/version-banner.md` for Lead — what operators see when a new
+  server lands, how to distribute the installer through Zalo, and how to verify upgrade
+  status via Settings.
+
+### Out of scope (deferred to P0.1)
+
+- Self-serve download button + `GET /downloads/CLIENT-<platform>-<version>.{exe|dmg}` static
+  serve (needs dedicated path-traversal review).
+- `CLIENT_UPGRADE_NUDGE_DOWNLOAD_CLICKED` audit event (no button → no click).
+- IPC `window.ops.shell.openExternal(url)` bridge.
+- E2E Playwright happy-path (the main app has no existing Playwright harness; kiosk-only).
+- `min_supported_client` enforcement.
+
 ## [Unreleased] — Step B P0 fixes (Production Readiness Audit closure)
 
 Branch: `fix/pre-go-live-p0` — 7 commits + 1 commit on `main` (Fix 6 B3 disposition).

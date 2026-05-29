@@ -219,6 +219,11 @@ export const authApi = {
   logout: () => api.post('/auth/logout', {}),
   me: (opts = {}) => api.get('/auth/me', opts),
   getUsers: () => api.get('/auth/users'),
+  // P0 client-version banner — admin+ pulls latest client-version audit
+  // events for each operator so Settings → Account Control can render
+  // the "Phiên bản client" badge column. Returns raw audit rows; pure
+  // helpers in services/clientVersionBadge.js compute the badge.
+  getUsersClientVersions: () => api.get('/users/client-versions'),
   updateProfile: (data) => api.post('/auth/update-profile', data),
   verifyTotp: (username, code) => api.post('/totp/verify', { username, code }),
   saveTotpSecret: (username, secret) => api.post('/totp/secret', { username, secret }),

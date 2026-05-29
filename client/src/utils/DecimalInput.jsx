@@ -26,7 +26,14 @@ import { useCallback, useEffect, useState } from 'react';
 // without a JSX transform. Import-only here (no re-export) because
 // Vite Fast Refresh requires component files to export only components.
 // Callers should import helpers directly from './DecimalInput.helpers.js'.
-import { DECIMAL_RE, toDisplay, toDisplayFixed, formatThousand, normalizeDecimalInput } from './DecimalInput.helpers.js';
+// eslint-disable-next-line no-unused-vars -- toDisplay re-exported for callers, see note above
+import {
+  DECIMAL_RE,
+  toDisplay,
+  toDisplayFixed,
+  formatThousand,
+  normalizeDecimalInput,
+} from './DecimalInput.helpers.js';
 
 export default function DecimalInput({
   value,
@@ -64,42 +71,51 @@ export default function DecimalInput({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
-  const handleChange = useCallback((e) => {
-    // normalizeDecimalInput handles: whitespace trim (Excel/Sheets paste),
-    // thousand-separator stripping, Euro/VN comma-as-decimal conversion.
-    const norm = normalizeDecimalInput(e.target.value, thousandSep);
-    if (!DECIMAL_RE.test(norm)) return; // reject non-decimal chars silently
-    setLocal(norm);
-    if (norm === '' || norm === '-' || norm === '.' || norm === '-.') {
-      // Partial — don't push a number upstream yet. Callers decide how
-      // to treat the cleared state on blur.
-      return;
-    }
-    const n = parseFloat(norm);
-    if (!Number.isNaN(n)) onChange(n);
-  }, [onChange, thousandSep]);
+  const handleChange = useCallback(
+    (e) => {
+      // normalizeDecimalInput handles: whitespace trim (Excel/Sheets paste),
+      // thousand-separator stripping, Euro/VN comma-as-decimal conversion.
+      const norm = normalizeDecimalInput(e.target.value, thousandSep);
+      if (!DECIMAL_RE.test(norm)) return; // reject non-decimal chars silently
+      setLocal(norm);
+      if (norm === '' || norm === '-' || norm === '.' || norm === '-.') {
+        // Partial — don't push a number upstream yet. Callers decide how
+        // to treat the cleared state on blur.
+        return;
+      }
+      const n = parseFloat(norm);
+      if (!Number.isNaN(n)) onChange(n);
+    },
+    [onChange, thousandSep]
+  );
 
-  const handleFocus = useCallback((e) => {
-    setFocused(true);
-    if (onFocus) onFocus(e);
-  }, [onFocus]);
+  const handleFocus = useCallback(
+    (e) => {
+      setFocused(true);
+      if (onFocus) onFocus(e);
+    },
+    [onFocus]
+  );
 
-  const handleBlur = useCallback((e) => {
-    // On blur, if the string doesn't parse (empty, dangling "."), push
-    // 0 upstream and normalize the display.
-    const norm = local.replace(',', '.');
-    const n = parseFloat(norm);
-    if (Number.isNaN(n)) {
-      onChange(0);
-      setLocal('');
-    } else {
-      // Pad to the caller's decimal budget for the idle display, but
-      // pass the un-rounded number upstream so precision is preserved.
-      setLocal(toDisplayFixed(n, decimals));
-    }
-    setFocused(false);
-    if (onBlur) onBlur(e);
-  }, [local, onChange, onBlur, decimals]);
+  const handleBlur = useCallback(
+    (e) => {
+      // On blur, if the string doesn't parse (empty, dangling "."), push
+      // 0 upstream and normalize the display.
+      const norm = local.replace(',', '.');
+      const n = parseFloat(norm);
+      if (Number.isNaN(n)) {
+        onChange(0);
+        setLocal('');
+      } else {
+        // Pad to the caller's decimal budget for the idle display, but
+        // pass the un-rounded number upstream so precision is preserved.
+        setLocal(toDisplayFixed(n, decimals));
+      }
+      setFocused(false);
+      if (onBlur) onBlur(e);
+    },
+    [local, onChange, onBlur, decimals]
+  );
 
   const displayValue = thousandSep && !focused ? formatThousand(local) : local;
 

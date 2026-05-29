@@ -28,15 +28,25 @@ import { atomicWriteFileSync } from '../services/atomicWrite.js';
 import { toCsvDocument } from '../utils/csvSafe.js';
 
 import { parseUploadedFile } from '../services/importParse.js';
+import { getDataset, listDatasets } from '../services/importDatasets.js';
 import {
-  getDataset, listDatasets,
-} from '../services/importDatasets.js';
-import {
-  mapHeaders, applyMappingOverrides, coerceRows, buildCanonical,
-  diffRows, readExisting, writeDataset, backupDataset, listBackups,
-  dispatchShadowWrite, dispatchShadowClear,
-  createPreviewToken, consumePreviewToken,
-  rowsAsObjects, mergeRows, datasetFilePath, notifyCacheClear,
+  mapHeaders,
+  applyMappingOverrides,
+  coerceRows,
+  buildCanonical,
+  diffRows,
+  readExisting,
+  writeDataset,
+  backupDataset,
+  listBackups,
+  dispatchShadowWrite,
+  dispatchShadowClear,
+  createPreviewToken,
+  consumePreviewToken,
+  rowsAsObjects,
+  mergeRows,
+  datasetFilePath,
+  notifyCacheClear,
   configureStageDir,
 } from '../services/importPipeline.js';
 
@@ -62,8 +72,14 @@ const UPLOAD_TMP_DIR = path.join(
 );
 try {
   fs.mkdirSync(UPLOAD_TMP_DIR, { recursive: true, mode: 0o700 });
-  try { fs.chmodSync(UPLOAD_TMP_DIR, 0o700); } catch { /* windows: no-op */ }
-} catch { /* ignore */ }
+  try {
+    fs.chmodSync(UPLOAD_TMP_DIR, 0o700);
+  } catch {
+    /* windows: no-op */
+  }
+} catch {
+  /* ignore */
+}
 
 // Stage directory holds the parsed/canonicalised wizard payload between
 // preview and commit. Created once at module load + registered with the
@@ -71,8 +87,14 @@ try {
 const WIZARD_STAGE_DIR = path.join(UPLOAD_TMP_DIR, 'wizard-stage');
 try {
   fs.mkdirSync(WIZARD_STAGE_DIR, { recursive: true, mode: 0o700 });
-  try { fs.chmodSync(WIZARD_STAGE_DIR, 0o700); } catch { /* windows */ }
-} catch { /* ignore */ }
+  try {
+    fs.chmodSync(WIZARD_STAGE_DIR, 0o700);
+  } catch {
+    /* windows */
+  }
+} catch {
+  /* ignore */
+}
 configureStageDir(WIZARD_STAGE_DIR);
 
 const upload = multer({
@@ -92,14 +114,24 @@ function verifyMagic(filePath, ext) {
     fd = fs.openSync(filePath, 'r');
     const buf = Buffer.alloc(8);
     fs.readSync(fd, buf, 0, 8, 0);
-    if (ext === '.xlsx') return buf[0] === 0x50 && buf[1] === 0x4b && buf[2] === 0x03 && buf[3] === 0x04;
-    if (ext === '.xls')  return buf[0] === 0xd0 && buf[1] === 0xcf && buf[2] === 0x11 && buf[3] === 0xe0;
+    if (ext === '.xlsx')
+      return buf[0] === 0x50 && buf[1] === 0x4b && buf[2] === 0x03 && buf[3] === 0x04;
+    if (ext === '.xls')
+      return buf[0] === 0xd0 && buf[1] === 0xcf && buf[2] === 0x11 && buf[3] === 0xe0;
     if (ext === '.csv' || ext === '.txt') {
-      let nul = 0; for (let i = 0; i < 8; i++) if (buf[i] === 0) nul++;
+      let nul = 0;
+      for (let i = 0; i < 8; i++) if (buf[i] === 0) nul++;
       return nul <= 2;
     }
     return false;
-  } catch { return false; } finally { if (fd) try { fs.closeSync(fd); } catch {} }
+  } catch {
+    return false;
+  } finally {
+    if (fd)
+      try {
+        fs.closeSync(fd);
+      } catch {}
+  }
 }
 
 // Common upload pre-flight
@@ -108,7 +140,9 @@ function requireValidUpload(req, res, next) {
   if (!f) return res.status(400).json({ ok: false, error: 'no_file' });
   const ext = path.extname(f.originalname).toLowerCase();
   if (!verifyMagic(f.path, ext)) {
-    try { fs.unlinkSync(f.path); } catch {}
+    try {
+      fs.unlinkSync(f.path);
+    } catch {}
     return res.status(400).json({ ok: false, error: 'file_content_mismatch' });
   }
   next();
@@ -133,105 +167,146 @@ router.get('/datasets', (req, res) => {
 // Body (multipart): file, dataset, sheet (optional), overrides (JSON, optional)
 // Response: { ok, token, dataset, headers, rows (sample), mapping, diff }
 // ─────────────────────────────────────────────────────────────────
-router.post('/preview', requireRole(4), upload.single('file'), requireValidUpload, async (req, res) => {
-  const cleanup = () => { if (req.file?.path) try { fs.unlinkSync(req.file.path); } catch {} };
-  try {
-    const datasetKey = req.body.dataset;
-    const dataset = getDataset(datasetKey);
-    if (!dataset) { cleanup(); return res.status(400).json({ ok: false, error: 'unknown_dataset' }); }
+router.post(
+  '/preview',
+  requireRole(4),
+  upload.single('file'),
+  requireValidUpload,
+  async (req, res) => {
+    const cleanup = () => {
+      if (req.file?.path)
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {}
+    };
+    try {
+      const datasetKey = req.body.dataset;
+      const dataset = getDataset(datasetKey);
+      if (!dataset) {
+        cleanup();
+        return res.status(400).json({ ok: false, error: 'unknown_dataset' });
+      }
 
-    const sheet = req.body.sheet || null;
-    const overrides = req.body.overrides ? safeJSON(req.body.overrides) : null;
+      const sheet = req.body.sheet || null;
+      const overrides = req.body.overrides ? safeJSON(req.body.overrides) : null;
 
-    const parsed = await parseUploadedFile(req.file, sheet ? { sheet } : {});
-    if (!parsed.headers || parsed.headers.length === 0) {
-      cleanup(); return res.status(400).json({ ok: false, error: 'empty_file' });
-    }
-    if (parsed.rows.length === 0) {
-      cleanup(); return res.status(400).json({ ok: false, error: 'no_data_rows' });
-    }
+      const parsed = await parseUploadedFile(req.file, sheet ? { sheet } : {});
+      if (!parsed.headers || parsed.headers.length === 0) {
+        cleanup();
+        return res.status(400).json({ ok: false, error: 'empty_file' });
+      }
+      if (parsed.rows.length === 0) {
+        cleanup();
+        return res.status(400).json({ ok: false, error: 'no_data_rows' });
+      }
 
-    const headerMappingRaw = mapHeaders(parsed.headers, dataset);
-    const headerMapping = overrides
-      ? applyMappingOverrides(headerMappingRaw, overrides, dataset)
-      : headerMappingRaw;
+      const headerMappingRaw = mapHeaders(parsed.headers, dataset);
+      const headerMapping = overrides
+        ? applyMappingOverrides(headerMappingRaw, overrides, dataset)
+        : headerMappingRaw;
 
-    if (headerMapping.missing.length > 0) {
-      cleanup();
-      return res.status(400).json({
-        ok: false, error: 'missing_required_headers',
-        missing: headerMapping.missing,
+      if (headerMapping.missing.length > 0) {
+        cleanup();
+        return res.status(400).json({
+          ok: false,
+          error: 'missing_required_headers',
+          missing: headerMapping.missing,
+          headers: parsed.headers,
+          meta: parsed.meta,
+          hint: `This file does not look like a ${dataset.label} export. Missing required columns: ${headerMapping.missing.join(', ')}`,
+        });
+      }
+
+      // Coerce types using ORIGINAL row indexing — coerce per canonical
+      // column, then build the canonical-shape rows.
+      const canonical = buildCanonical({
         headers: parsed.headers,
-        meta: parsed.meta,
-        hint: `This file does not look like a ${dataset.label} export. Missing required columns: ${headerMapping.missing.join(', ')}`,
+        rows: parsed.rows,
+        dataset,
+        headerMapping,
+        includeUnmapped: true,
       });
+
+      const { rows: coercedRows, issues } = coerceRows(canonical.headers, canonical.rows, dataset);
+      canonical.rows = coercedRows;
+
+      // Diff against existing
+      const existing = readExisting(dataset);
+      const existingHeaders = Array.isArray(existing)
+        ? dataset.canonicalHeaders
+        : existing.headers || [];
+      const existingRows = Array.isArray(existing)
+        ? existing.map((o) => dataset.canonicalHeaders.map((h) => o[h] ?? ''))
+        : existing.rows || [];
+      const diff = diffRows({
+        existingRows,
+        existingHeaders: Array.isArray(existing) ? dataset.canonicalHeaders : existingHeaders,
+        newRows: canonical.rows,
+        newHeaders: canonical.headers,
+        naturalKey: dataset.naturalKey,
+      });
+
+      // Persist to a wizard-staging file so commit can re-read without
+      // depending on the original tmp upload (which we delete now).
+      const stageFile = path.join(
+        WIZARD_STAGE_DIR,
+        `${crypto.randomBytes(12).toString('hex')}.json`
+      );
+      atomicWriteFileSync(
+        stageFile,
+        JSON.stringify({
+          datasetKey,
+          headers: canonical.headers,
+          rows: canonical.rows,
+          meta: parsed.meta,
+          sourceSha256: fileSha256(req.file.path),
+          filename: req.file.originalname,
+        })
+      );
+
+      const token = createPreviewToken({ stageFile, datasetKey, by: currentUser(req) });
+
+      res.json({
+        ok: true,
+        token,
+        dataset: {
+          key: dataset.key,
+          label: dataset.label,
+          canonicalHeaders: dataset.canonicalHeaders,
+          naturalKey: dataset.naturalKey,
+          requiredHeaders: dataset.requiredHeaders,
+          storageKind: dataset.storage.kind,
+        },
+        file: {
+          name: req.file.originalname,
+          size: req.file.size,
+          sha256: fileSha256(req.file.path),
+        },
+        meta: parsed.meta,
+        headers: {
+          raw: parsed.headers,
+          normalised: headerMapping.normalisedHeaders,
+          unmapped: headerMapping.unmapped,
+          mapping: headerMapping.mapping,
+        },
+        sample: {
+          headers: canonical.headers,
+          rows: canonical.rows.slice(0, 10),
+          totalRows: canonical.rows.length,
+        },
+        coercion: { issues: issues.slice(0, 50), totalIssues: issues.length },
+        diff,
+        modes: ['upsert', 'replace', 'append'],
+        defaultMode: 'upsert',
+      });
+    } catch (err) {
+      logErr(req, 'wizard_preview', err);
+      res.status(err.status || 500).json({ ok: false, error: redactErrorMessage(err) });
+    } finally {
+      cleanup();
     }
-
-    // Coerce types using ORIGINAL row indexing — coerce per canonical
-    // column, then build the canonical-shape rows.
-    const canonical = buildCanonical({
-      headers: parsed.headers, rows: parsed.rows, dataset, headerMapping,
-      includeUnmapped: true,
-    });
-
-    const { rows: coercedRows, issues } = coerceRows(canonical.headers, canonical.rows, dataset);
-    canonical.rows = coercedRows;
-
-    // Diff against existing
-    const existing = readExisting(dataset);
-    const existingHeaders = Array.isArray(existing) ? dataset.canonicalHeaders : (existing.headers || []);
-    const existingRows = Array.isArray(existing) ? existing.map(o => dataset.canonicalHeaders.map(h => o[h] ?? '')) : (existing.rows || []);
-    const diff = diffRows({
-      existingRows,
-      existingHeaders: Array.isArray(existing) ? dataset.canonicalHeaders : existingHeaders,
-      newRows: canonical.rows,
-      newHeaders: canonical.headers,
-      naturalKey: dataset.naturalKey,
-    });
-
-    // Persist to a wizard-staging file so commit can re-read without
-    // depending on the original tmp upload (which we delete now).
-    const stageFile = path.join(WIZARD_STAGE_DIR, `${crypto.randomBytes(12).toString('hex')}.json`);
-    atomicWriteFileSync(stageFile, JSON.stringify({
-      datasetKey,
-      headers: canonical.headers,
-      rows: canonical.rows,
-      meta: parsed.meta,
-      sourceSha256: fileSha256(req.file.path),
-      filename: req.file.originalname,
-    }));
-
-    const token = createPreviewToken({ stageFile, datasetKey, by: currentUser(req) });
-
-    res.json({
-      ok: true,
-      token,
-      dataset: { key: dataset.key, label: dataset.label, canonicalHeaders: dataset.canonicalHeaders, naturalKey: dataset.naturalKey, requiredHeaders: dataset.requiredHeaders, storageKind: dataset.storage.kind },
-      file: { name: req.file.originalname, size: req.file.size, sha256: fileSha256(req.file.path) },
-      meta: parsed.meta,
-      headers: {
-        raw: parsed.headers,
-        normalised: headerMapping.normalisedHeaders,
-        unmapped: headerMapping.unmapped,
-        mapping: headerMapping.mapping,
-      },
-      sample: {
-        headers: canonical.headers,
-        rows: canonical.rows.slice(0, 10),
-        totalRows: canonical.rows.length,
-      },
-      coercion: { issues: issues.slice(0, 50), totalIssues: issues.length },
-      diff,
-      modes: ['upsert', 'replace', 'append'],
-      defaultMode: 'upsert',
-    });
-  } catch (err) {
-    logErr(req, 'wizard_preview', err);
-    res.status(err.status || 500).json({ ok: false, error: redactErrorMessage(err) });
-  } finally {
-    cleanup();
   }
-});
+);
 
 // ─────────────────────────────────────────────────────────────────
 // POST /commit
@@ -257,10 +332,13 @@ router.post('/commit', requireRole(4), async (req, res) => {
     } catch {
       return res.status(400).json({ ok: false, error: 'corrupted_stage_file' });
     }
-    if (!stage || typeof stage !== 'object'
-      || typeof stage.datasetKey !== 'string'
-      || !Array.isArray(stage.headers)
-      || !Array.isArray(stage.rows)) {
+    if (
+      !stage ||
+      typeof stage !== 'object' ||
+      typeof stage.datasetKey !== 'string' ||
+      !Array.isArray(stage.headers) ||
+      !Array.isArray(stage.rows)
+    ) {
       return res.status(400).json({ ok: false, error: 'invalid_stage_shape' });
     }
     // Hard cap: a 1M-row commit is far above legitimate usage and would OOM
@@ -292,14 +370,17 @@ router.post('/commit', requireRole(4), async (req, res) => {
     notifyCacheClear();
 
     // Cleanup stage file
-    try { fs.unlinkSync(entry.stageFile); } catch {}
+    try {
+      fs.unlinkSync(entry.stageFile);
+    } catch {}
 
     const stats = {
       datasetKey: dataset.key,
       datasetLabel: dataset.label,
       mode,
       rowsImported: stage.rows.length,
-      totalAfter: dataset.storage.kind === 'js-array-of-arrays' ? merged.rows.length : merged.length,
+      totalAfter:
+        dataset.storage.kind === 'js-array-of-arrays' ? merged.rows.length : merged.length,
       backup: backupPath ? path.basename(backupPath) : null,
       file: stage.filename,
       sha256: stage.sourceSha256,
@@ -307,10 +388,12 @@ router.post('/commit', requireRole(4), async (req, res) => {
     };
 
     pushHistory({ ...stats, by: currentUser(req) });
-    audit('IMPORT_COMMIT',
+    audit(
+      'IMPORT_COMMIT',
       currentUser(req),
       req.ip || '-',
-      `${dataset.key} mode=${mode} rows=${stats.rowsImported} total=${stats.totalAfter} backup=${stats.backup} sha=${stats.sha256?.slice(0,12)} reason=${stats.reason || '-'}`);
+      `${dataset.key} mode=${mode} rows=${stats.rowsImported} total=${stats.totalAfter} backup=${stats.backup} sha=${stats.sha256?.slice(0, 12)} reason=${stats.reason || '-'}`
+    );
 
     res.json({ ok: true, stats });
   } catch (err) {
@@ -330,9 +413,10 @@ router.get('/template/:dataset', requireRole(4), async (req, res) => {
     const wb = XLSX.utils.book_new();
 
     // Sheet 1 — Data: header row + one example row of empty cells
-    const headers = dataset.storage.kind === 'json-array-of-objects'
-      ? dataset.canonicalHeaders.map(k => dataset.prettyLabels?.[k] || k)
-      : dataset.canonicalHeaders;
+    const headers =
+      dataset.storage.kind === 'json-array-of-objects'
+        ? dataset.canonicalHeaders.map((k) => dataset.prettyLabels?.[k] || k)
+        : dataset.canonicalHeaders;
     const dataAoa = [headers, headers.map(() => '')];
     const wsData = XLSX.utils.aoa_to_sheet(dataAoa);
     XLSX.utils.book_append_sheet(wb, wsData, 'Data');
@@ -356,7 +440,10 @@ router.get('/template/:dataset', requireRole(4), async (req, res) => {
 
     const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
     const fname = `${dataset.key}_template.xlsx`;
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
     res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
     res.send(buf);
   } catch (err) {
@@ -381,8 +468,8 @@ router.get('/export/:dataset', requireRole(4), async (req, res) => {
     let rows = [];
     if (Array.isArray(existing)) {
       const canon = dataset.canonicalHeaders;
-      headers = canon.map(k => dataset.prettyLabels?.[k] || k);
-      rows = existing.map(obj => canon.map(k => obj[k] ?? ''));
+      headers = canon.map((k) => dataset.prettyLabels?.[k] || k);
+      rows = existing.map((obj) => canon.map((k) => obj[k] ?? ''));
     } else {
       headers = existing.headers || [];
       rows = existing.rows || [];
@@ -399,14 +486,17 @@ router.get('/export/:dataset', requireRole(4), async (req, res) => {
     // XLSX export: same formula-injection guard. xlsx writes string cells as
     // type 's' but Excel may still interpret `=...` strings on cell-edit; prefix
     // the leading char with ' so the cell never resolves to a formula.
-    const safeRows = rows.map(r => r.map(safeXlsxCell));
+    const safeRows = rows.map((r) => r.map(safeXlsxCell));
     const safeHeaders = headers.map(safeXlsxCell);
     const XLSX = await import('xlsx');
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([safeHeaders, ...safeRows]);
     XLSX.utils.book_append_sheet(wb, ws, 'Data');
     const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
     res.setHeader('Content-Disposition', `attachment; filename="${dataset.key}_export.xlsx"`);
     res.send(buf);
   } catch (err) {
@@ -422,6 +512,7 @@ router.get('/export/:dataset', requireRole(4), async (req, res) => {
 function safeXlsxCell(v) {
   if (v == null) return '';
   if (typeof v !== 'string') return v;
+  // eslint-disable-next-line no-irregular-whitespace -- pre-existing tech debt: vietnamese whitespace intentional
   if (/^[\s \t\r\n]*[=+\-@]/.test(v)) return "'" + v;
   return v;
 }
@@ -433,7 +524,7 @@ router.get('/history', requireRole(4), (req, res) => {
   const dataset = req.query.dataset || null;
   const limit = Math.min(Number(req.query.limit) || 50, HISTORY_MAX);
   let items = _history;
-  if (dataset) items = items.filter(h => h.datasetKey === dataset);
+  if (dataset) items = items.filter((h) => h.datasetKey === dataset);
   res.json({ ok: true, items: items.slice(0, limit) });
 });
 
@@ -463,14 +554,16 @@ router.post('/restore', requireRole(4), (req, res) => {
     if (!dataset) return res.status(404).json({ ok: false, error: 'unknown_dataset' });
     // Path traversal guard: backup must live in dataset's folder, must
     // match the backup naming pattern.
-    if (path.basename(file) !== file) return res.status(400).json({ ok: false, error: 'invalid_file' });
+    if (path.basename(file) !== file)
+      return res.status(400).json({ ok: false, error: 'invalid_file' });
     const target = datasetFilePath(dataset);
     const ext = path.extname(target);
     const base = path.basename(target, ext);
     const re = new RegExp(`^${base}_backup_\\d{15}${ext.replace('.', '\\.')}$`);
     if (!re.test(file)) return res.status(400).json({ ok: false, error: 'invalid_file_pattern' });
     const backupFull = path.join(path.dirname(target), file);
-    if (!fs.existsSync(backupFull)) return res.status(404).json({ ok: false, error: 'backup_not_found' });
+    if (!fs.existsSync(backupFull))
+      return res.status(404).json({ ok: false, error: 'backup_not_found' });
 
     // Backup CURRENT before overwriting (safety net for accidental restore)
     const safeBackup = backupDataset(dataset);
@@ -488,14 +581,25 @@ router.post('/restore', requireRole(4), (req, res) => {
     }
 
     pushHistory({
-      datasetKey: dataset.key, datasetLabel: dataset.label,
-      mode: 'restore', restoredFrom: file, backup: safeBackup ? path.basename(safeBackup) : null,
+      datasetKey: dataset.key,
+      datasetLabel: dataset.label,
+      mode: 'restore',
+      restoredFrom: file,
+      backup: safeBackup ? path.basename(safeBackup) : null,
       by: currentUser(req),
     });
-    audit('IMPORT_RESTORE', currentUser(req), req.ip || '-',
-      `${dataset.key} from=${file} pre-backup=${safeBackup ? path.basename(safeBackup) : '-'}`);
+    audit(
+      'IMPORT_RESTORE',
+      currentUser(req),
+      req.ip || '-',
+      `${dataset.key} from=${file} pre-backup=${safeBackup ? path.basename(safeBackup) : '-'}`
+    );
 
-    res.json({ ok: true, restoredFrom: file, preBackup: safeBackup ? path.basename(safeBackup) : null });
+    res.json({
+      ok: true,
+      restoredFrom: file,
+      preBackup: safeBackup ? path.basename(safeBackup) : null,
+    });
   } catch (err) {
     logErr(req, 'wizard_restore', err);
     res.status(500).json({ ok: false, error: redactErrorMessage(err) });
@@ -506,7 +610,13 @@ router.post('/restore', requireRole(4), (req, res) => {
 // helpers
 // ─────────────────────────────────────────────────────────────────
 
-function safeJSON(s) { try { return JSON.parse(s); } catch { return null; } }
+function safeJSON(s) {
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
+}
 function currentUser(req) {
   return req.user?.user?.username || req.user?.username || '-';
 }

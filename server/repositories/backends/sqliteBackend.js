@@ -26,11 +26,16 @@ let dbReady = null;
 function db() {
   if (dbReady !== null) return dbReady;
   const fp = getDbPath();
-  if (!fs.existsSync(fp)) { dbReady = false; return false; }
+  if (!fs.existsSync(fp)) {
+    dbReady = false;
+    return false;
+  }
   try {
     dbReady = getDb();
     // Sanity: verify _migration_state exists (schema initialized).
-    dbReady.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='_migration_state'").get();
+    dbReady
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='_migration_state'")
+      .get();
   } catch (err) {
     console.warn('[sqliteBackend] failed to open ops.db, falling back to file:', err.message);
     dbReady = false;
@@ -54,27 +59,31 @@ export function _resetDbReadyForTests() {
 function scalarOrJson(v) {
   if (v == null) return null;
   if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') return v;
-  try { return JSON.stringify(v); } catch { return String(v); }
+  try {
+    return JSON.stringify(v);
+  } catch {
+    return String(v);
+  }
 }
 
 function quoteColumnsFor(q) {
   const raw = JSON.stringify(q);
   const state = q && typeof q.state === 'object' ? q.state : {};
   return {
-    id:          Number.isFinite(+q?.id) ? +q.id : null,
-    type:        scalarOrJson(q?.type),
-    rfq_number:  scalarOrJson(state.rfq_number ?? state.rfq_no),
-    ccl_pn:      scalarOrJson(state.ccl_pn),
-    direct_cu:   scalarOrJson(state.direct_cu),
-    end_cu:      scalarOrJson(state.end_cu),
-    npi_owner:   scalarOrJson(q?.npi_owner ?? state.npi_owner),
-    sale_owner:  scalarOrJson(q?.sale_owner ?? state.sale_owner),
-    saved_at:    scalarOrJson(q?.saved_at),
-    version:     scalarOrJson(q?.version),
-    label:       scalarOrJson(q?.label),
-    result:      scalarOrJson(q?.result),
-    state_json:  JSON.stringify(state),
-    raw_json:    raw,
+    id: Number.isFinite(+q?.id) ? +q.id : null,
+    type: scalarOrJson(q?.type),
+    rfq_number: scalarOrJson(state.rfq_number ?? state.rfq_no),
+    ccl_pn: scalarOrJson(state.ccl_pn),
+    direct_cu: scalarOrJson(state.direct_cu),
+    end_cu: scalarOrJson(state.end_cu),
+    npi_owner: scalarOrJson(q?.npi_owner ?? state.npi_owner),
+    sale_owner: scalarOrJson(q?.sale_owner ?? state.sale_owner),
+    saved_at: scalarOrJson(q?.saved_at),
+    version: scalarOrJson(q?.version),
+    label: scalarOrJson(q?.label),
+    result: scalarOrJson(q?.result),
+    state_json: JSON.stringify(state),
+    raw_json: raw,
   };
 }
 
@@ -91,13 +100,13 @@ const QUOTE_INSERT_SQL = `
 // with a table/kind not in this map throws — prevents SQL injection
 // regressions if a future caller accidentally passes user input.
 const ALLOWED_QUERIES = {
-  bom:                 { kinds: null },
-  routing_operations:  { kinds: null },
-  ifs_inventory:       { kinds: new Set(['inventory', 'finished_goods', 'raw_materials']) },
-  materials:           { kinds: new Set(['npi', 'sourcing']) },
-  quotes:              { kinds: null },
-  rfq_tracker:         { kinds: null },
-  sample_tracker:      { kinds: null },
+  bom: { kinds: null },
+  routing_operations: { kinds: null },
+  ifs_inventory: { kinds: new Set(['inventory', 'finished_goods', 'raw_materials']) },
+  materials: { kinds: new Set(['npi', 'sourcing']) },
+  quotes: { kinds: null },
+  rfq_tracker: { kinds: null },
+  sample_tracker: { kinds: null },
 };
 
 function rowsFromTable(table, kind = null) {
@@ -109,16 +118,20 @@ function rowsFromTable(table, kind = null) {
     }
   }
   const conn = db();
-  if (!conn) return null;   // signal caller to fall back
-  const rows = kind != null
-    ? conn.prepare(`SELECT raw_json FROM ${table} WHERE kind = ?`).all(kind)
-    : conn.prepare(`SELECT raw_json FROM ${table}`).all();
-  if (rows.length === 0) return null;   // empty → fall back to file
+  if (!conn) return null; // signal caller to fall back
+  const rows =
+    kind != null
+      ? conn.prepare(`SELECT raw_json FROM ${table} WHERE kind = ?`).all(kind)
+      : conn.prepare(`SELECT raw_json FROM ${table}`).all();
+  if (rows.length === 0) return null; // empty → fall back to file
   // Preserve raw-json shape: parse back into the same object shape
   // parseJsDataFile would produce.
-  return rows.map(r => {
-    try { return JSON.parse(r.raw_json); }
-    catch { return {}; }
+  return rows.map((r) => {
+    try {
+      return JSON.parse(r.raw_json);
+    } catch {
+      return {};
+    }
   });
 }
 
@@ -158,16 +171,22 @@ export default {
     const conn = db();
     if (!conn) {
       const list = fileBackend.listQuotes() || [];
-      return list.find(q => q && q.id === id) || null;
+      return list.find((q) => q && q.id === id) || null;
     }
     try {
       const row = conn.prepare('SELECT raw_json FROM quotes WHERE id = ?').get(id);
       if (row) {
-        try { return JSON.parse(row.raw_json); } catch { /* corrupt row — fall back */ }
+        try {
+          return JSON.parse(row.raw_json);
+        } catch {
+          /* corrupt row — fall back */
+        }
       }
-    } catch { /* fall through to file */ }
+    } catch {
+      /* fall through to file */
+    }
     const list = fileBackend.listQuotes() || [];
-    return list.find(q => q && q.id === id) || null;
+    return list.find((q) => q && q.id === id) || null;
   },
   /**
    * Shadow-write a single quote into SQLite. Best-effort: returns
@@ -203,9 +222,9 @@ export default {
     const conn = db();
     if (!conn) return { ok: false, written: 0, deleted: 0, skipped: 0, reason: 'db-unavailable' };
     const list = Array.isArray(quotes) ? quotes : [];
-    const valid = list.filter(q => q && Number.isFinite(+q.id));
+    const valid = list.filter((q) => q && Number.isFinite(+q.id));
     const skipped = list.length - valid.length;
-    const keepIds = new Set(valid.map(q => +q.id));
+    const keepIds = new Set(valid.map((q) => +q.id));
     try {
       const insert = conn.prepare(QUOTE_INSERT_SQL);
       // DELETE-then-upsert semantics wrapped in a single transaction.
@@ -222,6 +241,7 @@ export default {
           // we never hit it, but defensive coding.
           const CHUNK = 500;
           const idArr = [...ids];
+          // eslint-disable-next-line no-useless-assignment -- pre-existing tech debt
           let kept = [];
           for (let i = 0; i < idArr.length; i += CHUNK) {
             kept = idArr.slice(i, i + CHUNK);
@@ -242,7 +262,10 @@ export default {
       return { ok: true, written: valid.length, deleted, skipped };
     } catch (err) {
       return {
-        ok: false, written: 0, deleted: 0, skipped,
+        ok: false,
+        written: 0,
+        deleted: 0,
+        skipped,
         reason: err?.message || 'bulk-upsert-failed',
       };
     }
@@ -253,17 +276,33 @@ export default {
     // entirely" (fall back) by checking schema first.
     const conn = db();
     if (!conn) return fileBackend.listRfqTracker();
-    const has = conn.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='rfq_tracker'").get();
+    const has = conn
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='rfq_tracker'")
+      .get();
     if (!has) return fileBackend.listRfqTracker();
     const rows = conn.prepare('SELECT raw_json FROM rfq_tracker').all();
-    return rows.map(r => { try { return JSON.parse(r.raw_json); } catch { return {}; } });
+    return rows.map((r) => {
+      try {
+        return JSON.parse(r.raw_json);
+      } catch {
+        return {};
+      }
+    });
   },
   listSampleTracker() {
     const conn = db();
     if (!conn) return fileBackend.listSampleTracker();
-    const has = conn.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='sample_tracker'").get();
+    const has = conn
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='sample_tracker'")
+      .get();
     if (!has) return fileBackend.listSampleTracker();
     const rows = conn.prepare('SELECT raw_json FROM sample_tracker').all();
-    return rows.map(r => { try { return JSON.parse(r.raw_json); } catch { return {}; } });
+    return rows.map((r) => {
+      try {
+        return JSON.parse(r.raw_json);
+      } catch {
+        return {};
+      }
+    });
   },
 };

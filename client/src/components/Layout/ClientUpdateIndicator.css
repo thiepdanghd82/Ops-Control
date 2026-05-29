@@ -1,0 +1,94 @@
+/* <ClientUpdateIndicator> styling — P0 visibility nudge.
+ *
+ * Two modes:
+ *   .cui-banner — full-width red bar pinned to top
+ *   .cui-chip   — small pill at top-right corner
+ *
+ * z-index sits above ConnectionBanner (which is 1000) but below
+ * modal overlays (which start at 2000 in this codebase).
+ */
+
+.cui-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1100;
+  background: #b80c0c;
+  color: #fff;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 14px;
+  line-height: 1.4;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid #7a0707;
+}
+
+.cui-banner-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.cui-banner-text strong {
+  font-weight: 700;
+}
+
+.cui-banner-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cui-banner-collapse-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.cui-banner-collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.cui-banner-collapse-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.cui-chip {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 1100;
+  background: #b80c0c;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #7a0707;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.cui-chip:hover {
+  background: #d10e0e;
+}
+
+.cui-chip:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* When banner is visible, push down chip-anchored UI by the banner
+ * height. Each consumer can opt-in via the `data-cui-banner` attribute
+ * on <html>, set by the component on mount. */
+html[data-cui-banner='true'] body {
+  padding-top: 44px;
+}

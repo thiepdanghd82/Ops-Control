@@ -17,7 +17,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { toCsvBytes } from './authService.js';
 
-function decode(buf) { return Buffer.from(buf).toString('utf-8'); }
+function decode(buf) {
+  return Buffer.from(buf).toString('utf-8');
+}
 
 test('toCsvBytes: prepends UTF-8 BOM so Excel reads Vietnamese diacritics correctly', () => {
   const s = decode(toCsvBytes(['Customer'], [['CCL Vinh Long']]));
@@ -25,12 +27,9 @@ test('toCsvBytes: prepends UTF-8 BOM so Excel reads Vietnamese diacritics correc
 });
 
 test('toCsvBytes: escapes = + - @ formula prefix (CSV injection guard)', () => {
-  const s = decode(toCsvBytes(['Name'], [
-    ['=SUM(A1)'],
-    ['+cmd|/c calc'],
-    ['-2+3'],
-    ['@HYPERLINK(...)'],
-  ]));
+  const s = decode(
+    toCsvBytes(['Name'], [['=SUM(A1)'], ['+cmd|/c calc'], ['-2+3'], ['@HYPERLINK(...)']])
+  );
   // Each dangerous cell must start with an apostrophe so Excel treats it literal.
   assert.match(s, /'=SUM\(A1\)/);
   assert.match(s, /'\+cmd\|\/c calc/);
@@ -40,6 +39,7 @@ test('toCsvBytes: escapes = + - @ formula prefix (CSV injection guard)', () => {
 
 test('toCsvBytes: formula prefix applies even with leading whitespace (Excel strips it before parsing)', () => {
   const s = decode(toCsvBytes(['x'], [['  =A1']]));
+  // eslint-disable-next-line no-regex-spaces -- pre-existing tech debt: intentional multi-space match in CSV fixture
   assert.match(s, /'  =A1/);
 });
 

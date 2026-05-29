@@ -41,6 +41,19 @@ export default defineConfig([
           argsIgnorePattern: '^[A-Z_]',
         },
       ],
+      // React Compiler rules — shipped in eslint-plugin-react-hooks 8.x+
+      // and pulled in transitively via reactHooks.configs.flat.recommended.
+      // Codebase is mid-migration (see CLAUDE.md MES-3-FIX-20 + the
+      // existing eslint-disable-next-line comments for set-state-in-effect).
+      // Keep these as 'warn' so devs still see them in IDE + CI output
+      // but CI doesn't block on partial migration. Promote back to
+      // 'error' as part of the dedicated React Compiler migration sprint
+      // (tech-debt issue tracked in v1.6.x backlog).
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/refs': 'warn',
+      'react-hooks/purity': 'warn',
+      'react-hooks/preserve-manual-memoization': 'warn',
+      'react-hooks/static-components': 'warn',
     },
   },
   // Sprint 11 quick-win: flag NEW inline-style usage so we don't add

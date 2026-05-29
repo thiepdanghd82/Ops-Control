@@ -1,7 +1,24 @@
 /* global process */
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { visualizer } from 'rollup-plugin-visualizer'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { visualizer } from 'rollup-plugin-visualizer';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+// P0 client version banner — read client/package.json#version once at
+// config load and inject as `__APP_VERSION__` global. The banner compares
+// this against GET /api/version's `version` to decide whether to render.
+// This is a P0-scoped shim — full Vite-define SSoT sync across the
+// codebase is a separate follow-up (tracked in CLAUDE.md).
+const PKG_VERSION = (() => {
+  try {
+    const pkgUrl = new URL('./package.json', import.meta.url);
+    const pkg = JSON.parse(readFileSync(fileURLToPath(pkgUrl), 'utf-8'));
+    return pkg.version || '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+})();
 
 // Sprint 32 — opt-in bundle analyzer. `ANALYZE=1 npm run build` emits
 // dist/bundle-stats.html (interactive treemap) + dist/bundle-stats.json
@@ -14,22 +31,24 @@ const ANALYZE = process.env.ANALYZE === '1';
 export default defineConfig({
   plugins: [
     react(),
-    ANALYZE && visualizer({
-      filename: 'dist/bundle-stats.html',
-      template: 'treemap',
-      gzipSize: true,
-      brotliSize: true,
-      open: false,
-    }),
+    ANALYZE &&
+      visualizer({
+        filename: 'dist/bundle-stats.html',
+        template: 'treemap',
+        gzipSize: true,
+        brotliSize: true,
+        open: false,
+      }),
     // Second pass emits raw-data JSON for scripting (future perf-budget
     // rule that reads module-level costs instead of file totals).
-    ANALYZE && visualizer({
-      filename: 'dist/bundle-stats.json',
-      template: 'raw-data',
-      gzipSize: true,
-      brotliSize: true,
-      open: false,
-    }),
+    ANALYZE &&
+      visualizer({
+        filename: 'dist/bundle-stats.json',
+        template: 'raw-data',
+        gzipSize: true,
+        brotliSize: true,
+        open: false,
+      }),
   ].filter(Boolean),
   build: {
     // Phase 9L.2 — do not emit .js.map in production. Default Vite
@@ -48,24 +67,25 @@ export default defineConfig({
   //   opsctl-v1.3-marker:<commit-or-buildhash>:<iso-timestamp>
   define: {
     __OPS_BUNDLE_MARKER__: JSON.stringify(
-      `opsctl-v1.3-marker:${process.env.OPS_BUILD_ID || 'local'}:${new Date().toISOString()}`,
+      `opsctl-v1.3-marker:${process.env.OPS_BUILD_ID || 'local'}:${new Date().toISOString()}`
     ),
+    __APP_VERSION__: JSON.stringify(PKG_VERSION),
   },
   server: {
     port: 5174,
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
-        changeOrigin: true
+        changeOrigin: true,
       },
       '/legacy': {
         target: 'http://localhost:3000',
-        changeOrigin: true
+        changeOrigin: true,
       },
       '/data': {
         target: 'http://localhost:3000',
-        changeOrigin: true
-      }
-    }
-  }
-})
+        changeOrigin: true,
+      },
+    },
+  },
+});
