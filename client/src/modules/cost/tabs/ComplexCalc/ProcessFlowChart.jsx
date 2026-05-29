@@ -32,10 +32,15 @@ import './ComplexCalc.css';
 const ROLE_LEVELS = { viewonly: 1, user: 2, cost: 3, admin: 4, sys: 5 };
 
 function procKey(spIdx, p, i) {
-  return `p_${spIdx}_${i}_${(p.workcenter || p.label || 'proc').replace(/\W/g, '')}`;
+  return `p_${spIdx}_${i}_${String(p.workcenter || p.label || 'proc').replace(/\W/g, '')}`;
 }
 function matKey(spIdx, m, i) {
-  return `m_${spIdx}_${i}_${(m.code || m.desc || 'mat').replace(/\W/g, '')}`;
+  // String() guard — operator-loaded quotes can ship `code` / `desc` as a
+  // number (e.g. numeric SKU 12345) when a library row got typed-coerced
+  // during import. Without it `.replace` is undefined and Standard +
+  // Complex flow charts crash with "...replace is not a function" the
+  // moment Summarize / Layout tries to render the diagram.
+  return `m_${spIdx}_${i}_${String(m.code || m.desc || 'mat').replace(/\W/g, '')}`;
 }
 function mkId() {
   return `id_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -67,7 +72,7 @@ function deriveGroup(src, spIdx, fallbackTitle, kind = 'cplx') {
   const otherMats = visibleMats
     .filter((m) => m.row_type !== 'Main.Mat')
     .map((m, i) => ({
-      key: `x_${spIdx}_${i}_${(m.code || 'x').replace(/\W/g, '')}`,
+      key: `x_${spIdx}_${i}_${String(m.code || 'x').replace(/\W/g, '')}`,
       label: m.desc || m.code || `Extra ${i + 1}`,
       code: m.code || '',
       type: 'o',

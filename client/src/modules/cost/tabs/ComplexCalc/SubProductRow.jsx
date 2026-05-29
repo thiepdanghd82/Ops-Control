@@ -153,8 +153,10 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
 
   const setSpSetupLmActive = useCallback(
     (mi, value) => {
+      // VN locale: parseLocaleNumber handles both "12.5" and "12,5"; raw
+      // Number("12,5") was returning NaN → coerced to 0/null.
       if (activeMoqIdxCpx === 0) {
-        setMat(mi, 'setup_lm', value === '' || value == null ? 0 : Number(value));
+        setMat(mi, 'setup_lm', value === '' || value == null ? 0 : parseLocaleNumber(value) || 0);
         return;
       }
       const ei = activeMoqIdxCpx - 1;
@@ -162,12 +164,8 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
       const em = { ...(extra[ei] || {}) };
       const map = { ...(em[tierSpLmField] || {}) };
       const arr = Array.isArray(map[spi]) ? [...map[spi]] : [];
-      arr[mi] =
-        value === '' || value == null
-          ? null
-          : Number.isFinite(Number(value))
-            ? Number(value)
-            : null;
+      const parsedLm = parseLocaleNumber(value);
+      arr[mi] = value === '' || value == null ? null : Number.isFinite(parsedLm) ? parsedLm : null;
       map[spi] = arr;
       em[tierSpLmField] = map;
       extra[ei] = em;
@@ -178,8 +176,9 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
 
   const setSpSetupHActive = useCallback(
     (pi, value) => {
+      // VN locale: parseLocaleNumber handles both "12.5" and "12,5".
       if (activeMoqIdxCpx === 0) {
-        setProc(pi, 'setup_h', value === '' || value == null ? 0 : Number(value));
+        setProc(pi, 'setup_h', value === '' || value == null ? 0 : parseLocaleNumber(value) || 0);
         return;
       }
       const ei = activeMoqIdxCpx - 1;
@@ -187,12 +186,8 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
       const em = { ...(extra[ei] || {}) };
       const map = { ...(em.sp_proc_setup_h || {}) };
       const arr = Array.isArray(map[spi]) ? [...map[spi]] : [];
-      arr[pi] =
-        value === '' || value == null
-          ? null
-          : Number.isFinite(Number(value))
-            ? Number(value)
-            : null;
+      const parsedH = parseLocaleNumber(value);
+      arr[pi] = value === '' || value == null ? null : Number.isFinite(parsedH) ? parsedH : null;
       map[spi] = arr;
       em.sp_proc_setup_h = map;
       extra[ei] = em;

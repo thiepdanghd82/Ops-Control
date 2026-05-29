@@ -10,6 +10,7 @@ import { genRfqNum } from '../../../../utils/rfqGen';
 import { sharedApi } from '../../../../services/api';
 import DecimalInput from '../../../../utils/DecimalInput';
 import RfqInfoCard from '../../../../components/Shared/RfqInfoCard';
+import { parseLocaleNumber } from '../../../../utils/format';
 
 export default function CalcHeader() {
   const { stdState, cplxState, setStdField, dispatch } = useCalc();
@@ -21,7 +22,9 @@ export default function CalcHeader() {
       // Accept either a raw string (legacy <input type=text/number>) or a
       // pre-parsed number from DecimalInput via RfqInfoCard. When isNum
       // is true we coerce strings, otherwise pass through.
-      const v = isNum ? (typeof value === 'number' ? value : parseFloat(value) || 0) : value;
+      // parseLocaleNumber accepts both "12.5" and VN-locale "12,5"; raw
+      // parseFloat truncated "12,5" → 12 (operator-reported regression).
+      const v = isNum ? (typeof value === 'number' ? value : parseLocaleNumber(value) || 0) : value;
       setStdField(field, v);
       if (field === 'site') setActiveSite(v);
     },
@@ -78,7 +81,7 @@ export default function CalcHeader() {
           ? value
           : value === '' || value == null
             ? 0
-            : parseFloat(value) || 0;
+            : parseLocaleNumber(value) || 0;
       dispatch({ type: 'SET_EXTRA_MOQ', payload: { idx, field, value: v } });
       // Bidirectional USD ↔ VND sync for price/target fields.
       const rate = st.usd_rate || 0;

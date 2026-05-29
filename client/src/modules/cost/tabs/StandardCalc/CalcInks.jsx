@@ -56,7 +56,8 @@ export default function CalcInks() {
 
   const handleField = useCallback(
     (idx, field, value, isNum = false) => {
-      setInkField(idx, field, isNum ? parseFloat(value) || 0 : value);
+      // VN locale support: parseLocaleNumber accepts "12,5" (12.5).
+      setInkField(idx, field, isNum ? parseLocaleNumber(value) || 0 : value);
     },
     [setInkField]
   );

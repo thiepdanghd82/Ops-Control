@@ -5,7 +5,7 @@
 import { useCallback, useMemo } from 'react';
 import { useCalc } from '../../../../context/CalcContext';
 import { calcPacking, calcShipping } from '../../../../services/calcEngine';
-import { fmtN as _fmtN } from '../../../../utils/format';
+import { fmtN as _fmtN, parseLocaleNumber } from '../../../../utils/format';
 import DecimalInput from '../../../../utils/DecimalInput';
 
 // Local wrapper: default 6 decimals for packing/shipping unit costs.
@@ -28,7 +28,8 @@ export default function CalcPackingShip() {
 
   const handleField = useCallback(
     (field, value, isNum = false) => {
-      setStdField(field, isNum ? parseFloat(value) || 0 : value);
+      // VN locale support: parseLocaleNumber accepts "12,5" → 12.5.
+      setStdField(field, isNum ? parseLocaleNumber(value) || 0 : value);
     },
     [setStdField]
   );
