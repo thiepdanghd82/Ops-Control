@@ -15,13 +15,13 @@ const STORAGE_KEY = 'ops.rfqColors.v1';
 
 /** Palette shown in the context menu color bar (matches macOS Finder tags). */
 export const RFQ_COLOR_PALETTE = [
-  { key: 'red',    color: '#ef4444', label: 'Red' },
+  { key: 'red', color: '#ef4444', label: 'Red' },
   { key: 'orange', color: '#f97316', label: 'Orange' },
   { key: 'yellow', color: '#eab308', label: 'Yellow' },
-  { key: 'green',  color: '#22c55e', label: 'Green' },
-  { key: 'blue',   color: '#3b82f6', label: 'Blue' },
+  { key: 'green', color: '#22c55e', label: 'Green' },
+  { key: 'blue', color: '#3b82f6', label: 'Blue' },
   { key: 'purple', color: '#a855f7', label: 'Purple' },
-  { key: 'gray',   color: '#64748b', label: 'Gray' },
+  { key: 'gray', color: '#64748b', label: 'Gray' },
 ];
 
 function load() {
@@ -39,11 +39,15 @@ let state = load();
 const listeners = new Set();
 
 function emit() {
-  listeners.forEach(l => l());
+  listeners.forEach((l) => l());
 }
 
 function persist() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* ignore quota */ }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    /* ignore quota */
+  }
 }
 
 export function getRfqColor(rfq) {
@@ -55,7 +59,10 @@ export function setRfqColor(rfq, color) {
   if (!rfq) return;
   // Replace the whole object so useSyncExternalStore's identity check fires.
   if (color) state = { ...state, [rfq]: color };
-  else { const { [rfq]: _drop, ...rest } = state; state = rest; }
+  else {
+    const { [rfq]: _drop, ...rest } = state;
+    state = rest;
+  }
   persist();
   emit();
 }
@@ -65,7 +72,9 @@ function subscribe(cb) {
   return () => listeners.delete(cb);
 }
 
-function getSnapshot() { return state; }
+function getSnapshot() {
+  return state;
+}
 
 /** React hook — returns the current colors map and re-renders on changes. */
 export function useRfqColors() {

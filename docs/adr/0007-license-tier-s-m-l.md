@@ -27,11 +27,11 @@ brief — **S = 15, M = 20, L = 50** active users — and we need to:
 
 ### Tier table
 
-| Tier | Active users | Use case |
-|---|---|---|
-| **S** | 15 | Single-shift plant, ~1 supervisor + ~12 operators + 2 admin |
-| **M** | 20 | Two-shift plant, +5 cross-shift seats |
-| **L** | 50 | Multi-site or multi-line plant, includes QC + planning teams |
+| Tier  | Active users | Use case                                                     |
+| ----- | ------------ | ------------------------------------------------------------ |
+| **S** | 15           | Single-shift plant, ~1 supervisor + ~12 operators + 2 admin  |
+| **M** | 20           | Two-shift plant, +5 cross-shift seats                        |
+| **L** | 50           | Multi-site or multi-line plant, includes QC + planning teams |
 
 `max_users` baked into the license JSON exactly matches `TIER_LIMITS[tier]`;
 mismatch (e.g. tier S claiming `max_users=50`) rejects with
@@ -51,12 +51,12 @@ script).
 
 ### Enforcement points
 
-| Layer | Code | Behaviour |
-|---|---|---|
-| Server middleware | `requireSeatAvailable()` in `server/services/licenseService.js` | `POST /api/auth/users` returns 402 `LICENSE_LIMIT_EXCEEDED` when at cap |
-| Server diagnostic | `GET /api/license/status` (admin/sys) | Reads tier + counts, exposes `seats_remaining` for admin UI |
-| Client UX | (deferred to v1.3.1) | Disable the "Add user" button when status returns `seats_remaining === 0` |
-| Bypass prevention | Server-only enforcement | Client UI changes don't allow more users; the curl path also fails |
+| Layer             | Code                                                            | Behaviour                                                                 |
+| ----------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Server middleware | `requireSeatAvailable()` in `server/services/licenseService.js` | `POST /api/auth/users` returns 402 `LICENSE_LIMIT_EXCEEDED` when at cap   |
+| Server diagnostic | `GET /api/license/status` (admin/sys)                           | Reads tier + counts, exposes `seats_remaining` for admin UI               |
+| Client UX         | (deferred to v1.3.1)                                            | Disable the "Add user" button when status returns `seats_remaining === 0` |
+| Bypass prevention | Server-only enforcement                                         | Client UI changes don't allow more users; the curl path also fails        |
 
 ### Why these specific numbers
 
@@ -114,6 +114,7 @@ explicitly supersede this section.
 ### Reversal cost
 
 Low. To remove tier enforcement entirely:
+
 1. Remove `requireSeatAvailable` from `POST /api/auth/users`.
 2. Sign all customer licenses with `max_users` set to a large number.
 3. Update CHANGELOG.md.

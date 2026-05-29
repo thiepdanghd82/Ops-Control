@@ -3,9 +3,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  inc, observeLatency, renderPrometheus, _resetMetrics,
-} from './metrics.js';
+import { inc, observeLatency, renderPrometheus, _resetMetrics } from './metrics.js';
 
 test('inc increments counter', () => {
   _resetMetrics();

@@ -18,12 +18,16 @@ export default function CalcSummarize() {
   const tierSt = useMemo(() => getActiveTierState(st), [st]);
   const result = useMemo(() => {
     if (!lib) return null;
-    try { return calcAll(tierSt, null, lib, null); } catch { return null; }
+    try {
+      return calcAll(tierSt, null, lib, null);
+    } catch {
+      return null;
+    }
   }, [tierSt, lib]);
 
   const moqIdx = st.active_moq_idx || 0;
-  const moqQty = moqIdx === 0 ? (st.moq || 0) : (st.extra_moqs?.[moqIdx - 1]?.moq || 0);
-  const sp = moqIdx === 0 ? (st.selling_price || 0) : (st.extra_moqs?.[moqIdx - 1]?.price || 0);
+  const moqQty = moqIdx === 0 ? st.moq || 0 : st.extra_moqs?.[moqIdx - 1]?.moq || 0;
+  const sp = moqIdx === 0 ? st.selling_price || 0 : st.extra_moqs?.[moqIdx - 1]?.price || 0;
 
   // KPI cards need a completed calc pass; the flow chart does not —
   // it derives purely from stdState.materials[] + stdState.processes[].
@@ -53,7 +57,9 @@ export default function CalcSummarize() {
         </div>
         <div className="sc-sum-kpi" style={{ borderColor: '#dc2626' }}>
           <div className="sc-sum-kpi-label">Total Cost</div>
-          <div className="sc-sum-kpi-val" style={{ color: '#dc2626' }}>${fmtN(totalCost, 5)}</div>
+          <div className="sc-sum-kpi-val" style={{ color: '#dc2626' }}>
+            ${fmtN(totalCost, 5)}
+          </div>
           <div className="sc-sum-kpi-sub">USD/unit</div>
         </div>
         <div className="sc-sum-kpi" style={{ borderColor: '#1e40af' }}>
@@ -63,17 +69,31 @@ export default function CalcSummarize() {
         </div>
         <div className="sc-sum-kpi" style={{ borderColor: '#0891b2' }} title={KPI_TOOLTIPS.va}>
           <div className="sc-sum-kpi-label">VA%</div>
-          <div className="sc-sum-kpi-val" style={{ color: '#0891b2' }}>{pct(result.va)}</div>
+          <div className="sc-sum-kpi-val" style={{ color: '#0891b2' }}>
+            {pct(result.va)}
+          </div>
           <div className="sc-sum-kpi-sub">Value Add</div>
         </div>
-        <div className="sc-sum-kpi" style={{ borderColor: '#7c3aed' }} title={KPI_TOOLTIPS.contribution}>
+        <div
+          className="sc-sum-kpi"
+          style={{ borderColor: '#7c3aed' }}
+          title={KPI_TOOLTIPS.contribution}
+        >
           <div className="sc-sum-kpi-label">Contr%</div>
-          <div className="sc-sum-kpi-val" style={{ color: '#7c3aed' }}>{pct(result.contribution)}</div>
+          <div className="sc-sum-kpi-val" style={{ color: '#7c3aed' }}>
+            {pct(result.contribution)}
+          </div>
           <div className="sc-sum-kpi-sub">Contribution</div>
         </div>
-        <div className="sc-sum-kpi" style={{ borderColor: gmClr(result.gm) }} title={KPI_TOOLTIPS.gm}>
+        <div
+          className="sc-sum-kpi"
+          style={{ borderColor: gmClr(result.gm) }}
+          title={KPI_TOOLTIPS.gm}
+        >
           <div className="sc-sum-kpi-label">GM%</div>
-          <div className="sc-sum-kpi-val" style={{ color: gmClr(result.gm) }}>{pct(result.gm)}</div>
+          <div className="sc-sum-kpi-val" style={{ color: gmClr(result.gm) }}>
+            {pct(result.gm)}
+          </div>
           <div className="sc-sum-kpi-sub">Gross Margin</div>
         </div>
       </div>

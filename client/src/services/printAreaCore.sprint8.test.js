@@ -84,11 +84,18 @@ test('mergeClusters (lab): merges JPG-artifact variants that RGB leaves split', 
     { rgb: [0, 100, 200], count: 500 },
   ];
   const labMerged = mergeClusters(clusters, 28, { metric: 'lab' }); // → ~7 ΔE
-  const rgbMerged = mergeClusters(clusters, 4,  { metric: 'rgb' }); // intentionally tight
-  const labReds = labMerged.filter(c => c.rgb[0] > 150 && c.rgb[1] < 60);
-  const rgbReds = rgbMerged.filter(c => c.rgb[0] > 150 && c.rgb[1] < 60);
-  assert.equal(labReds.length, 1, `Lab should merge 3 JPG-ringed reds into 1, got ${labReds.length}`);
-  assert.ok(rgbReds.length > 1, `tight RGB threshold should leave ≥2 red clusters, got ${rgbReds.length}`);
+  const rgbMerged = mergeClusters(clusters, 4, { metric: 'rgb' }); // intentionally tight
+  const labReds = labMerged.filter((c) => c.rgb[0] > 150 && c.rgb[1] < 60);
+  const rgbReds = rgbMerged.filter((c) => c.rgb[0] > 150 && c.rgb[1] < 60);
+  assert.equal(
+    labReds.length,
+    1,
+    `Lab should merge 3 JPG-ringed reds into 1, got ${labReds.length}`
+  );
+  assert.ok(
+    rgbReds.length > 1,
+    `tight RGB threshold should leave ≥2 red clusters, got ${rgbReds.length}`
+  );
 });
 
 // ── AA sub-pixel weighting ───────────────────────────────────────
@@ -104,15 +111,20 @@ test('maskPrintable AA weighting: edge pixels contribute < 1; solid pixels = 1',
   const data = new Uint8ClampedArray(10 * 4);
   const greys = [255, 245, 240, 235, 230, 225, 220, 215, 100, 0];
   for (let i = 0; i < 10; i++) {
-    data[i * 4] = greys[i]; data[i * 4 + 1] = greys[i]; data[i * 4 + 2] = greys[i]; data[i * 4 + 3] = 255;
+    data[i * 4] = greys[i];
+    data[i * 4 + 1] = greys[i];
+    data[i * 4 + 2] = greys[i];
+    data[i * 4 + 3] = 255;
   }
   const img = { data, width: 10, height: 1 };
   const bg = [255, 255, 255];
   const weighted = maskPrintable(img, bg, 30, { aaWeighting: true });
   const unweighted = maskPrintable(img, bg, 30, { aaWeighting: false });
   // Some pixels must land in the AA band → fractional weight.
-  assert.ok(weighted.weights.some(w => w > 0 && w < 1),
-    `expected some fractional weights, got: ${weighted.weights.join(',')}`);
+  assert.ok(
+    weighted.weights.some((w) => w > 0 && w < 1),
+    `expected some fractional weights, got: ${weighted.weights.join(',')}`
+  );
   // Σweights ≤ printable count (AA pixels contribute < 1).
   assert.ok(weighted.printableWeight <= unweighted.pixels.length);
   // Solid black (last element in the test data) contributes full weight.
@@ -122,7 +134,7 @@ test('maskPrintable AA weighting: edge pixels contribute < 1; solid pixels = 1',
 test('maskPrintable AA off: reproduces pre-Sprint-8 numbers bit-for-bit', () => {
   const data = new Uint8ClampedArray(4 * 4);
   // 4 px: white, dark-gray, black, white
-  data.set([255, 255, 255, 255,   50, 50, 50, 255,   0, 0, 0, 255,   255, 255, 255, 255]);
+  data.set([255, 255, 255, 255, 50, 50, 50, 255, 0, 0, 0, 255, 255, 255, 255, 255]);
   const img = { data, width: 4, height: 1 };
   const bg = [255, 255, 255];
   const off = maskPrintable(img, bg, 12, { aaWeighting: false });
@@ -135,8 +147,11 @@ test('maskPrintable AA off: reproduces pre-Sprint-8 numbers bit-for-bit', () => 
 test('quantizeColors: weights sum to printableWeight across clusters', () => {
   // 5 pixels: 3 "red" with weights [1, 0.7, 0.4], 2 "blue" with weights [1, 0.9].
   const pixels = [
-    [255, 0, 0], [230, 30, 30], [180, 80, 80],
-    [0, 0, 255], [10, 10, 230],
+    [255, 0, 0],
+    [230, 30, 30],
+    [180, 80, 80],
+    [0, 0, 255],
+    [10, 10, 230],
   ];
   const weights = [1, 0.7, 0.4, 1, 0.9];
   const clusters = quantizeColors(pixels, 2, weights, { metric: 'lab' });
@@ -151,7 +166,7 @@ test('applyDotGain: solids (0% and 100%) are untouched; 50% gains significantly'
   assert.ok(Math.abs(applyDotGain(1, 18) - 1) < 0.001, '100% file stays 100%');
   // 50% file on flexo (18% gain) → roughly 0.68
   const press50 = applyDotGain(0.5, 18);
-  assert.ok(press50 > 0.65 && press50 < 0.70, `flexo 50% → ~68%, got ${press50}`);
+  assert.ok(press50 > 0.65 && press50 < 0.7, `flexo 50% → ~68%, got ${press50}`);
 });
 
 test('applyDotGain: accepts both 0..1 and 0..100 input magnitudes', () => {
@@ -168,12 +183,16 @@ test('applyInkProfile: dot gain increases ink volume for a 50% cluster; no chang
   const solidGain = applyInkProfile(colors100, 'flexo', { applyDotGain: true });
   const solidNo = applyInkProfile(colors100, 'flexo', { applyDotGain: false });
   // 50% ink volume goes up by ~35% (press 68% / file 50%).
-  assert.ok(withGain[0].ink_uL_per_label > noGain[0].ink_uL_per_label * 1.3,
-    `dot gain should inflate 50% ink vol by ~35%: ${withGain[0].ink_uL_per_label} vs ${noGain[0].ink_uL_per_label}`);
+  assert.ok(
+    withGain[0].ink_uL_per_label > noGain[0].ink_uL_per_label * 1.3,
+    `dot gain should inflate 50% ink vol by ~35%: ${withGain[0].ink_uL_per_label} vs ${noGain[0].ink_uL_per_label}`
+  );
   assert.ok(withGain[0].dot_gain_pct > 0.1, 'should expose dot_gain_pct > 0.1');
   // 100% fill: identical with/without gain.
-  assert.ok(Math.abs(solidGain[0].ink_uL_per_label - solidNo[0].ink_uL_per_label) < 0.001,
-    'solid fill: dot gain should be a no-op');
+  assert.ok(
+    Math.abs(solidGain[0].ink_uL_per_label - solidNo[0].ink_uL_per_label) < 0.001,
+    'solid fill: dot gain should be a no-op'
+  );
 });
 
 // ── Rotation ─────────────────────────────────────────────────────
@@ -198,7 +217,10 @@ test('detectRotation: near-square labels return 0 (safety)', () => {
 test('rotateImageData: 4× 90° rotations returns to original', () => {
   const data = new Uint8ClampedArray(3 * 2 * 4);
   for (let i = 0; i < data.length; i += 4) {
-    data[i] = i; data[i + 1] = i + 1; data[i + 2] = i + 2; data[i + 3] = 255;
+    data[i] = i;
+    data[i + 1] = i + 1;
+    data[i + 2] = i + 2;
+    data[i + 3] = 255;
   }
   const img = { data, width: 3, height: 2 };
   let r = img;
@@ -210,7 +232,7 @@ test('rotateImageData: 4× 90° rotations returns to original', () => {
 
 test('rotateImageData: 90° swaps dimensions', () => {
   const data = new Uint8ClampedArray(4 * 4); // 2×2 image
-  data.set([1, 0, 0, 255,  2, 0, 0, 255,  3, 0, 0, 255,  4, 0, 0, 255]);
+  data.set([1, 0, 0, 255, 2, 0, 0, 255, 3, 0, 0, 255, 4, 0, 0, 255]);
   const img = { data, width: 2, height: 2 };
   const rot = rotateImageData(img, 90);
   assert.equal(rot.width, 2); // 2×2 stays 2×2
@@ -247,13 +269,12 @@ test('bgSanityCheck: mid-range (10..90%) → ok:true', () => {
 
 test('buildResult userExcludedHex: hex match marks cluster excluded with reason=user', () => {
   const clusters = [
-    { rgb: [255, 0, 0], count: 1000 },   // #FF0000 — user will exclude
-    { rgb: [0, 0, 0], count: 500 },      // #000000 — kept
+    { rgb: [255, 0, 0], count: 1000 }, // #FF0000 — user will exclude
+    { rgb: [0, 0, 0], count: 500 }, // #000000 — kept
   ];
-  const res = buildResult(clusters, 10000, 0, 30, 20, null,
-    { userExcludedHex: ['#FF0000'] });
-  const red = res.colors.find(c => c.hex === '#FF0000');
-  const black = res.colors.find(c => c.hex === '#000000');
+  const res = buildResult(clusters, 10000, 0, 30, 20, null, { userExcludedHex: ['#FF0000'] });
+  const red = res.colors.find((c) => c.hex === '#FF0000');
+  const black = res.colors.find((c) => c.hex === '#000000');
   assert.equal(red.excluded, true);
   assert.equal(red.excluded_reason, 'user');
   assert.equal(black.excluded, false);
@@ -268,11 +289,15 @@ test('buildResult + bleed: mm² uses frame area (trim + bleed)', () => {
   // Pass frame dims to buildResult (runPrintAreaAnalysis does this).
   const res = buildResult(
     [{ rgb: [0, 0, 0], count: 4680 }],
-    10000, 0,
-    36, 26,  // frame
+    10000,
+    0,
+    36,
+    26, // frame
     null
   );
   // 4680 / 10000 = 46.8% of frame → 46.8% × 936 = ~438 mm².
-  assert.ok(Math.abs(res.totals.total_print_mm2 - 438) < 2,
-    `expected ~438 mm², got ${res.totals.total_print_mm2}`);
+  assert.ok(
+    Math.abs(res.totals.total_print_mm2 - 438) < 2,
+    `expected ~438 mm², got ${res.totals.total_print_mm2}`
+  );
 });

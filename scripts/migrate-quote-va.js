@@ -35,8 +35,13 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PATH = path.join(
-  __dirname, '..',
-  'server', 'data', 'Library', 'QuoteHistory', 'quote_history.json',
+  __dirname,
+  '..',
+  'server',
+  'data',
+  'Library',
+  'QuoteHistory',
+  'quote_history.json'
 );
 const DELTA = 0.0005;
 
@@ -60,9 +65,12 @@ function parseArgs(argv) {
  */
 export function recomputeFromResult(result, fallbackSp) {
   if (!result || typeof result !== 'object') return null;
-  const sp = (typeof result.sp === 'number' && result.sp > 0)
-    ? result.sp
-    : (typeof fallbackSp === 'number' && fallbackSp > 0 ? fallbackSp : 0);
+  const sp =
+    typeof result.sp === 'number' && result.sp > 0
+      ? result.sp
+      : typeof fallbackSp === 'number' && fallbackSp > 0
+        ? fallbackSp
+        : 0;
   if (sp <= 0) return null;
   const mat = typeof result.s_mat_cost === 'number' ? result.s_mat_cost : null;
   const tooling = typeof result.tooling === 'number' ? result.tooling : null;
@@ -78,8 +86,15 @@ export function recomputeFromResult(result, fallbackSp) {
 }
 
 export function migrateQuotes(quotes) {
-  const report = { total: quotes.length, eligible: 0, updated: 0, unchanged: 0, skipped: 0, changes: [] };
-  const next = quotes.map(q => {
+  const report = {
+    total: quotes.length,
+    eligible: 0,
+    updated: 0,
+    unchanged: 0,
+    skipped: 0,
+    changes: [],
+  };
+  const next = quotes.map((q) => {
     const r = q?.result;
     if (!r || typeof r.s_mat_cost !== 'number') {
       report.skipped++;
@@ -87,7 +102,10 @@ export function migrateQuotes(quotes) {
     }
     report.eligible++;
     const fresh = recomputeFromResult(r, q.state?.selling_price);
-    if (!fresh) { report.skipped++; return q; }
+    if (!fresh) {
+      report.skipped++;
+      return q;
+    }
     const diffs = {};
     for (const key of ['va', 'contribution', 'gm']) {
       const old = r[key];
@@ -97,10 +115,16 @@ export function migrateQuotes(quotes) {
         diffs[key] = { from: old, to: nw, delta: nw - (old ?? 0) };
       }
     }
-    if (Object.keys(diffs).length === 0) { report.unchanged++; return q; }
+    if (Object.keys(diffs).length === 0) {
+      report.unchanged++;
+      return q;
+    }
     report.updated++;
     report.changes.push({ id: q.id, type: q.type, sp: r.sp ?? q.state?.selling_price, diffs });
-    return { ...q, result: { ...r, ...Object.fromEntries(Object.entries(diffs).map(([k, v]) => [k, v.to])) } };
+    return {
+      ...q,
+      result: { ...r, ...Object.fromEntries(Object.entries(diffs).map(([k, v]) => [k, v.to])) },
+    };
   });
   return { next, report };
 }
@@ -122,7 +146,9 @@ function printReport(report, dryRun) {
     for (const c of report.changes) {
       console.log(`    #${c.id} (${c.type}) sp=${c.sp}`);
       for (const [k, v] of Object.entries(c.diffs)) {
-        console.log(`      ${k.padEnd(12)} ${pctStr(v.from)} → ${pctStr(v.to)}  (Δ ${(v.delta * 100).toFixed(2)}pp)`);
+        console.log(
+          `      ${k.padEnd(12)} ${pctStr(v.from)} → ${pctStr(v.to)}  (Δ ${(v.delta * 100).toFixed(2)}pp)`
+        );
       }
     }
   }
@@ -157,7 +183,11 @@ async function main() {
 
 // Run as CLI unless imported by a test. argv[1] may be relative and
 // contain spaces — pathToFileURL resolves + url-encodes correctly.
-const isCli = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+const isCli =
+  process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
 if (isCli) {
-  main().catch(err => { console.error(err); process.exit(1); });
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
 }

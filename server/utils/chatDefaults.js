@@ -30,7 +30,7 @@ export const MAX_DEFAULT_ROOMS_PER_USER = 50;
  */
 export function normalizeApprovalRoles(rawRoles) {
   const arr = Array.isArray(rawRoles) ? rawRoles : [];
-  const unique = [...new Set(arr.filter(r => typeof r === 'string' && r.length > 0))];
+  const unique = [...new Set(arr.filter((r) => typeof r === 'string' && r.length > 0))];
   const truncated = unique.length > MAX_DEFAULT_ROOMS_PER_USER;
   const roles = truncated ? unique.slice(0, MAX_DEFAULT_ROOMS_PER_USER) : unique;
   return { roles, truncated };

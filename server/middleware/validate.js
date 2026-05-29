@@ -29,8 +29,10 @@ export function validateBody(schema) {
       if (rule.type === 'string') {
         if (typeof v !== 'string') errors.push(`${field}: must be string`);
         else {
-          if (rule.min != null && v.length < rule.min) errors.push(`${field}: min length ${rule.min}`);
-          if (rule.max != null && v.length > rule.max) errors.push(`${field}: max length ${rule.max}`);
+          if (rule.min != null && v.length < rule.min)
+            errors.push(`${field}: min length ${rule.min}`);
+          if (rule.max != null && v.length > rule.max)
+            errors.push(`${field}: max length ${rule.max}`);
           if (rule.pattern && !rule.pattern.test(v)) errors.push(`${field}: invalid format`);
         }
       } else if (rule.type === 'number') {
@@ -46,7 +48,8 @@ export function validateBody(schema) {
         if (typeof v !== 'object' || Array.isArray(v)) errors.push(`${field}: must be object`);
       } else if (rule.type === 'array') {
         if (!Array.isArray(v)) errors.push(`${field}: must be array`);
-        else if (rule.max != null && v.length > rule.max) errors.push(`${field}: max ${rule.max} items`);
+        else if (rule.max != null && v.length > rule.max)
+          errors.push(`${field}: max ${rule.max} items`);
       } else if (rule.type === 'enum') {
         // Whitelist of literal values. Used for action names, status
         // codes — places where only a fixed set of strings is valid.

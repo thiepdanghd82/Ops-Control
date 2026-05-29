@@ -30,7 +30,9 @@ const CACHE_TTL = 5 * 60_000; // 5 minutes
 function getFileMtime(filePath) {
   try {
     return fs.statSync(filePath).mtimeMs;
-  } catch { return 0; }
+  } catch {
+    return 0;
+  }
 }
 
 function getCached(key) {
@@ -46,7 +48,7 @@ function getCached(key) {
 }
 
 function setCache(key, data, sourceFiles = []) {
-  const files = sourceFiles.map(fp => ({ path: fp, mtime: getFileMtime(fp) }));
+  const files = sourceFiles.map((fp) => ({ path: fp, mtime: getFileMtime(fp) }));
   cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL, files });
 }
 
@@ -69,7 +71,7 @@ function parseJsDataFile(filePath) {
 
   // If format is {headers: [], rows: [[]]} → convert to array of objects
   if (parsed && parsed.headers && Array.isArray(parsed.rows)) {
-    return parsed.rows.map(row =>
+    return parsed.rows.map((row) =>
       Object.fromEntries(parsed.headers.map((h, i) => [h, row[i] ?? '']))
     );
   }
@@ -102,7 +104,7 @@ export function getInventory() {
   const files = {
     inventory: 'inventory_data.js',
     finishedGoods: 'finished_good_data.js',
-    rawMaterials: 'raw_materials_data.js'
+    rawMaterials: 'raw_materials_data.js',
   };
 
   const sourcePaths = [];
@@ -143,9 +145,7 @@ export function getManufacturingStructures() {
  */
 export function getBOMForPart(partNo) {
   const structures = getManufacturingStructures();
-  return structures.filter(s =>
-    s['Parent Part No'] === partNo || s['parent_part_no'] === partNo
-  );
+  return structures.filter((s) => s['Parent Part No'] === partNo || s['parent_part_no'] === partNo);
 }
 
 /**
@@ -168,9 +168,7 @@ export function getRoutingOperations() {
  */
 export function getRoutingForPart(partNo) {
   const operations = getRoutingOperations();
-  return operations.filter(op =>
-    op['Part No'] === partNo || op['part_no'] === partNo
-  );
+  return operations.filter((op) => op['Part No'] === partNo || op['part_no'] === partNo);
 }
 
 /**
@@ -186,7 +184,7 @@ export function getWorkCenters() {
     const fallback = path.join(LIBRARY_DIR, 'Rate', 'rate.json');
     if (fs.existsSync(fallback)) {
       const data = readJsonFile(fallback);
-      const wcs = [...new Set(data.map(r => r.workcenter))].sort();
+      const wcs = [...new Set(data.map((r) => r.workcenter))].sort();
       setCache('workCenters', wcs, [fallback]);
       return wcs;
     }
@@ -204,7 +202,7 @@ export function getWorkCenters() {
       source: `Rate/rate_sites.json[${siteKey}]`,
       silent: false,
     });
-    rows.forEach(r => wcSet.add(r.workcenter));
+    rows.forEach((r) => wcSet.add(r.workcenter));
   }
   const wcs = [...wcSet].sort();
   setCache('workCenters', wcs, [filePath]);
@@ -219,11 +217,11 @@ export function getProducts() {
   if (cached) return cached;
 
   const inv = getInventory();
-  const products = (inv.finishedGoods || []).map(fg => ({
+  const products = (inv.finishedGoods || []).map((fg) => ({
     partNo: fg['Part No'] || fg['part_no'] || '',
     description: fg['Part Description'] || fg['description'] || '',
     type: fg['Type'] || fg['type'] || '',
-    uom: fg['UOM'] || fg['uom'] || ''
+    uom: fg['UOM'] || fg['uom'] || '',
   }));
 
   setCache('products', products); // inherits invalidation from inventory cache

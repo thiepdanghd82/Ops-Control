@@ -41,7 +41,9 @@ export function useAutoRefresh(fetchFn, options = {}) {
 
   // Use ref to avoid re-creating the timer when fetchFn identity changes
   const fetchRef = useRef(fetchFn);
-  useEffect(() => { fetchRef.current = fetchFn; }, [fetchFn]);
+  useEffect(() => {
+    fetchRef.current = fetchFn;
+  }, [fetchFn]);
 
   const inFlightRef = useRef(false);
 

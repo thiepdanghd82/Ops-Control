@@ -16,7 +16,7 @@
  *   _resetMetrics()                 — test hook
  */
 
-const COUNTERS = new Map();   // key: `name|labelKey` → number
+const COUNTERS = new Map(); // key: `name|labelKey` → number
 const HISTOGRAMS = new Map(); // key: `name|labelKey` → { buckets: number[], sum: number, count: number, labels }
 
 const LATENCY_BUCKETS_MS = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
@@ -53,7 +53,9 @@ export function observeLatency(name, ms, labels = {}) {
   if (!h) {
     h = {
       buckets: new Array(LATENCY_BUCKETS_MS.length + 1).fill(0),
-      sum: 0, count: 0, labels,
+      sum: 0,
+      count: 0,
+      labels,
     };
     HISTOGRAMS.set(key, h);
   }

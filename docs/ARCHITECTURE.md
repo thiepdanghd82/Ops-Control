@@ -69,17 +69,17 @@ flowchart LR
 
 ## 3. Tech stack
 
-| Layer | Tech | Version |
-|---|---|---|
-| Frontend | React 19 + Vite 8 + react-router-dom 6 | latest |
-| Backend  | Express 4 + better-sqlite3 12 | latest |
-| Auth     | argon2id (`argon2`) + JWT cookie + TOTP AES-256-GCM | argon2 0.44 |
-| License  | Ed25519 (`node:crypto`) | – |
-| Desktop  | Electron 38+ + electron-builder 26 | latest |
-| Native   | `serialport`, `node-hid`, `pdf-to-printer`, `electron-store 8` | unchanged |
-| Test     | `node:test` (server) + Jest 29 (root) + `node:test` (client) | – |
-| Lint     | ESLint 9 (flat config) + Prettier 3 | – |
-| CI       | GitHub Actions 5 jobs | – |
+| Layer    | Tech                                                           | Version     |
+| -------- | -------------------------------------------------------------- | ----------- |
+| Frontend | React 19 + Vite 8 + react-router-dom 6                         | latest      |
+| Backend  | Express 4 + better-sqlite3 12                                  | latest      |
+| Auth     | argon2id (`argon2`) + JWT cookie + TOTP AES-256-GCM            | argon2 0.44 |
+| License  | Ed25519 (`node:crypto`)                                        | –           |
+| Desktop  | Electron 38+ + electron-builder 26                             | latest      |
+| Native   | `serialport`, `node-hid`, `pdf-to-printer`, `electron-store 8` | unchanged   |
+| Test     | `node:test` (server) + Jest 29 (root) + `node:test` (client)   | –           |
+| Lint     | ESLint 9 (flat config) + Prettier 3                            | –           |
+| CI       | GitHub Actions 5 jobs                                          | –           |
 
 ## 4. Auth flow
 
@@ -178,11 +178,11 @@ flowchart TB
 
 ## 9. ADR (architecture decisions)
 
-| # | Decision | Why |
-|---|---|---|
-| 0001 | Keep on-prem stack (Express + better-sqlite3 + JSON store) | LAN deploy, no SaaS payback |
-| 0002 | argon2id over bcrypt | OWASP top recommendation, GPU-resistant |
-| 0003 | Ed25519 license signing | Asymmetric → leaked client install can't sign fake licenses |
-| 0004 | License tier S/M/L = 15/20/50 | Per IMPROVEMENT_BRIEF.md ¶4.5 |
-| 0005 | electron-builder over Tauri | Native module compatibility, 0 migration cost |
-| 0006 | In-place v1.2 hardening (not v1.3 layout port) | No git repo; rewrite would multi-week |
+| #    | Decision                                                   | Why                                                         |
+| ---- | ---------------------------------------------------------- | ----------------------------------------------------------- |
+| 0001 | Keep on-prem stack (Express + better-sqlite3 + JSON store) | LAN deploy, no SaaS payback                                 |
+| 0002 | argon2id over bcrypt                                       | OWASP top recommendation, GPU-resistant                     |
+| 0003 | Ed25519 license signing                                    | Asymmetric → leaked client install can't sign fake licenses |
+| 0004 | License tier S/M/L = 15/20/50                              | Per IMPROVEMENT_BRIEF.md ¶4.5                               |
+| 0005 | electron-builder over Tauri                                | Native module compatibility, 0 migration cost               |
+| 0006 | In-place v1.2 hardening (not v1.3 layout port)             | No git repo; rewrite would multi-week                       |

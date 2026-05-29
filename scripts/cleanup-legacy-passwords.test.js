@@ -40,10 +40,16 @@ test('cleanupUsers: empty pwd string counts as no pwd', () => {
 });
 
 test('cleanupUsers: preserves unrelated fields during cleanup', () => {
-  const users = [{
-    username: 'eve', pwd: 'plain', pwd_bcrypt: '$2b$12$h',
-    role: 'admin', lastLogin: '2026-04-01', permissions: { canDeleteQuote: true },
-  }];
+  const users = [
+    {
+      username: 'eve',
+      pwd: 'plain',
+      pwd_bcrypt: '$2b$12$h',
+      role: 'admin',
+      lastLogin: '2026-04-01',
+      permissions: { canDeleteQuote: true },
+    },
+  ];
   const { next } = cleanupUsers(users);
   assert.equal(next[0].role, 'admin');
   assert.equal(next[0].lastLogin, '2026-04-01');
@@ -54,9 +60,9 @@ test('cleanupUsers: preserves unrelated fields during cleanup', () => {
 test('cleanupUsers: mixed set classifies each row independently', () => {
   const users = [
     { username: 'alice', pwd: 'plain', pwd_bcrypt: '$2b$12$a' },
-    { username: 'bob',   pwd: 'plain' },
+    { username: 'bob', pwd: 'plain' },
     { username: 'carol', pwd_bcrypt: '$2b$12$c' },
-    { username: 'dave',  pwd: 'plain', pwd_bcrypt: '$2b$12$d' },
+    { username: 'dave', pwd: 'plain', pwd_bcrypt: '$2b$12$d' },
   ];
   const { report } = cleanupUsers(users);
   assert.deepEqual(report.cleaned.sort(), ['alice', 'dave']);

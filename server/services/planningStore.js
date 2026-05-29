@@ -50,16 +50,14 @@ export function getOrders() {
 export function createOrder(order) {
   return withLock('planning:orders', () => {
     const orders = getOrders();
-    const nextId = orders.length > 0
-      ? Math.max(...orders.map(o => o.id || 0)) + 1
-      : 1000;
+    const nextId = orders.length > 0 ? Math.max(...orders.map((o) => o.id || 0)) + 1 : 1000;
 
     const newOrder = {
       id: nextId,
       ...order,
       status: order.status || 'New',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     orders.push(newOrder);
@@ -71,14 +69,14 @@ export function createOrder(order) {
 export function updateOrder(id, updates) {
   return withLock('planning:orders', () => {
     const orders = getOrders();
-    const idx = orders.findIndex(o => o.id === id);
+    const idx = orders.findIndex((o) => o.id === id);
     if (idx === -1) return null;
 
     orders[idx] = {
       ...orders[idx],
       ...updates,
       id, // prevent id override
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
     writeCollection('orders', orders);
     return orders[idx];
@@ -88,7 +86,7 @@ export function updateOrder(id, updates) {
 export function deleteOrder(id) {
   return withLock('planning:orders', () => {
     const orders = getOrders();
-    const filtered = orders.filter(o => o.id !== id);
+    const filtered = orders.filter((o) => o.id !== id);
     if (filtered.length === orders.length) return false;
     writeCollection('orders', filtered);
     return true;
@@ -104,9 +102,8 @@ export function getWorkOrders() {
 export function createWorkOrder(workOrder) {
   return withLock('planning:work_orders', () => {
     const workOrders = getWorkOrders();
-    const nextId = workOrders.length > 0
-      ? Math.max(...workOrders.map(wo => wo.id || 0)) + 1
-      : 5000;
+    const nextId =
+      workOrders.length > 0 ? Math.max(...workOrders.map((wo) => wo.id || 0)) + 1 : 5000;
 
     const newWO = {
       id: nextId,
@@ -114,7 +111,7 @@ export function createWorkOrder(workOrder) {
       ...workOrder,
       status: 'New',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     workOrders.push(newWO);
@@ -126,14 +123,14 @@ export function createWorkOrder(workOrder) {
 export function updateWorkOrder(id, updates) {
   return withLock('planning:work_orders', () => {
     const workOrders = getWorkOrders();
-    const idx = workOrders.findIndex(wo => wo.id === id);
+    const idx = workOrders.findIndex((wo) => wo.id === id);
     if (idx === -1) return null;
 
     workOrders[idx] = {
       ...workOrders[idx],
       ...updates,
       id,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
     writeCollection('work_orders', workOrders);
     return workOrders[idx];
@@ -149,12 +146,12 @@ export function getWIPTracking() {
 export function updateWIP(woId, progress) {
   return withLock('planning:wip_tracking', () => {
     const wip = getWIPTracking();
-    const idx = wip.findIndex(w => w.woId === woId);
+    const idx = wip.findIndex((w) => w.woId === woId);
 
     const entry = {
       woId,
       ...progress,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     if (idx >= 0) {
@@ -177,7 +174,7 @@ export function getPlanningMeta() {
       workCenters: [],
       plannerData: {},
       componentWidths: {},
-      lastSync: null
+      lastSync: null,
     };
     atomicWriteFileSync(filePath, JSON.stringify(defaultMeta, null, 2));
     return defaultMeta;

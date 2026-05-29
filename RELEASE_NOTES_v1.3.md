@@ -23,11 +23,11 @@
 
 ### License theo Tier (S / M / L)
 
-| Tier | Max users | Use case |
-|---|---|---|
-| **S** | 15 | Plant nhỏ, 1 ca |
-| **M** | 20 | Plant trung, 2 ca |
-| **L** | 50 | Plant lớn, multi-site |
+| Tier  | Max users | Use case              |
+| ----- | --------- | --------------------- |
+| **S** | 15        | Plant nhỏ, 1 ca       |
+| **M** | 20        | Plant trung, 2 ca     |
+| **L** | 50        | Plant lớn, multi-site |
 
 Server tự động chặn tạo user mới khi vượt giới hạn → liên hệ CCL HQ để upgrade tier.
 
@@ -82,11 +82,11 @@ Trước đây nằm rải rác trong console log; giờ có tab **Audit log** t
 
 ## 📞 Liên hệ
 
-| Vấn đề | Kênh |
-|---|---|
-| License | Email thiepdt@outlook.com (kèm Installation ID) |
-| Bug / crash | GitHub Issues + screenshot + log từ Settings → About |
-| Hỗ trợ kỹ thuật | thiepdt@outlook.com |
+| Vấn đề          | Kênh                                                 |
+| --------------- | ---------------------------------------------------- |
+| License         | Email thiepdt@outlook.com (kèm Installation ID)      |
+| Bug / crash     | GitHub Issues + screenshot + log từ Settings → About |
+| Hỗ trợ kỹ thuật | thiepdt@outlook.com                                  |
 
 ---
 

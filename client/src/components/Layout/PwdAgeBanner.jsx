@@ -40,13 +40,16 @@ export default function PwdAgeBanner({ onOpenSettings }) {
   // body reads localStorage rather than the tick number itself.
   const remainingBucket = pwdAge?.days_remaining;
   const dismissedToday = useMemo(() => {
-    void dismissTick; void remainingBucket;
+    void dismissTick;
+    void remainingBucket;
     try {
       const raw = localStorage.getItem(DISMISS_KEY);
       if (!raw) return false;
       const { date, userId } = JSON.parse(raw);
       return date === todayYYYYMMDD() && userId === user?.id;
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   }, [user?.id, remainingBucket, dismissTick]);
 
   if (!pwdAge || typeof pwdAge.days_remaining !== 'number') return null;
@@ -58,16 +61,22 @@ export default function PwdAgeBanner({ onOpenSettings }) {
 
   function handleDismiss() {
     try {
-      localStorage.setItem(DISMISS_KEY, JSON.stringify({
-        date: todayYYYYMMDD(), userId: user?.id,
-      }));
-    } catch { /* private mode / quota — dismissal won't persist */ }
-    setDismissTick(t => t + 1);
+      localStorage.setItem(
+        DISMISS_KEY,
+        JSON.stringify({
+          date: todayYYYYMMDD(),
+          userId: user?.id,
+        })
+      );
+    } catch {
+      /* private mode / quota — dismissal won't persist */
+    }
+    setDismissTick((t) => t + 1);
   }
 
-  const bg    = isExpired ? '#fef2f2' : '#fef3c7';
+  const bg = isExpired ? '#fef2f2' : '#fef3c7';
   const color = isExpired ? '#7f1d1d' : '#78350f';
-  const icon  = isExpired ? '🔒' : '⏰';
+  const icon = isExpired ? '🔒' : '⏰';
   const headline = isExpired
     ? 'Password expired — please change it now to keep saving.'
     : `Password expires in ${remaining} day${remaining === 1 ? '' : 's'} (max ${pwdAge.max_age_days}d). Change it soon.`;
@@ -77,22 +86,34 @@ export default function PwdAgeBanner({ onOpenSettings }) {
       role="alert"
       aria-live={isExpired ? 'assertive' : 'polite'}
       style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '8px 16px', fontSize: 13, fontWeight: 500,
-        background: bg, color,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '8px 16px',
+        fontSize: 13,
+        fontWeight: 500,
+        background: bg,
+        color,
         borderBottom: `1px solid ${isExpired ? '#fca5a5' : '#fcd34d'}`,
       }}
     >
-      <span aria-hidden="true" style={{ fontSize: 16 }}>{icon}</span>
+      <span aria-hidden="true" style={{ fontSize: 16 }}>
+        {icon}
+      </span>
       <span style={{ flex: 1 }}>{headline}</span>
       {onOpenSettings && (
         <button
           type="button"
           onClick={onOpenSettings}
           style={{
-            padding: '4px 10px', fontSize: 12, fontWeight: 600,
+            padding: '4px 10px',
+            fontSize: 12,
+            fontWeight: 600,
             background: isExpired ? '#dc2626' : '#b45309',
-            color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer',
+            color: 'white',
+            border: 'none',
+            borderRadius: 4,
+            cursor: 'pointer',
           }}
         >
           Change password
@@ -104,8 +125,13 @@ export default function PwdAgeBanner({ onOpenSettings }) {
           onClick={handleDismiss}
           aria-label="Dismiss warning for today"
           style={{
-            padding: '4px 8px', fontSize: 11, background: 'transparent',
-            color, border: `1px solid ${color}`, borderRadius: 4, cursor: 'pointer',
+            padding: '4px 8px',
+            fontSize: 11,
+            background: 'transparent',
+            color,
+            border: `1px solid ${color}`,
+            borderRadius: 4,
+            cursor: 'pointer',
           }}
         >
           Later

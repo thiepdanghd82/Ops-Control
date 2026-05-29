@@ -5,9 +5,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  mapHeaders, applyMappingOverrides, coerceRows, buildCanonical,
-  diffRows, mergeRows, rowsAsObjects,
-  createPreviewToken, consumePreviewToken, _resetTokens,
+  mapHeaders,
+  applyMappingOverrides,
+  coerceRows,
+  buildCanonical,
+  diffRows,
+  mergeRows,
+  rowsAsObjects,
+  createPreviewToken,
+  consumePreviewToken,
+  _resetTokens,
 } from './importPipeline.js';
 import { getDataset } from './importDatasets.js';
 
@@ -67,7 +74,10 @@ test('applyMappingOverrides: __skip__ unmaps an auto-mapped column', () => {
 
 test('coerceRows: converts numbers per columnTypes', () => {
   const headers = ['Parent Part No', 'Component Part', 'Qty Per Assembly'];
-  const rows = [['A001', 'B001', '1,5'], ['A002', 'B002', '2.000']];
+  const rows = [
+    ['A001', 'B001', '1,5'],
+    ['A002', 'B002', '2.000'],
+  ];
   const r = coerceRows(headers, rows, BOM);
   assert.equal(r.rows[0][2], 1.5);
   assert.equal(r.rows[1][2], 2);
@@ -84,10 +94,17 @@ test('coerceRows: bad number recorded as issue, raw kept', () => {
 
 test('buildCanonical: orders by canonical headers, appends extras', () => {
   const rawHeaders = ['Component Part', 'Parent Part No', 'Custom Notes'];
-  const rawRows = [['B', 'A', 'note1'], ['B2', 'A2', 'note2']];
+  const rawRows = [
+    ['B', 'A', 'note1'],
+    ['B2', 'A2', 'note2'],
+  ];
   const mapping = mapHeaders(rawHeaders, BOM);
   const out = buildCanonical({
-    headers: rawHeaders, rows: rawRows, dataset: BOM, headerMapping: mapping, includeUnmapped: true,
+    headers: rawHeaders,
+    rows: rawRows,
+    dataset: BOM,
+    headerMapping: mapping,
+    includeUnmapped: true,
   });
   // Canonical order: Parent Part No first, then Component Part…
   assert.equal(out.headers[0], 'Parent Part No');
@@ -109,13 +126,15 @@ test('diffRows: detects added/updated/unchanged + removed-if-replace', () => {
     ['A2', 'B3', '*', '3'],
   ];
   const incoming = [
-    ['A1', 'B1', '*', '1'],   // unchanged
-    ['A1', 'B2', '*', '5'],   // updated
-    ['A4', 'B9', '*', '7'],   // added
+    ['A1', 'B1', '*', '1'], // unchanged
+    ['A1', 'B2', '*', '5'], // updated
+    ['A4', 'B9', '*', '7'], // added
   ];
   const r = diffRows({
-    existingRows: existing, existingHeaders: headers,
-    newRows: incoming, newHeaders: headers,
+    existingRows: existing,
+    existingHeaders: headers,
+    newRows: incoming,
+    newHeaders: headers,
     naturalKey: BOM.naturalKey,
   });
   assert.equal(r.counts.unchanged, 1);
@@ -128,11 +147,13 @@ test('diffRows: detects duplicate keys within upload', () => {
   const headers = ['Parent Part No', 'Component Part', 'Alternative No'];
   const incoming = [
     ['A1', 'B1', '*'],
-    ['A1', 'B1', '*'],   // duplicate
+    ['A1', 'B1', '*'], // duplicate
   ];
   const r = diffRows({
-    existingRows: [], existingHeaders: headers,
-    newRows: incoming, newHeaders: headers,
+    existingRows: [],
+    existingHeaders: headers,
+    newRows: incoming,
+    newHeaders: headers,
     naturalKey: BOM.naturalKey,
   });
   assert.equal(r.counts.duplicates, 1);
@@ -163,18 +184,18 @@ test('mergeRows: upsert updates by natural key, keeps untouched', () => {
   const incoming = {
     headers: ['Parent Part No', 'Component Part', 'Alternative No', 'Qty Per Assembly'],
     rows: [
-      ['A1', 'B1', '*', '99'],   // update existing
-      ['A3', 'B9', '*', '7'],    // new
+      ['A1', 'B1', '*', '99'], // update existing
+      ['A3', 'B9', '*', '7'], // new
     ],
   };
   const r = mergeRows({ existing, newCanonical: incoming, dataset: BOM, mode: 'upsert' });
   // Updated + new + untouched (A1/B2)
   assert.equal(r.rows.length, 3);
   // Updated row should have Qty=99
-  const updated = r.rows.find(row => row[0] === 'A1' && row[1] === 'B1');
+  const updated = r.rows.find((row) => row[0] === 'A1' && row[1] === 'B1');
   assert.equal(updated[3], '99');
   // Untouched row preserved
-  const untouched = r.rows.find(row => row[0] === 'A1' && row[1] === 'B2');
+  const untouched = r.rows.find((row) => row[0] === 'A1' && row[1] === 'B2');
   assert.equal(untouched[3], '2');
 });
 
@@ -186,21 +207,30 @@ test('mergeRows: upsert for JSON-AoO dataset (NPI)', () => {
   const incoming = {
     headers: ['name', 'supplier', 'price'],
     rows: [
-      ['Sticker A', 'Vendor1', 1.75],   // update
-      ['Sticker C', 'Vendor3', 3.0],    // new
+      ['Sticker A', 'Vendor1', 1.75], // update
+      ['Sticker C', 'Vendor3', 3.0], // new
     ],
   };
   const r = mergeRows({ existing, newCanonical: incoming, dataset: NPI, mode: 'upsert' });
   assert.equal(r.length, 3);
-  const a = r.find(o => o.name === 'Sticker A');
+  const a = r.find((o) => o.name === 'Sticker A');
   assert.equal(a.price, 1.75);
-  const c = r.find(o => o.name === 'Sticker C');
+  const c = r.find((o) => o.name === 'Sticker C');
   assert.equal(c.price, 3.0);
 });
 
 test('rowsAsObjects: header→value mapping', () => {
-  const out = rowsAsObjects(['a', 'b'], [['1', '2'], ['3', '4']]);
-  assert.deepEqual(out, [{ a: '1', b: '2' }, { a: '3', b: '4' }]);
+  const out = rowsAsObjects(
+    ['a', 'b'],
+    [
+      ['1', '2'],
+      ['3', '4'],
+    ]
+  );
+  assert.deepEqual(out, [
+    { a: '1', b: '2' },
+    { a: '3', b: '4' },
+  ]);
 });
 
 test('preview tokens: create + consume = single-use', () => {

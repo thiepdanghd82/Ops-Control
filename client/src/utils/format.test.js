@@ -51,12 +51,12 @@ test('gmClr: null → slate gray', () => {
 });
 
 test('gmClr: >= 20% green', () => {
-  assert.equal(gmClr(0.20), '#16a34a');
+  assert.equal(gmClr(0.2), '#16a34a');
   assert.equal(gmClr(0.35), '#16a34a');
 });
 
 test('gmClr: >= 10% amber', () => {
-  assert.equal(gmClr(0.10), '#d97706');
+  assert.equal(gmClr(0.1), '#d97706');
   assert.equal(gmClr(0.15), '#d97706');
 });
 
@@ -183,9 +183,9 @@ test('parseLocaleNumber: trimmed of surrounding whitespace', () => {
 });
 
 test('parseLocaleNumber: negative values across conventions', () => {
-  assert.equal(parseLocaleNumber('-1.234,5'), -1234.5);  // VN
-  assert.equal(parseLocaleNumber('-1,234.5'), -1234.5);  // US
-  assert.equal(parseLocaleNumber('-8,5'), -8.5);         // VN short
+  assert.equal(parseLocaleNumber('-1.234,5'), -1234.5); // VN
+  assert.equal(parseLocaleNumber('-1,234.5'), -1234.5); // US
+  assert.equal(parseLocaleNumber('-8,5'), -8.5); // VN short
 });
 
 test('parseLocaleNumber: caller pattern `parseLocaleNumber(v) || 0` works for VN user input', () => {

@@ -52,8 +52,11 @@ function fmtTime(iso) {
 }
 
 function openMessagesTab(roomId) {
-  try { sessionStorage.setItem(PENDING_ROOM_KEY, String(roomId)); }
-  catch { /* ignore — private mode / quota */ }
+  try {
+    sessionStorage.setItem(PENDING_ROOM_KEY, String(roomId));
+  } catch {
+    /* ignore — private mode / quota */
+  }
   // Reuses the existing App-level event that already handles
   // module + tab switching atomically.
   window.dispatchEvent(new CustomEvent('ops-switch-tab', { detail: 'messages' }));
@@ -72,7 +75,11 @@ export default function UnreadLoginPopup() {
     if (!isAuthenticated || !user?.id) return;
     const seenKey = `${FLAG_KEY}:${user.id}`;
     let seen = false;
-    try { seen = sessionStorage.getItem(seenKey) === '1'; } catch { /* ignore */ }
+    try {
+      seen = sessionStorage.getItem(seenKey) === '1';
+    } catch {
+      /* ignore */
+    }
     if (seen) return;
 
     let cancelled = false;
@@ -84,7 +91,11 @@ export default function UnreadLoginPopup() {
         if (unread.length === 0) {
           // Nothing to show — burn the flag anyway so we don't refetch
           // every time the component remounts during this session.
-          try { sessionStorage.setItem(seenKey, '1'); } catch { /* ignore */ }
+          try {
+            sessionStorage.setItem(seenKey, '1');
+          } catch {
+            /* ignore */
+          }
           return;
         }
         // Already sorted server-side by updated_at DESC; trust that.
@@ -96,7 +107,9 @@ export default function UnreadLoginPopup() {
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [isAuthenticated, user?.id]);
 
   // ESC dismisses. Click backdrop dismisses. Click X dismisses. Each
@@ -106,7 +119,11 @@ export default function UnreadLoginPopup() {
   const dismiss = () => {
     setOpen(false);
     if (user?.id) {
-      try { sessionStorage.setItem(`${FLAG_KEY}:${user.id}`, '1'); } catch { /* ignore */ }
+      try {
+        sessionStorage.setItem(`${FLAG_KEY}:${user.id}`, '1');
+      } catch {
+        /* ignore */
+      }
     }
   };
 
@@ -122,14 +139,19 @@ export default function UnreadLoginPopup() {
   const openAll = () => {
     dismiss();
     // Don't preselect a room when "Xem tất cả" — just open the inbox.
-    try { sessionStorage.removeItem(PENDING_ROOM_KEY); } catch { /* ignore */ }
+    try {
+      sessionStorage.removeItem(PENDING_ROOM_KEY);
+    } catch {
+      /* ignore */
+    }
     window.dispatchEvent(new CustomEvent('ops-switch-tab', { detail: 'messages' }));
   };
 
   const title = `Bạn có ${totalUnread} tin chưa đọc`;
-  const subtitle = convs.length > 1
-    ? `Trong ${convs.length} cuộc trò chuyện — click để mở`
-    : 'Click để mở, hoặc đóng lại xem sau';
+  const subtitle =
+    convs.length > 1
+      ? `Trong ${convs.length} cuộc trò chuyện — click để mở`
+      : 'Click để mở, hoặc đóng lại xem sau';
 
   return (
     <Modal open={open} onClose={dismiss} size="md" severity="info" ariaLabelledBy="ulp-title">
@@ -139,8 +161,8 @@ export default function UnreadLoginPopup() {
           {visible.map((c) => {
             const isDm = c.kind === 'dm';
             const name = isDm
-              ? (c.peer?.full_name || c.peer?.username || 'Unknown')
-              : (c.title || c.key);
+              ? c.peer?.full_name || c.peer?.username || 'Unknown'
+              : c.title || c.key;
             const last = c.last_message;
             const isSelf = last && Number(last.author_id) === Number(user?.id);
             const preview = !last
@@ -148,7 +170,13 @@ export default function UnreadLoginPopup() {
               : last.deleted_at
                 ? '(deleted)'
                 : (isSelf ? 'You: ' : '') + String(last.body || '').slice(0, 140);
-            const avatarKind = isDm ? '' : (c.kind === 'quote' ? 'quote' : c.kind === 'team' ? 'team' : 'group');
+            const avatarKind = isDm
+              ? ''
+              : c.kind === 'quote'
+                ? 'quote'
+                : c.kind === 'team'
+                  ? 'team'
+                  : 'group';
             return (
               <div key={c.id} className="ulp-row" onClick={() => jumpTo(c.id)}>
                 <div className={`ulp-avatar ${avatarKind}`}>
@@ -176,8 +204,12 @@ export default function UnreadLoginPopup() {
         </div>
       </Modal.Body>
       <Modal.Footer>
-        <button type="button" className="op-btn op-btn-ghost" onClick={dismiss}>Để sau</button>
-        <button type="button" className="op-btn op-btn-primary" onClick={openAll}>Mở Inbox</button>
+        <button type="button" className="op-btn op-btn-ghost" onClick={dismiss}>
+          Để sau
+        </button>
+        <button type="button" className="op-btn op-btn-primary" onClick={openAll}>
+          Mở Inbox
+        </button>
       </Modal.Footer>
     </Modal>
   );

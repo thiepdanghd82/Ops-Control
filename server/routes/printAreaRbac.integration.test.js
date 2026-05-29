@@ -24,14 +24,41 @@ process.env.OPS_TOTP_KEY = crypto.randomBytes(32).toString('hex');
 // Seed two users: one writer (role=cost) and one view-only.
 const seedUsersPath = path.join(tmp, 'Library', 'Users', 'users.json');
 fs.mkdirSync(path.dirname(seedUsersPath), { recursive: true });
-fs.writeFileSync(seedUsersPath, JSON.stringify([
-  { id: 1, username: 'writer', role: 'cost',
-    pwd_bcrypt: '$2b$10$dummy', lastPwdChange: new Date().toISOString(),
-    permissions: {}, full_name: 'W', english_name: 'W', id_no: '', email: '', phone: '' },
-  { id: 2, username: 'viewer', role: 'viewonly',
-    pwd_bcrypt: '$2b$10$dummy', lastPwdChange: new Date().toISOString(),
-    permissions: {}, full_name: 'V', english_name: 'V', id_no: '', email: '', phone: '' },
-], null, 2));
+fs.writeFileSync(
+  seedUsersPath,
+  JSON.stringify(
+    [
+      {
+        id: 1,
+        username: 'writer',
+        role: 'cost',
+        pwd_bcrypt: '$2b$10$dummy',
+        lastPwdChange: new Date().toISOString(),
+        permissions: {},
+        full_name: 'W',
+        english_name: 'W',
+        id_no: '',
+        email: '',
+        phone: '',
+      },
+      {
+        id: 2,
+        username: 'viewer',
+        role: 'viewonly',
+        pwd_bcrypt: '$2b$10$dummy',
+        lastPwdChange: new Date().toISOString(),
+        permissions: {},
+        full_name: 'V',
+        english_name: 'V',
+        id_no: '',
+        email: '',
+        phone: '',
+      },
+    ],
+    null,
+    2
+  )
+);
 
 const { default: app } = await import('../index.js');
 const { initSchema } = await import('../db/init.js');
@@ -39,18 +66,21 @@ initSchema();
 const { createSession } = await import('../services/authService.js');
 
 let server, baseUrl;
-test.before(() => new Promise((resolve) => {
-  server = app.listen(0, '127.0.0.1', () => {
-    baseUrl = `http://127.0.0.1:${server.address().port}`;
-    resolve();
-  });
-}));
+test.before(
+  () =>
+    new Promise((resolve) => {
+      server = app.listen(0, '127.0.0.1', () => {
+        baseUrl = `http://127.0.0.1:${server.address().port}`;
+        resolve();
+      });
+    })
+);
 test.after(() => new Promise((resolve) => server.close(resolve)));
 
 async function call(method, pathStr, token, body) {
   const res = await fetch(`${baseUrl}${pathStr}`, {
     method,
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: body ? JSON.stringify(body) : undefined,
   });
   return { status: res.status, body: await res.json().catch(() => ({})) };

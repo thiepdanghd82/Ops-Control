@@ -18,10 +18,32 @@ const COLUMNS = [
   { key: 'Parent Part Description', label: 'Parent Description' },
   { key: 'Component Part', label: 'Component Part' },
   { key: 'Component Part Description', label: 'Component Description' },
-  { key: 'Qty Per Assembly', label: 'Qty/Assembly', format: v => (v == null || v === '') ? '—' : Number(v).toFixed(6).replace(/\.?0+$/, '') },
+  {
+    key: 'Qty Per Assembly',
+    label: 'Qty/Assembly',
+    format: (v) =>
+      v == null || v === ''
+        ? '—'
+        : Number(v)
+            .toFixed(6)
+            .replace(/\.?0+$/, ''),
+  },
   { key: 'UOM', label: 'UOM' },
-  { key: 'Component Scrap', label: 'Scrap', format: v => (v == null || v === '') ? '—' : Number(v).toFixed(5).replace(/\.?0+$/, '') },
-  { key: 'Scrap Factor (%)', label: 'Scrap %', format: v => (v == null || v === '') ? '—' : `${Number(v)}%` },
+  {
+    key: 'Component Scrap',
+    label: 'Scrap',
+    format: (v) =>
+      v == null || v === ''
+        ? '—'
+        : Number(v)
+            .toFixed(5)
+            .replace(/\.?0+$/, ''),
+  },
+  {
+    key: 'Scrap Factor (%)',
+    label: 'Scrap %',
+    format: (v) => (v == null || v === '' ? '—' : `${Number(v)}%`),
+  },
   { key: 'Pitch', label: 'Pitch' },
   { key: 'Cavity', label: 'Cavity' },
   { key: 'Color Nums', label: 'Colors' },
@@ -37,9 +59,8 @@ export default function LibMfg() {
   // session returns the cached array INSTANTLY + revalidates in the
   // background. Phase 1 ETag means revalidation is a 304 (~5ms) when
   // upstream hasn't changed.
-  const { data: bomData, refresh: reloadBom } = useCachedFetch(
-    'lib-mfg-bom',
-    () => sharedApi.getBOM(),
+  const { data: bomData, refresh: reloadBom } = useCachedFetch('lib-mfg-bom', () =>
+    sharedApi.getBOM()
   );
   const data = Array.isArray(bomData) ? bomData : [];
   const loading = bomData == null;
@@ -54,7 +75,12 @@ export default function LibMfg() {
   }, [reloadBom]);
 
   const handleClear = useCallback(async () => {
-    if (!window.confirm('Clear all Manufacturing Structures data? The current file will be backed up first.')) return;
+    if (
+      !window.confirm(
+        'Clear all Manufacturing Structures data? The current file will be backed up first.'
+      )
+    )
+      return;
     setBusy(true);
     setMsg('Clearing…');
     try {
@@ -96,15 +122,28 @@ export default function LibMfg() {
   );
 
   if (loading) {
-    return <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Loading Manufacturing Structures...</div>;
+    return (
+      <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
+        Loading Manufacturing Structures...
+      </div>
+    );
   }
 
   const mfgIcon = (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 20h20"/>
-      <path d="M4 20V9l6-4v15"/>
-      <path d="M14 20V10l6 4v6"/>
-      <path d="M7 12h.01M7 16h.01M17 17h.01"/>
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M2 20h20" />
+      <path d="M4 20V9l6-4v15" />
+      <path d="M14 20V10l6 4v6" />
+      <path d="M7 12h.01M7 16h.01M17 17h.01" />
     </svg>
   );
 

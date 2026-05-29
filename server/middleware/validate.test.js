@@ -12,12 +12,22 @@ import { validateBody } from './validate.js';
 // ── Test harness — capture res.status + res.json without Express ──
 function runMw(mw, body) {
   const req = { body };
-  let status = 200, payload = null, nextCalled = false;
+  let status = 200,
+    payload = null,
+    nextCalled = false;
   const res = {
-    status(s) { status = s; return res; },
-    json(p) { payload = p; return res; },
+    status(s) {
+      status = s;
+      return res;
+    },
+    json(p) {
+      payload = p;
+      return res;
+    },
   };
-  mw(req, res, () => { nextCalled = true; });
+  mw(req, res, () => {
+    nextCalled = true;
+  });
   return { status, payload, nextCalled };
 }
 
@@ -27,7 +37,7 @@ test('required field missing → 400', () => {
   const r = runMw(mw, {});
   assert.equal(r.status, 400);
   assert.equal(r.payload.error, 'validation_failed');
-  assert.ok(r.payload.details.some(d => d.includes('x')));
+  assert.ok(r.payload.details.some((d) => d.includes('x')));
   assert.equal(r.nextCalled, false);
 });
 

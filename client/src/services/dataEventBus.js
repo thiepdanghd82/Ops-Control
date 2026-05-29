@@ -48,18 +48,28 @@ function openStream() {
   }
   // Token query-param fallback for non-cookie auth (mirrors chatApi).
   const token = (() => {
-    try { return localStorage.getItem('ops_token') || null; } catch { return null; }
+    try {
+      return localStorage.getItem('ops_token') || null;
+    } catch {
+      return null;
+    }
   })();
   const url = token ? `/api/events/stream?t=${encodeURIComponent(token)}` : '/api/events/stream';
   const es = new EventSource(url, { withCredentials: true });
 
   const handle = (e) => {
     let p = null;
-    try { p = JSON.parse(e.data); } catch { return; }
+    try {
+      p = JSON.parse(e.data);
+    } catch {
+      return;
+    }
     if (!p || typeof p !== 'object') return;
     if (typeof p.seq === 'number') {
       if (_lastSeq && p.seq > _lastSeq + 1) {
-        console.warn(`[dataEventBus] seq gap: ${_lastSeq} → ${p.seq} (events dropped or reconnect)`);
+        console.warn(
+          `[dataEventBus] seq gap: ${_lastSeq} → ${p.seq} (events dropped or reconnect)`
+        );
       }
       _lastSeq = p.seq;
     }
@@ -69,8 +79,11 @@ function openStream() {
   // Subscribe to the channels the server emits. Adding more is cheap;
   // missing one means the listeners never fire for that type.
   const TYPES = [
-    'quote.saved', 'quote.deleted', 'quote.restored',
-    'rfq.updated', 'sample.updated',
+    'quote.saved',
+    'quote.deleted',
+    'quote.restored',
+    'rfq.updated',
+    'sample.updated',
     'library.imported',
     'approval.transition',
     'security.alert',
@@ -78,7 +91,9 @@ function openStream() {
   ];
   for (const t of TYPES) es.addEventListener(t, handle);
 
-  es.onopen = () => { _connected = true; };
+  es.onopen = () => {
+    _connected = true;
+  };
   es.onerror = () => {
     _connected = false;
     // Browser auto-reconnects after `retry:` interval (server default 3s).
@@ -94,7 +109,14 @@ export function startDataEventStream() {
 }
 
 export function stopDataEventStream() {
-  if (_es) { try { _es.close(); } catch { /* ignore */ } _es = null; }
+  if (_es) {
+    try {
+      _es.close();
+    } catch {
+      /* ignore */
+    }
+    _es = null;
+  }
   _started = false;
 }
 
@@ -106,8 +128,7 @@ export function stopDataEventStream() {
  */
 export function subscribeDataEvents(channels, fn) {
   let set;
-  if (channels == null || channels === '*' ||
-      (Array.isArray(channels) && channels.length === 0)) {
+  if (channels == null || channels === '*' || (Array.isArray(channels) && channels.length === 0)) {
     set = null;
   } else if (typeof channels === 'string') {
     set = new Set([channels]);

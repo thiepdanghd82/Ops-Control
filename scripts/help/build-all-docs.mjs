@@ -13,9 +13,9 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const jobs = [
-  { name: 'User Guide',       script: 'build-user-guide.mjs' },
-  { name: 'Pricing Legend',   script: 'build-legend-docx.mjs' },
-  { name: 'Go-Live Guide',    script: 'build-go-live-docx.mjs' },
+  { name: 'User Guide', script: 'build-user-guide.mjs' },
+  { name: 'Pricing Legend', script: 'build-legend-docx.mjs' },
+  { name: 'Go-Live Guide', script: 'build-go-live-docx.mjs' },
 ];
 
 async function run(job) {

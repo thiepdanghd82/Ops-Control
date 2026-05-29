@@ -25,6 +25,7 @@ Hướng dẫn cài đặt + cấu hình + bảo trì Ops Control Desktop App ch
 ```
 
 **Phân rõ trách nhiệm:**
+
 - **IT khách hàng:** triển khai installer ban đầu, cấu hình firewall, đảm bảo server `10.102.3.61` chạy ổn định.
 - **CCL Design (vendor):** build + sign + push update qua `release.sh`. IT KHÔNG cần build từ source.
 
@@ -34,13 +35,13 @@ Hướng dẫn cài đặt + cấu hình + bảo trì Ops Control Desktop App ch
 
 ### 2.1 Máy trạm
 
-| Hạng mục | Yêu cầu tối thiểu | Khuyến nghị |
-|---|---|---|
-| OS | Windows 10 1809+ / macOS 11 (Big Sur)+ | Windows 11 / macOS 14 |
-| RAM | 4 GB | 8 GB |
-| Disk | 500 MB free | 2 GB free (cho data cache) |
-| Network | Truy cập tới `10.102.3.61:3000` (LAN) + `10.102.3.61:80` (updates) | Gigabit LAN |
-| Quyền user | Standard user OK (per-user install) | — |
+| Hạng mục   | Yêu cầu tối thiểu                                                  | Khuyến nghị                |
+| ---------- | ------------------------------------------------------------------ | -------------------------- |
+| OS         | Windows 10 1809+ / macOS 11 (Big Sur)+                             | Windows 11 / macOS 14      |
+| RAM        | 4 GB                                                               | 8 GB                       |
+| Disk       | 500 MB free                                                        | 2 GB free (cho data cache) |
+| Network    | Truy cập tới `10.102.3.61:3000` (LAN) + `10.102.3.61:80` (updates) | Gigabit LAN                |
+| Quyền user | Standard user OK (per-user install)                                | —                          |
 
 **Không cần:** Node.js, Python, Visual C++ runtime — tất cả đã bundled trong installer.
 
@@ -55,12 +56,12 @@ Server hiện đã chạy v1.0 — tận dụng. Bổ sung:
 
 Cấu hình firewall outbound trên máy trạm:
 
-| Đích | Port | Protocol | Mục đích |
-|---|---|---|---|
-| 10.102.3.61 | 3000 | TCP | App API (REST) |
-| 10.102.3.61 | 80 | TCP/HTTP | Auto-update (download .exe/.dmg + latest.yml) |
-| Máy in nhãn (192.168.x.x) | 9100 | TCP | ZPL/TSPL raw printing |
-| Máy in A4/A3 | tùy theo print spooler Windows | — | Office printing |
+| Đích                      | Port                           | Protocol | Mục đích                                      |
+| ------------------------- | ------------------------------ | -------- | --------------------------------------------- |
+| 10.102.3.61               | 3000                           | TCP      | App API (REST)                                |
+| 10.102.3.61               | 80                             | TCP/HTTP | Auto-update (download .exe/.dmg + latest.yml) |
+| Máy in nhãn (192.168.x.x) | 9100                           | TCP      | ZPL/TSPL raw printing                         |
+| Máy in A4/A3              | tùy theo print spooler Windows | —        | Office printing                               |
 
 Inbound: KHÔNG cần — app là pure client.
 
@@ -102,18 +103,22 @@ File này được sign bằng **self-signed code-signing cert** của CCL Desig
 ### 3.3 Cài hàng loạt qua GPO / SCCM / Intune (recommended cho 50 máy)
 
 **Silent install:**
+
 ```cmd
 "Ops-Control-Setup-1.1.0.exe" /S /allusers
 ```
+
 - `/S` = silent (không hiện UI)
 - `/allusers` = cài per-machine, cần admin
 
 **Uninstall silent:**
+
 ```cmd
 "%PROGRAMFILES%\Ops Control\Uninstall Ops Control.exe" /S
 ```
 
 **GPO Software Installation:** copy `.exe` lên file share `\\fileserver\software\ops-control\1.1.0\`, tạo Group Policy với:
+
 - Computer Configuration → Software Settings → Software Installation
 - Package source: `\\fileserver\software\ops-control\1.1.0\Ops-Control-Setup-1.1.0.exe`
 - Deployment method: Assigned (auto cài khi user login)
@@ -140,6 +145,7 @@ Ops-Control-1.1.0-x64.dmg     (Intel Mac ≈ 100 MB)
 DMG được **ad-hoc signed** (free alternative — không phải Apple Developer ID notarization). Để mở mà không bị Gatekeeper block, IT cần distribute qua kênh KHÔNG gắn `com.apple.quarantine` attribute (chi tiết: [`docs/INTERNAL_TRUST_SETUP.md`](INTERNAL_TRUST_SETUP.md)):
 
 **Kênh distribution KHÔNG gắn quarantine** (recommended cho deploy nội bộ):
+
 - ✅ File share LAN (smb://, afp://) — IT mount + copy
 - ✅ MDM (Jamf Pro / Mosyle / Kandji) — push install qua agent
 - ✅ Internal `.pkg` installer (xem section 2.4 của INTERNAL_TRUST_SETUP)
@@ -147,10 +153,12 @@ DMG được **ad-hoc signed** (free alternative — không phải Apple Develop
 - ✅ USB stick (APFS/HFS+ format, không FAT32)
 
 **Kênh GẮN quarantine** (cần workaround):
+
 - ❌ Browser download (Safari/Chrome/Edge) → user phải right-click → Open lần đầu
 - ❌ Email attachment → tương tự
 
 **Workaround nếu user lỡ download qua browser:**
+
 ```bash
 xattr -cr "/Applications/Ops Control.app"
 open "/Applications/Ops Control.app"
@@ -249,6 +257,7 @@ App sẽ tự "downgrade" về 1.1.4 ở lần check tiếp theo. (release.sh t�
 ## 6. Cấu hình per-machine
 
 App lưu config tại:
+
 - **Windows:** `%APPDATA%\ops-control-desktop\ops-control-config.json`
 - **macOS:** `~/Library/Application Support/ops-control-desktop/ops-control-config.json`
 
@@ -288,6 +297,7 @@ echo '{"mode":"thin","remoteUrl":"http://10.102.3.61:3000"}' > "$HOME/Library/Ap
 App KHÔNG cần driver Windows — gửi ZPL/TSPL trực tiếp qua TCP:9100.
 
 **Cấu hình lần đầu:**
+
 1. Máy in cắm LAN, đặt IP tĩnh (192.168.x.x), bật port 9100 (mặc định bật).
 2. Trong app: Settings → Thiết bị phần cứng → Label Printer → nhập IP + Port (9100) → Test (in 1 nhãn mẫu).
 3. App lưu config per-user.
@@ -296,7 +306,7 @@ App KHÔNG cần driver Windows — gửi ZPL/TSPL trực tiếp qua TCP:9100.
 
 1. Cân cắm USB-Serial (hoặc RS232 + USB-Serial adapter Prolific/FTDI).
 2. Driver Prolific PL2303 thường tự cài Windows.
-3. Trong app: Settings → Thiết bị phần cứng → Cân → chọn COM port (Win) hoặc /dev/cu.* (Mac), baud 9600.
+3. Trong app: Settings → Thiết bị phần cứng → Cân → chọn COM port (Win) hoặc /dev/cu.\* (Mac), baud 9600.
 4. Test: bấm "Đọc cân hiện tại" — phải hiện weight realtime.
 
 Nếu protocol khác chuẩn, IT chỉnh regex parser trong settings (mặc định: `/([+-]?\d+(?:\.\d+)?)\s*(kg|g|lb)?/i`).
@@ -313,11 +323,11 @@ Nếu protocol khác chuẩn, IT chỉnh regex parser trong settings (mặc đ�
 
 ### 8.1 Logs
 
-| Vị trí | Win | Mac |
-|---|---|---|
-| App main log | `%APPDATA%\ops-control-desktop\logs\main.log` | `~/Library/Logs/ops-control-desktop/main.log` |
+| Vị trí                     | Win                                             | Mac                                             |
+| -------------------------- | ----------------------------------------------- | ----------------------------------------------- |
+| App main log               | `%APPDATA%\ops-control-desktop\logs\main.log`   | `~/Library/Logs/ops-control-desktop/main.log`   |
 | Server log (mode embedded) | `%APPDATA%\ops-control-desktop\logs\server.log` | `~/Library/Logs/ops-control-desktop/server.log` |
-| Crash dump | `%LOCALAPPDATA%\CrashDumps\` | `~/Library/Logs/DiagnosticReports/` |
+| Crash dump                 | `%LOCALAPPDATA%\CrashDumps\`                    | `~/Library/Logs/DiagnosticReports/`             |
 
 Rotate: tự động khi size > 5 MB, giữ 5 file cũ.
 
@@ -326,6 +336,7 @@ Rotate: tự động khi size > 5 MB, giữ 5 file cũ.
 Mode `thin` (default): KHÔNG có data trên client — backup chỉ trên server `10.102.3.61` (đã có cron daily, xem v1.0 docs).
 
 Mode `embedded`/`smart`:
+
 - Win: `%APPDATA%\ops-control-desktop\data\`
 - Mac: `~/Library/Application Support/ops-control-desktop/data/`
 
@@ -334,11 +345,13 @@ Backup hàng ngày qua Volume Shadow Copy (Win) hoặc Time Machine (Mac).
 ### 8.3 Update process
 
 **Auto-update (mặc định):**
+
 - App tự check `http://10.102.3.61/updates/latest.yml` lúc start + mỗi 6h
 - Có version mới → download nền → toast "Khởi động lại để cài"
 - User chọn "Để sau" → tự cài khi đóng app lần kế
 
 **Force update toàn bộ máy:**
+
 ```bash
 # Trên server
 ssh ops@10.102.3.61
@@ -346,6 +359,7 @@ ssh ops@10.102.3.61
 ```
 
 User sẽ thấy toast trong vòng 6h. Để force ngay, IT có thể:
+
 - Email user yêu cầu Help → Kiểm tra cập nhật
 - Hoặc remote restart app via SCCM script
 
@@ -359,11 +373,13 @@ User sẽ thấy toast trong vòng 6h. Để force ngay, IT có thể:
 ### 8.5 Recovery: license invalid sau khi đổi máy / clone OS
 
 App bind license với HW fingerprint (CPU + MAC + motherboard SN). Nếu:
+
 - User đổi RAM → fingerprint không đổi (bound on CPU + motherboard)
 - User format + clone OS lên SSD mới → fingerprint không đổi
 - User đổi máy hoàn toàn → fingerprint đổi → license invalid
 
 Quy trình:
+
 1. Trong app, copy "Installation ID" từ dialog license (64 hex chars)
 2. Email cho CCL Design (vendor) — vendor sinh license file mới gắn HW mới
 3. User đặt file `license.json` vào `%APPDATA%\ops-control-desktop\` → restart app
@@ -372,16 +388,16 @@ Quy trình:
 
 ## 9. Troubleshooting matrix
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| App mở rồi đóng ngay | Single-instance lock từ instance trước, hoặc license expired | Kill mọi `Ops Control.exe` qua Task Manager; check `main.log` cho `License invalid` |
-| "Cannot connect to server" | Network down hoặc server `10.102.3.61` chết | `ping 10.102.3.61`; `curl http://10.102.3.61:3000/health` |
-| Zebra ping timeout | Sai IP/port hoặc firewall block 9100 | DevTools → `await window.ops.labelPrinter.ping(host, 9100)`; kiểm tra firewall máy in |
-| Cân không trả weight | Wrong COM/baud, hoặc protocol khác | Check Windows Device Manager → COM ports; thay baud rate; chỉnh regex trong settings |
-| Auto-update không chạy | Network block port 80, hoặc `latest.yml` cache | `curl http://10.102.3.61/updates/latest.yml`; nginx log `/var/log/nginx/error.log` |
-| SmartScreen warns "Unknown publisher" | Installer chưa sign hoặc cert expired | Liên hệ vendor — installer phải dùng EV Code Signing Cert |
-| macOS "App is damaged" | Notarization timeout / Gatekeeper cache | `xattr -cr "/Applications/Ops Control.app"`; thử lại; nếu vẫn lỗi, vendor reissue |
-| TOTP locked out | User mất phone hoặc Authenticator clear | Sys admin reset qua web UI v1.0 (Users tab → Reset TOTP) |
+| Symptom                               | Cause                                                        | Fix                                                                                   |
+| ------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| App mở rồi đóng ngay                  | Single-instance lock từ instance trước, hoặc license expired | Kill mọi `Ops Control.exe` qua Task Manager; check `main.log` cho `License invalid`   |
+| "Cannot connect to server"            | Network down hoặc server `10.102.3.61` chết                  | `ping 10.102.3.61`; `curl http://10.102.3.61:3000/health`                             |
+| Zebra ping timeout                    | Sai IP/port hoặc firewall block 9100                         | DevTools → `await window.ops.labelPrinter.ping(host, 9100)`; kiểm tra firewall máy in |
+| Cân không trả weight                  | Wrong COM/baud, hoặc protocol khác                           | Check Windows Device Manager → COM ports; thay baud rate; chỉnh regex trong settings  |
+| Auto-update không chạy                | Network block port 80, hoặc `latest.yml` cache               | `curl http://10.102.3.61/updates/latest.yml`; nginx log `/var/log/nginx/error.log`    |
+| SmartScreen warns "Unknown publisher" | Installer chưa sign hoặc cert expired                        | Liên hệ vendor — installer phải dùng EV Code Signing Cert                             |
+| macOS "App is damaged"                | Notarization timeout / Gatekeeper cache                      | `xattr -cr "/Applications/Ops Control.app"`; thử lại; nếu vẫn lỗi, vendor reissue     |
+| TOTP locked out                       | User mất phone hoặc Authenticator clear                      | Sys admin reset qua web UI v1.0 (Users tab → Reset TOTP)                              |
 
 ---
 
@@ -392,6 +408,7 @@ Quy trình:
 - SLA: 4h response trong giờ hành chính, 8h ngoài giờ
 
 Khi báo bug, đính kèm:
+
 1. Phiên bản app (Help → Phiên bản)
 2. OS + version
 3. Đoạn log liên quan (`main.log` 100 dòng cuối)

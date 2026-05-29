@@ -72,7 +72,7 @@ export function resolveTabAccess(user, tabId) {
   if (user.role === 'sys') return 'edit';
   if (!user.permission_group_id) return 'edit';
   const groups = loadGroups();
-  const g = groups.find(x => x.id === user.permission_group_id);
+  const g = groups.find((x) => x.id === user.permission_group_id);
   if (!g) return 'edit';
   const perm = g.tab_permissions?.[tabId];
   return perm === 'hidden' || perm === 'read' || perm === 'edit' ? perm : 'edit';
@@ -93,13 +93,17 @@ export function requireTabAccess(tabId, requiredMode = 'edit') {
     if (requiredMode === 'edit' && access !== 'edit') {
       return res.status(403).json({
         error: 'permission_denied',
-        tab: tabId, required: 'edit', current: access,
+        tab: tabId,
+        required: 'edit',
+        current: access,
       });
     }
     if (requiredMode === 'read' && access === 'hidden') {
       return res.status(403).json({
         error: 'permission_denied',
-        tab: tabId, required: 'read', current: 'hidden',
+        tab: tabId,
+        required: 'read',
+        current: 'hidden',
       });
     }
     next();

@@ -211,12 +211,12 @@
 }
 
 /* Dark mode */
-[data-theme="dark"] .imp-card-success {
+[data-theme='dark'] .imp-card-success {
   background: rgba(16, 185, 129, 0.1);
   border-color: rgba(16, 185, 129, 0.3);
 }
 
-[data-theme="dark"] .imp-card-error {
+[data-theme='dark'] .imp-card-error {
   background: rgba(239, 68, 68, 0.1);
   border-color: rgba(239, 68, 68, 0.3);
 }

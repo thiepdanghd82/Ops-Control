@@ -87,12 +87,12 @@ test('chromaBoost: rare red (0.5% of pixels) survives into the palette', () => {
   // Seed a deterministic RNG via Math.random stubbed to sequential values
   // — nope, easier to just run with a small fixed pattern.
   const pixels = [];
-  for (let i = 0; i < 20; i++) pixels.push([220, 38, 38]);    // 20 red = 0.5%
-  for (let i = 0; i < 3980; i++) pixels.push([15 + (i % 4), 15, 15]);  // 3980 near-black
+  for (let i = 0; i < 20; i++) pixels.push([220, 38, 38]); // 20 red = 0.5%
+  for (let i = 0; i < 3980; i++) pixels.push([15 + (i % 4), 15, 15]); // 3980 near-black
   // k=4 with chroma boost should still give us a red cluster.
   const clusters = quantizeColors(pixels, 4, null, { metric: 'lab', chromaBoost: true });
-  const redNear = clusters.find(c => labDist(c.rgb, [220, 38, 38]) < 20);
-  assert.ok(redNear, `no red-ish cluster found: ${JSON.stringify(clusters.map(c => c.rgb))}`);
+  const redNear = clusters.find((c) => labDist(c.rgb, [220, 38, 38]) < 20);
+  assert.ok(redNear, `no red-ish cluster found: ${JSON.stringify(clusters.map((c) => c.rgb))}`);
 });
 
 test('chromaBoost off: same input loses the red cluster (regression case)', () => {
@@ -102,11 +102,11 @@ test('chromaBoost off: same input loses the red cluster (regression case)', () =
   for (let i = 0; i < 20; i++) pixels.push([220, 38, 38]);
   for (let i = 0; i < 3980; i++) pixels.push([15 + (i % 4), 15, 15]);
   const clusters = quantizeColors(pixels, 4, null, { metric: 'lab', chromaBoost: false });
-  const redNear = clusters.find(c => labDist(c.rgb, [220, 38, 38]) < 20);
+  const redNear = clusters.find((c) => labDist(c.rgb, [220, 38, 38]) < 20);
   // May or may not find red — the key is the feature is off. We
   // just make sure chromaBoost ON is at least as good as OFF:
   const chromaOn = quantizeColors(pixels, 4, null, { metric: 'lab', chromaBoost: true });
-  const redOn = chromaOn.find(c => labDist(c.rgb, [220, 38, 38]) < 20);
+  const redOn = chromaOn.find((c) => labDist(c.rgb, [220, 38, 38]) < 20);
   assert.ok(redOn, 'chromaBoost ON must surface red');
   // If redNear exists we can't assert OFF missed it — so only check ON.
   void redNear;
@@ -139,11 +139,14 @@ test('rescueOutlierClusters: promotes pixels beyond outlierThreshold into a new 
   // deliberately OMITS red — simulating a quantize pass that missed it.
   for (let i = 0; i < 100; i++) pixels.push([220, 38, 38]);
   for (let i = 0; i < 9900; i++) pixels.push([20, 20, 20]);
-  const startingClusters = [{ rgb: [20, 20, 20], count: 10000 }];  // black only
-  const rescued = rescueOutlierClusters(pixels, null, startingClusters,
-    { metric: 'lab', outlierThreshold: 15, minOutlierPct: 0.005 });
+  const startingClusters = [{ rgb: [20, 20, 20], count: 10000 }]; // black only
+  const rescued = rescueOutlierClusters(pixels, null, startingClusters, {
+    metric: 'lab',
+    outlierThreshold: 15,
+    minOutlierPct: 0.005,
+  });
   assert.ok(rescued.length >= 2, 'should add at least one cluster');
-  const red = rescued.find(c => labDist(c.rgb, [220, 38, 38]) < 15);
+  const red = rescued.find((c) => labDist(c.rgb, [220, 38, 38]) < 15);
   assert.ok(red, 'rescued red centroid missing');
   assert.ok(red.count >= 90, `red count ${red.count}, expected ~100`);
 });
@@ -154,8 +157,11 @@ test('rescueOutlierClusters: respects minOutlierPct so noise is not promoted', (
   for (let i = 0; i < 5; i++) pixels.push([220, 38, 38]);
   for (let i = 0; i < 9995; i++) pixels.push([20, 20, 20]);
   const startingClusters = [{ rgb: [20, 20, 20], count: 10000 }];
-  const rescued = rescueOutlierClusters(pixels, null, startingClusters,
-    { metric: 'lab', outlierThreshold: 15, minOutlierPct: 0.01 });
+  const rescued = rescueOutlierClusters(pixels, null, startingClusters, {
+    metric: 'lab',
+    outlierThreshold: 15,
+    minOutlierPct: 0.01,
+  });
   // 5 / 10000 = 0.05% < 1% threshold → should NOT promote.
   assert.equal(rescued.length, 1, 'tiny outlier set should stay absorbed');
 });
@@ -164,18 +170,22 @@ test('rescueOutlierClusters: respects minOutlierPct so noise is not promoted', (
 
 test('injectPinnedClusters: pinned hex becomes its own cluster', () => {
   const pixels = [];
-  for (let i = 0; i < 50; i++) pixels.push([200, 40, 40]);   // 50 reddish
-  for (let i = 0; i < 9950; i++) pixels.push([20, 20, 20]);  // 9950 black
+  for (let i = 0; i < 50; i++) pixels.push([200, 40, 40]); // 50 reddish
+  for (let i = 0; i < 9950; i++) pixels.push([20, 20, 20]); // 9950 black
   const starting = [{ rgb: [20, 20, 20], count: 10000 }];
   const withPin = injectPinnedClusters(pixels, null, starting, ['#DC2626'], { metric: 'lab' });
-  const pinned = withPin.find(c => labDist(c.rgb, [220, 38, 38]) < 10);
+  const pinned = withPin.find((c) => labDist(c.rgb, [220, 38, 38]) < 10);
   assert.ok(pinned, 'pinned red cluster missing');
   assert.ok(pinned.count >= 40, `pinned captured ${pinned.count}, expected ~50`);
 });
 
 test('injectPinnedClusters: skips pins that are near an existing cluster', () => {
   // Starting palette already has black; pinning black again should no-op.
-  const pixels = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  const pixels = [
+    [0, 0, 0],
+    [0, 0, 0],
+    [0, 0, 0],
+  ];
   const starting = [{ rgb: [0, 0, 0], count: 3 }];
   const withPin = injectPinnedClusters(pixels, null, starting, ['#000000'], { metric: 'lab' });
   assert.equal(withPin.length, 1, 'duplicate pin should not add a cluster');
@@ -185,11 +195,11 @@ test('injectPinnedClusters: empty / invalid hex array is a no-op', () => {
   const starting = [{ rgb: [0, 0, 0], count: 10 }];
   assert.deepEqual(
     injectPinnedClusters([[0, 0, 0]], null, starting, [], { metric: 'lab' }),
-    starting,
+    starting
   );
   assert.deepEqual(
     injectPinnedClusters([[0, 0, 0]], null, starting, ['not-a-hex'], { metric: 'lab' }),
-    starting,
+    starting
   );
 });
 
@@ -206,28 +216,40 @@ test('quantizeColors: NaN k falls back to k=4 instead of crashing', () => {
 });
 
 test('quantizeColors: undefined k falls back to k=4', () => {
-  const pixels = [[0, 0, 0], [255, 255, 255], [128, 128, 128]];
+  const pixels = [
+    [0, 0, 0],
+    [255, 255, 255],
+    [128, 128, 128],
+  ];
   const out = quantizeColors(pixels, undefined, null, { metric: 'rgb' });
   assert.ok(Array.isArray(out) && out.length > 0);
 });
 
 test('rescueOutlierClusters: NaN maxNewClusters falls back safely', () => {
-  const pixels = [[220, 38, 38], [220, 38, 38], [20, 20, 20], [20, 20, 20]];
+  const pixels = [
+    [220, 38, 38],
+    [220, 38, 38],
+    [20, 20, 20],
+    [20, 20, 20],
+  ];
   const clusters = [{ rgb: [20, 20, 20], count: 2 }];
   const out = rescueOutlierClusters(pixels, null, clusters, {
     metric: 'lab',
-    maxNewClusters: NaN,  // corrupt input
+    maxNewClusters: NaN, // corrupt input
     minOutlierPct: 0.01,
   });
   assert.ok(Array.isArray(out), 'must not crash on NaN maxNewClusters');
 });
 
 test('integration: black label with 0.3% red surfaces a red cluster end-to-end', () => {
-  const pixels = blackLabelWithRed(10000, 0.003);  // 30 red / 9970 black
+  const pixels = blackLabelWithRed(10000, 0.003); // 30 red / 9970 black
   // Analyze: quantize + rescue, mirroring the runPrintAreaAnalysis order.
   let clusters = quantizeColors(pixels, 8, null, { metric: 'lab', chromaBoost: true });
-  clusters = rescueOutlierClusters(pixels, null, clusters,
-    { metric: 'lab', outlierThreshold: 15, minOutlierPct: 0.001 });
-  const red = clusters.find(c => labDist(c.rgb, [220, 38, 38]) < 20);
-  assert.ok(red, `no red in final palette: ${JSON.stringify(clusters.map(c => c.rgb))}`);
+  clusters = rescueOutlierClusters(pixels, null, clusters, {
+    metric: 'lab',
+    outlierThreshold: 15,
+    minOutlierPct: 0.001,
+  });
+  const red = clusters.find((c) => labDist(c.rgb, [220, 38, 38]) < 20);
+  assert.ok(red, `no red in final palette: ${JSON.stringify(clusters.map((c) => c.rgb))}`);
 });

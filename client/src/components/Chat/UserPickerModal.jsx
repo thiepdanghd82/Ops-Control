@@ -39,7 +39,13 @@ function fmtLastSeen(iso) {
 }
 
 export default function UserPickerModal({
-  open, onClose, users: usersProp, meId, onlineSet, onOpen, title = 'New message',
+  open,
+  onClose,
+  users: usersProp,
+  meId,
+  onlineSet,
+  onOpen,
+  title = 'New message',
 }) {
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState(null);
@@ -48,9 +54,14 @@ export default function UserPickerModal({
   const [err, setErr] = useState(null);
 
   useEffect(() => {
-    if (!open) { setQ(''); setErr(null); return; }
+    if (!open) {
+      setQ('');
+      setErr(null);
+      return;
+    }
     setLoading(true);
-    chatApi.users()
+    chatApi
+      .users()
       .then((r) => {
         if (r?.ok) {
           setLocalUsers(Array.isArray(r.users) ? r.users : []);
@@ -61,14 +72,14 @@ export default function UserPickerModal({
       })
       .catch((e) => {
         const msg = String(e?.message || e);
-        setErr(msg.includes('chat_disabled')
-          ? 'Chat chưa được bật — chưa tải được danh sách user.'
-          : msg);
+        setErr(
+          msg.includes('chat_disabled') ? 'Chat chưa được bật — chưa tải được danh sách user.' : msg
+        );
       })
       .finally(() => setLoading(false));
   }, [open]);
 
-  const users = localUsers.length > 0 ? localUsers : (usersProp || []);
+  const users = localUsers.length > 0 ? localUsers : usersProp || [];
   const onlineSetSafe = onlineSet || new Set();
   const needle = q.trim().toLowerCase();
   const filtered = users
@@ -76,9 +87,9 @@ export default function UserPickerModal({
     .filter((u) => {
       if (!needle) return true;
       return (
-        (u.username || '').toLowerCase().includes(needle)
-        || (u.full_name || '').toLowerCase().includes(needle)
-        || (u.role || '').toLowerCase().includes(needle)
+        (u.username || '').toLowerCase().includes(needle) ||
+        (u.full_name || '').toLowerCase().includes(needle) ||
+        (u.role || '').toLowerCase().includes(needle)
       );
     })
     .sort((a, b) => {
@@ -107,9 +118,11 @@ export default function UserPickerModal({
       }
     } catch (e) {
       const msg = String(e?.message || e);
-      setErr(msg.includes('chat_disabled')
-        ? 'Chat chưa được bật trên server. Set OPS_CHAT_ENABLED=1 (hoặc xoá OPS_CHAT_ENABLED=0).'
-        : msg);
+      setErr(
+        msg.includes('chat_disabled')
+          ? 'Chat chưa được bật trên server. Set OPS_CHAT_ENABLED=1 (hoặc xoá OPS_CHAT_ENABLED=0).'
+          : msg
+      );
     } finally {
       setBusy(null);
     }
@@ -117,8 +130,9 @@ export default function UserPickerModal({
 
   const subtitle = loading
     ? 'Loading directory…'
-    : err ? 'Could not load directory'
-    : `${filtered.length} of ${users.length - (users.some(u => Number(u.id) === Number(meId)) ? 1 : 0)} user${users.length === 2 ? '' : 's'}`;
+    : err
+      ? 'Could not load directory'
+      : `${filtered.length} of ${users.length - (users.some((u) => Number(u.id) === Number(meId)) ? 1 : 0)} user${users.length === 2 ? '' : 's'}`;
 
   return (
     <Modal open={open} onClose={onClose} size="sm" ariaLabelledBy="upm-title">
@@ -137,10 +151,14 @@ export default function UserPickerModal({
           {loading && <div className="upm-empty">Đang tải danh sách…</div>}
           {!loading && err && <div className="upm-empty upm-err">{err}</div>}
           {!loading && !err && users.length === 0 && (
-            <div className="upm-empty">Chưa có user nào được load. Kiểm tra OPS_CHAT_ENABLED=1.</div>
+            <div className="upm-empty">
+              Chưa có user nào được load. Kiểm tra OPS_CHAT_ENABLED=1.
+            </div>
           )}
           {!loading && !err && users.length > 0 && filtered.length === 0 && (
-            <div className="upm-empty">Không khớp "{q}" — tổng cộng {users.length} user</div>
+            <div className="upm-empty">
+              Không khớp "{q}" — tổng cộng {users.length} user
+            </div>
           )}
           {filtered.map((u) => {
             const name = u.full_name || u.username;
@@ -158,14 +176,15 @@ export default function UserPickerModal({
                 <div className="upm-row-main">
                   <div className="upm-row-name">{name}</div>
                   <div className="upm-row-meta">
-                    {u.username}{u.role ? ` · ${u.role}` : ''}
+                    {u.username}
+                    {u.role ? ` · ${u.role}` : ''}
                   </div>
                 </div>
-                {online
-                  ? <span className="upm-online">● Online</span>
-                  : u.last_seen_at
-                    ? <span className="upm-meta">{fmtLastSeen(u.last_seen_at)}</span>
-                    : null}
+                {online ? (
+                  <span className="upm-online">● Online</span>
+                ) : u.last_seen_at ? (
+                  <span className="upm-meta">{fmtLastSeen(u.last_seen_at)}</span>
+                ) : null}
               </div>
             );
           })}

@@ -57,8 +57,7 @@ function readBackendName() {
  * fallback behavior Sprint 7.1/7.3 wired.
  */
 function isStrictSqlite() {
-  return process.env.OPS_QUOTES_STRICT_SQLITE === '1'
-    && readBackendName() === 'sqlite';
+  return process.env.OPS_QUOTES_STRICT_SQLITE === '1' && readBackendName() === 'sqlite';
 }
 
 function loadQuotesFromSqliteStrict() {
@@ -71,9 +70,15 @@ function loadQuotesFromSqliteStrict() {
   const conn = getDb();
   try {
     const rows = conn.prepare('SELECT raw_json FROM quotes').all();
-    return rows.map(r => {
-      try { return JSON.parse(r.raw_json); } catch { return null; }
-    }).filter(Boolean);
+    return rows
+      .map((r) => {
+        try {
+          return JSON.parse(r.raw_json);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
   } catch (err) {
     const wrapped = new Error(`strict-sqlite: read failed — ${err.message}`);
     wrapped.code = err.code || 'OPS_DB_READ_FAILED';
@@ -86,7 +91,11 @@ function quoteHistoryPath() {
   // at a tmp file without touching prod data.
   const override = process.env.OPS_QUOTE_HISTORY_FILE;
   if (override) {
-    try { fs.mkdirSync(path.dirname(override), { recursive: true }); } catch { /* noop */ }
+    try {
+      fs.mkdirSync(path.dirname(override), { recursive: true });
+    } catch {
+      /* noop */
+    }
     return override;
   }
   return path.join(getDataDir(), 'Library', 'QuoteHistory', 'quote_history.json');
@@ -223,7 +232,7 @@ export async function upsertQuote(quote) {
     incoming._saved_at = new Date().toISOString();
     let next;
     const hasId = typeof incoming.id === 'number' && Number.isFinite(incoming.id);
-    const existingIdx = hasId ? list.findIndex(q => q && q.id === incoming.id) : -1;
+    const existingIdx = hasId ? list.findIndex((q) => q && q.id === incoming.id) : -1;
     if (existingIdx >= 0) {
       // Optimistic locking: if the caller sent `_version`, require it
       // to match the server's current version. Omitted version means
@@ -252,11 +261,11 @@ export async function upsertQuote(quote) {
         ...incoming,
         _version: serverVersion + 1,
       };
-      next = list.map((q, i) => i === existingIdx ? merged : q);
+      next = list.map((q, i) => (i === existingIdx ? merged : q));
       saveQuotes(next);
       return merged;
     }
-    const maxId = list.reduce((mx, q) => Math.max(mx, (q && typeof q.id === 'number') ? q.id : 0), 0);
+    const maxId = list.reduce((mx, q) => Math.max(mx, q && typeof q.id === 'number' ? q.id : 0), 0);
     const assigned = {
       ...incoming,
       id: hasId ? incoming.id : maxId + 1,
@@ -284,10 +293,13 @@ export function getQuoteById(id) {
       err.code = 'OPS_DB_MISSING';
       throw err;
     }
-    const row = getDb()
-      .prepare('SELECT raw_json FROM quotes WHERE id = ?').get(n);
+    const row = getDb().prepare('SELECT raw_json FROM quotes WHERE id = ?').get(n);
     if (!row) return null;
-    try { return JSON.parse(row.raw_json); } catch { return null; }
+    try {
+      return JSON.parse(row.raw_json);
+    } catch {
+      return null;
+    }
   }
   const backend = readBackendName();
   if (backend === 'sqlite') {
@@ -298,7 +310,7 @@ export function getQuoteById(id) {
       console.warn('  ⚠️  getQuoteById(sqlite) failed, falling back to file:', err.message);
     }
   }
-  return loadQuotesFromFile().find(q => q && q.id === n) || null;
+  return loadQuotesFromFile().find((q) => q && q.id === n) || null;
 }
 
 /**

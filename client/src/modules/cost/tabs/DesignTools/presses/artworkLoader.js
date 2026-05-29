@@ -17,8 +17,8 @@
  * Errors throw; callers should toast and reset the file input.
  */
 
-const RENDER_TARGET_WIDTH_PX = 1200;  // good balance: crisp on retina,
-                                      // ~1-2 MB encoded for typical artwork.
+const RENDER_TARGET_WIDTH_PX = 1200; // good balance: crisp on retina,
+// ~1-2 MB encoded for typical artwork.
 
 let _pdfjsModule = null;
 async function loadPdfjs() {
@@ -73,7 +73,7 @@ async function renderPdfFirstPage(file) {
     // lack it; a regular canvas works everywhere and the image is
     // discarded after toDataURL.
     const canvas = document.createElement('canvas');
-    canvas.width  = Math.ceil(viewport.width);
+    canvas.width = Math.ceil(viewport.width);
     canvas.height = Math.ceil(viewport.height);
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) throw new Error('canvas 2d context unavailable');
@@ -92,6 +92,10 @@ async function renderPdfFirstPage(file) {
     };
   } finally {
     // Free the parsed PDF — the page render is captured in our canvas.
-    try { await doc.destroy(); } catch { /* noop */ }
+    try {
+      await doc.destroy();
+    } catch {
+      /* noop */
+    }
   }
 }

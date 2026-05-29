@@ -22,7 +22,9 @@ export function useDocumentTitle(label, scope = '') {
     const previous = document.title;
     const parts = [label, scope, APP_SUFFIX].filter(Boolean);
     document.title = parts.join(' · ');
-    return () => { document.title = previous; };
+    return () => {
+      document.title = previous;
+    };
   }, [label, scope]);
 }
 

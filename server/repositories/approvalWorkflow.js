@@ -114,10 +114,10 @@ const REQUIRED_ROLE_FOR_ACTION = {
 // hierarchical role that also grants the action (admin-as-safety-net).
 // Array = any of the listed approval_roles authorizes.
 const APPROVAL_AUTH = {
-  APPROVE_SALES:   { approval_role: 'sales_mgr',                 fallback_role: 'admin' },
-  APPROVE_FINANCE: { approval_role: 'finance_dir',               fallback_role: 'admin' },
-  APPROVE:         { approval_role: ['sales_mgr', 'finance_dir'], fallback_role: 'admin' },
-  REJECT:          { approval_role: ['sales_mgr', 'finance_dir'], fallback_role: 'admin' },
+  APPROVE_SALES: { approval_role: 'sales_mgr', fallback_role: 'admin' },
+  APPROVE_FINANCE: { approval_role: 'finance_dir', fallback_role: 'admin' },
+  APPROVE: { approval_role: ['sales_mgr', 'finance_dir'], fallback_role: 'admin' },
+  REJECT: { approval_role: ['sales_mgr', 'finance_dir'], fallback_role: 'admin' },
 };
 
 function currentStatus(approval) {
@@ -155,7 +155,7 @@ function canUserTakeAction(user, action) {
   if (userLevel >= fallbackLevel) return true;
   if (auth.approval_role == null) return false;
   const needed = Array.isArray(auth.approval_role) ? auth.approval_role : [auth.approval_role];
-  return needed.some(r => approvalRoles.includes(r));
+  return needed.some((r) => approvalRoles.includes(r));
 }
 
 /**
@@ -202,10 +202,16 @@ export function transition({ approval, action, actorUser, reason, snapshot }) {
     delete next.rejected_by;
     delete next.rejected_stage;
     delete next.reason;
-  } else if (action === 'APPROVE_SALES' || (action === 'APPROVE' && fromStatus === 'pending_sales')) {
+  } else if (
+    action === 'APPROVE_SALES' ||
+    (action === 'APPROVE' && fromStatus === 'pending_sales')
+  ) {
     next.sales_approved_at = nowISO;
     next.sales_approved_by = actor;
-  } else if (action === 'APPROVE_FINANCE' || (action === 'APPROVE' && fromStatus === 'pending_finance')) {
+  } else if (
+    action === 'APPROVE_FINANCE' ||
+    (action === 'APPROVE' && fromStatus === 'pending_finance')
+  ) {
     next.finance_approved_at = nowISO;
     next.finance_approved_by = actor;
     // Convenience mirror kept for UIs that read the v1 approved_at field.
@@ -219,7 +225,9 @@ export function transition({ approval, action, actorUser, reason, snapshot }) {
     if (snapshot && typeof snapshot === 'object') {
       next.rates_snapshot = {
         site: snapshot.site ?? null,
-        sga_rate_pct: Number.isFinite(Number(snapshot.sga_rate_pct)) ? Number(snapshot.sga_rate_pct) : 0,
+        sga_rate_pct: Number.isFinite(Number(snapshot.sga_rate_pct))
+          ? Number(snapshot.sga_rate_pct)
+          : 0,
         frozen_at: nowISO,
         frozen_by: actor,
       };
@@ -266,7 +274,7 @@ export function getStatus(approval) {
 export function availableActions(approval, user) {
   const fromStatus = currentStatus(approval);
   const possible = Object.keys(TRANSITIONS[fromStatus] || {});
-  return possible.filter(a => canUserTakeAction(user, a));
+  return possible.filter((a) => canUserTakeAction(user, a));
 }
 
 const PENDING_STATES = new Set(['pending_sales', 'pending_finance']);

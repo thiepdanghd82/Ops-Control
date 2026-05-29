@@ -6,79 +6,106 @@
  */
 
 .ag-forbidden {
-  display:flex; align-items:center; justify-content:center;
-  min-height:60vh;
-  padding:40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 40px;
 }
 .ag-forbidden-card {
-  max-width:440px;
-  background:#fff;
-  border:1px solid #fecaca;
-  border-radius:12px;
-  padding:32px;
-  text-align:center;
-  box-shadow:0 2px 12px rgba(239, 68, 68, .08);
+  max-width: 440px;
+  background: #fff;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  box-shadow: 0 2px 12px rgba(239, 68, 68, 0.08);
 }
 .ag-forbidden-icon {
-  font-size:48px; color:#ef4444;
-  margin-bottom:8px;
+  font-size: 48px;
+  color: #ef4444;
+  margin-bottom: 8px;
 }
 .ag-forbidden h3 {
-  margin:0 0 8px;
-  font-size:18px; color:#7f1d1d;
+  margin: 0 0 8px;
+  font-size: 18px;
+  color: #7f1d1d;
 }
-.ag-forbidden p { color:#475569; font-size:13px; line-height:1.5; margin:6px 0; }
-.ag-forbidden-meta { font-size:12px; color:#64748b; margin-top:10px; }
+.ag-forbidden p {
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 6px 0;
+}
+.ag-forbidden-meta {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 10px;
+}
 .ag-forbidden-meta code {
-  background:#f1f5f9;
-  padding:1px 6px;
-  border-radius:4px;
-  font-family:ui-monospace, SFMono-Regular, monospace;
-  font-size:11px;
+  background: #f1f5f9;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 11px;
 }
 .ag-forbidden-hint {
-  margin-top:14px !important;
-  padding-top:14px;
-  border-top:1px dashed #e2e8f0;
-  color:#64748b !important;
-  font-size:12px !important;
-  font-style:italic;
+  margin-top: 14px !important;
+  padding-top: 14px;
+  border-top: 1px dashed #e2e8f0;
+  color: #64748b !important;
+  font-size: 12px !important;
+  font-style: italic;
 }
 
 .ag-readonly {
-  display:flex; flex-direction:column;
-  height:100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 .ag-readonly-banner {
-  display:flex; align-items:center; gap:10px;
-  padding:8px 16px;
-  background:linear-gradient(180deg, #fef3c7 0%, #fffbeb 100%);
-  border-bottom:1px solid #fde68a;
-  color:#78350f;
-  font-size:12px;
-  flex-shrink:0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: linear-gradient(180deg, #fef3c7 0%, #fffbeb 100%);
+  border-bottom: 1px solid #fde68a;
+  color: #78350f;
+  font-size: 12px;
+  flex-shrink: 0;
 }
-.ag-readonly-banner b { color:#78350f; }
+.ag-readonly-banner b {
+  color: #78350f;
+}
 .ag-readonly-banner code {
-  background:rgba(255, 255, 255, .7);
-  padding:1px 6px; border-radius:4px;
-  font-family:ui-monospace, SFMono-Regular, monospace;
-  font-size:11px; color:#78350f;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 11px;
+  color: #78350f;
 }
-.ag-ro-icon { font-size:16px; }
+.ag-ro-icon {
+  font-size: 16px;
+}
 
 /* <fieldset> has a browser-default border. Kill it + let the wrapped
  * content stretch normally. Opacity hint is subtle (not ugly) so the
  * operator can still read everything clearly. */
 .ag-readonly-fieldset {
-  border:none; padding:0; margin:0; min-width:0;
-  flex:1; display:flex; flex-direction:column;
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 .ag-readonly-fieldset[disabled] {
-  opacity:.88;
+  opacity: 0.88;
 }
-.ag-readonly-fieldset[disabled] button[type="submit"],
+.ag-readonly-fieldset[disabled] button[type='submit'],
 .ag-readonly-fieldset[disabled] .sc-btn-primary,
 .ag-readonly-fieldset[disabled] .btn-primary {
-  cursor:not-allowed;
+  cursor: not-allowed;
 }

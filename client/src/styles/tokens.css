@@ -19,16 +19,16 @@
   /* ─── Neutrals (slate scale) ───
    * Use for: text, borders, backgrounds, disabled states.
    * Primary neutral — preferred for new code. */
-  --color-slate-50:  #f8fafc;   /* 58 uses — page/card bg */
-  --color-slate-100: #f1f5f9;   /* 84 uses — subtle fill, hover bg */
-  --color-slate-200: #e2e8f0;   /* 102 uses — borders, dividers */
+  --color-slate-50: #f8fafc; /* 58 uses — page/card bg */
+  --color-slate-100: #f1f5f9; /* 84 uses — subtle fill, hover bg */
+  --color-slate-200: #e2e8f0; /* 102 uses — borders, dividers */
   --color-slate-300: #cbd5e1;
-  --color-slate-400: #94a3b8;   /* 73 uses — muted text, placeholders */
-  --color-slate-500: #64748b;   /* 94 uses — secondary text */
-  --color-slate-600: #475569;   /* 30 uses — button text on light bg */
-  --color-slate-700: #334155;   /* 35 uses — body text */
+  --color-slate-400: #94a3b8; /* 73 uses — muted text, placeholders */
+  --color-slate-500: #64748b; /* 94 uses — secondary text */
+  --color-slate-600: #475569; /* 30 uses — button text on light bg */
+  --color-slate-700: #334155; /* 35 uses — body text */
   --color-slate-800: #1e293b;
-  --color-slate-900: #0f2341;   /* 34 uses — headings, dark titles */
+  --color-slate-900: #0f2341; /* 34 uses — headings, dark titles */
 
   /* ─── Neutrals (gray scale — parallel) ───
    * PARALLEL to slate. The codebase uses both Tailwind `gray` and
@@ -36,7 +36,7 @@
    * (e.g. gray-500 #6b7280 vs slate-500 #64748b). New code should
    * prefer slate; these tokens exist so gray-using files can migrate
    * without visual drift, then be flipped to slate in a later pass. */
-  --color-gray-50:  #f9fafb;
+  --color-gray-50: #f9fafb;
   --color-gray-100: #f3f4f6;
   --color-gray-200: #e5e7eb;
   --color-gray-300: #d1d5db;
@@ -58,73 +58,73 @@
    * the semantic `--color-primary` / `--color-primary-hover` tokens.
    * A later cleanup pass will delete the aliases once grep shows no
    * surviving references. */
-  --color-primary:       #0f62fe;   /* IBM Carbon Blue 60 — app primary */
-  --color-primary-hover: #0353e9;   /* Blue 60 — darker on hover */
-  --color-primary-subtle: #edf5ff;  /* light tint for hover bg on tertiary buttons */
-  --color-primary-deep:  #002d9c;   /* darker, for gradient/active variants */
+  --color-primary: #0f62fe; /* IBM Carbon Blue 60 — app primary */
+  --color-primary-hover: #0353e9; /* Blue 60 — darker on hover */
+  --color-primary-subtle: #edf5ff; /* light tint for hover bg on tertiary buttons */
+  --color-primary-deep: #002d9c; /* darker, for gradient/active variants */
 
   /* Deprecated aliases — kept at their ORIGINAL Tailwind values so
    * unmigrated call-sites don't shift color. Do NOT use in new code. */
   --color-brand-500: #3b82f6;
   --color-brand-600: #2563eb;
   --color-brand-700: #1e40af;
-  --color-brand-50:  #eff6ff;
+  --color-brand-50: #eff6ff;
 
   /* ─── Semantic ─── */
   --color-success-500: #16a34a; /* GM ≥20%, save toast */
-  --color-success-50:  #f0fdf4;
+  --color-success-50: #f0fdf4;
 
   --color-warning-500: #d97706; /* GM 10–19% */
   --color-warning-600: #92400e;
-  --color-warning-50:  #fffbeb;
+  --color-warning-50: #fffbeb;
   --color-warning-100: #fef3c7; /* dirty badge bg */
 
-  --color-danger-500: #dc2626;  /* 30 uses — errors, delete */
-  --color-danger-300: #fca5a5;  /* error border */
-  --color-danger-50:  #fef2f2;  /* error row bg */
+  --color-danger-500: #dc2626; /* 30 uses — errors, delete */
+  --color-danger-300: #fca5a5; /* error border */
+  --color-danger-50: #fef2f2; /* error row bg */
 
   /* ─── Accents (used in specific features) ─── */
   /* Teal — remapped to IBM Carbon Gray 10 for flat card headers */
   --color-teal-500: #e0e0e0;
-  --color-teal-700: #f4f4f4;   /* was #0f766e — now IBM Gray 10 */
+  --color-teal-700: #f4f4f4; /* was #0f766e — now IBM Gray 10 */
   /* Amber — highlighted totals, MOQ badges, EAU indicator */
   --color-amber-400: #fbbf24;
   --color-amber-500: #f59e0b;
   /* Violet — process-mat rows, derived columns */
   --color-violet-500: #7c3aed;
-  --color-violet-50:  #f5f3ff;
+  --color-violet-50: #f5f3ff;
 
   /* ─── Typography scale ───
    * The audit found 18+ unique font-sizes with half-step outliers
    * (11.5, 12.5, 13.5). This 9-step scale covers every *needed*
    * size without the in-between values. Migrate old ad-hoc values
    * to the nearest step, rounding DOWN when ambiguous. */
-  --font-xs:   10px;  /* table footer labels, badges */
-  --font-sm:   11px;  /* table cells, dense forms */
-  --font-base: 12px;  /* default body text in data screens */
-  --font-md:   13px;  /* standard UI text, buttons */
-  --font-lg:   14px;  /* section titles, emphasized body */
-  --font-xl:   16px;  /* card titles */
-  --font-2xl:  18px;  /* page headings, error title */
-  --font-3xl:  22px;  /* hero KPIs */
-  --font-4xl:  28px;  /* login title, largest display */
+  --font-xs: 10px; /* table footer labels, badges */
+  --font-sm: 11px; /* table cells, dense forms */
+  --font-base: 12px; /* default body text in data screens */
+  --font-md: 13px; /* standard UI text, buttons */
+  --font-lg: 14px; /* section titles, emphasized body */
+  --font-xl: 16px; /* card titles */
+  --font-2xl: 18px; /* page headings, error title */
+  --font-3xl: 22px; /* hero KPIs */
+  --font-4xl: 28px; /* login title, largest display */
 
   /* ─── Font weights ───
    * The codebase only needs 3 weights; anything else is noise. */
   --fw-normal: 400;
-  --fw-semibold: 600;  /* emphasized body, muted headings */
-  --fw-bold: 700;      /* buttons, titles, totals */
+  --fw-semibold: 600; /* emphasized body, muted headings */
+  --fw-bold: 700; /* buttons, titles, totals */
 
   /* ─── Spacing scale ───
    * 4-px baseline grid. Audit found 18+ unique padding/margin values;
    * this scale keeps it to 9 predictable steps. */
-  --space-1:  4px;
-  --space-2:  8px;
-  --space-3:  12px;
-  --space-4:  16px;
-  --space-5:  20px;
-  --space-6:  24px;
-  --space-8:  32px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
   --space-10: 40px;
   --space-12: 48px;
 
@@ -136,10 +136,10 @@
   --radius-round: 50%;
 
   /* ─── Shadows ─── */
-  --shadow-sm: 0 1px 4px rgba(0, 0, 0, .06);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, .12);
-  --shadow-lg: 0 8px 30px rgba(0, 0, 0, .18);
-  --shadow-focus-ring: 0 0 0 3px rgba(59, 130, 246, .25);
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.18);
+  --shadow-focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.25);
 
   /* ─── Responsive breakpoints (for reference in @media queries) ───
    * The audit found 7 different breakpoints across files (480, 640,
@@ -199,23 +199,23 @@
    *   text-primary    = --ops-text        (Slate 800 — softer than #161616)
    *   text-secondary  = --ops-text-muted  (Slate 600)
    *   text-tertiary   = --ops-text-faint  (Slate 400) */
-  --surface-page: #f8fafc;         /* page bg (Slate 50) — gives the lighter feel */
-  --surface-card: #ffffff;         /* elevated cards + modals */
-  --surface-subtle: #f1f5f9;       /* Slate 100 — table headers, toolbars */
-  --surface-hover: #f1f5f9;        /* Slate 100 — row hover, button hover */
-  --surface-zebra: #f8fafc;        /* Slate 50 — zebra striping */
+  --surface-page: #f8fafc; /* page bg (Slate 50) — gives the lighter feel */
+  --surface-card: #ffffff; /* elevated cards + modals */
+  --surface-subtle: #f1f5f9; /* Slate 100 — table headers, toolbars */
+  --surface-hover: #f1f5f9; /* Slate 100 — row hover, button hover */
+  --surface-zebra: #f8fafc; /* Slate 50 — zebra striping */
 
-  --text-primary: #1f2937;         /* Slate 800 — body */
-  --text-secondary: #475569;       /* Slate 600 — muted/labels */
-  --text-tertiary: #94a3b8;        /* Slate 400 — placeholders/timestamps */
+  --text-primary: #1f2937; /* Slate 800 — body */
+  --text-secondary: #475569; /* Slate 600 — muted/labels */
+  --text-tertiary: #94a3b8; /* Slate 400 — placeholders/timestamps */
   --text-on-brand: #ffffff;
 
-  --border-subtle: #e2e8f0;        /* Slate 200 — row separators */
-  --border-strong: #cbd5e1;        /* Slate 300 — card outlines */
-  --border-focus: #0f62fe;         /* Carbon Blue 60 — focus ring */
+  --border-subtle: #e2e8f0; /* Slate 200 — row separators */
+  --border-strong: #cbd5e1; /* Slate 300 — card outlines */
+  --border-focus: #0f62fe; /* Carbon Blue 60 — focus ring */
 
   /* ─── Button variants ─── */
-  --btn-radius: 0;                 /* IBM Carbon uses square corners */
+  --btn-radius: 0; /* IBM Carbon uses square corners */
   --btn-padding-y: 7px;
   --btn-padding-x: 16px;
   --btn-font-size: 14px;
@@ -263,57 +263,60 @@
  *   — Primary blue #0f62fe works on both palettes; no need to change
  *     button colors.
  * ═══════════════════════════════════════════════════════════════════ */
-:root[data-theme="dark"] {
-  --surface-page:   #161616;   /* Gray 100 — page bg */
-  --surface-card:   #262626;   /* Gray 90  — elevated cards + modals */
-  --surface-subtle: #393939;   /* Gray 80  — table headers, toolbars */
-  --surface-hover:  #353535;   /* Gray 80+ — row hover */
-  --surface-zebra:  #1e1e1e;   /* Gray 95  — even-row striping */
+:root[data-theme='dark'] {
+  --surface-page: #161616; /* Gray 100 — page bg */
+  --surface-card: #262626; /* Gray 90  — elevated cards + modals */
+  --surface-subtle: #393939; /* Gray 80  — table headers, toolbars */
+  --surface-hover: #353535; /* Gray 80+ — row hover */
+  --surface-zebra: #1e1e1e; /* Gray 95  — even-row striping */
 
-  --text-primary:   #f4f4f4;   /* Gray 10  — body text, ~16:1 on page bg */
-  --text-secondary: #c6c6c6;   /* Gray 30  — muted, still 11:1 */
-  --text-tertiary:  #8d8d8d;   /* Gray 50  — placeholders (4.5:1 min) */
-  --text-on-brand:  #ffffff;
+  --text-primary: #f4f4f4; /* Gray 10  — body text, ~16:1 on page bg */
+  --text-secondary: #c6c6c6; /* Gray 30  — muted, still 11:1 */
+  --text-tertiary: #8d8d8d; /* Gray 50  — placeholders (4.5:1 min) */
+  --text-on-brand: #ffffff;
 
-  --border-subtle:  #393939;   /* separators */
-  --border-strong:  #525252;   /* card outline, thead bottom */
-  --border-focus:   #4589ff;   /* Carbon Blue 50 — more luminous on dark */
+  --border-subtle: #393939; /* separators */
+  --border-strong: #525252; /* card outline, thead bottom */
+  --border-focus: #4589ff; /* Carbon Blue 50 — more luminous on dark */
 
   /* Button variants re-tuned for dark bg. Primary button stays visible
    * because 0f62fe is bright enough; secondary gets a darker surface
    * so its white border doesn't glare. */
-  --btn-primary-bg:         #0f62fe;
-  --btn-primary-bg-hover:   #4589ff;
-  --btn-primary-text:       #ffffff;
+  --btn-primary-bg: #0f62fe;
+  --btn-primary-bg-hover: #4589ff;
+  --btn-primary-text: #ffffff;
 
-  --btn-secondary-bg:       #393939;
+  --btn-secondary-bg: #393939;
   --btn-secondary-bg-hover: #4c4c4c;
-  --btn-secondary-text:     #f4f4f4;
-  --btn-secondary-border:   #6f6f6f;
+  --btn-secondary-text: #f4f4f4;
+  --btn-secondary-border: #6f6f6f;
 
-  --btn-danger-bg:          #fa4d56;   /* Carbon Red 50 brighter on dark */
-  --btn-danger-bg-hover:    #ff8389;
-  --btn-danger-text:        #ffffff;
+  --btn-danger-bg: #fa4d56; /* Carbon Red 50 brighter on dark */
+  --btn-danger-bg-hover: #ff8389;
+  --btn-danger-text: #ffffff;
 
-  --btn-ghost-bg:           transparent;
-  --btn-ghost-bg-hover:     #393939;
-  --btn-ghost-text:         #f4f4f4;
+  --btn-ghost-bg: transparent;
+  --btn-ghost-bg-hover: #393939;
+  --btn-ghost-text: #f4f4f4;
 
-  --color-primary-subtle:   #001d6c;   /* Carbon Blue 90 — tertiary hover */
+  --color-primary-subtle: #001d6c; /* Carbon Blue 90 — tertiary hover */
 
-  --shadow-sm: 0 1px 4px rgba(0, 0, 0, .40);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, .50);
-  --shadow-lg: 0 8px 30px rgba(0, 0, 0, .60);
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.6);
 }
 
 /* Smooth theme transitions — avoids jarring flash when toggling. */
 :root {
   color-scheme: light dark;
 }
-html, body {
+html,
+body {
   background: var(--surface-page);
   color: var(--text-primary);
-  transition: background-color .18s ease, color .18s ease;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease;
 }
 
 /* Canonical button classes (Phase 9A.3) — namespaced `.op-btn` to
@@ -325,8 +328,11 @@ html, body {
  * Retains the legacy `.btn` / `.btn-primary` etc. aliases for any
  * existing call-sites that use them without a namespaced prefix —
  * those pass through to the same tokens. */
-.op-btn, .btn {
-  display: inline-flex; align-items: center; justify-content: center;
+.op-btn,
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: var(--btn-padding-y) var(--btn-padding-x);
   font-size: var(--btn-font-size);
@@ -335,8 +341,11 @@ html, body {
   border-radius: var(--btn-radius);
   border: 1px solid transparent;
   cursor: pointer;
-  letter-spacing: .16px;
-  transition: background-color .12s, border-color .12s, box-shadow .12s;
+  letter-spacing: 0.16px;
+  transition:
+    background-color 0.12s,
+    border-color 0.12s,
+    box-shadow 0.12s;
   user-select: none;
 }
 /* Phase 9E.3 — explicit focus-visible ring. Although index.css sets a
@@ -356,7 +365,8 @@ html, body {
    disabled-bg token (gray-3 #c6c6c6) + on-disabled text (gray-7
    #525252) yields 4.65:1, passing AA. The !important is required to
    override variant colors from primary/secondary/danger rules. */
-.op-btn:disabled, .btn:disabled {
+.op-btn:disabled,
+.btn:disabled {
   background: #c6c6c6 !important;
   color: #525252 !important;
   border-color: #c6c6c6 !important;
@@ -364,30 +374,46 @@ html, body {
   opacity: 1;
 }
 
-.op-btn-primary, .btn-primary {
+.op-btn-primary,
+.btn-primary {
   background: var(--btn-primary-bg);
   color: var(--btn-primary-text);
 }
-.op-btn-primary:hover:not(:disabled), .btn-primary:hover:not(:disabled) { background: var(--btn-primary-bg-hover); }
+.op-btn-primary:hover:not(:disabled),
+.btn-primary:hover:not(:disabled) {
+  background: var(--btn-primary-bg-hover);
+}
 
-.op-btn-secondary, .btn-secondary {
+.op-btn-secondary,
+.btn-secondary {
   background: var(--btn-secondary-bg);
   color: var(--btn-secondary-text);
   border-color: var(--btn-secondary-border);
 }
-.op-btn-secondary:hover:not(:disabled), .btn-secondary:hover:not(:disabled) { background: var(--btn-secondary-bg-hover); }
+.op-btn-secondary:hover:not(:disabled),
+.btn-secondary:hover:not(:disabled) {
+  background: var(--btn-secondary-bg-hover);
+}
 
-.op-btn-danger, .btn-danger {
+.op-btn-danger,
+.btn-danger {
   background: var(--btn-danger-bg);
   color: var(--btn-danger-text);
 }
-.op-btn-danger:hover:not(:disabled), .btn-danger:hover:not(:disabled) { background: var(--btn-danger-bg-hover); }
+.op-btn-danger:hover:not(:disabled),
+.btn-danger:hover:not(:disabled) {
+  background: var(--btn-danger-bg-hover);
+}
 
-.op-btn-ghost, .btn-ghost {
+.op-btn-ghost,
+.btn-ghost {
   background: var(--btn-ghost-bg);
   color: var(--btn-ghost-text);
 }
-.op-btn-ghost:hover:not(:disabled), .btn-ghost:hover:not(:disabled) { background: var(--btn-ghost-bg-hover); }
+.op-btn-ghost:hover:not(:disabled),
+.btn-ghost:hover:not(:disabled) {
+  background: var(--btn-ghost-bg-hover);
+}
 
 /* Tertiary — IBM Carbon-style bordered outline button. Primary-colored
  * border + text on transparent background; light blue tint on hover.
@@ -439,10 +465,16 @@ html, body {
   animation: op-btn-spin 0.7s linear infinite;
   color: var(--btn-primary-text);
 }
-.op-btn-secondary.op-btn-busy::after { color: var(--btn-secondary-text); }
-.op-btn-ghost.op-btn-busy::after     { color: var(--btn-ghost-text); }
+.op-btn-secondary.op-btn-busy::after {
+  color: var(--btn-secondary-text);
+}
+.op-btn-ghost.op-btn-busy::after {
+  color: var(--btn-ghost-text);
+}
 @keyframes op-btn-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Full-width modifier — commonly used in modal footers. */
@@ -469,7 +501,7 @@ html, body {
  * don't match :focus-visible at all.
  * ═══════════════════════════════════════════════════════════════ */
 
-:where(button, a, input, select, textarea, [role="tab"], [role="button"]):focus-visible {
+:where(button, a, input, select, textarea, [role='tab'], [role='button']):focus-visible {
   outline: 2px solid var(--color-primary, #0f62fe);
   outline-offset: 2px;
   border-radius: 3px;
@@ -478,6 +510,7 @@ html, body {
 /* Dark-mode: use a lighter accent so the ring remains visible against
  * dark panels. The token system provides color-primary-hover which is
  * tuned per theme. */
-[data-theme="dark"] :where(button, a, input, select, textarea, [role="tab"], [role="button"]):focus-visible {
+[data-theme='dark']
+  :where(button, a, input, select, textarea, [role='tab'], [role='button']):focus-visible {
   outline-color: var(--color-primary-hover, #4589ff);
 }

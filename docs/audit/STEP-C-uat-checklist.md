@@ -477,11 +477,11 @@ Fix ID: [F4-5 / F3-1 / F2-1 / F3-3 / F3-4 / F4-21 / F0-6 / bonus]
 Severity: [BLOCKER / MAJOR / MINOR / INFO]
 
 Environment / Môi trường:
-Host / OS: ****************\_\_\_\_****************
+Host / OS: **\*\***\*\*\*\***\*\***\_\_\_\_**\*\***\*\*\*\***\*\***
 Branch: fix/pre-go-live-p0
-HEAD commit: ****\_\_\_\_**** (run / chạy: git rev-parse HEAD)
-Browser (if UI): ****************\_\_\_\_****************
-Tester / Người test: ****************\_****************
+HEAD commit: \***\*\_\_\_\_\*\*** (run / chạy: git rev-parse HEAD)
+Browser (if UI): **\*\***\*\*\*\***\*\***\_\_\_\_**\*\***\*\*\*\***\*\***
+Tester / Người test: **\*\***\*\*\*\***\*\***\_**\*\***\*\*\*\***\*\***
 
 Expected / Kỳ vọng:
 
@@ -510,7 +510,7 @@ Suggested action / Hành động đề xuất:
 [ ] Roll back the offending commit; re-do the fix / Rollback commit; làm lại fix
 [ ] Investigate further — do NOT deploy until resolved / Điều tra thêm — KHÔNG deploy
 
-Reporter signature / Người báo: ********\_******** Date / Ngày: ****\_\_****
+Reporter signature / Người báo: **\*\*\*\***\_**\*\*\*\*** Date / Ngày: \***\*\_\_\*\***
 ─────────────────────────────────────────────────────────────────
 ```
 

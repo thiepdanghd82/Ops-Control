@@ -6,11 +6,13 @@ session is the first chance to confirm or refute them with real
 hardware + real customers.
 
 Severity scoring:
+
 - **Probability**: Low / Medium / High (qualitative — engineer's gut against the codebase + Lesson log)
 - **Impact**: Low (cosmetic) / Medium (operator workaround needed) / High (blocks customer-share until fix)
 - **Risk Owner**: person who decides whether mitigation is sufficient + escalation point if risk materialises during UAT. See Decision Authority in [README.md](README.md).
 
 Owner assignments (solo project — single owner across all risks):
+
 - R1 (Sheet-protection UX): Đặng Thế Thiệp
 - R2 (Watermark fidelity): Đặng Thế Thiệp
 - R3 (HMAC key drift): Đặng Thế Thiệp
@@ -56,6 +58,7 @@ The text styling (dark-red, bold, italic) is more portable than the fill colour.
 **Low-Medium.** The watermark is a visual cue, not a security feature. If LibreOffice renders the cell as light-grey instead of pink-grey, the message "CUSTOMER COPY" still reads — semantic intent preserved. If Numbers flattens to white background, the text is still legible. The risk degrades to "weak signal" rather than "broken signal".
 
 The defence-in-depth gradient is:
+
 1. AA1 cell text "CUSTOMER COPY" (most portable — survives across all spreadsheet apps)
 2. Bold + italic styling (very portable)
 3. Dark-red foreground colour (portable; may shift exact hue)
@@ -81,12 +84,14 @@ The defence-in-depth gradient is:
 **Low.** Sprint S-EXPORT-MVP-2 + Sprint 11 P2-1 deploy scripts (`deploy.sh` + `deploy.ps1`) explicitly merge prod `.env` rather than clobber, and preserve `OPS_EXPORT_HMAC_KEY` alongside `OPS_TOTP_KEY` + `OPS_KIOSK_KEY`. Preflight (`npm run preflight`) refuses to boot if missing or shape-invalid.
 
 But: this UAT is the first time the prod env-key path is exercised. Two known vectors that COULD bite:
+
 - Operator-initiated `.env` edit (someone "tidies up" the file)
 - Deploy from a fresh dev machine where the source `.env.example` has a placeholder
 
 ### Impact
 
 **High.** If verify fails, EVERY xlsx in the field becomes untrustable. Recovery playbook in CLAUDE.md (Section "OPS_EXPORT_HMAC_KEY lost or rotated mid-cycle") covers this:
+
 - Files issued pre-loss STILL OPEN + READ FINE (visible sheets unencrypted; XOR sheet-protect uses random password embedded in xlsx, independent of HMAC key)
 - MVP-3 re-import will REFUSE pre-loss exports — operator must re-export from source quote
 - Audit log forensic trace intact (sha256 of payload + per-tier `tier_audit[]` rows)
@@ -167,4 +172,5 @@ So R3 doesn't break the UAT — but discovering a key-mismatch mid-UAT undermine
 ## Risks to escalate to MVP-3 scope discussion
 
 (Updated as UAT runs; intentionally empty at framework-creation time)
+
 - (none yet)

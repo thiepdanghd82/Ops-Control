@@ -62,12 +62,24 @@ export default function ActiveUsersIndicator() {
   useEffect(() => {
     refresh();
     let id = null;
-    const start = () => { if (!id) id = setInterval(refresh, POLL_MS); };
-    const stop = () => { if (id) { clearInterval(id); id = null; } };
+    const start = () => {
+      if (!id) id = setInterval(refresh, POLL_MS);
+    };
+    const stop = () => {
+      if (id) {
+        clearInterval(id);
+        id = null;
+      }
+    };
     start();
-    const onVis = () => { document.hidden ? stop() : (refresh(), start()); };
+    const onVis = () => {
+      document.hidden ? stop() : (refresh(), start());
+    };
     document.addEventListener('visibilitychange', onVis);
-    return () => { stop(); document.removeEventListener('visibilitychange', onVis); };
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', onVis);
+    };
   }, [refresh]);
 
   // SSE bonus: when ANY user emits a data change (save/update), they're
@@ -76,7 +88,9 @@ export default function ActiveUsersIndicator() {
   useEffect(() => {
     const unsub = subscribeDataEvents(
       ['quote.saved', 'rfq.updated', 'sample.updated', 'approval.transition'],
-      () => { refresh(); }
+      () => {
+        refresh();
+      }
     );
     return unsub;
   }, [refresh]);
@@ -89,7 +103,9 @@ export default function ActiveUsersIndicator() {
       if (btnRef.current?.contains(e.target)) return;
       setOpen(false);
     };
-    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
     document.addEventListener('mousedown', onDoc);
     document.addEventListener('keydown', onKey);
     return () => {
@@ -98,10 +114,12 @@ export default function ActiveUsersIndicator() {
     };
   }, [open]);
 
-  const onlineCount = users.filter(u => u.online).length;
-  const sortedOnline = users.filter(u => u.online)
+  const onlineCount = users.filter((u) => u.online).length;
+  const sortedOnline = users
+    .filter((u) => u.online)
     .sort((a, b) => (a.full_name || a.username).localeCompare(b.full_name || b.username));
-  const sortedRecentOffline = users.filter(u => !u.online && u.last_seen)
+  const sortedRecentOffline = users
+    .filter((u) => !u.online && u.last_seen)
     .sort((a, b) => new Date(b.last_seen) - new Date(a.last_seen))
     .slice(0, 8);
 
@@ -111,7 +129,7 @@ export default function ActiveUsersIndicator() {
         ref={btnRef}
         type="button"
         className={`active-users-btn ${onlineCount > 0 ? 'has-online' : 'no-online'}`}
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen((o) => !o)}
         title={`${onlineCount} người đang online — click để xem danh sách`}
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -131,7 +149,9 @@ export default function ActiveUsersIndicator() {
               disabled={loading}
               title="Refresh"
               aria-label="Refresh"
-            >↻</button>
+            >
+              ↻
+            </button>
           </div>
 
           {err && <div className="active-users-err">⚠ {err}</div>}
@@ -142,12 +162,10 @@ export default function ActiveUsersIndicator() {
 
           {sortedOnline.length > 0 && (
             <ul className="active-users-list">
-              {sortedOnline.map(u => (
+              {sortedOnline.map((u) => (
                 <li key={u.id} className="active-users-item online">
                   <span className="active-users-item-dot" aria-hidden />
-                  <span className="active-users-item-name">
-                    {u.full_name || u.username}
-                  </span>
+                  <span className="active-users-item-name">{u.full_name || u.username}</span>
                   {u.role && u.role !== 'user' && (
                     <span className="active-users-item-role">{u.role}</span>
                   )}
@@ -158,19 +176,13 @@ export default function ActiveUsersIndicator() {
 
           {sortedRecentOffline.length > 0 && (
             <>
-              <div className="active-users-pop-sep">
-                Online gần đây
-              </div>
+              <div className="active-users-pop-sep">Online gần đây</div>
               <ul className="active-users-list">
-                {sortedRecentOffline.map(u => (
+                {sortedRecentOffline.map((u) => (
                   <li key={u.id} className="active-users-item offline">
                     <span className="active-users-item-dot offline" aria-hidden />
-                    <span className="active-users-item-name">
-                      {u.full_name || u.username}
-                    </span>
-                    <span className="active-users-item-when">
-                      {fmtLastSeen(u.last_seen)}
-                    </span>
+                    <span className="active-users-item-name">{u.full_name || u.username}</span>
+                    <span className="active-users-item-when">{fmtLastSeen(u.last_seen)}</span>
                   </li>
                 ))}
               </ul>

@@ -7,7 +7,9 @@
   font-size: 13px;
 }
 
-.audit__head { margin-bottom: 12px; }
+.audit__head {
+  margin-bottom: 12px;
+}
 .audit__title {
   font-size: 18px;
   font-weight: 600;
@@ -41,7 +43,7 @@
 }
 .audit__field span {
   text-transform: uppercase;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
   font-weight: 600;
 }
 
@@ -57,9 +59,14 @@
   outline: 2px solid var(--color-primary, #0f62fe);
   outline-offset: -2px;
 }
-.audit__input--num { text-align: right; }
+.audit__input--num {
+  text-align: right;
+}
 
-.audit__actions { display: flex; align-items: end; }
+.audit__actions {
+  display: flex;
+  align-items: end;
+}
 
 .audit__btn {
   padding: 7px 14px;
@@ -69,13 +76,16 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color .15s;
+  transition: background-color 0.15s;
   height: 32px;
 }
 .audit__btn:hover:not(:disabled) {
   background: var(--color-primary-deep, #0050e6);
 }
-.audit__btn:disabled { opacity: 0.6; cursor: wait; }
+.audit__btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
 
 /* ─── Status messages ─── */
 .audit__alert {
@@ -121,7 +131,7 @@
 .audit__tbl th {
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
   color: var(--text-secondary, #525252);
   background: var(--surface-subtle, #f4f4f4);
   font-weight: 600;
@@ -151,7 +161,7 @@
   border-radius: 12px;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: .02em;
+  letter-spacing: 0.02em;
 }
 .audit__badge--ok {
   background: #defbe6;

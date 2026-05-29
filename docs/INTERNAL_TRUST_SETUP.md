@@ -5,6 +5,7 @@
 **Đối tượng đọc:** IT của khách hàng (CCL Design Vietnam) — người setup môi trường + push GPO 1 lần.
 
 **Kết quả:**
+
 - 50 máy Windows nhận GPO → cài Ops Control mượt, không có dấu chấm than vàng SmartScreen
 - macOS distribute qua file share / Jamf / USB → cài mượt, không có "App is damaged" / "Right-click → Open"
 - Auto-update vẫn signed bằng cùng cert → chu trình release/rollout không đổi
@@ -49,11 +50,13 @@ Tạo (hoặc sửa) GPO áp dụng cho OU chứa máy trạm Ops Control. Ví d
 Push cert vào **2 store**:
 
 **A. Trusted Publishers** (bypass SmartScreen "Unknown publisher"):
+
 - Right-click `Trusted Publishers` → `Import...`
 - Chọn file `internal-cert.cer`
 - Place in: `Trusted Publishers`
 
 **B. Trusted Root Certification Authorities** (cho phép cert chain validation):
+
 - Right-click `Trusted Root Certification Authorities` → `Import...`
 - Chọn file `internal-cert.cer`
 - Place in: `Trusted Root Certification Authorities`
@@ -73,11 +76,13 @@ Phải thấy entry `CN=CCL Design Vietnam - Ops Control` trong output.
 #### Step 4: Verify SmartScreen behavior
 
 Trên máy trạm (đã nhận GPO):
+
 1. Copy `Ops-Control-Setup-1.1.0.exe` về Desktop
 2. Right-click → Properties → kiểm tra mục **Digital Signatures** tab — phải hiện "Signed by CCL Design Vietnam — Ops Control" ✓
 3. Double-click cài — **KHÔNG có dialog "Windows protected your PC"**
 
 Nếu vẫn còn dialog → kiểm tra:
+
 - `gpresult /h gpo-report.html` → confirm GPO Ops-Control-Trust đã apply
 - Cert đã import vào CẢ Trusted Publishers + Trusted Root CAs (mỗi store độc lập)
 
@@ -113,6 +118,7 @@ Trong `release.sh` đã wire sẵn:
 ```
 
 Ad-hoc signature (`codesign --sign -`):
+
 - Cung cấp **code integrity check** — file không bị sửa sau build
 - KHÔNG có "trusted signer" → Gatekeeper block khi user download qua browser
 - ĐƯỢC bypass khi file không có quarantine attribute
@@ -120,11 +126,13 @@ Ad-hoc signature (`codesign --sign -`):
 ### 2.2 Distribution qua kênh không gắn quarantine (IT side)
 
 `com.apple.quarantine` attribute chỉ được set bởi:
+
 - Browsers (Safari/Chrome/Firefox/Edge)
 - Apple Mail attachment download
 - AirDrop từ máy chưa trusted
 
 Các kênh KHÔNG set quarantine:
+
 - ✅ **File share LAN** (smb://, afp://) — copy về local
 - ✅ **MDM** (Jamf Pro / Mosyle / Kandji) — push install
 - ✅ **Internal pkg installer** với `pkgbuild`
@@ -194,6 +202,7 @@ Hoặc UI: Right-click `Ops Control.app` → `Open` → Gatekeeper sẽ hỏi 1 
 ### 3.1 Windows
 
 Trong `desktop/package.json`:
+
 ```json
 "build": {
   "win": {
@@ -230,14 +239,15 @@ Trade-off: Auto-update không có signature verification trên Mac. Mitigation: 
 
 ## Phần 4 — Tổng kết chi phí
 
-| Item | Trước (paid) | Sau (free alternative) |
-|---|---|---|
-| Windows code signing | EV cert Sectigo $290/năm | Self-signed + GPO push (1 lần setup) |
-| macOS notarization | Apple Dev ID $99/năm | Ad-hoc sign + IT distribution |
-| Domain (cho HTTPS internal) | $12/năm | Self-signed CA hoặc IP literal |
-| **Tổng** | **$401/năm** | **$0/năm** |
+| Item                        | Trước (paid)             | Sau (free alternative)               |
+| --------------------------- | ------------------------ | ------------------------------------ |
+| Windows code signing        | EV cert Sectigo $290/năm | Self-signed + GPO push (1 lần setup) |
+| macOS notarization          | Apple Dev ID $99/năm     | Ad-hoc sign + IT distribution        |
+| Domain (cho HTTPS internal) | $12/năm                  | Self-signed CA hoặc IP literal       |
+| **Tổng**                    | **$401/năm**             | **$0/năm**                           |
 
 **Trade-offs (acceptable cho deploy nội bộ 50 máy):**
+
 - ✗ Không phân phối public được (nhưng app này internal-only)
 - ✗ User ngoài 50 máy GPO sẽ thấy SmartScreen warning
 - ✗ Cert renewal mỗi 10 năm (vs auto-renew của Sectigo)

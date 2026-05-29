@@ -10,8 +10,12 @@
 }
 
 .metrics__head {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 12px; flex-wrap: wrap; gap: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 .metrics__title {
   font-size: 18px;
@@ -20,10 +24,13 @@
   color: var(--text-primary, #161616);
 }
 .metrics__bar {
-  display: flex; align-items: center; gap: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 .metrics__when {
-  font-size: 11px; color: var(--text-tertiary, #6f6f6f);
+  font-size: 11px;
+  color: var(--text-tertiary, #6f6f6f);
 }
 
 /* Health pill — small status badge to the left of the timestamp.
@@ -34,13 +41,29 @@
   border-radius: 12px;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: .02em;
+  letter-spacing: 0.02em;
   text-transform: lowercase;
 }
-.metrics__health--ok    { background: #defbe6; color: #0e6027; border: 1px solid #a7f0ba; }
-.metrics__health--warn  { background: #fff8e1; color: #8a6d00; border: 1px solid #ffe58a; }
-.metrics__health--alert { background: #fff1f1; color: #a2191f; border: 1px solid #ffb3b8; }
-.metrics__health--idle  { background: #f4f4f4; color: #525252; border: 1px solid #d4d4d4; }
+.metrics__health--ok {
+  background: #defbe6;
+  color: #0e6027;
+  border: 1px solid #a7f0ba;
+}
+.metrics__health--warn {
+  background: #fff8e1;
+  color: #8a6d00;
+  border: 1px solid #ffe58a;
+}
+.metrics__health--alert {
+  background: #fff1f1;
+  color: #a2191f;
+  border: 1px solid #ffb3b8;
+}
+.metrics__health--idle {
+  background: #f4f4f4;
+  color: #525252;
+  border: 1px solid #d4d4d4;
+}
 
 .metrics__btn {
   padding: 6px 14px;
@@ -50,12 +73,15 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color .15s;
+  transition: background-color 0.15s;
 }
 .metrics__btn:hover:not(:disabled) {
   background: var(--color-primary-deep, #0050e6);
 }
-.metrics__btn:disabled { opacity: 0.6; cursor: wait; }
+.metrics__btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
 
 /* ─── KPI tiles ─── */
 .metrics__tiles {
@@ -70,15 +96,25 @@
   padding: 12px 14px;
   border-left: 3px solid #0f62fe;
 }
-.metrics__tile--ok      { border-left-color: #198038; }
-.metrics__tile--warning { border-left-color: #f1c21b; }
-.metrics__tile--danger  { border-left-color: #da1e28; }
+.metrics__tile--ok {
+  border-left-color: #198038;
+}
+.metrics__tile--warning {
+  border-left-color: #f1c21b;
+}
+.metrics__tile--danger {
+  border-left-color: #da1e28;
+}
 .metrics__tile-lbl {
-  font-size: 11px; color: var(--text-secondary, #525252);
-  text-transform: uppercase; letter-spacing: .04em;
+  font-size: 11px;
+  color: var(--text-secondary, #525252);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 .metrics__tile-val {
-  font-size: 24px; font-weight: 300; margin-top: 4px;
+  font-size: 24px;
+  font-weight: 300;
+  margin-top: 4px;
   font-variant-numeric: tabular-nums;
   color: var(--text-primary, #161616);
 }
@@ -93,7 +129,7 @@
 .metrics__panel legend {
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
   color: var(--text-secondary, #525252);
   padding: 0 6px;
   font-weight: 600;
@@ -121,7 +157,7 @@
 .metrics__tbl th {
   font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
   color: var(--text-secondary, #525252);
   background: var(--surface-subtle, #f4f4f4);
   font-weight: 600;
@@ -139,8 +175,14 @@
   font-variant-numeric: tabular-nums;
 }
 
-.metrics__warn  { color: #b48a00; font-weight: 600; }
-.metrics__alert { color: #da1e28; font-weight: 600; }
+.metrics__warn {
+  color: #b48a00;
+  font-weight: 600;
+}
+.metrics__alert {
+  color: #da1e28;
+  font-weight: 600;
+}
 
 .metrics__empty {
   color: var(--text-tertiary, #6f6f6f);

@@ -73,16 +73,16 @@ Trong các trường hợp khác → **cứ chạy tiếp**.
 
 Khi hoàn tất, bạn phải tạo các artifact sau:
 
-| File | Nội dung |
-|---|---|
-| `UPGRADE_LOG.md` | Nhật ký từng phase: timestamp, task, kết quả, vấn đề gặp phải |
-| `CHANGELOG.md` | Tổng hợp thay đổi v1.2 → v1.3 theo Keep-a-Changelog format |
-| `MIGRATION_GUIDE.md` | Hướng dẫn upgrade cho user hiện tại từ v1.2 |
-| `RELEASE_NOTES_v1.3.md` | Bản tin phát hành cho end-user (tiếng Việt, dễ hiểu) |
-| `dist/` | 4 installer: `OpsControl-Server-v1.3-mac.dmg`, `OpsControl-Server-v1.3-win.exe`, `OpsControl-Client-v1.3-mac.dmg`, `OpsControl-Client-v1.3-win.exe` |
-| `dist/checksums.txt` | SHA-256 của 4 installer trên |
-| `docs/ARCHITECTURE.md` | Sơ đồ kiến trúc Client-Server v1.3 (mermaid diagram) |
-| `docs/SECURITY.md` | Mô tả các biện pháp bảo mật đã áp dụng |
+| File                    | Nội dung                                                                                                                                            |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `UPGRADE_LOG.md`        | Nhật ký từng phase: timestamp, task, kết quả, vấn đề gặp phải                                                                                       |
+| `CHANGELOG.md`          | Tổng hợp thay đổi v1.2 → v1.3 theo Keep-a-Changelog format                                                                                          |
+| `MIGRATION_GUIDE.md`    | Hướng dẫn upgrade cho user hiện tại từ v1.2                                                                                                         |
+| `RELEASE_NOTES_v1.3.md` | Bản tin phát hành cho end-user (tiếng Việt, dễ hiểu)                                                                                                |
+| `dist/`                 | 4 installer: `OpsControl-Server-v1.3-mac.dmg`, `OpsControl-Server-v1.3-win.exe`, `OpsControl-Client-v1.3-mac.dmg`, `OpsControl-Client-v1.3-win.exe` |
+| `dist/checksums.txt`    | SHA-256 của 4 installer trên                                                                                                                        |
+| `docs/ARCHITECTURE.md`  | Sơ đồ kiến trúc Client-Server v1.3 (mermaid diagram)                                                                                                |
+| `docs/SECURITY.md`      | Mô tả các biện pháp bảo mật đã áp dụng                                                                                                              |
 
 ---
 

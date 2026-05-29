@@ -17,10 +17,16 @@ function loadCustomUoms() {
   try {
     const raw = localStorage.getItem('ops.rate.customUoms');
     return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 function saveCustomUoms(list) {
-  try { localStorage.setItem('ops.rate.customUoms', JSON.stringify(list)); } catch { /* quota */ }
+  try {
+    localStorage.setItem('ops.rate.customUoms', JSON.stringify(list));
+  } catch {
+    /* quota */
+  }
 }
 
 export default function LibRate() {
@@ -35,12 +41,15 @@ export default function LibRate() {
   const [importing, setImporting] = useState(false);
   const fileRef = useRef(null);
   const [customUoms, setCustomUoms] = useState(loadCustomUoms);
-  const allUoms = [...DEFAULT_SPEED_UOMS, ...customUoms.filter(u => !DEFAULT_SPEED_UOMS.includes(u))];
+  const allUoms = [
+    ...DEFAULT_SPEED_UOMS,
+    ...customUoms.filter((u) => !DEFAULT_SPEED_UOMS.includes(u)),
+  ];
 
   useEffect(() => {
     const siteData = rawRates.rateSites?.[site];
     if (siteData && Array.isArray(siteData)) {
-      setRows(siteData.map(r => ({ ...r })));
+      setRows(siteData.map((r) => ({ ...r })));
     } else {
       setRows([]);
     }
@@ -48,17 +57,28 @@ export default function LibRate() {
   }, [site, rawRates]);
 
   const updateRow = useCallback((idx, field, value) => {
-    setRows(prev => prev.map((r, i) => i === idx ? { ...r, [field]: value } : r));
+    setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
     setDirty(true);
   }, []);
 
   const addRow = useCallback(() => {
-    setRows(prev => [...prev, { workcenter: '', crew: 1, machine_rate: 0, labor_rate: 0, speed_uom: '', oh_cost: 0, mc_cost: '' }]);
+    setRows((prev) => [
+      ...prev,
+      {
+        workcenter: '',
+        crew: 1,
+        machine_rate: 0,
+        labor_rate: 0,
+        speed_uom: '',
+        oh_cost: 0,
+        mc_cost: '',
+      },
+    ]);
     setDirty(true);
   }, []);
 
   const deleteRow = useCallback((idx) => {
-    setRows(prev => prev.filter((_, i) => i !== idx));
+    setRows((prev) => prev.filter((_, i) => i !== idx));
     setDirty(true);
   }, []);
 
@@ -101,18 +121,21 @@ export default function LibRate() {
     }
   }, [site]);
 
-  const handleRestore = useCallback(async (filename) => {
-    if (!confirm(`Restore rate from ${filename}?`)) return;
-    try {
-      await costApi.restoreRate(filename, site);
-      setShowBackups(false);
-      setMsg('Restored');
-      refreshLib();
-      setTimeout(() => setMsg(''), 2000);
-    } catch (err) {
-      setMsg('Restore failed: ' + err.message);
-    }
-  }, [site, refreshLib]);
+  const handleRestore = useCallback(
+    async (filename) => {
+      if (!confirm(`Restore rate from ${filename}?`)) return;
+      try {
+        await costApi.restoreRate(filename, site);
+        setShowBackups(false);
+        setMsg('Restored');
+        refreshLib();
+        setTimeout(() => setMsg(''), 2000);
+      } catch (err) {
+        setMsg('Restore failed: ' + err.message);
+      }
+    },
+    [site, refreshLib]
+  );
 
   const handleExportCsv = useCallback(async () => {
     try {
@@ -129,36 +152,44 @@ export default function LibRate() {
   // filters blank rows, backs up rate_sites.json, writes the target site,
   // and clears the server cache. We then refreshLib() so the context pulls
   // the new rows in and the useEffect on `rawRates` repopulates the table.
-  const handleImport = useCallback(async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = '';
-    if (dirty && !confirm('You have unsaved changes. Import will discard them. Continue?')) return;
-    setImporting(true);
-    setMsg('Importing…');
-    try {
-      const res = await importApi.uploadRate(file, site);
-      const stats = res?.stats || {};
-      setMsg(`Imported ${stats.rows ?? '?'} rows into ${stats.site || site}`);
-      await refreshLib();
-      setDirty(false);
-      setTimeout(() => setMsg(''), 3500);
-    } catch (err) {
-      console.error('Rate import failed:', err);
-      setMsg('Import failed: ' + (err.message || 'Unknown'));
-      setTimeout(() => setMsg(''), 5000);
-    } finally {
-      setImporting(false);
-    }
-  }, [site, dirty, refreshLib]);
+  const handleImport = useCallback(
+    async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      e.target.value = '';
+      if (dirty && !confirm('You have unsaved changes. Import will discard them. Continue?'))
+        return;
+      setImporting(true);
+      setMsg('Importing…');
+      try {
+        const res = await importApi.uploadRate(file, site);
+        const stats = res?.stats || {};
+        setMsg(`Imported ${stats.rows ?? '?'} rows into ${stats.site || site}`);
+        await refreshLib();
+        setDirty(false);
+        setTimeout(() => setMsg(''), 3500);
+      } catch (err) {
+        console.error('Rate import failed:', err);
+        setMsg('Import failed: ' + (err.message || 'Unknown'));
+        setTimeout(() => setMsg(''), 5000);
+      } finally {
+        setImporting(false);
+      }
+    },
+    [site, dirty, refreshLib]
+  );
 
   return (
     <div className="lib-rate">
       <div className="lr-toolbar">
         <div className="lr-title">Work Center Rate Table</div>
         <div className="lr-sites">
-          {SITES.map(s => (
-            <button key={s} className={`lr-site-btn ${site === s ? 'active' : ''}`} onClick={() => setSite(s)}>
+          {SITES.map((s) => (
+            <button
+              key={s}
+              className={`lr-site-btn ${site === s ? 'active' : ''}`}
+              onClick={() => setSite(s)}
+            >
               {s}
             </button>
           ))}
@@ -180,9 +211,15 @@ export default function LibRate() {
           >
             {importing ? 'Importing…' : '⭡ Import'}
           </button>
-          <button className="lr-btn lr-btn-csv" onClick={handleExportCsv}>Export CSV</button>
-          <button className="lr-btn lr-btn-backup" onClick={handleBackup}>Backup</button>
-          <button className="lr-btn lr-btn-restore" onClick={loadBackups}>Restore</button>
+          <button className="lr-btn lr-btn-csv" onClick={handleExportCsv}>
+            Export CSV
+          </button>
+          <button className="lr-btn lr-btn-backup" onClick={handleBackup}>
+            Backup
+          </button>
+          <button className="lr-btn lr-btn-restore" onClick={loadBackups}>
+            Restore
+          </button>
           <button className="lr-btn lr-btn-save" onClick={handleSave} disabled={!dirty || saving}>
             {saving ? 'Saving...' : 'Save'}
           </button>
@@ -195,12 +232,18 @@ export default function LibRate() {
             <span>Backups for {site}</span>
             <button onClick={() => setShowBackups(false)}>Close</button>
           </div>
-          {backups.length === 0 ? <p className="lr-backup-empty">No backups found</p> : (
+          {backups.length === 0 ? (
+            <p className="lr-backup-empty">No backups found</p>
+          ) : (
             <ul className="lr-backup-list">
               {backups.map((b, i) => (
                 <li key={(typeof b === 'string' ? b : b.name || b.filename) || `b-${i}`}>
                   <span>{typeof b === 'string' ? b : b.name || b.filename}</span>
-                  <button onClick={() => handleRestore(typeof b === 'string' ? b : b.name || b.filename)}>Restore</button>
+                  <button
+                    onClick={() => handleRestore(typeof b === 'string' ? b : b.name || b.filename)}
+                  >
+                    Restore
+                  </button>
                 </li>
               ))}
             </ul>
@@ -227,43 +270,91 @@ export default function LibRate() {
             {rows.map((r, i) => (
               <tr key={r.workcenter ? `wc-${r.workcenter}-${i}` : `wc-${i}`}>
                 <td className="lr-td-idx">{i + 1}</td>
-                <td><input type="text" value={r.workcenter || ''} onChange={e => updateRow(i, 'workcenter', e.target.value)} /></td>
-                <td><DecimalInput value={r.crew} onChange={v => updateRow(i, 'crew', v)} /></td>
-                <td><DecimalInput value={r.machine_rate} onChange={v => updateRow(i, 'machine_rate', v)} /></td>
-                <td><DecimalInput value={r.labor_rate} onChange={v => updateRow(i, 'labor_rate', v)} /></td>
                 <td>
-                  <select value={r.speed_uom || ''} onChange={e => {
-                    const v = e.target.value;
-                    if (v === ADD_NEW_SENTINEL) {
-                      const newUom = prompt('Enter new UOM (e.g. RPM, Cuts/min):');
-                      if (newUom && newUom.trim()) {
-                        const trimmed = newUom.trim();
-                        if (!allUoms.includes(trimmed)) {
-                          const next = [...customUoms, trimmed];
-                          setCustomUoms(next);
-                          saveCustomUoms(next);
+                  <input
+                    type="text"
+                    value={r.workcenter || ''}
+                    onChange={(e) => updateRow(i, 'workcenter', e.target.value)}
+                  />
+                </td>
+                <td>
+                  <DecimalInput value={r.crew} onChange={(v) => updateRow(i, 'crew', v)} />
+                </td>
+                <td>
+                  <DecimalInput
+                    value={r.machine_rate}
+                    onChange={(v) => updateRow(i, 'machine_rate', v)}
+                  />
+                </td>
+                <td>
+                  <DecimalInput
+                    value={r.labor_rate}
+                    onChange={(v) => updateRow(i, 'labor_rate', v)}
+                  />
+                </td>
+                <td>
+                  <select
+                    value={r.speed_uom || ''}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === ADD_NEW_SENTINEL) {
+                        const newUom = prompt('Enter new UOM (e.g. RPM, Cuts/min):');
+                        if (newUom && newUom.trim()) {
+                          const trimmed = newUom.trim();
+                          if (!allUoms.includes(trimmed)) {
+                            const next = [...customUoms, trimmed];
+                            setCustomUoms(next);
+                            saveCustomUoms(next);
+                          }
+                          updateRow(i, 'speed_uom', trimmed);
                         }
-                        updateRow(i, 'speed_uom', trimmed);
+                        // Reset select back to current value if cancelled
+                        e.target.value = r.speed_uom || '';
+                      } else {
+                        updateRow(i, 'speed_uom', v);
                       }
-                      // Reset select back to current value if cancelled
-                      e.target.value = r.speed_uom || '';
-                    } else {
-                      updateRow(i, 'speed_uom', v);
-                    }
-                  }}>
-                    {allUoms.map(u => <option key={u} value={u}>{u || '—'}</option>)}
+                    }}
+                  >
+                    {allUoms.map((u) => (
+                      <option key={u} value={u}>
+                        {u || '—'}
+                      </option>
+                    ))}
                     <option value={ADD_NEW_SENTINEL}>+ Add new...</option>
                   </select>
                 </td>
-                <td><DecimalInput value={r.oh_cost} onChange={v => updateRow(i, 'oh_cost', v)} style={{ color: '#0d9488' }} /></td>
-                <td><input type="text" value={r.mc_cost ?? ''} onChange={e => updateRow(i, 'mc_cost', e.target.value)} style={{ color: '#7c3aed' }} /></td>
-                <td><button className="lr-del" onClick={() => deleteRow(i)} title="Delete">&times;</button></td>
+                <td>
+                  <DecimalInput
+                    value={r.oh_cost}
+                    onChange={(v) => updateRow(i, 'oh_cost', v)}
+                    style={{ color: '#0d9488' }}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={r.mc_cost ?? ''}
+                    onChange={(e) => updateRow(i, 'mc_cost', e.target.value)}
+                    style={{ color: '#7c3aed' }}
+                  />
+                </td>
+                <td>
+                  <button className="lr-del" onClick={() => deleteRow(i)} title="Delete">
+                    &times;
+                  </button>
+                </td>
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={9} style={{ padding: 0 }}>
-                <EmptyState icon="⏱" title={`No rate data for ${site}`} hint="Click 'Add row' above to define work-center rates for this site." />
-              </td></tr>
+              <tr>
+                <td colSpan={9} style={{ padding: 0 }}>
+                  <EmptyState
+                    icon="⏱"
+                    title={`No rate data for ${site}`}
+                    hint="Click 'Add row' above to define work-center rates for this site."
+                  />
+                </td>
+              </tr>
             )}
           </tbody>
         </table>

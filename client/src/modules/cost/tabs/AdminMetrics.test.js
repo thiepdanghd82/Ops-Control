@@ -16,9 +16,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  parseMetricLine, parsePrometheus, sumByLabel, histogramSummary,
+  parseMetricLine,
+  parsePrometheus,
+  sumByLabel,
+  histogramSummary,
   computeHealth,
-  P95_ALERT_MS, ERROR_RATE_ALERT_PCT, ERROR_RATE_WARN_PCT,
+  P95_ALERT_MS,
+  ERROR_RATE_ALERT_PCT,
+  ERROR_RATE_WARN_PCT,
 } from './AdminMetrics.helpers.js';
 
 // ── parseMetricLine ──
@@ -120,16 +125,19 @@ test('sumByLabel: aggregates by label, sorts desc by count', () => {
     { name: 'http_requests_total', labels: { status: '2xx' }, value: 100 },
     { name: 'http_requests_total', labels: { status: '2xx' }, value: 50 },
     { name: 'http_requests_total', labels: { status: '5xx' }, value: 10 },
-    { name: 'other_metric',        labels: { status: '2xx' }, value: 999 },  // ignored
+    { name: 'other_metric', labels: { status: '2xx' }, value: 999 }, // ignored
   ];
   const result = sumByLabel(rows, 'http_requests_total', 'status');
-  assert.deepEqual(result, [['2xx', 150], ['5xx', 10]]);
+  assert.deepEqual(result, [
+    ['2xx', 150],
+    ['5xx', 10],
+  ]);
 });
 
 test('sumByLabel: missing label key falls back to "(unlabeled)"', () => {
   const rows = [
     { name: 'x', labels: { other_key: 'a' }, value: 5 },
-    { name: 'x', labels: {},                  value: 3 },
+    { name: 'x', labels: {}, value: 3 },
   ];
   const result = sumByLabel(rows, 'x', 'missing_label');
   assert.deepEqual(result, [['(unlabeled)', 8]]);
@@ -147,12 +155,36 @@ test('histogramSummary: derives p50/p95 from cumulative buckets', () => {
   // p50 (target 50): first bucket whose cumulative >= 50 → le=50.
   // p95 (target 95): first bucket whose cumulative >= 95 → le=100.
   const rows = [
-    { name: 'http_request_duration_ms_count',  labels: { method: 'GET', route: '/api/foo' }, value: 100 },
-    { name: 'http_request_duration_ms_sum',    labels: { method: 'GET', route: '/api/foo' }, value: 5000 },
-    { name: 'http_request_duration_ms_bucket', labels: { method: 'GET', route: '/api/foo', le: '10' },   value: 20 },
-    { name: 'http_request_duration_ms_bucket', labels: { method: 'GET', route: '/api/foo', le: '50' },   value: 60 },
-    { name: 'http_request_duration_ms_bucket', labels: { method: 'GET', route: '/api/foo', le: '100' },  value: 95 },
-    { name: 'http_request_duration_ms_bucket', labels: { method: 'GET', route: '/api/foo', le: '1000' }, value: 100 },
+    {
+      name: 'http_request_duration_ms_count',
+      labels: { method: 'GET', route: '/api/foo' },
+      value: 100,
+    },
+    {
+      name: 'http_request_duration_ms_sum',
+      labels: { method: 'GET', route: '/api/foo' },
+      value: 5000,
+    },
+    {
+      name: 'http_request_duration_ms_bucket',
+      labels: { method: 'GET', route: '/api/foo', le: '10' },
+      value: 20,
+    },
+    {
+      name: 'http_request_duration_ms_bucket',
+      labels: { method: 'GET', route: '/api/foo', le: '50' },
+      value: 60,
+    },
+    {
+      name: 'http_request_duration_ms_bucket',
+      labels: { method: 'GET', route: '/api/foo', le: '100' },
+      value: 95,
+    },
+    {
+      name: 'http_request_duration_ms_bucket',
+      labels: { method: 'GET', route: '/api/foo', le: '1000' },
+      value: 100,
+    },
   ];
   const summary = histogramSummary(rows, 'http_request_duration_ms');
   assert.equal(summary.length, 1);
@@ -165,11 +197,11 @@ test('histogramSummary: derives p50/p95 from cumulative buckets', () => {
 
 test('histogramSummary: multiple routes, sorted by count desc', () => {
   const rows = [
-    { name: 'lat_count',  labels: { method: 'GET', route: '/a' }, value: 10 },
-    { name: 'lat_sum',    labels: { method: 'GET', route: '/a' }, value: 100 },
+    { name: 'lat_count', labels: { method: 'GET', route: '/a' }, value: 10 },
+    { name: 'lat_sum', labels: { method: 'GET', route: '/a' }, value: 100 },
     { name: 'lat_bucket', labels: { method: 'GET', route: '/a', le: '50' }, value: 10 },
-    { name: 'lat_count',  labels: { method: 'POST', route: '/b' }, value: 200 },
-    { name: 'lat_sum',    labels: { method: 'POST', route: '/b' }, value: 8000 },
+    { name: 'lat_count', labels: { method: 'POST', route: '/b' }, value: 200 },
+    { name: 'lat_sum', labels: { method: 'POST', route: '/b' }, value: 8000 },
     { name: 'lat_bucket', labels: { method: 'POST', route: '/b', le: '100' }, value: 200 },
   ];
   const summary = histogramSummary(rows, 'lat');
@@ -181,7 +213,7 @@ test('histogramSummary: multiple routes, sorted by count desc', () => {
 
 test('histogramSummary: zero-count route yields null p50/p95 (no divide by 0)', () => {
   const rows = [
-    { name: 'lat_count',  labels: { method: 'GET', route: '/empty' }, value: 0 },
+    { name: 'lat_count', labels: { method: 'GET', route: '/empty' }, value: 0 },
     { name: 'lat_bucket', labels: { method: 'GET', route: '/empty', le: '10' }, value: 0 },
   ];
   const summary = histogramSummary(rows, 'lat');
@@ -192,82 +224,134 @@ test('histogramSummary: zero-count route yields null p50/p95 (no divide by 0)', 
 });
 
 test('histogramSummary: missing histogram name returns empty', () => {
-  const rows = [
-    { name: 'unrelated_counter', labels: {}, value: 42 },
-  ];
+  const rows = [{ name: 'unrelated_counter', labels: {}, value: 42 }];
   assert.deepEqual(histogramSummary(rows, 'no_such_metric'), []);
 });
 
 // ── computeHealth: verdict priority + thresholds ──
 
 test('computeHealth: idle when no traffic', () => {
-  assert.equal(computeHealth({
-    totalRequests: 0, errorRate: 0, slowRoutes: 0,
-    totalClientErrors: 0, cspViolations: 0,
-  }), 'idle');
+  assert.equal(
+    computeHealth({
+      totalRequests: 0,
+      errorRate: 0,
+      slowRoutes: 0,
+      totalClientErrors: 0,
+      cspViolations: 0,
+    }),
+    'idle'
+  );
 });
 
 test('computeHealth: ok when traffic exists and all thresholds clean', () => {
-  assert.equal(computeHealth({
-    totalRequests: 1000, errorRate: 0.1, slowRoutes: 0,
-    totalClientErrors: 0, cspViolations: 0,
-  }), 'ok');
+  assert.equal(
+    computeHealth({
+      totalRequests: 1000,
+      errorRate: 0.1,
+      slowRoutes: 0,
+      totalClientErrors: 0,
+      cspViolations: 0,
+    }),
+    'ok'
+  );
 });
 
 test('computeHealth: warn when error rate crosses warn threshold', () => {
   // Exactly at the warn boundary → warn (inclusive on `>=`).
-  assert.equal(computeHealth({
-    totalRequests: 1000, errorRate: ERROR_RATE_WARN_PCT, slowRoutes: 0,
-    totalClientErrors: 0, cspViolations: 0,
-  }), 'warn');
+  assert.equal(
+    computeHealth({
+      totalRequests: 1000,
+      errorRate: ERROR_RATE_WARN_PCT,
+      slowRoutes: 0,
+      totalClientErrors: 0,
+      cspViolations: 0,
+    }),
+    'warn'
+  );
   // Just below the alert boundary → still warn.
-  assert.equal(computeHealth({
-    totalRequests: 1000, errorRate: ERROR_RATE_ALERT_PCT - 0.01, slowRoutes: 0,
-    totalClientErrors: 0, cspViolations: 0,
-  }), 'warn');
+  assert.equal(
+    computeHealth({
+      totalRequests: 1000,
+      errorRate: ERROR_RATE_ALERT_PCT - 0.01,
+      slowRoutes: 0,
+      totalClientErrors: 0,
+      cspViolations: 0,
+    }),
+    'warn'
+  );
 });
 
 test('computeHealth: alert when error rate crosses alert threshold', () => {
-  assert.equal(computeHealth({
-    totalRequests: 1000, errorRate: ERROR_RATE_ALERT_PCT, slowRoutes: 0,
-    totalClientErrors: 0, cspViolations: 0,
-  }), 'alert');
+  assert.equal(
+    computeHealth({
+      totalRequests: 1000,
+      errorRate: ERROR_RATE_ALERT_PCT,
+      slowRoutes: 0,
+      totalClientErrors: 0,
+      cspViolations: 0,
+    }),
+    'alert'
+  );
 });
 
 test('computeHealth: alert when any route is slow (p95 ≥ alert)', () => {
   // Low error rate but 1 slow route → alert. The slowRoutes count
   // is pre-computed by the caller (filters latency rows with p95 >=
   // P95_ALERT_MS), so the helper just sees the rollup count.
-  assert.equal(computeHealth({
-    totalRequests: 1000, errorRate: 0, slowRoutes: 1,
-    totalClientErrors: 0, cspViolations: 0,
-  }), 'alert');
+  assert.equal(
+    computeHealth({
+      totalRequests: 1000,
+      errorRate: 0,
+      slowRoutes: 1,
+      totalClientErrors: 0,
+      cspViolations: 0,
+    }),
+    'alert'
+  );
 });
 
 test('computeHealth: alert when any client crash reported', () => {
-  assert.equal(computeHealth({
-    totalRequests: 1000, errorRate: 0, slowRoutes: 0,
-    totalClientErrors: 1, cspViolations: 0,
-  }), 'alert');
+  assert.equal(
+    computeHealth({
+      totalRequests: 1000,
+      errorRate: 0,
+      slowRoutes: 0,
+      totalClientErrors: 1,
+      cspViolations: 0,
+    }),
+    'alert'
+  );
 });
 
 test('computeHealth: warn when only CSP violations present', () => {
   // CSP on its own is warn (misconfigured inline handler) — but error
   // rate and client crashes always escalate to alert first.
-  assert.equal(computeHealth({
-    totalRequests: 1000, errorRate: 0, slowRoutes: 0,
-    totalClientErrors: 0, cspViolations: 3,
-  }), 'warn');
+  assert.equal(
+    computeHealth({
+      totalRequests: 1000,
+      errorRate: 0,
+      slowRoutes: 0,
+      totalClientErrors: 0,
+      cspViolations: 3,
+    }),
+    'warn'
+  );
 });
 
 test('computeHealth: alert priority over warn when both signals present', () => {
   // Client crash + CSP violation + high error rate: alert wins.
   // This locks the priority ordering — regressing it would downgrade
   // a real incident to a warn banner.
-  assert.equal(computeHealth({
-    totalRequests: 1000, errorRate: ERROR_RATE_ALERT_PCT, slowRoutes: 2,
-    totalClientErrors: 5, cspViolations: 10,
-  }), 'alert');
+  assert.equal(
+    computeHealth({
+      totalRequests: 1000,
+      errorRate: ERROR_RATE_ALERT_PCT,
+      slowRoutes: 2,
+      totalClientErrors: 5,
+      cspViolations: 10,
+    }),
+    'alert'
+  );
 });
 
 test('computeHealth: garbage input defaults to idle, does not throw', () => {
@@ -281,10 +365,16 @@ test('computeHealth: garbage input defaults to idle, does not throw', () => {
 test('computeHealth: ignores non-numeric fields', () => {
   // Defensive against a caller passing the wrong shape — coerces
   // strings to numbers via Number() || 0.
-  assert.equal(computeHealth({
-    totalRequests: 'not a number', errorRate: null, slowRoutes: undefined,
-    totalClientErrors: 'bad', cspViolations: {},
-  }), 'idle');
+  assert.equal(
+    computeHealth({
+      totalRequests: 'not a number',
+      errorRate: null,
+      slowRoutes: undefined,
+      totalClientErrors: 'bad',
+      cspViolations: {},
+    }),
+    'idle'
+  );
 });
 
 test('P95_ALERT_MS is exported and sane (> warn)', () => {

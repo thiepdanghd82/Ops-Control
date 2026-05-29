@@ -9,7 +9,14 @@ import assert from 'node:assert/strict';
 import { recomputeFromResult, migrateQuotes } from './migrate-quote-va.js';
 
 test('recomputeFromResult: canonical VA formula (mat + tooling + packing)', () => {
-  const r = { s_mat_cost: 0.025, tooling: 0.001, packing_ship: 0.003, labor_cost: 0.004, s_ttl: 0.04, sp: 0.05 };
+  const r = {
+    s_mat_cost: 0.025,
+    tooling: 0.001,
+    packing_ship: 0.003,
+    labor_cost: 0.004,
+    s_ttl: 0.04,
+    sp: 0.05,
+  };
   const out = recomputeFromResult(r);
   // va = 1 - (0.025 + 0.001 + 0.003) / 0.05 = 1 - 0.58 = 0.42
   assert.ok(Math.abs(out.va - 0.42) < 1e-9);
@@ -65,8 +72,19 @@ test('migrateQuotes: skips thin result ({gm, va, s_ttl} only)', () => {
 test('migrateQuotes: updates divergent VA (old formula: 1 - mat/sp)', () => {
   // Old bug: saved va = 1 - 0.025/0.05 = 0.5. Canonical: 1 - (0.025+0.001+0.003)/0.05 = 0.42.
   const q = {
-    id: 43, type: 'standard',
-    result: { s_mat_cost: 0.025, tooling: 0.001, packing_ship: 0.003, labor_cost: 0.004, s_ttl: 0.04, sp: 0.05, va: 0.5, gm: 0.2, contribution: 0.5 },
+    id: 43,
+    type: 'standard',
+    result: {
+      s_mat_cost: 0.025,
+      tooling: 0.001,
+      packing_ship: 0.003,
+      labor_cost: 0.004,
+      s_ttl: 0.04,
+      sp: 0.05,
+      va: 0.5,
+      gm: 0.2,
+      contribution: 0.5,
+    },
   };
   const { next, report } = migrateQuotes([q]);
   assert.equal(report.updated, 1);
@@ -79,8 +97,19 @@ test('migrateQuotes: updates divergent VA (old formula: 1 - mat/sp)', () => {
 
 test('migrateQuotes: idempotent — second run produces no changes', () => {
   const q = {
-    id: 43, type: 'standard',
-    result: { s_mat_cost: 0.025, tooling: 0.001, packing_ship: 0.003, labor_cost: 0.004, s_ttl: 0.04, sp: 0.05, va: 0.5, gm: 0.2, contribution: 0.5 },
+    id: 43,
+    type: 'standard',
+    result: {
+      s_mat_cost: 0.025,
+      tooling: 0.001,
+      packing_ship: 0.003,
+      labor_cost: 0.004,
+      s_ttl: 0.04,
+      sp: 0.05,
+      va: 0.5,
+      gm: 0.2,
+      contribution: 0.5,
+    },
   };
   const first = migrateQuotes([q]);
   const second = migrateQuotes(first.next);
@@ -90,8 +119,19 @@ test('migrateQuotes: idempotent — second run produces no changes', () => {
 
 test('migrateQuotes: leaves already-canonical quotes untouched', () => {
   const q = {
-    id: 1, type: 'standard',
-    result: { s_mat_cost: 0.025, tooling: 0.001, packing_ship: 0.003, labor_cost: 0.004, s_ttl: 0.04, sp: 0.05, va: 0.42, gm: 0.2, contribution: 0.34 },
+    id: 1,
+    type: 'standard',
+    result: {
+      s_mat_cost: 0.025,
+      tooling: 0.001,
+      packing_ship: 0.003,
+      labor_cost: 0.004,
+      s_ttl: 0.04,
+      sp: 0.05,
+      va: 0.42,
+      gm: 0.2,
+      contribution: 0.34,
+    },
   };
   const { next, report } = migrateQuotes([q]);
   assert.equal(report.unchanged, 1);
@@ -101,8 +141,19 @@ test('migrateQuotes: leaves already-canonical quotes untouched', () => {
 
 test('migrateQuotes: sub-threshold rounding delta does NOT trigger rewrite', () => {
   const q = {
-    id: 1, type: 'standard',
-    result: { s_mat_cost: 0.025, tooling: 0.001, packing_ship: 0.003, labor_cost: 0.004, s_ttl: 0.04, sp: 0.05, va: 0.4202, gm: 0.2, contribution: 0.34 },
+    id: 1,
+    type: 'standard',
+    result: {
+      s_mat_cost: 0.025,
+      tooling: 0.001,
+      packing_ship: 0.003,
+      labor_cost: 0.004,
+      s_ttl: 0.04,
+      sp: 0.05,
+      va: 0.4202,
+      gm: 0.2,
+      contribution: 0.34,
+    },
   };
   const { report } = migrateQuotes([q]);
   // Canonical 0.42 vs stored 0.4202 → delta 0.0002 < 0.0005 threshold.

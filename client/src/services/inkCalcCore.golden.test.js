@@ -17,11 +17,15 @@ test('meshRecalc: canonical open-area formula w²×100 / (w+d)²', () => {
   const row = { mesh_opening: 50, thread_dia: 35, mesh_thickness: 60 };
   const out = meshRecalc(row);
   // 50² × 100 / (50+35)² = 250000 / 7225 = 34.602
-  assert.ok(Math.abs(out.open_area_recipe - 34.602) < 0.01,
-    `open_area_recipe: expected ~34.60, got ${out.open_area_recipe}`);
+  assert.ok(
+    Math.abs(out.open_area_recipe - 34.602) < 0.01,
+    `open_area_recipe: expected ~34.60, got ${out.open_area_recipe}`
+  );
   // volume = open_area × thickness / 100 = 34.602 × 60 / 100 = 20.761
-  assert.ok(Math.abs(out.volume_recipe - 20.761) < 0.01,
-    `volume_recipe: expected ~20.76, got ${out.volume_recipe}`);
+  assert.ok(
+    Math.abs(out.volume_recipe - 20.761) < 0.01,
+    `volume_recipe: expected ~20.76, got ${out.volume_recipe}`
+  );
 });
 
 test('meshRecalc: zero inputs produce no NaN / Infinity', () => {
@@ -49,22 +53,64 @@ test('aniloxRecalc: missing transfer_eff leaves vol_recipe=0 (not NaN)', () => {
 /** Minimal std state with layout + one silkscreen-printed ink. */
 function makeStdForInk() {
   return {
-    moq: 50000, annual_qty: 500000, product_lifetime: 1,
-    trade_mode: 'USD(Normal)', site: 'VN',
-    part_width: 80, part_length_md: 50, web_width_td: 82, sheet_length: 52,
-    num_webs: 1, parts_in_md: 1, parts_web_across: 1, min_gap_md: 2,
-    rotary_cols: 0, pcs_per_roll: 5000,
+    moq: 50000,
+    annual_qty: 500000,
+    product_lifetime: 1,
+    trade_mode: 'USD(Normal)',
+    site: 'VN',
+    part_width: 80,
+    part_length_md: 50,
+    web_width_td: 82,
+    sheet_length: 52,
+    num_webs: 1,
+    parts_in_md: 1,
+    parts_web_across: 1,
+    min_gap_md: 2,
+    rotary_cols: 0,
+    pcs_per_roll: 5000,
     materials: [
-      { code: 'PET-80', width: 82, s_price: 8, g_price: 8, latest: 0, usage: 1, offcut_yn: 'N', slitting_yn: 'N' },
+      {
+        code: 'PET-80',
+        width: 82,
+        s_price: 8,
+        g_price: 8,
+        latest: 0,
+        usage: 1,
+        offcut_yn: 'N',
+        slitting_yn: 'N',
+      },
     ],
     inks: [
-      { color: 'Red', print_type: 'Silkscreen', base_mat: 'PET-80', mesh_spec: 'M180',
-        area_pct: 0.25, setup_kg: 0.3, s_price: 18, g_price: 18, latest: 0 },
+      {
+        color: 'Red',
+        print_type: 'Silkscreen',
+        base_mat: 'PET-80',
+        mesh_spec: 'M180',
+        area_pct: 0.25,
+        setup_kg: 0.3,
+        s_price: 18,
+        g_price: 18,
+        latest: 0,
+      },
     ],
     processes: [
-      { process_type: 'Print', workcenter: 'Flexo-A', speed: 30, layout: 1, efficiency: 0.85,
-        setup_h: 0, scrap_pct: 0.03, tool_cost: 0, tool_type: '', tool_life: 0,
-        manual_uph: 0, extra_cost: 0, product_life: 1, eau_ovr: 0, repeat: 1 },
+      {
+        process_type: 'Print',
+        workcenter: 'Flexo-A',
+        speed: 30,
+        layout: 1,
+        efficiency: 0.85,
+        setup_h: 0,
+        scrap_pct: 0.03,
+        tool_cost: 0,
+        tool_type: '',
+        tool_life: 0,
+        manual_uph: 0,
+        extra_cost: 0,
+        product_life: 1,
+        eau_ovr: 0,
+        repeat: 1,
+      },
     ],
   };
 }
@@ -73,15 +119,28 @@ function makeInkCalcDB() {
   return {
     silkscreen: {
       meshSpec: [
-        { mesh_code: 'M180', mesh_count: 180, thread_dia: 35, mesh_thickness: 60,
-          mesh_opening: 50, open_area_recipe: 34.60, volume_recipe: 20.76 },
+        {
+          mesh_code: 'M180',
+          mesh_count: 180,
+          thread_dia: 35,
+          mesh_thickness: 60,
+          mesh_opening: 50,
+          open_area_recipe: 34.6,
+          volume_recipe: 20.76,
+        },
       ],
       qpaCost: [],
     },
     flexo: {
       aniloxDB: [
-        { anilox_code: 'A400', lpi: 400, bcm: 4.5, transfer_eff: 30,
-          calc_vol: 6.975, vol_recipe: 2.0925 },
+        {
+          anilox_code: 'A400',
+          lpi: 400,
+          bcm: 4.5,
+          transfer_eff: 30,
+          calc_vol: 6.975,
+          vol_recipe: 2.0925,
+        },
       ],
       qpaCost: [],
     },
@@ -147,10 +206,17 @@ test('runInkCalc silkscreen: ink without color is skipped', () => {
 test('runInkCalc: prev overrides (density, ink_price_ovr) win over auto-derived', () => {
   const st = makeStdForInk();
   const db = makeInkCalcDB();
-  const prevRows = [{
-    sp_label: 'Standard', color: 'Red', mesh_spec: 'M180',
-    density: 1.3, ink_price_ovr: 25, repeat: 2, setup_kg_ovr: 0.5,
-  }];
+  const prevRows = [
+    {
+      sp_label: 'Standard',
+      color: 'Red',
+      mesh_spec: 'M180',
+      density: 1.3,
+      ink_price_ovr: 25,
+      repeat: 2,
+      setup_kg_ovr: 0.5,
+    },
+  ];
   const rows = runInkCalc('silkscreen', 'std', st, null, db, prevRows);
   const r = rows[0];
   assert.equal(r.density, 1.3, 'prev density overrode 1.0 default');
@@ -180,7 +246,7 @@ test('runInkCalc flexo: uses anilox DB vol_recipe + lpi + bcm fields', () => {
 test('runInkCalc flexo: non-Flexo ink is filtered out (anilox-only path)', () => {
   const st = makeStdForInk();
   st.inks[0].print_type = 'Silkscreen'; // wrong for flexo path
-  st.inks[0].mesh_spec = 'M180';        // not an anilox code
+  st.inks[0].mesh_spec = 'M180'; // not an anilox code
   const rows = runInkCalc('flexo', 'std', st, null, makeInkCalcDB(), []);
   assert.equal(rows.length, 0, 'silkscreen ink excluded from flexo run');
 });
@@ -218,6 +284,12 @@ test('runInkCalc cplx: emits row per SP that has a visible ink', () => {
   const cplxState = { moq: 50000, subproducts: [sp1, sp2, spHidden] };
   const rows = runInkCalc('silkscreen', 'cplx', null, cplxState, makeInkCalcDB(), []);
   assert.equal(rows.length, 2, 'SP3 (hidden ink) filtered out');
-  assert.deepEqual(rows.map(r => r.color), ['Red', 'Blue']);
-  assert.deepEqual(rows.map(r => r.sp_label), ['SP1', 'SP2']);
+  assert.deepEqual(
+    rows.map((r) => r.color),
+    ['Red', 'Blue']
+  );
+  assert.deepEqual(
+    rows.map((r) => r.sp_label),
+    ['SP1', 'SP2']
+  );
 });

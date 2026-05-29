@@ -16,23 +16,25 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  pickDielineBbox,
-  dielineBboxByColor,
-  rgbToHex,
-} from './printAreaCore.js';
+import { pickDielineBbox, dielineBboxByColor, rgbToHex } from './printAreaCore.js';
 
 function makeCanvas(w, h) {
   const data = new Uint8ClampedArray(w * h * 4);
   for (let i = 0; i < data.length; i += 4) {
-    data[i] = 255; data[i + 1] = 255; data[i + 2] = 255; data[i + 3] = 255;
+    data[i] = 255;
+    data[i + 1] = 255;
+    data[i + 2] = 255;
+    data[i + 3] = 255;
   }
   return { data, width: w, height: h };
 }
 function paint(img, x, y, rgb) {
   if (x < 0 || x >= img.width || y < 0 || y >= img.height) return;
   const i = (y * img.width + x) * 4;
-  img.data[i] = rgb[0]; img.data[i + 1] = rgb[1]; img.data[i + 2] = rgb[2]; img.data[i + 3] = 255;
+  img.data[i] = rgb[0];
+  img.data[i + 1] = rgb[1];
+  img.data[i + 2] = rgb[2];
+  img.data[i + 3] = 255;
 }
 function rect(img, x0, y0, x1, y1, rgb) {
   // Filled rectangle.
@@ -61,9 +63,9 @@ function disc(img, cx, cy, r, rgb) {
 
 function makeArtworkWithDieline() {
   const img = makeCanvas(600, 400);
-  const RED = [236, 68, 68];     // die-line color
-  const BLUE = [100, 150, 240];  // logo fill
-  const BLACK = [20, 20, 20];    // QR + dim lines
+  const RED = [236, 68, 68]; // die-line color
+  const BLUE = [100, 150, 240]; // logo fill
+  const BLACK = [20, 20, 20]; // QR + dim lines
   // Dimension annotations OUTSIDE the label (top + bottom thin lines).
   strokeRect(img, 50, 20, 550, 22, BLACK, 2);
   strokeRect(img, 50, 378, 550, 380, BLACK, 2);
@@ -83,8 +85,7 @@ test('pickDielineBbox: thin red outline wins over filled blue/black blobs', () =
   assert.ok(pick, 'expected a die-line candidate');
   // Color must be red (tolerant to ±10 per channel for averaging).
   for (let i = 0; i < 3; i++) {
-    assert.ok(Math.abs(pick.rgb[i] - RED[i]) <= 10,
-      `rgb[${i}]=${pick.rgb[i]} expected ~${RED[i]}`);
+    assert.ok(Math.abs(pick.rgb[i] - RED[i]) <= 10, `rgb[${i}]=${pick.rgb[i]} expected ~${RED[i]}`);
   }
   // Bbox matches the die-line rectangle (±2 px tolerance).
   assert.ok(Math.abs(pick.bbox.x - expectedBbox.x) <= 2);

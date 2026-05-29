@@ -40,15 +40,18 @@ test('20 concurrent upserts all persist (no lost updates)', async () => {
 
   // Fire all N in parallel. Promise.all resolves when every lock
   // acquisition has completed — if the serializer works, all 20 land.
-  const results = await Promise.all(payloads.map(p => upsertQuote(p)));
+  const results = await Promise.all(payloads.map((p) => upsertQuote(p)));
   assert.equal(results.length, N);
 
   const persisted = loadQuotes();
-  assert.equal(persisted.length, N,
-    `expected ${N} quotes after concurrent upsert, got ${persisted.length} — lost updates indicate the lock is not serializing writes`);
+  assert.equal(
+    persisted.length,
+    N,
+    `expected ${N} quotes after concurrent upsert, got ${persisted.length} — lost updates indicate the lock is not serializing writes`
+  );
 
   // Every id must be present — order doesn't matter, but presence does.
-  const ids = new Set(persisted.map(q => q.id));
+  const ids = new Set(persisted.map((q) => q.id));
   for (const p of payloads) {
     assert.ok(ids.has(p.id), `quote id ${p.id} missing after concurrent write`);
   }
@@ -61,15 +64,22 @@ test('concurrent update of the SAME id settles to one of the inputs (no corrupti
   // contains exactly one quote with id=2000 whose label matches one of
   // the inputs — not a half-merged frankenstein.
   const N = 10;
-  await Promise.all(Array.from({ length: N }, (_, i) =>
-    upsertQuote({ id: 2000, type: 'standard', label: `W${i}`, state: {} })));
+  await Promise.all(
+    Array.from({ length: N }, (_, i) =>
+      upsertQuote({ id: 2000, type: 'standard', label: `W${i}`, state: {} })
+    )
+  );
 
   const persisted = loadQuotes();
-  const matches = persisted.filter(q => q.id === 2000);
+  const matches = persisted.filter((q) => q.id === 2000);
   assert.equal(matches.length, 1, 'expected exactly one record for the contested id');
   assert.match(matches[0].label, /^W\d$/, 'label must equal one of the writer labels');
 });
 
 test('cleanup: tmp dir removed', () => {
-  try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* noop */ }
+  try {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  } catch {
+    /* noop */
+  }
 });

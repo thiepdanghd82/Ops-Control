@@ -36,8 +36,7 @@ function setupDb() {
  *  empty → we bypass that here since tests run against a tmp dir with
  *  no quote_history.json and would otherwise pick up prod data. */
 function dbRowCount() {
-  return connection.getDb()
-    .prepare('SELECT COUNT(*) as n FROM quotes').get().n;
+  return connection.getDb().prepare('SELECT COUNT(*) as n FROM quotes').get().n;
 }
 
 function setupNoDb() {
@@ -134,7 +133,10 @@ test('upsertQuotesBulk: seeds multiple and deletes rows absent from the next sav
   assert.equal(r.ok, true);
   assert.equal(r.written, 2);
   assert.equal(r.deleted, 1, 'one row removed');
-  const ids = backend.listQuotes().map(q => q.id).sort((a, b) => a - b);
+  const ids = backend
+    .listQuotes()
+    .map((q) => q.id)
+    .sort((a, b) => a - b);
   assert.deepEqual(ids, [1, 3]);
   assert.equal(backend.getQuoteById(3).label, 'Tier bump');
 });
@@ -156,7 +158,7 @@ test('upsertQuotesBulk: skips records without an id', () => {
     mkQuote(1),
     { state: { rfq_number: 'X' } }, // no id → skipped
     mkQuote(2),
-    null,                            // skipped
+    null, // skipped
   ]);
   assert.equal(r.ok, true);
   assert.equal(r.written, 2);
@@ -166,8 +168,11 @@ test('upsertQuotesBulk: skips records without an id', () => {
 test('upsertQuote: indexed columns populated for list-view filtering', () => {
   setupDb();
   backend.upsertQuote(mkQuote(42));
-  const row = connection.getDb()
-    .prepare('SELECT id, rfq_number, ccl_pn, direct_cu, end_cu, npi_owner, saved_at FROM quotes WHERE id = ?')
+  const row = connection
+    .getDb()
+    .prepare(
+      'SELECT id, rfq_number, ccl_pn, direct_cu, end_cu, npi_owner, saved_at FROM quotes WHERE id = ?'
+    )
     .get(42);
   assert.equal(row.rfq_number, 'RFQ-0042');
   assert.equal(row.ccl_pn, 'CCL-42');
@@ -194,7 +199,15 @@ test('quotes state.approval payload round-trips through raw_json', () => {
     status: 'pending_sales',
     submitted_by: 'hana',
     submitted_at: new Date().toISOString(),
-    history: [{ ts: new Date().toISOString(), from: 'draft', to: 'pending_sales', action: 'SUBMIT', actor: 'hana' }],
+    history: [
+      {
+        ts: new Date().toISOString(),
+        from: 'draft',
+        to: 'pending_sales',
+        action: 'SUBMIT',
+        actor: 'hana',
+      },
+    ],
   };
   backend.upsertQuote(q);
   const out = backend.getQuoteById(9);

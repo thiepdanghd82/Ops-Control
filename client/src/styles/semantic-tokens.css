@@ -181,7 +181,8 @@
 }
 
 .modal-close-btn {
-  width: 26px; height: 26px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   border: 1px solid var(--border-strong, #e0e0e0);
   background: #ffffff;
@@ -217,28 +218,57 @@
 }
 
 .status-success,
-.status-won       { background: #defbe6; color: #0e6027; }
+.status-won {
+  background: #defbe6;
+  color: #0e6027;
+}
 .status-warning,
-.status-scheduled { background: #fef3c7; color: #92400e; }
+.status-scheduled {
+  background: #fef3c7;
+  color: #92400e;
+}
 .status-danger,
 .status-lost,
-.status-blocked   { background: #fee2e2; color: #991b1b; }
+.status-blocked {
+  background: #fee2e2;
+  color: #991b1b;
+}
 .status-info,
 .status-progress,
-.status-active    { background: #dbeafe; color: #1e40af; }
-.status-neutral   { background: #e8e8e8; color: #525252; }
-.status-inactive  { background: #f4f4f4; color: #8d8d8d; }
-.status-pending   { background: #fef9c3; color: #854d0e; }
+.status-active {
+  background: #dbeafe;
+  color: #1e40af;
+}
+.status-neutral {
+  background: #e8e8e8;
+  color: #525252;
+}
+.status-inactive {
+  background: #f4f4f4;
+  color: #8d8d8d;
+}
+.status-pending {
+  background: #fef9c3;
+  color: #854d0e;
+}
 
 /* ───────────────────────────────────────────────────────────────────
  * 4. TYPOGRAPHY UTILITIES
  * Adopt gradually — replace inline `style={{ color: '#6f6f6f' }}` with
  * `className="text-muted"` on new code.
  * ─────────────────────────────────────────────────────────────────── */
-.text-muted      { color: var(--text-secondary, #525252); }
-.text-tertiary   { color: var(--text-tertiary, #8d8d8d); }
-.text-primary    { color: var(--text-primary, #161616); }
-.text-strong     { font-weight: 600; }
+.text-muted {
+  color: var(--text-secondary, #525252);
+}
+.text-tertiary {
+  color: var(--text-tertiary, #8d8d8d);
+}
+.text-primary {
+  color: var(--text-primary, #161616);
+}
+.text-strong {
+  font-weight: 600;
+}
 .tabular {
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum';
@@ -266,7 +296,7 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
-[role="button"]:focus-visible {
+[role='button']:focus-visible {
   outline: 2px solid var(--border-focus, #0f62fe);
   outline-offset: 1px;
 }

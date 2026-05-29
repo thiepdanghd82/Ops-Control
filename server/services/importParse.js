@@ -17,7 +17,7 @@ import path from 'path';
 const BOM = '﻿';
 
 function stripBOM(s) {
-  return s.charCodeAt(0) === 0xFEFF ? s.slice(1) : s;
+  return s.charCodeAt(0) === 0xfeff ? s.slice(1) : s;
 }
 
 function detectDelimiter(sample) {
@@ -30,7 +30,10 @@ function detectDelimiter(sample) {
   let bestCount = 0;
   for (const c of candidates) {
     const count = firstLine.split(c).length - 1;
-    if (count > bestCount) { bestCount = count; best = c; }
+    if (count > bestCount) {
+      bestCount = count;
+      best = c;
+    }
   }
   return best;
 }
@@ -56,8 +59,12 @@ export function parseCSVContent(content, opts = {}) {
     const ch = text[i];
     if (inQuotes) {
       if (ch === '"') {
-        if (text[i + 1] === '"') { field += '"'; i++; }
-        else { inQuotes = false; }
+        if (text[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
       } else {
         field += ch;
       }
@@ -68,14 +75,22 @@ export function parseCSVContent(content, opts = {}) {
       // Toggle into quotes only if field is empty (start-of-field) OR
       // the previous char was the delimiter (lenient — some IFS dumps
       // emit `Cell1,"hello, world",Cell3`).
-      if (field === '') { inQuotes = true; continue; }
+      if (field === '') {
+        inQuotes = true;
+        continue;
+      }
       // Stray quote — just append.
       field += ch;
       continue;
     }
-    if (ch === delimiter) { row.push(field); field = ''; continue; }
+    if (ch === delimiter) {
+      row.push(field);
+      field = '';
+      continue;
+    }
     if (ch === '\n') {
-      row.push(field); field = '';
+      row.push(field);
+      field = '';
       // Drop trailing \r (we treat \n as end-of-line; \r before it is part of CRLF)
       if (row.length === 1 && row[0] === '') {
         // Empty line — skip
@@ -105,8 +120,8 @@ export function parseCSVContent(content, opts = {}) {
   if (rows.length === 0) {
     return { headers: [], rows: [], delimiter };
   }
-  const headers = rows[0].map(h => String(h ?? '').trim());
-  const data = rows.slice(1).filter(r => r.some(c => c != null && String(c).trim() !== ''));
+  const headers = rows[0].map((h) => String(h ?? '').trim());
+  const data = rows.slice(1).filter((r) => r.some((c) => c != null && String(c).trim() !== ''));
   return { headers, rows: data, delimiter };
 }
 
@@ -130,10 +145,11 @@ export async function parseExcelFile(filePath, opts = {}) {
   if (aoa.length === 0) {
     return { headers: [], rows: [], meta: { sheets, sheet: wantSheet } };
   }
-  const headers = (aoa[0] || []).map(h => String(h ?? '').trim());
-  const rows = aoa.slice(1)
-    .map(r => Array.from({ length: headers.length }, (_, i) => r[i] ?? ''))
-    .filter(r => r.some(c => c != null && String(c).trim() !== ''));
+  const headers = (aoa[0] || []).map((h) => String(h ?? '').trim());
+  const rows = aoa
+    .slice(1)
+    .map((r) => Array.from({ length: headers.length }, (_, i) => r[i] ?? ''))
+    .filter((r) => r.some((c) => c != null && String(c).trim() !== ''));
   return { headers, rows, meta: { sheets, sheet: wantSheet } };
 }
 

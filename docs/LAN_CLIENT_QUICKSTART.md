@@ -22,6 +22,7 @@
 ```
 
 If Gatekeeper still blocks:
+
 ```
 xattr -cr "/Applications/Ops Control.app"
 ```
@@ -65,31 +66,32 @@ App restarts → login screen now talks to LAN server.
 
 ## Health checks anh có thể làm bất cứ lúc nào
 
-| Check | How |
-|---|---|
-| Server kết nối ổn? | TopBar góc trái: nếu thấy banner đỏ "Mất kết nối server" → server tắt hoặc mạng rớt |
-| Bao nhiêu người đang online? | TopBar góc phải: pill "● N online" — click để xem tên |
-| Có quote/RFQ mới không? | Tabs auto-refresh trong 30-60s; SSE push tức thì khi user khác save |
-| Login từ máy lạ? | Sau login, nếu thấy toast vàng "⚠ Login từ IP mới" mà không phải anh → đổi pwd ngay |
+| Check                        | How                                                                                 |
+| ---------------------------- | ----------------------------------------------------------------------------------- |
+| Server kết nối ổn?           | TopBar góc trái: nếu thấy banner đỏ "Mất kết nối server" → server tắt hoặc mạng rớt |
+| Bao nhiêu người đang online? | TopBar góc phải: pill "● N online" — click để xem tên                               |
+| Có quote/RFQ mới không?      | Tabs auto-refresh trong 30-60s; SSE push tức thì khi user khác save                 |
+| Login từ máy lạ?             | Sau login, nếu thấy toast vàng "⚠ Login từ IP mới" mà không phải anh → đổi pwd ngay |
 
 ---
 
 ## Troubleshooting
 
-| Lỗi | Nguyên nhân | Fix |
-|---|---|---|
-| `ERR_CONNECTION_REFUSED` | Server không chạy / máy server tắt | Liên hệ IT bật server lại |
-| `ERR_CERT_AUTHORITY_INVALID` (HTTPS) | CA chưa được trust | Xem [INTERNAL_TRUST_SETUP.md](INTERNAL_TRUST_SETUP.md) |
-| Login bị "Too many failed attempts" | 5+ lần nhập sai pwd → khóa 5min | Đợi 5 phút, hoặc admin reset qua Settings → Users |
-| TOTP "Invalid code" liên tục | Đồng hồ máy lệch giờ > 30s | Settings → Date & Time → "Set automatically" |
-| "Conflict — quote đã bị sửa bởi người khác" modal | 2 người cùng update 1 quote | Chọn "↻ Reload" để lấy bản mới (an toàn) hoặc "⚠ Overwrite" nếu chắc bản mình đúng |
-| Tab trắng / chunk loading error | Cache cũ sau update | Cmd+Shift+R (hard reload). Nếu vẫn lỗi: Settings → Logout → Login lại |
+| Lỗi                                               | Nguyên nhân                        | Fix                                                                                |
+| ------------------------------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------- |
+| `ERR_CONNECTION_REFUSED`                          | Server không chạy / máy server tắt | Liên hệ IT bật server lại                                                          |
+| `ERR_CERT_AUTHORITY_INVALID` (HTTPS)              | CA chưa được trust                 | Xem [INTERNAL_TRUST_SETUP.md](INTERNAL_TRUST_SETUP.md)                             |
+| Login bị "Too many failed attempts"               | 5+ lần nhập sai pwd → khóa 5min    | Đợi 5 phút, hoặc admin reset qua Settings → Users                                  |
+| TOTP "Invalid code" liên tục                      | Đồng hồ máy lệch giờ > 30s         | Settings → Date & Time → "Set automatically"                                       |
+| "Conflict — quote đã bị sửa bởi người khác" modal | 2 người cùng update 1 quote        | Chọn "↻ Reload" để lấy bản mới (an toàn) hoặc "⚠ Overwrite" nếu chắc bản mình đúng |
+| Tab trắng / chunk loading error                   | Cache cũ sau update                | Cmd+Shift+R (hard reload). Nếu vẫn lỗi: Settings → Logout → Login lại              |
 
 ---
 
 ## Cho IT/admin
 
 Smoke test toàn bộ infra sau install:
+
 ```bash
 ./scripts/smoke-runtime.sh http://<server-ip>:3100
 # Verifies /health, /api/events/stream, /api/users/status, …
@@ -97,6 +99,7 @@ Smoke test toàn bộ infra sau install:
 ```
 
 Off-site backup nightly:
+
 ```bash
 OPS_DATA_DIR=~/Library/Application\ Support/ops-control-desktop/data \
 OPS_OFFSITE_TARGET=backup@nas.local:/volume1/ops-backup \
@@ -105,6 +108,7 @@ OPS_OFFSITE_TARGET=backup@nas.local:/volume1/ops-backup \
 ```
 
 HTTPS via Caddy (one shot):
+
 ```bash
 brew install caddy
 ./scripts/setup-https-caddy.sh
@@ -112,6 +116,7 @@ sudo caddy run --config ~/.config/ops-control-caddy/Caddyfile
 ```
 
 Anomaly audit log:
+
 ```bash
 grep LOGIN_ANOMALY ~/Library/Application\ Support/ops-control-desktop/data/Library/Users/audit_log.json
 ```

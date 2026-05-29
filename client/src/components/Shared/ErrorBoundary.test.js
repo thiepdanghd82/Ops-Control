@@ -43,7 +43,12 @@ test('getDerivedStateFromError: captures the error into state', () => {
 
 test('componentDidCatch: invokes onError callback with the error + info', () => {
   let captured = null;
-  const inst = makeInstance({ label: 'X', onError: (err, info) => { captured = { err, info }; } });
+  const inst = makeInstance({
+    label: 'X',
+    onError: (err, info) => {
+      captured = { err, info };
+    },
+  });
   inst.componentDidCatch(new Error('nope'), { componentStack: '  in Foo\n  in Bar' });
   assert.ok(captured);
   assert.equal(captured.err.message, 'nope');
@@ -51,7 +56,12 @@ test('componentDidCatch: invokes onError callback with the error + info', () => 
 });
 
 test('componentDidCatch: onError throwing never propagates (boundary must not crash itself)', () => {
-  const inst = makeInstance({ label: 'X', onError: () => { throw new Error('telemetry down'); } });
+  const inst = makeInstance({
+    label: 'X',
+    onError: () => {
+      throw new Error('telemetry down');
+    },
+  });
   assert.doesNotThrow(() => inst.componentDidCatch(new Error('inner'), {}));
 });
 

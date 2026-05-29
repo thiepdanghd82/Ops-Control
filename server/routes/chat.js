@@ -13,12 +13,28 @@
  */
 import { Router } from 'express';
 import {
-  getOrCreateRoom, getRoom, getRoomByKey, addMember, isMember, listMembers,
-  listRoomsForUser, insertMessage, listMessages, listMessagesSince, markSeen,
+  getOrCreateRoom,
+  getRoom,
+  getRoomByKey,
+  addMember,
+  isMember,
+  listMembers,
+  listRoomsForUser,
+  insertMessage,
+  listMessages,
+  listMessagesSince,
+  markSeen,
   markDelivered,
-  listMentionsForUser, countUnreadMentions, markMentionsRead,
-  searchMessages, editMessage, deleteMessage, purgeMessage,
-  dmKey, teamKey, quoteKey,
+  listMentionsForUser,
+  countUnreadMentions,
+  markMentionsRead,
+  searchMessages,
+  editMessage,
+  deleteMessage,
+  purgeMessage,
+  dmKey,
+  teamKey,
+  quoteKey,
 } from '../repositories/chatStore.js';
 import { getQuoteById } from '../repositories/quotesStore.js';
 import { loadUsers, getSessionUser, getTokenFromHeader } from '../services/authService.js';
@@ -27,7 +43,11 @@ import { normalizeApprovalRoles, MAX_DEFAULT_ROOMS_PER_USER } from '../utils/cha
 import { validateBody } from '../middleware/validate.js';
 import { chatSendRateLimit, chatEditRateLimit } from '../middleware/rateLimit.js';
 import {
-  subscribe, publish, onPresenceChange, onlineUserIds, getLastSeenAt,
+  subscribe,
+  publish,
+  onPresenceChange,
+  onlineUserIds,
+  getLastSeenAt,
 } from '../services/chatBus.js';
 import { inc } from '../utils/metrics.js';
 
@@ -67,9 +87,11 @@ function requireUser(req) {
 function ensureDefaultMemberships(user) {
   const { roles, truncated } = normalizeApprovalRoles(user.approval_roles);
   if (truncated) {
-    console.warn(`[chat] user ${user.id} has too many approval_roles — truncated to ${MAX_DEFAULT_ROOMS_PER_USER} for default room provisioning`);
+    console.warn(
+      `[chat] user ${user.id} has too many approval_roles — truncated to ${MAX_DEFAULT_ROOMS_PER_USER} for default room provisioning`
+    );
   }
-  const keys = roles.map(r => ({ kind: 'team', key: teamKey(r), title: `#${r}` }));
+  const keys = roles.map((r) => ({ kind: 'team', key: teamKey(r), title: `#${r}` }));
   keys.push({ kind: 'team', key: 'team:everyone', title: '#everyone' });
   for (const k of keys) {
     const room = getOrCreateRoom(k);
@@ -84,7 +106,7 @@ function ensureDefaultMemberships(user) {
 function enrichRoom(room, caller, usersById) {
   if (room.kind !== 'dm') return room;
   const members = listMembers(room.id);
-  const other = members.find(m => m.user_id !== caller.id);
+  const other = members.find((m) => m.user_id !== caller.id);
   const otherName = other && usersById.get(other.user_id)?.username;
   return { ...room, title: otherName ? `@${otherName}` : room.title };
 }
@@ -105,7 +127,7 @@ router.get('/users', (req, res) => {
   const user = requireUser(req);
   if (!user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
   const online = new Set(onlineUserIds());
-  const users = loadUsers().map(u => ({
+  const users = loadUsers().map((u) => ({
     id: u.id,
     username: u.username,
     full_name: u.full_name || u.username,
@@ -137,8 +159,8 @@ router.get('/rooms', (req, res) => {
   ensureDefaultMemberships(user);
   const rooms = listRoomsForUser(user.id);
   const users = loadUsers();
-  const usersById = new Map(users.map(u => [u.id, u]));
-  const enriched = rooms.map(r => enrichRoom(r, user, usersById));
+  const usersById = new Map(users.map((u) => [u.id, u]));
+  const enriched = rooms.map((r) => enrichRoom(r, user, usersById));
   res.json({ ok: true, rooms: enriched });
 });
 
@@ -147,12 +169,13 @@ router.get('/rooms/:id/messages', (req, res) => {
   const user = requireUser(req);
   if (!user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
   const roomId = Number(req.params.id);
-  if (!Number.isFinite(roomId)) return res.status(400).json({ ok: false, error: 'invalid room id' });
+  if (!Number.isFinite(roomId))
+    return res.status(400).json({ ok: false, error: 'invalid room id' });
   if (!isMember({ roomId, userId: user.id })) {
     return res.status(403).json({ ok: false, error: 'not_a_member' });
   }
   const before = req.query.before ? Number(req.query.before) : null;
-  const limit  = req.query.limit  ? Number(req.query.limit)  : 50;
+  const limit = req.query.limit ? Number(req.query.limit) : 50;
   const messages = listMessages({ roomId, before, limit });
   res.json({ ok: true, messages });
 });
@@ -168,7 +191,8 @@ router.post(
     const user = requireUser(req);
     if (!user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
     const roomId = Number(req.params.id);
-    if (!Number.isFinite(roomId)) return res.status(400).json({ ok: false, error: 'invalid room id' });
+    if (!Number.isFinite(roomId))
+      return res.status(400).json({ ok: false, error: 'invalid room id' });
     if (!isMember({ roomId, userId: user.id })) {
       return res.status(403).json({ ok: false, error: 'not_a_member' });
     }
@@ -180,7 +204,10 @@ router.post(
     const { mentionIds } = parseMentions(cleaned, users);
 
     const msg = insertMessage({
-      roomId, authorId: user.id, body: cleaned, mentions: mentionIds,
+      roomId,
+      authorId: user.id,
+      body: cleaned,
+      mentions: mentionIds,
     });
     const room = getRoom(roomId);
     inc('chat_messages_sent_total', { kind: room?.kind || 'unknown' });
@@ -197,15 +224,17 @@ router.post(
     // delivered_at = null → the client renders a single tick and
     // upgrades to a double tick the next time the recipient connects
     // (via the catch-up replay path below).
-    const memberIds = listMembers(roomId).map(m => m.user_id);
+    const memberIds = listMembers(roomId).map((m) => m.user_id);
     const event = { type: 'message', room_id: roomId, message: msg };
     publish(memberIds, event, { trackPerUser: true });
-    const nonAuthorHit = (event._deliveredTo || []).some(id => Number(id) !== Number(user.id));
+    const nonAuthorHit = (event._deliveredTo || []).some((id) => Number(id) !== Number(user.id));
     if (nonAuthorHit) {
       try {
         markDelivered({ messageId: msg.id });
         msg.delivered_at = new Date().toISOString();
-      } catch { /* delivery receipt is best-effort; don't fail the send */ }
+      } catch {
+        /* delivery receipt is best-effort; don't fail the send */
+      }
     }
     // Internal plumbing never leaves the server.
     delete event._deliveredTo;
@@ -215,7 +244,7 @@ router.post(
     // via mention fan-out logic in insertMessage (self-mentions are
     // already filtered when rows are inserted).
     if (mentionIds.length > 0) {
-      const recipients = mentionIds.filter(id => Number(id) !== Number(user.id));
+      const recipients = mentionIds.filter((id) => Number(id) !== Number(user.id));
       if (recipients.length > 0) {
         publish(recipients, {
           type: 'mention',
@@ -228,7 +257,7 @@ router.post(
     }
 
     res.json({ ok: true, message: msg });
-  },
+  }
 );
 
 // PATCH /api/chat/messages/:id — edit (author, within window, Phase 10E).
@@ -242,7 +271,8 @@ router.patch(
     const user = requireUser(req);
     if (!user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
     const messageId = Number(req.params.id);
-    if (!Number.isFinite(messageId)) return res.status(400).json({ ok: false, error: 'invalid_id' });
+    if (!Number.isFinite(messageId))
+      return res.status(400).json({ ok: false, error: 'invalid_id' });
 
     const cleaned = sanitizeChatBody(req.body.body);
     if (!cleaned) return res.status(400).json({ ok: false, error: 'empty_body' });
@@ -253,15 +283,22 @@ router.patch(
     const { mentionIds } = parseMentions(cleaned, users);
 
     const result = editMessage({
-      messageId, userId: user.id, body: cleaned, mentions: mentionIds,
+      messageId,
+      userId: user.id,
+      body: cleaned,
+      mentions: mentionIds,
     });
     if (!result.ok) {
       const status =
-        result.reason === 'forbidden'       ? 403 :
-        result.reason === 'not_found'       ? 404 :
-        result.reason === 'window_expired'  ? 409 :
-        result.reason === 'deleted'         ? 410 :
-        400;
+        result.reason === 'forbidden'
+          ? 403
+          : result.reason === 'not_found'
+            ? 404
+            : result.reason === 'window_expired'
+              ? 409
+              : result.reason === 'deleted'
+                ? 410
+                : 400;
       return res.status(status).json({ ok: false, error: result.reason });
     }
 
@@ -269,8 +306,8 @@ router.patch(
 
     // Broadcast the edit to every member so their open drawer updates.
     publish(
-      listMembers(result.message.room_id).map(m => m.user_id),
-      { type: 'message_edited', room_id: result.message.room_id, message: result.message },
+      listMembers(result.message.room_id).map((m) => m.user_id),
+      { type: 'message_edited', room_id: result.message.room_id, message: result.message }
     );
 
     // Additionally fan out a `mention` event to users who were
@@ -287,7 +324,7 @@ router.patch(
     }
 
     res.json({ ok: true, message: result.message });
-  },
+  }
 );
 
 // DELETE /api/chat/messages/:id — soft delete (recall, tombstone).
@@ -307,15 +344,19 @@ router.delete('/messages/:id', chatEditRateLimit, (req, res) => {
     const result = purgeMessage({ messageId, userId: user.id });
     if (!result.ok) {
       const status =
-        result.reason === 'forbidden'      ? 403 :
-        result.reason === 'not_found'      ? 404 :
-        result.reason === 'window_expired' ? 409 : 400;
+        result.reason === 'forbidden'
+          ? 403
+          : result.reason === 'not_found'
+            ? 404
+            : result.reason === 'window_expired'
+              ? 409
+              : 400;
       return res.status(status).json({ ok: false, error: result.reason });
     }
     inc('chat_messages_purged_total');
     publish(
-      listMembers(result.room_id).map(m => m.user_id),
-      { type: 'message_purged', room_id: result.room_id, message_id: messageId },
+      listMembers(result.room_id).map((m) => m.user_id),
+      { type: 'message_purged', room_id: result.room_id, message_id: messageId }
     );
     return res.json({ ok: true, id: messageId, purged: true });
   }
@@ -323,24 +364,28 @@ router.delete('/messages/:id', chatEditRateLimit, (req, res) => {
   const result = deleteMessage({ messageId, userId: user.id });
   if (!result.ok) {
     const status =
-      result.reason === 'forbidden'        ? 403 :
-      result.reason === 'not_found'        ? 404 :
-      result.reason === 'window_expired'   ? 409 :
-      result.reason === 'already_deleted'  ? 410 :
-      400;
+      result.reason === 'forbidden'
+        ? 403
+        : result.reason === 'not_found'
+          ? 404
+          : result.reason === 'window_expired'
+            ? 409
+            : result.reason === 'already_deleted'
+              ? 410
+              : 400;
     return res.status(status).json({ ok: false, error: result.reason });
   }
 
   inc('chat_messages_deleted_total');
 
   publish(
-    listMembers(result.room_id).map(m => m.user_id),
+    listMembers(result.room_id).map((m) => m.user_id),
     {
       type: 'message_deleted',
       room_id: result.room_id,
       message_id: messageId,
       deleted_at: result.deleted_at,
-    },
+    }
   );
   res.json({ ok: true, id: messageId });
 });
@@ -353,13 +398,14 @@ router.post(
     const user = requireUser(req);
     if (!user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
     const roomId = Number(req.params.id);
-    if (!Number.isFinite(roomId)) return res.status(400).json({ ok: false, error: 'invalid room id' });
+    if (!Number.isFinite(roomId))
+      return res.status(400).json({ ok: false, error: 'invalid room id' });
     if (!isMember({ roomId, userId: user.id })) {
       return res.status(403).json({ ok: false, error: 'not_a_member' });
     }
     markSeen({ roomId, userId: user.id, messageId: Number(req.body.message_id) });
     res.json({ ok: true });
-  },
+  }
 );
 
 // GET /api/chat/dm/:username — get or create DM with that user
@@ -371,7 +417,7 @@ router.get('/dm/:username', (req, res) => {
     return res.status(400).json({ ok: false, error: 'invalid_target' });
   }
   const users = loadUsers();
-  const target = users.find(u => String(u.username).toLowerCase() === targetName);
+  const target = users.find((u) => String(u.username).toLowerCase() === targetName);
   if (!target) return res.status(404).json({ ok: false, error: 'user_not_found' });
 
   const room = getOrCreateRoom({
@@ -405,7 +451,7 @@ router.get('/quote/:id', (req, res) => {
   // "Quote #<id>". The state sub-object is the source of truth in
   // quotesStore — fields may also appear at the root for legacy rows.
   const rfq = quote.state?.rfq_number || quote.rfq_number;
-  const ccl = quote.state?.ccl_pn    || quote.ccl_pn;
+  const ccl = quote.state?.ccl_pn || quote.ccl_pn;
   const parts = [];
   if (rfq) {
     // Avoid "RFQ RFQ-42" when the input already has the prefix.
@@ -413,7 +459,7 @@ router.get('/quote/:id', (req, res) => {
   }
   if (ccl) parts.push(ccl);
   const title = parts.length ? parts.join(' · ') : `Quote #${quoteId}`;
-  const site  = quote.state?.site || quote.site || null;
+  const site = quote.state?.site || quote.site || null;
 
   const room = getOrCreateRoom({ kind: 'quote', key: quoteKey(quoteId), title, site });
   addMember({ roomId: room.id, userId: user.id });
@@ -442,10 +488,12 @@ router.post(
   (req, res) => {
     const user = requireUser(req);
     if (!user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
-    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(Number).filter(Number.isFinite) : null;
+    const ids = Array.isArray(req.body?.ids)
+      ? req.body.ids.map(Number).filter(Number.isFinite)
+      : null;
     const updated = markMentionsRead({ userId: user.id, ids });
     res.json({ ok: true, updated });
-  },
+  }
 );
 
 // GET /api/chat/search?q=foo — Phase 10D. Searches messages across
@@ -479,10 +527,10 @@ router.get('/conversations', (req, res) => {
   try {
     const rooms = listRoomsForUser(user.id);
     const users = loadUsers();
-    const userById = new Map(users.map(u => [Number(u.id), u]));
+    const userById = new Map(users.map((u) => [Number(u.id), u]));
     const online = new Set(onlineUserIds());
 
-    const conversations = rooms.map(r => {
+    const conversations = rooms.map((r) => {
       const base = {
         id: r.id,
         kind: r.kind,
@@ -501,17 +549,19 @@ router.get('/conversations', (req, res) => {
       // extra client-side joining.
       if (r.kind === 'dm') {
         const members = listMembers(r.id);
-        const other = members.find(m => Number(m.user_id) !== Number(user.id));
+        const other = members.find((m) => Number(m.user_id) !== Number(user.id));
         if (other) {
           const u = userById.get(Number(other.user_id));
-          base.peer = u ? {
-            id: u.id,
-            username: u.username,
-            full_name: u.full_name || u.username,
-            role: u.role,
-            online: online.has(Number(u.id)),
-            last_seen_at: getLastSeenAt(u.id),
-          } : { id: other.user_id, username: 'unknown', online: false, last_seen_at: null };
+          base.peer = u
+            ? {
+                id: u.id,
+                username: u.username,
+                full_name: u.full_name || u.username,
+                role: u.role,
+                online: online.has(Number(u.id)),
+                last_seen_at: getLastSeenAt(u.id),
+              }
+            : { id: other.user_id, username: 'unknown', online: false, last_seen_at: null };
         }
       }
       return base;
@@ -557,8 +607,11 @@ router.get('/stream', (req, res) => {
     lines.push(`data: ${JSON.stringify(event)}`);
     lines.push(''); // blank line terminates the event
     lines.push('');
-    try { res.write(lines.join('\n')); }
-    catch { /* stream closed */ }
+    try {
+      res.write(lines.join('\n'));
+    } catch {
+      /* stream closed */
+    }
   }
 
   // Catch-up: on reconnect the client sends Last-Event-ID. We replay
@@ -572,13 +625,18 @@ router.get('/stream', (req, res) => {
   const lastId = Number(req.headers['last-event-id']) || 0;
   if (lastId > 0) {
     try {
-      const rooms = listRoomsForUser(user.id).map(r => r.id);
+      const rooms = listRoomsForUser(user.id).map((r) => r.id);
       const missed = listMessagesSince({ roomIds: rooms, sinceId: lastId, limit: 500 });
       const deliveredNow = new Set();
       for (const m of missed) {
         if (!m.delivered_at && Number(m.author_id) !== Number(user.id)) {
-          try { markDelivered({ messageId: m.id }); m.delivered_at = new Date().toISOString(); deliveredNow.add(m.id); }
-          catch { /* best-effort */ }
+          try {
+            markDelivered({ messageId: m.id });
+            m.delivered_at = new Date().toISOString();
+            deliveredNow.add(m.id);
+          } catch {
+            /* best-effort */
+          }
         }
         send({ type: 'message', room_id: m.room_id, message: m });
       }
@@ -586,14 +644,20 @@ router.get('/stream', (req, res) => {
       // upgrade live. Only fire for messages we just flipped, not for
       // ones that were already delivered before this reconnect.
       if (deliveredNow.size > 0) {
-        const notify = missed.filter(m => deliveredNow.has(m.id));
-        const authorIds = [...new Set(notify.map(m => Number(m.author_id)))];
+        const notify = missed.filter((m) => deliveredNow.has(m.id));
+        const authorIds = [...new Set(notify.map((m) => Number(m.author_id)))];
         publish(authorIds, {
           type: 'message_delivered',
-          delivered: notify.map(m => ({ id: m.id, room_id: m.room_id, delivered_at: m.delivered_at })),
+          delivered: notify.map((m) => ({
+            id: m.id,
+            room_id: m.room_id,
+            delivered_at: m.delivered_at,
+          })),
         });
       }
-    } catch { /* swallow */ }
+    } catch {
+      /* swallow */
+    }
   }
 
   // Initial "hello" so the client can distinguish a fresh connection
@@ -601,14 +665,21 @@ router.get('/stream', (req, res) => {
   send({ type: 'hello', user_id: user.id, ts: new Date().toISOString() });
   // Hydrate current online set so the conversation list can paint
   // presence dots without waiting for the first transition event.
-  try { send({ type: 'presence_snapshot', online: onlineUserIds() }); } catch { /* ignore */ }
+  try {
+    send({ type: 'presence_snapshot', online: onlineUserIds() });
+  } catch {
+    /* ignore */
+  }
 
   // Heartbeat every 25s as an SSE comment. Keeps the connection alive
   // through idle-timeout proxies + detects dead sockets (write fails
   // on a closed stream).
   const heartbeat = setInterval(() => {
-    try { res.write(': keepalive\n\n'); }
-    catch { /* ignore; close handler cleans up */ }
+    try {
+      res.write(': keepalive\n\n');
+    } catch {
+      /* ignore; close handler cleans up */
+    }
   }, 25000);
 
   const unsubscribe = subscribe(user.id, send);
@@ -621,8 +692,11 @@ router.get('/stream', (req, res) => {
     // Don't echo the current user's own presence events back — the
     // browser already knows whether its own tab is open.
     if (Number(ev.userId) === Number(user.id)) return;
-    try { send({ type: 'presence', user_id: ev.userId, online: ev.online, at: ev.at }); }
-    catch { /* stream dead; close handler will unsubscribe */ }
+    try {
+      send({ type: 'presence', user_id: ev.userId, online: ev.online, at: ev.at });
+    } catch {
+      /* stream dead; close handler will unsubscribe */
+    }
   });
   inc('chat_sse_connections_opened_total');
 

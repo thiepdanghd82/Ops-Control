@@ -25,15 +25,19 @@ One block per scenario. Skip scenarios that didn't run.
 - **Software versions**: `<Excel build / LibreOffice version / Numbers iOS version>`
 
 **Steps that worked smoothly**:
+
 - (1-3 bullets)
 
 **Steps that felt slow / awkward / confusing**:
+
 - (UX friction — not necessarily bugs)
 
 **Bugs surfaced**:
+
 - (if any — full stub already in uat-export-flow.md)
 
 **Operator notes (free-text)**:
+
 > (e.g. "Sheet protection dialog wording on Win Excel 365 says 'protected' clearly but Mac Excel says 'on a protected sheet' — slightly less obvious. Operator opinion: rewording isn't worth a fix.")
 
 **Screenshots captured**: list filenames (saved under `docs/uat/runs/<date>/screenshots/<file>.png` — operator copies the per-scenario screenshots referenced in uat-export-flow.md into this per-run folder)
@@ -81,6 +85,7 @@ we're gathering signal.
 - [ ] Could not open
 
 Notes:
+
 > `<fill in>`
 
 #### Q2 — Sufficient information
@@ -90,6 +95,7 @@ Notes:
 - [ ] No, would need additional info: `<fill in>`
 
 Free text (anything customer specifically mentioned wanting):
+
 > `<fill in>`
 
 #### Q3 — Anything looks odd?
@@ -99,6 +105,7 @@ Free text (anything customer specifically mentioned wanting):
 - [ ] Looks wrong (capture below)
 
 Free text:
+
 > `<fill in>`
 
 #### Bonus — customer-volunteered observations
@@ -119,6 +126,7 @@ wrap-up.
 - [ ] No — needs more work before any customer-facing use
 
 Reasoning:
+
 > `<fill in>`
 
 ### Q-B: What's the single biggest gap operators feel between this xlsx and their hand-built Excel quotes?
@@ -127,7 +135,7 @@ Reasoning:
 
 ### Q-C: Of the bugs surfaced during UAT, which 1-3 are blocking customer share (P0-P1 severity)?
 
-List only **P0** (data wrong/leaked) or **P1** (UX confusion that would cause customer to re-quote). 
+List only **P0** (data wrong/leaked) or **P1** (UX confusion that would cause customer to re-quote).
 P2/P3 belong in Q-D backlog discussion, not here.
 
 1. `<fill in>` — severity, 1-line description

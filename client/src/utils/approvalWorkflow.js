@@ -27,11 +27,11 @@ export const APPROVAL_STATES = [
 const LEGACY_STATUS_ALIASES = { submitted: 'pending_sales' };
 
 const TRANSITIONS = {
-  draft:           { SUBMIT: 'pending_sales' },
-  pending_sales:   { APPROVE_SALES: 'pending_finance', REJECT: 'rejected' },
-  pending_finance: { APPROVE_FINANCE: 'approved',      REJECT: 'rejected' },
-  approved:        { REVOKE: 'draft' },
-  rejected:        { SUBMIT: 'pending_sales' },
+  draft: { SUBMIT: 'pending_sales' },
+  pending_sales: { APPROVE_SALES: 'pending_finance', REJECT: 'rejected' },
+  pending_finance: { APPROVE_FINANCE: 'approved', REJECT: 'rejected' },
+  approved: { REVOKE: 'draft' },
+  rejected: { SUBMIT: 'pending_sales' },
 };
 
 const ROLE_LEVELS = { viewonly: 1, user: 2, cost: 3, admin: 4, sys: 5 };
@@ -39,9 +39,9 @@ const ROLE_LEVELS = { viewonly: 1, user: 2, cost: 3, admin: 4, sys: 5 };
 const REQUIRED_ROLE_FOR_ACTION = { SUBMIT: 'user', REVOKE: 'sys' };
 
 const APPROVAL_AUTH = {
-  APPROVE_SALES:   { approval_role: 'sales_mgr',                 fallback_role: 'admin' },
-  APPROVE_FINANCE: { approval_role: 'finance_dir',               fallback_role: 'admin' },
-  REJECT:          { approval_role: ['sales_mgr', 'finance_dir'], fallback_role: 'admin' },
+  APPROVE_SALES: { approval_role: 'sales_mgr', fallback_role: 'admin' },
+  APPROVE_FINANCE: { approval_role: 'finance_dir', fallback_role: 'admin' },
+  REJECT: { approval_role: ['sales_mgr', 'finance_dir'], fallback_role: 'admin' },
 };
 
 export function getStatus(approval) {
@@ -65,7 +65,7 @@ function canUserTakeAction(user, action) {
   const fallbackLevel = ROLE_LEVELS[auth.fallback_role] || 999;
   if (userLevel >= fallbackLevel) return true;
   const needed = Array.isArray(auth.approval_role) ? auth.approval_role : [auth.approval_role];
-  return needed.some(r => approvalRoles.includes(r));
+  return needed.some((r) => approvalRoles.includes(r));
 }
 
 /**
@@ -76,7 +76,7 @@ function canUserTakeAction(user, action) {
 export function availableActions(approval, user) {
   const status = getStatus(approval);
   const possible = Object.keys(TRANSITIONS[status] || {});
-  return possible.filter(a => canUserTakeAction(user, a));
+  return possible.filter((a) => canUserTakeAction(user, a));
 }
 
 // ── Presentation helpers ──────────────────────────────────────────────
@@ -88,12 +88,18 @@ export function availableActions(approval, user) {
 export function statusDisplay(status) {
   const s = LEGACY_STATUS_ALIASES[status] || status || 'draft';
   switch (s) {
-    case 'draft':           return { label: 'Draft',           tone: 'neutral' };
-    case 'pending_sales':   return { label: 'Pending Sales',   tone: 'warning' };
-    case 'pending_finance': return { label: 'Pending Finance', tone: 'info'    };
-    case 'approved':        return { label: 'Approved',        tone: 'success' };
-    case 'rejected':        return { label: 'Rejected',        tone: 'danger'  };
-    default:                return { label: s,                 tone: 'neutral' };
+    case 'draft':
+      return { label: 'Draft', tone: 'neutral' };
+    case 'pending_sales':
+      return { label: 'Pending Sales', tone: 'warning' };
+    case 'pending_finance':
+      return { label: 'Pending Finance', tone: 'info' };
+    case 'approved':
+      return { label: 'Approved', tone: 'success' };
+    case 'rejected':
+      return { label: 'Rejected', tone: 'danger' };
+    default:
+      return { label: s, tone: 'neutral' };
   }
 }
 
@@ -104,11 +110,17 @@ export function statusDisplay(status) {
  */
 export function actionDisplay(action) {
   switch (action) {
-    case 'SUBMIT':           return { label: 'Submit',           tone: 'primary' };
-    case 'APPROVE_SALES':    return { label: 'Approve (Sales)',  tone: 'primary' };
-    case 'APPROVE_FINANCE':  return { label: 'Approve (Finance)', tone: 'primary' };
-    case 'REJECT':           return { label: 'Reject',           tone: 'danger'  };
-    case 'REVOKE':           return { label: 'Revoke',           tone: 'ghost'   };
-    default:                 return { label: action,             tone: 'ghost'   };
+    case 'SUBMIT':
+      return { label: 'Submit', tone: 'primary' };
+    case 'APPROVE_SALES':
+      return { label: 'Approve (Sales)', tone: 'primary' };
+    case 'APPROVE_FINANCE':
+      return { label: 'Approve (Finance)', tone: 'primary' };
+    case 'REJECT':
+      return { label: 'Reject', tone: 'danger' };
+    case 'REVOKE':
+      return { label: 'Revoke', tone: 'ghost' };
+    default:
+      return { label: action, tone: 'ghost' };
   }
 }

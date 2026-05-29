@@ -11,10 +11,10 @@ import CostSummaryBar from '../../../../components/Shared/CostSummaryBar';
 
 export default function CplxSummaryBar({ cs, aggregate }) {
   const moqIdx = cs.active_moq_idx || 0;
-  const moqQty = moqIdx === 0 ? (cs.moq || 0) : (cs.extra_moqs?.[moqIdx - 1]?.moq || 0);
-  const eau    = moqIdx === 0 ? (cs.annual_qty || 0) : (cs.extra_moqs?.[moqIdx - 1]?.eau || 0);
-  const sp     = moqIdx === 0 ? (cs.selling_price || 0) : (cs.extra_moqs?.[moqIdx - 1]?.price || 0);
-  const target = moqIdx === 0 ? (cs.target || 0) : (cs.extra_moqs?.[moqIdx - 1]?.target || 0);
+  const moqQty = moqIdx === 0 ? cs.moq || 0 : cs.extra_moqs?.[moqIdx - 1]?.moq || 0;
+  const eau = moqIdx === 0 ? cs.annual_qty || 0 : cs.extra_moqs?.[moqIdx - 1]?.eau || 0;
+  const sp = moqIdx === 0 ? cs.selling_price || 0 : cs.extra_moqs?.[moqIdx - 1]?.price || 0;
+  const target = moqIdx === 0 ? cs.target || 0 : cs.extra_moqs?.[moqIdx - 1]?.target || 0;
 
   return (
     <CostSummaryBar

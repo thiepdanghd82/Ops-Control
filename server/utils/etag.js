@@ -56,7 +56,7 @@ export function sendJsonWithEtag(req, res, data) {
 
   const ifNoneMatch = req.headers['if-none-match'] || '';
   // Header may carry multiple ETags ("a, b, c") — match any.
-  if (ifNoneMatch && ifNoneMatch.split(',').some(t => t.trim() === etag)) {
+  if (ifNoneMatch && ifNoneMatch.split(',').some((t) => t.trim() === etag)) {
     res.status(304).end();
     return;
   }

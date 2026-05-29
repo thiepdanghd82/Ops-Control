@@ -21,7 +21,9 @@
 import { loadQuotes } from './quotesStore.js';
 import { getStatus as getApprovalStatus } from './approvalWorkflow.js';
 
-function isNum(v) { return typeof v === 'number' && Number.isFinite(v); }
+function isNum(v) {
+  return typeof v === 'number' && Number.isFinite(v);
+}
 
 /**
  * Normalize time-range. Accepts number-of-days (30 | 90 | 365) or
@@ -59,8 +61,11 @@ function normalizeRange(days) {
 export function collectMetrics({ days } = {}) {
   const { sinceMs } = normalizeRange(days);
   let quotes;
-  try { quotes = loadQuotes(); }
-  catch { return []; }
+  try {
+    quotes = loadQuotes();
+  } catch {
+    return [];
+  }
   if (!Array.isArray(quotes)) return [];
 
   const out = [];
@@ -80,10 +85,13 @@ export function collectMetrics({ days } = {}) {
     const gm = isNum(result.gm) ? result.gm : null;
     const va = isNum(result.va) ? result.va : null;
     const contribution = isNum(result.contribution) ? result.contribution : null;
-    const sp = isNum(result.sp) ? result.sp
-      : (isNum(state.selling_price) ? state.selling_price : null);
+    const sp = isNum(result.sp)
+      ? result.sp
+      : isNum(state.selling_price)
+        ? state.selling_price
+        : null;
     const moq = isNum(state.moq) ? state.moq : null;
-    const revenue = (sp != null && moq != null) ? sp * moq : null;
+    const revenue = sp != null && moq != null ? sp * moq : null;
     const approvalStatus = getApprovalStatus(state.approval); // normalizes legacy 'submitted' → 'pending_sales'
 
     // Customer + part number live in `state.*` in the JSON shape; the
@@ -95,9 +103,14 @@ export function collectMetrics({ days } = {}) {
       saved_at: q.saved_at,
       saved_ms: savedMs,
       direct_cu: state.direct_cu ?? q.direct_cu ?? null,
-      end_cu:    state.end_cu    ?? q.end_cu    ?? null,
-      ccl_pn:    state.ccl_pn    ?? q.ccl_pn    ?? null,
-      gm, va, contribution, sp, moq, revenue,
+      end_cu: state.end_cu ?? q.end_cu ?? null,
+      ccl_pn: state.ccl_pn ?? q.ccl_pn ?? null,
+      gm,
+      va,
+      contribution,
+      sp,
+      moq,
+      revenue,
       approval_status: approvalStatus,
     });
   }
@@ -119,21 +132,34 @@ export function getOverview({ days, _metrics } = {}) {
   const total = metrics.length;
   if (total === 0) {
     return {
-      total: 0, by_type: {}, avg_gm: null, avg_va: null,
-      pending_count: 0, revenue_total: 0,
+      total: 0,
+      by_type: {},
+      avg_gm: null,
+      avg_va: null,
+      pending_count: 0,
+      revenue_total: 0,
     };
   }
 
   const byType = {};
-  let gmSum = 0, gmCount = 0;
-  let vaSum = 0, vaCount = 0;
+  let gmSum = 0,
+    gmCount = 0;
+  let vaSum = 0,
+    vaCount = 0;
   let pendingCount = 0;
   let revenueTotal = 0;
   for (const m of metrics) {
     byType[m.type || 'unknown'] = (byType[m.type || 'unknown'] || 0) + 1;
-    if (isNum(m.gm)) { gmSum += m.gm; gmCount++; }
-    if (isNum(m.va)) { vaSum += m.va; vaCount++; }
-    if (m.approval_status === 'pending_sales' || m.approval_status === 'pending_finance') pendingCount++;
+    if (isNum(m.gm)) {
+      gmSum += m.gm;
+      gmCount++;
+    }
+    if (isNum(m.va)) {
+      vaSum += m.va;
+      vaCount++;
+    }
+    if (m.approval_status === 'pending_sales' || m.approval_status === 'pending_finance')
+      pendingCount++;
     if (isNum(m.revenue)) revenueTotal += m.revenue;
   }
   return {
@@ -154,19 +180,33 @@ export function getOverview({ days, _metrics } = {}) {
  */
 export function getWinRate({ days, _metrics } = {}) {
   const metrics = _metrics || collectMetrics({ days });
-  let won = 0, lost = 0, pending = 0, draft = 0;
+  let won = 0,
+    lost = 0,
+    pending = 0,
+    draft = 0;
   for (const m of metrics) {
     switch (m.approval_status) {
-      case 'approved': won++; break;
-      case 'rejected': lost++; break;
+      case 'approved':
+        won++;
+        break;
+      case 'rejected':
+        lost++;
+        break;
       case 'pending_sales':
-      case 'pending_finance': pending++; break;
-      default: draft++; break;
+      case 'pending_finance':
+        pending++;
+        break;
+      default:
+        draft++;
+        break;
     }
   }
   const decided = won + lost;
   return {
-    won, lost, pending, draft,
+    won,
+    lost,
+    pending,
+    draft,
     decided,
     rate: decided > 0 ? won / decided : null,
   };
@@ -205,7 +245,10 @@ export function getTopCustomers(limit = 10, { days, _metrics } = {}) {
     const cu = m.direct_cu || '(unknown)';
     const row = agg.get(cu) || { count: 0, gmSum: 0, gmN: 0, revenue: 0, won: 0, lost: 0 };
     row.count++;
-    if (isNum(m.gm)) { row.gmSum += m.gm; row.gmN++; }
+    if (isNum(m.gm)) {
+      row.gmSum += m.gm;
+      row.gmN++;
+    }
     if (isNum(m.revenue)) row.revenue += m.revenue;
     if (m.approval_status === 'approved') row.won++;
     else if (m.approval_status === 'rejected') row.lost++;
@@ -251,10 +294,13 @@ export function getMonthlyQuoteCount({ months = 12, _metrics } = {}) {
   for (const m of metrics) {
     if (m.saved_ms == null) continue;
     for (let i = buckets.length - 1; i >= 0; i--) {
-      if (m.saved_ms >= buckets[i].cutoff) { buckets[i].count++; break; }
+      if (m.saved_ms >= buckets[i].cutoff) {
+        buckets[i].count++;
+        break;
+      }
     }
   }
-  return buckets.map(b => ({ month: b.month, count: b.count }));
+  return buckets.map((b) => ({ month: b.month, count: b.count }));
 }
 
 /**
@@ -271,7 +317,9 @@ export function getMarginTrend({ months = 12, _metrics } = {}) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     buckets.push({
       month: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-      gmSum: 0, gmN: 0, count: 0,
+      gmSum: 0,
+      gmN: 0,
+      count: 0,
       cutoff: d.getTime(),
     });
   }
@@ -280,12 +328,15 @@ export function getMarginTrend({ months = 12, _metrics } = {}) {
     for (let i = buckets.length - 1; i >= 0; i--) {
       if (m.saved_ms >= buckets[i].cutoff) {
         buckets[i].count++;
-        if (isNum(m.gm)) { buckets[i].gmSum += m.gm; buckets[i].gmN++; }
+        if (isNum(m.gm)) {
+          buckets[i].gmSum += m.gm;
+          buckets[i].gmN++;
+        }
         break;
       }
     }
   }
-  return buckets.map(b => ({
+  return buckets.map((b) => ({
     month: b.month,
     count: b.count,
     avg_gm: b.gmN ? b.gmSum / b.gmN : null,
@@ -299,18 +350,21 @@ export function getMarginTrend({ months = 12, _metrics } = {}) {
 export function getMarginHistogram({ days, _metrics } = {}) {
   const metrics = _metrics || collectMetrics({ days });
   const bands = {
-    'negative':    { range: '< 0%',    count: 0, color: '#dc2626' },
-    'low':         { range: '0–10%',   count: 0, color: '#dc2626' },
-    'medium':      { range: '10–20%',  count: 0, color: '#d97706' },
-    'good':        { range: '20–35%',  count: 0, color: '#16a34a' },
-    'excellent':   { range: '> 35%',   count: 0, color: '#16a34a' },
-    'unknown':     { range: 'no GM',   count: 0, color: '#94a3b8' },
+    negative: { range: '< 0%', count: 0, color: '#dc2626' },
+    low: { range: '0–10%', count: 0, color: '#dc2626' },
+    medium: { range: '10–20%', count: 0, color: '#d97706' },
+    good: { range: '20–35%', count: 0, color: '#16a34a' },
+    excellent: { range: '> 35%', count: 0, color: '#16a34a' },
+    unknown: { range: 'no GM', count: 0, color: '#94a3b8' },
   };
   for (const m of metrics) {
-    if (!isNum(m.gm)) { bands.unknown.count++; continue; }
+    if (!isNum(m.gm)) {
+      bands.unknown.count++;
+      continue;
+    }
     if (m.gm < 0) bands.negative.count++;
-    else if (m.gm < 0.10) bands.low.count++;
-    else if (m.gm < 0.20) bands.medium.count++;
+    else if (m.gm < 0.1) bands.low.count++;
+    else if (m.gm < 0.2) bands.medium.count++;
     else if (m.gm < 0.35) bands.good.count++;
     else bands.excellent.count++;
   }

@@ -40,13 +40,18 @@ export default function ApprovalHistoryModal({ open, onClose, approval, quoteLab
         ) : (
           <ol className="appr-hist-list">
             {history.map((h, i) => (
-              <li key={h.ts ? `${h.ts}-${h.action || ''}-${i}` : `hi-${i}`} className="appr-hist-row">
+              <li
+                key={h.ts ? `${h.ts}-${h.action || ''}-${i}` : `hi-${i}`}
+                className="appr-hist-row"
+              >
                 <time className="appr-hist-ts">{fmtTs(h.ts)}</time>
                 <span className="appr-hist-action">{h.action}</span>
                 <div className="appr-hist-body">
                   <div className="appr-hist-transition">
                     <span className="appr-hist-from">{h.from}</span>
-                    <span className="appr-hist-arrow" aria-hidden>→</span>
+                    <span className="appr-hist-arrow" aria-hidden>
+                      →
+                    </span>
                     <span className="appr-hist-to">{h.to}</span>
                     <span className="appr-hist-actor">by {h.actor || '—'}</span>
                   </div>
@@ -58,13 +63,32 @@ export default function ApprovalHistoryModal({ open, onClose, approval, quoteLab
         )}
       </Modal.Body>
 
-      {(approval?.submitted_by || approval?.sales_approved_by || approval?.finance_approved_by || approval?.rejected_by) && (
+      {(approval?.submitted_by ||
+        approval?.sales_approved_by ||
+        approval?.finance_approved_by ||
+        approval?.rejected_by) && (
         <Modal.Footer align="start">
           <div className="appr-hist-footer-meta">
-            {approval?.submitted_by && <span>Submitted by <b>{approval.submitted_by}</b></span>}
-            {approval?.sales_approved_by && <span>Sales ✓ by <b>{approval.sales_approved_by}</b></span>}
-            {approval?.finance_approved_by && <span>Finance ✓ by <b>{approval.finance_approved_by}</b></span>}
-            {approval?.rejected_by && <span>Rejected by <b>{approval.rejected_by}</b></span>}
+            {approval?.submitted_by && (
+              <span>
+                Submitted by <b>{approval.submitted_by}</b>
+              </span>
+            )}
+            {approval?.sales_approved_by && (
+              <span>
+                Sales ✓ by <b>{approval.sales_approved_by}</b>
+              </span>
+            )}
+            {approval?.finance_approved_by && (
+              <span>
+                Finance ✓ by <b>{approval.finance_approved_by}</b>
+              </span>
+            )}
+            {approval?.rejected_by && (
+              <span>
+                Rejected by <b>{approval.rejected_by}</b>
+              </span>
+            )}
           </div>
         </Modal.Footer>
       )}

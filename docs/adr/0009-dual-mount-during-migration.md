@@ -97,6 +97,7 @@ The legacy URL retires when ALL of:
    contract tests.
 
 When all four hold, retire in a single PR:
+
 - Remove the inline handler from `costApi.js`.
 - Note the retirement in `CHANGELOG.md` under "BREAKING (legacy URL
   retired)".
@@ -126,26 +127,26 @@ review surface. Retirement is a value, not a cost.
 
 ## Currently dual-mounted endpoints (as of 2026-04-29)
 
-| Legacy path | New canonical path | Retire when |
-|---|---|---|
-| `GET /api/audit` (security) | n/a — same path, identity mount | already canonical |
-| `GET /api/license/status` (security) | n/a — never had legacy at this path | already canonical |
-| `GET /api/admin/backup-schedule` | `GET /api/basis/backup/schedule` | UI updates the path |
-| `GET /api/rate/backups` | `GET /api/library/rate/backups` | UI updates the path |
-| `POST /api/rate/backup` | `POST /api/library/rate/backups` | UI updates the path |
-| `POST /api/rate/restore` | `POST /api/library/rate/restore` | UI updates the path |
-| `POST /api/rate/export-csv` | `POST /api/library/rate/export-csv` | UI updates the path |
-| `GET /api/ddl/backups` | `GET /api/library/ddl/backups` | UI updates the path |
-| `POST /api/ddl/backup` | `POST /api/library/ddl/backups` | UI updates the path |
-| `POST /api/ddl/restore` | `POST /api/library/ddl/restore` | UI updates the path |
-| `POST /api/ddl/export-csv` | `POST /api/library/ddl/export-csv` | UI updates the path |
-| `GET /api/released-quotations` | `GET /api/sales/quotations` | UI updates the path |
-| `GET /api/released-quotation/:name` | `GET /api/sales/quotations/:name` | UI updates the path |
-| `POST /api/save-quotation` | `POST /api/sales/quotations` | UI updates the path |
-| `POST /api/quotes` | `POST /api/sales/quotes` | UI updates the path |
-| `PATCH /api/quotes/:id` | `PATCH /api/sales/quotes/:id` | UI updates the path |
-| `DELETE /api/quotes/:id` | `DELETE /api/sales/quotes/:id` | UI updates the path |
-| `POST /api/quotes/:id/restore` | `POST /api/sales/quotes/:id/restore` | UI updates the path |
+| Legacy path                          | New canonical path                   | Retire when         |
+| ------------------------------------ | ------------------------------------ | ------------------- |
+| `GET /api/audit` (security)          | n/a — same path, identity mount      | already canonical   |
+| `GET /api/license/status` (security) | n/a — never had legacy at this path  | already canonical   |
+| `GET /api/admin/backup-schedule`     | `GET /api/basis/backup/schedule`     | UI updates the path |
+| `GET /api/rate/backups`              | `GET /api/library/rate/backups`      | UI updates the path |
+| `POST /api/rate/backup`              | `POST /api/library/rate/backups`     | UI updates the path |
+| `POST /api/rate/restore`             | `POST /api/library/rate/restore`     | UI updates the path |
+| `POST /api/rate/export-csv`          | `POST /api/library/rate/export-csv`  | UI updates the path |
+| `GET /api/ddl/backups`               | `GET /api/library/ddl/backups`       | UI updates the path |
+| `POST /api/ddl/backup`               | `POST /api/library/ddl/backups`      | UI updates the path |
+| `POST /api/ddl/restore`              | `POST /api/library/ddl/restore`      | UI updates the path |
+| `POST /api/ddl/export-csv`           | `POST /api/library/ddl/export-csv`   | UI updates the path |
+| `GET /api/released-quotations`       | `GET /api/sales/quotations`          | UI updates the path |
+| `GET /api/released-quotation/:name`  | `GET /api/sales/quotations/:name`    | UI updates the path |
+| `POST /api/save-quotation`           | `POST /api/sales/quotations`         | UI updates the path |
+| `POST /api/quotes`                   | `POST /api/sales/quotes`             | UI updates the path |
+| `PATCH /api/quotes/:id`              | `PATCH /api/sales/quotes/:id`        | UI updates the path |
+| `DELETE /api/quotes/:id`             | `DELETE /api/sales/quotes/:id`       | UI updates the path |
+| `POST /api/quotes/:id/restore`       | `POST /api/sales/quotes/:id/restore` | UI updates the path |
 
 Update this table whenever a new dual-mount lands.
 

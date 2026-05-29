@@ -64,33 +64,71 @@ export default function RfqInfoCard({
         <div className="sc-rfq-section-title">Identification</div>
         <div className="sc-grid4">
           <div className="sc-field">
-            <label htmlFor={fid('site')}>Site {siteLocked && <span title={`Locked after ${approvalStatus} — revoke to change`} style={{ fontSize: 10, color: '#8d8d8d', marginLeft: 4 }}>🔒</span>}</label>
+            <label htmlFor={fid('site')}>
+              Site{' '}
+              {siteLocked && (
+                <span
+                  title={`Locked after ${approvalStatus} — revoke to change`}
+                  style={{ fontSize: 10, color: '#8d8d8d', marginLeft: 4 }}
+                >
+                  🔒
+                </span>
+              )}
+            </label>
             <select
               id={fid('site')}
               value={get('site') || 'VN'}
-              onChange={e => set('site', e.target.value)}
+              onChange={(e) => set('site', e.target.value)}
               className="sc-input sc-inp-yellow"
               disabled={siteLocked}
-              title={siteLocked ? `Site is locked after ${approvalStatus}. REVOKE the approval to unlock.` : undefined}
+              title={
+                siteLocked
+                  ? `Site is locked after ${approvalStatus}. REVOKE the approval to unlock.`
+                  : undefined
+              }
             >
-              {SITE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+              {SITE_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
             </select>
           </div>
           <div className="sc-field">
             <label htmlFor={fid('ccl_pn')}>CCL PN (80#)</label>
-            <input id={fid('ccl_pn')} type="text" value={get('ccl_pn')} onChange={e => set('ccl_pn', e.target.value)} className="sc-input sc-inp-yellow" />
+            <input
+              id={fid('ccl_pn')}
+              type="text"
+              value={get('ccl_pn')}
+              onChange={(e) => set('ccl_pn', e.target.value)}
+              className="sc-input sc-inp-yellow"
+            />
           </div>
           <div className="sc-field">
             <label htmlFor={fid('npi_owner')}>NPI Owner</label>
-            <input id={fid('npi_owner')} type="text" list={datalistId} value={get('npi_owner')} onChange={e => set('npi_owner', e.target.value)}
-              className={`sc-input sc-inp-yellow ${!get('npi_owner') ? 'sc-input-warn' : ''}`} />
+            <input
+              id={fid('npi_owner')}
+              type="text"
+              list={datalistId}
+              value={get('npi_owner')}
+              onChange={(e) => set('npi_owner', e.target.value)}
+              className={`sc-input sc-inp-yellow ${!get('npi_owner') ? 'sc-input-warn' : ''}`}
+            />
             <datalist id={datalistId}>
-              {npiOwners.map(n => <option key={n} value={n} />)}
+              {npiOwners.map((n) => (
+                <option key={n} value={n} />
+              ))}
             </datalist>
           </div>
           <div className="sc-field">
             <label htmlFor={fid('sale_owner')}>Sale Owner</label>
-            <input id={fid('sale_owner')} type="text" value={get('sale_owner')} onChange={e => set('sale_owner', e.target.value)} className="sc-input" />
+            <input
+              id={fid('sale_owner')}
+              type="text"
+              value={get('sale_owner')}
+              onChange={(e) => set('sale_owner', e.target.value)}
+              className="sc-input"
+            />
           </div>
         </div>
 
@@ -98,19 +136,43 @@ export default function RfqInfoCard({
         <div className="sc-grid4">
           <div className="sc-field">
             <label htmlFor={fid('direct_cu')}>Direct Customer</label>
-            <input id={fid('direct_cu')} type="text" value={get('direct_cu')} onChange={e => set('direct_cu', e.target.value)} className="sc-input" />
+            <input
+              id={fid('direct_cu')}
+              type="text"
+              value={get('direct_cu')}
+              onChange={(e) => set('direct_cu', e.target.value)}
+              className="sc-input"
+            />
           </div>
           <div className="sc-field">
             <label htmlFor={fid('direct_cu_pn')}>Direct CU PN</label>
-            <input id={fid('direct_cu_pn')} type="text" value={get('direct_cu_pn')} onChange={e => set('direct_cu_pn', e.target.value)} className="sc-input" />
+            <input
+              id={fid('direct_cu_pn')}
+              type="text"
+              value={get('direct_cu_pn')}
+              onChange={(e) => set('direct_cu_pn', e.target.value)}
+              className="sc-input"
+            />
           </div>
           <div className="sc-field">
             <label htmlFor={fid('end_cu')}>End Customer</label>
-            <input id={fid('end_cu')} type="text" value={get('end_cu')} onChange={e => set('end_cu', e.target.value)} className="sc-input" />
+            <input
+              id={fid('end_cu')}
+              type="text"
+              value={get('end_cu')}
+              onChange={(e) => set('end_cu', e.target.value)}
+              className="sc-input"
+            />
           </div>
           <div className="sc-field">
             <label htmlFor={fid('end_cu_pn')}>End CU PN</label>
-            <input id={fid('end_cu_pn')} type="text" value={get('end_cu_pn')} onChange={e => set('end_cu_pn', e.target.value)} className="sc-input" />
+            <input
+              id={fid('end_cu_pn')}
+              type="text"
+              value={get('end_cu_pn')}
+              onChange={(e) => set('end_cu_pn', e.target.value)}
+              className="sc-input"
+            />
           </div>
         </div>
 
@@ -118,33 +180,75 @@ export default function RfqInfoCard({
         <div className="sc-grid4">
           <div className="sc-field sc-field-span2">
             <label htmlFor={fid('project_name')}>Project</label>
-            <input id={fid('project_name')} type="text" value={get('project_name')} onChange={e => set('project_name', e.target.value)} className="sc-input" />
+            <input
+              id={fid('project_name')}
+              type="text"
+              value={get('project_name')}
+              onChange={(e) => set('project_name', e.target.value)}
+              className="sc-input"
+            />
           </div>
           <div className="sc-field sc-field-span2">
             <label htmlFor={fid('description')}>Description</label>
-            <input id={fid('description')} type="text" value={get('description')} onChange={e => set('description', e.target.value)} className="sc-input" />
+            <input
+              id={fid('description')}
+              type="text"
+              value={get('description')}
+              onChange={(e) => set('description', e.target.value)}
+              className="sc-input"
+            />
           </div>
           <div className="sc-field">
             <label htmlFor={fid('product_lifetime')}>Product Life Time</label>
-            <DecimalInput id={fid('product_lifetime')} value={get('product_lifetime')} onChange={v => set('product_lifetime', v, true)} className="sc-input" placeholder="years" />
+            <DecimalInput
+              id={fid('product_lifetime')}
+              value={get('product_lifetime')}
+              onChange={(v) => set('product_lifetime', v, true)}
+              className="sc-input"
+              placeholder="years"
+            />
           </div>
           <div className="sc-field">
             <label htmlFor={fid('trade_mode')}>Trade Mode</label>
             {tradeModeOpts.length > 0 ? (
-              <select id={fid('trade_mode')} value={get('trade_mode')} onChange={e => set('trade_mode', e.target.value)} className="sc-input">
+              <select
+                id={fid('trade_mode')}
+                value={get('trade_mode')}
+                onChange={(e) => set('trade_mode', e.target.value)}
+                className="sc-input"
+              >
                 <option value="">-- Select --</option>
-                {tradeModeOpts.map(t => <option key={t} value={t}>{t}</option>)}
+                {tradeModeOpts.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
               </select>
             ) : (
-              <input id={fid('trade_mode')} type="text" value={get('trade_mode')} onChange={e => set('trade_mode', e.target.value)} className="sc-input" placeholder="USD / VND" />
+              <input
+                id={fid('trade_mode')}
+                type="text"
+                value={get('trade_mode')}
+                onChange={(e) => set('trade_mode', e.target.value)}
+                className="sc-input"
+                placeholder="USD / VND"
+              />
             )}
           </div>
           <div className="sc-field sc-field-span2">
             <label htmlFor={fid('design_process')}>Design Process</label>
-            <select id={fid('design_process')} value={get('design_process')} onChange={e => set('design_process', e.target.value)}
-              className={`sc-input ${!get('design_process') ? 'sc-input-warn' : ''}`}>
+            <select
+              id={fid('design_process')}
+              value={get('design_process')}
+              onChange={(e) => set('design_process', e.target.value)}
+              className={`sc-input ${!get('design_process') ? 'sc-input-warn' : ''}`}
+            >
               <option value="">-- Select --</option>
-              {designProcessOpts.map(p => <option key={p} value={p}>{p}</option>)}
+              {designProcessOpts.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -154,20 +258,45 @@ export default function RfqInfoCard({
           <div className="sc-field sc-field-span2">
             <label htmlFor={fid('rfq_number')}>RFQ Number</label>
             <div style={{ display: 'flex', gap: 4 }}>
-              <input id={fid('rfq_number')} type="text" value={get('rfq_number')} readOnly className="sc-input" style={{ background: '#eff6ff', flex: 1 }} />
-              <button className="sc-btn-sm" onClick={onGenerateRfq} title="Generate" aria-label="Generate RFQ number">&#8635;</button>
+              <input
+                id={fid('rfq_number')}
+                type="text"
+                value={get('rfq_number')}
+                readOnly
+                className="sc-input"
+                style={{ background: '#eff6ff', flex: 1 }}
+              />
+              <button
+                className="sc-btn-sm"
+                onClick={onGenerateRfq}
+                title="Generate"
+                aria-label="Generate RFQ number"
+              >
+                &#8635;
+              </button>
             </div>
           </div>
           <div className="sc-field">
             <label htmlFor={fid('request_ul')}>Request UL</label>
-            <select id={fid('request_ul')} value={get('request_ul') || 'N'} onChange={e => set('request_ul', e.target.value)} className="sc-input">
+            <select
+              id={fid('request_ul')}
+              value={get('request_ul') || 'N'}
+              onChange={(e) => set('request_ul', e.target.value)}
+              className="sc-input"
+            >
               <option value="N">N</option>
               <option value="Y">Y</option>
             </select>
           </div>
           <div className="sc-field">
             <label htmlFor={fid('ul_description')}>UL Description</label>
-            <input id={fid('ul_description')} type="text" value={get('ul_description')} onChange={e => set('ul_description', e.target.value)} className="sc-input" />
+            <input
+              id={fid('ul_description')}
+              type="text"
+              value={get('ul_description')}
+              onChange={(e) => set('ul_description', e.target.value)}
+              className="sc-input"
+            />
           </div>
         </div>
       </div>

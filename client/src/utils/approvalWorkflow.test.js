@@ -15,16 +15,21 @@ import {
   APPROVAL_STATES,
 } from './approvalWorkflow.js';
 
-const costEng  = { username: 'hana',  role: 'cost',     approval_roles: [] };
-const salesMgr = { username: 'sonia', role: 'user',     approval_roles: ['sales_mgr'] };
-const finDir   = { username: 'felix', role: 'user',     approval_roles: ['finance_dir'] };
-const admin    = { username: 'admin', role: 'admin',    approval_roles: [] };
-const sysUser  = { username: 'root',  role: 'sys',      approval_roles: [] };
-const viewonly = { username: 'vic',   role: 'viewonly', approval_roles: [] };
+const costEng = { username: 'hana', role: 'cost', approval_roles: [] };
+const salesMgr = { username: 'sonia', role: 'user', approval_roles: ['sales_mgr'] };
+const finDir = { username: 'felix', role: 'user', approval_roles: ['finance_dir'] };
+const admin = { username: 'admin', role: 'admin', approval_roles: [] };
+const sysUser = { username: 'root', role: 'sys', approval_roles: [] };
+const viewonly = { username: 'vic', role: 'viewonly', approval_roles: [] };
 
 test('APPROVAL_STATES matches server set', () => {
-  assert.deepEqual(APPROVAL_STATES,
-    ['draft', 'pending_sales', 'pending_finance', 'approved', 'rejected']);
+  assert.deepEqual(APPROVAL_STATES, [
+    'draft',
+    'pending_sales',
+    'pending_finance',
+    'approved',
+    'rejected',
+  ]);
 });
 
 test('getStatus: legacy submitted alias', () => {

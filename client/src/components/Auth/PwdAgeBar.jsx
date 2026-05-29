@@ -20,15 +20,24 @@ function tierFor(ratio) {
 }
 
 export default function PwdAgeBar({ daysRemaining, maxAgeDays, label, compact = false }) {
-  if (daysRemaining == null || maxAgeDays == null || !Number.isFinite(maxAgeDays) || maxAgeDays <= 0) {
+  if (
+    daysRemaining == null ||
+    maxAgeDays == null ||
+    !Number.isFinite(maxAgeDays) ||
+    maxAgeDays <= 0
+  ) {
     return null;
   }
   const ratio = Math.max(0, Math.min(1, daysRemaining / maxAgeDays));
-  const tier  = tierFor(ratio);
-  const pct   = Math.round(ratio * 100);
+  const tier = tierFor(ratio);
+  const pct = Math.round(ratio * 100);
 
   return (
-    <div className={`pwd-age-bar tier-${tier} ${compact ? 'compact' : ''}`} role="status" aria-live="polite">
+    <div
+      className={`pwd-age-bar tier-${tier} ${compact ? 'compact' : ''}`}
+      role="status"
+      aria-live="polite"
+    >
       {label !== false && (
         <div className="pwd-age-label">
           <span>{label || (daysRemaining === 0 ? 'Password expired' : 'Password age')}</span>

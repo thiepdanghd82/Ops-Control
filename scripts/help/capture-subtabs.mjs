@@ -40,29 +40,41 @@ async function dismissOverlays() {
   for (let attempt = 0; attempt < 3; attempt++) {
     const found = await page.evaluate(() => {
       let hit = false;
-      const later = [...document.querySelectorAll('button')].find(b => {
+      const later = [...document.querySelectorAll('button')].find((b) => {
         if (b.offsetParent === null) return false;
         return /^(để sau|later|maybe later|not now|dismiss|sau)$/i.test(b.textContent.trim());
       });
-      if (later) { later.click(); hit = true; }
-      const closeX = [...document.querySelectorAll('button')].find(b => {
+      if (later) {
+        later.click();
+        hit = true;
+      }
+      const closeX = [...document.querySelectorAll('button')].find((b) => {
         if (b.offsetParent === null) return false;
         if (!/^[×✕✖xX]$/.test(b.textContent.trim())) return false;
-        return !!b.closest('[role=dialog], .modal, [class*="modal"], [class*="popup"], [class*="overlay"]');
+        return !!b.closest(
+          '[role=dialog], .modal, [class*="modal"], [class*="popup"], [class*="overlay"]'
+        );
       });
-      if (closeX) { closeX.click(); hit = true; }
+      if (closeX) {
+        closeX.click();
+        hit = true;
+      }
       return hit;
     });
     if (!found) break;
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 200));
   }
   // CSS cover for re-mounting launcher
-  await page.addStyleTag({ content: `
+  await page
+    .addStyleTag({
+      content: `
     [class*="chat-launcher"], [class*="chat-bubble"], [class*="ChatLaunch"],
     .chat-widget, [id*="intercom"], [id*="drift"], [class*="messenger-bubble"] {
       display: none !important;
     }
-  `}).catch(() => {});
+  `,
+    })
+    .catch(() => {});
 }
 
 try {
@@ -70,11 +82,14 @@ try {
   await page.goto(BASE, { waitUntil: 'networkidle2', timeout: 30000 });
   await page.waitForSelector('input[type=password]', { timeout: 10000 });
   await page.evaluate((u) => {
-    const input = [...document.querySelectorAll('input')].find(i =>
-      i.type !== 'password' &&
-      /user|name/i.test(i.placeholder + ' ' + i.name));
+    const input = [...document.querySelectorAll('input')].find(
+      (i) => i.type !== 'password' && /user|name/i.test(i.placeholder + ' ' + i.name)
+    );
     if (input) {
-      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        'value'
+      ).set;
       setter.call(input, u);
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }
@@ -86,12 +101,13 @@ try {
     pw.dispatchEvent(new Event('input', { bubbles: true }));
   }, PASSWORD);
   await page.evaluate(() => {
-    const btn = [...document.querySelectorAll('button')].find(b =>
-      /sign\s*in/i.test(b.textContent) && !/change/i.test(b.textContent));
+    const btn = [...document.querySelectorAll('button')].find(
+      (b) => /sign\s*in/i.test(b.textContent) && !/change/i.test(b.textContent)
+    );
     btn?.click();
   });
   await page.waitForSelector('.sidebar', { timeout: 15000 });
-  await new Promise(r => setTimeout(r, 800));
+  await new Promise((r) => setTimeout(r, 800));
   await dismissOverlays();
   console.log('✓ Logged in');
 
@@ -101,12 +117,12 @@ try {
   async function navSidebar(labelRegex, waitMs = 1200) {
     await page.evaluate((m) => {
       const re = new RegExp(m, 'i');
-      const strip = s => s.replace(/^[^a-zA-Z]+/, '').trim();
+      const strip = (s) => s.replace(/^[^a-zA-Z]+/, '').trim();
       const items = [...document.querySelectorAll('.nav-item')];
-      const match = items.find(b => re.test(b.textContent) || re.test(strip(b.textContent)));
+      const match = items.find((b) => re.test(b.textContent) || re.test(strip(b.textContent)));
       match?.click();
     }, labelRegex);
-    await new Promise(r => setTimeout(r, waitMs));
+    await new Promise((r) => setTimeout(r, waitMs));
     await dismissOverlays();
   }
 
@@ -118,26 +134,39 @@ try {
     const clicked = await page.evaluate((m) => {
       const re = new RegExp(m, 'i');
       // Tier 1: match .sc-subtab-label span, click its parent button.
-      const labels = [...document.querySelectorAll('.sc-subtab-label')].filter(el => el.offsetParent !== null);
-      const labelHit = labels.find(el => re.test(el.textContent.trim()));
+      const labels = [...document.querySelectorAll('.sc-subtab-label')].filter(
+        (el) => el.offsetParent !== null
+      );
+      const labelHit = labels.find((el) => re.test(el.textContent.trim()));
       if (labelHit) {
         const btn = labelHit.closest('.sc-subtab-btn') || labelHit.closest('button');
-        if (btn) { btn.click(); return 'sc-label'; }
+        if (btn) {
+          btn.click();
+          return 'sc-label';
+        }
       }
       // Tier 2: .sc-subtab-btn by its full text (includes emoji prefix)
-      const btns = [...document.querySelectorAll('.sc-subtab-btn')].filter(el => el.offsetParent !== null);
-      const btnHit = btns.find(b => re.test(b.textContent.trim()));
-      if (btnHit) { btnHit.click(); return 'sc-btn'; }
+      const btns = [...document.querySelectorAll('.sc-subtab-btn')].filter(
+        (el) => el.offsetParent !== null
+      );
+      const btnHit = btns.find((b) => re.test(b.textContent.trim()));
+      if (btnHit) {
+        btnHit.click();
+        return 'sc-btn';
+      }
       // Tier 3: any visible button short label
-      const anyBtn = [...document.querySelectorAll('button')].filter(b => {
+      const anyBtn = [...document.querySelectorAll('button')].filter((b) => {
         if (b.offsetParent === null) return false;
         const t = b.textContent.trim();
         return t.length > 0 && t.length < 40 && re.test(t);
       })[0];
-      if (anyBtn) { anyBtn.click(); return 'any'; }
+      if (anyBtn) {
+        anyBtn.click();
+        return 'any';
+      }
       return null;
     }, labelRegex);
-    await new Promise(r => setTimeout(r, waitMs));
+    await new Promise((r) => setTimeout(r, waitMs));
     await dismissOverlays();
     return clicked;
   }
@@ -155,7 +184,7 @@ try {
     return true;
   });
   if (openedDetail) {
-    await new Promise(r => setTimeout(r, 1500));
+    await new Promise((r) => setTimeout(r, 1500));
     await dismissOverlays();
     await page.screenshot({ path: path.join(OUT_DIR, 'quote-history-opened.png') });
     console.log('  ✓ quote-history-opened');
@@ -167,17 +196,16 @@ try {
   console.log('→ Standard Calc');
   await navSidebar('^Standard|Tiêu chuẩn', 1500);
 
-
   // ── 3. Capture each Standard sub-tab ─────────────────────
   const STD_SUBTABS = [
-    { id: 'standard-layout',          re: '^Layout$' },
-    { id: 'standard-material',        re: '^Materials?$' },
-    { id: 'standard-inks',            re: '^Inks$' },
-    { id: 'standard-process',         re: '^Processes$' },
-    { id: 'standard-balancing',       re: '^Balancing$' },
-    { id: 'standard-cost-breakdown',  re: 'Cost Breakdown' },
-    { id: 'standard-pack-ship',       re: 'Pack.{0,5}Ship' },
-    { id: 'standard-summarize',       re: '^Summarize|Summary' },
+    { id: 'standard-layout', re: '^Layout$' },
+    { id: 'standard-material', re: '^Materials?$' },
+    { id: 'standard-inks', re: '^Inks$' },
+    { id: 'standard-process', re: '^Processes$' },
+    { id: 'standard-balancing', re: '^Balancing$' },
+    { id: 'standard-cost-breakdown', re: 'Cost Breakdown' },
+    { id: 'standard-pack-ship', re: 'Pack.{0,5}Ship' },
+    { id: 'standard-summarize', re: '^Summarize|Summary' },
   ];
   for (const st of STD_SUBTABS) {
     const result = await clickSubtab(st.re);
@@ -190,18 +218,18 @@ try {
   await navSidebar('^Complex|Phức tạp', 1500);
   // Also attempt to load a Complex quote; if none, capture the empty tree.
   await page.evaluate(() => {
-    const openBtn = [...document.querySelectorAll('button, a')].find(b => {
+    const openBtn = [...document.querySelectorAll('button, a')].find((b) => {
       if (b.offsetParent === null) return false;
       return /^(open|load|mở)$/i.test(b.textContent.trim());
     });
     openBtn?.click();
   });
-  await new Promise(r => setTimeout(r, 1200));
+  await new Promise((r) => setTimeout(r, 1200));
   await dismissOverlays();
 
   const CPLX_VIEWS = [
-    { id: 'complex-bom-tree',         re: 'BOM.*Tree|Cấu trúc' },
-    { id: 'complex-cost-breakdown',   re: 'Cost Breakdown|Cơ cấu' },
+    { id: 'complex-bom-tree', re: 'BOM.*Tree|Cấu trúc' },
+    { id: 'complex-cost-breakdown', re: 'Cost Breakdown|Cơ cấu' },
   ];
   for (const v of CPLX_VIEWS) {
     const result = await clickSubtab(v.re);

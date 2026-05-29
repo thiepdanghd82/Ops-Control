@@ -22,7 +22,7 @@ export default function OrderEntry() {
     dueDate: '',
     customer: '',
     priority: 'Normal',
-    notes: ''
+    notes: '',
   });
 
   const loadData = useCallback(async () => {
@@ -31,7 +31,7 @@ export default function OrderEntry() {
     try {
       const [ordersData, productsData] = await Promise.all([
         planningApi.getOrders(),
-        sharedApi.getProducts()
+        sharedApi.getProducts(),
       ]);
       setOrders(ordersData);
       setProducts(productsData);
@@ -43,7 +43,9 @@ export default function OrderEntry() {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // Validate before submit — pre-save guard prevents corrupt orders.
   function validateForm() {
@@ -51,7 +53,8 @@ export default function OrderEntry() {
     if (!formData.productCode) return 'Product code is required';
     if (!Number.isFinite(qty) || qty <= 0) return 'Quantity must be a positive integer';
     if (!formData.dueDate) return 'Due date is required';
-    if (formData.dueDate < new Date().toISOString().slice(0, 10)) return 'Due date cannot be in the past';
+    if (formData.dueDate < new Date().toISOString().slice(0, 10))
+      return 'Due date cannot be in the past';
     if (!formData.customer) return 'Customer is required';
     return null;
   }
@@ -67,10 +70,17 @@ export default function OrderEntry() {
     try {
       const newOrder = await planningApi.createOrder({
         ...formData,
-        quantity: parseInt(formData.quantity, 10)
+        quantity: parseInt(formData.quantity, 10),
       });
       setOrders([...orders, newOrder]);
-      setFormData({ productCode: '', quantity: '', dueDate: '', customer: '', priority: 'Normal', notes: '' });
+      setFormData({
+        productCode: '',
+        quantity: '',
+        dueDate: '',
+        customer: '',
+        priority: 'Normal',
+        notes: '',
+      });
       setShowForm(false);
       showToast('Order created', 'ok');
     } catch (e) {
@@ -84,7 +94,7 @@ export default function OrderEntry() {
   async function handleStatusChange(id, newStatus) {
     try {
       const updated = await planningApi.updateOrder(id, { status: newStatus });
-      setOrders(orders.map(o => o.id === id ? updated : o));
+      setOrders(orders.map((o) => (o.id === id ? updated : o)));
       showToast(`Status: ${newStatus}`, 'ok');
     } catch (e) {
       logErr('updateOrder failed', e);
@@ -96,7 +106,7 @@ export default function OrderEntry() {
     setConfirmDeleteId(null);
     try {
       await planningApi.deleteOrder(id);
-      setOrders(orders.filter(o => o.id !== id));
+      setOrders(orders.filter((o) => o.id !== id));
       showToast('Order deleted', 'ok');
     } catch (e) {
       logErr('deleteOrder failed', e);
@@ -105,11 +115,11 @@ export default function OrderEntry() {
   }
 
   const statusColors = {
-    'New': '#3b82f6',
-    'Planned': '#8b5cf6',
-    'Released': '#f59e0b',
+    New: '#3b82f6',
+    Planned: '#8b5cf6',
+    Released: '#f59e0b',
     'In Progress': '#10b981',
-    'Completed': '#6b7280'
+    Completed: '#6b7280',
   };
 
   if (loading) {
@@ -123,14 +133,19 @@ export default function OrderEntry() {
           icon="⚠️"
           title="Failed to load orders"
           hint={loadError}
-          action={<button className="btn btn-primary" onClick={loadData}>Retry</button>}
+          action={
+            <button className="btn btn-primary" onClick={loadData}>
+              Retry
+            </button>
+          }
         />
       </div>
     );
   }
 
   const todayStr = new Date().toISOString().slice(0, 10);
-  const orderToDelete = confirmDeleteId != null ? orders.find(o => o.id === confirmDeleteId) : null;
+  const orderToDelete =
+    confirmDeleteId != null ? orders.find((o) => o.id === confirmDeleteId) : null;
 
   return (
     <div className="order-entry">
@@ -156,13 +171,13 @@ export default function OrderEntry() {
               <input
                 type="text"
                 value={formData.productCode}
-                onChange={e => setFormData({ ...formData, productCode: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, productCode: e.target.value })}
                 placeholder="Enter part number"
                 list="products-list"
                 required
               />
               <datalist id="products-list">
-                {products.slice(0, 100).map(p => (
+                {products.slice(0, 100).map((p) => (
                   <option key={p.partNo} value={p.partNo}>
                     {p.description}
                   </option>
@@ -174,7 +189,7 @@ export default function OrderEntry() {
               <input
                 type="number"
                 value={formData.quantity}
-                onChange={e => setFormData({ ...formData, quantity: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                 placeholder="0"
                 min="1"
                 required
@@ -185,7 +200,7 @@ export default function OrderEntry() {
               <input
                 type="date"
                 value={formData.dueDate}
-                onChange={e => setFormData({ ...formData, dueDate: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
                 min={todayStr}
                 required
               />
@@ -195,7 +210,7 @@ export default function OrderEntry() {
               <input
                 type="text"
                 value={formData.customer}
-                onChange={e => setFormData({ ...formData, customer: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
                 placeholder="Customer name"
                 required
               />
@@ -204,7 +219,7 @@ export default function OrderEntry() {
               <label>Priority</label>
               <select
                 value={formData.priority}
-                onChange={e => setFormData({ ...formData, priority: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
               >
                 <option>Low</option>
                 <option>Normal</option>
@@ -240,11 +255,15 @@ export default function OrderEntry() {
             {orders.length === 0 ? (
               <tr>
                 <td colSpan="8" className="oe-empty-cell">
-                  <EmptyState icon="📋" title="No orders yet" hint='Click "+ New Order" to create one.' />
+                  <EmptyState
+                    icon="📋"
+                    title="No orders yet"
+                    hint='Click "+ New Order" to create one.'
+                  />
                 </td>
               </tr>
             ) : (
-              orders.map(order => (
+              orders.map((order) => (
                 <tr key={order.id}>
                   <td className="cell-id">{order.id}</td>
                   <td className="cell-code">{order.productCode}</td>
@@ -260,7 +279,7 @@ export default function OrderEntry() {
                     <select
                       className="status-select"
                       value={order.status}
-                      onChange={e => handleStatusChange(order.id, e.target.value)}
+                      onChange={(e) => handleStatusChange(order.id, e.target.value)}
                       style={{ borderColor: statusColors[order.status] || '#ccc' }}
                     >
                       <option>New</option>
@@ -271,7 +290,12 @@ export default function OrderEntry() {
                     </select>
                   </td>
                   <td>
-                    <button className="btn-icon btn-delete" onClick={() => setConfirmDeleteId(order.id)} title="Delete" aria-label={`Delete order ${order.id}`}>
+                    <button
+                      className="btn-icon btn-delete"
+                      onClick={() => setConfirmDeleteId(order.id)}
+                      title="Delete"
+                      aria-label={`Delete order ${order.id}`}
+                    >
                       🗑
                     </button>
                   </td>
@@ -290,14 +314,25 @@ export default function OrderEntry() {
       >
         <Modal.Header
           title="Delete order?"
-          subtitle={orderToDelete ? `#${orderToDelete.id} · ${orderToDelete.productCode} · qty ${orderToDelete.quantity}` : ''}
+          subtitle={
+            orderToDelete
+              ? `#${orderToDelete.id} · ${orderToDelete.productCode} · qty ${orderToDelete.quantity}`
+              : ''
+          }
         />
         <Modal.Body>
-          This action cannot be undone. The order will be removed from the system. Any work orders already generated from it will keep their references but will no longer link back to a parent order.
+          This action cannot be undone. The order will be removed from the system. Any work orders
+          already generated from it will keep their references but will no longer link back to a
+          parent order.
         </Modal.Body>
         <Modal.Footer>
-          <button className="op-btn op-btn-ghost" onClick={() => setConfirmDeleteId(null)}>Cancel</button>
-          <button className="op-btn op-btn-primary op-btn-danger" onClick={() => performDelete(confirmDeleteId)}>
+          <button className="op-btn op-btn-ghost" onClick={() => setConfirmDeleteId(null)}>
+            Cancel
+          </button>
+          <button
+            className="op-btn op-btn-primary op-btn-danger"
+            onClick={() => performDelete(confirmDeleteId)}
+          >
             Delete Order
           </button>
         </Modal.Footer>

@@ -23,7 +23,13 @@
  * each host would duplicate a lot of wiring.
  */
 import {
-  createContext, useContext, useState, useEffect, useMemo, useCallback, useRef,
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
 } from 'react';
 import { useI18n } from '../../utils/useI18n';
 import { useCostLib } from '../../context/CostLibContext';
@@ -47,24 +53,24 @@ export function useLibraryPicker() {
 function normNPI(row) {
   // npiDB rows: { name, type, price (DAP), thick, color, supplier, note }
   return {
-    code:     row.name || '',
+    code: row.name || '',
     ifs_code: '',
-    desc:     [row.type, row.thick, row.color].filter(Boolean).join(' · ') || row.name || '',
-    g_price:  Number(row.price) || 0,
+    desc: [row.type, row.thick, row.color].filter(Boolean).join(' · ') || row.name || '',
+    g_price: Number(row.price) || 0,
     supplier: row.supplier || '',
-    extra:    row.note || '',
+    extra: row.note || '',
   };
 }
 function normSourcing(row) {
   // sourcingDB rows: { material, size, exw, dap, moq, lt, supplier, status }
   return {
-    code:     row.material || '',
+    code: row.material || '',
     ifs_code: '',
-    desc:     [row.material, row.size].filter(Boolean).join(' · '),
+    desc: [row.material, row.size].filter(Boolean).join(' · '),
     // Prefer DAP price (landed) — same cost basis as NPI. exw fallback.
-    g_price:  Number(row.dap) || Number(row.exw) || 0,
+    g_price: Number(row.dap) || Number(row.exw) || 0,
     supplier: row.supplier || '',
-    extra:    row.status || '',
+    extra: row.status || '',
   };
 }
 function normRawMaterial(row) {
@@ -72,19 +78,19 @@ function normRawMaterial(row) {
   // Price, "Price Unit Measure", "Purch U/M", ... }
   const partNo = row['Part No'] || row.part_no || '';
   return {
-    code:     partNo,
-    ifs_code: partNo,  // For IFS inventory the Part No IS the IFS code.
-    desc:     row['Part Description'] || row.description || '',
-    g_price:  Number(row.Price ?? row.price) || 0,
+    code: partNo,
+    ifs_code: partNo, // For IFS inventory the Part No IS the IFS code.
+    desc: row['Part Description'] || row.description || '',
+    g_price: Number(row.Price ?? row.price) || 0,
     supplier: row['Supplier ID'] || row.supplier || '',
-    extra:    row['Price Unit Measure'] || row.uom || '',
+    extra: row['Price Unit Measure'] || row.uom || '',
   };
 }
 
 const LIBRARIES = [
-  { key: 'npi',      labelKey: 'picker.lib.npi',      norm: normNPI,         source: 'npi' },
-  { key: 'sourcing', labelKey: 'picker.lib.sourcing', norm: normSourcing,    source: 'sourcing' },
-  { key: 'raw',      labelKey: 'picker.lib.raw',      norm: normRawMaterial, source: 'rawMaterials' },
+  { key: 'npi', labelKey: 'picker.lib.npi', norm: normNPI, source: 'npi' },
+  { key: 'sourcing', labelKey: 'picker.lib.sourcing', norm: normSourcing, source: 'sourcing' },
+  { key: 'raw', labelKey: 'picker.lib.raw', norm: normRawMaterial, source: 'rawMaterials' },
 ];
 
 // Case-insensitive substring match across the normalized searchable
@@ -114,24 +120,28 @@ export function LibraryPickerProvider({ children }) {
     event.preventDefault();
     // Menu position clamped so it doesn't spill off the viewport edge.
     // Width/height are approximate — overshoot gets trimmed on first render.
-    const W = 230, H = 200;
-    const x = Math.min(event.clientX, window.innerWidth  - W - 8);
+    const W = 230,
+      H = 200;
+    const x = Math.min(event.clientX, window.innerWidth - W - 8);
     const y = Math.min(event.clientY, window.innerHeight - H - 8);
     setMenu({ x, y, onPick });
   }, []);
 
-  const closeMenu   = useCallback(() => setMenu(null), []);
+  const closeMenu = useCallback(() => setMenu(null), []);
   const closePicker = useCallback(() => setPicker(null), []);
 
-  const selectLibrary = useCallback((key) => {
-    if (!menu) return;
-    // Preserve the menu's origin (cursor position + onPick callback) so
-    // the picker card's "back" arrow can reopen the radio menu exactly
-    // where the user first right-clicked.
-    const origin = { x: menu.x, y: menu.y, onPick: menu.onPick };
-    setMenu(null);
-    setPicker({ libraryKey: key, onPick: menu.onPick, origin });
-  }, [menu]);
+  const selectLibrary = useCallback(
+    (key) => {
+      if (!menu) return;
+      // Preserve the menu's origin (cursor position + onPick callback) so
+      // the picker card's "back" arrow can reopen the radio menu exactly
+      // where the user first right-clicked.
+      const origin = { x: menu.x, y: menu.y, onPick: menu.onPick };
+      setMenu(null);
+      setPicker({ libraryKey: key, onPick: menu.onPick, origin });
+    },
+    [menu]
+  );
 
   const backToMenu = useCallback(() => {
     if (!picker?.origin) return;
@@ -143,7 +153,12 @@ export function LibraryPickerProvider({ children }) {
   // Dismiss menu/picker on Escape and outside click.
   useEffect(() => {
     if (!menu && !picker) return;
-    function onKey(e) { if (e.key === 'Escape') { setMenu(null); setPicker(null); } }
+    function onKey(e) {
+      if (e.key === 'Escape') {
+        setMenu(null);
+        setPicker(null);
+      }
+    }
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [menu, picker]);
@@ -153,18 +168,14 @@ export function LibraryPickerProvider({ children }) {
   return (
     <Ctx.Provider value={value}>
       {children}
-      {menu && (
-        <ContextMenu
-          x={menu.x}
-          y={menu.y}
-          onSelect={selectLibrary}
-          onClose={closeMenu}
-        />
-      )}
+      {menu && <ContextMenu x={menu.x} y={menu.y} onSelect={selectLibrary} onClose={closeMenu} />}
       {picker && (
         <PickerCard
           libraryKey={picker.libraryKey}
-          onPick={(hit) => { picker.onPick?.(hit); closePicker(); }}
+          onPick={(hit) => {
+            picker.onPick?.(hit);
+            closePicker();
+          }}
           onClose={closePicker}
           onBack={picker.origin ? backToMenu : null}
         />
@@ -180,7 +191,9 @@ function ContextMenu({ x, y, onSelect, onClose }) {
   const ref = useRef(null);
 
   useEffect(() => {
-    function onDoc(e) { if (!ref.current?.contains(e.target)) onClose(); }
+    function onDoc(e) {
+      if (!ref.current?.contains(e.target)) onClose();
+    }
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
   }, [onClose]);
@@ -193,14 +206,9 @@ function ContextMenu({ x, y, onSelect, onClose }) {
   };
 
   return (
-    <div
-      ref={ref}
-      className="libp-menu"
-      style={{ left: x, top: y }}
-      role="menu"
-    >
+    <div ref={ref} className="libp-menu" style={{ left: x, top: y }} role="menu">
       <div className="libp-menu-head">{t('picker.menu_title')}</div>
-      {LIBRARIES.map(L => (
+      {LIBRARIES.map((L) => (
         <button
           key={L.key}
           className={`libp-menu-item ${active === L.key ? 'active' : ''}`}
@@ -220,11 +228,13 @@ function ContextMenu({ x, y, onSelect, onClose }) {
 function PickerCard({ libraryKey, onPick, onClose, onBack }) {
   const { t } = useI18n();
   const { lib } = useCostLib();
-  const def = LIBRARIES.find(L => L.key === libraryKey);
+  const def = LIBRARIES.find((L) => L.key === libraryKey);
   const [query, setQuery] = useState('');
   const inputRef = useRef(null);
 
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   // Transform → filter → cap. `cap` keeps the DOM snappy when the
   // source library runs into the thousands (IFS inventory does).
@@ -232,8 +242,8 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
     if (!def) return [];
     const src = Array.isArray(lib[def.source]) ? lib[def.source] : [];
     const q = query.trim().toLowerCase();
-    const normalized = src.map(def.norm).filter(r => r.code || r.desc);
-    const filtered = q ? normalized.filter(r => matches(r, q)) : normalized;
+    const normalized = src.map(def.norm).filter((r) => r.code || r.desc);
+    const filtered = q ? normalized.filter((r) => matches(r, q)) : normalized;
     return filtered.slice(0, 400); // hard cap — user can narrow search
   }, [def, lib, query]);
 
@@ -244,7 +254,11 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
       <Modal.Header
         id="libp-title"
         title={t(def.labelKey)}
-        subtitle={rows.length >= 400 ? `400+ ${t('picker.result_count_suffix')}` : `${rows.length} ${t('picker.result_count_suffix')}`}
+        subtitle={
+          rows.length >= 400
+            ? `400+ ${t('picker.result_count_suffix')}`
+            : `${rows.length} ${t('picker.result_count_suffix')}`
+        }
       >
         {onBack && (
           <button
@@ -264,7 +278,7 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
             ref={inputRef}
             type="search"
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
             placeholder={t('picker.search_placeholder')}
             aria-label={t('picker.search_placeholder')}
           />
@@ -285,7 +299,11 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
             </thead>
             <tbody>
               {rows.length === 0 && (
-                <tr><td colSpan={4} className="libp-empty">{t('picker.empty')}</td></tr>
+                <tr>
+                  <td colSpan={4} className="libp-empty">
+                    {t('picker.empty')}
+                  </td>
+                </tr>
               )}
               {rows.map((r, i) => (
                 <tr
@@ -293,7 +311,9 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
                   onDoubleClick={() => onPick(r)}
                   title={t('picker.double_click_hint')}
                 >
-                  <td className="libp-col-code"><code>{r.code}</code></td>
+                  <td className="libp-col-code">
+                    <code>{r.code}</code>
+                  </td>
                   <td className="libp-col-desc">
                     {r.desc}
                     {r.extra && <span className="libp-extra"> — {r.extra}</span>}

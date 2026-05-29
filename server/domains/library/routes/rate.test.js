@@ -48,8 +48,11 @@ function buildApp(roleFromHeader = true) {
     getLibDir: () => tmpDir,
     safeFn: (s) => String(s).replace(/[^\w.-]/g, '_'),
     readJson: (p, def) => {
-      try { return JSON.parse(fs.readFileSync(p, 'utf8')); }
-      catch { return def !== undefined ? def : null; }
+      try {
+        return JSON.parse(fs.readFileSync(p, 'utf8'));
+      } catch {
+        return def !== undefined ? def : null;
+      }
     },
     writeJson: (p, data) => fs.writeFileSync(p, JSON.stringify(data, null, 2)),
     atomicWriteFileSync: (p, data) => fs.writeFileSync(p, data),
@@ -131,7 +134,7 @@ describe('rate library router — factory contract', () => {
     const fname = 'rate_vn_20260429120000.json';
     fs.writeFileSync(
       path.join(tmpDir, 'Rate', 'backups', fname),
-      JSON.stringify({ site: 'VN', data: [{ code: 'LBR', rate: 60 }] }),
+      JSON.stringify({ site: 'VN', data: [{ code: 'LBR', rate: 60 }] })
     );
     const r = await request(app, {
       method: 'POST',

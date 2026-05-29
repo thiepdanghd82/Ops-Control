@@ -11,7 +11,7 @@ import { api } from './api';
 const CSRF_COOKIE = 'ops_csrf';
 
 export const chatApi = {
-  rooms:    () => api.get('/chat/rooms'),
+  rooms: () => api.get('/chat/rooms'),
   // Phase 11 — people-first list for the Messages inbox. Same data
   // source as `rooms()` but re-shaped server-side so every DM row
   // carries a `peer` block (id, name, online, last_seen_at) — no
@@ -21,42 +21,37 @@ export const chatApi = {
   // switch. Live updates arrive through the existing SSE stream as
   // `presence` / `presence_snapshot` events.
   presence: () => api.get('/chat/presence'),
-  users:    () => api.get('/chat/users'),
+  users: () => api.get('/chat/users'),
   messages: (roomId, { before, limit = 50, signal } = {}) => {
     const qs = [];
     if (before) qs.push(`before=${encodeURIComponent(before)}`);
-    if (limit)  qs.push(`limit=${encodeURIComponent(limit)}`);
-    return api.get(`/chat/rooms/${roomId}/messages${qs.length ? '?' + qs.join('&') : ''}`, { signal });
+    if (limit) qs.push(`limit=${encodeURIComponent(limit)}`);
+    return api.get(`/chat/rooms/${roomId}/messages${qs.length ? '?' + qs.join('&') : ''}`, {
+      signal,
+    });
   },
-  send: (roomId, body) =>
-    api.post(`/chat/rooms/${roomId}/messages`, { body }),
+  send: (roomId, body) => api.post(`/chat/rooms/${roomId}/messages`, { body }),
   markSeen: (roomId, messageId) =>
     api.post(`/chat/rooms/${roomId}/seen`, { message_id: messageId }),
-  openDm: (username) =>
-    api.get(`/chat/dm/${encodeURIComponent(username)}`),
-  openQuote: (quoteId) =>
-    api.get(`/chat/quote/${encodeURIComponent(quoteId)}`),
+  openDm: (username) => api.get(`/chat/dm/${encodeURIComponent(username)}`),
+  openQuote: (quoteId) => api.get(`/chat/quote/${encodeURIComponent(quoteId)}`),
   mentions: ({ unread = false, limit = 50 } = {}) => {
     const qs = [];
     if (unread) qs.push('unread=1');
-    if (limit)  qs.push(`limit=${encodeURIComponent(limit)}`);
+    if (limit) qs.push(`limit=${encodeURIComponent(limit)}`);
     return api.get(`/chat/mentions${qs.length ? '?' + qs.join('&') : ''}`);
   },
-  markMentionsRead: (ids) =>
-    api.post('/chat/mentions/mark-read', ids ? { ids } : {}),
+  markMentionsRead: (ids) => api.post('/chat/mentions/mark-read', ids ? { ids } : {}),
   search: (query, { limit = 50, signal } = {}) => {
     const qs = `q=${encodeURIComponent(query)}&limit=${encodeURIComponent(limit)}`;
     return api.get(`/chat/search?${qs}`, { signal });
   },
-  editMessage: (messageId, body) =>
-    api.patch(`/chat/messages/${messageId}`, { body }),
-  deleteMessage: (messageId) =>
-    api.delete(`/chat/messages/${messageId}`),
+  editMessage: (messageId, body) => api.patch(`/chat/messages/${messageId}`, { body }),
+  deleteMessage: (messageId) => api.delete(`/chat/messages/${messageId}`),
   // Hard delete — server purges the row entirely. Use for "delete
   // completely" vs "recall" (soft delete). Client UI gates behind a
   // confirm with a stronger warning.
-  purgeMessage: (messageId) =>
-    api.delete(`/chat/messages/${messageId}?hard=1`),
+  purgeMessage: (messageId) => api.delete(`/chat/messages/${messageId}?hard=1`),
 };
 
 /**
@@ -66,9 +61,11 @@ export const chatApi = {
  * component can trigger without importing drawer internals.
  */
 export function openChatRoom(roomId) {
-  window.dispatchEvent(new CustomEvent('ops-open-chat', {
-    detail: { roomId: Number(roomId) },
-  }));
+  window.dispatchEvent(
+    new CustomEvent('ops-open-chat', {
+      detail: { roomId: Number(roomId) },
+    })
+  );
 }
 
 /**
@@ -102,16 +99,23 @@ export function openChatStream({ onEvent, onError }) {
   const es = new EventSource(url, { withCredentials: true });
 
   const parse = (e) => {
-    try { return JSON.parse(e.data); }
-    catch { return null; }
+    try {
+      return JSON.parse(e.data);
+    } catch {
+      return null;
+    }
   };
   es.addEventListener('message', (e) => {
-    const p = parse(e); if (p) onEvent?.(p);
+    const p = parse(e);
+    if (p) onEvent?.(p);
   });
   es.addEventListener('hello', (e) => {
-    const p = parse(e); if (p) onEvent?.(p);
+    const p = parse(e);
+    if (p) onEvent?.(p);
   });
-  es.onerror = (e) => { onError?.(e); };
+  es.onerror = (e) => {
+    onError?.(e);
+  };
 
   void CSRF_COOKIE;
   return { close: () => es.close() };

@@ -58,7 +58,9 @@ function resolveMax(envName, defaultMax) {
   // Reject NaN, Infinity, negative, zero. Without this, a typo in the
   // env var silently disabled the limiter because `count > NaN === false`.
   if (!Number.isFinite(n) || n <= 0) {
-    console.warn(`  ⚠️  ${envName}=${JSON.stringify(raw)} is not a positive number — using default ${defaultMax}`);
+    console.warn(
+      `  ⚠️  ${envName}=${JSON.stringify(raw)} is not a positive number — using default ${defaultMax}`
+    );
     return defaultMax;
   }
   return Math.floor(n);
@@ -91,7 +93,10 @@ function makeLimiter({ name, maxEnv, defaultMax }) {
     evictIfFull(now);
 
     const entry = store.get(ip) || { count: 0, resetAt: now + WINDOW_MS };
-    if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + WINDOW_MS; }
+    if (now > entry.resetAt) {
+      entry.count = 0;
+      entry.resetAt = now + WINDOW_MS;
+    }
     entry.count++;
     store.set(ip, entry);
 
@@ -114,7 +119,9 @@ function makeLimiter({ name, maxEnv, defaultMax }) {
 }
 
 export const writeRateLimit = makeLimiter({
-  name: 'write', maxEnv: 'OPS_WRITE_RATE_MAX', defaultMax: 30,
+  name: 'write',
+  maxEnv: 'OPS_WRITE_RATE_MAX',
+  defaultMax: 30,
 });
 
 // Sprint 1.7 — TOTP brute-force defence. /totp/verify previously had no
@@ -124,18 +131,24 @@ export const writeRateLimit = makeLimiter({
 // retyping a code, low enough to keep brute-force impractical. Override
 // via OPS_TOTP_RATE_MAX. Same limiter applied to /totp/enroll + change-pwd.
 export const totpVerifyRateLimit = makeLimiter({
-  name: 'totp', maxEnv: 'OPS_TOTP_RATE_MAX', defaultMax: 8,
+  name: 'totp',
+  maxEnv: 'OPS_TOTP_RATE_MAX',
+  defaultMax: 8,
 });
 
 export const saveRateLimit = makeLimiter({
-  name: 'save', maxEnv: 'OPS_SAVE_RATE_MAX', defaultMax: 120,
+  name: 'save',
+  maxEnv: 'OPS_SAVE_RATE_MAX',
+  defaultMax: 120,
 });
 
 // Chat send — per-IP cap on message POSTs. Generous because a typing
 // conversation averages 10-20 msg/min; we only care about stopping
 // bots / runaway scripts. 30/min = 300/10min default.
 export const chatSendRateLimit = makeLimiter({
-  name: 'chat', maxEnv: 'OPS_CHAT_RATE_MAX', defaultMax: 300,
+  name: 'chat',
+  maxEnv: 'OPS_CHAT_RATE_MAX',
+  defaultMax: 300,
 });
 
 // ─────────────────────────────────────────────────────────────────────
@@ -175,15 +188,16 @@ function makeUserLimiter({ name, maxEnv, defaultMax }) {
   function mw(req, res, next) {
     // Key preference: user.id > user.username > IP fallback
     const u = req.user?.user || req.user;
-    const userKey = u?.id != null ? `u:${u.id}`
-      : u?.username ? `u:${u.username}`
-      : null;
+    const userKey = u?.id != null ? `u:${u.id}` : u?.username ? `u:${u.username}` : null;
     const key = userKey || `ip:${clientIp(req)}`;
 
     const now = Date.now();
     evictIfFull(now);
     const entry = store.get(key) || { count: 0, resetAt: now + WINDOW_MS };
-    if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + WINDOW_MS; }
+    if (now > entry.resetAt) {
+      entry.count = 0;
+      entry.resetAt = now + WINDOW_MS;
+    }
     entry.count++;
     store.set(key, entry);
 
@@ -207,12 +221,16 @@ function makeUserLimiter({ name, maxEnv, defaultMax }) {
 // 60 saves / user / 10 min = 6 saves/min — generous for normal editing,
 // catches runaway scripts. Apply on save endpoints AFTER authMiddleware.
 export const userSaveRateLimit = makeUserLimiter({
-  name: 'user-save', maxEnv: 'OPS_USER_SAVE_RATE_MAX', defaultMax: 60,
+  name: 'user-save',
+  maxEnv: 'OPS_USER_SAVE_RATE_MAX',
+  defaultMax: 60,
 });
 
 // 30 writes / user / 10 min — for bulk imports, library updates, etc.
 export const userWriteRateLimit = makeUserLimiter({
-  name: 'user-write', maxEnv: 'OPS_USER_WRITE_RATE_MAX', defaultMax: 30,
+  name: 'user-write',
+  maxEnv: 'OPS_USER_WRITE_RATE_MAX',
+  defaultMax: 30,
 });
 
 // Chat edit/delete — lower cap because genuine usage should be a
@@ -220,5 +238,7 @@ export const userWriteRateLimit = makeUserLimiter({
 // hammering these is either testing our 15-min window or probing
 // for authz bugs, neither of which needs to run fast. 60/10min.
 export const chatEditRateLimit = makeLimiter({
-  name: 'chat-edit', maxEnv: 'OPS_CHAT_EDIT_RATE_MAX', defaultMax: 60,
+  name: 'chat-edit',
+  maxEnv: 'OPS_CHAT_EDIT_RATE_MAX',
+  defaultMax: 60,
 });

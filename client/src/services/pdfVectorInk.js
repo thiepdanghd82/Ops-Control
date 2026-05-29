@@ -99,8 +99,10 @@ export function flattenCubic(p0, p1, p2, p3, segments = 16) {
     const t = i / segments;
     const mt = 1 - t;
     // Cubic Bezier: (1−t)³P₀ + 3(1−t)²t P₁ + 3(1−t)t² P₂ + t³ P₃
-    const x = mt * mt * mt * p0[0] + 3 * mt * mt * t * p1[0] + 3 * mt * t * t * p2[0] + t * t * t * p3[0];
-    const y = mt * mt * mt * p0[1] + 3 * mt * mt * t * p1[1] + 3 * mt * t * t * p2[1] + t * t * t * p3[1];
+    const x =
+      mt * mt * mt * p0[0] + 3 * mt * mt * t * p1[0] + 3 * mt * t * t * p2[0] + t * t * t * p3[0];
+    const y =
+      mt * mt * mt * p0[1] + 3 * mt * mt * t * p1[1] + 3 * mt * t * t * p2[1] + t * t * t * p3[1];
     out.push([x, y]);
   }
   return out;
@@ -139,10 +141,7 @@ export function matrixMul(left, right) {
  * Map a point through a transform matrix.
  */
 export function applyMatrix(m, p) {
-  return [
-    m[0] * p[0] + m[2] * p[1] + m[4],
-    m[1] * p[0] + m[3] * p[1] + m[5],
-  ];
+  return [m[0] * p[0] + m[2] * p[1] + m[4], m[1] * p[0] + m[3] * p[1] + m[5]];
 }
 
 /**
@@ -159,7 +158,9 @@ export function applyMatrix(m, p) {
 export function plateKey(color) {
   if (!color) return 'rgb:0-0-0';
   if (color.cs === 'spot' || color.cs === 'Separation' || color.cs === 'DeviceN') {
-    const name = String(color.name || 'Unknown Spot').trim().toUpperCase();
+    const name = String(color.name || 'Unknown Spot')
+      .trim()
+      .toUpperCase();
     return `spot:${name}`;
   }
   if (color.cs === 'DeviceCMYK' || color.cs === 'cmyk') {
@@ -196,7 +197,7 @@ export function plateName(color) {
   if (color.cs === 'DeviceGray' || color.cs === 'gray') {
     return `Gray ${Math.round(color.values[0] * 100)}%`;
   }
-  const [r, g, b] = (color.values || [0, 0, 0]).map(v => Math.round(v * 255));
+  const [r, g, b] = (color.values || [0, 0, 0]).map((v) => Math.round(v * 255));
   return `RGB(${r},${g},${b})`;
 }
 
@@ -219,18 +220,20 @@ export function accumulatePlates(operatorList, OPS, resolveColor = null) {
   // Graphics state — a stack-based model matching the q/Q save/restore
   // bracketing in the PDF content stream. Each entry carries the CTM
   // and the current fill + stroke colour.
-  const gsStack = [{
-    ctm: [1, 0, 0, 1, 0, 0],            // identity
-    fill: { cs: 'DeviceGray', values: [0] },  // default black
-    stroke: { cs: 'DeviceGray', values: [0] },
-    fillTint: 1,
-    strokeTint: 1,
-  }];
+  const gsStack = [
+    {
+      ctm: [1, 0, 0, 1, 0, 0], // identity
+      fill: { cs: 'DeviceGray', values: [0] }, // default black
+      stroke: { cs: 'DeviceGray', values: [0] },
+      fillTint: 1,
+      strokeTint: 1,
+    },
+  ];
   let gs = gsStack[0];
 
   // Current path — an array of subpaths, each a polyline of points.
   let currentPath = [];
-  let currentSubpath = null;  // the subpath being built
+  let currentSubpath = null; // the subpath being built
 
   function startSubpath(pt) {
     currentSubpath = [pt];
@@ -246,7 +249,7 @@ export function accumulatePlates(operatorList, OPS, resolveColor = null) {
       // handles open loops too but the closed form matches filled
       // regions 1:1.
       const first = currentSubpath[0];
-      const last  = currentSubpath[currentSubpath.length - 1];
+      const last = currentSubpath[currentSubpath.length - 1];
       if (first[0] !== last[0] || first[1] !== last[1]) currentSubpath.push(first);
     }
   }
@@ -281,7 +284,10 @@ export function accumulatePlates(operatorList, OPS, resolveColor = null) {
       plates.set(key, {
         key,
         name: plateName(color),
-        type: (color.cs === 'spot' || color.cs === 'Separation' || color.cs === 'DeviceN') ? 'spot' : 'process',
+        type:
+          color.cs === 'spot' || color.cs === 'Separation' || color.cs === 'DeviceN'
+            ? 'spot'
+            : 'process',
         color,
         areaPdfUnits: tintedArea,
         objectCount: 1,
@@ -295,7 +301,7 @@ export function accumulatePlates(operatorList, OPS, resolveColor = null) {
   }
 
   // Main op walk
-  const fnArray  = operatorList.fnArray  || [];
+  const fnArray = operatorList.fnArray || [];
   const argsArray = operatorList.argsArray || [];
   const N = fnArray.length;
 
@@ -318,7 +324,7 @@ export function accumulatePlates(operatorList, OPS, resolveColor = null) {
     // cm — concat matrix to CTM. args can be [a,b,c,d,e,f] flat or a
     // single nested array depending on the pdf.js build.
     if (op === OPS.transform) {
-      const m2 = (args.length === 1 && Array.isArray(args[0])) ? args[0] : args;
+      const m2 = args.length === 1 && Array.isArray(args[0]) ? args[0] : args;
       gs.ctm = matrixMul(gs.ctm, m2);
       continue;
     }
@@ -445,12 +451,18 @@ export function accumulatePlates(operatorList, OPS, resolveColor = null) {
     // into the plate record.
     if (op === OPS.setFillColorN && resolveColor) {
       const resolved = resolveColor(args);
-      if (resolved) { gs.fill = resolved.color; gs.fillTint = resolved.tint ?? 1; }
+      if (resolved) {
+        gs.fill = resolved.color;
+        gs.fillTint = resolved.tint ?? 1;
+      }
       continue;
     }
     if (op === OPS.setStrokeColorN && resolveColor) {
       const resolved = resolveColor(args);
-      if (resolved) { gs.stroke = resolved.color; gs.strokeTint = resolved.tint ?? 1; }
+      if (resolved) {
+        gs.stroke = resolved.color;
+        gs.strokeTint = resolved.tint ?? 1;
+      }
       continue;
     }
 
@@ -537,7 +549,7 @@ export async function analyzePdfVectorInk(file, widthMm, heightMm, opts = {}) {
       // When space resolution is unavailable, fall back to treating the
       // numeric component(s) as a grayscale tint — matches the common
       // "100% solid spot" case for tints close to 1.0.
-      const tint = (typeof args[0] === 'number') ? args[0] : 1;
+      const tint = typeof args[0] === 'number' ? args[0] : 1;
       // If the last arg is a string and not numeric, treat as spot name.
       const tail = args[args.length - 1];
       if (typeof tail === 'string' && !/^\d/.test(tail)) {
@@ -567,12 +579,12 @@ export async function analyzePdfVectorInk(file, widthMm, heightMm, opts = {}) {
     // emit the raw PDF page box so callers can sanity-check scale.
     const frameMm2 = Math.max(1, widthMm * heightMm);
 
-    const rawPlates = Array.from(plates.values()).map(p => {
+    const rawPlates = Array.from(plates.values()).map((p) => {
       const areaMm2 = p.areaPdfUnits * unitToMm2;
       return {
         ...p,
         areaMm2,
-        coveragePct: frameMm2 > 0 ? (areaMm2 / frameMm2) : 0,
+        coveragePct: frameMm2 > 0 ? areaMm2 / frameMm2 : 0,
       };
     });
 
@@ -587,15 +599,15 @@ export async function analyzePdfVectorInk(file, widthMm, heightMm, opts = {}) {
 
     // If the PDF has ANY raster-image plate, the vector total is
     // incomplete — user should treat the result as a lower bound.
-    if (rawPlates.some(p => p.type === 'raster')) {
+    if (rawPlates.some((p) => p.type === 'raster')) {
       warnings.push(
         'PDF contains raster image(s). Vector analysis undercounts these regions — ' +
-        'their colours are not split by plate. Use raster-MMCQ mode for a visual cluster view.',
+          'their colours are not split by plate. Use raster-MMCQ mode for a visual cluster view.'
       );
     }
 
     const totalPrintedMm2 = rawPlates
-      .filter(p => p.type !== 'raster')
+      .filter((p) => p.type !== 'raster')
       .reduce((s, p) => s + p.areaMm2, 0);
     const totalPrintedPct = frameMm2 > 0 ? totalPrintedMm2 / frameMm2 : 0;
 
@@ -610,7 +622,11 @@ export async function analyzePdfVectorInk(file, widthMm, heightMm, opts = {}) {
       pageBox: { x: vp.viewBox[0], y: vp.viewBox[1], w: vp.width, h: vp.height },
     };
   } finally {
-    try { await doc.destroy(); } catch { /* ignore */ }
+    try {
+      await doc.destroy();
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -623,7 +639,7 @@ export async function analyzePdfVectorInk(file, widthMm, heightMm, opts = {}) {
  * (not a real ICC profile conversion, but good enough for thumbnails).
  */
 export function plateSwatchHex(color) {
-  if (!color) return '#9ca3af';  // grey for unknown
+  if (!color) return '#9ca3af'; // grey for unknown
   if (color.cs === 'DeviceRGB' || color.cs === 'rgb') {
     const [r, g, b] = color.values;
     return rgbToHex(Math.round(r * 255), Math.round(g * 255), Math.round(b * 255));
@@ -648,6 +664,9 @@ export function plateSwatchHex(color) {
 }
 
 function rgbToHex(r, g, b) {
-  const h = (n) => Math.max(0, Math.min(255, n | 0)).toString(16).padStart(2, '0');
+  const h = (n) =>
+    Math.max(0, Math.min(255, n | 0))
+      .toString(16)
+      .padStart(2, '0');
   return `#${h(r)}${h(g)}${h(b)}`.toUpperCase();
 }

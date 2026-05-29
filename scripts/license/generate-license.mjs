@@ -34,12 +34,18 @@ import { fileURLToPath } from 'node:url';
 
 const TIER_LIMITS = { S: 15, M: 20, L: 50 };
 const SIGNED_FIELDS = [
-  'version', 'installation_id', 'customer', 'tier', 'max_users',
-  'issued_at', 'expires_at', 'features',
+  'version',
+  'installation_id',
+  'customer',
+  'tier',
+  'max_users',
+  'issued_at',
+  'expires_at',
+  'features',
 ];
 
 function canonicalize(payload) {
-  const norm = (v) => Array.isArray(v) ? [...v].sort().join(',') : (v ?? '');
+  const norm = (v) => (Array.isArray(v) ? [...v].sort().join(',') : (v ?? ''));
   return SIGNED_FIELDS.map((k) => `${k}=${norm(payload[k])}`).join('|');
 }
 
@@ -77,7 +83,10 @@ function main() {
   const privateKey = createPrivateKey(fs.readFileSync(keyPath, 'utf8'));
 
   const features = args.features
-    ? args.features.split(',').map(s => s.trim()).filter(Boolean)
+    ? args.features
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
     : ['costing', 'library', 'sales', 'planning', 'quality', 'mes'];
 
   const payload = {

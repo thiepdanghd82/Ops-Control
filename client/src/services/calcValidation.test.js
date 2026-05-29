@@ -29,7 +29,7 @@ function baseStd(overrides = {}) {
     trade_mode: 'USD Normal',
     site: 'VN01',
     selling_price: 1,
-    part_width: 320,       // Layout TD — simulates screenshot scenario
+    part_width: 320, // Layout TD — simulates screenshot scenario
     part_length_md: 50,
     parts_in_md: 10,
     parts_web_across: 2,
@@ -40,7 +40,7 @@ function baseStd(overrides = {}) {
 }
 
 function findWarn(warnings, pattern) {
-  return warnings.find(w => pattern.test(w.message));
+  return warnings.find((w) => pattern.test(w.message));
 }
 
 // ── Bug 1 — Width validation with layout fallback ────────────────
@@ -57,7 +57,7 @@ test('Bug 1: material row with m.width=0 and layout part_width>0 → no "Width m
 
 test('Bug 1: row.width>0 (override) → no width error regardless of layout', () => {
   const st = baseStd({
-    part_width: 0,  // layout blank
+    part_width: 0, // layout blank
     materials: [{ code: 'MAT-1', usage: 1, width: 50, s_price: 10 }],
   });
   const warnings = validateStandard(st);
@@ -83,15 +83,17 @@ test('Bug 1 (Complex): per-subproduct part_width fallback', () => {
     trade_mode: 'USD Normal',
     site: 'VN01',
     selling_price: 1,
-    subproducts: [{
-      code: 'SPA',
-      part_width: 200,
-      part_length_md: 100,
-      parts_in_md: 5,
-      parts_web_across: 2,
-      materials: [{ code: 'M1', usage: 1, width: 0, s_price: 5 }],
-      processes: [{ workcenter: 'WC1', speed: 100, efficiency: 85 }],
-    }],
+    subproducts: [
+      {
+        code: 'SPA',
+        part_width: 200,
+        part_length_md: 100,
+        parts_in_md: 5,
+        parts_web_across: 2,
+        materials: [{ code: 'M1', usage: 1, width: 0, s_price: 5 }],
+        processes: [{ workcenter: 'WC1', speed: 100, efficiency: 85 }],
+      },
+    ],
   };
   const warnings = validateComplex(cplx);
   const widthWarn = findWarn(warnings, /Width must be greater than 0/);
@@ -111,7 +113,9 @@ test('Bug 2: Hrs-UOM workcenter with machine_rate=0 → Setup Hours NOT required
 });
 
 test('Bug 2: Hrs-UOM workcenter with machine_rate>0 AND setup_h=0 → error (original behavior preserved)', () => {
-  const lib = { rate: [{ workcenter: 'HEATPRESS', speed_uom: 'Hrs', machine_rate: 12, labor_rate: 5 }] };
+  const lib = {
+    rate: [{ workcenter: 'HEATPRESS', speed_uom: 'Hrs', machine_rate: 12, labor_rate: 5 }],
+  };
   const st = baseStd({
     processes: [{ workcenter: 'HEATPRESS', setup_h: 0, efficiency: 85 }],
   });
@@ -121,7 +125,9 @@ test('Bug 2: Hrs-UOM workcenter with machine_rate>0 AND setup_h=0 → error (ori
 });
 
 test('Bug 2: Hrs-UOM workcenter with machine_rate>0 AND setup_h>0 → no error', () => {
-  const lib = { rate: [{ workcenter: 'HEATPRESS', speed_uom: 'Hrs', machine_rate: 12, labor_rate: 5 }] };
+  const lib = {
+    rate: [{ workcenter: 'HEATPRESS', speed_uom: 'Hrs', machine_rate: 12, labor_rate: 5 }],
+  };
   const st = baseStd({
     processes: [{ workcenter: 'HEATPRESS', setup_h: 2, efficiency: 85 }],
   });
@@ -185,12 +191,23 @@ test('Bug 3: blank workcenter → no Layout error (would spam until WC picked)',
 test('Bug 3 (Complex): machine workcenter per sub-product requires Layout', () => {
   const lib = { rate: [{ workcenter: 'PRESS', speed_uom: 'pcs/hr', machine_rate: 15 }] };
   const cplx = {
-    ccl_pn: 'CPLX-001', moq: 1000, annual_qty: 10000, trade_mode: 'USD Normal', site: 'VN01', selling_price: 1,
-    subproducts: [{
-      code: 'SPA', part_width: 100, part_length_md: 50, parts_in_md: 5, parts_web_across: 2,
-      materials: [{ code: 'M1', usage: 1, width: 10, s_price: 5 }],
-      processes: [{ workcenter: 'PRESS', speed: 100, efficiency: 0.85, layout: 0 }],
-    }],
+    ccl_pn: 'CPLX-001',
+    moq: 1000,
+    annual_qty: 10000,
+    trade_mode: 'USD Normal',
+    site: 'VN01',
+    selling_price: 1,
+    subproducts: [
+      {
+        code: 'SPA',
+        part_width: 100,
+        part_length_md: 50,
+        parts_in_md: 5,
+        parts_web_across: 2,
+        materials: [{ code: 'M1', usage: 1, width: 10, s_price: 5 }],
+        processes: [{ workcenter: 'PRESS', speed: 100, efficiency: 0.85, layout: 0 }],
+      },
+    ],
   };
   const warnings = validateComplex(cplx, lib);
   const layoutWarn = findWarn(warnings, /Layout is required.*PRESS/);
@@ -200,12 +217,23 @@ test('Bug 3 (Complex): machine workcenter per sub-product requires Layout', () =
 test('Bug 2 (Complex): FQC in subproduct with machine_rate=0 → no setup-hours error', () => {
   const lib = { rate: [{ workcenter: 'FQC', speed_uom: 'Hrs', machine_rate: 0, labor_rate: 5 }] };
   const cplx = {
-    ccl_pn: 'CPLX-001', moq: 1000, annual_qty: 10000, trade_mode: 'USD Normal', site: 'VN01', selling_price: 1,
-    subproducts: [{
-      code: 'SPA', part_width: 100, part_length_md: 50, parts_in_md: 5, parts_web_across: 2,
-      materials: [{ code: 'M1', usage: 1, width: 10, s_price: 5 }],
-      processes: [{ workcenter: 'FQC', setup_h: 0, efficiency: 85 }],
-    }],
+    ccl_pn: 'CPLX-001',
+    moq: 1000,
+    annual_qty: 10000,
+    trade_mode: 'USD Normal',
+    site: 'VN01',
+    selling_price: 1,
+    subproducts: [
+      {
+        code: 'SPA',
+        part_width: 100,
+        part_length_md: 50,
+        parts_in_md: 5,
+        parts_web_across: 2,
+        materials: [{ code: 'M1', usage: 1, width: 10, s_price: 5 }],
+        processes: [{ workcenter: 'FQC', setup_h: 0, efficiency: 85 }],
+      },
+    ],
   };
   const warnings = validateComplex(cplx, lib);
   const setupWarn = findWarn(warnings, /Setup Hours is required/);

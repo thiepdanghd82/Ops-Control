@@ -20,8 +20,11 @@ const DATA_DIR = process.env.DATA_DIR
 const LIB = path.join(DATA_DIR, 'Library');
 
 function readJson(fp) {
-  try { return JSON.parse(fs.readFileSync(fp, 'utf-8')); }
-  catch { return []; }
+  try {
+    return JSON.parse(fs.readFileSync(fp, 'utf-8'));
+  } catch {
+    return [];
+  }
 }
 
 export default {

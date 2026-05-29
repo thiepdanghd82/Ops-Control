@@ -11,14 +11,29 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ops-chat-'));
 process.env.OPS_DB_PATH = path.join(tmp, 'ops.db');
 
 const {
-  dmKey, teamKey, quoteKey,
-  getOrCreateRoom, getRoom, getRoomByKey,
-  addMember, removeMember, isMember, listMembers,
+  dmKey,
+  teamKey,
+  quoteKey,
+  getOrCreateRoom,
+  getRoom,
+  getRoomByKey,
+  addMember,
+  removeMember,
+  isMember,
+  listMembers,
   listRoomsForUser,
-  insertMessage, listMessages, listMessagesSince, markSeen,
-  listMentionsForUser, countUnreadMentions, markMentionsRead,
+  insertMessage,
+  listMessages,
+  listMessagesSince,
+  markSeen,
+  listMentionsForUser,
+  countUnreadMentions,
+  markMentionsRead,
   searchMessages,
-  editMessage, deleteMessage, purgeMessage, EDIT_WINDOW_MS,
+  editMessage,
+  deleteMessage,
+  purgeMessage,
+  EDIT_WINDOW_MS,
   pruneOldMessages,
   _wipeChatForTests,
 } = await import('./chatStore.js');
@@ -112,9 +127,15 @@ test('listMessages: paginated "before" scrolls backward', () => {
   }
   const latest = listMessages({ roomId: r.id, limit: 3 });
   assert.equal(latest.length, 3);
-  assert.deepEqual(latest.map(m => m.id), [ids[7], ids[8], ids[9]]);
+  assert.deepEqual(
+    latest.map((m) => m.id),
+    [ids[7], ids[8], ids[9]]
+  );
   const older = listMessages({ roomId: r.id, before: latest[0].id, limit: 3 });
-  assert.deepEqual(older.map(m => m.id), [ids[4], ids[5], ids[6]]);
+  assert.deepEqual(
+    older.map((m) => m.id),
+    [ids[4], ids[5], ids[6]]
+  );
 });
 
 test('insertMessage bumps room.updated_at for recency sort', async () => {
@@ -122,7 +143,7 @@ test('insertMessage bumps room.updated_at for recency sort', async () => {
   const r = getOrCreateRoom({ kind: 'team', key: 'team:x' });
   addMember({ roomId: r.id, userId: 1 });
   const created = r.updated_at;
-  await new Promise(res => setTimeout(res, 10));
+  await new Promise((res) => setTimeout(res, 10));
   insertMessage({ roomId: r.id, authorId: 1, body: 'hi' });
   const updated = getRoom(r.id).updated_at;
   assert.ok(updated > created, `${updated} should be > ${created}`);
@@ -162,7 +183,7 @@ test('listRoomsForUser: sorted by recency with unread + last msg', () => {
   assert.equal(rooms[0].id, r2.id);
   assert.equal(rooms[1].id, r1.id);
   assert.equal(rooms[0].last_message.body, 'r2-2');
-  assert.equal(rooms[0].unread_count, 2);  // hasn't marked seen yet
+  assert.equal(rooms[0].unread_count, 2); // hasn't marked seen yet
 });
 
 test('listRoomsForUser: excludes rooms where user is not a member', () => {
@@ -213,7 +234,7 @@ test('listMessagesSince returns only new messages across given rooms', () => {
   const m3 = insertMessage({ roomId: rA.id, authorId: 1, body: 'a2' });
   const since = listMessagesSince({ roomIds: [rA.id, rB.id], sinceId: m1.id });
   assert.equal(since.length, 2); // b1 + a2
-  assert.ok(since.every(m => m.id > m1.id));
+  assert.ok(since.every((m) => m.id > m1.id));
   // Last entry is a2 (later id).
   assert.equal(since[since.length - 1].id, m3.id);
 });
@@ -227,7 +248,7 @@ test('listMessagesSince: empty roomIds → empty result', () => {
 test('insertMessage with mentions creates chat_mentions rows (skip self)', () => {
   _wipeChatForTests();
   const r = getOrCreateRoom({ kind: 'team', key: 'team:mentions' });
-  [1, 2, 3].forEach(u => addMember({ roomId: r.id, userId: u }));
+  [1, 2, 3].forEach((u) => addMember({ roomId: r.id, userId: u }));
   // Author=1 mentions 2, 3, and self (1) — self filtered out.
   insertMessage({ roomId: r.id, authorId: 1, body: '@a @b @self', mentions: [2, 3, 1] });
   assert.equal(countUnreadMentions(1), 0); // self-mention skipped
@@ -239,7 +260,7 @@ test('listMentionsForUser returns newest-first with joined message + room', () =
   _wipeChatForTests();
   const rA = getOrCreateRoom({ kind: 'team', key: 'team:a', title: '#a' });
   const rB = getOrCreateRoom({ kind: 'team', key: 'team:b', title: '#b' });
-  [1, 5].forEach(u => {
+  [1, 5].forEach((u) => {
     addMember({ roomId: rA.id, userId: u });
     addMember({ roomId: rB.id, userId: u });
   });
@@ -257,7 +278,7 @@ test('listMentionsForUser returns newest-first with joined message + room', () =
 test('markMentionsRead: flip all or a subset', () => {
   _wipeChatForTests();
   const r = getOrCreateRoom({ kind: 'team', key: 'team:x' });
-  [1, 5].forEach(u => addMember({ roomId: r.id, userId: u }));
+  [1, 5].forEach((u) => addMember({ roomId: r.id, userId: u }));
   insertMessage({ roomId: r.id, authorId: 1, body: 'a', mentions: [5] });
   insertMessage({ roomId: r.id, authorId: 1, body: 'b', mentions: [5] });
   insertMessage({ roomId: r.id, authorId: 1, body: 'c', mentions: [5] });
@@ -277,7 +298,7 @@ test('markMentionsRead: flip all or a subset', () => {
 test('mentions unreadOnly filter', () => {
   _wipeChatForTests();
   const r = getOrCreateRoom({ kind: 'team', key: 'team:x' });
-  [1, 5].forEach(u => addMember({ roomId: r.id, userId: u }));
+  [1, 5].forEach((u) => addMember({ roomId: r.id, userId: u }));
   insertMessage({ roomId: r.id, authorId: 1, body: 'a', mentions: [5] });
   insertMessage({ roomId: r.id, authorId: 1, body: 'b', mentions: [5] });
   markMentionsRead({ userId: 5 }); // both flip to read
@@ -289,7 +310,7 @@ test('mentions unreadOnly filter', () => {
 test('mention fan-out dedupes duplicate ids in one message', () => {
   _wipeChatForTests();
   const r = getOrCreateRoom({ kind: 'team', key: 'team:x' });
-  [1, 5].forEach(u => addMember({ roomId: r.id, userId: u }));
+  [1, 5].forEach((u) => addMember({ roomId: r.id, userId: u }));
   insertMessage({ roomId: r.id, authorId: 1, body: '@a @a @a', mentions: [5, 5, 5] });
   assert.equal(countUnreadMentions(5), 1);
 });
@@ -302,14 +323,14 @@ test('searchMessages: basic LIKE match, newest first, members only', () => {
   const rB = getOrCreateRoom({ kind: 'team', key: 'team:b', title: '#b' });
   addMember({ roomId: rA.id, userId: 1 });
   addMember({ roomId: rA.id, userId: 2 });
-  addMember({ roomId: rB.id, userId: 2 });  // user 1 is NOT in rB
+  addMember({ roomId: rB.id, userId: 2 }); // user 1 is NOT in rB
 
   insertMessage({ roomId: rA.id, authorId: 2, body: 'customer wants RFQ-42 review' });
   insertMessage({ roomId: rA.id, authorId: 2, body: 'also RFQ-99 please' });
   insertMessage({ roomId: rB.id, authorId: 2, body: 'secret RFQ-42 pricing in B' });
 
   const hits = searchMessages({ userId: 1, query: 'RFQ-42' });
-  assert.equal(hits.length, 1);  // only rA is visible to user 1
+  assert.equal(hits.length, 1); // only rA is visible to user 1
   assert.equal(hits[0].body, 'customer wants RFQ-42 review');
   assert.equal(hits[0].room_title, '#a');
 });
@@ -366,7 +387,7 @@ test('editMessage: author can edit, captures original body on first edit', () =>
 test('editMessage: non-author gets forbidden', () => {
   _wipeChatForTests();
   const r = getOrCreateRoom({ kind: 'team', key: 'team:x' });
-  [1, 2].forEach(u => addMember({ roomId: r.id, userId: u }));
+  [1, 2].forEach((u) => addMember({ roomId: r.id, userId: u }));
   const m = insertMessage({ roomId: r.id, authorId: 1, body: 'hi' });
   const result = editMessage({ messageId: m.id, userId: 2, body: 'hijacked' });
   assert.equal(result.ok, false);
@@ -379,9 +400,9 @@ test('editMessage: past the window → window_expired', () => {
   addMember({ roomId: r.id, userId: 1 });
   const m = insertMessage({ roomId: r.id, authorId: 1, body: 'old msg' });
   // Backdate created_at past the window by touching the DB directly.
-  getDb().prepare(
-    `UPDATE chat_messages SET created_at = ? WHERE id = ?`,
-  ).run(new Date(Date.now() - EDIT_WINDOW_MS - 1000).toISOString(), m.id);
+  getDb()
+    .prepare(`UPDATE chat_messages SET created_at = ? WHERE id = ?`)
+    .run(new Date(Date.now() - EDIT_WINDOW_MS - 1000).toISOString(), m.id);
 
   const result = editMessage({ messageId: m.id, userId: 1, body: 'too late' });
   assert.equal(result.ok, false);
@@ -425,7 +446,7 @@ test('deleteMessage: double-delete returns already_deleted', () => {
 test('editMessage with new mentions fans out NEW inbox rows only', () => {
   _wipeChatForTests();
   const r = getOrCreateRoom({ kind: 'team', key: 'team:x' });
-  [1, 5, 9].forEach(u => addMember({ roomId: r.id, userId: u }));
+  [1, 5, 9].forEach((u) => addMember({ roomId: r.id, userId: u }));
 
   // Initial post: mentions user 5
   const m = insertMessage({ roomId: r.id, authorId: 1, body: '@a', mentions: [5] });
@@ -434,7 +455,10 @@ test('editMessage with new mentions fans out NEW inbox rows only', () => {
 
   // Edit: add user 9 while keeping 5 (same body for simplicity)
   const result = editMessage({
-    messageId: m.id, userId: 1, body: '@a @b', mentions: [5, 9],
+    messageId: m.id,
+    userId: 1,
+    body: '@a @b',
+    mentions: [5, 9],
   });
   assert.equal(result.ok, true);
   // User 9: brand new mention
@@ -447,7 +471,7 @@ test('editMessage with new mentions fans out NEW inbox rows only', () => {
 test('editMessage removing a mention keeps the old inbox row', () => {
   _wipeChatForTests();
   const r = getOrCreateRoom({ kind: 'team', key: 'team:x' });
-  [1, 5].forEach(u => addMember({ roomId: r.id, userId: u }));
+  [1, 5].forEach((u) => addMember({ roomId: r.id, userId: u }));
   const m = insertMessage({ roomId: r.id, authorId: 1, body: '@a', mentions: [5] });
   // Edit removes the mention
   editMessage({ messageId: m.id, userId: 1, body: 'no tags now', mentions: [] });
@@ -465,13 +489,13 @@ test('deleted message body hidden from listMessages + listMessagesSince', () => 
   deleteMessage({ messageId: a.id, userId: 1 });
 
   const list = listMessages({ roomId: r.id });
-  const delRow = list.find(m => m.id === a.id);
+  const delRow = list.find((m) => m.id === a.id);
   assert.ok(delRow.deleted_at, 'deleted_at is present');
   assert.equal(delRow.body, null, 'body scrubbed in list');
   assert.equal(delRow.original_body, null, 'original_body scrubbed too');
 
   const since = listMessagesSince({ roomIds: [r.id], sinceId: 0 });
-  const delSince = since.find(m => m.id === a.id);
+  const delSince = since.find((m) => m.id === a.id);
   assert.equal(delSince.body, null, 'body scrubbed on SSE catch-up path');
 });
 
@@ -487,13 +511,13 @@ test('deleted messages excluded from searchMessages', () => {
   assert.equal(results.length, 1);
   assert.equal(results[0].body, 'visible-pricing-zz1');
   // Deleted row's body must not appear even as an empty hit
-  assert.ok(!results.some(r => r.id === hit.id));
+  assert.ok(!results.some((r) => r.id === hit.id));
 });
 
 test('deleted mention body null in inbox but row remains', () => {
   _wipeChatForTests();
   const r = getOrCreateRoom({ kind: 'team', key: 'team:x' });
-  [1, 5].forEach(u => addMember({ roomId: r.id, userId: u }));
+  [1, 5].forEach((u) => addMember({ roomId: r.id, userId: u }));
   const m = insertMessage({ roomId: r.id, authorId: 1, body: '@a ping', mentions: [5] });
   deleteMessage({ messageId: m.id, userId: 1 });
   const rows = listMentionsForUser({ userId: 5 });
@@ -519,7 +543,7 @@ test('purgeMessage: author hard-deletes; row gone from listMessages', () => {
 test('purgeMessage: non-author gets forbidden', () => {
   _wipeChatForTests();
   const r = getOrCreateRoom({ kind: 'team', key: 'team:x' });
-  [1, 2].forEach(u => addMember({ roomId: r.id, userId: u }));
+  [1, 2].forEach((u) => addMember({ roomId: r.id, userId: u }));
   const a = insertMessage({ roomId: r.id, authorId: 1, body: 'hi' });
   const result = purgeMessage({ messageId: a.id, userId: 2 });
   assert.equal(result.ok, false);
@@ -531,7 +555,8 @@ test('purgeMessage: past window → window_expired', () => {
   const r = getOrCreateRoom({ kind: 'team', key: 'team:x' });
   addMember({ roomId: r.id, userId: 1 });
   const a = insertMessage({ roomId: r.id, authorId: 1, body: 'old' });
-  getDb().prepare(`UPDATE chat_messages SET created_at = ? WHERE id = ?`)
+  getDb()
+    .prepare(`UPDATE chat_messages SET created_at = ? WHERE id = ?`)
     .run(new Date(Date.now() - EDIT_WINDOW_MS - 1000).toISOString(), a.id);
   assert.equal(purgeMessage({ messageId: a.id, userId: 1 }).reason, 'window_expired');
 });
@@ -539,7 +564,7 @@ test('purgeMessage: past window → window_expired', () => {
 test('purgeMessage cascades chat_mentions via FK', () => {
   _wipeChatForTests();
   const r = getOrCreateRoom({ kind: 'team', key: 'team:x' });
-  [1, 5].forEach(u => addMember({ roomId: r.id, userId: u }));
+  [1, 5].forEach((u) => addMember({ roomId: r.id, userId: u }));
   const a = insertMessage({ roomId: r.id, authorId: 1, body: '@a', mentions: [5] });
   assert.equal(countUnreadMentions(5), 1);
   purgeMessage({ messageId: a.id, userId: 1 });
@@ -561,11 +586,12 @@ test('editMessage on a deleted message → deleted reason', () => {
 test('pruneOldMessages deletes rows older than ttl and cascades mentions', () => {
   _wipeChatForTests();
   const r = getOrCreateRoom({ kind: 'team', key: 'team:x' });
-  [1, 5].forEach(u => addMember({ roomId: r.id, userId: u }));
+  [1, 5].forEach((u) => addMember({ roomId: r.id, userId: u }));
   const oldMsg = insertMessage({ roomId: r.id, authorId: 1, body: 'ancient', mentions: [5] });
   const newMsg = insertMessage({ roomId: r.id, authorId: 1, body: 'fresh', mentions: [5] });
   // Backdate the first msg
-  getDb().prepare(`UPDATE chat_messages SET created_at = ? WHERE id = ?`)
+  getDb()
+    .prepare(`UPDATE chat_messages SET created_at = ? WHERE id = ?`)
     .run(new Date(Date.now() - 400 * 86400 * 1000).toISOString(), oldMsg.id);
 
   const result = pruneOldMessages({ ttlDays: 30 });
@@ -587,5 +613,9 @@ test('pruneOldMessages: invalid ttl → skipped', () => {
 // ── cleanup ──
 test('cleanup', () => {
   _wipeChatForTests();
-  try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* noop */ }
+  try {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  } catch {
+    /* noop */
+  }
 });

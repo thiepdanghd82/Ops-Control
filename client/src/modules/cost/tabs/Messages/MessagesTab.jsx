@@ -18,9 +18,7 @@
  *   - No typing indicator — cheaper to add later if the need is real.
  */
 
-import {
-  useCallback, useEffect, useMemo, useRef, useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../../../../context/AuthContext';
 import { chatApi, openChatStream } from '../../../../services/chatApi';
 import UserPickerModal from '../../../../components/Chat/UserPickerModal';
@@ -83,9 +81,12 @@ function fmtDivider(iso) {
   const sameDay = d.toDateString() === now.toDateString();
   const hm = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   if (sameDay) return hm;
-  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
   if (d.toDateString() === yesterday.toDateString()) return `Yesterday ${hm}`;
-  return d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' + hm;
+  return (
+    d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' + hm
+  );
 }
 
 // Used to tell the server a message can be counted as "read" once the
@@ -111,8 +112,8 @@ function Avatar({ kind, name, online, size }) {
 function ConversationRow({ conv, meId, active, onClick }) {
   const isDm = conv.kind === 'dm';
   const name = isDm
-    ? (conv.peer?.full_name || conv.peer?.username || 'Unknown')
-    : (conv.title || `#${conv.key}`);
+    ? conv.peer?.full_name || conv.peer?.username || 'Unknown'
+    : conv.title || `#${conv.key}`;
   const last = conv.last_message;
   const isSelf = last && Number(last.author_id) === Number(meId);
   let preview = 'No messages yet';
@@ -122,7 +123,10 @@ function ConversationRow({ conv, meId, active, onClick }) {
   }
   const unread = conv.unread_count > 0 && !active;
   return (
-    <div className={`msg-row ${active ? 'active' : ''} ${unread ? 'unread' : ''}`} onClick={onClick}>
+    <div
+      className={`msg-row ${active ? 'active' : ''} ${unread ? 'unread' : ''}`}
+      onClick={onClick}
+    >
       <Avatar kind={conv.kind} name={name} online={isDm ? conv.peer?.online : null} />
       <div className="msg-row-main">
         <div className="msg-row-top">
@@ -160,15 +164,21 @@ function EmptyStateDirectory({ users, meId, onlineSet, onOpen }) {
   const filtered = users.filter((u) => {
     if (!needle) return true;
     return (
-      (u.username || '').toLowerCase().includes(needle)
-      || (u.full_name || '').toLowerCase().includes(needle)
-      || (u.role || '').toLowerCase().includes(needle)
+      (u.username || '').toLowerCase().includes(needle) ||
+      (u.full_name || '').toLowerCase().includes(needle) ||
+      (u.role || '').toLowerCase().includes(needle)
     );
   });
-  const online = filtered.filter((u) => Number(u.id) !== Number(meId) && onlineSet.has(Number(u.id)))
-    .sort((a, b) => (a.full_name || a.username || '').localeCompare(b.full_name || b.username || ''));
-  const offline = filtered.filter((u) => Number(u.id) !== Number(meId) && !onlineSet.has(Number(u.id)))
-    .sort((a, b) => (a.full_name || a.username || '').localeCompare(b.full_name || b.username || ''));
+  const online = filtered
+    .filter((u) => Number(u.id) !== Number(meId) && onlineSet.has(Number(u.id)))
+    .sort((a, b) =>
+      (a.full_name || a.username || '').localeCompare(b.full_name || b.username || '')
+    );
+  const offline = filtered
+    .filter((u) => Number(u.id) !== Number(meId) && !onlineSet.has(Number(u.id)))
+    .sort((a, b) =>
+      (a.full_name || a.username || '').localeCompare(b.full_name || b.username || '')
+    );
 
   const card = (u) => {
     const isSelf = Number(u.id) === Number(meId);
@@ -179,12 +189,26 @@ function EmptyStateDirectory({ users, meId, onlineSet, onOpen }) {
         key={u.id}
         className={`msg-dir-card ${isSelf ? 'self' : ''}`}
         onClick={() => !isSelf && pick(u)}
-        title={isSelf ? 'This is you' : isOnline ? 'Online — click to chat' : u.last_seen_at ? `Offline · last seen ${fmtLastSeen(u.last_seen_at)}` : 'Offline'}
+        title={
+          isSelf
+            ? 'This is you'
+            : isOnline
+              ? 'Online — click to chat'
+              : u.last_seen_at
+                ? `Offline · last seen ${fmtLastSeen(u.last_seen_at)}`
+                : 'Offline'
+        }
       >
         <Avatar kind="dm" name={name} online={isOnline} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="name">{name}{isSelf ? ' (bạn)' : ''}</div>
-          <div className="role">{u.role || '—'}{!isSelf && !isOnline && u.last_seen_at ? ` · ${fmtLastSeen(u.last_seen_at)}` : ''}</div>
+          <div className="name">
+            {name}
+            {isSelf ? ' (bạn)' : ''}
+          </div>
+          <div className="role">
+            {u.role || '—'}
+            {!isSelf && !isOnline && u.last_seen_at ? ` · ${fmtLastSeen(u.last_seen_at)}` : ''}
+          </div>
         </div>
       </div>
     );
@@ -224,8 +248,15 @@ function EmptyStateDirectory({ users, meId, onlineSet, onOpen }) {
 }
 
 function ConversationList({
-  conversations, meId, activeId, onSelect, onNewMessage,
-  query, setQuery, filter, setFilter,
+  conversations,
+  meId,
+  activeId,
+  onSelect,
+  onNewMessage,
+  query,
+  setQuery,
+  filter,
+  setFilter,
 }) {
   const filtered = useMemo(() => {
     const needle = (query || '').trim().toLowerCase();
@@ -239,7 +270,9 @@ function ConversationList({
         c.peer?.full_name || '',
         c.peer?.username || '',
         c.last_message?.body || '',
-      ].join(' ').toLowerCase();
+      ]
+        .join(' ')
+        .toLowerCase();
       return hay.includes(needle);
     });
   }, [conversations, query, filter]);
@@ -248,7 +281,15 @@ function ConversationList({
     <div className="msg-pane">
       <div className="msg-pane-header">
         <span>Messages</span>
-        <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 500, letterSpacing: 0, textTransform: 'none' }}>
+        <span
+          style={{
+            fontSize: 10,
+            color: '#9ca3af',
+            fontWeight: 500,
+            letterSpacing: 0,
+            textTransform: 'none',
+          }}
+        >
           {filtered.length} of {conversations.length}
         </span>
         <button
@@ -256,7 +297,9 @@ function ConversationList({
           onClick={onNewMessage}
           title="New message"
           aria-label="New message"
-        >+</button>
+        >
+          +
+        </button>
       </div>
       <div className="msg-list-search">
         <input
@@ -308,7 +351,10 @@ function DeliveryTick({ msg, isSelf, conv, meId }) {
   // exposes peer last_seen_id via a dedicated event.
   let cls = 'tick-sent';
   let glyph = '✓';
-  if (delivered) { cls = 'tick-delivered'; glyph = '✓✓'; }
+  if (delivered) {
+    cls = 'tick-delivered';
+    glyph = '✓✓';
+  }
   // Optional read upgrade — gated on a peer_last_seen_id hint the
   // parent will pass down as `conv.peer_last_seen_id` via SSE
   // eventually. Today this is almost always undefined, so the tick
@@ -317,33 +363,40 @@ function DeliveryTick({ msg, isSelf, conv, meId }) {
     cls = 'tick-read';
   }
   void meId;
-  return <span className={`tick ${cls}`} title={delivered ? 'Delivered' : 'Sent'}>{glyph}</span>;
+  return (
+    <span className={`tick ${cls}`} title={delivered ? 'Delivered' : 'Sent'}>
+      {glyph}
+    </span>
+  );
 }
 
 function Bubble({ msg, prev, meId, authorName, conv }) {
   if (msg.deleted_at) {
     return (
       <div className={`msg-bubble-row ${Number(msg.author_id) === Number(meId) ? 'out' : 'in'}`}>
-        {Number(msg.author_id) !== Number(meId) && <div className="mini-avatar">{initialsOf(authorName)}</div>}
+        {Number(msg.author_id) !== Number(meId) && (
+          <div className="mini-avatar">{initialsOf(authorName)}</div>
+        )}
         <div className="msg-bubble deleted">(message deleted)</div>
       </div>
     );
   }
   const isSelf = Number(msg.author_id) === Number(meId);
-  const isGrouped = prev
-    && Number(prev.author_id) === Number(msg.author_id)
-    && !prev.deleted_at
-    && (new Date(msg.created_at).getTime() - new Date(prev.created_at).getTime()) < 2 * 60 * 1000;
+  const isGrouped =
+    prev &&
+    Number(prev.author_id) === Number(msg.author_id) &&
+    !prev.deleted_at &&
+    new Date(msg.created_at).getTime() - new Date(prev.created_at).getTime() < 2 * 60 * 1000;
   const body = String(msg.body || '');
   // Jumbomoji — short emoji-only strings render bigger.
-  const isEmojiOnly = /^(\s|\p{Extended_Pictographic}|\u200D|\uFE0F)+$/u.test(body.trim()) && body.trim().length <= 12;
+  const isEmojiOnly =
+    /^(\s|\p{Extended_Pictographic}|\u200D|\uFE0F)+$/u.test(body.trim()) &&
+    body.trim().length <= 12;
   return (
     <div className={`msg-bubble-row ${isSelf ? 'out' : 'in'} ${isGrouped ? 'grouped' : ''}`}>
       {!isSelf && <div className="mini-avatar">{initialsOf(authorName)}</div>}
       <div className={`msg-bubble ${isEmojiOnly ? 'jumbo' : ''}`}>
-        {!isSelf && !isGrouped && conv?.kind !== 'dm' && (
-          <div className="author">{authorName}</div>
-        )}
+        {!isSelf && !isGrouped && conv?.kind !== 'dm' && <div className="author">{authorName}</div>}
         <div>{body}</div>
         <div className="msg-meta">
           <span>{fmtBubbleTime(msg.created_at)}</span>
@@ -381,23 +434,32 @@ function Feed({ messages, conv, meId, userById, loading }) {
 
   if (loading) return <div className="msg-feed msg-loading">Loading messages…</div>;
   if (!conv) return <div className="msg-feed msg-loading">Select a conversation on the left.</div>;
-  if (messages.length === 0) return <div className="msg-feed msg-loading">No messages yet — say hi.</div>;
+  if (messages.length === 0)
+    return <div className="msg-feed msg-loading">No messages yet — say hi.</div>;
 
   // Render loop with time dividers between > 10 min gaps.
   const nodes = [];
   let prev = null;
   for (const m of messages) {
-    const needDivider = !prev
-      || (new Date(m.created_at).getTime() - new Date(prev.created_at).getTime()) > 10 * 60 * 1000;
-    if (needDivider) nodes.push(<div key={`d-${m.id}`} className="msg-divider">{fmtDivider(m.created_at)}</div>);
+    const needDivider =
+      !prev ||
+      new Date(m.created_at).getTime() - new Date(prev.created_at).getTime() > 10 * 60 * 1000;
+    if (needDivider)
+      nodes.push(
+        <div key={`d-${m.id}`} className="msg-divider">
+          {fmtDivider(m.created_at)}
+        </div>
+      );
     const author = userById.get(Number(m.author_id));
-    const name = author ? (author.full_name || author.username) : 'Unknown';
-    nodes.push(
-      <Bubble key={m.id} msg={m} prev={prev} meId={meId} authorName={name} conv={conv} />
-    );
+    const name = author ? author.full_name || author.username : 'Unknown';
+    nodes.push(<Bubble key={m.id} msg={m} prev={prev} meId={meId} authorName={name} conv={conv} />);
     prev = m;
   }
-  return <div className="msg-feed" ref={scrollRef}>{nodes}</div>;
+  return (
+    <div className="msg-feed" ref={scrollRef}>
+      {nodes}
+    </div>
+  );
 }
 
 function Composer({ onSend, disabled }) {
@@ -419,13 +481,16 @@ function Composer({ onSend, disabled }) {
     }
   }, [text, sending, disabled, onSend]);
 
-  const onKey = useCallback((e) => {
-    // Enter sends, Shift+Enter = newline. Matches most chat apps.
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      submit();
-    }
-  }, [submit]);
+  const onKey = useCallback(
+    (e) => {
+      // Enter sends, Shift+Enter = newline. Matches most chat apps.
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        submit();
+      }
+    },
+    [submit]
+  );
 
   // Auto-resize textarea up to 5 lines.
   const onInput = useCallback((e) => {
@@ -440,7 +505,11 @@ function Composer({ onSend, disabled }) {
       <textarea
         ref={taRef}
         rows={1}
-        placeholder={disabled ? 'Select a conversation to reply…' : 'Type a message… (Enter to send, Shift+Enter = newline)'}
+        placeholder={
+          disabled
+            ? 'Select a conversation to reply…'
+            : 'Type a message… (Enter to send, Shift+Enter = newline)'
+        }
         value={text}
         onChange={onInput}
         onKeyDown={onKey}
@@ -464,37 +533,68 @@ function InfoPanel({ conv, userById }) {
   }
   const isDm = conv.kind === 'dm';
   const peer = isDm ? conv.peer : null;
-  const name = isDm
-    ? (peer?.full_name || peer?.username || 'Unknown')
-    : (conv.title || conv.key);
+  const name = isDm ? peer?.full_name || peer?.username || 'Unknown' : conv.title || conv.key;
   const subtitle = isDm
-    ? (peer?.online ? 'Online now' : peer?.last_seen_at ? `Last seen ${fmtLastSeen(peer.last_seen_at)}` : 'Offline')
-    : (conv.kind === 'quote' ? 'Quote discussion' : conv.kind === 'team' ? 'Team channel' : 'Group');
+    ? peer?.online
+      ? 'Online now'
+      : peer?.last_seen_at
+        ? `Last seen ${fmtLastSeen(peer.last_seen_at)}`
+        : 'Offline'
+    : conv.kind === 'quote'
+      ? 'Quote discussion'
+      : conv.kind === 'team'
+        ? 'Team channel'
+        : 'Group';
   return (
     <div className="msg-pane msg-info">
       <div className="msg-pane-header">Info</div>
       <div className="msg-info-body">
-        <div className="msg-info-avatar">{isDm ? initialsOf(name) : conv.kind === 'quote' ? 'Q' : '#'}</div>
+        <div className="msg-info-avatar">
+          {isDm ? initialsOf(name) : conv.kind === 'quote' ? 'Q' : '#'}
+        </div>
         <div className="msg-info-name">{name}</div>
         <div className="msg-info-sub">{subtitle}</div>
 
         {isDm && peer && (
           <div className="msg-info-section">
             <h5>Contact</h5>
-            <div className="msg-info-kv"><span className="k">Username</span><span className="v">{peer.username}</span></div>
-            <div className="msg-info-kv"><span className="k">Role</span><span className="v">{peer.role || '—'}</span></div>
+            <div className="msg-info-kv">
+              <span className="k">Username</span>
+              <span className="v">{peer.username}</span>
+            </div>
+            <div className="msg-info-kv">
+              <span className="k">Role</span>
+              <span className="v">{peer.role || '—'}</span>
+            </div>
             {peer.last_seen_at && !peer.online && (
-              <div className="msg-info-kv"><span className="k">Last seen</span><span className="v">{fmtLastSeen(peer.last_seen_at)}</span></div>
+              <div className="msg-info-kv">
+                <span className="k">Last seen</span>
+                <span className="v">{fmtLastSeen(peer.last_seen_at)}</span>
+              </div>
             )}
           </div>
         )}
 
         <div className="msg-info-section">
           <h5>Conversation</h5>
-          <div className="msg-info-kv"><span className="k">Kind</span><span className="v">{conv.kind}</span></div>
-          {conv.site && <div className="msg-info-kv"><span className="k">Site</span><span className="v">{conv.site}</span></div>}
-          <div className="msg-info-kv"><span className="k">Unread</span><span className="v">{conv.unread_count || 0}</span></div>
-          <div className="msg-info-kv"><span className="k">Updated</span><span className="v">{new Date(conv.updated_at).toLocaleString()}</span></div>
+          <div className="msg-info-kv">
+            <span className="k">Kind</span>
+            <span className="v">{conv.kind}</span>
+          </div>
+          {conv.site && (
+            <div className="msg-info-kv">
+              <span className="k">Site</span>
+              <span className="v">{conv.site}</span>
+            </div>
+          )}
+          <div className="msg-info-kv">
+            <span className="k">Unread</span>
+            <span className="v">{conv.unread_count || 0}</span>
+          </div>
+          <div className="msg-info-kv">
+            <span className="k">Updated</span>
+            <span className="v">{new Date(conv.updated_at).toLocaleString()}</span>
+          </div>
         </div>
       </div>
       {void userById}
@@ -529,7 +629,7 @@ export default function MessagesTab() {
 
   const activeConv = useMemo(
     () => conversations.find((c) => c.id === activeId) || null,
-    [conversations, activeId],
+    [conversations, activeId]
   );
 
   // Enrich conversations with live online set so the sidebar updates
@@ -562,17 +662,25 @@ export default function MessagesTab() {
     try {
       const r = await chatApi.users();
       if (r?.ok) setUsers(r.users || []);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const loadMessages = useCallback(async (roomId) => {
-    if (!roomId) { setMessages([]); return; }
+    if (!roomId) {
+      setMessages([]);
+      return;
+    }
     setMsgLoading(true);
     try {
       const r = await chatApi.messages(roomId, { limit: 100 });
       if (r?.ok) setMessages((r.messages || []).slice().sort((a, b) => a.id - b.id));
-    } catch { setMessages([]); }
-    finally { setMsgLoading(false); }
+    } catch {
+      setMessages([]);
+    } finally {
+      setMsgLoading(false);
+    }
   }, []);
 
   // Debounced "mark seen" — every message id we render in the active
@@ -585,9 +693,13 @@ export default function MessagesTab() {
       chatApi.markSeen(roomId, messageId).catch(() => {});
       // Also optimistically zero out the unread count in our local list
       // so the sidebar badge disappears right away.
-      setConversations((prev) => prev.map((c) =>
-        c.id === roomId ? { ...c, unread_count: 0, last_seen_id: Math.max(c.last_seen_id || 0, messageId) } : c
-      ));
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === roomId
+            ? { ...c, unread_count: 0, last_seen_id: Math.max(c.last_seen_id || 0, messageId) }
+            : c
+        )
+      );
     }, SEEN_DEBOUNCE_MS);
   }, []);
 
@@ -596,9 +708,12 @@ export default function MessagesTab() {
   useEffect(() => {
     loadConversations();
     loadUsers();
-    chatApi.presence().then((r) => {
-      if (r?.ok) setOnlineSet(new Set((r.online || []).map(Number)));
-    }).catch(() => {});
+    chatApi
+      .presence()
+      .then((r) => {
+        if (r?.ok) setOnlineSet(new Set((r.online || []).map(Number)));
+      })
+      .catch(() => {});
   }, [loadConversations, loadUsers]);
 
   // Deep-link from the login unread popup (and future places that
@@ -610,14 +725,21 @@ export default function MessagesTab() {
   useEffect(() => {
     if (conversations.length === 0) return;
     let pending;
-    try { pending = sessionStorage.getItem('ops_pending_conv_id'); }
-    catch { return; }
+    try {
+      pending = sessionStorage.getItem('ops_pending_conv_id');
+    } catch {
+      return;
+    }
     if (!pending) return;
     const id = Number(pending);
     if (Number.isFinite(id) && conversations.some((c) => c.id === id)) {
       setActiveId(id);
     }
-    try { sessionStorage.removeItem('ops_pending_conv_id'); } catch { /* ignore */ }
+    try {
+      sessionStorage.removeItem('ops_pending_conv_id');
+    } catch {
+      /* ignore */
+    }
   }, [conversations]);
 
   // ── Active room switching ────────────────────────────────────
@@ -659,10 +781,14 @@ export default function MessagesTab() {
                   ...c,
                   updated_at: msg.created_at,
                   last_message: {
-                    id: msg.id, author_id: msg.author_id, body: msg.body,
-                    created_at: msg.created_at, deleted_at: msg.deleted_at || null,
+                    id: msg.id,
+                    author_id: msg.author_id,
+                    body: msg.body,
+                    created_at: msg.created_at,
+                    deleted_at: msg.deleted_at || null,
                   },
-                  unread_count: (isSelf || isActive) ? (c.unread_count || 0) : (c.unread_count || 0) + 1,
+                  unread_count:
+                    isSelf || isActive ? c.unread_count || 0 : (c.unread_count || 0) + 1,
                 };
               });
               // Re-sort by updated_at DESC so the fresh room floats up.
@@ -672,7 +798,7 @@ export default function MessagesTab() {
           }
           case 'message_edited': {
             const m = ev.message;
-            setMessages((prev) => prev.map((x) => x.id === m.id ? m : x));
+            setMessages((prev) => prev.map((x) => (x.id === m.id ? m : x)));
             break;
           }
           case 'message_deleted':
@@ -681,9 +807,13 @@ export default function MessagesTab() {
             if (ev.type === 'message_purged') {
               setMessages((prev) => prev.filter((x) => x.id !== id));
             } else {
-              setMessages((prev) => prev.map((x) => x.id === id
-                ? { ...x, deleted_at: ev.deleted_at || new Date().toISOString(), body: null }
-                : x));
+              setMessages((prev) =>
+                prev.map((x) =>
+                  x.id === id
+                    ? { ...x, deleted_at: ev.deleted_at || new Date().toISOString(), body: null }
+                    : x
+                )
+              );
             }
             break;
           }
@@ -693,16 +823,17 @@ export default function MessagesTab() {
             const delivered = Array.isArray(ev.delivered) ? ev.delivered : [];
             if (delivered.length === 0) break;
             const byId = new Map(delivered.map((d) => [Number(d.id), d.delivered_at]));
-            setMessages((prev) => prev.map((x) => byId.has(x.id)
-              ? { ...x, delivered_at: byId.get(x.id) }
-              : x));
+            setMessages((prev) =>
+              prev.map((x) => (byId.has(x.id) ? { ...x, delivered_at: byId.get(x.id) } : x))
+            );
             break;
           }
           case 'presence': {
             const uid = Number(ev.user_id);
             setOnlineSet((prev) => {
               const next = new Set(prev);
-              if (ev.online) next.add(uid); else next.delete(uid);
+              if (ev.online) next.add(uid);
+              else next.delete(uid);
               return next;
             });
             break;
@@ -725,32 +856,38 @@ export default function MessagesTab() {
   // not already in the conversations list — synthesize a stub row so
   // the sidebar shows it immediately. The real row arrives on the
   // next refresh (triggered by the first message send or an SSE event).
-  const handleOpenDm = useCallback((roomId) => {
-    if (!roomId) return;
-    setActiveId(roomId);
-    setConversations((prev) => {
-      if (prev.some((c) => c.id === roomId)) return prev;
-      // Refresh in the background so we get the full peer block.
-      loadConversations();
-      return prev;
-    });
-  }, [loadConversations]);
+  const handleOpenDm = useCallback(
+    (roomId) => {
+      if (!roomId) return;
+      setActiveId(roomId);
+      setConversations((prev) => {
+        if (prev.some((c) => c.id === roomId)) return prev;
+        // Refresh in the background so we get the full peer block.
+        loadConversations();
+        return prev;
+      });
+    },
+    [loadConversations]
+  );
 
   // ── Send ──────────────────────────────────────────────────────
 
-  const onSend = useCallback(async (body) => {
-    if (!activeId) return;
-    const r = await chatApi.send(activeId, body);
-    if (r?.ok && r.message) {
-      // The SSE stream will echo this back, but append locally too so
-      // the feed updates the instant the Send button is clicked (users
-      // notice the 50–100 ms SSE round-trip).
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === r.message.id)) return prev;
-        return [...prev, r.message].sort((a, b) => a.id - b.id);
-      });
-    }
-  }, [activeId]);
+  const onSend = useCallback(
+    async (body) => {
+      if (!activeId) return;
+      const r = await chatApi.send(activeId, body);
+      if (r?.ok && r.message) {
+        // The SSE stream will echo this back, but append locally too so
+        // the feed updates the instant the Send button is clicked (users
+        // notice the 50–100 ms SSE round-trip).
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === r.message.id)) return prev;
+          return [...prev, r.message].sort((a, b) => a.id - b.id);
+        });
+      }
+    },
+    [activeId]
+  );
 
   // ── Render ────────────────────────────────────────────────────
 
@@ -781,22 +918,31 @@ export default function MessagesTab() {
             <div className="msg-feed-header">
               <Avatar
                 kind={activeConv.kind}
-                name={activeConv.kind === 'dm' ? (activeConv.peer?.full_name || activeConv.peer?.username) : activeConv.title}
+                name={
+                  activeConv.kind === 'dm'
+                    ? activeConv.peer?.full_name || activeConv.peer?.username
+                    : activeConv.title
+                }
                 online={activeConv.kind === 'dm' ? activeConv.peer?.online : null}
                 size={36}
               />
               <div>
                 <div className="msg-feed-title">
-                  {activeConv.kind === 'dm' ? (activeConv.peer?.full_name || activeConv.peer?.username) : (activeConv.title || activeConv.key)}
+                  {activeConv.kind === 'dm'
+                    ? activeConv.peer?.full_name || activeConv.peer?.username
+                    : activeConv.title || activeConv.key}
                 </div>
                 <div className="msg-feed-sub">
-                  {activeConv.kind === 'dm' && activeConv.peer?.online && <span className="dot-on">● Online</span>}
-                  {activeConv.kind === 'dm' && !activeConv.peer?.online && (
-                    activeConv.peer?.last_seen_at
-                      ? `Last seen ${fmtLastSeen(activeConv.peer.last_seen_at)}`
-                      : 'Offline'
+                  {activeConv.kind === 'dm' && activeConv.peer?.online && (
+                    <span className="dot-on">● Online</span>
                   )}
-                  {activeConv.kind !== 'dm' && (activeConv.kind === 'quote' ? 'Quote discussion' : 'Group channel')}
+                  {activeConv.kind === 'dm' &&
+                    !activeConv.peer?.online &&
+                    (activeConv.peer?.last_seen_at
+                      ? `Last seen ${fmtLastSeen(activeConv.peer.last_seen_at)}`
+                      : 'Offline')}
+                  {activeConv.kind !== 'dm' &&
+                    (activeConv.kind === 'quote' ? 'Quote discussion' : 'Group channel')}
                 </div>
               </div>
               <div className="msg-feed-actions">
@@ -805,7 +951,9 @@ export default function MessagesTab() {
                   onClick={() => setInfoOpen((v) => !v)}
                   title={infoOpen ? 'Hide info panel' : 'Show info panel'}
                   aria-label="Toggle info panel"
-                >ⓘ</button>
+                >
+                  ⓘ
+                </button>
               </div>
             </div>
             <Feed
@@ -823,7 +971,9 @@ export default function MessagesTab() {
               <div>
                 <div className="msg-feed-title">Inbox</div>
                 <div className="msg-feed-sub">
-                  {convLoading ? 'Loading conversations…' : `${conversations.length} conversation${conversations.length === 1 ? '' : 's'} · ${users.length} thành viên`}
+                  {convLoading
+                    ? 'Loading conversations…'
+                    : `${conversations.length} conversation${conversations.length === 1 ? '' : 's'} · ${users.length} thành viên`}
                 </div>
               </div>
             </div>

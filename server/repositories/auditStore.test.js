@@ -22,7 +22,13 @@ function setupTmp() {
 
 test('auditStore: appendAudit + tailAudit round-trip', () => {
   setupTmp();
-  const ok = appendAudit({ ts: '2026-04-19T10:00:00Z', event: 'LOGIN', user: 'alice', ip: '10.0.0.1', detail: 'ok' });
+  const ok = appendAudit({
+    ts: '2026-04-19T10:00:00Z',
+    event: 'LOGIN',
+    user: 'alice',
+    ip: '10.0.0.1',
+    detail: 'ok',
+  });
   assert.equal(ok, true);
   const rows = tailAudit(10);
   assert.equal(rows.length, 1);
@@ -36,7 +42,10 @@ test('auditStore: tailAudit returns newest first', () => {
   appendAudit({ ts: '2026-04-19T10:00:01Z', event: 'B' });
   appendAudit({ ts: '2026-04-19T10:00:02Z', event: 'C' });
   const rows = tailAudit(10);
-  assert.deepEqual(rows.map(r => r.event), ['C', 'B', 'A']);
+  assert.deepEqual(
+    rows.map((r) => r.event),
+    ['C', 'B', 'A']
+  );
 });
 
 test('auditStore: tailAudit limit caps result count', () => {
@@ -55,7 +64,10 @@ test('auditStore: filter by event', () => {
   appendAudit({ ts: '2026-04-19T10:00:02Z', event: 'LOGIN', user: 'c' });
   const rows = tailAudit(10, { event: 'LOGIN' });
   assert.equal(rows.length, 2);
-  assert.deepEqual(rows.map(r => r.user), ['c', 'a']);
+  assert.deepEqual(
+    rows.map((r) => r.user),
+    ['c', 'a']
+  );
 });
 
 test('auditStore: filter by user', () => {
@@ -65,7 +77,10 @@ test('auditStore: filter by user', () => {
   appendAudit({ ts: '2026-04-19T10:00:02Z', event: 'APPROVE', user: 'alice' });
   const rows = tailAudit(10, { user: 'alice' });
   assert.equal(rows.length, 2);
-  assert.deepEqual(rows.map(r => r.event), ['APPROVE', 'LOGIN']);
+  assert.deepEqual(
+    rows.map((r) => r.event),
+    ['APPROVE', 'LOGIN']
+  );
 });
 
 test('auditStore: auditRowCount returns correct count', () => {
@@ -79,7 +94,10 @@ test('auditStore: bulkAppendAudit inserts all rows in single transaction', () =>
   setupTmp();
   const rows = Array.from({ length: 500 }, (_, i) => ({
     ts: `2026-04-19T10:00:${String(i).padStart(3, '0')}Z`,
-    event: 'SEED', user: `u${i}`, ip: '10.0.0.1', detail: `row ${i}`,
+    event: 'SEED',
+    user: `u${i}`,
+    ip: '10.0.0.1',
+    detail: `row ${i}`,
   }));
   const inserted = bulkAppendAudit(rows);
   assert.equal(inserted, 500);
@@ -117,7 +135,9 @@ test('auditStore: index by event speeds up filter (smoke)', () => {
   // future migration that accidentally drops the index.
   setupTmp();
   const db = connection.getDb();
-  const plan = db.prepare('EXPLAIN QUERY PLAN SELECT * FROM audit_log WHERE event = ? ORDER BY id DESC LIMIT 10').all('LOGIN');
-  const uses = plan.some(r => String(r.detail || '').includes('idx_audit_event'));
+  const plan = db
+    .prepare('EXPLAIN QUERY PLAN SELECT * FROM audit_log WHERE event = ? ORDER BY id DESC LIMIT 10')
+    .all('LOGIN');
+  const uses = plan.some((r) => String(r.detail || '').includes('idx_audit_event'));
   assert.ok(uses, `expected idx_audit_event use — got: ${JSON.stringify(plan)}`);
 });

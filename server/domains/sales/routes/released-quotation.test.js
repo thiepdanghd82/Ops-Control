@@ -122,7 +122,7 @@ describe('released-quotation router — factory contract', () => {
     const fname = 'Q-T_20260429120000.json';
     fs.writeFileSync(
       path.join(tmpDir, 'ReleasedQuotation', fname),
-      JSON.stringify({ ref_no: 'Q-T', items: [] }),
+      JSON.stringify({ ref_no: 'Q-T', items: [] })
     );
     const r = await request(buildApp(), {
       path: `/api/sales/quotations/${fname}`,

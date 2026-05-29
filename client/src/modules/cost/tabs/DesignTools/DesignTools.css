@@ -8,7 +8,7 @@
   background: #f4f4f4;
   font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
   color: #161616;
-  overflow: hidden;       /* lock outer height; .dt-content scrolls */
+  overflow: hidden; /* lock outer height; .dt-content scrolls */
 }
 
 /* Header + tab bars stay fixed at the top; only .dt-content scrolls. */
@@ -34,7 +34,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px; height: 32px;
+  width: 32px;
+  height: 32px;
   background: #edf5ff;
   color: #0f62fe;
   font-size: 18px;
@@ -74,9 +75,15 @@
   color: #525252;
   text-align: left;
   position: relative;
-  transition: color 120ms, border-color 120ms, background 120ms;
+  transition:
+    color 120ms,
+    border-color 120ms,
+    background 120ms;
 }
-.dt-toolset:hover:not(:disabled) { background: #f4f4f4; color: #161616; }
+.dt-toolset:hover:not(:disabled) {
+  background: #f4f4f4;
+  color: #161616;
+}
 .dt-toolset:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -86,9 +93,20 @@
   border-bottom-color: #0f62fe;
   font-weight: 600;
 }
-.dt-toolset-icon { font-size: 18px; }
-.dt-toolset-en { font-size: 13px; line-height: 1.2; }
-.dt-toolset-vi { font-size: 11px; color: #8d8d8d; font-style: italic; font-weight: 400; line-height: 1.2; }
+.dt-toolset-icon {
+  font-size: 18px;
+}
+.dt-toolset-en {
+  font-size: 13px;
+  line-height: 1.2;
+}
+.dt-toolset-vi {
+  font-size: 11px;
+  color: #8d8d8d;
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.2;
+}
 
 /* "soon" / "stub" pills */
 .dt-soon {
@@ -125,24 +143,41 @@
   color: #525252;
   text-align: left;
   white-space: nowrap;
-  transition: border-color 120ms, color 120ms, background 120ms;
+  transition:
+    border-color 120ms,
+    color 120ms,
+    background 120ms;
 }
-.dt-press:hover { border-color: #8d8d8d; color: #161616; }
+.dt-press:hover {
+  border-color: #8d8d8d;
+  color: #161616;
+}
 .dt-press.active {
   background: #0f62fe;
   border-color: #0f62fe;
   color: #ffffff;
   font-weight: 600;
 }
-.dt-press.active .dt-press-vi { color: #d4e5ff; }
-.dt-press-en { font-size: 12px; line-height: 1.2; }
-.dt-press-vi { font-size: 10px; color: #8d8d8d; font-style: italic; font-weight: 400; line-height: 1.2; }
+.dt-press.active .dt-press-vi {
+  color: #d4e5ff;
+}
+.dt-press-en {
+  font-size: 12px;
+  line-height: 1.2;
+}
+.dt-press-vi {
+  font-size: 10px;
+  color: #8d8d8d;
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.2;
+}
 
 /* ──────────────── Level 3 content ──────────────── */
 .dt-content {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;       /* the scrollable region */
+  overflow-y: auto; /* the scrollable region */
   -webkit-overflow-scrolling: touch;
 }
 
@@ -155,13 +190,19 @@
   color: #525252;
   text-align: center;
 }
-.dt-cs-icon { font-size: 40px; }
+.dt-cs-icon {
+  font-size: 40px;
+}
 .dt-cs-title {
   font-size: 16px;
   margin: 8px 0 12px;
   color: #161616;
 }
-.dt-coming-soon p { margin: 4px 0; font-size: 13px; line-height: 1.5; }
+.dt-coming-soon p {
+  margin: 4px 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
 .dt-cs-checklist {
   margin-top: 18px !important;
   padding: 12px 16px;

@@ -19,10 +19,46 @@ const COLUMNS = [
   { key: 'Operation Description', label: 'Operation' },
   { key: 'Work Centre No', label: 'Work Center' },
   { key: 'Work Centre Desc', label: 'WC Description' },
-  { key: 'Mach Setup Time', label: 'Mach Setup', format: v => (v == null || v === '') ? '—' : Number(v).toFixed(5).replace(/\.?0+$/, '') },
-  { key: 'Labour Setup Time', label: 'Labor Setup', format: v => (v == null || v === '') ? '—' : Number(v).toFixed(5).replace(/\.?0+$/, '') },
-  { key: 'Mach Run Factor', label: 'Mach Run', format: v => (v == null || v === '') ? '—' : Number(v).toFixed(5).replace(/\.?0+$/, '') },
-  { key: 'Labour Run Factor', label: 'Labor Run', format: v => (v == null || v === '') ? '—' : Number(v).toFixed(5).replace(/\.?0+$/, '') },
+  {
+    key: 'Mach Setup Time',
+    label: 'Mach Setup',
+    format: (v) =>
+      v == null || v === ''
+        ? '—'
+        : Number(v)
+            .toFixed(5)
+            .replace(/\.?0+$/, ''),
+  },
+  {
+    key: 'Labour Setup Time',
+    label: 'Labor Setup',
+    format: (v) =>
+      v == null || v === ''
+        ? '—'
+        : Number(v)
+            .toFixed(5)
+            .replace(/\.?0+$/, ''),
+  },
+  {
+    key: 'Mach Run Factor',
+    label: 'Mach Run',
+    format: (v) =>
+      v == null || v === ''
+        ? '—'
+        : Number(v)
+            .toFixed(5)
+            .replace(/\.?0+$/, ''),
+  },
+  {
+    key: 'Labour Run Factor',
+    label: 'Labor Run',
+    format: (v) =>
+      v == null || v === ''
+        ? '—'
+        : Number(v)
+            .toFixed(5)
+            .replace(/\.?0+$/, ''),
+  },
   { key: 'Factor Unit', label: 'Unit' },
   { key: 'Crew Size', label: 'Crew' },
   { key: 'Setup Crew Size', label: 'Setup Crew' },
@@ -39,9 +75,8 @@ export default function LibRop() {
   // at 16 MB; first visit unavoidably hits the wire, repeat visits are
   // instant from in-memory cache + background revalidate (304 if no
   // server change).
-  const { data: routingData, refresh: reloadRouting } = useCachedFetch(
-    'lib-rop-routing',
-    () => sharedApi.getRouting(),
+  const { data: routingData, refresh: reloadRouting } = useCachedFetch('lib-rop-routing', () =>
+    sharedApi.getRouting()
   );
   const data = Array.isArray(routingData) ? routingData : [];
   const loading = routingData == null;
@@ -56,7 +91,12 @@ export default function LibRop() {
   }, [reloadRouting]);
 
   const handleClear = useCallback(async () => {
-    if (!window.confirm('Clear all Routing Operations data? The current file will be backed up first.')) return;
+    if (
+      !window.confirm(
+        'Clear all Routing Operations data? The current file will be backed up first.'
+      )
+    )
+      return;
     setBusy(true);
     setMsg('Clearing…');
     try {
@@ -98,13 +138,26 @@ export default function LibRop() {
   );
 
   if (loading) {
-    return <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Loading Routing Operations...</div>;
+    return (
+      <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
+        Loading Routing Operations...
+      </div>
+    );
   }
 
   const ropIcon = (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="3"/>
-      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33h.09a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.09a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33h.09a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.09a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
     </svg>
   );
 

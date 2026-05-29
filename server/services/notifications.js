@@ -47,11 +47,19 @@ function notificationsPath() {
   // touching production data. No harm in prod — env var is unset.
   const override = process.env.OPS_NOTIFICATIONS_FILE;
   if (override) {
-    try { fs.mkdirSync(path.dirname(override), { recursive: true }); } catch { /* noop */ }
+    try {
+      fs.mkdirSync(path.dirname(override), { recursive: true });
+    } catch {
+      /* noop */
+    }
     return override;
   }
   const dir = path.join(getDataDir(), 'Library', 'Notifications');
-  try { fs.mkdirSync(dir, { recursive: true }); } catch { /* already exists */ }
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch {
+    /* already exists */
+  }
   return path.join(dir, 'pending.json');
 }
 
@@ -126,9 +134,7 @@ export async function enqueue(records) {
  */
 export function listPendingFor(username) {
   const list = readSync();
-  return list.filter(n =>
-    n && n.recipient === username && !n.delivered_at
-  );
+  return list.filter((n) => n && n.recipient === username && !n.delivered_at);
 }
 
 /**
@@ -137,7 +143,7 @@ export function listPendingFor(username) {
  */
 export function listAllPending() {
   const list = readSync();
-  return list.filter(n => n && !n.delivered_at);
+  return list.filter((n) => n && !n.delivered_at);
 }
 
 /**
@@ -180,8 +186,10 @@ export function buildDigest() {
     digests.push({
       recipient,
       item_count: items.length,
-      oldest_created_at: items.reduce((acc, it) =>
-        !acc || it.created_at < acc ? it.created_at : acc, null),
+      oldest_created_at: items.reduce(
+        (acc, it) => (!acc || it.created_at < acc ? it.created_at : acc),
+        null
+      ),
       items,
     });
   }
@@ -216,12 +224,14 @@ export async function runDigest({ timeoutMs = 5000 } = {}) {
   if (digests.length === 0) {
     return { mode: 'empty', digests: [], delivered_ids: [] };
   }
-  const allIds = digests.flatMap(d => d.items.map(it => it.id));
+  const allIds = digests.flatMap((d) => d.items.map((it) => it.id));
   const webhook = process.env.OPS_NOTIFY_WEBHOOK;
   if (!webhook) {
     // Dry-run: print a compact summary so the ops log shows activity
     // even without a transport configured.
-    console.log(`  📨 notifications dry-run: ${digests.length} recipient(s), ${allIds.length} item(s) pending`);
+    console.log(
+      `  📨 notifications dry-run: ${digests.length} recipient(s), ${allIds.length} item(s) pending`
+    );
     for (const d of digests) {
       console.log(`     └─ ${d.recipient}: ${d.item_count} (oldest ${d.oldest_created_at})`);
     }
@@ -238,7 +248,8 @@ export async function runDigest({ timeoutMs = 5000 } = {}) {
     const secret = process.env.OPS_NOTIFY_WEBHOOK_SECRET;
     if (secret) {
       const timestamp = Date.now().toString();
-      const signature = crypto.createHmac('sha256', secret)
+      const signature = crypto
+        .createHmac('sha256', secret)
         .update(timestamp + '.' + body)
         .digest('hex');
       headers['X-Ops-Timestamp'] = timestamp;
@@ -262,7 +273,12 @@ export async function runDigest({ timeoutMs = 5000 } = {}) {
       signed: !!secret,
     };
   } catch (err) {
-    return { mode: 'webhook-failed', digests, delivered_ids: [], error: err?.message || String(err) };
+    return {
+      mode: 'webhook-failed',
+      digests,
+      delivered_ids: [],
+      error: err?.message || String(err),
+    };
   }
 }
 
@@ -286,9 +302,12 @@ export function verifyWebhookSignature({ body, timestamp, signature, maxAgeMs = 
   if (!Number.isFinite(ts)) return { ok: false, reason: 'bad-timestamp' };
   const age = Date.now() - ts;
   if (age > maxAgeMs || age < -maxAgeMs) return { ok: false, reason: 'timestamp-out-of-range' };
-  const expected = 'sha256=' + crypto.createHmac('sha256', secret)
-    .update(ts + '.' + body)
-    .digest('hex');
+  const expected =
+    'sha256=' +
+    crypto
+      .createHmac('sha256', secret)
+      .update(ts + '.' + body)
+      .digest('hex');
   const a = Buffer.from(expected);
   const b = Buffer.from(signature);
   if (a.length !== b.length) return { ok: false, reason: 'signature-mismatch' };

@@ -8,7 +8,11 @@
   padding: 18px 20px;
   background: var(--surface-card, #ffffff);
   color: var(--text-primary, #0f172a);
-  font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  font-family:
+    'IBM Plex Sans',
+    system-ui,
+    -apple-system,
+    sans-serif;
   max-width: 480px;
   margin: 0 auto;
 }
@@ -130,20 +134,20 @@
 
 /* Dark mode — visible inside the modal. The print stylesheet always
    prints the light-mode card (paper is white). */
-[data-theme="dark"] .prov-card {
+[data-theme='dark'] .prov-card {
   background: #262626;
   border-color: #393939;
   color: #f4f4f4;
 }
-[data-theme="dark"] .prov-card-mono {
+[data-theme='dark'] .prov-card-mono {
   background: #1e1e1e;
   border-color: #393939;
   color: #f4f4f4;
 }
-[data-theme="dark"] .prov-card-pwd {
+[data-theme='dark'] .prov-card-pwd {
   color: #78a9ff;
 }
-[data-theme="dark"] .prov-card-warn {
+[data-theme='dark'] .prov-card-warn {
   background: rgba(240, 196, 25, 0.1);
   border-left-color: rgba(240, 196, 25, 0.55);
   color: #fde68a;
@@ -200,12 +204,15 @@
      buttons — they're inside .op-modal-* which the visibility:hidden
      rule above already neutralises, but some browsers also need the
      box explicitly removed so it doesn't take up space. */
-  .op-modal-scrim, .op-modal-header, .op-modal-footer {
+  .op-modal-scrim,
+  .op-modal-header,
+  .op-modal-footer {
     display: none !important;
   }
   /* Modal body container shouldn't add its own background/borders to
      the page when only the inner print target is meant to show. */
-  .op-modal-card, .op-modal-body {
+  .op-modal-card,
+  .op-modal-body {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;

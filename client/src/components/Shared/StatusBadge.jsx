@@ -17,18 +17,18 @@
  */
 
 const TONES = {
-  success:  { bg: '#defbe6', fg: '#0e6027' },   // IBM Carbon green-10 / green-70
-  warning:  { bg: '#fef3c7', fg: '#92400e' },   // amber
-  danger:   { bg: '#fee2e2', fg: '#991b1b' },   // red
-  info:     { bg: '#dbeafe', fg: '#1e40af' },   // blue
-  neutral:  { bg: '#e8e8e8', fg: '#525252' },   // gray
-  inactive: { bg: '#f4f4f4', fg: '#8d8d8d' },   // muted gray
-  progress: { bg: '#dbeafe', fg: '#1e40af' },   // alias
-  scheduled:{ bg: '#fef3c7', fg: '#92400e' },   // alias
-  blocked:  { bg: '#fee2e2', fg: '#991b1b' },   // alias
-  pending:  { bg: '#fef9c3', fg: '#854d0e' },
-  won:      { bg: '#defbe6', fg: '#0e6027' },
-  lost:     { bg: '#fee2e2', fg: '#991b1b' },
+  success: { bg: '#defbe6', fg: '#0e6027' }, // IBM Carbon green-10 / green-70
+  warning: { bg: '#fef3c7', fg: '#92400e' }, // amber
+  danger: { bg: '#fee2e2', fg: '#991b1b' }, // red
+  info: { bg: '#dbeafe', fg: '#1e40af' }, // blue
+  neutral: { bg: '#e8e8e8', fg: '#525252' }, // gray
+  inactive: { bg: '#f4f4f4', fg: '#8d8d8d' }, // muted gray
+  progress: { bg: '#dbeafe', fg: '#1e40af' }, // alias
+  scheduled: { bg: '#fef3c7', fg: '#92400e' }, // alias
+  blocked: { bg: '#fee2e2', fg: '#991b1b' }, // alias
+  pending: { bg: '#fef9c3', fg: '#854d0e' },
+  won: { bg: '#defbe6', fg: '#0e6027' },
+  lost: { bg: '#fee2e2', fg: '#991b1b' },
 };
 
 const SIZES = {

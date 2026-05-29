@@ -81,6 +81,7 @@ app.use('/api/v1/xxx', createXxxRouter({ someCounter: () => /* live count */ }))
 Two flavours both supported:
 
 **A. Pure unit (preferred for services / pure logic):**
+
 ```js
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -92,6 +93,7 @@ describe('computeFoo', () => {
   });
 });
 ```
+
 Run: `node --test path/to/foo.test.js`
 
 **B. Express integration (router + middleware):**
@@ -191,13 +193,13 @@ Aim for **one domain per sprint** until `costApi.js` is < 500 LOC.
 
 ## 10. Quick reference
 
-| Need | File |
-|---|---|
-| Add an HTTP endpoint | `server/domains/<sap>/routes/*.js` (NOT `costApi.js`) |
-| Add password-related logic | `server/services/authService.js` |
-| Add license tier behaviour | `server/services/licenseService.js` |
-| Add CSP / nav lockdown | `desktop/main.js` (createMainWindow block) |
-| Add a new wizard step | `desktop/setupWizard.js` (extend renderServerWizard) |
-| Add an i18n key | `client/src/i18n/domains/<domain>.js` (new) or `strings.js` (legacy) |
-| Add a test | sibling `*.test.js` of the file under test |
-| Document a decision | `docs/adr/NNNN-<name>.md` |
+| Need                       | File                                                                 |
+| -------------------------- | -------------------------------------------------------------------- |
+| Add an HTTP endpoint       | `server/domains/<sap>/routes/*.js` (NOT `costApi.js`)                |
+| Add password-related logic | `server/services/authService.js`                                     |
+| Add license tier behaviour | `server/services/licenseService.js`                                  |
+| Add CSP / nav lockdown     | `desktop/main.js` (createMainWindow block)                           |
+| Add a new wizard step      | `desktop/setupWizard.js` (extend renderServerWizard)                 |
+| Add an i18n key            | `client/src/i18n/domains/<domain>.js` (new) or `strings.js` (legacy) |
+| Add a test                 | sibling `*.test.js` of the file under test                           |
+| Document a decision        | `docs/adr/NNNN-<name>.md`                                            |

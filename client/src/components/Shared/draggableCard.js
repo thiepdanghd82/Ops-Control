@@ -67,7 +67,11 @@ export function installDraggableCards() {
       pointerId: e.pointerId,
     };
 
-    try { handle.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+    try {
+      handle.setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
     e.preventDefault();
   };
 

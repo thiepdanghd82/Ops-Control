@@ -28,16 +28,24 @@ function fmtValue(v) {
 
 function opBadge(op) {
   const palette = {
-    added:   { bg: '#defbe6', fg: '#0e6027', label: '+ added' },
+    added: { bg: '#defbe6', fg: '#0e6027', label: '+ added' },
     removed: { bg: '#fee2e2', fg: '#991b1b', label: '− removed' },
     changed: { bg: '#dbeafe', fg: '#1e40af', label: '≠ changed' },
   }[op] || { bg: '#e8e8e8', fg: '#525252', label: op };
   return (
-    <span style={{
-      fontSize: 10, fontWeight: 600, letterSpacing: 0.2,
-      padding: '2px 8px', borderRadius: 10,
-      background: palette.bg, color: palette.fg,
-    }}>{palette.label}</span>
+    <span
+      style={{
+        fontSize: 10,
+        fontWeight: 600,
+        letterSpacing: 0.2,
+        padding: '2px 8px',
+        borderRadius: 10,
+        background: palette.bg,
+        color: palette.fg,
+      }}
+    >
+      {palette.label}
+    </span>
   );
 }
 
@@ -52,12 +60,26 @@ export default function QuoteVersionDiff({ quoteId, fromVersion, toVersion, onCl
      but the flag guard prevents cascading renders on stale promises. */
   useEffect(() => {
     let cancelled = false;
-    setLoading(true); setErr(null);
+    setLoading(true);
+    setErr(null);
     const qs = toVersion != null ? `?from=${fromVersion}&to=${toVersion}` : `?from=${fromVersion}`;
-    api.get(`/shared/quotes/${quoteId}/versions/diff${qs}`)
-      .then(res => { if (!cancelled) { setData(res); setLoading(false); } })
-      .catch(e => { if (!cancelled) { setErr(e.message || 'Failed to load diff'); setLoading(false); } });
-    return () => { cancelled = true; };
+    api
+      .get(`/shared/quotes/${quoteId}/versions/diff${qs}`)
+      .then((res) => {
+        if (!cancelled) {
+          setData(res);
+          setLoading(false);
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setErr(e.message || 'Failed to load diff');
+          setLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [quoteId, fromVersion, toVersion]);
 
   const subtitle = data
@@ -72,34 +94,113 @@ export default function QuoteVersionDiff({ quoteId, fromVersion, toVersion, onCl
           {loading && (
             <div style={{ padding: 32, textAlign: 'center', color: '#8d8d8d' }}>Loading diff…</div>
           )}
-          {err && (
-            <div style={{ padding: 20, color: '#991b1b', fontSize: 12 }}>{err}</div>
-          )}
+          {err && <div style={{ padding: 20, color: '#991b1b', fontSize: 12 }}>{err}</div>}
           {data && data.changes.length === 0 && (
             <div style={{ padding: 32, textAlign: 'center', color: '#525252', fontSize: 13 }}>
               No field-level changes between these two versions.
             </div>
           )}
           {data && data.changes.length > 0 && (
-            <table style={{
-              width: '100%', borderCollapse: 'separate', borderSpacing: 0,
-              fontSize: 12, color: '#161616',
-            }}>
+            <table
+              style={{
+                width: '100%',
+                borderCollapse: 'separate',
+                borderSpacing: 0,
+                fontSize: 12,
+                color: '#161616',
+              }}
+            >
               <thead>
                 <tr style={{ background: '#f4f4f4' }}>
-                  <th style={{ padding: '10px', textAlign: 'left', fontSize: 11, textTransform: 'uppercase', color: '#525252', letterSpacing: 0.4, borderBottom: '2px solid #e0e0e0' }}>Field</th>
-                  <th style={{ padding: '10px', textAlign: 'left', fontSize: 11, textTransform: 'uppercase', color: '#525252', letterSpacing: 0.4, borderBottom: '2px solid #e0e0e0', width: 90 }}>Change</th>
-                  <th style={{ padding: '10px', textAlign: 'left', fontSize: 11, textTransform: 'uppercase', color: '#525252', letterSpacing: 0.4, borderBottom: '2px solid #e0e0e0' }}>From</th>
-                  <th style={{ padding: '10px', textAlign: 'left', fontSize: 11, textTransform: 'uppercase', color: '#525252', letterSpacing: 0.4, borderBottom: '2px solid #e0e0e0' }}>To</th>
+                  <th
+                    style={{
+                      padding: '10px',
+                      textAlign: 'left',
+                      fontSize: 11,
+                      textTransform: 'uppercase',
+                      color: '#525252',
+                      letterSpacing: 0.4,
+                      borderBottom: '2px solid #e0e0e0',
+                    }}
+                  >
+                    Field
+                  </th>
+                  <th
+                    style={{
+                      padding: '10px',
+                      textAlign: 'left',
+                      fontSize: 11,
+                      textTransform: 'uppercase',
+                      color: '#525252',
+                      letterSpacing: 0.4,
+                      borderBottom: '2px solid #e0e0e0',
+                      width: 90,
+                    }}
+                  >
+                    Change
+                  </th>
+                  <th
+                    style={{
+                      padding: '10px',
+                      textAlign: 'left',
+                      fontSize: 11,
+                      textTransform: 'uppercase',
+                      color: '#525252',
+                      letterSpacing: 0.4,
+                      borderBottom: '2px solid #e0e0e0',
+                    }}
+                  >
+                    From
+                  </th>
+                  <th
+                    style={{
+                      padding: '10px',
+                      textAlign: 'left',
+                      fontSize: 11,
+                      textTransform: 'uppercase',
+                      color: '#525252',
+                      letterSpacing: 0.4,
+                      borderBottom: '2px solid #e0e0e0',
+                    }}
+                  >
+                    To
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {data.changes.map((c, i) => (
                   <tr key={`${c.path}::${c.op}`} style={{ background: i % 2 ? '#fafafa' : '#fff' }}>
-                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #e8e8e8', fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 11 }}>{c.path}</td>
-                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #e8e8e8' }}>{opBadge(c.op)}</td>
-                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #e8e8e8', fontVariantNumeric: 'tabular-nums' }}>{c.op === 'added' ? '' : fmtValue(c.from)}</td>
-                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #e8e8e8', fontVariantNumeric: 'tabular-nums' }}>{c.op === 'removed' ? '' : fmtValue(c.to)}</td>
+                    <td
+                      style={{
+                        padding: '8px 10px',
+                        borderBottom: '1px solid #e8e8e8',
+                        fontFamily: 'ui-monospace, Menlo, monospace',
+                        fontSize: 11,
+                      }}
+                    >
+                      {c.path}
+                    </td>
+                    <td style={{ padding: '8px 10px', borderBottom: '1px solid #e8e8e8' }}>
+                      {opBadge(c.op)}
+                    </td>
+                    <td
+                      style={{
+                        padding: '8px 10px',
+                        borderBottom: '1px solid #e8e8e8',
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
+                      {c.op === 'added' ? '' : fmtValue(c.from)}
+                    </td>
+                    <td
+                      style={{
+                        padding: '8px 10px',
+                        borderBottom: '1px solid #e8e8e8',
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
+                      {c.op === 'removed' ? '' : fmtValue(c.to)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -20,10 +20,10 @@
 // changes (e.g. a bulk-import route legitimately exceeds 1 s p95),
 // adjust here; the banner + row highlighting in AdminMetrics.jsx both
 // read from these constants.
-export const P95_WARN_MS   = 500;
-export const P95_ALERT_MS  = 1000;
+export const P95_WARN_MS = 500;
+export const P95_ALERT_MS = 1000;
 export const ERROR_RATE_ALERT_PCT = 1;
-export const ERROR_RATE_WARN_PCT  = 0.5;
+export const ERROR_RATE_WARN_PCT = 0.5;
 
 /**
  * Roll up a single "health" verdict from the per-metric summaries.
@@ -35,13 +35,13 @@ export const ERROR_RATE_WARN_PCT  = 0.5;
  * @returns {'alert'|'warn'|'ok'|'idle'}
  */
 export function computeHealth(s) {
-  const totalRequests    = Number(s?.totalRequests)    || 0;
-  const errorRate        = Number(s?.errorRate)        || 0;
-  const slowRoutes       = Number(s?.slowRoutes)       || 0;
-  const totalClientErrors= Number(s?.totalClientErrors)|| 0;
-  const cspViolations    = Number(s?.cspViolations)    || 0;
+  const totalRequests = Number(s?.totalRequests) || 0;
+  const errorRate = Number(s?.errorRate) || 0;
+  const slowRoutes = Number(s?.slowRoutes) || 0;
+  const totalClientErrors = Number(s?.totalClientErrors) || 0;
+  const cspViolations = Number(s?.cspViolations) || 0;
   if (errorRate >= ERROR_RATE_ALERT_PCT || slowRoutes > 0 || totalClientErrors > 0) return 'alert';
-  if (errorRate >= ERROR_RATE_WARN_PCT  || cspViolations > 0) return 'warn';
+  if (errorRate >= ERROR_RATE_WARN_PCT || cspViolations > 0) return 'warn';
   return totalRequests > 0 ? 'ok' : 'idle';
 }
 
@@ -52,7 +52,9 @@ export function computeHealth(s) {
  */
 export function parseMetricLine(line) {
   if (!line || line.startsWith('#')) return null;
-  const m = line.match(/^([a-zA-Z_][a-zA-Z0-9_]*)(\{[^}]*\})?\s+(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)\s*$/);
+  const m = line.match(
+    /^([a-zA-Z_][a-zA-Z0-9_]*)(\{[^}]*\})?\s+(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)\s*$/
+  );
   if (!m) return null;
   const [, name, labelsRaw, valueRaw] = m;
   const labels = {};
@@ -98,9 +100,9 @@ export function sumByLabel(rows, name, labelKey) {
  * case; a real Prom server would interpolate.
  */
 export function histogramSummary(rows, name) {
-  const buckets = rows.filter(r => r.name === `${name}_bucket`);
-  const sums    = rows.filter(r => r.name === `${name}_sum`);
-  const counts  = rows.filter(r => r.name === `${name}_count`);
+  const buckets = rows.filter((r) => r.name === `${name}_bucket`);
+  const sums = rows.filter((r) => r.name === `${name}_sum`);
+  const counts = rows.filter((r) => r.name === `${name}_count`);
   const byRoute = new Map();
   for (const r of counts) {
     const key = `${r.labels.method || ''} ${r.labels.route || ''}`.trim();

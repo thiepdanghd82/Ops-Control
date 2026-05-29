@@ -18,17 +18,23 @@ import { invalidateLicenseCache, TIERS } from '../../../services/licenseService.
 import { createLicenseRouter } from './license.js';
 
 const SIGNED_FIELDS = [
-  'version', 'installation_id', 'customer', 'tier', 'max_users',
-  'issued_at', 'expires_at', 'features',
+  'version',
+  'installation_id',
+  'customer',
+  'tier',
+  'max_users',
+  'issued_at',
+  'expires_at',
+  'features',
 ];
-const norm = (v) => Array.isArray(v) ? [...v].sort().join(',') : (v ?? '');
+const norm = (v) => (Array.isArray(v) ? [...v].sort().join(',') : (v ?? ''));
 const canonicalize = (p) => SIGNED_FIELDS.map((k) => `${k}=${norm(p[k])}`).join('|');
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ops-lic-int-test-'));
 const licPath = path.join(tmpDir, 'license.json');
 
 const devPriv = createPrivateKey(
-  fs.readFileSync(path.resolve('scripts/license/dev-private.pem'), 'utf8'),
+  fs.readFileSync(path.resolve('scripts/license/dev-private.pem'), 'utf8')
 );
 
 function writeLic(overrides = {}) {

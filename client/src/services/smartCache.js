@@ -91,7 +91,9 @@ export async function cacheFirstList(table, fetchHttp, opts = {}) {
     // run async. Caller can subscribe via the optional onRefresh
     // callback to update UI when fresh rows land.
     if (typeof opts.onRefresh === 'function') {
-      refresh.then((fresh) => { if (fresh) opts.onRefresh(fresh); });
+      refresh.then((fresh) => {
+        if (fresh) opts.onRefresh(fresh);
+      });
     }
     return { rows: cached, source: 'cache' };
   }
@@ -106,13 +108,16 @@ export async function cacheFirstList(table, fetchHttp, opts = {}) {
  * the outbox. Caller should treat the queued case as a soft-success: the
  * mutation will be retried by smart-client when the network comes back.
  */
-export async function enqueueOrSend({ method, url, body, headers }, { mode = 'embedded', online } = {}) {
+export async function enqueueOrSend(
+  { method, url, body, headers },
+  { mode = 'embedded', online } = {}
+) {
   if (!desktop.cache.available || !isSmartMode(mode)) {
     // Pass through to fetch. Caller handles errors.
     return fetch(url, {
       method,
       headers: headers || (body ? { 'Content-Type': 'application/json' } : {}),
-      body: body == null ? undefined : (typeof body === 'string' ? body : JSON.stringify(body)),
+      body: body == null ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
       credentials: 'include',
     });
   }
@@ -128,7 +133,7 @@ export async function enqueueOrSend({ method, url, body, headers }, { mode = 'em
     const res = await fetch(url, {
       method,
       headers: headers || (body ? { 'Content-Type': 'application/json' } : {}),
-      body: body == null ? undefined : (typeof body === 'string' ? body : JSON.stringify(body)),
+      body: body == null ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
       credentials: 'include',
     });
     return res;
@@ -160,13 +165,19 @@ export function useSyncStatus() {
     let cancelled = false;
     // Initial fetch — broadcasts only fire on change, so without this
     // first read we'd render stale defaults until something changes.
-    desktop.cache.syncStatus().then((s) => {
-      if (!cancelled && s) setStatus((prev) => ({ ...prev, ...s }));
-    }).catch(() => {});
+    desktop.cache
+      .syncStatus()
+      .then((s) => {
+        if (!cancelled && s) setStatus((prev) => ({ ...prev, ...s }));
+      })
+      .catch(() => {});
     const off = desktop.cache.onSyncStatus((s) => {
       if (!cancelled && s) setStatus(s);
     });
-    return () => { cancelled = true; if (typeof off === 'function') off(); };
+    return () => {
+      cancelled = true;
+      if (typeof off === 'function') off();
+    };
   }, []);
 
   return status;

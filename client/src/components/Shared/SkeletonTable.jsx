@@ -11,9 +11,10 @@
  *   widths      — optional array of percentage widths per col (length = cols)
  */
 export default function SkeletonTable({ rows = 10, cols = 6, widths }) {
-  const w = widths && widths.length === cols
-    ? widths
-    : Array.from({ length: cols }, (_, i) => i === 0 ? 40 : i === cols - 1 ? 60 : 80);
+  const w =
+    widths && widths.length === cols
+      ? widths
+      : Array.from({ length: cols }, (_, i) => (i === 0 ? 40 : i === cols - 1 ? 60 : 80));
 
   return (
     <div style={{ width: '100%', padding: '0 12px' }}>

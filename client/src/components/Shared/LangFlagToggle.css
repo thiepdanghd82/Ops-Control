@@ -22,7 +22,9 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   line-height: 1;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
 }
 
 .lang-flag-btn:hover {
@@ -44,20 +46,20 @@
   font-family: var(--ops-font-mono, ui-monospace, SFMono-Regular, monospace);
 }
 
-[data-theme="dark"] .lang-flag-toggle {
+[data-theme='dark'] .lang-flag-toggle {
   background: #262626;
   border-color: #393939;
 }
 
-[data-theme="dark"] .lang-flag-btn {
+[data-theme='dark'] .lang-flag-btn {
   color: #a8a8a8;
 }
 
-[data-theme="dark"] .lang-flag-btn:hover {
+[data-theme='dark'] .lang-flag-btn:hover {
   color: #f4f4f4;
 }
 
-[data-theme="dark"] .lang-flag-btn.is-active {
+[data-theme='dark'] .lang-flag-btn.is-active {
   background: #393939;
   color: #f4f4f4;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);

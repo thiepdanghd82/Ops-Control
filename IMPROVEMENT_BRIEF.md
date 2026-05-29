@@ -67,8 +67,8 @@ Dự án **"Ops Control v1.2"** là phần mềm quản lý vận hành cho ngà
 
 ### 4.3. Build 2 phiên bản × 2 hệ điều hành (4 installer)
 
-| Edition            | macOS         | Windows       |
-| ------------------ | ------------- | ------------- |
+| Edition            | macOS           | Windows         |
+| ------------------ | --------------- | --------------- |
 | **Server Edition** | `.dmg` / `.pkg` | `.msi` / `.exe` |
 | **Client Edition** | `.dmg` / `.pkg` | `.msi` / `.exe` |
 

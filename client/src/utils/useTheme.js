@@ -29,7 +29,9 @@ export function readStoredPref() {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
     return VALID.has(v) ? v : 'system';
-  } catch { return 'system'; }
+  } catch {
+    return 'system';
+  }
 }
 
 export function resolveTheme(pref) {
@@ -93,7 +95,11 @@ export function useTheme() {
 
   const setPref = useCallback((next) => {
     if (!VALID.has(next)) return;
-    try { localStorage.setItem(STORAGE_KEY, next); } catch { /* quota, private mode */ }
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      /* quota, private mode */
+    }
     setPrefState(next);
   }, []);
 

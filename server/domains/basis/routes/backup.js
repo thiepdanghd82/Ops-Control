@@ -66,8 +66,12 @@ export function createBackupRouter({
       const mod = await loadScheduler();
       const r = mod.setSchedule(req.body || {});
       const u = req.user?.user || req.user || {};
-      audit('BACKUP_SCHEDULE_UPDATE', u.username, clientIp(req),
-        `enabled=${req.body?.enabled} hour=${req.body?.hour} retentionDays=${req.body?.retentionDays}`);
+      audit(
+        'BACKUP_SCHEDULE_UPDATE',
+        u.username,
+        clientIp(req),
+        `enabled=${req.body?.enabled} hour=${req.body?.hour} retentionDays=${req.body?.retentionDays}`
+      );
       res.json(r);
     } catch (err) {
       res.status(400).json({ ok: false, error: err.message });
@@ -81,8 +85,12 @@ export function createBackupRouter({
       const mod = await loadScheduler();
       const summary = await mod.runBackupCycle({ force: true });
       const u = req.user?.user || req.user || {};
-      audit('BACKUP_RUN_NOW', u.username, clientIp(req),
-        `ok=${summary.ok} duration=${summary.durationMs}ms`);
+      audit(
+        'BACKUP_RUN_NOW',
+        u.username,
+        clientIp(req),
+        `ok=${summary.ok} duration=${summary.durationMs}ms`
+      );
       res.json({ ok: true, summary });
     } catch (err) {
       res.status(500).json({ ok: false, error: err.message });

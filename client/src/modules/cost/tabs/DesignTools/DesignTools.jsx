@@ -33,11 +33,11 @@ const TOOLSETS = [
 ];
 
 const PRESSES = [
-  { id: 'gallus',       en: 'Gallus',       vi: 'Gallus ECS340',     impl: 'gallus' },
-  { id: 'letter_press', en: 'Letter Press', vi: 'Máy Letter Press',  impl: 'stub' },
-  { id: 'brotech',      en: 'Brotech',      vi: 'Brotech',           impl: 'stub' },
-  { id: 'hp_indigo',    en: 'HP Indigo',    vi: 'HP Indigo',         impl: 'stub' },
-  { id: 'silkscreen',   en: 'Silkscreen',   vi: 'Lụa (Silkscreen)',  impl: 'stub' },
+  { id: 'gallus', en: 'Gallus', vi: 'Gallus ECS340', impl: 'gallus' },
+  { id: 'letter_press', en: 'Letter Press', vi: 'Máy Letter Press', impl: 'stub' },
+  { id: 'brotech', en: 'Brotech', vi: 'Brotech', impl: 'stub' },
+  { id: 'hp_indigo', en: 'HP Indigo', vi: 'HP Indigo', impl: 'stub' },
+  { id: 'silkscreen', en: 'Silkscreen', vi: 'Lụa (Silkscreen)', impl: 'stub' },
 ];
 
 const SS_KEY = 'ops_design_tools_state';
@@ -47,16 +47,22 @@ export default function DesignTools() {
     try {
       const raw = sessionStorage.getItem(SS_KEY);
       if (raw) return { toolset: 'print', press: 'gallus', ...JSON.parse(raw) };
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return { toolset: 'print', press: 'gallus' };
   });
 
   useEffect(() => {
-    try { sessionStorage.setItem(SS_KEY, JSON.stringify(state)); } catch { /* quota */ }
+    try {
+      sessionStorage.setItem(SS_KEY, JSON.stringify(state));
+    } catch {
+      /* quota */
+    }
   }, [state]);
 
-  const setToolset = (id) => setState(prev => ({ ...prev, toolset: id }));
-  const setPress   = (id) => setState(prev => ({ ...prev, press: id }));
+  const setToolset = (id) => setState((prev) => ({ ...prev, toolset: id }));
+  const setPress = (id) => setState((prev) => ({ ...prev, press: id }));
 
   return (
     <div className="dt-root">
@@ -71,13 +77,16 @@ export default function DesignTools() {
         </div>
         <div className="dt-page-sub">
           Pick a tool family below — each opens a per-machine designer.
-          <span className="dt-bi-vi"> Chọn bộ công cụ bên dưới — mỗi bộ mở designer cho từng loại máy.</span>
+          <span className="dt-bi-vi">
+            {' '}
+            Chọn bộ công cụ bên dưới — mỗi bộ mở designer cho từng loại máy.
+          </span>
         </div>
       </header>
 
       {/* ═════════ Level 1: toolset bar ═════════ */}
       <div className="dt-toolset-bar" role="tablist" aria-label="Tool family">
-        {TOOLSETS.map(t => (
+        {TOOLSETS.map((t) => (
           <button
             key={t.id}
             role="tab"
@@ -87,7 +96,9 @@ export default function DesignTools() {
             onClick={() => !t.disabled && setToolset(t.id)}
             title={t.disabled ? 'Coming in a future sprint' : t.en}
           >
-            <span className="dt-toolset-icon" aria-hidden>{t.icon}</span>
+            <span className="dt-toolset-icon" aria-hidden>
+              {t.icon}
+            </span>
             <span>
               <div className="dt-toolset-en">{t.en}</div>
               <div className="dt-toolset-vi">{t.vi}</div>
@@ -100,7 +111,7 @@ export default function DesignTools() {
       {/* ═════════ Level 2: press bar ═════════ */}
       {state.toolset === 'print' && (
         <div className="dt-press-bar" role="tablist" aria-label="Press machine">
-          {PRESSES.map(p => (
+          {PRESSES.map((p) => (
             <button
               key={p.id}
               role="tab"
@@ -132,7 +143,7 @@ export default function DesignTools() {
 }
 
 function PressContent({ press }) {
-  const def = PRESSES.find(p => p.id === press);
+  const def = PRESSES.find((p) => p.id === press);
   if (!def) return null;
   if (def.impl === 'gallus') return <GallusCalc />;
   return (
@@ -156,10 +167,10 @@ function ComingSoonPanel({ en, vi, pressName }) {
       <p className="dt-bi-vi">{vi}</p>
       {pressName && (
         <p className="dt-cs-checklist">
-          To bring up <b>{pressName}</b>, drop a <code>{pressName.toLowerCase()}Inventory.js</code>
-          {' '}+ <code>{pressName.toLowerCase()}Engine.js</code> in <code>presses/</code>
-          {' '}using the Gallus pair as a template, then add the press to <code>PRESSES</code> in
-          {' '}<code>DesignTools.jsx</code>.
+          To bring up <b>{pressName}</b>, drop a <code>{pressName.toLowerCase()}Inventory.js</code>{' '}
+          + <code>{pressName.toLowerCase()}Engine.js</code> in <code>presses/</code> using the
+          Gallus pair as a template, then add the press to <code>PRESSES</code> in{' '}
+          <code>DesignTools.jsx</code>.
         </p>
       )}
     </div>

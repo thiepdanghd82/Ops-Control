@@ -28,8 +28,11 @@ const buffered = new Map();
 
 function route() {
   // Path-only, no query/hash — keeps label cardinality bounded.
-  try { return String(window.location?.pathname || '/').slice(0, 80); }
-  catch { return '/'; }
+  try {
+    return String(window.location?.pathname || '/').slice(0, 80);
+  } catch {
+    return '/';
+  }
 }
 
 function send(name, value) {
@@ -37,18 +40,25 @@ function send(name, value) {
   const payload = JSON.stringify({ name, value, route: route() });
   try {
     const blob = new Blob([payload], { type: 'application/json' });
-    if (typeof navigator !== 'undefined'
-        && typeof navigator.sendBeacon === 'function'
-        && navigator.sendBeacon(ENDPOINT, blob)) return;
+    if (
+      typeof navigator !== 'undefined' &&
+      typeof navigator.sendBeacon === 'function' &&
+      navigator.sendBeacon(ENDPOINT, blob)
+    )
+      return;
     if (typeof fetch === 'function') {
       fetch(ENDPOINT, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: payload,
         keepalive: true,
-      }).catch(() => { /* telemetry best-effort */ });
+      }).catch(() => {
+        /* telemetry best-effort */
+      });
     }
-  } catch { /* browser refused — swallow */ }
+  } catch {
+    /* browser refused — swallow */
+  }
 }
 
 function flushAll() {
@@ -74,7 +84,9 @@ export function startWebVitals() {
       const po = new PerformanceObserver(handler);
       po.observe({ type, buffered: true });
       observers.push(po);
-    } catch { /* entry type not supported in this browser */ }
+    } catch {
+      /* entry type not supported in this browser */
+    }
   }
 
   // LCP — take the LAST observed entry before page hide (per-spec).
@@ -118,7 +130,9 @@ export function startWebVitals() {
     if (nav && nav.responseStart > 0) {
       buffered.set('TTFB', nav.responseStart - nav.requestStart);
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // Flush on hide — pagehide is more reliable than beforeunload
   // (mobile Safari fires pagehide when app goes to background).
@@ -129,7 +143,13 @@ export function startWebVitals() {
   window.addEventListener('pagehide', flushAll);
 
   return () => {
-    observers.forEach(po => { try { po.disconnect(); } catch { /* noop */ } });
+    observers.forEach((po) => {
+      try {
+        po.disconnect();
+      } catch {
+        /* noop */
+      }
+    });
     document.removeEventListener('visibilitychange', onHide);
     window.removeEventListener('pagehide', flushAll);
     window.__webVitalsStarted = false;

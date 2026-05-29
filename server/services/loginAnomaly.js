@@ -35,10 +35,10 @@
 
 import { emitDataChange } from './eventBus.js';
 
-const LAST_N_LOGINS = 10;       // per user, in-memory ring
-const CONCURRENT_WINDOW_MS = 5 * 60 * 1000;  // 5 min window for "concurrent"
+const LAST_N_LOGINS = 10; // per user, in-memory ring
+const CONCURRENT_WINDOW_MS = 5 * 60 * 1000; // 5 min window for "concurrent"
 const NEW_IP_LOOKBACK_MS = 30 * 24 * 60 * 60 * 1000; // 30d
-const UNUSUAL_HOUR_START = 22;  // 22:00–06:00 = unusual
+const UNUSUAL_HOUR_START = 22; // 22:00–06:00 = unusual
 const UNUSUAL_HOUR_END = 6;
 
 // userId → [{ ip, ts, hour }]
@@ -88,9 +88,7 @@ export function inspectLogin({ userId, username, ip, role }) {
   // New IP for this user (within 30d lookback). Empty history → first
   // login ever, NOT counted as anomaly (would fire on every new user).
   if (arr.length > 0) {
-    const recentIps = new Set(
-      arr.filter(e => now - e.ts <= NEW_IP_LOOKBACK_MS).map(e => e.ip),
-    );
+    const recentIps = new Set(arr.filter((e) => now - e.ts <= NEW_IP_LOOKBACK_MS).map((e) => e.ip));
     if (recentIps.size > 0 && !recentIps.has(ip)) {
       reasons.push('new_ip');
     }
@@ -100,7 +98,7 @@ export function inspectLogin({ userId, username, ip, role }) {
   // none of the recent logins were in the unusual window — otherwise
   // a night-shift operator gets flagged every night.
   if (arr.length >= 3) {
-    const hadUnusualBefore = arr.some(e => isUnusualHour(new Date(e.ts)));
+    const hadUnusualBefore = arr.some((e) => isUnusualHour(new Date(e.ts)));
     if (!hadUnusualBefore && isUnusualHour(date)) {
       reasons.push('unusual_hour');
     }
@@ -115,7 +113,9 @@ export function inspectLogin({ userId, username, ip, role }) {
 
   // Surface to admin clients via SSE + return to caller for JSON body.
   const payload = {
-    userId, username, role,
+    userId,
+    username,
+    role,
     ip,
     reasons,
     concurrentIps: [...concurrentIps],
@@ -123,7 +123,9 @@ export function inspectLogin({ userId, username, ip, role }) {
   };
   try {
     emitDataChange('security.alert', payload, { audience: 'admins' });
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
 
   return { reasons, ips: [...concurrentIps] };
 }

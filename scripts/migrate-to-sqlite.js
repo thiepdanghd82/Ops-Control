@@ -37,11 +37,13 @@ const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
 const COMMIT = args.includes('--commit');
 const FORCE = args.includes('--force');
-const datasetArg = args.find(a => a.startsWith('--dataset='));
+const datasetArg = args.find((a) => a.startsWith('--dataset='));
 const ONLY_DATASET = datasetArg ? datasetArg.slice('--dataset='.length) : null;
 
 if (!DRY_RUN && !COMMIT) {
-  console.error('Usage: node scripts/migrate-to-sqlite.js --dry-run | --commit [--dataset=X] [--force]');
+  console.error(
+    'Usage: node scripts/migrate-to-sqlite.js --dry-run | --commit [--dataset=X] [--force]'
+  );
   process.exit(2);
 }
 
@@ -54,7 +56,7 @@ function parseJsDataFile(filePath) {
   if (jsonStr.endsWith(';')) jsonStr = jsonStr.slice(0, -1).trim();
   const parsed = JSON.parse(jsonStr);
   if (parsed && parsed.headers && Array.isArray(parsed.rows)) {
-    return parsed.rows.map(row =>
+    return parsed.rows.map((row) =>
       Object.fromEntries(parsed.headers.map((h, i) => [h, row[i] ?? '']))
     );
   }
@@ -139,22 +141,22 @@ function toBomCols(r) {
   const raw = JSON.stringify(r);
   return {
     cols: {
-      parent_part:      r['Parent Part No'] ?? null,
-      parent_desc:      r['Parent Part Description'] ?? null,
-      component_part:   r['Component Part'] ?? null,
-      component_desc:   r['Component Part Description'] ?? null,
+      parent_part: r['Parent Part No'] ?? null,
+      parent_desc: r['Parent Part Description'] ?? null,
+      component_part: r['Component Part'] ?? null,
+      component_desc: r['Component Part Description'] ?? null,
       qty_per_assembly: numOrNull(r['Qty Per Assembly']),
-      scrap:            numOrNull(r['Component Scrap']),
-      scrap_pct:        numOrNull(r['Scrap Factor (%)']),
-      uom:              r['UOM'] ?? null,
-      pitch:            numOrNull(r['Pitch']),
-      cavity:           intOrNull(r['Cavity']),
-      color_nums:       intOrNull(r['Color Nums']),
-      structure_type:   r['Structure Type'] ?? null,
-      alternative_no:   r['Alternative No'] ?? null,
-      effectivity:      r['Structure Effectivity'] ?? null,
-      planner:          r['Planner'] ?? null,
-      raw_json:         raw,
+      scrap: numOrNull(r['Component Scrap']),
+      scrap_pct: numOrNull(r['Scrap Factor (%)']),
+      uom: r['UOM'] ?? null,
+      pitch: numOrNull(r['Pitch']),
+      cavity: intOrNull(r['Cavity']),
+      color_nums: intOrNull(r['Color Nums']),
+      structure_type: r['Structure Type'] ?? null,
+      alternative_no: r['Alternative No'] ?? null,
+      effectivity: r['Structure Effectivity'] ?? null,
+      planner: r['Planner'] ?? null,
+      raw_json: raw,
     },
   };
 }
@@ -163,26 +165,26 @@ function toRoutingCols(r) {
   const raw = JSON.stringify(r);
   return {
     cols: {
-      part_no:             r['Part No'] ?? null,
-      part_desc:           r['Part Description'] ?? null,
-      operation_no:        intOrNull(r['Operation No']),
-      operation_desc:      r['Operation Description'] ?? null,
-      work_centre_no:      r['Work Centre No'] ?? null,
-      work_centre_desc:    r['Work Centre Desc'] ?? null,
-      mach_setup_time:     numOrNull(r['Mach Setup Time']),
-      labour_setup_time:   numOrNull(r['Labour Setup Time']),
-      mach_run_factor:     numOrNull(r['Mach Run Factor']),
-      labour_run_factor:   numOrNull(r['Labour Run Factor']),
-      factor_unit:         r['Factor Unit'] ?? null,
-      setup_crew_size:     intOrNull(r['Setup Crew Size']),
-      crew_size:           intOrNull(r['Crew Size']),
-      alternative:         r['Alternative'] ?? null,
-      routing_revision:    r['Routing Revision'] ?? null,
-      routing_type:        r['Routing Type'] ?? null,
-      efficiency_factor:   numOrNull(r['Efficiency Factor']),
-      site:                r['Site'] ?? null,
-      state:               r['State'] ?? null,
-      raw_json:            raw,
+      part_no: r['Part No'] ?? null,
+      part_desc: r['Part Description'] ?? null,
+      operation_no: intOrNull(r['Operation No']),
+      operation_desc: r['Operation Description'] ?? null,
+      work_centre_no: r['Work Centre No'] ?? null,
+      work_centre_desc: r['Work Centre Desc'] ?? null,
+      mach_setup_time: numOrNull(r['Mach Setup Time']),
+      labour_setup_time: numOrNull(r['Labour Setup Time']),
+      mach_run_factor: numOrNull(r['Mach Run Factor']),
+      labour_run_factor: numOrNull(r['Labour Run Factor']),
+      factor_unit: r['Factor Unit'] ?? null,
+      setup_crew_size: intOrNull(r['Setup Crew Size']),
+      crew_size: intOrNull(r['Crew Size']),
+      alternative: r['Alternative'] ?? null,
+      routing_revision: r['Routing Revision'] ?? null,
+      routing_type: r['Routing Type'] ?? null,
+      efficiency_factor: numOrNull(r['Efficiency Factor']),
+      site: r['Site'] ?? null,
+      state: r['State'] ?? null,
+      raw_json: raw,
     },
   };
 }
@@ -194,14 +196,14 @@ function toInventoryCols(r) {
   // fall back to raw_json for everything else.
   return {
     cols: {
-      kind:         _kind,
-      part_no:      rest['Part No'] ?? rest['Part'] ?? null,
-      part_desc:    rest['Part Description'] ?? rest['Description'] ?? null,
-      qty_on_hand:  numOrNull(rest['Qty On Hand'] ?? rest['Qty'] ?? rest['Quantity']),
-      uom:          rest['UOM'] ?? rest['Unit'] ?? null,
-      location:     rest['Location'] ?? rest['Location No'] ?? null,
-      lot_no:       rest['Lot/Batch'] ?? rest['Lot No'] ?? rest['Lot'] ?? null,
-      raw_json:     JSON.stringify(rest),
+      kind: _kind,
+      part_no: rest['Part No'] ?? rest['Part'] ?? null,
+      part_desc: rest['Part Description'] ?? rest['Description'] ?? null,
+      qty_on_hand: numOrNull(rest['Qty On Hand'] ?? rest['Qty'] ?? rest['Quantity']),
+      uom: rest['UOM'] ?? rest['Unit'] ?? null,
+      location: rest['Location'] ?? rest['Location No'] ?? null,
+      lot_no: rest['Lot/Batch'] ?? rest['Lot No'] ?? rest['Lot'] ?? null,
+      raw_json: JSON.stringify(rest),
     },
   };
 }
@@ -211,7 +213,11 @@ function toInventoryCols(r) {
 function scalarOr(v) {
   if (v == null) return null;
   if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') return v;
-  try { return JSON.stringify(v); } catch { return String(v); }
+  try {
+    return JSON.stringify(v);
+  } catch {
+    return String(v);
+  }
 }
 
 function toQuoteCols(r) {
@@ -219,20 +225,20 @@ function toQuoteCols(r) {
   const state = r.state && typeof r.state === 'object' ? r.state : {};
   return {
     cols: {
-      id:            intOrNull(r.id),
-      type:          scalarOr(r.type),
-      rfq_number:    scalarOr(state.rfq_number ?? state.rfq_no),
-      ccl_pn:        scalarOr(state.ccl_pn),
-      direct_cu:     scalarOr(state.direct_cu),
-      end_cu:        scalarOr(state.end_cu),
-      npi_owner:     scalarOr(r.npi_owner ?? state.npi_owner),
-      sale_owner:    scalarOr(r.sale_owner ?? state.sale_owner),
-      saved_at:      scalarOr(r.saved_at),
-      version:       scalarOr(r.version),
-      label:         scalarOr(r.label),
-      result:        scalarOr(r.result),
-      state_json:    JSON.stringify(state),
-      raw_json:      raw,
+      id: intOrNull(r.id),
+      type: scalarOr(r.type),
+      rfq_number: scalarOr(state.rfq_number ?? state.rfq_no),
+      ccl_pn: scalarOr(state.ccl_pn),
+      direct_cu: scalarOr(state.direct_cu),
+      end_cu: scalarOr(state.end_cu),
+      npi_owner: scalarOr(r.npi_owner ?? state.npi_owner),
+      sale_owner: scalarOr(r.sale_owner ?? state.sale_owner),
+      saved_at: scalarOr(r.saved_at),
+      version: scalarOr(r.version),
+      label: scalarOr(r.label),
+      result: scalarOr(r.result),
+      state_json: JSON.stringify(state),
+      raw_json: raw,
     },
   };
 }
@@ -240,13 +246,13 @@ function toQuoteCols(r) {
 function toRfqTrackerCols(r) {
   return {
     cols: {
-      rfq_no:     r.rfq_no ?? r.rfq_number ?? null,
-      customer:   r.customer ?? null,
-      product:    r.product ?? null,
-      stage:      r.stage ?? null,
-      owner:      r.owner ?? r.npi_owner ?? null,
-      result:     r.result ?? null,
-      raw_json:   JSON.stringify(r),
+      rfq_no: r.rfq_no ?? r.rfq_number ?? null,
+      customer: r.customer ?? null,
+      product: r.product ?? null,
+      stage: r.stage ?? null,
+      owner: r.owner ?? r.npi_owner ?? null,
+      result: r.result ?? null,
+      raw_json: JSON.stringify(r),
     },
   };
 }
@@ -254,10 +260,10 @@ function toRfqTrackerCols(r) {
 function toSampleTrackerCols(r) {
   return {
     cols: {
-      part_no:        r.part_no ?? r.ccl_pn ?? null,
-      customer:       r.customer ?? r.direct_cu ?? null,
+      part_no: r.part_no ?? r.ccl_pn ?? null,
+      customer: r.customer ?? r.direct_cu ?? null,
       overall_status: r.overall_status ?? null,
-      raw_json:       JSON.stringify(r),
+      raw_json: JSON.stringify(r),
     },
   };
 }
@@ -266,21 +272,21 @@ function toMaterialCols(r) {
   const { _kind, ...rest } = r;
   return {
     cols: {
-      kind:      _kind,
-      code:      rest.code ?? rest.material ?? null,
-      name:      rest.name ?? rest.req ?? null,
-      price:     numOrNull(rest.price ?? rest.exw ?? rest.dap),
-      type:      rest.type ?? null,
-      thick:     rest.thick ?? null,
-      color:     rest.color ?? null,
-      surface:   rest.surface ?? null,
-      adhesive:  rest.adhesive ?? null,
-      moq:       rest.moq != null ? String(rest.moq) : null,
-      lt:        rest.lt != null ? String(rest.lt) : null,
-      supplier:  rest.supplier ?? null,
-      note:      rest.note ?? rest.status ?? null,
-      date:      rest.date ?? rest.month ?? null,
-      raw_json:  JSON.stringify(rest),
+      kind: _kind,
+      code: rest.code ?? rest.material ?? null,
+      name: rest.name ?? rest.req ?? null,
+      price: numOrNull(rest.price ?? rest.exw ?? rest.dap),
+      type: rest.type ?? null,
+      thick: rest.thick ?? null,
+      color: rest.color ?? null,
+      surface: rest.surface ?? null,
+      adhesive: rest.adhesive ?? null,
+      moq: rest.moq != null ? String(rest.moq) : null,
+      lt: rest.lt != null ? String(rest.lt) : null,
+      supplier: rest.supplier ?? null,
+      note: rest.note ?? rest.status ?? null,
+      date: rest.date ?? rest.month ?? null,
+      raw_json: JSON.stringify(rest),
     },
   };
 }
@@ -347,7 +353,7 @@ function processDataset(name, cfg) {
   console.log(`  source rows: ${rows.length}`);
 
   // Checksum on raw JSON of each row (pre-DB, independent of schema)
-  const rawJsons = rows.map(r => JSON.stringify(r));
+  const rawJsons = rows.map((r) => JSON.stringify(r));
   const srcChecksum = computeRowsChecksum(rawJsons);
   console.log(`  source checksum: ${srcChecksum.slice(0, 16)}…`);
 
@@ -359,14 +365,16 @@ function processDataset(name, cfg) {
   // Guard: if target table already has data and --force not set, bail.
   const existing = db.prepare(`SELECT COUNT(*) AS n FROM ${cfg.table}`).get().n;
   if (existing > 0 && !FORCE) {
-    console.error(`  ✖  table ${cfg.table} has ${existing} rows already. Re-run with --force to drop + reinsert.`);
+    console.error(
+      `  ✖  table ${cfg.table} has ${existing} rows already. Re-run with --force to drop + reinsert.`
+    );
     process.exit(3);
   }
 
   // Build insert statement from first-row mapper output
   const mapped0 = cfg.mapper(rows[0] || {});
   const colNames = Object.keys(mapped0.cols);
-  const placeholders = colNames.map(c => `@${c}`).join(', ');
+  const placeholders = colNames.map((c) => `@${c}`).join(', ');
   const insertSql = `INSERT INTO ${cfg.table} (${colNames.join(', ')}) VALUES (${placeholders})`;
   const insert = db.prepare(insertSql);
 
@@ -392,7 +400,11 @@ function processDataset(name, cfg) {
   console.log(`  inserted: ${inserted}`);
 
   // Verify row count parity
-  const dbCount = db.prepare(`SELECT COUNT(*) AS n FROM ${cfg.table} ${cfg.table === 'ifs_inventory' || cfg.table === 'materials' ? '' : ''}`).get().n;
+  const dbCount = db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM ${cfg.table} ${cfg.table === 'ifs_inventory' || cfg.table === 'materials' ? '' : ''}`
+    )
+    .get().n;
   if (dbCount !== rows.length) {
     console.error(`  ✖  PARITY FAIL: expected ${rows.length}, got ${dbCount}`);
     process.exit(2);
@@ -400,26 +412,32 @@ function processDataset(name, cfg) {
 
   // Verify raw_json checksum parity
   const dbRows = db.prepare(`SELECT raw_json FROM ${cfg.table}`).all();
-  const dbChecksum = computeRowsChecksum(dbRows.map(r => r.raw_json));
+  const dbChecksum = computeRowsChecksum(dbRows.map((r) => r.raw_json));
 
   // For inventory/materials, source has _kind embedded which the DB
   // raw_json strips. Recompute source checksum without _kind for
   // apples-to-apples.
   let expectedChecksum = srcChecksum;
   if (name === 'inventory' || name === 'materials') {
-    expectedChecksum = computeRowsChecksum(rows.map(r => {
-      const { _kind, ...rest } = r; return JSON.stringify(rest);
-    }));
+    expectedChecksum = computeRowsChecksum(
+      rows.map((r) => {
+        const { _kind, ...rest } = r;
+        return JSON.stringify(rest);
+      })
+    );
   }
 
   if (dbChecksum !== expectedChecksum) {
-    console.error(`  ✖  CHECKSUM FAIL: src=${expectedChecksum.slice(0, 16)}…, db=${dbChecksum.slice(0, 16)}…`);
+    console.error(
+      `  ✖  CHECKSUM FAIL: src=${expectedChecksum.slice(0, 16)}…, db=${dbChecksum.slice(0, 16)}…`
+    );
     process.exit(2);
   }
   console.log(`  db checksum:     ${dbChecksum.slice(0, 16)}… (match)`);
 
   // Record in _migration_state
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO _migration_state (dataset, mode, last_sync, row_count, checksum, updated_at)
     VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, CURRENT_TIMESTAMP)
     ON CONFLICT(dataset) DO UPDATE SET
@@ -428,7 +446,8 @@ function processDataset(name, cfg) {
       row_count=excluded.row_count,
       checksum=excluded.checksum,
       updated_at=excluded.updated_at
-  `).run(name, 'shadow-write', inserted, dbChecksum);
+  `
+  ).run(name, 'shadow-write', inserted, dbChecksum);
 
   return { dataset: name, rows: rows.length, srcChecksum, dbChecksum, inserted };
 }

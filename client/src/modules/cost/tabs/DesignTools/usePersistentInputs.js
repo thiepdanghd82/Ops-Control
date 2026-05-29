@@ -34,8 +34,11 @@ export default function usePersistentInputs(key, makeDefault) {
   });
 
   useEffect(() => {
-    try { sessionStorage.setItem(key, JSON.stringify(state)); }
-    catch { /* quota / private mode — UX still works without persistence */ }
+    try {
+      sessionStorage.setItem(key, JSON.stringify(state));
+    } catch {
+      /* quota / private mode — UX still works without persistence */
+    }
   }, [key, state]);
 
   return [state, setState];

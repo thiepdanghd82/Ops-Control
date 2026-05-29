@@ -61,7 +61,7 @@ export function mapHeaders(rawHeaders, dataset) {
       unmapped.push(i);
     }
   });
-  const missing = (dataset.requiredHeaders || []).filter(h => !(h in mapping));
+  const missing = (dataset.requiredHeaders || []).filter((h) => !(h in mapping));
   return { normalisedHeaders, mapping, unmapped, missing };
 }
 
@@ -99,9 +99,9 @@ export function applyMappingOverrides(headerMapping, overrides, dataset) {
     }
     next.normalisedHeaders[idx] = canonical;
     next.mapping[canonical] = idx;
-    next.unmapped = next.unmapped.filter(i => i !== idx);
+    next.unmapped = next.unmapped.filter((i) => i !== idx);
   }
-  next.missing = (dataset.requiredHeaders || []).filter(h => !(h in next.mapping));
+  next.missing = (dataset.requiredHeaders || []).filter((h) => !(h in next.mapping));
   return next;
 }
 
@@ -142,10 +142,10 @@ export function coerceRows(headers, rows, dataset) {
 export function buildCanonical({ headers, rows, dataset, headerMapping, includeUnmapped = true }) {
   const canonical = dataset.canonicalHeaders;
   const extras = includeUnmapped
-    ? headerMapping.unmapped.map(i => headers[i]).filter(h => h && String(h).trim())
+    ? headerMapping.unmapped.map((i) => headers[i]).filter((h) => h && String(h).trim())
     : [];
   const outHeaders = [...canonical, ...extras];
-  const outRows = rows.map(row => {
+  const outRows = rows.map((row) => {
     const next = new Array(outHeaders.length).fill('');
     canonical.forEach((h, j) => {
       const srcIdx = headerMapping.mapping[h];
@@ -168,13 +168,25 @@ function keyForRow(row, headers, naturalKey) {
   // For passthrough datasets the columns live in `headers`; for JSON-AoO
   // datasets the row IS an object so we read by canonical key directly.
   if (Array.isArray(row)) {
-    return naturalKey.map(k => {
-      const idx = headers.indexOf(k);
-      return idx >= 0 ? String(row[idx] ?? '').trim().toLowerCase() : '';
-    }).join('|');
+    return naturalKey
+      .map((k) => {
+        const idx = headers.indexOf(k);
+        return idx >= 0
+          ? String(row[idx] ?? '')
+              .trim()
+              .toLowerCase()
+          : '';
+      })
+      .join('|');
   }
   // Object row
-  return naturalKey.map(k => String(row[k] ?? '').trim().toLowerCase()).join('|');
+  return naturalKey
+    .map((k) =>
+      String(row[k] ?? '')
+        .trim()
+        .toLowerCase()
+    )
+    .join('|');
 }
 
 /**
@@ -193,10 +205,17 @@ export function diffRows({ existingRows, existingHeaders, newRows, newHeaders, n
     if (k && !newIdx.has(k)) newIdx.set(k, r);
   }
 
-  const added = [], updated = [], unchanged = [], removedIfReplace = [], dupKeys = [];
+  const added = [],
+    updated = [],
+    unchanged = [],
+    removedIfReplace = [],
+    dupKeys = [];
   for (const [k, nr] of newIdx) {
     const er = exIdx.get(k);
-    if (!er) { added.push(nr); continue; }
+    if (!er) {
+      added.push(nr);
+      continue;
+    }
     if (rowsEqual(er, existingHeaders, nr, newHeaders)) unchanged.push(nr);
     else updated.push({ before: er, after: nr });
   }
@@ -294,7 +313,8 @@ export function writeDataset(dataset, payload) {
   fs.mkdirSync(path.dirname(p), { recursive: true });
   if (dataset.storage.kind === STORAGE_JS_AOA) {
     const content = `${dataset.storage.varName}=${JSON.stringify({
-      headers: payload.headers, rows: payload.rows,
+      headers: payload.headers,
+      rows: payload.rows,
     })};`;
     atomicWriteFileSync(p, content);
   } else {
@@ -333,8 +353,12 @@ export function pruneDatasetBackups(dataset, keep = WIZARD_BACKUP_KEEP) {
     const toDelete = backups.slice(keep);
     let deleted = 0;
     for (const b of toDelete) {
-      try { fs.unlinkSync(path.join(dir, b.file)); deleted++; }
-      catch { /* ignore one-file failure */ }
+      try {
+        fs.unlinkSync(path.join(dir, b.file));
+        deleted++;
+      } catch {
+        /* ignore one-file failure */
+      }
     }
     return { ok: true, deleted, kept: backups.length - deleted };
   } catch {
@@ -349,9 +373,10 @@ export function listBackups(dataset) {
   const ext = path.extname(p);
   const base = path.basename(p, ext);
   const re = new RegExp(`^${escapeRegex(base)}_backup_\\d{15}${escapeRegex(ext)}$`);
-  return fs.readdirSync(dir)
-    .filter(f => re.test(f))
-    .map(f => {
+  return fs
+    .readdirSync(dir)
+    .filter((f) => re.test(f))
+    .map((f) => {
       const full = path.join(dir, f);
       const st = fs.statSync(full);
       return {
@@ -420,7 +445,9 @@ export function consumePreviewToken(token) {
   return entry;
 }
 
-export function _resetTokens() { _tokens.clear(); }
+export function _resetTokens() {
+  _tokens.clear();
+}
 
 // Sweep stale tokens AND orphaned stage files every 5 minutes.
 // Stage files are written by /preview and consumed by /commit. If the operator
@@ -452,23 +479,29 @@ function sweepWizardStage() {
           if (st.isFile() && now - st.mtimeMs > STAGE_GRACE_MS) {
             fs.unlinkSync(p);
           }
-        } catch { /* ignore one-file failure */ }
+        } catch {
+          /* ignore one-file failure */
+        }
       }
-    } catch { /* dir missing — wizard never used yet */ }
+    } catch {
+      /* dir missing — wizard never used yet */
+    }
   }
 }
 setInterval(sweepWizardStage, 5 * 60 * 1000).unref?.();
 
 // Configured by the route module on import (avoids circular dep).
 let _stageDir = null;
-export function configureStageDir(dir) { _stageDir = dir; }
+export function configureStageDir(dir) {
+  _stageDir = dir;
+}
 
 // ─────────────────────────────────────────────────────────────────
 // AoA → AoO (for shadow-write + JSON datasets)
 // ─────────────────────────────────────────────────────────────────
 
 export function rowsAsObjects(headers, rows) {
-  return rows.map(r => Object.fromEntries(headers.map((h, i) => [h, r[i] ?? ''])));
+  return rows.map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i] ?? ''])));
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -492,10 +525,12 @@ export function mergeRows({ existing, newCanonical, dataset, mode = 'upsert' }) 
     if (dataset.storage.kind === STORAGE_JS_AOA) {
       // Preserve existing headers; pad new rows to fit if columns overlap.
       const headers = existing.headers.length ? existing.headers : newCanonical.headers;
-      const padded = newCanonical.rows.map(r => headers.map(h => {
-        const idx = newCanonical.headers.indexOf(h);
-        return idx >= 0 ? r[idx] : '';
-      }));
+      const padded = newCanonical.rows.map((r) =>
+        headers.map((h) => {
+          const idx = newCanonical.headers.indexOf(h);
+          return idx >= 0 ? r[idx] : '';
+        })
+      );
       return { headers, rows: [...existing.rows, ...padded] };
     }
     const existingArr = Array.isArray(existing) ? existing : [];
@@ -517,7 +552,7 @@ export function mergeRows({ existing, newCanonical, dataset, mode = 'upsert' }) 
     // First, walk new rows: each one either replaces an existing entry (by key) or is added.
     for (const r of newCanonical.rows) {
       const k = keyForRow(r, newCanonical.headers, naturalKey);
-      const padded = headers.map(h => {
+      const padded = headers.map((h) => {
         const idx = newCanonical.headers.indexOf(h);
         return idx >= 0 ? r[idx] : '';
       });
@@ -528,7 +563,7 @@ export function mergeRows({ existing, newCanonical, dataset, mode = 'upsert' }) 
     for (const r of existing.rows) {
       const k = keyForRow(r, existing.headers, naturalKey);
       if (k && seenKeys.has(k)) continue;
-      const padded = headers.map(h => {
+      const padded = headers.map((h) => {
         const idx = existing.headers.indexOf(h);
         return idx >= 0 ? r[idx] : '';
       });
@@ -570,7 +605,11 @@ function mergeHeaderUnion(a, b) {
 // ─────────────────────────────────────────────────────────────────
 
 export function notifyCacheClear() {
-  try { clearCache(); } catch { /* no-op */ }
+  try {
+    clearCache();
+  } catch {
+    /* no-op */
+  }
 }
 
 // Re-export commonly used helpers so routes don't import 3 modules

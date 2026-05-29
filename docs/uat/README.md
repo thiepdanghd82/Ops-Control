@@ -25,12 +25,12 @@ state. UAT execution thì chạy trên prod — xem
 
 ## Decision Authority
 
-| Quyết định | Người quyết | Trigger escalation |
-|---|---|---|
-| Halt vs continue UAT khi bug | Đặng Thế Thiệp | P0 bug (data loss/security), hoặc 2+ P1 bug cùng phiên |
-| Gửi file cho customer hay hold | Đặng Thế Thiệp | Bất kỳ bug nào liên quan SCN6-8 (file integrity) |
-| Bug severity classification | Đặng Thế Thiệp | Borderline P1/P2 |
-| Final triage (fix-before-send / fix-MVP-2.1 / defer / wontfix) | Đặng Thế Thiệp | Tất cả bugs sau UAT |
+| Quyết định                                                     | Người quyết    | Trigger escalation                                     |
+| -------------------------------------------------------------- | -------------- | ------------------------------------------------------ |
+| Halt vs continue UAT khi bug                                   | Đặng Thế Thiệp | P0 bug (data loss/security), hoặc 2+ P1 bug cùng phiên |
+| Gửi file cho customer hay hold                                 | Đặng Thế Thiệp | Bất kỳ bug nào liên quan SCN6-8 (file integrity)       |
+| Bug severity classification                                    | Đặng Thế Thiệp | Borderline P1/P2                                       |
+| Final triage (fix-before-send / fix-MVP-2.1 / defer / wontfix) | Đặng Thế Thiệp | Tất cả bugs sau UAT                                    |
 
 Backup nếu decision-maker unavailable: N/A — solo project. Defer non-urgent decisions 24h until available. P0 leak = halt UAT, không proceed mà không có decision.
 
@@ -49,6 +49,7 @@ Backup nếu decision-maker unavailable: N/A — solo project. Defer non-urgent 
 ## Customer artifact gate
 
 File chỉ được gửi customer khi:
+
 - SCN1-5 tất cả PASS (functional + integrity)
 - SCN6-8 không có P0/P1 bug (file behavior on customer side)
 - Decision-maker (xem Decision Authority) approve "go" trong vòng 1h sau khi SCN8 xong
@@ -56,6 +57,7 @@ File chỉ được gửi customer khi:
 - **Cách notify decision-maker:** Slack DM + tag trong `#ops-control-uat` channel với prefix `🟢 GO REQUEST:` để dễ search sau này
 
 Nếu gửi rồi mới phát hiện bug:
+
 - **P0 (data wrong/leaked):** notify customer + recall trong 1h
   - **Procedure:**
     1. Phone call customer contact ngay (không email — quá chậm)

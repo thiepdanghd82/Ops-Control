@@ -53,13 +53,13 @@ describe('validateRows — basic behavior', () => {
     const { rows, errors } = validateRows([{ pct: 1.5 }], schema, { silent: true });
     assert.equal(rows.length, 1); // row kept but field stripped
     assert.equal(rows[0].pct, undefined);
-    assert.ok(errors.some(e => e.includes('above max')));
+    assert.ok(errors.some((e) => e.includes('above max')));
   });
 
   test('rejects values outside enum', () => {
     const schema = { role: { type: 'string', enum: ['admin', 'user'] } };
     const { errors } = validateRows([{ role: 'hacker' }], schema, { silent: true });
-    assert.ok(errors.some(e => e.includes('must be one of')));
+    assert.ok(errors.some((e) => e.includes('must be one of')));
   });
 
   test('non-array top-level input returns empty + logs error', () => {
@@ -71,7 +71,9 @@ describe('validateRows — basic behavior', () => {
 
   test('non-object row is dropped', () => {
     const schema = { id: { type: 'string', required: true } };
-    const { rows, dropped } = validateRows([null, 'string-row', { id: 'ok' }], schema, { silent: true });
+    const { rows, dropped } = validateRows([null, 'string-row', { id: 'ok' }], schema, {
+      silent: true,
+    });
     assert.equal(rows.length, 1);
     assert.equal(dropped, 2);
   });
@@ -86,14 +88,20 @@ describe('permissionGroupSchema — auth-critical', () => {
       is_system: false,
       tab_permissions: { pricing: 'edit', rfq: 'read' },
     };
-    const { rows, dropped } = validateRows([g], permissionGroupSchema, { strict: true, silent: true });
+    const { rows, dropped } = validateRows([g], permissionGroupSchema, {
+      strict: true,
+      silent: true,
+    });
     assert.equal(dropped, 0);
     assert.equal(rows[0].id, 'sales_default');
     assert.deepEqual(rows[0].tab_permissions, { pricing: 'edit', rfq: 'read' });
   });
 
   test('drops group missing required id', () => {
-    const { dropped } = validateRows([{ name: 'no-id' }], permissionGroupSchema, { strict: true, silent: true });
+    const { dropped } = validateRows([{ name: 'no-id' }], permissionGroupSchema, {
+      strict: true,
+      silent: true,
+    });
     assert.equal(dropped, 1);
   });
 
@@ -148,11 +156,9 @@ describe('rateRowSchema — pricing-critical', () => {
   });
 
   test('drops row with negative rate (required + min:0)', () => {
-    const { rows, dropped } = validateRows(
-      [{ workcenter: 'X', rate: -5 }],
-      rateRowSchema,
-      { silent: true },
-    );
+    const { rows, dropped } = validateRows([{ workcenter: 'X', rate: -5 }], rateRowSchema, {
+      silent: true,
+    });
     assert.equal(rows.length, 0);
     assert.equal(dropped, 1);
   });
@@ -172,7 +178,9 @@ describe('safeParseJson', () => {
   test('returns null on parse failure', () => {
     const originalError = console.error;
     let logged = '';
-    console.error = (...args) => { logged = args.join(' '); };
+    console.error = (...args) => {
+      logged = args.join(' ');
+    };
     try {
       const r = safeParseJson('not json', 'unit');
       assert.equal(r, null);

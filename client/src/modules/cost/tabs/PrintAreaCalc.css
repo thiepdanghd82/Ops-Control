@@ -72,7 +72,7 @@
 
 /* Universal focus ring — uses our brand soft shadow so it's visible
  * on every interactive without per-element styling. */
-.pa-calc :is(button, input, select, textarea, [role="button"]):focus-visible {
+.pa-calc :is(button, input, select, textarea, [role='button']):focus-visible {
   outline: none;
   box-shadow: var(--pa-shadow-focus);
 }
@@ -171,9 +171,10 @@
   font-weight: 600;
   color: var(--pa-text-muted);
   cursor: pointer;
-  transition: background var(--pa-dur-fast) var(--pa-ease),
-              color var(--pa-dur-fast) var(--pa-ease),
-              box-shadow var(--pa-dur-fast) var(--pa-ease);
+  transition:
+    background var(--pa-dur-fast) var(--pa-ease),
+    color var(--pa-dur-fast) var(--pa-ease),
+    box-shadow var(--pa-dur-fast) var(--pa-ease);
   font-family: inherit;
   white-space: nowrap;
 }
@@ -181,7 +182,10 @@
  * very narrow screens (iPhone portrait). Compact sizing matches the
  * Carbon pattern used by Pricing Std / Pricing Cpx. */
 @media (max-width: 1099px) {
-  .pa-tab { padding: 5px 12px; font-size: 12.5px; }
+  .pa-tab {
+    padding: 5px 12px;
+    font-size: 12.5px;
+  }
 }
 .pa-tab:hover:not(.active) {
   background: rgba(255, 255, 255, 0.8);
@@ -213,8 +217,14 @@
 /* Header collapses on narrow screens — stack title + nav vertically
  * so the title doesn't get squeezed against the nav buttons. */
 @media (max-width: 720px) {
-  .pa-tabs { width: 100%; justify-content: stretch; }
-  .pa-tab { flex: 1; justify-content: center; }
+  .pa-tabs {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .pa-tab {
+    flex: 1;
+    justify-content: center;
+  }
 }
 
 .pa-body {
@@ -229,10 +239,15 @@
    * instead of blowing out the grid. */
 }
 @media (min-width: 1600px) {
-  .pa-body { grid-template-columns: 340px minmax(0, 1fr); }
+  .pa-body {
+    grid-template-columns: 340px minmax(0, 1fr);
+  }
 }
 @media (min-width: 1920px) {
-  .pa-body { grid-template-columns: 340px minmax(0, 1fr); padding: 14px 20px; }
+  .pa-body {
+    grid-template-columns: 340px minmax(0, 1fr);
+    padding: 14px 20px;
+  }
 }
 
 .pa-panel {
@@ -302,7 +317,9 @@
    Clear ROI / Separations onto the same line as "Results · Canvas ×".
    On narrow viewports the buttons wrap below the title but stay
    right-aligned as a group. */
-.pa-results-header-title { min-width: 0; }
+.pa-results-header-title {
+  min-width: 0;
+}
 .pa-results-header-tools {
   display: flex;
   flex-wrap: wrap;
@@ -334,7 +351,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background 120ms, border-color 120ms;
+  transition:
+    background 120ms,
+    border-color 120ms;
 }
 .pa-clear-btn:hover {
   background: #fecaca;
@@ -359,7 +378,7 @@
   cursor: pointer;
   line-height: 1.4;
 }
-.pa-check-row input[type="checkbox"] {
+.pa-check-row input[type='checkbox'] {
   margin-top: 2px;
   cursor: pointer;
 }
@@ -382,8 +401,13 @@
   cursor: pointer;
   line-height: 1.35;
 }
-.pa-radio-opt input[type="radio"] { cursor: pointer; }
-.pa-radio-opt input[type="radio"]:disabled + span { opacity: 0.5; cursor: not-allowed; }
+.pa-radio-opt input[type='radio'] {
+  cursor: pointer;
+}
+.pa-radio-opt input[type='radio']:disabled + span {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 /* Sanity warning + info banners. Both share structure so callers can
    treat them as one visual family; colors differentiate severity. */
@@ -397,7 +421,10 @@
   line-height: 1.4;
   border-radius: 3px;
 }
-.pa-bg-warning-meta { color: #9ca3af; font-weight: 400; }
+.pa-bg-warning-meta {
+  color: #9ca3af;
+  font-weight: 400;
+}
 .pa-info-banner {
   font-size: 12px;
   color: #1e40af;
@@ -423,8 +450,12 @@
 }
 
 /* ─── Library table: right-click context menu ─── */
-.pa-library-row { transition: background-color 120ms; }
-.pa-library-row:hover { background-color: #f9fafb; }
+.pa-library-row {
+  transition: background-color 120ms;
+}
+.pa-library-row:hover {
+  background-color: #f9fafb;
+}
 
 /* Three-dot action button lives in the last cell and doubles as a
    left-click affordance for anyone who doesn't know about right-click. */
@@ -438,7 +469,10 @@
   height: 26px;
   border-radius: 4px;
   cursor: pointer;
-  transition: background-color 120ms, border-color 120ms, color 120ms;
+  transition:
+    background-color 120ms,
+    border-color 120ms,
+    color 120ms;
 }
 .pa-library-actions-btn:hover {
   background: #eff6ff;
@@ -457,8 +491,9 @@
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12),
-              0 2px 6px  rgba(15, 23, 42, 0.08);
+  box-shadow:
+    0 10px 24px rgba(15, 23, 42, 0.12),
+    0 2px 6px rgba(15, 23, 42, 0.08);
   font-size: 13px;
   color: #111827;
   user-select: none;
@@ -495,27 +530,42 @@
   background: #eff6ff;
   outline: none;
 }
-.pa-context-menu-danger { color: #b91c1c; }
+.pa-context-menu-danger {
+  color: #b91c1c;
+}
 .pa-context-menu-danger:hover,
-.pa-context-menu-danger:focus-visible { background: #fef2f2; }
-.pa-context-menu-ico { width: 16px; text-align: center; }
+.pa-context-menu-danger:focus-visible {
+  background: #fef2f2;
+}
+.pa-context-menu-ico {
+  width: 16px;
+  text-align: center;
+}
 
-[data-theme="dark"] .pa-library-row:hover { background-color: #1f2937; }
-[data-theme="dark"] .pa-context-menu {
+[data-theme='dark'] .pa-library-row:hover {
+  background-color: #1f2937;
+}
+[data-theme='dark'] .pa-context-menu {
   background: #1f2937;
   border-color: #374151;
   color: #e5e7eb;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
 }
-[data-theme="dark"] .pa-context-menu-header {
+[data-theme='dark'] .pa-context-menu-header {
   color: #9ca3af;
   border-bottom-color: #374151;
 }
-[data-theme="dark"] .pa-context-menu-item:hover,
-[data-theme="dark"] .pa-context-menu-item:focus-visible { background: #374151; }
-[data-theme="dark"] .pa-context-menu-danger { color: #fca5a5; }
-[data-theme="dark"] .pa-context-menu-danger:hover,
-[data-theme="dark"] .pa-context-menu-danger:focus-visible { background: rgba(185, 28, 28, 0.25); }
+[data-theme='dark'] .pa-context-menu-item:hover,
+[data-theme='dark'] .pa-context-menu-item:focus-visible {
+  background: #374151;
+}
+[data-theme='dark'] .pa-context-menu-danger {
+  color: #fca5a5;
+}
+[data-theme='dark'] .pa-context-menu-danger:hover,
+[data-theme='dark'] .pa-context-menu-danger:focus-visible {
+  background: rgba(185, 28, 28, 0.25);
+}
 
 /* Excluded states — chips, rows, and the "ignored" tag. */
 .pa-overlay-chip.excluded {
@@ -557,8 +607,13 @@
   animation: pa-pulse 1.4s ease-in-out infinite;
 }
 @keyframes pa-pulse {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 .pa-results tr.excluded {
   background: #fef3c7;
@@ -594,8 +649,8 @@
   font-weight: 600;
   color: #4b5563;
 }
-.pa-field input[type="text"],
-.pa-field input[type="number"],
+.pa-field input[type='text'],
+.pa-field input[type='number'],
 .pa-field select {
   padding: 6px 8px;
   border: 1px solid #d1d5db;
@@ -603,7 +658,7 @@
   font-size: 12px;
   font-family: inherit;
 }
-.pa-field input[type="range"] {
+.pa-field input[type='range'] {
   width: 100%;
 }
 
@@ -623,9 +678,10 @@
   line-height: 1.5;
   background: var(--pa-primary-soft);
   cursor: pointer;
-  transition: background var(--pa-dur-fast) var(--pa-ease),
-              border-color var(--pa-dur-fast) var(--pa-ease),
-              transform var(--pa-dur-fast) var(--pa-ease);
+  transition:
+    background var(--pa-dur-fast) var(--pa-ease),
+    border-color var(--pa-dur-fast) var(--pa-ease),
+    transform var(--pa-dur-fast) var(--pa-ease);
 }
 .pa-dropzone:hover {
   background: #dbeafe;
@@ -672,19 +728,26 @@
   letter-spacing: 0.02em;
   cursor: pointer;
   margin-top: var(--pa-sp-2);
-  box-shadow: var(--pa-shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transition: transform var(--pa-dur-fast) var(--pa-ease),
-              box-shadow var(--pa-dur-fast) var(--pa-ease),
-              filter var(--pa-dur-fast) var(--pa-ease);
+  box-shadow:
+    var(--pa-shadow-md),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition:
+    transform var(--pa-dur-fast) var(--pa-ease),
+    box-shadow var(--pa-dur-fast) var(--pa-ease),
+    filter var(--pa-dur-fast) var(--pa-ease);
 }
 .pa-analyze-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: var(--pa-shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  box-shadow:
+    var(--pa-shadow-lg),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
   filter: brightness(1.05);
 }
 .pa-analyze-btn:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: var(--pa-shadow-sm), inset 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    var(--pa-shadow-sm),
+    inset 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 .pa-analyze-btn:disabled {
   background: #cbd5e1;
@@ -706,7 +769,12 @@
 .pa-action-bar {
   position: sticky;
   bottom: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, var(--pa-surface) 30%, var(--pa-surface) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0) 0%,
+    var(--pa-surface) 30%,
+    var(--pa-surface) 100%
+  );
   padding: var(--pa-sp-3) 0 var(--pa-sp-1);
   margin: var(--pa-sp-3) 0 calc(-1 * var(--pa-sp-4));
   z-index: 2;
@@ -781,8 +849,13 @@
   animation: pa-tag-busy-pulse 1.4s ease-in-out infinite;
 }
 @keyframes pa-tag-busy-pulse {
-  0%, 100% { background-position: 0% 0; }
-  50% { background-position: 100% 0; }
+  0%,
+  100% {
+    background-position: 0% 0;
+  }
+  50% {
+    background-position: 100% 0;
+  }
 }
 .pa-canvas-caption {
   font-size: 11px;
@@ -870,7 +943,9 @@
   letter-spacing: 0;
   text-transform: none;
   min-width: 22px;
-  transition: background-color 120ms, color 120ms;
+  transition:
+    background-color 120ms,
+    color 120ms;
 }
 .pa-zoom-btn:hover:not(:disabled),
 .pa-zoom-value:hover {
@@ -898,15 +973,23 @@
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
-[data-theme="dark"] .pa-zoom-controls {
+[data-theme='dark'] .pa-zoom-controls {
   border-color: #374151;
   background: #1f2937;
 }
-[data-theme="dark"] .pa-zoom-btn,
-[data-theme="dark"] .pa-zoom-value { color: #e5e7eb; }
-[data-theme="dark"] .pa-zoom-btn:hover:not(:disabled),
-[data-theme="dark"] .pa-zoom-value:hover { background: #374151; color: #93c5fd; }
-[data-theme="dark"] .pa-zoom-value { border-left-color: #374151; border-right-color: #374151; }
+[data-theme='dark'] .pa-zoom-btn,
+[data-theme='dark'] .pa-zoom-value {
+  color: #e5e7eb;
+}
+[data-theme='dark'] .pa-zoom-btn:hover:not(:disabled),
+[data-theme='dark'] .pa-zoom-value:hover {
+  background: #374151;
+  color: #93c5fd;
+}
+[data-theme='dark'] .pa-zoom-value {
+  border-left-color: #374151;
+  border-right-color: #374151;
+}
 .pa-canvas-empty {
   color: var(--pa-text-subtle);
   font-size: 12px;
@@ -1033,13 +1116,13 @@
   top: 4px;
   bottom: 4px;
   width: var(--pa-pct, 0%);
-  background: linear-gradient(90deg, rgba(37, 99, 235, 0.10) 0%, rgba(37, 99, 235, 0.18) 100%);
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0.18) 100%);
   border-radius: var(--pa-r-sm);
   z-index: -1;
   transition: width var(--pa-dur-med) var(--pa-ease);
 }
 .pa-results tr.excluded .pa-pct-cell::before {
-  background: linear-gradient(90deg, rgba(217, 119, 6, 0.10) 0%, rgba(217, 119, 6, 0.18) 100%);
+  background: linear-gradient(90deg, rgba(217, 119, 6, 0.1) 0%, rgba(217, 119, 6, 0.18) 100%);
 }
 
 /* Stacked total bar — shown above tfoot to visualize coverage split
@@ -1132,7 +1215,9 @@
   animation: pa-spin 0.7s linear infinite;
 }
 @keyframes pa-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 /* Mid-analysis canvas dim — dim the canvas so the user sees we're
  * working without blocking interaction or hiding the source. */
@@ -1171,7 +1256,10 @@
 }
 
 /* Bilingual additions */
-.pa-legend-wrap { padding: 14px; max-width: 820px; }
+.pa-legend-wrap {
+  padding: 14px;
+  max-width: 820px;
+}
 .pa-bi-vi {
   margin-top: 4px;
   color: #64748b;
@@ -1179,8 +1267,14 @@
   font-size: 11.5px;
   line-height: 1.5;
 }
-.pa-legend-note { font-size: 11px; }
-.pa-legend-disclaimer { font-size: 12px; font-style: italic; color: #6b7280; }
+.pa-legend-note {
+  font-size: 11px;
+}
+.pa-legend-disclaimer {
+  font-size: 12px;
+  font-style: italic;
+  color: #6b7280;
+}
 
 /* Print method chips — radio buttons styled as press-method tiles. */
 .pa-method-grid {
@@ -1200,7 +1294,9 @@
   cursor: pointer;
   font-size: 12px;
   background: #fff;
-  transition: background 120ms, border-color 120ms;
+  transition:
+    background 120ms,
+    border-color 120ms;
   position: relative;
 }
 .pa-method-chip:hover {
@@ -1213,7 +1309,7 @@
   color: #3730a3;
   font-weight: 700;
 }
-.pa-method-chip input[type="radio"] {
+.pa-method-chip input[type='radio'] {
   position: absolute;
   opacity: 0;
   pointer-events: none;
@@ -1260,9 +1356,10 @@
   font-size: 12px;
   font-weight: 600;
   color: var(--pa-text-muted);
-  transition: background var(--pa-dur-fast) var(--pa-ease),
-              color var(--pa-dur-fast) var(--pa-ease),
-              box-shadow var(--pa-dur-fast) var(--pa-ease);
+  transition:
+    background var(--pa-dur-fast) var(--pa-ease),
+    color var(--pa-dur-fast) var(--pa-ease),
+    box-shadow var(--pa-dur-fast) var(--pa-ease);
 }
 .pa-roi-btn:hover {
   background: rgba(255, 255, 255, 0.8);
@@ -1328,8 +1425,14 @@
   animation: pa-slide-in var(--pa-dur-med) var(--pa-ease);
 }
 @keyframes pa-slide-in {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .pa-pick-swatch {
   width: 32px;
@@ -1384,7 +1487,9 @@ button.pa-pick-row.pa-pick-ink {
   display: flex;
   align-items: center;
   gap: 2px;
-  transition: background 120ms, border-color 120ms;
+  transition:
+    background 120ms,
+    border-color 120ms;
 }
 button.pa-pick-row.pa-pick-ink:hover {
   background: #ddd6fe;
@@ -1431,7 +1536,9 @@ button.pa-pick-row.pa-pick-pin {
   color: #92400e;
   cursor: pointer;
   text-align: left;
-  transition: background 120ms, border-color 120ms;
+  transition:
+    background 120ms,
+    border-color 120ms;
 }
 button.pa-pick-row.pa-pick-pin:hover {
   background: #fef3c7;
@@ -1523,12 +1630,20 @@ button.pa-pick-row.pa-pick-pin.pinned {
 
 /* Responsive — single column below 1100 px (preview stacks below). */
 @media (max-width: 1100px) {
-  .pa-body { grid-template-columns: 1fr; }
-  .pa-method-grid { grid-template-columns: 1fr 1fr 1fr; }
+  .pa-body {
+    grid-template-columns: 1fr;
+  }
+  .pa-method-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
 }
 @media (max-width: 900px) {
-  .pa-canvas-pair { grid-template-columns: 1fr; }
+  .pa-canvas-pair {
+    grid-template-columns: 1fr;
+  }
 }
 @media (max-width: 700px) {
-  .pa-method-grid { grid-template-columns: 1fr 1fr; }
+  .pa-method-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }

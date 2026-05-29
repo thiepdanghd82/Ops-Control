@@ -41,7 +41,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DATA_DIR = process.env.DATA_DIR
-  ? (path.isAbsolute(process.env.DATA_DIR) ? process.env.DATA_DIR : path.resolve(__dirname, '..', process.env.DATA_DIR))
+  ? path.isAbsolute(process.env.DATA_DIR)
+    ? process.env.DATA_DIR
+    : path.resolve(__dirname, '..', process.env.DATA_DIR)
   : path.resolve(__dirname, '..', 'server', 'data');
 const SECRETS_PATH = path.join(DATA_DIR, 'Library', 'Users', 'totp_secrets.enc');
 
@@ -55,8 +57,11 @@ function readSecrets() {
     die(1, `No TOTP secrets file at ${SECRETS_PATH}. Nothing to rotate.`);
   }
   let raw;
-  try { raw = JSON.parse(fs.readFileSync(SECRETS_PATH, 'utf-8')); }
-  catch (e) { die(1, `totp_secrets.enc is not valid JSON: ${e.message}`); }
+  try {
+    raw = JSON.parse(fs.readFileSync(SECRETS_PATH, 'utf-8'));
+  } catch (e) {
+    die(1, `totp_secrets.enc is not valid JSON: ${e.message}`);
+  }
   return raw;
 }
 
@@ -64,8 +69,8 @@ function decryptV2(enc, keyHex) {
   const key = Buffer.from(keyHex.slice(0, 64), 'hex');
   if (key.length !== 32) die(1, 'OPS_TOTP_KEY must be 64 hex chars (32 bytes).');
   const nonce = Buffer.from(enc.nonce, 'base64');
-  const ct    = Buffer.from(enc.data, 'base64');
-  const tag   = Buffer.from(enc.tag, 'base64');
+  const ct = Buffer.from(enc.data, 'base64');
+  const tag = Buffer.from(enc.tag, 'base64');
   const decipher = crypto.createDecipheriv('chacha20-poly1305', key, nonce, { authTagLength: 16 });
   decipher.setAuthTag(tag);
   if (enc.aad) decipher.setAAD(Buffer.from(enc.aad, 'base64'));
@@ -78,15 +83,18 @@ function encryptV2(secretsDict, keyHex) {
   const aad = Buffer.from('ops-totp-v2', 'utf-8');
   const cipher = crypto.createCipheriv('chacha20-poly1305', key, nonce, { authTagLength: 16 });
   cipher.setAAD(aad);
-  const ct  = Buffer.concat([cipher.update(Buffer.from(JSON.stringify(secretsDict), 'utf-8')), cipher.final()]);
+  const ct = Buffer.concat([
+    cipher.update(Buffer.from(JSON.stringify(secretsDict), 'utf-8')),
+    cipher.final(),
+  ]);
   const tag = cipher.getAuthTag();
   return {
     version: 'v2',
-    alg:     'chacha20-poly1305',
-    nonce:   nonce.toString('base64'),
-    data:    ct.toString('base64'),
-    tag:     tag.toString('base64'),
-    aad:     aad.toString('base64'),
+    alg: 'chacha20-poly1305',
+    nonce: nonce.toString('base64'),
+    data: ct.toString('base64'),
+    tag: tag.toString('base64'),
+    aad: aad.toString('base64'),
     rotated_at: new Date().toISOString(),
   };
 }
@@ -110,13 +118,22 @@ async function main() {
 
   const enc = readSecrets();
   if ((enc.version || 'v2') !== 'v2') {
-    die(1, `Only v2 (ChaCha20-Poly1305) secrets can be rotated; this file is ${enc.version}. Re-save via a live server first.`);
+    die(
+      1,
+      `Only v2 (ChaCha20-Poly1305) secrets can be rotated; this file is ${enc.version}. Re-save via a live server first.`
+    );
   }
 
   // Decrypt with CURRENT key.
   let secrets;
-  try { secrets = decryptV2(enc, currentKey); }
-  catch (e) { die(1, `Failed to decrypt with current OPS_TOTP_KEY — is the env value correct? (${e.message})`); }
+  try {
+    secrets = decryptV2(enc, currentKey);
+  } catch (e) {
+    die(
+      1,
+      `Failed to decrypt with current OPS_TOTP_KEY — is the env value correct? (${e.message})`
+    );
+  }
 
   const userCount = Object.keys(secrets).length;
   if (userCount === 0) {
@@ -155,4 +172,4 @@ async function main() {
   console.log('');
 }
 
-main().catch(err => die(3, err.message));
+main().catch((err) => die(3, err.message));

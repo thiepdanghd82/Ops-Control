@@ -37,7 +37,7 @@ file with at minimum 4 tests:**
 2. **Role gate** — wrong role → 403 (when the router has any
    role-restricted endpoint).
 3. **Happy path** — at least one endpoint with valid input → 200
-   + expected side effect.
+   - expected side effect.
 4. **Error path** — at least one negative case (404, 400, or 409)
    per non-trivial endpoint.
 
@@ -141,15 +141,15 @@ break that. CI is the only enforcement layer that survives.
 
 ## Routers conformance status (as of 2026-04-29 / rc.4)
 
-| Router | Sibling test? | Test count | Compliant? |
-|---|---|---|---|
-| `server/domains/security/routes/audit.js` | – | 0 | ❌ debt — open ticket |
-| `server/domains/security/routes/license.js` | ✅ | 5 | ✅ |
-| `server/domains/basis/routes/backup.js` | – | 0 | ❌ debt — open ticket |
-| `server/domains/library/routes/rate.js` | ✅ | 8 | ✅ |
-| `server/domains/library/routes/ddl.js` | ✅ | 6 | ✅ |
-| `server/domains/sales/routes/released-quotation.js` | ✅ | 9 | ✅ |
-| `server/domains/sales/routes/quotes.js` | ✅ | 14 | ✅ |
+| Router                                              | Sibling test? | Test count | Compliant?            |
+| --------------------------------------------------- | ------------- | ---------- | --------------------- |
+| `server/domains/security/routes/audit.js`           | –             | 0          | ❌ debt — open ticket |
+| `server/domains/security/routes/license.js`         | ✅            | 5          | ✅                    |
+| `server/domains/basis/routes/backup.js`             | –             | 0          | ❌ debt — open ticket |
+| `server/domains/library/routes/rate.js`             | ✅            | 8          | ✅                    |
+| `server/domains/library/routes/ddl.js`              | ✅            | 6          | ✅                    |
+| `server/domains/sales/routes/released-quotation.js` | ✅            | 9          | ✅                    |
+| `server/domains/sales/routes/quotes.js`             | ✅            | 14         | ✅                    |
 
 **Conformance: 5/7 (71 %)**. CI gate enables `warn` mode at
 rc.4; `error` mode at rc.5 once the 2 debt routers (`audit`,

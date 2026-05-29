@@ -42,7 +42,7 @@ function makeCalibrationArtwork() {
     for (let x = 0; x < W; x++) {
       const i = (y * W + x) * 4;
       const isLeft = x < W / 2;
-      data[i]     = isLeft ? 0   : 217;  // CYAN(0,174,239) vs MAGENTA(217,70,239)
+      data[i] = isLeft ? 0 : 217; // CYAN(0,174,239) vs MAGENTA(217,70,239)
       data[i + 1] = isLeft ? 174 : 70;
       data[i + 2] = isLeft ? 239 : 239;
       data[i + 3] = 255;
@@ -54,8 +54,10 @@ function makeCalibrationArtwork() {
 test('calibration: Lab + AA on, solid 50/50 cyan/magenta reads as 50%/50%', () => {
   const img = makeCalibrationArtwork();
   const bg = [255, 255, 255];
-  const { pixels, weights, bgCount, total } = maskPrintable(img, bg, 12,
-    { aaWeighting: true, metric: 'lab' });
+  const { pixels, weights, bgCount, total } = maskPrintable(img, bg, 12, {
+    aaWeighting: true,
+    metric: 'lab',
+  });
   assert.equal(bgCount, 0, 'no BG pixels in a fully-inked reference');
   assert.equal(total, img.width * img.height);
   // Both pixels are >> AA band from white — all weights should be ~1.
@@ -71,25 +73,31 @@ test('calibration: Lab + AA on, solid 50/50 cyan/magenta reads as 50%/50%', () =
   const result = buildResult(clusters, total, bgCount, 30, 20, null);
   // Each color should be ~50% ± 0.5%.
   for (const c of result.colors) {
-    assert.ok(Math.abs(c.print_area_pct - 0.5) < 0.005,
-      `${c.hex} pct = ${c.print_area_pct}, expected ~0.5`);
+    assert.ok(
+      Math.abs(c.print_area_pct - 0.5) < 0.005,
+      `${c.hex} pct = ${c.print_area_pct}, expected ~0.5`
+    );
   }
   // total_print_mm² = 100% × 600 mm² = 600 mm².
-  assert.ok(Math.abs(result.totals.total_print_mm2 - 600) < 0.5,
-    `total mm² = ${result.totals.total_print_mm2}, expected 600`);
+  assert.ok(
+    Math.abs(result.totals.total_print_mm2 - 600) < 0.5,
+    `total mm² = ${result.totals.total_print_mm2}, expected 600`
+  );
 });
 
 test('calibration: dieline heuristic still flags the magenta half by default', () => {
   // Sanity: isDielineColor should match the magenta (217, 70, 239).
   assert.equal(isDielineColor([217, 70, 239]), true);
-  assert.equal(isDielineColor([0, 174, 239]), false);  // cyan is not a dieline
+  assert.equal(isDielineColor([0, 174, 239]), false); // cyan is not a dieline
 });
 
 test('calibration: ink volume is deterministic for flexo + AA on + DG on', () => {
   const img = makeCalibrationArtwork();
   const bg = [255, 255, 255];
-  const { pixels, weights, bgCount, total } = maskPrintable(img, bg, 12,
-    { aaWeighting: true, metric: 'lab' });
+  const { pixels, weights, bgCount, total } = maskPrintable(img, bg, 12, {
+    aaWeighting: true,
+    metric: 'lab',
+  });
   let clusters = quantizeColors(pixels, 2, weights, { metric: 'lab' });
   clusters = mergeClusters(clusters, 18, { metric: 'lab' });
   const result = buildResult(clusters, total, bgCount, 30, 20, null);
@@ -119,22 +127,28 @@ test('calibration: ink volume is deterministic for flexo + AA on + DG on', () =>
     // Each cluster: 300 mm² × 3 µm × 1.12 × 0.001 = 1.008 µL baseline.
     // With DG at 50% canvas share (0.5) on flexo (18%), press_pct ≈
     // 0.68 → gainRatio = 0.68/0.5 = 1.36 → 1.008 × 1.36 ≈ 1.371 µL.
-    assert.ok(c.ink_uL_per_label > 1.2 && c.ink_uL_per_label < 1.5,
-      `${c.hex} ink_uL = ${c.ink_uL_per_label}, expected 1.2..1.5 µL`);
+    assert.ok(
+      c.ink_uL_per_label > 1.2 && c.ink_uL_per_label < 1.5,
+      `${c.hex} ink_uL = ${c.ink_uL_per_label}, expected 1.2..1.5 µL`
+    );
   }
 });
 
 test('calibration: AA off + DG off reproduces pre-Sprint-8 ink numbers', () => {
   const img = makeCalibrationArtwork();
   const bg = [255, 255, 255];
-  const { pixels, weights, bgCount, total } = maskPrintable(img, bg, 12,
-    { aaWeighting: false, metric: 'rgb' });
+  const { pixels, weights, bgCount, total } = maskPrintable(img, bg, 12, {
+    aaWeighting: false,
+    metric: 'rgb',
+  });
   const clusters = quantizeColors(pixels, 2, weights, { metric: 'rgb' });
   const result = buildResult(clusters, total, bgCount, 30, 20, null);
   const withInk = applyInkProfile(result.colors, 'flexo', { applyDotGain: false });
   for (const c of withInk) {
     // Baseline: 300 mm² × 3 µm × 1.12 × 0.001 = 1.008 µL, no DG multiplier.
-    assert.ok(Math.abs(c.ink_uL_per_label - 1.008) < 0.01,
-      `${c.hex} ink_uL = ${c.ink_uL_per_label}, expected ~1.008 (pre-Sprint-8)`);
+    assert.ok(
+      Math.abs(c.ink_uL_per_label - 1.008) < 0.01,
+      `${c.hex} ink_uL = ${c.ink_uL_per_label}, expected ~1.008 (pre-Sprint-8)`
+    );
   }
 });

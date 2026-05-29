@@ -24,11 +24,36 @@ process.env.OPS_CHAT_ENABLED = '1';
 fs.mkdirSync(path.join(tmp, 'Library', 'Users'), { recursive: true });
 fs.writeFileSync(
   path.join(tmp, 'Library', 'Users', 'users.json'),
-  JSON.stringify([
-    { id: 1, username: 'hana',   role: 'cost',  pwd: 'x', pwd_bcrypt: '$2b$10$test', approval_roles: [] },
-    { id: 2, username: 'sonia',  role: 'user',  pwd: 'x', pwd_bcrypt: '$2b$10$test', approval_roles: ['sales_mgr'] },
-    { id: 3, username: 'felix',  role: 'user',  pwd: 'x', pwd_bcrypt: '$2b$10$test', approval_roles: ['finance_dir'] },
-  ], null, 2),
+  JSON.stringify(
+    [
+      {
+        id: 1,
+        username: 'hana',
+        role: 'cost',
+        pwd: 'x',
+        pwd_bcrypt: '$2b$10$test',
+        approval_roles: [],
+      },
+      {
+        id: 2,
+        username: 'sonia',
+        role: 'user',
+        pwd: 'x',
+        pwd_bcrypt: '$2b$10$test',
+        approval_roles: ['sales_mgr'],
+      },
+      {
+        id: 3,
+        username: 'felix',
+        role: 'user',
+        pwd: 'x',
+        pwd_bcrypt: '$2b$10$test',
+        approval_roles: ['finance_dir'],
+      },
+    ],
+    null,
+    2
+  )
 );
 
 const { default: app } = await import('../index.js');
@@ -51,16 +76,19 @@ saveQuotes([
 ]);
 
 let server, baseUrl;
-const tokenHana  = createSession(1, { totpVerified: true });
+const tokenHana = createSession(1, { totpVerified: true });
 const tokenSonia = createSession(2, { totpVerified: true });
 
-test.before(() => new Promise(resolve => {
-  server = app.listen(0, '127.0.0.1', () => {
-    baseUrl = `http://127.0.0.1:${server.address().port}`;
-    resolve();
-  });
-}));
-test.after(() => new Promise(resolve => server.close(resolve)));
+test.before(
+  () =>
+    new Promise((resolve) => {
+      server = app.listen(0, '127.0.0.1', () => {
+        baseUrl = `http://127.0.0.1:${server.address().port}`;
+        resolve();
+      });
+    })
+);
+test.after(() => new Promise((resolve) => server.close(resolve)));
 
 function h(token) {
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
@@ -74,13 +102,13 @@ test('GET /api/chat/rooms — 200 when enabled, populates default memberships', 
   const body = await r.json();
   assert.equal(body.ok, true);
   // hana has no approval_roles, so default membership = #everyone only.
-  assert.ok(body.rooms.some(r => r.key === 'team:everyone'));
+  assert.ok(body.rooms.some((r) => r.key === 'team:everyone'));
 });
 
 test('sonia (sales_mgr) auto-joins #sales_mgr + #everyone', async () => {
   const r = await fetch(`${baseUrl}/api/chat/rooms`, { headers: h(tokenSonia) });
   const body = await r.json();
-  const keys = body.rooms.map(r => r.key);
+  const keys = body.rooms.map((r) => r.key);
   assert.ok(keys.includes('team:sales_mgr'));
   assert.ok(keys.includes('team:everyone'));
 });
@@ -114,7 +142,8 @@ test('POST message into DM, GET returns it', async () => {
   const { room } = await dmRes.json();
 
   const send = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
-    method: 'POST', headers: h(tokenHana),
+    method: 'POST',
+    headers: h(tokenHana),
     body: JSON.stringify({ body: 'Hey @sonia, check RFQ-42' }),
   });
   assert.equal(send.status, 200);
@@ -137,7 +166,8 @@ test('empty/whitespace message body rejected', async () => {
   const dmRes = await fetch(`${baseUrl}/api/chat/dm/sonia`, { headers: h(tokenHana) });
   const { room } = await dmRes.json();
   const r = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
-    method: 'POST', headers: h(tokenHana),
+    method: 'POST',
+    headers: h(tokenHana),
     body: JSON.stringify({ body: '   ' }),
   });
   assert.equal(r.status, 400);
@@ -147,7 +177,8 @@ test('HTML tags stripped from body server-side', async () => {
   const dmRes = await fetch(`${baseUrl}/api/chat/dm/sonia`, { headers: h(tokenHana) });
   const { room } = await dmRes.json();
   const send = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
-    method: 'POST', headers: h(tokenHana),
+    method: 'POST',
+    headers: h(tokenHana),
     body: JSON.stringify({ body: '<script>alert(1)</script>plain' }),
   });
   const body = await send.json();
@@ -158,12 +189,13 @@ test('non-member cannot POST to a room', async () => {
   // Create a team room only sonia belongs to
   const soniaRooms = await fetch(`${baseUrl}/api/chat/rooms`, { headers: h(tokenSonia) });
   const { rooms } = await soniaRooms.json();
-  const salesRoom = rooms.find(r => r.key === 'team:sales_mgr');
+  const salesRoom = rooms.find((r) => r.key === 'team:sales_mgr');
   assert.ok(salesRoom, 'sales_mgr room should exist');
 
   // hana (non-member) tries to POST
   const r = await fetch(`${baseUrl}/api/chat/rooms/${salesRoom.id}/messages`, {
-    method: 'POST', headers: h(tokenHana),
+    method: 'POST',
+    headers: h(tokenHana),
     body: JSON.stringify({ body: 'cannot post here' }),
   });
   assert.equal(r.status, 403);
@@ -177,13 +209,15 @@ test('mark-seen updates last_seen_id', async () => {
   const dmRes = await fetch(`${baseUrl}/api/chat/dm/sonia`, { headers: h(tokenHana) });
   const { room } = await dmRes.json();
   const send = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
-    method: 'POST', headers: h(tokenSonia),
+    method: 'POST',
+    headers: h(tokenSonia),
     body: JSON.stringify({ body: 'msg from sonia' }),
   });
   const { message } = await send.json();
 
   const seen = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/seen`, {
-    method: 'POST', headers: h(tokenHana),
+    method: 'POST',
+    headers: h(tokenHana),
     body: JSON.stringify({ message_id: message.id }),
   });
   assert.equal(seen.status, 200);
@@ -191,7 +225,7 @@ test('mark-seen updates last_seen_id', async () => {
   // Now rooms list should show unread_count=0 for this room
   const list = await fetch(`${baseUrl}/api/chat/rooms`, { headers: h(tokenHana) });
   const { rooms } = await list.json();
-  const dmRoom = rooms.find(r => r.id === room.id);
+  const dmRoom = rooms.find((r) => r.id === room.id);
   assert.equal(dmRoom.unread_count, 0);
 });
 
@@ -217,7 +251,8 @@ test('GET /api/chat/quote/:id is idempotent — second call returns same room', 
   assert.equal(b1.room.id, b2.room.id);
   // Both callers auto-joined as members; they can now post.
   const post = await fetch(`${baseUrl}/api/chat/rooms/${b1.room.id}/messages`, {
-    method: 'POST', headers: h(tokenSonia),
+    method: 'POST',
+    headers: h(tokenSonia),
     body: JSON.stringify({ body: 'scoped to the quote' }),
   });
   assert.equal(post.status, 200);
@@ -237,19 +272,20 @@ test('GET /api/chat/quote/bogus → 400', async () => {
 
 // ── Mentions inbox (Phase 10C) ──
 
-test('sending @mention populates the recipient\'s inbox', async () => {
+test("sending @mention populates the recipient's inbox", async () => {
   // hana DMs sonia with @sonia → sonia gets a mention row
   const dmRes = await fetch(`${baseUrl}/api/chat/dm/sonia`, { headers: h(tokenHana) });
   const { room } = await dmRes.json();
   await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
-    method: 'POST', headers: h(tokenHana),
+    method: 'POST',
+    headers: h(tokenHana),
     body: JSON.stringify({ body: 'FYI @sonia needs your review' }),
   });
   const inbox = await fetch(`${baseUrl}/api/chat/mentions?unread=1`, {
     headers: h(tokenSonia),
-  }).then(r => r.json());
+  }).then((r) => r.json());
   assert.ok(inbox.unread_count >= 1);
-  assert.ok(inbox.mentions.some(m => m.message_body.includes('needs your review')));
+  assert.ok(inbox.mentions.some((m) => m.message_body.includes('needs your review')));
 });
 
 test('self-mention is NOT fanned out', async () => {
@@ -258,26 +294,28 @@ test('self-mention is NOT fanned out', async () => {
   const { room } = await dmRes.json();
   const before = await fetch(`${baseUrl}/api/chat/mentions?unread=1`, {
     headers: h(tokenHana),
-  }).then(r => r.json());
+  }).then((r) => r.json());
   await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
-    method: 'POST', headers: h(tokenHana),
+    method: 'POST',
+    headers: h(tokenHana),
     body: JSON.stringify({ body: 'Reminder to @hana to double-check' }),
   });
   const after = await fetch(`${baseUrl}/api/chat/mentions?unread=1`, {
     headers: h(tokenHana),
-  }).then(r => r.json());
+  }).then((r) => r.json());
   assert.equal(after.unread_count, before.unread_count);
 });
 
 test('POST /api/chat/mentions/mark-read flips all unread', async () => {
   const mark = await fetch(`${baseUrl}/api/chat/mentions/mark-read`, {
-    method: 'POST', headers: h(tokenSonia),
+    method: 'POST',
+    headers: h(tokenSonia),
     body: JSON.stringify({}),
   });
   assert.equal(mark.status, 200);
   const inbox = await fetch(`${baseUrl}/api/chat/mentions?unread=1`, {
     headers: h(tokenSonia),
-  }).then(r => r.json());
+  }).then((r) => r.json());
   assert.equal(inbox.unread_count, 0);
 });
 
@@ -287,9 +325,10 @@ test('GET /api/chat/search returns messages from accessible rooms', async () => 
   // hana sends to the #everyone room
   const roomsRes = await fetch(`${baseUrl}/api/chat/rooms`, { headers: h(tokenHana) });
   const { rooms: hanaRooms } = await roomsRes.json();
-  const everyone = hanaRooms.find(r => r.key === 'team:everyone');
+  const everyone = hanaRooms.find((r) => r.key === 'team:everyone');
   await fetch(`${baseUrl}/api/chat/rooms/${everyone.id}/messages`, {
-    method: 'POST', headers: h(tokenHana),
+    method: 'POST',
+    headers: h(tokenHana),
     body: JSON.stringify({ body: 'searchable unique-marker-zz' }),
   });
 
@@ -306,22 +345,23 @@ test('search does NOT leak messages from rooms caller is not in', async () => {
   // Sonia posts to #sales_mgr (hana is not a member)
   const soniaRooms = await fetch(`${baseUrl}/api/chat/rooms`, { headers: h(tokenSonia) });
   const { rooms } = await soniaRooms.json();
-  const salesRoom = rooms.find(r => r.key === 'team:sales_mgr');
+  const salesRoom = rooms.find((r) => r.key === 'team:sales_mgr');
   await fetch(`${baseUrl}/api/chat/rooms/${salesRoom.id}/messages`, {
-    method: 'POST', headers: h(tokenSonia),
+    method: 'POST',
+    headers: h(tokenSonia),
     body: JSON.stringify({ body: 'confidential-keyword-qq' }),
   });
 
   // hana searches — should find nothing
   const hanaSearch = await fetch(`${baseUrl}/api/chat/search?q=confidential-keyword-qq`, {
     headers: h(tokenHana),
-  }).then(r => r.json());
+  }).then((r) => r.json());
   assert.equal(hanaSearch.results.length, 0);
 
   // sonia (member) finds it
   const soniaSearch = await fetch(`${baseUrl}/api/chat/search?q=confidential-keyword-qq`, {
     headers: h(tokenSonia),
-  }).then(r => r.json());
+  }).then((r) => r.json());
   assert.ok(soniaSearch.results.length >= 1);
 });
 
@@ -342,15 +382,18 @@ test('chat operations increment Prometheus counters', async () => {
   const dmRes = await fetch(`${baseUrl}/api/chat/dm/sonia`, { headers: h(tokenHana) });
   const { room } = await dmRes.json();
   const sent = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
-    method: 'POST', headers: h(tokenHana),
+    method: 'POST',
+    headers: h(tokenHana),
     body: JSON.stringify({ body: 'Hey @sonia metrics test' }),
-  }).then(r => r.json());
+  }).then((r) => r.json());
   await fetch(`${baseUrl}/api/chat/messages/${sent.message.id}`, {
-    method: 'PATCH', headers: h(tokenHana),
+    method: 'PATCH',
+    headers: h(tokenHana),
     body: JSON.stringify({ body: 'metrics test (edited)' }),
   });
   await fetch(`${baseUrl}/api/chat/messages/${sent.message.id}`, {
-    method: 'DELETE', headers: h(tokenHana),
+    method: 'DELETE',
+    headers: h(tokenHana),
   });
   await fetch(`${baseUrl}/api/chat/search?q=metrics`, { headers: h(tokenHana) });
 
@@ -369,12 +412,14 @@ test('PATCH /api/chat/messages/:id — author can edit own message', async () =>
   const dmRes = await fetch(`${baseUrl}/api/chat/dm/sonia`, { headers: h(tokenHana) });
   const { room } = await dmRes.json();
   const sent = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
-    method: 'POST', headers: h(tokenHana),
+    method: 'POST',
+    headers: h(tokenHana),
     body: JSON.stringify({ body: 'typo in message' }),
-  }).then(r => r.json());
+  }).then((r) => r.json());
 
   const edit = await fetch(`${baseUrl}/api/chat/messages/${sent.message.id}`, {
-    method: 'PATCH', headers: h(tokenHana),
+    method: 'PATCH',
+    headers: h(tokenHana),
     body: JSON.stringify({ body: 'fixed typo' }),
   });
   assert.equal(edit.status, 200);
@@ -389,28 +434,32 @@ test('PATCH edit adding @mention pings the newly-mentioned user', async () => {
   const { room } = await dmRes.json();
   // Post WITHOUT a mention
   const sent = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
-    method: 'POST', headers: h(tokenHana),
+    method: 'POST',
+    headers: h(tokenHana),
     body: JSON.stringify({ body: 'thinking about this' }),
-  }).then(r => r.json());
+  }).then((r) => r.json());
 
   // Sonia clears any existing unread so we can isolate the edit's effect
   await fetch(`${baseUrl}/api/chat/mentions/mark-read`, {
-    method: 'POST', headers: h(tokenSonia), body: JSON.stringify({}),
+    method: 'POST',
+    headers: h(tokenSonia),
+    body: JSON.stringify({}),
   });
   const before = await fetch(`${baseUrl}/api/chat/mentions?unread=1`, {
     headers: h(tokenSonia),
-  }).then(r => r.json());
+  }).then((r) => r.json());
   assert.equal(before.unread_count, 0);
 
   // Edit to ADD @sonia
   await fetch(`${baseUrl}/api/chat/messages/${sent.message.id}`, {
-    method: 'PATCH', headers: h(tokenHana),
+    method: 'PATCH',
+    headers: h(tokenHana),
     body: JSON.stringify({ body: 'hey @sonia — thinking about this' }),
   });
 
   const after = await fetch(`${baseUrl}/api/chat/mentions?unread=1`, {
     headers: h(tokenSonia),
-  }).then(r => r.json());
+  }).then((r) => r.json());
   assert.equal(after.unread_count, 1);
   assert.ok(after.mentions[0].message_body.includes('thinking about this'));
 });
@@ -419,12 +468,14 @@ test('PATCH — non-author gets 403', async () => {
   const dmRes = await fetch(`${baseUrl}/api/chat/dm/sonia`, { headers: h(tokenHana) });
   const { room } = await dmRes.json();
   const sent = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
-    method: 'POST', headers: h(tokenHana),
+    method: 'POST',
+    headers: h(tokenHana),
     body: JSON.stringify({ body: 'hana said this' }),
-  }).then(r => r.json());
+  }).then((r) => r.json());
 
   const edit = await fetch(`${baseUrl}/api/chat/messages/${sent.message.id}`, {
-    method: 'PATCH', headers: h(tokenSonia),
+    method: 'PATCH',
+    headers: h(tokenSonia),
     body: JSON.stringify({ body: 'sonia hijacks' }),
   });
   assert.equal(edit.status, 403);
@@ -434,19 +485,21 @@ test('DELETE — author can soft-delete; history still returns the row', async (
   const dmRes = await fetch(`${baseUrl}/api/chat/dm/sonia`, { headers: h(tokenHana) });
   const { room } = await dmRes.json();
   const sent = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
-    method: 'POST', headers: h(tokenHana),
+    method: 'POST',
+    headers: h(tokenHana),
     body: JSON.stringify({ body: 'will be deleted' }),
-  }).then(r => r.json());
+  }).then((r) => r.json());
 
   const del = await fetch(`${baseUrl}/api/chat/messages/${sent.message.id}`, {
-    method: 'DELETE', headers: h(tokenHana),
+    method: 'DELETE',
+    headers: h(tokenHana),
   });
   assert.equal(del.status, 200);
 
   const hist = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
     headers: h(tokenHana),
-  }).then(r => r.json());
-  const found = hist.messages.find(m => m.id === sent.message.id);
+  }).then((r) => r.json());
+  const found = hist.messages.find((m) => m.id === sent.message.id);
   assert.ok(found, 'row still present for audit');
   assert.ok(found.deleted_at, 'deleted_at set');
 });
@@ -466,47 +519,56 @@ test('chatEditRateLimit: 429 after burst of PATCH/DELETE', async () => {
     // Post + immediately edit cycle — counts each as one operation
     // against the edit limiter (POST uses a different limiter).
     const sent = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
-      method: 'POST', headers: h(tokenHana),
+      method: 'POST',
+      headers: h(tokenHana),
       body: JSON.stringify({ body: `burst ${i}` }),
-    }).then(r => r.json());
+    }).then((r) => r.json());
     const r = await fetch(`${baseUrl}/api/chat/messages/${sent.message.id}`, {
-      method: 'PATCH', headers: h(tokenHana),
+      method: 'PATCH',
+      headers: h(tokenHana),
       body: JSON.stringify({ body: `burst ${i} edited` }),
     });
-    if (r.status === 429) { saw429 = true; break; }
+    if (r.status === 429) {
+      saw429 = true;
+      break;
+    }
   }
   assert.equal(saw429, true);
-  chatEditRateLimit._reset();  // don't bleed into subsequent tests
+  chatEditRateLimit._reset(); // don't bleed into subsequent tests
 });
 
 test('DELETE ?hard=1 — purges the row entirely', async () => {
   const dmRes = await fetch(`${baseUrl}/api/chat/dm/sonia`, { headers: h(tokenHana) });
   const { room } = await dmRes.json();
   const sent = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
-    method: 'POST', headers: h(tokenHana),
+    method: 'POST',
+    headers: h(tokenHana),
     body: JSON.stringify({ body: 'purge me' }),
-  }).then(r => r.json());
+  }).then((r) => r.json());
   const del = await fetch(`${baseUrl}/api/chat/messages/${sent.message.id}?hard=1`, {
-    method: 'DELETE', headers: h(tokenHana),
+    method: 'DELETE',
+    headers: h(tokenHana),
   });
   assert.equal(del.status, 200);
   const body = await del.json();
   assert.equal(body.purged, true);
   const hist = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
     headers: h(tokenHana),
-  }).then(r => r.json());
-  assert.ok(!hist.messages.some(m => m.id === sent.message.id), 'row is gone');
+  }).then((r) => r.json());
+  assert.ok(!hist.messages.some((m) => m.id === sent.message.id), 'row is gone');
 });
 
 test('DELETE ?hard=1 — non-author gets 403', async () => {
   const dmRes = await fetch(`${baseUrl}/api/chat/dm/sonia`, { headers: h(tokenHana) });
   const { room } = await dmRes.json();
   const sent = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
-    method: 'POST', headers: h(tokenHana),
+    method: 'POST',
+    headers: h(tokenHana),
     body: JSON.stringify({ body: 'not yours to purge' }),
-  }).then(r => r.json());
+  }).then((r) => r.json());
   const r = await fetch(`${baseUrl}/api/chat/messages/${sent.message.id}?hard=1`, {
-    method: 'DELETE', headers: h(tokenSonia),
+    method: 'DELETE',
+    headers: h(tokenSonia),
   });
   assert.equal(r.status, 403);
 });
@@ -515,15 +577,18 @@ test('DELETE — second delete returns 410', async () => {
   const dmRes = await fetch(`${baseUrl}/api/chat/dm/sonia`, { headers: h(tokenHana) });
   const { room } = await dmRes.json();
   const sent = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
-    method: 'POST', headers: h(tokenHana),
+    method: 'POST',
+    headers: h(tokenHana),
     body: JSON.stringify({ body: 'once' }),
-  }).then(r => r.json());
+  }).then((r) => r.json());
 
   await fetch(`${baseUrl}/api/chat/messages/${sent.message.id}`, {
-    method: 'DELETE', headers: h(tokenHana),
+    method: 'DELETE',
+    headers: h(tokenHana),
   });
   const again = await fetch(`${baseUrl}/api/chat/messages/${sent.message.id}`, {
-    method: 'DELETE', headers: h(tokenHana),
+    method: 'DELETE',
+    headers: h(tokenHana),
   });
   assert.equal(again.status, 410);
 });
@@ -534,9 +599,9 @@ test('GET /api/chat/users returns directory for autocomplete', async () => {
   const r = await fetch(`${baseUrl}/api/chat/users`, { headers: h(tokenHana) });
   const body = await r.json();
   assert.equal(body.users.length, 3);
-  assert.ok(body.users.every(u => u.id && u.username));
+  assert.ok(body.users.every((u) => u.id && u.username));
   // Passwords + bcrypt hashes NOT leaked
-  assert.ok(body.users.every(u => u.pwd == null && u.pwd_bcrypt == null));
+  assert.ok(body.users.every((u) => u.pwd == null && u.pwd_bcrypt == null));
 });
 
 // ── Feature flag OFF ──

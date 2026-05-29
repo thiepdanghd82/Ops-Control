@@ -16,14 +16,15 @@ export default function CplxHeader() {
   const { lib, setActiveSite } = useCostLib();
   const cs = cplxState;
 
-  const handleField = useCallback((field, value, isNum = false) => {
-    // Accept number (from DecimalInput in RfqInfoCard) or string (legacy).
-    const v = isNum
-      ? (typeof value === 'number' ? value : (parseFloat(value) || 0))
-      : value;
-    setCplxField(field, v);
-    if (field === 'site') setActiveSite(v);
-  }, [setCplxField, setActiveSite]);
+  const handleField = useCallback(
+    (field, value, isNum = false) => {
+      // Accept number (from DecimalInput in RfqInfoCard) or string (legacy).
+      const v = isNum ? (typeof value === 'number' ? value : parseFloat(value) || 0) : value;
+      setCplxField(field, v);
+      if (field === 'site') setActiveSite(v);
+    },
+    [setCplxField, setActiveSite]
+  );
 
   // Phase 9D.1 — sync CostLibContext.activeSite with the quote's own
   // site field so loading a saved quote picks up that site's rates

@@ -88,19 +88,22 @@ function attachListeners() {
     broadcast({ state: 'downloaded', version: info.version });
 
     const win = BrowserWindow.getAllWindows()[0];
-    dialog.showMessageBox(win, {
-      type: 'info',
-      title: 'Ops Control — Cập nhật sẵn sàng',
-      message: `Phiên bản ${info.version} đã tải xong.`,
-      detail: 'Khởi động lại để cài đặt phiên bản mới.\n\nNếu chọn "Để sau", bản cập nhật sẽ tự cài khi anh thoát Ops Control.',
-      buttons: ['Khởi động lại', 'Để sau'],
-      defaultId: 0,
-      cancelId: 1,
-    }).then(({ response }) => {
-      if (response === 0) {
-        getAutoUpdater().quitAndInstall(false, true);
-      }
-    });
+    dialog
+      .showMessageBox(win, {
+        type: 'info',
+        title: 'Ops Control — Cập nhật sẵn sàng',
+        message: `Phiên bản ${info.version} đã tải xong.`,
+        detail:
+          'Khởi động lại để cài đặt phiên bản mới.\n\nNếu chọn "Để sau", bản cập nhật sẽ tự cài khi anh thoát Ops Control.',
+        buttons: ['Khởi động lại', 'Để sau'],
+        defaultId: 0,
+        cancelId: 1,
+      })
+      .then(({ response }) => {
+        if (response === 0) {
+          getAutoUpdater().quitAndInstall(false, true);
+        }
+      });
   });
 }
 
@@ -125,28 +128,31 @@ function initAutoUpdater(userInitiated = false) {
     return;
   }
 
-  getAutoUpdater().checkForUpdates().then((result) => {
-    if (userInitiated && result?.updateInfo?.version === app.getVersion()) {
-      const win = BrowserWindow.getAllWindows()[0];
-      dialog.showMessageBox(win, {
-        type: 'info',
-        title: 'Ops Control',
-        message: 'Đang dùng phiên bản mới nhất.',
-        detail: `v${app.getVersion()}`,
-      });
-    }
-  }).catch((err) => {
-    log.error('[updater] checkForUpdates failed:', err);
-    if (userInitiated) {
-      const win = BrowserWindow.getAllWindows()[0];
-      dialog.showMessageBox(win, {
-        type: 'warning',
-        title: 'Ops Control',
-        message: 'Không kiểm tra được cập nhật.',
-        detail: err.message,
-      });
-    }
-  });
+  getAutoUpdater()
+    .checkForUpdates()
+    .then((result) => {
+      if (userInitiated && result?.updateInfo?.version === app.getVersion()) {
+        const win = BrowserWindow.getAllWindows()[0];
+        dialog.showMessageBox(win, {
+          type: 'info',
+          title: 'Ops Control',
+          message: 'Đang dùng phiên bản mới nhất.',
+          detail: `v${app.getVersion()}`,
+        });
+      }
+    })
+    .catch((err) => {
+      log.error('[updater] checkForUpdates failed:', err);
+      if (userInitiated) {
+        const win = BrowserWindow.getAllWindows()[0];
+        dialog.showMessageBox(win, {
+          type: 'warning',
+          title: 'Ops Control',
+          message: 'Không kiểm tra được cập nhật.',
+          detail: err.message,
+        });
+      }
+    });
 }
 
 module.exports = { initAutoUpdater, getStatus: () => lastStatus };

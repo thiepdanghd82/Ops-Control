@@ -16,8 +16,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { updateUsers, bcryptHash } from '../server/services/authService.js';
 
-const DEFAULT_SEED_PATH = process.env.OPS_USER_SEED
-  || path.join(process.env.HOME || '/tmp', 'Library/Application Support/Ops Control/pending-admin-seed.json');
+const DEFAULT_SEED_PATH =
+  process.env.OPS_USER_SEED ||
+  path.join(
+    process.env.HOME || '/tmp',
+    'Library/Application Support/Ops Control/pending-admin-seed.json'
+  );
 
 async function main() {
   const seedPath = process.argv[2] || DEFAULT_SEED_PATH;
@@ -63,7 +67,7 @@ async function main() {
       outcome = 'reset';
       return;
     }
-    const nextId = (users.reduce((m, u) => Math.max(m, Number(u.id) || 0), 0)) + 1;
+    const nextId = users.reduce((m, u) => Math.max(m, Number(u.id) || 0), 0) + 1;
     users.push({
       id: nextId,
       username,
@@ -75,8 +79,11 @@ async function main() {
   });
 
   // Wipe the seed file so the next boot is a no-op.
-  try { fs.unlinkSync(seedPath); }
-  catch { /* leave for ops to clean if perms refused */ }
+  try {
+    fs.unlinkSync(seedPath);
+  } catch {
+    /* leave for ops to clean if perms refused */
+  }
 
   console.log(`[seed-admin] sys user "${username}" ${outcome}. Seed file removed.`);
 }

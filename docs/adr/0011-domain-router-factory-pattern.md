@@ -131,7 +131,7 @@ handler)`. We don't. Reasons:
   on. Inline `if (!deps.isAdminPlus(req.user)) return 403` is
   immediately readable.
 - Tests can drive the negative path through `req.headers
-  ['x-test-role']` (stub auth pattern) without mocking middleware.
+['x-test-role']` (stub auth pattern) without mocking middleware.
 
 #### 4.4 NO module-level state
 
@@ -286,14 +286,14 @@ framework migration just for routing organisation.
 
 ## Currently-conforming routers (as of 2026-04-29)
 
-| Router | Routes | Tests | Coverage (lines) |
-|---|---|---|---|
-| `server/domains/security/routes/audit.js` | 1 | (covered via integration)| n/a |
-| `server/domains/security/routes/license.js` | 1 | 5 | 100 % |
-| `server/domains/basis/routes/backup.js` | 3 | – (deferred) | – |
-| `server/domains/library/routes/rate.js` | 4 | 8 | 90.8 % |
-| `server/domains/library/routes/ddl.js` | 4 | 6 | 95.6 % |
-| `server/domains/sales/routes/released-quotation.js` | 3 | 9 | 96.0 % |
+| Router                                              | Routes | Tests                     | Coverage (lines) |
+| --------------------------------------------------- | ------ | ------------------------- | ---------------- |
+| `server/domains/security/routes/audit.js`           | 1      | (covered via integration) | n/a              |
+| `server/domains/security/routes/license.js`         | 1      | 5                         | 100 %            |
+| `server/domains/basis/routes/backup.js`             | 3      | – (deferred)              | –                |
+| `server/domains/library/routes/rate.js`             | 4      | 8                         | 90.8 %           |
+| `server/domains/library/routes/ddl.js`              | 4      | 6                         | 95.6 %           |
+| `server/domains/sales/routes/released-quotation.js` | 3      | 9                         | 96.0 %           |
 
 7 routers · 16 endpoints · 28 contract tests · mean coverage 96 %.
 

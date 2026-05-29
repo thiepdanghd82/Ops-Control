@@ -42,7 +42,11 @@ function lockDir() {
   // and survive a DATA_DIR-scoped backup/restore cycle.
   const base = process.env.DATA_DIR || path.join(process.cwd(), 'server', 'data');
   const dir = path.join(base, 'locks');
-  try { fs.mkdirSync(dir, { recursive: true }); } catch { /* best-effort */ }
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch {
+    /* best-effort */
+  }
   return dir;
 }
 
@@ -55,7 +59,11 @@ async function acquireFileLock(key) {
   const file = path.join(lockDir(), keyToFilename(key));
   // proper-lockfile requires an existing target to lock. Create a
   // stub marker if missing — idempotent, trivially small.
-  try { fs.writeFileSync(file, '', { flag: 'a' }); } catch { /* ignore — acquire will surface the error */ }
+  try {
+    fs.writeFileSync(file, '', { flag: 'a' });
+  } catch {
+    /* ignore — acquire will surface the error */
+  }
   // Retries smooth over normal contention: stale 30s (crash survives),
   // retries 10× with exponential backoff capped at 1s.
   return lockfile.lock(file, {
@@ -81,7 +89,9 @@ export async function withLock(key, fn) {
   // `fn` completes. Storing the chain in the map means the Nth
   // waiter awaits the (N-1)th, which awaits the (N-2)th, …
   let resolveRun;
-  const run = new Promise(r => { resolveRun = r; });
+  const run = new Promise((r) => {
+    resolveRun = r;
+  });
   const mine = previous.then(() => run);
   _locks.set(key, mine);
 
@@ -95,13 +105,18 @@ export async function withLock(key, fn) {
       try {
         releaseFileLock = await acquireFileLock(key);
       } catch (err) {
-        console.warn(`  ⚠️  withLock(${key}) file-lock failed (degrading to in-process only):`, err?.message || err);
+        console.warn(
+          `  ⚠️  withLock(${key}) file-lock failed (degrading to in-process only):`,
+          err?.message || err
+        );
       }
     }
     return await fn();
   } finally {
     if (releaseFileLock) {
-      try { await releaseFileLock(); } catch (err) {
+      try {
+        await releaseFileLock();
+      } catch (err) {
         console.warn(`  ⚠️  withLock(${key}) file-lock release failed:`, err?.message || err);
       }
     }

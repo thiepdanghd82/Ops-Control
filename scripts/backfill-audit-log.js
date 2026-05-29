@@ -27,8 +27,13 @@ import { bulkAppendAudit, auditRowCount } from '../server/repositories/auditStor
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_FILE = path.join(
-  __dirname, '..',
-  'server', 'data', 'Library', 'Users', 'audit_log.json',
+  __dirname,
+  '..',
+  'server',
+  'data',
+  'Library',
+  'Users',
+  'audit_log.json'
 );
 
 function parseArgs(argv) {
@@ -94,5 +99,10 @@ async function main() {
   console.log(`DB total now: ${finalCount}`);
 }
 
-const isCli = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
-if (isCli) main().catch(err => { console.error(err); process.exit(1); });
+const isCli =
+  process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+if (isCli)
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });

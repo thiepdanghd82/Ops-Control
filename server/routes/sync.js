@@ -145,7 +145,11 @@ router.get('/pull', (req, res) => {
   }
 
   let mtimeMs = since;
-  try { mtimeMs = fs.statSync(absPath).mtimeMs; } catch (_) { /* swallow */ }
+  try {
+    mtimeMs = fs.statSync(absPath).mtimeMs;
+  } catch (_) {
+    /* swallow */
+  }
 
   const allRows = toRows(data);
   let maxSavedAt = since;
@@ -213,7 +217,7 @@ router.post('/push', async (req, res) => {
     const r = await fetch(target, {
       method: method.toUpperCase(),
       headers: fwdHeaders,
-      body: body == null ? undefined : (typeof body === 'string' ? body : JSON.stringify(body)),
+      body: body == null ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
     });
 
     let payload = null;
@@ -243,13 +247,17 @@ router.post('/push', async (req, res) => {
 router.get('/manifest', (req, res) => {
   const tables = Object.entries(SYNC_TABLES).map(([name, cfg]) => {
     const abs = resolveProjectFile(cfg.file);
-    let exists = false, mtimeMs = 0, size = 0;
+    let exists = false,
+      mtimeMs = 0,
+      size = 0;
     try {
       const st = fs.statSync(abs);
       exists = true;
       mtimeMs = st.mtimeMs;
       size = st.size;
-    } catch (_) { /* swallow */ }
+    } catch (_) {
+      /* swallow */
+    }
     return { name, exists, mtimeMs, size, idField: cfg.idField };
   });
   res.json({ ok: true, tables, serverTime: Date.now() });

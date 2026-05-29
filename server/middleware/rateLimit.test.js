@@ -28,10 +28,17 @@ function mkReqExpress(ip) {
   return { ip, headers: {}, socket: { remoteAddress: '127.0.0.1' } };
 }
 function mkRes() {
-  let status = 200, payload = null;
+  let status = 200,
+    payload = null;
   const res = {
-    status(s) { status = s; return res; },
-    json(p) { payload = p; return res; },
+    status(s) {
+      status = s;
+      return res;
+    },
+    json(p) {
+      payload = p;
+      return res;
+    },
     _status: () => status,
     _payload: () => payload,
   };
@@ -45,7 +52,9 @@ test('writeRateLimit: allows up to default max (30) per IP', () => {
   for (let i = 0; i < 30; i++) {
     const res = mkRes();
     let next = false;
-    writeRateLimit(mkReq(ip), res, () => { next = true; });
+    writeRateLimit(mkReq(ip), res, () => {
+      next = true;
+    });
     if (next) allowed++;
   }
   assert.equal(allowed, 30);
@@ -59,7 +68,9 @@ test('writeRateLimit: 31st call blocked with 429', () => {
   }
   const res = mkRes();
   let next = false;
-  writeRateLimit(mkReq(ip), res, () => { next = true; });
+  writeRateLimit(mkReq(ip), res, () => {
+    next = true;
+  });
   assert.equal(next, false);
   assert.equal(res._status(), 429);
   assert.equal(res._payload().ok, false);
@@ -75,7 +86,9 @@ test('writeRateLimit: per-IP isolation — different IPs share no counter', () =
   // 10.0.0.3 is exhausted, 10.0.0.4 should still be allowed
   const res = mkRes();
   let next = false;
-  writeRateLimit(mkReq('10.0.0.4'), res, () => { next = true; });
+  writeRateLimit(mkReq('10.0.0.4'), res, () => {
+    next = true;
+  });
   assert.equal(next, true);
   assert.equal(res._status(), 200);
 });
@@ -86,7 +99,9 @@ test('saveRateLimit: higher threshold than writeRateLimit (default 120)', () => 
   let allowed = 0;
   for (let i = 0; i < 120; i++) {
     let next = false;
-    saveRateLimit(mkReq(ip), mkRes(), () => { next = true; });
+    saveRateLimit(mkReq(ip), mkRes(), () => {
+      next = true;
+    });
     if (next) allowed++;
   }
   assert.equal(allowed, 120);
@@ -94,13 +109,15 @@ test('saveRateLimit: higher threshold than writeRateLimit (default 120)', () => 
   // 121st call blocked
   const res = mkRes();
   let next = false;
-  saveRateLimit(mkReq(ip), res, () => { next = true; });
+  saveRateLimit(mkReq(ip), res, () => {
+    next = true;
+  });
   assert.equal(next, false);
   assert.equal(res._status(), 429);
   assert.ok(res._payload().error.includes('save'));
 });
 
-test('limiters: independent stores — burning save doesn\'t affect write', () => {
+test("limiters: independent stores — burning save doesn't affect write", () => {
   writeRateLimit._reset();
   saveRateLimit._reset();
   const ip = '10.0.0.6';
@@ -109,7 +126,9 @@ test('limiters: independent stores — burning save doesn\'t affect write', () =
   }
   // save exhausted, write should still work
   let next = false;
-  writeRateLimit(mkReq(ip), mkRes(), () => { next = true; });
+  writeRateLimit(mkReq(ip), mkRes(), () => {
+    next = true;
+  });
   assert.equal(next, true);
 });
 
@@ -123,7 +142,9 @@ test('limiter: uses req.ip when set (Express-populated from X-Forwarded-For via 
   // because Express resolved it to req.ip under trust proxy.
   const res = mkRes();
   let next = false;
-  writeRateLimit(mkReqExpress(ip), res, () => { next = true; });
+  writeRateLimit(mkReqExpress(ip), res, () => {
+    next = true;
+  });
   assert.equal(next, false);
   assert.equal(res._status(), 429);
 });
@@ -135,7 +156,9 @@ test('limiter: falls back to socket.remoteAddress when req.ip absent', () => {
   }
   const res = mkRes();
   let next = false;
-  writeRateLimit(mkReq('10.0.0.100'), res, () => { next = true; });
+  writeRateLimit(mkReq('10.0.0.100'), res, () => {
+    next = true;
+  });
   assert.equal(next, false);
   assert.equal(res._status(), 429);
 });
@@ -146,14 +169,22 @@ test('limiter: raw x-forwarded-for header is IGNORED without trust proxy', () =>
   // avoid per-IP counts. Now the limiter only reads req.ip (set by
   // Express when trust-proxy is configured) or socket. Header alone
   // must not influence the counter.
-  const spoofed = { headers: { 'x-forwarded-for': 'spoof-me' }, socket: { remoteAddress: '10.0.0.200' } };
+  const spoofed = {
+    headers: { 'x-forwarded-for': 'spoof-me' },
+    socket: { remoteAddress: '10.0.0.200' },
+  };
   for (let i = 0; i < 30; i++) writeRateLimit(spoofed, mkRes(), () => {});
   // Another request with a DIFFERENT spoofed header but same socket —
   // should still hit 429 because the counter keyed on the socket.
-  const spoofed2 = { headers: { 'x-forwarded-for': 'different-spoof' }, socket: { remoteAddress: '10.0.0.200' } };
+  const spoofed2 = {
+    headers: { 'x-forwarded-for': 'different-spoof' },
+    socket: { remoteAddress: '10.0.0.200' },
+  };
   const res = mkRes();
   let next = false;
-  writeRateLimit(spoofed2, res, () => { next = true; });
+  writeRateLimit(spoofed2, res, () => {
+    next = true;
+  });
   assert.equal(next, false);
   assert.equal(res._status(), 429);
 });
@@ -168,7 +199,9 @@ test('limiter: malformed env var (NaN) falls back to default, does NOT disable l
   for (let i = 0; i < 30; i++) writeRateLimit(mkReq('10.0.0.201'), mkRes(), () => {});
   const res = mkRes();
   let next = false;
-  writeRateLimit(mkReq('10.0.0.201'), res, () => { next = true; });
+  writeRateLimit(mkReq('10.0.0.201'), res, () => {
+    next = true;
+  });
   assert.equal(next, false, 'limiter must still enforce default max when env is absent/bad');
   assert.equal(res._status(), 429);
 });
@@ -192,6 +225,8 @@ test('LRU eviction: store size is bounded below STORE_MAX + 10% headroom', () =>
   // eviction must not have deleted the logic, only old entries.
   writeRateLimit._reset();
   let next = false;
-  writeRateLimit(mkReq('10.0.0.255'), mkRes(), () => { next = true; });
+  writeRateLimit(mkReq('10.0.0.255'), mkRes(), () => {
+    next = true;
+  });
   assert.equal(next, true, 'limiter must still accept new IPs after an eviction pass');
 });

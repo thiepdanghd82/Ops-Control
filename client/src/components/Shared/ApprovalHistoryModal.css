@@ -22,7 +22,9 @@
   color: #161616;
   border-bottom: 1px solid #f4f4f4;
 }
-.appr-hist-row:last-child { border-bottom: none; }
+.appr-hist-row:last-child {
+  border-bottom: none;
+}
 
 .appr-hist-ts {
   font-variant-numeric: tabular-nums;
@@ -44,10 +46,21 @@
   gap: 4px;
   align-items: baseline;
 }
-.appr-hist-from   { color: #525252; }
-.appr-hist-arrow  { color: #8d8d8d; margin: 0 2px; }
-.appr-hist-to     { font-weight: 600; color: #161616; }
-.appr-hist-actor  { color: #6f6f6f; margin-left: 6px; }
+.appr-hist-from {
+  color: #525252;
+}
+.appr-hist-arrow {
+  color: #8d8d8d;
+  margin: 0 2px;
+}
+.appr-hist-to {
+  font-weight: 600;
+  color: #161616;
+}
+.appr-hist-actor {
+  color: #6f6f6f;
+  margin-left: 6px;
+}
 
 .appr-hist-reason {
   margin-top: 4px;
@@ -64,7 +77,9 @@
   font-size: 11px;
   color: #6f6f6f;
 }
-.appr-hist-footer-meta b { color: #161616; }
+.appr-hist-footer-meta b {
+  color: #161616;
+}
 /* Status pills come from the canonical .status-badge + .status-<tone>
    palette in styles/semantic-tokens.css — no local overrides here so
    badges stay in sync with the rest of the app. */

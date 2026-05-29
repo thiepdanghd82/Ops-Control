@@ -30,7 +30,10 @@ test('APPROVE_FINANCE with snapshot freezes site + rate', () => {
   const pending = toPendingFinance();
   const snapshot = { site: 'VN', sga_rate_pct: 5 };
   const r = transition({
-    approval: pending, action: 'APPROVE_FINANCE', actorUser: finDir, snapshot,
+    approval: pending,
+    action: 'APPROVE_FINANCE',
+    actorUser: finDir,
+    snapshot,
   });
   assert.equal(r.ok, true);
   assert.equal(r.approval.status, 'approved');
@@ -51,7 +54,9 @@ test('APPROVE_FINANCE without snapshot still succeeds (back-compat)', () => {
 test('APPROVE_FINANCE normalizes non-finite rate to 0', () => {
   const pending = toPendingFinance();
   const r = transition({
-    approval: pending, action: 'APPROVE_FINANCE', actorUser: finDir,
+    approval: pending,
+    action: 'APPROVE_FINANCE',
+    actorUser: finDir,
     snapshot: { site: 'VN', sga_rate_pct: 'abc' },
   });
   assert.equal(r.ok, true);
@@ -60,13 +65,17 @@ test('APPROVE_FINANCE normalizes non-finite rate to 0', () => {
 
 test('SUBMIT / APPROVE_SALES do not record snapshot', () => {
   const r1 = transition({
-    approval: null, action: 'SUBMIT', actorUser: costEng,
+    approval: null,
+    action: 'SUBMIT',
+    actorUser: costEng,
     snapshot: { site: 'VN', sga_rate_pct: 5 },
   });
   assert.equal(r1.approval.rates_snapshot, undefined);
 
   const r2 = transition({
-    approval: r1.approval, action: 'APPROVE_SALES', actorUser: salesMgr,
+    approval: r1.approval,
+    action: 'APPROVE_SALES',
+    actorUser: salesMgr,
     snapshot: { site: 'VN', sga_rate_pct: 5 },
   });
   assert.equal(r2.approval.rates_snapshot, undefined);
@@ -75,7 +84,10 @@ test('SUBMIT / APPROVE_SALES do not record snapshot', () => {
 test('REJECT does not write snapshot', () => {
   const pending = toPendingFinance();
   const r = transition({
-    approval: pending, action: 'REJECT', actorUser: finDir, reason: 'margin too low',
+    approval: pending,
+    action: 'REJECT',
+    actorUser: finDir,
+    reason: 'margin too low',
     snapshot: { site: 'VN', sga_rate_pct: 5 },
   });
   assert.equal(r.ok, true);
@@ -86,14 +98,18 @@ test('REJECT does not write snapshot', () => {
 test('REVOKE clears snapshot — next approval captures fresh one', () => {
   const pending = toPendingFinance();
   const approved = transition({
-    approval: pending, action: 'APPROVE_FINANCE', actorUser: finDir,
+    approval: pending,
+    action: 'APPROVE_FINANCE',
+    actorUser: finDir,
     snapshot: { site: 'VN', sga_rate_pct: 5 },
   }).approval;
   assert.ok(approved.rates_snapshot);
 
   const sys = { username: 'root', role: 'sys', approval_roles: [] };
   const revoked = transition({
-    approval: approved, action: 'REVOKE', actorUser: sys,
+    approval: approved,
+    action: 'REVOKE',
+    actorUser: sys,
   }).approval;
   assert.equal(revoked.rates_snapshot, undefined, 'REVOKE must clear snapshot');
   assert.equal(revoked.status, 'draft');
@@ -103,8 +119,15 @@ test('snapshot is copied, not referenced — caller mutations do not affect the 
   const pending = toPendingFinance();
   const snapshot = { site: 'VN', sga_rate_pct: 5 };
   const r = transition({
-    approval: pending, action: 'APPROVE_FINANCE', actorUser: finDir, snapshot,
+    approval: pending,
+    action: 'APPROVE_FINANCE',
+    actorUser: finDir,
+    snapshot,
   });
   snapshot.sga_rate_pct = 99; // attacker mutates input after call
-  assert.equal(r.approval.rates_snapshot.sga_rate_pct, 5, 'stored snapshot must be independent of caller');
+  assert.equal(
+    r.approval.rates_snapshot.sga_rate_pct,
+    5,
+    'stored snapshot must be independent of caller'
+  );
 });

@@ -7,6 +7,7 @@ Surfaces in scope: Quote History download icon → modal → POST /api/quotes/:i
 ## How to use this checklist
 
 Each scenario has 4 fields the operator fills in real time:
+
 - **Steps** — exact click path; assume cold browser session
 - **Expected** — what the UI / file should do
 - **Acceptance** — Pass / Fail binary; partial-pass = Fail with notes
@@ -25,6 +26,7 @@ Document order kept as SCN1 → SCN8 for readability (operator scenarios grouped
 ### Screenshot anonymisation rule (per risk-register R4)
 
 Trước khi commit screenshot vào `screenshots/` folder:
+
 - **CROP** vùng có customer name, PO number, total amount, tier pricing
 - Nếu không crop được sạch → ghi mô tả text, KHÔNG attach screenshot
 - Cover sheet screenshots: ưu tiên crop ra vùng "CUSTOMER COPY" watermark + sheet structure, BỎ vùng KPI numbers
@@ -261,8 +263,8 @@ Pick the largest Cpx quote available (most sub-products × most ink/process rows
 
 ### Acceptance
 
-- [ ] Export time ≤ 10s (note actual: ___ s)
-- [ ] File size ≤ 5 MB (note actual: ___ MB)
+- [ ] Export time ≤ 10s (note actual: \_\_\_ s)
+- [ ] File size ≤ 5 MB (note actual: \_\_\_ MB)
 - [ ] All sheets render no #REF, no truncation
 - [ ] Fail (fill bug stub; capture file size + tier count)
 

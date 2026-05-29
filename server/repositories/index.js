@@ -24,16 +24,16 @@ const BACKEND_NAME = (process.env.OPS_DATA_BACKEND || 'file').toLowerCase();
 // for phased rollout. Value is either 'file' or 'sqlite'. Invalid /
 // missing values fall back to BACKEND_NAME.
 const DATASET_ENV = {
-  bom:               'OPS_BACKEND_BOM',
-  routing:           'OPS_BACKEND_ROUTING',
-  inventory:         'OPS_BACKEND_INVENTORY',
-  finished_goods:    'OPS_BACKEND_FINISHED_GOODS',
-  raw_materials:     'OPS_BACKEND_RAW_MATERIALS',
-  materials_npi:     'OPS_BACKEND_MATERIALS_NPI',
-  materials_sourcing:'OPS_BACKEND_MATERIALS_SOURCING',
-  quotes:            'OPS_BACKEND_QUOTES',
-  rfq_tracker:       'OPS_BACKEND_RFQ_TRACKER',
-  sample_tracker:    'OPS_BACKEND_SAMPLE_TRACKER',
+  bom: 'OPS_BACKEND_BOM',
+  routing: 'OPS_BACKEND_ROUTING',
+  inventory: 'OPS_BACKEND_INVENTORY',
+  finished_goods: 'OPS_BACKEND_FINISHED_GOODS',
+  raw_materials: 'OPS_BACKEND_RAW_MATERIALS',
+  materials_npi: 'OPS_BACKEND_MATERIALS_NPI',
+  materials_sourcing: 'OPS_BACKEND_MATERIALS_SOURCING',
+  quotes: 'OPS_BACKEND_QUOTES',
+  rfq_tracker: 'OPS_BACKEND_RFQ_TRACKER',
+  sample_tracker: 'OPS_BACKEND_SAMPLE_TRACKER',
 };
 
 function backendFor(dataset) {
@@ -50,24 +50,48 @@ for (const ds of Object.keys(DATASET_ENV)) {
   const envName = DATASET_ENV[ds];
   const override = (process.env[envName] || '').toLowerCase();
   const effective = override === 'sqlite' || override === 'file' ? override : BACKEND_NAME;
-  _summary[ds] = effective + (override && override !== effective ? ` (ignored invalid "${process.env[envName]}")` : '');
+  _summary[ds] =
+    effective +
+    (override && override !== effective ? ` (ignored invalid "${process.env[envName]}")` : '');
 }
-if (process.env.OPS_DEBUG_BACKEND === '1' || BACKEND_NAME === 'sqlite' || Object.values(_summary).some(v => v !== BACKEND_NAME)) {
+if (
+  process.env.OPS_DEBUG_BACKEND === '1' ||
+  BACKEND_NAME === 'sqlite' ||
+  Object.values(_summary).some((v) => v !== BACKEND_NAME)
+) {
   console.log('[repositories] backend resolution:', _summary);
 }
 
-export function getBackendName() { return BACKEND_NAME; }
-export function getBackendSummary() { return { master: BACKEND_NAME, datasets: { ..._summary } }; }
+export function getBackendName() {
+  return BACKEND_NAME;
+}
+export function getBackendSummary() {
+  return { master: BACKEND_NAME, datasets: { ..._summary } };
+}
 
 // Public read API. Each method picks its backend from per-dataset env
 // overrides so ops can flip one dataset at a time during cutover.
-export function listBom()        { return backendFor('bom').listBom(); }
-export function listRouting()    { return backendFor('routing').listRouting(); }
-export function listInventory()  { return backendFor('inventory').listInventory(); }
-export function listFinishedGoods() { return backendFor('finished_goods').listFinishedGoods(); }
-export function listRawMaterials()  { return backendFor('raw_materials').listRawMaterials(); }
-export function listMaterialsNpi()     { return backendFor('materials_npi').listMaterialsNpi(); }
-export function listMaterialsSourcing() { return backendFor('materials_sourcing').listMaterialsSourcing(); }
+export function listBom() {
+  return backendFor('bom').listBom();
+}
+export function listRouting() {
+  return backendFor('routing').listRouting();
+}
+export function listInventory() {
+  return backendFor('inventory').listInventory();
+}
+export function listFinishedGoods() {
+  return backendFor('finished_goods').listFinishedGoods();
+}
+export function listRawMaterials() {
+  return backendFor('raw_materials').listRawMaterials();
+}
+export function listMaterialsNpi() {
+  return backendFor('materials_npi').listMaterialsNpi();
+}
+export function listMaterialsSourcing() {
+  return backendFor('materials_sourcing').listMaterialsSourcing();
+}
 
 // Composite: returns { inventory, finishedGoods, rawMaterials } — matches
 // the shape dataSync.getInventory() returns so /api/shared/inventory
@@ -86,17 +110,19 @@ export function listInventoryAll() {
 // agnostic: just filter the full list. Still O(n) but n < 40k and
 // these endpoints are rarely called (quote detail views only).
 export function listBomForPart(partNo) {
-  return listBom().filter(r =>
-    r['Parent Part No'] === partNo || r['parent_part_no'] === partNo
-  );
+  return listBom().filter((r) => r['Parent Part No'] === partNo || r['parent_part_no'] === partNo);
 }
 
 export function listRoutingForPart(partNo) {
-  return listRouting().filter(r =>
-    r['Part No'] === partNo || r['part_no'] === partNo
-  );
+  return listRouting().filter((r) => r['Part No'] === partNo || r['part_no'] === partNo);
 }
 
-export function listQuotes()       { return backendFor('quotes').listQuotes(); }
-export function listRfqTracker()   { return backendFor('rfq_tracker').listRfqTracker(); }
-export function listSampleTracker(){ return backendFor('sample_tracker').listSampleTracker(); }
+export function listQuotes() {
+  return backendFor('quotes').listQuotes();
+}
+export function listRfqTracker() {
+  return backendFor('rfq_tracker').listRfqTracker();
+}
+export function listSampleTracker() {
+  return backendFor('sample_tracker').listSampleTracker();
+}

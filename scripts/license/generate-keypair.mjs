@@ -41,7 +41,7 @@ function main() {
   }
 
   const privPath = path.join(__dirname, `${label}-private.pem`);
-  const pubPath  = path.join(__dirname, `${label}-public.pem`);
+  const pubPath = path.join(__dirname, `${label}-public.pem`);
 
   if (fs.existsSync(privPath) || fs.existsSync(pubPath)) {
     console.error(`Refusing to overwrite existing keys at ${label}-*.pem`);
@@ -51,7 +51,7 @@ function main() {
 
   const { privateKey, publicKey } = generateKeyPairSync('ed25519');
   fs.writeFileSync(privPath, privateKey.export({ format: 'pem', type: 'pkcs8' }), { mode: 0o600 });
-  fs.writeFileSync(pubPath,  publicKey.export({ format: 'pem', type: 'spki' }),    { mode: 0o644 });
+  fs.writeFileSync(pubPath, publicKey.export({ format: 'pem', type: 'spki' }), { mode: 0o644 });
 
   console.log(`✅ Generated Ed25519 keypair "${label}"`);
   console.log(`   private (chmod 600): ${privPath}`);
@@ -61,7 +61,9 @@ function main() {
   console.log(`   1. Move ${path.basename(privPath)} to offline vault. NEVER commit.`);
   console.log(`   2. Add to .gitignore: scripts/license/*-private.pem`);
   console.log(`   3. Bake public key into installer build:`);
-  console.log(`        OPS_LICENSE_PUBKEY="$(cat ${path.basename(pubPath)})" npm run desktop:build:mac`);
+  console.log(
+    `        OPS_LICENSE_PUBKEY="$(cat ${path.basename(pubPath)})" npm run desktop:build:mac`
+  );
   console.log(`   4. Document this label + creation date in docs/SECURITY.md key-rotation log.`);
 }
 

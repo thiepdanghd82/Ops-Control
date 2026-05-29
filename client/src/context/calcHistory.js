@@ -41,7 +41,7 @@ const HISTORY_BOUNDARY_ACTIONS = new Set([
 export const HISTORY_ACTIONS = {
   UNDO: 'HISTORY_UNDO',
   REDO: 'HISTORY_REDO',
-  RESET: 'HISTORY_RESET',   // future use — manual history wipe without touching state
+  RESET: 'HISTORY_RESET', // future use — manual history wipe without touching state
 };
 
 function bounded(arr, limit) {

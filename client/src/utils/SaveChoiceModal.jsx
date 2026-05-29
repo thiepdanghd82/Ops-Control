@@ -32,21 +32,21 @@ export default function SaveChoiceModal({
       <Modal.Header
         id="save-choice-title"
         title="Save quote"
-        subtitle={quoteId != null ? `Quote #${quoteId}${quoteLabel ? ` — ${quoteLabel}` : ''}` : undefined}
+        subtitle={
+          quoteId != null ? `Quote #${quoteId}${quoteLabel ? ` — ${quoteLabel}` : ''}` : undefined
+        }
         severity="question"
       />
       <Modal.Body>
-        <p>
-          This quote was loaded from history. How would you like to save your changes?
-        </p>
+        <p>This quote was loaded from history. How would you like to save your changes?</p>
         <ul className="op-modal-choice-list">
           <li>
-            <b>Update existing</b> — replace the current revision in place.
-            Anyone viewing quote #{quoteId} will see the new values.
+            <b>Update existing</b> — replace the current revision in place. Anyone viewing quote #
+            {quoteId} will see the new values.
           </li>
           <li>
-            <b>Save as new version</b> — keep the original quote untouched and
-            create a separate revision from your edits.
+            <b>Save as new version</b> — keep the original quote untouched and create a separate
+            revision from your edits.
           </li>
         </ul>
       </Modal.Body>

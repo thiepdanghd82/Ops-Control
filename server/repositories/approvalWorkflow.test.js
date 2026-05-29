@@ -17,17 +17,22 @@ import {
 } from './approvalWorkflow.js';
 
 // ── Fixtures ──
-const costEng = { username: 'hana',   role: 'cost',   approval_roles: [] };
-const salesMgr = { username: 'sonia',  role: 'user',   approval_roles: ['sales_mgr'] };
-const finDir   = { username: 'felix',  role: 'user',   approval_roles: ['finance_dir'] };
-const admin    = { username: 'admin',  role: 'admin',  approval_roles: [] };
-const sysUser  = { username: 'root',   role: 'sys',    approval_roles: [] };
-const viewonly = { username: 'vic',    role: 'viewonly', approval_roles: [] };
+const costEng = { username: 'hana', role: 'cost', approval_roles: [] };
+const salesMgr = { username: 'sonia', role: 'user', approval_roles: ['sales_mgr'] };
+const finDir = { username: 'felix', role: 'user', approval_roles: ['finance_dir'] };
+const admin = { username: 'admin', role: 'admin', approval_roles: [] };
+const sysUser = { username: 'root', role: 'sys', approval_roles: [] };
+const viewonly = { username: 'vic', role: 'viewonly', approval_roles: [] };
 
 // ── Shape + initial state ──
 test('APPROVAL_STATES lists the 5 v2 states', () => {
-  assert.deepEqual(APPROVAL_STATES,
-    ['draft', 'pending_sales', 'pending_finance', 'approved', 'rejected']);
+  assert.deepEqual(APPROVAL_STATES, [
+    'draft',
+    'pending_sales',
+    'pending_finance',
+    'approved',
+    'rejected',
+  ]);
 });
 
 test('getStatus: missing / null / undefined → draft', () => {
@@ -140,7 +145,9 @@ test('REJECT from pending_sales without reason → rejected (error)', () => {
 test('REJECT from pending_sales with reason → rejected', () => {
   const s1 = transition({ approval: null, action: 'SUBMIT', actorUser: costEng }).approval;
   const r = transition({
-    approval: s1, action: 'REJECT', actorUser: salesMgr,
+    approval: s1,
+    action: 'REJECT',
+    actorUser: salesMgr,
     reason: 'Price too low for current tooling plan.',
   });
   assert.equal(r.ok, true);
@@ -154,7 +161,9 @@ test('REJECT from pending_finance stores rejected_stage = pending_finance', () =
   const s1 = transition({ approval: null, action: 'SUBMIT', actorUser: costEng }).approval;
   const s2 = transition({ approval: s1, action: 'APPROVE_SALES', actorUser: salesMgr }).approval;
   const r = transition({
-    approval: s2, action: 'REJECT', actorUser: finDir,
+    approval: s2,
+    action: 'REJECT',
+    actorUser: finDir,
     reason: 'Margin below 25% target',
   });
   assert.equal(r.ok, true);
@@ -171,7 +180,10 @@ test('REJECT by cost engineer → rejected (insufficient role)', () => {
 test('rejected + SUBMIT by cost engineer → pending_sales, rejection fields cleared', () => {
   const s1 = transition({ approval: null, action: 'SUBMIT', actorUser: costEng }).approval;
   const rejected = transition({
-    approval: s1, action: 'REJECT', actorUser: salesMgr, reason: 'fix MOQ'
+    approval: s1,
+    action: 'REJECT',
+    actorUser: salesMgr,
+    reason: 'fix MOQ',
   }).approval;
   const r = transition({ approval: rejected, action: 'SUBMIT', actorUser: costEng });
   assert.equal(r.ok, true);
@@ -180,8 +192,8 @@ test('rejected + SUBMIT by cost engineer → pending_sales, rejection fields cle
   assert.equal(r.approval.rejected_stage, undefined);
   assert.equal(r.approval.reason, undefined);
   // History keeps the rejection record so audit trail stays intact.
-  assert.ok(r.approval.history.some(h => h.action === 'REJECT'));
-  assert.ok(r.approval.history.some(h => h.action === 'SUBMIT' && h.from === 'rejected'));
+  assert.ok(r.approval.history.some((h) => h.action === 'REJECT'));
+  assert.ok(r.approval.history.some((h) => h.action === 'SUBMIT' && h.from === 'rejected'));
 });
 
 // ── REVOKE: sys-only escape hatch ──
@@ -261,7 +273,10 @@ test('history is capped at 50 entries', () => {
   for (let i = 0; i < 40; i++) {
     approval = transition({ approval, action: 'SUBMIT', actorUser: costEng }).approval;
     approval = transition({
-      approval, action: 'REJECT', actorUser: salesMgr, reason: 'churn',
+      approval,
+      action: 'REJECT',
+      actorUser: salesMgr,
+      reason: 'churn',
     }).approval;
   }
   assert.equal(approval.history.length, 50);
@@ -317,18 +332,16 @@ test('countActionable: admin fallback authorizes all pending gates', () => {
 test('countActionable: quotes missing state or approval are skipped', () => {
   const quotes = [
     null,
-    {},                                   // no state
+    {}, // no state
     { state: null },
-    { state: { approval: null } },        // no approval = draft
+    { state: { approval: null } }, // no approval = draft
     { state: { approval: { status: 'pending_sales' } } },
   ];
   assert.equal(countActionable(quotes, salesMgr), 1);
 });
 
 test('countActionable: legacy submitted alias is treated as pending_sales', () => {
-  const quotes = [
-    { state: { approval: { status: 'submitted', submitted_by: 'hana' } } },
-  ];
+  const quotes = [{ state: { approval: { status: 'submitted', submitted_by: 'hana' } } }];
   assert.equal(countActionable(quotes, salesMgr), 1);
 });
 
