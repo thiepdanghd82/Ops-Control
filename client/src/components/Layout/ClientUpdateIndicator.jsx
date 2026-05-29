@@ -34,9 +34,11 @@ import {
 import './ClientUpdateIndicator.css';
 
 // Injected by vite.config.js#define from client/package.json#version.
-// Declared here so a missing inject (e.g. running outside Vite) collapses
-// to undefined rather than ReferenceError-ing the whole app.
-/* global __APP_VERSION__ */
+// Declared as a readonly global in both root eslint.config.js (block 3e)
+// and client/eslint.config.js so no in-file `/* global */` comment is
+// needed (and would duplicate-decl per no-redeclare). The typeof guard
+// below handles the missing-inject case (running outside Vite) so a
+// stripped define still collapses to null rather than ReferenceError.
 const CLIENT_VERSION =
   typeof __APP_VERSION__ === 'string' && __APP_VERSION__ ? __APP_VERSION__ : null;
 

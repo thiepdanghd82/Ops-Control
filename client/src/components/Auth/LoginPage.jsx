@@ -456,7 +456,8 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
               ? `localhost:${cfg.embeddedPort || ''} (this machine)`
               : remoteHost || loadHost;
           setServerInfo({
-            version: cfg?.version || '1.5.10',
+            version:
+              cfg?.version || (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0'),
             buildLabel: 'build 2026.05',
             mode,
             label: classify(mode, displayHost),
@@ -465,7 +466,7 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
         })
         .catch(() => {
           setServerInfo({
-            version: '1.5.10',
+            version: typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0',
             buildLabel: 'build 2026.05',
             mode: 'embedded',
             label: classify('embedded', loadHost),
@@ -474,7 +475,7 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
         });
     } else {
       setServerInfo({
-        version: '1.5.10',
+        version: typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0',
         buildLabel: 'build 2026.05',
         mode: 'web',
         label: classify('web', loadHost),

@@ -331,7 +331,8 @@ function ProfileSection({ user }) {
       </h3>
       <div className="settings-card about-card">
         <p>
-          <strong>Ops Control</strong> v1.5.10
+          <strong>Ops Control</strong> v
+          {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'}
         </p>
         <p>CCL Design Vietnam — Integrated Cost & Planning Platform</p>
         <p className="about-tech">Henry Dang — NPI Manager · React + Node.js (Electron 33)</p>
