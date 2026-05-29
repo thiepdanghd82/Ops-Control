@@ -315,11 +315,9 @@ export default function CalcProcesses() {
                       {r ? r.crew || proc.crew || '\u2014' : proc.crew || '\u2014'}
                     </td>
                     <td>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={proc.speed || ''}
-                        onChange={(e) => handleField(i, 'speed', e.target.value, true)}
+                      <DecimalInput
+                        value={proc.speed}
+                        onChange={(v) => setProcessField(i, 'speed', v)}
                         placeholder="—"
                         className="sc-input-sm sc-input-num"
                       />
@@ -396,11 +394,9 @@ export default function CalcProcesses() {
                       />
                     </td>
                     <td>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={proc.tool_cost || ''}
-                        onChange={(e) => handleField(i, 'tool_cost', e.target.value, true)}
+                      <DecimalInput
+                        value={proc.tool_cost}
+                        onChange={(v) => setProcessField(i, 'tool_cost', v)}
                         placeholder="—"
                         className="sc-input-sm sc-input-num"
                       />
@@ -420,11 +416,9 @@ export default function CalcProcesses() {
                       </select>
                     </td>
                     <td>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={proc.tool_life || ''}
-                        onChange={(e) => handleField(i, 'tool_life', e.target.value, true)}
+                      <DecimalInput
+                        value={proc.tool_life}
+                        onChange={(v) => setProcessField(i, 'tool_life', v)}
                         placeholder="—"
                         className="sc-input-sm sc-input-num"
                       />
