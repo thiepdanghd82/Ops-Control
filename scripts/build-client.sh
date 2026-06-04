@@ -66,6 +66,14 @@ fi
 
 # ─── 1. Build the client bundle (carries the source fixes) ────────────
 echo "[1/6] Building client/dist (Vite)…"
+# The client `prebuild` hook runs scripts/help/build-all-docs.mjs which
+# imports `docx` from the ROOT devDependencies. Install root deps first
+# (js-only; --ignore-scripts skips native compiles we don't need here)
+# so the doc generators resolve instead of ERR_MODULE_NOT_FOUND.
+if [[ ! -d "$PROJECT_ROOT/node_modules/docx" ]]; then
+  echo "  · installing root deps (docx etc. for client prebuild doc-gen)…"
+  ( cd "$PROJECT_ROOT" && npm install --no-audit --no-fund --ignore-scripts )
+fi
 if [[ ! -d "$PROJECT_ROOT/client/node_modules" ]]; then
   echo "  · installing client deps…"
   ( cd "$PROJECT_ROOT/client" && npm install --no-audit --no-fund )
