@@ -6,9 +6,29 @@ runtime hashes a hardware fingerprint into a 64-hex-char **Installation
 ID**, and the license file at `<userData>/license.json` must carry a
 matching `installation_id` field signed by the corresponding private key.
 
-Files in this directory are reference artifacts (re-deliverable, low
-operational impact if leaked because each one only unlocks ONE specific
-machine). Naming convention: `<YYYY-MM-DD>-<platform>-<operator>.json`.
+Files in this directory are **metadata-only** registry entries — the
+cryptographic `signature` is NOT committed (see "Storage policy" below).
+Naming convention: `<YYYY-MM-DD>-<platform>-<operator>.json`.
+
+## Storage policy
+
+This is a **public** repo, so the registry stores **metadata only** —
+enough for recovery / re-issue / audit (`installation_id`, `tier`,
+`max_users`, `issued_at`, `expires_at`, `features`). Two fields are
+sanitized:
+
+- **`signature`** — redacted to `"REDACTED — stored offline, see registry
+  README"`. The real Ed25519 signature is key material and never goes in a
+  public repo.
+- **`customer`** — recorded as a short internal code (e.g. `CCL-YP`) rather
+  than the full account name.
+
+The **full signed license file** (with the real `signature`) is kept
+**OFFLINE** by the license admin — in the Lead Engineer's encrypted vault /
+secure store. Its location is recorded out-of-band (never written into this
+public repo, no personal machine paths in docs). To re-deliver or re-issue,
+the admin pulls the full file from the offline store; the metadata here is
+the input / cross-reference.
 
 ## Why we keep these in repo
 
@@ -25,9 +45,10 @@ machine). Naming convention: `<YYYY-MM-DD>-<platform>-<operator>.json`.
 
 - Installation ID is HW-derived. Anyone cloning the repo can't use these
   licenses — their HW fingerprint won't match.
-- The Ed25519 signature only proves "the dev key signed this file". The
-  dev public key (`scripts/license/dev-public.pem`) is also in repo —
-  signature is verifiable but not forgeable without the **private** key.
+- The real Ed25519 signature is NOT in this repo (redacted per the Storage
+  policy above; the full signed file lives offline). Even if it were, it
+  only proves "the dev key signed this file" and is not forgeable without
+  the **private** key.
 - The dev **private** key (`scripts/license/dev-private.pem`) IS in
   repo too. That is intentional: paired with the in-repo dev pubkey
   embedded in `desktop/license.js`, dev builds are self-signing.

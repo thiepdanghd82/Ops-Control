@@ -19,9 +19,12 @@ All notable changes to Ops Control. Format follows [Keep a Changelog](https://ke
   - Troubleshooting matrix (installation-mismatch / expired / bad-signature)
 
   Why repo: lost-license recovery, expiry re-issue input capture, audit
-  trail. Why this isn't a credentials leak: licenses are HW-bound
-  (Installation ID is hardware-derived), and the in-repo `dev-private.pem`
-  is intentional for dev builds (production rotation procedure documented).
+  trail. Why this isn't a credentials leak: registry entries are
+  **metadata-only** — the cryptographic `signature` is redacted and the
+  full signed file is kept OFFLINE by the license admin (see README
+  "Storage policy"); `customer` is a short internal code. Licenses are also
+  HW-bound (Installation ID is hardware-derived), and the in-repo
+  `dev-private.pem` is intentional for dev builds.
 
 ## [v1.5.12] — Hotfix: Std Processes decimal-input mid-typing trap
 
