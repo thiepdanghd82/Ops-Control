@@ -60,11 +60,22 @@ const PORT = process.env.OPS_PORT || process.env.PORT || 3000;
 // beats discovering degraded security in an incident post-mortem.
 if (process.env.NODE_ENV === 'production') {
   const missing = [];
+  const HEX64 = /^[0-9a-fA-F]{64}$/;
+  const genHint = `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")`;
   if (!process.env.OPS_TOTP_KEY || process.env.OPS_TOTP_KEY.length !== 64) {
-    missing.push(
-      'OPS_TOTP_KEY (64-char hex; generate with: ' +
-        `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")`
-    );
+    missing.push('OPS_TOTP_KEY (64-char hex; generate with: ' + genHint);
+  }
+  // Parity with scripts/preflight-env.js (the deploy gate): boot also
+  // refuses to start without the kiosk JWT key + the export-HMAC key.
+  // Pre-fix, a `npm start` that skipped preflight would boot with these
+  // unset and only fail at runtime — kiosk pairing broke and quote xlsx
+  // export threw 500 on first use. Same 64-hex shape + preservation
+  // semantics; deploy.sh / deploy.ps1 carry all three across releases.
+  if (!process.env.OPS_KIOSK_KEY || process.env.OPS_KIOSK_KEY.length !== 64) {
+    missing.push('OPS_KIOSK_KEY (64-char hex; generate with: ' + genHint);
+  }
+  if (!process.env.OPS_EXPORT_HMAC_KEY || !HEX64.test(process.env.OPS_EXPORT_HMAC_KEY)) {
+    missing.push('OPS_EXPORT_HMAC_KEY (64-char hex; generate with: ' + genHint);
   }
   // CORS: empty is OK only if the client + API are same-origin. If
   // operators explicitly set OPS_ALLOW_SAME_ORIGIN=1 we accept that.
@@ -81,7 +92,7 @@ if (process.env.NODE_ENV === 'production') {
     console.error('\n    See .env.example for defaults.\n');
     process.exit(1);
   }
-  console.log('✅  production preflight passed: TOTP key set, CORS configured');
+  console.log('✅  production preflight passed: TOTP/KIOSK/HMAC keys set, CORS configured');
 }
 
 // Trust the first reverse-proxy hop (nginx, ALB, Cloudflare). Express
