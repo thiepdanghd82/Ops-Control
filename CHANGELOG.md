@@ -2,6 +2,30 @@
 
 All notable changes to Ops Control. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+
+- **Operator licenses registry** at `docs/operations/licenses/` — repo-tracked
+  reference store for the per-installation Ed25519 licenses minted for the
+  CCL Vietnam Yen Phong deployment. First entry: `mpham` Win box (tier M,
+  expires 2027-06-09). Companion `README.md` documents:
+  - Mint workflow (operator copies Installation ID from error dialog →
+    Lead runs `scripts/license/generate-license.mjs` → JSON delivered via
+    Zalo → placed at `<userData>/license.json`)
+  - Tier reference (S/M/L per `max_users` ceiling)
+  - Registry table (one row per provisioned operator, sorted chronologically)
+  - Production key rotation plan (deferred to v1.6.x post-go-live)
+  - Troubleshooting matrix (installation-mismatch / expired / bad-signature)
+
+  Why repo: lost-license recovery, expiry re-issue input capture, audit
+  trail. Why this isn't a credentials leak: registry entries are
+  **metadata-only** — the cryptographic `signature` is redacted and the
+  full signed file is kept OFFLINE by the license admin (see README
+  "Storage policy"); `customer` is a short internal code. Licenses are also
+  HW-bound (Installation ID is hardware-derived), and the in-repo
+  `dev-private.pem` is intentional for dev builds.
+
 ## [v1.5.12] — Hotfix: Std Processes decimal-input mid-typing trap
 
 Patch release closing operator-reported follow-up to PR #95.

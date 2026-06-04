@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "installation_id": "d550d6b92e78bc9fb8b8aa47ceb632559f5b18abdab577e56548684a44014ac3",
+  "customer": "CCL-YP",
+  "tier": "M",
+  "max_users": 20,
+  "issued_at": "2026-05-29T04:34:20.328Z",
+  "expires_at": "2027-06-09T00:00:00.000Z",
+  "features": ["costing", "library", "sales", "planning", "quality", "mes"],
+  "signature": "REDACTED — stored offline, see registry README"
+}
