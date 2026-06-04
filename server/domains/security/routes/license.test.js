@@ -10,7 +10,7 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
-import { createPrivateKey, sign } from 'node:crypto';
+import { generateKeyPairSync, sign } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -33,9 +33,10 @@ const canonicalize = (p) => SIGNED_FIELDS.map((k) => `${k}=${norm(p[k])}`).join(
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ops-lic-int-test-'));
 const licPath = path.join(tmpDir, 'license.json');
 
-const devPriv = createPrivateKey(
-  fs.readFileSync(path.resolve('scripts/license/dev-private.pem'), 'utf8')
-);
+// Rotation 2026-06-04: ephemeral keypair, no committed key; verifier reads
+// the matching public half via OPS_LICENSE_PUBKEY.
+const { privateKey: testPriv, publicKey: testPub } = generateKeyPairSync('ed25519');
+process.env.OPS_LICENSE_PUBKEY = testPub.export({ format: 'pem', type: 'spki' }).toString();
 
 function writeLic(overrides = {}) {
   const payload = {
@@ -49,7 +50,7 @@ function writeLic(overrides = {}) {
     features: ['costing'],
     ...overrides,
   };
-  const signature = sign(null, Buffer.from(canonicalize(payload)), devPriv).toString('base64');
+  const signature = sign(null, Buffer.from(canonicalize(payload)), testPriv).toString('base64');
   fs.writeFileSync(licPath, JSON.stringify({ ...payload, signature }));
 }
 

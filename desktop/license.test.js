@@ -8,15 +8,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {
-  createPublicKey,
-  createPrivateKey,
-  sign,
-  verify,
-  generateKeyPairSync,
-} = require('node:crypto');
-const fs = require('node:fs');
-const path = require('node:path');
+const { sign, verify, generateKeyPairSync } = require('node:crypto');
 
 const SIGNED_FIELDS = [
   'version',
@@ -43,12 +35,10 @@ function verifyLicense(license, pubKey) {
   return verify(null, Buffer.from(canonicalize(payload)), pubKey, Buffer.from(signature, 'base64'));
 }
 
-const devPriv = createPrivateKey(
-  fs.readFileSync(path.join(__dirname, '..', 'scripts', 'license', 'dev-private.pem'), 'utf8')
-);
-const devPub = createPublicKey(
-  fs.readFileSync(path.join(__dirname, '..', 'scripts', 'license', 'dev-public.pem'), 'utf8')
-);
+// Rotation 2026-06-04: sign with a runtime-ephemeral keypair so no signing
+// key is ever committed to the repo. These tests exercise the canonicalize +
+// Ed25519 sign/verify roundtrip, which is key-agnostic.
+const { privateKey: testPriv, publicKey: testPub } = generateKeyPairSync('ed25519');
 
 const baseLicense = () => ({
   version: 2,
@@ -62,41 +52,41 @@ const baseLicense = () => ({
 });
 
 test('valid license verifies OK with paired pubkey', () => {
-  const lic = signLicense(baseLicense(), devPriv);
-  assert.equal(verifyLicense(lic, devPub), true);
+  const lic = signLicense(baseLicense(), testPriv);
+  assert.equal(verifyLicense(lic, testPub), true);
 });
 
 test('tampered field fails verification', () => {
-  const lic = signLicense(baseLicense(), devPriv);
+  const lic = signLicense(baseLicense(), testPriv);
   lic.max_users = 50;
-  assert.equal(verifyLicense(lic, devPub), false);
+  assert.equal(verifyLicense(lic, testPub), false);
 });
 
 test('tampered signature (middle byte) fails verification', () => {
-  const lic = signLicense(baseLicense(), devPriv);
+  const lic = signLicense(baseLicense(), testPriv);
   const sig = lic.signature.split('');
   sig[20] = sig[20] === 'A' ? 'B' : 'A';
   lic.signature = sig.join('');
-  assert.equal(verifyLicense(lic, devPub), false);
+  assert.equal(verifyLicense(lic, testPub), false);
 });
 
 test('signature from a different keypair fails', () => {
   const { privateKey: otherPriv } = generateKeyPairSync('ed25519');
   const lic = signLicense(baseLicense(), otherPriv);
-  assert.equal(verifyLicense(lic, devPub), false);
+  assert.equal(verifyLicense(lic, testPub), false);
 });
 
 test('canonicalisation is order-independent on array fields', () => {
-  const a = signLicense({ ...baseLicense(), features: ['library', 'costing'] }, devPriv);
-  const b = signLicense({ ...baseLicense(), features: ['costing', 'library'] }, devPriv);
+  const a = signLicense({ ...baseLicense(), features: ['library', 'costing'] }, testPriv);
+  const b = signLicense({ ...baseLicense(), features: ['costing', 'library'] }, testPriv);
   assert.equal(a.signature, b.signature);
 });
 
 test('all 3 tiers (S/M/L) sign + verify', () => {
   for (const tier of ['S', 'M', 'L']) {
     const max = { S: 15, M: 20, L: 50 }[tier];
-    const lic = signLicense({ ...baseLicense(), tier, max_users: max }, devPriv);
-    assert.equal(verifyLicense(lic, devPub), true, `tier ${tier} should verify`);
+    const lic = signLicense({ ...baseLicense(), tier, max_users: max }, testPriv);
+    assert.equal(verifyLicense(lic, testPub), true, `tier ${tier} should verify`);
   }
 });
 

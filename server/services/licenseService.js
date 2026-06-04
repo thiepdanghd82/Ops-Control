@@ -22,6 +22,16 @@ import { createPublicKey, verify } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
+// KEY ROTATION 2026-06-04: embedded PRODUCTION public key (label "prod",
+// SHA-256 fp 044e1ad7…), mirror of desktop/license.js EMBEDDED_PUBKEY_PEM.
+// Replaces the old on-disk scripts/license/dev-public.pem fallback — the old
+// dev keypair's PRIVATE half had been committed to the public repo and is
+// considered permanently disclosed. The matching private key lives OFFLINE
+// only and is never committed. Old-key licenses no longer verify here.
+const EMBEDDED_PUBKEY_PEM = `-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAS3dNNf/Srcj2KxqswutJU0WHjPujy4imTKkZys379GE=
+-----END PUBLIC KEY-----`;
+
 const TIER_LIMITS = Object.freeze({ S: 15, M: 20, L: 50 });
 const SIGNED_FIELDS = [
   'version',
@@ -50,16 +60,15 @@ function loadPublicKey() {
       console.warn('[license] OPS_LICENSE_PUBKEY invalid:', e.message);
     }
   }
-  // Fallback to bundled dev key — same one paired with desktop/license.js.
-  const devPath = path.resolve(process.cwd(), 'scripts/license/dev-public.pem');
-  if (fs.existsSync(devPath)) {
-    try {
-      return createPublicKey(fs.readFileSync(devPath, 'utf8'));
-    } catch (e) {
-      console.warn('[license] dev key load failed:', e.message);
-    }
+  // Embedded production key — mirror of desktop/license.js. No on-disk
+  // fallback: the old scripts/license/dev-public.pem was retired in the
+  // 2026-06-04 rotation and removed from the repo.
+  try {
+    return createPublicKey(EMBEDDED_PUBKEY_PEM);
+  } catch (e) {
+    console.warn('[license] embedded pubkey load failed:', e.message);
+    return null;
   }
-  return null;
 }
 
 function licensePath() {

@@ -4,11 +4,11 @@
 .env.local
 .env.*.local
 
-# v1.3 — Ed25519 license signing keys. Production private keys NEVER
-# commit; live offline in the CCL HQ vault. Dev key is committed
-# intentionally (whitelist below) so `npm test` works out-of-the-box.
+# v1.3 — Ed25519 license signing keys. Private keys NEVER commit; they
+# live OFFLINE in the license admin's vault (~/OpsControl-license-keys).
+# Rotation 2026-06-04 retired the old in-repo dev key; tests now sign with
+# runtime-ephemeral keypairs, so no private key needs to be tracked.
 scripts/license/*-private.pem
-!scripts/license/dev-private.pem
 desktop/license-pubkey.pem
 
 # v1.3 — autonomous-upgrade artefacts (UPGRADE_LOG.md is checked in;

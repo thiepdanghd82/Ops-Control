@@ -23,8 +23,28 @@ All notable changes to Ops Control. Format follows [Keep a Changelog](https://ke
   **metadata-only** — the cryptographic `signature` is redacted and the
   full signed file is kept OFFLINE by the license admin (see README
   "Storage policy"); `customer` is a short internal code. Licenses are also
-  HW-bound (Installation ID is hardware-derived), and the in-repo
-  `dev-private.pem` is intentional for dev builds.
+  HW-bound (Installation ID is hardware-derived), and the license-signing
+  private key is OFFLINE only (see Security below).
+
+### Security
+
+- **License signing key rotated (2026-06-04).** The old Ed25519 signing
+  keypair was a dev key whose **private** half (`scripts/license/dev-private.pem`)
+  had been committed to this public repo — anyone with a clone could mint
+  forged licenses for any installation/tier/expiry. Redaction alone could
+  not fix this; the key had to be rotated.
+  - Generated a fresh offline keypair (label `prod`, public SHA-256 fp
+    `044e1ad7…`). Private key lives only at
+    `~/OpsControl-license-keys/prod-private.pem` (chmod 600, outside repo).
+  - Embedded the new **public** key in both verifiers (`desktop/license.js`
+    `EMBEDDED_PUBKEY_PEM` + `server/services/licenseService.js`); `git rm`'d
+    the old `dev-{private,public}.pem`.
+  - `generate-license.mjs` now REQUIRES `--key <offline-private-key>` (no
+    in-repo default). `generate-keypair.mjs` gained `--out-dir` so keys
+    never default into the tree. License tests sign with runtime-ephemeral
+    keypairs — no signing key is committed.
+  - Re-minted the live `mpham` license under the new key; rebuilt installers
+    so old-key licenses are rejected and new-key licenses accepted.
 
 ## [v1.5.12] — Hotfix: Std Processes decimal-input mid-typing trap
 

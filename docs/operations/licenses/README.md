@@ -47,12 +47,14 @@ the input / cross-reference.
   licenses — their HW fingerprint won't match.
 - The real Ed25519 signature is NOT in this repo (redacted per the Storage
   policy above; the full signed file lives offline). Even if it were, it
-  only proves "the dev key signed this file" and is not forgeable without
+  only proves "the prod key signed this file" and is not forgeable without
   the **private** key.
-- The dev **private** key (`scripts/license/dev-private.pem`) IS in
-  repo too. That is intentional: paired with the in-repo dev pubkey
-  embedded in `desktop/license.js`, dev builds are self-signing.
-- For **production rotation**: see "Production key rotation" below.
+- The signing **private** key is NOT in the repo. As of the 2026-06-04
+  rotation it lives OFFLINE only (`~/OpsControl-license-keys/prod-private.pem`
+  on the license admin's box). Only the **public** key is embedded in
+  `desktop/license.js` + `server/services/licenseService.js`. Cloning the
+  repo therefore does NOT let anyone forge licenses.
+- See "Production key rotation" below for the rotation record.
 
 ## Mint a license for a new operator
 
@@ -61,13 +63,17 @@ the input / cross-reference.
 # installation-mismatch" dialog. They click "Copy Installation ID"
 # and send the 64-char hex value to Lead (via Zalo / email / SSH).
 
-# Lead runs on the dev box:
+# Lead runs on the box that holds the OFFLINE private key. --key is
+# REQUIRED (no in-repo default since the 2026-06-04 rotation):
 node scripts/license/generate-license.mjs \
   --installation-id <hex64 from operator> \
   --customer "CCL Design Vietnam — Yen Phong" \
   --tier M \
   --expires <YYYY-MM-DD, ~1 year out> \
-  --out docs/operations/licenses/<YYYY-MM-DD>-<platform>-<operator>.json
+  --key ~/OpsControl-license-keys/prod-private.pem \
+  --out ~/OpsControl-license-keys/<YYYY-MM-DD>-<platform>-<operator>.json
+# NOTE: write the signed --out file OUTSIDE the repo (it carries a real
+# signature). Commit only the metadata-only registry entry per Storage policy.
 
 # Lead sends the resulting JSON to operator via Zalo.
 # Operator places it at:
@@ -97,33 +103,38 @@ unlock.
 
 | Date       | Platform | Operator (OS user) | Installation ID prefix | Expires    | File                                                   |
 | ---------- | -------- | ------------------ | ---------------------- | ---------- | ------------------------------------------------------ |
-| 2026-05-29 | Win      | `mpham`            | `d550d6b9 2e78bc9f…`   | 2027-06-09 | [2026-05-29-win-mpham.json](2026-05-29-win-mpham.json) |
+| 2026-05-29 (re-issued 2026-06-04, key rotation) | Win | `mpham` | `d550d6b9 2e78bc9f…` | 2027-06-09 | [2026-05-29-win-mpham.json](2026-05-29-win-mpham.json) |
 
 Append a row whenever a new license is minted. Keep the rows sorted by
 date ascending so the registry reads as a chronological provisioning log.
 
-## Production key rotation (deferred to v1.6.x post-go-live)
+## Production key rotation — DONE 2026-06-04
 
-Current state: **dev key in repo**. Acceptable for LAN-only D-0 go-live
-because there's no external attack surface — anyone able to clone the
-repo already has filesystem access to the deploy box and can do worse
-things directly.
+The old keypair was a **dev key whose private half had been committed to
+this public repo**, so it had to be treated as permanently disclosed:
+anyone with a clone could mint forged licenses. Rotation closed that hole.
 
-Long-term plan:
+What was done (branch `fix/license-key-rotation`):
 
-1. `node scripts/license/generate-keypair.mjs` on a clean offline
-   workstation → produces a new keypair
-2. Move the private key to an offline encrypted vault (1Password, YubiKey,
-   air-gapped USB — whichever discipline anh wants to commit to)
-3. Replace the public key embedded in `desktop/license.js` with the new
-   public key
-4. Rebuild + redistribute SERVER/CLIENT installers — old licenses become
-   invalid against the new pubkey
-5. Re-mint every license under the new key + redistribute via Zalo
+1. Generated a fresh offline Ed25519 keypair — label `prod`, public
+   SHA-256 fingerprint `044e1ad7d194154158183f409ec5dbb820a31093fc6076ce988f92ccf58cd36f`.
+   Private key lives ONLY at `~/OpsControl-license-keys/prod-private.pem`
+   (chmod 600, outside the repo, not in any cloud-sync zone).
+2. Embedded the new **public** key in both verifiers
+   (`desktop/license.js` + `server/services/licenseService.js`) and
+   `git rm`'d the old `scripts/license/dev-{private,public}.pem`.
+3. `generate-license.mjs` now REQUIRES `--key <offline-private-key>`
+   (no in-repo default). Tests sign with runtime-ephemeral keypairs.
+4. Re-minted every live license under the new key + rebuilt/redistributed
+   the SERVER/CLIENT installers shipping the new pubkey. Old-key licenses
+   no longer verify.
 
-Single coordinated reset, ~1 day of work + 1 hour operator downtime per
-seat. Schedule when the v1.5.x line is stable + before adding any
-external user.
+**Storage policy for the new key:** the private key never leaves
+`~/OpsControl-license-keys/`; record its location + the public fingerprint
+out-of-band (not in this repo). To rotate again, repeat with a new label
+(`node scripts/license/generate-keypair.mjs prod-2027 --out-dir ~/OpsControl-license-keys`).
+Because the old private key is public forever, rotation — not redaction —
+is the only thing that invalidates it.
 
 ## Troubleshooting
 
