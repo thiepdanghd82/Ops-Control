@@ -84,6 +84,27 @@ if [[ ! -f "$PROJECT_ROOT/client/dist/index.html" ]]; then
   exit 1
 fi
 
+# ─── 1b. Bake the runtime build-role (the REAL role signal) ───────────
+# desktop/main.js readBuildRole() reads desktop/build-role.json and sets
+# BUILD_ROLE, which drives the first-run mode default:
+#   {"role":"client"} → mode 'thin'     + "enter server URL" prompt
+#   {"role":"server"} → mode 'embedded' + "your server IP" dialog
+#   absent / other    → 'generic' (mode 'embedded', no prompt)
+# This file is the ONLY role signal the app actually reads.
+#
+# DEAD FIELD WARNING: the --config.extraMetadata.opsMode flag in step 5
+# is NOT read by any code (server or desktop — grep the repo, it's never
+# referenced). It is kept only to match the legacy build:client:mac npm
+# script. WITHOUT this build-role.json the DMG runs as 'generic', so the
+# role label on the artifact would be a lie. Mirrors the write-then-unlink
+# pattern in scripts/build-mac-installers.mjs (line 58 + 112).
+ROLE_FILE="$PROJECT_ROOT/desktop/build-role.json"
+printf '{\n  "role": "%s"\n}\n' "$ROLE_LOWER" > "$ROLE_FILE"
+# Restore a clean tree on ANY exit (success, error via set -e, or signal)
+# so the role marker never lingers in the repo or a dev/manual build.
+trap 'rm -f "$ROLE_FILE"' EXIT INT TERM
+echo "      baked build-role.json {\"role\":\"$ROLE_LOWER\"} (auto-removed on exit)"
+
 # ─── 2. Sync project to no-space /tmp path ────────────────────────────
 echo "[2/6] Syncing to $TMP_DIR (rsync, follow symlinks)…"
 mkdir -p "$TMP_DIR"
@@ -137,6 +158,9 @@ cd "$TMP_DIR/desktop"
 echo "      Running electron-builder (role=${ROLE})…"
 rm -rf dist-electron
 COMMON_FLAGS=(--config.npmRebuild=false
+  # opsMode = DEAD FIELD (no code reads it — see step 1b). The real role
+  # comes from the build-role.json baked above. Kept only for parity with
+  # the legacy build:client:mac npm script.
   --config.extraMetadata.opsMode="$ROLE_LOWER"
   --config.productName="OpsControl ${ROLE}"
   --publish never)
