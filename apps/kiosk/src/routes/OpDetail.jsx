@@ -86,6 +86,7 @@ export default function OpDetail({ opId }) {
   const act = async (kind, body) => {
     if (!op || busy) return;
     setBusy(true);
+    const prev = op; // snapshot for revert-on-failure
     const optimisticTo = OPTIMISTIC[kind] || (kind === 'complete_from_pause' ? 'DONE' : null);
     if (optimisticTo) setOp({ ...op, status: optimisticTo });
     const r = await dispatchAction(opId, kind, body);
@@ -93,8 +94,11 @@ export default function OpDetail({ opId }) {
     if (r.sent && r.op) setOp(r.op);
     else if (r.queued) flash('Queued — will send when online.');
     else if (r.problem) {
+      // Revert optimistic flip — refresh() pulls from /dispatch which
+      // only lists DISPATCHED ops, so a non-DISPATCHED op would orphan
+      // the UI on the bad optimistic state. Snapshot is authoritative.
+      setOp(prev);
       flash(r.problem.detail || r.problem.type || 'Action failed');
-      refresh(); // server-side state may differ; resync.
     }
   };
 
