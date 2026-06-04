@@ -89,8 +89,17 @@ for (const pkg of candidates) {
 
 const missing = [];
 for (const pkg of required) {
+  // A scoped package (e.g. @serialport/bindings-cpp) is also covered when
+  // the WHOLE scope is overlaid (from: node_modules/@serialport). That
+  // shape is needed when shipping the full serialport stack — the meta
+  // package pulls many @serialport/* siblings, so we overlay the scope
+  // rather than enumerate each one.
+  const scope = pkg.startsWith('@') ? pkg.split('/')[0] : null;
   const overlay = extraResources.find(
-    (r) => r && r.from === `node_modules/${pkg}` && r.to === `app/node_modules/${pkg}`
+    (r) =>
+      r &&
+      ((r.from === `node_modules/${pkg}` && r.to === `app/node_modules/${pkg}`) ||
+        (scope && r.from === `node_modules/${scope}` && r.to === `app/node_modules/${scope}`))
   );
   if (!overlay) missing.push(pkg);
 }

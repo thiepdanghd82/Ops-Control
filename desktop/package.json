@@ -108,7 +108,8 @@
           "!**/{*.test.js,*.md,*.markdown,*.html,test/**,tests/**,examples/**,docs/**,.bin/**,.cache/**}",
           "!**/better-sqlite3/**",
           "!**/node-hid/**",
-          "!**/@serialport/bindings-cpp/**"
+          "!**/serialport/**",
+          "!**/@serialport/**"
         ]
       },
       {
@@ -120,8 +121,12 @@
         "to": "app/node_modules/node-hid"
       },
       {
-        "from": "node_modules/@serialport/bindings-cpp",
-        "to": "app/node_modules/@serialport/bindings-cpp"
+        "from": "node_modules/serialport",
+        "to": "app/node_modules/serialport"
+      },
+      {
+        "from": "node_modules/@serialport",
+        "to": "app/node_modules/@serialport"
       }
     ],
     "win": {

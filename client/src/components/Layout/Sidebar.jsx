@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useAccess } from '../../context/useAccess';
+import { useFeatureFlag } from '../../context/useAppConfig';
 import { costApi } from '../../services/api';
 import { useMyApprovalCount } from '../../utils/useMyApprovalCount';
 import { useI18n } from '../../utils/useI18n';
@@ -82,7 +83,13 @@ const COST_SECTIONS = [
       // Sprint MES-2.7 — kiosk-admin (sys + admin via permission group). The
       // tab-access middleware on /api/planning/v2/kiosks/pairings is the
       // authoritative gate; this nav entry just shows the link.
-      { id: 'kiosk-admin', icon: 'settings', labelKey: 'nav.tab.kiosk_admin', minRole: 'admin' },
+      {
+        id: 'kiosk-admin',
+        icon: 'settings',
+        labelKey: 'nav.tab.kiosk_admin',
+        minRole: 'admin',
+        featureFlag: 'kiosk',
+      },
       { id: 'help', icon: 'help', labelKey: 'nav.tab.help' },
     ],
   },
@@ -135,6 +142,13 @@ export default function Sidebar({
   const { user, hasModule, logout } = useAuth();
   const { access } = useAccess();
   const { t } = useI18n();
+  // Feature gates (default off via DEFAULT_FEATURES) — hide the Planning
+  // module switcher + the kiosk-admin tab until the server opts them in
+  // via /api/runtime-config. AND-ed with the existing per-user hasModule
+  // / role / permission-group gates, so enabling a flag never widens
+  // access on its own.
+  const planningFeature = useFeatureFlag('planning');
+  const featureFlags = { kiosk: useFeatureFlag('kiosk'), planning: planningFeature };
   const ROLE_LEVELS = { viewonly: 1, user: 2, cost: 3, admin: 4, sys: 5 };
 
   const sections = activeModule === 'planning' ? PLANNING_SECTIONS : COST_SECTIONS;
@@ -254,7 +268,7 @@ export default function Sidebar({
             {t('nav.module_cost')}
           </button>
         )}
-        {hasModule('planning') && (
+        {hasModule('planning') && planningFeature && (
           <button
             className={`module-btn ${activeModule === 'planning' ? 'active' : ''}`}
             onClick={() => handleModuleSwitch('planning')}
@@ -268,6 +282,9 @@ export default function Sidebar({
       <nav className="sidebar-nav">
         {sections.map((section) => {
           const visibleTabs = section.tabs.filter((tab) => {
+            // Feature-flag gate (default off) — e.g. kiosk-admin needs
+            // OPS_FEATURE_KIOSK. AND-ed with role/permission below.
+            if (tab.featureFlag && !featureFlags[tab.featureFlag]) return false;
             // Legacy role-based gate (e.g. metrics → sys only).
             if (tab.minRole) {
               if ((ROLE_LEVELS[user?.role] || 0) < (ROLE_LEVELS[tab.minRole] || 0)) return false;

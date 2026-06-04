@@ -28,6 +28,13 @@ process.env.NODE_ENV = 'test';
 // would require threading a secret through the fixture. Tests that care
 // about 2FA enforcement live in authService.totpFailClosed.test.js.
 process.env.OPS_REQUIRE_2FA_ROLES = '';
+// This is the full-app golden integration test — exercise the app with
+// every module mounted, like before the Planning/Kiosk outer-gate landed.
+// (The gate's default-off + fail-closed behaviour has its own coverage in
+// featureGate.off/on.integration.test.js.) Without these, /api/planning/*
+// now returns the gate's 404 instead of the 401-without-auth this asserts.
+process.env.OPS_FEATURE_PLANNING = '1';
+process.env.OPS_FEATURE_KIOSK = '1';
 
 // Sprint 24: seed a test user BEFORE the app imports so the golden
 // HTTP lifecycle test (login → create quote → fetch) has a real
