@@ -17,15 +17,23 @@ import { fmtN, pct, gmClr } from '../../../../utils/format';
 
 // Re-derive VA / Contribution / GM at a different price without
 // re-running calcAll. Costs (s_mat_cost, tooling, packing_ship, s_ttl,
-// labor_cost, bd_setup_labor) are price-independent — we just swap the
-// denominator. Canonical formulas match calcEngine.calcAll (line 556-560)
-// so Selling-table and Target-table values reconcile exactly.
+// labor_cost) are price-independent — we just swap the denominator.
+// Canonical formulas match calcEngine.calcAll's `contribution`
+// (run_labor_only = labor_cost - setup_labor_total) so Selling-table
+// and Target-table values reconcile exactly.
+//
+// IMPORTANT: calcAll already returns `r.labor_cost` with setup labor
+// stripped (calcEngine: `labor_cost: labor_cost - setup_labor_total`),
+// so it IS the run-only labor. Do NOT subtract `r.bd_setup_labor`
+// again — that double-counts the strip and inflates Target Contr%
+// vs Selling Contr% by bd_setup_labor/price (the reconciliation bug
+// fixed here; VA/GM were unaffected because neither carries a labor term).
 function kpiAtPrice(r, price) {
   if (!r || !price || price <= 0) return { va: null, contribution: null, gm: null };
   const mats = r.s_mat_cost || 0;
   const tool = r.tooling || 0;
   const ps = r.packing_ship || 0;
-  const runLaborOnly = (r.labor_cost || 0) - (r.bd_setup_labor || 0);
+  const runLaborOnly = r.labor_cost || 0;
   return {
     va: 1 - (mats + tool + ps) / price,
     contribution: 1 - (mats + tool + ps + runLaborOnly) / price,
