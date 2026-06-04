@@ -38,6 +38,20 @@ const EXEMPT_PATTERNS = [
   /\.test\.js$/, // unit tests — never ship
 ];
 
+// build.files entries that are GENERATED AT BUILD TIME and therefore do
+// NOT exist in a clean checkout. They are legitimately listed in
+// build.files (so electron-builder packs them when present) but must be
+// skipped by the "entries point to real files" existence check below.
+//
+//   build-role.json — scripts/build-mac-installers.mjs (+ the Windows
+//   counterpart) writeFileSync({ role }) before packaging each per-role
+//   installer, then fs.unlinkSync() it afterwards to restore a clean
+//   tree (see build-mac-installers.mjs lines 58 + 112/134). It is never
+//   committed, so a clean repo / fresh CI run has no file on disk.
+const GENERATED_AT_BUILD = new Set([
+  'build-role.json', //
+]);
+
 function listTopLevelJs() {
   return fs
     .readdirSync(__dirname, { withFileTypes: true })
@@ -74,6 +88,9 @@ test('build.files entries all point to real files (no rotted entries)', () => {
     // Only check plain filename entries — skip globs (`**/*`), negations (`!`),
     // and directory patterns. Those are validated by electron-builder itself.
     if (/[*!]/.test(entry) || entry.endsWith('/')) continue;
+    // Skip files generated at build time (written then unlinked by the
+    // installer scripts) — they're intentionally absent in a clean tree.
+    if (GENERATED_AT_BUILD.has(entry)) continue;
     if (!fs.existsSync(path.join(__dirname, entry))) stale.push(entry);
   }
   assert.deepEqual(

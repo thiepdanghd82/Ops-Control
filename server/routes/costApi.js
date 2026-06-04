@@ -2712,14 +2712,21 @@ router.post(
     let rawD = pl.data || '';
     if (rawD.includes(',')) rawD = rawD.split(',')[1];
     const raw = Buffer.from(rawD, 'base64');
-    const qid = pl.quote_id;
+    // quote_id flows into the filename too — strip separators here as well,
+    // otherwise a crafted quote_id like "../../etc/x" injects path segments
+    // into `fname`. The startsWith() guard below catches the escape, but
+    // sanitizing at the source is the primary defence (mirrors `ccl`).
+    const qid = pl.quote_id == null ? null : String(pl.quote_id).replace(/[/\\\0]/g, '_');
     const fname = qid != null ? `${ccl} (${qid}#)${ext}` : `${ccl}${ext}`;
     const layoutsDir = path.resolve(getDataDir(), 'Products layout');
-    const fpath = path.resolve(layoutsDir, fname);
-    if (!fpath.startsWith(layoutsDir + path.sep)) {
+    fs.mkdirSync(layoutsDir, { recursive: true });
+    // realpath the (now-existing) dir so a symlinked "Products layout"
+    // can't be used to escape — parity with the DELETE /layout endpoint.
+    const realDir = fs.realpathSync(layoutsDir);
+    const fpath = path.resolve(realDir, fname);
+    if (!fpath.startsWith(realDir + path.sep)) {
       return res.status(400).json({ ok: false, msg: 'path traversal' });
     }
-    fs.mkdirSync(layoutsDir, { recursive: true });
     atomicWriteFileSync(fpath, raw);
     console.log(`  💾  Layout → ${fname}  (${Math.floor(raw.length / 1024)} KB)`);
     res.json({ ok: true, filename: fname });

@@ -484,9 +484,15 @@ export function calcInk(ink, st, moq, lib) {
     const setup_sheets = Math.ceil(baseMat_usage / 0.98);
     setup_s = moq ? (click_charge * clicks * setup_sheets) / moq : 0;
   } else {
-    const qpa_lm = pitch / 1000 / layout_per_sheet / (st.num_webs || 1);
+    // Guard against layout_per_sheet = 0 (operator zeroed parts_web_across
+    // or parts_in_md): bare division would yield Infinity → NaN run cost
+    // for every ink. qpa_lm = 0 makes run_s fall through to 0, matching
+    // the "no layout = no run" intent. The run_s gate below also requires
+    // ink_cover_val > 0 && width_m > 0, so this is belt-and-braces.
+    const qpa_lm =
+      layout_per_sheet > 0 ? pitch / 1000 / layout_per_sheet / (st.num_webs || 1) : 0;
     run_s =
-      ink_cover_val > 0 && width_m > 0
+      ink_cover_val > 0 && width_m > 0 && qpa_lm > 0
         ? (price * qpa_lm * (ink.area_pct || 0) * width_m) / ink_cover_val / scrapF
         : 0;
     const baseMat = st.materials.find((m) => m.code === ink.base_mat);

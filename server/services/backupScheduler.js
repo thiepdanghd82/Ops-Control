@@ -247,9 +247,22 @@ export async function runBackupCycle({ force = false } = {}) {
   // alongside the legacy `file` basename). Fall back to `file` only as a
   // defensive last resort — any caller that still relies on basename will
   // hit the same SQLITE_CANTOPEN we are fixing here.
-  if (sqliteResult?.path && !sqliteResult.skipped) {
+  // Prefer the absolute `path`; fall back to the legacy `file` basename
+  // only as a last resort. If a backup was actually written (not skipped)
+  // but neither field is present, DON'T fail silently — surface a verify
+  // step with ok:false so the anomaly shows up in the summary + audit
+  // instead of a backup that was never integrity-checked.
+  const verifyTarget = sqliteResult?.path || sqliteResult?.file;
+  if (sqliteResult && !sqliteResult.skipped && !verifyTarget) {
+    summary.steps.push({
+      name: 'verify',
+      ok: false,
+      error: 'backup created but no path returned — integrity check skipped',
+    });
+  }
+  if (verifyTarget && !sqliteResult.skipped) {
     try {
-      const verify = await verifyBackup(sqliteResult.path);
+      const verify = await verifyBackup(verifyTarget);
       summary.steps.push({ name: 'verify', ...verify });
       if (verify.ok && verify.counts) {
         const drops = compareToLive(verify.counts);
