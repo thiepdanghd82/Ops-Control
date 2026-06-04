@@ -4,8 +4,9 @@
   "customer": "CCL-YP",
   "tier": "M",
   "max_users": 20,
-  "issued_at": "2026-05-29T04:34:20.328Z",
+  "issued_at": "2026-06-04T10:25:13.074Z",
   "expires_at": "2027-06-09T00:00:00.000Z",
   "features": ["costing", "library", "sales", "planning", "quality", "mes"],
-  "signature": "REDACTED — stored offline, see registry README"
+  "signature": "REDACTED — stored offline, see registry README",
+  "note": "Re-issued 2026-06-04 under the rotated production key (old dev key retired; see CHANGELOG Security + README 'Production key rotation'). Original issue 2026-05-29. Full signed file stored OFFLINE."
 }

@@ -20,8 +20,10 @@
  *   }
  *
  * Public key embed strategy: read from OPS_LICENSE_PUBKEY (env at build
- * time, baked into asar). For dev, fallback to the bundled dev pubkey
- * which pairs with `scripts/generate-license.mjs`'s dev privkey.
+ * time, baked into asar) or a bundled resources/license-pubkey.pem;
+ * otherwise fall back to the embedded production key (EMBEDDED_PUBKEY_PEM).
+ * Rotated 2026-06-04 — the old dev keypair is retired (its private half
+ * leaked via the public repo); the new private key lives offline only.
  *
  * v1.2 HMAC licenses are NO LONGER ACCEPTED — operators must request a
  * new v1.3 license. Migration plan documented in MIGRATION_GUIDE.md.
@@ -49,15 +51,18 @@ const VALID_TIERS = Object.freeze(['S', 'M', 'L']);
 const LICENSE_PATH = () => path.join(app.getPath('userData'), 'license.json');
 const TRIAL_DAYS = 14;
 
-// Public key (PEM/SPKI, Ed25519). At build time, electron-builder
-// injects OPS_LICENSE_PUBKEY through the env or a generated file in
-// resources. Dev mode falls back to the committed dev pubkey so the
-// app boots out-of-the-box without ops setup.
-// DEV pubkey — pairs with scripts/license/dev-private.pem. Production
-// builds MUST set OPS_LICENSE_PUBKEY at build time so dev licenses
-// signed with the dev private key cannot be applied to prod installs.
-const DEV_PUBKEY_PEM = `-----BEGIN PUBLIC KEY-----
-MCowBQYDK2VwAyEAR2s68TfG9nR70mQXUBVALdf468fBR/RBMP9r4n9X5gY=
+// Public key (PEM/SPKI, Ed25519). At build time, electron-builder may
+// inject OPS_LICENSE_PUBKEY through the env or a generated resources file;
+// otherwise the embedded production key below is used.
+//
+// KEY ROTATION 2026-06-04: this is the PRODUCTION public key (label "prod",
+// SHA-256 fp 044e1ad7…). It replaced the old dev keypair, whose PRIVATE half
+// had been committed to the public repo and is therefore considered
+// permanently disclosed. The matching private key lives OFFLINE only
+// (~/OpsControl-license-keys/prod-private.pem on the license admin's box);
+// it is never committed. Old-key licenses no longer verify against this key.
+const EMBEDDED_PUBKEY_PEM = `-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAS3dNNf/Srcj2KxqswutJU0WHjPujy4imTKkZys379GE=
 -----END PUBLIC KEY-----`;
 
 function getPublicKey() {
@@ -78,7 +83,7 @@ function getPublicKey() {
       console.warn('[license] bundled pubkey invalid:', e.message);
     }
   }
-  return crypto.createPublicKey(DEV_PUBKEY_PEM);
+  return crypto.createPublicKey(EMBEDDED_PUBKEY_PEM);
 }
 
 // ─── Hardware fingerprint ──────────────────────────────────────────

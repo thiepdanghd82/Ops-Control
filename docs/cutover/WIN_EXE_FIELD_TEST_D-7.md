@@ -113,11 +113,14 @@ auto-skip role detection and go straight to server URL config.
 - [ ] Operator pastes `.lic` into **Activation Key** field → click **Activate**
 - [ ] License banner disappears → can now log in
 
-**STOP if**: License generation fails on Lead's Mac → check `dev-private.pem`
-exists at `scripts/license/dev-private.pem`. **STOP if**: license accepted
-in modal but banner persists → check that `OPS_LICENSE_PUBKEY` in Mac
-SERVER's `.env` matches `dev-public.pem` (Sprint S-D15 incident — Mac DMG
-shipped with the pubkey missing, fixed at build time).
+**STOP if**: License generation fails on Lead's Mac → confirm the OFFLINE
+private key exists at `~/OpsControl-license-keys/prod-private.pem` and that
+`--key` points at it (post 2026-06-04 rotation: there is no in-repo default).
+**STOP if**: license accepted in modal but banner persists → check that the
+installer embeds the NEW pubkey (`desktop/license.js:EMBEDDED_PUBKEY_PEM`,
+fp `044e1ad7…`) or that `OPS_LICENSE_PUBKEY` in the Mac SERVER's `.env`
+matches it (Sprint S-D15 incident — Mac DMG shipped with the pubkey missing,
+fixed at build time).
 
 ### Phase 4 — Login + TOTP enrollment (5 min)
 

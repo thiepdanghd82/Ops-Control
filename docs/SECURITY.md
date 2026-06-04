@@ -42,8 +42,8 @@
 
 ### Asymmetric Ed25519
 
-- **Private key:** offline at CCL HQ (paired with `scripts/license/dev-private.pem` for development).
-- **Public key:** baked into client app via `OPS_LICENSE_PUBKEY` env at build time, fallback `desktop/license.js:DEV_PUBKEY_PEM`.
+- **Private key:** OFFLINE only at `~/OpsControl-license-keys/prod-private.pem` (license admin's box). Rotated 2026-06-04 — old in-repo dev key retired (private half had leaked via the public repo). Public fp `044e1ad7…`.
+- **Public key:** baked into client app via `OPS_LICENSE_PUBKEY` env at build time, fallback `desktop/license.js:EMBEDDED_PUBKEY_PEM` (mirrored in `server/services/licenseService.js`).
 - **Sign tool:** `scripts/license/generate-license.mjs` — CLI for CCL HQ ops.
 - **Verify:** `desktop/license.js:verifyLicense()` (Electron) + `server/services/licenseService.js:getLicense()` (Node server).
 

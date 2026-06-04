@@ -25,23 +25,63 @@
  *      and add to electron-builder config.extraResources.
  *   4. Schedule re-keying — see ROTATION RUNBOOK in this file's footer.
  */
-import { generateKeyPairSync } from 'node:crypto';
+import { createHash, generateKeyPairSync } from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+function expandHome(p) {
+  if (p === '~') return os.homedir();
+  if (p.startsWith('~/')) return path.join(os.homedir(), p.slice(2));
+  return p;
+}
+
+function parseFlags(argv) {
+  const out = { _: [] };
+  for (let i = 2; i < argv.length; i += 1) {
+    const a = argv[i];
+    if (a === '--out-dir') {
+      out.outDir = argv[i + 1];
+      i += 1;
+    } else if (a.startsWith('--out-dir=')) {
+      out.outDir = a.slice('--out-dir='.length);
+    } else {
+      out._.push(a);
+    }
+  }
+  return out;
+}
+
 function main() {
-  const label = process.argv[2];
+  const flags = parseFlags(process.argv);
+  const label = flags._[0];
   if (!label || !/^[\w-]+$/.test(label)) {
-    console.error('Usage: node generate-keypair.mjs <label>');
+    console.error('Usage: node generate-keypair.mjs <label> [--out-dir <dir>]');
     console.error('  Label must match /^[\\w-]+$/. Suggested: prod-YYYY or env-region.');
+    console.error('  --out-dir: write keys OUTSIDE the repo (recommended for prod keys,');
+    console.error('             e.g. ~/OpsControl-license-keys). The private key must never');
+    console.error('             land in the git tree.');
     process.exit(1);
   }
 
-  const privPath = path.join(__dirname, `${label}-private.pem`);
-  const pubPath = path.join(__dirname, `${label}-public.pem`);
+  // Production private keys MUST live outside the repo. Default to __dirname
+  // only for legacy dev-key generation; warn loudly when a prod-looking label
+  // would write into the tree without an explicit --out-dir.
+  let outDir = __dirname;
+  if (flags.outDir) {
+    outDir = path.resolve(expandHome(flags.outDir));
+    fs.mkdirSync(outDir, { recursive: true, mode: 0o700 });
+  } else if (/prod/i.test(label)) {
+    console.error(`Refusing to write a "prod"-labelled key into the repo (${__dirname}).`);
+    console.error('Pass --out-dir <dir-outside-repo> so the private key never enters git.');
+    process.exit(1);
+  }
+
+  const privPath = path.join(outDir, `${label}-private.pem`);
+  const pubPath = path.join(outDir, `${label}-public.pem`);
 
   if (fs.existsSync(privPath) || fs.existsSync(pubPath)) {
     console.error(`Refusing to overwrite existing keys at ${label}-*.pem`);
@@ -50,21 +90,25 @@ function main() {
   }
 
   const { privateKey, publicKey } = generateKeyPairSync('ed25519');
+  const pubPem = publicKey.export({ format: 'pem', type: 'spki' });
   fs.writeFileSync(privPath, privateKey.export({ format: 'pem', type: 'pkcs8' }), { mode: 0o600 });
-  fs.writeFileSync(pubPath, publicKey.export({ format: 'pem', type: 'spki' }), { mode: 0o644 });
+  fs.writeFileSync(pubPath, pubPem, { mode: 0o644 });
+
+  // SHA-256 fingerprint of the SPKI DER — safe to log/share (public material).
+  const fp = createHash('sha256')
+    .update(publicKey.export({ format: 'der', type: 'spki' }))
+    .digest('hex');
 
   console.log(`✅ Generated Ed25519 keypair "${label}"`);
   console.log(`   private (chmod 600): ${privPath}`);
   console.log(`   public               : ${pubPath}`);
+  console.log(`   public SHA-256 fp    : ${fp}`);
   console.log('');
   console.log('🔒 NEXT STEPS:');
-  console.log(`   1. Move ${path.basename(privPath)} to offline vault. NEVER commit.`);
-  console.log(`   2. Add to .gitignore: scripts/license/*-private.pem`);
-  console.log(`   3. Bake public key into installer build:`);
-  console.log(
-    `        OPS_LICENSE_PUBKEY="$(cat ${path.basename(pubPath)})" npm run desktop:build:mac`
-  );
-  console.log(`   4. Document this label + creation date in docs/SECURITY.md key-rotation log.`);
+  console.log(`   1. Keep ${path.basename(privPath)} OFFLINE. NEVER commit; never paste anywhere.`);
+  console.log(`   2. Embed the PUBLIC key into the verifiers (desktop/license.js +`);
+  console.log(`      server/services/licenseService.js) and/or build with OPS_LICENSE_PUBKEY.`);
+  console.log(`   3. Document this label + creation date + fingerprint in docs/SECURITY.md.`);
 }
 
 main();

@@ -12,16 +12,17 @@
  *     --tier M \
  *     --expires 2027-04-29 \
  *     [--features costing,library,sales,planning,quality,mes] \
- *     [--privkey scripts/license/dev-private.pem] \
+ *     --key ~/OpsControl-license-keys/prod-private.pem \
  *     [--out license.json]
  *
  * Output: license.json (or stdout) with embedded Ed25519 signature.
  *
  * Security:
- *   - Production usage MUST point --privkey at the offline-stored
- *     production private key. The dev key checked into the repo is for
- *     development licenses only and is paired with the dev pubkey
- *     embedded in `desktop/license.js`.
+ *   - --key is REQUIRED and MUST point at the offline-stored production
+ *     private key (~/OpsControl-license-keys/prod-private.pem). Rotated
+ *     2026-06-04 — the old in-repo dev key was retired (private half leaked
+ *     via the public repo). The matching public key is embedded in
+ *     desktop/license.js + server/services/licenseService.js.
  *   - Customer obtains `installation_id` from their installed app
  *     (Settings → License → Copy Installation ID) and emails CCL HQ.
  *   - The signed license file is then sent back and applied via
@@ -29,8 +30,6 @@
  */
 import { createPrivateKey, sign } from 'node:crypto';
 import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 const TIER_LIMITS = { S: 15, M: 20, L: 50 };
 const SIGNED_FIELDS = [
@@ -74,8 +73,17 @@ function main() {
     process.exit(1);
   }
 
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  const keyPath = args.privkey || path.join(here, 'dev-private.pem');
+  // KEY ROTATION 2026-06-04: the in-repo dev key default was removed. The
+  // signing private key MUST be passed explicitly via --key (or --privkey)
+  // and MUST live outside the repo (offline vault), e.g.
+  //   --key ~/OpsControl-license-keys/prod-private.pem
+  const keyPath = args.key || args.privkey;
+  if (!keyPath) {
+    console.error('Missing --key <path-to-offline-private-key>');
+    console.error('  The signing key is never stored in the repo. Point --key at the');
+    console.error('  offline production key, e.g. ~/OpsControl-license-keys/prod-private.pem');
+    process.exit(1);
+  }
   if (!fs.existsSync(keyPath)) {
     console.error(`Private key not found at ${keyPath}`);
     process.exit(1);
