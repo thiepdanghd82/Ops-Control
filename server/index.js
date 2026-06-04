@@ -393,6 +393,15 @@ app.get(['/health', '/api/health'], (req, res) => {
 // closed). Operator can still emergency-disable via OPS_FEATURE_ALT_MATERIALS=0
 // (or 'false'/'off'/'no'). Anything else, including absent env var, leaves
 // the feature enabled.
+// Feature flags — Kiosk + Planning ship HIDDEN by default (opt-in). They
+// gate at the composition root (here + the mount/serve sites below), NOT
+// inside mountPlanning, so the planning/kiosk test harnesses that call
+// mountPlanning directly keep exercising the real routes. Enable with
+// OPS_FEATURE_PLANNING / OPS_FEATURE_KIOSK = 1 | true | on | yes.
+const featureOn = (v) => v === '1' || v === 'true' || v === 'on' || v === 'yes';
+const FEATURE_PLANNING = featureOn(process.env.OPS_FEATURE_PLANNING);
+const FEATURE_KIOSK = featureOn(process.env.OPS_FEATURE_KIOSK);
+
 app.get('/api/runtime-config', (req, res) => {
   const falsy = (v) => v === '0' || v === 'false' || v === 'off' || v === 'no';
   res.set('Cache-Control', 'no-cache');
@@ -401,6 +410,8 @@ app.get('/api/runtime-config', (req, res) => {
     version: PKG_VERSION,
     features: {
       alt_materials: !falsy(process.env.OPS_FEATURE_ALT_MATERIALS),
+      planning: FEATURE_PLANNING,
+      kiosk: FEATURE_KIOSK,
     },
   });
 });
@@ -972,11 +983,21 @@ app.use('/api/v1/shared', authMiddleware, enforceSiteAccess, sharedRouter);
 // Planning v1.3 (MES-1.4): /api/planning/v2/work-orders/* — gated by
 // the mes.workOrder.enabled feature flag. Mount BEFORE the legacy
 // /api/planning router so v2 prefix matches win on registration order.
-mountPlanning(app);
-
-// Planning module: Node.js native endpoints
-app.use('/api/planning', authMiddleware, enforceSiteAccess, planningRouter);
-app.use('/api/v1/planning', authMiddleware, enforceSiteAccess, planningRouter);
+// Planning is gated at the composition root by OPS_FEATURE_PLANNING
+// (default off). Flag off → neither the v2 nor the legacy router mounts
+// and /api/planning/* fails closed with 404. mountPlanning is untouched
+// internally so its own mes.workOrder.enabled gate + the planning test
+// harness (which calls mountPlanning directly) behave exactly as before.
+if (FEATURE_PLANNING) {
+  mountPlanning(app);
+  // Planning module: Node.js native endpoints
+  app.use('/api/planning', authMiddleware, enforceSiteAccess, planningRouter);
+  app.use('/api/v1/planning', authMiddleware, enforceSiteAccess, planningRouter);
+} else {
+  app.use(['/api/planning', '/api/v1/planning'], (_req, res) =>
+    res.status(404).json({ ok: false, error: 'feature_disabled', feature: 'planning' })
+  );
+}
 
 // IFS Data import endpoints (admin+ only). Rate-limited to prevent
 // accidental or malicious disk-thrashing by repeated large imports.
@@ -1100,35 +1121,46 @@ app.use('/api/v1/events', eventsRouter);
 // don't fall through into clientDist (which would 404 instead of
 // serving the kiosk shell).
 const kioskDist = path.join(__dirname, '..', 'apps', 'kiosk', 'dist');
-app.use(
-  '/kiosk',
-  express.static(kioskDist, {
-    setHeaders(res, filePath) {
-      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-      } else {
-        // index.html, manifest.webmanifest, sw.js — always revalidate.
-        res.setHeader('Cache-Control', 'no-cache');
-      }
-    },
-  })
-);
-// Kiosk asset 404 guard — clones the planner pattern below for the
-// /kiosk/ subtree. Without this, a stale kiosk client requesting a
-// no-longer-extant chunk would fall through to the kiosk SPA catch-all
-// and load index.html with `text/html`, crashing the browser with the
-// MIME-type error documented in CLAUDE.md "Stale-chunk crash recovery".
-app.get(['/kiosk/assets/*', '/kiosk/*.js', '/kiosk/*.css', '/kiosk/*.map'], (req, res) => {
-  res.status(404).type('text/plain').send('kiosk asset not found — stale chunk');
-});
-// Kiosk SPA catch-all — anything under /kiosk/ that wasn't matched by
-// the static handler or the 404 guard above falls through to here and
-// gets index.html (so client-side routes like /kiosk/pair work on hard
-// reload).
-app.get('/kiosk/*', (req, res) => {
-  res.setHeader('Cache-Control', 'no-cache');
-  res.sendFile(path.join(kioskDist, 'index.html'));
-});
+// Kiosk PWA serving is gated by OPS_FEATURE_KIOSK (default off). Flag off
+// → the whole /kiosk/* subtree fails closed with a plain-text 404 instead
+// of serving the shell. (The kiosk API lives under planning's v2 router,
+// so it is governed by OPS_FEATURE_PLANNING above — gating it separately
+// would mean reaching inside mountPlanning, which we deliberately don't.)
+if (FEATURE_KIOSK) {
+  app.use(
+    '/kiosk',
+    express.static(kioskDist, {
+      setHeaders(res, filePath) {
+        if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else {
+          // index.html, manifest.webmanifest, sw.js — always revalidate.
+          res.setHeader('Cache-Control', 'no-cache');
+        }
+      },
+    })
+  );
+  // Kiosk asset 404 guard — clones the planner pattern below for the
+  // /kiosk/ subtree. Without this, a stale kiosk client requesting a
+  // no-longer-extant chunk would fall through to the kiosk SPA catch-all
+  // and load index.html with `text/html`, crashing the browser with the
+  // MIME-type error documented in CLAUDE.md "Stale-chunk crash recovery".
+  app.get(['/kiosk/assets/*', '/kiosk/*.js', '/kiosk/*.css', '/kiosk/*.map'], (req, res) => {
+    res.status(404).type('text/plain').send('kiosk asset not found — stale chunk');
+  });
+  // Kiosk SPA catch-all — anything under /kiosk/ that wasn't matched by
+  // the static handler or the 404 guard above falls through to here and
+  // gets index.html (so client-side routes like /kiosk/pair work on hard
+  // reload).
+  app.get('/kiosk/*', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(path.join(kioskDist, 'index.html'));
+  });
+} else {
+  app.get(['/kiosk', '/kiosk/*'], (_req, res) =>
+    res.status(404).type('text/plain').send('Kiosk is not enabled on this server.')
+  );
+}
 
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
 app.use(
