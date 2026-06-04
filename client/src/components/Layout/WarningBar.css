@@ -156,3 +156,86 @@
   flex: 1 1 auto;
   min-width: 0;
 }
+
+/* ─── Ignore feature ─────────────────────────────────────────────── */
+
+/* Neutral tone — shown when every visible issue is ignored, so the bar
+   discloses the ignored count without a red/amber "alarm" colour. */
+.warning-bar.wb-clean {
+  background: #f1f5f9;
+  color: #475569;
+  border-top-color: rgba(0, 0, 0, 0.1);
+}
+
+.wb-body {
+  width: 100%;
+  max-width: 1100px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* Per-row Ignore / Un-ignore action buttons */
+.wb-act-btn {
+  flex-shrink: 0;
+  margin-left: auto;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  background: rgba(255, 255, 255, 0.6);
+  color: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 8px;
+  border-radius: 24px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+.wb-act-btn:hover {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.35);
+}
+
+/* Ignored sub-section */
+.wb-ignored {
+  width: 100%;
+  padding: 0 16px 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  margin-top: 2px;
+}
+
+.wb-ignored-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 0;
+}
+.wb-ignored-toggle:hover {
+  color: #334155;
+}
+
+.wb-ignored-chevron {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.wb-list-ignored {
+  padding-top: 0;
+  padding-bottom: 4px;
+}
+
+.wb-item-ignored {
+  color: #64748b;
+}
+.wb-item-ignored .wb-item-msg {
+  text-decoration: line-through;
+  text-decoration-color: rgba(100, 116, 139, 0.5);
+}
