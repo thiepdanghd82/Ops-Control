@@ -1304,14 +1304,16 @@ async function loadPdfjs() {
   // when e is a plain Array (some PDFs hand the trailer /ID parser one).
   // Forcing the fallback path by deleting the prototype methods on both the
   // main thread AND inside the worker realm sidesteps the engine bug.
-  // eslint-disable-next-line no-empty -- pre-existing tech debt: intentional empty fallback
   try {
     delete Uint8Array.prototype.toHex;
-  } catch {}
-  // eslint-disable-next-line no-empty -- pre-existing tech debt: intentional empty fallback
+  } catch {
+    /* method may be non-configurable on some engines — ignore */
+  }
   try {
     delete Uint8Array.prototype.toBase64;
-  } catch {}
+  } catch {
+    /* method may be non-configurable on some engines — ignore */
+  }
 
   const pdfjs = await import('pdfjs-dist');
   const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;

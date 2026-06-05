@@ -26,10 +26,8 @@ import { useCallback, useEffect, useState } from 'react';
 // without a JSX transform. Import-only here (no re-export) because
 // Vite Fast Refresh requires component files to export only components.
 // Callers should import helpers directly from './DecimalInput.helpers.js'.
-// eslint-disable-next-line no-unused-vars -- toDisplay re-exported for callers, see note above
 import {
   DECIMAL_RE,
-  toDisplay,
   toDisplayFixed,
   formatThousand,
   normalizeDecimalInput,
