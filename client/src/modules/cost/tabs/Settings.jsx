@@ -11,6 +11,7 @@ import HardwareSection from './HardwareSection';
 import ImportLegacySection from './ImportLegacySection';
 import ModeSection from './ModeSection';
 import AboutSection from './AboutSection';
+import LicenseManagerSection from './LicenseManager';
 import ProvisioningCard from '../../../components/Auth/ProvisioningCard';
 import {
   getClientVersionBadge,
@@ -41,6 +42,9 @@ const MENU_SECTIONS = [
     label: 'System',
     items: [
       { id: 'account', icon: '◍', label: 'Account Control', minRole: 'admin' },
+      // v1.6 — License Manager (fleet license distribution). sys-only:
+      // it surfaces every machine's installation_id + license status.
+      { id: 'license-mgr', icon: '⚷', label: 'License Manager', minRole: 'sys' },
       // v1.2 — about + diagnostics dialog cho mọi user
       { id: 'about', icon: 'ⓘ', label: 'About / Diagnostics' },
     ],
@@ -62,6 +66,7 @@ const ICON_BGS = {
   profile: '#dbeafe',
   mypwd: '#fef3c7',
   account: '#e0e7ff',
+  'license-mgr': '#fee2e2',
   data: '#fce7f3',
   syslog: '#f0fdf4',
   appearance: '#f3e8ff',
@@ -138,6 +143,7 @@ export default function Settings() {
         {activeSec === 'mode' && <ModeSection />}
         {activeSec === 'about' && <AboutSection />}
         {activeSec === 'account' && <AccountSection />}
+        {activeSec === 'license-mgr' && <LicenseManagerSection />}
         {activeSec === 'data' && <BackupSection />}
         {activeSec === 'syslog' && <LogsSection />}
         {activeSec === 'import-legacy' && <ImportLegacySection />}
