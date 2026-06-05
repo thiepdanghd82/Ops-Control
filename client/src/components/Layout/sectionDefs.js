@@ -77,7 +77,8 @@ export const COST_SECTIONS = [
     icon: 'rates',
     tabs: [
       { id: 'lib-rate', icon: 'rates', labelKey: 'nav.tab.rate_table' },
-      { id: 'lib-ddl', icon: 'ddl', labelKey: 'nav.tab.ddl' },
+      // Pre-go-live: DDL editing is admin/sys only (mirror of Sidebar nav).
+      { id: 'lib-ddl', icon: 'ddl', labelKey: 'nav.tab.ddl', minRole: 'admin' },
       { id: 'lib-finance', icon: 'finance', labelKey: 'nav.tab.finance_data' },
       { id: 'lib-machine-tech', icon: 'machine', label: 'Machine Technical' },
       // MES-3-V2 (KIOSK-002) — kiosk reason codes admin CRUD.

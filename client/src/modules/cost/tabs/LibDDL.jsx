@@ -46,12 +46,16 @@ const SKIP_KEYS = new Set([
 ]);
 
 export default function LibDDL() {
-  const { rawDDL, setRawDDL } = useCostLib();
+  const { rawDDL, setRawDDL, refreshLib } = useCostLib();
   const [site, setSite] = useState('VN');
   const [sections, setSections] = useState({});
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  // Anti-clobber: set when /save-all returns 409 (another admin changed DDL
+  // since we loaded). The user must reload before saving so they don't
+  // overwrite the other edit.
+  const [conflict, setConflict] = useState(false);
   // Track which site we've already seeded and whether we've done the
   // initial load. Prevents server refreshes from clobbering unsaved edits.
   const seededSiteRef = useRef(null);
@@ -142,26 +146,45 @@ export default function LibDDL() {
     setMsg('');
     try {
       const ddlSites = { ...(rawDDL.ddlSites || {}), [site]: sections };
-      // Commit to the engine data immediately so every consumer of
-      // CostLibContext (calculators, other tabs) sees the new values
-      // without waiting for — or being overwritten by — a server refetch.
-      setRawDDL({ ...rawDDL, ddlSites });
+      // Persist FIRST (send the _rev we loaded so the server can reject a stale
+      // overwrite with 409). Only commit to CostLibContext on success — that
+      // way a 409 doesn't leave local state ahead of the server.
+      // NOTE: server /save-all expects key `ddlSitesDB`, not `ddlSites`.
+      const resp = await costApi.saveAll({ ddlSitesDB: ddlSites, _ddlRev: rawDDL._rev });
+      // Commit locally so calculators/other tabs see the new values immediately,
+      // and adopt the new _rev so the NEXT save isn't a false conflict.
+      setRawDDL({ ...rawDDL, ddlSites, _rev: resp?.ddl_rev ?? rawDDL._rev });
       seededSiteRef.current = site;
       setDirty(false);
-      // Persist to disk in the background. If it fails, surface the error
-      // but keep the local edit in place.
-      // NOTE: server /save-all expects key `ddlSitesDB`, not `ddlSites`.
-      // Previously this sent `ddlSites` which the server silently ignored,
-      // so Save flashed "OK" but the file on disk was never written.
-      await costApi.saveAll({ ddlSitesDB: ddlSites });
       setMsg('Saved');
       setTimeout(() => setMsg(''), 2000);
     } catch (err) {
-      setMsg('Error: ' + err.message);
+      if (err?.status === 409) {
+        // Someone else edited DDL since we loaded — don't clobber. Keep the
+        // user's local edits visible but require a reload before saving.
+        setConflict(true);
+        setMsg('');
+      } else {
+        setMsg('Error: ' + err.message);
+      }
     } finally {
       setSaving(false);
     }
   }, [sections, site, rawDDL, setRawDDL]);
+
+  const handleReload = useCallback(async () => {
+    setConflict(false);
+    setDirty(false);
+    seededSiteRef.current = null; // force re-seed from the freshly fetched data
+    setMsg('Reloading…');
+    try {
+      await refreshLib();
+      setMsg('Reloaded — review then save again');
+      setTimeout(() => setMsg(''), 2500);
+    } catch (err) {
+      setMsg('Reload failed: ' + err.message);
+    }
+  }, [refreshLib]);
 
   const handleBackup = useCallback(async () => {
     try {
@@ -201,6 +224,18 @@ export default function LibDDL() {
           </button>
         </div>
       </div>
+
+      {conflict && (
+        <div className="ddl-conflict" role="alert">
+          <span>
+            ⚠ Drop-Down Lists đã được người khác sửa kể từ lúc bạn mở. Tải lại để
+            xem thay đổi mới trước khi lưu (chỉnh sửa của bạn vẫn còn cho tới khi bấm Tải lại).
+          </span>
+          <button className="ddl-btn ddl-btn-save" onClick={handleReload}>
+            Tải lại
+          </button>
+        </div>
+      )}
 
       <div className="ddl-content">
         {sectionKeys.length === 0 && (
