@@ -254,3 +254,21 @@
   background: #e8e8e8;
   color: #0353e9;
 }
+
+/* Anti-clobber conflict banner (PART 3 — DDL _rev) */
+.ddl-conflict {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 12px 0;
+  padding: 10px 14px;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.ddl-conflict button {
+  flex: 0 0 auto;
+}

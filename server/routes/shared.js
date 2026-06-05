@@ -832,9 +832,22 @@ router.get('/rates', (req, res) => {
 // GET /api/shared/ddl - Drop-down lists
 router.get('/ddl', (req, res) => {
   try {
-    const ddlSites = readJson(path.join(LIB, 'DDL', 'ddl_sites.json')) || {};
+    const ddlSitesPath = path.join(LIB, 'DDL', 'ddl_sites.json');
+    const ddlSites = readJson(ddlSitesPath) || {};
     const ddl = readJson(path.join(LIB, 'DDL', 'ddl.json')) || {};
-    res.json({ ddlSites, ddl });
+    // _rev — content hash of ddl_sites.json (derived, NOT a stored field, so no
+    // schema change). The client echoes it back on /save-all so the server can
+    // reject a stale overwrite (two clients editing DDL) with 409. Empty when
+    // the file doesn't exist yet (first save always allowed).
+    let _rev = '';
+    try {
+      if (fs.existsSync(ddlSitesPath)) {
+        _rev = crypto.createHash('sha256').update(fs.readFileSync(ddlSitesPath)).digest('hex').slice(0, 16);
+      }
+    } catch {
+      /* hash best-effort — empty _rev just means "no concurrency check" */
+    }
+    res.json({ ddlSites, ddl, _rev });
   } catch (err) {
     res.status(500).json({ error: 'Failed to load DDL' });
   }

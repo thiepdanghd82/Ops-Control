@@ -1946,7 +1946,44 @@ const SAVE_ALL_KNOWN_KEYS = new Set([
   'inkCalcDB',
   'npiDB',
   'sourcingDB',
+  // Control field (not a dataset): the DDL concurrency token the client echoes
+  // from /shared/ddl so save-all can reject a stale DDL overwrite. Never written.
+  '_ddlRev',
 ]);
+
+// _rev = content hash of ddl_sites.json on disk. Derived, never stored in the
+// data → no schema change. Empty when the file is missing (first save allowed).
+function ddlRevOf(fp) {
+  try {
+    return crypto.createHash('sha256').update(fs.readFileSync(fp)).digest('hex').slice(0, 16);
+  } catch {
+    return '';
+  }
+}
+
+// Key-level diff between the old and new multi-site DDL for the DDL_SAVE audit.
+// Returns the sites touched + which section keys changed per site (control keys
+// starting with `_` are ignored for the headline). Bounded + sorted.
+function diffDdlSections(oldAll, newAll) {
+  const o = oldAll && typeof oldAll === 'object' ? oldAll : {};
+  const n = newAll && typeof newAll === 'object' ? newAll : {};
+  const sitesChanged = [];
+  const sections = {};
+  for (const site of new Set([...Object.keys(o), ...Object.keys(n)])) {
+    const os = (o[site] && typeof o[site] === 'object' ? o[site] : {}) || {};
+    const ns = (n[site] && typeof n[site] === 'object' ? n[site] : {}) || {};
+    const changed = [];
+    for (const k of new Set([...Object.keys(os), ...Object.keys(ns)])) {
+      if (k.startsWith('_')) continue;
+      if (JSON.stringify(os[k]) !== JSON.stringify(ns[k])) changed.push(k);
+    }
+    if (changed.length) {
+      sitesChanged.push(site);
+      sections[site] = changed.sort();
+    }
+  }
+  return { sites: sitesChanged.sort(), sections };
+}
 
 // Sprint S3 — body-key → tab-id map for permission enforcement. Keys
 // not listed here aren't guarded per-tab (they're either legacy admin
@@ -2018,6 +2055,9 @@ router.post(
     // so the client can retry just the failed slice instead of re-posting
     // the whole batch and risk clobbering someone else's concurrent work.
     const saveResults = [];
+    // DDL audit/concurrency state (PART 2 + 3) — populated by the ddlSitesDB write.
+    let ddlOldSites = null;
+    let ddlNewRev = null;
     const runWrite = (key, fn) => {
       try {
         fn();
@@ -2121,10 +2161,29 @@ router.post(
           writeJson(path.join(LIB, 'Rate', 'rate_sites.json'), pl.rateSitesDB)
         );
       if (pl.ddlDB) runWrite('ddlDB', () => writeJson(path.join(LIB, 'DDL', 'ddl.json'), pl.ddlDB));
-      if (pl.ddlSitesDB)
-        runWrite('ddlSitesDB', () =>
-          writeJson(path.join(LIB, 'DDL', 'ddl_sites.json'), pl.ddlSitesDB)
-        );
+      if (pl.ddlSitesDB) {
+        const ddlPath = path.join(LIB, 'DDL', 'ddl_sites.json');
+        // Anti-clobber (warning-level, NOT the quotes optimistic-lock): if the
+        // client sent the _rev it loaded and the file changed since, reject so
+        // it reloads instead of overwriting another admin's edit. Short-circuit
+        // like the finance-summary lock — the whole point is to not clobber.
+        if (pl._ddlRev !== undefined && pl._ddlRev !== null) {
+          const curRev = ddlRevOf(ddlPath);
+          if (curRev !== pl._ddlRev) {
+            return res.status(409).json({
+              ok: false,
+              error: 'ddl_conflict',
+              message: 'DDL đã được người khác sửa — reload trước khi lưu.',
+              current_rev: curRev,
+              saved_keys: saveResults.filter((r) => r.ok).map((r) => r.key),
+            });
+          }
+        }
+        // Capture the old state BEFORE the write so DDL_SAVE can audit a diff.
+        ddlOldSites = readJson(ddlPath) || {};
+        runWrite('ddlSitesDB', () => writeJson(ddlPath, pl.ddlSitesDB));
+        ddlNewRev = ddlRevOf(ddlPath);
+      }
       if (pl.rfqTracker)
         runWrite('rfqTracker', () =>
           writeJson(path.join(LIB, 'RFQTracker', 'rfq_tracker.json'), pl.rfqTracker)
@@ -2298,6 +2357,26 @@ router.post(
           /* audit failures must never block save */
         }
       }
+      // PART 2 — richer DDL trail: the generic LIBRARY_SAVE above only logs the
+      // key name. DDL_SAVE adds the section-level diff (which sites + section
+      // keys actually changed) so an edit that breaks quotes is traceable.
+      if (succeeded.includes('ddlSitesDB') && ddlOldSites) {
+        try {
+          const diff = diffDdlSections(ddlOldSites, pl.ddlSitesDB);
+          audit(
+            'DDL_SAVE',
+            cu?.username || '-',
+            clientIp(req) || '-',
+            JSON.stringify({
+              sites_changed: diff.sites,
+              sections_changed: diff.sections,
+              timestamp: ts,
+            })
+          );
+        } catch {
+          /* audit best-effort */
+        }
+      }
 
       const emittedTypes = new Set();
       for (const k of succeeded) {
@@ -2316,6 +2395,9 @@ router.post(
         data_dir: getDataDir(),
         saved_keys: succeeded,
         ignored_keys: unknownKeys,
+        // New DDL concurrency token so the client updates its stored _rev after
+        // a successful DDL save (only present when ddlSitesDB was written).
+        ...(ddlNewRev != null ? { ddl_rev: ddlNewRev } : {}),
       });
     } catch (e) {
       // This catch only runs on non-write failures now (payload parsing,
