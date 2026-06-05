@@ -1306,6 +1306,30 @@ if (isEntryPoint) {
       .catch((err) => console.warn('[audit-retention] init failed:', err.message));
   });
 
+  // ─── Double-run guard (headless daemon ↔ app embedded server) ───
+  // If another Ops Control server already owns this port, listen() emits
+  // EADDRINUSE. Exit with a clear, actionable message instead of dumping a
+  // raw stack trace. This prevents the confusing "two servers" state and,
+  // when both point at the same DATA_DIR, guards the SQLite file from two
+  // writers. The headless service binds a fixed OPS_PORT (default 3000); the
+  // desktop app picks a free port, so this mainly fires when a second daemon
+  // or a manual `node server/index.js` races the running service.
+  server.on('error', (err) => {
+    if (err && err.code === 'EADDRINUSE') {
+      console.error(
+        `\n❌  Ops Control: cổng ${PORT} đang bận — Server đang chạy ở process khác ` +
+          `(daemon/service hoặc app SERVER).`
+      );
+      console.error(
+        `    Không khởi động bản thứ hai để tránh hỏng DATA_DIR. Dừng tiến trình cũ ` +
+          `(xem script status/stop) hoặc đổi OPS_PORT rồi thử lại.\n`
+      );
+      process.exit(1);
+    }
+    console.error('[fatal] server listen error:', err);
+    process.exit(1);
+  });
+
   // Phase 9G.5 — graceful shutdown. SIGTERM is what PM2/systemd/Docker
   // sends on deploy rolling-restart; SIGINT is Ctrl+C. Without this
   // handler, in-flight /save-all requests can be killed mid-write and
