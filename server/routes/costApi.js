@@ -219,6 +219,8 @@ import {
   persistSessions,
   userMustHaveTotp,
   revokeSessionsForUser,
+  singleSessionEnabled,
+  findUserSessionConflict,
   listActiveSessions,
   isSys,
   isAdminPlus,
@@ -676,6 +678,12 @@ router.post(
     // Sprint 1.6 — "Remember me" checkbox. When true, server issues a
     // 30-day session + 30-day cookie maxAge instead of the 8h default.
     remember: { type: 'boolean' },
+    // Single-session (SAP-style): which machine is logging in + its name, and
+    // whether to take over an existing session on another machine. Desktop
+    // sends the License Manager installation_id; web sends 'web'.
+    installation_id: { type: 'string', max: 64 },
+    hostname: { type: 'string', max: 120 },
+    force: { type: 'boolean' },
   }),
   async (req, res) => {
     const ip = clientIp(req);
@@ -686,11 +694,22 @@ router.post(
         .json({ ok: false, msg: '⛔ Too many login attempts. Try again after 60 seconds.' });
     }
     try {
-      const { username: rawUser, password, remember: rawRemember } = req.body || {};
+      const {
+        username: rawUser,
+        password,
+        remember: rawRemember,
+        installation_id: rawInstall,
+        hostname: rawHost,
+        force: rawForce,
+      } = req.body || {};
       const username = (rawUser || '').trim().toLowerCase();
       // Sprint 1.6 — coerce explicitly: only `true` extends TTL, anything
       // else (undefined / 0 / 'false' string) keeps the 8h default.
       const remember = rawRemember === true;
+      // Single-session metadata (default 'web'/'unknown' for browser clients).
+      const installationId = String(rawInstall || 'web').slice(0, 64);
+      const hostname = String(rawHost || 'web').slice(0, 120);
+      const force = rawForce === true;
 
       // Phase 10H per-username lockout. Cheaper than bcrypt verify, so
       // runs first. Sprint S-P0-FIX-3 (OWASP ASVS V4.0 §6.2.4) — response
@@ -727,6 +746,42 @@ router.post(
         return res.status(401).json({ ok: false, error: 'Invalid credentials' });
       }
       clearLoginFailures(username);
+
+      // ── Single-session enforcement (SAP-style takeover) ──────────────────
+      // Password is proven here. If the same user has a live session on ANOTHER
+      // machine, don't let a second one in silently. A non-stale conflict needs
+      // explicit takeover (force=true); a stale (idle) one is taken over
+      // automatically. No role is exempt. OPS_SINGLE_SESSION=0 disables it.
+      if (singleSessionEnabled()) {
+        const conflict = findUserSessionConflict(user.id, installationId);
+        if (conflict && !conflict.stale && !force) {
+          // Surface the conflict; client shows the takeover dialog. We do NOT
+          // create a session here — login is not granted until takeover.
+          return res.status(409).json({
+            ok: false,
+            error: 'session_conflict',
+            conflict: { hostname: conflict.hostname, last_activity: conflict.last_activity },
+          });
+        }
+        if (conflict) {
+          // force=true OR stale → take over: revoke the other machine's
+          // session(s) with a tombstone so it learns it was kicked.
+          const killed = revokeSessionsForUser(user.id, null, 'session-revoked');
+          audit(
+            'SESSION_TAKEOVER',
+            username,
+            ip,
+            JSON.stringify({
+              user: username,
+              from_host: hostname,
+              kicked_host: conflict.hostname,
+              stale: !!conflict.stale,
+              sessions_revoked: killed,
+            })
+          );
+        }
+      }
+
       // Check TOTP. Sprint 40 — fail-CLOSED when the secrets file can't
       // be decrypted. Sprint 41 — role-based hard enforcement closes the
       // "file missing → empty dict → bypass" hole: a user whose role
@@ -749,12 +804,19 @@ router.post(
           remember,
           totpVerified: false,
           totpEnrollmentPending: true,
+          installationId,
+          hostname,
         });
         totpEnrollmentRequired = true;
         audit('TOTP_ENROLLMENT_REQUIRED', username, ip, `role=${user.role}`);
       } else {
         const needsTotp = userHasSecret || secretsUnavailable;
-        token = createSession(user.id, { remember, totpVerified: !needsTotp });
+        token = createSession(user.id, {
+          remember,
+          totpVerified: !needsTotp,
+          installationId,
+          hostname,
+        });
       }
       audit('LOGIN_OK', username, ip);
       // Anomaly detection — runs AFTER the login is fully authenticated
@@ -834,6 +896,20 @@ router.post(
     }
   }
 );
+
+// POST /api/auth/session-conflict-cancelled — the user saw the takeover dialog
+// and chose Hủy (did NOT kick the other machine). Audit-only; no auth, no state
+// change. Rate-limited to stop audit spam. CSRF-exempt (no session at login).
+router.post('/auth/session-conflict-cancelled', (req, res) => {
+  const ip = clientIp(req);
+  if (!checkRateLimit(ip)) return res.status(429).json({ ok: false });
+  const username = String(req.body?.username || '-')
+    .trim()
+    .toLowerCase()
+    .slice(0, 64);
+  audit('SESSION_CONFLICT_CANCELLED', username, ip, JSON.stringify({ user: username }));
+  return res.json({ ok: true });
+});
 
 // POST /api/auth/logout
 router.post('/auth/logout', (req, res) => {

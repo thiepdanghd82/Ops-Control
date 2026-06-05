@@ -18,11 +18,35 @@ const RATE_LIMIT_WINDOW = 60; // seconds
 const MAX_AUDIT_LOG = 500;
 const ONLINE_TTL = 90; // seconds
 
+// Single-session (SAP-style): a fully-authenticated session that has been idle
+// longer than this is treated as "dead" — a new login from another machine
+// takes over silently (still revoked + audited) instead of prompting. Read
+// dynamically so ops can retune live; tuning knob only (no secret, no schema).
+// Default 15 min.
+function staleThresholdSec() {
+  const v = Number(process.env.OPS_SESSION_STALE_SEC);
+  return Number.isFinite(v) && v >= 0 ? v : 15 * 60; // honor an explicit 0
+}
+// Revoke-reason tombstones live this long so a kicked machine's next request
+// can be told WHY (session-revoked) before the token is forgotten.
+const REVOKE_TOMBSTONE_TTL_SEC = 3600;
+
 // ── In-memory stores ──
 const _sessions = new Map();
 const _rateLimit = new Map();
 const _auditLog = [];
 const _onlineUsers = new Map();
+// token -> { reason, at } for sessions revoked by takeover / policy.
+const _revokeTombstones = new Map();
+
+/**
+ * Single-session enforcement is ON by default; ops can disable in an emergency
+ * via OPS_SINGLE_SESSION=0 (or 'false'/'off'/'no'). Anything else keeps it ON.
+ */
+export function singleSessionEnabled() {
+  const v = (process.env.OPS_SINGLE_SESSION ?? '').trim().toLowerCase();
+  return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
+}
 
 // ── Paths ──
 let LIB_DIR = '';
@@ -703,7 +727,14 @@ function genToken() {
 
 export function createSession(
   userId,
-  { ttl, remember = false, totpVerified = true, totpEnrollmentPending = false } = {}
+  {
+    ttl,
+    remember = false,
+    totpVerified = true,
+    totpEnrollmentPending = false,
+    installationId = '',
+    hostname = '',
+  } = {}
 ) {
   if (!ttl) {
     // Resolution order: explicit ttl arg > per-user override > remember-me extension > default 8h.
@@ -730,6 +761,11 @@ export function createSession(
     // + /api/totp/verify (to finalize). getSessionUser() still rejects
     // until totp_verified=true.
     totp_enrollment_pending: totpEnrollmentPending,
+    // Single-session metadata (SAP-style): which machine this session is on
+    // + last seen, so a login from another machine can detect the conflict.
+    installation_id: String(installationId || '').slice(0, 64) || 'unknown',
+    hostname: String(hostname || '').slice(0, 120) || 'unknown',
+    last_activity: nowSec,
   });
   persistSessions();
   return tok;
@@ -772,6 +808,9 @@ export function getSessionUser(token) {
     return null;
   }
   if (!s.totp_verified) return null;
+  // Single-session: keep last_activity fresh so the stale-takeover window is
+  // measured from real use. In-memory only (not persisted on every request).
+  s.last_activity = Date.now() / 1000;
   return findUserById(s.user_id);
 }
 
@@ -810,6 +849,11 @@ export function listActiveSessions() {
       role: user?.role || '?',
       expires_at: new Date(sess.expires_at * 1000).toISOString(),
       totp_verified: !!sess.totp_verified,
+      installation_id: sess.installation_id || 'unknown',
+      hostname: sess.hostname || 'unknown',
+      last_activity: sess.last_activity
+        ? new Date(sess.last_activity * 1000).toISOString()
+        : null,
     });
   }
   return rows;
@@ -825,11 +869,15 @@ export function listActiveSessions() {
  *
  * Returns the number of sessions killed.
  */
-export function revokeSessionsForUser(userId, exceptToken = null) {
+export function revokeSessionsForUser(userId, exceptToken = null, reason = null) {
   let killed = 0;
+  const now = Date.now() / 1000;
   for (const [tok, sess] of _sessions) {
     if (sess.user_id === userId && tok !== exceptToken) {
       _sessions.delete(tok);
+      // Leave a tombstone so the kicked machine's next request can be told
+      // WHY (e.g. 'session-revoked' for a takeover) rather than a bare 401.
+      if (reason) _revokeTombstones.set(tok, { reason, at: now });
       killed++;
     }
   }
@@ -837,6 +885,56 @@ export function revokeSessionsForUser(userId, exceptToken = null) {
   // durable across a crash; use the sync variant.
   if (killed > 0) persistSessionsNow();
   return killed;
+}
+
+/**
+ * Single-session conflict detection. Returns the most-recently-active session
+ * of `userId` that is fully authenticated, NOT expired, and on a DIFFERENT
+ * machine than `installationId`. Same machine is never a conflict (re-login /
+ * multiple tabs). Returns null when there is no other-machine session.
+ *
+ * The returned record carries `stale` = idle longer than SESSION_STALE_SEC, so
+ * the caller can take over silently (no prompt) for an abandoned session.
+ */
+export function findUserSessionConflict(userId, installationId) {
+  const now = Date.now() / 1000;
+  const me = String(installationId || 'unknown');
+  let best = null;
+  for (const [tok, s] of _sessions) {
+    if (s.user_id !== userId) continue;
+    if (s.expires_at <= now) continue;
+    if (!s.totp_verified) continue; // only fully-authenticated logins count
+    if ((s.installation_id || 'unknown') === me) continue; // same machine ≠ conflict
+    const lastAct = s.last_activity || s.created_at || now;
+    if (!best || lastAct > best._lastAct) {
+      best = {
+        token_prefix: tok.slice(0, 8),
+        installation_id: s.installation_id || 'unknown',
+        hostname: s.hostname || 'unknown',
+        last_activity: new Date(lastAct * 1000).toISOString(),
+        stale: now - lastAct > staleThresholdSec(),
+        _lastAct: lastAct,
+      };
+    }
+  }
+  if (best) delete best._lastAct;
+  return best;
+}
+
+/**
+ * If a token was revoked (takeover/policy), return its reason while the
+ * tombstone is fresh, else null. Lets authMiddleware answer 401 with
+ * reason=session-revoked so the kicked client can show the right message.
+ */
+export function getRevokeReason(token) {
+  if (!token) return null;
+  const t = _revokeTombstones.get(token);
+  if (!t) return null;
+  if (Date.now() / 1000 - t.at > REVOKE_TOMBSTONE_TTL_SEC) {
+    _revokeTombstones.delete(token);
+    return null;
+  }
+  return t.reason;
 }
 
 function cleanupSessions() {
@@ -847,6 +945,10 @@ function cleanupSessions() {
       _sessions.delete(tok);
       count++;
     }
+  }
+  // Expire stale revoke tombstones alongside session cleanup.
+  for (const [tok, t] of _revokeTombstones) {
+    if (now - t.at > REVOKE_TOMBSTONE_TTL_SEC) _revokeTombstones.delete(tok);
   }
   if (count > 0) {
     console.log(`  🧹  Cleaned ${count} expired sessions`);

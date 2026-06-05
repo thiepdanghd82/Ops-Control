@@ -713,7 +713,13 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 //       flag + same-user match + correct OTP) provides equivalent
 //       protection against forged cross-origin requests.
 import { checkCsrf } from './utils/authCookie.js';
-const CSRF_EXEMPT_PATHS = new Set(['/api/auth/login', '/api/totp/verify', '/api/totp/enroll']);
+const CSRF_EXEMPT_PATHS = new Set([
+  '/api/auth/login',
+  '/api/totp/verify',
+  '/api/totp/enroll',
+  // Audit-only, pre-session (single-session takeover "Hủy"); no state change.
+  '/api/auth/session-conflict-cancelled',
+]);
 app.use((req, res, next) => {
   if (CSRF_EXEMPT_PATHS.has(req.path)) return next();
   const r = checkCsrf(req);
