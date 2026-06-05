@@ -231,6 +231,23 @@ export const authApi = {
   heartbeat: (opts = {}) => api.post('/heartbeat', {}, opts),
 };
 
+// ─── License Manager fleet API (v1.6, ships AFTER go-live) ───
+// "Ký offline, phân phối online". The server NEVER signs — it only records
+// per-machine heartbeats, lists the fleet (sys-only), verifies + queues an
+// already-signed license (sys-only), and delivers it on the next heartbeat.
+export const licenseFleetApi = {
+  // Desktop heartbeat — metadata only (installation_id + hostname + status).
+  heartbeat: (payload) => api.post('/license/fleet/heartbeat', payload),
+  // sys-only fleet table.
+  list: () => api.get('/license/fleet'),
+  // sys-only: upload an offline-signed license; server verifies before queuing.
+  upload: (license, installation_id) =>
+    api.post('/license/fleet/upload', { license, installation_id }),
+  // client confirms it applied the delivered license.
+  confirmDistributed: (installation_id) =>
+    api.post('/license/fleet/distributed', { installation_id }),
+};
+
 // ─── IFS Data Import API (multipart CSV/XLSX upload) ───
 // Backend endpoints are defined in server/routes/import.js and mounted at
 // /api/import. Each upload backs up the current data file, rewrites it from

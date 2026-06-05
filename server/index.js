@@ -656,6 +656,7 @@ import eventsRouter from './routes/events.js';
 import { authMiddleware, requireRole } from './middleware/auth.js';
 import auditRouter from './domains/security/routes/audit.js'; // v1.3 P3.1 — domain extraction
 import { createLicenseRouter } from './domains/security/routes/license.js'; // v1.3 P5.1
+import { createLicenseFleetRouter } from './domains/security/routes/licenseFleet.js'; // v1.6 License Manager
 import { createBackupRouter } from './domains/basis/routes/backup.js'; // v1.3 F1
 import { createRateRouter } from './domains/library/routes/rate.js'; // v1.3 J1 — go-live
 import { createDdlRouter } from './domains/library/routes/ddl.js'; // v1.3 J1 — go-live
@@ -748,6 +749,11 @@ const licenseStatusCount = () => {
     return 0;
   }
 };
+// v1.6 — License Manager fleet router. Mounted BEFORE /api/license so the
+// /fleet/* paths are matched here (the status router only owns /status).
+// Server NEVER signs — it verifies + queues already-signed licenses only.
+app.use('/api/license/fleet', createLicenseFleetRouter({ dataDir: DATA_DIR }));
+app.use('/api/v1/license/fleet', createLicenseFleetRouter({ dataDir: DATA_DIR }));
 app.use('/api/license', createLicenseRouter({ countActiveUsers: licenseStatusCount }));
 app.use('/api/v1/license', createLicenseRouter({ countActiveUsers: licenseStatusCount }));
 

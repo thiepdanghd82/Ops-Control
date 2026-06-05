@@ -1,0 +1,99 @@
+.licmgr {
+  padding: 8px 4px;
+}
+.licmgr-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.licmgr-head h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+.licmgr-sub {
+  color: var(--text-muted, #64748b);
+  font-size: 0.85rem;
+  max-width: 720px;
+  margin: 6px 0 14px;
+}
+.licmgr-alert {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+.licmgr-alert-bad {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+.licmgr-alert-ok {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+.licmgr-empty {
+  color: var(--text-muted, #64748b);
+  padding: 24px;
+  text-align: center;
+  border: 1px dashed var(--border, #e2e8f0);
+  border-radius: 10px;
+}
+.licmgr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.licmgr-table th,
+.licmgr-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  vertical-align: middle;
+}
+.licmgr-table th {
+  font-weight: 600;
+  color: var(--text-muted, #475569);
+  background: var(--surface-2, #f8fafc);
+}
+.licmgr-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+}
+.licmgr-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-right: 4px;
+}
+.licmgr-tone-good {
+  background: #dcfce7;
+  color: #166534;
+}
+.licmgr-tone-warn {
+  background: #fef9c3;
+  color: #854d0e;
+}
+.licmgr-tone-bad {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.licmgr-tone-neutral {
+  background: #e2e8f0;
+  color: #334155;
+}
+.licmgr-actions {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+.op-btn-sm {
+  padding: 4px 8px;
+  font-size: 0.78rem;
+}
+.licmgr-hidden-input {
+  display: none;
+}
