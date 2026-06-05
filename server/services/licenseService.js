@@ -195,6 +195,58 @@ export function invalidateLicenseCache() {
 }
 
 /**
+ * Verify an in-memory license object (NOT from disk, NOT cached). Used by the
+ * License Manager fleet upload flow to validate an operator-supplied signed
+ * license BEFORE queuing it for distribution. Checks format + tier + Ed25519
+ * signature against the embedded production pubkey + expiry. Does NOT bind to
+ * this server's hardware (the license targets a DIFFERENT machine); the caller
+ * is responsible for matching `installation_id` to the intended target.
+ *
+ * Trials are explicitly rejected — only real signed licenses are distributable.
+ *
+ * @returns {{ok:true, license:object} | {ok:false, reason:string, detail?:string}}
+ */
+export function verifyLicenseObject(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { ok: false, reason: 'malformed' };
+  }
+  if (raw.isTrial) return { ok: false, reason: 'trial-not-distributable' };
+  if (raw.version !== 2 || !raw.signature) return { ok: false, reason: 'unsupported-format' };
+  if (!TIER_LIMITS[raw.tier]) return { ok: false, reason: 'bad-tier' };
+  if (raw.max_users !== TIER_LIMITS[raw.tier]) return { ok: false, reason: 'tier-mismatch' };
+  if (!/^[0-9a-f]{64}$/i.test(String(raw.installation_id || ''))) {
+    return { ok: false, reason: 'bad-installation-id' };
+  }
+  const pub = loadPublicKey();
+  if (!pub) return { ok: false, reason: 'no-pubkey' };
+  let sigOk;
+  try {
+    const { signature, ...payload } = raw;
+    sigOk = verify(null, Buffer.from(canonicalize(payload)), pub, Buffer.from(signature, 'base64'));
+  } catch (e) {
+    return { ok: false, reason: 'verify-error', detail: e.message };
+  }
+  if (!sigOk) return { ok: false, reason: 'bad-signature' };
+  if (raw.expires_at) {
+    const exp = new Date(raw.expires_at).getTime();
+    if (Number.isFinite(exp) && exp < Date.now()) {
+      return { ok: false, reason: 'expired', detail: raw.expires_at };
+    }
+  }
+  return {
+    ok: true,
+    license: {
+      installation_id: raw.installation_id,
+      customer: raw.customer,
+      tier: raw.tier,
+      max_users: raw.max_users,
+      expires_at: raw.expires_at,
+      features: raw.features || [],
+    },
+  };
+}
+
+/**
  * Express middleware: rejects user-creation requests when the customer
  * is at their tier seat limit. Plug into `POST /api/users` AFTER auth.
  *
