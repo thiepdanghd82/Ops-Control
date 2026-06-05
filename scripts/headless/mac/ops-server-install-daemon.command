@@ -73,25 +73,54 @@ ENV
   echo "  ✓ Đã ghi $ENV_FILE (khóa chỉ nằm trong file 600 này, không vào plist/log)."
 fi
 
-# ── 4. Di trú license + data từ app của user (nếu có) ───────────────────────
+# ── 4. Di trú dữ liệu app embedded cũ + license ─────────────────────────────
 echo ""
-echo "[4/7] License + dữ liệu…"
+echo "[4/7] Di trú dữ liệu app embedded (nếu có) + license…"
 USER_UDATA="/Users/$INVOKING_USER/Library/Application Support/ops-control-desktop"
-if [ ! -f "$LICENSE_FILE" ] && [ -f "$USER_UDATA/license.json" ]; then
-  echo "  → Tìm thấy license của app ($INVOKING_USER). Sao chép sang dịch vụ nền…"
-  run cp "$USER_UDATA/license.json" "$LICENSE_FILE"
-elif [ -f "$LICENSE_FILE" ]; then
-  echo "  ✓ Đã có license tại $LICENSE_FILE"
-else
-  echo "  ⚠ Chưa có license. Sau khi cài, đặt file license đã ký vào:"
-  echo "      $LICENSE_FILE"
-  echo "    (dùng mint-license.command để cấp, rồi copy đè + start lại)."
-fi
-if [ -d "$USER_UDATA/data" ] && [ -z "$(ls -A "$DATA_DIR" 2>/dev/null | grep -v license.json)" ]; then
-  read -r -p "  Sao chép dữ liệu hiện có của app sang dịch vụ nền? [y/N] " ans 2>/dev/null || ans=N
+OLD_DATA="$USER_UDATA/data"
+if [ -f "$DATA_DIR/ops.db" ]; then
+  echo "  • DATA_DIR dịch vụ đã có ops.db — BỎ QUA migrate (không ghi đè dữ liệu daemon)."
+elif [ -f "$OLD_DATA/ops.db" ]; then
+  echo "  Phát hiện dữ liệu app embedded tại:"
+  echo "      $OLD_DATA"
+  echo "  ⚠ BẮT BUỘC: app SERVER (cửa sổ) phải đã TẮT HẲN trước khi di trú (tránh hỏng DB"
+  echo "     do hai tiến trình mở cùng SQLite). Hãy thoát hẳn app Ops Control rồi tiếp tục."
+  read -r -p "  App đã tắt — di trú + verify ngay bây giờ? [y/N] " ans 2>/dev/null || ans=N
   if [ "${ans:-N}" = "y" ] || [ "${ans:-N}" = "Y" ]; then
-    run rsync -a "$USER_UDATA/data/" "$DATA_DIR/"
+    echo "    \$ ELECTRON_RUN_AS_NODE=1 \"$ELECTRON_BIN\" migrate-datadir.cjs \"$OLD_DATA\" \"$DATA_DIR\" …"
+    ELECTRON_RUN_AS_NODE=1 "$ELECTRON_BIN" "$MIGRATE_HELPER" "$OLD_DATA" "$DATA_DIR" "$APP" || {
+      echo "  ✘ Migrate/verify THẤT BẠI — KHÔNG khởi động daemon. Xem thông báo lỗi ở trên."
+      pause_close; exit 1
+    }
+    # license nằm 1 cấp TRÊN data/, không đi theo bản copy data → copy riêng
+    if [ -f "$USER_UDATA/license.json" ] && [ ! -f "$LICENSE_FILE" ]; then
+      run cp "$USER_UDATA/license.json" "$LICENSE_FILE"
+    fi
+    # Vô hiệu hóa DATA_DIR cũ: đổi tên → app embedded KHÔNG thể chạy nhầm DB cũ
+    # (guard port không chặn được vì app dùng cổng động). App mở lại sẽ tạo DB rỗng.
+    TS="$(date +%Y%m%d-%H%M%S)"
+    run mv "$OLD_DATA" "$OLD_DATA.migrated-backup-$TS"
+    cat > "$USER_UDATA/READ-ME-SERVER-MOVED.txt" <<EOF
+Ops Control SERVER da chuyen sang DICH VU NEN (LaunchDaemon) luc $TS.
+- Du lieu dang dung (authoritative): $DATA_DIR
+- Backup du lieu cu:                 $OLD_DATA.migrated-backup-$TS
+KHONG mo app SERVER (cua so) nua — hay dung dich vu nen. Mo app se tao DB RONG moi.
+EOF
+    echo "  ✓ Đã di trú + đổi tên data cũ → .migrated-backup-$TS (chống app dùng nhầm DB cũ)."
+  else
+    echo "  • Bỏ qua migrate — dịch vụ sẽ khởi tạo DB TRỐNG mới."
   fi
+else
+  echo "  • Không thấy dữ liệu app cũ ($OLD_DATA) — dịch vụ khởi tạo DB mới."
+fi
+# License fallback (khi không migrate nhưng app có license)
+if [ ! -f "$LICENSE_FILE" ] && [ -f "$USER_UDATA/license.json" ]; then
+  run cp "$USER_UDATA/license.json" "$LICENSE_FILE"
+fi
+if [ -f "$LICENSE_FILE" ]; then
+  echo "  ✓ License: $LICENSE_FILE"
+else
+  echo "  ⚠ Chưa có license. Đặt file license đã ký vào: $LICENSE_FILE rồi chạy start."
 fi
 
 # ── 5. Ghi wrapper run-server.sh ────────────────────────────────────────────

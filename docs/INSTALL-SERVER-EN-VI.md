@@ -37,6 +37,43 @@ Lead). Các máy CLIENT chỉ cần cài bản CLIENT và trỏ tới SERVER.
 
 ---
 
+## 🔄 Máy SERVER ĐANG chạy app embedded? Di trú dữ liệu trước · Migrating an existing SERVER
+
+**Vấn đề.** Nếu máy SERVER đang chạy **app embedded** (mở cửa sổ app), dữ liệu nằm
+trong DATA_DIR **theo user** (`~/Library/Application Support/ops-control-desktop/data`
+trên Mac · `%APPDATA%\ops-control-desktop\data` trên Win). Dịch vụ nền dùng DATA_DIR
+**hệ thống** (`/Library/OpsControl/data` · `C:\ProgramData\OpsControl\data`) → nếu
+không di trú, daemon khởi động với **database TRỐNG**.
+
+**Cài đặt đã tự lo việc này.** Trình cài (`install-daemon.command` / `install-service.bat`)
+**tự phát hiện** dữ liệu app cũ → hỏi xác nhận → **copy nguyên trạng** (ops.db + WAL +
+`Library/` + `Backup/`) → **verify** (so sánh checksum từng file + đối chiếu **row count**
+các bảng cũ == mới) → **chỉ start daemon khi verify PASS**. Sau đó **đổi tên DATA_DIR cũ**
+thành `…/data.migrated-backup-<ngày>` để app embedded không thể chạy nhầm DB cũ.
+
+> ⚠️ **Vì sao phải đổi tên data cũ?** Port-guard KHÔNG chặn được app embedded: app
+> chọn **cổng động** (không phải 3000) nên không đụng daemon → nếu daemon đang tắt mà
+> ai mở app SERVER, app sẽ chạy trên **DB cũ** → dữ liệu **phân kỳ**. Đổi tên data cũ là
+> cơ chế chống chính: app mở lại chỉ tạo DB rỗng (thấy ngay là sai), không âm thầm ghi
+> vào DB cũ. File `READ-ME-SERVER-MOVED.txt` được đặt lại để nhắc.
+
+### Thứ tự go-live cho máy SERVER hiện hữu · Cutover order
+
+1. [ ] Báo operators **tạm dừng** dùng hệ thống (vài phút).
+2. [ ] Trên máy SERVER: **Thoát HẲN app Ops Control** (Cmd+Q / Quit; kiểm tra không còn
+       tiến trình `Ops Control`). _Bắt buộc — hai tiến trình mở cùng SQLite sẽ hỏng DB._
+3. [ ] Chạy trình cài dịch vụ nền (mục 🍎/🪟 bên dưới). Khi hỏi **di trú** → gõ **y**.
+       Xem dòng `MIGRATE-OK` + `row-count verify OK`.
+4. [ ] `/health` trả `ok:true`. Mở thử 1–2 quote cũ để chắc dữ liệu đúng.
+5. [ ] Báo operators **nối lại** — vẫn `http://<IP-máy-SERVER>:3000`.
+6. [ ] **TỪ NAY không mở app SERVER** trên máy đó nữa — chỉ dùng dịch vụ nền.
+
+> Nếu verify **THẤT BẠI**: trình cài **không** start daemon, **không** đổi tên data cũ —
+> app embedded vẫn chạy như cũ. Báo lại để kiểm tra (thường do app chưa tắt hẳn → file
+> đang mở khác checksum). Data cũ luôn được **giữ nguyên** (chỉ copy, không xóa).
+
+---
+
 ## 🍎 macOS
 
 Thư mục script: `scripts/headless/mac/`
@@ -48,8 +85,9 @@ Thư mục script: `scripts/headless/mac/`
    - Lần đầu macOS có thể chặn: **chuột phải → Open → Open**.
 3. Cửa sổ Terminal hiện ra. Nó **xin mật khẩu Mac của bạn** (sudo) — gõ mật khẩu
    (không hiện ký tự là bình thường) rồi Enter.
-4. Script in **từng bước** (tạo thư mục, sinh khóa, ghi plist, nạp dịch vụ). Khi
-   xong sẽ thấy:
+4. Script in **từng bước** (thư mục, sinh khóa, **di trú dữ liệu**, plist, nạp dịch vụ).
+   - Nếu phát hiện app embedded cũ, script **hỏi di trú** — thoát hẳn app rồi gõ `y`
+     (xem mục 🔄 phía trên). Khi xong sẽ thấy:
    ```
    ✅ Server ĐANG CHẠY — http://127.0.0.1:3000/health OK
    ```
@@ -99,7 +137,8 @@ Thư mục script: `scripts/headless/win/`
 1. Mở thư mục `scripts/headless/win/`.
 2. **Chuột phải** `ops-server-install-service.bat` → **Run as administrator**.
    (Nếu quên, script tự bật cửa sổ UAC xin quyền — bấm **Yes**.)
-3. Cửa sổ đen hiện các bước [1/6]…[6/6]. Khi xong:
+3. Cửa sổ đen hiện các bước [1/7]…[7/7]. Nếu phát hiện app embedded cũ, script
+   **hỏi di trú** — thoát hẳn app rồi gõ `y` (xem mục 🔄). Khi xong:
    ```
    OK Server DANG CHAY - http://127.0.0.1:3000/health
    ```

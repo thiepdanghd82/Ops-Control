@@ -39,6 +39,9 @@ OUT_LOG="$LOG_DIR/server.out.log"
 ERR_LOG="$LOG_DIR/server.err.log"
 PORT="${OPS_PORT:-3000}"
 
+# Shared migrate+verify helper (one level up, in scripts/headless/).
+MIGRATE_HELPER="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)/migrate-datadir.cjs"
+
 # Re-exec self under sudo if not already root (transparent — prints why).
 need_root() {
   if [ "$(id -u)" -ne 0 ]; then

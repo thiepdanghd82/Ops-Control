@@ -51,6 +51,24 @@ zero cài thêm.
 > `nssm set OpsControlServer AppEnvironmentExtra ELECTRON_RUN_AS_NODE=1 …` (kèm các khóa).
 > Không kèm sẵn vì nssm là binary bên thứ ba.
 
+## Di trú dữ liệu app embedded → dịch vụ nền
+
+`migrate-datadir.cjs` (chạy qua Electron-as-node, cross-OS) được trình cài gọi khi
+phát hiện DATA_DIR app cũ (`<userData>/data`):
+
+1. **Copy nguyên trạng** cả thư mục (ops.db + `-wal`/`-shm` + `Library/` + `Backup/`)
+   sang DATA_DIR hệ thống — yêu cầu app SERVER cũ đã **tắt hẳn**.
+2. **Verify** từng file bằng **sha256** (copy faithful ⇒ row count chắc chắn khớp) +
+   **bonus** đối chiếu row count các bảng (cũ == mới) nếu nạp được better-sqlite3.
+3. Từ chối ghi đè nếu đích đã có `ops.db` (exit 3); fail nếu checksum/row-count lệch
+   (exit 4/5). **Chỉ start daemon khi MIGRATE-OK.**
+
+Sau migrate, trình cài **đổi tên DATA_DIR cũ** → `data.migrated-backup-<ts>` + đặt
+`READ-ME-SERVER-MOVED.txt`. **Vì sao:** port-guard KHÔNG chặn app embedded (app dùng
+cổng động, không đụng 3000) → nếu daemon tắt mà ai mở app SERVER, app sẽ ghi vào DB
+cũ → phân kỳ. Đổi tên data cũ ⇒ app mở lại chỉ tạo DB rỗng (lỗi thấy ngay), không âm
+thầm ghi DB cũ. Data cũ **giữ nguyên** dưới tên backup (không xóa).
+
 ## Guard chống chạy đôi
 
 `server/index.js` bắt `EADDRINUSE` ở `listen()` → in thông báo rõ
@@ -63,6 +81,8 @@ không để hai writer cùng một DATA_DIR). Đây là thay đổi server-logi
   license thật → `/health ok:true`, preflight production PASS, `DATA_DIR` đúng path,
   `ops.db` + `Library/` + `license.json` được tạo/đọc.
 - ✅ Guard chạy đôi: instance thứ 2 trên cùng cổng → exit 1 + thông báo rõ.
+- ✅ Migrate: copy DATA_DIR thật → verify checksum (0 sai khác) + row-count 17 bảng khớp
+  → `MIGRATE-OK`; guard chống ghi đè đích đã có ops.db (exit 3); đổi tên data cũ thành công.
 - ✅ `plutil -lint` plist OK; `xmllint` Task XML OK (UTF-16LE + BOM); `bash -n` mọi script; `node --check` helper.
 
 Phần **cài đặt có quyền** (launchctl/schtasks) cần sudo/admin → Lead chạy theo
