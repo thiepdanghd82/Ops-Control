@@ -13,8 +13,11 @@
 > **CI Node-22 red root-caused = NOT a product bug:** the native `better-sqlite3`
 > binary didn't match the runner's Node ABI → every DB test threw
 > "Cannot read properties of undefined (reading 'close')". A clean Node-22 run
-> (binary rebuilt) passes 1246/1246; added `npm rebuild better-sqlite3` to the
-> CI server-test job. **P3 (defer post-go-live, logged here):** (a) `npm audit`
+> (binary rebuilt) passes 1246/1246; the fix (`npm rebuild better-sqlite3` in the
+> CI `test-server` job) is prepared in `docs/ci/node22-better-sqlite3-fix.md` but
+> NOT applied to `.github/workflows/ci.yml` here (audit token lacks GitHub
+> `workflow` scope — apply via GitHub web). **P3 (defer post-go-live, logged
+> here):** (a) `npm audit`
 > = 2 moderate only (`uuid <11.1.1`, `exceljs`); the only fix force-bumps
 > `exceljs` (core xlsx export) — not worth the regression risk before go-live;
 > (b) `scripts/verify-backup.js` expects the *manual-snapshot* Library layout
