@@ -4,7 +4,7 @@
 nền, tự bật khi máy khởi động (trước khi ai login), tự restart khi crash, không
 cửa sổ.
 
-> Operator-facing step-by-step (EN-VI): [`docs/INSTALL-SERVER-EN-VI.md`](../../docs/INSTALL-SERVER-EN-VI.md).
+> Operator-facing step-by-step (EN-VI): [`docs/install/INSTALL-SERVER-EN-VI.md`](../../docs/install/INSTALL-SERVER-EN-VI.md).
 > File này mô tả **kiến trúc** cho người bảo trì.
 
 ## Kiến trúc chung (cả 2 OS)
@@ -86,5 +86,5 @@ không để hai writer cùng một DATA_DIR). Đây là thay đổi server-logi
 - ✅ `plutil -lint` plist OK; `xmllint` Task XML OK (UTF-16LE + BOM); `bash -n` mọi script; `node --check` helper.
 
 Phần **cài đặt có quyền** (launchctl/schtasks) cần sudo/admin → Lead chạy theo
-checklist trong `docs/INSTALL-SERVER-EN-VI.md` (môi trường build không có sudo
+checklist trong `docs/install/INSTALL-SERVER-EN-VI.md` (môi trường build không có sudo
 phi tương tác). Windows chưa test máy thật — xem checklist thủ công trong doc.

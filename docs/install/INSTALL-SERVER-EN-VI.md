@@ -37,6 +37,27 @@ Lead). Các máy CLIENT chỉ cần cài bản CLIENT và trỏ tới SERVER.
 
 ---
 
+## 🪟 Cách ĐƠN GIẢN — chạy SERVER bằng app cửa sổ · Simple option: windowed app SERVER
+
+Nếu **chưa cần** dịch vụ nền (vd test ban đầu, hoặc có người ngồi máy SERVER), bạn
+có thể chỉ **mở app SERVER** — nó tự chạy embedded server ngay trong app:
+
+1. Cài bản **Ops Control SERVER** (`Ops Control SERVER 1.5.12-arm64.dmg` /
+   `Ops Control SERVER Setup 1.5.12.exe`) như bản CLIENT (kéo vào Applications /
+   chạy Setup). Qua Gatekeeper/SmartScreen như thường.
+2. **Mở app**. Lần đầu wizard hỏi cấu hình SERVER (cổng, thư mục dữ liệu) — để mặc
+   định là được. **Bạn sẽ thấy:** app mở ra giao diện đăng nhập, và server LAN đã chạy.
+3. Nạp `license.json` (giống CLIENT: vào `~/Library/Application Support/ops-control-desktop/`
+   trên Mac · `%APPDATA%\ops-control-desktop\` trên Win), mở lại app.
+4. Kiểm tra: trình duyệt máy khác mở `http://<IP-máy-SERVER>:3000/health` → `{"ok":true}`.
+
+> Hạn chế của cách này: server **chỉ chạy khi app đang mở** (đăng xuất / tắt máy là
+> server dừng) và **cổng động** (không cố định 3000 nếu 3000 bận). Cho go-live nhiều
+> client nối ổn định, **khuyến nghị dùng dịch vụ nền** ở dưới (cổng 3000 cố định,
+> tự chạy lúc boot). **Đừng chạy cả hai cùng lúc** trên một máy.
+
+---
+
 ## 🔄 Máy SERVER ĐANG chạy app embedded? Di trú dữ liệu trước · Migrating an existing SERVER
 
 **Vấn đề.** Nếu máy SERVER đang chạy **app embedded** (mở cửa sổ app), dữ liệu nằm
