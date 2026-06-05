@@ -1974,8 +1974,18 @@ router.post(
     const cu = getSessionUser(getTokenFromHeader(req));
     if (!cu) return res.status(401).json({ error: 'Unauthorized' });
     if (cu.role === 'viewonly') return res.status(403).json({ ok: false, msg: 'View Only' });
-    const LIB = getLibDir();
     const pl = req.body;
+    // Pre-go-live lockdown: editing Drop-Down Lists is admin/sys only. DDL
+    // drives pricing-critical dropdowns (workcenters → rate, coverage, etc.),
+    // so a non-admin must NOT save them even if a permission group granted
+    // lib-ddl edit — those users intentionally lose this. Server-side enforce
+    // (the Sidebar already hides the tab; this closes the curl/bypass path).
+    if ((pl?.ddlSitesDB || pl?.ddlDB) && !isAdminPlus(cu)) {
+      return res
+        .status(403)
+        .json({ ok: false, msg: 'Chỉ admin/sys được sửa Drop-Down Lists' });
+    }
+    const LIB = getLibDir();
     // Body must be a plain object — reject arrays, strings, null early so we
     // don't crash halfway through writing some files and leave partial state.
     if (!pl || typeof pl !== 'object' || Array.isArray(pl)) {

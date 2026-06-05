@@ -66,7 +66,11 @@ const COST_SECTIONS = [
     labelKey: 'nav.section.libraries',
     tabs: [
       { id: 'lib-rate', icon: 'rates', labelKey: 'nav.tab.rate_table' },
-      { id: 'lib-ddl', icon: 'ddl', labelKey: 'nav.tab.ddl' },
+      // Pre-go-live lockdown: DDL drives pricing dropdowns — editing is
+      // admin/sys only. Non-admins still SEE the values in the calculator
+      // (lib.ddl loads via /shared/ddl for everyone); the editor tab is
+      // hidden + the server enforces it (/save-all ddlSitesDB gate).
+      { id: 'lib-ddl', icon: 'ddl', labelKey: 'nav.tab.ddl', minRole: 'admin' },
       { id: 'lib-finance', icon: 'finance', labelKey: 'nav.tab.finance_data' },
       { id: 'lib-machine-tech', icon: 'machine', label: 'Machine Technical' },
     ],
