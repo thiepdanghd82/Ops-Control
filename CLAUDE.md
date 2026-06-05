@@ -1,5 +1,27 @@
 # Ops Control — Agent Playbook
 
+> **Pre-go-live audit (2026-06-05, branch `fix/pre-golive-audit`).** Full
+> test matrix green: client 883, server+scripts+domains 1246, kiosk vitest 53,
+> desktop license 8 + manifest 3. **Lint repo-wide now 0 errors** (was 6) —
+> fixed the 5 backlog errors (`connectionHealth.js`/`printAreaCore.js`/
+> `DecimalInput.jsx`: their `eslint-disable-next-line` sat one line above the
+> offending `catch`/import so never suppressed; replaced with optional catch
+> binding / commented blocks / dead-import removal) **plus a P1: duplicate
+> `license:` key in `desktop/preload.js`** (the single-session bridge re-declared
+> the existing About/Diagnostics bridge; the 2nd silently won — removed the
+> redundant block, the complete `{status,fingerprint,apply,tiers}` stays).
+> **CI Node-22 red root-caused = NOT a product bug:** the native `better-sqlite3`
+> binary didn't match the runner's Node ABI → every DB test threw
+> "Cannot read properties of undefined (reading 'close')". A clean Node-22 run
+> (binary rebuilt) passes 1246/1246; added `npm rebuild better-sqlite3` to the
+> CI server-test job. **P3 (defer post-go-live, logged here):** (a) `npm audit`
+> = 2 moderate only (`uuid <11.1.1`, `exceljs`); the only fix force-bumps
+> `exceljs` (core xlsx export) — not worth the regression risk before go-live;
+> (b) `scripts/verify-backup.js` expects the *manual-snapshot* Library layout
+> (raw JSONs), so it false-flags the *scheduled* backup which tars Library —
+> the scheduled cycle self-verifies (integrity ok) + the SQLite restores clean
+> (18 tables), so this is a tooling-doc gap, not a data risk.
+>
 > **Sprints 1.5–1.7 (Apr 27–28, 2026) — SAP/IFS-grade hardening pass.**
 >
 > **Sprint 1.5 — SAP/IFS user provisioning.** `must_change_password` flag + admin "Generate Provisioning Card" flow (server-generated 12-char temp pwd, one-shot modal with print + copy, A6-card print stylesheet) + Settings → Connection Mode "Re-run setup wizard" button. Login screen Carbon redesign + EN/VN flag toggle on Hardware/Mode tabs + bilingual decision Legend.
