@@ -45,16 +45,10 @@ const opsAPI = {
     rerunFirstRun: () => invoke('ops:rerun-first-run'),
   },
 
-  // ─── License (read-only bridge) ────────────────────────────────
-  // Exposes the local license status so the renderer can read this machine's
-  // installation_id + hostname (used by single-session login). Read-only —
-  // no signing, no fleet. EXTRACTED from feat/license-manager-tab (the v1.6
-  // License Manager adds .applyFromFleet here too); keep both in sync when
-  // that branch merges.
-  license: {
-    status: () => invoke('ops:license.status'),
-    fingerprint: () => invoke('ops:license.fingerprint'),
-  },
+  // NOTE: the `license` bridge is defined ONCE below (status/fingerprint/apply/
+  // tiers). Single-session only needs status (installation_id + hostname) and
+  // reuses that block — do NOT add a second `license:` key here (duplicate key
+  // → the later one silently wins; caught by the pre-go-live audit).
 
   // ─── Auto-update events ────────────────────────────────────────
   updater: {
