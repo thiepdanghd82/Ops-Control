@@ -313,14 +313,18 @@ async function showLicenseDialog(reason, installationId) {
 function register(ipcMain) {
   ipcMain.handle('ops:license.status', () => {
     const installationId = getHardwareFingerprint();
+    // hostname lets the single-session login show "đang đăng nhập tại <máy>".
+    // EXTRACTED from feat/license-manager-tab — keep in sync on merge.
+    const hostname = require('node:os').hostname();
     const existing = loadLicense();
-    if (!existing) return { hasLicense: false, installationId };
+    if (!existing) return { hasLicense: false, installationId, hostname };
     const v = existing.isTrial
       ? verifyTrial(existing, installationId)
       : verifyLicense(existing, installationId);
     return {
       hasLicense: true,
       installationId,
+      hostname,
       isTrial: !!existing.isTrial,
       valid: v.valid,
       reason: v.reason,
