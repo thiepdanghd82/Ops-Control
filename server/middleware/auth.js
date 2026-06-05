@@ -1,7 +1,7 @@
 /**
  * Auth Middleware — uses local session store (no Python dependency)
  */
-import { getSessionUser, getTokenFromHeader } from '../services/authService.js';
+import { getSessionUser, getTokenFromHeader, getRevokeReason } from '../services/authService.js';
 
 export function authMiddleware(req, res, next) {
   const token = getTokenFromHeader(req);
@@ -11,6 +11,12 @@ export function authMiddleware(req, res, next) {
 
   const user = getSessionUser(token);
   if (!user) {
+    // Single-session: if this token was kicked by a takeover, tell the client
+    // so it can show "đăng nhập ở máy khác" instead of a generic expiry.
+    const reason = getRevokeReason(token);
+    if (reason === 'session-revoked') {
+      return res.status(401).json({ error: 'Session revoked', reason: 'session-revoked' });
+    }
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 

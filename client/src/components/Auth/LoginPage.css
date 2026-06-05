@@ -1174,3 +1174,55 @@
   color: #ff8389;
   border-color: rgba(255, 131, 137, 0.3);
 }
+
+/* ── Single-session takeover dialog + revoked banner ───────────────────── */
+.ss-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.55);
+  padding: 16px;
+}
+.ss-dialog {
+  background: var(--surface, #fff);
+  color: var(--text, #0f172a);
+  border-radius: 12px;
+  max-width: 440px;
+  width: 100%;
+  padding: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+.ss-dialog h2 {
+  margin: 0 0 12px;
+  font-size: 1.15rem;
+}
+.ss-dialog p {
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+.ss-dialog-sub {
+  color: var(--text-muted, #64748b);
+  font-size: 0.92rem;
+}
+.ss-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+.ss-revoked-banner {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.ss-revoked-draft {
+  color: #166534;
+}

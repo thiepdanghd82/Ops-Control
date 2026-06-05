@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import PwdAgeBar from './PwdAgeBar';
 import TotpEnrollment from './TotpEnrollment';
 import { showToast } from '../../utils/toast';
+import { formatLastActivity } from '../../services/singleSession';
 import './LoginPage.css';
 
 // Phase 10J redesign — icons are SVG, not emoji.
@@ -207,6 +208,10 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
     cancelTotp,
     totpEnrollmentRequired,
     completeTotpEnrollment,
+    sessionRevoked,
+    draftSaved,
+    dismissSessionRevoked,
+    cancelSessionConflict,
   } = useAuth();
   const { t } = useI18n();
   // Phase 9L.3 — pre-fill username from the last successful session
@@ -297,7 +302,12 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
     };
   }, [username]);
 
-  const handleLogin = async (e) => {
+  // Single-session: when the server says the account is live on another
+  // machine, login() returns { conflict }. We hold it here to drive the
+  // takeover dialog. handleLogin(_, true) re-submits with force.
+  const [conflict, setConflict] = useState(null);
+
+  const handleLogin = async (e, force = false) => {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
     setError('');
     // Client-side guard for change-mode: new + confirm must match and
@@ -327,7 +337,14 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
         /* private mode / quota — non-critical, the preference
                 resets to true on next visit which is the legacy default */
       }
-      const loginRes = await login(username, password, remember);
+      const loginRes = await login(username, password, remember, { force });
+      // Single-session: another machine holds a live session. Show the
+      // takeover dialog instead of completing login.
+      if (loginRes?.conflict && !force) {
+        setConflict(loginRes.conflict);
+        return; // finally{} resets loading; dialog drives the next step
+      }
+      if (sessionRevoked) dismissSessionRevoked();
       try {
         localStorage.setItem('ops_last_username', username);
       } catch {
@@ -649,8 +666,58 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
     <div className={`cb-shell${compact ? ' cb-compact' : ''}`}>
       <CarbonHero />
 
+      {/* Single-session: takeover confirmation dialog */}
+      {conflict && (
+        <div className="ss-overlay" role="dialog" aria-modal="true" aria-labelledby="ss-title">
+          <div className="ss-dialog">
+            <h2 id="ss-title">Tài khoản đang đăng nhập ở máy khác</h2>
+            <p>
+              Tài khoản này đang đăng nhập tại <strong>{conflict.hostname}</strong>, hoạt động{' '}
+              <strong>{formatLastActivity(conflict.last_activity)}</strong>.
+            </p>
+            <p className="ss-dialog-sub">
+              Tiếp tục sẽ <strong>đăng xuất máy kia</strong> và đăng nhập tại máy này.
+            </p>
+            <div className="ss-dialog-actions">
+              <button
+                type="button"
+                className="op-btn"
+                onClick={() => {
+                  cancelSessionConflict(username);
+                  setConflict(null);
+                  setError('Đã hủy — máy kia vẫn đang đăng nhập.');
+                }}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="op-btn op-btn-primary"
+                onClick={() => {
+                  setConflict(null);
+                  handleLogin(null, true);
+                }}
+              >
+                Tiếp tục — đăng xuất máy kia
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="cb-form-pane">
         <form className="cb-card" onSubmit={handleLogin} autoComplete="on">
+          {sessionRevoked && (
+            <div className="ss-revoked-banner" role="alert">
+              ⚠ Tài khoản của bạn vừa đăng nhập ở máy khác — phiên tại máy này đã kết thúc.
+              {draftSaved && (
+                <span className="ss-revoked-draft">
+                  {' '}
+                  Bản nháp đang nhập đã được lưu tạm trên máy này.
+                </span>
+              )}
+            </div>
+          )}
           <h1>
             {compact
               ? t('login.expired_title')

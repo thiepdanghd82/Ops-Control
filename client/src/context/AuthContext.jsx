@@ -8,6 +8,7 @@
    rule flags it but rewriting via subscribe would add complexity. */
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { authApi, setToken, clearToken } from '../services/api';
+import { getInstallationInfo, snapshotDraftOnRevoke } from '../services/singleSession';
 
 const AuthContext = createContext(null);
 
@@ -34,6 +35,10 @@ export function AuthProvider({ children }) {
   // dialog instead of blanking the whole tab; the user keeps their
   // place and doesn't have to retype their username.
   const [sessionExpired, setSessionExpired] = useState(false);
+  // Single-session: distinct from a plain expiry — this machine was kicked by
+  // a login takeover on another machine. We save the in-progress draft first.
+  const [sessionRevoked, setSessionRevoked] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
 
   // Module-scope-ish const — hoisted outside render so useCallback deps
   // don't need to list it (ESLint exhaustive-deps flagged it previously).
@@ -81,6 +86,19 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('ops:session-expired', onExpired);
   }, []);
 
+  // Single-session — this machine was kicked by a takeover elsewhere. Save any
+  // in-progress quote draft locally BEFORE bouncing to login so work isn't lost.
+  useEffect(() => {
+    function onRevoked() {
+      const saved = snapshotDraftOnRevoke();
+      setDraftSaved(saved);
+      setUser(null);
+      setSessionRevoked(true);
+    }
+    window.addEventListener('ops:session-revoked', onRevoked);
+    return () => window.removeEventListener('ops:session-revoked', onRevoked);
+  }, []);
+
   // Check existing session on mount — initial hydration from localStorage.
   // AbortController aborts the hydration /auth/me on Strict-Mode double
   // mount OR app shell unmount, so a slow backend doesn't setState on a
@@ -121,12 +139,28 @@ export function AuthProvider({ children }) {
     return () => ctrl.abort();
   }, []);
 
-  const login = useCallback(async (username, password, remember = false) => {
+  const login = useCallback(async (username, password, remember = false, { force = false } = {}) => {
     // Sprint 1.6 — pass `remember` through so the server issues a 30-day
     // session/cookie instead of the 8h default. Token is also stored in
     // sessionStorage (not localStorage) when remember=false so closing
     // the browser actually logs the user out.
-    const result = await authApi.login(username, password, remember);
+    // Single-session: attach this machine's identity. A live session on another
+    // machine → server replies 409; we surface { conflict } so the caller can
+    // show the takeover dialog and re-call login with { force: true }.
+    const machine = await getInstallationInfo();
+    let result;
+    try {
+      result = await authApi.login(username, password, remember, {
+        installation_id: machine.installation_id,
+        hostname: machine.hostname,
+        force,
+      });
+    } catch (err) {
+      if (err?.status === 409 && err.body?.conflict) {
+        return { success: false, conflict: err.body.conflict };
+      }
+      throw err;
+    }
 
     if (!result.ok && result.msg) {
       throw new Error(result.msg);
@@ -241,6 +275,19 @@ export function AuthProvider({ children }) {
   // Phase 9L.3 — exposes re-login state. After a successful re-login
   // we clear `sessionExpired` so consumers can hide the banner.
   const dismissSessionExpired = useCallback(() => setSessionExpired(false), []);
+  // Single-session: clear the "kicked" banner once the user re-logs in / dismisses.
+  const dismissSessionRevoked = useCallback(() => {
+    setSessionRevoked(false);
+    setDraftSaved(false);
+  }, []);
+  // User chose Hủy on the takeover dialog → audit-only, no session granted.
+  const cancelSessionConflict = useCallback(async (username) => {
+    try {
+      await authApi.cancelSessionConflict(username);
+    } catch {
+      /* audit-only; ignore failures */
+    }
+  }, []);
   const loginAndDismissBanner = useCallback(
     async (username, password) => {
       const r = await login(username, password);
@@ -286,6 +333,10 @@ export function AuthProvider({ children }) {
       dismissSessionExpired,
       reLogin: loginAndDismissBanner,
       pwdAge,
+      sessionRevoked,
+      draftSaved,
+      dismissSessionRevoked,
+      cancelSessionConflict,
     }),
     [
       user,
@@ -304,6 +355,10 @@ export function AuthProvider({ children }) {
       dismissSessionExpired,
       loginAndDismissBanner,
       pwdAge,
+      sessionRevoked,
+      draftSaved,
+      dismissSessionRevoked,
+      cancelSessionConflict,
     ]
   );
 

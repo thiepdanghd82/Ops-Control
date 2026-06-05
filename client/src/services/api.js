@@ -133,6 +133,16 @@ async function request(path, options = {}) {
 
   if (res.status === 401) {
     clearToken();
+    // Single-session: distinguish "kicked by a takeover on another machine"
+    // from an ordinary expiry so the UI can save the draft + show the right
+    // message. The server stamps body.reason='session-revoked' on kicked tokens.
+    let reason = '';
+    try {
+      const b = await res.clone().json();
+      reason = b?.reason || '';
+    } catch {
+      /* non-JSON 401 */
+    }
     // Phase 9L.3 — broadcast so the app can show a re-login modal
     // instead of blanking tabs. A custom window event is intercepted
     // by AuthContext (singleton owner of login UI state). Dispatched
@@ -140,16 +150,17 @@ async function request(path, options = {}) {
     // handler swallows the error.
     try {
       if (typeof window !== 'undefined') {
+        const name = reason === 'session-revoked' ? 'ops:session-revoked' : 'ops:session-expired';
         window.dispatchEvent(
-          new CustomEvent('ops:session-expired', {
-            detail: { path, method: (options.method || 'GET').toUpperCase() },
+          new CustomEvent(name, {
+            detail: { path, method: (options.method || 'GET').toUpperCase(), reason },
           })
         );
       }
     } catch {
       /* window missing in SSR/test envs */
     }
-    throw new Error('Session expired');
+    throw new Error(reason === 'session-revoked' ? 'Session revoked' : 'Session expired');
   }
 
   if (!res.ok) {
@@ -214,8 +225,20 @@ export const authApi = {
   // Sprint 1.6 — `remember` (boolean) toggles the 30-day vs 8h session.
   // Defaults to false so existing call sites that pass only (user, pwd)
   // get the original short-TTL behaviour.
-  login: (username, password, remember = false) =>
-    api.post('/auth/login', { username, password, remember: !!remember }),
+  // Single-session: opts carries { installation_id, hostname, force }. Existing
+  // 3-arg callers still work (opts defaults → server treats as 'web', no force).
+  login: (username, password, remember = false, opts = {}) =>
+    api.post('/auth/login', {
+      username,
+      password,
+      remember: !!remember,
+      installation_id: opts.installation_id,
+      hostname: opts.hostname,
+      force: !!opts.force,
+    }),
+  // User chose "Hủy" on the takeover dialog → audit-only (no session granted).
+  cancelSessionConflict: (username) =>
+    api.post('/auth/session-conflict-cancelled', { username }),
   logout: () => api.post('/auth/logout', {}),
   me: (opts = {}) => api.get('/auth/me', opts),
   getUsers: () => api.get('/auth/users'),
