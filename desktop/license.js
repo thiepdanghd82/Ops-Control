@@ -268,6 +268,27 @@ function applyLicense(licenseInput) {
   return { ok: true, license: v };
 }
 
+// ─── Apply a license delivered by the License Manager fleet (v1.6) ──
+// Same verification as applyLicense (must verify against the embedded pubkey
+// AND match THIS machine's installation_id), plus a timestamped backup of the
+// existing license.json before overwrite. Returns needsRestart so the renderer
+// can prompt the user — we NEVER restart mid-session.
+function applyLicenseFromFleet(licenseInput) {
+  const installationId = getHardwareFingerprint();
+  const v = verifyLicense(licenseInput, installationId);
+  if (!v.valid) return { ok: false, reason: v.reason, detail: v.detail };
+  try {
+    const p = LICENSE_PATH();
+    if (fs.existsSync(p)) {
+      fs.copyFileSync(p, `${p}.bak-${Date.now()}`);
+    }
+  } catch {
+    /* best-effort backup — never block applying a valid license */
+  }
+  saveLicense(licenseInput);
+  return { ok: true, needsRestart: true, license: v };
+}
+
 /**
  * Format a 64-char sha256 hex into 4 groups of 16, separated by spaces.
  * Why: a continuous 64-char hex wraps badly inside macOS dialog text and
@@ -313,14 +334,16 @@ async function showLicenseDialog(reason, installationId) {
 function register(ipcMain) {
   ipcMain.handle('ops:license.status', () => {
     const installationId = getHardwareFingerprint();
+    const hostname = require('node:os').hostname();
     const existing = loadLicense();
-    if (!existing) return { hasLicense: false, installationId };
+    if (!existing) return { hasLicense: false, installationId, hostname };
     const v = existing.isTrial
       ? verifyTrial(existing, installationId)
       : verifyLicense(existing, installationId);
     return {
       hasLicense: true,
       installationId,
+      hostname,
       isTrial: !!existing.isTrial,
       valid: v.valid,
       reason: v.reason,
@@ -350,6 +373,22 @@ function register(ipcMain) {
     }
     return applyLicense(lic);
   });
+  ipcMain.handle('ops:license.applyFromFleet', (_e, lic) => {
+    // Same envelope guard as ops:license.apply. The fleet-delivered license is
+    // already-signed; applyLicenseFromFleet re-verifies it against the embedded
+    // pubkey + this machine's installation_id before backing up + writing.
+    if (!lic || typeof lic !== 'object' || Array.isArray(lic)) {
+      return { ok: false, reason: 'malformed', detail: 'License must be a JSON object' };
+    }
+    try {
+      if (JSON.stringify(lic).length > 8192) {
+        return { ok: false, reason: 'too-large', detail: 'License envelope exceeds 8 KB' };
+      }
+    } catch {
+      return { ok: false, reason: 'malformed', detail: 'License is not serializable' };
+    }
+    return applyLicenseFromFleet(lic);
+  });
   ipcMain.handle('ops:license.fingerprint', () => getHardwareFingerprint());
   ipcMain.handle('ops:license.tiers', () => ({ tiers: VALID_TIERS, limits: TIER_LIMITS }));
 }
@@ -358,6 +397,7 @@ module.exports = {
   register,
   checkOnBoot,
   applyLicense,
+  applyLicenseFromFleet,
   showLicenseDialog,
   getHardwareFingerprint,
   verifyLicense,

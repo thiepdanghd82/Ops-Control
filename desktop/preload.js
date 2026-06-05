@@ -45,6 +45,17 @@ const opsAPI = {
     rerunFirstRun: () => invoke('ops:rerun-first-run'),
   },
 
+  // ─── License (v1.6 — fleet heartbeat + offline-signed distribution) ──
+  // status/fingerprint read the local license; applyFromFleet verifies +
+  // backs up + writes a server-delivered (already-signed) license. The app
+  // NEVER signs — applyFromFleet only accepts a license that verifies against
+  // the embedded pubkey AND is bound to this machine's installation_id.
+  license: {
+    status: () => invoke('ops:license.status'),
+    fingerprint: () => invoke('ops:license.fingerprint'),
+    applyFromFleet: (lic) => invoke('ops:license.applyFromFleet', lic),
+  },
+
   // ─── Auto-update events ────────────────────────────────────────
   updater: {
     checkForUpdates: () => invoke('ops:updater.check'),
