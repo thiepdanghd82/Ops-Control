@@ -40,8 +40,13 @@ export function createDdlRouter({
   toCsvBytes,
   validateBackupBody,
   validateRestoreBody,
+  // PART 2 — forensic trail for DDL backup/restore. Defaults to a no-op so the
+  // existing contract tests (which don't inject it) keep working.
+  audit = () => {},
 }) {
   const router = express.Router();
+  const userOf = (req) => req.user?.user?.username || req.user?.username || '-';
+  const ipOf = (req) => req.ip || req.headers['x-forwarded-for'] || '-';
 
   // GET /backups
   router.get('/backups', auth, (req, res) => {
@@ -76,6 +81,11 @@ export function createDdlRouter({
       savedAt: new Date().toISOString(),
       data,
     });
+    try {
+      audit('DDL_BACKUP', userOf(req), ipOf(req), JSON.stringify({ site, filename: fname }));
+    } catch {
+      /* audit best-effort */
+    }
     res.json({ ok: true, filename: fname, site });
   });
 
@@ -86,6 +96,11 @@ export function createDdlRouter({
     if (!fs.existsSync(fpath)) return res.status(404).json({ ok: false, error: 'Not found' });
     const bk = readJson(fpath);
     const data = bk?.data || bk;
+    try {
+      audit('DDL_RESTORE', userOf(req), ipOf(req), JSON.stringify({ site, filename }));
+    } catch {
+      /* audit best-effort */
+    }
     res.json({ ok: true, data, site, filename });
   });
 

@@ -824,6 +824,7 @@ app.use(
   createDdlRouter({
     ...libRouterDeps,
     ddlToCsvRows,
+    audit, // PART 2 — DDL_BACKUP / DDL_RESTORE forensic trail
     // DDL backup body is an object, not an array
     validateBackupBody: validateBody({
       site: { type: 'string', max: 32 },
