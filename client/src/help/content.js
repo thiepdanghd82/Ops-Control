@@ -5641,7 +5641,10 @@ export const HELP_CONTENT = {
   'whats-new': {
     id: 'whats-new',
     section: 'SYSTEM',
-    title: bi("What's new — v1.3 (April 2026)", 'Mới — v1.3 (Tháng 4/2026)'),
+    title: bi(
+      "What's new — v1.3 (April 2026) + go-live hardening (June 2026)",
+      'Mới — v1.3 (Tháng 4/2026) + hardening go-live (Tháng 6/2026)'
+    ),
     function: bi(
       'Release notes — 6 đợt enterprise hardening',
       'Ghi chú phát hành — 6 đợt hardening enterprise'
@@ -5681,6 +5684,18 @@ export const HELP_CONTENT = {
         'Đợt 6: Active Sessions admin tab (sys-only, in Account Control) — see all active logins (username, role, 2FA status, token prefix, expires-in). Per-row Revoke button kicks user from all machines.',
         'Đợt 6: Tab Sessions admin (sys-only, trong Account Control) — xem mọi session đang đăng nhập (username, role, 2FA status, token prefix, expires-in). Nút Revoke mỗi dòng kick user khỏi mọi máy.'
       ),
+      feat(
+        'Go-live: SINGLE-SESSION (one machine per account). Logging in while the same account is live on another machine shows a dialog "Account is logged in at <machine>, active <N min> ago — [Continue (log out the other) / Cancel]". Continue kicks the other machine; that machine drops to login with "Your account just logged in on another machine" and saves any in-progress quote draft locally first. An idle session (>15 min) is taken over automatically. No role is exempt. Emergency off-switch: OPS_SINGLE_SESSION=0.',
+        'Go-live: ĐĂNG NHẬP ĐƠN (mỗi tài khoản 1 máy). Đăng nhập khi tài khoản đang mở ở máy khác sẽ hiện hộp thoại "Tài khoản đang đăng nhập tại <máy>, hoạt động <N phút> trước — [Tiếp tục (đăng xuất máy kia) / Hủy]". Tiếp tục sẽ đá máy kia; máy đó về màn login kèm "Tài khoản của bạn vừa đăng nhập ở máy khác" và lưu bản nháp đang nhập trước. Phiên rảnh (>15 phút) bị tiếp quản tự động. Không ngoại lệ role nào. Tắt khẩn cấp: OPS_SINGLE_SESSION=0.'
+      ),
+      feat(
+        'Go-live: LICENSE banner. Each install is hardware-bound. If the license file is missing/expired/tampered you see a red "License không hợp lệ: <reason>" banner — click it, Copy Installation ID, send to the Lead to get a signed license.json. A fresh install runs a 14-day TRIAL (tier S) then locks until a real license is applied. About / Diagnostics shows the live license + HW fingerprint.',
+        'Go-live: Banner LICENSE. Mỗi bản cài gắn với phần cứng. Nếu file license thiếu/hết hạn/bị sửa, bạn thấy banner đỏ "License không hợp lệ: <lý do>" — bấm vào, Copy Installation ID, gửi Lead để nhận license.json đã ký. Bản mới chạy TRIAL 14 ngày (tier S) rồi khóa cho tới khi nạp license thật. About / Diagnostics hiện license + vân tay phần cứng.'
+      ),
+      feat(
+        'Go-live: KIOSK + PLANNING hidden by default. Shop-floor Kiosk Admin and the Planning module are gated behind OPS_FEATURE_KIOSK / OPS_FEATURE_PLANNING (both OFF for this go-live), so their sidebar tabs are hidden and their API routes return 404 (fail-closed). Nothing is lost — flip the env flag to bring them back unchanged. Costing is unaffected.',
+        'Go-live: KIOSK + PLANNING ẩn mặc định. Kiosk Admin (xưởng) và module Planning bị gate sau OPS_FEATURE_KIOSK / OPS_FEATURE_PLANNING (đều TẮT cho go-live này), nên tab sidebar bị ẩn và route API trả 404 (fail-closed). Không mất gì — bật lại env flag là chúng trở lại nguyên trạng. Costing không bị ảnh hưởng.'
+      ),
     ],
     workflow: [
       bs('Read through the 6 đợt highlights above.', 'Đọc qua 6 đợt highlights ở trên.'),
@@ -5695,6 +5710,10 @@ export const HELP_CONTENT = {
       bs(
         'Settings → Account Control → Sessions tab (chỉ sys) — verify thấy 2 sessions; click Revoke để kick session kia.',
         'Settings → Account Control → Sessions tab (chỉ sys) — verify thấy 2 sessions; click Revoke để kick session kia.'
+      ),
+      bs(
+        'Go-live single-session: login the SAME account on a 2nd machine → takeover dialog appears. Click "Continue" → the 1st machine drops to login with the "logged in on another machine" notice. Cancel → the 1st machine keeps working.',
+        'Đăng nhập đơn (go-live): login CÙNG tài khoản ở máy thứ 2 → hiện hộp thoại tiếp quản. Bấm "Tiếp tục" → máy thứ 1 rớt về login kèm thông báo "đăng nhập ở máy khác". Hủy → máy thứ 1 vẫn dùng bình thường.'
       ),
       bs(
         'Settings → Backup / Restore → click "📤 Upload từ máy khác…" để test restore từ snapshot ngoài.',
