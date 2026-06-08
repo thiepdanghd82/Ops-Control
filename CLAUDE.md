@@ -1,4 +1,5 @@
 # Ops Control — Agent Playbook
+@AGENT_PRINCIPLES.md
 
 > **Sprints 1.5–1.7 (Apr 27–28, 2026) — SAP/IFS-grade hardening pass.**
 >
