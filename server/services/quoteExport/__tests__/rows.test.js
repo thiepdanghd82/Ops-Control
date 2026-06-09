@@ -139,9 +139,9 @@ test('rows: 03-materials renders real setup_cost from result.rows', async () => 
   const mat = wb.getWorksheet('03 Materials');
   // Header at row 4 (sheet banner + section banner + header); first data row 5.
   // Setup Cost = col N (14), Run Cost = col O (15), Total = col P (16).
-  const setup1 = mat.getCell('N5').value;
-  const run1 = mat.getCell('O5').value;
-  const total1 = mat.getCell('P5').value;
+  const setup1 = mat.getCell('O5').value;
+  const run1 = mat.getCell('P5').value;
+  const total1 = mat.getCell('Q5').value;
   assert.equal(setup1, 0.012);
   assert.equal(run1, 0.06);
   assert.equal(total1, 0.072);
@@ -151,7 +151,7 @@ test('rows: 03-materials renders second material row from result.rows[1]', async
   const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
   const mat = wb.getWorksheet('03 Materials');
-  const setup2 = mat.getCell('N6').value;
+  const setup2 = mat.getCell('O6').value;
   assert.equal(setup2, 0.008);
 });
 
@@ -274,6 +274,6 @@ test('rows: aggregate subtotal row coexists with per-row data', async () => {
     }
   }
   assert.ok(subtotalRow, 'Subtotal row should still be present');
-  assert.equal(mat.getCell(`N${subtotalRow}`).value, 0.02);
-  assert.equal(mat.getCell(`O${subtotalRow}`).value, 0.1);
+  assert.equal(mat.getCell(`O${subtotalRow}`).value, 0.02);
+  assert.equal(mat.getCell(`P${subtotalRow}`).value, 0.1);
 });

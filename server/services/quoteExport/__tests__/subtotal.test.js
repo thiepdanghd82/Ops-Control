@@ -111,10 +111,11 @@ test('subtotal: Materials shows bd_mat_setup + bd_mat_run', async () => {
   const mat = wb.getWorksheet('03 Materials');
   const r = findSubtotalRow(mat, 'Subtotal');
   assert.ok(r, 'Subtotal row not found on Materials');
-  // setup_cost (col N=14), run_cost (col O=15), total (col P=16)
-  const setup = mat.getCell(r, 14).value;
-  const run = mat.getCell(r, 15).value;
-  const total = mat.getCell(r, 16).value;
+  // setup_cost (col O=15), run_cost (col P=16), total (col Q=17)
+  // Shifted +1 after drw_material column inserted at position 3.
+  const setup = mat.getCell(r, 15).value;
+  const run = mat.getCell(r, 16).value;
+  const total = mat.getCell(r, 17).value;
   assert.equal(setup, 0.002);
   assert.equal(run, 0.073);
   assert.ok(Math.abs(Number(total) - 0.075) < 1e-9);

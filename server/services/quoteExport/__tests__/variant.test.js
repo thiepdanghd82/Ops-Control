@@ -108,18 +108,18 @@ test('variant.customer: Materials Ref Price column is hidden', async () => {
   const out = await exportQuote(makeQuote(), { variant: 'customer', lang: 'en' });
   const wb = await parseBuffer(out.buffer);
   const mat = wb.getWorksheet('03 Materials');
-  // Ref Price is col L (12th)
-  const col = mat.getColumn('L');
-  assert.equal(col.hidden, true, 'col L (Ref Price) must be hidden in customer variant');
+  // Ref Price is col M (13th) after drw_material column inserted at position 3.
+  const col = mat.getColumn('M');
+  assert.equal(col.hidden, true, 'col M (Ref Price) must be hidden in customer variant');
 });
 
 test('variant.internal: Materials Ref Price column is visible', async () => {
   const out = await exportQuote(makeQuote(), { variant: 'internal', lang: 'en' });
   const wb = await parseBuffer(out.buffer);
   const mat = wb.getWorksheet('03 Materials');
-  const col = mat.getColumn('L');
+  const col = mat.getColumn('M');
   // ExcelJS leaves `hidden` undefined when not set
-  assert.notEqual(col.hidden, true, 'col L (Ref Price) must be visible in internal variant');
+  assert.notEqual(col.hidden, true, 'col M (Ref Price) must be visible in internal variant');
 });
 
 test('variant.customer: Inks Ref Price column hidden', async () => {
