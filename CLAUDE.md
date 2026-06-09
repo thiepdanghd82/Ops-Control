@@ -1175,6 +1175,13 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - **Effort**: S (~1 doc section, ~30 min)
 - **Priority**: P3 (process hygiene; cuts per-sprint CI-red commit-message churn before go-live and for post-go-live maintainers)
 
+#### MES-3-FIX-51 — Test pollution flake on backupCode.integration.test.js:113
+
+- **Source**: D-21 audit (2026-06-09) confirmed CI Server tests chronically red since 2026-06-04. Test `per-entry ETIMEDOUT is isolated` passes 10/10 in isolation on Node 22 but consistently fails in CI full-suite. Suspect: `fs.cpSync` monkey-patch (test re-patches basename `design-md` selectively, restore in `finally`) leaks state to downstream tests on Node 22+ runtime — possibly fs.cpSync API semantic change between Node 20→22 OR a polluting test earlier in suite captures the patched `fs.cpSync` as its own "real" reference and re-restores it in patched form.
+- **Acceptance**: (1) Reproduce CI conditions locally — `nvm/fnm use 22` + `npm rebuild better-sqlite3` (binary NMV mismatch otherwise blocks full suite) + full server suite run. (2) Bisect to identify polluting test (likely earlier `fs.*` patcher OR shared `Backup & restore/Code/` filesystem state). (3) Refactor monkey-patch to module-level fixture using `test.before` / `test.after` hooks with explicit teardown verification (`assert.equal(fs.cpSync, realCpSync, 'cpSync was not restored')`). (4) Un-skip the test (remove `test.skip` + comment block in `server/routes/backupCode.integration.test.js`).
+- **Effort**: M (1-2h reproduce + 1-2h root cause + 30 min fix)
+- **Priority**: P2 — deferred post-go-live. CI safety net restored by SKIP; backup partial-failure coverage retained via hardware test + parallel integration tests in `server/db/backup.js` + `server/services/backupScheduler.js`. Un-skip MUST happen post-D+7 before next CI-red cycle accumulates more debt.
+
 #### KIOSK-001 — Real branded PWA icons
 
 - **Source**: MES-2.6a placeholder icons (Carbon-blue squares with white "K", zlib-encoded inline)
