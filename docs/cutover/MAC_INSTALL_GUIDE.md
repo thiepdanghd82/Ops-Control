@@ -164,7 +164,7 @@ activate:
 ## Login
 
 Default credentials handed during D-1 prep session per
-`docs/cutover/BACKUP_ENGINEER_BRIEF_2026-06-09.md`:
+`docs/cutover/BACKUP_ENGINEER_BRIEF_2026-06-30.md`:
 
 - **Username**: operator's username (per HR onboard list)
 - **Password**: temp password from Provisioning Card (paper card given
@@ -270,7 +270,7 @@ CRASH:            quit (Cmd+Q) → relaunch
 "License invalid": copy Installation ID → Zalo Lead Engineer → paste back the .lic key
 
 HELP:             Cost → SYSTEM → Help (F1 anywhere goes to the current tab's help)
-EMERGENCY:        Zalo group "OpsControl GoLive 2026-06-09"
+EMERGENCY:        Zalo group "OpsControl GoLive 2026-06-30"
 LEAD ENGINEER:    +84965191991 (Đặng Thế Thiệp)
 BACKUP ENGINEER:  +84988749869 (Trần Thị Hương)
 ```
@@ -279,14 +279,14 @@ BACKUP ENGINEER:  +84988749869 (Trần Thị Hương)
 
 ## Companion files
 
-- `docs/cutover/BACKUP_ENGINEER_BRIEF_2026-06-09.md` — Hương scope + contacts
-- `docs/cutover/STOP_TRIGGERS_2026-06-09.md` — 11 halt criteria
+- `docs/cutover/BACKUP_ENGINEER_BRIEF_2026-06-30.md` — Hương scope + contacts
+- `docs/cutover/STOP_TRIGGERS_2026-06-30.md` — 11 halt criteria
 - `docs/cutover/ROLLBACK-RUNBOOK-20260522.md` — incident playbook (engineer-facing)
 - `client/public/help/OpsControl_UserGuide.docx` — full user guide (in-app: Help tab)
 
 ---
 
-**Document version**: 1.0 (D-14 2026-05-26)
+**Document version**: 1.1 (D-21 audit refresh 2026-06-09 — go-live re-baselined 2026-06-09 → 2026-06-30; D-14 = 2026-06-16)
 **Owner**: Lead Engineer (Đặng Thế Thiệp)
 **Audience**: 7 Mac operators (1 SERVER + 6 CLIENT) at CCL Vietnam Yen Phong
 **Print + circulate**: D-15 evening or D-14 morning before walkthrough

@@ -1,14 +1,17 @@
-# Backup Engineer Brief — Ops Control v1.5.10 Cutover
+# Backup Engineer Brief — Ops Control v1.5.12 Cutover
 
 > Brief template for the backup/standby engineer Lead Engineer (Đặng Thế Thiệp)
-> identifies as on-call partner during 2026-06-09 go-live + D+1..D+7 parallel run.
+> identifies as on-call partner during 2026-06-30 go-live + D+1..D+7 parallel run.
+>
+> **Date refresh (D-21 audit 2026-06-09)**: go-live re-baselined from 2026-06-09
+> to **2026-06-30**. D-1 = 2026-06-29 (Mon), D+7 end of parallel run = 2026-07-07.
 
 ## Coverage window
 
-- **D-1 prep (Mon 2026-06-08)**: standby phone, available within 2h call
-- **D-0 go-live (Tue 2026-06-09)**: ideally co-located OR screen-share from 06:00-12:00 ICT
-- **D+1..D+3 (Wed-Fri 2026-06-10..12)**: rotating on-call with Lead Engineer
-- **D+4..D+7 (Sat-Tue 2026-06-13..16)**: light on-call (parallel run end)
+- **D-1 prep (Mon 2026-06-29)**: standby phone, available within 2h call
+- **D-0 go-live (Tue 2026-06-30)**: ideally co-located OR screen-share from 06:00-12:00 ICT
+- **D+1..D+3 (Wed-Fri 2026-07-01..03)**: rotating on-call with Lead Engineer
+- **D+4..D+7 (Sat-Tue 2026-07-04..07)**: light on-call (parallel run end)
 
 ## Skills needed
 
@@ -25,7 +28,7 @@ Lead Engineer walks through:
 2. Key docs:
    - `docs/cutover/READINESS_AUDIT_D-6_2026-05-24.md`
    - `docs/cutover/ROLLBACK-RUNBOOK-20260522.md`
-   - `docs/cutover/STOP_TRIGGERS_2026-06-09.md`
+   - `docs/cutover/STOP_TRIGGERS_2026-06-30.md`
    - `CLAUDE.md` Recovery playbook section
 3. Prod box access: SSH key on `10.102.3.61`, NSSM service name `ops-control`
 4. Backup runbook: how to invoke `npm run backup:run` if Lead unavailable
@@ -63,7 +66,7 @@ Lead Engineer retains all go/no-go authority. Backup Engineer:
 - **Plant Manager**:
   - Phone: `<TBD — pending HR call 2026-05-25 Monday AM>` (fill via amendment PR after HR confirms)
   - Email: `<TBD — pending HR call 2026-05-25 Monday AM>`
-  - **Escape hatch (D-1 Lead Engineer briefing → Backup Engineer)**: PM phone/email recorded on physical card stored in sealed envelope labeled `OPS-EMERGENCY-PM-CONTACT-2026-06-09` at Lead Engineer's workstation, opened by Backup Engineer ONLY during T6 double-failure incident OR when Lead Engineer incapacitated. Lead Engineer prepares envelope D-2 (2026-06-07) after HR contact captured; physical handoff to Hương during D-1 prep session.
+  - **Escape hatch (D-1 Lead Engineer briefing → Backup Engineer)**: PM phone/email recorded on physical card stored in sealed envelope labeled `OPS-EMERGENCY-PM-CONTACT-2026-06-30` at Lead Engineer's workstation, opened by Backup Engineer ONLY during T6 double-failure incident OR when Lead Engineer incapacitated. Lead Engineer prepares envelope D-2 (2026-06-28) after HR contact captured; physical handoff to Hương during D-1 prep session.
   - **Backup channel**: until envelope handoff complete, Backup Engineer routes PM escalation through Sales Lead (whose contact she already has access to via her existing CCL Vietnam directory).
 - **Sysadmin**:
   - Phone: `+84965191991 (= Lead Engineer Đặng Thế Thiệp; no separate sysadmin role exists)`
@@ -71,6 +74,6 @@ Lead Engineer retains all go/no-go authority. Backup Engineer:
 
 ## Sign-off
 
-- Lead Engineer briefed Backup on: `TBD - pending Hương Zalo confirm walk-through date (target D-14 2026-05-26)`
+- Lead Engineer briefed Backup on: `TBD - pending Hương Zalo confirm walk-through date (target D-14 2026-06-16)`
 - Backup Engineer name: `Trần Thị Hương`
 - Backup Engineer acknowledged scope: `2026-05-25 (via phone, confirmed accept role + SSH/NSSM/cron skills present)`

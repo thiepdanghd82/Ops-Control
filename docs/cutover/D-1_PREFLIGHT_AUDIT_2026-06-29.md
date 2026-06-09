@@ -65,7 +65,7 @@ Operator + engineer verify before 17:00 ICT go/no-go meeting:
 
 - Source: `docs/cutover/READINESS_AUDIT_D-6_2026-05-24.md`
 - Closure tracker: this file
-- Final checklist: `docs/cutover/D-1_FINAL_CHECKLIST_2026-06-08.md`
+- Final checklist: `docs/cutover/D-1_FINAL_CHECKLIST_2026-06-29.md`
 - UAT D-1 summary: `docs/uat/runs/2026-06-08-export-uat-summary.md`
 - 8-day cutover plan: `docs/cutover/8-DAY-CUTOVER-PLAN-20260522.md`
 - Schedule decision: `docs/cutover/SCHEDULE_DECISION_2026-05-24.md`
