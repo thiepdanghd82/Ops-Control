@@ -246,6 +246,28 @@ export const STRINGS = {
 
   // ─── Hardware Devices + Connection Mode ───
   // v1.3 L3: 90 hw.* + mode.* keys MOVED to client/src/i18n/domains/mes.js.
+
+  // ─── Lead time & Notice — Pricing sub-tab (Std + Cpx) ───
+  // Cover-sheet free-text fields + read-only Tooling cost. Tab label
+  // duplicated as a hardcoded string in SUB_TABS arrays (matching
+  // neighbouring tabs' convention); this key reserved for Help System
+  // + future breadcrumb / Search uses.
+  'lt.tab_label': { en: 'Lead time & Notice', vi: 'L/T & Ghi chú' },
+  'lt.col.tooling_cost': { en: 'Tooling cost (USD)', vi: 'Chi phí Tooling (USD)' },
+  'lt.col.material_lt': { en: 'Material L/T', vi: 'L/T Vật liệu' },
+  'lt.col.sample_lt': { en: 'Sample L/T', vi: 'L/T Mẫu' },
+  'lt.col.po_lt': { en: 'PO L/T', vi: 'L/T PO' },
+  'lt.col.remark': { en: 'Remark', vi: 'Ghi chú' },
+  'lt.col.process': { en: 'Process', vi: 'Công đoạn' },
+  'lt.col.material_type': {
+    en: 'Type of Material (In quotation)',
+    vi: 'Loại vật liệu (Báo giá)',
+  },
+  'lt.tooling.synced_tip': {
+    en: 'Auto-synced from Processes tab — sum of Tool Cost column',
+    vi: 'Tự đồng bộ từ tab Processes — tổng cột Tool Cost',
+  },
+  'lt.placeholder.multiline': { en: 'Type notes…', vi: 'Nhập ghi chú…' },
 };
 
 /**

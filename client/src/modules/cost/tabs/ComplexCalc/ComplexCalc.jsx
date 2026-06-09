@@ -31,6 +31,8 @@ import CplxCostBreakdown from './CplxCostBreakdown';
 import ProcessFlowChart from './ProcessFlowChart';
 import SubProductRow from './SubProductRow';
 import BomTreeView from './BomTreeView';
+import CalcLeadTimeNotice from '../StandardCalc/CalcLeadTimeNotice';
+import { sumToolingCostCpx } from '../StandardCalc/CalcLeadTimeNotice.helpers.js';
 import { showToast } from '../../../../utils/toast';
 import { fmtN, pct, gmClr } from '../../../../utils/format';
 import DecimalInput from '../../../../utils/DecimalInput';
@@ -48,6 +50,7 @@ const SUB_TABS = [
   { id: 'breakdown', label: 'Cost Breakdown', icon: '≡' },
   { id: 'packing', label: 'Pack & Ship', icon: '▣' },
   { id: 'summary', label: 'Summarize', icon: '☰' },
+  { id: 'lead-time', label: 'Lead time & Notice', icon: '⏱' },
 ];
 
 const PACK_LABELS = {
@@ -331,6 +334,15 @@ export default function ComplexCalc() {
   const setCplxField = useCallback(
     (f, v) => dispatch({ type: 'SET_CPLX_FIELD', payload: { field: f, value: v } }),
     [dispatch]
+  );
+
+  // Lead time & Notice — Tooling cost cell shows Σ tool_cost across
+  // every process in every subproduct (cross-SP sum). Helper extracted
+  // to enable node:test coverage; reuses sumToolingCostStd internally
+  // so Std and Cpx skip the same `hidden:true` rows by the same rule.
+  const toolingCostTotal = useMemo(
+    () => sumToolingCostCpx(cplxState.subproducts),
+    [cplxState.subproducts]
   );
 
   const packTotal = useMemo(() => {
@@ -890,6 +902,13 @@ export default function ComplexCalc() {
             it must render even before the first calc pass completes
             (e.g. new quote, no price lib loaded yet). */}
         {activeSubTab === 'summary' && <ProcessFlowChart />}
+        {activeSubTab === 'lead-time' && (
+          <CalcLeadTimeNotice
+            leadTime={cplxState.lead_time}
+            onChange={(next) => setCplxField('lead_time', next)}
+            toolingCostTotal={toolingCostTotal}
+          />
+        )}
       </div>
 
       <SaveChoiceModal

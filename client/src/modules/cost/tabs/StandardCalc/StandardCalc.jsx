@@ -2,7 +2,7 @@
  * StandardCalc — Main wrapper for Standard Calculator
  * Matches COST V1.0 M05 with sub-tab navigation
  */
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import {
@@ -28,6 +28,8 @@ import CalcPackingShip from './CalcPackingShip';
 import CalcCostBreakdown from './CalcCostBreakdown';
 import CalcSummarize from './CalcSummarize';
 import ProcessBalancing from './ProcessBalancing';
+import CalcLeadTimeNotice from './CalcLeadTimeNotice';
+import { sumToolingCostStd } from './CalcLeadTimeNotice.helpers.js';
 import CalcLegend from './CalcLegend';
 import TabBarOverflow from '../../../../components/Shared/TabBarOverflow';
 import './StandardCalc.css';
@@ -43,6 +45,7 @@ const SUB_TABS = [
   { id: 'packing', label: 'Pack & Ship', icon: '▣' },
   { id: 'breakdown', label: 'Cost Breakdown', icon: '≡' },
   { id: 'summarize', label: 'Summarize', icon: '☰' },
+  { id: 'lead-time', label: 'Lead time & Notice', icon: '⏱' },
   { id: 'legend', label: 'Legend', icon: 'ⓘ' },
 ];
 
@@ -54,6 +57,7 @@ export default function StandardCalc() {
     isDirty,
     markClean,
     dispatch,
+    setStdField,
     loadQuote,
     pendingQuote,
     clearPendingQuote,
@@ -278,6 +282,15 @@ export default function StandardCalc() {
     dispatch({ type: 'RESET_STD' });
   }, [dispatch]);
 
+  // Lead time & Notice — read-only Tooling cost cell derives Σ tool_cost
+  // across all processes. Single source of truth stays in
+  // stdState.processes[i].tool_cost. Helper extracted to enable
+  // node:test coverage (CalcLeadTimeNotice.helpers.test.js).
+  const toolingCostTotal = useMemo(
+    () => sumToolingCostStd(stdState.processes),
+    [stdState.processes]
+  );
+
   let content;
   switch (activeSubTab) {
     case 'header':
@@ -306,6 +319,15 @@ export default function StandardCalc() {
       break;
     case 'summarize':
       content = <CalcSummarize />;
+      break;
+    case 'lead-time':
+      content = (
+        <CalcLeadTimeNotice
+          leadTime={stdState.lead_time}
+          onChange={(next) => setStdField('lead_time', next)}
+          toolingCostTotal={toolingCostTotal}
+        />
+      );
       break;
     case 'legend':
       content = <CalcLegend />;
