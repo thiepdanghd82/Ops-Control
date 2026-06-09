@@ -118,10 +118,11 @@ test('numFmt: Materials sheet numeric body uses number format', async () => {
   const out = await exportQuote(makeQuote(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
   const mat = wb.getWorksheet('03 Materials');
-  // Check usage / setup_lm / width / latest columns (D..M) for first data row
+  // Check usage / setup_lm / width / latest columns (E..N) for first data row
+  // (shifted +1 after drw_material column inserted at position 3).
   // Header is row ~4, first data row ~5
   for (let r = 5; r <= 10; r++) {
-    for (const col of ['D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M']) {
+    for (const col of ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N']) {
       const cell = mat.getCell(`${col}${r}`);
       if (typeof cell.value === 'number' && cell.numFmt) {
         assert.ok(

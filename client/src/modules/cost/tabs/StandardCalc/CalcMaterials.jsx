@@ -297,7 +297,8 @@ export default function CalcMaterials() {
                   <tr>
                     <th style={{ width: 130 }}>Row</th>
                     <th style={{ width: 85 }}>IFS Code</th>
-                    <th style={{ width: 130 }}>Desc.</th>
+                    <th style={{ width: 110 }}>DRW materials</th>
+                    <th style={{ width: 130 }}>Quote materials</th>
                     <th style={{ width: 55 }}>Usage</th>
                     <th style={{ width: 55 }}>Setup LM</th>
                     <th
@@ -426,6 +427,14 @@ export default function CalcMaterials() {
                                 style={{ flex: 1 }}
                               />
                             </div>
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              value={mat.drw_material || ''}
+                              onChange={(e) => handleField(i, 'drw_material', e.target.value)}
+                              className="sc-input-sm sc-input-desc"
+                            />
                           </td>
                           <td>
                             <input

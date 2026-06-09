@@ -696,7 +696,8 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                   <tr>
                     <th style={{ width: 120 }}>Row</th>
                     <th style={{ width: 80 }}>IFS Code</th>
-                    <th style={{ width: 120 }}>Desc.</th>
+                    <th style={{ width: 100 }}>DRW materials</th>
+                    <th style={{ width: 120 }}>Quote materials</th>
                     <th style={{ width: 50 }}>Usage</th>
                     <th style={{ width: 55 }}>Setup LM</th>
                     <th style={{ width: 60 }} title="Override pitch from layout">
@@ -810,6 +811,14 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                               style={
                                 isRef ? { color: 'var(--color-violet-500)', fontWeight: 700 } : {}
                               }
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              value={m.drw_material || ''}
+                              onChange={(e) => setMat(mi, 'drw_material', e.target.value)}
+                              className="cc-det-inp cc-det-desc"
                             />
                           </td>
                           <td>

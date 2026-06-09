@@ -106,6 +106,8 @@ export const LABELS = {
   'mat.section_alt': { en: 'Alternative materials', vi: 'Vật tư phương án 2' },
   'mat.row_type': { en: 'Row Type', vi: 'Loại' },
   'mat.ifs_code': { en: 'IFS Code', vi: 'Mã IFS' },
+  'mat.drw_material': { en: 'DRW materials', vi: 'Vật tư bản vẽ' },
+  'mat.quote_materials': { en: 'Quote materials', vi: 'Vật tư báo giá' },
   'mat.desc': { en: 'Description', vi: 'Mô tả' },
   'mat.usage': { en: 'Usage', vi: 'Sử dụng' },
   'mat.setup_lm': { en: 'Setup LM', vi: 'Setup LM' },

@@ -23,7 +23,8 @@ import { pickStdTierRows, pickCpxTierRows, sumRowCosts, getActiveIdx } from '../
 const MAT_COLS = [
   { key: 'row_type', label: 'mat.row_type', width: 14 },
   { key: 'ifs_code', label: 'mat.ifs_code', width: 14 },
-  { key: 'desc', label: 'mat.desc', width: 22 },
+  { key: 'drw_material', label: 'mat.drw_material', width: 18 },
+  { key: 'desc', label: 'mat.quote_materials', width: 22 },
   { key: 'usage', label: 'mat.usage', width: 8, numeric: true },
   { key: 'setup_lm', label: 'mat.setup_lm', width: 10, numeric: true },
   { key: 'pitch', label: 'mat.pitch', width: 10, numeric: true },
@@ -154,7 +155,7 @@ export function buildMaterialsSheet(wb, ctx) {
 
   // Footnote
   r += 1;
-  sheet.mergeCells(`A${r}:P${r}`);
+  sheet.mergeCells(`A${r}:Q${r}`);
   const note = sheet.getCell(`A${r}`);
   note.value = L('common.computed_at_calc', lang);
   applyStyle(note, 'footnote');
@@ -175,7 +176,7 @@ function writeMaterialSection(sheet, startRow, title, rows, lang, rowBreakdown) 
   let r = startRow;
 
   // Section banner
-  sheet.mergeCells(`A${r}:P${r}`);
+  sheet.mergeCells(`A${r}:Q${r}`);
   sheet.getCell(`A${r}`).value = title;
   applyStyle(sheet.getCell(`A${r}`), 'section');
   r += 1;
@@ -191,7 +192,7 @@ function writeMaterialSection(sheet, startRow, title, rows, lang, rowBreakdown) 
 
   // Body rows
   if (rows.length === 0) {
-    sheet.mergeCells(`A${r}:P${r}`);
+    sheet.mergeCells(`A${r}:Q${r}`);
     sheet.getCell(`A${r}`).value = '—';
     applyStyle(sheet.getCell(`A${r}`), 'body');
     return r + 1;
@@ -230,6 +231,8 @@ function extractCellValue(col, mat, rowCost) {
       return mat.row_type || 'Main.Mat';
     case 'ifs_code':
       return mat.ifs_code || mat.code || '';
+    case 'drw_material':
+      return mat.drw_material || '';
     case 'desc':
       return mat.desc || mat.code || '';
     case 'usage':
@@ -263,14 +266,15 @@ function numCell(v) {
 }
 
 function writeSubtotalRow(sheet, r, cols, label, values) {
-  // Label spans the first 3 cols, then aggregate values land in their
-  // matching columns (setup_cost / run_cost / total).
-  sheet.mergeCells(`A${r}:C${r}`);
+  // Label spans the first 4 non-numeric cols (row_type, ifs_code,
+  // drw_material, quote_materials/desc), then aggregate values land in
+  // their matching columns (setup_cost / run_cost / total).
+  sheet.mergeCells(`A${r}:D${r}`);
   const labelCell = sheet.getCell(`A${r}`);
   labelCell.value = label;
   applyStyle(labelCell, 'subtotal');
   cols.forEach((c, i) => {
-    if (i < 3) return; // skipped, merged into label
+    if (i < 4) return; // skipped, merged into label
     const cell = sheet.getCell(r, i + 1);
     if (Object.prototype.hasOwnProperty.call(values, c.key)) {
       const v = values[c.key];

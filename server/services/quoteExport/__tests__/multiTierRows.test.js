@@ -276,13 +276,13 @@ function makeCpxMultiTier() {
 }
 
 // Helpers — find Materials row 5 (first data row after section banner +
-// header) Setup Cost cell (col N=14). For Cpx the section banner adds
-// one extra row per SP so the first data row drifts; the helpers below
-// scan defensively.
+// header) Setup Cost cell (col O=15 after drw_material column insertion
+// shifted it +1). For Cpx the section banner adds one extra row per SP
+// so the first data row drifts; the helpers below scan defensively.
 function readFirstMaterialSetupCost(sheet) {
-  // Walk rows 3..30 looking for the first row where col N is a number.
+  // Walk rows 3..30 looking for the first row where col O is a number.
   for (let r = 3; r <= 30; r++) {
-    const v = sheet.getCell(r, 14).value;
+    const v = sheet.getCell(r, 15).value;
     if (typeof v === 'number') return v;
   }
   return null;
@@ -387,8 +387,8 @@ test('multi-tier Std: Materials Subtotal derived from per-tier rows', async () =
   const subRow = findSubtotalRow(matT1);
   assert.ok(subRow, 'Subtotal row missing on tier 1 Materials');
   // Tier 1 has setup_cost=0.025, run_cost=0.08
-  assert.equal(matT1.getCell(subRow, 14).value, 0.025);
-  assert.equal(matT1.getCell(subRow, 15).value, 0.08);
+  assert.equal(matT1.getCell(subRow, 15).value, 0.025);
+  assert.equal(matT1.getCell(subRow, 16).value, 0.08);
 });
 
 // Active-tier subtotal still uses bd_* (rounding-free aggregate)
@@ -409,7 +409,7 @@ test('multi-tier Std: active-tier Materials Subtotal uses bd_mat_* (not row sum)
   const mat = wb.getWorksheet('03 Materials');
   const subRow = findSubtotalRow(mat);
   // Active tier subtotal must still be bd_mat_setup = 0.05, not 0.999
-  assert.equal(mat.getCell(subRow, 14).value, 0.05);
+  assert.equal(mat.getCell(subRow, 15).value, 0.05);
 });
 
 // Cpx differential
