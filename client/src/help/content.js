@@ -5060,6 +5060,94 @@ export const HELP_CONTENT = {
     screenshot: null,
   },
 
+  'lead-time-notice': {
+    id: 'lead-time-notice',
+    section: 'CALCULATORS',
+    title: bi('Lead time & Notice', 'L/T & Ghi chú'),
+    function: bi(
+      'Capture per-quote tooling cost, lead times, and notice on the quotation cover sheet.',
+      'Ghi chi phí tooling, lead time, và ghi chú cho mỗi báo giá.'
+    ),
+    path: 'Ops Cost > Pricing (Std) > Lead time & Notice / Pricing (Cpx) > Lead time & Notice',
+    purpose: bi(
+      'Single 1-row cover sheet for quotation metadata not driven by calc engine — tooling cost (auto-synced from Processes), supplier lead times (Material/Sample/PO), Remark, Process notes, Type of Material. Persists with quote on Save and round-trips via Quote History.',
+      'Trang phụ 1 dòng cho metadata báo giá ngoài calc engine — chi phí tooling (tự cộng từ Processes), lead time nhà cung cấp (Vật liệu/Mẫu/PO), Ghi chú, Công đoạn, Loại vật liệu. Lưu cùng quote và round-trip qua Quote History.'
+    ),
+    whenToUse: bi(
+      'Before sending quotation xlsx to customer — fill 6 free-text fields with supplier-provided lead times + tooling notes.',
+      'Trước khi gửi xlsx báo giá cho khách — điền 6 ô free-text với lead time từ nhà cung cấp + ghi chú tooling.'
+    ),
+    preRequisites: [
+      br(
+        'Processes sub-tab populated (Tooling cost cell auto-derives from Σ Tool Cost; Std reads from state.processes, Cpx reads cross-SP from cplxState.subproducts[].processes).',
+        'Sub-tab Processes đã điền (ô Tooling cost tự lấy Σ Tool Cost; Std đọc từ state.processes, Cpx đọc cross-SP từ cplxState.subproducts[].processes).'
+      ),
+    ],
+    procedures: [
+      proc('Tooling cost — read-only', 'Chi phí Tooling — chỉ-đọc', null, [
+        bs(
+          'Auto-syncs as Σ tool_cost from Processes tab — no manual entry. Edit happens on Processes/Calculators tab; switch back to Lead time & Notice to see updated total.',
+          'Tự cộng tổng Σ tool_cost từ tab Processes — không nhập tay. Chỉnh ở tab Processes/Calculators rồi quay lại Lead time & Notice để thấy tổng cập nhật.'
+        ),
+        bs(
+          'Cell hiển thị "$X,XXX.XX" (Intl USD format) hoặc "—" nếu tổng = 0. Lock icon 🔒 + cursor not-allowed báo hiệu read-only.',
+          'Ô hiển thị "$X,XXX.XX" (định dạng USD) hoặc "—" nếu tổng = 0. Icon 🔒 + con trỏ not-allowed báo chỉ-đọc.'
+        ),
+      ]),
+      proc('6 free-text cells', '6 ô free-text', null, [
+        bs(
+          'Material L/T — supplier lead time for raw material (e.g. "4 weeks").',
+          'L/T Vật liệu — lead time nhà cung cấp vật liệu thô (vd "4 tuần").'
+        ),
+        bs(
+          'Sample L/T — sample production lead time (e.g. "7 days").',
+          'L/T Mẫu — lead time làm mẫu (vd "7 ngày").'
+        ),
+        bs(
+          'PO L/T — PO-to-delivery lead time (e.g. "30 days from PO").',
+          'L/T PO — lead time từ PO đến giao hàng (vd "30 ngày từ PO").'
+        ),
+        bs(
+          'Remark — free-form notes; multi-line supported (Enter wraps inside cell).',
+          'Ghi chú — văn bản tự do; hỗ trợ nhiều dòng (Enter xuống dòng trong ô).'
+        ),
+        bs(
+          'Process — process-specific notes for the quotation cover sheet.',
+          'Công đoạn — ghi chú công đoạn cụ thể cho trang bìa báo giá.'
+        ),
+        bs(
+          'Type of Material (In quotation) — material type as it appears in customer quotation.',
+          'Loại vật liệu (Báo giá) — loại vật liệu như xuất hiện trong báo giá khách.'
+        ),
+      ]),
+      proc('Save + round-trip', 'Lưu + round-trip', null, [
+        bs(
+          'Click Save (top-right toolbar) to persist 6 fields with quote.state.lead_time. Newline characters in Remark preserve through JSON round-trip.',
+          'Bấm Save (toolbar phải trên) để lưu 6 trường vào quote.state.lead_time. Ký tự xuống dòng trong Ghi chú được giữ qua JSON round-trip.'
+        ),
+        bs(
+          'Reload quote via Quote History → 6 fields restore exactly. Legacy quote pre-feature loads empty 6 cells, no crash.',
+          'Reload quote qua Quote History → 6 trường khôi phục y nguyên. Quote cũ trước feature mở ra 6 ô trống, không crash.'
+        ),
+      ]),
+    ],
+    tips: [
+      bi(
+        'Tab vị trí: Pricing (Std) — chèn TRƯỚC Legend (giữa Summarize và Legend). Pricing (Cpx) — sub-tab cuối, SAU Summarize.',
+        'Vị trí tab: Pricing (Std) — TRƯỚC Legend (giữa Summarize và Legend). Pricing (Cpx) — sub-tab cuối, SAU Summarize.'
+      ),
+      bi(
+        'For Cpx, Tooling cost sums ACROSS all sub-products (cross-SP flatMap). Adding/removing SPs or per-SP processes auto-updates the total on next tab switch.',
+        'Với Cpx, Tooling cost tổng cộng QUA TẤT CẢ sub-product (cross-SP flatMap). Thêm/xoá SP hoặc per-SP processes tự cập nhật khi switch tab.'
+      ),
+      bi(
+        'Container query @900px stacks 7 cells into card view for narrow viewports / collapsed sidebar.',
+        'Container query @900px xếp dọc 7 ô thành card view cho viewport hẹp / sidebar collapse.'
+      ),
+    ],
+    relatedTabs: ['standard', 'standard-process', 'quote-history'],
+  },
+
   'standard-inks': {
     id: 'standard-inks',
     section: 'CALCULATORS',

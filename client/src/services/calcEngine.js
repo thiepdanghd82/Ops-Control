@@ -1495,6 +1495,19 @@ export function createStdState() {
     design_process: '',
     layout_file: null,
     customer_drw_file: null,
+    // Lead time & Notice sub-tab metadata. Free-text fields operator
+    // fills on cover-sheet; zero pricing impact (calcAll never reads
+    // lead_time). Legacy quotes heal via `state.lead_time || {}`
+    // fallback at reducer + UI, so no schema-version bump needed
+    // (PR #110 pattern).
+    lead_time: {
+      lt_material: '',
+      lt_sample: '',
+      lt_po: '',
+      lt_remark: '',
+      lt_process: '',
+      lt_material_type: '',
+    },
   };
 }
 
@@ -1655,6 +1668,17 @@ export function createEmptyStdState() {
     extra_moqs: [],
     active_moq_idx: 0,
     sum_records: [],
+    // Lead time & Notice sub-tab metadata — see createStdState for
+    // the contract; mirrored here so RESET_STD (New button) starts
+    // with the same shape.
+    lead_time: {
+      lt_material: '',
+      lt_sample: '',
+      lt_po: '',
+      lt_remark: '',
+      lt_process: '',
+      lt_material_type: '',
+    },
   };
 }
 
@@ -1709,6 +1733,16 @@ export function createCplxState() {
     // groupTitles } — empty object = fully auto-generated from data.
     flow_chart_overrides: {},
     _shape_version: 2,
+    // Lead time & Notice sub-tab metadata — see createStdState for
+    // the contract. Quote-level (not per-SP) per operator scoping.
+    lead_time: {
+      lt_material: '',
+      lt_sample: '',
+      lt_po: '',
+      lt_remark: '',
+      lt_process: '',
+      lt_material_type: '',
+    },
   };
 }
 

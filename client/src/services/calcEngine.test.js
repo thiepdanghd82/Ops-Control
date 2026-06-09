@@ -2326,3 +2326,60 @@ test('matCostExcludingInk: null/bad input → 0 (no crash, no NaN)', () => {
   assert.equal(matCostExcludingInk(null), 0);
   assert.equal(matCostExcludingInk({}), 0);
 });
+
+// ── Sprint S-D21 — Lead time & Notice schema defaults ───────────────
+// Both factories must emit the same 6-key shape so the UI renders 6
+// empty textareas on a fresh quote and legacy quotes (no lead_time
+// field at all) heal via `state.lead_time || {}` fallback at the UI
+// without crashing.
+
+const EMPTY_LEAD_TIME = {
+  lt_material: '',
+  lt_sample: '',
+  lt_po: '',
+  lt_remark: '',
+  lt_process: '',
+  lt_material_type: '',
+};
+
+test('createStdState().lead_time = 6-key empty-string object', () => {
+  assert.deepStrictEqual(createStdState().lead_time, EMPTY_LEAD_TIME);
+});
+
+test('createCplxState().lead_time = 6-key empty-string object', () => {
+  assert.deepStrictEqual(createCplxState().lead_time, EMPTY_LEAD_TIME);
+});
+
+// Round-trip — Save flow serialises state via JSON.stringify (sharedApi.upsertQuote
+// → SQLite TEXT column). These tests guard the operator-visible contract that
+// lead_time survives a Save → Load cycle byte-for-byte, including newlines in
+// the free-text Remark field (multi-line textarea content).
+
+const POPULATED_LEAD_TIME = {
+  lt_material: '4 weeks',
+  lt_sample: '7 days',
+  lt_po: '30 days',
+  lt_remark: 'multi\nline\ntext',
+  lt_process: 'Indigo',
+  lt_material_type: 'PE-Coat',
+};
+
+test('lead_time round-trip — Std quote serialize/deserialize', () => {
+  const state = createStdState();
+  state.lead_time = { ...POPULATED_LEAD_TIME };
+  const restored = JSON.parse(JSON.stringify(state));
+  assert.deepStrictEqual(restored.lead_time, POPULATED_LEAD_TIME);
+  // Explicit guard — newline preservation in lt_remark (Save path could
+  // strip / escape newlines on some serialisers).
+  assert.equal(restored.lead_time.lt_remark, 'multi\nline\ntext');
+  assert.equal(restored.lead_time.lt_remark.split('\n').length, 3);
+});
+
+test('lead_time round-trip — Cpx quote serialize/deserialize', () => {
+  const state = createCplxState();
+  state.lead_time = { ...POPULATED_LEAD_TIME };
+  const restored = JSON.parse(JSON.stringify(state));
+  assert.deepStrictEqual(restored.lead_time, POPULATED_LEAD_TIME);
+  assert.equal(restored.lead_time.lt_remark, 'multi\nline\ntext');
+  assert.equal(restored.lead_time.lt_remark.split('\n').length, 3);
+});
