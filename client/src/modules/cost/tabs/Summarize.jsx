@@ -18,6 +18,9 @@ import { useAbortableFetch } from '../../../hooks/useAbortableFetch';
 import EmptyState from '../../../components/Shared/EmptyState';
 import { err as logErr } from '../../../utils/logger';
 import { buildCsv, saveCsv } from '../../../services/csvExport';
+import { useQuoteFilters } from '../hooks/useQuoteFilters';
+import { applyQuoteFilters } from '../lib/quoteFilters';
+import ScopedFilterBar from '../components/ScopedFilterBar';
 import './Summarize.css';
 
 // Yield = 1 - Σ(scrap_pct) across every process in a state. Uses a simple
@@ -111,7 +114,8 @@ export default function Summarize() {
   const { lib } = useCostLib();
   const [sortCol, setSortCol] = useState(null);
   const [sortAsc, setSortAsc] = useState(true);
-  const [filter, setFilter] = useState('');
+  const { filter, debouncedFilter, setField, clearField, clearAll, hasActiveFilter } =
+    useQuoteFilters();
   // Sprint AR — hook-managed fetch with isDirty + activeQuoteId as
   // refresh triggers. Hook internally aborts stale in-flight loads on
   // rapid save/load switching so the table never flashes old rows.
@@ -234,6 +238,10 @@ export default function Summarize() {
             direct_cu: st.direct_cu || '',
             direct_cu_pn: st.direct_cu_pn || '',
             project: st.project || '',
+            // Bổ sung end_cu cho shared filter (S-PROJFIX fallback chain in
+            // applyQuoteFilters reads end_cu || project so Standard quotes
+            // — which alias End Customer into state.project — stay searchable).
+            end_cu: st.end_cu || '',
             end_cu_pn: st.end_cu_pn || '',
             description: st.description || '',
             size:
@@ -281,22 +289,10 @@ export default function Summarize() {
     return rows;
   }, [quotes, lib]);
 
-  const filtered = useMemo(() => {
-    if (!filter) return records;
-    const q = filter.toLowerCase();
-    return records.filter((r) =>
-      [
-        r.direct_cu,
-        r.direct_cu_pn,
-        r.project,
-        r.end_cu_pn,
-        r.description,
-        r.size,
-        r.trade_mode,
-        r.npi_owner,
-      ].some((f) => (f || '').toLowerCase().includes(q))
-    );
-  }, [records, filter]);
+  const filtered = useMemo(
+    () => applyQuoteFilters(records, debouncedFilter),
+    [records, debouncedFilter]
+  );
 
   const sorted = useMemo(() => {
     if (!sortCol) return filtered;
@@ -479,29 +475,33 @@ export default function Summarize() {
           </svg>
         </div>
         <div className="sum-header-title">Summarize &mdash; Cost Records</div>
-        <input
-          className="sum-search"
-          type="text"
-          placeholder="Search..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
-        <div className="sum-header-spacer" />
-        <button
-          className="sum-export-btn"
-          onClick={exportCSV}
-          disabled={exportCount === 0}
-          title={
-            selectedVisibleCount > 0
-              ? `Export ${selectedVisibleCount} selected row(s) — native Save dialog`
-              : sorted.length > 0
-                ? `Export all ${sorted.length} visible row(s) — native Save dialog`
-                : 'No rows to export'
-          }
-        >
-          CSV Export{exportCount > 0 ? ` (${exportCount})` : ''}
-        </button>
       </div>
+      <ScopedFilterBar
+        filter={filter}
+        setField={setField}
+        clearField={clearField}
+        clearAll={clearAll}
+        hasActiveFilter={hasActiveFilter}
+        resultCount={sorted.length}
+        totalCount={records.length}
+        globalPlaceholder="Search RFQ / Customer / Part / Sale Owner / NPI Owner…"
+        rightSlot={
+          <button
+            className="sum-export-btn"
+            onClick={exportCSV}
+            disabled={exportCount === 0}
+            title={
+              selectedVisibleCount > 0
+                ? `Export ${selectedVisibleCount} selected row(s) — native Save dialog`
+                : sorted.length > 0
+                  ? `Export all ${sorted.length} visible row(s) — native Save dialog`
+                  : 'No rows to export'
+            }
+          >
+            CSV Export{exportCount > 0 ? ` (${exportCount})` : ''}
+          </button>
+        }
+      />
       <div className="sum-table-wrap">
         <table className="sum-table">
           <thead>

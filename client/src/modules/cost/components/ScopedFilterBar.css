@@ -1,0 +1,279 @@
+.sc-filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--color-slate-50);
+  border-bottom: 1px solid var(--color-slate-200);
+}
+
+.sc-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sc-filter-row-1 {
+  gap: 12px;
+}
+
+.sc-filter-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 320px;
+  min-width: 240px;
+  background: #fff;
+  border: 1px solid var(--color-slate-300);
+  border-radius: 6px;
+  padding: 0 10px;
+  height: 32px;
+  transition: border-color 0.15s;
+}
+
+.sc-filter-search-wrap:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-subtle);
+}
+
+.sc-filter-search-wrap .sc-filter-icon {
+  color: var(--color-slate-400);
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+
+.sc-filter-search {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--font-md);
+  color: var(--color-slate-800);
+  height: 100%;
+}
+
+.sc-filter-search::placeholder {
+  color: var(--color-slate-400);
+}
+
+.sc-filter-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sc-filter-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: var(--color-slate-200);
+  color: var(--color-slate-600);
+  border-radius: 50%;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.sc-filter-clear:hover {
+  background: var(--color-slate-300);
+  color: var(--color-slate-800);
+}
+
+.sc-filter-clear-search {
+  margin-left: 4px;
+}
+
+.sc-filter-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid var(--color-slate-300);
+  border-radius: 6px;
+  padding: 0 8px;
+  height: 30px;
+  flex: 1 1 140px;
+  min-width: 120px;
+  max-width: 220px;
+  transition: border-color 0.15s;
+}
+
+.sc-filter-text:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-subtle);
+}
+
+.sc-filter-text-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-subtle);
+}
+
+.sc-filter-text-label {
+  font-size: var(--font-xs);
+  color: var(--color-slate-500);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.sc-filter-text input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--font-sm);
+  color: var(--color-slate-800);
+  min-width: 0;
+}
+
+.sc-filter-text input::placeholder {
+  color: var(--color-slate-400);
+  font-weight: 400;
+}
+
+.sc-filter-date {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.sc-filter-date-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid var(--color-slate-300);
+  border-radius: 6px;
+  padding: 0 10px;
+  height: 30px;
+  font-size: var(--font-sm);
+  color: var(--color-slate-700);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.sc-filter-date-trigger:hover {
+  border-color: var(--color-slate-400);
+}
+
+.sc-filter-date-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-subtle);
+  color: var(--color-slate-900);
+  font-weight: 600;
+}
+
+.sc-filter-date-pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  background: #fff;
+  border: 1px solid var(--color-slate-300);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 35, 65, 0.12);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 280px;
+}
+
+.sc-filter-date-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.sc-filter-date-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--font-xs);
+  color: var(--color-slate-500);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.sc-filter-date-grid input[type='date'] {
+  border: 1px solid var(--color-slate-300);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: var(--font-sm);
+  font-family: inherit;
+  color: var(--color-slate-800);
+}
+
+.sc-filter-date-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.sc-filter-date-presets button {
+  border: 1px solid var(--color-slate-200);
+  background: var(--color-slate-50);
+  color: var(--color-slate-700);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: var(--font-xs);
+  cursor: pointer;
+}
+
+.sc-filter-date-presets button:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.sc-filter-date-preset-clear {
+  margin-left: auto;
+  color: var(--color-danger-500) !important;
+}
+
+.sc-filter-clear-all {
+  border: 1px solid var(--color-slate-300);
+  background: #fff;
+  color: var(--color-slate-700);
+  border-radius: 6px;
+  padding: 0 10px;
+  height: 30px;
+  font-size: var(--font-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sc-filter-clear-all:hover {
+  border-color: var(--color-danger-500);
+  color: var(--color-danger-500);
+}
+
+.sc-filter-count {
+  margin-left: auto;
+  font-size: var(--font-sm);
+  color: var(--color-slate-500);
+  white-space: nowrap;
+}
+
+/* Responsive: < 1280px wrap each scoped field to ~50% width (2x2 grid) */
+@container (max-width: 1279px) {
+  .sc-filter-row-2 .sc-filter-text,
+  .sc-filter-row-2 .sc-filter-date {
+    flex: 1 1 calc(50% - 4px);
+    max-width: none;
+  }
+}
+
+@media (max-width: 1279px) {
+  .sc-filter-row-2 .sc-filter-text,
+  .sc-filter-row-2 .sc-filter-date {
+    flex: 1 1 calc(50% - 4px);
+    max-width: none;
+  }
+}

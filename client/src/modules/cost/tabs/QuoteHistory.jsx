@@ -20,6 +20,9 @@ import { useAutoRefresh, formatLastRefresh } from '../../../utils/useAutoRefresh
 import { subscribeDataEvents } from '../../../services/dataEventBus';
 import { useAccess } from '../../../context/useAccess';
 import ExportModal from './QuoteHistory/ExportModal';
+import { useQuoteFilters } from '../hooks/useQuoteFilters';
+import { applyQuoteFilters, quoteAccessor } from '../lib/quoteFilters';
+import ScopedFilterBar from '../components/ScopedFilterBar';
 import './QuoteHistory.css';
 import './QuoteHistory/ExportModal.css';
 
@@ -156,9 +159,15 @@ export default function QuoteHistory() {
     onError: (err) => err?.name !== 'AbortError' && logErr('Failed to load quotes:', err),
   });
   const quotes = useMemo(() => (Array.isArray(rawQuotes) ? rawQuotes : []), [rawQuotes]);
-  const [search, setSearch] = useState('');
+  const { filter, debouncedFilter, setField, clearField, clearAll, hasActiveFilter } =
+    useQuoteFilters();
   const [filterType, setFilterType] = useState('all');
   const [page, setPage] = useState(0);
+  // Reset to page 0 whenever the applied filter or pill changes so the
+  // user lands on the first page of results instead of an out-of-range page.
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedFilter, filterType]);
   const [sortKey, setSortKey] = useState('date');
   const [sortDir, setSortDir] = useState('desc');
   const [ctxMenu, setCtxMenu] = useState(null); // { x, y, quote }
@@ -264,33 +273,17 @@ export default function QuoteHistory() {
   const filtered = useMemo(() => {
     let r = quotes;
     if (filterType !== 'all') r = r.filter((q) => q.type === filterType);
-    if (search) {
-      const t = search.toLowerCase();
-      r = r.filter((q) => {
-        const s = q.state || {};
-        // s.project covers Standard's aliased End Customer (see SORT_KEYS.end_cu).
-        return [
-          s.ccl_pn,
-          s.direct_cu,
-          s.project_name,
-          s.end_cu || s.project,
-          q.label,
-          s.rfq_number,
-          s.npi_owner,
-          q.npi_owner,
-          s.sale_owner,
-          s.direct_cu_pn,
-          s.end_cu_pn,
-        ].some((v) => (v || '').toLowerCase().includes(t));
-      });
-    }
+    // Shared scoped + global filter (S-PROJFIX + NPI fallback preserved in
+    // quoteAccessor). AND-combine across query / date range / customer /
+    // part / sale boxes; empty/null fields are skipped.
+    r = applyQuoteFilters(r, debouncedFilter, quoteAccessor);
     const getter = SORT_KEYS[sortKey] || SORT_KEYS.date;
     return [...r].sort((a, b) => {
       const va = getter(a),
         vb = getter(b);
       return va < vb ? (sortDir === 'asc' ? -1 : 1) : va > vb ? (sortDir === 'asc' ? 1 : -1) : 0;
     });
-  }, [quotes, search, filterType, sortKey, sortDir]);
+  }, [quotes, debouncedFilter, filterType, sortKey, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   // Defense-in-depth: if the stored page lands out of range (e.g. the
@@ -425,7 +418,7 @@ export default function QuoteHistory() {
 
   return (
     <div className="qh-root">
-      {/* ══ Unified Header Bar — title + search + filter pills in one row ══ */}
+      {/* ══ Header Bar (title + sync info) + ScopedFilterBar below ══ */}
       <div className="qh-headerbar">
         <div className="qh-hb-icon">
           <svg
@@ -471,69 +464,43 @@ export default function QuoteHistory() {
             </button>
           </div>
         </div>
-        <div className="qh-hb-search-wrap">
-          <svg
-            className="qh-si"
-            viewBox="0 0 24 24"
-            width="13"
-            height="13"
-            fill="none"
-            stroke="#94a3b8"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            className="qh-hb-search"
-            placeholder="Search CCL PN / RFQ / Customer / Project / NPI Owner / Sale Owner…"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(0);
-            }}
-          />
-          {search && (
-            <button
-              className="qh-hb-sclear"
-              onClick={() => {
-                setSearch('');
-                setPage(0);
-              }}
-            >
-              ×
-            </button>
-          )}
-        </div>
-        <div className="qh-hb-filters">
-          {[
-            { id: 'all', label: 'All' },
-            { id: 'standard', label: '◇ Standard' },
-            { id: 'complex', label: '◈ Complex' },
-          ].map((f) => (
-            <button
-              key={f.id}
-              className={`qh-hb-fbtn ${filterType === f.id ? 'active' : ''}`}
-              onClick={() => {
-                setFilterType(f.id);
-                setPage(0);
-              }}
-            >
-              {f.label}
-            </button>
-          ))}
-          {/* Sprint 13 UI — Trash bin entry. Lazy-loads server data
-              on click (no polling cost when closed). */}
-          <button
-            className="qh-hb-fbtn qh-hb-trash-btn"
-            onClick={openTrash}
-            title="View soft-deleted quotes · Xem các quote đã xoá (có thể restore)"
-          >
-            🗑 Trash
-          </button>
-        </div>
       </div>
+      <ScopedFilterBar
+        filter={filter}
+        setField={setField}
+        clearField={clearField}
+        clearAll={clearAll}
+        hasActiveFilter={hasActiveFilter}
+        resultCount={filtered.length}
+        totalCount={quotes.length}
+        globalPlaceholder="Search CCL PN / RFQ / Customer / Project / NPI Owner / Sale Owner…"
+        rightSlot={
+          <div className="qh-hb-filters">
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'standard', label: '◇ Standard' },
+              { id: 'complex', label: '◈ Complex' },
+            ].map((f) => (
+              <button
+                key={f.id}
+                className={`qh-hb-fbtn ${filterType === f.id ? 'active' : ''}`}
+                onClick={() => setFilterType(f.id)}
+              >
+                {f.label}
+              </button>
+            ))}
+            {/* Sprint 13 UI — Trash bin entry. Lazy-loads server data
+                on click (no polling cost when closed). */}
+            <button
+              className="qh-hb-fbtn qh-hb-trash-btn"
+              onClick={openTrash}
+              title="View soft-deleted quotes · Xem các quote đã xoá (có thể restore)"
+            >
+              🗑 Trash
+            </button>
+          </div>
+        }
+      />
 
       {/* ══ TABLE — flush with header, full screen ══ */}
       <div className="qh-table-full">
