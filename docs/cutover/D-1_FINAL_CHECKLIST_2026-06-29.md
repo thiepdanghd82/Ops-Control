@@ -29,12 +29,12 @@
 
 ## Sign-off
 
-- **Lead Engineer**: **\*\*\*\***\_\_\_\_**\*\*\*\*** Time: 2026-06-08 17:00 ICT
+- **Lead Engineer**: **\*\*\*\***\_\_\_\_**\*\*\*\*** Time: 2026-06-29 17:00 ICT
 - **Plant Manager (final ship authority)**: **\*\*\*\***\_\_\_\_**\*\*\*\*** Time: \***\*\_\_\_\_\*\***
 - **Backup Engineer (Trần Thị Hương — incident standby confirmed)**: **\*\*\*\***\_\_\_\_**\*\*\*\*** Time: \***\*\_\_\_\_\*\***
 - **Sales Lead (customer comms confirmed)**: **\*\*\*\***\_\_\_\_**\*\*\*\*** Time: \***\*\_\_\_\_\*\***
 
-## If GO: D-0 handoff (2026-06-09 06:00 ICT)
+## If GO: D-0 handoff (2026-06-30 06:00 ICT)
 
 Per `docs/cutover/8-DAY-CUTOVER-PLAN-20260522.md` D-0 section:
 

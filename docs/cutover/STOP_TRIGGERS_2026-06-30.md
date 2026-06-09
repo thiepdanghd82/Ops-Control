@@ -1,11 +1,15 @@
-# STOP Triggers — Ops Control v1.5.10 Go-Live 2026-06-09
+# STOP Triggers — Ops Control v1.5.12 Go-Live 2026-06-30
 
 > Pre-commitment document. Lead Engineer self-binds to these triggers
 > BEFORE cutover stress applies. If any trigger fires, HALT and
 > rollback per Runbook A/B. Do NOT proceed under schedule pressure.
 >
-> **Status**: SIGNED — binding for Đặng Thế Thiệp during 2026-06-08
-> to 2026-06-16 (D-1 through D+7 parallel-run end).
+> **Status**: SIGNED — binding for Đặng Thế Thiệp during 2026-06-29
+> to 2026-07-07 (D-1 through D+7 parallel-run end).
+>
+> **Date refresh history**: original go-live 2026-05-30 (SLIP_PROPOSAL_2026-05-24)
+> → 2026-06-09 (SCHEDULE_DECISION_2026-05-24) → **2026-06-30** (D-21 audit
+> 2026-06-09 confirmed real D-0 per memory/project_golive.md).
 
 ## Authority context
 
@@ -90,7 +94,7 @@ When ANY trigger fires:
 - **Lead Engineer**: Đặng Thế Thiệp
 - **Date signed**: 2026-05-25 (re-signed post-discovery; original 2026-05-24)
 - **Authority basis**: Plant Manager verbal delegation 2026-05-24
-- **Binding period**: 2026-06-08 (D-1) through 2026-06-16 (D+7 end of parallel run)
+- **Binding period**: 2026-06-29 (D-1) through 2026-07-07 (D+7 end of parallel run)
 - **Decision**: AGREE all 11 triggers + T6 updated per Option B (sysadmin discovery)
 - **T6 amendment reason**: Sysadmin = Lead Engineer (same person, no separate role at CCL Vietnam). Original T6 ("sysadmin unreachable") was tautological with implicit Lead-unreachable trigger. Amended T6 captures the actual failure mode: double-failure (both Lead AND Backup Engineer Hương unreachable) — Plant Manager direct-channel escalation is the only remaining recovery path.
 - **Backup Engineer confirmed**: Trần Thị Hương (huongtt@cclind.com, +84988749869), SSH/NSSM/cron skills confirmed via phone 2026-05-25.
@@ -100,6 +104,6 @@ When ANY trigger fires:
 **Companion docs**:
 
 - `docs/cutover/READINESS_AUDIT_D-6_2026-05-24.md` — original risk source
-- `docs/cutover/SCHEDULE_DECISION_2026-05-24.md` — 2026-06-09 schedule
+- `docs/cutover/SCHEDULE_DECISION_2026-05-24.md` — historical 2026-06-09 decision (superseded by 2026-06-30 per D-21 audit)
 - `docs/cutover/ROLLBACK-RUNBOOK-20260522.md` — Runbook A + B
-- `docs/cutover/D-1_FINAL_CHECKLIST_2026-06-08.md` — 12-point go/no-go
+- `docs/cutover/D-1_FINAL_CHECKLIST_2026-06-29.md` — 12-point go/no-go

@@ -294,7 +294,7 @@ Inject 3 controlled failures to make sure the system handles them:
 ### Overall result (check one)
 
 - [ ] **PASS** — all 6 phases green. Cutover procedure validated end-to-end.
-      **DECISION: GO** for D-0 go-live 2026-06-09.
+      **DECISION: GO** for D-0 go-live 2026-06-30.
 - [ ] **PARTIAL** — phases 1-N pass, phase \<X\> partial. Specific issue:
       `__________________________________________________________`
       → triage with Lead + decide whether to delay D-0 by 1 day or proceed.
@@ -342,9 +342,9 @@ unless resolved within 24 hours:
 ## Companion files
 
 - `docs/cutover/8-DAY-CUTOVER-PLAN-20260522.md` — D-2 work block context
-- `docs/cutover/STOP_TRIGGERS_2026-06-09.md` — 11 halt criteria for D-0
+- `docs/cutover/STOP_TRIGGERS_2026-06-30.md` — 11 halt criteria for D-0
 - `docs/cutover/ROLLBACK-RUNBOOK-20260522.md` — Runbook A + B (full procedure)
-- `docs/cutover/BACKUP_ENGINEER_BRIEF_2026-06-09.md` — Hương's standby scope
+- `docs/cutover/BACKUP_ENGINEER_BRIEF_2026-06-30.md` — Hương's standby scope
 - `docs/cutover/HUONG_WALKTHROUGH_AGENDA_D-14.md` — onboarding agenda (cross-link "Block 5 live drill")
 - `CLAUDE.md` Recovery playbook section — Linux + Windows rollback procedures
 

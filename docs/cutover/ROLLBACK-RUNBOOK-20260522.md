@@ -1,7 +1,14 @@
-# Rollback Runbook — Ops Control v1.5.10 Go-Live
+# Rollback Runbook — Ops Control v1.5.12 Go-Live
 
-**Date**: 2026-05-22 | **Go-live**: 2026-05-30 | **Site**: CCL Design Vietnam, Yen Phong
+**Doc written**: 2026-05-22 | **Original go-live**: 2026-05-30 (superseded)
+**Current go-live**: 2026-06-30 (re-baselined D-21 audit 2026-06-09)
+**Site**: CCL Design Vietnam, Yen Phong
 **Audience**: bilingual (engineer steps in English; operator-facing in Vietnamese)
+
+> **Date refresh (D-21 audit 2026-06-09)**: schedule re-baselined twice
+> (2026-05-30 → 2026-06-09 → **2026-06-30**). Procedures below remain
+> valid — only the calendar moved. Replace Zalo group references with
+> "OpsControl GoLive 2026-06-30" everywhere.
 
 > **Role clarification (2026-05-25 discovery — see `docs/cutover/SYSADMIN_DISCOVERY_NOTE_2026-05-25.md`)**: At CCL Vietnam Yen Phong, "Sysadmin" is a functional role held by the Lead Engineer (Đặng Thế Thiệp, `+84965191991`, `thiepdt@cclind.com`). Wherever this runbook references "Sysadmin", read as "Lead Engineer executing sysadmin function". Backup Engineer (Trần Thị Hương, `+84988749869`, `huongtt@cclind.com`) covers BOTH engineering + sysadmin scopes during Lead unreachable incidents.
 
@@ -120,7 +127,7 @@ If the bad deploy corrupted DATA (rare — usually requires explicit destructive
 
 ## A.7 Operator-facing announcement (Vietnamese)
 
-Post in Zalo group "OpsControl GoLive 2026-05-30" and broadcast verbally to floor supervisor:
+Post in Zalo group "OpsControl GoLive 2026-06-30" and broadcast verbally to floor supervisor:
 
 > 🔵 **THÔNG BÁO** — Hệ thống Ops Control đang được phục hồi về phiên bản trước. **Vui lòng dừng nhập liệu mới trong 5–10 phút.**
 >
