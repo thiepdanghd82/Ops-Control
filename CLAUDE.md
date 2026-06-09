@@ -1154,6 +1154,27 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - **Bundle with**: MVP-2 (HMAC/\_Audit/\_Schema work) since `result.rows` is part of `payload_sha256` input — order matters for hash stability.
 - **Status**: CLOSED 2026-05-19 via PR #48 (SHA: `fc21c1a`, MVP-1.5). `calcRowBreakdown` extracts per-row Setup/Run/Total from `calcAll`'s existing `matResults/inkResults/procResults`; `buildStdRowsPayload` / `buildCpxRowsPayload` walk all tiers + SPs. Save path in StandardCalc + ComplexCalc populates `result.rows` / `result.tiers[N].rows` / `result.subproducts[spi].rows`. Schema bumps idempotent: std v2→v3, cpx v3→v4. Server route returns 422 `legacy_no_rows` (distinct from `no-snapshot`) so pre-FIX-41 quotes prompt operator re-save. 30 new tests (21 client + 9 server). Sum invariant holds: `Σ rows.materials_main[i].setup_cost === bd_mat_setup`.
 
+#### MES-3-FIX-48 — Quote Export: xlsx sheet 11-leadtime (render `lead_time` cover-sheet)
+
+- **Source**: Sprint S-D21-LEADTIME (PR #113, 2026-06-09) shipped the Lead time & Notice sub-tab that captures per-quote `lead_time: {lt_material, lt_sample, lt_po, lt_remark, lt_process, lt_material_type}` + tooling-cost rollup into persisted state, but the xlsx exporter does NOT read `lead_time` — the data operators enter as of v1.5.12 never reaches the exported workbook. Explicitly deferred at ship ("sheet 11-leadtime deferred, follow-up").
+- **Acceptance**: (1) New `server/services/quoteExport/sheets/11-leadtime.js` rendering the 6 free-text cells + tooling-cost total (USD) with EN+VN labels (mirror existing sheet label convention, ~6 i18n keys). (2) Wire into the workbook sheet list after sheet 10 (Summary). (3) Variant rule: lead times + remark on both customer + internal; tooling-cost total internal-only (parity with Processes sheet). (4) Reads persisted `quote.state.lead_time` (Std) + per-quote Cpx; em-dash fallback for pre-#113 legacy quotes with no `lead_time` block. (5) Tests: ≥6 covering populated / empty / legacy + multiline `lt_remark` round-trip in cell.
+- **Effort**: S–M (~120 LOC sheet + ~40 LOC wiring/i18n + ~80 LOC tests)
+- **Priority**: P2 (operators enter lead-time data on v1.5.12 that silently does not export — customer-facing quote gap before go-live D-0 2026-06-30)
+
+#### MES-3-FIX-49 — Lead time & Notice: per-SP lead-time table for Complex quotes
+
+- **Source**: Sprint S-D21-LEADTIME shipped lead-time capture at the quote level only; for Complex (Cpx) quotes the sub-tab records one cover-sheet shared across all sub-products. Multi-SP RFQs with genuinely different per-SP lead times (e.g. different material sourcing windows) cannot be represented. Deferred at ship ("per-SP lead-time table (Cpx operator quote-level only)").
+- **Acceptance**: (1) Product decision FIRST (review with Thiep): does CCL Vietnam quote per-SP lead times, or is quote-level sufficient for go-live? If sufficient → close WONTFIX with rationale. (2) If per-SP needed: extend the Cpx SP factory in `createCplxState` with an optional `lead_time` block; render a per-SP row/table in the sub-tab; keep quote-level as default/rollup. (3) Heal-on-read, no shape bump (PR #110 `safeLeadTime()` pattern). (4) Exporter (FIX-48) renders a per-SP section when present. (5) Tests for per-SP persist + legacy quote-level fallback.
+- **Effort**: M (~200 LOC if built; ~0 if product closes as quote-level-sufficient)
+- **Priority**: P3 (no operator has reported the gap; confirm scope with owner before building — may be WONTFIX)
+
+#### MES-3-FIX-50 — Document commitlint scope/type convention for contributors
+
+- **Source**: Recurring per-sprint commit-message friction: S-D21-LEADTIME branched as `feat(pricing):` then had to retitle to `feat(costing):` (scope-enum has no `pricing`); the PR #99 tech-debt note records 8 commits that breached `body-max-line-length` 120 via single-line `-m` bodies, fixable only by force-push (owner declined). Rules live in `commitlint.config.js` but there is no contributor-facing cheatsheet, so the same mistakes recur each sprint and trip the commit-messages CI check.
+- **Acceptance**: (1) Add a "Commit message convention" section to the canonical contributor doc (CONTRIBUTING.md or AGENT_PRINCIPLES.md) covering: allowed types; closed scope-enum (`costing` not `pricing`; `docs:` takes no scope); `header-max-length` 100; `body-max-line-length` 120 (wrap, never single-line `-m`); blank line before any trailer; avoid Closes/PR/FIX trailers in body (per FIX-25). (2) One good + one bad example. (3) Cross-link from the CLAUDE.md sprint-workflow section. (4) Doc-only, no code change.
+- **Effort**: S (~1 doc section, ~30 min)
+- **Priority**: P3 (process hygiene; cuts per-sprint CI-red commit-message churn before go-live and for post-go-live maintainers)
+
 #### KIOSK-001 — Real branded PWA icons
 
 - **Source**: MES-2.6a placeholder icons (Carbon-blue squares with white "K", zlib-encoded inline)
