@@ -148,7 +148,12 @@ jobs:
       # install step CI fails with "command not found: vitest".
       - run: cd apps/kiosk && npm ci
       - run: npm test
-      - run: cd desktop && npm ci && npm run test:license && npm run test:manifest
+      # `--ignore-scripts` skips desktop postinstall (electron-builder
+      # install-app-deps → node-gyp rebuild of node-hid + libusb). Ubuntu
+      # CI runner doesn't ship libusb-1.0-0-dev; test:license + test:manifest
+      # are pure JS, don't need rebuilt native binaries. Same pattern as
+      # vulnerability scan job line 30.
+      - run: cd desktop && npm ci --ignore-scripts && npm run test:license && npm run test:manifest
 
   test-client:
     name: Client tests
