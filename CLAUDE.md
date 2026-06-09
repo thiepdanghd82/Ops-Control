@@ -154,6 +154,57 @@ simple tasks.
 >
 > **Sprint history — newest first** (SHA-discipline per Lesson 0):
 >
+> **Sprint S-D21-PRE-GOLIVE — 3-PR pre-go-live polish bundle shipped 2026-06-09 (D-21 to CCL Vietnam Yen Phong go-live).**
+> Three independent features bundled under the same hardware-test session on a freshly-rebuilt Mac DMG SERVER 1.5.12
+> (SHA `0d5b3efa70f6a51c07d63139cb5480c8b83c3a5f9211bc2ce883a1fe640cedb7`). All 3 PRs admin-merged via squash to keep
+> main moving (CI-red pre-existing per MES-3-FIX-36/37/38/39 backlog; none regressed on the green checks: client tests
+> + commit messages + router siblings + runtime deps stayed green). Final client test count 883 → 904 (+21 quoteFilters
+> cases); xlsx export 142/142 unchanged after the +1 column shift.
+>
+> - **PR #109 — Agent guardrails + skills + CONTEXT glossary shipped 2026-06-09 (SHA: `95be4d9`).** New
+>   `AGENT_PRINCIPLES.md` (4 core principles: think-before-coding, simplicity, surgical changes, goal-driven +
+>   checkpoints; 5 working modes: ALIGN, DIAGNOSE, TDD, ZOOM-OUT, HANDOFF) wired into CLAUDE.md via
+>   `@AGENT_PRINCIPLES.md` import. New `CONTEXT.md` glossary for the project's dense jargon (`bd_mat_setup` /
+>   `bd_mat_run`, MOQ tiers, Indigo subtypes, alt-materials "mirror", print vs cut canonical fields). `AUTO_EXECUTE.md`
+>   header hardened — DORMANT by default + stale-content warning (original text targets v1.2→v1.3 upgrade, codebase at
+>   v1.5.12 + close to go-live). 6 mattpocock skills installed under `.agents/skills/` (diagnose,
+>   git-guardrails-claude-code, grill-with-docs, handoff, tdd, zoom-out) with `skills-lock.json` source-tracking.
+>   Process-only change, no runtime code.
+> - **PR #110 — Materials tab DRW column + rename Desc → Quote materials shipped 2026-06-09 (SHA: `5d89504`).** Operator
+>   request: separate the engineering-drawing material identifier from the quoted material identifier on every material
+>   row (Std + Cpx + per-SP), so the xlsx export to customer mirrors the same two columns. New text field
+>   `drw_material` placed BEFORE `Quote materials` (formerly `Desc.`) on both `CalcMaterials.jsx` (Std) and
+>   `SubProductRow.jsx` (Cpx). `drw_material: ''` added to default row template at 6 factory locations in `calcEngine.js`
+>   (createStdState materials_main + mirror; createEmptyStdState ×2; createSubProduct ×2). Legacy quotes heal on next
+>   save with default `''` — **Henry chose Option A: no schema-version bump** (STD_SHAPE_VERSION=3, CPLX_SHAPE_VERSION=4
+>   unchanged). xlsx export `server/services/quoteExport/sheets/03-materials.js` gets new column at position 3 BEFORE
+>   existing `desc`; banner span P→Q; subtotal label span A:C→A:D (`i<3` → `i<4`). desc column's label key switches
+>   `mat.desc → mat.quote_materials` so the Materials sheet renames without touching the Inks sheet (which still uses
+>   `mat.desc` for ink description — Inks DESC label stays "Description / Mô tả"). 2 new i18n keys: `mat.drw_material` +
+>   `mat.quote_materials` (EN+VN). 5 xlsx test files updated for the +1 column shift in Materials sheet (rows /
+>   subtotal / variant / multiTierRows / numFmt.regression); Inks sheet tests unchanged. calcEngine + validator + Inks
+>   lookup + HMAC payload all unchanged (field is metadata only — zero pricing impact).
+> - **PR #111 — Shared scoped filter bar for Quote History + Cost Breakdown shipped 2026-06-09 (SHA: `7e6cd4c`).** Both
+>   tabs fetch the same `sharedApi.getQuotes()` payload with the same `quote.state` schema. Filter logic was duplicated
+>   and drifted — **Summarize global search did NOT cover `sale_owner`** (operator regression), and neither tab had
+>   Date / Customer / Part / Sale scoped boxes. This change extracts ONE pure filter engine + ONE shared filter-bar UI,
+>   preserving the S-PROJFIX (Lesson 21) `end_cu || project` fallback and the NPI quote-level fallback
+>   (`state.npi_owner || quote.npi_owner`). New infrastructure: `lib/quoteFilters.js` — pure `applyQuoteFilters()` with
+>   caller-provided accessor (identity for Summarize already-flat rows; `quoteAccessor()` helper for raw QuoteHistory
+>   quotes). AND-combines across global query + date range + customer + part + sale. 21 test cases cover S-PROJFIX
+>   regression + NPI fallback + Summarize sale_owner miss + 4-filter combine + case-insensitive scopes.
+>   `hooks/useQuoteFilters.js` — state with built-in 300ms debounce (raw filter drives input value; `debouncedFilter`
+>   feeds `applyQuoteFilters`). State in-memory only — tab switch clears (intentional v1; URL sync + sessionStorage
+>   persistence deferred to v2). `components/ScopedFilterBar.{jsx,css}` — 2-row filter UI (row 1: global search +
+>   rightSlot for tab-specific actions like CSV button or pill filters; row 2: Date popover + 3 scoped text inputs +
+>   Clear-all + N-of-M counter). Date popover uses native `<input type="date">` + 5 presets (Today / This week /
+>   This month / Last 30 days / Clear) — **no new npm package**. Click-outside + Escape close popover. Tokens.css vars
+>   for dark/light theme parity (Lesson 6). Summarize.jsx adds `end_cu: st.end_cu || ''` to row builder for S-PROJFIX
+>   fallback. QuoteHistory.jsx pill buttons (All/Standard/Complex/Trash) move into ScopedFilterBar rightSlot;
+>   `useEffect` resets page on `debouncedFilter` or `filterType` change. Pagination + sort + sync btn + 30s polling +
+>   SSE push intact — filter state lives in hook outside `useAbortableFetch` tick so auto-refresh does NOT reset filter
+>   input that operator is typing.
+>
 > **Tech debt + CI state — recorded 2026-06-04 (branch `fix/contribution-reconcile-audit-hardening`, PR #99).** Three CI checks are red on PR #99; classified by re-running each check locally + comparing against `main`'s CI on base commit `30db7d2`: (1) **Lint + format — PRE-EXISTING.** `eslint .` reports 5 errors (no-unused-vars + no-empty), all in files this branch never touched: `client/src/services/connectionHealth.js` (2× unused `_`), `client/src/services/printAreaCore.js` (2× empty block at 1310/1314), `client/src/utils/DecimalInput.jsx` (unused `toDisplay`). Red on `main` too → matches MES-3-FIX-38 backlog. NOT fixed (out of branch scope). (2) **Server tests — PRE-EXISTING.** `npm test` red on CI (Node 22) but green locally on Node 24 — full chain passes (jest no-tests + kiosk vitest 53/53 + `node --test` server/scripts/domains 1231/1231, exit 0). Red on `main` `30db7d2` too, so not branch-caused. Prime suspect: flaky `per-entry ETIMEDOUT is isolated` (`server/routes/backupCode.integration.test.js:113`) or a Node 22↔24 behaviour gap — needs a separate isolated investigation (reproduce under Node 22). NOT fixed. (3) **Commit messages — BRANCH-CAUSED but left as-is.** All 8 commits violate commitlint `body-max-line-length` (120) — bodies were written as single 186–521-char lines via `git commit -m`. Only fixable by rewording history → force-push, which the owner declined (admin-merge squash instead). **New convention going forward: wrap every commit-message body line at ≤120 chars** so the commit-messages check stays green without a force-push.
 >
 > **Sprint S-D15-COSTING-CUTOVER — 7-PR cutover sprint at D-15 shipped 2026-05-25 / 2026-05-26.** Closed 4 latent costing/UI bugs surfaced during operator hardware tests on the freshly-built Mac DMG SERVER 1.5.10, plus shipped operator-onboarding docs for go-live D-0 (2026-06-09). Sprint ran across two calendar days because each fix required a fresh DMG rebuild + operator hardware re-verify before merging — six builds total. Final test count 800 → 843 (+43 client tests across 4 new helper modules). All 7 PRs merged to `main` via admin-merge (pre-existing CI-red triggered by MES-3-FIX-36/37/38/39 backlog; none of the merged PRs regressed on the green checks: client tests + commit messages + router siblings + runtime deps all stayed green).
