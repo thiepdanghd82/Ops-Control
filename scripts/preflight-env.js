@@ -87,6 +87,24 @@ if (env === 'production') {
       'LOSING THIS VALUE INVALIDATES TAMPER-DETECTION ON ALL PRE-LOSS QUOTE EXPORTS.'
   );
 
+  // Sprint S-D21-LICENSE-FIX 2026-06-09 — Ed25519 SPKI PEM bake or env-inject.
+  // Without it licenseService rejects all validation; server boots but operators
+  // see LICENSE_INVALID on every request. Preflight-gate so missing key fails
+  // boot loudly instead of silent runtime lockout. SPKI PEM shape check
+  // (-----BEGIN PUBLIC KEY-----...-----END PUBLIC KEY-----) — strict enough
+  // to catch typos / truncation, permissive enough to accept any valid Ed25519
+  // public key.
+  check(
+    'OPS_LICENSE_PUBKEY',
+    process.env.OPS_LICENSE_PUBKEY &&
+      process.env.OPS_LICENSE_PUBKEY.includes('BEGIN PUBLIC KEY') &&
+      process.env.OPS_LICENSE_PUBKEY.includes('END PUBLIC KEY'),
+    'must be a valid SPKI PEM block ' +
+      '(-----BEGIN PUBLIC KEY----- ... -----END PUBLIC KEY-----). ' +
+      'Source: prod-public.pem from offline license keypair. ' +
+      'LOSING THIS VALUE LOCKS OUT ALL USERS — every license validation fails.'
+  );
+
   const corsSet = (process.env.OPS_CORS_ORIGINS || '').trim();
   check(
     'OPS_CORS_ORIGINS',

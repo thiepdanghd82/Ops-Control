@@ -70,6 +70,7 @@ ssh "$REMOTE" "cat $APP_DIR/.env 2>/dev/null" > "$REMOTE_ENV_TMP" || true
 EXISTING_TOTP_KEY=$(grep -E '^OPS_TOTP_KEY=' "$REMOTE_ENV_TMP" | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
 EXISTING_KIOSK_KEY=$(grep -E '^OPS_KIOSK_KEY=' "$REMOTE_ENV_TMP" | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
 EXISTING_EXPORT_HMAC_KEY=$(grep -E '^OPS_EXPORT_HMAC_KEY=' "$REMOTE_ENV_TMP" | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
+EXISTING_LICENSE_PUBKEY=$(grep -E '^OPS_LICENSE_PUBKEY=' "$REMOTE_ENV_TMP" | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
 EXISTING_KEY_COUNT=$(wc -l < "$REMOTE_ENV_TMP" | tr -d ' ')
 if [ "$EXISTING_KEY_COUNT" -gt 0 ]; then
     echo "  ✓  Captured ${EXISTING_KEY_COUNT} existing env line(s) for merge-back"
@@ -101,6 +102,19 @@ else
     echo "      Without it, quote xlsx exports cannot be HMAC-signed. Server"
     echo "      refuses to start in NODE_ENV=production (see preflight)."
     echo "      Generate: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+fi
+# Sprint S-D21-LICENSE-FIX 2026-06-09 — Ed25519 SPKI PEM for license
+# validation (server/services/licenseService.js + desktop/license.js).
+# Whole-file merge preserves the value; this block surfaces missing-key
+# state. Without it server boots OK (legacy preflight didn't gate it)
+# but every license check fails → all users locked out post-deploy.
+# Preflight now gates this key (PR fix/d21-license-pubkey-preserve).
+if [ -n "$EXISTING_LICENSE_PUBKEY" ]; then
+    echo "  ✓  Preserving existing OPS_LICENSE_PUBKEY (${#EXISTING_LICENSE_PUBKEY} chars)"
+else
+    echo "  ⚠   No existing OPS_LICENSE_PUBKEY — operator must set one before boot."
+    echo "      Without it, all license validations fail → all users locked out."
+    echo "      Source: prod-public.pem from offline license keypair."
 fi
 echo ""
 
