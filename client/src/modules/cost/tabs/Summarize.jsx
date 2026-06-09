@@ -21,7 +21,44 @@ import { buildCsv, saveCsv } from '../../../services/csvExport';
 import { useQuoteFilters } from '../hooks/useQuoteFilters';
 import { applyQuoteFilters } from '../lib/quoteFilters';
 import ScopedFilterBar from '../components/ScopedFilterBar';
+import ColumnsToggle from '../../../components/Shared/ColumnsToggle';
+import { loadVisibleColumns } from '../../../components/Shared/ColumnsToggle.helpers';
 import './Summarize.css';
+
+// Column config — module-scoped so ColumnsToggle.helpers loader can read
+// it without recomputing per render. `rfq_no` flagged required (anchor;
+// also gives operator-visible quote identity in CSV export). Other
+// metadata (`w`, `right`, `auto`, `fmt`, `bold`, `color`) consumed by
+// the table render below — preserved as-is from pre-refactor.
+const SUMMARIZE_COLUMNS = [
+  { key: 'rfq_no', label: 'RFQ NO', w: 140, required: true },
+  { key: 'direct_cu', label: 'Direct Customer', auto: true },
+  { key: 'project', label: 'End Customer', auto: true },
+  { key: 'end_cu_pn', label: 'End CU PN', auto: true },
+  { key: 'description', label: 'Description', auto: true },
+  { key: 'production_size', label: 'Production Size', w: 110 },
+  { key: 'moq', label: 'MOQ', w: 60, right: true },
+  { key: 'yield_pct', label: 'Yield%', w: 55, right: true, fmt: (v) => pct(v) },
+  { key: 's_mat_cost', label: 'Material', w: 70, right: true, fmt: (v) => fmtN(v) },
+  { key: 'overhead', label: 'Overhead', w: 70, right: true, fmt: (v) => fmtN(v) },
+  { key: 'labor_cost', label: 'Labor', w: 70, right: true, fmt: (v) => fmtN(v) },
+  { key: 'tooling', label: 'Tooling', w: 65, right: true, fmt: (v) => fmtN(v) },
+  { key: 'pack_ship', label: 'Pack&Ship', w: 65, right: true, fmt: (v) => fmtN(v) },
+  { key: 'g_ttl_cost', label: 'G.Total', w: 70, right: true, fmt: (v) => fmtN(v), bold: true },
+  { key: 'target', label: 'Target Price', w: 75, right: true, fmt: (v) => fmtN(v, 4) },
+  { key: 'usd_price', label: 'Price', w: 65, right: true, fmt: (v) => fmtN(v, 4) },
+  { key: 'va_pct', label: 'VA%', w: 55, right: true, fmt: (v) => pct(v) },
+  { key: 'contr_pct', label: 'Contr. %', w: 65, right: true, fmt: (v) => pct(v) },
+  { key: 'gm_pct', label: 'GM%', w: 55, right: true, fmt: (v) => pct(v), color: true },
+  { key: 'trade_mode', label: 'Trade', w: 60 },
+  { key: 'npi_owner', label: 'NPI Owner', w: 90 },
+];
+const SUMMARIZE_COLUMNS_STORAGE_KEY = 'ops-cost-summarize-cols';
+// CSV always prepends these audit fields regardless of column-toggle state.
+// Operator workflows (audit cross-ref Quote History, multi-tier MOQ diff,
+// timestamp forensic) rely on these — hiding them in UI is a display
+// preference, but exporting without them breaks downstream tooling.
+const CSV_ALWAYS_INCLUDE_KEYS = ['quote_id', 'tier', 'update_date', 'type', 'sale_owner'];
 
 // Yield = 1 - Σ(scrap_pct) across every process in a state. Uses a simple
 // sum (not the compound 1-∏(1-s) formula calcEngine uses internally) because
@@ -114,6 +151,13 @@ export default function Summarize() {
   const { lib } = useCostLib();
   const [sortCol, setSortCol] = useState(null);
   const [sortAsc, setSortAsc] = useState(true);
+  // Visible columns — loaded from localStorage on mount via helper so
+  // initial render reflects the persisted toggle state (no flash from
+  // full set → filtered set). ColumnsToggle component owns hiddenKeys
+  // internally + fires onChange with already-filtered visibleColumns.
+  const [visibleColumns, setVisibleColumns] = useState(() =>
+    loadVisibleColumns(SUMMARIZE_COLUMNS, SUMMARIZE_COLUMNS_STORAGE_KEY, [])
+  );
   const { filter, debouncedFilter, setField, clearField, clearAll, hasActiveFilter } =
     useQuoteFilters();
   // Sprint AR — hook-managed fetch with isDirty + activeQuoteId as
@@ -351,42 +395,26 @@ export default function Summarize() {
   }, [sorted]);
 
   const exportCSV = useCallback(async () => {
-    const cols = [
-      'rfq_no',
-      'quote_id',
-      'tier',
-      'update_date',
-      'type',
-      'direct_cu',
-      'direct_cu_pn',
-      'project',
-      'end_cu_pn',
-      'description',
-      // `size` (canonical Cut dimensions) removed from CSV per operator
-      // feedback 2026-05-26 — it duplicates `production_size` for most
-      // quotes and confused readers on the rows where canonical Cut was
-      // never populated (showed `2x3` placeholder).
-      'production_size',
-      'moq',
-      'annual_qty',
-      'yield_pct',
-      's_mat_cost',
-      'overhead',
-      'labor_cost',
-      'vat_loss',
-      'tooling',
-      'pack_ship',
-      'g_ttl_cost',
-      'target',
-      'usd_price',
-      'va_pct',
-      'contr_pct',
-      'gm_pct',
-      'trade_mode',
-      'delivery_term',
-      'npi_owner',
-      'sale_owner',
-    ];
+    // CSV column composition (Option B agreed at Phase-1 scope):
+    //   - Always-include audit prefix: quote_id, tier, update_date, type,
+    //     sale_owner — operator workflows rely on these for cross-ref
+    //     with Quote History + multi-tier MOQ diff + timestamp forensic.
+    //   - Then visibleColumns (post-toggle): respects operator's column
+    //     toggle for display fields. Empty hidden = original full set
+    //     (minus `direct_cu_pn` / `annual_qty` / `vat_loss` /
+    //     `delivery_term` which were never in displayed columns config —
+    //     same drop as pre-toggle behavior; if Henry needs them back,
+    //     add to SUMMARIZE_COLUMNS as required: false).
+    // Dedupe defensively in case visibleColumns somehow overlaps prefix.
+    const visibleKeys = visibleColumns.map((c) => c.key);
+    const seen = new Set();
+    const cols = [];
+    for (const k of [...CSV_ALWAYS_INCLUDE_KEYS, ...visibleKeys]) {
+      if (!seen.has(k)) {
+        cols.push(k);
+        seen.add(k);
+      }
+    }
     // Export selected-and-visible if any selections; otherwise the full
     // visible set. Hidden selections (filtered out) are never written.
     const visibleSelected = sorted.filter((r) => selected.has(r.id));
@@ -403,7 +431,7 @@ export default function Summarize() {
       // inside saveCsv.
       window.alert(`Export failed: ${err?.message || err}`);
     }
-  }, [sorted, selected]);
+  }, [sorted, selected, visibleColumns]);
 
   // selectedVisibleCount = how many currently-visible rows are selected.
   // Used for the button label so it never lies about "N rows" when
@@ -414,7 +442,14 @@ export default function Summarize() {
   );
   const exportCount = selectedVisibleCount > 0 ? selectedVisibleCount : sorted.length;
 
-  // Column layout per user spec:
+  // Column layout per user spec — declared MODULE-SCOPED above as
+  // `SUMMARIZE_COLUMNS` so the ColumnsToggle helper can load persisted
+  // hidden keys at useState init. `visibleColumns` (state below) is the
+  // filtered subset after operator toggles. Per-render fmt closures
+  // (e.g. `pct(v)`) capture module imports at the top of this file, so
+  // closures resolve correctly even though SUMMARIZE_COLUMNS is declared
+  // outside the function body.
+  //
   // # → Direct Customer → End Customer (project field, legacy naming) →
   //   End CU PN → Description → cost columns → G.Total → Target Price →
   //   Price → VA% → GM% → Trade → NPI Owner (moved to end).
@@ -423,36 +458,6 @@ export default function Summarize() {
   // width, white-space: nowrap). Used for the identifier/name columns
   // where content length varies (Direct Customer, End Customer, End CU
   // PN, Description) — the wider labels would otherwise wrap or clip.
-  const columns = [
-    { key: 'rfq_no', label: 'RFQ NO', w: 140 },
-    { key: 'direct_cu', label: 'Direct Customer', auto: true },
-    { key: 'project', label: 'End Customer', auto: true },
-    { key: 'end_cu_pn', label: 'End CU PN', auto: true },
-    { key: 'description', label: 'Description', auto: true },
-    {
-      key: 'production_size',
-      label: 'Production Size',
-      w: 110,
-      // Centered + tabular numerals so 220×395 vs 60×120 align under each other.
-      // Sourced from `print_part_*` (Print sub-tab) with fallback to canonical
-      // `part_*` per row computation above.
-    },
-    { key: 'moq', label: 'MOQ', w: 60, right: true },
-    { key: 'yield_pct', label: 'Yield%', w: 55, right: true, fmt: (v) => pct(v) },
-    { key: 's_mat_cost', label: 'Material', w: 70, right: true, fmt: (v) => fmtN(v) },
-    { key: 'overhead', label: 'Overhead', w: 70, right: true, fmt: (v) => fmtN(v) },
-    { key: 'labor_cost', label: 'Labor', w: 70, right: true, fmt: (v) => fmtN(v) },
-    { key: 'tooling', label: 'Tooling', w: 65, right: true, fmt: (v) => fmtN(v) },
-    { key: 'pack_ship', label: 'Pack&Ship', w: 65, right: true, fmt: (v) => fmtN(v) },
-    { key: 'g_ttl_cost', label: 'G.Total', w: 70, right: true, fmt: (v) => fmtN(v), bold: true },
-    { key: 'target', label: 'Target Price', w: 75, right: true, fmt: (v) => fmtN(v, 4) },
-    { key: 'usd_price', label: 'Price', w: 65, right: true, fmt: (v) => fmtN(v, 4) },
-    { key: 'va_pct', label: 'VA%', w: 55, right: true, fmt: (v) => pct(v) },
-    { key: 'contr_pct', label: 'Contr. %', w: 65, right: true, fmt: (v) => pct(v) },
-    { key: 'gm_pct', label: 'GM%', w: 55, right: true, fmt: (v) => pct(v), color: true },
-    { key: 'trade_mode', label: 'Trade', w: 60 },
-    { key: 'npi_owner', label: 'NPI Owner', w: 90 },
-  ];
 
   return (
     <div className="sum">
@@ -486,20 +491,28 @@ export default function Summarize() {
         totalCount={records.length}
         globalPlaceholder="Search RFQ / Customer / Part / Sale Owner / NPI Owner…"
         rightSlot={
-          <button
-            className="sum-export-btn"
-            onClick={exportCSV}
-            disabled={exportCount === 0}
-            title={
-              selectedVisibleCount > 0
-                ? `Export ${selectedVisibleCount} selected row(s) — native Save dialog`
-                : sorted.length > 0
-                  ? `Export all ${sorted.length} visible row(s) — native Save dialog`
-                  : 'No rows to export'
-            }
-          >
-            CSV Export{exportCount > 0 ? ` (${exportCount})` : ''}
-          </button>
+          <>
+            <ColumnsToggle
+              columns={SUMMARIZE_COLUMNS}
+              storageKey={SUMMARIZE_COLUMNS_STORAGE_KEY}
+              onChange={setVisibleColumns}
+              defaultHiddenKeys={[]}
+            />
+            <button
+              className="sum-export-btn"
+              onClick={exportCSV}
+              disabled={exportCount === 0}
+              title={
+                selectedVisibleCount > 0
+                  ? `Export ${selectedVisibleCount} selected row(s) — native Save dialog`
+                  : sorted.length > 0
+                    ? `Export all ${sorted.length} visible row(s) — native Save dialog`
+                    : 'No rows to export'
+              }
+            >
+              CSV Export{exportCount > 0 ? ` (${exportCount})` : ''}
+            </button>
+          </>
         }
       />
       <div className="sum-table-wrap">
@@ -530,7 +543,7 @@ export default function Summarize() {
                   onChange={toggleSelectAll}
                 />
               </th>
-              {columns.map((c) => (
+              {visibleColumns.map((c) => (
                 <th
                   key={c.key}
                   // `auto: true` columns get no width + nowrap so the
@@ -545,7 +558,7 @@ export default function Summarize() {
             </tr>
             <tr className="sum-select-header-row">
               {/* Checkbox column already occupies leftmost via rowSpan=2 above. */}
-              <th colSpan={columns.length} className="sum-select-hint">
+              <th colSpan={visibleColumns.length} className="sum-select-hint">
                 {selectedVisibleCount > 0
                   ? `${selectedVisibleCount} row(s) selected — only those will be exported${selected.size > selectedVisibleCount ? ` (${selected.size - selectedVisibleCount} more hidden by filter)` : ''}`
                   : 'No rows selected — export will include all visible rows'}
@@ -555,7 +568,7 @@ export default function Summarize() {
           <tbody>
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={columns.length + 1} className="sum-empty-cell">
+                <td colSpan={visibleColumns.length + 1} className="sum-empty-cell">
                   {loadError ? (
                     <EmptyState
                       icon="⚠️"
@@ -596,7 +609,7 @@ export default function Summarize() {
                       onClick={(e) => e.stopPropagation()}
                     />
                   </td>
-                  {columns.map((c) => {
+                  {visibleColumns.map((c) => {
                     // RFQ NO gets its own color override from the rfqColors store;
                     // other "color: true" columns (GM%) still use gmClr.
                     const rfqTint = c.key === 'rfq_no' ? rfqColors[r.rfq_no] : null;
