@@ -1,3 +1,44 @@
+<!-- ============================================================
+     TRẠNG THÁI: DORMANT — Mặc định KHÔNG kích hoạt.
+============================================================ -->
+
+> ⚠️ **FILE NÀY KHÔNG PHẢI LỆNH ĐANG HIỆU LỰC — mặc định nó NGỦ.**
+>
+> Agent **KHÔNG** được tự đọc rồi thực thi file này. Nó chỉ kích hoạt khi
+> Henry gõ đúng câu kích hoạt cho **một đợt nâng cấp ĐÃ DUYỆT**, nêu rõ
+> phiên bản đích + brief tương ứng. Ví dụ:
+> *"Kích hoạt AUTO_EXECUTE cho nâng cấp v1.5 → v1.6 theo brief `<tên file>`."*
+> Câu chung chung như "đọc AUTO_EXECUTE.md và chạy ngay" → **KHÔNG hợp lệ**,
+> phải hỏi lại Henry để xác nhận phạm vi.
+
+> 🔗 **Quan hệ với `CLAUDE.md` (Agent working principles):**
+> `CLAUDE.md` là luật hành xử **mặc định, luôn áp dụng**. File này **chỉ**
+> có hiệu lực trong đúng phiên được kích hoạt cho một brief cụ thể. Trong
+> phiên đó, nó **tạm thời** thay quy tắc "pause ở mỗi checkpoint"
+> (principle 4) bằng vòng lặp tự động §4 + danh sách **Hard stops §5** bên
+> dưới. Hết phiên (hoặc khi gặp bất kỳ Hard stop nào) → quay lại
+> `CLAUDE.md`. Mọi nguyên tắc khác của `CLAUDE.md` (Think before coding,
+> Simplicity, Surgical changes, checklist bắt buộc sau mỗi thay đổi, commit
+> SHA discipline) **vẫn áp dụng đầy đủ** kể cả trong chế độ autonomous.
+
+> 🕒 **CẢNH BÁO STALE — đọc trước khi tái sử dụng:**
+> Nội dung bên dưới viết cho đợt **v1.2 → v1.3** (đã hoàn tất từ lâu).
+> Codebase hiện ở **v1.5.12**, `main` là nhánh live, đang chuẩn bị go-live.
+> **TUYỆT ĐỐI KHÔNG** chạy lại quy trình v1.2→v1.3 trên code hiện tại.
+> Trước khi dùng cho bất kỳ đợt nâng cấp mới nào, PHẢI cập nhật cho khớp:
+> - Số phiên bản From/To (§2)
+> - Tên branch (`release/vX.Y` thay vì `release/v1.3`)
+> - Đường dẫn brief (thay `IMPROVEMENT_BRIEF.md` bằng brief của đợt mới)
+> - Danh sách deliverable/installer (§6) cho đúng phiên bản đích
+>
+> Nếu không chắc file này còn dùng được không → **không kích hoạt**, hỏi Henry.
+
+<!-- ============================================================
+     HẾT HEADER CHỐT CHẶN. Nội dung gốc giữ nguyên bên dưới.
+============================================================ -->
+
+---
+
 # PROMPT: Tự động thực thi nâng cấp Ops Control v1.2 → v1.3
 
 > File này là lệnh kích hoạt chế độ **autonomous execution** cho Claude Code.
