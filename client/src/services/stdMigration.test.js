@@ -81,6 +81,7 @@ test('upgradeStdState: already-current state returned by reference (short-circui
     num_moq: 1,
     extra_moqs: [],
     materials: [{ code: 'M001', _mid: 'm_0_a' }],
+    pricing_snapshot: {}, // present + object → healPricingSnapshot no-ops
   };
   const next = upgradeStdState(current);
   assert.equal(next, current, 'no-op when fully upgraded (reference equality)');
@@ -222,6 +223,7 @@ test('upgradeStdState: already-upgraded quote → returns same ref', () => {
     materials: [{ _mid: 'm1', code: 'M001' }],
     part_width: 462,
     part_length_md: 135,
+    pricing_snapshot: {}, // present + object → healPricingSnapshot no-ops
   };
   const next = upgradeStdState(quote);
   assert.equal(next, quote, 'short-circuit when nothing needs healing');
@@ -275,6 +277,7 @@ test('upgradeStdState: short-circuit when all _mid populated (no churn)', () => 
     processes: [{ _mid: 'p1', workcenter: 'X' }],
     part_width: 100,
     part_length_md: 50,
+    pricing_snapshot: {}, // present + object → healPricingSnapshot no-ops
   };
   const next = upgradeStdState(quote);
   assert.equal(next, quote, 'no _mid gaps + no print-cut mismatch → same ref');
@@ -319,4 +322,66 @@ test('upgradeStdState v3: idempotent — applying twice returns same shape', () 
   assert.equal(once._schema_version, 3);
   assert.equal(twice._schema_version, 3);
   assert.equal(twice, once, 'second call returns same ref (short-circuit at v3)');
+});
+
+// ─── Phase 1 pricing snapshot heal-on-read (additive, no version bump)
+
+test('upgradeStdState: legacy state without pricing_snapshot gets empty default', () => {
+  const legacy = {
+    _schema_version: 1,
+    materials: [{ _mid: 'm1', code: 'M1' }],
+  };
+  const upgraded = upgradeStdState(legacy);
+  assert.ok(upgraded.pricing_snapshot, 'pricing_snapshot now present');
+  assert.equal(upgraded.pricing_snapshot._captured_at, null);
+  assert.equal(upgraded.pricing_snapshot._synthesized, false);
+  assert.equal(upgraded.pricing_snapshot._site, null);
+  assert.deepEqual(upgraded.pricing_snapshot.materials, {});
+  assert.deepEqual(upgraded.pricing_snapshot.rates, {});
+  assert.deepEqual(upgraded.pricing_snapshot.coverage, []);
+});
+
+test('upgradeStdState: existing pricing_snapshot is NOT overwritten (idempotent)', () => {
+  const withSnap = {
+    _schema_version: 3,
+    materials_main: [{ _mid: 'm1', code: 'M1' }],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [{ _mid: 'm1', code: 'M1' }],
+    inks: [],
+    processes: [],
+    pricing_snapshot: {
+      _captured_at: '2026-06-09T00:00:00.000Z',
+      _captured_by: null,
+      _synthesized: false,
+      _lib_version: null,
+      _site: 'VN',
+      materials: { M1: { s_price: 5.0 } },
+      coverage: [],
+      rates: {},
+    },
+  };
+  const upgraded = upgradeStdState(withSnap);
+  // Short-circuit path: same reference, snapshot untouched.
+  assert.equal(upgraded, withSnap);
+  assert.equal(upgraded.pricing_snapshot.materials.M1.s_price, 5.0);
+  assert.equal(upgraded.pricing_snapshot._site, 'VN');
+});
+
+test('upgradeStdState: current-version state missing snapshot still heals via short-circuit path', () => {
+  // Fully-current shape EXCEPT pricing_snapshot — short-circuit must
+  // not return early without adding the snapshot.
+  const currentNoSnap = {
+    _schema_version: 3,
+    materials_main: [{ _mid: 'm1', code: 'M1' }],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [{ _mid: 'm1', code: 'M1' }],
+    inks: [],
+    processes: [],
+  };
+  const upgraded = upgradeStdState(currentNoSnap);
+  assert.notEqual(upgraded, currentNoSnap, 'returns new object because snapshot was added');
+  assert.ok(upgraded.pricing_snapshot);
+  assert.equal(upgraded.pricing_snapshot._captured_at, null);
 });

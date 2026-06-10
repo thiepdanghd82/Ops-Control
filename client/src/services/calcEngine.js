@@ -7,6 +7,7 @@
  * lib shape: { rate: [], ddl: { coverage: [], click_charges: {}, tool_life: {} } }
  */
 import { isIndigoPrintType } from './printTypeUtils.js';
+import { createEmptySnapshot } from './pricingSnapshot.js';
 
 /**
  * @typedef {Object} CalcResult
@@ -1508,6 +1509,12 @@ export function createStdState() {
       lt_process: '',
       lt_material_type: '',
     },
+    // Pricing snapshot — Phase 1 foundation for fixing the calcEngine
+    // recompute-drift bug (quote.state today does NOT embed pricing
+    // params, so re-opening an old quote after master rates shift
+    // produces a different cost). Empty default; freezeLib(lib, state)
+    // populates at save time (Phase 2). See pricingSnapshot.js.
+    pricing_snapshot: createEmptySnapshot(),
   };
 }
 
@@ -1679,6 +1686,9 @@ export function createEmptyStdState() {
       lt_process: '',
       lt_material_type: '',
     },
+    // Pricing snapshot — see createStdState for the contract; mirrored
+    // here so RESET_STD (New button) starts with the same empty shape.
+    pricing_snapshot: createEmptySnapshot(),
   };
 }
 
@@ -1743,6 +1753,9 @@ export function createCplxState() {
       lt_process: '',
       lt_material_type: '',
     },
+    // Pricing snapshot — quote-level (not per-SP), captures USED rows
+    // from lib at save time. See pricingSnapshot.js / createStdState.
+    pricing_snapshot: createEmptySnapshot(),
   };
 }
 
