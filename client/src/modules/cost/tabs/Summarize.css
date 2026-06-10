@@ -98,6 +98,9 @@
   box-shadow: none;
   font-size: 12px;
   letter-spacing: 0.16px;
+  /* Approx column-label row height (padding 10×2 + ~16 line-box + 2 border).
+     Used to stack the select-hint row sticky-below instead of overlapping. */
+  --sum-header-h: 36px;
 }
 .sum-table thead th {
   position: sticky;
@@ -281,7 +284,12 @@
   cursor: pointer;
   vertical-align: middle;
 }
-.sum-select-header-row > th {
+/* Specificity must beat `.sum-table thead th` (1 class + 2 type = 12)
+   so the `top:` override actually wins — without `.sum-table thead`
+   prefix the var resolves to the right value but `top:0` from the
+   broader rule overrides it and both header rows stack at y=0,
+   hiding the column-label row behind the hint row on scroll. */
+.sum-table thead .sum-select-header-row > th {
   background: #f8fafc;
   font-weight: 400;
   font-style: italic;
@@ -291,6 +299,10 @@
   border-bottom: 1px solid #e2e8f0;
   text-align: left;
   cursor: default;
+  /* Stack below the column-label row instead of overlapping at top:0
+     (both rows live in <thead> and inherit position:sticky). */
+  top: var(--sum-header-h);
+  z-index: 1;
 }
 .sum-select-hint {
   letter-spacing: 0.01em;
