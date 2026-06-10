@@ -923,7 +923,19 @@ export function calcReducer(state, action) {
 
     // ── Global ──
     case A.LOAD_QUOTE: {
-      const { quoteType, state: qState } = payload;
+      const { quoteType, state: qState, action } = payload;
+      // Phase 3 — `action === 'copy'` resets quote identity (so the
+      // next save creates a NEW server record instead of updating the
+      // source) and stamps `pricing_snapshot._synthesized = true` +
+      // clears `_captured_at` / `_captured_by` so the next save re-
+      // freezes against the current master library + records the
+      // copying operator. `action === 'load'` (or omitted) preserves
+      // identity exactly as pre-Phase-3 — BC for every existing caller.
+      const isCopy = action === 'copy';
+      const copySnapshot = (snap) => {
+        if (!snap || typeof snap !== 'object') return snap;
+        return { ...snap, _synthesized: true, _captured_at: null, _captured_by: null };
+      };
       // Sprint 18: schema migration moved into dedicated migrator
       // modules (stdMigration / cplxMigration). LOAD_QUOTE now spreads
       // the factory defaults first (so legacy quotes missing a field
@@ -934,12 +946,15 @@ export function calcReducer(state, action) {
       // throughout the reducer.
       if (quoteType === 'std') {
         const merged = { ...createStdState(), ...qState };
-        const next = upgradeStdState(merged);
+        const upgraded = upgradeStdState(merged);
+        const next = isCopy
+          ? { ...upgraded, pricing_snapshot: copySnapshot(upgraded.pricing_snapshot) }
+          : upgraded;
         return {
           ...state,
           isDirty: false,
-          activeQuoteId: payload.id || null,
-          activeQuoteVersion: payload.version || 0,
+          activeQuoteId: isCopy ? null : payload.id || null,
+          activeQuoteVersion: isCopy ? 0 : payload.version || 0,
           stdState: next,
         };
       }
@@ -959,13 +974,16 @@ export function calcReducer(state, action) {
           };
         });
       }
-      const next = upgradeCplxState(mergedCplx);
+      const upgradedCpx = upgradeCplxState(mergedCplx);
+      const nextCpx = isCopy
+        ? { ...upgradedCpx, pricing_snapshot: copySnapshot(upgradedCpx.pricing_snapshot) }
+        : upgradedCpx;
       return {
         ...state,
         isDirty: false,
-        activeQuoteId: payload.id || null,
-        activeQuoteVersion: payload.version || 0,
-        cplxState: next,
+        activeQuoteId: isCopy ? null : payload.id || null,
+        activeQuoteVersion: isCopy ? 0 : payload.version || 0,
+        cplxState: nextCpx,
       };
     }
 

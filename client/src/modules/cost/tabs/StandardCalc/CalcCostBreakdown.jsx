@@ -13,6 +13,7 @@ import {
   inkCostTotal,
   matCostExcludingInk,
 } from '../../../../services/calcEngine';
+import { snapshotPricingParams } from '../../../../services/pricingSnapshot';
 import { fmtN, pct, gmClr } from '../../../../utils/format';
 
 // Re-derive VA / Contribution / GM at a different price without
@@ -49,10 +50,12 @@ export default function CalcCostBreakdown() {
 
   const tiers = useMemo(() => {
     if (!lib) return [];
+    // Phase 3 — resolve snapshot ONCE per memo cycle, reuse across tiers.
+    const { snapshot } = snapshotPricingParams(st, lib);
     return enumerateTiers(st).map(({ idx, moq, sp, eau }) => {
       try {
         const tierSt = buildTierState(st, idx, sp, moq, eau);
-        return { idx, moq, sp, eau, result: calcAll(tierSt, null, lib, null) };
+        return { idx, moq, sp, eau, result: calcAll(tierSt, null, lib, null, { snapshot }) };
       } catch {
         return { idx, moq, sp, eau, result: null };
       }

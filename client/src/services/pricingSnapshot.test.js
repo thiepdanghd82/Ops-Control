@@ -238,8 +238,35 @@ describe('freezeLib — metadata + edge cases', () => {
     assert.equal(without._lib_version, null);
   });
 
-  test('_captured_by always null in Phase 1 (Phase 2 will pass user_id)', () => {
+  test('_captured_by defaults to null when options omitted (legacy callers)', () => {
     const snap = freezeLib({ mat: [], rate: [], ddl: { coverage: [] } }, {});
+    assert.equal(snap._captured_by, null);
+  });
+
+  test('_captured_by reads options.userId — Phase 3 explicit-option pattern', () => {
+    const snap = freezeLib(
+      { mat: [], rate: [], ddl: { coverage: [] } },
+      {},
+      { userId: 'henry' }
+    );
+    assert.equal(snap._captured_by, 'henry');
+  });
+
+  test('_captured_by accepts numeric user id (server may surface number)', () => {
+    const snap = freezeLib(
+      { mat: [], rate: [], ddl: { coverage: [] } },
+      {},
+      { userId: 42 }
+    );
+    assert.equal(snap._captured_by, 42);
+  });
+
+  test('_captured_by falls back to null when options.userId explicitly null', () => {
+    const snap = freezeLib(
+      { mat: [], rate: [], ddl: { coverage: [] } },
+      {},
+      { userId: null }
+    );
     assert.equal(snap._captured_by, null);
   });
 
