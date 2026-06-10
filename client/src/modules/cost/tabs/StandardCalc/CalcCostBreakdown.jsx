@@ -14,6 +14,7 @@ import {
   matCostExcludingInk,
 } from '../../../../services/calcEngine';
 import { snapshotPricingParams } from '../../../../services/pricingSnapshot';
+import SnapshotPanel from '../../components/SnapshotPanel';
 import { fmtN, pct, gmClr } from '../../../../utils/format';
 
 // Re-derive VA / Contribution / GM at a different price without
@@ -48,10 +49,17 @@ export default function CalcCostBreakdown() {
   const { t } = useI18n();
   const st = stdState;
 
+  // Phase 4 — lift snapshot resolution out of the tiers memo so the
+  // <SnapshotPanel> can render it without recomputing. `source` +
+  // `snapshot` come from snapshotPricingParams; persisted wins, legacy
+  // synthesizes from current lib.
+  const { source: snapshotSource, snapshot } = useMemo(
+    () => (lib ? snapshotPricingParams(st, lib) : { source: 'empty', snapshot: null }),
+    [st, lib]
+  );
+
   const tiers = useMemo(() => {
     if (!lib) return [];
-    // Phase 3 — resolve snapshot ONCE per memo cycle, reuse across tiers.
-    const { snapshot } = snapshotPricingParams(st, lib);
     return enumerateTiers(st).map(({ idx, moq, sp, eau }) => {
       try {
         const tierSt = buildTierState(st, idx, sp, moq, eau);
@@ -60,7 +68,11 @@ export default function CalcCostBreakdown() {
         return { idx, moq, sp, eau, result: null };
       }
     });
-  }, [st, lib]);
+  }, [st, lib, snapshot]);
+
+  // Active-tier warnings (site_mismatch etc.) for the SnapshotPanel.
+  const activeIdx = st.active_moq_idx || 0;
+  const activeWarnings = tiers.find((t) => t.idx === activeIdx)?.result?._warnings || [];
 
   if (!lib) {
     return (
@@ -441,6 +453,10 @@ export default function CalcCostBreakdown() {
             </div>
           );
         })()}
+      {/* Phase 4 — pricing snapshot audit panel. Collapsed by default;
+          operator opens to see when the quote was frozen, by whom,
+          under which site, plus any site-mismatch warnings. */}
+      <SnapshotPanel source={snapshotSource} snapshot={snapshot} warnings={activeWarnings} />
     </div>
   );
 }

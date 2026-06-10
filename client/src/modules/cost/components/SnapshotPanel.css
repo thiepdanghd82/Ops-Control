@@ -1,0 +1,102 @@
+/* SnapshotPanel — audit info panel under Cost Breakdown.
+ * Class prefix `.snapshot-panel-*`. Tokens.css for theme parity. */
+
+.snapshot-panel {
+  margin-top: 16px;
+  border: 1px solid var(--color-slate-200, #e5e7eb);
+  border-radius: 6px;
+  background: var(--color-slate-50, #f8fafc);
+}
+
+.snapshot-panel-summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--color-slate-700, #334155);
+  list-style: none;
+  user-select: none;
+}
+
+/* Hide the default ▶ marker on Chromium/Webkit while keeping the
+   click-to-toggle affordance. Replace with our own caret. */
+.snapshot-panel-summary::-webkit-details-marker {
+  display: none;
+}
+.snapshot-panel-summary::before {
+  content: '▸';
+  color: var(--color-slate-500, #64748b);
+  font-size: 11px;
+  transition: transform 0.15s;
+}
+.snapshot-panel[open] > .snapshot-panel-summary::before {
+  transform: rotate(90deg);
+}
+
+.snapshot-panel-title {
+  font-weight: 600;
+  color: var(--color-slate-900, #0f172a);
+}
+
+.snapshot-panel-fields {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  padding: 8px 14px 12px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-slate-700, #334155);
+  border-top: 1px solid var(--color-slate-200, #e5e7eb);
+}
+
+.snapshot-panel-fields dt {
+  font-weight: 500;
+  color: var(--color-slate-500, #64748b);
+}
+.snapshot-panel-fields dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Status-line colour pairs the dd with its source intent. */
+.snapshot-panel-status-persisted {
+  color: var(--color-success-600, #0e6027);
+}
+.snapshot-panel-status-synthesized {
+  color: var(--color-warning-600, #92400e);
+}
+.snapshot-panel-status-empty {
+  color: var(--color-slate-500, #64748b);
+}
+
+.snapshot-panel-warnings {
+  list-style: disc;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--color-danger-600, #991b1b);
+}
+
+/* Copy-mode banner — sits at the top of the Pricing Worksheet when the
+ * operator opened a quote via right-click Copy. Carbon "info" tone so
+ * it doesn't look like an error.
+ *
+ * Pure CSS — props-driven sub-classes (.banner-info / .banner-warn)
+ * are reserved for future re-use across modules. */
+.snapshot-copy-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin: 0 0 12px;
+  font-size: 13px;
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+  border-radius: 6px;
+  font-weight: 500;
+}
+.snapshot-copy-banner-icon {
+  flex-shrink: 0;
+}

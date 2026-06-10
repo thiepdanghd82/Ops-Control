@@ -15,6 +15,8 @@ import {
   buildCpxRowsPayload,
 } from '../../../../services/calcEngine';
 import { freezeLib, snapshotPricingParams } from '../../../../services/pricingSnapshot';
+import { isCopyMode } from '../../components/SnapshotPanel.helpers';
+import '../../components/SnapshotPanel.css';
 import {
   addSubProduct,
   removeSubProduct,
@@ -416,9 +418,21 @@ export default function ComplexCalc() {
     }
   }, [cs]);
   const labels = PACK_LABELS[cs.packing_method] || PACK_LABELS.Sheet;
+  const copyMode = isCopyMode(cs, activeQuoteId);
 
   return (
     <div className="cc">
+      {/* Phase 4 — Cpx copy-mode banner. Same logic as Std. */}
+      {copyMode && (
+        <div className="snapshot-copy-banner" role="status" aria-live="polite">
+          <span className="snapshot-copy-banner-icon" aria-hidden="true">
+            ⎘
+          </span>
+          <span>
+            Copy mode — saving will create a new quote and freeze current library rates
+          </span>
+        </div>
+      )}
       {/* Sub-tab bar — wrapped in TabBarOverflow for narrow-screen fit */}
       <div className="cc-tab-bar">
         <TabBarOverflow

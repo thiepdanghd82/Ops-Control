@@ -13,6 +13,8 @@ import {
   buildStdRowsPayload,
 } from '../../../../services/calcEngine';
 import { freezeLib } from '../../../../services/pricingSnapshot';
+import { isCopyMode } from '../../components/SnapshotPanel.helpers';
+import '../../components/SnapshotPanel.css';
 import { costApi, sharedApi } from '../../../../services/api';
 import { chatApi, openChatRoom } from '../../../../services/chatApi';
 import { useI18n } from '../../../../utils/useI18n';
@@ -357,8 +359,24 @@ export default function StandardCalc() {
       content = <CalcHeader />;
   }
 
+  const copyMode = isCopyMode(stdState, activeQuoteId);
+
   return (
     <div className="sc">
+      {/* Phase 4 — copy-mode banner. Appears when operator right-clicked
+          Copy from Quote History; LOAD_QUOTE reset activeQuoteId and
+          flipped pricing_snapshot._synthesized so the next save creates
+          a new quote and freezes against the current master library. */}
+      {copyMode && (
+        <div className="snapshot-copy-banner" role="status" aria-live="polite">
+          <span className="snapshot-copy-banner-icon" aria-hidden="true">
+            ⎘
+          </span>
+          <span>
+            Copy mode — saving will create a new quote and freeze current library rates
+          </span>
+        </div>
+      )}
       {/* Sub-tab bar — wrapped in TabBarOverflow so arrows + fade
           appear automatically when the bar is wider than viewport
           (common on 14" laptops with sidebar expanded). */}
