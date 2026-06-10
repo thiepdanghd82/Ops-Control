@@ -242,6 +242,7 @@ import {
   upsertQuote,
   VersionConflictError,
 } from '../repositories/quotesStore.js';
+import { recordSnapshotSave } from '../services/pricingSnapshotMetrics.js';
 import {
   setAuthCookies,
   clearAuthCookies,
@@ -2597,6 +2598,7 @@ router.post('/quotes', saveRateLimit, async (req, res) => {
     } catch {
       /* audit failures must never block save */
     }
+    recordSnapshotSave(saved);
     emitDataChange('quote.saved', {
       id: saved?.id,
       version: saved?._version,
@@ -2760,6 +2762,7 @@ router.patch('/quotes/:id', saveRateLimit, async (req, res) => {
     } catch {
       /* audit failures must never block save */
     }
+    recordSnapshotSave(saved);
     emitDataChange('quote.saved', {
       id: saved?.id,
       version: saved?._version,
