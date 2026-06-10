@@ -7,7 +7,56 @@
  * lib shape: { rate: [], ddl: { coverage: [], click_charges: {}, tool_life: {} } }
  */
 import { isIndigoPrintType } from './printTypeUtils.js';
-import { createEmptySnapshot } from './pricingSnapshot.js';
+import {
+  createEmptySnapshot,
+  getCoverageFromSnapshot,
+  getMatFromSnapshot,
+  getRateFromSnapshot,
+  getSnapshotSite,
+} from './pricingSnapshot.js';
+import { warn as devWarn } from '../utils/logger.js';
+
+/**
+ * Phase 2 resolver — internal helper that reads pricing values via the
+ * persisted snapshot first, falling back to the live `lib.*` master
+ * library on a per-key miss. Snapshot wins on direct hit; miss falls
+ * through to `lib` so post-save additions (operator added a new
+ * material/workcenter after the snapshot was frozen) still calc.
+ *
+ * Resolver pattern is INTERNAL to the calcAll flow only. The public
+ * `getMatByCode(lib, code)` / `getRateByWC(lib, wc)` exports keep
+ * their 2-arg signature for external callers (CostLibContext +
+ * SubProductRow.jsx). Inside calcAll → calcInk / calcProcess we route
+ * the lookups via this resolver instead.
+ *
+ * When `snapshot` is null/empty (legacy quote OR explicit BC mode call
+ * `calcAll(st, allSpResults, lib)` with no options), every accessor
+ * falls through to lib → behavior is identical to pre-Phase-2.
+ */
+function createResolver(snapshot, lib) {
+  return {
+    getMat(code) {
+      const fromSnap = getMatFromSnapshot(snapshot, code);
+      if (fromSnap) return fromSnap;
+      // Match the case-insensitive trimmed lookup `getMatByCode` does
+      // so a snapshot miss falls back identically to the legacy path.
+      if (!lib || !Array.isArray(lib.mat)) return null;
+      const c = String(code || '').trim().toLowerCase();
+      return lib.mat.find((m) => String(m.code).trim().toLowerCase() === c) || null;
+    },
+    getRate(wc) {
+      const fromSnap = getRateFromSnapshot(snapshot, wc);
+      if (fromSnap) return fromSnap;
+      if (!lib || !Array.isArray(lib.rate)) return null;
+      return lib.rate.find((r) => r.workcenter === wc) || null;
+    },
+    getCoverage() {
+      const fromSnap = getCoverageFromSnapshot(snapshot);
+      if (fromSnap && fromSnap.length > 0) return fromSnap;
+      return (lib && lib.ddl && lib.ddl.coverage) || [];
+    },
+  };
+}
 
 /**
  * @typedef {Object} CalcResult
@@ -419,7 +468,7 @@ export function calcMat(mat, st, moq, allSpResults, subproducts) {
 
 // ── Ink Cost ──
 
-export function calcInk(ink, st, moq, lib) {
+export function calcInk(ink, st, moq, lib, options = {}) {
   // Row identity gate — V3.3 only checked `ink.color` because that build
   // had a single "Color name" input. Ops Control v1.2 added a separate
   // "IFS Code" column; operators who typed only the IFS code (leaving
@@ -436,7 +485,12 @@ export function calcInk(ink, st, moq, lib) {
   // whole layout. Empty = follow Layout's computed pitch.
   const pitch = Number(ink.pitch_mm) > 0 ? Number(ink.pitch_mm) : calcPitch(st);
   const layout_per_sheet = calcLayoutPerSheet(st);
-  const covArr = (lib.ddl && lib.ddl.coverage) || [];
+  // Phase 2: route coverage lookup through the resolver when calcAll
+  // provides one (post-snapshot path). Falls back to direct lib read
+  // for backward-compat callers (Phase 1 calcInk(ink, st, moq, lib)).
+  const covArr = options.resolver
+    ? options.resolver.getCoverage()
+    : (lib && lib.ddl && lib.ddl.coverage) || [];
   const covObj = covArr.find((c) => c.pt === ink.print_type);
   const ink_cover_val = ink.coverage_override > 0 ? ink.coverage_override : covObj ? covObj.cov : 0;
   const ink_cover_disp = isIndigo ? '' : ink_cover_val || '';
@@ -516,7 +570,7 @@ export function calcInk(ink, st, moq, lib) {
 
 // ── Process Cost ──
 
-export function calcProcess(proc, st, moq, lib) {
+export function calcProcess(proc, st, moq, lib, options = {}) {
   if (!proc.workcenter)
     return {
       setup_mach: 0,
@@ -533,11 +587,18 @@ export function calcProcess(proc, st, moq, lib) {
       total_time: 0,
       pitch: 0,
     };
-  const rate = getRateByWC(lib, proc.workcenter) || { machine_rate: 0, labor_rate: 0 };
+  // Phase 2: snapshot-first lookups via resolver. Falls back to the
+  // direct `getRateByWC(lib, …)` path for legacy callers that don't
+  // pass `options.resolver`.
+  const rate = (options.resolver
+    ? options.resolver.getRate(proc.workcenter)
+    : getRateByWC(lib, proc.workcenter)) || { machine_rate: 0, labor_rate: 0 };
   const mach_rate = rate.machine_rate || 0;
   const labor_rate = rate.labor_rate || 0;
   const crew = rate.crew || 1;
-  const manual_rate = (getRateByWC(lib, 'Manual') || {}).labor_rate || 2.54;
+  const manual_rate =
+    ((options.resolver ? options.resolver.getRate('Manual') : getRateByWC(lib, 'Manual')) || {})
+      .labor_rate || 2.54;
   const speed_uom = rate.speed_uom || '';
   const pitch = calcPitch(st);
   const layout = proc.layout || 1;
@@ -716,9 +777,66 @@ export function computeSga({ g_ttl, sp_price, lib, site, snapshot }) {
 
 // ── Aggregate: calcAll ──
 
-export function calcAll(st, allSpResults, lib, subproducts) {
+/**
+ * @param {object} st - tier state (post buildTierState)
+ * @param {Array|null} allSpResults - sub-product pass-1 results (Cpx aggregation), null for Std
+ * @param {object} lib - master library (post activeSite filter from CostLibContext)
+ * @param {Array|null} subproducts - subproducts array (Cpx context), null for Std
+ * @param {object} [options]
+ * @param {object|null} [options.snapshot] - Phase 2 pricing snapshot to read pricing
+ *   from. Null/undefined → snapshot-less BC mode (lib-only, identical to pre-Phase-2
+ *   behavior). Empty snapshot → resolver falls through to lib on every key (also BC).
+ * @param {boolean} [options.warnSiteMismatch=true] - emit a `_warnings` entry when
+ *   snapshot._site is set, state.site is set, and they diverge (operator changed
+ *   site after the snapshot was frozen). Skip when either side is null.
+ * @param {boolean} [options.collectWarnings=true] - attach `_warnings` array to
+ *   the returned result. False → swallow warnings, no `_warnings` field.
+ * @returns {object} cost-breakdown result; carries `_warnings` array iff
+ *   `collectWarnings !== false` AND at least one warning was raised.
+ */
+export function calcAll(st, allSpResults, lib, subproducts, options = {}) {
   const moq =
     st.moq && st.moq > 0 ? st.moq : st.annual_qty && st.annual_qty > 0 ? st.annual_qty : 1;
+
+  // Phase 2 resolver — snapshot-first, lib-fallback. Snapshot null →
+  // every getter falls through to lib → behavior identical to pre-Phase-2
+  // BC mode. The resolver is created ONCE per calcAll invocation +
+  // propagated to calcInk / calcProcess via the same `options` bag so
+  // callers don't need to know about the resolver shape.
+  const snapshot = options.snapshot || null;
+  const resolver = createResolver(snapshot, lib);
+  const callOptions = { ...options, resolver };
+
+  // Site-mismatch warning collection. Snapshot._site is set when
+  // freezeLib captured state.site; state.site is the live tier site.
+  // Both set + diverge → operator flipped active site after freeze →
+  // calc may be using rates from a site the operator no longer
+  // considers active. Skip silently when either side is null (legacy
+  // / synthesized snapshot OR pre-Sprint-1.x state without site field).
+  //
+  // Note: this is a separate channel from the existing `warnings`
+  // string array (scrap_pct guards) — surfaced via the distinct
+  // `_warnings` field so consumers can opt-in without parsing strings.
+  const siteWarnings = [];
+  const snapSite = getSnapshotSite(snapshot);
+  const stateSite = (st && st.site) || null;
+  if (
+    options.warnSiteMismatch !== false &&
+    snapSite &&
+    stateSite &&
+    snapSite !== stateSite
+  ) {
+    const msg = `Site mismatch: snapshot frozen under '${snapSite}', current state.site = '${stateSite}'`;
+    siteWarnings.push({
+      type: 'site_mismatch',
+      snapshot_site: snapSite,
+      state_site: stateSite,
+      message: msg,
+    });
+    // DEV-only console.warn via the repo logger (Vite import.meta.env.DEV
+    // gate; auto-silent in prod + node:test).
+    devWarn('[calcEngine]', msg);
+  }
 
   // Materials
   let s_mat_setup = 0,
@@ -763,7 +881,7 @@ export function calcAll(st, allSpResults, lib, subproducts) {
   const inkResults = st.inks.map((ik) => {
     if (ik.hidden)
       return { setup_s: 0, run_s: 0, vat: 0, ink_cover_disp: '', layout_indigo_disp: '', total: 0 };
-    const r = calcInk(ik, st, moq, lib);
+    const r = calcInk(ik, st, moq, lib, callOptions);
     s_ink_setup += r.setup_s || 0;
     s_ink_run += r.run_s || 0;
     vat_ink += r.vat || 0;
@@ -799,7 +917,7 @@ export function calcAll(st, allSpResults, lib, subproducts) {
         total_time: 0,
         pitch: 0,
       };
-    const r = calcProcess(p, st, moq, lib);
+    const r = calcProcess(p, st, moq, lib, callOptions);
     overhead += r.run_mach || 0;
     labor_cost += r.run_labor || 0;
     tooling += r.tooling || 0;
@@ -934,6 +1052,12 @@ export function calcAll(st, allSpResults, lib, subproducts) {
     bd_setup_mach: setup_mach_total,
     bd_setup_labor: setup_labor_total,
     warnings,
+    // Phase 2 snapshot/site-mismatch warnings — attached only when
+    // `collectWarnings !== false` AND at least one warning was raised,
+    // so the BC return shape stays untouched for happy-path callers.
+    ...(options.collectWarnings !== false && siteWarnings.length > 0
+      ? { _warnings: siteWarnings }
+      : {}),
   };
 }
 
