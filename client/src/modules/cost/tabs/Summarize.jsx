@@ -23,7 +23,11 @@ import { applyQuoteFilters } from '../lib/quoteFilters';
 import ScopedFilterBar from '../components/ScopedFilterBar';
 import ColumnsToggle from '../../../components/Shared/ColumnsToggle';
 import { loadVisibleColumns } from '../../../components/Shared/ColumnsToggle.helpers';
-import { collectDrwMaterials, collectQuoteMaterials } from './Summarize.materials.helpers.js';
+import {
+  collectDrwMaterials,
+  collectQuoteMaterials,
+  toBulletFromTextarea,
+} from './Summarize.materials.helpers.js';
 import {
   sumToolingCostStd,
   sumToolingCostCpx,
@@ -32,17 +36,21 @@ import {
 } from './StandardCalc/CalcLeadTimeNotice.helpers.js';
 import './Summarize.css';
 
-// Reusable cell wrapper for long free-text cells (REMARK / DRAW_MATERIALS /
-// QUOTE_MATERIALS). Single-line ellipsis + native `title` tooltip so
-// operator hover gets the full value. Class `.sum-cell-clip` lives in
-// Summarize.css with `max-width / overflow / text-overflow: ellipsis`.
-function ClipCell({ value }) {
+// Multi-line bullet cell — used by Draw Materials / Quote Materials /
+// Remark / Process / Type of Material. Source string is already a
+// bullet list ("- a\n- b\n- c") via formatBulletList / toBulletFromTextarea
+// in Summarize.materials.helpers.js, so the cell just needs `white-space:
+// pre-line` to honour the embedded newlines. Cell is capped at
+// max-height 120px with custom-scrollbar vertical scroll; full content
+// also available via native `title` tooltip on hover for the read-at-a-
+// glance use case where opening the cell is overkill.
+function MultilineCell({ value }) {
   const s = value == null || value === '' ? '' : String(value);
   if (!s) return '—';
   return (
-    <span className="sum-cell-clip" title={s}>
+    <div className="sum-cell-multiline" title={s}>
       {s}
-    </span>
+    </div>
   );
 }
 
@@ -72,19 +80,20 @@ const SUMMARIZE_COLUMNS = [
   { key: 'end_cu_pn', label: 'End CU PN', auto: true },
   { key: 'description', label: 'Description', auto: true },
   { key: 'production_size', label: 'Production Size', w: 110 },
-  // Materials aggregation columns — operator may have a long string;
-  // ellipsis + tooltip pattern via ClipCell.
+  // Materials aggregation columns — values are pre-formatted bullet
+  // lists (one Main.Mat row per line); MultilineCell honours the
+  // embedded \n and caps height with a scrollbar.
   {
     key: 'drw_materials',
     label: 'Draw Materials',
-    w: 160,
-    render: (r) => <ClipCell value={r.drw_materials} />,
+    w: 200,
+    render: (r) => <MultilineCell value={r.drw_materials} />,
   },
   {
     key: 'quote_materials',
     label: 'Quote Materials',
-    w: 160,
-    render: (r) => <ClipCell value={r.quote_materials} />,
+    w: 200,
+    render: (r) => <MultilineCell value={r.quote_materials} />,
   },
   { key: 'moq', label: 'MOQ', w: 60, right: true },
   { key: 'yield_pct', label: 'Yield%', w: 55, right: true, fmt: (v) => pct(v) },
@@ -116,9 +125,19 @@ const SUMMARIZE_COLUMNS = [
   { key: 'material_lt', label: 'Material L/T', w: 110 },
   { key: 'sample_lt', label: 'Sample L/T', w: 110 },
   { key: 'po_lt', label: 'PO L/T', w: 110 },
-  { key: 'remark', label: 'Remark', w: 200, render: (r) => <ClipCell value={r.remark} /> },
-  { key: 'process', label: 'Process', w: 130 },
-  { key: 'type_of_material', label: 'Type of Material', w: 140 },
+  // 3 multi-line Lead Time cells — operator types newline-separated
+  // text in the source textarea (Pricing Std/Cpx Lead Time & Notice
+  // sub-tab); row builder converts to a bullet list via
+  // toBulletFromTextarea so Summarize renders one bullet per source
+  // line. MultilineCell caps + scrolls; full content in `title`.
+  { key: 'remark', label: 'Remark', w: 220, render: (r) => <MultilineCell value={r.remark} /> },
+  { key: 'process', label: 'Process', w: 180, render: (r) => <MultilineCell value={r.process} /> },
+  {
+    key: 'type_of_material',
+    label: 'Type of Material',
+    w: 180,
+    render: (r) => <MultilineCell value={r.type_of_material} />,
+  },
   { key: 'va_pct', label: 'VA%', w: 55, right: true, fmt: (v) => pct(v) },
   { key: 'contr_pct', label: 'Contr. %', w: 65, right: true, fmt: (v) => pct(v) },
   { key: 'gm_pct', label: 'GM%', w: 55, right: true, fmt: (v) => pct(v), color: true },
@@ -431,16 +450,20 @@ export default function Summarize() {
             // 6 Lead Time & Notice fields — heal-on-read via
             // safeLeadTime so legacy quotes (saved before Sprint S-D21-
             // LEADTIME) get empty strings, not undefined → no
-            // ?.optional-chain in the renderer.
+            // ?.optional-chain in the renderer. The 3 multi-line fields
+            // (remark / process / type_of_material) are reformatted as
+            // bullet lists so the Summarize cell shows one bullet per
+            // operator-typed source line; the 3 single-line LT fields
+            // stay as plain text (UX would gain nothing from bullets).
             ...(() => {
               const lt = safeLeadTime(st.lead_time);
               return {
                 material_lt: lt.lt_material,
                 sample_lt: lt.lt_sample,
                 po_lt: lt.lt_po,
-                remark: lt.lt_remark,
-                process: lt.lt_process,
-                type_of_material: lt.lt_material_type,
+                remark: toBulletFromTextarea(lt.lt_remark),
+                process: toBulletFromTextarea(lt.lt_process),
+                type_of_material: toBulletFromTextarea(lt.lt_material_type),
               };
             })(),
           });
