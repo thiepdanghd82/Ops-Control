@@ -165,6 +165,24 @@ const SUMMARIZE_COLUMNS = [
   { key: 'gm_pct', label: 'GM%', w: 55, right: true, fmt: (v) => pct(v), color: true },
   { key: 'trade_mode', label: 'Trade', w: 60 },
   { key: 'npi_owner', label: 'NPI Owner', w: 90 },
+  // Phase 4 — pricing-snapshot status pill (default hidden; operator
+  // opts in via ColumnsToggle when auditing whether quotes are frozen
+  // vs running on live rates).
+  {
+    key: 'snapshot_status',
+    label: 'Snapshot',
+    w: 90,
+    render: (r) => {
+      const snap = r.pricing_snapshot;
+      if (!snap || !snap._captured_at) {
+        return <span className="sum-snap-pill sum-snap-pill-empty">No snapshot</span>;
+      }
+      if (snap._synthesized) {
+        return <span className="sum-snap-pill sum-snap-pill-live">Live</span>;
+      }
+      return <span className="sum-snap-pill sum-snap-pill-frozen">Frozen</span>;
+    },
+  },
 ];
 const SUMMARIZE_COLUMNS_STORAGE_KEY = 'ops-cost-summarize-cols';
 // Default hide the 6 Lead Time & Notice columns — text-heavy free-form
@@ -180,6 +198,9 @@ const SUMMARIZE_DEFAULT_HIDDEN_KEYS = [
   'remark',
   'process',
   'type_of_material',
+  // Phase 4 — snapshot status column. Hidden default; operator opts
+  // in for compliance audits ("which quotes are pinned to old rates?").
+  'snapshot_status',
 ];
 // CSV always prepends these audit fields regardless of column-toggle state.
 // Operator workflows (audit cross-ref Quote History, multi-tier MOQ diff,
@@ -477,6 +498,9 @@ export default function Summarize() {
             // operator can browse + filter + CSV-export without round-
             // tripping through Quote History → Open quote.
             project_name: st.project_name || '',
+            // Phase 4 — pass-through snapshot for the optional Snapshot
+            // status column. Read-only; render-time only.
+            pricing_snapshot: st.pricing_snapshot || null,
             drw_materials: collectDrwMaterials(st),
             quote_materials: collectQuoteMaterials(st),
             // Σ tool_cost across the quote. Branch on q.type because

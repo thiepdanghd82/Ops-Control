@@ -132,7 +132,7 @@ async function parseBuffer(buffer) {
 
 // ── Happy path ──────────────────────────────────────────────────
 
-test('exportQuote: customer variant → single xlsx with 10 sheets', async () => {
+test('exportQuote: customer variant → single xlsx with 11 sheets', async () => {
   const out = await exportQuote(makeFixtureQuote(), {
     variant: 'customer',
     lang: 'en',
@@ -154,10 +154,13 @@ test('exportQuote: customer variant → single xlsx with 10 sheets', async () =>
     .map((s) => s.name);
   // MVP-1 baseline = 10 visible sheets. MVP-2 adds _Audit + _Schema
   // as hidden sheets; they don't count toward the visible-sheet contract.
+  // Phase 4 (Sprint S-D20-PRICING-SNAPSHOT) adds "10 Pricing Snapshot"
+  // as an 11th visible sheet — operator-facing audit metadata for the
+  // frozen rates, distinct from the hidden _Audit forensic sheet.
   assert.equal(
     visibleNames.length,
-    10,
-    `expected 10 visible sheets, got ${visibleNames.length}: ${visibleNames}`
+    11,
+    `expected 11 visible sheets, got ${visibleNames.length}: ${visibleNames}`
   );
   assert.deepEqual(visibleNames, [
     '00 Cover',
@@ -170,6 +173,7 @@ test('exportQuote: customer variant → single xlsx with 10 sheets', async () =>
     '07 Pack Ship',
     '08 Cost Breakdown',
     '09 Summary',
+    '10 Pricing Snapshot',
   ]);
 });
 
@@ -183,7 +187,8 @@ test('exportQuote: internal variant produces same sheet count, different filenam
   assert.match(out.filename, /_internal_v2_/);
   const wb = await parseBuffer(out.buffer);
   const visible = wb.worksheets.filter((s) => s.state !== 'hidden' && s.state !== 'veryHidden');
-  assert.equal(visible.length, 10);
+  // Phase 4 — 10 baseline sheets + 1 Pricing Snapshot = 11.
+  assert.equal(visible.length, 11);
 });
 
 test('exportQuote: Cover sheet contains quote label + version + customer name', async () => {

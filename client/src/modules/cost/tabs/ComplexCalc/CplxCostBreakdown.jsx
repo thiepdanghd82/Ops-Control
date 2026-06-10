@@ -9,6 +9,8 @@
 import { useMemo } from 'react';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
+import { snapshotPricingParams } from '../../../../services/pricingSnapshot';
+import SnapshotPanel from '../../components/SnapshotPanel';
 import {
   aggregateComplex,
   enumerateTiers,
@@ -84,6 +86,13 @@ export default function CplxCostBreakdown() {
   const cs = cplxState;
   const sps = useMemo(() => cs.subproducts || [], [cs.subproducts]);
 
+  // Phase 4 — lift snapshot resolve for the SnapshotPanel + propagate
+  // through aggregateForTier → aggregateComplex (Phase 3 opts.snapshot).
+  const { source: snapshotSource, snapshot } = useMemo(
+    () => (lib ? snapshotPricingParams(cs, lib) : { source: 'empty', snapshot: null }),
+    [cs, lib]
+  );
+
   const tiers = useMemo(() => {
     if (!lib) return [];
     return enumerateTiers(cs).map(({ idx, moq, sp, eau }) => ({
@@ -91,9 +100,13 @@ export default function CplxCostBreakdown() {
       moq,
       sp,
       eau,
-      result: aggregateForTier(cs, sps, lib, idx, { bomQtyEnabled, spMoqScalingEnabled }),
+      result: aggregateForTier(cs, sps, lib, idx, {
+        bomQtyEnabled,
+        spMoqScalingEnabled,
+        snapshot,
+      }),
     }));
-  }, [cs, sps, lib, bomQtyEnabled, spMoqScalingEnabled]);
+  }, [cs, sps, lib, bomQtyEnabled, spMoqScalingEnabled, snapshot]);
 
   if (!lib) {
     return (
@@ -105,6 +118,9 @@ export default function CplxCostBreakdown() {
 
   const activeIdx = cs.active_moq_idx || 0;
   const activeResult = tiers[activeIdx]?.result;
+  // Phase 4 — site-mismatch / future-warning surface from the
+  // active-tier calcAll result (Phase 2 `_warnings` channel).
+  const activeWarnings = activeResult?._warnings || [];
 
   return (
     <div className="sc-section">
@@ -471,6 +487,8 @@ export default function CplxCostBreakdown() {
             </div>
           );
         })()}
+      {/* Phase 4 — pricing snapshot audit panel (Cpx symmetric with Std). */}
+      <SnapshotPanel source={snapshotSource} snapshot={snapshot} warnings={activeWarnings} />
     </div>
   );
 }

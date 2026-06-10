@@ -31,6 +31,7 @@ import { buildBalancingSheet } from './sheets/06-balancing.js';
 import { buildPackShipSheet } from './sheets/07-pack-ship.js';
 import { buildCostBreakdownSheet } from './sheets/08-cost-breakdown.js';
 import { buildSummarySheet } from './sheets/09-summary.js';
+import { buildPricingSnapshotSheet } from './sheets/10-pricing-snapshot.js';
 // MVP-2 tamper-resistance pipeline
 import { buildAuditSheet } from './audit.js';
 import { encodeSchemaPayload, buildSchemaSheet } from './schema.js';
@@ -303,6 +304,11 @@ async function buildOneXlsx(ctx) {
   buildPackShipSheet(wb, { quote, lang });
   buildCostBreakdownSheet(wb, { quote, tierIdx, variant, lang });
   buildSummarySheet(wb, { quote, tierIdx, tierKpis, variant, lang });
+  // Phase 4 (Sprint S-D20-PRICING-SNAPSHOT) — operator-facing audit
+  // metadata for the pricing snapshot (frozen rates / captured at /
+  // captured by / site / warnings). Distinct from the hidden _Audit
+  // sheet below which carries HMAC + payload sha256.
+  buildPricingSnapshotSheet(wb, { quote, tierIdx, tierKpis, variant, lang });
 
   // 2. MVP-2 Item E — customer watermark BEFORE _Audit/_Schema so the
   //    watermark style is applied to visible sheets only (the items
