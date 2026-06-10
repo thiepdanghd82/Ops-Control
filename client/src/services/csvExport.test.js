@@ -75,6 +75,33 @@ test('buildCsv — null row defensively handled', () => {
   assert.equal(buildCsv([null], ['a']), BOM + 'a\n');
 });
 
+test('buildCsv — opts.headers overrides header row, body still uses cols keys', () => {
+  // Summarize CSV passes operator-facing labels via opts.headers so the
+  // header row reads "End Customer" not the internal key `project`
+  // (S-PROJFIX / Lesson 21 aliasMap).
+  const rows = [{ project: 'WiiM', rfq_no: 'RFQ-1' }];
+  const csv = buildCsv(rows, ['rfq_no', 'project'], {
+    headers: ['RFQ NO', 'End Customer'],
+  });
+  assert.equal(csv, BOM + 'RFQ NO,End Customer\nRFQ-1,WiiM');
+});
+
+test('buildCsv — opts.headers escaped same as keys (comma in label is quoted)', () => {
+  const csv = buildCsv([{ a: 1 }], ['a'], { headers: ['Direct, Customer'] });
+  assert.equal(csv, BOM + '"Direct, Customer"\n1');
+});
+
+test('buildCsv — missing opts (legacy callers) keeps using cols as header', () => {
+  // Backward-compat path: 3rd argument absent should still work.
+  const csv = buildCsv([{ x: 1 }], ['x']);
+  assert.equal(csv, BOM + 'x\n1');
+});
+
+test('buildCsv — opts without headers field falls back to cols', () => {
+  const csv = buildCsv([{ x: 1 }], ['x'], {});
+  assert.equal(csv, BOM + 'x\n1');
+});
+
 test('buildCsv — operator-style row with all quoting cases', () => {
   const rows = [
     {

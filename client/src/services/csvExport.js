@@ -42,11 +42,18 @@ const UTF8_BOM = '﻿';
  * default to legacy code pages still decode it correctly.
  *
  * @param {Array<Object>} rows
- * @param {Array<string>} cols column keys (used as header row + field lookup)
+ * @param {Array<string>} cols column keys (used for field lookup, also
+ *   for the header row by default)
+ * @param {object} [opts]
+ * @param {Array<string>} [opts.headers] override the header row — same
+ *   length as cols; lets callers ship operator-facing column labels
+ *   (e.g. "End Customer") instead of the internal key (`project`).
+ *   Defaults to `cols` for backward compatibility.
  * @returns {string} CSV text with header row, '\n' line terminator
  */
-export function buildCsv(rows, cols) {
-  const header = cols.map(csvEscape).join(',');
+export function buildCsv(rows, cols, opts) {
+  const headerKeys = opts && Array.isArray(opts.headers) ? opts.headers : cols;
+  const header = headerKeys.map(csvEscape).join(',');
   const body = rows.map((r) => cols.map((c) => csvEscape(r?.[c])).join(','));
   return UTF8_BOM + [header, ...body].join('\n');
 }

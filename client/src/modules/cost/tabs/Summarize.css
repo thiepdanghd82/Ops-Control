@@ -130,6 +130,31 @@
   line-height: 1.4;
   vertical-align: middle;
 }
+/* Multi-line bullet cell for Draw Materials / Quote Materials / Remark
+   / Process / Type of Material. Source string is a "- a\n- b" bullet
+   list (formatted by Summarize.materials.helpers.js); `white-space:
+   pre-line` honours the embedded \n. Cell is capped at 120px with a
+   thin custom scrollbar so a quote with 20 Main.Mat rows or a 12-line
+   Remark doesn't blow the row height to several screens tall — the
+   table layout stays predictable while operator still gets full
+   content via vertical scroll AND the `title` tooltip. */
+.sum-cell-multiline {
+  white-space: pre-line;
+  max-height: 120px;
+  overflow-y: auto;
+  line-height: 1.4;
+  padding: 4px 0;
+}
+.sum-cell-multiline::-webkit-scrollbar {
+  width: 4px;
+}
+.sum-cell-multiline::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+}
+.sum-cell-multiline::-webkit-scrollbar-track {
+  background: transparent;
+}
 .sum-table tbody tr {
   cursor: pointer;
 }

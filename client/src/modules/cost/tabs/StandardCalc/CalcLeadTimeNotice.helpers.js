@@ -59,6 +59,28 @@ export function fmtUsd(n) {
   return USD_FMT.format(n);
 }
 
+// VND values are integer-by-convention (no decimals); en-US locale gives
+// the same thousand-separator (`,`) the existing `fmtUsd` produces so the
+// two columns line up visually in the Summarize table side-by-side.
+const VND_FMT = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 0,
+});
+
+/**
+ * Format a VND amount as "10,450" — no currency symbol because VND
+ * presentations in this app pair the number with a column label
+ * "(VND)", not an inline glyph. Returns "—" for 0 / NaN / non-finite
+ * so legacy quotes (no `selling_price_vnd` / `extra_moqs[i].price_vnd`)
+ * render cleanly without a noisy `0`.
+ * @param {number} n
+ * @returns {string}
+ */
+export function fmtVnd(n) {
+  const v = Number(n);
+  if (!Number.isFinite(v) || v === 0) return '—';
+  return VND_FMT.format(v);
+}
+
 // Field shape contract — kept in one place so component + tests + future
 // xlsx export sheet all reference the same key list.
 export const LEAD_TIME_KEYS = Object.freeze([

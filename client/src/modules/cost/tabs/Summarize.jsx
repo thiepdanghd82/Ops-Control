@@ -23,30 +23,142 @@ import { applyQuoteFilters } from '../lib/quoteFilters';
 import ScopedFilterBar from '../components/ScopedFilterBar';
 import ColumnsToggle from '../../../components/Shared/ColumnsToggle';
 import { loadVisibleColumns } from '../../../components/Shared/ColumnsToggle.helpers';
+import {
+  collectDrwMaterials,
+  collectQuoteMaterials,
+  toBulletFromTextarea,
+} from './Summarize.materials.helpers.js';
+import {
+  sumToolingCostStd,
+  sumToolingCostCpx,
+  safeLeadTime,
+  fmtUsd,
+  fmtVnd,
+} from './StandardCalc/CalcLeadTimeNotice.helpers.js';
 import './Summarize.css';
+
+// Multi-line bullet cell — used by Draw Materials / Quote Materials /
+// Remark / Process / Type of Material. Source string is already a
+// bullet list ("- a\n- b\n- c") via formatBulletList / toBulletFromTextarea
+// in Summarize.materials.helpers.js, so the cell just needs `white-space:
+// pre-line` to honour the embedded newlines. Cell is capped at
+// max-height 120px with custom-scrollbar vertical scroll; full content
+// also available via native `title` tooltip on hover for the read-at-a-
+// glance use case where opening the cell is overkill.
+function MultilineCell({ value }) {
+  const s = value == null || value === '' ? '' : String(value);
+  if (!s) return '—';
+  return (
+    <div className="sum-cell-multiline" title={s}>
+      {s}
+    </div>
+  );
+}
 
 // Column config — module-scoped so ColumnsToggle.helpers loader can read
 // it without recomputing per render. `rfq_no` flagged required (anchor;
 // also gives operator-visible quote identity in CSV export). Other
 // metadata (`w`, `right`, `auto`, `fmt`, `bold`, `color`) consumed by
 // the table render below — preserved as-is from pre-refactor.
+//
+// Cell-render contract (extended 2026-06-10 for schema-extend sprint):
+//   - `fmt(value)` — formats a primitive cell value; existing path.
+//   - `render(row, ri)` — full custom JSX cell, gets the entire row
+//     PLUS the visible 1-based position; takes precedence over `fmt`.
+//     Used for `row_idx` (numbering) + REMARK + materials aggregation
+//     (ellipsis + tooltip wrapper).
+//
+// `row_idx` re-numbers on every filter / sort change because `ri` comes
+// from the post-sort, post-filter `sorted.map((r, ri) => ...)` index.
+// Henry confirmed VISIBLE-position semantics over original quote-tier
+// ordinal — matches operator UX expectation for list views.
 const SUMMARIZE_COLUMNS = [
+  // row_idx is UI-only — visible position has no meaning in an exported
+  // CSV row (operator re-sorts in Excel anyway). `csvExclude: true`
+  // makes the CSV builder skip this column even when it shows up in
+  // `visibleColumns`.
+  {
+    key: 'row_idx',
+    label: '#',
+    w: 40,
+    required: true,
+    csvExclude: true,
+    render: (_r, ri) => ri + 1,
+  },
   { key: 'rfq_no', label: 'RFQ NO', w: 140, required: true },
   { key: 'direct_cu', label: 'Direct Customer', auto: true },
   { key: 'project', label: 'End Customer', auto: true },
+  { key: 'project_name', label: 'Project', auto: true },
   { key: 'end_cu_pn', label: 'End CU PN', auto: true },
   { key: 'description', label: 'Description', auto: true },
   { key: 'production_size', label: 'Production Size', w: 110 },
+  // Materials aggregation columns — values are pre-formatted bullet
+  // lists (one Main.Mat row per line); MultilineCell honours the
+  // embedded \n and caps height with a scrollbar.
+  {
+    key: 'drw_materials',
+    label: 'Draw Materials',
+    w: 200,
+    render: (r) => <MultilineCell value={r.drw_materials} />,
+  },
+  {
+    key: 'quote_materials',
+    label: 'Quote Materials',
+    w: 200,
+    render: (r) => <MultilineCell value={r.quote_materials} />,
+  },
   { key: 'moq', label: 'MOQ', w: 60, right: true },
   { key: 'yield_pct', label: 'Yield%', w: 55, right: true, fmt: (v) => pct(v) },
   { key: 's_mat_cost', label: 'Material', w: 70, right: true, fmt: (v) => fmtN(v) },
   { key: 'overhead', label: 'Overhead', w: 70, right: true, fmt: (v) => fmtN(v) },
   { key: 'labor_cost', label: 'Labor', w: 70, right: true, fmt: (v) => fmtN(v) },
-  { key: 'tooling', label: 'Tooling', w: 65, right: true, fmt: (v) => fmtN(v) },
+  // Renamed from "Tooling" → "Tooling/pcs" to disambiguate from the
+  // new TOOLING_COST_USD column (which is the quote-level Σ tool_cost
+  // in absolute USD, not the per-piece allocation).
+  { key: 'tooling', label: 'Tooling/pcs', w: 75, right: true, fmt: (v) => fmtN(v) },
   { key: 'pack_ship', label: 'Pack&Ship', w: 65, right: true, fmt: (v) => fmtN(v) },
   { key: 'g_ttl_cost', label: 'G.Total', w: 70, right: true, fmt: (v) => fmtN(v), bold: true },
   { key: 'target', label: 'Target Price', w: 75, right: true, fmt: (v) => fmtN(v, 4) },
-  { key: 'usd_price', label: 'Price', w: 65, right: true, fmt: (v) => fmtN(v, 4) },
+  // Label change "Price" → "Price (USD)" so the new VND column reads
+  // unambiguously next to it. Key stays `usd_price` to keep
+  // localStorage `ops-cost-summarize-cols` operator state intact
+  // (key-based toggle persistence — Phase 1 ColumnsToggle contract).
+  { key: 'usd_price', label: 'Price (USD)', w: 75, right: true, fmt: (v) => fmtN(v, 4) },
+  // Per-tier VND price — raw read from state.selling_price_vnd
+  // (tier 0) / extra_moqs[i].price_vnd (tier 1+). fmtVnd → "10,450"
+  // or "—" for 0 / NaN / non-finite. en-US locale match fmtUsd so
+  // both columns share thousand-separator style side by side.
+  { key: 'vnd_price', label: 'Price (VND)', w: 90, right: true, fmt: (v) => fmtVnd(v) },
+  // Quote-level Σ tool_cost in USD (sums across processes in Std or
+  // across every subproduct's processes in Cpx). `fmtUsd` returns '—'
+  // for 0 / NaN / non-finite — matches Lead Time tab cover sheet.
+  {
+    key: 'tooling_cost_usd',
+    label: 'Tooling Cost (USD)',
+    w: 110,
+    right: true,
+    fmt: (v) => fmtUsd(v),
+  },
+  // Lead Time & Notice — free-text strings from state.lead_time.
+  // safeLeadTime() heals legacy quotes so the 6 fields always exist
+  // (defaulted to ''). REMARK gets ClipCell because operators write
+  // multi-line essays; others are short single-line text fields.
+  { key: 'material_lt', label: 'Material L/T', w: 110 },
+  { key: 'sample_lt', label: 'Sample L/T', w: 110 },
+  { key: 'po_lt', label: 'PO L/T', w: 110 },
+  // 3 multi-line Lead Time cells — operator types newline-separated
+  // text in the source textarea (Pricing Std/Cpx Lead Time & Notice
+  // sub-tab); row builder converts to a bullet list via
+  // toBulletFromTextarea so Summarize renders one bullet per source
+  // line. MultilineCell caps + scrolls; full content in `title`.
+  { key: 'remark', label: 'Remark', w: 220, render: (r) => <MultilineCell value={r.remark} /> },
+  { key: 'process', label: 'Process', w: 180, render: (r) => <MultilineCell value={r.process} /> },
+  {
+    key: 'type_of_material',
+    label: 'Type of Material',
+    w: 180,
+    render: (r) => <MultilineCell value={r.type_of_material} />,
+  },
   { key: 'va_pct', label: 'VA%', w: 55, right: true, fmt: (v) => pct(v) },
   { key: 'contr_pct', label: 'Contr. %', w: 65, right: true, fmt: (v) => pct(v) },
   { key: 'gm_pct', label: 'GM%', w: 55, right: true, fmt: (v) => pct(v), color: true },
@@ -54,6 +166,20 @@ const SUMMARIZE_COLUMNS = [
   { key: 'npi_owner', label: 'NPI Owner', w: 90 },
 ];
 const SUMMARIZE_COLUMNS_STORAGE_KEY = 'ops-cost-summarize-cols';
+// Default hide the 6 Lead Time & Notice columns — text-heavy free-form
+// fields most operators won't reference daily. Show them via the toggle
+// when forensically tracing a quote's lead-time commitments. Henry's
+// Phase-Q6 confirm: respect-visibility in CSV (NOT force-included), so
+// hiding them keeps the export lean too (CSV_ALWAYS_INCLUDE_KEYS only
+// adds the audit prefix, not the lead-time columns).
+const SUMMARIZE_DEFAULT_HIDDEN_KEYS = [
+  'material_lt',
+  'sample_lt',
+  'po_lt',
+  'remark',
+  'process',
+  'type_of_material',
+];
 // CSV always prepends these audit fields regardless of column-toggle state.
 // Operator workflows (audit cross-ref Quote History, multi-tier MOQ diff,
 // timestamp forensic) rely on these — hiding them in UI is a display
@@ -156,7 +282,11 @@ export default function Summarize() {
   // full set → filtered set). ColumnsToggle component owns hiddenKeys
   // internally + fires onChange with already-filtered visibleColumns.
   const [visibleColumns, setVisibleColumns] = useState(() =>
-    loadVisibleColumns(SUMMARIZE_COLUMNS, SUMMARIZE_COLUMNS_STORAGE_KEY, [])
+    loadVisibleColumns(
+      SUMMARIZE_COLUMNS,
+      SUMMARIZE_COLUMNS_STORAGE_KEY,
+      SUMMARIZE_DEFAULT_HIDDEN_KEYS
+    )
   );
   const { filter, debouncedFilter, setField, clearField, clearAll, hasActiveFilter } =
     useQuoteFilters();
@@ -219,10 +349,15 @@ export default function Summarize() {
       const isCplx = q.type === 'complex';
       const numTiers = st.num_moq || 1;
       for (let t = 0; t < numTiers; t++) {
-        let moq, usdPrice, eau, target;
+        let moq, usdPrice, vndPrice, eau, target;
         if (t === 0) {
           moq = st.moq || 0;
           usdPrice = st.selling_price || 0;
+          // Tier 0 reads the quote-level mirror; CalcHeader.jsx
+          // setPriceUsd/setPriceVnd keep selling_price_vnd in sync at
+          // write time (Sprint 1.7g pattern). No USD × usd_rate fallback
+          // — operator stated VND data is always raw-direct.
+          vndPrice = Number(st.selling_price_vnd) || 0;
           eau = st.annual_qty || 0;
           target = st.target;
         } else {
@@ -230,6 +365,7 @@ export default function Summarize() {
           if (!em) continue;
           moq = em.moq || 0;
           usdPrice = em.price || 0;
+          vndPrice = Number(em.price_vnd) || 0;
           eau = em.eau || st.annual_qty || 0;
           target = em.target;
         }
@@ -317,6 +453,10 @@ export default function Summarize() {
             g_ttl_cost: r.s_ttl,
             target,
             usd_price: usdPrice,
+            // Per-tier raw VND from CalcHeader (Sprint 1.7g mirror).
+            // Falls back to 0 → fmtVnd → "—" for legacy quotes without
+            // selling_price_vnd / extra_moqs[i].price_vnd populated.
+            vnd_price: vndPrice,
             va_pct: va,
             contr_pct: contr,
             gm_pct: gm,
@@ -324,6 +464,39 @@ export default function Summarize() {
             delivery_term: st.delivery_term || '',
             npi_owner: st.npi_owner || '',
             sale_owner: st.sale_owner || '',
+            // ─── Schema-extend sprint (2026-06-10) ──────────────────
+            // Sync from Pricing (Std/Cpx) sub-tabs into the row so the
+            // operator can browse + filter + CSV-export without round-
+            // tripping through Quote History → Open quote.
+            project_name: st.project_name || '',
+            drw_materials: collectDrwMaterials(st),
+            quote_materials: collectQuoteMaterials(st),
+            // Σ tool_cost across the quote. Branch on q.type because
+            // Cpx walks subproducts whereas Std walks top-level
+            // processes. Both helpers tolerate missing arrays.
+            tooling_cost_usd:
+              q.type === 'complex'
+                ? sumToolingCostCpx(st.subproducts)
+                : sumToolingCostStd(st.processes),
+            // 6 Lead Time & Notice fields — heal-on-read via
+            // safeLeadTime so legacy quotes (saved before Sprint S-D21-
+            // LEADTIME) get empty strings, not undefined → no
+            // ?.optional-chain in the renderer. The 3 multi-line fields
+            // (remark / process / type_of_material) are reformatted as
+            // bullet lists so the Summarize cell shows one bullet per
+            // operator-typed source line; the 3 single-line LT fields
+            // stay as plain text (UX would gain nothing from bullets).
+            ...(() => {
+              const lt = safeLeadTime(st.lead_time);
+              return {
+                material_lt: lt.lt_material,
+                sample_lt: lt.lt_sample,
+                po_lt: lt.lt_po,
+                remark: toBulletFromTextarea(lt.lt_remark),
+                process: toBulletFromTextarea(lt.lt_process),
+                type_of_material: toBulletFromTextarea(lt.lt_material_type),
+              };
+            })(),
           });
         } catch (err) {
           console.warn('Summarize calc failed for quote', q.id, 'tier', t, err);
@@ -406,21 +579,38 @@ export default function Summarize() {
     //     same drop as pre-toggle behavior; if Henry needs them back,
     //     add to SUMMARIZE_COLUMNS as required: false).
     // Dedupe defensively in case visibleColumns somehow overlaps prefix.
+    // Also filter `csvExclude: true` columns (currently row_idx — the
+    // visible row counter has no meaning in a re-sortable CSV row).
+    const csvExcludedKeys = new Set(
+      SUMMARIZE_COLUMNS.filter((c) => c.csvExclude).map((c) => c.key)
+    );
+    const colByKey = new Map(SUMMARIZE_COLUMNS.map((c) => [c.key, c]));
     const visibleKeys = visibleColumns.map((c) => c.key);
     const seen = new Set();
     const cols = [];
+    // Parallel array — operator-facing header label per column. For
+    // SUMMARIZE_COLUMNS entries we use `c.label` so the CSV header
+    // matches the on-screen column name (e.g. "End Customer" not
+    // `project`, which is the internal key holding aliased text per
+    // S-PROJFIX / Lesson 21). CSV_ALWAYS_INCLUDE_KEYS (quote_id, tier,
+    // update_date, type, sale_owner) have no SUMMARIZE_COLUMNS entry;
+    // their keys are machine-style identifiers operators already
+    // recognise so we ship them as-is.
+    const headers = [];
     for (const k of [...CSV_ALWAYS_INCLUDE_KEYS, ...visibleKeys]) {
-      if (!seen.has(k)) {
-        cols.push(k);
-        seen.add(k);
-      }
+      if (seen.has(k)) continue;
+      if (csvExcludedKeys.has(k)) continue;
+      cols.push(k);
+      const colDef = colByKey.get(k);
+      headers.push(colDef && colDef.label ? colDef.label : k);
+      seen.add(k);
     }
     // Export selected-and-visible if any selections; otherwise the full
     // visible set. Hidden selections (filtered out) are never written.
     const visibleSelected = sorted.filter((r) => selected.has(r.id));
     const rowsToExport = visibleSelected.length > 0 ? visibleSelected : sorted;
     if (rowsToExport.length === 0) return; // nothing to write
-    const csv = buildCsv(rowsToExport, cols);
+    const csv = buildCsv(rowsToExport, cols, { headers });
     const suggested = `summarize_${new Date().toISOString().slice(0, 10)}${visibleSelected.length > 0 ? `_${visibleSelected.length}rows` : ''}.csv`;
     try {
       await saveCsv(csv, suggested);
@@ -496,7 +686,7 @@ export default function Summarize() {
               columns={SUMMARIZE_COLUMNS}
               storageKey={SUMMARIZE_COLUMNS_STORAGE_KEY}
               onChange={setVisibleColumns}
-              defaultHiddenKeys={[]}
+              defaultHiddenKeys={SUMMARIZE_DEFAULT_HIDDEN_KEYS}
             />
             <button
               className="sum-export-btn"
@@ -613,6 +803,15 @@ export default function Summarize() {
                     // RFQ NO gets its own color override from the rfqColors store;
                     // other "color: true" columns (GM%) still use gmClr.
                     const rfqTint = c.key === 'rfq_no' ? rfqColors[r.rfq_no] : null;
+                    // Render contract: `render(row, ri)` wins over `fmt(value)`.
+                    // Used for row_idx (visible position), REMARK + materials
+                    // (ellipsis + tooltip via ClipCell). Existing 21 cols
+                    // keep using `fmt` \u2014 fully backward compatible.
+                    const cellContent = c.render
+                      ? c.render(r, ri)
+                      : c.fmt
+                        ? c.fmt(r[c.key])
+                        : (r[c.key] ?? '\u2014');
                     return (
                       <td
                         key={c.key}
@@ -623,7 +822,7 @@ export default function Summarize() {
                           whiteSpace: c.auto ? 'nowrap' : undefined,
                         }}
                       >
-                        {c.fmt ? c.fmt(r[c.key]) : (r[c.key] ?? '\u2014')}
+                        {cellContent}
                       </td>
                     );
                   })}
