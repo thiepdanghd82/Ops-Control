@@ -5,6 +5,7 @@ import {
   sumToolingCostStd,
   sumToolingCostCpx,
   fmtUsd,
+  fmtVnd,
   safeLeadTime,
 } from './CalcLeadTimeNotice.helpers.js';
 
@@ -98,6 +99,43 @@ describe('fmtUsd', () => {
 
   test('1234567.89 → "$1,234,567.89" (thousand separators)', () => {
     assert.equal(fmtUsd(1234567.89), '$1,234,567.89');
+  });
+});
+
+describe('fmtVnd', () => {
+  test('0 → "—"', () => {
+    assert.equal(fmtVnd(0), '—');
+  });
+
+  test('NaN → "—"', () => {
+    assert.equal(fmtVnd(NaN), '—');
+  });
+
+  test('undefined / null → "—"', () => {
+    assert.equal(fmtVnd(undefined), '—');
+    assert.equal(fmtVnd(null), '—');
+  });
+
+  test('non-numeric string → "—"', () => {
+    assert.equal(fmtVnd('not-a-number'), '—');
+  });
+
+  test('10450 → "10,450" (thousand separator, no currency symbol)', () => {
+    assert.equal(fmtVnd(10450), '10,450');
+  });
+
+  test('123456789 → "123,456,789" (large value)', () => {
+    assert.equal(fmtVnd(123456789), '123,456,789');
+  });
+
+  test('10450.7 → "10,451" (decimals rounded to integer)', () => {
+    // VND is integer-by-convention; partial dong don't exist in
+    // operational use. Rounding avoids surfacing fake precision.
+    assert.equal(fmtVnd(10450.7), '10,451');
+  });
+
+  test('numeric string accepted via Number() coerce', () => {
+    assert.equal(fmtVnd('25000'), '25,000');
   });
 });
 

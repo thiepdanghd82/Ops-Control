@@ -33,6 +33,7 @@ import {
   sumToolingCostCpx,
   safeLeadTime,
   fmtUsd,
+  fmtVnd,
 } from './StandardCalc/CalcLeadTimeNotice.helpers.js';
 import './Summarize.css';
 
@@ -72,7 +73,18 @@ function MultilineCell({ value }) {
 // Henry confirmed VISIBLE-position semantics over original quote-tier
 // ordinal — matches operator UX expectation for list views.
 const SUMMARIZE_COLUMNS = [
-  { key: 'row_idx', label: '#', w: 40, required: true, render: (_r, ri) => ri + 1 },
+  // row_idx is UI-only — visible position has no meaning in an exported
+  // CSV row (operator re-sorts in Excel anyway). `csvExclude: true`
+  // makes the CSV builder skip this column even when it shows up in
+  // `visibleColumns`.
+  {
+    key: 'row_idx',
+    label: '#',
+    w: 40,
+    required: true,
+    csvExclude: true,
+    render: (_r, ri) => ri + 1,
+  },
   { key: 'rfq_no', label: 'RFQ NO', w: 140, required: true },
   { key: 'direct_cu', label: 'Direct Customer', auto: true },
   { key: 'project', label: 'End Customer', auto: true },
@@ -107,7 +119,16 @@ const SUMMARIZE_COLUMNS = [
   { key: 'pack_ship', label: 'Pack&Ship', w: 65, right: true, fmt: (v) => fmtN(v) },
   { key: 'g_ttl_cost', label: 'G.Total', w: 70, right: true, fmt: (v) => fmtN(v), bold: true },
   { key: 'target', label: 'Target Price', w: 75, right: true, fmt: (v) => fmtN(v, 4) },
-  { key: 'usd_price', label: 'Price', w: 65, right: true, fmt: (v) => fmtN(v, 4) },
+  // Label change "Price" → "Price (USD)" so the new VND column reads
+  // unambiguously next to it. Key stays `usd_price` to keep
+  // localStorage `ops-cost-summarize-cols` operator state intact
+  // (key-based toggle persistence — Phase 1 ColumnsToggle contract).
+  { key: 'usd_price', label: 'Price (USD)', w: 75, right: true, fmt: (v) => fmtN(v, 4) },
+  // Per-tier VND price — raw read from state.selling_price_vnd
+  // (tier 0) / extra_moqs[i].price_vnd (tier 1+). fmtVnd → "10,450"
+  // or "—" for 0 / NaN / non-finite. en-US locale match fmtUsd so
+  // both columns share thousand-separator style side by side.
+  { key: 'vnd_price', label: 'Price (VND)', w: 90, right: true, fmt: (v) => fmtVnd(v) },
   // Quote-level Σ tool_cost in USD (sums across processes in Std or
   // across every subproduct's processes in Cpx). `fmtUsd` returns '—'
   // for 0 / NaN / non-finite — matches Lead Time tab cover sheet.
@@ -328,10 +349,15 @@ export default function Summarize() {
       const isCplx = q.type === 'complex';
       const numTiers = st.num_moq || 1;
       for (let t = 0; t < numTiers; t++) {
-        let moq, usdPrice, eau, target;
+        let moq, usdPrice, vndPrice, eau, target;
         if (t === 0) {
           moq = st.moq || 0;
           usdPrice = st.selling_price || 0;
+          // Tier 0 reads the quote-level mirror; CalcHeader.jsx
+          // setPriceUsd/setPriceVnd keep selling_price_vnd in sync at
+          // write time (Sprint 1.7g pattern). No USD × usd_rate fallback
+          // — operator stated VND data is always raw-direct.
+          vndPrice = Number(st.selling_price_vnd) || 0;
           eau = st.annual_qty || 0;
           target = st.target;
         } else {
@@ -339,6 +365,7 @@ export default function Summarize() {
           if (!em) continue;
           moq = em.moq || 0;
           usdPrice = em.price || 0;
+          vndPrice = Number(em.price_vnd) || 0;
           eau = em.eau || st.annual_qty || 0;
           target = em.target;
         }
@@ -426,6 +453,10 @@ export default function Summarize() {
             g_ttl_cost: r.s_ttl,
             target,
             usd_price: usdPrice,
+            // Per-tier raw VND from CalcHeader (Sprint 1.7g mirror).
+            // Falls back to 0 → fmtVnd → "—" for legacy quotes without
+            // selling_price_vnd / extra_moqs[i].price_vnd populated.
+            vnd_price: vndPrice,
             va_pct: va,
             contr_pct: contr,
             gm_pct: gm,
@@ -548,14 +579,19 @@ export default function Summarize() {
     //     same drop as pre-toggle behavior; if Henry needs them back,
     //     add to SUMMARIZE_COLUMNS as required: false).
     // Dedupe defensively in case visibleColumns somehow overlaps prefix.
+    // Also filter `csvExclude: true` columns (currently row_idx — the
+    // visible row counter has no meaning in a re-sortable CSV row).
+    const csvExcludedKeys = new Set(
+      SUMMARIZE_COLUMNS.filter((c) => c.csvExclude).map((c) => c.key)
+    );
     const visibleKeys = visibleColumns.map((c) => c.key);
     const seen = new Set();
     const cols = [];
     for (const k of [...CSV_ALWAYS_INCLUDE_KEYS, ...visibleKeys]) {
-      if (!seen.has(k)) {
-        cols.push(k);
-        seen.add(k);
-      }
+      if (seen.has(k)) continue;
+      if (csvExcludedKeys.has(k)) continue;
+      cols.push(k);
+      seen.add(k);
     }
     // Export selected-and-visible if any selections; otherwise the full
     // visible set. Hidden selections (filtered out) are never written.
