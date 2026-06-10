@@ -18,6 +18,17 @@
   color: var(--color-slate-700, #334155);
   list-style: none;
   user-select: none;
+  border-radius: 6px;
+  transition: background 0.12s;
+}
+
+/* Hover affordance — operator sees the row is clickable before the
+   click happens. Without this, the toggle was invisible until tried. */
+.snapshot-panel-summary:hover {
+  background: var(--color-slate-100, #f1f5f9);
+}
+.snapshot-panel-summary:active {
+  background: var(--color-slate-200, #e2e8f0);
 }
 
 /* Hide the default ▶ marker on Chromium/Webkit while keeping the
@@ -28,8 +39,11 @@
 .snapshot-panel-summary::before {
   content: '▸';
   color: var(--color-slate-500, #64748b);
-  font-size: 11px;
+  font-size: 13px;
+  width: 14px;
+  display: inline-block;
   transition: transform 0.15s;
+  text-align: center;
 }
 .snapshot-panel[open] > .snapshot-panel-summary::before {
   transform: rotate(90deg);
@@ -38,6 +52,20 @@
 .snapshot-panel-title {
   font-weight: 600;
   color: var(--color-slate-900, #0f172a);
+}
+
+/* Right-pushed hint text — appears in the summary row as a soft affordance
+   so the operator can see at a glance "this is clickable". Faded on hover
+   so it doesn't clutter once they know. */
+.snapshot-panel-hint {
+  margin-left: auto;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--color-slate-500, #94a3b8);
+  transition: opacity 0.15s;
+}
+.snapshot-panel-summary:hover .snapshot-panel-hint {
+  opacity: 0.6;
 }
 
 .snapshot-panel-fields {
