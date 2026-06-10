@@ -41,6 +41,18 @@
 // re-save in the calculator.
 export const CPLX_SHAPE_VERSION = 4;
 
+// Phase 1 pricing-snapshot foundation (additive field, NO version bump
+// per PR #110 precedent — heal-on-read is sufficient for purely
+// additive defaults). Mirrors stdMigration.healPricingSnapshot.
+import { createEmptySnapshot } from './pricingSnapshot.js';
+
+function healPricingSnapshot(state) {
+  if (state && state.pricing_snapshot && typeof state.pricing_snapshot === 'object') {
+    return state;
+  }
+  return { ...state, pricing_snapshot: createEmptySnapshot() };
+}
+
 function startsWithFG(code) {
   return typeof code === 'string' && code.toUpperCase().startsWith('FG');
 }
@@ -116,7 +128,7 @@ export function upgradeCplxState(state) {
           sp.processes.every((r) => !r || typeof r !== 'object' || r._mid))
     )
   ) {
-    return state; // already upgraded
+    return healPricingSnapshot(state); // already upgraded — still heal snapshot if absent
   }
 
   const sourceVersion = Number(state._shape_version) || 0;
@@ -169,13 +181,16 @@ export function upgradeCplxState(state) {
 
   const tooling_alloc = Array.isArray(state.tooling_alloc) ? state.tooling_alloc : [];
 
-  return {
+  const upgraded = {
     ...state,
     subproducts: newSps,
     bom,
     tooling_alloc,
     _shape_version: CPLX_SHAPE_VERSION,
   };
+  // Pricing-snapshot heal (Phase 1) — additive default after the
+  // shape-version walk so newly-migrated states get the snapshot too.
+  return healPricingSnapshot(upgraded);
 }
 
 /**

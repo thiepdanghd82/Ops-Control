@@ -36,6 +36,22 @@
 // stay readable; export route returns 422 `legacy_no_rows` to prompt re-save.
 export const STD_SHAPE_VERSION = 3;
 
+// Phase 1 pricing-snapshot foundation (additive field, NO version bump
+// per PR #110 / Sprint S-D21-LEADTIME precedent). Imported here, not
+// re-implemented, so the canonical shape stays single-source — same
+// pricingSnapshot.js the calcReducer factories + freezeLib use.
+import { createEmptySnapshot } from './pricingSnapshot.js';
+
+// Idempotent: returns SAME reference when state already carries a
+// snapshot object so the React-memo short-circuit in upgradeStdState
+// stays intact for fully-current quotes.
+function healPricingSnapshot(state) {
+  if (state && state.pricing_snapshot && typeof state.pricing_snapshot === 'object') {
+    return state;
+  }
+  return { ...state, pricing_snapshot: createEmptySnapshot() };
+}
+
 // Stable _mid generator — duplicated from createStdState() so this
 // module doesn't import calcEngine (keeps migrator pure + zero-dep).
 // Collision risk: Date.now + 6 random chars = ~64 bits of entropy per
@@ -80,7 +96,7 @@ export function upgradeStdState(state) {
       Array.isArray(state.materials_main) &&
       Array.isArray(state.materials_alt) &&
       (state.materials_active === 'main' || state.materials_active === 'alt');
-    if (hasMids && hasAltShape) return state;
+    if (hasMids && hasAltShape) return healPricingSnapshot(state);
   }
 
   let next = state;
@@ -111,6 +127,9 @@ export function upgradeStdState(state) {
   if (next.materials !== live) {
     next = { ...next, materials: live };
   }
+  // Pricing-snapshot heal (Phase 1) — additive, runs after version
+  // chain so newly-migrated states also pick up the empty default.
+  next = healPricingSnapshot(next);
   return next;
 }
 
