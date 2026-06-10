@@ -1,11 +1,12 @@
 # Ops Control — Agent Playbook
+
 # Agent working principles (read first)
 
 > Behavioral guardrails for any agent (Claude Code / Antigravity) working in this repo.
 > Distilled from Andrej Karpathy's notes on LLM coding pitfalls + battle-tested community
-> practice, adapted to this project's existing conventions. These govern *how* you work;
+> practice, adapted to this project's existing conventions. These govern _how_ you work;
 > the sprint history, lessons, checklists, and recovery playbooks in `CLAUDE.md` govern
-> *what* the system is and the exact steps to follow.
+> _what_ the system is and the exact steps to follow.
 
 ## Precedence
 
@@ -39,7 +40,7 @@ header).
 - This does **not** loosen the rigor this repo already requires. Tests, defense-in-depth
   auth checks (`requireTabAccess`), schema validation on `Library/*` (Lesson 8), and the
   mandatory post-change checklist are **not** speculative — they stay. Simplicity is
-  about the *shape of the solution*, never about skipping verification.
+  about the _shape of the solution_, never about skipping verification.
 - Do NOT adopt a heavyweight end-to-end framework that "owns" the whole process — it
   hides bugs in the process itself. Prefer small, composable modes (Part B).
 
@@ -68,6 +69,7 @@ header).
   and **pause at each checkpoint** for confirmation before moving on. Do not execute the
   whole plan in one unattended pass (unless running under an explicitly-invoked
   `AUTO_EXECUTE.md` session).
+
 - Definition of Done for any code change includes the existing
   **"After every UI/client-code change — MANDATORY checklist"** in `CLAUDE.md` (tests
   green -> rebuild -> restart node if `server/**` was touched -> bundle self-check ->
@@ -154,6 +156,8 @@ simple tasks.
 >
 > **Sprint history — newest first** (SHA-discipline per Lesson 0):
 >
+> **Sprint S-SNAPSHOT-PHASE-5 — Pre-go-live validation (UAT + bench + docs + metrics) shipped 2026-06-10 (SHA: `c336083` via PR #130).** Closes the 4-phase pricing-snapshot rollout with the validation + hardening deliverables ahead of CCL Vietnam Hai Duong go-live 2026-07-21. **Server-side metrics** — new `server/services/pricingSnapshotMetrics.js` emits 3 Prometheus-compat counter families on every quote save: `pricing_snapshot_save_total{type,source,site}` (every save, source ∈ persisted/synthesized/empty), `pricing_snapshot_synth_save_total{type,site}` (synth subset — alarm signal for library-load issues), `pricing_snapshot_warning_total{type,warning}` (per-warning-type aggregation, e.g. `site_mismatch`). Tolerant helper — malformed snapshot still bumps `source=empty`, never blocks save (mirrors costApi audit() try/catch). Wired into POST /quotes + PATCH /quotes/:id after `upsertQuote` succeeds. 10 new unit tests covering resolveSnapshotSource branches + counter emission + warning aggregation + malformed-input tolerance. **Synthetic benchmark** — `scripts/bench/pricingSnapshot.bench.js` times `freezeLib` + `snapshotPricingParams` + resolver lookup across 100 / 1k / 10k fixtures with realistic state shape (50 mat / 40 wc / 30 coverage rows mirroring production CCL library at v1.5.12). At 10k quotes: `freezeLib` p95 = 38 μs (130× under 5 ms budget), `snapshotPricingParams` p95 = 0 μs, resolver lookup p95 = 0 μs. Confirms snapshot work added zero measurable hot-path cost. Exit 1 on any 10k-fixture p95 breach so CI can opt-in to enforce. **Bilingual EN+VI docs**: `docs/uat/pricing-snapshot-uat.md` — 30-scenario UAT script (20 operator + 10 admin) covering save+freeze, copy quote, legacy heal-on-read, SnapshotPanel UI, Summarize column, xlsx audit sheet, site mismatch detection, library drift shielding, /metrics counter assertions. Executor = Henry solo on Mac DMG. `docs/cutover/PRICING_SNAPSHOT_OPERATOR_GUIDE.md` — operator how-to (badge legend / copy workflow / legacy quote / FAQ). `docs/cutover/PRICING_SNAPSHOT_ADMIN_GUIDE.md` — admin reference (architecture / warnings catalogue / Summarize bulk audit / xlsx review / /metrics signals / library audit guarantee / recovery playbook). **Tests**: server 1265/1265 pass (1 chronic MES-3-FIX-51 SKIP, unrelated). Client 1151/1151 unchanged. Bench exit 0 at all 3 fixture sizes. Admin-merged via squash per Sprint S-D21 culture (CI-red pre-existing per MES-3-FIX-38/50 backlog; green checks all passed). **Out of scope**: Phase 6 stage rollout + production cut-over scheduling (separate sprint S-SNAPSHOT-PHASE-6 with 41-day buffer to go-live D-0 2026-07-21).
+>
 > **Sprint S-SNAPSHOT-PHASE-4 — Snapshot UI surface + xlsx audit sheet shipped 2026-06-10 (SHA: `d344fd1` via PR #129, 2 commits including affordance fix `b63d449`).** Closes the user-facing layer of the 4-phase pricing-snapshot rollout. New `client/src/modules/cost/components/SnapshotPanel.{jsx,css,helpers.js}` renders at the BOTTOM of Cost Breakdown (Std + Cpx) via native `<details>` (repo precedent: ImportWizard / ModeSection / ImportLegacySection — no React modal state). 5 fields × 3 source tones: `persisted` 🟢 / `synthesized` 🟡 / `empty` ⚪ via reused `<StatusBadge>` (Carbon palette). Hover affordance + caret rotation + "click to toggle" hint added in commit `b63d449` after Henry's hardware test surfaced "không đóng mở được" — native `<details>` was clickable but visually inert until the .12s background + slate-100 hover token landed. Aria-label + title attr for keyboard / screen-reader parity. Copy-mode banner (blue `#dbeafe/#1e40af/#93c5fd`) at top of Pricing Worksheet detects `isCopyMode(state, activeQuoteId)` so operator sees "this is a COPY of …" before realising why the badge flipped to Live rates. **xlsx audit sheet** — new `server/services/quoteExport/sheets/10-pricing-snapshot.js` adds tab `10 Pricing Snapshot` (VISIBLE, distinct from MVP-2 hidden `_Audit` + `_Schema`) with 11 field/value rows (rows 3–13): Quote ID, Quote saved at, Pricing captured at, Pricing captured by, Site, Library version, Snapshot status, Materials frozen, Workcenters frozen, Coverage rows, Warnings. Status label 3-way: `Frozen at save time` / `Live rates (no snapshot persisted)` / `No snapshot`. Warnings cell wraps newlines + row.height = `Math.max(20, warnings.length * 16)`. Style presets `th` / `label` / `body` (initial draft used non-existent `tableHeader`/`tableLabel`/`tableValue` — fixed before commit). Sheet count 10 → 11 across `exportQuote.unit.test.js`. **Summarize "Snapshot" column** — optional, default hidden via `SUMMARIZE_DEFAULT_HIDDEN_KEYS`, renders per-row Frozen/Live/No pill so admin can scan unfrozen quotes at a glance. **CalcCostBreakdown + CplxCostBreakdown** — lifted `snapshotPricingParams` to useMemo + passed through to tier calcAll AND SnapshotPanel so multi-tier displays read uniformly from snapshot. **Tests**: 1039 client + 6 new sheet integration tests (persisted stamps / synthesized labelled / empty labelled / distinct from hidden `_Audit` / surfaces `_warnings` / null snapshot graceful) + 11 helper unit tests. Henry hardware-verified on Mac DMG SERVER 1.5.12 (SHA `2524e376…`) across 4 rebuilds → admin-merged. **Out of scope**: xlsx sheet 11-leadtime (MES-3-FIX-48 deferred), per-quote snapshot diff viewer (future work if auditor demand surfaces).
 >
 > **Sprint S-SNAPSHOT-PHASE-3 — Snapshot capture + render wiring shipped 2026-06-10 (SHA: `4ae6931` via PR #128).** Writer + reader sides land. **Writer**: `StandardCalc.jsx` + `ComplexCalc.jsx` `buildQuoteData` calls `freezeLib(lib, state, { userId: user?.id })` AND recomputes `calcAll` + rowsPayload with the resulting snapshot before POST. `useAuth()` threads `user.id` into the freeze options — `_captured_by` previously left null because `freezeLib` had no auth context (hook-only path: `Auth` accessible only inside React tree, NOT from the pure helper). Explicit-option pattern chosen over implicit globals so node:test fixtures stay pure. **Cpx** re-runs `aggregateComplex` post-freeze so each SP's per-tier result inherits the snapshot resolver. **Copy quote bug** (latent since Sprint 14 right-click Copy ship): `pendingQuote.action` was set by Quote History but never READ by either StandardCalc nor ComplexCalc useEffect → copies always treated as plain reload, snapshot kept the ORIGINAL captured_at/by. Fix: useEffect destructures `action` + passes through `loadQuote(quoteType, qState, id, version, action)` 5-positional signature (default `'load'` for BC). Reducer `LOAD_QUOTE` branches on action: when `'copy'`, calls `copySnapshot()` which flips `_synthesized: true` + clears `_captured_at`/`_captured_by` + resets `activeQuoteId` (UI knows this is a draft, not a re-open). **Reader**: `CalcCostBreakdown.jsx` + `CplxCostBreakdown.jsx` resolve via `snapshotPricingParams(state, lib)` once per render in useMemo, passes `{snapshot, source}` to every tier's calcAll call. **Tests**: 998 client + 6 new copy-action reducer cases. Henry hardware-verified on Mac DMG. **Out of scope**: SnapshotPanel UI (deferred to Phase 4), Summarize column (Phase 4), xlsx sheet (Phase 4).
@@ -176,10 +180,11 @@ simple tasks.
 > Three independent features bundled under the same hardware-test session on a freshly-rebuilt Mac DMG SERVER 1.5.12
 > (SHA `0d5b3efa70f6a51c07d63139cb5480c8b83c3a5f9211bc2ce883a1fe640cedb7`). All 3 PRs admin-merged via squash to keep
 > main moving (CI-red pre-existing per MES-3-FIX-36/37/38/39 backlog; none regressed on the green checks: client tests
-> + commit messages + router siblings + runtime deps stayed green). Final client test count 883 → 904 (+21 quoteFilters
-> cases); xlsx export 142/142 unchanged after the +1 column shift.
 >
-> - **PR #109 — Agent guardrails + skills + CONTEXT glossary shipped 2026-06-09 (SHA: `95be4d9`).** New
+> - commit messages + router siblings + runtime deps stayed green). Final client test count 883 → 904 (+21 quoteFilters
+>   cases); xlsx export 142/142 unchanged after the +1 column shift.
+>
+> * **PR #109 — Agent guardrails + skills + CONTEXT glossary shipped 2026-06-09 (SHA: `95be4d9`).** New
 >   `AGENT_PRINCIPLES.md` (4 core principles: think-before-coding, simplicity, surgical changes, goal-driven +
 >   checkpoints; 5 working modes: ALIGN, DIAGNOSE, TDD, ZOOM-OUT, HANDOFF) wired into CLAUDE.md via
 >   `@AGENT_PRINCIPLES.md` import. New `CONTEXT.md` glossary for the project's dense jargon (`bd_mat_setup` /
@@ -188,7 +193,7 @@ simple tasks.
 >   v1.5.12 + close to go-live). 6 mattpocock skills installed under `.agents/skills/` (diagnose,
 >   git-guardrails-claude-code, grill-with-docs, handoff, tdd, zoom-out) with `skills-lock.json` source-tracking.
 >   Process-only change, no runtime code.
-> - **PR #110 — Materials tab DRW column + rename Desc → Quote materials shipped 2026-06-09 (SHA: `5d89504`).** Operator
+> * **PR #110 — Materials tab DRW column + rename Desc → Quote materials shipped 2026-06-09 (SHA: `5d89504`).** Operator
 >   request: separate the engineering-drawing material identifier from the quoted material identifier on every material
 >   row (Std + Cpx + per-SP), so the xlsx export to customer mirrors the same two columns. New text field
 >   `drw_material` placed BEFORE `Quote materials` (formerly `Desc.`) on both `CalcMaterials.jsx` (Std) and
@@ -202,7 +207,7 @@ simple tasks.
 >   `mat.quote_materials` (EN+VN). 5 xlsx test files updated for the +1 column shift in Materials sheet (rows /
 >   subtotal / variant / multiTierRows / numFmt.regression); Inks sheet tests unchanged. calcEngine + validator + Inks
 >   lookup + HMAC payload all unchanged (field is metadata only — zero pricing impact).
-> - **PR #111 — Shared scoped filter bar for Quote History + Cost Breakdown shipped 2026-06-09 (SHA: `7e6cd4c`).** Both
+> * **PR #111 — Shared scoped filter bar for Quote History + Cost Breakdown shipped 2026-06-09 (SHA: `7e6cd4c`).** Both
 >   tabs fetch the same `sharedApi.getQuotes()` payload with the same `quote.state` schema. Filter logic was duplicated
 >   and drifted — **Summarize global search did NOT cover `sale_owner`** (operator regression), and neither tab had
 >   Date / Customer / Part / Sale scoped boxes. This change extracts ONE pure filter engine + ONE shared filter-bar UI,
