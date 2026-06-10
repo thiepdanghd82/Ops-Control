@@ -60,11 +60,17 @@ export function createEmptySnapshot() {
   };
 }
 
-// Phase 1 placeholder — Phase 2 will hand user_id down via
-// buildQuoteData() (or a save-side hook) rather than depending on
-// React-hook context from a pure module. Returning null is the
-// documented fallback.
-function getCurrentUserId() {
+// Phase 3 wired: buildQuoteData (StandardCalc / ComplexCalc) pulls the
+// user from `useAuth()` and hands the id down via
+// `freezeLib(lib, state, { userId })`. AuthContext is a React hook so
+// this pure module cannot reach it directly — the explicit-option
+// pattern keeps pricingSnapshot.js React-free + node:test friendly.
+// Falls back to null when caller doesn't supply userId (legacy callers
+// + tests that don't care about attribution).
+function resolveCapturedBy(options) {
+  if (options && typeof options.userId !== 'undefined' && options.userId !== null) {
+    return options.userId;
+  }
   return null;
 }
 
@@ -117,9 +123,14 @@ function collectUsedWorkcenters(state) {
  * @param {object|null|undefined} lib - Live master library (post-
  *   activeSite filter from CostLibContext). null → empty snapshot.
  * @param {object|null|undefined} state - Persisted quote state.
+ * @param {object} [options]
+ * @param {string|null} [options.userId] - operator id for the
+ *   `_captured_by` audit field. Phase 3 buildQuoteData pulls this from
+ *   `useAuth().user.id`. Omit for legacy / test callers — falls back
+ *   to null and the field remains a safe sentinel for audit queries.
  * @returns {object} pricing_snapshot shape (see createEmptySnapshot)
  */
-export function freezeLib(lib, state) {
+export function freezeLib(lib, state, options) {
   if (!lib) return createEmptySnapshot();
 
   const usedMatCodes = collectUsedMatCodes(state);
@@ -144,7 +155,7 @@ export function freezeLib(lib, state) {
 
   return {
     _captured_at: new Date().toISOString(),
-    _captured_by: getCurrentUserId(),
+    _captured_by: resolveCapturedBy(options),
     _synthesized: false,
     _lib_version: (lib && lib._version) || null,
     _site: (state && state.site) || null,

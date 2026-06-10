@@ -72,9 +72,17 @@ export function CalcProvider({ children }) {
   // it for optimistic-locking checks. Callers that don't know the
   // version pass 0 / undefined — the server treats that as opt-out and
   // merges without the conflict check.
+  // Phase 3 — `action` carries the operator's intent ('copy' | 'load').
+  // 'copy' resets activeQuoteId so the next save creates a new record
+  // and marks pricing_snapshot._synthesized so the next save re-freezes
+  // against the current master library. Callers omitting action default
+  // to 'load' (BC for every pre-Phase-3 caller).
   const loadQuote = useCallback(
-    (quoteType, qState, id, version = 0) =>
-      dispatch({ type: A.LOAD_QUOTE, payload: { quoteType, state: qState, id, version } }),
+    (quoteType, qState, id, version = 0, action = 'load') =>
+      dispatch({
+        type: A.LOAD_QUOTE,
+        payload: { quoteType, state: qState, id, version, action },
+      }),
     []
   );
   const resetStd = useCallback(() => dispatch({ type: A.RESET_STD }), []);

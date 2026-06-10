@@ -4,6 +4,7 @@
  * Project tab: collapsible header + SP table with expandable detail rows
  */
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { useAuth } from '../../../../context/AuthContext';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import {
@@ -13,6 +14,7 @@ import {
   serializeResultForPersist,
   buildCpxRowsPayload,
 } from '../../../../services/calcEngine';
+import { freezeLib, snapshotPricingParams } from '../../../../services/pricingSnapshot';
 import {
   addSubProduct,
   removeSubProduct,
@@ -80,6 +82,8 @@ export default function ComplexCalc() {
     activeQuoteVersion,
   } = useCalc();
   const { lib } = useCostLib();
+  // Phase 3 — user id for snapshot `_captured_by` audit field.
+  const { user } = useAuth();
   const [bomQtyEnabled] = useBomQtyFlag();
   const [spMoqScalingEnabled] = useSpMoqScalingFlag();
   const cs = cplxState;
@@ -92,7 +96,7 @@ export default function ComplexCalc() {
   // shows empty default state instead of the requested quote.
   useEffect(() => {
     if (!pendingQuote || pendingQuote.type !== 'complex') return;
-    const { id } = pendingQuote;
+    const { id, action } = pendingQuote;
     let cancelled = false;
     sharedApi
       .getQuotes()
@@ -101,7 +105,9 @@ export default function ComplexCalc() {
         const q = (quotes || []).find((x) => String(x.id) === String(id));
         if (q?.state) {
           // Pass `_version` through for optimistic locking on subsequent saves.
-          loadQuote('cplx', q.state, q.id, q._version || 0);
+          // Phase 3 — `action` propagation for copy-mode reset (mirror
+          // of the Std handler in StandardCalc.jsx).
+          loadQuote('cplx', q.state, q.id, q._version || 0, action);
         } else {
           showToast(`Quote #${id} not found`, 'err');
         }
@@ -141,11 +147,19 @@ export default function ComplexCalc() {
   const { spResults, aggregate, calcErrors } = useMemo(() => {
     if (!lib || !sps.length) return { spResults: [], aggregate: null, calcErrors: [] };
     const tierIdx = cs.active_moq_idx || 0;
+    // Phase 3 — resolve snapshot once per memo cycle, hand to aggregateComplex
+    // through the same `opts` bag it already uses for bomQtyEnabled +
+    // spMoqScalingEnabled.
+    const { snapshot } = snapshotPricingParams(cs, lib);
     const {
       aggregate: agg,
       pass2,
       errors,
-    } = aggregateComplex(cs, sps, lib, tierIdx, { bomQtyEnabled, spMoqScalingEnabled });
+    } = aggregateComplex(cs, sps, lib, tierIdx, {
+      bomQtyEnabled,
+      spMoqScalingEnabled,
+      snapshot,
+    });
     if (!agg) return { spResults: [], aggregate: null, calcErrors: errors };
     // Log pass errors so callers/console see them (helper is pure, doesn't log).
     for (const e of errors) {
@@ -209,21 +223,63 @@ export default function ComplexCalc() {
   const [saving, setSaving] = useState(false);
 
   const buildQuoteData = useCallback(() => {
+    // Phase 3 — capture pricing snapshot. Cpx walks subproducts for
+    // both materials + processes inside freezeLib, so a 3-SP quote with
+    // shared workcenters dedupes naturally. user?.id stamps audit.
+    const snapshot = lib ? freezeLib(lib, cs, { userId: user?.id || null }) : null;
+    const stateWithSnapshot = snapshot ? { ...cs, pricing_snapshot: snapshot } : cs;
+    const calcOptions = snapshot ? { snapshot } : {};
+    // Re-aggregate with the freshly-frozen snapshot so the persisted
+    // result KPIs (gm/va/contribution/s_ttl/etc.) reflect the values
+    // we just locked in. Without this, a loaded quote whose master lib
+    // has shifted would persist its render-time (old-snapshot) numbers
+    // alongside the new snapshot — internally inconsistent until next
+    // load. ~30ms for typical 3-SP quote; sync to surface errors.
+    let persistedAggregate = aggregate;
+    if (lib && sps.length) {
+      const tierIdx = cs.active_moq_idx || 0;
+      const { aggregate: aggFresh } = aggregateComplex(cs, sps, lib, tierIdx, {
+        bomQtyEnabled,
+        spMoqScalingEnabled,
+        snapshot,
+      });
+      if (aggFresh) {
+        const sp = cs.selling_price || 0;
+        if (sp > 0) {
+          aggFresh.gm = (sp - (aggFresh.s_ttl || 0)) / sp;
+          aggFresh.va =
+            (sp - (aggFresh.s_mat_cost || 0) - (aggFresh.tooling || 0) - (aggFresh.packing_ship || 0)) /
+            sp;
+          aggFresh.contribution =
+            1 -
+            ((aggFresh.s_mat_cost || 0) +
+              (aggFresh.tooling || 0) +
+              (aggFresh.packing_ship || 0) +
+              (aggFresh.labor_cost || 0)) /
+              sp;
+        }
+        persistedAggregate = aggFresh;
+      }
+    }
     // MES-3-FIX-41: per-row Setup/Run/Total per SP per tier — exports
     // now show real numbers everywhere instead of em-dash. Cost ~150ms
     // for 3 SPs × 5 tiers; runs sync so save errors surface cleanly.
-    const cpxRows = lib ? buildCpxRowsPayload(cs, sps, lib) : { subproducts: [] };
+    // Phase 3: rows payload uses the same snapshot so per-SP per-tier
+    // breakdown can't drift from the aggregate result.
+    const cpxRows = lib
+      ? buildCpxRowsPayload(cs, sps, lib, calcOptions)
+      : { subproducts: [] };
     const persisted = serializeResultForPersist(
-      aggregate ? { ...aggregate, subproducts: cpxRows.subproducts } : null
+      persistedAggregate ? { ...persistedAggregate, subproducts: cpxRows.subproducts } : null
     );
     return {
       type: 'complex',
-      state: cs,
+      state: stateWithSnapshot,
       result: persisted,
       saved_at: new Date().toISOString(),
       label: cs.ccl_pn || 'Complex',
     };
-  }, [cs, sps, lib, aggregate]);
+  }, [cs, sps, lib, aggregate, user?.id, bomQtyEnabled, spMoqScalingEnabled]);
 
   const persistAsNew = useCallback(async () => {
     setSaving(true);

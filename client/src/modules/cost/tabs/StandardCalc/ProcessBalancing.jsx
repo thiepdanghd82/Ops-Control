@@ -6,6 +6,7 @@ import { useMemo, useCallback } from 'react';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import { calcAll, getActiveTierState } from '../../../../services/calcEngine';
+import { snapshotPricingParams } from '../../../../services/pricingSnapshot';
 import { fmtN as _fmtN } from '../../../../utils/format';
 import DecimalInput from '../../../../utils/DecimalInput';
 
@@ -34,12 +35,13 @@ export default function ProcessBalancing() {
   const tierSt = useMemo(() => getActiveTierState(st), [st]);
   const allResult = useMemo(() => {
     if (!lib) return null;
+    const { snapshot } = snapshotPricingParams(st, lib);
     try {
-      return calcAll(tierSt, null, lib, null);
+      return calcAll(tierSt, null, lib, null, { snapshot });
     } catch {
       return null;
     }
-  }, [tierSt, lib]);
+  }, [tierSt, lib, st]);
 
   const procResults = useMemo(() => allResult?.procResults || [], [allResult]);
   const processes = useMemo(() => st.processes || [], [st.processes]);

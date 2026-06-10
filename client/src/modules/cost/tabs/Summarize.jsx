@@ -11,6 +11,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useCalc } from '../../../context/CalcContext';
 import { useCostLib } from '../../../context/CostLibContext';
 import { calcAll, buildTierState, applyCplxTierToSp } from '../../../services/calcEngine';
+import { snapshotPricingParams } from '../../../services/pricingSnapshot';
 import { sharedApi } from '../../../services/api';
 import { RFQ_COLOR_PALETTE, setRfqColor, useRfqColors } from '../../../services/rfqColors';
 import { fmtN, pct, gmClr } from '../../../utils/format';
@@ -212,7 +213,7 @@ function yieldFromSubproducts(sps) {
 // Complex two-pass aggregator — mirrors ComplexCalc.jsx / CplxCostBreakdown.
 // Kept inline rather than extracted to a shared util to avoid touching
 // more modules; the logic is small and self-contained.
-function aggregateCplxTier(cs, sps, lib, tierIdx) {
+function aggregateCplxTier(cs, sps, lib, tierIdx, options = {}) {
   if (!lib || !sps.length) return null;
   const activeMoq =
     tierIdx === 0 ? cs.moq : ((cs.extra_moqs || [])[tierIdx - 1] || {}).moq || cs.moq;
@@ -226,7 +227,9 @@ function aggregateCplxTier(cs, sps, lib, tierIdx) {
         trade_mode: cs.trade_mode,
         site: cs.site,
       };
-      return calcAll(spSt, null, lib, null);
+      // Phase 3: propagate snapshot to the SP-level calcAll so the
+      // aggregated Cpx tier honours frozen rates per saved quote.
+      return calcAll(spSt, null, lib, null, options);
     } catch {
       return null;
     }
@@ -244,7 +247,7 @@ function aggregateCplxTier(cs, sps, lib, tierIdx) {
         trade_mode: cs.trade_mode,
         site: cs.site,
       };
-      return calcAll(spSt, pass1, lib, tieredSps);
+      return calcAll(spSt, pass1, lib, tieredSps, options);
     } catch {
       return pass1[spi];
     }
@@ -372,14 +375,19 @@ export default function Summarize() {
         try {
           let r,
             yield_pct = 1;
+          // Phase 3 — each saved quote carries its own pricing_snapshot
+          // (or none → synthesize from current lib). Resolved once per
+          // quote, reused across every tier walk.
+          const { snapshot } = snapshotPricingParams(st, lib);
+          const calcOpts = { snapshot };
           if (isCplx) {
             const sps = st.subproducts || [];
-            r = aggregateCplxTier(st, sps, lib, t);
+            r = aggregateCplxTier(st, sps, lib, t, calcOpts);
             // Yield = 1 - Σ(scrap_pct) across every process in every SP.
             yield_pct = yieldFromSubproducts(sps);
           } else {
             const tierSt = buildTierState(st, t, usdPrice, moq, eau);
-            r = calcAll(tierSt, null, lib, null);
+            r = calcAll(tierSt, null, lib, null, calcOpts);
             // Yield = 1 - Σ(scrap_pct) across every process in this tier.
             yield_pct = yieldFromProcesses(tierSt);
           }

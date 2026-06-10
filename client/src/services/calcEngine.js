@@ -2149,6 +2149,12 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
     return sp.ship_qty || activeMoq;
   };
 
+  // Phase 3 — extract snapshot from opts (caller injects via the same
+  // `opts` bag already used for bomQtyEnabled / spMoqScalingEnabled).
+  // Passing it down the SP calcAll calls so the aggregate honours the
+  // frozen rates per the parent quote, not the live master library.
+  const calcOpts = opts.snapshot ? { snapshot: opts.snapshot } : {};
+
   const errors = [];
   const pass1 = tieredSps.map((sp, spi) => {
     try {
@@ -2159,7 +2165,7 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
         trade_mode: cs.trade_mode,
         site: cs.site,
       };
-      return calcAll(spSt, null, lib, null);
+      return calcAll(spSt, null, lib, null, calcOpts);
     } catch (err) {
       errors.push({ spi, code: sp.code, pass: 1, message: err?.message || String(err) });
       return null;
@@ -2178,7 +2184,7 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
         trade_mode: cs.trade_mode,
         site: cs.site,
       };
-      const res = calcAll(spSt, pass1, lib, tieredSps);
+      const res = calcAll(spSt, pass1, lib, tieredSps, calcOpts);
       const matErrs = (res?.matResults || []).filter((r) => r?.error).map((r) => r.error);
       if (matErrs.length) errors.push({ spi, code: sp.code, pass: 2, message: matErrs.join('; ') });
       return res;
@@ -2380,14 +2386,18 @@ const _procRowFromResult = (r) => {
  * @param {object[]} [allSpResults] — Cpx pass1 results (Std passes null)
  * @param {object[]} [subproducts]  — Cpx subproducts (Std passes null)
  */
-export function calcRowBreakdown(state, lib, allSpResults, subproducts) {
+export function calcRowBreakdown(state, lib, allSpResults, subproducts, options = {}) {
   if (!state || !lib) {
     return { materials_main: [], materials_alt: [], inks: [], processes: [] };
   }
   const activeKey = state.materials_active === 'alt' ? 'materials_alt' : 'materials_main';
   const inactiveKey = activeKey === 'materials_main' ? 'materials_alt' : 'materials_main';
 
-  const activeResult = calcAll(state, allSpResults, lib, subproducts);
+  // Phase 3: propagate snapshot down to the internal calcAll so the
+  // per-row breakdown uses frozen rates/coverage just like the
+  // top-level result does. Without this, save-time rowsPayload would
+  // drift from the displayed cost on legacy quotes after master shift.
+  const activeResult = calcAll(state, allSpResults, lib, subproducts, options);
   const out = {
     materials_main: [],
     materials_alt: [],
@@ -2405,7 +2415,7 @@ export function calcRowBreakdown(state, lib, allSpResults, subproducts) {
       materials: inactiveSet,
       materials_active: activeKey === 'materials_main' ? 'alt' : 'main',
     };
-    const inactiveResult = calcAll(swapped, allSpResults, lib, subproducts);
+    const inactiveResult = calcAll(swapped, allSpResults, lib, subproducts, options);
     out[inactiveKey] = (inactiveResult.matResults || []).map(_matRowFromResult);
   }
   return out;
@@ -2419,7 +2429,7 @@ export function calcRowBreakdown(state, lib, allSpResults, subproducts) {
  * @param {object} state — Std state
  * @param {object} lib
  */
-export function buildStdRowsPayload(state, lib) {
+export function buildStdRowsPayload(state, lib, options = {}) {
   if (!state || !lib) return { rows: null, tiers: [] };
   const tierCount = 1 + (Array.isArray(state.extra_moqs) ? state.extra_moqs.length : 0);
   const activeIdx = Number(state.active_moq_idx) || 0;
@@ -2430,7 +2440,10 @@ export function buildStdRowsPayload(state, lib) {
     const moq = t === 0 ? state.moq : (em?.moq ?? state.moq);
     const eau = t === 0 ? state.annual_qty : (em?.eau ?? state.annual_qty);
     const tierSt = buildTierState(state, t, price, moq, eau);
-    tiers.push({ rows: calcRowBreakdown(tierSt, lib, null, null) });
+    // Phase 3: propagate snapshot through to calcRowBreakdown → calcAll
+    // so per-tier per-row breakdown stays consistent with frozen rates
+    // when buildQuoteData captures the snapshot at save time.
+    tiers.push({ rows: calcRowBreakdown(tierSt, lib, null, null, options) });
   }
   return { rows: tiers[activeIdx]?.rows ?? null, tiers };
 }
@@ -2444,7 +2457,7 @@ export function buildStdRowsPayload(state, lib) {
  * @param {object[]} sps — array of subproduct states
  * @param {object} lib
  */
-export function buildCpxRowsPayload(cs, sps, lib) {
+export function buildCpxRowsPayload(cs, sps, lib, options = {}) {
   if (!cs || !Array.isArray(sps) || !sps.length || !lib) return { subproducts: [] };
   const tierCount = 1 + (Array.isArray(cs.extra_moqs) ? cs.extra_moqs.length : 0);
   const activeIdx = Number(cs.active_moq_idx) || 0;
@@ -2462,7 +2475,11 @@ export function buildCpxRowsPayload(cs, sps, lib) {
         trade_mode: cs.trade_mode,
         site: cs.site,
       };
-      tiers.push({ rows: calcRowBreakdown(spSt, lib, null, null) });
+      // Phase 3: propagate snapshot (frozen rates/coverage) into the
+      // per-SP per-tier rows breakdown. Matches buildStdRowsPayload's
+      // pattern — the rows payload now never drifts from the
+      // top-level result when a snapshot is supplied.
+      tiers.push({ rows: calcRowBreakdown(spSt, lib, null, null, options) });
     }
     return { rows: tiers[activeIdx]?.rows ?? null, tiers };
   });

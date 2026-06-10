@@ -3,6 +3,7 @@
  * Matches COST V1.0 M05 with sub-tab navigation
  */
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useAuth } from '../../../../context/AuthContext';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import {
@@ -11,6 +12,7 @@ import {
   serializeResultForPersist,
   buildStdRowsPayload,
 } from '../../../../services/calcEngine';
+import { freezeLib } from '../../../../services/pricingSnapshot';
 import { costApi, sharedApi } from '../../../../services/api';
 import { chatApi, openChatRoom } from '../../../../services/chatApi';
 import { useI18n } from '../../../../utils/useI18n';
@@ -65,6 +67,10 @@ export default function StandardCalc() {
     activeQuoteVersion,
   } = useCalc();
   const { lib } = useCostLib();
+  // Phase 3 — pull current user id so freezeLib can stamp
+  // `_captured_by` for the audit trail. Hook stays at component scope
+  // (pure pricingSnapshot.js can't reach AuthContext directly).
+  const { user } = useAuth();
   const [saveChoiceOpen, setSaveChoiceOpen] = useState(false);
   // v1.3 Đợt 2 — replace blunt window.confirm() with ConflictModal.
   // `conflict` is null when no conflict, otherwise { current, attempted,
@@ -85,7 +91,7 @@ export default function StandardCalc() {
   // and loadQuote has been dispatched, then clear it.
   useEffect(() => {
     if (!pendingQuote || pendingQuote.type !== 'standard') return;
-    const { id } = pendingQuote;
+    const { id, action } = pendingQuote;
     let cancelled = false;
     sharedApi
       .getQuotes()
@@ -95,7 +101,11 @@ export default function StandardCalc() {
         if (q?.state) {
           // Pass `_version` through so subsequent Update-existing saves
           // include it in the PATCH for optimistic-locking enforcement.
-          loadQuote('std', q.state, q.id, q._version || 0);
+          // Phase 3 — pass `action` ('copy' | 'load' | undefined) so
+          // the reducer can branch: copy mode resets activeQuoteId +
+          // marks pricing_snapshot._synthesized so the next save
+          // re-freezes against the current master library.
+          loadQuote('std', q.state, q.id, q._version || 0, action);
         } else {
           showToast(`Quote #${id} not found`, 'err');
         }
@@ -140,22 +150,33 @@ export default function StandardCalc() {
   // "Save as new" and "Update existing" paths.
   const buildQuoteData = useCallback(() => {
     const tierSt = getActiveTierState(stdState);
-    const result = lib ? calcAll(tierSt, null, lib, null) : null;
+    // Phase 3 — capture pricing snapshot AT save time. Embed it into
+    // state.pricing_snapshot BEFORE calcAll so the result we persist
+    // matches what reload-time calc will produce (same snapshot in,
+    // same numbers out). user?.id stamps `_captured_by` for audit.
+    const snapshot = lib ? freezeLib(lib, stdState, { userId: user?.id || null }) : null;
+    const stateWithSnapshot = snapshot ? { ...stdState, pricing_snapshot: snapshot } : stdState;
+    const calcOptions = snapshot ? { snapshot } : {};
+    const result = lib ? calcAll(tierSt, null, lib, null, calcOptions) : null;
     // MES-3-FIX-41: bundle per-row Setup/Run/Total for active tier +
     // every tier so exports can render real numbers per Material/Ink/
     // Process row instead of em-dash. ~50ms for typical 5-tier quote.
-    const rowsPayload = lib ? buildStdRowsPayload(stdState, lib) : { rows: null, tiers: [] };
+    // Phase 3: rows payload uses the same snapshot so per-tier
+    // breakdown can't drift from the top-level result.
+    const rowsPayload = lib
+      ? buildStdRowsPayload(stdState, lib, calcOptions)
+      : { rows: null, tiers: [] };
     const persisted = serializeResultForPersist(
       result ? { ...result, rows: rowsPayload.rows, tiers: rowsPayload.tiers } : null
     );
     return {
       type: 'standard',
-      state: stdState,
+      state: stateWithSnapshot,
       result: persisted,
       saved_at: new Date().toISOString(),
       label: stdState.ccl_pn || stdState.rfq_number || 'Untitled',
     };
-  }, [stdState, lib]);
+  }, [stdState, lib, user?.id]);
 
   const persistAsNew = useCallback(async () => {
     setSaving(true);
