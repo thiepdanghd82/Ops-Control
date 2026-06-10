@@ -284,7 +284,12 @@
   cursor: pointer;
   vertical-align: middle;
 }
-.sum-select-header-row > th {
+/* Specificity must beat `.sum-table thead th` (1 class + 2 type = 12)
+   so the `top:` override actually wins — without `.sum-table thead`
+   prefix the var resolves to the right value but `top:0` from the
+   broader rule overrides it and both header rows stack at y=0,
+   hiding the column-label row behind the hint row on scroll. */
+.sum-table thead .sum-select-header-row > th {
   background: #f8fafc;
   font-weight: 400;
   font-style: italic;
