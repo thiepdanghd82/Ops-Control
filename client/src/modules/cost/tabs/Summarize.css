@@ -98,6 +98,9 @@
   box-shadow: none;
   font-size: 12px;
   letter-spacing: 0.16px;
+  /* Approx column-label row height (padding 10×2 + ~16 line-box + 2 border).
+     Used to stack the select-hint row sticky-below instead of overlapping. */
+  --sum-header-h: 36px;
 }
 .sum-table thead th {
   position: sticky;
@@ -291,6 +294,10 @@
   border-bottom: 1px solid #e2e8f0;
   text-align: left;
   cursor: default;
+  /* Stack below the column-label row instead of overlapping at top:0
+     (both rows live in <thead> and inherit position:sticky). */
+  top: var(--sum-header-h);
+  z-index: 1;
 }
 .sum-select-hint {
   letter-spacing: 0.01em;
