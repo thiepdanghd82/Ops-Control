@@ -584,13 +584,25 @@ export default function Summarize() {
     const csvExcludedKeys = new Set(
       SUMMARIZE_COLUMNS.filter((c) => c.csvExclude).map((c) => c.key)
     );
+    const colByKey = new Map(SUMMARIZE_COLUMNS.map((c) => [c.key, c]));
     const visibleKeys = visibleColumns.map((c) => c.key);
     const seen = new Set();
     const cols = [];
+    // Parallel array — operator-facing header label per column. For
+    // SUMMARIZE_COLUMNS entries we use `c.label` so the CSV header
+    // matches the on-screen column name (e.g. "End Customer" not
+    // `project`, which is the internal key holding aliased text per
+    // S-PROJFIX / Lesson 21). CSV_ALWAYS_INCLUDE_KEYS (quote_id, tier,
+    // update_date, type, sale_owner) have no SUMMARIZE_COLUMNS entry;
+    // their keys are machine-style identifiers operators already
+    // recognise so we ship them as-is.
+    const headers = [];
     for (const k of [...CSV_ALWAYS_INCLUDE_KEYS, ...visibleKeys]) {
       if (seen.has(k)) continue;
       if (csvExcludedKeys.has(k)) continue;
       cols.push(k);
+      const colDef = colByKey.get(k);
+      headers.push(colDef && colDef.label ? colDef.label : k);
       seen.add(k);
     }
     // Export selected-and-visible if any selections; otherwise the full
@@ -598,7 +610,7 @@ export default function Summarize() {
     const visibleSelected = sorted.filter((r) => selected.has(r.id));
     const rowsToExport = visibleSelected.length > 0 ? visibleSelected : sorted;
     if (rowsToExport.length === 0) return; // nothing to write
-    const csv = buildCsv(rowsToExport, cols);
+    const csv = buildCsv(rowsToExport, cols, { headers });
     const suggested = `summarize_${new Date().toISOString().slice(0, 10)}${visibleSelected.length > 0 ? `_${visibleSelected.length}rows` : ''}.csv`;
     try {
       await saveCsv(csv, suggested);
