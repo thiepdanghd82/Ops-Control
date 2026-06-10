@@ -130,6 +130,20 @@
   line-height: 1.4;
   vertical-align: middle;
 }
+/* Single-line clip + native `title` tooltip for long free-text cells
+   (REMARK / DRAW_MATERIALS / QUOTE_MATERIALS). Width caps come from
+   the column config (`w: …`); this rule handles the overflow + ellipsis
+   without changing row height. Hover shows the full value via the
+   browser's `title` attribute — keeps the table compact while
+   preserving operator access to the full string. */
+.sum-cell-clip {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
 .sum-table tbody tr {
   cursor: pointer;
 }

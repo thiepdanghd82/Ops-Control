@@ -23,30 +23,102 @@ import { applyQuoteFilters } from '../lib/quoteFilters';
 import ScopedFilterBar from '../components/ScopedFilterBar';
 import ColumnsToggle from '../../../components/Shared/ColumnsToggle';
 import { loadVisibleColumns } from '../../../components/Shared/ColumnsToggle.helpers';
+import { collectDrwMaterials, collectQuoteMaterials } from './Summarize.materials.helpers.js';
+import {
+  sumToolingCostStd,
+  sumToolingCostCpx,
+  safeLeadTime,
+  fmtUsd,
+} from './StandardCalc/CalcLeadTimeNotice.helpers.js';
 import './Summarize.css';
+
+// Reusable cell wrapper for long free-text cells (REMARK / DRAW_MATERIALS /
+// QUOTE_MATERIALS). Single-line ellipsis + native `title` tooltip so
+// operator hover gets the full value. Class `.sum-cell-clip` lives in
+// Summarize.css with `max-width / overflow / text-overflow: ellipsis`.
+function ClipCell({ value }) {
+  const s = value == null || value === '' ? '' : String(value);
+  if (!s) return '—';
+  return (
+    <span className="sum-cell-clip" title={s}>
+      {s}
+    </span>
+  );
+}
 
 // Column config — module-scoped so ColumnsToggle.helpers loader can read
 // it without recomputing per render. `rfq_no` flagged required (anchor;
 // also gives operator-visible quote identity in CSV export). Other
 // metadata (`w`, `right`, `auto`, `fmt`, `bold`, `color`) consumed by
 // the table render below — preserved as-is from pre-refactor.
+//
+// Cell-render contract (extended 2026-06-10 for schema-extend sprint):
+//   - `fmt(value)` — formats a primitive cell value; existing path.
+//   - `render(row, ri)` — full custom JSX cell, gets the entire row
+//     PLUS the visible 1-based position; takes precedence over `fmt`.
+//     Used for `row_idx` (numbering) + REMARK + materials aggregation
+//     (ellipsis + tooltip wrapper).
+//
+// `row_idx` re-numbers on every filter / sort change because `ri` comes
+// from the post-sort, post-filter `sorted.map((r, ri) => ...)` index.
+// Henry confirmed VISIBLE-position semantics over original quote-tier
+// ordinal — matches operator UX expectation for list views.
 const SUMMARIZE_COLUMNS = [
+  { key: 'row_idx', label: '#', w: 40, required: true, render: (_r, ri) => ri + 1 },
   { key: 'rfq_no', label: 'RFQ NO', w: 140, required: true },
   { key: 'direct_cu', label: 'Direct Customer', auto: true },
   { key: 'project', label: 'End Customer', auto: true },
+  { key: 'project_name', label: 'Project', auto: true },
   { key: 'end_cu_pn', label: 'End CU PN', auto: true },
   { key: 'description', label: 'Description', auto: true },
   { key: 'production_size', label: 'Production Size', w: 110 },
+  // Materials aggregation columns — operator may have a long string;
+  // ellipsis + tooltip pattern via ClipCell.
+  {
+    key: 'drw_materials',
+    label: 'Draw Materials',
+    w: 160,
+    render: (r) => <ClipCell value={r.drw_materials} />,
+  },
+  {
+    key: 'quote_materials',
+    label: 'Quote Materials',
+    w: 160,
+    render: (r) => <ClipCell value={r.quote_materials} />,
+  },
   { key: 'moq', label: 'MOQ', w: 60, right: true },
   { key: 'yield_pct', label: 'Yield%', w: 55, right: true, fmt: (v) => pct(v) },
   { key: 's_mat_cost', label: 'Material', w: 70, right: true, fmt: (v) => fmtN(v) },
   { key: 'overhead', label: 'Overhead', w: 70, right: true, fmt: (v) => fmtN(v) },
   { key: 'labor_cost', label: 'Labor', w: 70, right: true, fmt: (v) => fmtN(v) },
-  { key: 'tooling', label: 'Tooling', w: 65, right: true, fmt: (v) => fmtN(v) },
+  // Renamed from "Tooling" → "Tooling/pcs" to disambiguate from the
+  // new TOOLING_COST_USD column (which is the quote-level Σ tool_cost
+  // in absolute USD, not the per-piece allocation).
+  { key: 'tooling', label: 'Tooling/pcs', w: 75, right: true, fmt: (v) => fmtN(v) },
   { key: 'pack_ship', label: 'Pack&Ship', w: 65, right: true, fmt: (v) => fmtN(v) },
   { key: 'g_ttl_cost', label: 'G.Total', w: 70, right: true, fmt: (v) => fmtN(v), bold: true },
   { key: 'target', label: 'Target Price', w: 75, right: true, fmt: (v) => fmtN(v, 4) },
   { key: 'usd_price', label: 'Price', w: 65, right: true, fmt: (v) => fmtN(v, 4) },
+  // Quote-level Σ tool_cost in USD (sums across processes in Std or
+  // across every subproduct's processes in Cpx). `fmtUsd` returns '—'
+  // for 0 / NaN / non-finite — matches Lead Time tab cover sheet.
+  {
+    key: 'tooling_cost_usd',
+    label: 'Tooling Cost (USD)',
+    w: 110,
+    right: true,
+    fmt: (v) => fmtUsd(v),
+  },
+  // Lead Time & Notice — free-text strings from state.lead_time.
+  // safeLeadTime() heals legacy quotes so the 6 fields always exist
+  // (defaulted to ''). REMARK gets ClipCell because operators write
+  // multi-line essays; others are short single-line text fields.
+  { key: 'material_lt', label: 'Material L/T', w: 110 },
+  { key: 'sample_lt', label: 'Sample L/T', w: 110 },
+  { key: 'po_lt', label: 'PO L/T', w: 110 },
+  { key: 'remark', label: 'Remark', w: 200, render: (r) => <ClipCell value={r.remark} /> },
+  { key: 'process', label: 'Process', w: 130 },
+  { key: 'type_of_material', label: 'Type of Material', w: 140 },
   { key: 'va_pct', label: 'VA%', w: 55, right: true, fmt: (v) => pct(v) },
   { key: 'contr_pct', label: 'Contr. %', w: 65, right: true, fmt: (v) => pct(v) },
   { key: 'gm_pct', label: 'GM%', w: 55, right: true, fmt: (v) => pct(v), color: true },
@@ -54,6 +126,20 @@ const SUMMARIZE_COLUMNS = [
   { key: 'npi_owner', label: 'NPI Owner', w: 90 },
 ];
 const SUMMARIZE_COLUMNS_STORAGE_KEY = 'ops-cost-summarize-cols';
+// Default hide the 6 Lead Time & Notice columns — text-heavy free-form
+// fields most operators won't reference daily. Show them via the toggle
+// when forensically tracing a quote's lead-time commitments. Henry's
+// Phase-Q6 confirm: respect-visibility in CSV (NOT force-included), so
+// hiding them keeps the export lean too (CSV_ALWAYS_INCLUDE_KEYS only
+// adds the audit prefix, not the lead-time columns).
+const SUMMARIZE_DEFAULT_HIDDEN_KEYS = [
+  'material_lt',
+  'sample_lt',
+  'po_lt',
+  'remark',
+  'process',
+  'type_of_material',
+];
 // CSV always prepends these audit fields regardless of column-toggle state.
 // Operator workflows (audit cross-ref Quote History, multi-tier MOQ diff,
 // timestamp forensic) rely on these — hiding them in UI is a display
@@ -156,7 +242,11 @@ export default function Summarize() {
   // full set → filtered set). ColumnsToggle component owns hiddenKeys
   // internally + fires onChange with already-filtered visibleColumns.
   const [visibleColumns, setVisibleColumns] = useState(() =>
-    loadVisibleColumns(SUMMARIZE_COLUMNS, SUMMARIZE_COLUMNS_STORAGE_KEY, [])
+    loadVisibleColumns(
+      SUMMARIZE_COLUMNS,
+      SUMMARIZE_COLUMNS_STORAGE_KEY,
+      SUMMARIZE_DEFAULT_HIDDEN_KEYS
+    )
   );
   const { filter, debouncedFilter, setField, clearField, clearAll, hasActiveFilter } =
     useQuoteFilters();
@@ -324,6 +414,35 @@ export default function Summarize() {
             delivery_term: st.delivery_term || '',
             npi_owner: st.npi_owner || '',
             sale_owner: st.sale_owner || '',
+            // ─── Schema-extend sprint (2026-06-10) ──────────────────
+            // Sync from Pricing (Std/Cpx) sub-tabs into the row so the
+            // operator can browse + filter + CSV-export without round-
+            // tripping through Quote History → Open quote.
+            project_name: st.project_name || '',
+            drw_materials: collectDrwMaterials(st),
+            quote_materials: collectQuoteMaterials(st),
+            // Σ tool_cost across the quote. Branch on q.type because
+            // Cpx walks subproducts whereas Std walks top-level
+            // processes. Both helpers tolerate missing arrays.
+            tooling_cost_usd:
+              q.type === 'complex'
+                ? sumToolingCostCpx(st.subproducts)
+                : sumToolingCostStd(st.processes),
+            // 6 Lead Time & Notice fields — heal-on-read via
+            // safeLeadTime so legacy quotes (saved before Sprint S-D21-
+            // LEADTIME) get empty strings, not undefined → no
+            // ?.optional-chain in the renderer.
+            ...(() => {
+              const lt = safeLeadTime(st.lead_time);
+              return {
+                material_lt: lt.lt_material,
+                sample_lt: lt.lt_sample,
+                po_lt: lt.lt_po,
+                remark: lt.lt_remark,
+                process: lt.lt_process,
+                type_of_material: lt.lt_material_type,
+              };
+            })(),
           });
         } catch (err) {
           console.warn('Summarize calc failed for quote', q.id, 'tier', t, err);
@@ -496,7 +615,7 @@ export default function Summarize() {
               columns={SUMMARIZE_COLUMNS}
               storageKey={SUMMARIZE_COLUMNS_STORAGE_KEY}
               onChange={setVisibleColumns}
-              defaultHiddenKeys={[]}
+              defaultHiddenKeys={SUMMARIZE_DEFAULT_HIDDEN_KEYS}
             />
             <button
               className="sum-export-btn"
@@ -613,6 +732,15 @@ export default function Summarize() {
                     // RFQ NO gets its own color override from the rfqColors store;
                     // other "color: true" columns (GM%) still use gmClr.
                     const rfqTint = c.key === 'rfq_no' ? rfqColors[r.rfq_no] : null;
+                    // Render contract: `render(row, ri)` wins over `fmt(value)`.
+                    // Used for row_idx (visible position), REMARK + materials
+                    // (ellipsis + tooltip via ClipCell). Existing 21 cols
+                    // keep using `fmt` \u2014 fully backward compatible.
+                    const cellContent = c.render
+                      ? c.render(r, ri)
+                      : c.fmt
+                        ? c.fmt(r[c.key])
+                        : (r[c.key] ?? '\u2014');
                     return (
                       <td
                         key={c.key}
@@ -623,7 +751,7 @@ export default function Summarize() {
                           whiteSpace: c.auto ? 'nowrap' : undefined,
                         }}
                       >
-                        {c.fmt ? c.fmt(r[c.key]) : (r[c.key] ?? '\u2014')}
+                        {cellContent}
                       </td>
                     );
                   })}
