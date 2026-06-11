@@ -855,13 +855,30 @@ async function showClientFirstRunDialog() {
     if(!/:\\d+/.test(url)) url = url + ':3100';
     setStatus('Đang test ' + url + ' ...');
     $test.disabled=true;
+    // Probe via webRequest interceptor (handled in main process, Node http →
+    // no CORS). Direct fetch() from this data: URL is cross-origin to the
+    // target server → browser CORS chặn → "Failed to fetch". Bug surfaced
+    // 2026-06-11 (Henry's CCL Vietnam soft-launch). The interceptor reads
+    // the probe result from a callback URL and stuffs it into window.__probeResult.
     try {
-      const ctrl=new AbortController();
-      const t=setTimeout(()=>ctrl.abort(), 4000);
-      const res=await fetch(url + '/api/health', { signal: ctrl.signal });
-      clearTimeout(t);
-      if(res.ok){ setStatus('✓ Server OK — bấm "Lưu & tiếp tục"', 'ok'); $save.disabled=false; lastTestOk=true; $url.value=url; }
-      else { setStatus('✗ Server trả ' + res.status, 'err'); }
+      window.__probeResolve = null;
+      const probePromise = new Promise((resolve) => { window.__probeResolve = resolve; });
+      // Fire the intercepted "fetch" — main process catches the /__probe__
+      // URL pattern, runs probeServer() server-side, and responds back via
+      // a custom callback URL.
+      fetch('/__probe__?url=' + encodeURIComponent(url));
+      const r = await Promise.race([
+        probePromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('probe timeout')), 5000)),
+      ]);
+      if (r.ok) {
+        setStatus('✓ Server v' + (r.version || '?') + ' OK (' + r.ms + ' ms) — bấm "Lưu & tiếp tục"', 'ok');
+        $save.disabled = false;
+        lastTestOk = true;
+        $url.value = url;
+      } else {
+        setStatus('✗ Không kết nối được: ' + (r.error || 'unknown'), 'err');
+      }
     } catch(err){ setStatus('✗ Không kết nối được: ' + err.message, 'err'); }
     finally { $test.disabled=false; }
   });
@@ -900,6 +917,35 @@ async function showClientFirstRunDialog() {
         }
         callback({ cancel: true });
         if (!win.isDestroyed()) win.close();
+      }
+    );
+
+    // Intercept /__probe__?url=… "fetch" calls from the wizard's Test
+    // Connection button. Routes to main-process probeServer() (node:http)
+    // so CORS doesn't apply. Pushes the result back into the renderer via
+    // executeJavaScript → window.__probeResolve(). Bug fix 2026-06-11:
+    // direct fetch() from data: URL is cross-origin and blocked by CORS.
+    win.webContents.session.webRequest.onBeforeRequest(
+      { urls: ['*://*/__probe__*'] },
+      async (details, callback) => {
+        callback({ cancel: true });
+        try {
+          const u = new URL(details.url);
+          const targetUrl = u.searchParams.get('url') || '';
+          const result = await probeServer(targetUrl);
+          if (!win.isDestroyed()) {
+            const json = JSON.stringify(result).replace(/[\\'"]/g, (c) => '\\' + c);
+            win.webContents.executeJavaScript(
+              `window.__probeResolve && window.__probeResolve(JSON.parse('${json}'))`
+            );
+          }
+        } catch (e) {
+          if (!win.isDestroyed()) {
+            win.webContents.executeJavaScript(
+              `window.__probeResolve && window.__probeResolve({ok:false,error:${JSON.stringify(e.message)}})`
+            );
+          }
+        }
       }
     );
     win.on('closed', () => resolve());
@@ -1052,10 +1098,29 @@ app.whenReady().then(async () => {
     // client build → "enter server URL + test" dialog. If client user picks
     // "Skip", mode flips to embedded → we may need to start the local server
     // post-dialog. Server dialog is pure info, no follow-up needed.
+    // Recovery: detect users stuck in invalid state from prior installs
+    // (firstRunCompleted=true + thin + remoteUrl='') — reset the flag so
+    // the wizard fires this boot and they get a chance to set the URL.
+    // Otherwise the app would loadURL('') → ERR_INVALID_URL (-300) and
+    // they need to hand-edit electron-store config.json. Bug surfaced
+    // 2026-06-11 (Henry's CCL Vietnam soft-launch — rc2 CORS bug
+    // strand-stuck multiple operators in this state before PR #133 fix).
+    if (BUILD_ROLE === 'client' && store.get('firstRunCompleted')) {
+      const mode = store.get('mode');
+      const remoteUrl = store.get('remoteUrl') || '';
+      if (mode === 'thin' && remoteUrl.length === 0) {
+        log.warn(
+          '[main] recovering from invalid state: thin + empty remoteUrl → re-running wizard'
+        );
+        store.delete('firstRunCompleted');
+      }
+    }
+
     if (BUILD_ROLE !== 'generic' && !store.get('firstRunCompleted')) {
       try {
         if (BUILD_ROLE === 'server') {
           await showServerFirstRunDialog();
+          store.set('firstRunCompleted', true);
         } else if (BUILD_ROLE === 'client') {
           await showClientFirstRunDialog();
           // Client may have flipped to embedded via Skip — honour it now
@@ -1064,8 +1129,27 @@ app.whenReady().then(async () => {
             log.info('[main] client first-run skipped → starting embedded server');
             await startEmbeddedServer();
           }
+          // Defensive: only mark first-run complete if the wizard left the
+          // CLIENT in a bootable state. The wizard can resolve without the
+          // user saving (test failed, window closed via red X) — without
+          // this guard, app boots next time with mode='thin' + remoteUrl=''
+          // → loadURL('') → ERR_INVALID_URL (-300). Bug surfaced 2026-06-11
+          // when the CORS bug in the test button (PR #133) left users
+          // unable to save the URL → silent escape into the bad state.
+          // Either valid state allows firstRunCompleted=true:
+          //   - mode='thin'    AND remoteUrl non-empty
+          //   - mode='embedded' (no remoteUrl needed)
+          const mode = store.get('mode');
+          const remoteUrl = store.get('remoteUrl') || '';
+          if (mode === 'embedded' || (mode === 'thin' && remoteUrl.length > 0)) {
+            store.set('firstRunCompleted', true);
+          } else {
+            log.warn(
+              '[main] client first-run: wizard closed without saving URL ' +
+                `(mode=${mode}, remoteUrl="${remoteUrl}") — re-running wizard next launch.`
+            );
+          }
         }
-        store.set('firstRunCompleted', true);
       } catch (err) {
         log.error('[main] first-run dialog failed:', err);
       }
