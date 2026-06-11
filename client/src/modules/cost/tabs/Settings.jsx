@@ -25,33 +25,65 @@ import './Settings.css';
 const MENU_SECTIONS = [
   {
     label: 'User',
+    i18nKey: 'settings.section.user',
     items: [
-      { id: 'profile', icon: '◉', label: 'My Profile' },
-      { id: 'mypwd', icon: '⚿', label: 'My Password' },
+      { id: 'profile', icon: '◉', label: 'My Profile', i18nKey: 'settings.item.profile' },
+      { id: 'mypwd', icon: '⚿', label: 'My Password', i18nKey: 'settings.item.mypwd' },
       // Phase 9J.4 — theme preference lives under the user's own
       // settings (it's a personal UI choice, not a tenant-wide config).
-      { id: 'appearance', icon: '◐', label: 'Appearance' },
+      { id: 'appearance', icon: '◐', label: 'Appearance', i18nKey: 'settings.item.appearance' },
       // v1.1 — desktop-only tab, hiển thị banner trong web mode.
-      { id: 'hardware', icon: '⌘', label: 'Thiết bị phần cứng', i18nKey: 'settings.item.hardware' },
+      { id: 'hardware', icon: '⌘', label: 'Hardware Devices', i18nKey: 'settings.item.hardware' },
       // v1.2 — desktop-only: chế độ kết nối (embedded/thin/smart).
-      { id: 'mode', icon: '⇄', label: 'Chế độ kết nối', i18nKey: 'settings.item.mode' },
+      { id: 'mode', icon: '⇄', label: 'Connection Mode', i18nKey: 'settings.item.mode' },
     ],
   },
   {
     label: 'System',
+    i18nKey: 'settings.section.system',
     items: [
-      { id: 'account', icon: '◍', label: 'Account Control', minRole: 'admin' },
+      {
+        id: 'account',
+        icon: '◍',
+        label: 'Account Control',
+        i18nKey: 'settings.item.account',
+        minRole: 'admin',
+      },
       // v1.2 — about + diagnostics dialog cho mọi user
-      { id: 'about', icon: 'ⓘ', label: 'About / Diagnostics' },
+      {
+        id: 'about',
+        icon: 'ⓘ',
+        label: 'About / Diagnostics',
+        i18nKey: 'settings.item.about',
+      },
     ],
   },
   {
     label: 'Maintenance',
+    i18nKey: 'settings.section.maintenance',
     items: [
-      { id: 'data', icon: '⊞', label: 'Backup / Restore', minRole: 'admin' },
-      { id: 'syslog', icon: '❒', label: 'System Logs', minRole: 'admin' },
+      {
+        id: 'data',
+        icon: '⊞',
+        label: 'Backup / Restore',
+        i18nKey: 'settings.item.backup',
+        minRole: 'admin',
+      },
+      {
+        id: 'syslog',
+        icon: '❒',
+        label: 'System Logs',
+        i18nKey: 'settings.item.syslog',
+        minRole: 'admin',
+      },
       // v1.1 — desktop-only: import data từ Ops Control v1.0 cũ
-      { id: 'import-legacy', icon: '⇩', label: 'Import data v1.0', minRole: 'admin' },
+      {
+        id: 'import-legacy',
+        icon: '⇩',
+        label: 'Import data v1.0',
+        i18nKey: 'settings.item.import_legacy',
+        minRole: 'admin',
+      },
     ],
   },
 ];
@@ -108,7 +140,9 @@ export default function Settings() {
           if (visibleItems.length === 0) return null;
           return (
             <div key={section.label} className="smenu-section">
-              <div className="smenu-section-label">{section.label}</div>
+              <div className="smenu-section-label">
+                {section.i18nKey ? t(section.i18nKey) : section.label}
+              </div>
               {visibleItems.map((it) => (
                 <button
                   key={it.id}
@@ -151,6 +185,7 @@ export default function Settings() {
 // ═══════════════════════════════════════════════════════════
 
 function ProfileSection({ user }) {
+  const { t } = useI18n();
   const [form, setForm] = useState({
     full_name: user?.full_name || '',
     english_name: user?.english_name || '',
@@ -225,7 +260,7 @@ function ProfileSection({ user }) {
 
   return (
     <div className="settings-panel">
-      <h3 className="panel-title">◉ My Profile</h3>
+      <h3 className="panel-title">◉ {t('settings.item.profile')}</h3>
       <div className="settings-card">
         {/* Avatar Section */}
         <div className="prof-avatar-section">
@@ -270,14 +305,14 @@ function ProfileSection({ user }) {
             >
               ⚡ {roleLabel}
             </span>
-            <div className="prof-avatar-hint">📷 Click on photo to upload</div>
+            <div className="prof-avatar-hint">📷 {t('settings.profile.upload_hint')}</div>
           </div>
         </div>
 
         {/* Form Grid */}
         <div className="prof-form-grid">
           <div className="prof-form-field prof-field-wide">
-            <label>Full Name (Vietnamese)</label>
+            <label>{t('settings.profile.full_name_vn')}</label>
             <input
               type="text"
               value={form.full_name}
@@ -285,7 +320,7 @@ function ProfileSection({ user }) {
             />
           </div>
           <div className="prof-form-field prof-field-wide">
-            <label>English Name</label>
+            <label>{t('settings.profile.english_name')}</label>
             <input
               type="text"
               value={form.english_name}
@@ -293,19 +328,19 @@ function ProfileSection({ user }) {
             />
           </div>
           <div className="prof-form-field">
-            <label>Email</label>
+            <label>{t('settings.profile.email')}</label>
             <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
           </div>
           <div className="prof-form-field">
-            <label>Phone</label>
+            <label>{t('settings.profile.phone')}</label>
             <input type="text" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
           </div>
           <div className="prof-form-field">
-            <label>Username</label>
+            <label>{t('settings.profile.username')}</label>
             <input type="text" value={user?.username || ''} readOnly className="prof-readonly" />
           </div>
           <div className="prof-form-field">
-            <label>ID No.</label>
+            <label>{t('settings.profile.id_no')}</label>
             <input type="text" value={user?.id_no || ''} readOnly className="prof-readonly" />
           </div>
         </div>
@@ -323,11 +358,11 @@ function ProfileSection({ user }) {
         onClick={handleSave}
         disabled={saving}
       >
-        {saving ? 'Saving...' : 'Save Profile'}
+        {saving ? t('common.saving') : t('settings.profile.save_btn')}
       </button>
 
       <h3 className="panel-title" style={{ marginTop: 28 }}>
-        About
+        {t('settings.profile.about_title')}
       </h3>
       <div className="settings-card about-card">
         <p>
