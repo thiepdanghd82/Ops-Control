@@ -360,6 +360,30 @@ async function startEmbeddedServer() {
     process.env.OPS_KIOSK_KEY = kioskKey;
   }
 
+  // OPS_EXPORT_HMAC_KEY — required by Sprint S-EXPORT-MVP-2 quote xlsx
+  // export pipeline (preflight refuses prod boot if missing). Same
+  // electron-store pattern as TOTP + KIOSK: generate once, persist
+  // across app restarts so prior signed xlsx exports stay verifiable.
+  // Loss = MVP-3 re-import refuses pre-loss exports (per Recovery
+  // Playbook in CLAUDE.md) — make the generated key extremely durable
+  // via electron-store + `<userData>/.env` fallback path.
+  //
+  // CLIENT-build embedded mode hit this wall on Phase 6 Day 2 hardware
+  // verify (Henry's Mac DMG, 2026-06-10 17:21 onwards): fresh install
+  // had no .env seed → embedded server refused to start. Auto-gen
+  // closes the gap so CCL Hai Duong operators don't see "edit .env
+  // file manually" friction on first run.
+  if (!process.env.OPS_EXPORT_HMAC_KEY) {
+    let hmacKey = store.get('exportHmacKey');
+    if (!hmacKey || hmacKey.length !== 64) {
+      const crypto = require('node:crypto');
+      hmacKey = crypto.randomBytes(32).toString('hex');
+      store.set('exportHmacKey', hmacKey);
+      log.info('[main] Generated new OPS_EXPORT_HMAC_KEY (saved to electron-store)');
+    }
+    process.env.OPS_EXPORT_HMAC_KEY = hmacKey;
+  }
+
   // Require Express server hiện tại — KHÔNG sửa code gốc
   const serverEntry = path.join(APP_ROOT, 'server', 'index.js');
   if (!fs.existsSync(serverEntry)) {
@@ -583,23 +607,39 @@ function createMainWindow() {
   log.info('[main] Loading URL:', url);
   mainWindow.loadURL(url).catch((err) => {
     log.error('[main] loadURL failed:', err);
-    // Offer one-click recovery: switch back to embedded mode + restart.
-    // Most failures here are user picked thin/smart with an unreachable
-    // remoteUrl; reverting to embedded gives them a working app to fix
-    // the URL from inside Settings.
+    // Recovery dialog branches on BUILD_ROLE:
+    //   - server build: offer "Reset về Embedded" (correct — server runs
+    //     embedded; thin only when admin points at another server)
+    //   - client build: offer "Re-run setup wizard" (so operator fixes
+    //     the remoteUrl). DO NOT offer embedded — CLIENT has no DB
+    //     of its own; flipping to embedded creates a fresh empty DB
+    //     and breaks the operator → SERVER LAN topology.
+    // Bug surfaced 2026-06-11 by Henry: prior code defaulted CLIENT to
+    // "Reset về Embedded" which silently switched the role topology.
+    const isClientBuild = BUILD_ROLE === 'client';
     const choice = dialog.showMessageBoxSync(mainWindow, {
       type: 'error',
       title: 'Ops Control — không kết nối được server',
       message: `Không kết nối được tới ${url}`,
-      detail: `${err.message}\n\nApp đang ở mode "${store.get('mode')}". Có thể server LAN tắt, sai IP, hoặc firewall chặn.\n\nChọn "Reset về Embedded" để chuyển về server local và thử lại — config mode sẽ bị reset, anh có thể chỉnh lại trong Settings → ⇄ Chế độ kết nối sau khi vào được app.`,
-      buttons: ['Reset về Embedded + Restart', 'Thoát app', 'Bỏ qua'],
+      detail: isClientBuild
+        ? `${err.message}\n\nApp đang ở mode "${store.get('mode')}". Có thể SERVER LAN tắt, sai IP, hoặc firewall chặn.\n\nChọn "Chạy lại setup wizard" để nhập lại địa chỉ SERVER.`
+        : `${err.message}\n\nApp đang ở mode "${store.get('mode')}". Có thể server LAN tắt, sai IP, hoặc firewall chặn.\n\nChọn "Reset về Embedded" để chuyển về server local và thử lại — config mode sẽ bị reset, anh có thể chỉnh lại trong Settings → ⇄ Chế độ kết nối sau khi vào được app.`,
+      buttons: isClientBuild
+        ? ['Chạy lại setup wizard', 'Thoát app', 'Bỏ qua']
+        : ['Reset về Embedded + Restart', 'Thoát app', 'Bỏ qua'],
       defaultId: 0,
       cancelId: 2,
       noLink: true,
     });
     if (choice === 0) {
-      store.set('mode', 'embedded');
-      store.set('remoteUrl', '');
+      if (isClientBuild) {
+        // Clear remoteUrl so the setup wizard re-shows on relaunch.
+        // Do NOT touch mode — keep it as 'thin' (CLIENT default).
+        store.set('remoteUrl', '');
+      } else {
+        store.set('mode', 'embedded');
+        store.set('remoteUrl', '');
+      }
       app.relaunch();
       app.exit(0);
     } else if (choice === 1) {
