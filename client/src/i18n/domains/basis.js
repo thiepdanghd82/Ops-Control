@@ -122,6 +122,23 @@ registerStrings({
   'settings.item.syslog': { en: 'System Logs', vi: 'Nhật ký Hệ thống' },
   'settings.item.hardware': { en: 'Hardware Devices', vi: 'Thiết bị phần cứng' },
   'settings.item.mode': { en: 'Connection Mode', vi: 'Chế độ kết nối' },
+  'settings.item.about': { en: 'About / Diagnostics', vi: 'Giới thiệu / Chẩn đoán' },
+  'settings.item.import_legacy': { en: 'Import data v1.0', vi: 'Nhập dữ liệu v1.0' },
+
+  // My Profile form labels (Sprint S-I18N-COVER 2026-06-11) — operator-
+  // visible form previously hardcoded English.
+  'settings.profile.upload_hint': {
+    en: 'Click on photo to upload',
+    vi: 'Bấm vào ảnh để tải lên',
+  },
+  'settings.profile.full_name_vn': { en: 'Full Name (Vietnamese)', vi: 'Họ và tên (Tiếng Việt)' },
+  'settings.profile.english_name': { en: 'English Name', vi: 'Tên tiếng Anh' },
+  'settings.profile.email': { en: 'Email', vi: 'Email' },
+  'settings.profile.phone': { en: 'Phone', vi: 'Điện thoại' },
+  'settings.profile.username': { en: 'Username', vi: 'Tên đăng nhập' },
+  'settings.profile.id_no': { en: 'ID No.', vi: 'Mã số' },
+  'settings.profile.save_btn': { en: 'Save Profile', vi: 'Lưu hồ sơ' },
+  'settings.profile.about_title': { en: 'About', vi: 'Giới thiệu' },
 
   'appearance.title': { en: 'Appearance', vi: 'Giao diện' },
   'appearance.hint': {

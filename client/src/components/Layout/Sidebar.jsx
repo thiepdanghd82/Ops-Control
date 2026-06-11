@@ -22,7 +22,7 @@ const COST_SECTIONS = [
       { id: 'lib-mat', icon: 'material', labelKey: 'nav.tab.material_cost' },
       { id: 'ink-calc', icon: 'ink', labelKey: 'nav.tab.inks_calc' },
       { id: 'print-area', icon: 'print_area', labelKey: 'nav.tab.print_area' },
-      { id: 'design-tools', icon: 'design', label: 'Design Tools' },
+      { id: 'design-tools', icon: 'design', labelKey: 'nav.tab.design_tools' },
       { id: 'messages', icon: 'messages', labelKey: 'nav.tab.messages' },
     ],
   },
@@ -72,7 +72,7 @@ const COST_SECTIONS = [
       // hidden + the server enforces it (/save-all ddlSitesDB gate).
       { id: 'lib-ddl', icon: 'ddl', labelKey: 'nav.tab.ddl', minRole: 'admin' },
       { id: 'lib-finance', icon: 'finance', labelKey: 'nav.tab.finance_data' },
-      { id: 'lib-machine-tech', icon: 'machine', label: 'Machine Technical' },
+      { id: 'lib-machine-tech', icon: 'machine', labelKey: 'nav.tab.machine_technical' },
     ],
   },
   {
@@ -102,25 +102,25 @@ const COST_SECTIONS = [
 const PLANNING_SECTIONS = [
   {
     id: 'production',
-    label: 'PRODUCTION',
+    labelKey: 'nav.section.production',
     tabs: [
-      { id: 'order-entry', icon: 'orders', label: 'Order Entry' },
-      { id: 'bom-explosion', icon: 'bom', label: 'BOM Explosion' },
-      { id: 'material-check', icon: 'materials_chk', label: 'Material Check' },
+      { id: 'order-entry', icon: 'orders', labelKey: 'nav.tab.order_entry' },
+      { id: 'bom-explosion', icon: 'bom', labelKey: 'nav.tab.bom_explosion' },
+      { id: 'material-check', icon: 'materials_chk', labelKey: 'nav.tab.material_check' },
     ],
   },
   {
     id: 'scheduling',
-    label: 'SCHEDULING',
+    labelKey: 'nav.section.scheduling',
     tabs: [
-      { id: 'capacity', icon: 'capacity', label: 'Capacity Planning' },
-      { id: 'work-orders', icon: 'settings', label: 'Work Orders' },
+      { id: 'capacity', icon: 'capacity', labelKey: 'nav.tab.capacity_planning' },
+      { id: 'work-orders', icon: 'settings', labelKey: 'nav.tab.work_orders' },
     ],
   },
   {
     id: 'planning-tracking',
-    label: 'TRACKING',
-    tabs: [{ id: 'wip-tracker', icon: 'wip', label: 'WIP Tracker' }],
+    labelKey: 'nav.section.planning_tracking',
+    tabs: [{ id: 'wip-tracker', icon: 'wip', labelKey: 'nav.tab.wip_tracker' }],
   },
 ];
 
@@ -404,9 +404,9 @@ export default function Sidebar({
                     <div className="sb-user-name">
                       {name}
                       {isAdmin && <span className="sb-admin-star"> ★</span>}
-                      {isMe && <span className="sb-me-tag"> (me)</span>}
+                      {isMe && <span className="sb-me-tag"> {t('nav.footer.me_tag')}</span>}
                     </div>
-                    <div className="sb-user-status">Active now</div>
+                    <div className="sb-user-status">{t('nav.footer.active_now')}</div>
                   </div>
                 </div>
               );
