@@ -71,6 +71,7 @@ export const STRINGS = {
   'nav.tab.cost_breakdown': { en: 'Cost Breakdown', vi: 'Cơ cấu Chi phí' },
   'nav.tab.formal_quotation': { en: 'Formal Quotation', vi: 'Báo giá Chính thức' },
   'nav.tab.quote_history': { en: 'Quote History', vi: 'Lịch sử Báo giá' },
+  'nav.tab.npi_parts_list': { en: 'NPI Parts List', vi: 'Danh sách NPI Parts' },
   'nav.tab.pending_approvals': { en: 'Pending Approvals', vi: 'Chờ Phê duyệt' },
   'nav.tab.mfg_structures': { en: 'Mfg Structures', vi: 'Cấu trúc SX' },
   'nav.tab.routing_ops': { en: 'Routing Ops', vi: 'Công đoạn SX' },
@@ -108,6 +109,42 @@ export const STRINGS = {
   // Footer status — operator-visible at all times.
   'nav.footer.me_tag': { en: '(me)', vi: '(tôi)' },
   'nav.footer.active_now': { en: 'Active now', vi: 'Đang hoạt động' },
+
+  // ─── NPI Parts List (Sprint S-NPI-PARTS, v1.6 Option C read-only viewer) ───
+  'npi_parts.title': { en: 'NPI Parts List', vi: 'Danh sách NPI Parts' },
+  'npi_parts.row_count': {
+    en: '{shown} of {total} rows',
+    vi: '{shown} / {total} dòng',
+  },
+  'npi_parts.readonly_notice': {
+    en: 'Read-only viewer (v1.6). Edit capability ships in v1.7.',
+    vi: 'Chế độ xem chỉ đọc (v1.6). Tính năng chỉnh sửa sẽ có ở v1.7.',
+  },
+  'npi_parts.search_placeholder': {
+    en: 'Search part name, Code IFS, System code, customer, PIC…',
+    vi: 'Tìm theo Part Name, Code IFS, System code, customer, PIC…',
+  },
+  'npi_parts.year_filter_label': { en: 'Filter by year', vi: 'Lọc theo năm' },
+  'npi_parts.year_all': { en: 'All years', vi: 'Tất cả các năm' },
+  'npi_parts.columns_title': { en: 'Visible columns', vi: 'Cột hiển thị' },
+  'npi_parts.no_match': { en: 'No matching rows.', vi: 'Không tìm thấy dòng phù hợp.' },
+  'npi_parts.prev': { en: 'Prev', vi: 'Trước' },
+  'npi_parts.next': { en: 'Next', vi: 'Tiếp' },
+  'npi_parts.page_x_of_y': { en: 'Page {x} of {y}', vi: 'Trang {x} / {y}' },
+  'npi_parts.snapshot_generated_at': {
+    en: 'Snapshot generated {ts}',
+    vi: 'Snapshot tạo {ts}',
+  },
+  'npi_parts.showcard_title': { en: 'Part details', vi: 'Chi tiết Part' },
+  'npi_parts.showcard_tooling_fee': { en: 'Tooling Fees', vi: 'Phí Tooling' },
+  'npi_parts.load_error_title': {
+    en: 'Failed to load NPI parts snapshot',
+    vi: 'Không tải được snapshot NPI parts',
+  },
+  'npi_parts.load_error_hint': {
+    en: 'Check network + reload',
+    vi: 'Kiểm tra mạng và tải lại',
+  },
 
   // ─── Home Page (Sprint S-HOME 2026-05-03) ───
   'home.morning': { en: 'Good morning', vi: 'Chào buổi sáng' },

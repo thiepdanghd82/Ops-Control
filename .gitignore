@@ -4,6 +4,12 @@
 .env.local
 .env.*.local
 
+# Generated NPI parts snapshot (~30 MB) — built from the source xlsx
+# at `2. TEMPLATES/Cost Ref data/NPI/NPI Quote part list.xlsx`. Run
+# `npm run build:npi-parts` from repo root before `npm run build` so
+# Vite copies it into the client bundle. See Sprint S-NPI-PARTS.
+client/public/npi-parts/parts-snapshot.json
+
 # v1.3 — Ed25519 license signing keys. Private keys NEVER commit; they
 # live OFFLINE in the license admin's vault (~/OpsControl-license-keys).
 # Rotation 2026-06-04 retired the old in-repo dev key; tests now sign with

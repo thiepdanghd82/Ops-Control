@@ -29,6 +29,7 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 //     there to absorb that window gracefully.
 const IFSInventory = lazy(() => import('./tabs/IFSInventory'));
 const QuoteHistory = lazy(() => import('./tabs/QuoteHistory'));
+const NpiPartsList = lazy(() => import('./tabs/NpiPartsList'));
 const PendingApprovalsInbox = lazy(() => import('./tabs/PendingApprovalsInbox'));
 const MaterialLibrary = lazy(() => import('./tabs/MaterialLibrary'));
 const Settings = lazy(() => import('./tabs/Settings'));
@@ -77,6 +78,7 @@ import './CostModule.css';
 const TAB_COMPONENTS = {
   'lib-inventory': IFSInventory,
   'quote-history': QuoteHistory,
+  'npi-parts-list': NpiPartsList,
   'approvals-inbox': PendingApprovalsInbox,
   'lib-mat': MaterialLibrary,
   settings: Settings,
@@ -123,6 +125,7 @@ function TabLoadingFallback() {
 const TAB_TITLES = {
   'lib-inventory': 'IFS Inventory',
   'quote-history': 'Quote History',
+  'npi-parts-list': 'NPI Parts List',
   'approvals-inbox': 'Approvals Inbox',
   'lib-mat': 'Materials Library',
   settings: 'Settings',
