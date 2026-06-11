@@ -1098,10 +1098,29 @@ app.whenReady().then(async () => {
     // client build → "enter server URL + test" dialog. If client user picks
     // "Skip", mode flips to embedded → we may need to start the local server
     // post-dialog. Server dialog is pure info, no follow-up needed.
+    // Recovery: detect users stuck in invalid state from prior installs
+    // (firstRunCompleted=true + thin + remoteUrl='') — reset the flag so
+    // the wizard fires this boot and they get a chance to set the URL.
+    // Otherwise the app would loadURL('') → ERR_INVALID_URL (-300) and
+    // they need to hand-edit electron-store config.json. Bug surfaced
+    // 2026-06-11 (Henry's CCL Vietnam soft-launch — rc2 CORS bug
+    // strand-stuck multiple operators in this state before PR #133 fix).
+    if (BUILD_ROLE === 'client' && store.get('firstRunCompleted')) {
+      const mode = store.get('mode');
+      const remoteUrl = store.get('remoteUrl') || '';
+      if (mode === 'thin' && remoteUrl.length === 0) {
+        log.warn(
+          '[main] recovering from invalid state: thin + empty remoteUrl → re-running wizard'
+        );
+        store.delete('firstRunCompleted');
+      }
+    }
+
     if (BUILD_ROLE !== 'generic' && !store.get('firstRunCompleted')) {
       try {
         if (BUILD_ROLE === 'server') {
           await showServerFirstRunDialog();
+          store.set('firstRunCompleted', true);
         } else if (BUILD_ROLE === 'client') {
           await showClientFirstRunDialog();
           // Client may have flipped to embedded via Skip — honour it now
@@ -1110,8 +1129,27 @@ app.whenReady().then(async () => {
             log.info('[main] client first-run skipped → starting embedded server');
             await startEmbeddedServer();
           }
+          // Defensive: only mark first-run complete if the wizard left the
+          // CLIENT in a bootable state. The wizard can resolve without the
+          // user saving (test failed, window closed via red X) — without
+          // this guard, app boots next time with mode='thin' + remoteUrl=''
+          // → loadURL('') → ERR_INVALID_URL (-300). Bug surfaced 2026-06-11
+          // when the CORS bug in the test button (PR #133) left users
+          // unable to save the URL → silent escape into the bad state.
+          // Either valid state allows firstRunCompleted=true:
+          //   - mode='thin'    AND remoteUrl non-empty
+          //   - mode='embedded' (no remoteUrl needed)
+          const mode = store.get('mode');
+          const remoteUrl = store.get('remoteUrl') || '';
+          if (mode === 'embedded' || (mode === 'thin' && remoteUrl.length > 0)) {
+            store.set('firstRunCompleted', true);
+          } else {
+            log.warn(
+              '[main] client first-run: wizard closed without saving URL ' +
+                `(mode=${mode}, remoteUrl="${remoteUrl}") — re-running wizard next launch.`
+            );
+          }
         }
-        store.set('firstRunCompleted', true);
       } catch (err) {
         log.error('[main] first-run dialog failed:', err);
       }
