@@ -855,13 +855,30 @@ async function showClientFirstRunDialog() {
     if(!/:\\d+/.test(url)) url = url + ':3100';
     setStatus('Đang test ' + url + ' ...');
     $test.disabled=true;
+    // Probe via webRequest interceptor (handled in main process, Node http →
+    // no CORS). Direct fetch() from this data: URL is cross-origin to the
+    // target server → browser CORS chặn → "Failed to fetch". Bug surfaced
+    // 2026-06-11 (Henry's CCL Vietnam soft-launch). The interceptor reads
+    // the probe result from a callback URL and stuffs it into window.__probeResult.
     try {
-      const ctrl=new AbortController();
-      const t=setTimeout(()=>ctrl.abort(), 4000);
-      const res=await fetch(url + '/api/health', { signal: ctrl.signal });
-      clearTimeout(t);
-      if(res.ok){ setStatus('✓ Server OK — bấm "Lưu & tiếp tục"', 'ok'); $save.disabled=false; lastTestOk=true; $url.value=url; }
-      else { setStatus('✗ Server trả ' + res.status, 'err'); }
+      window.__probeResolve = null;
+      const probePromise = new Promise((resolve) => { window.__probeResolve = resolve; });
+      // Fire the intercepted "fetch" — main process catches the /__probe__
+      // URL pattern, runs probeServer() server-side, and responds back via
+      // a custom callback URL.
+      fetch('/__probe__?url=' + encodeURIComponent(url));
+      const r = await Promise.race([
+        probePromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('probe timeout')), 5000)),
+      ]);
+      if (r.ok) {
+        setStatus('✓ Server v' + (r.version || '?') + ' OK (' + r.ms + ' ms) — bấm "Lưu & tiếp tục"', 'ok');
+        $save.disabled = false;
+        lastTestOk = true;
+        $url.value = url;
+      } else {
+        setStatus('✗ Không kết nối được: ' + (r.error || 'unknown'), 'err');
+      }
     } catch(err){ setStatus('✗ Không kết nối được: ' + err.message, 'err'); }
     finally { $test.disabled=false; }
   });
@@ -900,6 +917,35 @@ async function showClientFirstRunDialog() {
         }
         callback({ cancel: true });
         if (!win.isDestroyed()) win.close();
+      }
+    );
+
+    // Intercept /__probe__?url=… "fetch" calls from the wizard's Test
+    // Connection button. Routes to main-process probeServer() (node:http)
+    // so CORS doesn't apply. Pushes the result back into the renderer via
+    // executeJavaScript → window.__probeResolve(). Bug fix 2026-06-11:
+    // direct fetch() from data: URL is cross-origin and blocked by CORS.
+    win.webContents.session.webRequest.onBeforeRequest(
+      { urls: ['*://*/__probe__*'] },
+      async (details, callback) => {
+        callback({ cancel: true });
+        try {
+          const u = new URL(details.url);
+          const targetUrl = u.searchParams.get('url') || '';
+          const result = await probeServer(targetUrl);
+          if (!win.isDestroyed()) {
+            const json = JSON.stringify(result).replace(/[\\'"]/g, (c) => '\\' + c);
+            win.webContents.executeJavaScript(
+              `window.__probeResolve && window.__probeResolve(JSON.parse('${json}'))`
+            );
+          }
+        } catch (e) {
+          if (!win.isDestroyed()) {
+            win.webContents.executeJavaScript(
+              `window.__probeResolve && window.__probeResolve({ok:false,error:${JSON.stringify(e.message)}})`
+            );
+          }
+        }
       }
     );
     win.on('closed', () => resolve());
