@@ -70,6 +70,15 @@ const PATHS = {
       <polyline points="8,4 8,8 11,10" />
     </>
   ),
+  // Parts list — checklist-ish ledger icon (NPI Parts List, Sprint S-NPI-PARTS).
+  parts_list: (
+    <>
+      <rect x="2.5" y="2.5" width="11" height="11" rx="1" />
+      <line x1="5" y1="5.5" x2="11" y2="5.5" />
+      <line x1="5" y1="8" x2="11" y2="8" />
+      <line x1="5" y1="10.5" x2="9" y2="10.5" />
+    </>
+  ),
   analysis: (
     <>
       <polyline points="2,12 5,8 8,10 11,5 14,7" />
