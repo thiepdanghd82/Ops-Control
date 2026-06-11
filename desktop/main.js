@@ -360,6 +360,30 @@ async function startEmbeddedServer() {
     process.env.OPS_KIOSK_KEY = kioskKey;
   }
 
+  // OPS_EXPORT_HMAC_KEY — required by Sprint S-EXPORT-MVP-2 quote xlsx
+  // export pipeline (preflight refuses prod boot if missing). Same
+  // electron-store pattern as TOTP + KIOSK: generate once, persist
+  // across app restarts so prior signed xlsx exports stay verifiable.
+  // Loss = MVP-3 re-import refuses pre-loss exports (per Recovery
+  // Playbook in CLAUDE.md) — make the generated key extremely durable
+  // via electron-store + `<userData>/.env` fallback path.
+  //
+  // CLIENT-build embedded mode hit this wall on Phase 6 Day 2 hardware
+  // verify (Henry's Mac DMG, 2026-06-10 17:21 onwards): fresh install
+  // had no .env seed → embedded server refused to start. Auto-gen
+  // closes the gap so CCL Hai Duong operators don't see "edit .env
+  // file manually" friction on first run.
+  if (!process.env.OPS_EXPORT_HMAC_KEY) {
+    let hmacKey = store.get('exportHmacKey');
+    if (!hmacKey || hmacKey.length !== 64) {
+      const crypto = require('node:crypto');
+      hmacKey = crypto.randomBytes(32).toString('hex');
+      store.set('exportHmacKey', hmacKey);
+      log.info('[main] Generated new OPS_EXPORT_HMAC_KEY (saved to electron-store)');
+    }
+    process.env.OPS_EXPORT_HMAC_KEY = hmacKey;
+  }
+
   // Require Express server hiện tại — KHÔNG sửa code gốc
   const serverEntry = path.join(APP_ROOT, 'server', 'index.js');
   if (!fs.existsSync(serverEntry)) {
