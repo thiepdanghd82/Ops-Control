@@ -298,6 +298,17 @@ export default function RfqInfoCard({
               className="sc-input"
             />
           </div>
+          <div className="sc-field sc-field-full">
+            <label htmlFor={fid('options')}>Options</label>
+            <textarea
+              id={fid('options')}
+              value={get('options')}
+              onChange={(e) => set('options', e.target.value)}
+              className="sc-input"
+              rows={2}
+              style={{ resize: 'vertical', minHeight: '3.6em', fontFamily: 'inherit' }}
+            />
+          </div>
         </div>
       </div>
     </div>

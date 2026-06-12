@@ -16,7 +16,7 @@ registerStrings({
   // Quote History column headers
   'qh.date': { en: 'DATE', vi: 'NGÀY' },
   'qh.rfq_number': { en: 'RFQ NO.', vi: 'SỐ RFQ' },
-  'qh.ver': { en: 'VER', vi: 'PHIÊN BẢN' },
+  'qh.option': { en: 'OPTION', vi: 'TÙY CHỌN' },
   'qh.ul': { en: 'UL', vi: 'UL' },
   'qh.owner': { en: 'OWNER', vi: 'CHỦ' },
   'qh.direct_cu': { en: 'DIRECT CU', vi: 'KH TRỰC TIẾP' },

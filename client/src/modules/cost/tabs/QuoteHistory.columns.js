@@ -38,7 +38,7 @@ export const QUOTE_HISTORY_COLUMN_KEYS = [
   'num',
   'date',
   'rfq',
-  'ver',
+  'option',
   'ul',
   'owner',
   'direct_cu',
@@ -85,13 +85,7 @@ export const QUOTE_HISTORY_REQUIRED_KEYS = new Set([
  * choice (via ColumnsToggle.helpers.loadHiddenKeys) supersedes this on
  * subsequent reloads.
  */
-export const QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS = [
-  'ul',
-  'ifs',
-  'dcu_pn',
-  'ecu_pn',
-  'target',
-];
+export const QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS = ['ul', 'ifs', 'dcu_pn', 'ecu_pn', 'target'];
 
 /**
  * Pure sort functions per column key. Returns a primitive comparable
@@ -104,6 +98,12 @@ export const QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS = [
 export const QUOTE_HISTORY_SORT_FNS = {
   date: (q) => new Date(q.saved_at || 0).getTime(),
   rfq: (q) => (q.state?.rfq_number || '').toLowerCase(),
+  // Sprint S-OPTIONS-COL (2026-06-12) — column repurposed from VER (which
+  // showed `q.version`) to Option (operator-entered free-text in RFQ &
+  // Certification, persisted at state.options). Legacy column key 'ver'
+  // is rewritten to 'option' in resolveSortKey so saved sort prefs from
+  // v1.6.0-rc6 keep working after the rename.
+  option: (q) => (q.state?.options || '').toLowerCase(),
   // Renamed `npi` → `owner` so column.key == sort key == localStorage key
   // stays consistent. Legacy persisted sortKey 'npi' is silently rewritten
   // to 'owner' in QuoteHistory.jsx's resilience guard.
@@ -160,7 +160,10 @@ export const QUOTE_HISTORY_SORT_FNS = {
  * v1.5.12 keep working.
  */
 export function resolveSortKey(currentKey, visibleKeys) {
-  const rewritten = currentKey === 'npi' ? 'owner' : currentKey;
+  let rewritten = currentKey === 'npi' ? 'owner' : currentKey;
+  // Sprint S-OPTIONS-COL (2026-06-12) — VER column repurposed as Option.
+  // Saved sort prefs from v1.6.0-rc6 carrying 'ver' rewrite to 'option'.
+  if (rewritten === 'ver') rewritten = 'option';
   if (!rewritten) return 'date';
   const set = visibleKeys instanceof Set ? visibleKeys : new Set(visibleKeys || []);
   if (!QUOTE_HISTORY_SORT_FNS[rewritten]) return 'date';

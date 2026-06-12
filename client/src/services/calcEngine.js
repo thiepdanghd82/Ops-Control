@@ -41,7 +41,9 @@ function createResolver(snapshot, lib) {
       // Match the case-insensitive trimmed lookup `getMatByCode` does
       // so a snapshot miss falls back identically to the legacy path.
       if (!lib || !Array.isArray(lib.mat)) return null;
-      const c = String(code || '').trim().toLowerCase();
+      const c = String(code || '')
+        .trim()
+        .toLowerCase();
       return lib.mat.find((m) => String(m.code).trim().toLowerCase() === c) || null;
     },
     getRate(wc) {
@@ -544,8 +546,7 @@ export function calcInk(ink, st, moq, lib, options = {}) {
     // for every ink. qpa_lm = 0 makes run_s fall through to 0, matching
     // the "no layout = no run" intent. The run_s gate below also requires
     // ink_cover_val > 0 && width_m > 0, so this is belt-and-braces.
-    const qpa_lm =
-      layout_per_sheet > 0 ? pitch / 1000 / layout_per_sheet / (st.num_webs || 1) : 0;
+    const qpa_lm = layout_per_sheet > 0 ? pitch / 1000 / layout_per_sheet / (st.num_webs || 1) : 0;
     run_s =
       ink_cover_val > 0 && width_m > 0 && qpa_lm > 0
         ? (price * qpa_lm * (ink.area_pct || 0) * width_m) / ink_cover_val / scrapF
@@ -820,12 +821,7 @@ export function calcAll(st, allSpResults, lib, subproducts, options = {}) {
   const siteWarnings = [];
   const snapSite = getSnapshotSite(snapshot);
   const stateSite = (st && st.site) || null;
-  if (
-    options.warnSiteMismatch !== false &&
-    snapSite &&
-    stateSite &&
-    snapSite !== stateSite
-  ) {
+  if (options.warnSiteMismatch !== false && snapSite && stateSite && snapSite !== stateSite) {
     const msg = `Site mismatch: snapshot frozen under '${snapSite}', current state.site = '${stateSite}'`;
     siteWarnings.push({
       type: 'site_mismatch',
@@ -1390,6 +1386,7 @@ export function createStdState() {
     npi_owner: '',
     sale_owner: '',
     description: '',
+    options: '',
     moq: 0,
     annual_qty: 0,
     trade_mode: 'USD(Normal)',
@@ -1653,6 +1650,7 @@ export function createEmptyStdState() {
     end_cu_pn: '',
     direct_cu_pn: '',
     description: '',
+    options: '',
     npi_owner: '',
     sale_owner: '',
     moq: 0,
@@ -1823,6 +1821,7 @@ export function createCplxState() {
     direct_cu: '',
     project: '',
     description: '',
+    options: '',
     moq: 0,
     annual_qty: 0,
     product_lifetime: 0,

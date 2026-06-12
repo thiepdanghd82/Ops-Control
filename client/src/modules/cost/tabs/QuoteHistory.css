@@ -385,8 +385,19 @@
   color: var(--color-slate-600);
   font-weight: 500;
 }
-.qh-d-ver {
-  text-align: center;
+.qh-d-option {
+  text-align: left;
+  font-size: 11px;
+  color: var(--color-slate-700);
+}
+.qh-option-text {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  margin-right: 4px;
 }
 .qh-d-ul {
   text-align: center;
@@ -474,25 +485,6 @@
   font-size: 11px;
 }
 /* .qh-d-acts is defined below with the Layout badge styles. */
-
-/* Version badge */
-.qh-vb {
-  display: inline-block;
-  padding: 1px 6px;
-  border-radius: 8px;
-  font-size: 10px;
-  font-weight: 600;
-  margin-right: 3px;
-}
-.v-grn {
-  color: #16a34a;
-}
-.v-blu {
-  color: #2563eb;
-}
-.v-pur {
-  color: #7c3aed;
-}
 
 /* Type badge */
 .qh-tb {
