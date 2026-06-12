@@ -42,12 +42,18 @@
 - **Price (VND) per-tier** — raw from `state.selling_price_vnd` / `extra_moqs[t-1].price_vnd`, en-US `Intl.NumberFormat` (e.g. `10,450`).
 - **Pricing Snapshot operator + admin guides** — bilingual EN+VI under `docs/cutover/PRICING_SNAPSHOT_*_GUIDE.md`.
 - **Prometheus metrics** — `pricing_snapshot_save_total{type,source,site}` + `_synth_save_total{type,site}` + `_warning_total{type,warning}` at `/metrics`.
+- **NPI Parts List (read-only)** — new tab under Quoting & Pricing. Static viewer over ~25k-row NPI production reference (xlsx → JSON snapshot bundled into the DMG). Search across Part Name / Code IFS / System code / Customer / PIC / Direct Project; year filter on RFQ date; ColumnsToggle with 52 default-hidden cols; double-click row → showcard modal with 9 audit fields + 5 tooling-fee variants. Snapshot path `client/public/npi-parts/parts-snapshot.json` (avoids Vite `/data` proxy collision); rebuild via `npm run build:npi-parts`. Edit/save deferred to v1.7 (Option C scope). _Henry confirmed scope 2026-06-11._
+- **Bilingual VI locale cover** — 33 P0+P1 holes patched across Sidebar nav (Design Tools / Machine Technical / Planning tabs + section headers), Settings tabs + My Profile form labels, footer status text (`Active now` / `(me)` tag). Settings section headers now resolve `i18nKey` correctly (previously only items resolved — root cause of the VI-mode regression Henry caught in the rc4 screenshot). 16 P2 admin-only holes (DDL editor / Audit Log internal / Metrics / Kiosk Admin) deferred to post-go-live polish.
 
 ## 🐛 Bug fixes
 
 - `LOAD_QUOTE` silent overwrite via copy action (above).
 - Summarize CSV escape for multi-line bullet cells (RFC 4180 — Sprint S-D20-SUMMARIZE-SCHEMA-EXTEND).
 - Search scope missing `sale_owner` field (Sprint S-D21-PRE-GOLIVE PR #111).
+- **Desktop CLIENT login failure on first run** — embedded Express refused to boot because `OPS_EXPORT_HMAC_KEY` was missing; auto-gen via `crypto.randomBytes(32).toString('hex')` persisted to `electron-store` (mirrors TOTP + KIOSK key gen). Operator can now create admin account + log in immediately after install. _Sprint S-DESKTOP-HMAC._
+- **Desktop CLIENT dialog flips topology to EMBEDDED** — loadURL-fail recovery dialog used to default to "Reset về Embedded + Restart", silently switching a CLIENT install into EMBEDDED (created a phantom local server, hid real connectivity problems). Dialog now branches on `BUILD_ROLE` — CLIENT gets "Chạy lại setup wizard" (preserves `mode='thin'`). _Sprint S-DESKTOP-HMAC._
+- **Desktop setup wizard "Failed to fetch" (CORS)** — wizard rendered at `data:text/html` URL has null origin, renderer `fetch()` to embedded Express is cross-origin, blocked silently. Replaced renderer `fetch()` with `/__probe__?url=` sentinel intercepted in main process; `probeServer()` runs server-side via `node:http` (no CORS layer). Server-side CORS policy untouched. _Sprint S-WIZARD-CORS._
+- **Desktop `ERR_INVALID_URL` after wizard-close-without-save** — `firstRunCompleted=true` was set unconditionally; closing the wizard with empty `remoteUrl` bricked the app on next boot. Two-layer defensive guard: recovery (reset flag if state is non-bootable) + prevention (only set flag if state is bootable). _Sprint S-WIZARD-CORS._
 
 ## ⚙️ Infrastructure
 
@@ -81,6 +87,11 @@ All p95 latencies are 100–500× under budget. Snapshot work added zero measura
 - S-SNAPSHOT-PHASE-3 — Writer + render wiring (PR #128, SHA `4ae6931`)
 - S-SNAPSHOT-PHASE-4 — UI surface + xlsx audit sheet (PR #129, SHA `d344fd1`)
 - S-SNAPSHOT-PHASE-5 — Pre-go-live validation (PR #130, SHA `c336083`)
+- S-RELEASE-DAY1A — v1.6.0-rc1 release docs + version bump (PR #131, SHA `75a9094`)
+- S-DESKTOP-HMAC — HMAC auto-gen + CLIENT dialog topology guard (PR #132, SHA `b720feb`)
+- S-WIZARD-CORS — Wizard CORS sentinel + firstRunCompleted defensive guard (PR #133, SHA `e39bb63`)
+- S-I18N-COVER — vi locale coverage holes patched (PR #135, SHA `74f5235`)
+- S-NPI-PARTS — Read-only NPI Parts List viewer (PR #136, SHA `2a77660`)
 - S-SNAPSHOT-PHASE-6 — Deploy + go-live (this sprint)
 
 ## ⚠ Known issues · Vấn đề đã biết
@@ -90,18 +101,18 @@ All p95 latencies are 100–500× under budget. Snapshot work added zero measura
 
 ## 📅 Rollout schedule · Lịch triển khai
 
-| Date                     | Event                                                 |
-| ------------------------ | ----------------------------------------------------- |
-| 2026-06-11               | Day 1.A — pre-flight + tag v1.6.0-rc1                 |
-| 2026-06-12               | Day 2 — build DMG SERVER + CLIENT (ad-hoc signed)     |
-| 2026-06-15/16            | Day 3-4 — Henry solo hardware verify (6 scenarios)    |
-| 2026-06-17               | Day 5 — buffer (rollback drill skipped per Q4=C)      |
-| 2026-06-18/19            | Day 6-7 — bilingual guides + cheatsheet finalised     |
-| 2026-06-20 — 2026-07-17  | Buffer / bug fix cycle / dry-run sessions             |
-| **2026-07-18 22:00 ICT** | **Production cut-over (Sat off-shift)**               |
-| 2026-07-19/20            | 48h close monitoring (Henry on-call)                  |
-| **2026-07-21 09:00 ICT** | **GO-LIVE official + operator training session 1–2h** |
+| Date                     | Event                                                  |
+| ------------------------ | ------------------------------------------------------ |
+| 2026-06-10               | Day 1.A — pre-flight + tag v1.6.0-rc1 ✅               |
+| 2026-06-11               | Day 2 — build DMG SERVER + CLIENT (rc2 → rc6 stack) ✅ |
+| 2026-06-12 → 06-15       | Day 3-4 — Henry solo hardware verify (6 scenarios)     |
+| 2026-06-16               | Day 5 — buffer (rollback drill skipped per Q4=C)       |
+| 2026-06-17/18            | Day 6-7 — bilingual training deck + support kickoff    |
+| 2026-06-20 — 2026-07-17  | Buffer / bug fix cycle / dry-run sessions              |
+| **2026-07-18 22:00 ICT** | **Production cut-over (Sat off-shift)**                |
+| 2026-07-19/20            | 48h close monitoring (Henry on-call)                   |
+| **2026-07-21 09:00 ICT** | **GO-LIVE official + operator training session 1–2h**  |
 
 ---
 
-**Compiled · Biên soạn**: Henry · Henry@CCL Vietnam · 2026-06-10
+**Compiled · Biên soạn**: Henry · Henry@CCL Vietnam · 2026-06-10 (rc1) — updated 2026-06-12 (rc6 stack + NPI Parts List + vi cover)
