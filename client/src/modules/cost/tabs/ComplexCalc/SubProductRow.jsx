@@ -1212,14 +1212,21 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                         />
                       </td>
                       <td>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={ik.area_pct != null ? Math.round(ik.area_pct * 100) : ''}
-                          onChange={(e) => setInk(ii, 'area_pct', numF(e.target.value) / 100)}
-                          className="cc-det-inp cc-det-num"
-                        />
+                        {(() => {
+                          const isInkReal = !!(ik.color || ik.ifs_code || ik.print_type);
+                          const needsArea = isInkReal && !(Number(ik.area_pct) > 0);
+                          return (
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={ik.area_pct != null ? Math.round(ik.area_pct * 100) : ''}
+                              onChange={(e) => setInk(ii, 'area_pct', numF(e.target.value) / 100)}
+                              className={`cc-det-inp cc-det-num ${needsArea ? 'sc-input-warn' : ''}`}
+                              title={needsArea ? 'AREA % bắt buộc để tính giá mực RUN' : undefined}
+                            />
+                          );
+                        })()}
                       </td>
                       <td>
                         {(() => {

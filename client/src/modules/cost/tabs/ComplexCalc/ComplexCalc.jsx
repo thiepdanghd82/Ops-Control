@@ -250,7 +250,10 @@ export default function ComplexCalc() {
         if (sp > 0) {
           aggFresh.gm = (sp - (aggFresh.s_ttl || 0)) / sp;
           aggFresh.va =
-            (sp - (aggFresh.s_mat_cost || 0) - (aggFresh.tooling || 0) - (aggFresh.packing_ship || 0)) /
+            (sp -
+              (aggFresh.s_mat_cost || 0) -
+              (aggFresh.tooling || 0) -
+              (aggFresh.packing_ship || 0)) /
             sp;
           aggFresh.contribution =
             1 -
@@ -268,9 +271,7 @@ export default function ComplexCalc() {
     // for 3 SPs × 5 tiers; runs sync so save errors surface cleanly.
     // Phase 3: rows payload uses the same snapshot so per-SP per-tier
     // breakdown can't drift from the aggregate result.
-    const cpxRows = lib
-      ? buildCpxRowsPayload(cs, sps, lib, calcOptions)
-      : { subproducts: [] };
+    const cpxRows = lib ? buildCpxRowsPayload(cs, sps, lib, calcOptions) : { subproducts: [] };
     const persisted = serializeResultForPersist(
       persistedAggregate ? { ...persistedAggregate, subproducts: cpxRows.subproducts } : null
     );
@@ -428,9 +429,7 @@ export default function ComplexCalc() {
           <span className="snapshot-copy-banner-icon" aria-hidden="true">
             ⎘
           </span>
-          <span>
-            Copy mode — saving will create a new quote and freeze current library rates
-          </span>
+          <span>Copy mode — saving will create a new quote and freeze current library rates</span>
         </div>
       )}
       {/* Sub-tab bar — wrapped in TabBarOverflow for narrow-screen fit */}
@@ -1123,6 +1122,16 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField }) {
     return out;
   }, [sps]);
 
+  // EAU required for tooling amortization (calcProcess uses
+  // cs.annual_qty × product_lifetime as the tooling EAU cap). Warn when
+  // any SP process has tool_cost > 0 but EAU left blank.
+  const showEauWarn = useMemo(
+    () =>
+      sps.some((sp) => (sp.processes || []).some((p) => Number(p?.tool_cost) > 0)) &&
+      !(Number(cs.annual_qty) > 0),
+    [sps, cs.annual_qty]
+  );
+
   const showSetupMoqTable = numMoq > 1 && (flatMats.length > 0 || flatProcs.length > 0);
   const fmtIntLocal = (v) =>
     v == null || v === '' || isNaN(+v) ? '\u2014' : Number(v).toLocaleString('en-US');
@@ -1290,8 +1299,11 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField }) {
                   <DecimalInput
                     value={cs.annual_qty}
                     onChange={(v) => setCplxField('annual_qty', v)}
-                    className="sc-moq-inp"
+                    className={`sc-moq-inp ${showEauWarn ? 'sc-input-warn' : ''}`}
                     thousandSep
+                    title={
+                      showEauWarn ? 'EAU bắt buộc để tính giá khuôn (Tooling) đúng' : undefined
+                    }
                   />
                 </td>
                 <td>
