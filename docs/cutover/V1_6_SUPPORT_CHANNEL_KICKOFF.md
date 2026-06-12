@@ -43,6 +43,7 @@
   • Screenshot (CROP customer name + tier pricing trước khi paste)
   • Behavior thấy vs behavior kỳ vọng
   • Operator account đang dùng
+  • Build role: SERVER hay CLIENT (xem Settings → About)
 
 🚫 Mức độ:
   🔴 P0 = save/export failing, app crash, cost calc sai → ping Henry trực tiếp + post channel
@@ -72,6 +73,7 @@
   • Screenshot (CROP customer name + tier pricing before pasting)
   • Behavior seen vs expected
   • Operator account in use
+  • Build role: SERVER or CLIENT (see Settings → About)
 
 🚫 Severity:
   🔴 P0 = save/export failing, app crash, wrong cost calc → ping Henry directly + post channel
@@ -155,8 +157,9 @@ Operator paste vào channel. Auto-formatter friendly.
 
 Severity · Mức độ: [P0/P1/P2]
 Quote · Báo giá: RFQ-XXXX-XXXX (mask customer name)
-Tab: [Pricing Std / Cpx / Quote History / Summarize / Settings / ...]
+Tab: [Pricing Std / Cpx / Quote History / Summarize / NPI Parts List / Settings / ...]
 Operator: [your username]
+Build role · Vai trò: [SERVER / CLIENT]   ← Settings → About
 v1.6 build SHA: [from Settings → About]
 
 What happened · Hiện tượng:
@@ -176,6 +179,52 @@ Screenshot · Ảnh:
 Workaround · Cách lách:
 [If you found one, otherwise leave blank]
 ```
+
+---
+
+## ⑤a Known recovery paths · Các đường khôi phục đã biết
+
+Self-serve before pinging Henry — these fixes are baked into v1.6 and the operator can recover without code changes.
+
+### CLIENT DMG: "loadURL failed" / setup wizard can't reach SERVER
+
+**🇻🇳** Trong dialog hiện ra:
+
+- **DÙNG**: nút **"Chạy lại setup wizard"** → wizard mở lại để nhập URL SERVER. CLIENT vẫn ở thin mode.
+- **TUYỆT ĐỐI KHÔNG dùng**: nút "Reset về Embedded" → nút này dành cho SERVER build (sẽ silent flip CLIENT thành embedded + tạo phantom local server, ẩn lỗi mạng thật).
+
+**🇬🇧** In the recovery dialog:
+
+- **USE**: **"Chạy lại setup wizard"** button → wizard reopens to re-enter SERVER URL. CLIENT stays in thin mode.
+- **DO NOT USE**: "Reset to Embedded" button → that button is for SERVER builds (silently flips CLIENT to embedded + spawns phantom local server, hides real network issues).
+
+**Reference**: Sprint S-DESKTOP-HMAC (PR #132).
+
+### First-install CLIENT login fails after admin creation
+
+`OPS_EXPORT_HMAC_KEY` is now **auto-generated** on first run (64-hex via `crypto.randomBytes`) + persisted to `electron-store`. Operator should NOT need to set it manually. If login still fails:
+
+1. Confirm Settings → About shows `BUILD_ROLE: CLIENT` + `mode: thin` (NOT embedded).
+2. If mode = embedded on a CLIENT install → operator hit the dialog flip bug above → reinstall CLIENT DMG.
+3. Otherwise → P1 bug report.
+
+**Reference**: Sprint S-DESKTOP-HMAC (PR #132).
+
+### Setup wizard "Failed to fetch" when testing SERVER connection
+
+v1.6 routes the wizard probe through main process (`/__probe__` sentinel) instead of renderer `fetch()` to bypass the data-URL null-origin CORS block. If operator still sees "Failed to fetch":
+
+1. Confirm SERVER URL is reachable from a regular browser (Safari) on the CLIENT Mac.
+2. Confirm SERVER `/health` endpoint returns 200.
+3. Otherwise → P1 bug report with build SHA + CLIENT macOS log excerpt.
+
+**Reference**: Sprint S-WIZARD-CORS (PR #133).
+
+### CLIENT app bricks at boot with `ERR_INVALID_URL`
+
+If operator closed the setup wizard without saving on a previous run, v1.6's defensive guard at boot detects the invalid state (`firstRunCompleted=true && thin && remoteUrl===''`) + auto-resets the flag to re-open the wizard. No operator action needed beyond re-running the wizard.
+
+**Reference**: Sprint S-WIZARD-CORS (PR #133).
 
 ---
 

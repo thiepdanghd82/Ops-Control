@@ -39,6 +39,11 @@ Location · Địa điểm: CCL Vietnam Hai Duong · [Conference room name]
 
 **Demo (1 min):** show side-by-side: old behavior (drift) vs new (frozen) on the same quote.
 
+### Also new in v1.6 · Cũng mới trong v1.6
+
+- **NPI Parts List** (read-only) — new tab under **Quoting & Pricing** sidebar section. Static viewer over the ~25k-row NPI production reference (Henry's Cost Ref xlsx). Search across Part Name / Code IFS / System code / Customer / PIC / Direct Project; year filter on RFQ date; double-click row → showcard. Edit/save deferred to v1.7.
+- **NPI Parts List** (chỉ-đọc) — tab mới dưới mục **Quoting & Pricing** ở sidebar. Viewer tĩnh trên ~25k dòng NPI reference (file xlsx Cost Ref). Tìm theo Part Name / Code IFS / System code / Customer / PIC / Direct Project; lọc theo năm RFQ; double-click row → showcard. Sửa/save dời lại v1.7.
+
 ---
 
 ## Slide 3 — Reading the badge · Đọc badge
@@ -283,6 +288,12 @@ Klick row tiêu đề mở/đóng. Caret ▸ ↔ ▾ rotate.
 **Q5 · 🇻🇳** Library version field trống? · **🇬🇧** Lib version field empty?
 **A** OK — chỉ khi library chưa có `_version` field. Admin có thể thêm sau. Freeze vẫn hoạt động đúng.
 
+**Q6 · 🇻🇳** CLIENT DMG báo lỗi loadURL / setup wizard không kết nối được? · **🇬🇧** CLIENT DMG loadURL error / wizard can't connect?
+**A** Trong dialog hiện ra, ấn nút **"Chạy lại setup wizard"** (KHÔNG chọn "Reset về Embedded" — nút đó chỉ dành cho SERVER build). Wizard sẽ mở lại để nhập URL SERVER. CLIENT vẫn giữ thin mode. · In the recovery dialog, click **"Chạy lại setup wizard"** (do NOT choose "Reset to Embedded" — that button is for SERVER builds only). Wizard reopens to re-enter SERVER URL. CLIENT keeps thin mode.
+
+**Q7 · 🇻🇳** Lần đầu cài CLIENT login fail (admin tạo xong nhưng không vào được)? · **🇬🇧** First-install CLIENT login fails (admin created OK but can't sign in)?
+**A** v1.6 đã tự động sinh `OPS_EXPORT_HMAC_KEY` ở first run + lưu vào electron-store. Nếu vẫn fail → kiểm tra Settings → About → confirm BUILD_ROLE = CLIENT + mode = thin (không phải embedded). · v1.6 auto-generates `OPS_EXPORT_HMAC_KEY` on first run + persists to electron-store. If still failing → check Settings → About → confirm BUILD_ROLE = CLIENT + mode = thin (not embedded).
+
 ### Cheatsheet · Phiếu nhắc
 
 📋 1-trang bilingual đã in sẵn — dán ở workstation. Reference: [V1_6_OPERATOR_CHEATSHEET.md](./V1_6_OPERATOR_CHEATSHEET.md)
@@ -299,20 +310,20 @@ Klick row tiêu đề mở/đóng. Caret ▸ ↔ ▾ rotate.
 
 ### Pacing · Nhịp độ
 
-| Slide                  | Time               | Format                               |
-| ---------------------- | ------------------ | ------------------------------------ |
-| 1 — Title              | 1 min              | Intro, name, role                    |
-| 2 — Why v1.6           | 3 min              | Talk + 1-min demo of drift bug       |
-| 3 — Badge              | 2 min              | Show panel, explain colors           |
-| 4 — Demo new quote     | 3 min              | LIVE walkthrough                     |
-| 5 — Demo copy          | 4 min              | LIVE walkthrough — emphasise SAFE    |
-| 6 — Demo legacy heal   | 2 min              | LIVE walkthrough                     |
-| 7 — Demo site mismatch | 2 min              | LIVE walkthrough                     |
-| 8 — Demo xlsx          | 3 min              | LIVE walkthrough + open Excel        |
-| 9 — Summarize column   | 2 min              | LIVE walkthrough                     |
-| 10 — Support + Q&A     | 5 min + Q&A 20 min | Slack invite, distribute cheatsheets |
+| Slide                  | Time               | Format                                           |
+| ---------------------- | ------------------ | ------------------------------------------------ |
+| 1 — Title              | 1 min              | Intro, name, role                                |
+| 2 — Why v1.6           | 4 min              | Talk + 1-min demo of drift bug + NPI tab mention |
+| 3 — Badge              | 2 min              | Show panel, explain colors                       |
+| 4 — Demo new quote     | 3 min              | LIVE walkthrough                                 |
+| 5 — Demo copy          | 4 min              | LIVE walkthrough — emphasise SAFE                |
+| 6 — Demo legacy heal   | 2 min              | LIVE walkthrough                                 |
+| 7 — Demo site mismatch | 2 min              | LIVE walkthrough                                 |
+| 8 — Demo xlsx          | 3 min              | LIVE walkthrough + open Excel                    |
+| 9 — Summarize column   | 2 min              | LIVE walkthrough                                 |
+| 10 — Support + Q&A     | 6 min + Q&A 20 min | Slack invite, distribute cheatsheets, 7 FAQs     |
 
-**Total: 27 min presentation + 30 min Q&A = ~60 min session.** Add 20 min buffer for slow Q&A → 80 min total.
+**Total: 29 min presentation + 30 min Q&A = ~60 min session.** Add 20 min buffer for slow Q&A → 80 min total.
 
 ### Pre-session setup · Chuẩn bị trước session
 
