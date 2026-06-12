@@ -54,6 +54,8 @@
 - **Desktop CLIENT dialog flips topology to EMBEDDED** — loadURL-fail recovery dialog used to default to "Reset về Embedded + Restart", silently switching a CLIENT install into EMBEDDED (created a phantom local server, hid real connectivity problems). Dialog now branches on `BUILD_ROLE` — CLIENT gets "Chạy lại setup wizard" (preserves `mode='thin'`). _Sprint S-DESKTOP-HMAC._
 - **Desktop setup wizard "Failed to fetch" (CORS)** — wizard rendered at `data:text/html` URL has null origin, renderer `fetch()` to embedded Express is cross-origin, blocked silently. Replaced renderer `fetch()` with `/__probe__?url=` sentinel intercepted in main process; `probeServer()` runs server-side via `node:http` (no CORS layer). Server-side CORS policy untouched. _Sprint S-WIZARD-CORS._
 - **Desktop `ERR_INVALID_URL` after wizard-close-without-save** — `firstRunCompleted=true` was set unconditionally; closing the wizard with empty `remoteUrl` bricked the app on next boot. Two-layer defensive guard: recovery (reset flag if state is non-bootable) + prevention (only set flag if state is bootable). _Sprint S-WIZARD-CORS._
+- **Inks RUN cost silently zero when AREA % left blank** — `run_s` formula multiplies by `area_pct`, so an empty AREA % cell zeroed the whole numerator and operators saw "—" with no hint. AREA % cell now flips to a red border (existing `.sc-input-warn`) when the ink row has identity (color/IFS/print type) but `area_pct = 0`. Native tooltip explains. Both Std + Cpx. _Sprint S-INPUT-WARN (PR #139)._
+- **Tooling cost silently inflates when EAU left blank** — `calcProcess` falls back from `annual_qty × product_lifetime` to `MOQ × 1` when EAU is 0, silently producing wrong per-unit tooling. EAU cell now flips red when at least one process has `tool_cost > 0` but `annual_qty = 0`. Same red-border pattern. _Sprint S-INPUT-WARN (PR #139)._
 
 ## ⚙️ Infrastructure
 
@@ -92,6 +94,7 @@ All p95 latencies are 100–500× under budget. Snapshot work added zero measura
 - S-WIZARD-CORS — Wizard CORS sentinel + firstRunCompleted defensive guard (PR #133, SHA `e39bb63`)
 - S-I18N-COVER — vi locale coverage holes patched (PR #135, SHA `74f5235`)
 - S-NPI-PARTS — Read-only NPI Parts List viewer (PR #136, SHA `2a77660`)
+- S-INPUT-WARN — Red-border warnings for missing AREA % + EAU (PR #139, SHA `3a5519c`)
 - S-SNAPSHOT-PHASE-6 — Deploy + go-live (this sprint)
 
 ## ⚠ Known issues · Vấn đề đã biết
@@ -115,4 +118,4 @@ All p95 latencies are 100–500× under budget. Snapshot work added zero measura
 
 ---
 
-**Compiled · Biên soạn**: Henry · Henry@CCL Vietnam · 2026-06-10 (rc1) — updated 2026-06-12 (rc6 stack + NPI Parts List + vi cover)
+**Compiled · Biên soạn**: Henry · Henry@CCL Vietnam · 2026-06-10 (rc1) — updated 2026-06-12 (rc7: AREA % + EAU input warnings on top of rc6 stack + NPI Parts List + vi cover)
