@@ -25,30 +25,55 @@ describe('QUOTE_HISTORY_COLUMN_KEYS', () => {
 
   test('every required key appears in the order list', () => {
     for (const k of QUOTE_HISTORY_REQUIRED_KEYS) {
-      assert.ok(QUOTE_HISTORY_COLUMN_KEYS.includes(k), `required key "${k}" missing from order list`);
+      assert.ok(
+        QUOTE_HISTORY_COLUMN_KEYS.includes(k),
+        `required key "${k}" missing from order list`
+      );
     }
   });
 
   test('every default-hidden key appears in the order list', () => {
     for (const k of QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS) {
-      assert.ok(QUOTE_HISTORY_COLUMN_KEYS.includes(k), `default-hidden key "${k}" missing from order list`);
+      assert.ok(
+        QUOTE_HISTORY_COLUMN_KEYS.includes(k),
+        `default-hidden key "${k}" missing from order list`
+      );
     }
   });
 
   test('required ∩ defaultHidden is empty — required cols must never be hidden by default', () => {
     for (const k of QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS) {
-      assert.equal(QUOTE_HISTORY_REQUIRED_KEYS.has(k), false, `key "${k}" cannot be both required and default-hidden`);
+      assert.equal(
+        QUOTE_HISTORY_REQUIRED_KEYS.has(k),
+        false,
+        `key "${k}" cannot be both required and default-hidden`
+      );
     }
   });
 });
 
 describe('QUOTE_HISTORY_SORT_FNS — basic shape', () => {
-  test('matches the 13 sortable columns from the header', () => {
-    // SortTh wired in QuoteHistory.jsx for these 13 column keys. Mismatch
+  test('matches the 14 sortable columns from the header', () => {
+    // SortTh wired in QuoteHistory.jsx for these column keys. Mismatch
     // here means a SortTh column has no sortFn → click does nothing.
+    // Sprint S-OPTIONS-COL bumped from 13 → 14 by adding 'option'.
     const expected = new Set([
-      'date', 'rfq', 'owner', 'direct_cu', 'end_cu', 'project',
-      'ifs', 'dcu_pn', 'moq', 'sell', 'price_vnd', 'va', 'contr', 'gm', 'status',
+      'date',
+      'rfq',
+      'option',
+      'owner',
+      'direct_cu',
+      'end_cu',
+      'project',
+      'ifs',
+      'dcu_pn',
+      'moq',
+      'sell',
+      'price_vnd',
+      'va',
+      'contr',
+      'gm',
+      'status',
     ]);
     const actual = new Set(Object.keys(QUOTE_HISTORY_SORT_FNS));
     assert.deepEqual(actual, expected);
@@ -81,22 +106,16 @@ describe('QUOTE_HISTORY_SORT_FNS — text columns', () => {
   });
 
   test('owner falls back state.npi_owner → q.npi_owner (S-PROJFIX guard)', () => {
+    assert.equal(QUOTE_HISTORY_SORT_FNS.owner({ state: { npi_owner: 'Henry' } }), 'henry');
+    assert.equal(QUOTE_HISTORY_SORT_FNS.owner({ state: {}, npi_owner: 'Top-Level' }), 'top-level');
     assert.equal(
-      QUOTE_HISTORY_SORT_FNS.owner({ state: { npi_owner: 'Henry' } }),
-      'henry'
+      QUOTE_HISTORY_SORT_FNS.owner({ state: { npi_owner: '' }, npi_owner: 'Fallback' }),
+      'fallback'
     );
-    assert.equal(
-      QUOTE_HISTORY_SORT_FNS.owner({ state: {}, npi_owner: 'Top-Level' }),
-      'top-level'
-    );
-    assert.equal(QUOTE_HISTORY_SORT_FNS.owner({ state: { npi_owner: '' }, npi_owner: 'Fallback' }), 'fallback');
   });
 
   test('end_cu falls back state.end_cu → state.project (Lesson 21 aliasMap)', () => {
-    assert.equal(
-      QUOTE_HISTORY_SORT_FNS.end_cu({ state: { end_cu: 'Complex-CU' } }),
-      'complex-cu'
-    );
+    assert.equal(QUOTE_HISTORY_SORT_FNS.end_cu({ state: { end_cu: 'Complex-CU' } }), 'complex-cu');
     // Standard quote: end_cu empty, project holds the End Customer text
     assert.equal(
       QUOTE_HISTORY_SORT_FNS.end_cu({ state: { end_cu: '', project: 'Standard-EndCU' } }),
@@ -106,7 +125,9 @@ describe('QUOTE_HISTORY_SORT_FNS — text columns', () => {
 
   test('project reads state.project_name (canonical), NOT state.project', () => {
     assert.equal(
-      QUOTE_HISTORY_SORT_FNS.project({ state: { project_name: 'MyProject', project: 'IGNORE-ME' } }),
+      QUOTE_HISTORY_SORT_FNS.project({
+        state: { project_name: 'MyProject', project: 'IGNORE-ME' },
+      }),
       'myproject'
     );
   });
@@ -117,6 +138,12 @@ describe('QUOTE_HISTORY_SORT_FNS — text columns', () => {
 
   test('dcu_pn reads state.direct_cu_pn', () => {
     assert.equal(QUOTE_HISTORY_SORT_FNS.dcu_pn({ state: { direct_cu_pn: 'PN-789' } }), 'pn-789');
+  });
+
+  test('option reads state.options lowercased (Sprint S-OPTIONS-COL)', () => {
+    assert.equal(QUOTE_HISTORY_SORT_FNS.option({ state: { options: 'UL + RoHS' } }), 'ul + rohs');
+    assert.equal(QUOTE_HISTORY_SORT_FNS.option({}), '');
+    assert.equal(QUOTE_HISTORY_SORT_FNS.option({ state: {} }), '');
   });
 });
 
@@ -142,10 +169,7 @@ describe('QUOTE_HISTORY_SORT_FNS — numeric columns', () => {
 
 describe('QUOTE_HISTORY_SORT_FNS — composite columns', () => {
   test('price_vnd reads selling_price_vnd when present', () => {
-    assert.equal(
-      QUOTE_HISTORY_SORT_FNS.price_vnd({ state: { selling_price_vnd: 25000 } }),
-      25000
-    );
+    assert.equal(QUOTE_HISTORY_SORT_FNS.price_vnd({ state: { selling_price_vnd: 25000 } }), 25000);
   });
 
   test('price_vnd derives USD × usd_rate fallback (Sprint 1.7g)', () => {
@@ -208,6 +232,12 @@ describe('resolveSortKey', () => {
     assert.equal(resolveSortKey('npi', new Set(['date', 'owner'])), 'owner');
   });
 
+  test('rewrites legacy "ver" → "option" (column repurposed in Sprint S-OPTIONS-COL)', () => {
+    assert.equal(resolveSortKey('ver', new Set(['date', 'option'])), 'option');
+    // Hidden after rewrite still falls back to "date".
+    assert.equal(resolveSortKey('ver', new Set(['date', 'rfq'])), 'date');
+  });
+
   test('rewritten "owner" still falls back when hidden', () => {
     assert.equal(resolveSortKey('npi', new Set(['date', 'rfq'])), 'date');
   });
@@ -235,10 +265,7 @@ describe('resolveSortKey', () => {
 describe('QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS (Phase 2 Q7 option C)', () => {
   test('hides exactly 5 cols → 21 visible by default', () => {
     assert.equal(QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS.length, 5);
-    assert.equal(
-      QUOTE_HISTORY_COLUMN_KEYS.length - QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS.length,
-      21
-    );
+    assert.equal(QUOTE_HISTORY_COLUMN_KEYS.length - QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS.length, 21);
   });
 
   test('Option C list', () => {

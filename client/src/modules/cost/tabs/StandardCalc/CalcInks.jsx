@@ -317,18 +317,29 @@ export default function CalcInks() {
                       />
                     </td>
                     <td>
-                      <input
-                        type="number"
-                        step="1"
-                        min="0"
-                        max="100"
-                        value={ink.area_pct ? Math.round(ink.area_pct * 100) : ''}
-                        onChange={(e) =>
-                          handleField(i, 'area_pct', (parseLocaleNumber(e.target.value) || 0) / 100)
-                        }
-                        placeholder="—"
-                        className="sc-input-sm sc-input-num"
-                      />
+                      {(() => {
+                        const isInkReal = !!(ink.color || ink.ifs_code || ink.print_type);
+                        const needsArea = isInkReal && !(Number(ink.area_pct) > 0);
+                        return (
+                          <input
+                            type="number"
+                            step="1"
+                            min="0"
+                            max="100"
+                            value={ink.area_pct ? Math.round(ink.area_pct * 100) : ''}
+                            onChange={(e) =>
+                              handleField(
+                                i,
+                                'area_pct',
+                                (parseLocaleNumber(e.target.value) || 0) / 100
+                              )
+                            }
+                            placeholder="—"
+                            className={`sc-input-sm sc-input-num ${needsArea ? 'sc-input-warn' : ''}`}
+                            title={needsArea ? 'AREA % bắt buộc để tính giá mực RUN' : undefined}
+                          />
+                        );
+                      })()}
                     </td>
                     <td>
                       {(() => {

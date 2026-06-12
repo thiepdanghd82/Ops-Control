@@ -145,16 +145,20 @@ const QUOTE_HISTORY_COLUMNS = [
     render: (q) => q.state?.rfq_number || '—',
   },
   {
-    key: 'ver',
-    labelKey: 'qh.ver',
-    width: 90,
-    thClass: 'qh-c-ctr',
-    tdClass: 'qh-d-ver',
+    key: 'option',
+    labelKey: 'qh.option',
+    width: 180,
+    sortable: true,
+    tdClass: 'qh-d-option',
     render: (q, ctx) => {
-      const { verN, verCls } = ctx.derived;
+      const opts = q.state?.options || '';
       return (
         <>
-          <span className={`qh-vb ${verCls}`}>{verN > 1 ? `${verN} tiers` : `ver.${verN}`}</span>
+          {opts && (
+            <span className="qh-option-text" title={opts}>
+              {opts}
+            </span>
+          )}
           <span className={`qh-tb ${q.type === 'complex' ? 'tb-cpx' : 'tb-std'}`}>
             {q.type === 'complex' ? 'CPX' : 'STD'}
           </span>
@@ -257,7 +261,8 @@ const QUOTE_HISTORY_COLUMNS = [
     labelKey: 'qh.trade_mode',
     width: 80,
     tdClass: 'qh-d-trade',
-    render: (q) => (q.state?.trade_mode ? <span className="qh-trade">{q.state.trade_mode}</span> : '—'),
+    render: (q) =>
+      q.state?.trade_mode ? <span className="qh-trade">{q.state.trade_mode}</span> : '—',
   },
   {
     key: 'design',
@@ -295,7 +300,8 @@ const QUOTE_HISTORY_COLUMNS = [
     // back to USD × usd_rate when the explicit VND mirror is absent.
     render: (q) => {
       const s = q.state || {};
-      if (s.selling_price_vnd != null && s.selling_price_vnd !== '') return fmtNum(s.selling_price_vnd);
+      if (s.selling_price_vnd != null && s.selling_price_vnd !== '')
+        return fmtNum(s.selling_price_vnd);
       if (Number.isFinite(+s.selling_price) && Number.isFinite(+s.usd_rate)) {
         return fmtNum(Number(s.selling_price) * Number(s.usd_rate));
       }
@@ -337,7 +343,11 @@ const QUOTE_HISTORY_COLUMNS = [
     tdClass: 'qh-d-gm',
     render: (q, ctx) => {
       const { gmVal } = ctx.derived;
-      return gmVal != null ? <span className={`qh-gm ${gmClass(gmVal)}`}>{fmtPct(gmVal)}</span> : '—';
+      return gmVal != null ? (
+        <span className={`qh-gm ${gmClass(gmVal)}`}>{fmtPct(gmVal)}</span>
+      ) : (
+        '—'
+      );
     },
   },
   {
@@ -369,7 +379,11 @@ const QUOTE_HISTORY_COLUMNS = [
     tdClass: 'qh-d-approve',
     tdStyle: { textAlign: 'center' },
     render: (q, ctx) => (
-      <ApprovalActionsCell quote={q} user={ctx.user} onAfterTransition={ctx.reloadAfterTransition} />
+      <ApprovalActionsCell
+        quote={q}
+        user={ctx.user}
+        onAfterTransition={ctx.reloadAfterTransition}
+      />
     ),
   },
   {
@@ -414,13 +428,29 @@ const QUOTE_HISTORY_COLUMNS = [
         )}
         {q.has_layout || q.state?.layout_file?.name ? (
           <span className="qh-act-layout qh-layout-yes" title="Layout attached">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round">
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#16a34a"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            >
               <polyline points="20 6 9 17 4 12" />
             </svg>
           </span>
         ) : (
           <span className="qh-act-layout qh-layout-no" title="No layout">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round">
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#dc2626"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            >
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
@@ -478,11 +508,7 @@ export default function QuoteHistory() {
     [t]
   );
   const [visibleColumns, setVisibleColumns] = useState(() =>
-    loadVisibleColumns(
-      toggleColumns,
-      QUOTE_HISTORY_STORAGE_KEY,
-      QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS
-    )
+    loadVisibleColumns(toggleColumns, QUOTE_HISTORY_STORAGE_KEY, QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS)
   );
   // Resilience guard — when the active sortKey is hidden via the toggle
   // (or rewritten by the legacy 'npi' → 'owner' rename path), snap back
@@ -893,8 +919,6 @@ export default function QuoteHistory() {
                   const s = q.state || {};
                   const r = q.result || {};
                   const idx = page * PAGE_SIZE + i;
-                  const verN = Number(q.version) || 0;
-                  const verCls = verN === 0 ? 'v-grn' : verN === 1 ? 'v-blu' : 'v-pur';
                   const rawMats = s.materials || q.materials || [];
                   const matStr = Array.isArray(rawMats)
                     ? rawMats
@@ -943,8 +967,6 @@ export default function QuoteHistory() {
                       sizeH,
                       design,
                       matStr,
-                      verN,
-                      verCls,
                     },
                   };
                   return (
