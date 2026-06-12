@@ -255,7 +255,7 @@ export default function RfqInfoCard({
 
         <div className="sc-rfq-section-title">RFQ &amp; Certification</div>
         <div className="sc-grid4">
-          <div className="sc-field sc-field-span2">
+          <div className="sc-field">
             <label htmlFor={fid('rfq_number')}>RFQ Number</label>
             <div style={{ display: 'flex', gap: 4 }}>
               <input
@@ -277,6 +277,17 @@ export default function RfqInfoCard({
             </div>
           </div>
           <div className="sc-field">
+            <label htmlFor={fid('options')}>Options</label>
+            <textarea
+              id={fid('options')}
+              value={get('options')}
+              onChange={(e) => set('options', e.target.value)}
+              className="sc-input"
+              rows={1}
+              style={{ resize: 'vertical', minHeight: '2.2em', fontFamily: 'inherit' }}
+            />
+          </div>
+          <div className="sc-field">
             <label htmlFor={fid('request_ul')}>Request UL</label>
             <select
               id={fid('request_ul')}
@@ -296,17 +307,6 @@ export default function RfqInfoCard({
               value={get('ul_description')}
               onChange={(e) => set('ul_description', e.target.value)}
               className="sc-input"
-            />
-          </div>
-          <div className="sc-field sc-field-full">
-            <label htmlFor={fid('options')}>Options</label>
-            <textarea
-              id={fid('options')}
-              value={get('options')}
-              onChange={(e) => set('options', e.target.value)}
-              className="sc-input"
-              rows={2}
-              style={{ resize: 'vertical', minHeight: '3.6em', fontFamily: 'inherit' }}
             />
           </div>
         </div>
