@@ -44,6 +44,8 @@
 - **Prometheus metrics** — `pricing_snapshot_save_total{type,source,site}` + `_synth_save_total{type,site}` + `_warning_total{type,warning}` at `/metrics`.
 - **NPI Parts List (read-only)** — new tab under Quoting & Pricing. Static viewer over ~25k-row NPI production reference (xlsx → JSON snapshot bundled into the DMG). Search across Part Name / Code IFS / System code / Customer / PIC / Direct Project; year filter on RFQ date; ColumnsToggle with 52 default-hidden cols; double-click row → showcard modal with 9 audit fields + 5 tooling-fee variants. Snapshot path `client/public/npi-parts/parts-snapshot.json` (avoids Vite `/data` proxy collision); rebuild via `npm run build:npi-parts`. Edit/save deferred to v1.7 (Option C scope). _Henry confirmed scope 2026-06-11._
 - **Bilingual VI locale cover** — 33 P0+P1 holes patched across Sidebar nav (Design Tools / Machine Technical / Planning tabs + section headers), Settings tabs + My Profile form labels, footer status text (`Active now` / `(me)` tag). Settings section headers now resolve `i18nKey` correctly (previously only items resolved — root cause of the VI-mode regression Henry caught in the rc4 screenshot). 16 P2 admin-only holes (DDL editor / Audit Log internal / Metrics / Kiosk Admin) deferred to post-go-live polish.
+- **RFQ Options textarea** — new operator-entered free-text notes field in RFQ & Certification section, sits inline with RFQ Number / Request UL / UL Description (one row, four equal columns). Multi-line with vertical resize for longer notes. Persisted at `state.options`; surfaces in Quote History as a sortable column. Both Std + Cpx. _Sprint S-OPTIONS-FIELD (PR #138 + PR #141)._
+- **Quote History `OPTION` column** (replaces `VER`) — column repurposed to display the Options text instead of `q.version`. Sortable; ellipsis + tooltip when long. Legacy sort prefs carrying `'ver'` auto-rewrite to `'option'` (mirror of v1.5.12's `'npi'` → `'owner'` rewrite). EN: `OPTION` / VI: `TÙY CHỌN`. STD/CPX type badge + MaterialActiveBadge still render in the same cell. _Sprint S-OPTIONS-FIELD._
 
 ## 🐛 Bug fixes
 
@@ -95,6 +97,7 @@ All p95 latencies are 100–500× under budget. Snapshot work added zero measura
 - S-I18N-COVER — vi locale coverage holes patched (PR #135, SHA `74f5235`)
 - S-NPI-PARTS — Read-only NPI Parts List viewer (PR #136, SHA `2a77660`)
 - S-INPUT-WARN — Red-border warnings for missing AREA % + EAU (PR #139, SHA `3a5519c`)
+- S-OPTIONS-FIELD — RFQ Options textarea + Quote History column repurposed (PR #138 SHA `ee84205` + PR #141 SHA `2de82df`)
 - S-SNAPSHOT-PHASE-6 — Deploy + go-live (this sprint)
 
 ## ⚠ Known issues · Vấn đề đã biết
@@ -118,4 +121,4 @@ All p95 latencies are 100–500× under budget. Snapshot work added zero measura
 
 ---
 
-**Compiled · Biên soạn**: Henry · Henry@CCL Vietnam · 2026-06-10 (rc1) — updated 2026-06-12 (rc7: AREA % + EAU input warnings on top of rc6 stack + NPI Parts List + vi cover)
+**Compiled · Biên soạn**: Henry · Henry@CCL Vietnam · 2026-06-10 (rc1) — updated 2026-06-12 (rc9: AREA % + EAU input warnings + RFQ Options field + Quote History OPTION column on top of rc6 stack + NPI Parts List + vi cover)
