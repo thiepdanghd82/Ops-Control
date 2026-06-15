@@ -182,11 +182,40 @@ test('runInkCalc silkscreen std: returns one row per visible ink with all fields
 test('runInkCalc silkscreen: base_mat code fallback to embedded width (regex safe)', () => {
   const st = makeStdForInk();
   // Point ink at a non-existent material; width comes from trailing digits.
+  // Zero out the 2 higher-priority fallbacks (per-row ink.width + layout
+  // web_width_td) so the test still exercises the suffix-extraction path
+  // it was written to guard. Mirrors calcEngine.calcInk's 4-tier order.
   st.materials = [];
+  st.web_width_td = 0;
+  st.inks[0].width = 0;
   st.inks[0].base_mat = 'ABC-200';
   const rows = runInkCalc('silkscreen', 'std', st, null, makeInkCalcDB(), []);
   assert.equal(rows[0].mat_width, 200, 'positive width extracted from code');
   assert.ok(rows[0].ink_volume >= 0, 'no negative volume (Sprint 5 regression guard)');
+});
+
+test('runInkCalc silkscreen: per-row ink.width wins over web_width_td / materials / suffix (Henry parity fix)', () => {
+  // Mirror of calcEngine.calcInk 4-tier order: ik.width is highest
+  // priority. Henry's workflow always fills the WIDTH column on the
+  // Pricing Std → Inks row; without this priority the Cal. QPA & Cost
+  // table blanked out when materials lookup missed.
+  const st = makeStdForInk();
+  st.web_width_td = 82; // would-be fallback
+  st.inks[0].width = 270; // operator-entered per-row width
+  const rows = runInkCalc('silkscreen', 'std', st, null, makeInkCalcDB(), []);
+  assert.equal(rows[0].mat_width, 270, 'ik.width wins');
+  assert.ok(rows[0].total_area > 0, 'downstream total_area populated');
+  assert.ok(rows[0].ink_volume > 0, 'downstream ink_volume populated');
+});
+
+test('runInkCalc silkscreen: web_width_td used when ink.width empty', () => {
+  const st = makeStdForInk();
+  st.web_width_td = 82;
+  st.inks[0].width = 0;
+  st.materials = [];
+  st.inks[0].base_mat = '';
+  const rows = runInkCalc('silkscreen', 'std', st, null, makeInkCalcDB(), []);
+  assert.equal(rows[0].mat_width, 82, 'web_width_td used when ik.width empty');
 });
 
 test('runInkCalc silkscreen: hidden ink skipped', () => {
