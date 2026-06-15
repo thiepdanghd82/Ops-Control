@@ -37,7 +37,7 @@ registerStrings({
   'qh.contr_pct': { en: 'CONTR.%', vi: 'ĐÓNG GÓP%' },
   'qh.gm_pct': { en: 'GM%', vi: 'GM%' },
   'qh.status': { en: 'STATUS', vi: 'TRẠNG THÁI' },
-  'qh.approve_reject': { en: 'APPROVE / REJECT', vi: 'DUYỆT / TỪ CHỐI' },
+  'qh.quote_progress': { en: 'QUOTE PROGRESS', vi: 'TIẾN TRÌNH BÁO GIÁ' },
   'qh.layout': { en: 'LAYOUT', vi: 'BỐ CỤC' },
 
   // RFQ Tracker actions + columns

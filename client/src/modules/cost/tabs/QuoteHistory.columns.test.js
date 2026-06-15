@@ -194,18 +194,38 @@ describe('QUOTE_HISTORY_SORT_FNS — composite columns', () => {
     assert.equal(QUOTE_HISTORY_SORT_FNS.contr({ result: { contr_pct: 18 } }), 0.18);
   });
 
-  test('status maps approval workflow state to ordinal — REGRESSION GUARD on STATUS_ORDER', () => {
+  test('status maps approval workflow state to ordinal — REGRESSION GUARD on STATUS_ORDER (V2)', () => {
+    // Sprint S-QUOTE-PROGRESS-V2 — new state model. Legacy 'approved'
+    // status heal-on-reads to 'price_approved' via getApprovalStatus,
+    // so this test exercises both fresh + legacy quote records.
     assert.equal(
       QUOTE_HISTORY_SORT_FNS.status({ state: { approval: { status: 'draft' } } }),
       STATUS_ORDER.draft
     );
     assert.equal(
-      QUOTE_HISTORY_SORT_FNS.status({ state: { approval: { status: 'approved' } } }),
-      STATUS_ORDER.approved
+      QUOTE_HISTORY_SORT_FNS.status({ state: { approval: { status: 'quote_to_sale' } } }),
+      STATUS_ORDER.quote_to_sale
+    );
+    assert.equal(
+      QUOTE_HISTORY_SORT_FNS.status({ state: { approval: { status: 'price_approved' } } }),
+      STATUS_ORDER.price_approved
+    );
+    assert.equal(
+      QUOTE_HISTORY_SORT_FNS.status({ state: { approval: { status: 'cancelled' } } }),
+      STATUS_ORDER.cancelled
     );
     assert.equal(
       QUOTE_HISTORY_SORT_FNS.status({ state: { approval: { status: 'rejected' } } }),
       STATUS_ORDER.rejected
+    );
+    // Heal-on-read for legacy quote records.
+    assert.equal(
+      QUOTE_HISTORY_SORT_FNS.status({ state: { approval: { status: 'approved' } } }),
+      STATUS_ORDER.price_approved
+    );
+    assert.equal(
+      QUOTE_HISTORY_SORT_FNS.status({ state: { approval: { status: 'pending_sales' } } }),
+      STATUS_ORDER.quote_to_sale
     );
   });
 

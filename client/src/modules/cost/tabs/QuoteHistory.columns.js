@@ -16,16 +16,21 @@
 import { getStatus as getApprovalStatus } from '../../../utils/approvalWorkflow.js';
 
 /**
- * Ordinal used by status-column sorting — matches workflow progression so
- * ASC goes draft → pending_sales → pending_finance → approved, and
- * rejected sorts to the end so reviewers see actionable items near the top.
- * Mirror of the constant previously inlined in QuoteHistory.jsx.
+ * Ordinal used by status-column sorting — matches workflow progression
+ * so ASC goes draft → quote_to_sale → price_approved, with the two
+ * terminal/abnormal states (cancelled, rejected) sorted last so review-
+ * worthy in-flight quotes stay near the top.
+ *
+ * Sprint S-QUOTE-PROGRESS-V2 (2026-06-15) — collapsed the v1 2-gate
+ * pipeline (pending_sales/pending_finance/approved). Legacy quote
+ * status values are heal-on-read mapped via getApprovalStatus so they
+ * sort under the corresponding new bucket.
  */
 export const STATUS_ORDER = {
   draft: 0,
-  pending_sales: 1,
-  pending_finance: 2,
-  approved: 3,
+  quote_to_sale: 1,
+  price_approved: 2,
+  cancelled: 3,
   rejected: 4,
 };
 

@@ -1,10 +1,11 @@
 /**
  * PendingApprovalsInbox — "my queue" view.
  *
- * Shows only quotes where the current user can legitimately take an
- * action right now (availableActions() is non-empty). Sorted FIFO by
- * submitted_at so the reviewer clears the oldest work first — matches
- * IBM/SAP/Brady inbox convention. Empty state is celebratory.
+ * Shows only quotes currently in the review queue (status =
+ * quote_to_sale) that the current user can act on (canUserSetStatus
+ * for price_approved). Sorted FIFO by approval.changed_at so the
+ * reviewer clears the oldest work first — matches IBM/SAP/Brady inbox
+ * convention. Empty state is celebratory.
  *
  * Toggle "My queue" / "All pending" lets admins / sys see the full
  * backlog without approval_roles being the gate. Non-privileged users
@@ -21,13 +22,21 @@ import SkeletonTable from '../../../components/Shared/SkeletonTable';
 import ApprovalStatusBadge from '../../../components/Shared/ApprovalStatusBadge';
 import ApprovalActionsCell from '../../../components/Shared/ApprovalActionsCell';
 import ApprovalHistoryModal from '../../../components/Shared/ApprovalHistoryModal';
-import { availableActions, getStatus } from '../../../utils/approvalWorkflow';
+import {
+  availableTargetStatuses,
+  canUserSetStatus,
+  getStatus,
+} from '../../../utils/approvalWorkflow';
 import { useAbortableFetch } from '../../../hooks/useAbortableFetch';
 import { useAutoRefresh } from '../../../utils/useAutoRefresh';
 import { subscribeDataEvents } from '../../../services/dataEventBus';
 import { err as logErr } from '../../../utils/logger';
 
-const PENDING_STATES = new Set(['pending_sales', 'pending_finance']);
+// Sprint S-QUOTE-PROGRESS-V2 — the "pending" review queue collapsed
+// from {pending_sales, pending_finance} to the single quote_to_sale
+// status. Anything else (draft / price_approved / cancelled / rejected)
+// is either pre-review or terminal.
+const PENDING_STATES = new Set(['quote_to_sale']);
 
 function fmtDateTime(iso) {
   if (!iso) return '—';
@@ -126,23 +135,25 @@ export default function PendingApprovalsInbox() {
       .filter((q) => q && q.state)
       .map((q) => {
         const approval = q.state.approval || null;
+        // "Actionable" in the new model = user can move the quote to
+        // price_approved (the next forward step out of quote_to_sale).
+        const canApprove = canUserSetStatus(user, 'price_approved');
         return {
           q,
           approval,
           status: getStatus(approval),
-          actions: availableActions(approval, user),
-          submittedAt: approval?.submitted_at || null,
+          targets: availableTargetStatuses(approval, user),
+          actionable: canApprove,
+          submittedAt: approval?.changed_at || approval?.submitted_at || null,
         };
       });
     let filtered;
     if (viewMode === 'mine') {
-      // Items I can act on RIGHT NOW, pending by definition.
-      filtered = rows.filter((r) => r.actions.length > 0 && PENDING_STATES.has(r.status));
+      filtered = rows.filter((r) => r.actionable && PENDING_STATES.has(r.status));
     } else {
-      // Everything currently in the review queue, regardless of who can act.
       filtered = rows.filter((r) => PENDING_STATES.has(r.status));
     }
-    // FIFO: oldest submission first (earliest ISO string wins).
+    // FIFO: oldest entry to the review queue first.
     filtered.sort((a, b) => {
       const ta = a.submittedAt ? new Date(a.submittedAt).getTime() : Infinity;
       const tb = b.submittedAt ? new Date(b.submittedAt).getTime() : Infinity;
@@ -157,7 +168,7 @@ export default function PendingApprovalsInbox() {
         (q) =>
           q?.state &&
           PENDING_STATES.has(getStatus(q.state.approval)) &&
-          availableActions(q.state.approval, user).length > 0
+          canUserSetStatus(user, 'price_approved')
       ).length,
     [quotes, user]
   );
@@ -385,12 +396,12 @@ export default function PendingApprovalsInbox() {
                     <Td title={`${s.direct_cu || ''} → ${s.end_cu || ''}`}>
                       {s.direct_cu || s.end_cu || '—'}
                     </Td>
-                    <Td>{item.approval?.submitted_by || '—'}</Td>
+                    <Td>{item.approval?.changed_by || item.approval?.submitted_by || '—'}</Td>
                     <Td align="right">{fmtNum(s.moq)}</Td>
                     <Td align="right">{fmtPrice(s.selling_price)}</Td>
                     <Td align="right">{gmVal != null ? fmtPct(gmVal) : '—'}</Td>
                     <Td align="center">
-                      {item.actions.length > 0 ? (
+                      {item.targets.length > 0 ? (
                         <ApprovalActionsCell
                           quote={q}
                           user={user}
@@ -400,7 +411,7 @@ export default function PendingApprovalsInbox() {
                         />
                       ) : (
                         <span style={{ fontSize: 10, color: '#8d8d8d', fontStyle: 'italic' }}>
-                          awaiting other reviewer
+                          read-only
                         </span>
                       )}
                     </Td>
