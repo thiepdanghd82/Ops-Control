@@ -511,18 +511,18 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
         <span>CCL Design Vietnam</span>
       </div>
       <div className="cb-hero-body">
-        <div className="cb-hero-tag">Manufacturing Operations</div>
+        <div className="cb-hero-tag">NPI Workspace</div>
         {/* Sprint S-P0-FIX-4 (a11y F3-4) — was <h2>; demoted to <p> so the
             page heading hierarchy starts cleanly at <h1>. The aside is
             already aria-hidden so this never reached screen readers, but
             tooling (Lighthouse, axe-core) flagged the DOM-order h2-before-h1.
             Visual treatment is fully CSS-driven via .cb-hero-title. */}
         <p className="cb-hero-title">
-          Pricing &amp; planning, <strong>online or off.</strong>
+          Cost, quote &amp; sample, <strong>online or off.</strong>
         </p>
         <p className="cb-hero-desc">
-          Quote, track, and approve from the floor. Local-first writes, automatic sync, single
-          source of truth across the plant.
+          Quote, cost, and track samples from the floor. Local-first writes, automatic sync, single
+          source of truth for the NPI team.
         </p>
         <span className="cb-hero-arrow">→</span>
       </div>
