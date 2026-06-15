@@ -134,7 +134,6 @@ export default function ApprovalActionsCell({
         {options.map((o) => (
           <option key={o.value} value={o.value} disabled={!o.enabled || o.value === currentStatus}>
             {o.label}
-            {o.value === currentStatus ? ' (current)' : ''}
             {!o.enabled && o.value !== currentStatus ? ' — not authorized' : ''}
           </option>
         ))}
