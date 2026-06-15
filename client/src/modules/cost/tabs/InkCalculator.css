@@ -430,7 +430,21 @@
   font-size: 12px;
   letter-spacing: 0.32px;
   border: 1px solid #e0e0e0;
-  color: #161616;
+  color: #ffffff;
+}
+/* Sub-header cells use dark inline backgrounds (#1e40af / #0f766e /
+   #7c3aed / #b45309 / #166534 / #1d4ed8). Inherited grey #525252 was
+   nearly invisible on those backgrounds — Henry reported "đổi màu chữ
+   thành màu trắng để màu đen không nhìn thấy gì". Attribute selector
+   is surgical: only cells with one of the 6 brand colors flip to white,
+   so the leftmost Row/Color cells (light footBg) keep the default grey. */
+.ink-qpa-table thead th[style*='#1e40af'],
+.ink-qpa-table thead th[style*='#0f766e'],
+.ink-qpa-table thead th[style*='#7c3aed'],
+.ink-qpa-table thead th[style*='#b45309'],
+.ink-qpa-table thead th[style*='#166534'],
+.ink-qpa-table thead th[style*='#1d4ed8'] {
+  color: #ffffff;
 }
 .ink-qpa-table thead th.formula {
   padding: 4px 6px;

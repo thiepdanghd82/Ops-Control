@@ -121,15 +121,26 @@ export function runInkCalc(kind, source, stdState, cplxState, inkCalc, prevRows)
           parseFloat(dbRow.vol_recipe) ||
           0
         : 0;
+      // Width resolution — mirrors calcEngine.calcInk's 4-tier fallback so
+      // the Inks Calculator preview matches what Pricing actually charges.
+      //   1. per-row `ik.width` (mm) — operator override entered on
+      //      Pricing → Inks → WIDTH column (most common path; Henry's
+      //      Silkscreen workflow always fills it)
+      //   2. layout `st.web_width_td` — the press web's effective TD width
+      //   3. materials lookup via `ik.base_mat` → `matRow.width`
+      //   4. trailing numeric substring of `ik.base_mat` (e.g. "Mat-300" → 300)
+      // Without this, Silkscreen rows with `ik.width=270` but no `base_mat`
+      // produced `mat_width=0` → `total_area=0` → every volume / weight /
+      // cost cell collapsed to "—" while calcEngine showed the correct
+      // numbers in Pricing Std. Same regex as calcEngine for parity.
       const matRow = (st.materials || []).find((m) => m.code === ik.base_mat);
-      // Fallback: extract rightmost positive numeric substring from base_mat code.
-      // Uses the same regex approach as calcEngine.calcInk — slice(-4) +
-      // parseFloat would return -200 for codes like "ABC-200" because
-      // parseFloat parses leading signs, silently producing a NEGATIVE
-      // width that propagates through total_area → ink_volume → cost.
-      const _widthMatch = !isFlexo ? String(ik.base_mat || '').match(/(\d+(?:\.\d+)?)\s*$/) : null;
-      const _widthFromCode = _widthMatch ? Math.max(0, parseFloat(_widthMatch[1])) : 0;
-      const mat_width = matRow ? parseFloat(matRow.width) || 0 : _widthFromCode;
+      let mat_width = Number(ik.width) || 0;
+      if (mat_width <= 0) mat_width = Number(st.web_width_td) || 0;
+      if (mat_width <= 0 && matRow) mat_width = parseFloat(matRow.width) || 0;
+      if (mat_width <= 0 && !isFlexo) {
+        const _widthMatch = String(ik.base_mat || '').match(/(\d+(?:\.\d+)?)\s*$/);
+        mat_width = _widthMatch ? Math.max(0, parseFloat(_widthMatch[1])) : 0;
+      }
       const pitch_mm = ik.pitch_mm > 0 ? ik.pitch_mm : globalPitch;
       const total_area = mat_width * pitch_mm;
       const ink_volume_max = vol_recipe * total_area * 1e-6;
