@@ -42,7 +42,7 @@ async function loadPdfjs() {
   return pdfjs;
 }
 
-function PdfCanvasPreview({ bytes, className, title }) {
+function PdfCanvasPreview({ bytes, className, title, rotation = 0 }) {
   const containerRef = useRef(null);
   const [status, setStatus] = useState('loading');
   useEffect(() => {
@@ -64,11 +64,14 @@ function PdfCanvasPreview({ bytes, className, title }) {
         for (let i = 1; i <= pdfDoc.numPages; i++) {
           if (cancelled) break;
           const page = await pdfDoc.getPage(i);
-          const baseVp = page.getViewport({ scale: 1 });
+          // Container-fit scale: use the rotated baseVp so 90°/270° fits
+          // to the SHORT side of the original page instead of overflowing
+          // (pdfjs swaps width/height for odd-multiple rotations).
+          const baseVp = page.getViewport({ scale: 1, rotation });
           const containerW = containerRef.current.clientWidth || 800;
           const dpr = Math.min(window.devicePixelRatio || 1, 2);
           const scale = (containerW / baseVp.width) * dpr;
-          const vp = page.getViewport({ scale });
+          const vp = page.getViewport({ scale, rotation });
           const canvas = document.createElement('canvas');
           canvas.width = vp.width;
           canvas.height = vp.height;
@@ -88,7 +91,7 @@ function PdfCanvasPreview({ bytes, className, title }) {
       cancelled = true;
       if (pdfDoc) pdfDoc.destroy();
     };
-  }, [bytes]);
+  }, [bytes, rotation]);
   return (
     <div
       className={className}
@@ -442,10 +445,10 @@ export default function FileUploadZone({
     setCtxMenu(null);
     inputRef.current?.click();
   };
-  // Rotate 90° clockwise per click (0 → 90 → 180 → 270 → 0). Image only;
-  // PDFs use the native iframe renderer and don't respect CSS transform.
-  // Rotation is preview-only (not persisted) — fresh load resets to 0°,
-  // matching how zoom/pan behave.
+  // Rotate 90° clockwise per click (0 → 90 → 180 → 270 → 0). Works for
+  // both images (CSS transform) and PDFs (pdfjs `getViewport({rotation})`
+  // re-renders the canvas at the new orientation). Rotation is preview-
+  // only (not persisted) — fresh load resets to 0°, matching zoom/pan.
   const ctxRotate = () => {
     setCtxMenu(null);
     setRotation((r) => (r + 90) % 360);
@@ -520,8 +523,7 @@ export default function FileUploadZone({
           full dropdown for power users, but direct buttons give every
           user a discoverable path. Matches Quote History's action-column
           pattern — icon buttons with tooltips + hover color feedback.
-          Disabled states: Open + Delete when no file; Rotate only for
-          images (PDF iframe ignores CSS transform). */}
+          Disabled states: Open + Delete when no file. */}
       <div
         className={`fuz-label${collapsible ? ' fuz-label-collapsible' : ''}${collapsed ? ' fuz-collapsed' : ''}`}
         onContextMenu={handleContextMenu}
@@ -628,12 +630,12 @@ export default function FileUploadZone({
               e.stopPropagation();
               setRotation((r) => (r + 90) % 360);
             }}
-            disabled={!file || (!isImage && isPDF)}
+            disabled={!file || (!isImage && !isPDF)}
             title={
               file
-                ? isImage
+                ? isImage || isPDF
                   ? 'Rotate 90° clockwise (⌘R)'
-                  : 'Rotate only works on image files'
+                  : 'Rotate only works on image or PDF files'
                 : 'No file attached'
             }
             aria-label="Rotate drawing 90 degrees"
@@ -736,6 +738,7 @@ export default function FileUploadZone({
                 bytes={pdfBytes?.bytes}
                 title={file.name}
                 className="fuz-pdf-frame"
+                rotation={rotation}
               />
             )}
             {hasPreview && !isImage && !isPDF && <div className="fuz-file-msg">File attached</div>}
@@ -753,7 +756,9 @@ export default function FileUploadZone({
               <div className="fuz-zoom-badge">{Math.round(zoom * 100)}%</div>
             )}
             {/* Rotation indicator (only while non-zero) */}
-            {isImage && rotation !== 0 && <div className="fuz-rot-badge">{rotation}°</div>}
+            {(isImage || isPDF) && rotation !== 0 && (
+              <div className="fuz-rot-badge">{rotation}°</div>
+            )}
           </div>
         ) : (
           <div className="fuz-empty" onClick={() => inputRef.current?.click()}>
@@ -823,8 +828,9 @@ export default function FileUploadZone({
 
       {/* Fullscreen viewer — XL modal showing the file at large size.
           Triggered by the new fullscreen button OR double-click on the
-          preview. PDFs use blob URL iframe (avoids CSP/data-URL block).
-          Images respect rotation but reset zoom/pan inside the modal. */}
+          preview. Both image and PDF respect the current rotation set
+          on the header card (CSS transform for images, pdfjs viewport
+          for PDFs). Zoom/pan reset inside the modal. */}
       <Modal
         open={fullscreenOpen}
         onClose={() => setFullscreenOpen(false)}
@@ -842,7 +848,12 @@ export default function FileUploadZone({
             />
           )}
           {file && hasPreview && isPDF && blobUrl && (
-            <PdfCanvasPreview bytes={pdfBytes?.bytes} title={file.name} className="fuz-fs-pdf" />
+            <PdfCanvasPreview
+              bytes={pdfBytes?.bytes}
+              title={file.name}
+              className="fuz-fs-pdf"
+              rotation={rotation}
+            />
           )}
           {file && !hasPreview && <div className="fuz-file-msg">No preview available.</div>}
         </Modal.Body>
