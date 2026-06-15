@@ -44,18 +44,16 @@ import { inc as incMetric } from '../utils/metrics.js';
 import { redactErrorMessage, logErr } from '../utils/safeError.js';
 import { validateRows, machineProfileSchema } from '../services/librarySchema.js';
 
-// Actions the approval state machine accepts. Mirrored into validation
-// so the router rejects garbage before it reaches the state machine —
-// the 400 response then lists valid actions instead of surfacing the
-// internal machine error.
-const APPROVAL_ACTIONS = [
-  'SUBMIT',
-  'APPROVE_SALES',
-  'APPROVE_FINANCE',
-  'APPROVE',
-  'REJECT',
-  'REVOKE',
-];
+// Target statuses the quote-progress state machine accepts as the
+// `action` field of POST /approvals/:id/transition. Mirrored into
+// validation so the router rejects garbage before it reaches the
+// state machine — the 400 response then lists valid statuses instead
+// of surfacing the internal machine error.
+//
+// Sprint S-QUOTE-PROGRESS-V2 (2026-06-15) — the field name `action`
+// is kept for callsite compatibility with v1 clients still in flight,
+// but the values are now target statuses, not workflow verbs.
+const APPROVAL_ACTIONS = ['draft', 'quote_to_sale', 'price_approved', 'cancelled', 'rejected'];
 
 // sanitizeReason moved to utils/sanitize.js (Phase 9E.2) so it's
 // unit-testable without booting the router. Imported above.
@@ -367,7 +365,7 @@ router.post(
       const { current_approval, action, reason } = req.body;
       const result = approvalTransition({
         approval: current_approval,
-        action: String(action).toUpperCase(),
+        action: String(action).toLowerCase(),
         actorUser,
         reason: sanitizeReason(reason),
       });
@@ -380,10 +378,13 @@ router.post(
   }
 );
 
-// ── Atomic approval endpoint (Sprint 6.2) ────────────────────────────
+// ── Atomic quote-progress endpoint (Sprint 6.2 + V2 rewrite) ─────────
 //
 // POST /api/shared/approvals/:quoteId/transition
-// Body: { action: 'SUBMIT'|'APPROVE_SALES'|'APPROVE_FINANCE'|'APPROVE'|'REJECT'|'REVOKE', reason?: string }
+// Body: { action: 'draft'|'quote_to_sale'|'price_approved'|'cancelled'|'rejected', reason?: string }
+//   (Sprint S-QUOTE-PROGRESS-V2 — `action` is now a target status,
+//   not a workflow verb. `reason` required when action ∈ {cancelled,
+//   rejected}.)
 //
 // Reads the current quote from quote_history.json, applies the state
 // machine transition, writes the file atomically, appends a quote
@@ -422,12 +423,26 @@ function clientIp(req) {
 // users; if that grows we'll cache with an mtime check.
 function notificationRecipients({ toStatus, prevApproval, actorUsername }) {
   const users = loadUsers();
-  const usersWithRole = (role) =>
+  const usersWithSalesRole = () =>
     users
-      .filter((u) => u && Array.isArray(u.approval_roles) && u.approval_roles.includes(role))
+      .filter(
+        (u) =>
+          u &&
+          Array.isArray(u.approval_roles) &&
+          u.approval_roles.some((r) => r === 'sales' || r === 'sales_mgr')
+      )
       .map((u) => u.username);
 
-  const submitter = prevApproval?.submitted_by;
+  // Sprint S-QUOTE-PROGRESS-V2 — submitter / approver attribution
+  // collapsed into the single changed_by field. Legacy v1 records may
+  // still carry submitted_by / sales_approved_by / finance_approved_by;
+  // we fall back through them so notifications keep flowing for
+  // pre-rewrite quote data.
+  const lastActor =
+    prevApproval?.changed_by ||
+    prevApproval?.submitted_by ||
+    prevApproval?.sales_approved_by ||
+    prevApproval?.finance_approved_by;
   const out = [];
   const addDistinct = (username, reason) => {
     if (!username || username === actorUsername) return; // never notify the actor
@@ -435,21 +450,16 @@ function notificationRecipients({ toStatus, prevApproval, actorUsername }) {
     out.push({ recipient: username, recipient_reason: reason });
   };
 
-  if (toStatus === 'pending_sales') {
-    for (const u of usersWithRole('sales_mgr')) addDistinct(u, 'sales_mgr review queue');
-  } else if (toStatus === 'pending_finance') {
-    for (const u of usersWithRole('finance_dir')) addDistinct(u, 'finance_dir review queue');
-  } else if (toStatus === 'approved') {
-    if (submitter) addDistinct(submitter, 'your quote was approved');
+  if (toStatus === 'quote_to_sale') {
+    for (const u of usersWithSalesRole()) addDistinct(u, 'sales review queue');
+  } else if (toStatus === 'price_approved') {
+    if (lastActor) addDistinct(lastActor, 'your quote is now price-approved');
   } else if (toStatus === 'rejected') {
-    if (submitter) addDistinct(submitter, 'your quote was rejected — please revise');
+    if (lastActor) addDistinct(lastActor, 'your quote was rejected — please revise');
+  } else if (toStatus === 'cancelled') {
+    if (lastActor) addDistinct(lastActor, 'your quote was cancelled');
   } else if (toStatus === 'draft') {
-    // REVOKE path — tell the submitter + previous approvers their sign-off is cleared.
-    if (submitter) addDistinct(submitter, 'approval revoked — quote returned to draft');
-    if (prevApproval?.sales_approved_by)
-      addDistinct(prevApproval.sales_approved_by, 'sales approval revoked');
-    if (prevApproval?.finance_approved_by)
-      addDistinct(prevApproval.finance_approved_by, 'finance approval revoked');
+    if (lastActor) addDistinct(lastActor, 'quote returned to draft');
   }
   return out;
 }
@@ -487,7 +497,10 @@ router.post(
 
     const { action, reason: rawReason } = req.body;
     const reason = sanitizeReason(rawReason);
-    const normalizedAction = String(action).toUpperCase();
+    // Sprint S-QUOTE-PROGRESS-V2 — `action` is now a target status
+    // string ('draft' / 'quote_to_sale' / 'price_approved' /
+    // 'cancelled' / 'rejected'). Lowercase per the new enum.
+    const normalizedAction = String(action).toLowerCase();
 
     try {
       const result = await withLock(`quote:${quoteId}`, async () => {
@@ -499,48 +512,15 @@ router.post(
         const quote = quotes[idx];
         const prevApproval = quote.state?.approval || null;
 
-        // Phase 9E.4 — when APPROVE_FINANCE fires, freeze the pricing
-        // basis (site + live SGA rate) into the approval record. Read
-        // live Finance config on the server so we don't trust a client-
-        // provided value; this guarantees the snapshot reflects what
-        // Finance actually had at the approval moment.
-        let snapshot = null;
-        if (normalizedAction === 'APPROVE_FINANCE' || normalizedAction === 'APPROVE') {
-          const site = quote.state?.site || 'VN';
-          try {
-            const finSum = readJson(path.join(LIB, 'Finance', 'finance_sum.json')) || {};
-            const ratesBySite = finSum?.sga_rate_pct_by_site || {};
-            // Case-insensitive lookup matches client computeSga behavior.
-            let rate = ratesBySite[site];
-            if (rate == null) {
-              const nkey = String(site).trim().toLowerCase();
-              for (const [k, v] of Object.entries(ratesBySite)) {
-                if (String(k).trim().toLowerCase() === nkey) {
-                  rate = v;
-                  break;
-                }
-              }
-            }
-            snapshot = { site, sga_rate_pct: Number(rate) || 0 };
-          } catch (err) {
-            // Finance config unreadable → graceful-degrade to 0% so the
-            // approval isn't blocked. Sprint 12: log loudly so Ops sees
-            // the silent fallback. Without this the margin reporting on
-            // the approved quote looks fine to the user but uses 0% SGA
-            // when the live rate might have been 5%.
-            console.error(
-              `  ❌  APPROVE_FINANCE snapshot read failed (quote=${quoteId}, site=${site}): ${err?.message || err}. Falling back to 0% SGA.`
-            );
-            snapshot = { site, sga_rate_pct: 0 };
-          }
-        }
-
+        // rates_snapshot (Phase 9E.4 — freeze Finance SGA at
+        // APPROVE_FINANCE) was dropped in V2: Phase 5 Pricing Snapshot
+        // already freezes the entire pricing basis on every Save,
+        // which is broader coverage than the single-rate snapshot.
         const tr = approvalTransition({
           approval: prevApproval,
           action: normalizedAction,
           actorUser,
           reason,
-          snapshot,
         });
         if (!tr.ok) {
           return { status: 400, body: tr };
@@ -565,19 +545,11 @@ router.post(
           console.warn('  ⚠️  approvals append version:', e.message);
         }
 
-        // Sprint 12: include the frozen SGA snapshot in the audit entry
-        // when APPROVE_FINANCE fires. The snapshot is ALSO persisted on
-        // the quote (approval.rates_snapshot), but Finance/compliance
-        // auditors typically look at the append-only audit log first —
-        // having the rate inline makes "who signed off at what rate"
-        // traceable without cross-referencing quote state that could
-        // later be REVOKEd.
-        const snapSuffix = snapshot ? ` sga=${snapshot.sga_rate_pct}% site=${snapshot.site}` : '';
         audit(
           'APPROVAL_TRANSITION',
           actorUser.username,
           clientIp(req),
-          `quote=${quoteId} ${normalizedAction} ${prevApproval?.status || 'draft'}→${tr.approval.status}${snapSuffix}${reason ? ' reason=' + String(reason).slice(0, 200) : ''}`
+          `quote=${quoteId} ${prevApproval?.status || 'draft'}→${tr.approval.status}${reason ? ' reason=' + String(reason).slice(0, 200) : ''}`
         );
 
         // Sprint 6.6: enqueue notification records for the next reviewer
@@ -842,7 +814,11 @@ router.get('/ddl', (req, res) => {
     let _rev = '';
     try {
       if (fs.existsSync(ddlSitesPath)) {
-        _rev = crypto.createHash('sha256').update(fs.readFileSync(ddlSitesPath)).digest('hex').slice(0, 16);
+        _rev = crypto
+          .createHash('sha256')
+          .update(fs.readFileSync(ddlSitesPath))
+          .digest('hex')
+          .slice(0, 16);
       }
     } catch {
       /* hash best-effort — empty _rev just means "no concurrency check" */

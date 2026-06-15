@@ -1,9 +1,11 @@
 /**
- * approvalWorkflow — state machine tests for the 3-stage chain.
+ * approvalWorkflow — state machine tests for the V2 5-status dropdown.
  *
- * Runner: node --test (ESM-native). Mirrors client-side test pattern
- * since jest + ESM requires experimental flags; these tests are pure
- * functions with no IO, so node --test is the right tool.
+ * Sprint S-QUOTE-PROGRESS-V2 (2026-06-15) — rewritten from the v1
+ * 3-stage chain (draft → pending_sales → pending_finance → approved)
+ * to the flat dropdown model. Legacy v1 test cases are gone except
+ * for heal-on-read coverage on getStatus / transition.
+ *
  *   node --test server/repositories/approvalWorkflow.test.js
  */
 import test from 'node:test';
@@ -11,26 +13,29 @@ import assert from 'node:assert/strict';
 import {
   transition,
   getStatus,
-  availableActions,
+  availableTargetStatuses,
+  canUserSetStatus,
   countActionable,
   APPROVAL_STATES,
 } from './approvalWorkflow.js';
 
 // ── Fixtures ──
 const costEng = { username: 'hana', role: 'cost', approval_roles: [] };
-const salesMgr = { username: 'sonia', role: 'user', approval_roles: ['sales_mgr'] };
-const finDir = { username: 'felix', role: 'user', approval_roles: ['finance_dir'] };
+const sales = { username: 'sonia', role: 'user', approval_roles: ['sales'] };
+const salesMgrLegacy = { username: 'sue', role: 'user', approval_roles: ['sales_mgr'] };
+const finDirLegacy = { username: 'felix', role: 'user', approval_roles: ['finance_dir'] };
 const admin = { username: 'admin', role: 'admin', approval_roles: [] };
 const sysUser = { username: 'root', role: 'sys', approval_roles: [] };
 const viewonly = { username: 'vic', role: 'viewonly', approval_roles: [] };
+const plainUser = { username: 'ulla', role: 'user', approval_roles: [] };
 
 // ── Shape + initial state ──
-test('APPROVAL_STATES lists the 5 v2 states', () => {
+test('APPROVAL_STATES lists the V2 5 statuses in dropdown order', () => {
   assert.deepEqual(APPROVAL_STATES, [
     'draft',
-    'pending_sales',
-    'pending_finance',
-    'approved',
+    'quote_to_sale',
+    'price_approved',
+    'cancelled',
     'rejected',
   ]);
 });
@@ -46,311 +51,231 @@ test('getStatus: unknown status → draft (safety fallback)', () => {
   assert.equal(getStatus({ status: 'bogus' }), 'draft');
 });
 
-test('getStatus: legacy "submitted" aliases to pending_sales', () => {
-  assert.equal(getStatus({ status: 'submitted' }), 'pending_sales');
+test('getStatus: heal-on-read maps legacy v1 statuses', () => {
+  assert.equal(getStatus({ status: 'submitted' }), 'quote_to_sale');
+  assert.equal(getStatus({ status: 'pending_sales' }), 'quote_to_sale');
+  assert.equal(getStatus({ status: 'pending_finance' }), 'quote_to_sale');
+  assert.equal(getStatus({ status: 'approved' }), 'price_approved');
 });
 
-// ── SUBMIT: draft → pending_sales ──
-test('SUBMIT from draft by cost engineer → pending_sales', () => {
-  const r = transition({ approval: null, action: 'SUBMIT', actorUser: costEng });
+// ── canUserSetStatus / availableTargetStatuses ──
+test('canUserSetStatus: cost engineer can set any of the 5', () => {
+  for (const s of APPROVAL_STATES) {
+    assert.equal(canUserSetStatus(costEng, s), true, `cost should set ${s}`);
+  }
+});
+
+test('canUserSetStatus: admin + sys can set any of the 5', () => {
+  for (const user of [admin, sysUser]) {
+    for (const s of APPROVAL_STATES) {
+      assert.equal(canUserSetStatus(user, s), true, `${user.role} should set ${s}`);
+    }
+  }
+});
+
+test('canUserSetStatus: sales approval_role unlocks price_approved + cancelled + rejected', () => {
+  assert.equal(canUserSetStatus(sales, 'draft'), false);
+  assert.equal(canUserSetStatus(sales, 'quote_to_sale'), false);
+  assert.equal(canUserSetStatus(sales, 'price_approved'), true);
+  assert.equal(canUserSetStatus(sales, 'cancelled'), true);
+  assert.equal(canUserSetStatus(sales, 'rejected'), true);
+});
+
+test('canUserSetStatus: legacy sales_mgr is aliased as sales', () => {
+  assert.equal(canUserSetStatus(salesMgrLegacy, 'price_approved'), true);
+  assert.equal(canUserSetStatus(salesMgrLegacy, 'cancelled'), true);
+  assert.equal(canUserSetStatus(salesMgrLegacy, 'rejected'), true);
+  assert.equal(canUserSetStatus(salesMgrLegacy, 'quote_to_sale'), false);
+});
+
+test('canUserSetStatus: legacy finance_dir alone (no sales) loses its v1 privileges', () => {
+  assert.equal(canUserSetStatus(finDirLegacy, 'price_approved'), false);
+  assert.equal(canUserSetStatus(finDirLegacy, 'rejected'), false);
+});
+
+test('canUserSetStatus: viewonly + plain user → false for everything', () => {
+  for (const user of [viewonly, plainUser]) {
+    for (const s of APPROVAL_STATES) {
+      assert.equal(canUserSetStatus(user, s), false, `${user.role} must not set ${s}`);
+    }
+  }
+});
+
+test('availableTargetStatuses excludes the current status', () => {
+  const targets = availableTargetStatuses({ status: 'quote_to_sale' }, costEng);
+  assert.equal(targets.includes('quote_to_sale'), false);
+  assert.deepEqual(targets, ['draft', 'price_approved', 'cancelled', 'rejected']);
+});
+
+// ── transition: forward + backward + no-op ──
+test('transition: draft → quote_to_sale by cost engineer', () => {
+  const r = transition({ approval: null, action: 'quote_to_sale', actorUser: costEng });
   assert.equal(r.ok, true);
-  assert.equal(r.approval.status, 'pending_sales');
-  assert.equal(r.approval.submitted_by, 'hana');
-  assert.ok(r.approval.submitted_at, 'submitted_at stamped');
+  assert.equal(r.approval.status, 'quote_to_sale');
+  assert.equal(r.approval.changed_by, 'hana');
+  assert.ok(r.approval.changed_at, 'changed_at stamped');
   assert.equal(r.approval.history.length, 1);
-  assert.equal(r.approval.history[0].action, 'SUBMIT');
   assert.equal(r.approval.history[0].from, 'draft');
-  assert.equal(r.approval.history[0].to, 'pending_sales');
+  assert.equal(r.approval.history[0].to, 'quote_to_sale');
 });
 
-test('SUBMIT by viewonly user → rejected', () => {
-  const r = transition({ approval: null, action: 'SUBMIT', actorUser: viewonly });
-  assert.equal(r.ok, false);
-  assert.match(r.error, /user \+|role user\+/i);
-});
-
-test('SUBMIT from approved → rejected (bad transition)', () => {
-  const approved = { status: 'approved' };
-  const r = transition({ approval: approved, action: 'SUBMIT', actorUser: costEng });
-  assert.equal(r.ok, false);
-  assert.match(r.error, /Cannot SUBMIT from status approved/);
-});
-
-// ── APPROVE_SALES: pending_sales → pending_finance ──
-test('APPROVE_SALES by sales_mgr → pending_finance', () => {
-  const s1 = transition({ approval: null, action: 'SUBMIT', actorUser: costEng }).approval;
-  const r = transition({ approval: s1, action: 'APPROVE_SALES', actorUser: salesMgr });
+test('transition: quote_to_sale → price_approved by sales', () => {
+  const s1 = transition({ approval: null, action: 'quote_to_sale', actorUser: costEng }).approval;
+  const r = transition({ approval: s1, action: 'price_approved', actorUser: sales });
   assert.equal(r.ok, true);
-  assert.equal(r.approval.status, 'pending_finance');
-  assert.equal(r.approval.sales_approved_by, 'sonia');
-  assert.ok(r.approval.sales_approved_at);
-  // History chain preserved
+  assert.equal(r.approval.status, 'price_approved');
+  assert.equal(r.approval.changed_by, 'sonia');
   assert.equal(r.approval.history.length, 2);
-  assert.equal(r.approval.history[1].action, 'APPROVE_SALES');
 });
 
-test('APPROVE_SALES by finance_dir (without sales_mgr) → rejected', () => {
-  const s1 = transition({ approval: null, action: 'SUBMIT', actorUser: costEng }).approval;
-  const r = transition({ approval: s1, action: 'APPROVE_SALES', actorUser: finDir });
-  assert.equal(r.ok, false);
-  assert.match(r.error, /APPROVE_SALES/);
-});
-
-test('APPROVE_SALES by admin (fallback) → pending_finance', () => {
-  const s1 = transition({ approval: null, action: 'SUBMIT', actorUser: costEng }).approval;
-  const r = transition({ approval: s1, action: 'APPROVE_SALES', actorUser: admin });
+test('transition: any status → draft is allowed for cost engineer (rollback flow)', () => {
+  const s1 = transition({
+    approval: null,
+    action: 'price_approved',
+    actorUser: admin,
+  }).approval;
+  const r = transition({ approval: s1, action: 'draft', actorUser: costEng });
   assert.equal(r.ok, true);
-  assert.equal(r.approval.status, 'pending_finance');
-  assert.equal(r.approval.sales_approved_by, 'admin');
+  assert.equal(r.approval.status, 'draft');
 });
 
-test('APPROVE_SALES from draft → rejected', () => {
-  const r = transition({ approval: null, action: 'APPROVE_SALES', actorUser: salesMgr });
+test('transition: same → same is rejected (no-op)', () => {
+  const s1 = transition({ approval: null, action: 'quote_to_sale', actorUser: costEng }).approval;
+  const r = transition({ approval: s1, action: 'quote_to_sale', actorUser: costEng });
   assert.equal(r.ok, false);
+  assert.match(r.error, /already/i);
 });
 
-// ── APPROVE_FINANCE: pending_finance → approved ──
-test('APPROVE_FINANCE by finance_dir → approved (+ mirror fields)', () => {
-  const s1 = transition({ approval: null, action: 'SUBMIT', actorUser: costEng }).approval;
-  const s2 = transition({ approval: s1, action: 'APPROVE_SALES', actorUser: salesMgr }).approval;
-  const r = transition({ approval: s2, action: 'APPROVE_FINANCE', actorUser: finDir });
-  assert.equal(r.ok, true);
-  assert.equal(r.approval.status, 'approved');
-  assert.equal(r.approval.finance_approved_by, 'felix');
-  assert.equal(r.approval.approved_by, 'felix', 'v1 mirror field populated');
-  assert.equal(r.approval.finance_approved_at, r.approval.approved_at);
-});
-
-test('APPROVE_FINANCE by sales_mgr alone → rejected', () => {
-  const s1 = transition({ approval: null, action: 'SUBMIT', actorUser: costEng }).approval;
-  const s2 = transition({ approval: s1, action: 'APPROVE_SALES', actorUser: salesMgr }).approval;
-  const r = transition({ approval: s2, action: 'APPROVE_FINANCE', actorUser: salesMgr });
+test('transition: unknown target status is rejected', () => {
+  const r = transition({ approval: null, action: 'made_up', actorUser: admin });
   assert.equal(r.ok, false);
+  assert.match(r.error, /Unknown target status/i);
 });
 
-test('APPROVE_FINANCE from pending_sales → rejected (skip not allowed)', () => {
-  const s1 = transition({ approval: null, action: 'SUBMIT', actorUser: costEng }).approval;
-  const r = transition({ approval: s1, action: 'APPROVE_FINANCE', actorUser: finDir });
+test('transition: viewonly cannot set anything', () => {
+  const r = transition({ approval: null, action: 'quote_to_sale', actorUser: viewonly });
   assert.equal(r.ok, false);
+  assert.match(r.error, /cannot set status/);
 });
 
-// ── REJECT: any pending → rejected (requires reason) ──
-test('REJECT from pending_sales without reason → rejected (error)', () => {
-  const s1 = transition({ approval: null, action: 'SUBMIT', actorUser: costEng }).approval;
-  const r = transition({ approval: s1, action: 'REJECT', actorUser: salesMgr });
+// ── Reason-required: cancelled + rejected ──
+test('transition: cancelled without reason → rejected', () => {
+  const r = transition({ approval: null, action: 'cancelled', actorUser: costEng });
   assert.equal(r.ok, false);
   assert.match(r.error, /reason/i);
 });
 
-test('REJECT from pending_sales with reason → rejected', () => {
-  const s1 = transition({ approval: null, action: 'SUBMIT', actorUser: costEng }).approval;
+test('transition: cancelled with reason → ok', () => {
   const r = transition({
-    approval: s1,
-    action: 'REJECT',
-    actorUser: salesMgr,
-    reason: 'Price too low for current tooling plan.',
+    approval: null,
+    action: 'cancelled',
+    actorUser: costEng,
+    reason: 'Customer pulled the order',
   });
   assert.equal(r.ok, true);
-  assert.equal(r.approval.status, 'rejected');
-  assert.equal(r.approval.rejected_by, 'sonia');
-  assert.equal(r.approval.rejected_stage, 'pending_sales');
-  assert.match(r.approval.reason, /tooling/);
+  assert.equal(r.approval.status, 'cancelled');
+  assert.equal(r.approval.reason, 'Customer pulled the order');
+  assert.equal(r.approval.history[0].reason, 'Customer pulled the order');
 });
 
-test('REJECT from pending_finance stores rejected_stage = pending_finance', () => {
-  const s1 = transition({ approval: null, action: 'SUBMIT', actorUser: costEng }).approval;
-  const s2 = transition({ approval: s1, action: 'APPROVE_SALES', actorUser: salesMgr }).approval;
+test('transition: rejected without reason → rejected', () => {
+  const r = transition({ approval: null, action: 'rejected', actorUser: admin });
+  assert.equal(r.ok, false);
+  assert.match(r.error, /reason/i);
+});
+
+test('transition: rejected with reason → ok by sales', () => {
+  const s1 = transition({ approval: null, action: 'quote_to_sale', actorUser: costEng }).approval;
   const r = transition({
-    approval: s2,
-    action: 'REJECT',
-    actorUser: finDir,
+    approval: s1,
+    action: 'rejected',
+    actorUser: sales,
     reason: 'Margin below 25% target',
   });
   assert.equal(r.ok, true);
-  assert.equal(r.approval.rejected_stage, 'pending_finance');
+  assert.equal(r.approval.status, 'rejected');
+  assert.equal(r.approval.changed_by, 'sonia');
 });
 
-test('REJECT by cost engineer → rejected (insufficient role)', () => {
-  const s1 = transition({ approval: null, action: 'SUBMIT', actorUser: costEng }).approval;
-  const r = transition({ approval: s1, action: 'REJECT', actorUser: costEng, reason: 'oops' });
-  assert.equal(r.ok, false);
-});
-
-// ── Re-submission after rejection ──
-test('rejected + SUBMIT by cost engineer → pending_sales, rejection fields cleared', () => {
-  const s1 = transition({ approval: null, action: 'SUBMIT', actorUser: costEng }).approval;
-  const rejected = transition({
-    approval: s1,
-    action: 'REJECT',
-    actorUser: salesMgr,
-    reason: 'fix MOQ',
+test('transition: reason field is dropped when transitioning to a non-reason status', () => {
+  const s1 = transition({
+    approval: null,
+    action: 'rejected',
+    actorUser: admin,
+    reason: 'X',
   }).approval;
-  const r = transition({ approval: rejected, action: 'SUBMIT', actorUser: costEng });
+  assert.equal(s1.reason, 'X');
+  // Now transition back to draft (no reason needed) → reason cleared.
+  const r = transition({ approval: s1, action: 'draft', actorUser: costEng });
   assert.equal(r.ok, true);
-  assert.equal(r.approval.status, 'pending_sales');
-  assert.equal(r.approval.rejected_by, undefined, 'cleared on re-submit');
-  assert.equal(r.approval.rejected_stage, undefined);
   assert.equal(r.approval.reason, undefined);
-  // History keeps the rejection record so audit trail stays intact.
-  assert.ok(r.approval.history.some((h) => h.action === 'REJECT'));
-  assert.ok(r.approval.history.some((h) => h.action === 'SUBMIT' && h.from === 'rejected'));
-});
-
-// ── REVOKE: sys-only escape hatch ──
-test('REVOKE approved → draft by sys', () => {
-  const s1 = transition({ approval: null, action: 'SUBMIT', actorUser: costEng }).approval;
-  const s2 = transition({ approval: s1, action: 'APPROVE_SALES', actorUser: salesMgr }).approval;
-  const s3 = transition({ approval: s2, action: 'APPROVE_FINANCE', actorUser: finDir }).approval;
-  const r = transition({ approval: s3, action: 'REVOKE', actorUser: sysUser });
-  assert.equal(r.ok, true);
-  assert.equal(r.approval.status, 'draft');
-  assert.equal(r.approval.approved_by, undefined, 'final-approval stamp cleared');
-  assert.equal(r.approval.finance_approved_by, undefined);
-});
-
-test('REVOKE by admin → rejected (sys-only)', () => {
-  const s1 = transition({ approval: null, action: 'SUBMIT', actorUser: costEng }).approval;
-  const s2 = transition({ approval: s1, action: 'APPROVE_SALES', actorUser: salesMgr }).approval;
-  const s3 = transition({ approval: s2, action: 'APPROVE_FINANCE', actorUser: finDir }).approval;
-  const r = transition({ approval: s3, action: 'REVOKE', actorUser: admin });
-  assert.equal(r.ok, false);
-});
-
-// ── Legacy APPROVE alias ──
-test('legacy APPROVE from submitted → pending_finance (back-compat)', () => {
-  const legacy = { status: 'submitted', submitted_by: 'hana' };
-  const r = transition({ approval: legacy, action: 'APPROVE', actorUser: salesMgr });
-  assert.equal(r.ok, true);
-  assert.equal(r.approval.status, 'pending_finance');
-  assert.equal(r.approval.sales_approved_by, 'sonia');
-});
-
-test('legacy APPROVE from pending_finance → approved', () => {
-  const s1 = transition({ approval: null, action: 'SUBMIT', actorUser: costEng }).approval;
-  const s2 = transition({ approval: s1, action: 'APPROVE_SALES', actorUser: salesMgr }).approval;
-  const r = transition({ approval: s2, action: 'APPROVE', actorUser: finDir });
-  assert.equal(r.ok, true);
-  assert.equal(r.approval.status, 'approved');
-  assert.equal(r.approval.approved_by, 'felix');
-});
-
-// ── availableActions: UI helper ──
-test('availableActions: draft + cost engineer → [SUBMIT]', () => {
-  assert.deepEqual(availableActions(null, costEng), ['SUBMIT']);
-});
-
-test('availableActions: pending_sales + sales_mgr → [APPROVE_SALES, APPROVE, REJECT]', () => {
-  const s1 = { status: 'pending_sales' };
-  const acts = availableActions(s1, salesMgr);
-  assert.ok(acts.includes('APPROVE_SALES'));
-  assert.ok(acts.includes('REJECT'));
-});
-
-test('availableActions: pending_sales + cost engineer → []', () => {
-  const s1 = { status: 'pending_sales' };
-  assert.deepEqual(availableActions(s1, costEng), []);
-});
-
-test('availableActions: pending_finance + finance_dir → includes APPROVE_FINANCE', () => {
-  const s1 = { status: 'pending_finance' };
-  const acts = availableActions(s1, finDir);
-  assert.ok(acts.includes('APPROVE_FINANCE'));
-  assert.ok(acts.includes('REJECT'));
-});
-
-test('availableActions: approved + sys → [REVOKE]', () => {
-  assert.deepEqual(availableActions({ status: 'approved' }, sysUser), ['REVOKE']);
-});
-
-test('availableActions: approved + admin → [] (admin cannot revoke)', () => {
-  assert.deepEqual(availableActions({ status: 'approved' }, admin), []);
 });
 
 // ── History bound ──
 test('history is capped at 50 entries', () => {
-  // Thrash the state machine: submit → reject → submit → reject … until cap.
   let approval = null;
-  for (let i = 0; i < 40; i++) {
-    approval = transition({ approval, action: 'SUBMIT', actorUser: costEng }).approval;
+  // Thrash: alternate quote_to_sale and draft.
+  for (let i = 0; i < 60; i++) {
     approval = transition({
       approval,
-      action: 'REJECT',
-      actorUser: salesMgr,
-      reason: 'churn',
+      action: i % 2 === 0 ? 'quote_to_sale' : 'draft',
+      actorUser: admin,
     }).approval;
   }
   assert.equal(approval.history.length, 50);
-  // Oldest entry should have been evicted — earliest remaining should
-  // come from the tail of the sequence.
-  assert.equal(approval.history[approval.history.length - 1].action, 'REJECT');
 });
 
-// ── countActionable (Sprint 6.5) ──
+// ── countActionable (sidebar inbox badge) ──
 test('countActionable: empty inputs → 0', () => {
-  assert.equal(countActionable(null, salesMgr), 0);
-  assert.equal(countActionable([], salesMgr), 0);
+  assert.equal(countActionable(null, sales), 0);
+  assert.equal(countActionable([], sales), 0);
   assert.equal(countActionable([{ state: {} }], null), 0);
 });
 
-test('countActionable: only pending_* states count (draft/approved/rejected ignored)', () => {
+test('countActionable: counts only quotes in quote_to_sale that user can approve', () => {
   const quotes = [
     { state: { approval: { status: 'draft' } } },
-    { state: { approval: { status: 'approved', approved_by: 'x' } } },
-    { state: { approval: { status: 'rejected', rejected_by: 'x' } } },
-    { state: { approval: { status: 'pending_sales' } } },
-    { state: { approval: { status: 'pending_finance' } } },
+    { state: { approval: { status: 'price_approved' } } },
+    { state: { approval: { status: 'rejected' } } },
+    { state: { approval: { status: 'cancelled' } } },
+    { state: { approval: { status: 'quote_to_sale' } } },
+    { state: { approval: { status: 'quote_to_sale' } } },
   ];
-  // sales_mgr can act on pending_sales (APPROVE/REJECT) and pending_finance (REJECT)
-  assert.equal(countActionable(quotes, salesMgr), 2);
+  // sales can transition quote_to_sale → price_approved
+  assert.equal(countActionable(quotes, sales), 2);
 });
 
-test('countActionable: cost engineer on all pending → 0', () => {
+test('countActionable: legacy pending_sales / pending_finance heal-on-read into the queue', () => {
   const quotes = [
     { state: { approval: { status: 'pending_sales' } } },
     { state: { approval: { status: 'pending_finance' } } },
+    { state: { approval: { status: 'submitted' } } },
   ];
-  assert.equal(countActionable(quotes, costEng), 0);
+  assert.equal(countActionable(quotes, sales), 3);
 });
 
-test('countActionable: finance_dir on pending_sales → REJECT only, counts', () => {
+test('countActionable: soft-deleted quotes are excluded', () => {
   const quotes = [
-    { state: { approval: { status: 'pending_sales' } } },
-    { state: { approval: { status: 'pending_finance' } } },
+    { state: { approval: { status: 'quote_to_sale' } }, deleted_at: '2026-01-01' },
+    { state: { approval: { status: 'quote_to_sale' } } },
   ];
-  assert.equal(countActionable(quotes, finDir), 2);
+  assert.equal(countActionable(quotes, sales), 1);
 });
 
-test('countActionable: admin fallback authorizes all pending gates', () => {
+test('countActionable: plain user without sales role → 0 even when quotes await review', () => {
   const quotes = [
-    { state: { approval: { status: 'pending_sales' } } },
-    { state: { approval: { status: 'pending_finance' } } },
-    { state: { approval: { status: 'pending_sales' } } },
+    { state: { approval: { status: 'quote_to_sale' } } },
+    { state: { approval: { status: 'quote_to_sale' } } },
   ];
-  assert.equal(countActionable(quotes, admin), 3);
-});
-
-test('countActionable: quotes missing state or approval are skipped', () => {
-  const quotes = [
-    null,
-    {}, // no state
-    { state: null },
-    { state: { approval: null } }, // no approval = draft
-    { state: { approval: { status: 'pending_sales' } } },
-  ];
-  assert.equal(countActionable(quotes, salesMgr), 1);
-});
-
-test('countActionable: legacy submitted alias is treated as pending_sales', () => {
-  const quotes = [{ state: { approval: { status: 'submitted', submitted_by: 'hana' } } }];
-  assert.equal(countActionable(quotes, salesMgr), 1);
+  assert.equal(countActionable(quotes, plainUser), 0);
 });
 
 // ── Immutability ──
 test('transition() does not mutate input approval object', () => {
-  const s0 = { status: 'pending_sales', history: [] };
+  const s0 = { status: 'quote_to_sale', history: [] };
   const frozen = Object.freeze(s0);
-  const r = transition({ approval: frozen, action: 'APPROVE_SALES', actorUser: salesMgr });
+  const r = transition({ approval: frozen, action: 'price_approved', actorUser: admin });
   assert.equal(r.ok, true);
-  assert.equal(s0.status, 'pending_sales', 'input untouched');
+  assert.equal(s0.status, 'quote_to_sale', 'input untouched');
   assert.equal(s0.history.length, 0, 'input history untouched');
 });

@@ -45,14 +45,17 @@ export default function RfqInfoCard({
   // collide, and labels always associate with the right input (WCAG 1.3.1).
   const fid = (k) => `rfq-${datalistId || 'x'}-${k}`;
 
-  // Phase 9E.4 — once a quote has crossed Sales approval (or past) the
-  // pricing basis is considered committed. Changing `site` after that
-  // point would retroactively shift the cost stack because a different
-  // site's rate table / SGA rate applies. We disable the site selector
-  // to prevent that, while allowing unlock via REVOKE (which clears the
-  // rates_snapshot server-side). Drafts + pending_sales stay editable.
+  // Phase 9E.4 + Sprint S-QUOTE-PROGRESS-V2 — once a quote is
+  // price_approved the pricing basis is committed. Changing site
+  // would retroactively shift the cost stack because a different
+  // site's rate table / SGA rate applies. Operator must transition
+  // back to draft / quote_to_sale to unlock. Legacy quote data with
+  // 'pending_finance' or 'approved' still locks (back-compat).
   const approvalStatus = state?.approval?.status || 'draft';
-  const siteLocked = approvalStatus === 'pending_finance' || approvalStatus === 'approved';
+  const siteLocked =
+    approvalStatus === 'price_approved' ||
+    approvalStatus === 'pending_finance' ||
+    approvalStatus === 'approved';
 
   return (
     <div className="sc-card">

@@ -777,28 +777,25 @@ test('api-v1: unknown route under /api/v1 returns 404 JSON (same as /api)', asyn
   assert.ok(body.error);
 });
 
-// ── Sprint AV — Approval workflow e2e ───────────────────────────────
+// ── Sprint S-QUOTE-PROGRESS-V2 — flat-dropdown approval e2e ──────────
 //
-// Walks the critical approval pipeline end-to-end via real HTTP calls:
+// Walks the V2 state machine end-to-end via real HTTP calls. The v1
+// 3-stage chain (draft → pending_sales → pending_finance → approved)
+// collapsed into a flat dropdown — operator picks any target status
+// and the server gates by role + reason-required.
 //
 //   1. Sys user logs in, creates a draft quote.
-//   2. SUBMIT transition  → state.approval.status = pending_sales.
-//   3. APPROVE_SALES      → state.approval.status = pending_finance.
-//   4. APPROVE_FINANCE    → state.approval.status = approved.
-//   5. REVOKE             → state.approval.status = draft (unlocks
-//      pricing fields + clears rates_snapshot server-side).
+//   2. Transition to quote_to_sale (any cost+ role).
+//   3. Transition to price_approved (cost+ or sales role).
+//   4. Transition back to draft (any cost+ role — rollback flow).
+//   5. Transition to cancelled with reason (cost+ or sales + reason required).
 //
-// Each transition returns the authoritative new approval object so the
-// client never drifts against server state. This lifecycle is what
-// Sprint 6.2 introduced atomic endpoints for; catching a regression
-// here means no user ever lands on a mid-state stuck quote.
+// Catching regressions here means no user lands on a stuck quote and
+// the role gates on the new model still fire correctly.
 
-test('approval-e2e: full lifecycle submit → sales → finance → approve → revoke', async () => {
+test('approval-e2e: full lifecycle draft → quote_to_sale → price_approved → draft → cancelled', async () => {
   const token = await login();
 
-  // 1) Create a draft quote with enough state that the approval
-  //    machine's pre-transition validators are happy. Golden path
-  //    only — edge cases live in approvalWorkflow.test.js.
   const create = await fetch(
     `${baseUrl}/api/quotes`,
     authed(token, {
@@ -827,8 +824,6 @@ test('approval-e2e: full lifecycle submit → sales → finance → approve → 
   const quoteId = quote.id;
   assert.ok(quoteId, 'created quote has id');
 
-  // Helper — hit the atomic transition endpoint and return the new
-  // approval object. Status 200 = applied + persisted.
   async function transition(action, reason) {
     const r = await fetch(
       `${baseUrl}/api/shared/approvals/${quoteId}/transition`,
@@ -842,41 +837,34 @@ test('approval-e2e: full lifecycle submit → sales → finance → approve → 
     return body.approval;
   }
 
-  // 2) SUBMIT → pending_sales
-  let appr = await transition('SUBMIT');
-  assert.equal(appr.status, 'pending_sales', 'SUBMIT → pending_sales');
-  assert.ok(appr.submitted_at, 'submitted_at timestamp recorded');
+  // 2) draft → quote_to_sale
+  let appr = await transition('quote_to_sale');
+  assert.equal(appr.status, 'quote_to_sale');
+  assert.ok(appr.changed_at, 'changed_at timestamp recorded');
 
-  // 3) APPROVE_SALES → pending_finance
-  appr = await transition('APPROVE_SALES');
-  assert.equal(appr.status, 'pending_finance', 'APPROVE_SALES → pending_finance');
+  // 3) quote_to_sale → price_approved
+  appr = await transition('price_approved');
+  assert.equal(appr.status, 'price_approved');
 
-  // 4) APPROVE_FINANCE → approved
-  appr = await transition('APPROVE_FINANCE');
-  assert.equal(appr.status, 'approved', 'APPROVE_FINANCE → approved');
-  assert.ok(appr.approved_at, 'approved_at timestamp recorded');
-
-  // 5) Full-list read must reflect the final state — the atomic
-  //    endpoint only returns the one changed approval, so we verify
-  //    the full-fetch sees the same thing (tests single-source-of-truth).
+  // 4) Full-list read reflects the final state.
   const list = await fetch(`${baseUrl}/api/shared/quotes`, authed(token)).then((r) => r.json());
   const persisted = list.find((q) => q.id === quoteId);
   assert.ok(persisted, 'quote visible in list after approval');
-  assert.equal(
-    persisted.state.approval.status,
-    'approved',
-    'persisted approval status matches atomic-endpoint response'
-  );
+  assert.equal(persisted.state.approval.status, 'price_approved');
 
-  // 6) REVOKE → draft. Sys role is allowed from any state.
-  appr = await transition('REVOKE', 'e2e cleanup');
-  assert.equal(appr.status, 'draft', 'REVOKE → draft');
+  // 5) Rollback to draft.
+  appr = await transition('draft');
+  assert.equal(appr.status, 'draft');
+
+  // 6) Transition to cancelled with reason.
+  appr = await transition('cancelled', 'e2e cleanup — customer pulled order');
+  assert.equal(appr.status, 'cancelled');
+  assert.match(appr.reason, /customer pulled order/);
 });
 
-test('approval-e2e: SUBMIT on non-draft quote rejected with 400', async () => {
-  // Locks the state-machine guard: you can't submit a quote that's
-  // already in flight. Regression in approvalWorkflow.js could let
-  // a double-submit pass and produce a weird half-transitioned state.
+test('approval-e2e: same-status transition rejected with 400', async () => {
+  // Locks the state-machine no-op guard: setting status to the value
+  // it's already at must not append a history entry.
   const token = await login();
   const create = await fetch(
     `${baseUrl}/api/quotes`,
@@ -904,28 +892,28 @@ test('approval-e2e: SUBMIT on non-draft quote rejected with 400', async () => {
   const { quote } = await create.json();
   const id = quote.id;
 
-  // First SUBMIT: success.
+  // First transition: success.
   const r1 = await fetch(
     `${baseUrl}/api/shared/approvals/${id}/transition`,
     authed(token, {
       method: 'POST',
-      body: JSON.stringify({ action: 'SUBMIT' }),
+      body: JSON.stringify({ action: 'quote_to_sale' }),
     })
   );
   assert.equal(r1.status, 200);
 
-  // Second SUBMIT from pending_sales: machine rejects.
+  // Same-status transition: machine rejects.
   const r2 = await fetch(
     `${baseUrl}/api/shared/approvals/${id}/transition`,
     authed(token, {
       method: 'POST',
-      body: JSON.stringify({ action: 'SUBMIT' }),
+      body: JSON.stringify({ action: 'quote_to_sale' }),
     })
   );
-  assert.equal(r2.status, 400, 'duplicate SUBMIT must be rejected');
+  assert.equal(r2.status, 400, 'no-op transition must be rejected');
 });
 
-test('approval-e2e: REJECT carries reason text through to persistence', async () => {
+test('approval-e2e: cancelled / rejected carry reason text through to persistence', async () => {
   const token = await login();
   const create = await fetch(
     `${baseUrl}/api/quotes`,
@@ -953,28 +941,16 @@ test('approval-e2e: REJECT carries reason text through to persistence', async ()
   const { quote } = await create.json();
   const id = quote.id;
 
-  // SUBMIT then REJECT with a reason.
-  await fetch(
-    `${baseUrl}/api/shared/approvals/${id}/transition`,
-    authed(token, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'SUBMIT' }),
-    })
-  );
   const reject = await fetch(
     `${baseUrl}/api/shared/approvals/${id}/transition`,
     authed(token, {
       method: 'POST',
-      body: JSON.stringify({ action: 'REJECT', reason: 'price too low' }),
+      body: JSON.stringify({ action: 'rejected', reason: 'price too low' }),
     })
   );
   assert.equal(reject.status, 200);
   const { approval } = await reject.json();
   assert.equal(approval.status, 'rejected');
-  // reason is sanitized server-side — should survive unchanged for
-  // a simple alphanumeric message. Locks the sanitizer not stripping
-  // legitimate input. Field name is `reason` on the approval object
-  // (see approvalWorkflow.js line ~231).
   assert.ok(
     approval.reason && approval.reason.includes('price too low'),
     `approval.reason should include original text, got: ${approval.reason}`

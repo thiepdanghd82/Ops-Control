@@ -63,28 +63,41 @@ export default function ApprovalHistoryModal({ open, onClose, approval, quoteLab
         )}
       </Modal.Body>
 
-      {(approval?.submitted_by ||
+      {(approval?.changed_by ||
+        approval?.submitted_by ||
         approval?.sales_approved_by ||
         approval?.finance_approved_by ||
         approval?.rejected_by) && (
         <Modal.Footer align="start">
           <div className="appr-hist-footer-meta">
-            {approval?.submitted_by && (
+            {approval?.changed_by && approval?.changed_at && (
+              <span>
+                Last change by <b>{approval.changed_by}</b> ·{' '}
+                {new Date(approval.changed_at).toLocaleString()}
+              </span>
+            )}
+            {/* Sprint S-QUOTE-PROGRESS-V2 — v1 split-attribution
+                fields (submitted_by / sales_approved_by /
+                finance_approved_by / rejected_by) only render for
+                legacy quote records that pre-date the rewrite. */}
+            {approval?.submitted_by && !approval?.changed_by && (
               <span>
                 Submitted by <b>{approval.submitted_by}</b>
               </span>
             )}
             {approval?.sales_approved_by && (
               <span>
-                Sales ✓ by <b>{approval.sales_approved_by}</b>
+                Sales ✓ by <b>{approval.sales_approved_by}</b>{' '}
+                <em style={{ color: '#8d8d8d' }}>(legacy)</em>
               </span>
             )}
             {approval?.finance_approved_by && (
               <span>
-                Finance ✓ by <b>{approval.finance_approved_by}</b>
+                Finance ✓ by <b>{approval.finance_approved_by}</b>{' '}
+                <em style={{ color: '#8d8d8d' }}>(legacy)</em>
               </span>
             )}
-            {approval?.rejected_by && (
+            {approval?.rejected_by && !approval?.changed_by && (
               <span>
                 Rejected by <b>{approval.rejected_by}</b>
               </span>

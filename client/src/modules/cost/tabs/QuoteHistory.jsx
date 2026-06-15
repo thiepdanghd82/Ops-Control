@@ -372,7 +372,7 @@ const QUOTE_HISTORY_COLUMNS = [
   },
   {
     key: 'approve',
-    labelKey: 'qh.approve_reject',
+    labelKey: 'qh.quote_progress',
     required: true,
     width: 170,
     thClass: 'qh-c-ctr',

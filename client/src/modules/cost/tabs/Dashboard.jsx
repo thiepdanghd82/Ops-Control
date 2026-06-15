@@ -450,16 +450,18 @@ function HistBar({ label, count, color, total }) {
 }
 
 function ApprovalFunnel({ funnel, t }) {
-  // Ordered from top-of-funnel to terminal; rejected sits beside the
-  // main chain since it's a branch, not a progression.
+  // Ordered from top-of-funnel to terminal; cancelled + rejected are
+  // branches off the main chain (not a progression). Sprint
+  // S-QUOTE-PROGRESS-V2 collapsed the v1 2-gate pipeline into a
+  // single quote_to_sale review step.
   const main = [
     { key: 'draft', label: t('dashboard.status.draft'), color: '#94a3b8' },
-    { key: 'pending_sales', label: t('dashboard.status.pending_sales'), color: '#f59e0b' },
-    { key: 'pending_finance', label: t('dashboard.status.pending_finance'), color: '#3b82f6' },
-    { key: 'approved', label: t('dashboard.status.approved'), color: '#16a34a' },
+    { key: 'quote_to_sale', label: t('dashboard.status.quote_to_sale'), color: '#3b82f6' },
+    { key: 'price_approved', label: t('dashboard.status.price_approved'), color: '#16a34a' },
   ];
   const rejected = funnel.rejected || 0;
-  const max = Math.max(1, ...main.map((s) => funnel[s.key] || 0), rejected);
+  const cancelled = funnel.cancelled || 0;
+  const max = Math.max(1, ...main.map((s) => funnel[s.key] || 0), rejected, cancelled);
 
   return (
     <div style={{ padding: 8 }}>
@@ -516,9 +518,25 @@ function ApprovalFunnel({ funnel, t }) {
         }}
       >
         <div style={{ width: 120, fontSize: 11, color: 'var(--text-secondary)' }}>
-          {t('dashboard.status.rejected')}
+          {t('dashboard.status.cancelled')} / {t('dashboard.status.rejected')}
         </div>
-        <div style={{ flex: 1, height: 18, background: 'var(--surface-subtle)' }}>
+        <div
+          style={{
+            flex: 1,
+            height: 18,
+            background: 'var(--surface-subtle)',
+            display: 'flex',
+          }}
+        >
+          <div
+            style={{
+              width: `${Math.round((cancelled / max) * 100)}%`,
+              height: '100%',
+              background: '#f59e0b',
+              minWidth: cancelled > 0 ? 2 : 0,
+            }}
+            title={`${t('dashboard.status.cancelled')}: ${cancelled}`}
+          />
           <div
             style={{
               width: `${Math.round((rejected / max) * 100)}%`,
@@ -526,6 +544,7 @@ function ApprovalFunnel({ funnel, t }) {
               background: '#dc2626',
               minWidth: rejected > 0 ? 2 : 0,
             }}
+            title={`${t('dashboard.status.rejected')}: ${rejected}`}
           />
         </div>
         <div
@@ -537,7 +556,7 @@ function ApprovalFunnel({ funnel, t }) {
             color: 'var(--text-primary)',
           }}
         >
-          {rejected}
+          {cancelled + rejected}
         </div>
       </div>
     </div>

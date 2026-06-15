@@ -1,145 +1,170 @@
 /**
- * ApprovalActionsCell — renders the buttons a given user can legally
- * invoke on a given quote's approval. Reject opens an inline modal for
- * the required reason. All actions go through the atomic endpoint via
- * `sharedApi.transitionApproval`; on success the parent re-fetches
- * quotes (caller passes `onAfterTransition`).
+ * ApprovalActionsCell — dropdown for the Quote Progress column.
  *
- * Sprint 6.3.
+ * Sprint S-QUOTE-PROGRESS-V2 (2026-06-15) — rewrite from buttons to
+ * a single <select> dropdown. The 5 quote-progress statuses are
+ * listed; options the current user can't set are disabled with a
+ * tooltip. Picking a status that requires a reason (cancelled /
+ * rejected) opens an inline modal; the rest transition directly.
+ *
+ * All transitions go through `sharedApi.transitionApproval` (atomic
+ * server endpoint). On success the parent re-fetches via the existing
+ * `onAfterTransition` / `onOptimisticTransition` / `onTransitionRollback`
+ * callbacks (kept unchanged for QuoteHistory.jsx wiring continuity).
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { sharedApi } from '../../services/api';
 import { showToast } from '../../utils/toast';
-import { availableActions, actionDisplay, getStatus } from '../../utils/approvalWorkflow';
+import {
+  APPROVAL_STATES,
+  canUserSetStatus,
+  getStatus,
+  statusDisplay,
+  statusRequiresReason,
+} from '../../utils/approvalWorkflow';
 
 export default function ApprovalActionsCell({
   quote,
   user,
   onAfterTransition,
-  // Optimistic UI hooks (Option 3 anti-flash): parent removes the row
-  // from its local list BEFORE the network round-trip so the operator
-  // sees the result immediately. On 4xx/5xx the parent should restore
-  // (typically via refresh()) — wired through onTransitionRollback.
   onOptimisticTransition,
   onTransitionRollback,
 }) {
   const approval = quote?.state?.approval || null;
-  const actions = availableActions(approval, user);
-  const [busy, setBusy] = useState(null); // current action being dispatched
-  const [rejectOpen, setRejectOpen] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
+  const currentStatus = getStatus(approval);
+  const [busy, setBusy] = useState(false);
+  const [reasonModal, setReasonModal] = useState(null); // { targetStatus, reason }
+
+  // Computed once per render — which of the 5 statuses can this user
+  // pick, and what's the label/tone for each. The dropdown still shows
+  // ALL options (so operators learn the full workflow vocabulary) but
+  // disables the ones outside the user's auth.
+  const options = useMemo(
+    () =>
+      APPROVAL_STATES.map((s) => ({
+        value: s,
+        label: statusDisplay(s).label,
+        enabled: canUserSetStatus(user, s),
+        requiresReason: statusRequiresReason(s),
+      })),
+    [user]
+  );
 
   const runTransition = useCallback(
-    async (action, reason) => {
+    async (targetStatus, reason) => {
       if (!quote?.id) {
         showToast('Missing quote id', 'err');
         return;
       }
-      setBusy(action);
-      // Optimistic remove BEFORE the network call. If the API rejects we
-      // restore via onTransitionRollback below. Avoids the ~300-500ms
-      // gap where the row sits with "…" before vanishing.
-      onOptimisticTransition?.(quote.id, action);
+      setBusy(true);
+      onOptimisticTransition?.(quote.id, targetStatus);
       try {
-        await sharedApi.transitionApproval(quote.id, action, reason);
-        showToast(`Quote #${quote.id}: ${action} recorded`);
-        // Tell same-tab listeners (Sidebar badge, inbox) to refresh.
-        // Cross-tab sync would need SSE/websocket — out of scope for 6.5.
+        await sharedApi.transitionApproval(quote.id, targetStatus, reason);
+        showToast(`Quote #${quote.id}: ${statusDisplay(targetStatus).label}`);
         window.dispatchEvent(new Event('ops-approvals-changed'));
         onAfterTransition?.(quote.id);
       } catch (err) {
         showToast(`Transition failed: ${err?.message || 'unknown'}`, 'err');
-        // Rollback: ask parent to re-fetch so the optimistically-removed
-        // row reappears with its correct status from the server.
         onTransitionRollback?.(quote.id, err);
       } finally {
-        setBusy(null);
+        setBusy(false);
       }
     },
     [quote?.id, onAfterTransition, onOptimisticTransition, onTransitionRollback]
   );
 
-  const confirmReject = useCallback(async () => {
-    const reason = rejectReason.trim();
-    if (!reason) {
-      showToast('Reject requires a reason.', 'err');
+  const onSelectChange = useCallback(
+    (e) => {
+      const target = e.target.value;
+      if (!target || target === currentStatus) return;
+      const opt = options.find((o) => o.value === target);
+      if (!opt || !opt.enabled) {
+        // Belt-and-braces: the option should already be disabled in
+        // the rendered DOM, but a script-driven change could still fire.
+        e.target.value = currentStatus;
+        return;
+      }
+      if (opt.requiresReason) {
+        setReasonModal({ targetStatus: target, reason: '' });
+        // Reset the <select> back to current so a Cancel on the modal
+        // doesn't leave the dropdown stranded on the un-confirmed value.
+        e.target.value = currentStatus;
+      } else {
+        runTransition(target);
+      }
+    },
+    [currentStatus, options, runTransition]
+  );
+
+  const confirmReason = useCallback(async () => {
+    if (!reasonModal) return;
+    const trimmed = reasonModal.reason.trim();
+    if (!trimmed) {
+      showToast(`${statusDisplay(reasonModal.targetStatus).label} requires a reason.`, 'err');
       return;
     }
-    await runTransition('REJECT', reason);
-    setRejectOpen(false);
-    setRejectReason('');
-  }, [rejectReason, runTransition]);
+    await runTransition(reasonModal.targetStatus, trimmed);
+    setReasonModal(null);
+  }, [reasonModal, runTransition]);
 
-  if (actions.length === 0) {
-    return null;
-  }
+  // No options enabled = no role to act = render nothing (parent shows
+  // the read-only status badge via the separate `status` column).
+  const anyEnabled = options.some((o) => o.enabled);
+  if (!anyEnabled) return null;
 
   return (
     <>
-      <div style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
-        {actions.map((a) => (
-          <ActionButton
-            key={a}
-            action={a}
-            busy={busy === a}
-            disabledByOther={busy != null && busy !== a}
-            onClick={() => (a === 'REJECT' ? setRejectOpen(true) : runTransition(a))}
-          />
+      <select
+        value={currentStatus}
+        onChange={onSelectChange}
+        disabled={busy}
+        title={busy ? 'Saving…' : 'Change quote progress status'}
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          padding: '4px 6px',
+          border: '1px solid #c6c6c6',
+          background: busy ? '#f4f4f4' : '#fff',
+          color: '#161616',
+          cursor: busy ? 'wait' : 'pointer',
+          borderRadius: 2,
+          minWidth: 140,
+        }}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value} disabled={!o.enabled || o.value === currentStatus}>
+            {o.label}
+            {o.value === currentStatus ? ' (current)' : ''}
+            {!o.enabled && o.value !== currentStatus ? ' — not authorized' : ''}
+          </option>
         ))}
-      </div>
-      {rejectOpen && (
-        <RejectModal
+      </select>
+      {reasonModal && (
+        <ReasonModal
           quoteLabel={quote.state?.ccl_pn || quote.state?.rfq_number || `#${quote.id}`}
-          currentStatus={getStatus(approval)}
-          reason={rejectReason}
-          setReason={setRejectReason}
-          busy={busy === 'REJECT'}
-          onCancel={() => {
-            setRejectOpen(false);
-            setRejectReason('');
-          }}
-          onConfirm={confirmReject}
+          fromStatus={currentStatus}
+          targetStatus={reasonModal.targetStatus}
+          reason={reasonModal.reason}
+          setReason={(v) => setReasonModal((m) => ({ ...m, reason: v }))}
+          busy={busy}
+          onCancel={() => setReasonModal(null)}
+          onConfirm={confirmReason}
         />
       )}
     </>
   );
 }
 
-function ActionButton({ action, busy, disabledByOther, onClick }) {
-  const { label, tone } = actionDisplay(action);
-  const palette = BUTTON_PALETTE[tone] || BUTTON_PALETTE.ghost;
-  return (
-    <button
-      type="button"
-      disabled={busy || disabledByOther}
-      onClick={onClick}
-      title={label}
-      style={{
-        fontSize: 10,
-        fontWeight: 600,
-        letterSpacing: 0.2,
-        padding: '4px 8px',
-        border: `1px solid ${palette.border}`,
-        background: busy ? palette.busyBg : palette.bg,
-        color: palette.fg,
-        cursor: busy || disabledByOther ? 'not-allowed' : 'pointer',
-        opacity: disabledByOther ? 0.45 : 1,
-        borderRadius: 2,
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {busy ? '…' : label}
-    </button>
-  );
-}
-
-const BUTTON_PALETTE = {
-  primary: { bg: '#0f62fe', busyBg: '#0043ce', fg: '#fff', border: '#0043ce' },
-  danger: { bg: '#fff', busyBg: '#fff1f1', fg: '#a2191f', border: '#da1e28' },
-  ghost: { bg: '#fff', busyBg: '#f4f4f4', fg: '#525252', border: '#c6c6c6' },
-};
-
-function RejectModal({ quoteLabel, currentStatus, reason, setReason, busy, onCancel, onConfirm }) {
+function ReasonModal({
+  quoteLabel,
+  fromStatus,
+  targetStatus,
+  reason,
+  setReason,
+  busy,
+  onCancel,
+  onConfirm,
+}) {
   useEffect(() => {
     function onKey(e) {
       if (e.key === 'Escape') onCancel();
@@ -148,6 +173,10 @@ function RejectModal({ quoteLabel, currentStatus, reason, setReason, busy, onCan
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onCancel, onConfirm]);
+
+  const targetLabel = statusDisplay(targetStatus).label;
+  const fromLabel = statusDisplay(fromStatus).label;
+  const verb = targetStatus === 'cancelled' ? 'Cancel' : 'Reject';
 
   return (
     <div
@@ -182,12 +211,12 @@ function RejectModal({ quoteLabel, currentStatus, reason, setReason, busy, onCan
             color: '#161616',
           }}
         >
-          Reject quote — {quoteLabel}
+          {verb} quote — {quoteLabel}
         </div>
         <div style={{ padding: 18 }}>
           <div style={{ fontSize: 12, color: '#525252', marginBottom: 10 }}>
-            Current status: <b>{currentStatus}</b>. Rejecting returns the quote to <b>rejected</b>;
-            the cost engineer can edit and re-submit.
+            Changing status from <b>{fromLabel}</b> to <b>{targetLabel}</b>. A reason is required
+            for audit history.
           </div>
           <label
             style={{
@@ -260,7 +289,7 @@ function RejectModal({ quoteLabel, currentStatus, reason, setReason, busy, onCan
               borderRadius: 2,
             }}
           >
-            {busy ? 'Rejecting…' : 'Reject'}
+            {busy ? `${verb}ing…` : verb}
           </button>
         </div>
       </div>
