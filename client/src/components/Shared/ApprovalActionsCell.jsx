@@ -29,6 +29,7 @@ export default function ApprovalActionsCell({
   onAfterTransition,
   onOptimisticTransition,
   onTransitionRollback,
+  allowedTargets,
 }) {
   const approval = quote?.state?.approval || null;
   const currentStatus = getStatus(approval);
@@ -38,17 +39,22 @@ export default function ApprovalActionsCell({
   // Computed once per render — which of the 5 statuses can this user
   // pick, and what's the label/tone for each. The dropdown still shows
   // ALL options (so operators learn the full workflow vocabulary) but
-  // disables the ones outside the user's auth.
-  const options = useMemo(
-    () =>
-      APPROVAL_STATES.map((s) => ({
+  // disables the ones outside the user's auth. When `allowedTargets`
+  // is provided (Pending Approvals inbox passes ['price_approved',
+  // 'rejected']) the list is narrowed to that allowlist plus the
+  // current status (kept so the <select> value mapping stays valid;
+  // rendered disabled either way).
+  const options = useMemo(() => {
+    const allow = Array.isArray(allowedTargets) ? new Set(allowedTargets) : null;
+    return APPROVAL_STATES.filter((s) => !allow || s === currentStatus || allow.has(s)).map(
+      (s) => ({
         value: s,
         label: statusDisplay(s).label,
         enabled: canUserSetStatus(user, s),
         requiresReason: statusRequiresReason(s),
-      })),
-    [user]
-  );
+      })
+    );
+  }, [user, allowedTargets, currentStatus]);
 
   const runTransition = useCallback(
     async (targetStatus, reason) => {

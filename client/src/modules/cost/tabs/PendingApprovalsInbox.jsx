@@ -38,6 +38,13 @@ import { err as logErr } from '../../../utils/logger';
 // is either pre-review or terminal.
 const PENDING_STATES = new Set(['quote_to_sale']);
 
+// The inbox dropdown only offers terminal review outcomes — approve
+// or reject. Draft + Cancelled are intentionally hidden here (operator
+// flagged 2026-06-15): an inbox queue is a review workflow, not a
+// rollback or admin cancel surface — those still work from Quote
+// History where the full 5-status list lives.
+const INBOX_ALLOWED_TARGETS = ['price_approved', 'rejected'];
+
 function fmtDateTime(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -405,6 +412,7 @@ export default function PendingApprovalsInbox() {
                         <ApprovalActionsCell
                           quote={q}
                           user={user}
+                          allowedTargets={INBOX_ALLOWED_TARGETS}
                           onAfterTransition={reloadAfterTransition}
                           onOptimisticTransition={optimisticRemove}
                           onTransitionRollback={rollbackOnError}
