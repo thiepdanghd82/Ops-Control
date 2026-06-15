@@ -223,6 +223,13 @@ export default function CalcProcesses() {
                 <th style={{ width: 45 }}>Rpt</th>
                 <th style={{ width: 55 }}>Crew</th>
                 <th style={{ width: 65 }}>Speed</th>
+                <th
+                  className="sc-col-derived"
+                  style={{ width: 65 }}
+                  title="Speed unit of measure from Rate Table"
+                >
+                  UoM
+                </th>
                 <th style={{ width: 50 }}>Layout</th>
                 <th style={{ width: 50 }}>Eff%</th>
                 <th style={{ width: 55 }}>Setup H</th>
@@ -270,6 +277,8 @@ export default function CalcProcesses() {
                 const i = proc._idx;
                 const r = results[i];
                 const wcOpts = lib ? getWCOptionsByType(lib, proc.process_type) : [];
+                const rateRow = lib ? getRateByWC(lib, proc.workcenter) : null;
+                const uom = rateRow?.speed_uom || '';
                 return (
                   <tr key={proc._mid || `idx-${i}`}>
                     <td className="sc-td-idx">Process {vi + 1}</td>
@@ -321,6 +330,9 @@ export default function CalcProcesses() {
                         placeholder="—"
                         className="sc-input-sm sc-input-num"
                       />
+                    </td>
+                    <td className="sc-td-auto" style={{ fontSize: 10 }}>
+                      {uom || '—'}
                     </td>
                     <td>
                       <input
