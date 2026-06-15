@@ -549,13 +549,21 @@ function NPIEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
             disabled={isViewOnly}
           />
         </Section>
-        <Section color="#047857" icon="💰" title="Pricing & Logistics">
+        <Section color="#047857" icon="💰" title="Pricing">
           <Field
-            label="Price (USD/m²)"
+            label="EXW Price (USD/m²)"
+            value={form.exw}
+            onChange={(v) => set('exw', v)}
+            disabled={isViewOnly}
+          />
+          <Field
+            label="DAP Price (USD/m²)"
             value={form.price}
             onChange={(v) => set('price', v)}
             disabled={isViewOnly}
           />
+        </Section>
+        <Section color="#92400e" icon="📦" title="Logistics">
           <Field
             label="MOQ (m²)"
             value={form.moq}
