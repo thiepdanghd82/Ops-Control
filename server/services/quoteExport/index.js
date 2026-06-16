@@ -301,7 +301,10 @@ async function buildOneXlsx(ctx) {
   buildInksSheet(wb, { quote, tierIdx, variant, lang });
   buildProcessesSheet(wb, { quote, tierIdx, variant, lang, rateLookup });
   buildBalancingSheet(wb, { quote, tierIdx, lang });
-  buildPackShipSheet(wb, { quote, lang });
+  // Sprint S-PACK-SHIP-PER-TIER step 4 — sheet 07 joins 03/04/05/08 in
+  // receiving tierIdx so per-MOQ pack/ship overrides surface in the
+  // right xlsx of a multi-tier zip.
+  buildPackShipSheet(wb, { quote, tierIdx, lang });
   buildCostBreakdownSheet(wb, { quote, tierIdx, variant, lang });
   buildSummarySheet(wb, { quote, tierIdx, tierKpis, variant, lang });
   // Phase 4 (Sprint S-D20-PRICING-SNAPSHOT) — operator-facing audit
