@@ -638,6 +638,12 @@ export function calcProcess(proc, st, moq, lib, options = {}) {
 
   const _totalQtyAuto = (st.annual_qty || moq) * (st.product_lifetime || 1);
   const eau = proc.eau_ovr && proc.eau_ovr > 0 ? proc.eau_ovr : _totalQtyAuto;
+  // Safety cap from CCL tooling-cost spec (`2. TEMPLATES/Costing/Cách tính
+  // chi phí tools.xlsx`): amortize over at most 80% of EAU so a die that
+  // outlasts demand doesn't spread its cost too thinly. Henry's decision
+  // 2026-06-15: keep EAU as `annual × lifetime` (multi-year total) and
+  // apply the 0.8 factor uniformly (including operator-overridden EAU).
+  const eauCap = eau * 0.8;
 
   // Tooling
   let tooling = 0;
@@ -655,10 +661,11 @@ export function calcProcess(proc, st, moq, lib, options = {}) {
       .replace(/[\s&]/g, '');
     const isJig = ttNorm === 'jig' || ttNorm === 'jigfixture';
     if (isJig) {
-      tooling = tlife > eau ? proc.tool_cost / eau : proc.tool_cost / tlife;
+      // JIG mẫu số KHÔNG nhân Cavity (gá giữ SP, không tiêu hao theo shot × cavity).
+      tooling = tlife > eauCap ? proc.tool_cost / eauCap : proc.tool_cost / tlife;
     } else {
       const totalToolPcs = tlife * layout;
-      tooling = totalToolPcs > eau ? proc.tool_cost / eau : proc.tool_cost / totalToolPcs;
+      tooling = totalToolPcs > eauCap ? proc.tool_cost / eauCap : proc.tool_cost / totalToolPcs;
     }
   }
 
