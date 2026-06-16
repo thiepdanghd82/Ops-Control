@@ -325,9 +325,9 @@ test('calcProcess [fix #8]: "Jig" normalizes to the isJig branch', () => {
     scrap_pct: 0,
   };
   const r = calcProcess(proc, st, 1000, makeLib());
-  // Jig formula: tool_cost / min(tlife, eau). eau = 1000, tlife (from DDL) = 1_000_000
-  // → tool_cost / eau = 10
-  assert.equal(r.tooling, 10);
+  // Jig formula: tool_cost / min(tlife, eauCap). eau = 1000, eauCap = 800,
+  // tlife (from DDL) = 1_000_000 → tlife > eauCap → cost/eauCap = 10000/800 = 12.5.
+  assert.equal(r.tooling, 12.5);
 });
 
 test('calcProcess [fix #8]: legacy "Jig& Fixture" still hits isJig branch', () => {
@@ -345,8 +345,8 @@ test('calcProcess [fix #8]: legacy "Jig& Fixture" still hits isJig branch', () =
     scrap_pct: 0,
   };
   const r = calcProcess(proc, st, 1000, makeLib());
-  // isJig → tlife (2000) > eau (1000) → tool_cost / eau = 10
-  assert.equal(r.tooling, 10);
+  // isJig → tlife (2000) > eauCap (800) → cost/eauCap = 10000/800 = 12.5
+  assert.equal(r.tooling, 12.5);
 });
 
 test('calcProcess [fix #8]: spaced/cased "jig & fixture" also normalizes', () => {
@@ -364,7 +364,7 @@ test('calcProcess [fix #8]: spaced/cased "jig & fixture" also normalizes', () =>
     scrap_pct: 0,
   };
   const r = calcProcess(proc, st, 1000, makeLib());
-  assert.equal(r.tooling, 10);
+  assert.equal(r.tooling, 12.5);
 });
 
 test('calcProcess: non-Jig tool uses tlife × layout formula', () => {
@@ -385,6 +385,51 @@ test('calcProcess: non-Jig tool uses tlife × layout formula', () => {
   // non-Jig: totalToolPcs = tlife * layout = 2000
   // totalToolPcs (2000) < eau (10000) → tool_cost / totalToolPcs = 5000/2000 = 2.5
   assert.equal(r.tooling, 2.5);
+});
+
+// ── REGRESSION: 80% EAU safety cap matches CCL tooling spec ────────────
+// Source: `2. TEMPLATES/Costing/Cách tính chi phí tools.xlsx` (Tooling_Guide
+// sheet). Henry confirmed 2026-06-15: keep EAU as annual × lifetime, apply
+// × 0.8 uniformly. Verifies that the 4 representative tool_types from the
+// xlsx "BẢNG TIÊU CHUẨN" example produce the published per-pc tooling.
+// Inputs mirror the xlsx: Tool Cost = $1000, Cavity = 1, EAU = 90,000,
+// product_lifetime = 1 (so eau = 90k, eauCap = 72k).
+test('calcProcess [regression]: 80% EAU cap matches CCL "Cách tính chi phí tools" spec', () => {
+  const lib = makeLib();
+  // Override DDL Tool Life per scenario via tool_life_ovr to isolate the
+  // formula. Each row pairs (tool_type, tool_life_shots, expected $/pc).
+  const cases = [
+    // Etching: Life×Cav = 20k ≤ eauCap 72k → chia theo đời khuôn = 1000/20k = $0.05
+    { tool_type: 'Etching', tool_life: 20_000, expected: 1000 / 20_000 },
+    // Carving: Life×Cav = 40k ≤ eauCap 72k → chia theo đời khuôn = 1000/40k = $0.025
+    { tool_type: 'Carving', tool_life: 40_000, expected: 1000 / 40_000 },
+    // Metal: Life×Cav = 500k > eauCap 72k → chia theo trần = 1000/72k ≈ $0.01389
+    { tool_type: 'Metal', tool_life: 500_000, expected: 1000 / 72_000 },
+    // Jig: KHÔNG nhân Cavity. tlife 1M > eauCap 72k → chia theo trần = 1000/72k.
+    { tool_type: 'Jig', tool_life: 1_000_000, expected: 1000 / 72_000 },
+  ];
+  for (const { tool_type, tool_life, expected } of cases) {
+    const st = makeState({ annual_qty: 90_000, product_lifetime: 1 });
+    const proc = {
+      workcenter: 'Flexo-A',
+      tool_type,
+      tool_cost: 1000,
+      tool_life_ovr: true,
+      tool_life,
+      speed: 0,
+      layout: 1, // Cavity = 1 per xlsx Inputs
+      efficiency: 0.85,
+      setup_h: 0,
+      scrap_pct: 0,
+      eau_ovr: 0,
+      repeat: 1,
+    };
+    const r = calcProcess(proc, st, 1000, lib);
+    assert.ok(
+      Math.abs(r.tooling - expected) < 1e-9,
+      `${tool_type}: expected $${expected.toFixed(6)}, got $${r.tooling.toFixed(6)}`
+    );
+  }
 });
 
 test('calcProcess: empty workcenter returns the zero shape', () => {
