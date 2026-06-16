@@ -60,22 +60,34 @@ const SUB_TABS = [
 
 // Sprint S-PACK-SHIP-PER-TIER — wrapper that appends the ↻ reset
 // button beside an input when the active tier has an override on
-// that field. On tier 0 (or no override) renders children alone so
-// the existing single-input layout stays unchanged.
+// that field.
+//
+// CRITICAL — DOM IDENTITY: on tier > 0 the wrapper <div> ALWAYS renders.
+// Only the ↻ button is conditional. Pre-fix, the wrapper itself was
+// conditional on cf(field).isOverride — when the operator typed the
+// first character into an inherited field, isOverride flipped
+// false → true and React saw the input's parent change from raw
+// children to <div>{…}</div>, unmounting + remounting the input →
+// losing focus + the keystroke (Henry bug 2026-06-16: "văng khi nhập
+// được 1 ký tự"). Keeping the wrapper stable across the override
+// toggle lets React reconcile the input in place. Tier 0 still returns
+// raw children — no override concept, byte-identical to pre-sprint.
 function CpxPackRow({ field, cf, isTier, activeIdx, onReset, children }) {
   if (!isTier) return children;
-  if (!cf(field).isOverride) return children;
+  const isOverride = cf(field).isOverride;
   return (
     <div className="sc-pack-row">
       {children}
-      <button
-        type="button"
-        className="sc-pack-reset"
-        title={`Reset MOQ ${activeIdx + 1} override → MOQ 1 base`}
-        onClick={() => onReset(field)}
-      >
-        ↻
-      </button>
+      {isOverride && (
+        <button
+          type="button"
+          className="sc-pack-reset"
+          title={`Reset MOQ ${activeIdx + 1} override → MOQ 1 base`}
+          onClick={() => onReset(field)}
+        >
+          ↻
+        </button>
+      )}
     </div>
   );
 }

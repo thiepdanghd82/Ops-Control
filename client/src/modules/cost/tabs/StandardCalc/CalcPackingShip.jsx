@@ -42,23 +42,33 @@ function presence(v) {
   return v === undefined || v === null ? '' : v;
 }
 
-// Module-scope wrapper for input + optional ↻ reset button. Reset only
-// renders when isTier && isOverride; otherwise children pass through
-// unchanged so tier 0 keeps the original single-input layout. Module
-// scope (not inline) per react-hooks/static-components lint.
+// Module-scope wrapper for input + optional ↻ reset button.
+//
+// CRITICAL — DOM IDENTITY: on tier > 0 the wrapper <div> ALWAYS renders.
+// Only the ↻ button is conditional. Pre-fix, the wrapper itself was
+// conditional on isOverride — when the operator typed the first
+// character into an inherited field, isOverride flipped false→true and
+// React saw the input's parent change from raw children to <div>{…}</div>,
+// unmounting + remounting the input → losing focus + the keystroke
+// (Henry bug 2026-06-16: "văng khi nhập được 1 ký tự"). Keeping the
+// wrapper stable across the override toggle lets React reconcile the
+// input in place. Tier 0 still returns raw children — no override
+// concept, byte-identical to pre-sprint layout.
 function PackRow({ isTier, isOverride, activeIdx, onReset, children }) {
-  if (!isTier || !isOverride) return children;
+  if (!isTier) return children;
   return (
     <div className="sc-pack-row">
       {children}
-      <button
-        type="button"
-        className="sc-pack-reset"
-        title={`Reset MOQ ${activeIdx + 1} override → MOQ 1 base`}
-        onClick={onReset}
-      >
-        ↻
-      </button>
+      {isOverride && (
+        <button
+          type="button"
+          className="sc-pack-reset"
+          title={`Reset MOQ ${activeIdx + 1} override → MOQ 1 base`}
+          onClick={onReset}
+        >
+          ↻
+        </button>
+      )}
     </div>
   );
 }
