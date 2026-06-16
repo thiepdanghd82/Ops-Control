@@ -1222,6 +1222,13 @@ export function buildTierState(st, tierIdx, price, moq, eau) {
       em.proc_setup_h[i] != null ? Object.assign({}, p, { setup_h: em.proc_setup_h[i] }) : p
     );
   }
+  // Sprint S-PACK-SHIP-PER-TIER — per-MOQ packing/shipping override.
+  // Field-level merge: any of the 10 pack/ship keys present in
+  // em.packing overrides the base value; keys absent fall back to base.
+  // Mirrors the line in getActiveTierState; buildTierState was missing
+  // it before, so persisted result.tiers[N] + multi-tier xlsx silently
+  // showed base pack/ship for every non-active tier.
+  if (em.packing) Object.assign(base, em.packing);
   return base;
 }
 
@@ -2304,7 +2311,13 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
   // safe; no NaN risk.
   if (aggregate) {
     try {
-      const parentPsSt = { ...cs, moq: activeMoq };
+      // Sprint S-PACK-SHIP-PER-TIER — merge per-tier parent packing
+      // override (cs.extra_moqs[tierIdx-1].packing) before computing
+      // parent pack/ship. Spread tierPacking BEFORE the explicit moq so
+      // activeMoq always wins even if a packing object accidentally
+      // carried a moq key.
+      const tierPacking = tierIdx > 0 ? cs.extra_moqs?.[tierIdx - 1]?.packing || {} : {};
+      const parentPsSt = { ...cs, ...tierPacking, moq: activeMoq };
       const parentPacking = calcPacking(parentPsSt) || 0;
       const parentShipping = calcShipping(parentPsSt) || 0;
       const parentPs = parentPacking + parentShipping;
