@@ -37,6 +37,17 @@ registerStrings({
   'pricing.process_short': { en: 'Proc', vi: 'CĐ' },
   'pricing.packing_ship': { en: 'Pack+Ship', vi: 'Đóng gói+VC' },
 
+  // Sprint S-PACK-SHIP-PER-TIER — banner shown at the top of the
+  // Packing & Ship tab when active_moq_idx > 0, hinting that values
+  // are inherited from MOQ1 unless the operator overrides them.
+  // "MOQ1" is intentional verbatim (not interpolated qty) per Henry's
+  // call — clearer than "MOQ 500" since the inheritance source IS
+  // tier 0 regardless of its MOQ quantity.
+  'pricing.pack_ship.inherit_hint': {
+    en: 'Inherited from MOQ1 — edit to set a value specific to this MOQ',
+    vi: 'Kế thừa từ MOQ1 — sửa để áp riêng cho MOQ này',
+  },
+
   // ─── Material Library / Print Area / Inks (v1.3 M3) ───
   // Library-side material picker shares its search-placeholder string
   // here; the calc-side InkCalculator + PrintAreaCalc tabs use these

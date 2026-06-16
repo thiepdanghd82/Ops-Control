@@ -439,6 +439,19 @@
   font-size: 12px;
   margin-bottom: 10px;
 }
+/* Subtler "inherited from MOQ1" hint shown at the very top of the
+   Packing & Ship tab when activeIdx > 0. Lower-intensity than
+   .sc-pack-tier-hint so the two banners stack without competing
+   for attention. Pure info — no border, no background. */
+.sc-pack-inherit-hint {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-style: italic;
+  padding: 4px 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .sc-pack-row {
   display: flex;
   align-items: center;

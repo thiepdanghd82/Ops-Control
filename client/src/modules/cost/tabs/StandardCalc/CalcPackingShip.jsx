@@ -21,6 +21,7 @@ import { calcPacking, calcShipping, getActiveTierState } from '../../../../servi
 import { resolveTierField } from '../../../../services/packingTierField';
 import { fmtN as _fmtN, parseLocaleNumber } from '../../../../utils/format';
 import DecimalInput from '../../../../utils/DecimalInput';
+import { useI18n } from '../../../../utils/useI18n';
 
 function fmtN(v, d = 6) {
   return _fmtN(v, d);
@@ -64,6 +65,7 @@ function PackRow({ isTier, isOverride, activeIdx, onReset, children }) {
 
 export default function CalcPackingShip() {
   const { stdState, dispatch } = useCalc();
+  const { t } = useI18n();
   const st = stdState;
   const activeIdx = st.active_moq_idx || 0;
   const em = activeIdx > 0 ? (st.extra_moqs || [])[activeIdx - 1] : null;
@@ -123,6 +125,12 @@ export default function CalcPackingShip() {
 
   return (
     <div className="sc-section">
+      {isTier && (
+        <div className="sc-pack-inherit-hint" role="note">
+          <span aria-hidden="true">ℹ️</span>
+          {t('pricing.pack_ship.inherit_hint')}
+        </div>
+      )}
       {isTier && (
         <div className="sc-pack-tier-hint" role="note">
           ▣ Editing <b>MOQ {activeIdx + 1}</b> override. Clear an input or click ↻ to revert that

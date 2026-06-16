@@ -778,6 +778,12 @@ export default function ComplexCalc() {
               matching how Standard quotes roll up packing and shipping into the final price.
             </div>
             {isCsTier && (
+              <div className="sc-pack-inherit-hint" role="note">
+                <span aria-hidden="true">ℹ️</span>
+                {t('pricing.pack_ship.inherit_hint')}
+              </div>
+            )}
+            {isCsTier && (
               <div className="sc-pack-tier-hint" role="note">
                 ▣ Editing <b>MOQ {csActiveIdx + 1}</b> override. Clear an input or click ↻ to revert
                 that field to MOQ 1 base.
