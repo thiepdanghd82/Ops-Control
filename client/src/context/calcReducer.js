@@ -44,6 +44,11 @@ export const CALC_ACTIONS = {
   TOGGLE_ROW_HIDDEN: 'TOGGLE_ROW_HIDDEN',
   SET_ACTIVE_MOQ: 'SET_ACTIVE_MOQ',
   SET_EXTRA_MOQ: 'SET_EXTRA_MOQ',
+  // MES-3-FIX-53 — Cpx mirror of SET_EXTRA_MOQ writing to cplxState.
+  // Cpx tier inputs (moq / eau / price / price_vnd / target / target_vnd)
+  // used to dispatch SET_EXTRA_MOQ which only touched the Std slice —
+  // every Cpx tier write landed in the wrong place + data lost on save.
+  SET_CPLX_EXTRA_MOQ: 'SET_CPLX_EXTRA_MOQ',
   SET_NUM_MOQ: 'SET_NUM_MOQ',
   // Sprint S-PACK-SHIP-PER-TIER — per-MOQ packing/shipping override.
   // Routes by stdState.active_moq_idx: tier 0 → top-level state[field];
@@ -517,6 +522,18 @@ export function calcReducer(state, action) {
       const extra = [...(state.stdState.extra_moqs || [])];
       extra[payload.idx] = { ...(extra[payload.idx] || {}), [payload.field]: payload.value };
       return { ...state, isDirty: true, stdState: { ...state.stdState, extra_moqs: extra } };
+    }
+
+    // MES-3-FIX-53 — Cpx parallel of SET_EXTRA_MOQ. Same shape, but
+    // writes to cplxState.extra_moqs so Cpx tier MOQ/EAU/Price/Target
+    // inputs land in the right slice. Pre-fix the Cpx caller dispatched
+    // SET_EXTRA_MOQ above which targets stdState — visible writes went
+    // to the wrong slice + data loss on save round-trip. Clone-not-
+    // mutate: array new, element new (mirrors Std case).
+    case A.SET_CPLX_EXTRA_MOQ: {
+      const extra = [...(state.cplxState.extra_moqs || [])];
+      extra[payload.idx] = { ...(extra[payload.idx] || {}), [payload.field]: payload.value };
+      return { ...state, isDirty: true, cplxState: { ...state.cplxState, extra_moqs: extra } };
     }
 
     // Sprint S-PACK-SHIP-PER-TIER — Std side. Routes by active_moq_idx.
