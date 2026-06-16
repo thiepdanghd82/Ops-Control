@@ -45,6 +45,12 @@ export const CALC_ACTIONS = {
   SET_ACTIVE_MOQ: 'SET_ACTIVE_MOQ',
   SET_EXTRA_MOQ: 'SET_EXTRA_MOQ',
   SET_NUM_MOQ: 'SET_NUM_MOQ',
+  // Sprint S-PACK-SHIP-PER-TIER — per-MOQ packing/shipping override.
+  // Routes by stdState.active_moq_idx: tier 0 → top-level state[field];
+  // tier>0 → extra_moqs[idx-1].packing[field] (sparse). Empty / null
+  // value deletes the key (revert to base); explicit 0 stores 0.
+  SET_STD_TIER_PACKING_FIELD: 'SET_STD_TIER_PACKING_FIELD',
+  SET_CPLX_TIER_PACKING_FIELD: 'SET_CPLX_TIER_PACKING_FIELD',
 
   // Complex state
   SET_CPLX_FIELD: 'SET_CPLX_FIELD',
@@ -513,6 +519,31 @@ export function calcReducer(state, action) {
       return { ...state, isDirty: true, stdState: { ...state.stdState, extra_moqs: extra } };
     }
 
+    // Sprint S-PACK-SHIP-PER-TIER — Std side. Routes by active_moq_idx.
+    // Tier 0 → top-level. Tier>0 → extra_moqs[idx-1].packing[field].
+    // Empty/null value deletes the key (revert to base); explicit 0
+    // stores 0 (Henry's dễ-vỡ case).
+    case A.SET_STD_TIER_PACKING_FIELD: {
+      const { field, value } = payload;
+      const activeIdx = state.stdState.active_moq_idx || 0;
+      if (activeIdx === 0) {
+        return {
+          ...state,
+          isDirty: true,
+          stdState: { ...state.stdState, [field]: value },
+        };
+      }
+      const ei = activeIdx - 1;
+      const extra = (state.stdState.extra_moqs || []).map((em, i) => {
+        if (i !== ei) return em;
+        const packing = { ...(em?.packing || {}) };
+        if (value === '' || value == null) delete packing[field];
+        else packing[field] = value;
+        return { ...em, packing };
+      });
+      return { ...state, isDirty: true, stdState: { ...state.stdState, extra_moqs: extra } };
+    }
+
     // ── Complex ──
     case A.SET_CPLX_FIELD:
       return {
@@ -523,6 +554,29 @@ export function calcReducer(state, action) {
 
     case A.SET_CPLX_STATE:
       return { ...state, isDirty: true, cplxState: { ...state.cplxState, ...payload } };
+
+    // Sprint S-PACK-SHIP-PER-TIER — Cpx mirror of SET_STD_TIER_PACKING_FIELD.
+    // Same delete/explicit-0 semantics; routes against cplxState.active_moq_idx.
+    case A.SET_CPLX_TIER_PACKING_FIELD: {
+      const { field, value } = payload;
+      const activeIdx = state.cplxState.active_moq_idx || 0;
+      if (activeIdx === 0) {
+        return {
+          ...state,
+          isDirty: true,
+          cplxState: { ...state.cplxState, [field]: value },
+        };
+      }
+      const ei = activeIdx - 1;
+      const extra = (state.cplxState.extra_moqs || []).map((em, i) => {
+        if (i !== ei) return em;
+        const packing = { ...(em?.packing || {}) };
+        if (value === '' || value == null) delete packing[field];
+        else packing[field] = value;
+        return { ...em, packing };
+      });
+      return { ...state, isDirty: true, cplxState: { ...state.cplxState, extra_moqs: extra } };
+    }
 
     case A.ADD_SUBPRODUCT: {
       const code =
