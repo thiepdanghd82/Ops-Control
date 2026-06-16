@@ -15,6 +15,7 @@ import {
   buildCpxRowsPayload,
 } from '../../../../services/calcEngine';
 import { freezeLib, snapshotPricingParams } from '../../../../services/pricingSnapshot';
+import { resolveTierField } from '../../../../services/packingTierField';
 import { isCopyMode } from '../../components/SnapshotPanel.helpers';
 import '../../components/SnapshotPanel.css';
 import {
@@ -56,6 +57,28 @@ const SUB_TABS = [
   { id: 'summary', label: 'Summarize', icon: '☰' },
   { id: 'lead-time', label: 'Lead time & Notice', icon: '⏱' },
 ];
+
+// Sprint S-PACK-SHIP-PER-TIER — wrapper that appends the ↻ reset
+// button beside an input when the active tier has an override on
+// that field. On tier 0 (or no override) renders children alone so
+// the existing single-input layout stays unchanged.
+function CpxPackRow({ field, cf, isTier, activeIdx, onReset, children }) {
+  if (!isTier) return children;
+  if (!cf(field).isOverride) return children;
+  return (
+    <div className="sc-pack-row">
+      {children}
+      <button
+        type="button"
+        className="sc-pack-reset"
+        title={`Reset MOQ ${activeIdx + 1} override → MOQ 1 base`}
+        onClick={() => onReset(field)}
+      >
+        ↻
+      </button>
+    </div>
+  );
+}
 
 const PACK_LABELS = {
   Sheet: { pcsLabel: 'Pcs/Roll', bagLabel: 'Rolls/Box', containerLabel: 'Core Cost' },
@@ -404,21 +427,46 @@ export default function ComplexCalc() {
     [cplxState.subproducts]
   );
 
+  // Sprint S-PACK-SHIP-PER-TIER — per-tier pack/ship binding for the
+  // Packing sub-tab. Mirrors CalcPackingShip.jsx Std logic. `csTierSt`
+  // is the active-tier-merged view (em.packing layered over cs) so
+  // packTotal + shipTotal reflect the override on tier>0.
+  const csActiveIdx = cs.active_moq_idx || 0;
+  const csEm = csActiveIdx > 0 ? (cs.extra_moqs || [])[csActiveIdx - 1] : null;
+  const isCsTier = csActiveIdx > 0;
+  const csTierSt = useMemo(() => {
+    if (!isCsTier || !csEm || !csEm.packing) return cs;
+    return { ...cs, ...csEm.packing };
+  }, [cs, csEm, isCsTier]);
   const packTotal = useMemo(() => {
     try {
-      return calcPacking(cs);
+      return calcPacking(csTierSt);
     } catch {
       return 0;
     }
-  }, [cs]);
+  }, [csTierSt]);
   const shipTotal = useMemo(() => {
     try {
-      return calcShipping(cs);
+      return calcShipping(csTierSt);
     } catch {
       return 0;
     }
-  }, [cs]);
-  const labels = PACK_LABELS[cs.packing_method] || PACK_LABELS.Sheet;
+  }, [csTierSt]);
+  const cf = useCallback((field) => resolveTierField(csEm, cs, field), [csEm, cs]);
+  const setCpxPack = useCallback(
+    (field, value) => dispatch({ type: 'SET_CPLX_TIER_PACKING_FIELD', payload: { field, value } }),
+    [dispatch]
+  );
+  const resetCpxPack = useCallback((field) => setCpxPack(field, ''), [setCpxPack]);
+  const cpxPackCls = useCallback(
+    (field) => {
+      if (!isCsTier) return '';
+      const { isOverride } = cf(field);
+      return isOverride ? 'sc-pack-tier-ovr' : 'sc-pack-tier-inherit';
+    },
+    [isCsTier, cf]
+  );
+  const labels = PACK_LABELS[cf('packing_method').value || 'Sheet'] || PACK_LABELS.Sheet;
   const copyMode = isCopyMode(cs, activeQuoteId);
 
   return (
@@ -714,7 +762,10 @@ export default function ComplexCalc() {
 
         {/* ═══ PACKING TAB ═══
             Uses the sc-* classes shared with StandardCalc.css so the
-            styling matches 1-to-1 with the Standard calculator. */}
+            styling matches 1-to-1 with the Standard calculator.
+            Sprint S-PACK-SHIP-PER-TIER — per-MOQ override mirror of
+            Std CalcPackingShip.jsx; same resolveTierField + reducer
+            action so the two stay in lock-step. */}
         {activeSubTab === 'packing' && (
           <div className="sc-section">
             {/* Sprint 41 — assembly-level Pack&Ship hint. Before this sprint
@@ -726,6 +777,12 @@ export default function ComplexCalc() {
               They add on top of any per-sub-product packing entered in the Calculators tab,
               matching how Standard quotes roll up packing and shipping into the final price.
             </div>
+            {isCsTier && (
+              <div className="sc-pack-tier-hint" role="note">
+                ▣ Editing <b>MOQ {csActiveIdx + 1}</b> override. Clear an input or click ↻ to revert
+                that field to MOQ 1 base.
+              </div>
+            )}
             <div className="sc-pack-grid">
               <div className="sc-card">
                 <div className="sc-card-header sc-header-emerald">
@@ -735,61 +792,114 @@ export default function ComplexCalc() {
                 <div className="sc-card-body">
                   <div className="sc-field">
                     <label>Packing Method</label>
-                    <select
-                      value={cs.packing_method || 'Sheet'}
-                      onChange={(e) => setCplxField('packing_method', e.target.value)}
-                      className="sc-input"
+                    <CpxPackRow
+                      field="packing_method"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
                     >
-                      <option value="Sheet">Sheet</option>
-                      <option value="Roll">Roll</option>
-                      <option value="Tray">Tray</option>
-                      <option value="PE Bag">PE Bag</option>
-                    </select>
+                      <select
+                        value={cf('packing_method').value || 'Sheet'}
+                        onChange={(e) => setCpxPack('packing_method', e.target.value)}
+                        className={`sc-input ${cpxPackCls('packing_method')}`}
+                      >
+                        <option value="Sheet">Sheet</option>
+                        <option value="Roll">Roll</option>
+                        <option value="Tray">Tray</option>
+                        <option value="PE Bag">PE Bag</option>
+                      </select>
+                    </CpxPackRow>
                   </div>
                   <div className="sc-field">
                     <label>{labels.pcsLabel}</label>
-                    <DecimalInput
-                      value={cs.pcs_per_bag}
-                      placeholder="—"
-                      onChange={(v) => setCplxField('pcs_per_bag', v)}
-                      className="sc-input"
-                    />
+                    <CpxPackRow
+                      field="pcs_per_bag"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
+                    >
+                      <DecimalInput
+                        value={cf('pcs_per_bag').value}
+                        placeholder="—"
+                        onChange={(v) => setCpxPack('pcs_per_bag', v)}
+                        preserveEmpty={isCsTier}
+                        className={`sc-input ${cpxPackCls('pcs_per_bag')}`}
+                      />
+                    </CpxPackRow>
                   </div>
                   <div className="sc-field">
                     <label>{labels.bagLabel}</label>
-                    <DecimalInput
-                      value={cs.bags_per_box}
-                      placeholder="—"
-                      onChange={(v) => setCplxField('bags_per_box', v)}
-                      className="sc-input"
-                    />
+                    <CpxPackRow
+                      field="bags_per_box"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
+                    >
+                      <DecimalInput
+                        value={cf('bags_per_box').value}
+                        placeholder="—"
+                        onChange={(v) => setCpxPack('bags_per_box', v)}
+                        preserveEmpty={isCsTier}
+                        className={`sc-input ${cpxPackCls('bags_per_box')}`}
+                      />
+                    </CpxPackRow>
                   </div>
                   <div className="sc-field">
                     <label>{labels.containerLabel}</label>
-                    <DecimalInput
-                      value={cs.container_cost}
-                      placeholder="—"
-                      onChange={(v) => setCplxField('container_cost', v)}
-                      className="sc-input"
-                    />
+                    <CpxPackRow
+                      field="container_cost"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
+                    >
+                      <DecimalInput
+                        value={cf('container_cost').value}
+                        placeholder="—"
+                        onChange={(v) => setCpxPack('container_cost', v)}
+                        preserveEmpty={isCsTier}
+                        className={`sc-input ${cpxPackCls('container_cost')}`}
+                      />
+                    </CpxPackRow>
                   </div>
                   <div className="sc-field">
                     <label>Box Cost (USD)</label>
-                    <DecimalInput
-                      value={cs.box_cost}
-                      placeholder="—"
-                      onChange={(v) => setCplxField('box_cost', v)}
-                      className="sc-input"
-                    />
+                    <CpxPackRow
+                      field="box_cost"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
+                    >
+                      <DecimalInput
+                        value={cf('box_cost').value}
+                        placeholder="—"
+                        onChange={(v) => setCpxPack('box_cost', v)}
+                        preserveEmpty={isCsTier}
+                        className={`sc-input ${cpxPackCls('box_cost')}`}
+                      />
+                    </CpxPackRow>
                   </div>
                   <div className="sc-field">
                     <label>Other Packing/pcs</label>
-                    <DecimalInput
-                      value={cs.other_packing}
-                      placeholder="—"
-                      onChange={(v) => setCplxField('other_packing', v)}
-                      className="sc-input"
-                    />
+                    <CpxPackRow
+                      field="other_packing"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
+                    >
+                      <DecimalInput
+                        value={cf('other_packing').value}
+                        placeholder="—"
+                        onChange={(v) => setCpxPack('other_packing', v)}
+                        preserveEmpty={isCsTier}
+                        className={`sc-input ${cpxPackCls('other_packing')}`}
+                      />
+                    </CpxPackRow>
                   </div>
                   <div className="sc-pack-total">
                     Total Packing/pcs: <b>{fmtN(packTotal, 6)} USD</b>
@@ -804,52 +914,90 @@ export default function ComplexCalc() {
                 <div className="sc-card-body">
                   <div className="sc-field">
                     <label>Delivery Term</label>
-                    <input
-                      type="text"
-                      value={cs.delivery_term || ''}
-                      onChange={(e) => setCplxField('delivery_term', e.target.value)}
-                      className="sc-input"
-                      placeholder="FOB, CIF, etc."
-                    />
+                    <CpxPackRow
+                      field="delivery_term"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
+                    >
+                      <input
+                        type="text"
+                        value={cf('delivery_term').value ?? ''}
+                        onChange={(e) => setCpxPack('delivery_term', e.target.value)}
+                        className={`sc-input ${cpxPackCls('delivery_term')}`}
+                        placeholder="FOB, CIF, etc."
+                      />
+                    </CpxPackRow>
                   </div>
                   <div className="sc-field">
                     <label>Deliver Quantity</label>
-                    {/* Auto-sync with MOQ: when ship_qty is 0 we display
-                        MOQ. Clearing reverts to MOQ on next render (engine
-                        also falls back to MOQ in calcShipping L409 so cost
-                        is correct either way). Purple-bold = override. */}
-                    <DecimalInput
-                      value={cs.ship_qty > 0 ? cs.ship_qty : cs.moq || 0}
-                      onChange={(v) => setCplxField('ship_qty', v)}
-                      className="sc-input"
-                      placeholder="—"
-                      style={
-                        cs.ship_qty > 0 ? { color: 'var(--color-violet-500)', fontWeight: 700 } : {}
-                      }
-                      title={
-                        cs.ship_qty > 0
-                          ? 'Override — clear to revert to MOQ'
-                          : 'Auto-synced from MOQ'
-                      }
-                    />
+                    <CpxPackRow
+                      field="ship_qty"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
+                    >
+                      <DecimalInput
+                        value={
+                          isCsTier
+                            ? cf('ship_qty').value
+                            : cs.ship_qty > 0
+                              ? cs.ship_qty
+                              : cs.moq || 0
+                        }
+                        onChange={(v) => setCpxPack('ship_qty', v)}
+                        preserveEmpty={isCsTier}
+                        className={`sc-input ${cpxPackCls('ship_qty')}`}
+                        placeholder="—"
+                        title={
+                          isCsTier
+                            ? cf('ship_qty').isOverride
+                              ? `MOQ ${csActiveIdx + 1} override — click ↻ to revert`
+                              : 'Inherits MOQ 1 base — type to override'
+                            : cs.ship_qty > 0
+                              ? 'Override — clear to revert to MOQ'
+                              : 'Auto-synced from MOQ'
+                        }
+                      />
+                    </CpxPackRow>
                   </div>
                   <div className="sc-field">
                     <label>Shipping Cost (USD total)</label>
-                    <DecimalInput
-                      value={cs.shipping_cost}
-                      placeholder="—"
-                      onChange={(v) => setCplxField('shipping_cost', v)}
-                      className="sc-input"
-                    />
+                    <CpxPackRow
+                      field="shipping_cost"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
+                    >
+                      <DecimalInput
+                        value={cf('shipping_cost').value}
+                        placeholder="—"
+                        onChange={(v) => setCpxPack('shipping_cost', v)}
+                        preserveEmpty={isCsTier}
+                        className={`sc-input ${cpxPackCls('shipping_cost')}`}
+                      />
+                    </CpxPackRow>
                   </div>
                   <div className="sc-field">
                     <label>Other Cost/shipment</label>
-                    <DecimalInput
-                      value={cs.other_ship}
-                      placeholder="—"
-                      onChange={(v) => setCplxField('other_ship', v)}
-                      className="sc-input"
-                    />
+                    <CpxPackRow
+                      field="other_ship"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
+                    >
+                      <DecimalInput
+                        value={cf('other_ship').value}
+                        placeholder="—"
+                        onChange={(v) => setCpxPack('other_ship', v)}
+                        preserveEmpty={isCsTier}
+                        className={`sc-input ${cpxPackCls('other_ship')}`}
+                      />
+                    </CpxPackRow>
                   </div>
                   <div className="sc-ship-total">
                     Total Shipping/pcs: <b>{fmtN(shipTotal, 6)} USD</b>

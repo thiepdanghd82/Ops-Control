@@ -22,14 +22,15 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { blurEmptyValue } from '../services/packingTierField.js';
 // Pure helpers live in a sibling .js file so node --test can load them
 // without a JSX transform. Import-only here (no re-export) because
 // Vite Fast Refresh requires component files to export only components.
 // Callers should import helpers directly from './DecimalInput.helpers.js'.
-// eslint-disable-next-line no-unused-vars -- toDisplay re-exported for callers, see note above
+// (toDisplay lives in the helpers file; only the helpers this component
+// actually uses are imported here so eslint stays clean.)
 import {
   DECIMAL_RE,
-  toDisplay,
   toDisplayFixed,
   formatThousand,
   normalizeDecimalInput,
@@ -51,6 +52,12 @@ export default function DecimalInput({
   // value passed to onChange is never rounded, so cross-tab sync /
   // calc round-trips preserve precision (CLAUDE.md lesson 17).
   decimals,
+  // Sprint S-PACK-SHIP-PER-TIER (opt-in): blur-with-empty fires
+  // onChange('') instead of onChange(0). Per-MOQ pack/ship override
+  // fields use this so clearing the field sends '' to the reducer
+  // (which deletes the override key → revert to base). Default off
+  // preserves the 100+ existing callsite behavior (blur-empty → 0).
+  preserveEmpty = false,
   ...rest
 }) {
   // Local mirror of the input string so partial values ("0.", ".", "-")
@@ -104,7 +111,7 @@ export default function DecimalInput({
       const norm = local.replace(',', '.');
       const n = parseFloat(norm);
       if (Number.isNaN(n)) {
-        onChange(0);
+        onChange(blurEmptyValue(preserveEmpty));
         setLocal('');
       } else {
         // Pad to the caller's decimal budget for the idle display, but
@@ -114,7 +121,7 @@ export default function DecimalInput({
       setFocused(false);
       if (onBlur) onBlur(e);
     },
-    [local, onChange, onBlur, decimals]
+    [local, onChange, onBlur, decimals, preserveEmpty]
   );
 
   const displayValue = thousandSep && !focused ? formatThousand(local) : local;
