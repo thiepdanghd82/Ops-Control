@@ -1391,9 +1391,15 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField }) {
         else if (field === 'target') patch.target_vnd = +(value * rate).toFixed(0);
         else if (field === 'target_vnd') patch.target = +(value / rate).toFixed(4);
       }
-      // Apply each field via SET_EXTRA_MOQ (one mutation per key).
+      // MES-3-FIX-53 — Cpx tier inputs must target cplxState.extra_moqs.
+      // Pre-fix this loop dispatched SET_EXTRA_MOQ which writes to
+      // stdState (wrong slice) — every Cpx tier MOQ/EAU/Price/Target
+      // keystroke vanished from cplxState. Visible value persisted only
+      // via DecimalInput's local string mirror, masking the data loss
+      // until save round-trip. SET_CPLX_EXTRA_MOQ is the Cpx mirror —
+      // identical payload shape, targets cplxState.
       for (const [f, v] of Object.entries(patch)) {
-        dispatch({ type: 'SET_EXTRA_MOQ', payload: { idx, field: f, value: v } });
+        dispatch({ type: 'SET_CPLX_EXTRA_MOQ', payload: { idx, field: f, value: v } });
       }
     },
     [dispatch, rate]
