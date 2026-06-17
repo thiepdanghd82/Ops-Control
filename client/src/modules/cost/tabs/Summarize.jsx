@@ -87,6 +87,15 @@ const SUMMARIZE_COLUMNS = [
     render: (_r, ri) => ri + 1,
   },
   { key: 'rfq_no', label: 'RFQ NO', w: 140, required: true },
+  // Sprint S-SALE-OWNER-COL (2026-06-16, moved 2026-06-17) — operator-
+  // entered free-text Sale Owner from Pricing (Std/Cpx) → RFQ & MOQ
+  // info sub-tab (shared component RfqInfoCard.jsx). Positioned
+  // immediately after RFQ NO per Henry's hardware-verify request so
+  // the salesperson attribution surfaces as the first identity column
+  // before the customer/project chain. CSV always-include already had
+  // `sale_owner` (CSV_ALWAYS_INCLUDE_KEYS below) so the column
+  // appearance is purely a UI gap closure.
+  { key: 'sale_owner', label: 'Sale Owner', w: 100 },
   { key: 'direct_cu', label: 'Direct Customer', auto: true },
   { key: 'project', label: 'End Customer', auto: true },
   { key: 'project_name', label: 'Project', auto: true },
@@ -165,13 +174,6 @@ const SUMMARIZE_COLUMNS = [
   { key: 'gm_pct', label: 'GM%', w: 55, right: true, fmt: (v) => pct(v), color: true },
   { key: 'trade_mode', label: 'Trade', w: 60 },
   { key: 'npi_owner', label: 'NPI Owner', w: 90 },
-  // Sprint S-SALE-OWNER-COL (2026-06-16) — operator-entered free-text
-  // Sale Owner from Pricing (Std/Cpx) → RFQ & MOQ info sub-tab
-  // (shared component RfqInfoCard.jsx). Row data already populated
-  // upstream; this entry just exposes it as a visible/sortable column.
-  // CSV always-include already had `sale_owner` (line above) so the
-  // column appearance is purely a UI gap closure.
-  { key: 'sale_owner', label: 'Sale Owner', w: 100 },
   // Phase 4 — pricing-snapshot status pill (default hidden; operator
   // opts in via ColumnsToggle when auditing whether quotes are frozen
   // vs running on live rates).
