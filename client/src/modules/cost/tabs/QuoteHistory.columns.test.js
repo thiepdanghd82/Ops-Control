@@ -11,12 +11,13 @@ import {
 } from './QuoteHistory.columns.js';
 
 describe('QUOTE_HISTORY_COLUMN_KEYS', () => {
-  test('contains 26 keys in source order — REGRESSION GUARD for table shape', () => {
+  test('contains 27 keys in source order — REGRESSION GUARD for table shape', () => {
     // Header row in QuoteHistory.jsx renders this exact set in this exact
     // order. Drift here means the ColumnsToggle popover ↔ table-render
     // contract broke; bump this number only when intentionally
     // adding/removing a column.
-    assert.equal(QUOTE_HISTORY_COLUMN_KEYS.length, 26);
+    // Sprint S-SALE-OWNER-COL (2026-06-16) bumped 26 → 27 by adding 'sale'.
+    assert.equal(QUOTE_HISTORY_COLUMN_KEYS.length, 27);
   });
 
   test('no duplicate keys', () => {
@@ -53,15 +54,17 @@ describe('QUOTE_HISTORY_COLUMN_KEYS', () => {
 });
 
 describe('QUOTE_HISTORY_SORT_FNS — basic shape', () => {
-  test('matches the 14 sortable columns from the header', () => {
+  test('matches the sortable columns from the header', () => {
     // SortTh wired in QuoteHistory.jsx for these column keys. Mismatch
     // here means a SortTh column has no sortFn → click does nothing.
-    // Sprint S-OPTIONS-COL bumped from 13 → 14 by adding 'option'.
+    // Sprint S-OPTIONS-COL bumped by adding 'option'; Sprint
+    // S-SALE-OWNER-COL (2026-06-16) added 'sale'.
     const expected = new Set([
       'date',
       'rfq',
       'option',
       'owner',
+      'sale',
       'direct_cu',
       'end_cu',
       'project',
@@ -112,6 +115,12 @@ describe('QUOTE_HISTORY_SORT_FNS — text columns', () => {
       QUOTE_HISTORY_SORT_FNS.owner({ state: { npi_owner: '' }, npi_owner: 'Fallback' }),
       'fallback'
     );
+  });
+
+  test('sale reads state.sale_owner (Sprint S-SALE-OWNER-COL)', () => {
+    assert.equal(QUOTE_HISTORY_SORT_FNS.sale({ state: { sale_owner: 'Lien' } }), 'lien');
+    assert.equal(QUOTE_HISTORY_SORT_FNS.sale({ state: {} }), '');
+    assert.equal(QUOTE_HISTORY_SORT_FNS.sale({}), '');
   });
 
   test('end_cu falls back state.end_cu → state.project (Lesson 21 aliasMap)', () => {
@@ -283,9 +292,11 @@ describe('resolveSortKey', () => {
 });
 
 describe('QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS (Phase 2 Q7 option C)', () => {
-  test('hides exactly 5 cols → 21 visible by default', () => {
+  test('hides exactly 5 cols → 22 visible by default', () => {
+    // Sprint S-SALE-OWNER-COL (2026-06-16) bumped column total 26 → 27,
+    // so visible-by-default went 21 → 22 (5 default-hidden unchanged).
     assert.equal(QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS.length, 5);
-    assert.equal(QUOTE_HISTORY_COLUMN_KEYS.length - QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS.length, 21);
+    assert.equal(QUOTE_HISTORY_COLUMN_KEYS.length - QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS.length, 22);
   });
 
   test('Option C list', () => {

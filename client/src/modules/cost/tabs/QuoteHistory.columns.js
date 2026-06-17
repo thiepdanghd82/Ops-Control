@@ -46,6 +46,11 @@ export const QUOTE_HISTORY_COLUMN_KEYS = [
   'option',
   'ul',
   'owner',
+  // Sprint S-SALE-OWNER-COL (2026-06-16) — operator-entered free-text
+  // Sale Owner from Pricing (Std/Cpx) → RFQ & MOQ info sub-tab. Inserted
+  // adjacent to `owner` (NPI Owner) so the two operator-attribution
+  // columns sit together visually.
+  'sale',
   'direct_cu',
   'end_cu',
   'project',
@@ -113,6 +118,9 @@ export const QUOTE_HISTORY_SORT_FNS = {
   // stays consistent. Legacy persisted sortKey 'npi' is silently rewritten
   // to 'owner' in QuoteHistory.jsx's resilience guard.
   owner: (q) => (q.state?.npi_owner || q.npi_owner || '').toLowerCase(),
+  // Sprint S-SALE-OWNER-COL — operator-entered free-text from RFQ
+  // & MOQ info (shared RfqInfoCard); same field for Std + Cpx.
+  sale: (q) => (q.state?.sale_owner || '').toLowerCase(),
   direct_cu: (q) => (q.state?.direct_cu || '').toLowerCase(),
   // Sprint S-PROJFIX (2026-04-29) — Standard's RfqInfoCard aliases the
   // End Customer input to state.project (CalcHeader.jsx aliasMap), so
