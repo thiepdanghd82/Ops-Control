@@ -19,6 +19,12 @@ registerStrings({
   'qh.option': { en: 'OPTION', vi: 'TÙY CHỌN' },
   'qh.ul': { en: 'UL', vi: 'UL' },
   'qh.owner': { en: 'OWNER', vi: 'CHỦ' },
+  // Sprint S-INBOX-COLS (2026-06-17) — Pending Approvals "who submitted
+  // this for review" column. Renamed from "Submitted by" per Henry's
+  // hardware-verify (closer to operator vocabulary: the person who
+  // quoted the part is the same person who submits it for sales
+  // approval in the CCL workflow).
+  'qh.quoted_by': { en: 'QUOTED BY', vi: 'NGƯỜI BÁO GIÁ' },
   // Sprint S-SALE-OWNER-COL (2026-06-16) — Sale Owner column in Quote
   // History; source = state.sale_owner from RFQ & MOQ info sub-tab.
   'qh.sale_owner': { en: 'SALE OWNER', vi: 'NV BÁN HÀNG' },

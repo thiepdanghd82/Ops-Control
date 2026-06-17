@@ -399,7 +399,7 @@ export default function PendingApprovalsInbox() {
                 <Th style={{ minWidth: 130 }}>{t('qh.project')}</Th>
                 {/* Bulleted Main.Mat join, Process Mat skipped. */}
                 <Th style={{ minWidth: 180 }}>{t('qh.materials')}</Th>
-                <Th style={{ width: 100 }}>Submitted by</Th>
+                <Th style={{ width: 100 }}>{t('qh.quoted_by')}</Th>
                 <Th style={{ width: 80 }} align="right">
                   MOQ
                 </Th>
