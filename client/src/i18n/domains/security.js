@@ -85,6 +85,21 @@ registerStrings({
     en: 'New password must be different from the current one.',
     vi: 'Mật khẩu mới phải khác mật khẩu hiện tại.',
   },
+  // Hotfix MES-3-FIX-54 — post-TOTP / post-enrollment dispatch outcomes
+  // for the deferred change-password flow. The {error} interpolation
+  // carries the server's reason (e.g. "Current password incorrect").
+  'login.change.post_totp_failed': {
+    en: 'Password change failed after 2FA: {error}',
+    vi: 'Đổi mật khẩu thất bại sau xác thực 2 bước: {error}',
+  },
+  'login.change.post_enroll_ok': {
+    en: 'Password changed.',
+    vi: 'Mật khẩu đã được đổi.',
+  },
+  'login.change.post_enroll_failed': {
+    en: 'Password change after 2FA enrollment failed: {error}. Use Settings → Change password to retry.',
+    vi: 'Đổi mật khẩu sau khi kích hoạt 2FA thất bại: {error}. Vào Cài đặt → Đổi mật khẩu để thử lại.',
+  },
   'login.must_change.title': { en: 'Set a new password', vi: 'Đặt mật khẩu mới' },
   'login.must_change.body': {
     en: 'Your administrator provisioned a temporary password for this account. Please choose a new password before continuing.',
