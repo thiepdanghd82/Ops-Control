@@ -384,12 +384,18 @@ export default function PendingApprovalsInbox() {
           >
             <thead>
               <tr style={{ background: '#f4f4f4', borderBottom: '1px solid #c6c6c6' }}>
+                {/* Sprint S-INBOX-COLS rc3 (2026-06-17) — column reorder per
+                    Henry's hardware verify: AGE → RFQ → SUBMITTED → QUOTED BY
+                    → STATUS so the reviewer scan flow is "how old? → which
+                    quote? → when submitted? → who quoted? → where in the
+                    pipeline?" before the identity/financials block. */}
                 <Th style={{ width: 70 }}>Age</Th>
-                <Th style={{ width: 140 }}>Submitted</Th>
-                <Th style={{ width: 140 }}>Status</Th>
                 <Th style={{ width: 130 }}>RFQ</Th>
-                {/* Sprint S-INBOX-COLS (2026-06-17) — Sale Owner adjacent
-                    to RFQ per PR #157 admin-scan convention. */}
+                <Th style={{ width: 140 }}>Submitted</Th>
+                <Th style={{ width: 100 }}>{t('qh.quoted_by')}</Th>
+                <Th style={{ width: 140 }}>Status</Th>
+                {/* Sale Owner adjacent to identity block per PR #157
+                    admin-scan convention. */}
                 <Th style={{ width: 100 }}>{t('qh.sale_owner')}</Th>
                 <Th style={{ minWidth: 130 }}>CCL PN</Th>
                 <Th style={{ minWidth: 130 }}>Customer</Th>
@@ -399,7 +405,6 @@ export default function PendingApprovalsInbox() {
                 <Th style={{ minWidth: 130 }}>{t('qh.project')}</Th>
                 {/* Bulleted Main.Mat join, Process Mat skipped. */}
                 <Th style={{ minWidth: 180 }}>{t('qh.materials')}</Th>
-                <Th style={{ width: 100 }}>{t('qh.quoted_by')}</Th>
                 <Th style={{ width: 80 }} align="right">
                   MOQ
                 </Th>
@@ -461,18 +466,8 @@ export default function PendingApprovalsInbox() {
                         {days == null ? '—' : days === 0 ? 'today' : `${days}d`}
                       </span>
                     </Td>
-                    <Td>{fmtDateTime(item.submittedAt)}</Td>
-                    <Td>
-                      <ApprovalStatusBadge
-                        approval={item.approval}
-                        onOpenHistory={() =>
-                          setHistoryModal({
-                            approval: item.approval,
-                            label: s.ccl_pn || s.rfq_number || `#${q.id}`,
-                          })
-                        }
-                      />
-                    </Td>
+                    {/* RFQ — moved next to Age so reviewer sees quote
+                        identity immediately after the SLA badge. */}
                     <Td>
                       <button
                         onClick={() => openQuote(item)}
@@ -491,6 +486,21 @@ export default function PendingApprovalsInbox() {
                       >
                         {s.rfq_number || '—'}
                       </button>
+                    </Td>
+                    <Td>{fmtDateTime(item.submittedAt)}</Td>
+                    {/* QUOTED BY — moved next to Submitted (operator pair:
+                        "submitted when, by whom") and right before Status. */}
+                    <Td>{item.approval?.changed_by || item.approval?.submitted_by || '—'}</Td>
+                    <Td>
+                      <ApprovalStatusBadge
+                        approval={item.approval}
+                        onOpenHistory={() =>
+                          setHistoryModal({
+                            approval: item.approval,
+                            label: s.ccl_pn || s.rfq_number || `#${q.id}`,
+                          })
+                        }
+                      />
                     </Td>
                     {/* Sale Owner — derived via helper (s.sale_owner). */}
                     <Td>{dx.sale_owner || '—'}</Td>
@@ -516,7 +526,6 @@ export default function PendingApprovalsInbox() {
                     >
                       {dx.drw_materials || '—'}
                     </Td>
-                    <Td>{item.approval?.changed_by || item.approval?.submitted_by || '—'}</Td>
                     <Td align="right">{fmtNum(s.moq)}</Td>
                     {/* PRICE USD — same data as pre-fix Sell column. */}
                     <Td align="right">{fmtPrice(dx.price_usd)}</Td>
