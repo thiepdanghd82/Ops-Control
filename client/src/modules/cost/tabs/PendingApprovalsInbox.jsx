@@ -17,11 +17,13 @@ import { useMemo, useState, useCallback, useEffect } from 'react';
 import { sharedApi } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 import { useCalc } from '../../../context/CalcContext';
+import { useI18n } from '../../../utils/useI18n';
 import EmptyState from '../../../components/Shared/EmptyState';
 import SkeletonTable from '../../../components/Shared/SkeletonTable';
 import ApprovalStatusBadge from '../../../components/Shared/ApprovalStatusBadge';
 import ApprovalActionsCell from '../../../components/Shared/ApprovalActionsCell';
 import ApprovalHistoryModal from '../../../components/Shared/ApprovalHistoryModal';
+import ScopedFilterBar from '../components/ScopedFilterBar';
 import {
   availableTargetStatuses,
   canUserSetStatus,
@@ -29,8 +31,11 @@ import {
 } from '../../../utils/approvalWorkflow';
 import { useAbortableFetch } from '../../../hooks/useAbortableFetch';
 import { useAutoRefresh } from '../../../utils/useAutoRefresh';
+import { useQuoteFilters } from '../hooks/useQuoteFilters';
+import { applyQuoteFilters, quoteAccessor } from '../lib/quoteFilters';
 import { subscribeDataEvents } from '../../../services/dataEventBus';
 import { err as logErr } from '../../../utils/logger';
+import { deriveInboxRow } from './PendingApprovalsInbox.columns.helpers';
 
 // Sprint S-QUOTE-PROGRESS-V2 — the "pending" review queue collapsed
 // from {pending_sales, pending_finance} to the single quote_to_sale
@@ -76,6 +81,17 @@ function fmtPrice(v) {
     .toFixed(4)
     .replace(/\.?0+$/, '');
 }
+// en-US 0-decimals VND; '—' for null/0/non-finite. Matches the
+// fmtVnd contract in StandardCalc/CalcLeadTimeNotice.helpers.js +
+// Summarize so cross-table values render uniformly. Inlined here
+// per the surgical-scope rule rather than imported from a sibling
+// tab — keeps PendingApprovalsInbox self-contained.
+const VND_FMT = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+function fmtVnd(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n === 0) return '—';
+  return VND_FMT.format(n);
+}
 function fmtPct(v) {
   return v == null ? '—' : `${(Number(v) * 100).toFixed(1)}%`;
 }
@@ -83,8 +99,16 @@ function fmtPct(v) {
 export default function PendingApprovalsInbox() {
   const { user, hasRole } = useAuth();
   const { setPendingQuote } = useCalc();
+  const { t } = useI18n();
   const [viewMode, setViewMode] = useState('mine'); // 'mine' | 'all'
   const [historyModal, setHistoryModal] = useState(null);
+  // Shared filter infra — same hook + accessor + applyQuoteFilters as
+  // Quote History so an operator using both screens trains a single
+  // mental model (date range / customer / part / sale / global query).
+  // Filter state lives outside useAbortableFetch so 30s poll + SSE
+  // refresh don't reset it (same QuoteHistory pattern, Sprint S-D20).
+  const { filter, debouncedFilter, setField, clearField, clearAll, hasActiveFilter } =
+    useQuoteFilters();
 
   const canSeeAll = hasRole('admin');
 
@@ -160,6 +184,12 @@ export default function PendingApprovalsInbox() {
     } else {
       filtered = rows.filter((r) => PENDING_STATES.has(r.status));
     }
+    // Shared filter infra — accessor maps {q, approval, ...} item to
+    // the flat shape applyQuoteFilters expects (via quoteAccessor on
+    // the underlying quote). Applied AFTER viewMode + PENDING_STATES
+    // so the "N in my queue" counter above stays anchored to the true
+    // queue size, not the filtered subset.
+    filtered = applyQuoteFilters(filtered, debouncedFilter, (item) => quoteAccessor(item.q));
     // FIFO: oldest entry to the review queue first.
     filtered.sort((a, b) => {
       const ta = a.submittedAt ? new Date(a.submittedAt).getTime() : Infinity;
@@ -167,6 +197,21 @@ export default function PendingApprovalsInbox() {
       return ta - tb;
     });
     return filtered;
+  }, [quotes, user, viewMode, debouncedFilter]);
+
+  // Total pre-filter count for ScopedFilterBar "N of M shown" tally.
+  // Mirrors the items useMemo's pre-filter shape (viewMode applied,
+  // filter NOT applied) so the counter reads "matches out of {viewMode}
+  // queue size" — same semantic as Quote History.
+  const totalForFilter = useMemo(() => {
+    if (!Array.isArray(quotes)) return 0;
+    return quotes.filter((q) => {
+      if (!q || !q.state) return false;
+      const status = getStatus(q.state.approval);
+      if (!PENDING_STATES.has(status)) return false;
+      if (viewMode === 'mine') return canUserSetStatus(user, 'price_approved');
+      return true;
+    }).length;
   }, [quotes, user, viewMode]);
 
   const myQueueCount = useMemo(
@@ -200,7 +245,7 @@ export default function PendingApprovalsInbox() {
   if (initialLoading) {
     return (
       <div style={{ padding: 24 }}>
-        <SkeletonTable rows={8} cols={9} />
+        <SkeletonTable rows={8} cols={18} />
       </div>
     );
   }
@@ -286,15 +331,37 @@ export default function PendingApprovalsInbox() {
         </button>
       </div>
 
+      {/* Shared filter infra — global search + Date/Customer/Part/Sale
+          chips. Counter reflects filtered count vs viewMode queue size
+          (NOT my-queue/all-pending split). */}
+      <ScopedFilterBar
+        filter={filter}
+        setField={setField}
+        clearField={clearField}
+        clearAll={clearAll}
+        hasActiveFilter={hasActiveFilter}
+        resultCount={items.length}
+        totalCount={totalForFilter}
+        globalPlaceholder="Search RFQ, customer, project, materials…"
+      />
+
       {/* Empty state */}
       {items.length === 0 ? (
         <EmptyState
           icon={viewMode === 'mine' ? '✓' : '📭'}
-          title={viewMode === 'mine' ? 'All caught up' : 'No quotes in review'}
+          title={
+            hasActiveFilter
+              ? 'No matches for current filters'
+              : viewMode === 'mine'
+                ? 'All caught up'
+                : 'No quotes in review'
+          }
           hint={
-            viewMode === 'mine'
-              ? 'No quotes are waiting on your action right now. Check back later, or switch to "All pending" if you are an admin.'
-              : 'No quotes are currently in Sales or Finance review.'
+            hasActiveFilter
+              ? 'Try clearing a filter chip or the global search box above.'
+              : viewMode === 'mine'
+                ? 'No quotes are waiting on your action right now. Check back later, or switch to "All pending" if you are an admin.'
+                : 'No quotes are currently in Sales or Finance review.'
           }
         />
       ) : (
@@ -321,14 +388,34 @@ export default function PendingApprovalsInbox() {
                 <Th style={{ width: 140 }}>Submitted</Th>
                 <Th style={{ width: 140 }}>Status</Th>
                 <Th style={{ width: 130 }}>RFQ</Th>
+                {/* Sprint S-INBOX-COLS (2026-06-17) — Sale Owner adjacent
+                    to RFQ per PR #157 admin-scan convention. */}
+                <Th style={{ width: 100 }}>{t('qh.sale_owner')}</Th>
                 <Th style={{ minWidth: 130 }}>CCL PN</Th>
                 <Th style={{ minWidth: 130 }}>Customer</Th>
+                {/* END CU + PROJECT canonical readings — Lesson 21
+                    enforced via deriveInboxRow helper (NOT s.project). */}
+                <Th style={{ minWidth: 130 }}>{t('qh.end_cu')}</Th>
+                <Th style={{ minWidth: 130 }}>{t('qh.project')}</Th>
+                {/* Bulleted Main.Mat join, Process Mat skipped. */}
+                <Th style={{ minWidth: 180 }}>{t('qh.materials')}</Th>
                 <Th style={{ width: 100 }}>Submitted by</Th>
                 <Th style={{ width: 80 }} align="right">
                   MOQ
                 </Th>
+                {/* Existing "Sell" column relabeled to "PRICE USD" via
+                    qh.sell_price key — same data (s.selling_price). */}
                 <Th style={{ width: 90 }} align="right">
-                  Sell
+                  {t('qh.sell_price')}
+                </Th>
+                <Th style={{ width: 100 }} align="right">
+                  {t('qh.price_vnd')}
+                </Th>
+                <Th style={{ width: 60 }} align="right">
+                  {t('qh.va_pct')}
+                </Th>
+                <Th style={{ width: 70 }} align="right">
+                  {t('qh.contr_pct')}
                 </Th>
                 <Th style={{ width: 60 }} align="right">
                   GM%
@@ -342,10 +429,16 @@ export default function PendingApprovalsInbox() {
               {items.map((item, i) => {
                 const q = item.q;
                 const s = q.state || {};
-                const r = q.result || {};
                 const days = ageDays(item.submittedAt);
                 const ageClr = ageBadgeColor(days);
-                const gmVal = r.gm != null ? r.gm : r.gm_pct != null ? r.gm_pct / 100 : null;
+                // Derive bag — pinned to Quote History contract via
+                // deriveInboxRow helper (Lesson 21 project_name vs
+                // project, legacy contr_pct/gm_pct coerce, raw VND).
+                // Non-null guaranteed because the upstream useMemo
+                // already filters q && q.state — but the helper
+                // tolerates partial state for safety.
+                const dx = deriveInboxRow(q) || {};
+                const { gmVal, vaVal, contrVal } = dx;
                 return (
                   <tr
                     key={q.id || i}
@@ -399,13 +492,39 @@ export default function PendingApprovalsInbox() {
                         {s.rfq_number || '—'}
                       </button>
                     </Td>
+                    {/* Sale Owner — derived via helper (s.sale_owner). */}
+                    <Td>{dx.sale_owner || '—'}</Td>
                     <Td>{s.ccl_pn || '—'}</Td>
                     <Td title={`${s.direct_cu || ''} → ${s.end_cu || ''}`}>
                       {s.direct_cu || s.end_cu || '—'}
                     </Td>
+                    {/* END CU canonical (Lesson 21 fallback handled in helper). */}
+                    <Td>{dx.end_cu || '—'}</Td>
+                    {/* PROJECT canonical — s.project_name only. */}
+                    <Td>{dx.project || '—'}</Td>
+                    {/* MATERIALS — bulleted Main.Mat join (drw_material). Native
+                        title tooltip lets reviewers hover for full content
+                        without expanding the cell. */}
+                    <Td
+                      title={dx.drw_materials || ''}
+                      style={{
+                        whiteSpace: 'pre-line',
+                        maxWidth: 220,
+                        fontSize: 11,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {dx.drw_materials || '—'}
+                    </Td>
                     <Td>{item.approval?.changed_by || item.approval?.submitted_by || '—'}</Td>
                     <Td align="right">{fmtNum(s.moq)}</Td>
-                    <Td align="right">{fmtPrice(s.selling_price)}</Td>
+                    {/* PRICE USD — same data as pre-fix Sell column. */}
+                    <Td align="right">{fmtPrice(dx.price_usd)}</Td>
+                    {/* PRICE VND — raw s.selling_price_vnd, NO USD×rate
+                        fallback (helper enforces; spec test C2). */}
+                    <Td align="right">{fmtVnd(dx.price_vnd)}</Td>
+                    <Td align="right">{vaVal != null ? fmtPct(vaVal) : '—'}</Td>
+                    <Td align="right">{contrVal != null ? fmtPct(contrVal) : '—'}</Td>
                     <Td align="right">{gmVal != null ? fmtPct(gmVal) : '—'}</Td>
                     <Td align="center">
                       {item.targets.length > 0 ? (
