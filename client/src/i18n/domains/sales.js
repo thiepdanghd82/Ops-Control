@@ -19,6 +19,9 @@ registerStrings({
   'qh.option': { en: 'OPTION', vi: 'TÙY CHỌN' },
   'qh.ul': { en: 'UL', vi: 'UL' },
   'qh.owner': { en: 'OWNER', vi: 'CHỦ' },
+  // Sprint S-SALE-OWNER-COL (2026-06-16) — Sale Owner column in Quote
+  // History; source = state.sale_owner from RFQ & MOQ info sub-tab.
+  'qh.sale_owner': { en: 'SALE OWNER', vi: 'NV BÁN HÀNG' },
   'qh.direct_cu': { en: 'DIRECT CU', vi: 'KH TRỰC TIẾP' },
   'qh.end_cu': { en: 'END CU', vi: 'KH CUỐI' },
   'qh.project': { en: 'PROJECT', vi: 'DỰ ÁN' },

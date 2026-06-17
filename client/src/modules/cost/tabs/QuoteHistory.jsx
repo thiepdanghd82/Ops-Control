@@ -188,6 +188,18 @@ const QUOTE_HISTORY_COLUMNS = [
     tdClass: 'qh-d-owner',
     render: (q) => q.state?.npi_owner || q.npi_owner || '—',
   },
+  // Sprint S-SALE-OWNER-COL (2026-06-16) — Sale Owner from RFQ & MOQ
+  // info sub-tab (shared RfqInfoCard.jsx). Reads top-level state.sale_owner
+  // for both Std + Cpx. Placed next to owner (NPI) so both operator
+  // attribution columns sit together.
+  {
+    key: 'sale',
+    labelKey: 'qh.sale_owner',
+    sortable: true,
+    width: 100,
+    tdClass: 'qh-d-owner',
+    render: (q) => q.state?.sale_owner || '—',
+  },
   {
     key: 'direct_cu',
     labelKey: 'qh.direct_cu',

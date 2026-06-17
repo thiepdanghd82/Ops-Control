@@ -165,6 +165,13 @@ const SUMMARIZE_COLUMNS = [
   { key: 'gm_pct', label: 'GM%', w: 55, right: true, fmt: (v) => pct(v), color: true },
   { key: 'trade_mode', label: 'Trade', w: 60 },
   { key: 'npi_owner', label: 'NPI Owner', w: 90 },
+  // Sprint S-SALE-OWNER-COL (2026-06-16) — operator-entered free-text
+  // Sale Owner from Pricing (Std/Cpx) → RFQ & MOQ info sub-tab
+  // (shared component RfqInfoCard.jsx). Row data already populated
+  // upstream; this entry just exposes it as a visible/sortable column.
+  // CSV always-include already had `sale_owner` (line above) so the
+  // column appearance is purely a UI gap closure.
+  { key: 'sale_owner', label: 'Sale Owner', w: 100 },
   // Phase 4 — pricing-snapshot status pill (default hidden; operator
   // opts in via ColumnsToggle when auditing whether quotes are frozen
   // vs running on live rates).
@@ -624,10 +631,13 @@ export default function Summarize() {
     // SUMMARIZE_COLUMNS entries we use `c.label` so the CSV header
     // matches the on-screen column name (e.g. "End Customer" not
     // `project`, which is the internal key holding aliased text per
-    // S-PROJFIX / Lesson 21). CSV_ALWAYS_INCLUDE_KEYS (quote_id, tier,
-    // update_date, type, sale_owner) have no SUMMARIZE_COLUMNS entry;
-    // their keys are machine-style identifiers operators already
-    // recognise so we ship them as-is.
+    // S-PROJFIX / Lesson 21). Most CSV_ALWAYS_INCLUDE_KEYS (quote_id,
+    // tier, update_date, type) have no SUMMARIZE_COLUMNS entry; their
+    // keys are machine-style identifiers operators already recognise
+    // so we ship them as-is. `sale_owner` is in BOTH (Sprint S-SALE-
+    // OWNER-COL added it as a visible/sortable column) — dedupe keeps
+    // the prefix slot but colByKey.get() now hands back the friendly
+    // "Sale Owner" header instead of the raw key.
     const headers = [];
     for (const k of [...CSV_ALWAYS_INCLUDE_KEYS, ...visibleKeys]) {
       if (seen.has(k)) continue;
