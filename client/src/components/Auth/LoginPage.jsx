@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useI18n } from '../../utils/useI18n';
 import { useAuth } from '../../context/AuthContext';
+import { costApi } from '../../services/api';
+import { decideChangePwdDispatch, shouldDispatchAfterTotp } from './loginChangePwdDispatcher';
 import PwdAgeBar from './PwdAgeBar';
 import TotpEnrollment from './TotpEnrollment';
 import { showToast } from '../../utils/toast';
@@ -263,6 +265,13 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
   // marks the account `must_change_password` (after admin create or
   // reset), the change-pwd flow is locked on; the user can't dismiss it.
   const [mustChangePwd, setMustChangePwd] = useState(false);
+  // Hotfix MES-3-FIX-54 — pending password change deferred until after
+  // TOTP verify. React state (NOT localStorage/sessionStorage) so the
+  // new pwd never lands in persistent storage. Cleared on TOTP cancel
+  // and after dispatch (success OR failure) so a stale pending can't
+  // re-fire on the next login attempt. See loginChangePwdDispatcher.js
+  // for the decision contract.
+  const [pendingPwdChange, setPendingPwdChange] = useState(null);
 
   // Debounced fetch: when the username changes, look up the password
   // age so the colored bar can reflect that user's rotation status.
@@ -364,34 +373,32 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
         showToast(`⚠ ${msg}. Nếu không phải bạn, đổi mật khẩu ngay.`, 'warn');
       }
       // Phase 10L — if the user opted in to change-password on login,
-      // swap the password with the freshly issued session. Same
-      // /auth/change-pwd endpoint the Settings page uses; it's
-      // session-authenticated so the token we just received works.
-      if (changeMode) {
-        const tok = localStorage.getItem('ops_token');
-        const csrf =
-          document.cookie
-            .split(';')
-            .map((s) => s.trim())
-            .find((s) => s.startsWith('ops_csrf='))
-            ?.split('=')[1] || '';
-        const r = await fetch('/api/auth/change-pwd', {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: tok ? `Bearer ${tok}` : '',
-            'X-CSRF-Token': csrf,
-          },
-          body: JSON.stringify({ old_pwd: password, new_pwd: newPwd }),
-        });
-        const body = await r.json().catch(() => ({}));
-        if (!body.ok) throw new Error(body.msg || 'Change password failed');
+      // swap the password with the freshly issued session.
+      //
+      // Hotfix MES-3-FIX-54 — defer until AFTER TOTP verify when the
+      // login() call returned totp_required, otherwise the change-pwd
+      // POST hits the server with a pre-TOTP session token and
+      // getSessionUser() returns null → 401 → caught + swallowed
+      // because the UI has already swapped to the TOTP screen. The
+      // dispatcher helper encodes the decision; api.js's costApi.changePwd
+      // handles both localStorage AND sessionStorage tokens (replaces the
+      // pre-fix hand-rolled fetch that only read localStorage, a
+      // secondary bug when Remember-me was unchecked).
+      const dispatch = decideChangePwdDispatch({ changeMode, oldPwd: password, newPwd }, loginRes);
+      if (dispatch.action === 'defer-until-totp') {
+        // Stash for runVerifyTOTP — do NOT clear changeMode/newPwd yet
+        // since the TOTP screen takes over and the operator's intent is
+        // still pending. Cleared on cancel via wrappedCancelTotp.
+        setPendingPwdChange(dispatch.pending);
+      } else if (dispatch.action === 'change-now') {
+        await costApi.changePwd(dispatch.pending.old_pwd, dispatch.pending.new_pwd);
         // Clear change-mode fields + collapse UI; user is now in.
         setChangeMode(false);
         setNewPwd('');
         setNewPwdConfirm('');
       }
+      // dispatch.action === 'noop' — login error path already threw, or
+      // changeMode was off; nothing to do here.
     } catch (err) {
       setError(localizeAuthError(err.message, t));
     } finally {
@@ -406,13 +413,41 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
   // Extracted verify flow so the auto-fire path (onChange detects 6
   // digits) and the manual path (form submit / button click) share
   // the same code. Guarded against reentry via totpLoading.
+  //
+  // Hotfix MES-3-FIX-54 — after TOTP verify succeeds, dispatch any
+  // pendingPwdChange that was deferred from handleLogin. Server now
+  // accepts the change-pwd POST because the session has flipped to
+  // totp_verified=true. On failure surface the error inline on the
+  // TOTP screen (still mounted) instead of swallowing it like the
+  // pre-fix bug did.
   const runVerifyTOTP = async (code) => {
     if (code.length !== 6 || totpLoading) return;
     setTotpError('');
     setTotpLoading(true);
     try {
-      await verifyTOTP(effectiveUsername, code);
+      const verifyRes = await verifyTOTP(effectiveUsername, code);
       setTotpFailCount(0);
+      if (shouldDispatchAfterTotp(pendingPwdChange, verifyRes)) {
+        try {
+          await costApi.changePwd(pendingPwdChange.old_pwd, pendingPwdChange.new_pwd);
+        } catch (changeErr) {
+          // Clear pending so the operator's next login attempt isn't
+          // silently double-applied. Surface the error on the TOTP
+          // screen (still mounted because totpPending stays true until
+          // AuthContext flips user state after a full verify+meta cycle).
+          setPendingPwdChange(null);
+          setTotpError(
+            t('login.change.post_totp_failed', {
+              error: changeErr?.message || 'Change password failed',
+            }) || `Change password failed: ${changeErr?.message || 'unknown error'}`
+          );
+          throw changeErr;
+        }
+        setPendingPwdChange(null);
+        setChangeMode(false);
+        setNewPwd('');
+        setNewPwdConfirm('');
+      }
     } catch (err) {
       setTotpError(err.message || 'Invalid code');
       setTotpCode('');
@@ -424,6 +459,45 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
   const handleTOTP = (e) => {
     e.preventDefault();
     runVerifyTOTP(totpCode);
+  };
+
+  // Hotfix MES-3-FIX-54 — wrap AuthContext's cancelTotp so leaving the
+  // TOTP screen also discards any deferred pendingPwdChange. Without
+  // this the next successful login (different account, or same account
+  // with different pwd) would silently apply the OLD pending pwd
+  // change once TOTP completes — wrong account, wrong rotation.
+  const wrappedCancelTotp = () => {
+    setPendingPwdChange(null);
+    cancelTotp();
+  };
+  // Hotfix MES-3-FIX-54 — covers the rare first-login flow where the
+  // user has must_change_password=true AND needs to enroll TOTP (admin
+  // role, freshly created account, never opened the app). Dispatcher
+  // routes this case to defer-until-totp; after enrollment completes
+  // the session is totp_verified=true so we can finally POST change-pwd.
+  // Errors here surface via Toast (enrollment UI doesn't expose an
+  // error sink) — operator can re-attempt via Settings → Change password
+  // once inside the app.
+  const wrappedCompleteTotpEnrollment = async () => {
+    await completeTotpEnrollment();
+    if (pendingPwdChange) {
+      try {
+        await costApi.changePwd(pendingPwdChange.old_pwd, pendingPwdChange.new_pwd);
+        showToast(t('login.change.post_enroll_ok') || 'Password changed', 'info');
+      } catch (err) {
+        showToast(
+          t('login.change.post_enroll_failed', {
+            error: err?.message || 'unknown',
+          }) || `Password change after enrollment failed: ${err?.message || 'unknown'}`,
+          'warn'
+        );
+      } finally {
+        setPendingPwdChange(null);
+        setChangeMode(false);
+        setNewPwd('');
+        setNewPwdConfirm('');
+      }
+    }
   };
 
   // ─── Server info: dynamic version + actual server URL ────────────
@@ -553,8 +627,8 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
           <div className="cb-card" style={{ maxWidth: 560 }}>
             <TotpEnrollment
               username={enrollUsername}
-              onComplete={completeTotpEnrollment}
-              onCancel={cancelTotp}
+              onComplete={wrappedCompleteTotpEnrollment}
+              onCancel={wrappedCancelTotp}
             />
           </div>
         </div>
@@ -644,7 +718,7 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
                   setTotpCode('');
                   setTotpError('');
                   setTotpFailCount(0);
-                  cancelTotp();
+                  wrappedCancelTotp();
                 }}
               >
                 ← Back to login
