@@ -115,6 +115,21 @@ async function main() {
     }
   }
 
+  // Prebuild client bundle — electron-builder packages `client/dist`
+  // via extraResources. Without this step, edits made on disk since the
+  // last `vite build` ship STALE inside the installer even though the
+  // source file looks current. MES-3-FIX-55 (2026-06-17) — mirror of
+  // the Mac installer fix; same trap exists on Windows.
+  if (!process.env.OPS_SKIP_CLIENT_REBUILD) {
+    console.log('Prebuild: rebuilding client bundle (vite build)...');
+    await spawnP('npm', ['--prefix', path.join(ROOT, 'client'), 'run', 'build'], { cwd: ROOT });
+    console.log('  ✓ client/dist refreshed.\n');
+  } else {
+    console.warn(
+      '⚠  OPS_SKIP_CLIENT_REBUILD=1 — skipping client bundle rebuild (emergency override).'
+    );
+  }
+
   // Preflight — verify every asar-unpacked native package has its
   // extraResources overlay. Without this, outside-asar code (the
   // embedded server) loads the wrong-ABI binary at runtime. See
