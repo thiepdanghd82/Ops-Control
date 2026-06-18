@@ -14,8 +14,8 @@
  *   00 Table of Contents
  *   02 Header Tab
  *   03 Layout Tab
- *   04 Materials Tab
- *   05 Processes Tab   (includes the Inks sub-module)
+ *   04 Materials section   (inside the Materials & Process tab)
+ *   05 Processes + Inks section   (inside the Materials & Process tab)
  *   06 Packing & KPIs
  *   07 Reference Tables
  *   08 Master Formulas (47 total)
@@ -164,8 +164,8 @@ const SECTIONS = [
   { id: 'toc', num: '00', title: 'Table of Contents', vi: 'Mục lục' },
   { id: 'header', num: '02', title: 'Header Tab', vi: 'Tab RFQ & MOQ' },
   { id: 'layout', num: '03', title: 'Layout Tab', vi: 'Tab Layout' },
-  { id: 'mat', num: '04', title: 'Materials Tab', vi: 'Tab Vật tư' },
-  { id: 'proc', num: '05', title: 'Processes + Inks', vi: 'Tab Công đoạn + Mực' },
+  { id: 'mat', num: '04', title: 'Materials section', vi: 'Mục Vật tư' },
+  { id: 'proc', num: '05', title: 'Processes + Inks section', vi: 'Mục Công đoạn + Mực' },
   { id: 'pack', num: '06', title: 'Packing & KPIs', vi: 'Đóng gói & KPI' },
   { id: 'ref', num: '07', title: 'Reference Tables', vi: 'Bảng tra cứu' },
   { id: 'master', num: '08', title: 'Master Formulas', vi: '41 công thức' },
@@ -423,23 +423,58 @@ export default function CalcLegend() {
             </p>
           </header>
 
-          <Callout type="tip" title="✅ Audit provenance · Xuất xứ kiểm chứng">
+          <Callout
+            type="tip"
+            title="✅ Audit provenance · Xuất xứ kiểm chứng"
+            bodyVi={
+              <>
+                Mọi công thức trong tài liệu này đã được đối chiếu với engine sống tại{' '}
+                <code className="cl-ic">client/src/services/calcEngine.js</code> vào ngày{' '}
+                <b>{new Date().toISOString().slice(0, 10)}</b>. Khi training xlsx cũ (v3.3) lệch với
+                code, engine thắng; điểm đã sửa được đánh dấu <b>⚠ Corrected</b>. Các hàm tính
+                chính:{' '}
+                <code className="cl-ic">
+                  calcPitch · calcLayoutPerSheet · calcQPA_LM · calcMat · calcInk · calcProcess ·
+                  calcPacking · calcShipping · calcAll · computeSga
+                </code>
+                ; danh sách export đầy đủ (helpers, factories, aggregators như{' '}
+                <code>aggregateComplex</code>, <code>buildStdRowsPayload</code>,{' '}
+                <code>buildTierState</code>, <code>createStdState</code>,{' '}
+                <code>serializeResultForPersist</code> …) — xem trực tiếp trong{' '}
+                <code className="cl-ic">calcEngine.js</code>.
+              </>
+            }
+          >
             Every formula in this Legend has been cross-checked against the live engine at{' '}
             <code className="cl-ic">client/src/services/calcEngine.js</code> on{' '}
             <b>{new Date().toISOString().slice(0, 10)}</b>. Where the legacy training xlsx (v3.3)
             had drifted from code, the engine wins; corrected items are tagged <b>⚠ Corrected</b>.
-            The engine's public functions are:{' '}
+            The engine's main calc functions are:{' '}
             <code className="cl-ic">
               calcPitch · calcLayoutPerSheet · calcQPA_LM · calcMat · calcInk · calcProcess ·
               calcPacking · calcShipping · calcAll · computeSga
             </code>
-            .
+            ; the full public export list (helpers, factories, aggregators such as{' '}
+            <code>aggregateComplex</code>, <code>buildStdRowsPayload</code>,{' '}
+            <code>buildTierState</code>, <code>createStdState</code>,{' '}
+            <code>serializeResultForPersist</code> …) — see{' '}
+            <code className="cl-ic">calcEngine.js</code> directly for the canonical list.
           </Callout>
 
           <Callout
             type="warn"
             title="⚠ 14 corrections applied vs. xlsx v3.3"
             titleVi="⚠ 14 điểm đã sửa so với xlsx v3.3"
+            bodyVi={
+              <>
+                Các điểm lệch chính mà audit phát hiện: VA% / CONTR% / GM% dùng <b>S.Total</b> (cơ
+                sở supplier) — không phải G.Total như xlsx nói (đồng bộ Finance Sprint 21). Offcut
+                dùng <b>(Cavities MOD Width) / Cavities</b> — không phải công thức log-width.
+                Overhead / Labor mà <code>calcAll</code> trả về là <b>chỉ phần Run</b>; phần Setup
+                được tách riêng. Và module SGA (Sprint 9D) hoàn toàn không có trong xlsx — lần đầu
+                được tài liệu hóa tại đây.
+              </>
+            }
           >
             Major drift points the audit surfaced: VA% / CONTR% / GM% use <b>S.Total</b>
             (supplier basis) — not G.Total as the xlsx states (Sprint 21 Finance alignment). Offcut
@@ -512,26 +547,26 @@ export default function CalcLegend() {
                 {
                   value: (
                     <code className="cl-ic">
-                      s_mat_cost + overhead + labor_cost + vat_loss + tooling + proc_extra +
-                      packing_ship
+                      s_mat_cost + overhead + labor_cost + vat_loss + proc_extra_vat + tooling +
+                      proc_extra + packing_ship
                     </code>
                   ),
                   mono: true,
                 },
-                { value: '✅ Verified — primary basis for GM.' },
+                { value: '✅ Verified — primary basis for GM. Includes proc_extra_vat.' },
               ],
               [
                 { value: <b>G.TOTAL COST</b> },
                 {
                   value: (
                     <code className="cl-ic">
-                      g_mat_cost + overhead + labor_cost + vat_loss + tooling + proc_extra +
-                      packing_ship
+                      g_mat_cost + overhead + labor_cost + vat_loss + proc_extra_vat + tooling +
+                      proc_extra + packing_ship
                     </code>
                   ),
                   mono: true,
                 },
-                { value: '✅ Verified — purchase-price basis.' },
+                { value: '✅ Verified — purchase-price basis. Includes proc_extra_vat.' },
               ],
               [
                 { value: <b>UPH (m/min)</b> },
@@ -1728,14 +1763,14 @@ effective_uph = base_uph × cut_type_factor`}
           </Callout>
         </section>
 
-        {/* 04 — Materials Tab */}
+        {/* 04 — Materials section (inside the Materials & Process tab) */}
         <section id="sec-mat" className="cl-section">
           <header className="cl-section-header">
             <div className="cl-section-tag">04</div>
             <h2>
               <BiHead
-                en="Materials Tab — Cost Formulas"
-                vi="Tab Materials — Công thức chi phí vật tư"
+                en="Materials section — Cost Formulas (Materials & Process tab)"
+                vi="Mục Vật tư — Công thức chi phí vật tư (tab Vật tư & Công đoạn)"
               />
             </h2>
             <p className="cl-section-sub">
@@ -1973,14 +2008,14 @@ g_mat_cost = Σ(setup_g + run_g) [materials]  +  Σ(setup_s + run_s) [inks]`}
           />
         </section>
 
-        {/* 05 — Processes Tab */}
+        {/* 05 — Processes + Inks section (inside the Materials & Process tab) */}
         <section id="sec-proc" className="cl-section">
           <header className="cl-section-header">
             <div className="cl-section-tag">05</div>
             <h2>
               <BiHead
-                en="Processes Tab — Machine · Labor · Tooling"
-                vi="Tab Processes — Máy · Nhân công · Khuôn"
+                en="Processes + Inks section — Machine · Labor · Tooling (Materials & Process tab)"
+                vi="Mục Công đoạn + Mực — Máy · Nhân công · Khuôn (tab Vật tư & Công đoạn)"
               />
             </h2>
             <p className="cl-section-sub">
@@ -2129,8 +2164,8 @@ g_mat_cost = Σ(setup_g + run_g) [materials]  +  Σ(setup_s + run_s) [inks]`}
                 {
                   value: (
                     <BiRow
-                      en="Knife / Etching / Carving / Metal / Rotary / Stencil / Pressplate / Jig / CNC / RDC"
-                      vi="Knife / Etching / Carving / Metal / Rotary / Stencil / Pressplate / Jig / CNC / RDC"
+                      en="Knife / Etching / Carving / Metal / Rotary / Stencil / Pressplate / Jig / CNC / Pinnacle Die / RDC (driven by DDL — see §07 Tool Life table)"
+                      vi="Knife / Etching / Carving / Metal / Rotary / Stencil / Pressplate / Jig / CNC / Pinnacle Die / RDC (lấy từ DDL — xem bảng tuổi thọ khuôn §07)"
                     />
                   ),
                 },
@@ -2305,6 +2340,73 @@ extra_vat = (trade_mode === 'USD(Book)') ? extra × 0.15 : 0`}
             expr="= Container/unit + Box/unit + Other + Shipping/unit"
           />
 
+          <Callout
+            type="note"
+            title="📌 Per-tier Pack & Ship override (Sprint S-PACK-SHIP-PER-TIER)"
+            titleVi="📌 Override Pack & Ship theo từng MOQ tier (Sprint S-PACK-SHIP-PER-TIER)"
+            bodyVi={
+              <>
+                Mỗi MOQ tier có thể override 5 trường pack/ship một cách độc lập (
+                <code>container_cost</code>, <code>box_cost</code>, <code>other_packing</code>,{' '}
+                <code>shipping_cost</code>, <code>other_ship</code>):
+                <ul>
+                  <li>
+                    Tier &gt; 0 <b>kế thừa</b> từ MOQ 1 trừ khi có{' '}
+                    <code>extra_moqs[i].packing.&lt;field&gt;</code>.
+                  </li>
+                  <li>
+                    Giá trị <b>0 tường minh</b> được giữ nguyên — <em>không</em> bị coi là falsy để
+                    fallback.
+                  </li>
+                  <li>
+                    Nhập <b>chuỗi rỗng</b> <code>''</code> sẽ <b>xóa override</b> và kế thừa lại.
+                  </li>
+                  <li>
+                    Tín hiệu hình ảnh: <code className="cl-ic">.sc-pack-tier-ovr</code> (tím + đậm)
+                    = override do operator nhập;{' '}
+                    <code className="cl-ic">.sc-pack-tier-inherit</code> (xám + nghiêng) = kế thừa;
+                    nút ↻ reset cạnh ô input chỉ hiện khi đang override.
+                  </li>
+                  <li>
+                    Implementation: <code>resolveTierField()</code> trong{' '}
+                    <code className="cl-ic">services/packingTierField.js</code> +{' '}
+                    <code>buildTierState()</code> tại <code className="cl-ic">calcEngine.js</code>.
+                    Tham khảo chéo Sprint S-PACK-SHIP-PER-TIER trong CLAUDE.md.
+                  </li>
+                </ul>
+              </>
+            }
+          >
+            Each MOQ tier can override the 5 pack/ship fields (<code>container_cost</code>,{' '}
+            <code>box_cost</code>, <code>other_packing</code>, <code>shipping_cost</code>,{' '}
+            <code>other_ship</code>) independently of the base MOQ 1 values:
+            <ul>
+              <li>
+                Tier &gt; 0 <b>inherits</b> from MOQ 1 unless{' '}
+                <code>extra_moqs[i].packing.&lt;field&gt;</code> is present.
+              </li>
+              <li>
+                An <b>explicit 0</b> is preserved (<em>not</em> treated as falsy / inherit).
+              </li>
+              <li>
+                Entering an <b>empty string</b> <code>''</code> deletes the override and re-inherits
+                from the base.
+              </li>
+              <li>
+                Visual cues: <code className="cl-ic">.sc-pack-tier-ovr</code> (violet + bold) =
+                operator override; <code className="cl-ic">.sc-pack-tier-inherit</code> (gray +
+                italic) = inherited; the ↻ reset button next to the input only appears when an
+                override exists.
+              </li>
+              <li>
+                Implementation: <code>resolveTierField()</code> in{' '}
+                <code className="cl-ic">services/packingTierField.js</code> +{' '}
+                <code>buildTierState()</code> in <code className="cl-ic">calcEngine.js</code>. See
+                Sprint S-PACK-SHIP-PER-TIER in CLAUDE.md for the full contract.
+              </li>
+            </ul>
+          </Callout>
+
           <h3>
             <BiHead
               en="B. Summary KPIs (verified from calcAll())"
@@ -2315,6 +2417,16 @@ extra_vat = (trade_mode === 'USD(Book)') ? extra × 0.15 : 0`}
             type="warn"
             title="⚠ Sprint 21 Finance alignment — xlsx is stale"
             titleVi="⚠ Đồng bộ Sprint 21 theo Finance — xlsx đã lỗi thời"
+            bodyVi={
+              <>
+                Trước Sprint 21, VA% / CONTR% / GM% dùng <code>g_mat_cost</code> +{' '}
+                <code>g_ttl</code> — nhưng các giá trị này không khớp với UI Cost Breakdown vốn hiển
+                thị các cột supplier-price. Finance yêu cầu đồng bộ: engine sống hiện tính cả ba từ
+                tổng <b>s_*</b> (supplier). Xlsx v3.3 vẫn tài liệu hóa công thức cũ theo G-basis.
+                Quote cũ phân tích lại sau Sprint 21 có thể cho KPI hơi khác — đây là phần đã được
+                Finance ký duyệt sửa lại.
+              </>
+            }
           >
             Prior to Sprint 21, VA% / CONTR% / GM% used <code>g_mat_cost</code> +<code>g_ttl</code>{' '}
             — but those didn't reconcile with the Cost Breakdown UI which shows supplier-price
@@ -2428,6 +2540,29 @@ extra_vat = (trade_mode === 'USD(Book)') ? extra × 0.15 : 0`}
             type="warn"
             title="⚠ Critical interpretation difference"
             titleVi="⚠ Khác biệt diễn giải quan trọng"
+            bodyVi={
+              <>
+                Xlsx nói <code>Overhead = Σ(Run_Machine + Setup_Machine)</code>. Còn object trả về
+                từ <code>calcAll()</code> trong engine là:
+                <ul>
+                  <li>
+                    <code>overhead: overhead − setup_mach_total</code> → <b>CHỈ Run machine</b>
+                  </li>
+                  <li>
+                    <code>labor_cost: labor_cost − setup_labor_total</code> → <b>CHỈ Run labor</b>
+                  </li>
+                  <li>
+                    <code>bd_setup_mach: setup_mach_total</code> — phần setup tách riêng
+                  </li>
+                  <li>
+                    <code>bd_setup_labor: setup_labor_total</code> — phần setup tách riêng
+                  </li>
+                </ul>
+                Nên khi tab Cost Breakdown hiển thị "Overhead", đó là phần RUN. Setup được tách ra
+                dòng riêng. S.TOTAL vẫn cộng CẢ HAI (qua biểu thức tổng ở trên), nên GM% không đổi —
+                đây chỉ là sửa độ chi tiết khi báo cáo.
+              </>
+            }
           >
             The xlsx said <code>Overhead = Σ(Run_Machine + Setup_Machine)</code>. The engine's{' '}
             <code>calcAll()</code> return object has:
