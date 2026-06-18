@@ -4946,7 +4946,11 @@ export const HELP_CONTENT = {
         'Quên Gap khiến Materials ước lượng sử dụng quá cao — báo giá sẽ lạc quan.'
       ),
     ],
-    relatedTabs: ['standard', 'standard-material', 'standard-process'],
+    // Sprint S-PRICING-COMBINED-P2 — 3 standalone Mat/Ink/Process tabs
+    // retired; pivot cross-link to 'standard-combined' (the new primary
+    // entry point). The 3 standalone help entries still exist as section
+    // documentation, reachable via search.
+    relatedTabs: ['standard', 'standard-combined'],
     screenshot: null,
   },
 
@@ -5056,7 +5060,10 @@ export const HELP_CONTENT = {
         ]
       ),
     ],
-    relatedTabs: ['standard', 'standard-layout', 'lib-mat'],
+    // Sprint S-PRICING-COMBINED-P2 — Materials section now lives inside
+    // the merged "Materials & Process" tab. Add standard-combined as
+    // primary navigation target; keep 'standard' top-level + cross-links.
+    relatedTabs: ['standard-combined', 'standard', 'standard-layout', 'lib-mat'],
     screenshot: null,
   },
 
@@ -5145,7 +5152,9 @@ export const HELP_CONTENT = {
         'Container query @900px xếp dọc 7 ô thành card view cho viewport hẹp / sidebar collapse.'
       ),
     ],
-    relatedTabs: ['standard', 'standard-process', 'quote-history'],
+    // Sprint S-PRICING-COMBINED-P2 — pivot to standard-combined (new
+    // primary tab); standard-process still reachable via search.
+    relatedTabs: ['standard', 'standard-combined', 'quote-history'],
   },
 
   'standard-inks': {
@@ -5213,7 +5222,9 @@ export const HELP_CONTENT = {
         ),
       ]),
     ],
-    relatedTabs: ['standard', 'ink-calc', 'print-area'],
+    // Sprint S-PRICING-COMBINED-P2 — Inks section now lives inside the
+    // merged "Materials & Process" tab. standard-combined as primary nav.
+    relatedTabs: ['standard-combined', 'standard', 'ink-calc', 'print-area'],
     screenshot: null,
   },
 
@@ -5290,25 +5301,28 @@ export const HELP_CONTENT = {
         ),
       ]),
     ],
-    relatedTabs: ['standard', 'standard-balancing', 'lib-rop', 'lib-rate'],
+    // Sprint S-PRICING-COMBINED-P2 — Processes section now lives inside
+    // the merged "Materials & Process" tab. standard-combined as primary nav.
+    relatedTabs: ['standard-combined', 'standard', 'standard-balancing', 'lib-rop', 'lib-rate'],
     screenshot: null,
   },
 
   'standard-combined': {
     id: 'standard-combined',
     section: 'CALCULATORS',
-    title: bi(
-      'Pricing Worksheet — Combined view (Materials + Inks + Processes)',
-      'Bảng tính giá — Tổng hợp (Vật tư + Mực + Công đoạn)'
-    ),
+    // Sprint S-PRICING-COMBINED-P2 (2026-06-18) — this is now the PRIMARY
+    // pricing-phase tab. The 3 standalone tabs (Materials / Inks /
+    // Processes) were retired; their help entries remain as section-level
+    // documentation but the operator-facing tab is "Materials & Process".
+    title: bi('Pricing Worksheet — Materials & Process', 'Bảng tính giá — Vật tư & Công đoạn'),
     function: bi(
-      'Render all 3 pricing-phase calculators in one scrollable surface',
-      'Render cả 3 calculator pricing trong một surface cuộn dọc'
+      'Sole pricing-phase surface for Standard quote — Materials + Inks + Processes stacked in one scrollable tab',
+      'Surface pricing-phase duy nhất cho báo giá Standard — Vật tư + Mực + Công đoạn xếp chồng trong một tab cuộn dọc'
     ),
-    path: 'Ops Cost > Pricing (Std) > Combined',
+    path: 'Ops Cost > Pricing (Std) > Materials & Process',
     purpose: bi(
-      'Single view that stacks the Material, Inks, and Processes sub-tabs so the operator scrolls once instead of clicking 3 tabs. Mirrors the Cpx SubProductRow layout. The 3 originals stay available unchanged for muscle memory + F1 deep-links.',
-      'Một view duy nhất xếp chồng 3 sub-tab Material, Inks, Processes để operator chỉ cuộn một lần thay vì click 3 tab. Giống layout SubProductRow của Cpx. 3 tab gốc vẫn giữ nguyên cho muscle memory + F1 deep-link.'
+      'Replaces the 3 retired sub-tabs (Materials / Inks / Processes — retired in Phase 2 of S-PRICING-COMBINED roadmap). Renders all three sections stacked under bold section headings; cross-section live updates work because all 3 share the same React state via useCalc(). Mirrors the Cpx SubProductRow layout.',
+      'Thay thế 3 sub-tab đã gỡ (Materials / Inks / Processes — gỡ ở Phase 2 của lộ trình S-PRICING-COMBINED). Render cả 3 section xếp chồng dưới heading section in đậm; cross-section live update hoạt động vì cả 3 dùng chung React state qua useCalc(). Giống layout SubProductRow của Cpx.'
     ),
     whenToUse: bi(
       'When you want to see all pricing-phase data without tab-switching — useful for cross-section sanity checks (e.g. process workcenter ↔ ink RUN cost live update) or for a guided walk-through with a reviewer.',
@@ -5337,15 +5351,17 @@ export const HELP_CONTENT = {
           'Sửa workcenter công đoạn → ink RUN cost trên cùng màn hình cập nhật ngay (không cần chuyển tab). Cả 3 section dùng chung React state qua useCalc().'
         ),
       ]),
-      proc('When to use the originals', 'Khi nào dùng tab gốc', null, [
+      proc('Section deep dives', 'Tra cứu chi tiết từng section', null, [
         bs(
-          'The 3 standalone tabs (Materials / Inks / Processes) remain available — use them when you want a focused view (less scrolling) or when training a new operator who learned the tab-by-tab workflow first.',
-          '3 tab độc lập (Materials / Inks / Processes) vẫn còn — dùng khi muốn view tập trung (ít cuộn hơn) hoặc khi training operator mới học workflow tab-by-tab trước.'
+          'For deep field-by-field documentation of each section, see the Materials / Inks / Processes help entries via search — they retain the original detail content from when those were standalone tabs.',
+          'Để tra cứu chi tiết từng field của mỗi section, mở các help entry Materials / Inks / Processes qua search — chúng giữ nguyên nội dung chi tiết từ thời còn là tab độc lập.'
         ),
       ]),
     ],
-    // Sprint S-PRICING-COMBINED-P1 — links to all 3 original entries so
-    // F1 from Combined surfaces deep dives for each section.
+    // Sprint S-PRICING-COMBINED-P2 — the 3 standalone help entries
+    // remain as section documentation (reachable via search). Listed
+    // first as related-tabs because they're the per-section deep dives;
+    // 'standard' is the parent calculator entry.
     relatedTabs: ['standard-material', 'standard-inks', 'standard-process', 'standard'],
     screenshot: null,
   },
@@ -5403,7 +5419,9 @@ export const HELP_CONTENT = {
         ),
       ]),
     ],
-    relatedTabs: ['standard-process', 'standard'],
+    // Sprint S-PRICING-COMBINED-P2 — Balancing reads Process data which
+    // now lives inside the merged "Materials & Process" tab.
+    relatedTabs: ['standard-combined', 'standard'],
     screenshot: null,
   },
 

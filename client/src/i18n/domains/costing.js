@@ -20,7 +20,11 @@ registerStrings({
   // scrollable surface. Tab label + 3 section headings live here so
   // future Phase 2 (retire 3 originals) can flip references without
   // touching component code.
-  'pricing.tab.combined': { en: 'Combined', vi: 'Tổng hợp' },
+  // Sprint S-PRICING-COMBINED-P2 (2026-06-18) — Phase 2 renamed the
+  // tab now that it's the sole pricing-phase surface (3 standalone
+  // tabs retired). Key id stays 'pricing.tab.combined' so callers
+  // (StandardCalc.jsx SUB_TABS labelKey) keep working without churn.
+  'pricing.tab.combined': { en: 'Materials & Process', vi: 'Vật tư & Công đoạn' },
   'pricing.section.materials': { en: 'Materials', vi: 'Vật tư' },
   'pricing.section.inks': { en: 'Inks', vi: 'Mực in' },
   'pricing.section.processes': { en: 'Processes', vi: 'Công đoạn' },

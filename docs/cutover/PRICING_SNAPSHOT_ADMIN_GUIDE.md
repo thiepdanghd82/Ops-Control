@@ -67,19 +67,19 @@ Every exported xlsx (variant `internal` AND `customer`) has tab `10 Pricing Snap
 
 Mọi xlsx export (variant `internal` VÀ `customer`) có tab `10 Pricing Snapshot` với 11 dòng metadata freeze. Auditor có thể kiểm tra freeze status mà không mở app.
 
-| Row · Dòng         | Value semantics · Ý nghĩa |
-| ------------------ | ------------------------- |
-| Quote ID           | quote.id |
-| Quote saved at     | quote.saved_at (ISO → local time format) |
-| Pricing captured at | snapshot._captured_at (or `—`) |
-| Pricing captured by | snapshot._captured_by (or `—`) |
-| Site               | snapshot._site (or `—`) |
-| Library version    | snapshot._lib_version (or `—`) |
-| Snapshot status    | `Frozen at save time` / `Live rates (no snapshot persisted)` / `No snapshot` |
-| Materials frozen   | count keys in snapshot.materials |
-| Workcenters frozen | count keys in snapshot.rates |
-| Coverage rows      | length of snapshot.coverage array |
-| Warnings           | `—` or newline-separated message list |
+| Row · Dòng          | Value semantics · Ý nghĩa                                                    |
+| ------------------- | ---------------------------------------------------------------------------- |
+| Quote ID            | quote.id                                                                     |
+| Quote saved at      | quote.saved_at (ISO → local time format)                                     |
+| Pricing captured at | snapshot.\_captured_at (or `—`)                                              |
+| Pricing captured by | snapshot.\_captured_by (or `—`)                                              |
+| Site                | snapshot.\_site (or `—`)                                                     |
+| Library version     | snapshot.\_lib_version (or `—`)                                              |
+| Snapshot status     | `Frozen at save time` / `Live rates (no snapshot persisted)` / `No snapshot` |
+| Materials frozen    | count keys in snapshot.materials                                             |
+| Workcenters frozen  | count keys in snapshot.rates                                                 |
+| Coverage rows       | length of snapshot.coverage array                                            |
+| Warnings            | `—` or newline-separated message list                                        |
 
 Distinct from the hidden `_Audit` sheet (MVP-2 forensic — HMAC + payload hash). Both ship with every export.
 
@@ -195,7 +195,7 @@ The Prometheus endpoint is part of the existing `server/index.js` exposure (Spri
 ## 7. Going forward · Kế hoạch tiếp theo
 
 - Phase 5 (this work) — pre-go-live UAT, docs, metrics, benchmark. Lands 2026-06-10 → 2026-06-15.
-- Phase 6 (post-go-live) — stage rollout → production cut-over → CCL Vietnam Hai Duong go-live 2026-07-21.
+- Phase 6 (post-go-live) — stage rollout → production cut-over → CCL Vietnam Hai Duong go-live 2026-07-30.
 - Backlog ticket if needed — MES-3-FIX-48 (xlsx sheet 11-leadtime, parallel surface to `10 Pricing Snapshot`).
 
 ---

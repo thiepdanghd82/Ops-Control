@@ -21,7 +21,7 @@ Hệ thống Ops Control sẽ được nâng cấp lên phiên bản v1.6 vào:
 Trong khung giờ này, hệ thống sẽ không truy cập được. Các quote / báo giá
 đang mở cần được lưu trước 21:30.
 
-Phiên bản v1.6 đưa vào hoạt động chính thức Thứ Hai 2026-07-21 sáng,
+Phiên bản v1.6 đưa vào hoạt động chính thức Thứ Năm 2026-07-30 sáng,
 kèm buổi training 1-2 giờ cho operator.
 
 Cập nhật chính:
@@ -50,7 +50,7 @@ Ops Control will be upgraded to version v1.6 on:
 System will be unavailable during this window. Open quotes must be
 saved before 21:30.
 
-Version v1.6 officially goes live Monday morning 2026-07-21 with a
+Version v1.6 officially goes live Thursday morning 2026-07-30 with a
 1–2 hour operator training session.
 
 Key changes:
@@ -79,7 +79,7 @@ Ngày mai (Thứ Bảy 2026-07-18) 22:00 ICT, hệ thống Ops Control sẽ
 
 • Vui lòng lưu tất cả quote đang mở trước 21:30
 • Hệ thống không truy cập được từ 22:00 — 23:00
-• Sáng Thứ Hai 2026-07-21 sẽ có training session cho operator
+• Sáng Thứ Năm 2026-07-30 sẽ có training session cho operator
 
 Henry on-call suốt đêm Thứ Bảy: +84 [Henry's phone]
 
@@ -97,7 +97,7 @@ upgraded to v1.6.
 
 • Please save all open quotes before 21:30
 • System unavailable from 22:00 — 23:00
-• Monday morning 2026-07-21 → operator training session
+• Thursday morning 2026-07-30 → operator training session
 
 Henry on-call through Saturday night: +84 [Henry's phone]
 
@@ -154,7 +154,7 @@ Ops Control v1.6 đã chính thức online lúc 23:00 ICT.
 
 Login bình thường. Nếu thấy lỗi gì, ping Henry ngay.
 
-Sáng Thứ Hai (2026-07-21) 09:00 sẽ có training session 1-2 giờ
+Sáng Thứ Năm (2026-07-30) 09:00 sẽ có training session 1-2 giờ
 giới thiệu các tính năng mới.
 
 Cảm ơn anh/chị đã kiên nhẫn,
@@ -170,7 +170,7 @@ Ops Control v1.6 went live at 23:00 ICT.
 
 Login as normal. Ping Henry immediately if you see any issue.
 
-Monday morning (2026-07-21) 09:00 → 1–2 hour training session
+Thursday morning (2026-07-30) 09:00 → 1–2 hour training session
 on the new features.
 
 Thank you for your patience,
@@ -216,14 +216,14 @@ Henry
 
 ---
 
-## ⑤ Monday morning — Training session announcement (Mon 2026-07-21 08:00)
+## ⑤ Thursday morning — Training session announcement (Thu 2026-07-30 08:00)
 
 ### 🇻🇳
 
 ```
 🌅 CHÀO BUỔI SÁNG — OPS CONTROL v1.6 ĐÃ LIVE
 
-Hôm nay (Thứ Hai 2026-07-21) chính thức là ngày đầu tiên Ops Control
+Hôm nay (Thứ Năm 2026-07-30) chính thức là ngày đầu tiên Ops Control
 v1.6 vận hành.
 
 📌 Training session 09:00 — 10:30 ICT
@@ -243,7 +243,7 @@ Henry
 ```
 🌅 GOOD MORNING — OPS CONTROL v1.6 LIVE
 
-Today (Monday 2026-07-21) is the official first day of Ops Control
+Today (Thursday 2026-07-30) is the official first day of Ops Control
 v1.6 in production.
 
 📌 Training session 09:00 — 10:30 ICT
