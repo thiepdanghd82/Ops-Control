@@ -15,6 +15,16 @@
 import { registerStrings } from '../strings.js';
 
 registerStrings({
+  // Sprint S-PRICING-COMBINED-P1 (2026-06-17) — Combined sub-tab on
+  // Pricing (Std) that stacks Materials / Inks / Processes in one
+  // scrollable surface. Tab label + 3 section headings live here so
+  // future Phase 2 (retire 3 originals) can flip references without
+  // touching component code.
+  'pricing.tab.combined': { en: 'Combined', vi: 'Tổng hợp' },
+  'pricing.section.materials': { en: 'Materials', vi: 'Vật tư' },
+  'pricing.section.inks': { en: 'Inks', vi: 'Mực in' },
+  'pricing.section.processes': { en: 'Processes', vi: 'Công đoạn' },
+
   // Pricing breakdown columns
   'pricing.tier': { en: 'Tier', vi: 'Bậc' },
   'pricing.moq': { en: 'MOQ', vi: 'MOQ' },

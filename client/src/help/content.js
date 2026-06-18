@@ -5294,6 +5294,62 @@ export const HELP_CONTENT = {
     screenshot: null,
   },
 
+  'standard-combined': {
+    id: 'standard-combined',
+    section: 'CALCULATORS',
+    title: bi(
+      'Pricing Worksheet — Combined view (Materials + Inks + Processes)',
+      'Bảng tính giá — Tổng hợp (Vật tư + Mực + Công đoạn)'
+    ),
+    function: bi(
+      'Render all 3 pricing-phase calculators in one scrollable surface',
+      'Render cả 3 calculator pricing trong một surface cuộn dọc'
+    ),
+    path: 'Ops Cost > Pricing (Std) > Combined',
+    purpose: bi(
+      'Single view that stacks the Material, Inks, and Processes sub-tabs so the operator scrolls once instead of clicking 3 tabs. Mirrors the Cpx SubProductRow layout. The 3 originals stay available unchanged for muscle memory + F1 deep-links.',
+      'Một view duy nhất xếp chồng 3 sub-tab Material, Inks, Processes để operator chỉ cuộn một lần thay vì click 3 tab. Giống layout SubProductRow của Cpx. 3 tab gốc vẫn giữ nguyên cho muscle memory + F1 deep-link.'
+    ),
+    whenToUse: bi(
+      'When you want to see all pricing-phase data without tab-switching — useful for cross-section sanity checks (e.g. process workcenter ↔ ink RUN cost live update) or for a guided walk-through with a reviewer.',
+      'Khi muốn nhìn toàn bộ data pricing-phase mà không cần chuyển tab — hữu ích cho cross-section sanity check (vd workcenter công đoạn ↔ ink RUN cost cập nhật live) hoặc walk-through cùng reviewer.'
+    ),
+    preRequisites: [
+      br(
+        'Layout sub-tab completed; Material Library populated.',
+        'Sub-tab Layout đã xong; Material Library đã có data.'
+      ),
+    ],
+    procedures: [
+      proc('Scrolling pattern', 'Mẫu cuộn dọc', null, [
+        bs(
+          'Sections appear in workflow order: Materials → Inks → Processes. Bold section headings mark each phase boundary.',
+          'Các section xuất hiện theo thứ tự workflow: Vật tư → Mực → Công đoạn. Heading section in đậm đánh dấu ranh giới mỗi phase.'
+        ),
+        bs(
+          'All field inputs (Materials usage, Ink AREA%, Process setup_h, etc.) behave identically to the standalone sub-tabs — same warnings (red borders), same alt-materials toggle, same MOQ-tier override bar.',
+          'Tất cả input (Usage vật tư, AREA% mực, setup_h công đoạn, v.v.) hoạt động giống hệt sub-tab độc lập — cùng warning (viền đỏ), cùng alt-materials toggle, cùng MOQ-tier override bar.'
+        ),
+      ]),
+      proc('Cross-section live update', 'Cập nhật live giữa các section', null, [
+        bs(
+          'Edit a process workcenter → the ink RUN cost on the same screen updates immediately (no tab switch needed). All 3 sections share the same React state via useCalc().',
+          'Sửa workcenter công đoạn → ink RUN cost trên cùng màn hình cập nhật ngay (không cần chuyển tab). Cả 3 section dùng chung React state qua useCalc().'
+        ),
+      ]),
+      proc('When to use the originals', 'Khi nào dùng tab gốc', null, [
+        bs(
+          'The 3 standalone tabs (Materials / Inks / Processes) remain available — use them when you want a focused view (less scrolling) or when training a new operator who learned the tab-by-tab workflow first.',
+          '3 tab độc lập (Materials / Inks / Processes) vẫn còn — dùng khi muốn view tập trung (ít cuộn hơn) hoặc khi training operator mới học workflow tab-by-tab trước.'
+        ),
+      ]),
+    ],
+    // Sprint S-PRICING-COMBINED-P1 — links to all 3 original entries so
+    // F1 from Combined surfaces deep dives for each section.
+    relatedTabs: ['standard-material', 'standard-inks', 'standard-process', 'standard'],
+    screenshot: null,
+  },
+
   'standard-balancing': {
     id: 'standard-balancing',
     section: 'CALCULATORS',

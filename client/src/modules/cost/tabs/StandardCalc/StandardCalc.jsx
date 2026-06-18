@@ -28,6 +28,7 @@ import CalcLayout from './CalcLayout';
 import CalcMaterials from './CalcMaterials';
 import CalcInks from './CalcInks';
 import CalcProcesses from './CalcProcesses';
+import CalcCombined from './CalcCombined';
 import CalcPackingShip from './CalcPackingShip';
 import CalcCostBreakdown from './CalcCostBreakdown';
 import CalcSummarize from './CalcSummarize';
@@ -39,9 +40,17 @@ import TabBarOverflow from '../../../../components/Shared/TabBarOverflow';
 import './StandardCalc.css';
 import './ProcessBalancing.css';
 
+// Sprint S-PRICING-COMBINED-P1 (2026-06-17) — Combined tab added
+// BEFORE Materials so the all-in-one view sits at the head of the
+// pricing-phase block. Opt-in: the 3 original tabs (materials / inks /
+// processes) remain in place for muscle memory + F1 deep-links until
+// Phase 2 retires them. New entry carries `labelKey` for i18n; the
+// other 10 stay literal (pre-existing inconsistency, S-I18N-COVER
+// backlog — translating all 11 is out of surgical scope here).
 const SUB_TABS = [
   { id: 'header', label: 'RFQ & MOQ Info', icon: '▤' },
   { id: 'layout', label: 'Layout', icon: '▦' },
+  { id: 'combined', label: 'Combined', labelKey: 'pricing.tab.combined', icon: '⊞' },
   { id: 'materials', label: 'Materials', icon: '◈' },
   { id: 'inks', label: 'Inks', icon: '⊕' },
   { id: 'processes', label: 'Processes', icon: '⚙' },
@@ -322,6 +331,9 @@ export default function StandardCalc() {
     case 'layout':
       content = <CalcLayout />;
       break;
+    case 'combined':
+      content = <CalcCombined />;
+      break;
     case 'materials':
       content = <CalcMaterials />;
       break;
@@ -372,9 +384,7 @@ export default function StandardCalc() {
           <span className="snapshot-copy-banner-icon" aria-hidden="true">
             ⎘
           </span>
-          <span>
-            Copy mode — saving will create a new quote and freeze current library rates
-          </span>
+          <span>Copy mode — saving will create a new quote and freeze current library rates</span>
         </div>
       )}
       {/* Sub-tab bar — wrapped in TabBarOverflow so arrows + fade
@@ -418,22 +428,29 @@ export default function StandardCalc() {
             </div>
           }
         >
-          {SUB_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              role="tab"
-              aria-selected={activeSubTab === tab.id}
-              aria-label={tab.label}
-              className={`sc-subtab-btn ${activeSubTab === tab.id ? 'active' : ''}`}
-              onClick={() => setActiveSubTab(tab.id)}
-              title={tab.label}
-            >
-              <span className="sc-subtab-icon" aria-hidden="true">
-                {tab.icon}
-              </span>
-              <span className="sc-subtab-label">{tab.label}</span>
-            </button>
-          ))}
+          {SUB_TABS.map((tab) => {
+            // labelKey is opt-in per S-PRICING-COMBINED-P1; falls back to
+            // literal `tab.label` so the 10 pre-existing entries don't
+            // need an i18n shim. S-I18N-COVER backlog candidate to lift
+            // all 11 to labelKey-only in a future sprint.
+            const visibleLabel = tab.labelKey ? t(tab.labelKey) : tab.label;
+            return (
+              <button
+                key={tab.id}
+                role="tab"
+                aria-selected={activeSubTab === tab.id}
+                aria-label={visibleLabel}
+                className={`sc-subtab-btn ${activeSubTab === tab.id ? 'active' : ''}`}
+                onClick={() => setActiveSubTab(tab.id)}
+                title={visibleLabel}
+              >
+                <span className="sc-subtab-icon" aria-hidden="true">
+                  {tab.icon}
+                </span>
+                <span className="sc-subtab-label">{visibleLabel}</span>
+              </button>
+            );
+          })}
         </TabBarOverflow>
       </div>
 
