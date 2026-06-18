@@ -155,6 +155,19 @@
 .sum-cell-multiline::-webkit-scrollbar-track {
   background: transparent;
 }
+/* Sprint S-SUMMARIZE-DATE-COL — DATE column. Mirrors QuoteHistory's
+   .qh-d-date / .qh-d-time cell typography so the two sidebar tables
+   read identically when an operator switches between Cost Breakdown
+   and Quote History. */
+.sum-d-date {
+  font-size: 11px;
+  color: var(--color-slate-600);
+}
+.sum-d-time {
+  font-size: 9px;
+  color: var(--color-slate-400);
+  margin-top: 1px;
+}
 .sum-table tbody tr {
   cursor: pointer;
 }
