@@ -387,8 +387,8 @@ export const HELP_CONTENT = {
         'Save có kiểm soát phiên bản: lưu lại cùng SKU tạo revision mới.'
       ),
       feat(
-        'What-if sensitivity: preview ±5% margin / ±10% qty without committing.',
-        'What-if: xem trước ±5% margin / ±10% qty mà không lưu.'
+        'Sub-tab order (P2 reorder): RFQ & MOQ Info → Layout → Materials & Process → Pack & Ship → Lead time → Cost Breakdown → Balancing → Summarize → Legend. The Materials & Process tab replaces the retired Layout-time Materials / Inks / Processes trio (Sprint S-PRICING-COMBINED-P2).',
+        'Thứ tự sub-tab (P2 reorder): RFQ & MOQ Info → Layout → Vật tư & Công đoạn → Pack & Ship → Lead time → Cost Breakdown → Balancing → Summarize → Legend. Tab Vật tư & Công đoạn thay cho bộ 3 tab cũ Materials / Inks / Processes (Sprint S-PRICING-COMBINED-P2).'
       ),
     ],
     example: ex(
@@ -402,20 +402,12 @@ export const HELP_CONTENT = {
           'Nhập SKU "T3000001", qty 250,000, width 82, height 52.'
         ),
         bs(
-          'In the Material sub-tab, choose Paper → White Semi-gloss → Permanent Acrylic.',
-          'Vào sub-tab Material, chọn Paper → White Semi-gloss → Permanent Acrylic.'
+          'In the Materials & Process sub-tab (stacked sections), choose Paper → White Semi-gloss → Permanent Acrylic in the Materials section; set Number of Inks = 1 + print type = Flexo in the Inks section; pick work-center "Flexo-AT-10" in the Processes section (Rate Table auto-fills hourly rate).',
+          'Trong sub-tab Vật tư & Công đoạn (các section xếp chồng), chọn Paper → White Semi-gloss → Permanent Acrylic trong section Vật tư; đặt Số màu = 1 + loại in = Flexo trong section Mực; chọn work-center "Flexo-AT-10" trong section Công đoạn (Rate Table tự điền đơn giá/giờ).'
         ),
         bs(
-          'In the Inks sub-tab, set Number of Inks = 1, print type = Flexo.',
-          'Vào sub-tab Inks, đặt Số màu = 1, loại in = Flexo.'
-        ),
-        bs(
-          'In the Processes sub-tab, pick work-center "Flexo-AT-10" and confirm the Rate Table auto-fills hourly rate.',
-          'Vào sub-tab Processes, chọn work-center "Flexo-AT-10" và xác nhận Rate Table tự điền đơn giá/giờ.'
-        ),
-        bs(
-          'Set target Margin % = 30 in the Summarize sub-tab.',
-          'Đặt target Margin % = 30 trong sub-tab Summarize.'
+          'Set target Margin % = 30 on the RFQ & MOQ Info header. Review the GM% / VA% / Contr% on the Summarize sub-tab.',
+          'Đặt target Margin % = 30 ở header RFQ & MOQ Info. Xem GM% / VA% / Contr% trên sub-tab Summarize.'
         ),
         bs(
           'Choose Save → the quote is committed to Quote History with a new revision ID.',
@@ -583,8 +575,8 @@ export const HELP_CONTENT = {
             'Click Save để lưu vào Quote History (key = SKU; save lại sẽ ghi đè — dùng History để audit).'
           ),
           bs(
-            'Optional: click "What-if" to preview ±5% margin scenarios without saving.',
-            'Tuỳ chọn: click "What-if" để xem kịch bản ±5% margin mà không lưu.'
+            'To compare margin scenarios non-destructively, save as a new quote (right-click Copy in Quote History) and tweak — there is no in-place What-if slider in the shipped UI.',
+            'Để so sánh kịch bản margin không phá data, save thành quote mới (right-click Copy trên Quote History) rồi chỉnh — UI hiện không có slider What-if tại chỗ.'
           ),
         ]
       ),
@@ -1641,103 +1633,135 @@ export const HELP_CONTENT = {
     section: 'QUOTING',
     title: bi('Cost Breakdown', 'Cơ cấu Chi phí'),
     function: bi(
-      'Executive-view breakdown of a saved quote',
-      'Xem tổng quan chi phí của báo giá đã lưu'
+      'Sortable sidebar table of every saved quote × MOQ tier',
+      'Bảng sidebar sắp xếp được cho mọi báo giá đã lưu × bậc MOQ'
     ),
     path: 'Ops Cost > Quoting > Cost Breakdown',
     purpose: bi(
-      'Executive view of a saved quote: line-by-line cost, margin sensitivity, and what-if scenarios. Read-only snapshot for sign-off.',
-      'View cấp quản lý của báo giá đã lưu: chi phí từng dòng, độ nhạy margin, kịch bản what-if. Snapshot chỉ đọc để ký duyệt.'
+      'Browseable cross-quote table — one row per (quote × MOQ tier). ~32 sortable columns covering identity (#, DATE, RFQ NO, Sale Owner, Direct/End Customer, Project, PNs, materials), economics (MOQ, USD Price, VND Price, Tooling, GM%, VA%, Contr%), and Snapshot status. Single source for cross-quote filtering, CSV export, and right-click forensic flags.',
+      'Bảng cross-quote duyệt được — một dòng cho mỗi (báo giá × bậc MOQ). ~32 cột sortable bao phủ identity (#, DATE, RFQ NO, Sale Owner, Direct/End Customer, Project, PN, vật tư), kinh tế (MOQ, USD Price, VND Price, Tooling, GM%, VA%, Contr%), và trạng thái Snapshot. Nguồn duy nhất cho lọc cross-quote, xuất CSV, gắn cờ forensic bằng chuột phải.'
     ),
     whenToUse: bi(
-      'Before submitting to Pending Approvals; before sharing with customer in Formal Quotation; during weekly quote reviews.',
-      'Trước khi submit Pending Approvals; trước khi gửi khách qua Formal Quotation; trong review báo giá hàng tuần.'
+      'Daily scan for margin outliers; cross-quote filtering by Sale Owner / Date / Customer; CSV pull for Excel reconciliation; right-click an RFQ to colour-flag while reviewing a batch.',
+      'Quét hàng ngày các báo giá lệch margin; lọc cross-quote theo Sale Owner / Ngày / Khách; pull CSV để đối chiếu Excel; right-click RFQ để gắn màu khi review một loạt.'
     ),
     preRequisites: [
-      br('A saved quote (Standard or Complex).', 'Một báo giá đã lưu (Standard hoặc Complex).'),
+      br(
+        'At least one saved quote (Standard or Complex). Pre-FIX-41 legacy quotes show "—" on per-row cells until re-saved.',
+        'Tối thiểu 1 báo giá đã lưu (Standard hoặc Complex). Báo giá legacy trước FIX-41 hiển thị "—" ở các ô per-row cho tới khi save lại.'
+      ),
     ],
     procedures: [
       proc(
-        'SKU picker',
-        'Chọn SKU',
+        'Scan + sort the table',
+        'Quét + sắp xếp bảng',
         bi(
-          'Dropdown sorts by last-update descending, so the freshest quote is on top.',
-          'Dropdown sắp xếp theo last-update giảm dần, báo giá mới nhất ở trên cùng.'
+          '~32 columns; click any header to sort ASC/DESC. Click again to flip. Sort indicator (▲/▼) appears on the active column.',
+          '~32 cột; click header bất kỳ để sort ASC/DESC. Click lại để đảo. Chỉ báo sort (▲/▼) hiển thị trên cột đang active.'
         ),
         [
           bs(
-            'Click the SKU dropdown at the top of the screen.',
-            'Click dropdown SKU ở đầu màn hình.'
+            'Anchors: # (visible row index), DATE (dd/MM/yyyy on top, HH:mm beneath — mirrors Quote History date cell), RFQ NO, Sale Owner.',
+            'Anchor: # (chỉ số dòng hiển thị), DATE (dd/MM/yyyy ở trên, HH:mm ở dưới — mirror cột date của Quote History), RFQ NO, Sale Owner.'
           ),
           bs(
-            'Type to filter if the list is long (matches SKU and customer name).',
-            'Gõ để lọc nếu list dài (match theo SKU và tên khách).'
+            'Economics columns: MOQ, USD Price, VND Price, Tooling/pcs, Tooling Cost (USD), GM%, VA%, Contr%. Color-coding flags margin floor breaches.',
+            'Cột kinh tế: MOQ, USD Price, VND Price, Tooling/pcs, Tooling Cost (USD), GM%, VA%, Contr%. Color-code đánh dấu margin dưới sàn.'
           ),
           bs(
-            'Select — the breakdown panels refresh instantly.',
-            'Chọn — các panel breakdown refresh ngay.'
+            'Snapshot column — Frozen / Live / No pill per row. Default-hidden; opt in via Columns toggle when auditing whether quotes are frozen.',
+            'Cột Snapshot — pill Frozen / Live / No theo từng dòng. Mặc định ẩn; opt in qua Columns toggle khi kiểm tra báo giá đã được freeze chưa.'
           ),
         ]
       ),
       proc(
-        'Cost waterfall panel',
-        'Khối Cơ cấu Chi phí',
+        'Filter (ScopedFilterBar)',
+        'Lọc (ScopedFilterBar)',
         bi(
-          'Read top-to-bottom: raw material up, labor in the middle, margin + sell at the bottom.',
-          'Đọc từ trên xuống: vật tư thô ở trên, nhân công ở giữa, margin + bán ở dưới.'
+          'Shared bar across Quote History + Cost Breakdown — same scopes, same debounce. Filter state lives outside the 30s polling tick so auto-refresh never resets what you typed.',
+          'Bar dùng chung giữa Quote History và Cost Breakdown — cùng scope, cùng debounce. State filter nằm ngoài tick polling 30s nên auto-refresh không bao giờ reset thứ đã gõ.'
         ),
         [
           bs(
-            'Review each line: Material → Ink → Labor → Overhead → Margin → Sell.',
-            'Xem từng dòng: Material → Ink → Labor → Overhead → Margin → Sell.'
+            'Global search (300ms debounce) — matches across RFQ NO, customer, project, materials, sale owner.',
+            'Global search (debounce 300ms) — match qua RFQ NO, khách, project, vật tư, sale owner.'
           ),
           bs(
-            'Hover any line to see the formula, contributing fields, and the library row that sourced it (Rate Table / Material Library).',
-            'Hover dòng bất kỳ để xem công thức, các ô đóng góp, và dòng library đã cung cấp (Rate Table / Material Library).'
+            'Date range — native picker + 5 presets (Today / This week / This month / Last 30 days / Clear).',
+            'Date range — picker native + 5 preset (Hôm nay / Tuần này / Tháng này / 30 ngày gần nhất / Xoá).'
           ),
           bs(
-            'Click the expand arrow on a line for its sub-breakdown (e.g., Labor → per work-cell rows).',
-            'Click mũi tên expand trên dòng để xem sub-breakdown (vd Labor → dòng theo work-cell).'
+            'Three scoped boxes: Customer, Part, Sale. Case-insensitive substring. AND-combine with the global box + date range.',
+            'Ba ô scoped: Customer, Part, Sale. Case-insensitive substring. AND-combine với ô global + date range.'
+          ),
+          bs(
+            'N-of-M counter on the right shows matched vs total. Clear-all button resets every scope.',
+            'Counter N-of-M bên phải hiện số match / tổng. Nút Clear-all reset mọi scope.'
           ),
         ]
       ),
       proc(
-        'What-if panel',
-        'Khối What-if',
+        'Columns toggle',
+        'Toggle cột',
         bi(
-          'Non-destructive preview — changes here do not save to the quote. Use for margin meetings or sensitivity analysis.',
-          'Preview không ghi đè — thay đổi ở đây không lưu vào báo giá. Dùng cho meeting margin hoặc phân tích nhạy cảm.'
+          'Popover above the table. Hide/show any non-required column; choice persists in localStorage (`ops-cost-summarize-cols`). Required: RFQ NO.',
+          'Popover phía trên bảng. Ẩn/hiện cột bất kỳ không phải required; lựa chọn lưu trong localStorage (`ops-cost-summarize-cols`). Required: RFQ NO.'
         ),
         [
-          bs('Click "What-if" button in the toolbar.', 'Click nút "What-if" trên toolbar.'),
           bs(
-            'Adjust Margin % (slider) and/or Quantity (multiplier).',
-            'Chỉnh Margin % (slider) và/hoặc Quantity (nhân).'
+            'Click the Columns icon → checkbox per column. DATE column is required (cannot be hidden) — anchors timestamp parity with Quote History.',
+            'Click icon Columns → checkbox cho từng cột. Cột DATE là required (không ẩn được) — anchor parity dấu thời gian với Quote History.'
           ),
           bs(
-            'The Sell price below updates live; a diff pill shows ±x% vs. the committed value.',
-            'Giá bán bên dưới update live; pill diff hiển thị ±x% so với giá trị đã commit.'
-          ),
-          bs(
-            'Close the What-if panel to return to the committed numbers (nothing saved).',
-            'Đóng panel What-if để về số đã commit (không lưu gì).'
+            'Optional default-hidden columns include Snapshot + the 6 Lead Time & Notice columns — opt in when forensically auditing.',
+            'Các cột mặc định ẩn gồm Snapshot + 6 cột Lead Time & Notice — opt in khi kiểm tra forensic.'
           ),
         ]
       ),
-      proc('Export', 'Xuất file', null, [
-        bs(
-          'Click ⬇ PDF to download a single-page executive summary.',
-          'Click ⬇ PDF để tải bản tóm tắt 1 trang cấp quản lý.'
+      proc(
+        'Per-row select + CSV export',
+        'Chọn dòng + Xuất CSV',
+        bi(
+          'Checkbox in each row; Select-All header with indeterminate state. CSV uses the native macOS Save dialog (File System Access API; falls back to download anchor on older Electron).',
+          'Checkbox mỗi dòng; header Select-All có trạng thái indeterminate. CSV dùng hộp thoại Save native của macOS (File System Access API; fallback download anchor trên Electron cũ).'
         ),
-        bs(
-          'Click ⬇ CSV to export the line-item table for Excel reconciliation.',
-          'Click ⬇ CSV để xuất bảng line-item cho đối chiếu Excel.'
+        [
+          bs(
+            'Tick rows to include; toolbar "CSV Export (N)" updates with the selected-visible count.',
+            'Tick các dòng muốn xuất; nút "CSV Export (N)" trên toolbar cập nhật theo số đã chọn (và hiển thị).'
+          ),
+          bs(
+            'No selection → export ships all visible rows; selection is intersected with the filter so hidden rows are never written to disk.',
+            'Không chọn gì → xuất toàn bộ dòng đang hiển thị; selection được intersect với filter nên dòng bị ẩn không bao giờ ghi xuống file.'
+          ),
+          bs(
+            'CSV ships UTF-8 with BOM (Excel VN locale opens × correctly), RFC 4180 escaping, and an always-include audit prefix: quote_id, tier, update_date, type, sale_owner.',
+            'CSV xuất UTF-8 có BOM (Excel locale VN hiển thị × đúng), escape RFC 4180, và prefix audit luôn có: quote_id, tier, update_date, type, sale_owner.'
+          ),
+        ]
+      ),
+      proc(
+        'Open quote + right-click flags',
+        'Mở báo giá + cờ chuột phải',
+        bi(
+          'Double-click any row opens the showcard. Right-click opens the context menu — Open shortcut, RFQ colour picker, Copy summary.',
+          'Double-click dòng để mở showcard. Right-click mở context menu — shortcut Open, color picker RFQ, Copy tóm tắt.'
         ),
-        bs(
-          'PDF filename convention: "Quote_[SKU]_[YYYYMMDD].pdf".',
-          'Quy ước tên file PDF: "Quote_[SKU]_[YYYYMMDD].pdf".'
-        ),
-      ]),
+        [
+          bs(
+            'Double-click row → showcard / detail modal opens.',
+            'Double-click dòng → showcard / modal chi tiết mở.'
+          ),
+          bs(
+            'Right-click row → context menu. Pick from the colour palette to tint RFQ NO text (helps batch reviews). Click × to clear the colour.',
+            'Right-click dòng → context menu. Chọn màu trên palette để tô màu chữ RFQ NO (tiện review hàng loạt). Click × để bỏ màu.'
+          ),
+          bs(
+            'Context menu also has Copy → puts "RFQ | Direct CU | Project | End CU PN" on the clipboard for chat/email.',
+            'Context menu còn có Copy → copy "RFQ | Direct CU | Project | End CU PN" vào clipboard để paste chat/email.'
+          ),
+        ]
+      ),
     ],
     workflow: null,
     keyFields: [],
@@ -1764,14 +1788,18 @@ export const HELP_CONTENT = {
     ],
     tips: [
       bt(
-        "Bookmark this tab for the quote review meeting — it's the cleanest single-page view.",
-        'Bookmark tab này cho meeting review báo giá — đây là view 1 trang sạch nhất.'
+        'Sale Owner column (sortable) groups quotes per salesperson — handy for weekly review meetings.',
+        'Cột Sale Owner (sortable) gộp báo giá theo từng nhân viên bán hàng — tiện cho meeting review hàng tuần.'
+      ),
+      bt(
+        'Snapshot column (default-hidden, opt in via Columns toggle) shows Frozen / Live / No per row — scan for unfrozen quotes before sign-off.',
+        'Cột Snapshot (mặc định ẩn, opt in qua Columns toggle) hiển thị Frozen / Live / No mỗi dòng — quét quote chưa frozen trước khi ký duyệt.'
       ),
     ],
     pitfalls: [
       bp(
-        "Numbers shown are SNAPSHOT at save time; editing the quote elsewhere won't update until re-saved.",
-        'Số liệu hiển thị là SNAPSHOT tại thời điểm save; sửa báo giá ở nơi khác sẽ không cập nhật cho tới khi save lại.'
+        'Frozen rows reflect library rates AT SAVE TIME — current library edits do not propagate until the quote is re-saved.',
+        'Dòng Frozen phản ánh rate library TẠI THỜI ĐIỂM SAVE — chỉnh library hiện tại không lan tới quote tới khi save lại.'
       ),
     ],
     relatedTabs: ['standard', 'complex', 'formal-quote', 'quote-history'],
@@ -1884,89 +1912,133 @@ export const HELP_CONTENT = {
     section: 'QUOTING',
     title: bi('Quote History', 'Lịch sử Báo giá'),
     function: bi(
-      'Searchable audit trail of every quote version',
-      'Audit trail mọi phiên bản báo giá'
+      'Sortable browseable table of every saved quote with 27-column config + scoped filter + Trash bin',
+      'Bảng duyệt sortable của mọi báo giá đã lưu với cấu hình 27 cột + filter scoped + Trash bin'
     ),
     path: 'Ops Cost > Quoting > Quote History',
     purpose: bi(
-      'Searchable audit trail of every quote (draft, approved, sent, won, lost). Full who-did-what-when.',
-      'Audit trail có thể search của mọi báo giá (draft, approved, sent, won, lost). Ai làm gì khi nào đầy đủ.'
+      'The browseable history of every saved quote (draft / pending_sales / pending_finance / price_approved / cancelled / rejected). 27 sortable columns — 6 required (anchors), 5 default-hidden (rare). Adds Sale Owner (PR #156), Option column (replaces VER badge), Material Active badge (Main/Alt/Mixed). Drives operator scan, xlsx export per row, soft-delete + restore.',
+      'Lịch sử duyệt được của mọi báo giá đã lưu (draft / pending_sales / pending_finance / price_approved / cancelled / rejected). 27 cột sortable — 6 required (anchor), 5 mặc định ẩn (ít dùng). Thêm Sale Owner (PR #156), cột Option (thay badge VER), Material Active badge (Main/Alt/Mixed). Phục vụ operator scan, xuất xlsx từng dòng, soft-delete + restore.'
     ),
     whenToUse: bi(
-      'When a customer asks "what did you quote last time for X?" or when reconciling a dispute.',
-      'Khi khách hỏi "lần trước báo bao nhiêu cho X" hoặc đối chiếu tranh chấp.'
+      'Cross-quote scan (sort by Sale Owner, Option text, GM% etc.); export xlsx per row for customer/internal review; right-click to soft-delete or restore from Trash bin.',
+      'Quét cross-quote (sort theo Sale Owner, Option text, GM% v.v.); xuất xlsx từng dòng cho khách/nội bộ; right-click để soft-delete hoặc restore từ Trash bin.'
     ),
     preRequisites: [],
     procedures: [
-      proc('Search + filter', 'Tìm kiếm + lọc', null, [
-        bs(
-          'Search box: SKU / customer / submitter name.',
-          'Ô search: SKU / tên khách / tên người submit.'
-        ),
-        bs(
-          'Date range picker: default "last 90 days".',
-          'Date range picker: mặc định "90 ngày gần nhất".'
-        ),
-        bs(
-          'Status chip filter: Draft / Submitted / Approved / Rejected / Sent / Won / Lost.',
-          'Filter trạng thái chip: Draft / Submitted / Approved / Rejected / Sent / Won / Lost.'
-        ),
-      ]),
-      proc('Open quote detail', 'Mở chi tiết báo giá', null, [
-        bs(
-          'Click any row → full detail modal opens.',
-          'Click dòng bất kỳ → modal chi tiết đầy đủ mở.'
-        ),
-        bs(
-          'Version history tab lists all saves (each Save = new version).',
-          'Tab Version history liệt kê mọi lần save (mỗi Save = phiên bản mới).'
-        ),
-        bs(
-          'Click a version → loads that snapshot into the detail view.',
-          'Click phiên bản → load snapshot đó vào view chi tiết.'
-        ),
-      ]),
       proc(
-        'Compare versions',
-        'So sánh các phiên bản',
+        'Scan + sort the 27-column table',
+        'Quét + sort bảng 27 cột',
         bi(
-          'Use when debugging "why is this quote different from last quarter?"',
-          'Dùng khi debug "tại sao báo giá này khác quý trước?"'
+          'Required anchors (cannot be hidden): #, DATE, RFQ, STATUS, APPROVE action, LAYOUT (xlsx export). Default-hidden: UL, IFS, dcu_pn, ecu_pn, target — opt in via Columns toggle.',
+          'Anchor required (không ẩn được): #, DATE, RFQ, STATUS, APPROVE, LAYOUT (xuất xlsx). Mặc định ẩn: UL, IFS, dcu_pn, ecu_pn, target — opt in qua Columns toggle.'
         ),
         [
           bs(
-            'In detail modal, click "Compare versions".',
-            'Trong modal chi tiết, click "Compare versions".'
+            'Click any header to sort ASC/DESC (▲/▼ indicator). STATUS uses workflow ordinal — draft → pending_sales → pending_finance → price_approved with cancelled/rejected sinking to bottom.',
+            'Click header bất kỳ để sort ASC/DESC (chỉ báo ▲/▼). STATUS dùng ordinal workflow — draft → pending_sales → pending_finance → price_approved, cancelled/rejected chìm xuống cuối.'
           ),
           bs(
-            'Select any two versions from the history list.',
-            'Chọn 2 phiên bản bất kỳ từ list lịch sử.'
+            'Sale Owner column (Sprint S-SALE-OWNER-COL) — sortable; reads state.sale_owner from Pricing → RFQ & MOQ info sub-tab.',
+            'Cột Sale Owner (Sprint S-SALE-OWNER-COL) — sortable; đọc state.sale_owner từ Pricing → RFQ & MOQ info sub-tab.'
           ),
           bs(
-            'Diff view highlights field-level changes (red = changed, green = new).',
-            'View diff highlight thay đổi theo từng trường (đỏ = đã đổi, xanh = mới).'
+            'Option column (Sprint S-OPTIONS-FIELD) — replaces the old VER badge. Free-text notes from RFQ Information; truncated with ellipsis + native title tooltip; sortable.',
+            'Cột Option (Sprint S-OPTIONS-FIELD) — thay badge VER cũ. Ghi chú free-text từ RFQ Information; cắt ngắn ellipsis + tooltip native title; sortable.'
+          ),
+          bs(
+            'STD/CPX type badge + Material Active badge — alt-materials surface shows Main / Alt / Mixed (N alt / M main) at quote / per-SP level (Sprint S-ALT-MAT PR #C).',
+            'Badge STD/CPX + Material Active badge — surface alt-materials hiển thị Main / Alt / Mixed (N alt / M main) ở mức quote / per-SP (Sprint S-ALT-MAT PR #C).'
           ),
         ]
       ),
       proc(
-        'Status update + export',
-        'Cập nhật trạng thái + xuất',
+        'Columns toggle (Phase 2)',
+        'Toggle cột (Phase 2)',
         bi(
-          'Setting Won/Lost drives Dashboard win-rate KPI — do not skip.',
-          'Đặt Won/Lost ảnh hưởng KPI tỉ lệ thắng trên Dashboard — không được bỏ.'
+          'Same shared <ColumnsToggle> popover used by Cost Breakdown. Persists in localStorage `ops-cost-quote-history-cols`. Required keys cannot be hidden.',
+          'Cùng popover <ColumnsToggle> dùng chung với Cost Breakdown. Lưu vào localStorage `ops-cost-quote-history-cols`. Cột required không ẩn được.'
         ),
         [
           bs(
-            'From row right-click → "Update status" → Won / Lost / Cancelled.',
-            'Right-click dòng → "Update status" → Won / Lost / Cancelled.'
+            'Click Columns icon above the table → check/uncheck per column. 27 keys total, 5 default-hidden (UL, IFS, dcu_pn, ecu_pn, target).',
+            'Click icon Columns phía trên bảng → check/uncheck từng cột. Tổng 27 key, 5 mặc định ẩn (UL, IFS, dcu_pn, ecu_pn, target).'
           ),
           bs(
-            'Add a one-line reason for Lost (required).',
-            'Thêm lý do 1 dòng cho Lost (bắt buộc).'
+            'Hiding the currently-sorted column auto-snaps sort back to DATE DESC. Legacy `npi` → `owner` and `ver` → `option` sort-key rewrites preserve saved sort prefs across upgrades.',
+            'Ẩn cột đang sort sẽ tự snap sort về DATE DESC. Rewrite legacy `npi` → `owner` và `ver` → `option` giữ sort prefs cũ qua các bản upgrade.'
+          ),
+        ]
+      ),
+      proc(
+        'Scoped filter bar',
+        'Thanh lọc scoped',
+        bi(
+          'Same shared bar as Cost Breakdown — global search + date range + 3 scoped boxes (Customer / Part / Sale). 300ms debounce; AND-combine.',
+          'Cùng thanh dùng chung với Cost Breakdown — global search + date range + 3 ô scoped (Customer / Part / Sale). Debounce 300ms; AND-combine.'
+        ),
+        [
+          bs(
+            'Pill chips (All / Standard / Complex / Trash) sit in the rightSlot of the filter bar — Trash chip opens the soft-deleted bin.',
+            'Pill chip (All / Standard / Complex / Trash) nằm trong rightSlot của filter bar — chip Trash mở bin các bản đã soft-delete.'
           ),
           bs(
-            'Click ⬇ CSV in toolbar to export the filtered list.',
-            'Click ⬇ CSV trên toolbar để xuất list đã lọc.'
+            'Filter survives the 30s polling + SSE refresh tick (state lives outside `useAbortableFetch`).',
+            'Filter sống sót qua tick polling 30s + SSE refresh (state nằm ngoài `useAbortableFetch`).'
+          ),
+        ]
+      ),
+      proc(
+        'Open + right-click context menu',
+        'Mở + context menu chuột phải',
+        bi(
+          'Double-click row to load the quote into Pricing (Std/Cpx). Right-click for context menu (Open / Copy / Trash / Status workflow).',
+          'Double-click dòng để load báo giá vào Pricing (Std/Cpx). Right-click mở context menu (Open / Copy / Trash / Workflow trạng thái).'
+        ),
+        [
+          bs(
+            'Right-click row → Open (loads quote), Copy (copies quote to new draft — clears snapshot freeze + activeQuoteId), Trash (soft-delete).',
+            'Right-click dòng → Open (load quote), Copy (copy sang draft mới — xoá freeze snapshot + activeQuoteId), Trash (soft-delete).'
+          ),
+          bs(
+            'Trash uses soft-delete (`DELETE /api/quotes/:id`) so the row moves to the Trash bin instead of being purged. Sys role can hard-delete via `?purge=1`.',
+            'Trash dùng soft-delete (`DELETE /api/quotes/:id`) để dòng chuyển vào Trash bin thay vì xoá hẳn. Role sys có thể xoá cứng qua `?purge=1`.'
+          ),
+        ]
+      ),
+      proc(
+        'Trash bin (soft-delete + restore)',
+        'Trash bin (soft-delete + restore)',
+        bi(
+          'Trash chip in the filter bar → opens a modal listing soft-deleted quotes (loaded from `?trashed=1`). Restore button calls `POST /api/quotes/:id/restore`.',
+          'Chip Trash trong filter bar → mở modal liệt kê quote đã soft-delete (load từ `?trashed=1`). Nút Restore gọi `POST /api/quotes/:id/restore`.'
+        ),
+        [
+          bs(
+            'Click Trash chip → modal opens with columns: #, Type (STD/CPX), Label / RFQ, Direct CU, Trashed at, By, Actions.',
+            'Click chip Trash → modal mở với cột: #, Type (STD/CPX), Label / RFQ, Direct CU, Đã xoá lúc, Người xoá, Actions.'
+          ),
+          bs(
+            'Restore returns the quote to the main list at its original status; Purge (sys role only) hard-deletes.',
+            'Restore đưa quote về list chính ở status gốc; Purge (chỉ role sys) xoá cứng.'
+          ),
+        ]
+      ),
+      proc(
+        'xlsx export per row',
+        'Xuất xlsx từng dòng',
+        bi(
+          'LAYOUT column has a download icon per row → opens variant/lang/tier dialog. Multi-tier exports return a single zip.',
+          'Cột LAYOUT có icon download mỗi dòng → mở dialog variant/lang/tier. Xuất nhiều tier trả về một file zip.'
+        ),
+        [
+          bs(
+            'Click ⬇ icon in the LAYOUT cell → pick variant (Customer / Internal), language (EN / VI / EN+VI), tiers (1 .. all).',
+            'Click icon ⬇ trong ô LAYOUT → chọn variant (Khách / Nội bộ), ngôn ngữ (EN / VI / Song ngữ), tier (1 .. tất cả).'
+          ),
+          bs(
+            'Pre-FIX-41 legacy quotes show "saved before per-row tracking" — re-save the quote once in Pricing to populate `result.rows` so xlsx renders real Material/Ink/Process numbers.',
+            'Báo giá legacy trước FIX-41 hiển thị "saved before per-row tracking" — save lại quote một lần trong Pricing để populate `result.rows` để xlsx render số Material/Ink/Process thực.'
           ),
         ]
       ),
@@ -1985,8 +2057,12 @@ export const HELP_CONTENT = {
     ],
     tips: [
       bt(
-        'Set a status of Won/Lost for closed loops — drives Dashboard win-rate KPI.',
-        'Đặt trạng thái Won/Lost cho deal đã đóng — ảnh hưởng KPI tỉ lệ thắng trên Dashboard.'
+        'Sale Owner column (sortable) groups quotes per salesperson — type a name into the Sale scoped box to filter.',
+        'Cột Sale Owner (sortable) gộp báo giá theo từng nhân viên bán hàng — gõ tên vào ô scoped Sale để lọc.'
+      ),
+      bt(
+        'Option column (replaces the old VER badge — Sprint S-OPTIONS-FIELD) shows free-text RFQ notes; sortable + hover tooltip for full text.',
+        'Cột Option (thay badge VER cũ — Sprint S-OPTIONS-FIELD) hiển thị ghi chú RFQ free-text; sortable + tooltip hover để xem đầy đủ.'
       ),
       bt(
         'If the export dialog shows "saved before per-row tracking", open the quote in the calculator and Save once to refresh export data — pre-v1.5 quotes need a re-save before Materials / Inks / Processes sheets can render real numbers.',
@@ -2024,20 +2100,50 @@ export const HELP_CONTENT = {
       ),
     ],
     procedures: [
-      proc('Filter bar', 'Thanh lọc', null, [
-        bs(
-          'Use the radio toggle: "My submissions" / "Awaiting my approval" / "All".',
-          'Dùng radio toggle: "My submissions" / "Awaiting my approval" / "All".'
+      proc(
+        'View mode chips + scoped filter',
+        'Chip view mode + filter scoped',
+        bi(
+          'Two chips at the top: My queue (rows where you can act per role) / All pending (every quote in pending_sales or pending_finance). Shared ScopedFilterBar below = global search + date range + 3 scoped boxes (Customer / Part / Sale).',
+          'Hai chip ở trên cùng: My queue (dòng bạn có quyền action theo role) / All pending (mọi quote pending_sales hoặc pending_finance). ScopedFilterBar dùng chung phía dưới = global search + date range + 3 ô scoped (Customer / Part / Sale).'
         ),
-        bs(
-          'Search box filters by SKU, customer, or submitter name.',
-          'Ô search lọc theo SKU, khách, hoặc tên người submit.'
+        [
+          bs(
+            'View mode chip "My queue" filters to rows where canUserSetStatus(user, "price_approved") is true (your role allows acting). "All pending" shows everything in pending_sales + pending_finance.',
+            'Chip view mode "My queue" lọc về dòng mà canUserSetStatus(user, "price_approved") = true (role bạn có quyền action). "All pending" hiện mọi dòng pending_sales + pending_finance.'
+          ),
+          bs(
+            'Header tag "N in my queue" anchors to the true queue size; the N-of-M counter on ScopedFilterBar reflects matches vs viewMode queue.',
+            'Tag header "N in my queue" anchor về kích thước queue thật; counter N-of-M trên ScopedFilterBar phản ánh số match / kích thước queue theo viewMode.'
+          ),
+          bs(
+            'Filter state lives outside the 30s polling + SSE refresh tick, so auto-refresh never resets what you typed.',
+            'State filter nằm ngoài tick polling 30s + SSE refresh, nên auto-refresh không bao giờ reset thứ đã gõ.'
+          ),
+        ]
+      ),
+      proc(
+        'Column layout (Sprint S-INBOX-COLS)',
+        'Bố cục cột (Sprint S-INBOX-COLS)',
+        bi(
+          'Operator scan order: AGE → RFQ → SUBMITTED → QUOTED BY → STATUS, then identity / financials block. "QUOTED BY" replaces the legacy "Submitted by" header (same person quotes + submits in CCL workflow).',
+          'Thứ tự scan operator: AGE → RFQ → SUBMITTED → QUOTED BY → STATUS, sau đó là khối identity / financials. "QUOTED BY" thay header cũ "Submitted by" (cùng một người báo giá và submit trong workflow CCL).'
         ),
-        bs(
-          'Age column sorts overdue quotes to the top (default).',
-          'Cột Age sắp xếp báo giá quá hạn lên đầu (mặc định).'
-        ),
-      ]),
+        [
+          bs(
+            '8 new columns adjacent to identity/financials block — Sale Owner, END CU, PROJECT, MATERIALS (bulleted Main.Mat), PRICE USD, PRICE VND (raw — no USD×rate fallback), VA%, CONTR.%.',
+            '8 cột mới sát khối identity/financials — Sale Owner, END CU, PROJECT, MATERIALS (liệt kê Main.Mat), PRICE USD, PRICE VND (raw — không fallback USD×rate), VA%, CONTR.%.'
+          ),
+          bs(
+            'Total now 18 columns (was 11). Reads from shared helper `deriveInboxRow(q)` so the inbox stays pinned to the same Quote History contract (Lesson 21 end_cu/project guards baked in).',
+            'Tổng 18 cột (cũ 11). Đọc qua helper dùng chung `deriveInboxRow(q)` để inbox bám theo cùng contract của Quote History (guards end_cu/project theo Lesson 21).'
+          ),
+          bs(
+            'AGE chip color-codes overdue rows (≥7 days red, ≥3 days amber); STATUS chip is the workflow state.',
+            'Chip AGE color-code dòng quá hạn (≥7 ngày đỏ, ≥3 ngày vàng); chip STATUS là trạng thái workflow.'
+          ),
+        ]
+      ),
       proc(
         'Quote detail modal',
         'Modal chi tiết',
@@ -2120,6 +2226,67 @@ export const HELP_CONTENT = {
     ],
     relatedTabs: ['summarize', 'quote-history', 'formal-quote'],
     screenshot: 'approvals-inbox.png',
+  },
+
+  'npi-parts-list': {
+    id: 'npi-parts-list',
+    section: 'QUOTING',
+    title: bi('NPI Parts List', 'Danh sách NPI Parts'),
+    function: bi(
+      'Read-only viewer of the bundled NPI Quote part list snapshot (~25k rows)',
+      'Trình xem chỉ-đọc snapshot NPI Quote part list (~25k dòng)'
+    ),
+    path: 'Ops Cost > Quoting > NPI Parts List',
+    purpose: bi(
+      'Browse the bundled `NPI Quote part list.xlsx` snapshot (Henry production reference, 25k rows × 64 cols). v1.6 ships read-only — no Add/Edit/Delete; lookup + reference only. Snapshot at `client/public/npi-parts/parts-snapshot.json`.',
+      'Duyệt snapshot `NPI Quote part list.xlsx` đã đóng gói (data tham chiếu sản xuất của Henry, 25k dòng × 64 cột). v1.6 ship chỉ-đọc — không Add/Edit/Delete; lookup + tham khảo. Snapshot tại `client/public/npi-parts/parts-snapshot.json`.'
+    ),
+    whenToUse: bi(
+      'Cross-reference an IFS code, system code, or customer PN against historical NPI parts; pull tooling fee + unit-price reference for an existing PN.',
+      'Tra cứu chéo IFS code, system code, hoặc PN khách với NPI parts lịch sử; lấy tham chiếu tooling fee + unit-price cho một PN có sẵn.'
+    ),
+    procedures: [
+      proc('Search + filter', 'Tìm kiếm + lọc', null, [
+        bs(
+          'Search box matches across 6 fields (case-insensitive substring): Part Name / Code IFS / System code / Customer / PIC / Direct Project.',
+          'Ô search match qua 6 trường (case-insensitive substring): Part Name / Code IFS / System code / Customer / PIC / Direct Project.'
+        ),
+        bs(
+          'Year filter dropdown — built from distinct RFQ-date years in the snapshot. Pick a year or "All".',
+          'Dropdown lọc năm — xây từ các năm distinct của RFQ date trong snapshot. Chọn năm hoặc "All".'
+        ),
+      ]),
+      proc('Columns toggle', 'Toggle cột', null, [
+        bs(
+          'Reuses the shared <ColumnsToggle> popover (Sprint S-D20). 12 columns visible by default; 52 opt-in via toggle. Persists in `ops-cost-npi-parts-cols`.',
+          'Dùng popover <ColumnsToggle> dùng chung (Sprint S-D20). 12 cột mặc định hiển thị; 52 opt-in qua toggle. Lưu trong `ops-cost-npi-parts-cols`.'
+        ),
+      ]),
+      proc('Showcard modal', 'Modal showcard', null, [
+        bs(
+          'Double-click any row → modal opens with 9 high-value fields (RFQ date / Quoted date / System code / Code IFS / Unit price VND / Unit price USD / Customer / MOQ / Process) + 5 tooling fee lines (woodie / Pinacle die / Rotary Die / Dieset / NC die).',
+          'Double-click dòng → modal mở với 9 trường quan trọng (RFQ date / Quoted date / System code / Code IFS / Unit price VND / Unit price USD / Customer / MOQ / Process) + 5 dòng tooling fee (woodie / Pinacle die / Rotary Die / Dieset / NC die).'
+        ),
+        bs(
+          'VND format en-US 0 decimals; USD format 4 decimals; tabular-nums alignment.',
+          'Định dạng VND en-US 0 chữ số thập phân; USD 4 chữ số; căn tabular-nums.'
+        ),
+      ]),
+      proc('Pagination', 'Phân trang', null, [
+        bs(
+          'Client-side pagination at 200 rows / page (matches MaterialLibrary). Prev / Next buttons; page X of Y indicator.',
+          'Phân trang client-side 200 dòng / trang (giống MaterialLibrary). Nút Prev / Next; chỉ báo page X of Y.'
+        ),
+      ]),
+    ],
+    tips: [
+      bt(
+        'Read-only in v1.6; edit + sync deferred to v1.7. Snapshot rebuilds via `npm run build:npi-parts` before each DMG cut.',
+        'Chỉ-đọc trong v1.6; edit + sync hoãn sang v1.7. Snapshot rebuild qua `npm run build:npi-parts` trước mỗi đợt cut DMG.'
+      ),
+    ],
+    relatedTabs: ['quote-history', 'summarize', 'lib-mat'],
+    screenshot: null,
   },
 
   // ─────────────────────────────────────────────────────────────
@@ -4962,10 +5129,10 @@ export const HELP_CONTENT = {
       'Pick substrate + adhesive + liner; compute material cost per label',
       'Chọn face + adhesive + liner; tính chi phí vật tư/nhãn'
     ),
-    path: 'Ops Cost > Pricing (Std) >Material',
+    path: 'Ops Cost > Pricing (Std) > Materials & Process (Materials section)',
     purpose: bi(
-      'Select each material layer (face + adhesive + liner + optional laminate/varnish) from Material Library and compute the material cost line.',
-      'Chọn từng lớp vật tư (face + adhesive + liner + optional laminate/varnish) từ Material Library và tính dòng chi phí vật tư.'
+      'Note: this section now lives inside the Materials & Process tab (Sprint S-PRICING-COMBINED-P2, 2026-06-18). This help entry is preserved as a deep-dive on the Materials section; the operator-facing tab is "Materials & Process". Select each material layer (face + adhesive + liner + optional laminate/varnish) from Material Library and compute the material cost line.',
+      'Lưu ý: section này giờ nằm trong tab Vật tư & Công đoạn (Sprint S-PRICING-COMBINED-P2, 2026-06-18). Entry help này được giữ làm tra cứu sâu cho section Vật tư; tab operator nhìn thấy là "Vật tư & Công đoạn". Chọn từng lớp vật tư (face + adhesive + liner + optional laminate/varnish) từ Material Library và tính dòng chi phí vật tư.'
     ),
     whenToUse: bi(
       'After Layout is complete. Re-visit when switching substrate.',
@@ -5140,8 +5307,8 @@ export const HELP_CONTENT = {
     ],
     tips: [
       bi(
-        'Tab vị trí: Pricing (Std) — chèn TRƯỚC Legend (giữa Summarize và Legend). Pricing (Cpx) — sub-tab cuối, SAU Summarize.',
-        'Vị trí tab: Pricing (Std) — TRƯỚC Legend (giữa Summarize và Legend). Pricing (Cpx) — sub-tab cuối, SAU Summarize.'
+        'Tab position: Pricing (Std) — between Pack & Ship and Cost Breakdown (P2 reorder, Sprint S-PRICING-COMBINED-P2). Pricing (Cpx) — last sub-tab, AFTER Summarize.',
+        'Vị trí tab: Pricing (Std) — giữa Pack & Ship và Cost Breakdown (P2 reorder, Sprint S-PRICING-COMBINED-P2). Pricing (Cpx) — sub-tab cuối, SAU Summarize.'
       ),
       bi(
         'For Cpx, Tooling cost sums ACROSS all sub-products (cross-SP flatMap). Adding/removing SPs or per-SP processes auto-updates the total on next tab switch.',
@@ -5165,10 +5332,10 @@ export const HELP_CONTENT = {
       'Per-color ink consumption + cost for Standard quote',
       'Tiêu thụ mực từng màu + chi phí cho báo giá Standard'
     ),
-    path: 'Ops Cost > Pricing (Std) >Inks',
+    path: 'Ops Cost > Pricing (Std) > Materials & Process (Inks section)',
     purpose: bi(
-      'Per-ink µL/label and total ink cost. Pulls volumes from Print Area Calc when imported; falls back to method defaults otherwise.',
-      'µL/nhãn và chi phí mực tổng. Lấy volume từ Print Area khi import; fallback defaults nếu không.'
+      'Note: this section now lives inside the Materials & Process tab (Sprint S-PRICING-COMBINED-P2, 2026-06-18). This help entry is preserved as a deep-dive on the Inks section; the operator-facing tab is "Materials & Process". Per-ink µL/label and total ink cost. Pulls volumes from Print Area Calc when imported; falls back to method defaults otherwise.',
+      'Lưu ý: section này giờ nằm trong tab Vật tư & Công đoạn (Sprint S-PRICING-COMBINED-P2, 2026-06-18). Entry help này được giữ làm tra cứu sâu cho section Mực; tab operator nhìn thấy là "Vật tư & Công đoạn". µL/nhãn và chi phí mực tổng. Lấy volume từ Print Area khi import; fallback defaults nếu không.'
     ),
     whenToUse: bi(
       'After Material sub-tab. Critical when ink > 5% of total cost.',
@@ -5236,10 +5403,10 @@ export const HELP_CONTENT = {
       'Configure process routing (work-centers, setup, run rate) per tier',
       'Cấu hình routing (work-center, setup, tốc độ) theo bậc'
     ),
-    path: 'Ops Cost > Pricing (Std) >Processes',
+    path: 'Ops Cost > Pricing (Std) > Materials & Process (Processes section)',
     purpose: bi(
-      'Each process row = one operation on the routing. Drives labor + machine cost across all MOQ tiers.',
-      'Mỗi process row = 1 công đoạn trên routing. Ảnh hưởng labor + chi phí máy cho mọi bậc MOQ.'
+      'Note: this section now lives inside the Materials & Process tab (Sprint S-PRICING-COMBINED-P2, 2026-06-18). This help entry is preserved as a deep-dive on the Processes section; the operator-facing tab is "Materials & Process". Each process row = one operation on the routing. Drives labor + machine cost across all MOQ tiers.',
+      'Lưu ý: section này giờ nằm trong tab Vật tư & Công đoạn (Sprint S-PRICING-COMBINED-P2, 2026-06-18). Entry help này được giữ làm tra cứu sâu cho section Công đoạn; tab operator nhìn thấy là "Vật tư & Công đoạn". Mỗi process row = 1 công đoạn trên routing. Ảnh hưởng labor + chi phí máy cho mọi bậc MOQ.'
     ),
     whenToUse: bi(
       'After Inks. Use Balancing sub-tab if press has capacity bottleneck.',
@@ -5430,55 +5597,85 @@ export const HELP_CONTENT = {
     section: 'CALCULATORS',
     title: bi('Pricing Worksheet — Cost Breakdown', 'Bảng tính giá — Cơ cấu Chi phí'),
     function: bi(
-      'Itemized cost waterfall per MOQ tier',
-      'Waterfall chi phí chi tiết theo từng bậc MOQ'
+      'Read-only itemised cost waterfall per MOQ tier + Pricing Snapshot panel',
+      'Waterfall chi phí read-only theo từng bậc MOQ + panel Pricing Snapshot'
     ),
-    path: 'Ops Cost > Pricing (Std) >Cost Breakdown',
+    path: 'Ops Cost > Pricing (Std) > Cost Breakdown',
     purpose: bi(
-      'Every cost line at every tier in one table. This is the SKU-level view; the top-level Cost Breakdown tab is the quote-level view.',
-      'Mọi dòng chi phí × mọi bậc trong 1 bảng. Đây là view cấp SKU; tab Cost Breakdown cấp cao hơn là view cấp báo giá.'
+      'Read-only review surface. Shows every cost line at every tier (Material / Ink / Labor / Machine / Overhead / Packing / VAT / Extra) computed live from current state and the active pricing snapshot. Pricing Snapshot panel + Copy-mode banner at the bottom expose which library rates drove the numbers.',
+      'Surface review chỉ-đọc. Hiển thị mọi dòng chi phí × mọi bậc (Vật tư / Mực / Nhân công / Máy / Overhead / Packing / VAT / Extra) tính live từ state hiện tại và snapshot pricing đang active. Panel Pricing Snapshot + banner Copy-mode ở dưới cho biết library rate nào driver ra số này.'
     ),
     whenToUse: bi(
-      'Last review before Summarize. Confirm each cost line looks reasonable vs. historical.',
-      'Review cuối trước khi Summarize. Xác nhận mỗi dòng hợp lý so với lịch sử.'
+      'Last review before Summarize. Confirm each cost line looks reasonable; check Snapshot panel to see if rates are frozen (saved snapshot) or live (recomputed against current library).',
+      'Review cuối trước Summarize. Xác nhận mỗi dòng hợp lý; check panel Snapshot để biết rate đã frozen (snapshot đã lưu) hay live (tính lại theo library hiện tại).'
     ),
     preRequisites: [
       br(
-        'Layout, Material, Inks, Process sub-tabs filled.',
-        'Đã điền các sub-tab Layout, Material, Inks, Process.'
+        'Materials & Process tab filled, Layout configured.',
+        'Tab Materials & Process đã điền, Layout đã cấu hình.'
       ),
     ],
     procedures: [
-      proc('Review cost lines', 'Review các dòng chi phí', null, [
+      proc('Read the cost matrix', 'Đọc matrix chi phí', null, [
         bs(
-          'Rows: Material, Ink, Labor (per process), Machine (per process), Overhead, SGA.',
-          'Dòng: Vật tư, Mực, Nhân công (mỗi process), Máy (mỗi process), Overhead, SGA.'
-        ),
-        bs('Columns: one per MOQ tier.', 'Cột: một cột mỗi bậc MOQ.'),
-        bs(
-          'Total row at bottom; margin-before-tier-selection at very bottom.',
-          'Dòng Total ở đáy; margin-trước-chọn-bậc ở dưới cùng.'
-        ),
-      ]),
-      proc('Drilldown', 'Drilldown', null, [
-        bs(
-          'Click any cell → detail modal with formula + source fields.',
-          'Click ô bất kỳ → modal chi tiết kèm công thức + trường nguồn.'
+          'Rows: Material / Ink / Labor (per process) / Machine (per process) / Overhead / Packing & Ship / VAT Loss / Extra.',
+          'Dòng: Vật tư / Mực / Nhân công (mỗi process) / Máy (mỗi process) / Overhead / Packing & Ship / VAT Loss / Extra.'
         ),
         bs(
-          'Red flag icon = variance > 20% vs historical avg for this SKU / product family.',
-          'Icon cờ đỏ = chênh lệch > 20% so với trung bình lịch sử SKU / dòng sản phẩm.'
+          'Columns: one per MOQ tier; active-tier column is highlighted.',
+          'Cột: một cột mỗi bậc MOQ; cột tier đang active được highlight.'
+        ),
+        bs(
+          'No drill-down modal in the shipped UI — cells are display-only. Read by row to verify each cost component.',
+          'Không có modal drill-down trong UI hiện tại — các ô chỉ hiển thị. Đọc theo dòng để xác nhận từng thành phần chi phí.'
         ),
       ]),
-      proc('Export', 'Xuất', null, [
-        bs('Click ⬇ CSV to export the full matrix.', 'Click ⬇ CSV để xuất full matrix.'),
-        bs(
-          'For customer-facing, use Summarize → Formal Quotation instead (filters internal cost lines).',
-          'Để gửi khách, dùng Summarize → Formal Quotation (lọc bỏ dòng chi phí nội bộ).'
+      proc(
+        'Pricing Snapshot panel (Phase 4)',
+        'Panel Pricing Snapshot (Phase 4)',
+        bi(
+          'Native <details> at the BOTTOM of Cost Breakdown. Click to expand/collapse. Shows 5 audit fields with one of 3 source-tone badges.',
+          '<details> native ở DƯỚI CÙNG Cost Breakdown. Click để mở/đóng. Hiển thị 5 trường audit với một trong 3 badge tone-source.'
         ),
-      ]),
+        [
+          bs(
+            '🟢 persisted — snapshot was captured at save time; numbers are frozen against the library version at that moment.',
+            '🟢 persisted — snapshot đã capture tại thời điểm save; số đã frozen theo phiên bản library lúc đó.'
+          ),
+          bs(
+            '🟡 synthesized — quote was loaded but no snapshot persisted yet; numbers are recomputed live against current library rates.',
+            '🟡 synthesized — quote load nhưng chưa có snapshot persisted; số tính lại live theo rate library hiện tại.'
+          ),
+          bs(
+            '⚪ empty — no snapshot data; numbers also live but with no audit trail.',
+            '⚪ empty — không có dữ liệu snapshot; số cũng live nhưng không có audit trail.'
+          ),
+          bs(
+            'Panel surfaces: Quote saved at, Pricing captured at, Pricing captured by, Site, Library version. Warnings (e.g. site_mismatch) appear in the panel when the saved snapshot site differs from current state.',
+            'Panel hiện: Quote saved at, Pricing captured at, Pricing captured by, Site, Library version. Warning (vd site_mismatch) xuất hiện khi site snapshot đã lưu khác state hiện tại.'
+          ),
+        ]
+      ),
+      proc(
+        'Copy-mode banner',
+        'Banner Copy-mode',
+        bi(
+          "Blue banner appears at top of the Pricing Worksheet (Cost Breakdown sub-tab included) when the operator right-clicked Copy on a quote in Quote History. Surfaces that this is a COPY — saving will create a NEW quote and freeze CURRENT library rates (not the original quote's frozen snapshot).",
+          'Banner xanh xuất hiện ở đầu Pricing Worksheet (gồm sub-tab Cost Breakdown) khi operator right-click Copy quote trên Quote History. Báo hiệu đây là một COPY — save sẽ tạo quote MỚI và freeze rate library HIỆN TẠI (không phải snapshot frozen của quote gốc).'
+        ),
+        [
+          bs(
+            'Banner text: "Copy mode — saving will create a new quote and freeze current library rates".',
+            'Text banner: "Copy mode — save sẽ tạo quote mới và freeze rate library hiện tại".'
+          ),
+          bs(
+            'Detected via isCopyMode(state, activeQuoteId); banner persists until you save (or discard) the copy.',
+            'Detect qua isCopyMode(state, activeQuoteId); banner còn cho tới khi bạn save (hoặc bỏ) copy.'
+          ),
+        ]
+      ),
     ],
-    relatedTabs: ['standard', 'standard-summarize', 'summarize'],
+    relatedTabs: ['standard', 'standard-summarize', 'summarize', 'quote-history'],
     screenshot: null,
   },
 
@@ -5529,16 +5726,41 @@ export const HELP_CONTENT = {
         ),
       ]),
       proc('Freight', 'Cước vận chuyển', null, [
-        bs('Pick Incoterms (EXW / FOB / CIF / DDP).', 'Chọn Incoterms (EXW / FOB / CIF / DDP).'),
         bs(
-          'For non-EXW: fill Origin → Destination; Freight rate auto-looks up from Freight library (if configured).',
-          'Với non-EXW: điền Điểm đi → Điểm đến; cước tự tra từ thư viện Freight (nếu đã cấu hình).'
-        ),
-        bs(
-          'Manual override when the freight library misses the lane.',
-          'Ghi đè thủ công khi thư viện freight không có tuyến.'
+          'Pick Incoterms (EXW / FOB / CIF / DDP) and enter the shipping / other-ship costs directly. There is no freight library or origin → destination auto-lookup in the shipped UI.',
+          'Chọn Incoterms (EXW / FOB / CIF / DDP) và nhập trực tiếp chi phí shipping / other-ship. UI hiện không có thư viện freight hoặc auto-lookup điểm đi → điểm đến.'
         ),
       ]),
+      proc(
+        'Per-MOQ-tier overrides (Sprint S-PACK-SHIP-PER-TIER)',
+        'Override theo bậc MOQ (Sprint S-PACK-SHIP-PER-TIER)',
+        bi(
+          'Tier 0 (MOQ 1) is the base; tier > 0 panes carry an inherit hint banner at the top — values cascade from MOQ 1 unless you override per tier.',
+          'Tier 0 (MOQ 1) là cơ sở; pane tier > 0 có banner gợi ý inherit ở trên cùng — giá trị thừa kế từ MOQ 1 trừ khi bạn override theo bậc.'
+        ),
+        [
+          bs(
+            'Switch the active MOQ tier from the Pricing header. Tier > 0 shows the `.sc-pack-tier-hint` inherit banner explaining override mode.',
+            'Chuyển active MOQ tier từ header Pricing. Tier > 0 hiển thị banner inherit `.sc-pack-tier-hint` giải thích chế độ override.'
+          ),
+          bs(
+            'Type a value into any of the 5 cells (container_cost / box_cost / other_packing / shipping_cost / other_ship) at tier > 0 → cell flips to `.sc-pack-tier-ovr` (violet + bold) marking it as an operator override.',
+            'Gõ giá trị vào 1 trong 5 ô (container_cost / box_cost / other_packing / shipping_cost / other_ship) ở tier > 0 → ô đổi sang `.sc-pack-tier-ovr` (tím + đậm) đánh dấu override của operator.'
+          ),
+          bs(
+            'Inherited (un-overridden) cells render as `.sc-pack-tier-inherit` (gray italic) showing the MOQ 1 base value live.',
+            'Ô thừa kế (chưa override) hiển thị `.sc-pack-tier-inherit` (xám in nghiêng) hiện giá trị base MOQ 1 live.'
+          ),
+          bs(
+            'Click the ↻ reset button beside an overridden cell to remove the override and revert to MOQ 1 base. Clearing the field to empty also reverts (`preserveEmpty` opt-in on the 5 fields).',
+            'Click nút ↻ reset bên cạnh ô đã override để bỏ override và quay về base MOQ 1. Xoá ô về rỗng cũng revert (opt-in `preserveEmpty` trên 5 ô đó).'
+          ),
+          bs(
+            'Totals (Total Packing/pcs + Total Shipping/pcs) compute from the active-tier-merged state, so the override effect is visible immediately.',
+            'Tổng (Total Packing/pcs + Total Shipping/pcs) tính từ state đã merge theo active-tier, nên hiệu ứng override hiển thị ngay.'
+          ),
+        ]
+      ),
     ],
     relatedTabs: ['standard', 'lib-mat'],
     screenshot: null,
@@ -5549,65 +5771,67 @@ export const HELP_CONTENT = {
     section: 'CALCULATORS',
     title: bi('Pricing Worksheet — Summarize', 'Bảng tính giá — Tóm tắt'),
     function: bi(
-      'Per-tier margin + sell price; the final decision screen',
-      'Margin + giá bán theo từng bậc; màn hình quyết định cuối'
+      'Read-only KPI dashboard for the active MOQ tier + Process Flow chart',
+      'Bảng KPI chỉ-đọc cho bậc MOQ đang active + biểu đồ Process Flow'
     ),
-    path: 'Ops Cost > Pricing (Std) >Summarize',
+    path: 'Ops Cost > Pricing (Std) > Summarize',
     purpose: bi(
-      'Set target margin per tier; see sell price + profit live. Commit + save from here.',
-      'Đặt margin target theo từng bậc; xem giá bán + lợi nhuận live. Commit + save tại đây.'
+      '6 KPI cards (MOQ qty, Total Cost, Selling Price, VA%, Contr%, GM%) computed live against the active tier + active pricing snapshot. ProcessFlowChart renders below. No data entry on this sub-tab — margin / price targets are set on the Pricing (Std) header (RFQ & MOQ Info).',
+      '6 thẻ KPI (MOQ qty, Total Cost, Selling Price, VA%, Contr%, GM%) tính live theo bậc đang active + snapshot pricing đang active. ProcessFlowChart hiển thị bên dưới. Không nhập liệu trên sub-tab này — target margin / price đặt ở header Pricing (Std) (RFQ & MOQ Info).'
     ),
     whenToUse: bi(
-      'Last sub-tab. Final margin call before saving to Quote History.',
-      'Sub-tab cuối. Quyết định margin cuối trước khi lưu Quote History.'
+      'Last sub-tab review before Save. Verify the active-tier KPIs (especially GM%, VA%, Contr%) match expectations.',
+      'Review sub-tab cuối trước khi Save. Xác nhận các KPI của tier đang active (đặc biệt GM%, VA%, Contr%) khớp kỳ vọng.'
     ),
     preRequisites: [
       br(
-        'All upstream sub-tabs (Layout, Material, Inks, Process, Cost Breakdown) filled.',
-        'Mọi sub-tab phía trước (Layout, Material, Inks, Process, Cost Breakdown) đã điền.'
+        'Materials & Process tab filled (replaces the retired Layout / Material / Inks / Process tabs — see Sprint S-PRICING-COMBINED-P2).',
+        'Tab Materials & Process đã điền (thay cho các tab Layout / Material / Inks / Process đã retire — xem Sprint S-PRICING-COMBINED-P2).'
+      ),
+      br(
+        'Layout sub-tab configured (drives QPA / yield).',
+        'Sub-tab Layout đã cấu hình (driver QPA / yield).'
       ),
     ],
     procedures: [
+      proc('Read the 6 KPI cards', 'Đọc 6 thẻ KPI', null, [
+        bs(
+          'MOQ N — active tier index + EA quantity. Total Cost — USD/unit (computed s_ttl). Selling Price — USD/unit per the active tier.',
+          'MOQ N — chỉ số tier đang active + số lượng EA. Total Cost — USD/đơn vị (s_ttl tính). Selling Price — USD/đơn vị theo tier đang active.'
+        ),
+        bs(
+          'VA% (Value Add), Contr% (Contribution), GM% (Gross Margin) — color-coded; GM% uses gmClr threshold (red if below floor).',
+          'VA% (Value Add), Contr% (Contribution), GM% (Gross Margin) — color-code; GM% dùng ngưỡng gmClr (đỏ nếu dưới sàn).'
+        ),
+        bs(
+          'Hover each card for the KPI tooltip (formula from KPI_TOOLTIPS).',
+          'Hover từng thẻ để xem tooltip KPI (công thức từ KPI_TOOLTIPS).'
+        ),
+      ]),
+      proc('Process Flow chart', 'Biểu đồ Process Flow', null, [
+        bs(
+          'Below the KPIs, ProcessFlowChart renders the routing of `state.processes` as a directed chain. Read-only visualisation; edit happens in the Materials & Process tab.',
+          'Dưới KPI, ProcessFlowChart render routing của `state.processes` thành chuỗi directed. Visualisation chỉ-đọc; edit ở tab Materials & Process.'
+        ),
+      ]),
       proc(
-        'Set margin per tier',
-        'Đặt margin theo bậc',
+        'Save + submit (toolbar at top of Pricing Std)',
+        'Save + submit (toolbar trên cùng Pricing Std)',
         bi(
-          'Different margins per tier is common — larger tiers can absorb tighter margins due to better setup amortization.',
-          'Margin khác nhau theo bậc là bình thường — bậc lớn có thể chịu margin chặt hơn nhờ amortize setup tốt hơn.'
+          'The Save button lives in the Pricing Std header toolbar, NOT on this sub-tab. Save opens the SaveChoiceModal (Save as new vs Update existing) for existing quotes.',
+          'Nút Save nằm trong toolbar header Pricing Std, KHÔNG ở sub-tab này. Save mở SaveChoiceModal (Save as new vs Update existing) cho quote có sẵn.'
         ),
         [
-          bs('For each MOQ tier row, enter Margin %.', 'Với mỗi dòng bậc MOQ, nhập Margin %.'),
-          bs('Sell price updates live.', 'Giá bán update live.'),
           bs(
-            "Use Copy icon to propagate one tier's margin to the rest.",
-            'Dùng icon Copy để áp margin 1 bậc sang các bậc còn lại.'
+            'Click Save in the toolbar → SaveChoiceModal appears for existing quotes; brand-new quotes save straight away.',
+            'Click Save trên toolbar → SaveChoiceModal xuất hiện cho quote có sẵn; quote mới hoàn toàn save thẳng.'
+          ),
+          bs(
+            'Ctrl/Cmd+S also triggers Save when the calculator pane is focused.',
+            'Ctrl/Cmd+S cũng kích hoạt Save khi pane calculator đang focus.'
           ),
         ]
       ),
-      proc('Per-tier review', 'Review theo bậc', null, [
-        bs(
-          'Columns: Cost → Margin → Sell → Profit → Profit/1k.',
-          'Cột: Cost → Margin → Sell → Profit → Profit/1k.'
-        ),
-        bs(
-          'Red cell = margin below minimum threshold (default 15%); needs justification.',
-          'Ô đỏ = margin dưới ngưỡng tối thiểu (mặc định 15%); cần giải trình.'
-        ),
-      ]),
-      proc('Commit save', 'Commit save', null, [
-        bs(
-          'Click Save → snapshot committed to Quote History.',
-          'Click Save → snapshot lưu vào Quote History.'
-        ),
-        bs(
-          'Click Submit for Approval → enters Pending Approvals queue.',
-          'Click Submit for Approval → vào queue Pending Approvals.'
-        ),
-        bs(
-          'Click Formal Quotation → opens the customer-facing doc generator.',
-          'Click Formal Quotation → mở trình tạo tài liệu gửi khách.'
-        ),
-      ]),
     ],
     relatedTabs: [
       'standard',
@@ -5620,8 +5844,92 @@ export const HELP_CONTENT = {
   },
 
   // ─────────────────────────────────────────────────────────────
-  // COMPLEX CALC — sub-views (BOM tree + Cost Breakdown)
+  // COMPLEX CALC — sub-tabs
   // ─────────────────────────────────────────────────────────────
+
+  'complex-project': {
+    id: 'complex-project',
+    section: 'CALCULATORS',
+    subSection: 'calculators',
+    title: bi('Pricing (Complex) — RFQ & MOQ info', 'Bảng tính giá (Phức tạp) — RFQ & MOQ info'),
+    function: bi(
+      'Cover-sheet identity + MOQ-tier setup for a Complex quote',
+      'Trang bìa identity + thiết lập bậc MOQ cho báo giá Complex'
+    ),
+    path: 'Ops Cost > Pricing (Cpx) > RFQ & MOQ info',
+    purpose: bi(
+      'First sub-tab. Captures customer / project identity (RFQ number, Sale Owner, Direct/End Customer, Options notes) and configures the MOQ tiers + EAU / VND-USD price targets that drive every downstream sub-product.',
+      'Sub-tab đầu tiên. Ghi identity khách / project (RFQ number, Sale Owner, Direct/End Customer, ghi chú Options) và cấu hình bậc MOQ + target EAU / VND-USD áp xuống mọi sub-product.'
+    ),
+    whenToUse: bi(
+      'Open first when creating a new Complex quote — every other sub-tab reads from this state slice.',
+      'Mở đầu tiên khi tạo Complex quote mới — mọi sub-tab khác đọc từ state slice này.'
+    ),
+    procedures: [
+      proc('Identity block', 'Khối identity', null, [
+        bs(
+          'Fill RFQ Number, Sale Owner, Direct/End Customer, Project — same fields as Std header.',
+          'Điền RFQ Number, Sale Owner, Direct/End Customer, Project — cùng các trường với header Std.'
+        ),
+        bs(
+          'Options textarea captures free-text quote notes (surfaces as the Option column on Quote History).',
+          'Textarea Options ghi ghi chú free-text cho báo giá (hiển thị thành cột Option trên Quote History).'
+        ),
+      ]),
+      proc('MOQ tiers + price targets', 'Bậc MOQ + target giá', null, [
+        bs(
+          'Configure tier 1 (base MOQ) + up to 4 additional tiers with EAU + Price USD / VND + target margin.',
+          'Cấu hình bậc 1 (MOQ cơ sở) + tối đa 4 bậc thêm với EAU + Price USD / VND + target margin.'
+        ),
+        bs(
+          'Tier dispatch routes Cpx-side writes through SET_CPLX_EXTRA_MOQ (MES-3-FIX-53) so values land on cplxState slice (data-loss bug fixed 2026-06-16).',
+          'Dispatch tier chạy qua SET_CPLX_EXTRA_MOQ (MES-3-FIX-53) để giá trị landed đúng slice cplxState (bug data-loss fix 2026-06-16).'
+        ),
+      ]),
+    ],
+    relatedTabs: ['complex', 'complex-calculators', 'complex-bom-tree', 'complex-summary'],
+    screenshot: null,
+  },
+
+  'complex-calculators': {
+    id: 'complex-calculators',
+    section: 'CALCULATORS',
+    subSection: 'calculators',
+    title: bi('Pricing (Complex) — Calculators', 'Bảng tính giá (Phức tạp) — Calculators'),
+    function: bi(
+      'Per-sub-product calculator rows (Materials + Inks + Processes) for every BOM SP',
+      'Dòng calculator cho từng sub-product (Vật tư + Mực + Công đoạn) cho mọi SP của BOM'
+    ),
+    path: 'Ops Cost > Pricing (Cpx) > Calculators',
+    purpose: bi(
+      'The main data-entry surface for Complex. Renders one `SubProductRow` per sub-product — each SP has its own Materials / Inks / Processes sections (same shape as the Std Combined tab, scoped per SP via `cplxState.subproducts[i]`).',
+      'Surface nhập liệu chính cho Complex. Render một `SubProductRow` cho mỗi sub-product — mỗi SP có riêng các section Materials / Inks / Processes (cùng shape với tab Combined của Std, scope theo SP qua `cplxState.subproducts[i]`).'
+    ),
+    whenToUse: bi(
+      'After RFQ & MOQ info. This is where most of the per-SP work happens — material rows, ink rows, process routing per sub-product.',
+      'Sau RFQ & MOQ info. Đây là nơi diễn ra phần lớn công việc per-SP — material rows, ink rows, process routing cho mỗi sub-product.'
+    ),
+    procedures: [
+      proc('Add / edit sub-products', 'Thêm / sửa sub-product', null, [
+        bs(
+          'Each SP block is collapsible — click the header to expand/collapse. Use the BOM Tree sub-tab to add/remove SPs at higher levels.',
+          'Mỗi block SP có thể thu gọn — click header để mở/đóng. Dùng sub-tab BOM Tree để thêm/xoá SP ở cấp cao hơn.'
+        ),
+        bs(
+          'Per-SP alt-materials toggle (Maint.Mat ↔ Alternative.Mat) lives in each SP block — independent of other SPs.',
+          'Toggle alt-materials per-SP (Maint.Mat ↔ Alternative.Mat) nằm trong mỗi block SP — độc lập với SP khác.'
+        ),
+      ]),
+      proc('Cross-SP per-tier overrides', 'Override cross-SP theo tier', null, [
+        bs(
+          'MOQ tier dispatch routes per-SP material setup_lm and process setup_h overrides through the cplxState slice — switch active tier to apply.',
+          'Dispatch tier MOQ chạy qua slice cplxState cho override per-SP material setup_lm và process setup_h — chuyển active tier để áp dụng.'
+        ),
+      ]),
+    ],
+    relatedTabs: ['complex', 'complex-project', 'complex-bom-tree', 'complex-cost-breakdown'],
+    screenshot: null,
+  },
 
   'complex-bom-tree': {
     id: 'complex-bom-tree',
@@ -5747,6 +6055,77 @@ export const HELP_CONTENT = {
       ]),
     ],
     relatedTabs: ['complex', 'complex-bom-tree', 'summarize'],
+    screenshot: null,
+  },
+
+  'complex-packing': {
+    id: 'complex-packing',
+    section: 'CALCULATORS',
+    subSection: 'calculators',
+    title: bi(
+      'Pricing (Complex) — Pack & Ship',
+      'Bảng tính giá (Phức tạp) — Đóng gói & Vận chuyển'
+    ),
+    function: bi(
+      'Quote-level packing + shipping cost for the assembled Complex quote',
+      'Chi phí đóng gói + vận chuyển cấp báo giá cho Complex quote'
+    ),
+    path: 'Ops Cost > Pricing (Cpx) > Pack & Ship',
+    purpose: bi(
+      'Single quote-level pack & ship pane for Complex (sub-products do not carry their own pack/ship — packaging happens at the assembled-quote level). 5 fields: container_cost / box_cost / other_packing / shipping_cost / other_ship.',
+      'Một pane pack & ship cấp báo giá cho Complex (sub-product không có pack/ship riêng — đóng gói diễn ra ở cấp báo giá đã ráp). 5 trường: container_cost / box_cost / other_packing / shipping_cost / other_ship.'
+    ),
+    whenToUse: bi(
+      'After per-SP Calculators are populated. Always fill for export quotes (CIF / DDP); optional for EXW-local.',
+      'Sau khi Calculators per-SP đã điền. Luôn điền cho quote xuất khẩu (CIF / DDP); tuỳ chọn với EXW-nội địa.'
+    ),
+    procedures: [
+      proc('Per-MOQ-tier overrides', 'Override theo bậc MOQ', null, [
+        bs(
+          'Same per-tier override pattern as the Std Pack & Ship pane (Sprint S-PACK-SHIP-PER-TIER): tier 0 is base, tier > 0 inherits MOQ 1 by default with violet/bold override + ↻ reset + inherit hint banner.',
+          'Cùng mẫu override per-tier như pane Pack & Ship của Std (Sprint S-PACK-SHIP-PER-TIER): tier 0 là base, tier > 0 thừa kế MOQ 1 mặc định với override tím/đậm + ↻ reset + banner gợi ý inherit.'
+        ),
+        bs(
+          'Routes through SET_CPLX_TIER_PACKING_FIELD so cplxState.extra_moqs[i].packing carries the override.',
+          'Chạy qua SET_CPLX_TIER_PACKING_FIELD nên cplxState.extra_moqs[i].packing mang override.'
+        ),
+      ]),
+    ],
+    relatedTabs: ['complex', 'complex-calculators', 'standard-pack-ship'],
+    screenshot: null,
+  },
+
+  'complex-summary': {
+    id: 'complex-summary',
+    section: 'CALCULATORS',
+    subSection: 'calculators',
+    title: bi('Pricing (Complex) — Summarize', 'Bảng tính giá (Phức tạp) — Tóm tắt'),
+    function: bi(
+      'Per-tier margin + sell price for the assembled Complex quote',
+      'Margin + giá bán theo từng bậc cho Complex quote đã ráp'
+    ),
+    path: 'Ops Cost > Pricing (Cpx) > Summarize',
+    purpose: bi(
+      'Final decision screen for Complex — aggregates per-SP cost via aggregateComplex into the quote-level summary (Cost → Margin → Sell → Profit). Set target margin per tier; commit + save from here.',
+      'Màn hình quyết định cuối cho Complex — gộp chi phí per-SP qua aggregateComplex thành tóm tắt cấp báo giá (Cost → Margin → Sell → Profit). Đặt target margin theo bậc; commit + save tại đây.'
+    ),
+    whenToUse: bi(
+      'Last data-entry sub-tab before Lead time & Notice. Final margin call before saving.',
+      'Sub-tab nhập liệu cuối trước Lead time & Notice. Quyết định margin cuối trước khi save.'
+    ),
+    procedures: [
+      proc('Set margin per tier', 'Đặt margin theo bậc', null, [
+        bs(
+          'Each MOQ tier row shows aggregated Cost / Margin / Sell. Enter target Margin % per tier.',
+          'Mỗi dòng bậc MOQ hiển thị Cost / Margin / Sell đã gộp. Nhập target Margin % theo bậc.'
+        ),
+        bs(
+          'Snapshot panel + Copy-mode banner identical to the Std Cost Breakdown surface — see standard-cost-breakdown for the Snapshot / Copy semantics.',
+          'Snapshot panel + banner Copy-mode giống surface Cost Breakdown của Std — xem standard-cost-breakdown để biết ngữ nghĩa Snapshot / Copy.'
+        ),
+      ]),
+    ],
+    relatedTabs: ['complex', 'complex-cost-breakdown', 'lead-time-notice', 'summarize'],
     screenshot: null,
   },
 
