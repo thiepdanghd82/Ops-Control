@@ -56,6 +56,31 @@ function MultilineCell({ value }) {
   );
 }
 
+// Sprint S-SUMMARIZE-DATE-COL (2026-06-18) — DATE column mirroring
+// QuoteHistory sidebar's date cell (dd/MM/yyyy + small HH:mm beneath).
+// Source field `r.update_date` is already populated from `q.saved_at`
+// by the row builder (kept in CSV_ALWAYS_INCLUDE_KEYS as raw ISO so
+// downstream forensic tooling is unaffected — render here is UI-only).
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
+function fmtTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+function DateCell({ value }) {
+  if (!value) return '—';
+  return (
+    <>
+      <div className="sum-d-date">{fmtDate(value)}</div>
+      <div className="sum-d-time">{fmtTime(value)}</div>
+    </>
+  );
+}
+
 // Column config — module-scoped so ColumnsToggle.helpers loader can read
 // it without recomputing per render. `rfq_no` flagged required (anchor;
 // also gives operator-visible quote identity in CSV export). Other
@@ -85,6 +110,22 @@ const SUMMARIZE_COLUMNS = [
     required: true,
     csvExclude: true,
     render: (_r, ri) => ri + 1,
+  },
+  // Sprint S-SUMMARIZE-DATE-COL (2026-06-18) — DATE column inserted
+  // ahead of RFQ NO so the operator scan reads "when → what" left-to-
+  // right, mirroring the QuoteHistory sidebar header order. `required`
+  // so it can't be hidden (anchor identity column like rfq_no). Source
+  // `r.update_date` already populated by the row builder; this entry
+  // also flips the CSV header label from raw `update_date` → `DATE`
+  // via the colByKey.get(k).label lookup in the CSV builder (CSV row
+  // value still emits the raw ISO from CSV_ALWAYS_INCLUDE_KEYS, so
+  // downstream tooling sees no value change — only a friendlier header).
+  {
+    key: 'update_date',
+    label: 'DATE',
+    w: 88,
+    required: true,
+    render: (r) => <DateCell value={r.update_date} />,
   },
   { key: 'rfq_no', label: 'RFQ NO', w: 140, required: true },
   // Sprint S-SALE-OWNER-COL (2026-06-16, moved 2026-06-17) — operator-
