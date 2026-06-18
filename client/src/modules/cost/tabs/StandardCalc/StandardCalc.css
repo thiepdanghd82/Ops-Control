@@ -3612,3 +3612,23 @@ select.sc-input {
   font-style: italic;
   opacity: 1;
 }
+
+/* Sprint S-PRICING-COMBINED-P1 (2026-06-17) — Combined sub-tab
+   stacks Materials / Inks / Processes in one scrollable surface.
+   Section dividers use the same .sc-card-header weight + border so
+   the operator's eye lands on each phase boundary as a familiar
+   shape. No new color tokens; reuses existing var(--*) palette. */
+.sc-combined-section + .sc-combined-section {
+  margin-top: 24px;
+}
+.sc-combined-section-heading {
+  margin: 0 0 8px 0;
+  padding: 8px 12px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.32px;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--border-strong);
+}
