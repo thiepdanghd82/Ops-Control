@@ -1,6 +1,6 @@
 # v1.6 Support Channel Kickoff · Khởi tạo kênh hỗ trợ
 
-> Templates + checklist để mở Slack/Teams channel `#ops-control-v1-6-support` cho 30-day post-go-live monitoring window (2026-07-21 → 2026-08-19).
+> Templates + checklist để mở Slack/Teams channel `#ops-control-v1-6-support` cho 30-day post-go-live monitoring window (2026-07-30 → 2026-08-29).
 
 ---
 
@@ -33,7 +33,7 @@
 ```
 👋 Chào mừng vào kênh hỗ trợ Ops Control v1.6!
 
-📅 Cửa sổ giám sát: 2026-07-21 → 2026-08-19 (30 ngày)
+📅 Cửa sổ giám sát: 2026-07-30 → 2026-08-29 (30 ngày)
 👤 On-call: Henry Dang (Đặng Thế Thiệp)
 ⏰ Daily summary: 17:00 ICT mỗi ngày làm việc
 
@@ -63,7 +63,7 @@
 ```
 👋 Welcome to Ops Control v1.6 support channel!
 
-📅 Monitoring window: 2026-07-21 → 2026-08-19 (30 days)
+📅 Monitoring window: 2026-07-30 → 2026-08-29 (30 days)
 👤 On-call: Henry Dang
 ⏰ Daily summary: 17:00 ICT every weekday
 
@@ -277,7 +277,7 @@ Mỗi thứ Hai, post tổng kết tuần trước.
 
 ## ⑦ End-of-window archive · Đóng channel
 
-2026-08-19 (Day +30 from go-live):
+2026-08-29 (Day +30 from go-live):
 
 - [ ] Post final summary: total saves, total bugs filed, total closed, deferred to v1.6.1.
 - [ ] Pin: link to v1.6.1 patch plan (if applicable).

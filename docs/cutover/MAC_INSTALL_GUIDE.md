@@ -197,7 +197,7 @@ recovery short of a Lead Engineer reset via Provisioning Card.
 
 After login, click **Cost → Standard** in the sidebar. You should see:
 
-- ✅ Tabs: RFQ & MOQ Info / Layout / Materials / Inks / Processes / Balancing / Pack & Ship / Cost Breakdown / Summarize / Legend
+- ✅ Tabs: RFQ & MOQ Info / Layout / Materials & Process / Balancing / Pack & Ship / Cost Breakdown / Summarize / Legend
 - ✅ Top-right corner shows "online" green pill + your username
 - ✅ Bottom-left sidebar shows "SYSTEM → Settings" if you're admin/sys
 

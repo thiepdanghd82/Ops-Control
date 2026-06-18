@@ -1,6 +1,6 @@
 # Ops Control v1.6 — Training Deck · Tài liệu training
 
-> 10-slide bilingual deck for Monday 2026-07-21 09:00 ICT operator training session.
+> 10-slide bilingual deck for Thursday 2026-07-30 09:00 ICT operator training session.
 > Duration · Thời lượng: 60-90 min (presentation 40 min + live demo 30 min + Q&A 20 min).
 > Audience · Đối tượng: CCL Vietnam Hai Duong Cost / Sales / NPI / Plant operators.
 > Format: Markdown — render via any deck tool (Marp, Slidev, or just paginate by `---`).
@@ -17,12 +17,12 @@
                   │   Pricing Snapshot       │
                   │   Đóng băng giá báo giá  │
                   │                          │
-                  │   Live from 2026-07-21   │
+                  │   Live from 2026-07-30   │
                   │                          │
                   └──────────────────────────┘
 
 Presented by · Trình bày: Henry Dang (Đặng Thế Thiệp)
-Training date · Ngày training: Monday 2026-07-21 · 09:00 ICT
+Training date · Ngày training: Thursday 2026-07-30 · 09:00 ICT
 Location · Địa điểm: CCL Vietnam Hai Duong · [Conference room name]
 ```
 
@@ -209,7 +209,7 @@ Klick row tiêu đề mở/đóng. Caret ▸ ↔ ▾ rotate.
 3. Click Export → save xlsx file
 4. Mở file trong Excel
 5. Có 11 sheets visible (tăng từ 10 ở v1.5):
-   - Cover / RFQ-MOQ / Layout / Materials / Inks / Processes / Balancing / Pack&Ship / Cost Breakdown / Summary
+   - Cover / RFQ-MOQ / Layout / Materials & Process / Balancing / Pack&Ship / Cost Breakdown / Summary
    - **`10 Pricing Snapshot`** ← MỚI ở v1.6
 6. Click tab "10 Pricing Snapshot" → 11 rows metadata:
    - Quote ID / Quote saved at / Pricing captured at / Pricing captured by / Site / Library version / Snapshot status / Materials frozen / Workcenters frozen / Coverage rows / Warnings
@@ -222,7 +222,7 @@ Klick row tiêu đề mở/đóng. Caret ▸ ↔ ▾ rotate.
 3. Click Export → save xlsx file
 4. Open in Excel
 5. 11 visible sheets (up from 10 in v1.5):
-   - Cover / RFQ-MOQ / Layout / Materials / Inks / Processes / Balancing / Pack&Ship / Cost Breakdown / Summary
+   - Cover / RFQ-MOQ / Layout / Materials & Process / Balancing / Pack&Ship / Cost Breakdown / Summary
    - **`10 Pricing Snapshot`** ← NEW in v1.6
 6. Click "10 Pricing Snapshot" tab → 11 rows of metadata:
    - Quote ID / Quote saved at / Pricing captured at / Pricing captured by / Site / Library version / Snapshot status / Materials frozen / Workcenters frozen / Coverage rows / Warnings

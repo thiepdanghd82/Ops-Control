@@ -25,9 +25,11 @@ import SummaryBox from './SummaryBox';
 import CalcSummaryBar from './CalcSummaryBar';
 import CalcHeader from './CalcHeader';
 import CalcLayout from './CalcLayout';
-import CalcMaterials from './CalcMaterials';
-import CalcInks from './CalcInks';
-import CalcProcesses from './CalcProcesses';
+// Sprint S-PRICING-COMBINED-P2 — CalcMaterials / CalcInks / CalcProcesses
+// no longer imported here; they are mounted inside CalcCombined (Phase 1
+// composition). Files are preserved in the codebase so Phase 3
+// (MES-3-FIX-56) can extract them into shared *Section components for
+// the Cpx dedup pass.
 import CalcCombined from './CalcCombined';
 import CalcPackingShip from './CalcPackingShip';
 import CalcCostBreakdown from './CalcCostBreakdown';
@@ -40,30 +42,57 @@ import TabBarOverflow from '../../../../components/Shared/TabBarOverflow';
 import './StandardCalc.css';
 import './ProcessBalancing.css';
 
-// Sprint S-PRICING-COMBINED-P1 (2026-06-17) — Combined tab added
-// BEFORE Materials so the all-in-one view sits at the head of the
-// pricing-phase block. Opt-in: the 3 original tabs (materials / inks /
-// processes) remain in place for muscle memory + F1 deep-links until
-// Phase 2 retires them. New entry carries `labelKey` for i18n; the
-// other 10 stay literal (pre-existing inconsistency, S-I18N-COVER
-// backlog — translating all 11 is out of surgical scope here).
+// Sprint S-PRICING-COMBINED-P2 (2026-06-18) — Phase 2 retires the 3
+// standalone Materials / Inks / Processes tabs. The Combined tab is
+// renamed to "Materials & Process" (VI "Vật tư & Công đoạn") and
+// becomes the SOLE entry point for the pricing-phase data. The 3
+// component files (CalcMaterials.jsx / CalcInks.jsx / CalcProcesses.jsx)
+// are preserved — `CalcCombined` still renders them as stacked sections;
+// only the tab routing surface is consolidated. Phase 3 (MES-3-FIX-56,
+// post-go-live) will extract shared `*Section` components + dedup ~1,600
+// LOC from Cpx SubProductRow.
+//
+// Tab id stays 'combined' (NOT renamed to 'materials-process') so
+// sessionStorage prefs from Phase 1 + any future test that pins the
+// id keep working. Defensive fallback below maps the retired sub-tab
+// ids to 'combined' for graceful UX on stale prefs / deep-links.
+// Sprint S-PRICING-COMBINED-P2 follow-up (2026-06-18) — Henry hardware
+// verify reorder. Final scan flow reads as the operator's quote-build
+// arc with cost analysis at the tail:
+//   RFQ → Layout → Materials & Process → Pack & Ship → Lead time →
+//   Cost Breakdown → Balancing → Summarize → Legend
+// Lead time sits adjacent to Pack & Ship (both are shipment-readiness
+// concerns the operator fills together). Summarize moves to the
+// tail position as the final review pane after Balancing.
 const SUB_TABS = [
   { id: 'header', label: 'RFQ & MOQ Info', icon: '▤' },
   { id: 'layout', label: 'Layout', icon: '▦' },
-  { id: 'combined', label: 'Combined', labelKey: 'pricing.tab.combined', icon: '⊞' },
-  { id: 'materials', label: 'Materials', icon: '◈' },
-  { id: 'inks', label: 'Inks', icon: '⊕' },
-  { id: 'processes', label: 'Processes', icon: '⚙' },
-  { id: 'balancing', label: 'Balancing', icon: '⇆' },
+  { id: 'combined', label: 'Materials & Process', labelKey: 'pricing.tab.combined', icon: '⊞' },
   { id: 'packing', label: 'Pack & Ship', icon: '▣' },
-  { id: 'breakdown', label: 'Cost Breakdown', icon: '≡' },
-  { id: 'summarize', label: 'Summarize', icon: '☰' },
   { id: 'lead-time', label: 'Lead time & Notice', icon: '⏱' },
+  { id: 'breakdown', label: 'Cost Breakdown', icon: '≡' },
+  { id: 'balancing', label: 'Balancing', icon: '⇆' },
+  { id: 'summarize', label: 'Summarize', icon: '☰' },
   { id: 'legend', label: 'Legend', icon: 'ⓘ' },
 ];
 
+// Sprint S-PRICING-COMBINED-P2 — defensive fallback for any caller
+// (sessionStorage pref from a pre-Phase-2 install, deep-link, future
+// ops-switch-subtab CustomEvent) that still passes one of the retired
+// sub-tab ids. Mirrors the `resolveSortKey('npi' → 'owner')` Quote
+// History pattern: silently rewrite stale ids to the current canonical
+// one so the operator never lands on a blank screen.
+const RETIRED_SUBTAB_REDIRECT = { materials: 'combined', inks: 'combined', processes: 'combined' };
+function resolveActiveSubTab(id) {
+  return RETIRED_SUBTAB_REDIRECT[id] || id || 'header';
+}
+
 export default function StandardCalc() {
-  const [activeSubTab, setActiveSubTab] = useState('header');
+  // resolveActiveSubTab() rewrites any retired sub-tab id (Phase 2) so a
+  // stale sessionStorage pref or deep-link → graceful fallback to
+  // 'combined' instead of a blank pane.
+  const [activeSubTab, _setActiveSubTab] = useState(() => resolveActiveSubTab('header'));
+  const setActiveSubTab = (id) => _setActiveSubTab(resolveActiveSubTab(id));
   const { t } = useI18n();
   const {
     stdState,
@@ -333,15 +362,6 @@ export default function StandardCalc() {
       break;
     case 'combined':
       content = <CalcCombined />;
-      break;
-    case 'materials':
-      content = <CalcMaterials />;
-      break;
-    case 'inks':
-      content = <CalcInks />;
-      break;
-    case 'processes':
-      content = <CalcProcesses />;
       break;
     case 'balancing':
       content = <ProcessBalancing />;
