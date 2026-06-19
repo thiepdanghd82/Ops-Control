@@ -38,7 +38,11 @@ export function buildRfqMoqSheet(wb, ctx) {
     ['rfq.quote_date', state.quote_date || quote.saved_at || '—'],
     ['rfq.trade_mode', state.trade_mode || '—'],
     ['rfq.site', state.site || '—'],
-    ['rfq.salesperson', state.salesperson || '—'],
+    // MES-3-FIX-58 (2026-06-18) — was reading `state.salesperson`, a
+    // field that never existed in the state shape. Canonical is
+    // `state.sale_owner` (shared RfqInfoCard). Keep `salesperson` as a
+    // legacy fallback in case any historical fixture uses the old key.
+    ['rfq.salesperson', state.sale_owner || state.salesperson || '—'],
     ['rfq.npi_owner', state.npi_owner || '—'],
   ];
   let r = 3;
