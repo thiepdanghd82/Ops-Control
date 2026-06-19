@@ -25,6 +25,11 @@ import ScopedFilterBar from '../components/ScopedFilterBar';
 import ColumnsToggle from '../../../components/Shared/ColumnsToggle';
 import { loadVisibleColumns } from '../../../components/Shared/ColumnsToggle.helpers';
 import {
+  SUMMARIZE_COLUMNS_STORAGE_KEY,
+  SUMMARIZE_DEFAULT_HIDDEN_KEYS,
+  CSV_ALWAYS_INCLUDE_KEYS,
+} from './Summarize.columns.js';
+import {
   collectDrwMaterials,
   collectQuoteMaterials,
   toBulletFromTextarea,
@@ -234,29 +239,12 @@ const SUMMARIZE_COLUMNS = [
     },
   },
 ];
-const SUMMARIZE_COLUMNS_STORAGE_KEY = 'ops-cost-summarize-cols';
-// Default hide the 6 Lead Time & Notice columns — text-heavy free-form
-// fields most operators won't reference daily. Show them via the toggle
-// when forensically tracing a quote's lead-time commitments. Henry's
-// Phase-Q6 confirm: respect-visibility in CSV (NOT force-included), so
-// hiding them keeps the export lean too (CSV_ALWAYS_INCLUDE_KEYS only
-// adds the audit prefix, not the lead-time columns).
-const SUMMARIZE_DEFAULT_HIDDEN_KEYS = [
-  'material_lt',
-  'sample_lt',
-  'po_lt',
-  'remark',
-  'process',
-  'type_of_material',
-  // Phase 4 — snapshot status column. Hidden default; operator opts
-  // in for compliance audits ("which quotes are pinned to old rates?").
-  'snapshot_status',
-];
-// CSV always prepends these audit fields regardless of column-toggle state.
-// Operator workflows (audit cross-ref Quote History, multi-tier MOQ diff,
-// timestamp forensic) rely on these — hiding them in UI is a display
-// preference, but exporting without them breaks downstream tooling.
-const CSV_ALWAYS_INCLUDE_KEYS = ['quote_id', 'tier', 'update_date', 'type', 'sale_owner'];
+// Sprint B3b / A3-03 (2026-06-19) — shape constants now live in
+// the React-free Summarize.columns.js companion (imported at the
+// top of this file). IMPORTANT: when adding/removing a column to
+// SUMMARIZE_COLUMNS above, ALSO update SUMMARIZE_COLUMN_KEYS in
+// Summarize.columns.js — the fixture test will fail loudly on
+// length drift.
 
 // Yield = 1 - Σ(scrap_pct) across every process in a state. Uses a simple
 // sum (not the compound 1-∏(1-s) formula calcEngine uses internally) because

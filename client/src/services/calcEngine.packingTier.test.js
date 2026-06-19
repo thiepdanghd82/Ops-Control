@@ -98,6 +98,33 @@ test('buildTierState [pack/ship per-tier]: tier 1 full override lands in resolve
   assert.equal(tier1.other_ship, 100);
 });
 
+// Sprint B3b / A3-02 (2026-06-19) — pin "each tier inherits from
+// BASE (tier 0), NOT from tier N-1". The implementation merges only
+// `extra_moqs[idx-1].packing` onto top-level state for the requested
+// tier, so each tier's resolution is independent. Without this test
+// a future "inherit from previous tier" refactor could silently
+// change the semantics (operators with tier 1 override but tier 2
+// blank would suddenly see tier 1's value bleed into tier 2).
+test('buildTierState [pack/ship per-tier]: tier 2 inherits from BASE, NOT from tier 1 override', () => {
+  const st = makeStdState({
+    extra_moqs: [
+      // Tier 1 has a clear override on container_cost.
+      { moq: 1000, packing: { container_cost: 999 } },
+      // Tier 2 has NO packing override at all — must fall back to
+      // base (container_cost: 0), not to tier 1 (container_cost: 999).
+      { moq: 2000 },
+    ],
+  });
+  const tier1 = buildTierState(st, 1, 1.0, 1000, st.annual_qty);
+  const tier2 = buildTierState(st, 2, 1.0, 2000, st.annual_qty);
+  assert.equal(tier1.container_cost, 999, 'tier 1 sees its own override');
+  assert.equal(
+    tier2.container_cost,
+    0,
+    'tier 2 must inherit base (0), NOT tier 1 (999) — independent resolution per tier'
+  );
+});
+
 test('buildTierState [pack/ship per-tier]: partial override — unspecified keys fall back to base', () => {
   const st = makeStdState({
     extra_moqs: [
