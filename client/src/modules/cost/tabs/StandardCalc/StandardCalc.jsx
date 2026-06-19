@@ -23,6 +23,7 @@ import SaveChoiceModal from '../../../../utils/SaveChoiceModal';
 import ConflictModal from '../../../../components/Shared/ConflictModal';
 import SummaryBox from './SummaryBox';
 import CalcSummaryBar from './CalcSummaryBar';
+import { shouldShowSummaryBar } from '../costSummaryBarVisibility.js';
 import CalcHeader from './CalcHeader';
 import CalcLayout from './CalcLayout';
 // Sprint S-PRICING-COMBINED-P2 — CalcMaterials / CalcInks / CalcProcesses
@@ -474,8 +475,12 @@ export default function StandardCalc() {
         </TabBarOverflow>
       </div>
 
-      {/* Persistent cost summary bar — always visible below tabs */}
-      <CalcSummaryBar />
+      {/* Cost summary bar — Sprint S-SUMBAR-HIDE (2026-06-19) gates
+          visibility per active sub-tab so analysis / reference tabs
+          (Cost Breakdown / Balancing / Summarize / Legend) don't
+          repeat info already shown below. Data-entry tabs keep it
+          for live margin feedback. See costSummaryBarVisibility.js. */}
+      {shouldShowSummaryBar(activeSubTab, 'std') && <CalcSummaryBar />}
 
       {/* Content */}
       <div className="sc-content">{content}</div>
