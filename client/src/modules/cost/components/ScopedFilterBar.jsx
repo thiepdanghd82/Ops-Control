@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useI18n } from '../../../utils/useI18n';
 import './ScopedFilterBar.css';
 
 const SearchIcon = () => (
@@ -50,6 +51,7 @@ function startOfMonthIso() {
 }
 
 function DateRangePicker({ filter, setField, clearField }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -72,7 +74,7 @@ function DateRangePicker({ filter, setField, clearField }) {
   const hasRange = filter.dateFrom || filter.dateTo;
   const label = hasRange
     ? `${fmtDay(filter.dateFrom) || '…'} → ${fmtDay(filter.dateTo) || '…'}`
-    : 'Date range';
+    : t('filter.date_range');
 
   function applyPreset(from, to) {
     setField('dateFrom', from);
@@ -94,7 +96,7 @@ function DateRangePicker({ filter, setField, clearField }) {
             className="sc-filter-clear"
             role="button"
             tabIndex={0}
-            aria-label="Clear date range"
+            aria-label={t('filter.clear_date_aria')}
             onClick={(e) => {
               e.stopPropagation();
               clearField('dateFrom');
@@ -117,7 +119,7 @@ function DateRangePicker({ filter, setField, clearField }) {
         <div className="sc-filter-date-pop" role="dialog">
           <div className="sc-filter-date-grid">
             <label>
-              From
+              {t('filter.from')}
               <input
                 type="date"
                 value={filter.dateFrom || ''}
@@ -125,7 +127,7 @@ function DateRangePicker({ filter, setField, clearField }) {
               />
             </label>
             <label>
-              To
+              {t('filter.to')}
               <input
                 type="date"
                 value={filter.dateTo || ''}
@@ -135,16 +137,16 @@ function DateRangePicker({ filter, setField, clearField }) {
           </div>
           <div className="sc-filter-date-presets">
             <button type="button" onClick={() => applyPreset(todayIso(), todayIso())}>
-              Today
+              {t('filter.today')}
             </button>
             <button type="button" onClick={() => applyPreset(startOfWeekIso(), todayIso())}>
-              This week
+              {t('filter.this_week')}
             </button>
             <button type="button" onClick={() => applyPreset(startOfMonthIso(), todayIso())}>
-              This month
+              {t('filter.this_month')}
             </button>
             <button type="button" onClick={() => applyPreset(daysAgoIso(30), todayIso())}>
-              Last 30 days
+              {t('filter.last_30_days')}
             </button>
             <button
               type="button"
@@ -154,7 +156,7 @@ function DateRangePicker({ filter, setField, clearField }) {
                 clearField('dateTo');
               }}
             >
-              Clear
+              {t('filter.clear')}
             </button>
           </div>
         </div>
@@ -164,6 +166,7 @@ function DateRangePicker({ filter, setField, clearField }) {
 }
 
 function ScopedTextInput({ name, label, value, onChange, onClear }) {
+  const { t } = useI18n();
   return (
     <label className={`sc-filter-text${value ? ' sc-filter-text-active' : ''}`}>
       <span className="sc-filter-text-label">{label}</span>
@@ -177,7 +180,7 @@ function ScopedTextInput({ name, label, value, onChange, onClear }) {
         <button
           type="button"
           className="sc-filter-clear"
-          aria-label={`Clear ${label}`}
+          aria-label={t('filter.clear_field_aria', { label })}
           onClick={() => onClear(name)}
         >
           ×
@@ -195,9 +198,14 @@ export default function ScopedFilterBar({
   hasActiveFilter,
   resultCount,
   totalCount,
-  globalPlaceholder = 'Search…',
+  globalPlaceholder,
   rightSlot = null,
 }) {
+  const { t } = useI18n();
+  // globalPlaceholder is consumer-provided (Inbox / Summarize / QH each
+  // pass their own scope-specific placeholder); fall back to a generic
+  // translated default when omitted.
+  const searchPlaceholder = globalPlaceholder ?? t('filter.search_placeholder');
   return (
     <div className="sc-filter-bar">
       <div className="sc-filter-row sc-filter-row-1">
@@ -206,7 +214,7 @@ export default function ScopedFilterBar({
           <input
             className="sc-filter-search"
             type="text"
-            placeholder={globalPlaceholder}
+            placeholder={searchPlaceholder}
             value={filter.query}
             onChange={(e) => setField('query', e.target.value)}
           />
@@ -214,7 +222,7 @@ export default function ScopedFilterBar({
             <button
               type="button"
               className="sc-filter-clear sc-filter-clear-search"
-              aria-label="Clear search"
+              aria-label={t('filter.clear_search_aria')}
               onClick={() => clearField('query')}
             >
               ×
@@ -227,21 +235,21 @@ export default function ScopedFilterBar({
         <DateRangePicker filter={filter} setField={setField} clearField={clearField} />
         <ScopedTextInput
           name="customer"
-          label="Customer"
+          label={t('filter.customer')}
           value={filter.customer}
           onChange={setField}
           onClear={clearField}
         />
         <ScopedTextInput
           name="part"
-          label="Part"
+          label={t('filter.part')}
           value={filter.part}
           onChange={setField}
           onClear={clearField}
         />
         <ScopedTextInput
           name="sale"
-          label="Sale"
+          label={t('filter.sale')}
           value={filter.sale}
           onChange={setField}
           onClear={clearField}
@@ -251,14 +259,14 @@ export default function ScopedFilterBar({
             type="button"
             className="sc-filter-clear-all"
             onClick={clearAll}
-            title="Clear all filters"
+            title={t('filter.clear_all_title')}
           >
-            ↻ Clear all
+            {t('filter.clear_all')}
           </button>
         )}
         <span className="sc-filter-count">
           {resultCount != null && totalCount != null
-            ? `${resultCount} of ${totalCount} shown`
+            ? t('filter.shown_of', { n: resultCount, m: totalCount })
             : ''}
         </span>
       </div>

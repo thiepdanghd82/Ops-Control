@@ -283,7 +283,7 @@ export default function PendingApprovalsInbox() {
           marginBottom: 16,
         }}
       >
-        <div style={{ fontSize: 18, fontWeight: 600, color: '#161616' }}>Pending Approvals</div>
+        <div style={{ fontSize: 18, fontWeight: 600, color: '#161616' }}>{t('inbox.title')}</div>
         <span
           style={{
             fontSize: 11,
@@ -295,27 +295,27 @@ export default function PendingApprovalsInbox() {
             borderRadius: 10,
           }}
         >
-          {myQueueCount} in my queue
+          {t('inbox.in_my_queue', { n: myQueueCount })}
         </span>
         {canSeeAll && (
           <div style={{ marginLeft: 'auto', display: 'inline-flex', gap: 0 }}>
             <ViewToggleBtn
               active={viewMode === 'mine'}
               onClick={() => setViewMode('mine')}
-              label="My queue"
+              label={t('inbox.my_queue')}
               count={myQueueCount}
             />
             <ViewToggleBtn
               active={viewMode === 'all'}
               onClick={() => setViewMode('all')}
-              label="All pending"
+              label={t('inbox.all_pending')}
               count={allPendingCount}
             />
           </div>
         )}
         <button
           onClick={refresh}
-          title="Refresh"
+          title={t('inbox.refresh_title')}
           style={{
             marginLeft: canSeeAll ? 0 : 'auto',
             fontSize: 11,
@@ -327,7 +327,7 @@ export default function PendingApprovalsInbox() {
             borderRadius: 2,
           }}
         >
-          ↻ Refresh
+          {t('inbox.refresh')}
         </button>
       </div>
 
@@ -342,7 +342,7 @@ export default function PendingApprovalsInbox() {
         hasActiveFilter={hasActiveFilter}
         resultCount={items.length}
         totalCount={totalForFilter}
-        globalPlaceholder="Search RFQ, customer, project, materials…"
+        globalPlaceholder={t('inbox.search_placeholder')}
       />
 
       {/* Empty state */}
@@ -351,17 +351,17 @@ export default function PendingApprovalsInbox() {
           icon={viewMode === 'mine' ? '✓' : '📭'}
           title={
             hasActiveFilter
-              ? 'No matches for current filters'
+              ? t('inbox.empty.no_match.title')
               : viewMode === 'mine'
-                ? 'All caught up'
-                : 'No quotes in review'
+                ? t('inbox.empty.caught_up.title')
+                : t('inbox.empty.no_review.title')
           }
           hint={
             hasActiveFilter
-              ? 'Try clearing a filter chip or the global search box above.'
+              ? t('inbox.empty.no_match.hint')
               : viewMode === 'mine'
-                ? 'No quotes are waiting on your action right now. Check back later, or switch to "All pending" if you are an admin.'
-                : 'No quotes are currently in Sales or Finance review.'
+                ? t('inbox.empty.caught_up.hint')
+                : t('inbox.empty.no_review.hint')
           }
         />
       ) : (
