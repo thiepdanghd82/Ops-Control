@@ -97,4 +97,65 @@ registerStrings({
   },
   'qexp.error.network': { en: 'Network error. Please retry.', vi: 'Lỗi mạng. Vui lòng thử lại.' },
   'qexp.error.generic': { en: 'Export failed: {detail}', vi: 'Xuất thất bại: {detail}' },
+
+  // ─── Sprint S-I18N-COVER-2 (2026-06-19) — Phase B group B3c ──────
+  // ScopedFilterBar is shared between Quote History + Pending
+  // Approvals Inbox + Cost Breakdown sidebar; keys live here next to
+  // the qh.* family so the whole sales-review surface ships VI parity
+  // together. Pending Approvals header strings (`inbox.*`) also live
+  // here — the inbox is a Sales-domain surface and gets resolved by
+  // the same registry slice.
+
+  // ── ScopedFilterBar (date picker + scoped text inputs + counter) ──
+  'filter.date_range': { en: 'Date range', vi: 'Khoảng ngày' },
+  'filter.from': { en: 'From', vi: 'Từ' },
+  'filter.to': { en: 'To', vi: 'Đến' },
+  'filter.today': { en: 'Today', vi: 'Hôm nay' },
+  'filter.this_week': { en: 'This week', vi: 'Tuần này' },
+  'filter.this_month': { en: 'This month', vi: 'Tháng này' },
+  'filter.last_30_days': { en: 'Last 30 days', vi: '30 ngày qua' },
+  'filter.clear': { en: 'Clear', vi: 'Xoá' },
+  'filter.search_placeholder': { en: 'Search…', vi: 'Tìm kiếm…' },
+  'filter.customer': { en: 'Customer', vi: 'Khách hàng' },
+  'filter.part': { en: 'Part', vi: 'Linh kiện' },
+  'filter.sale': { en: 'Sale', vi: 'Bán hàng' },
+  'filter.clear_all': { en: '↻ Clear all', vi: '↻ Xoá hết' },
+  'filter.clear_all_title': { en: 'Clear all filters', vi: 'Xoá hết bộ lọc' },
+  'filter.shown_of': { en: '{n} of {m} shown', vi: '{n} / {m} hiển thị' },
+  'filter.clear_field_aria': { en: 'Clear {label}', vi: 'Xoá {label}' },
+  'filter.clear_search_aria': { en: 'Clear search', vi: 'Xoá tìm kiếm' },
+  'filter.clear_date_aria': { en: 'Clear date range', vi: 'Xoá khoảng ngày' },
+
+  // ── Pending Approvals Inbox header + empty states ──
+  'inbox.title': { en: 'Pending Approvals', vi: 'Chờ duyệt' },
+  'inbox.in_my_queue': { en: '{n} in my queue', vi: '{n} trong hàng đợi' },
+  'inbox.my_queue': { en: 'My queue', vi: 'Hàng đợi của tôi' },
+  'inbox.all_pending': { en: 'All pending', vi: 'Tất cả chờ duyệt' },
+  'inbox.refresh': { en: '↻ Refresh', vi: '↻ Làm mới' },
+  'inbox.refresh_title': { en: 'Refresh', vi: 'Làm mới' },
+  'inbox.search_placeholder': {
+    en: 'Search RFQ, customer, project, materials…',
+    vi: 'Tìm RFQ, khách hàng, dự án, vật liệu…',
+  },
+  'inbox.empty.no_match.title': {
+    en: 'No matches for current filters',
+    vi: 'Không khớp với bộ lọc hiện tại',
+  },
+  'inbox.empty.no_match.hint': {
+    en: 'Try clearing a filter chip or the global search box above.',
+    vi: 'Thử xoá một chip bộ lọc hoặc ô tìm kiếm tổng phía trên.',
+  },
+  'inbox.empty.caught_up.title': { en: 'All caught up', vi: 'Đã xong hết' },
+  'inbox.empty.caught_up.hint': {
+    en: 'No quotes are waiting on your action right now. Check back later, or switch to "All pending" if you are an admin.',
+    vi: 'Hiện không có báo giá nào chờ bạn xử lý. Quay lại sau, hoặc chuyển sang "Tất cả chờ duyệt" nếu bạn là admin.',
+  },
+  'inbox.empty.no_review.title': {
+    en: 'No quotes in review',
+    vi: 'Không có báo giá đang xét duyệt',
+  },
+  'inbox.empty.no_review.hint': {
+    en: 'No quotes are currently in Sales or Finance review.',
+    vi: 'Hiện không có báo giá nào đang trong vòng xét duyệt Bán hàng hoặc Tài chính.',
+  },
 });
