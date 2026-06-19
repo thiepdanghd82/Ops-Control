@@ -1723,122 +1723,139 @@ const mtUpload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-router.post('/machine-technical/:kind/import', mtUpload.single('file'), async (req, res) => {
-  const cu = requireWriter(req, res);
-  if (!cu) {
-    if (req.file)
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch {
-        /* ignore */
-      }
-    return;
-  }
-  if (!isAdminPlus(cu)) {
-    if (req.file)
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch {
-        /* ignore */
-      }
-    return res.status(403).json({ error: 'admin_or_sys_required' });
-  }
-  const kind = req.params.kind;
-  if (!mtKindOk(kind)) {
-    if (req.file)
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch {
-        /* ignore */
-      }
-    return res.status(400).json({ error: 'bad_kind' });
-  }
-  if (!req.file) return res.status(400).json({ error: 'no_file' });
-
-  try {
-    const XLSX = (await import('xlsx')).default;
-    const wb = XLSX.readFile(req.file.path);
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-
-    // Detect shape: if first col header is 'Attribute' or contains all
-    // attribute names → transposed (attribute × machine).
-    // Else → rows-are-machines with first row as header.
-    let imported = [];
-    const FIELD_LIST = mtRead()._meta[`_${kind}_fields`] || [];
-    if (rows.length > 0 && FIELD_LIST.includes(String(rows[1]?.[0] || ''))) {
-      // Transposed — rebuild records.
-      const numCols = Math.max(...rows.map((r) => r.length));
-      for (let col = 1; col < numCols; col++) {
-        const rec = {};
-        for (let r = 1; r < rows.length; r++) {
-          const key = String(rows[r]?.[0] || '').trim();
-          if (!FIELD_LIST.includes(key)) continue;
-          let val = rows[r]?.[col];
-          if (val === '' || val === undefined) continue;
-          if (key.startsWith('has_')) val = val === 'Yes' || val === true;
-          rec[key] = val;
+// Sprint B3e / A4-02 (2026-06-19) — defense-in-depth: bulk-import
+// is operator-impactful (replaces machine technical data wholesale)
+// so symmetric `requireTabAccess('lib-machine-tech')` matches the
+// guard pattern on rfq-tracker + sample-tracking attachment routes.
+// The handler's inline `requireWriter` still runs (defense in depth,
+// not a replacement) — a viewer who somehow bypasses the middleware
+// still gets 401/403 from the inline check.
+router.post(
+  '/machine-technical/:kind/import',
+  requireTabAccess('lib-machine-tech'),
+  mtUpload.single('file'),
+  async (req, res) => {
+    const cu = requireWriter(req, res);
+    if (!cu) {
+      if (req.file)
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {
+          /* ignore */
         }
-        if (rec.brand || rec.model) imported.push(rec);
-      }
-    } else {
-      // Flat rows — header row + data rows.
-      const header = rows[0].map((h) => String(h || '').trim());
-      for (let r = 1; r < rows.length; r++) {
-        const rec = {};
-        header.forEach((h, i) => {
-          const v = rows[r]?.[i];
-          if (v !== '' && v !== undefined) rec[h] = v;
-        });
-        if (rec.brand || rec.model) imported.push(rec);
-      }
+      return;
     }
-
-    // Upsert by id (or synthesize id from brand-model).
-    const slug = (s) =>
-      String(s || '')
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 80);
-    let created = 0,
-      updated = 0;
-    await withLock('machine-technical', async () => {
-      const data = mtRead();
-      const list = data[kind];
-      for (const incoming of imported) {
-        const rec = { ...incoming };
-        if (!rec.id) rec.id = slug(`${rec.brand || 'unknown'}-${rec.model || Date.now()}`);
-        const idx = list.findIndex((x) => x.id === rec.id);
-        if (idx >= 0) {
-          list[idx] = { ...list[idx], ...rec };
-          updated++;
-        } else {
-          list.push(rec);
-          created++;
+    if (!isAdminPlus(cu)) {
+      if (req.file)
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {
+          /* ignore */
         }
-      }
-      mtWrite({ [kind]: list });
-      audit('MT_IMPORT', cu.username, req.ip, `${kind}: +${created} created, ~${updated} updated`);
-    });
+      return res.status(403).json({ error: 'admin_or_sys_required' });
+    }
+    const kind = req.params.kind;
+    if (!mtKindOk(kind)) {
+      if (req.file)
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {
+          /* ignore */
+        }
+      return res.status(400).json({ error: 'bad_kind' });
+    }
+    if (!req.file) return res.status(400).json({ error: 'no_file' });
 
     try {
-      fs.unlinkSync(req.file.path);
-    } catch {
-      /* ignore */
-    }
-    res.json({ ok: true, created, updated, total: imported.length });
-  } catch (err) {
-    if (req.file)
+      const XLSX = (await import('xlsx')).default;
+      const wb = XLSX.readFile(req.file.path);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // Detect shape: if first col header is 'Attribute' or contains all
+      // attribute names → transposed (attribute × machine).
+      // Else → rows-are-machines with first row as header.
+      let imported = [];
+      const FIELD_LIST = mtRead()._meta[`_${kind}_fields`] || [];
+      if (rows.length > 0 && FIELD_LIST.includes(String(rows[1]?.[0] || ''))) {
+        // Transposed — rebuild records.
+        const numCols = Math.max(...rows.map((r) => r.length));
+        for (let col = 1; col < numCols; col++) {
+          const rec = {};
+          for (let r = 1; r < rows.length; r++) {
+            const key = String(rows[r]?.[0] || '').trim();
+            if (!FIELD_LIST.includes(key)) continue;
+            let val = rows[r]?.[col];
+            if (val === '' || val === undefined) continue;
+            if (key.startsWith('has_')) val = val === 'Yes' || val === true;
+            rec[key] = val;
+          }
+          if (rec.brand || rec.model) imported.push(rec);
+        }
+      } else {
+        // Flat rows — header row + data rows.
+        const header = rows[0].map((h) => String(h || '').trim());
+        for (let r = 1; r < rows.length; r++) {
+          const rec = {};
+          header.forEach((h, i) => {
+            const v = rows[r]?.[i];
+            if (v !== '' && v !== undefined) rec[h] = v;
+          });
+          if (rec.brand || rec.model) imported.push(rec);
+        }
+      }
+
+      // Upsert by id (or synthesize id from brand-model).
+      const slug = (s) =>
+        String(s || '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '')
+          .slice(0, 80);
+      let created = 0,
+        updated = 0;
+      await withLock('machine-technical', async () => {
+        const data = mtRead();
+        const list = data[kind];
+        for (const incoming of imported) {
+          const rec = { ...incoming };
+          if (!rec.id) rec.id = slug(`${rec.brand || 'unknown'}-${rec.model || Date.now()}`);
+          const idx = list.findIndex((x) => x.id === rec.id);
+          if (idx >= 0) {
+            list[idx] = { ...list[idx], ...rec };
+            updated++;
+          } else {
+            list.push(rec);
+            created++;
+          }
+        }
+        mtWrite({ [kind]: list });
+        audit(
+          'MT_IMPORT',
+          cu.username,
+          req.ip,
+          `${kind}: +${created} created, ~${updated} updated`
+        );
+      });
+
       try {
         fs.unlinkSync(req.file.path);
       } catch {
         /* ignore */
       }
-    logErr(req, 'mt:import', err);
-    res.status(500).json({ error: redactErrorMessage(err) });
+      res.json({ ok: true, created, updated, total: imported.length });
+    } catch (err) {
+      if (req.file)
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {
+          /* ignore */
+        }
+      logErr(req, 'mt:import', err);
+      res.status(500).json({ error: redactErrorMessage(err) });
+    }
   }
-});
+);
 
 // GET /api/shared/sample-tracking - Sample tracking
 router.get('/sample-tracking', (req, res) => {
@@ -2349,75 +2366,85 @@ router.delete('/print-area/:sku', async (req, res) => {
 // when calling POST /print-area to save the job metadata. File is
 // content-addressed: re-uploading an identical image is a no-op on
 // disk (hash collision → existing file is reused).
-router.post('/print-area/upload', paUpload.single('artwork'), (req, res) => {
-  if (!requireWriter(req, res)) {
-    // We've consumed a multipart upload — best-effort cleanup of the
-    // disk artifact so a viewonly probe can't fill the tmpdir.
-    try {
-      if (req.file?.path) fs.unlinkSync(req.file.path);
-    } catch {
-      /* ignore */
-    }
-    return;
-  }
-  if (!req.file) return res.status(400).json({ error: 'no_file' });
-  const tmpPath = req.file.path;
-  const ext = path.extname(req.file.originalname || '').toLowerCase() || '.png';
-  try {
-    if (!paVerifyImageMagic(tmpPath, ext)) {
-      return res.status(400).json({ error: 'file_type_mismatch' });
-    }
-    paEnsureDirs();
-    const hash = paHashFile(tmpPath);
-    const finalName = `${hash}${ext}`;
-    const finalPath = path.join(PA_ARTWORK_DIR, finalName);
-    if (!fs.existsSync(finalPath)) {
-      // Move tmp → final. `renameSync` is atomic within a single
-      // filesystem but throws EXDEV across volumes (common on macOS
-      // where /tmp and user data live on different disks). Fall back
-      // to copy-then-unlink — not atomic but still safe because the
-      // content-addressed `finalName` makes the write idempotent.
+//
+// Sprint B3e / A4-02 (2026-06-19) — defense-in-depth: symmetric
+// `requireTabAccess('print-area')` matches the guard pattern used by
+// rfq-tracker + sample-tracking attachment routes. Inline
+// `requireWriter` still runs (defense in depth, not a replacement).
+router.post(
+  '/print-area/upload',
+  requireTabAccess('print-area'),
+  paUpload.single('artwork'),
+  (req, res) => {
+    if (!requireWriter(req, res)) {
+      // We've consumed a multipart upload — best-effort cleanup of the
+      // disk artifact so a viewonly probe can't fill the tmpdir.
       try {
-        fs.renameSync(tmpPath, finalPath);
-      } catch (err) {
-        if (err?.code === 'EXDEV') {
-          fs.copyFileSync(tmpPath, finalPath);
-          try {
-            fs.unlinkSync(tmpPath);
-          } catch {
-            /* ignore cleanup */
+        if (req.file?.path) fs.unlinkSync(req.file.path);
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    if (!req.file) return res.status(400).json({ error: 'no_file' });
+    const tmpPath = req.file.path;
+    const ext = path.extname(req.file.originalname || '').toLowerCase() || '.png';
+    try {
+      if (!paVerifyImageMagic(tmpPath, ext)) {
+        return res.status(400).json({ error: 'file_type_mismatch' });
+      }
+      paEnsureDirs();
+      const hash = paHashFile(tmpPath);
+      const finalName = `${hash}${ext}`;
+      const finalPath = path.join(PA_ARTWORK_DIR, finalName);
+      if (!fs.existsSync(finalPath)) {
+        // Move tmp → final. `renameSync` is atomic within a single
+        // filesystem but throws EXDEV across volumes (common on macOS
+        // where /tmp and user data live on different disks). Fall back
+        // to copy-then-unlink — not atomic but still safe because the
+        // content-addressed `finalName` makes the write idempotent.
+        try {
+          fs.renameSync(tmpPath, finalPath);
+        } catch (err) {
+          if (err?.code === 'EXDEV') {
+            fs.copyFileSync(tmpPath, finalPath);
+            try {
+              fs.unlinkSync(tmpPath);
+            } catch {
+              /* ignore cleanup */
+            }
+          } else {
+            throw err;
           }
-        } else {
-          throw err;
+        }
+      } else {
+        // File is already stored — discard the upload's tmp copy.
+        try {
+          fs.unlinkSync(tmpPath);
+        } catch {
+          /* ignore */
         }
       }
-    } else {
-      // File is already stored — discard the upload's tmp copy.
+      res.json({
+        ok: true,
+        artwork_file: path.join('Library', 'PrintArea', 'artworks', finalName),
+        hash,
+        size: req.file.size,
+        mime: req.file.mimetype,
+      });
+    } catch (err) {
+      // Always try to clean up tmp on error — a failed handler should
+      // not leave artifacts under /tmp.
       try {
         fs.unlinkSync(tmpPath);
       } catch {
         /* ignore */
       }
+      logErr(req, 'print-area:upload', err);
+      res.status(500).json({ error: redactErrorMessage(err) });
     }
-    res.json({
-      ok: true,
-      artwork_file: path.join('Library', 'PrintArea', 'artworks', finalName),
-      hash,
-      size: req.file.size,
-      mime: req.file.mimetype,
-    });
-  } catch (err) {
-    // Always try to clean up tmp on error — a failed handler should
-    // not leave artifacts under /tmp.
-    try {
-      fs.unlinkSync(tmpPath);
-    } catch {
-      /* ignore */
-    }
-    logErr(req, 'print-area:upload', err);
-    res.status(500).json({ error: redactErrorMessage(err) });
   }
-});
+);
 
 /** Parse window._VAR_NAME={...} from .js data file */
 function parseJsDataFile(filePath) {
