@@ -242,7 +242,11 @@
           "crew": 1,
           "speed_uom": "m/min"
         }
-      }
+      },
+      "tool_life": {
+        "RDC Die": 100000
+      },
+      "click_charges": {}
     }
   },
   "expected_result": {

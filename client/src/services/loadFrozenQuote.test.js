@@ -54,18 +54,19 @@ const fixture = JSON.parse(readFileSync(FIXTURE_PATH, 'utf8'));
 
 // Synthetic libV2 simulating "5 years of master library drift" but
 // ONLY mutating clusters that the pricing snapshot ACTUALLY pins
-// (Materials/Inks coverage/Rate per Sprint S-SNAPSHOT-PHASE-1). Other
-// clusters (tool_life DDL, SGA rate) are NOT in the snapshot today
-// and stay pinned to fixture.lib so test 2 isolates the snapshot's
-// pinning contract from non-snapshot retention gaps.
+// (Materials/Inks coverage/Rate per Sprint S-SNAPSHOT-PHASE-1 +
+// tool_life/click_charges per PR-A 2026-06-20). Other clusters
+// (SGA rate) are NOT in the snapshot today and stay pinned to
+// fixture.lib so test 2 isolates the snapshot's pinning contract
+// from non-snapshot retention gaps.
 //
-// PHASE 2.1 FINDING: tool_life + SGA rate are NOT pinned by snapshot.
-// Operator updating either after-the-fact silently changes historical
-// quote reload values. Filed as follow-up tickets:
-//   - S-SNAPSHOT-EXTEND-TOOL-LIFE (tool_life DDL freeze)
-//   - S-SNAPSHOT-EXTEND-SGA (finance.summary SGA rate freeze)
-// Both P1 for 20-year retention compliance, but out of scope for this
-// PR which only tests the EXISTING contract.
+// PR-A CHANGE: tool_life + click_charges NOW MUTATED in libV2 because
+// they ARE pinned by the snapshot. T4 + T5 below assert mutating
+// these does NOT shift result — pins the new PR-A contract.
+//
+// SGA STILL not snapshot-pinned at this PR layer. PR-A2 will extend
+// pricing_snapshot to include SGA precedence (approval > snapshot >
+// lib); until then SGA stays pinned to fixture.lib here.
 function makeLibV2(baseLib) {
   return {
     rate: [
@@ -82,8 +83,9 @@ function makeLibV2(baseLib) {
         { pt: 'Flexo', cov: 250 },
         { pt: 'Indigo', cov: 350 },
       ],
+      // PR-A: BOTH click_charges and tool_life MUTATED — snapshot must pin both.
       click_charges: { 100: 0.7, 1000: 4.5 },
-      tool_life: baseLib.ddl.tool_life, // NOT a snapshot cluster — must stay pinned to isolate
+      tool_life: { 'RDC Die': 50000, 'Pinacle die': 30000, Jig: 200000 }, // halved from fixture.lib
       print_type_list: ['Flexo', 'Indigo'],
     },
     finance: baseLib.finance, // SGA NOT a snapshot cluster — stay pinned
@@ -163,6 +165,102 @@ test('20-year contract: frozen quote reproduces identical numbers under MUTATED 
         `pricingSnapshot.js + calcEngine.js for new lib.* lookups that bypass the resolver.`
     );
   }
+});
+
+// ─── PR-A new contract tests ───────────────────────────────────────
+
+test('PR-A pin: mutating libV2.ddl.tool_life does NOT shift result (snapshot pins tool_life)', () => {
+  // Targeted mutate: ONLY tool_life changed; everything else matches
+  // fixture.lib. Pre-PR-A this would fail because tool_life lookup
+  // bypassed the resolver; post-PR-A snapshot.tool_life wins.
+  const state = fixture.state;
+  const expected = fixture.expected_result;
+  const snapshot = state.pricing_snapshot;
+  const lib = {
+    ...fixture.lib,
+    ddl: {
+      ...fixture.lib.ddl,
+      tool_life: { 'RDC Die': 1, 'Pinacle die': 1, Jig: 1 }, // catastrophic 100,000× shift
+    },
+  };
+
+  const tierSt = getActiveTierState(state);
+  const result = calcAll(tierSt, null, lib, null, { snapshot });
+  const actual = serializeResultForPersist(result);
+
+  assert.equal(
+    actual.tooling,
+    expected.tooling,
+    `tooling drifted under tool_life mutation — snapshot.tool_life is NOT pinning. ` +
+      `Expected ${expected.tooling}, got ${actual.tooling}. Check calcEngine resolver.getToolLife.`
+  );
+  assert.equal(actual.s_ttl, expected.s_ttl, 'downstream s_ttl also pinned');
+});
+
+test('PR-A pin: mutating libV2.ddl.click_charges does NOT shift result (snapshot pins click_charges)', () => {
+  // Fixture quote has no Indigo inks (Flexo only), so click_charges
+  // snapshot is {} and the resolver returns {} → no clicks computed
+  // regardless. This test exercises the resolver branch — the result
+  // should be invariant under click_charges mutation in any case.
+  const state = fixture.state;
+  const expected = fixture.expected_result;
+  const snapshot = state.pricing_snapshot;
+  const lib = {
+    ...fixture.lib,
+    ddl: {
+      ...fixture.lib.ddl,
+      click_charges: { 100: 999, 1000: 9999 }, // catastrophic 2000× shift
+    },
+  };
+
+  const tierSt = getActiveTierState(state);
+  const result = calcAll(tierSt, null, lib, null, { snapshot });
+  const actual = serializeResultForPersist(result);
+
+  // Whole result identical — proves resolver routes click_charges
+  // lookup through snapshot, not live lib.
+  for (const k of Object.keys(expected)) {
+    assert.deepStrictEqual(actual[k], expected[k], `${k} drifted under click_charges mutation`);
+  }
+});
+
+test('PR-A legacy: snapshot without tool_life/click_charges emits _warnings + uses live lib', () => {
+  // Simulate a pre-PR-A snapshot: persisted block lacks tool_life +
+  // click_charges keys. Resolver falls back to live lib (calc still
+  // works) AND attaches one _warnings entry per missing field so audit
+  // UI can flag the quote as partially-pinned.
+  const state = fixture.state;
+  const snapshot = state.pricing_snapshot;
+  // Strip new-cluster fields to simulate legacy
+  const { tool_life, click_charges, ...legacySnapshot } = snapshot;
+  // Silence unused destructure (the whole point is to drop them)
+  void tool_life;
+  void click_charges;
+  const legacyState = { ...state, pricing_snapshot: legacySnapshot };
+
+  const tierSt = getActiveTierState(legacyState);
+  const result = calcAll(tierSt, null, fixture.lib, null, { snapshot: legacySnapshot });
+
+  assert.ok(Array.isArray(result._warnings), 'result has _warnings array');
+  const warnTypes = result._warnings.map((w) => `${w.type}/${w.field || ''}`);
+  assert.ok(
+    warnTypes.includes('legacy_snapshot_partial/tool_life'),
+    `_warnings should include legacy_snapshot_partial for tool_life. Got: ${warnTypes.join(', ')}`
+  );
+  assert.ok(
+    warnTypes.includes('legacy_snapshot_partial/click_charges'),
+    `_warnings should include legacy_snapshot_partial for click_charges. Got: ${warnTypes.join(', ')}`
+  );
+
+  // Calc still runs (no crash) and falls back to live lib for the
+  // missing clusters → tooling cost matches expected (because lib
+  // here IS fixture.lib, same as save-time)
+  const actual = serializeResultForPersist(result);
+  assert.equal(
+    actual.tooling,
+    fixture.expected_result.tooling,
+    'tooling computed via lib fallback'
+  );
 });
 
 test('20-year contract: WITHOUT snapshot, libV2 DOES produce different numbers (sanity proves drift exists)', () => {

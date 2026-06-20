@@ -57,6 +57,11 @@ export function createEmptySnapshot() {
     materials: {},
     coverage: [],
     rates: {},
+    // PR-A (2026-06-20): tool_life + click_charges clusters added.
+    // Legacy snapshots without these fields fall back to live lib and
+    // get tagged _partial_legacy=true + _warnings entry.
+    tool_life: {},
+    click_charges: {},
   };
 }
 
@@ -115,6 +120,53 @@ function collectUsedWorkcenters(state) {
 }
 
 /**
+ * Collect tool_type strings actually referenced by die-cut processes
+ * on the quote. Pre-Sprint-S-PRICING-COMBINED-P2 we'd walk the whole
+ * lib.ddl.tool_life dict; per snapshot-gọn principle we only freeze
+ * the types this quote uses — keeps snapshot bytes proportional to
+ * quote size, not library size.
+ */
+function collectUsedToolTypes(state) {
+  const used = new Set();
+  const walk = (procs) => {
+    if (!Array.isArray(procs)) return;
+    for (const p of procs) {
+      if (p && typeof p.tool_type === 'string' && p.tool_type.length > 0) {
+        used.add(p.tool_type);
+      }
+    }
+  };
+  walk(state?.processes);
+  if (Array.isArray(state?.subproducts)) {
+    for (const sp of state.subproducts) walk(sp?.processes);
+  }
+  return used;
+}
+
+/**
+ * Detect whether the quote needs click_charges frozen. Indigo-printed
+ * inks (per isIndigoPrintType in calcEngine — startsWith('Indigo'))
+ * read lib.ddl.click_charges at run-cost computation. Quote with no
+ * Indigo inks → empty click_charges snapshot (no bytes wasted).
+ */
+function quoteUsesClickCharges(state) {
+  const walk = (inks) => {
+    if (!Array.isArray(inks)) return false;
+    for (const i of inks) {
+      if (i && typeof i.print_type === 'string' && i.print_type.startsWith('Indigo')) {
+        return true;
+      }
+    }
+    return false;
+  };
+  if (walk(state?.inks)) return true;
+  if (Array.isArray(state?.subproducts)) {
+    for (const sp of state.subproducts) if (walk(sp?.inks)) return true;
+  }
+  return false;
+}
+
+/**
  * Capture a USED-rows-only snapshot of the live master library. Walks
  * Std + Cpx materials and processes so a quote with 3 subproducts and
  * 9 workcenters snapshots 9 rate rows + 5 material rows — not the
@@ -153,6 +205,28 @@ export function freezeLib(lib, state, options) {
     rates[wc] = row ? { ...row } : null;
   }
 
+  // PR-A (2026-06-20): freeze tool_life only for tool_types this quote
+  // actually uses. Empty dict for quotes with no die-cut processes —
+  // resolver falls through cleanly (returns 0, matching pre-snapshot
+  // getToolLife behavior for unknown types).
+  const tool_life = {};
+  const libToolLife = (lib.ddl && lib.ddl.tool_life) || {};
+  for (const toolType of collectUsedToolTypes(state)) {
+    if (Object.prototype.hasOwnProperty.call(libToolLife, toolType)) {
+      tool_life[toolType] = libToolLife[toolType];
+    }
+  }
+
+  // PR-A (2026-06-20): freeze click_charges only when quote actually
+  // has Indigo inks. Captures the full charge table because clicks-per-
+  // tier lookup walks all keys to find the largest key ≤ clicks
+  // (calcEngine.js:529-536 — sorted-key climb). Snapshotting only the
+  // "needed" tier would require knowing the quote's clicks ahead of
+  // time; full-table is small (~10 entries) so cost is negligible.
+  const click_charges = quoteUsesClickCharges(state)
+    ? { ...((lib.ddl && lib.ddl.click_charges) || {}) }
+    : {};
+
   return {
     _captured_at: new Date().toISOString(),
     _captured_by: resolveCapturedBy(options),
@@ -162,6 +236,8 @@ export function freezeLib(lib, state, options) {
     materials,
     coverage: structuredClone((lib.ddl && lib.ddl.coverage) || []),
     rates,
+    tool_life,
+    click_charges,
   };
 }
 
@@ -241,4 +317,61 @@ export function getCoverageFromSnapshot(snapshot) {
 export function getSnapshotSite(snapshot) {
   if (!snapshot) return null;
   return snapshot._site || null;
+}
+
+/**
+ * Tool lifespan for a die type as frozen at save time. Returns 0 when
+ * the snapshot doesn't carry tool_life (pre-PR-A snapshot) OR when the
+ * specific tool_type wasn't in the lib at save time. Caller (calcEngine
+ * resolver) treats 0 the same as the pre-snapshot getToolLife return
+ * shape — falls through to proc.tool_life || 1 in the tooling formula.
+ *
+ * @param {object|null|undefined} snapshot
+ * @param {string} toolType
+ * @returns {number}
+ */
+export function getToolLifeFromSnapshot(snapshot, toolType) {
+  if (!snapshot || !snapshot.tool_life) return 0;
+  const v = snapshot.tool_life[toolType];
+  return Number.isFinite(v) ? v : 0;
+}
+
+/**
+ * Indigo click charges table as frozen at save time. Returns empty
+ * object when snapshot lacks click_charges (pre-PR-A) so caller can
+ * fall back to live lib.ddl.click_charges (with _warnings emit per
+ * legacy-partial pattern).
+ *
+ * @param {object|null|undefined} snapshot
+ * @returns {Record<string, number>}
+ */
+export function getClickChargesFromSnapshot(snapshot) {
+  if (!snapshot || !snapshot.click_charges || typeof snapshot.click_charges !== 'object') {
+    return {};
+  }
+  return snapshot.click_charges;
+}
+
+/**
+ * Returns the list of new-cluster fields (tool_life + click_charges)
+ * that are MISSING from a snapshot — used by the resolver to attach
+ * _warnings + set pricing_snapshot._partial_legacy=true so consumers
+ * (UI, audit log) can flag the quote as "partially-pinned".
+ *
+ * A snapshot is considered to LACK a field if the key is absent
+ * entirely. An EMPTY dict ({}) is considered PRESENT (it means the
+ * quote at save time had no die-cut / no Indigo, so freeze was a
+ * no-op — distinct from "we didn't have the freeze capability yet").
+ *
+ * @param {object|null|undefined} snapshot
+ * @returns {string[]} ['tool_life', 'click_charges'] subset
+ */
+export function detectLegacyPartialFields(snapshot) {
+  if (!snapshot) return [];
+  const missing = [];
+  if (!Object.prototype.hasOwnProperty.call(snapshot, 'tool_life')) missing.push('tool_life');
+  if (!Object.prototype.hasOwnProperty.call(snapshot, 'click_charges')) {
+    missing.push('click_charges');
+  }
+  return missing;
 }
