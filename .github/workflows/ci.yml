@@ -41,7 +41,12 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '22', cache: 'npm' }
       - run: npm ci --ignore-scripts
-      - run: npm run lint
+      # --max-warnings 370 is the baseline after Phase 0 CI Green Sprint
+      # (PR-A + PR-B + PR-C1 + PR-C2, 2026-06-20). 315 are pre-existing
+      # inline-style tech debt (Sprint 12 deferred); rest tracked in
+      # docs/ci/warning-by-rule.md with per-rule tickets. CI fails if
+      # warnings grow; lower the number as tickets close.
+      - run: npm run lint -- --max-warnings 370
       - run: npm run format:check
 
   runtime-deps:

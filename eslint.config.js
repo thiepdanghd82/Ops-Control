@@ -55,7 +55,14 @@ export default [
     },
     rules: {
       eqeqeq: ['error', 'smart'],
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^(_|e|err)$',
+        },
+      ],
       'no-console': 'off',
       'no-debugger': 'error',
       'no-empty': ['error', { allowEmptyCatch: true }],
@@ -91,7 +98,14 @@ export default [
     },
     rules: {
       eqeqeq: ['error', 'smart'],
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^(_|e|err)$',
+        },
+      ],
       'no-console': 'off',
       'no-debugger': 'error',
       'no-empty': ['error', { allowEmptyCatch: true }],
@@ -111,7 +125,14 @@ export default [
     },
     rules: {
       eqeqeq: ['error', 'smart'],
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^(_|e|err)$',
+        },
+      ],
       'no-empty': ['error', { allowEmptyCatch: true }],
     },
   },
@@ -123,7 +144,14 @@ export default [
       globals: { ...globals.serviceworker, ...globals.es2024 },
     },
     rules: {
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^(_|e|err)$',
+        },
+      ],
     },
   },
   {
@@ -147,7 +175,14 @@ export default [
     },
     rules: {
       'no-empty-pattern': 'off',
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^(_|e|err)$',
+        },
+      ],
     },
   },
   // 3e. Client (React + Vite, browser globals). client/eslint.config.js
@@ -177,7 +212,7 @@ export default [
         {
           varsIgnorePattern: '^[A-Z_]',
           argsIgnorePattern: '^[A-Z_]',
-          caughtErrorsIgnorePattern: '^[A-Z_]',
+          caughtErrorsIgnorePattern: '^(_|e|err|[A-Z])',
         },
       ],
     },
@@ -192,7 +227,10 @@ export default [
     },
     rules: {
       eqeqeq: ['error', 'smart'],
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      'no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^(_|e|err)$' },
+      ],
     },
   },
   // 5. Tests — relaxed
