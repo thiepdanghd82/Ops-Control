@@ -228,8 +228,8 @@ export default function LibDDL() {
       {conflict && (
         <div className="ddl-conflict" role="alert">
           <span>
-            ⚠ Drop-Down Lists đã được người khác sửa kể từ lúc bạn mở. Tải lại để
-            xem thay đổi mới trước khi lưu (chỉnh sửa của bạn vẫn còn cho tới khi bấm Tải lại).
+            ⚠ Drop-Down Lists đã được người khác sửa kể từ lúc bạn mở. Tải lại để xem thay đổi mới
+            trước khi lưu (chỉnh sửa của bạn vẫn còn cho tới khi bấm Tải lại).
           </span>
           <button className="ddl-btn ddl-btn-save" onClick={handleReload}>
             Tải lại

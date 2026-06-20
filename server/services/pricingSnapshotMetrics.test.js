@@ -21,10 +21,7 @@ test('resolveSnapshotSource — synthesized when _synthesized=true', () => {
 });
 
 test('resolveSnapshotSource — persisted when _captured_at is non-empty string', () => {
-  assert.equal(
-    resolveSnapshotSource({ _captured_at: '2026-06-10T00:00:00.000Z' }),
-    'persisted'
-  );
+  assert.equal(resolveSnapshotSource({ _captured_at: '2026-06-10T00:00:00.000Z' }), 'persisted');
 });
 
 test('resolveSnapshotSource — empty when _captured_at empty / missing', () => {
@@ -47,7 +44,10 @@ test('recordSnapshotSave — counter for persisted std save', () => {
     result: {},
   });
   const out = renderPrometheus();
-  assert.match(out, /pricing_snapshot_save_total\{site="VN",source="persisted",type="standard"\} 1/);
+  assert.match(
+    out,
+    /pricing_snapshot_save_total\{site="VN",source="persisted",type="standard"\} 1/
+  );
 });
 
 test('recordSnapshotSave — synthesized bumps both save_total + synth_save_total', () => {
@@ -63,7 +63,10 @@ test('recordSnapshotSave — synthesized bumps both save_total + synth_save_tota
     result: {},
   });
   const out = renderPrometheus();
-  assert.match(out, /pricing_snapshot_save_total\{site="VN",source="synthesized",type="complex"\} 1/);
+  assert.match(
+    out,
+    /pricing_snapshot_save_total\{site="VN",source="synthesized",type="complex"\} 1/
+  );
   assert.match(out, /pricing_snapshot_synth_save_total\{site="VN",type="complex"\} 1/);
 });
 
@@ -119,5 +122,7 @@ test('recordSnapshotSave — never throws even on garbage input', () => {
   assert.doesNotThrow(() => recordSnapshotSave(null));
   assert.doesNotThrow(() => recordSnapshotSave(undefined));
   assert.doesNotThrow(() => recordSnapshotSave({}));
-  assert.doesNotThrow(() => recordSnapshotSave({ type: 'standard', state: 'oops', result: 'oops' }));
+  assert.doesNotThrow(() =>
+    recordSnapshotSave({ type: 'standard', state: 'oops', result: 'oops' })
+  );
 });

@@ -648,11 +648,11 @@ Same as SCN27 cleanup.
 
 ## Summary tally · Tổng kết
 
-| Block          | Total | PASS | FAIL | Notes |
-| -------------- | ----- | ---- | ---- | ----- |
-| Operator (1–20)|   20  |      |      |       |
-| Admin (21–30)  |   10  |      |      |       |
-| **Total**      |   30  |      |      |       |
+| Block           | Total | PASS | FAIL | Notes |
+| --------------- | ----- | ---- | ---- | ----- |
+| Operator (1–20) | 20    |      |      |       |
+| Admin (21–30)   | 10    |      |      |       |
+| **Total**       | 30    |      |      |       |
 
 **Pass threshold for Phase 5 sign-off · Ngưỡng PASS để chốt Phase 5**: 28/30 (≥93%); any P0 FAIL → halt.
 P1+ FAILs not gating but must have MES-3-FIX ticket filed before go-live D-0 (2026-07-21).

@@ -117,11 +117,11 @@ Cách nào cũng được:
 
 ### 4) Start / Stop / Gỡ · Manage
 
-| Việc | Double-click |
-| --- | --- |
-| Khởi động / khởi động lại | `ops-server-start.command` |
-| Dừng (vẫn tự chạy lại lần boot sau) | `ops-server-stop.command` |
-| Gỡ hẳn (giữ dữ liệu) | `ops-server-uninstall.command` |
+| Việc                                | Double-click                   |
+| ----------------------------------- | ------------------------------ |
+| Khởi động / khởi động lại           | `ops-server-start.command`     |
+| Dừng (vẫn tự chạy lại lần boot sau) | `ops-server-stop.command`      |
+| Gỡ hẳn (giữ dữ liệu)                | `ops-server-uninstall.command` |
 
 ---
 
@@ -164,11 +164,11 @@ Thư mục script: `scripts/headless/win/`
 
 ### 4) Start / Stop / Gỡ · Manage (Run as administrator)
 
-| Việc | File |
-| --- | --- |
-| Khởi động / khởi động lại | `start.bat` |
-| Dừng (vẫn tự chạy lại lần boot sau) | `stop.bat` |
-| Gỡ hẳn (giữ dữ liệu) | `uninstall.bat` |
+| Việc                                | File            |
+| ----------------------------------- | --------------- |
+| Khởi động / khởi động lại           | `start.bat`     |
+| Dừng (vẫn tự chạy lại lần boot sau) | `stop.bat`      |
+| Gỡ hẳn (giữ dữ liệu)                | `uninstall.bat` |
 
 ### 5) ✅ Checklist test thủ công (Lead chạy trên 1 máy Windows thật)
 
@@ -193,13 +193,13 @@ Thư mục script: `scripts/headless/win/`
 
 ## Khắc phục sự cố · Troubleshooting
 
-| Triệu chứng | Xử lý |
-| --- | --- |
-| `/health` không phản hồi | Xem `server.err.log`. Thường do thiếu license hoặc cổng 3000 bận. |
-| "cổng 3000 đang bận / port busy" | Đang có server khác chạy (app SERVER đang mở, hoặc dịch vụ đã chạy). Đóng bớt một cái. |
-| `LICENSE_INVALID` khi tạo user | Đặt `license.json` đã ký vào DATA_DIR (mac: `/Library/OpsControl/data`, win: `C:\ProgramData\OpsControl\data`) rồi start lại. |
-| Client không nối được | Kiểm tra firewall cho phép cổng 3000 inbound + IP đúng + cùng LAN. |
-| Đổi cổng | Sửa `OPS_PORT` trong `server.env` (mac: `/Library/OpsControl/server.env`, win: `C:\ProgramData\OpsControl\server.env`) → start lại. |
+| Triệu chứng                      | Xử lý                                                                                                                               |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `/health` không phản hồi         | Xem `server.err.log`. Thường do thiếu license hoặc cổng 3000 bận.                                                                   |
+| "cổng 3000 đang bận / port busy" | Đang có server khác chạy (app SERVER đang mở, hoặc dịch vụ đã chạy). Đóng bớt một cái.                                              |
+| `LICENSE_INVALID` khi tạo user   | Đặt `license.json` đã ký vào DATA_DIR (mac: `/Library/OpsControl/data`, win: `C:\ProgramData\OpsControl\data`) rồi start lại.       |
+| Client không nối được            | Kiểm tra firewall cho phép cổng 3000 inbound + IP đúng + cùng LAN.                                                                  |
+| Đổi cổng                         | Sửa `OPS_PORT` trong `server.env` (mac: `/Library/OpsControl/server.env`, win: `C:\ProgramData\OpsControl\server.env`) → start lại. |
 
 > **Khóa bí mật** (TOTP/KIOSK/HMAC) nằm trong `server.env` — **đừng xóa** file này;
 > mất nó (rồi cài lại với khóa mới) sẽ khiến mọi user phải đăng ký lại 2FA.

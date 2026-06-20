@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  applyColumnVisibility,
-  loadHiddenKeys,
-  saveHiddenKeys,
-} from './ColumnsToggle.helpers.js';
+import { applyColumnVisibility, loadHiddenKeys, saveHiddenKeys } from './ColumnsToggle.helpers.js';
 import './ColumnsToggle.css';
 
 const ColumnsIcon = () => (

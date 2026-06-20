@@ -11,12 +11,14 @@ description: Ops Control shared-language glossary.
 > When code and this file disagree, **code wins** (CLAUDE.md Lesson 3).
 
 ## People & places
+
 - **Henry / Đặng Thế Thiệp** — project owner; runs the operator hardware tests.
 - **Hương** — Backup Engineer (SPOF mitigation; onboarding brief in `docs/cutover/`).
 - **CCL Vietnam (Yen Phong)** — production site. Go-live target: **2026-06-30**.
 - **Remote prod box** — Windows server `10.102.3.61:3000` (NSSM service via `deploy.ps1`).
 
 ## Runtime surfaces (which bundle is served — ask the URL first)
+
 - **Vite dev** — `:5173`/`:5175`, serves `client/src/**` live via HMR. No rebuild needed.
 - **Prod local** — `:3000`, serves the pre-built `client/dist/**`. Rebuild after edits.
 - **Prod remote** — `10.102.3.61:3000`, same but rebuild **and** deploy.
@@ -24,6 +26,7 @@ description: Ops Control shared-language glossary.
   `~/Library/Application Support/ops-control-desktop/data/ops.db` (NOT `server/data/ops.db`).
 
 ## Quote / pricing engine
+
 - **calcEngine** — the pricing calculator; **CLIENT-ONLY** single source of truth. Never on server.
 - **Std / Cpx** — Standard vs Complex quote types. Cpx contains **subproducts (SP)**.
 - **MOQ** — Minimum Order Quantity; quotes carry MOQ **tiers** with per-tier overrides in
@@ -43,6 +46,7 @@ description: Ops Control shared-language glossary.
   per-subproduct in `result.subproducts[spi].rows`.
 
 ## Printing & manufacturing
+
 - **Print Type vs print_type_list vs print** (Library DDL keys — easy to mix up):
   `print_type` = semantic ink types (`SS`, `Flexo`, `Indigo`, `Indigo(Primer)`) — use on the
   Inks tab. `print_type_list` = process workcenter list (`Indigo6800`, `SS(Sheet)`,
@@ -62,6 +66,7 @@ description: Ops Control shared-language glossary.
 - **MES / WO / Kiosk** — Manufacturing Execution System / Work Order / kiosk PWA (shop floor).
 
 ## Security & authorization
+
 - **3-layer auth**: `role` (sys/admin/cost/user/viewonly) + `department` + `permission_group_id`.
   Every access goes through `permissionService.resolveTabAccess(user, tabId)` →
   `hidden | read | edit`. `sys` = god mode.
@@ -71,6 +76,7 @@ description: Ops Control shared-language glossary.
 - **Library/** is a trust boundary — validated via `librarySchema.js` on read.
 
 ## Build / release / CI
+
 - **Stack**: Node.js + React + SQLite (better-sqlite3) + Electron desktop + Kiosk PWA.
   Repo `thiepdanghd82/Ops-Control`. Built in Antigravity IDE + Claude Code.
 - **Packaging**: DMG installers, SERVER vs CLIENT roles. Beware the Electron NMV

@@ -41,11 +41,17 @@ function makeTierState(overrides = {}) {
     materials: [
       { code: 'MAT-A', _mid: 'm1', usage: 1, s_price: 5.0, g_price: 5.5, width: 200, cavities: 1 },
     ],
-    inks: [
-      { _mid: 'i1', color: 'C', print_type: 'Flexo', s_price: 50, coverage_override: 0 },
-    ],
+    inks: [{ _mid: 'i1', color: 'C', print_type: 'Flexo', s_price: 50, coverage_override: 0 }],
     processes: [
-      { _mid: 'p1', workcenter: 'Slit', process_type: 'Slit', setup_h: 1, run_h: 0, speed: 100, efficiency: 0.85 },
+      {
+        _mid: 'p1',
+        workcenter: 'Slit',
+        process_type: 'Slit',
+        setup_h: 1,
+        run_h: 0,
+        speed: 100,
+        efficiency: 0.85,
+      },
     ],
     extra_moqs: [],
     num_moq: 1,
@@ -58,8 +64,22 @@ function makeLibV1() {
   return {
     mat: [{ code: 'MAT-A', s_price: 5.0, g_price: 5.5 }],
     rate: [
-      { workcenter: 'Slit', crew: 1, machine_rate: 11.92, labor_rate: 3.08, speed_uom: 'M/min', oh_cost: 0 },
-      { workcenter: 'Manual', crew: 1, machine_rate: 0, labor_rate: 2.54, speed_uom: '—', oh_cost: 0 },
+      {
+        workcenter: 'Slit',
+        crew: 1,
+        machine_rate: 11.92,
+        labor_rate: 3.08,
+        speed_uom: 'M/min',
+        oh_cost: 0,
+      },
+      {
+        workcenter: 'Manual',
+        crew: 1,
+        machine_rate: 0,
+        labor_rate: 2.54,
+        speed_uom: '—',
+        oh_cost: 0,
+      },
     ],
     ddl: { coverage: [{ pt: 'Flexo', cov: 0.5 }] },
     finance: { vat_pct: 0.1 },
@@ -73,8 +93,22 @@ function makeLibV2() {
   return {
     mat: [{ code: 'MAT-A', s_price: 6.0, g_price: 6.6 }],
     rate: [
-      { workcenter: 'Slit', crew: 1, machine_rate: 14.3, labor_rate: 3.7, speed_uom: 'M/min', oh_cost: 0 },
-      { workcenter: 'Manual', crew: 1, machine_rate: 0, labor_rate: 3.0, speed_uom: '—', oh_cost: 0 },
+      {
+        workcenter: 'Slit',
+        crew: 1,
+        machine_rate: 14.3,
+        labor_rate: 3.7,
+        speed_uom: 'M/min',
+        oh_cost: 0,
+      },
+      {
+        workcenter: 'Manual',
+        crew: 1,
+        machine_rate: 0,
+        labor_rate: 3.0,
+        speed_uom: '—',
+        oh_cost: 0,
+      },
     ],
     ddl: { coverage: [{ pt: 'Flexo', cov: 0.6 }] },
     finance: { vat_pct: 0.1 },
@@ -148,7 +182,11 @@ describe('calcAll — Snapshot reader (Phase 2 core)', () => {
     const st = makeTierState();
     const r1 = calcAll(st, null, makeLibV1(), null);
     const r2 = calcAll(st, null, makeLibV2(), null);
-    assert.notEqual(r1.bd_labor, r2.bd_labor, 'libV2 labor_rate=3.7 should change bd_labor vs libV1=3.08');
+    assert.notEqual(
+      r1.bd_labor,
+      r2.bd_labor,
+      'libV2 labor_rate=3.7 should change bd_labor vs libV1=3.08'
+    );
   });
 
   test('snapshot V1 + libV1 === snapshot V1 + libV2 (stability)', () => {
@@ -180,7 +218,15 @@ describe('calcAll — Snapshot reader (Phase 2 core)', () => {
       ...st,
       materials: [
         ...st.materials,
-        { code: 'MAT-B', _mid: 'm2', usage: 1, s_price: 3.0, g_price: 3.3, width: 200, cavities: 1 },
+        {
+          code: 'MAT-B',
+          _mid: 'm2',
+          usage: 1,
+          s_price: 3.0,
+          g_price: 3.3,
+          width: 200,
+          cavities: 1,
+        },
       ],
     };
     const libExtended = {
@@ -201,14 +247,29 @@ describe('calcAll — Snapshot reader (Phase 2 core)', () => {
       ...st,
       processes: [
         ...st.processes,
-        { _mid: 'p2', workcenter: 'Laminate', process_type: 'Lam', setup_h: 0.5, run_h: 0, speed: 50, efficiency: 0.85 },
+        {
+          _mid: 'p2',
+          workcenter: 'Laminate',
+          process_type: 'Lam',
+          setup_h: 0.5,
+          run_h: 0,
+          speed: 50,
+          efficiency: 0.85,
+        },
       ],
     };
     const libExtended = {
       ...makeLibV1(),
       rate: [
         ...makeLibV1().rate,
-        { workcenter: 'Laminate', crew: 1, machine_rate: 15, labor_rate: 4, speed_uom: 'M/min', oh_cost: 0 },
+        {
+          workcenter: 'Laminate',
+          crew: 1,
+          machine_rate: 15,
+          labor_rate: 4,
+          speed_uom: 'M/min',
+          oh_cost: 0,
+        },
       ],
     };
     const result = calcAll(stWithNewWc, null, libExtended, null, { snapshot: snapV1 });
@@ -221,7 +282,14 @@ describe('calcProcess — resolver-aware (Phase 2 calcAll-internal path)', () =>
   test('calcProcess(p, st, moq, lib) without options falls through to lib', () => {
     // BC path: external callers pass 4 args, no resolver — lib direct.
     const lib = makeLibV1();
-    const proc = { workcenter: 'Slit', process_type: 'Slit', setup_h: 1, run_h: 0, speed: 100, efficiency: 0.85 };
+    const proc = {
+      workcenter: 'Slit',
+      process_type: 'Slit',
+      setup_h: 1,
+      run_h: 0,
+      speed: 100,
+      efficiency: 0.85,
+    };
     const st = makeTierState();
     const r = calcProcess(proc, st, 1000, lib);
     assert.ok(Number.isFinite(r.run_mach || 0));
@@ -230,7 +298,14 @@ describe('calcProcess — resolver-aware (Phase 2 calcAll-internal path)', () =>
   test('calcProcess with options.resolver — snapshot HIT, lib ignored', () => {
     const snap = freezeLib(makeLibV1(), makeTierState());
     // Pass libV2 (different rates) — resolver pulls from snapV1 instead.
-    const proc = { workcenter: 'Slit', process_type: 'Slit', setup_h: 1, run_h: 0, speed: 100, efficiency: 0.85 };
+    const proc = {
+      workcenter: 'Slit',
+      process_type: 'Slit',
+      setup_h: 1,
+      run_h: 0,
+      speed: 100,
+      efficiency: 0.85,
+    };
     const st = makeTierState();
     const fromSnap = calcProcess(proc, st, 1000, makeLibV2(), {
       resolver: {
@@ -324,7 +399,14 @@ describe('calcAll — Backward-compat with existing `warnings` (scrap_pct) field
     const st = {
       ...makeTierState({ site: 'India' }),
       processes: [
-        { _mid: 'p1', workcenter: 'Slit', process_type: 'Slit', setup_h: 1, run_h: 0, scrap_pct: 0.99 },
+        {
+          _mid: 'p1',
+          workcenter: 'Slit',
+          process_type: 'Slit',
+          setup_h: 1,
+          run_h: 0,
+          scrap_pct: 0.99,
+        },
       ],
     };
     const snap = { ...freezeLib(makeLibV1(), st), _site: 'VN' };

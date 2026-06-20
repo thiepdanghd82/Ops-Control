@@ -17,9 +17,9 @@
 
 > Behavioral guardrails for any agent (Claude Code / Antigravity) working in this repo.
 > Distilled from Andrej Karpathy's notes on LLM coding pitfalls + battle-tested community
-> practice, adapted to this project's existing conventions. These govern *how* you work;
+> practice, adapted to this project's existing conventions. These govern _how_ you work;
 > the sprint history, lessons, checklists, and recovery playbooks in `CLAUDE.md` govern
-> *what* the system is and the exact steps to follow.
+> _what_ the system is and the exact steps to follow.
 
 ## Precedence
 
@@ -53,7 +53,7 @@ header).
 - This does **not** loosen the rigor this repo already requires. Tests, defense-in-depth
   auth checks (`requireTabAccess`), schema validation on `Library/*` (Lesson 8), and the
   mandatory post-change checklist are **not** speculative — they stay. Simplicity is
-  about the *shape of the solution*, never about skipping verification.
+  about the _shape of the solution_, never about skipping verification.
 - Do NOT adopt a heavyweight end-to-end framework that "owns" the whole process — it
   hides bugs in the process itself. Prefer small, composable modes (Part B).
 
@@ -82,6 +82,7 @@ header).
   and **pause at each checkpoint** for confirmation before moving on. Do not execute the
   whole plan in one unattended pass (unless running under an explicitly-invoked
   `AUTO_EXECUTE.md` session).
+
 - Definition of Done for any code change includes the existing
   **"After every UI/client-code change — MANDATORY checklist"** in `CLAUDE.md` (tests
   green -> rebuild -> restart node if `server/**` was touched -> bundle self-check ->

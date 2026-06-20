@@ -52,7 +52,12 @@ describe('LOAD_QUOTE — Std action="copy" branch', () => {
       type: A.LOAD_QUOTE,
       payload: {
         quoteType: 'std',
-        state: { _schema_version: 3, materials_main: [], materials_alt: [], materials_active: 'main' },
+        state: {
+          _schema_version: 3,
+          materials_main: [],
+          materials_alt: [],
+          materials_active: 'main',
+        },
         id: 'q-copy-source',
         version: 5,
         action: 'copy',
@@ -91,16 +96,24 @@ describe('LOAD_QUOTE — Std action="copy" branch', () => {
   });
 
   test('clears isDirty so the copy starts on the unmodified baseline', () => {
-    const next = calcReducer({ ...initialState(), isDirty: true }, {
-      type: A.LOAD_QUOTE,
-      payload: {
-        quoteType: 'std',
-        state: { _schema_version: 3, materials_main: [], materials_alt: [], materials_active: 'main' },
-        id: 'q-copy',
-        version: 5,
-        action: 'copy',
-      },
-    });
+    const next = calcReducer(
+      { ...initialState(), isDirty: true },
+      {
+        type: A.LOAD_QUOTE,
+        payload: {
+          quoteType: 'std',
+          state: {
+            _schema_version: 3,
+            materials_main: [],
+            materials_alt: [],
+            materials_active: 'main',
+          },
+          id: 'q-copy',
+          version: 5,
+          action: 'copy',
+        },
+      }
+    );
     assert.equal(next.isDirty, false);
   });
 });
@@ -111,7 +124,12 @@ describe('LOAD_QUOTE — Std action="load" (or omitted) preserves identity', () 
       type: A.LOAD_QUOTE,
       payload: {
         quoteType: 'std',
-        state: { _schema_version: 3, materials_main: [], materials_alt: [], materials_active: 'main' },
+        state: {
+          _schema_version: 3,
+          materials_main: [],
+          materials_alt: [],
+          materials_active: 'main',
+        },
         id: 'q-load-target',
         version: 7,
         action: 'load',
@@ -126,7 +144,12 @@ describe('LOAD_QUOTE — Std action="load" (or omitted) preserves identity', () 
       type: A.LOAD_QUOTE,
       payload: {
         quoteType: 'std',
-        state: { _schema_version: 3, materials_main: [], materials_alt: [], materials_active: 'main' },
+        state: {
+          _schema_version: 3,
+          materials_main: [],
+          materials_alt: [],
+          materials_active: 'main',
+        },
         id: 'q-bc-load',
         version: 3,
         // no action field

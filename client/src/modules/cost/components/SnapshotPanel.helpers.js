@@ -70,9 +70,7 @@ export function countSnapshotEntries(snapshot) {
       ? Object.keys(snapshot.materials).length
       : 0;
   const rates =
-    snapshot.rates && typeof snapshot.rates === 'object'
-      ? Object.keys(snapshot.rates).length
-      : 0;
+    snapshot.rates && typeof snapshot.rates === 'object' ? Object.keys(snapshot.rates).length : 0;
   const coverage = Array.isArray(snapshot.coverage) ? snapshot.coverage.length : 0;
   return { materials, rates, coverage };
 }
