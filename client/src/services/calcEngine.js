@@ -13,6 +13,9 @@ import {
   getMatFromSnapshot,
   getRateFromSnapshot,
   getSnapshotSite,
+  getToolLifeFromSnapshot,
+  getClickChargesFromSnapshot,
+  detectLegacyPartialFields,
 } from './pricingSnapshot.js';
 import { warn as devWarn } from '../utils/logger.js';
 
@@ -56,6 +59,28 @@ function createResolver(snapshot, lib) {
       const fromSnap = getCoverageFromSnapshot(snapshot);
       if (fromSnap && fromSnap.length > 0) return fromSnap;
       return (lib && lib.ddl && lib.ddl.coverage) || [];
+    },
+    // PR-A (2026-06-20): tool_life resolver. Snapshot wins on direct
+    // hit; key-miss returns 0 from snapshot (matching getToolLife's
+    // pre-snapshot fallthrough — callers OR-with proc.tool_life || 1).
+    // Snapshot ENTIRELY MISSING the tool_life cluster (legacy pre-PR-A)
+    // → fall back to live lib so the calc still works; caller can
+    // detect via detectLegacyPartialFields + emit _warnings.
+    getToolLife(toolType) {
+      if (snapshot && Object.prototype.hasOwnProperty.call(snapshot, 'tool_life')) {
+        return getToolLifeFromSnapshot(snapshot, toolType);
+      }
+      // Legacy snapshot: fall back to live lib
+      return lib && lib.ddl && lib.ddl.tool_life ? lib.ddl.tool_life[toolType] || 0 : 0;
+    },
+    // PR-A (2026-06-20): click_charges resolver. Same legacy fallback
+    // pattern as getToolLife. Returns the full charge table (caller
+    // walks keys to find the largest ≤ clicks).
+    getClickCharges() {
+      if (snapshot && Object.prototype.hasOwnProperty.call(snapshot, 'click_charges')) {
+        return getClickChargesFromSnapshot(snapshot);
+      }
+      return (lib && lib.ddl && lib.ddl.click_charges) || {};
     },
   };
 }
@@ -524,7 +549,13 @@ export function calcInk(ink, st, moq, lib, options = {}) {
   let run_s, setup_s;
   if (isIndigo) {
     const clicks = ink.clicks || 0;
-    const _ccTbl = (lib.ddl && lib.ddl.click_charges) || {};
+    // PR-A (2026-06-20): route through resolver when calcAll supplies
+    // one — snapshot wins, fallback to live lib (with legacy fallback
+    // inside resolver.getClickCharges). BC-compat for direct calcInk
+    // callers (no options.resolver): read lib directly.
+    const _ccTbl = options.resolver
+      ? options.resolver.getClickCharges()
+      : (lib.ddl && lib.ddl.click_charges) || {};
     const _ccKeys = Object.keys(_ccTbl)
       .map(Number)
       .filter((k) => !isNaN(k) && k > 0)
@@ -647,10 +678,17 @@ export function calcProcess(proc, st, moq, lib, options = {}) {
   // Tooling
   let tooling = 0;
   if (proc.tool_cost > 0) {
+    // PR-A (2026-06-20): route through resolver when calcAll supplies
+    // one. Snapshot wins; legacy snapshot (pre-PR-A) falls back to lib
+    // inside resolver.getToolLife. BC-compat direct callers (no
+    // options.resolver) read lib directly via getToolLife().
+    const resolvedLife = options.resolver
+      ? options.resolver.getToolLife(proc.tool_type)
+      : getToolLife(lib, proc.tool_type);
     const tlife =
       proc.tool_life_ovr && proc.tool_life_ovr !== false
         ? proc.tool_life || 1
-        : getToolLife(lib, proc.tool_type) || proc.tool_life || 1;
+        : resolvedLife || proc.tool_life || 1;
     // DDL data uses "Jig" but legacy code shipped with "Jig& Fixture".
     // Normalize both to match any variant (whitespace/casing/ampersand) but
     // require EXACT match after normalization so we don't accidentally
@@ -838,6 +876,25 @@ export function calcAll(st, allSpResults, lib, subproducts, options = {}) {
     // DEV-only console.warn via the repo logger (Vite import.meta.env.DEV
     // gate; auto-silent in prod + node:test).
     devWarn('[calcEngine]', msg);
+  }
+
+  // PR-A (2026-06-20): legacy-partial detection. When a persisted snapshot
+  // lacks tool_life or click_charges (pre-2026-06-21 freeze format), the
+  // resolver falls back to live lib for those keys — the calc still runs
+  // but the result is NOT save-time-pinned for those clusters. Emit one
+  // _warnings entry per missing field so audit UI + Phase 2 reproducibility
+  // contract can flag the quote as "partially-pinned".
+  if (snapshot && snapshot._captured_at && !snapshot._synthesized) {
+    const missingFields = detectLegacyPartialFields(snapshot);
+    for (const field of missingFields) {
+      siteWarnings.push({
+        type: 'legacy_snapshot_partial',
+        field,
+        message:
+          `Pre-2026-06-21 snapshot lacks ${field} freeze; ${field === 'tool_life' ? 'tooling cost' : 'Indigo click charges'} ` +
+          'computed from current rate, may differ from save-time. Re-save to upgrade snapshot.',
+      });
+    }
   }
 
   // Materials

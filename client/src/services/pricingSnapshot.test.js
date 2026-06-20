@@ -9,10 +9,13 @@ import {
   getRateFromSnapshot,
   getCoverageFromSnapshot,
   getSnapshotSite,
+  getToolLifeFromSnapshot,
+  getClickChargesFromSnapshot,
+  detectLegacyPartialFields,
 } from './pricingSnapshot.js';
 
 describe('createEmptySnapshot', () => {
-  test('canonical shape — all 8 keys default to safe-empty', () => {
+  test('canonical shape — all 10 keys default to safe-empty (PR-A added tool_life + click_charges)', () => {
     const s = createEmptySnapshot();
     assert.deepEqual(s, {
       _captured_at: null,
@@ -23,6 +26,8 @@ describe('createEmptySnapshot', () => {
       materials: {},
       coverage: [],
       rates: {},
+      tool_life: {},
+      click_charges: {},
     });
   });
 
@@ -31,8 +36,12 @@ describe('createEmptySnapshot', () => {
     const b = createEmptySnapshot();
     a.materials['MAT-A'] = { s_price: 1 };
     a.coverage.push({ x: 1 });
+    a.tool_life['RDC Die'] = 99999;
+    a.click_charges[100] = 0.99;
     assert.deepEqual(b.materials, {});
     assert.deepEqual(b.coverage, []);
+    assert.deepEqual(b.tool_life, {});
+    assert.deepEqual(b.click_charges, {});
   });
 });
 
@@ -416,5 +425,170 @@ describe('Accessor helpers', () => {
     test('snapshot without _site → null', () => {
       assert.equal(getSnapshotSite({}), null);
     });
+  });
+});
+
+// ─── PR-A new clusters (tool_life + click_charges) ─────────────────
+
+describe('PR-A freezeLib — tool_life cluster', () => {
+  const LIB = {
+    mat: [{ code: 'M', s_price: 1, g_price: 1 }],
+    rate: [{ workcenter: 'WC', machine_rate: 1, labor_rate: 1, crew: 1 }],
+    ddl: {
+      coverage: [],
+      click_charges: {},
+      tool_life: { 'RDC Die': 100000, 'Pinacle die': 60000, Jig: 500000, woodie: 30000 },
+    },
+  };
+
+  test('captures ONLY tool_types referenced by quote processes (snapshot-gọn)', () => {
+    const state = {
+      materials: [{ code: 'M' }],
+      processes: [
+        { workcenter: 'WC', tool_type: 'RDC Die' },
+        { workcenter: 'WC', tool_type: 'Jig' },
+      ],
+    };
+    const snap = freezeLib(LIB, state);
+    assert.deepEqual(snap.tool_life, { 'RDC Die': 100000, Jig: 500000 });
+    // Pinacle die + woodie NOT captured because quote doesn't use them
+    assert.ok(!('Pinacle die' in snap.tool_life));
+    assert.ok(!('woodie' in snap.tool_life));
+  });
+
+  test('walks Cpx subproduct processes', () => {
+    const state = {
+      materials: [{ code: 'M' }],
+      processes: [],
+      subproducts: [
+        {
+          materials: [{ code: 'M' }],
+          processes: [{ workcenter: 'WC', tool_type: 'woodie' }],
+        },
+      ],
+    };
+    const snap = freezeLib(LIB, state);
+    assert.equal(snap.tool_life.woodie, 30000);
+  });
+
+  test('quote with no die-cut → empty tool_life dict (not omitted)', () => {
+    const state = { materials: [{ code: 'M' }], processes: [{ workcenter: 'WC' }] };
+    const snap = freezeLib(LIB, state);
+    assert.deepEqual(snap.tool_life, {});
+    // Key MUST be present so detectLegacyPartialFields doesn't false-flag
+    assert.ok(Object.prototype.hasOwnProperty.call(snap, 'tool_life'));
+  });
+
+  test('tool_type referencing key NOT in lib → field absent from snapshot (no junk)', () => {
+    const state = {
+      materials: [{ code: 'M' }],
+      processes: [{ workcenter: 'WC', tool_type: 'pinncle die' }], // typo
+    };
+    const snap = freezeLib(LIB, state);
+    assert.deepEqual(snap.tool_life, {});
+  });
+});
+
+describe('PR-A freezeLib — click_charges cluster', () => {
+  const LIB_INDIGO = {
+    mat: [{ code: 'M' }],
+    rate: [{ workcenter: 'WC' }],
+    ddl: {
+      coverage: [],
+      click_charges: { 100: 0.5, 1000: 3.0 },
+      tool_life: {},
+    },
+  };
+
+  test('captures full click_charges table when quote has Indigo ink', () => {
+    const state = {
+      materials: [{ code: 'M' }],
+      processes: [],
+      inks: [{ print_type: 'Indigo6800' }],
+    };
+    const snap = freezeLib(LIB_INDIGO, state);
+    assert.deepEqual(snap.click_charges, { 100: 0.5, 1000: 3.0 });
+  });
+
+  test('quote with no Indigo ink → empty click_charges dict (no bytes wasted)', () => {
+    const state = {
+      materials: [{ code: 'M' }],
+      processes: [],
+      inks: [{ print_type: 'Flexo' }],
+    };
+    const snap = freezeLib(LIB_INDIGO, state);
+    assert.deepEqual(snap.click_charges, {});
+    assert.ok(Object.prototype.hasOwnProperty.call(snap, 'click_charges'));
+  });
+
+  test('walks Cpx subproduct inks for Indigo detection', () => {
+    const state = {
+      materials: [{ code: 'M' }],
+      processes: [],
+      subproducts: [{ materials: [{ code: 'M' }], inks: [{ print_type: 'Indigo7800' }] }],
+    };
+    const snap = freezeLib(LIB_INDIGO, state);
+    assert.deepEqual(snap.click_charges, { 100: 0.5, 1000: 3.0 });
+  });
+});
+
+describe('PR-A accessors — getToolLifeFromSnapshot + getClickChargesFromSnapshot', () => {
+  const SNAP = { tool_life: { 'RDC Die': 100000 }, click_charges: { 100: 0.5 } };
+
+  test('getToolLifeFromSnapshot — hit returns numeric value', () => {
+    assert.equal(getToolLifeFromSnapshot(SNAP, 'RDC Die'), 100000);
+  });
+  test('getToolLifeFromSnapshot — miss returns 0 (matches pre-snapshot fallthrough)', () => {
+    assert.equal(getToolLifeFromSnapshot(SNAP, 'woodie'), 0);
+  });
+  test('getToolLifeFromSnapshot — null snapshot → 0', () => {
+    assert.equal(getToolLifeFromSnapshot(null, 'RDC Die'), 0);
+  });
+  test('getToolLifeFromSnapshot — snapshot lacks tool_life key → 0', () => {
+    assert.equal(getToolLifeFromSnapshot({}, 'RDC Die'), 0);
+  });
+
+  test('getClickChargesFromSnapshot — present returns dict', () => {
+    assert.deepEqual(getClickChargesFromSnapshot(SNAP), { 100: 0.5 });
+  });
+  test('getClickChargesFromSnapshot — null snapshot → {}', () => {
+    assert.deepEqual(getClickChargesFromSnapshot(null), {});
+  });
+  test('getClickChargesFromSnapshot — snapshot lacks click_charges → {}', () => {
+    assert.deepEqual(getClickChargesFromSnapshot({}), {});
+  });
+});
+
+describe('PR-A detectLegacyPartialFields — legacy snapshot detection', () => {
+  test('full PR-A snapshot → no missing fields', () => {
+    const snap = createEmptySnapshot();
+    assert.deepEqual(detectLegacyPartialFields(snap), []);
+  });
+
+  test('legacy snapshot missing tool_life → flagged', () => {
+    const legacy = { _captured_at: 'T', materials: {}, rates: {}, coverage: [], click_charges: {} };
+    assert.deepEqual(detectLegacyPartialFields(legacy), ['tool_life']);
+  });
+
+  test('legacy snapshot missing click_charges → flagged', () => {
+    const legacy = { _captured_at: 'T', materials: {}, rates: {}, coverage: [], tool_life: {} };
+    assert.deepEqual(detectLegacyPartialFields(legacy), ['click_charges']);
+  });
+
+  test('legacy snapshot missing BOTH new clusters → both flagged', () => {
+    const legacy = { _captured_at: 'T', materials: {}, rates: {}, coverage: [] };
+    assert.deepEqual(detectLegacyPartialFields(legacy), ['tool_life', 'click_charges']);
+  });
+
+  test('null snapshot → empty array (no flagging — caller handles missing snapshot separately)', () => {
+    assert.deepEqual(detectLegacyPartialFields(null), []);
+  });
+
+  test('EMPTY dict ({}) is considered PRESENT, not missing', () => {
+    // Distinct from "key absent". Empty means "quote had no die-cut /
+    // no Indigo → freeze was a no-op (correctly captured)". Distinct
+    // from "key absent" which means pre-PR-A snapshot lacked freeze.
+    const snap = { tool_life: {}, click_charges: {} };
+    assert.deepEqual(detectLegacyPartialFields(snap), []);
   });
 });
