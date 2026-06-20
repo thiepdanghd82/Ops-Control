@@ -24,6 +24,11 @@
  *
  * Sprint S-SUMMARIZE-DATE-COL (#164, 2026-06-18) added 'update_date'
  * (label 'DATE') between 'row_idx' and 'rfq_no'.
+ *
+ * Sprint S-SUMMARIZE-EAU-COL (2026-06-19) added 'annual_qty' (label
+ * 'EAU') between 'quote_materials' and 'moq' so operators see "per
+ * year vs per shipment" volumes side by side. Source `r.annual_qty`
+ * was already in the row builder; this is a UI gap closure.
  */
 export const SUMMARIZE_COLUMN_KEYS = [
   'row_idx',
@@ -38,6 +43,7 @@ export const SUMMARIZE_COLUMN_KEYS = [
   'production_size',
   'drw_materials',
   'quote_materials',
+  'annual_qty',
   'moq',
   'yield_pct',
   's_mat_cost',
