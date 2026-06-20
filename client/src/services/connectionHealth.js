@@ -41,11 +41,10 @@ let healthEndpoint = '/health';
 
 function notify() {
   for (const fn of listeners) {
-    // eslint-disable-next-line no-unused-vars -- pre-existing tech debt: unused catch param `_`
     try {
       fn({ ...state });
-    } catch (_) {
-      /* swallow */
+    } catch {
+      /* swallow: subscriber callback errors must not break the broadcast loop */
     }
   }
 }
@@ -177,11 +176,10 @@ export function getConnectionStatus() {
 export function subscribeConnection(fn) {
   listeners.add(fn);
   // Send current state immediately so subscriber doesn't wait for first poll
-  // eslint-disable-next-line no-unused-vars -- pre-existing tech debt: unused catch param `_`
   try {
     fn({ ...state });
-  } catch (_) {
-    /* swallow */
+  } catch {
+    /* swallow: initial snapshot callback errors must not block subscription */
   }
   return () => listeners.delete(fn);
 }
