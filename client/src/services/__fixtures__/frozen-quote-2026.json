@@ -246,7 +246,11 @@
       "tool_life": {
         "RDC Die": 100000
       },
-      "click_charges": {}
+      "click_charges": {},
+      "sga": {
+        "rate_pct": 5,
+        "site_key": "VN"
+      }
     }
   },
   "expected_result": {

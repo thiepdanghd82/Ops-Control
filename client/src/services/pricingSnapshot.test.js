@@ -11,11 +11,12 @@ import {
   getSnapshotSite,
   getToolLifeFromSnapshot,
   getClickChargesFromSnapshot,
+  getSgaFromSnapshot,
   detectLegacyPartialFields,
 } from './pricingSnapshot.js';
 
 describe('createEmptySnapshot', () => {
-  test('canonical shape — all 10 keys default to safe-empty (PR-A added tool_life + click_charges)', () => {
+  test('canonical shape — all 11 keys default to safe-empty (PR-A2 added sga)', () => {
     const s = createEmptySnapshot();
     assert.deepEqual(s, {
       _captured_at: null,
@@ -28,6 +29,7 @@ describe('createEmptySnapshot', () => {
       rates: {},
       tool_life: {},
       click_charges: {},
+      sga: null,
     });
   });
 
@@ -38,10 +40,12 @@ describe('createEmptySnapshot', () => {
     a.coverage.push({ x: 1 });
     a.tool_life['RDC Die'] = 99999;
     a.click_charges[100] = 0.99;
+    a.sga = { rate_pct: 99, site_key: 'TEST' };
     assert.deepEqual(b.materials, {});
     assert.deepEqual(b.coverage, []);
     assert.deepEqual(b.tool_life, {});
     assert.deepEqual(b.click_charges, {});
+    assert.equal(b.sga, null);
   });
 });
 
@@ -560,24 +564,50 @@ describe('PR-A accessors — getToolLifeFromSnapshot + getClickChargesFromSnapsh
 });
 
 describe('PR-A detectLegacyPartialFields — legacy snapshot detection', () => {
-  test('full PR-A snapshot → no missing fields', () => {
+  test('full PR-A2 snapshot → no missing fields', () => {
     const snap = createEmptySnapshot();
     assert.deepEqual(detectLegacyPartialFields(snap), []);
   });
 
   test('legacy snapshot missing tool_life → flagged', () => {
-    const legacy = { _captured_at: 'T', materials: {}, rates: {}, coverage: [], click_charges: {} };
+    const legacy = {
+      _captured_at: 'T',
+      materials: {},
+      rates: {},
+      coverage: [],
+      click_charges: {},
+      sga: null,
+    };
     assert.deepEqual(detectLegacyPartialFields(legacy), ['tool_life']);
   });
 
   test('legacy snapshot missing click_charges → flagged', () => {
-    const legacy = { _captured_at: 'T', materials: {}, rates: {}, coverage: [], tool_life: {} };
+    const legacy = {
+      _captured_at: 'T',
+      materials: {},
+      rates: {},
+      coverage: [],
+      tool_life: {},
+      sga: null,
+    };
     assert.deepEqual(detectLegacyPartialFields(legacy), ['click_charges']);
   });
 
-  test('legacy snapshot missing BOTH new clusters → both flagged', () => {
+  test('legacy snapshot missing sga (PR-A2 added) → flagged', () => {
+    const legacy = {
+      _captured_at: 'T',
+      materials: {},
+      rates: {},
+      coverage: [],
+      tool_life: {},
+      click_charges: {},
+    };
+    assert.deepEqual(detectLegacyPartialFields(legacy), ['sga']);
+  });
+
+  test('legacy snapshot missing ALL 3 new clusters → all 3 flagged', () => {
     const legacy = { _captured_at: 'T', materials: {}, rates: {}, coverage: [] };
-    assert.deepEqual(detectLegacyPartialFields(legacy), ['tool_life', 'click_charges']);
+    assert.deepEqual(detectLegacyPartialFields(legacy), ['tool_life', 'click_charges', 'sga']);
   });
 
   test('null snapshot → empty array (no flagging — caller handles missing snapshot separately)', () => {
@@ -586,9 +616,71 @@ describe('PR-A detectLegacyPartialFields — legacy snapshot detection', () => {
 
   test('EMPTY dict ({}) is considered PRESENT, not missing', () => {
     // Distinct from "key absent". Empty means "quote had no die-cut /
-    // no Indigo → freeze was a no-op (correctly captured)". Distinct
-    // from "key absent" which means pre-PR-A snapshot lacked freeze.
-    const snap = { tool_life: {}, click_charges: {} };
+    // no Indigo / no site → freeze was a no-op (correctly captured)".
+    // Null sga is also PRESENT (quote with no resolvable site).
+    const snap = { tool_life: {}, click_charges: {}, sga: null };
     assert.deepEqual(detectLegacyPartialFields(snap), []);
+  });
+});
+
+// ─── PR-A2 SGA cluster ──────────────────────────────────────────────
+
+describe('PR-A2 freezeLib — sga cluster', () => {
+  const LIB = {
+    mat: [{ code: 'M' }],
+    rate: [{ workcenter: 'WC' }],
+    ddl: { coverage: [], click_charges: {}, tool_life: {} },
+    finance: { summary: { sga_rate_pct_by_site: { VN: 5, 'Hai Duong': 7 } } },
+  };
+
+  test('captures rate + site_key when finance has the quote site', () => {
+    const state = { materials: [{ code: 'M' }], processes: [], site: 'VN' };
+    const snap = freezeLib(LIB, state);
+    assert.deepEqual(snap.sga, { rate_pct: 5, site_key: 'VN' });
+  });
+
+  test('case-insensitive site match (matches computeSga lookup)', () => {
+    const state = { materials: [{ code: 'M' }], processes: [], site: 'vn' };
+    const snap = freezeLib(LIB, state);
+    // Resolves to canonical 'VN' from finance even though state was lowercase
+    assert.deepEqual(snap.sga, { rate_pct: 5, site_key: 'VN' });
+  });
+
+  test('site not in finance.summary → null (no rate to pin)', () => {
+    const state = { materials: [{ code: 'M' }], processes: [], site: 'Unknown' };
+    const snap = freezeLib(LIB, state);
+    assert.equal(snap.sga, null);
+  });
+
+  test('no site on state → null', () => {
+    const state = { materials: [{ code: 'M' }], processes: [] };
+    const snap = freezeLib(LIB, state);
+    assert.equal(snap.sga, null);
+  });
+
+  test('no lib.finance → null (graceful for legacy libs)', () => {
+    const state = { materials: [{ code: 'M' }], processes: [], site: 'VN' };
+    const snap = freezeLib({ ...LIB, finance: undefined }, state);
+    assert.equal(snap.sga, null);
+  });
+});
+
+describe('PR-A2 accessor — getSgaFromSnapshot', () => {
+  test('snapshot with sga → returns pair', () => {
+    const snap = { sga: { rate_pct: 5, site_key: 'VN' } };
+    assert.deepEqual(getSgaFromSnapshot(snap), { rate_pct: 5, site_key: 'VN' });
+  });
+
+  test('snapshot lacking sga key (pre-PR-A2) → null', () => {
+    assert.equal(getSgaFromSnapshot({}), null);
+  });
+
+  test('snapshot with sga=null (no rate at save) → null (caller falls through)', () => {
+    const snap = { sga: null };
+    assert.equal(getSgaFromSnapshot(snap), null);
+  });
+
+  test('null snapshot → null', () => {
+    assert.equal(getSgaFromSnapshot(null), null);
   });
 });

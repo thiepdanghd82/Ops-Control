@@ -62,6 +62,14 @@ export function createEmptySnapshot() {
     // get tagged _partial_legacy=true + _warnings entry.
     tool_life: {},
     click_charges: {},
+    // PR-A2 (2026-06-20): SGA cluster added. Pin sga_rate_pct at the
+    // resolved site key from finance.summary so draft quotes (not yet
+    // APPROVED — without state.approval.rates_snapshot) still freeze
+    // at save time. Precedence in computeSga remains:
+    //   1. state.approval.rates_snapshot (Phase 9E.4 — approved win)
+    //   2. pricing_snapshot.sga         (this field — draft pin)
+    //   3. lib.finance.summary          (live, last resort + legacy)
+    sga: null, // { rate_pct: number, site_key: string } or null when not capturable
   };
 }
 
@@ -227,6 +235,14 @@ export function freezeLib(lib, state, options) {
     ? { ...((lib.ddl && lib.ddl.click_charges) || {}) }
     : {};
 
+  // PR-A2 (2026-06-20): freeze sga at the quote's site key. Mirrors the
+  // case-insensitive lookup computeSga does (calcEngine.js:734-747) so
+  // a quote saved with state.site='vn' (lowercase) freezes the same VN
+  // rate the engine would have computed at save time. Stores BOTH the
+  // numeric rate AND the canonical site key so audit-time consumers can
+  // see which site lookup actually matched.
+  const sga = freezeSgaForState(lib, state);
+
   return {
     _captured_at: new Date().toISOString(),
     _captured_by: resolveCapturedBy(options),
@@ -238,7 +254,43 @@ export function freezeLib(lib, state, options) {
     rates,
     tool_life,
     click_charges,
+    sga,
   };
+}
+
+/**
+ * Resolve the SGA rate for the quote's site from lib.finance.summary,
+ * mirroring computeSga's case-insensitive lookup. Returns
+ *   { rate_pct: number, site_key: string }
+ * on success, or null when no site / no finance.summary / no rate
+ * for that site (caller falls back to live lib at resolve time, with
+ * legacy_snapshot_partial warning emitted).
+ *
+ * @param {object} lib
+ * @param {object} state
+ * @returns {{ rate_pct: number, site_key: string } | null}
+ */
+function freezeSgaForState(lib, state) {
+  const siteKey = (state && state.site) || null;
+  if (!siteKey) return null;
+  const rates =
+    (lib && lib.finance && lib.finance.summary && lib.finance.summary.sga_rate_pct_by_site) || null;
+  if (!rates) return null;
+  let raw = rates[siteKey];
+  let resolvedKey = siteKey;
+  if (raw == null) {
+    const normalized = String(siteKey).trim().toLowerCase();
+    for (const [k, v] of Object.entries(rates)) {
+      if (String(k).trim().toLowerCase() === normalized) {
+        raw = v;
+        resolvedKey = k;
+        break;
+      }
+    }
+  }
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return null;
+  return { rate_pct: parsed, site_key: resolvedKey };
 }
 
 /**
@@ -353,18 +405,19 @@ export function getClickChargesFromSnapshot(snapshot) {
 }
 
 /**
- * Returns the list of new-cluster fields (tool_life + click_charges)
- * that are MISSING from a snapshot — used by the resolver to attach
- * _warnings + set pricing_snapshot._partial_legacy=true so consumers
- * (UI, audit log) can flag the quote as "partially-pinned".
+ * Returns the list of new-cluster fields (tool_life + click_charges +
+ * sga) that are MISSING from a snapshot — used by the resolver to
+ * attach _warnings + set pricing_snapshot._partial_legacy=true so
+ * consumers (UI, audit log) can flag the quote as "partially-pinned".
  *
  * A snapshot is considered to LACK a field if the key is absent
- * entirely. An EMPTY dict ({}) is considered PRESENT (it means the
- * quote at save time had no die-cut / no Indigo, so freeze was a
- * no-op — distinct from "we didn't have the freeze capability yet").
+ * entirely. An EMPTY dict / null sga ({} or null) is considered
+ * PRESENT (it means the quote at save time had no die-cut / no
+ * Indigo / no site — freeze was a no-op for that field — distinct
+ * from "we didn't have the freeze capability yet").
  *
  * @param {object|null|undefined} snapshot
- * @returns {string[]} ['tool_life', 'click_charges'] subset
+ * @returns {string[]} ['tool_life', 'click_charges', 'sga'] subset
  */
 export function detectLegacyPartialFields(snapshot) {
   if (!snapshot) return [];
@@ -373,5 +426,23 @@ export function detectLegacyPartialFields(snapshot) {
   if (!Object.prototype.hasOwnProperty.call(snapshot, 'click_charges')) {
     missing.push('click_charges');
   }
+  // PR-A2: 'sga' key absent → pre-A2 snapshot → legacy
+  if (!Object.prototype.hasOwnProperty.call(snapshot, 'sga')) missing.push('sga');
   return missing;
+}
+
+/**
+ * SGA rate as frozen at save time. Returns the { rate_pct, site_key }
+ * pair OR null when snapshot lacks SGA (pre-PR-A2 OR quote saved with
+ * no site OR site lookup missed in finance.summary). Caller (computeSga
+ * precedence) treats null as "fall through to next precedence layer".
+ *
+ * @param {object|null|undefined} snapshot
+ * @returns {{ rate_pct: number, site_key: string } | null}
+ */
+export function getSgaFromSnapshot(snapshot) {
+  if (!snapshot || !Object.prototype.hasOwnProperty.call(snapshot, 'sga')) return null;
+  const sga = snapshot.sga;
+  if (!sga || typeof sga !== 'object') return null;
+  return sga;
 }

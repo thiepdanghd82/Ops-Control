@@ -263,6 +263,107 @@ test('PR-A legacy: snapshot without tool_life/click_charges emits _warnings + us
   );
 });
 
+// ─── PR-A2 SGA precedence contract tests ───────────────────────────
+
+test('PR-A2 pin: mutating libV2.finance.sga does NOT shift result (snapshot pins SGA for draft quote)', () => {
+  // Closes STEP 0 finding: pre-PR-A2, draft quote (no approval) exported
+  // via POST /api/quotes/:id/export computed SGA from live lib.finance.
+  // Operator updating finance_sum.json mid-2027 shifted historical
+  // g_ttl_with_sga + gm_after_sga silently. PR-A2 pins via
+  // pricing_snapshot.sga → SGA mutation must NOT drift result.
+  const state = fixture.state;
+  const expected = fixture.expected_result;
+  const snapshot = state.pricing_snapshot;
+  const lib = {
+    ...fixture.lib,
+    finance: { summary: { sga_rate_pct_by_site: { VN: 12 }, version: 99 } }, // 5% → 12%
+  };
+
+  const tierSt = getActiveTierState(state);
+  const result = calcAll(tierSt, null, lib, null, { snapshot });
+  const actual = serializeResultForPersist(result);
+
+  // SGA + downstream g_ttl_with_sga + gm_after_sga MUST be invariant
+  assert.equal(actual.sga, expected.sga, `sga drifted under lib.finance mutation`);
+  assert.equal(actual.sga_rate_pct, expected.sga_rate_pct, `sga_rate_pct drifted`);
+  assert.equal(
+    actual.g_ttl_with_sga,
+    expected.g_ttl_with_sga,
+    `g_ttl_with_sga drifted — pricing_snapshot.sga is NOT being honored. ` +
+      `Check computeSga precedence (calcEngine.js:780).`
+  );
+  assert.equal(actual.gm_after_sga, expected.gm_after_sga, 'gm_after_sga also pinned');
+});
+
+test('PR-A2 REGRESSION GUARD: approved quote (approval.rates_snapshot wins over pricing_snapshot.sga)', () => {
+  // CRITICAL: Phase 9E.4 approval workflow MUST keep wins-over-snapshot
+  // semantics. This test simulates an approved quote carrying BOTH:
+  //   - state.approval.rates_snapshot.sga_rate_pct = 5  (approval pin)
+  //   - state.pricing_snapshot.sga.rate_pct = 99       (PR-A2 freeze)
+  // Result MUST use 5 (approval), NOT 99 (snapshot). If this test FAILS,
+  // precedence is WRONG and Phase 9E.4 has been broken.
+  const state = fixture.state;
+  const snapshot = state.pricing_snapshot;
+
+  // Forge a divergent pair: pricing_snapshot.sga = 99% (PR-A2), but the
+  // quote is "approved" with rates_snapshot.sga_rate_pct = 5%. Approval
+  // wins per the precedence chain.
+  const forgedState = {
+    ...state,
+    pricing_snapshot: { ...snapshot, sga: { rate_pct: 99, site_key: 'VN' } },
+    approval: { rates_snapshot: { sga_rate_pct: 5, site: 'VN' } },
+  };
+  const lib = fixture.lib;
+
+  const tierSt = getActiveTierState(forgedState);
+  const result = calcAll(tierSt, null, lib, null, {
+    snapshot: forgedState.pricing_snapshot,
+  });
+
+  // sga_rate_pct must be 5 (approval), NOT 99 (pricing snapshot)
+  assert.equal(
+    result.sga_rate_pct,
+    5,
+    `REGRESSION: approval.rates_snapshot (5%) should win over pricing_snapshot.sga (99%). ` +
+      `Got ${result.sga_rate_pct}. Phase 9E.4 contract broken — fix computeSga precedence.`
+  );
+});
+
+test('PR-A2 ACCEPTANCE: export path computes SGA via snapshot, not live lib (closes STEP 0 bypass)', () => {
+  // Simulates the production export-path bypass: operator drafts a
+  // quote, exports customer xlsx (which calls into engine via export
+  // service), then 2027 lib.finance bumps SGA. If engine's
+  // computeSga reads lib.finance directly (pre-PR-A2 bug), the 2027
+  // re-export gives a different g_ttl_with_sga than the original.
+  //
+  // POST-PR-A2: precedence path MUST go through snapshot.sga so
+  // re-export gives identical numbers.
+  const state = fixture.state;
+  const expected = fixture.expected_result;
+  const snapshot = state.pricing_snapshot;
+
+  // Simulate 2027: lib.finance SGA bumped 5% → 8%
+  const lib2027 = {
+    ...fixture.lib,
+    finance: { summary: { sga_rate_pct_by_site: { VN: 8 }, version: 2 } },
+  };
+
+  const tierSt = getActiveTierState(state);
+  // Mimic the call shape used by server/services/quoteExport — passes
+  // lib + snapshot via the same options channel calcAll uses for UI
+  // rendering. If snapshot precedence missed, this would compute SGA
+  // from lib2027 (8%) instead of pricing_snapshot.sga (5%).
+  const result = calcAll(tierSt, null, lib2027, null, { snapshot });
+
+  assert.equal(
+    result.sga_rate_pct,
+    expected.sga_rate_pct,
+    `ACCEPTANCE FAIL: export-path engine call computed SGA from lib2027 (8%) instead of snapshot (5%). ` +
+      `This means a customer xlsx exported in 2026 would not reconcile if regenerated in 2027 after ` +
+      `a finance rate change — the bug STEP 0 surfaced is not actually closed by PR-A2.`
+  );
+});
+
 test('20-year contract: WITHOUT snapshot, libV2 DOES produce different numbers (sanity proves drift exists)', () => {
   // Negative control: prove that the snapshot is actually doing the
   // work. Without snapshot, libV2 should change the result — if it
