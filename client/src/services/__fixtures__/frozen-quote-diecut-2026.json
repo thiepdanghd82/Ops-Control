@@ -1,0 +1,293 @@
+{
+  "_comment": "Phase 2 PR-B + Phase 1 M-4 mũi tên 2 đích — die-cut quote pinning tool_life via pricing_snapshot. Mag-Die + Pinacle die mixed; lifetime cap triggers (annual_qty × lifetime × 0.8 < tool_life). Regenerate via scripts/regen-frozen-quotes.mjs.",
+  "_captured_at": "2026-06-20T00:00:00.000Z",
+  "lib": {
+    "rate": [
+      {
+        "workcenter": "Manual",
+        "machine_rate": 0,
+        "labor_rate": 2.54,
+        "crew": 1,
+        "speed_uom": ""
+      },
+      {
+        "workcenter": "Flexo-A",
+        "machine_rate": 40,
+        "labor_rate": 10,
+        "crew": 2,
+        "speed_uom": "m/min"
+      },
+      {
+        "workcenter": "RDC-1",
+        "machine_rate": 30,
+        "labor_rate": 8,
+        "crew": 1,
+        "speed_uom": "m/min"
+      },
+      {
+        "workcenter": "Indigo6800",
+        "machine_rate": 60,
+        "labor_rate": 12,
+        "crew": 1,
+        "speed_uom": "m/min"
+      },
+      {
+        "workcenter": "Mag-Die",
+        "machine_rate": 25,
+        "labor_rate": 6,
+        "crew": 1,
+        "speed_uom": "m/min"
+      }
+    ],
+    "mat": [
+      {
+        "code": "PET-80",
+        "type": "face",
+        "s_price": 8,
+        "g_price": 9,
+        "thickness": 80
+      },
+      {
+        "code": "LIN-75",
+        "type": "liner",
+        "s_price": 2.5,
+        "g_price": 3,
+        "thickness": 75
+      }
+    ],
+    "ddl": {
+      "coverage": [
+        {
+          "pt": "Flexo",
+          "cov": 300
+        },
+        {
+          "pt": "Indigo",
+          "cov": 400
+        }
+      ],
+      "click_charges": {
+        "100": 0.5,
+        "1000": 3,
+        "10000": 12
+      },
+      "tool_life": {
+        "RDC Die": 100000,
+        "Pinacle die": 60000,
+        "woodie": 30000,
+        "Jig": 500000
+      },
+      "print_type_list": ["Flexo", "Indigo", "Indigo6800"]
+    },
+    "finance": {
+      "summary": {
+        "sga_rate_pct_by_site": {
+          "VN": 5,
+          "Hai Duong": 7
+        }
+      }
+    },
+    "inkCalc": {}
+  },
+  "state": {
+    "rfq_number": "RFQ-DIECUT-2026-001",
+    "ccl_pn": "DIECUT-2026",
+    "moq": 50000,
+    "annual_qty": 100000,
+    "product_lifetime": 1,
+    "trade_mode": "USD(Normal)",
+    "site": "VN",
+    "selling_price": 0.08,
+    "num_moq": 1,
+    "active_moq_idx": 0,
+    "extra_moqs": [],
+    "part_width": 80,
+    "part_length_md": 50,
+    "web_width_td": 82,
+    "sheet_length": 52,
+    "num_webs": 1,
+    "parts_in_md": 1,
+    "parts_web_across": 1,
+    "min_gap_md": 2,
+    "rotary_cols": 0,
+    "pcs_per_roll": 5000,
+    "materials": [
+      {
+        "code": "PET-80",
+        "width": 82,
+        "usage": 1,
+        "setup_lm": 50,
+        "cavities": 0,
+        "free_liner": 0,
+        "pitch_ovr": 0,
+        "offcut_yn": "N",
+        "slitting_yn": "N",
+        "df_yn": "",
+        "offcut_pct": 0,
+        "s_price": 8,
+        "g_price": 9,
+        "latest": 0
+      },
+      {
+        "code": "LIN-75",
+        "width": 82,
+        "usage": 1,
+        "setup_lm": 50,
+        "cavities": 0,
+        "free_liner": 0,
+        "pitch_ovr": 0,
+        "offcut_yn": "N",
+        "slitting_yn": "N",
+        "df_yn": "",
+        "offcut_pct": 0,
+        "s_price": 2.5,
+        "g_price": 3,
+        "latest": 0
+      }
+    ],
+    "inks": [
+      {
+        "color": "Red",
+        "print_type": "Flexo",
+        "base_mat": "PET-80",
+        "area_pct": 0.3,
+        "setup_kg": 0.2,
+        "s_price": 25,
+        "g_price": 25,
+        "latest": 0
+      }
+    ],
+    "processes": [
+      {
+        "process_type": "Print",
+        "workcenter": "Flexo-A",
+        "speed": 30,
+        "layout": 1,
+        "efficiency": 0.85,
+        "setup_h": 1,
+        "scrap_pct": 0.03,
+        "tool_cost": 0,
+        "tool_type": "",
+        "tool_life": 0,
+        "manual_uph": 0,
+        "extra_cost": 0,
+        "product_life": 1,
+        "eau_ovr": 0,
+        "repeat": 1
+      },
+      {
+        "process_type": "Die_Cut",
+        "workcenter": "Mag-Die",
+        "speed": 40,
+        "layout": 1,
+        "efficiency": 0.85,
+        "setup_h": 0.5,
+        "scrap_pct": 0.02,
+        "tool_cost": 1200,
+        "tool_type": "Pinacle die",
+        "tool_life": 0,
+        "manual_uph": 0,
+        "extra_cost": 0,
+        "product_life": 1,
+        "eau_ovr": 0,
+        "repeat": 1
+      }
+    ],
+    "pcs_per_bag": 500,
+    "bags_per_box": 20,
+    "container_cost": 0.5,
+    "box_cost": 0.6,
+    "other_packing": 0,
+    "shipping_cost": 200,
+    "other_ship": 0,
+    "ship_qty": 50000,
+    "pricing_snapshot": {
+      "_captured_at": "2026-06-20T00:00:00.000Z",
+      "_captured_by": "henry",
+      "_synthesized": false,
+      "_lib_version": null,
+      "_site": "VN",
+      "materials": {
+        "PET-80": {
+          "code": "PET-80",
+          "type": "face",
+          "s_price": 8,
+          "g_price": 9,
+          "thickness": 80
+        },
+        "LIN-75": {
+          "code": "LIN-75",
+          "type": "liner",
+          "s_price": 2.5,
+          "g_price": 3,
+          "thickness": 75
+        }
+      },
+      "coverage": [
+        {
+          "pt": "Flexo",
+          "cov": 300
+        },
+        {
+          "pt": "Indigo",
+          "cov": 400
+        }
+      ],
+      "rates": {
+        "Flexo-A": {
+          "workcenter": "Flexo-A",
+          "machine_rate": 40,
+          "labor_rate": 10,
+          "crew": 2,
+          "speed_uom": "m/min"
+        },
+        "Mag-Die": {
+          "workcenter": "Mag-Die",
+          "machine_rate": 25,
+          "labor_rate": 6,
+          "crew": 1,
+          "speed_uom": "m/min"
+        }
+      },
+      "tool_life": {
+        "Pinacle die": 60000
+      },
+      "click_charges": {},
+      "sga": {
+        "rate_pct": 5,
+        "site_key": "VN"
+      }
+    }
+  },
+  "expected_result": {
+    "sp": 0.08,
+    "s_ttl": 0.07964858286210567,
+    "g_ttl": 0.08675874886252645,
+    "gm": 0.0043927142236790395,
+    "va": 0.06190430287976012,
+    "contribution": 0.05053377528727987,
+    "s_mat_cost": 0.049987655769619194,
+    "g_mat_cost": 0.05709782177003997,
+    "overhead": 0.0021812848850880557,
+    "labor_cost": 0.0009096422073984232,
+    "tooling": 0.02,
+    "packing_ship": 0.00506,
+    "vat_loss": 0,
+    "bd_mat_setup": 0.000984,
+    "bd_mat_run": 0.05589732800336629,
+    "bd_ink_setup": 0.00010004100000000001,
+    "bd_ink_run": 0.00011645276667367979,
+    "bd_overhead": 0.003231284885088056,
+    "bd_labor": 0.0013696422073984232,
+    "bd_extra": 0,
+    "bd_extra_vat": 0,
+    "bd_setup_mach": 0.0010500000000000002,
+    "bd_setup_labor": 0.00046,
+    "sga": 0.004337937443126323,
+    "sga_rate_pct": 5,
+    "g_ttl_with_sga": 0.09109668630565278,
+    "gm_after_sga": -0.049831503815400024,
+    "site": "VN",
+    "warnings": []
+  }
+}
