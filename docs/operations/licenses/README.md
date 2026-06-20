@@ -18,7 +18,7 @@ enough for recovery / re-issue / audit (`installation_id`, `tier`,
 sanitized:
 
 - **`signature`** — redacted to `"REDACTED — stored offline, see registry
-  README"`. The real Ed25519 signature is key material and never goes in a
+README"`. The real Ed25519 signature is key material and never goes in a
   public repo.
 - **`customer`** — recorded as a short internal code (e.g. `CCL-YP`) rather
   than the full account name.
@@ -101,9 +101,9 @@ unlock.
 
 ## Registry — provisioned operators
 
-| Date       | Platform | Operator (OS user) | Installation ID prefix | Expires    | File                                                   |
-| ---------- | -------- | ------------------ | ---------------------- | ---------- | ------------------------------------------------------ |
-| 2026-05-29 (re-issued 2026-06-04, key rotation) | Win | `mpham` | `d550d6b9 2e78bc9f…` | 2027-06-09 | [2026-05-29-win-mpham.json](2026-05-29-win-mpham.json) |
+| Date                                            | Platform | Operator (OS user) | Installation ID prefix | Expires    | File                                                   |
+| ----------------------------------------------- | -------- | ------------------ | ---------------------- | ---------- | ------------------------------------------------------ |
+| 2026-05-29 (re-issued 2026-06-04, key rotation) | Win      | `mpham`            | `d550d6b9 2e78bc9f…`   | 2027-06-09 | [2026-05-29-win-mpham.json](2026-05-29-win-mpham.json) |
 
 Append a row whenever a new license is minted. Keep the rows sorted by
 date ascending so the registry reads as a chronological provisioning log.

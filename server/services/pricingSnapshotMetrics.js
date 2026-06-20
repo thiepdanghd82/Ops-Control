@@ -54,7 +54,8 @@ export function recordSnapshotSave(saved) {
 
     const warnings = Array.isArray(saved?.result?._warnings) ? saved.result._warnings : [];
     for (const w of warnings) {
-      const wtype = (w && typeof w === 'object' && typeof w.type === 'string' && w.type) || 'unknown';
+      const wtype =
+        (w && typeof w === 'object' && typeof w.type === 'string' && w.type) || 'unknown';
       inc('pricing_snapshot_warning_total', { type, warning: wtype });
     }
   } catch {

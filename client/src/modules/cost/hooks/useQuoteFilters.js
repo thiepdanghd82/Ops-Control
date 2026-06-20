@@ -11,8 +11,7 @@ import { EMPTY_FILTER } from '../lib/quoteFilters.js';
 
 const DEBOUNCE_MS = 300;
 
-const isActive = (f) =>
-  !!(f.query || f.dateFrom || f.dateTo || f.customer || f.part || f.sale);
+const isActive = (f) => !!(f.query || f.dateFrom || f.dateTo || f.customer || f.part || f.sale);
 
 export function useQuoteFilters(initial) {
   const [filter, setFilter] = useState(() => ({ ...EMPTY_FILTER, ...(initial || {}) }));

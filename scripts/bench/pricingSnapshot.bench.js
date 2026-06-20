@@ -66,8 +66,16 @@ function makeLibrary() {
   }
   const rate = [];
   const wcs = [
-    'Slit', 'Pre_Cut', 'Flexo', 'Indigo', 'SS_Sheet',
-    'Inspection', 'Lamination', 'Slitting', 'Rewind', 'Finish',
+    'Slit',
+    'Pre_Cut',
+    'Flexo',
+    'Indigo',
+    'SS_Sheet',
+    'Inspection',
+    'Lamination',
+    'Slitting',
+    'Rewind',
+    'Finish',
   ];
   for (let i = 0; i < 40; i++) {
     rate.push({

@@ -52,7 +52,10 @@ describe('applyColumnVisibility', () => {
   test('required column ignores hiddenKeys (always visible) — REGRESSION GUARD', () => {
     // Even if storageKey somehow contained rfq_no, required guard wins.
     const out = applyColumnVisibility(SAMPLE_COLS, new Set(['rfq_no', 'direct_cu', 'project']));
-    assert.equal(out.find((c) => c.key === 'rfq_no'), SAMPLE_COLS[0]);
+    assert.equal(
+      out.find((c) => c.key === 'rfq_no'),
+      SAMPLE_COLS[0]
+    );
     assert.equal(out.length, 3); // rfq_no (required) + moq + gm_pct
   });
 

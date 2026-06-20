@@ -66,7 +66,10 @@ export function formatBulletList(items) {
 export function toBulletFromTextarea(rawText) {
   if (typeof rawText !== 'string') return '';
   // Split on \n (covers \r\n via the trim() below dropping the \r).
-  const lines = rawText.split('\n').map((s) => s.trim()).filter((s) => s.length > 0);
+  const lines = rawText
+    .split('\n')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
   return formatBulletList(lines);
 }
 

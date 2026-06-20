@@ -43,7 +43,11 @@ export default function SnapshotPanel({ source, snapshot, warnings }) {
         <span className="snapshot-panel-title">Pricing Snapshot</span>
         <StatusBadge tone={tone} label={badgeLabel} size="sm" />
         {warningList.length > 0 && (
-          <StatusBadge tone="danger" label={`${warningList.length} warning${warningList.length > 1 ? 's' : ''}`} size="sm" />
+          <StatusBadge
+            tone="danger"
+            label={`${warningList.length} warning${warningList.length > 1 ? 's' : ''}`}
+            size="sm"
+          />
         )}
       </summary>
       <dl className="snapshot-panel-fields">

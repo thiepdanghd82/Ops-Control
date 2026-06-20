@@ -121,7 +121,12 @@ test('7) force does NOT bypass a wrong password', async () => {
   const res = await fetch(`${baseUrl}/api/auth/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ username: 'erin', password: 'WRONG', force: true, installation_id: 'x' }),
+    body: JSON.stringify({
+      username: 'erin',
+      password: 'WRONG',
+      force: true,
+      installation_id: 'x',
+    }),
   });
   assert.equal(res.status, 401);
   const body = await res.json().catch(() => ({}));

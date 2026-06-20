@@ -37,11 +37,7 @@ describe('sumToolingCostStd', () => {
   });
 
   test('rows with hidden===true are skipped', () => {
-    const processes = [
-      { tool_cost: 100 },
-      { tool_cost: 200, hidden: true },
-      { tool_cost: 50 },
-    ];
+    const processes = [{ tool_cost: 100 }, { tool_cost: 200, hidden: true }, { tool_cost: 50 }];
     assert.equal(sumToolingCostStd(processes), 150);
   });
 });

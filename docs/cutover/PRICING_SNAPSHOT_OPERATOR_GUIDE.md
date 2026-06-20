@@ -39,11 +39,11 @@ The badge next to "Pricing Snapshot" tells you whether the quote is frozen.
 
 Badge bên cạnh "Pricing Snapshot" cho biết báo giá đã được đóng băng chưa.
 
-| Badge color · Màu badge | Meaning · Ý nghĩa | Action needed · Cần làm gì |
-| ----------------------- | ----------------- | -------------------------- |
-| 🟢 **Frozen** (green)   | Quote pinned to rates at save time. Reopen → same numbers, every time. · Báo giá pin vào đơn giá lúc lưu. Mở lại → đúng số. | None — this is normal. · Không cần làm gì. |
+| Badge color · Màu badge   | Meaning · Ý nghĩa                                                                                                                                | Action needed · Cần làm gì                                 |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| 🟢 **Frozen** (green)     | Quote pinned to rates at save time. Reopen → same numbers, every time. · Báo giá pin vào đơn giá lúc lưu. Mở lại → đúng số.                      | None — this is normal. · Không cần làm gì.                 |
 | 🟡 **Live rates** (amber) | Quote uses CURRENT library rates. Numbers may change if library changes. · Báo giá dùng đơn giá library HIỆN TẠI. Số có thể đổi nếu library đổi. | **Save the quote** to freeze. · **Lưu báo giá** để freeze. |
-| ⚪ **No snapshot** (gray)  | Quote has no rates resolved (no library loaded). · Báo giá chưa có đơn giá (chưa nạp library). | Open library, then save. · Mở library rồi lưu. |
+| ⚪ **No snapshot** (gray) | Quote has no rates resolved (no library loaded). · Báo giá chưa có đơn giá (chưa nạp library).                                                   | Open library, then save. · Mở library rồi lưu.             |
 
 🔴 **Red warning badge** ("N warning(s)") — appears when there are audit warnings (e.g. site mismatch). Expand panel to read.
 

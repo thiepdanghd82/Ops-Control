@@ -39,7 +39,9 @@ if (!fs.existsSync(path.join(oldDir, 'ops.db'))) {
 }
 if (fs.existsSync(path.join(newDir, 'ops.db'))) {
   console.error('DICH da co ops.db: ' + newDir);
-  console.error('Khong ghi de de tranh mat du lieu daemon hien co. Di chuyen/xoa dich roi chay lai.');
+  console.error(
+    'Khong ghi de de tranh mat du lieu daemon hien co. Di chuyen/xoa dich roi chay lai.'
+  );
   process.exit(3);
 }
 
@@ -79,7 +81,9 @@ for (const f of files) {
     mismatch++;
   }
 }
-console.log('   ' + files.length + ' file, ' + (bytes / 1048576).toFixed(1) + ' MB; sai khac: ' + mismatch);
+console.log(
+  '   ' + files.length + ' file, ' + (bytes / 1048576).toFixed(1) + ' MB; sai khac: ' + mismatch
+);
 if (mismatch > 0) {
   console.error('VERIFY FAIL: copy khong khop. KHONG dung lam authoritative.');
   process.exit(4);
@@ -107,7 +111,8 @@ try {
     }
   }
   if (Database) {
-    const open = (d) => new Database(path.join(d, 'ops.db'), { readonly: true, fileMustExist: true });
+    const open = (d) =>
+      new Database(path.join(d, 'ops.db'), { readonly: true, fileMustExist: true });
     const a = open(oldDir);
     const b = open(newDir);
     const tabs = a
@@ -137,7 +142,9 @@ try {
     }
     console.log('   row-count verify OK (' + tabs.length + ' bang).');
   } else {
-    console.log('   (bo qua row-count: khong nap duoc better-sqlite3 — checksum da chung minh copy faithful)');
+    console.log(
+      '   (bo qua row-count: khong nap duoc better-sqlite3 — checksum da chung minh copy faithful)'
+    );
   }
 } catch (e) {
   console.log('   (row-count optional loi: ' + e.message + ' — checksum verify da PASS)');

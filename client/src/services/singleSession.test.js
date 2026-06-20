@@ -54,10 +54,8 @@ describe('formatLastActivity', () => {
     assert.equal(formatLastActivity('2026-06-05T11:59:30Z', now), 'vừa xong'));
   test('minutes', () =>
     assert.equal(formatLastActivity('2026-06-05T11:45:00Z', now), '15 phút trước'));
-  test('hours', () =>
-    assert.equal(formatLastActivity('2026-06-05T09:00:00Z', now), '3 giờ trước'));
-  test('days', () =>
-    assert.equal(formatLastActivity('2026-06-03T12:00:00Z', now), '2 ngày trước'));
+  test('hours', () => assert.equal(formatLastActivity('2026-06-05T09:00:00Z', now), '3 giờ trước'));
+  test('days', () => assert.equal(formatLastActivity('2026-06-03T12:00:00Z', now), '2 ngày trước'));
   test('bad input → empty', () => assert.equal(formatLastActivity('nope', now), ''));
 });
 

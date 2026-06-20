@@ -9,14 +9,14 @@ cửa sổ.
 
 ## Kiến trúc chung (cả 2 OS)
 
-| Khía cạnh | Lựa chọn | Vì sao |
-| --- | --- | --- |
-| **Runtime** | Electron của app đã cài, chạy `ELECTRON_RUN_AS_NODE=1` trên `<app>/…/resources/app/server/index.js` | Không cần cài Node riêng; native module (better-sqlite3…) đã đúng ABI của Electron. Cùng `server/index.js` mà app embedded + deploy Linux dùng. |
-| **Cổng** | Cố định `3000` (`OPS_PORT`) | Client LAN trỏ tới cổng ổn định. (App embedded dùng cổng động → không trỏ cố định được.) |
-| **DATA_DIR** | **Hệ thống**, không theo user: `/Library/OpsControl/data` (mac) · `C:\ProgramData\OpsControl\data` (win) | Dịch vụ chạy **trước login** bằng root/SYSTEM. Thư mục `~/Library` của user **không đọc được pre-login khi bật FileVault**. Phải dùng thư mục hệ thống. |
-| **Secrets** | `server.env` (chmod 600 root / ACL admin) — `OPS_TOTP_KEY` `OPS_KIOSK_KEY` `OPS_EXPORT_HMAC_KEY` sinh 1 lần | Preflight production của server bắt buộc 3 khóa 64-hex. Sinh 1 lần, **không xoay** ở lần cài lại (tránh khóa user khỏi 2FA). KHÔNG nằm trong plist/task (chỉ trong file 600). |
-| **License** | `<DATA_DIR>/license.json` qua `OPS_LICENSE_FILE` | `server/services/licenseService.js` chỉ verify **chữ ký** (không HW-recheck), nên copy thẳng license.json của app sang là chạy. Installer tự copy từ profile user nếu có. |
-| **Env khác** | `NODE_ENV=production`, `OPS_ALLOW_SAME_ORIGIN=1`, `OPS_DATA_BACKEND=sqlite`, `OPS_BACKUP_SCHEDULE=1`, `OPS_AUDIT_RETENTION=1` | Khớp y hệt env mà `desktop/main.js startEmbeddedServer()` set cho server. |
+| Khía cạnh    | Lựa chọn                                                                                                                      | Vì sao                                                                                                                                                                        |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Runtime**  | Electron của app đã cài, chạy `ELECTRON_RUN_AS_NODE=1` trên `<app>/…/resources/app/server/index.js`                           | Không cần cài Node riêng; native module (better-sqlite3…) đã đúng ABI của Electron. Cùng `server/index.js` mà app embedded + deploy Linux dùng.                               |
+| **Cổng**     | Cố định `3000` (`OPS_PORT`)                                                                                                   | Client LAN trỏ tới cổng ổn định. (App embedded dùng cổng động → không trỏ cố định được.)                                                                                      |
+| **DATA_DIR** | **Hệ thống**, không theo user: `/Library/OpsControl/data` (mac) · `C:\ProgramData\OpsControl\data` (win)                      | Dịch vụ chạy **trước login** bằng root/SYSTEM. Thư mục `~/Library` của user **không đọc được pre-login khi bật FileVault**. Phải dùng thư mục hệ thống.                       |
+| **Secrets**  | `server.env` (chmod 600 root / ACL admin) — `OPS_TOTP_KEY` `OPS_KIOSK_KEY` `OPS_EXPORT_HMAC_KEY` sinh 1 lần                   | Preflight production của server bắt buộc 3 khóa 64-hex. Sinh 1 lần, **không xoay** ở lần cài lại (tránh khóa user khỏi 2FA). KHÔNG nằm trong plist/task (chỉ trong file 600). |
+| **License**  | `<DATA_DIR>/license.json` qua `OPS_LICENSE_FILE`                                                                              | `server/services/licenseService.js` chỉ verify **chữ ký** (không HW-recheck), nên copy thẳng license.json của app sang là chạy. Installer tự copy từ profile user nếu có.     |
+| **Env khác** | `NODE_ENV=production`, `OPS_ALLOW_SAME_ORIGIN=1`, `OPS_DATA_BACKEND=sqlite`, `OPS_BACKUP_SCHEDULE=1`, `OPS_AUDIT_RETENTION=1` | Khớp y hệt env mà `desktop/main.js startEmbeddedServer()` set cho server.                                                                                                     |
 
 ## macOS — LaunchDaemon (`mac/`)
 

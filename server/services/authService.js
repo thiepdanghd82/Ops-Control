@@ -851,9 +851,7 @@ export function listActiveSessions() {
       totp_verified: !!sess.totp_verified,
       installation_id: sess.installation_id || 'unknown',
       hostname: sess.hostname || 'unknown',
-      last_activity: sess.last_activity
-        ? new Date(sess.last_activity * 1000).toISOString()
-        : null,
+      last_activity: sess.last_activity ? new Date(sess.last_activity * 1000).toISOString() : null,
     });
   }
   return rows;

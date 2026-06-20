@@ -59,10 +59,7 @@ describe('freezeLib — materials cluster (USED rows only)', () => {
 
   test('Cpx quote: walks every subproducts[i].materials', () => {
     const snap = freezeLib(LIB, {
-      subproducts: [
-        { materials: [{ code: 'MAT-A' }] },
-        { materials: [{ code: 'MAT-B' }] },
-      ],
+      subproducts: [{ materials: [{ code: 'MAT-A' }] }, { materials: [{ code: 'MAT-B' }] }],
     });
     assert.deepEqual(Object.keys(snap.materials).sort(), ['MAT-A', 'MAT-B']);
   });
@@ -124,9 +121,30 @@ describe('freezeLib — Rate cluster (pre-filtered lib.rate per active site)', (
   // lib.rate arriving here is already filtered by activeSite at
   // CostLibContext. freezeLib reads it direct, no multi-site logic.
   const VN_RATES = [
-    { workcenter: 'Pre_Cut', crew: 1, machine_rate: 0, labor_rate: 2.54, speed_uom: '—', oh_cost: 0 },
-    { workcenter: 'Slit', crew: 1, machine_rate: 11.92, labor_rate: 3.08, speed_uom: 'M/min', oh_cost: 0 },
-    { workcenter: 'Laminate(Roll)', crew: 2, machine_rate: 11.92, labor_rate: 2.92, speed_uom: 'M/min', oh_cost: 0.5 },
+    {
+      workcenter: 'Pre_Cut',
+      crew: 1,
+      machine_rate: 0,
+      labor_rate: 2.54,
+      speed_uom: '—',
+      oh_cost: 0,
+    },
+    {
+      workcenter: 'Slit',
+      crew: 1,
+      machine_rate: 11.92,
+      labor_rate: 3.08,
+      speed_uom: 'M/min',
+      oh_cost: 0,
+    },
+    {
+      workcenter: 'Laminate(Roll)',
+      crew: 2,
+      machine_rate: 11.92,
+      labor_rate: 2.92,
+      speed_uom: 'M/min',
+      oh_cost: 0.5,
+    },
   ];
 
   test('freeze FULL row spread from pre-filtered lib.rate (machine+labor+oh+crew+speed_uom)', () => {
@@ -213,7 +231,11 @@ describe('freezeLib — site context capture (_site metadata)', () => {
   test('audit-trail integrity: rate frozen under VN tag stays paired with _site=VN', () => {
     // Phase 2 will compare snapshot._site vs current state.site and
     // emit a warning if they diverge — this guards that pairing.
-    const lib = { mat: [], rate: [{ workcenter: 'Slit', labor_rate: 3.08 }], ddl: { coverage: [] } };
+    const lib = {
+      mat: [],
+      rate: [{ workcenter: 'Slit', labor_rate: 3.08 }],
+      ddl: { coverage: [] },
+    };
     const snap = freezeLib(lib, { processes: [{ workcenter: 'Slit' }], site: 'VN' });
     assert.equal(snap._site, 'VN');
     assert.equal(snap.rates['Slit'].labor_rate, 3.08);
@@ -232,7 +254,10 @@ describe('freezeLib — metadata + edge cases', () => {
   });
 
   test('_lib_version reads from lib._version (falls back to null when absent)', () => {
-    const withVersion = freezeLib({ _version: 'v3.1', mat: [], rate: [], ddl: { coverage: [] } }, {});
+    const withVersion = freezeLib(
+      { _version: 'v3.1', mat: [], rate: [], ddl: { coverage: [] } },
+      {}
+    );
     assert.equal(withVersion._lib_version, 'v3.1');
     const without = freezeLib({ mat: [], rate: [], ddl: { coverage: [] } }, {});
     assert.equal(without._lib_version, null);
@@ -244,29 +269,17 @@ describe('freezeLib — metadata + edge cases', () => {
   });
 
   test('_captured_by reads options.userId — Phase 3 explicit-option pattern', () => {
-    const snap = freezeLib(
-      { mat: [], rate: [], ddl: { coverage: [] } },
-      {},
-      { userId: 'henry' }
-    );
+    const snap = freezeLib({ mat: [], rate: [], ddl: { coverage: [] } }, {}, { userId: 'henry' });
     assert.equal(snap._captured_by, 'henry');
   });
 
   test('_captured_by accepts numeric user id (server may surface number)', () => {
-    const snap = freezeLib(
-      { mat: [], rate: [], ddl: { coverage: [] } },
-      {},
-      { userId: 42 }
-    );
+    const snap = freezeLib({ mat: [], rate: [], ddl: { coverage: [] } }, {}, { userId: 42 });
     assert.equal(snap._captured_by, 42);
   });
 
   test('_captured_by falls back to null when options.userId explicitly null', () => {
-    const snap = freezeLib(
-      { mat: [], rate: [], ddl: { coverage: [] } },
-      {},
-      { userId: null }
-    );
+    const snap = freezeLib({ mat: [], rate: [], ddl: { coverage: [] } }, {}, { userId: null });
     assert.equal(snap._captured_by, null);
   });
 

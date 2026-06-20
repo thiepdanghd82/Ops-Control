@@ -44,7 +44,9 @@ fs.mkdirSync(logDir, { recursive: true });
 
 if (!fs.existsSync(serverEntry)) {
   console.error('ERROR: server entry not found: ' + serverEntry);
-  console.error('Cai ban "Ops Control SERVER Setup ….exe" truoc (mac dinh C:\\Program Files\\Ops Control).');
+  console.error(
+    'Cai ban "Ops Control SERVER Setup ….exe" truoc (mac dinh C:\\Program Files\\Ops Control).'
+  );
   process.exit(2);
 }
 
@@ -88,7 +90,11 @@ const wrap = [
   'if exist "%OPS_HOME%\\server.env" for /f "usebackq eol=# tokens=1,* delims==" %%A in ("%OPS_HOME%\\server.env") do set "%%A=%%B"',
   'set "ELECTRON_RUN_AS_NODE=1"',
   'cd /d "' + appWork + '"',
-  '"' + electron + '" "' + serverEntry + '" >> "%OPS_HOME%\\logs\\server.out.log" 2>> "%OPS_HOME%\\logs\\server.err.log"',
+  '"' +
+    electron +
+    '" "' +
+    serverEntry +
+    '" >> "%OPS_HOME%\\logs\\server.out.log" 2>> "%OPS_HOME%\\logs\\server.err.log"',
   '',
 ].join('\r\n');
 fs.writeFileSync(wrapper, wrap);

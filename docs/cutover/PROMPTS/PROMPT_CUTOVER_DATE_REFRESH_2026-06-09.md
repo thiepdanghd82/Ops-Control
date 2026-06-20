@@ -21,18 +21,18 @@ Consequence: every operative cutover doc that says go-live = `2026-06-09` (and e
 
 ### Canonical cutover calendar (D-0 = Tue 2026-06-30)
 
-| Milestone | OLD date (06-09 cohort) | NEW date (06-30 cohort) | Weekday |
-| --------- | ----------------------- | ----------------------- | ------- |
-| D-21 (today) | 2026-05-19 | **2026-06-09** | Tue |
-| D-15      | 2026-05-25 | **2026-06-15** | Mon |
-| D-14      | 2026-05-26 | **2026-06-16** | Tue |
-| D-7       | 2026-06-02 | **2026-06-23** | Tue |
-| D-6       | 2026-06-03 | **2026-06-24** | Wed |
-| D-2       | 2026-06-07 | **2026-06-28** | Sun |
-| D-1       | 2026-06-08 | **2026-06-29** | Mon |
-| **D-0**   | **2026-06-09** | **2026-06-30** | **Tue** |
-| D+1       | 2026-06-10 | **2026-07-01** | Wed |
-| D+7       | 2026-06-16 | **2026-07-07** | Tue |
+| Milestone    | OLD date (06-09 cohort) | NEW date (06-30 cohort) | Weekday |
+| ------------ | ----------------------- | ----------------------- | ------- |
+| D-21 (today) | 2026-05-19              | **2026-06-09**          | Tue     |
+| D-15         | 2026-05-25              | **2026-06-15**          | Mon     |
+| D-14         | 2026-05-26              | **2026-06-16**          | Tue     |
+| D-7          | 2026-06-02              | **2026-06-23**          | Tue     |
+| D-6          | 2026-06-03              | **2026-06-24**          | Wed     |
+| D-2          | 2026-06-07              | **2026-06-28**          | Sun     |
+| D-1          | 2026-06-08              | **2026-06-29**          | Mon     |
+| **D-0**      | **2026-06-09**          | **2026-06-30**          | **Tue** |
+| D+1          | 2026-06-10              | **2026-07-01**          | Wed     |
+| D+7          | 2026-06-16              | **2026-07-07**          | Tue     |
 
 **Rule of thumb for ANY date you find in an operative doc**: if it belongs to the 06-09 cohort, add 21 days. Do NOT blind-`sed` — see classification + decision points below.
 
@@ -44,18 +44,18 @@ Editing a point-in-time record rewrites history. Follow `PROMPT_PR-3`'s preceden
 
 ### ✅ OPERATIVE — must reflect D-0 = 2026-06-30 (FIX these)
 
-| File | Action |
-| ---- | ------ |
-| `STOP_TRIGGERS_2026-06-09.md` | body dates +21; **rename → `STOP_TRIGGERS_2026-06-30.md`** |
-| `BACKUP_ENGINEER_BRIEF_2026-06-09.md` | body dates +21; **rename → `BACKUP_ENGINEER_BRIEF_2026-06-30.md`** |
-| `D-1_FINAL_CHECKLIST_2026-06-08.md` | body dates +21; **rename → `D-1_FINAL_CHECKLIST_2026-06-29.md`** |
-| `D-1_PREFLIGHT_AUDIT_2026-06-08.md` | body dates +21; **rename → `D-1_PREFLIGHT_AUDIT_2026-06-29.md`** |
-| `HUONG_WALKTHROUGH_AGENDA_D-14.md` | body dates +21 (esp. D-14 `2026-05-26`→`2026-06-16`, D-15→`2026-06-15`); **keep filename** (D-14 is a relative label) |
-| `DRY_RUN_CUTOVER_D-2.md` | body dates +21 (D-2 → `2026-06-28`); keep filename |
-| `WIN_EXE_FIELD_TEST_D-7.md` | body dates +21 (D-7 → `2026-06-23`); keep filename |
-| `MAC_INSTALL_GUIDE.md` | body dates +21; D-6 UAT → `2026-06-24`; **Zalo group name** line ~273 (see decision D3) |
-| `ROLLBACK-RUNBOOK-20260522.md` | body go-live references → `2026-06-30`; keep filename (creation date) |
-| `8-DAY-CUTOVER-PLAN-20260522.md` | **READ + classify first** (see decision D2) — likely recompute window to D-7…D-0 = `2026-06-23`…`2026-06-30` |
+| File                                  | Action                                                                                                                |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `STOP_TRIGGERS_2026-06-09.md`         | body dates +21; **rename → `STOP_TRIGGERS_2026-06-30.md`**                                                            |
+| `BACKUP_ENGINEER_BRIEF_2026-06-09.md` | body dates +21; **rename → `BACKUP_ENGINEER_BRIEF_2026-06-30.md`**                                                    |
+| `D-1_FINAL_CHECKLIST_2026-06-08.md`   | body dates +21; **rename → `D-1_FINAL_CHECKLIST_2026-06-29.md`**                                                      |
+| `D-1_PREFLIGHT_AUDIT_2026-06-08.md`   | body dates +21; **rename → `D-1_PREFLIGHT_AUDIT_2026-06-29.md`**                                                      |
+| `HUONG_WALKTHROUGH_AGENDA_D-14.md`    | body dates +21 (esp. D-14 `2026-05-26`→`2026-06-16`, D-15→`2026-06-15`); **keep filename** (D-14 is a relative label) |
+| `DRY_RUN_CUTOVER_D-2.md`              | body dates +21 (D-2 → `2026-06-28`); keep filename                                                                    |
+| `WIN_EXE_FIELD_TEST_D-7.md`           | body dates +21 (D-7 → `2026-06-23`); keep filename                                                                    |
+| `MAC_INSTALL_GUIDE.md`                | body dates +21; D-6 UAT → `2026-06-24`; **Zalo group name** line ~273 (see decision D3)                               |
+| `ROLLBACK-RUNBOOK-20260522.md`        | body go-live references → `2026-06-30`; keep filename (creation date)                                                 |
+| `8-DAY-CUTOVER-PLAN-20260522.md`      | **READ + classify first** (see decision D2) — likely recompute window to D-7…D-0 = `2026-06-23`…`2026-06-30`          |
 
 ### 🛑 HISTORICAL — DO NOT EDIT (frozen point-in-time records)
 

@@ -100,9 +100,10 @@ export function buildPricingSnapshotSheet(wb, ctx) {
   const snap = (quote && quote.state && quote.state.pricing_snapshot) || null;
   const status = resolveSnapshotStatus(snap);
   const warnings = (quote && quote.result && quote.result._warnings) || [];
-  const warningText = Array.isArray(warnings) && warnings.length > 0
-    ? warnings.map((w) => (w && w.message) || String(w)).join('\n')
-    : '—';
+  const warningText =
+    Array.isArray(warnings) && warnings.length > 0
+      ? warnings.map((w) => (w && w.message) || String(w)).join('\n')
+      : '—';
 
   const rows = [
     ['Quote ID', String(quote?.id ?? '—')],

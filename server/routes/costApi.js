@@ -2019,9 +2019,7 @@ router.post(
     // lib-ddl edit — those users intentionally lose this. Server-side enforce
     // (the Sidebar already hides the tab; this closes the curl/bypass path).
     if ((pl?.ddlSitesDB || pl?.ddlDB) && !isAdminPlus(cu)) {
-      return res
-        .status(403)
-        .json({ ok: false, msg: 'Chỉ admin/sys được sửa Drop-Down Lists' });
+      return res.status(403).json({ ok: false, msg: 'Chỉ admin/sys được sửa Drop-Down Lists' });
     }
     const LIB = getLibDir();
     // Body must be a plain object — reject arrays, strings, null early so we

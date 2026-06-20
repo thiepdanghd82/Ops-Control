@@ -237,8 +237,7 @@ export const authApi = {
       force: !!opts.force,
     }),
   // User chose "Hủy" on the takeover dialog → audit-only (no session granted).
-  cancelSessionConflict: (username) =>
-    api.post('/auth/session-conflict-cancelled', { username }),
+  cancelSessionConflict: (username) => api.post('/auth/session-conflict-cancelled', { username }),
   logout: () => api.post('/auth/logout', {}),
   me: (opts = {}) => api.get('/auth/me', opts),
   getUsers: () => api.get('/auth/users'),
