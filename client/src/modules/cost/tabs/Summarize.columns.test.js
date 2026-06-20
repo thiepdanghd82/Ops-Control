@@ -22,7 +22,7 @@ import {
 } from './Summarize.columns.js';
 
 describe('SUMMARIZE_COLUMN_KEYS', () => {
-  test('contains 36 keys in source order — REGRESSION GUARD for table shape', () => {
+  test('contains 37 keys in source order — REGRESSION GUARD for table shape', () => {
     // Header row in Summarize.jsx renders this exact set in this exact
     // order. Drift here means the ColumnsToggle popover ↔ table-render
     // contract broke; bump this number only when intentionally
@@ -33,7 +33,8 @@ describe('SUMMARIZE_COLUMN_KEYS', () => {
     //   - S-SALE-OWNER-COL (2026-06-16) +1 → 33
     //   - existing snapshot_status + 2 tooling cols brought us to 35
     //   - S-SUMMARIZE-DATE-COL #164 (2026-06-18) +1 update_date → 36
-    assert.equal(SUMMARIZE_COLUMN_KEYS.length, 36);
+    //   - S-SUMMARIZE-EAU-COL (2026-06-19) +1 annual_qty → 37
+    assert.equal(SUMMARIZE_COLUMN_KEYS.length, 37);
   });
 
   test('no duplicate keys', () => {

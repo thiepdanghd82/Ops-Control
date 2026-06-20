@@ -14,7 +14,7 @@ import { calcAll, buildTierState, applyCplxTierToSp } from '../../../services/ca
 import { snapshotPricingParams } from '../../../services/pricingSnapshot';
 import { sharedApi } from '../../../services/api';
 import { RFQ_COLOR_PALETTE, setRfqColor, useRfqColors } from '../../../services/rfqColors';
-import { fmtN, pct, gmClr } from '../../../utils/format';
+import { fmtN, pct, gmClr, fmtInt } from '../../../utils/format';
 import { useAbortableFetch } from '../../../hooks/useAbortableFetch';
 import EmptyState from '../../../components/Shared/EmptyState';
 import { err as logErr } from '../../../utils/logger';
@@ -164,7 +164,23 @@ const SUMMARIZE_COLUMNS = [
     w: 200,
     render: (r) => <MultilineCell value={r.quote_materials} />,
   },
-  { key: 'moq', label: 'MOQ', w: 60, right: true },
+  // Sprint S-SUMMARIZE-EAU-COL (2026-06-19) — EAU column inserted
+  // ahead of MOQ per Henry's request so operators see "how many per
+  // year vs how many per shipment" left-to-right. Source field
+  // `r.annual_qty` is already populated by the row builder from
+  // `st.annual_qty` (tier 0) / `em.eau` (tier 1+) — wired the same
+  // way as `r.moq`.
+  //
+  // S-COST-BREAKDOWN-INT-FMT (2026-06-19) — both EAU + MOQ use
+  // `fmt: fmtInt(v)` so the cells render with en-US thousand
+  // separators ("250,000" / "10,000") matching the CostSummaryBar
+  // top strip + Quote History MOQ column. Before this, Cost
+  // Breakdown was the only surface showing raw integers without
+  // commas (`250000` / `10000`). With MES-3-FIX-60 CSV fmt fix
+  // applied, the CSV export inherits the same formatting; without
+  // it, CSV emits raw.
+  { key: 'annual_qty', label: 'EAU', w: 80, right: true, fmt: (v) => fmtInt(v) },
+  { key: 'moq', label: 'MOQ', w: 70, right: true, fmt: (v) => fmtInt(v) },
   { key: 'yield_pct', label: 'Yield%', w: 55, right: true, fmt: (v) => pct(v) },
   { key: 's_mat_cost', label: 'Material', w: 70, right: true, fmt: (v) => fmtN(v) },
   { key: 'overhead', label: 'Overhead', w: 70, right: true, fmt: (v) => fmtN(v) },
@@ -645,10 +661,12 @@ export default function Summarize() {
     //     with Quote History + multi-tier MOQ diff + timestamp forensic.
     //   - Then visibleColumns (post-toggle): respects operator's column
     //     toggle for display fields. Empty hidden = original full set
-    //     (minus `direct_cu_pn` / `annual_qty` / `vat_loss` /
-    //     `delivery_term` which were never in displayed columns config —
-    //     same drop as pre-toggle behavior; if Henry needs them back,
-    //     add to SUMMARIZE_COLUMNS as required: false).
+    //     (minus `direct_cu_pn` / `vat_loss` / `delivery_term` which
+    //     were never in displayed columns config — same drop as pre-
+    //     toggle behavior; if Henry needs them back, add to
+    //     SUMMARIZE_COLUMNS as required: false. `annual_qty` was
+    //     added 2026-06-19 as the EAU column — Sprint
+    //     S-SUMMARIZE-EAU-COL.)
     // Dedupe defensively in case visibleColumns somehow overlaps prefix.
     // Also filter `csvExclude: true` columns (currently row_idx — the
     // visible row counter has no meaning in a re-sortable CSV row).
