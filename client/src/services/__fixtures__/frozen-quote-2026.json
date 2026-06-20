@@ -1,0 +1,279 @@
+{
+  "_comment": "Frozen quote fixture pinned 2026-06-20. See loadFrozenQuote.test.js for the 20-year reproducibility contract. Regenerate via scripts/regen-frozen-quote.mjs only after deliberate engine change.",
+  "_captured_at": "2026-06-20T00:00:00.000Z",
+  "lib": {
+    "rate": [
+      {
+        "workcenter": "Manual",
+        "machine_rate": 0,
+        "labor_rate": 2.54,
+        "crew": 1,
+        "speed_uom": ""
+      },
+      {
+        "workcenter": "Flexo-A",
+        "machine_rate": 40,
+        "labor_rate": 10,
+        "crew": 2,
+        "speed_uom": "m/min"
+      },
+      {
+        "workcenter": "RDC-1",
+        "machine_rate": 30,
+        "labor_rate": 8,
+        "crew": 1,
+        "speed_uom": "m/min"
+      }
+    ],
+    "mat": [
+      {
+        "code": "PET-80",
+        "type": "face",
+        "s_price": 8,
+        "g_price": 9,
+        "thickness": 80
+      },
+      {
+        "code": "LIN-75",
+        "type": "liner",
+        "s_price": 2.5,
+        "g_price": 3,
+        "thickness": 75
+      }
+    ],
+    "ddl": {
+      "coverage": [
+        {
+          "pt": "Flexo",
+          "cov": 300
+        },
+        {
+          "pt": "Indigo",
+          "cov": 400
+        }
+      ],
+      "click_charges": {
+        "100": 0.5,
+        "1000": 3
+      },
+      "tool_life": {
+        "RDC Die": 100000,
+        "Pinacle die": 60000,
+        "Jig": 500000
+      },
+      "print_type_list": ["Flexo", "Indigo"]
+    },
+    "finance": {
+      "summary": {
+        "sga_rate_pct_by_site": {
+          "VN": 5
+        },
+        "version": 1
+      }
+    },
+    "inkCalc": {}
+  },
+  "state": {
+    "rfq_number": "RFQ-FROZEN-2026-001",
+    "ccl_pn": "FROZEN-2026",
+    "moq": 50000,
+    "annual_qty": 500000,
+    "product_lifetime": 1,
+    "trade_mode": "USD(Normal)",
+    "site": "VN",
+    "selling_price": 0.08,
+    "num_moq": 1,
+    "active_moq_idx": 0,
+    "extra_moqs": [],
+    "part_width": 80,
+    "part_length_md": 50,
+    "web_width_td": 82,
+    "sheet_length": 52,
+    "num_webs": 1,
+    "parts_in_md": 1,
+    "parts_web_across": 1,
+    "min_gap_md": 2,
+    "rotary_cols": 0,
+    "pcs_per_roll": 5000,
+    "materials": [
+      {
+        "code": "PET-80",
+        "width": 82,
+        "usage": 1,
+        "setup_lm": 50,
+        "cavities": 0,
+        "free_liner": 0,
+        "pitch_ovr": 0,
+        "offcut_yn": "N",
+        "slitting_yn": "N",
+        "df_yn": "",
+        "offcut_pct": 0,
+        "s_price": 8,
+        "g_price": 9,
+        "latest": 0
+      },
+      {
+        "code": "LIN-75",
+        "width": 82,
+        "usage": 1,
+        "setup_lm": 0,
+        "cavities": 0,
+        "free_liner": 0,
+        "pitch_ovr": 0,
+        "offcut_yn": "N",
+        "slitting_yn": "N",
+        "df_yn": "",
+        "offcut_pct": 0,
+        "s_price": 2.5,
+        "g_price": 3,
+        "latest": 0
+      }
+    ],
+    "inks": [
+      {
+        "color": "Red",
+        "print_type": "Flexo",
+        "base_mat": "PET-80",
+        "area_pct": 0.3,
+        "setup_kg": 0.2,
+        "s_price": 25,
+        "g_price": 25,
+        "latest": 0
+      },
+      {
+        "color": "Blue",
+        "print_type": "Flexo",
+        "base_mat": "PET-80",
+        "area_pct": 0.2,
+        "setup_kg": 0.2,
+        "s_price": 25,
+        "g_price": 25,
+        "latest": 0
+      }
+    ],
+    "processes": [
+      {
+        "process_type": "Print",
+        "workcenter": "Flexo-A",
+        "speed": 30,
+        "layout": 1,
+        "efficiency": 0.85,
+        "setup_h": 1,
+        "scrap_pct": 0.03,
+        "tool_cost": 0,
+        "tool_type": "",
+        "tool_life": 0,
+        "manual_uph": 0,
+        "extra_cost": 0,
+        "product_life": 1,
+        "eau_ovr": 0,
+        "repeat": 1
+      },
+      {
+        "process_type": "Die_Cut",
+        "workcenter": "RDC-1",
+        "speed": 40,
+        "layout": 1,
+        "efficiency": 0.85,
+        "setup_h": 0.5,
+        "scrap_pct": 0.02,
+        "tool_cost": 500,
+        "tool_type": "RDC Die",
+        "tool_life": 100000,
+        "manual_uph": 0,
+        "extra_cost": 0,
+        "product_life": 1,
+        "eau_ovr": 0,
+        "repeat": 1
+      }
+    ],
+    "pcs_per_bag": 500,
+    "bags_per_box": 20,
+    "container_cost": 0.5,
+    "box_cost": 0.6,
+    "other_packing": 0,
+    "shipping_cost": 200,
+    "other_ship": 0,
+    "ship_qty": 50000,
+    "pricing_snapshot": {
+      "_captured_at": "2026-06-20T00:00:00.000Z",
+      "_captured_by": "henry",
+      "_synthesized": false,
+      "_lib_version": null,
+      "_site": "VN",
+      "materials": {
+        "PET-80": {
+          "code": "PET-80",
+          "type": "face",
+          "s_price": 8,
+          "g_price": 9,
+          "thickness": 80
+        },
+        "LIN-75": {
+          "code": "LIN-75",
+          "type": "liner",
+          "s_price": 2.5,
+          "g_price": 3,
+          "thickness": 75
+        }
+      },
+      "coverage": [
+        {
+          "pt": "Flexo",
+          "cov": 300
+        },
+        {
+          "pt": "Indigo",
+          "cov": 400
+        }
+      ],
+      "rates": {
+        "Flexo-A": {
+          "workcenter": "Flexo-A",
+          "machine_rate": 40,
+          "labor_rate": 10,
+          "crew": 2,
+          "speed_uom": "m/min"
+        },
+        "RDC-1": {
+          "workcenter": "RDC-1",
+          "machine_rate": 30,
+          "labor_rate": 8,
+          "crew": 1,
+          "speed_uom": "m/min"
+        }
+      }
+    }
+  },
+  "expected_result": {
+    "sp": 0.08,
+    "s_ttl": 0.06488616870337825,
+    "g_ttl": 0.07195533470379904,
+    "gm": 0.18892289120777184,
+    "va": 0.24974602149081282,
+    "contribution": 0.2376793391477725,
+    "s_mat_cost": 0.049960318280734974,
+    "g_mat_cost": 0.05702948428115576,
+    "overhead": 0.0023205158352000597,
+    "labor_cost": 0.0009653345874432249,
+    "tooling": 0.005,
+    "packing_ship": 0.00506,
+    "vat_loss": 0,
+    "bd_mat_setup": 0.0007379999999999999,
+    "bd_mat_run": 0.05589732800336629,
+    "bd_ink_setup": 0.00020006833333333334,
+    "bd_ink_run": 0.000194087944456133,
+    "bd_overhead": 0.0034205158352000596,
+    "bd_labor": 0.0014453345874432249,
+    "bd_extra": 0,
+    "bd_extra_vat": 0,
+    "bd_setup_mach": 0.0011,
+    "bd_setup_labor": 0.00048,
+    "sga": 0.0035977667351899524,
+    "sga_rate_pct": 5,
+    "g_ttl_with_sga": 0.075553101438989,
+    "gm_after_sga": 0.14395080701789742,
+    "site": "VN",
+    "warnings": []
+  }
+}
