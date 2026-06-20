@@ -1,0 +1,38 @@
+{
+  "$schema": "./scripts/check-security-allowlist.schema.json",
+  "_doc": "CVE allowlist for npm audit. Every entry MUST have an expiry. CI fails if any entry is expired OR if a high+/critical CVE exists outside this allowlist. Owner: Henry. Maintenance: review monthly.",
+  "_policy": {
+    "max_expiry_days": 90,
+    "audit_level": "high",
+    "review_cadence": "monthly"
+  },
+  "allowlist": [
+    {
+      "cve": "GHSA-w5hq-g745-h8pq",
+      "package": "uuid",
+      "via": "exceljs",
+      "severity": "moderate",
+      "reason": "Missing buffer bounds check in uuid v3/v5/v6 when buf arg is provided. Exploit path requires caller to pass a pre-allocated buffer to uuid; codebase NEVER invokes uuid with buf (verified Phase A pre-go-live audit 2026-06-19). exceljs (the consumer) uses uuid only via v4 random API which does not accept buf. Fix requires exceljs major bump (3.x → 4.x) which spans the xlsx export pipeline; deferred to dep-bump sprint Q4 2026.",
+      "ticket": "MES-3-FIX-NN-exceljs-major (file post-go-live)",
+      "added": "2026-06-20",
+      "expiry": "2026-12-31"
+    },
+    {
+      "cve": "Jest 29 transitive js-yaml chain (18 advisories)",
+      "package": "jest + @jest/* + babel-plugin-istanbul + @istanbuljs/load-nyc-config",
+      "via": "js-yaml moderate (CVE-2025-XXXX) cascading through Jest 29 internal deps",
+      "severity": "moderate",
+      "reason": "Jest 29.7.0 is dev-only test runner; --omit=dev excludes from runtime audit. Fix requires Jest major bump 29 → 30 (semver-major) which changes test API surface. Already covered by root job's --omit=dev flag; this entry documents the chain for review cadence. Schedule Jest 30 bump alongside React 19 testing infrastructure setup (S-TEST-INFRA, Q1 2027).",
+      "ticket": "S-TEST-INFRA (file Q1 2027)",
+      "added": "2026-06-20",
+      "expiry": "2027-03-31"
+    }
+  ],
+  "_history": [
+    {
+      "date": "2026-06-20",
+      "actor": "Henry + AI",
+      "action": "Initial allowlist created during CI Green Sprint Phase 0.3 (Debug Playbook). npm audit fix + @playwright/test bump + sub-package fixes eliminated 2 critical + 3 high + 1 low. Multer (high) auto-bumped to 2.2.0 via caret range (closes MES-3-FIX-59 on arrival). Remaining 20 moderate all dev-only or require breaking change; documented above."
+    }
+  ]
+}
