@@ -159,6 +159,25 @@ try {
   console.error(`  ⚠️   TOTP boot probe threw: ${e.message}`);
 }
 
+// Phase 3 M-5a (2026-06-20) — SQLite integrity probe. Runs PRAGMA
+// integrity_check on ops.db at boot; blocks startup if corruption
+// detected so silent bit-rot doesn't propagate to off-site rsync.
+// Override via OPS_SKIP_INTEGRITY_PROBE=1 for emergency boots only.
+// Closes Enterprise Re-evaluation M-5 + R6 retention control.
+try {
+  const { logBootIntegrityProbe } = await import('./db/integrityProbe.js');
+  const integrity = logBootIntegrityProbe();
+  if (!integrity.ok && !integrity.skipped) {
+    console.error('  🚨  Boot ABORTED — see DB integrity probe output above.');
+    process.exit(2);
+  }
+} catch (e) {
+  // Probe infra error (module load failed, etc.) — log + continue.
+  // Real corruption detection is handled by the probe's own ok flag;
+  // this catch is for the probe-loading-itself class of error.
+  console.error(`  ⚠️   DB integrity probe infra error: ${e.message}`);
+}
+
 // ─── Middleware ───
 // CORS: default closed in production, permissive for dev. Override via
 // OPS_CORS_ORIGINS="https://foo,https://bar" comma-separated allowlist.
