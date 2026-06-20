@@ -32,6 +32,7 @@ import { chatApi, openChatRoom } from '../../../../services/chatApi';
 import { useI18n } from '../../../../utils/useI18n';
 import CplxHeader from './CplxHeader';
 import CplxSummaryBar from './CplxSummaryBar';
+import { shouldShowSummaryBar } from '../costSummaryBarVisibility.js';
 import CplxCostBreakdown from './CplxCostBreakdown';
 import ProcessFlowChart from './ProcessFlowChart';
 import SubProductRow from './SubProductRow';
@@ -547,8 +548,16 @@ export default function ComplexCalc() {
         </TabBarOverflow>
       </div>
 
-      {/* Persistent cost summary bar — always visible below tabs */}
-      <CplxSummaryBar cs={cs} aggregate={aggregate} />
+      {/* Cost summary bar — Sprint S-SUMBAR-HIDE (2026-06-19) gates
+          visibility per active sub-tab so analysis tabs (Cost
+          Breakdown + Summary) don't repeat info already shown below.
+          Data-entry tabs keep it for live margin feedback. See
+          costSummaryBarVisibility.js. NOTE: Cpx id is 'summary'
+          (singular), differs from Std 'summarize' — predicate's
+          kind='cpx' branch uses the right Set. */}
+      {shouldShowSummaryBar(activeSubTab, 'cpx') && (
+        <CplxSummaryBar cs={cs} aggregate={aggregate} />
+      )}
 
       <div className="cc-content">
         {/* ═══ PROJECT TAB ═══ */}
