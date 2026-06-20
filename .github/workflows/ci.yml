@@ -30,6 +30,8 @@ jobs:
         run: cd desktop && npm ci --ignore-scripts
       - name: Audit (desktop)
         run: cd desktop && npm audit --audit-level=high
+      - name: Security allowlist hygiene
+        run: node scripts/check-security-allowlist.mjs
 
   lint:
     name: Lint + format
