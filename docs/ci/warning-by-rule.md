@@ -89,15 +89,19 @@
 
 ## Regression guard (NEW in PR-C2)
 
-Add `--max-warnings <N>` to CI lint command. After PR-A + PR-B + PR-C1 + PR-C2 merge:
+Add `--max-warnings <N>` to CI lint command. After PR-A + PR-B + PR-C1 + PR-C2 + hotfix merge:
 
 ```yaml
-- run: npm run lint -- --max-warnings 370
+- run: npm run lint -- --max-warnings 435
 ```
 
-This **prevents new warnings from being added** without an explicit baseline bump. If a PR introduces a 371st warning, CI fails. Lowering the count (e.g. as Sprint 12 inline-style migration progresses) requires updating the number — forcing explicit acknowledgment.
+This **prevents new warnings from being added** without an explicit baseline bump. If a PR introduces a 436th warning, CI fails. Lowering the count (e.g. as Sprint 12 inline-style migration progresses) requires updating the number — forcing explicit acknowledgment.
 
-**Why 370:** Current count post-Phase 0. Can be lowered as tickets close:
+**Why 435 (not 370):** Node version sensitivity. Local Node 24 reports ~366 warnings; CI Node 22 reports ~432. Difference comes from V8 / `@eslint/js` 10.0.1 `no-useless-assignment` control-flow analysis precision changes between Node major versions. Three real bugs caught only on Node 22 (`calcEngine.js:524-525` + `dataEventBus.js:61` initial-zero assignments shadowed by branch reassignment) were fixed in the hotfix; the remaining ~66 warning delta is rule-precision drift (mostly `no-useless-assignment` near-misses on conditional reassignment patterns). **Source of truth is CI count, not local.** Run `npm run lint` locally under Node 22 (`fnm use 22` or `nvm use 22`) to match CI exactly. See **MES-3-FIX-4** for the Node-CI-local-sync ticket.
+
+**Why max-warnings is one number not two:** Could split into "Node 22 floor" + "Node 24 floor" but adds complexity. Picking the CI count as authoritative is simpler — local devs see "0 errors locally but CI failed" as a flag to investigate, not a confusing two-baseline state.
+
+**Can be lowered as tickets close:**
 
 - After S-INLINE-STYLE-MIGRATION (Q4 2026): drop by ~50/sprint
 - After MES-3-FIX-38 audit: drop by 8

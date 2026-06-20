@@ -521,8 +521,7 @@ export function calcInk(ink, st, moq, lib, options = {}) {
   }
   const width_m = _widthMm / 1000;
 
-  let run_s = 0,
-    setup_s = 0;
+  let run_s, setup_s;
   if (isIndigo) {
     const clicks = ink.clicks || 0;
     const _ccTbl = (lib.ddl && lib.ddl.click_charges) || {};
