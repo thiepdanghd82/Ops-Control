@@ -29,6 +29,7 @@ import {
   SUMMARIZE_DEFAULT_HIDDEN_KEYS,
   CSV_ALWAYS_INCLUDE_KEYS,
 } from './Summarize.columns.js';
+import { formatCsvRows } from './Summarize.csvHelpers.js';
 import {
   collectDrwMaterials,
   collectQuoteMaterials,
@@ -683,7 +684,14 @@ export default function Summarize() {
     const visibleSelected = sorted.filter((r) => selected.has(r.id));
     const rowsToExport = visibleSelected.length > 0 ? visibleSelected : sorted;
     if (rowsToExport.length === 0) return; // nothing to write
-    const csv = buildCsv(rowsToExport, cols, { headers });
+    // MES-3-FIX-60 (2026-06-19) — apply each column's UI `fmt` to its
+    // CSV cell value so operators opening summarize_*.csv see the same
+    // numeric precision + percent suffix as the on-screen table.
+    // Audit-prefix slots (quote_id / tier / update_date / type /
+    // sale_owner) have no SUMMARIZE_COLUMNS entry → formatCsvCell
+    // returns raw; ISO timestamps + plain text untouched.
+    const formattedRows = formatCsvRows(rowsToExport, cols, colByKey);
+    const csv = buildCsv(formattedRows, cols, { headers });
     const suggested = `summarize_${new Date().toISOString().slice(0, 10)}${visibleSelected.length > 0 ? `_${visibleSelected.length}rows` : ''}.csv`;
     try {
       await saveCsv(csv, suggested);
