@@ -1,0 +1,267 @@
+{
+  "_comment": "Phase 2 PR-B — draft quote (no approval.rates_snapshot) pinning SGA via pricing_snapshot.sga. Closes STEP 0 export-path bypass: any customer xlsx exported pre-approval freezes SGA save-time rate, immune to finance.summary drift. Regen via scripts/regen-frozen-quotes.mjs.",
+  "_captured_at": "2026-06-20T00:00:00.000Z",
+  "lib": {
+    "rate": [
+      {
+        "workcenter": "Manual",
+        "machine_rate": 0,
+        "labor_rate": 2.54,
+        "crew": 1,
+        "speed_uom": ""
+      },
+      {
+        "workcenter": "Flexo-A",
+        "machine_rate": 40,
+        "labor_rate": 10,
+        "crew": 2,
+        "speed_uom": "m/min"
+      },
+      {
+        "workcenter": "RDC-1",
+        "machine_rate": 30,
+        "labor_rate": 8,
+        "crew": 1,
+        "speed_uom": "m/min"
+      },
+      {
+        "workcenter": "Indigo6800",
+        "machine_rate": 60,
+        "labor_rate": 12,
+        "crew": 1,
+        "speed_uom": "m/min"
+      },
+      {
+        "workcenter": "Mag-Die",
+        "machine_rate": 25,
+        "labor_rate": 6,
+        "crew": 1,
+        "speed_uom": "m/min"
+      }
+    ],
+    "mat": [
+      {
+        "code": "PET-80",
+        "type": "face",
+        "s_price": 8,
+        "g_price": 9,
+        "thickness": 80
+      },
+      {
+        "code": "LIN-75",
+        "type": "liner",
+        "s_price": 2.5,
+        "g_price": 3,
+        "thickness": 75
+      }
+    ],
+    "ddl": {
+      "coverage": [
+        {
+          "pt": "Flexo",
+          "cov": 300
+        },
+        {
+          "pt": "Indigo",
+          "cov": 400
+        }
+      ],
+      "click_charges": {
+        "100": 0.5,
+        "1000": 3,
+        "10000": 12
+      },
+      "tool_life": {
+        "RDC Die": 100000,
+        "Pinacle die": 60000,
+        "woodie": 30000,
+        "Jig": 500000
+      },
+      "print_type_list": ["Flexo", "Indigo", "Indigo6800"]
+    },
+    "finance": {
+      "summary": {
+        "sga_rate_pct_by_site": {
+          "VN": 5,
+          "Hai Duong": 7
+        }
+      }
+    },
+    "inkCalc": {}
+  },
+  "state": {
+    "rfq_number": "RFQ-DRAFT-SGA-2026-001",
+    "ccl_pn": "DRAFT-SGA-2026",
+    "moq": 50000,
+    "annual_qty": 500000,
+    "product_lifetime": 1,
+    "trade_mode": "USD(Normal)",
+    "site": "VN",
+    "selling_price": 0.08,
+    "num_moq": 1,
+    "active_moq_idx": 0,
+    "extra_moqs": [],
+    "part_width": 80,
+    "part_length_md": 50,
+    "web_width_td": 82,
+    "sheet_length": 52,
+    "num_webs": 1,
+    "parts_in_md": 1,
+    "parts_web_across": 1,
+    "min_gap_md": 2,
+    "rotary_cols": 0,
+    "pcs_per_roll": 5000,
+    "materials": [
+      {
+        "code": "PET-80",
+        "width": 82,
+        "usage": 1,
+        "setup_lm": 50,
+        "cavities": 0,
+        "free_liner": 0,
+        "pitch_ovr": 0,
+        "offcut_yn": "N",
+        "slitting_yn": "N",
+        "df_yn": "",
+        "offcut_pct": 0,
+        "s_price": 8,
+        "g_price": 9,
+        "latest": 0
+      },
+      {
+        "code": "LIN-75",
+        "width": 82,
+        "usage": 1,
+        "setup_lm": 50,
+        "cavities": 0,
+        "free_liner": 0,
+        "pitch_ovr": 0,
+        "offcut_yn": "N",
+        "slitting_yn": "N",
+        "df_yn": "",
+        "offcut_pct": 0,
+        "s_price": 2.5,
+        "g_price": 3,
+        "latest": 0
+      }
+    ],
+    "inks": [
+      {
+        "color": "Red",
+        "print_type": "Flexo",
+        "base_mat": "PET-80",
+        "area_pct": 0.3,
+        "setup_kg": 0.2,
+        "s_price": 25,
+        "g_price": 25,
+        "latest": 0
+      }
+    ],
+    "processes": [
+      {
+        "process_type": "Print",
+        "workcenter": "Flexo-A",
+        "speed": 30,
+        "layout": 1,
+        "efficiency": 0.85,
+        "setup_h": 1,
+        "scrap_pct": 0.03,
+        "tool_cost": 0,
+        "tool_type": "",
+        "tool_life": 0,
+        "manual_uph": 0,
+        "extra_cost": 0,
+        "product_life": 1,
+        "eau_ovr": 0,
+        "repeat": 1
+      }
+    ],
+    "pcs_per_bag": 500,
+    "bags_per_box": 20,
+    "container_cost": 0.5,
+    "box_cost": 0.6,
+    "other_packing": 0,
+    "shipping_cost": 200,
+    "other_ship": 0,
+    "ship_qty": 50000,
+    "pricing_snapshot": {
+      "_captured_at": "2026-06-20T00:00:00.000Z",
+      "_captured_by": "henry",
+      "_synthesized": false,
+      "_lib_version": null,
+      "_site": "VN",
+      "materials": {
+        "PET-80": {
+          "code": "PET-80",
+          "type": "face",
+          "s_price": 8,
+          "g_price": 9,
+          "thickness": 80
+        },
+        "LIN-75": {
+          "code": "LIN-75",
+          "type": "liner",
+          "s_price": 2.5,
+          "g_price": 3,
+          "thickness": 75
+        }
+      },
+      "coverage": [
+        {
+          "pt": "Flexo",
+          "cov": 300
+        },
+        {
+          "pt": "Indigo",
+          "cov": 400
+        }
+      ],
+      "rates": {
+        "Flexo-A": {
+          "workcenter": "Flexo-A",
+          "machine_rate": 40,
+          "labor_rate": 10,
+          "crew": 2,
+          "speed_uom": "m/min"
+        }
+      },
+      "tool_life": {},
+      "click_charges": {},
+      "sga": {
+        "rate_pct": 5,
+        "site_key": "VN"
+      }
+    }
+  },
+  "expected_result": {
+    "sp": 0.08,
+    "s_ttl": 0.057450264771983034,
+    "g_ttl": 0.06442068745239539,
+    "gm": 0.2818716903502121,
+    "va": 0.3241609565721648,
+    "contribution": 0.3150645344981806,
+    "s_mat_cost": 0.04900712347422682,
+    "g_mat_cost": 0.05597754615463918,
+    "overhead": 0.0014554275318374773,
+    "labor_cost": 0.0007277137659187386,
+    "tooling": 0,
+    "packing_ship": 0.00506,
+    "vat_loss": 0,
+    "bd_mat_setup": 0.000984,
+    "bd_mat_run": 0.05477938144329897,
+    "bd_ink_setup": 0.00010004100000000001,
+    "bd_ink_run": 0.0001141237113402062,
+    "bd_overhead": 0.0022554275318374772,
+    "bd_labor": 0.0011277137659187386,
+    "bd_extra": 0,
+    "bd_extra_vat": 0,
+    "bd_setup_mach": 0.0008,
+    "bd_setup_labor": 0.0004,
+    "sga": 0.0032210343726197695,
+    "sga_rate_pct": 5,
+    "g_ttl_with_sga": 0.06764172182501516,
+    "gm_after_sga": 0.24160876069246506,
+    "site": "VN",
+    "warnings": []
+  }
+}
