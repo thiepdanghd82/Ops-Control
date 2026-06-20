@@ -52,6 +52,7 @@ export default function CalcLeadTimeNotice({ leadTime, onChange, toolingCostTota
 
   const toolingDisplay = fmtUsd(toolingCostTotal);
   const toolingTip = t('lt.tooling.synced_tip');
+  const toolingCaption = t('lt.tooling.caption');
   const placeholder = t('lt.placeholder.multiline');
 
   return (
@@ -65,10 +66,13 @@ export default function CalcLeadTimeNotice({ leadTime, onChange, toolingCostTota
             aria-label={toolingTip}
             aria-readonly="true"
           >
-            <span className="ltn-tooling-value">{toolingDisplay}</span>
-            <span className="ltn-tooling-lock" aria-hidden="true">
-              🔒
-            </span>
+            <div className="ltn-tooling-row">
+              <span className="ltn-tooling-value">{toolingDisplay}</span>
+              <span className="ltn-tooling-lock" aria-hidden="true">
+                🔒
+              </span>
+            </div>
+            <span className="ltn-tooling-caption">{toolingCaption}</span>
           </div>
         </div>
         {FIELDS.map((f) => {
