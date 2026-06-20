@@ -15,6 +15,7 @@ import {
   getSnapshotSite,
   getToolLifeFromSnapshot,
   getClickChargesFromSnapshot,
+  getSgaFromSnapshot,
   detectLegacyPartialFields,
 } from './pricingSnapshot.js';
 import { warn as devWarn } from '../utils/logger.js';
@@ -765,14 +766,20 @@ export function calcShipping(st) {
 //
 // Pure function: no IO, no state. Extracted so calcAll stays lean and
 // the formula can be unit-tested without standing up a full quote state.
-export function computeSga({ g_ttl, sp_price, lib, site, snapshot }) {
+//
+// PR-A2 (2026-06-20) — 3-layer precedence for retention:
+//   1. snapshot (approval.rates_snapshot, Phase 9E.4) — approved win
+//   2. pricingSnapshot (state.pricing_snapshot.sga, PR-A2) — draft pin
+//   3. lib.finance.summary — live, last resort + legacy fallback
+//
+// Approved quote carrying both approval.rates_snapshot AND
+// pricing_snapshot.sga (different values) → MUST resolve to approval
+// per the regression-guard test. Draft quote (no approval) with
+// pricing_snapshot.sga → resolves to snapshot. Pre-PR-A2 quote (no
+// snapshot.sga) → live lib (existing behavior unchanged).
+export function computeSga({ g_ttl, sp_price, lib, site, snapshot, pricingSnapshot }) {
   const siteKey = site || 'VN';
-  // Phase 9E.4 — snapshot precedence. When an approved quote carries
-  // state.approval.rates_snapshot (captured at APPROVE_FINANCE), that
-  // frozen rate is authoritative. A later Finance edit bumping SGA
-  // from 0→5% must NOT retroactively change this quote's reported
-  // margin. Callers pass the snapshot explicitly so the computation
-  // stays pure (no hidden dependency on approval state).
+  // Layer 1 — approval.rates_snapshot wins (Phase 9E.4 unchanged)
   if (snapshot && typeof snapshot === 'object') {
     const snapPct = Number(snapshot.sga_rate_pct);
     const pct = Number.isFinite(snapPct) && snapPct > 0 ? snapPct : 0;
@@ -789,6 +796,26 @@ export function computeSga({ g_ttl, sp_price, lib, site, snapshot }) {
     };
   }
 
+  // Layer 2 — PR-A2 pricing_snapshot.sga (draft pin). Only fires when
+  // approval snapshot absent AND pricing snapshot has the sga cluster
+  // (legacy snapshots return null from getSgaFromSnapshot).
+  const psSga = getSgaFromSnapshot(pricingSnapshot);
+  if (psSga && Number.isFinite(psSga.rate_pct)) {
+    const pct = psSga.rate_pct > 0 ? psSga.rate_pct : 0;
+    const psSgaAmount = pct > 0 ? (Number(g_ttl) || 0) * (pct / 100) : 0;
+    const psTtl = (Number(g_ttl) || 0) + psSgaAmount;
+    const psGm = sp_price > 0 ? 1 - psTtl / sp_price : null;
+    return {
+      sga: psSgaAmount,
+      sga_rate_pct: pct,
+      g_ttl_with_sga: psTtl,
+      gm_after_sga: psGm,
+      site: psSga.site_key || siteKey,
+      from_snapshot: true,
+    };
+  }
+
+  // Layer 3 — live lib fallback (pre-A2 legacy + final default)
   const rates = lib?.finance?.summary?.sga_rate_pct_by_site || {};
   // Phase 9E.2 — case-insensitive site lookup. Prior version silently
   // returned 0 SGA if a quote stored `site: 'vn'` (lowercase) but the
@@ -1049,15 +1076,25 @@ export function calcAll(st, allSpResults, lib, subproducts, options = {}) {
   const gm = sp_price > 0 ? 1 - s_ttl / sp_price : null;
 
   // SGA burden — see computeSga() below for the formula + rationale.
-  // Pass the approval snapshot when the quote is in an approved state
-  // so the frozen rate wins over live Finance data (Phase 9E.4).
+  // PR-A2 (2026-06-20): 3-layer precedence — approval.rates_snapshot
+  // (Phase 9E.4) → pricing_snapshot.sga (this PR) → lib.finance (live).
+  // Approved quote keeps existing approval-snapshot wins behavior; draft
+  // quote now pinned via pricing_snapshot.sga; pre-PR-A2 quotes fall
+  // through to lib.finance unchanged.
   const approvalSnapshot = st.approval?.rates_snapshot || null;
   const {
     sga,
     sga_rate_pct: sgaRatePct,
     g_ttl_with_sga,
     site,
-  } = computeSga({ g_ttl, sp_price, lib, site: st.site, snapshot: approvalSnapshot });
+  } = computeSga({
+    g_ttl,
+    sp_price,
+    lib,
+    site: st.site,
+    snapshot: approvalSnapshot,
+    pricingSnapshot: snapshot, // PR-A2: pricing snapshot from options.snapshot
+  });
   // Sprint 21 follow-up: gm uses s_ttl (supplier basis). gm_after_sga
   // must also use s_ttl so the delta gm - gm_after_sga isolates JUST
   // the SGA burden. Pre-fix, gm_after_sga was s_ttl-vs-g_ttl AND SGA
