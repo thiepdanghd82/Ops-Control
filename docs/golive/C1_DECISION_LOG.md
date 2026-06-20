@@ -33,7 +33,7 @@
 | (a) Hai Duong-only pilot | [ ]       | SCOPE_LOCK unchanged                                        |
 | (b) Multi-site global    | [ ]       | S-WIN-PORT, SAP M-2, multi-site rollout escalate to roadmap |
 
-**Notes**: ****\*\*****\*\*****\*\*****\_\_\_\_****\*\*****\*\*****\*\*****
+**Notes**: \***\*\*\*\*\***\*\*\***\*\*\*\*\***\_\_\_\_\***\*\*\*\*\***\*\*\***\*\*\*\*\***
 
 ---
 
@@ -49,7 +49,7 @@
 | C. Cloud web access                   | [ ]       | Escalate S-WEB-FIRST to Q1-2027          |
 | D. SaaS multi-tenant rewrite          | [ ]       | ⚠️ Counter-propose dời go-live           |
 
-**Notes**: ****\*\*****\*\*****\*\*****\_\_\_\_****\*\*****\*\*****\*\*****
+**Notes**: \***\*\*\*\*\***\*\*\***\*\*\*\*\***\_\_\_\_\***\*\*\*\*\***\*\*\***\*\*\*\*\***
 
 ---
 
@@ -64,7 +64,7 @@
 | (b) Business requirement | [ ]       | R8-R12 stay at 2027-Q1-Q3 estimates, defer R11+R12 indefinitely         |
 | (c) Both                 | [ ]       | (a) holds                                                               |
 
-**Notes**: ****\*\*****\*\*****\*\*****\_\_\_\_****\*\*****\*\*****\*\*****
+**Notes**: \***\*\*\*\*\***\*\*\***\*\*\*\*\***\_\_\_\_\***\*\*\*\*\***\*\*\***\*\*\*\*\***
 
 ---
 
@@ -79,7 +79,7 @@
 | (b) 15 provisioned (peak 5-7) | [ ]       | No scaling concern                                      |
 | (c) ~45 accounts × shifts     | [ ]       | Audit attribution + license fleet capacity check needed |
 
-**Notes**: ****\*\*****\*\*****\*\*****\_\_\_\_****\*\*****\*\*****\*\*****
+**Notes**: \***\*\*\*\*\***\*\*\***\*\*\*\*\***\_\_\_\_\***\*\*\*\*\***\*\*\***\*\*\*\*\***
 
 ---
 
@@ -108,7 +108,7 @@
 | Scale / barcode / RFID    | []  | []  | Defer to MES-3+ unless critical                           |
 | Customer email automation | []  | []  | Defer to post-go-live operator-driven feature             |
 
-**Notes**: ****\*\*****\*\*****\*\*****\_\_\_\_****\*\*****\*\*****\*\*****
+**Notes**: \***\*\*\*\*\***\*\*\***\*\*\*\*\***\_\_\_\_\***\*\*\*\*\***\*\*\***\*\*\*\*\***
 
 ---
 
@@ -123,7 +123,7 @@
 | (b) No — must include Win in v1.6    | [ ]       | ⚠️ D-0 slips to 2026-09-15 minimum (S-WIN-PORT ~2 sprints) |
 | (c) Mac + read-only web for managers | [ ]       | S-WEB-FIRST simplified Q3-2026; adds risk to D-0           |
 
-**Notes**: ****\*\*****\*\*****\*\*****\_\_\_\_****\*\*****\*\*****\*\*****
+**Notes**: \***\*\*\*\*\***\*\*\***\*\*\*\*\***\_\_\_\_\***\*\*\*\*\***\*\*\***\*\*\*\*\***
 
 ---
 
