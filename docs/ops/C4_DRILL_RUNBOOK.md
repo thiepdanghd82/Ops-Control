@@ -138,13 +138,13 @@ curl -sS http://localhost:3100/health
 
 #### 1.5 Log RTO
 
-| Metric          | Value            |
-| --------------- | ---------------- |
-| Start time      | ****\_\_****     |
-| End time        | ****\_\_****     |
-| **Elapsed**     | ****\_\_****     |
-| **Target ≤ 6h** | [ ] MET [ ] MISS |
-| Gaps observed   | ******\_\_****** |
+| Metric          | Value                |
+| --------------- | -------------------- |
+| Start time      | \***\*\_\_\*\***     |
+| End time        | \***\*\_\_\*\***     |
+| **Elapsed**     | \***\*\_\_\*\***     |
+| **Target ≤ 6h** | [ ] MET [ ] MISS     |
+| Gaps observed   | **\*\***\_\_**\*\*** |
 
 ---
 

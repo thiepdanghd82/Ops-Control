@@ -4,17 +4,25 @@
 
 **Deadline · Hạn phản hồi**: 2026-06-26 23:59 ICT (D-65)
 **Use case · Khi nào dùng**: Henry không đặt được lịch 3h với stakeholder trước 2026-06-26 (Path A unschedulable)
-**Mechanism · Cơ chế**: Email + form + 48-72h response window + silence-implies-consent clause (⚠️ Henry confirm trước khi gửi)
+**Mechanism · Cơ chế**: Email + form + 48-72h response window + **explicit positive acknowledgment required** (no silence-implies-consent — see rationale below)
 
 ---
 
-## ⚠️ Henry-confirm-first decision · Cần xác nhận trước khi gửi
+## ⚠️ Why explicit-ack (NOT silence-clause) · Tại sao ack tường minh, không phải im-lặng-là-đồng-ý
 
-> **EN:** Path B contains a clause: "If no response received by 2026-06-26 23:59 ICT, this document is considered SIGNED-OFF and v1.6 scope is locked as proposed (Mac-only pilot, Hai Duong site, 15 users)."
+> **EN:** An earlier draft of this document proposed a "silence-implies-consent" clause (if no response by deadline → scope auto-signed). **That clause has been removed.** For a 20-year-retention enterprise system, silence-as-consent is:
 >
-> **VI:** Path B có điều khoản: "Nếu không nhận phản hồi trước 2026-06-26 23:59 ICT, văn bản này được coi là ĐÃ KÝ-OFF và scope v1.6 khóa như đề xuất (pilot Mac-only, site Hai Duong, 15 users)."
+> - **Legally weak** — if stakeholder later disputes scope, "you didn't object to the email" does not hold up in compliance audit (SOX, ISO 27001, NĐ 13/2023). Explicit written agreement is the audit-trail standard.
+> - **Relationally weak** — implies "I'll take advantage of your inbox overflow." Damages trust for a project meant to run 20 years.
 >
-> **⚠️ Henry MUST confirm acceptability before invoking Path B.** Some organizations / regulatory regimes (SOX, ISO 27001) require explicit written sign-off; silence-implies-consent invalidates the audit trail. If unacceptable, replace the clause with "Failure to respond by deadline triggers escalation to S-SCOPE-LOCK-PENDING blocking ticket + project pause."
+> **Replacement rule**: Path B requires a positive acknowledgment reply (just `"Agreed / Đồng ý"` + name + date is enough). If no acknowledgment by deadline, escalate to blocking ticket — DO NOT auto-pass.
+
+> **VI:** Bản nháp trước của tài liệu này đã đề xuất "im-lặng = đồng ý" (không phản hồi đến hạn → tự động ký scope). **Điều khoản đó đã được loại bỏ.** Đối với hệ thống enterprise lưu trữ 20 năm, im-lặng-là-đồng-ý:
+>
+> - **Yếu về pháp lý** — nếu stakeholder sau này tranh chấp scope, "anh không phản đối email" KHÔNG đứng vững trong audit tuân thủ (SOX, ISO 27001, NĐ 13/2023). Sự đồng ý tường minh bằng văn bản là chuẩn audit-trail.
+> - **Yếu về quan hệ** — ngụ ý "tôi sẽ lợi dụng việc anh quá tải email". Phá hỏng lòng tin cho dự án dự kiến chạy 20 năm.
+>
+> **Quy tắc thay thế**: Path B yêu cầu reply acknowledgment dương tính (chỉ cần `"Agreed / Đồng ý"` + tên + ngày là đủ). Nếu không có ack đến hạn, leo thang sang blocking ticket — KHÔNG auto-pass.
 
 ---
 
@@ -46,7 +54,7 @@ Ops Control v1.6 go-live is scheduled for **2026-08-30**, with stakeholder scope
 
 **If you have concerns or need to discuss**: Reply with the questions/concerns BEFORE 2026-06-26. Henry can schedule a 30-min call within 48h to walk through any blocker.
 
-**Silence-implies-consent clause** [⚠️ Henry confirm before sending]: If no response received by 2026-06-26 23:59 ICT, this document is considered SIGNED-OFF and v1.6 scope locks as proposed (Mac-only pilot for Hai Duong site, 15 users, Materials/Inks/Processes Combined tab, 20-year retention via pricing snapshot). Project proceeds on this basis.
+**Acknowledgment required**: A short positive reply is sufficient. Even just `"Agreed — [your name] — [today's date]"` (plus the 7-question form below) is enough to count as written sign-off. **No response by 2026-06-26 23:59 ICT triggers project escalation** (NOT auto-approval — the project pauses until written sign-off is received).
 
 Best regards,
 Henry Đặng Thế Thiệp
@@ -74,7 +82,7 @@ Ops Control v1.6 go-live dự kiến **2026-08-30**, scope-lock cần ký với 
 
 **Nếu cần thảo luận**: Phản hồi câu hỏi/quan ngại TRƯỚC 2026-06-26. Henry có thể đặt call 30 phút trong 48h.
 
-**Điều khoản im-lặng-là-đồng-ý** [⚠️ Henry xác nhận trước khi gửi]: Nếu không nhận phản hồi trước 2026-06-26 23:59 ICT, văn bản coi như ĐÃ KÝ-OFF và scope v1.6 khóa như đề xuất (pilot Mac-only site Hai Duong, 15 users, tab Materials & Process gộp, lưu trữ 20 năm qua pricing snapshot). Dự án tiếp tục trên cơ sở này.
+**Yêu cầu acknowledgment**: Một reply dương tính ngắn là đủ. Chỉ cần `"Đồng ý — [tên anh/chị] — [ngày hôm nay]"` (kèm form 7 câu hỏi bên dưới) là đủ tính làm sign-off bằng văn bản. **Không phản hồi đến 2026-06-26 23:59 ICT sẽ kích hoạt leo thang dự án** (KHÔNG tự duyệt — dự án tạm dừng cho tới khi nhận được sign-off bằng văn bản).
 
 Trân trọng,
 Henry Đặng Thế Thiệp
@@ -174,13 +182,13 @@ Date · Ngày:            _______________________
 
 ## 🚦 Decision pathways after response · Hành động sau phản hồi
 
-| Stakeholder response                                                     | Action                                                                                                                                                                                 |
-| ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ✅ All 7 answers match RECOMMENDED + signature                           | C-1 CLOSED. Capture in `C1_DECISION_LOG.md`, update `project_golive` memory, lift engineering freeze.                                                                                  |
-| 🟡 Answers diverge but within scope tolerance (e.g. Q4 = (c) shifts)     | Capture divergence, evaluate impact (likely minor), update C-1 status to CLOSED-WITH-NOTES.                                                                                            |
-| 🔴 Answers shift scope significantly (Q1=b, Q2=B/C/D, Q6 SAP=IN, Q7=b/c) | Pause v1.6. Re-draft SCOPE_LOCK + DEFERRAL_ROADMAP per `C1_PRE_MORTEM.md` scenarios. Re-send Path B OR schedule emergency Path A within 5 days.                                        |
-| ⏰ No response by 2026-06-26 23:59 ICT                                   | **IF silence-clause acceptable**: C-1 CLOSED-BY-SILENCE, capture in DECISION_LOG with timestamp. **IF NOT**: file `S-SCOPE-LOCK-PENDING`, project paused, escalate to Henry's manager. |
-| 📞 Stakeholder requests live call                                        | Schedule within 48h (still hits D-65). Convert to Path A short-form (~1h, focus on Q1+Q2+Q7 gates).                                                                                    |
+| Stakeholder response                                                     | Action                                                                                                                                                                                                                                                                                        |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ✅ All 7 answers match RECOMMENDED + signature                           | C-1 CLOSED. Capture in `C1_DECISION_LOG.md`, update `project_golive` memory, lift engineering freeze.                                                                                                                                                                                         |
+| 🟡 Answers diverge but within scope tolerance (e.g. Q4 = (c) shifts)     | Capture divergence, evaluate impact (likely minor), update C-1 status to CLOSED-WITH-NOTES.                                                                                                                                                                                                   |
+| 🔴 Answers shift scope significantly (Q1=b, Q2=B/C/D, Q6 SAP=IN, Q7=b/c) | Pause v1.6. Re-draft SCOPE_LOCK + DEFERRAL_ROADMAP per `C1_PRE_MORTEM.md` scenarios. Re-send Path B OR schedule emergency Path A within 5 days.                                                                                                                                               |
+| ⏰ No acknowledgment by 2026-06-26 23:59 ICT                             | **Auto-escalate** (silence is NEVER consent — see §⚠️ above). File `S-SCOPE-LOCK-PENDING` blocking ticket; project paused; escalate to Henry's manager + stakeholder leadership. Engineering freeze remains. Resend Path B with 48h ack deadline OR force Path A live workshop within 5 days. |
+| 📞 Stakeholder requests live call                                        | Schedule within 48h (still hits D-65). Convert to Path A short-form (~1h, focus on Q1+Q2+Q7 gates).                                                                                                                                                                                           |
 
 ---
 

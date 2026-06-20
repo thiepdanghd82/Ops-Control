@@ -110,13 +110,13 @@ Lead Engineer, Ops Control v1.6
 
 > Henry fills in actual names + emails when sending invitations · Henry điền tên + email thực khi gửi mời
 
-| #   | Name · Tên         | Role · Vai trò            | Email  | Status                             | Session date booked    |
-| --- | ------------------ | ------------------------- | ------ | ---------------------------------- | ---------------------- |
-| 1   | ******\_\_\_****** | Sales (primary)           | **\_** | [ ] Invited [ ] Confirmed [ ] Done | ****\_****             |
-| 2   | ******\_\_\_****** | Sales (primary)           | **\_** | [ ] Invited [ ] Confirmed [ ] Done | ****\_****             |
-| 3   | ******\_\_\_****** | Sales (backup)            | **\_** | [ ] Invited [ ] Confirmed [ ] Done | ****\_****             |
-| 4   | ******\_\_\_****** | NPI (backup)              | **\_** | [ ] Invited [ ] Confirmed [ ] Done | ****\_****             |
-| 5   | Hương              | Backup engineer (witness) | **\_** | [ ] Confirmed                      | (attends all sessions) |
+| #   | Name · Tên             | Role · Vai trò            | Email  | Status                             | Session date booked    |
+| --- | ---------------------- | ------------------------- | ------ | ---------------------------------- | ---------------------- |
+| 1   | **\*\***\_\_\_**\*\*** | Sales (primary)           | **\_** | [ ] Invited [ ] Confirmed [ ] Done | \***\*\_\*\***         |
+| 2   | **\*\***\_\_\_**\*\*** | Sales (primary)           | **\_** | [ ] Invited [ ] Confirmed [ ] Done | \***\*\_\*\***         |
+| 3   | **\*\***\_\_\_**\*\*** | Sales (backup)            | **\_** | [ ] Invited [ ] Confirmed [ ] Done | \***\*\_\*\***         |
+| 4   | **\*\***\_\_\_**\*\*** | NPI (backup)              | **\_** | [ ] Invited [ ] Confirmed [ ] Done | \***\*\_\*\***         |
+| 5   | Hương                  | Backup engineer (witness) | **\_** | [ ] Confirmed                      | (attends all sessions) |
 
 **Target · Mục tiêu**: ≥2 confirmed completions before 2026-08-09. 3 ideal (one finds something the other two miss).
 

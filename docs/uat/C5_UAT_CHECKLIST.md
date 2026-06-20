@@ -10,16 +10,16 @@
 
 ## 1. Session meta · Thông tin buổi
 
-| Field                          | Value                                                        |
-| ------------------------------ | ------------------------------------------------------------ |
-| Operator name · Tên            | **********\_\_\_**********                                   |
-| Operator role · Vai trò        | [ ] Sales primary [ ] Sales backup [ ] NPI [ ] Other: **\_** |
-| Date · Ngày                    | **********\_\_\_**********                                   |
-| Start time · Giờ bắt đầu       | **\_** · End time · Giờ kết thúc: **\_**                     |
-| Henry attended · Henry tham dự | [ ] Yes (observe + Q&A) [ ] No (operator solo)               |
-| Hương attended · Hương tham dự | [ ] Yes (witness) [ ] No                                     |
-| Environment · Môi trường       | [ ] Production-grade DMG [ ] Pre-release rc [ ] Dev build    |
-| Build SHA256 · SHA build       | **********\_\_\_********** (verify Settings → About)         |
+| Field                          | Value                                                            |
+| ------------------------------ | ---------------------------------------------------------------- |
+| Operator name · Tên            | \***\*\*\*\*\***\_\_\_\***\*\*\*\*\***                           |
+| Operator role · Vai trò        | [ ] Sales primary [ ] Sales backup [ ] NPI [ ] Other: **\_**     |
+| Date · Ngày                    | \***\*\*\*\*\***\_\_\_\***\*\*\*\*\***                           |
+| Start time · Giờ bắt đầu       | **\_** · End time · Giờ kết thúc: **\_**                         |
+| Henry attended · Henry tham dự | [ ] Yes (observe + Q&A) [ ] No (operator solo)                   |
+| Hương attended · Hương tham dự | [ ] Yes (witness) [ ] No                                         |
+| Environment · Môi trường       | [ ] Production-grade DMG [ ] Pre-release rc [ ] Dev build        |
+| Build SHA256 · SHA build       | \***\*\*\*\*\***\_\_\_\***\*\*\*\*\*** (verify Settings → About) |
 
 ---
 
@@ -49,73 +49,73 @@
 
 ### A. Save + freeze (scenarios 1-5)
 
-| #   | Scenario name (from UAT script)                | P   | F   | Bug ID / Note            |
-| --- | ---------------------------------------------- | --- | --- | ------------------------ |
-| 1   | Std quote save → snapshot persisted            | [ ] | [ ] | **********\_\_********** |
-| 2   | Cpx quote save → snapshot per-SP persisted     | [ ] | [ ] | **********\_\_********** |
-| 3   | Empty draft save → empty snapshot graceful     | [ ] | [ ] | **********\_\_********** |
-| 4   | Snapshot status badge shows "Frozen"           | [ ] | [ ] | **********\_\_********** |
-| 5   | \_captured_by + \_captured_at fields populated | [ ] | [ ] | **********\_\_********** |
+| #   | Scenario name (from UAT script)                | P   | F   | Bug ID / Note                        |
+| --- | ---------------------------------------------- | --- | --- | ------------------------------------ |
+| 1   | Std quote save → snapshot persisted            | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 2   | Cpx quote save → snapshot per-SP persisted     | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 3   | Empty draft save → empty snapshot graceful     | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 4   | Snapshot status badge shows "Frozen"           | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 5   | \_captured_by + \_captured_at fields populated | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
 
 ### B. Copy quote (scenarios 6-10)
 
-| #   | Scenario name                                 | P   | F   | Bug ID / Note            |
-| --- | --------------------------------------------- | --- | --- | ------------------------ |
-| 6   | Copy Std quote → new copy = draft state       | [ ] | [ ] | **********\_\_********** |
-| 7   | Copy Cpx quote → all SPs copied               | [ ] | [ ] | **********\_\_********** |
-| 8   | Copy preserves pricing snapshot in source     | [ ] | [ ] | **********\_\_********** |
-| 9   | Copy resets \_captured_at/\_by in destination | [ ] | [ ] | **********\_\_********** |
-| 10  | Copy badge flips to "Live" until first save   | [ ] | [ ] | **********\_\_********** |
+| #   | Scenario name                                 | P   | F   | Bug ID / Note                        |
+| --- | --------------------------------------------- | --- | --- | ------------------------------------ |
+| 6   | Copy Std quote → new copy = draft state       | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 7   | Copy Cpx quote → all SPs copied               | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 8   | Copy preserves pricing snapshot in source     | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 9   | Copy resets \_captured_at/\_by in destination | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 10  | Copy badge flips to "Live" until first save   | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
 
 ### C. Legacy heal-on-read (scenarios 11-15)
 
-| #   | Scenario name                                 | P   | F   | Bug ID / Note            |
-| --- | --------------------------------------------- | --- | --- | ------------------------ |
-| 11  | Pre-snapshot legacy quote loads without error | [ ] | [ ] | **********\_\_********** |
-| 12  | Legacy quote shows "No snapshot" badge        | [ ] | [ ] | **********\_\_********** |
-| 13  | Resave legacy quote populates snapshot        | [ ] | [ ] | **********\_\_********** |
-| 14  | Legacy + tool_life partial heal works         | [ ] | [ ] | **********\_\_********** |
-| 15  | \_warnings array surfaces legacy detection    | [ ] | [ ] | **********\_\_********** |
+| #   | Scenario name                                 | P   | F   | Bug ID / Note                        |
+| --- | --------------------------------------------- | --- | --- | ------------------------------------ |
+| 11  | Pre-snapshot legacy quote loads without error | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 12  | Legacy quote shows "No snapshot" badge        | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 13  | Resave legacy quote populates snapshot        | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 14  | Legacy + tool_life partial heal works         | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 15  | \_warnings array surfaces legacy detection    | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
 
 ### D. SnapshotPanel UI (scenarios 16-19)
 
-| #   | Scenario name                                       | P   | F   | Bug ID / Note            |
-| --- | --------------------------------------------------- | --- | --- | ------------------------ |
-| 16  | Cost Breakdown bottom panel renders 5 fields        | [ ] | [ ] | **********\_\_********** |
-| 17  | Click-toggle works (open/close)                     | [ ] | [ ] | **********\_\_********** |
-| 18  | Source pill color matches state (green/yellow/gray) | [ ] | [ ] | **********\_\_********** |
-| 19  | Copy-mode banner appears on copies                  | [ ] | [ ] | **********\_\_********** |
+| #   | Scenario name                                       | P   | F   | Bug ID / Note                        |
+| --- | --------------------------------------------------- | --- | --- | ------------------------------------ |
+| 16  | Cost Breakdown bottom panel renders 5 fields        | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 17  | Click-toggle works (open/close)                     | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 18  | Source pill color matches state (green/yellow/gray) | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 19  | Copy-mode banner appears on copies                  | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
 
 ### E. Summarize column (scenarios 20-21)
 
-| #   | Scenario name                              | P   | F   | Bug ID / Note            |
-| --- | ------------------------------------------ | --- | --- | ------------------------ |
-| 20  | Snapshot column togglable in ColumnsToggle | [ ] | [ ] | **********\_\_********** |
-| 21  | Column shows Frozen/Live/No per row        | [ ] | [ ] | **********\_\_********** |
+| #   | Scenario name                              | P   | F   | Bug ID / Note                        |
+| --- | ------------------------------------------ | --- | --- | ------------------------------------ |
+| 20  | Snapshot column togglable in ColumnsToggle | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 21  | Column shows Frozen/Live/No per row        | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
 
 ### F. xlsx audit sheet (scenarios 22-25)
 
-| #   | Scenario name                          | P   | F   | Bug ID / Note            |
-| --- | -------------------------------------- | --- | --- | ------------------------ |
-| 22  | Export shows "10 Pricing Snapshot" tab | [ ] | [ ] | **********\_\_********** |
-| 23  | 11 audit rows populate correctly       | [ ] | [ ] | **********\_\_********** |
-| 24  | Status label matches snapshot state    | [ ] | [ ] | **********\_\_********** |
-| 25  | Warnings cell shows all \_warnings     | [ ] | [ ] | **********\_\_********** |
+| #   | Scenario name                          | P   | F   | Bug ID / Note                        |
+| --- | -------------------------------------- | --- | --- | ------------------------------------ |
+| 22  | Export shows "10 Pricing Snapshot" tab | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 23  | 11 audit rows populate correctly       | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 24  | Status label matches snapshot state    | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 25  | Warnings cell shows all \_warnings     | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
 
 ### G. Site mismatch + library drift (scenarios 26-28)
 
-| #   | Scenario name                                           | P   | F   | Bug ID / Note            |
-| --- | ------------------------------------------------------- | --- | --- | ------------------------ |
-| 26  | Site mismatch warning surfaces in \_warnings            | [ ] | [ ] | **********\_\_********** |
-| 27  | Library update post-save: snapshot still uses old rates | [ ] | [ ] | **********\_\_********** |
-| 28  | Library audit shielding works across reload             | [ ] | [ ] | **********\_\_********** |
+| #   | Scenario name                                           | P   | F   | Bug ID / Note                        |
+| --- | ------------------------------------------------------- | --- | --- | ------------------------------------ |
+| 26  | Site mismatch warning surfaces in \_warnings            | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 27  | Library update post-save: snapshot still uses old rates | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 28  | Library audit shielding works across reload             | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
 
 ### H. /metrics counters (scenarios 29-30)
 
-| #   | Scenario name                                        | P   | F   | Bug ID / Note            |
-| --- | ---------------------------------------------------- | --- | --- | ------------------------ |
-| 29  | pricing_snapshot_save_total counter increments       | [ ] | [ ] | **********\_\_********** |
-| 30  | pricing_snapshot_synth_save_total tracks synth saves | [ ] | [ ] | ********\_\_********     |
+| #   | Scenario name                                        | P   | F   | Bug ID / Note                        |
+| --- | ---------------------------------------------------- | --- | --- | ------------------------------------ |
+| 29  | pricing_snapshot_save_total counter increments       | [ ] | [ ] | \***\*\*\*\*\***\_\_\***\*\*\*\*\*** |
+| 30  | pricing_snapshot_synth_save_total tracks synth saves | [ ] | [ ] | **\*\*\*\***\_\_**\*\*\*\***         |
 
 ---
 
@@ -143,8 +143,8 @@ After completing all 30 scenarios, the operator answers:
 > **VI:** "Sau buổi UAT này, bạn có cảm thấy sẵn sàng dùng Ops Control v1.6 hàng ngày từ 2026-08-30 không?"
 
 - [ ] **YES** — confident, ship as-is
-- [ ] **YES WITH CAVEATS** — usable but please fix [list]: ************\_\_\_************
-- [ ] **NO** — too many issues; need [list]: ************\_\_\_************
+- [ ] **YES WITH CAVEATS** — usable but please fix [list]: \***\*\*\*\*\*\*\***\_\_\_\***\*\*\*\*\*\*\***
+- [ ] **NO** — too many issues; need [list]: \***\*\*\*\*\*\*\***\_\_\_\***\*\*\*\*\*\*\***
 
 **Optional comments · Ghi chú tùy chọn**:
 
@@ -158,13 +158,13 @@ After completing all 30 scenarios, the operator answers:
 
 ## 6. Bug list filed · Bug đã file
 
-| Bug ID (MES-3-FIX-NN) | Severity (P0/P1/P2) | Brief description · Mô tả ngắn         |
-| --------------------- | ------------------- | -------------------------------------- |
-| ******\_\_******      | **\_**              | ******************\_****************** |
-| ******\_\_******      | **\_**              | ******************\_****************** |
-| ******\_\_******      | **\_**              | ******************\_****************** |
-| ******\_\_******      | **\_**              | ******************\_****************** |
-| ******\_\_******      | **\_**              | ******************\_****************** |
+| Bug ID (MES-3-FIX-NN) | Severity (P0/P1/P2) | Brief description · Mô tả ngắn                             |
+| --------------------- | ------------------- | ---------------------------------------------------------- |
+| **\*\***\_\_**\*\***  | **\_**              | **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\*** |
+| **\*\***\_\_**\*\***  | **\_**              | **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\*** |
+| **\*\***\_\_**\*\***  | **\_**              | **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\*** |
+| **\*\***\_\_**\*\***  | **\_**              | **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\*** |
+| **\*\***\_\_**\*\***  | **\_**              | **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\*** |
 
 ---
 
@@ -174,11 +174,11 @@ By signing below, the operator confirms they completed the UAT scenarios above, 
 
 > Bằng chữ ký dưới đây, operator xác nhận đã hoàn thành scenario UAT trên, kết quả pass/fail chính xác, và đánh giá chủ quan phản ánh đúng cảm nhận thực.
 
-| Role · Vai trò                   | Name · Tên             | Signature · Chữ ký     | Date · Ngày |
-| -------------------------------- | ---------------------- | ---------------------- | ----------- |
-| Operator                         | ********\_\_\_******** | ********\_\_\_******** | ****\_****  |
-| Engineering Lead (Henry)         | Henry Đặng Thế Thiệp   | ********\_\_\_******** | ****\_****  |
-| Backup Engineer (Hương, witness) | Hương                  | ********\_\_\_******** | ****\_****  |
+| Role · Vai trò                   | Name · Tên                     | Signature · Chữ ký             | Date · Ngày    |
+| -------------------------------- | ------------------------------ | ------------------------------ | -------------- |
+| Operator                         | **\*\*\*\***\_\_\_**\*\*\*\*** | **\*\*\*\***\_\_\_**\*\*\*\*** | \***\*\_\*\*** |
+| Engineering Lead (Henry)         | Henry Đặng Thế Thiệp           | **\*\*\*\***\_\_\_**\*\*\*\*** | \***\*\_\*\*** |
+| Backup Engineer (Hương, witness) | Hương                          | **\*\*\*\***\_\_\_**\*\*\*\*** | \***\*\_\*\*** |
 
 ---
 
