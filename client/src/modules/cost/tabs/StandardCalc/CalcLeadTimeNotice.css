@@ -1,133 +1,166 @@
-/* Lead time & Notice sub-tab — 1 row, 7 cells (cover-sheet metadata).
- * Lesson 6 + 11 + 27 — no inline style; clamp() typography;
- * container-query stacking on narrow widths (Carbon "Tile" pattern). */
+/* Lead time & Notice sub-tab — Notion/Linear-style 2-column form
+ * (Option C). Each field is a row: label-left (compact, uppercase
+ * letter-spaced) | input-right (full width).
+ *
+ * Sprint S-LEADTIME-TABLE-POLISH (2026-06-19, Option C). Henry's
+ * pivot from horizontal 7-col grid → vertical label-field rows for
+ * an "authored form" feel matching Notion / Linear properties
+ * panels. Better for the textareas which want vertical real-estate;
+ * also reads top-to-bottom like a checklist.
+ *
+ * Zero schema / state / calc / onChange change. JSX adds wrapper
+ * spans for Tooling row + caption but field-input contract is
+ * unchanged so Lesson 18 focus-loss does not apply.
+ */
 
 .ltn-wrap {
   container-type: inline-size;
-  max-width: min(100%, 1800px);
-  padding: 12px 16px;
+  /* Henry 2026-06-19 — stretch to full screen width (was capped at
+     1100px Notion-style; operator wanted edge-to-edge). Label
+     column stays fixed 180px; only the textarea row expands. */
+  max-width: 100%;
+  padding: 16px 16px 20px;
 }
 
 .ltn-grid {
-  display: grid;
-  grid-template-columns:
-    minmax(130px, 150px) /* Tooling cost — narrow, numeric */
-    minmax(140px, 1fr) /* Material L/T */
-    minmax(140px, 1fr) /* Sample L/T */
-    minmax(140px, 1fr) /* PO L/T */
-    minmax(200px, 2fr) /* Remark — flexible wide */
-    minmax(160px, 1.2fr) /* Process */
-    minmax(190px, 1.4fr); /* Type of Material */
-  gap: 0;
-  border: 1px solid var(--color-slate-200);
-  border-radius: 6px;
-  overflow: hidden;
-  background: var(--color-slate-50);
-}
-
-.ltn-col {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--color-slate-200);
+  border: 1px solid var(--color-slate-200);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-slate-200); /* shows as 1px row separators */
+  gap: 1px;
+  box-shadow:
+    0 1px 3px rgba(15, 35, 65, 0.04),
+    0 1px 2px rgba(15, 35, 65, 0.06);
+}
+
+/* Each row = one field. Label-left fixed width, input-right flex. */
+.ltn-col {
+  display: grid;
+  grid-template-columns: 180px 1fr;
   background: #fff;
   min-width: 0;
 }
 
-.ltn-col:last-child {
-  border-right: none;
-}
-
+/* Label cell — right-bordered separator, top-aligned (textareas
+   grow vertically; label stays anchored to first line). Uppercase
+   letter-spaced sales-form convention. */
 .ltn-th {
-  padding: 8px 10px;
+  padding: 12px 14px;
   background: var(--color-slate-50);
-  border-bottom: 1px solid var(--color-slate-200);
-  font-size: clamp(0.78rem, 0.9vw + 0.55rem, 0.9rem);
+  border-right: 1px solid var(--color-slate-200);
+  font-size: 0.72rem;
   font-weight: 600;
-  color: var(--color-slate-700);
-  letter-spacing: 0.01em;
-  line-height: 1.3;
-}
-
-.ltn-cell {
-  padding: 10px;
-  flex: 1;
+  color: var(--color-slate-500);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.4;
   display: flex;
-  min-height: 80px;
+  align-items: flex-start;
 }
 
-/* Tooling cell — READ-ONLY visual contract: muted bg, not-allowed cursor,
- * lock glyph. operator edits the underlying value on Processes tab. */
+/* Field cell — tight horizontal padding, flex column so textarea +
+   optional caption stack cleanly. */
+.ltn-cell {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Tooling row — read-only metric with inline lock + caption. Whole
+   cell uses subtle muted bg to signal "not editable". */
 .ltn-tooling {
   background: var(--color-slate-50);
   cursor: not-allowed;
   color: var(--color-slate-600);
-  justify-content: space-between;
+  flex-direction: row;
   align-items: center;
+  gap: 14px;
   font-variant-numeric: tabular-nums;
 }
 
+.ltn-tooling-row {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
 .ltn-tooling-value {
-  font-weight: 600;
-  font-size: clamp(0.88rem, 1vw + 0.55rem, 1.02rem);
+  font-weight: 700;
+  font-size: clamp(1.1rem, 1.3vw + 0.6rem, 1.3rem);
   color: var(--color-slate-800);
+  letter-spacing: -0.01em;
 }
 
 .ltn-tooling-lock {
-  opacity: 0.4;
-  font-size: 0.85em;
+  opacity: 0.45;
+  font-size: 0.8em;
   flex-shrink: 0;
 }
 
+.ltn-tooling-caption {
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-slate-400);
+}
+
+/* Textareas — authored-form input: subtle interior shadow + clear
+   focus ring. Default border is muted so the focused row stands
+   out against the un-focused stack. */
 .ltn-input {
-  flex: 1;
+  width: 100%;
   border: 1px solid var(--color-slate-200);
-  border-radius: 4px;
-  padding: 6px 8px;
+  border-radius: 5px;
+  padding: 7px 9px;
   font-family: inherit;
-  font-size: clamp(0.82rem, 0.9vw + 0.6rem, 0.95rem);
-  line-height: 1.4;
+  font-size: clamp(0.85rem, 0.9vw + 0.6rem, 0.95rem);
+  line-height: 1.45;
   resize: vertical;
-  min-height: 4.5em;
+  min-height: 2.6em;
   /* Chromium 123+ / Electron 41+ — auto-grow with content; older
      browsers fall back to min-height above. */
   field-sizing: content;
   background: #fff;
   color: var(--color-slate-800);
-  width: 100%;
+  box-shadow: inset 0 1px 1px rgba(15, 35, 65, 0.03);
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
 }
 
 .ltn-input::placeholder {
   color: var(--color-slate-400);
+  font-style: italic;
+}
+
+.ltn-input:hover {
+  border-color: var(--color-slate-300);
 }
 
 .ltn-input:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: -1px;
+  outline: none;
   border-color: var(--color-primary);
+  box-shadow:
+    inset 0 1px 1px rgba(15, 35, 65, 0.03),
+    0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
-/* Responsive: < 900px container → stack 7 cells as cards (Carbon Tile). */
-@container (max-width: 900px) {
-  .ltn-grid {
-    grid-template-columns: 1fr;
-    gap: 8px;
-    border: none;
-    background: transparent;
-    overflow: visible;
-  }
+/* Narrow screens — stack label ABOVE field for tablet/portrait. */
+@container (max-width: 600px) {
   .ltn-col {
-    border: 1px solid var(--color-slate-200);
-    border-right: 1px solid var(--color-slate-200);
-    border-radius: 6px;
-    overflow: hidden;
-  }
-  .ltn-col:last-child {
-    border-right: 1px solid var(--color-slate-200);
+    grid-template-columns: 1fr;
   }
   .ltn-th {
-    font-size: 0.74rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--color-slate-500);
+    border-right: 0;
+    border-bottom: 1px solid var(--color-slate-200);
+    padding: 8px 12px;
+  }
+  .ltn-tooling {
+    flex-wrap: wrap;
   }
 }

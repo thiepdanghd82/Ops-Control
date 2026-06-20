@@ -320,6 +320,13 @@ export const STRINGS = {
     en: 'Auto-synced from Processes tab — sum of Tool Cost column',
     vi: 'Tự đồng bộ từ tab Processes — tổng cột Tool Cost',
   },
+  // Sprint S-LEADTIME-TABLE-POLISH (2026-06-19) — short visible
+  // badge under the Tooling value. Distinct from `synced_tip`
+  // which is the longer hover tooltip.
+  'lt.tooling.caption': {
+    en: 'Read-only · Auto-synced',
+    vi: 'Chỉ đọc · Tự đồng bộ',
+  },
   'lt.placeholder.multiline': { en: 'Type notes…', vi: 'Nhập ghi chú…' },
 };
 
