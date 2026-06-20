@@ -67,6 +67,20 @@ jobs:
         with: { node-version: '22', cache: 'npm' }
       - run: node scripts/check-runtime-deps.js
 
+  diecut-test-coverage:
+    # Phase 1.3 of Debug Playbook (2026-06-20). Enforces the rule
+    # in docs/tests/diecut-coverage-gap.md: every die type added to
+    # the test fixture must have a sibling golden test exercising
+    # it via tool_type. Catches silent acceptance of formula drift
+    # for new die types.
+    name: Die-cut test coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'npm' }
+      - run: node scripts/check-diecut-test-coverage.mjs
+
   commitlint:
     # v1.3 G3 — re-validate Conventional Commits on PR. Catches commits
     # that bypassed the local husky commit-msg hook with --no-verify.
