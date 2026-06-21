@@ -1,8 +1,21 @@
 # C-4 BACKUP DRILL + BIT-ROT CRON DEPLOY RUNBOOK (Hương operates)
 
+## 🛑 REVISED SCOPE (2026-06-21) — no hot-spare BCP
+
+> Henry decision 2026-06-21: NO hot-spare Mac mini will be procured (`C4_HOTSPARE_PROCUREMENT.md` top banner). Drill scope changes:
+>
+> - **Block 1 (restore drill) — STILL VALID**: restore to a loaner/borrowed Mac OR to Henry's personal Mac as the verification target. Validates off-site backup + restore procedure end-to-end. RTO measurement still meaningful.
+> - **Block 2 (bit-rot cron deploy) — UNCHANGED**: Hương deploys cron on primary SERVER.
+> - **Block 3 (failover rehearsal) — DROP** (no hot-spare to fail over to). Replace with: **Vendor pre-arrangement walk-through** — Hương confirms local Apple reseller contact + emergency procurement procedure; documents vendor phone+address in this runbook.
+> - **New Block 4 — Operator xlsx-fallback SOP** (10 min): Hương verifies sales operators know the manual quote workflow if SERVER down >24h.
+>
+> **RTO target**: no longer ≤6h. New target: validate restore-to-loaner < 4h + document realistic worst-case 14-22 days (per `C4_HOTSPARE_PROCUREMENT.md` decision banner).
+
+---
+
 ## Combined runbook · Runbook gộp
 
-**Deadline · Hạn**: 2026-07-31 (D-30) — backup drill validates RTO < 6h
+**Deadline · Hạn**: 2026-07-31 (D-30) — backup drill validates restore procedure (RTO target revised — see banner above)
 **Operator · Người vận hành**: Hương (backup engineer, B-3 SPOF reduction)
 **Henry's role · Vai trò Henry**: observer + Q&A only (Hương MUST drive — knowledge transfer is the point)
 **Combined scope · Phạm vi gộp**:
