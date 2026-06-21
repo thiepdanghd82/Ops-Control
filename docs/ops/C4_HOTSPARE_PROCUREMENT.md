@@ -1,11 +1,40 @@
 # C-4 HOT-SPARE PROCUREMENT — Mac mini purchase note
 
-## Hot-spare Mac mini for SERVER role · Mac mini dự phòng cho SERVER
+## 🛑 DECISION (2026-06-21) — Henry: NO PURCHASE · Henry quyết: KHÔNG MUA
 
-**Procurement deadline · Hạn mua**: 2026-07-10 (allow 14-day ship + 7-day provision before D-30 = 2026-07-31)
-**Estimated cost · Chi phí ước**: ~$700 USD (Mac mini M4 base + accessories)
-**Justification · Cơ sở**: Eliminates SPOF on Henry's SERVER Mac mini for v1.6 go-live; required to run C-4 backup drill (`C4_DRILL_RUNBOOK.md`) and post-go-live BCP/RTO ≤ 6h
-**Approver · Người duyệt**: Henry → Henry's manager (sign off for company purchase)
+> **EN:** Henry has decided NOT to procure a hot-spare Mac mini for v1.6 go-live. This document is preserved as historical reference + risk record. The C-4 backup drill (`C4_DRILL_RUNBOOK.md`) shifts to a **restore-only drill** (no failover rehearsal) and the operational BCP **accepts the elevated RTO**.
+>
+> **VI:** Henry đã quyết định KHÔNG mua hot-spare Mac mini cho v1.6 go-live. Tài liệu này giữ làm tham chiếu lịch sử + ghi nhận rủi ro. C-4 drill chuyển sang **chỉ restore** (không diễn tập failover) và BCP vận hành **chấp nhận RTO cao hơn**.
+
+### 🚨 RTO impact accepted · Tác động RTO chấp nhận
+
+| Scenario                | With hot-spare (rejected) | Without hot-spare (current decision)                   |
+| ----------------------- | ------------------------- | ------------------------------------------------------ |
+| Disk failure            | ~6h RTO (swap + restore)  | **~14-22 days** (procure + ship + provision + restore) |
+| Mac stolen / fried      | ~6h RTO                   | **~14-22 days**                                        |
+| OS bricked / corruption | ~4h (reinstall on spare)  | ~2-3 days (rebuild on existing Mac OR loaner)          |
+| BCP risk classification | Yellow                    | **Orange** — production downtime up to 3 weeks         |
+| RPO (data loss bound)   | 24h (nightly backup)      | 24h (unchanged — backup discipline same)               |
+
+**Mitigation now required** (work to schedule into C-4 drill day):
+
+1. **Fast-ship pre-arrangement** — identify local Hai Duong / Hanoi Apple reseller able to ship Mac mini same-day or next-day during business hours. Worst-case RTO drops to ~3-5 days instead of 14-22. Henry to confirm vendor + capture phone+address before D-7 (2026-08-23).
+2. **Loaner Mac inventory** — if any Mac in Hai Duong office (any department) can be temporarily commandeered as emergency SERVER for ≤72h, document the loaner candidate + escalation contact. Even Henry's personal Mac counts in true emergency.
+3. **Operator workaround SOP** — if SERVER down >24h, document fallback to xlsx-only quote workflow (operators paste lib values from last printed price list, generate quote in Excel, re-enter into Ops Control when service restored). Loses snapshot freezing for affected quotes but keeps business running.
+4. **Faster off-site backup cadence** — consider tightening rsync from nightly to every 6h to bound RPO further during the no-hotspare risk window.
+
+**Rationale for no-purchase**: Henry's call (not captured here — budget? availability? acceptable risk for pilot?). Document does NOT advocate the decision; documents the consequences so the trade-off is on record for retro + future revision (e.g. v1.6.1 if disk failure event happens).
+
+---
+
+## Original procurement plan (HISTORICAL — NOT to execute)
+
+> Below preserved for context. SKIP to `C4_DRILL_RUNBOOK.md` for the revised drill scope under no-hotspare BCP.
+
+**Procurement deadline · Hạn mua**: ~~2026-07-10~~ — CANCELLED
+**Estimated cost · Chi phí ước**: ~~$700-830 USD~~ — not approved
+**Justification · Cơ sở**: ~~Eliminates SPOF; enables ~6h RTO~~ — risk accepted per decision above
+**Approver · Người duyệt**: ~~Henry → Henry's manager~~ — decision: NO
 
 ---
 
