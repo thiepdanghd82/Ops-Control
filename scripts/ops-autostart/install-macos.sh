@@ -18,7 +18,8 @@ PLIST_TEMPLATE="$SCRIPT_DIR/com.ccldesign.opscontrol-server.plist"
 LABEL="com.ccldesign.opscontrol-server"
 TARGET_DIR="$HOME/Library/LaunchAgents"
 TARGET_PATH="$TARGET_DIR/$LABEL.plist"
-APP_PATH="/Applications/Ops Control SERVER.app/Contents/MacOS/Ops Control"
+APP_BUNDLE="/Applications/Ops Control.app"
+APP_PATH="$APP_BUNDLE/Contents/MacOS/Ops Control"
 
 # Pre-flight
 if [ ! -f "$PLIST_TEMPLATE" ]; then
@@ -26,9 +27,16 @@ if [ ! -f "$PLIST_TEMPLATE" ]; then
   exit 1
 fi
 if [ ! -x "$APP_PATH" ]; then
-  echo "✗ Ops Control SERVER.app not installed at /Applications. Install the SERVER DMG first." >&2
+  echo "✗ Ops Control.app not installed at /Applications/Ops Control.app." >&2
+  echo "  Install the SERVER DMG first: drag 'Ops Control.app' from the mounted" >&2
+  echo "  DMG window into the Applications folder, then re-run this script." >&2
   exit 1
 fi
+
+# Reminder: this script assumes the installed app is SERVER role. The role
+# marker (desktop/build-role.json) lives inside app.asar so we can't easily
+# inspect it on disk. If you intended CLIENT, abort now and reinstall the
+# correct DMG; auto-start is designed for SERVER role only.
 
 mkdir -p "$TARGET_DIR"
 mkdir -p "$HOME/Library/Logs"

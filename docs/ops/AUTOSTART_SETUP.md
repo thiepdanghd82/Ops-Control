@@ -17,7 +17,7 @@ Mitigates C-4 BCP gap post no-hotspare decision (`C4_HOTSPARE_PROCUREMENT.md` 20
 
 **Prereq · Yêu cầu trước**:
 
-- Ops Control SERVER DMG đã cài tại `/Applications/Ops Control SERVER.app`
+- Ops Control SERVER DMG đã cài tại `/Applications/Ops Control.app` (note: app bundle name là "Ops Control.app" — chỉ tên DMG file mới có suffix "SERVER")
 - Auto-login đã bật ở `System Settings → Users & Groups → Automatic Login` (cần thiết để LaunchAgent chạy sau khi reboot — LaunchAgent KHÔNG chạy ở loginwindow trước khi user login)
 
 **Install · Cài**:

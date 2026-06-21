@@ -40,7 +40,7 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/Applications/Ops Control SERVER.app/Contents/MacOS/Ops Control</string>
+        <string>/Applications/Ops Control.app/Contents/MacOS/Ops Control</string>
     </array>
 
     <key>RunAtLoad</key>

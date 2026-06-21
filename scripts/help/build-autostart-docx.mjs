@@ -375,7 +375,7 @@ function buildDocument() {
   sections.push(
     ...stepBlock(4, 'Navigate to scripts folder', 'Chuyển tới thư mục scripts', [
       p('Gõ lệnh sau (đường dẫn này có sẵn trong installed app, KHÔNG cần copy file từ dev box):'),
-      code('cd "/Applications/Ops Control SERVER.app/Contents/Resources/app"'),
+      code('cd "/Applications/Ops Control.app/Contents/Resources/app"'),
     ])
   );
   sections.push(
