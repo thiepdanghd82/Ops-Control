@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Ops Control SERVER — macOS LaunchAgent template
+  -------------------------------------------------
+  Auto-start the Ops Control SERVER Electron app at user login + auto-
+  restart if the app crashes. Designed for the Mac mini physically at
+  CCL Design Hai Duong that hosts the embedded Express + SQLite for
+  operator CLIENT machines on the LAN.
+
+  Behavior:
+    - RunAtLoad: launch when the user logs in (after power loss → reboot
+      → auto-login → SERVER comes back online without operator action)
+    - KeepAlive (SuccessfulExit=false): auto-restart ONLY when the app
+      exits with non-zero status (crash). Clean Cmd+Q quit does NOT
+      relaunch — operator can stop the SERVER for maintenance.
+    - ThrottleInterval: minimum 30 seconds between restarts to avoid
+      crash-loop runaway.
+
+  Install:
+    sh scripts/ops-autostart/install-macos.sh
+  Uninstall:
+    sh scripts/ops-autostart/uninstall-macos.sh
+
+  Logs:
+    Standard output → ~/Library/Logs/ops-control-server.out.log
+    Standard error  → ~/Library/Logs/ops-control-server.err.log
+
+  Lưu ý vận hành:
+    - Tài khoản Mac phải bật auto-login (System Settings → Users & Groups
+      → Automatic Login) để LaunchAgent kích hoạt sau khi reboot.
+    - LaunchAgent KHÔNG chạy trong loginwindow (trước khi user login).
+      Nếu cần chạy không user, dùng LaunchDaemon (system-wide, root) —
+      nhưng Electron cần GUI session nên LaunchAgent là lựa chọn đúng.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ccldesign.opscontrol-server</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Applications/Ops Control SERVER.app/Contents/MacOS/Ops Control</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>ProcessType</key>
+    <string>Interactive</string>
+
+    <key>StandardOutPath</key>
+    <string>__HOME__/Library/Logs/ops-control-server.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__HOME__/Library/Logs/ops-control-server.err.log</string>
+</dict>
+</plist>
