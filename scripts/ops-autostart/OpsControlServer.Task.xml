@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Ops Control SERVER Windows Task Scheduler template.
+
+  Why Task Scheduler instead of a Windows Service (NSSM, etc): Electron
+  desktop apps need a GUI session and fail in Session 0. Task Scheduler
+  AtLogon is the correct pattern for a desktop SERVER role.
+
+  Behavior:
+    Trigger: at user logon (any user). After power loss + reboot, auto
+    login (must be enabled) brings the SERVER back online.
+    Settings: restart on failure 3 times, 1 minute interval.
+    AllowStartOnDemand: true so operator can manually trigger from the
+    Task Scheduler GUI for a smoke test.
+
+  Placeholder __APP_PATH__ is replaced by install-windows.ps1 with the
+  installer path discovered on the target machine. install-windows.ps1
+  re-saves as UTF-16 before calling Register-ScheduledTask, which
+  matches the encoding Task Scheduler expects on import.
+
+  Install:    powershell -ExecutionPolicy Bypass -File install-windows.ps1
+  Uninstall:  powershell -ExecutionPolicy Bypass -File uninstall-windows.ps1
+-->
+<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Author>CCL Design</Author>
+    <Description>Auto-start Ops Control SERVER at logon plus restart on failure (BCP).</Description>
+    <URI>\OpsControlServer</URI>
+  </RegistrationInfo>
+  <Triggers>
+    <LogonTrigger>
+      <Enabled>true</Enabled>
+    </LogonTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <LogonType>InteractiveToken</LogonType>
+      <RunLevel>LeastPrivilege</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <IdleSettings>
+      <StopOnIdleEnd>false</StopOnIdleEnd>
+      <RestartOnIdle>false</RestartOnIdle>
+    </IdleSettings>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <WakeToRun>false</WakeToRun>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <Priority>5</Priority>
+    <RestartOnFailure>
+      <Interval>PT1M</Interval>
+      <Count>3</Count>
+    </RestartOnFailure>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>__APP_PATH__</Command>
+    </Exec>
+  </Actions>
+</Task>
