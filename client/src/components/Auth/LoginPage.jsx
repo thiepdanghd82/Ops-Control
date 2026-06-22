@@ -575,6 +575,37 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
     }
   }, []);
 
+  // ─── Live server-reachability indicator ──────────────────────────
+  // Pre-auth probe of the public /health endpoint so operators can see
+  // at a glance (green dot = connected, red = disconnected) whether the
+  // LAN server is reachable BEFORE they type credentials. Self-contained
+  // local probe (not the post-auth connectionHealth singleton) so it runs
+  // on the login surface without coupling to the authenticated session.
+  // serverOnline: null = checking, true = up, false = down.
+  const [serverOnline, setServerOnline] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    let timer = null;
+    const probe = async () => {
+      const ctrl = new AbortController();
+      const to = setTimeout(() => ctrl.abort(), 5000);
+      try {
+        const r = await fetch('/health', { method: 'GET', cache: 'no-store', signal: ctrl.signal });
+        clearTimeout(to);
+        if (alive) setServerOnline(r.ok);
+      } catch {
+        clearTimeout(to);
+        if (alive) setServerOnline(false);
+      }
+    };
+    probe();
+    timer = setInterval(probe, 10000);
+    return () => {
+      alive = false;
+      if (timer) clearInterval(timer);
+    };
+  }, []);
+
   // Carbon hero — shared shell for all 3 screens (login / TOTP / enrollment).
   // Hidden when compact (re-login modal) — wrapper applies .cb-compact class.
   const CarbonHero = () => (
@@ -952,6 +983,22 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
           <div className="cb-card-foot">
             <span>{serverInfo.label}</span>
             <span>{serverInfo.host}</span>
+          </div>
+          <div
+            className={`cb-conn ${
+              serverOnline === false ? 'is-down' : serverOnline ? 'is-up' : 'is-checking'
+            }`}
+            role="status"
+            aria-live="polite"
+          >
+            <span className="cb-conn-dot" aria-hidden="true" />
+            <span className="cb-conn-text">
+              {serverOnline === null
+                ? t('login.conn.checking')
+                : serverOnline
+                  ? t('login.conn.connected')
+                  : t('login.conn.disconnected')}
+            </span>
           </div>
         </form>
       </div>
