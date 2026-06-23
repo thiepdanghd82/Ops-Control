@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>vn.ccldesign.opsbackup.offsite</string>
+
+  <!-- IMPORTANT: replace __HOME__ with your real home path before installing,
+       e.g. /Users/henrydang/Downloads/Claude-Cowork/3. PROJECT/Ops-Control/deploy/macos-offsite-backup/offsite-backup.sh -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>__SCRIPT_PATH__</string>
+  </array>
+
+  <!-- Run at load + every 4 hours, so an intermittently-connected external
+       drive gets caught whenever it's plugged in. -->
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StartInterval</key>
+  <integer>14400</integer>
+
+  <key>StandardOutPath</key>
+  <string>__HOME__/Library/Logs/ops-offsite-backup.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/Library/Logs/ops-offsite-backup.err.log</string>
+</dict>
+</plist>
