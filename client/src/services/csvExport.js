@@ -72,10 +72,40 @@ export function buildCsv(rows, cols, opts) {
  * @returns {Promise<string|null>}
  */
 export async function saveCsv(csvText, suggestedName) {
-  // Prefer native Save dialog when supported (Electron desktop falls
-  // here — Chromium 41+ renderer ships the API). User picks folder +
-  // filename + extension; file written synchronously via the handle.
-  if (typeof window !== 'undefined' && typeof window.showSaveFilePicker === 'function') {
+  const win = typeof window !== 'undefined' ? window : undefined;
+
+  // 1. Electron desktop bridge (window.ops.fs) — native Save dialog driven by
+  // the main process, so it works on BOTH the embedded SERVER and the thin
+  // CLIENT. The CLIENT loads http://<remote-ip>:3100 which is NOT a secure
+  // context, so window.showSaveFilePicker is undefined there and the File
+  // System Access path below never runs; the old <a download> fallback was
+  // unreliable in that renderer (DIAGNOSE: CSV export "did nothing" on CLIENT).
+  // The preload exposes window.ops regardless of the loaded origin, so this
+  // branch sidesteps the secure-context limitation entirely. The fs.writeFile
+  // handler only writes to a path returned by showSaveDialog (path-traversal
+  // whitelist in desktop/native/fs.js) — no server-security change.
+  const fsBridge = win && win.ops && win.ops.fs;
+  if (
+    fsBridge &&
+    typeof fsBridge.showSaveDialog === 'function' &&
+    typeof fsBridge.writeFile === 'function'
+  ) {
+    const res = await fsBridge.showSaveDialog({
+      defaultPath: suggestedName,
+      filters: [
+        { name: 'CSV', extensions: ['csv'] },
+        { name: 'Tất cả', extensions: ['*'] },
+      ],
+    });
+    if (!res || res.canceled || !res.filePath) return null;
+    await fsBridge.writeFile(res.filePath, csvText);
+    return res.filePath;
+  }
+
+  // 2. Prefer native Save dialog when supported (web secure context — the
+  // File System Access API is only exposed when window.isSecureContext is
+  // true, e.g. https or the loopback origin the embedded SERVER loads).
+  if (win && typeof win.showSaveFilePicker === 'function') {
     try {
       const handle = await window.showSaveFilePicker({
         suggestedName,
