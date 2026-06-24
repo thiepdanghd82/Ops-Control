@@ -34,6 +34,7 @@ import {
   shadowClearMaterials,
 } from '../repositories/shadowWrite.js';
 import { matchHeader } from '../services/importPipeline.js';
+import { uploadSingle } from '../utils/uploadGuard.js';
 
 // Convert {headers, rows[]} to array-of-objects for shadow-write mappers.
 function rowsAsObjects(headers, rows) {
@@ -87,13 +88,15 @@ function sweepStaleUploads() {
 sweepStaleUploads();
 
 // Configure multer for file uploads
+// 50 MB default: a full BOM/inventory "Export Current Data" now runs ~24 MB as
+// xlsx (≈19.5K rows), and the app must re-import what it exports. The earlier
+// 10 MB cap broke that round-trip. Routes are requireRole(4)-gated (trusted
+// admins only), and CSV export (much smaller) is the recommended path.
+// Override with OPS_IMPORT_MAX_MB.
+const IMPORT_MAX_MB = Number(process.env.OPS_IMPORT_MAX_MB) || 50;
 const upload = multer({
   dest: UPLOAD_TMP_DIR,
-  // Phase 10H — tightened from 50MB to 10MB. Legitimate BOM/routing
-  // imports have never hit 5MB in production; the old cap was a DoS
-  // vector (upload a 50MB zip-bomb Excel and bloat the parser).
-  // Override with OPS_IMPORT_MAX_MB for edge cases.
-  limits: { fileSize: (Number(process.env.OPS_IMPORT_MAX_MB) || 10) * 1024 * 1024 },
+  limits: { fileSize: IMPORT_MAX_MB * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (['.csv', '.xlsx', '.xls'].includes(ext)) {
@@ -307,7 +310,7 @@ function clearJsDataFile(filePath, varName) {
 router.post(
   '/inventory',
   requireRole(4),
-  upload.single('file'),
+  uploadSingle(upload, 'file', IMPORT_MAX_MB),
   requireValidUpload,
   async (req, res) => {
     try {
@@ -375,7 +378,7 @@ router.post(
 router.post(
   '/finished-goods',
   requireRole(4),
-  upload.single('file'),
+  uploadSingle(upload, 'file', IMPORT_MAX_MB),
   requireValidUpload,
   async (req, res) => {
     try {
@@ -416,7 +419,7 @@ router.post(
 router.post(
   '/raw-materials',
   requireRole(4),
-  upload.single('file'),
+  uploadSingle(upload, 'file', IMPORT_MAX_MB),
   requireValidUpload,
   async (req, res) => {
     try {
@@ -454,45 +457,55 @@ router.post(
 );
 
 // POST /api/import/bom - Import manufacturing structures (BOM)
-router.post('/bom', requireRole(4), upload.single('file'), requireValidUpload, async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+router.post(
+  '/bom',
+  requireRole(4),
+  uploadSingle(upload, 'file', IMPORT_MAX_MB),
+  requireValidUpload,
+  async (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-    const ext = path.extname(req.file.originalname).toLowerCase();
-    let parsed;
+      const ext = path.extname(req.file.originalname).toLowerCase();
+      let parsed;
 
-    if (ext === '.csv') {
-      parsed = parseCSV(fs.readFileSync(req.file.path, 'utf-8'));
-    } else {
-      parsed = await parseExcel(req.file.path);
+      if (ext === '.csv') {
+        parsed = parseCSV(fs.readFileSync(req.file.path, 'utf-8'));
+      } else {
+        parsed = await parseExcel(req.file.path);
+      }
+
+      if (parsed.rows.length === 0) return res.status(400).json({ error: 'No data rows' });
+      validateHeaders(parsed.headers, REQUIRED_HEADERS.bom, 'Manufacturing Structures (BOM)');
+
+      const targetFile = path.join(
+        LIBRARY_DIR,
+        'Manufacturing_Structures',
+        'mfg_structures_data.js'
+      );
+      backupFile(targetFile);
+      writeJsDataFile(targetFile, 'window._CCL_MFG_DATA', parsed.headers, parsed.rows);
+      shadowWriteBom(rowsAsObjects(parsed.headers, parsed.rows));
+      clearCache();
+      fs.unlinkSync(req.file.path);
+
+      res.json({ ok: true, stats: { headers: parsed.headers.length, rows: parsed.rows.length } });
+    } catch (err) {
+      console.error('Import bom error:', err);
+      if (req.file?.path)
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {}
+      res.status(err.status || 500).json({ error: err.message });
     }
-
-    if (parsed.rows.length === 0) return res.status(400).json({ error: 'No data rows' });
-    validateHeaders(parsed.headers, REQUIRED_HEADERS.bom, 'Manufacturing Structures (BOM)');
-
-    const targetFile = path.join(LIBRARY_DIR, 'Manufacturing_Structures', 'mfg_structures_data.js');
-    backupFile(targetFile);
-    writeJsDataFile(targetFile, 'window._CCL_MFG_DATA', parsed.headers, parsed.rows);
-    shadowWriteBom(rowsAsObjects(parsed.headers, parsed.rows));
-    clearCache();
-    fs.unlinkSync(req.file.path);
-
-    res.json({ ok: true, stats: { headers: parsed.headers.length, rows: parsed.rows.length } });
-  } catch (err) {
-    console.error('Import bom error:', err);
-    if (req.file?.path)
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch {}
-    res.status(err.status || 500).json({ error: err.message });
   }
-});
+);
 
 // POST /api/import/routing - Import routing operations
 router.post(
   '/routing',
   requireRole(4),
-  upload.single('file'),
+  uploadSingle(upload, 'file', IMPORT_MAX_MB),
   requireValidUpload,
   async (req, res) => {
     try {
@@ -824,7 +837,7 @@ function handleMaterialsImport(cfg) {
 router.post(
   '/npi-materials',
   requireRole(4),
-  upload.single('file'),
+  uploadSingle(upload, 'file', IMPORT_MAX_MB),
   requireValidUpload,
   handleMaterialsImport({
     label: 'NPI Materials',
@@ -912,7 +925,7 @@ function normaliseRateRow(raw) {
 router.post(
   '/rate',
   requireRole(4),
-  upload.single('file'),
+  uploadSingle(upload, 'file', IMPORT_MAX_MB),
   requireValidUpload,
   async (req, res) => {
     try {
@@ -986,7 +999,7 @@ router.post(
 router.post(
   '/sourcing-db',
   requireRole(4),
-  upload.single('file'),
+  uploadSingle(upload, 'file', IMPORT_MAX_MB),
   requireValidUpload,
   handleMaterialsImport({
     label: 'Sourcing DB',

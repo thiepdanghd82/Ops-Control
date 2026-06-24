@@ -354,7 +354,8 @@ export default function ImportWizard({
 // ─────────────────────────────────────────────────────────────────
 function Stage1Upload({ datasetKey, onPick, busy }) {
   const tplUrl = importWizardApi.templateUrl(datasetKey);
-  const exportUrl = importWizardApi.exportUrl(datasetKey, 'xlsx');
+  const exportCsvUrl = importWizardApi.exportUrl(datasetKey, 'csv');
+  const exportXlsxUrl = importWizardApi.exportUrl(datasetKey, 'xlsx');
   return (
     <div className="iw-stage1">
       <div
@@ -382,15 +383,20 @@ function Stage1Upload({ datasetKey, onPick, busy }) {
         </svg>
         <div className="iw-drop-title">Click to choose a CSV or XLSX file</div>
         <div className="iw-drop-help">
-          Up to 10 MB · header row required · auto-detects delimiter and Excel sheets
+          Up to 50 MB · header row required · auto-detects delimiter and Excel sheets
         </div>
       </div>
       <div className="iw-roundtrip">
         <a className="op-btn op-btn-ghost" href={tplUrl}>
           📄 Download Template
         </a>
-        <a className="op-btn op-btn-ghost" href={exportUrl}>
-          ⬇ Export Current Data
+        {/* CSV first — much smaller than XLSX and re-imports cleanly (a full
+            BOM export is ~24 MB as xlsx vs a few MB as csv). */}
+        <a className="op-btn op-btn-ghost" href={exportCsvUrl}>
+          ⬇ Export CSV (re-importable)
+        </a>
+        <a className="op-btn op-btn-ghost" href={exportXlsxUrl}>
+          ⬇ Export XLSX
         </a>
       </div>
     </div>
