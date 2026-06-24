@@ -339,6 +339,51 @@ test('mapHeaders: still flags genuinely unknown columns (no false positives)', (
   assert.ok(r.unmapped.includes(2), 'gibberish column stays unmapped');
 });
 
+// ─── Finished Goods = catalog/deal-price schema, keyed by Catalog No ───
+// FG is a customer deal-price agreement list, NOT a parts-on-hand inventory.
+// It previously inherited the Part-No inventory schema, so the app's own FG
+// export ("Catalog No, Deal Price, …") failed to re-import ("Missing required
+// columns: Part No"). Full Inventory + Raw Materials stay Part-No keyed.
+const FG = getDataset('finished-goods');
+const CCL_FG_HEADERS = [
+  'Catalog No',
+  'Catalog Desc',
+  'Min Quantity',
+  'Currency Code',
+  'Deal Price',
+  'Deal Price Incl Tax',
+  'Deal Price Base',
+  'Deal Price Incl Tax Base',
+  'Valid From Date',
+  'Valid Until',
+  'Agreement Id',
+  'Customer No',
+  'Site',
+  'Name',
+  'Association No',
+];
+
+test('Finished Goods dataset is catalog/deal-price keyed (Catalog No, not Part No)', () => {
+  assert.deepEqual(FG.requiredHeaders, ['Catalog No']);
+  assert.ok(FG.canonicalHeaders.includes('Catalog No'));
+  assert.ok(FG.canonicalHeaders.includes('Deal Price'));
+  assert.ok(!FG.canonicalHeaders.includes('Part No'), 'FG has no Part No column');
+  // Full Inventory + Raw Materials stay Part-No keyed.
+  assert.deepEqual(getDataset('inventory').requiredHeaders, ['Part No']);
+  assert.deepEqual(getDataset('raw-materials').requiredHeaders, ['Part No']);
+});
+
+test('mapHeaders: real Finished Goods export maps, no missing required', () => {
+  const r = mapHeaders(CCL_FG_HEADERS, FG);
+  assert.deepEqual(r.missing, [], 'Catalog No present → nothing missing');
+  for (const k of FG.canonicalHeaders) assert.ok(k in r.mapping, `"${k}" must map`);
+  assert.deepEqual(r.unmapped, []);
+});
+
+test('mapHeaders: FG "Deal Price Base (VND)" variant maps to Deal Price Base', () => {
+  assert.equal(mapHeaders(['Deal Price Base (VND)'], FG).mapping['Deal Price Base'], 0);
+});
+
 test('mergeRows replace: wipes prior rows, keeps only uploaded (NPI)', () => {
   const existing = [
     { name: 'OLD-A', supplier: 'X', price: 1 },

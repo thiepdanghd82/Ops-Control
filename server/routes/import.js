@@ -292,7 +292,10 @@ const REQUIRED_HEADERS = {
   bom: ['Parent Part No', 'Component Part'],
   routing: ['Part No', 'Operation No', 'Work Centre No'],
   inventory: ['Part No'],
-  finishedGoods: ['Part No'],
+  // Finished Goods is a customer deal-price / catalog agreement list keyed by
+  // Catalog No (distinct from the Part-No inventory schema) — see
+  // FINISHED_GOODS_DATASET in importDatasets.js.
+  finishedGoods: ['Catalog No'],
   rawMaterials: ['Part No'],
 };
 
