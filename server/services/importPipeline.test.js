@@ -6,6 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   mapHeaders,
+  matchHeader,
   applyMappingOverrides,
   coerceRows,
   buildCanonical,
@@ -16,11 +17,28 @@ import {
   consumePreviewToken,
   _resetTokens,
 } from './importPipeline.js';
-import { getDataset } from './importDatasets.js';
+import { getDataset, DATASETS } from './importDatasets.js';
 
 const BOM = getDataset('bom');
 const ROUTING = getDataset('routing');
 const NPI = getDataset('npi-materials');
+const SOURCING = getDataset('sourcing-db');
+
+// The real headers CCL's "Export Current Data" / report writes (Lesson 32).
+const CCL_NPI_HEADERS = [
+  'UPDATE DATE',
+  'MATERIAL NAME',
+  'USD / M² PRICE',
+  'TYPE / DESCRIPTION',
+  'MM THICKNESS',
+  'COLOR',
+  'SURFACE',
+  'ADHESIVE',
+  'M² MOQ',
+  'DAYS LEAD TIME',
+  'SUPPLIER',
+  'NOTES / REMARKS',
+];
 
 test('mapHeaders: exact match for canonical headers', () => {
   const r = mapHeaders(['Parent Part No', 'Component Part', 'Qty Per Assembly'], BOM);
@@ -246,4 +264,92 @@ test('preview tokens: create + consume = single-use', () => {
 test('preview tokens: unknown token returns null', () => {
   _resetTokens();
   assert.equal(consumePreviewToken('nonexistent'), null);
+});
+
+// ─── Tolerant header matching (Lesson 32) ──────────────────────────
+// Real CCL export headers carry units/punctuation ("USD / M² PRICE",
+// "MM THICKNESS", "M² MOQ", "DAYS LEAD TIME", "NOTES / REMARKS") that the
+// old exact-equality matcher dropped → Price/Thickness/MOQ/Lead/Notes blank.
+
+test('mapHeaders: real CCL NPI export — ALL 12 columns map (none dropped)', () => {
+  const r = mapHeaders(CCL_NPI_HEADERS, NPI);
+  for (const k of NPI.canonicalHeaders) {
+    assert.ok(k in r.mapping, `column "${k}" must be mapped`);
+  }
+  assert.deepEqual(r.unmapped, [], 'no unmapped columns');
+  assert.deepEqual(r.missing, [], 'no missing required headers');
+});
+
+test('mapHeaders: the 5 previously-dropped NPI columns now map', () => {
+  assert.equal(mapHeaders(['USD / M² PRICE'], NPI).mapping.price, 0);
+  assert.equal(mapHeaders(['MM THICKNESS'], NPI).mapping.thick, 0);
+  assert.equal(mapHeaders(['M² MOQ'], NPI).mapping.moq, 0);
+  assert.equal(mapHeaders(['DAYS LEAD TIME'], NPI).mapping.lt, 0);
+  assert.equal(mapHeaders(['NOTES / REMARKS'], NPI).mapping.note, 0);
+});
+
+test('round-trip invariant: every dataset label/canonical maps back to its key', () => {
+  for (const ds of Object.values(DATASETS)) {
+    for (const k of ds.canonicalHeaders) {
+      const label = (ds.prettyLabels && ds.prettyLabels[k]) || k;
+      const r = mapHeaders([label], ds);
+      assert.equal(r.mapping[k], 0, `${ds.key}: export label "${label}" must re-import to "${k}"`);
+    }
+  }
+});
+
+test('matchHeader: cascade confidence + canonical', () => {
+  assert.deepEqual(
+    {
+      c: matchHeader('Material Name', NPI.aliases).canonical,
+      conf: matchHeader('Material Name', NPI.aliases).confidence,
+    },
+    { c: 'name', conf: 1 },
+    'exact alias → 1.0'
+  );
+  const price = matchHeader('USD / M² PRICE', NPI.aliases);
+  assert.equal(price.canonical, 'price');
+  assert.ok(price.confidence >= 0.9, 'token-set equal → ≥0.9');
+  const note = matchHeader('NOTES / REMARKS', NPI.aliases);
+  assert.equal(note.canonical, 'note');
+  assert.ok(note.confidence >= 0.6, 'subset → ≥0.6');
+});
+
+test('matchHeader: unknown column → unmatched + suggestions, never a silent canonical', () => {
+  const r = matchHeader('Totally Unrelated Column 123', NPI.aliases);
+  assert.equal(r.canonical, null);
+  assert.equal(r.status, 'unmatched');
+  assert.ok(Array.isArray(r.suggestions));
+});
+
+test('mapHeaders: per-column report carries status/confidence/suggestions', () => {
+  const r = mapHeaders(['MATERIAL NAME', 'USD / M² PRICE', 'ZzzUnknown'], NPI);
+  assert.ok(Array.isArray(r.columns));
+  const by = Object.fromEntries(r.columns.map((c) => [c.raw, c]));
+  assert.equal(by['MATERIAL NAME'].status, 'matched');
+  assert.equal(by['MATERIAL NAME'].canonical, 'name');
+  assert.equal(by['USD / M² PRICE'].canonical, 'price');
+  assert.ok(['matched', 'low'].includes(by['USD / M² PRICE'].status));
+  assert.equal(by['ZzzUnknown'].status, 'unmatched');
+  assert.equal(by['ZzzUnknown'].canonical, null);
+});
+
+test('mapHeaders: still flags genuinely unknown columns (no false positives)', () => {
+  const r = mapHeaders(['Parent Part No', 'Component Part', 'GiberishCol123'], BOM);
+  assert.ok(r.unmapped.includes(2), 'gibberish column stays unmapped');
+});
+
+test('mergeRows replace: wipes prior rows, keeps only uploaded (NPI)', () => {
+  const existing = [
+    { name: 'OLD-A', supplier: 'X', price: 1 },
+    { name: 'OLD-B', supplier: 'Y', price: 2 },
+  ];
+  const newCanonical = {
+    headers: NPI.canonicalHeaders,
+    rows: [NPI.canonicalHeaders.map((h) => (h === 'name' ? 'NEW-1' : h === 'supplier' ? 'Z' : ''))],
+  };
+  const out = mergeRows({ existing, newCanonical, dataset: NPI, mode: 'replace' });
+  assert.equal(out.length, 1, 'only the uploaded row survives');
+  assert.equal(out[0].name, 'NEW-1');
+  assert.ok(!out.some((r) => String(r.name).startsWith('OLD')), 'no prior rows remain');
 });
