@@ -38,31 +38,161 @@ const LIBRARY_DIR = path.join(DATA_DIR, 'Library');
 // Header mapping
 // ─────────────────────────────────────────────────────────────────
 
+// Tokens that carry no field identity — units + qualifiers that appear in
+// real export headers ("USD / M² PRICE", "MM THICKNESS", "DAYS LEAD TIME").
+// Stripping them lets the remaining content tokens match the alias content.
+const NOISE_TOKENS = new Set(['mm', 'm2', 'usd', 'vnd', 'days', 'day', 'pcs', 'no']);
+
+/**
+ * Canonicalise a header/alias string into a Set of content tokens:
+ * lowercase, ²→2, strip punctuation (/ , . ( ) - # %), drop unit/noise
+ * tokens, keep the rest. Deterministic. e.g. "USD / M² PRICE" → {price}.
+ */
+export function canonicalTokens(s) {
+  const cleaned = String(s ?? '')
+    .toLowerCase()
+    .replace(/²/g, '2')
+    .replace(/[/,.()\-#%]/g, ' ');
+  const toks = cleaned
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((t) => !NOISE_TOKENS.has(t));
+  return new Set(toks);
+}
+
+function setsEqual(a, b) {
+  if (a.size !== b.size) return false;
+  for (const t of a) if (!b.has(t)) return false;
+  return true;
+}
+function isSubset(small, big) {
+  if (small.size === 0) return false;
+  for (const t of small) if (!big.has(t)) return false;
+  return true;
+}
+function jaccard(a, b) {
+  if (a.size === 0 || b.size === 0) return 0;
+  let inter = 0;
+  for (const t of a) if (b.has(t)) inter++;
+  const uni = a.size + b.size - inter;
+  return uni === 0 ? 0 : inter / uni;
+}
+
+/**
+ * Match a raw header against an alias map `{ normKey(alias): canonical }`
+ * (the shape of both `dataset.aliases` and the legacy NPI_HEADER_MAP).
+ *
+ * Tolerant cascade — deterministic, no fuzzy-match dependency:
+ *   1. exact `aliases[normKey(h)]`           → confidence 1.0
+ *   2. canonicalised token-set equal          → 0.9
+ *   3. alias tokens ⊆ header tokens, OR
+ *      Jaccard(header, alias) ≥ 0.6           → 0.7
+ *   else (< 0.6)                              → UNMATCHED
+ *
+ * Highest confidence wins; ties keep the first alias encountered (insertion
+ * order). Returns { canonical, confidence, status, suggestions }, where
+ * status is 'matched' (≥0.9) | 'low' (≥0.6) | 'unmatched', and suggestions
+ * is the top-2 nearest canonicals (by raw token overlap) for unmatched cols.
+ */
+export function matchHeader(rawHeader, aliases) {
+  const nk = normKey(rawHeader);
+  if (aliases[nk]) {
+    return { canonical: aliases[nk], confidence: 1, status: 'matched', suggestions: [] };
+  }
+  const hTokens = canonicalTokens(rawHeader);
+  let best = null; // { canonical, confidence }
+  const sims = new Map(); // canonical → best raw overlap (for suggestions)
+  for (const [aliasKey, canonical] of Object.entries(aliases)) {
+    const aTokens = canonicalTokens(aliasKey);
+    if (aTokens.size === 0) continue; // unit-only alias (e.g. "usd/m²") — skip
+    const sim = jaccard(hTokens, aTokens);
+    if (sim > 0 && (!sims.has(canonical) || sims.get(canonical) < sim)) {
+      sims.set(canonical, sim);
+    }
+    let conf = 0;
+    if (setsEqual(hTokens, aTokens)) conf = 0.9;
+    else if (isSubset(aTokens, hTokens) || sim >= 0.6) conf = 0.7;
+    if (conf > 0 && (!best || conf > best.confidence)) {
+      best = { canonical, confidence: conf };
+    }
+  }
+  if (best && best.confidence >= 0.6) {
+    return {
+      canonical: best.canonical,
+      confidence: best.confidence,
+      status: best.confidence >= 0.9 ? 'matched' : 'low',
+      suggestions: [],
+    };
+  }
+  const suggestions = [...sims.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([canonical, confidence]) => ({ canonical, confidence: +confidence.toFixed(3) }));
+  return {
+    canonical: null,
+    confidence: best ? best.confidence : 0,
+    status: 'unmatched',
+    suggestions,
+  };
+}
+
 /**
  * Given the raw headers of an uploaded file, return:
  *   - normalisedHeaders: same length as input, with each header rewritten
- *     to its canonical form when an alias matched, else null.
+ *     to its canonical form when matched (confidence ≥ 0.6), else null.
  *   - mapping: { canonical: originalIndex } — the column lookup used by
  *     the row mapper. Only keeps the first match per canonical name.
- *   - unmapped: indexes of columns the alias map did not recognise.
+ *   - unmapped: indexes of columns no alias matched (status 'unmatched').
  *   - missing: required canonical headers that were NOT found.
+ *   - columns: per-source-column report (raw, canonical, confidence,
+ *     status, suggestions) so the preview never silently drops a column.
  */
 export function mapHeaders(rawHeaders, dataset) {
   const aliases = dataset.aliases || {};
   const normalisedHeaders = new Array(rawHeaders.length).fill(null);
   const mapping = {};
   const unmapped = [];
+  const columns = [];
   rawHeaders.forEach((h, i) => {
-    const canonical = aliases[normKey(h)];
-    if (canonical) {
-      normalisedHeaders[i] = canonical;
-      if (!(canonical in mapping)) mapping[canonical] = i;
+    const m = matchHeader(h, aliases);
+    // A column can only claim a canonical that no earlier column took.
+    if (m.canonical && !(m.canonical in mapping)) {
+      normalisedHeaders[i] = m.canonical;
+      mapping[m.canonical] = i;
+      columns.push({
+        index: i,
+        raw: h,
+        canonical: m.canonical,
+        confidence: m.confidence,
+        status: m.status,
+        suggestions: m.suggestions,
+      });
+    } else if (m.canonical) {
+      // matched but the canonical was already claimed by an earlier column →
+      // treat as a duplicate; report it but don't drop the first mapping.
+      unmapped.push(i);
+      columns.push({
+        index: i,
+        raw: h,
+        canonical: null,
+        confidence: m.confidence,
+        status: 'duplicate',
+        suggestions: [{ canonical: m.canonical, confidence: m.confidence }],
+      });
     } else {
       unmapped.push(i);
+      columns.push({
+        index: i,
+        raw: h,
+        canonical: null,
+        confidence: m.confidence,
+        status: 'unmatched',
+        suggestions: m.suggestions,
+      });
     }
   });
   const missing = (dataset.requiredHeaders || []).filter((h) => !(h in mapping));
-  return { normalisedHeaders, mapping, unmapped, missing };
+  return { normalisedHeaders, mapping, unmapped, missing, columns };
 }
 
 /**

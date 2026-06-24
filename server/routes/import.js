@@ -33,6 +33,7 @@ import {
   shadowClearInventory,
   shadowClearMaterials,
 } from '../repositories/shadowWrite.js';
+import { matchHeader } from '../services/importPipeline.js';
 
 // Convert {headers, rows[]} to array-of-objects for shadow-write mappers.
 function rowsAsObjects(headers, rows) {
@@ -702,10 +703,14 @@ function normKey(s) {
 }
 
 function mapRowsByHeader(headers, rows, headerMap) {
-  // Build column-index → field-key lookup once.
+  // Build column-index → field-key lookup once. Uses the tolerant matcher
+  // (Lesson 32) so real export headers like "USD / M² PRICE" / "MM THICKNESS"
+  // / "M² MOQ" / "DAYS LEAD TIME" / "NOTES / REMARKS" map instead of being
+  // silently dropped — headerMap is the same { normKey: canonical } shape the
+  // matcher expects.
   const colToField = {};
   headers.forEach((h, i) => {
-    const key = headerMap[normKey(h)];
+    const key = matchHeader(h, headerMap).canonical;
     if (key && !(key in colToField)) colToField[key] = i;
   });
   const fields = Object.keys(colToField);

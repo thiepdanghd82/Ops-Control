@@ -288,6 +288,9 @@ router.post(
           normalised: headerMapping.normalisedHeaders,
           unmapped: headerMapping.unmapped,
           mapping: headerMapping.mapping,
+          // Per-source-column report (matched/low/unmatched/duplicate +
+          // confidence + suggestions) so the wizard never silent-drops.
+          columns: headerMapping.columns || [],
         },
         sample: {
           headers: canonical.headers,

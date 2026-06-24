@@ -25,8 +25,8 @@ const MODE_LABELS = {
     help: 'Update rows that match the natural key; add the rest. Existing rows not in the upload are kept untouched.',
   },
   replace: {
-    label: 'Replace All',
-    help: 'Drop the entire current dataset and replace with the upload. Use only for full re-imports.',
+    label: 'Replace all (xoá toàn bộ dữ liệu cũ)',
+    help: 'Drop the entire current dataset and replace with the upload. Use only for full re-imports. The current data is auto-backed up first.',
   },
   append: {
     label: 'Append',
@@ -54,6 +54,7 @@ export default function ImportWizard({
   const [overrides, setOverrides] = useState({}); // { colIdx: 'CanonicalName' | '__skip__' }
   const [mode, setMode] = useState('upsert');
   const [reason, setReason] = useState('');
+  const [confirmReplace, setConfirmReplace] = useState(false); // replace-mode guard
   const [commitStats, setCommitStats] = useState(null);
 
   // Reset on close
@@ -69,6 +70,7 @@ export default function ImportWizard({
     setOverrides({});
     setMode('upsert');
     setReason('');
+    setConfirmReplace(false);
     setCommitStats(null);
     if (fileRef.current) fileRef.current.value = '';
   }, [open]);
@@ -160,6 +162,16 @@ export default function ImportWizard({
     }
   }, [preview, mode, reason, onCommitted]);
 
+  // Replace wipes the whole dataset — gate it behind an explicit confirm.
+  // (The server still auto-backs-up before any write; this is the human guard.)
+  const requestCommit = useCallback(() => {
+    if (mode === 'replace') {
+      setConfirmReplace(true);
+      return;
+    }
+    handleCommit();
+  }, [mode, handleCommit]);
+
   // Derived: has-blocking-issues?
   const blocking = useMemo(() => {
     if (!preview) return [];
@@ -173,120 +185,167 @@ export default function ImportWizard({
   }, [preview]);
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      size="xl"
-      severity="info"
-      closable={!busy}
-      dismissable={!busy}
-    >
-      <Modal.Header
-        title={`Import — ${datasetLabel || datasetKey}`}
-        subtitle={`Step ${stage <= 3 ? stage : 3} of 3 ${stage === 4 ? '· Done' : ''}`}
-      />
-
-      <Modal.Body className="iw-body">
-        {error && (
-          <div className="iw-banner iw-banner-err" role="alert">
-            {error}
-          </div>
-        )}
-        {warning && stage !== 4 && <div className="iw-banner iw-banner-warn">{warning}</div>}
-
-        {stage === 1 && (
-          <Stage1Upload
-            datasetKey={datasetKey}
-            onPick={() => fileRef.current?.click()}
-            busy={busy}
-          />
-        )}
-
-        {stage === 2 && preview && (
-          <Stage2Review
-            preview={preview}
-            sheet={sheet}
-            overrides={overrides}
-            onSheetChange={handleSheetChange}
-            onOverrideChange={handleOverrideChange}
-            onApplyOverrides={handleApplyOverrides}
-            blocking={blocking}
-          />
-        )}
-
-        {stage === 3 && preview && (
-          <Stage3Commit
-            preview={preview}
-            mode={mode}
-            setMode={setMode}
-            reason={reason}
-            setReason={setReason}
-          />
-        )}
-
-        {stage === 4 && commitStats && <Stage4Success stats={commitStats} />}
-
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".csv,.xlsx,.xls,.txt"
-          className="iw-hidden-file-input"
-          onChange={handleFileChosen}
+    <>
+      <Modal
+        open={open}
+        onClose={onClose}
+        size="xl"
+        severity="info"
+        closable={!busy}
+        dismissable={!busy}
+      >
+        <Modal.Header
+          title={`Import — ${datasetLabel || datasetKey}`}
+          subtitle={`Step ${stage <= 3 ? stage : 3} of 3 ${stage === 4 ? '· Done' : ''}`}
         />
-      </Modal.Body>
 
-      <Modal.Footer>
-        {stage === 1 && (
-          <>
-            <button className="op-btn op-btn-ghost" onClick={onClose} disabled={busy}>
-              Cancel
+        <Modal.Body className="iw-body">
+          {error && (
+            <div className="iw-banner iw-banner-err" role="alert">
+              {error}
+            </div>
+          )}
+          {warning && stage !== 4 && <div className="iw-banner iw-banner-warn">{warning}</div>}
+
+          {stage === 1 && (
+            <Stage1Upload
+              datasetKey={datasetKey}
+              onPick={() => fileRef.current?.click()}
+              busy={busy}
+            />
+          )}
+
+          {stage === 2 && preview && (
+            <Stage2Review
+              preview={preview}
+              sheet={sheet}
+              overrides={overrides}
+              onSheetChange={handleSheetChange}
+              onOverrideChange={handleOverrideChange}
+              onApplyOverrides={handleApplyOverrides}
+              blocking={blocking}
+            />
+          )}
+
+          {stage === 3 && preview && (
+            <Stage3Commit
+              preview={preview}
+              mode={mode}
+              setMode={setMode}
+              reason={reason}
+              setReason={setReason}
+            />
+          )}
+
+          {stage === 4 && commitStats && <Stage4Success stats={commitStats} />}
+
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,.xlsx,.xls,.txt"
+            className="iw-hidden-file-input"
+            onChange={handleFileChosen}
+          />
+        </Modal.Body>
+
+        <Modal.Footer>
+          {stage === 1 && (
+            <>
+              <button className="op-btn op-btn-ghost" onClick={onClose} disabled={busy}>
+                Cancel
+              </button>
+              <button
+                className="op-btn op-btn-primary"
+                onClick={() => fileRef.current?.click()}
+                disabled={busy}
+              >
+                {busy ? 'Parsing…' : 'Choose File'}
+              </button>
+            </>
+          )}
+          {stage === 2 && (
+            <>
+              <button
+                className="op-btn op-btn-ghost"
+                onClick={() => {
+                  setStage(1);
+                  setPreview(null);
+                }}
+              >
+                Back
+              </button>
+              <button className="op-btn op-btn-primary" onClick={() => setStage(3)} disabled={busy}>
+                Continue
+              </button>
+            </>
+          )}
+          {stage === 3 && (
+            <>
+              <button className="op-btn op-btn-ghost" onClick={() => setStage(2)} disabled={busy}>
+                Back
+              </button>
+              <button
+                className="op-btn op-btn-primary iw-commit-btn"
+                onClick={requestCommit}
+                disabled={busy}
+              >
+                {busy ? 'Committing…' : `Commit · ${MODE_LABELS[mode]?.label}`}
+              </button>
+            </>
+          )}
+          {stage === 4 && (
+            <button className="op-btn op-btn-primary" onClick={onClose}>
+              Close
             </button>
-            <button
-              className="op-btn op-btn-primary"
-              onClick={() => fileRef.current?.click()}
-              disabled={busy}
-            >
-              {busy ? 'Parsing…' : 'Choose File'}
-            </button>
-          </>
-        )}
-        {stage === 2 && (
-          <>
-            <button
-              className="op-btn op-btn-ghost"
-              onClick={() => {
-                setStage(1);
-                setPreview(null);
-              }}
-            >
-              Back
-            </button>
-            <button className="op-btn op-btn-primary" onClick={() => setStage(3)} disabled={busy}>
-              Continue
-            </button>
-          </>
-        )}
-        {stage === 3 && (
-          <>
-            <button className="op-btn op-btn-ghost" onClick={() => setStage(2)} disabled={busy}>
-              Back
-            </button>
-            <button
-              className="op-btn op-btn-primary iw-commit-btn"
-              onClick={handleCommit}
-              disabled={busy}
-            >
-              {busy ? 'Committing…' : `Commit · ${MODE_LABELS[mode]?.label}`}
-            </button>
-          </>
-        )}
-        {stage === 4 && (
-          <button className="op-btn op-btn-primary" onClick={onClose}>
-            Close
+          )}
+        </Modal.Footer>
+      </Modal>
+
+      {/* Replace-mode confirm — destructive, so make the operator opt in once
+        more. The server auto-backs-up before the wipe, but this is the human
+        stop. */}
+      <Modal
+        open={confirmReplace}
+        onClose={() => setConfirmReplace(false)}
+        size="sm"
+        severity="danger"
+      >
+        <Modal.Header title="Replace all data? · Xoá toàn bộ dữ liệu cũ?" />
+        <Modal.Body>
+          <p>
+            This will <strong>delete every existing {datasetLabel || datasetKey} row</strong> and
+            replace it with the {preview?.sample?.totalRows ?? ''} uploaded row(s).
+            {preview?.diff?.counts?.removedIfReplace > 0 && (
+              <> {preview.diff.counts.removedIfReplace} current row(s) will be removed.</>
+            )}
+          </p>
+          <p>
+            Việc này sẽ <strong>xoá toàn bộ dữ liệu hiện có</strong> và thay bằng file vừa tải lên.
+            Bản hiện tại được tự động sao lưu trước khi ghi đè (
+            <code>*_backup_&lt;ts&gt;.json</code>).
+          </p>
+        </Modal.Body>
+        <Modal.Footer>
+          <button
+            className="op-btn op-btn-ghost"
+            onClick={() => setConfirmReplace(false)}
+            disabled={busy}
+          >
+            Cancel · Huỷ
           </button>
-        )}
-      </Modal.Footer>
-    </Modal>
+          <button
+            className="op-btn op-btn-danger"
+            onClick={() => {
+              setConfirmReplace(false);
+              handleCommit();
+            }}
+            disabled={busy}
+          >
+            {busy ? 'Committing…' : 'Replace all · Xoá & nhập'}
+          </button>
+        </Modal.Footer>
+      </Modal>
+    </>
   );
 }
 
