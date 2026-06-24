@@ -243,8 +243,12 @@ const INVENTORY_DATASET = {
   },
 };
 
+// Finished Goods is a customer DEAL-PRICE / catalog agreement list (keyed by
+// Catalog No), NOT a parts-on-hand inventory — a distinct IFS schema from Full
+// Inventory / Raw Materials (those are Part-No keyed). It used to inherit the
+// Part-No inventory schema, so the app's own FG export failed to re-import
+// ("Missing required columns: Part No"). Own schema fixes the round-trip.
 const FINISHED_GOODS_DATASET = {
-  ...INVENTORY_DATASET,
   key: 'finished-goods',
   label: 'Finished Goods Inventory',
   storage: {
@@ -253,6 +257,51 @@ const FINISHED_GOODS_DATASET = {
     file: 'finished_good_data.js',
     varName: 'window._CCL_FG_DATA',
   },
+  canonicalHeaders: [
+    'Catalog No',
+    'Catalog Desc',
+    'Min Quantity',
+    'Currency Code',
+    'Deal Price',
+    'Deal Price Incl Tax',
+    'Deal Price Base',
+    'Deal Price Incl Tax Base',
+    'Valid From Date',
+    'Valid Until',
+    'Agreement Id',
+    'Customer No',
+    'Site',
+    'Name',
+    'Association No',
+  ],
+  requiredHeaders: ['Catalog No'],
+  naturalKey: ['Catalog No', 'Customer No', 'Agreement Id'],
+  columnTypes: {
+    'Min Quantity': 'number',
+    'Deal Price': 'number',
+    'Deal Price Incl Tax': 'number',
+    'Deal Price Base': 'number',
+    'Deal Price Incl Tax Base': 'number',
+    'Valid From Date': 'date',
+    'Valid Until': 'date',
+  },
+  aliases: aliasMap({
+    'Catalog No': ['Catalog', 'Catalog Number', 'Mã catalog'],
+    'Catalog Desc': ['Catalog Description', 'Catalog Desc.'],
+    'Min Quantity': ['Min Qty', 'Minimum Quantity', 'SL tối thiểu'],
+    'Currency Code': ['Currency', 'Tiền tệ'],
+    'Deal Price': ['Price', 'Giá'],
+    'Deal Price Incl Tax': ['Deal Price Including Tax', 'Price Incl Tax'],
+    'Deal Price Base': ['Deal Price Base (VND)'],
+    'Deal Price Incl Tax Base': ['Deal Price Incl Tax Base (VND)'],
+    'Valid From Date': ['Valid From', 'From Date', 'Hiệu lực từ'],
+    'Valid Until': ['Valid To', 'Until', 'Hiệu lực đến'],
+    'Agreement Id': ['Agreement', 'Agreement No', 'Agreement ID'],
+    'Customer No': ['Customer', 'Customer Number', 'Mã khách'],
+    Site: ['Plant', 'Nhà máy'],
+    Name: ['Customer Name', 'Tên khách'],
+    'Association No': ['Association', 'Association Number'],
+  }),
   shadow: {
     writer: 'shadowWriteInventory',
     writerArg: 'finished_goods',
