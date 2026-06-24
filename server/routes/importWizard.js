@@ -26,6 +26,7 @@ import { redactErrorMessage, logErr } from '../utils/safeError.js';
 import { audit } from '../services/authService.js';
 import { atomicWriteFileSync } from '../services/atomicWrite.js';
 import { toCsvDocument } from '../utils/csvSafe.js';
+import { uploadSingle } from '../utils/uploadGuard.js';
 
 import { parseUploadedFile } from '../services/importParse.js';
 import { getDataset, listDatasets } from '../services/importDatasets.js';
@@ -97,9 +98,14 @@ try {
 }
 configureStageDir(WIZARD_STAGE_DIR);
 
+// 50 MB default: a full BOM "Export Current Data" (≈19.5K rows) is ~24 MB as
+// xlsx, and the app must be able to re-import what it exports. Overridable via
+// OPS_IMPORT_MAX_MB. Routes are requireRole(4)-gated so the upload surface is
+// trusted admins only. (Prefer the CSV export — much smaller for re-import.)
+const IMPORT_MAX_MB = Number(process.env.OPS_IMPORT_MAX_MB) || 50;
 const upload = multer({
   dest: UPLOAD_TMP_DIR,
-  limits: { fileSize: (Number(process.env.OPS_IMPORT_MAX_MB) || 10) * 1024 * 1024 },
+  limits: { fileSize: IMPORT_MAX_MB * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (['.csv', '.xlsx', '.xls', '.txt'].includes(ext)) cb(null, true);
@@ -170,7 +176,7 @@ router.get('/datasets', (req, res) => {
 router.post(
   '/preview',
   requireRole(4),
-  upload.single('file'),
+  uploadSingle(upload, 'file', IMPORT_MAX_MB),
   requireValidUpload,
   async (req, res) => {
     const cleanup = () => {
