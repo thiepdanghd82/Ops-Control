@@ -3801,7 +3801,9 @@ router.post('/import-xlsm', xlsmUpload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ ok: false, msg: 'No file uploaded' });
 
   try {
-    const wb = XLSX.readFile(req.file.path, { type: 'file' });
+    // xlsx ESM build (xlsx.mjs) has no fs wired → readFile throws
+    // "Cannot access file"; read the bytes + XLSX.read(buffer) instead.
+    const wb = XLSX.read(fs.readFileSync(req.file.path));
 
     // Find main calc sheet: prefer '2.1','1.1','2','1','Simple','Complex'
     const preferredSheets = [

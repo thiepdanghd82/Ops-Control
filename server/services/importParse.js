@@ -136,7 +136,9 @@ export function parseCSVFile(filePath, opts = {}) {
  */
 export async function parseExcelFile(filePath, opts = {}) {
   const XLSX = await import('xlsx');
-  const workbook = XLSX.readFile(filePath, { cellDates: false, cellNF: false });
+  // xlsx ESM build (xlsx.mjs) has no fs wired → readFile throws
+  // "Cannot access file"; read bytes + XLSX.read(buffer) instead.
+  const workbook = XLSX.read(fs.readFileSync(filePath), { cellDates: false, cellNF: false });
   const sheets = workbook.SheetNames || [];
   if (sheets.length === 0) throw new Error('Excel file has no sheets');
   const wantSheet = opts.sheet && sheets.includes(opts.sheet) ? opts.sheet : sheets[0];

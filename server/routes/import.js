@@ -219,7 +219,11 @@ function parseCSVLine(line, delimiter) {
  */
 async function parseExcel(filePath) {
   const XLSX = await import('xlsx');
-  const workbook = XLSX.readFile(filePath);
+  // xlsx's ESM build (xlsx.mjs — what `import('xlsx')` resolves to in this
+  // ESM server) does NOT auto-wire node fs, so XLSX.readFile() throws
+  // "Cannot access file" (redacted to internal_error). Read the bytes
+  // ourselves + XLSX.read(buffer) so it works regardless of fs-wiring.
+  const workbook = XLSX.read(fs.readFileSync(filePath));
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
   const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
