@@ -1768,7 +1768,9 @@ router.post(
 
     try {
       const XLSX = (await import('xlsx')).default;
-      const wb = XLSX.readFile(req.file.path);
+      // xlsx ESM build (xlsx.mjs) has no fs wired → readFile throws
+      // "Cannot access file"; read bytes + XLSX.read(buffer) instead.
+      const wb = XLSX.read(fs.readFileSync(req.file.path));
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 

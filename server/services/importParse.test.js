@@ -4,7 +4,11 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCSVContent } from './importParse.js';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import XLSX from 'xlsx';
+import { parseCSVContent, parseExcelFile } from './importParse.js';
 
 test('CSV: comma-delimited basic', () => {
   const r = parseCSVContent('a,b,c\n1,2,3\n4,5,6');
@@ -84,4 +88,33 @@ test('CSV: empty content', () => {
   const r = parseCSVContent('');
   assert.deepEqual(r.headers, []);
   assert.deepEqual(r.rows, []);
+});
+
+// ─── Excel parsing (xlsx ESM fs-wiring regression) ─────────────────
+// Bug: xlsx's ESM build (xlsx.mjs — what `import('xlsx')` resolves to in this
+// ESM server) does NOT auto-wire node fs, so XLSX.readFile(path) threw
+// "Cannot access file" → the import route redacted it to "internal_error" and
+// no .xlsx/.xls file could ever be imported. Fix: read the bytes ourselves +
+// XLSX.read(buffer). This test parses a real generated .xlsx (RED before fix).
+test('Excel: parseExcelFile reads a real .xlsx file', async () => {
+  const aoa = [
+    ['Material Name', 'Price', 'Type'],
+    ['PET SB50', 3.35, 'Silver Bright Gloss PET'],
+    ['LR1110', 1.1, ''],
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  const tmp = path.join(os.tmpdir(), `importParse-xlsx-${process.pid}.xlsx`);
+  fs.writeFileSync(tmp, buf);
+  try {
+    const r = await parseExcelFile(tmp);
+    assert.deepEqual(r.headers, ['Material Name', 'Price', 'Type']);
+    assert.equal(r.rows.length, 2, 'two non-empty data rows');
+    assert.equal(r.rows[0][0], 'PET SB50');
+    assert.equal(r.meta.sheets[0], 'Sheet1');
+  } finally {
+    fs.rmSync(tmp, { force: true });
+  }
 });
