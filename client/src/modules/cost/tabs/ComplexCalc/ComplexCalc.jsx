@@ -13,6 +13,7 @@ import {
   aggregateComplex,
   serializeResultForPersist,
   buildCpxRowsPayload,
+  getActiveSPMaterials,
 } from '../../../../services/calcEngine';
 import { freezeLib, snapshotPricingParams } from '../../../../services/pricingSnapshot';
 import { resolveTierField } from '../../../../services/packingTierField';
@@ -38,7 +39,12 @@ import ProcessFlowChart from './ProcessFlowChart';
 import SubProductRow from './SubProductRow';
 import BomTreeView from './BomTreeView';
 import CalcLeadTimeNotice from '../StandardCalc/CalcLeadTimeNotice';
-import { sumToolingCostCpx } from '../StandardCalc/CalcLeadTimeNotice.helpers.js';
+import {
+  sumToolingCostCpx,
+  deriveMaterialLT,
+  resolveMaterialLtDisplay,
+  safeLeadTime,
+} from '../StandardCalc/CalcLeadTimeNotice.helpers.js';
 import { showToast } from '../../../../utils/toast';
 import { fmtN, pct, gmClr } from '../../../../utils/format';
 import DecimalInput from '../../../../utils/DecimalInput';
@@ -260,12 +266,31 @@ export default function ComplexCalc() {
 
   const [saving, setSaving] = useState(false);
 
+  // Material L/T auto-derive (Sprint S-MAT-LT) — max IFS/NPI lead time across
+  // the active Main.Mat rows of EVERY subproduct + 7 days. Flattened across SPs
+  // so a multi-SP quote takes the longest-lead material. Same parent-useMemo
+  // pattern as Tooling Cost; re-derives when any sp.materials* or lib changes.
+  const materialLtAuto = useMemo(
+    () =>
+      deriveMaterialLT(
+        sps.flatMap((sp) => getActiveSPMaterials(sp)),
+        lib
+      ),
+    [sps, lib]
+  );
+
   const buildQuoteData = useCallback(() => {
     // Phase 3 — capture pricing snapshot. Cpx walks subproducts for
     // both materials + processes inside freezeLib, so a 3-SP quote with
     // shared workcenters dedupes naturally. user?.id stamps audit.
     const snapshot = lib ? freezeLib(lib, cs, { userId: user?.id || null }) : null;
-    const stateWithSnapshot = snapshot ? { ...cs, pricing_snapshot: snapshot } : cs;
+    // Persist the RESOLVED Material L/T into lt_material (override wins, else
+    // the auto "<n> days") so Summarize + future export read it; lt_material_ovr
+    // remains the override source of truth.
+    const resolvedMatLt = resolveMaterialLtDisplay(cs.lead_time, materialLtAuto).value;
+    const leadTimePatched = { ...safeLeadTime(cs.lead_time), lt_material: resolvedMatLt };
+    const csPatched = { ...cs, lead_time: leadTimePatched };
+    const stateWithSnapshot = snapshot ? { ...csPatched, pricing_snapshot: snapshot } : csPatched;
     const calcOptions = snapshot ? { snapshot } : {};
     // Re-aggregate with the freshly-frozen snapshot so the persisted
     // result KPIs (gm/va/contribution/s_ttl/etc.) reflect the values
@@ -318,7 +343,7 @@ export default function ComplexCalc() {
       saved_at: new Date().toISOString(),
       label: cs.ccl_pn || 'Complex',
     };
-  }, [cs, sps, lib, aggregate, user?.id, bomQtyEnabled, spMoqScalingEnabled]);
+  }, [cs, sps, lib, aggregate, user?.id, bomQtyEnabled, spMoqScalingEnabled, materialLtAuto]);
 
   const persistAsNew = useCallback(async () => {
     setSaving(true);
@@ -1151,6 +1176,7 @@ export default function ComplexCalc() {
             leadTime={cplxState.lead_time}
             onChange={(next) => setCplxField('lead_time', next)}
             toolingCostTotal={toolingCostTotal}
+            materialLtAuto={materialLtAuto}
           />
         )}
       </div>

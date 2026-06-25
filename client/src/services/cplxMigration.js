@@ -53,6 +53,19 @@ function healPricingSnapshot(state) {
   return { ...state, pricing_snapshot: createEmptySnapshot() };
 }
 
+// Sprint S-MAT-LT — seed legacy free-text `lt_material` into the new
+// `lt_material_ovr` override key ONCE (key-presence signal) so already-saved
+// Cpx quotes keep their manual Material L/T as an override. Mirrors
+// stdMigration.healLeadTimeMaterialOvr. Cpx lead_time is quote-level (not
+// per-SP), so this heals the single top-level lead_time object.
+function healLeadTimeMaterialOvr(state) {
+  const lt = state && state.lead_time;
+  if (!lt || typeof lt !== 'object' || Array.isArray(lt)) return state;
+  if ('lt_material_ovr' in lt) return state;
+  const seed = typeof lt.lt_material === 'string' ? lt.lt_material : '';
+  return { ...state, lead_time: { ...lt, lt_material_ovr: seed } };
+}
+
 function startsWithFG(code) {
   return typeof code === 'string' && code.toUpperCase().startsWith('FG');
 }
@@ -128,7 +141,8 @@ export function upgradeCplxState(state) {
           sp.processes.every((r) => !r || typeof r !== 'object' || r._mid))
     )
   ) {
-    return healPricingSnapshot(state); // already upgraded — still heal snapshot if absent
+    // already upgraded — still heal snapshot + lead-time override if absent
+    return healLeadTimeMaterialOvr(healPricingSnapshot(state));
   }
 
   const sourceVersion = Number(state._shape_version) || 0;
@@ -190,7 +204,8 @@ export function upgradeCplxState(state) {
   };
   // Pricing-snapshot heal (Phase 1) — additive default after the
   // shape-version walk so newly-migrated states get the snapshot too.
-  return healPricingSnapshot(upgraded);
+  // Material L/T override heal (Sprint S-MAT-LT) — seed legacy free-text.
+  return healLeadTimeMaterialOvr(healPricingSnapshot(upgraded));
 }
 
 /**

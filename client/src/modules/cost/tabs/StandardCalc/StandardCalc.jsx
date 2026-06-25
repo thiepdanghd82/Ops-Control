@@ -11,6 +11,7 @@ import {
   getActiveTierState,
   serializeResultForPersist,
   buildStdRowsPayload,
+  getActiveMaterials,
 } from '../../../../services/calcEngine';
 import { freezeLib } from '../../../../services/pricingSnapshot';
 import { isCopyMode } from '../../components/SnapshotPanel.helpers';
@@ -37,7 +38,12 @@ import CalcCostBreakdown from './CalcCostBreakdown';
 import CalcSummarize from './CalcSummarize';
 import ProcessBalancing from './ProcessBalancing';
 import CalcLeadTimeNotice from './CalcLeadTimeNotice';
-import { sumToolingCostStd } from './CalcLeadTimeNotice.helpers.js';
+import {
+  sumToolingCostStd,
+  deriveMaterialLT,
+  resolveMaterialLtDisplay,
+  safeLeadTime,
+} from './CalcLeadTimeNotice.helpers.js';
 import CalcLegend from './CalcLegend';
 import TabBarOverflow from '../../../../components/Shared/TabBarOverflow';
 import './StandardCalc.css';
@@ -187,6 +193,18 @@ export default function StandardCalc() {
 
   const [saving, setSaving] = useState(false);
 
+  // Material L/T auto-derive (Sprint S-MAT-LT) — same parent-useMemo pattern as
+  // Tooling Cost: max IFS/NPI lead time across the active Main.Mat rows + 7 days.
+  // Re-derives when the material set or library changes; the sub-tab re-renders
+  // on tab switch (Lesson 18) so switching here picks up Materials-tab edits.
+  const materialLtAuto = useMemo(
+    () => deriveMaterialLT(getActiveMaterials(stdState), lib),
+    // Narrow deps: only the material set + library affect the derive; the full
+    // stdState would over-recompute on every keystroke in unrelated fields.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [stdState.materials_main, stdState.materials_alt, stdState.materials_active, lib]
+  );
+
   // Build the quote payload from the current state — reused by both
   // "Save as new" and "Update existing" paths.
   const buildQuoteData = useCallback(() => {
@@ -196,7 +214,13 @@ export default function StandardCalc() {
     // matches what reload-time calc will produce (same snapshot in,
     // same numbers out). user?.id stamps `_captured_by` for audit.
     const snapshot = lib ? freezeLib(lib, stdState, { userId: user?.id || null }) : null;
-    const stateWithSnapshot = snapshot ? { ...stdState, pricing_snapshot: snapshot } : stdState;
+    // Persist the RESOLVED Material L/T into lt_material (override wins, else the
+    // auto "<n> days") so downstream readers (Summarize, future export sheet 11)
+    // see the value; lt_material_ovr stays the override source of truth.
+    const resolvedMatLt = resolveMaterialLtDisplay(stdState.lead_time, materialLtAuto).value;
+    const leadTimePatched = { ...safeLeadTime(stdState.lead_time), lt_material: resolvedMatLt };
+    const baseState = { ...stdState, lead_time: leadTimePatched };
+    const stateWithSnapshot = snapshot ? { ...baseState, pricing_snapshot: snapshot } : baseState;
     const calcOptions = snapshot ? { snapshot } : {};
     const result = lib ? calcAll(tierSt, null, lib, null, calcOptions) : null;
     // MES-3-FIX-41: bundle per-row Setup/Run/Total for active tier +
@@ -217,7 +241,7 @@ export default function StandardCalc() {
       saved_at: new Date().toISOString(),
       label: stdState.ccl_pn || stdState.rfq_number || 'Untitled',
     };
-  }, [stdState, lib, user?.id]);
+  }, [stdState, lib, user?.id, materialLtAuto]);
 
   const persistAsNew = useCallback(async () => {
     setSaving(true);
@@ -382,6 +406,7 @@ export default function StandardCalc() {
           leadTime={stdState.lead_time}
           onChange={(next) => setStdField('lead_time', next)}
           toolingCostTotal={toolingCostTotal}
+          materialLtAuto={materialLtAuto}
         />
       );
       break;
