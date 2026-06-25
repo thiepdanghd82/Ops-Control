@@ -137,43 +137,102 @@ export function matchHeader(rawHeader, aliases) {
 }
 
 /**
- * Given the raw headers of an uploaded file, return:
+ * Fraction of a column's NON-EMPTY sampled cells that coerce to a number.
+ * Used to disambiguate which source column feeds a number-typed canonical:
+ * a real "Price" column scores ~1.0; a boolean "Use Price Incl Tax" column
+ * (all `false`) scores 0. Empty cells are ignored (sparse columns are fine).
+ */
+function numericFitness(sampleRows, colIndex, limit = 100) {
+  let seen = 0;
+  let numeric = 0;
+  for (let r = 0; r < sampleRows.length && seen < limit; r++) {
+    const cell = sampleRows[r] ? sampleRows[r][colIndex] : undefined;
+    const s = cell == null ? '' : String(cell).trim();
+    if (s === '') continue;
+    seen++;
+    if (coerce(cell, 'number').ok) numeric++;
+  }
+  return seen === 0 ? 0 : numeric / seen;
+}
+
+/**
+ * Given the raw headers of an uploaded file (and, optionally, the parsed
+ * data rows), return:
  *   - normalisedHeaders: same length as input, with each header rewritten
  *     to its canonical form when matched (confidence ≥ 0.6), else null.
  *   - mapping: { canonical: originalIndex } — the column lookup used by
- *     the row mapper. Only keeps the first match per canonical name.
- *   - unmapped: indexes of columns no alias matched (status 'unmatched').
+ *     the row mapper. ONE winning column per canonical.
+ *   - unmapped: indexes of columns no alias matched (or that lost a
+ *     canonical to a stronger column).
  *   - missing: required canonical headers that were NOT found.
  *   - columns: per-source-column report (raw, canonical, confidence,
  *     status, suggestions) so the preview never silently drops a column.
+ *
+ * Conflict resolution (Lesson 32): when several source columns match the
+ * same canonical, the winner is chosen by HIGHEST confidence first — an
+ * exact header ("Price", 1.0) always beats a token-subset match ("Use Price
+ * Incl Tax", 0.7), regardless of column order. When `sampleRows` is given,
+ * number-typed canonicals additionally (a) drop non-exact candidates whose
+ * sampled data is not numeric (e.g. a boolean column) and (b) break ties by
+ * numeric fitness — so the matcher uses BOTH the title and the data.
  */
-export function mapHeaders(rawHeaders, dataset) {
+export function mapHeaders(rawHeaders, dataset, sampleRows = null) {
   const aliases = dataset.aliases || {};
+  const colTypes = dataset.columnTypes || {};
   const normalisedHeaders = new Array(rawHeaders.length).fill(null);
   const mapping = {};
   const unmapped = [];
   const columns = [];
-  rawHeaders.forEach((h, i) => {
-    const m = matchHeader(h, aliases);
-    // A column can only claim a canonical that no earlier column took.
-    if (m.canonical && !(m.canonical in mapping)) {
+  const hasSamples = Array.isArray(sampleRows) && sampleRows.length > 0;
+
+  // 1. Match every column against the alias map.
+  const matches = rawHeaders.map((h, i) => ({ index: i, raw: h, ...matchHeader(h, aliases) }));
+
+  // 2. Resolve each canonical to its single best column.
+  const claims = {}; // canonical -> winning column index
+  const byCanonical = new Map();
+  for (const m of matches) {
+    if (!m.canonical) continue;
+    if (!byCanonical.has(m.canonical)) byCanonical.set(m.canonical, []);
+    byCanonical.get(m.canonical).push(m);
+  }
+  for (const [canonical, cands] of byCanonical) {
+    const isNum = colTypes[canonical] === 'number';
+    const fit = (m) => (hasSamples ? numericFitness(sampleRows, m.index) : 0);
+    let pool = cands;
+    if (isNum && hasSamples) {
+      // A boolean / text column can't be a number field unless its header is
+      // an EXACT alias match — drop the rest so it can't steal the canonical.
+      const qualified = cands.filter((m) => m.confidence >= 1 || fit(m) >= 0.3);
+      if (qualified.length) pool = qualified;
+    }
+    pool = [...pool].sort(
+      (a, b) => b.confidence - a.confidence || fit(b) - fit(a) || a.index - b.index
+    );
+    claims[canonical] = pool[0].index;
+  }
+
+  // 3. Emit per-column report + mapping using the resolved winners.
+  for (const m of matches) {
+    const i = m.index;
+    if (m.canonical && claims[m.canonical] === i) {
       normalisedHeaders[i] = m.canonical;
       mapping[m.canonical] = i;
       columns.push({
         index: i,
-        raw: h,
+        raw: m.raw,
         canonical: m.canonical,
         confidence: m.confidence,
         status: m.status,
         suggestions: m.suggestions,
       });
     } else if (m.canonical) {
-      // matched but the canonical was already claimed by an earlier column →
-      // treat as a duplicate; report it but don't drop the first mapping.
+      // Matched a canonical but lost it to a stronger column (higher
+      // confidence / better-typed data). Report it; never silently apply it.
       unmapped.push(i);
       columns.push({
         index: i,
-        raw: h,
+        raw: m.raw,
         canonical: null,
         confidence: m.confidence,
         status: 'duplicate',
@@ -183,14 +242,14 @@ export function mapHeaders(rawHeaders, dataset) {
       unmapped.push(i);
       columns.push({
         index: i,
-        raw: h,
+        raw: m.raw,
         canonical: null,
         confidence: m.confidence,
         status: 'unmatched',
         suggestions: m.suggestions,
       });
     }
-  });
+  }
   const missing = (dataset.requiredHeaders || []).filter((h) => !(h in mapping));
   return { normalisedHeaders, mapping, unmapped, missing, columns };
 }
