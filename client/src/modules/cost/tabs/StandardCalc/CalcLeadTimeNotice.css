@@ -150,6 +150,14 @@
     0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
+/* Manual-override Material L/T — same violet (#7c3aed) the CONTR % KPI uses.
+   Higher specificity + !important so it beats .ltn-input's slate-800 color
+   (the bare .sc-pack-tier-ovr loses on equal specificity / source order). */
+.ltn-input.sc-pack-tier-ovr {
+  color: var(--color-violet-500) !important;
+  font-weight: 700 !important;
+}
+
 /* Narrow screens — stack label ABOVE field for tablet/portrait. */
 @container (max-width: 600px) {
   .ltn-col {
