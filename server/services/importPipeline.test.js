@@ -401,7 +401,8 @@ test('mergeRows replace: wipes prior rows, keeps only uploaded (NPI)', () => {
 
 // ─── IFS Materials (SupplierforPurchaseParts export) ───────────────
 const IFS = getDataset('ifs-materials');
-// The real headers the IFS "SupplierforPurchaseParts" export writes.
+// The real data headers the IFS "SupplierforPurchaseParts" upload carries
+// (the operator-trimmed 16-col export, minus the "#" row-index column).
 const IFS_HEADERS = [
   'Part No',
   'Part Description',
@@ -412,6 +413,12 @@ const IFS_HEADERS = [
   'Price incl. Tax',
   'Currency',
   'Price Unit Measure',
+  'Tax Code',
+  'Supplier Manufacturing Leadtime',
+  'Tax Code Description',
+  'Status Code',
+  'Status Code Description',
+  'Country of Origin',
 ];
 
 test('IFS_DATASET registered: part_no required, [part_no,supplier_id] natural key', () => {
@@ -419,14 +426,34 @@ test('IFS_DATASET registered: part_no required, [part_no,supplier_id] natural ke
   assert.deepEqual(IFS.requiredHeaders, ['part_no']);
   assert.deepEqual(IFS.naturalKey, ['part_no', 'supplier_id']);
   assert.equal(IFS.storage.file, 'ifs_materials.json');
-  assert.equal(IFS.canonicalHeaders.length, 9);
+  assert.equal(IFS.canonicalHeaders.length, 15);
 });
 
-test('mapHeaders: real IFS export headers — all 9 map, none dropped', () => {
+test('mapHeaders: real IFS export headers — all 15 map, none dropped', () => {
   const r = mapHeaders(IFS_HEADERS, IFS);
   for (const k of IFS.canonicalHeaders) assert.ok(k in r.mapping, `"${k}" must map`);
   assert.deepEqual(r.missing, []);
   assert.deepEqual(r.unmapped, []);
+});
+
+test('mapHeaders: the 6 added IFS columns map (Tax/Status/Leadtime/Country)', () => {
+  const r = mapHeaders(IFS_HEADERS, IFS);
+  for (const k of [
+    'tax_code',
+    'leadtime',
+    'tax_code_desc',
+    'status_code',
+    'status_code_desc',
+    'country',
+  ]) {
+    assert.ok(k in r.mapping, `"${k}" must map`);
+  }
+});
+
+test('mapHeaders: "#" row-index column is unmapped, not a canonical', () => {
+  const r = mapHeaders(['#', ...IFS_HEADERS], IFS);
+  assert.ok(r.unmapped.includes(0), '"#" stays unmapped (passthrough)');
+  assert.deepEqual(r.missing, []);
 });
 
 test('mapHeaders: IFS unknown extra column → UNMATCHED, never silent-drop', () => {

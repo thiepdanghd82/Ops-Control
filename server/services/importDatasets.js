@@ -424,6 +424,8 @@ const IFS_DATASET = {
     folder: 'MaterialCost',
     file: 'ifs_materials.json',
   },
+  // Mirrors the IFS "SupplierforPurchaseParts" upload (16 cols; the "#"
+  // row-index column is left unmapped). Column order matches the export.
   canonicalHeaders: [
     'part_no',
     'desc',
@@ -434,6 +436,12 @@ const IFS_DATASET = {
     'price_tax',
     'currency',
     'uom',
+    'tax_code',
+    'leadtime',
+    'tax_code_desc',
+    'status_code',
+    'status_code_desc',
+    'country',
   ],
   prettyLabels: {
     part_no: 'Part No',
@@ -445,10 +453,16 @@ const IFS_DATASET = {
     price_tax: 'Price incl. Tax',
     currency: 'Currency',
     uom: 'Price Unit Measure',
+    tax_code: 'Tax Code',
+    leadtime: 'Supplier Manufacturing Leadtime',
+    tax_code_desc: 'Tax Code Description',
+    status_code: 'Status Code',
+    status_code_desc: 'Status Code Description',
+    country: 'Country of Origin',
   },
   requiredHeaders: ['part_no'],
   naturalKey: ['part_no', 'supplier_id'],
-  columnTypes: { conv: 'number', price: 'number', price_tax: 'number' },
+  columnTypes: { conv: 'number', price: 'number', price_tax: 'number', leadtime: 'number' },
   aliases: aliasMap({
     part_no: ['Part No', 'Part Number', 'Mã hàng', 'Part'],
     desc: ['Part Description', 'Description', 'Desc', 'Mô tả'],
@@ -459,6 +473,17 @@ const IFS_DATASET = {
     price_tax: ['Price incl. Tax', 'Price incl Tax', 'Price with Tax', 'Giá gồm thuế'],
     currency: ['Currency', 'Tiền tệ'],
     uom: ['Price Unit Measure', 'Unit Measure', 'UoM', 'Unit', 'Đơn vị'],
+    tax_code: ['Tax Code', 'Mã thuế'],
+    leadtime: [
+      'Supplier Manufacturing Leadtime',
+      'Manufacturing Leadtime',
+      'Leadtime',
+      'Lead Time',
+    ],
+    tax_code_desc: ['Tax Code Description', 'Tax Description'],
+    status_code: ['Status Code', 'Status'],
+    status_code_desc: ['Status Code Description', 'Status Description'],
+    country: ['Country of Origin', 'Country', 'Origin', 'Xuất xứ'],
   }),
   // No shadow-write: this dataset is read straight from ifs_materials.json by
   // shared.getMaterials (like NPI/Sourcing), and is not consumed by calc, so it
