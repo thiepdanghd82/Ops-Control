@@ -10,7 +10,7 @@ import './ImportDialog.css';
 const IMPORT_TARGETS = {
   inventory: { label: 'IFS Inventory (Full)', endpoint: '/api/import/inventory', icon: '📊' },
   finishedGoods: { label: 'Finished Goods', endpoint: '/api/import/finished-goods', icon: '📦' },
-  rawMaterials: { label: 'Raw Materials', endpoint: '/api/import/raw-materials', icon: '🧱' },
+  // Raw Materials retired 2026-06-25 — import via Material Cost › IFS Materials.
   bom: { label: 'Manufacturing Structures (BOM)', endpoint: '/api/import/bom', icon: '⚙️' },
   routing: { label: 'Routing Operations', endpoint: '/api/import/routing', icon: '🔄' },
 };

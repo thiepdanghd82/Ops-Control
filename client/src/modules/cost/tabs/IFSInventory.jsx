@@ -20,11 +20,10 @@ const IMPORT_CFG = {
     clear: () => importApi.clearFinishedGoods(),
     label: 'Finished Goods',
   },
-  rawMaterials: {
-    wizardKey: 'raw-materials',
-    clear: () => importApi.clearRawMaterials(),
-    label: 'Raw Materials',
-  },
+  // Raw Materials retired from IFS Inventory 2026-06-25 — raw-material
+  // master moved to Material Cost › IFS Materials (ifs_materials.json).
+  // The server raw_materials feed stays alive (Planning Qty On Hand)
+  // until qty is migrated onto IFS Materials.
 };
 
 const PER_PAGE = 100;
@@ -75,30 +74,6 @@ const TAB_CONFIG = [
       >
         <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
         <polyline points="22 4 12 14.01 9 11.01" />
-      </svg>
-    ),
-  },
-  {
-    id: 'rawMaterials',
-    label: 'Raw Materials',
-    col: '#7c3aed',
-    brd: '#a855f7',
-    headerBg: '#faf5ff',
-    hover: '#faf5ff',
-    icon: (
-      <svg
-        viewBox="0 0 24 24"
-        width="20"
-        height="20"
-        fill="none"
-        stroke="white"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
-        <line x1="3" y1="6" x2="21" y2="6" />
-        <path d="M16 10a4 4 0 01-8 0" />
       </svg>
     ),
   },
@@ -176,7 +151,7 @@ function saveVisibleCols(tabId, cols) {
 }
 
 const IFS_TAB_KEY = 'ops-ifs-active-tab';
-const ALLOWED_IFS_TABS = ['inventory', 'finishedGoods', 'rawMaterials'];
+const ALLOWED_IFS_TABS = ['inventory', 'finishedGoods'];
 
 export default function IFSInventory() {
   // Sprint AR — hook-managed fetch. Multi-MB inventory response is
@@ -194,7 +169,6 @@ export default function IFSInventory() {
     () => ({
       inventory: rawInv?.inventory || [],
       finishedGoods: rawInv?.finishedGoods || [],
-      rawMaterials: rawInv?.rawMaterials || [],
     }),
     [rawInv]
   );

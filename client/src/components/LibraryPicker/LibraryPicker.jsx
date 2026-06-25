@@ -73,24 +73,25 @@ function normSourcing(row) {
     extra: row.status || '',
   };
 }
-function normRawMaterial(row) {
-  // raw_materials rows: { "Part No", "Part Description", "Supplier ID",
-  // Price, "Price Unit Measure", "Purch U/M", ... }
-  const partNo = row['Part No'] || row.part_no || '';
+function normIfsMaterial(row) {
+  // IFS Materials (Material Cost) canonical rows: { part_no, desc,
+  // supplier_id, supplier, conv, price, currency, uom, ... }. Tolerates
+  // the legacy IFS-Inventory Title-Case keys for any in-flight cache.
+  const partNo = row.part_no || row['Part No'] || '';
   return {
     code: partNo,
-    ifs_code: partNo, // For IFS inventory the Part No IS the IFS code.
-    desc: row['Part Description'] || row.description || '',
-    g_price: Number(row.Price ?? row.price) || 0,
-    supplier: row['Supplier ID'] || row.supplier || '',
-    extra: row['Price Unit Measure'] || row.uom || '',
+    ifs_code: partNo, // For IFS materials the Part No IS the IFS code.
+    desc: row.desc || row['Part Description'] || '',
+    g_price: Number(row.price ?? row.Price) || 0,
+    supplier: row.supplier || row.supplier_id || row['Supplier ID'] || '',
+    extra: row.uom || row['Price Unit Measure'] || '',
   };
 }
 
 const LIBRARIES = [
   { key: 'npi', labelKey: 'picker.lib.npi', norm: normNPI, source: 'npi' },
   { key: 'sourcing', labelKey: 'picker.lib.sourcing', norm: normSourcing, source: 'sourcing' },
-  { key: 'raw', labelKey: 'picker.lib.raw', norm: normRawMaterial, source: 'rawMaterials' },
+  { key: 'ifs', labelKey: 'picker.lib.ifs', norm: normIfsMaterial, source: 'ifs' },
 ];
 
 // Case-insensitive substring match across the normalized searchable
