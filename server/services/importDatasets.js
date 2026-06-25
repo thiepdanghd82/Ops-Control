@@ -414,6 +414,58 @@ const NPI_DATASET = {
 };
 
 // ═══════════════════════════════════════════════════════════════════
+// IFS Materials (IFS "SupplierforPurchaseParts" export — canonical-key JSON)
+// ═══════════════════════════════════════════════════════════════════
+const IFS_DATASET = {
+  key: 'ifs-materials',
+  label: 'IFS Materials',
+  storage: {
+    kind: STORAGE_JSON_AOO,
+    folder: 'MaterialCost',
+    file: 'ifs_materials.json',
+  },
+  canonicalHeaders: [
+    'part_no',
+    'desc',
+    'supplier_id',
+    'supplier',
+    'conv',
+    'price',
+    'price_tax',
+    'currency',
+    'uom',
+  ],
+  prettyLabels: {
+    part_no: 'Part No',
+    desc: 'Part Description',
+    supplier_id: 'Supplier ID',
+    supplier: 'Supplier Name',
+    conv: 'Conversion Factor',
+    price: 'Price',
+    price_tax: 'Price incl. Tax',
+    currency: 'Currency',
+    uom: 'Price Unit Measure',
+  },
+  requiredHeaders: ['part_no'],
+  naturalKey: ['part_no', 'supplier_id'],
+  columnTypes: { conv: 'number', price: 'number', price_tax: 'number' },
+  aliases: aliasMap({
+    part_no: ['Part No', 'Part Number', 'Mã hàng', 'Part'],
+    desc: ['Part Description', 'Description', 'Desc', 'Mô tả'],
+    supplier_id: ['Supplier ID', 'Supplier Code', 'Mã NCC'],
+    supplier: ['Supplier Name', 'Supplier', 'Vendor', 'NCC', 'Nhà cung cấp'],
+    conv: ['Conversion Factor', 'Conv', 'Hệ số quy đổi'],
+    price: ['Price', 'Unit Price', 'Giá'],
+    price_tax: ['Price incl. Tax', 'Price incl Tax', 'Price with Tax', 'Giá gồm thuế'],
+    currency: ['Currency', 'Tiền tệ'],
+    uom: ['Price Unit Measure', 'Unit Measure', 'UoM', 'Unit', 'Đơn vị'],
+  }),
+  // No shadow-write: this dataset is read straight from ifs_materials.json by
+  // shared.getMaterials (like NPI/Sourcing), and is not consumed by calc, so it
+  // needs no SQLite materials-table mirror.
+};
+
+// ═══════════════════════════════════════════════════════════════════
 // Sourcing DB
 // ═══════════════════════════════════════════════════════════════════
 const SOURCING_DATASET = {
@@ -485,6 +537,7 @@ export const DATASETS = {
   'finished-goods': FINISHED_GOODS_DATASET,
   'raw-materials': RAW_MATERIALS_DATASET,
   'npi-materials': NPI_DATASET,
+  'ifs-materials': IFS_DATASET,
   'sourcing-db': SOURCING_DATASET,
 };
 

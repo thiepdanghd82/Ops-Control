@@ -185,8 +185,9 @@ router.get('/materials', (req, res) => {
   try {
     const matDB = readJson(path.join(LIB, 'MaterialCost', 'materials.json')) || [];
     const npiDB = readJson(path.join(LIB, 'MaterialCost', 'npi_materials.json')) || [];
+    const ifsDB = readJson(path.join(LIB, 'MaterialCost', 'ifs_materials.json')) || [];
     const sourcingDB = readJson(path.join(LIB, 'MaterialCost', 'sourcing_db.json')) || [];
-    res.json({ matDB, npiDB, sourcingDB });
+    res.json({ matDB, npiDB, ifsDB, sourcingDB });
   } catch (err) {
     res.status(500).json({ error: 'Failed to load materials' });
   }

@@ -398,3 +398,81 @@ test('mergeRows replace: wipes prior rows, keeps only uploaded (NPI)', () => {
   assert.equal(out[0].name, 'NEW-1');
   assert.ok(!out.some((r) => String(r.name).startsWith('OLD')), 'no prior rows remain');
 });
+
+// ─── IFS Materials (SupplierforPurchaseParts export) ───────────────
+const IFS = getDataset('ifs-materials');
+// The real headers the IFS "SupplierforPurchaseParts" export writes.
+const IFS_HEADERS = [
+  'Part No',
+  'Part Description',
+  'Supplier ID',
+  'Supplier Name',
+  'Conversion Factor',
+  'Price',
+  'Price incl. Tax',
+  'Currency',
+  'Price Unit Measure',
+];
+
+test('IFS_DATASET registered: part_no required, [part_no,supplier_id] natural key', () => {
+  assert.ok(IFS, 'ifs-materials dataset is registered');
+  assert.deepEqual(IFS.requiredHeaders, ['part_no']);
+  assert.deepEqual(IFS.naturalKey, ['part_no', 'supplier_id']);
+  assert.equal(IFS.storage.file, 'ifs_materials.json');
+  assert.equal(IFS.canonicalHeaders.length, 9);
+});
+
+test('mapHeaders: real IFS export headers — all 9 map, none dropped', () => {
+  const r = mapHeaders(IFS_HEADERS, IFS);
+  for (const k of IFS.canonicalHeaders) assert.ok(k in r.mapping, `"${k}" must map`);
+  assert.deepEqual(r.missing, []);
+  assert.deepEqual(r.unmapped, []);
+});
+
+test('mapHeaders: IFS unknown extra column → UNMATCHED, never silent-drop', () => {
+  const r = mapHeaders([...IFS_HEADERS, 'Some Weird Extra Col'], IFS);
+  assert.ok(r.unmapped.includes(IFS_HEADERS.length), 'extra column index is unmapped');
+  assert.deepEqual(r.missing, [], 'required still satisfied');
+  // the extra column is surfaced in the per-column report, not dropped
+  const extra = r.columns.find((c) => c.raw === 'Some Weird Extra Col');
+  assert.equal(extra.status, 'unmatched');
+});
+
+test('mapHeaders: missing Part No blocks (required)', () => {
+  const r = mapHeaders(['Supplier ID', 'Price'], IFS);
+  assert.deepEqual(r.missing, ['part_no']);
+});
+
+test('IFS coercion: conv / price / price_tax coerce to number', () => {
+  const headers = IFS.canonicalHeaders;
+  const idx = Object.fromEntries(headers.map((h, i) => [h, i]));
+  const row = headers.map((h) =>
+    h === 'part_no'
+      ? 'P1'
+      : h === 'conv'
+        ? '1,5'
+        : h === 'price'
+          ? '2.50'
+          : h === 'price_tax'
+            ? '2.75'
+            : ''
+  );
+  const { rows: out } = coerceRows(headers, [row], IFS);
+  assert.equal(out[0][idx.conv], 1.5);
+  assert.equal(out[0][idx.price], 2.5);
+  assert.equal(out[0][idx.price_tax], 2.75);
+});
+
+test('mergeRows replace wipes prior IFS rows, keeps only uploaded', () => {
+  const existing = [{ part_no: 'OLD', supplier_id: 'S1' }];
+  const newCanonical = {
+    headers: IFS.canonicalHeaders,
+    rows: [
+      IFS.canonicalHeaders.map((h) => (h === 'part_no' ? 'NEW' : h === 'supplier_id' ? 'S2' : '')),
+    ],
+  };
+  const out = mergeRows({ existing, newCanonical, dataset: IFS, mode: 'replace' });
+  assert.equal(out.length, 1);
+  assert.equal(out[0].part_no, 'NEW');
+  assert.ok(!out.some((r) => r.part_no === 'OLD'));
+});
