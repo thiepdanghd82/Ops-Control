@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import {
   mapHeaders,
   matchHeader,
+  resolveHeaderClaims,
   applyMappingOverrides,
   coerceRows,
   buildCanonical,
@@ -573,6 +574,39 @@ test('mapHeaders: confidence wins even WITHOUT sample data (title-only)', () => 
   assert.equal(r.mapping.desc, 2);
   assert.equal(r.mapping.price, 6);
   assert.equal(r.mapping.price_tax, 7);
+});
+
+// resolveHeaderClaims is the shared resolver behind BOTH mapHeaders (registry
+// datasets) and the legacy header-map importer (import.js mapRowsByHeader),
+// so the same confidence-ranked + data-aware logic protects every import path.
+test('resolveHeaderClaims: exact header beats earlier subset match (legacy map)', () => {
+  // A flat { normKey: canonical } map, the shape the legacy importer uses.
+  // Like the registry datasets: the SPECIFIC header is an exact alias while a
+  // generic alias ("description") is what the wrong column subset-matches.
+  const headerMap = {
+    price: 'price',
+    'supplier name': 'supplier',
+    'part description': 'desc',
+    description: 'desc',
+  };
+  const headers = [
+    'Use Price Incl Tax',
+    'Price',
+    'Site Description',
+    'Part Description',
+    'Supplier Name',
+  ];
+  const sample = [
+    [false, 2.59, 'CCL Design Vietnam', '(RF3) RFID', 'ACUBE INFOTECH'],
+    [false, 0.47, 'CCL Design Vietnam', '(TWPE5050)', 'Adcel Vietnam'],
+  ];
+  const { claims } = resolveHeaderClaims(headers, headerMap, {
+    numberFields: ['price'],
+    sampleRows: sample,
+  });
+  assert.equal(claims.price, 1, 'price → "Price" col, not the boolean "Use Price Incl Tax"');
+  assert.equal(claims.desc, 3, 'desc → "Part Description", not "Site Description"');
+  assert.equal(claims.supplier, 4, 'supplier → "Supplier Name"');
 });
 
 test('mapHeaders: data disambiguates two equal-confidence number candidates', () => {

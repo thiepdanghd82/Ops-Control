@@ -33,7 +33,7 @@ import {
   shadowClearInventory,
   shadowClearMaterials,
 } from '../repositories/shadowWrite.js';
-import { matchHeader } from '../services/importPipeline.js';
+import { resolveHeaderClaims } from '../services/importPipeline.js';
 import { uploadSingle } from '../utils/uploadGuard.js';
 
 // Convert {headers, rows[]} to array-of-objects for shadow-write mappers.
@@ -718,24 +718,21 @@ function normKey(s) {
     .replace(/\s+/g, ' ');
 }
 
-function mapRowsByHeader(headers, rows, headerMap) {
-  // Build column-index → field-key lookup once. Uses the tolerant matcher
-  // (Lesson 32) so real export headers like "USD / M² PRICE" / "MM THICKNESS"
-  // / "M² MOQ" / "DAYS LEAD TIME" / "NOTES / REMARKS" map instead of being
-  // silently dropped — headerMap is the same { normKey: canonical } shape the
-  // matcher expects.
-  const colToField = {};
-  headers.forEach((h, i) => {
-    const key = matchHeader(h, headerMap).canonical;
-    if (key && !(key in colToField)) colToField[key] = i;
-  });
-  const fields = Object.keys(colToField);
+function mapRowsByHeader(headers, rows, headerMap, numberFields = []) {
+  // Tolerant matcher (Lesson 32) + confidence-ranked, data-aware conflict
+  // resolution (PR #211) via the shared resolver — so real export headers like
+  // "USD / M² PRICE" map instead of being silently dropped, AND when several
+  // columns match one field the EXACT header wins over a weak token-subset
+  // match regardless of column order (no more "first column in the file"
+  // stealing a field). `headerMap` is the same { normKey: canonical } shape.
+  const { claims } = resolveHeaderClaims(headers, headerMap, { numberFields, sampleRows: rows });
+  const fields = Object.keys(claims);
   if (fields.length === 0) return [];
   return rows
     .map((row) => {
       const obj = {};
       for (const f of fields) {
-        const v = row[colToField[f]];
+        const v = row[claims[f]];
         if (v !== undefined && v !== null && v !== '') obj[f] = v;
       }
       return obj;
@@ -766,7 +763,12 @@ function handleMaterialsImport(cfg) {
         return res.status(400).json({ ok: false, error: 'File has too few columns' });
       }
 
-      const mappedRows = mapRowsByHeader(parsed.headers, parsed.rows, cfg.headerMap);
+      const mappedRows = mapRowsByHeader(
+        parsed.headers,
+        parsed.rows,
+        cfg.headerMap,
+        cfg.numberFields || []
+      );
       if (mappedRows.length === 0) {
         return res.status(400).json({
           ok: false,
@@ -846,6 +848,7 @@ router.post(
     label: 'NPI Materials',
     filename: 'npi_materials.json',
     headerMap: NPI_HEADER_MAP,
+    numberFields: ['price', 'thick', 'moq', 'lt'],
     hintHeaders: ['Date', 'Material Name', 'Price', 'Type', 'Thickness', 'Supplier'],
   })
 );
@@ -944,7 +947,13 @@ router.post(
       // Map raw rows to internal field keys via fuzzy header matching, then
       // filter out rows without a workcenter name (blank separator rows in
       // the CSV, totals rows, etc.).
-      const mapped = mapRowsByHeader(parsed.headers, parsed.rows, RATE_HEADER_MAP)
+      const mapped = mapRowsByHeader(parsed.headers, parsed.rows, RATE_HEADER_MAP, [
+        'crew',
+        'machine_rate',
+        'labor_rate',
+        'mc_cost',
+        'oh_cost',
+      ])
         .map(normaliseRateRow)
         .filter((r) => r.workcenter && r.workcenter.length > 0);
 
@@ -1008,6 +1017,7 @@ router.post(
     label: 'Sourcing DB',
     filename: 'sourcing_db.json',
     headerMap: SOURCING_HEADER_MAP,
+    numberFields: ['exw', 'dap', 'moq', 'lt'],
     hintHeaders: ['Req. Date', 'Customer', 'Material', 'EXW Price', 'DAP Price', 'Supplier'],
   })
 );

@@ -156,6 +156,56 @@ function numericFitness(sampleRows, colIndex, limit = 100) {
 }
 
 /**
+ * Resolve raw headers → the winning column index per canonical, using the
+ * tolerant matcher with confidence-ranked (and optionally data-aware)
+ * conflict resolution. Shared by `mapHeaders` (registry datasets) and the
+ * legacy header-map importer so EVERY import path resolves identically.
+ *
+ * When several columns match one canonical the winner is chosen by:
+ *   1. highest confidence  (exact 1.0 beats token-subset 0.7),
+ *   2. data-type fitness   (for number fields: drop non-exact candidates
+ *      whose sampled data is not numeric, then break ties by numeric
+ *      fitness) — requires `sampleRows`,
+ *   3. leftmost column.
+ *
+ * @param {string[]} rawHeaders
+ * @param {Object}   aliases                 { normKey(alias): canonical }
+ * @param {Object}   [opts]
+ * @param {Iterable<string>} [opts.numberFields] canonicals that hold numbers
+ * @param {Array[]}  [opts.sampleRows]       parsed data rows (data-aware tie-break)
+ * @returns {{ claims: Object, matches: Array }} claims = { canonical: winningIndex }
+ */
+export function resolveHeaderClaims(rawHeaders, aliases, opts = {}) {
+  const numberFields = new Set(opts.numberFields || []);
+  const sampleRows = Array.isArray(opts.sampleRows) ? opts.sampleRows : null;
+  const hasSamples = !!sampleRows && sampleRows.length > 0;
+  const matches = rawHeaders.map((h, i) => ({ index: i, raw: h, ...matchHeader(h, aliases) }));
+  const byCanonical = new Map();
+  for (const m of matches) {
+    if (!m.canonical) continue;
+    if (!byCanonical.has(m.canonical)) byCanonical.set(m.canonical, []);
+    byCanonical.get(m.canonical).push(m);
+  }
+  const claims = {};
+  for (const [canonical, cands] of byCanonical) {
+    const isNum = numberFields.has(canonical);
+    const fit = (m) => (hasSamples ? numericFitness(sampleRows, m.index) : 0);
+    let pool = cands;
+    if (isNum && hasSamples) {
+      // A boolean / text column can't be a number field unless its header is
+      // an EXACT alias match — drop the rest so it can't steal the canonical.
+      const qualified = cands.filter((m) => m.confidence >= 1 || fit(m) >= 0.3);
+      if (qualified.length) pool = qualified;
+    }
+    pool = [...pool].sort(
+      (a, b) => b.confidence - a.confidence || fit(b) - fit(a) || a.index - b.index
+    );
+    claims[canonical] = pool[0].index;
+  }
+  return { claims, matches };
+}
+
+/**
  * Given the raw headers of an uploaded file (and, optionally, the parsed
  * data rows), return:
  *   - normalisedHeaders: same length as input, with each header rewritten
@@ -179,38 +229,18 @@ function numericFitness(sampleRows, colIndex, limit = 100) {
 export function mapHeaders(rawHeaders, dataset, sampleRows = null) {
   const aliases = dataset.aliases || {};
   const colTypes = dataset.columnTypes || {};
+  const numberFields = Object.keys(colTypes).filter((k) => colTypes[k] === 'number');
   const normalisedHeaders = new Array(rawHeaders.length).fill(null);
   const mapping = {};
   const unmapped = [];
   const columns = [];
-  const hasSamples = Array.isArray(sampleRows) && sampleRows.length > 0;
 
-  // 1. Match every column against the alias map.
-  const matches = rawHeaders.map((h, i) => ({ index: i, raw: h, ...matchHeader(h, aliases) }));
-
-  // 2. Resolve each canonical to its single best column.
-  const claims = {}; // canonical -> winning column index
-  const byCanonical = new Map();
-  for (const m of matches) {
-    if (!m.canonical) continue;
-    if (!byCanonical.has(m.canonical)) byCanonical.set(m.canonical, []);
-    byCanonical.get(m.canonical).push(m);
-  }
-  for (const [canonical, cands] of byCanonical) {
-    const isNum = colTypes[canonical] === 'number';
-    const fit = (m) => (hasSamples ? numericFitness(sampleRows, m.index) : 0);
-    let pool = cands;
-    if (isNum && hasSamples) {
-      // A boolean / text column can't be a number field unless its header is
-      // an EXACT alias match — drop the rest so it can't steal the canonical.
-      const qualified = cands.filter((m) => m.confidence >= 1 || fit(m) >= 0.3);
-      if (qualified.length) pool = qualified;
-    }
-    pool = [...pool].sort(
-      (a, b) => b.confidence - a.confidence || fit(b) - fit(a) || a.index - b.index
-    );
-    claims[canonical] = pool[0].index;
-  }
+  // 1 + 2. Match every column, then resolve each canonical to its single best
+  // column (confidence-ranked + data-aware) via the shared resolver.
+  const { claims, matches } = resolveHeaderClaims(rawHeaders, aliases, {
+    numberFields,
+    sampleRows,
+  });
 
   // 3. Emit per-column report + mapping using the resolved winners.
   for (const m of matches) {
