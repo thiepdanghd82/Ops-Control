@@ -800,6 +800,15 @@ function IFSTab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
                 <th className="th-d" style={{ width: 90 }}>
                   Mfg Leadtime
                 </th>
+                <th className="th-d" style={{ width: 90 }}>
+                  Thickness
+                </th>
+                <th className="th-d" style={{ width: 130 }}>
+                  Type Designation
+                </th>
+                <th className="th-d" style={{ minWidth: 170 }}>
+                  Product Family
+                </th>
                 <th className="th-d" style={{ minWidth: 150 }}>
                   Tax Code Desc.
                 </th>
@@ -817,7 +826,7 @@ function IFSTab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
             <tbody>
               {paged.length === 0 ? (
                 <tr>
-                  <td colSpan={16} style={{ padding: 0 }}>
+                  <td colSpan={19} style={{ padding: 0 }}>
                     <EmptyState
                       icon="📋"
                       title="No materials found"
@@ -848,6 +857,11 @@ function IFSTab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
                       <td className="td-text">
                         {r.leadtime !== '' && r.leadtime != null ? r.leadtime : '—'}
                       </td>
+                      <td className="td-text">
+                        {r.thickness !== '' && r.thickness != null ? r.thickness : '—'}
+                      </td>
+                      <td className="td-text">{r.type_designation || '—'}</td>
+                      <td className="td-text">{r.product_family || '—'}</td>
                       <td className="td-text">{r.tax_code_desc || '—'}</td>
                       <td className="td-text">{r.status_code || '—'}</td>
                       <td className="td-text">{r.status_code_desc || '—'}</td>
@@ -979,6 +993,28 @@ function IFSEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
             label="Price Unit Measure"
             value={form.uom}
             onChange={(v) => set('uom', v)}
+            disabled={isViewOnly}
+          />
+        </Section>
+        <Section color="#0f766e" icon="📐" title="Specs">
+          <Field
+            label="Thickness"
+            value={form.thickness}
+            onChange={(v) => set('thickness', v)}
+            type="number"
+            disabled={isViewOnly}
+          />
+          <Field
+            label="Type Designation"
+            value={form.type_designation}
+            onChange={(v) => set('type_designation', v)}
+            disabled={isViewOnly}
+          />
+          <Field
+            label="Part Product Family Description"
+            value={form.product_family}
+            onChange={(v) => set('product_family', v)}
+            wide
             disabled={isViewOnly}
           />
         </Section>
