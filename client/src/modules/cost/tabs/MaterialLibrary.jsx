@@ -22,6 +22,7 @@ export default function MaterialLibrary() {
   const isViewOnly = !hasRole('user');
   const canImport = hasRole('admin');
   const [npiDB, setNpiDB] = useState([]);
+  const [ifsDB, setIfsDB] = useState([]);
   const [sourcingDB, setSourcingDB] = useState([]);
   const [loading, setLoading] = useState(true);
   const [subTab, setSubTab] = useState('npi');
@@ -36,6 +37,7 @@ export default function MaterialLibrary() {
     try {
       const data = await sharedApi.getMaterials();
       setNpiDB(data.npiDB || []);
+      setIfsDB(data.ifsDB || []);
       setSourcingDB(data.sourcingDB || []);
     } catch (err) {
       console.error('Failed to load materials:', err);
@@ -46,7 +48,7 @@ export default function MaterialLibrary() {
 
   async function handleSave() {
     try {
-      await costApi.saveAll({ npiDB, sourcingDB });
+      await costApi.saveAll({ npiDB, ifsDB, sourcingDB });
       setIsDirty(false);
     } catch (e) {
       alert('Save failed: ' + e.message);
@@ -66,6 +68,7 @@ export default function MaterialLibrary() {
 
   const TABS = [
     { id: 'npi', label: 'NPI Materials', count: npiDB.length, col: '#0369a1', brd: '#0ea5e9' },
+    { id: 'ifs', label: 'IFS Materials', count: ifsDB.length, col: '#6d28d9', brd: '#8b5cf6' },
     {
       id: 'sourcing',
       label: 'Sourcing DB',
@@ -103,6 +106,16 @@ export default function MaterialLibrary() {
           <NPITab
             data={npiDB}
             setData={setNpiDB}
+            markDirty={markDirty}
+            isViewOnly={isViewOnly}
+            canImport={canImport}
+            reload={loadData}
+          />
+        )}
+        {subTab === 'ifs' && (
+          <IFSTab
+            data={ifsDB}
+            setData={setIfsDB}
             markDirty={markDirty}
             isViewOnly={isViewOnly}
             canImport={canImport}
@@ -588,6 +601,360 @@ function NPIEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
               rows={3}
             />
           </div>
+        </Section>
+      </Modal.Body>
+      <Modal.Footer align="between">
+        {!isNew && onDelete && !isViewOnly ? (
+          <button type="button" className="op-btn op-btn-danger" onClick={onDelete}>
+            Delete
+          </button>
+        ) : (
+          <span />
+        )}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="button" className="op-btn op-btn-ghost" onClick={onClose}>
+            Cancel
+          </button>
+          {!isViewOnly && (
+            <button type="button" className="op-btn op-btn-primary" onClick={() => onSave(form)}>
+              Save Changes
+            </button>
+          )}
+        </div>
+      </Modal.Footer>
+    </Modal>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// IFS MATERIALS TAB (IFS SupplierforPurchaseParts — 9 columns)
+// ═══════════════════════════════════════════════════════════
+function IFSTab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(0);
+  const [editIdx, setEditIdx] = useState(null);
+  const [addMode, setAddMode] = useState(false);
+  const searchRef = useRef(null);
+
+  const filtered = useMemo(() => {
+    if (!search) return data;
+    const terms = search.toLowerCase().split(/\s+/).filter(Boolean);
+    return data.filter((r) => {
+      const text = [r.part_no, r.desc, r.supplier_id, r.supplier]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return terms.every((t) => text.includes(t));
+    });
+  }, [data, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const effectivePage = Math.min(page, totalPages - 1);
+  const paged = filtered.slice(effectivePage * PER_PAGE, (effectivePage + 1) * PER_PAGE);
+
+  function handleAdd(row) {
+    setData((prev) => [...prev, row]);
+    markDirty();
+    setAddMode(false);
+  }
+  function handleEditSave(idx, row) {
+    setData((prev) => {
+      const n = [...prev];
+      n[idx] = row;
+      return n;
+    });
+    markDirty();
+    setEditIdx(null);
+  }
+  function handleDelete(idx) {
+    if (!confirm('Delete this IFS material?')) return;
+    setData((prev) => prev.filter((_, i) => i !== idx));
+    markDirty();
+  }
+
+  return (
+    <>
+      <div className="ml-headerbar ml-headerbar-npi">
+        <div className="ml-hb-icon">
+          <svg
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            fill="none"
+            stroke="white"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
+            <rect x="9" y="3" width="6" height="4" rx="1" />
+            <line x1="9" y1="12" x2="15" y2="12" />
+            <line x1="9" y1="16" x2="13" y2="16" />
+          </svg>
+        </div>
+        <div className="ml-hb-titleblock">
+          <div className="ml-hb-title">IFS Materials</div>
+          <div className="ml-hb-meta">
+            <span className="ml-hb-badge">{data.length}</span>
+            <span className="ml-hb-sub">
+              {paged.length} of {filtered.length}
+            </span>
+          </div>
+        </div>
+        <div className="ml-hb-search-wrap">
+          <svg
+            className="ml-search-icon"
+            viewBox="0 0 24 24"
+            width="13"
+            height="13"
+            fill="none"
+            stroke="#94a3b8"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            ref={searchRef}
+            type="text"
+            className="ml-hb-search"
+            placeholder="Search by part no, description, supplier…"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(0);
+            }}
+          />
+          {search && filtered.length < data.length && (
+            <span className="ml-hb-search-badge">
+              {filtered.length} / {data.length}
+            </span>
+          )}
+        </div>
+        {!isViewOnly && (
+          <button className="ml-hb-btn-add" onClick={() => setAddMode(true)}>
+            <svg
+              viewBox="0 0 24 24"
+              width="11"
+              height="11"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            >
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Add Row
+          </button>
+        )}
+        {canImport && (
+          <ImportFileButton
+            datasetKey="ifs-materials"
+            label="IFS Materials"
+            onDone={reload}
+            inline
+          />
+        )}
+      </div>
+
+      <div className="ml-table-full">
+        <div className="ml-table-flush">
+          <table className="ml-table">
+            <thead>
+              <tr>
+                <th className="th-d" style={{ width: 42, textAlign: 'center' }}>
+                  #
+                </th>
+                <th className="th-d" style={{ minWidth: 150 }}>
+                  Part No
+                </th>
+                <th className="th-d" style={{ minWidth: 220 }}>
+                  Part Description
+                </th>
+                <th className="th-d" style={{ width: 110 }}>
+                  Supplier ID
+                </th>
+                <th className="th-d" style={{ minWidth: 160 }}>
+                  Supplier Name
+                </th>
+                <th className="th-b" style={{ width: 90 }}>
+                  Conversion
+                </th>
+                <th className="th-b" style={{ width: 96 }}>
+                  Price
+                </th>
+                <th className="th-b" style={{ width: 110 }}>
+                  Price incl. Tax
+                </th>
+                <th className="th-d" style={{ width: 80 }}>
+                  Currency
+                </th>
+                <th className="th-d" style={{ width: 100 }}>
+                  Price UoM
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {paged.length === 0 ? (
+                <tr>
+                  <td colSpan={10} style={{ padding: 0 }}>
+                    <EmptyState
+                      icon="📋"
+                      title="No materials found"
+                      hint="Try clearing the search or import a fresh IFS materials file."
+                    />
+                  </td>
+                </tr>
+              ) : (
+                paged.map((r, i) => {
+                  const realIdx = data.indexOf(r);
+                  return (
+                    <tr
+                      key={realIdx}
+                      className="ml-row"
+                      onClick={() => !isViewOnly && setEditIdx(realIdx)}
+                    >
+                      <td className="td-num">{page * PER_PAGE + i + 1}</td>
+                      <td className="td-name">{r.part_no || '—'}</td>
+                      <td className="td-type">{r.desc || '—'}</td>
+                      <td className="td-text">{r.supplier_id || '—'}</td>
+                      <td className="td-text">{r.supplier || '—'}</td>
+                      <td className="td-price">{fmtPrice(r.conv)}</td>
+                      <td className="td-price">{fmtPrice(r.price)}</td>
+                      <td className="td-price">{fmtPrice(r.price_tax)}</td>
+                      <td className="td-text">{r.currency || '—'}</td>
+                      <td className="td-text">{r.uom || '—'}</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {totalPages > 1 && (
+        <div className="ml-pagination">
+          <button className="ml-pg-btn" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+            ← Prev
+          </button>
+          <span className="ml-pg-info">
+            {page + 1} / {totalPages}
+          </span>
+          <button
+            className="ml-pg-btn"
+            disabled={page >= totalPages - 1}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next →
+          </button>
+        </div>
+      )}
+
+      {editIdx !== null && (
+        <IFSEditModal
+          row={data[editIdx]}
+          idx={editIdx}
+          onSave={(row) => handleEditSave(editIdx, row)}
+          onDelete={() => {
+            handleDelete(editIdx);
+            setEditIdx(null);
+          }}
+          onClose={() => setEditIdx(null)}
+          isViewOnly={isViewOnly}
+        />
+      )}
+      {addMode && (
+        <IFSEditModal
+          row={{}}
+          idx={-1}
+          onSave={handleAdd}
+          onClose={() => setAddMode(false)}
+          isNew
+          isViewOnly={false}
+        />
+      )}
+    </>
+  );
+}
+
+function IFSEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }) {
+  const [form, setForm] = useState({ ...row });
+  const set = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
+
+  return (
+    <Modal open onClose={onClose} size="lg" ariaLabelledBy="ml-ifs-title">
+      <Modal.Header
+        id="ml-ifs-title"
+        title={isNew ? 'New IFS Material' : 'Edit IFS Material'}
+        subtitle={isNew ? undefined : `#${idx + 1} — ${row.part_no || 'Untitled'}`}
+        severity="info"
+      />
+      <Modal.Body>
+        <Section color="#1e40af" icon="🏷️" title="Identification">
+          <Field
+            label="Part No"
+            value={form.part_no}
+            onChange={(v) => set('part_no', v)}
+            disabled={isViewOnly}
+          />
+          <Field
+            label="Supplier ID"
+            value={form.supplier_id}
+            onChange={(v) => set('supplier_id', v)}
+            disabled={isViewOnly}
+          />
+          <Field
+            label="Part Description"
+            value={form.desc}
+            onChange={(v) => set('desc', v)}
+            wide
+            disabled={isViewOnly}
+          />
+          <Field
+            label="Supplier Name"
+            value={form.supplier}
+            onChange={(v) => set('supplier', v)}
+            wide
+            disabled={isViewOnly}
+          />
+        </Section>
+        <Section color="#047857" icon="💰" title="Pricing">
+          <Field
+            label="Conversion Factor"
+            value={form.conv}
+            onChange={(v) => set('conv', v)}
+            type="number"
+            disabled={isViewOnly}
+          />
+          <Field
+            label="Price"
+            value={form.price}
+            onChange={(v) => set('price', v)}
+            type="number"
+            disabled={isViewOnly}
+          />
+          <Field
+            label="Price incl. Tax"
+            value={form.price_tax}
+            onChange={(v) => set('price_tax', v)}
+            type="number"
+            disabled={isViewOnly}
+          />
+          <Field
+            label="Currency"
+            value={form.currency}
+            onChange={(v) => set('currency', v)}
+            disabled={isViewOnly}
+          />
+          <Field
+            label="Price Unit Measure"
+            value={form.uom}
+            onChange={(v) => set('uom', v)}
+            disabled={isViewOnly}
+          />
         </Section>
       </Modal.Body>
       <Modal.Footer align="between">

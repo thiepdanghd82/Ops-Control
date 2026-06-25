@@ -614,6 +614,7 @@ function buildBackupSnapshot() {
     summarizeDB: path.join(LIB_DIR, 'SummarizeDB', 'summarize_db.json'),
     matDB: path.join(LIB_DIR, 'MaterialCost', 'materials.json'),
     npiDB: path.join(LIB_DIR, 'MaterialCost', 'npi_materials.json'),
+    ifsDB: path.join(LIB_DIR, 'MaterialCost', 'ifs_materials.json'),
     sourcingDB: path.join(LIB_DIR, 'MaterialCost', 'sourcing_db.json'),
     rateDB: path.join(LIB_DIR, 'Rate', 'rate.json'),
     rateSitesDB: path.join(LIB_DIR, 'Rate', 'rate_sites.json'),
@@ -639,6 +640,7 @@ function restoreFromSnapshot(snap) {
     summarizeDB: path.join(LIB_DIR, 'SummarizeDB', 'summarize_db.json'),
     matDB: path.join(LIB_DIR, 'MaterialCost', 'materials.json'),
     npiDB: path.join(LIB_DIR, 'MaterialCost', 'npi_materials.json'),
+    ifsDB: path.join(LIB_DIR, 'MaterialCost', 'ifs_materials.json'),
     sourcingDB: path.join(LIB_DIR, 'MaterialCost', 'sourcing_db.json'),
     rateDB: path.join(LIB_DIR, 'Rate', 'rate.json'),
     rateSitesDB: path.join(LIB_DIR, 'Rate', 'rate_sites.json'),
@@ -1916,6 +1918,7 @@ router.get('/load-all', (req, res) => {
     financeSumDB: path.join(LIB, 'Finance', 'finance_sum.json'),
     inkCalcDB: path.join(LIB, 'InkCalc', 'ink_calc.json'),
     npiDB: path.join(LIB, 'MaterialCost', 'npi_materials.json'),
+    ifsDB: path.join(LIB, 'MaterialCost', 'ifs_materials.json'),
     sourcingDB: path.join(LIB, 'MaterialCost', 'sourcing_db.json'),
   };
   for (const [key, fp] of Object.entries(jsonMap)) {
@@ -1946,6 +1949,7 @@ const SAVE_ALL_KNOWN_KEYS = new Set([
   'financeSumDB',
   'inkCalcDB',
   'npiDB',
+  'ifsDB',
   'sourcingDB',
   // Control field (not a dataset): the DDL concurrency token the client echoes
   // from /shared/ddl so save-all can reject a stale DDL overwrite. Never written.
@@ -2242,6 +2246,10 @@ router.post(
         runWrite('npiDB', () =>
           writeJson(path.join(LIB, 'MaterialCost', 'npi_materials.json'), pl.npiDB)
         );
+      if (pl.ifsDB)
+        runWrite('ifsDB', () =>
+          writeJson(path.join(LIB, 'MaterialCost', 'ifs_materials.json'), pl.ifsDB)
+        );
       if (pl.sourcingDB)
         runWrite('sourcingDB', () =>
           writeJson(path.join(LIB, 'MaterialCost', 'sourcing_db.json'), pl.sourcingDB)
@@ -2334,6 +2342,7 @@ router.post(
         financeSumDB: 'library.imported',
         inkCalcDB: 'library.imported',
         npiDB: 'library.imported',
+        ifsDB: 'library.imported',
         sourcingDB: 'library.imported',
       };
       // Audit emit per successfully-saved dataset (P0-8b): forensic
@@ -3683,6 +3692,7 @@ router.post('/backup/upload', writeRateLimit, backupUpload.single('file'), (req,
       'financeSumDB',
       'inkCalcDB',
       'npiDB',
+      'ifsDB',
       'sourcingDB',
     ];
     const hasKnownKey = KNOWN_KEYS.some((k) => Object.prototype.hasOwnProperty.call(snap, k));
