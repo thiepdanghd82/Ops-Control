@@ -794,12 +794,30 @@ function IFSTab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
                 <th className="th-d" style={{ width: 100 }}>
                   Price UoM
                 </th>
+                <th className="th-d" style={{ width: 80 }}>
+                  Tax Code
+                </th>
+                <th className="th-d" style={{ width: 90 }}>
+                  Mfg Leadtime
+                </th>
+                <th className="th-d" style={{ minWidth: 150 }}>
+                  Tax Code Desc.
+                </th>
+                <th className="th-d" style={{ width: 80 }}>
+                  Status
+                </th>
+                <th className="th-d" style={{ width: 110 }}>
+                  Status Desc.
+                </th>
+                <th className="th-d" style={{ width: 110 }}>
+                  Country
+                </th>
               </tr>
             </thead>
             <tbody>
               {paged.length === 0 ? (
                 <tr>
-                  <td colSpan={10} style={{ padding: 0 }}>
+                  <td colSpan={16} style={{ padding: 0 }}>
                     <EmptyState
                       icon="📋"
                       title="No materials found"
@@ -826,6 +844,14 @@ function IFSTab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
                       <td className="td-price">{fmtPrice(r.price_tax)}</td>
                       <td className="td-text">{r.currency || '—'}</td>
                       <td className="td-text">{r.uom || '—'}</td>
+                      <td className="td-text">{r.tax_code || '—'}</td>
+                      <td className="td-text">
+                        {r.leadtime !== '' && r.leadtime != null ? r.leadtime : '—'}
+                      </td>
+                      <td className="td-text">{r.tax_code_desc || '—'}</td>
+                      <td className="td-text">{r.status_code || '—'}</td>
+                      <td className="td-text">{r.status_code_desc || '—'}</td>
+                      <td className="td-text">{r.country || '—'}</td>
                     </tr>
                   );
                 })
@@ -953,6 +979,46 @@ function IFSEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
             label="Price Unit Measure"
             value={form.uom}
             onChange={(v) => set('uom', v)}
+            disabled={isViewOnly}
+          />
+        </Section>
+        <Section color="#92400e" icon="🏛️" title="Tax & Status">
+          <Field
+            label="Tax Code"
+            value={form.tax_code}
+            onChange={(v) => set('tax_code', v)}
+            disabled={isViewOnly}
+          />
+          <Field
+            label="Tax Code Description"
+            value={form.tax_code_desc}
+            onChange={(v) => set('tax_code_desc', v)}
+            wide
+            disabled={isViewOnly}
+          />
+          <Field
+            label="Status Code"
+            value={form.status_code}
+            onChange={(v) => set('status_code', v)}
+            disabled={isViewOnly}
+          />
+          <Field
+            label="Status Code Description"
+            value={form.status_code_desc}
+            onChange={(v) => set('status_code_desc', v)}
+            disabled={isViewOnly}
+          />
+          <Field
+            label="Supplier Manufacturing Leadtime"
+            value={form.leadtime}
+            onChange={(v) => set('leadtime', v)}
+            type="number"
+            disabled={isViewOnly}
+          />
+          <Field
+            label="Country of Origin"
+            value={form.country}
+            onChange={(v) => set('country', v)}
             disabled={isViewOnly}
           />
         </Section>
