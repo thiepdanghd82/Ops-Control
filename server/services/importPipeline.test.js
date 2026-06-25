@@ -420,18 +420,39 @@ const IFS_HEADERS = [
   'Status Code Description',
   'Country of Origin',
 ];
+// 3 enrichment columns sourced from the Full Inventory export — not in the
+// SupplierforPurchaseParts upload, blank until a richer file is imported.
+const IFS_ENRICH = ['Thickness', 'Type Designation', 'Part Product Family Description'];
+const IFS_ENRICHED_HEADERS = [...IFS_HEADERS, ...IFS_ENRICH];
 
 test('IFS_DATASET registered: part_no required, [part_no,supplier_id] natural key', () => {
   assert.ok(IFS, 'ifs-materials dataset is registered');
   assert.deepEqual(IFS.requiredHeaders, ['part_no']);
   assert.deepEqual(IFS.naturalKey, ['part_no', 'supplier_id']);
   assert.equal(IFS.storage.file, 'ifs_materials.json');
-  assert.equal(IFS.canonicalHeaders.length, 15);
+  assert.equal(IFS.canonicalHeaders.length, 18);
 });
 
-test('mapHeaders: real IFS export headers — all 15 map, none dropped', () => {
+test('mapHeaders: real 15-col upload maps all source cols; 3 enrichment cols stay blank', () => {
   const r = mapHeaders(IFS_HEADERS, IFS);
+  assert.deepEqual(r.unmapped, [], 'every source header maps to a canonical');
+  assert.deepEqual(r.missing, []);
+  const enrich = ['thickness', 'type_designation', 'product_family'];
+  for (const k of IFS.canonicalHeaders) {
+    if (enrich.includes(k)) {
+      assert.ok(!(k in r.mapping), `"${k}" absent until a richer file provides it`);
+    } else {
+      assert.ok(k in r.mapping, `"${k}" must map`);
+    }
+  }
+});
+
+test('mapHeaders: enriched export maps all 18 incl Thickness/Type/Family', () => {
+  const r = mapHeaders(IFS_ENRICHED_HEADERS, IFS);
   for (const k of IFS.canonicalHeaders) assert.ok(k in r.mapping, `"${k}" must map`);
+  for (const k of ['thickness', 'type_designation', 'product_family']) {
+    assert.ok(k in r.mapping, `"${k}" must map`);
+  }
   assert.deepEqual(r.missing, []);
   assert.deepEqual(r.unmapped, []);
 });

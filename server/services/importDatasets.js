@@ -425,7 +425,9 @@ const IFS_DATASET = {
     file: 'ifs_materials.json',
   },
   // Mirrors the IFS "SupplierforPurchaseParts" upload (16 cols; the "#"
-  // row-index column is left unmapped). Column order matches the export.
+  // row-index column is left unmapped) + 3 enrichment columns
+  // (thickness / type_designation / product_family) sourced from the Full
+  // Inventory export — blank until a richer file is imported or edited in.
   canonicalHeaders: [
     'part_no',
     'desc',
@@ -438,6 +440,9 @@ const IFS_DATASET = {
     'uom',
     'tax_code',
     'leadtime',
+    'thickness',
+    'type_designation',
+    'product_family',
     'tax_code_desc',
     'status_code',
     'status_code_desc',
@@ -455,6 +460,9 @@ const IFS_DATASET = {
     uom: 'Price Unit Measure',
     tax_code: 'Tax Code',
     leadtime: 'Supplier Manufacturing Leadtime',
+    thickness: 'Thickness',
+    type_designation: 'Type Designation',
+    product_family: 'Part Product Family Description',
     tax_code_desc: 'Tax Code Description',
     status_code: 'Status Code',
     status_code_desc: 'Status Code Description',
@@ -462,7 +470,13 @@ const IFS_DATASET = {
   },
   requiredHeaders: ['part_no'],
   naturalKey: ['part_no', 'supplier_id'],
-  columnTypes: { conv: 'number', price: 'number', price_tax: 'number', leadtime: 'number' },
+  columnTypes: {
+    conv: 'number',
+    price: 'number',
+    price_tax: 'number',
+    leadtime: 'number',
+    thickness: 'number',
+  },
   aliases: aliasMap({
     part_no: ['Part No', 'Part Number', 'Mã hàng', 'Part'],
     desc: ['Part Description', 'Description', 'Desc', 'Mô tả'],
@@ -479,6 +493,14 @@ const IFS_DATASET = {
       'Manufacturing Leadtime',
       'Leadtime',
       'Lead Time',
+    ],
+    thickness: ['Thickness', 'Thick', 'Thickness (mm)', 'Độ dày'],
+    type_designation: ['Type Designation', 'Type', 'Material Type', 'Type Designation Description'],
+    product_family: [
+      'Part Product Family Description',
+      'Product Family',
+      'Part Product Family',
+      'Product Family Description',
     ],
     tax_code_desc: ['Tax Code Description', 'Tax Description'],
     status_code: ['Status Code', 'Status'],
