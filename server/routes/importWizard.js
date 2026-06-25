@@ -206,7 +206,10 @@ router.post(
         return res.status(400).json({ ok: false, error: 'no_data_rows' });
       }
 
-      const headerMappingRaw = mapHeaders(parsed.headers, dataset);
+      // Pass the parsed rows so the matcher can disambiguate number-typed
+      // canonicals by data (e.g. a real "Price" column vs a boolean "Use
+      // Price Incl Tax" column) — title + data mapping per Lesson 32.
+      const headerMappingRaw = mapHeaders(parsed.headers, dataset, parsed.rows);
       const headerMapping = overrides
         ? applyMappingOverrides(headerMappingRaw, overrides, dataset)
         : headerMappingRaw;

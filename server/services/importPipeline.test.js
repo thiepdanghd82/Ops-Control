@@ -524,3 +524,65 @@ test('mergeRows replace wipes prior IFS rows, keeps only uploaded', () => {
   assert.equal(out[0].part_no, 'NEW');
   assert.ok(!out.some((r) => r.part_no === 'OLD'));
 });
+
+// ─── Conflict resolution on the rich 74-col IFS export ─────────────
+// The full "SupplierforPurchaseParts ... _update_type_materials" export has
+// many columns that token-collide with a canonical: "Site Description" vs
+// "Part Description" (desc), "Use Price Incl Tax" (boolean) vs "Price" vs
+// "Price incl. Tax". The matcher must pick the EXACT header, not the first
+// column in file order, and must reject a boolean column from a number field.
+const IFS_RICH = [
+  'Site Description', // → must NOT win desc
+  'Part No',
+  'Part Description', // → desc (exact)
+  'Supplier ID',
+  'Supplier Name', // → supplier (exact)
+  'Use Price Incl Tax', // boolean → must NOT win price
+  'Price', // → price (exact)
+  'Price incl. Tax', // → price_tax (exact)
+];
+const IFS_RICH_SAMPLE = [
+  [
+    'CCL Design Vietnam',
+    '80643750S',
+    '(RF3) RFID LABEL',
+    'ACU581',
+    'ACUBE INFOTECH',
+    false,
+    2.59,
+    2.59,
+  ],
+  ['CCL Design Vietnam', '30030864', '(TWPE5050)', 'ADC581', 'Adcel Vietnam', false, 0.47, 0.47],
+];
+
+test('mapHeaders: exact header wins canonical over an earlier subset match', () => {
+  const r = mapHeaders(IFS_RICH, IFS, IFS_RICH_SAMPLE);
+  assert.equal(r.mapping.desc, 2, 'desc → "Part Description", not "Site Description"');
+  assert.equal(r.mapping.supplier, 4, 'supplier → "Supplier Name"');
+  assert.equal(r.mapping.price, 6, 'price → "Price", not boolean "Use Price Incl Tax"');
+  assert.equal(r.mapping.price_tax, 7, 'price_tax → "Price incl. Tax"');
+  // The losers are reported, never silently applied.
+  const bySite = r.columns.find((c) => c.raw === 'Site Description');
+  assert.equal(bySite.status, 'duplicate');
+  assert.ok(r.unmapped.includes(0), '"Site Description" left unmapped');
+  assert.ok(r.unmapped.includes(5), 'boolean "Use Price Incl Tax" left unmapped');
+});
+
+test('mapHeaders: confidence wins even WITHOUT sample data (title-only)', () => {
+  const r = mapHeaders(IFS_RICH, IFS);
+  assert.equal(r.mapping.desc, 2);
+  assert.equal(r.mapping.price, 6);
+  assert.equal(r.mapping.price_tax, 7);
+});
+
+test('mapHeaders: data disambiguates two equal-confidence number candidates', () => {
+  // Both subset-match price at 0.7; only the data says which is the real one.
+  const headers = ['Part No', 'Use Price Incl Tax', 'Net Price Value'];
+  const sample = [
+    ['P1', false, 10],
+    ['P2', false, 20],
+  ];
+  const r = mapHeaders(headers, IFS, sample);
+  assert.equal(r.mapping.price, 2, 'numeric "Net Price Value" beats boolean column');
+  assert.ok(r.unmapped.includes(1), 'boolean column rejected for the number field');
+});
