@@ -2843,16 +2843,9 @@ const DATA_IMPORT_DATASETS = [
     fetch: () => sharedApi.getProducts(),
     filename: 'finished_goods',
   },
-  {
-    key: 'rawMaterials',
-    label: 'Raw Materials',
-    desc: 'Raw material master data',
-    accept: '.csv,.xlsx,.xls',
-    upload: (file) => importApi.uploadRawMaterials(file),
-    clear: () => importApi.clearRawMaterials(),
-    fetch: () => sharedApi.getMaterials(),
-    filename: 'raw_materials',
-  },
+  // Raw Materials retired 2026-06-25 — raw-material master moved to
+  // Material Cost › IFS Materials (registry-driven import). Server
+  // raw_materials store + route retained for Planning Qty On Hand.
   {
     key: 'bom',
     label: 'BOM / Mfg Structures',

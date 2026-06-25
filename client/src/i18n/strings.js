@@ -176,7 +176,7 @@ export const STRINGS = {
   'picker.menu_title': { en: 'Search from library', vi: 'Tìm từ thư viện' },
   'picker.lib.npi': { en: 'NPI Material', vi: 'NPI Material' },
   'picker.lib.sourcing': { en: 'Sourcing DB', vi: 'Sourcing DB' },
-  'picker.lib.raw': { en: 'Raw Materials (IFS)', vi: 'Raw Materials (IFS)' },
+  'picker.lib.ifs': { en: 'IFS Materials', vi: 'IFS Materials' },
   'picker.close': { en: 'Close', vi: 'Đóng' },
   'picker.back': { en: 'Back to library list', vi: 'Quay lại danh sách thư viện' },
   'picker.search_placeholder': {

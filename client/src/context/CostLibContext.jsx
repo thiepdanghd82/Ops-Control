@@ -34,15 +34,13 @@ export function CostLibProvider({ children }) {
   // Raw data from server
   const [rawRates, setRawRates] = useState({ rateSites: {}, rate: [] });
   const [rawDDL, setRawDDL] = useState({ ddlSites: {}, ddl: {} });
-  const [materials, setMaterials] = useState({ matDB: [], npiDB: [], sourcingDB: [] });
+  const [materials, setMaterials] = useState({ matDB: [], npiDB: [], ifsDB: [], sourcingDB: [] });
   const [finance, setFinance] = useState({ wc: [], summary: {}, years: {} });
   const [inkCalc, setInkCalc] = useState({});
-  // Phase 10M — Raw Materials from IFS Inventory. Loaded here (was
-  // previously scoped to IFSInventory.jsx only) so the right-click
-  // material picker in Std/Complex can search it alongside NPI and
-  // Sourcing DB. Shape: Array<{ "Part No", "Part Description",
-  // "Supplier ID", Price, "Price Unit Measure", ... }>.
-  const [rawMaterials, setRawMaterials] = useState([]);
+  // 2026-06-25 — the right-click material picker's IFS library now reads
+  // Material Cost › IFS Materials (materials.ifsDB from /api/materials),
+  // a strict superset of the retired IFS-Inventory Raw Materials feed.
+  // No separate inventory fetch here anymore.
 
   // In-flight controller for the parallel lib-load. A new loadAll() —
   // e.g. `refreshLib()` after a Settings edit, or Strict-Mode double
@@ -59,19 +57,12 @@ export function CostLibProvider({ children }) {
     setLoading(true);
     setError(null);
     try {
-      const [ratesData, ddlData, matData, finData, inkData, invData] = await Promise.all([
+      const [ratesData, ddlData, matData, finData, inkData] = await Promise.all([
         sharedApi.getRates({ signal }),
         sharedApi.getDDL({ signal }),
         sharedApi.getMaterials({ signal }),
         sharedApi.getFinance({ signal }),
         sharedApi.getInkCalc({ signal }),
-        sharedApi.getInventory({ signal }).catch((e) => {
-          // AbortError propagates so the outer catch handles it; other
-          // inventory failures degrade to empty rawMaterials (optional
-          // data — the picker still works with NPI + Sourcing DB).
-          if (e?.name === 'AbortError') throw e;
-          return { rawMaterials: [] };
-        }),
       ]);
       if (signal.aborted) return;
       setRawRates(ratesData);
@@ -79,7 +70,6 @@ export function CostLibProvider({ children }) {
       setMaterials(matData);
       setFinance(finData);
       setInkCalc(inkData);
-      setRawMaterials(Array.isArray(invData?.rawMaterials) ? invData.rawMaterials : []);
     } catch (err) {
       // AbortError = superseded by a newer loadAll() or the provider
       // unmounted. Not a real failure — silent.
@@ -134,13 +124,13 @@ export function CostLibProvider({ children }) {
       mat: materials.matDB || [],
       npi: materials.npiDB || [],
       sourcing: materials.sourcingDB || [],
-      rawMaterials, // Phase 10M — IFS inventory raw materials library
+      ifs: materials.ifsDB || [], // IFS Materials — picker's IFS library (was Raw Materials)
       finance,
       financeWC: finance.wc || [],
       financeSum: finance.summary || {},
       inkCalc,
     };
-  }, [activeSite, rawRates, rawDDL, materials, finance, inkCalc, rawMaterials]);
+  }, [activeSite, rawRates, rawDDL, materials, finance, inkCalc]);
 
   // Helper functions matching COST V1.0 global helpers
   const getRateByWC = useCallback(
