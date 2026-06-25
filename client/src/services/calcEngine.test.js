@@ -2378,8 +2378,11 @@ test('matCostExcludingInk: null/bad input → 0 (no crash, no NaN)', () => {
 // field at all) heal via `state.lead_time || {}` fallback at the UI
 // without crashing.
 
+// 7 keys since Sprint S-MAT-LT added `lt_material_ovr` (Material L/T auto-derive
+// override source). Order matches the factory blocks in calcEngine.js.
 const EMPTY_LEAD_TIME = {
   lt_material: '',
+  lt_material_ovr: '',
   lt_sample: '',
   lt_po: '',
   lt_remark: '',
@@ -2387,11 +2390,11 @@ const EMPTY_LEAD_TIME = {
   lt_material_type: '',
 };
 
-test('createStdState().lead_time = 6-key empty-string object', () => {
+test('createStdState().lead_time = 7-key empty-string object', () => {
   assert.deepStrictEqual(createStdState().lead_time, EMPTY_LEAD_TIME);
 });
 
-test('createCplxState().lead_time = 6-key empty-string object', () => {
+test('createCplxState().lead_time = 7-key empty-string object', () => {
   assert.deepStrictEqual(createCplxState().lead_time, EMPTY_LEAD_TIME);
 });
 

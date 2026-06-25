@@ -1731,6 +1731,7 @@ export function createStdState() {
     // (PR #110 pattern).
     lead_time: {
       lt_material: '',
+      lt_material_ovr: '',
       lt_sample: '',
       lt_po: '',
       lt_remark: '',
@@ -1909,6 +1910,7 @@ export function createEmptyStdState() {
     // with the same shape.
     lead_time: {
       lt_material: '',
+      lt_material_ovr: '',
       lt_sample: '',
       lt_po: '',
       lt_remark: '',
@@ -1977,6 +1979,7 @@ export function createCplxState() {
     // the contract. Quote-level (not per-SP) per operator scoping.
     lead_time: {
       lt_material: '',
+      lt_material_ovr: '',
       lt_sample: '',
       lt_po: '',
       lt_remark: '',

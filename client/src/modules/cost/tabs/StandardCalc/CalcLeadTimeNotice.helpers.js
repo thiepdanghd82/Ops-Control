@@ -9,6 +9,8 @@
  * the repo adopts a JSX-aware test runner (out of scope for this PR).
  */
 
+import { isMainMat } from '../../lib/rowTypeNormalize.js';
+
 // Match CalcProcesses.jsx hidden convention — rows flagged `hidden:true`
 // are treated as deleted by the calc engine and should NOT contribute to
 // the Tooling Cost sum on the Lead time tab either.
@@ -92,6 +94,84 @@ export const LEAD_TIME_KEYS = Object.freeze([
   'lt_material_type',
 ]);
 
+// Material L/T = max(library lead time across the quote's Main.Mat rows) + this
+// buffer, formatted "<n> days". Buffer covers internal handling once material
+// lands. Auto-derived (READ-ONLY · AUTO-SYNCED) with a manual override.
+export const MATERIAL_LT_BUFFER = 7;
+
+/**
+ * Auto-derive the Material L/T string from the active Main.Mat material rows +
+ * the IFS / NPI libraries.
+ *
+ * For every Main.Mat row, look the row's IFS CODE (`code`, falling back to
+ * `ifs_code`) up in BOTH libraries — IFS Materials by `part_no` (lead-time
+ * field `leadtime`) and NPI Materials by `name` (lead-time field `lt`) — and
+ * collect every finite, > 0 day count. The result is `max(collected) + BUFFER`
+ * formatted "<n> days". Returns `null` when nothing matched (caller shows an
+ * empty cell — never a bare "7 days").
+ *
+ * Matching is trim + case-insensitive; multiple library rows sharing a key all
+ * enter the max pool. Non-Main.Mat rows (Alt.Mat / Process Mat) are ignored.
+ *
+ * @param {Array|null|undefined} rows  active material rows (helper filters Main.Mat)
+ * @param {{ifs?:Array, npi?:Array}|null|undefined} lib  CostLibContext `lib`
+ * @returns {string|null}  e.g. "37 days", or null when no library match
+ */
+export function deriveMaterialLT(rows, lib) {
+  if (!Array.isArray(rows) || !lib || typeof lib !== 'object') return null;
+  const ifs = Array.isArray(lib.ifs) ? lib.ifs : [];
+  const npi = Array.isArray(lib.npi) ? lib.npi : [];
+  const collected = [];
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue;
+    if (!isMainMat(row.row_type)) continue;
+    const key = String(row.code || row.ifs_code || '').trim();
+    if (!key) continue;
+    const keyLc = key.toLowerCase();
+    for (const r of ifs) {
+      if (
+        r &&
+        String(r.part_no ?? '')
+          .trim()
+          .toLowerCase() === keyLc
+      ) {
+        const n = Number(r.leadtime);
+        if (Number.isFinite(n) && n > 0) collected.push(n);
+      }
+    }
+    for (const r of npi) {
+      if (
+        r &&
+        String(r.name ?? '')
+          .trim()
+          .toLowerCase() === keyLc
+      ) {
+        const n = Number(r.lt);
+        if (Number.isFinite(n) && n > 0) collected.push(n);
+      }
+    }
+  }
+  if (collected.length === 0) return null;
+  const maxLt = Math.max(...collected);
+  return `${Math.round(maxLt + MATERIAL_LT_BUFFER)} days`;
+}
+
+/**
+ * Resolve what the Material L/T cell shows: the manual override when set,
+ * otherwise the auto-derived value. `lt_material_ovr` is the override source of
+ * truth; an empty / whitespace override means "auto".
+ *
+ * @param {object|null|undefined} leadTime  state.lead_time
+ * @param {string|null} autoVal  deriveMaterialLT() result
+ * @returns {{value:string, isOverride:boolean}}
+ */
+export function resolveMaterialLtDisplay(leadTime, autoVal) {
+  const lt = leadTime && typeof leadTime === 'object' ? leadTime : {};
+  const ovr = typeof lt.lt_material_ovr === 'string' ? lt.lt_material_ovr : '';
+  if (ovr.trim() !== '') return { value: ovr, isOverride: true };
+  return { value: autoVal || '', isOverride: false };
+}
+
 /**
  * Heal legacy quotes that lack `state.lead_time` (saved before this feature
  * landed). Returns a fresh object with all 6 keys present + defaulted to ''
@@ -107,5 +187,9 @@ export function safeLeadTime(leadTime) {
   for (const k of LEAD_TIME_KEYS) {
     if (typeof out[k] !== 'string') out[k] = '';
   }
+  // Material L/T auto-derive override source (Sprint S-MAT-LT). Structural
+  // default only — the legacy lt_material→lt_material_ovr seed happens ONCE at
+  // migration heal (not here), so a later ↻ reset isn't re-seeded each render.
+  if (typeof out.lt_material_ovr !== 'string') out.lt_material_ovr = '';
   return out;
 }

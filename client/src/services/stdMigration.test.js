@@ -385,3 +385,39 @@ test('upgradeStdState: current-version state missing snapshot still heals via sh
   assert.ok(upgraded.pricing_snapshot);
   assert.equal(upgraded.pricing_snapshot._captured_at, null);
 });
+
+// Sprint S-MAT-LT — Material L/T override heal-on-read.
+test('upgradeStdState: legacy lt_material seeds lt_material_ovr (pre-feature quote)', () => {
+  const legacy = {
+    _schema_version: 3,
+    materials_main: [{ _mid: 'm1', code: 'M1' }],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [{ _mid: 'm1', code: 'M1' }],
+    inks: [],
+    processes: [],
+    pricing_snapshot: { _captured_at: null },
+    lead_time: { lt_material: '25 days', lt_sample: '' }, // no lt_material_ovr key
+  };
+  const out = upgradeStdState(legacy);
+  assert.equal(out.lead_time.lt_material_ovr, '25 days', 'free text seeded as override');
+  assert.equal(out.lead_time.lt_material, '25 days', 'original preserved');
+});
+
+test('upgradeStdState: feature-aware quote (lt_material_ovr present) NOT re-seeded', () => {
+  const featureAware = {
+    _schema_version: 3,
+    materials_main: [{ _mid: 'm1', code: 'M1' }],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [{ _mid: 'm1', code: 'M1' }],
+    inks: [],
+    processes: [],
+    pricing_snapshot: { _captured_at: null },
+    // auto mode: override empty, lt_material holds the resolved auto value
+    lead_time: { lt_material: '37 days', lt_material_ovr: '' },
+  };
+  const out = upgradeStdState(featureAware);
+  assert.equal(out.lead_time.lt_material_ovr, '', 'stays empty — reset-safe, no re-seed');
+  assert.equal(out, featureAware, 'same ref (nothing to heal) — React memo friendly');
+});

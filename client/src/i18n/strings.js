@@ -328,6 +328,22 @@ export const STRINGS = {
     vi: 'Chỉ đọc · Tự đồng bộ',
   },
   'lt.placeholder.multiline': { en: 'Type notes…', vi: 'Nhập ghi chú…' },
+  // Sprint S-MAT-LT (2026-06-25) — Material L/T auto-derive + manual override.
+  'lt.material.auto_caption': {
+    en: 'Auto · max L/T + 7 days',
+    vi: 'Tự động · L/T lớn nhất + 7 ngày',
+  },
+  'lt.material.manual_caption': { en: 'Manual override', vi: 'Nhập tay (ghi đè)' },
+  'lt.material.auto_tip': {
+    en: 'Auto-derived from IFS/NPI Materials lead time of the Main.Mat rows (max + 7 days). Type to override.',
+    vi: 'Tự suy ra từ lead time IFS/NPI của các dòng Main.Mat (lớn nhất + 7 ngày). Gõ để ghi đè.',
+  },
+  'lt.material.manual_tip': {
+    en: 'Manual override active — click ↻ to revert to the auto value.',
+    vi: 'Đang ghi đè thủ công — bấm ↻ để quay lại giá trị tự động.',
+  },
+  'lt.material.auto_placeholder': { en: 'No library match', vi: 'Không khớp thư viện' },
+  'lt.material.reset': { en: 'Reset to auto', vi: 'Đặt lại về tự động' },
 };
 
 /**

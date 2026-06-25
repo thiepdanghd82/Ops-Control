@@ -52,6 +52,21 @@ function healPricingSnapshot(state) {
   return { ...state, pricing_snapshot: createEmptySnapshot() };
 }
 
+// Sprint S-MAT-LT — Material L/T auto-derive override (additive field, NO
+// version bump per PR #110 pattern). A quote saved BEFORE this feature has a
+// `lead_time` object with NO `lt_material_ovr` key — its free-text `lt_material`
+// was a manual entry, so seed `lt_material_ovr` from it ONCE here (key-presence
+// signal) to preserve the override (shows violet) without silently changing
+// already-saved quotes. Post-feature quotes already carry the key (even '') →
+// returned unchanged so the React-memo short-circuit + ↻ reset stay correct.
+function healLeadTimeMaterialOvr(state) {
+  const lt = state && state.lead_time;
+  if (!lt || typeof lt !== 'object' || Array.isArray(lt)) return state;
+  if ('lt_material_ovr' in lt) return state; // feature-aware quote — leave it
+  const seed = typeof lt.lt_material === 'string' ? lt.lt_material : '';
+  return { ...state, lead_time: { ...lt, lt_material_ovr: seed } };
+}
+
 // Stable _mid generator — duplicated from createStdState() so this
 // module doesn't import calcEngine (keeps migrator pure + zero-dep).
 // Collision risk: Date.now + 6 random chars = ~64 bits of entropy per
@@ -96,7 +111,7 @@ export function upgradeStdState(state) {
       Array.isArray(state.materials_main) &&
       Array.isArray(state.materials_alt) &&
       (state.materials_active === 'main' || state.materials_active === 'alt');
-    if (hasMids && hasAltShape) return healPricingSnapshot(state);
+    if (hasMids && hasAltShape) return healLeadTimeMaterialOvr(healPricingSnapshot(state));
   }
 
   let next = state;
@@ -130,6 +145,8 @@ export function upgradeStdState(state) {
   // Pricing-snapshot heal (Phase 1) — additive, runs after version
   // chain so newly-migrated states also pick up the empty default.
   next = healPricingSnapshot(next);
+  // Material L/T override heal (Sprint S-MAT-LT) — seed legacy free-text.
+  next = healLeadTimeMaterialOvr(next);
   return next;
 }
 

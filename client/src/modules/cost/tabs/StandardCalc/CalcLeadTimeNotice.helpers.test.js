@@ -7,6 +7,8 @@ import {
   fmtUsd,
   fmtVnd,
   safeLeadTime,
+  deriveMaterialLT,
+  resolveMaterialLtDisplay,
 } from './CalcLeadTimeNotice.helpers.js';
 
 describe('sumToolingCostStd', () => {
@@ -182,5 +184,107 @@ describe('safeLeadTime', () => {
     for (const k of EXPECTED_KEYS) {
       assert.equal(out[k], full[k]);
     }
+  });
+
+  test('lt_material_ovr structural default → "" when absent', () => {
+    assert.equal(safeLeadTime(undefined).lt_material_ovr, '');
+    assert.equal(safeLeadTime({ lt_material: 'x' }).lt_material_ovr, '');
+  });
+
+  test('lt_material_ovr preserved when present (does NOT re-seed)', () => {
+    assert.equal(
+      safeLeadTime({ lt_material: 'x', lt_material_ovr: '40 days' }).lt_material_ovr,
+      '40 days'
+    );
+    // empty override stays empty (reset-safe — no re-seed from lt_material)
+    assert.equal(safeLeadTime({ lt_material: 'legacy', lt_material_ovr: '' }).lt_material_ovr, '');
+  });
+});
+
+describe('deriveMaterialLT', () => {
+  const LIB = {
+    ifs: [
+      { part_no: 'MAT-A', leadtime: 30 },
+      { part_no: 'MAT-B', leadtime: 10 },
+      { part_no: 'MAT-ZERO', leadtime: 0 },
+      { part_no: 'MAT-BAD', leadtime: 'n/a' },
+    ],
+    npi: [
+      { name: 'MAT-A', lt: 20 },
+      { name: 'NPI-ONLY', lt: 45 },
+    ],
+  };
+  const main = (code, extra = {}) => ({ row_type: 'Main.Mat', code, ...extra });
+
+  test('max + 7 across multiple Main.Mat rows, formatted "<n> days"', () => {
+    const rows = [main('MAT-A'), main('MAT-B')]; // IFS 30/10 + NPI 20 → max 30
+    assert.equal(deriveMaterialLT(rows, LIB), '37 days');
+  });
+
+  test('considers BOTH IFS `leadtime` and NPI `lt`', () => {
+    // NPI-ONLY only in NPI (lt 45) → 52 days
+    assert.equal(deriveMaterialLT([main('NPI-ONLY')], LIB), '52 days');
+    // MAT-A: IFS 30 + NPI 20 → max 30 → 37
+    assert.equal(deriveMaterialLT([main('MAT-A')], LIB), '37 days');
+  });
+
+  test('Alt.Mat / Process Mat rows ignored', () => {
+    const rows = [
+      { row_type: 'Alt.Mat', code: 'MAT-A' },
+      { row_type: 'Process Mat', code: 'NPI-ONLY' },
+    ];
+    assert.equal(deriveMaterialLT(rows, LIB), null);
+  });
+
+  test('legacy "Main.Mat 1" classified via isMainMat', () => {
+    assert.equal(deriveMaterialLT([{ row_type: 'Main.Mat 1', code: 'MAT-B' }], LIB), '17 days');
+  });
+
+  test('no library match → null (never a bare "7 days")', () => {
+    assert.equal(deriveMaterialLT([main('NOPE')], LIB), null);
+    assert.equal(deriveMaterialLT([main('')], LIB), null);
+  });
+
+  test('non-finite / 0 lead times skipped', () => {
+    assert.equal(deriveMaterialLT([main('MAT-ZERO'), main('MAT-BAD')], LIB), null);
+    // mix: MAT-ZERO(0, skip) + MAT-B(10) → 17
+    assert.equal(deriveMaterialLT([main('MAT-ZERO'), main('MAT-B')], LIB), '17 days');
+  });
+
+  test('code falls back to ifs_code; trim + case-insensitive match', () => {
+    assert.equal(
+      deriveMaterialLT([{ row_type: 'Main.Mat', code: '', ifs_code: ' mat-a ' }], LIB),
+      '37 days'
+    );
+    assert.equal(deriveMaterialLT([main('  MAT-b ')], LIB), '17 days');
+  });
+
+  test('null / non-array / missing lib → null', () => {
+    assert.equal(deriveMaterialLT(null, LIB), null);
+    assert.equal(deriveMaterialLT([main('MAT-A')], null), null);
+    assert.equal(deriveMaterialLT([main('MAT-A')], {}), null);
+  });
+});
+
+describe('resolveMaterialLtDisplay', () => {
+  test('non-empty override → override value + isOverride true', () => {
+    const r = resolveMaterialLtDisplay({ lt_material_ovr: '40 days' }, '37 days');
+    assert.deepEqual(r, { value: '40 days', isOverride: true });
+  });
+
+  test('empty / whitespace override → auto value, isOverride false', () => {
+    assert.deepEqual(resolveMaterialLtDisplay({ lt_material_ovr: '' }, '37 days'), {
+      value: '37 days',
+      isOverride: false,
+    });
+    assert.deepEqual(resolveMaterialLtDisplay({ lt_material_ovr: '   ' }, '37 days'), {
+      value: '37 days',
+      isOverride: false,
+    });
+  });
+
+  test('null auto → empty string in auto mode', () => {
+    assert.deepEqual(resolveMaterialLtDisplay({}, null), { value: '', isOverride: false });
+    assert.deepEqual(resolveMaterialLtDisplay(null, null), { value: '', isOverride: false });
   });
 });
