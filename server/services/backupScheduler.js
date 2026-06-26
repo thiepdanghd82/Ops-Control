@@ -187,6 +187,25 @@ function backupDir() {
   return path.join(dataRoot, 'Backup');
 }
 
+// Count backup artifacts on disk so Settings → Backup can show "N backups
+// stored" + an Open-folder affordance. Each sub-dir holds one kind:
+// SQLite/*.sqlite (db snapshots), Library/*.tar.gz (library tarballs),
+// Data/*.json (full-data exports). Missing dirs → 0 (defensive).
+function countBackups() {
+  const root = backupDir();
+  const countIn = (sub, ext) => {
+    try {
+      return fs.readdirSync(path.join(root, sub)).filter((f) => f.endsWith(ext)).length;
+    } catch {
+      return 0;
+    }
+  };
+  const sqlite = countIn('SQLite', '.sqlite');
+  const library = countIn('Library', '.tar.gz');
+  const data = countIn('Data', '.json');
+  return { sqlite, library, data, total: sqlite + library + data };
+}
+
 /**
  * Create gzipped tarball of Library/* using system tar (cross-platform
  * via Node's built-in spawn). Works on macOS + Windows (with bundled tar).
@@ -494,6 +513,10 @@ export function getStatus() {
     lastRun: _lastRun,
     lastError: _lastError,
     persistedAt: configPath(),
+    // Where the backup files live + how many exist, for the Settings
+    // "Open backup folder" button + count badge.
+    backupRoot: backupDir(),
+    counts: countBackups(),
   };
 }
 

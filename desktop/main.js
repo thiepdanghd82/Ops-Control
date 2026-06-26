@@ -1298,3 +1298,22 @@ ipcMain.handle('ops:shell.openExternalFile', async (_e, { b64Data, ext } = {}) =
   if (errMsg) throw new Error(`shell.openPath: ${errMsg}`);
   return { path: tmpPath };
 });
+
+// Open a local folder in Finder/Explorer (Settings → Backup "Open backup
+// folder"). Validates the path exists + is a directory before handing it to
+// the OS — the renderer passes the server-reported backupRoot, a real local
+// path on the embedded SERVER install.
+ipcMain.handle('ops:shell.openPath', async (_e, { targetPath } = {}) => {
+  if (typeof targetPath !== 'string' || targetPath.length === 0) {
+    return { ok: false, error: 'openPath: targetPath is required' };
+  }
+  try {
+    if (!fs.statSync(targetPath).isDirectory()) {
+      return { ok: false, error: 'Not a folder' };
+    }
+  } catch {
+    return { ok: false, error: `Folder not found: ${targetPath}` };
+  }
+  const errMsg = await shell.openPath(targetPath);
+  return errMsg ? { ok: false, error: errMsg } : { ok: true };
+});

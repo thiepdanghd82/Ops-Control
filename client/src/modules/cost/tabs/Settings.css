@@ -2771,6 +2771,31 @@ button.acct-approval-pill.on:hover {
   cursor: not-allowed;
 }
 
+/* Open backup folder — secondary (outline) so it sits quietly beside the
+   green Run-now primary. */
+.bk-sched-open-btn {
+  background: #fff;
+  color: var(--text-primary, #0f172a);
+  border: 1px solid var(--border-strong, #cbd5e1);
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.bk-sched-open-btn:hover {
+  background: var(--color-slate-50, #f8fafc);
+  border-color: var(--color-primary, #2563eb);
+}
+
+.bk-sched-counts {
+  color: var(--text-tertiary, #94a3b8);
+}
+
 .bk-sched-form {
   display: flex;
   flex-direction: column;
