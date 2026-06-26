@@ -68,6 +68,91 @@ function writePersistedConfig(cfg) {
   fs.renameSync(tmp, p);
 }
 
+// Sprint S-BACKUP-RELIABILITY (A) — `_lastRun` / `_lastError` were in-memory
+// only, so every process restart reset them to null and Settings → Backup
+// showed "Last run: Never run on this server" even when the nightly cycle had
+// run minutes earlier. Persist them to a sidecar JSON so the UI shows the
+// TRUE last run across restarts (and so the boot catch-up below can tell
+// whether today's backup already happened).
+function lastRunPath() {
+  const dataRoot = path.dirname(getDbPath());
+  return path.join(dataRoot, 'Library', 'SystemConfig', 'backup-last-run.json');
+}
+
+function persistLastRun() {
+  try {
+    const p = lastRunPath();
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    const tmp = p + '.tmp.' + process.pid;
+    fs.writeFileSync(
+      tmp,
+      JSON.stringify({
+        lastRun: _lastRun,
+        lastError: _lastError,
+        savedAt: new Date().toISOString(),
+      })
+    );
+    fs.renameSync(tmp, p);
+  } catch (err) {
+    // Non-fatal — the backup itself already succeeded; only the status
+    // indicator loses durability. Surface it without throwing.
+    console.warn('[backup] could not persist last-run state:', err.message);
+  }
+}
+
+function loadPersistedLastRun() {
+  if (_lastRun != null) return; // already have it in memory
+  try {
+    const j = JSON.parse(fs.readFileSync(lastRunPath(), 'utf-8'));
+    if (j && typeof j === 'object') {
+      if (j.lastRun) _lastRun = j.lastRun;
+      if (j.lastError) _lastError = j.lastError;
+    }
+  } catch {
+    /* absent on first boot — fine */
+  }
+}
+
+// Sprint S-BACKUP-RELIABILITY (B) — boot catch-up. The scheduler only fires a
+// setTimeout for the NEXT HH:00; if the box was off / mid-restart at the
+// scheduled hour, that day got NO backup and nothing ran it later. On boot,
+// if the scheduled hour has already passed today AND no cycle has run today,
+// run one shortly after boot. backupOpsDb's "one backup per day" skip makes
+// this idempotent — it only actually writes when today's backup is missing.
+const BOOT_CATCHUP_DELAY_MS = 15_000;
+
+/**
+ * Pure decision for the boot catch-up: run one now iff the scheduled hour has
+ * already passed today AND no cycle has run today yet. Exported for unit tests.
+ *
+ * @param {object} a
+ * @param {number} a.hour            scheduled hour (0-23)
+ * @param {Date}   a.now             current time
+ * @param {string|null} a.lastRunStartedAt  ISO string of the last cycle, or null
+ * @returns {boolean}
+ */
+export function _shouldBootCatchUp({ hour, now, lastRunStartedAt }) {
+  if (now.getHours() < hour) return false; // scheduled run still ahead today
+  if (lastRunStartedAt) {
+    const started = new Date(lastRunStartedAt);
+    if (!Number.isNaN(started.getTime()) && started.toDateString() === now.toDateString()) {
+      return false; // already ran today
+    }
+  }
+  return true;
+}
+
+// Test seam — reset module state so each test starts clean (mirrors
+// connection.js _resetForTests).
+export function _resetSchedulerForTests() {
+  _lastRun = null;
+  _lastError = null;
+  if (_timer) {
+    clearTimeout(_timer);
+    _timer = null;
+  }
+}
+
 function effectiveSettings() {
   const persisted = readPersistedConfig() || {};
   // env fallback when persisted file is absent
@@ -235,6 +320,10 @@ export async function runBackupCycle({ force = false } = {}) {
     // configured (audit finding §7).
     audit('BACKUP_FAILED', '-', '-', `sqlite: ${err.message}`);
     await alertWebhook({ text: `🚨 Ops Control backup FAILED (sqlite): ${err.message}` });
+    // A: record the failed cycle as the last run so the UI doesn't show a
+    // stale "success" while sqlite is actually broken.
+    _lastRun = summary;
+    persistLastRun();
     return summary;
   }
 
@@ -315,6 +404,10 @@ export async function runBackupCycle({ force = false } = {}) {
     audit('BACKUP_FAILED', '-', '-', _lastError || 'cycle returned non-ok');
   }
 
+  // A: persist the completed cycle so Settings → Backup shows the true last
+  // run after a restart (was in-memory only → "Never run on this server").
+  persistLastRun();
+
   console.log(`[backup] cycle ${summary.ok ? '✓' : '✗'} ${summary.durationMs}ms`);
   return summary;
 }
@@ -327,6 +420,9 @@ export async function runBackupCycle({ force = false } = {}) {
  */
 export function startBackupScheduler() {
   if (_timer) return { already: true };
+  // A: hydrate last-run state from disk so "Last run" survives restarts and
+  // the catch-up check below knows whether today's backup already happened.
+  loadPersistedLastRun();
   const { enabled, hour } = effectiveSettings();
   if (!enabled) {
     console.log('[backup] scheduler disabled (settings.enabled=false)');
@@ -346,10 +442,30 @@ export function startBackupScheduler() {
   // First run scheduled for next HH:00
   const ms = msUntilNext(hour);
   _timer = setTimeout(tick, ms);
+
+  // B: boot catch-up — if the scheduled hour already passed today and no
+  // cycle has run today, run one shortly after boot so a day the server was
+  // down at the scheduled hour doesn't leave a gap. Non-blocking; the per-day
+  // skip in backupOpsDb makes it a no-op when today's backup already exists.
+  let catchupScheduled = false;
+  if (
+    _shouldBootCatchUp({ hour, now: new Date(), lastRunStartedAt: _lastRun?.startedAt || null })
+  ) {
+    catchupScheduled = true;
+    setTimeout(() => {
+      runBackupCycle()
+        .then((s) => {
+          if (!s?.steps?.[0]?.skipped) console.log('[backup] boot catch-up ran (missed window)');
+        })
+        .catch((err) => console.error('[backup] boot catch-up error:', err));
+    }, BOOT_CATCHUP_DELAY_MS);
+  }
+
   console.log(
-    `[backup] scheduler started — next run in ${(ms / 1000 / 60).toFixed(0)} minutes (target ${hour}:00)`
+    `[backup] scheduler started — next run in ${(ms / 1000 / 60).toFixed(0)} minutes (target ${hour}:00)` +
+      (catchupScheduled ? ' — boot catch-up queued' : '')
   );
-  return { ok: true, nextRunMs: ms };
+  return { ok: true, nextRunMs: ms, catchupScheduled };
 }
 
 export function stopBackupScheduler() {
@@ -360,6 +476,9 @@ export function stopBackupScheduler() {
 }
 
 export function getStatus() {
+  // A: lazy-hydrate persisted last-run so a status call right after boot (or
+  // before the scheduler started) still reports the true last run.
+  loadPersistedLastRun();
   const eff = effectiveSettings();
   // Compute next-run preview (independent of timer state) so the UI can
   // show "Next backup at 02:00 in ~7h 32m" even right after a restart.
