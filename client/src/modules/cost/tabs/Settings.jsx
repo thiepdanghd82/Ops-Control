@@ -2376,6 +2376,29 @@ function BackupScheduleCard({ onRunDone }) {
     }
   }
 
+  // Open the backup folder in Finder/Explorer (desktop shell only). The path
+  // is the server-reported backupRoot — a real local path on the embedded
+  // SERVER install. On the web / a thin client we can't open a remote folder,
+  // so fall back to flashing the path so the operator can navigate manually.
+  async function handleOpenBackup() {
+    const root = status?.backupRoot;
+    if (!root) {
+      flash('error', 'Backup folder path unavailable');
+      return;
+    }
+    if (window.ops?.shell?.openPath) {
+      try {
+        const r = await window.ops.shell.openPath(root);
+        if (r && r.ok === false) flash('error', 'Could not open folder: ' + (r.error || 'unknown'));
+      } catch (err) {
+        flash('error', 'Could not open folder: ' + (err.message || 'unknown'));
+      }
+    } else {
+      // Not in the desktop shell — surface the path for manual navigation.
+      flash('info', 'Backup folder: ' + root);
+    }
+  }
+
   if (loading) return <div className="bk-sched-card bk-sched-loading">Loading schedule…</div>;
 
   const dirty =
@@ -2397,8 +2420,31 @@ function BackupScheduleCard({ onRunDone }) {
             {status?.enabled
               ? `Next run: ${fmtTime(status.nextRunAt)} (in ${fmtDuration(status.nextRunMs)})`
               : 'Scheduler disabled — only manual backups will run'}
+            {status?.counts?.total != null && (
+              <>
+                {' · '}
+                <b>{status.counts.total}</b> backups stored
+                <small className="bk-sched-counts">
+                  {' '}
+                  ({status.counts.sqlite} db · {status.counts.library} library ·{' '}
+                  {status.counts.data} data)
+                </small>
+              </>
+            )}
           </div>
         </div>
+        <button
+          type="button"
+          className="bk-sched-open-btn"
+          onClick={handleOpenBackup}
+          title={
+            status?.backupRoot
+              ? `Open backup folder · Mở thư mục backup\n${status.backupRoot}`
+              : 'Open backup folder'
+          }
+        >
+          📂 Open folder
+        </button>
         <button
           type="button"
           className="bk-sched-run-btn"

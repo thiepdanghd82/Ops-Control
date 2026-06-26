@@ -66,6 +66,7 @@ const opsAPI = {
   // child window with no print dialog or annotation tools.
   shell: {
     openExternalFile: (b64Data, ext) => invoke('ops:shell.openExternalFile', { b64Data, ext }),
+    openPath: (targetPath) => invoke('ops:shell.openPath', { targetPath }),
   },
 
   // ─── Printer (A4/A3 office printers) ───────────────────────────
