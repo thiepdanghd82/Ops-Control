@@ -2256,8 +2256,9 @@ function BackupSection() {
       <Modal
         open={restoreModalOpen}
         onClose={() => setRestoreModalOpen(false)}
-        size="md"
+        size="lg"
         severity="warning"
+        draggable
       >
         <Modal.Header title={t('settings.backup.restore_modal_title')} severity="warning" />
         <Modal.Body>
@@ -2267,12 +2268,18 @@ function BackupSection() {
             <div className="bk-restore-wrap">
               <p className="bk-restore-hint">{t('settings.backup.restore_hint')}</p>
               <table className="data-table bk-restore-table">
+                <colgroup>
+                  <col className="bk-restore-col-date" />
+                  <col className="bk-restore-col-size" />
+                  <col className="bk-restore-col-file" />
+                  <col className="bk-restore-col-act" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>{t('settings.backup.restore_col_date')}</th>
                     <th className="text-right">{t('settings.backup.restore_col_size')}</th>
                     <th>{t('settings.backup.restore_col_file')}</th>
-                    <th></th>
+                    <th className="text-right">{t('settings.backup.restore_col_act')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2299,7 +2306,7 @@ function BackupSection() {
                             <BackupKindBadge filename={b.filename} t={t} />
                             {b.filename}
                           </td>
-                          <td>
+                          <td className="text-right">
                             <button
                               className="btn btn-sm btn-primary"
                               onClick={async () => {

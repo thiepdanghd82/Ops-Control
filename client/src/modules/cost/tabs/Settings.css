@@ -449,16 +449,35 @@
   margin: 8px 0 14px;
 }
 
-/* Restore-from-backup modal — dated list, newest first. */
+/* Restore-from-backup modal — dated list, newest first. Fixed layout so the
+   columns fit the dialog width with NO horizontal scroll (the Restore button
+   was getting clipped); the File column flexes + ellipses long names. */
 .bk-restore-wrap {
   max-height: 52vh;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 .bk-restore-table {
   width: 100%;
+  table-layout: fixed;
 }
+.bk-restore-table th,
+.bk-restore-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bk-restore-col-date {
+  width: 165px;
+}
+.bk-restore-col-size {
+  width: 78px;
+}
+.bk-restore-col-act {
+  width: 110px;
+}
+/* File column takes the remaining width and ellipses long filenames. */
 .bk-restore-file {
-  max-width: 260px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

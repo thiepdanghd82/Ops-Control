@@ -130,6 +130,7 @@ export default function Modal({
   dismissable = true,
   closable = true,
   ariaLabelledBy,
+  draggable = false, // opt-in: drag the card by its header to reposition
   children,
 }) {
   const cardRef = useRef(null);
@@ -175,6 +176,50 @@ export default function Modal({
     };
   }, [open, dismissable, onClose]);
 
+  // Opt-in drag: move the card by its header. Imperative (writes
+  // card.style.transform directly) so there's no per-mousemove re-render and
+  // no dynamic inline style in JSX (Lesson 6). Offset resets each open.
+  useEffect(() => {
+    if (!open || !draggable) return;
+    const card = cardRef.current;
+    const header = card?.querySelector('.op-modal-header');
+    if (!card || !header) return;
+    card.style.transform = '';
+    let dx = 0,
+      dy = 0,
+      startX = 0,
+      startY = 0,
+      dragging = false;
+    const onMove = (e) => {
+      if (!dragging) return;
+      card.style.transform = `translate(${dx + e.clientX - startX}px, ${dy + e.clientY - startY}px)`;
+    };
+    const onUp = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      dx += e.clientX - startX;
+      dy += e.clientY - startY;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    const onDown = (e) => {
+      // Left button only; ignore drags that start on an interactive control.
+      if (e.button !== 0 || e.target.closest('button, a, input, select, textarea')) return;
+      dragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+      e.preventDefault();
+    };
+    header.addEventListener('mousedown', onDown);
+    return () => {
+      header.removeEventListener('mousedown', onDown);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [open, draggable]);
+
   if (!open) return null;
 
   const handleOverlayMouseDown = (e) => {
@@ -188,7 +233,7 @@ export default function Modal({
     <div className="op-modal-overlay" role="presentation" onMouseDown={handleOverlayMouseDown}>
       <div
         ref={cardRef}
-        className={`op-modal-card size-${size}${severityClass}`}
+        className={`op-modal-card size-${size}${severityClass}${draggable ? ' op-modal-card--draggable' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={ariaLabelledBy}

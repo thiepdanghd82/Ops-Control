@@ -137,6 +137,7 @@ registerStrings({
   'settings.backup.restore_col_date': { en: 'Date', vi: 'Ngày' },
   'settings.backup.restore_col_size': { en: 'Size', vi: 'Dung lượng' },
   'settings.backup.restore_col_file': { en: 'File', vi: 'Tệp' },
+  'settings.backup.restore_col_act': { en: 'Action', vi: 'Thao tác' },
   'settings.backup.restore_row_btn': { en: 'Restore', vi: 'Khôi phục' },
   'settings.backup.restore_close': { en: 'Close', vi: 'Đóng' },
   'settings.backup.restore_hint': {
