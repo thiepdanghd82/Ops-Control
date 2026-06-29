@@ -271,6 +271,7 @@ import {
   upsertQuote,
   VersionConflictError,
 } from '../repositories/quotesStore.js';
+import { filterQuoteHistory } from '../utils/quoteShape.js';
 import { recordSnapshotSave } from '../services/pricingSnapshotMetrics.js';
 import {
   setAuthCookies,
@@ -635,7 +636,7 @@ function rateRows(rate) {
 }
 
 // Backup helpers
-function buildBackupSnapshot() {
+export function buildBackupSnapshot() {
   const LIB_DIR = getLibDir();
   const snap = { _backup_at: new Date().toISOString(), _version: 3 };
   const map = {
@@ -662,7 +663,7 @@ function buildBackupSnapshot() {
   return snap;
 }
 
-function restoreFromSnapshot(snap) {
+export function restoreFromSnapshot(snap) {
   const LIB_DIR = getLibDir();
   const map = {
     quoteHistory: path.join(LIB_DIR, 'QuoteHistory', 'quote_history.json'),
@@ -684,14 +685,33 @@ function restoreFromSnapshot(snap) {
   const restored = [];
   const failed = [];
   for (const [key, fp] of Object.entries(map)) {
-    if (key in snap) {
-      try {
+    if (!(key in snap)) continue;
+    try {
+      if (key === 'quoteHistory') {
+        // P0 fix (2026-06-29): the box runs OPS_DATA_BACKEND=sqlite, so Quote
+        // History reads ops.db › quotes — NOT quote_history.json. A raw
+        // writeJson here rewrites the file but leaves ops.db at its post-delete
+        // state, so a quote deleted AFTER the backup never reappears on restore
+        // (silent data-loss). Route through the same dual-writer /save-all uses
+        // (saveQuotesStore): atomic JSON write + ops.db reconcile (DELETE … WHERE
+        // id NOT IN(kept) + upsert) so SQLite matches the snapshot exactly.
+        // Filter malformed rows first (parity with /save-all) — log, never drop
+        // silently — so a corrupt backup row can't poison the restore.
+        const { valid, dropped } = filterQuoteHistory(snap[key]);
+        if (dropped.length > 0) {
+          console.warn(
+            `  ⚠️  Restore quoteHistory: dropped ${dropped.length} malformed row(s): ` +
+              JSON.stringify(dropped.slice(0, 5))
+          );
+        }
+        saveQuotesStore(valid);
+      } else {
         writeJson(fp, snap[key]);
-        restored.push(key);
-      } catch (e) {
-        console.warn(`  ⚠️  Restore ${key}: ${e.message}`);
-        failed.push({ key, error: e.message || String(e) });
       }
+      restored.push(key);
+    } catch (e) {
+      console.warn(`  ⚠️  Restore ${key}: ${e.message}`);
+      failed.push({ key, error: e.message || String(e) });
     }
   }
   return { restored, failed };
