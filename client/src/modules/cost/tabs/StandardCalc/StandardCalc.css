@@ -485,6 +485,12 @@
   font-style: italic;
 }
 
+/* Materials "Mats./MOQ (m²/lm)" — gross material for the active-tier MOQ.
+   Tabular figures so the thousand-separated quantities align per row. */
+.sc-mats-moq {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Inputs — IBM Carbon: bottom-border only, subtle bg, 0px radius */
 .sc-input {
   display: block;

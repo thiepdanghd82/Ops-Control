@@ -345,13 +345,17 @@ export default function CalcMaterials() {
                     </th>
                     <th
                       className="sc-col-derived"
-                      style={{ width: 50 }}
-                      title="Layout per sheet = parts_across × parts_md"
+                      style={{ width: 70 }}
+                      title="Gross material for MOQ (m²) incl. setup + scrap + offcut"
                     >
-                      L/Sheet
+                      Mats./MOQ (m²)
                     </th>
-                    <th className="sc-col-derived" style={{ width: 50 }} title="Number of webs">
-                      Webs
+                    <th
+                      className="sc-col-derived"
+                      style={{ width: 70 }}
+                      title="Gross material for MOQ (lm) incl. setup + scrap + offcut"
+                    >
+                      Mats./MOQ (lm)
                     </th>
                     <th
                       className="sc-col-derived"
@@ -636,10 +640,28 @@ export default function CalcMaterials() {
                           {/* Layout-derived columns */}
                           <td className="sc-td-derived">{r ? fmtN(r.qpa_m2, 6) : '\u2014'}</td>
                           <td className="sc-td-derived">{r ? fmtN(r.qpa_lm, 7) : '\u2014'}</td>
-                          <td className="sc-td-derived">
-                            {r ? r.layout_sheet || layoutCavities || '\u2014' : '\u2014'}
+                          <td
+                            className="sc-td-derived sc-mats-moq"
+                            title="Gross material for MOQ (m\u00b2) incl. setup + scrap + offcut"
+                          >
+                            {r && r.mats_moq_m2
+                              ? r.mats_moq_m2.toLocaleString('en-US', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })
+                              : '\u2014'}
                           </td>
-                          <td className="sc-td-derived">{st.num_webs || '\u2014'}</td>
+                          <td
+                            className="sc-td-derived sc-mats-moq"
+                            title="Gross material for MOQ (lm) incl. setup + scrap + offcut"
+                          >
+                            {r && r.mats_moq_lm
+                              ? r.mats_moq_lm.toLocaleString('en-US', {
+                                  minimumFractionDigits: 1,
+                                  maximumFractionDigits: 1,
+                                })
+                              : '\u2014'}
+                          </td>
                           <td className="sc-td-derived" style={{ color: '#059669' }}>
                             {r ? (scrapDisplay * 100).toFixed(1) + '%' : '\u2014'}
                           </td>

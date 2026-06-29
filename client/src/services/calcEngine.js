@@ -375,6 +375,8 @@ export function calcMat(mat, st, moq, allSpResults, subproducts) {
           _spLabor: 0,
           _spTooling: 0,
           _spVat: 0,
+          mats_moq_m2: 0,
+          mats_moq_lm: 0,
           error: `SP reference "${mat.code}" not computed`,
         };
       }
@@ -411,6 +413,8 @@ export function calcMat(mat, st, moq, allSpResults, subproducts) {
         _spLabor,
         _spTooling,
         _spVat,
+        mats_moq_m2: 0,
+        mats_moq_lm: 0,
       };
     }
   }
@@ -425,6 +429,8 @@ export function calcMat(mat, st, moq, allSpResults, subproducts) {
   const meter_roll = cavities > 0 && pcs_roll > 0 ? ((pcs_roll / cavities) * pitch) / 1000 : 0;
 
   const _blank = {
+    mats_moq_m2: 0,
+    mats_moq_lm: 0,
     setup_s: 0,
     setup_g: 0,
     run_s: 0,
@@ -469,11 +475,24 @@ export function calcMat(mat, st, moq, allSpResults, subproducts) {
   const run_g =
     (((gp + slit_adj) * (effWidth / 1000) * qpa_lm_raw) / scrapDiv / offcutDiv) * (mat.usage || 1);
 
+  // Mats./MOQ — GROSS material consumed for the active-tier MOQ. The quantity
+  // counterpart of run_s + setup_s so it stays in lockstep with the cost
+  // columns: RUN share applies scrap + offcut (like run_s), SETUP share applies
+  // offcut only (like setup_s). usage included exactly once.
+  const _usage = mat.usage || 1;
+  const mats_moq_lm = moq
+    ? (qpa_lm_raw / scrapDiv / offcutDiv) * _usage * moq +
+      ((mat.setup_lm || 0) * _usage) / offcutDiv
+    : 0;
+  const mats_moq_m2 = mats_moq_lm * (effWidth / 1000);
+
   const total_s = setup_s + run_s;
   const total_g = setup_g + run_g;
   const vat = st.trade_mode === 'USD(Book)' ? total_s * 0.15 : 0;
 
   return {
+    mats_moq_m2,
+    mats_moq_lm,
     setup_s,
     setup_g,
     run_s,
