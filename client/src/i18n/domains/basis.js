@@ -123,7 +123,22 @@ registerStrings({
   'settings.item.hardware': { en: 'Hardware Devices', vi: 'Thiết bị phần cứng' },
   'settings.item.mode': { en: 'Connection Mode', vi: 'Chế độ kết nối' },
   'settings.item.about': { en: 'About / Diagnostics', vi: 'Giới thiệu / Chẩn đoán' },
-  'settings.item.import_legacy': { en: 'Import data v1.0', vi: 'Nhập dữ liệu v1.0' },
+  // Backup → Restore picker (dated backup list modal)
+  'settings.backup.restore_btn': { en: 'Restore', vi: 'Khôi phục' },
+  'settings.backup.restore_btn_title': {
+    en: 'Restore data from a backup (pick by date)',
+    vi: 'Khôi phục dữ liệu từ một bản backup (chọn theo ngày)',
+  },
+  'settings.backup.restore_modal_title': {
+    en: 'Restore from backup',
+    vi: 'Khôi phục từ bản backup',
+  },
+  'settings.backup.restore_empty': { en: 'No backups found', vi: 'Chưa có bản backup' },
+  'settings.backup.restore_col_date': { en: 'Date', vi: 'Ngày' },
+  'settings.backup.restore_col_size': { en: 'Size', vi: 'Dung lượng' },
+  'settings.backup.restore_col_file': { en: 'File', vi: 'Tệp' },
+  'settings.backup.restore_row_btn': { en: 'Restore', vi: 'Khôi phục' },
+  'settings.backup.restore_close': { en: 'Close', vi: 'Đóng' },
 
   // My Profile form labels (Sprint S-I18N-COVER 2026-06-11) — operator-
   // visible form previously hardcoded English.

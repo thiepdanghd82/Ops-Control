@@ -449,6 +449,21 @@
   margin: 8px 0 14px;
 }
 
+/* Restore-from-backup modal — dated list, newest first. */
+.bk-restore-wrap {
+  max-height: 52vh;
+  overflow-y: auto;
+}
+.bk-restore-table {
+  width: 100%;
+}
+.bk-restore-file {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .row-num {
   color: var(--color-slate-400);
   font-size: 11px;
