@@ -139,6 +139,17 @@ registerStrings({
   'settings.backup.restore_col_file': { en: 'File', vi: 'Tệp' },
   'settings.backup.restore_row_btn': { en: 'Restore', vi: 'Khôi phục' },
   'settings.backup.restore_close': { en: 'Close', vi: 'Đóng' },
+  'settings.backup.restore_hint': {
+    en: 'To recover deleted data, pick a Manual or Scheduled backup dated BEFORE the deletion. "Pre-restore" snapshots are auto undo-points taken before each restore — not general backups.',
+    vi: 'Để khôi phục dữ liệu đã xoá, chọn bản Thủ công hoặc Định kỳ có NGÀY TRƯỚC khi xoá. Bản "Trước restore" là điểm hoàn-tác tự động tạo trước mỗi lần khôi phục — không phải bản backup thường.',
+  },
+  'settings.backup.kind_manual': { en: 'Manual', vi: 'Thủ công' },
+  'settings.backup.kind_auto': { en: 'Scheduled', vi: 'Định kỳ' },
+  'settings.backup.kind_pre_restore': { en: 'Pre-restore', vi: 'Trước restore' },
+  'settings.backup.kind_pre_restore_hint': {
+    en: 'Auto undo-point saved right before a restore — dated at the restore, not a general backup.',
+    vi: 'Điểm hoàn-tác tự động lưu ngay trước một lần khôi phục — ngày là lúc restore, không phải bản backup thường.',
+  },
 
   // My Profile form labels (Sprint S-I18N-COVER 2026-06-11) — operator-
   // visible form previously hardcoded English.

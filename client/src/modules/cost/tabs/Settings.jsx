@@ -2192,6 +2192,7 @@ function BackupSection() {
                     <tr key={b.filename}>
                       <td className="row-num">{i + 1}</td>
                       <td className="cell-code">
+                        <BackupKindBadge filename={b.filename} t={t} />
                         {b.filename}
                         {fileLbl}
                       </td>
@@ -2264,6 +2265,7 @@ function BackupSection() {
             <EmptyState icon="💾" title={t('settings.backup.restore_empty')} />
           ) : (
             <div className="bk-restore-wrap">
+              <p className="bk-restore-hint">{t('settings.backup.restore_hint')}</p>
               <table className="data-table bk-restore-table">
                 <thead>
                   <tr>
@@ -2294,6 +2296,7 @@ function BackupSection() {
                           </td>
                           <td className="text-right mono">{sizeLbl}</td>
                           <td className="cell-code bk-restore-file" title={b.filename}>
+                            <BackupKindBadge filename={b.filename} t={t} />
                             {b.filename}
                           </td>
                           <td>
@@ -2364,6 +2367,32 @@ function fmtTime(iso) {
   } catch {
     return iso;
   }
+}
+
+// Classify a data-backup file by its filename prefix so the list can tag what
+// each snapshot is. `pre_restore_*` are auto undo-points the server writes
+// BEFORE every restore (dated at the restore, NOT a general backup) — operators
+// kept picking them by mistake to recover deleted quotes. manual_/auto_ are the
+// real recovery points. Returns an i18n key suffix + a css modifier.
+function backupKind(filename) {
+  const f = String(filename || '');
+  if (f.startsWith('pre_restore_')) return 'pre_restore';
+  if (f.startsWith('manual_')) return 'manual';
+  if (f.startsWith('auto_')) return 'auto';
+  return 'other';
+}
+
+function BackupKindBadge({ filename, t }) {
+  const kind = backupKind(filename);
+  if (kind === 'other') return null;
+  return (
+    <span
+      className={`bk-kind bk-kind-${kind}`}
+      title={kind === 'pre_restore' ? t('settings.backup.kind_pre_restore_hint') : undefined}
+    >
+      {t(`settings.backup.kind_${kind}`)}
+    </span>
+  );
 }
 
 function BackupScheduleCard({ onRunDone, onRestore }) {
