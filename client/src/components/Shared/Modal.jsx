@@ -130,9 +130,15 @@ export default function Modal({
   dismissable = true,
   closable = true,
   ariaLabelledBy,
-  draggable = false, // opt-in: drag the card by its header to reposition
+  // Drag the card by its header to reposition. Default: AUTO — on for the
+  // content-rich sizes (lg/xl: showcards, tables, pickers, previews) where
+  // moving the dialog to see the screen behind is useful; off for sm/md
+  // (short confirmations / small forms stay centered). Pass an explicit
+  // boolean to force it either way.
+  draggable,
   children,
 }) {
+  const isDraggable = draggable ?? (size === 'lg' || size === 'xl');
   const cardRef = useRef(null);
   const restoreFocusRef = useRef(null);
 
@@ -180,7 +186,7 @@ export default function Modal({
   // card.style.transform directly) so there's no per-mousemove re-render and
   // no dynamic inline style in JSX (Lesson 6). Offset resets each open.
   useEffect(() => {
-    if (!open || !draggable) return;
+    if (!open || !isDraggable) return;
     const card = cardRef.current;
     const header = card?.querySelector('.op-modal-header');
     if (!card || !header) return;
@@ -218,7 +224,7 @@ export default function Modal({
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [open, draggable]);
+  }, [open, isDraggable]);
 
   if (!open) return null;
 
@@ -233,7 +239,7 @@ export default function Modal({
     <div className="op-modal-overlay" role="presentation" onMouseDown={handleOverlayMouseDown}>
       <div
         ref={cardRef}
-        className={`op-modal-card size-${size}${severityClass}${draggable ? ' op-modal-card--draggable' : ''}`}
+        className={`op-modal-card size-${size}${severityClass}${isDraggable ? ' op-modal-card--draggable' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={ariaLabelledBy}
