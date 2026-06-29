@@ -40,8 +40,8 @@ const TABS_ROOT = path.join(__dirname, '..', 'modules', 'cost', 'tabs');
 // introduce native number inputs without being whitelisted here.
 const BUDGETS = {
   'InkCalculator.jsx': 2, // Sprint AD: swept; 2 readonly `calc_vol`/`vol_recipe` remain
-  'ComplexCalc/SubProductRow.jsx': 6, // Sprint AF: pitch_ovr/width/cavities/offcut_pct swept; area_pct/efficiency/scrap_pct/clicks/repeat/layout remain (int-percent × /100 or min=1 integer)
-  'StandardCalc/CalcProcesses.jsx': 4,
+  'ComplexCalc/SubProductRow.jsx': 7, // Sprint AF: pitch_ovr/width/cavities/offcut_pct swept; area_pct/efficiency/scrap_pct/clicks/repeat/layout remain (int-percent × /100 or min=1 integer); +1 crew (S-PROC-CREW, integer count)
+  'StandardCalc/CalcProcesses.jsx': 5, // +1 crew (S-PROC-CREW, integer count like rpt/layout)
   'StandardCalc/CalcMaterials.jsx': 4,
   'LibRate.jsx': 0, // Sprint AE: swept
   'StandardCalc/CalcPackingShip.jsx': 3,
