@@ -2064,7 +2064,12 @@ function BackupSection() {
       {/* Sprint 1.7b — admin-editable backup schedule. Sits at the top so
           operators see "next backup at 02:00, last run ✓" before they
           decide whether to run a manual backup below. */}
-      {hasRole('admin') && <BackupScheduleCard onRunDone={loadBackups} />}
+      {hasRole('admin') && (
+        <BackupScheduleCard
+          onRunDone={loadBackups}
+          onRestore={hasRole('sys') ? () => setRestoreModalOpen(true) : null}
+        />
+      )}
 
       <div className="ifs-tabs" style={{ marginBottom: 12 }}>
         <button
@@ -2089,15 +2094,6 @@ function BackupSection() {
             <button className="btn btn-primary" onClick={createDataBackup}>
               Create Data Backup
             </button>
-            {hasRole('sys') && (
-              <button
-                className="btn"
-                onClick={() => setRestoreModalOpen(true)}
-                title={t('settings.backup.restore_btn_title')}
-              >
-                ↩ {t('settings.backup.restore_btn')}
-              </button>
-            )}
             {hasRole('sys') && (
               <>
                 <input
@@ -2364,7 +2360,8 @@ function fmtTime(iso) {
   }
 }
 
-function BackupScheduleCard({ onRunDone }) {
+function BackupScheduleCard({ onRunDone, onRestore }) {
+  const { t } = useI18n();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -2606,6 +2603,16 @@ function BackupScheduleCard({ onRunDone }) {
         {dirty && (
           <button type="button" className="btn" onClick={reload} disabled={saving}>
             Discard
+          </button>
+        )}
+        {onRestore && (
+          <button
+            type="button"
+            className="btn"
+            onClick={onRestore}
+            title={t('settings.backup.restore_btn_title')}
+          >
+            ↩ {t('settings.backup.restore_btn')}
           </button>
         )}
       </div>
