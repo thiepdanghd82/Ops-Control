@@ -32,7 +32,8 @@ test('merges both dirs and carries name + size + date per entry', () => {
   for (const f of files) {
     assert.ok(typeof f.filename === 'string' && f.filename);
     assert.ok(typeof f.size === 'number' && f.size >= 0);
-    assert.ok(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(f.date), 'date is YYYY-MM-DD HH:MM:SS');
+    assert.ok(typeof f.mtimeMs === 'number' && f.mtimeMs > 0, 'mtimeMs epoch for local formatting');
+    assert.ok(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(f.date), 'date kept for fallback');
   }
 });
 

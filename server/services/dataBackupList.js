@@ -15,7 +15,12 @@ import path from 'path';
  * @param {string[]} dirs  directories to scan, in preference order (a filename
  *                         seen in an earlier dir wins — its entry is kept and
  *                         the later duplicate skipped).
- * @returns {{filename:string,size:number,date:string}[]} deduped, sorted desc by date.
+ * @returns {{filename:string,size:number,mtimeMs:number,date:string}[]} deduped, sorted desc by mtime.
+ *
+ * `mtimeMs` is the raw epoch — the client formats it in the BROWSER's local
+ * timezone (matching how "Last run" renders), so the listed time isn't off by
+ * the UTC offset. `date` (UTC "YYYY-MM-DD HH:MM:SS") is kept for backward
+ * compatibility / fallback.
  */
 export function collectDataBackups(dirs) {
   const seen = new Set();
@@ -35,6 +40,7 @@ export function collectDataBackups(dirs) {
         files.push({
           filename: f,
           size: stat.size,
+          mtimeMs: stat.mtimeMs,
           date: new Date(stat.mtimeMs).toISOString().slice(0, 19).replace('T', ' '),
         });
       } catch {
@@ -42,7 +48,7 @@ export function collectDataBackups(dirs) {
       }
     }
   }
-  // `date` is "YYYY-MM-DD HH:MM:SS" → lexical sort == chronological.
-  files.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  // Sort newest-first by raw mtime (precise; independent of string format).
+  files.sort((a, b) => b.mtimeMs - a.mtimeMs);
   return files;
 }

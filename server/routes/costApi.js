@@ -3525,6 +3525,7 @@ router.get('/backup/code-list', (req, res) => {
         filename: e.name,
         size,
         files: fileCount,
+        mtimeMs: stat.mtimeMs,
         date: new Date(stat.mtimeMs).toISOString().slice(0, 19).replace('T', ' '),
       };
     });

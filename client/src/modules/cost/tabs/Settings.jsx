@@ -2196,7 +2196,9 @@ function BackupSection() {
                         {fileLbl}
                       </td>
                       <td className="text-right mono">{sizeLbl}</td>
-                      <td className="cell-date">{b.date || '—'}</td>
+                      <td className="cell-date">
+                        {b.mtimeMs ? fmtTime(b.mtimeMs) : b.date || '—'}
+                      </td>
                       <td
                         className="cell-actions"
                         style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}
@@ -2274,7 +2276,9 @@ function BackupSection() {
                 <tbody>
                   {[...dataBackups]
                     .sort((a, b) =>
-                      String(b.date || b.filename).localeCompare(String(a.date || a.filename))
+                      b.mtimeMs != null && a.mtimeMs != null
+                        ? b.mtimeMs - a.mtimeMs
+                        : String(b.date || b.filename).localeCompare(String(a.date || a.filename))
                     )
                     .map((b) => {
                       const sizeLbl =
@@ -2285,7 +2289,9 @@ function BackupSection() {
                           : '—';
                       return (
                         <tr key={b.filename}>
-                          <td className="cell-date">{b.date || '—'}</td>
+                          <td className="cell-date">
+                            {b.mtimeMs ? fmtTime(b.mtimeMs) : b.date || '—'}
+                          </td>
                           <td className="text-right mono">{sizeLbl}</td>
                           <td className="cell-code bk-restore-file" title={b.filename}>
                             {b.filename}
