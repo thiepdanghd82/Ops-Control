@@ -52,6 +52,7 @@ import {
   MANUAL_OVERRIDE_COLOR,
 } from '../../../../services/covOvrState';
 import '../StandardCalc/StandardCalc.css';
+import { crewOverrideState, isManualDerivedRow } from '../StandardCalc/processCrew.helpers';
 
 export default function SubProductRow({ sp, spi, result, allSps }) {
   const { dispatch, cplxState } = useCalc();
@@ -1375,9 +1376,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                   <th style={{ width: 40 }} title="Repeat">
                     Rpt
                   </th>
-                  <th className="sc-col-derived" style={{ width: 40 }}>
-                    Crew
-                  </th>
+                  <th style={{ width: 60 }}>Crew</th>
                   <th style={{ width: 55 }}>Speed</th>
                   <th className="sc-col-derived" style={{ width: 65 }}>
                     UOM
@@ -1430,10 +1429,11 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                 {procs.map((p, pi) => {
                   const wcOpts = lib ? getWCOptionsByType(lib, p.process_type) : [];
                   const rate = lib ? getRateByWC(lib, p.workcenter) : null;
-                  const crew = rate?.crew || '';
                   const uom = rate?.speed_uom || '';
                   const origIdx = (sp.processes || []).indexOf(p);
                   const r = procResults[origIdx] || null;
+                  const crewSt = crewOverrideState(p.crew, rate?.crew);
+                  const manualDerived = isManualDerivedRow(r, p.speed);
                   return (
                     <tr key={p._mid || `idx-${pi}`}>
                       <td className="sc-td-idx">Process {pi + 1}</td>
@@ -1457,7 +1457,14 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                       <td>
                         <select
                           value={p.workcenter || ''}
-                          onChange={(e) => setProc(pi, 'workcenter', e.target.value)}
+                          onChange={(e) => {
+                            const wc = e.target.value;
+                            setProc(pi, 'workcenter', wc);
+                            if (lib && wc) {
+                              const rt = getRateByWC(lib, wc);
+                              if (rt && rt.crew) setProc(pi, 'crew', rt.crew);
+                            }
+                          }}
                           className="cc-det-sel sc-select-bare"
                         >
                           <option value="">--</option>
@@ -1478,7 +1485,32 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                           style={{ background: 'var(--color-warning-100)' }}
                         />
                       </td>
-                      <td className="sc-td-derived">{crew || '\u2014'}</td>
+                      <td>
+                        <div className="sc-pack-row">
+                          <input
+                            type="number"
+                            min="1"
+                            value={crewSt.value}
+                            onChange={(e) => setProc(pi, 'crew', numF(e.target.value))}
+                            className={`cc-det-inp cc-det-num ${crewSt.isOverride ? 'sc-pack-tier-ovr' : ''}`}
+                            title={
+                              crewSt.isOverride
+                                ? `Override \u2014 rate crew = ${crewSt.base}. Drives labor + manual throughput.`
+                                : 'Crew size \u2014 drives labor + manual MAN UPH'
+                            }
+                          />
+                          {crewSt.isOverride && (
+                            <button
+                              type="button"
+                              className="sc-pack-reset"
+                              onClick={() => setProc(pi, 'crew', crewSt.base)}
+                              title={`Reset to rate crew (${crewSt.base})`}
+                            >
+                              &#8635;
+                            </button>
+                          )}
+                        </div>
+                      </td>
                       <td>
                         <DecimalInput
                           value={p.speed}
@@ -1512,11 +1544,20 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                       </td>
                       <td className="sc-td-derived">{r?.uph ? Math.round(r.uph) : '\u2014'}</td>
                       <td>
-                        <DecimalInput
-                          value={p.manual_uph}
-                          onChange={(v) => setProc(pi, 'manual_uph', v)}
-                          className="cc-det-inp cc-det-num"
-                        />
+                        {manualDerived ? (
+                          <span
+                            className="sc-cell-auto-uph"
+                            title="Auto-synced from Crew \u00d7 Eff% \u00d7 Speed \u2014 change Crew or Speed to rebalance this manual stage"
+                          >
+                            {Math.round(r.manualUph).toLocaleString()}
+                          </span>
+                        ) : (
+                          <DecimalInput
+                            value={p.manual_uph}
+                            onChange={(v) => setProc(pi, 'manual_uph', v)}
+                            className="cc-det-inp cc-det-num"
+                          />
+                        )}
                       </td>
                       {/* Sprint 1.6 — per-MOQ Setup H (mirrors Standard fix). */}
                       <td>

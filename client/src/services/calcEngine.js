@@ -613,6 +613,8 @@ export function calcProcess(proc, st, moq, lib, options = {}) {
       extra: 0,
       extra_vat: 0,
       uph: 0,
+      crew: 0,
+      manualUph: 0,
       mach_rate: 0,
       labor_rate: 0,
       speed_uom: '',
@@ -627,7 +629,11 @@ export function calcProcess(proc, st, moq, lib, options = {}) {
     : getRateByWC(lib, proc.workcenter)) || { machine_rate: 0, labor_rate: 0 };
   const mach_rate = rate.machine_rate || 0;
   const labor_rate = rate.labor_rate || 0;
-  const crew = rate.crew || 1;
+  // CREW column (proc.crew) is the throughput / balancing lever — it overrides
+  // the Rate Table crew when set. Undefined/blank → fall back to rate.crew so
+  // quotes that never touched the column stay byte-identical (BC).
+  const crewRaw = Number(proc.crew);
+  const crew = Number.isFinite(crewRaw) && crewRaw > 0 ? crewRaw : rate.crew || 1;
   const manual_rate =
     ((options.resolver ? options.resolver.getRate('Manual') : getRateByWC(lib, 'Manual')) || {})
       .labor_rate || 2.54;
@@ -658,13 +664,31 @@ export function calcProcess(proc, st, moq, lib, options = {}) {
     uph = uph * getCutTypeSpeedFactor(st.cut_type);
   }
 
+  // MAN UPH — for a MANUAL process (no machine speed → uph === 0) with a
+  // per-operator speed entered, throughput is DERIVED from crew so operators
+  // balance manual stages (Inspection/FQC/OQC) by changing CREW:
+  //   manualUph = crew × eff × speed.
+  // Machine rows + legacy quotes (speed 0, manual_uph typed) keep the typed
+  // value via the else branch — heal-on-read, no schema bump.
+  const manualUph =
+    uph === 0 && Number(proc.speed) > 0 ? crew * eff * Number(proc.speed) : proc.manual_uph || 0;
+
   const setup_h = proc.setup_h || 0;
   const setup_mach = moq ? ((setup_h * mach_rate) / moq) * repeat : 0;
   const setup_labor = moq ? ((setup_h * labor_rate * crew) / moq) * repeat : 0;
   const run_mach = uph > 0 ? (mach_rate / uph / Math.max(0.001, scrapFactor)) * repeat : 0;
+  // Manual-labor crew model — Option A (default): CREW is a throughput lever,
+  // unit cost stays correct. Because manualUph already scales with crew,
+  //   (manual_rate × crew) / (crew × eff × speed) = manual_rate / (eff × speed)
+  // → per-piece manual labor is crew-NEUTRAL; changing crew moves MAN UPH +
+  // PROD TIME (capacity / Balancing), not unit cost. Switch to Option B (crew
+  // lowers unit cost) by setting MANUAL_LABOR_CREW_MULT to 1.
+  const MANUAL_LABOR_CREW_MULT = crew;
   const run_labor =
     ((uph > 0 ? (labor_rate * crew) / uph / Math.max(0.001, scrapFactor) : 0) +
-      (proc.manual_uph > 0 ? manual_rate / proc.manual_uph / Math.max(0.001, scrapFactor) : 0)) *
+      (manualUph > 0
+        ? (manual_rate * MANUAL_LABOR_CREW_MULT) / manualUph / Math.max(0.001, scrapFactor)
+        : 0)) *
     repeat;
 
   const _totalQtyAuto = (st.annual_qty || moq) * (st.product_lifetime || 1);
@@ -712,9 +736,7 @@ export function calcProcess(proc, st, moq, lib, options = {}) {
   const extra_vat = st.trade_mode === 'USD(Book)' ? extra * 0.15 : 0;
 
   const total_time =
-    ((uph > 0 ? moq / uph : 0) + (proc.manual_uph > 0 ? moq / proc.manual_uph : 0) + setup_h) *
-    60 *
-    repeat;
+    ((uph > 0 ? moq / uph : 0) + (manualUph > 0 ? moq / manualUph : 0) + setup_h) * 60 * repeat;
   return {
     setup_mach,
     setup_labor,
@@ -724,6 +746,8 @@ export function calcProcess(proc, st, moq, lib, options = {}) {
     extra,
     extra_vat,
     uph,
+    crew,
+    manualUph,
     mach_rate,
     labor_rate,
     speed_uom,

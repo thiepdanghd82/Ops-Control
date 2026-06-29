@@ -475,6 +475,16 @@
   color: #fff;
 }
 
+/* Process MAN UPH — derived (auto-synced from Crew × Eff% × Speed) for manual
+   rows (Inspection/FQC/OQC). Read-only lock styling: italic + derived-blue so
+   operators see it tracks Crew instead of being hand-typed. */
+.sc-cell-auto-uph {
+  display: inline-block;
+  color: var(--color-blue-700, #1a4a8a);
+  font-weight: 700;
+  font-style: italic;
+}
+
 /* Inputs — IBM Carbon: bottom-border only, subtle bg, 0px radius */
 .sc-input {
   display: block;

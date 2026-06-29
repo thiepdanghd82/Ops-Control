@@ -15,6 +15,7 @@ import {
 } from '../../../../services/calcEngine';
 import { fmtN as _fmtN, parseLocaleNumber } from '../../../../utils/format';
 import DecimalInput from '../../../../utils/DecimalInput';
+import { crewOverrideState, isManualDerivedRow } from './processCrew.helpers';
 // ProcessBalancing is rendered as separate "Balancing" sub-tab
 
 // Local wrapper: default 4 decimals for process cost fields.
@@ -221,7 +222,7 @@ export default function CalcProcesses() {
                 <th style={{ width: 110 }}>Process Type</th>
                 <th style={{ width: 110 }}>Workcenter</th>
                 <th style={{ width: 45 }}>Rpt</th>
-                <th style={{ width: 55 }}>Crew</th>
+                <th style={{ width: 70 }}>Crew</th>
                 <th style={{ width: 65 }}>Speed</th>
                 <th
                   className="sc-col-derived"
@@ -279,6 +280,8 @@ export default function CalcProcesses() {
                 const wcOpts = lib ? getWCOptionsByType(lib, proc.process_type) : [];
                 const rateRow = lib ? getRateByWC(lib, proc.workcenter) : null;
                 const uom = rateRow?.speed_uom || '';
+                const crewSt = crewOverrideState(proc.crew, rateRow?.crew);
+                const manualDerived = isManualDerivedRow(r, proc.speed);
                 return (
                   <tr key={proc._mid || `idx-${i}`}>
                     <td className="sc-td-idx">Process {vi + 1}</td>
@@ -320,8 +323,31 @@ export default function CalcProcesses() {
                         style={{ background: '#fef3c7' }}
                       />
                     </td>
-                    <td className="sc-td-auto">
-                      {r ? r.crew || proc.crew || '\u2014' : proc.crew || '\u2014'}
+                    <td>
+                      <div className="sc-pack-row">
+                        <input
+                          type="number"
+                          min="1"
+                          value={crewSt.value}
+                          onChange={(e) => handleField(i, 'crew', e.target.value, true)}
+                          className={`sc-input-sm sc-input-num ${crewSt.isOverride ? 'sc-pack-tier-ovr' : ''}`}
+                          title={
+                            crewSt.isOverride
+                              ? `Override \u2014 rate crew = ${crewSt.base}. Drives labor + manual throughput.`
+                              : 'Crew size \u2014 drives labor + manual MAN UPH'
+                          }
+                        />
+                        {crewSt.isOverride && (
+                          <button
+                            type="button"
+                            className="sc-pack-reset"
+                            onClick={() => setProcessField(i, 'crew', crewSt.base)}
+                            title={`Reset to rate crew (${crewSt.base})`}
+                          >
+                            &#8635;
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <DecimalInput
@@ -397,13 +423,22 @@ export default function CalcProcesses() {
                       {r && r.uph ? Math.round(r.uph).toLocaleString() : '\u2014'}
                     </td>
                     <td>
-                      <DecimalInput
-                        value={proc.manual_uph}
-                        onChange={(v) => setProcessField(i, 'manual_uph', v)}
-                        placeholder="—"
-                        className="sc-input-sm sc-input-num"
-                        style={{ color: '#b45309' }}
-                      />
+                      {manualDerived ? (
+                        <span
+                          className="sc-cell-auto-uph"
+                          title="Auto-synced from Crew × Eff% × Speed — change Crew or Speed to rebalance this manual stage"
+                        >
+                          {Math.round(r.manualUph).toLocaleString()}
+                        </span>
+                      ) : (
+                        <DecimalInput
+                          value={proc.manual_uph}
+                          onChange={(v) => setProcessField(i, 'manual_uph', v)}
+                          placeholder="—"
+                          className="sc-input-sm sc-input-num"
+                          style={{ color: '#b45309' }}
+                        />
+                      )}
                     </td>
                     <td>
                       <DecimalInput
