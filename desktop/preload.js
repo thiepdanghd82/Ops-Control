@@ -122,13 +122,6 @@ const opsAPI = {
     readFile: (filePath) => invoke('ops:fs.readFile', filePath),
   },
 
-  // ─── Legacy data import (v1.0 → v1.1 migration) ──────────────
-  import: {
-    pickFolder: (opts) => invoke('ops:import.pickFolder', opts),
-    scanFolder: (path) => invoke('ops:import.scanFolder', path),
-    execute: (path, opts) => invoke('ops:import.execute', path, opts),
-  },
-
   // ─── License (S-DIAG-FIX 2026-05-05) ──────────────────────────
   // Handlers registered in desktop/license.js:309-331; the bridge
   // was missing here, so renderer's window.ops.license was undefined

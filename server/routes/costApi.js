@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 import multer from 'multer';
 import XLSX from 'xlsx';
 import { atomicWriteFileSync } from '../services/atomicWrite.js';
+import { collectDataBackups } from '../services/dataBackupList.js';
 import { redactErrorMessage, logErr, asSafeError } from '../utils/safeError.js';
 import { listLanIPv4, pickServerUrl } from '../utils/networkInfo.js';
 import { readFileSync as readFileSyncPkg } from 'fs';
@@ -71,6 +72,34 @@ function ensurePkgBackupDirs() {
   fs.mkdirSync(path.join(root, 'Code'), { recursive: true });
   fs.mkdirSync(path.join(root, 'Data'), { recursive: true });
   return root;
+}
+
+// The backup scheduler writes its daily full-data snapshots to
+// <DATA_DIR>/Backup/Data (sibling of PackageBackups). They carry the SAME
+// restoreFromSnapshot-compatible shape as the manual snapshots in
+// PackageBackups/Data, so the Restore picker must list + restore from BOTH —
+// otherwise operators see "No backups" even when the schedule card counts
+// several "data" snapshots. (Surfaced 2026-06-29 hardware verify.)
+function getAutoDataBackupDir() {
+  return path.join(getDataDir(), 'Backup', 'Data');
+}
+
+// Directories that hold restorable data-backup JSON snapshots, in
+// preference order (manual dir first so a same-named manual snapshot wins).
+function dataBackupDirs() {
+  return [path.join(getPkgBackupDir(), 'Data'), getAutoDataBackupDir()];
+}
+
+// Resolve a data-backup filename to a full path, checking the manual dir
+// first then the scheduler/auto dir. Returns null if not found in either.
+// safeFn guards against path traversal.
+function resolveDataBackupPath(filename) {
+  const fn = safeFn(filename);
+  for (const dir of dataBackupDirs()) {
+    const fp = path.join(dir, fn);
+    if (fs.existsSync(fp)) return fp;
+  }
+  return null;
 }
 
 // Source tree filter — used by both backup (copy out) and restore (copy back).
@@ -242,6 +271,7 @@ import {
   upsertQuote,
   VersionConflictError,
 } from '../repositories/quotesStore.js';
+import { filterQuoteHistory } from '../utils/quoteShape.js';
 import { recordSnapshotSave } from '../services/pricingSnapshotMetrics.js';
 import {
   setAuthCookies,
@@ -606,7 +636,7 @@ function rateRows(rate) {
 }
 
 // Backup helpers
-function buildBackupSnapshot() {
+export function buildBackupSnapshot() {
   const LIB_DIR = getLibDir();
   const snap = { _backup_at: new Date().toISOString(), _version: 3 };
   const map = {
@@ -633,7 +663,7 @@ function buildBackupSnapshot() {
   return snap;
 }
 
-function restoreFromSnapshot(snap) {
+export function restoreFromSnapshot(snap) {
   const LIB_DIR = getLibDir();
   const map = {
     quoteHistory: path.join(LIB_DIR, 'QuoteHistory', 'quote_history.json'),
@@ -655,14 +685,33 @@ function restoreFromSnapshot(snap) {
   const restored = [];
   const failed = [];
   for (const [key, fp] of Object.entries(map)) {
-    if (key in snap) {
-      try {
+    if (!(key in snap)) continue;
+    try {
+      if (key === 'quoteHistory') {
+        // P0 fix (2026-06-29): the box runs OPS_DATA_BACKEND=sqlite, so Quote
+        // History reads ops.db › quotes — NOT quote_history.json. A raw
+        // writeJson here rewrites the file but leaves ops.db at its post-delete
+        // state, so a quote deleted AFTER the backup never reappears on restore
+        // (silent data-loss). Route through the same dual-writer /save-all uses
+        // (saveQuotesStore): atomic JSON write + ops.db reconcile (DELETE … WHERE
+        // id NOT IN(kept) + upsert) so SQLite matches the snapshot exactly.
+        // Filter malformed rows first (parity with /save-all) — log, never drop
+        // silently — so a corrupt backup row can't poison the restore.
+        const { valid, dropped } = filterQuoteHistory(snap[key]);
+        if (dropped.length > 0) {
+          console.warn(
+            `  ⚠️  Restore quoteHistory: dropped ${dropped.length} malformed row(s): ` +
+              JSON.stringify(dropped.slice(0, 5))
+          );
+        }
+        saveQuotesStore(valid);
+      } else {
         writeJson(fp, snap[key]);
-        restored.push(key);
-      } catch (e) {
-        console.warn(`  ⚠️  Restore ${key}: ${e.message}`);
-        failed.push({ key, error: e.message || String(e) });
       }
+      restored.push(key);
+    } catch (e) {
+      console.warn(`  ⚠️  Restore ${key}: ${e.message}`);
+      failed.push({ key, error: e.message || String(e) });
     }
   }
   return { restored, failed };
@@ -3446,25 +3495,12 @@ router.get('/backup/list', (req, res) => {
   const u = getSessionUser(getTokenFromHeader(req));
   if (!u) return res.status(401).json({ error: 'Unauthorized' });
   ensurePkgBackupDirs();
-  const bdir = path.join(getPkgBackupDir(), 'Data');
-  try {
-    const files = fs
-      .readdirSync(bdir)
-      .filter((f) => f.endsWith('.json') && !f.startsWith('.'))
-      .sort()
-      .reverse()
-      .map((f) => {
-        const stat = fs.statSync(path.join(bdir, f));
-        return {
-          filename: f,
-          size: stat.size,
-          date: new Date(stat.mtimeMs).toISOString().slice(0, 19).replace('T', ' '),
-        };
-      });
-    res.json({ ok: true, files, dir: bdir });
-  } catch {
-    res.json({ ok: true, files: [], dir: bdir });
-  }
+  const primaryDir = path.join(getPkgBackupDir(), 'Data');
+  // Merge manual snapshots (PackageBackups/Data) with the scheduler's daily
+  // auto snapshots (Backup/Data) — same JSON shape, both restorable. Deduped by
+  // filename (manual dir wins) + sorted newest-first by the pure helper.
+  const files = collectDataBackups(dataBackupDirs());
+  res.json({ ok: true, files, dir: primaryDir });
 });
 
 // Code backups are now directory snapshots, not single HTML files.
@@ -3489,6 +3525,7 @@ router.get('/backup/code-list', (req, res) => {
         filename: e.name,
         size,
         files: fileCount,
+        mtimeMs: stat.mtimeMs,
         date: new Date(stat.mtimeMs).toISOString().slice(0, 19).replace('T', ' '),
       };
     });
@@ -3506,8 +3543,8 @@ router.get('/backup/download/:name', (req, res) => {
   const u = getSessionUser(getTokenFromHeader(req));
   if (!u) return res.status(401).json({ error: 'Unauthorized' });
   const fname = safeFn(decodeURIComponent(req.params.name));
-  const fpath = path.join(getPkgBackupDir(), 'Data', fname);
-  if (!fs.existsSync(fpath)) return res.status(404).json({ error: 'Not found' });
+  const fpath = resolveDataBackupPath(fname);
+  if (!fpath) return res.status(404).json({ error: 'Not found' });
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
   res.send(fs.readFileSync(fpath));
@@ -3605,8 +3642,8 @@ router.post('/backup/restore', writeRateLimit, (req, res) => {
   const u = getSessionUser(getTokenFromHeader(req));
   if (!isSys(u)) return res.status(403).json({ error: 'Admin only' });
   const { filename } = req.body;
-  const fpath = path.join(getPkgBackupDir(), 'Data', safeFn(filename));
-  if (!fs.existsSync(fpath)) return res.status(404).json({ error: 'Not found' });
+  const fpath = resolveDataBackupPath(filename);
+  if (!fpath) return res.status(404).json({ error: 'Not found' });
   // Parse + validate the snapshot BEFORE touching any real data file.
   // If the JSON is corrupted or the shape is wrong, we abort cleanly rather
   // than wipe live tables with a half-parsed payload.
@@ -3734,9 +3771,11 @@ router.post('/backup/delete', writeRateLimit, (req, res) => {
   if (!isSys(u)) return res.status(403).json({ error: 'Admin only' });
   try {
     const { filename, type: btype = 'data' } = req.body;
-    const subdir = btype === 'code' ? 'Code' : 'Data';
-    const fpath = path.join(getPkgBackupDir(), subdir, safeFn(filename));
-    if (!fs.existsSync(fpath)) return res.status(404).json({ error: 'Not found' });
+    const fpath =
+      btype === 'code'
+        ? path.join(getPkgBackupDir(), 'Code', safeFn(filename))
+        : resolveDataBackupPath(filename);
+    if (!fpath || !fs.existsSync(fpath)) return res.status(404).json({ error: 'Not found' });
     // Data backups are single JSON files → unlink. Code backups are folders → rmSync recursive.
     const stat = fs.statSync(fpath);
     if (stat.isDirectory()) fs.rmSync(fpath, { recursive: true, force: true });

@@ -8,7 +8,6 @@ import { useI18n } from '../../../utils/useI18n';
 import PermissionGroupsSection from './PermissionGroupsSection';
 import ConnectionInfoSection from './ConnectionInfoSection';
 import HardwareSection from './HardwareSection';
-import ImportLegacySection from './ImportLegacySection';
 import ModeSection from './ModeSection';
 import AboutSection from './AboutSection';
 import ProvisioningCard from '../../../components/Auth/ProvisioningCard';
@@ -76,14 +75,6 @@ const MENU_SECTIONS = [
         i18nKey: 'settings.item.syslog',
         minRole: 'admin',
       },
-      // v1.1 — desktop-only: import data từ Ops Control v1.0 cũ
-      {
-        id: 'import-legacy',
-        icon: '⇩',
-        label: 'Import data v1.0',
-        i18nKey: 'settings.item.import_legacy',
-        minRole: 'admin',
-      },
     ],
   },
 ];
@@ -98,7 +89,6 @@ const ICON_BGS = {
   syslog: '#f0fdf4',
   appearance: '#f3e8ff',
   hardware: '#fef9c3',
-  'import-legacy': '#dcfce7',
   mode: '#fae8ff',
   about: '#cffafe',
 };
@@ -174,7 +164,6 @@ export default function Settings() {
         {activeSec === 'account' && <AccountSection />}
         {activeSec === 'data' && <BackupSection />}
         {activeSec === 'syslog' && <LogsSection />}
-        {activeSec === 'import-legacy' && <ImportLegacySection />}
       </main>
     </div>
   );
@@ -1901,6 +1890,7 @@ function AddUserModal({ onClose, onCreate }) {
 
 function BackupSection() {
   const { hasRole } = useAuth();
+  const { t } = useI18n();
   const [dataBackups, setDataBackups] = useState([]);
   const [codeBackups, setCodeBackups] = useState([]);
   const [dataDir, setDataDir] = useState('');
@@ -1909,6 +1899,7 @@ function BackupSection() {
   const [activeTab, setActiveTab] = useState('data');
   const [msg, setMsg] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const uploadInputRef = useRef(null);
 
   useEffect(() => {
@@ -1978,7 +1969,7 @@ function BackupSection() {
           `Proceed?`
       )
     )
-      return;
+      return false;
     setMsg(null);
     try {
       const res = await costApi.restoreBackup(filename);
@@ -1989,8 +1980,10 @@ function BackupSection() {
         text: `${summary}${warn}. Safety snapshot: ${res.pre_backup}`,
       });
       loadBackups();
+      return !res.partial;
     } catch (e) {
       setMsg({ type: 'error', text: e.message });
+      return false;
     }
   }
 
@@ -2071,7 +2064,12 @@ function BackupSection() {
       {/* Sprint 1.7b — admin-editable backup schedule. Sits at the top so
           operators see "next backup at 02:00, last run ✓" before they
           decide whether to run a manual backup below. */}
-      {hasRole('admin') && <BackupScheduleCard onRunDone={loadBackups} />}
+      {hasRole('admin') && (
+        <BackupScheduleCard
+          onRunDone={loadBackups}
+          onRestore={hasRole('sys') ? () => setRestoreModalOpen(true) : null}
+        />
+      )}
 
       <div className="ifs-tabs" style={{ marginBottom: 12 }}>
         <button
@@ -2194,11 +2192,14 @@ function BackupSection() {
                     <tr key={b.filename}>
                       <td className="row-num">{i + 1}</td>
                       <td className="cell-code">
+                        <BackupKindBadge filename={b.filename} t={t} />
                         {b.filename}
                         {fileLbl}
                       </td>
                       <td className="text-right mono">{sizeLbl}</td>
-                      <td className="cell-date">{b.date || '—'}</td>
+                      <td className="cell-date">
+                        {b.mtimeMs ? fmtTime(b.mtimeMs) : b.date || '—'}
+                      </td>
                       <td
                         className="cell-actions"
                         style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}
@@ -2248,6 +2249,88 @@ function BackupSection() {
           </table>
         </div>
       </div>
+
+      {/* Restore picker — dated list of data backups, newest first.
+          Reuses the existing restoreDataBackup() plumbing (confirm +
+          server-side pre_restore_<ts> safety snapshot + toast). */}
+      <Modal
+        open={restoreModalOpen}
+        onClose={() => setRestoreModalOpen(false)}
+        size="lg"
+        severity="warning"
+        draggable
+      >
+        <Modal.Header title={t('settings.backup.restore_modal_title')} severity="warning" />
+        <Modal.Body>
+          {dataBackups.length === 0 ? (
+            <EmptyState icon="💾" title={t('settings.backup.restore_empty')} />
+          ) : (
+            <div className="bk-restore-wrap">
+              <p className="bk-restore-hint">{t('settings.backup.restore_hint')}</p>
+              <table className="data-table bk-restore-table">
+                <colgroup>
+                  <col className="bk-restore-col-date" />
+                  <col className="bk-restore-col-size" />
+                  <col className="bk-restore-col-file" />
+                  <col className="bk-restore-col-act" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>{t('settings.backup.restore_col_date')}</th>
+                    <th className="text-right">{t('settings.backup.restore_col_size')}</th>
+                    <th>{t('settings.backup.restore_col_file')}</th>
+                    <th className="text-right">{t('settings.backup.restore_col_act')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...dataBackups]
+                    .sort((a, b) =>
+                      b.mtimeMs != null && a.mtimeMs != null
+                        ? b.mtimeMs - a.mtimeMs
+                        : String(b.date || b.filename).localeCompare(String(a.date || a.filename))
+                    )
+                    .map((b) => {
+                      const sizeLbl =
+                        b.size != null
+                          ? b.size > 1024 * 1024
+                            ? `${(b.size / 1024 / 1024).toFixed(1)} MB`
+                            : `${(b.size / 1024).toFixed(1)} KB`
+                          : '—';
+                      return (
+                        <tr key={b.filename}>
+                          <td className="cell-date">
+                            {b.mtimeMs ? fmtTime(b.mtimeMs) : b.date || '—'}
+                          </td>
+                          <td className="text-right mono">{sizeLbl}</td>
+                          <td className="cell-code bk-restore-file" title={b.filename}>
+                            <BackupKindBadge filename={b.filename} t={t} />
+                            {b.filename}
+                          </td>
+                          <td className="text-right">
+                            <button
+                              className="btn btn-sm btn-primary"
+                              onClick={async () => {
+                                const ok = await restoreDataBackup(b.filename);
+                                if (ok) setRestoreModalOpen(false);
+                              }}
+                            >
+                              {t('settings.backup.restore_row_btn')}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <button className="op-btn op-btn-tertiary" onClick={() => setRestoreModalOpen(false)}>
+            {t('settings.backup.restore_close')}
+          </button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }
@@ -2293,7 +2376,34 @@ function fmtTime(iso) {
   }
 }
 
-function BackupScheduleCard({ onRunDone }) {
+// Classify a data-backup file by its filename prefix so the list can tag what
+// each snapshot is. `pre_restore_*` are auto undo-points the server writes
+// BEFORE every restore (dated at the restore, NOT a general backup) — operators
+// kept picking them by mistake to recover deleted quotes. manual_/auto_ are the
+// real recovery points. Returns an i18n key suffix + a css modifier.
+function backupKind(filename) {
+  const f = String(filename || '');
+  if (f.startsWith('pre_restore_')) return 'pre_restore';
+  if (f.startsWith('manual_')) return 'manual';
+  if (f.startsWith('auto_')) return 'auto';
+  return 'other';
+}
+
+function BackupKindBadge({ filename, t }) {
+  const kind = backupKind(filename);
+  if (kind === 'other') return null;
+  return (
+    <span
+      className={`bk-kind bk-kind-${kind}`}
+      title={kind === 'pre_restore' ? t('settings.backup.kind_pre_restore_hint') : undefined}
+    >
+      {t(`settings.backup.kind_${kind}`)}
+    </span>
+  );
+}
+
+function BackupScheduleCard({ onRunDone, onRestore }) {
+  const { t } = useI18n();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -2535,6 +2645,16 @@ function BackupScheduleCard({ onRunDone }) {
         {dirty && (
           <button type="button" className="btn" onClick={reload} disabled={saving}>
             Discard
+          </button>
+        )}
+        {onRestore && (
+          <button
+            type="button"
+            className="btn"
+            onClick={onRestore}
+            title={t('settings.backup.restore_btn_title')}
+          >
+            ↩ {t('settings.backup.restore_btn')}
           </button>
         )}
       </div>

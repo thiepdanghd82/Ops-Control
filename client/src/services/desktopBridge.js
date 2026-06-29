@@ -204,21 +204,6 @@ export const desktop = {
       isElectron ? ops.cache.upsert(tableName, rowId, payload) : Promise.resolve({ ok: false }),
   },
 
-  // ─── Legacy data import (v1.0 → v1.1) ────────────────────────
-  import: {
-    available: isElectron,
-    pickFolder: (opts) =>
-      isElectron
-        ? ops.import.pickFolder(opts)
-        : Promise.resolve({ canceled: true, reason: 'web-mode' }),
-    scanFolder: (path) =>
-      isElectron ? ops.import.scanFolder(path) : Promise.resolve({ ok: false, error: 'web-mode' }),
-    execute: (path, opts) =>
-      isElectron
-        ? ops.import.execute(path, opts)
-        : Promise.resolve({ ok: false, error: 'web-mode' }),
-  },
-
   // ─── Filesystem (open/save dialog + IO) ───────────────────────
   fs: {
     showSaveDialog: (opts) =>

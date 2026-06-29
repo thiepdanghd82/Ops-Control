@@ -449,6 +449,75 @@
   margin: 8px 0 14px;
 }
 
+/* Restore-from-backup modal — dated list, newest first. Fixed layout so the
+   columns fit the dialog width with NO horizontal scroll (the Restore button
+   was getting clipped); the File column flexes + ellipses long names. */
+.bk-restore-wrap {
+  max-height: 52vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.bk-restore-table {
+  width: 100%;
+  table-layout: fixed;
+}
+.bk-restore-table th,
+.bk-restore-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bk-restore-col-date {
+  width: 165px;
+}
+.bk-restore-col-size {
+  width: 78px;
+}
+.bk-restore-col-act {
+  width: 110px;
+}
+/* File column takes the remaining width and ellipses long filenames. */
+.bk-restore-file {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bk-restore-hint {
+  margin: 0 0 10px;
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-amber-900, #78350f);
+  background: var(--color-amber-50, #fffbeb);
+  border: 1px solid var(--color-amber-200, #fde68a);
+  border-radius: 4px;
+}
+
+/* Backup-kind tag shown before the filename (manual / scheduled / pre-restore). */
+.bk-kind {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border-radius: 3px;
+  vertical-align: middle;
+}
+.bk-kind-manual {
+  color: #1e40af;
+  background: #dbeafe;
+}
+.bk-kind-auto {
+  color: #3730a3;
+  background: #e0e7ff;
+}
+.bk-kind-pre_restore {
+  color: #92400e;
+  background: #fef3c7;
+}
+
 .row-num {
   color: var(--color-slate-400);
   font-size: 11px;

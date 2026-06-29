@@ -6,8 +6,8 @@
  *   - Library version + lib row counts (materials / workcenters / coverage)
  *   - Any `_warnings` carried by the calcAll result (site_mismatch etc.)
  *
- * Native <details> for collapse (repo pattern — ImportWizard, ModeSection,
- * ImportLegacySection). <StatusBadge> reused for the source pill.
+ * Native <details> for collapse (repo pattern — ImportWizard, ModeSection).
+ * <StatusBadge> reused for the source pill.
  *
  * Pure presentation — caller resolves snapshot via snapshotPricingParams
  * and passes `source` + `snapshot` + optional `warnings`. No state, no

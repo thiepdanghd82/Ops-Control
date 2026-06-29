@@ -96,6 +96,12 @@
   gap: 12px;
 }
 
+/* Opt-in draggable card — header is the grab handle. */
+.op-modal-card--draggable .op-modal-header {
+  cursor: move;
+  user-select: none;
+}
+
 .op-modal-header-icon {
   flex-shrink: 0;
   width: clamp(28px, 3vw, 32px);

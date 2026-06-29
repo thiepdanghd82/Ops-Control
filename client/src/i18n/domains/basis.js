@@ -123,7 +123,34 @@ registerStrings({
   'settings.item.hardware': { en: 'Hardware Devices', vi: 'Thiết bị phần cứng' },
   'settings.item.mode': { en: 'Connection Mode', vi: 'Chế độ kết nối' },
   'settings.item.about': { en: 'About / Diagnostics', vi: 'Giới thiệu / Chẩn đoán' },
-  'settings.item.import_legacy': { en: 'Import data v1.0', vi: 'Nhập dữ liệu v1.0' },
+  // Backup → Restore picker (dated backup list modal)
+  'settings.backup.restore_btn': { en: 'Restore', vi: 'Khôi phục' },
+  'settings.backup.restore_btn_title': {
+    en: 'Restore data from a backup (pick by date)',
+    vi: 'Khôi phục dữ liệu từ một bản backup (chọn theo ngày)',
+  },
+  'settings.backup.restore_modal_title': {
+    en: 'Restore from backup',
+    vi: 'Khôi phục từ bản backup',
+  },
+  'settings.backup.restore_empty': { en: 'No backups found', vi: 'Chưa có bản backup' },
+  'settings.backup.restore_col_date': { en: 'Date', vi: 'Ngày' },
+  'settings.backup.restore_col_size': { en: 'Size', vi: 'Dung lượng' },
+  'settings.backup.restore_col_file': { en: 'File', vi: 'Tệp' },
+  'settings.backup.restore_col_act': { en: 'Action', vi: 'Thao tác' },
+  'settings.backup.restore_row_btn': { en: 'Restore', vi: 'Khôi phục' },
+  'settings.backup.restore_close': { en: 'Close', vi: 'Đóng' },
+  'settings.backup.restore_hint': {
+    en: 'To recover deleted data, pick a Manual or Scheduled backup dated BEFORE the deletion. "Pre-restore" snapshots are auto undo-points taken before each restore — not general backups.',
+    vi: 'Để khôi phục dữ liệu đã xoá, chọn bản Thủ công hoặc Định kỳ có NGÀY TRƯỚC khi xoá. Bản "Trước restore" là điểm hoàn-tác tự động tạo trước mỗi lần khôi phục — không phải bản backup thường.',
+  },
+  'settings.backup.kind_manual': { en: 'Manual', vi: 'Thủ công' },
+  'settings.backup.kind_auto': { en: 'Scheduled', vi: 'Định kỳ' },
+  'settings.backup.kind_pre_restore': { en: 'Pre-restore', vi: 'Trước restore' },
+  'settings.backup.kind_pre_restore_hint': {
+    en: 'Auto undo-point saved right before a restore — dated at the restore, not a general backup.',
+    vi: 'Điểm hoàn-tác tự động lưu ngay trước một lần khôi phục — ngày là lúc restore, không phải bản backup thường.',
+  },
 
   // My Profile form labels (Sprint S-I18N-COVER 2026-06-11) — operator-
   // visible form previously hardcoded English.
