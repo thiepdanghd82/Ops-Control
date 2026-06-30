@@ -44,6 +44,16 @@ registerStrings({
   'pricing.contr_pct': { en: 'Contr%', vi: 'Đóng góp%' },
   'pricing.gm_pct': { en: 'GM%', vi: 'GM%' },
   'pricing.selling_unit': { en: 'Selling /unit (USD)', vi: 'Giá bán /sản phẩm (USD)' },
+  // Cost Breakdown — Cost Structure what-if (display-only)
+  'cb.cost_structure': { en: 'Cost Structure', vi: 'Cấu trúc chi phí' },
+  'cb.bucket': { en: 'Cost bucket', vi: 'Khoản mục' },
+  'cb.value': { en: 'Value', vi: 'Giá trị' },
+  'cb.pct_sell': { en: '% Sell', vi: '% Bán' },
+  'cb.pct_target': { en: '% Target', vi: '% Mục tiêu' },
+  'cb.active': { en: 'Active', vi: 'Áp dụng' },
+  'cb.reset': { en: 'Reset — re-check all buckets', vi: 'Đặt lại — bật lại tất cả' },
+  'cb.grand_total': { en: 'GRAND TOTAL', vi: 'TỔNG CỘNG' },
+  'cb.excluded': { en: 'Excluded', vi: 'Đã loại' },
 
   // Summary box (compact-form labels for narrow columns)
   'pricing.material_short': { en: 'Mat', vi: 'VL' },
