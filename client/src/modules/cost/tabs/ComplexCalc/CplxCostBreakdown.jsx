@@ -6,9 +6,10 @@
  * two-pass calcAll across all sub-products for each MOQ tier, so the
  * tier row aggregates match the FG sub-product (or fall back to a sum).
  */
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
+import { useI18n } from '../../../../utils/useI18n';
 import { snapshotPricingParams } from '../../../../services/pricingSnapshot';
 import SnapshotPanel from '../../components/SnapshotPanel';
 import {
@@ -21,24 +22,17 @@ import { fmtN, pct, gmClr } from '../../../../utils/format';
 import { useBomQtyFlag } from '../../../../utils/useBomQtyFlag';
 import { useSpMoqScalingFlag } from '../../../../utils/useSpMoqScalingFlag';
 import { KPI_TOOLTIPS } from '../../../../utils/kpiDefinitions';
+import {
+  recomputeKpi,
+  isBucketActive,
+  readMask,
+  writeMask,
+} from '../StandardCalc/costStructureWhatIf';
 
-// Re-derive VA / Contribution / GM at an arbitrary price without
-// re-running aggregateComplex. Costs are price-independent so only
-// the denominator changes. Formulas mirror aggregateForTier() below
-// (CCL convention: VA excludes labor, Contribution includes it) so
-// Selling-table and Target-table values reconcile cell-for-cell.
-function kpiAtPrice(agg, price) {
-  if (!agg || !price || price <= 0) return { va: null, contribution: null, gm: null };
-  const mats = agg.s_mat_cost || 0;
-  const tool = agg.tooling || 0;
-  const ps = agg.packing_ship || 0;
-  const labor = agg.labor_cost || 0;
-  return {
-    va: 1 - (mats + tool + ps) / price,
-    contribution: 1 - (mats + tool + ps + labor) / price,
-    gm: 1 - (agg.s_ttl || 0) / price,
-  };
-}
+// VA / Contribution / GM re-derivation at a different price now lives in
+// costStructureWhatIf.recomputeKpi (shared with Standard); all-active equals
+// the canonical agg.va/contribution/gm exactly, the active-mask subtracts
+// toggled-off buckets per metric.
 
 // Tier-aware aggregation wrapper — delegates the heavy two-pass calc to
 // aggregateComplex() in calcEngine and then layers tier-specific margin
@@ -79,12 +73,34 @@ function aggregateForTier(cs, sps, lib, tierIdx, opts) {
 }
 
 export default function CplxCostBreakdown() {
-  const { cplxState } = useCalc();
+  const { cplxState, activeQuoteId } = useCalc();
   const { lib } = useCostLib();
+  const { t } = useI18n();
   const [bomQtyEnabled] = useBomQtyFlag();
   const [spMoqScalingEnabled] = useSpMoqScalingFlag();
   const cs = cplxState;
   const sps = useMemo(() => cs.subproducts || [], [cs.subproducts]);
+
+  // Display-only what-if mask (sessionStorage per quote — never quote state /
+  // reducer / server). Mirrors Standard CalcCostBreakdown.
+  const [mask, setMask] = useState(() => readMask(activeQuoteId));
+  useEffect(() => {
+    setMask(readMask(activeQuoteId));
+  }, [activeQuoteId]);
+  const toggleBucket = useCallback(
+    (key) => {
+      setMask((prev) => {
+        const next = { ...prev, [key]: prev[key] === false ? true : false };
+        writeMask(activeQuoteId, next);
+        return next;
+      });
+    },
+    [activeQuoteId]
+  );
+  const resetMask = useCallback(() => {
+    writeMask(activeQuoteId, {});
+    setMask({});
+  }, [activeQuoteId]);
 
   // Phase 4 — lift snapshot resolve for the SnapshotPanel + propagate
   // through aggregateForTier → aggregateComplex (Phase 3 opts.snapshot).
@@ -161,6 +177,7 @@ export default function CplxCostBreakdown() {
               {tiers.map(({ idx, moq, sp, eau, result: r }) => {
                 const isActive = idx === activeIdx;
                 const target = idx === 0 ? cs.target : cs.extra_moqs?.[idx - 1]?.target;
+                const sk = r ? recomputeKpi(r, mask, sp) : null;
                 return (
                   <tr key={idx} className={isActive ? 'sc-bd-active' : ''}>
                     <td>
@@ -188,19 +205,19 @@ export default function CplxCostBreakdown() {
                           {fmtN(r.s_ttl)}
                         </td>
                         <td className="right bd-va" style={{ color: '#0891b2', fontWeight: 700 }}>
-                          {pct(r.va)}
+                          {pct(sk.va)}
                         </td>
                         <td
                           className="right bd-contr"
                           style={{ color: '#7c3aed', fontWeight: 700 }}
                         >
-                          {pct(r.contribution)}
+                          {pct(sk.contribution)}
                         </td>
                         <td
                           className="right bd-gm"
-                          style={{ color: gmClr(r.gm), fontWeight: 800, fontSize: 13 }}
+                          style={{ color: gmClr(sk.gm), fontWeight: 800, fontSize: 13 }}
                         >
-                          {pct(r.gm)}
+                          {pct(sk.gm)}
                         </td>
                       </>
                     ) : (
@@ -251,7 +268,7 @@ export default function CplxCostBreakdown() {
               {tiers.map(({ idx, moq, sp, eau, result: r }) => {
                 const isActive = idx === activeIdx;
                 const target = idx === 0 ? cs.target : cs.extra_moqs?.[idx - 1]?.target;
-                const tgtKpi = kpiAtPrice(r, target);
+                const tgtKpi = recomputeKpi(r, mask, target);
                 return (
                   <tr key={idx} className={isActive ? 'sc-bd-active' : ''}>
                     <td>
@@ -315,73 +332,125 @@ export default function CplxCostBreakdown() {
       {activeResult &&
         (() => {
           const r = activeResult;
+          const sellPrice = tiers[activeIdx]?.sp || 0;
+          const targetPrice = activeIdx === 0 ? cs.target : cs.extra_moqs?.[activeIdx - 1]?.target;
           const rows = [
-            { label: 'Material Cost', value: matCostExcludingInk(r), color: '#2563eb', icon: '◈' },
-            { label: 'Ink Cost', value: inkCostTotal(r), color: '#0891b2', icon: '⊕' },
+            {
+              key: 'material',
+              label: 'Material Cost',
+              value: matCostExcludingInk(r),
+              color: '#2563eb',
+              icon: '◈',
+            },
+            { key: 'ink', label: 'Ink Cost', value: inkCostTotal(r), color: '#0891b2', icon: '⊕' },
             // r.overhead/r.labor_cost are RUN-only (calcEngine 635-636 strips
             // setup). Add bd_setup_mach / bd_setup_labor so the waterfall bars
             // sum to s_ttl and match the Detailed Breakdown's setup+run rows.
             {
+              key: 'overhead',
               label: 'Overhead (Machine)',
               value: (r.overhead || 0) + (r.bd_setup_mach || 0),
               color: '#059669',
               icon: '⚙',
             },
             {
+              key: 'labor',
               label: 'Labor Cost',
               value: (r.labor_cost || 0) + (r.bd_setup_labor || 0),
               color: '#16a34a',
               icon: '⊙',
             },
-            { label: 'Tooling', value: r.tooling, color: '#374151', icon: '⚒' },
-            { label: 'Packing & Shipping', value: r.packing_ship, color: '#0ea5e9', icon: '▣' },
-            { label: 'VAT Loss', value: r.vat_loss, color: '#f59e0b', icon: '⊘' },
+            { key: 'tooling', label: 'Tooling', value: r.tooling, color: '#374151', icon: '⚒' },
+            {
+              key: 'packing',
+              label: 'Packing & Shipping',
+              value: r.packing_ship,
+              color: '#0ea5e9',
+              icon: '▣',
+            },
+            { key: 'vat', label: 'VAT Loss', value: r.vat_loss, color: '#f59e0b', icon: '⊘' },
           ];
-          const totalCost = r.s_ttl || 0;
+          const totalCost = r.s_ttl || 0; // composition-% denominator (unchanged)
           const maxVal = Math.max(...rows.map((x) => Math.abs(x.value || 0)), 0.001);
+          const visible = rows.filter((x) => x.value > 0);
+          const isOff = (x) => !isBucketActive(mask, x.key);
+          const activeSum = visible.reduce((s, x) => s + (isOff(x) ? 0 : x.value), 0);
+          const excluded = visible.reduce((s, x) => s + (isOff(x) ? x.value : 0), 0);
+          const pctOf = (v, p) => (p > 0 ? pct(v / p) : '—');
           return (
             <div className="sc-card" style={{ marginTop: 12 }}>
               <div className="sc-card-header sc-header-dark">
-                <span className="sc-card-title">Cost Structure</span>
+                <span className="sc-card-title">{t('cb.cost_structure')}</span>
               </div>
               <div className="sc-card-body">
-                {rows
-                  .filter((x) => x.value > 0)
-                  .map((x, i) => {
-                    const barW = Math.round((Math.abs(x.value) / maxVal) * 100);
-                    const share = totalCost > 0 ? ((x.value / totalCost) * 100).toFixed(1) : 0;
-                    return (
-                      <div key={i} className="sc-sum-bar-row">
-                        <div className="sc-sum-bar-label">
-                          <span>
-                            {x.icon} {x.label}
-                          </span>
-                          <span style={{ color: '#64748b', fontSize: 11 }}>{share}%</span>
-                        </div>
-                        <div className="sc-sum-bar-track">
-                          <div
-                            className="sc-sum-bar-fill"
-                            style={{ width: barW + '%', background: x.color }}
-                          />
-                        </div>
-                        <div className="sc-sum-bar-val" style={{ color: x.color }}>
-                          ${fmtN(x.value)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                <div className="sc-sum-bar-row sc-sum-bar-total">
-                  <div className="sc-sum-bar-label">
-                    <b>GRAND TOTAL</b>
-                  </div>
+                <div className="sc-sum-bar-row sc-cb-head">
+                  <div className="sc-sum-bar-label">{t('cb.bucket')}</div>
                   <div className="sc-sum-bar-track" />
-                  <div
-                    className="sc-sum-bar-val"
-                    style={{ fontWeight: 900, fontSize: 14, color: '#0f2341' }}
-                  >
-                    ${fmtN(totalCost)}
+                  <div className="sc-sum-bar-val sc-cb-h">{t('cb.value')}</div>
+                  <div className="sc-cb-pct sc-cb-h">{t('cb.pct_sell')}</div>
+                  <div className="sc-cb-pct sc-cb-h">{t('cb.pct_target')}</div>
+                  <div className="sc-cb-active sc-cb-h">
+                    {t('cb.active')}
+                    <button
+                      type="button"
+                      className="sc-cb-reset"
+                      onClick={resetMask}
+                      title={t('cb.reset')}
+                    >
+                      &#8635;
+                    </button>
                   </div>
                 </div>
+                {visible.map((x) => {
+                  const barW = Math.round((Math.abs(x.value) / maxVal) * 100);
+                  const share = totalCost > 0 ? ((x.value / totalCost) * 100).toFixed(1) : 0;
+                  const off = isOff(x);
+                  return (
+                    <div key={x.key} className={`sc-sum-bar-row${off ? ' sc-cb-off' : ''}`}>
+                      <div className="sc-sum-bar-label">
+                        <span>
+                          {x.icon} {x.label}
+                        </span>
+                        <span className="sc-cb-comp">{share}%</span>
+                      </div>
+                      <div className="sc-sum-bar-track">
+                        <div
+                          className="sc-sum-bar-fill"
+                          style={{ width: barW + '%', background: x.color }}
+                        />
+                      </div>
+                      <div className="sc-sum-bar-val" style={{ color: x.color }}>
+                        ${fmtN(x.value)}
+                      </div>
+                      <div className="sc-cb-pct">{pctOf(x.value, sellPrice)}</div>
+                      <div className="sc-cb-pct">{pctOf(x.value, targetPrice)}</div>
+                      <div className="sc-cb-active">
+                        <input
+                          type="checkbox"
+                          className="sc-cb-chk"
+                          checked={!off}
+                          onChange={() => toggleBucket(x.key)}
+                          aria-label={`${t('cb.active')} — ${x.label}`}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="sc-sum-bar-row sc-sum-bar-total">
+                  <div className="sc-sum-bar-label">
+                    <b>{t('cb.grand_total')}</b>
+                  </div>
+                  <div className="sc-sum-bar-track" />
+                  <div className="sc-sum-bar-val sc-cb-grand">${fmtN(activeSum)}</div>
+                  <div className="sc-cb-pct sc-cb-grand">{pctOf(activeSum, sellPrice)}</div>
+                  <div className="sc-cb-pct sc-cb-grand">{pctOf(activeSum, targetPrice)}</div>
+                  <div className="sc-cb-active" />
+                </div>
+                {excluded > 0 && (
+                  <div className="sc-cb-excluded">
+                    {t('cb.excluded')}: &minus;${fmtN(excluded)}
+                  </div>
+                )}
               </div>
             </div>
           );

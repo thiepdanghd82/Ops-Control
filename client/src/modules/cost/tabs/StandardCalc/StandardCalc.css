@@ -1752,6 +1752,82 @@ select.sc-input {
   margin-top: 4px;
 }
 
+/* Cost Structure what-if columns (display-only): % Sell, % Target, Active. */
+.sc-cb-comp {
+  color: var(--text-secondary, #64748b);
+  font-size: 11px;
+}
+.sc-cb-pct {
+  width: 64px;
+  flex-shrink: 0;
+  text-align: right;
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+}
+.sc-cb-active {
+  width: 54px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.sc-cb-chk {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-emerald-600, #059669);
+}
+.sc-cb-na {
+  color: var(--color-slate-300, #cbd5e1);
+}
+.sc-cb-head {
+  border-bottom: 1px solid var(--color-slate-200, #e2e8f0);
+}
+.sc-cb-head .sc-cb-h,
+.sc-cb-head .sc-sum-bar-label,
+.sc-cb-head .sc-sum-bar-val {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary, #64748b);
+}
+.sc-cb-reset {
+  border: 1px solid var(--color-slate-300, #cbd5e1);
+  background: transparent;
+  color: var(--text-secondary, #64748b);
+  border-radius: 3px;
+  font-size: 11px;
+  line-height: 1;
+  padding: 1px 4px;
+  cursor: pointer;
+}
+.sc-cb-reset:hover {
+  background: var(--color-slate-100, #f1f5f9);
+}
+/* Inactive (unchecked) bucket — dimmed + struck so it reads as excluded. */
+.sc-cb-off {
+  opacity: 0.5;
+}
+.sc-cb-off .sc-sum-bar-label > span:first-child,
+.sc-cb-off .sc-sum-bar-val {
+  text-decoration: line-through;
+}
+.sc-cb-grand {
+  font-weight: 900;
+  color: var(--color-slate-900, #0f2341);
+}
+.sc-cb-excluded {
+  text-align: right;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--color-amber-700, #b45309);
+  padding-top: 4px;
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .sc-content {
