@@ -228,12 +228,29 @@ describe('deriveMaterialLT', () => {
     assert.equal(deriveMaterialLT([main('MAT-A')], LIB), '37 days');
   });
 
-  test('Alt.Mat / Process Mat rows ignored', () => {
+  test('Process Mat rows ARE counted (operator decision 2026-06-30)', () => {
+    // Process Mat NPI-ONLY (lt 45) → 52; Alt.Mat MAT-A ignored even though 30>...
     const rows = [
-      { row_type: 'Alt.Mat', code: 'MAT-A' },
-      { row_type: 'Process Mat', code: 'NPI-ONLY' },
+      { row_type: 'Alt.Mat', code: 'MAT-A' }, // ignored — alt set
+      { row_type: 'Process Mat', code: 'NPI-ONLY' }, // counted → 45
     ];
-    assert.equal(deriveMaterialLT(rows, LIB), null);
+    assert.equal(deriveMaterialLT(rows, LIB), '52 days');
+  });
+
+  test('max spans Main.Mat + Process.Mat together', () => {
+    const rows = [
+      { row_type: 'Main.Mat', code: 'MAT-B' }, // 10
+      { row_type: 'Process Mat', code: 'NPI-ONLY' }, // 45 → wins
+    ];
+    assert.equal(deriveMaterialLT(rows, LIB), '52 days');
+  });
+
+  test('legacy "Process Mat 2" suffix classified via isProcessMat', () => {
+    assert.equal(deriveMaterialLT([{ row_type: 'Process Mat 2', code: 'MAT-A' }], LIB), '37 days');
+  });
+
+  test('Alt.Mat still ignored on its own', () => {
+    assert.equal(deriveMaterialLT([{ row_type: 'Alt.Mat', code: 'NPI-ONLY' }], LIB), null);
   });
 
   test('legacy "Main.Mat 1" classified via isMainMat', () => {
