@@ -10,6 +10,7 @@
  */
 
 import { isMainMat, isProcessMat } from '../../lib/rowTypeNormalize.js';
+import { calcMat } from '../../../../services/calcEngine.js';
 
 // Match CalcProcesses.jsx hidden convention — rows flagged `hidden:true`
 // are treated as deleted by the calc engine and should NOT contribute to
@@ -159,6 +160,68 @@ export function deriveMaterialLT(rows, lib) {
   if (collected.length === 0) return null;
   const maxLt = Math.max(...collected);
   return `${Math.round(maxLt + MATERIAL_LT_BUFFER)} days`;
+}
+
+/**
+ * Build the read-only "Materials MOQ" table for the Lead time & Notice sub-tab.
+ * DISPLAY-ONLY: pure derive from the material rows + NPI Materials library — no
+ * writes to quote state / reducer / server.
+ *
+ * One output row per material row that has a non-empty IFS code (blank rows
+ * skipped). `qpa_m2` is computed via the SAME calcMat the Materials table uses
+ * (moq-independent), so the value matches that tab exactly. `moq_m2` (NPI m²
+ * MOQ) + `type` (NPI Type/Description) come from the NPI row whose `name`
+ * case-insensitively equals the code; no match → moq_m2 + clear_pcs null (UI
+ * shows "—", never fabricated). `clear_pcs = moq_m2 / qpa_m2` (guarded against
+ * divide-by-zero).
+ *
+ * Cpx flattens across subproducts: the parent calls this once per SP (st = the
+ * subproduct) with opts.spCode, then concatenates.
+ *
+ * @param {Array|null|undefined} materials  active material rows
+ * @param {{npi?:Array}|null|undefined} lib  CostLibContext `lib`
+ * @param {object} st    layout state passed to calcMat (tier state / subproduct)
+ * @param {number} moq   active-tier moq (qpa_m2 ignores it; passed for parity)
+ * @param {{spCode?:string}} [opts]  Cpx per-SP label prefix
+ * @returns {Array<{row_label:string,ifs_code:string,quote_mat:string,type:string,qpa_m2:number,moq_m2:number|null,clear_pcs:number|null}>}
+ */
+export function buildLeadTimeMaterialsTable(materials, lib, st, moq, opts = {}) {
+  if (!Array.isArray(materials)) return [];
+  const npi = lib && Array.isArray(lib.npi) ? lib.npi : [];
+  const spCode = opts && opts.spCode ? String(opts.spCode).trim() : '';
+  const out = [];
+  for (const mat of materials) {
+    if (!mat || typeof mat !== 'object') continue;
+    const key = String(mat.code || mat.ifs_code || '').trim();
+    if (!key) continue; // skip blank-code rows
+    const keyLc = key.toLowerCase();
+    const npiMatch = npi.find(
+      (n) =>
+        n &&
+        String(n.name ?? '')
+          .trim()
+          .toLowerCase() === keyLc
+    );
+    let qpa_m2 = 0;
+    try {
+      qpa_m2 = Number(calcMat(mat, st, moq, null, null).qpa_m2) || 0;
+    } catch {
+      qpa_m2 = 0;
+    }
+    const moqNum = npiMatch ? Number(npiMatch.moq) : NaN;
+    const moq_m2 = Number.isFinite(moqNum) && moqNum > 0 ? moqNum : null;
+    const clear_pcs = moq_m2 != null && qpa_m2 > 0 ? moq_m2 / qpa_m2 : null;
+    out.push({
+      row_label: spCode ? `${spCode} · ${mat.row_type || ''}` : mat.row_type || '',
+      ifs_code: mat.code || '',
+      quote_mat: mat.desc || '',
+      type: npiMatch ? npiMatch.type || '' : '',
+      qpa_m2,
+      moq_m2,
+      clear_pcs,
+    });
+  }
+  return out;
 }
 
 /**

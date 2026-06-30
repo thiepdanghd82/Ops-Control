@@ -344,6 +344,16 @@ export const STRINGS = {
   },
   'lt.material.auto_placeholder': { en: 'No library match', vi: 'Không khớp thư viện' },
   'lt.material.reset': { en: 'Reset to auto', vi: 'Đặt lại về tự động' },
+  // Read-only Materials MOQ table (synced from Materials section + NPI library)
+  'lt.matmoq.title': { en: 'Materials MOQ', vi: 'MOQ Vật tư' },
+  'lt.matmoq.empty': { en: 'No synced materials', vi: 'Chưa có vật tư' },
+  'lt.matmoq.row': { en: 'Row', vi: 'Dòng' },
+  'lt.matmoq.ifs_code': { en: 'IFS code', vi: 'Mã IFS' },
+  'lt.matmoq.quote_mat': { en: 'Quote Materials', vi: 'Vật tư báo giá' },
+  'lt.matmoq.type': { en: 'Type / Description', vi: 'Loại / Mô tả' },
+  'lt.matmoq.qpa_m2': { en: 'QPA (m²)', vi: 'QPA (m²)' },
+  'lt.matmoq.moq_m2': { en: 'Materials MOQ (m²)', vi: 'MOQ Vật tư (m²)' },
+  'lt.matmoq.clear_pcs': { en: 'Clear Materials MOQ (pcs)', vi: 'MOQ Vật tư (pcs)' },
 };
 
 /**

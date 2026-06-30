@@ -172,3 +172,61 @@
     flex-wrap: wrap;
   }
 }
+
+/* Read-only Materials MOQ table (synced from Materials section + NPI library). */
+.ltn-matmoq {
+  margin-top: 16px;
+}
+.ltn-matmoq-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 8px;
+}
+.ltn-matmoq-empty {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-secondary, #94a3b8);
+  padding: 12px;
+  background: var(--color-slate-50, #f8fafc);
+  border: 1px solid var(--color-slate-200, #e2e8f0);
+  border-radius: 4px;
+}
+.ltn-matmoq-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-slate-200, #e2e8f0);
+  border-radius: 4px;
+}
+.ltn-matmoq-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.ltn-matmoq-table thead th {
+  background: var(--color-slate-100, #f1f5f9);
+  color: var(--text-secondary, #475569);
+  font-weight: 700;
+  text-align: left;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--color-slate-200, #e2e8f0);
+  white-space: nowrap;
+}
+.ltn-matmoq-table tbody td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--color-slate-100, #f1f5f9);
+  color: var(--text-primary, #1e293b);
+}
+.ltn-matmoq-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.ltn-matmoq-num {
+  text-align: right;
+  font-family: monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ltn-matmoq-code {
+  font-family: monospace;
+}

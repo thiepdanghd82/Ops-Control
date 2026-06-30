@@ -9,7 +9,9 @@ import {
   safeLeadTime,
   deriveMaterialLT,
   resolveMaterialLtDisplay,
+  buildLeadTimeMaterialsTable,
 } from './CalcLeadTimeNotice.helpers.js';
+import { calcMat } from '../../../../services/calcEngine.js';
 
 describe('sumToolingCostStd', () => {
   test('empty array → 0', () => {
@@ -303,5 +305,112 @@ describe('resolveMaterialLtDisplay', () => {
   test('null auto → empty string in auto mode', () => {
     assert.deepEqual(resolveMaterialLtDisplay({}, null), { value: '', isOverride: false });
     assert.deepEqual(resolveMaterialLtDisplay(null, null), { value: '', isOverride: false });
+  });
+});
+
+describe('buildLeadTimeMaterialsTable', () => {
+  // st with layout so calcMat returns a deterministic qpa_m2:
+  //   effWidth=100, pitch=10, cavities=1, webs=1, usage=1
+  //   qpa_m2 = (10*100/1e6/1/1)*1 = 0.001
+  const ST = { num_webs: 1, processes: [], web_width_td: 100, sheet_length: 10, min_gap_md: 0 };
+  const mat = (code, extra = {}) => ({
+    row_type: 'Main.Mat',
+    code,
+    desc: `desc-${code}`,
+    width: 100,
+    cavities: 1,
+    pitch_ovr: 10,
+    usage: 1,
+    ...extra,
+  });
+  const LIB = {
+    npi: [
+      { name: 'MAT-A', moq: 500, type: 'PET 50um' },
+      { name: 'MAT-ZERO-MOQ', moq: 0, type: 'X' },
+    ],
+  };
+  const QPA = calcMat(mat('MAT-A'), ST, 1000, null, null).qpa_m2; // 0.001
+  const close = (a, b) => Math.abs(a - b) < 1e-9;
+
+  test('code matches NPI name → moq_m2 = NPI moq, clear_pcs = moq/qpa_m2', () => {
+    const rows = buildLeadTimeMaterialsTable([mat('MAT-A')], LIB, ST, 1000);
+    assert.equal(rows.length, 1);
+    const r = rows[0];
+    assert.equal(r.ifs_code, 'MAT-A');
+    assert.equal(r.quote_mat, 'desc-MAT-A');
+    assert.equal(r.type, 'PET 50um');
+    assert.ok(close(r.qpa_m2, QPA), 'qpa_m2 == calcMat qpa_m2');
+    assert.equal(r.moq_m2, 500);
+    assert.ok(close(r.clear_pcs, 500 / QPA), 'clear_pcs = moq/qpa');
+  });
+
+  test('qpa_m2 equals calcMat(mat,...).qpa_m2 exactly', () => {
+    const rows = buildLeadTimeMaterialsTable([mat('MAT-A')], LIB, ST, 1000);
+    assert.equal(rows[0].qpa_m2, calcMat(mat('MAT-A'), ST, 1000, null, null).qpa_m2);
+  });
+
+  test('no NPI match → moq_m2 + clear_pcs null (never fabricated)', () => {
+    const rows = buildLeadTimeMaterialsTable([mat('NOPE')], LIB, ST, 1000);
+    assert.equal(rows[0].moq_m2, null);
+    assert.equal(rows[0].clear_pcs, null);
+    assert.equal(rows[0].type, '');
+  });
+
+  test('qpa_m2 = 0 → clear_pcs null (no divide-by-zero)', () => {
+    // width 0 + no layout width → effWidth 0 → qpa_m2 0
+    const rows = buildLeadTimeMaterialsTable(
+      [mat('MAT-A', { width: 0 })],
+      LIB,
+      { ...ST, web_width_td: 0 },
+      1000
+    );
+    assert.equal(rows[0].qpa_m2, 0);
+    assert.equal(rows[0].clear_pcs, null);
+    assert.equal(rows[0].moq_m2, 500, 'moq_m2 still from NPI');
+  });
+
+  test('NPI moq = 0 → moq_m2 null (no fake MOQ)', () => {
+    const rows = buildLeadTimeMaterialsTable([mat('MAT-ZERO-MOQ')], LIB, ST, 1000);
+    assert.equal(rows[0].moq_m2, null);
+    assert.equal(rows[0].clear_pcs, null);
+  });
+
+  test('blank-code rows skipped', () => {
+    const rows = buildLeadTimeMaterialsTable(
+      [mat(''), mat('   '), { row_type: 'Main.Mat' }, mat('MAT-A')],
+      LIB,
+      ST,
+      1000
+    );
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].ifs_code, 'MAT-A');
+  });
+
+  test('case-insensitive + trim match on NPI name', () => {
+    const rows = buildLeadTimeMaterialsTable([mat('  mat-a ')], LIB, ST, 1000);
+    assert.equal(rows[0].moq_m2, 500);
+  });
+
+  test('Cpx flatten across subproducts (parent concatenates per-SP)', () => {
+    const sp1 = buildLeadTimeMaterialsTable([mat('MAT-A')], LIB, ST, 1000, { spCode: 'SP1' });
+    const sp2 = buildLeadTimeMaterialsTable([mat('NOPE')], LIB, ST, 1000, { spCode: 'SP2' });
+    const all = [...sp1, ...sp2];
+    assert.equal(all.length, 2);
+    assert.equal(all[0].row_label, 'SP1 · Main.Mat');
+    assert.equal(all[1].row_label, 'SP2 · Main.Mat');
+  });
+
+  test('purity: does not mutate inputs', () => {
+    const rows = [mat('MAT-A')];
+    const snap = JSON.parse(JSON.stringify(rows));
+    const libSnap = JSON.parse(JSON.stringify(LIB));
+    buildLeadTimeMaterialsTable(rows, LIB, ST, 1000);
+    assert.deepEqual(rows, snap, 'materials untouched');
+    assert.deepEqual(LIB, libSnap, 'lib untouched');
+  });
+
+  test('non-array materials / missing lib → []', () => {
+    assert.deepEqual(buildLeadTimeMaterialsTable(null, LIB, ST, 1000), []);
+    assert.deepEqual(buildLeadTimeMaterialsTable([mat('MAT-A')], null, ST, 1000)[0].moq_m2, null);
   });
 });

@@ -43,6 +43,7 @@ import {
   deriveMaterialLT,
   resolveMaterialLtDisplay,
   safeLeadTime,
+  buildLeadTimeMaterialsTable,
 } from './CalcLeadTimeNotice.helpers.js';
 import CalcLegend from './CalcLegend';
 import TabBarOverflow from '../../../../components/Shared/TabBarOverflow';
@@ -204,6 +205,22 @@ export default function StandardCalc() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [stdState.materials_main, stdState.materials_alt, stdState.materials_active, lib]
   );
+
+  // Read-only Materials MOQ table for the Lead time tab — synced from the active
+  // material rows + NPI library (same parent-useMemo pattern as materialLtAuto;
+  // qpa_m2 via the active-tier state so it matches the Materials tab exactly).
+  const ltMatRows = useMemo(() => {
+    const tierSt = getActiveTierState(stdState);
+    const moq = tierSt.moq || stdState.moq || 0;
+    return buildLeadTimeMaterialsTable(getActiveMaterials(stdState), lib, tierSt, moq);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    stdState.materials_main,
+    stdState.materials_alt,
+    stdState.materials_active,
+    stdState.active_moq_idx,
+    lib,
+  ]);
 
   // Build the quote payload from the current state — reused by both
   // "Save as new" and "Update existing" paths.
@@ -407,6 +424,7 @@ export default function StandardCalc() {
           onChange={(next) => setStdField('lead_time', next)}
           toolingCostTotal={toolingCostTotal}
           materialLtAuto={materialLtAuto}
+          materialsTable={ltMatRows}
         />
       );
       break;

@@ -44,6 +44,7 @@ import {
   deriveMaterialLT,
   resolveMaterialLtDisplay,
   safeLeadTime,
+  buildLeadTimeMaterialsTable,
 } from '../StandardCalc/CalcLeadTimeNotice.helpers.js';
 import { showToast } from '../../../../utils/toast';
 import { fmtN, pct, gmClr } from '../../../../utils/format';
@@ -278,6 +279,17 @@ export default function ComplexCalc() {
       ),
     [sps, lib]
   );
+
+  // Read-only Materials MOQ table — flatten per-SP rows (st = the subproduct, so
+  // qpa_m2 matches each SP's Materials display) + NPI library. Display-only.
+  const ltMatRows = useMemo(() => {
+    const moq = cs.moq || 0;
+    return sps.flatMap((sp) =>
+      buildLeadTimeMaterialsTable(getActiveSPMaterials(sp), lib, sp, moq, {
+        spCode: sp.code || '',
+      })
+    );
+  }, [sps, lib, cs.moq]);
 
   const buildQuoteData = useCallback(() => {
     // Phase 3 — capture pricing snapshot. Cpx walks subproducts for
@@ -1177,6 +1189,7 @@ export default function ComplexCalc() {
             onChange={(next) => setCplxField('lead_time', next)}
             toolingCostTotal={toolingCostTotal}
             materialLtAuto={materialLtAuto}
+            materialsTable={ltMatRows}
           />
         )}
       </div>

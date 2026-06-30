@@ -1,7 +1,18 @@
 import { useCallback, useMemo } from 'react';
 import { useI18n } from '../../../../utils/useI18n';
 import { fmtUsd, safeLeadTime, resolveMaterialLtDisplay } from './CalcLeadTimeNotice.helpers.js';
+import { fmtN } from '../../../../utils/format';
 import './CalcLeadTimeNotice.css';
+
+// Read-only formatters for the Materials MOQ table. "—" for null/0.
+function fmtMoqM2(v) {
+  return v != null && v > 0
+    ? Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : '—';
+}
+function fmtClearPcs(v) {
+  return v != null && v > 0 ? Math.round(v).toLocaleString('en-US') : '—';
+}
 
 // Material L/T (lt_material) is rendered as a dedicated auto-derive + override
 // cell BEFORE this loop; the remaining 5 stay plain free-text textareas.
@@ -42,6 +53,7 @@ export default function CalcLeadTimeNotice({
   onChange,
   toolingCostTotal,
   materialLtAuto = null,
+  materialsTable = [],
 }) {
   const { t } = useI18n();
 
@@ -137,6 +149,44 @@ export default function CalcLeadTimeNotice({
             </div>
           );
         })}
+      </div>
+
+      {/* Read-only "Materials MOQ" table — synced FROM the Materials section +
+          the NPI Materials library. Display-only: never writes quote state. */}
+      <div className="ltn-matmoq">
+        <div className="ltn-matmoq-title">{t('lt.matmoq.title')}</div>
+        {materialsTable.length === 0 ? (
+          <div className="ltn-matmoq-empty">{t('lt.matmoq.empty')}</div>
+        ) : (
+          <div className="ltn-matmoq-wrap">
+            <table className="ltn-matmoq-table">
+              <thead>
+                <tr>
+                  <th>{t('lt.matmoq.row')}</th>
+                  <th>{t('lt.matmoq.ifs_code')}</th>
+                  <th>{t('lt.matmoq.quote_mat')}</th>
+                  <th>{t('lt.matmoq.type')}</th>
+                  <th className="ltn-matmoq-num">{t('lt.matmoq.qpa_m2')}</th>
+                  <th className="ltn-matmoq-num">{t('lt.matmoq.moq_m2')}</th>
+                  <th className="ltn-matmoq-num">{t('lt.matmoq.clear_pcs')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {materialsTable.map((r, i) => (
+                  <tr key={`${r.ifs_code}-${i}`}>
+                    <td>{r.row_label || '—'}</td>
+                    <td className="ltn-matmoq-code">{r.ifs_code || '—'}</td>
+                    <td>{r.quote_mat || '—'}</td>
+                    <td>{r.type || '—'}</td>
+                    <td className="ltn-matmoq-num">{r.qpa_m2 > 0 ? fmtN(r.qpa_m2, 6) : '—'}</td>
+                    <td className="ltn-matmoq-num">{fmtMoqM2(r.moq_m2)}</td>
+                    <td className="ltn-matmoq-num">{fmtClearPcs(r.clear_pcs)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
