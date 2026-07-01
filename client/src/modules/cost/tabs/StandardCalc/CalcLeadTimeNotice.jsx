@@ -164,6 +164,7 @@ export default function CalcLeadTimeNotice({
                   <th>{t('lt.matmoq.ifs_code')}</th>
                   <th>{t('lt.matmoq.quote_mat')}</th>
                   <th>{t('lt.matmoq.type')}</th>
+                  <th className="ltn-matmoq-num">{t('lt.matmoq.leadtime')}</th>
                   <th className="ltn-matmoq-num">{t('lt.matmoq.qpa_m2')}</th>
                   <th className="ltn-matmoq-num">{t('lt.matmoq.moq_m2')}</th>
                   <th className="ltn-matmoq-num">{t('lt.matmoq.clear_pcs')}</th>
@@ -176,6 +177,11 @@ export default function CalcLeadTimeNotice({
                     <td className="ltn-matmoq-code">{r.ifs_code || '—'}</td>
                     <td>{r.quote_mat || '—'}</td>
                     <td>{r.type || '—'}</td>
+                    <td className="ltn-matmoq-num">
+                      {r.leadtime != null && r.leadtime > 0
+                        ? Math.round(r.leadtime).toLocaleString('en-US')
+                        : '—'}
+                    </td>
                     <td className="ltn-matmoq-num">{r.qpa_m2 > 0 ? fmtN(r.qpa_m2, 6) : '—'}</td>
                     <td className="ltn-matmoq-num">{fmtMoqM2(r.moq_m2)}</td>
                     <td className="ltn-matmoq-num">{fmtClearPcs(r.clear_pcs)}</td>

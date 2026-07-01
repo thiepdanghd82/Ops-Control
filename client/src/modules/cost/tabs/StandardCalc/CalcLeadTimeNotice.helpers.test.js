@@ -325,8 +325,14 @@ describe('buildLeadTimeMaterialsTable', () => {
   });
   const LIB = {
     npi: [
-      { name: 'MAT-A', moq: 500, type: 'PET 50um' },
-      { name: 'MAT-ZERO-MOQ', moq: 0, type: 'X' },
+      { name: 'MAT-A', moq: 500, type: 'PET 50um', lt: 30 },
+      { name: 'MAT-ZERO-MOQ', moq: 0, type: 'X', lt: 12 },
+      { name: 'NPI-ONLY-LT', moq: 100, type: 'Y', lt: 20 },
+    ],
+    ifs: [
+      { part_no: 'MAT-A', leadtime: 45 }, // both match → max(30,45) = 45
+      { part_no: 'IFS-ONLY-LT', leadtime: 18 },
+      { part_no: 'IFS-ZERO', leadtime: 0 },
     ],
   };
   const QPA = calcMat(mat('MAT-A'), ST, 1000, null, null).qpa_m2; // 0.001
@@ -412,5 +418,43 @@ describe('buildLeadTimeMaterialsTable', () => {
   test('non-array materials / missing lib → []', () => {
     assert.deepEqual(buildLeadTimeMaterialsTable(null, LIB, ST, 1000), []);
     assert.deepEqual(buildLeadTimeMaterialsTable([mat('MAT-A')], null, ST, 1000)[0].moq_m2, null);
+  });
+
+  // ── Leadtime column (synced from NPI `lt` + IFS `leadtime`) ──
+  test('leadtime: BOTH libraries match → max(npi.lt, ifs.leadtime)', () => {
+    // MAT-A: npi.lt 30, ifs.leadtime 45 → 45
+    assert.equal(buildLeadTimeMaterialsTable([mat('MAT-A')], LIB, ST, 1000)[0].leadtime, 45);
+  });
+
+  test('leadtime: NPI only → npi.lt', () => {
+    assert.equal(buildLeadTimeMaterialsTable([mat('NPI-ONLY-LT')], LIB, ST, 1000)[0].leadtime, 20);
+  });
+
+  test('leadtime: IFS only → ifs.leadtime', () => {
+    assert.equal(buildLeadTimeMaterialsTable([mat('IFS-ONLY-LT')], LIB, ST, 1000)[0].leadtime, 18);
+  });
+
+  test('leadtime: no match → null; zero/non-finite ignored', () => {
+    assert.equal(buildLeadTimeMaterialsTable([mat('NOPE')], LIB, ST, 1000)[0].leadtime, null);
+    // IFS-ZERO leadtime 0 (no NPI) → filtered out → null
+    assert.equal(buildLeadTimeMaterialsTable([mat('IFS-ZERO')], LIB, ST, 1000)[0].leadtime, null);
+  });
+
+  test('leadtime: case-insensitive + trim match on both libraries', () => {
+    assert.equal(buildLeadTimeMaterialsTable([mat('  mat-a ')], LIB, ST, 1000)[0].leadtime, 45);
+    assert.equal(
+      buildLeadTimeMaterialsTable([mat(' ifs-only-lt ')], LIB, ST, 1000)[0].leadtime,
+      18
+    );
+  });
+
+  test('column order: leadtime immediately before qpa_m2; other fields unchanged', () => {
+    const r = buildLeadTimeMaterialsTable([mat('MAT-A')], LIB, ST, 1000)[0];
+    const keys = Object.keys(r);
+    assert.equal(keys.indexOf('qpa_m2') - keys.indexOf('leadtime'), 1, 'leadtime just before qpa');
+    // no regression on existing fields
+    assert.equal(r.moq_m2, 500);
+    assert.equal(r.type, 'PET 50um');
+    assert.ok(close(r.clear_pcs, 500 / QPA));
   });
 });

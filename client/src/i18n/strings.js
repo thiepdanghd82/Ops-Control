@@ -351,6 +351,7 @@ export const STRINGS = {
   'lt.matmoq.ifs_code': { en: 'IFS code', vi: 'Mã IFS' },
   'lt.matmoq.quote_mat': { en: 'Quote Materials', vi: 'Vật tư báo giá' },
   'lt.matmoq.type': { en: 'Type / Description', vi: 'Loại / Mô tả' },
+  'lt.matmoq.leadtime': { en: 'Leadtime', vi: 'Thời gian giao' },
   'lt.matmoq.qpa_m2': { en: 'QPA (m²)', vi: 'QPA (m²)' },
   'lt.matmoq.moq_m2': { en: 'Materials MOQ (m²)', vi: 'MOQ Vật tư (m²)' },
   'lt.matmoq.clear_pcs': { en: 'Clear Materials MOQ (pcs)', vi: 'MOQ Vật tư (pcs)' },

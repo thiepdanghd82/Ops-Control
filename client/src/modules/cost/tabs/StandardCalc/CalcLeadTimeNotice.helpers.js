@@ -183,11 +183,12 @@ export function deriveMaterialLT(rows, lib) {
  * @param {object} st    layout state passed to calcMat (tier state / subproduct)
  * @param {number} moq   active-tier moq (qpa_m2 ignores it; passed for parity)
  * @param {{spCode?:string}} [opts]  Cpx per-SP label prefix
- * @returns {Array<{row_label:string,ifs_code:string,quote_mat:string,type:string,qpa_m2:number,moq_m2:number|null,clear_pcs:number|null}>}
+ * @returns {Array<{row_label:string,ifs_code:string,quote_mat:string,type:string,leadtime:number|null,qpa_m2:number,moq_m2:number|null,clear_pcs:number|null}>}
  */
 export function buildLeadTimeMaterialsTable(materials, lib, st, moq, opts = {}) {
   if (!Array.isArray(materials)) return [];
   const npi = lib && Array.isArray(lib.npi) ? lib.npi : [];
+  const ifs = lib && Array.isArray(lib.ifs) ? lib.ifs : [];
   const spCode = opts && opts.spCode ? String(opts.spCode).trim() : '';
   const out = [];
   for (const mat of materials) {
@@ -211,11 +212,26 @@ export function buildLeadTimeMaterialsTable(materials, lib, st, moq, opts = {}) 
     const moqNum = npiMatch ? Number(npiMatch.moq) : NaN;
     const moq_m2 = Number.isFinite(moqNum) && moqNum > 0 ? moqNum : null;
     const clear_pcs = moq_m2 != null && qpa_m2 > 0 ? moq_m2 / qpa_m2 : null;
+    // Leadtime (days) synced from BOTH libraries — NPI `lt` + IFS `leadtime`;
+    // MAX when both match, the single value when only one matches, else null.
+    const ifsMatch = ifs.find(
+      (r) =>
+        r &&
+        String(r.part_no ?? '')
+          .trim()
+          .toLowerCase() === keyLc
+    );
+    const ltCands = [
+      npiMatch ? Number(npiMatch.lt) : NaN,
+      ifsMatch ? Number(ifsMatch.leadtime) : NaN,
+    ].filter((v) => Number.isFinite(v) && v > 0);
+    const leadtime = ltCands.length ? Math.max(...ltCands) : null;
     out.push({
       row_label: spCode ? `${spCode} · ${mat.row_type || ''}` : mat.row_type || '',
       ifs_code: mat.code || '',
       quote_mat: mat.desc || '',
       type: npiMatch ? npiMatch.type || '' : '',
+      leadtime,
       qpa_m2,
       moq_m2,
       clear_pcs,
