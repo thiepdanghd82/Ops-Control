@@ -568,3 +568,101 @@ describe('REMARK checkbox-driven auto-sync', () => {
     assert.equal(resolveRemarkDisplay(lt, autoB).value, 'manual'); // unchanged
   });
 });
+
+describe('buildLeadTimeMaterialsTable — tolerant code↔library matcher (Lesson 32)', () => {
+  const { normCode, resolveLibRow } = helpersNs;
+  const ST = { num_webs: 1, processes: [], web_width_td: 100, sheet_length: 10, min_gap_md: 0 };
+  const mat = (code) => ({
+    row_type: 'Main.Mat',
+    code,
+    desc: `d-${code}`,
+    width: 100,
+    cavities: 1,
+    pitch_ovr: 10,
+    usage: 1,
+  });
+  const LIB = {
+    npi: [
+      { name: 'JKD PSC 701-10B-NT', moq: 1568, type: 'Matte black PET', lt: 30 }, // internal space
+      { name: 'NITTO No 56301', moq: 100, type: 'Tape', lt: 12 }, // exact-only sibling
+      { name: 'STAR50*', moq: 30, type: 'Star', lt: 5 }, // trailing *
+      // Two spacing variants that both normalize to 'ambx1' — a code matching a
+      // THIRD spacing ('AMB X 1') exact-matches neither → ambiguous.
+      { name: 'AMB X1', moq: 10, type: 'a', lt: 3 },
+      { name: 'AMBX 1', moq: 20, type: 'b', lt: 4 },
+    ],
+    // Same code as the NPI 'JKD PSC 701-10B-NT' but only a spacing difference
+    // from the row code (normCode collapses it); leadtime 40 > NPI 30.
+    ifs: [{ part_no: 'JKD PSC 701-10B-NT', leadtime: 40 }],
+  };
+
+  test('normCode: collapses spacing / dash / case / trailing *', () => {
+    assert.equal(normCode('JKD PSC701-10B-NT'), 'jkdpsc701-10b-nt');
+    assert.equal(normCode('JKD PSC 701-10B-NT'), 'jkdpsc701-10b-nt'); // internal space gone
+    assert.equal(normCode('STAR50*'), 'star50');
+    assert.equal(normCode('A–B'), 'a-b'); // en-dash → hyphen
+    assert.equal(normCode('  Mixed Case  '), 'mixedcase');
+  });
+
+  test('JKD PSC701-10B-NT (no space) resolves NPI "JKD PSC 701-10B-NT" via fallback', () => {
+    const r = buildLeadTimeMaterialsTable([mat('JKD PSC701-10B-NT')], LIB, ST, 1000)[0];
+    assert.equal(r.moq_m2, 1568, 'MOQ from NPI');
+    assert.equal(r.leadtime, 40, 'max(NPI 30, IFS 40) = 40');
+    assert.equal(r.type, 'Matte black PET');
+    assert.equal(r.resolved, true);
+    assert.equal(r.fuzzy, true, 'flagged fuzzy (normalized fallback)');
+    assert.equal(r.ambiguous, false);
+    assert.ok(r.clear_pcs > 0);
+  });
+
+  test('exact matches still win and are NOT flagged fuzzy', () => {
+    const r = buildLeadTimeMaterialsTable([mat('NITTO No 56301')], LIB, ST, 1000)[0];
+    assert.equal(r.moq_m2, 100);
+    assert.equal(r.fuzzy, false, 'exact → not fuzzy');
+    assert.equal(r.resolved, true);
+  });
+
+  test('trailing "*" library name matches a plain code', () => {
+    const r = buildLeadTimeMaterialsTable([mat('STAR50')], LIB, ST, 1000)[0];
+    assert.equal(r.moq_m2, 30);
+    assert.equal(r.leadtime, 5);
+    assert.equal(r.fuzzy, true);
+  });
+
+  test('dash variant (hyphen vs en-dash) matches via normCode', () => {
+    // resolveLibRow directly: code with en-dash vs part_no with hyphen
+    const res = resolveLibRow([{ part_no: 'JKD-PSC701-10B-NT' }], 'part_no', 'JKD–PSC701-10B-NT');
+    assert.equal(res.fuzzy, true);
+    assert.ok(res.row);
+  });
+
+  test('AMBIGUITY: code normalizing to >1 distinct library rows → unresolved + flagged', () => {
+    // 'AMB X 1' → normCode 'ambx1'; exact-matches neither 'AMB X1' nor 'AMBX 1'.
+    const r = buildLeadTimeMaterialsTable([mat('AMB X 1')], LIB, ST, 1000)[0];
+    assert.equal(r.ambiguous, true);
+    assert.equal(r.resolved, false, 'not silently joined');
+    assert.equal(r.moq_m2, null);
+    assert.equal(r.leadtime, null);
+    assert.equal(r.type, '');
+  });
+
+  test('no library match anywhere → unresolved, not fuzzy/ambiguous', () => {
+    const r = buildLeadTimeMaterialsTable([mat('TOTALLY-UNKNOWN')], LIB, ST, 1000)[0];
+    assert.equal(r.resolved, false);
+    assert.equal(r.fuzzy, false);
+    assert.equal(r.ambiguous, false);
+    assert.equal(r.moq_m2, null);
+  });
+
+  test('resolveLibRow: exact wins over a would-be fuzzy sibling', () => {
+    const rows = [
+      { name: 'A B', moq: 1 },
+      { name: 'AB', moq: 2 },
+    ];
+    // key "AB" exact-matches row 2 → not fuzzy, not ambiguous
+    const res = resolveLibRow(rows, 'name', 'AB');
+    assert.equal(res.row.moq, 2);
+    assert.equal(res.fuzzy, false);
+    assert.equal(res.ambiguous, false);
+  });
+});

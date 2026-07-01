@@ -279,7 +279,29 @@ export default function CalcLeadTimeNotice({
                         ) : null}
                       </td>
                       <td>{r.row_label || '—'}</td>
-                      <td className="ltn-matmoq-code">{r.ifs_code || '—'}</td>
+                      <td
+                        className={`ltn-matmoq-code${
+                          r.ambiguous
+                            ? ' ltn-matmoq-ambiguous'
+                            : r.fuzzy
+                              ? ' ltn-matmoq-fuzzy'
+                              : selKey && !r.resolved
+                                ? ' ltn-matmoq-unresolved'
+                                : ''
+                        }`}
+                        title={
+                          r.ambiguous
+                            ? t('lt.matmoq.ambiguous_tip')
+                            : r.fuzzy
+                              ? t('lt.matmoq.fuzzy_tip')
+                              : selKey && !r.resolved
+                                ? t('lt.matmoq.unresolved_tip')
+                                : undefined
+                        }
+                      >
+                        {r.ifs_code || '—'}
+                        {r.fuzzy && <span className="ltn-matmoq-approx"> ≈</span>}
+                      </td>
                       <td>{r.quote_mat || '—'}</td>
                       <td>{r.type || '—'}</td>
                       <td className="ltn-matmoq-num">

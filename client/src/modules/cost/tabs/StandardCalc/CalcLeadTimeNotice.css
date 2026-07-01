@@ -243,3 +243,21 @@
   cursor: pointer;
   accent-color: var(--color-blue-600, #2563eb);
 }
+
+/* Match-quality cues on the IFS code cell (Lesson 32 tolerant lookup). */
+.ltn-matmoq-fuzzy {
+  color: var(--color-amber-700, #b45309);
+}
+.ltn-matmoq-approx {
+  font-weight: 700;
+  color: var(--color-amber-600, #d97706);
+}
+.ltn-matmoq-ambiguous {
+  color: var(--color-orange-700, #c2410c);
+  text-decoration: underline dotted;
+}
+.ltn-matmoq-unresolved {
+  color: var(--color-red-600, #dc2626);
+  text-decoration: underline dotted var(--color-red-400, #f87171);
+  text-underline-offset: 2px;
+}

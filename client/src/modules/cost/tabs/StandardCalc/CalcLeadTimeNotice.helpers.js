@@ -185,6 +185,58 @@ export function deriveMaterialLT(rows, lib) {
  * @param {{spCode?:string}} [opts]  Cpx per-SP label prefix
  * @returns {Array<{row_label:string,ifs_code:string,quote_mat:string,type:string,leadtime:number|null,qpa_m2:number,moq_m2:number|null,clear_pcs:number|null}>}
  */
+/**
+ * Normalize a material code / library name for tolerant matching. Collapses the
+ * spacing / dash / case / trailing-* differences that make an EXACT lookup miss
+ * (CLAUDE.md Lesson 32 — the code↔library variant): e.g. row code
+ * "JKD PSC701-10B-NT" vs NPI name "JKD PSC 701-10B-NT" (internal space) both
+ * normalize to "jkdpsc701-10b-nt". Whitespace is removed entirely (not just
+ * trimmed) so an internal space in only one string no longer blocks the match.
+ */
+export function normCode(s) {
+  return String(s || '')
+    .normalize('NFKC')
+    .replace(/[‐-―−]/g, '-') // en/em/figure dashes + minus → hyphen
+    .replace(/\s+/g, '') // remove ALL whitespace (PSC 701 → PSC701)
+    .toLowerCase()
+    .replace(/\*+$/, ''); // strip trailing '*' markers (NPI names use them)
+}
+
+/**
+ * Resolve a library row for `key` from `rows` keyed by `field`, EXACT-first then
+ * a normalized fallback. Returns { row, fuzzy, ambiguous }:
+ *  - exact trim+lowercase equality always wins (zero false-positive risk);
+ *  - else normCode() equality — one distinct match → { fuzzy:true };
+ *  - MORE THAN ONE distinct library row normalizing to the key → do NOT guess:
+ *    { ambiguous:true, row:null } so the caller keeps "—" + flags the row.
+ */
+export function resolveLibRow(rows, field, key) {
+  if (!Array.isArray(rows)) return { row: null, fuzzy: false, ambiguous: false };
+  const keyLc = String(key).trim().toLowerCase();
+  const exact = rows.find(
+    (r) =>
+      r &&
+      String(r[field] ?? '')
+        .trim()
+        .toLowerCase() === keyLc
+  );
+  if (exact) return { row: exact, fuzzy: false, ambiguous: false };
+  const nkey = normCode(key);
+  if (!nkey) return { row: null, fuzzy: false, ambiguous: false };
+  const hits = rows.filter((r) => r && normCode(r[field]) === nkey);
+  if (hits.length === 0) return { row: null, fuzzy: false, ambiguous: false };
+  // Distinct = different original field values (true dupes are not ambiguous).
+  const distinct = new Set(
+    hits.map((r) =>
+      String(r[field] ?? '')
+        .trim()
+        .toLowerCase()
+    )
+  );
+  if (distinct.size > 1) return { row: null, fuzzy: false, ambiguous: true };
+  return { row: hits[0], fuzzy: true, ambiguous: false };
+}
+
 export function buildLeadTimeMaterialsTable(materials, lib, st, moq, opts = {}) {
   if (!Array.isArray(materials)) return [];
   const npi = lib && Array.isArray(lib.npi) ? lib.npi : [];
@@ -195,14 +247,15 @@ export function buildLeadTimeMaterialsTable(materials, lib, st, moq, opts = {}) 
     if (!mat || typeof mat !== 'object') continue;
     const key = String(mat.code || mat.ifs_code || '').trim();
     if (!key) continue; // skip blank-code rows
-    const keyLc = key.toLowerCase();
-    const npiMatch = npi.find(
-      (n) =>
-        n &&
-        String(n.name ?? '')
-          .trim()
-          .toLowerCase() === keyLc
-    );
+    // Tolerant lookup (exact-first, normalized fallback, ambiguity guard) so a
+    // spacing/dash/case variant between the code and the library name still
+    // resolves Type / Leadtime / MOQ (Lesson 32).
+    const npiRes = resolveLibRow(npi, 'name', key);
+    const ifsRes = resolveLibRow(ifs, 'part_no', key);
+    const npiMatch = npiRes.ambiguous ? null : npiRes.row;
+    const ifsMatch = ifsRes.ambiguous ? null : ifsRes.row;
+    const ambiguous = npiRes.ambiguous || ifsRes.ambiguous;
+    const fuzzy = (!!npiMatch && npiRes.fuzzy) || (!!ifsMatch && ifsRes.fuzzy);
     let qpa_m2 = 0;
     try {
       qpa_m2 = Number(calcMat(mat, st, moq, null, null).qpa_m2) || 0;
@@ -214,13 +267,6 @@ export function buildLeadTimeMaterialsTable(materials, lib, st, moq, opts = {}) 
     const clear_pcs = moq_m2 != null && qpa_m2 > 0 ? moq_m2 / qpa_m2 : null;
     // Leadtime (days) synced from BOTH libraries — NPI `lt` + IFS `leadtime`;
     // MAX when both match, the single value when only one matches, else null.
-    const ifsMatch = ifs.find(
-      (r) =>
-        r &&
-        String(r.part_no ?? '')
-          .trim()
-          .toLowerCase() === keyLc
-    );
     const ltCands = [
       npiMatch ? Number(npiMatch.lt) : NaN,
       ifsMatch ? Number(ifsMatch.leadtime) : NaN,
@@ -235,6 +281,13 @@ export function buildLeadTimeMaterialsTable(materials, lib, st, moq, opts = {}) 
       qpa_m2,
       moq_m2,
       clear_pcs,
+      // Match-quality flags for the UI (Lesson 32 visibility):
+      //  - resolved: any library-derived data found
+      //  - fuzzy:    resolved ONLY via the normalized fallback (spacing/dash/case)
+      //  - ambiguous: normalized fallback hit >1 distinct rows → left unresolved
+      resolved: !!(npiMatch || ifsMatch),
+      fuzzy,
+      ambiguous,
     });
   }
   return out;

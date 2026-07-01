@@ -357,6 +357,18 @@ export const STRINGS = {
   'lt.matmoq.clear_pcs': { en: 'Clear Materials MOQ (pcs)', vi: 'MOQ Vật tư (pcs)' },
   'lt.matmoq.select_all': { en: 'Select all for Remark', vi: 'Chọn tất cả cho Ghi chú' },
   'lt.matmoq.select_row': { en: 'Include in Remark:', vi: 'Đưa vào Ghi chú:' },
+  'lt.matmoq.fuzzy_tip': {
+    en: '≈ Matched despite spacing/dash difference — clean the code or the library entry',
+    vi: '≈ Khớp dù lệch khoảng trắng/gạch — nên chuẩn hoá mã hoặc dòng thư viện',
+  },
+  'lt.matmoq.ambiguous_tip': {
+    en: 'Ambiguous — the code matches more than one library entry; left unresolved',
+    vi: 'Không rõ ràng — mã khớp nhiều dòng thư viện; để trống',
+  },
+  'lt.matmoq.unresolved_tip': {
+    en: 'No library match — check the IFS code or add it to NPI / IFS Materials',
+    vi: 'Không khớp thư viện — kiểm tra mã IFS hoặc thêm vào NPI / IFS Materials',
+  },
   // REMARK checkbox-driven auto-sync
   'lt.remark.auto_placeholder': {
     en: 'Auto from checked materials — or type to override',
