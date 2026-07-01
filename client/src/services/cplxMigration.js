@@ -66,6 +66,17 @@ function healLeadTimeMaterialOvr(state) {
   return { ...state, lead_time: { ...lt, lt_material_ovr: seed } };
 }
 
+// Sprint S-PO-LT — seed lt_po_ovr from legacy free-text lt_po ONCE so the
+// auto-derived PO L/T doesn't silently replace a saved manual entry. Mirrors
+// stdMigration.healLeadTimePoOvr; Cpx lead_time is quote-level.
+function healLeadTimePoOvr(state) {
+  const lt = state && state.lead_time;
+  if (!lt || typeof lt !== 'object' || Array.isArray(lt)) return state;
+  if ('lt_po_ovr' in lt) return state;
+  const seed = typeof lt.lt_po === 'string' ? lt.lt_po : '';
+  return { ...state, lead_time: { ...lt, lt_po_ovr: seed } };
+}
+
 // Sprint S-REMARK-SEL — seed lt_remark_ovr from legacy free-text lt_remark ONCE
 // so checkbox-driven REMARK doesn't clobber a saved manual note. Mirrors
 // stdMigration.healLeadTimeRemarkOvr; Cpx lead_time is quote-level.
@@ -153,7 +164,9 @@ export function upgradeCplxState(state) {
     )
   ) {
     // already upgraded — still heal snapshot + lead-time override if absent
-    return healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(healPricingSnapshot(state)));
+    return healLeadTimePoOvr(
+      healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(healPricingSnapshot(state)))
+    );
   }
 
   const sourceVersion = Number(state._shape_version) || 0;
@@ -216,7 +229,9 @@ export function upgradeCplxState(state) {
   // Pricing-snapshot heal (Phase 1) — additive default after the
   // shape-version walk so newly-migrated states get the snapshot too.
   // Material L/T override heal (Sprint S-MAT-LT) — seed legacy free-text.
-  return healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(healPricingSnapshot(upgraded)));
+  return healLeadTimePoOvr(
+    healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(healPricingSnapshot(upgraded)))
+  );
 }
 
 /**

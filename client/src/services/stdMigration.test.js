@@ -404,6 +404,25 @@ test('upgradeStdState: legacy lt_material seeds lt_material_ovr (pre-feature quo
   assert.equal(out.lead_time.lt_material, '25 days', 'original preserved');
 });
 
+test('upgradeStdState: legacy lt_po seeds lt_po_ovr (pre-feature quote)', () => {
+  const legacy = {
+    _schema_version: 3,
+    materials_main: [{ _mid: 'm1', code: 'M1' }],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [{ _mid: 'm1', code: 'M1' }],
+    inks: [],
+    processes: [],
+    pricing_snapshot: { _captured_at: null },
+    // has a manual PO L/T, no lt_po_ovr key → seed it as an override so the
+    // auto-derived value doesn't silently replace the saved text.
+    lead_time: { lt_material: '25 days', lt_material_ovr: '', lt_po: '14 days' },
+  };
+  const out = upgradeStdState(legacy);
+  assert.equal(out.lead_time.lt_po_ovr, '14 days', 'free-text PO L/T seeded as override');
+  assert.equal(out.lead_time.lt_po, '14 days', 'original preserved');
+});
+
 test('upgradeStdState: feature-aware quote (lt_material_ovr present) NOT re-seeded', () => {
   const featureAware = {
     _schema_version: 3,
@@ -415,8 +434,8 @@ test('upgradeStdState: feature-aware quote (lt_material_ovr present) NOT re-seed
     processes: [],
     pricing_snapshot: { _captured_at: null },
     // auto mode: overrides empty, lt_material holds the resolved auto value.
-    // Fully feature-aware → both override keys present so heal is a no-op.
-    lead_time: { lt_material: '37 days', lt_material_ovr: '', lt_remark_ovr: '' },
+    // Fully feature-aware → all override keys present so heal is a no-op.
+    lead_time: { lt_material: '37 days', lt_material_ovr: '', lt_po_ovr: '', lt_remark_ovr: '' },
   };
   const out = upgradeStdState(featureAware);
   assert.equal(out.lead_time.lt_material_ovr, '', 'stays empty — reset-safe, no re-seed');

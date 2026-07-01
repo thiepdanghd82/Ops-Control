@@ -67,6 +67,20 @@ function healLeadTimeMaterialOvr(state) {
   return { ...state, lead_time: { ...lt, lt_material_ovr: seed } };
 }
 
+// Sprint S-PO-LT — PO L/T becomes auto-derived (Σ PROD TIME ÷ 8) with a manual
+// override (lt_po_ovr). A quote saved BEFORE this feature has free-text lt_po
+// but NO lt_po_ovr key — that text was a manual entry, so seed lt_po_ovr from it
+// ONCE (key-presence signal) so it survives as a manual override (violet)
+// instead of being silently replaced by the auto value. Post-feature quotes
+// carry the key → returned unchanged.
+function healLeadTimePoOvr(state) {
+  const lt = state && state.lead_time;
+  if (!lt || typeof lt !== 'object' || Array.isArray(lt)) return state;
+  if ('lt_po_ovr' in lt) return state;
+  const seed = typeof lt.lt_po === 'string' ? lt.lt_po : '';
+  return { ...state, lead_time: { ...lt, lt_po_ovr: seed } };
+}
+
 // Sprint S-REMARK-SEL — REMARK becomes checkbox-driven with a manual override
 // (lt_remark_ovr). A quote saved BEFORE this feature has a free-text lt_remark
 // but NO lt_remark_ovr key — that text was a manual note, so seed lt_remark_ovr
@@ -126,7 +140,9 @@ export function upgradeStdState(state) {
       Array.isArray(state.materials_alt) &&
       (state.materials_active === 'main' || state.materials_active === 'alt');
     if (hasMids && hasAltShape)
-      return healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(healPricingSnapshot(state)));
+      return healLeadTimePoOvr(
+        healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(healPricingSnapshot(state)))
+      );
   }
 
   let next = state;
@@ -161,7 +177,7 @@ export function upgradeStdState(state) {
   // chain so newly-migrated states also pick up the empty default.
   next = healPricingSnapshot(next);
   // Material L/T override heal (Sprint S-MAT-LT) — seed legacy free-text.
-  next = healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(next));
+  next = healLeadTimePoOvr(healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(next)));
   return next;
 }
 
