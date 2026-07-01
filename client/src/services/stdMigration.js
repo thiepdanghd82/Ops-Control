@@ -67,6 +67,20 @@ function healLeadTimeMaterialOvr(state) {
   return { ...state, lead_time: { ...lt, lt_material_ovr: seed } };
 }
 
+// Sprint S-REMARK-SEL — REMARK becomes checkbox-driven with a manual override
+// (lt_remark_ovr). A quote saved BEFORE this feature has a free-text lt_remark
+// but NO lt_remark_ovr key — that text was a manual note, so seed lt_remark_ovr
+// from it ONCE (key-presence signal) so it survives as a manual override
+// (violet) instead of being clobbered by the auto checkbox block. Post-feature
+// quotes carry the key → returned unchanged.
+function healLeadTimeRemarkOvr(state) {
+  const lt = state && state.lead_time;
+  if (!lt || typeof lt !== 'object' || Array.isArray(lt)) return state;
+  if ('lt_remark_ovr' in lt) return state;
+  const seed = typeof lt.lt_remark === 'string' ? lt.lt_remark : '';
+  return { ...state, lead_time: { ...lt, lt_remark_ovr: seed } };
+}
+
 // Stable _mid generator — duplicated from createStdState() so this
 // module doesn't import calcEngine (keeps migrator pure + zero-dep).
 // Collision risk: Date.now + 6 random chars = ~64 bits of entropy per
@@ -111,7 +125,8 @@ export function upgradeStdState(state) {
       Array.isArray(state.materials_main) &&
       Array.isArray(state.materials_alt) &&
       (state.materials_active === 'main' || state.materials_active === 'alt');
-    if (hasMids && hasAltShape) return healLeadTimeMaterialOvr(healPricingSnapshot(state));
+    if (hasMids && hasAltShape)
+      return healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(healPricingSnapshot(state)));
   }
 
   let next = state;
@@ -146,7 +161,7 @@ export function upgradeStdState(state) {
   // chain so newly-migrated states also pick up the empty default.
   next = healPricingSnapshot(next);
   // Material L/T override heal (Sprint S-MAT-LT) — seed legacy free-text.
-  next = healLeadTimeMaterialOvr(next);
+  next = healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(next));
   return next;
 }
 

@@ -44,6 +44,9 @@ import {
   deriveMaterialLT,
   resolveMaterialLtDisplay,
   safeLeadTime,
+  buildLeadTimeMaterialsTable,
+  buildRemarkFromSelection,
+  resolveRemarkDisplay,
 } from '../StandardCalc/CalcLeadTimeNotice.helpers.js';
 import { showToast } from '../../../../utils/toast';
 import { fmtN, pct, gmClr } from '../../../../utils/format';
@@ -279,6 +282,17 @@ export default function ComplexCalc() {
     [sps, lib]
   );
 
+  // Read-only Materials MOQ table — flatten per-SP rows (st = the subproduct, so
+  // qpa_m2 matches each SP's Materials display) + NPI library. Display-only.
+  const ltMatRows = useMemo(() => {
+    const moq = cs.moq || 0;
+    return sps.flatMap((sp) =>
+      buildLeadTimeMaterialsTable(getActiveSPMaterials(sp), lib, sp, moq, {
+        spCode: sp.code || '',
+      })
+    );
+  }, [sps, lib, cs.moq]);
+
   const buildQuoteData = useCallback(() => {
     // Phase 3 — capture pricing snapshot. Cpx walks subproducts for
     // both materials + processes inside freezeLib, so a 3-SP quote with
@@ -288,7 +302,14 @@ export default function ComplexCalc() {
     // the auto "<n> days") so Summarize + future export read it; lt_material_ovr
     // remains the override source of truth.
     const resolvedMatLt = resolveMaterialLtDisplay(cs.lead_time, materialLtAuto).value;
-    const leadTimePatched = { ...safeLeadTime(cs.lead_time), lt_material: resolvedMatLt };
+    // REMARK: persist the resolved checkbox-driven value (or manual override).
+    const autoRemark = buildRemarkFromSelection(ltMatRows, cs.lead_time?.remark_selection);
+    const resolvedRemark = resolveRemarkDisplay(cs.lead_time, autoRemark).value;
+    const leadTimePatched = {
+      ...safeLeadTime(cs.lead_time),
+      lt_material: resolvedMatLt,
+      lt_remark: resolvedRemark,
+    };
     const csPatched = { ...cs, lead_time: leadTimePatched };
     const stateWithSnapshot = snapshot ? { ...csPatched, pricing_snapshot: snapshot } : csPatched;
     const calcOptions = snapshot ? { snapshot } : {};
@@ -1177,6 +1198,7 @@ export default function ComplexCalc() {
             onChange={(next) => setCplxField('lead_time', next)}
             toolingCostTotal={toolingCostTotal}
             materialLtAuto={materialLtAuto}
+            materialsTable={ltMatRows}
           />
         )}
       </div>

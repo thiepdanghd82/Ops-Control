@@ -344,6 +344,50 @@ export const STRINGS = {
   },
   'lt.material.auto_placeholder': { en: 'No library match', vi: 'Không khớp thư viện' },
   'lt.material.reset': { en: 'Reset to auto', vi: 'Đặt lại về tự động' },
+  // Read-only Materials MOQ table (synced from Materials section + NPI library)
+  'lt.matmoq.title': { en: 'Materials MOQ', vi: 'MOQ Vật tư' },
+  'lt.matmoq.empty': { en: 'No synced materials', vi: 'Chưa có vật tư' },
+  'lt.matmoq.row': { en: 'Row', vi: 'Dòng' },
+  'lt.matmoq.ifs_code': { en: 'IFS code', vi: 'Mã IFS' },
+  'lt.matmoq.quote_mat': { en: 'Quote Materials', vi: 'Vật tư báo giá' },
+  'lt.matmoq.type': { en: 'Type / Description', vi: 'Loại / Mô tả' },
+  'lt.matmoq.leadtime': { en: 'Leadtime', vi: 'Thời gian giao' },
+  'lt.matmoq.qpa_m2': { en: 'QPA (m²)', vi: 'QPA (m²)' },
+  'lt.matmoq.moq_m2': { en: 'Materials MOQ (m²)', vi: 'MOQ Vật tư (m²)' },
+  'lt.matmoq.clear_pcs': { en: 'Clear Materials MOQ (pcs)', vi: 'MOQ Vật tư (pcs)' },
+  'lt.matmoq.select_all': { en: 'Select all for Remark', vi: 'Chọn tất cả cho Ghi chú' },
+  'lt.matmoq.select_row': { en: 'Include in Remark:', vi: 'Đưa vào Ghi chú:' },
+  'lt.matmoq.fuzzy_tip': {
+    en: '≈ Matched despite spacing/dash difference — clean the code or the library entry',
+    vi: '≈ Khớp dù lệch khoảng trắng/gạch — nên chuẩn hoá mã hoặc dòng thư viện',
+  },
+  'lt.matmoq.ambiguous_tip': {
+    en: 'Ambiguous — the code matches more than one library entry; left unresolved',
+    vi: 'Không rõ ràng — mã khớp nhiều dòng thư viện; để trống',
+  },
+  'lt.matmoq.unresolved_tip': {
+    en: 'No library match — check the IFS code or add it to NPI / IFS Materials',
+    vi: 'Không khớp thư viện — kiểm tra mã IFS hoặc thêm vào NPI / IFS Materials',
+  },
+  // REMARK checkbox-driven auto-sync
+  'lt.remark.auto_placeholder': {
+    en: 'Auto from checked materials — or type to override',
+    vi: 'Tự động từ vật tư đã chọn — hoặc nhập tay để ghi đè',
+  },
+  'lt.remark.auto_caption': { en: 'Auto · from checked rows', vi: 'Tự động · từ dòng đã tick' },
+  'lt.remark.manual_caption': { en: 'Manual override', vi: 'Nhập tay (ghi đè)' },
+  'lt.remark.auto_tip': {
+    en: 'Auto-synced from the checked Materials MOQ rows',
+    vi: 'Tự đồng bộ từ các dòng Materials MOQ đã tick',
+  },
+  'lt.remark.manual_tip': {
+    en: 'Manual override — checkboxes no longer change this. ↻ to re-enable auto.',
+    vi: 'Nhập tay (ghi đè) — checkbox không còn tác động. ↻ để bật lại tự động.',
+  },
+  'lt.remark.reset': {
+    en: 'Reset to auto (from checkboxes)',
+    vi: 'Đặt lại về tự động (từ checkbox)',
+  },
 };
 
 /**

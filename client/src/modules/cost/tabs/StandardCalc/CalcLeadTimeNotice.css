@@ -172,3 +172,92 @@
     flex-wrap: wrap;
   }
 }
+
+/* Read-only Materials MOQ table (synced from Materials section + NPI library). */
+.ltn-matmoq {
+  margin-top: 16px;
+}
+.ltn-matmoq-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 8px;
+}
+.ltn-matmoq-empty {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-secondary, #94a3b8);
+  padding: 12px;
+  background: var(--color-slate-50, #f8fafc);
+  border: 1px solid var(--color-slate-200, #e2e8f0);
+  border-radius: 4px;
+}
+.ltn-matmoq-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-slate-200, #e2e8f0);
+  border-radius: 4px;
+}
+.ltn-matmoq-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.ltn-matmoq-table thead th {
+  background: var(--color-slate-100, #f1f5f9);
+  color: var(--text-secondary, #475569);
+  font-weight: 700;
+  text-align: left;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--color-slate-200, #e2e8f0);
+  white-space: nowrap;
+}
+.ltn-matmoq-table tbody td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--color-slate-100, #f1f5f9);
+  color: var(--text-primary, #1e293b);
+}
+.ltn-matmoq-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.ltn-matmoq-num {
+  text-align: right;
+  font-family: monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ltn-matmoq-code {
+  font-family: monospace;
+}
+
+/* Checkbox column in the Materials MOQ table (drives the REMARK field). */
+.ltn-matmoq-chk {
+  width: 34px;
+  text-align: center;
+  white-space: nowrap;
+}
+.ltn-matmoq-chk input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: var(--color-blue-600, #2563eb);
+}
+
+/* Match-quality cues on the IFS code cell (Lesson 32 tolerant lookup). */
+.ltn-matmoq-fuzzy {
+  color: var(--color-amber-700, #b45309);
+}
+.ltn-matmoq-approx {
+  font-weight: 700;
+  color: var(--color-amber-600, #d97706);
+}
+.ltn-matmoq-ambiguous {
+  color: var(--color-orange-700, #c2410c);
+  text-decoration: underline dotted;
+}
+.ltn-matmoq-unresolved {
+  color: var(--color-red-600, #dc2626);
+  text-decoration: underline dotted var(--color-red-400, #f87171);
+  text-underline-offset: 2px;
+}

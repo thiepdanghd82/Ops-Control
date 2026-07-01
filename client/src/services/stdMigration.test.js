@@ -414,10 +414,50 @@ test('upgradeStdState: feature-aware quote (lt_material_ovr present) NOT re-seed
     inks: [],
     processes: [],
     pricing_snapshot: { _captured_at: null },
-    // auto mode: override empty, lt_material holds the resolved auto value
-    lead_time: { lt_material: '37 days', lt_material_ovr: '' },
+    // auto mode: overrides empty, lt_material holds the resolved auto value.
+    // Fully feature-aware → both override keys present so heal is a no-op.
+    lead_time: { lt_material: '37 days', lt_material_ovr: '', lt_remark_ovr: '' },
   };
   const out = upgradeStdState(featureAware);
   assert.equal(out.lead_time.lt_material_ovr, '', 'stays empty — reset-safe, no re-seed');
   assert.equal(out, featureAware, 'same ref (nothing to heal) — React memo friendly');
+});
+
+// Sprint S-REMARK-SEL — REMARK override heal-on-read.
+test('upgradeStdState: legacy lt_remark seeds lt_remark_ovr (pre-feature quote)', () => {
+  const legacy = {
+    _schema_version: 3,
+    materials_main: [{ _mid: 'm1', code: 'M1' }],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [{ _mid: 'm1', code: 'M1' }],
+    inks: [],
+    processes: [],
+    pricing_snapshot: { _captured_at: null },
+    // has an existing manual REMARK, no lt_remark_ovr key + no lt_material_ovr
+    lead_time: { lt_material: '25 days', lt_remark: 'ship by air' },
+  };
+  const out = upgradeStdState(legacy);
+  assert.equal(out.lead_time.lt_remark_ovr, 'ship by air', 'free-text remark seeded as override');
+  assert.equal(out.lead_time.lt_remark, 'ship by air', 'original preserved');
+});
+
+test('upgradeStdState: feature-aware remark (lt_remark_ovr present) NOT re-seeded', () => {
+  const featureAware = {
+    _schema_version: 3,
+    materials_main: [{ _mid: 'm1', code: 'M1' }],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [{ _mid: 'm1', code: 'M1' }],
+    inks: [],
+    processes: [],
+    pricing_snapshot: { _captured_at: null },
+    lead_time: {
+      lt_material_ovr: '',
+      lt_remark: 'MAT-A: 100 pcs',
+      lt_remark_ovr: '', // auto mode — do not re-seed from lt_remark
+    },
+  };
+  const out = upgradeStdState(featureAware);
+  assert.equal(out.lead_time.lt_remark_ovr, '', 'stays empty — auto mode preserved');
 });
