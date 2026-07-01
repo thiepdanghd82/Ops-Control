@@ -6,9 +6,7 @@ import './CalcLeadTimeNotice.css';
 
 // Read-only formatters for the Materials MOQ table. "—" for null/0.
 function fmtMoqM2(v) {
-  return v != null && v > 0
-    ? Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : '—';
+  return v != null && v > 0 ? Math.round(v).toLocaleString('en-US') : '—';
 }
 function fmtClearPcs(v) {
   return v != null && v > 0 ? Math.round(v).toLocaleString('en-US') : '—';
