@@ -185,6 +185,33 @@
   color: var(--text-secondary, #64748b);
   margin-bottom: 8px;
 }
+.ltn-tol {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.ltn-tol-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  white-space: nowrap;
+}
+.ltn-tol-input {
+  width: 90px;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-slate-800, #1e293b);
+  background: var(--surface-1, #fff);
+  border: 1px solid var(--color-slate-300, #cbd5e1);
+  border-radius: 4px;
+}
+.ltn-tol-input:focus {
+  outline: none;
+  border-color: var(--color-brand-500, #2563eb);
+  box-shadow: 0 0 0 2px var(--color-brand-100, #dbeafe);
+}
 .ltn-matmoq-empty {
   font-size: 13px;
   font-style: italic;

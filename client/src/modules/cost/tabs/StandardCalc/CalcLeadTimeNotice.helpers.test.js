@@ -569,6 +569,97 @@ describe('REMARK checkbox-driven auto-sync', () => {
   });
 });
 
+describe('buildRemarkBlock — header + bullets + editable Product tolerance footer', () => {
+  const { buildRemarkBlock, resolveRemarkDisplay, safeLeadTime, REMARK_MOQ_HEADER } = helpersNs;
+
+  const ROWS = [
+    { ifs_code: 'MAT-A', clear_pcs: 269191 },
+    { ifs_code: 'MAT-C', clear_pcs: 1899409 },
+  ];
+
+  test('header constant is "1. Clear materials MOQ."', () => {
+    assert.equal(REMARK_MOQ_HEADER, '1. Clear materials MOQ.');
+  });
+
+  test('footer reads the field: "0.2" → "+/- 0.2mm"', () => {
+    assert.equal(
+      buildRemarkBlock([], {}, '0.2'),
+      '1. Clear materials MOQ.\n2. Product tolerance: +/- 0.2mm'
+    );
+  });
+
+  test('footer reads the field: "0.15" → "+/- 0.15mm"', () => {
+    assert.equal(
+      buildRemarkBlock([], {}, '0.15'),
+      '1. Clear materials MOQ.\n2. Product tolerance: +/- 0.15mm'
+    );
+  });
+
+  test('empty / null / whitespace tolerance → default "0.2"', () => {
+    const expected = '1. Clear materials MOQ.\n2. Product tolerance: +/- 0.2mm';
+    assert.equal(buildRemarkBlock([], {}, ''), expected);
+    assert.equal(buildRemarkBlock([], {}, null), expected);
+    assert.equal(buildRemarkBlock([], {}, undefined), expected);
+    assert.equal(buildRemarkBlock([], {}, '   '), expected);
+  });
+
+  test('tolerance is trimmed: "  0.25  " → "+/- 0.25mm"', () => {
+    assert.equal(
+      buildRemarkBlock([], {}, '  0.25  '),
+      '1. Clear materials MOQ.\n2. Product tolerance: +/- 0.25mm'
+    );
+  });
+
+  test('full block: header + bullets (ceil, thousands) + tolerance footer', () => {
+    assert.equal(
+      buildRemarkBlock(ROWS, {}, '0.2'),
+      '1. Clear materials MOQ.\n' +
+        'MAT-A: 269,191 pcs\n' +
+        'MAT-C: 1,899,409 pcs\n' +
+        '2. Product tolerance: +/- 0.2mm'
+    );
+  });
+
+  test('unchecking a row drops its bullet but keeps header + footer', () => {
+    assert.equal(
+      buildRemarkBlock(ROWS, { 'MAT-A': false }, '0.2'),
+      '1. Clear materials MOQ.\nMAT-C: 1,899,409 pcs\n2. Product tolerance: +/- 0.2mm'
+    );
+  });
+
+  test('changing tolerance regenerates auto block WITHOUT setting override', () => {
+    const lt = safeLeadTime({ product_tolerance: '0.2' }); // no lt_remark_ovr
+    const autoA = buildRemarkBlock(ROWS, {}, lt.product_tolerance);
+    const dispA = resolveRemarkDisplay(lt, autoA);
+    assert.equal(dispA.isOverride, false, 'still AUTO');
+    // Operator edits tolerance → new field value, still no override.
+    const lt2 = safeLeadTime({ ...lt, product_tolerance: '0.35' });
+    const autoB = buildRemarkBlock(ROWS, {}, lt2.product_tolerance);
+    const dispB = resolveRemarkDisplay(lt2, autoB);
+    assert.equal(dispB.isOverride, false, 'tolerance edit does not override');
+    assert.match(dispB.value, /\+\/- 0\.35mm$/);
+    assert.notEqual(dispA.value, dispB.value, 'footer regenerated in place');
+  });
+
+  test('manual override precedence: tolerance edits do NOT override typed REMARK', () => {
+    const lt = safeLeadTime({ lt_remark_ovr: 'hand-typed note', product_tolerance: '0.15' });
+    const auto = buildRemarkBlock(ROWS, {}, lt.product_tolerance);
+    const disp = resolveRemarkDisplay(lt, auto);
+    assert.equal(disp.isOverride, true);
+    assert.equal(disp.value, 'hand-typed note', 'override text wins over the auto block');
+  });
+
+  test('heal-on-read: legacy state without product_tolerance → "0.2"', () => {
+    const healed = safeLeadTime({ lt_material: '', lt_remark: '' });
+    assert.equal(healed.product_tolerance, '0.2');
+  });
+
+  test('heal-on-read: present tolerance preserved; operator-cleared "" preserved', () => {
+    assert.equal(safeLeadTime({ product_tolerance: '0.15' }).product_tolerance, '0.15');
+    assert.equal(safeLeadTime({ product_tolerance: '' }).product_tolerance, '');
+  });
+});
+
 describe('buildLeadTimeMaterialsTable — tolerant code↔library matcher (Lesson 32)', () => {
   const { normCode, resolveLibRow } = helpersNs;
   const ST = { num_webs: 1, processes: [], web_width_td: 100, sheet_length: 10, min_gap_md: 0 };

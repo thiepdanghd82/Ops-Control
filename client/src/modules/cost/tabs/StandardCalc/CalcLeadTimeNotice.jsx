@@ -4,7 +4,7 @@ import {
   fmtUsd,
   safeLeadTime,
   resolveMaterialLtDisplay,
-  buildRemarkFromSelection,
+  buildRemarkBlock,
   resolveRemarkDisplay,
   remarkSelectAllState,
   toggleRemarkSelection,
@@ -93,9 +93,13 @@ export default function CalcLeadTimeNotice({
   // REMARK: checkbox-driven auto text ("<IFS code>: <Clear MOQ> pcs" per checked
   // row) unless a manual override (lt_remark_ovr) is set. Editing writes the
   // override; ↻ clears it and re-enables the checkbox sync.
+  // Full auto block: "1. Clear materials MOQ." header + one bullet per checked
+  // row + "2. Product tolerance: +/- <n>mm" footer. Regenerates when the rows,
+  // the checkbox selection, OR the per-quote product_tolerance change — all in
+  // AUTO mode (never sets lt_remark_ovr).
   const autoRemark = useMemo(
-    () => buildRemarkFromSelection(materialsTable, lt.remark_selection),
-    [materialsTable, lt.remark_selection]
+    () => buildRemarkBlock(materialsTable, lt.remark_selection, lt.product_tolerance),
+    [materialsTable, lt.remark_selection, lt.product_tolerance]
   );
   const remarkDisp = resolveRemarkDisplay(lt, autoRemark);
   const remarkLabel = t('lt.col.remark');
@@ -224,6 +228,24 @@ export default function CalcLeadTimeNotice({
           the NPI Materials library. Display-only: never writes quote state. */}
       <div className="ltn-matmoq">
         <div className="ltn-matmoq-title">{t('lt.matmoq.title')}</div>
+        {/* Product tolerance — per-quote value feeding the REMARK footer
+            ("2. Product tolerance: +/- <n>mm"). Editing here re-runs the auto
+            REMARK; it does NOT flip REMARK into manual override. */}
+        <div className="ltn-tol">
+          <label className="ltn-tol-label" htmlFor="ltn-product-tolerance">
+            {t('lt.tol.label')}
+          </label>
+          <input
+            id="ltn-product-tolerance"
+            type="text"
+            inputMode="decimal"
+            className="ltn-tol-input"
+            value={lt.product_tolerance ?? ''}
+            placeholder="0.2"
+            onChange={(e) => handleField('product_tolerance', e.target.value)}
+            aria-label={t('lt.tol.label')}
+          />
+        </div>
         {materialsTable.length === 0 ? (
           <div className="ltn-matmoq-empty">{t('lt.matmoq.empty')}</div>
         ) : (
