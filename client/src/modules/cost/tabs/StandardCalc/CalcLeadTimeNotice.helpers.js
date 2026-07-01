@@ -9,7 +9,7 @@
  * the repo adopts a JSX-aware test runner (out of scope for this PR).
  */
 
-import { isMainMat } from '../../lib/rowTypeNormalize.js';
+import { isMainMat, isProcessMat } from '../../lib/rowTypeNormalize.js';
 
 // Match CalcProcesses.jsx hidden convention — rows flagged `hidden:true`
 // are treated as deleted by the calc engine and should NOT contribute to
@@ -100,20 +100,25 @@ export const LEAD_TIME_KEYS = Object.freeze([
 export const MATERIAL_LT_BUFFER = 7;
 
 /**
- * Auto-derive the Material L/T string from the active Main.Mat material rows +
- * the IFS / NPI libraries.
+ * Auto-derive the Material L/T string from the active Main.Mat + Process.Mat
+ * material rows + the IFS / NPI libraries.
  *
- * For every Main.Mat row, look the row's IFS CODE (`code`, falling back to
- * `ifs_code`) up in BOTH libraries — IFS Materials by `part_no` (lead-time
- * field `leadtime`) and NPI Materials by `name` (lead-time field `lt`) — and
- * collect every finite, > 0 day count. The result is `max(collected) + BUFFER`
- * formatted "<n> days". Returns `null` when nothing matched (caller shows an
- * empty cell — never a bare "7 days").
+ * For every Main.Mat OR Process.Mat row, look the row's IFS CODE (`code`,
+ * falling back to `ifs_code`) up in BOTH libraries — IFS Materials by `part_no`
+ * (lead-time field `leadtime`) and NPI Materials by `name` (lead-time field
+ * `lt`) — and collect every finite, > 0 day count. The result is
+ * `max(collected) + BUFFER` formatted "<n> days". Returns `null` when nothing
+ * matched (caller shows an empty cell — never a bare "7 days").
+ *
+ * Process Mat (ancillary materials: liner / primer / anti-static, etc.) is
+ * included because its own supplier lead time can gate material readiness too
+ * (operator decision 2026-06-30). Alt.Mat is excluded by construction — only
+ * the ACTIVE material set is passed in.
  *
  * Matching is trim + case-insensitive; multiple library rows sharing a key all
- * enter the max pool. Non-Main.Mat rows (Alt.Mat / Process Mat) are ignored.
+ * enter the max pool.
  *
- * @param {Array|null|undefined} rows  active material rows (helper filters Main.Mat)
+ * @param {Array|null|undefined} rows  active material rows (Main.Mat + Process.Mat counted)
  * @param {{ifs?:Array, npi?:Array}|null|undefined} lib  CostLibContext `lib`
  * @returns {string|null}  e.g. "37 days", or null when no library match
  */
@@ -124,7 +129,7 @@ export function deriveMaterialLT(rows, lib) {
   const collected = [];
   for (const row of rows) {
     if (!row || typeof row !== 'object') continue;
-    if (!isMainMat(row.row_type)) continue;
+    if (!isMainMat(row.row_type) && !isProcessMat(row.row_type)) continue;
     const key = String(row.code || row.ifs_code || '').trim();
     if (!key) continue;
     const keyLc = key.toLowerCase();
