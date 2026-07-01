@@ -263,6 +263,52 @@ export function resolveMaterialLtDisplay(leadTime, autoVal) {
   return { value: autoVal || '', isOverride: false };
 }
 
+// PO L/T auto-derive (Sprint S-PO-LT). Total production time drives the PO lead
+// time: Σ over all processes of the PROD TIME hours (total_time minutes / 60),
+// divided by an 8-hour working day and rounded UP. Mirrors the Material L/T
+// auto + manual-override UX (lt_po_ovr + violet + ↻ reset).
+export const PO_LT_WORK_HOURS_PER_DAY = 8;
+
+/**
+ * Derive the PO lead time in whole days from the active-tier process results.
+ * `total_time` is the per-process production time in MINUTES (calcProcess /
+ * calcAll procResults); the PROD TIME column shows the same value / 60 hours.
+ *
+ * poDays = ceil( Σ(total_time / 60) / 8 ), or null when there is no production
+ * time (0 processes / all hidden / non-finite) so the caller shows an empty cell
+ * rather than "0 days". Cpx: pass the process results flattened across every
+ * subproduct.
+ *
+ * @param {Array|null|undefined} processResults  calcAll(...).procResults (active tier)
+ * @returns {number|null}  whole days, or null
+ */
+export function derivePoLeadTime(processResults) {
+  if (!Array.isArray(processResults)) return null;
+  let totalHours = 0;
+  for (const r of processResults) {
+    const t = Number(r && r.total_time);
+    if (Number.isFinite(t) && t > 0) totalHours += t / 60;
+  }
+  if (!(totalHours > 0)) return null;
+  return Math.ceil(totalHours / PO_LT_WORK_HOURS_PER_DAY);
+}
+
+/**
+ * Resolve what the PO L/T cell shows: the manual override when set, otherwise
+ * the auto-derived "<n> days". `lt_po_ovr` is the override source of truth; an
+ * empty / whitespace override means "auto".
+ *
+ * @param {object|null|undefined} leadTime  state.lead_time
+ * @param {number|null} poDays  derivePoLeadTime() result
+ * @returns {{value:string, isOverride:boolean}}
+ */
+export function resolvePoLtDisplay(leadTime, poDays) {
+  const lt = leadTime && typeof leadTime === 'object' ? leadTime : {};
+  const ovr = typeof lt.lt_po_ovr === 'string' ? lt.lt_po_ovr : '';
+  if (ovr.trim() !== '') return { value: ovr, isOverride: true };
+  return { value: poDays != null ? `${poDays} days` : '', isOverride: false };
+}
+
 // ── REMARK checkbox-driven auto-sync (Sprint S-REMARK-SEL) ──
 // The Materials MOQ table's checkbox column drives the REMARK field: one line
 // per CHECKED coded row. Selection = map of UNCHECKED keys ({ [ifs_code]:
@@ -396,6 +442,9 @@ export function safeLeadTime(leadTime) {
   // default only — the legacy lt_material→lt_material_ovr seed happens ONCE at
   // migration heal (not here), so a later ↻ reset isn't re-seeded each render.
   if (typeof out.lt_material_ovr !== 'string') out.lt_material_ovr = '';
+  // PO L/T auto-derive override source (Sprint S-PO-LT). Structural default
+  // only; the legacy lt_po→lt_po_ovr seed happens ONCE at migration heal.
+  if (typeof out.lt_po_ovr !== 'string') out.lt_po_ovr = '';
   // REMARK checkbox-driven auto-sync (Sprint S-REMARK-SEL). Structural defaults:
   //  - lt_remark_ovr: manual-override source (like lt_material_ovr). Legacy
   //    lt_remark→lt_remark_ovr seed happens ONCE at migration heal, not here.

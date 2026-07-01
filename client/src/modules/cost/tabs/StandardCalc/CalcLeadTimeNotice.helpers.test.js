@@ -309,6 +309,81 @@ describe('resolveMaterialLtDisplay', () => {
   });
 });
 
+describe('derivePoLeadTime — Σ PROD TIME ÷ 8, round up', () => {
+  const { derivePoLeadTime } = helpersNs;
+  const R = (t) => ({ total_time: t });
+
+  test('screenshot quote: total_time [151.4,548,583,1714,158,30] min → 7 days', () => {
+    // hours ≈ 2.52+9.14+9.73+28.57+2.64+0.50 = 53.07 → /8 = 6.63 → ceil 7
+    assert.equal(derivePoLeadTime([151.4, 548, 583, 1714, 158, 30].map(R)), 7);
+  });
+
+  test('rounds UP (8h1min total → 481 min → 8.017h/8 = 1.002 → 2 days)', () => {
+    assert.equal(derivePoLeadTime([R(481)]), 2);
+  });
+
+  test('exact multiple of a day is NOT rounded up (480 min = 8h → 1 day)', () => {
+    assert.equal(derivePoLeadTime([R(480)]), 1);
+  });
+
+  test('0 / NaN / negative total_time ignored', () => {
+    assert.equal(derivePoLeadTime([R(0), R(NaN), R(-5), R(480)]), 1);
+  });
+
+  test('no processes / all zero → null (empty cell, never "0 days")', () => {
+    assert.equal(derivePoLeadTime([]), null);
+    assert.equal(derivePoLeadTime([R(0), R(0)]), null);
+  });
+
+  test('null / non-array → null', () => {
+    assert.equal(derivePoLeadTime(null), null);
+    assert.equal(derivePoLeadTime(undefined), null);
+    assert.equal(derivePoLeadTime('x'), null);
+  });
+
+  test('Cpx flatten: two SP process arrays combined before summing', () => {
+    const sp1 = [R(480)]; // 8h
+    const sp2 = [R(480), R(480)]; // 16h
+    // parent flattens; 8+16 = 24h /8 = 3 days
+    assert.equal(derivePoLeadTime([...sp1, ...sp2]), 3);
+  });
+});
+
+describe('resolvePoLtDisplay', () => {
+  const { resolvePoLtDisplay } = helpersNs;
+
+  test('non-empty override wins', () => {
+    assert.deepEqual(resolvePoLtDisplay({ lt_po_ovr: '10 days' }, 7), {
+      value: '10 days',
+      isOverride: true,
+    });
+  });
+
+  test('empty / whitespace override → auto "<n> days"', () => {
+    assert.deepEqual(resolvePoLtDisplay({ lt_po_ovr: '' }, 7), {
+      value: '7 days',
+      isOverride: false,
+    });
+    assert.deepEqual(resolvePoLtDisplay({ lt_po_ovr: '  ' }, 7), {
+      value: '7 days',
+      isOverride: false,
+    });
+  });
+
+  test('null poDays + no override → empty string', () => {
+    assert.deepEqual(resolvePoLtDisplay({}, null), { value: '', isOverride: false });
+    assert.deepEqual(resolvePoLtDisplay(null, null), { value: '', isOverride: false });
+  });
+});
+
+describe('safeLeadTime — lt_po_ovr structural default', () => {
+  const { safeLeadTime } = helpersNs;
+  test('absent lt_po_ovr → "" ; present preserved', () => {
+    assert.equal(safeLeadTime({}).lt_po_ovr, '');
+    assert.equal(safeLeadTime({ lt_po_ovr: '10 days' }).lt_po_ovr, '10 days');
+  });
+});
+
 describe('buildLeadTimeMaterialsTable', () => {
   // st with layout so calcMat returns a deterministic qpa_m2:
   //   effWidth=100, pitch=10, cavities=1, webs=1, usage=1

@@ -43,6 +43,8 @@ import {
   sumToolingCostCpx,
   deriveMaterialLT,
   resolveMaterialLtDisplay,
+  derivePoLeadTime,
+  resolvePoLtDisplay,
   safeLeadTime,
   buildLeadTimeMaterialsTable,
   buildRemarkFromSelection,
@@ -282,6 +284,15 @@ export default function ComplexCalc() {
     [sps, lib]
   );
 
+  // PO L/T auto-derive (Sprint S-PO-LT) — Σ PROD TIME across EVERY subproduct's
+  // processes ÷ 8-hour day, rounded up. spResults (= pass2) already carries each
+  // SP's procResults (total_time minutes); flatten + derivePoLeadTime. Same
+  // parent-useMemo + manual-override (lt_po_ovr) UX as Material L/T.
+  const poLtAuto = useMemo(
+    () => derivePoLeadTime(spResults.flatMap((r) => (r && r.procResults) || [])),
+    [spResults]
+  );
+
   // Read-only Materials MOQ table — flatten per-SP rows (st = the subproduct, so
   // qpa_m2 matches each SP's Materials display) + NPI library. Display-only.
   const ltMatRows = useMemo(() => {
@@ -302,12 +313,16 @@ export default function ComplexCalc() {
     // the auto "<n> days") so Summarize + future export read it; lt_material_ovr
     // remains the override source of truth.
     const resolvedMatLt = resolveMaterialLtDisplay(cs.lead_time, materialLtAuto).value;
+    // PO L/T: persist the resolved "<n> days" (override wins, else Σ PROD TIME ÷
+    // 8 across every SP); lt_po_ovr stays the override source of truth.
+    const resolvedPoLt = resolvePoLtDisplay(cs.lead_time, poLtAuto).value;
     // REMARK: persist the resolved checkbox-driven value (or manual override).
     const autoRemark = buildRemarkFromSelection(ltMatRows, cs.lead_time?.remark_selection);
     const resolvedRemark = resolveRemarkDisplay(cs.lead_time, autoRemark).value;
     const leadTimePatched = {
       ...safeLeadTime(cs.lead_time),
       lt_material: resolvedMatLt,
+      lt_po: resolvedPoLt,
       lt_remark: resolvedRemark,
     };
     const csPatched = { ...cs, lead_time: leadTimePatched };
@@ -364,7 +379,18 @@ export default function ComplexCalc() {
       saved_at: new Date().toISOString(),
       label: cs.ccl_pn || 'Complex',
     };
-  }, [cs, sps, lib, aggregate, user?.id, bomQtyEnabled, spMoqScalingEnabled, materialLtAuto]);
+  }, [
+    cs,
+    sps,
+    lib,
+    aggregate,
+    user?.id,
+    bomQtyEnabled,
+    spMoqScalingEnabled,
+    materialLtAuto,
+    poLtAuto,
+    ltMatRows,
+  ]);
 
   const persistAsNew = useCallback(async () => {
     setSaving(true);
@@ -1198,6 +1224,7 @@ export default function ComplexCalc() {
             onChange={(next) => setCplxField('lead_time', next)}
             toolingCostTotal={toolingCostTotal}
             materialLtAuto={materialLtAuto}
+            poLtAuto={poLtAuto}
             materialsTable={ltMatRows}
           />
         )}

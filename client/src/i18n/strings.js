@@ -344,6 +344,21 @@ export const STRINGS = {
   },
   'lt.material.auto_placeholder': { en: 'No library match', vi: 'Không khớp thư viện' },
   'lt.material.reset': { en: 'Reset to auto', vi: 'Đặt lại về tự động' },
+  'lt.po.auto_caption': {
+    en: 'Auto · Σ PROD TIME ÷ 8',
+    vi: 'Tự động · Σ PROD TIME ÷ 8',
+  },
+  'lt.po.manual_caption': { en: 'Manual override', vi: 'Nhập tay (ghi đè)' },
+  'lt.po.auto_tip': {
+    en: 'Auto-derived from total production time (Σ PROD TIME hours ÷ 8-hour day, rounded up). Type to override.',
+    vi: 'Tự suy ra từ tổng thời gian sản xuất (Σ PROD TIME giờ ÷ ngày 8 giờ, làm tròn lên). Gõ để ghi đè.',
+  },
+  'lt.po.manual_tip': {
+    en: 'Manual override active — click ↻ to revert to the auto value.',
+    vi: 'Đang ghi đè thủ công — bấm ↻ để quay lại giá trị tự động.',
+  },
+  'lt.po.auto_placeholder': { en: 'No processes', vi: 'Chưa có công đoạn' },
+  'lt.po.reset': { en: 'Reset to auto', vi: 'Đặt lại về tự động' },
   // Read-only Materials MOQ table (synced from Materials section + NPI library)
   'lt.matmoq.title': { en: 'Materials MOQ', vi: 'MOQ Vật tư' },
   'lt.tol.label': { en: 'Product tolerance (± mm)', vi: 'Dung sai sản phẩm (± mm)' },

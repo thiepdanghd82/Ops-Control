@@ -2378,25 +2378,26 @@ test('matCostExcludingInk: null/bad input → 0 (no crash, no NaN)', () => {
 // field at all) heal via `state.lead_time || {}` fallback at the UI
 // without crashing.
 
-// 8 keys: Sprint S-MAT-LT added `lt_material_ovr`; Sprint S-PROD-TOL added
-// `product_tolerance` (per-quote "Product tolerance: +/- <n>mm" REMARK footer,
-// default '0.2'). Order matches the factory blocks in calcEngine.js.
+// 9 keys: Sprint S-MAT-LT added `lt_material_ovr`; Sprint S-PO-LT added
+// `lt_po_ovr` (PO L/T auto-derive override); Sprint S-PROD-TOL added
+// `product_tolerance` (default '0.2'). Order matches the factory blocks.
 const EMPTY_LEAD_TIME = {
   lt_material: '',
   lt_material_ovr: '',
   lt_sample: '',
   lt_po: '',
+  lt_po_ovr: '',
   lt_remark: '',
   lt_process: '',
   lt_material_type: '',
   product_tolerance: '0.2',
 };
 
-test('createStdState().lead_time = 8-key seed object', () => {
+test('createStdState().lead_time = 9-key seed object', () => {
   assert.deepStrictEqual(createStdState().lead_time, EMPTY_LEAD_TIME);
 });
 
-test('createCplxState().lead_time = 8-key seed object', () => {
+test('createCplxState().lead_time = 9-key seed object', () => {
   assert.deepStrictEqual(createCplxState().lead_time, EMPTY_LEAD_TIME);
 });
 

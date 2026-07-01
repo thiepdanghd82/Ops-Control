@@ -4,6 +4,7 @@ import {
   fmtUsd,
   safeLeadTime,
   resolveMaterialLtDisplay,
+  resolvePoLtDisplay,
   buildRemarkBlock,
   resolveRemarkDisplay,
   remarkSelectAllState,
@@ -22,13 +23,10 @@ function fmtClearPcs(v) {
   return v != null && v > 0 ? Math.round(v).toLocaleString('en-US') : '—';
 }
 
-// Material L/T + REMARK are rendered as dedicated auto-derive + override cells;
-// the rest stay plain free-text. Order: Material → Sample → PO → Remark →
-// Process → Type. REMARK sits between the before/after groups below.
-const FIELDS_BEFORE_REMARK = [
-  { key: 'lt_sample', i18n: 'lt.col.sample_lt' },
-  { key: 'lt_po', i18n: 'lt.col.po_lt' },
-];
+// Material L/T + PO L/T + REMARK are rendered as dedicated auto-derive +
+// override cells; the rest stay plain free-text. Order: Material → Sample → PO →
+// Remark → Process → Type. Sample is the only plain field before the PO cell.
+const FIELDS_BEFORE_REMARK = [{ key: 'lt_sample', i18n: 'lt.col.sample_lt' }];
 const FIELDS_AFTER_REMARK = [
   { key: 'lt_process', i18n: 'lt.col.process' },
   { key: 'lt_material_type', i18n: 'lt.col.material_type' },
@@ -62,6 +60,7 @@ export default function CalcLeadTimeNotice({
   onChange,
   toolingCostTotal,
   materialLtAuto = null,
+  poLtAuto = null,
   materialsTable = [],
 }) {
   const { t } = useI18n();
@@ -89,6 +88,11 @@ export default function CalcLeadTimeNotice({
   // override source of truth) — NOT lt_material directly.
   const matLt = resolveMaterialLtDisplay(lt, materialLtAuto);
   const matLtLabel = t('lt.col.material_lt');
+
+  // PO L/T: manual override (violet + ↻) wins, else the auto-derived "<n> days"
+  // = Σ PROD TIME ÷ 8. Editing writes lt_po_ovr (the override source of truth).
+  const poLt = resolvePoLtDisplay(lt, poLtAuto);
+  const poLtLabel = t('lt.col.po_lt');
 
   // REMARK: checkbox-driven auto text ("<IFS code>: <Clear MOQ> pcs" per checked
   // row) unless a manual override (lt_remark_ovr) is set. Editing writes the
@@ -173,6 +177,37 @@ export default function CalcLeadTimeNotice({
             </div>
           );
         })}
+        {/* PO L/T — auto-derived (Σ PROD TIME ÷ 8) unless manually overridden. */}
+        <div className="ltn-col ltn-col-po">
+          <div className="ltn-th">{poLtLabel}</div>
+          <div className="ltn-cell">
+            <div className="sc-pack-row">
+              <textarea
+                rows={3}
+                value={poLt.value}
+                onChange={(e) => handleField('lt_po_ovr', e.target.value)}
+                placeholder={poLtAuto != null ? `${poLtAuto} days` : t('lt.po.auto_placeholder')}
+                className={`ltn-input${poLt.isOverride ? ' sc-pack-tier-ovr' : ''}`}
+                aria-label={poLtLabel}
+                title={poLt.isOverride ? t('lt.po.manual_tip') : t('lt.po.auto_tip')}
+              />
+              {poLt.isOverride && (
+                <button
+                  type="button"
+                  className="sc-pack-reset"
+                  onClick={() => handleField('lt_po_ovr', '')}
+                  title={t('lt.po.reset')}
+                  aria-label={t('lt.po.reset')}
+                >
+                  ↻
+                </button>
+              )}
+            </div>
+            <span className="ltn-tooling-caption">
+              {poLt.isOverride ? t('lt.po.manual_caption') : t('lt.po.auto_caption')}
+            </span>
+          </div>
+        </div>
         {/* REMARK — checkbox-driven auto text unless manually overridden. */}
         <div className="ltn-col ltn-col-remark">
           <div className="ltn-th">{remarkLabel}</div>

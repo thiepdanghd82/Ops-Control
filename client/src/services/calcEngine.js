@@ -1777,6 +1777,9 @@ export function createStdState() {
       lt_material_ovr: '',
       lt_sample: '',
       lt_po: '',
+      // PO L/T auto-derive override source (Σ PROD TIME ÷ 8, mirrors
+      // lt_material_ovr). Heal-on-read seeds from legacy lt_po at migration.
+      lt_po_ovr: '',
       lt_remark: '',
       lt_process: '',
       lt_material_type: '',
@@ -1960,6 +1963,9 @@ export function createEmptyStdState() {
       lt_material_ovr: '',
       lt_sample: '',
       lt_po: '',
+      // PO L/T auto-derive override source (Σ PROD TIME ÷ 8, mirrors
+      // lt_material_ovr). Heal-on-read seeds from legacy lt_po at migration.
+      lt_po_ovr: '',
       lt_remark: '',
       lt_process: '',
       lt_material_type: '',
@@ -2033,6 +2039,9 @@ export function createCplxState() {
       lt_material_ovr: '',
       lt_sample: '',
       lt_po: '',
+      // PO L/T auto-derive override source (Σ PROD TIME ÷ 8, mirrors
+      // lt_material_ovr). Heal-on-read seeds from legacy lt_po at migration.
+      lt_po_ovr: '',
       lt_remark: '',
       lt_process: '',
       lt_material_type: '',
