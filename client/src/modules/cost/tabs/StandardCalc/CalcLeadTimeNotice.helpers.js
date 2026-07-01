@@ -281,10 +281,12 @@ export function isRemarkRowSelected(selection, code) {
 }
 
 /**
- * Build the auto REMARK text from the table rows + selection. One line per
- * CHECKED row that has a non-empty ifs_code:
- *   "<ifs_code>: <Clear MOQ> pcs"   (or "<ifs_code>: —" when clear_pcs is null)
- * joined by "\n", in table order. Blank-code rows excluded.
+ * Build the auto REMARK text from the table rows + selection. One "- " bulleted
+ * line per CHECKED row that has a non-empty ifs_code:
+ *   "- <ifs_code>: <Clear MOQ> pcs"   (or "- <ifs_code>: —" when clear_pcs null)
+ * joined by "\n", in table order. Blank-code rows excluded. The leading "- "
+ * matches the operator's hand-typed convention so the auto text reads like a
+ * bulleted list under the "1. Clear materials MOQ." header.
  */
 export function buildRemarkFromSelection(rows, selection) {
   if (!Array.isArray(rows)) return '';
@@ -296,7 +298,7 @@ export function buildRemarkFromSelection(rows, selection) {
     if (!isRemarkRowSelected(selection, code)) continue;
     const clear =
       r.clear_pcs != null && r.clear_pcs > 0 ? `${formatThousands(r.clear_pcs)} pcs` : '—';
-    lines.push(`${r.ifs_code}: ${clear}`);
+    lines.push(`- ${r.ifs_code}: ${clear}`);
   }
   return lines.join('\n');
 }

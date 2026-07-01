@@ -484,22 +484,22 @@ describe('REMARK checkbox-driven auto-sync', () => {
     assert.equal(formatThousands(NaN), '—');
   });
 
-  test('all checked (default {}) → one line per coded row, in order', () => {
+  test('all checked (default {}) → one "- " line per coded row, in order', () => {
     assert.equal(
       buildRemarkFromSelection(ROWS, {}),
-      'MAT-A: 269,191 pcs\nMAT-B: —\nMAT-C: 1,899,409 pcs'
+      '- MAT-A: 269,191 pcs\n- MAT-B: —\n- MAT-C: 1,899,409 pcs'
     );
   });
 
   test('uncheck a row → its line disappears', () => {
     assert.equal(
       buildRemarkFromSelection(ROWS, { 'MAT-A': false }),
-      'MAT-B: —\nMAT-C: 1,899,409 pcs'
+      '- MAT-B: —\n- MAT-C: 1,899,409 pcs'
     );
   });
 
-  test('clear_pcs null → "<code>: —"', () => {
-    assert.equal(buildRemarkFromSelection([{ ifs_code: 'X', clear_pcs: null }], {}), 'X: —');
+  test('clear_pcs null → "- <code>: —"', () => {
+    assert.equal(buildRemarkFromSelection([{ ifs_code: 'X', clear_pcs: null }], {}), '- X: —');
   });
 
   test('blank-code rows excluded even when others checked', () => {
@@ -610,12 +610,12 @@ describe('buildRemarkBlock — header + bullets + editable Product tolerance foo
     );
   });
 
-  test('full block: header + bullets (ceil, thousands) + tolerance footer', () => {
+  test('full block: header + "- " bullets (ceil, thousands) + tolerance footer', () => {
     assert.equal(
       buildRemarkBlock(ROWS, {}, '0.2'),
       '1. Clear materials MOQ.\n' +
-        'MAT-A: 269,191 pcs\n' +
-        'MAT-C: 1,899,409 pcs\n' +
+        '- MAT-A: 269,191 pcs\n' +
+        '- MAT-C: 1,899,409 pcs\n' +
         '2. Product tolerance: +/- 0.2mm'
     );
   });
@@ -623,7 +623,7 @@ describe('buildRemarkBlock — header + bullets + editable Product tolerance foo
   test('unchecking a row drops its bullet but keeps header + footer', () => {
     assert.equal(
       buildRemarkBlock(ROWS, { 'MAT-A': false }, '0.2'),
-      '1. Clear materials MOQ.\nMAT-C: 1,899,409 pcs\n2. Product tolerance: +/- 0.2mm'
+      '1. Clear materials MOQ.\n- MAT-C: 1,899,409 pcs\n2. Product tolerance: +/- 0.2mm'
     );
   });
 
