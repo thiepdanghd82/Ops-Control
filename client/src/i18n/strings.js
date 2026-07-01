@@ -346,6 +346,7 @@ export const STRINGS = {
   'lt.material.reset': { en: 'Reset to auto', vi: 'Đặt lại về tự động' },
   // Read-only Materials MOQ table (synced from Materials section + NPI library)
   'lt.matmoq.title': { en: 'Materials MOQ', vi: 'MOQ Vật tư' },
+  'lt.tol.label': { en: 'Product tolerance (± mm)', vi: 'Dung sai sản phẩm (± mm)' },
   'lt.matmoq.empty': { en: 'No synced materials', vi: 'Chưa có vật tư' },
   'lt.matmoq.row': { en: 'Row', vi: 'Dòng' },
   'lt.matmoq.ifs_code': { en: 'IFS code', vi: 'Mã IFS' },

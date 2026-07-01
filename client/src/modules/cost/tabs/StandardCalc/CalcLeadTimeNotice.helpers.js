@@ -301,6 +301,32 @@ export function buildRemarkFromSelection(rows, selection) {
   return lines.join('\n');
 }
 
+/** Header line of the auto REMARK block (the numbered MOQ section). */
+export const REMARK_MOQ_HEADER = '1. Clear materials MOQ.';
+
+/** Default Product tolerance (± mm) when the per-quote field is blank/absent. */
+export const PRODUCT_TOLERANCE_DEFAULT = '0.2';
+
+/**
+ * Assemble the full auto REMARK block:
+ *   1. Clear materials MOQ.
+ *   <IFS>: <clear> pcs       (one per CHECKED coded row, table order)
+ *   2. Product tolerance: +/- <tol>mm
+ *
+ * The tolerance comes from the per-quote `state.lead_time.product_tolerance`
+ * field (falls back to PRODUCT_TOLERANCE_DEFAULT when blank). Editing tolerance
+ * only re-runs THIS builder — it never sets `lt_remark_ovr`, so the REMARK
+ * stays in AUTO mode. Bullet rows reuse buildRemarkFromSelection unchanged.
+ */
+export function buildRemarkBlock(rows, selection, productTolerance) {
+  const bullets = buildRemarkFromSelection(rows, selection);
+  const tol = String(productTolerance ?? '').trim() || PRODUCT_TOLERANCE_DEFAULT;
+  const footer = `2. Product tolerance: +/- ${tol}mm`;
+  return bullets
+    ? `${REMARK_MOQ_HEADER}\n${bullets}\n${footer}`
+    : `${REMARK_MOQ_HEADER}\n${footer}`;
+}
+
 /**
  * Resolve what the REMARK field shows: the manual override when set, else the
  * checkbox-driven auto text. `lt_remark_ovr` is the override source of truth.
@@ -382,5 +408,9 @@ export function safeLeadTime(leadTime) {
   ) {
     out.remark_selection = {};
   }
+  // Product tolerance footer (Sprint S-PROD-TOL). Structural default only:
+  // absent → '0.2' on heal; an operator-cleared '' is preserved (the REMARK
+  // footer falls back to '0.2' at render). Editing this never sets an override.
+  if (typeof out.product_tolerance !== 'string') out.product_tolerance = PRODUCT_TOLERANCE_DEFAULT;
   return out;
 }

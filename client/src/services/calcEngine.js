@@ -1780,6 +1780,10 @@ export function createStdState() {
       lt_remark: '',
       lt_process: '',
       lt_material_type: '',
+      // Per-quote "Product tolerance: +/- <n>mm" footer of the auto REMARK.
+      // Editable free-text (accepts "0.2" / "0.15"); heal-on-read defaults to
+      // '0.2' via safeLeadTime() so legacy quotes stay valid (no schema bump).
+      product_tolerance: '0.2',
     },
     // Pricing snapshot — Phase 1 foundation for fixing the calcEngine
     // recompute-drift bug (quote.state today does NOT embed pricing
@@ -1959,6 +1963,10 @@ export function createEmptyStdState() {
       lt_remark: '',
       lt_process: '',
       lt_material_type: '',
+      // Per-quote "Product tolerance: +/- <n>mm" footer of the auto REMARK.
+      // Editable free-text (accepts "0.2" / "0.15"); heal-on-read defaults to
+      // '0.2' via safeLeadTime() so legacy quotes stay valid (no schema bump).
+      product_tolerance: '0.2',
     },
     // Pricing snapshot — see createStdState for the contract; mirrored
     // here so RESET_STD (New button) starts with the same empty shape.
@@ -2028,6 +2036,10 @@ export function createCplxState() {
       lt_remark: '',
       lt_process: '',
       lt_material_type: '',
+      // Per-quote "Product tolerance: +/- <n>mm" footer of the auto REMARK.
+      // Editable free-text (accepts "0.2" / "0.15"); heal-on-read defaults to
+      // '0.2' via safeLeadTime() so legacy quotes stay valid (no schema bump).
+      product_tolerance: '0.2',
     },
     // Pricing snapshot — quote-level (not per-SP), captures USED rows
     // from lib at save time. See pricingSnapshot.js / createStdState.
