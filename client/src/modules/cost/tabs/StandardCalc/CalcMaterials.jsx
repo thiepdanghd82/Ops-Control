@@ -17,6 +17,7 @@ import { useI18n } from '../../../../utils/useI18n';
 import { fmtN, parseLocaleNumber } from '../../../../utils/format';
 import DecimalInput from '../../../../utils/DecimalInput';
 import { primaryRowTypeLabel } from '../../../../services/altMaterialsLabels';
+import { resolveLibRow } from '../../lib/codeMatch.js';
 import AltMaterialsToggle from './AltMaterialsToggle';
 
 export default function CalcMaterials() {
@@ -189,14 +190,20 @@ export default function CalcMaterials() {
 
   const lookupMat = useCallback(
     (idx, code) => {
-      const found = getMatByCode(code);
+      // Exact lookup wins (calc-path getMatByCode, untouched). On an exact miss,
+      // fall back to the tolerant matcher so codes like "3M 9183" (≈ "3m9183") or
+      // "PET SB50(A)PA-T111LLY*" (≈ without "*") still auto-fill instead of
+      // leaving the operator to type the price by hand → risk of $0
+      // (CLAUDE.md Lesson 32, code↔library layer). Ambiguous normalized hits
+      // resolve to null — never guess.
+      const found = getMatByCode(code) || resolveLibRow(lib.mat, 'code', code).row;
       if (found) {
         setMaterialField(idx, 'desc', found.description || found.desc || '');
         if (found.price) setMaterialField(idx, 'g_price', parseFloat(found.price) || 0);
         if (found.width) setMaterialField(idx, 'width', parseFloat(found.width) || 0);
       }
     },
-    [getMatByCode, setMaterialField]
+    [getMatByCode, lib.mat, setMaterialField]
   );
 
   const addRow = useCallback(() => {

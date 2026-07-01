@@ -10,6 +10,7 @@ import { useFeatureFlag } from '../../../../context/useAppConfig';
 import { useI18n } from '../../../../utils/useI18n';
 import { useLibraryPicker } from '../../../../components/LibraryPicker/LibraryPicker';
 import AltMaterialsToggle from '../StandardCalc/AltMaterialsToggle';
+import { resolveLibRow } from '../../lib/codeMatch.js';
 import { sharedApi } from '../../../../services/api';
 import {
   getProcessOptions,
@@ -813,7 +814,12 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                               value={m.code || ''}
                               onChange={(e) => setMat(mi, 'code', e.target.value)}
                               onBlur={(e) => {
-                                const f = getMatByCode(e.target.value);
+                                // Exact lookup wins (calc-path getMatByCode). On an
+                                // exact miss, tolerant fallback so spacing/dash/`*`
+                                // variants auto-fill instead of null (Lesson 32).
+                                const f =
+                                  getMatByCode(e.target.value) ||
+                                  resolveLibRow(lib.mat, 'code', e.target.value).row;
                                 if (f) setMat(mi, 'desc', f.description || f.desc || '');
                               }}
                               className="cc-det-inp"

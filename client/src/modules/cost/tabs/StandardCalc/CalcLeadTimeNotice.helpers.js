@@ -11,6 +11,12 @@
 
 import { isMainMat, isProcessMat } from '../../lib/rowTypeNormalize.js';
 import { calcMat } from '../../../../services/calcEngine.js';
+import { normCode, resolveLibRow } from '../../lib/codeMatch.js';
+
+// Re-exported for existing callers/tests that import the tolerant matcher from
+// this module (moved to ../../lib/codeMatch.js so the Materials auto-fill
+// handlers can share it — no behavior change here).
+export { normCode, resolveLibRow };
 
 // Match CalcProcesses.jsx hidden convention — rows flagged `hidden:true`
 // are treated as deleted by the calc engine and should NOT contribute to
@@ -185,58 +191,6 @@ export function deriveMaterialLT(rows, lib) {
  * @param {{spCode?:string}} [opts]  Cpx per-SP label prefix
  * @returns {Array<{row_label:string,ifs_code:string,quote_mat:string,type:string,leadtime:number|null,qpa_m2:number,moq_m2:number|null,clear_pcs:number|null}>}
  */
-/**
- * Normalize a material code / library name for tolerant matching. Collapses the
- * spacing / dash / case / trailing-* differences that make an EXACT lookup miss
- * (CLAUDE.md Lesson 32 — the code↔library variant): e.g. row code
- * "JKD PSC701-10B-NT" vs NPI name "JKD PSC 701-10B-NT" (internal space) both
- * normalize to "jkdpsc701-10b-nt". Whitespace is removed entirely (not just
- * trimmed) so an internal space in only one string no longer blocks the match.
- */
-export function normCode(s) {
-  return String(s || '')
-    .normalize('NFKC')
-    .replace(/[‐-―−]/g, '-') // en/em/figure dashes + minus → hyphen
-    .replace(/\s+/g, '') // remove ALL whitespace (PSC 701 → PSC701)
-    .toLowerCase()
-    .replace(/\*+$/, ''); // strip trailing '*' markers (NPI names use them)
-}
-
-/**
- * Resolve a library row for `key` from `rows` keyed by `field`, EXACT-first then
- * a normalized fallback. Returns { row, fuzzy, ambiguous }:
- *  - exact trim+lowercase equality always wins (zero false-positive risk);
- *  - else normCode() equality — one distinct match → { fuzzy:true };
- *  - MORE THAN ONE distinct library row normalizing to the key → do NOT guess:
- *    { ambiguous:true, row:null } so the caller keeps "—" + flags the row.
- */
-export function resolveLibRow(rows, field, key) {
-  if (!Array.isArray(rows)) return { row: null, fuzzy: false, ambiguous: false };
-  const keyLc = String(key).trim().toLowerCase();
-  const exact = rows.find(
-    (r) =>
-      r &&
-      String(r[field] ?? '')
-        .trim()
-        .toLowerCase() === keyLc
-  );
-  if (exact) return { row: exact, fuzzy: false, ambiguous: false };
-  const nkey = normCode(key);
-  if (!nkey) return { row: null, fuzzy: false, ambiguous: false };
-  const hits = rows.filter((r) => r && normCode(r[field]) === nkey);
-  if (hits.length === 0) return { row: null, fuzzy: false, ambiguous: false };
-  // Distinct = different original field values (true dupes are not ambiguous).
-  const distinct = new Set(
-    hits.map((r) =>
-      String(r[field] ?? '')
-        .trim()
-        .toLowerCase()
-    )
-  );
-  if (distinct.size > 1) return { row: null, fuzzy: false, ambiguous: true };
-  return { row: hits[0], fuzzy: true, ambiguous: false };
-}
-
 export function buildLeadTimeMaterialsTable(materials, lib, st, moq, opts = {}) {
   if (!Array.isArray(materials)) return [];
   const npi = lib && Array.isArray(lib.npi) ? lib.npi : [];
