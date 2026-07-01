@@ -11,6 +11,7 @@ import {
   resolveMaterialLtDisplay,
   buildLeadTimeMaterialsTable,
 } from './CalcLeadTimeNotice.helpers.js';
+import * as helpersNs from './CalcLeadTimeNotice.helpers.js';
 import { calcMat } from '../../../../services/calcEngine.js';
 
 describe('sumToolingCostStd', () => {
@@ -456,5 +457,114 @@ describe('buildLeadTimeMaterialsTable', () => {
     assert.equal(r.moq_m2, 500);
     assert.equal(r.type, 'PET 50um');
     assert.ok(close(r.clear_pcs, 500 / QPA));
+  });
+});
+
+describe('REMARK checkbox-driven auto-sync', () => {
+  const {
+    buildRemarkFromSelection,
+    resolveRemarkDisplay,
+    remarkSelectAllState,
+    toggleRemarkSelection,
+    setAllRemarkSelection,
+    isRemarkRowSelected,
+    formatThousands,
+  } = helpersNs;
+
+  const ROWS = [
+    { ifs_code: 'MAT-A', clear_pcs: 269191 },
+    { ifs_code: 'MAT-B', clear_pcs: null }, // no clear → "—"
+    { ifs_code: '', clear_pcs: 100 }, // blank code → excluded
+    { ifs_code: 'MAT-C', clear_pcs: 1899409 },
+  ];
+
+  test('formatThousands rounds + separates; non-finite → "—"', () => {
+    assert.equal(formatThousands(269191.4), '269,191');
+    assert.equal(formatThousands(68.6), '69');
+    assert.equal(formatThousands(NaN), '—');
+  });
+
+  test('all checked (default {}) → one line per coded row, in order', () => {
+    assert.equal(
+      buildRemarkFromSelection(ROWS, {}),
+      'MAT-A: 269,191 pcs\nMAT-B: —\nMAT-C: 1,899,409 pcs'
+    );
+  });
+
+  test('uncheck a row → its line disappears', () => {
+    assert.equal(
+      buildRemarkFromSelection(ROWS, { 'MAT-A': false }),
+      'MAT-B: —\nMAT-C: 1,899,409 pcs'
+    );
+  });
+
+  test('clear_pcs null → "<code>: —"', () => {
+    assert.equal(buildRemarkFromSelection([{ ifs_code: 'X', clear_pcs: null }], {}), 'X: —');
+  });
+
+  test('blank-code rows excluded even when others checked', () => {
+    const only = buildRemarkFromSelection([{ ifs_code: '  ', clear_pcs: 5 }], {});
+    assert.equal(only, '');
+  });
+
+  test('isRemarkRowSelected: default true; false mask unchecks', () => {
+    assert.equal(isRemarkRowSelected({}, 'MAT-A'), true);
+    assert.equal(isRemarkRowSelected({ 'MAT-A': false }, 'MAT-A'), false);
+    assert.equal(isRemarkRowSelected(null, 'MAT-A'), true);
+  });
+
+  test('toggleRemarkSelection: check→uncheck sets false; uncheck→check deletes key', () => {
+    assert.deepEqual(toggleRemarkSelection({}, 'MAT-A'), { 'MAT-A': false });
+    assert.deepEqual(toggleRemarkSelection({ 'MAT-A': false }, 'MAT-A'), {});
+  });
+
+  test('setAllRemarkSelection: checked → {} (all); unchecked → all coded keys false', () => {
+    assert.deepEqual(setAllRemarkSelection(ROWS, true), {});
+    assert.deepEqual(setAllRemarkSelection(ROWS, false), {
+      'MAT-A': false,
+      'MAT-B': false,
+      'MAT-C': false,
+    });
+  });
+
+  test('remarkSelectAllState: all / partial / none', () => {
+    assert.deepEqual(remarkSelectAllState(ROWS, {}), {
+      total: 3,
+      selected: 3,
+      checked: true,
+      indeterminate: false,
+    });
+    assert.deepEqual(remarkSelectAllState(ROWS, { 'MAT-A': false }), {
+      total: 3,
+      selected: 2,
+      checked: false,
+      indeterminate: true,
+    });
+    assert.deepEqual(remarkSelectAllState(ROWS, setAllRemarkSelection(ROWS, false)), {
+      total: 3,
+      selected: 0,
+      checked: false,
+      indeterminate: false,
+    });
+  });
+
+  test('resolveRemarkDisplay: override wins; empty override → auto', () => {
+    assert.deepEqual(resolveRemarkDisplay({ lt_remark_ovr: 'my note' }, 'AUTO'), {
+      value: 'my note',
+      isOverride: true,
+    });
+    assert.deepEqual(resolveRemarkDisplay({ lt_remark_ovr: '' }, 'AUTO'), {
+      value: 'AUTO',
+      isOverride: false,
+    });
+    assert.deepEqual(resolveRemarkDisplay(null, 'AUTO'), { value: 'AUTO', isOverride: false });
+  });
+
+  test('override stops auto-sync: changing selection does not alter displayed remark', () => {
+    const lt = { lt_remark_ovr: 'manual' };
+    const autoA = buildRemarkFromSelection(ROWS, {});
+    const autoB = buildRemarkFromSelection(ROWS, { 'MAT-A': false });
+    assert.equal(resolveRemarkDisplay(lt, autoA).value, 'manual');
+    assert.equal(resolveRemarkDisplay(lt, autoB).value, 'manual'); // unchanged
   });
 });

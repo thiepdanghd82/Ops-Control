@@ -44,6 +44,8 @@ import {
   resolveMaterialLtDisplay,
   safeLeadTime,
   buildLeadTimeMaterialsTable,
+  buildRemarkFromSelection,
+  resolveRemarkDisplay,
 } from './CalcLeadTimeNotice.helpers.js';
 import CalcLegend from './CalcLegend';
 import TabBarOverflow from '../../../../components/Shared/TabBarOverflow';
@@ -235,7 +237,16 @@ export default function StandardCalc() {
     // auto "<n> days") so downstream readers (Summarize, future export sheet 11)
     // see the value; lt_material_ovr stays the override source of truth.
     const resolvedMatLt = resolveMaterialLtDisplay(stdState.lead_time, materialLtAuto).value;
-    const leadTimePatched = { ...safeLeadTime(stdState.lead_time), lt_material: resolvedMatLt };
+    // REMARK: persist the resolved value (checkbox-driven auto text unless a
+    // manual override) so Summarize / export read it; remark_selection +
+    // lt_remark_ovr remain the source of truth.
+    const autoRemark = buildRemarkFromSelection(ltMatRows, stdState.lead_time?.remark_selection);
+    const resolvedRemark = resolveRemarkDisplay(stdState.lead_time, autoRemark).value;
+    const leadTimePatched = {
+      ...safeLeadTime(stdState.lead_time),
+      lt_material: resolvedMatLt,
+      lt_remark: resolvedRemark,
+    };
     const baseState = { ...stdState, lead_time: leadTimePatched };
     const stateWithSnapshot = snapshot ? { ...baseState, pricing_snapshot: snapshot } : baseState;
     const calcOptions = snapshot ? { snapshot } : {};

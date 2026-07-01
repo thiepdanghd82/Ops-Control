@@ -256,6 +256,92 @@ export function resolveMaterialLtDisplay(leadTime, autoVal) {
   return { value: autoVal || '', isOverride: false };
 }
 
+// ── REMARK checkbox-driven auto-sync (Sprint S-REMARK-SEL) ──
+// The Materials MOQ table's checkbox column drives the REMARK field: one line
+// per CHECKED coded row. Selection = map of UNCHECKED keys ({ [ifs_code]:
+// false }); a row is checked unless its key === false (so new rows default
+// checked). All pure — no React, no state mutation.
+
+/** Round + thousands-separate (matches the Clear Materials MOQ column). */
+export function formatThousands(v) {
+  return Number.isFinite(Number(v)) ? Math.round(Number(v)).toLocaleString('en-US') : '—';
+}
+
+/** A row is selected unless the mask marks its ifs_code false. */
+export function isRemarkRowSelected(selection, code) {
+  const sel = selection && typeof selection === 'object' ? selection : {};
+  return sel[code] !== false;
+}
+
+/**
+ * Build the auto REMARK text from the table rows + selection. One line per
+ * CHECKED row that has a non-empty ifs_code:
+ *   "<ifs_code>: <Clear MOQ> pcs"   (or "<ifs_code>: —" when clear_pcs is null)
+ * joined by "\n", in table order. Blank-code rows excluded.
+ */
+export function buildRemarkFromSelection(rows, selection) {
+  if (!Array.isArray(rows)) return '';
+  const lines = [];
+  for (const r of rows) {
+    if (!r || typeof r !== 'object') continue;
+    const code = String(r.ifs_code || '').trim();
+    if (!code) continue;
+    if (!isRemarkRowSelected(selection, code)) continue;
+    const clear =
+      r.clear_pcs != null && r.clear_pcs > 0 ? `${formatThousands(r.clear_pcs)} pcs` : '—';
+    lines.push(`${r.ifs_code}: ${clear}`);
+  }
+  return lines.join('\n');
+}
+
+/**
+ * Resolve what the REMARK field shows: the manual override when set, else the
+ * checkbox-driven auto text. `lt_remark_ovr` is the override source of truth.
+ */
+export function resolveRemarkDisplay(leadTime, autoRemark) {
+  const lt = leadTime && typeof leadTime === 'object' ? leadTime : {};
+  const ovr = typeof lt.lt_remark_ovr === 'string' ? lt.lt_remark_ovr : '';
+  if (ovr.trim() !== '') return { value: ovr, isOverride: true };
+  return { value: autoRemark || '', isOverride: false };
+}
+
+/** Header select-all state over the coded rows. */
+export function remarkSelectAllState(rows, selection) {
+  let total = 0;
+  let selected = 0;
+  for (const r of Array.isArray(rows) ? rows : []) {
+    const code = String(r?.ifs_code || '').trim();
+    if (!code) continue;
+    total++;
+    if (isRemarkRowSelected(selection, code)) selected++;
+  }
+  return {
+    total,
+    selected,
+    checked: total > 0 && selected === total,
+    indeterminate: selected > 0 && selected < total,
+  };
+}
+
+/** Toggle one row's checkbox → new selection map (immutable). */
+export function toggleRemarkSelection(selection, code) {
+  const sel = { ...(selection && typeof selection === 'object' ? selection : {}) };
+  if (sel[code] === false) delete sel[code];
+  else sel[code] = false;
+  return sel;
+}
+
+/** Select-all / clear-all → new selection map for the given rows. */
+export function setAllRemarkSelection(rows, checked) {
+  if (checked) return {};
+  const sel = {};
+  for (const r of Array.isArray(rows) ? rows : []) {
+    const code = String(r?.ifs_code || '').trim();
+    if (code) sel[code] = false;
+  }
+  return sel;
+}
+
 /**
  * Heal legacy quotes that lack `state.lead_time` (saved before this feature
  * landed). Returns a fresh object with all 6 keys present + defaulted to ''
@@ -275,5 +361,19 @@ export function safeLeadTime(leadTime) {
   // default only — the legacy lt_material→lt_material_ovr seed happens ONCE at
   // migration heal (not here), so a later ↻ reset isn't re-seeded each render.
   if (typeof out.lt_material_ovr !== 'string') out.lt_material_ovr = '';
+  // REMARK checkbox-driven auto-sync (Sprint S-REMARK-SEL). Structural defaults:
+  //  - lt_remark_ovr: manual-override source (like lt_material_ovr). Legacy
+  //    lt_remark→lt_remark_ovr seed happens ONCE at migration heal, not here.
+  //  - remark_selection: map of UNCHECKED row keys ({ [ifs_code]: false }); a
+  //    row is checked unless its key === false. Absent/empty {} = all checked,
+  //    and newly-added rows default checked. Coerce non-objects to {}.
+  if (typeof out.lt_remark_ovr !== 'string') out.lt_remark_ovr = '';
+  if (
+    !out.remark_selection ||
+    typeof out.remark_selection !== 'object' ||
+    Array.isArray(out.remark_selection)
+  ) {
+    out.remark_selection = {};
+  }
   return out;
 }

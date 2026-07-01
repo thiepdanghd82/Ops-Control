@@ -45,6 +45,8 @@ import {
   resolveMaterialLtDisplay,
   safeLeadTime,
   buildLeadTimeMaterialsTable,
+  buildRemarkFromSelection,
+  resolveRemarkDisplay,
 } from '../StandardCalc/CalcLeadTimeNotice.helpers.js';
 import { showToast } from '../../../../utils/toast';
 import { fmtN, pct, gmClr } from '../../../../utils/format';
@@ -300,7 +302,14 @@ export default function ComplexCalc() {
     // the auto "<n> days") so Summarize + future export read it; lt_material_ovr
     // remains the override source of truth.
     const resolvedMatLt = resolveMaterialLtDisplay(cs.lead_time, materialLtAuto).value;
-    const leadTimePatched = { ...safeLeadTime(cs.lead_time), lt_material: resolvedMatLt };
+    // REMARK: persist the resolved checkbox-driven value (or manual override).
+    const autoRemark = buildRemarkFromSelection(ltMatRows, cs.lead_time?.remark_selection);
+    const resolvedRemark = resolveRemarkDisplay(cs.lead_time, autoRemark).value;
+    const leadTimePatched = {
+      ...safeLeadTime(cs.lead_time),
+      lt_material: resolvedMatLt,
+      lt_remark: resolvedRemark,
+    };
     const csPatched = { ...cs, lead_time: leadTimePatched };
     const stateWithSnapshot = snapshot ? { ...csPatched, pricing_snapshot: snapshot } : csPatched;
     const calcOptions = snapshot ? { snapshot } : {};

@@ -230,3 +230,16 @@
 .ltn-matmoq-code {
   font-family: monospace;
 }
+
+/* Checkbox column in the Materials MOQ table (drives the REMARK field). */
+.ltn-matmoq-chk {
+  width: 34px;
+  text-align: center;
+  white-space: nowrap;
+}
+.ltn-matmoq-chk input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: var(--color-blue-600, #2563eb);
+}
