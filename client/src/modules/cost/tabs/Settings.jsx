@@ -771,6 +771,14 @@ const AcctIcon = {
       <path d="M14 11v6" />
     </SqIcon>
   ),
+  // Shield with a reset arrow — SYS-only reset another user's 2FA (S-2FA-RESET)
+  reset2fa: (
+    <SqIcon>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="M15 10a3 3 0 1 0-.8 2.9" />
+      <path d="M15 8.5V11h-2.4" />
+    </SqIcon>
+  ),
   // ID card — generate temp password + show provisioning card (Sprint 1.5)
   card: (
     <SqIcon>
@@ -814,6 +822,7 @@ function pwdAgeBadge(lastPwdChange) {
 
 function AccountSection() {
   const { user: currentUser } = useAuth();
+  const { t } = useI18n();
   const [users, setUsers] = useState([]);
   const [onlineList, setOnlineList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -830,6 +839,12 @@ function AccountSection() {
   // password isn't kept in memory longer than needed (it's already hashed
   // server-side and we don't show it again).
   const [provisioning, setProvisioning] = useState(null);
+  // Sprint S-2FA-RESET — SYS-only per-user 2FA reset (lost-phone recovery).
+  // Holds the target user row while the confirm+step-up modal is open.
+  const [reset2fa, setReset2fa] = useState(null); // { user } | null
+  const [reset2faPwd, setReset2faPwd] = useState('');
+  const [reset2faBusy, setReset2faBusy] = useState(false);
+  const [reset2faErr, setReset2faErr] = useState('');
   // P0 client-version banner — keep the latest CLIENT_UPGRADE_NUDGE_SHOWN
   // + CLIENT_VERSION_MATCH_AFTER_UPGRADE audit rows around so the
   // "Phiên bản client" column can render per-operator badges. Empty
@@ -994,6 +1009,39 @@ function AccountSection() {
       flash('success', `Temp password issued for ${u.username}`);
     } catch (e) {
       flash('error', 'Failed to generate temp password: ' + (e.message || 'unknown'));
+    }
+  }
+
+  // Sprint S-2FA-RESET — open the confirm+step-up modal for a target user.
+  function openReset2fa(u) {
+    setReset2faPwd('');
+    setReset2faErr('');
+    setReset2fa({ user: u });
+  }
+
+  async function submitReset2fa() {
+    if (!reset2fa?.user) return;
+    setReset2faBusy(true);
+    setReset2faErr('');
+    try {
+      const r = await costApi.resetUser2fa(reset2fa.user.id, { password: reset2faPwd });
+      // Step-up failure comes back as HTTP 200 { ok:false, code:'bad_password' }
+      // (server avoids 401 so it can't trip the global session-expired logout).
+      if (r && r.ok === false) {
+        setReset2faErr(t('settings.reset2fa.err_pwd'));
+        return;
+      }
+      flash('success', t('settings.reset2fa.toast_ok').replace('{user}', reset2fa.user.username));
+      setReset2fa(null);
+      setReset2faPwd('');
+    } catch (e) {
+      // 403 (not sys / self) + 404 (missing) throw with err.status.
+      const status = e?.status;
+      if (status === 403) setReset2faErr(t('settings.reset2fa.err_forbidden'));
+      else if (status === 404) setReset2faErr(t('settings.reset2fa.err_notfound'));
+      else setReset2faErr(e?.message || 'unknown');
+    } finally {
+      setReset2faBusy(false);
     }
   }
 
@@ -1477,6 +1525,18 @@ function AccountSection() {
                               {AcctIcon.shield}
                             </button>
                           )}
+                          {/* S-2FA-RESET — SYS-only per-user 2FA reset (lost
+                              phone). Distinct from the self "Setup 2FA" above. */}
+                          {!isMe && isSys && (
+                            <button
+                              className="acct-sq-btn acct-sq-reset2fa"
+                              onClick={() => openReset2fa(u)}
+                              title={t('settings.reset2fa.btn_title')}
+                              aria-label={t('settings.reset2fa.btn_title')}
+                            >
+                              {AcctIcon.reset2fa}
+                            </button>
+                          )}
                           {!isMe && isSys && (
                             <button
                               className="acct-sq-btn acct-sq-lock"
@@ -1701,6 +1761,56 @@ function AccountSection() {
         tempPassword={provisioning?.tempPassword || ''}
         serverUrl={provisioning?.serverUrl || ''}
       />
+
+      {/* S-2FA-RESET — SYS-only confirm + step-up modal. */}
+      {reset2fa && (
+        <Modal
+          open
+          onClose={() => (reset2faBusy ? null : setReset2fa(null))}
+          size="sm"
+          severity="warning"
+          draggable
+          ariaLabelledBy="reset2fa-title"
+        >
+          <Modal.Header id="reset2fa-title" title={t('settings.reset2fa.modal_title')} />
+          <Modal.Body>
+            <p className="acct-reset2fa-body">
+              {t('settings.reset2fa.modal_body').replace('{user}', reset2fa.user.username)}
+            </p>
+            <label className="acct-reset2fa-label" htmlFor="reset2fa-pwd">
+              {t('settings.reset2fa.pwd_label')}
+            </label>
+            <input
+              id="reset2fa-pwd"
+              type="password"
+              className="acct-reset2fa-input"
+              autoComplete="off"
+              value={reset2faPwd}
+              disabled={reset2faBusy}
+              onChange={(e) => {
+                setReset2faPwd(e.target.value);
+                if (reset2faErr) setReset2faErr('');
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && reset2faPwd && !reset2faBusy) submitReset2fa();
+              }}
+            />
+            {reset2faErr && <div className="acct-reset2fa-err">{reset2faErr}</div>}
+          </Modal.Body>
+          <Modal.Footer>
+            <button className="op-btn" onClick={() => setReset2fa(null)} disabled={reset2faBusy}>
+              {t('common.cancel')}
+            </button>
+            <button
+              className="op-btn op-btn-danger"
+              onClick={submitReset2fa}
+              disabled={reset2faBusy || !reset2faPwd}
+            >
+              {reset2faBusy ? t('common.saving') : t('settings.reset2fa.confirm_btn')}
+            </button>
+          </Modal.Footer>
+        </Modal>
+      )}
     </div>
   );
 }

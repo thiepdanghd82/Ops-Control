@@ -485,6 +485,46 @@ function getAppUrl() {
   return `http://127.0.0.1:${embeddedPort}`;
 }
 
+// ─── "Server connecting…" screen + retry-with-backoff ──────────────
+// Instead of firing the scary ERR_CONNECTION_REFUSED recovery dialog on the
+// FIRST loadURL failure (which surfaced during a boot race — renderer beats the
+// embedded server's port bind), show a calm "connecting" screen and poll
+// /health via probeServer (never throws) until the server answers, then load
+// the real app. Only fall back to the recovery dialog after the budget is spent.
+function connectingScreenHtml(url) {
+  return `<!doctype html><html lang="vi"><head><meta charset="utf-8"/>
+<style>
+  html,body{height:100%;margin:0}
+  body{display:flex;align-items:center;justify-content:center;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    background:#0f2341;color:#e6eef8}
+  .wrap{text-align:center;max-width:420px;padding:24px}
+  .spin{width:44px;height:44px;margin:0 auto 20px;border:4px solid rgba(255,255,255,.18);
+    border-top-color:#4f9cff;border-radius:50%;animation:s 1s linear infinite}
+  @keyframes s{to{transform:rotate(360deg)}}
+  h1{font-size:18px;font-weight:600;margin:0 0 8px}
+  p{font-size:13px;line-height:1.5;color:#a9bcd6;margin:6px 0}
+  code{color:#8fb8ff;font-size:12px}
+</style></head><body><div class="wrap">
+  <div class="spin"></div>
+  <h1>Đang kết nối máy chủ Ops Control…</h1>
+  <p>Server connecting — máy chủ đang khởi động, vui lòng chờ.</p>
+  <p><code>${String(url).replace(/[<>&"]/g, '')}</code></p>
+</div></body></html>`;
+}
+
+async function waitForServer(url, timeoutMs = 60000) {
+  const start = Date.now();
+  let delay = 400;
+  while (Date.now() - start < timeoutMs) {
+    const res = await probeServer(url); // { ok } — never throws
+    if (res && res.ok) return true;
+    await new Promise((r) => setTimeout(r, delay));
+    delay = Math.min(delay + 300, 2000); // gentle backoff, cap 2s
+  }
+  return false;
+}
+
 // ─── Tạo cửa sổ chính ──────────────────────────────────────────────
 function createMainWindow() {
   const bounds = store.get('windowBounds');
@@ -605,8 +645,36 @@ function createMainWindow() {
 
   const url = getAppUrl();
   log.info('[main] Loading URL:', url);
-  mainWindow.loadURL(url).catch((err) => {
-    log.error('[main] loadURL failed:', err);
+
+  // Show the connecting screen first, poll /health, then load the real app.
+  // The recovery dialog only appears after waitForServer's budget is spent —
+  // no more scary ERR_CONNECTION_REFUSED on a transient boot race.
+  mainWindow
+    .loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(connectingScreenHtml(url)))
+    .catch(() => {});
+
+  (async () => {
+    const ready = await waitForServer(url, 60000);
+    if (ready) {
+      try {
+        await mainWindow.loadURL(url);
+        return; // connected — done
+      } catch (err) {
+        log.error('[main] loadURL failed after server became ready:', err);
+        // fall through to the recovery dialog below
+      }
+    } else {
+      log.error('[main] server did not answer /health within budget:', url);
+    }
+    showConnectFailedDialog(url, new Error('ERR_CONNECTION_REFUSED (server unreachable)'));
+  })();
+}
+
+// Recovery dialog, extracted so createMainWindow's retry loop can call it only
+// after the connecting budget is exhausted.
+function showConnectFailedDialog(url, err) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  {
     // Recovery dialog branches on BUILD_ROLE:
     //   - server build: offer "Reset về Embedded" (correct — server runs
     //     embedded; thin only when admin points at another server)
@@ -645,7 +713,7 @@ function createMainWindow() {
     } else if (choice === 1) {
       app.exit(1);
     }
-  });
+  }
 }
 
 // ─── Tray icon (chạy nền) ──────────────────────────────────────────

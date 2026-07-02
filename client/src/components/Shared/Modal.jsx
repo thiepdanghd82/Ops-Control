@@ -141,6 +141,14 @@ export default function Modal({
   const isDraggable = draggable ?? (size === 'lg' || size === 'xl');
   const cardRef = useRef(null);
   const restoreFocusRef = useRef(null);
+  // Keep the latest onClose without retriggering the open/focus effect below.
+  // Consumers pass an inline arrow for onClose (new identity every render), so
+  // listing it as an effect dep re-ran the autofocus on every keystroke and
+  // stole focus back to the primary button after one character. See Lesson 38.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -159,7 +167,7 @@ export default function Modal({
     const onKey = (e) => {
       if (e.key === 'Escape' && dismissable) {
         e.stopPropagation();
-        onClose?.();
+        onCloseRef.current?.();
       }
     };
     document.addEventListener('keydown', onKey);
@@ -180,7 +188,7 @@ export default function Modal({
         }
       }
     };
-  }, [open, dismissable, onClose]);
+  }, [open, dismissable]);
 
   // Opt-in drag: move the card by its header. Imperative (writes
   // card.style.transform directly) so there's no per-mousemove re-render and
