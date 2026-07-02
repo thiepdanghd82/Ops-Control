@@ -167,6 +167,29 @@ registerStrings({
   'settings.profile.save_btn': { en: 'Save Profile', vi: 'Lưu hồ sơ' },
   'settings.profile.about_title': { en: 'About', vi: 'Giới thiệu' },
 
+  // Sprint S-2FA-RESET — SYS-only per-user 2FA reset (lost-phone recovery).
+  'settings.reset2fa.btn_title': { en: 'Reset 2FA', vi: 'Reset 2FA' },
+  'settings.reset2fa.modal_title': { en: 'Reset 2FA', vi: 'Reset 2FA' },
+  'settings.reset2fa.modal_body': {
+    en: 'Reset 2FA for "{user}"? Their current authenticator stops working and they must scan a new QR at the next login. Their password is unchanged.',
+    vi: 'Reset 2FA cho "{user}"? Authenticator hiện tại sẽ ngừng hoạt động và họ phải quét QR mới ở lần đăng nhập kế tiếp. Mật khẩu không đổi.',
+  },
+  'settings.reset2fa.pwd_label': {
+    en: 'Your password (confirm it is you)',
+    vi: 'Mật khẩu của bạn (xác nhận chính chủ)',
+  },
+  'settings.reset2fa.confirm_btn': { en: 'Reset 2FA', vi: 'Reset 2FA' },
+  'settings.reset2fa.toast_ok': {
+    en: '2FA reset for {user}. They scan a new QR at next login.',
+    vi: 'Đã reset 2FA cho {user}. Họ sẽ quét QR mới ở lần đăng nhập kế tiếp.',
+  },
+  'settings.reset2fa.err_pwd': { en: 'Current password incorrect.', vi: 'Mật khẩu không đúng.' },
+  'settings.reset2fa.err_forbidden': {
+    en: 'Only SYS accounts can reset another user’s 2FA.',
+    vi: 'Chỉ tài khoản SYS mới được reset 2FA của người khác.',
+  },
+  'settings.reset2fa.err_notfound': { en: 'User not found.', vi: 'Không tìm thấy user.' },
+
   'appearance.title': { en: 'Appearance', vi: 'Giao diện' },
   'appearance.hint': {
     en: 'Choose how Ops Control looks. The choice is saved in this browser only.',

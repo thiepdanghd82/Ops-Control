@@ -532,6 +532,12 @@ export const costApi = {
   deleteUser: (id) => authCall('delete', `/auth/users/${id}`),
   setSessionTtl: (id, ttlHours) =>
     authCall('post', `/auth/users/${id}/session-ttl`, { ttl_hours: ttlHours }),
+  // Sprint S-2FA-RESET — SYS-only per-user 2FA reset (lost-phone recovery).
+  // Step-up: `password` is the SYS caller's own current password. The target
+  // must re-scan a new QR at their next login. Uses api.post (NOT authCall) so
+  // the 200 `{ ok:false, code:'bad_password' }` step-up response is returned to
+  // the caller instead of thrown — 403/404 still throw with err.status.
+  resetUser2fa: (id, { password }) => api.post(`/auth/users/${id}/reset-2fa`, { password }),
 
   // Rate — v1.3 N6 — migrated from legacy `/rate/*` to canonical
   // `/library/rate/*` (router lives at server/domains/library/routes/rate.js).

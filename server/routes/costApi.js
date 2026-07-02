@@ -1509,6 +1509,91 @@ router.post(
   }
 );
 
+// POST /api/auth/users/:id/reset-2fa
+//
+// Sprint S-2FA-RESET — SYS-only per-user TOTP reset for the "lost phone" case.
+// Deliberately STRICTER than the legacy DELETE /totp/secret/:username (admin+,
+// self-allowed, no audit): sys-only, no self-reset via this path, a step-up
+// password check, an audit row, and target-session revoke so re-enrollment is
+// forced on the target's next login. Removes the target's secret via the
+// race-safe updateTotpSecrets helper (NEVER raw file ops) and leaves
+// target.totp_required untouched so login re-enters the enrollment flow.
+router.post(
+  '/auth/users/:id/reset-2fa',
+  writeRateLimit,
+  validateBody({
+    // Step-up: the SYS caller's OWN current password. Optional at the schema
+    // layer so an absent password takes the SAME "bad password" branch below
+    // (uniform failure) instead of a 400 validation error.
+    password: { type: 'string', required: false, max: 256 },
+  }),
+  async (req, res) => {
+    const caller = getSessionUser(getTokenFromHeader(req));
+    // Gate: SYS only (roleLevel >= 5) — stricter than the old admin+ DELETE.
+    if (!isSys(caller)) return res.status(403).json({ error: 'Forbidden — SYS only' });
+    const uid = parseInt(req.params.id);
+
+    // ── STEP-UP AUTH (Option 2, modular) ──────────────────────────────────
+    // Verify the caller's CURRENT password before a security-sensitive reset,
+    // so an unattended-but-unlocked SYS session can't be abused. Remove this
+    // single block to disable step-up if policy changes.
+    //
+    // Returns HTTP 200 { ok:false, code:'bad_password' } (NOT 401) on mismatch:
+    // the client's global request() treats ANY 401 as session-expiry and
+    // force-logs-out, so a wrong step-up code would nuke the SYS's own session.
+    // This mirrors the /auth/change-pwd precedent (wrong old_pwd → 200 ok:false).
+    const { password } = req.body;
+    if (!(await checkPassword(caller, password || ''))) {
+      audit('TOTP_RESET_STEPUP_FAIL', caller.username, clientIp(req), `target_id=${uid}`);
+      return res.json({ ok: false, code: 'bad_password', error: 'Current password incorrect' });
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
+    const users = loadUsers();
+    const target = users.find((x) => x.id === uid);
+    if (!target) return res.status(404).json({ error: 'User not found' });
+    // No self-reset via this route: SYS resets OTHERS. A SYS who lost their own
+    // phone uses the console recover-sys-user.js path. This closes the
+    // self-reset-without-a-code gap for this endpoint.
+    if (target.id === caller.id)
+      return res.status(403).json({ error: 'Cannot reset your own 2FA via this route' });
+
+    // Remove the target's TOTP secret (keyed by username, case-insensitive)
+    // through the race-safe read-modify-write helper — never a raw file op.
+    let secretRemoved = false;
+    await updateTotpSecrets((secs) => {
+      const key = Object.keys(secs).find(
+        (k) => k.toLowerCase() === String(target.username).toLowerCase()
+      );
+      if (key) {
+        delete secs[key];
+        secretRemoved = true;
+      }
+      return secs;
+    });
+
+    // Revoke the target's active sessions so the reset takes effect at once —
+    // they must re-login (password still valid) and re-enroll a new QR.
+    const killed = revokeSessionsForUser(target.id);
+
+    audit(
+      'TOTP_RESET_BY_SYS',
+      caller.username,
+      clientIp(req),
+      JSON.stringify({
+        actor_id: caller.id,
+        actor_username: caller.username,
+        target_id: target.id,
+        target_username: target.username,
+        secret_removed: secretRemoved,
+        sessions_revoked: killed,
+        ip: clientIp(req),
+      })
+    );
+    res.json({ ok: true, secret_removed: secretRemoved, sessions_revoked: killed });
+  }
+);
+
 // POST /api/auth/users/:id/temp-pwd
 //
 // Sprint 1.5 — SAP/IFS-style provisioning. Generates a cryptographically
@@ -1829,6 +1914,9 @@ router.delete('/totp/secret/:username', (req, res) => {
   if (keyDel) {
     delete secs[keyDel];
     saveTotpSecrets(secs);
+    // Audit the reset (was console.log-only — closes the missing-trail gap;
+    // no behavior change). The SYS-only reset-2fa route is the preferred path.
+    audit('TOTP_SECRET_DELETED', caller.username, clientIp(req), `target=${usernameReq}`);
     console.log(`  🗑️  TOTP secret removed for: ${usernameReq}`);
   }
   res.json({ ok: true });

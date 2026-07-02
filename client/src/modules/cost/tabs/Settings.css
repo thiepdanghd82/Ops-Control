@@ -1758,6 +1758,7 @@ button.acct-approval-pill.on:hover {
 .acct-sq-shield,
 .acct-sq-lock,
 .acct-sq-card,
+.acct-sq-reset2fa,
 .acct-sq-trash {
   background: linear-gradient(180deg, #9aa4b2, #7e8896);
 }
@@ -1765,10 +1766,49 @@ button.acct-approval-pill.on:hover {
 .acct-sq-trash {
   background: linear-gradient(180deg, #c28a8a, #a06f6f);
 }
+/* Amber hint for the SYS-only 2FA reset — a security-sensitive action,
+   distinct from the neutral cluster + the red delete. */
+.acct-sq-reset2fa {
+  background: linear-gradient(180deg, #d9a441, #b9862c);
+}
 /* Subtle blue hint for the provisioning card — distinct from neutral
    reset-pwd to flag it as the SAP/IFS handover entry point. */
 .acct-sq-card {
   background: linear-gradient(180deg, #7fa9d4, #5a87b6);
+}
+
+/* S-2FA-RESET confirm + step-up modal body */
+.acct-reset2fa-body {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary, #1e293b);
+}
+.acct-reset2fa-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 4px;
+}
+.acct-reset2fa-input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+  border: 1px solid var(--color-slate-300, #cbd5e1);
+  border-radius: 4px;
+  background: var(--surface-1, #fff);
+  color: var(--color-slate-800, #1e293b);
+}
+.acct-reset2fa-input:focus {
+  outline: none;
+  border-color: var(--color-brand-500, #2563eb);
+  box-shadow: 0 0 0 2px var(--color-brand-100, #dbeafe);
+}
+.acct-reset2fa-err {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--color-red-600, #dc2626);
 }
 
 /* Tighter gap for the action-button cluster */
