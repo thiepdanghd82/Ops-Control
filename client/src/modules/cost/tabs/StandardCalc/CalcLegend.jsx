@@ -167,8 +167,9 @@ const SECTIONS = [
   { id: 'mat', num: '04', title: 'Materials section', vi: 'Mục Vật tư' },
   { id: 'proc', num: '05', title: 'Processes + Inks section', vi: 'Mục Công đoạn + Mực' },
   { id: 'pack', num: '06', title: 'Packing & KPIs', vi: 'Đóng gói & KPI' },
+  { id: 'leadtime', num: '06B', title: 'Lead time & Notice', vi: 'Lead time & Ghi chú' },
   { id: 'ref', num: '07', title: 'Reference Tables', vi: 'Bảng tra cứu' },
-  { id: 'master', num: '08', title: 'Master Formulas', vi: '41 công thức' },
+  { id: 'master', num: '08', title: 'Master Formulas', vi: '55 công thức' },
   { id: 'example', num: '09', title: 'Worked Example', vi: 'Ví dụ chi tiết' },
   { id: 'trouble', num: '10', title: 'Troubleshooting', vi: 'Xử lý sự cố' },
 ];
@@ -472,7 +473,12 @@ export default function CalcLegend() {
                 dùng <b>(Cavities MOD Width) / Cavities</b> — không phải công thức log-width.
                 Overhead / Labor mà <code>calcAll</code> trả về là <b>chỉ phần Run</b>; phần Setup
                 được tách riêng. Và module SGA (Sprint 9D) hoàn toàn không có trong xlsx — lần đầu
-                được tài liệu hóa tại đây.
+                được tài liệu hóa tại đây. <b>Bản cập nhật này</b> còn sửa hai điểm lệch
+                Legend-vs-code phát hiện khi soát lại — mức trần khuôn là <code>eau × 0.8</code>{' '}
+                (trước thiếu hệ số 0.8) và công thức setup mực Indigo là{' '}
+                <code>cc × clicks × ⌈base_usage/0.98⌉ / MOQ</code> — và bổ sung ba phần engine trước
+                đây chưa có: <b>Lead time &amp; Notice</b> (§06B), <b>What-if Cost Breakdown</b>{' '}
+                (§06 D), và <b>Mats./MOQ gộp</b> (§04).
               </>
             }
           >
@@ -481,7 +487,12 @@ export default function CalcLegend() {
             uses <b>(Cavities MOD Width) / Cavities</b> — not the log-width formula. Overhead /
             Labor returned from calcAll are
             <b> Run-only</b>; Setup components are separate. And the SGA module (Sprint 9D) is
-            entirely missing from the xlsx — documented here for the first time.
+            entirely missing from the xlsx — documented here for the first time. <b>This refresh</b>{' '}
+            additionally corrected two Legend-vs-code drifts found in the re-audit — the tooling EAU
+            cap is <code>eau × 0.8</code> (the 0.8 factor was missing) and the Indigo ink-setup
+            formula is <code>cc × clicks × ⌈base_usage/0.98⌉ / MOQ</code> — and newly documented
+            three engine surfaces absent before: <b>Lead time &amp; Notice</b> (§06B),{' '}
+            <b>Cost Breakdown what-if</b> (§06 D), and <b>Mats./MOQ gross</b> (§04).
           </Callout>
 
           <h3>
@@ -1978,6 +1989,20 @@ N     → $0.00 /LM`}
             note="✅ Verified — identical shape, uses purchase price. G feeds G.TOTAL."
           />
           <Formula
+            name="Mats./MOQ (LM) & (m²) — gross material for the tier MOQ"
+            nameVi="Mats./MOQ (LM) & (m²) — vật liệu gộp cho MOQ của tier"
+            expr={`mats_moq_lm = MOQ > 0
+  ? (qpa_lm_raw / safeYield(scrap) / safeYield(OC)) × usage × MOQ    ← RUN share
+    + (setup_lm × usage) / safeYield(OC)                             ← SETUP share
+  : 0
+mats_moq_m2 = mats_moq_lm × (effWidth / 1000)`}
+            note="⚠ Added — the quantity counterpart of run_s + setup_s, so it stays in lockstep with the cost columns. RUN share carries scrap + offcut (like run_s); SETUP share carries offcut only (like setup_s); usage counted exactly once. effWidth = mat.width || web_width_td. safeYield floors each divisor at 0.001."
+            noteVi="⚠ Bổ sung — lượng vật liệu tương ứng với run_s + setup_s, luôn đồng bộ với các cột chi phí. Phần RUN mang scrap + offcut (như run_s); phần SETUP chỉ mang offcut (như setup_s); usage tính đúng một lần. effWidth = mat.width || web_width_td. safeYield chặn mẫu số ở 0.001."
+            example={`qpa_lm_raw=0.0135, scrap=0.03, OC=0.05, usage=1, setup_lm=50, MOQ=250000, effWidth=82mm
+mats_moq_lm = 0.0135/0.97/0.95×1×250000 + 50×1/0.95 = 3,663 + 52.6 ≈ 3,715 LM
+mats_moq_m2 = 3,715 × 0.082 ≈ 304.6 m²`}
+          />
+          <Formula
             name="VAT Loss"
             expr="VAT = (trade_mode === 'USD(Book)') ? (setup_s + run_s) × 0.15 : 0"
             note="✅ Verified — applied only when trade_mode === 'USD(Book)' literal string match."
@@ -1997,8 +2022,9 @@ Ink_Setup = price × (setup_kg + coverage>0 ? area_pct×width_m×base_usage/cove
             expr={`L_ind     = ⌊980 / pitch⌋ × layout_per_sheet × num_webs
 cc        = LOOKUP(clicks, lib.ddl.click_charges)   [largest key ≤ clicks]
 Ink_Run   = L_ind > 0 ? cc × clicks / L_ind / safeYield(scrap) : 0
-Ink_Setup = MOQ × cc × clicks × ⌈base_usage / 0.98⌉ / MOQ`}
-            note="✅ Verified — 980 mm = Indigo sheet width constant. clicks = number of ink channels used on the job."
+setup_sheets = ⌈base_usage / 0.98⌉
+Ink_Setup = cc × clicks × setup_sheets / MOQ`}
+            note="✅ Verified — 980 mm = Indigo sheet width constant; 0.98 = setup-sheet yield. clicks = number of ink channels used on the job."
           />
           <Formula
             name="Totals (s_mat_cost / g_mat_cost)"
@@ -2261,18 +2287,20 @@ run_mach    = uph > 0 ? mach_rate / uph / max(0.001, scrapFactor) × repeat : 0`
           />
           <Formula
             name="EAU (lifetime qty for tooling cap)"
-            expr={`eau = (eau_ovr > 0) ? eau_ovr
-      : (annual_qty || moq) × (product_lifetime || 1)`}
-            note="✅ Verified — falls back to MOQ when annual_qty is absent (not to 1 as the xlsx suggested)."
+            expr={`eau    = (eau_ovr > 0) ? eau_ovr
+       : (annual_qty || moq) × (product_lifetime || 1)
+eauCap = eau × 0.8      ← only 80% of lifetime EAU is amortizable`}
+            note="✅ Verified — falls back to MOQ when annual_qty is absent (not to 1 as the xlsx suggested). ⚠ Corrected — the cap actually applied to tooling is eauCap = eau × 0.8, NOT raw eau; the 0.8 safety factor was missing here before the re-audit."
+            noteVi="✅ Đã xác thực — rơi về MOQ khi thiếu annual_qty (không phải về 1 như xlsx nói). ⚠ Đã sửa — mức trần thực áp cho khuôn là eauCap = eau × 0.8, KHÔNG phải eau thô; hệ số an toàn 0.8 trước đây bị thiếu ở đây."
           />
           <Formula
             name="Tooling/unit — Standard"
             expr={`tlife = tool_life_ovr ? tool_life : (DDL.tool_life[tool_type] || 1)
 totalToolPcs = tlife × layout
-tool = (totalToolPcs > eau)
-  ? tool_cost / eau              ← EAU cap applies
+tool = (totalToolPcs > eauCap)
+  ? tool_cost / eauCap           ← EAU cap applies (eauCap = eau × 0.8)
   : tool_cost / totalToolPcs     ← normal amortization`}
-            note="✅ Verified — if tool_type missing from DDL, tlife falls back to 1 → massive per-unit cost (sentinel for broken config)."
+            note="✅ Verified — divisor floored at the 0.8-capped EAU. If tool_type missing from DDL, tlife falls back to 1 → massive per-unit cost (sentinel for broken config)."
           />
           <Formula
             name="Tooling/unit — Jig (special case)"
@@ -2280,14 +2308,25 @@ tool = (totalToolPcs > eau)
 ttNorm = tool_type.toLowerCase().replace(/[\\s&]/g, '')
 isJig  = ttNorm === 'jig' || ttNorm === 'jigfixture'
 if (isJig):
-  tool = (tlife > eau) ? tool_cost / eau : tool_cost / tlife`}
-            note="⚠ Corrected — xlsx omitted the DDL key normalization step. Writing 'Jig & Fixture' or 'jig' or 'JIG' all work identically."
+  tool = (tlife > eauCap) ? tool_cost / eauCap : tool_cost / tlife
+         (eauCap = eau × 0.8; Jig denominator has NO × layout)`}
+            note="⚠ Corrected — xlsx omitted the DDL key normalization step. Writing 'Jig & Fixture' or 'jig' or 'JIG' all work identically. The cap is the same eau × 0.8; unlike Standard, Jig's raw-amortization denominator is tlife alone (no × layout)."
           />
           <Formula
             name="Extra cost per unit"
             expr={`extra     = (extra_cost > 0) ? extra_cost / max(0.001, SF) : 0
 extra_vat = (trade_mode === 'USD(Book)') ? extra × 0.15 : 0`}
             note="⚠ Added — xlsx omitted this; extra is scrap-adjusted."
+          />
+          <Formula
+            name="Production time (total_time) & PROD TIME column"
+            nameVi="Thời gian sản xuất (total_time) & cột PROD TIME"
+            expr={`total_time = ( (uph > 0 ? MOQ / uph : 0)
+             + (manual_uph > 0 ? MOQ / manual_uph : 0)
+             + setup_h ) × 60 × repeat        [minutes]
+PROD TIME (hrs) = total_time / 60`}
+            note="⚠ Added — total_time is per-process production time in MINUTES. The PROD TIME column shows total_time / 60 hours. This feeds the Lead time & Notice PO L/T auto-derive (Σ PROD TIME ÷ 8 → days)."
+            noteVi="⚠ Bổ sung — total_time là thời gian sản xuất mỗi công đoạn tính bằng PHÚT. Cột PROD TIME hiển thị total_time / 60 giờ. Dùng để tự suy ra PO L/T ở tab Lead time & Notice (Σ PROD TIME ÷ 8 → ngày)."
           />
           <Formula
             name="Aggregates (return shape of calcProcess)"
@@ -2333,7 +2372,8 @@ extra_vat = (trade_mode === 'USD(Book)') ? extra × 0.15 : 0`}
           <Formula
             name="Shipping/unit"
             expr="(shipping_cost + other_ship) / ship_qty"
-            note="ship_qty is typically set = MOQ"
+            note="✅ Verified — ship_qty = st.ship_qty || st.moq || 1 (falls back to MOQ, then 1)."
+            noteVi="✅ Đã xác thực — ship_qty = st.ship_qty || st.moq || 1 (rơi về MOQ, rồi về 1)."
           />
           <Formula
             name="Total Pack & Ship"
@@ -2583,6 +2623,274 @@ extra_vat = (trade_mode === 'USD(Book)') ? extra × 0.15 : 0`}
             So when Cost Breakdown tab shows "Overhead", that's the RUN portion. Setup is split out
             in its own row. S.TOTAL still adds BOTH (via the sum expression above), so GM% is
             unchanged — this is just a reporting granularity fix.
+          </Callout>
+
+          <h3>
+            <BiHead
+              en="D. Cost Breakdown what-if — % Sell / % Target + Active toggles (display-only)"
+              vi="D. What-if trong Cost Breakdown — % Sell / % Target + bật/tắt bucket (chỉ hiển thị)"
+            />
+          </h3>
+          <Callout
+            type="info"
+            title="⚠ Added — costStructureWhatIf.js"
+            titleVi="⚠ Bổ sung — costStructureWhatIf.js"
+            bodyVi={
+              <>
+                Cost Breakdown có bảng what-if cho phép operator <b>bật/tắt từng bucket chi phí</b>{' '}
+                và xem hai cột <b>% Sell</b> (theo giá bán của tier) và <b>% Target</b> (theo giá
+                mục tiêu). Đây là công cụ <b>chỉ hiển thị</b> — mask lưu ở{' '}
+                <code className="cl-ic">sessionStorage</code> (khóa{' '}
+                <code>ops-cb-whatif-mask-v1</code>), <b>không</b> ghi vào quote / reducer / server /
+                snapshot / exporter.
+              </>
+            }
+          >
+            Cost Breakdown carries a what-if panel that lets an operator{' '}
+            <b>toggle cost buckets off</b> and read two columns — <b>% Sell</b> (against the tier
+            selling price) and <b>% Target</b> (against the target price). It is <b>display-only</b>
+            : the mask persists to <code className="cl-ic">sessionStorage</code> (key{' '}
+            <code>ops-cb-whatif-mask-v1</code>) and never writes the quote / reducer / server /
+            snapshot / exporter.
+          </Callout>
+          <Formula
+            name="% Sell / % Target — per-row recompute"
+            nameVi="% Sell / % Target — tính lại theo dòng"
+            expr={`price = (% Sell → tier selling price) | (% Target → tier target price)
+VA%    = 1 − va   / price
+Contr% = 1 − contr / price
+GM%    = 1 − gm   / price
+  where va / contr / gm are the canonical cost numerators
+  MINUS any bucket the operator toggled OFF
+  (null when price ≤ 0)`}
+            note="⚠ Added — same VA / Contr / GM numerators as calcAll, but recomputed against the chosen price with inactive buckets removed. Removing a bucket only affects the metrics whose formula includes it (see membership below)."
+            noteVi="⚠ Bổ sung — cùng tử số VA / Contr / GM như calcAll, nhưng tính lại theo giá đã chọn và bỏ các bucket đã tắt. Tắt một bucket chỉ ảnh hưởng các chỉ số có bucket đó trong công thức (xem bảng bên dưới)."
+          />
+          <FieldTable
+            columns={[
+              { label: <BiRow en="Bucket" vi="Nhóm chi phí" />, w: '20%' },
+              { label: <BiRow en="In VA?" vi="Trong VA?" />, w: '13%' },
+              { label: <BiRow en="In Contr?" vi="Trong Contr?" />, w: '14%' },
+              { label: <BiRow en="In GM?" vi="Trong GM?" />, w: '13%' },
+              { label: <BiRow en="Note" vi="Ghi chú" />, w: '40%' },
+            ]}
+            rows={[
+              [
+                { value: <b>material</b> },
+                { value: '✅', center: true },
+                { value: '✅', center: true },
+                { value: '✅', center: true },
+                { value: <BiRow en="s_mat_cost minus ink" vi="s_mat_cost trừ mực" /> },
+              ],
+              [
+                { value: <b>ink</b> },
+                { value: '✅', center: true },
+                { value: '✅', center: true },
+                { value: '✅', center: true },
+                { value: <BiRow en="ink setup + run" vi="mực setup + run" /> },
+              ],
+              [
+                { value: <b>tooling</b> },
+                { value: '✅', center: true },
+                { value: '✅', center: true },
+                { value: '✅', center: true },
+                { value: <BiRow en="tooling" vi="khuôn" /> },
+              ],
+              [
+                { value: <b>packing</b> },
+                { value: '✅', center: true },
+                { value: '✅', center: true },
+                { value: '✅', center: true },
+                { value: <BiRow en="packing_ship" vi="đóng gói + vận chuyển" /> },
+              ],
+              [
+                { value: <b>labor</b> },
+                { value: '—', center: true },
+                { value: '✅', center: true },
+                { value: '✅', center: true },
+                {
+                  value: (
+                    <BiRow
+                      en="Contr uses RUN labor; GM uses full labor (+ bd_setup_labor)"
+                      vi="Contr dùng labor RUN; GM dùng labor đầy đủ (+ bd_setup_labor)"
+                    />
+                  ),
+                },
+              ],
+              [
+                { value: <b>overhead</b> },
+                { value: '—', center: true },
+                { value: '—', center: true },
+                { value: '✅', center: true },
+                {
+                  value: (
+                    <BiRow
+                      en="GM only. overhead + bd_setup_mach (setup machine folded in)"
+                      vi="Chỉ GM. overhead + bd_setup_mach (đã gộp setup máy)"
+                    />
+                  ),
+                },
+              ],
+              [
+                { value: <b>vat</b> },
+                { value: '—', center: true },
+                { value: '—', center: true },
+                { value: '✅', center: true },
+                { value: <BiRow en="GM only. vat_loss" vi="Chỉ GM. vat_loss" /> },
+              ],
+            ]}
+          />
+          <Callout type="note" title="Membership recap" titleVi="Tóm tắt thành phần">
+            <BiRow
+              en="VA = {material, ink, tooling, packing}. Contr = VA + run labor. GM = everything (adds overhead+setup machine, full labor+setup labor, vat). SGA is NOT a toggle bucket. 'Setup' is not its own bucket — setup machine rides in overhead, setup labor rides in labor."
+              vi="VA = {vật tư, mực, khuôn, đóng gói}. Contr = VA + labor run. GM = tất cả (thêm overhead+setup máy, labor đầy đủ+setup labor, vat). SGA KHÔNG phải bucket bật/tắt. 'Setup' không phải bucket riêng — setup máy nằm trong overhead, setup labor nằm trong labor."
+            />
+          </Callout>
+        </section>
+
+        {/* 06B — Lead time & Notice */}
+        <section id="sec-leadtime" className="cl-section">
+          <header className="cl-section-header">
+            <div className="cl-section-tag">06B</div>
+            <h2>
+              <BiHead
+                en="Lead time & Notice — auto-derived lead times + REMARK"
+                vi="Lead time & Ghi chú — lead time tự suy ra + REMARK"
+              />
+            </h2>
+            <p className="cl-section-sub">
+              <BiRow
+                en="Material L/T, PO L/T, Materials MOQ table, auto REMARK — CalcLeadTimeNotice.helpers.js"
+                vi="Material L/T, PO L/T, bảng Materials MOQ, REMARK tự động — CalcLeadTimeNotice.helpers.js"
+              />
+            </p>
+          </header>
+
+          <Callout
+            type="info"
+            title="⚠ Added — this sub-tab was not in the xlsx"
+            titleVi="⚠ Bổ sung — sub-tab này không có trong xlsx"
+            bodyVi={
+              <>
+                Tab <b>Lead time & Notice</b> (giữa Pack & Ship và Cost Breakdown) tự suy ra
+                Material L/T + PO L/T từ thư viện và các công đoạn, dựng bảng Materials MOQ, và sinh
+                REMARK. Mỗi trường auto đều có ô <b>override</b> (<code>lt_material_ovr</code>,{' '}
+                <code>lt_po_ovr</code>, <code>lt_remark_ovr</code>) — nhập tay sẽ thắng giá trị tự
+                suy ra và <b>không</b> bị coi là "manual override" của quote.
+              </>
+            }
+          >
+            The <b>Lead time & Notice</b> sub-tab (between Pack & Ship and Cost Breakdown)
+            auto-derives Material L/T + PO L/T from the library and the process list, builds the
+            Materials MOQ table, and generates the REMARK. Each auto field has an <b>override</b>{' '}
+            box (<code>lt_material_ovr</code>, <code>lt_po_ovr</code>, <code>lt_remark_ovr</code>) —
+            a typed value wins over the auto value and does not flip the quote into "manual
+            override".
+          </Callout>
+
+          <h3>
+            <BiHead en="A. Auto-derived formulas" vi="A. Công thức tự suy ra" />
+          </h3>
+          <Formula
+            name="Material L/T"
+            nameVi="Material L/T (lead time vật tư)"
+            expr={`pool = library lead times for every Main.Mat AND Process.Mat row
+       (IFS 'leadtime' by part_no  +  NPI 'lt' by name; positive values only)
+Material L/T = round( max(pool) + 7 ) + " days"
+             = null when the pool is empty`}
+            note="⚠ Added — MATERIAL_LT_BUFFER = 7 days. Pool spans BOTH Main.Mat and Process.Mat rows, joined to BOTH libraries; deriveMaterialLT uses trim/lowercase equality (the Materials MOQ table below uses the tolerant normCode join)."
+            noteVi="⚠ Bổ sung — MATERIAL_LT_BUFFER = 7 ngày. Pool gồm CẢ dòng Main.Mat lẫn Process.Mat, join với CẢ hai thư viện; deriveMaterialLT so khớp bằng trim/lowercase (bảng Materials MOQ bên dưới dùng join normCode dung sai)."
+            example='max lib lead time = 21 days → 21 + 7 = 28 → "28 days"'
+          />
+          <Formula
+            name="PO L/T"
+            nameVi="PO L/T (lead time đặt hàng)"
+            expr={`totalHours = Σ over processes ( total_time_minutes / 60 )   [PROD TIME hrs]
+PO L/T     = ceil( totalHours / 8 ) + " days"
+           = null when totalHours ≤ 0`}
+            note="⚠ Added — PO_LT_WORK_HOURS_PER_DAY = 8. Sums the PROD TIME column (per-process total_time ÷ 60 hrs), divides by an 8-hour work-day, rounds UP to whole days."
+            noteVi="⚠ Bổ sung — PO_LT_WORK_HOURS_PER_DAY = 8. Cộng cột PROD TIME (total_time ÷ 60 giờ mỗi công đoạn), chia cho ngày làm việc 8 giờ, làm tròn LÊN thành số ngày nguyên."
+            example='Σ PROD TIME = 17.2 hrs → ceil(17.2 / 8) = ceil(2.15) = 3 → "3 days"'
+          />
+
+          <h3>
+            <BiHead en="B. Materials MOQ table" vi="B. Bảng Materials MOQ" />
+          </h3>
+          <Callout
+            type="note"
+            title="Code ↔ library join uses normCode (tolerant)"
+            titleVi="Join Code ↔ thư viện dùng normCode (dung sai)"
+            bodyVi={
+              <>
+                Mỗi dòng material được join tới NPI (theo <code>name</code>) và IFS (theo{' '}
+                <code>part_no</code>) qua <code>resolveLibRow</code>: khớp <b>chính xác trước</b>,
+                sau đó fallback <code>normCode</code> (NFKC → gạch ngang → bỏ MỌI khoảng trắng →
+                thường hóa → bỏ <code>*</code> cuối). Nếu có &gt;1 kết quả normalize khác nhau → coi
+                là <b>ambiguous</b> và bỏ qua (để trống, không đoán).
+              </>
+            }
+          >
+            Each material row joins to NPI (by <code>name</code>) and IFS (by <code>part_no</code>)
+            through <code>resolveLibRow</code>: <b>exact match first</b>, then a{' '}
+            <code>normCode</code> fallback (NFKC → dashes → strip ALL whitespace → lowercase → drop
+            trailing <code>*</code>). If more than one distinct normalized hit exists it is treated
+            as <b>ambiguous</b> and skipped (left blank — never guessed).
+          </Callout>
+          <Formula
+            name="Materials MOQ (m²) & Clear MOQ (pcs)"
+            nameVi="Materials MOQ (m²) & Clear MOQ (pcs)"
+            expr={`MOQ (m²)  = NPI library 'moq' for the joined row   (positive, else —)
+QPA (m²)  = calcMat(mat, st, moq).qpa_m2          (MOQ-independent area/pc)
+Clear MOQ = MOQ (m²) / QPA (m²)                   (pcs; — when either missing)
+Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
+            note="⚠ Added — Clear MOQ is a RAW division (moq_m2 / qpa_m2); the value is stored unrounded. The table only rounds to the nearest whole number at DISPLAY time (formatThousands → Math.round) — it is NOT a ceil. Display-only: the table never writes quote state."
+            noteVi="⚠ Bổ sung — Clear MOQ là phép CHIA thô (moq_m2 / qpa_m2); giá trị lưu chưa làm tròn. Bảng chỉ làm tròn về số nguyên gần nhất khi HIỂN THỊ (formatThousands → Math.round) — KHÔNG phải ceil. Chỉ hiển thị: bảng không ghi state quote."
+            example="MOQ(m²)=500, QPA(m²)=0.004428 → Clear MOQ = 500 / 0.004428 ≈ 112,918 pcs (shown 112,918)"
+          />
+
+          <h3>
+            <BiHead en="C. Auto REMARK format" vi="C. Định dạng REMARK tự động" />
+          </h3>
+          <Formula
+            name="REMARK auto-format (buildRemarkBlock)"
+            nameVi="REMARK tự động (buildRemarkBlock)"
+            expr={`1. Clear materials MOQ.
+- <ifs_code>: <Clear MOQ> pcs      ← one "- " line per selected material
+- <ifs_code>: —                    ← "—" when Clear MOQ unavailable
+2. Product tolerance: +/- <product_tolerance>mm`}
+            note='⚠ Added — REMARK_MOQ_HEADER = "1. Clear materials MOQ." Each selected material renders a "- " dash line "<ifs_code>: <n,nnn> pcs". Footer is "2. Product tolerance: +/- {product_tolerance}mm" — literal ASCII "+/-" (not ±), no space before "mm". product_tolerance defaults to "0.2" (editable per quote; heal-on-read).'
+            noteVi='⚠ Bổ sung — REMARK_MOQ_HEADER = "1. Clear materials MOQ." Mỗi material chọn tạo một dòng gạch "- " "<ifs_code>: <n,nnn> pcs". Chân là "2. Product tolerance: +/- {product_tolerance}mm" — dùng "+/-" ASCII (không phải ±), không có dấu cách trước "mm". product_tolerance mặc định "0.2" (sửa được theo quote; heal-on-read).'
+            example={`1. Clear materials MOQ.
+- MAT-PET50: 112,918 pcs
+- MAT-LINER: —
+2. Product tolerance: +/- 0.2mm`}
+          />
+          <Callout
+            type="note"
+            title="state.lead_time shape (9 persisted keys)"
+            titleVi="Cấu trúc state.lead_time (9 khóa lưu)"
+            bodyVi={
+              <>
+                <code>createStdState</code> / <code>createCplxState</code> seed 9 khóa:{' '}
+                <code>
+                  lt_material, lt_material_ovr, lt_sample, lt_po, lt_po_ovr, lt_remark, lt_process,
+                  lt_material_type
+                </code>{' '}
+                (mặc định <code>''</code>) + <code>product_tolerance</code> (mặc định{' '}
+                <code>'0.2'</code>). <code>safeLeadTime()</code> còn heal thêm{' '}
+                <code>lt_remark_ovr</code> + <code>remark_selection</code> khi đọc quote cũ (không
+                bump schema).
+              </>
+            }
+          >
+            <code>createStdState</code> / <code>createCplxState</code> seed 9 keys:{' '}
+            <code>
+              lt_material, lt_material_ovr, lt_sample, lt_po, lt_po_ovr, lt_remark, lt_process,
+              lt_material_type
+            </code>{' '}
+            (default <code>''</code>) + <code>product_tolerance</code> (default <code>'0.2'</code>).{' '}
+            <code>safeLeadTime()</code> additionally heals <code>lt_remark_ovr</code> +{' '}
+            <code>remark_selection</code> on read of legacy quotes (no schema bump).
           </Callout>
         </section>
 
@@ -2858,8 +3166,8 @@ extra_vat = (trade_mode === 'USD(Book)') ? extra × 0.15 : 0`}
             <div className="cl-section-tag">08</div>
             <h2>
               <BiHead
-                en="Master Formula Reference — all 47 formulas"
-                vi="Tổng hợp công thức — 47 công thức"
+                en="Master Formula Reference — all 55 formulas"
+                vi="Tổng hợp công thức — 55 công thức"
               />
             </h2>
             <p className="cl-section-sub">
@@ -2897,7 +3205,7 @@ extra_vat = (trade_mode === 'USD(Book)') ? extra × 0.15 : 0`}
                 ],
                 [
                   'Layout per Sheet',
-                  'L = parts_in_md × parts_web_across',
+                  'L = parts_in_md × parts_web_across × parts_per_die',
                   'cav',
                   'calcLayoutPerSheet()',
                 ],
@@ -2924,6 +3232,18 @@ extra_vat = (trade_mode === 'USD(Book)') ? extra × 0.15 : 0`}
                   'MAT PO (LM)',
                   'MAT_PO = MOQ × 1.1 × P/1000 / C / W × U + setup_lm',
                   'LM',
+                  'calcMat()',
+                ],
+                [
+                  'Mats./MOQ (LM)  ⚠ Added',
+                  'gross_lm = qpa_lm_raw/(1−S)/(1−OC)×U×MOQ + setup_lm×U/(1−OC)',
+                  'LM',
+                  'calcMat()',
+                ],
+                [
+                  'Mats./MOQ (m²)  ⚠ Added',
+                  'gross_m2 = gross_lm × effWidth/1000',
+                  'm²',
                   'calcMat()',
                 ],
               ],
@@ -3037,15 +3357,21 @@ extra_vat = (trade_mode === 'USD(Book)') ? extra × 0.15 : 0`}
                   'calcProcess()',
                 ],
                 [
-                  'Tooling (Standard)',
-                  'Tool = Tool_Cost / min(tlife × Layout, EAU)',
+                  'Tooling (Standard) ⚠ Corrected',
+                  'Tool = Tool_Cost / min(tlife × Layout, EAU × 0.8)',
                   'USD/pcs',
                   'calcProcess()',
                 ],
                 [
-                  'Tooling (Jig)',
-                  'Tool = Tool_Cost / min(tlife_jig, EAU)',
+                  'Tooling (Jig) ⚠ Corrected',
+                  'Tool = Tool_Cost / min(tlife_jig, EAU × 0.8)',
                   'USD/pcs',
+                  'calcProcess()',
+                ],
+                [
+                  'PROD TIME (total_time) ⚠ Added',
+                  'total_time = (MOQ/uph + MOQ/manual_uph + setup_h) × 60 × repeat',
+                  'min',
                   'calcProcess()',
                 ],
               ],
@@ -3125,6 +3451,52 @@ extra_vat = (trade_mode === 'USD(Book)') ? extra × 0.15 : 0`}
                   'computeSga()',
                 ],
                 ['GM% after SGA', '1 − (s_ttl + sga) / sp_price', '%', 'calcAll()'],
+              ],
+            },
+            {
+              group: 'LEAD TIME & NOTICE  ⚠ Added',
+              items: [
+                [
+                  'Material L/T',
+                  'round( max(lib lead time · Main.Mat + Process.Mat) + 7 ) + " days"',
+                  'days',
+                  'deriveMaterialLT()',
+                ],
+                [
+                  'PO L/T',
+                  'ceil( Σ(total_time_min / 60) / 8 ) + " days"',
+                  'days',
+                  'derivePoLeadTime()',
+                ],
+                [
+                  'Clear MOQ',
+                  'clear_pcs = MOQ(m²) / QPA(m²)   [raw ÷; display Math.round, NOT ceil]',
+                  'pcs',
+                  'buildLeadTimeMaterialsTable()',
+                ],
+                [
+                  'REMARK',
+                  '"1. Clear materials MOQ." + per-mat "- <code>: <n> pcs" + "2. Product tolerance: +/- <tol>mm"',
+                  'text',
+                  'buildRemarkBlock()',
+                ],
+              ],
+            },
+            {
+              group: 'COST BREAKDOWN WHAT-IF  ⚠ Added (display-only)',
+              items: [
+                [
+                  '% Sell / % Target',
+                  'VA%=1−va/price · Contr%=1−contr/price · GM%=1−gm/price   [minus toggled-off buckets]',
+                  '%',
+                  'costStructureWhatIf.js',
+                ],
+                [
+                  'Bucket membership',
+                  'VA={mat,ink,tool,pack} · Contr=VA+run labor · GM=all(+overhead+setup+vat)',
+                  '—',
+                  'buildBuckets()',
+                ],
               ],
             },
           ].map((grp) => (
@@ -3939,8 +4311,9 @@ extra_vat = (trade_mode === 'USD(Book)') ? extra × 0.15 : 0`}
           <div className="cl-footer-meta">
             Source of truth / Nguồn:{' '}
             <code className="cl-ic">client/src/services/calcEngine.js</code> · Audit date / Ngày
-            soát: {new Date().toISOString().slice(0, 10)} · Corrections applied / Đã chỉnh: 14 (see
-            §00 / xem §00)
+            soát: {new Date().toISOString().slice(0, 10)} · 14 corrections vs xlsx v3.3 + re-audit
+            refresh (EAU 0.8 cap, Indigo setup; +3 new sections) / 14 điểm sửa so với xlsx v3.3 +
+            soát lại (trần EAU 0.8, setup Indigo; +3 mục mới) — see §00 / xem §00
           </div>
           <div className="cl-footer-note">
             <div>

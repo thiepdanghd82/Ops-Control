@@ -271,7 +271,7 @@ const titlePage = [
   new Paragraph({
     children: [
       new TextRun({
-        text: `Audit date: ${new Date().toISOString().slice(0, 10)} · 14 corrections applied`,
+        text: `Audit date: ${new Date().toISOString().slice(0, 10)} · 14 corrections + re-audit refresh`,
         font: FONT,
         size: 22,
       }),
@@ -313,12 +313,16 @@ calcShipping, calcAll, computeSga.`,
 
   ...callout(
     '⚠',
-    '14 corrections applied vs. xlsx v3.3',
+    '14 corrections applied vs. xlsx v3.3 (+ re-audit refresh)',
     `Major drift points: VA% / CONTR% / GM% use S.Total (supplier basis) — NOT
 G.Total as the xlsx states (Sprint 21 Finance alignment). Offcut uses
 (Cavities MOD Width) / Cavities — NOT the log-width formula. Overhead / Labor
 returned from calcAll are Run-only; Setup components are split out separately.
-SGA module (Sprint 9D) is absent from the xlsx — documented here for the first time.`,
+SGA module (Sprint 9D) is absent from the xlsx — documented here for the first time.
+This refresh additionally corrected two Legend-vs-code drifts (tooling EAU cap is
+eau × 0.8, not raw eau; Indigo ink-setup is cc × clicks × ⌈base_usage/0.98⌉ / MOQ)
+and newly documented three engine surfaces: Lead time & Notice, Cost Breakdown
+what-if, and Mats./MOQ gross.`,
     COLOR_WARN_BG,
     'DC2626'
   ),
@@ -366,20 +370,20 @@ SGA module (Sprint 9D) is absent from the xlsx — documented here for the first
         children: [
           cellText('S.TOTAL COST', { width: 1900, bold: true }),
           cellText(
-            's_mat_cost + overhead + labor_cost + vat_loss + tooling + proc_extra + packing_ship',
+            's_mat_cost + overhead + labor_cost + vat_loss + proc_extra_vat + tooling + proc_extra + packing_ship',
             { width: 5000, mono: true }
           ),
-          cellText('✅ Verified — primary basis for GM.', { width: 2126 }),
+          cellText('✅ Verified — primary basis for GM. Includes proc_extra_vat.', { width: 2126 }),
         ],
       }),
       new TableRow({
         children: [
           cellText('G.TOTAL COST', { width: 1900, bold: true }),
           cellText(
-            'g_mat_cost + overhead + labor_cost + vat_loss + tooling + proc_extra + packing_ship',
+            'g_mat_cost + overhead + labor_cost + vat_loss + proc_extra_vat + tooling + proc_extra + packing_ship',
             { width: 5000, mono: true }
           ),
-          cellText('✅ Verified — purchase-price basis.', { width: 2126 }),
+          cellText('✅ Verified — purchase-price basis. Includes proc_extra_vat.', { width: 2126 }),
         ],
       }),
       new TableRow({
@@ -585,9 +589,9 @@ const section03 = [
   ),
   ...formula(
     'Layout per Sheet',
-    'L = parts_in_md × parts_web_across',
-    'Parts per stroke/sheet.',
-    '1 × 4 = 4 cav'
+    'L = parts_in_md × parts_web_across × parts_per_die',
+    'Parts per stroke/sheet. parts_per_die is floored at 1 (compound-die multiplier).',
+    '1 × 4 × 1 = 4 cav'
   ),
   ...formula(
     'QPA (m²)',
@@ -668,6 +672,17 @@ Priority 3 (legacy log_width fallback):
     'Run Cost/unit (G price)',
     'Run_G = (gp + slit_adj) × (width/1000) × qpa_lm_raw / safeYield(scrap) / safeYield(OC) × usage',
     '✅ Verified — identical shape, uses purchase price.'
+  ),
+
+  ...formula(
+    'Mats./MOQ (LM) & (m²) — gross material for the tier MOQ  ⚠ Added',
+    `mats_moq_lm = MOQ > 0
+  ? (qpa_lm_raw / safeYield(scrap) / safeYield(OC)) × usage × MOQ   ← RUN share
+    + (setup_lm × usage) / safeYield(OC)                            ← SETUP share
+  : 0
+mats_moq_m2 = mats_moq_lm × (effWidth / 1000)`,
+    '⚠ Added — quantity counterpart of run_s + setup_s. RUN share carries scrap + offcut; SETUP share carries offcut only; usage counted once. effWidth = mat.width || web_width_td.',
+    'qpa_lm_raw=0.0135, scrap=0.03, OC=0.05, usage=1, setup_lm=50, MOQ=250k, effWidth=82mm\nmats_moq_lm = 0.0135/0.97/0.95×250000 + 50/0.95 ≈ 3,715 LM · mats_moq_m2 ≈ 304.6 m²'
   ),
 
   ...formula(
@@ -781,19 +796,20 @@ run_mach    = uph > 0 ? mach_rate / uph / max(0.001, scrapFactor) × repeat : 0`
 
   ...formula(
     'EAU (lifetime qty for tooling cap)',
-    `eau = (eau_ovr > 0) ? eau_ovr
-      : (annual_qty || moq) × (product_lifetime || 1)`,
-    '⚠ Corrected — falls back to MOQ when annual_qty is absent (not to 1 as xlsx said).'
+    `eau    = (eau_ovr > 0) ? eau_ovr
+       : (annual_qty || moq) × (product_lifetime || 1)
+eauCap = eau × 0.8      ← only 80% of lifetime EAU is amortizable`,
+    '⚠ Corrected — falls back to MOQ when annual_qty is absent (not to 1). The cap applied to tooling is eauCap = eau × 0.8, NOT raw eau; the 0.8 factor was missing before the re-audit.'
   ),
 
   ...formula(
     'Tooling/unit — Standard',
     `tlife = tool_life_ovr ? tool_life : (DDL.tool_life[tool_type] || 1)
 totalToolPcs = tlife × layout
-tool = totalToolPcs > eau
-  ? tool_cost / eau              ← EAU cap applies
+tool = totalToolPcs > eauCap
+  ? tool_cost / eauCap           ← EAU cap applies (eauCap = eau × 0.8)
   : tool_cost / totalToolPcs     ← normal amortization`,
-    '✅ Verified — if tool_type missing from DDL, tlife → 1 (sentinel).'
+    '⚠ Corrected — divisor floored at the 0.8-capped EAU. If tool_type missing from DDL, tlife → 1 (sentinel).'
   ),
 
   ...formula(
@@ -801,8 +817,18 @@ tool = totalToolPcs > eau
     `ttNorm = tool_type.toLowerCase().replace(/[\\s&]/g, '')
 isJig  = ttNorm === 'jig' || ttNorm === 'jigfixture'
 if (isJig):
-  tool = (tlife > eau) ? tool_cost / eau : tool_cost / tlife`,
-    '⚠ Corrected — xlsx omitted DDL key normalization. "Jig & Fixture", "jig", "JIG" all work identically.'
+  tool = (tlife > eauCap) ? tool_cost / eauCap : tool_cost / tlife
+         (eauCap = eau × 0.8; Jig denominator has NO × layout)`,
+    '⚠ Corrected — xlsx omitted DDL key normalization; the Legend omitted the 0.8 cap. "Jig & Fixture", "jig", "JIG" all work identically; Jig raw denominator is tlife alone (no × layout).'
+  ),
+
+  ...formula(
+    'Production time (total_time) & PROD TIME column  ⚠ Added',
+    `total_time = ( (uph > 0 ? MOQ / uph : 0)
+             + (manual_uph > 0 ? MOQ / manual_uph : 0)
+             + setup_h ) × 60 × repeat        [minutes]
+PROD TIME (hrs) = total_time / 60`,
+    '⚠ Added — total_time is per-process production time in MINUTES. The PROD TIME column shows total_time / 60 hours. Feeds the Lead time & Notice PO L/T derive (Σ PROD TIME ÷ 8 → days).'
   ),
 
   ...formula(
@@ -941,6 +967,166 @@ its own row. S.TOTAL still adds BOTH (via the sum expression above), so GM% is
 unchanged — this is just a reporting granularity fix.`,
     COLOR_WARN_BG,
     'DC2626'
+  ),
+
+  h2('D. Cost Breakdown what-if — % Sell / % Target + Active toggles (display-only)'),
+  ...callout(
+    '⚠',
+    'Added — costStructureWhatIf.js',
+    `Cost Breakdown carries a what-if panel that lets an operator toggle cost
+buckets off and read two columns — % Sell (against the tier selling price) and
+% Target (against the target price). It is DISPLAY-ONLY: the mask persists to
+sessionStorage (key ops-cb-whatif-mask-v1) and never writes the quote / reducer
+/ server / snapshot / exporter.`,
+    COLOR_NOTE_BG,
+    'EAB308'
+  ),
+  ...formula(
+    '% Sell / % Target — per-row recompute',
+    `price = (% Sell → tier selling price) | (% Target → tier target price)
+VA%    = 1 − va    / price
+Contr% = 1 − contr / price
+GM%    = 1 − gm    / price
+  where va / contr / gm are the canonical numerators MINUS any bucket toggled OFF
+  (null when price ≤ 0)`,
+    '⚠ Added — same VA / Contr / GM numerators as calcAll, recomputed against the chosen price with inactive buckets removed.'
+  ),
+  buildTable(
+    [1900, 1100, 1200, 1000, 3826],
+    [
+      new TableRow({
+        tableHeader: true,
+        children: [
+          cellText('Bucket', { width: 1900, bold: true, fill: COLOR_HEAD_BG }),
+          cellText('In VA?', {
+            width: 1100,
+            bold: true,
+            fill: COLOR_HEAD_BG,
+            alignment: AlignmentType.CENTER,
+          }),
+          cellText('In Contr?', {
+            width: 1200,
+            bold: true,
+            fill: COLOR_HEAD_BG,
+            alignment: AlignmentType.CENTER,
+          }),
+          cellText('In GM?', {
+            width: 1000,
+            bold: true,
+            fill: COLOR_HEAD_BG,
+            alignment: AlignmentType.CENTER,
+          }),
+          cellText('Note', { width: 3826, bold: true, fill: COLOR_HEAD_BG }),
+        ],
+      }),
+      ...[
+        ['material', '✅', '✅', '✅', 's_mat_cost minus ink'],
+        ['ink', '✅', '✅', '✅', 'ink setup + run'],
+        ['tooling', '✅', '✅', '✅', 'tooling'],
+        ['packing', '✅', '✅', '✅', 'packing_ship'],
+        ['labor', '—', '✅', '✅', 'Contr uses RUN labor; GM uses full labor (+ bd_setup_labor)'],
+        ['overhead', '—', '—', '✅', 'GM only. overhead + bd_setup_mach (setup machine folded in)'],
+        ['vat', '—', '—', '✅', 'GM only. vat_loss'],
+      ].map(
+        ([b, va, contr, gm, note]) =>
+          new TableRow({
+            children: [
+              cellText(b, { width: 1900, bold: true }),
+              cellText(va, { width: 1100, alignment: AlignmentType.CENTER }),
+              cellText(contr, { width: 1200, alignment: AlignmentType.CENTER }),
+              cellText(gm, { width: 1000, alignment: AlignmentType.CENTER }),
+              cellText(note, { width: 3826 }),
+            ],
+          })
+      ),
+    ]
+  ),
+  p(
+    'Membership recap: VA = {material, ink, tooling, packing}. Contr = VA + run labor. GM = everything (adds overhead + setup machine, full labor + setup labor, vat). SGA is not a toggle bucket; "setup" is not its own bucket — setup machine rides in overhead, setup labor rides in labor.',
+    {
+      italics: true,
+      color: '6B7280',
+    }
+  ),
+  new Paragraph({ children: [new PageBreak()] }),
+];
+
+// ── § 06B Lead time & Notice ───────────────────────────────────
+const section06b = [
+  h1('06B. Lead time & Notice — auto-derived lead times + REMARK'),
+  p('Material L/T, PO L/T, Materials MOQ table, auto REMARK — CalcLeadTimeNotice.helpers.js', {
+    italics: true,
+    color: '6B7280',
+  }),
+  ...callout(
+    '⚠',
+    'Added — this sub-tab was not in the xlsx',
+    `The Lead time & Notice sub-tab (between Pack & Ship and Cost Breakdown)
+auto-derives Material L/T + PO L/T from the library and the process list, builds
+the Materials MOQ table, and generates the REMARK. Each auto field has an
+override box (lt_material_ovr, lt_po_ovr, lt_remark_ovr) — a typed value wins
+over the auto value and does not flip the quote into "manual override".`,
+    COLOR_NOTE_BG,
+    'EAB308'
+  ),
+
+  h2('A. Auto-derived formulas'),
+  ...formula(
+    'Material L/T',
+    `pool = library lead times for every Main.Mat AND Process.Mat row
+       (IFS 'leadtime' by part_no  +  NPI 'lt' by name; positive values only)
+Material L/T = round( max(pool) + 7 ) + " days"   (null when the pool is empty)`,
+    '⚠ Added — MATERIAL_LT_BUFFER = 7 days. Pool spans BOTH Main.Mat and Process.Mat rows across BOTH libraries.',
+    'max lib lead time = 21 → 21 + 7 = 28 → "28 days"'
+  ),
+  ...formula(
+    'PO L/T',
+    `totalHours = Σ over processes ( total_time_minutes / 60 )   [PROD TIME hrs]
+PO L/T     = ceil( totalHours / 8 ) + " days"   (null when totalHours ≤ 0)`,
+    '⚠ Added — PO_LT_WORK_HOURS_PER_DAY = 8. Sums the PROD TIME column, divides by an 8-hour work-day, rounds UP.',
+    'Σ PROD TIME = 17.2 hrs → ceil(17.2 / 8) = 3 → "3 days"'
+  ),
+
+  h2('B. Materials MOQ table (code ↔ library join via normCode)'),
+  ...callout(
+    '📌',
+    'Tolerant join',
+    `Each material row joins to NPI (by name) and IFS (by part_no) through
+resolveLibRow: exact match first, then a normCode fallback (NFKC → dashes →
+strip ALL whitespace → lowercase → drop trailing "*"). More than one distinct
+normalized hit → treated as ambiguous and skipped (left blank, never guessed).`,
+    COLOR_TIP_BG,
+    '22C55E'
+  ),
+  ...formula(
+    'Materials MOQ (m²) & Clear MOQ (pcs)',
+    `MOQ (m²)  = NPI library 'moq' for the joined row   (positive, else —)
+QPA (m²)  = calcMat(mat, st, moq).qpa_m2            (MOQ-independent area/pc)
+Clear MOQ = MOQ (m²) / QPA (m²)                     (pcs; — when either missing)
+Lead time = max( NPI 'lt', IFS 'leadtime' )         (per row, positive only)`,
+    '⚠ Added — Clear MOQ is a RAW division (moq_m2 / qpa_m2), stored unrounded. The table rounds to the nearest whole number at DISPLAY time (Math.round) — NOT a ceil. Display-only; never writes quote state.',
+    'MOQ(m²)=500, QPA(m²)=0.004428 → 500 / 0.004428 ≈ 112,918 pcs'
+  ),
+
+  h2('C. Auto REMARK format (buildRemarkBlock)'),
+  ...formula(
+    'REMARK auto-format',
+    `1. Clear materials MOQ.
+- <ifs_code>: <Clear MOQ> pcs      ← one "- " line per selected material
+- <ifs_code>: —                    ← "—" when Clear MOQ unavailable
+2. Product tolerance: +/- <product_tolerance>mm`,
+    '⚠ Added — REMARK_MOQ_HEADER = "1. Clear materials MOQ." Footer uses literal ASCII "+/-" (not ±), no space before "mm". product_tolerance defaults to "0.2" (editable per quote; heal-on-read).',
+    '1. Clear materials MOQ.\n- MAT-PET50: 112,918 pcs\n- MAT-LINER: —\n2. Product tolerance: +/- 0.2mm'
+  ),
+  ...callout(
+    'ℹ',
+    'state.lead_time shape (9 persisted keys)',
+    `createStdState / createCplxState seed 9 keys: lt_material, lt_material_ovr,
+lt_sample, lt_po, lt_po_ovr, lt_remark, lt_process, lt_material_type (default '')
++ product_tolerance (default '0.2'). safeLeadTime() additionally heals
+lt_remark_ovr + remark_selection on read of legacy quotes (no schema bump).`,
+    COLOR_NOTE_BG,
+    'EAB308'
   ),
   new Paragraph({ children: [new PageBreak()] }),
 ];
@@ -1384,7 +1570,7 @@ const section10 = [
   new Paragraph({
     children: [
       new TextRun({
-        text: `Source of truth: client/src/services/calcEngine.js · Audit date: ${new Date().toISOString().slice(0, 10)} · 14 corrections applied`,
+        text: `Source of truth: client/src/services/calcEngine.js · Audit date: ${new Date().toISOString().slice(0, 10)} · 14 corrections vs xlsx v3.3 + re-audit refresh (EAU 0.8 cap, Indigo setup; +3 sections)`,
         font: MONO,
         size: 18,
         color: '6B7280',
@@ -1500,6 +1686,7 @@ const doc = new Document({
         ...section04,
         ...section05,
         ...section06,
+        ...section06b,
         ...section07,
         ...section09,
         ...section10,
@@ -1524,5 +1711,7 @@ try {
 
 const size = (fs.statSync(PUBLIC_OUT).size / 1024).toFixed(1);
 console.log(`✓ Wrote ${PUBLIC_OUT} (${size} KB)`);
-console.log(`  Sections: 9`);
-console.log(`  Audit: 14 corrections applied`);
+console.log(`  Sections: 10`);
+console.log(
+  `  Audit: 14 corrections vs xlsx v3.3 + re-audit refresh (EAU 0.8, Indigo setup; +3 sections)`
+);
