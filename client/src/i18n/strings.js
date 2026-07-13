@@ -179,6 +179,26 @@ export const STRINGS = {
     en: 'Import the RFQ Master xlsx to get started.',
     vi: 'Nhập file RFQ Master (xlsx) để bắt đầu.',
   },
+  // Sort + filter (display-only)
+  'rfq_tracking.filters': { en: 'Filters', vi: 'Bộ lọc' },
+  'rfq_tracking.clear_filters': { en: 'Clear filters', vi: 'Xóa bộ lọc' },
+  'rfq_tracking.sort_hint': {
+    en: 'Sort: click to cycle ↑ / ↓ / off',
+    vi: 'Sắp xếp: nhấp để đổi ↑ / ↓ / tắt',
+  },
+  'rfq_tracking.no_match': {
+    en: 'No rows match the current filters.',
+    vi: 'Không có dòng nào khớp bộ lọc.',
+  },
+  'rfq_tracking.filter.contains': { en: 'contains…', vi: 'chứa…' },
+  'rfq_tracking.filter.min': { en: 'min', vi: 'min' },
+  'rfq_tracking.filter.max': { en: 'max', vi: 'max' },
+  'rfq_tracking.filter.min_pct': { en: 'min %', vi: 'min %' },
+  'rfq_tracking.filter.max_pct': { en: 'max %', vi: 'max %' },
+  'rfq_tracking.filter.all': { en: 'All', vi: 'Tất cả' },
+  'rfq_tracking.filter.n_sel': { en: '{n} selected', vi: 'đã chọn {n}' },
+  'rfq_tracking.filter.no_values': { en: '(no values)', vi: '(không có giá trị)' },
+  'rfq_tracking.filter.clear_col': { en: 'Clear', vi: 'Xóa' },
   // Showcard field groups
   'rfq_tracking.group.identity': { en: 'Identity', vi: 'Định danh' },
   'rfq_tracking.group.materials': { en: 'Materials & Process', vi: 'Vật tư & Công đoạn' },

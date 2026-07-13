@@ -55,7 +55,7 @@ const BUDGETS = {
   'FormalQuotation.jsx': 0, // Sprint AG: swept
   'ComplexCalc/BomTreeView.jsx': 1, // BOM qty is integer (step=1), no decimal-input bug
   'RFQTracker.jsx': 1, // stage.sla_days is integer days (step=1), no decimal-input bug
-  'RfqTracking.jsx': 2, // spreadsheet grid: 2 uncontrolled inline cells (num + pct) use defaultValue+blur-commit for a 200-row table where DecimalInput's controlled model doesn't fit; the showcard editor uses DecimalInput
+  'RfqTracking.jsx': 4, // 2 uncontrolled inline grid cells (num + pct, defaultValue+blur-commit for a 200-row table) + 2 RangeFilter min/max filter inputs (display-only numeric range, no decimal-precision bug); the showcard editor uses DecimalInput
   'SampleTracking.jsx': 1, // stage.sla_days is integer days (step=1), no decimal-input bug
   'StandardCalc/MachineProfileModal.jsx': 7, // admin CRUD form — integer/locale-free fields; no decimal-input bug
   'MachineTechnicalTab.jsx': 1, // single integer input (FieldInput for *_mm fields) — admin CRUD, not pricing input
