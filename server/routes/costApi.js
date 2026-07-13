@@ -12,6 +12,13 @@ import multer from 'multer';
 import XLSX from 'xlsx';
 import { atomicWriteFileSync } from '../services/atomicWrite.js';
 import { collectDataBackups } from '../services/dataBackupList.js';
+import { getDataset } from '../services/importDatasets.js';
+import {
+  readExisting as readDatasetRows,
+  writeDataset as writeDatasetRows,
+  backupDataset,
+  datasetFilePath,
+} from '../services/importPipeline.js';
 import { redactErrorMessage, logErr, asSafeError } from '../utils/safeError.js';
 import { listLanIPv4, pickServerUrl } from '../utils/networkInfo.js';
 import { readFileSync as readFileSyncPkg } from 'fs';
@@ -1987,6 +1994,49 @@ router.post('/heartbeat', (req, res) => {
   if (!u) return res.status(401).json({ error: 'Unauthorized' });
   markOnline(u.id, u.username, u.role);
   res.json({ ok: true });
+});
+
+// ─── RFQ Tracking (registry-driven master list; RFQ_TRACKING_DATASET) ───
+// Distinct from the kanban `rfq-tracker` tab. Reads + writes go through the
+// SAME import-pipeline storage helpers the Import Wizard uses, so manual
+// inline edits and xlsx imports stay consistent on one JSON file
+// (Library/RFQTracking/rfq_tracking.json). GET tolerates a missing file → [].
+// POST bulk-saves (auto-backup first), gated by requireTabAccess on writes.
+const RFQ_TRACKING_KEY = 'rfq-tracking';
+
+// GET /api/rfq-tracking
+router.get('/rfq-tracking', (req, res) => {
+  const u = getSessionUser(getTokenFromHeader(req));
+  if (!u) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const ds = getDataset(RFQ_TRACKING_KEY);
+    const rows = ds ? readDatasetRows(ds) : [];
+    res.json(Array.isArray(rows) ? rows : []);
+  } catch (err) {
+    logErr(req, 'rfq_tracking_get', err);
+    res.status(500).json({ error: 'Failed to load RFQ Tracking' });
+  }
+});
+
+// POST /api/rfq-tracking — bulk save (auto-backup + atomic write)
+router.post('/rfq-tracking', requireTabAccess(RFQ_TRACKING_KEY), (req, res) => {
+  const u = getSessionUser(getTokenFromHeader(req));
+  if (!u) return res.status(401).json({ error: 'Unauthorized' });
+  if (u.role === 'viewonly') return res.status(403).json({ ok: false, msg: 'View Only' });
+  const ds = getDataset(RFQ_TRACKING_KEY);
+  if (!ds) return res.status(500).json({ error: 'rfq-tracking dataset not registered' });
+  const rows = Array.isArray(req.body) ? req.body : req.body?.rows;
+  if (!Array.isArray(rows)) {
+    return res.status(400).json({ error: 'Expected an array of rows (or { rows: [...] })' });
+  }
+  try {
+    if (fs.existsSync(datasetFilePath(ds))) backupDataset(ds); // sibling _backup_<ts>.json
+    writeDatasetRows(ds, rows);
+    res.json({ ok: true, count: rows.length });
+  } catch (err) {
+    logErr(req, 'rfq_tracking_save', err);
+    res.status(500).json({ error: 'Failed to save RFQ Tracking' });
+  }
 });
 
 // GET /api/load-all

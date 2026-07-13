@@ -603,6 +603,11 @@ export const costApi = {
   loadAll: () => api.get('/load-all'),
   saveAll: (data) => api.post('/save-all', data),
 
+  // RFQ Tracking master list (registry-driven; distinct from the kanban
+  // rfq-tracker). GET returns the row array; POST bulk-saves (auto-backup).
+  getRfqTracking: (opts = {}) => api.get('/rfq-tracking', opts),
+  saveRfqTracking: (rows) => api.post('/rfq-tracking', rows),
+
   // Layout/drawing files — persisted to server's data/Products layout/ folder
   // Matches COST V1.0's saveLayoutToDisk + /api/layout/:name pattern
   saveLayout: ({ ccl_pn, ext, data, quote_id }) =>
