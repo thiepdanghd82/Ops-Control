@@ -17,6 +17,8 @@ import {
   stripRids,
   isBlank,
   isPctBad,
+  rowNeedsReason,
+  rowsNeedingReason,
 } from './rfqTableView.js';
 
 // Column model subset (mirrors RfqTracking.COLUMNS types)
@@ -206,4 +208,33 @@ test('isPctBad flags fractions below the margin threshold (blank never flagged)'
   assert.equal(isPctBad(0, null), false);
   assert.equal(isPctBad(0.25, 'abc'), false);
   assert.equal(isPctBad(null, -1), false, 'no threshold → never bad');
+});
+
+test('rowNeedsReason: Rejected/Cancel need a Notes/Reason; others never do', () => {
+  assert.equal(rowNeedsReason({ sale_stage: 'Rejected', notes: '' }), true);
+  assert.equal(rowNeedsReason({ sale_stage: 'Cancel', notes: '   ' }), true, 'whitespace = blank');
+  assert.equal(rowNeedsReason({ sale_stage: 'Rejected', notes: 'no budget' }), false, 'filled ok');
+  assert.equal(rowNeedsReason({ sale_stage: 'Cancel', notes: 'dup RFQ' }), false);
+  assert.equal(rowNeedsReason({ sale_stage: 'Approved', notes: '' }), false, 'Approved no reason');
+  assert.equal(
+    rowNeedsReason({ sale_stage: 'Other-custom', notes: '' }),
+    false,
+    'custom no reason'
+  );
+  assert.equal(rowNeedsReason({ sale_stage: '', notes: '' }), false, 'blank stage no reason');
+  assert.equal(rowNeedsReason({}), false);
+});
+
+test('rowsNeedingReason returns only the offending rows', () => {
+  const rows = [
+    { _rid: 'a', sale_stage: 'Rejected', notes: '' }, // offender
+    { _rid: 'b', sale_stage: 'Rejected', notes: 'reason' }, // ok
+    { _rid: 'c', sale_stage: 'Approved', notes: '' }, // ok
+    { _rid: 'd', sale_stage: 'Cancel', notes: '' }, // offender
+  ];
+  assert.deepEqual(
+    rowsNeedingReason(rows).map((r) => r._rid),
+    ['a', 'd']
+  );
+  assert.deepEqual(rowsNeedingReason([]), []);
 });

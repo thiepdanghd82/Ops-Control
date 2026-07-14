@@ -173,6 +173,16 @@ export const STRINGS = {
   'rfq_tracking.delete_confirm': { en: 'Delete this RFQ row?', vi: 'Xóa dòng RFQ này?' },
   'rfq_tracking.close': { en: 'Close', vi: 'Đóng' },
   'rfq_tracking.save_changes': { en: 'Save Changes', vi: 'Lưu thay đổi' },
+  'rfq_tracking.other': { en: 'Other…', vi: 'Khác…' },
+  'rfq_tracking.other_placeholder': { en: 'Type a value…', vi: 'Nhập giá trị…' },
+  'rfq_tracking.reason_required': {
+    en: 'Sale Stage “Rejected/Cancel” requires a Notes/Reason — fill it before saving.',
+    vi: 'Sale Stage “Rejected/Cancel” bắt buộc điền Notes/Reason trước khi lưu.',
+  },
+  'rfq_tracking.reason_required_toast': {
+    en: 'Cannot save — {n} Rejected/Cancel row(s) need a Notes/Reason.',
+    vi: 'Không thể lưu — {n} dòng Rejected/Cancel cần điền Notes/Reason.',
+  },
   'rfq_tracking.showcard_title': { en: 'RFQ {rfq} · {qtn}', vi: 'RFQ {rfq} · {qtn}' },
   'rfq_tracking.empty_title': { en: 'No RFQs yet', vi: 'Chưa có RFQ nào' },
   'rfq_tracking.empty_hint': {

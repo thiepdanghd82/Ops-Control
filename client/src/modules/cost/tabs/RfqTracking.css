@@ -472,3 +472,38 @@
   background: rgba(218, 30, 40, 0.14);
   border-color: #da1e28;
 }
+
+/* ── Choice cells (Sale Stage / Sales PIC): select + "Other" text ── */
+.rt-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+}
+.rt-choice-sel {
+  width: 100%;
+  cursor: pointer;
+}
+.rt-choice-other {
+  width: 100%;
+}
+
+/* ── Showcard: Notes/Reason required for Rejected/Cancel ──────────── */
+.rt-sc-reason-err {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border: 1px solid #da1e28;
+  border-left-width: 4px;
+  border-radius: 4px;
+  background: rgba(218, 30, 40, 0.1);
+  color: #da1e28;
+  font-size: 13px;
+  font-weight: 600;
+}
+.rt-field-invalid > label {
+  color: #da1e28;
+}
+.rt-field-invalid .rt-field-input {
+  border-color: #da1e28;
+  background: rgba(218, 30, 40, 0.08);
+}
