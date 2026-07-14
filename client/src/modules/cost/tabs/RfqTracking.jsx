@@ -119,12 +119,15 @@ function saveViewState(state) {
 }
 
 // ── value helpers ─────────────────────────────────────────────────
-// Percent: stored fraction -0.2778 ↔ edited/displayed -27.78.
+// Percent DISPLAY is rounded to a whole number (-0.4991 → "-50", 0.28223 →
+// "28"). The stored fraction keeps full precision — only the shown value
+// rounds; the inline blur no-ops when the rounded text is unchanged so a mere
+// focus+blur never clobbers the exact fraction.
 function fracToPctStr(v) {
   if (v == null || v === '') return '';
   const n = Number(v);
   if (!Number.isFinite(n)) return '';
-  return String(Math.round(n * 1000000) / 10000); // ×100, trim float noise
+  return String(Math.round(n * 100)); // whole-percent, no decimals
 }
 function pctStrToFrac(s) {
   const t = String(s ?? '').trim();
@@ -693,7 +696,11 @@ function InlineCell({ col, value, disabled, onCommit }) {
           type="number"
           step="any"
           defaultValue={fracToPctStr(value)}
-          onBlur={(e) => onCommit(pctStrToFrac(e.target.value))}
+          onBlur={(e) => {
+            // Unchanged rounded display → keep the exact stored fraction.
+            if (e.target.value === fracToPctStr(value)) return;
+            onCommit(pctStrToFrac(e.target.value));
+          }}
         />
         <span className="rt-pct-suffix" aria-hidden="true">
           %
