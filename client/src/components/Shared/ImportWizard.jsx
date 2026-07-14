@@ -87,10 +87,22 @@ export default function ImportWizard({
             chosenOverrides && Object.keys(chosenOverrides).length ? chosenOverrides : null,
         });
         setPreview(res);
-        // Auto-pick first sheet for Excel if not yet chosen
+        // Default the sheet picker to the server's AUTO-SELECTED best sheet
+        // (highest header match), not the first sheet. Operator can override.
         if (!chosenSheet && res.meta?.sheets?.length > 0) setSheet(res.meta.sheet);
-        // Warn (but don't block) when there are coercion issues
-        if (res.coercion?.totalIssues > 0) {
+        // Sheet-mismatch warning: if the shown sheet maps fewer than half the
+        // dataset's canonical columns, the operator likely needs a different
+        // sheet. Server already picked the best sheet, so this fires when even
+        // the best is a poor match, or after a manual switch to a bad sheet.
+        const mapped = Object.keys(res.headers?.mapping || {}).length;
+        const total = res.dataset?.canonicalHeaders?.length || 0;
+        const multiSheet = (res.meta?.sheets?.length || 0) > 1;
+        if (multiSheet && total && mapped < Math.ceil(total / 2)) {
+          setWarning(
+            `This sheet doesn't look like ${res.dataset?.label || 'this'} data — showing "${res.meta?.sheet}" (${mapped}/${total} columns matched). Pick a different sheet if this is wrong.`
+          );
+        } else if (res.coercion?.totalIssues > 0) {
+          // Warn (but don't block) when there are coercion issues
           setWarning(
             `${res.coercion.totalIssues} cell(s) had type-coercion issues — see the Issues panel.`
           );

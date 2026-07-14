@@ -196,7 +196,13 @@ router.post(
       const sheet = req.body.sheet || null;
       const overrides = req.body.overrides ? safeJSON(req.body.overrides) : null;
 
-      const parsed = await parseUploadedFile(req.file, sheet ? { sheet } : {});
+      // When the operator hasn't picked a sheet, auto-select the sheet whose
+      // header row best matches THIS dataset — fixes grabbing the first sheet
+      // (e.g. a Dashboard/title sheet) instead of the data sheet; the Lesson 32
+      // tolerant matcher never saw the right sheet otherwise. Explicit sheet
+      // still wins. `meta.sheetScores` (below) explains the choice to the UI.
+      const scoreHeaders = (headers) => Object.keys(mapHeaders(headers, dataset).mapping).length;
+      const parsed = await parseUploadedFile(req.file, sheet ? { sheet } : { scoreHeaders });
       if (!parsed.headers || parsed.headers.length === 0) {
         cleanup();
         return res.status(400).json({ ok: false, error: 'empty_file' });
