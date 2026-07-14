@@ -37,6 +37,7 @@ import {
   replaceByRid,
   stripRids,
   anyFilterActive,
+  isPctBad,
 } from './rfqTableView';
 import './RfqTracking.css';
 
@@ -80,6 +81,16 @@ const COLUMNS = [
 const GROUPS = ['identity', 'materials', 'dates', 'pricing', 'sales'];
 const SEARCH_KEYS = ['rfq_no', 'customer', 'part_no', 'description', 'end_customer'];
 
+// Margin red-flag thresholds (stored FRACTIONS). A cell turns red when its
+// value is below the threshold: GM < 0%, Contr < 25%, VA < 30%.
+const PCT_MIN = { gm: 0, contr: 0.25, va: 0.3 };
+
+// Numeric-display refinements. THOUSANDS: show a thousands separator (MOQ,
+// EAU). INT: round to a whole number (Est. Revenue). Storage keeps the exact
+// value — only the shown text changes.
+const THOUSANDS_COLS = new Set(['moq', 'eau']);
+const INT_COLS = new Set(['est_revenue']);
+
 const COLUMNS_BY_KEY = Object.fromEntries(COLUMNS.map((c) => [c.key, c]));
 // Low-cardinality text columns get an enum multi-select filter (distinct
 // values present); everything else text gets a "contains" input.
@@ -114,12 +125,15 @@ function saveViewState(state) {
 }
 
 // ── value helpers ─────────────────────────────────────────────────
-// Percent: stored fraction -0.2778 ↔ edited/displayed -27.78.
+// Percent DISPLAY is rounded to a whole number (-0.4991 → "-50", 0.28223 →
+// "28"). The stored fraction keeps full precision — only the shown value
+// rounds; the inline blur no-ops when the rounded text is unchanged so a mere
+// focus+blur never clobbers the exact fraction.
 function fracToPctStr(v) {
   if (v == null || v === '') return '';
   const n = Number(v);
   if (!Number.isFinite(n)) return '';
-  return String(Math.round(n * 1000000) / 10000); // ×100, trim float noise
+  return String(Math.round(n * 100)); // whole-percent, no decimals
 }
 function pctStrToFrac(s) {
   const t = String(s ?? '').trim();
@@ -129,10 +143,26 @@ function pctStrToFrac(s) {
   return n / 100;
 }
 function numOrEmpty(s) {
-  const t = String(s ?? '').trim();
+  const t = String(s ?? '')
+    .trim()
+    .replace(/,/g, ''); // tolerate a pasted "1,000"
   if (t === '') return '';
   const n = Number(t);
   return Number.isFinite(n) ? n : '';
+}
+// 250000 → "250,000" (thousands separator, no decimals).
+function fmtThousands(v) {
+  if (v == null || v === '') return '';
+  const n = Number(v);
+  if (!Number.isFinite(n)) return String(v);
+  return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
+// 123456.78 → "123457" (rounded whole number, no decimals).
+function fmtInt(v) {
+  if (v == null || v === '') return '';
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '';
+  return String(Math.round(n));
 }
 // dd/MM/yyyy from an ISO (YYYY-MM-DD…) date; '—' otherwise.
 function fmtDate(v) {
@@ -665,6 +695,44 @@ function InlineCell({ col, value, disabled, onCommit }) {
   const { type } = col;
   const cls = `rt-cell rt-cell-${type}`;
   if (type === 'num') {
+    // MOQ / EAU: show a thousands separator. A native number input can't hold
+    // "1,000", so use a text cell — raw digits while focused, formatted on blur.
+    if (THOUSANDS_COLS.has(col.key)) {
+      return (
+        <input
+          className={cls}
+          disabled={disabled}
+          type="text"
+          inputMode="numeric"
+          defaultValue={fmtThousands(value)}
+          onFocus={(e) => {
+            e.target.value = value == null ? '' : String(value);
+          }}
+          onBlur={(e) => {
+            const n = numOrEmpty(e.target.value);
+            onCommit(n);
+            e.target.value = fmtThousands(n); // reformat display
+          }}
+        />
+      );
+    }
+    // Est. Revenue: rounded whole number. Unchanged rounded text no-ops so a
+    // focus+blur never clobbers the exact stored value.
+    if (INT_COLS.has(col.key)) {
+      return (
+        <input
+          className={cls}
+          disabled={disabled}
+          type="number"
+          step="1"
+          defaultValue={fmtInt(value)}
+          onBlur={(e) => {
+            if (e.target.value === fmtInt(value)) return;
+            onCommit(numOrEmpty(e.target.value));
+          }}
+        />
+      );
+    }
     return (
       <input
         className={cls}
@@ -677,15 +745,27 @@ function InlineCell({ col, value, disabled, onCommit }) {
     );
   }
   if (type === 'pct') {
+    // Show a "%" suffix and red-flag the cell when below its margin threshold
+    // (GM < 0%, Contr < 25%, VA < 30%). Value is still edited as a % number.
+    const bad = isPctBad(PCT_MIN[col.key], value);
     return (
-      <input
-        className={cls}
-        disabled={disabled}
-        type="number"
-        step="any"
-        defaultValue={fracToPctStr(value)}
-        onBlur={(e) => onCommit(pctStrToFrac(e.target.value))}
-      />
+      <span className={`rt-pct-wrap ${bad ? 'rt-cell-bad' : ''}`}>
+        <input
+          className={`${cls} rt-pct-input`}
+          disabled={disabled}
+          type="number"
+          step="any"
+          defaultValue={fracToPctStr(value)}
+          onBlur={(e) => {
+            // Unchanged rounded display → keep the exact stored fraction.
+            if (e.target.value === fracToPctStr(value)) return;
+            onCommit(pctStrToFrac(e.target.value));
+          }}
+        />
+        <span className="rt-pct-suffix" aria-hidden="true">
+          %
+        </span>
+      </span>
     );
   }
   if (type === 'date') {
@@ -790,7 +870,7 @@ function ShowcardField({ col, value, disabled, onChange, label }) {
           onChange={(v) => onChange(v)}
         />
       ) : type === 'pct' ? (
-        <div className="rt-field-pct">
+        <div className={`rt-field-pct ${isPctBad(PCT_MIN[col.key], value) ? 'rt-cell-bad' : ''}`}>
           <DecimalInput
             className="rt-field-input"
             value={fracToPctStr(value)}

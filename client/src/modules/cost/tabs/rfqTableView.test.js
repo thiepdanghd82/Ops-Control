@@ -16,6 +16,7 @@ import {
   deleteByRid,
   stripRids,
   isBlank,
+  isPctBad,
 } from './rfqTableView.js';
 
 // Column model subset (mirrors RfqTracking.COLUMNS types)
@@ -186,4 +187,23 @@ test('isBlank contract', () => {
   assert.equal(isBlank('  '), true);
   assert.equal(isBlank(0), false);
   assert.equal(isBlank('x'), false);
+});
+
+test('isPctBad flags fractions below the margin threshold (blank never flagged)', () => {
+  // GM < 0
+  assert.equal(isPctBad(0, -0.2777), true, 'GM -27.77% is bad');
+  assert.equal(isPctBad(0, 0), false, 'GM exactly 0% is ok (not < 0)');
+  assert.equal(isPctBad(0, 0.15), false, 'GM 15% ok');
+  // Contr < 0.25
+  assert.equal(isPctBad(0.25, 0.1), true, 'Contr 10% is bad');
+  assert.equal(isPctBad(0.25, 0.25), false, 'Contr exactly 25% ok');
+  assert.equal(isPctBad(0.25, 0.3), false, 'Contr 30% ok');
+  // VA < 0.30
+  assert.equal(isPctBad(0.3, 0.2), true, 'VA 20% is bad');
+  assert.equal(isPctBad(0.3, 0.3), false, 'VA exactly 30% ok');
+  // blanks / non-numeric never flagged
+  assert.equal(isPctBad(0.3, ''), false);
+  assert.equal(isPctBad(0, null), false);
+  assert.equal(isPctBad(0.25, 'abc'), false);
+  assert.equal(isPctBad(null, -1), false, 'no threshold → never bad');
 });

@@ -440,3 +440,35 @@
   color: var(--text-muted, #6f6f6f);
   font-size: 13px;
 }
+
+/* ── Percent cells (VA / Contr / GM): "%" suffix + margin red-flag ── */
+.rt-pct-wrap {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.rt-pct-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
+}
+.rt-pct-suffix {
+  padding: 0 6px 0 1px;
+  color: var(--text-muted, #6f6f6f);
+  font-size: 11.5px;
+  pointer-events: none;
+}
+/* Red background when below threshold (GM < 0%, Contr < 25%, VA < 30%).
+   Semi-transparent so it reads on both light and dark themes. */
+.rt-cell-bad {
+  background: rgba(218, 30, 40, 0.16);
+}
+/* Let the wrapper's red show through the (transparent) grid input on focus. */
+.rt-pct-wrap .rt-cell:focus {
+  background: transparent;
+}
+/* Showcard input has an opaque background, so tint the input itself. */
+.rt-field-pct.rt-cell-bad .rt-field-input {
+  background: rgba(218, 30, 40, 0.14);
+  border-color: #da1e28;
+}
