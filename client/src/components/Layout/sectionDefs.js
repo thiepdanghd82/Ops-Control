@@ -37,6 +37,7 @@ export const COST_SECTIONS = [
       { id: 'formal-quote', icon: 'formal_quote', labelKey: 'nav.tab.formal_quotation' },
       { id: 'quote-history', icon: 'history', labelKey: 'nav.tab.quote_history' },
       { id: 'npi-parts-list', icon: 'parts_list', labelKey: 'nav.tab.npi_parts_list' },
+      { id: 'rfq-tracking', icon: 'rfq_tracking', labelKey: 'nav.tab.rfq_tracking' },
       { id: 'approvals-inbox', icon: 'approvals', labelKey: 'nav.tab.pending_approvals' },
     ],
   },

@@ -30,6 +30,7 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 const IFSInventory = lazy(() => import('./tabs/IFSInventory'));
 const QuoteHistory = lazy(() => import('./tabs/QuoteHistory'));
 const NpiPartsList = lazy(() => import('./tabs/NpiPartsList'));
+const RfqTracking = lazy(() => import('./tabs/RfqTracking'));
 const PendingApprovalsInbox = lazy(() => import('./tabs/PendingApprovalsInbox'));
 const MaterialLibrary = lazy(() => import('./tabs/MaterialLibrary'));
 const Settings = lazy(() => import('./tabs/Settings'));
@@ -79,6 +80,7 @@ const TAB_COMPONENTS = {
   'lib-inventory': IFSInventory,
   'quote-history': QuoteHistory,
   'npi-parts-list': NpiPartsList,
+  'rfq-tracking': RfqTracking,
   'approvals-inbox': PendingApprovalsInbox,
   'lib-mat': MaterialLibrary,
   settings: Settings,
@@ -126,6 +128,7 @@ const TAB_TITLES = {
   'lib-inventory': 'IFS Inventory',
   'quote-history': 'Quote History',
   'npi-parts-list': 'NPI Parts List',
+  'rfq-tracking': 'RFQ Tracking',
   'approvals-inbox': 'Approvals Inbox',
   'lib-mat': 'Materials Library',
   settings: 'Settings',

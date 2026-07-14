@@ -117,6 +117,16 @@ const PATHS = {
       <line x1="5" y1="11" x2="11" y2="11" />
     </>
   ),
+  // RFQ Tracking — spreadsheet grid (master list; distinct from rfq_tracker).
+  rfq_tracking: (
+    <>
+      <rect x="2.5" y="3" width="11" height="10" rx="0.5" />
+      <line x1="2.5" y1="6.5" x2="13.5" y2="6.5" />
+      <line x1="2.5" y1="9.75" x2="13.5" y2="9.75" />
+      <line x1="6.5" y1="3" x2="6.5" y2="13" />
+      <line x1="10" y1="3" x2="10" y2="13" />
+    </>
+  ),
 
   // ── Production / Planning
   orders: (

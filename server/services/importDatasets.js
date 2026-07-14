@@ -575,6 +575,143 @@ const SOURCING_DATASET = {
 };
 
 // ═══════════════════════════════════════════════════════════════════
+// RFQ Tracking (master list of RFQs — "RFQ Master" sheet, 29 cols)
+// Standalone tracking dataset (NOT fed to the pricing calc) → JSON-AoO,
+// no `shadow` block (mirror IFS_DATASET). A RFQ has multiple quote
+// rounds (1st / 2nd …), so the natural key is (rfq_no, qtn).
+// DISTINCT from the kanban `rfq-tracker` tab (RFQTracker/rfq_tracker.json).
+// ═══════════════════════════════════════════════════════════════════
+const RFQ_TRACKING_DATASET = {
+  key: 'rfq-tracking',
+  label: 'RFQ Tracking',
+  storage: {
+    kind: STORAGE_JSON_AOO,
+    folder: 'RFQTracking',
+    file: 'rfq_tracking.json',
+  },
+  canonicalHeaders: [
+    'rfq_no',
+    'qtn',
+    'customer',
+    'end_customer',
+    'part_no',
+    'description',
+    'main_material',
+    'design_process',
+    'print_type',
+    'silkscreen',
+    'moq',
+    'rfq_date',
+    'target_date',
+    'actual_quote_date',
+    'days_in_process',
+    'month',
+    'npi_stage',
+    'npi_pic',
+    'control_flag',
+    'ccl_price',
+    'target_price',
+    'va',
+    'contr',
+    'gm',
+    'eau',
+    'est_revenue',
+    'sales_pic',
+    'sale_stage',
+    'notes',
+  ],
+  // Pretty label per canonical key (export template header row + UI columns).
+  // These are the verbatim "RFQ Master" sheet headers.
+  prettyLabels: {
+    rfq_no: 'RFQ No',
+    qtn: 'Qtn #',
+    customer: 'Customer',
+    end_customer: 'End Customer/Project',
+    part_no: 'Part Number',
+    description: 'Description',
+    main_material: 'Main Material',
+    design_process: 'Design Process',
+    print_type: 'Print (LP/Flexo)',
+    silkscreen: 'SilkScreen',
+    moq: 'MOQ',
+    rfq_date: 'RFQ Date',
+    target_date: 'Target Date',
+    actual_quote_date: 'Actual Quote Date',
+    days_in_process: 'Days in Process',
+    month: 'Month',
+    npi_stage: 'NPI Stage',
+    npi_pic: 'NPI PIC',
+    control_flag: 'Control Flag',
+    ccl_price: 'CCL Price ($)',
+    target_price: 'Target Price ($)',
+    va: 'VA %',
+    contr: 'Contr %',
+    gm: 'GM %',
+    eau: 'EAU / Qty',
+    est_revenue: 'Est. Revenue ($)',
+    sales_pic: 'Sales PIC',
+    sale_stage: 'Sale Stage',
+    notes: 'Notes / Reason',
+  },
+  requiredHeaders: ['rfq_no'],
+  naturalKey: ['rfq_no', 'qtn'],
+  columnTypes: {
+    moq: 'number',
+    rfq_date: 'date',
+    target_date: 'date',
+    actual_quote_date: 'date',
+    days_in_process: 'number',
+    ccl_price: 'number',
+    target_price: 'number',
+    va: 'number',
+    contr: 'number',
+    gm: 'number',
+    eau: 'number',
+    est_revenue: 'number',
+  },
+  // Aliases list the verbatim "RFQ Master" header (belt-and-suspenders on
+  // top of the tolerant token matcher — Lesson 32) + common variants. Keep
+  // variants distinct enough that no normalized alias maps to two canonicals.
+  aliases: aliasMap({
+    rfq_no: ['RFQ No', 'RFQ#', 'RFQ Number', 'RFQ No.', 'Số RFQ'],
+    qtn: ['Qtn #', 'Qtn', 'Quote #', 'Quotation #', 'Qtn No', 'Round', 'Lần báo giá'],
+    customer: ['Customer', 'Cust', 'Khách hàng'],
+    end_customer: ['End Customer/Project', 'End Customer', 'Project', 'End Cust', 'Dự án'],
+    part_no: ['Part Number', 'Part No', 'Part#', 'Part #', 'PN', 'Mã hàng'],
+    description: ['Description', 'Desc', 'Mô tả'],
+    main_material: ['Main Material', 'Material', 'Vật liệu chính'],
+    design_process: ['Design Process', 'Process', 'Công đoạn'],
+    print_type: ['Print (LP/Flexo)', 'Print', 'LP/Flexo', 'Print Type'],
+    silkscreen: ['SilkScreen', 'Silk Screen', 'Silk'],
+    moq: ['MOQ', 'Min Qty', 'Min Order', 'Số lượng tối thiểu'],
+    rfq_date: ['RFQ Date', 'RFQ Dt', 'Ngày RFQ'],
+    target_date: ['Target Date', 'Ngày mục tiêu'],
+    actual_quote_date: ['Actual Quote Date', 'Quote Date', 'Ngày báo giá'],
+    days_in_process: ['Days in Process', 'Days', 'Số ngày'],
+    month: ['Month', 'Tháng'],
+    npi_stage: ['NPI Stage', 'Stage', 'Giai đoạn NPI'],
+    npi_pic: ['NPI PIC', 'NPI Owner', 'PIC NPI'],
+    control_flag: ['Control Flag', 'Flag', 'Control', 'Trạng thái'],
+    ccl_price: ['CCL Price ($)', 'CCL Price', 'CCL $', 'Giá CCL'],
+    target_price: ['Target Price ($)', 'Target Price', 'Giá mục tiêu'],
+    va: ['VA %', 'VA', 'VA%', 'Value Add %'],
+    contr: ['Contr %', 'Contr', 'Contr%', 'Contribution', 'Contribution %'],
+    gm: ['GM %', 'GM', 'GM%', 'Gross Margin', 'Gross Margin %'],
+    eau: ['EAU / Qty', 'EAU', 'EAU/Qty', 'Annual Qty'],
+    est_revenue: [
+      'Est. Revenue ($)',
+      'Est Revenue',
+      'Estimated Revenue',
+      'Revenue',
+      'Doanh thu ước tính',
+    ],
+    sales_pic: ['Sales PIC', 'Sale PIC', 'Sales Owner', 'Sale Owner'],
+    sale_stage: ['Sale Stage', 'Sales Stage', 'Giai đoạn bán'],
+    notes: ['Notes / Reason', 'Notes', 'Note', 'Reason', 'Ghi chú', 'Lý do'],
+  }),
+};
+
+// ═══════════════════════════════════════════════════════════════════
 // Public registry
 // ═══════════════════════════════════════════════════════════════════
 export const DATASETS = {
@@ -586,6 +723,7 @@ export const DATASETS = {
   'npi-materials': NPI_DATASET,
   'ifs-materials': IFS_DATASET,
   'sourcing-db': SOURCING_DATASET,
+  'rfq-tracking': RFQ_TRACKING_DATASET,
 };
 
 export function getDataset(key) {
