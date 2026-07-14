@@ -27,6 +27,17 @@ import SkeletonTable from '../../../components/Shared/SkeletonTable';
 import Modal from '../../../components/Shared/Modal';
 import ImportWizard from '../../../components/Shared/ImportWizard';
 import DecimalInput from '../../../utils/DecimalInput';
+import {
+  buildView,
+  cycleSort,
+  distinctValues,
+  assignRids,
+  applyEditByRid,
+  deleteByRid,
+  replaceByRid,
+  stripRids,
+  anyFilterActive,
+} from './rfqTableView';
 import './RfqTracking.css';
 
 const PER_PAGE = 200;
@@ -68,6 +79,39 @@ const COLUMNS = [
 
 const GROUPS = ['identity', 'materials', 'dates', 'pricing', 'sales'];
 const SEARCH_KEYS = ['rfq_no', 'customer', 'part_no', 'description', 'end_customer'];
+
+const COLUMNS_BY_KEY = Object.fromEntries(COLUMNS.map((c) => [c.key, c]));
+// Low-cardinality text columns get an enum multi-select filter (distinct
+// values present); everything else text gets a "contains" input.
+const ENUM_COLS = new Set([
+  'month',
+  'npi_stage',
+  'npi_pic',
+  'control_flag',
+  'design_process',
+  'sale_stage',
+  'sales_pic',
+]);
+// Sort + filter state persists here (display-only) so it survives this lazy
+// tab unmounting on switch (Lesson 18). NEVER sent to the server / quote.
+const VIEW_STORE = 'ops-rfq-tracking-view';
+
+function loadViewState() {
+  try {
+    const raw = sessionStorage.getItem(VIEW_STORE);
+    const v = raw ? JSON.parse(raw) : null;
+    return v && typeof v === 'object' ? v : null;
+  } catch {
+    return null;
+  }
+}
+function saveViewState(state) {
+  try {
+    sessionStorage.setItem(VIEW_STORE, JSON.stringify(state));
+  } catch {
+    /* quota / private mode — non-fatal */
+  }
+}
 
 // ── value helpers ─────────────────────────────────────────────────
 // Percent: stored fraction -0.2778 ↔ edited/displayed -27.78.
@@ -151,19 +195,32 @@ export default function RfqTracking() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
-  const [editIdx, setEditIdx] = useState(null);
+  const [editRid, setEditRid] = useState(null);
   const [rev, setRev] = useState(0); // bump → remount inline inputs
   const searchRef = useRef(null);
+  const ridSeq = useRef(0); // monotonic id source for newly-added rows
+
+  // Sort + filter view state (display-only; persisted to sessionStorage).
+  const persisted = useRef(loadViewState()).current;
+  const [sort, setSort] = useState(persisted?.sort ?? null);
+  const [filters, setFilters] = useState(persisted?.filters ?? {});
+  const [showFilters, setShowFilters] = useState(persisted?.showFilters ?? false);
 
   useEffect(() => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    saveViewState({ sort, filters, showFilters });
+  }, [sort, filters, showFilters]);
+
   async function loadData() {
     setLoading(true);
     try {
       const data = await costApi.getRfqTracking();
-      setRows(Array.isArray(data) ? data : []);
+      const withRids = assignRids(Array.isArray(data) ? data : []);
+      ridSeq.current = withRids.length; // next add won't collide with r0..r{n-1}
+      setRows(withRids);
       setDirty(false);
       setRev((r) => r + 1);
     } catch (err) {
@@ -176,7 +233,7 @@ export default function RfqTracking() {
   async function handleSave() {
     setSaving(true);
     try {
-      await costApi.saveRfqTracking(rows);
+      await costApi.saveRfqTracking(stripRids(rows)); // never persist _rid
       setDirty(false);
     } catch (e) {
       alert('Save failed: ' + (e?.message || e));
@@ -185,62 +242,93 @@ export default function RfqTracking() {
     }
   }
 
-  // Commit a single inline cell edit into local state (called on blur).
-  function commitCell(realIdx, key, value) {
+  // Edit by STABLE _rid — sort/filter reorder the visible rows, so the
+  // paginated display index is NOT safe to edit by (would hit the wrong row).
+  function commitCell(rid, key, value) {
     setRows((prev) => {
-      const cur = prev[realIdx]?.[key] ?? '';
-      if (String(cur) === String(value)) return prev; // no-op, avoid churn
-      const n = [...prev];
-      n[realIdx] = { ...n[realIdx], [key]: value };
-      return n;
+      const cur = prev.find((r) => r._rid === rid);
+      if (!cur || String(cur[key] ?? '') === String(value)) return prev; // no-op
+      return applyEditByRid(prev, rid, key, value);
     });
     setDirty(true);
   }
 
   function handleAdd() {
-    setRows((prev) => [...prev, {}]);
+    const rid = `r${ridSeq.current++}`;
+    setRows((prev) => [...prev, { _rid: rid }]);
     setDirty(true);
     setRev((r) => r + 1);
-    // jump to last page so the new row is visible
-    setTimeout(() => {
-      setPage(Math.floor(rows.length / PER_PAGE));
-    }, 0);
+    setEditRid(rid); // open the showcard to fill it (works under any filter)
   }
 
-  function handleShowcardSave(idx, row) {
-    setRows((prev) => {
-      const n = [...prev];
-      n[idx] = row;
-      return n;
-    });
+  function handleShowcardSave(rid, row) {
+    setRows((prev) => replaceByRid(prev, rid, row));
     setDirty(true);
     setRev((r) => r + 1);
-    setEditIdx(null);
+    setEditRid(null);
   }
 
-  function handleDelete(idx) {
+  function handleDelete(rid) {
     if (!confirm(t('rfq_tracking.delete_confirm'))) return;
-    setRows((prev) => prev.filter((_, i) => i !== idx));
+    setRows((prev) => deleteByRid(prev, rid));
     setDirty(true);
     setRev((r) => r + 1);
-    setEditIdx(null);
+    setEditRid(null);
   }
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return rows;
-    const terms = search.toLowerCase().split(/\s+/).filter(Boolean);
-    return rows.filter((r) => {
-      const text = SEARCH_KEYS.map((k) => r[k])
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return terms.every((tm) => text.includes(tm));
+  // Header click → tri-state sort; reset to page 1.
+  function onSortClick(key) {
+    setSort(cycleSort(sort, key));
+    setPage(0);
+  }
+  // Per-column filter setter (empty value → remove the filter); reset page.
+  function setColFilter(key, value) {
+    setFilters((prev) => {
+      const next = { ...prev };
+      const empty =
+        value == null ||
+        (Array.isArray(value) && value.length === 0) ||
+        (typeof value === 'string' && value === '') ||
+        (typeof value === 'object' &&
+          !Array.isArray(value) &&
+          Object.values(value).every((x) => String(x ?? '').trim() === ''));
+      if (empty) delete next[key];
+      else next[key] = value;
+      return next;
     });
-  }, [rows, search]);
+    setPage(0);
+  }
+  function clearFilters() {
+    setFilters({});
+    setPage(0);
+  }
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  // Distinct enum options per low-cardinality column (recomputed on data change).
+  const enumOptions = useMemo(() => {
+    const m = {};
+    for (const k of ENUM_COLS) m[k] = distinctValues(rows, k);
+    return m;
+  }, [rows]);
+
+  // Pipeline: global search → per-column filters → sort → (paginate below).
+  const view = useMemo(
+    () =>
+      buildView(rows, {
+        search,
+        searchKeys: SEARCH_KEYS,
+        filters,
+        sort,
+        columnsByKey: COLUMNS_BY_KEY,
+      }),
+    [rows, search, filters, sort]
+  );
+  const filtersOn = anyFilterActive(filters);
+
+  const totalPages = Math.max(1, Math.ceil(view.length / PER_PAGE));
   const effectivePage = Math.min(page, totalPages - 1);
-  const paged = filtered.slice(effectivePage * PER_PAGE, (effectivePage + 1) * PER_PAGE);
+  const paged = view.slice(effectivePage * PER_PAGE, (effectivePage + 1) * PER_PAGE);
+  const editRow = editRid != null ? rows.find((r) => r._rid === editRid) : null;
+  const editIdx = editRid != null ? rows.findIndex((r) => r._rid === editRid) : -1;
 
   if (loading) {
     return (
@@ -250,13 +338,43 @@ export default function RfqTracking() {
     );
   }
 
+  const renderFilter = (c) => {
+    const fv = filters[c.key];
+    if (c.type === 'num' || c.type === 'pct') {
+      return (
+        <RangeFilter value={fv} pct={c.type === 'pct'} onChange={(v) => setColFilter(c.key, v)} />
+      );
+    }
+    if (c.type === 'date') {
+      return <DateRangeFilter value={fv} onChange={(v) => setColFilter(c.key, v)} />;
+    }
+    if (ENUM_COLS.has(c.key)) {
+      return (
+        <EnumFilter
+          options={enumOptions[c.key] || []}
+          value={fv || []}
+          onChange={(v) => setColFilter(c.key, v)}
+        />
+      );
+    }
+    return (
+      <input
+        type="text"
+        className="rt-fcell"
+        placeholder={t('rfq_tracking.filter.contains')}
+        value={fv || ''}
+        onChange={(e) => setColFilter(c.key, e.target.value)}
+      />
+    );
+  };
+
   return (
     <div className="rt-wrap">
       <div className="rt-headbar">
         <div className="rt-hb-left">
           <h2 className="rt-title">{t('rfq_tracking.title')}</h2>
           <span className="rt-count">
-            {t('rfq_tracking.row_count', { shown: filtered.length, total: rows.length })}
+            {t('rfq_tracking.row_count', { shown: view.length, total: rows.length })}
           </span>
         </div>
         <div className="rt-hb-right">
@@ -271,6 +389,20 @@ export default function RfqTracking() {
               setPage(0);
             }}
           />
+          <button
+            type="button"
+            className={`rt-btn ${showFilters ? 'rt-btn-on' : ''}`}
+            onClick={() => setShowFilters((s) => !s)}
+            aria-pressed={showFilters}
+          >
+            ⚟ {t('rfq_tracking.filters')}
+            {filtersOn ? ' •' : ''}
+          </button>
+          {filtersOn && (
+            <button type="button" className="rt-btn" onClick={clearFilters}>
+              {t('rfq_tracking.clear_filters')}
+            </button>
+          )}
           {!isViewOnly && (
             <button type="button" className="rt-btn" onClick={handleAdd}>
               + {t('rfq_tracking.add_row')}
@@ -305,42 +437,85 @@ export default function RfqTracking() {
                   <th className="rt-th-num" data-col="__num">
                     #
                   </th>
-                  {COLUMNS.map((c) => (
-                    <th key={c.key} data-col={c.key} className={c.required ? 'rt-th-req' : ''}>
-                      {t(`rfq_tracking.col.${c.key}`)}
-                    </th>
-                  ))}
+                  {COLUMNS.map((c) => {
+                    const active = sort?.key === c.key;
+                    const ariaSort = active
+                      ? sort.dir === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : 'none';
+                    return (
+                      <th
+                        key={c.key}
+                        data-col={c.key}
+                        aria-sort={ariaSort}
+                        className={c.required ? 'rt-th-req' : ''}
+                      >
+                        <button
+                          type="button"
+                          className="rt-th-sort"
+                          onClick={() => onSortClick(c.key)}
+                          title={t('rfq_tracking.sort_hint')}
+                        >
+                          <span className="rt-th-label">{t(`rfq_tracking.col.${c.key}`)}</span>
+                          <span className="rt-sort-ind" aria-hidden="true">
+                            {active ? (sort.dir === 'asc' ? '▲' : '▼') : '⇅'}
+                          </span>
+                        </button>
+                      </th>
+                    );
+                  })}
                 </tr>
+                {showFilters && (
+                  <tr className="rt-filter-row">
+                    <th className="rt-th-num rt-filter-num" data-col="__num">
+                      <button
+                        type="button"
+                        className="rt-fclear"
+                        onClick={clearFilters}
+                        disabled={!filtersOn}
+                        title={t('rfq_tracking.clear_filters')}
+                      >
+                        ✕
+                      </button>
+                    </th>
+                    {COLUMNS.map((c) => (
+                      <th key={c.key} data-col={c.key} className="rt-filter-cell">
+                        {renderFilter(c)}
+                      </th>
+                    ))}
+                  </tr>
+                )}
               </thead>
               <tbody>
-                {paged.map((r) => {
-                  const realIdx = rows.indexOf(r);
+                {paged.map((r, i) => {
+                  const displayNum = effectivePage * PER_PAGE + i + 1;
                   return (
-                    <tr key={realIdx} className="rt-row">
+                    <tr key={r._rid} className="rt-row">
                       <td
                         className="rt-td-num"
                         data-col="__num"
                         title={t('rfq_tracking.expand_hint')}
-                        onDoubleClick={() => setEditIdx(realIdx)}
+                        onDoubleClick={() => setEditRid(r._rid)}
                       >
                         <button
                           type="button"
                           className="rt-expand"
-                          onClick={() => setEditIdx(realIdx)}
+                          onClick={() => setEditRid(r._rid)}
                           aria-label={t('rfq_tracking.expand_hint')}
                         >
                           ⤢
                         </button>
-                        <span className="rt-rownum">{realIdx + 1}</span>
+                        <span className="rt-rownum">{displayNum}</span>
                       </td>
                       {COLUMNS.map((c) => (
                         <td key={c.key} data-col={c.key}>
                           <InlineCell
-                            key={`${realIdx}:${c.key}:${rev}`}
+                            key={`${r._rid}:${c.key}:${rev}`}
                             col={c}
                             value={r[c.key]}
                             disabled={isViewOnly}
-                            onCommit={(v) => commitCell(realIdx, c.key, v)}
+                            onCommit={(v) => commitCell(r._rid, c.key, v)}
                           />
                         </td>
                       ))}
@@ -350,6 +525,8 @@ export default function RfqTracking() {
               </tbody>
             </table>
           </div>
+
+          {view.length === 0 && <div className="rt-nomatch">{t('rfq_tracking.no_match')}</div>}
 
           <div className="rt-pager">
             <button
@@ -375,15 +552,109 @@ export default function RfqTracking() {
         </>
       )}
 
-      {editIdx !== null && rows[editIdx] && (
+      {editRow && (
         <RfqShowcard
-          row={rows[editIdx]}
+          row={editRow}
           idx={editIdx}
           isViewOnly={isViewOnly}
-          onSave={(row) => handleShowcardSave(editIdx, row)}
-          onDelete={() => handleDelete(editIdx)}
-          onClose={() => setEditIdx(null)}
+          onSave={(row) => handleShowcardSave(editRid, row)}
+          onDelete={() => handleDelete(editRid)}
+          onClose={() => setEditRid(null)}
         />
+      )}
+    </div>
+  );
+}
+
+// ── Per-column filter controls ────────────────────────────────────
+function RangeFilter({ value, onChange, pct }) {
+  const { t } = useI18n();
+  const v = value || {};
+  return (
+    <div className="rt-frange">
+      <input
+        type="number"
+        step="any"
+        className="rt-fcell rt-fcell-sm"
+        placeholder={pct ? t('rfq_tracking.filter.min_pct') : t('rfq_tracking.filter.min')}
+        value={v.min ?? ''}
+        onChange={(e) => onChange({ ...v, min: e.target.value })}
+      />
+      <input
+        type="number"
+        step="any"
+        className="rt-fcell rt-fcell-sm"
+        placeholder={pct ? t('rfq_tracking.filter.max_pct') : t('rfq_tracking.filter.max')}
+        value={v.max ?? ''}
+        onChange={(e) => onChange({ ...v, max: e.target.value })}
+      />
+    </div>
+  );
+}
+
+function DateRangeFilter({ value, onChange }) {
+  const v = value || {};
+  return (
+    <div className="rt-frange">
+      <input
+        type="date"
+        className="rt-fcell rt-fcell-sm"
+        value={v.from ?? ''}
+        onChange={(e) => onChange({ ...v, from: e.target.value })}
+      />
+      <input
+        type="date"
+        className="rt-fcell rt-fcell-sm"
+        value={v.to ?? ''}
+        onChange={(e) => onChange({ ...v, to: e.target.value })}
+      />
+    </div>
+  );
+}
+
+function EnumFilter({ options, value, onChange }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const sel = value || [];
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [open]);
+  const toggle = (opt) =>
+    onChange(sel.includes(opt) ? sel.filter((x) => x !== opt) : [...sel, opt]);
+  const summary =
+    sel.length === 0
+      ? t('rfq_tracking.filter.all')
+      : t('rfq_tracking.filter.n_sel', { n: sel.length });
+  return (
+    <div className="rt-enum" ref={ref}>
+      <button type="button" className="rt-fcell rt-enum-btn" onClick={() => setOpen((o) => !o)}>
+        <span className="rt-enum-sum">{summary}</span>
+        <span aria-hidden="true">▾</span>
+      </button>
+      {open && (
+        <div className="rt-enum-pop">
+          {options.length === 0 ? (
+            <div className="rt-enum-empty">{t('rfq_tracking.filter.no_values')}</div>
+          ) : (
+            options.map((opt) => (
+              <label key={opt} className="rt-enum-opt">
+                <input type="checkbox" checked={sel.includes(opt)} onChange={() => toggle(opt)} />
+                <span>{opt}</span>
+              </label>
+            ))
+          )}
+          {sel.length > 0 && (
+            <button type="button" className="rt-enum-clear" onClick={() => onChange([])}>
+              {t('rfq_tracking.filter.clear_col')}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
