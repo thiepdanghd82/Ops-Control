@@ -85,6 +85,12 @@ const SEARCH_KEYS = ['rfq_no', 'customer', 'part_no', 'description', 'end_custom
 // value is below the threshold: GM < 0%, Contr < 25%, VA < 30%.
 const PCT_MIN = { gm: 0, contr: 0.25, va: 0.3 };
 
+// Numeric-display refinements. THOUSANDS: show a thousands separator (MOQ,
+// EAU). INT: round to a whole number (Est. Revenue). Storage keeps the exact
+// value — only the shown text changes.
+const THOUSANDS_COLS = new Set(['moq', 'eau']);
+const INT_COLS = new Set(['est_revenue']);
+
 const COLUMNS_BY_KEY = Object.fromEntries(COLUMNS.map((c) => [c.key, c]));
 // Low-cardinality text columns get an enum multi-select filter (distinct
 // values present); everything else text gets a "contains" input.
@@ -137,10 +143,26 @@ function pctStrToFrac(s) {
   return n / 100;
 }
 function numOrEmpty(s) {
-  const t = String(s ?? '').trim();
+  const t = String(s ?? '')
+    .trim()
+    .replace(/,/g, ''); // tolerate a pasted "1,000"
   if (t === '') return '';
   const n = Number(t);
   return Number.isFinite(n) ? n : '';
+}
+// 250000 → "250,000" (thousands separator, no decimals).
+function fmtThousands(v) {
+  if (v == null || v === '') return '';
+  const n = Number(v);
+  if (!Number.isFinite(n)) return String(v);
+  return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
+// 123456.78 → "123457" (rounded whole number, no decimals).
+function fmtInt(v) {
+  if (v == null || v === '') return '';
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '';
+  return String(Math.round(n));
 }
 // dd/MM/yyyy from an ISO (YYYY-MM-DD…) date; '—' otherwise.
 function fmtDate(v) {
@@ -673,6 +695,44 @@ function InlineCell({ col, value, disabled, onCommit }) {
   const { type } = col;
   const cls = `rt-cell rt-cell-${type}`;
   if (type === 'num') {
+    // MOQ / EAU: show a thousands separator. A native number input can't hold
+    // "1,000", so use a text cell — raw digits while focused, formatted on blur.
+    if (THOUSANDS_COLS.has(col.key)) {
+      return (
+        <input
+          className={cls}
+          disabled={disabled}
+          type="text"
+          inputMode="numeric"
+          defaultValue={fmtThousands(value)}
+          onFocus={(e) => {
+            e.target.value = value == null ? '' : String(value);
+          }}
+          onBlur={(e) => {
+            const n = numOrEmpty(e.target.value);
+            onCommit(n);
+            e.target.value = fmtThousands(n); // reformat display
+          }}
+        />
+      );
+    }
+    // Est. Revenue: rounded whole number. Unchanged rounded text no-ops so a
+    // focus+blur never clobbers the exact stored value.
+    if (INT_COLS.has(col.key)) {
+      return (
+        <input
+          className={cls}
+          disabled={disabled}
+          type="number"
+          step="1"
+          defaultValue={fmtInt(value)}
+          onBlur={(e) => {
+            if (e.target.value === fmtInt(value)) return;
+            onCommit(numOrEmpty(e.target.value));
+          }}
+        />
+      );
+    }
     return (
       <input
         className={cls}
