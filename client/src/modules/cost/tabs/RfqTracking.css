@@ -113,6 +113,20 @@
   content: ' *';
   color: #da1e28;
 }
+
+/* Sales-input columns (Sales PIC / Sale Stage / Notes-Reason) get an amber
+   header accent so Sales can spot the columns they own at a glance. The tint
+   is semi-transparent → reads on both light and dark themes. */
+.rt-table thead th.rt-th-sales {
+  background: rgba(217, 138, 0, 0.16);
+  box-shadow: inset 0 3px 0 0 #d98a00;
+}
+.rt-table thead th.rt-th-sales .rt-th-sort:hover {
+  background: rgba(217, 138, 0, 0.24);
+}
+.rt-filter-row th.rt-th-sales {
+  background: rgba(217, 138, 0, 0.1);
+}
 .rt-table tbody td {
   padding: 0;
   border-bottom: 1px solid var(--border-subtle, #eee);

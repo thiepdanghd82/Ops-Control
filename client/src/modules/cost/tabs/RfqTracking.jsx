@@ -510,7 +510,9 @@ export default function RfqTracking() {
                         key={c.key}
                         data-col={c.key}
                         aria-sort={ariaSort}
-                        className={c.required ? 'rt-th-req' : ''}
+                        className={`${c.required ? 'rt-th-req' : ''}${
+                          c.group === 'sales' ? ' rt-th-sales' : ''
+                        }`}
                       >
                         <button
                           type="button"
@@ -541,7 +543,11 @@ export default function RfqTracking() {
                       </button>
                     </th>
                     {COLUMNS.map((c) => (
-                      <th key={c.key} data-col={c.key} className="rt-filter-cell">
+                      <th
+                        key={c.key}
+                        data-col={c.key}
+                        className={`rt-filter-cell${c.group === 'sales' ? ' rt-th-sales' : ''}`}
+                      >
                         {renderFilter(c)}
                       </th>
                     ))}
