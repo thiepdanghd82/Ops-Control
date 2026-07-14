@@ -237,7 +237,18 @@ export default function RfqTracking() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [editRid, setEditRid] = useState(null);
+  const [reasonPrompt, setReasonPrompt] = useState(false); // opened to force a reason
   const [rev, setRev] = useState(0); // bump → remount inline inputs
+
+  // Open the showcard for normal editing (not a reason prompt).
+  const openCard = (rid) => {
+    setReasonPrompt(false);
+    setEditRid(rid);
+  };
+  const closeCard = () => {
+    setReasonPrompt(false);
+    setEditRid(null);
+  };
   const searchRef = useRef(null);
   const ridSeq = useRef(0); // monotonic id source for newly-added rows
 
@@ -276,6 +287,7 @@ export default function RfqTracking() {
     // pop the showcard open on the first offender so the operator fills it.
     const missing = rowsNeedingReason(rows);
     if (missing.length) {
+      setReasonPrompt(true); // pre-highlight + jump to Notes/Reason on open
       setEditRid(missing[0]._rid);
       showToast(t('rfq_tracking.reason_required_toast', { n: missing.length }), 'err');
       return;
@@ -307,14 +319,14 @@ export default function RfqTracking() {
     setRows((prev) => [...prev, { _rid: rid }]);
     setDirty(true);
     setRev((r) => r + 1);
-    setEditRid(rid); // open the showcard to fill it (works under any filter)
+    openCard(rid); // open the showcard to fill it (works under any filter)
   }
 
   function handleShowcardSave(rid, row) {
     setRows((prev) => replaceByRid(prev, rid, row));
     setDirty(true);
     setRev((r) => r + 1);
-    setEditRid(null);
+    closeCard();
   }
 
   function handleDelete(rid) {
@@ -322,7 +334,7 @@ export default function RfqTracking() {
     setRows((prev) => deleteByRid(prev, rid));
     setDirty(true);
     setRev((r) => r + 1);
-    setEditRid(null);
+    closeCard();
   }
 
   // Header click → tri-state sort; reset to page 1.
@@ -545,12 +557,12 @@ export default function RfqTracking() {
                         className="rt-td-num"
                         data-col="__num"
                         title={t('rfq_tracking.expand_hint')}
-                        onDoubleClick={() => setEditRid(r._rid)}
+                        onDoubleClick={() => openCard(r._rid)}
                       >
                         <button
                           type="button"
                           className="rt-expand"
-                          onClick={() => setEditRid(r._rid)}
+                          onClick={() => openCard(r._rid)}
                           aria-label={t('rfq_tracking.expand_hint')}
                         >
                           ⤢
@@ -606,9 +618,10 @@ export default function RfqTracking() {
           row={editRow}
           idx={editIdx}
           isViewOnly={isViewOnly}
+          requireReason={reasonPrompt}
           onSave={(row) => handleShowcardSave(editRid, row)}
           onDelete={() => handleDelete(editRid)}
-          onClose={() => setEditRid(null)}
+          onClose={closeCard}
         />
       )}
     </div>
@@ -829,7 +842,9 @@ function ChoiceCell({ options, value, disabled, onCommit }) {
   const v = value == null ? '' : String(value);
   const isPreset = v !== '' && options.includes(v);
   const [otherMode, setOtherMode] = useState(v !== '' && !isPreset);
+  const otherRef = useRef(null);
   const selectVal = otherMode ? OTHER : isPreset ? v : '';
+  const focusOther = () => requestAnimationFrame(() => otherRef.current?.focus());
   return (
     <div className="rt-choice">
       <select
@@ -841,6 +856,7 @@ function ChoiceCell({ options, value, disabled, onCommit }) {
           if (sel === OTHER) {
             setOtherMode(true);
             onCommit(''); // clear preset so the operator types a custom value
+            focusOther(); // jump the cursor straight into the manual input
           } else {
             setOtherMode(false);
             onCommit(sel);
@@ -857,6 +873,7 @@ function ChoiceCell({ options, value, disabled, onCommit }) {
       </select>
       {otherMode && (
         <input
+          ref={otherRef}
           className="rt-cell rt-choice-other"
           type="text"
           disabled={disabled}
@@ -875,6 +892,7 @@ function ShowcardChoice({ options, value, disabled, onChange }) {
   const v = value == null ? '' : String(value);
   const isPreset = v !== '' && options.includes(v);
   const [otherMode, setOtherMode] = useState(v !== '' && !isPreset);
+  const otherRef = useRef(null);
   const selectVal = otherMode ? OTHER : isPreset ? v : '';
   return (
     <div className="rt-choice">
@@ -887,6 +905,7 @@ function ShowcardChoice({ options, value, disabled, onChange }) {
           if (sel === OTHER) {
             setOtherMode(true);
             onChange('');
+            requestAnimationFrame(() => otherRef.current?.focus());
           } else {
             setOtherMode(false);
             onChange(sel);
@@ -903,6 +922,7 @@ function ShowcardChoice({ options, value, disabled, onChange }) {
       </select>
       {otherMode && (
         <input
+          ref={otherRef}
           className="rt-field-input"
           type="text"
           disabled={disabled}
@@ -916,19 +936,32 @@ function ShowcardChoice({ options, value, disabled, onChange }) {
 }
 
 // ── Showcard (grouped, editable, draggable lg modal) ──────────────
-function RfqShowcard({ row, idx, isViewOnly, onSave, onDelete, onClose }) {
+function RfqShowcard({ row, idx, isViewOnly, requireReason, onSave, onDelete, onClose }) {
   const { t } = useI18n();
   const [form, setForm] = useState({ ...row });
-  const [reasonErr, setReasonErr] = useState(false);
+  // When opened because a reason is required, pre-highlight straight away.
+  const [reasonErr, setReasonErr] = useState(!!requireReason);
+  const notesRef = useRef(null);
   const set = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
   const needsReason = rowNeedsReason(form); // Rejected/Cancel + blank Notes
   const attemptSave = () => {
     if (rowNeedsReason(form)) {
       setReasonErr(true);
+      notesRef.current?.focus();
       return;
     }
     onSave(form);
   };
+
+  // Opened via the "reason required" save gate → jump to + focus Notes/Reason.
+  useEffect(() => {
+    if (requireReason) {
+      requestAnimationFrame(() => {
+        notesRef.current?.scrollIntoView({ block: 'center' });
+        notesRef.current?.focus();
+      });
+    }
+  }, [requireReason]);
 
   return (
     <Modal open onClose={onClose} size="lg" ariaLabelledBy="rt-sc-title">
@@ -960,6 +993,7 @@ function RfqShowcard({ row, idx, isViewOnly, onSave, onDelete, onClose }) {
                   onChange={(v) => set(c.key, v)}
                   label={t(`rfq_tracking.col.${c.key}`)}
                   invalid={reasonErr && needsReason && c.key === 'notes'}
+                  inputRef={c.key === 'notes' ? notesRef : undefined}
                 />
               ))}
             </div>
@@ -994,7 +1028,7 @@ function RfqShowcard({ row, idx, isViewOnly, onSave, onDelete, onClose }) {
   );
 }
 
-function ShowcardField({ col, value, disabled, onChange, label, invalid }) {
+function ShowcardField({ col, value, disabled, onChange, label, invalid, inputRef }) {
   const { type } = col;
   const isChoice = type === 'text' && CHOICES[col.key];
   return (
@@ -1036,6 +1070,7 @@ function ShowcardField({ col, value, disabled, onChange, label, invalid }) {
         />
       ) : (
         <input
+          ref={inputRef}
           type="text"
           className="rt-field-input"
           value={value ?? ''}
