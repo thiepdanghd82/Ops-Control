@@ -472,3 +472,55 @@
   background: rgba(218, 30, 40, 0.14);
   border-color: #da1e28;
 }
+
+/* ── Choice cells (Sale Stage / Sales PIC): select OR "Other" text ── */
+.rt-choice {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+}
+.rt-choice-sel {
+  flex: 1 1 auto;
+  min-width: 0;
+  cursor: pointer;
+}
+.rt-choice-other {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* ▾ button to reopen the preset list from a custom "Other" value */
+.rt-choice-toggle {
+  flex: 0 0 auto;
+  border: 1px solid var(--border, #c6c6c6);
+  border-radius: 3px;
+  background: var(--surface, #fff);
+  color: var(--text-muted, #6f6f6f);
+  cursor: pointer;
+  padding: 2px 5px;
+  font-size: 10px;
+  line-height: 1;
+}
+.rt-choice-toggle:hover {
+  background: var(--surface-hover, #f2f2f2);
+}
+
+/* ── Showcard: Notes/Reason required for Rejected/Cancel ──────────── */
+.rt-sc-reason-err {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border: 1px solid #da1e28;
+  border-left-width: 4px;
+  border-radius: 4px;
+  background: rgba(218, 30, 40, 0.1);
+  color: #da1e28;
+  font-size: 13px;
+  font-weight: 600;
+}
+.rt-field-invalid > label {
+  color: #da1e28;
+}
+.rt-field-invalid .rt-field-input {
+  border-color: #da1e28;
+  background: rgba(218, 30, 40, 0.08);
+}

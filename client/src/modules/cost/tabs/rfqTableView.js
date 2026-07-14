@@ -192,6 +192,21 @@ export function replaceByRid(rows, rid, nextRow) {
   return (rows || []).map((r) => (r._rid === rid ? { ...nextRow, _rid: rid } : r));
 }
 
+// ── Sale-stage reason requirement ─────────────────────────────────
+// A row whose Sale Stage is Rejected or Cancel MUST carry a Notes/Reason
+// before it can be saved.
+export const REASON_REQUIRED_STAGES = ['Rejected', 'Cancel'];
+
+export function rowNeedsReason(row) {
+  const stage = String(row?.sale_stage ?? '').trim();
+  if (!REASON_REQUIRED_STAGES.includes(stage)) return false;
+  return isBlank(row?.notes);
+}
+
+export function rowsNeedingReason(rows) {
+  return (rows || []).filter(rowNeedsReason);
+}
+
 // Strip the in-memory-only `_rid` before persisting to the server.
 export function stripRids(rows) {
   return (rows || []).map((r) => {
