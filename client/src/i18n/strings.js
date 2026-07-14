@@ -175,6 +175,7 @@ export const STRINGS = {
   'rfq_tracking.save_changes': { en: 'Save Changes', vi: 'Lưu thay đổi' },
   'rfq_tracking.other': { en: 'Other…', vi: 'Khác…' },
   'rfq_tracking.other_placeholder': { en: 'Type a value…', vi: 'Nhập giá trị…' },
+  'rfq_tracking.choose_from_list': { en: 'Choose from list', vi: 'Chọn từ danh sách' },
   'rfq_tracking.reason_required': {
     en: 'Sale Stage “Rejected/Cancel” requires a Notes/Reason — fill it before saving.',
     vi: 'Sale Stage “Rejected/Cancel” bắt buộc điền Notes/Reason trước khi lưu.',

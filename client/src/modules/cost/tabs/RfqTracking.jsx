@@ -843,22 +843,50 @@ function ChoiceCell({ options, value, disabled, onCommit }) {
   const isPreset = v !== '' && options.includes(v);
   const [otherMode, setOtherMode] = useState(v !== '' && !isPreset);
   const otherRef = useRef(null);
-  const selectVal = otherMode ? OTHER : isPreset ? v : '';
-  const focusOther = () => requestAnimationFrame(() => otherRef.current?.focus());
+
+  // Other mode → show ONLY the custom text (no redundant "Other…" label) plus a
+  // small ▾ to reopen the preset list.
+  if (otherMode) {
+    return (
+      <div className="rt-choice">
+        <input
+          ref={otherRef}
+          className="rt-cell rt-choice-other"
+          type="text"
+          disabled={disabled}
+          defaultValue={isPreset ? '' : v}
+          placeholder={t('rfq_tracking.other_placeholder')}
+          onBlur={(e) => onCommit(e.target.value)}
+        />
+        {!disabled && (
+          <button
+            type="button"
+            className="rt-choice-toggle"
+            title={t('rfq_tracking.choose_from_list')}
+            onClick={() => {
+              setOtherMode(false);
+              onCommit('');
+            }}
+          >
+            ▾
+          </button>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="rt-choice">
       <select
         className="rt-cell rt-choice-sel"
         disabled={disabled}
-        value={selectVal}
+        value={isPreset ? v : ''}
         onChange={(e) => {
           const sel = e.target.value;
           if (sel === OTHER) {
             setOtherMode(true);
             onCommit(''); // clear preset so the operator types a custom value
-            focusOther(); // jump the cursor straight into the manual input
+            requestAnimationFrame(() => otherRef.current?.focus());
           } else {
-            setOtherMode(false);
             onCommit(sel);
           }
         }}
@@ -871,17 +899,6 @@ function ChoiceCell({ options, value, disabled, onCommit }) {
         ))}
         <option value={OTHER}>{t('rfq_tracking.other')}</option>
       </select>
-      {otherMode && (
-        <input
-          ref={otherRef}
-          className="rt-cell rt-choice-other"
-          type="text"
-          disabled={disabled}
-          defaultValue={isPreset ? '' : v}
-          placeholder={t('rfq_tracking.other_placeholder')}
-          onBlur={(e) => onCommit(e.target.value)}
-        />
-      )}
     </div>
   );
 }
@@ -893,13 +910,41 @@ function ShowcardChoice({ options, value, disabled, onChange }) {
   const isPreset = v !== '' && options.includes(v);
   const [otherMode, setOtherMode] = useState(v !== '' && !isPreset);
   const otherRef = useRef(null);
-  const selectVal = otherMode ? OTHER : isPreset ? v : '';
+
+  if (otherMode) {
+    return (
+      <div className="rt-choice">
+        <input
+          ref={otherRef}
+          className="rt-field-input"
+          type="text"
+          disabled={disabled}
+          value={v}
+          placeholder={t('rfq_tracking.other_placeholder')}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        {!disabled && (
+          <button
+            type="button"
+            className="rt-choice-toggle"
+            title={t('rfq_tracking.choose_from_list')}
+            onClick={() => {
+              setOtherMode(false);
+              onChange('');
+            }}
+          >
+            ▾
+          </button>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="rt-choice">
       <select
         className="rt-field-input"
         disabled={disabled}
-        value={selectVal}
+        value={isPreset ? v : ''}
         onChange={(e) => {
           const sel = e.target.value;
           if (sel === OTHER) {
@@ -907,7 +952,6 @@ function ShowcardChoice({ options, value, disabled, onChange }) {
             onChange('');
             requestAnimationFrame(() => otherRef.current?.focus());
           } else {
-            setOtherMode(false);
             onChange(sel);
           }
         }}
@@ -920,17 +964,6 @@ function ShowcardChoice({ options, value, disabled, onChange }) {
         ))}
         <option value={OTHER}>{t('rfq_tracking.other')}</option>
       </select>
-      {otherMode && (
-        <input
-          ref={otherRef}
-          className="rt-field-input"
-          type="text"
-          disabled={disabled}
-          value={v}
-          placeholder={t('rfq_tracking.other_placeholder')}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      )}
     </div>
   );
 }
