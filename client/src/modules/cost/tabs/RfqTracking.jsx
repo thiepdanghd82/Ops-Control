@@ -37,6 +37,7 @@ import {
   replaceByRid,
   stripRids,
   anyFilterActive,
+  isPctBad,
 } from './rfqTableView';
 import './RfqTracking.css';
 
@@ -79,6 +80,10 @@ const COLUMNS = [
 
 const GROUPS = ['identity', 'materials', 'dates', 'pricing', 'sales'];
 const SEARCH_KEYS = ['rfq_no', 'customer', 'part_no', 'description', 'end_customer'];
+
+// Margin red-flag thresholds (stored FRACTIONS). A cell turns red when its
+// value is below the threshold: GM < 0%, Contr < 25%, VA < 30%.
+const PCT_MIN = { gm: 0, contr: 0.25, va: 0.3 };
 
 const COLUMNS_BY_KEY = Object.fromEntries(COLUMNS.map((c) => [c.key, c]));
 // Low-cardinality text columns get an enum multi-select filter (distinct
@@ -677,15 +682,23 @@ function InlineCell({ col, value, disabled, onCommit }) {
     );
   }
   if (type === 'pct') {
+    // Show a "%" suffix and red-flag the cell when below its margin threshold
+    // (GM < 0%, Contr < 25%, VA < 30%). Value is still edited as a % number.
+    const bad = isPctBad(PCT_MIN[col.key], value);
     return (
-      <input
-        className={cls}
-        disabled={disabled}
-        type="number"
-        step="any"
-        defaultValue={fracToPctStr(value)}
-        onBlur={(e) => onCommit(pctStrToFrac(e.target.value))}
-      />
+      <span className={`rt-pct-wrap ${bad ? 'rt-cell-bad' : ''}`}>
+        <input
+          className={`${cls} rt-pct-input`}
+          disabled={disabled}
+          type="number"
+          step="any"
+          defaultValue={fracToPctStr(value)}
+          onBlur={(e) => onCommit(pctStrToFrac(e.target.value))}
+        />
+        <span className="rt-pct-suffix" aria-hidden="true">
+          %
+        </span>
+      </span>
     );
   }
   if (type === 'date') {
@@ -790,7 +803,7 @@ function ShowcardField({ col, value, disabled, onChange, label }) {
           onChange={(v) => onChange(v)}
         />
       ) : type === 'pct' ? (
-        <div className="rt-field-pct">
+        <div className={`rt-field-pct ${isPctBad(PCT_MIN[col.key], value) ? 'rt-cell-bad' : ''}`}>
           <DecimalInput
             className="rt-field-input"
             value={fracToPctStr(value)}

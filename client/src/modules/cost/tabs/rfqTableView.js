@@ -17,6 +17,19 @@ export function isBlank(v) {
   return v == null || String(v).trim() === '';
 }
 
+/**
+ * Is a stored fraction below its margin threshold? Used to red-flag the
+ * VA / Contr / GM cells. `min` is a FRACTION (GM 0, Contr 0.25, VA 0.30).
+ * Blank / non-numeric values are never flagged.
+ */
+export function isPctBad(min, value) {
+  if (min == null) return false;
+  if (isBlank(value)) return false;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return false;
+  return n < min;
+}
+
 // Non-blank value compare by column type (blanks handled by the caller).
 export function compareValues(a, b, type) {
   if (type === 'num' || type === 'pct') {
