@@ -24,7 +24,7 @@ import DesignSyncPicker from './DesignSyncPicker';
 import { validateLayout } from '../../../../services/layoutValidation';
 
 export default function CalcLayout() {
-  const { stdState, setStdField } = useCalc();
+  const { stdState, setStdField, setStdDrawings } = useCalc();
   const st = stdState;
   // Lifted from PrintCutLayout so peer cards (Summary, Suggestion)
   // can show Print/Cut-specific content based on the active sub-tab.
@@ -231,24 +231,28 @@ export default function CalcLayout() {
       <div className="cl-upload-grid">
         <FileUploadZone
           label="Design Layout Drawing"
-          file={st.layout_file}
+          multiple
+          files={st.layout_files || []}
+          activeIndex={st.layout_active || 0}
           endCu={st.end_cu}
           directCu={st.direct_cu}
           endCuPn={st.end_cu_pn}
           cclPn={st.ccl_pn}
-          onFileChange={(v) => setStdField('layout_file', v)}
-          onClear={() => setStdField('layout_file', null)}
+          onFilesChange={(next) => setStdDrawings('layout', next)}
+          onActiveChange={(idx) => setStdDrawings('layout', undefined, idx)}
         />
         <FileUploadZone
           label="Customer Drawing"
-          file={st.customer_drw_file}
+          multiple
+          files={st.customer_drw_files || []}
+          activeIndex={st.customer_drw_active || 0}
           endCu={st.end_cu}
           directCu={st.direct_cu}
           endCuPn={st.end_cu_pn}
           cclPn={st.ccl_pn}
           nameSuffix="_cust"
-          onFileChange={(v) => setStdField('customer_drw_file', v)}
-          onClear={() => setStdField('customer_drw_file', null)}
+          onFilesChange={(next) => setStdDrawings('customer_drw', next)}
+          onActiveChange={(idx) => setStdDrawings('customer_drw', undefined, idx)}
         />
       </div>
     </div>

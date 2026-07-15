@@ -438,7 +438,7 @@ const QUOTE_HISTORY_COLUMNS = [
             </svg>
           </button>
         )}
-        {q.has_layout || q.state?.layout_file?.name ? (
+        {q.has_layout || q.state?.layout_files?.length || q.state?.layout_file?.name ? (
           <span className="qh-act-layout qh-layout-yes" title="Layout attached">
             <svg
               width="12"

@@ -131,6 +131,14 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
     (pi, f, v) => dispatch(setSpProcessField({ spIdx: spi, idx: pi, field: f, value: v })),
     [dispatch, spi]
   );
+  // Multi-drawing (Sprint S-MULTI-DRAW) — atomic list + active + singular
+  // mirror per subproduct. Omitted files/active fall back to current state
+  // in the reducer, so append-then-set-active never round-trips a stale list.
+  const setDraw = useCallback(
+    (kind, files, active) =>
+      dispatch({ type: 'SET_SP_DRAWINGS', payload: { spIdx: spi, kind, files, active } }),
+    [dispatch, spi]
+  );
 
   // Sprint 1.6 — Complex per-MOQ Setup LM / Setup H, mirroring the Standard
   // calculator fix. Override slots live at:
@@ -625,24 +633,28 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
         <div className="cl-upload-grid">
           <FileUploadZone
             label="Design Layout Drawing"
-            file={sp.layout_file}
+            multiple
+            files={sp.layout_files || []}
+            activeIndex={sp.layout_active || 0}
             endCu={parentEndCu}
             directCu={parentDirectCu}
             endCuPn={parentEndCuPn}
             cclPn={spBase}
-            onFileChange={(v) => setF('layout_file', v)}
-            onClear={() => setF('layout_file', null)}
+            onFilesChange={(next) => setDraw('layout', next)}
+            onActiveChange={(idx) => setDraw('layout', undefined, idx)}
           />
           <FileUploadZone
             label="Customer Drawing"
-            file={sp.customer_drw_file}
+            multiple
+            files={sp.customer_drw_files || []}
+            activeIndex={sp.customer_drw_active || 0}
             endCu={parentEndCu}
             directCu={parentDirectCu}
             endCuPn={parentEndCuPn}
             cclPn={spBase}
             nameSuffix="_cust"
-            onFileChange={(v) => setF('customer_drw_file', v)}
-            onClear={() => setF('customer_drw_file', null)}
+            onFilesChange={(next) => setDraw('customer_drw', next)}
+            onActiveChange={(idx) => setDraw('customer_drw', undefined, idx)}
           />
         </div>
       </div>

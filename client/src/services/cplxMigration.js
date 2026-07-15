@@ -45,6 +45,9 @@ export const CPLX_SHAPE_VERSION = 4;
 // per PR #110 precedent — heal-on-read is sufficient for purely
 // additive defaults). Mirrors stdMigration.healPricingSnapshot.
 import { createEmptySnapshot } from './pricingSnapshot.js';
+// Multi-drawing heal — per-SP + top-level cover. Idempotent, additive, NO
+// version bump (PR #110 pattern). Keeps each singular *_file mirrored.
+import { healDrawings } from './drawingFiles.js';
 
 function healPricingSnapshot(state) {
   if (state && state.pricing_snapshot && typeof state.pricing_snapshot === 'object') {
@@ -86,6 +89,24 @@ function healLeadTimeRemarkOvr(state) {
   if ('lt_remark_ovr' in lt) return state;
   const seed = typeof lt.lt_remark === 'string' ? lt.lt_remark : '';
   return { ...state, lead_time: { ...lt, lt_remark_ovr: seed } };
+}
+
+// Heal drawings on the top-level cover AND every subproduct (Cpx drawings
+// are per-SP). Returns SAME ref when nothing changed so the React-memo
+// short-circuit stays intact for fully-current quotes.
+function healCplxDrawings(state) {
+  if (!state || typeof state !== 'object' || Array.isArray(state)) return state;
+  let out = healDrawings(state);
+  if (Array.isArray(out.subproducts)) {
+    let changed = false;
+    const sps = out.subproducts.map((sp) => {
+      const h = healDrawings(sp);
+      if (h !== sp) changed = true;
+      return h;
+    });
+    if (changed) out = { ...out, subproducts: sps };
+  }
+  return out;
 }
 
 function startsWithFG(code) {
@@ -163,9 +184,9 @@ export function upgradeCplxState(state) {
           sp.processes.every((r) => !r || typeof r !== 'object' || r._mid))
     )
   ) {
-    // already upgraded — still heal snapshot + lead-time override if absent
-    return healLeadTimePoOvr(
-      healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(healPricingSnapshot(state)))
+    // already upgraded — still heal snapshot + lead-time override + drawings
+    return healCplxDrawings(
+      healLeadTimePoOvr(healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(healPricingSnapshot(state))))
     );
   }
 
@@ -229,8 +250,9 @@ export function upgradeCplxState(state) {
   // Pricing-snapshot heal (Phase 1) — additive default after the
   // shape-version walk so newly-migrated states get the snapshot too.
   // Material L/T override heal (Sprint S-MAT-LT) — seed legacy free-text.
-  return healLeadTimePoOvr(
-    healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(healPricingSnapshot(upgraded)))
+  // Multi-drawing heal — wrap legacy single file(s) per-SP + cover.
+  return healCplxDrawings(
+    healLeadTimePoOvr(healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(healPricingSnapshot(upgraded))))
   );
 }
 

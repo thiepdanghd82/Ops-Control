@@ -6,6 +6,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { upgradeCplxState, findAssemblyIndex, CPLX_SHAPE_VERSION } from './cplxMigration.js';
 
+// Fully-healed drawing shape (Sprint S-MULTI-DRAW) — spread into cover +
+// subproducts of "already-current" fixtures so healCplxDrawings short-
+// circuits by reference (empty lists + null singular are self-consistent).
+const DRAW_CURRENT = {
+  layout_files: [],
+  layout_active: 0,
+  layout_file: null,
+  customer_drw_files: [],
+  customer_drw_active: 0,
+  customer_drw_file: null,
+};
+
 test('upgradeCplxState: null/undefined passes through', () => {
   assert.equal(upgradeCplxState(null), null);
   assert.equal(upgradeCplxState(undefined), undefined);
@@ -352,6 +364,7 @@ test('upgradeCplxState: existing pricing_snapshot is NOT overwritten', () => {
         materials_alt: [],
         materials_active: 'main',
         materials: [],
+        ...DRAW_CURRENT, // per-SP drawings already-healed
       },
     ],
     pricing_snapshot: {
@@ -364,6 +377,7 @@ test('upgradeCplxState: existing pricing_snapshot is NOT overwritten', () => {
       coverage: [],
       rates: { Slit: { workcenter: 'Slit', labor_rate: 3.08 } },
     },
+    ...DRAW_CURRENT, // top-level cover drawings already-healed
   };
   const upgraded = upgradeCplxState(withSnap);
   // Short-circuit path: same reference, snapshot untouched.

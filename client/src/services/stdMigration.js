@@ -41,6 +41,10 @@ export const STD_SHAPE_VERSION = 3;
 // re-implemented, so the canonical shape stays single-source — same
 // pricingSnapshot.js the calcReducer factories + freezeLib use.
 import { createEmptySnapshot } from './pricingSnapshot.js';
+// Multi-drawing heal — wraps a legacy single layout_file/customer_drw_file
+// into a [file]+active list (idempotent, additive, NO version bump per the
+// PR #110 pattern). Keeps the singular field mirrored to the active file.
+import { healDrawings } from './drawingFiles.js';
 
 // Idempotent: returns SAME reference when state already carries a
 // snapshot object so the React-memo short-circuit in upgradeStdState
@@ -140,8 +144,10 @@ export function upgradeStdState(state) {
       Array.isArray(state.materials_alt) &&
       (state.materials_active === 'main' || state.materials_active === 'alt');
     if (hasMids && hasAltShape)
-      return healLeadTimePoOvr(
-        healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(healPricingSnapshot(state)))
+      return healDrawings(
+        healLeadTimePoOvr(
+          healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(healPricingSnapshot(state)))
+        )
       );
   }
 
@@ -178,6 +184,8 @@ export function upgradeStdState(state) {
   next = healPricingSnapshot(next);
   // Material L/T override heal (Sprint S-MAT-LT) — seed legacy free-text.
   next = healLeadTimePoOvr(healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(next)));
+  // Multi-drawing heal — wrap legacy single file(s) into list + active.
+  next = healDrawings(next);
   return next;
 }
 

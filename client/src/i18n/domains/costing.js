@@ -140,4 +140,12 @@ registerStrings({
     en: 'Per-tier Setup LM override applies to the ACTIVE material set (currently {set}). Switch the Maint.Mat / Alternative.Mat toggle to edit the other set.',
     vi: 'Setup LM ghi đè theo tier áp dụng vào bộ vật tư ĐANG ACTIVE ({set}). Chuyển toggle Maint.Mat / Alternative.Mat để edit bộ kia.',
   },
+
+  // ─── Sprint S-MULTI-DRAW — FileUploadZone multi-drawing gallery ───
+  'fuz.count': { en: '{n} files', vi: '{n} tệp' },
+  'fuz.add': { en: 'Add drawing', vi: 'Thêm bản vẽ' },
+  'fuz.remove': { en: 'Remove drawing', vi: 'Xoá bản vẽ' },
+  'fuz.open_new': { en: 'Open in new window', vi: 'Mở ở cửa sổ mới' },
+  'fuz.showing': { en: 'Showing', vi: 'Đang hiện' },
+  'fuz.remove_confirm': { en: 'Remove "{name}"?', vi: 'Xoá "{name}"?' },
 });

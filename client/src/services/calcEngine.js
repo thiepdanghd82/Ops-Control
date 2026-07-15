@@ -1765,8 +1765,14 @@ export function createStdState() {
     other_ship: 0,
     // RFQ
     design_process: '',
+    // Drawings — LIST + active pointer; the singular *_file is the active
+    // mirror (see services/drawingFiles.js) so legacy readers stay green.
     layout_file: null,
+    layout_files: [],
+    layout_active: 0,
     customer_drw_file: null,
+    customer_drw_files: [],
+    customer_drw_active: 0,
     // Lead time & Notice sub-tab metadata. Free-text fields operator
     // fills on cover-sheet; zero pricing impact (calcAll never reads
     // lead_time). Legacy quotes heal via `state.lead_time || {}`
@@ -1950,7 +1956,13 @@ export function createEmptyStdState() {
     design_process: '',
     request_ul: 'N',
     ul_description: '',
+    // Drawings — LIST + active mirror (see services/drawingFiles.js).
     layout_file: null,
+    layout_files: [],
+    layout_active: 0,
+    customer_drw_file: null,
+    customer_drw_files: [],
+    customer_drw_active: 0,
     num_moq: 1,
     extra_moqs: [],
     active_moq_idx: 0,
@@ -2011,7 +2023,13 @@ export function createCplxState() {
     num_moq: 1,
     extra_moqs: [],
     active_moq_idx: 0,
+    // Drawings — LIST + active mirror (see services/drawingFiles.js).
     layout_file: null,
+    layout_files: [],
+    layout_active: 0,
+    customer_drw_file: null,
+    customer_drw_files: [],
+    customer_drw_active: 0,
     packing_method: 'Sheet',
     pcs_per_bag: 0,
     bags_per_box: 0,
@@ -2230,7 +2248,13 @@ export function createSubProduct(code) {
     plate_thickness_mm: 0,
     anilox_bcm: 0,
     print_to_cut_offset_mm: 0,
+    // Drawings — per-subproduct LIST + active mirror (drawingFiles.js).
     layout_file: null,
+    layout_files: [],
+    layout_active: 0,
+    customer_drw_file: null,
+    customer_drw_files: [],
+    customer_drw_active: 0,
     _layoutOpen: true,
     _bodyOpen: true,
   };
