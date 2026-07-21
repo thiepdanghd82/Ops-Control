@@ -14,8 +14,6 @@
 import fs from 'fs';
 import path from 'path';
 
-const BOM = '﻿';
-
 function stripBOM(s) {
   return s.charCodeAt(0) === 0xfeff ? s.slice(1) : s;
 }

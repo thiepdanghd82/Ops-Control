@@ -484,6 +484,58 @@ SQLite path.
   manual flag-flip is needed.
 - Chromium-only this sprint; cross-browser deferred to MES-3.
 
+## CI signal — required vs advisory (Sprint CI-TRUST, 2026-07-21)
+
+The point of CI is a **trustworthy** red/green: a clean PR goes deterministically
+green, and only a GENUINE regression turns a check red. Chronic red +
+admin-merge is the anti-pattern — it makes real breakage look "pre-existing"
+and get merged. The split below keeps the signal honest without hiding
+failures.
+
+**REQUIRED (must be green — a red here is a real regression, do NOT merge):**
+
+- **Client tests** (`cd client && npm test`) — 1525+ vanilla node:test.
+- **Server tests** (`npm test`) — runs jest + kiosk + `node --test` + desktop
+  license/manifest. The `node --test` glob uses **`--test-concurrency=1`**
+  (serialized) to eliminate the MES-3-FIX-52 runner deserialize race between
+  parallel worker children — ~2.7× slower but deterministic. The one chronic
+  skip is `backupCode.integration.test.js` "per-entry ETIMEDOUT is isolated"
+  (`test.skip`, MES-3-FIX-51 — fs.cpSync monkey-patch pollution; backup
+  partial-failure still covered by hardware + parallel integration tests).
+- **Lint + format** — `npm run lint -- --max-warnings 435` (Node 22 baseline
+  from the 2026-06-20 Phase-0 CI-Green hotfix; lower as tickets close) +
+  `format:check`. Deterministic — a NEW error or crossing the warning cap
+  fails it. Never raise the cap to hide new warnings.
+- **Commit messages** / **Commit-msg hook smoke** — Conventional Commits
+  (see the commitlint convention: scope `costing` not `pricing`, lowercase
+  subject, no trailing period, body ≤120).
+- **Runtime deps declared**, **Router has sibling tests**, **Die-cut test
+  coverage**, **Build artefacts** — structural guards; a red here is real.
+  Build runs `perf-budget` (bundle-size gate). Its budgets were re-baselined
+  to the v1.6 build 2026-07-21 (they were v1.3.0-GA stale — the overage stayed
+  hidden while `build` was skipped under red lint). The gate stays ENFORCED
+  at the new honest level; **MES-3-FIX-62** tracks the real reduction
+  (lazy-load PlanningModule / code-split the shell) — lower the budgets back
+  as that lands. Never raise a perf budget to hide a genuine size regression;
+  re-baseline only for legitimate multi-version growth, with a reduction ticket.
+
+**ADVISORY (non-blocking — reports in logs, never fails the required set):**
+
+- **Vulnerability scan** (`npm audit`) — the npm-audit STEPS carry
+  `continue-on-error: true` (`.github/workflows/ci.yml`) so the check stays
+  GREEN while still running + printing findings in the step logs (the
+  `Security allowlist hygiene` step is NOT advisory — it still blocks). The
+  outstanding advisories (multer high GHSA-72gw-mp4g-v24j + uuid/exceljs
+  moderate) are verified non-exploitable in our gated topology and scheduled
+  for the post-freeze dep bump (**MES-3-FIX-59**, parent **MES-3-FIX-39**).
+  Drop the per-step `continue-on-error` once MES-3-FIX-59 lands and
+  `npm audit --omit=dev` returns 0 high — then a NEW vuln blocks again.
+
+**Rule:** only the advisory vuln-scan may be non-blocking. Never silence a
+lint/test failure to get green — fix it or file a ticket + skip the specific
+flaky case WITH the ticket reference (MES-3-FIX-51 pattern), never a blanket
+mute. Cross-link: MES-3-FIX-39 / -51 / -52 / -59.
+
 ## Common failure mode to avoid
 
 > "I edited the source, HMR refreshed my preview, I claimed the change is live."
@@ -1292,6 +1344,12 @@ For each, write 5 fields: ID, title, source, acceptance, effort, priority.
 - **Source**: S-2FA-RESET security follow-up (2026-07-01). The NEW `POST /auth/users/:id/reset-2fa` is SYS-only + step-up password + no-self-reset. But the pre-existing `DELETE /api/totp/secret/:username` (costApi.js ~1820) still gates only `roleLevel(caller) < 4 || caller === target` — so ANY authenticated user can delete THEIR OWN TOTP secret with zero re-verification (no current TOTP code, no password). On this auto-login + FileVault-off box, a stolen-but-idle session could disable 2FA on that account and re-enroll a fresh authenticator. Sprint S-2FA-RESET added an audit row to this endpoint but deliberately did NOT close the self-reset path (out of scope — filed here).
 - **Acceptance**: pick one — (a) for the self path (`caller === target`) require a valid CURRENT TOTP code (or password step-up) in the body, verified server-side before deletion; OR (b) drop the self-reset branch entirely and route all resets through the SYS-only endpoint + `recover-sys-user.js`. Admin+ reset of OTHER users may stay as-is or also require step-up for symmetry with the new route. Keep the `TOTP_RESET*` audit. Tests: self-reset without code → 401/403; with valid code → ok; admin-resets-other → unchanged.
 - **Effort**: S (~30 LOC + tests). **Priority**: P2 — genuine privilege-preservation gap on an auto-login box, but no UI invokes the legacy endpoint (curl-only), so not go-live-blocking. Close before broad multi-operator rollout. Cross-link Sprint S-2FA-RESET; use the new `reset-2fa` route (isSys + `checkPassword` step-up) as the reference pattern.
+
+#### MES-3-FIX-62 — Reduce client bundle back under the pre-v1.6 perf budgets (shell code-split)
+
+- **Source**: Sprint CI-TRUST (2026-07-21, P1-3). Making the chronic-red Lint job green unblocked the `build` job (it `needs: [lint, …]`, so it had been SKIPPED for a long stretch), which surfaced a hidden `perf-budget` overage: `index` (app shell) 458.8 kB / 320 kB v1.3 budget (146%), `HelpTab` 305 kB / 260 kB (120%), `StandardCalc` 196 kB / 200 kB (marginal). Root cause is legitimate multi-version growth (v1.3 → v1.6: alt-materials, snapshot, design tools, RFQ tracking, multi-drawing, lead-time) PLUS `App.jsx` eagerly importing BOTH `CostModule` and `PlanningModule` into the shell. Budgets were **re-baselined** to the honest v1.6 size + ~15% (`scripts/check-perf-budget.js`, gate stays ENFORCED) so CI is trustworthy now; this ticket is the real reduction.
+- **Acceptance**: (1) Lazy-load `PlanningModule` (and any other rarely-first-paint surface) via `React.lazy` + `Suspense` so it leaves the `index` shell — operators land on Cost by default; Planning is a separate route. (2) Consider splitting the help `content.js` (6.8k LOC) so `HelpTab` loads its bilingual content on demand. (3) After each split, LOWER the corresponding budget in `check-perf-budget.js` back toward the v1.3 targets + comment the new honest number. (4) Verify `npm run build && npm run perf-budget` green at the tighter budgets; DMG smoke that Planning + Help still open. (5) No functional change — pure code-split.
+- **Effort**: M (lazy-load wiring + re-measure + budget tightening + DMG smoke). **Priority**: P2 — post-go-live; the re-baseline already restored a trustworthy `build` gate, this reclaims first-paint. Cross-link Sprint CI-TRUST + the CI signal doc (required-vs-advisory).
 
 #### MES-3-FIX-57 — `scripts/seed-admin.js` writes users.json to wrong path in dev workspace (missing `authService.init(DATA_DIR)`)
 

@@ -7,12 +7,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import {
-  validateRows,
-  rateRowSchema,
-  machineProfileSchema,
-  safeParseJson,
-} from './librarySchema.js';
+import { validateRows, rateRowSchema } from './librarySchema.js';
 
 const __filename_ds = fileURLToPath(import.meta.url);
 const __dirname_ds = path.dirname(__filename_ds);

@@ -210,7 +210,7 @@ export function buildLeadTimeMaterialsTable(materials, lib, st, moq, opts = {}) 
     const ifsMatch = ifsRes.ambiguous ? null : ifsRes.row;
     const ambiguous = npiRes.ambiguous || ifsRes.ambiguous;
     const fuzzy = (!!npiMatch && npiRes.fuzzy) || (!!ifsMatch && ifsRes.fuzzy);
-    let qpa_m2 = 0;
+    let qpa_m2;
     try {
       qpa_m2 = Number(calcMat(mat, st, moq, null, null).qpa_m2) || 0;
     } catch {
