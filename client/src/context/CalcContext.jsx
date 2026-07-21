@@ -66,6 +66,17 @@ export function CalcProvider({ children }) {
     (field, value) => dispatch({ type: A.SET_CPLX_FIELD, payload: { field, value } }),
     []
   );
+  // Multi-drawing dispatchers — atomic list + active + singular mirror.
+  const setStdDrawings = useCallback(
+    (kind, files, active) =>
+      dispatch({ type: A.SET_STD_DRAWINGS, payload: { kind, files, active } }),
+    []
+  );
+  const setSpDrawings = useCallback(
+    (spIdx, kind, files, active) =>
+      dispatch({ type: A.SET_SP_DRAWINGS, payload: { spIdx, kind, files, active } }),
+    []
+  );
 
   // Sprint 11 P0-2: `version` is the server's `_version` for this quote.
   // Tracked here (not inside qState) so subsequent PATCH calls include
@@ -148,6 +159,8 @@ export function CalcProvider({ children }) {
       setInkField,
       setProcessField,
       setCplxField,
+      setStdDrawings,
+      setSpDrawings,
       loadQuote,
       resetStd,
       resetCplx,
@@ -169,6 +182,8 @@ export function CalcProvider({ children }) {
       setInkField,
       setProcessField,
       setCplxField,
+      setStdDrawings,
+      setSpDrawings,
       loadQuote,
       resetStd,
       resetCplx,

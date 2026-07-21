@@ -22,6 +22,8 @@
  */
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { costApi } from '../../services/api';
+import { useI18n } from '../../utils/useI18n';
+import { removeDrawingAt, targetFileAt, resolveOpenAction } from '../../services/drawingFiles';
 import Modal from './Modal';
 import './FileUploadZone.css';
 
@@ -169,10 +171,25 @@ export default function FileUploadZone({
   collapsible = false,
   defaultCollapsed = true,
   storageKey,
+  // ── Multi-file mode (opt-in). Single-file callers omit these and are
+  //    byte-identical. In multiple mode the component renders a thumbnail
+  //    gallery; the ACTIVE file (files[activeIndex]) fills the frame and
+  //    drives every existing preview / fullscreen / open path.
+  multiple = false,
+  files: filesProp,
+  activeIndex = 0,
+  onFilesChange,
+  onActiveChange,
 }) {
+  const { t } = useI18n();
   const inputRef = useRef(null);
   const viewportRef = useRef(null);
-  const file = normalizeFile(rawFile);
+  // Multi-file: derive the active file; single-file: use rawFile untouched.
+  const multiFiles = multiple && Array.isArray(filesProp) ? filesProp : null;
+  const activeIdx =
+    multiFiles && multiFiles.length ? Math.min(activeIndex, multiFiles.length - 1) : 0;
+  const activeRaw = multiFiles ? (multiFiles[activeIdx] ?? null) : rawFile;
+  const file = normalizeFile(activeRaw);
 
   // Collapse state. Persisted per-storageKey so reopening the tab returns
   // the operator to their last choice. Default collapsed when the prop is
@@ -255,6 +272,78 @@ export default function FileUploadZone({
     };
   }, [blobUrl]);
 
+  // ── Mode-aware writers ──
+  // Update the ACTIVE file object (used by the server auto-fetch rehydrate).
+  const commitActiveFile = useCallback(
+    (obj) => {
+      if (multiFiles) onFilesChange?.(multiFiles.map((f, i) => (i === activeIdx ? obj : f)));
+      else onFileChange?.(obj);
+    },
+    [multiFiles, activeIdx, onFilesChange, onFileChange]
+  );
+  // Upload APPENDS in multi-mode (new file becomes active); replaces in single.
+  const appendFile = useCallback(
+    (obj) => {
+      if (multiFiles) {
+        onFilesChange?.([...multiFiles, obj]);
+        onActiveChange?.(multiFiles.length);
+      } else {
+        onFileChange?.(obj);
+      }
+    },
+    [multiFiles, onFilesChange, onActiveChange, onFileChange]
+  );
+  // Clear the active file: remove-and-re-point in multi; onClear in single.
+  const clearActive = useCallback(() => {
+    if (multiFiles) {
+      const { files: nf, active: na } = removeDrawingAt(multiFiles, activeIdx, activeIdx);
+      onFilesChange?.(nf);
+      onActiveChange?.(na);
+    } else {
+      onClear?.();
+    }
+  }, [multiFiles, activeIdx, onFilesChange, onActiveChange, onClear]);
+
+  // Open ANY file (a thumbnail's own file, not the active one) in a new
+  // window — desktop bridge when present, else a fresh blob URL. Pure
+  // decision via resolveOpenAction; execution here.
+  const openFileInNewWindow = useCallback(async (f) => {
+    if (!f?.dataUrl) return;
+    const bridge = window.ops?.shell?.openExternalFile;
+    const action = resolveOpenAction(f, !!bridge);
+    if (action.mode === 'none') return;
+    if (action.mode === 'bridge') {
+      try {
+        await bridge(action.b64, action.ext);
+        return;
+      } catch (err) {
+        console.warn('[FileUploadZone] openExternalFile failed, falling back:', err);
+      }
+    }
+    const m = /^data:([^;]+);base64,(.+)$/.exec(f.dataUrl);
+    if (!m) return;
+    const bin = atob(m[2]);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([arr], { type: m[1] }));
+    window.open(url, '_blank', 'noopener,noreferrer');
+    // Revoke after the new window has had time to load the resource.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }, []);
+
+  // Remove a specific thumbnail (with confirm), re-pointing active.
+  const removeThumb = useCallback(
+    (i) => {
+      if (!multiFiles) return;
+      const f = normalizeFile(multiFiles[i]);
+      if (f?.name && !window.confirm(t('fuz.remove_confirm', { name: f.name }))) return;
+      const { files: nf, active: na } = removeDrawingAt(multiFiles, activeIdx, i);
+      onFilesChange?.(nf);
+      onActiveChange?.(na);
+    },
+    [multiFiles, activeIdx, onFilesChange, onActiveChange, t]
+  );
+
   // ── Zoom & Pan (image only) ──
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -303,7 +392,11 @@ export default function FileUploadZone({
           return;
         }
         const mime = json.mime || file.type || 'application/octet-stream';
-        onFileChange({ name: file.name, type: mime, dataUrl: `data:${mime};base64,${json.data}` });
+        commitActiveFile({
+          name: file.name,
+          type: mime,
+          dataUrl: `data:${mime};base64,${json.data}`,
+        });
       } catch (err) {
         if (cancelled) return;
         const msg =
@@ -317,7 +410,7 @@ export default function FileUploadZone({
     return () => {
       cancelled = true;
     };
-  }, [file, onFileChange]);
+  }, [file, commitActiveFile]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // ── File reading ──
@@ -327,9 +420,16 @@ export default function FileUploadZone({
       reader.onload = async () => {
         const dataUrl = reader.result;
         // Auto-name per customer spec: {Customer}_{EndCuPN}_{Date_Time}.
-        // Uses new naming context when available, falls back to legacy
-        // cclPn so loading old quotes still works.
-        const basename = buildServerBasename({ endCu, directCu, endCuPn, cclPn, nameSuffix });
+        // In multi-file mode append a per-file index so several drawings
+        // in the same minute don't collide (server stores by this name).
+        const idxSuffix = multiFiles ? `_${multiFiles.length + 1}` : '';
+        const basename = buildServerBasename({
+          endCu,
+          directCu,
+          endCuPn,
+          cclPn,
+          nameSuffix: `${nameSuffix || ''}${idxSuffix}`,
+        });
         const ext =
           extOf(f.name) ||
           (f.type === 'application/pdf'
@@ -339,7 +439,7 @@ export default function FileUploadZone({
               : '.bin');
         const generatedName = basename + ext;
         const obj = { name: generatedName, type: f.type, dataUrl };
-        onFileChange(obj);
+        appendFile(obj);
         try {
           await costApi.saveLayout({
             ccl_pn: basename,
@@ -352,7 +452,7 @@ export default function FileUploadZone({
       };
       reader.readAsDataURL(f);
     },
-    [onFileChange, endCu, directCu, endCuPn, cclPn, nameSuffix]
+    [appendFile, multiFiles, endCu, directCu, endCuPn, cclPn, nameSuffix]
   );
 
   const handleDrop = useCallback(
@@ -439,7 +539,7 @@ export default function FileUploadZone({
   };
   const ctxDelete = () => {
     setCtxMenu(null);
-    if (file && window.confirm(`Remove "${file.name || 'file'}"?`)) onClear();
+    if (file && window.confirm(`Remove "${file.name || 'file'}"?`)) clearActive();
   };
   const ctxUpload = () => {
     setCtxMenu(null);
@@ -709,6 +809,101 @@ export default function FileUploadZone({
           </button>
         </div>
       </div>
+
+      {/* Thumbnail gallery (multi-file only). Each drawing is a small tile;
+          the active one is highlighted and fills the frame below. Images
+          decode lazily via native loading="lazy" (no per-tile object URL to
+          manage); PDFs/other show a badge. */}
+      {!collapsed && multiFiles && multiFiles.length > 0 && (
+        <div className="fuz-thumbs" role="listbox" aria-label={label}>
+          <span className="fuz-thumbs-count">{t('fuz.count', { n: multiFiles.length })}</span>
+          {multiFiles.map((raw, i) => {
+            const nf = normalizeFile(raw);
+            const thumbImg = !!(
+              nf &&
+              (nf.type?.startsWith('image/') ||
+                /\.(png|jpe?g|gif|webp|svg|bmp|tiff?|heic|heif)$/i.test(nf.name || ''))
+            );
+            const thumbPdf = nf?.type === 'application/pdf' || /\.pdf$/i.test(nf?.name || '');
+            const isActive = i === activeIdx;
+            return (
+              <div
+                key={nf?.name ? `${nf.name}:${i}` : `thumb-${i}`}
+                className={`fuz-thumb${isActive ? ' fuz-thumb-active' : ''}`}
+                role="option"
+                aria-selected={isActive}
+                tabIndex={0}
+                title={nf?.name || ''}
+                onClick={() => onActiveChange?.(i)}
+                onDoubleClick={() => openFileInNewWindow(targetFileAt(multiFiles, i))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onActiveChange?.(i);
+                  }
+                }}
+              >
+                <div className="fuz-thumb-preview">
+                  {thumbImg && nf?.dataUrl ? (
+                    <img
+                      src={nf.dataUrl}
+                      alt={nf.name}
+                      className="fuz-thumb-img"
+                      loading="lazy"
+                      draggable={false}
+                    />
+                  ) : (
+                    <span className="fuz-thumb-badge">{thumbPdf ? 'PDF' : 'FILE'}</span>
+                  )}
+                </div>
+                <span className="fuz-thumb-name">{nf?.name || '—'}</span>
+                <div className="fuz-thumb-actions" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    className="fuz-thumb-btn fuz-thumb-open"
+                    title={t('fuz.open_new')}
+                    aria-label={t('fuz.open_new')}
+                    onClick={() => openFileInNewWindow(targetFileAt(multiFiles, i))}
+                  >
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                      <polyline points="15 3 21 3 21 9" />
+                      <line x1="10" y1="14" x2="21" y2="3" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="fuz-thumb-btn fuz-thumb-remove"
+                    title={t('fuz.remove')}
+                    aria-label={t('fuz.remove')}
+                    onClick={() => removeThumb(i)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          <button
+            type="button"
+            className="fuz-thumb-add"
+            title={t('fuz.add')}
+            aria-label={t('fuz.add')}
+            onClick={() => inputRef.current?.click()}
+          >
+            +
+          </button>
+        </div>
+      )}
 
       {/* Preview or Empty — body hidden when collapsible+collapsed. We
           conditionally render rather than CSS-hide so PdfCanvasPreview

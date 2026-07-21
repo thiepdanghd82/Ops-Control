@@ -21,6 +21,7 @@ import {
 import { upgradeCplxState } from '../services/cplxMigration.js';
 import { upgradeStdState } from '../services/stdMigration.js';
 import { applyPrintToCutSync } from '../services/layoutFieldSync.js';
+import { buildDrawingPatch, DRAWING_KINDS } from '../services/drawingFiles.js';
 
 // ── Action Types ──
 // Exported so tests + advanced callers can reference canonical strings
@@ -29,6 +30,9 @@ export const CALC_ACTIONS = {
   // Standard state
   SET_STD_FIELD: 'SET_STD_FIELD',
   SET_STD_STATE: 'SET_STD_STATE',
+  // Multi-drawing attachments (Sprint S-MULTI-DRAW). Atomically writes
+  // [kind]_files + [kind]_active + the singular [kind]_file mirror.
+  SET_STD_DRAWINGS: 'SET_STD_DRAWINGS',
   SET_MATERIAL_FIELD: 'SET_MATERIAL_FIELD',
   SET_INK_FIELD: 'SET_INK_FIELD',
   SET_PROCESS_FIELD: 'SET_PROCESS_FIELD',
@@ -63,6 +67,8 @@ export const CALC_ACTIONS = {
   ADD_SUBPRODUCT: 'ADD_SUBPRODUCT',
   REMOVE_SUBPRODUCT: 'REMOVE_SUBPRODUCT',
   SET_SP_FIELD: 'SET_SP_FIELD',
+  // Multi-drawing attachments per subproduct (Sprint S-MULTI-DRAW).
+  SET_SP_DRAWINGS: 'SET_SP_DRAWINGS',
   SET_SP_MATERIAL_FIELD: 'SET_SP_MATERIAL_FIELD',
   SET_SP_INK_FIELD: 'SET_SP_INK_FIELD',
   SET_SP_PROCESS_FIELD: 'SET_SP_PROCESS_FIELD',
@@ -292,6 +298,21 @@ export function calcReducer(state, action) {
 
     case A.SET_STD_STATE:
       return { ...state, isDirty: true, stdState: { ...state.stdState, ...payload } };
+
+    case A.SET_STD_DRAWINGS: {
+      // payload { kind, files?, active? } → atomic list + active + singular
+      // mirror so every legacy reader (exporter, QuoteHistory, preview)
+      // keeps seeing the active file. An OMITTED field falls back to the
+      // CURRENT state so append (files-only) then set-active (active-only)
+      // never round-trips a stale list. See services/drawingFiles.js.
+      const meta = DRAWING_KINDS[payload.kind];
+      if (!meta) return state;
+      const cur = state.stdState;
+      const files = payload.files !== undefined ? payload.files : cur[meta.list] || [];
+      const active = payload.active !== undefined ? payload.active : cur[meta.active] || 0;
+      const patch = buildDrawingPatch(payload.kind, files, active);
+      return { ...state, isDirty: true, stdState: { ...cur, ...patch } };
+    }
 
     case A.SET_MATERIAL_FIELD: {
       // Route to active set (main or alt) AND keep state.materials mirror
@@ -647,6 +668,26 @@ export function calcReducer(state, action) {
       // AdvancedLayoutBlock so the same trap surfaces per-SP).
       const sp = state.cplxState.subproducts[payload.spIdx];
       const patch = applyPrintToCutSync(sp, payload.field, payload.value);
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, patch),
+        },
+      };
+    }
+
+    case A.SET_SP_DRAWINGS: {
+      // Multi-drawing per subproduct — atomic list + active + singular
+      // mirror, scoped to subproducts[spIdx]. Omitted files/active fall
+      // back to the subproduct's CURRENT values (see SET_STD_DRAWINGS).
+      const meta = DRAWING_KINDS[payload.kind];
+      if (!meta) return state;
+      const sp = state.cplxState.subproducts[payload.spIdx] || {};
+      const files = payload.files !== undefined ? payload.files : sp[meta.list] || [];
+      const active = payload.active !== undefined ? payload.active : sp[meta.active] || 0;
+      const patch = buildDrawingPatch(payload.kind, files, active);
       return {
         ...state,
         isDirty: true,

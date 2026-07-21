@@ -15,6 +15,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { upgradeStdState, STD_SHAPE_VERSION } from './stdMigration.js';
 
+// A fully-healed drawing shape (Sprint S-MULTI-DRAW). Spread into
+// "already-current" fixtures so healDrawings short-circuits by reference
+// (empty lists + null singular are self-consistent → same-ref return).
+const DRAW_CURRENT = {
+  layout_files: [],
+  layout_active: 0,
+  layout_file: null,
+  customer_drw_files: [],
+  customer_drw_active: 0,
+  customer_drw_file: null,
+};
+
 test('upgradeStdState: null / non-object / array pass through unchanged', () => {
   assert.equal(upgradeStdState(null), null);
   assert.equal(upgradeStdState(undefined), undefined);
@@ -82,6 +94,7 @@ test('upgradeStdState: already-current state returned by reference (short-circui
     extra_moqs: [],
     materials: [{ code: 'M001', _mid: 'm_0_a' }],
     pricing_snapshot: {}, // present + object → healPricingSnapshot no-ops
+    ...DRAW_CURRENT, // drawings already-healed → healDrawings short-circuits
   };
   const next = upgradeStdState(current);
   assert.equal(next, current, 'no-op when fully upgraded (reference equality)');
@@ -224,6 +237,7 @@ test('upgradeStdState: already-upgraded quote → returns same ref', () => {
     part_width: 462,
     part_length_md: 135,
     pricing_snapshot: {}, // present + object → healPricingSnapshot no-ops
+    ...DRAW_CURRENT,
   };
   const next = upgradeStdState(quote);
   assert.equal(next, quote, 'short-circuit when nothing needs healing');
@@ -278,6 +292,7 @@ test('upgradeStdState: short-circuit when all _mid populated (no churn)', () => 
     part_width: 100,
     part_length_md: 50,
     pricing_snapshot: {}, // present + object → healPricingSnapshot no-ops
+    ...DRAW_CURRENT,
   };
   const next = upgradeStdState(quote);
   assert.equal(next, quote, 'no _mid gaps + no print-cut mismatch → same ref');
@@ -360,6 +375,7 @@ test('upgradeStdState: existing pricing_snapshot is NOT overwritten (idempotent)
       coverage: [],
       rates: {},
     },
+    ...DRAW_CURRENT,
   };
   const upgraded = upgradeStdState(withSnap);
   // Short-circuit path: same reference, snapshot untouched.
@@ -436,6 +452,7 @@ test('upgradeStdState: feature-aware quote (lt_material_ovr present) NOT re-seed
     // auto mode: overrides empty, lt_material holds the resolved auto value.
     // Fully feature-aware → all override keys present so heal is a no-op.
     lead_time: { lt_material: '37 days', lt_material_ovr: '', lt_po_ovr: '', lt_remark_ovr: '' },
+    ...DRAW_CURRENT,
   };
   const out = upgradeStdState(featureAware);
   assert.equal(out.lead_time.lt_material_ovr, '', 'stays empty — reset-safe, no re-seed');
