@@ -659,6 +659,11 @@ export function buildBackupSnapshot() {
     ddlSitesDB: path.join(LIB_DIR, 'DDL', 'ddl_sites.json'),
     rfqTracker: path.join(LIB_DIR, 'RFQTracker', 'rfq_tracker.json'),
     sampleTracker: path.join(LIB_DIR, 'SampleTracking', 'sample_tracking.json'),
+    // RFQ Tracking master-list (PR #232). Plain JSON file behind
+    // GET/POST /api/rfq-tracking — NOT SQLite-backed, so a raw writeJson
+    // restore (the else-branch below) is correct; keep it OUT of the
+    // quoteHistory dual-writer special-case.
+    rfqTrackingDB: path.join(LIB_DIR, 'RFQTracking', 'rfq_tracking.json'),
     financeWCDB: path.join(LIB_DIR, 'Finance', 'finance_wc.json'),
     financeSumDB: path.join(LIB_DIR, 'Finance', 'finance_sum.json'),
     inkCalcDB: path.join(LIB_DIR, 'InkCalc', 'ink_calc.json'),
@@ -685,6 +690,11 @@ export function restoreFromSnapshot(snap) {
     ddlSitesDB: path.join(LIB_DIR, 'DDL', 'ddl_sites.json'),
     rfqTracker: path.join(LIB_DIR, 'RFQTracker', 'rfq_tracker.json'),
     sampleTracker: path.join(LIB_DIR, 'SampleTracking', 'sample_tracking.json'),
+    // RFQ Tracking master-list (PR #232). Plain JSON file behind
+    // GET/POST /api/rfq-tracking — NOT SQLite-backed, so a raw writeJson
+    // restore (the else-branch below) is correct; keep it OUT of the
+    // quoteHistory dual-writer special-case.
+    rfqTrackingDB: path.join(LIB_DIR, 'RFQTracking', 'rfq_tracking.json'),
     financeWCDB: path.join(LIB_DIR, 'Finance', 'finance_wc.json'),
     financeSumDB: path.join(LIB_DIR, 'Finance', 'finance_sum.json'),
     inkCalcDB: path.join(LIB_DIR, 'InkCalc', 'ink_calc.json'),
