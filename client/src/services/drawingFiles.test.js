@@ -14,9 +14,15 @@ import {
   healDrawingKind,
   healDrawings,
   resolveOpenAction,
+  stripDataUrl,
+  lightenList,
+  stripDrawingBytesFromState,
+  stripDrawingBytesDeep,
 } from './drawingFiles.js';
 
 const F = (n) => ({ name: `${n}.png`, type: 'image/png', dataUrl: `data:image/png;base64,${n}` });
+const L = (n) => ({ name: `${n}.png`, type: 'image/png' }); // light (no dataUrl)
+const hasBytes = (o) => o && Object.prototype.hasOwnProperty.call(o, 'dataUrl');
 
 // ── clamp / mirror ────────────────────────────────────────────────
 test('clampActive keeps index in range; 0 for empty/invalid', () => {
@@ -87,12 +93,17 @@ test('targetFileAt returns THAT file, null out of range', () => {
 });
 
 // ── buildDrawingPatch (list + active + mirror) ────────────────────
-test('buildDrawingPatch sets list, active, and singular mirror', () => {
+test('buildDrawingPatch sets list, active, and singular mirror (and lightens)', () => {
   const list = [F('a'), F('b')];
   const patch = buildDrawingPatch('layout', list, 1);
-  assert.equal(patch.layout_files, list);
+  assert.equal(patch.layout_files.length, 2);
+  assert.equal(hasBytes(patch.layout_files[0]), false, 'dataUrl stripped from list');
+  assert.equal(hasBytes(patch.layout_file), false, 'dataUrl stripped from mirror');
   assert.equal(patch.layout_active, 1);
   assert.equal(patch.layout_file.name, 'b.png', 'singular mirrors active');
+  // already-light input keeps the same array ref (no needless clone)
+  const light = [L('a'), L('b')];
+  assert.equal(buildDrawingPatch('layout', light, 0).layout_files, light);
 
   const cust = buildDrawingPatch('customer_drw', [F('x')], 0);
   assert.equal(cust.customer_drw_files.length, 1);
@@ -158,6 +169,103 @@ test('healDrawings preserves unrelated fields', () => {
   const h = healDrawings(s);
   assert.equal(h.moq, 500);
   assert.equal(h.other.x, 1);
+});
+
+test('healDrawings strips inline base64 → {name,type} (legacy inline quote)', () => {
+  const legacy = { layout_files: [F('a'), F('b')], layout_active: 0, layout_file: F('a') };
+  const h = healDrawings(legacy);
+  assert.equal(hasBytes(h.layout_files[0]), false, 'list item lightened');
+  assert.equal(hasBytes(h.layout_files[1]), false);
+  assert.equal(hasBytes(h.layout_file), false, 'mirror lightened');
+  assert.equal(h.layout_files[0].name, 'a.png', 'name kept');
+  assert.equal(h.layout_files[0].type, 'image/png', 'type kept');
+});
+
+// ── stripDataUrl / lightenList / state strip ──────────────────────
+test('stripDataUrl drops dataUrl; ref-stable when already light', () => {
+  const stripped = stripDataUrl(F('a'));
+  assert.equal(hasBytes(stripped), false);
+  assert.equal(stripped.name, 'a.png');
+  const light = L('a');
+  assert.equal(stripDataUrl(light), light, 'already-light → same ref');
+});
+
+test('lightenList strips each; same ref when nothing to strip', () => {
+  const heavy = [F('a'), F('b')];
+  const out = lightenList(heavy);
+  assert.notEqual(out, heavy);
+  assert.ok(out.every((f) => !hasBytes(f)));
+  const light = [L('a')];
+  assert.equal(lightenList(light), light, 'already-light → same ref');
+});
+
+test('stripDrawingBytesFromState lightens both kinds; ref-stable when light', () => {
+  const state = {
+    moq: 500,
+    layout_files: [F('a'), F('b')],
+    layout_file: F('a'),
+    customer_drw_files: [F('c')],
+    customer_drw_file: F('c'),
+  };
+  const out = stripDrawingBytesFromState(state);
+  assert.ok(
+    out.layout_files.every((f) => !hasBytes(f)),
+    'layout lightened'
+  );
+  assert.ok(
+    out.customer_drw_files.every((f) => !hasBytes(f)),
+    'customer lightened'
+  );
+  assert.equal(hasBytes(out.layout_file), false);
+  assert.equal(hasBytes(out.customer_drw_file), false);
+  assert.equal(out.moq, 500, 'unrelated field preserved');
+  // Serialized state carries NO base64 at all.
+  assert.equal(/base64/.test(JSON.stringify(out)), false, 'no base64 in persisted JSON');
+  // Already-light state → same ref (no needless clone).
+  const light = stripDrawingBytesFromState(out);
+  assert.equal(light, out);
+});
+
+test('stripDrawingBytesDeep lightens per-subproduct (Cpx) + top-level', () => {
+  const cpx = {
+    layout_files: [F('cover')],
+    layout_file: F('cover'),
+    subproducts: [
+      { code: 'A', layout_files: [F('a1'), F('a2')], layout_file: F('a1') },
+      { code: 'B', customer_drw_files: [F('b1')], customer_drw_file: F('b1') },
+    ],
+  };
+  const out = stripDrawingBytesDeep(cpx);
+  assert.equal(/base64/.test(JSON.stringify(out)), false, 'no base64 anywhere in Cpx state');
+  assert.equal(out.subproducts[0].layout_files[0].name, 'a1.png', 'names preserved');
+  assert.equal(out.subproducts[1].customer_drw_files[0].name, 'b1.png');
+  // Std-shaped state (no subproducts) still lightens top-level.
+  const std = stripDrawingBytesDeep({ layout_files: [F('x')], layout_file: F('x') });
+  assert.equal(/base64/.test(JSON.stringify(std)), false);
+});
+
+test('5 attachments serialize well under 2 MB with names only', () => {
+  // Simulate 5 large drawings (~600 KB base64 each) attached to a quote.
+  const big = (n) => ({
+    name: `drw_${n}.png`,
+    type: 'image/png',
+    dataUrl: 'data:image/png;base64,' + 'A'.repeat(600 * 1024),
+  });
+  const state = {
+    layout_files: [big(1), big(2), big(3)],
+    layout_file: big(1),
+    customer_drw_files: [big(4), big(5)],
+    customer_drw_file: big(4),
+  };
+  const heavyBytes = JSON.stringify(state).length;
+  assert.ok(heavyBytes > 2 * 1024 * 1024, `precondition: heavy state is ${heavyBytes}B (> 2MB)`);
+  const light = stripDrawingBytesDeep(state);
+  const lightBytes = JSON.stringify(light).length;
+  assert.ok(lightBytes < 2 * 1024 * 1024, `persisted state ${lightBytes}B well under 2MB`);
+  assert.ok(lightBytes < 4096, 'light state is tiny (names only)');
+  // Names + active pointer survive for re-fetch by name.
+  assert.equal(light.layout_files.length, 3);
+  assert.equal(light.layout_files[0].name, 'drw_1.png');
 });
 
 // ── resolveOpenAction (both branches) ─────────────────────────────

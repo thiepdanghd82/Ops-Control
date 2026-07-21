@@ -191,6 +191,24 @@ export default function FileUploadZone({
   const activeRaw = multiFiles ? (multiFiles[activeIdx] ?? null) : rawFile;
   const file = normalizeFile(activeRaw);
 
+  // ── Transient byte cache (name → dataUrl) ──
+  // Persisted state carries only {name, type} (no base64). Bytes live ONLY
+  // here — populated on upload and lazily fetched from /api/layout/{name} for
+  // previews/thumbnails. Never written back to app state, so a quote's JSON
+  // stays far under the 2 MB /save-all cap no matter how many drawings.
+  const [byteCache, setByteCache] = useState({});
+  const cacheBytes = useCallback((name, dataUrl) => {
+    if (!name || !dataUrl) return;
+    setByteCache((c) => (c[name] === dataUrl ? c : { ...c, [name]: dataUrl }));
+  }, []);
+  // Resolve a file's bytes: an inline dataUrl (fresh upload / legacy) wins,
+  // else the by-name cache. Null when not yet hydrated.
+  const dataUrlFor = useCallback(
+    (f) => f?.dataUrl || (f?.name ? byteCache[f.name] : null) || null,
+    [byteCache]
+  );
+  const activeDataUrl = dataUrlFor(file);
+
   // Collapse state. Persisted per-storageKey so reopening the tab returns
   // the operator to their last choice. Default collapsed when the prop is
   // enabled — keeps the Layout tab's drawing zones folded out of the way
@@ -231,7 +249,7 @@ export default function FileUploadZone({
       /\.(png|jpe?g|gif|webp|svg|bmp|tiff?|heic|heif)$/i.test(file.name || ''))
   );
   const isPDF = file?.type === 'application/pdf' || /\.pdf$/i.test(file?.name || '');
-  const hasPreview = !!file?.dataUrl;
+  const hasPreview = !!activeDataUrl;
 
   // ── Context menu ──
   const [ctxMenu, setCtxMenu] = useState(null);
@@ -250,8 +268,8 @@ export default function FileUploadZone({
   // and PdfCanvasPreview (PDF.js needs raw bytes — fetch(blob:) is blocked
   // by Electron's CSP `connect-src`) read from this.
   const pdfBytes = useMemo(() => {
-    if (!file?.dataUrl || typeof file.dataUrl !== 'string') return null;
-    const m = /^data:([^;]+);base64,(.+)$/.exec(file.dataUrl);
+    if (!activeDataUrl || typeof activeDataUrl !== 'string') return null;
+    const m = /^data:([^;]+);base64,(.+)$/.exec(activeDataUrl);
     if (!m) return null;
     try {
       const bin = atob(m[2]);
@@ -261,7 +279,7 @@ export default function FileUploadZone({
     } catch {
       return null;
     }
-  }, [file?.dataUrl]);
+  }, [activeDataUrl]);
   const blobUrl = useMemo(() => {
     if (!pdfBytes) return '';
     return URL.createObjectURL(new Blob([pdfBytes.bytes], { type: pdfBytes.mime }));
@@ -273,15 +291,8 @@ export default function FileUploadZone({
   }, [blobUrl]);
 
   // ── Mode-aware writers ──
-  // Update the ACTIVE file object (used by the server auto-fetch rehydrate).
-  const commitActiveFile = useCallback(
-    (obj) => {
-      if (multiFiles) onFilesChange?.(multiFiles.map((f, i) => (i === activeIdx ? obj : f)));
-      else onFileChange?.(obj);
-    },
-    [multiFiles, activeIdx, onFilesChange, onFileChange]
-  );
   // Upload APPENDS in multi-mode (new file becomes active); replaces in single.
+  // The `obj` passed here is LIGHT ({name,type}); its bytes go to the cache.
   const appendFile = useCallback(
     (obj) => {
       if (multiFiles) {
@@ -305,31 +316,47 @@ export default function FileUploadZone({
   }, [multiFiles, activeIdx, onFilesChange, onActiveChange, onClear]);
 
   // Open ANY file (a thumbnail's own file, not the active one) in a new
-  // window — desktop bridge when present, else a fresh blob URL. Pure
-  // decision via resolveOpenAction; execution here.
-  const openFileInNewWindow = useCallback(async (f) => {
-    if (!f?.dataUrl) return;
-    const bridge = window.ops?.shell?.openExternalFile;
-    const action = resolveOpenAction(f, !!bridge);
-    if (action.mode === 'none') return;
-    if (action.mode === 'bridge') {
-      try {
-        await bridge(action.b64, action.ext);
-        return;
-      } catch (err) {
-        console.warn('[FileUploadZone] openExternalFile failed, falling back:', err);
+  // window — desktop bridge when present, else a fresh blob URL. Resolves
+  // bytes from the cache, fetching by name on demand (state is light).
+  const openFileInNewWindow = useCallback(
+    async (f) => {
+      if (!f?.name && !f?.dataUrl) return;
+      let durl = f?.dataUrl || (f?.name ? byteCache[f.name] : null);
+      if (!durl && f?.name) {
+        try {
+          const json = await costApi.getLayout(f.name);
+          if (json?.data) {
+            durl = `data:${json.mime || f.type || 'application/octet-stream'};base64,${json.data}`;
+            cacheBytes(f.name, durl);
+          }
+        } catch {
+          /* 404 etc — nothing to open */
+        }
       }
-    }
-    const m = /^data:([^;]+);base64,(.+)$/.exec(f.dataUrl);
-    if (!m) return;
-    const bin = atob(m[2]);
-    const arr = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-    const url = URL.createObjectURL(new Blob([arr], { type: m[1] }));
-    window.open(url, '_blank', 'noopener,noreferrer');
-    // Revoke after the new window has had time to load the resource.
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  }, []);
+      if (!durl) return;
+      const bridge = window.ops?.shell?.openExternalFile;
+      const action = resolveOpenAction({ dataUrl: durl, type: f?.type }, !!bridge);
+      if (action.mode === 'none') return;
+      if (action.mode === 'bridge') {
+        try {
+          await bridge(action.b64, action.ext);
+          return;
+        } catch (err) {
+          console.warn('[FileUploadZone] openExternalFile failed, falling back:', err);
+        }
+      }
+      const m = /^data:([^;]+);base64,(.+)$/.exec(durl);
+      if (!m) return;
+      const bin = atob(m[2]);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([arr], { type: m[1] }));
+      window.open(url, '_blank', 'noopener,noreferrer');
+      // Revoke after the new window has had time to load the resource.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    },
+    [byteCache, cacheBytes]
+  );
 
   // Remove a specific thumbnail (with confirm), re-pointing active.
   const removeThumb = useCallback(
@@ -357,7 +384,6 @@ export default function FileUploadZone({
   // behavior change. Consistent with AuthContext / useMyApprovalCount
   // pattern elsewhere in the codebase.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional viewport reset on file change
     setZoom(1);
     setPan({ x: 0, y: 0 });
     setRotation(0);
@@ -372,12 +398,8 @@ export default function FileUploadZone({
   // when the lookup 404s, AND log other failures to the console so they
   // show up in client-error telemetry.
   const [fetchError, setFetchError] = useState(null);
-  // Same "intentional sync setState in effect" pattern as the zoom/pan
-  // reset above — the whole point of the effect is to wipe stale error
-  // state when the file changes, so React 19's strict rule trips us.
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (!file || file.dataUrl || !file.name) {
+    if (!file || activeDataUrl || !file.name) {
       setFetchError(null);
       return;
     }
@@ -392,11 +414,8 @@ export default function FileUploadZone({
           return;
         }
         const mime = json.mime || file.type || 'application/octet-stream';
-        commitActiveFile({
-          name: file.name,
-          type: mime,
-          dataUrl: `data:${mime};base64,${json.data}`,
-        });
+        // Cache the bytes for preview — NEVER write them back into app state.
+        cacheBytes(file.name, `data:${mime};base64,${json.data}`);
       } catch (err) {
         if (cancelled) return;
         const msg =
@@ -410,8 +429,47 @@ export default function FileUploadZone({
     return () => {
       cancelled = true;
     };
-  }, [file, commitActiveFile]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  }, [file, activeDataUrl, cacheBytes]);
+
+  // Hydrate IMAGE thumbnail bytes by name into the transient cache so the
+  // gallery shows real thumbnails after reload (state is light). PDFs/other
+  // show a badge → no fetch. An in-flight guard prevents duplicate requests;
+  // the cache guard makes re-runs converge.
+  const thumbFetching = useRef(new Set());
+  useEffect(() => {
+    if (!multiFiles) return undefined;
+    let cancelled = false;
+    const targets = [];
+    multiFiles.forEach((raw) => {
+      const nf = normalizeFile(raw);
+      if (!nf?.name || nf.dataUrl || byteCache[nf.name] || thumbFetching.current.has(nf.name))
+        return;
+      const isImg =
+        nf.type?.startsWith('image/') ||
+        /\.(png|jpe?g|gif|webp|svg|bmp|tiff?|heic|heif)$/i.test(nf.name);
+      if (isImg) targets.push({ name: nf.name, type: nf.type });
+    });
+    if (targets.length === 0) return undefined;
+    targets.forEach((tgt) => thumbFetching.current.add(tgt.name));
+    (async () => {
+      for (const tgt of targets) {
+        try {
+          const json = await costApi.getLayout(tgt.name);
+          if (!cancelled && json?.data) {
+            const mime = json.mime || tgt.type || 'application/octet-stream';
+            cacheBytes(tgt.name, `data:${mime};base64,${json.data}`);
+          }
+        } catch {
+          /* 404 etc — tile stays a badge */
+        } finally {
+          thumbFetching.current.delete(tgt.name);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [multiFiles, byteCache, cacheBytes]);
 
   // ── File reading ──
   const readFile = useCallback(
@@ -438,8 +496,10 @@ export default function FileUploadZone({
               ? '.' + f.type.slice(6)
               : '.bin');
         const generatedName = basename + ext;
-        const obj = { name: generatedName, type: f.type, dataUrl };
-        appendFile(obj);
+        // Persist ONLY {name,type} to state; the bytes go to the transient
+        // cache (instant preview) and to the server by name (durable copy).
+        appendFile({ name: generatedName, type: f.type });
+        cacheBytes(generatedName, dataUrl);
         try {
           await costApi.saveLayout({
             ccl_pn: basename,
@@ -452,7 +512,7 @@ export default function FileUploadZone({
       };
       reader.readAsDataURL(f);
     },
-    [appendFile, multiFiles, endCu, directCu, endCuPn, cclPn, nameSuffix]
+    [appendFile, cacheBytes, multiFiles, endCu, directCu, endCuPn, cclPn, nameSuffix]
   );
 
   const handleDrop = useCallback(
@@ -510,32 +570,12 @@ export default function FileUploadZone({
     };
   }, [ctxMenu]);
 
+  // Open the ACTIVE file in a new window. Delegates to the shared resolver so
+  // it works whether bytes are inline, cached, or must be fetched by name —
+  // desktop bridge (OS default app: print/annotate) with a window.open fallback.
   const ctxOpen = async () => {
     setCtxMenu(null);
-    // Desktop (Electron): hand off to the OS default handler so PDFs open
-    // in Adobe Acrobat / Preview / system browser — operators get print
-    // dialog, annotations, etc. that the embedded Chromium PDF viewer
-    // doesn't expose. Falls back to web-style window.open() when the
-    // bridge isn't available (regular browser).
-    const bridge = window.ops?.shell?.openExternalFile;
-    if (bridge && file?.dataUrl) {
-      const m = /^data:([^;]+);base64,(.+)$/.exec(file.dataUrl);
-      if (m) {
-        const ext =
-          m[1] === 'application/pdf'
-            ? '.pdf'
-            : m[1].startsWith('image/')
-              ? '.' + m[1].slice(6).split('+')[0]
-              : '.bin';
-        try {
-          await bridge(m[2], ext);
-          return;
-        } catch (err) {
-          console.warn('[FileUploadZone] openExternalFile failed, falling back:', err);
-        }
-      }
-    }
-    if (blobUrl) window.open(blobUrl, '_blank', 'noopener,noreferrer');
+    await openFileInNewWindow(file);
   };
   const ctxDelete = () => {
     setCtxMenu(null);
@@ -559,8 +599,8 @@ export default function FileUploadZone({
   // browsers, (b) loses the in-app context. Now opens an in-app modal at
   // xl size — operators can still hit the Open button for a real new tab.
   const handleDoubleClick = useCallback(() => {
-    if (file?.dataUrl) setFullscreenOpen(true);
-  }, [file]);
+    if (activeDataUrl) setFullscreenOpen(true);
+  }, [activeDataUrl]);
 
   // ── Zoom (wheel) ──
   const handleWheel = useCallback(
@@ -675,7 +715,7 @@ export default function FileUploadZone({
             className="fuz-act-btn fuz-act-fullscreen"
             onClick={(e) => {
               e.stopPropagation();
-              if (file?.dataUrl) setFullscreenOpen(true);
+              if (activeDataUrl) setFullscreenOpen(true);
             }}
             disabled={!file}
             title="Fullscreen (double-click)"
@@ -825,6 +865,7 @@ export default function FileUploadZone({
                 /\.(png|jpe?g|gif|webp|svg|bmp|tiff?|heic|heif)$/i.test(nf.name || ''))
             );
             const thumbPdf = nf?.type === 'application/pdf' || /\.pdf$/i.test(nf?.name || '');
+            const thumbUrl = dataUrlFor(nf); // inline / cached / null (badge)
             const isActive = i === activeIdx;
             return (
               <div
@@ -844,9 +885,9 @@ export default function FileUploadZone({
                 }}
               >
                 <div className="fuz-thumb-preview">
-                  {thumbImg && nf?.dataUrl ? (
+                  {thumbImg && thumbUrl ? (
                     <img
-                      src={nf.dataUrl}
+                      src={thumbUrl}
                       alt={nf.name}
                       className="fuz-thumb-img"
                       loading="lazy"
@@ -919,7 +960,7 @@ export default function FileUploadZone({
           >
             {hasPreview && isImage && (
               <img
-                src={file.dataUrl}
+                src={activeDataUrl}
                 alt={file.name}
                 className="fuz-img"
                 style={{
@@ -1036,7 +1077,7 @@ export default function FileUploadZone({
         <Modal.Body>
           {file && hasPreview && isImage && (
             <img
-              src={blobUrl || file.dataUrl}
+              src={blobUrl || activeDataUrl}
               alt={file.name}
               className="fuz-fs-img"
               style={{ transform: `rotate(${rotation}deg)` }}
