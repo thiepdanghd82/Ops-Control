@@ -14,6 +14,7 @@ import {
   getActiveMaterials,
 } from '../../../../services/calcEngine';
 import { freezeLib } from '../../../../services/pricingSnapshot';
+import { stripDrawingBytesDeep } from '../../../../services/drawingFiles';
 import { isCopyMode } from '../../components/SnapshotPanel.helpers';
 import '../../components/SnapshotPanel.css';
 import { costApi, sharedApi } from '../../../../services/api';
@@ -269,7 +270,12 @@ export default function StandardCalc() {
       lt_remark: resolvedRemark,
     };
     const baseState = { ...stdState, lead_time: leadTimePatched };
-    const stateWithSnapshot = snapshot ? { ...baseState, pricing_snapshot: snapshot } : baseState;
+    // Strip drawing base64 bytes before persist — attachments are stored on
+    // the server by name; state carries only {name,type}. Keeps quote JSON far
+    // under the 2 MB /save-all cap regardless of how many drawings are attached.
+    const stateWithSnapshot = stripDrawingBytesDeep(
+      snapshot ? { ...baseState, pricing_snapshot: snapshot } : baseState
+    );
     const calcOptions = snapshot ? { snapshot } : {};
     const result = lib ? calcAll(tierSt, null, lib, null, calcOptions) : null;
     // MES-3-FIX-41: bundle per-row Setup/Run/Total for active tier +

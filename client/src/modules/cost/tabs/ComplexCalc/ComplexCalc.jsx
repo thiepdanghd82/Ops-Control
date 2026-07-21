@@ -16,6 +16,7 @@ import {
   getActiveSPMaterials,
 } from '../../../../services/calcEngine';
 import { freezeLib, snapshotPricingParams } from '../../../../services/pricingSnapshot';
+import { stripDrawingBytesDeep } from '../../../../services/drawingFiles';
 import { resolveTierField } from '../../../../services/packingTierField';
 import { isCopyMode } from '../../components/SnapshotPanel.helpers';
 import '../../components/SnapshotPanel.css';
@@ -326,7 +327,12 @@ export default function ComplexCalc() {
       lt_remark: resolvedRemark,
     };
     const csPatched = { ...cs, lead_time: leadTimePatched };
-    const stateWithSnapshot = snapshot ? { ...csPatched, pricing_snapshot: snapshot } : csPatched;
+    // Strip per-SP drawing base64 before persist — attachments live on the
+    // server by name; state carries only {name,type} so the quote JSON stays
+    // far under the 2 MB /save-all cap no matter how many drawings/SPs.
+    const stateWithSnapshot = stripDrawingBytesDeep(
+      snapshot ? { ...csPatched, pricing_snapshot: snapshot } : csPatched
+    );
     const calcOptions = snapshot ? { snapshot } : {};
     // Re-aggregate with the freshly-frozen snapshot so the persisted
     // result KPIs (gm/va/contribution/s_ttl/etc.) reflect the values

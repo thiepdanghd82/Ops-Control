@@ -30,6 +30,27 @@ test('Std heal: legacy single layout_file → [file] active 0, singular kept', (
   assert.equal(up.layout_file.name, 'old.png', 'singular mirror preserved');
   assert.equal(up.customer_drw_files[0].name, 'cust.png');
   assert.equal(up.customer_drw_file.name, 'cust.png');
+  // Heal-on-read ALSO strips inline base64 → {name,type}: bytes re-fetched
+  // by name thereafter, so a legacy inline-dataUrl quote can't bloat state.
+  assert.equal(/base64/.test(JSON.stringify(up)), false, 'no base64 after heal');
+});
+
+test('Std heal strips inline dataUrl already present in the list', () => {
+  const legacy = {
+    _schema_version: 3,
+    materials_main: [],
+    materials_alt: [],
+    materials_active: 'main',
+    layout_files: [
+      { name: 'a.png', type: 'image/png', dataUrl: 'data:image/png;base64,AAAA' },
+      { name: 'b.png', type: 'image/png', dataUrl: 'data:image/png;base64,BBBB' },
+    ],
+    layout_active: 1,
+  };
+  const up = upgradeStdState(legacy);
+  assert.equal(/base64/.test(JSON.stringify(up)), false, 'inline list bytes stripped on read');
+  assert.equal(up.layout_files[1].name, 'b.png', 'names + order preserved');
+  assert.equal(up.layout_file.name, 'b.png', 'mirror follows active, lightened');
 });
 
 test('Std heal: no drawings → empty lists, null singular', () => {
