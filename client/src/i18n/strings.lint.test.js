@@ -34,7 +34,6 @@ import { STRINGS } from './strings.js';
 import './domains/basis.js';
 import './domains/costing.js';
 import './domains/mes.js';
-import './domains/planning.js';
 import './domains/sales.js';
 import './domains/security.js';
 

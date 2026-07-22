@@ -178,11 +178,6 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '22', cache: 'npm' }
       - run: npm ci
-      # Root `npm test` shells out to `cd apps/kiosk && npm run test`
-      # before running node --test on the server. Kiosk has its own
-      # package.json with vitest in devDependencies; without an explicit
-      # install step CI fails with "command not found: vitest".
-      - run: cd apps/kiosk && npm ci
       - run: npm test
       # `--ignore-scripts` skips desktop postinstall (electron-builder
       # install-app-deps → node-gyp rebuild of node-hid + libusb). Ubuntu

@@ -8,9 +8,8 @@
  * the browser's module system so "hover-preload then click" avoids
  * the Suspense fallback flash entirely.
  *
- * The imports here are the SAME specifiers used in CostModule /
- * PlanningModule, so Vite deduplicates the chunk — no duplicated code
- * in the bundle.
+ * The imports here are the SAME specifiers used in CostModule, so Vite
+ * deduplicates the chunk — no duplicated code in the bundle.
  */
 
 const COST_LOADERS = {
@@ -39,33 +38,12 @@ const COST_LOADERS = {
   help: () => import('../modules/help/HelpTab'),
 };
 
-const PLANNING_LOADERS = {
-  'order-entry': () => import('../modules/planning/tabs/OrderEntry'),
-  'bom-explosion': () => import('../modules/planning/tabs/BOMExplosion'),
-  'material-check': () => import('../modules/planning/tabs/MaterialCheck'),
-  capacity: () => import('../modules/planning/tabs/CapacityPlanning'),
-  'work-orders': () => import('../modules/planning/tabs/WorkOrders'),
-  'wip-tracker': () => import('../modules/planning/tabs/WIPTracker'),
-};
-
 /** Kick off the import for a cost tab's chunk. Cached after first call. */
 export function preloadCostTab(tabId) {
   const loader = COST_LOADERS[tabId];
   if (typeof loader === 'function') {
     // Swallow rejections — a failed preload should not poison the
     // event handler; the click-time load will show the real error.
-    try {
-      loader().catch(() => {});
-    } catch {
-      /* ignore */
-    }
-  }
-}
-
-/** Kick off the import for a planning tab's chunk. Cached after first call. */
-export function preloadPlanningTab(tabId) {
-  const loader = PLANNING_LOADERS[tabId];
-  if (typeof loader === 'function') {
     try {
       loader().catch(() => {});
     } catch {

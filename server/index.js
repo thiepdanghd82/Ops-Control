@@ -24,7 +24,6 @@ const TRACKED_ENV = [
   'DATA_DIR',
   'OPS_CORS_ORIGINS',
   'OPS_TOTP_KEY',
-  'OPS_KIOSK_KEY',
   'OPS_ALLOW_SAME_ORIGIN',
 ];
 if (process.env.NODE_ENV !== 'test') {
@@ -66,14 +65,10 @@ if (process.env.NODE_ENV === 'production') {
     missing.push('OPS_TOTP_KEY (64-char hex; generate with: ' + genHint);
   }
   // Parity with scripts/preflight-env.js (the deploy gate): boot also
-  // refuses to start without the kiosk JWT key + the export-HMAC key.
-  // Pre-fix, a `npm start` that skipped preflight would boot with these
-  // unset and only fail at runtime — kiosk pairing broke and quote xlsx
-  // export threw 500 on first use. Same 64-hex shape + preservation
-  // semantics; deploy.sh / deploy.ps1 carry all three across releases.
-  if (!process.env.OPS_KIOSK_KEY || process.env.OPS_KIOSK_KEY.length !== 64) {
-    missing.push('OPS_KIOSK_KEY (64-char hex; generate with: ' + genHint);
-  }
+  // refuses to start without the export-HMAC key. Pre-fix, a `npm start`
+  // that skipped preflight would boot with it unset and only fail at
+  // runtime — quote xlsx export threw 500 on first use. (OPS_KIOSK_KEY
+  // requirement removed 2026-07-22 with the Kiosk PWA.)
   if (!process.env.OPS_EXPORT_HMAC_KEY || !HEX64.test(process.env.OPS_EXPORT_HMAC_KEY)) {
     missing.push('OPS_EXPORT_HMAC_KEY (64-char hex; generate with: ' + genHint);
   }
@@ -412,14 +407,8 @@ app.get(['/health', '/api/health'], (req, res) => {
 // closed). Operator can still emergency-disable via OPS_FEATURE_ALT_MATERIALS=0
 // (or 'false'/'off'/'no'). Anything else, including absent env var, leaves
 // the feature enabled.
-// Feature flags — Kiosk + Planning ship HIDDEN by default (opt-in). They
-// gate at the composition root (here + the mount/serve sites below), NOT
-// inside mountPlanning, so the planning/kiosk test harnesses that call
-// mountPlanning directly keep exercising the real routes. Enable with
-// OPS_FEATURE_PLANNING / OPS_FEATURE_KIOSK = 1 | true | on | yes.
-const featureOn = (v) => v === '1' || v === 'true' || v === 'on' || v === 'yes';
-const FEATURE_PLANNING = featureOn(process.env.OPS_FEATURE_PLANNING);
-const FEATURE_KIOSK = featureOn(process.env.OPS_FEATURE_KIOSK);
+// Planning module + Kiosk PWA removed 2026-07-22 (code-only cleanup) — their
+// OPS_FEATURE_* flags + mounts are gone.
 
 app.get('/api/runtime-config', (req, res) => {
   const falsy = (v) => v === '0' || v === 'false' || v === 'off' || v === 'no';
@@ -429,8 +418,6 @@ app.get('/api/runtime-config', (req, res) => {
     version: PKG_VERSION,
     features: {
       alt_materials: !falsy(process.env.OPS_FEATURE_ALT_MATERIALS),
-      planning: FEATURE_PLANNING,
-      kiosk: FEATURE_KIOSK,
     },
     // Sprint S-SYSCTRL — global SYS-controlled sidebar show/hide. Read the
     // JSON file at request time (tolerant of a missing file → nothing hidden)
@@ -669,8 +656,6 @@ app.post('/api/telemetry/web-vitals', express.json({ limit: '2kb' }), (req, res)
 import costApiRouter from './routes/costApi.js';
 import { readSidebarVisibility } from './services/sidebarVisibility.js';
 // Legacy iframe route removed — all tabs now run natively in React
-import planningRouter from './routes/planning.js';
-import { mountPlanning } from '../domains/planning/server/index.js'; // v1.3 MES-1.4 — WO v2 routes
 import sharedRouter from './routes/shared.js';
 import importRouter from './routes/import.js';
 import importWizardRouter from './routes/importWizard.js';
@@ -1011,24 +996,8 @@ import { enforceSiteAccess } from './middleware/siteAccess.js';
 app.use('/api/shared', authMiddleware, enforceSiteAccess, sharedRouter);
 app.use('/api/v1/shared', authMiddleware, enforceSiteAccess, sharedRouter);
 
-// Planning v1.3 (MES-1.4): /api/planning/v2/work-orders/* — gated by
-// the mes.workOrder.enabled feature flag. Mount BEFORE the legacy
-// /api/planning router so v2 prefix matches win on registration order.
-// Planning is gated at the composition root by OPS_FEATURE_PLANNING
-// (default off). Flag off → neither the v2 nor the legacy router mounts
-// and /api/planning/* fails closed with 404. mountPlanning is untouched
-// internally so its own mes.workOrder.enabled gate + the planning test
-// harness (which calls mountPlanning directly) behave exactly as before.
-if (FEATURE_PLANNING) {
-  mountPlanning(app);
-  // Planning module: Node.js native endpoints
-  app.use('/api/planning', authMiddleware, enforceSiteAccess, planningRouter);
-  app.use('/api/v1/planning', authMiddleware, enforceSiteAccess, planningRouter);
-} else {
-  app.use(['/api/planning', '/api/v1/planning'], (_req, res) =>
-    res.status(404).json({ ok: false, error: 'feature_disabled', feature: 'planning' })
-  );
-}
+// Planning module removed 2026-07-22 (code-only). /api/planning/* stays
+// unmapped → Express returns a JSON 404 for any stale caller.
 
 // IFS Data import endpoints (admin+ only). Rate-limited to prevent
 // accidental or malicious disk-thrashing by repeated large imports.
@@ -1141,57 +1110,8 @@ app.use('/api/v1/events', eventsRouter);
 //       the browser won't even revalidate, saving network round-trips.
 //   (b) everything else (index.html, .ico, /help/*.docx) — no-cache so
 //       a new deploy is visible without a hard-refresh.
-// ─── Kiosk PWA (MES-2.6a) — mounted BEFORE the planner SPA ───
-//
-// Served from apps/kiosk/dist. Same two-tier caching policy as the
-// planner: hashed /kiosk/assets/* are immutable; everything else
-// (index.html, manifest, sw.js) revalidates on every request — sw.js
-// MUST always revalidate so a deploy isn't held up by an old SW.
-//
-// Mounted before the planner's express.static so /kiosk/* requests
-// don't fall through into clientDist (which would 404 instead of
-// serving the kiosk shell).
-const kioskDist = path.join(__dirname, '..', 'apps', 'kiosk', 'dist');
-// Kiosk PWA serving is gated by OPS_FEATURE_KIOSK (default off). Flag off
-// → the whole /kiosk/* subtree fails closed with a plain-text 404 instead
-// of serving the shell. (The kiosk API lives under planning's v2 router,
-// so it is governed by OPS_FEATURE_PLANNING above — gating it separately
-// would mean reaching inside mountPlanning, which we deliberately don't.)
-if (FEATURE_KIOSK) {
-  app.use(
-    '/kiosk',
-    express.static(kioskDist, {
-      setHeaders(res, filePath) {
-        if (filePath.includes(`${path.sep}assets${path.sep}`)) {
-          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-        } else {
-          // index.html, manifest.webmanifest, sw.js — always revalidate.
-          res.setHeader('Cache-Control', 'no-cache');
-        }
-      },
-    })
-  );
-  // Kiosk asset 404 guard — clones the planner pattern below for the
-  // /kiosk/ subtree. Without this, a stale kiosk client requesting a
-  // no-longer-extant chunk would fall through to the kiosk SPA catch-all
-  // and load index.html with `text/html`, crashing the browser with the
-  // MIME-type error documented in CLAUDE.md "Stale-chunk crash recovery".
-  app.get(['/kiosk/assets/*', '/kiosk/*.js', '/kiosk/*.css', '/kiosk/*.map'], (req, res) => {
-    res.status(404).type('text/plain').send('kiosk asset not found — stale chunk');
-  });
-  // Kiosk SPA catch-all — anything under /kiosk/ that wasn't matched by
-  // the static handler or the 404 guard above falls through to here and
-  // gets index.html (so client-side routes like /kiosk/pair work on hard
-  // reload).
-  app.get('/kiosk/*', (req, res) => {
-    res.setHeader('Cache-Control', 'no-cache');
-    res.sendFile(path.join(kioskDist, 'index.html'));
-  });
-} else {
-  app.get(['/kiosk', '/kiosk/*'], (_req, res) =>
-    res.status(404).type('text/plain').send('Kiosk is not enabled on this server.')
-  );
-}
+// Kiosk PWA removed 2026-07-22 (code-only) — /kiosk/* is no longer served;
+// stale callers fall through to the SPA catch-all's asset-404 guard below.
 
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
 app.use(

@@ -11,13 +11,8 @@
 import { createContext } from 'react';
 
 export const DEFAULT_FEATURES = Object.freeze({
+  // Planning module + Kiosk PWA removed 2026-07-22 (code-only cleanup).
   alt_materials: false,
-  // Planning + Kiosk ship hidden; the server opts them in via
-  // /api/runtime-config (OPS_FEATURE_PLANNING / OPS_FEATURE_KIOSK). Default
-  // false here means a failed/absent config fetch fails CLOSED — the
-  // Planning module switcher + kiosk-admin tab stay hidden.
-  planning: false,
-  kiosk: false,
 });
 
 // Sprint S-SYSCTRL — global SYS-controlled sidebar show/hide. Default = nothing

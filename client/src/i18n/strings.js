@@ -54,7 +54,6 @@ export const STRINGS = {
 
   // ─── Sidebar / Nav ───
   'nav.module_cost': { en: 'Ops Cost', vi: 'Ops Cost' },
-  'nav.module_planning': { en: 'Planning', vi: 'Kế hoạch' },
   'nav.section.calculators': { en: 'PRICING WORKSHEET', vi: 'BẢNG TÍNH GIÁ' },
   'nav.section.quoting': { en: 'QUOTING & PRICING', vi: 'BÁO GIÁ' },
   'nav.section.manufacturing': { en: 'MANUFACTURING', vi: 'SẢN XUẤT' },
@@ -89,21 +88,8 @@ export const STRINGS = {
   'nav.tab.settings': { en: 'Settings', vi: 'Cài đặt' },
   'nav.tab.metrics': { en: 'Admin Metrics', vi: 'Số liệu Quản trị' },
   'nav.tab.audit_log': { en: 'Audit Log', vi: 'Nhật ký Kiểm toán' },
-  'nav.tab.kiosk_admin': { en: 'Kiosk Admin', vi: 'Quản trị Kiosk' },
-  'nav.tab.reason_codes': { en: 'Reason Codes', vi: 'Mã lý do' },
   'nav.tab.help': { en: 'Help', vi: 'Hướng dẫn' },
   'nav.tab.home': { en: 'Home', vi: 'Trang chủ' },
-  // Planning section nav (Sprint S-I18N-COVER 2026-06-11) — retrofit
-  // PLANNING_SECTIONS that were previously hardcoded English labels.
-  'nav.section.production': { en: 'PRODUCTION', vi: 'SẢN XUẤT' },
-  'nav.section.scheduling': { en: 'SCHEDULING', vi: 'LỊCH SẢN XUẤT' },
-  'nav.section.planning_tracking': { en: 'TRACKING', vi: 'THEO DÕI' },
-  'nav.tab.order_entry': { en: 'Order Entry', vi: 'Nhập đơn hàng' },
-  'nav.tab.bom_explosion': { en: 'BOM Explosion', vi: 'Khai triển BOM' },
-  'nav.tab.material_check': { en: 'Material Check', vi: 'Kiểm tra Vật tư' },
-  'nav.tab.capacity_planning': { en: 'Capacity Planning', vi: 'Lập kế hoạch Công suất' },
-  'nav.tab.work_orders': { en: 'Work Orders', vi: 'Lệnh sản xuất' },
-  'nav.tab.wip_tracker': { en: 'WIP Tracker', vi: 'Theo dõi BTP' },
   'nav.team_online_title': { en: 'Team Online', vi: 'Đội ngũ đang online' },
   'nav.team_online_count': { en: '{n} online', vi: '{n} đang online' },
   'nav.badge_pending_tooltip': { en: '{n} awaiting your action', vi: '{n} đang chờ bạn xử lý' },

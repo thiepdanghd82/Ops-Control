@@ -11,7 +11,6 @@ import './i18n/domains/costing.js';
 import './i18n/domains/sales.js';
 import './i18n/domains/basis.js';
 import './i18n/domains/mes.js';
-import './i18n/domains/planning.js';
 import App from './App.jsx';
 import { startWebVitals } from './utils/webVitals.js';
 import { installDraggableCards } from './components/Shared/draggableCard.js';

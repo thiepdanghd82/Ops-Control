@@ -93,49 +93,14 @@ export const COST_SECTIONS = [
       // Sprint S-AUDIT (2026-04-29) — append-only event stream viewer
       // ported from v1.3 (apps/client/src/AuditLog.jsx). Sys-only.
       { id: 'audit-log', icon: 'audit', labelKey: 'nav.tab.audit_log', minRole: 'sys' },
-      // Sprint MES-2.7 — kiosk-admin (sys + admin via permission group). The
-      // tab-access middleware on /api/planning/v2/kiosks/pairings is the
-      // authoritative gate; this nav entry just shows the link.
-      {
-        id: 'kiosk-admin',
-        icon: 'settings',
-        labelKey: 'nav.tab.kiosk_admin',
-        minRole: 'admin',
-        featureFlag: 'kiosk',
-      },
       { id: 'help', icon: 'help', labelKey: 'nav.tab.help' },
     ],
   },
 ];
 
-export const PLANNING_SECTIONS = [
-  {
-    id: 'production',
-    labelKey: 'nav.section.production',
-    tabs: [
-      { id: 'order-entry', icon: 'orders', labelKey: 'nav.tab.order_entry' },
-      { id: 'bom-explosion', icon: 'bom', labelKey: 'nav.tab.bom_explosion' },
-      { id: 'material-check', icon: 'materials_chk', labelKey: 'nav.tab.material_check' },
-    ],
-  },
-  {
-    id: 'scheduling',
-    labelKey: 'nav.section.scheduling',
-    tabs: [
-      { id: 'capacity', icon: 'capacity', labelKey: 'nav.tab.capacity_planning' },
-      { id: 'work-orders', icon: 'settings', labelKey: 'nav.tab.work_orders' },
-    ],
-  },
-  {
-    id: 'planning-tracking',
-    labelKey: 'nav.section.planning_tracking',
-    tabs: [{ id: 'wip-tracker', icon: 'wip', labelKey: 'nav.tab.wip_tracker' }],
-  },
-];
-
-/** Every section across both modules (cost + planning). */
+/** Every sidebar section (Cost only — Planning module removed 2026-07-22). */
 export function allSections() {
-  return [...COST_SECTIONS, ...PLANNING_SECTIONS];
+  return [...COST_SECTIONS];
 }
 
 /** Whether a section may be globally hidden (System is always-on). */

@@ -76,15 +76,6 @@
         ]
       },
       {
-        "from": "../domains",
-        "to": "app/domains",
-        "filter": [
-          "**/*",
-          "!**/*.test.js",
-          "!**/tests/**"
-        ]
-      },
-      {
         "from": "../client/dist",
         "to": "app/client/dist"
       },
