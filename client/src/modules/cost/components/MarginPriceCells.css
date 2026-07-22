@@ -1,0 +1,103 @@
+/* MarginPriceCells — editable VA/Contr/GM inputs + Apply-GM-25% affordance.
+   Class-based only (Lesson 6). `.sc-input-warn` (StandardCalc.css) supplies
+   the red below-floor border. */
+
+.mpc-cell-input {
+  width: 100%;
+  min-width: 52px;
+  box-sizing: border-box;
+  text-align: right;
+  font: inherit;
+  font-weight: 700;
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  cursor: text;
+}
+.mpc-cell-input:hover {
+  border-color: var(--border-subtle, #e2e8f0);
+  background: var(--surface-hover, #f8fafc);
+}
+.mpc-cell-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  background: #fff;
+}
+[data-theme='dark'] .mpc-cell-input:focus {
+  background: #0f172a;
+}
+
+/* Metric tint (mirrors the read-only cell colors). */
+.mpc-va {
+  color: #0891b2;
+}
+.mpc-contr {
+  color: #7c3aed;
+}
+.mpc-gm {
+  color: #047857;
+}
+.mpc-gm-neg {
+  color: #dc2626;
+}
+
+/* Rejected (unsolvable) edit — brief amber flash, then revert. */
+.mpc-reject {
+  animation: mpc-reject-flash 1.1s ease-out;
+}
+@keyframes mpc-reject-flash {
+  0%,
+  40% {
+    border-color: #f59e0b;
+    background: #fffbeb;
+  }
+  100% {
+    border-color: transparent;
+    background: transparent;
+  }
+}
+
+/* Apply GM-25% affordance inside the price cell. */
+.mpc-apply {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 2px;
+}
+.mpc-apply-btn {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  line-height: 18px;
+  text-align: center;
+  border: 1px solid var(--border-subtle, #cbd5e1);
+  border-radius: 5px;
+  background: var(--surface-card, #fff);
+  color: #2563eb;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+}
+.mpc-apply-btn:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: #2563eb;
+}
+.mpc-apply-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.mpc-hint {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+  white-space: nowrap;
+}
+.mpc-apply-warn .mpc-hint {
+  color: #b45309;
+}
+[data-theme='dark'] .mpc-apply-btn {
+  background: #1e293b;
+  border-color: #334155;
+}
