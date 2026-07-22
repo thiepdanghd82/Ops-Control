@@ -107,6 +107,11 @@ export const STRINGS = {
   'nav.team_online_title': { en: 'Team Online', vi: 'Đội ngũ đang online' },
   'nav.team_online_count': { en: '{n} online', vi: '{n} đang online' },
   'nav.badge_pending_tooltip': { en: '{n} awaiting your action', vi: '{n} đang chờ bạn xử lý' },
+  // Sprint S-SYSCTRL — SYS-only cue: this item is globally hidden for others.
+  'nav.hidden_for_others': {
+    en: 'Hidden for other users (System Control)',
+    vi: 'Đang ẩn với người dùng khác (Điều khiển Hệ thống)',
+  },
   // Footer status — operator-visible at all times.
   'nav.footer.me_tag': { en: '(me)', vi: '(tôi)' },
   'nav.footer.active_now': { en: 'Active now', vi: 'Đang hoạt động' },

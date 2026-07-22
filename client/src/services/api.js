@@ -613,6 +613,13 @@ export const costApi = {
   saveLayout: ({ ccl_pn, ext, data, quote_id }) =>
     api.post('/save-layout', { ccl_pn: ccl_pn || 'unknown', ext, data, quote_id }),
   getLayout: (filename) => api.get(`/layout/${encodeURIComponent(filename)}`),
+
+  // System Control — global sidebar show/hide (SYS-only PUT). Read is open to
+  // any authenticated user (the sidebar needs it); the map also rides
+  // /api/runtime-config so normal page loads don't hit this endpoint.
+  getSidebarVisibility: () => api.get('/system/sidebar-visibility'),
+  updateSidebarVisibility: ({ hiddenTabs, hiddenSections }) =>
+    api.put('/system/sidebar-visibility', { hiddenTabs, hiddenSections }),
   listLayouts: () => api.get('/layouts'),
 
   // Quote save: delegates to the server's /api/quotes endpoint which

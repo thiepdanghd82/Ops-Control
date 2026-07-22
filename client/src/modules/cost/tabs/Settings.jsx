@@ -11,6 +11,8 @@ import HardwareSection from './HardwareSection';
 import ModeSection from './ModeSection';
 import AboutSection from './AboutSection';
 import ProvisioningCard from '../../../components/Auth/ProvisioningCard';
+// SYS-only, rarely opened → lazy chunk so it stays out of the Settings bundle.
+const SystemControl = React.lazy(() => import('./SystemControl'));
 import {
   getClientVersionBadge,
   groupClientVersionEventsByUser,
@@ -54,6 +56,14 @@ const MENU_SECTIONS = [
         icon: 'ⓘ',
         label: 'About / Diagnostics',
         i18nKey: 'settings.item.about',
+      },
+      // Sprint S-SYSCTRL — SYS-only global sidebar show/hide ("lean mode").
+      {
+        id: 'system-control',
+        icon: '⊟',
+        label: 'System Control',
+        i18nKey: 'settings.item.system_control',
+        minRole: 'sys',
       },
     ],
   },
@@ -162,6 +172,11 @@ export default function Settings() {
         {activeSec === 'mode' && <ModeSection />}
         {activeSec === 'about' && <AboutSection />}
         {activeSec === 'account' && <AccountSection />}
+        {activeSec === 'system-control' && (
+          <React.Suspense fallback={null}>
+            <SystemControl />
+          </React.Suspense>
+        )}
         {activeSec === 'data' && <BackupSection />}
         {activeSec === 'syslog' && <LogsSection />}
       </main>

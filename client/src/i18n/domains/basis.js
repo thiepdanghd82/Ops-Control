@@ -123,6 +123,37 @@ registerStrings({
   'settings.item.hardware': { en: 'Hardware Devices', vi: 'Thiết bị phần cứng' },
   'settings.item.mode': { en: 'Connection Mode', vi: 'Chế độ kết nối' },
   'settings.item.about': { en: 'About / Diagnostics', vi: 'Giới thiệu / Chẩn đoán' },
+
+  // ─── Sprint S-SYSCTRL — SYS-only System Control (global sidebar lean mode) ───
+  'settings.item.system_control': { en: 'System Control', vi: 'Điều khiển Hệ thống' },
+  'system_control.title': { en: 'System Control', vi: 'Điều khiển Hệ thống' },
+  'system_control.note': {
+    en: 'Globally show or hide main sidebar sections and tabs for ALL users (lean mode — hide features operators do not need). This only HIDES — it never grants access. SYS only; changes apply to all users on their next load. SYS always sees hidden items, marked with a dot.',
+    vi: 'Ẩn/hiện toàn cục các mục và tab trên thanh bên cho MỌI người dùng (chế độ gọn — ẩn tính năng operator không cần). Chỉ ẩn, KHÔNG bao giờ cấp thêm quyền. Chỉ SYS; thay đổi áp dụng cho mọi người ở lần tải kế tiếp. SYS luôn thấy mục đã ẩn, có chấm đánh dấu.',
+  },
+  'system_control.forbidden': {
+    en: 'System Control is restricted to SYS (Super Admin) accounts.',
+    vi: 'Điều khiển Hệ thống chỉ dành cho tài khoản SYS (Super Admin).',
+  },
+  'system_control.visible': { en: 'Visible', vi: 'Hiện' },
+  'system_control.hidden': { en: 'Hidden', vi: 'Ẩn' },
+  'system_control.show_all': { en: 'Show all', vi: 'Hiện tất cả' },
+  'system_control.save': { en: 'Save', vi: 'Lưu' },
+  'system_control.saving': { en: 'Saving…', vi: 'Đang lưu…' },
+  'system_control.saved': {
+    en: 'Saved — applies on next load',
+    vi: 'Đã lưu — áp dụng ở lần tải kế tiếp',
+  },
+  'system_control.save_failed': { en: 'Save failed', vi: 'Lưu thất bại' },
+  'system_control.master_hint': {
+    en: 'Hide/show this whole section',
+    vi: 'Ẩn/hiện cả mục này',
+  },
+  'system_control.section_hidden_hint': {
+    en: 'The whole section is hidden',
+    vi: 'Cả mục đang bị ẩn',
+  },
+
   // Backup → Restore picker (dated backup list modal)
   'settings.backup.restore_btn': { en: 'Restore', vi: 'Khôi phục' },
   'settings.backup.restore_btn_title': {

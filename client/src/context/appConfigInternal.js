@@ -20,7 +20,15 @@ export const DEFAULT_FEATURES = Object.freeze({
   kiosk: false,
 });
 
+// Sprint S-SYSCTRL — global SYS-controlled sidebar show/hide. Default = nothing
+// hidden, so a failed/absent config fetch shows the FULL sidebar (fail-open is
+// correct here: this layer only ever HIDES on top of the real access gates, so
+// "show everything" can't leak access the user didn't already have).
+export const DEFAULT_SIDEBAR = Object.freeze({ hiddenTabs: [], hiddenSections: [] });
+
 export const AppConfigContext = createContext({
   features: DEFAULT_FEATURES,
+  sidebar: DEFAULT_SIDEBAR,
   ready: false,
+  setSidebarVisibility: () => {},
 });
