@@ -180,6 +180,21 @@ export default function CplxCostBreakdown() {
         </div>
         <div className="sc-card-body sc-table-wrap">
           <table className="sc-table sc-bd-table">
+            <colgroup>
+              <col className="bdc-tier" />
+              <col className="bdc-qty" />
+              <col className="bdc-qty" />
+              <col className="bdc-price" />
+              <col className="bdc-price" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-metric" />
+              <col className="bdc-metric" />
+              <col className="bdc-metric" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Tier</th>
@@ -224,7 +239,7 @@ export default function CplxCostBreakdown() {
                     <td className="right">{moq ? moq.toLocaleString() : '\u2014'}</td>
                     <td className="right">{eau ? eau.toLocaleString() : '\u2014'}</td>
                     <td className="right" style={{ fontWeight: 700, color: '#1e40af' }}>
-                      {sp ? '$' + fmtN(sp, 4) : '\u2014'}
+                      <span className="mpc-price-val">{sp ? '$' + fmtN(sp, 4) : '\u2014'}</span>
                       <ApplyDefault
                         def={def}
                         warn={sellWarn}
@@ -291,6 +306,21 @@ export default function CplxCostBreakdown() {
         </div>
         <div className="sc-card-body sc-table-wrap">
           <table className="sc-table sc-bd-table">
+            <colgroup>
+              <col className="bdc-tier" />
+              <col className="bdc-qty" />
+              <col className="bdc-qty" />
+              <col className="bdc-price" />
+              <col className="bdc-price" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-metric" />
+              <col className="bdc-metric" />
+              <col className="bdc-metric" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Tier</th>
@@ -339,7 +369,9 @@ export default function CplxCostBreakdown() {
                       {sp ? '$' + fmtN(sp, 4) : '\u2014'}
                     </td>
                     <td className="right" style={{ fontWeight: 700, color: '#b45309' }}>
-                      {target ? '$' + fmtN(target, 4) : '\u2014'}
+                      <span className="mpc-price-val">
+                        {target ? '$' + fmtN(target, 4) : '\u2014'}
+                      </span>
                       <ApplyDefault
                         def={def}
                         warn={tgtWarn}
