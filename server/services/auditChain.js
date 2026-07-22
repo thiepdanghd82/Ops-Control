@@ -47,9 +47,6 @@ import { createHash } from 'node:crypto';
 /** Canonical entry field order — DO NOT REORDER without bumping a chain version. */
 const CANONICAL_FIELDS = /** @type {const} */ (['ts', 'event', 'user', 'ip', 'detail']);
 
-/** Fields that participate in chain metadata (excluded from hash input). */
-const CHAIN_FIELDS = new Set(['prev_hash', 'hash']);
-
 /**
  * @typedef {{
  *   ts: string,

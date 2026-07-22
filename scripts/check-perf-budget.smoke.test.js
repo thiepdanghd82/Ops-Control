@@ -52,8 +52,8 @@ test('perf-budget CLI: all chunks under budget → exit 0', () => {
 });
 
 test('perf-budget CLI: chunk over budget → exit 1 with failure line', () => {
-  // 400kB index.js — exceeds the 290kB shell budget.
-  const dist = setupTmpDist({ 'index-XyZ00001.js': 400_000 });
+  // 600kB index.js — exceeds the v1.6 re-baselined 540kB shell budget.
+  const dist = setupTmpDist({ 'index-XyZ00001.js': 600_000 });
   const r = runCli(dist);
   assert.equal(r.status, 1, 'over-budget must exit non-zero');
   assert.match(r.stdout, /FAILED/);

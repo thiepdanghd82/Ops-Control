@@ -21,7 +21,7 @@ import { fileURLToPath } from 'url';
 
 import { atomicWriteFileSync } from './atomicWrite.js';
 import { clearCache } from './dataSync.js';
-import { getDataset, normKey, STORAGE_JS_AOA, STORAGE_JSON_AOO } from './importDatasets.js';
+import { getDataset, normKey, STORAGE_JS_AOA } from './importDatasets.js';
 import { coerce } from './importTypeCoerce.js';
 import * as shadowWrite from '../repositories/shadowWrite.js';
 
