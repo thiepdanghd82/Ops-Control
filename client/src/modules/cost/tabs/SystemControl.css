@@ -1,0 +1,160 @@
+/* System Control — SYS-only global sidebar show/hide (Sprint S-SYSCTRL). */
+
+.sysctl {
+  padding: 4px 4px 40px;
+  max-width: 720px;
+}
+.sysctl-head {
+  margin-bottom: 14px;
+}
+.sysctl-title {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 700;
+}
+.sysctl-note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted, #6f6f6f);
+}
+
+.sysctl-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle, #e8e8e8);
+}
+.sysctl-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sysctl-flash {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #16a34a;
+}
+
+/* ── Section cards ─────────────────────────────────────────────── */
+.sysctl-section {
+  border: 1px solid var(--border-subtle, #e0e0e0);
+  border-radius: 8px;
+  padding: 6px 14px 12px;
+  margin: 0 0 14px;
+}
+.sysctl-section.is-hidden {
+  background: rgba(147, 51, 234, 0.05);
+  border-color: rgba(147, 51, 234, 0.35);
+}
+.sysctl-section-legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 6px;
+}
+.sysctl-section-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--brand, #1e40af);
+}
+
+.sysctl-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+.sysctl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 6px;
+  border-radius: 5px;
+}
+.sysctl-row:hover {
+  background: var(--surface-hover, #f5f7fb);
+}
+.sysctl-row-label {
+  font-size: 13px;
+  color: var(--text, #161616);
+}
+
+/* ── Visible / Hidden toggle pill ──────────────────────────────── */
+.sysctl-toggle {
+  min-width: 78px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #c6c6c6);
+  background: var(--surface, #fff);
+  color: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+.sysctl-toggle.is-on {
+  background: rgba(22, 163, 74, 0.12);
+  border-color: #16a34a;
+  color: #15803d;
+}
+.sysctl-toggle.is-off {
+  background: rgba(147, 51, 234, 0.14);
+  border-color: #9333ea;
+  color: #7e22ce;
+}
+.sysctl-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.sysctl-toggle-master {
+  min-width: 86px;
+  margin-left: auto;
+}
+
+/* ── Forbidden card (defense-in-depth) ─────────────────────────── */
+.sysctl-forbidden {
+  max-width: 460px;
+  margin: 40px auto;
+  padding: 28px;
+  text-align: center;
+  border: 1px solid var(--border-subtle, #e0e0e0);
+  border-radius: 10px;
+}
+.sysctl-forbidden-icon {
+  font-size: 40px;
+  color: #da1e28;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.sysctl-forbidden h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+.sysctl-forbidden p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted, #6f6f6f);
+}
+
+[data-theme='dark'] .sysctl-section.is-hidden {
+  background: rgba(147, 51, 234, 0.12);
+}
+[data-theme='dark'] .sysctl-toggle.is-on {
+  background: rgba(22, 163, 74, 0.2);
+  color: #4ade80;
+}
+[data-theme='dark'] .sysctl-toggle.is-off {
+  background: rgba(147, 51, 234, 0.24);
+  color: #c084fc;
+}

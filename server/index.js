@@ -432,6 +432,10 @@ app.get('/api/runtime-config', (req, res) => {
       planning: FEATURE_PLANNING,
       kiosk: FEATURE_KIOSK,
     },
+    // Sprint S-SYSCTRL — global SYS-controlled sidebar show/hide. Read the
+    // JSON file at request time (tolerant of a missing file → nothing hidden)
+    // so it rides the existing mount-time fetch — no extra request per page.
+    sidebar: readSidebarVisibility(),
   });
 });
 
@@ -663,6 +667,7 @@ app.post('/api/telemetry/web-vitals', express.json({ limit: '2kb' }), (req, res)
 
 // ─── Routes ───
 import costApiRouter from './routes/costApi.js';
+import { readSidebarVisibility } from './services/sidebarVisibility.js';
 // Legacy iframe route removed — all tabs now run natively in React
 import planningRouter from './routes/planning.js';
 import { mountPlanning } from '../domains/planning/server/index.js'; // v1.3 MES-1.4 — WO v2 routes

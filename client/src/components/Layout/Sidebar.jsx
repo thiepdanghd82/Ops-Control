@@ -1,130 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useAccess } from '../../context/useAccess';
-import { useFeatureFlag } from '../../context/useAppConfig';
+import { useFeatureFlag, useSidebarVisibility } from '../../context/useAppConfig';
 import { costApi } from '../../services/api';
 import { useMyApprovalCount } from '../../utils/useMyApprovalCount';
 import { useI18n } from '../../utils/useI18n';
 import { preloadCostTab, preloadPlanningTab } from '../../utils/tabPreload';
 import { SidebarIcon } from './SidebarIcon.jsx';
+// Sprint S-SYSCTRL — sidebar catalog extracted to a React-free module so the
+// SYS-only System Control panel toggles the SAME list the sidebar renders.
+import { COST_SECTIONS, PLANNING_SECTIONS, applySidebarVisibility } from './sidebarSections.js';
 import './Sidebar.css';
-
-// Sprint S-ICON (2026-04-29) — Unicode glyphs replaced by 16px monochrome
-// inline-SVG icons (Carbon-style, see SidebarIcon.jsx). The `icon` field
-// now carries an icon-name string that maps to a path in PATHS{}.
-const COST_SECTIONS = [
-  {
-    id: 'calculators',
-    labelKey: 'nav.section.calculators',
-    tabs: [
-      { id: 'standard', icon: 'calc_std', labelKey: 'nav.tab.standard' },
-      { id: 'complex', icon: 'calc_cplx', labelKey: 'nav.tab.complex' },
-      { id: 'lib-mat', icon: 'material', labelKey: 'nav.tab.material_cost' },
-      { id: 'ink-calc', icon: 'ink', labelKey: 'nav.tab.inks_calc' },
-      { id: 'print-area', icon: 'print_area', labelKey: 'nav.tab.print_area' },
-      { id: 'design-tools', icon: 'design', labelKey: 'nav.tab.design_tools' },
-      { id: 'messages', icon: 'messages', labelKey: 'nav.tab.messages' },
-    ],
-  },
-  {
-    id: 'quoting',
-    labelKey: 'nav.section.quoting',
-    tabs: [
-      { id: 'summarize', icon: 'summarize', labelKey: 'nav.tab.cost_breakdown' },
-      { id: 'formal-quote', icon: 'formal_quote', labelKey: 'nav.tab.formal_quotation' },
-      { id: 'quote-history', icon: 'history', labelKey: 'nav.tab.quote_history' },
-      { id: 'npi-parts-list', icon: 'parts_list', labelKey: 'nav.tab.npi_parts_list' },
-      { id: 'rfq-tracking', icon: 'rfq_tracking', labelKey: 'nav.tab.rfq_tracking' },
-      { id: 'approvals-inbox', icon: 'approvals', labelKey: 'nav.tab.pending_approvals' },
-    ],
-  },
-  {
-    id: 'manufacturing',
-    labelKey: 'nav.section.manufacturing',
-    tabs: [
-      { id: 'lib-mfg', icon: 'mfg', labelKey: 'nav.tab.mfg_structures' },
-      { id: 'lib-rop', icon: 'routing', labelKey: 'nav.tab.routing_ops' },
-      { id: 'lib-inventory', icon: 'ifs', labelKey: 'nav.tab.ifs_inventory' },
-    ],
-  },
-  {
-    id: 'tracking',
-    labelKey: 'nav.section.tracking',
-    tabs: [
-      { id: 'rfq-tracker', icon: 'rfq_tracker', labelKey: 'nav.tab.rfq_tracker' },
-      { id: 'sample-tracking', icon: 'samples', labelKey: 'nav.tab.sample_tracking' },
-    ],
-  },
-  {
-    id: 'reports',
-    labelKey: 'nav.section.reports',
-    tabs: [
-      { id: 'dashboard', icon: 'dashboard', labelKey: 'nav.tab.dashboard', minRole: 'user' },
-      { id: 'quote-analysis', icon: 'analysis', labelKey: 'nav.tab.quote_analysis' },
-    ],
-  },
-  {
-    id: 'libraries',
-    labelKey: 'nav.section.libraries',
-    tabs: [
-      { id: 'lib-rate', icon: 'rates', labelKey: 'nav.tab.rate_table' },
-      // Pre-go-live lockdown: DDL drives pricing dropdowns — editing is
-      // admin/sys only. Non-admins still SEE the values in the calculator
-      // (lib.ddl loads via /shared/ddl for everyone); the editor tab is
-      // hidden + the server enforces it (/save-all ddlSitesDB gate).
-      { id: 'lib-ddl', icon: 'ddl', labelKey: 'nav.tab.ddl', minRole: 'admin' },
-      { id: 'lib-finance', icon: 'finance', labelKey: 'nav.tab.finance_data' },
-      { id: 'lib-machine-tech', icon: 'machine', labelKey: 'nav.tab.machine_technical' },
-    ],
-  },
-  {
-    id: 'system',
-    labelKey: 'nav.section.system',
-    tabs: [
-      { id: 'settings', icon: 'settings', labelKey: 'nav.tab.settings' },
-      { id: 'metrics', icon: 'metrics', labelKey: 'nav.tab.metrics', minRole: 'sys' },
-      // Sprint S-AUDIT (2026-04-29) — append-only event stream viewer
-      // ported from v1.3 (apps/client/src/AuditLog.jsx). Sys-only.
-      { id: 'audit-log', icon: 'audit', labelKey: 'nav.tab.audit_log', minRole: 'sys' },
-      // Sprint MES-2.7 — kiosk-admin (sys + admin via permission group). The
-      // tab-access middleware on /api/planning/v2/kiosks/pairings is the
-      // authoritative gate; this nav entry just shows the link.
-      {
-        id: 'kiosk-admin',
-        icon: 'settings',
-        labelKey: 'nav.tab.kiosk_admin',
-        minRole: 'admin',
-        featureFlag: 'kiosk',
-      },
-      { id: 'help', icon: 'help', labelKey: 'nav.tab.help' },
-    ],
-  },
-];
-
-const PLANNING_SECTIONS = [
-  {
-    id: 'production',
-    labelKey: 'nav.section.production',
-    tabs: [
-      { id: 'order-entry', icon: 'orders', labelKey: 'nav.tab.order_entry' },
-      { id: 'bom-explosion', icon: 'bom', labelKey: 'nav.tab.bom_explosion' },
-      { id: 'material-check', icon: 'materials_chk', labelKey: 'nav.tab.material_check' },
-    ],
-  },
-  {
-    id: 'scheduling',
-    labelKey: 'nav.section.scheduling',
-    tabs: [
-      { id: 'capacity', icon: 'capacity', labelKey: 'nav.tab.capacity_planning' },
-      { id: 'work-orders', icon: 'settings', labelKey: 'nav.tab.work_orders' },
-    ],
-  },
-  {
-    id: 'planning-tracking',
-    labelKey: 'nav.section.planning_tracking',
-    tabs: [{ id: 'wip-tracker', icon: 'wip', labelKey: 'nav.tab.wip_tracker' }],
-  },
-];
 
 const COLLAPSE_KEY = 'opsctl.sidebar.section-collapsed.v1';
 
@@ -158,6 +44,26 @@ export default function Sidebar({
   const ROLE_LEVELS = { viewonly: 1, user: 2, cost: 3, admin: 4, sys: 5 };
 
   const sections = activeModule === 'planning' ? PLANNING_SECTIONS : COST_SECTIONS;
+
+  // Sprint S-SYSCTRL — global SYS-controlled show/hide. HIDE-ONLY: the
+  // existing per-tab gate (`baseAllows`) is ANDed FIRST inside
+  // applySidebarVisibility, so un-hiding a tab never grants access the user
+  // didn't already have. SYS bypasses hiding (sees a muted badge instead) so
+  // they can always reach Settings → System Control to toggle things back.
+  const { hiddenTabs, hiddenSections } = useSidebarVisibility();
+  const baseAllows = (tab) => {
+    if (tab.featureFlag && !featureFlags[tab.featureFlag]) return false;
+    if (tab.minRole && (ROLE_LEVELS[user?.role] || 0) < (ROLE_LEVELS[tab.minRole] || 0))
+      return false;
+    if (access(tab.id) === 'hidden') return false;
+    return true;
+  };
+  const renderSections = applySidebarVisibility(sections, {
+    hiddenTabs,
+    hiddenSections,
+    role: user?.role,
+    baseAllows,
+  });
 
   // Sprint S-COLLAPSE (2026-04-29) — section header is now collapsible.
   // Persists per section ID across reloads via localStorage so the
@@ -286,19 +192,11 @@ export default function Sidebar({
 
       {/* Navigation */}
       <nav className="sidebar-nav">
-        {sections.map((section) => {
-          const visibleTabs = section.tabs.filter((tab) => {
-            // Feature-flag gate (default off) — e.g. kiosk-admin needs
-            // OPS_FEATURE_KIOSK. AND-ed with role/permission below.
-            if (tab.featureFlag && !featureFlags[tab.featureFlag]) return false;
-            // Legacy role-based gate (e.g. metrics → sys only).
-            if (tab.minRole) {
-              if ((ROLE_LEVELS[user?.role] || 0) < (ROLE_LEVELS[tab.minRole] || 0)) return false;
-            }
-            // Sprint S2 — permission-group 'hidden' filter.
-            if (access(tab.id) === 'hidden') return false;
-            return true;
-          });
+        {renderSections.map((section) => {
+          // Tabs already filtered by applySidebarVisibility (baseAllows gate +
+          // global hide). For SYS, globally-hidden items are KEPT and carry
+          // `_globallyHidden` so we can show a muted "hidden for others" badge.
+          const visibleTabs = section.tabs;
           if (visibleTabs.length === 0) return null;
 
           // Section label comes from labelKey (i18n) with fallback to
@@ -355,19 +253,35 @@ export default function Sidebar({
                       /* ignore preload errors */
                     }
                   };
+                  // SYS-only cue: this item is globally hidden for everyone
+                  // else (System Control). SYS still sees + can open it.
+                  const hiddenForOthers = !!tab._globallyHidden;
                   return (
                     <button
                       key={tab.id}
-                      className={`nav-item ${activeTab === tab.id ? 'active' : ''}`}
+                      className={`nav-item ${activeTab === tab.id ? 'active' : ''}${hiddenForOthers ? ' nav-item-globally-hidden' : ''}`}
                       onClick={() => onTabChange(tab.id)}
                       onMouseEnter={preload}
                       onFocus={preload}
-                      title={collapsed ? tabLabel : undefined}
+                      title={
+                        hiddenForOthers
+                          ? t('nav.hidden_for_others')
+                          : collapsed
+                            ? tabLabel
+                            : undefined
+                      }
                     >
                       <span className="nav-icon">
                         <SidebarIcon name={tab.icon} />
                       </span>
                       <span className="nav-label">{tabLabel}</span>
+                      {hiddenForOthers && (
+                        <span
+                          className="nav-hidden-dot"
+                          aria-hidden="true"
+                          title={t('nav.hidden_for_others')}
+                        />
+                      )}
                       {badge != null && (
                         <span className="nav-badge" title={badgeTitle}>
                           {badge > 99 ? '99+' : badge}

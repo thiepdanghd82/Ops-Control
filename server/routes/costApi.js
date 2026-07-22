@@ -14,6 +14,11 @@ import { atomicWriteFileSync } from '../services/atomicWrite.js';
 import { collectDataBackups } from '../services/dataBackupList.js';
 import { getDataset } from '../services/importDatasets.js';
 import {
+  readSidebarVisibility,
+  validateVisibilityPayload,
+  writeSidebarVisibility,
+} from '../services/sidebarVisibility.js';
+import {
   readExisting as readDatasetRows,
   writeDataset as writeDatasetRows,
   backupDataset,
@@ -2058,6 +2063,41 @@ router.post('/heartbeat', (req, res) => {
   if (!u) return res.status(401).json({ error: 'Unauthorized' });
   markOnline(u.id, u.username, u.role);
   res.json({ ok: true });
+});
+
+// ─── System Control — global sidebar show/hide (Sprint S-SYSCTRL) ───
+// GLOBAL visibility layer, distinct from per-user permission groups. HIDE-
+// ONLY: the client ANDs these hidden sets AFTER minRole + permission-group
+// access, so un-hiding never widens access. GET is readable by any
+// authenticated user (the client needs it to render); PUT is SYS-only.
+
+// GET /api/system/sidebar-visibility — any authenticated user may read.
+router.get('/system/sidebar-visibility', (req, res) => {
+  const caller = getSessionUser(getTokenFromHeader(req));
+  if (!caller) return res.status(401).json({ error: 'Unauthorized' });
+  res.json(readSidebarVisibility());
+});
+
+// PUT /api/system/sidebar-visibility — SYS ONLY. Validates ids against the
+// toggleable catalog (rejects unknown / always-on ids), persists, audits.
+router.put('/system/sidebar-visibility', (req, res) => {
+  const caller = getSessionUser(getTokenFromHeader(req));
+  if (!caller) return res.status(401).json({ error: 'Unauthorized' });
+  if (!isSys(caller)) return res.status(403).json({ error: 'Forbidden — SYS only' });
+  const v = validateVisibilityPayload(req.body);
+  if (!v.ok) return res.status(400).json({ error: v.error });
+  const saved = writeSidebarVisibility(v.value, caller.id);
+  audit(
+    'SIDEBAR_VISIBILITY_UPDATE',
+    caller.username,
+    clientIp(req),
+    JSON.stringify({
+      hiddenTabs: v.value.hiddenTabs,
+      hiddenSections: v.value.hiddenSections,
+      user_id: caller.id,
+    })
+  );
+  res.json({ ok: true, ...saved });
 });
 
 // ─── RFQ Tracking (registry-driven master list; RFQ_TRACKING_DATASET) ───
