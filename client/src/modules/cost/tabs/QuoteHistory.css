@@ -618,7 +618,9 @@
 }
 
 .qh-ctx-menu {
-  position: absolute;
+  /* fixed so the menu escapes the table's overflow clipping; placed
+     edge-aware + draggable by useFloatingMenu (menuPosition.js). */
+  position: fixed;
   z-index: 9999;
   min-width: 220px;
   background: rgba(255, 255, 255, 0.95);
@@ -656,6 +658,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 260px;
+  cursor: move;
+  user-select: none;
 }
 
 .qh-ctx-divider {

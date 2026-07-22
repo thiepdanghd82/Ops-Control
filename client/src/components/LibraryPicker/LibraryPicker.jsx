@@ -34,6 +34,7 @@ import {
 import { useI18n } from '../../utils/useI18n';
 import { useCostLib } from '../../context/CostLibContext';
 import Modal from '../Shared/Modal';
+import { useFloatingMenu } from '../Shared/useFloatingMenu';
 import './LibraryPicker.css';
 
 const Ctx = createContext(null);
@@ -119,13 +120,9 @@ export function LibraryPickerProvider({ children }) {
 
   const openMenu = useCallback(({ event, onPick }) => {
     event.preventDefault();
-    // Menu position clamped so it doesn't spill off the viewport edge.
-    // Width/height are approximate — overshoot gets trimmed on first render.
-    const W = 230,
-      H = 200;
-    const x = Math.min(event.clientX, window.innerWidth - W - 8);
-    const y = Math.min(event.clientY, window.innerHeight - H - 8);
-    setMenu({ x, y, onPick });
+    // Raw viewport coords — ContextMenu places itself edge-aware (flip +
+    // clamp) after measuring, via useFloatingMenu.
+    setMenu({ x: event.clientX, y: event.clientY, onPick });
   }, []);
 
   const closeMenu = useCallback(() => setMenu(null), []);
@@ -189,15 +186,15 @@ export function LibraryPickerProvider({ children }) {
 function ContextMenu({ x, y, onSelect, onClose }) {
   const { t } = useI18n();
   const [active, setActive] = useState(null);
-  const ref = useRef(null);
+  const { menuRef, style } = useFloatingMenu({ open: true, x, y });
 
   useEffect(() => {
     function onDoc(e) {
-      if (!ref.current?.contains(e.target)) onClose();
+      if (!menuRef.current?.contains(e.target)) onClose();
     }
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
-  }, [onClose]);
+  }, [onClose, menuRef]);
 
   const choose = (key) => {
     setActive(key);
@@ -207,8 +204,10 @@ function ContextMenu({ x, y, onSelect, onClose }) {
   };
 
   return (
-    <div ref={ref} className="libp-menu" style={{ left: x, top: y }} role="menu">
-      <div className="libp-menu-head">{t('picker.menu_title')}</div>
+    <div ref={menuRef} className="libp-menu" style={style} role="menu">
+      <div className="libp-menu-head" data-menu-drag-handle>
+        {t('picker.menu_title')}
+      </div>
       {LIBRARIES.map((L) => (
         <button
           key={L.key}

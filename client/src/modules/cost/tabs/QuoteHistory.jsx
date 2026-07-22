@@ -24,6 +24,7 @@ import { useQuoteFilters } from '../hooks/useQuoteFilters';
 import { applyQuoteFilters, quoteAccessor } from '../lib/quoteFilters';
 import ScopedFilterBar from '../components/ScopedFilterBar';
 import ColumnsToggle from '../../../components/Shared/ColumnsToggle';
+import { useFloatingMenu, useMergedMenuRef } from '../../../components/Shared/useFloatingMenu';
 import { loadVisibleColumns } from '../../../components/Shared/ColumnsToggle.helpers.js';
 import {
   QUOTE_HISTORY_SORT_FNS,
@@ -547,6 +548,14 @@ export default function QuoteHistory() {
   const { access: tabAccess } = useAccess();
   const canExport = tabAccess('quote-history') !== 'hidden';
   const ctxRef = useRef(null);
+  // Edge-aware placement (fixed, escapes the table's overflow clipping) +
+  // drag-to-move by the header. Store raw viewport coords in ctxMenu.x/y.
+  const { menuRef: ctxMenuRef, style: ctxMenuStyle } = useFloatingMenu({
+    open: !!ctxMenu,
+    x: ctxMenu?.x ?? 0,
+    y: ctxMenu?.y ?? 0,
+  });
+  const ctxMergedRef = useMergedMenuRef(ctxMenuRef, ctxRef);
   const rfqColors = useRfqColors();
 
   // Close context menu on click outside or Escape
@@ -568,16 +577,10 @@ export default function QuoteHistory() {
 
   function handleContextMenu(e, quote) {
     e.preventDefault();
-    // Get position relative to the qh-root container
-    const rect = e.currentTarget.closest('.qh-root')?.getBoundingClientRect() || {
-      left: 0,
-      top: 0,
-    };
-    setCtxMenu({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-      quote,
-    });
+    // Store raw viewport coords — the menu is position:fixed and placed
+    // edge-aware by useFloatingMenu, so it escapes the table's overflow
+    // clipping (a right-click on a low/edge row is no longer cut off).
+    setCtxMenu({ x: e.clientX, y: e.clientY, quote });
   }
 
   // load + abort-on-unmount now handled by useAbortableFetch above.
@@ -1150,8 +1153,8 @@ export default function QuoteHistory() {
 
       {/* ══ Context Menu (right-click) ══ */}
       {ctxMenu && (
-        <div ref={ctxRef} className="qh-ctx-menu" style={{ left: ctxMenu.x, top: ctxMenu.y }}>
-          <div className="qh-ctx-header">
+        <div ref={ctxMergedRef} className="qh-ctx-menu" style={ctxMenuStyle}>
+          <div className="qh-ctx-header" data-menu-drag-handle>
             Quote #{ctxMenu.quote.id} —{' '}
             {ctxMenu.quote.state?.ccl_pn || ctxMenu.quote.state?.rfq_number || 'Untitled'}
           </div>
