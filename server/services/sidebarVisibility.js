@@ -30,9 +30,6 @@ export const TOGGLEABLE_SECTION_IDS = Object.freeze([
   'tracking',
   'reports',
   'libraries',
-  'production',
-  'scheduling',
-  'planning-tracking',
 ]);
 
 export const TOGGLEABLE_TAB_IDS = Object.freeze([
@@ -60,12 +57,6 @@ export const TOGGLEABLE_TAB_IDS = Object.freeze([
   'lib-ddl',
   'lib-finance',
   'lib-machine-tech',
-  'order-entry',
-  'bom-explosion',
-  'material-check',
-  'capacity',
-  'work-orders',
-  'wip-tracker',
 ]);
 
 const SECTION_SET = new Set(TOGGLEABLE_SECTION_IDS);

@@ -40,7 +40,7 @@ export function migrate(dataDir, opts = {}) {
 
   if (!fs.existsSync(groupsPath)) {
     logger.log(
-      '[migration:rfq-tracking-tab] groups.json missing — skipping (fresh install will seed via mountPlanning)'
+      '[migration:rfq-tracking-tab] groups.json missing — skipping (fresh install seeds it)'
     );
     return { applied: false, reason: 'no_groups_file' };
   }

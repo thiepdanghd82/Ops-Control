@@ -1,42 +1,24 @@
 /**
- * HomePage — Sprint S-HOME (2026-05-03).
+ * HomePage — Sprint S-HOME (2026-05-03); trimmed 2026-07-22 when the
+ * Planning module was removed (the WO/order KPIs + "Today's Focus" queue
+ * were planning-only).
  *
- * Operator dashboard. Designed around "what needs my attention TODAY"
- * — not a flashy KPI wall. 5 sections, top-down priority:
- *
+ * Operator dashboard — a navigation hub, not a duplicate UI:
  *   1. Greeting          — orient: who am I, what date, what factory
- *   2. KPI strip         — 4 numbers that drive decisions today
- *   3. My queue          — what's mine to act on (role-aware)
- *   4. Recent activity   — what just happened across the team
- *   5. Quick actions     — shortcuts to start common workflows
+ *   2. My approvals      — the one counter that drives action today
+ *   3. Module shortcuts  — into the ERPAG-style landing grids (S-LANDING)
+ *   4. Quick actions     — shortcuts to start common Cost workflows
  *
- * Data sources (all existing endpoints — no new API):
- *   - planningApi.getOrders()      → open order count
- *   - planningApi.getWorkOrders()  → active / overdue / due-today
- *   - useMyApprovalCount()         → my pending approvals (poll)
- *
- * Role gates apply via useAccess — sections the operator can't see
- * (e.g. permission_group hides 'work-orders') are hidden here too.
- *
- * Cards click → onTabChange(tabId) routes to the actual feature, so
- * the home page is a navigation hub, not a duplicate UI.
+ * Cards click → onTabChange(tabId). Role gates apply via useAccess.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useAccess } from '../../context/useAccess';
 import { useI18n } from '../../utils/useI18n';
 import { useMyApprovalCount } from '../../utils/useMyApprovalCount';
-import { planningApi } from '../../services/api';
-import { err as logErr } from '../../utils/logger';
 import { SidebarIcon } from '../../components/Layout/SidebarIcon.jsx';
 import { landingTabFor } from '../../components/Layout/sectionDefs.js';
 import './HomePage.css';
-
-const TERMINAL_WO_STATUSES = new Set(['COMPLETED', 'QC_RELEASED', 'CLOSED', 'CANCELLED']);
-
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function pickGreeting(t) {
   const h = new Date().getHours();
@@ -60,51 +42,6 @@ export default function HomePage({ onTabChange }) {
   const { t, lang } = useI18n();
   const { count: approvalCount } = useMyApprovalCount({ enabled: !!user });
 
-  const [stats, setStats] = useState({
-    activeWOs: null,
-    overdueWOs: null,
-    dueToday: null,
-    activeOrders: null,
-  });
-  const [dueWOs, setDueWOs] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    Promise.all([
-      planningApi.getWorkOrders().catch(() => []),
-      planningApi.getOrders().catch(() => []),
-    ])
-      .then(([wos, orders]) => {
-        if (cancelled) return;
-        const today = todayIso();
-        const woList = Array.isArray(wos) ? wos : wos?.items || [];
-        const orderList = Array.isArray(orders) ? orders : [];
-        const active = woList.filter((w) => !TERMINAL_WO_STATUSES.has(w.status));
-        const overdue = active.filter((w) => w.due_date && w.due_date < today);
-        const dueToday = active.filter((w) => w.due_date === today);
-        const dueSoon = active
-          .filter((w) => w.due_date && w.due_date >= today)
-          .sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''))
-          .slice(0, 6);
-        setStats({
-          activeWOs: active.length,
-          overdueWOs: overdue.length,
-          dueToday: dueToday.length,
-          activeOrders: orderList.filter((o) => o.status !== 'Completed').length,
-        });
-        setDueWOs(dueSoon);
-        setLoading(false);
-      })
-      .catch((e) => {
-        logErr('HomePage stats load failed', e);
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const greeting = useMemo(() => pickGreeting(t), [t]);
   const todayStr = useMemo(() => formatLongDate(lang), [lang]);
 
@@ -114,7 +51,6 @@ export default function HomePage({ onTabChange }) {
     () =>
       [
         { id: 'standard', icon: 'calc_std', labelKey: 'home.qa.new_quote' },
-        { id: 'order-entry', icon: 'orders', labelKey: 'home.qa.new_order', module: 'planning' },
         { id: 'rfq-tracker', icon: 'rfq_tracker', labelKey: 'home.qa.rfq' },
         { id: 'approvals-inbox', icon: 'approvals', labelKey: 'home.qa.approvals' },
         { id: 'lib-inventory', icon: 'ifs', labelKey: 'home.qa.inventory' },
@@ -163,96 +99,19 @@ export default function HomePage({ onTabChange }) {
         </div>
       </header>
 
-      {/* ── KPI Strip — S-DESIGN-1 Dashboard-aligned tiles ──
-            Label-on-top + big number + optional caption. Icon dropped
-            (was operational duplicate of the destination tab's icon).
-            Severity drives the 3px left rail tone, matching the
-            Dashboard `tone-*` system. No delta pill / sparkline —
-            these are operational counters, not analytics trends. */}
+      {/* ── KPI Strip — My Approvals (the one action-driving counter left
+            after Planning removal). Severity drives the 3px left rail tone. */}
       <section className="home-kpis">
-        <KpiCard
-          label={t('home.kpi.active_wos')}
-          value={loading ? '…' : (stats.activeWOs ?? 0)}
-          severity={stats.overdueWOs > 0 ? 'warn' : 'ok'}
-          subValue={
-            stats.overdueWOs > 0 ? `${stats.overdueWOs} ${t('home.kpi.overdue_suffix')}` : null
-          }
-          onClick={() => onTabChange('work-orders')}
-        />
-        <KpiCard
-          label={t('home.kpi.due_today')}
-          value={loading ? '…' : (stats.dueToday ?? 0)}
-          severity={stats.dueToday > 0 ? 'info' : 'neutral'}
-          onClick={() => onTabChange('work-orders')}
-        />
         <KpiCard
           label={t('home.kpi.my_approvals')}
           value={approvalCount ?? 0}
           severity={approvalCount > 0 ? 'urgent' : 'neutral'}
           onClick={() => onTabChange('approvals-inbox')}
         />
-        <KpiCard
-          label={t('home.kpi.active_orders')}
-          value={loading ? '…' : (stats.activeOrders ?? 0)}
-          severity="info"
-          onClick={() => onTabChange('order-entry')}
-        />
       </section>
 
-      {/* ── Two-column main ── */}
+      {/* ── Module Shortcuts ── */}
       <div className="home-main">
-        {/* My Queue / Today's Focus */}
-        <section className="home-card">
-          <header className="home-card-header">
-            <h2>{t('home.section.todays_focus')}</h2>
-            <button
-              type="button"
-              className="home-card-link"
-              onClick={() => onTabChange('work-orders')}
-            >
-              {t('home.view_all')} →
-            </button>
-          </header>
-          {loading ? (
-            <p className="home-empty">{t('home.loading')}</p>
-          ) : dueWOs.length === 0 ? (
-            <p className="home-empty">{t('home.empty.no_active_wo')}</p>
-          ) : (
-            <ul className="home-list">
-              {dueWOs.map((wo) => {
-                const isOverdue = wo.due_date && wo.due_date < todayIso();
-                const isToday = wo.due_date === todayIso();
-                return (
-                  <li
-                    key={wo.id}
-                    className={`home-list-item ${
-                      isOverdue ? 'is-overdue' : isToday ? 'is-today' : ''
-                    }`}
-                    onClick={() => onTabChange('work-orders')}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') onTabChange('work-orders');
-                    }}
-                  >
-                    <span className="home-list-code">{wo.code || `WO-${wo.id}`}</span>
-                    <span className="home-list-meta">
-                      {wo.customer || '—'}
-                      {wo.qty_planned ? ` · qty ${Number(wo.qty_planned).toLocaleString()}` : ''}
-                    </span>
-                    <span
-                      className={`home-list-due ${isOverdue ? 'overdue' : isToday ? 'today' : ''}`}
-                    >
-                      {wo.due_date || '—'}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-
-        {/* Module Shortcuts */}
         <section className="home-card">
           <header className="home-card-header">
             <h2>{t('home.section.modules')}</h2>

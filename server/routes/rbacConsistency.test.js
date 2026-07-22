@@ -35,7 +35,7 @@ const INDEX_JS = path.resolve(__dirname, '..', 'index.js');
 // index.js for each pair to detect drift.
 const APP_LEVEL_AUTH_MOUNTS = {
   'routes/shared.js': '/api/shared',
-  'routes/planning.js': '/api/planning',
+  // routes/planning.js removed 2026-07-22 with the Planning module.
   'routes/import.js': '/api/import',
   'routes/importWizard.js': '/api/import-wizard',
   'routes/sync.js': '/api/sync',

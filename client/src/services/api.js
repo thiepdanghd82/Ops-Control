@@ -672,21 +672,3 @@ export const costApi = {
   getActiveSessions: (opts = {}) => api.get('/auth/sessions', opts),
   revokeUserSessions: (username) => api.post('/auth/sessions/revoke', { username }),
 };
-
-// ─── Planning API (Node.js native) ───
-export const planningApi = {
-  getOrders: () => api.get('/planning/orders'),
-  createOrder: (order) => api.post('/planning/orders', order),
-  updateOrder: (id, data) => api.put(`/planning/orders/${id}`, data),
-  deleteOrder: (id) => api.delete(`/planning/orders/${id}`),
-
-  getWorkOrders: () => api.get('/planning/work-orders'),
-  createWorkOrder: (wo) => api.post('/planning/work-orders', wo),
-  updateWorkOrder: (id, data) => api.put(`/planning/work-orders/${id}`, data),
-
-  getWIP: () => api.get('/planning/wip'),
-  updateWIP: (woId, data) => api.put(`/planning/wip/${woId}`, data),
-
-  getCapacity: () => api.get('/planning/capacity'),
-  getMeta: () => api.get('/planning/meta'),
-};

@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useAccess } from '../../context/useAccess';
-import { useFeatureFlag, useSidebarVisibility } from '../../context/useAppConfig';
+import { useSidebarVisibility } from '../../context/useAppConfig';
 import { costApi } from '../../services/api';
 import { useMyApprovalCount } from '../../utils/useMyApprovalCount';
 import { useI18n } from '../../utils/useI18n';
-import { preloadCostTab, preloadPlanningTab } from '../../utils/tabPreload';
+import { preloadCostTab } from '../../utils/tabPreload';
 import { SidebarIcon } from './SidebarIcon.jsx';
 // Sprint S-SYSCTRL — sidebar catalog extracted to a React-free module so the
 // SYS-only System Control panel toggles the SAME list the sidebar renders.
-import { COST_SECTIONS, PLANNING_SECTIONS, applySidebarVisibility } from './sidebarSections.js';
+import { COST_SECTIONS, applySidebarVisibility } from './sidebarSections.js';
 import './Sidebar.css';
 
 const COLLAPSE_KEY = 'opsctl.sidebar.section-collapsed.v1';
@@ -34,16 +34,10 @@ export default function Sidebar({
   const { user, hasModule, logout } = useAuth();
   const { access } = useAccess();
   const { t } = useI18n();
-  // Feature gates (default off via DEFAULT_FEATURES) — hide the Planning
-  // module switcher + the kiosk-admin tab until the server opts them in
-  // via /api/runtime-config. AND-ed with the existing per-user hasModule
-  // / role / permission-group gates, so enabling a flag never widens
-  // access on its own.
-  const planningFeature = useFeatureFlag('planning');
-  const featureFlags = { kiosk: useFeatureFlag('kiosk'), planning: planningFeature };
   const ROLE_LEVELS = { viewonly: 1, user: 2, cost: 3, admin: 4, sys: 5 };
 
-  const sections = activeModule === 'planning' ? PLANNING_SECTIONS : COST_SECTIONS;
+  // Planning module removed 2026-07-22 — Cost is the only module.
+  const sections = COST_SECTIONS;
 
   // Sprint S-SYSCTRL — global SYS-controlled show/hide. HIDE-ONLY: the
   // existing per-tab gate (`baseAllows`) is ANDed FIRST inside
@@ -52,7 +46,6 @@ export default function Sidebar({
   // they can always reach Settings → System Control to toggle things back.
   const { hiddenTabs, hiddenSections } = useSidebarVisibility();
   const baseAllows = (tab) => {
-    if (tab.featureFlag && !featureFlags[tab.featureFlag]) return false;
     if (tab.minRole && (ROLE_LEVELS[user?.role] || 0) < (ROLE_LEVELS[tab.minRole] || 0))
       return false;
     if (access(tab.id) === 'hidden') return false;
@@ -126,8 +119,7 @@ export default function Sidebar({
   function handleModuleSwitch(mod) {
     if (mod !== activeModule) {
       onModuleChange(mod);
-      const defaultTab = mod === 'cost' ? 'standard' : 'order-entry';
-      onTabChange(defaultTab);
+      onTabChange('standard');
     }
   }
 
@@ -170,25 +162,17 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* Module Switcher */}
-      <div className="module-switcher">
-        {hasModule('cost') && (
+      {/* Module Switcher — Cost only (Planning module removed 2026-07-22) */}
+      {hasModule('cost') && (
+        <div className="module-switcher">
           <button
             className={`module-btn ${activeModule === 'cost' ? 'active' : ''}`}
             onClick={() => handleModuleSwitch('cost')}
           >
             {t('nav.module_cost')}
           </button>
-        )}
-        {hasModule('planning') && planningFeature && (
-          <button
-            className={`module-btn ${activeModule === 'planning' ? 'active' : ''}`}
-            onClick={() => handleModuleSwitch('planning')}
-          >
-            {t('nav.module_planning')}
-          </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="sidebar-nav">
@@ -247,8 +231,7 @@ export default function Sidebar({
                   // no-ops when the chunk is already cached.
                   const preload = () => {
                     try {
-                      if (activeModule === 'cost') preloadCostTab(tab.id);
-                      else preloadPlanningTab(tab.id);
+                      preloadCostTab(tab.id);
                     } catch {
                       /* ignore preload errors */
                     }

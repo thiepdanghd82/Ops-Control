@@ -11,7 +11,6 @@ import TopBar from './components/Layout/TopBar';
 import WarningBar from './components/Layout/WarningBar';
 import PwdAgeBanner from './components/Layout/PwdAgeBanner';
 import CostModule from './modules/cost/CostModule';
-import PlanningModule from './modules/planning/PlanningModule';
 import ImportDialog from './components/Shared/ImportDialog';
 import ChatDrawer from './components/Chat/ChatDrawer';
 import UnreadLoginPopup from './components/Chat/UnreadLoginPopup';
@@ -235,9 +234,6 @@ function AppContent() {
               gets the immediate `activeTab` so its highlight is instant. */}
               {activeModule === 'cost' && (
                 <CostModule activeTab={deferredActiveTab} onTabChange={setActiveTab} />
-              )}
-              {activeModule === 'planning' && (
-                <PlanningModule activeTab={deferredActiveTab} onTabChange={setActiveTab} />
               )}
             </div>
             {/* Bottom-of-screen validation status bar — renders null unless

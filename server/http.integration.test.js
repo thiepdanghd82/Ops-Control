@@ -178,10 +178,8 @@ test('GET /api/shared/dashboard — 401 without auth', async () => {
   assert.ok(r.headers.get('content-type')?.includes('application/json'));
 });
 
-test('GET /api/planning/orders — 401 without auth', async () => {
-  const r = await fetch(`${baseUrl}/api/planning/orders`);
-  assert.equal(r.status, 401);
-});
+// Planning module removed 2026-07-22 — /api/planning/* is now unmapped and
+// falls through to the JSON-404 catch-all (asserted below).
 
 // ── 404 shape ──
 
