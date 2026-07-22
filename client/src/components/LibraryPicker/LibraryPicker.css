@@ -35,6 +35,8 @@
   text-transform: uppercase;
   color: var(--text-secondary);
   padding: 8px 10px 6px;
+  cursor: move;
+  user-select: none;
 }
 .libp-menu-item {
   display: flex;

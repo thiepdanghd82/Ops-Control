@@ -24,6 +24,7 @@ import { applyQuoteFilters } from '../lib/quoteFilters';
 import ScopedFilterBar from '../components/ScopedFilterBar';
 import ColumnsToggle from '../../../components/Shared/ColumnsToggle';
 import { loadVisibleColumns } from '../../../components/Shared/ColumnsToggle.helpers';
+import { useFloatingMenu, useMergedMenuRef } from '../../../components/Shared/useFloatingMenu';
 import {
   SUMMARIZE_COLUMNS_STORAGE_KEY,
   SUMMARIZE_DEFAULT_HIDDEN_KEYS,
@@ -383,6 +384,14 @@ export default function Summarize() {
   const quotes = useMemo(() => (Array.isArray(rawQuotes) ? rawQuotes : []), [rawQuotes]);
   const [ctxMenu, setCtxMenu] = useState(null); // { x, y, row }
   const ctxRef = useRef(null);
+  // Fixed, edge-aware placement (escapes the table overflow clipping) +
+  // drag-to-move by the header. ctxMenu.x/y are raw viewport coords.
+  const { menuRef: ctxMenuRef, style: ctxMenuStyle } = useFloatingMenu({
+    open: !!ctxMenu,
+    x: ctxMenu?.x ?? 0,
+    y: ctxMenu?.y ?? 0,
+  });
+  const ctxMergedRef = useMergedMenuRef(ctxMenuRef, ctxRef);
   const rfqColors = useRfqColors();
 
   // Close context menu on outside click / Escape
@@ -404,8 +413,9 @@ export default function Summarize() {
 
   function handleContextMenu(e, row) {
     e.preventDefault();
-    const rect = e.currentTarget.closest('.sum')?.getBoundingClientRect() || { left: 0, top: 0 };
-    setCtxMenu({ x: e.clientX - rect.left, y: e.clientY - rect.top, row });
+    // Raw viewport coords — placed edge-aware by useFloatingMenu (fixed),
+    // so a right-click on a low/edge row is no longer clipped.
+    setCtxMenu({ x: e.clientX, y: e.clientY, row });
   }
 
   function handleOpen(row) {
@@ -934,8 +944,8 @@ export default function Summarize() {
 
       {/* ══ Context Menu (right-click on row) ══ */}
       {ctxMenu && (
-        <div ref={ctxRef} className="sum-ctx-menu" style={{ left: ctxMenu.x, top: ctxMenu.y }}>
-          <div className="sum-ctx-header">
+        <div ref={ctxMergedRef} className="sum-ctx-menu" style={ctxMenuStyle}>
+          <div className="sum-ctx-header" data-menu-drag-handle>
             {ctxMenu.row.rfq_no} — {ctxMenu.row.direct_cu || 'Untitled'}
           </div>
           <div className="sum-ctx-divider" />

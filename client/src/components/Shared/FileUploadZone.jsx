@@ -25,6 +25,7 @@ import { costApi } from '../../services/api';
 import { useI18n } from '../../utils/useI18n';
 import { removeDrawingAt, targetFileAt, resolveOpenAction } from '../../services/drawingFiles';
 import Modal from './Modal';
+import { useFloatingMenu } from './useFloatingMenu';
 import './FileUploadZone.css';
 
 // PDF.js renderer — Electron 41's built-in Chromium PDF Viewer renders
@@ -253,6 +254,14 @@ export default function FileUploadZone({
 
   // ── Context menu ──
   const [ctxMenu, setCtxMenu] = useState(null);
+  // Edge-aware placement (fixed) + drag-to-move by the header. ctxMenu.x/y
+  // are raw viewport coords; useFloatingMenu flips/clamps a menu opened
+  // near the bottom/right edge so it isn't clipped off-screen.
+  const { menuRef: ctxMenuRef, style: ctxMenuStyle } = useFloatingMenu({
+    open: !!ctxMenu,
+    x: ctxMenu?.x ?? 0,
+    y: ctxMenu?.y ?? 0,
+  });
 
   // ── Fullscreen modal ──
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
@@ -1021,8 +1030,8 @@ export default function FileUploadZone({
           Header row shows card title + filename (like "Quote #99 — NA"),
           item rows use the same hover color + shortcut chips. */}
       {ctxMenu && (
-        <div className="fuz-ctx" style={{ top: ctxMenu.y, left: ctxMenu.x }}>
-          <div className="fuz-ctx-header">
+        <div ref={ctxMenuRef} className="fuz-ctx" style={ctxMenuStyle}>
+          <div className="fuz-ctx-header" data-menu-drag-handle>
             {label}
             <span className="fuz-ctx-header-sub">
               {file?.name ? ` — ${file.name}` : ' — (empty)'}
