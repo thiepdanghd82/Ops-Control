@@ -1919,20 +1919,74 @@ router.post(
   }
 );
 
-router.delete('/totp/secret/:username', (req, res) => {
+// MES-3-FIX-61 — self-service 2FA reset must re-verify.
+//   SELF path (caller===target): the caller could previously drop their OWN
+//   TOTP secret with ZERO re-verification, so a stolen/idle session on the
+//   auto-login box could disable 2FA + re-enroll a new authenticator. Now the
+//   self path REQUIRES a valid CURRENT TOTP code OR the caller's password.
+//   OTHERS path (admin+ resetting another user): unchanged. The SYS-only
+//   POST /auth/users/:id/reset-2fa remains the preferred, stricter path.
+router.delete('/totp/secret/:username', async (req, res) => {
   const caller = getSessionUser(getTokenFromHeader(req));
   if (!caller) return res.status(401).json({ error: 'Unauthorized' });
   const usernameReq = decodeURIComponent(req.params.username);
-  if (roleLevel(caller) < 4 && caller.username.toLowerCase() !== usernameReq.toLowerCase()) {
+  const isSelf = caller.username.toLowerCase() === usernameReq.toLowerCase();
+
+  // Others may only be reset by admin+ (unchanged). Self is allowed for any
+  // authenticated user but MUST re-verify below.
+  if (!isSelf && roleLevel(caller) < 4) {
     return res.status(403).json({ error: 'Forbidden' });
   }
-  const secs = loadTotpSecrets();
-  const keyDel = Object.keys(secs).find((k) => k.toLowerCase() === usernameReq.toLowerCase());
-  if (keyDel) {
-    delete secs[keyDel];
-    saveTotpSecrets(secs);
-    // Audit the reset (was console.log-only — closes the missing-trail gap;
-    // no behavior change). The SYS-only reset-2fa route is the preferred path.
+
+  if (isSelf) {
+    // Step-up: a valid CURRENT TOTP code (verified against the caller's own
+    // secret) OR the caller's password. Missing/wrong → 401, secret untouched.
+    const { code, password } = req.body || {};
+    let verified = false;
+    if (password) verified = await checkPassword(caller, String(password));
+    if (!verified && code) {
+      const secs = loadTotpSecrets();
+      const key = Object.keys(secs).find((k) => k.toLowerCase() === usernameReq.toLowerCase());
+      verified = key ? totpVerify(secs[key], String(code).trim()) : false;
+    }
+    if (!verified) {
+      audit(
+        'TOTP_SELF_RESET_FAIL',
+        caller.username,
+        clientIp(req),
+        JSON.stringify({ user_id: caller.id, ip: clientIp(req) })
+      );
+      return res
+        .status(401)
+        .json({ error: 'Re-verify required: enter your current 2FA code or password.' });
+    }
+    // Race-safe removal (never a raw file op) — mirrors reset-2fa.
+    await updateTotpSecrets((secs) => {
+      const key = Object.keys(secs).find((k) => k.toLowerCase() === usernameReq.toLowerCase());
+      if (key) delete secs[key];
+      return secs;
+    });
+    audit(
+      'TOTP_SELF_RESET',
+      caller.username,
+      clientIp(req),
+      JSON.stringify({ user_id: caller.id, ip: clientIp(req) })
+    );
+    console.log(`  🔐  TOTP self-reset (re-verified) for: ${usernameReq}`);
+    return res.json({ ok: true });
+  }
+
+  // Admin+ resetting ANOTHER user — unchanged behavior + existing audit trail.
+  let removed = false;
+  await updateTotpSecrets((secs) => {
+    const key = Object.keys(secs).find((k) => k.toLowerCase() === usernameReq.toLowerCase());
+    if (key) {
+      delete secs[key];
+      removed = true;
+    }
+    return secs;
+  });
+  if (removed) {
     audit('TOTP_SECRET_DELETED', caller.username, clientIp(req), `target=${usernameReq}`);
     console.log(`  🗑️  TOTP secret removed for: ${usernameReq}`);
   }
