@@ -108,9 +108,19 @@ export const STRINGS = {
     en: '{shown} of {total} rows',
     vi: '{shown} / {total} dòng',
   },
-  'npi_parts.readonly_notice': {
-    en: 'Read-only viewer (v1.6). Edit capability ships in v1.7.',
-    vi: 'Chế độ xem chỉ đọc (v1.6). Tính năng chỉnh sửa sẽ có ở v1.7.',
+  'npi_parts.data_notice': {
+    en: 'Master reference list. Import to replace the set; export CSV/XLSX round-trips losslessly.',
+    vi: 'Danh sách tham chiếu gốc. Import để thay thế; export CSV/XLSX round-trip không mất dữ liệu.',
+  },
+  'npi_parts.import': { en: 'Import…', vi: 'Nhập…' },
+  'npi_parts.import_hint': {
+    en: 'Import NPI Parts from CSV or XLSX (preview + Export/Template inside the wizard)',
+    vi: 'Nhập NPI Parts từ CSV hoặc XLSX (xem trước + Export/Template trong wizard)',
+  },
+  'npi_parts.clear': { en: 'Clear Data', vi: 'Xoá dữ liệu' },
+  'npi_parts.clear_hint': {
+    en: 'Clear all NPI Parts data (the current file is backed up first)',
+    vi: 'Xoá toàn bộ dữ liệu NPI Parts (file hiện tại được sao lưu trước)',
   },
   'npi_parts.search_placeholder': {
     en: 'Search part name, Code IFS, System code, customer, PIC…',
