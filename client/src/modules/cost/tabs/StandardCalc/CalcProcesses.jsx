@@ -16,6 +16,7 @@ import {
 import { fmtN as _fmtN, parseLocaleNumber } from '../../../../utils/format';
 import DecimalInput from '../../../../utils/DecimalInput';
 import { crewOverrideState, isManualDerivedRow } from './processCrew.helpers';
+import { resolveScrapOnWorkcenterChange } from '../../../../services/scrapDefaults';
 // ProcessBalancing is rendered as separate "Balancing" sub-tab
 
 // Local wrapper: default 4 decimals for process cost fields.
@@ -101,21 +102,31 @@ export default function CalcProcesses() {
 
   const handleProcessType = useCallback(
     (idx, value) => {
+      const prev = processes[idx] || {};
       setProcessField(idx, 'process_type', value);
       setProcessField(idx, 'workcenter', '');
+      // Clearing the workcenter counts as "changing away" — reset an auto FQC
+      // 10% back to 0, but never touch an operator-typed scrap.
+      const scrap = resolveScrapOnWorkcenterChange(prev.workcenter, '', prev.scrap_pct);
+      if (scrap.changed) setProcessField(idx, 'scrap_pct', scrap.value);
     },
-    [setProcessField]
+    [setProcessField, processes]
   );
 
   const handleWorkcenter = useCallback(
     (idx, wc) => {
+      const prev = processes[idx] || {};
       setProcessField(idx, 'workcenter', wc);
+      // FQC → auto 10% scrap; away from FQC → reset the auto 10% to 0. Only
+      // when scrap is still at its default (0 or the prior auto value).
+      const scrap = resolveScrapOnWorkcenterChange(prev.workcenter, wc, prev.scrap_pct);
+      if (scrap.changed) setProcessField(idx, 'scrap_pct', scrap.value);
       if (lib && wc) {
         const rate = getRateByWC(lib, wc);
         if (rate && rate.crew) setProcessField(idx, 'crew', rate.crew);
       }
     },
-    [setProcessField, lib]
+    [setProcessField, lib, processes]
   );
 
   const handleToolType = useCallback(
@@ -408,7 +419,8 @@ export default function CalcProcesses() {
                         type="number"
                         min="0"
                         max="100"
-                        value={proc.scrap_pct != null ? Math.round(proc.scrap_pct * 100) : 3}
+                        placeholder="0"
+                        value={proc.scrap_pct ? Math.round(proc.scrap_pct * 100) : ''}
                         onChange={(e) =>
                           handleField(
                             i,
