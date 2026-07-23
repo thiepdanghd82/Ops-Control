@@ -29,6 +29,7 @@ import { useI18n } from '../../../utils/useI18n';
 import { sharedApi, importApi } from '../../../services/api';
 import ColumnsToggle from '../../../components/Shared/ColumnsToggle';
 import ImportWizard from '../../../components/Shared/ImportWizard';
+import ConfirmClearModal from '../../../components/Shared/ConfirmClearModal';
 import EmptyState from '../../../components/Shared/EmptyState';
 import SkeletonTable from '../../../components/Shared/SkeletonTable';
 import Modal from '../../../components/Shared/Modal';
@@ -185,7 +186,8 @@ export default function NpiPartsList() {
   const [showcardRow, setShowcardRow] = useState(null);
   const [reloadTick, setReloadTick] = useState(0);
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [clearOpen, setClearOpen] = useState(false);
+  const [busy] = useState(false);
   const [msg, setMsg] = useState('');
 
   const reload = useCallback(() => setReloadTick((n) => n + 1), []);
@@ -216,22 +218,12 @@ export default function NpiPartsList() {
     reload();
   }, [reload]);
 
-  const handleClear = useCallback(async () => {
-    if (!window.confirm('Clear all NPI Parts data? The current file will be backed up first.'))
-      return;
-    setBusy(true);
-    setMsg('Clearing…');
-    try {
-      await importApi.clearNpiParts();
-      reload();
-      setMsg('Data cleared');
-      setTimeout(() => setMsg(''), 3000);
-    } catch (err) {
-      setMsg('Clear failed: ' + (err?.message || 'Unknown error'));
-      setTimeout(() => setMsg(''), 5000);
-    } finally {
-      setBusy(false);
-    }
+  // Post-clear reload — the wipe + password step-up run inside
+  // ConfirmClearModal (importApi.clearNpiParts(password)).
+  const afterClear = useCallback(() => {
+    reload();
+    setMsg('Data cleared');
+    setTimeout(() => setMsg(''), 3000);
   }, [reload]);
 
   const columnConfig = useMemo(() => {
@@ -347,7 +339,7 @@ export default function NpiPartsList() {
           <button
             type="button"
             className="op-btn op-btn-danger npi-parts-clear-btn"
-            onClick={handleClear}
+            onClick={() => setClearOpen(true)}
             disabled={busy}
             title={t('npi_parts.clear_hint')}
           >
@@ -493,6 +485,14 @@ export default function NpiPartsList() {
         datasetKey="npi-parts"
         datasetLabel="NPI Parts List"
         onCommitted={handleWizardCommitted}
+      />
+      <ConfirmClearModal
+        open={clearOpen}
+        onClose={() => setClearOpen(false)}
+        datasetLabel="NPI Parts List"
+        rowCount={snapshot?.row_count}
+        clearApi={(password) => importApi.clearNpiParts(password)}
+        onCleared={afterClear}
       />
     </div>
   );

@@ -277,13 +277,16 @@ export const importApi = {
       file
     ),
   // Clear-data — each endpoint wipes only its own dataset and backs up the
-  // previous contents. Keeps tabs independent.
-  clearBom: () => api.delete('/import/bom'),
-  clearRouting: () => api.delete('/import/routing'),
-  clearInventory: () => api.delete('/import/inventory'),
-  clearFinishedGoods: () => api.delete('/import/finished-goods'),
-  clearRawMaterials: () => api.delete('/import/raw-materials'),
-  clearNpiParts: () => api.delete('/import/npi-parts'),
+  // previous contents. Keeps tabs independent. Requires the caller's account
+  // password (step-up); POST (not DELETE) so the { password } body is sent.
+  // Returns 200 { ok:false, code:'bad_password' } on a wrong/missing password
+  // (never thrown) so the confirm modal can show an inline error.
+  clearBom: (password) => api.post('/import/bom/clear', { password }),
+  clearRouting: (password) => api.post('/import/routing/clear', { password }),
+  clearInventory: (password) => api.post('/import/inventory/clear', { password }),
+  clearFinishedGoods: (password) => api.post('/import/finished-goods/clear', { password }),
+  clearRawMaterials: (password) => api.post('/import/raw-materials/clear', { password }),
+  clearNpiParts: (password) => api.post('/import/npi-parts/clear', { password }),
   status: () => api.get('/import/status'),
   // Server-side backup — copies the dataset's data file to destPath
   // (or an auto-named sibling if destPath is omitted). Admins only.

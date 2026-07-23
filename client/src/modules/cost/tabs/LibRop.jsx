@@ -10,6 +10,7 @@ import { useCallback, useState } from 'react';
 import { sharedApi, importApi } from '../../../services/api';
 import DataBrowser from '../../../components/Shared/DataBrowser';
 import ImportWizard from '../../../components/Shared/ImportWizard';
+import ConfirmClearModal from '../../../components/Shared/ConfirmClearModal';
 import { useCachedFetch, invalidateCache } from '../../../hooks/useCachedFetch';
 
 const COLUMNS = [
@@ -80,9 +81,10 @@ export default function LibRop() {
   );
   const data = Array.isArray(routingData) ? routingData : [];
   const loading = routingData == null;
-  const [busy, setBusy] = useState(false);
+  const [busy] = useState(false);
   const [msg, setMsg] = useState('');
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [clearOpen, setClearOpen] = useState(false);
 
   const handleWizardCommitted = useCallback(async () => {
     await sharedApi.refreshCache().catch(() => {});
@@ -90,29 +92,14 @@ export default function LibRop() {
     await reloadRouting();
   }, [reloadRouting]);
 
-  const handleClear = useCallback(async () => {
-    if (
-      !window.confirm(
-        'Clear all Routing Operations data? The current file will be backed up first.'
-      )
-    )
-      return;
-    setBusy(true);
-    setMsg('Clearing…');
-    try {
-      await importApi.clearRouting();
-      await sharedApi.refreshCache().catch(() => {});
-      invalidateCache('lib-rop-routing');
-      await reloadRouting();
-      setMsg('Data cleared');
-      setTimeout(() => setMsg(''), 3000);
-    } catch (err) {
-      console.error('Clear failed:', err);
-      setMsg('Clear failed: ' + (err.message || 'Unknown error'));
-      setTimeout(() => setMsg(''), 5000);
-    } finally {
-      setBusy(false);
-    }
+  // Post-clear reload — the wipe + password step-up run inside
+  // ConfirmClearModal (importApi.clearRouting(password)).
+  const afterClear = useCallback(async () => {
+    await sharedApi.refreshCache().catch(() => {});
+    invalidateCache('lib-rop-routing');
+    await reloadRouting();
+    setMsg('Data cleared');
+    setTimeout(() => setMsg(''), 3000);
   }, [reloadRouting]);
 
   const importSlot = (
@@ -127,7 +114,7 @@ export default function LibRop() {
       </button>
       <button
         className="db-col-btn db-btn-danger"
-        onClick={handleClear}
+        onClick={() => setClearOpen(true)}
         disabled={busy}
         title="Clear all Routing Operations data (backup kept)"
       >
@@ -178,6 +165,14 @@ export default function LibRop() {
         datasetKey="routing"
         datasetLabel="Routing Operations"
         onCommitted={handleWizardCommitted}
+      />
+      <ConfirmClearModal
+        open={clearOpen}
+        onClose={() => setClearOpen(false)}
+        datasetLabel="Routing Operations"
+        rowCount={data.length}
+        clearApi={(password) => importApi.clearRouting(password)}
+        onCleared={afterClear}
       />
     </>
   );
