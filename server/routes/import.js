@@ -575,6 +575,11 @@ const CLEAR_TARGETS = {
     varName: 'window._CCL_RM_DATA',
     label: 'Raw Materials',
   },
+  'npi-parts': {
+    file: ['NpiParts', 'npi_parts_data.js'],
+    varName: 'window._CCL_NPIPARTS_DATA',
+    label: 'NPI Parts List',
+  },
 };
 
 // Map slug → shadow-clear function so DELETE /:slug also truncates the

@@ -283,6 +283,7 @@ export const importApi = {
   clearInventory: () => api.delete('/import/inventory'),
   clearFinishedGoods: () => api.delete('/import/finished-goods'),
   clearRawMaterials: () => api.delete('/import/raw-materials'),
+  clearNpiParts: () => api.delete('/import/npi-parts'),
   status: () => api.get('/import/status'),
   // Server-side backup — copies the dataset's data file to destPath
   // (or an auto-named sibling if destPath is omitted). Admins only.
@@ -354,6 +355,8 @@ export const sharedApi = {
   getRouting: (partNo, opts = {}) =>
     partNo ? api.get(`/shared/routing/${partNo}`, opts) : api.get('/shared/routing', opts),
   getWorkCenters: (opts = {}) => api.get('/shared/work-centers', opts),
+  // NPI Parts List — returns { columns, rows, row_count, generated_at }.
+  getNpiParts: (opts = {}) => api.get('/shared/npi-parts', opts),
 
   // Cost data (read directly from JSON files)
   getMaterials: (opts = {}) => api.get('/shared/materials', opts),
