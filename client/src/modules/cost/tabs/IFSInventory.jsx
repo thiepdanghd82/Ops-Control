@@ -4,6 +4,7 @@ import { useCachedFetch, invalidateCache } from '../../../hooks/useCachedFetch';
 import EmptyState from '../../../components/Shared/EmptyState';
 import SkeletonTable from '../../../components/Shared/SkeletonTable';
 import ImportWizard from '../../../components/Shared/ImportWizard';
+import ConfirmClearModal from '../../../components/Shared/ConfirmClearModal';
 import './IFSInventory.css';
 
 // Per sub-tab clear wiring. Imports go through the unified Import Wizard
@@ -12,12 +13,12 @@ import './IFSInventory.css';
 const IMPORT_CFG = {
   inventory: {
     wizardKey: 'inventory',
-    clear: () => importApi.clearInventory(),
+    clear: (password) => importApi.clearInventory(password),
     label: 'Full Inventory',
   },
   finishedGoods: {
     wizardKey: 'finished-goods',
-    clear: () => importApi.clearFinishedGoods(),
+    clear: (password) => importApi.clearFinishedGoods(password),
     label: 'Finished Goods',
   },
   // Raw Materials retired from IFS Inventory 2026-06-25 — raw-material
@@ -182,9 +183,10 @@ export default function IFSInventory() {
       return 'inventory';
     }
   });
-  const [busy, setBusy] = useState(false);
+  const [busy] = useState(false);
   const [msg, setMsg] = useState('');
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [clearOpen, setClearOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -213,26 +215,17 @@ export default function IFSInventory() {
     [activeTab, flash, refresh]
   );
 
-  const handleClear = useCallback(async () => {
-    const cfg = IMPORT_CFG[activeTab];
-    if (!cfg) return;
-    if (!window.confirm(`Clear all ${cfg.label} data? The current file will be backed up first.`))
-      return;
-    setBusy(true);
-    setMsg('Clearing…');
-    try {
-      await cfg.clear();
-      await sharedApi.refreshCache().catch(() => {});
+  // Post-clear reload — the wipe + password step-up run inside
+  // ConfirmClearModal (cfg.clear(password) for the active sub-tab).
+  const afterClear = useCallback(
+    (label) => {
+      sharedApi.refreshCache().catch(() => {});
       invalidateCache('ifs-inventory');
       refresh();
-      flash(`${cfg.label} cleared`);
-    } catch (err) {
-      console.error('Clear failed:', err);
-      flash('Clear failed: ' + (err.message || 'Unknown error'), 5500);
-    } finally {
-      setBusy(false);
-    }
-  }, [activeTab, flash, refresh]);
+      flash(`${label} cleared`);
+    },
+    [flash, refresh]
+  );
 
   if (loading)
     return (
@@ -272,7 +265,7 @@ export default function IFSInventory() {
         <button
           className="inv-header-btn danger"
           disabled={busy}
-          onClick={handleClear}
+          onClick={() => setClearOpen(true)}
           title={`Clear all ${tabCfg.label} data (backup kept)`}
         >
           {'\uD83D\uDDD1 Clear Data'}
@@ -299,6 +292,16 @@ export default function IFSInventory() {
           datasetKey={wizardCfg.wizardKey}
           datasetLabel={wizardCfg.label}
           onCommitted={handleWizardCommitted}
+        />
+      )}
+      {wizardCfg && (
+        <ConfirmClearModal
+          open={clearOpen}
+          onClose={() => setClearOpen(false)}
+          datasetLabel={wizardCfg.label}
+          rowCount={(data[activeTab] || []).length}
+          clearApi={(password) => wizardCfg.clear(password)}
+          onCleared={() => afterClear(wizardCfg.label)}
         />
       )}
     </div>

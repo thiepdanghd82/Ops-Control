@@ -36,6 +36,26 @@ export const STRINGS = {
   'common.loading': { en: 'Loading…', vi: 'Đang tải…' },
   'common.saving': { en: 'Saving…', vi: 'Đang lưu…' },
   'common.unsaved': { en: 'Unsaved', vi: 'Chưa lưu' },
+  // ─── Clear Data password step-up (ConfirmClearModal) ───
+  'clear_confirm.title': { en: 'Clear data — confirm', vi: 'Xoá dữ liệu — xác nhận' },
+  'clear_confirm.body': {
+    en: 'This permanently clears all {rows} rows of {dataset}. The current file is backed up first, but this cannot be undone from the app. Enter your account password to confirm.',
+    vi: 'Thao tác này xoá vĩnh viễn toàn bộ {rows} dòng của {dataset}. File hiện tại được sao lưu trước, nhưng không thể hoàn tác trong ứng dụng. Nhập mật khẩu tài khoản để xác nhận.',
+  },
+  'clear_confirm.body_no_count': {
+    en: 'This permanently clears all of {dataset}. The current file is backed up first, but this cannot be undone from the app. Enter your account password to confirm.',
+    vi: 'Thao tác này xoá vĩnh viễn toàn bộ {dataset}. File hiện tại được sao lưu trước, nhưng không thể hoàn tác trong ứng dụng. Nhập mật khẩu tài khoản để xác nhận.',
+  },
+  'clear_confirm.pwd_label': { en: 'Account password', vi: 'Mật khẩu tài khoản' },
+  'clear_confirm.err_pwd': {
+    en: 'Incorrect account password.',
+    vi: 'Mật khẩu tài khoản không đúng.',
+  },
+  'clear_confirm.err_generic': {
+    en: 'Clear failed. Please try again.',
+    vi: 'Xoá thất bại. Vui lòng thử lại.',
+  },
+  'clear_confirm.confirm_btn': { en: 'Clear data', vi: 'Xoá dữ liệu' },
   'common.saved': { en: 'Saved', vi: 'Đã lưu' },
   'common.active': { en: 'Active', vi: 'Đang dùng' },
   'common.yes': { en: 'Yes', vi: 'Có' },
