@@ -149,6 +149,22 @@ test('calcMatScrapFactor: single 3% scrap on an assigned workcenter', () => {
   assert.ok(Math.abs(sf - 0.03) < 1e-9);
 });
 
+test('calcMatScrapFactor: scrap 0 on an assigned workcenter → no loss (new default)', () => {
+  // A fresh process row now seeds scrap = 0, so an assigned workcenter with
+  // the untouched default contributes zero material loss.
+  const sf = calcMatScrapFactor({
+    processes: [{ workcenter: 'Flexo-A', scrap_pct: 0 }],
+  });
+  assert.equal(sf, 0);
+});
+
+test('calcMatScrapFactor: FQC 10% → 10% loss (FQC workcenter default)', () => {
+  const sf = calcMatScrapFactor({
+    processes: [{ workcenter: 'FQC', scrap_pct: 0.1 }],
+  });
+  assert.ok(Math.abs(sf - 0.1) < 1e-9);
+});
+
 test('calcMatScrapFactor: compounding across multiple processes', () => {
   // 1 - (1-0.03)(1-0.05) = 1 - 0.9215 = 0.0785
   const sf = calcMatScrapFactor({

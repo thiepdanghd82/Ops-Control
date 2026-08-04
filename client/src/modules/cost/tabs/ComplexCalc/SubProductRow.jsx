@@ -47,6 +47,7 @@ import {
 import { validateLayout } from '../../../../services/layoutValidation';
 import { primaryRowTypeLabel } from '../../../../services/altMaterialsLabels';
 import { isIndigoPrintType } from '../../../../services/printTypeUtils';
+import { resolveScrapOnWorkcenterChange } from '../../../../services/scrapDefaults';
 import {
   getCovOvrState,
   getCovOvrTooltip,
@@ -1488,6 +1489,14 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                           onChange={(e) => {
                             setProc(pi, 'process_type', e.target.value);
                             setProc(pi, 'workcenter', '');
+                            // Clearing workcenter = "away" — reset an auto FQC
+                            // 10% to 0; never touch an operator-typed scrap.
+                            const sc = resolveScrapOnWorkcenterChange(
+                              p.workcenter,
+                              '',
+                              p.scrap_pct
+                            );
+                            if (sc.changed) setProc(pi, 'scrap_pct', sc.value);
                           }}
                           className="cc-det-sel sc-select-bare"
                         >
@@ -1505,6 +1514,14 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                           onChange={(e) => {
                             const wc = e.target.value;
                             setProc(pi, 'workcenter', wc);
+                            // FQC → auto 10% scrap; away from FQC → reset the
+                            // auto 10% to 0. Only while scrap is at its default.
+                            const sc = resolveScrapOnWorkcenterChange(
+                              p.workcenter,
+                              wc,
+                              p.scrap_pct
+                            );
+                            if (sc.changed) setProc(pi, 'scrap_pct', sc.value);
                             if (lib && wc) {
                               const rt = getRateByWC(lib, wc);
                               if (rt && rt.crew) setProc(pi, 'crew', rt.crew);
@@ -1624,7 +1641,8 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                           type="number"
                           min="0"
                           max="100"
-                          value={p.scrap_pct != null ? Math.round(p.scrap_pct * 100) : 3}
+                          placeholder="0"
+                          value={p.scrap_pct ? Math.round(p.scrap_pct * 100) : ''}
                           onChange={(e) => setProc(pi, 'scrap_pct', numF(e.target.value) / 100)}
                           className="cc-det-inp cc-det-num"
                         />
