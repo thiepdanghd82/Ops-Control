@@ -729,10 +729,16 @@ export function calcProcess(proc, st, moq, lib, options = {}) {
     const resolvedLife = options.resolver
       ? options.resolver.getToolLife(proc.tool_type)
       : getToolLife(lib, proc.tool_type);
-    const tlife =
-      proc.tool_life_ovr && proc.tool_life_ovr !== false
-        ? proc.tool_life || 1
-        : resolvedLife || proc.tool_life || 1;
+    // The editable per-row Tool Life column is the SOURCE OF TRUTH for the
+    // tooling calc (2026-08): whenever the row holds a positive value it wins,
+    // so editing Tool Life changes the cost. The DDL/snapshot resolvedLife is a
+    // fallback used ONLY when the row is 0/empty (legacy quotes saved before
+    // the column was populated). tool_life_ovr no longer gates the cost — the
+    // row value is inherently frozen with the quote state, so it's reproducible
+    // without the snapshot resolver. Pre-2026-06-21 snapshots that lack
+    // tool_life only matter when rowLife is 0 (the fallback path below).
+    const rowLife = Number(proc.tool_life) || 0;
+    const tlife = rowLife > 0 ? rowLife : resolvedLife || 1;
     // DDL data uses "Jig" but legacy code shipped with "Jig& Fixture".
     // Normalize both to match any variant (whitespace/casing/ampersand) but
     // require EXACT match after normalization so we don't accidentally
