@@ -149,16 +149,16 @@ export default function CalcProcesses() {
     return Object.keys(lib.ddl.tool_life);
   }, [lib]);
 
-  // Backfill tool_life from DDL when loading a legacy quote where
-  // tool_type was saved but tool_life was never populated (= 0).
-  // The engine already falls back to getToolLife at compute time so
-  // cost is correct — but the UI input only shows proc.tool_life, so
-  // without this heal the column looks empty. Respect tool_life_ovr
-  // so an operator's manual override is never overwritten.
+  // Seed the editable Tool Life column from DDL when a row has none (= 0),
+  // e.g. a legacy quote saved before the column was populated, or right after
+  // a tool_type change. The row value is now the SOURCE OF TRUTH for the
+  // tooling calc (calcEngine calcProcess), so we fill ONLY when the row is 0 —
+  // a value the operator has typed is non-zero and is never overwritten. No
+  // tool_life_ovr guard needed: the `missing` check alone protects edits.
   useEffect(() => {
     if (!lib?.ddl?.tool_life || !processes.length) return;
     processes.forEach((proc, i) => {
-      if (!proc || proc.hidden || proc.tool_life_ovr) return;
+      if (!proc || proc.hidden) return;
       const hasType = !!proc.tool_type;
       const missing = !proc.tool_life || Number(proc.tool_life) === 0;
       if (hasType && missing) {

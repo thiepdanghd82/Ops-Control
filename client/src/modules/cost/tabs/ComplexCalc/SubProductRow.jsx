@@ -330,16 +330,15 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
     [lib]
   );
 
-  // Backfill tool_life from DDL when loading a legacy quote where
-  // tool_type was saved but tool_life was never populated (= 0).
-  // The engine falls back at compute time but the UI input reads
-  // proc.tool_life directly — without this heal the column looks
-  // empty. Respect tool_life_ovr so manual overrides survive.
+  // Seed the editable Tool Life column from DDL when a row has none (= 0) —
+  // legacy quote or right after a tool_type change. The row value is the
+  // SOURCE OF TRUTH for the tooling calc, so we fill ONLY when the row is 0; a
+  // typed value is non-zero and is never overwritten (mirrors CalcProcesses).
   useEffect(() => {
     if (!lib?.ddl?.tool_life) return;
     const list = sp.processes || [];
     list.forEach((proc, i) => {
-      if (!proc || proc.hidden || proc.tool_life_ovr) return;
+      if (!proc || proc.hidden) return;
       const hasType = !!proc.tool_type;
       const missing = !proc.tool_life || Number(proc.tool_life) === 0;
       if (hasType && missing) {
