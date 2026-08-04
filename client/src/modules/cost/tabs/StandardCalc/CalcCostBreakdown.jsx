@@ -98,7 +98,11 @@ export default function CalcCostBreakdown() {
           <span className="sc-card-title">{t('pricing.selling_unit')}</span>
         </div>
         <div className="sc-card-body sc-table-wrap">
-          <table className="sc-table sc-bd-table">
+          {/* data-kbd-skip: the VA/Contr/GM cells are an edit-to-reprice
+              surface (MarginCell), NOT a data-entry grid — grid keyboard-nav
+              must not own their keys, so MarginCell's own Enter/blur commit
+              runs. Analysis table, so skipping arrow-nav here loses nothing. */}
+          <table className="sc-table sc-bd-table" data-kbd-skip>
             <thead>
               <tr>
                 <th>{t('pricing.tier')}</th>
@@ -188,7 +192,11 @@ export default function CalcCostBreakdown() {
           <span className="sc-card-title">Target /unit (USD)</span>
         </div>
         <div className="sc-card-body sc-table-wrap">
-          <table className="sc-table sc-bd-table">
+          {/* data-kbd-skip: the VA/Contr/GM cells are an edit-to-reprice
+              surface (MarginCell), NOT a data-entry grid — grid keyboard-nav
+              must not own their keys, so MarginCell's own Enter/blur commit
+              runs. Analysis table, so skipping arrow-nav here loses nothing. */}
+          <table className="sc-table sc-bd-table" data-kbd-skip>
             <thead>
               <tr>
                 <th>Tier</th>

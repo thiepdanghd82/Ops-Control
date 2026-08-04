@@ -149,7 +149,10 @@ export default function CplxCostBreakdown() {
           <span className="sc-card-title">Selling /unit (USD)</span>
         </div>
         <div className="sc-card-body sc-table-wrap">
-          <table className="sc-table sc-bd-table">
+          {/* data-kbd-skip: MarginCell VA/Contr/GM cells are edit-to-reprice,
+              not a data-entry grid — keep their native Enter/blur commit
+              (mirrors Standard CalcCostBreakdown). */}
+          <table className="sc-table sc-bd-table" data-kbd-skip>
             <thead>
               <tr>
                 <th>Tier</th>
@@ -240,7 +243,10 @@ export default function CplxCostBreakdown() {
           <span className="sc-card-title">Target /unit (USD)</span>
         </div>
         <div className="sc-card-body sc-table-wrap">
-          <table className="sc-table sc-bd-table">
+          {/* data-kbd-skip: MarginCell VA/Contr/GM cells are edit-to-reprice,
+              not a data-entry grid — keep their native Enter/blur commit
+              (mirrors Standard CalcCostBreakdown). */}
+          <table className="sc-table sc-bd-table" data-kbd-skip>
             <thead>
               <tr>
                 <th>Tier</th>
