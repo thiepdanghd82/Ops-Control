@@ -18,7 +18,13 @@
  * Capture-phase so it sees keys before the inputs; DecimalInput needs no change.
  */
 import { useEffect } from 'react';
-import { collectFocusable, rectOf, nextControlInDirection } from './gridKeyboardNav.js';
+import {
+  collectFocusable,
+  rectOf,
+  nextControlInDirection,
+  buildTableContext,
+  resolveTableTarget,
+} from './gridKeyboardNav.js';
 
 const KEY_DIR = {
   ArrowUp: 'up',
@@ -86,13 +92,27 @@ export function useGridKeyboardNav(scopeRef) {
         if (dir === 'right' && !atEnd) return;
       }
 
+      // Primary path: structural nav for real <table>s (Materials / Inks /
+      // Processes / Cpx sub-product tables). Exact row/column stepping — never
+      // drifts to another row. Clamps at table edges (returns null → no move).
+      const table = buildTableContext(active, scope);
+      if (table) {
+        const target = resolveTableTarget(table.grid, table.pos, dir);
+        if (target) {
+          e.preventDefault();
+          focusAndSelect(target);
+        }
+        return; // in a table → table nav is authoritative (move or clamp)
+      }
+
+      // Geometry fallback: CSS-grid forms (RFQ & MOQ Info, Layout, Pack & Ship).
       const controls = collectFocusable(scope);
       if (controls.length < 2) return;
       const activeRect = rectOf(active);
       const rects = controls.filter((el) => el !== active).map((el) => ({ el, rect: rectOf(el) }));
 
       const target = nextControlInDirection(rects, activeRect, dir);
-      if (!target) return; // clamp at edge — don't swallow the key
+      if (!target) return; // clamp — don't swallow the key
 
       e.preventDefault();
       focusAndSelect(target);
