@@ -3,6 +3,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { authApi, api, costApi, importApi, sharedApi } from '../../../services/api';
 import EmptyState from '../../../components/Shared/EmptyState';
 import Modal from '../../../components/Shared/Modal';
+import ConfirmClearModal from '../../../components/Shared/ConfirmClearModal';
 import { useTheme } from '../../../utils/useTheme';
 import { useI18n } from '../../../utils/useI18n';
 import PermissionGroupsSection from './PermissionGroupsSection';
@@ -3120,7 +3121,7 @@ const DATA_IMPORT_DATASETS = [
     desc: 'Current stock levels synced from IFS',
     accept: '.csv,.xlsx,.xls',
     upload: (file) => importApi.uploadInventory(file),
-    clear: () => importApi.clearInventory(),
+    clear: (password) => importApi.clearInventory(password),
     fetch: () => sharedApi.getInventory(),
     filename: 'inventory',
   },
@@ -3130,7 +3131,7 @@ const DATA_IMPORT_DATASETS = [
     desc: 'FG master data (part numbers, descriptions)',
     accept: '.csv,.xlsx,.xls',
     upload: (file) => importApi.uploadFinishedGoods(file),
-    clear: () => importApi.clearFinishedGoods(),
+    clear: (password) => importApi.clearFinishedGoods(password),
     fetch: () => sharedApi.getProducts(),
     filename: 'finished_goods',
   },
@@ -3143,7 +3144,7 @@ const DATA_IMPORT_DATASETS = [
     desc: 'Bill of materials for manufactured parts',
     accept: '.csv,.xlsx,.xls',
     upload: (file) => importApi.uploadBom(file),
-    clear: () => importApi.clearBom(),
+    clear: (password) => importApi.clearBom(password),
     fetch: () => sharedApi.getBOM(),
     filename: 'bom',
   },
@@ -3153,7 +3154,7 @@ const DATA_IMPORT_DATASETS = [
     desc: 'Process routing + work center assignments',
     accept: '.csv,.xlsx,.xls',
     upload: (file) => importApi.uploadRouting(file),
-    clear: () => importApi.clearRouting(),
+    clear: (password) => importApi.clearRouting(password),
     fetch: () => sharedApi.getRouting(),
     filename: 'routing',
   },
@@ -3163,6 +3164,7 @@ function DataImportSection({ importStatus, onRefresh }) {
   const { hasRole } = useAuth();
   const [busy, setBusy] = useState({});
   const [msg, setMsg] = useState(null);
+  const [clearTarget, setClearTarget] = useState(null); // dataset ds | null
   // Editable destination path per dataset — defaults to the server's
   // reported absolute path, user can override to save elsewhere.
   const [paths, setPaths] = useState({});
@@ -3231,23 +3233,11 @@ function DataImportSection({ importStatus, onRefresh }) {
     }
   }
 
-  async function handleClear(ds) {
-    if (
-      !confirm(
-        `Reset "${ds.label}" data?\n\nThe current dataset will be cleared. The server will auto-backup to /data/Backup/Data/ before wiping.\n\nThis cannot be undone via UI — restore must go through the server's Backup folder.`
-      )
-    )
-      return;
-    setBusyFor(ds.key, 'clear');
-    try {
-      await ds.clear();
-      flash('success', `${ds.label} data cleared (backup kept on server)`);
-      onRefresh?.();
-    } catch (e) {
-      flash('error', `${ds.label} clear failed: ${e.message || 'unknown'}`);
-    } finally {
-      setBusyFor(ds.key, null);
-    }
+  // Post-clear reload — the wipe + account-password step-up run inside
+  // ConfirmClearModal (ds.clear(password)). Opened from the Reset button.
+  function afterClear(ds) {
+    flash('success', `${ds.label} data cleared (backup kept on server)`);
+    onRefresh?.();
   }
 
   return (
@@ -3343,7 +3333,7 @@ function DataImportSection({ importStatus, onRefresh }) {
                   <button
                     className="di-btn di-btn-clear"
                     disabled={!canEdit || !info?.exists || state === 'clear'}
-                    onClick={() => handleClear(ds)}
+                    onClick={() => setClearTarget(ds)}
                     title="Wipe dataset (server auto-backs up)"
                   >
                     {state === 'clear' ? '⟳' : '✕'} Reset
@@ -3354,6 +3344,13 @@ function DataImportSection({ importStatus, onRefresh }) {
           })}
         </div>
       </div>
+      <ConfirmClearModal
+        open={!!clearTarget}
+        onClose={() => setClearTarget(null)}
+        datasetLabel={clearTarget?.label}
+        clearApi={(password) => clearTarget.clear(password)}
+        onCleared={() => afterClear(clearTarget)}
+      />
     </section>
   );
 }

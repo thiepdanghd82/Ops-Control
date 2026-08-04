@@ -712,6 +712,189 @@ const RFQ_TRACKING_DATASET = {
 };
 
 // ═══════════════════════════════════════════════════════════════════
+// NPI Parts List (master reference — "NPI Quote part list", 64 cols)
+// STORAGE_JS_AOA like BOM/Routing (25k×64 → compact arrays, not AoO).
+// No prettyLabels: the 64 canonical headers ARE the verbatim operator
+// strings, so export round-trips directly. No `shadow` block — the pricing
+// calc does NOT consume NPI Parts (mirror ifs-materials / rfq-tracking).
+// Bulk reference reload → commit in `replace` mode (the base file is the
+// full set); upsert by the best-effort composite key is available too.
+// ═══════════════════════════════════════════════════════════════════
+const NPI_PARTS_HEADERS = [
+  'PIC',
+  'Type',
+  'RFQ date',
+  'Part Name',
+  'Code IFS',
+  'System code',
+  'Unit price (VND)',
+  'Unit price (USD)',
+  'Customer',
+  'Direct Project',
+  'No.',
+  'Remark',
+  'Production part',
+  'Size W',
+  'Size L',
+  'Material',
+  'Size2 W',
+  'Size2 L',
+  'Num. of Webs',
+  'Parts in MD',
+  'Parts/Web across',
+  'Min Gap MD btwn Sheets',
+  'Cavity',
+  'MOQ',
+  'Process',
+  'LP/Flexo',
+  'SS',
+  'Glue',
+  'LP/Flexo Film',
+  'SS Film',
+  'Stencil Plate life',
+  'Cutter life',
+  'Dieset distribution',
+  'Mat 2',
+  'Mat 3',
+  'Mat 4',
+  'Mat 5',
+  'GP%',
+  'Cutter type',
+  'Cutter Cavity',
+  'Tooling fee (woodie)',
+  'Tooling fee (Pinacle die)',
+  'Tooling fee (Rotary Die)',
+  'Tooling fee (Dieset)',
+  'EAU',
+  'Material in Drawing',
+  'Plate Flexo',
+  'Film + Plate (SS)',
+  'Sale/PM',
+  'Quoted date',
+  'Quoted Approval (VND)',
+  'Quoted Approval (USD)',
+  'Delivery Term',
+  'Tooling fee (NC die)',
+  'Mat 6',
+  'Mat 7',
+  'Mat 8',
+  'Mat 9',
+  'Mat 10',
+  'Week',
+  'VA %',
+  'Cont %',
+  'GM %',
+  'INK IN QUOATION',
+];
+
+const NPI_PARTS_DATASET = {
+  key: 'npi-parts',
+  label: 'NPI Parts List',
+  storage: {
+    kind: STORAGE_JS_AOA,
+    folder: 'NpiParts',
+    file: 'npi_parts_data.js',
+    varName: 'window._CCL_NPIPARTS_DATA',
+  },
+  canonicalHeaders: NPI_PARTS_HEADERS,
+  // Part Name / Code IFS are mostly blank in real data → not reliable; guard
+  // against importing the wrong file with System code + Customer instead.
+  requiredHeaders: ['System code', 'Customer'],
+  // Best-effort composite for upsert. Default commit mode is `replace`
+  // (bulk reference reload) — the wizard's Replace option covers it (the
+  // pipeline has no per-dataset defaultMode field).
+  naturalKey: ['System code', 'Code IFS', 'RFQ date', 'Customer'],
+  columnTypes: {
+    'Unit price (VND)': 'number',
+    'Unit price (USD)': 'number',
+    MOQ: 'number',
+    EAU: 'number',
+    Cavity: 'number',
+    'Cutter Cavity': 'number',
+    'Num. of Webs': 'number',
+    'Parts in MD': 'number',
+    'Parts/Web across': 'number',
+    'Min Gap MD btwn Sheets': 'number',
+    'Size W': 'number',
+    'Size L': 'number',
+    'Size2 W': 'number',
+    'Size2 L': 'number',
+    'Tooling fee (woodie)': 'number',
+    'Tooling fee (Pinacle die)': 'number',
+    'Tooling fee (Rotary Die)': 'number',
+    'Tooling fee (Dieset)': 'number',
+    'Tooling fee (NC die)': 'number',
+    'Quoted Approval (VND)': 'number',
+    'Quoted Approval (USD)': 'number',
+    'GP%': 'number',
+    'VA %': 'number',
+    'Cont %': 'number',
+    'GM %': 'number',
+    'RFQ date': 'date',
+    'Quoted date': 'date',
+    Week: 'date',
+  },
+  // Every canonical header maps to itself (exact-match path, like BOM/Routing)
+  // via the spread below; the explicit entries add EN/VN + unit/paren/typo
+  // variants the token matcher can't collapse on its own. The tolerant token
+  // cascade (Lesson 32) handles everything else.
+  aliases: aliasMap({
+    ...Object.fromEntries(NPI_PARTS_HEADERS.map((h) => [h, []])),
+    PIC: ['Owner', 'NPI PIC'],
+    Type: ['Loại'],
+    'RFQ date': ['RFQ Date', 'Ngày RFQ'],
+    'Part Name': ['Tên hàng'],
+    'Code IFS': ['IFS Code', 'Mã IFS'],
+    'System code': ['System Code', 'Mã hệ thống'],
+    // VND/USD are noise tokens → the two Unit-price columns share the token
+    // set {unit,price}; only exact/explicit aliases disambiguate them.
+    'Unit price (VND)': ['Unit price (VND)', 'VND Unit Price', 'Unit Price VND', 'Đơn giá VND'],
+    'Unit price (USD)': ['Unit price (USD)', 'USD Unit Price', 'Unit Price USD', 'Đơn giá USD'],
+    Customer: ['Customer', 'Khách hàng'],
+    'Direct Project': ['Direct Project', 'Project', 'Dự án'],
+    'No.': ['No.', 'No', 'STT'],
+    'Num. of Webs': ['Num. of Webs', 'Number of Webs', 'Num of Webs', 'No. of Webs'],
+    'GP%': ['GP%', 'GP %', 'GP'],
+    'Cutter Cavity': ['Cutter Cavity', 'Cutter Cav'],
+    'Tooling fee (woodie)': ['Tooling fee (woodie)', 'Woodie Tooling', 'Tooling Woodie'],
+    'Tooling fee (Pinacle die)': [
+      'Tooling fee (Pinacle die)',
+      'Pinacle die Tooling',
+      'Tooling Pinacle die',
+      'Pinnacle die Tooling',
+    ],
+    'Tooling fee (Rotary Die)': [
+      'Tooling fee (Rotary Die)',
+      'Rotary Die Tooling',
+      'Tooling Rotary Die',
+    ],
+    'Tooling fee (Dieset)': ['Tooling fee (Dieset)', 'Dieset Tooling', 'Tooling Dieset'],
+    'Tooling fee (NC die)': ['Tooling fee (NC die)', 'NC die Tooling', 'Tooling NC die'],
+    // Quoted Approval VND/USD share {quoted,approval} after noise-strip.
+    'Quoted Approval (VND)': [
+      'Quoted Approval (VND)',
+      'VND Quoted Approval',
+      'Quoted Approval VND',
+    ],
+    'Quoted Approval (USD)': [
+      'Quoted Approval (USD)',
+      'USD Quoted Approval',
+      'Quoted Approval USD',
+    ],
+    'VA %': ['VA %', 'VA%', 'VA', 'Value Add %'],
+    'Cont %': ['Cont %', 'Cont%', 'Contr %', 'Contr%', 'Contribution %', 'Contribution'],
+    'GM %': ['GM %', 'GM%', 'GM', 'Gross Margin %'],
+    // Typo-tolerance: the real file header is misspelt "QUOATION".
+    'INK IN QUOATION': [
+      'INK IN QUOATION',
+      'Ink in quotation',
+      'INK IN QUOTATION',
+      'Ink in Quoation',
+    ],
+  }),
+};
+
+// ═══════════════════════════════════════════════════════════════════
 // Public registry
 // ═══════════════════════════════════════════════════════════════════
 export const DATASETS = {
@@ -724,6 +907,7 @@ export const DATASETS = {
   'ifs-materials': IFS_DATASET,
   'sourcing-db': SOURCING_DATASET,
   'rfq-tracking': RFQ_TRACKING_DATASET,
+  'npi-parts': NPI_PARTS_DATASET,
 };
 
 export function getDataset(key) {

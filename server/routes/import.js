@@ -12,6 +12,7 @@ import { fileURLToPath } from 'url';
 import { requireRole } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 import { clearCache } from '../services/dataSync.js';
+import { checkPassword, audit } from '../services/authService.js';
 import {
   getBackupRoot,
   resolveBackupTarget,
@@ -575,6 +576,11 @@ const CLEAR_TARGETS = {
     varName: 'window._CCL_RM_DATA',
     label: 'Raw Materials',
   },
+  'npi-parts': {
+    file: ['NpiParts', 'npi_parts_data.js'],
+    varName: 'window._CCL_NPIPARTS_DATA',
+    label: 'NPI Parts List',
+  },
 };
 
 // Map slug → shadow-clear function so DELETE /:slug also truncates the
@@ -587,25 +593,80 @@ const SHADOW_CLEAR_FNS = {
   'raw-materials': () => shadowClearInventory('raw_materials'),
 };
 
+function clientIp(req) {
+  return req.ip || req.connection?.remoteAddress || '0.0.0.0';
+}
+
+// Best-effort data-row count of a JS-AoA library file (for the audit trail).
+function countRowsInJsFile(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return 0;
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const m = content.match(/=\s*(\{[\s\S]*\})\s*;?\s*$/);
+    if (!m) return 0;
+    const parsed = JSON.parse(m[1]);
+    return Array.isArray(parsed.rows) ? parsed.rows.length : 0;
+  } catch {
+    return 0;
+  }
+}
+
+// Bulk-wipe of an imported dataset requires the caller to re-enter their
+// ACCOUNT PASSWORD (step-up), enforced here so a curl user can't bypass the
+// client modal. POST (not DELETE) because api.delete carries no body. The
+// existing requireRole(4) gate stays; the password check is ADDED on top.
 for (const [slug, cfg] of Object.entries(CLEAR_TARGETS)) {
-  router.delete(`/${slug}`, requireRole(4), (req, res) => {
-    try {
-      const targetFile = path.join(LIBRARY_DIR, ...cfg.file);
-      const backupPath = backupFile(targetFile);
-      clearJsDataFile(targetFile, cfg.varName);
-      const shadowFn = SHADOW_CLEAR_FNS[slug];
-      if (shadowFn) shadowFn();
-      clearCache();
-      res.json({
-        ok: true,
-        message: `${cfg.label} cleared`,
-        stats: { backup: backupPath ? path.basename(backupPath) : null },
-      });
-    } catch (err) {
-      logErr(req, `clear_${slug}`, err);
-      res.status(500).json({ error: redactErrorMessage(err) });
+  router.post(
+    `/${slug}/clear`,
+    requireRole(4),
+    // `password` optional at the schema layer so an ABSENT password takes the
+    // same "bad password" branch below (uniform failure), not a 400.
+    validateBody({ password: { type: 'string', required: false, max: 256 } }),
+    async (req, res) => {
+      const caller = req.user?.user;
+      const ip = clientIp(req);
+      // Verify the caller's CURRENT account password BEFORE wiping. Missing or
+      // wrong → HTTP 200 { ok:false, code:'bad_password' } (NOT 401 — the
+      // client's request() treats any 401 as session-expiry + force-logout).
+      // Nothing is touched. Mirrors the S-2FA-RESET step-up precedent.
+      const { password } = req.body || {};
+      if (!caller || !(await checkPassword(caller, password || ''))) {
+        audit(
+          'DATASET_CLEAR_DENIED',
+          caller?.username || '-',
+          ip,
+          JSON.stringify({ dataset: slug })
+        );
+        return res.json({ ok: false, code: 'bad_password', error: 'Account password incorrect' });
+      }
+      try {
+        const targetFile = path.join(LIBRARY_DIR, ...cfg.file);
+        const rowsBefore = countRowsInJsFile(targetFile);
+        const backupPath = backupFile(targetFile);
+        clearJsDataFile(targetFile, cfg.varName);
+        const shadowFn = SHADOW_CLEAR_FNS[slug];
+        if (shadowFn) shadowFn();
+        clearCache();
+        audit(
+          'DATASET_CLEAR',
+          caller.username,
+          ip,
+          JSON.stringify({ dataset: slug, user_id: caller.id, rows_before: rowsBefore })
+        );
+        res.json({
+          ok: true,
+          message: `${cfg.label} cleared`,
+          stats: {
+            backup: backupPath ? path.basename(backupPath) : null,
+            rows_before: rowsBefore,
+          },
+        });
+      } catch (err) {
+        logErr(req, `clear_${slug}`, err);
+        res.status(500).json({ error: redactErrorMessage(err) });
+      }
     }
-  });
+  );
 }
 
 // ─── NPI Materials & Sourcing DB import ───

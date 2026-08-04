@@ -2295,12 +2295,12 @@ eauCap = eau × 0.8      ← only 80% of lifetime EAU is amortizable`}
           />
           <Formula
             name="Tooling/unit — Standard"
-            expr={`tlife = tool_life_ovr ? tool_life : (DDL.tool_life[tool_type] || 1)
+            expr={`tlife = (tool_life > 0) ? tool_life : (DDL.tool_life[tool_type] || 1)
 totalToolPcs = tlife × layout
 tool = (totalToolPcs > eauCap)
   ? tool_cost / eauCap           ← EAU cap applies (eauCap = eau × 0.8)
   : tool_cost / totalToolPcs     ← normal amortization`}
-            note="✅ Verified — divisor floored at the 0.8-capped EAU. If tool_type missing from DDL, tlife falls back to 1 → massive per-unit cost (sentinel for broken config)."
+            note="✅ Verified — the editable per-row Tool Life column is the source of truth: its value is used whenever positive, so editing it changes the cost. The DDL library life only SEEDS the column and is the fallback when the row is 0/empty (legacy quotes). Divisor floored at the 0.8-capped EAU. If the row is 0 and tool_type is missing from DDL, tlife falls back to 1 → massive per-unit cost (sentinel for broken config)."
           />
           <Formula
             name="Tooling/unit — Jig (special case)"

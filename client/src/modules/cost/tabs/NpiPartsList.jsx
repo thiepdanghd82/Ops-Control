@@ -24,18 +24,18 @@
  * No react-window dep needed for v1.6; revisit if v1.7 adds 100k+ scale.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useI18n } from '../../../utils/useI18n';
+import { sharedApi, importApi } from '../../../services/api';
 import ColumnsToggle from '../../../components/Shared/ColumnsToggle';
+import ImportWizard from '../../../components/Shared/ImportWizard';
+import ConfirmClearModal from '../../../components/Shared/ConfirmClearModal';
 import EmptyState from '../../../components/Shared/EmptyState';
 import SkeletonTable from '../../../components/Shared/SkeletonTable';
 import Modal from '../../../components/Shared/Modal';
 import './NpiPartsList.css';
 
 const PER_PAGE = 200;
-// NB: path deliberately outside `/data/` to bypass Vite's proxy to
-// Express :3000 (which auth-gates). See client/vite.config.js.
-const SNAPSHOT_URL = '/npi-parts/parts-snapshot.json';
 const STORAGE_KEY = 'ops-cost-npi-parts-cols';
 
 // Default-visible 12 cols — operator-facing high-value fields. Rest
@@ -184,24 +184,47 @@ export default function NpiPartsList() {
   const [visibleColumns, setVisibleColumns] = useState([]);
   const [selectedRow, setSelectedRow] = useState(null); // index in filtered list
   const [showcardRow, setShowcardRow] = useState(null);
+  const [reloadTick, setReloadTick] = useState(0);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [clearOpen, setClearOpen] = useState(false);
+  const [busy] = useState(false);
+  const [msg, setMsg] = useState('');
 
+  const reload = useCallback(() => setReloadTick((n) => n + 1), []);
+
+  // Read the LIVE Library file via the authed shared route (seeded once from
+  // the bundled snapshot). Was a static /npi-parts/parts-snapshot.json fetch
+  // before import shipped; the response shape is unchanged
+  // ({ columns, rows, row_count, generated_at }).
   useEffect(() => {
     let aborted = false;
-    fetch(SNAPSHOT_URL)
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
+    setSnapshot(null);
+    setLoadErr(null);
+    sharedApi
+      .getNpiParts()
       .then((data) => {
         if (!aborted) setSnapshot(data);
       })
       .catch((err) => {
-        if (!aborted) setLoadErr(err.message || 'Failed to load NPI snapshot');
+        if (!aborted) setLoadErr(err?.message || 'Failed to load NPI Parts');
       });
     return () => {
       aborted = true;
     };
-  }, []);
+  }, [reloadTick]);
+
+  const handleWizardCommitted = useCallback(() => {
+    setWizardOpen(false);
+    reload();
+  }, [reload]);
+
+  // Post-clear reload — the wipe + password step-up run inside
+  // ConfirmClearModal (importApi.clearNpiParts(password)).
+  const afterClear = useCallback(() => {
+    reload();
+    setMsg('Data cleared');
+    setTimeout(() => setMsg(''), 3000);
+  }, [reload]);
 
   const columnConfig = useMemo(() => {
     if (!snapshot?.columns) return [];
@@ -274,7 +297,7 @@ export default function NpiPartsList() {
             })}
           </span>
         </div>
-        <div className="npi-parts-readonly-notice">{t('npi_parts.readonly_notice')}</div>
+        <div className="npi-parts-readonly-notice">{t('npi_parts.data_notice')}</div>
         <div className="npi-parts-controls">
           <input
             type="search"
@@ -304,6 +327,25 @@ export default function NpiPartsList() {
             onChange={setVisibleColumns}
             title={t('npi_parts.columns_title')}
           />
+          <button
+            type="button"
+            className="op-btn op-btn-primary npi-parts-import-btn"
+            onClick={() => setWizardOpen(true)}
+            disabled={busy}
+            title={t('npi_parts.import_hint')}
+          >
+            ⬆ {t('npi_parts.import')}
+          </button>
+          <button
+            type="button"
+            className="op-btn op-btn-danger npi-parts-clear-btn"
+            onClick={() => setClearOpen(true)}
+            disabled={busy}
+            title={t('npi_parts.clear_hint')}
+          >
+            🗑 {t('npi_parts.clear')}
+          </button>
+          {msg && <span className="npi-parts-toolbar-msg">{msg}</span>}
         </div>
       </header>
 
@@ -436,6 +478,22 @@ export default function NpiPartsList() {
           </Modal.Footer>
         </Modal>
       )}
+
+      <ImportWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        datasetKey="npi-parts"
+        datasetLabel="NPI Parts List"
+        onCommitted={handleWizardCommitted}
+      />
+      <ConfirmClearModal
+        open={clearOpen}
+        onClose={() => setClearOpen(false)}
+        datasetLabel="NPI Parts List"
+        rowCount={snapshot?.row_count}
+        clearApi={(password) => importApi.clearNpiParts(password)}
+        onCleared={afterClear}
+      />
     </div>
   );
 }

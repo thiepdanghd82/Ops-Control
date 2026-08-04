@@ -36,6 +36,26 @@ export const STRINGS = {
   'common.loading': { en: 'Loading…', vi: 'Đang tải…' },
   'common.saving': { en: 'Saving…', vi: 'Đang lưu…' },
   'common.unsaved': { en: 'Unsaved', vi: 'Chưa lưu' },
+  // ─── Clear Data password step-up (ConfirmClearModal) ───
+  'clear_confirm.title': { en: 'Clear data — confirm', vi: 'Xoá dữ liệu — xác nhận' },
+  'clear_confirm.body': {
+    en: 'This permanently clears all {rows} rows of {dataset}. The current file is backed up first, but this cannot be undone from the app. Enter your account password to confirm.',
+    vi: 'Thao tác này xoá vĩnh viễn toàn bộ {rows} dòng của {dataset}. File hiện tại được sao lưu trước, nhưng không thể hoàn tác trong ứng dụng. Nhập mật khẩu tài khoản để xác nhận.',
+  },
+  'clear_confirm.body_no_count': {
+    en: 'This permanently clears all of {dataset}. The current file is backed up first, but this cannot be undone from the app. Enter your account password to confirm.',
+    vi: 'Thao tác này xoá vĩnh viễn toàn bộ {dataset}. File hiện tại được sao lưu trước, nhưng không thể hoàn tác trong ứng dụng. Nhập mật khẩu tài khoản để xác nhận.',
+  },
+  'clear_confirm.pwd_label': { en: 'Account password', vi: 'Mật khẩu tài khoản' },
+  'clear_confirm.err_pwd': {
+    en: 'Incorrect account password.',
+    vi: 'Mật khẩu tài khoản không đúng.',
+  },
+  'clear_confirm.err_generic': {
+    en: 'Clear failed. Please try again.',
+    vi: 'Xoá thất bại. Vui lòng thử lại.',
+  },
+  'clear_confirm.confirm_btn': { en: 'Clear data', vi: 'Xoá dữ liệu' },
   'common.saved': { en: 'Saved', vi: 'Đã lưu' },
   'common.active': { en: 'Active', vi: 'Đang dùng' },
   'common.yes': { en: 'Yes', vi: 'Có' },
@@ -108,9 +128,19 @@ export const STRINGS = {
     en: '{shown} of {total} rows',
     vi: '{shown} / {total} dòng',
   },
-  'npi_parts.readonly_notice': {
-    en: 'Read-only viewer (v1.6). Edit capability ships in v1.7.',
-    vi: 'Chế độ xem chỉ đọc (v1.6). Tính năng chỉnh sửa sẽ có ở v1.7.',
+  'npi_parts.data_notice': {
+    en: 'Master reference list. Import to replace the set; export CSV/XLSX round-trips losslessly.',
+    vi: 'Danh sách tham chiếu gốc. Import để thay thế; export CSV/XLSX round-trip không mất dữ liệu.',
+  },
+  'npi_parts.import': { en: 'Import…', vi: 'Nhập…' },
+  'npi_parts.import_hint': {
+    en: 'Import NPI Parts from CSV or XLSX (preview + Export/Template inside the wizard)',
+    vi: 'Nhập NPI Parts từ CSV hoặc XLSX (xem trước + Export/Template trong wizard)',
+  },
+  'npi_parts.clear': { en: 'Clear Data', vi: 'Xoá dữ liệu' },
+  'npi_parts.clear_hint': {
+    en: 'Clear all NPI Parts data (the current file is backed up first)',
+    vi: 'Xoá toàn bộ dữ liệu NPI Parts (file hiện tại được sao lưu trước)',
   },
   'npi_parts.search_placeholder': {
     en: 'Search part name, Code IFS, System code, customer, PIC…',

@@ -19,6 +19,7 @@ import {
   getRoutingForPart,
   getWorkCenters,
   getProducts,
+  getNpiParts,
   clearCache,
 } from '../services/dataSync.js';
 import * as repo from '../repositories/index.js';
@@ -164,6 +165,21 @@ router.get('/routing/:partNo', (req, res) => {
   } catch (err) {
     console.error('Error loading routing for part:', err);
     res.status(500).json({ error: 'Failed to load routing data' });
+  }
+});
+
+// GET /api/shared/npi-parts - NPI Parts List (registry dataset 'npi-parts').
+// Reads the live Library file (seeded once from the bundled snapshot); the
+// tab used a static /npi-parts/parts-snapshot.json before import shipped.
+// File-only (no SQLite mirror) → read via dataSync directly, not the repo layer.
+router.get('/npi-parts', (req, res) => {
+  try {
+    const data = getNpiParts();
+    // ETag for the ~15-25 MB payload (25k×64), same pattern as BOM/Routing.
+    sendJsonWithEtag(req, res, data);
+  } catch (err) {
+    console.error('Error loading npi-parts:', err);
+    res.status(500).json({ error: 'Failed to load npi-parts data' });
   }
 });
 

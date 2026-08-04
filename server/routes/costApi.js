@@ -677,6 +677,22 @@ export function buildBackupSnapshot() {
     const data = readJson(fp);
     if (data != null) snap[key] = data;
   }
+  // NPI Parts List — a JS-AoA library file (window._CCL_NPIPARTS_DATA={...};),
+  // NOT JSON, so the readJson map above can't handle it. Read via the dataset
+  // reader ({headers, rows}) and stash that; restore writes it back with the
+  // dataset writer so the wrapper survives (Lesson 34 — restore through the
+  // same writer the read path consumes). File-backed, no SQLite dual-writer.
+  try {
+    const npiPartsDs = getDataset('npi-parts');
+    if (npiPartsDs) {
+      const npi = readDatasetRows(npiPartsDs); // { headers, rows }
+      if (npi && Array.isArray(npi.rows) && npi.rows.length > 0) {
+        snap.npiPartsDB = { headers: npi.headers, rows: npi.rows };
+      }
+    }
+  } catch {
+    /* absent / unreadable → nothing to back up */
+  }
   return snap;
 }
 
@@ -734,6 +750,24 @@ export function restoreFromSnapshot(snap) {
     } catch (e) {
       console.warn(`  ⚠️  Restore ${key}: ${e.message}`);
       failed.push({ key, error: e.message || String(e) });
+    }
+  }
+  // NPI Parts List — JS-AoA file; write via the dataset writer so the
+  // window._CCL_NPIPARTS_DATA={...}; wrapper is preserved (a raw writeJson
+  // would corrupt it). Matches dataSync.getNpiParts's read path (Lesson 34).
+  if ('npiPartsDB' in snap) {
+    try {
+      const npiPartsDs = getDataset('npi-parts');
+      if (npiPartsDs) {
+        writeDatasetRows(npiPartsDs, {
+          headers: snap.npiPartsDB.headers || [],
+          rows: snap.npiPartsDB.rows || [],
+        });
+        restored.push('npiPartsDB');
+      }
+    } catch (e) {
+      console.warn(`  ⚠️  Restore npiPartsDB: ${e.message}`);
+      failed.push({ key: 'npiPartsDB', error: e.message || String(e) });
     }
   }
   return { restored, failed };

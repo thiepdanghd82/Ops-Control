@@ -22,6 +22,7 @@ import { upgradeCplxState } from '../services/cplxMigration.js';
 import { upgradeStdState } from '../services/stdMigration.js';
 import { applyPrintToCutSync } from '../services/layoutFieldSync.js';
 import { buildDrawingPatch, DRAWING_KINDS } from '../services/drawingFiles.js';
+import { resetProcessesScrap } from '../services/scrapDefaults.js';
 
 // ── Action Types ──
 // Exported so tests + advanced callers can reference canonical strings
@@ -489,7 +490,7 @@ export function calcReducer(state, action) {
           layout: 0,
           efficiency: 0.85,
           setup_h: 0,
-          scrap_pct: 0.03,
+          scrap_pct: 0,
           manual_uph: 0,
           tool_cost: 0,
           tool_type: '',
@@ -944,7 +945,7 @@ export function calcReducer(state, action) {
           layout: 0,
           efficiency: 0.85,
           setup_h: 0,
-          scrap_pct: 0.03,
+          scrap_pct: 0,
           manual_uph: 0,
           tool_cost: 0,
           tool_type: '',
@@ -1060,7 +1061,13 @@ export function calcReducer(state, action) {
         const merged = { ...createStdState(), ...qState };
         const upgraded = upgradeStdState(merged);
         const next = isCopy
-          ? { ...upgraded, pricing_snapshot: copySnapshot(upgraded.pricing_snapshot) }
+          ? {
+              ...upgraded,
+              pricing_snapshot: copySnapshot(upgraded.pricing_snapshot),
+              // Copy = fresh start: re-apply the new-RFQ scrap policy
+              // (0 everywhere, 0.10 for FQC). Open/load preserves saved scrap.
+              processes: resetProcessesScrap(upgraded.processes),
+            }
           : upgraded;
         return {
           ...state,
@@ -1088,7 +1095,17 @@ export function calcReducer(state, action) {
       }
       const upgradedCpx = upgradeCplxState(mergedCplx);
       const nextCpx = isCopy
-        ? { ...upgradedCpx, pricing_snapshot: copySnapshot(upgradedCpx.pricing_snapshot) }
+        ? {
+            ...upgradedCpx,
+            pricing_snapshot: copySnapshot(upgradedCpx.pricing_snapshot),
+            // Copy = fresh start: reset every subproduct's process scrap to
+            // its workcenter default (0, or 0.10 for FQC). Open preserves.
+            subproducts: Array.isArray(upgradedCpx.subproducts)
+              ? upgradedCpx.subproducts.map((sp) =>
+                  sp ? { ...sp, processes: resetProcessesScrap(sp.processes) } : sp
+                )
+              : upgradedCpx.subproducts,
+          }
         : upgradedCpx;
       return {
         ...state,
