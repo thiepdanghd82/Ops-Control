@@ -2,7 +2,7 @@
  * StandardCalc — Main wrapper for Standard Calculator
  * Matches COST V1.0 M05 with sub-tab navigation
  */
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../../../context/AuthContext';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
@@ -52,6 +52,7 @@ import {
 } from './CalcLeadTimeNotice.helpers.js';
 import CalcLegend from './CalcLegend';
 import TabBarOverflow from '../../../../components/Shared/TabBarOverflow';
+import { useGridKeyboardNav } from '../../../../utils/useGridKeyboardNav';
 import './StandardCalc.css';
 import './ProcessBalancing.css';
 
@@ -476,6 +477,11 @@ export default function StandardCalc() {
 
   const copyMode = isCopyMode(stdState, activeQuoteId);
 
+  // Spreadsheet-style arrow/Enter cell navigation, scoped to the sub-tab
+  // content root so it never touches the sidebar / modals / Quote History.
+  const contentRef = useRef(null);
+  useGridKeyboardNav(contentRef);
+
   return (
     <div className="sc">
       {/* Phase 4 — copy-mode banner. Appears when operator right-clicked
@@ -565,7 +571,9 @@ export default function StandardCalc() {
       {shouldShowSummaryBar(activeSubTab, 'std') && <CalcSummaryBar />}
 
       {/* Content */}
-      <div className="sc-content">{content}</div>
+      <div className="sc-content" ref={contentRef}>
+        {content}
+      </div>
 
       <SaveChoiceModal
         open={saveChoiceOpen}

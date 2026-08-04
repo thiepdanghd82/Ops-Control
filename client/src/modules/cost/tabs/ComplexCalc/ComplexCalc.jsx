@@ -3,7 +3,7 @@
  * 5 sub-tabs: Project | MOQ | Breakdown | Packing | Summary
  * Project tab: collapsible header + SP table with expandable detail rows
  */
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '../../../../context/AuthContext';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
@@ -58,6 +58,7 @@ import { KPI_TOOLTIPS } from '../../../../utils/kpiDefinitions';
 import SaveChoiceModal from '../../../../utils/SaveChoiceModal';
 import ConflictModal from '../../../../components/Shared/ConflictModal';
 import TabBarOverflow from '../../../../components/Shared/TabBarOverflow';
+import { useGridKeyboardNav } from '../../../../utils/useGridKeyboardNav';
 import '../StandardCalc/StandardCalc.css';
 import './ComplexCalc.css';
 
@@ -560,6 +561,11 @@ export default function ComplexCalc() {
   const labels = PACK_LABELS[cf('packing_method').value || 'Sheet'] || PACK_LABELS.Sheet;
   const copyMode = isCopyMode(cs, activeQuoteId);
 
+  // Spreadsheet-style arrow/Enter cell navigation, scoped to the sub-tab
+  // content root (mirrors StandardCalc).
+  const contentRef = useRef(null);
+  useGridKeyboardNav(contentRef);
+
   return (
     <div className="cc">
       {/* Phase 4 — Cpx copy-mode banner. Same logic as Std. */}
@@ -637,7 +643,7 @@ export default function ComplexCalc() {
         <CplxSummaryBar cs={cs} aggregate={aggregate} />
       )}
 
-      <div className="cc-content">
+      <div className="cc-content" ref={contentRef}>
         {/* ═══ PROJECT TAB ═══ */}
         {activeSubTab === 'project' && (
           <div className="sc-section sc-rfq-moq-split">

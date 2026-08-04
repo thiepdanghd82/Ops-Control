@@ -244,7 +244,12 @@ export default function Modal({
   const severityClass = severity ? ` op-modal--${severity}` : '';
 
   return (
-    <div className="op-modal-overlay" role="presentation" onMouseDown={handleOverlayMouseDown}>
+    <div
+      className="op-modal-overlay"
+      role="presentation"
+      data-kbd-skip
+      onMouseDown={handleOverlayMouseDown}
+    >
       <div
         ref={cardRef}
         className={`op-modal-card size-${size}${severityClass}${isDraggable ? ' op-modal-card--draggable' : ''}`}
