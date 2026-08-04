@@ -2,7 +2,7 @@
  * CalcCostBreakdown — Cost breakdown + tier comparison for Standard Calculator
  * Matches COST V1.0 M05 cost breakdown section
  */
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import { useI18n } from '../../../../utils/useI18n';
@@ -15,8 +15,16 @@ import {
 } from '../../../../services/calcEngine';
 import { snapshotPricingParams } from '../../../../services/pricingSnapshot';
 import SnapshotPanel from '../../components/SnapshotPanel';
-import { fmtN, pct, gmClr } from '../../../../utils/format';
+import { fmtN, pct } from '../../../../utils/format';
 import { recomputeKpi, isBucketActive, readMask, writeMask } from './costStructureWhatIf';
+import {
+  defaultPrice,
+  solvePriceForMetric,
+  planTierPriceWrite,
+  isEmptyPrice,
+} from '../../../../services/priceSolver';
+import { MarginCell, ApplyDefault } from '../../components/MarginPriceCells';
+import { metricWarn } from '../../components/MarginPriceCells.helpers';
 
 // VA / Contribution / GM re-derivation at a different price now lives in
 // costStructureWhatIf.recomputeKpi (anchored to r's canonical numerators so
@@ -24,10 +32,11 @@ import { recomputeKpi, isBucketActive, readMask, writeMask } from './costStructu
 // the active-mask subtracts toggled-off buckets per metric).
 
 export default function CalcCostBreakdown() {
-  const { stdState, activeQuoteId } = useCalc();
+  const { stdState, activeQuoteId, dispatch } = useCalc();
   const { lib } = useCostLib();
   const { t } = useI18n();
   const st = stdState;
+  const rate = st.usd_rate || 0;
 
   // Display-only what-if: toggle cost buckets off to see VA/Contr/GM recompute.
   // Mask lives in sessionStorage keyed by quote id — NEVER the quote state /
@@ -77,6 +86,70 @@ export default function CalcCostBreakdown() {
   const activeIdx = st.active_moq_idx || 0;
   const activeWarnings = tiers.find((t) => t.idx === activeIdx)?.result?._warnings || [];
 
+  // ── Price ↔ margin inversion (Cost Breakdown only) ──
+  // The solver reads the SAME snapshot + calc path the tables use.
+  const solverOpts = useMemo(() => ({ kind: 'std', snapshot }), [snapshot]);
+  // GM-25% default price per tier (raised if a secondary floor binds higher).
+  const defaults = useMemo(
+    () => tiers.map((tr) => (tr.result ? defaultPrice(st, lib, tr.idx, solverOpts) : null)),
+    [tiers, st, lib, solverOpts]
+  );
+
+  // Back-solve the price for one metric+target and write it (Selling → price,
+  // Target → target). Returns false when unsolvable so the cell can flash.
+  const commitMetric = useCallback(
+    (table, tierIdx, metric, targetFrac) => {
+      const price = solvePriceForMetric(st, lib, tierIdx, metric, targetFrac, solverOpts);
+      if (price == null || !(price > 0) || !Number.isFinite(price)) return false;
+      for (const a of planTierPriceWrite({ kind: 'std', table, tierIdx, usd: price, rate }))
+        dispatch(a);
+      return true;
+    },
+    [st, lib, solverOpts, rate, dispatch]
+  );
+
+  // Apply the GM-25% default to a tier's selling or target price.
+  const applyDefault = useCallback(
+    (table, tierIdx) => {
+      const d = defaultPrice(st, lib, tierIdx, solverOpts);
+      if (!d || !(d.price > 0)) return;
+      for (const a of planTierPriceWrite({ kind: 'std', table, tierIdx, usd: d.price, rate }))
+        dispatch(a);
+    },
+    [st, lib, solverOpts, rate, dispatch]
+  );
+
+  // Auto-seed the GM-25% default into a FRESH tier only — one whose selling
+  // AND target are both empty (a brand-new tier, not a loaded quote that
+  // intentionally left one blank). Seeds both prices once per tier per quote;
+  // a manual value always wins and a deliberately-cleared field is not
+  // re-seeded (use ↻ to re-apply). Marked seen only on a successful seed so
+  // a tier with no costs yet gets seeded once costs are entered.
+  const seededRef = useRef({});
+  useEffect(() => {
+    if (!lib) return;
+    const qid = String(activeQuoteId ?? 'draft');
+    const seen = seededRef.current[qid] || (seededRef.current[qid] = new Set());
+    for (const { idx, result } of tiers) {
+      if (!result || seen.has(idx)) continue;
+      const curSell = idx === 0 ? st.selling_price : st.extra_moqs?.[idx - 1]?.price;
+      const curTgt = idx === 0 ? st.target : st.extra_moqs?.[idx - 1]?.target;
+      if (!(isEmptyPrice(curSell) && isEmptyPrice(curTgt))) continue; // fresh tier only
+      const d = defaultPrice(st, lib, idx, solverOpts);
+      if (!d || !(d.price > 0)) continue; // no costs yet → try again later
+      seen.add(idx);
+      for (const table of ['selling', 'target'])
+        for (const a of planTierPriceWrite({
+          kind: 'std',
+          table,
+          tierIdx: idx,
+          usd: d.price,
+          rate,
+        }))
+          dispatch(a);
+    }
+  }, [tiers, st, lib, solverOpts, rate, activeQuoteId, dispatch]);
+
   if (!lib) {
     return (
       <div className="sc-section" style={{ padding: 20, color: '#94a3b8', textAlign: 'center' }}>
@@ -103,6 +176,21 @@ export default function CalcCostBreakdown() {
               must not own their keys, so MarginCell's own Enter/blur commit
               runs. Analysis table, so skipping arrow-nav here loses nothing. */}
           <table className="sc-table sc-bd-table" data-kbd-skip>
+            <colgroup>
+              <col className="bdc-tier" />
+              <col className="bdc-qty" />
+              <col className="bdc-qty" />
+              <col className="bdc-price" />
+              <col className="bdc-price" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-metric" />
+              <col className="bdc-metric" />
+              <col className="bdc-metric" />
+            </colgroup>
             <thead>
               <tr>
                 <th>{t('pricing.tier')}</th>
@@ -121,11 +209,17 @@ export default function CalcCostBreakdown() {
               </tr>
             </thead>
             <tbody>
-              {tiers.map(({ idx, moq, sp, eau, result: r }) => {
+              {tiers.map(({ idx, moq, sp, eau, result: r }, i) => {
                 const isActive = idx === (st.active_moq_idx || 0);
                 const target = idx === 0 ? st.target : st.extra_moqs?.[idx - 1]?.target;
                 // What-if KPIs at the selling price; all-active === r.va/contr/gm.
                 const sk = r ? recomputeKpi(r, mask, sp) : null;
+                const def = defaults[i];
+                const sellWarn =
+                  sk &&
+                  (metricWarn('gm', sk.gm) ||
+                    metricWarn('contribution', sk.contribution) ||
+                    metricWarn('va', sk.va));
                 return (
                   <tr key={idx} className={isActive ? 'sc-bd-active' : ''}>
                     <td>
@@ -136,7 +230,12 @@ export default function CalcCostBreakdown() {
                     <td className="right">{moq ? moq.toLocaleString() : '\u2014'}</td>
                     <td className="right">{eau ? eau.toLocaleString() : '\u2014'}</td>
                     <td className="right" style={{ fontWeight: 700, color: '#1e40af' }}>
-                      {sp ? '$' + fmtN(sp, 4) : '\u2014'}
+                      <span className="mpc-price-val">{sp ? '$' + fmtN(sp, 4) : '\u2014'}</span>
+                      <ApplyDefault
+                        def={def}
+                        warn={sellWarn}
+                        onApply={() => applyDefault('selling', idx)}
+                      />
                     </td>
                     <td className="right" style={{ color: '#64748b' }}>
                       {target ? '$' + fmtN(target, 4) : '\u2014'}
@@ -152,20 +251,29 @@ export default function CalcCostBreakdown() {
                         <td className="right bd-sub" style={{ fontWeight: 800 }}>
                           {fmtN(r.s_ttl)}
                         </td>
-                        <td className="right bd-va" style={{ color: '#0891b2', fontWeight: 700 }}>
-                          {pct(sk.va)}
+                        <td className="right bd-va">
+                          <MarginCell
+                            metric="va"
+                            value={sk.va}
+                            warn={metricWarn('va', sk.va)}
+                            onCommit={(f) => commitMetric('selling', idx, 'va', f)}
+                          />
                         </td>
-                        <td
-                          className="right bd-contr"
-                          style={{ color: '#7c3aed', fontWeight: 700 }}
-                        >
-                          {pct(sk.contribution)}
+                        <td className="right bd-contr">
+                          <MarginCell
+                            metric="contribution"
+                            value={sk.contribution}
+                            warn={metricWarn('contribution', sk.contribution)}
+                            onCommit={(f) => commitMetric('selling', idx, 'contribution', f)}
+                          />
                         </td>
-                        <td
-                          className="right bd-gm"
-                          style={{ color: gmClr(sk.gm), fontWeight: 800, fontSize: 13 }}
-                        >
-                          {pct(sk.gm)}
+                        <td className="right bd-gm">
+                          <MarginCell
+                            metric="gm"
+                            value={sk.gm}
+                            warn={metricWarn('gm', sk.gm)}
+                            onCommit={(f) => commitMetric('selling', idx, 'gm', f)}
+                          />
                         </td>
                       </>
                     ) : (
@@ -197,6 +305,21 @@ export default function CalcCostBreakdown() {
               must not own their keys, so MarginCell's own Enter/blur commit
               runs. Analysis table, so skipping arrow-nav here loses nothing. */}
           <table className="sc-table sc-bd-table" data-kbd-skip>
+            <colgroup>
+              <col className="bdc-tier" />
+              <col className="bdc-qty" />
+              <col className="bdc-qty" />
+              <col className="bdc-price" />
+              <col className="bdc-price" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-metric" />
+              <col className="bdc-metric" />
+              <col className="bdc-metric" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Tier</th>
@@ -215,11 +338,18 @@ export default function CalcCostBreakdown() {
               </tr>
             </thead>
             <tbody>
-              {tiers.map(({ idx, moq, sp, eau, result: r }) => {
+              {tiers.map(({ idx, moq, sp, eau, result: r }, i) => {
                 const isActive = idx === (st.active_moq_idx || 0);
                 const target = idx === 0 ? st.target : st.extra_moqs?.[idx - 1]?.target;
                 // What-if KPIs at the target price; all-active === kpiAtPrice(r, target).
                 const tgtKpi = recomputeKpi(r, mask, target);
+                const def = defaults[i];
+                const tgtWarn =
+                  target &&
+                  tgtKpi &&
+                  (metricWarn('gm', tgtKpi.gm) ||
+                    metricWarn('contribution', tgtKpi.contribution) ||
+                    metricWarn('va', tgtKpi.va));
                 return (
                   <tr key={idx} className={isActive ? 'sc-bd-active' : ''}>
                     <td>
@@ -233,7 +363,14 @@ export default function CalcCostBreakdown() {
                       {sp ? '$' + fmtN(sp, 4) : '\u2014'}
                     </td>
                     <td className="right" style={{ fontWeight: 700, color: '#b45309' }}>
-                      {target ? '$' + fmtN(target, 4) : '\u2014'}
+                      <span className="mpc-price-val">
+                        {target ? '$' + fmtN(target, 4) : '\u2014'}
+                      </span>
+                      <ApplyDefault
+                        def={def}
+                        warn={tgtWarn}
+                        onApply={() => applyDefault('target', idx)}
+                      />
                     </td>
                     {r ? (
                       <>
@@ -246,24 +383,29 @@ export default function CalcCostBreakdown() {
                         <td className="right bd-sub" style={{ fontWeight: 800 }}>
                           {fmtN(r.s_ttl)}
                         </td>
-                        <td className="right bd-va" style={{ color: '#0891b2', fontWeight: 700 }}>
-                          {target ? pct(tgtKpi.va) : '\u2014'}
+                        <td className="right bd-va">
+                          <MarginCell
+                            metric="va"
+                            value={target ? tgtKpi.va : null}
+                            warn={metricWarn('va', target ? tgtKpi.va : null)}
+                            onCommit={(f) => commitMetric('target', idx, 'va', f)}
+                          />
                         </td>
-                        <td
-                          className="right bd-contr"
-                          style={{ color: '#7c3aed', fontWeight: 700 }}
-                        >
-                          {target ? pct(tgtKpi.contribution) : '\u2014'}
+                        <td className="right bd-contr">
+                          <MarginCell
+                            metric="contribution"
+                            value={target ? tgtKpi.contribution : null}
+                            warn={metricWarn('contribution', target ? tgtKpi.contribution : null)}
+                            onCommit={(f) => commitMetric('target', idx, 'contribution', f)}
+                          />
                         </td>
-                        <td
-                          className="right bd-gm"
-                          style={{
-                            color: target ? gmClr(tgtKpi.gm) : '#94a3b8',
-                            fontWeight: 800,
-                            fontSize: 13,
-                          }}
-                        >
-                          {target ? pct(tgtKpi.gm) : '\u2014'}
+                        <td className="right bd-gm">
+                          <MarginCell
+                            metric="gm"
+                            value={target ? tgtKpi.gm : null}
+                            warn={metricWarn('gm', target ? tgtKpi.gm : null)}
+                            onCommit={(f) => commitMetric('target', idx, 'gm', f)}
+                          />
                         </td>
                       </>
                     ) : (

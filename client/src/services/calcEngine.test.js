@@ -149,6 +149,22 @@ test('calcMatScrapFactor: single 3% scrap on an assigned workcenter', () => {
   assert.ok(Math.abs(sf - 0.03) < 1e-9);
 });
 
+test('calcMatScrapFactor: scrap 0 on an assigned workcenter → no loss (new default)', () => {
+  // A fresh process row now seeds scrap = 0, so an assigned workcenter with
+  // the untouched default contributes zero material loss.
+  const sf = calcMatScrapFactor({
+    processes: [{ workcenter: 'Flexo-A', scrap_pct: 0 }],
+  });
+  assert.equal(sf, 0);
+});
+
+test('calcMatScrapFactor: FQC 10% → 10% loss (FQC workcenter default)', () => {
+  const sf = calcMatScrapFactor({
+    processes: [{ workcenter: 'FQC', scrap_pct: 0.1 }],
+  });
+  assert.ok(Math.abs(sf - 0.1) < 1e-9);
+});
+
 test('calcMatScrapFactor: compounding across multiple processes', () => {
   // 1 - (1-0.03)(1-0.05) = 1 - 0.9215 = 0.0785
   const sf = calcMatScrapFactor({
@@ -1049,10 +1065,95 @@ test('calcProcess [regression]: tool_type "Jig" (exact) still hits Jig branch', 
     ],
   });
   const r = calcProcess(st.processes[0], st, 10_000, lib);
-  // Jig branch: tlife (1_000_000) > eau (1_000_000) → tooling = cost/eau
-  // OR DDL tool_life for Jig = 1_000_000 used as tlife override.
-  // Either way tooling = 1000 / 1_000_000 = 0.001/pc — small.
-  assert.ok(r.tooling < 0.1, `expected Jig-branch tiny tooling; got ${r.tooling}`);
+  // Row Tool Life is now authoritative (2026-08): rowLife 100 wins over the
+  // DDL Jig life. The Jig branch omits the layout multiplier, so
+  // tooling = tool_cost / tlife = 1000 / 100 = 10. A non-Jig tool_type would
+  // divide by tlife × layout (1000 / (100×4) = 2.5) — asserting 10 (not 2.5)
+  // proves the Jig branch is still taken. (eauCap = 800k ≫ 100, so no cap.)
+  assert.ok(
+    Math.abs(r.tooling - 10) < 1e-9,
+    `expected Jig-branch cost/tlife = 10; got ${r.tooling}`
+  );
+});
+
+// ── Tool Life column is the SOURCE OF TRUTH for tooling (2026-08) ──
+// The editable per-row Tool Life wins over the DDL/snapshot life whenever it
+// holds a positive value; DDL is only the fallback for legacy rows still at 0.
+// Helper: a non-Jig process with layout 1, so tooling = tool_cost / tlife.
+function toolLifeProc(over = {}) {
+  return {
+    process_type: 'RDC',
+    workcenter: 'RDC-1',
+    speed: 0,
+    layout: 1,
+    efficiency: 0.85,
+    setup_h: 0,
+    scrap_pct: 0,
+    tool_cost: 2000,
+    tool_type: 'Metal', // DDL Metal life = 500_000
+    tool_life: 0,
+    eau_ovr: 0,
+    repeat: 1,
+    ...over,
+  };
+}
+
+test('calcProcess: editing Tool Life changes the tooling cost (row wins over DDL)', () => {
+  const lib = makeLib();
+  // eau = annual × lifetime = 1M, eauCap = 800k ≫ any tlife below → no cap.
+  const st = makeState({ annual_qty: 1_000_000, product_lifetime: 1 });
+  // Row Tool Life 100_000 must be used (→ 2000/100_000 = 0.02), NOT the DDL
+  // Metal life 500_000 (which would give 2000/500_000 = 0.004).
+  const r = calcProcess(toolLifeProc({ tool_life: 100_000 }), st, 10_000, lib);
+  assert.ok(Math.abs(r.tooling - 0.02) < 1e-9, `row life must win; got ${r.tooling}`);
+});
+
+test('calcProcess: row Tool Life 0 falls back to the DDL/resolved life (legacy quote)', () => {
+  const lib = makeLib();
+  const st = makeState({ annual_qty: 1_000_000, product_lifetime: 1 });
+  // rowLife 0 → DDL Metal 500_000 → 2000/500_000 = 0.004.
+  const r = calcProcess(toolLifeProc({ tool_life: 0 }), st, 10_000, lib);
+  assert.ok(
+    Math.abs(r.tooling - 2000 / 500_000) < 1e-12,
+    `expected DDL fallback; got ${r.tooling}`
+  );
+});
+
+test('calcProcess: row Tool Life 0 + no DDL match → tlife 1 (unchanged guard)', () => {
+  const lib = makeLib();
+  const st = makeState({ annual_qty: 1_000_000, product_lifetime: 1 });
+  // Unknown tool_type → resolvedLife 0 → tlife falls to 1 → tooling = 2000/1.
+  const r = calcProcess(toolLifeProc({ tool_type: 'NotInDDL', tool_life: 0 }), st, 10_000, lib);
+  assert.ok(Math.abs(r.tooling - 2000) < 1e-9, `expected 2000 with tlife=1; got ${r.tooling}`);
+});
+
+test('calcProcess: eauCap still caps even when the row Tool Life is authoritative', () => {
+  const lib = makeLib();
+  // eau = 90k → eauCap = 72k. rowLife 2M ≫ eauCap → tooling = tool_cost / eauCap.
+  const st = makeState({ annual_qty: 90_000, product_lifetime: 1 });
+  const r = calcProcess(toolLifeProc({ tool_life: 2_000_000 }), st, 10_000, lib);
+  assert.ok(Math.abs(r.tooling - 2000 / 72_000) < 1e-12, `expected eauCap cap; got ${r.tooling}`);
+});
+
+test('calcProcess: snapshot resolver life is used ONLY when the row is 0', () => {
+  const lib = makeLib();
+  const st = makeState({ annual_qty: 1_000_000, product_lifetime: 1 });
+  const resolver = {
+    getRate: (wc) => (wc === 'Manual' ? {} : { machine_rate: 30, labor_rate: 8, crew: 1 }),
+    getToolLife: () => 300_000, // sentinel snapshot life
+  };
+  // rowLife > 0 → row wins, resolver life NOT used: 2000/100_000 = 0.02.
+  const withRow = calcProcess(toolLifeProc({ tool_life: 100_000 }), st, 10_000, lib, { resolver });
+  assert.ok(
+    Math.abs(withRow.tooling - 0.02) < 1e-9,
+    `row wins over resolver; got ${withRow.tooling}`
+  );
+  // rowLife 0 → resolver life used: 2000/300_000.
+  const withResolver = calcProcess(toolLifeProc({ tool_life: 0 }), st, 10_000, lib, { resolver });
+  assert.ok(
+    Math.abs(withResolver.tooling - 2000 / 300_000) < 1e-12,
+    `resolver used when row 0; got ${withResolver.tooling}`
+  );
 });
 
 // ── aggregateComplex — extracted from ComplexCalc.jsx + CplxCostBreakdown.jsx ──
