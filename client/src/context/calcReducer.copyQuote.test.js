@@ -223,6 +223,115 @@ describe('LOAD_QUOTE — Cpx symmetric behavior', () => {
   });
 });
 
+describe('LOAD_QUOTE — copy re-applies the new-RFQ scrap policy', () => {
+  const stdProcesses = [
+    { workcenter: 'SS(Sheet)', scrap_pct: 0.03, speed: 150 },
+    { workcenter: 'FQC', scrap_pct: 0.03, speed: 588 },
+    { workcenter: '', scrap_pct: 0.03 },
+  ];
+
+  test('Std copy → non-FQC scrap reset to 0, FQC to 0.10 (other fields kept)', () => {
+    const next = calcReducer(initialState(), {
+      type: A.LOAD_QUOTE,
+      payload: {
+        quoteType: 'std',
+        state: {
+          _schema_version: 3,
+          materials_main: [],
+          materials_alt: [],
+          materials_active: 'main',
+          processes: stdProcesses.map((p) => ({ ...p })),
+        },
+        id: 'q-copy-scrap',
+        version: 2,
+        action: 'copy',
+      },
+    });
+    const procs = next.stdState.processes;
+    assert.equal(procs[0].scrap_pct, 0, 'SS reset to 0');
+    assert.equal(procs[1].scrap_pct, 0.1, 'FQC → 0.10');
+    assert.equal(procs[2].scrap_pct, 0, 'blank workcenter → 0');
+    assert.equal(procs[0].speed, 150, 'other fields preserved');
+    assert.equal(procs[1].speed, 588);
+  });
+
+  test('Std load (Open) → scrap PRESERVED exactly (regression guard, BC)', () => {
+    const next = calcReducer(initialState(), {
+      type: A.LOAD_QUOTE,
+      payload: {
+        quoteType: 'std',
+        state: {
+          _schema_version: 3,
+          materials_main: [],
+          materials_alt: [],
+          materials_active: 'main',
+          processes: stdProcesses.map((p) => ({ ...p })),
+        },
+        id: 'q-load-scrap',
+        version: 2,
+        action: 'load',
+      },
+    });
+    const procs = next.stdState.processes;
+    assert.equal(procs[0].scrap_pct, 0.03, 'SS scrap unchanged on Open');
+    assert.equal(procs[1].scrap_pct, 0.03, 'FQC scrap unchanged on Open');
+    assert.equal(procs[2].scrap_pct, 0.03);
+  });
+
+  test('Cpx copy → every subproduct process scrap reset by workcenter default', () => {
+    const next = calcReducer(initialState(), {
+      type: A.LOAD_QUOTE,
+      payload: {
+        quoteType: 'cplx',
+        state: {
+          _shape_version: 4,
+          bom: [],
+          tooling_alloc: [],
+          subproducts: [
+            {
+              materials: [],
+              processes: [
+                { workcenter: 'Flexo', scrap_pct: 0.03 },
+                { workcenter: 'fqc', scrap_pct: 0.03 },
+              ],
+            },
+            {
+              materials: [],
+              processes: [{ workcenter: 'IPQC', scrap_pct: 0.03 }],
+            },
+          ],
+        },
+        id: 'cpx-copy-scrap',
+        version: 3,
+        action: 'copy',
+      },
+    });
+    const sp = next.cplxState.subproducts;
+    assert.equal(sp[0].processes[0].scrap_pct, 0, 'SP0 Flexo → 0');
+    assert.equal(sp[0].processes[1].scrap_pct, 0.1, 'SP0 fqc (case-insensitive) → 0.10');
+    assert.equal(sp[1].processes[0].scrap_pct, 0, 'SP1 IPQC → 0');
+  });
+
+  test('Cpx load (Open) → subproduct scrap PRESERVED (regression guard)', () => {
+    const next = calcReducer(initialState(), {
+      type: A.LOAD_QUOTE,
+      payload: {
+        quoteType: 'cplx',
+        state: {
+          _shape_version: 4,
+          bom: [],
+          tooling_alloc: [],
+          subproducts: [{ materials: [], processes: [{ workcenter: 'Flexo', scrap_pct: 0.03 }] }],
+        },
+        id: 'cpx-load-scrap',
+        version: 3,
+        action: 'load',
+      },
+    });
+    assert.equal(next.cplxState.subproducts[0].processes[0].scrap_pct, 0.03);
+  });
+});
+
 describe('LOAD_QUOTE — copy mode with synthesized snapshot (post-Phase-1 migration)', () => {
   test('Quote that was healed to empty snapshot still copies cleanly', () => {
     // Phase 1 migration heals legacy quotes to createEmptySnapshot() —

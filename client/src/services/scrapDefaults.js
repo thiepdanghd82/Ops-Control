@@ -50,3 +50,22 @@ export function resolveScrapOnWorkcenterChange(prevWc, nextWc, currentScrap) {
   if (cur === nextDefault) return { changed: false, value: cur };
   return { changed: true, value: nextDefault };
 }
+
+/**
+ * Reset every process row's scrap to its workcenter default — 0 for all, 0.10
+ * for FQC. Used on COPY so a copied quote starts fresh under the same policy as
+ * a brand-new RFQ.
+ *
+ * This is a DELIBERATE full reset: unlike resolveScrapOnWorkcenterChange (which
+ * preserves an operator-typed scrap), Copy overwrites EVERY row regardless of
+ * the source value. Clones — never mutates the input rows.
+ *
+ * @param {Array<object>} processes
+ * @returns {Array<object>} new array (empty if input is not an array)
+ */
+export function resetProcessesScrap(processes) {
+  if (!Array.isArray(processes)) return [];
+  return processes.map((row) =>
+    row ? { ...row, scrap_pct: defaultScrapForWorkcenter(row.workcenter) } : row
+  );
+}
