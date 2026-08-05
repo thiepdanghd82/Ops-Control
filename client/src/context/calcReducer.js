@@ -350,28 +350,39 @@ export function calcReducer(state, action) {
       const current = stdActiveMaterials(state.stdState);
       const mats = [...current];
       if (mats.length < 20) {
-        mats.push({
-          _mid: `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          row_type: mats.length < 10 ? 'Main.Mat' : 'Process Mat',
-          code: '',
-          ifs_code: '',
-          desc: '',
-          usage: 0,
-          setup_lm: 0,
-          cavities: 0,
-          free_liner: 0,
-          width: 0,
-          log_width: 0,
-          pitch_ovr: 0,
-          offcut_yn: '',
-          slitting_yn: '',
-          df_yn: '',
-          offcut_pct: 0,
-          import_duty: 0,
-          s_price: 0,
-          g_price: 0,
-          latest: 0,
-        });
+        // Prefill from the row above so operators don't re-key shared
+        // fields (code, sizes, prices, flags). Fresh _mid keeps React
+        // keys unique. First row (empty set) keeps the blank template so
+        // the position-based row_type fallback still applies.
+        if (mats.length > 0) {
+          mats.push({
+            ...mats[mats.length - 1],
+            _mid: `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          });
+        } else {
+          mats.push({
+            _mid: `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            row_type: 'Main.Mat',
+            code: '',
+            ifs_code: '',
+            desc: '',
+            usage: 0,
+            setup_lm: 0,
+            cavities: 0,
+            free_liner: 0,
+            width: 0,
+            log_width: 0,
+            pitch_ovr: 0,
+            offcut_yn: '',
+            slitting_yn: '',
+            df_yn: '',
+            offcut_pct: 0,
+            import_duty: 0,
+            s_price: 0,
+            g_price: 0,
+            latest: 0,
+          });
+        }
       }
       return { ...state, isDirty: true, stdState: stdWithMaterials(state.stdState, mats) };
     }
@@ -441,7 +452,30 @@ export function calcReducer(state, action) {
     case A.ADD_INK_ROW: {
       const inks = [...state.stdState.inks];
       if (inks.length < 10) {
+        // Prefill from the row above EXCEPT setup_kg — operators asked
+        // for a fixed editable 0.2 default on new ink rows (never copy
+        // the prior setup_kg). Fresh _mid + sequential label. First row
+        // (empty list) keeps the blank template but still seeds 0.2.
+        const base =
+          inks.length > 0
+            ? { ...inks[inks.length - 1] }
+            : {
+                ifs_code: '',
+                color: '',
+                print_type: '',
+                mesh_spec: '',
+                pitch_mm: 0,
+                base_mat: '',
+                width: 0,
+                coverage: 0,
+                area_pct: 0,
+                clicks: 0,
+                s_price: 0,
+                g_price: 0,
+                latest: 0,
+              };
         inks.push({
+          ...base,
           // Row-identity for React key stability. Without _mid the JSX
           // keyed by index remounts the input on reorder/delete — losing
           // focus + cursor pos mid-typing, and contributing to the
@@ -449,20 +483,7 @@ export function calcReducer(state, action) {
           // materials (Sprint 11 _mid back-fill).
           _mid: `i_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           label: `Ink ${inks.length + 1}`,
-          ifs_code: '',
-          color: '',
-          print_type: '',
-          mesh_spec: '',
-          pitch_mm: 0,
-          base_mat: '',
-          width: 0,
-          coverage: 0,
-          setup_kg: 0,
-          area_pct: 0,
-          clicks: 0,
-          s_price: 0,
-          g_price: 0,
-          latest: 0,
+          setup_kg: 0.2,
         });
       }
       return { ...state, isDirty: true, stdState: { ...state.stdState, inks } };
