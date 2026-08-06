@@ -33,7 +33,8 @@
  *   First primary action button inside the modal is focused on open.
  *   Focus is restored to the previously-active element on close.
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useI18n } from '../../utils/useI18n';
 import './Modal.css';
 
 const SEVERITY_ICONS = {
@@ -136,9 +137,20 @@ export default function Modal({
   // (short confirmations / small forms stay centered). Pass an explicit
   // boolean to force it either way.
   draggable,
+  // Opt-in maximize/restore toggle in the header. When maximized the card
+  // grows to ~96vw × ~92vh (class-based, Lesson 6) so wide tables show all
+  // their columns. Default false. `maximized` resets when the modal
+  // remounts (consumers like the library picker unmount on close).
+  maximizable = false,
   children,
 }) {
+  const { t } = useI18n();
   const isDraggable = draggable ?? (size === 'lg' || size === 'xl');
+  const [maximized, setMaximized] = useState(false);
+  const maximizedRef = useRef(false);
+  useEffect(() => {
+    maximizedRef.current = maximized;
+  }, [maximized]);
   const cardRef = useRef(null);
   const restoreFocusRef = useRef(null);
   // Keep the latest onClose without retriggering the open/focus effect below.
@@ -218,7 +230,13 @@ export default function Modal({
     };
     const onDown = (e) => {
       // Left button only; ignore drags that start on an interactive control.
-      if (e.button !== 0 || e.target.closest('button, a, input, select, textarea')) return;
+      // A maximized card is pinned — no drag (CSS also forces transform:none).
+      if (
+        maximizedRef.current ||
+        e.button !== 0 ||
+        e.target.closest('button, a, input, select, textarea')
+      )
+        return;
       dragging = true;
       startX = e.clientX;
       startY = e.clientY;
@@ -252,13 +270,48 @@ export default function Modal({
     >
       <div
         ref={cardRef}
-        className={`op-modal-card size-${size}${severityClass}${isDraggable ? ' op-modal-card--draggable' : ''}`}
+        className={`op-modal-card size-${size}${severityClass}${isDraggable ? ' op-modal-card--draggable' : ''}${maximized ? ' op-modal-card--max' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={ariaLabelledBy}
         tabIndex={-1}
       >
         {children}
+        {maximizable && (
+          <button
+            type="button"
+            className="op-modal-maxbtn"
+            aria-label={maximized ? t('modal.restore') : t('modal.maximize')}
+            title={maximized ? t('modal.restore') : t('modal.maximize')}
+            onClick={() => setMaximized((m) => !m)}
+          >
+            {maximized ? (
+              <svg
+                viewBox="0 0 16 16"
+                width="13"
+                height="13"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                aria-hidden="true"
+              >
+                <path d="M6 3v3H3M10 13v-3h3M3 10h3v3M13 6h-3V3" />
+              </svg>
+            ) : (
+              <svg
+                viewBox="0 0 16 16"
+                width="13"
+                height="13"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                aria-hidden="true"
+              >
+                <rect x="3" y="3" width="10" height="10" rx="1" />
+              </svg>
+            )}
+          </button>
+        )}
         {closable && (
           <button
             type="button"

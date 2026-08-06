@@ -28,7 +28,10 @@ export default function Window({
   onResize,
 }) {
   const { t } = useI18n();
-  const isMax = win.state === 'max';
+  const isFixed = !!win.fixed;
+  // Fixed (Home) behaves like a chrome-less pinned max: fills the desktop,
+  // no drag/resize, no titlebar buttons, and sits behind the floats.
+  const isMax = win.state === 'max' || isFixed;
 
   // z-index is the only per-render dynamic style. Passed as a variable
   // so the no-inline-style lint (which targets {{...}} literals) is happy.
@@ -46,7 +49,7 @@ export default function Window({
 
   return (
     <Rnd
-      className={`opswin ${isFocused ? 'opswin-focused' : ''} ${isMax ? 'opswin-max' : ''} ${win.state === 'min' ? 'opswin-hidden' : ''}`}
+      className={`opswin ${isFocused ? 'opswin-focused' : ''} ${isMax ? 'opswin-max' : ''} ${isFixed ? 'opswin-fixed' : ''} ${win.state === 'min' ? 'opswin-hidden' : ''}`}
       style={zStyle}
       size={size}
       position={position}
@@ -68,38 +71,41 @@ export default function Window({
           <span className="opswin-title" title={win.title}>
             {win.title}
           </span>
-          <div className="opswin-btns">
-            <button
-              type="button"
-              className="opswin-btn opswin-btn-min"
-              onMouseDown={stop}
-              onClick={() => onMinimize(win.id)}
-              aria-label={t('window.minimize')}
-              title={t('window.minimize')}
-            >
-              &#8211;
-            </button>
-            <button
-              type="button"
-              className="opswin-btn opswin-btn-max"
-              onMouseDown={stop}
-              onClick={() => (isMax ? onRestore(win.id) : onMaximize(win.id))}
-              aria-label={isMax ? t('window.restore') : t('window.maximize')}
-              title={isMax ? t('window.restore') : t('window.maximize')}
-            >
-              {isMax ? '❐' : '□'}
-            </button>
-            <button
-              type="button"
-              className="opswin-btn opswin-btn-close"
-              onMouseDown={stop}
-              onClick={() => onClose(win.id)}
-              aria-label={t('window.close')}
-              title={t('window.close')}
-            >
-              &#10005;
-            </button>
-          </div>
+          {/* Fixed (Home) is the base layer — no minimize/maximize/close. */}
+          {!isFixed && (
+            <div className="opswin-btns">
+              <button
+                type="button"
+                className="opswin-btn opswin-btn-min"
+                onMouseDown={stop}
+                onClick={() => onMinimize(win.id)}
+                aria-label={t('window.minimize')}
+                title={t('window.minimize')}
+              >
+                &#8211;
+              </button>
+              <button
+                type="button"
+                className="opswin-btn opswin-btn-max"
+                onMouseDown={stop}
+                onClick={() => (isMax ? onRestore(win.id) : onMaximize(win.id))}
+                aria-label={isMax ? t('window.restore') : t('window.maximize')}
+                title={isMax ? t('window.restore') : t('window.maximize')}
+              >
+                {isMax ? '❐' : '□'}
+              </button>
+              <button
+                type="button"
+                className="opswin-btn opswin-btn-close"
+                onMouseDown={stop}
+                onClick={() => onClose(win.id)}
+                aria-label={t('window.close')}
+                title={t('window.close')}
+              >
+                &#10005;
+              </button>
+            </div>
+          )}
         </div>
         <div className="opswin-body">
           <TabContent tabId={win.tabId} onTabChange={onOpen} resetKey={win.id} />

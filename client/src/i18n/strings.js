@@ -294,6 +294,10 @@ export const STRINGS = {
   'home.qa.inventory': { en: 'IFS Inventory', vi: 'Tồn kho IFS' },
   'home.qa.help': { en: 'Help', vi: 'Hướng dẫn' },
 
+  // ─── Modal maximize/restore (opt-in on shared Modal) ───
+  'modal.maximize': { en: 'Maximize', vi: 'Phóng to' },
+  'modal.restore': { en: 'Restore', vi: 'Thu nhỏ' },
+
   // ─── Window manager (in-app MDI, feature-flagged) ───
   'window.minimize': { en: 'Minimize', vi: 'Thu nhỏ' },
   'window.maximize': { en: 'Maximize', vi: 'Phóng to' },

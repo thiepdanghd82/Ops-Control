@@ -212,7 +212,7 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
   if (!def) return null;
 
   return (
-    <Modal open onClose={onClose} size="lg" ariaLabelledBy="libp-title">
+    <Modal open onClose={onClose} size="lg" maximizable ariaLabelledBy="libp-title">
       <Modal.Header
         id="libp-title"
         title={t(def.labelKey)}

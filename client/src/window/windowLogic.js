@@ -35,7 +35,8 @@ export const MIN_WINDOW_H = 200;
  * sessionStorage view/handoff keys.
  */
 export const MULTI_INSTANCE_TABS = new Set([
-  'home',
+  // NB: 'home' is intentionally NOT here — it's the single fixed base
+  // window (see isFixedTab). One instance, never duplicated.
   'dashboard',
   'lib-inventory',
   'lib-mat',
@@ -60,6 +61,14 @@ export const MULTI_INSTANCE_TABS = new Set([
 /** `landing:<sectionId>` panels are pure grids — always multi-instance. */
 export function isLandingTab(tabId) {
   return typeof tabId === 'string' && tabId.startsWith('landing:');
+}
+
+/**
+ * The Home window is FIXED: it's the base layer behind every floating
+ * window and has no minimize / maximize / close chrome. Never removable.
+ */
+export function isFixedTab(tabId) {
+  return tabId === 'home';
 }
 
 /**
@@ -126,6 +135,7 @@ export function deserializeLayout(raw, isKnownTab) {
     const id = typeof w.id === 'string' && w.id ? w.id : `win-${windows.length + 1}`;
     if (seen.has(id)) continue;
     seen.add(id);
+    const fixed = isFixedTab(w.tabId);
     const rec = {
       id,
       tabId: w.tabId,
@@ -133,9 +143,11 @@ export function deserializeLayout(raw, isKnownTab) {
       y: num(w.y, 0),
       w: Math.max(MIN_WINDOW_W, num(w.w, DEFAULT_WINDOW_W)),
       h: Math.max(MIN_WINDOW_H, num(w.h, DEFAULT_WINDOW_H)),
-      z: num(w.z, WINDOW_Z_BASE),
-      state: VALID_STATES.has(w.state) ? w.state : 'normal',
+      z: fixed ? WINDOW_Z_BASE : num(w.z, WINDOW_Z_BASE),
+      // Fixed (Home) is always normal — never min/max.
+      state: fixed ? 'normal' : VALID_STATES.has(w.state) ? w.state : 'normal',
       singleton: isSingleton(w.tabId),
+      fixed,
       prevRect: w.prevRect && typeof w.prevRect === 'object' ? { ...w.prevRect } : null,
     };
     windows.push(rec);

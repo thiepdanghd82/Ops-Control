@@ -19,6 +19,7 @@ import {
 import {
   isSingleton,
   isLandingTab,
+  isFixedTab,
   serializeLayout,
   deserializeLayout,
   focusedTabId,
@@ -28,7 +29,13 @@ import {
 function open(state, tabId, opts = {}) {
   return reduce(state, {
     type: A.OPEN,
-    payload: { tabId, title: opts.title || tabId, singleton: isSingleton(tabId), rect: opts.rect },
+    payload: {
+      tabId,
+      title: opts.title || tabId,
+      singleton: isSingleton(tabId),
+      fixed: isFixedTab(tabId),
+      rect: opts.rect,
+    },
   });
 }
 
@@ -163,6 +170,57 @@ test('focusedTabId null when empty or all minimized', () => {
   assert.equal(focusedTabId(s), null);
 });
 
+// ── fixed (Home base) window ──
+test('fixed window: opens at base z, below floating windows', () => {
+  let s = open(initialWindowState(), 'home');
+  const home = s.windows[0];
+  assert.equal(home.fixed, true);
+  assert.equal(home.z, WINDOW_Z_BASE, 'home pinned to base z');
+  s = open(s, 'standard');
+  const std = s.windows.find((w) => w.tabId === 'standard');
+  assert.ok(std.z > home.z, 'floating window above home');
+  assert.equal(focusedTabId(s), 'standard', 'home never grabs focus over a float');
+});
+
+test('fixed window: CLOSE / MINIMIZE / MAXIMIZE are no-ops', () => {
+  let s = open(initialWindowState(), 'home');
+  const id = s.windows[0].id;
+  s = reduce(s, { type: A.CLOSE, payload: { id } });
+  assert.equal(s.windows.length, 1, 'home cannot be closed');
+  s = reduce(s, { type: A.MINIMIZE, payload: { id } });
+  assert.equal(s.windows[0].state, 'normal', 'home cannot be minimized');
+  s = reduce(s, { type: A.MAXIMIZE, payload: { id } });
+  assert.equal(s.windows[0].state, 'normal', 'home cannot be maximized');
+  assert.equal(s.windows[0].fixed, true);
+});
+
+test('fixed window: FOCUS does not raise it above floats', () => {
+  let s = open(initialWindowState(), 'home');
+  s = open(s, 'standard');
+  const homeId = s.windows.find((w) => w.tabId === 'home').id;
+  const stdZ = s.windows.find((w) => w.tabId === 'standard').z;
+  s = reduce(s, { type: A.FOCUS, payload: { id: homeId } });
+  const home = s.windows.find((w) => w.id === homeId);
+  assert.ok(home.z < stdZ, 'home stays behind the float even when focused');
+});
+
+test('fixed window: re-OPEN home never duplicates', () => {
+  let s = open(initialWindowState(), 'home');
+  s = open(s, 'home');
+  assert.equal(s.windows.filter((w) => w.tabId === 'home').length, 1);
+});
+
+test('fixed survives serialize → deserialize (fixed recomputed)', () => {
+  let s = open(initialWindowState(), 'home');
+  s = open(s, 'lib-mat');
+  const layout = serializeLayout(s);
+  const back = deserializeLayout(layout, () => true);
+  const home = back.windows.find((w) => w.tabId === 'home');
+  assert.equal(home.fixed, true);
+  assert.equal(home.z, WINDOW_Z_BASE);
+  assert.equal(back.windows.find((w) => w.tabId === 'lib-mat').fixed, false);
+});
+
 // ── classification ──
 test('isSingleton classification', () => {
   assert.equal(isSingleton('standard'), true);
@@ -175,6 +233,9 @@ test('isSingleton classification', () => {
   assert.equal(isSingleton('landing:quoting'), false);
   assert.equal(isLandingTab('landing:quoting'), true);
   assert.equal(isSingleton('some-unknown-tab'), true, 'unknown → singleton (fail-safe)');
+  assert.equal(isSingleton('home'), true, 'home is a single fixed window');
+  assert.equal(isFixedTab('home'), true);
+  assert.equal(isFixedTab('standard'), false);
 });
 
 // ── persistence ──

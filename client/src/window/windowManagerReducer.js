@@ -56,13 +56,15 @@ export function windowManagerReducer(state, action) {
   const { type, payload } = action || {};
   switch (type) {
     case A.OPEN: {
-      const { tabId, title = '', singleton = true, rect } = payload || {};
+      const { tabId, title = '', singleton = true, rect, fixed = false } = payload || {};
       if (!tabId) return state;
       // Singleton: focus the existing window (raise + un-minimize) instead
-      // of opening a duplicate.
+      // of opening a duplicate. A fixed window (Home base layer) is never
+      // raised — it stays behind the floating windows.
       if (singleton) {
         const existing = state.windows.find((w) => w.tabId === tabId);
         if (existing) {
+          if (existing.fixed) return state; // Home base — already at the back.
           const z = raise(state);
           return {
             ...state,
@@ -74,7 +76,9 @@ export function windowManagerReducer(state, action) {
         }
       }
       const counter = state.counter + 1;
-      const z = raise(state);
+      // Fixed windows pin to the base z (below every floating window) and
+      // do NOT bump zTop, so later windows always open on top of Home.
+      const z = fixed ? WINDOW_Z_BASE : raise(state);
       const geo = cascadeRect(state.counter, rect);
       const win = {
         id: `win-${counter}`,
@@ -87,15 +91,18 @@ export function windowManagerReducer(state, action) {
         z,
         state: 'normal',
         singleton: !!singleton,
+        fixed: !!fixed,
         prevRect: null,
       };
-      return { ...state, counter, zTop: z, windows: [...state.windows, win] };
+      return { ...state, counter, zTop: fixed ? state.zTop : z, windows: [...state.windows, win] };
     }
 
     case A.FOCUS: {
       const { id } = payload || {};
       const target = state.windows.find((w) => w.id === id);
       if (!target) return state;
+      // Fixed (Home) never raises — it's the base layer behind floats.
+      if (target.fixed) return state;
       const z = raise(state);
       return {
         ...state,
@@ -108,7 +115,8 @@ export function windowManagerReducer(state, action) {
 
     case A.MINIMIZE: {
       const { id } = payload || {};
-      if (!state.windows.some((w) => w.id === id)) return state;
+      const target = state.windows.find((w) => w.id === id);
+      if (!target || target.fixed) return state; // Home can't be minimized.
       return {
         ...state,
         windows: state.windows.map((w) => (w.id === id ? { ...w, state: 'min' } : w)),
@@ -118,7 +126,7 @@ export function windowManagerReducer(state, action) {
     case A.MAXIMIZE: {
       const { id } = payload || {};
       const target = state.windows.find((w) => w.id === id);
-      if (!target || target.state === 'max') return state;
+      if (!target || target.fixed || target.state === 'max') return state;
       const z = raise(state);
       return {
         ...state,
@@ -160,6 +168,8 @@ export function windowManagerReducer(state, action) {
 
     case A.CLOSE: {
       const { id } = payload || {};
+      const target = state.windows.find((w) => w.id === id);
+      if (target?.fixed) return state; // Home can never be closed.
       return { ...state, windows: state.windows.filter((w) => w.id !== id) };
     }
 
