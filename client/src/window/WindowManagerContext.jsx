@@ -72,7 +72,7 @@ function initEnabled() {
     return windowManagerReducer(initialWindowState(), openAction('home'));
   }
   try {
-    const hydrated = deserializeLayout(JSON.parse(stored), isKnownTab);
+    const hydrated = deserializeLayout(JSON.parse(stored), isKnownTab, tabTitle);
     if (hydrated) return hydrated;
   } catch {
     /* corrupt JSON → fall through to empty */

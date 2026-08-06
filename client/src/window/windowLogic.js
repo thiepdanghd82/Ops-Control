@@ -120,13 +120,15 @@ export function serializeLayout(store) {
 /**
  * Rebuild a store from a persisted layout. `isKnownTab(tabId)` decides
  * whether a window's tab still exists — records that fail are dropped
- * silently (stale-tabId fallback). Returns null when the input is
- * unusable or every window was dropped, so the caller can fall back to a
- * default layout instead of an empty desktop.
+ * silently (stale-tabId fallback). `titleOf(tabId)` recomputes each
+ * window's display title (title is NOT persisted). Returns null when the
+ * input is unusable or every window was dropped, so the caller can fall
+ * back to a default layout instead of an empty desktop.
  */
-export function deserializeLayout(raw, isKnownTab) {
+export function deserializeLayout(raw, isKnownTab, titleOf) {
   if (!raw || typeof raw !== 'object' || !Array.isArray(raw.windows)) return null;
   const known = typeof isKnownTab === 'function' ? isKnownTab : () => true;
+  const nameOf = typeof titleOf === 'function' ? titleOf : () => '';
   const seen = new Set();
   const windows = [];
   for (const w of raw.windows) {
@@ -139,11 +141,14 @@ export function deserializeLayout(raw, isKnownTab) {
     const rec = {
       id,
       tabId: w.tabId,
+      // Title recomputed on hydrate (BUG-1: was undefined → blank taskbar
+      // item + titlebar for the hydrated Home window).
+      title: nameOf(w.tabId) || '',
       x: num(w.x, 0),
       y: num(w.y, 0),
       w: Math.max(MIN_WINDOW_W, num(w.w, DEFAULT_WINDOW_W)),
       h: Math.max(MIN_WINDOW_H, num(w.h, DEFAULT_WINDOW_H)),
-      z: fixed ? WINDOW_Z_BASE : num(w.z, WINDOW_Z_BASE),
+      z: num(w.z, WINDOW_Z_BASE),
       // Fixed (Home) is always normal — never min/max.
       state: fixed ? 'normal' : VALID_STATES.has(w.state) ? w.state : 'normal',
       singleton: isSingleton(w.tabId),

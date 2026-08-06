@@ -171,15 +171,15 @@ test('focusedTabId null when empty or all minimized', () => {
 });
 
 // ── fixed (Home base) window ──
-test('fixed window: opens at base z, below floating windows', () => {
+test('fixed window: opening another window after Home stacks above it', () => {
   let s = open(initialWindowState(), 'home');
   const home = s.windows[0];
   assert.equal(home.fixed, true);
-  assert.equal(home.z, WINDOW_Z_BASE, 'home pinned to base z');
+  assert.ok(home.z > WINDOW_Z_BASE, 'home opens like a normal window');
   s = open(s, 'standard');
   const std = s.windows.find((w) => w.tabId === 'standard');
-  assert.ok(std.z > home.z, 'floating window above home');
-  assert.equal(focusedTabId(s), 'standard', 'home never grabs focus over a float');
+  assert.ok(std.z > home.z, 'later window stacks above Home');
+  assert.equal(focusedTabId(s), 'standard');
 });
 
 test('fixed window: CLOSE / MINIMIZE / MAXIMIZE are no-ops', () => {
@@ -194,31 +194,52 @@ test('fixed window: CLOSE / MINIMIZE / MAXIMIZE are no-ops', () => {
   assert.equal(s.windows[0].fixed, true);
 });
 
-test('fixed window: FOCUS does not raise it above floats', () => {
+test('fixed window: FOCUS raises Home to the front (return to Home)', () => {
   let s = open(initialWindowState(), 'home');
   s = open(s, 'standard');
   const homeId = s.windows.find((w) => w.tabId === 'home').id;
-  const stdZ = s.windows.find((w) => w.tabId === 'standard').z;
   s = reduce(s, { type: A.FOCUS, payload: { id: homeId } });
   const home = s.windows.find((w) => w.id === homeId);
-  assert.ok(home.z < stdZ, 'home stays behind the float even when focused');
+  assert.equal(home.z, s.zTop, 'home is now top z');
+  assert.equal(focusedTabId(s), 'home', 'focused tab is Home');
 });
 
-test('fixed window: re-OPEN home never duplicates', () => {
+test('fixed window: OPEN existing Home raises it to front, no duplicate', () => {
   let s = open(initialWindowState(), 'home');
-  s = open(s, 'home');
-  assert.equal(s.windows.filter((w) => w.tabId === 'home').length, 1);
+  s = open(s, 'standard'); // standard now on top
+  assert.equal(focusedTabId(s), 'standard');
+  s = open(s, 'home'); // click logo / sidebar Home
+  assert.equal(s.windows.filter((w) => w.tabId === 'home').length, 1, 'no duplicate');
+  assert.equal(focusedTabId(s), 'home', 'Home raised to front');
 });
 
-test('fixed survives serialize → deserialize (fixed recomputed)', () => {
+test('fixed window: opening a non-home window after focusing Home raises above it', () => {
+  let s = open(initialWindowState(), 'home');
+  s = open(s, 'standard');
+  const homeId = s.windows.find((w) => w.tabId === 'home').id;
+  s = reduce(s, { type: A.FOCUS, payload: { id: homeId } }); // Home to front
+  assert.equal(focusedTabId(s), 'home');
+  s = open(s, 'lib-mat'); // normal stacking preserved
+  assert.equal(focusedTabId(s), 'lib-mat', 'new window stacks above Home');
+});
+
+test('fixed survives serialize → deserialize; title recomputed via titleOf', () => {
   let s = open(initialWindowState(), 'home');
   s = open(s, 'lib-mat');
   const layout = serializeLayout(s);
-  const back = deserializeLayout(layout, () => true);
+  const titleOf = (t) => (t === 'home' ? 'Home' : t === 'lib-mat' ? 'Materials Library' : t);
+  const back = deserializeLayout(layout, () => true, titleOf);
   const home = back.windows.find((w) => w.tabId === 'home');
   assert.equal(home.fixed, true);
-  assert.equal(home.z, WINDOW_Z_BASE);
+  assert.equal(home.title, 'Home', 'BUG-1: hydrated Home has its title, not blank');
+  assert.equal(back.windows.find((w) => w.tabId === 'lib-mat').title, 'Materials Library');
   assert.equal(back.windows.find((w) => w.tabId === 'lib-mat').fixed, false);
+});
+
+test('deserializeLayout without titleOf → title empty string (no crash)', () => {
+  let s = open(initialWindowState(), 'home');
+  const back = deserializeLayout(serializeLayout(s), () => true);
+  assert.equal(back.windows[0].title, '');
 });
 
 // ── classification ──

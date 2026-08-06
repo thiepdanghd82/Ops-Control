@@ -118,9 +118,14 @@ function AppShell() {
   useEffect(() => {
     if (isAuthenticated && !wasAuthenticatedRef.current) {
       setActiveTab('home');
+      // Window-manager mode: seed-if-missing + raise Home to the front so
+      // a returning user with a saved layout starts on Home (not their
+      // last highest-z window). openWindow('home') creates Home if the
+      // hydrated layout somehow lacks it (safety net).
+      if (wmEnabled) wm.openWindow('home');
     }
     wasAuthenticatedRef.current = isAuthenticated;
-  }, [isAuthenticated]);
+  }, [isAuthenticated, wmEnabled, wm]);
 
   // Listen for tab switch events from native components (e.g., Quote History -> Open quote).
   // With the window manager on, route the target through openWindow (the
