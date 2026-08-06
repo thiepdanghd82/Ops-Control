@@ -244,13 +244,23 @@
 
 .libp-card-tablewrap {
   flex: 1;
-  overflow: auto;
+  overflow: auto; /* both axes — PRICE stays reachable by horizontal scroll */
 }
 
 .libp-table {
   width: 100%;
+  /* Sum of the column widths (date 96 + code 160 + desc 200 + supplier 160
+     + price 110 + padding) so the last column (PRICE) is never clipped
+     without a scrollbar at the lg width — scroll horizontally instead. */
+  min-width: 760px;
   border-collapse: collapse;
   font-size: 12.5px;
+}
+
+/* When the modal is maximized, the picker fills it and every column
+   shows without scrolling (the ~96vw card is far wider than min-width). */
+.op-modal-card--max .libp-card-tablewrap {
+  overflow: auto;
 }
 .libp-table thead th {
   position: sticky;

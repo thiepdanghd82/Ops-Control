@@ -385,6 +385,44 @@
     color 120ms,
     border-color 120ms;
 }
+/* Maximize/restore toggle — sits just left of the close button. */
+.op-modal-maxbtn {
+  position: absolute;
+  top: 12px;
+  right: 46px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #6f6f6f;
+  cursor: pointer;
+  border-radius: 4px;
+  transition:
+    background 120ms,
+    color 120ms;
+}
+.op-modal-maxbtn:hover {
+  background: #e0e0e0;
+  color: #161616;
+}
+.op-modal-maxbtn:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+/* Maximized card — override the size cap + any drag transform so it fills
+   the viewport (class-based, no inline style — Lesson 6). Restore removes
+   the class and the inline drag transform (if any) reapplies. */
+.op-modal-card--max {
+  width: 96vw !important;
+  max-width: 96vw !important;
+  height: 92vh !important;
+  max-height: 92vh !important;
+  transform: none !important;
+}
 .op-modal-close:hover {
   background: #e0e0e0;
   color: #161616;
@@ -481,6 +519,11 @@
   .op-modal-close {
     width: 36px;
     height: 36px;
+  }
+  .op-modal-maxbtn {
+    width: 36px;
+    height: 36px;
+    right: 54px;
   }
 }
 

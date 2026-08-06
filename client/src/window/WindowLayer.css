@@ -48,6 +48,14 @@
 .opswin-max {
   border-radius: 0;
 }
+/* Fixed Home base layer: full-area, no chrome buttons, not draggable. */
+.opswin-fixed {
+  border-radius: 0;
+  box-shadow: none;
+}
+.opswin-fixed .opswin-titlebar {
+  cursor: default;
+}
 .opswin-hidden {
   display: none !important;
 }

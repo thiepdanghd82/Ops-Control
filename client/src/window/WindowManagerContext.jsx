@@ -22,6 +22,7 @@ import {
 import {
   isSingleton,
   isLandingTab,
+  isFixedTab,
   serializeLayout,
   deserializeLayout,
   focusedTabId as selectFocusedTabId,
@@ -47,7 +48,13 @@ function isKnownTab(tabId) {
 function openAction(tabId, rect) {
   return {
     type: A.OPEN,
-    payload: { tabId, title: tabTitle(tabId), singleton: isSingleton(tabId), rect },
+    payload: {
+      tabId,
+      title: tabTitle(tabId),
+      singleton: isSingleton(tabId),
+      fixed: isFixedTab(tabId),
+      rect,
+    },
   };
 }
 
