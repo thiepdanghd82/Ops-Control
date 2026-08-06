@@ -1,0 +1,198 @@
+/* In-app window manager (Phase 1). All chrome is class-based (Lesson 6);
+   the only dynamic inline style is a window's z-index (a variable). */
+
+/* Root fills the .app-content region as a flex column: desktop grows,
+   taskbar is a fixed-height sibling so a maximized window (100% of the
+   desktop) never paints under the dock. */
+.opswin-root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+/* Desktop host — the positioned parent react-rnd clamps drag/resize to. */
+.opswin-desktop {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--surface-subtle, #f4f4f4);
+}
+
+.opswin-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+/* ── Window frame ── */
+.opswin {
+  /* react-rnd sets position/size; we only theme the box. */
+  border: 1px solid var(--border-strong, #c6c6c6);
+  border-radius: 8px;
+  background: var(--surface-card, #fff);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.16);
+  overflow: hidden;
+  display: flex;
+}
+.opswin-focused {
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.28);
+  border-color: #0f62fe;
+}
+.opswin-max {
+  border-radius: 0;
+}
+.opswin-hidden {
+  display: none !important;
+}
+
+.opswin-frame {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+/* ── Titlebar ── */
+.opswin-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 34px;
+  padding: 0 6px 0 12px;
+  background: var(--surface-subtle, #e8e8e8);
+  border-bottom: 1px solid var(--border-subtle, #d9d9d9);
+  cursor: move;
+  user-select: none;
+  flex: 0 0 auto;
+}
+.opswin-focused .opswin-titlebar {
+  background: color-mix(in oklab, #0f62fe, transparent 88%);
+}
+.opswin-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.opswin-btns {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+.opswin-btn {
+  width: 26px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+.opswin-btn:hover {
+  background: color-mix(in oklab, var(--text-primary), transparent 88%);
+  color: var(--text-primary);
+}
+.opswin-btn-close:hover {
+  background: #da1e28;
+  color: #fff;
+}
+
+/* ── Body ── */
+.opswin-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  position: relative;
+}
+/* The reused .cost-module fills the window body instead of the page. */
+.opswin-body .cost-module {
+  height: 100%;
+}
+
+/* ── Taskbar dock (flex sibling of the desktop, fixed height) ── */
+.opswin-taskbar {
+  flex: 0 0 36px;
+  z-index: 4500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  padding: 0 8px;
+  background: var(--surface-card, #fff);
+  border-top: 1px solid var(--border-strong, #c6c6c6);
+  overflow-x: auto;
+}
+.opswin-taskitem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  max-width: 180px;
+  padding: 0 10px;
+  border: 1px solid var(--border-subtle, #d9d9d9);
+  border-radius: 4px;
+  background: var(--surface-subtle, #f4f4f4);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+.opswin-taskitem:hover {
+  border-color: #0f62fe;
+}
+.opswin-taskitem.active {
+  border-color: #0f62fe;
+  background: color-mix(in oklab, #0f62fe, transparent 86%);
+  font-weight: 600;
+}
+.opswin-taskitem.minimized {
+  opacity: 0.6;
+  font-style: italic;
+}
+.opswin-taskdot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  flex: 0 0 auto;
+}
+.opswin-taskitem.active .opswin-taskdot {
+  background: #0f62fe;
+}
+.opswin-tasklabel {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Dark theme ── */
+[data-theme='dark'] .opswin {
+  border-color: var(--border-strong, #444);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+[data-theme='dark'] .opswin-focused {
+  border-color: #4589ff;
+}

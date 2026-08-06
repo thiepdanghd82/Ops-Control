@@ -412,12 +412,19 @@ app.get(['/health', '/api/health'], (req, res) => {
 
 app.get('/api/runtime-config', (req, res) => {
   const falsy = (v) => v === '0' || v === 'false' || v === 'off' || v === 'no';
+  // Opt-IN helper — default OFF unless explicitly enabled (mirror of the
+  // falsy() default-ON pattern, inverted). Used for features that must
+  // stay dark until hardware-verified.
+  const truthy = (v) => v === '1' || v === 'true' || v === 'on' || v === 'yes';
   res.set('Cache-Control', 'no-cache');
   res.json({
     ok: true,
     version: PKG_VERSION,
     features: {
       alt_materials: !falsy(process.env.OPS_FEATURE_ALT_MATERIALS),
+      // In-app window manager (MDI). Default OFF — classic single-tab
+      // shell until OPS_FEATURE_WINDOW_MANAGER is explicitly enabled.
+      window_manager: truthy(process.env.OPS_FEATURE_WINDOW_MANAGER),
     },
     // Sprint S-SYSCTRL — global SYS-controlled sidebar show/hide. Read the
     // JSON file at request time (tolerant of a missing file → nothing hidden)

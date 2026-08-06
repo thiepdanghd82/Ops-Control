@@ -294,6 +294,17 @@ export const STRINGS = {
   'home.qa.inventory': { en: 'IFS Inventory', vi: 'Tồn kho IFS' },
   'home.qa.help': { en: 'Help', vi: 'Hướng dẫn' },
 
+  // ─── Window manager (in-app MDI, feature-flagged) ───
+  'window.minimize': { en: 'Minimize', vi: 'Thu nhỏ' },
+  'window.maximize': { en: 'Maximize', vi: 'Phóng to' },
+  'window.restore': { en: 'Restore', vi: 'Khôi phục' },
+  'window.close': { en: 'Close', vi: 'Đóng' },
+  'window.taskbar': { en: 'Open windows', vi: 'Cửa sổ đang mở' },
+  'window.empty': {
+    en: 'Click a sidebar tab to open a window',
+    vi: 'Nhấn một mục ở thanh bên để mở cửa sổ',
+  },
+
   // ─── Library picker (Phase 10M right-click on material/ink rows) ───
   'picker.menu_title': { en: 'Search from library', vi: 'Tìm từ thư viện' },
   'picker.lib.npi': { en: 'NPI Material', vi: 'NPI Material' },
