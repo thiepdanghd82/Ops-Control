@@ -13,6 +13,10 @@ import { createContext } from 'react';
 export const DEFAULT_FEATURES = Object.freeze({
   // Planning module + Kiosk PWA removed 2026-07-22 (code-only cleanup).
   alt_materials: false,
+  // In-app window manager (MDI) — default OFF; classic single-tab shell
+  // renders until the server flag turns it on. Guarantees OFF pre-fetch
+  // and on a failed runtime-config fetch.
+  window_manager: false,
 });
 
 // Sprint S-SYSCTRL — global SYS-controlled sidebar show/hide. Default = nothing
