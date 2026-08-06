@@ -666,14 +666,27 @@ export function calcProcess(proc, st, moq, lib, options = {}) {
   let uph = 0;
   const sp = proc.speed || 0;
   const eff = proc.efficiency || 0.85;
+  // UOM → Machine-UPH formula. The UI labels were renamed 2026-08
+  // (Stamp/min→Shot/min, Pcs/H→Pcs/hrs, Sheets/H+Sheet/H→Sheets/Hrs, new
+  // 'Hrs'); the OLD tokens are kept as ALIASES so already-saved rate rows
+  // + quotes compute identically — every rename is label-only, same
+  // formula. 'Hrs' + '' → uph 0 (manual: labor comes from the setup_h →
+  // setup_labor path, no run formula). 'Mtr/Hr' stays aliased even though
+  // it was dropped from the selectable list — legacy rows must compute.
   const _suom = (speed_uom || '').replace(/\s/g, '').toLowerCase();
   if (_suom === 'm/min') uph = ((sp * eff * 60 * 1000) / Math.max(1, pitch)) * layout;
   else if (_suom === 'mtr/hr' || _suom === 'm/hr')
     uph = ((sp * eff * 1000) / Math.max(1, pitch)) * layout;
-  else if (_suom === 'stamp/min') uph = sp * eff * 60 * layout;
-  else if (_suom === 'pcs/h' || _suom === 'pcs/hr') uph = sp * eff;
-  else if (_suom === 'sheets/h' || _suom === 'sheets/hr') uph = sp * eff * layout;
-  else if (_suom === 'sheet/h' || _suom === 'sheet/hr') uph = sp * eff * layout;
+  else if (_suom === 'shot/min' || _suom === 'stamp/min') uph = sp * eff * 60 * layout;
+  else if (_suom === 'pcs/hrs' || _suom === 'pcs/h' || _suom === 'pcs/hr') uph = sp * eff;
+  else if (
+    _suom === 'sheets/hrs' ||
+    _suom === 'sheets/h' ||
+    _suom === 'sheets/hr' ||
+    _suom === 'sheet/h' ||
+    _suom === 'sheet/hr'
+  )
+    uph = sp * eff * layout;
 
   // Sprint S-DFM-P3 — cut_type speed factor for Die_Cut rows.
   // Through / both / perf / emboss all run slower than kiss-cut due
