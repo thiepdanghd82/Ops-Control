@@ -264,7 +264,13 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
           setMat(mi, 'code', hit.code || '');
           setMat(mi, 'ifs_code', hit.ifs_code || '');
           setMat(mi, 'desc', hit.desc || '');
-          if (hit.g_price) setMat(mi, 'g_price', Number(hit.g_price) || 0);
+          // Fill BOTH Ref Price (g_price) and MAT PRICE (latest) — mirror
+          // of Std CalcMaterials so the shared picker fills identically.
+          if (hit.g_price) {
+            const p = Number(hit.g_price) || 0;
+            setMat(mi, 'g_price', p);
+            setMat(mi, 'latest', p);
+          }
         },
       });
     },

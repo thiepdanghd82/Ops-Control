@@ -162,7 +162,6 @@
   align-items: center;
   gap: 4px;
 }
-.libp-card-back,
 .libp-card-close {
   width: 28px;
   height: 28px;
@@ -181,14 +180,35 @@
   padding: 0;
   line-height: 1;
 }
-.libp-card-back {
-  font-size: 18px;
+/* A dedicated row above the search input so the auto-width text button
+   never overlaps the modal title/subtitle (was an icon-only 28px circle
+   that overflowed the long "Back to library list" label). */
+.libp-backrow {
+  padding: 8px 20px 0;
 }
-.libp-card-back:hover,
+.libp-card-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  width: auto;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+  padding: 4px 8px;
+  line-height: 1.2;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
 .libp-card-close:hover {
   background: color-mix(in oklab, var(--text-primary), transparent 90%);
 }
 .libp-card-back:hover {
+  background: color-mix(in oklab, var(--text-primary), transparent 90%);
   color: #0f62fe;
 }
 
@@ -262,8 +282,14 @@
   background: color-mix(in oklab, #0f62fe, transparent 88%);
 }
 
+.libp-col-date {
+  width: 96px;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
 .libp-col-code {
-  width: 180px;
+  width: 160px;
   font-family: 'IBM Plex Mono', monospace;
   font-size: 12px;
 }

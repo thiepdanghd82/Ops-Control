@@ -35,6 +35,7 @@ import { useI18n } from '../../utils/useI18n';
 import { useCostLib } from '../../context/CostLibContext';
 import Modal from '../Shared/Modal';
 import { useFloatingMenu } from '../Shared/useFloatingMenu';
+import { normNPI, normSourcing, normIfsMaterial } from './LibraryPicker.norm.js';
 import './LibraryPicker.css';
 
 const Ctx = createContext(null);
@@ -46,48 +47,9 @@ export function useLibraryPicker() {
 }
 
 // ── Per-library normalizers ──────────────────────────────────────────
-// Each function takes a raw row from the library and returns the
-// shared picker row shape { code, ifs_code, desc, g_price, supplier,
-// extra } plus whichever columns that library wants to display. The
-// `extra` string appears as a muted 3rd column in the search table.
-
-function normNPI(row) {
-  // npiDB rows: { name, type, price (DAP), thick, color, supplier, note }
-  return {
-    code: row.name || '',
-    ifs_code: '',
-    desc: [row.type, row.thick, row.color].filter(Boolean).join(' · ') || row.name || '',
-    g_price: Number(row.price) || 0,
-    supplier: row.supplier || '',
-    extra: row.note || '',
-  };
-}
-function normSourcing(row) {
-  // sourcingDB rows: { material, size, exw, dap, moq, lt, supplier, status }
-  return {
-    code: row.material || '',
-    ifs_code: '',
-    desc: [row.material, row.size].filter(Boolean).join(' · '),
-    // Prefer DAP price (landed) — same cost basis as NPI. exw fallback.
-    g_price: Number(row.dap) || Number(row.exw) || 0,
-    supplier: row.supplier || '',
-    extra: row.status || '',
-  };
-}
-function normIfsMaterial(row) {
-  // IFS Materials (Material Cost) canonical rows: { part_no, desc,
-  // supplier_id, supplier, conv, price, currency, uom, ... }. Tolerates
-  // the legacy IFS-Inventory Title-Case keys for any in-flight cache.
-  const partNo = row.part_no || row['Part No'] || '';
-  return {
-    code: partNo,
-    ifs_code: partNo, // For IFS materials the Part No IS the IFS code.
-    desc: row.desc || row['Part Description'] || '',
-    g_price: Number(row.price ?? row.Price) || 0,
-    supplier: row.supplier || row.supplier_id || row['Supplier ID'] || '',
-    extra: row.uom || row['Price Unit Measure'] || '',
-  };
-}
+// Pure row-shape mappers extracted to LibraryPicker.norm.js so node:test
+// can import them without a JSX/CSS loader. Each returns the shared
+// picker row { code, ifs_code, desc, g_price, supplier, extra, date }.
 
 const LIBRARIES = [
   { key: 'npi', labelKey: 'picker.lib.npi', norm: normNPI, source: 'npi' },
@@ -259,20 +221,21 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
             ? `400+ ${t('picker.result_count_suffix')}`
             : `${rows.length} ${t('picker.result_count_suffix')}`
         }
-      >
-        {onBack && (
-          <button
-            type="button"
-            className="libp-card-back"
-            onClick={onBack}
-            aria-label={t('picker.back')}
-            title={t('picker.back')}
-          >
-            ← {t('picker.back')}
-          </button>
-        )}
-      </Modal.Header>
+      />
       <Modal.Body className="flush">
+        {onBack && (
+          <div className="libp-backrow">
+            <button
+              type="button"
+              className="libp-card-back"
+              onClick={onBack}
+              aria-label={t('picker.back')}
+              title={t('picker.back')}
+            >
+              ← {t('picker.back')}
+            </button>
+          </div>
+        )}
         <div className="libp-card-search">
           <input
             ref={inputRef}
@@ -291,6 +254,7 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
           <table className="libp-table">
             <thead>
               <tr>
+                <th className="libp-col-date">{t('picker.col.date')}</th>
                 <th className="libp-col-code">{t('picker.col.code')}</th>
                 <th className="libp-col-desc">{t('picker.col.desc')}</th>
                 <th className="libp-col-supplier">{t('picker.col.supplier')}</th>
@@ -300,7 +264,7 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="libp-empty">
+                  <td colSpan={5} className="libp-empty">
                     {t('picker.empty')}
                   </td>
                 </tr>
@@ -311,6 +275,7 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
                   onDoubleClick={() => onPick(r)}
                   title={t('picker.double_click_hint')}
                 >
+                  <td className="libp-col-date">{r.date || '—'}</td>
                   <td className="libp-col-code">
                     <code>{r.code}</code>
                   </td>

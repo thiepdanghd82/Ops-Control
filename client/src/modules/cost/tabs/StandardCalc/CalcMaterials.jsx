@@ -199,7 +199,11 @@ export default function CalcMaterials() {
       const found = getMatByCode(code) || resolveLibRow(lib.mat, 'code', code).row;
       if (found) {
         setMaterialField(idx, 'desc', found.description || found.desc || '');
-        if (found.price) setMaterialField(idx, 'g_price', parseFloat(found.price) || 0);
+        if (found.price) {
+          const p = parseFloat(found.price) || 0;
+          setMaterialField(idx, 'g_price', p);
+          setMaterialField(idx, 'latest', p);
+        }
         if (found.width) setMaterialField(idx, 'width', parseFloat(found.width) || 0);
       }
     },
@@ -228,7 +232,14 @@ export default function CalcMaterials() {
           setMaterialField(idx, 'code', hit.code || '');
           setMaterialField(idx, 'ifs_code', hit.ifs_code || '');
           setMaterialField(idx, 'desc', hit.desc || '');
-          if (hit.g_price) setMaterialField(idx, 'g_price', Number(hit.g_price) || 0);
+          // Fill BOTH Ref Price (g_price) and MAT PRICE (latest) so the
+          // active cost cell isn't left at $0 after an explicit select.
+          // MAT PRICE stays editable — operator can override afterwards.
+          if (hit.g_price) {
+            const p = Number(hit.g_price) || 0;
+            setMaterialField(idx, 'g_price', p);
+            setMaterialField(idx, 'latest', p);
+          }
         },
       });
     },
