@@ -737,7 +737,7 @@ function PrintSubTab({ state, onField }) {
           NOTE-B: pl_num_colors is a SEPARATE field from Color Count above — if
           Henry confirms they're the same quantity, bind "# No of colors" to
           state.color_count instead of pl_num_colors to avoid double-entry. */}
-      <div className="sc-grid4">
+      <div className="sc-grid4 sc-print-cost-row">
         <div className="sc-field" title={PL_PRINT_TYPE_GROUPS}>
           <label>Print type</label>
           <select

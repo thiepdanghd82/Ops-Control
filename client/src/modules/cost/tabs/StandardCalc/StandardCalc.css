@@ -1965,6 +1965,15 @@ select.sc-input {
   border-top: 1px dashed #e2e8f0;
   padding-top: 8px;
 }
+
+/* Print-cost row (Layout ▸ Print Design Layout, first row) — extra breathing
+   room + a faint dashed divider before the ① Product Size geometry grid.
+   Same 1px dashed #e2e8f0 as the divider above "Advanced Layout" (.cl-adv). */
+.sc-print-cost-row {
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px dashed #e2e8f0;
+}
 .cl-adv-toggle {
   background: transparent;
   border: none;
