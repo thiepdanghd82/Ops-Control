@@ -1625,6 +1625,14 @@ export function createStdState() {
     die_quiet_zone_mm: 0, // clearance around die for reg marks / bearer (0 = none)
     tol_p2p_mm: 0, // print-to-print (color registration) tolerance
     min_slit_lane_width_mm: 0, // override default min slit lane width (0 = 25mm default)
+    // Print-cost block — Layout ▸ Print Design Layout bottom row (additive,
+    // heal-on-read, NO schema bump; same pattern as lead_time). pl_plate_cost
+    // is calculated + read-only — TODO: Plate cost formula pending Henry.
+    // These do NOT feed calcEngine/cost/exporter yet (roll-in is a follow-up).
+    pl_print_type: '',
+    pl_num_colors: '',
+    pl_film_lp_cost: '',
+    pl_plate_cost: '',
     // ── Phase 4 UX polish ──
     unwind_direction: '', // '' | 'face-in' | 'face-out' — label orientation on roll
     print_direction_md: '', // '' | 'head-first' | 'tail-first' — text reading direction
@@ -1866,6 +1874,12 @@ export function createEmptyStdState() {
     min_gap_md: 0,
     rotary_cols: 0,
     pcs_per_roll: 0,
+    // Print-cost block (Layout ▸ Print Design Layout). See createStdState for
+    // the contract — additive, heal-on-read; pl_plate_cost formula pending.
+    pl_print_type: '',
+    pl_num_colors: '',
+    pl_film_lp_cost: '',
+    pl_plate_cost: '',
     // Alt-materials feature (Sprint S-ALT-MAT, PR #A). See createStdState
     // for the full contract — materials field is a mirror of the active set.
     materials_main: Array(1)
@@ -2260,6 +2274,12 @@ export function createSubProduct(code) {
     die_quiet_zone_mm: 0,
     tol_p2p_mm: 0,
     min_slit_lane_width_mm: 0,
+    // Print-cost block (Layout ▸ Print Design Layout). See createStdState for
+    // the contract — additive, heal-on-read; pl_plate_cost formula pending.
+    pl_print_type: '',
+    pl_num_colors: '',
+    pl_film_lp_cost: '',
+    pl_plate_cost: '',
     unwind_direction: '',
     print_direction_md: '',
     include_reg_marks: false,

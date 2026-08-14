@@ -23,6 +23,16 @@ import DecimalInput from '../../../../utils/DecimalInput';
 import DesignSyncPicker from './DesignSyncPicker';
 import { validateLayout } from '../../../../services/layoutValidation';
 
+// Print-cost block dropdown (Layout ▸ Print Design Layout). The 4 TOP-LEVEL
+// print types; Flexo + Silkscreen sub-variants are surfaced as a tooltip
+// (NOTE-A). Hardcoded for now — promote to a DDL (editable) or a grouped
+// <optgroup> of sub-variants as a follow-up if Henry wants them selectable.
+const PL_PRINT_TYPES = ['Letter Press', 'Flexo', 'Indigo6800', 'Silkscreen'];
+const PL_PRINT_TYPE_GROUPS =
+  'Nhóm in — Flexo = {Flexo(Gallus4C), Flexo(1C+1Cut Brotech), Flexo(1C+2Cut Brotech), ' +
+  'Flexo(2C+2Cut Brotech), Flexo(2C+1Cut Brotech)}; Silkscreen = {SS(Sheet), SS(Sheet Glue), ' +
+  'SS(R2R), SS(Sheet Auto)}.';
+
 export default function CalcLayout() {
   const { stdState, setStdField, setStdDrawings } = useCalc();
   const st = stdState;
@@ -886,6 +896,65 @@ function PrintSubTab({ state, onField }) {
             onChange={(v) => onField('tol_p2p_mm', v)}
             className="sc-input"
             placeholder="0.1 flexo / 0.05 Indigo"
+          />
+        </div>
+      </div>
+      {/* Print-cost block — additive UI, formula TBD (pending Henry). Renders
+          in the Print sub-view only. Shared by Std + Cpx via AdvancedLayoutBlock.
+          NOTE-A: dropdown = 4 top-level options; sub-variants shown as a tooltip.
+          NOTE-B: pl_num_colors is a SEPARATE field from Color Count above — if
+          Henry confirms they're the same quantity, bind "# No of colors" to
+          state.color_count instead of pl_num_colors to avoid double-entry. */}
+      <div className="sc-grid4">
+        <div className="sc-field" title={PL_PRINT_TYPE_GROUPS}>
+          <label>Print type</label>
+          <select
+            className="sc-input"
+            value={state.pl_print_type || ''}
+            onChange={(e) => onField('pl_print_type', e.target.value)}
+          >
+            <option value="">— Select —</option>
+            {PL_PRINT_TYPES.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div
+          className="sc-field"
+          title="Số màu in cho khối chi phí in. Tách biệt với Color Count ở trên (NOTE-B) trừ khi được xác nhận trùng."
+        >
+          <label># No of colors</label>
+          <DecimalInput
+            value={state.pl_num_colors}
+            onChange={(v) => onField('pl_num_colors', v)}
+            className="sc-input"
+            placeholder="e.g. 4"
+          />
+        </div>
+        <div className="sc-field" title="Film / letterpress plate film cost (USD).">
+          <label>Film LP cost $</label>
+          <DecimalInput
+            value={state.pl_film_lp_cost}
+            onChange={(v) => onField('pl_film_lp_cost', v)}
+            className="sc-input"
+            placeholder="0"
+          />
+        </div>
+        <div
+          className="sc-field"
+          title="Plate cost — tính toán, chỉ đọc. Công thức sẽ được bổ sung sau."
+        >
+          <label>Plate cost $</label>
+          {/* TODO: Plate cost formula — pending Henry. Read-only placeholder;
+              pl_plate_cost stays '' until the formula lands. */}
+          <input
+            type="text"
+            value={state.pl_plate_cost || '—'}
+            disabled
+            readOnly
+            className="sc-input sc-derived"
           />
         </div>
       </div>
