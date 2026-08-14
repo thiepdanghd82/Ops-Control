@@ -6,8 +6,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useCostLib } from '../../../context/CostLibContext';
 import { costApi } from '../../../services/api';
 import EmptyState from '../../../components/Shared/EmptyState';
+import Modal from '../../../components/Shared/Modal';
 import { SITES } from '../../../utils/sites';
 import DecimalInput from '../../../utils/DecimalInput';
+import { addObjectKey, deleteObjectKey, deleteArrayIndex } from './ddlEntryHelpers.js';
 import './LibDDL.css';
 
 // Standard section display names
@@ -56,6 +58,13 @@ export default function LibDDL() {
   // since we loaded). The user must reload before saving so they don't
   // overwrite the other edit.
   const [conflict, setConflict] = useState(false);
+  // Add-entry modal for the object-keyed tables (tool_life / click_charges).
+  // Replaces window.prompt, which returns null in the packaged Electron app
+  // (MES-3-FIX-43) so "+ Add" silently did nothing. { key, label } when open.
+  const [addModal, setAddModal] = useState(null);
+  const [newKeyInput, setNewKeyInput] = useState('');
+  const [newValInput, setNewValInput] = useState('');
+  const [addError, setAddError] = useState('');
   // Track which site we've already seeded and whether we've done the
   // initial load. Prevents server refreshes from clobbering unsaved edits.
   const seededSiteRef = useRef(null);
@@ -122,22 +131,28 @@ export default function LibDDL() {
     setDirty(true);
   }, []);
 
-  const addObjectEntry = useCallback((key) => {
-    const newKey = prompt('Enter key name:');
-    if (!newKey) return;
-    setSections((prev) => ({
-      ...prev,
-      [key]: { ...(prev[key] || {}), [newKey]: '' },
-    }));
-    setDirty(true);
+  // Open the add-entry modal for an object-keyed section (no window.prompt).
+  const addObjectEntry = useCallback((key, label) => {
+    setAddModal({ key, label });
+    setNewKeyInput('');
+    setNewValInput('');
+    setAddError('');
   }, []);
 
+  const confirmAddObjectEntry = useCallback(() => {
+    if (!addModal) return;
+    const res = addObjectKey(sections[addModal.key], newKeyInput, newValInput);
+    if (!res.ok) {
+      setAddError(res.error === 'duplicate' ? 'That key already exists.' : 'Enter a key name.');
+      return;
+    }
+    setSections((prev) => ({ ...prev, [addModal.key]: res.obj }));
+    setDirty(true);
+    setAddModal(null);
+  }, [addModal, sections, newKeyInput, newValInput]);
+
   const deleteObjectEntry = useCallback((key, entryKey) => {
-    setSections((prev) => {
-      const obj = { ...(prev[key] || {}) };
-      delete obj[entryKey];
-      return { ...prev, [key]: obj };
-    });
+    setSections((prev) => ({ ...prev, [key]: deleteObjectKey(prev[key], entryKey) }));
     setDirty(true);
   }, []);
 
@@ -281,10 +296,12 @@ export default function LibDDL() {
                         />
                         <button
                           className="ddl-del"
+                          title="Delete row"
+                          aria-label="Delete row"
                           onClick={() => {
                             setSections((prev) => ({
                               ...prev,
-                              [key]: value.filter((_, j) => j !== i),
+                              [key]: deleteArrayIndex(value, i),
                             }));
                             setDirty(true);
                           }}
@@ -321,12 +338,17 @@ export default function LibDDL() {
                           value={ev ?? ''}
                           onChange={(e) => updateObjectEntry(key, ek, e.target.value)}
                         />
-                        <button className="ddl-del" onClick={() => deleteObjectEntry(key, ek)}>
+                        <button
+                          className="ddl-del"
+                          title="Delete row"
+                          aria-label="Delete row"
+                          onClick={() => deleteObjectEntry(key, ek)}
+                        >
                           &times;
                         </button>
                       </div>
                     ))}
-                    <button className="ddl-add" onClick={() => addObjectEntry(key)}>
+                    <button className="ddl-add" onClick={() => addObjectEntry(key, label)}>
                       + Add
                     </button>
                   </div>
@@ -364,6 +386,68 @@ export default function LibDDL() {
           })}
         </div>
       </div>
+
+      <Modal
+        open={!!addModal}
+        onClose={() => setAddModal(null)}
+        size="sm"
+        ariaLabelledBy="ddl-add-title"
+      >
+        <Modal.Header id="ddl-add-title" title={`Add ${addModal?.label || 'entry'}`} />
+        <Modal.Body>
+          <div className="ddl-add-field">
+            <label className="ddl-add-label" htmlFor="ddl-add-key">
+              Key
+            </label>
+            <input
+              id="ddl-add-key"
+              type="text"
+              className="ddl-add-input"
+              data-modal-autofocus
+              placeholder={
+                addModal?.key === 'click_charges' ? 'Number, e.g. 1' : 'Name, e.g. Knife'
+              }
+              value={newKeyInput}
+              onChange={(e) => {
+                setNewKeyInput(e.target.value);
+                if (addError) setAddError('');
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') confirmAddObjectEntry();
+              }}
+            />
+          </div>
+          <div className="ddl-add-field">
+            <label className="ddl-add-label" htmlFor="ddl-add-val">
+              Value <span className="ddl-add-optional">(optional)</span>
+            </label>
+            <input
+              id="ddl-add-val"
+              type="text"
+              className="ddl-add-input"
+              value={newValInput}
+              onChange={(e) => setNewValInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') confirmAddObjectEntry();
+              }}
+            />
+          </div>
+          {addError && <div className="ddl-add-err">{addError}</div>}
+        </Modal.Body>
+        <Modal.Footer>
+          <button type="button" className="op-btn op-btn-ghost" onClick={() => setAddModal(null)}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="op-btn op-btn-primary"
+            onClick={confirmAddObjectEntry}
+            disabled={!newKeyInput.trim()}
+          >
+            Add
+          </button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }

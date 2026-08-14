@@ -219,7 +219,10 @@
   cursor: pointer;
   font-size: 16px;
   padding: 4px 6px;
-  flex-shrink: 0;
+  /* Stable footprint so two flex inputs can never squeeze the × to
+     invisibility (BUG 2 hardening). */
+  flex: 0 0 auto;
+  min-width: 28px;
   border-radius: 0;
   line-height: 1;
   transition:
@@ -229,6 +232,42 @@
 .ddl-del:hover {
   background: #f4f4f4;
   color: #da1e28;
+}
+
+/* ── Add-entry modal (object-keyed tables) ── */
+.ddl-add-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.ddl-add-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #6f6f6f);
+}
+.ddl-add-optional {
+  font-weight: 400;
+  font-style: italic;
+}
+.ddl-add-input {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong, #c6c6c6);
+  border-radius: 4px;
+  background: var(--surface-card, #fff);
+  color: var(--text-primary, #161616);
+  font: inherit;
+  font-size: 13px;
+}
+.ddl-add-input:focus {
+  outline: none;
+  border-color: #0f62fe;
+  box-shadow: 0 0 0 2px color-mix(in oklab, #0f62fe, transparent 78%);
+}
+.ddl-add-err {
+  color: #da1e28;
+  font-size: 12.5px;
 }
 
 /* Add row */
