@@ -9,7 +9,13 @@ import EmptyState from '../../../components/Shared/EmptyState';
 import Modal from '../../../components/Shared/Modal';
 import { SITES } from '../../../utils/sites';
 import DecimalInput from '../../../utils/DecimalInput';
-import { addObjectKey, deleteObjectKey, deleteArrayIndex } from './ddlEntryHelpers.js';
+import {
+  addObjectKey,
+  deleteObjectKey,
+  deleteArrayIndex,
+  reconcileToolLife,
+  renameToolLifeKey,
+} from './ddlEntryHelpers.js';
 import './LibDDL.css';
 
 // Standard section display names
@@ -89,8 +95,19 @@ export default function LibDDL() {
         else if (typeof v === 'object' && v !== null) clone[k] = { ...v };
         else clone[k] = v;
       }
+      // Money-path heal: ensure tool_life is keyed exactly by tool_type so
+      // getToolLife resolves for every selectable tool type (carry legacy
+      // values over via a normalized match; never drop without carry-over).
+      let healed = false;
+      if (Array.isArray(clone.tool_type)) {
+        const rec = reconcileToolLife(clone.tool_type, clone.tool_life || {});
+        clone.tool_life = rec.toolLife;
+        healed = rec.changed;
+      }
       setSections(clone);
       seededSiteRef.current = site;
+      setDirty(healed); // dirty only if the reconcile actually changed data
+      return;
     } else if (seededSiteRef.current !== site) {
       setSections({});
       seededSiteRef.current = site;
@@ -101,8 +118,16 @@ export default function LibDDL() {
   const updateItem = useCallback((key, idx, value) => {
     setSections((prev) => {
       const arr = [...(prev[key] || [])];
+      const oldVal = arr[idx];
       arr[idx] = value;
-      return { ...prev, [key]: arr };
+      const next = { ...prev, [key]: arr };
+      // Cascade a tool_type rename onto tool_life so the value follows the
+      // name (tool_life stays keyed exactly by tool_type). Other array
+      // sections are unaffected.
+      if (key === 'tool_type') {
+        next.tool_life = renameToolLifeKey(prev.tool_life, oldVal, value);
+      }
+      return next;
     });
     setDirty(true);
   }, []);
@@ -117,8 +142,14 @@ export default function LibDDL() {
 
   const deleteItem = useCallback((key, idx) => {
     setSections((prev) => {
+      const removed = (prev[key] || [])[idx];
       const arr = (prev[key] || []).filter((_, i) => i !== idx);
-      return { ...prev, [key]: arr };
+      const next = { ...prev, [key]: arr };
+      // Cascade a tool_type delete: drop its tool_life key.
+      if (key === 'tool_type') {
+        next.tool_life = deleteObjectKey(prev.tool_life, String(removed ?? '').trim());
+      }
+      return next;
     });
     setDirty(true);
   }, []);
@@ -324,7 +355,41 @@ export default function LibDDL() {
               );
             }
 
-            // Object sections (click_charges, tool_life)
+            // Tool Life — rows are GOVERNED by the tool_type list (one row
+            // per tool type, in order). The label is read-only (managed in
+            // the Tool Type card); only the value is editable. No own add /
+            // rename / delete — the set is driven entirely by tool_type, so
+            // tool_life stays keyed exactly by tool_type and getToolLife
+            // resolves for every selectable tool type (money-path).
+            if (key === 'tool_life' && typeof value === 'object' && !Array.isArray(value)) {
+              const toolTypes = Array.isArray(sections.tool_type)
+                ? sections.tool_type
+                : Object.keys(value);
+              return (
+                <div key={key} className="ddl-card">
+                  <div className="ddl-card-head">{label}</div>
+                  <div className="ddl-card-body">
+                    {toolTypes.length === 0 && (
+                      <div className="ddl-tl-empty">Add tool types in the Tool Type card.</div>
+                    )}
+                    {toolTypes.map((tt, i) => (
+                      <div key={`${tt}-${i}`} className="ddl-kv-row">
+                        <span className="ddl-kv-key ddl-kv-key-wide" title={tt}>
+                          {tt || '—'}
+                        </span>
+                        <input
+                          type="text"
+                          value={value[tt] ?? ''}
+                          onChange={(e) => updateObjectEntry('tool_life', tt, e.target.value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+
+            // Object sections (click_charges)
             if (OBJECT_KEYS.has(key) && typeof value === 'object' && !Array.isArray(value)) {
               return (
                 <div key={key} className="ddl-card">
