@@ -20,6 +20,11 @@ import {
   deleteCustomTable,
   isCustomSection,
   orderSectionKeys,
+  applyTitleOverride,
+  addExcludedType,
+  dropExcludedType,
+  renameExcludedType,
+  reconcileCutterCost,
 } from './ddlEntryHelpers.js';
 import './LibDDL.css';
 
@@ -55,6 +60,7 @@ const SKIP_KEYS = new Set([
   '_custom_sections',
   '_custom_names',
   '_custom_colors',
+  'cutter_cost_excluded',
   'npi_design_owner',
   'print',
 ]);
@@ -63,6 +69,38 @@ const SKIP_KEYS = new Set([
 // (case-insensitive) so it can't shadow a system table like "Coverage Table".
 const RESERVED_LABELS = Object.values(SECTION_LABELS);
 
+// Shared card head — every DDL card uses this so the ✎ Rename pencil shows
+// consistently. `onRename` opens the rename modal (built-in + custom cards);
+// `onDeleteTable` (custom pair-tables only) shows the "Delete table" action.
+function DdlCardHead({ label, onRename, onDeleteTable }) {
+  return (
+    <div className="ddl-card-head ddl-card-head--row">
+      <span className="ddl-card-head-label">{label}</span>
+      {onRename && (
+        <button
+          type="button"
+          className="ddl-title-edit"
+          title="Rename this table"
+          aria-label="Rename table"
+          onClick={onRename}
+        >
+          ✎
+        </button>
+      )}
+      {onDeleteTable && (
+        <button
+          type="button"
+          className="ddl-table-del"
+          title="Delete this custom table"
+          onClick={onDeleteTable}
+        >
+          Delete table
+        </button>
+      )}
+    </div>
+  );
+}
+
 // Shared 2-column pair renderer (a label input + a value input per row, with
 // per-row delete + "+ Add"). Drives BOTH the Coverage Table ({pt, cov}, value
 // is a DecimalInput) and custom tables ({k, v}, value is free text) via the
@@ -70,7 +108,7 @@ const RESERVED_LABELS = Object.values(SECTION_LABELS);
 // full next array; `onDeleteTable` (custom only) renders a card-head "Delete
 // table" affordance. Module-scope so a keystroke re-renders (not remounts) —
 // inputs keep focus.
-function PairTableCard({ label, rows, config, onRowsChange, onDeleteTable }) {
+function PairTableCard({ label, rows, config, onRowsChange, onRename, onDeleteTable }) {
   const { labelField, valueField, labelPlaceholder, valuePlaceholder, valueDecimal, newRow } =
     config;
   const list = Array.isArray(rows) ? rows : [];
@@ -78,19 +116,7 @@ function PairTableCard({ label, rows, config, onRowsChange, onDeleteTable }) {
     onRowsChange(list.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   return (
     <div className="ddl-card">
-      <div className="ddl-card-head ddl-card-head--row">
-        <span className="ddl-card-head-label">{label}</span>
-        {onDeleteTable && (
-          <button
-            type="button"
-            className="ddl-table-del"
-            title="Delete this custom table"
-            onClick={onDeleteTable}
-          >
-            Delete table
-          </button>
-        )}
-      </div>
+      <DdlCardHead label={label} onRename={onRename} onDeleteTable={onDeleteTable} />
       <div className="ddl-card-body">
         {list.map((item, i) => (
           <div key={i} className="ddl-cov-row">
@@ -157,6 +183,10 @@ export default function LibDDL() {
   const [newTableError, setNewTableError] = useState('');
   // Confirm modal for deleting a whole custom table. { key, label } when open.
   const [deleteTableModal, setDeleteTableModal] = useState(null);
+  // Rename-title modal (all cards). { key } when open; input holds the title.
+  const [renameModal, setRenameModal] = useState(null);
+  const [renameInput, setRenameInput] = useState('');
+  const [renameError, setRenameError] = useState('');
   // Track which site we've already seeded and whether we've done the
   // initial load. Prevents server refreshes from clobbering unsaved edits.
   const seededSiteRef = useRef(null);
@@ -190,10 +220,15 @@ export default function LibDDL() {
         clone.tool_life = rec.toolLife;
         healed = rec.changed;
         // Cutter Cost $ is governed by the same tool_type list (rows synced
-        // one-per-tool-type). Reuse the generic reconcile so every tool type
-        // has a cost key (carry existing via exact+normalized match, blank
-        // for new types). Values are Henry-filled later; nothing reads them.
-        const recCc = reconcileToolLife(clone.tool_type, clone.cutter_cost || {});
+        // one-per-tool-type) MINUS any user-excluded types. Reuse the generic
+        // reconcile on the filtered list so every non-excluded tool type has a
+        // cost key (carry existing via exact+normalized match, blank for new),
+        // and excluded types are never re-added. Values are Henry-filled later.
+        const recCc = reconcileCutterCost(
+          clone.tool_type,
+          clone.cutter_cost || {},
+          clone.cutter_cost_excluded
+        );
         clone.cutter_cost = recCc.toolLife;
         healed = healed || recCc.changed;
       }
@@ -220,6 +255,9 @@ export default function LibDDL() {
       if (key === 'tool_type') {
         next.tool_life = renameToolLifeKey(prev.tool_life, oldVal, value);
         next.cutter_cost = renameToolLifeKey(prev.cutter_cost, oldVal, value);
+        // Keep an excluded (deleted-from-Cutter-Cost) entry attached to the
+        // renamed tool type so it stays hidden under the new name.
+        next.cutter_cost_excluded = renameExcludedType(prev.cutter_cost_excluded, oldVal, value);
       }
       return next;
     });
@@ -244,6 +282,8 @@ export default function LibDDL() {
         const rk = String(removed ?? '').trim();
         next.tool_life = deleteObjectKey(prev.tool_life, rk);
         next.cutter_cost = deleteObjectKey(prev.cutter_cost, rk);
+        // Housekeeping: a deleted tool type can't be excluded anymore.
+        next.cutter_cost_excluded = dropExcludedType(prev.cutter_cost_excluded, rk);
       }
       return next;
     });
@@ -317,6 +357,52 @@ export default function LibDDL() {
     }
     setDeleteTableModal(null);
   }, [sections, deleteTableModal]);
+
+  // Rename a card title (built-in or custom). The section KEY never changes —
+  // only the display-name override in _custom_names[key].
+  const openRename = useCallback((key, currentLabel) => {
+    setRenameModal({ key });
+    setRenameInput(currentLabel || '');
+    setRenameError('');
+  }, []);
+
+  const confirmRename = useCallback(() => {
+    if (!renameModal) return;
+    if (!renameInput.trim()) {
+      setRenameError('Enter a table name.');
+      return;
+    }
+    setSections((prev) => ({
+      ...prev,
+      _custom_names: applyTitleOverride(
+        prev._custom_names,
+        renameModal.key,
+        renameInput,
+        SECTION_LABELS[renameModal.key]
+      ),
+    }));
+    setDirty(true);
+    setRenameModal(null);
+  }, [renameModal, renameInput]);
+
+  // Cutter Cost per-row delete — record the tool type in cutter_cost_excluded
+  // (so the reconcile never re-adds it) AND drop its value. Sticks across
+  // reloads; a genuinely NEW tool type still appears automatically.
+  const deleteCutterCostRow = useCallback((tt) => {
+    setSections((prev) => ({
+      ...prev,
+      cutter_cost: deleteObjectKey(prev.cutter_cost, tt),
+      cutter_cost_excluded: addExcludedType(prev.cutter_cost_excluded, tt),
+    }));
+    setDirty(true);
+  }, []);
+
+  // Restore all hidden Cutter Cost rows (clear the exclusion set). Re-seeding
+  // of blank cost keys happens on the next load reconcile.
+  const restoreCutterCost = useCallback(() => {
+    setSections((prev) => ({ ...prev, cutter_cost_excluded: [] }));
+    setDirty(true);
+  }, []);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -431,7 +517,9 @@ export default function LibDDL() {
         )}
         <div className="ddl-grid">
           {sectionKeys.map((key) => {
-            const label = SECTION_LABELS[key] || sections._custom_names?.[key] || key;
+            // Prefer the display-name override (rename) over the built-in
+            // default; the section KEY is unchanged (code/calc key off it).
+            const label = sections._custom_names?.[key] || SECTION_LABELS[key] || key;
             const value = sections[key];
 
             // Coverage — array of {pt, cov}. Renders via the shared pair
@@ -445,6 +533,7 @@ export default function LibDDL() {
                   rows={value}
                   config={pairTableConfig('coverage')}
                   onRowsChange={(rows) => setRowsFor(key, rows)}
+                  onRename={() => openRename(key, label)}
                 />
               );
             }
@@ -459,6 +548,7 @@ export default function LibDDL() {
                   rows={value}
                   config={pairTableConfig(key)}
                   onRowsChange={(rows) => setRowsFor(key, rows)}
+                  onRename={() => openRename(key, label)}
                   onDeleteTable={() => setDeleteTableModal({ key, label })}
                 />
               );
@@ -476,7 +566,7 @@ export default function LibDDL() {
                 : Object.keys(value);
               return (
                 <div key={key} className="ddl-card">
-                  <div className="ddl-card-head">{label}</div>
+                  <DdlCardHead label={label} onRename={() => openRename(key, label)} />
                   <div className="ddl-card-body">
                     {toolTypes.length === 0 && (
                       <div className="ddl-tl-empty">Add tool types in the Tool Type card.</div>
@@ -505,12 +595,17 @@ export default function LibDDL() {
             // would mirror getToolLife). cutter_cost stays keyed exactly by
             // tool_type via the same reconcile + rename/delete cascades.
             if (key === 'cutter_cost' && typeof value === 'object' && !Array.isArray(value)) {
-              const toolTypes = Array.isArray(sections.tool_type)
+              const allTypes = Array.isArray(sections.tool_type)
                 ? sections.tool_type
                 : Object.keys(value);
+              const excluded = new Set(
+                Array.isArray(sections.cutter_cost_excluded) ? sections.cutter_cost_excluded : []
+              );
+              const toolTypes = allTypes.filter((tt) => !excluded.has(tt));
+              const hiddenCount = excluded.size;
               return (
                 <div key={key} className="ddl-card">
-                  <div className="ddl-card-head">{label}</div>
+                  <DdlCardHead label={label} onRename={() => openRename(key, label)} />
                   <div className="ddl-card-body">
                     {toolTypes.length === 0 && (
                       <div className="ddl-tl-empty">Add tool types in the Tool Type card.</div>
@@ -525,8 +620,21 @@ export default function LibDDL() {
                           value={value[tt] ?? ''}
                           onChange={(e) => updateObjectEntry('cutter_cost', tt, e.target.value)}
                         />
+                        <button
+                          className="ddl-del"
+                          title="Delete row"
+                          aria-label="Delete row"
+                          onClick={() => deleteCutterCostRow(tt)}
+                        >
+                          &times;
+                        </button>
                       </div>
                     ))}
+                    {hiddenCount > 0 && (
+                      <button className="ddl-restore" onClick={restoreCutterCost}>
+                        ↺ Sync from Tool Life ({hiddenCount} hidden)
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -536,7 +644,7 @@ export default function LibDDL() {
             if (OBJECT_KEYS.has(key) && typeof value === 'object' && !Array.isArray(value)) {
               return (
                 <div key={key} className="ddl-card">
-                  <div className="ddl-card-head">{label}</div>
+                  <DdlCardHead label={label} onRename={() => openRename(key, label)} />
                   <div className="ddl-card-body">
                     {Object.entries(value).map(([ek, ev]) => (
                       <div key={ek} className="ddl-kv-row">
@@ -568,7 +676,7 @@ export default function LibDDL() {
             if (Array.isArray(value)) {
               return (
                 <div key={key} className="ddl-card">
-                  <div className="ddl-card-head">{label}</div>
+                  <DdlCardHead label={label} onRename={() => openRename(key, label)} />
                   <div className="ddl-card-body">
                     {value.map((item, i) => (
                       <div key={i} className="ddl-item-row">
@@ -736,6 +844,60 @@ export default function LibDDL() {
           </button>
           <button type="button" className="op-btn op-btn-danger" onClick={confirmDeleteTable}>
             Delete table
+          </button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Rename table title — writes _custom_names[key]; the section KEY
+          never changes. Works for built-in + custom cards. */}
+      <Modal
+        open={!!renameModal}
+        onClose={() => setRenameModal(null)}
+        size="sm"
+        ariaLabelledBy="ddl-rename-title"
+      >
+        <Modal.Header id="ddl-rename-title" title="Rename table" />
+        <Modal.Body>
+          <div className="ddl-add-field">
+            <label className="ddl-add-label" htmlFor="ddl-rename-input">
+              Table title
+            </label>
+            <input
+              id="ddl-rename-input"
+              type="text"
+              className="ddl-add-input"
+              data-modal-autofocus
+              value={renameInput}
+              onChange={(e) => {
+                setRenameInput(e.target.value);
+                if (renameError) setRenameError('');
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') confirmRename();
+              }}
+            />
+          </div>
+          <div className="ddl-newtable-hint">
+            Only the display title changes — the underlying data key stays the same, so pricing/calc
+            references are unaffected.
+          </div>
+          {renameError && <div className="ddl-add-err">{renameError}</div>}
+        </Modal.Body>
+        <Modal.Footer>
+          <button
+            type="button"
+            className="op-btn op-btn-ghost"
+            onClick={() => setRenameModal(null)}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="op-btn op-btn-primary"
+            onClick={confirmRename}
+            disabled={!renameInput.trim()}
+          >
+            Save
           </button>
         </Modal.Footer>
       </Modal>

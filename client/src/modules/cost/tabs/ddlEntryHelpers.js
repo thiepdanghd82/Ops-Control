@@ -98,6 +98,79 @@ export function reconcileToolLife(toolTypes, toolLife) {
   return { toolLife: out, changed };
 }
 
+// ── Card title overrides (rename any table) ─────────────────────────
+// A display-name override lives in _custom_names[key]; the section KEY never
+// changes (code + calc reference the key, not the label). The label resolve
+// prefers _custom_names[key] over the built-in SECTION_LABELS default, so a
+// rename works for BOTH built-in and custom cards. Renaming a built-in back
+// to its default drops the override so it falls back cleanly.
+
+/**
+ * Apply/clear a title override. Trims the title; an empty title OR one equal
+ * to the built-in default removes the override key (clean fallback). Returns
+ * a NEW _custom_names object.
+ * @param {Record<string,string>} customNames
+ * @param {string} key
+ * @param {string} newTitle
+ * @param {string} [defaultLabel]  built-in SECTION_LABELS[key], if any
+ */
+export function applyTitleOverride(customNames, key, newTitle, defaultLabel) {
+  const src = customNames && typeof customNames === 'object' ? customNames : {};
+  const title = String(newTitle ?? '').trim();
+  const next = { ...src };
+  if (!title || title === String(defaultLabel ?? '')) {
+    delete next[key];
+  } else {
+    next[key] = title;
+  }
+  return next;
+}
+
+// ── Cutter Cost row exclusion (per-row delete that sticks) ──────────
+// Cutter Cost rows are governed by the tool_type list (one per tool type),
+// but the user can delete a row. Deleted tool types are recorded in
+// cutter_cost_excluded[] so the reconcile never re-adds them, while a
+// genuinely NEW tool type still appears automatically. Applies to
+// cutter_cost ONLY — Tool Life stays fully governed (no per-row delete).
+
+/** Add a tool type to the exclusion list (trim + dedupe). Returns new array. */
+export function addExcludedType(excluded, tt) {
+  const list = Array.isArray(excluded) ? excluded : [];
+  const t = String(tt ?? '').trim();
+  if (!t || list.some((x) => String(x).trim() === t)) return list.slice();
+  return [...list, t];
+}
+
+/** Remove a tool type from the exclusion list (tool_type delete cleanup). */
+export function dropExcludedType(excluded, tt) {
+  const t = String(tt ?? '').trim();
+  return (Array.isArray(excluded) ? excluded : []).filter((x) => String(x).trim() !== t);
+}
+
+/** Move an excluded entry across a tool_type rename (no-op if not excluded). */
+export function renameExcludedType(excluded, oldName, newName) {
+  const o = String(oldName ?? '').trim();
+  const n = String(newName ?? '').trim();
+  const list = Array.isArray(excluded) ? excluded : [];
+  if (!list.some((x) => String(x).trim() === o)) return list.slice();
+  return list.map((x) => (String(x).trim() === o ? n : x)).filter((x) => String(x).trim() !== '');
+}
+
+/**
+ * Reconcile cutter_cost against the tool_type list MINUS the excluded set —
+ * seeds a cost key for every non-excluded tool type (carry existing via
+ * exact+normalized match, blank for new), drops excluded/removed types. Reuses
+ * the generic reconcileToolLife on the filtered list.
+ * @returns {{toolLife: Record<string, any>, changed: boolean}}
+ */
+export function reconcileCutterCost(toolTypes, cutterCost, excluded) {
+  const ex = new Set((Array.isArray(excluded) ? excluded : []).map((x) => String(x).trim()));
+  const included = (Array.isArray(toolTypes) ? toolTypes : []).filter(
+    (tt) => !ex.has(String(tt).trim())
+  );
+  return reconcileToolLife(included, cutterCost || {});
+}
+
 // ── Custom pair-tables (Coverage-shaped user tables) ────────────────
 // A custom table is an array of {k, v} pairs stored under a `custom_<slug>`
 // key, with the display name in _custom_names[key] and the key tracked in
