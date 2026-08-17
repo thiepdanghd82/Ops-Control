@@ -316,6 +316,7 @@ export default function LibDDL() {
                           }}
                         />
                         <DecimalInput
+                          className="ddl-cov-val"
                           value={item.cov}
                           placeholder="Coverage"
                           onChange={(v) => {
