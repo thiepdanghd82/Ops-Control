@@ -539,7 +539,11 @@ export default function LibDDL() {
             }
 
             // Custom tables — array of {k, v}. Same pair renderer + a
-            // card-head "Delete table" affordance (custom only).
+            // card-head "Delete table" affordance (custom only). The delete
+            // affordance only shows while there are UNSAVED changes (dirty) —
+            // once saved, a custom table is committed and the button hides,
+            // keeping the title bar clean. Editing any field brings it back
+            // (you're inherently editing when you want to delete one).
             if (isCustomSection(sections, key) && Array.isArray(value)) {
               return (
                 <PairTableCard
@@ -549,7 +553,7 @@ export default function LibDDL() {
                   config={pairTableConfig(key)}
                   onRowsChange={(rows) => setRowsFor(key, rows)}
                   onRename={() => openRename(key, label)}
-                  onDeleteTable={() => setDeleteTableModal({ key, label })}
+                  onDeleteTable={dirty ? () => setDeleteTableModal({ key, label }) : undefined}
                 />
               );
             }
