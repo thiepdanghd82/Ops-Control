@@ -1633,6 +1633,13 @@ export function createStdState() {
     pl_num_colors: '',
     pl_film_lp_cost: '',
     pl_plate_cost: '',
+    // Cutter-cost block — Layout ▸ Cutting Design Layout top row (additive,
+    // heal-on-read, NO schema bump; mirrors the pl_* print-cost block). Four
+    // type+cost pairs: cutter_types[i] = a TOOL_TYPE selection; cutter_costs[i]
+    // is CALCULATED + read-only — TODO: Cutter cost formula pending Henry.
+    // These do NOT feed calcEngine/cost/exporter yet (Std only; Cpx follow-up).
+    cutter_types: ['', '', '', ''],
+    cutter_costs: ['', '', '', ''],
     // ── Phase 4 UX polish ──
     unwind_direction: '', // '' | 'face-in' | 'face-out' — label orientation on roll
     print_direction_md: '', // '' | 'head-first' | 'tail-first' — text reading direction
@@ -1880,6 +1887,10 @@ export function createEmptyStdState() {
     pl_num_colors: '',
     pl_film_lp_cost: '',
     pl_plate_cost: '',
+    // Cutter-cost block (Layout ▸ Cutting Design Layout). See createStdState
+    // for the contract — additive, heal-on-read; Cutter cost formula pending.
+    cutter_types: ['', '', '', ''],
+    cutter_costs: ['', '', '', ''],
     // Alt-materials feature (Sprint S-ALT-MAT, PR #A). See createStdState
     // for the full contract — materials field is a mirror of the active set.
     materials_main: Array(1)
