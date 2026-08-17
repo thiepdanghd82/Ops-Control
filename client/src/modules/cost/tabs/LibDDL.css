@@ -162,6 +162,19 @@
   border-bottom: none;
 }
 
+/* Coverage rows — taller + airier for easier reading + clicking (GIÃN).
+   Scoped to the coverage card only (later, same-specificity override) so
+   item/kv rows keep their compact 40px height. Inputs stay flex:1 with
+   their own padding, so the extra row height only adds whitespace — it
+   does NOT shrink the two fields. A slightly darker divider + a touch of
+   vertical margin give clearer separation between rows. */
+.ddl-cov-row {
+  height: 48px;
+  gap: 12px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
 /* Inputs — IBM Carbon underline */
 .ddl-item-row input,
 .ddl-kv-row input,
@@ -199,9 +212,20 @@
   background: #ffffff;
   box-shadow: none;
 }
-.ddl-cov-row input[type='number'] {
-  max-width: 80px;
+/* Coverage value field. DecimalInput renders <input type="text"> (NOT
+   type="number"), so the old input[type='number'] selector never matched
+   and the field grew to full flex:1 width — together with the pt input it
+   consumed the whole row and pushed the delete × off the card edge (clipped
+   → invisible). Target the real class + give it a bounded width, and let
+   both inputs shrink (min-width:0) so the flex:0 0 auto × always keeps its
+   footprint and stays visible. */
+.ddl-cov-row .ddl-cov-val {
+  flex: 0 0 96px;
+  max-width: 96px;
   text-align: right;
+}
+.ddl-cov-row input {
+  min-width: 0;
 }
 .ddl-kv-key {
   font-size: 12px;
