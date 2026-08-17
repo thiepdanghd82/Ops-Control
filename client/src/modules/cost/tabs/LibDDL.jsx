@@ -29,6 +29,7 @@ const SECTION_LABELS = {
   coverage: 'Coverage Table',
   click_charges: 'Click Charges',
   tool_life: 'Tool Life',
+  cutter_cost: 'Cutter Cost $',
   pre_cut: 'Pre Cut',
   die_cut: 'Die Cut',
   print_type_list: 'Print Type',
@@ -41,7 +42,7 @@ const SECTION_LABELS = {
 };
 
 // Keys that are objects (not simple arrays)
-const OBJECT_KEYS = new Set(['click_charges', 'tool_life', 'coverage']);
+const OBJECT_KEYS = new Set(['click_charges', 'tool_life', 'cutter_cost', 'coverage']);
 // Internal keys to skip.
 //   `print` (2026-05-11): redundant press-subtype panel — duplicated
 //   `print_type_list` semantics with parens/spacing variations (e.g.
@@ -188,6 +189,13 @@ export default function LibDDL() {
         const rec = reconcileToolLife(clone.tool_type, clone.tool_life || {});
         clone.tool_life = rec.toolLife;
         healed = rec.changed;
+        // Cutter Cost $ is governed by the same tool_type list (rows synced
+        // one-per-tool-type). Reuse the generic reconcile so every tool type
+        // has a cost key (carry existing via exact+normalized match, blank
+        // for new types). Values are Henry-filled later; nothing reads them.
+        const recCc = reconcileToolLife(clone.tool_type, clone.cutter_cost || {});
+        clone.cutter_cost = recCc.toolLife;
+        healed = healed || recCc.changed;
       }
       setSections(clone);
       seededSiteRef.current = site;
@@ -206,11 +214,12 @@ export default function LibDDL() {
       const oldVal = arr[idx];
       arr[idx] = value;
       const next = { ...prev, [key]: arr };
-      // Cascade a tool_type rename onto tool_life so the value follows the
-      // name (tool_life stays keyed exactly by tool_type). Other array
-      // sections are unaffected.
+      // Cascade a tool_type rename onto tool_life AND cutter_cost so the
+      // value follows the name (both stay keyed exactly by tool_type).
+      // Other array sections are unaffected.
       if (key === 'tool_type') {
         next.tool_life = renameToolLifeKey(prev.tool_life, oldVal, value);
+        next.cutter_cost = renameToolLifeKey(prev.cutter_cost, oldVal, value);
       }
       return next;
     });
@@ -230,9 +239,11 @@ export default function LibDDL() {
       const removed = (prev[key] || [])[idx];
       const arr = (prev[key] || []).filter((_, i) => i !== idx);
       const next = { ...prev, [key]: arr };
-      // Cascade a tool_type delete: drop its tool_life key.
+      // Cascade a tool_type delete: drop its tool_life AND cutter_cost key.
       if (key === 'tool_type') {
-        next.tool_life = deleteObjectKey(prev.tool_life, String(removed ?? '').trim());
+        const rk = String(removed ?? '').trim();
+        next.tool_life = deleteObjectKey(prev.tool_life, rk);
+        next.cutter_cost = deleteObjectKey(prev.cutter_cost, rk);
       }
       return next;
     });
@@ -479,6 +490,40 @@ export default function LibDDL() {
                           type="text"
                           value={value[tt] ?? ''}
                           onChange={(e) => updateObjectEntry('tool_life', tt, e.target.value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+
+            // Cutter Cost $ — GOVERNED by the tool_type list exactly like
+            // Tool Life (one read-only-label row per tool type; no own add /
+            // rename / delete). Values default '' — Henry fills them later;
+            // nothing consumes cutter_cost yet (a future getCutterCost helper
+            // would mirror getToolLife). cutter_cost stays keyed exactly by
+            // tool_type via the same reconcile + rename/delete cascades.
+            if (key === 'cutter_cost' && typeof value === 'object' && !Array.isArray(value)) {
+              const toolTypes = Array.isArray(sections.tool_type)
+                ? sections.tool_type
+                : Object.keys(value);
+              return (
+                <div key={key} className="ddl-card">
+                  <div className="ddl-card-head">{label}</div>
+                  <div className="ddl-card-body">
+                    {toolTypes.length === 0 && (
+                      <div className="ddl-tl-empty">Add tool types in the Tool Type card.</div>
+                    )}
+                    {toolTypes.map((tt, i) => (
+                      <div key={`${tt}-${i}`} className="ddl-kv-row">
+                        <span className="ddl-kv-key ddl-kv-key-wide" title={tt}>
+                          {tt || '—'}
+                        </span>
+                        <input
+                          type="text"
+                          value={value[tt] ?? ''}
+                          onChange={(e) => updateObjectEntry('cutter_cost', tt, e.target.value)}
                         />
                       </div>
                     ))}
