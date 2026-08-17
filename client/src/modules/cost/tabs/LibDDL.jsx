@@ -15,6 +15,11 @@ import {
   deleteArrayIndex,
   reconcileToolLife,
   renameToolLifeKey,
+  pairTableConfig,
+  createCustomTable,
+  deleteCustomTable,
+  isCustomSection,
+  orderSectionKeys,
 } from './ddlEntryHelpers.js';
 import './LibDDL.css';
 
@@ -53,6 +58,80 @@ const SKIP_KEYS = new Set([
   'print',
 ]);
 
+// Built-in card labels — a new custom table's name is deduped against these
+// (case-insensitive) so it can't shadow a system table like "Coverage Table".
+const RESERVED_LABELS = Object.values(SECTION_LABELS);
+
+// Shared 2-column pair renderer (a label input + a value input per row, with
+// per-row delete + "+ Add"). Drives BOTH the Coverage Table ({pt, cov}, value
+// is a DecimalInput) and custom tables ({k, v}, value is free text) via the
+// `config` field-mapping from pairTableConfig(). `onRowsChange` receives the
+// full next array; `onDeleteTable` (custom only) renders a card-head "Delete
+// table" affordance. Module-scope so a keystroke re-renders (not remounts) —
+// inputs keep focus.
+function PairTableCard({ label, rows, config, onRowsChange, onDeleteTable }) {
+  const { labelField, valueField, labelPlaceholder, valuePlaceholder, valueDecimal, newRow } =
+    config;
+  const list = Array.isArray(rows) ? rows : [];
+  const patchRow = (i, patch) =>
+    onRowsChange(list.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  return (
+    <div className="ddl-card">
+      <div className="ddl-card-head ddl-card-head--row">
+        <span className="ddl-card-head-label">{label}</span>
+        {onDeleteTable && (
+          <button
+            type="button"
+            className="ddl-table-del"
+            title="Delete this custom table"
+            onClick={onDeleteTable}
+          >
+            Delete table
+          </button>
+        )}
+      </div>
+      <div className="ddl-card-body">
+        {list.map((item, i) => (
+          <div key={i} className="ddl-cov-row">
+            <input
+              type="text"
+              value={item?.[labelField] || ''}
+              placeholder={labelPlaceholder}
+              onChange={(e) => patchRow(i, { [labelField]: e.target.value })}
+            />
+            {valueDecimal ? (
+              <DecimalInput
+                className="ddl-cov-val"
+                value={item?.[valueField]}
+                placeholder={valuePlaceholder}
+                onChange={(v) => patchRow(i, { [valueField]: v })}
+              />
+            ) : (
+              <input
+                type="text"
+                value={item?.[valueField] ?? ''}
+                placeholder={valuePlaceholder}
+                onChange={(e) => patchRow(i, { [valueField]: e.target.value })}
+              />
+            )}
+            <button
+              className="ddl-del"
+              title="Delete row"
+              aria-label="Delete row"
+              onClick={() => onRowsChange(deleteArrayIndex(list, i))}
+            >
+              &times;
+            </button>
+          </div>
+        ))}
+        <button className="ddl-add" onClick={() => onRowsChange([...list, { ...newRow }])}>
+          + Add
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function LibDDL() {
   const { rawDDL, setRawDDL, refreshLib } = useCostLib();
   const [site, setSite] = useState('VN');
@@ -71,6 +150,12 @@ export default function LibDDL() {
   const [newKeyInput, setNewKeyInput] = useState('');
   const [newValInput, setNewValInput] = useState('');
   const [addError, setAddError] = useState('');
+  // "+ New Table" modal — creates a custom Coverage-shaped pair table.
+  const [newTableOpen, setNewTableOpen] = useState(false);
+  const [newTableName, setNewTableName] = useState('');
+  const [newTableError, setNewTableError] = useState('');
+  // Confirm modal for deleting a whole custom table. { key, label } when open.
+  const [deleteTableModal, setDeleteTableModal] = useState(null);
   // Track which site we've already seeded and whether we've done the
   // initial load. Prevents server refreshes from clobbering unsaved edits.
   const seededSiteRef = useRef(null);
@@ -187,6 +272,41 @@ export default function LibDDL() {
     setDirty(true);
   }, []);
 
+  // Replace the whole rows array for a pair table (coverage or custom).
+  const setRowsFor = useCallback((key, rows) => {
+    setSections((prev) => ({ ...prev, [key]: rows }));
+    setDirty(true);
+  }, []);
+
+  const openNewTable = useCallback(() => {
+    setNewTableName('');
+    setNewTableError('');
+    setNewTableOpen(true);
+  }, []);
+
+  const confirmNewTable = useCallback(() => {
+    const res = createCustomTable(sections, newTableName, { reservedLabels: RESERVED_LABELS });
+    if (!res.ok) {
+      setNewTableError(
+        res.error === 'duplicate' ? 'A table with that name already exists.' : 'Enter a table name.'
+      );
+      return;
+    }
+    setSections(res.sections);
+    setDirty(true);
+    setNewTableOpen(false);
+  }, [sections, newTableName]);
+
+  const confirmDeleteTable = useCallback(() => {
+    if (!deleteTableModal) return;
+    const res = deleteCustomTable(sections, deleteTableModal.key);
+    if (res.ok) {
+      setSections(res.sections);
+      setDirty(true);
+    }
+    setDeleteTableModal(null);
+  }, [sections, deleteTableModal]);
+
   const handleSave = useCallback(async () => {
     setSaving(true);
     setMsg('');
@@ -242,8 +362,12 @@ export default function LibDDL() {
     }
   }, [site, sections]);
 
-  // Determine section order: known sections first, then custom
-  const sectionKeys = Object.keys(sections).filter((k) => !SKIP_KEYS.has(k));
+  // Determine section order: built-in sections first, then custom tables.
+  const customKeys = Array.isArray(sections._custom_sections) ? sections._custom_sections : [];
+  const sectionKeys = orderSectionKeys(
+    Object.keys(sections).filter((k) => !SKIP_KEYS.has(k)),
+    customKeys
+  );
 
   return (
     <div className="lib-ddl">
@@ -262,6 +386,9 @@ export default function LibDDL() {
         </div>
         <div className="ddl-actions">
           {msg && <span className="ddl-msg">{msg}</span>}
+          <button className="ddl-btn" onClick={openNewTable}>
+            + New Table
+          </button>
           <button className="ddl-btn" onClick={handleBackup}>
             Backup
           </button>
@@ -296,63 +423,33 @@ export default function LibDDL() {
             const label = SECTION_LABELS[key] || sections._custom_names?.[key] || key;
             const value = sections[key];
 
-            // Coverage is an array of objects {pt, cov}
+            // Coverage — array of {pt, cov}. Renders via the shared pair
+            // renderer; keeps its EXACT shape (money-path). Not deletable as
+            // a table (built-in).
             if (key === 'coverage' && Array.isArray(value)) {
               return (
-                <div key={key} className="ddl-card">
-                  <div className="ddl-card-head">{label}</div>
-                  <div className="ddl-card-body">
-                    {value.map((item, i) => (
-                      <div key={i} className="ddl-cov-row">
-                        <input
-                          type="text"
-                          value={item.pt || ''}
-                          placeholder="Print Type"
-                          onChange={(e) => {
-                            const arr = [...value];
-                            arr[i] = { ...arr[i], pt: e.target.value };
-                            setSections((prev) => ({ ...prev, [key]: arr }));
-                            setDirty(true);
-                          }}
-                        />
-                        <DecimalInput
-                          className="ddl-cov-val"
-                          value={item.cov}
-                          placeholder="Coverage"
-                          onChange={(v) => {
-                            const arr = [...value];
-                            arr[i] = { ...arr[i], cov: v };
-                            setSections((prev) => ({ ...prev, [key]: arr }));
-                            setDirty(true);
-                          }}
-                        />
-                        <button
-                          className="ddl-del"
-                          title="Delete row"
-                          aria-label="Delete row"
-                          onClick={() => {
-                            setSections((prev) => ({
-                              ...prev,
-                              [key]: deleteArrayIndex(value, i),
-                            }));
-                            setDirty(true);
-                          }}
-                        >
-                          &times;
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      className="ddl-add"
-                      onClick={() => {
-                        setSections((prev) => ({ ...prev, [key]: [...value, { pt: '', cov: 0 }] }));
-                        setDirty(true);
-                      }}
-                    >
-                      + Add
-                    </button>
-                  </div>
-                </div>
+                <PairTableCard
+                  key={key}
+                  label={label}
+                  rows={value}
+                  config={pairTableConfig('coverage')}
+                  onRowsChange={(rows) => setRowsFor(key, rows)}
+                />
+              );
+            }
+
+            // Custom tables — array of {k, v}. Same pair renderer + a
+            // card-head "Delete table" affordance (custom only).
+            if (isCustomSection(sections, key) && Array.isArray(value)) {
+              return (
+                <PairTableCard
+                  key={key}
+                  label={label}
+                  rows={value}
+                  config={pairTableConfig(key)}
+                  onRowsChange={(rows) => setRowsFor(key, rows)}
+                  onDeleteTable={() => setDeleteTableModal({ key, label })}
+                />
               );
             }
 
@@ -511,6 +608,89 @@ export default function LibDDL() {
             disabled={!newKeyInput.trim()}
           >
             Add
+          </button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* "+ New Table" — create a custom Coverage-shaped pair table. */}
+      <Modal
+        open={newTableOpen}
+        onClose={() => setNewTableOpen(false)}
+        size="sm"
+        ariaLabelledBy="ddl-newtable-title"
+      >
+        <Modal.Header id="ddl-newtable-title" title="New custom table" />
+        <Modal.Body>
+          <div className="ddl-add-field">
+            <label className="ddl-add-label" htmlFor="ddl-newtable-name">
+              Table name
+            </label>
+            <input
+              id="ddl-newtable-name"
+              type="text"
+              className="ddl-add-input"
+              data-modal-autofocus
+              placeholder="e.g. Freight Rates"
+              value={newTableName}
+              onChange={(e) => {
+                setNewTableName(e.target.value);
+                if (newTableError) setNewTableError('');
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') confirmNewTable();
+              }}
+            />
+          </div>
+          <div className="ddl-newtable-hint">
+            Creates a 2-column table (Name / Value). It is stored + editable but not read by
+            pricing/calc — a free-form reference list.
+          </div>
+          {newTableError && <div className="ddl-add-err">{newTableError}</div>}
+        </Modal.Body>
+        <Modal.Footer>
+          <button
+            type="button"
+            className="op-btn op-btn-ghost"
+            onClick={() => setNewTableOpen(false)}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="op-btn op-btn-primary"
+            onClick={confirmNewTable}
+            disabled={!newTableName.trim()}
+          >
+            Create
+          </button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Delete-whole-table confirm — custom tables only. */}
+      <Modal
+        open={!!deleteTableModal}
+        onClose={() => setDeleteTableModal(null)}
+        size="sm"
+        severity="danger"
+        ariaLabelledBy="ddl-deltable-title"
+      >
+        <Modal.Header id="ddl-deltable-title" title="Delete table" />
+        <Modal.Body>
+          <p className="ddl-deltable-msg">
+            Delete the custom table <b>{deleteTableModal?.label}</b> and all its rows? This cannot
+            be undone (until you reload without saving).
+          </p>
+        </Modal.Body>
+        <Modal.Footer>
+          <button
+            type="button"
+            className="op-btn op-btn-ghost"
+            onClick={() => setDeleteTableModal(null)}
+          >
+            Cancel
+          </button>
+          <button type="button" className="op-btn op-btn-danger" onClick={confirmDeleteTable}>
+            Delete table
           </button>
         </Modal.Footer>
       </Modal>
