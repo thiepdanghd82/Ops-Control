@@ -162,6 +162,19 @@
   border-bottom: none;
 }
 
+/* Coverage rows — taller + airier for easier reading + clicking (GIÃN).
+   Scoped to the coverage card only (later, same-specificity override) so
+   item/kv rows keep their compact 40px height. Inputs stay flex:1 with
+   their own padding, so the extra row height only adds whitespace — it
+   does NOT shrink the two fields. A slightly darker divider + a touch of
+   vertical margin give clearer separation between rows. */
+.ddl-cov-row {
+  height: 48px;
+  gap: 12px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
 /* Inputs — IBM Carbon underline */
 .ddl-item-row input,
 .ddl-kv-row input,
