@@ -1974,6 +1974,50 @@ select.sc-input {
   margin-bottom: 16px;
   border-bottom: 1px dashed #e2e8f0;
 }
+
+/* Cutter-cost block (Cutting Design Layout) — same faint dashed divider +
+   wider gap as .sc-print-cost-row, separating the 4 type+cost pairs from
+   the die-geometry grid below. */
+.sc-cutter-cost-row {
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px dashed #e2e8f0;
+}
+/* Fields on the left, compact summary table on the right; wraps under the
+   fields when the column is narrow. */
+.sc-cutter-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px;
+}
+.sc-cutter-block .sc-cutter-fields {
+  flex: 1 1 420px;
+}
+.sc-cutter-summary {
+  flex: 0 0 auto;
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 200px;
+}
+.sc-cutter-summary th,
+.sc-cutter-summary td {
+  border: 1px solid #e2e8f0;
+  padding: 4px 10px;
+  text-align: left;
+}
+.sc-cutter-summary th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #475569;
+}
+.sc-cutter-summary td {
+  color: #334155;
+}
+.sc-cutter-summary-empty {
+  text-align: center;
+  color: #94a3b8;
+}
 .cl-adv-toggle {
   background: transparent;
   border: none;
