@@ -30,16 +30,16 @@ test('flat number / numeric string returns as-is; malformed → 0', () => {
   assert.equal(resolveCutterBaseCost('abc', 3), 0);
 });
 
-// ── resolve: tiered (Magnetic Rotary bands, upper-exclusive) ──────
+// ── resolve: tiered (Magnetic Rotary bands, upper-inclusive) ──────
 
-test('tiered resolves each band, upper-exclusive; catch-all above', () => {
+test('tiered resolves each band, upper-inclusive; catch-all above', () => {
   const e = DEFAULT_MAGNETIC_ROTARY;
-  assert.equal(resolveCutterBaseCost(e, 0.5), 150); // x<1.5
-  assert.equal(resolveCutterBaseCost(e, 1.5), 120); // 1.5≤x<2 (boundary → next band)
-  assert.equal(resolveCutterBaseCost(e, 2), 80); // 2≤x<4
+  assert.equal(resolveCutterBaseCost(e, 0.5), 150); // x≤1.5
+  assert.equal(resolveCutterBaseCost(e, 1.5), 150); // exactly 1.5 → "up to 1.5" band
+  assert.equal(resolveCutterBaseCost(e, 2), 120); // exactly 2 → "up to 2" band
   assert.equal(resolveCutterBaseCost(e, 3.9), 80);
-  assert.equal(resolveCutterBaseCost(e, 4), 60); // exactly 4 → catch-all (upper-exclusive)
-  assert.equal(resolveCutterBaseCost(e, 10), 60);
+  assert.equal(resolveCutterBaseCost(e, 4), 80); // exactly 4 → "up to 4" band (Henry-confirmed 2026-08-18)
+  assert.equal(resolveCutterBaseCost(e, 10), 60); // >4 → catch-all
 });
 
 test('catch-all always matches (huge / unknown circumference)', () => {

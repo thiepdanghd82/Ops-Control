@@ -14,12 +14,11 @@
  * resolveCutterBaseCost, fed by the Cutting layout's magnetic-cylinder
  * circumference. Golden calcEngine unaffected.
  *
- * Boundary rule: UPPER-EXCLUSIVE — a tier matches when
- *   upto_m == null (catch-all)  OR  circumferenceM < upto_m.
+ * Boundary rule: UPPER-INCLUSIVE — a tier matches when
+ *   upto_m == null (catch-all)  OR  circumferenceM <= upto_m.
  * So Magnetic Rotary { 1.5:150, 2:120, 4:80, ∞:60 } gives
- *   x<1.5→150, 1.5≤x<2→120, 2≤x<4→80, x≥4→60.
- * CONFIRM (Henry): at EXACTLY 4.0 m this returns 60 (upper-exclusive default).
- * If the 2–4 band should own 4.0 (→ 80), switch the finite compare to `<=`.
+ *   x≤1.5→150, 1.5<x≤2→120, 2<x≤4→80, x>4→60.
+ * At EXACTLY 4.0 m this returns 80 (the 2–4 band owns 4.0) — Henry-confirmed 2026-08-18.
  */
 
 // Default seed for Magnetic Rotary (only applied when its value is blank).
@@ -70,7 +69,7 @@ export function normalizeTiers(tiers) {
 /**
  * Resolve a cutter base cost for a circumference (metres).
  *   • flat entry (number / numeric string) → the number.
- *   • tiered entry → FIRST band (ascending) where upto_m == null OR x < upto_m.
+ *   • tiered entry → FIRST band (ascending) where upto_m == null OR x <= upto_m.
  *   • malformed / no match → 0.
  * Guards NaN/undefined; an unknown circumference (NaN) resolves to the catch-all.
  */
@@ -84,7 +83,7 @@ export function resolveCutterBaseCost(entry, circumferenceM) {
   for (const t of normalizeTiers(entry.tiers)) {
     if (t.upto_m == null) return numOr0(t.cost); // catch-all
     const u = Number(t.upto_m);
-    if (Number.isFinite(u) && x < u) return numOr0(t.cost); // upper-exclusive
+    if (Number.isFinite(u) && x <= u) return numOr0(t.cost); // upper-inclusive
     // non-finite upper bound (incomplete tier) → skip
   }
   return 0;

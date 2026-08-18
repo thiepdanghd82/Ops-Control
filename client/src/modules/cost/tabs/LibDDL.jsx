@@ -45,6 +45,7 @@ const SECTION_LABELS = {
   click_charges: 'Click Charges',
   tool_life: 'Tool Life',
   cutter_cost: 'Cutter Cost $',
+  cutter_addon: 'Cutter Add-on $',
   plate_base_cost: 'Plate Base Cost $',
   pre_cut: 'Pre Cut',
   die_cut: 'Die Cut',
@@ -62,6 +63,7 @@ const OBJECT_KEYS = new Set([
   'click_charges',
   'tool_life',
   'cutter_cost',
+  'cutter_addon',
   'plate_base_cost',
   'coverage',
 ]);
@@ -78,6 +80,7 @@ const SKIP_KEYS = new Set([
   '_custom_names',
   '_custom_colors',
   'cutter_cost_excluded',
+  'cutter_addon_excluded',
   'npi_design_owner',
   'print',
 ]);
@@ -357,6 +360,29 @@ export default function LibDDL() {
           };
           healed = true;
         }
+        // Cutter Add-on $ — the additive constant per cutter type in the Dao-cắt
+        // formula (Etching +40, Carving +77, else 0). Governed by tool_type like
+        // Cutter Cost (same exclusion-aware reconcile). Plain numeric values.
+        const recAddon = reconcileCutterCost(
+          clone.tool_type,
+          clone.cutter_addon || {},
+          clone.cutter_addon_excluded
+        );
+        clone.cutter_addon = recAddon.toolLife;
+        healed = healed || recAddon.changed;
+        // Seed Etching 40 / Carving 77 ONLY when currently blank (don't clobber).
+        for (const [needle, seedVal] of [
+          ['etching', 40],
+          ['carving', 77],
+        ]) {
+          const ak = Object.keys(clone.cutter_addon).find((k) =>
+            String(k).trim().toLowerCase().startsWith(needle)
+          );
+          if (ak && (clone.cutter_addon[ak] === '' || clone.cutter_addon[ak] == null)) {
+            clone.cutter_addon[ak] = seedVal;
+            healed = true;
+          }
+        }
       }
       // Seed the Plate Base Cost $ section if absent so the card renders +
       // the Print-Design "Plate cost $" formula has a lookup source. Editable
@@ -388,9 +414,11 @@ export default function LibDDL() {
       if (key === 'tool_type') {
         next.tool_life = renameToolLifeKey(prev.tool_life, oldVal, value);
         next.cutter_cost = renameToolLifeKey(prev.cutter_cost, oldVal, value);
-        // Keep an excluded (deleted-from-Cutter-Cost) entry attached to the
-        // renamed tool type so it stays hidden under the new name.
+        next.cutter_addon = renameToolLifeKey(prev.cutter_addon, oldVal, value);
+        // Keep an excluded (deleted-from-Cutter-Cost/Add-on) entry attached to
+        // the renamed tool type so it stays hidden under the new name.
         next.cutter_cost_excluded = renameExcludedType(prev.cutter_cost_excluded, oldVal, value);
+        next.cutter_addon_excluded = renameExcludedType(prev.cutter_addon_excluded, oldVal, value);
       }
       return next;
     });
@@ -415,8 +443,10 @@ export default function LibDDL() {
         const rk = String(removed ?? '').trim();
         next.tool_life = deleteObjectKey(prev.tool_life, rk);
         next.cutter_cost = deleteObjectKey(prev.cutter_cost, rk);
+        next.cutter_addon = deleteObjectKey(prev.cutter_addon, rk);
         // Housekeeping: a deleted tool type can't be excluded anymore.
         next.cutter_cost_excluded = dropExcludedType(prev.cutter_cost_excluded, rk);
+        next.cutter_addon_excluded = dropExcludedType(prev.cutter_addon_excluded, rk);
       }
       return next;
     });
@@ -534,6 +564,20 @@ export default function LibDDL() {
   // of blank cost keys happens on the next load reconcile.
   const restoreCutterCost = useCallback(() => {
     setSections((prev) => ({ ...prev, cutter_cost_excluded: [] }));
+    setDirty(true);
+  }, []);
+
+  // Cutter Add-on per-row delete + restore — same exclusion mechanics.
+  const deleteCutterAddonRow = useCallback((tt) => {
+    setSections((prev) => ({
+      ...prev,
+      cutter_addon: deleteObjectKey(prev.cutter_addon, tt),
+      cutter_addon_excluded: addExcludedType(prev.cutter_addon_excluded, tt),
+    }));
+    setDirty(true);
+  }, []);
+  const restoreCutterAddon = useCallback(() => {
+    setSections((prev) => ({ ...prev, cutter_addon_excluded: [] }));
     setDirty(true);
   }, []);
 
@@ -758,6 +802,55 @@ export default function LibDDL() {
                     ))}
                     {hiddenCount > 0 && (
                       <button className="ddl-restore" onClick={restoreCutterCost}>
+                        ↺ Sync from Tool Life ({hiddenCount} hidden)
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+
+            // Cutter Add-on $ — the additive constant per cutter type (Dao-cắt
+            // formula). GOVERNED by tool_type like Cutter Cost: read-only-label
+            // rows, plain numeric value, per-row delete via the exclusion set.
+            if (key === 'cutter_addon' && typeof value === 'object' && !Array.isArray(value)) {
+              const allTypes = Array.isArray(sections.tool_type)
+                ? sections.tool_type
+                : Object.keys(value);
+              const excluded = new Set(
+                Array.isArray(sections.cutter_addon_excluded) ? sections.cutter_addon_excluded : []
+              );
+              const toolTypes = allTypes.filter((tt) => !excluded.has(tt));
+              const hiddenCount = excluded.size;
+              return (
+                <div key={key} className="ddl-card">
+                  <DdlCardHead label={label} onRename={() => openRename(key, label)} />
+                  <div className="ddl-card-body">
+                    {toolTypes.length === 0 && (
+                      <div className="ddl-tl-empty">Add tool types in the Tool Type card.</div>
+                    )}
+                    {toolTypes.map((tt, i) => (
+                      <div key={`${tt}-${i}`} className="ddl-kv-row">
+                        <span className="ddl-kv-key ddl-kv-key-wide" title={tt}>
+                          {tt || '—'}
+                        </span>
+                        <input
+                          type="text"
+                          value={value[tt] ?? ''}
+                          onChange={(e) => updateObjectEntry('cutter_addon', tt, e.target.value)}
+                        />
+                        <button
+                          className="ddl-del"
+                          title="Delete row"
+                          aria-label="Delete row"
+                          onClick={() => deleteCutterAddonRow(tt)}
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ))}
+                    {hiddenCount > 0 && (
+                      <button className="ddl-restore" onClick={restoreCutterAddon}>
                         ↺ Sync from Tool Life ({hiddenCount} hidden)
                       </button>
                     )}

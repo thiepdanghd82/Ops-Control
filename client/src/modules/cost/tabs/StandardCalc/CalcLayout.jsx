@@ -25,6 +25,7 @@ import {
   getPlateFilmCost,
   normPrintType,
 } from '../../../../services/plateCost';
+import { computeCutterCost } from '../../../../services/cutterCost';
 import FileUploadZone from '../../../../components/Shared/FileUploadZone';
 import DecimalInput from '../../../../utils/DecimalInput';
 import DesignSyncPicker from './DesignSyncPicker';
@@ -1039,13 +1040,15 @@ function CutSubTab({ state, onField, showCutterCost = false }) {
     cur[i] = v;
     onField('cutter_types', cur);
   };
-  // Summary rows — one per non-empty Cutter type. Cost mirrors cutter_costs[i]
-  // (shows '—' until the formula lands).
-  const cutterPairs = [];
-  for (let i = 0; i < CUTTER_PAIR_COUNT; i++) {
-    const t = String(state.cutter_types?.[i] ?? '').trim();
-    if (t) cutterPairs.push({ type: t, cost: state.cutter_costs?.[i] });
-  }
+  // Cutter cost is COMPUTED by default (Dao cắt formula) but the cell is an
+  // editable OVERRIDE: state.cutter_costs[i] holds the override ('' = use auto).
+  const setCutterCost = (i, v) => {
+    const cur = Array.isArray(state.cutter_costs) ? state.cutter_costs.slice() : [];
+    while (cur.length < CUTTER_PAIR_COUNT) cur.push('');
+    cur[i] = v;
+    onField('cutter_costs', cur);
+  };
+  const resetCutterCost = (i) => setCutterCost(i, '');
 
   const magPitch = state.magnetic_tooth
     ? (state.magnetic_tooth * (state.tooth_pitch_mm || 3.175)).toFixed(2)
@@ -1081,6 +1084,26 @@ function CutSubTab({ state, onField, showCutterCost = false }) {
   //                (all webs cut simultaneously on same stroke).
   const cutTotalPerShot = slit ? cutterCavity : numWebs * cutterCavity;
 
+  // Cutter cost inputs: product size (canonical, falls back to the Print ①
+  // Product Size) + cavity = Cut Total/Shot. Effective cost = the operator's
+  // override if set, else the computed Dao-cắt value.
+  const cutterWmm = Number(state.part_width) || Number(state.print_part_width) || 0;
+  const cutterLmm = Number(state.part_length_md) || Number(state.print_part_length_md) || 0;
+  const cutterDims = { widthMm: cutterWmm, lengthMm: cutterLmm, cavity: cutTotalPerShot };
+  const cutterCostAt = (i) => {
+    const ovr = state.cutter_costs?.[i];
+    const overridden = ovr != null && String(ovr).trim() !== '';
+    if (overridden) return { value: ovr, overridden: true };
+    const auto = computeCutterCost(state.cutter_types?.[i], cutterDims, lib);
+    return { value: auto, overridden: false };
+  };
+  // Summary rows — one per non-empty Cutter type, using the effective cost.
+  const cutterPairs = [];
+  for (let i = 0; i < CUTTER_PAIR_COUNT; i++) {
+    const t = String(state.cutter_types?.[i] ?? '').trim();
+    if (t) cutterPairs.push({ type: t, cost: cutterCostAt(i).value });
+  }
+
   return (
     <div className="cl-pc-body">
       {/* Cutter-cost block — additive UI, formula TBD (pending Henry). Sits at
@@ -1115,18 +1138,35 @@ function CutSubTab({ state, onField, showCutterCost = false }) {
                   </div>
                   <div
                     className="sc-field"
-                    title="Cutter cost — tính toán, chỉ đọc. Công thức sẽ được bổ sung sau."
+                    title="Cutter cost — tự tính theo công thức Dao cắt (chu vi × base + hằng số). Mặc định sync, sửa đè được; ↻ để về tự động."
                   >
                     <label>Cutter cost {i + 1} $</label>
-                    {/* TODO: Cutter cost formula — pending Henry. Read-only
-                        placeholder; cutter_costs[i] stays '' until it lands. */}
-                    <input
-                      type="text"
-                      value={state.cutter_costs?.[i] || '—'}
-                      disabled
-                      readOnly
-                      className="sc-input sc-derived"
-                    />
+                    {(() => {
+                      const cc = cutterCostAt(i);
+                      return (
+                        <div className="sc-cutter-cost-input">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            className={`sc-input${cc.overridden ? ' sc-cutter-cost-ovr' : ''}`}
+                            value={cc.value === '' || cc.value == null ? '' : String(cc.value)}
+                            placeholder="—"
+                            onChange={(e) => setCutterCost(i, e.target.value)}
+                          />
+                          {cc.overridden && (
+                            <button
+                              type="button"
+                              className="sc-cutter-cost-reset"
+                              title="Reset về tự động"
+                              aria-label="Reset về tự động"
+                              onClick={() => resetCutterCost(i)}
+                            >
+                              ↻
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </Fragment>
               ))}

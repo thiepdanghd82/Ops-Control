@@ -2018,6 +2018,34 @@ select.sc-input {
   text-align: center;
   color: #94a3b8;
 }
+/* Cutter cost cell — computed default with editable override + ↻ reset. */
+.sc-cutter-cost-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sc-cutter-cost-input .sc-input {
+  flex: 1;
+}
+.sc-cutter-cost-ovr {
+  color: var(--color-violet-500);
+  font-weight: 700;
+}
+.sc-cutter-cost-reset {
+  flex: 0 0 auto;
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid var(--color-violet-500);
+  color: var(--color-violet-500);
+  border-radius: 3px;
+  padding: 0 6px;
+  height: 26px;
+  cursor: pointer;
+}
+.sc-cutter-cost-reset:hover {
+  background: var(--color-violet-500);
+  color: #fff;
+}
 .cl-adv-toggle {
   background: transparent;
   border: none;
