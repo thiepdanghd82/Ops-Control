@@ -19,6 +19,12 @@ import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import { sharedApi } from '../../../../services/api';
 import { calcPitch, calcLayoutPerSheet } from '../../../../services/calcEngine';
+import {
+  computePlateCost,
+  getPlateBaseCost,
+  getPlateFilmCost,
+  normPrintType,
+} from '../../../../services/plateCost';
 import FileUploadZone from '../../../../components/Shared/FileUploadZone';
 import DecimalInput from '../../../../utils/DecimalInput';
 import DesignSyncPicker from './DesignSyncPicker';
@@ -717,6 +723,35 @@ export function PrintCutLayout({
 // ── Print sub-tab: image net + bleed + plate cylinder ──────────
 
 function PrintSubTab({ state, onField }) {
+  const { lib } = useCostLib();
+  // Plate cost $ (display-only) — Henry's formula, keyed by Print type off the
+  // plate_base_cost DDL section. Not fed into calcEngine/cost/exporter.
+  const plateBase = getPlateBaseCost(lib, state.pl_print_type);
+  const filmCostDefault = getPlateFilmCost(lib); // Letter-press film-per-color suggestion
+  const isLetterPress = normPrintType(state.pl_print_type) === normPrintType('Letter Press');
+  const plateCost = useMemo(
+    () =>
+      computePlateCost(
+        {
+          pt: state.pl_print_type,
+          colors: state.pl_num_colors,
+          webW: state.web_width_td,
+          sheetL: state.sheet_length,
+          filmLp: state.pl_film_lp_cost,
+        },
+        { plateBase }
+      ),
+    [
+      state.pl_print_type,
+      state.pl_num_colors,
+      state.web_width_td,
+      state.sheet_length,
+      state.pl_film_lp_cost,
+      plateBase,
+    ]
+  );
+  const plateCostDisplay = plateCost == null ? '—' : plateCost.toFixed(2);
+
   const platePitch = state.plate_tooth
     ? (state.plate_tooth * (state.tooth_pitch_mm || 3.175)).toFixed(2)
     : '—';
@@ -781,25 +816,26 @@ function PrintSubTab({ state, onField }) {
             placeholder="e.g. 4"
           />
         </div>
-        <div className="sc-field" title="Film / letterpress plate film cost (USD).">
+        <div
+          className="sc-field"
+          title="Film / letterpress plate film cost (USD mỗi màu). Chỉ dùng cho Letter Press; gợi ý = Film cost trong bảng Plate Base Cost."
+        >
           <label>Film LP cost $</label>
           <DecimalInput
             value={state.pl_film_lp_cost}
             onChange={(v) => onField('pl_film_lp_cost', v)}
             className="sc-input"
-            placeholder="0"
+            placeholder={isLetterPress && filmCostDefault ? String(filmCostDefault) : '0'}
           />
         </div>
         <div
           className="sc-field"
-          title="Plate cost — tính toán, chỉ đọc. Công thức sẽ được bổ sung sau."
+          title="Plate cost — tính toán, chỉ đọc (display-only). PB×((W+40)/1000)×((L+40)/1000)×#colors +C×FilmLP (Letter Press) / +7.5 (Flexo) / PB×#colors (Silk screen). PB = XLOOKUP bảng Plate Base Cost theo Print type."
         >
           <label>Plate cost $</label>
-          {/* TODO: Plate cost formula — pending Henry. Read-only placeholder;
-              pl_plate_cost stays '' until the formula lands. */}
           <input
             type="text"
-            value={state.pl_plate_cost || '—'}
+            value={plateCostDisplay}
             disabled
             readOnly
             className="sc-input sc-derived"

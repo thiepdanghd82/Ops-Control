@@ -26,6 +26,7 @@ import {
   renameExcludedType,
   reconcileCutterCost,
 } from './ddlEntryHelpers.js';
+import { DEFAULT_PLATE_BASE } from '../../../services/plateCost.js';
 import './LibDDL.css';
 
 // Standard section display names
@@ -35,6 +36,7 @@ const SECTION_LABELS = {
   click_charges: 'Click Charges',
   tool_life: 'Tool Life',
   cutter_cost: 'Cutter Cost $',
+  plate_base_cost: 'Plate Base Cost $',
   pre_cut: 'Pre Cut',
   die_cut: 'Die Cut',
   print_type_list: 'Print Type',
@@ -47,7 +49,13 @@ const SECTION_LABELS = {
 };
 
 // Keys that are objects (not simple arrays)
-const OBJECT_KEYS = new Set(['click_charges', 'tool_life', 'cutter_cost', 'coverage']);
+const OBJECT_KEYS = new Set([
+  'click_charges',
+  'tool_life',
+  'cutter_cost',
+  'plate_base_cost',
+  'coverage',
+]);
 // Internal keys to skip.
 //   `print` (2026-05-11): redundant press-subtype panel — duplicated
 //   `print_type_list` semantics with parens/spacing variations (e.g.
@@ -231,6 +239,13 @@ export default function LibDDL() {
         );
         clone.cutter_cost = recCc.toolLife;
         healed = healed || recCc.changed;
+      }
+      // Seed the Plate Base Cost $ section if absent so the card renders +
+      // the Print-Design "Plate cost $" formula has a lookup source. Editable
+      // + savable afterwards; the plate cost is display-only (no calc feed).
+      if (!clone.plate_base_cost || typeof clone.plate_base_cost !== 'object') {
+        clone.plate_base_cost = { ...DEFAULT_PLATE_BASE };
+        healed = true;
       }
       setSections(clone);
       seededSiteRef.current = site;
