@@ -45,6 +45,18 @@ export function isPerimeterType(type) {
   return PERIMETER_TYPES.has(normType(type));
 }
 
+/**
+ * Effective cavity for one cutter: the per-cutter override when non-empty,
+ * else the global Cut Total/Shot fallback. Some jobs run several cutters with
+ * DIFFERENT cavity counts per stage, so each cutter resolves its own cavity.
+ * A non-empty override wins even if it coerces to 0/NaN — computeCutterCost's
+ * cav<=0 guard then blanks that cutter's cost.
+ */
+export function effCavity(override, fallbackCavity) {
+  const s = String(override == null ? '' : override).trim();
+  return s === '' ? num(fallbackCavity) : num(override);
+}
+
 /** Part perimeter × cavity, in metres (the spec's "chu vi"). */
 export function circumferenceM({ widthMm, lengthMm, cavity } = {}) {
   const perim = (num(widthMm) * 2 + num(lengthMm) * 2) / 1000;

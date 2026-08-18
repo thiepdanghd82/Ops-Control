@@ -1640,6 +1640,10 @@ export function createStdState() {
     // These do NOT feed calcEngine/cost/exporter yet (Std only; Cpx follow-up).
     cutter_types: ['', '', '', ''],
     cutter_costs: ['', '', '', ''],
+    // Per-cutter cavity override ('' = use the global Cut Total/Shot). Some
+    // jobs run several cutters with different cavity counts per stage; the
+    // cutter-cost formula uses THIS cavity per cutter.
+    cutter_cavities: ['', '', '', ''],
     // ── Phase 4 UX polish ──
     unwind_direction: '', // '' | 'face-in' | 'face-out' — label orientation on roll
     print_direction_md: '', // '' | 'head-first' | 'tail-first' — text reading direction
@@ -1891,6 +1895,7 @@ export function createEmptyStdState() {
     // for the contract — additive, heal-on-read; Cutter cost formula pending.
     cutter_types: ['', '', '', ''],
     cutter_costs: ['', '', '', ''],
+    cutter_cavities: ['', '', '', ''],
     // Alt-materials feature (Sprint S-ALT-MAT, PR #A). See createStdState
     // for the full contract — materials field is a mirror of the active set.
     materials_main: Array(1)
