@@ -46,6 +46,7 @@ const SECTION_LABELS = {
   tool_life: 'Tool Life',
   cutter_cost: 'Cutter Cost $',
   cutter_addon: 'Cutter Add-on $',
+  cutter_min: 'Min Tools Price $',
   plate_base_cost: 'Plate Base Cost $',
   pre_cut: 'Pre Cut',
   die_cut: 'Die Cut',
@@ -64,6 +65,7 @@ const OBJECT_KEYS = new Set([
   'tool_life',
   'cutter_cost',
   'cutter_addon',
+  'cutter_min',
   'plate_base_cost',
   'coverage',
 ]);
@@ -81,6 +83,7 @@ const SKIP_KEYS = new Set([
   '_custom_colors',
   'cutter_cost_excluded',
   'cutter_addon_excluded',
+  'cutter_min_excluded',
   'npi_design_owner',
   'print',
 ]);
@@ -383,6 +386,30 @@ export default function LibDDL() {
             healed = true;
           }
         }
+        // Min Tools Price $ — the per-type floor threshold (Dao-cắt: computed
+        // <= min → min + addon/cavities). Governed by tool_type like Cutter
+        // Add-on. Seed Knife 25, Etching/Carving/Rotary 100 ONLY when blank.
+        const recMin = reconcileCutterCost(
+          clone.tool_type,
+          clone.cutter_min || {},
+          clone.cutter_min_excluded
+        );
+        clone.cutter_min = recMin.toolLife;
+        healed = healed || recMin.changed;
+        for (const [needle, seedVal] of [
+          ['knife', 25],
+          ['etching', 100],
+          ['carving', 100],
+          ['magnetic', 100],
+        ]) {
+          const mk = Object.keys(clone.cutter_min).find((k) =>
+            String(k).trim().toLowerCase().startsWith(needle)
+          );
+          if (mk && (clone.cutter_min[mk] === '' || clone.cutter_min[mk] == null)) {
+            clone.cutter_min[mk] = seedVal;
+            healed = true;
+          }
+        }
       }
       // Seed the Plate Base Cost $ section if absent so the card renders +
       // the Print-Design "Plate cost $" formula has a lookup source. Editable
@@ -415,10 +442,12 @@ export default function LibDDL() {
         next.tool_life = renameToolLifeKey(prev.tool_life, oldVal, value);
         next.cutter_cost = renameToolLifeKey(prev.cutter_cost, oldVal, value);
         next.cutter_addon = renameToolLifeKey(prev.cutter_addon, oldVal, value);
+        next.cutter_min = renameToolLifeKey(prev.cutter_min, oldVal, value);
         // Keep an excluded (deleted-from-Cutter-Cost/Add-on) entry attached to
         // the renamed tool type so it stays hidden under the new name.
         next.cutter_cost_excluded = renameExcludedType(prev.cutter_cost_excluded, oldVal, value);
         next.cutter_addon_excluded = renameExcludedType(prev.cutter_addon_excluded, oldVal, value);
+        next.cutter_min_excluded = renameExcludedType(prev.cutter_min_excluded, oldVal, value);
       }
       return next;
     });
@@ -444,9 +473,11 @@ export default function LibDDL() {
         next.tool_life = deleteObjectKey(prev.tool_life, rk);
         next.cutter_cost = deleteObjectKey(prev.cutter_cost, rk);
         next.cutter_addon = deleteObjectKey(prev.cutter_addon, rk);
+        next.cutter_min = deleteObjectKey(prev.cutter_min, rk);
         // Housekeeping: a deleted tool type can't be excluded anymore.
         next.cutter_cost_excluded = dropExcludedType(prev.cutter_cost_excluded, rk);
         next.cutter_addon_excluded = dropExcludedType(prev.cutter_addon_excluded, rk);
+        next.cutter_min_excluded = dropExcludedType(prev.cutter_min_excluded, rk);
       }
       return next;
     });
@@ -578,6 +609,20 @@ export default function LibDDL() {
   }, []);
   const restoreCutterAddon = useCallback(() => {
     setSections((prev) => ({ ...prev, cutter_addon_excluded: [] }));
+    setDirty(true);
+  }, []);
+
+  // Min Tools Price per-row delete + restore — same exclusion mechanics.
+  const deleteCutterMinRow = useCallback((tt) => {
+    setSections((prev) => ({
+      ...prev,
+      cutter_min: deleteObjectKey(prev.cutter_min, tt),
+      cutter_min_excluded: addExcludedType(prev.cutter_min_excluded, tt),
+    }));
+    setDirty(true);
+  }, []);
+  const restoreCutterMin = useCallback(() => {
+    setSections((prev) => ({ ...prev, cutter_min_excluded: [] }));
     setDirty(true);
   }, []);
 
@@ -851,6 +896,55 @@ export default function LibDDL() {
                     ))}
                     {hiddenCount > 0 && (
                       <button className="ddl-restore" onClick={restoreCutterAddon}>
+                        ↺ Sync from Tool Life ({hiddenCount} hidden)
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+
+            // Min Tools Price $ — the per-type floor threshold (Dao-cắt formula:
+            // computed <= min → min + addon/cavities). GOVERNED by tool_type like
+            // Cutter Add-on: read-only-label rows, numeric value, per-row delete.
+            if (key === 'cutter_min' && typeof value === 'object' && !Array.isArray(value)) {
+              const allTypes = Array.isArray(sections.tool_type)
+                ? sections.tool_type
+                : Object.keys(value);
+              const excluded = new Set(
+                Array.isArray(sections.cutter_min_excluded) ? sections.cutter_min_excluded : []
+              );
+              const toolTypes = allTypes.filter((tt) => !excluded.has(tt));
+              const hiddenCount = excluded.size;
+              return (
+                <div key={key} className="ddl-card">
+                  <DdlCardHead label={label} onRename={() => openRename(key, label)} />
+                  <div className="ddl-card-body">
+                    {toolTypes.length === 0 && (
+                      <div className="ddl-tl-empty">Add tool types in the Tool Type card.</div>
+                    )}
+                    {toolTypes.map((tt, i) => (
+                      <div key={`${tt}-${i}`} className="ddl-kv-row">
+                        <span className="ddl-kv-key ddl-kv-key-wide" title={tt}>
+                          {tt || '—'}
+                        </span>
+                        <input
+                          type="text"
+                          value={value[tt] ?? ''}
+                          onChange={(e) => updateObjectEntry('cutter_min', tt, e.target.value)}
+                        />
+                        <button
+                          className="ddl-del"
+                          title="Delete row"
+                          aria-label="Delete row"
+                          onClick={() => deleteCutterMinRow(tt)}
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ))}
+                    {hiddenCount > 0 && (
+                      <button className="ddl-restore" onClick={restoreCutterMin}>
                         ↺ Sync from Tool Life ({hiddenCount} hidden)
                       </button>
                     )}

@@ -13,6 +13,7 @@ import {
   circumferenceM,
   getCutterBaseCost,
   getCutterAddon,
+  getCutterMin,
   computeCutterCost,
   effCavity,
 } from '../services/cutterCost.js';
@@ -28,10 +29,19 @@ const LIB = {
       'Jig&Fixture': 45,
       CNC: 45,
       Stencil: '', // configured-but-blank flat type
+      'Boundary Flat': 80, // base 80 + addon 20 = 100 == min → floor branch at the boundary
     },
     cutter_addon: {
       'Etching/ Pinnacle Die': 40,
       'Carving/ NC Die': 77,
+      'Boundary Flat': 20,
+    },
+    cutter_min: {
+      'Knife/ Wood': 25,
+      'Etching/ Pinnacle Die': 100,
+      'Carving/ NC Die': 100,
+      'Magnetic Rotary': 100,
+      'Boundary Flat': 100,
     },
   },
 };
@@ -147,4 +157,53 @@ test('blank cases → empty string', () => {
   ); // missing cavity
   assert.equal(computeCutterCost('Stencil', DIMS, LIB), ''); // flat, base blank + no addon
   assert.equal(computeCutterCost('Unknown Type', DIMS, LIB), ''); // flat, absent + no addon
+});
+
+// ── Min tools price floor (computed <= minBase → minBase + addon/cavities) ──
+test('getCutterMin reads cutter_min (0 default)', () => {
+  assert.equal(getCutterMin(LIB, 'Knife/ Wood'), 25);
+  assert.equal(getCutterMin(LIB, 'Etching/ Pinnacle Die'), 100);
+  assert.equal(getCutterMin(LIB, 'Jig&Fixture'), 0); // no floor configured
+  assert.equal(getCutterMin({ ddl: {} }, 'Knife/ Wood'), 0);
+});
+
+test('above the Min → computed value unchanged', () => {
+  // standard geometry (circ 8.472) is well above every floor
+  assert.equal(computeCutterCost('Knife/ Wood', DIMS, LIB), 593.04);
+  assert.equal(computeCutterCost('Etching/ Pinnacle Die', DIMS, LIB), 1056.64);
+  assert.equal(computeCutterCost('Carving/ NC Die', DIMS, LIB), 1347.8);
+  assert.equal(computeCutterCost('Magnetic Rotary', DIMS, LIB), 508.32);
+});
+
+test('at/below the Min → floor = minBase + addon/cavities', () => {
+  // Knife/Wood: circ 0.2 → 0.2*70 = 14 (<= 25) → floor 25 + 0/1 = 25
+  assert.equal(computeCutterCost('Knife/ Wood', { widthMm: 50, lengthMm: 50, cavity: 1 }, LIB), 25);
+  // Etching: circ 0.4 → 0.4*120 + 40 = 88 (<= 100) → floor 100 + 40/2 = 120
+  assert.equal(
+    computeCutterCost('Etching/ Pinnacle Die', { widthMm: 50, lengthMm: 50, cavity: 2 }, LIB),
+    120
+  );
+  // Carving: circ 0.12 → 0.12*150 + 77 = 95 (<= 100) → floor 100 + 77/1 = 177
+  assert.equal(
+    computeCutterCost('Carving/ NC Die', { widthMm: 30, lengthMm: 30, cavity: 1 }, LIB),
+    177
+  );
+  // Magnetic Rotary: circ 0.5 → 0.5*150 = 75 (<= 100) → floor 100 + 0 = 100
+  assert.equal(
+    computeCutterCost('Magnetic Rotary', { widthMm: 125, lengthMm: 125, cavity: 1 }, LIB),
+    100
+  );
+});
+
+test('exactly == Min applies the floor (<= inclusive)', () => {
+  // Boundary Flat: base 80 + addon 20 = 100 == min 100 → floor 100 + 20/2 = 110
+  assert.equal(
+    computeCutterCost('Boundary Flat', { widthMm: 0, lengthMm: 0, cavity: 2 }, LIB),
+    110
+  );
+});
+
+test('type with no Min → no floor even when tiny', () => {
+  // Jig&Fixture flat 45, no cutter_min → stays 45
+  assert.equal(computeCutterCost('Jig&Fixture', { widthMm: 1, lengthMm: 1, cavity: 1 }, LIB), 45);
 });

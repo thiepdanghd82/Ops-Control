@@ -79,12 +79,22 @@ export function getCutterAddon(lib, type) {
   return num(v);
 }
 
+/** Minimum-tools-price base for a type (cutter_min DDL; 0 = no floor). */
+export function getCutterMin(lib, type) {
+  const v = lib && lib.ddl && lib.ddl.cutter_min ? lib.ddl.cutter_min[type] : undefined;
+  return num(v);
+}
+
 /**
  * Compute the cutter cost for a selected type. Returns a rounded number, or
  * '' (blank) when it can't / shouldn't compute:
  *   • no type selected,
  *   • perimeter type with missing product size or cavity,
  *   • flat type with no base configured and no addon.
+ *
+ * Min tools price floor (Henry, 2026-08-18): when the computed cost is <= the
+ * type's Min (cutter_min DDL), the floor `minBase + addon/cavities` applies;
+ * when it's > Min, the computed value stands. Types with no Min → no floor.
  */
 export function computeCutterCost(type, dims, lib) {
   const t = String(type == null ? '' : type).trim();
@@ -94,16 +104,26 @@ export function computeCutterCost(type, dims, lib) {
   const base = getCutterBaseCost(lib, t, circ);
   const addon = getCutterAddon(lib, t);
 
+  let rawCost;
   if (isPerimeterType(t)) {
     const w = num(d.widthMm);
     const l = num(d.lengthMm);
     const cav = num(d.cavity);
     if (w <= 0 || l <= 0 || cav <= 0) return ''; // not enough geometry yet
-    return round2(circ * base + addon);
+    rawCost = round2(circ * base + addon);
+  } else {
+    // Flat type: blank when nothing is configured (base entry empty AND no addon).
+    const raw = rawBaseEntry(lib, t);
+    const rawBlank = raw == null || raw === '';
+    if (rawBlank && addon === 0) return '';
+    rawCost = round2(base + addon);
   }
-  // Flat type: blank when nothing is configured (base entry empty AND no addon).
-  const raw = rawBaseEntry(lib, t);
-  const rawBlank = raw == null || raw === '';
-  if (rawBlank && addon === 0) return '';
-  return round2(base + addon);
+
+  // Min tools price floor: computed <= minBase → minBase + addon/cavities.
+  const minBase = getCutterMin(lib, t);
+  if (minBase > 0 && rawCost <= minBase) {
+    const cav = num(d.cavity);
+    return round2(minBase + (cav > 0 ? addon / cav : 0));
+  }
+  return rawCost;
 }
