@@ -25,7 +25,7 @@ import {
   getPlateFilmCost,
   normPrintType,
 } from '../../../../services/plateCost';
-import { computeCutterCost } from '../../../../services/cutterCost';
+import { computeCutterCost, effCavity } from '../../../../services/cutterCost';
 import FileUploadZone from '../../../../components/Shared/FileUploadZone';
 import DecimalInput from '../../../../utils/DecimalInput';
 import DesignSyncPicker from './DesignSyncPicker';
@@ -1049,6 +1049,16 @@ function CutSubTab({ state, onField, showCutterCost = false }) {
     onField('cutter_costs', cur);
   };
   const resetCutterCost = (i) => setCutterCost(i, '');
+  // Per-cutter cavity is a computed-default (Cut Total/Shot) + editable
+  // OVERRIDE: state.cutter_cavities[i] ('' = use the global default). The
+  // cost formula uses THIS cavity per cutter (different dies per stage).
+  const setCutterCavity = (i, v) => {
+    const cur = Array.isArray(state.cutter_cavities) ? state.cutter_cavities.slice() : [];
+    while (cur.length < CUTTER_PAIR_COUNT) cur.push('');
+    cur[i] = v;
+    onField('cutter_cavities', cur);
+  };
+  const resetCutterCavity = (i) => setCutterCavity(i, '');
 
   const magPitch = state.magnetic_tooth
     ? (state.magnetic_tooth * (state.tooth_pitch_mm || 3.175)).toFixed(2)
@@ -1089,12 +1099,24 @@ function CutSubTab({ state, onField, showCutterCost = false }) {
   // override if set, else the computed Dao-cắt value.
   const cutterWmm = Number(state.part_width) || Number(state.print_part_width) || 0;
   const cutterLmm = Number(state.part_length_md) || Number(state.print_part_length_md) || 0;
-  const cutterDims = { widthMm: cutterWmm, lengthMm: cutterLmm, cavity: cutTotalPerShot };
+  // Effective cavity per cutter — the per-cutter override if set, else the
+  // global Cut Total/Shot. Cavity display cell (default + override + ↻ reset).
+  const cavityAt = (i) => {
+    const ovr = state.cutter_cavities?.[i];
+    const overridden = ovr != null && String(ovr).trim() !== '';
+    return { value: overridden ? ovr : cutTotalPerShot, overridden };
+  };
   const cutterCostAt = (i) => {
     const ovr = state.cutter_costs?.[i];
     const overridden = ovr != null && String(ovr).trim() !== '';
     if (overridden) return { value: ovr, overridden: true };
-    const auto = computeCutterCost(state.cutter_types?.[i], cutterDims, lib);
+    // Each cutter's circumference/cost uses ITS own cavity.
+    const dims = {
+      widthMm: cutterWmm,
+      lengthMm: cutterLmm,
+      cavity: effCavity(state.cutter_cavities?.[i], cutTotalPerShot),
+    };
+    const auto = computeCutterCost(state.cutter_types?.[i], dims, lib);
     return { value: auto, overridden: false };
   };
   // Summary rows — one per non-empty Cutter type, using the effective cost.
@@ -1115,7 +1137,7 @@ function CutSubTab({ state, onField, showCutterCost = false }) {
       {showCutterCost && (
         <div className="sc-cutter-cost-row">
           <div className="sc-cutter-block">
-            <div className="sc-grid4 sc-cutter-fields">
+            <div className="sc-cutter-fields">
               {Array.from({ length: CUTTER_PAIR_COUNT }).map((_, i) => (
                 <Fragment key={i}>
                   <div
@@ -1135,6 +1157,38 @@ function CutSubTab({ state, onField, showCutterCost = false }) {
                         </option>
                       ))}
                     </select>
+                  </div>
+                  <div
+                    className="sc-field"
+                    title="Số cavity của dao này. Mặc định = Cut Total/Shot; sửa khi dùng nhiều dao với số cavity khác nhau."
+                  >
+                    <label>Cutter cavities {i + 1}</label>
+                    {(() => {
+                      const cv = cavityAt(i);
+                      return (
+                        <div className="sc-cutter-cost-input">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            className={`sc-input${cv.overridden ? ' sc-cutter-cost-ovr' : ''}`}
+                            value={cv.value === '' || cv.value == null ? '' : String(cv.value)}
+                            placeholder="—"
+                            onChange={(e) => setCutterCavity(i, e.target.value)}
+                          />
+                          {cv.overridden && (
+                            <button
+                              type="button"
+                              className="sc-cutter-cost-reset"
+                              title="Reset về tự động"
+                              aria-label="Reset về tự động"
+                              onClick={() => resetCutterCavity(i)}
+                            >
+                              ↻
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div
                     className="sc-field"

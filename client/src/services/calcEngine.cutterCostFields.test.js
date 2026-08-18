@@ -11,7 +11,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createStdState, createEmptyStdState, createSubProduct } from './calcEngine.js';
 
-const CUTTER_FIELDS = ['cutter_types', 'cutter_costs'];
+const CUTTER_FIELDS = ['cutter_types', 'cutter_costs', 'cutter_cavities'];
 
 test('createStdState seeds cutter_types + cutter_costs as 4 empties', () => {
   const s = createStdState();
@@ -40,10 +40,12 @@ test('createSubProduct (Cpx) does NOT carry the cutter fields — Std only', () 
 test('cutter fields survive a JSON save/load round-trip (Std)', () => {
   const s = createStdState();
   s.cutter_types = ['Knife/ Wood', '', 'Magnetic Rotary', ''];
-  s.cutter_costs = ['', '', '', '']; // still calculated/read-only — stays empty
+  s.cutter_costs = ['', '', '', '']; // computed default; override stays empty
+  s.cutter_cavities = ['3', '', '', '']; // per-cutter cavity override
   const round = JSON.parse(JSON.stringify(s));
   assert.deepEqual(round.cutter_types, ['Knife/ Wood', '', 'Magnetic Rotary', '']);
   assert.deepEqual(round.cutter_costs, ['', '', '', '']);
+  assert.deepEqual(round.cutter_cavities, ['3', '', '', '']);
 });
 
 test('summary lists ONLY non-empty cutter types (component filter contract)', () => {

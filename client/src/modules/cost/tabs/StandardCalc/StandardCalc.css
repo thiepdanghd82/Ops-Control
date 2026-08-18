@@ -1992,7 +1992,13 @@ select.sc-input {
   gap: 16px;
 }
 .sc-cutter-block .sc-cutter-fields {
-  flex: 1 1 420px;
+  flex: 1 1 480px;
+  /* One cutter per row — a grouped TRIPLET: type | cavities | cost. minmax
+     lets the columns shrink on narrower cards without overflowing. */
+  display: grid;
+  grid-template-columns: minmax(120px, 1.5fr) minmax(72px, 0.8fr) minmax(84px, 1fr);
+  gap: 10px 12px;
+  align-items: end;
 }
 .sc-cutter-summary {
   flex: 0 0 auto;

@@ -14,6 +14,7 @@ import {
   getCutterBaseCost,
   getCutterAddon,
   computeCutterCost,
+  effCavity,
 } from '../services/cutterCost.js';
 
 // Library fixture keyed by the exact tool_type strings (whitespace as shipped).
@@ -110,6 +111,31 @@ test('flat types = base + addon (no perimeter)', () => {
   assert.equal(computeCutterCost('Jig&Fixture', DIMS, LIB), 45);
   assert.equal(computeCutterCost('CNC', DIMS, LIB), 45);
   assert.equal(computeCutterCost('CNC', { widthMm: 0, lengthMm: 0, cavity: 0 }, LIB), 45); // geometry irrelevant for flat
+});
+
+// ── Per-cutter cavity override (money-path) ─────────────────────────
+test('per-cutter cavity drives that cutter cost — cavity 6 vs 3', () => {
+  // Same W=586, L=120 (perim 1.412 m). cavity 6 → circ 8.472 → 593.04.
+  assert.equal(
+    computeCutterCost('Knife/ Wood', { widthMm: 586, lengthMm: 120, cavity: 6 }, LIB),
+    593.04
+  );
+  // Override cavity 3 → circ 4.236 → 4.236*70 = 296.52 (this cutter only).
+  assert.equal(
+    computeCutterCost('Knife/ Wood', { widthMm: 586, lengthMm: 120, cavity: 3 }, LIB),
+    296.52
+  );
+});
+
+test('effCavity: non-empty override wins; empty falls back to the global cavity', () => {
+  assert.equal(effCavity('3', 6), 3); // override
+  assert.equal(effCavity(3, 6), 3);
+  assert.equal(effCavity('', 6), 6); // empty → fallback
+  assert.equal(effCavity('   ', 6), 6); // whitespace → fallback
+  assert.equal(effCavity(null, 6), 6);
+  assert.equal(effCavity(undefined, 6), 6);
+  assert.equal(effCavity('0', 6), 0); // explicit 0 override wins (→ blank cost downstream)
+  assert.equal(effCavity('abc', 6), 0); // garbage → num()→0 (guarded downstream)
 });
 
 test('blank cases → empty string', () => {
