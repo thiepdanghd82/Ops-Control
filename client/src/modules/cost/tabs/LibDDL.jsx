@@ -27,6 +27,15 @@ import {
   reconcileCutterCost,
 } from './ddlEntryHelpers.js';
 import { DEFAULT_PLATE_BASE } from '../../../services/plateCost.js';
+import {
+  isTiered,
+  toTiered,
+  toFlat,
+  setTierField,
+  addTier,
+  removeTier,
+  DEFAULT_MAGNETIC_ROTARY,
+} from '../../../services/cutterBaseCost.js';
 import './LibDDL.css';
 
 // Standard section display names
@@ -167,6 +176,103 @@ function PairTableCard({ label, rows, config, onRowsChange, onRename, onDeleteTa
   );
 }
 
+// Cutter Base Cost row — read-only tool-type label + a mode-aware value:
+//   FLAT   (number/string): single input + "⇄ Tiered" toggle.
+//   TIERED ({tiers}): per-tier "up to (m)" + "cost $" rows (catch-all shows
+//   "above", upto disabled) with add/remove tier + "⇄ Flat" toggle.
+// All edits flow through onSetEntry(nextEntry) → updateObjectEntry(setDirty).
+// Governed by tool_type + row delete/exclusion just like the flat version.
+// Module-scope so a keystroke re-renders (not remounts) — inputs keep focus.
+function CutterCostRow({ label, entry, onSetEntry, onDeleteRow }) {
+  const tiered = isTiered(entry);
+  const tiers = tiered && Array.isArray(entry.tiers) ? entry.tiers : [];
+  return (
+    <div className="ddl-cc-row">
+      <div className="ddl-kv-row">
+        <span className="ddl-kv-key ddl-kv-key-wide" title={label}>
+          {label || '—'}
+        </span>
+        {!tiered && (
+          <input
+            className="ddl-cc-flat"
+            type="text"
+            value={entry ?? ''}
+            placeholder="cost $"
+            onChange={(e) => onSetEntry(e.target.value)}
+          />
+        )}
+        <button
+          type="button"
+          className="ddl-cc-toggle"
+          title={tiered ? 'Chuyển về giá phẳng' : 'Chuyển sang giá theo chu vi (m)'}
+          onClick={() => onSetEntry(tiered ? toFlat(entry) : toTiered(entry))}
+        >
+          {tiered ? '⇄ Flat' : '⇄ Tiered'}
+        </button>
+        <button
+          className="ddl-del"
+          title="Delete row"
+          aria-label="Delete row"
+          onClick={onDeleteRow}
+        >
+          &times;
+        </button>
+      </div>
+      {tiered && (
+        <div className="ddl-cc-tiers">
+          {tiers.map((t, i) => {
+            const isCatch = t && t.upto_m == null;
+            return (
+              <div key={i} className="ddl-cc-tier">
+                <input
+                  className="ddl-cc-upto"
+                  type="text"
+                  disabled={isCatch}
+                  value={isCatch ? '' : (t?.upto_m ?? '')}
+                  placeholder={isCatch ? '∞ (above)' : 'up to (m)'}
+                  onChange={(e) =>
+                    onSetEntry({ tiers: setTierField(tiers, i, 'upto_m', e.target.value) })
+                  }
+                />
+                <input
+                  className="ddl-cc-cost"
+                  type="text"
+                  value={t?.cost ?? ''}
+                  placeholder="cost $"
+                  onChange={(e) =>
+                    onSetEntry({ tiers: setTierField(tiers, i, 'cost', e.target.value) })
+                  }
+                />
+                {isCatch ? (
+                  <span className="ddl-cc-catch" title="Catch-all: mọi chu vi ≥ mốc cuối">
+                    above
+                  </span>
+                ) : (
+                  <button
+                    className="ddl-del"
+                    title="Remove tier"
+                    aria-label="Remove tier"
+                    onClick={() => onSetEntry({ tiers: removeTier(tiers, i) })}
+                  >
+                    &times;
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          <button
+            type="button"
+            className="ddl-add ddl-cc-addtier"
+            onClick={() => onSetEntry({ tiers: addTier(tiers) })}
+          >
+            + tier
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function LibDDL() {
   const { rawDDL, setRawDDL, refreshLib } = useCostLib();
   const [site, setSite] = useState('VN');
@@ -239,6 +345,18 @@ export default function LibDDL() {
         );
         clone.cutter_cost = recCc.toolLife;
         healed = healed || recCc.changed;
+        // Seed Magnetic Rotary with the 4-band tiered default ONLY when its
+        // value is currently blank (don't clobber existing flat/tiered data).
+        // Editable afterwards; still governed by tool_type sync + row delete.
+        const mrKey = Object.keys(clone.cutter_cost).find(
+          (k) => String(k).trim().toLowerCase() === 'magnetic rotary'
+        );
+        if (mrKey && (clone.cutter_cost[mrKey] === '' || clone.cutter_cost[mrKey] == null)) {
+          clone.cutter_cost[mrKey] = {
+            tiers: DEFAULT_MAGNETIC_ROTARY.tiers.map((t) => ({ ...t })),
+          };
+          healed = true;
+        }
       }
       // Seed the Plate Base Cost $ section if absent so the card renders +
       // the Print-Design "Plate cost $" formula has a lookup source. Editable
@@ -630,24 +748,13 @@ export default function LibDDL() {
                       <div className="ddl-tl-empty">Add tool types in the Tool Type card.</div>
                     )}
                     {toolTypes.map((tt, i) => (
-                      <div key={`${tt}-${i}`} className="ddl-kv-row">
-                        <span className="ddl-kv-key ddl-kv-key-wide" title={tt}>
-                          {tt || '—'}
-                        </span>
-                        <input
-                          type="text"
-                          value={value[tt] ?? ''}
-                          onChange={(e) => updateObjectEntry('cutter_cost', tt, e.target.value)}
-                        />
-                        <button
-                          className="ddl-del"
-                          title="Delete row"
-                          aria-label="Delete row"
-                          onClick={() => deleteCutterCostRow(tt)}
-                        >
-                          &times;
-                        </button>
-                      </div>
+                      <CutterCostRow
+                        key={`${tt}-${i}`}
+                        label={tt}
+                        entry={value[tt]}
+                        onSetEntry={(next) => updateObjectEntry('cutter_cost', tt, next)}
+                        onDeleteRow={() => deleteCutterCostRow(tt)}
+                      />
                     ))}
                     {hiddenCount > 0 && (
                       <button className="ddl-restore" onClick={restoreCutterCost}>

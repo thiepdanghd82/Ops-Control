@@ -180,6 +180,88 @@
 .ddl-title-edit + .ddl-table-del {
   margin-left: 0;
 }
+/* Cutter Base Cost — flat/tiered mode-aware row. */
+.ddl-cc-row {
+  border-bottom: 1px solid #f4f4f4;
+}
+.ddl-cc-row:last-of-type {
+  border-bottom: none;
+}
+.ddl-cc-flat {
+  /* inherits .ddl-kv-row input (Carbon underline) via the wrapper */
+  min-width: 0;
+}
+.ddl-cc-toggle {
+  flex: 0 0 auto;
+  margin-left: auto;
+  border: 1px solid #d0d0d0;
+  background: transparent;
+  color: #0f62fe;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 8px;
+  border-radius: 0;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+.ddl-cc-toggle:hover {
+  background: #e8e8e8;
+  border-color: #a8a8a8;
+}
+.ddl-cc-tiers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 16px 10px 28px;
+}
+.ddl-cc-tier {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ddl-cc-upto,
+.ddl-cc-cost {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border: none;
+  border-bottom: 1px solid #c6c6c6;
+  border-radius: 0;
+  background: #f4f4f4;
+  color: #161616;
+  font-size: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  outline: none;
+  box-sizing: border-box;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+.ddl-cc-upto:focus,
+.ddl-cc-cost:focus {
+  border-bottom-color: #0f62fe;
+  background: #ffffff;
+}
+.ddl-cc-upto:disabled {
+  background: #ededed;
+  color: #8d8d8d;
+}
+.ddl-cc-catch {
+  flex: 0 0 auto;
+  min-width: 28px;
+  font-size: 11px;
+  color: #8d8d8d;
+  text-align: center;
+}
+.ddl-cc-addtier {
+  align-self: flex-start;
+  padding-left: 0;
+}
+
 /* "Sync from Tool Life" restore link in the Cutter Cost card. */
 .ddl-restore {
   display: block;
