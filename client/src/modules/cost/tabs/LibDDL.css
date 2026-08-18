@@ -153,6 +153,51 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* ✎ Rename pencil in every card head. */
+.ddl-title-edit {
+  flex: 0 0 auto;
+  margin-left: auto;
+  border: 1px solid #d0d0d0;
+  background: transparent;
+  color: #525252;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: 0;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background-color 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+.ddl-title-edit:hover {
+  background: #e8e8e8;
+  color: #161616;
+  border-color: #a8a8a8;
+}
+/* When the pencil sits next to a Delete-table action, don't push twice. */
+.ddl-title-edit + .ddl-table-del {
+  margin-left: 0;
+}
+/* "Sync from Tool Life" restore link in the Cutter Cost card. */
+.ddl-restore {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: #0f62fe;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 0.16px;
+}
+.ddl-restore:hover {
+  background: #e8e8e8;
+}
+
 .ddl-table-del {
   flex: 0 0 auto;
   border: 1px solid #e0b4b4;
