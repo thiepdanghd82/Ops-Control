@@ -17,6 +17,9 @@ import { fmtN as _fmtN, parseLocaleNumber } from '../../../../utils/format';
 import DecimalInput from '../../../../utils/DecimalInput';
 import { crewOverrideState, isManualDerivedRow } from './processCrew.helpers';
 import { resolveScrapOnWorkcenterChange } from '../../../../services/scrapDefaults';
+import { layoutToolCostSources, buildLayoutToolCosts } from '../../../../services/layoutToolCost';
+import ToolCostCell from '../../components/ToolCostCell';
+import '../../components/ToolCostCell.css';
 // ProcessBalancing is rendered as separate "Balancing" sub-tab
 
 // Local wrapper: default 4 decimals for process cost fields.
@@ -32,18 +35,28 @@ export default function CalcProcesses() {
 
   const tierSt = useMemo(() => getActiveTierState(st), [st]);
 
+  // Layout-assigned tool costs (Sprint S-LAYOUT-TOOLCOST). CalcProcesses calls
+  // calcProcess DIRECTLY (not through calcAll), so it builds the map here and
+  // passes it explicitly. Derived live from (tierSt, lib) → editing a Plate /
+  // Cutter cost on the Layout tab live-updates any process assigned to it.
+  const layoutSources = useMemo(
+    () => (lib ? layoutToolCostSources(tierSt, lib) : []),
+    [tierSt, lib]
+  );
+  const layoutToolCosts = useMemo(() => buildLayoutToolCosts(layoutSources), [layoutSources]);
+
   const results = useMemo(() => {
     if (!lib) return [];
     return processes.map((proc) => {
       if (proc.hidden || !proc.workcenter) return null;
       try {
         const moq = tierSt.moq || st.moq || 0;
-        return calcProcess(proc, tierSt, moq, lib);
+        return calcProcess(proc, tierSt, moq, lib, { layoutToolCosts });
       } catch {
         return null;
       }
     });
-  }, [processes, tierSt, lib, st.moq]);
+  }, [processes, tierSt, lib, st.moq, layoutToolCosts]);
 
   const handleField = useCallback(
     (idx, field, value, isNum = false) => {
@@ -453,11 +466,17 @@ export default function CalcProcesses() {
                       )}
                     </td>
                     <td>
-                      <DecimalInput
-                        value={proc.tool_cost}
-                        onChange={(v) => setProcessField(i, 'tool_cost', v)}
+                      <ToolCostCell
+                        proc={proc}
+                        idx={i}
+                        processes={processes}
+                        sources={layoutSources}
+                        layoutToolCosts={layoutToolCosts}
+                        onAssign={(id) => setProcessField(i, 'tool_cost_src', id)}
+                        onUnassign={() => setProcessField(i, 'tool_cost_src', '')}
+                        onManualChange={(v) => setProcessField(i, 'tool_cost', v)}
+                        inputClassName="sc-input-sm sc-input-num"
                         placeholder="—"
-                        className="sc-input-sm sc-input-num"
                       />
                     </td>
                     <td>

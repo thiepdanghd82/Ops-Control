@@ -55,6 +55,9 @@ import {
 } from '../../../../services/covOvrState';
 import '../StandardCalc/StandardCalc.css';
 import { crewOverrideState, isManualDerivedRow } from '../StandardCalc/processCrew.helpers';
+import { layoutToolCostSources, buildLayoutToolCosts } from '../../../../services/layoutToolCost';
+import ToolCostCell from '../../components/ToolCostCell';
+import '../../components/ToolCostCell.css';
 
 export default function SubProductRow({ sp, spi, result, allSps }) {
   const { dispatch, cplxState } = useCalc();
@@ -358,6 +361,13 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
   const mats = (sp.materials || []).filter((m) => !m.hidden);
   const inks = (sp.inks || []).filter((i) => !i.hidden);
   const procs = (sp.processes || []).filter((p) => !p.hidden);
+
+  // Layout-assigned tool costs (Sprint S-LAYOUT-TOOLCOST). Cpx sub-products
+  // carry only PLATE layout fields (no cutter block), so sources = Plate only.
+  // The Cpx money-path builds the same map inside calcAll(spSt); this map is
+  // just for the cell's read-only display + the picker list.
+  const layoutSources = useMemo(() => (lib ? layoutToolCostSources(sp, lib) : []), [sp, lib]);
+  const layoutToolCosts = useMemo(() => buildLayoutToolCosts(layoutSources), [layoutSources]);
 
   // Scrap% display = Σ(process scrap_pct) — mirrors Standard CalcMaterials /
   // CalcInks. Display-only metric; underlying cost math still uses
@@ -1654,10 +1664,16 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                         />
                       </td>
                       <td>
-                        <DecimalInput
-                          value={p.tool_cost}
-                          onChange={(v) => setProc(pi, 'tool_cost', v)}
-                          className="cc-det-inp cc-det-num"
+                        <ToolCostCell
+                          proc={p}
+                          idx={origIdx}
+                          processes={sp.processes || []}
+                          sources={layoutSources}
+                          layoutToolCosts={layoutToolCosts}
+                          onAssign={(id) => setProc(pi, 'tool_cost_src', id)}
+                          onUnassign={() => setProc(pi, 'tool_cost_src', '')}
+                          onManualChange={(v) => setProc(pi, 'tool_cost', v)}
+                          inputClassName="cc-det-inp cc-det-num"
                         />
                       </td>
                       <td>

@@ -19,6 +19,11 @@ import {
   detectLegacyPartialFields,
 } from './pricingSnapshot.js';
 import { warn as devWarn } from '../utils/logger.js';
+import {
+  layoutToolCostSources,
+  buildLayoutToolCosts,
+  effectiveToolCost,
+} from './layoutToolCost.js';
 
 /**
  * Phase 2 resolver — internal helper that reads pricing values via the
@@ -733,8 +738,14 @@ export function calcProcess(proc, st, moq, lib, options = {}) {
   const eauCap = eau * 0.8;
 
   // Tooling
+  // Effective tool cost — a process may ASSIGN a Layout-computed cost
+  // (Plate / Cutter i) via proc.tool_cost_src (Sprint S-LAYOUT-TOOLCOST).
+  // Assigned + present → the Layout source cost from options.layoutToolCosts;
+  // assigned but source gone → 0 (UI warns); unassigned ('') → manual
+  // proc.tool_cost, so quotes without an assignment stay byte-identical (BC).
+  const effToolCost = effectiveToolCost(proc, options.layoutToolCosts);
   let tooling = 0;
-  if (proc.tool_cost > 0) {
+  if (effToolCost > 0) {
     // PR-A (2026-06-20): route through resolver when calcAll supplies
     // one. Snapshot wins; legacy snapshot (pre-PR-A) falls back to lib
     // inside resolver.getToolLife. BC-compat direct callers (no
@@ -762,10 +773,10 @@ export function calcProcess(proc, st, moq, lib, options = {}) {
     const isJig = ttNorm === 'jig' || ttNorm === 'jigfixture';
     if (isJig) {
       // JIG mẫu số KHÔNG nhân Cavity (gá giữ SP, không tiêu hao theo shot × cavity).
-      tooling = tlife > eauCap ? proc.tool_cost / eauCap : proc.tool_cost / tlife;
+      tooling = tlife > eauCap ? effToolCost / eauCap : effToolCost / tlife;
     } else {
       const totalToolPcs = tlife * layout;
-      tooling = totalToolPcs > eauCap ? proc.tool_cost / eauCap : proc.tool_cost / totalToolPcs;
+      tooling = totalToolPcs > eauCap ? effToolCost / eauCap : effToolCost / totalToolPcs;
     }
   }
 
@@ -939,7 +950,15 @@ export function calcAll(st, allSpResults, lib, subproducts, options = {}) {
   // callers don't need to know about the resolver shape.
   const snapshot = options.snapshot || null;
   const resolver = createResolver(snapshot, lib);
-  const callOptions = { ...options, resolver };
+  // Layout-assigned tool costs (Sprint S-LAYOUT-TOOLCOST): id → cost map for
+  // Plate + Cutter 1~4, derived LIVE from (st, lib) so a process row that
+  // assigned a Layout source resolves its tool cost from here. Built once per
+  // calcAll; the direct calcProcess site (CalcProcesses) + tests may inject via
+  // options.layoutToolCosts (wins). Cpx SPs pass their own spSt so each SP gets
+  // its own plate cost. Rows with empty tool_cost_src ignore it → golden BC.
+  const layoutToolCosts =
+    options.layoutToolCosts ?? buildLayoutToolCosts(layoutToolCostSources(st, lib));
+  const callOptions = { ...options, resolver, layoutToolCosts };
 
   // Site-mismatch warning collection. Snapshot._site is set when
   // freezeLib captured state.site; state.site is the live tier site.
@@ -1782,6 +1801,7 @@ export function createStdState() {
         scrap_pct: 0,
         manual_uph: 0,
         tool_cost: 0,
+        tool_cost_src: '',
         tool_type: '',
         tool_life: 0,
         extra_cost: 0,
@@ -1985,6 +2005,7 @@ export function createEmptyStdState() {
         scrap_pct: 0,
         manual_uph: 0,
         tool_cost: 0,
+        tool_cost_src: '',
         tool_type: '',
         tool_life: 0,
         extra_cost: 0,
@@ -2224,6 +2245,7 @@ export function createSubProduct(code) {
         scrap_pct: 0,
         manual_uph: 0,
         tool_cost: 0,
+        tool_cost_src: '',
         tool_type: '',
         tool_life: 0,
         extra_cost: 0,
