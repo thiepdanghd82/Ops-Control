@@ -14,6 +14,7 @@ import {
   matCostExcludingInk,
 } from '../../../../services/calcEngine';
 import { snapshotPricingParams } from '../../../../services/pricingSnapshot';
+import { procTotal } from '../../../../services/kpiBuckets';
 import SnapshotPanel from '../../components/SnapshotPanel';
 import { fmtN, pct } from '../../../../utils/format';
 import { recomputeKpi, isBucketActive, readMask, writeMask } from './costStructureWhatIf';
@@ -244,9 +245,7 @@ export default function CalcCostBreakdown() {
                       <>
                         <td className="right bd-mat">{fmtN(matCostExcludingInk(r))}</td>
                         <td className="right bd-ink">{fmtN(inkCostTotal(r))}</td>
-                        <td className="right bd-proc">
-                          {fmtN(r.overhead + r.labor_cost + r.tooling)}
-                        </td>
+                        <td className="right bd-proc">{fmtN(procTotal(r))}</td>
                         <td className="right bd-pack">{fmtN(r.packing_ship)}</td>
                         <td className="right bd-sub" style={{ fontWeight: 800 }}>
                           {fmtN(r.s_ttl)}
@@ -376,9 +375,7 @@ export default function CalcCostBreakdown() {
                       <>
                         <td className="right bd-mat">{fmtN(matCostExcludingInk(r))}</td>
                         <td className="right bd-ink">{fmtN(inkCostTotal(r))}</td>
-                        <td className="right bd-proc">
-                          {fmtN(r.overhead + r.labor_cost + r.tooling)}
-                        </td>
+                        <td className="right bd-proc">{fmtN(procTotal(r))}</td>
                         <td className="right bd-pack">{fmtN(r.packing_ship)}</td>
                         <td className="right bd-sub" style={{ fontWeight: 800 }}>
                           {fmtN(r.s_ttl)}
@@ -645,7 +642,7 @@ export default function CalcCostBreakdown() {
                     </div>
                     <div className="sc-bd-detail-row sc-bd-detail-total">
                       <span>Total Proc</span>
-                      <span>{fmtN(r.overhead + r.labor_cost + r.tooling)}</span>
+                      <span>{fmtN(procTotal(r))}</span>
                     </div>
                   </div>
                   <div className="sc-bd-detail-group">

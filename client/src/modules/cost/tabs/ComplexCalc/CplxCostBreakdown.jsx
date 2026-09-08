@@ -11,6 +11,7 @@ import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import { useI18n } from '../../../../utils/useI18n';
 import { snapshotPricingParams } from '../../../../services/pricingSnapshot';
+import { procTotal } from '../../../../services/kpiBuckets';
 import SnapshotPanel from '../../components/SnapshotPanel';
 import { enumerateTiers, inkCostTotal, matCostExcludingInk } from '../../../../services/calcEngine';
 import { aggregateForTier } from '../../../../services/cplxTierAggregate';
@@ -256,9 +257,7 @@ export default function CplxCostBreakdown() {
                       <>
                         <td className="right bd-mat">{fmtN(matCostExcludingInk(r))}</td>
                         <td className="right bd-ink">{fmtN(inkCostTotal(r))}</td>
-                        <td className="right bd-proc">
-                          {fmtN((r.overhead || 0) + (r.labor_cost || 0) + (r.tooling || 0))}
-                        </td>
+                        <td className="right bd-proc">{fmtN(procTotal(r))}</td>
                         <td className="right bd-pack">{fmtN(r.packing_ship)}</td>
                         <td className="right bd-sub" style={{ fontWeight: 800 }}>
                           {fmtN(r.s_ttl)}
@@ -388,9 +387,7 @@ export default function CplxCostBreakdown() {
                       <>
                         <td className="right bd-mat">{fmtN(matCostExcludingInk(r))}</td>
                         <td className="right bd-ink">{fmtN(inkCostTotal(r))}</td>
-                        <td className="right bd-proc">
-                          {fmtN((r.overhead || 0) + (r.labor_cost || 0) + (r.tooling || 0))}
-                        </td>
+                        <td className="right bd-proc">{fmtN(procTotal(r))}</td>
                         <td className="right bd-pack">{fmtN(r.packing_ship)}</td>
                         <td className="right bd-sub" style={{ fontWeight: 800 }}>
                           {fmtN(r.s_ttl)}
@@ -634,9 +631,7 @@ export default function CplxCostBreakdown() {
                     </div>
                     <div className="sc-bd-detail-row sc-bd-detail-total">
                       <span>Total Proc</span>
-                      <span>
-                        {fmtN((r.overhead || 0) + (r.labor_cost || 0) + (r.tooling || 0))}
-                      </span>
+                      <span>{fmtN(procTotal(r))}</span>
                     </div>
                   </div>
                   <div className="sc-bd-detail-group">
