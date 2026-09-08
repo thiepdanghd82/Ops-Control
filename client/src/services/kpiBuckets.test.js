@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getKpiBuckets } from './kpiBuckets.js';
+import { getKpiBuckets, procTotal } from './kpiBuckets.js';
 
 test('null result → null buckets', () => {
   assert.equal(getKpiBuckets(null), null);
@@ -109,4 +109,75 @@ test('Operator-reported numbers from RFQ ARBHBB000790 (2026-05-26)', () => {
     Math.abs(drop - (r.bd_ink_setup + r.bd_ink_run)) < 1e-9,
     `drop=${drop} should equal bd_ink_setup+bd_ink_run`
   );
+});
+
+// ── procTotal — Cost Breakdown "Total Proc" (setup cluster included) ──
+
+test('procTotal = overhead + labor_cost + tooling + setup mach + setup labor', () => {
+  const r = {
+    overhead: 0.1, // RUN-only (calcEngine strips setup)
+    labor_cost: 0.05, // RUN-only
+    tooling: 0.04,
+    bd_setup_mach: 0.02,
+    bd_setup_labor: 0.03,
+  };
+  assert.equal(procTotal(r), 0.1 + 0.05 + 0.04 + 0.02 + 0.03);
+  // = the sum of the 5 detail rows (Setup Mach + Setup Labor + Overhead +
+  // Labor + Tooling) shown in the panel.
+});
+
+test('REGRESSION — the reported bug: run-only sum understates Total Proc by the setup cluster', () => {
+  const r = {
+    overhead: 0.1,
+    labor_cost: 0.05,
+    tooling: 0.04,
+    bd_setup_mach: 0.02,
+    bd_setup_labor: 0.03,
+  };
+  const buggyRunOnly = r.overhead + r.labor_cost + r.tooling; // the old display formula
+  assert.ok(procTotal(r) > buggyRunOnly, 'Total Proc must exceed the run-only sum');
+  assert.ok(
+    Math.abs(procTotal(r) - buggyRunOnly - (r.bd_setup_mach + r.bd_setup_labor)) < 1e-9,
+    'the gap is exactly the setup cluster'
+  );
+});
+
+test('procTotal == kpiBuckets.process + tooling (one source of truth)', () => {
+  const r = {
+    s_mat_cost: 0.7,
+    overhead: 0.1,
+    labor_cost: 0.05,
+    tooling: 0.04,
+    bd_setup_mach: 0.02,
+    bd_setup_labor: 0.03,
+    packing_ship: 0.01,
+    s_ttl: 0.95,
+  };
+  const b = getKpiBuckets(r);
+  assert.equal(procTotal(r), b.process + b.tooling);
+});
+
+test('reconciliation — Materials + Total Proc + Pack&Ship == s_ttl (no extras/vat)', () => {
+  // s_ttl = s_mat_cost + (setup+run process) + tooling + packing_ship.
+  // Materials(0.7) + procTotal(0.24) + pack(0.01) = 0.95 = s_ttl.
+  const r = {
+    s_mat_cost: 0.7,
+    overhead: 0.1,
+    labor_cost: 0.05,
+    tooling: 0.04,
+    bd_setup_mach: 0.02,
+    bd_setup_labor: 0.03,
+    packing_ship: 0.01,
+    s_ttl: 0.95,
+  };
+  const b = getKpiBuckets(r);
+  const sum = b.ttl_mat + procTotal(r) + b.pack_ship;
+  assert.ok(Math.abs(sum - r.s_ttl) < 1e-9, `sum ${sum} should reconcile to s_ttl ${r.s_ttl}`);
+});
+
+test('procTotal guards null / NaN / missing fields → 0', () => {
+  assert.equal(procTotal(null), 0);
+  assert.equal(procTotal(undefined), 0);
+  assert.equal(procTotal({}), 0);
+  assert.equal(procTotal({ overhead: NaN, labor_cost: 'x', tooling: undefined }), 0);
 });
