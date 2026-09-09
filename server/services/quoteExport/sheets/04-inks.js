@@ -218,7 +218,14 @@ function extractCellValue(col, ink, idx, rowCost, scrapPct = 0) {
     case 'area_pct':
       return numCell(ink.area_pct);
     case 'cov_ovr':
-      return numCell(ink.coverage_override);
+      // Show the EFFECTIVE coverage the app displays: the operator override
+      // when set, else the auto-synced coverage (persisted ink_cover_disp).
+      // Indigo rows carry no coverage ('' → em-dash).
+      if (Number(ink.coverage_override) > 0) return Number(ink.coverage_override);
+      if (rowCost && rowCost.ink_cover_disp !== '' && rowCost.ink_cover_disp != null) {
+        return Number(rowCost.ink_cover_disp);
+      }
+      return '—';
     case 'clicks':
       // Indigo subtypes — calcRowBreakdown only attaches clicks when
       // print_type starts with 'Indigo'. Fall back to ink.clicks for

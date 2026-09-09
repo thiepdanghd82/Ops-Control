@@ -17,6 +17,12 @@
 import { createSheet, freezeTop } from '../workbook.js';
 import { applyStyle } from '../styles.js';
 import { L } from '../i18n.js';
+import { getActiveIdx } from '../tierRows.js';
+
+function num(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
 
 /**
  * @param {import('exceljs').Workbook} wb
@@ -63,7 +69,7 @@ export function buildPackShipSheet(wb, ctx) {
   );
 
   // Shipping
-  writeKV(
+  r = writeKV(
     sheet,
     r,
     L('pack.section_shipping', lang),
@@ -72,6 +78,27 @@ export function buildPackShipSheet(wb, ctx) {
       ['pack.delivery_term', ps.delivery_term, ''],
       ['pack.container_cost', ps.container_cost, 'USD'],
       ['pack.other_ship', ps.other_ship, 'USD'],
+    ],
+    lang
+  );
+
+  // Totals per pcs — the computed Total Packing/pcs + Total Shipping/pcs the
+  // app shows (calcPacking / calcShipping), persisted per tier. The combined
+  // Total Pack & Ship/pcs is the authoritative result.packing_ship.
+  const result = quote.result || {};
+  const activeIdx = getActiveIdx(quote);
+  const tierRes = tierIdx === activeIdx ? result : result.tiers?.[tierIdx] || {};
+  const packingPcs = num(tierRes.packing_pcs) ?? num(result.packing_pcs);
+  const shippingPcs = num(tierRes.shipping_pcs) ?? num(result.shipping_pcs);
+  const packShip = num(result.packing_ship);
+  writeKV(
+    sheet,
+    r,
+    L('pack.section_totals', lang),
+    [
+      ['pack.total_packing_pcs', packingPcs, 'USD'],
+      ['pack.total_shipping_pcs', shippingPcs, 'USD'],
+      ['pack.total_packship_pcs', packShip, 'USD'],
     ],
     lang
   );

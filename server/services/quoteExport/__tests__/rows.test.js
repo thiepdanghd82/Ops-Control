@@ -86,6 +86,9 @@ function makeQuoteWithRows() {
       bd_overhead: 0.005,
       bd_labor: 0.008,
       tooling: 0.003,
+      packing_ship: 0.011,
+      packing_pcs: 0.0004,
+      shipping_pcs: 0.0106,
       // FIX-41 per-row payload
       rows: {
         materials_main: [
@@ -103,7 +106,7 @@ function makeQuoteWithRows() {
         materials_alt: [],
         inks: [
           { setup_cost: 0.003, run_cost: 0.012, total: 0.015, clicks: 8 },
-          { setup_cost: 0.002, run_cost: 0.008, total: 0.01 },
+          { setup_cost: 0.002, run_cost: 0.008, total: 0.01, ink_cover_disp: 400 },
         ],
         processes: [
           {
@@ -144,7 +147,7 @@ function makeQuoteWithRows() {
             materials_alt: [],
             inks: [
               { setup_cost: 0.003, run_cost: 0.012, total: 0.015, clicks: 8 },
-              { setup_cost: 0.002, run_cost: 0.008, total: 0.01 },
+              { setup_cost: 0.002, run_cost: 0.008, total: 0.01, ink_cover_disp: 400 },
             ],
             processes: [
               {
@@ -234,6 +237,30 @@ test('rows: 05-processes renders UOM from persisted speed_uom (rateLookup not wi
   const proc = wb.getWorksheet('05 Processes');
   // UOM = col F (6).
   assert.equal(proc.getCell('F4').value, 'm/min');
+});
+
+test('rows: 04-inks Cov Ovr shows effective coverage from ink_cover_disp (not blank)', async () => {
+  const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
+  const wb = await parse(out.buffer);
+  const inks = wb.getWorksheet('04 Inks');
+  // Cov Ovr = col J (10). Second ink (Flexo, row 5) has ink_cover_disp 400.
+  assert.equal(inks.getCell('J5').value, 400);
+});
+
+test('rows: 07-pack-ship renders Total Packing/pcs + Shipping/pcs + combined', async () => {
+  const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
+  const wb = await parse(out.buffer);
+  const ps = wb.getWorksheet('07 Pack Ship');
+  const findB = (label) => {
+    for (let r = 1; r <= 40; r++) {
+      const a = ps.getCell(`A${r}`).value;
+      if (typeof a === 'string' && a.includes(label)) return ps.getCell(`B${r}`).value;
+    }
+    return undefined;
+  };
+  assert.equal(findB('Total Packing/pcs'), 0.0004);
+  assert.equal(findB('Total Shipping/pcs'), 0.0106);
+  assert.equal(findB('Total Pack & Ship/pcs'), 0.011);
 });
 
 test('rows: 06-balancing renders MOQ/EAU run time + bottleneck from persisted total_time', async () => {

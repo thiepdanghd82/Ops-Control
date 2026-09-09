@@ -1123,7 +1123,9 @@ export function calcAll(st, allSpResults, lib, subproducts, options = {}) {
     vat_loss += r._spVat || 0;
   });
 
-  const packing_ship = calcPacking(st) + calcShipping(st);
+  const packing_pcs = calcPacking(st);
+  const shipping_pcs = calcShipping(st);
+  const packing_ship = packing_pcs + shipping_pcs;
   const s_ttl =
     s_mat_cost +
     overhead +
@@ -1216,6 +1218,8 @@ export function calcAll(st, allSpResults, lib, subproducts, options = {}) {
     vat_loss,
     tooling,
     packing_ship,
+    packing_pcs, // Total Packing/pcs (calcPacking) — for the export's Pack&Ship totals
+    shipping_pcs, // Total Shipping/pcs (calcShipping)
     s_ttl,
     g_ttl,
     va,
@@ -1287,6 +1291,8 @@ const PERSISTED_RESULT_FIELDS = [
   'labor_cost',
   'tooling',
   'packing_ship',
+  'packing_pcs',
+  'shipping_pcs',
   'vat_loss',
   'bd_mat_setup',
   'bd_mat_run',
@@ -2515,6 +2521,8 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
     'bd_setup_mach',
     'bd_setup_labor',
     'packing_ship',
+    'packing_pcs',
+    'shipping_pcs',
     'vat_loss',
     'bd_extra',
   ];
@@ -2603,6 +2611,11 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
         aggregate.packing_ship = (aggregate.packing_ship || 0) + parentPs;
         aggregate.s_ttl = (aggregate.s_ttl || 0) + parentPs;
       }
+      // Expose the packing/shipping split for the export's Pack&Ship totals
+      // (parent-level — per-SP packing is usually 0). The authoritative
+      // combined stays packing_ship.
+      aggregate.packing_pcs = (aggregate.packing_pcs || 0) + parentPacking;
+      aggregate.shipping_pcs = (aggregate.shipping_pcs || 0) + parentShipping;
     } catch (err) {
       errors.push({
         spi: -1,
@@ -2775,7 +2788,13 @@ export function buildStdRowsPayload(state, lib, options = {}) {
     // Phase 3: propagate snapshot through to calcRowBreakdown → calcAll
     // so per-tier per-row breakdown stays consistent with frozen rates
     // when buildQuoteData captures the snapshot at save time.
-    tiers.push({ rows: calcRowBreakdown(tierSt, lib, null, null, options) });
+    // Per-tier Packing/Shipping per-pcs so the export's Pack&Ship totals
+    // reflect this tier's packing override (tierSt already merged it).
+    tiers.push({
+      rows: calcRowBreakdown(tierSt, lib, null, null, options),
+      packing_pcs: calcPacking(tierSt),
+      shipping_pcs: calcShipping(tierSt),
+    });
   }
   return { rows: tiers[activeIdx]?.rows ?? null, tiers };
 }

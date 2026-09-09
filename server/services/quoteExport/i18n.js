@@ -195,6 +195,10 @@ export const LABELS = {
   'pack.delivery_term': { en: 'Delivery Term', vi: 'Điều khoản giao' },
   'pack.container_cost': { en: 'Container cost', vi: 'Chi phí container' },
   'pack.other_ship': { en: 'Other shipping', vi: 'Vận chuyển khác' },
+  'pack.section_totals': { en: 'Totals (per pcs)', vi: 'Tổng (theo pcs)' },
+  'pack.total_packing_pcs': { en: 'Total Packing/pcs', vi: 'Tổng đóng gói/pcs' },
+  'pack.total_shipping_pcs': { en: 'Total Shipping/pcs', vi: 'Tổng vận chuyển/pcs' },
+  'pack.total_packship_pcs': { en: 'Total Pack & Ship/pcs', vi: 'Tổng đóng gói & vận chuyển/pcs' },
 
   // ── 08 Cost Breakdown ───────────────────────────────────────────
   'cb.section': { en: 'Cost Breakdown', vi: 'Phân tích chi phí' },
