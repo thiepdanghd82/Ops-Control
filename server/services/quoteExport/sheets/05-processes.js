@@ -204,7 +204,9 @@ function extractCellValue(col, proc, rate, rowCost) {
     case 'speed':
       return numCell(proc.speed);
     case 'speed_uom':
-      return (rate && rate.speed_uom) || '';
+      // Persisted at calc time (rateLookup isn't wired into the export deps);
+      // fall back to a live rate lookup when one is supplied.
+      return (rowCost && rowCost.speed_uom) || (rate && rate.speed_uom) || '';
     case 'layout':
       return numCell(proc.layout);
     case 'efficiency':

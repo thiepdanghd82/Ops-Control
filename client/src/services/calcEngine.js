@@ -509,6 +509,12 @@ export function calcMat(mat, st, moq, allSpResults, subproducts) {
     qpa_lm,
     mat_po_lm,
     pitch,
+    // Effective width + cavities (row override else Layout fallback) — the
+    // values the app's Width/Cav columns show + the calc actually uses. Exposed
+    // so the export can persist them (server can't recompute the Layout
+    // fallback — calcEngine is client-only).
+    width: effWidth,
+    cavities,
     qpa_lm_raw,
     scrap_factor,
     webs,
@@ -621,7 +627,18 @@ export function calcInk(ink, st, moq, lib, options = {}) {
   }
   const total = setup_s + run_s;
   const vat = st.trade_mode === 'USD(Book)' ? total * 0.15 : 0;
-  return { setup_s, run_s, vat, ink_cover_disp, layout_indigo_disp, total };
+  return {
+    setup_s,
+    run_s,
+    vat,
+    ink_cover_disp,
+    layout_indigo_disp,
+    total,
+    // Effective pitch + width (row override else Layout fallback) so the export
+    // shows the same Pitch/Width the app displays instead of raw 0.
+    pitch,
+    width: _widthMm,
+  };
 }
 
 // ── Process Cost ──
@@ -2644,6 +2661,10 @@ const _matRowFromResult = (r) => ({
   qpa_lm: _num(r && r.qpa_lm),
   mats_moq_m2: _num(r && r.mats_moq_m2),
   mats_moq_lm: _num(r && r.mats_moq_lm),
+  // Effective Pitch / Width / Cavities the app shows (override else Layout).
+  pitch: _num(r && r.pitch),
+  width: _num(r && r.width),
+  cavities: _num(r && r.cavities),
 });
 const _inkRowFromResult = (r, ink) => {
   const row = {
@@ -2654,6 +2675,9 @@ const _inkRowFromResult = (r, ink) => {
     // the actual coverage, not just the print type ('' for the N/A variant).
     ink_cover_disp: r ? r.ink_cover_disp : '',
     layout_indigo_disp: r ? r.layout_indigo_disp : '',
+    // Effective Pitch (mm) / Width the app shows (override else Layout).
+    pitch_mm: _num(r && r.pitch),
+    width: _num(r && r.width),
   };
   // Indigo subtypes display clicks; non-Indigo omit the field.
   if (ink && String(ink.print_type || '').startsWith('Indigo')) {
@@ -2681,6 +2705,7 @@ const _procRowFromResult = (r) => {
     manual_uph: _num(r && r.manualUph), // MAN UPH (derived value the app shows)
     total_time: _num(r && r.total_time), // PROD TIME (minutes; sheet renders /60)
     crew: _num(r && r.crew), // effective crew
+    speed_uom: (r && r.speed_uom) || '', // UOM (from the rate table at calc time)
   };
 };
 

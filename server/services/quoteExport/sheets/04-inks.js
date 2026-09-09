@@ -207,10 +207,12 @@ function extractCellValue(col, ink, idx, rowCost, scrapPct = 0) {
       return ink.print_type || '';
     case 'mesh_spec':
       return ink.mesh_spec || '';
+    // Pitch (mm) / Width — effective value (override else Layout) persisted per
+    // row; fall back to the raw input for legacy quotes.
     case 'pitch_mm':
-      return numCell(ink.pitch_mm);
+      return rowCost && rowCost.pitch_mm > 0 ? rowCost.pitch_mm : numCell(ink.pitch_mm);
     case 'width':
-      return numCell(ink.width);
+      return rowCost && rowCost.width > 0 ? rowCost.width : numCell(ink.width);
     case 'setup_kg':
       return numCell(ink.setup_kg);
     case 'area_pct':

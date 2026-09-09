@@ -119,6 +119,7 @@ function makeQuoteWithRows() {
             manual_uph: 0,
             total_time: 12,
             crew: 2,
+            speed_uom: 'm/min',
           },
         ],
       },
@@ -134,6 +135,9 @@ function makeQuoteWithRows() {
                 qpa_lm: 0.3,
                 mats_moq_m2: 250,
                 mats_moq_lm: 150,
+                pitch: 3.175,
+                width: 320,
+                cavities: 8,
               },
               { setup_cost: 0.008, run_cost: 0.04, total: 0.048 },
             ],
@@ -156,6 +160,7 @@ function makeQuoteWithRows() {
                 manual_uph: 0,
                 total_time: 12,
                 crew: 2,
+                speed_uom: 'm/min',
               },
             ],
           },
@@ -211,6 +216,36 @@ test('rows: 03-materials renders QPA + Mats/MOQ derived columns from result.rows
   assert.equal(mat.getCell('P5').value, 0.3);
   assert.equal(mat.getCell('Q5').value, 250);
   assert.equal(mat.getCell('R5').value, 150);
+});
+
+test('rows: 03-materials renders effective Pitch/Width/Cav from result.rows (not raw 0)', async () => {
+  const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
+  const wb = await parse(out.buffer);
+  const mat = wb.getWorksheet('03 Materials');
+  // Pitch = G (7), Width = H (8), Cav = I (9). Persisted effective values.
+  assert.equal(mat.getCell('G5').value, 3.175);
+  assert.equal(mat.getCell('H5').value, 320);
+  assert.equal(mat.getCell('I5').value, 8);
+});
+
+test('rows: 05-processes renders UOM from persisted speed_uom (rateLookup not wired)', async () => {
+  const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
+  const wb = await parse(out.buffer);
+  const proc = wb.getWorksheet('05 Processes');
+  // UOM = col F (6).
+  assert.equal(proc.getCell('F4').value, 'm/min');
+});
+
+test('rows: 06-balancing renders MOQ/EAU run time + bottleneck from persisted total_time', async () => {
+  const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
+  const wb = await parse(out.buffer);
+  const bal = wb.getWorksheet('06 Balancing');
+  // MOQ 1000, EAU 10000. Header row 6; first WC data row 7. total_time 12 min
+  // → MOQ run time 0.2h; EAU run time 0.2 × (10000/1000) = 2h; shifts 2/8=0.25.
+  assert.equal(bal.getCell('E7').value, 0.2); // MOQ run time
+  assert.equal(bal.getCell('F7').value, 2); // EAU run time
+  assert.equal(bal.getCell('G7').value, 0.25); // # shifts
+  assert.equal(bal.getCell('H7').value, '◄ BN'); // sole process → bottleneck
 });
 
 test('rows: 04-inks renders setup_cost + clicks for Indigo row', async () => {

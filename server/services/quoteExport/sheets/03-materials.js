@@ -261,12 +261,15 @@ function extractCellValue(col, mat, rowCost, scrapPct = 0) {
       return numCell(mat.usage);
     case 'setup_lm':
       return numCell(mat.setup_lm);
+    // Pitch / Width / Cav — show the effective value the app displays + calc
+    // uses (row override else Layout fallback), persisted per row; fall back to
+    // the raw input for legacy quotes.
     case 'pitch':
-      return numCell(mat.pitch_ovr);
+      return rowCost && rowCost.pitch > 0 ? rowCost.pitch : numCell(mat.pitch_ovr);
     case 'width':
-      return numCell(mat.width);
+      return rowCost && rowCost.width > 0 ? rowCost.width : numCell(mat.width);
     case 'cav':
-      return numCell(mat.cavities);
+      return rowCost && rowCost.cavities > 0 ? rowCost.cavities : numCell(mat.cavities);
     case 'offcut':
       return mat.offcut_yn ?? '';
     case 'offcut_pct':
