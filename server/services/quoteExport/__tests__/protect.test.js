@@ -58,9 +58,9 @@ async function loadWb(buf) {
   return wb;
 }
 
-test('protect: every visible sheet has protection enabled after export', async () => {
+test('protect: every visible sheet has protection enabled after export (customer)', async () => {
   const out = await exportQuote(makeQuote(), {
-    variant: 'internal',
+    variant: 'customer',
     lang: 'en',
     hmacKey: HMAC_KEY,
   });
@@ -76,9 +76,26 @@ test('protect: every visible sheet has protection enabled after export', async (
   }
 });
 
-test('protect: hidden _Audit + _Schema sheets are also protected', async () => {
+test('protect: INTERNAL variant leaves sheets editable (no protection, null hash)', async () => {
   const out = await exportQuote(makeQuote(), {
     variant: 'internal',
+    lang: 'en',
+    hmacKey: HMAC_KEY,
+  });
+  const wb = await loadWb(out.buffer);
+  for (const sheet of wb.worksheets) {
+    const proto = sheet.sheetProtection;
+    assert.ok(
+      !proto || proto.sheet !== true,
+      `internal sheet ${sheet.name} must NOT be protection-locked`
+    );
+  }
+  assert.equal(out.auditMeta[0].wbPasswordHash, null, 'internal export has no workbook password');
+});
+
+test('protect: hidden _Audit + _Schema sheets are also protected (customer)', async () => {
+  const out = await exportQuote(makeQuote(), {
+    variant: 'customer',
     lang: 'en',
     hmacKey: HMAC_KEY,
   });
@@ -131,7 +148,7 @@ test('protect: PROTECT_OPTIONS locks edit but allows sort + autoFilter (read UX)
 });
 
 test('protect: every workbook export gets a NEW random password (audit hash differs)', async () => {
-  const a = await exportQuote(makeQuote(), { variant: 'internal', lang: 'en', hmacKey: HMAC_KEY });
-  const b = await exportQuote(makeQuote(), { variant: 'internal', lang: 'en', hmacKey: HMAC_KEY });
+  const a = await exportQuote(makeQuote(), { variant: 'customer', lang: 'en', hmacKey: HMAC_KEY });
+  const b = await exportQuote(makeQuote(), { variant: 'customer', lang: 'en', hmacKey: HMAC_KEY });
   assert.notEqual(a.auditMeta[0].wbPasswordHash, b.auditMeta[0].wbPasswordHash);
 });

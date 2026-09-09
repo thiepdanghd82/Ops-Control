@@ -379,9 +379,16 @@ async function buildOneXlsx(ctx) {
 
   // 6. MVP-2 Item D — per-sheet password protection. MUST run last so
   //    no later mutation is silently rejected. Sheet protection is
-  //    cosmetic; the real defense is HMAC above.
-  const password = generateWorkbookPassword();
-  const { passwordHash } = await protectAllSheets(wb, password);
+  //    cosmetic (the real defense is the HMAC above), so it applies to the
+  //    CUSTOMER copy only — the INTERNAL copy is left editable so operators
+  //    can work with their own data without a discarded random password
+  //    (Henry, 2026-09-09). _Audit / _Schema / HMAC are unchanged for both.
+  let password = null;
+  let passwordHash = null;
+  if (variant === 'customer') {
+    password = generateWorkbookPassword();
+    ({ passwordHash } = await protectAllSheets(wb, password));
+  }
 
   // CSV path reads cell values off `wb` directly (sheet protection +
   // watermark don't alter values), so skip the xlsx byte serialization.
@@ -396,8 +403,9 @@ async function buildOneXlsx(ctx) {
       // Dev-only: sample.gen.js sets includePassword=true so the
       // generator can print the password for manual Excel inspection.
       // Prod route MUST NOT set this flag — the audit log only stores
-      // the hash; raw passwords are not retrievable post-export.
-      ...(ctx.includePassword ? { _devPassword: password } : {}),
+      // the hash; raw passwords are not retrievable post-export. Null on
+      // the internal variant (no protection applied).
+      ...(ctx.includePassword && password ? { _devPassword: password } : {}),
     },
   };
 }
