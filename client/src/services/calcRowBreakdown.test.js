@@ -144,6 +144,44 @@ test('calcRowBreakdown: each material row has setup_cost / run_cost / total Numb
   assert.equal(typeof m.total, 'number');
 });
 
+test('calcRowBreakdown: persists the displayed derived fields for export parity', () => {
+  const rows = calcRowBreakdown(makeStdState(), makeLib());
+  // Materials — QPA + Mats/MOQ + effective Pitch/Width/Cavities.
+  const m = rows.materials_main[0];
+  for (const k of [
+    'qpa_m2',
+    'qpa_lm',
+    'mats_moq_m2',
+    'mats_moq_lm',
+    'pitch',
+    'width',
+    'cavities',
+  ]) {
+    assert.equal(typeof m[k], 'number', `material row must persist ${k}`);
+  }
+  // Processes — split + throughput + UOM string.
+  const p = rows.processes[0];
+  for (const k of [
+    'setup_mach',
+    'setup_labor',
+    'run_mach',
+    'run_labor',
+    'tooling',
+    'uph',
+    'manual_uph',
+    'total_time',
+    'crew',
+  ]) {
+    assert.equal(typeof p[k], 'number', `process row must persist ${k}`);
+  }
+  assert.equal(typeof p.speed_uom, 'string', 'process row must persist speed_uom');
+  // Inks — effective Pitch (mm) + Width for the export.
+  if (rows.inks[0]) {
+    assert.equal(typeof rows.inks[0].pitch_mm, 'number', 'ink row must persist pitch_mm');
+    assert.equal(typeof rows.inks[0].width, 'number', 'ink row must persist width');
+  }
+});
+
 test('calcRowBreakdown: returns empty arrays when state or lib missing', () => {
   const empty = calcRowBreakdown(null, null);
   assert.deepEqual(empty.materials_main, []);

@@ -124,6 +124,8 @@ export const LABELS = {
   'mat.l_per_sheet': { en: 'L/Sheet', vi: 'L/tờ' },
   'mat.webs': { en: 'Webs', vi: 'Webs' },
   'mat.scrap_pct': { en: 'Scrap %', vi: 'Scrap %' },
+  'mat.mats_moq_m2': { en: 'Mats/MOQ (m²)', vi: 'Vật tư/MOQ (m²)' },
+  'mat.mats_moq_lm': { en: 'Mats/MOQ (LM)', vi: 'Vật tư/MOQ (LM)' },
   'mat.setup_cost': { en: 'Setup Cost', vi: 'Chi phí setup' },
   'mat.run_cost': { en: 'Run Cost', vi: 'Chi phí run' },
 
@@ -161,7 +163,14 @@ export const LABELS = {
   'proc.mach_rate': { en: 'Machine Rate', vi: 'Đơn giá máy' },
   'proc.labor_rate': { en: 'Labor Rate', vi: 'Đơn giá nhân công' },
   'proc.crew': { en: 'Crew', vi: 'Người vận hành' },
-  'proc.uph_derived': { en: 'UPH', vi: 'UPH' },
+  'proc.uph_derived': { en: 'MC UPH', vi: 'UPH máy' },
+  'proc.repeat': { en: 'Rpt', vi: 'Lặp' },
+  'proc.prod_time': { en: 'Prod Time (h)', vi: 'Giờ SX' },
+  'proc.s_mach': { en: 'S.Mach', vi: 'Setup máy' },
+  'proc.s_labor': { en: 'S.Labor', vi: 'Setup NC' },
+  'proc.r_mach': { en: 'R.Mach', vi: 'Run máy' },
+  'proc.r_labor': { en: 'R.Labor', vi: 'Run NC' },
+  'proc.tooling': { en: 'Tooling', vi: 'Tooling' },
 
   // ── 06 Balancing ────────────────────────────────────────────────
   'bal.section': { en: 'Capacity Balancing', vi: 'Cân đối công suất' },
@@ -186,6 +195,10 @@ export const LABELS = {
   'pack.delivery_term': { en: 'Delivery Term', vi: 'Điều khoản giao' },
   'pack.container_cost': { en: 'Container cost', vi: 'Chi phí container' },
   'pack.other_ship': { en: 'Other shipping', vi: 'Vận chuyển khác' },
+  'pack.section_totals': { en: 'Totals (per pcs)', vi: 'Tổng (theo pcs)' },
+  'pack.total_packing_pcs': { en: 'Total Packing/pcs', vi: 'Tổng đóng gói/pcs' },
+  'pack.total_shipping_pcs': { en: 'Total Shipping/pcs', vi: 'Tổng vận chuyển/pcs' },
+  'pack.total_packship_pcs': { en: 'Total Pack & Ship/pcs', vi: 'Tổng đóng gói & vận chuyển/pcs' },
 
   // ── 08 Cost Breakdown ───────────────────────────────────────────
   'cb.section': { en: 'Cost Breakdown', vi: 'Phân tích chi phí' },
@@ -208,6 +221,7 @@ export const LABELS = {
   'cb.packaging': { en: 'Packaging', vi: 'Đóng gói' },
   'cb.vat_loss': { en: 'VAT loss', vi: 'Hao VAT' },
   'cb.extra': { en: 'Extra', vi: 'Khác' },
+  'cb.sga': { en: 'SG&A', vi: 'SG&A' },
   'cb.s_total': { en: 'S.TOTAL (supplier)', vi: 'S.TOTAL (NCC)' },
   'cb.g_total': { en: 'G.TOTAL (purchase)', vi: 'G.TOTAL (mua)' },
   'cb.margin_usd': { en: 'Margin (USD)', vi: 'Margin (USD)' },

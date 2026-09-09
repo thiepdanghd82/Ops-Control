@@ -36,6 +36,7 @@ import './ExportModal.css';
 
 const DEFAULT_VARIANT = 'internal';
 const DEFAULT_LANG = 'bilingual';
+const DEFAULT_FORMAT = 'xlsx';
 
 /**
  * @param {object} props
@@ -53,6 +54,7 @@ export default function ExportModal({ open, quote, onClose, onSuccess }) {
   // so a previous selection from another row doesn't leak across.
   const [variant, setVariant] = useState(DEFAULT_VARIANT);
   const [lang, setLang] = useState(DEFAULT_LANG);
+  const [format, setFormat] = useState(DEFAULT_FORMAT);
   const [allTiers, setAllTiers] = useState(true);
   const [selected, setSelected] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -65,6 +67,7 @@ export default function ExportModal({ open, quote, onClose, onSuccess }) {
     if (open) {
       setVariant(DEFAULT_VARIANT);
       setLang(DEFAULT_LANG);
+      setFormat(DEFAULT_FORMAT);
       setAllTiers(true);
       setSelected({});
       setSubmitting(false);
@@ -106,6 +109,7 @@ export default function ExportModal({ open, quote, onClose, onSuccess }) {
         variant,
         lang,
         tiers: resolveSelectedTiers({ allTiers, selected }, tiers),
+        format,
         signal: ctrl.signal,
       });
       onSuccess?.(out.filename);
@@ -166,6 +170,32 @@ export default function ExportModal({ open, quote, onClose, onSuccess }) {
                 onChange={() => setVariant('internal')}
               />
               <span>{t('qexp.field.variant.internal')}</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset className="qe-fieldset" disabled={submitting}>
+          <legend className="qe-legend">{t('qexp.field.format.label')}</legend>
+          <div className="qe-radio-row">
+            <label className="qe-radio">
+              <input
+                type="radio"
+                name="qe-format"
+                value="xlsx"
+                checked={format === 'xlsx'}
+                onChange={() => setFormat('xlsx')}
+              />
+              <span>{t('qexp.field.format.xlsx')}</span>
+            </label>
+            <label className="qe-radio">
+              <input
+                type="radio"
+                name="qe-format"
+                value="csv"
+                checked={format === 'csv'}
+                onChange={() => setFormat('csv')}
+              />
+              <span>{t('qexp.field.format.csv')}</span>
             </label>
           </div>
         </fieldset>

@@ -272,6 +272,8 @@
     "labor_cost": 0.0009096422073984232,
     "tooling": 0.02,
     "packing_ship": 0.00506,
+    "packing_pcs": 0.00106,
+    "shipping_pcs": 0.004,
     "vat_loss": 0,
     "bd_mat_setup": 0.000984,
     "bd_mat_run": 0.05589732800336629,

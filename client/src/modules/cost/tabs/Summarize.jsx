@@ -25,6 +25,9 @@ import ScopedFilterBar from '../components/ScopedFilterBar';
 import ColumnsToggle from '../../../components/Shared/ColumnsToggle';
 import { loadVisibleColumns } from '../../../components/Shared/ColumnsToggle.helpers';
 import { useFloatingMenu, useMergedMenuRef } from '../../../components/Shared/useFloatingMenu';
+import { useAccess } from '../../../context/useAccess';
+import ExportModal from './QuoteHistory/ExportModal';
+import './QuoteHistory/ExportModal.css';
 import {
   SUMMARIZE_COLUMNS_STORAGE_KEY,
   SUMMARIZE_DEFAULT_HIDDEN_KEYS,
@@ -382,6 +385,16 @@ export default function Summarize() {
     onError: (err) => err?.name !== 'AbortError' && logErr('Summarize getQuotes failed:', err),
   });
   const quotes = useMemo(() => (Array.isArray(rawQuotes) ? rawQuotes : []), [rawQuotes]);
+  // Raw quote by id — the ctx-menu Export needs the full quote (state /
+  // _version) to drive the tier picker; Summarize rows are flattened per-tier.
+  const quotesById = useMemo(() => {
+    const m = new Map();
+    for (const q of quotes) m.set(q.id, q);
+    return m;
+  }, [quotes]);
+  const { access: tabAccess } = useAccess();
+  const canExport = tabAccess('quote-history') !== 'hidden';
+  const [exportModal, setExportModal] = useState(null);
   const [ctxMenu, setCtxMenu] = useState(null); // { x, y, row }
   const ctxRef = useRef(null);
   // Fixed, edge-aware placement (escapes the table overflow clipping) +
@@ -954,6 +967,22 @@ export default function Summarize() {
             <span>Open</span>
             <span className="sum-ctx-shortcut">⌘O</span>
           </button>
+          {canExport && (
+            <button
+              className="sum-ctx-item"
+              onClick={() => {
+                const q = quotesById.get(ctxMenu.row.quote_id) || {
+                  id: ctxMenu.row.quote_id,
+                  type: ctxMenu.row.type,
+                };
+                setExportModal({ quote: q });
+                setCtxMenu(null);
+              }}
+            >
+              <span className="sum-ctx-icon">⬇️</span>
+              <span>Export…</span>
+            </button>
+          )}
           <div className="sum-ctx-divider" />
           {/* Color bar — tints RFQ NO text only */}
           <div className="sum-ctx-colorbar">
@@ -999,6 +1028,13 @@ export default function Summarize() {
           </button>
         </div>
       )}
+
+      {/* Export modal — reuses the QuoteHistory ExportModal (all tabs, xlsx/csv). */}
+      <ExportModal
+        open={!!exportModal}
+        quote={exportModal?.quote || null}
+        onClose={() => setExportModal(null)}
+      />
     </div>
   );
 }

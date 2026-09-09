@@ -211,6 +211,9 @@ function buildInternalRows(result, tier, lang) {
     [L('cb.packing_ship', lang), num(result.packing_ship)],
     [L('cb.vat_loss', lang), num(result.vat_loss)],
     [L('cb.extra', lang), num(result.bd_extra)],
+    // SG&A — matches the app's Cost Breakdown waterfall row (result.sga,
+    // already persisted). Renders 0/— on quotes/sites with no SGA rate.
+    [L('cb.sga', lang), num(result.sga)],
   ];
 }
 
