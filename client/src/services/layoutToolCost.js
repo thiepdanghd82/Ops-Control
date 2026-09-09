@@ -171,6 +171,60 @@ export function availableToolCostSources(sources, processes, currentIdx) {
   });
 }
 
+// Process → allowed Layout source kinds. A Print process only takes the Plate
+// (khuôn in); a cutting process only takes Cutter (dao cut); everything else
+// (Assembly / Inspection / ManualWork — e.g. a hand-typed Jig&Fixture) takes
+// none. Classify by process_type first; only 'Others'/blank falls back to
+// tool_type. Keeps the picker honest so a Print row never lists dao-cut costs.
+const PRINT_PROCESS_TYPES = new Set(['Print']);
+const CUT_PROCESS_TYPES = new Set(['Pre_Cut', 'Die_Cut', 'Special_cut']);
+const NONE_PROCESS_TYPES = new Set(['Assembly', 'Inspection', 'ManualWork']);
+// tool_type fallback (DDL tool_life keys): Pressplate → plate; cutting/die
+// tools → cutter; Jig / CNC → none.
+const CUT_TOOL_TYPES = new Set([
+  'Knife',
+  'Etching',
+  'Carving',
+  'Metal',
+  'Rotary',
+  'Stencil',
+  'Pinnacle Die',
+  'RDC',
+]);
+
+/**
+ * Which Layout source kinds a process may assign.
+ * @param {object} proc
+ * @returns {Set<'plate'|'cutter'>} empty set = no Layout source allowed.
+ */
+export function allowedSourceKinds(proc) {
+  const p = proc || {};
+  const pt = String(p.process_type || '').trim();
+  if (PRINT_PROCESS_TYPES.has(pt)) return new Set(['plate']);
+  if (CUT_PROCESS_TYPES.has(pt)) return new Set(['cutter']);
+  if (NONE_PROCESS_TYPES.has(pt)) return new Set();
+  // pt === 'Others' or blank → fall back to tool_type.
+  const tt = String(p.tool_type || '').trim();
+  if (tt === 'Pressplate') return new Set(['plate']);
+  if (CUT_TOOL_TYPES.has(tt)) return new Set(['cutter']);
+  return new Set();
+}
+
+/**
+ * Sources a process may PICK from: filtered to the kinds it's allowed
+ * (allowedSourceKinds) AND not taken by another row (availableToolCostSources).
+ * @param {Array<{id:string,kind:string}>} sources
+ * @param {Array<{tool_cost_src?:string}>} processes
+ * @param {number} currentIdx
+ * @param {object} proc
+ * @returns {Array<{id:string,kind:string}>}
+ */
+export function pickableToolCostSources(sources, processes, currentIdx, proc) {
+  const kinds = allowedSourceKinds(proc);
+  const byKind = (sources || []).filter((s) => s && kinds.has(s.kind));
+  return availableToolCostSources(byKind, processes, currentIdx);
+}
+
 /**
  * Suggested (pre-highlighted) source for a process: the Plate source for a
  * Pressplate tool_type or a Print process_type. Cutters are unrestricted (no

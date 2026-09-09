@@ -21,7 +21,11 @@
 import { useEffect, useRef, useState } from 'react';
 import Modal from '../../../components/Shared/Modal';
 import DecimalInput from '../../../utils/DecimalInput';
-import { availableToolCostSources, suggestedSrcForProcess } from '../../../services/layoutToolCost';
+import {
+  pickableToolCostSources,
+  suggestedSrcForProcess,
+  allowedSourceKinds,
+} from '../../../services/layoutToolCost';
 
 // Session-scoped: the info modal shows only the FIRST time any picker opens.
 let INFO_SHOWN = false;
@@ -124,8 +128,23 @@ export default function ToolCostCell({
     );
   }
 
-  // ── Unassigned → manual input + ⇄ Sync button (+ picker dropdown) ──
-  const available = availableToolCostSources(sources, processes, idx);
+  // ── Unassigned ──
+  // A Print process may only take the Plate (khuôn in); a cutting process only
+  // Cutter (dao cut); everything else (Assembly / Inspection / ManualWork —
+  // e.g. a hand-typed Jig&Fixture) takes NO Layout source → hide ⇄, manual only.
+  const canSync = allowedSourceKinds(proc).size > 0;
+  if (!canSync) {
+    return (
+      <DecimalInput
+        value={proc.tool_cost}
+        onChange={onManualChange}
+        placeholder={placeholder}
+        className={inputClassName}
+      />
+    );
+  }
+
+  const available = pickableToolCostSources(sources, processes, idx, proc);
   const suggestedId = suggestedSrcForProcess(proc);
 
   return (

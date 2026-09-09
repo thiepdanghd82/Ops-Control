@@ -7,6 +7,8 @@ import {
   availableToolCostSources,
   suggestedSrcForProcess,
   layoutCutContext,
+  allowedSourceKinds,
+  pickableToolCostSources,
 } from './layoutToolCost.js';
 import { computePlateCost, getPlateBaseCost } from './plateCost.js';
 import { computeCutterCost, effCavity } from './cutterCost.js';
@@ -201,6 +203,80 @@ test('suggestedSrcForProcess suggests plate for Pressplate tool_type or Print pr
   assert.equal(suggestedSrcForProcess({ tool_type: 'Knife/Wood', process_type: 'Die_Cut' }), null);
   assert.equal(suggestedSrcForProcess({}), null);
   assert.equal(suggestedSrcForProcess(null), null);
+});
+
+// ── allowedSourceKinds — Print→plate, Cut→cutter, else none ──────────────────
+
+test('allowedSourceKinds — Print process → {plate}', () => {
+  assert.deepEqual([...allowedSourceKinds({ process_type: 'Print' })], ['plate']);
+});
+
+test('allowedSourceKinds — cutting processes → {cutter}', () => {
+  for (const pt of ['Pre_Cut', 'Die_Cut', 'Special_cut']) {
+    assert.deepEqual([...allowedSourceKinds({ process_type: pt })], ['cutter'], pt);
+  }
+});
+
+test('allowedSourceKinds — Assembly/Inspection/ManualWork → none (no fallback)', () => {
+  for (const pt of ['Assembly', 'Inspection', 'ManualWork']) {
+    // even with a plate-ish tool_type, an explicit non-tool process → none.
+    assert.equal(allowedSourceKinds({ process_type: pt, tool_type: 'Pressplate' }).size, 0, pt);
+  }
+});
+
+test('allowedSourceKinds — Others/blank falls back to tool_type', () => {
+  assert.deepEqual(
+    [...allowedSourceKinds({ process_type: 'Others', tool_type: 'Pressplate' })],
+    ['plate']
+  );
+  assert.deepEqual([...allowedSourceKinds({ process_type: '', tool_type: 'Knife' })], ['cutter']);
+  assert.deepEqual(
+    [...allowedSourceKinds({ process_type: 'Others', tool_type: 'Pinnacle Die' })],
+    ['cutter']
+  );
+  assert.equal(allowedSourceKinds({ process_type: 'Others', tool_type: 'Jig' }).size, 0);
+  assert.equal(allowedSourceKinds({}).size, 0);
+});
+
+// ── pickableToolCostSources — kind filter + no-dup pool ───────────────────────
+
+const KIND_SOURCES = [
+  { id: 'plate', kind: 'plate', label: 'Plate · Letter Press', cost: 23 },
+  { id: 'cutter-0', kind: 'cutter', label: 'Cutter 1 · Knife/Wood', cost: 36.4 },
+  { id: 'cutter-1', kind: 'cutter', label: 'Cutter 2 · Knife/Wood', cost: 54.6 },
+];
+
+test('pickable — a Print row sees ONLY the plate (no dao-cut costs)', () => {
+  const procs = [{ process_type: 'Print' }];
+  assert.deepEqual(
+    pickableToolCostSources(KIND_SOURCES, procs, 0, procs[0]).map((s) => s.id),
+    ['plate']
+  );
+});
+
+test('pickable — a Die_Cut row sees ONLY cutters (no plate)', () => {
+  const procs = [{ process_type: 'Die_Cut' }];
+  assert.deepEqual(
+    pickableToolCostSources(KIND_SOURCES, procs, 0, procs[0]).map((s) => s.id),
+    ['cutter-0', 'cutter-1']
+  );
+});
+
+test('pickable — an Inspection row sees NOTHING', () => {
+  const procs = [{ process_type: 'Inspection' }];
+  assert.deepEqual(pickableToolCostSources(KIND_SOURCES, procs, 0, procs[0]), []);
+});
+
+test('pickable — kind filter composes with the no-duplicate pool', () => {
+  // cutter-0 taken by row 1; the Die_Cut row 0 then only sees cutter-1.
+  const procs = [
+    { process_type: 'Die_Cut' },
+    { process_type: 'Die_Cut', tool_cost_src: 'cutter-0' },
+  ];
+  assert.deepEqual(
+    pickableToolCostSources(KIND_SOURCES, procs, 0, procs[0]).map((s) => s.id),
+    ['cutter-1']
+  );
 });
 
 // ── layoutCutContext — geometry mirror ───────────────────────────────────────
