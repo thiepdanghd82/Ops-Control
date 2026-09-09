@@ -84,7 +84,18 @@ function makeQuote(resultOverrides = {}) {
         materials_main: [{ setup_cost: 0.002, run_cost: 0.073, total: 0.075 }],
         materials_alt: [],
         inks: [{ setup_cost: 0.01, run_cost: 0.025, total: 0.035 }],
-        processes: [{ setup_cost: 0.009, run_cost: 0.029, total: 0.038 }],
+        processes: [
+          {
+            setup_cost: 0.009,
+            run_cost: 0.029,
+            total: 0.038,
+            setup_mach: 0.004,
+            setup_labor: 0.005,
+            run_mach: 0.02,
+            run_labor: 0.006,
+            tooling: 0.003,
+          },
+        ],
       },
       ...resultOverrides,
     },
@@ -111,11 +122,10 @@ test('subtotal: Materials shows bd_mat_setup + bd_mat_run', async () => {
   const mat = wb.getWorksheet('03 Materials');
   const r = findSubtotalRow(mat, 'Subtotal');
   assert.ok(r, 'Subtotal row not found on Materials');
-  // setup_cost (col O=15), run_cost (col P=16), total (col Q=17)
-  // Shifted +1 after drw_material column inserted at position 3.
-  const setup = mat.getCell(r, 15).value;
-  const run = mat.getCell(r, 16).value;
-  const total = mat.getCell(r, 17).value;
+  // Full-parity order: setup_cost (col T=20), run_cost (U=21), total (V=22).
+  const setup = mat.getCell(r, 20).value;
+  const run = mat.getCell(r, 21).value;
+  const total = mat.getCell(r, 22).value;
   assert.equal(setup, 0.002);
   assert.equal(run, 0.073);
   assert.ok(Math.abs(Number(total) - 0.075) < 1e-9);
@@ -127,30 +137,27 @@ test('subtotal: Inks shows bd_ink_setup + bd_ink_run', async () => {
   const inks = wb.getWorksheet('04 Inks');
   const r = findSubtotalRow(inks, 'Subtotal');
   assert.ok(r, 'Subtotal row not found on Inks');
-  const setup = inks.getCell(r, 14).value;
-  const run = inks.getCell(r, 15).value;
-  const total = inks.getCell(r, 16).value;
+  // scrap_pct inserted after clicks shifts money cols +1: setup O(15) run P(16) total Q(17).
+  const setup = inks.getCell(r, 15).value;
+  const run = inks.getCell(r, 16).value;
+  const total = inks.getCell(r, 17).value;
   assert.equal(setup, 0.01);
   assert.equal(run, 0.025);
   assert.ok(Math.abs(Number(total) - 0.035) < 1e-9);
 });
 
-test('subtotal: Processes derives Setup + Run + Total from bd_setup_*/bd_labor/bd_overhead/tooling', async () => {
+test('subtotal: Processes sums the persisted per-row split (S.Mach/S.Labor/R.Mach/R.Labor/Tooling)', async () => {
   const out = await exportQuote(makeQuote(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
   const proc = wb.getWorksheet('05 Processes');
   const r = findSubtotalRow(proc, 'Subtotal');
   assert.ok(r, 'Subtotal row not found on Processes');
-  // setup_cost = col 17 (Q), run_cost = 18 (R), total = 19 (S)
-  const setup = proc.getCell(r, 17).value;
-  const run = proc.getCell(r, 18).value;
-  const total = proc.getCell(r, 19).value;
-  // setup = 0.004 + 0.005 = 0.009
-  // total = 0.02 + 0.015 + 0.003 = 0.038
-  // run = total - setup = 0.029
-  assert.ok(Math.abs(Number(setup) - 0.009) < 1e-9);
-  assert.ok(Math.abs(Number(total) - 0.038) < 1e-9);
-  assert.ok(Math.abs(Number(run) - 0.029) < 1e-9);
+  // Full-parity columns: Q setup_mach · R setup_labor · S run_mach · T run_labor · U tooling.
+  assert.ok(Math.abs(Number(proc.getCell(r, 17).value) - 0.004) < 1e-9); // Q
+  assert.ok(Math.abs(Number(proc.getCell(r, 18).value) - 0.005) < 1e-9); // R
+  assert.ok(Math.abs(Number(proc.getCell(r, 19).value) - 0.02) < 1e-9); // S
+  assert.ok(Math.abs(Number(proc.getCell(r, 20).value) - 0.006) < 1e-9); // T
+  assert.ok(Math.abs(Number(proc.getCell(r, 21).value) - 0.003) < 1e-9); // U
 });
 
 test('subtotal: omitted when result has no aggregate (legacy/empty quote)', async () => {

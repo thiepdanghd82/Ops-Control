@@ -7,34 +7,36 @@
 import { createSheet, freezeTop, hideColumns } from '../workbook.js';
 import { applyStyle } from '../styles.js';
 import { L, biLabel } from '../i18n.js';
-import {
-  pickStdTierRows,
-  pickCpxTierRows,
-  sumRowCosts,
-  getActiveIdx,
-  getTierMoq,
-} from '../tierRows.js';
+import { pickStdTierRows, pickCpxTierRows, getActiveIdx, getTierMoq } from '../tierRows.js';
 
+// Column order matches the app Processes table (CalcProcesses.jsx). Inputs
+// come from state.processes[i] / rate lookup; `computedOnly` columns come from
+// the persisted per-row breakdown (result.rows.processes[i]) — the derived
+// MC UPH / MAN UPH / PROD TIME + the setup/run mach·labor split + tooling that
+// operators see live. `internalOnly` trailing columns keep data the current
+// export renders (rates / extra) without cluttering the customer copy.
 const PROC_COLS = [
   { key: 'process_type', label: 'proc.process_type', width: 14 },
   { key: 'workcenter', label: 'proc.workcenter', width: 14 },
+  { key: 'repeat', label: 'proc.repeat', width: 6, numeric: true },
+  { key: 'crew', label: 'proc.crew', width: 8, numeric: true, computedOnly: true },
   { key: 'speed', label: 'proc.speed', width: 10, numeric: true },
   { key: 'speed_uom', label: 'proc.speed_uom', width: 10 },
   { key: 'layout', label: 'proc.layout', width: 9, numeric: true },
   { key: 'efficiency', label: 'proc.efficiency', width: 11, numeric: true },
   { key: 'setup_h', label: 'proc.setup_h', width: 9, numeric: true },
   { key: 'scrap_pct', label: 'proc.scrap_pct', width: 10, numeric: true },
-  { key: 'manual_uph', label: 'proc.manual_uph', width: 11, numeric: true },
+  { key: 'uph', label: 'proc.uph_derived', width: 9, numeric: true, computedOnly: true },
+  { key: 'manual_uph', label: 'proc.manual_uph', width: 11, numeric: true, computedOnly: true },
   { key: 'tool_cost', label: 'proc.tool_cost', width: 11, numeric: true, customerHidden: true },
   { key: 'tool_type', label: 'proc.tool_type', width: 12 },
   { key: 'tool_life', label: 'proc.tool_life', width: 11, numeric: true, customerHidden: true },
-  { key: 'extra_cost', label: 'proc.extra_cost', width: 11, numeric: true },
-  { key: 'mach_rate', label: 'proc.mach_rate', width: 11, numeric: true },
-  { key: 'labor_rate', label: 'proc.labor_rate', width: 11, numeric: true },
-  { key: 'crew', label: 'proc.crew', width: 8, numeric: true },
-  { key: 'setup_cost', label: 'mat.setup_cost', width: 12, numeric: true, computedOnly: true },
-  { key: 'run_cost', label: 'mat.run_cost', width: 12, numeric: true, computedOnly: true },
-  { key: 'total', label: 'common.total', width: 12, numeric: true, computedOnly: true },
+  { key: 'prod_time', label: 'proc.prod_time', width: 10, numeric: true, computedOnly: true },
+  { key: 'setup_mach', label: 'proc.s_mach', width: 10, numeric: true, computedOnly: true },
+  { key: 'setup_labor', label: 'proc.s_labor', width: 10, numeric: true, computedOnly: true },
+  { key: 'run_mach', label: 'proc.r_mach', width: 10, numeric: true, computedOnly: true },
+  { key: 'run_labor', label: 'proc.r_labor', width: 10, numeric: true, computedOnly: true },
+  { key: 'tooling', label: 'proc.tooling', width: 10, numeric: true, computedOnly: true },
 ];
 
 /**
@@ -46,6 +48,7 @@ export function buildProcessesSheet(wb, ctx) {
   const tierIdx = Number.isInteger(ctx.tierIdx) ? ctx.tierIdx : getActiveIdx(quote);
   const activeIdx = getActiveIdx(quote);
   const isActive = tierIdx === activeIdx;
+  const LASTCOL = letterFor(PROC_COLS.length); // full-width merge span
   const sheet = createSheet(wb, {
     name: '05 Processes',
     bannerText: L('proc.section', lang),
@@ -88,13 +91,13 @@ export function buildProcessesSheet(wb, ctx) {
 
   for (const group of procGroups) {
     if (group.label) {
-      sheet.mergeCells(`A${r}:S${r}`);
+      sheet.mergeCells(`A${r}:${LASTCOL}${r}`);
       sheet.getCell(`A${r}`).value = group.label;
       applyStyle(sheet.getCell(`A${r}`), 'section');
       r += 1;
     }
     if (group.procs.length === 0) {
-      sheet.mergeCells(`A${r}:S${r}`);
+      sheet.mergeCells(`A${r}:${LASTCOL}${r}`);
       sheet.getCell(`A${r}`).value = '—';
       applyStyle(sheet.getCell(`A${r}`), 'body');
       r += 1;
@@ -109,7 +112,10 @@ export function buildProcessesSheet(wb, ctx) {
         const cell = sheet.getCell(r, ci + 1);
         cell.value = extractCellValue(c, proc, rate, rowCost);
         applyStyle(cell, c.numeric ? (c.computedOnly ? 'numCost' : 'num') : 'body');
-        if (c.computedOnly && !rowCost) {
+        // Note only when a persisted-derived column is genuinely missing
+        // (legacy quote / pre-parity rows) — crew falls back to the rate so
+        // it never needs it.
+        if (c.computedOnly && c.key !== 'crew' && cell.value === '—') {
           cell.note = 'Computed at calc time, not persisted (legacy quote — re-save to refresh).';
         }
       });
@@ -117,58 +123,34 @@ export function buildProcessesSheet(wb, ctx) {
     }
   }
 
-  // Subtotal. Two distinct paths:
-  //   - Active tier: keep the snapshot-driven derivation that combines
-  //     setup_mach + setup_labor + overhead + labor + tooling. These
-  //     buckets are the calcEngine result for the active tier; they
-  //     account for the full per-process cost including labor + OH
-  //     that aren't visible in the per-row Setup/Run cells.
-  //   - Non-active tier: labor / overhead / tooling are NOT recomputed
-  //     server-side (calcEngine is locked client-only). Derive the
-  //     subtotal from the per-tier row sums instead so the cell totals
-  //     match what's rendered. The footnote below explains the gap.
-  let procSetup;
-  let procRun;
-  let procTotal;
-  if (isActive) {
-    const setupMach = Number(result.bd_setup_mach) || 0;
-    const setupLabor = Number(result.bd_setup_labor) || 0;
-    const overhead = Number(result.bd_overhead) || 0;
-    const labor = Number(result.bd_labor) || 0;
-    const tooling = Number(result.tooling) || 0;
-    procSetup = setupMach + setupLabor;
-    procTotal = overhead + labor + tooling;
-    procRun = procTotal - procSetup;
-  } else {
-    const combined = procGroups
-      .map((g) => g.rowBreakdown)
-      .filter((arr) => Array.isArray(arr))
-      .reduce(
-        (acc, arr) => {
-          const t = sumRowCosts(arr);
-          acc.setup += t.setup;
-          acc.run += t.run;
-          acc.any = acc.any || t.hasAny;
-          return acc;
-        },
-        { setup: 0, run: 0, any: false }
-      );
-    procSetup = combined.any ? combined.setup : 0;
-    procRun = combined.any ? combined.run : 0;
-    procTotal = procSetup + procRun;
+  // Subtotal = column-wise sum of the persisted per-row split, which equals
+  // the app's Processes-tab header totals by construction (CalcProcesses sums
+  // the same setup_mach/setup_labor/run_mach/run_labor/tooling per row). Works
+  // uniformly for the active AND non-active tier — each tier's rowBreakdown
+  // carries its own split — with no server-side recompute. Legacy quotes whose
+  // rows predate the split contribute 0 (they re-save to populate).
+  const split = { setup_mach: 0, setup_labor: 0, run_mach: 0, run_labor: 0, tooling: 0 };
+  let hasSplit = false;
+  for (const g of procGroups) {
+    if (!Array.isArray(g.rowBreakdown)) continue;
+    for (const rc of g.rowBreakdown) {
+      if (!rc) continue;
+      for (const k of Object.keys(split)) {
+        if (rc[k] != null) {
+          split[k] += Number(rc[k]) || 0;
+          hasSplit = true;
+        }
+      }
+    }
   }
-  if (procSetup > 0 || procTotal > 0) {
+  if (hasSplit) {
     r += 1;
-    writeSubtotalRow(sheet, r, PROC_COLS, L('common.subtotal', lang), {
-      setup_cost: procSetup,
-      run_cost: procRun >= 0 ? procRun : null,
-      total: procTotal,
-    });
+    writeSubtotalRow(sheet, r, PROC_COLS, L('common.subtotal', lang), split);
     r += 1;
   }
 
   r += 1;
-  sheet.mergeCells(`A${r}:S${r}`);
+  sheet.mergeCells(`A${r}:${LASTCOL}${r}`);
   const note = sheet.getCell(`A${r}`);
   note.value = L('common.computed_at_calc', lang);
   applyStyle(note, 'footnote');
@@ -180,7 +162,7 @@ export function buildProcessesSheet(wb, ctx) {
   // active-tier aggregates surfaced on the Cost Breakdown sheet.
   if (!isActive) {
     r += 1;
-    sheet.mergeCells(`A${r}:S${r}`);
+    sheet.mergeCells(`A${r}:${LASTCOL}${r}`);
     const fn = sheet.getCell(`A${r}`);
     fn.value = renderActiveTierFootnote(quote, activeIdx, tierIdx, lang);
     fn.alignment = { wrapText: true, vertical: 'top' };
@@ -200,17 +182,25 @@ export function buildProcessesSheet(wb, ctx) {
 
 function extractCellValue(col, proc, rate, rowCost) {
   if (col.computedOnly) {
-    if (!rowCost) return '—';
-    if (col.key === 'setup_cost') return rowCost.setup_cost ?? '—';
-    if (col.key === 'run_cost') return rowCost.run_cost ?? '—';
-    if (col.key === 'total') return rowCost.total ?? '—';
-    return '—';
+    // Effective crew — persisted derived value, else the rate-table crew.
+    if (col.key === 'crew') {
+      if (rowCost && rowCost.crew != null) return Number(rowCost.crew);
+      return rate && rate.crew != null ? Number(rate.crew) : '—';
+    }
+    // PROD TIME persisted in minutes; the app displays hours.
+    if (col.key === 'prod_time') {
+      return rowCost && rowCost.total_time != null ? rowCost.total_time / 60 : '—';
+    }
+    // uph / manual_uph / setup_mach / setup_labor / run_mach / run_labor / tooling
+    return rowCost && rowCost[col.key] != null ? rowCost[col.key] : '—';
   }
   switch (col.key) {
     case 'process_type':
       return proc.process_type || '';
     case 'workcenter':
       return proc.workcenter || '';
+    case 'repeat':
+      return numCell(proc.repeat != null ? proc.repeat : 1);
     case 'speed':
       return numCell(proc.speed);
     case 'speed_uom':
@@ -223,22 +213,12 @@ function extractCellValue(col, proc, rate, rowCost) {
       return numCell(proc.setup_h);
     case 'scrap_pct':
       return numCell(proc.scrap_pct);
-    case 'manual_uph':
-      return numCell(proc.manual_uph);
     case 'tool_cost':
       return numCell(proc.tool_cost);
     case 'tool_type':
       return proc.tool_type || '';
     case 'tool_life':
       return numCell(proc.tool_life);
-    case 'extra_cost':
-      return numCell(proc.extra_cost);
-    case 'mach_rate':
-      return rate && rate.machine_rate != null ? Number(rate.machine_rate) : '—';
-    case 'labor_rate':
-      return rate && rate.labor_rate != null ? Number(rate.labor_rate) : '—';
-    case 'crew':
-      return rate && rate.crew != null ? Number(rate.crew) : '—';
     default:
       return '';
   }

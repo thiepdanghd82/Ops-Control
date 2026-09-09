@@ -112,7 +112,7 @@ function makeStdMultiTier() {
         materials_main: [{ setup_cost: 0.05, run_cost: 0.1, total: 0.15 }],
         materials_alt: [],
         inks: [{ setup_cost: 0.003, run_cost: 0.012, total: 0.015, clicks: 8 }],
-        processes: [{ setup_cost: 0.006, run_cost: 0.038, total: 0.044 }],
+        processes: [{ setup_cost: 0.006, run_cost: 0.038, total: 0.044, setup_mach: 0.006 }],
       },
       tiers: [
         // Tier 0 — active. Match the mirror exactly.
@@ -121,7 +121,7 @@ function makeStdMultiTier() {
             materials_main: [{ setup_cost: 0.05, run_cost: 0.1, total: 0.15 }],
             materials_alt: [],
             inks: [{ setup_cost: 0.003, run_cost: 0.012, total: 0.015, clicks: 8 }],
-            processes: [{ setup_cost: 0.006, run_cost: 0.038, total: 0.044 }],
+            processes: [{ setup_cost: 0.006, run_cost: 0.038, total: 0.044, setup_mach: 0.006 }],
           },
         },
         // Tier 1 — DIFFERENT numbers.
@@ -130,7 +130,7 @@ function makeStdMultiTier() {
             materials_main: [{ setup_cost: 0.025, run_cost: 0.08, total: 0.105 }],
             materials_alt: [],
             inks: [{ setup_cost: 0.0015, run_cost: 0.01, total: 0.0115, clicks: 8 }],
-            processes: [{ setup_cost: 0.003, run_cost: 0.03, total: 0.033 }],
+            processes: [{ setup_cost: 0.003, run_cost: 0.03, total: 0.033, setup_mach: 0.003 }],
           },
         },
         // Tier 2 — different again.
@@ -139,7 +139,7 @@ function makeStdMultiTier() {
             materials_main: [{ setup_cost: 0.005, run_cost: 0.06, total: 0.065 }],
             materials_alt: [],
             inks: [{ setup_cost: 0.0003, run_cost: 0.008, total: 0.0083, clicks: 8 }],
-            processes: [{ setup_cost: 0.0006, run_cost: 0.024, total: 0.0246 }],
+            processes: [{ setup_cost: 0.0006, run_cost: 0.024, total: 0.0246, setup_mach: 0.0006 }],
           },
         },
       ],
@@ -280,19 +280,19 @@ function makeCpxMultiTier() {
 // shifted it +1). For Cpx the section banner adds one extra row per SP
 // so the first data row drifts; the helpers below scan defensively.
 function readFirstMaterialSetupCost(sheet) {
-  // Walk rows 3..30 looking for the first row where col O is a number.
+  // Full-parity order: Materials Setup Cost = col T (20). The inserted
+  // QPA/Mats-MOQ columns are '—' in these fixtures so scanning col 20 is safe.
   for (let r = 3; r <= 30; r++) {
-    const v = sheet.getCell(r, 15).value;
+    const v = sheet.getCell(r, 20).value;
     if (typeof v === 'number') return v;
   }
   return null;
 }
 
 function readFirstInkSetupCost(sheet) {
-  // Inks header is row 3; data starts row 4 (Std) or 5 (Cpx — extra
-  // section banner). Walk defensively from row 4.
+  // scrap_pct inserted after clicks shifts Inks Setup Cost to col O (15).
   for (let r = 4; r <= 30; r++) {
-    const v = sheet.getCell(r, 14).value;
+    const v = sheet.getCell(r, 15).value;
     if (typeof v === 'number') return v;
   }
   return null;
@@ -367,7 +367,8 @@ test('multi-tier Std: Processes Setup Cost differs per tier xlsx', async () => {
   const zip = await unzipAll(out.buffer);
   const t0 = pickXlsxByMoq(zip, '500');
   const t1 = pickXlsxByMoq(zip, '1000');
-  // Processes Setup Cost = col 17 (Q). Header row 3; data row 4 (Std).
+  // Processes S.Mach = col 17 (Q) in the full-parity layout. Header row 3;
+  // data row 4 (Std). Per-tier setup_mach differs → proves the right tier landed.
   const p0 = t0.getWorksheet('05 Processes').getCell(4, 17).value;
   const p1 = t1.getWorksheet('05 Processes').getCell(4, 17).value;
   assert.equal(p0, 0.006);
@@ -386,9 +387,9 @@ test('multi-tier Std: Materials Subtotal derived from per-tier rows', async () =
   const matT1 = t1.getWorksheet('03 Materials');
   const subRow = findSubtotalRow(matT1);
   assert.ok(subRow, 'Subtotal row missing on tier 1 Materials');
-  // Tier 1 has setup_cost=0.025, run_cost=0.08
-  assert.equal(matT1.getCell(subRow, 15).value, 0.025);
-  assert.equal(matT1.getCell(subRow, 16).value, 0.08);
+  // Tier 1 has setup_cost=0.025, run_cost=0.08 (cols T=20, U=21).
+  assert.equal(matT1.getCell(subRow, 20).value, 0.025);
+  assert.equal(matT1.getCell(subRow, 21).value, 0.08);
 });
 
 // Active-tier subtotal still uses bd_* (rounding-free aggregate)
@@ -408,8 +409,8 @@ test('multi-tier Std: active-tier Materials Subtotal uses bd_mat_* (not row sum)
   const wb = await parseXlsx(out.buffer);
   const mat = wb.getWorksheet('03 Materials');
   const subRow = findSubtotalRow(mat);
-  // Active tier subtotal must still be bd_mat_setup = 0.05, not 0.999
-  assert.equal(mat.getCell(subRow, 15).value, 0.05);
+  // Active tier subtotal must still be bd_mat_setup = 0.05, not 0.999 (col T=20).
+  assert.equal(mat.getCell(subRow, 20).value, 0.05);
 });
 
 // Cpx differential

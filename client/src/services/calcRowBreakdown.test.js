@@ -144,6 +144,30 @@ test('calcRowBreakdown: each material row has setup_cost / run_cost / total Numb
   assert.equal(typeof m.total, 'number');
 });
 
+test('calcRowBreakdown: persists the displayed derived fields for export parity', () => {
+  const rows = calcRowBreakdown(makeStdState(), makeLib());
+  // Materials — QPA + Mats/MOQ columns the app shows.
+  const m = rows.materials_main[0];
+  for (const k of ['qpa_m2', 'qpa_lm', 'mats_moq_m2', 'mats_moq_lm']) {
+    assert.equal(typeof m[k], 'number', `material row must persist ${k}`);
+  }
+  // Processes — MC UPH / MAN UPH / PROD TIME + the setup/run split + tooling.
+  const p = rows.processes[0];
+  for (const k of [
+    'setup_mach',
+    'setup_labor',
+    'run_mach',
+    'run_labor',
+    'tooling',
+    'uph',
+    'manual_uph',
+    'total_time',
+    'crew',
+  ]) {
+    assert.equal(typeof p[k], 'number', `process row must persist ${k}`);
+  }
+});
+
 test('calcRowBreakdown: returns empty arrays when state or lib missing', () => {
   const empty = calcRowBreakdown(null, null);
   assert.deepEqual(empty.materials_main, []);

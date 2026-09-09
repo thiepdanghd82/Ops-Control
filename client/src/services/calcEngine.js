@@ -2628,16 +2628,32 @@ const _num = (v) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
+// Row extractors persist the SUBSET of each result the export tabs display —
+// the money columns PLUS the derived per-row values operators see in the app
+// (QPA/Mats-per-MOQ for materials; MC UPH / MAN UPH / PROD TIME + the
+// setup/run mach/labor split + tooling for processes). calcEngine stays the
+// only calc engine; the server renders these persisted numbers (Export-parity,
+// 2026-09-09 — extends the MES-3-FIX-41 pattern). Additive: legacy quotes lack
+// the new keys and the sheets fall back to '—' per key until re-saved.
 const _matRowFromResult = (r) => ({
   setup_cost: _num(r && r.setup_s),
   run_cost: _num(r && r.run_s),
   total: _num(r && r.total_s),
+  // Displayed derived columns (CalcMaterials QPA + Mats/MOQ).
+  qpa_m2: _num(r && r.qpa_m2),
+  qpa_lm: _num(r && r.qpa_lm),
+  mats_moq_m2: _num(r && r.mats_moq_m2),
+  mats_moq_lm: _num(r && r.mats_moq_lm),
 });
 const _inkRowFromResult = (r, ink) => {
   const row = {
     setup_cost: _num(r && r.setup_s),
     run_cost: _num(r && r.run_s),
     total: _num(r && r.total),
+    // Snapshot the synced coverage display so the export's Cov Ovr note shows
+    // the actual coverage, not just the print type ('' for the N/A variant).
+    ink_cover_disp: r ? r.ink_cover_disp : '',
+    layout_indigo_disp: r ? r.layout_indigo_disp : '',
   };
   // Indigo subtypes display clicks; non-Indigo omit the field.
   if (ink && String(ink.print_type || '').startsWith('Indigo')) {
@@ -2651,9 +2667,20 @@ const _procRowFromResult = (r) => {
   const tooling = _num(r && r.tooling);
   const extra = _num(r && r.extra);
   return {
+    // Retained: collapsed money columns (subtotal fold + BC).
     setup_cost: setup,
     run_cost: run + tooling + extra,
     total: setup + run + tooling + extra,
+    // Displayed split + throughput (CalcProcesses result columns).
+    setup_mach: _num(r && r.setup_mach),
+    setup_labor: _num(r && r.setup_labor),
+    run_mach: _num(r && r.run_mach),
+    run_labor: _num(r && r.run_labor),
+    tooling,
+    uph: _num(r && r.uph), // MC UPH
+    manual_uph: _num(r && r.manualUph), // MAN UPH (derived value the app shows)
+    total_time: _num(r && r.total_time), // PROD TIME (minutes; sheet renders /60)
+    crew: _num(r && r.crew), // effective crew
   };
 };
 

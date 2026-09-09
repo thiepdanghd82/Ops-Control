@@ -89,7 +89,15 @@ function makeQuoteWithRows() {
       // FIX-41 per-row payload
       rows: {
         materials_main: [
-          { setup_cost: 0.012, run_cost: 0.06, total: 0.072 },
+          {
+            setup_cost: 0.012,
+            run_cost: 0.06,
+            total: 0.072,
+            qpa_m2: 0.5,
+            qpa_lm: 0.3,
+            mats_moq_m2: 250,
+            mats_moq_lm: 150,
+          },
           { setup_cost: 0.008, run_cost: 0.04, total: 0.048 },
         ],
         materials_alt: [],
@@ -97,13 +105,36 @@ function makeQuoteWithRows() {
           { setup_cost: 0.003, run_cost: 0.012, total: 0.015, clicks: 8 },
           { setup_cost: 0.002, run_cost: 0.008, total: 0.01 },
         ],
-        processes: [{ setup_cost: 0.005, run_cost: 0.016, total: 0.021 }],
+        processes: [
+          {
+            setup_cost: 0.005,
+            run_cost: 0.016,
+            total: 0.021,
+            setup_mach: 0.002,
+            setup_labor: 0.003,
+            run_mach: 0.01,
+            run_labor: 0.006,
+            tooling: 0.003,
+            uph: 5000,
+            manual_uph: 0,
+            total_time: 12,
+            crew: 2,
+          },
+        ],
       },
       tiers: [
         {
           rows: {
             materials_main: [
-              { setup_cost: 0.012, run_cost: 0.06, total: 0.072 },
+              {
+                setup_cost: 0.012,
+                run_cost: 0.06,
+                total: 0.072,
+                qpa_m2: 0.5,
+                qpa_lm: 0.3,
+                mats_moq_m2: 250,
+                mats_moq_lm: 150,
+              },
               { setup_cost: 0.008, run_cost: 0.04, total: 0.048 },
             ],
             materials_alt: [],
@@ -111,7 +142,22 @@ function makeQuoteWithRows() {
               { setup_cost: 0.003, run_cost: 0.012, total: 0.015, clicks: 8 },
               { setup_cost: 0.002, run_cost: 0.008, total: 0.01 },
             ],
-            processes: [{ setup_cost: 0.005, run_cost: 0.016, total: 0.021 }],
+            processes: [
+              {
+                setup_cost: 0.005,
+                run_cost: 0.016,
+                total: 0.021,
+                setup_mach: 0.002,
+                setup_labor: 0.003,
+                run_mach: 0.01,
+                run_labor: 0.006,
+                tooling: 0.003,
+                uph: 5000,
+                manual_uph: 0,
+                total_time: 12,
+                crew: 2,
+              },
+            ],
           },
         },
       ],
@@ -137,11 +183,11 @@ test('rows: 03-materials renders real setup_cost from result.rows', async () => 
   const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
   const mat = wb.getWorksheet('03 Materials');
-  // Header at row 4 (sheet banner + section banner + header); first data row 5.
-  // Setup Cost = col N (14), Run Cost = col O (15), Total = col P (16).
-  const setup1 = mat.getCell('O5').value;
-  const run1 = mat.getCell('P5').value;
-  const total1 = mat.getCell('Q5').value;
+  // Header at row 4; first data row 5. Full-parity order pushed the money
+  // columns right: Setup Cost = T (20), Run Cost = U (21), Total = V (22).
+  const setup1 = mat.getCell('T5').value;
+  const run1 = mat.getCell('U5').value;
+  const total1 = mat.getCell('V5').value;
   assert.equal(setup1, 0.012);
   assert.equal(run1, 0.06);
   assert.equal(total1, 0.072);
@@ -151,17 +197,29 @@ test('rows: 03-materials renders second material row from result.rows[1]', async
   const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
   const mat = wb.getWorksheet('03 Materials');
-  const setup2 = mat.getCell('O6').value;
+  const setup2 = mat.getCell('T6').value;
   assert.equal(setup2, 0.008);
+});
+
+test('rows: 03-materials renders QPA + Mats/MOQ derived columns from result.rows', async () => {
+  const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
+  const wb = await parse(out.buffer);
+  const mat = wb.getWorksheet('03 Materials');
+  // First data row 5: QPA m² = O (15), QPA lm = P (16), Mats/MOQ m² = Q (17),
+  // Mats/MOQ lm = R (18).
+  assert.equal(mat.getCell('O5').value, 0.5);
+  assert.equal(mat.getCell('P5').value, 0.3);
+  assert.equal(mat.getCell('Q5').value, 250);
+  assert.equal(mat.getCell('R5').value, 150);
 });
 
 test('rows: 04-inks renders setup_cost + clicks for Indigo row', async () => {
   const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
   const inks = wb.getWorksheet('04 Inks');
-  // First ink data row 4 (header row 3). setup_cost = col N (14).
-  // clicks = col K (11).
-  const setup = inks.getCell('N4').value;
+  // First ink data row 4 (header row 3). scrap_pct inserted after clicks
+  // pushes setup_cost to col O (15); clicks stays col K (11).
+  const setup = inks.getCell('O4').value;
   const clicks = inks.getCell('K4').value;
   assert.equal(setup, 0.003);
   assert.equal(clicks, 8);
@@ -181,10 +239,17 @@ test('rows: 05-processes renders setup + run + total from result.rows', async ()
   const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
   const proc = wb.getWorksheet('05 Processes');
-  // First data row 4 (header row 3). Setup Cost = col Q (17), Run = R (18), Total = S (19).
-  assert.equal(proc.getCell('Q4').value, 0.005);
-  assert.equal(proc.getCell('R4').value, 0.016);
-  assert.equal(proc.getCell('S4').value, 0.021);
+  // First data row 4 (header row 3). Full-parity columns (app order):
+  //   D crew · K MC UPH · P Prod Time(h) · Q S.Mach · R S.Labor · S R.Mach
+  //   · T R.Labor · U Tooling.
+  assert.equal(proc.getCell('D4').value, 2); // crew
+  assert.equal(proc.getCell('K4').value, 5000); // MC UPH (uph)
+  assert.equal(proc.getCell('P4').value, 0.2); // Prod time = total_time 12 / 60
+  assert.equal(proc.getCell('Q4').value, 0.002); // setup_mach
+  assert.equal(proc.getCell('R4').value, 0.003); // setup_labor
+  assert.equal(proc.getCell('S4').value, 0.01); // run_mach
+  assert.equal(proc.getCell('T4').value, 0.006); // run_labor
+  assert.equal(proc.getCell('U4').value, 0.003); // tooling
 });
 
 test('rows: legacy quote (no result.rows) → 422 legacy_no_rows', async () => {
@@ -274,6 +339,6 @@ test('rows: aggregate subtotal row coexists with per-row data', async () => {
     }
   }
   assert.ok(subtotalRow, 'Subtotal row should still be present');
-  assert.equal(mat.getCell(`O${subtotalRow}`).value, 0.02);
-  assert.equal(mat.getCell(`P${subtotalRow}`).value, 0.1);
+  assert.equal(mat.getCell(`T${subtotalRow}`).value, 0.02);
+  assert.equal(mat.getCell(`U${subtotalRow}`).value, 0.1);
 });
