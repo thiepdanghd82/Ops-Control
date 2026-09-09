@@ -75,15 +75,23 @@ test('normalizeErrorBody: unrecognised body shape falls back to http_<status>', 
 
 // ─── buildExportRequestBody ────────────────────────────────────────
 
-test('buildExportRequestBody: passes through variant/lang/tiers verbatim', () => {
+test('buildExportRequestBody: passes through variant/lang/tiers + defaults format=xlsx', () => {
   assert.deepEqual(buildExportRequestBody({ variant: 'customer', lang: 'en', tiers: 'all' }), {
     variant: 'customer',
     lang: 'en',
     tiers: 'all',
+    format: 'xlsx',
   });
   assert.deepEqual(
     buildExportRequestBody({ variant: 'internal', lang: 'bilingual', tiers: [0, 2] }),
-    { variant: 'internal', lang: 'bilingual', tiers: [0, 2] }
+    { variant: 'internal', lang: 'bilingual', tiers: [0, 2], format: 'xlsx' }
+  );
+});
+
+test('buildExportRequestBody: passes through format=csv when supplied', () => {
+  assert.deepEqual(
+    buildExportRequestBody({ variant: 'customer', lang: 'en', tiers: 'all', format: 'csv' }),
+    { variant: 'customer', lang: 'en', tiers: 'all', format: 'csv' }
   );
 });
 
@@ -132,6 +140,7 @@ test('exportQuote: POST sends correct body + Content-Type + CSRF skipped when no
     variant: 'internal',
     lang: 'bilingual',
     tiers: 'all',
+    format: 'xlsx',
   });
   assert.equal(out.kind, 'xlsx');
   assert.equal(out.filename, 'Quote_test.xlsx');

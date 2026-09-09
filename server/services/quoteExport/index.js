@@ -19,6 +19,7 @@
 import crypto from 'node:crypto';
 import { createWorkbook } from './workbook.js';
 import { buildZip } from './zip.js';
+import { workbookToCsvEntries } from './csv.js';
 import { build1TierName, buildZipName } from './filenames.js';
 import { enumerateTiers } from './tierUtils.js';
 import { buildCoverSheet } from './sheets/00-cover.js';
@@ -57,6 +58,7 @@ export class QuoteExportError extends Error {
  * @typedef {object} ExportOpts
  * @property {'customer'|'internal'} variant
  * @property {'en'|'vi'|'bilingual'} [lang='bilingual']
+ * @property {'xlsx'|'csv'} [format='xlsx']
  * @property {number[]|'all'} [tiers='all']
  * @property {string} [exportedBy]
  * @property {string} [engineSha]
@@ -110,6 +112,10 @@ export async function exportQuote(quote, opts) {
   if (!['en', 'vi', 'bilingual'].includes(lang)) {
     throw new QuoteExportError('bad-lang', `lang must be 'en'|'vi'|'bilingual', got ${lang}`, 400);
   }
+  const format = opts?.format || 'xlsx';
+  if (format !== 'xlsx' && format !== 'csv') {
+    throw new QuoteExportError('bad-format', `format must be 'xlsx'|'csv', got ${format}`, 400);
+  }
 
   // MVP-2: HMAC key is REQUIRED. Tests pass an override; route gets it
   // via deps wiring; preflight rejects boot if env missing.
@@ -132,13 +138,14 @@ export async function exportQuote(quote, opts) {
   for (const idx of requestedIdxs) {
     const tier = tiers[idx];
     const kpis = pickKpisForTier(quote, idx, tier);
-    const { buffer, audit } = await buildOneXlsx({
+    const { buffer, audit, wb } = await buildOneXlsx({
       quote,
       tier,
       tierIdx: idx,
       tierKpis: kpis,
       variant,
       lang,
+      format,
       exportedBy: opts?.exportedBy || '-',
       engineSha: opts?.engineSha,
       rateLookup: opts?.rateLookup,
@@ -156,7 +163,38 @@ export async function exportQuote(quote, opts) {
       version: quote._version ?? 1,
       now: opts?.now,
     });
-    builtPerTier.push({ idx, filename, buffer, audit: { ...audit, tierIdx: idx, filename } });
+    builtPerTier.push({ idx, filename, buffer, wb, audit: { ...audit, tierIdx: idx, filename } });
+  }
+
+  // CSV: serialize every VISIBLE sheet of each tier's workbook to a
+  // BOM-prefixed RFC-4180 CSV and bundle them into a .zip. Single-tier is
+  // still a zip (a quote has 11 tabs → 11 CSVs); multi-tier folders the
+  // CSVs per tier so parity with the xlsx-per-tier zip holds.
+  if (format === 'csv') {
+    const single = builtPerTier.length === 1;
+    let entries;
+    let filename;
+    if (single) {
+      entries = workbookToCsvEntries(builtPerTier[0].wb);
+      filename = builtPerTier[0].filename.replace(/\.xlsx$/i, '_csv.zip');
+    } else {
+      entries = builtPerTier.flatMap((e) =>
+        workbookToCsvEntries(e.wb, { prefix: e.filename.replace(/\.xlsx$/i, '') })
+      );
+      filename = buildZipName({
+        rfq: quote.state?.rfq_number || quote.label,
+        customer: quote.state?.end_cu || quote.state?.direct_cu,
+        version: quote._version ?? 1,
+        now: opts?.now,
+      }).replace(/\.zip$/i, '_csv.zip');
+    }
+    const zipBuf = await buildZip(entries);
+    return {
+      kind: 'zip',
+      filename,
+      buffer: zipBuf,
+      auditMeta: builtPerTier.map((e) => e.audit),
+    };
   }
 
   if (builtPerTier.length === 1) {
@@ -275,6 +313,7 @@ async function buildOneXlsx(ctx) {
     tierKpis,
     variant,
     lang,
+    format = 'xlsx',
     exportedBy,
     engineSha,
     rateLookup,
@@ -344,9 +383,12 @@ async function buildOneXlsx(ctx) {
   const password = generateWorkbookPassword();
   const { passwordHash } = await protectAllSheets(wb, password);
 
-  const buffer = Buffer.from(await wb.xlsx.writeBuffer());
+  // CSV path reads cell values off `wb` directly (sheet protection +
+  // watermark don't alter values), so skip the xlsx byte serialization.
+  const buffer = format === 'csv' ? null : Buffer.from(await wb.xlsx.writeBuffer());
   return {
     buffer,
+    wb,
     audit: {
       wbPasswordHash: passwordHash,
       schemaSha256: encoded.sha256,

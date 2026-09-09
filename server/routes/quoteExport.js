@@ -70,6 +70,15 @@ export function createQuoteExportRouter(deps) {
         status: 400,
       });
     }
+    const format = body.format || 'xlsx';
+    if (!['xlsx', 'csv'].includes(format)) {
+      return res.status(400).json({
+        type: '/errors/bad-value',
+        title: `format must be xlsx|csv`,
+        field: 'format',
+        status: 400,
+      });
+    }
 
     const quote = deps.getQuoteById(id);
     if (!quote) {
@@ -85,6 +94,7 @@ export function createQuoteExportRouter(deps) {
       const out = await exportQuote(quote, {
         variant: body.variant,
         lang,
+        format,
         tiers: body.tiers,
         exportedBy: cu.username || '-',
         engineSha: deps.engineSha,
@@ -121,6 +131,7 @@ export function createQuoteExportRouter(deps) {
             version: quote._version ?? null,
             variant: body.variant,
             lang,
+            format,
             tiers: body.tiers ?? 'all',
             kind: out.kind,
             filename: out.filename,

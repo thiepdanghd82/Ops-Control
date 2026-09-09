@@ -1194,6 +1194,18 @@ export default function QuoteHistory() {
             <span>Open With</span>
             <span className="qh-ctx-arrow">›</span>
           </button>
+          {canExport && (
+            <button
+              className="qh-ctx-item"
+              onClick={() => {
+                setExportModal({ quote: ctxMenu.quote });
+                setCtxMenu(null);
+              }}
+            >
+              <span className="qh-ctx-icon">⬇️</span>
+              <span>Export…</span>
+            </button>
+          )}
           <div className="qh-ctx-divider" />
           {/* Color bar — changes RFQ NO text color only */}
           <div className="qh-ctx-colorbar">

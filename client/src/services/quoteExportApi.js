@@ -160,13 +160,15 @@ export function normalizeErrorBody(body, status) {
  * client-side modal collects checkbox state then collapses to one of
  * the two shapes here.
  *
- * @param {{variant: 'customer'|'internal', lang: 'en'|'vi'|'bilingual', tiers: 'all'|number[]}} opts
+ * @param {{variant: 'customer'|'internal', lang: 'en'|'vi'|'bilingual', tiers: 'all'|number[], format?: 'xlsx'|'csv'}} opts
  */
 export function buildExportRequestBody(opts) {
   return {
     variant: opts.variant,
     lang: opts.lang,
     tiers: opts.tiers,
+    // Default 'xlsx' keeps the wire shape BC for any caller that omits it.
+    format: opts.format || 'xlsx',
   };
 }
 
@@ -181,6 +183,7 @@ export function buildExportRequestBody(opts) {
  * @param {'customer'|'internal'} args.variant
  * @param {'en'|'vi'|'bilingual'} args.lang
  * @param {'all'|number[]} args.tiers
+ * @param {'xlsx'|'csv'} [args.format='xlsx']
  * @param {AbortSignal} [args.signal]   for cancel-on-modal-close
  * @param {typeof fetch} [args.fetchImpl]   injection for tests
  * @param {(blob: Blob, name: string) => void} [args.downloadImpl]   ditto
@@ -193,6 +196,7 @@ export async function exportQuote(args) {
     variant,
     lang,
     tiers,
+    format = 'xlsx',
     signal,
     fetchImpl = typeof fetch !== 'undefined' ? fetch : null,
     downloadImpl = triggerBlobDownload,
@@ -216,7 +220,7 @@ export async function exportQuote(args) {
       method: 'POST',
       headers,
       credentials: 'include',
-      body: JSON.stringify(buildExportRequestBody({ variant, lang, tiers })),
+      body: JSON.stringify(buildExportRequestBody({ variant, lang, tiers, format })),
       signal,
     });
   } catch (err) {
