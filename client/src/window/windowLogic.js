@@ -59,30 +59,37 @@ export const MULTI_INSTANCE_TABS = new Set([
 ]);
 
 /**
- * Tabs whose content is a data grid. Measured 2026-09-10 at viewport
- * 1440x900: the widest of these tables reports scrollWidth 3333px while a
- * default window is 900px, so a floating window shows roughly a quarter of
- * the columns and leaves 38% of the screen empty behind it. These open
- * maximized; the operator can still restore, move and resize them.
+ * Tabs that stay FLOATING. Everything else opens filling the frame.
  *
- * Calculators are deliberately absent — comparing Standard against Complex
- * side by side is the reason the MDI shell exists.
+ * Inverted on purpose. The first pass listed which tabs to maximize, and
+ * that allowlist covered 9 of 28 — the other 19 still opened as 900px
+ * windows, and the next person to add a data screen would have hit the
+ * same gap. Naming the exceptions is the shorter, more stable list.
+ *
+ * These six are exceptions because they are meant to sit side by side:
+ * comparing Standard against Complex is the reason the MDI shell exists,
+ * the three calculators get opened next to a quote being priced, and chat
+ * belongs alongside the work rather than on top of it.
+ *
+ * Why it matters: measured 2026-09-10 at viewport 1440x900, a default
+ * window is 898px — 62% of the viewport — while the widest table reports
+ * scrollWidth 3333px. A floating window shows about a quarter of the
+ * columns and leaves 38% of the screen empty behind it.
  */
-export const MAXIMIZED_BY_DEFAULT = new Set([
-  'quote-history',
-  'rfq-tracking',
-  'lib-inventory',
-  'npi-parts-list',
-  'rfq-tracker',
-  'sample-tracking',
-  'lib-mat',
-  'approvals-inbox',
-  'audit-log',
+export const FLOATING_BY_DEFAULT = new Set([
+  'standard',
+  'complex',
+  'ink-calc',
+  'print-area',
+  'design-tools',
+  'messages',
 ]);
 
 /** True when this tab should open filling the frame rather than floating. */
 export function opensMaximized(tabId) {
-  return !isFixedTab(tabId) && MAXIMIZED_BY_DEFAULT.has(tabId);
+  if (!tabId) return false;
+  if (isFixedTab(tabId)) return false;
+  return !FLOATING_BY_DEFAULT.has(tabId);
 }
 
 /** `landing:<sectionId>` panels are pure grids — always multi-instance. */
