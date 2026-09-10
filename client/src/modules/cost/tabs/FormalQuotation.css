@@ -19,7 +19,7 @@
 .fq-toolbar-title {
   font-size: 15px;
   font-weight: 600;
-  color: var(--color-slate-900);
+  color: var(--color-brand-navy);
 }
 .fq-released-badge {
   font-size: 10px;
@@ -71,7 +71,7 @@
 }
 .fq-card-header {
   padding: 10px 16px;
-  background: linear-gradient(135deg, var(--color-slate-900), #1e3a6e);
+  background: linear-gradient(135deg, var(--color-brand-navy), #1e3a6e);
   color: white;
   font-size: 13px;
   font-weight: 600;
@@ -116,7 +116,7 @@
 }
 .fq-ro {
   font-size: 12px;
-  color: var(--color-slate-900);
+  color: var(--color-brand-navy);
   font-weight: 600;
   padding: 4px 0;
   border-bottom: 1px solid var(--color-slate-200);
@@ -149,7 +149,7 @@
 }
 .fq-td-ro {
   font-size: 10px;
-  color: var(--color-slate-900);
+  color: var(--color-brand-navy);
 }
 .fq-prod-input {
   width: 100%;
