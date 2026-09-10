@@ -431,10 +431,17 @@ export function validateByActiveTab(activeTab, stdState, cplxState, lib = null) 
  * it: a field's warning appears once that field has been touched, or
  * once Save has been pressed and the operator has asked for the full list.
  *
+ * A warning with no `field` cannot be attributed to an input, so it stays
+ * hidden until the operator has engaged with the record at all — showing it
+ * on a pristine record is exactly the nagging this gate exists to remove.
+ * Verified 2026-09-10 against the running app: gating only `field` warnings
+ * still left 4 Layout/Materials errors on a brand-new record.
+ *
  * Pure — returns a new array, never mutates `warnings`.
  */
 export function gateWarnings(warnings, { touched = [], saveAttempted = false } = {}) {
   if (saveAttempted) return warnings.slice();
+  if (touched.length === 0) return [];
   const seen = new Set(touched);
   return warnings.filter((w) => !w.field || seen.has(w.field));
 }

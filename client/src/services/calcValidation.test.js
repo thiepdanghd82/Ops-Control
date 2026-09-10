@@ -283,8 +283,18 @@ test('attempting save reveals every warning regardless of touch', () => {
   assert.equal(out.length, 2);
 });
 
-test('record-level warnings with no field are always shown', () => {
+test('a pristine record shows nothing at all, not even fieldless warnings', () => {
+  // The whole point: opening a new record must not greet the operator with
+  // errors. A fieldless warning cannot be attributed to an input, so showing
+  // it on an untouched record is exactly the nagging this gate removes.
   const out = gateWarnings([W.cclPn, W.noField], { touched: [], saveAttempted: false });
+  assert.deepEqual(out, []);
+});
+
+test('once any field is touched, fieldless warnings become visible', () => {
+  // The operator has engaged with the record, so record-level problems are
+  // now useful rather than premature.
+  const out = gateWarnings([W.cclPn, W.noField], { touched: ['moq'], saveAttempted: false });
   assert.deepEqual(
     out.map((w) => w.id),
     ['gen-1']
