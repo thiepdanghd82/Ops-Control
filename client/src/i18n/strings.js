@@ -301,6 +301,10 @@ export const STRINGS = {
   // ─── Window manager (in-app MDI, feature-flagged) ───
   // ── TOTP enrollment (mandatory security onboarding — the one screen
   // where an untranslated string becomes a support call) ──
+  'pwdage.expired': { en: 'Password expired', vi: 'Mật khẩu đã hết hạn' },
+  'pwdage.label': { en: 'Password age', vi: 'Thời hạn mật khẩu' },
+  'pwdage.day': { en: 'day', vi: 'ngày' },
+  'pwdage.days': { en: 'days', vi: 'ngày' },
   'totp.enroll.title': { en: 'Set up 2-Step Verification', vi: 'Thiết lập xác thực 2 bước' },
   'totp.enroll.account': { en: 'Account', vi: 'Tài khoản' },
   'totp.enroll.scan': {

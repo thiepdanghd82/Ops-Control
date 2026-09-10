@@ -12,6 +12,7 @@
  * always have the data yet).
  */
 import './PwdAgeBar.css';
+import { useI18n } from '../../utils/useI18n';
 
 function tierFor(ratio) {
   if (ratio > 2 / 3) return 'ok';
@@ -20,6 +21,7 @@ function tierFor(ratio) {
 }
 
 export default function PwdAgeBar({ daysRemaining, maxAgeDays, label, compact = false }) {
+  const { t } = useI18n();
   if (
     daysRemaining == null ||
     maxAgeDays == null ||
@@ -40,9 +42,9 @@ export default function PwdAgeBar({ daysRemaining, maxAgeDays, label, compact = 
     >
       {label !== false && (
         <div className="pwd-age-label">
-          <span>{label || (daysRemaining === 0 ? 'Password expired' : 'Password age')}</span>
+          <span>{label || t(daysRemaining === 0 ? 'pwdage.expired' : 'pwdage.label')}</span>
           <span className="pwd-age-days">
-            {daysRemaining} / {maxAgeDays} {daysRemaining === 1 ? 'day' : 'days'}
+            {daysRemaining} / {maxAgeDays} {t(daysRemaining === 1 ? 'pwdage.day' : 'pwdage.days')}
           </span>
         </div>
       )}
