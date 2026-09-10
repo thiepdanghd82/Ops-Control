@@ -40,10 +40,12 @@ function open(state, tabId, opts = {}) {
 }
 
 test('OPEN pushes a normal window with raised z', () => {
-  const s = open(initialWindowState(), 'standard');
+  // Uses ink-calc, not standard: the pricing worksheets open maximized as of
+  // 2026-09-10, so they are no longer an example of a plain floating window.
+  const s = open(initialWindowState(), 'ink-calc');
   assert.equal(s.windows.length, 1);
   const w = s.windows[0];
-  assert.equal(w.tabId, 'standard');
+  assert.equal(w.tabId, 'ink-calc');
   assert.equal(w.state, 'normal');
   assert.equal(w.z, s.zTop);
   assert.ok(w.z > WINDOW_Z_BASE);
@@ -329,8 +331,10 @@ test('a data-grid tab opens maximized with a restorable prevRect', () => {
   assert.ok(w.prevRect.w >= 320 && w.prevRect.h >= 200, 'prevRect must be a usable size');
 });
 
-test('a calculator tab still opens as a normal floating window', () => {
-  const s = open(initialWindowState(), 'standard');
+test('a utility calculator still opens as a normal floating window', () => {
+  // ink-calc is opened alongside a quote to feed a number back into it, so
+  // it must not cover the worksheet.
+  const s = open(initialWindowState(), 'ink-calc');
   const w = s.windows[s.windows.length - 1];
 
   assert.equal(w.state, 'normal');

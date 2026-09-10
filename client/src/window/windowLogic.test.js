@@ -32,8 +32,21 @@ test('data-grid screens open maximized', () => {
   }
 });
 
-test('calculators keep floating so they can be compared side by side', () => {
-  for (const id of ['standard', 'complex', 'ink-calc', 'print-area']) {
+test('the two pricing worksheets open maximized', () => {
+  // They were floating on the theory that operators compare Standard against
+  // Complex side by side. The operator who actually runs this app said no:
+  // each is a dense multi-tab form that a 900px window cuts off, and in
+  // practice you work one quote at a time. Trust the person doing the job.
+  for (const id of ['standard', 'complex']) {
+    assert.equal(opensMaximized(id), true, `${id} should open maximized`);
+  }
+});
+
+test('the utility calculators stay floating', () => {
+  // These are opened ALONGSIDE a quote being priced — an ink calculation or
+  // a print-area check feeds a number back into the worksheet, so covering
+  // the worksheet with them would defeat the point.
+  for (const id of ['ink-calc', 'print-area', 'design-tools', 'messages']) {
     assert.equal(opensMaximized(id), false, `${id} should stay floating`);
   }
 });
@@ -45,6 +58,8 @@ test('home is never maximized — it is the fixed base layer', () => {
 test('every non-calculator screen opens maximized', () => {
   // The full sidebar, minus the calculators listed in the test above.
   for (const id of [
+    'standard',
+    'complex',
     'summarize',
     'formal-quote',
     'quote-history',

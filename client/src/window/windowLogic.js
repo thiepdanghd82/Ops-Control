@@ -66,24 +66,22 @@ export const MULTI_INSTANCE_TABS = new Set([
  * windows, and the next person to add a data screen would have hit the
  * same gap. Naming the exceptions is the shorter, more stable list.
  *
- * These six are exceptions because they are meant to sit side by side:
- * comparing Standard against Complex is the reason the MDI shell exists,
- * the three calculators get opened next to a quote being priced, and chat
- * belongs alongside the work rather than on top of it.
+ * These four are exceptions because they are opened ALONGSIDE a quote being
+ * priced: an ink calculation or a print-area check feeds a number back into
+ * the worksheet, so covering the worksheet with them defeats the point, and
+ * chat belongs beside the work rather than on top of it.
+ *
+ * Standard and Complex were on this list until 2026-09-10, on the theory
+ * that operators compare the two side by side. The operator who runs the
+ * app said otherwise: each is a dense multi-tab form that a 900px window
+ * cuts off, and in practice you work one quote at a time.
  *
  * Why it matters: measured 2026-09-10 at viewport 1440x900, a default
  * window is 898px — 62% of the viewport — while the widest table reports
  * scrollWidth 3333px. A floating window shows about a quarter of the
  * columns and leaves 38% of the screen empty behind it.
  */
-export const FLOATING_BY_DEFAULT = new Set([
-  'standard',
-  'complex',
-  'ink-calc',
-  'print-area',
-  'design-tools',
-  'messages',
-]);
+export const FLOATING_BY_DEFAULT = new Set(['ink-calc', 'print-area', 'design-tools', 'messages']);
 
 /** True when this tab should open filling the frame rather than floating. */
 export function opensMaximized(tabId) {
