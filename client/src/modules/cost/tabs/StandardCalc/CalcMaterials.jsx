@@ -517,7 +517,7 @@ export default function CalcMaterials() {
                               style={
                                 mat.pitch_ovr > 0
                                   ? { color: 'var(--color-violet-500)', fontWeight: 700 }
-                                  : { color: 'var(--color-slate-900)' }
+                                  : { color: 'var(--color-brand-navy)' }
                               }
                               title={
                                 mat.pitch_ovr > 0
@@ -535,7 +535,7 @@ export default function CalcMaterials() {
                               style={
                                 mat.width > 0
                                   ? { color: 'var(--color-violet-500)', fontWeight: 700 }
-                                  : { color: 'var(--color-slate-900)' }
+                                  : { color: 'var(--color-brand-navy)' }
                               }
                               title={
                                 mat.width > 0
@@ -560,7 +560,7 @@ export default function CalcMaterials() {
                               style={
                                 mat.cavities > 0
                                   ? { color: 'var(--color-violet-500)', fontWeight: 700 }
-                                  : { color: 'var(--color-slate-900)' }
+                                  : { color: 'var(--color-brand-navy)' }
                               }
                               title={
                                 mat.cavities > 0
@@ -612,7 +612,7 @@ export default function CalcMaterials() {
                                   style={
                                     overridden
                                       ? { color: 'var(--color-violet-500)', fontWeight: 700 }
-                                      : { color: 'var(--color-slate-900)' }
+                                      : { color: 'var(--color-brand-navy)' }
                                   }
                                   title={
                                     yn === 'N'

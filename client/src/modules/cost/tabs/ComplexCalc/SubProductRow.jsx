@@ -924,7 +924,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                               style={
                                 m.pitch_ovr > 0
                                   ? { color: 'var(--color-violet-500)', fontWeight: 700 }
-                                  : { color: 'var(--color-slate-900)' }
+                                  : { color: 'var(--color-brand-navy)' }
                               }
                               title={
                                 m.pitch_ovr > 0
@@ -943,7 +943,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                               style={
                                 m.width > 0
                                   ? { color: 'var(--color-violet-500)', fontWeight: 700 }
-                                  : { color: 'var(--color-slate-900)' }
+                                  : { color: 'var(--color-brand-navy)' }
                               }
                               title={
                                 m.width > 0
@@ -962,7 +962,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                               style={
                                 m.cavities > 0
                                   ? { color: 'var(--color-violet-500)', fontWeight: 700 }
-                                  : { color: 'var(--color-slate-900)' }
+                                  : { color: 'var(--color-brand-navy)' }
                               }
                               title={
                                 m.cavities > 0
@@ -1018,7 +1018,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                                     style={
                                       overridden
                                         ? { color: 'var(--color-violet-500)', fontWeight: 700 }
-                                        : { color: 'var(--color-slate-900)' }
+                                        : { color: 'var(--color-brand-navy)' }
                                     }
                                     title={
                                       overridden
@@ -1032,7 +1032,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                                     value={shown}
                                     readOnly
                                     className="cc-det-inp cc-det-num"
-                                    style={{ color: 'var(--color-slate-900)' }}
+                                    style={{ color: 'var(--color-brand-navy)' }}
                                     title={yn === 'N' ? 'Offcut=N → 0%' : 'Default → 5%'}
                                   />
                                 )}
