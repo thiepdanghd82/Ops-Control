@@ -19,6 +19,8 @@
     "build:server:win": "node ../scripts/build-windows-installers.mjs server",
     "test:license": "node --test license.test.js",
     "test:manifest": "node --test build-manifest.test.js",
+    "test:firstrun": "env -u ELECTRON_RUN_AS_NODE electron --no-deprecation clientFirstRun.test.js",
+    "test:wizard": "env -u ELECTRON_RUN_AS_NODE electron --no-deprecation setupWizard.test.js",
     "postinstall": "electron-builder install-app-deps"
   },
   "devDependencies": {
@@ -58,6 +60,7 @@
       "smart-client.js",
       "license.js",
       "setupWizard.js",
+      "clientFirstRun.js",
       "utils/**/*",
       "native/**/*",
       "package.json",
