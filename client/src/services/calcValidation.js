@@ -421,3 +421,20 @@ export function validateByActiveTab(activeTab, stdState, cplxState, lib = null) 
   if (activeTab === 'complex') return validateComplex(cplxState, lib);
   return [];
 }
+
+/**
+ * Filter validation output down to what the operator should see right now.
+ *
+ * A freshly opened record is empty by definition, so running the raw
+ * validators against it produces a wall of "X is required" before the
+ * user has typed anything. That trained people to ignore the bar. Gate
+ * it: a field's warning appears once that field has been touched, or
+ * once Save has been pressed and the operator has asked for the full list.
+ *
+ * Pure — returns a new array, never mutates `warnings`.
+ */
+export function gateWarnings(warnings, { touched = [], saveAttempted = false } = {}) {
+  if (saveAttempted) return warnings.slice();
+  const seen = new Set(touched);
+  return warnings.filter((w) => !w.field || seen.has(w.field));
+}

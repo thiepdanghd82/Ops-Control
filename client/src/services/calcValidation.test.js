@@ -17,7 +17,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateStandard, validateComplex } from './calcValidation.js';
+import { validateStandard, validateComplex, gateWarnings } from './calcValidation.js';
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -255,4 +255,45 @@ test('negative-value header warnings carry the same field key', () => {
   const byId = Object.fromEntries(out.map((w) => [w.id, w]));
   assert.equal(byId['hdr-moq-neg'].field, 'moq');
   assert.equal(byId['hdr-eau-neg'].field, 'annual_qty');
+});
+
+// ── gateWarnings ──────────────────────────────────────────────────
+
+const W = {
+  cclPn: { id: 'hdr-ccl-pn', severity: 'error', scope: 'Header', field: 'ccl_pn', message: 'x' },
+  moq: { id: 'hdr-moq', severity: 'error', scope: 'Header', field: 'moq', message: 'y' },
+  noField: { id: 'gen-1', severity: 'warn', scope: 'Pricing', message: 'z' },
+};
+
+test('a fresh record with nothing touched shows no field warnings', () => {
+  const out = gateWarnings([W.cclPn, W.moq], { touched: [], saveAttempted: false });
+  assert.deepEqual(out, []);
+});
+
+test('touching one field reveals only that field warning', () => {
+  const out = gateWarnings([W.cclPn, W.moq], { touched: ['ccl_pn'], saveAttempted: false });
+  assert.deepEqual(
+    out.map((w) => w.id),
+    ['hdr-ccl-pn']
+  );
+});
+
+test('attempting save reveals every warning regardless of touch', () => {
+  const out = gateWarnings([W.cclPn, W.moq], { touched: [], saveAttempted: true });
+  assert.equal(out.length, 2);
+});
+
+test('record-level warnings with no field are always shown', () => {
+  const out = gateWarnings([W.cclPn, W.noField], { touched: [], saveAttempted: false });
+  assert.deepEqual(
+    out.map((w) => w.id),
+    ['gen-1']
+  );
+});
+
+test('gateWarnings does not mutate its input', () => {
+  const input = [W.cclPn, W.moq];
+  const copy = JSON.parse(JSON.stringify(input));
+  gateWarnings(input, { touched: ['moq'], saveAttempted: false });
+  assert.deepEqual(input, copy);
 });
