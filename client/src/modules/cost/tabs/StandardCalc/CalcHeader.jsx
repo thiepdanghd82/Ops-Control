@@ -4,6 +4,7 @@
  */
 import { useCallback, useEffect, useMemo } from 'react';
 import { useCalc } from '../../../../context/CalcContext';
+import { validateStandard } from '../../../../services/calcValidation';
 import { useCostLib } from '../../../../context/CostLibContext';
 import { getDesignProcessList } from '../../../../utils/ddl';
 import { genRfqNum } from '../../../../utils/rfqGen';
@@ -13,8 +14,10 @@ import RfqInfoCard from '../../../../components/Shared/RfqInfoCard';
 import { parseLocaleNumber } from '../../../../utils/format';
 
 export default function CalcHeader() {
-  const { stdState, cplxState, setStdField, dispatch } = useCalc();
+  const { stdState, cplxState, setStdField, dispatch, touched, saveAttempted, markTouched } =
+    useCalc();
   const { lib, setActiveSite } = useCostLib();
+  const warnings = useMemo(() => validateStandard(stdState, lib), [stdState, lib]);
   const st = stdState;
 
   const handleField = useCallback(
@@ -285,6 +288,10 @@ export default function CalcHeader() {
           // binds to `project` in stdState. Alias here preserves the
           // legacy field naming without touching saved quotes.
           aliasMap={{ end_cu: 'project' }}
+          warnings={warnings}
+          touched={touched}
+          saveAttempted={saveAttempted}
+          onTouch={markTouched}
         />
       </div>
 
@@ -348,6 +355,7 @@ export default function CalcHeader() {
                       <DecimalInput
                         value={st.moq}
                         onChange={(v) => setStdField('moq', v)}
+                        onBlur={() => markTouched('moq')}
                         className="sc-moq-inp"
                         thousandSep
                       />
@@ -356,6 +364,7 @@ export default function CalcHeader() {
                       <DecimalInput
                         value={st.annual_qty}
                         onChange={(v) => setStdField('annual_qty', v)}
+                        onBlur={() => markTouched('annual_qty')}
                         className={`sc-moq-inp ${showEauWarn ? 'sc-input-warn' : ''}`}
                         thousandSep
                         title={
