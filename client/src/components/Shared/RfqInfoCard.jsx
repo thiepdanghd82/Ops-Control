@@ -27,6 +27,7 @@
 
 import { SITES as SITE_OPTIONS } from '../../utils/sites';
 import DecimalInput from '../../utils/DecimalInput';
+import { gateWarnings } from '../../services/calcValidation';
 
 export default function RfqInfoCard({
   state,
@@ -37,6 +38,10 @@ export default function RfqInfoCard({
   tradeModeOpts = [],
   datalistId,
   aliasMap,
+  warnings = [],
+  touched = [],
+  saveAttempted = false,
+  onTouch = () => {},
 }) {
   const realKey = (k) => (aliasMap && aliasMap[k]) || k;
   const get = (k) => state?.[realKey(k)] ?? '';
@@ -44,6 +49,17 @@ export default function RfqInfoCard({
   // Stable per-instance id so multiple RfqInfoCards on one page never
   // collide, and labels always associate with the right input (WCAG 1.3.1).
   const fid = (k) => `rfq-${datalistId || 'x'}-${k}`;
+
+  // Gated once per render, not once per field — errorFor() is called for
+  // every field below and re-filtering inside it would be O(fields × warnings).
+  const gated = gateWarnings(warnings, { touched, saveAttempted });
+
+  // Warning for one field, or null. Resolves through realKey() so an
+  // aliased field (Standard maps end_cu → project) still joins correctly.
+  const errorFor = (k) => {
+    const key = realKey(k);
+    return gated.find((w) => w.field === key && w.severity === 'error') || null;
+  };
 
   // Phase 9E.4 + Sprint S-QUOTE-PROGRESS-V2 — once a quote is
   // price_approved the pricing basis is committed. Changing site
@@ -97,15 +113,30 @@ export default function RfqInfoCard({
               ))}
             </select>
           </div>
-          <div className="sc-field">
-            <label htmlFor={fid('ccl_pn')}>CCL PN (80#)</label>
+          <div className={`sc-field${errorFor('ccl_pn') ? ' sc-field-error' : ''}`}>
+            <label htmlFor={fid('ccl_pn')}>
+              CCL PN (80#)
+              <span className="sc-required" aria-hidden="true">
+                *
+              </span>
+            </label>
             <input
               id={fid('ccl_pn')}
               type="text"
+              required
+              aria-required="true"
+              aria-invalid={errorFor('ccl_pn') ? 'true' : undefined}
+              aria-describedby={errorFor('ccl_pn') ? `${fid('ccl_pn')}-err` : undefined}
               value={get('ccl_pn')}
               onChange={(e) => set('ccl_pn', e.target.value)}
+              onBlur={() => onTouch(realKey('ccl_pn'))}
               className="sc-input sc-inp-yellow"
             />
+            {errorFor('ccl_pn') && (
+              <span className="sc-field-msg" id={`${fid('ccl_pn')}-err`} role="alert">
+                {errorFor('ccl_pn').message}
+              </span>
+            )}
           </div>
           <div className="sc-field">
             <label htmlFor={fid('npi_owner')}>NPI Owner</label>

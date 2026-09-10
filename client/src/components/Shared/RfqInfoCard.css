@@ -1,0 +1,20 @@
+/* Required marker — red asterisk, aria-hidden so screen readers get the
+   information from aria-required instead of hearing "star". */
+.sc-required {
+  color: var(--color-danger-600, #dc2626);
+  margin-left: 2px;
+}
+
+/* Field-level error. Border AND message, never colour alone — operators
+   on the floor use this on cheap panels and some are colour-blind. */
+.sc-field-error .sc-input {
+  border-color: var(--color-danger-600, #dc2626);
+}
+
+.sc-field-msg {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--color-danger-600, #dc2626);
+}

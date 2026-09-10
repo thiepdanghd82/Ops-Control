@@ -63,6 +63,7 @@ function validateHeader(st, scopeLabel = 'Header') {
       id: 'hdr-ccl-pn',
       severity: 'error',
       scope: scopeLabel,
+      field: 'ccl_pn',
       message: 'CCL Part Number is required',
     });
   }
@@ -71,6 +72,7 @@ function validateHeader(st, scopeLabel = 'Header') {
       id: 'hdr-moq-neg',
       severity: 'error',
       scope: scopeLabel,
+      field: 'moq',
       message: 'MOQ is negative — must be a positive number',
     });
   } else if (num(st.moq) <= 0) {
@@ -78,6 +80,7 @@ function validateHeader(st, scopeLabel = 'Header') {
       id: 'hdr-moq',
       severity: 'error',
       scope: scopeLabel,
+      field: 'moq',
       message: 'MOQ must be greater than 0 (MOQ = 0 inflates Setup/Tooling)',
     });
   }
@@ -86,6 +89,7 @@ function validateHeader(st, scopeLabel = 'Header') {
       id: 'hdr-eau-neg',
       severity: 'error',
       scope: scopeLabel,
+      field: 'annual_qty',
       message: 'Annual Qty (EAU) is negative — must be a positive number',
     });
   } else if (num(st.annual_qty) <= 0) {
@@ -93,6 +97,7 @@ function validateHeader(st, scopeLabel = 'Header') {
       id: 'hdr-eau',
       severity: 'error',
       scope: scopeLabel,
+      field: 'annual_qty',
       message: 'Annual Qty (EAU) must be greater than 0',
     });
   }
@@ -415,4 +420,28 @@ export function validateByActiveTab(activeTab, stdState, cplxState, lib = null) 
   if (activeTab === 'standard') return validateStandard(stdState, lib);
   if (activeTab === 'complex') return validateComplex(cplxState, lib);
   return [];
+}
+
+/**
+ * Filter validation output down to what the operator should see right now.
+ *
+ * A freshly opened record is empty by definition, so running the raw
+ * validators against it produces a wall of "X is required" before the
+ * user has typed anything. That trained people to ignore the bar. Gate
+ * it: a field's warning appears once that field has been touched, or
+ * once Save has been pressed and the operator has asked for the full list.
+ *
+ * A warning with no `field` cannot be attributed to an input, so it stays
+ * hidden until the operator has engaged with the record at all — showing it
+ * on a pristine record is exactly the nagging this gate exists to remove.
+ * Verified 2026-09-10 against the running app: gating only `field` warnings
+ * still left 4 Layout/Materials errors on a brand-new record.
+ *
+ * Pure — returns a new array, never mutates `warnings`.
+ */
+export function gateWarnings(warnings, { touched = [], saveAttempted = false } = {}) {
+  if (saveAttempted) return warnings.slice();
+  if (touched.length === 0) return [];
+  const seen = new Set(touched);
+  return warnings.filter((w) => !w.field || seen.has(w.field));
 }

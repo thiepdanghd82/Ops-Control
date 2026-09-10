@@ -131,6 +131,7 @@ export default function ComplexCalc() {
     clearPendingQuote,
     activeQuoteId,
     activeQuoteVersion,
+    markTouched,
   } = useCalc();
   const { lib } = useCostLib();
   // Phase 3 — user id for snapshot `_captured_by` audit field.
@@ -654,7 +655,13 @@ export default function ComplexCalc() {
 
             {/* RIGHT — MOQ & Pricing */}
             <div className="sc-moq-col">
-              <ComplexMoqTab cs={cs} sps={sps} dispatch={dispatch} setCplxField={setCplxField} />
+              <ComplexMoqTab
+                cs={cs}
+                sps={sps}
+                dispatch={dispatch}
+                setCplxField={setCplxField}
+                markTouched={markTouched}
+              />
             </div>
           </div>
         )}
@@ -1269,7 +1276,7 @@ export default function ComplexCalc() {
 /* ─────────────────────────────────────────────────────────────
  * ComplexMoqTab — MOQ tier management + Setup Data per MOQ table
  * ───────────────────────────────────────────────────────────── */
-function ComplexMoqTab({ cs, sps, dispatch, setCplxField }) {
+function ComplexMoqTab({ cs, sps, dispatch, setCplxField, markTouched }) {
   const numMoq = cs.num_moq || 1;
   const extraMoqs = useMemo(() => cs.extra_moqs || [], [cs.extra_moqs]);
   const activeMoqIdx = cs.active_moq_idx || 0;
@@ -1559,6 +1566,7 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField }) {
                   <DecimalInput
                     value={cs.moq}
                     onChange={(v) => setCplxField('moq', v)}
+                    onBlur={() => markTouched('moq')}
                     className="sc-moq-inp"
                     thousandSep
                   />
@@ -1567,6 +1575,7 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField }) {
                   <DecimalInput
                     value={cs.annual_qty}
                     onChange={(v) => setCplxField('annual_qty', v)}
+                    onBlur={() => markTouched('annual_qty')}
                     className={`sc-moq-inp ${showEauWarn ? 'sc-input-warn' : ''}`}
                     thousandSep
                     title={
