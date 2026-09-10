@@ -58,6 +58,33 @@ export const MULTI_INSTANCE_TABS = new Set([
   'help',
 ]);
 
+/**
+ * Tabs whose content is a data grid. Measured 2026-09-10 at viewport
+ * 1440x900: the widest of these tables reports scrollWidth 3333px while a
+ * default window is 900px, so a floating window shows roughly a quarter of
+ * the columns and leaves 38% of the screen empty behind it. These open
+ * maximized; the operator can still restore, move and resize them.
+ *
+ * Calculators are deliberately absent — comparing Standard against Complex
+ * side by side is the reason the MDI shell exists.
+ */
+export const MAXIMIZED_BY_DEFAULT = new Set([
+  'quote-history',
+  'rfq-tracking',
+  'lib-inventory',
+  'npi-parts-list',
+  'rfq-tracker',
+  'sample-tracking',
+  'lib-mat',
+  'approvals-inbox',
+  'audit-log',
+]);
+
+/** True when this tab should open filling the frame rather than floating. */
+export function opensMaximized(tabId) {
+  return !isFixedTab(tabId) && MAXIMIZED_BY_DEFAULT.has(tabId);
+}
+
 /** `landing:<sectionId>` panels are pure grids — always multi-instance. */
 export function isLandingTab(tabId) {
   return typeof tabId === 'string' && tabId.startsWith('landing:');
