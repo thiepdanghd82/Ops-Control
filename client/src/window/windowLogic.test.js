@@ -42,7 +42,45 @@ test('home is never maximized — it is the fixed base layer', () => {
   assert.equal(opensMaximized('home'), false);
 });
 
-test('an unknown tab id is not maximized', () => {
-  assert.equal(opensMaximized('does-not-exist'), false);
+test('every non-calculator screen opens maximized', () => {
+  // The full sidebar, minus the calculators listed in the test above.
+  for (const id of [
+    'summarize',
+    'formal-quote',
+    'quote-history',
+    'npi-parts-list',
+    'rfq-tracking',
+    'approvals-inbox',
+    'lib-mfg',
+    'lib-rop',
+    'lib-inventory',
+    'lib-mat',
+    'rfq-tracker',
+    'sample-tracking',
+    'dashboard',
+    'quote-analysis',
+    'lib-rate',
+    'lib-ddl',
+    'lib-finance',
+    'lib-machine-tech',
+    'settings',
+    'metrics',
+    'audit-log',
+    'help',
+  ]) {
+    assert.equal(opensMaximized(id), true, `${id} should open maximized`);
+  }
+});
+
+test('a screen added later defaults to maximized, not floating', () => {
+  // The rule is inverted on purpose: FLOATING_BY_DEFAULT is the short,
+  // deliberate list. An allowlist of screens to maximize is what left 19 of
+  // 28 tabs opening as 900px windows after the first pass — the next person
+  // to add a data screen would have hit the same gap.
+  assert.equal(opensMaximized('some-future-grid'), true);
+});
+
+test('no tab id at all is not maximized', () => {
   assert.equal(opensMaximized(undefined), false);
+  assert.equal(opensMaximized(''), false);
 });
