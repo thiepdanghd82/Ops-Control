@@ -54,14 +54,15 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '22', cache: 'npm' }
       - run: npm ci --ignore-scripts
-      # --max-warnings 435 is the Node 22 baseline after Phase 0 CI Green
-      # Sprint hotfix (2026-06-20). Local Node 24 reports ~366 warnings;
-      # CI Node 22 reports ~432 due to V8 / @eslint/js control-flow
-      # analysis differences. Source of truth is CI count, not local.
-      # 315 are pre-existing inline-style tech debt (Sprint 12 deferred);
-      # rest tracked in docs/ci/warning-by-rule.md with per-rule tickets.
-      # CI fails if warnings grow; lower the number as tickets close.
-      - run: npm run lint -- --max-warnings 435
+      # RATCHET — this number may only ever go DOWN, never up.
+      # It is the exact CI warning count as of the commit that set it.
+      # CI Node 22 and local Node 24 disagree (V8 / @eslint/js control-flow
+      # analysis differences), so ALWAYS read this number off a CI run,
+      # never off a local `npx eslint .`. Local under-reports by ~60.
+      # 303 of these are inline `style={{...}}` (no-restricted-syntax) —
+      # the stalled design-token migration. Lower this number as files
+      # migrate; a PR that raises it is a PR that added debt.
+      - run: npm run lint -- --max-warnings 413
       - run: npm run format:check
 
   runtime-deps:
