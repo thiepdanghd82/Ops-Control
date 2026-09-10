@@ -70,6 +70,15 @@ const PATHS = {
       <polyline points="8,4 8,8 11,10" />
     </>
   ),
+  // Parts list — checklist-ish ledger icon (NPI Parts List, Sprint S-NPI-PARTS).
+  parts_list: (
+    <>
+      <rect x="2.5" y="2.5" width="11" height="11" rx="1" />
+      <line x1="5" y1="5.5" x2="11" y2="5.5" />
+      <line x1="5" y1="8" x2="11" y2="8" />
+      <line x1="5" y1="10.5" x2="9" y2="10.5" />
+    </>
+  ),
   analysis: (
     <>
       <polyline points="2,12 5,8 8,10 11,5 14,7" />
@@ -106,6 +115,16 @@ const PATHS = {
       <rect x="3" y="3" width="10" height="11" rx="0.5" />
       <polyline points="5,7 6.5,8.5 9.5,5.5" />
       <line x1="5" y1="11" x2="11" y2="11" />
+    </>
+  ),
+  // RFQ Tracking — spreadsheet grid (master list; distinct from rfq_tracker).
+  rfq_tracking: (
+    <>
+      <rect x="2.5" y="3" width="11" height="10" rx="0.5" />
+      <line x1="2.5" y1="6.5" x2="13.5" y2="6.5" />
+      <line x1="2.5" y1="9.75" x2="13.5" y2="9.75" />
+      <line x1="6.5" y1="3" x2="6.5" y2="13" />
+      <line x1="10" y1="3" x2="10" y2="13" />
     </>
   ),
 

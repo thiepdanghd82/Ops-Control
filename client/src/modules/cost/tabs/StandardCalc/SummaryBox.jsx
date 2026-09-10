@@ -12,6 +12,7 @@ import {
   inkCostTotal,
   matCostExcludingInk,
 } from '../../../../services/calcEngine';
+import { snapshotPricingParams } from '../../../../services/pricingSnapshot';
 
 function fmtN(v, d = 2) {
   if (v == null || isNaN(v)) return '\u2014';
@@ -38,8 +39,13 @@ export default function SummaryBox() {
   const result = useMemo(() => {
     if (!lib) return null;
     const tierSt = getActiveTierState(stdState);
+    // Phase 3 — resolve pricing snapshot before calc so the displayed
+    // numbers honour what was frozen at save time. Persisted snapshot
+    // wins; legacy (no snapshot) synthesizes from current lib (=
+    // pre-Phase-3 behavior).
+    const { snapshot } = snapshotPricingParams(stdState, lib);
     try {
-      return calcAll(tierSt, null, lib, null);
+      return calcAll(tierSt, null, lib, null, { snapshot });
     } catch {
       return null;
     }

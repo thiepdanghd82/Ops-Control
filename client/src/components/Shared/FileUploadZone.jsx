@@ -22,7 +22,10 @@
  */
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { costApi } from '../../services/api';
+import { useI18n } from '../../utils/useI18n';
+import { removeDrawingAt, targetFileAt, resolveOpenAction } from '../../services/drawingFiles';
 import Modal from './Modal';
+import { useFloatingMenu } from './useFloatingMenu';
 import './FileUploadZone.css';
 
 // PDF.js renderer — Electron 41's built-in Chromium PDF Viewer renders
@@ -42,7 +45,7 @@ async function loadPdfjs() {
   return pdfjs;
 }
 
-function PdfCanvasPreview({ bytes, className, title }) {
+function PdfCanvasPreview({ bytes, className, title, rotation = 0 }) {
   const containerRef = useRef(null);
   const [status, setStatus] = useState('loading');
   useEffect(() => {
@@ -64,11 +67,14 @@ function PdfCanvasPreview({ bytes, className, title }) {
         for (let i = 1; i <= pdfDoc.numPages; i++) {
           if (cancelled) break;
           const page = await pdfDoc.getPage(i);
-          const baseVp = page.getViewport({ scale: 1 });
+          // Container-fit scale: use the rotated baseVp so 90°/270° fits
+          // to the SHORT side of the original page instead of overflowing
+          // (pdfjs swaps width/height for odd-multiple rotations).
+          const baseVp = page.getViewport({ scale: 1, rotation });
           const containerW = containerRef.current.clientWidth || 800;
           const dpr = Math.min(window.devicePixelRatio || 1, 2);
           const scale = (containerW / baseVp.width) * dpr;
-          const vp = page.getViewport({ scale });
+          const vp = page.getViewport({ scale, rotation });
           const canvas = document.createElement('canvas');
           canvas.width = vp.width;
           canvas.height = vp.height;
@@ -88,7 +94,7 @@ function PdfCanvasPreview({ bytes, className, title }) {
       cancelled = true;
       if (pdfDoc) pdfDoc.destroy();
     };
-  }, [bytes]);
+  }, [bytes, rotation]);
   return (
     <div
       className={className}
@@ -166,10 +172,43 @@ export default function FileUploadZone({
   collapsible = false,
   defaultCollapsed = true,
   storageKey,
+  // ── Multi-file mode (opt-in). Single-file callers omit these and are
+  //    byte-identical. In multiple mode the component renders a thumbnail
+  //    gallery; the ACTIVE file (files[activeIndex]) fills the frame and
+  //    drives every existing preview / fullscreen / open path.
+  multiple = false,
+  files: filesProp,
+  activeIndex = 0,
+  onFilesChange,
+  onActiveChange,
 }) {
+  const { t } = useI18n();
   const inputRef = useRef(null);
   const viewportRef = useRef(null);
-  const file = normalizeFile(rawFile);
+  // Multi-file: derive the active file; single-file: use rawFile untouched.
+  const multiFiles = multiple && Array.isArray(filesProp) ? filesProp : null;
+  const activeIdx =
+    multiFiles && multiFiles.length ? Math.min(activeIndex, multiFiles.length - 1) : 0;
+  const activeRaw = multiFiles ? (multiFiles[activeIdx] ?? null) : rawFile;
+  const file = normalizeFile(activeRaw);
+
+  // ── Transient byte cache (name → dataUrl) ──
+  // Persisted state carries only {name, type} (no base64). Bytes live ONLY
+  // here — populated on upload and lazily fetched from /api/layout/{name} for
+  // previews/thumbnails. Never written back to app state, so a quote's JSON
+  // stays far under the 2 MB /save-all cap no matter how many drawings.
+  const [byteCache, setByteCache] = useState({});
+  const cacheBytes = useCallback((name, dataUrl) => {
+    if (!name || !dataUrl) return;
+    setByteCache((c) => (c[name] === dataUrl ? c : { ...c, [name]: dataUrl }));
+  }, []);
+  // Resolve a file's bytes: an inline dataUrl (fresh upload / legacy) wins,
+  // else the by-name cache. Null when not yet hydrated.
+  const dataUrlFor = useCallback(
+    (f) => f?.dataUrl || (f?.name ? byteCache[f.name] : null) || null,
+    [byteCache]
+  );
+  const activeDataUrl = dataUrlFor(file);
 
   // Collapse state. Persisted per-storageKey so reopening the tab returns
   // the operator to their last choice. Default collapsed when the prop is
@@ -211,10 +250,18 @@ export default function FileUploadZone({
       /\.(png|jpe?g|gif|webp|svg|bmp|tiff?|heic|heif)$/i.test(file.name || ''))
   );
   const isPDF = file?.type === 'application/pdf' || /\.pdf$/i.test(file?.name || '');
-  const hasPreview = !!file?.dataUrl;
+  const hasPreview = !!activeDataUrl;
 
   // ── Context menu ──
   const [ctxMenu, setCtxMenu] = useState(null);
+  // Edge-aware placement (fixed) + drag-to-move by the header. ctxMenu.x/y
+  // are raw viewport coords; useFloatingMenu flips/clamps a menu opened
+  // near the bottom/right edge so it isn't clipped off-screen.
+  const { menuRef: ctxMenuRef, style: ctxMenuStyle } = useFloatingMenu({
+    open: !!ctxMenu,
+    x: ctxMenu?.x ?? 0,
+    y: ctxMenu?.y ?? 0,
+  });
 
   // ── Fullscreen modal ──
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
@@ -230,8 +277,8 @@ export default function FileUploadZone({
   // and PdfCanvasPreview (PDF.js needs raw bytes — fetch(blob:) is blocked
   // by Electron's CSP `connect-src`) read from this.
   const pdfBytes = useMemo(() => {
-    if (!file?.dataUrl || typeof file.dataUrl !== 'string') return null;
-    const m = /^data:([^;]+);base64,(.+)$/.exec(file.dataUrl);
+    if (!activeDataUrl || typeof activeDataUrl !== 'string') return null;
+    const m = /^data:([^;]+);base64,(.+)$/.exec(activeDataUrl);
     if (!m) return null;
     try {
       const bin = atob(m[2]);
@@ -241,7 +288,7 @@ export default function FileUploadZone({
     } catch {
       return null;
     }
-  }, [file?.dataUrl]);
+  }, [activeDataUrl]);
   const blobUrl = useMemo(() => {
     if (!pdfBytes) return '';
     return URL.createObjectURL(new Blob([pdfBytes.bytes], { type: pdfBytes.mime }));
@@ -251,6 +298,87 @@ export default function FileUploadZone({
       if (blobUrl) URL.revokeObjectURL(blobUrl);
     };
   }, [blobUrl]);
+
+  // ── Mode-aware writers ──
+  // Upload APPENDS in multi-mode (new file becomes active); replaces in single.
+  // The `obj` passed here is LIGHT ({name,type}); its bytes go to the cache.
+  const appendFile = useCallback(
+    (obj) => {
+      if (multiFiles) {
+        onFilesChange?.([...multiFiles, obj]);
+        onActiveChange?.(multiFiles.length);
+      } else {
+        onFileChange?.(obj);
+      }
+    },
+    [multiFiles, onFilesChange, onActiveChange, onFileChange]
+  );
+  // Clear the active file: remove-and-re-point in multi; onClear in single.
+  const clearActive = useCallback(() => {
+    if (multiFiles) {
+      const { files: nf, active: na } = removeDrawingAt(multiFiles, activeIdx, activeIdx);
+      onFilesChange?.(nf);
+      onActiveChange?.(na);
+    } else {
+      onClear?.();
+    }
+  }, [multiFiles, activeIdx, onFilesChange, onActiveChange, onClear]);
+
+  // Open ANY file (a thumbnail's own file, not the active one) in a new
+  // window — desktop bridge when present, else a fresh blob URL. Resolves
+  // bytes from the cache, fetching by name on demand (state is light).
+  const openFileInNewWindow = useCallback(
+    async (f) => {
+      if (!f?.name && !f?.dataUrl) return;
+      let durl = f?.dataUrl || (f?.name ? byteCache[f.name] : null);
+      if (!durl && f?.name) {
+        try {
+          const json = await costApi.getLayout(f.name);
+          if (json?.data) {
+            durl = `data:${json.mime || f.type || 'application/octet-stream'};base64,${json.data}`;
+            cacheBytes(f.name, durl);
+          }
+        } catch {
+          /* 404 etc — nothing to open */
+        }
+      }
+      if (!durl) return;
+      const bridge = window.ops?.shell?.openExternalFile;
+      const action = resolveOpenAction({ dataUrl: durl, type: f?.type }, !!bridge);
+      if (action.mode === 'none') return;
+      if (action.mode === 'bridge') {
+        try {
+          await bridge(action.b64, action.ext);
+          return;
+        } catch (err) {
+          console.warn('[FileUploadZone] openExternalFile failed, falling back:', err);
+        }
+      }
+      const m = /^data:([^;]+);base64,(.+)$/.exec(durl);
+      if (!m) return;
+      const bin = atob(m[2]);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([arr], { type: m[1] }));
+      window.open(url, '_blank', 'noopener,noreferrer');
+      // Revoke after the new window has had time to load the resource.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    },
+    [byteCache, cacheBytes]
+  );
+
+  // Remove a specific thumbnail (with confirm), re-pointing active.
+  const removeThumb = useCallback(
+    (i) => {
+      if (!multiFiles) return;
+      const f = normalizeFile(multiFiles[i]);
+      if (f?.name && !window.confirm(t('fuz.remove_confirm', { name: f.name }))) return;
+      const { files: nf, active: na } = removeDrawingAt(multiFiles, activeIdx, i);
+      onFilesChange?.(nf);
+      onActiveChange?.(na);
+    },
+    [multiFiles, activeIdx, onFilesChange, onActiveChange, t]
+  );
 
   // ── Zoom & Pan (image only) ──
   const [zoom, setZoom] = useState(1);
@@ -265,7 +393,6 @@ export default function FileUploadZone({
   // behavior change. Consistent with AuthContext / useMyApprovalCount
   // pattern elsewhere in the codebase.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional viewport reset on file change
     setZoom(1);
     setPan({ x: 0, y: 0 });
     setRotation(0);
@@ -280,12 +407,8 @@ export default function FileUploadZone({
   // when the lookup 404s, AND log other failures to the console so they
   // show up in client-error telemetry.
   const [fetchError, setFetchError] = useState(null);
-  // Same "intentional sync setState in effect" pattern as the zoom/pan
-  // reset above — the whole point of the effect is to wipe stale error
-  // state when the file changes, so React 19's strict rule trips us.
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (!file || file.dataUrl || !file.name) {
+    if (!file || activeDataUrl || !file.name) {
       setFetchError(null);
       return;
     }
@@ -300,7 +423,8 @@ export default function FileUploadZone({
           return;
         }
         const mime = json.mime || file.type || 'application/octet-stream';
-        onFileChange({ name: file.name, type: mime, dataUrl: `data:${mime};base64,${json.data}` });
+        // Cache the bytes for preview — NEVER write them back into app state.
+        cacheBytes(file.name, `data:${mime};base64,${json.data}`);
       } catch (err) {
         if (cancelled) return;
         const msg =
@@ -314,8 +438,47 @@ export default function FileUploadZone({
     return () => {
       cancelled = true;
     };
-  }, [file, onFileChange]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  }, [file, activeDataUrl, cacheBytes]);
+
+  // Hydrate IMAGE thumbnail bytes by name into the transient cache so the
+  // gallery shows real thumbnails after reload (state is light). PDFs/other
+  // show a badge → no fetch. An in-flight guard prevents duplicate requests;
+  // the cache guard makes re-runs converge.
+  const thumbFetching = useRef(new Set());
+  useEffect(() => {
+    if (!multiFiles) return undefined;
+    let cancelled = false;
+    const targets = [];
+    multiFiles.forEach((raw) => {
+      const nf = normalizeFile(raw);
+      if (!nf?.name || nf.dataUrl || byteCache[nf.name] || thumbFetching.current.has(nf.name))
+        return;
+      const isImg =
+        nf.type?.startsWith('image/') ||
+        /\.(png|jpe?g|gif|webp|svg|bmp|tiff?|heic|heif)$/i.test(nf.name);
+      if (isImg) targets.push({ name: nf.name, type: nf.type });
+    });
+    if (targets.length === 0) return undefined;
+    targets.forEach((tgt) => thumbFetching.current.add(tgt.name));
+    (async () => {
+      for (const tgt of targets) {
+        try {
+          const json = await costApi.getLayout(tgt.name);
+          if (!cancelled && json?.data) {
+            const mime = json.mime || tgt.type || 'application/octet-stream';
+            cacheBytes(tgt.name, `data:${mime};base64,${json.data}`);
+          }
+        } catch {
+          /* 404 etc — tile stays a badge */
+        } finally {
+          thumbFetching.current.delete(tgt.name);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [multiFiles, byteCache, cacheBytes]);
 
   // ── File reading ──
   const readFile = useCallback(
@@ -324,9 +487,16 @@ export default function FileUploadZone({
       reader.onload = async () => {
         const dataUrl = reader.result;
         // Auto-name per customer spec: {Customer}_{EndCuPN}_{Date_Time}.
-        // Uses new naming context when available, falls back to legacy
-        // cclPn so loading old quotes still works.
-        const basename = buildServerBasename({ endCu, directCu, endCuPn, cclPn, nameSuffix });
+        // In multi-file mode append a per-file index so several drawings
+        // in the same minute don't collide (server stores by this name).
+        const idxSuffix = multiFiles ? `_${multiFiles.length + 1}` : '';
+        const basename = buildServerBasename({
+          endCu,
+          directCu,
+          endCuPn,
+          cclPn,
+          nameSuffix: `${nameSuffix || ''}${idxSuffix}`,
+        });
         const ext =
           extOf(f.name) ||
           (f.type === 'application/pdf'
@@ -335,8 +505,10 @@ export default function FileUploadZone({
               ? '.' + f.type.slice(6)
               : '.bin');
         const generatedName = basename + ext;
-        const obj = { name: generatedName, type: f.type, dataUrl };
-        onFileChange(obj);
+        // Persist ONLY {name,type} to state; the bytes go to the transient
+        // cache (instant preview) and to the server by name (durable copy).
+        appendFile({ name: generatedName, type: f.type });
+        cacheBytes(generatedName, dataUrl);
         try {
           await costApi.saveLayout({
             ccl_pn: basename,
@@ -349,7 +521,7 @@ export default function FileUploadZone({
       };
       reader.readAsDataURL(f);
     },
-    [onFileChange, endCu, directCu, endCuPn, cclPn, nameSuffix]
+    [appendFile, cacheBytes, multiFiles, endCu, directCu, endCuPn, cclPn, nameSuffix]
   );
 
   const handleDrop = useCallback(
@@ -407,45 +579,25 @@ export default function FileUploadZone({
     };
   }, [ctxMenu]);
 
+  // Open the ACTIVE file in a new window. Delegates to the shared resolver so
+  // it works whether bytes are inline, cached, or must be fetched by name —
+  // desktop bridge (OS default app: print/annotate) with a window.open fallback.
   const ctxOpen = async () => {
     setCtxMenu(null);
-    // Desktop (Electron): hand off to the OS default handler so PDFs open
-    // in Adobe Acrobat / Preview / system browser — operators get print
-    // dialog, annotations, etc. that the embedded Chromium PDF viewer
-    // doesn't expose. Falls back to web-style window.open() when the
-    // bridge isn't available (regular browser).
-    const bridge = window.ops?.shell?.openExternalFile;
-    if (bridge && file?.dataUrl) {
-      const m = /^data:([^;]+);base64,(.+)$/.exec(file.dataUrl);
-      if (m) {
-        const ext =
-          m[1] === 'application/pdf'
-            ? '.pdf'
-            : m[1].startsWith('image/')
-              ? '.' + m[1].slice(6).split('+')[0]
-              : '.bin';
-        try {
-          await bridge(m[2], ext);
-          return;
-        } catch (err) {
-          console.warn('[FileUploadZone] openExternalFile failed, falling back:', err);
-        }
-      }
-    }
-    if (blobUrl) window.open(blobUrl, '_blank', 'noopener,noreferrer');
+    await openFileInNewWindow(file);
   };
   const ctxDelete = () => {
     setCtxMenu(null);
-    if (file && window.confirm(`Remove "${file.name || 'file'}"?`)) onClear();
+    if (file && window.confirm(`Remove "${file.name || 'file'}"?`)) clearActive();
   };
   const ctxUpload = () => {
     setCtxMenu(null);
     inputRef.current?.click();
   };
-  // Rotate 90° clockwise per click (0 → 90 → 180 → 270 → 0). Image only;
-  // PDFs use the native iframe renderer and don't respect CSS transform.
-  // Rotation is preview-only (not persisted) — fresh load resets to 0°,
-  // matching how zoom/pan behave.
+  // Rotate 90° clockwise per click (0 → 90 → 180 → 270 → 0). Works for
+  // both images (CSS transform) and PDFs (pdfjs `getViewport({rotation})`
+  // re-renders the canvas at the new orientation). Rotation is preview-
+  // only (not persisted) — fresh load resets to 0°, matching zoom/pan.
   const ctxRotate = () => {
     setCtxMenu(null);
     setRotation((r) => (r + 90) % 360);
@@ -456,8 +608,8 @@ export default function FileUploadZone({
   // browsers, (b) loses the in-app context. Now opens an in-app modal at
   // xl size — operators can still hit the Open button for a real new tab.
   const handleDoubleClick = useCallback(() => {
-    if (file?.dataUrl) setFullscreenOpen(true);
-  }, [file]);
+    if (activeDataUrl) setFullscreenOpen(true);
+  }, [activeDataUrl]);
 
   // ── Zoom (wheel) ──
   const handleWheel = useCallback(
@@ -520,8 +672,7 @@ export default function FileUploadZone({
           full dropdown for power users, but direct buttons give every
           user a discoverable path. Matches Quote History's action-column
           pattern — icon buttons with tooltips + hover color feedback.
-          Disabled states: Open + Delete when no file; Rotate only for
-          images (PDF iframe ignores CSS transform). */}
+          Disabled states: Open + Delete when no file. */}
       <div
         className={`fuz-label${collapsible ? ' fuz-label-collapsible' : ''}${collapsed ? ' fuz-collapsed' : ''}`}
         onContextMenu={handleContextMenu}
@@ -573,7 +724,7 @@ export default function FileUploadZone({
             className="fuz-act-btn fuz-act-fullscreen"
             onClick={(e) => {
               e.stopPropagation();
-              if (file?.dataUrl) setFullscreenOpen(true);
+              if (activeDataUrl) setFullscreenOpen(true);
             }}
             disabled={!file}
             title="Fullscreen (double-click)"
@@ -628,12 +779,12 @@ export default function FileUploadZone({
               e.stopPropagation();
               setRotation((r) => (r + 90) % 360);
             }}
-            disabled={!file || (!isImage && isPDF)}
+            disabled={!file || (!isImage && !isPDF)}
             title={
               file
-                ? isImage
+                ? isImage || isPDF
                   ? 'Rotate 90° clockwise (⌘R)'
-                  : 'Rotate only works on image files'
+                  : 'Rotate only works on image or PDF files'
                 : 'No file attached'
             }
             aria-label="Rotate drawing 90 degrees"
@@ -708,6 +859,102 @@ export default function FileUploadZone({
         </div>
       </div>
 
+      {/* Thumbnail gallery (multi-file only). Each drawing is a small tile;
+          the active one is highlighted and fills the frame below. Images
+          decode lazily via native loading="lazy" (no per-tile object URL to
+          manage); PDFs/other show a badge. */}
+      {!collapsed && multiFiles && multiFiles.length > 0 && (
+        <div className="fuz-thumbs" role="listbox" aria-label={label}>
+          <span className="fuz-thumbs-count">{t('fuz.count', { n: multiFiles.length })}</span>
+          {multiFiles.map((raw, i) => {
+            const nf = normalizeFile(raw);
+            const thumbImg = !!(
+              nf &&
+              (nf.type?.startsWith('image/') ||
+                /\.(png|jpe?g|gif|webp|svg|bmp|tiff?|heic|heif)$/i.test(nf.name || ''))
+            );
+            const thumbPdf = nf?.type === 'application/pdf' || /\.pdf$/i.test(nf?.name || '');
+            const thumbUrl = dataUrlFor(nf); // inline / cached / null (badge)
+            const isActive = i === activeIdx;
+            return (
+              <div
+                key={nf?.name ? `${nf.name}:${i}` : `thumb-${i}`}
+                className={`fuz-thumb${isActive ? ' fuz-thumb-active' : ''}`}
+                role="option"
+                aria-selected={isActive}
+                tabIndex={0}
+                title={nf?.name || ''}
+                onClick={() => onActiveChange?.(i)}
+                onDoubleClick={() => openFileInNewWindow(targetFileAt(multiFiles, i))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onActiveChange?.(i);
+                  }
+                }}
+              >
+                <div className="fuz-thumb-preview">
+                  {thumbImg && thumbUrl ? (
+                    <img
+                      src={thumbUrl}
+                      alt={nf.name}
+                      className="fuz-thumb-img"
+                      loading="lazy"
+                      draggable={false}
+                    />
+                  ) : (
+                    <span className="fuz-thumb-badge">{thumbPdf ? 'PDF' : 'FILE'}</span>
+                  )}
+                </div>
+                <span className="fuz-thumb-name">{nf?.name || '—'}</span>
+                <div className="fuz-thumb-actions" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    className="fuz-thumb-btn fuz-thumb-open"
+                    title={t('fuz.open_new')}
+                    aria-label={t('fuz.open_new')}
+                    onClick={() => openFileInNewWindow(targetFileAt(multiFiles, i))}
+                  >
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                      <polyline points="15 3 21 3 21 9" />
+                      <line x1="10" y1="14" x2="21" y2="3" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="fuz-thumb-btn fuz-thumb-remove"
+                    title={t('fuz.remove')}
+                    aria-label={t('fuz.remove')}
+                    onClick={() => removeThumb(i)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          <button
+            type="button"
+            className="fuz-thumb-add"
+            title={t('fuz.add')}
+            aria-label={t('fuz.add')}
+            onClick={() => inputRef.current?.click()}
+          >
+            +
+          </button>
+        </div>
+      )}
+
       {/* Preview or Empty — body hidden when collapsible+collapsed. We
           conditionally render rather than CSS-hide so PdfCanvasPreview
           doesn't run pdfjs while the panel is folded away. */}
@@ -722,7 +969,7 @@ export default function FileUploadZone({
           >
             {hasPreview && isImage && (
               <img
-                src={file.dataUrl}
+                src={activeDataUrl}
                 alt={file.name}
                 className="fuz-img"
                 style={{
@@ -736,6 +983,7 @@ export default function FileUploadZone({
                 bytes={pdfBytes?.bytes}
                 title={file.name}
                 className="fuz-pdf-frame"
+                rotation={rotation}
               />
             )}
             {hasPreview && !isImage && !isPDF && <div className="fuz-file-msg">File attached</div>}
@@ -753,7 +1001,9 @@ export default function FileUploadZone({
               <div className="fuz-zoom-badge">{Math.round(zoom * 100)}%</div>
             )}
             {/* Rotation indicator (only while non-zero) */}
-            {isImage && rotation !== 0 && <div className="fuz-rot-badge">{rotation}°</div>}
+            {(isImage || isPDF) && rotation !== 0 && (
+              <div className="fuz-rot-badge">{rotation}°</div>
+            )}
           </div>
         ) : (
           <div className="fuz-empty" onClick={() => inputRef.current?.click()}>
@@ -780,8 +1030,8 @@ export default function FileUploadZone({
           Header row shows card title + filename (like "Quote #99 — NA"),
           item rows use the same hover color + shortcut chips. */}
       {ctxMenu && (
-        <div className="fuz-ctx" style={{ top: ctxMenu.y, left: ctxMenu.x }}>
-          <div className="fuz-ctx-header">
+        <div ref={ctxMenuRef} className="fuz-ctx" style={ctxMenuStyle}>
+          <div className="fuz-ctx-header" data-menu-drag-handle>
             {label}
             <span className="fuz-ctx-header-sub">
               {file?.name ? ` — ${file.name}` : ' — (empty)'}
@@ -823,8 +1073,9 @@ export default function FileUploadZone({
 
       {/* Fullscreen viewer — XL modal showing the file at large size.
           Triggered by the new fullscreen button OR double-click on the
-          preview. PDFs use blob URL iframe (avoids CSP/data-URL block).
-          Images respect rotation but reset zoom/pan inside the modal. */}
+          preview. Both image and PDF respect the current rotation set
+          on the header card (CSS transform for images, pdfjs viewport
+          for PDFs). Zoom/pan reset inside the modal. */}
       <Modal
         open={fullscreenOpen}
         onClose={() => setFullscreenOpen(false)}
@@ -835,14 +1086,19 @@ export default function FileUploadZone({
         <Modal.Body>
           {file && hasPreview && isImage && (
             <img
-              src={blobUrl || file.dataUrl}
+              src={blobUrl || activeDataUrl}
               alt={file.name}
               className="fuz-fs-img"
               style={{ transform: `rotate(${rotation}deg)` }}
             />
           )}
           {file && hasPreview && isPDF && blobUrl && (
-            <PdfCanvasPreview bytes={pdfBytes?.bytes} title={file.name} className="fuz-fs-pdf" />
+            <PdfCanvasPreview
+              bytes={pdfBytes?.bytes}
+              title={file.name}
+              className="fuz-fs-pdf"
+              rotation={rotation}
+            />
           )}
           {file && !hasPreview && <div className="fuz-file-msg">No preview available.</div>}
         </Modal.Body>

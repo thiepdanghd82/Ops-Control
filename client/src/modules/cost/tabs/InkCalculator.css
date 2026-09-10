@@ -430,7 +430,20 @@
   font-size: 12px;
   letter-spacing: 0.32px;
   border: 1px solid #e0e0e0;
-  color: #161616;
+  color: #ffffff;
+}
+/* Sub-header row (the 2nd <tr> inside thead) — every cell has a dark
+   inline background: 6 brand colors on the data cells PLUS footBg
+   (#1e3a5f silk / #4c1d95 flexo) on the leftmost Row/Color pair. The
+   inherited grey #525252 was invisible on every one of them. PR #144's
+   attribute selector misfired because React's inline-style
+   serialization shifts the hex form; PR #145's positional selector
+   fixed the data cells but I mistakenly assumed footBg was light and
+   excluded the first 2 cells — Henry then reported "còn sót chưa
+   chuyển chữ sang màu trắng, cột Syns, chữ ROW và COLOR". footBg is
+   in fact dark too, so all sub-header cells flip to white. */
+.ink-qpa-table thead tr:nth-of-type(2) > th {
+  color: #ffffff;
 }
 .ink-qpa-table thead th.formula {
   padding: 4px 6px;

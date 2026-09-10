@@ -34,6 +34,8 @@ import {
 import { useI18n } from '../../utils/useI18n';
 import { useCostLib } from '../../context/CostLibContext';
 import Modal from '../Shared/Modal';
+import { useFloatingMenu } from '../Shared/useFloatingMenu';
+import { normNPI, normSourcing, normIfsMaterial } from './LibraryPicker.norm.js';
 import './LibraryPicker.css';
 
 const Ctx = createContext(null);
@@ -45,52 +47,14 @@ export function useLibraryPicker() {
 }
 
 // ── Per-library normalizers ──────────────────────────────────────────
-// Each function takes a raw row from the library and returns the
-// shared picker row shape { code, ifs_code, desc, g_price, supplier,
-// extra } plus whichever columns that library wants to display. The
-// `extra` string appears as a muted 3rd column in the search table.
-
-function normNPI(row) {
-  // npiDB rows: { name, type, price (DAP), thick, color, supplier, note }
-  return {
-    code: row.name || '',
-    ifs_code: '',
-    desc: [row.type, row.thick, row.color].filter(Boolean).join(' · ') || row.name || '',
-    g_price: Number(row.price) || 0,
-    supplier: row.supplier || '',
-    extra: row.note || '',
-  };
-}
-function normSourcing(row) {
-  // sourcingDB rows: { material, size, exw, dap, moq, lt, supplier, status }
-  return {
-    code: row.material || '',
-    ifs_code: '',
-    desc: [row.material, row.size].filter(Boolean).join(' · '),
-    // Prefer DAP price (landed) — same cost basis as NPI. exw fallback.
-    g_price: Number(row.dap) || Number(row.exw) || 0,
-    supplier: row.supplier || '',
-    extra: row.status || '',
-  };
-}
-function normRawMaterial(row) {
-  // raw_materials rows: { "Part No", "Part Description", "Supplier ID",
-  // Price, "Price Unit Measure", "Purch U/M", ... }
-  const partNo = row['Part No'] || row.part_no || '';
-  return {
-    code: partNo,
-    ifs_code: partNo, // For IFS inventory the Part No IS the IFS code.
-    desc: row['Part Description'] || row.description || '',
-    g_price: Number(row.Price ?? row.price) || 0,
-    supplier: row['Supplier ID'] || row.supplier || '',
-    extra: row['Price Unit Measure'] || row.uom || '',
-  };
-}
+// Pure row-shape mappers extracted to LibraryPicker.norm.js so node:test
+// can import them without a JSX/CSS loader. Each returns the shared
+// picker row { code, ifs_code, desc, g_price, supplier, extra, date }.
 
 const LIBRARIES = [
   { key: 'npi', labelKey: 'picker.lib.npi', norm: normNPI, source: 'npi' },
   { key: 'sourcing', labelKey: 'picker.lib.sourcing', norm: normSourcing, source: 'sourcing' },
-  { key: 'raw', labelKey: 'picker.lib.raw', norm: normRawMaterial, source: 'rawMaterials' },
+  { key: 'ifs', labelKey: 'picker.lib.ifs', norm: normIfsMaterial, source: 'ifs' },
 ];
 
 // Case-insensitive substring match across the normalized searchable
@@ -118,13 +82,9 @@ export function LibraryPickerProvider({ children }) {
 
   const openMenu = useCallback(({ event, onPick }) => {
     event.preventDefault();
-    // Menu position clamped so it doesn't spill off the viewport edge.
-    // Width/height are approximate — overshoot gets trimmed on first render.
-    const W = 230,
-      H = 200;
-    const x = Math.min(event.clientX, window.innerWidth - W - 8);
-    const y = Math.min(event.clientY, window.innerHeight - H - 8);
-    setMenu({ x, y, onPick });
+    // Raw viewport coords — ContextMenu places itself edge-aware (flip +
+    // clamp) after measuring, via useFloatingMenu.
+    setMenu({ x: event.clientX, y: event.clientY, onPick });
   }, []);
 
   const closeMenu = useCallback(() => setMenu(null), []);
@@ -188,15 +148,15 @@ export function LibraryPickerProvider({ children }) {
 function ContextMenu({ x, y, onSelect, onClose }) {
   const { t } = useI18n();
   const [active, setActive] = useState(null);
-  const ref = useRef(null);
+  const { menuRef, style } = useFloatingMenu({ open: true, x, y });
 
   useEffect(() => {
     function onDoc(e) {
-      if (!ref.current?.contains(e.target)) onClose();
+      if (!menuRef.current?.contains(e.target)) onClose();
     }
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
-  }, [onClose]);
+  }, [onClose, menuRef]);
 
   const choose = (key) => {
     setActive(key);
@@ -206,8 +166,10 @@ function ContextMenu({ x, y, onSelect, onClose }) {
   };
 
   return (
-    <div ref={ref} className="libp-menu" style={{ left: x, top: y }} role="menu">
-      <div className="libp-menu-head">{t('picker.menu_title')}</div>
+    <div ref={menuRef} className="libp-menu" style={style} role="menu">
+      <div className="libp-menu-head" data-menu-drag-handle>
+        {t('picker.menu_title')}
+      </div>
       {LIBRARIES.map((L) => (
         <button
           key={L.key}
@@ -250,7 +212,7 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
   if (!def) return null;
 
   return (
-    <Modal open onClose={onClose} size="lg" ariaLabelledBy="libp-title">
+    <Modal open onClose={onClose} size="lg" maximizable ariaLabelledBy="libp-title">
       <Modal.Header
         id="libp-title"
         title={t(def.labelKey)}
@@ -259,20 +221,21 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
             ? `400+ ${t('picker.result_count_suffix')}`
             : `${rows.length} ${t('picker.result_count_suffix')}`
         }
-      >
-        {onBack && (
-          <button
-            type="button"
-            className="libp-card-back"
-            onClick={onBack}
-            aria-label={t('picker.back')}
-            title={t('picker.back')}
-          >
-            ← {t('picker.back')}
-          </button>
-        )}
-      </Modal.Header>
+      />
       <Modal.Body className="flush">
+        {onBack && (
+          <div className="libp-backrow">
+            <button
+              type="button"
+              className="libp-card-back"
+              onClick={onBack}
+              aria-label={t('picker.back')}
+              title={t('picker.back')}
+            >
+              ← {t('picker.back')}
+            </button>
+          </div>
+        )}
         <div className="libp-card-search">
           <input
             ref={inputRef}
@@ -291,6 +254,7 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
           <table className="libp-table">
             <thead>
               <tr>
+                <th className="libp-col-date">{t('picker.col.date')}</th>
                 <th className="libp-col-code">{t('picker.col.code')}</th>
                 <th className="libp-col-desc">{t('picker.col.desc')}</th>
                 <th className="libp-col-supplier">{t('picker.col.supplier')}</th>
@@ -300,7 +264,7 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="libp-empty">
+                  <td colSpan={5} className="libp-empty">
                     {t('picker.empty')}
                   </td>
                 </tr>
@@ -311,6 +275,7 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
                   onDoubleClick={() => onPick(r)}
                   title={t('picker.double_click_hint')}
                 >
+                  <td className="libp-col-date">{r.date || '—'}</td>
                   <td className="libp-col-code">
                     <code>{r.code}</code>
                   </td>

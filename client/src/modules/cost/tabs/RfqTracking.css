@@ -1,0 +1,540 @@
+/* RFQ Tracking — spreadsheet-style master list. Mirrors MaterialLibrary look. */
+
+.rt-wrap {
+  padding: 16px 20px 40px;
+  container-type: inline-size;
+}
+
+/* ── Headbar ─────────────────────────────────────────────────── */
+.rt-headbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.rt-hb-left {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.rt-hb-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.rt-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+.rt-count {
+  font-size: 12px;
+  color: var(--text-muted, #6f6f6f);
+  font-variant-numeric: tabular-nums;
+}
+.rt-search {
+  min-width: 240px;
+  padding: 6px 10px;
+  border: 1px solid var(--border, #c6c6c6);
+  border-radius: 4px;
+  background: var(--surface, #fff);
+  color: inherit;
+  font-size: 13px;
+}
+.rt-import-msg {
+  font-size: 12px;
+  color: var(--brand, #1e40af);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+.rt-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border, #c6c6c6);
+  border-radius: 4px;
+  background: var(--surface, #fff);
+  color: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.rt-btn:hover:not(:disabled) {
+  background: var(--surface-hover, #f2f2f2);
+}
+.rt-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.rt-btn-primary {
+  background: var(--brand, #1e40af);
+  border-color: var(--brand, #1e40af);
+  color: #fff;
+}
+.rt-btn-primary:hover:not(:disabled) {
+  background: var(--brand-dark, #1a3690);
+}
+.rt-btn-danger {
+  border-color: #da1e28;
+  color: #da1e28;
+}
+.rt-btn-import {
+  border-style: dashed;
+}
+
+/* ── Table ───────────────────────────────────────────────────── */
+.rt-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 6px;
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+}
+.rt-table {
+  border-collapse: collapse;
+  font-size: 12.5px;
+  min-width: 100%;
+}
+.rt-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface-alt, #f4f4f4);
+  color: var(--text, #161616);
+  text-align: left;
+  font-weight: 600;
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--border, #c6c6c6);
+  border-right: 1px solid var(--border-subtle, #e8e8e8);
+  white-space: nowrap;
+}
+.rt-th-req::after {
+  content: ' *';
+  color: #da1e28;
+}
+
+/* Sales-input columns (Sales PIC / Sale Stage / Notes-Reason) get an amber
+   header accent so Sales can spot the columns they own at a glance. The tint
+   is semi-transparent → reads on both light and dark themes. */
+.rt-table thead th.rt-th-sales {
+  background: rgba(217, 138, 0, 0.16);
+  box-shadow: inset 0 3px 0 0 #d98a00;
+}
+.rt-table thead th.rt-th-sales .rt-th-sort:hover {
+  background: rgba(217, 138, 0, 0.24);
+}
+.rt-filter-row th.rt-th-sales {
+  background: rgba(217, 138, 0, 0.1);
+}
+.rt-table tbody td {
+  padding: 0;
+  border-bottom: 1px solid var(--border-subtle, #eee);
+  border-right: 1px solid var(--border-subtle, #f0f0f0);
+  vertical-align: middle;
+}
+.rt-row:hover td {
+  background: var(--surface-hover, #f7f9fc);
+}
+
+/* row-number / expand cell */
+.rt-th-num,
+.rt-td-num {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface-alt, #f4f4f4);
+  text-align: center;
+  white-space: nowrap;
+}
+.rt-table thead .rt-th-num {
+  z-index: 3;
+}
+.rt-td-num {
+  padding: 2px 6px;
+  color: var(--text-muted, #6f6f6f);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.rt-rownum {
+  margin-left: 2px;
+}
+.rt-expand {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--brand, #1e40af);
+  padding: 0 2px;
+}
+.rt-expand:hover {
+  transform: scale(1.15);
+}
+
+/* ── Inline cells (borderless, spreadsheet feel) ─────────────── */
+.rt-cell {
+  width: 100%;
+  min-width: 70px;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  padding: 5px 7px;
+  font: inherit;
+  font-size: 12.5px;
+}
+.rt-cell:focus {
+  outline: none;
+  border-color: var(--brand, #1e40af);
+  background: var(--surface, #fff);
+}
+.rt-cell:disabled {
+  color: var(--text, #161616);
+  -webkit-text-fill-color: var(--text, #161616);
+  opacity: 1;
+}
+.rt-cell-num,
+.rt-cell-pct {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.rt-cell-date {
+  min-width: 128px;
+}
+
+/* per-column min-widths (no inline styles — Lesson 6) */
+[data-col='__num'] {
+  min-width: 54px;
+}
+[data-col='rfq_no'],
+[data-col='qtn'] {
+  min-width: 62px;
+}
+[data-col='description'],
+[data-col='end_customer'],
+[data-col='npi_stage'] {
+  min-width: 150px;
+}
+[data-col='main_material'],
+[data-col='notes'] {
+  min-width: 200px;
+}
+
+/* ── Pager ───────────────────────────────────────────────────── */
+.rt-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 12px;
+}
+.rt-pager-label {
+  font-size: 12px;
+  color: var(--text-muted, #6f6f6f);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Showcard ────────────────────────────────────────────────── */
+.rt-sc-group {
+  border: 1px solid var(--border-subtle, #e0e0e0);
+  border-radius: 6px;
+  padding: 10px 14px 14px;
+  margin: 0 0 14px;
+}
+.rt-sc-group > legend {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--brand, #1e40af);
+  padding: 0 6px;
+}
+.rt-sc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px 14px;
+}
+.rt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.rt-field-wide {
+  grid-column: 1 / -1;
+}
+.rt-field > label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #6f6f6f);
+}
+.rt-field-input {
+  padding: 6px 8px;
+  border: 1px solid var(--border, #c6c6c6);
+  border-radius: 4px;
+  background: var(--surface, #fff);
+  color: inherit;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.rt-field-pct {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rt-field-suffix {
+  font-size: 12px;
+  color: var(--text-muted, #6f6f6f);
+}
+.rt-sc-footer-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+@container (max-width: 700px) {
+  .rt-sc-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Sortable headers ────────────────────────────────────────── */
+.rt-btn-on {
+  background: var(--brand, #1e40af);
+  border-color: var(--brand, #1e40af);
+  color: #fff;
+}
+/* header cells hold a full-width sort button → move padding onto the button */
+.rt-table thead th {
+  padding: 0;
+}
+.rt-th-num {
+  padding: 5px 6px;
+}
+.rt-th-sort {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 8px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+.rt-th-sort:hover {
+  background: var(--surface-hover, #eef2ff);
+}
+.rt-sort-ind {
+  font-size: 10px;
+  opacity: 0.55;
+}
+.rt-table thead th[aria-sort='ascending'] .rt-sort-ind,
+.rt-table thead th[aria-sort='descending'] .rt-sort-ind {
+  opacity: 1;
+  color: var(--brand, #1e40af);
+}
+
+/* ── Filter row (second sticky header row) ───────────────────── */
+.rt-filter-row th {
+  position: sticky;
+  top: 33px; /* sits just below the ~33px header row */
+  z-index: 1;
+  background: var(--surface-alt, #f4f4f4);
+  border-bottom: 1px solid var(--border, #c6c6c6);
+  padding: 3px 4px;
+}
+.rt-filter-row .rt-th-num {
+  z-index: 2;
+  text-align: center;
+}
+.rt-fclear {
+  border: 1px solid var(--border, #c6c6c6);
+  background: var(--surface, #fff);
+  color: #da1e28;
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 1px 6px;
+  font-size: 12px;
+}
+.rt-fclear:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.rt-fcell {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border, #c6c6c6);
+  border-radius: 3px;
+  background: var(--surface, #fff);
+  color: inherit;
+  font: inherit;
+  font-size: 11.5px;
+  padding: 3px 5px;
+}
+.rt-frange {
+  display: flex;
+  gap: 3px;
+}
+.rt-fcell-sm {
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+/* ── Enum multi-select popover ───────────────────────────────── */
+.rt-enum {
+  position: relative;
+}
+.rt-enum-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  cursor: pointer;
+  text-align: left;
+}
+.rt-enum-sum {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rt-enum-pop {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 30;
+  min-width: 170px;
+  max-height: 260px;
+  overflow-y: auto;
+  margin-top: 2px;
+  padding: 4px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #c6c6c6);
+  border-radius: 5px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+}
+.rt-enum-opt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.rt-enum-opt:hover {
+  background: var(--surface-hover, #f2f2f2);
+}
+.rt-enum-empty {
+  padding: 6px;
+  font-size: 12px;
+  color: var(--text-muted, #6f6f6f);
+}
+.rt-enum-clear {
+  width: 100%;
+  margin-top: 4px;
+  padding: 3px;
+  border: 1px solid var(--border, #c6c6c6);
+  border-radius: 3px;
+  background: var(--surface, #fff);
+  color: inherit;
+  cursor: pointer;
+  font-size: 11.5px;
+}
+
+/* ── No-match message ────────────────────────────────────────── */
+.rt-nomatch {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted, #6f6f6f);
+  font-size: 13px;
+}
+
+/* ── Percent cells (VA / Contr / GM): "%" suffix + margin red-flag ── */
+.rt-pct-wrap {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.rt-pct-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
+}
+.rt-pct-suffix {
+  padding: 0 6px 0 1px;
+  color: var(--text-muted, #6f6f6f);
+  font-size: 11.5px;
+  pointer-events: none;
+}
+/* Red background when below threshold (GM < 0%, Contr < 25%, VA < 30%).
+   Semi-transparent so it reads on both light and dark themes. */
+.rt-cell-bad {
+  background: rgba(218, 30, 40, 0.16);
+}
+/* Let the wrapper's red show through the (transparent) grid input on focus. */
+.rt-pct-wrap .rt-cell:focus {
+  background: transparent;
+}
+/* Showcard input has an opaque background, so tint the input itself. */
+.rt-field-pct.rt-cell-bad .rt-field-input {
+  background: rgba(218, 30, 40, 0.14);
+  border-color: #da1e28;
+}
+
+/* ── Choice cells (Sale Stage / Sales PIC): select OR "Other" text ── */
+.rt-choice {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+}
+.rt-choice-sel {
+  flex: 1 1 auto;
+  min-width: 0;
+  cursor: pointer;
+}
+.rt-choice-other {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* ▾ button to reopen the preset list from a custom "Other" value */
+.rt-choice-toggle {
+  flex: 0 0 auto;
+  border: 1px solid var(--border, #c6c6c6);
+  border-radius: 3px;
+  background: var(--surface, #fff);
+  color: var(--text-muted, #6f6f6f);
+  cursor: pointer;
+  padding: 2px 5px;
+  font-size: 10px;
+  line-height: 1;
+}
+.rt-choice-toggle:hover {
+  background: var(--surface-hover, #f2f2f2);
+}
+
+/* ── Showcard: Notes/Reason required for Rejected/Cancel ──────────── */
+.rt-sc-reason-err {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border: 1px solid #da1e28;
+  border-left-width: 4px;
+  border-radius: 4px;
+  background: rgba(218, 30, 40, 0.1);
+  color: #da1e28;
+  font-size: 13px;
+  font-weight: 600;
+}
+.rt-field-invalid > label {
+  color: #da1e28;
+}
+.rt-field-invalid .rt-field-input {
+  border-color: #da1e28;
+  background: rgba(218, 30, 40, 0.08);
+}

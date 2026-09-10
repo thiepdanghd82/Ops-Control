@@ -21,7 +21,7 @@ import { fileURLToPath } from 'url';
 
 import { atomicWriteFileSync } from './atomicWrite.js';
 import { clearCache } from './dataSync.js';
-import { getDataset, normKey, STORAGE_JS_AOA, STORAGE_JSON_AOO } from './importDatasets.js';
+import { getDataset, normKey, STORAGE_JS_AOA } from './importDatasets.js';
 import { coerce } from './importTypeCoerce.js';
 import * as shadowWrite from '../repositories/shadowWrite.js';
 
@@ -38,31 +38,250 @@ const LIBRARY_DIR = path.join(DATA_DIR, 'Library');
 // Header mapping
 // ─────────────────────────────────────────────────────────────────
 
+// Tokens that carry no field identity — units + qualifiers that appear in
+// real export headers ("USD / M² PRICE", "MM THICKNESS", "DAYS LEAD TIME").
+// Stripping them lets the remaining content tokens match the alias content.
+const NOISE_TOKENS = new Set(['mm', 'm2', 'usd', 'vnd', 'days', 'day', 'pcs', 'no']);
+
 /**
- * Given the raw headers of an uploaded file, return:
- *   - normalisedHeaders: same length as input, with each header rewritten
- *     to its canonical form when an alias matched, else null.
- *   - mapping: { canonical: originalIndex } — the column lookup used by
- *     the row mapper. Only keeps the first match per canonical name.
- *   - unmapped: indexes of columns the alias map did not recognise.
- *   - missing: required canonical headers that were NOT found.
+ * Canonicalise a header/alias string into a Set of content tokens:
+ * lowercase, ²→2, strip punctuation (/ , . ( ) - # %), drop unit/noise
+ * tokens, keep the rest. Deterministic. e.g. "USD / M² PRICE" → {price}.
  */
-export function mapHeaders(rawHeaders, dataset) {
+export function canonicalTokens(s) {
+  const cleaned = String(s ?? '')
+    .toLowerCase()
+    .replace(/²/g, '2')
+    .replace(/[/,.()\-#%]/g, ' ');
+  const toks = cleaned
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((t) => !NOISE_TOKENS.has(t));
+  return new Set(toks);
+}
+
+function setsEqual(a, b) {
+  if (a.size !== b.size) return false;
+  for (const t of a) if (!b.has(t)) return false;
+  return true;
+}
+function isSubset(small, big) {
+  if (small.size === 0) return false;
+  for (const t of small) if (!big.has(t)) return false;
+  return true;
+}
+function jaccard(a, b) {
+  if (a.size === 0 || b.size === 0) return 0;
+  let inter = 0;
+  for (const t of a) if (b.has(t)) inter++;
+  const uni = a.size + b.size - inter;
+  return uni === 0 ? 0 : inter / uni;
+}
+
+/**
+ * Match a raw header against an alias map `{ normKey(alias): canonical }`
+ * (the shape of both `dataset.aliases` and the legacy NPI_HEADER_MAP).
+ *
+ * Tolerant cascade — deterministic, no fuzzy-match dependency:
+ *   1. exact `aliases[normKey(h)]`           → confidence 1.0
+ *   2. canonicalised token-set equal          → 0.9
+ *   3. alias tokens ⊆ header tokens, OR
+ *      Jaccard(header, alias) ≥ 0.6           → 0.7
+ *   else (< 0.6)                              → UNMATCHED
+ *
+ * Highest confidence wins; ties keep the first alias encountered (insertion
+ * order). Returns { canonical, confidence, status, suggestions }, where
+ * status is 'matched' (≥0.9) | 'low' (≥0.6) | 'unmatched', and suggestions
+ * is the top-2 nearest canonicals (by raw token overlap) for unmatched cols.
+ */
+export function matchHeader(rawHeader, aliases) {
+  const nk = normKey(rawHeader);
+  if (aliases[nk]) {
+    return { canonical: aliases[nk], confidence: 1, status: 'matched', suggestions: [] };
+  }
+  const hTokens = canonicalTokens(rawHeader);
+  let best = null; // { canonical, confidence }
+  const sims = new Map(); // canonical → best raw overlap (for suggestions)
+  for (const [aliasKey, canonical] of Object.entries(aliases)) {
+    const aTokens = canonicalTokens(aliasKey);
+    if (aTokens.size === 0) continue; // unit-only alias (e.g. "usd/m²") — skip
+    const sim = jaccard(hTokens, aTokens);
+    if (sim > 0 && (!sims.has(canonical) || sims.get(canonical) < sim)) {
+      sims.set(canonical, sim);
+    }
+    let conf = 0;
+    if (setsEqual(hTokens, aTokens)) conf = 0.9;
+    else if (isSubset(aTokens, hTokens) || sim >= 0.6) conf = 0.7;
+    if (conf > 0 && (!best || conf > best.confidence)) {
+      best = { canonical, confidence: conf };
+    }
+  }
+  if (best && best.confidence >= 0.6) {
+    return {
+      canonical: best.canonical,
+      confidence: best.confidence,
+      status: best.confidence >= 0.9 ? 'matched' : 'low',
+      suggestions: [],
+    };
+  }
+  const suggestions = [...sims.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([canonical, confidence]) => ({ canonical, confidence: +confidence.toFixed(3) }));
+  return {
+    canonical: null,
+    confidence: best ? best.confidence : 0,
+    status: 'unmatched',
+    suggestions,
+  };
+}
+
+/**
+ * Fraction of a column's NON-EMPTY sampled cells that coerce to a number.
+ * Used to disambiguate which source column feeds a number-typed canonical:
+ * a real "Price" column scores ~1.0; a boolean "Use Price Incl Tax" column
+ * (all `false`) scores 0. Empty cells are ignored (sparse columns are fine).
+ */
+function numericFitness(sampleRows, colIndex, limit = 100) {
+  let seen = 0;
+  let numeric = 0;
+  for (let r = 0; r < sampleRows.length && seen < limit; r++) {
+    const cell = sampleRows[r] ? sampleRows[r][colIndex] : undefined;
+    const s = cell == null ? '' : String(cell).trim();
+    if (s === '') continue;
+    seen++;
+    if (coerce(cell, 'number').ok) numeric++;
+  }
+  return seen === 0 ? 0 : numeric / seen;
+}
+
+/**
+ * Resolve raw headers → the winning column index per canonical, using the
+ * tolerant matcher with confidence-ranked (and optionally data-aware)
+ * conflict resolution. Shared by `mapHeaders` (registry datasets) and the
+ * legacy header-map importer so EVERY import path resolves identically.
+ *
+ * When several columns match one canonical the winner is chosen by:
+ *   1. highest confidence  (exact 1.0 beats token-subset 0.7),
+ *   2. data-type fitness   (for number fields: drop non-exact candidates
+ *      whose sampled data is not numeric, then break ties by numeric
+ *      fitness) — requires `sampleRows`,
+ *   3. leftmost column.
+ *
+ * @param {string[]} rawHeaders
+ * @param {Object}   aliases                 { normKey(alias): canonical }
+ * @param {Object}   [opts]
+ * @param {Iterable<string>} [opts.numberFields] canonicals that hold numbers
+ * @param {Array[]}  [opts.sampleRows]       parsed data rows (data-aware tie-break)
+ * @returns {{ claims: Object, matches: Array }} claims = { canonical: winningIndex }
+ */
+export function resolveHeaderClaims(rawHeaders, aliases, opts = {}) {
+  const numberFields = new Set(opts.numberFields || []);
+  const sampleRows = Array.isArray(opts.sampleRows) ? opts.sampleRows : null;
+  const hasSamples = !!sampleRows && sampleRows.length > 0;
+  const matches = rawHeaders.map((h, i) => ({ index: i, raw: h, ...matchHeader(h, aliases) }));
+  const byCanonical = new Map();
+  for (const m of matches) {
+    if (!m.canonical) continue;
+    if (!byCanonical.has(m.canonical)) byCanonical.set(m.canonical, []);
+    byCanonical.get(m.canonical).push(m);
+  }
+  const claims = {};
+  for (const [canonical, cands] of byCanonical) {
+    const isNum = numberFields.has(canonical);
+    const fit = (m) => (hasSamples ? numericFitness(sampleRows, m.index) : 0);
+    let pool = cands;
+    if (isNum && hasSamples) {
+      // A boolean / text column can't be a number field unless its header is
+      // an EXACT alias match — drop the rest so it can't steal the canonical.
+      const qualified = cands.filter((m) => m.confidence >= 1 || fit(m) >= 0.3);
+      if (qualified.length) pool = qualified;
+    }
+    pool = [...pool].sort(
+      (a, b) => b.confidence - a.confidence || fit(b) - fit(a) || a.index - b.index
+    );
+    claims[canonical] = pool[0].index;
+  }
+  return { claims, matches };
+}
+
+/**
+ * Given the raw headers of an uploaded file (and, optionally, the parsed
+ * data rows), return:
+ *   - normalisedHeaders: same length as input, with each header rewritten
+ *     to its canonical form when matched (confidence ≥ 0.6), else null.
+ *   - mapping: { canonical: originalIndex } — the column lookup used by
+ *     the row mapper. ONE winning column per canonical.
+ *   - unmapped: indexes of columns no alias matched (or that lost a
+ *     canonical to a stronger column).
+ *   - missing: required canonical headers that were NOT found.
+ *   - columns: per-source-column report (raw, canonical, confidence,
+ *     status, suggestions) so the preview never silently drops a column.
+ *
+ * Conflict resolution (Lesson 32): when several source columns match the
+ * same canonical, the winner is chosen by HIGHEST confidence first — an
+ * exact header ("Price", 1.0) always beats a token-subset match ("Use Price
+ * Incl Tax", 0.7), regardless of column order. When `sampleRows` is given,
+ * number-typed canonicals additionally (a) drop non-exact candidates whose
+ * sampled data is not numeric (e.g. a boolean column) and (b) break ties by
+ * numeric fitness — so the matcher uses BOTH the title and the data.
+ */
+export function mapHeaders(rawHeaders, dataset, sampleRows = null) {
   const aliases = dataset.aliases || {};
+  const colTypes = dataset.columnTypes || {};
+  const numberFields = Object.keys(colTypes).filter((k) => colTypes[k] === 'number');
   const normalisedHeaders = new Array(rawHeaders.length).fill(null);
   const mapping = {};
   const unmapped = [];
-  rawHeaders.forEach((h, i) => {
-    const canonical = aliases[normKey(h)];
-    if (canonical) {
-      normalisedHeaders[i] = canonical;
-      if (!(canonical in mapping)) mapping[canonical] = i;
+  const columns = [];
+
+  // 1 + 2. Match every column, then resolve each canonical to its single best
+  // column (confidence-ranked + data-aware) via the shared resolver.
+  const { claims, matches } = resolveHeaderClaims(rawHeaders, aliases, {
+    numberFields,
+    sampleRows,
+  });
+
+  // 3. Emit per-column report + mapping using the resolved winners.
+  for (const m of matches) {
+    const i = m.index;
+    if (m.canonical && claims[m.canonical] === i) {
+      normalisedHeaders[i] = m.canonical;
+      mapping[m.canonical] = i;
+      columns.push({
+        index: i,
+        raw: m.raw,
+        canonical: m.canonical,
+        confidence: m.confidence,
+        status: m.status,
+        suggestions: m.suggestions,
+      });
+    } else if (m.canonical) {
+      // Matched a canonical but lost it to a stronger column (higher
+      // confidence / better-typed data). Report it; never silently apply it.
+      unmapped.push(i);
+      columns.push({
+        index: i,
+        raw: m.raw,
+        canonical: null,
+        confidence: m.confidence,
+        status: 'duplicate',
+        suggestions: [{ canonical: m.canonical, confidence: m.confidence }],
+      });
     } else {
       unmapped.push(i);
+      columns.push({
+        index: i,
+        raw: m.raw,
+        canonical: null,
+        confidence: m.confidence,
+        status: 'unmatched',
+        suggestions: m.suggestions,
+      });
     }
-  });
+  }
   const missing = (dataset.requiredHeaders || []).filter((h) => !(h in mapping));
-  return { normalisedHeaders, mapping, unmapped, missing };
+  return { normalisedHeaders, mapping, unmapped, missing, columns };
 }
 
 /**

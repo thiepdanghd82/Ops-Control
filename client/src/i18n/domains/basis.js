@@ -101,9 +101,9 @@ registerStrings({
   'dashboard.col.revenue': { en: 'Revenue (USD)', vi: 'Doanh thu (USD)' },
   'dashboard.col.won_lost': { en: 'Won / Lost', vi: 'Thắng / Thua' },
   'dashboard.status.draft': { en: 'Draft', vi: 'Nháp' },
-  'dashboard.status.pending_sales': { en: 'Pending Sales', vi: 'Chờ Sales' },
-  'dashboard.status.pending_finance': { en: 'Pending Finance', vi: 'Chờ Tài chính' },
-  'dashboard.status.approved': { en: 'Approved', vi: 'Đã duyệt' },
+  'dashboard.status.quote_to_sale': { en: 'Quote to sale', vi: 'Đã gửi Sales' },
+  'dashboard.status.price_approved': { en: 'Price Approved', vi: 'Đã duyệt giá' },
+  'dashboard.status.cancelled': { en: 'Cancelled', vi: 'Đã huỷ' },
   'dashboard.status.rejected': { en: 'Rejected', vi: 'Đã từ chối' },
   'dashboard.err.title': { en: 'Dashboard unavailable', vi: 'Không thể tải Dashboard' },
   'dashboard.empty.no_customer': { en: 'No customer data', vi: 'Chưa có dữ liệu khách hàng' },
@@ -122,6 +122,104 @@ registerStrings({
   'settings.item.syslog': { en: 'System Logs', vi: 'Nhật ký Hệ thống' },
   'settings.item.hardware': { en: 'Hardware Devices', vi: 'Thiết bị phần cứng' },
   'settings.item.mode': { en: 'Connection Mode', vi: 'Chế độ kết nối' },
+  'settings.item.about': { en: 'About / Diagnostics', vi: 'Giới thiệu / Chẩn đoán' },
+
+  // ─── Sprint S-SYSCTRL — SYS-only System Control (global sidebar lean mode) ───
+  'settings.item.system_control': { en: 'System Control', vi: 'Điều khiển Hệ thống' },
+  'system_control.title': { en: 'System Control', vi: 'Điều khiển Hệ thống' },
+  'system_control.note': {
+    en: 'Globally show or hide main sidebar sections and tabs for ALL users (lean mode — hide features operators do not need). This only HIDES — it never grants access. SYS only; changes apply to all users on their next load. SYS always sees hidden items, marked with a dot.',
+    vi: 'Ẩn/hiện toàn cục các mục và tab trên thanh bên cho MỌI người dùng (chế độ gọn — ẩn tính năng operator không cần). Chỉ ẩn, KHÔNG bao giờ cấp thêm quyền. Chỉ SYS; thay đổi áp dụng cho mọi người ở lần tải kế tiếp. SYS luôn thấy mục đã ẩn, có chấm đánh dấu.',
+  },
+  'system_control.forbidden': {
+    en: 'System Control is restricted to SYS (Super Admin) accounts.',
+    vi: 'Điều khiển Hệ thống chỉ dành cho tài khoản SYS (Super Admin).',
+  },
+  'system_control.visible': { en: 'Visible', vi: 'Hiện' },
+  'system_control.hidden': { en: 'Hidden', vi: 'Ẩn' },
+  'system_control.show_all': { en: 'Show all', vi: 'Hiện tất cả' },
+  'system_control.save': { en: 'Save', vi: 'Lưu' },
+  'system_control.saving': { en: 'Saving…', vi: 'Đang lưu…' },
+  'system_control.saved': {
+    en: 'Saved — applies on next load',
+    vi: 'Đã lưu — áp dụng ở lần tải kế tiếp',
+  },
+  'system_control.save_failed': { en: 'Save failed', vi: 'Lưu thất bại' },
+  'system_control.master_hint': {
+    en: 'Hide/show this whole section',
+    vi: 'Ẩn/hiện cả mục này',
+  },
+  'system_control.section_hidden_hint': {
+    en: 'The whole section is hidden',
+    vi: 'Cả mục đang bị ẩn',
+  },
+
+  // Backup → Restore picker (dated backup list modal)
+  'settings.backup.restore_btn': { en: 'Restore', vi: 'Khôi phục' },
+  'settings.backup.restore_btn_title': {
+    en: 'Restore data from a backup (pick by date)',
+    vi: 'Khôi phục dữ liệu từ một bản backup (chọn theo ngày)',
+  },
+  'settings.backup.restore_modal_title': {
+    en: 'Restore from backup',
+    vi: 'Khôi phục từ bản backup',
+  },
+  'settings.backup.restore_empty': { en: 'No backups found', vi: 'Chưa có bản backup' },
+  'settings.backup.restore_col_date': { en: 'Date', vi: 'Ngày' },
+  'settings.backup.restore_col_size': { en: 'Size', vi: 'Dung lượng' },
+  'settings.backup.restore_col_file': { en: 'File', vi: 'Tệp' },
+  'settings.backup.restore_col_act': { en: 'Action', vi: 'Thao tác' },
+  'settings.backup.restore_row_btn': { en: 'Restore', vi: 'Khôi phục' },
+  'settings.backup.restore_close': { en: 'Close', vi: 'Đóng' },
+  'settings.backup.restore_hint': {
+    en: 'To recover deleted data, pick a Manual or Scheduled backup dated BEFORE the deletion. "Pre-restore" snapshots are auto undo-points taken before each restore — not general backups.',
+    vi: 'Để khôi phục dữ liệu đã xoá, chọn bản Thủ công hoặc Định kỳ có NGÀY TRƯỚC khi xoá. Bản "Trước restore" là điểm hoàn-tác tự động tạo trước mỗi lần khôi phục — không phải bản backup thường.',
+  },
+  'settings.backup.kind_manual': { en: 'Manual', vi: 'Thủ công' },
+  'settings.backup.kind_auto': { en: 'Scheduled', vi: 'Định kỳ' },
+  'settings.backup.kind_pre_restore': { en: 'Pre-restore', vi: 'Trước restore' },
+  'settings.backup.kind_pre_restore_hint': {
+    en: 'Auto undo-point saved right before a restore — dated at the restore, not a general backup.',
+    vi: 'Điểm hoàn-tác tự động lưu ngay trước một lần khôi phục — ngày là lúc restore, không phải bản backup thường.',
+  },
+
+  // My Profile form labels (Sprint S-I18N-COVER 2026-06-11) — operator-
+  // visible form previously hardcoded English.
+  'settings.profile.upload_hint': {
+    en: 'Click on photo to upload',
+    vi: 'Bấm vào ảnh để tải lên',
+  },
+  'settings.profile.full_name_vn': { en: 'Full Name (Vietnamese)', vi: 'Họ và tên (Tiếng Việt)' },
+  'settings.profile.english_name': { en: 'English Name', vi: 'Tên tiếng Anh' },
+  'settings.profile.email': { en: 'Email', vi: 'Email' },
+  'settings.profile.phone': { en: 'Phone', vi: 'Điện thoại' },
+  'settings.profile.username': { en: 'Username', vi: 'Tên đăng nhập' },
+  'settings.profile.id_no': { en: 'ID No.', vi: 'Mã số' },
+  'settings.profile.save_btn': { en: 'Save Profile', vi: 'Lưu hồ sơ' },
+  'settings.profile.about_title': { en: 'About', vi: 'Giới thiệu' },
+
+  // Sprint S-2FA-RESET — SYS-only per-user 2FA reset (lost-phone recovery).
+  'settings.reset2fa.btn_title': { en: 'Reset 2FA', vi: 'Reset 2FA' },
+  'settings.reset2fa.modal_title': { en: 'Reset 2FA', vi: 'Reset 2FA' },
+  'settings.reset2fa.modal_body': {
+    en: 'Reset 2FA for "{user}"? Their current authenticator stops working and they must scan a new QR at the next login. Their password is unchanged.',
+    vi: 'Reset 2FA cho "{user}"? Authenticator hiện tại sẽ ngừng hoạt động và họ phải quét QR mới ở lần đăng nhập kế tiếp. Mật khẩu không đổi.',
+  },
+  'settings.reset2fa.pwd_label': {
+    en: 'Your password (confirm it is you)',
+    vi: 'Mật khẩu của bạn (xác nhận chính chủ)',
+  },
+  'settings.reset2fa.confirm_btn': { en: 'Reset 2FA', vi: 'Reset 2FA' },
+  'settings.reset2fa.toast_ok': {
+    en: '2FA reset for {user}. They scan a new QR at next login.',
+    vi: 'Đã reset 2FA cho {user}. Họ sẽ quét QR mới ở lần đăng nhập kế tiếp.',
+  },
+  'settings.reset2fa.err_pwd': { en: 'Current password incorrect.', vi: 'Mật khẩu không đúng.' },
+  'settings.reset2fa.err_forbidden': {
+    en: 'Only SYS accounts can reset another user’s 2FA.',
+    vi: 'Chỉ tài khoản SYS mới được reset 2FA của người khác.',
+  },
+  'settings.reset2fa.err_notfound': { en: 'User not found.', vi: 'Không tìm thấy user.' },
 
   'appearance.title': { en: 'Appearance', vi: 'Giao diện' },
   'appearance.hint': {

@@ -240,19 +240,23 @@ test('getWinRate: legacy "submitted" aliases to pending_sales (not counted as de
   assert.equal(r.rate, 1);
 });
 
-test('getApprovalFunnel: counts each state', () => {
+test('getApprovalFunnel: counts each V2 state', () => {
   resetDb();
   seedQuote({ id: 1, direct_cu: 'A', saved_at: iso(5), approval_status: 'draft' });
-  seedQuote({ id: 2, direct_cu: 'A', saved_at: iso(5), approval_status: 'pending_sales' });
-  seedQuote({ id: 3, direct_cu: 'A', saved_at: iso(5), approval_status: 'pending_finance' });
-  seedQuote({ id: 4, direct_cu: 'A', saved_at: iso(5), approval_status: 'approved' });
+  seedQuote({ id: 2, direct_cu: 'A', saved_at: iso(5), approval_status: 'quote_to_sale' });
+  seedQuote({ id: 3, direct_cu: 'A', saved_at: iso(5), approval_status: 'price_approved' });
+  seedQuote({ id: 4, direct_cu: 'A', saved_at: iso(5), approval_status: 'cancelled' });
   seedQuote({ id: 5, direct_cu: 'A', saved_at: iso(5), approval_status: 'rejected' });
+  // Legacy v1 statuses heal-on-read into the V2 buckets.
+  seedQuote({ id: 6, direct_cu: 'A', saved_at: iso(5), approval_status: 'pending_sales' });
+  seedQuote({ id: 7, direct_cu: 'A', saved_at: iso(5), approval_status: 'pending_finance' });
+  seedQuote({ id: 8, direct_cu: 'A', saved_at: iso(5), approval_status: 'approved' });
   const f = getApprovalFunnel();
   assert.deepEqual(f, {
     draft: 1,
-    pending_sales: 1,
-    pending_finance: 1,
-    approved: 1,
+    quote_to_sale: 3, // 1 new + 2 healed (pending_sales + pending_finance)
+    price_approved: 2, // 1 new + 1 healed (approved)
+    cancelled: 1,
     rejected: 1,
   });
 });

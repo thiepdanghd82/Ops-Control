@@ -38,6 +38,7 @@ import {
 import { plateSwatchHex } from '../../../services/pdfVectorInk';
 import DecimalInput from '../../../utils/DecimalInput';
 import TabBarOverflow from '../../../components/Shared/TabBarOverflow';
+import { useFloatingMenu } from '../../../components/Shared/useFloatingMenu';
 import './PrintAreaCalc.css';
 
 // Compact helper used by the Ink Plates panel — returns the hex string
@@ -2205,7 +2206,12 @@ function LibraryTab({ jobs, loading, error, onReload, onOpen }) {
   // (from MouseEvent.clientX/Y) so we position the floating menu via
   // fixed coords that don't drift when the table scrolls underneath.
   const [menu, setMenu] = useState(null); // { x, y, job } | null
-  const menuRef = useRef(null);
+  // Shared edge-aware placement (fixed) + drag-to-move by the header.
+  const { menuRef, style: menuStyle } = useFloatingMenu({
+    open: !!menu,
+    x: menu?.x ?? 0,
+    y: menu?.y ?? 0,
+  });
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     if (!needle) return jobs;
@@ -2249,20 +2255,6 @@ function LibraryTab({ jobs, loading, error, onReload, onOpen }) {
       document.removeEventListener('keydown', onKey);
       window.removeEventListener('scroll', close, true);
       window.removeEventListener('resize', close);
-    };
-  }, [menu]);
-
-  // Clamp the menu inside the viewport so a right-click near the
-  // bottom/right edge doesn't scroll pages off-screen.
-  const clamped = useMemo(() => {
-    if (!menu) return null;
-    const W = window.innerWidth,
-      H = window.innerHeight;
-    const MW = 160,
-      MH = 88; // approximate menu dimensions
-    return {
-      x: Math.min(menu.x, W - MW - 8),
-      y: Math.min(menu.y, H - MH - 8),
     };
   }, [menu]);
 
@@ -2372,15 +2364,17 @@ function LibraryTab({ jobs, loading, error, onReload, onOpen }) {
           </tbody>
         </table>
       )}
-      {menu && clamped && (
+      {menu && (
         <div
           ref={menuRef}
           className="pa-context-menu"
           role="menu"
           aria-label={`Actions for ${menu.job.sku}`}
-          style={{ top: clamped.y, left: clamped.x }}
+          style={menuStyle}
         >
-          <div className="pa-context-menu-header">{menu.job.sku}</div>
+          <div className="pa-context-menu-header" data-menu-drag-handle>
+            {menu.job.sku}
+          </div>
           <button
             type="button"
             role="menuitem"

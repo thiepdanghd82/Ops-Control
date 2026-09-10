@@ -20,6 +20,10 @@ import os from 'node:os';
 import path from 'node:path';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ops-concur-'));
+// Isolate BOTH the file path AND DATA_DIR — quotesStore shadow-writes to the
+// SQLite ops.db under DATA_DIR even in 'file' backend mode, so without this the
+// shadow-write escapes to whatever DATA_DIR points at (Lesson 33).
+process.env.DATA_DIR = tmp;
 const historyFile = path.join(tmp, 'quote_history.json');
 process.env.OPS_QUOTE_HISTORY_FILE = historyFile;
 // Keep SQLite out of the loop so the test exercises the file path

@@ -15,6 +15,20 @@
 import { registerStrings } from '../strings.js';
 
 registerStrings({
+  // Sprint S-PRICING-COMBINED-P1 (2026-06-17) — Combined sub-tab on
+  // Pricing (Std) that stacks Materials / Inks / Processes in one
+  // scrollable surface. Tab label + 3 section headings live here so
+  // future Phase 2 (retire 3 originals) can flip references without
+  // touching component code.
+  // Sprint S-PRICING-COMBINED-P2 (2026-06-18) — Phase 2 renamed the
+  // tab now that it's the sole pricing-phase surface (3 standalone
+  // tabs retired). Key id stays 'pricing.tab.combined' so callers
+  // (StandardCalc.jsx SUB_TABS labelKey) keep working without churn.
+  'pricing.tab.combined': { en: 'Materials & Process', vi: 'Vật tư & Công đoạn' },
+  'pricing.section.materials': { en: 'Materials', vi: 'Vật tư' },
+  'pricing.section.inks': { en: 'Inks', vi: 'Mực in' },
+  'pricing.section.processes': { en: 'Processes', vi: 'Công đoạn' },
+
   // Pricing breakdown columns
   'pricing.tier': { en: 'Tier', vi: 'Bậc' },
   'pricing.moq': { en: 'MOQ', vi: 'MOQ' },
@@ -30,12 +44,33 @@ registerStrings({
   'pricing.contr_pct': { en: 'Contr%', vi: 'Đóng góp%' },
   'pricing.gm_pct': { en: 'GM%', vi: 'GM%' },
   'pricing.selling_unit': { en: 'Selling /unit (USD)', vi: 'Giá bán /sản phẩm (USD)' },
+  // Cost Breakdown — Cost Structure what-if (display-only)
+  'cb.cost_structure': { en: 'Cost Structure', vi: 'Cấu trúc chi phí' },
+  'cb.bucket': { en: 'Cost bucket', vi: 'Khoản mục' },
+  'cb.value': { en: 'Value', vi: 'Giá trị' },
+  'cb.pct_sell': { en: '% Sell', vi: '% Bán' },
+  'cb.pct_target': { en: '% Target', vi: '% Mục tiêu' },
+  'cb.active': { en: 'Active', vi: 'Áp dụng' },
+  'cb.reset': { en: 'Reset — re-check all buckets', vi: 'Đặt lại — bật lại tất cả' },
+  'cb.grand_total': { en: 'GRAND TOTAL', vi: 'TỔNG CỘNG' },
+  'cb.excluded': { en: 'Excluded', vi: 'Đã loại' },
 
   // Summary box (compact-form labels for narrow columns)
   'pricing.material_short': { en: 'Mat', vi: 'VL' },
   'pricing.ink_short': { en: 'Ink', vi: 'Mực' },
   'pricing.process_short': { en: 'Proc', vi: 'CĐ' },
   'pricing.packing_ship': { en: 'Pack+Ship', vi: 'Đóng gói+VC' },
+
+  // Sprint S-PACK-SHIP-PER-TIER — banner shown at the top of the
+  // Packing & Ship tab when active_moq_idx > 0, hinting that values
+  // are inherited from MOQ1 unless the operator overrides them.
+  // "MOQ1" is intentional verbatim (not interpolated qty) per Henry's
+  // call — clearer than "MOQ 500" since the inheritance source IS
+  // tier 0 regardless of its MOQ quantity.
+  'pricing.pack_ship.inherit_hint': {
+    en: 'Inherited from MOQ1 — edit to set a value specific to this MOQ',
+    vi: 'Kế thừa từ MOQ1 — sửa để áp riêng cho MOQ này',
+  },
 
   // ─── Material Library / Print Area / Inks (v1.3 M3) ───
   // Library-side material picker shares its search-placeholder string
@@ -105,4 +140,12 @@ registerStrings({
     en: 'Per-tier Setup LM override applies to the ACTIVE material set (currently {set}). Switch the Maint.Mat / Alternative.Mat toggle to edit the other set.',
     vi: 'Setup LM ghi đè theo tier áp dụng vào bộ vật tư ĐANG ACTIVE ({set}). Chuyển toggle Maint.Mat / Alternative.Mat để edit bộ kia.',
   },
+
+  // ─── Sprint S-MULTI-DRAW — FileUploadZone multi-drawing gallery ───
+  'fuz.count': { en: '{n} files', vi: '{n} tệp' },
+  'fuz.add': { en: 'Add drawing', vi: 'Thêm bản vẽ' },
+  'fuz.remove': { en: 'Remove drawing', vi: 'Xoá bản vẽ' },
+  'fuz.open_new': { en: 'Open in new window', vi: 'Mở ở cửa sổ mới' },
+  'fuz.showing': { en: 'Showing', vi: 'Đang hiện' },
+  'fuz.remove_confirm': { en: 'Remove "{name}"?', vi: 'Xoá "{name}"?' },
 });

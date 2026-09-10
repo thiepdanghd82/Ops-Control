@@ -418,6 +418,79 @@
   min-width: 100px;
 }
 
+/* Sprint S-PACK-SHIP-PER-TIER — per-MOQ override visual states.
+   Mirror the violet-override / italic-inherited pattern from Inks
+   Width/Pitch + covOvrState helper. Class applies to the input/
+   select element directly so it pairs with .sc-input layout. */
+.sc-pack-tier-ovr {
+  color: var(--color-violet-500);
+  font-weight: 700;
+}
+.sc-pack-tier-inherit {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+.sc-pack-tier-hint {
+  background: var(--color-blue-50, #eff6ff);
+  color: var(--color-blue-900, #1e3a8a);
+  border: 1px solid var(--color-blue-200, #bfdbfe);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+/* Subtler "inherited from MOQ1" hint shown at the very top of the
+   Packing & Ship tab when activeIdx > 0. Lower-intensity than
+   .sc-pack-tier-hint so the two banners stack without competing
+   for attention. Pure info — no border, no background. */
+.sc-pack-inherit-hint {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-style: italic;
+  padding: 4px 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sc-pack-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sc-pack-row > :first-child {
+  flex: 1;
+}
+.sc-pack-reset {
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid var(--color-violet-500);
+  color: var(--color-violet-500);
+  border-radius: 3px;
+  padding: 0 6px;
+  height: 26px;
+  cursor: pointer;
+}
+.sc-pack-reset:hover {
+  background: var(--color-violet-500);
+  color: #fff;
+}
+
+/* Process MAN UPH — derived (auto-synced from Crew × Eff% × Speed) for manual
+   rows (Inspection/FQC/OQC). Read-only lock styling: italic + derived-blue so
+   operators see it tracks Crew instead of being hand-typed. */
+.sc-cell-auto-uph {
+  display: inline-block;
+  color: var(--color-blue-700, #1a4a8a);
+  font-weight: 700;
+  font-style: italic;
+}
+
+/* Materials "Mats./MOQ (m²/lm)" — gross material for the active-tier MOQ.
+   Tabular figures so the thousand-separated quantities align per row. */
+.sc-mats-moq {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Inputs — IBM Carbon: bottom-border only, subtle bg, 0px radius */
 .sc-input {
   display: block;
@@ -1665,7 +1738,7 @@ select.sc-input {
   transition: width 0.3s;
 }
 .sc-sum-bar-val {
-  width: 90px;
+  width: 135px;
   text-align: right;
   font-family: monospace;
   font-size: 12px;
@@ -1677,6 +1750,82 @@ select.sc-input {
   border-bottom: none;
   padding-top: 10px;
   margin-top: 4px;
+}
+
+/* Cost Structure what-if columns (display-only): % Sell, % Target, Active. */
+.sc-cb-comp {
+  color: var(--text-secondary, #64748b);
+  font-size: 11px;
+}
+.sc-cb-pct {
+  width: 96px;
+  flex-shrink: 0;
+  text-align: right;
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+}
+.sc-cb-active {
+  width: 54px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.sc-cb-chk {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-emerald-600, #059669);
+}
+.sc-cb-na {
+  color: var(--color-slate-300, #cbd5e1);
+}
+.sc-cb-head {
+  border-bottom: 1px solid var(--color-slate-200, #e2e8f0);
+}
+.sc-cb-head .sc-cb-h,
+.sc-cb-head .sc-sum-bar-label,
+.sc-cb-head .sc-sum-bar-val {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary, #64748b);
+}
+.sc-cb-reset {
+  border: 1px solid var(--color-slate-300, #cbd5e1);
+  background: transparent;
+  color: var(--text-secondary, #64748b);
+  border-radius: 3px;
+  font-size: 11px;
+  line-height: 1;
+  padding: 1px 4px;
+  cursor: pointer;
+}
+.sc-cb-reset:hover {
+  background: var(--color-slate-100, #f1f5f9);
+}
+/* Inactive (unchecked) bucket — dimmed + struck so it reads as excluded. */
+.sc-cb-off {
+  opacity: 0.5;
+}
+.sc-cb-off .sc-sum-bar-label > span:first-child,
+.sc-cb-off .sc-sum-bar-val {
+  text-decoration: line-through;
+}
+.sc-cb-grand {
+  font-weight: 900;
+  color: var(--color-slate-900, #0f2341);
+}
+.sc-cb-excluded {
+  text-align: right;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--color-amber-700, #b45309);
+  padding-top: 4px;
 }
 
 /* Responsive */
@@ -1815,6 +1964,93 @@ select.sc-input {
   margin-top: 10px;
   border-top: 1px dashed #e2e8f0;
   padding-top: 8px;
+}
+
+/* Print-cost row (Layout ▸ Print Design Layout, first row) — extra breathing
+   room + a faint dashed divider before the ① Product Size geometry grid.
+   Same 1px dashed #e2e8f0 as the divider above "Advanced Layout" (.cl-adv). */
+.sc-print-cost-row {
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+/* Cutter-cost block (Cutting Design Layout) — same faint dashed divider +
+   wider gap as .sc-print-cost-row, separating the 4 type+cost pairs from
+   the die-geometry grid below. */
+.sc-cutter-cost-row {
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px dashed #e2e8f0;
+}
+/* Fields on the left, compact summary table on the right; wraps under the
+   fields when the column is narrow. */
+.sc-cutter-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px;
+}
+.sc-cutter-block .sc-cutter-fields {
+  flex: 1 1 480px;
+  /* One cutter per row — a grouped TRIPLET: type | cavities | cost. minmax
+     lets the columns shrink on narrower cards without overflowing. */
+  display: grid;
+  grid-template-columns: minmax(120px, 1.5fr) minmax(72px, 0.8fr) minmax(84px, 1fr);
+  gap: 10px 12px;
+  align-items: end;
+}
+.sc-cutter-summary {
+  flex: 0 0 auto;
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 200px;
+}
+.sc-cutter-summary th,
+.sc-cutter-summary td {
+  border: 1px solid #e2e8f0;
+  padding: 4px 10px;
+  text-align: left;
+}
+.sc-cutter-summary th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #475569;
+}
+.sc-cutter-summary td {
+  color: #334155;
+}
+.sc-cutter-summary-empty {
+  text-align: center;
+  color: #94a3b8;
+}
+/* Cutter cost cell — computed default with editable override + ↻ reset. */
+.sc-cutter-cost-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sc-cutter-cost-input .sc-input {
+  flex: 1;
+}
+.sc-cutter-cost-ovr {
+  color: var(--color-violet-500);
+  font-weight: 700;
+}
+.sc-cutter-cost-reset {
+  flex: 0 0 auto;
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid var(--color-violet-500);
+  color: var(--color-violet-500);
+  border-radius: 3px;
+  padding: 0 6px;
+  height: 26px;
+  cursor: pointer;
+}
+.sc-cutter-cost-reset:hover {
+  background: var(--color-violet-500);
+  color: #fff;
 }
 .cl-adv-toggle {
   background: transparent;
@@ -3554,4 +3790,24 @@ select.sc-input {
   color: #9ca3af;
   font-style: italic;
   opacity: 1;
+}
+
+/* Sprint S-PRICING-COMBINED-P1 (2026-06-17) — Combined sub-tab
+   stacks Materials / Inks / Processes in one scrollable surface.
+   Section dividers use the same .sc-card-header weight + border so
+   the operator's eye lands on each phase boundary as a familiar
+   shape. No new color tokens; reuses existing var(--*) palette. */
+.sc-combined-section + .sc-combined-section {
+  margin-top: 24px;
+}
+.sc-combined-section-heading {
+  margin: 0 0 8px 0;
+  padding: 8px 12px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.32px;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--border-strong);
 }

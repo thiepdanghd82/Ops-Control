@@ -40,6 +40,7 @@ export default defineConfig([
         {
           varsIgnorePattern: '^[A-Z_]',
           argsIgnorePattern: '^[A-Z_]',
+          caughtErrorsIgnorePattern: '^(_|e|err|[A-Z])',
         },
       ],
       // React Compiler rules — shipped in eslint-plugin-react-hooks 8.x+

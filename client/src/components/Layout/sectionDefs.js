@@ -36,6 +36,8 @@ export const COST_SECTIONS = [
       { id: 'summarize', icon: 'summarize', labelKey: 'nav.tab.cost_breakdown' },
       { id: 'formal-quote', icon: 'formal_quote', labelKey: 'nav.tab.formal_quotation' },
       { id: 'quote-history', icon: 'history', labelKey: 'nav.tab.quote_history' },
+      { id: 'npi-parts-list', icon: 'parts_list', labelKey: 'nav.tab.npi_parts_list' },
+      { id: 'rfq-tracking', icon: 'rfq_tracking', labelKey: 'nav.tab.rfq_tracking' },
       { id: 'approvals-inbox', icon: 'approvals', labelKey: 'nav.tab.pending_approvals' },
     ],
   },
@@ -77,11 +79,10 @@ export const COST_SECTIONS = [
     icon: 'rates',
     tabs: [
       { id: 'lib-rate', icon: 'rates', labelKey: 'nav.tab.rate_table' },
-      { id: 'lib-ddl', icon: 'ddl', labelKey: 'nav.tab.ddl' },
+      // Pre-go-live: DDL editing is admin/sys only (mirror of Sidebar nav).
+      { id: 'lib-ddl', icon: 'ddl', labelKey: 'nav.tab.ddl', minRole: 'admin' },
       { id: 'lib-finance', icon: 'finance', labelKey: 'nav.tab.finance_data' },
       { id: 'lib-machine-tech', icon: 'machine', label: 'Machine Technical' },
-      // MES-3-V2 (KIOSK-002) — kiosk reason codes admin CRUD.
-      { id: 'reason-codes', icon: 'rates', labelKey: 'nav.tab.reason_codes', minRole: 'admin' },
     ],
   },
   {
@@ -93,37 +94,8 @@ export const COST_SECTIONS = [
       { id: 'settings', icon: 'settings', labelKey: 'nav.tab.settings' },
       { id: 'metrics', icon: 'metrics', labelKey: 'nav.tab.metrics', minRole: 'sys' },
       { id: 'audit-log', icon: 'audit', labelKey: 'nav.tab.audit_log', minRole: 'sys' },
-      { id: 'kiosk-admin', icon: 'settings', labelKey: 'nav.tab.kiosk_admin', minRole: 'admin' },
       { id: 'help', icon: 'help', labelKey: 'nav.tab.help' },
     ],
-  },
-];
-
-export const PLANNING_SECTIONS = [
-  {
-    id: 'production',
-    label: 'Production',
-    icon: 'orders',
-    tabs: [
-      { id: 'order-entry', icon: 'orders', label: 'Order Entry' },
-      { id: 'bom-explosion', icon: 'bom', label: 'BOM Explosion' },
-      { id: 'material-check', icon: 'materials_chk', label: 'Material Check' },
-    ],
-  },
-  {
-    id: 'scheduling',
-    label: 'Scheduling',
-    icon: 'capacity',
-    tabs: [
-      { id: 'capacity', icon: 'capacity', label: 'Capacity Planning' },
-      { id: 'work-orders', icon: 'settings', label: 'Work Orders' },
-    ],
-  },
-  {
-    id: 'planning-tracking',
-    label: 'Tracking',
-    icon: 'wip',
-    tabs: [{ id: 'wip-tracker', icon: 'wip', label: 'WIP Tracker' }],
   },
 ];
 

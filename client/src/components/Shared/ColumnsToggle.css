@@ -1,0 +1,131 @@
+/* ColumnsToggle — shared popover for table column visibility.
+ * Used by Cost Breakdown (Summarize) via ScopedFilterBar rightSlot.
+ * Class prefix `.ct-*` — NOT shared with DataBrowser's `.db-col-*`
+ * so the two coexist without theme drift.
+ * Lesson 6 — no inline style; tokens.css vars for theme parity. */
+
+.ct-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.ct-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid var(--color-slate-300);
+  border-radius: 6px;
+  padding: 0 10px;
+  height: 30px;
+  font-size: var(--font-sm);
+  color: var(--color-slate-700);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s;
+}
+
+.ct-toggle-btn:hover {
+  border-color: var(--color-slate-400);
+}
+
+.ct-toggle-btn-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-subtle);
+  color: var(--color-slate-900);
+  font-weight: 600;
+}
+
+.ct-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 60;
+  background: #fff;
+  border: 1px solid var(--color-slate-300);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 35, 65, 0.12);
+  padding: 12px 14px;
+  min-width: 320px;
+  max-width: 720px;
+  width: max-content;
+}
+
+.ct-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-slate-200);
+  margin-bottom: 8px;
+}
+
+.ct-panel-title {
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--color-slate-800);
+}
+
+.ct-panel-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.ct-action {
+  border: 1px solid var(--color-slate-200);
+  background: var(--color-slate-50);
+  color: var(--color-slate-700);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: var(--font-xs);
+  cursor: pointer;
+}
+
+.ct-action:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.ct-panel-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.ct-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-sm);
+  color: var(--color-slate-800);
+  cursor: pointer;
+  padding: 3px 4px;
+  border-radius: 3px;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.ct-item:hover {
+  background: var(--color-slate-50);
+}
+
+.ct-item-required {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ct-item-required:hover {
+  background: transparent;
+}
+
+.ct-item input[type='checkbox'] {
+  margin: 0;
+  cursor: inherit;
+}
+
+.ct-item-label {
+  font-size: inherit;
+}

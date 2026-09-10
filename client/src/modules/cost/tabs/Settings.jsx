@@ -3,16 +3,18 @@ import { useAuth } from '../../../context/AuthContext';
 import { authApi, api, costApi, importApi, sharedApi } from '../../../services/api';
 import EmptyState from '../../../components/Shared/EmptyState';
 import Modal from '../../../components/Shared/Modal';
+import ConfirmClearModal from '../../../components/Shared/ConfirmClearModal';
 import { useTheme } from '../../../utils/useTheme';
 import { useI18n } from '../../../utils/useI18n';
 import PermissionGroupsSection from './PermissionGroupsSection';
 import ConnectionInfoSection from './ConnectionInfoSection';
 import HardwareSection from './HardwareSection';
-import ImportLegacySection from './ImportLegacySection';
 import ModeSection from './ModeSection';
 import AboutSection from './AboutSection';
 import LicenseManagerSection from './LicenseManager';
 import ProvisioningCard from '../../../components/Auth/ProvisioningCard';
+// SYS-only, rarely opened → lazy chunk so it stays out of the Settings bundle.
+const SystemControl = React.lazy(() => import('./SystemControl'));
 import {
   getClientVersionBadge,
   groupClientVersionEventsByUser,
@@ -26,36 +28,68 @@ import './Settings.css';
 const MENU_SECTIONS = [
   {
     label: 'User',
+    i18nKey: 'settings.section.user',
     items: [
-      { id: 'profile', icon: '◉', label: 'My Profile' },
-      { id: 'mypwd', icon: '⚿', label: 'My Password' },
+      { id: 'profile', icon: '◉', label: 'My Profile', i18nKey: 'settings.item.profile' },
+      { id: 'mypwd', icon: '⚿', label: 'My Password', i18nKey: 'settings.item.mypwd' },
       // Phase 9J.4 — theme preference lives under the user's own
       // settings (it's a personal UI choice, not a tenant-wide config).
-      { id: 'appearance', icon: '◐', label: 'Appearance' },
+      { id: 'appearance', icon: '◐', label: 'Appearance', i18nKey: 'settings.item.appearance' },
       // v1.1 — desktop-only tab, hiển thị banner trong web mode.
-      { id: 'hardware', icon: '⌘', label: 'Thiết bị phần cứng', i18nKey: 'settings.item.hardware' },
+      { id: 'hardware', icon: '⌘', label: 'Hardware Devices', i18nKey: 'settings.item.hardware' },
       // v1.2 — desktop-only: chế độ kết nối (embedded/thin/smart).
-      { id: 'mode', icon: '⇄', label: 'Chế độ kết nối', i18nKey: 'settings.item.mode' },
+      { id: 'mode', icon: '⇄', label: 'Connection Mode', i18nKey: 'settings.item.mode' },
     ],
   },
   {
     label: 'System',
+    i18nKey: 'settings.section.system',
     items: [
-      { id: 'account', icon: '◍', label: 'Account Control', minRole: 'admin' },
+      {
+        id: 'account',
+        icon: '◍',
+        label: 'Account Control',
+        i18nKey: 'settings.item.account',
+        minRole: 'admin',
+      },
       // v1.6 — License Manager (fleet license distribution). sys-only:
       // it surfaces every machine's installation_id + license status.
       { id: 'license-mgr', icon: '⚷', label: 'License Manager', minRole: 'sys' },
       // v1.2 — about + diagnostics dialog cho mọi user
-      { id: 'about', icon: 'ⓘ', label: 'About / Diagnostics' },
+      {
+        id: 'about',
+        icon: 'ⓘ',
+        label: 'About / Diagnostics',
+        i18nKey: 'settings.item.about',
+      },
+      // Sprint S-SYSCTRL — SYS-only global sidebar show/hide ("lean mode").
+      {
+        id: 'system-control',
+        icon: '⊟',
+        label: 'System Control',
+        i18nKey: 'settings.item.system_control',
+        minRole: 'sys',
+      },
     ],
   },
   {
     label: 'Maintenance',
+    i18nKey: 'settings.section.maintenance',
     items: [
-      { id: 'data', icon: '⊞', label: 'Backup / Restore', minRole: 'admin' },
-      { id: 'syslog', icon: '❒', label: 'System Logs', minRole: 'admin' },
-      // v1.1 — desktop-only: import data từ Ops Control v1.0 cũ
-      { id: 'import-legacy', icon: '⇩', label: 'Import data v1.0', minRole: 'admin' },
+      {
+        id: 'data',
+        icon: '⊞',
+        label: 'Backup / Restore',
+        i18nKey: 'settings.item.backup',
+        minRole: 'admin',
+      },
+      {
+        id: 'syslog',
+        icon: '❒',
+        label: 'System Logs',
+        i18nKey: 'settings.item.syslog',
+        minRole: 'admin',
+      },
     ],
   },
 ];
@@ -71,7 +105,6 @@ const ICON_BGS = {
   syslog: '#f0fdf4',
   appearance: '#f3e8ff',
   hardware: '#fef9c3',
-  'import-legacy': '#dcfce7',
   mode: '#fae8ff',
   about: '#cffafe',
 };
@@ -113,7 +146,9 @@ export default function Settings() {
           if (visibleItems.length === 0) return null;
           return (
             <div key={section.label} className="smenu-section">
-              <div className="smenu-section-label">{section.label}</div>
+              <div className="smenu-section-label">
+                {section.i18nKey ? t(section.i18nKey) : section.label}
+              </div>
               {visibleItems.map((it) => (
                 <button
                   key={it.id}
@@ -144,9 +179,13 @@ export default function Settings() {
         {activeSec === 'about' && <AboutSection />}
         {activeSec === 'account' && <AccountSection />}
         {activeSec === 'license-mgr' && <LicenseManagerSection />}
+        {activeSec === 'system-control' && (
+          <React.Suspense fallback={null}>
+            <SystemControl />
+          </React.Suspense>
+        )}
         {activeSec === 'data' && <BackupSection />}
         {activeSec === 'syslog' && <LogsSection />}
-        {activeSec === 'import-legacy' && <ImportLegacySection />}
       </main>
     </div>
   );
@@ -157,6 +196,7 @@ export default function Settings() {
 // ═══════════════════════════════════════════════════════════
 
 function ProfileSection({ user }) {
+  const { t } = useI18n();
   const [form, setForm] = useState({
     full_name: user?.full_name || '',
     english_name: user?.english_name || '',
@@ -231,7 +271,7 @@ function ProfileSection({ user }) {
 
   return (
     <div className="settings-panel">
-      <h3 className="panel-title">◉ My Profile</h3>
+      <h3 className="panel-title">◉ {t('settings.item.profile')}</h3>
       <div className="settings-card">
         {/* Avatar Section */}
         <div className="prof-avatar-section">
@@ -276,14 +316,14 @@ function ProfileSection({ user }) {
             >
               ⚡ {roleLabel}
             </span>
-            <div className="prof-avatar-hint">📷 Click on photo to upload</div>
+            <div className="prof-avatar-hint">📷 {t('settings.profile.upload_hint')}</div>
           </div>
         </div>
 
         {/* Form Grid */}
         <div className="prof-form-grid">
           <div className="prof-form-field prof-field-wide">
-            <label>Full Name (Vietnamese)</label>
+            <label>{t('settings.profile.full_name_vn')}</label>
             <input
               type="text"
               value={form.full_name}
@@ -291,7 +331,7 @@ function ProfileSection({ user }) {
             />
           </div>
           <div className="prof-form-field prof-field-wide">
-            <label>English Name</label>
+            <label>{t('settings.profile.english_name')}</label>
             <input
               type="text"
               value={form.english_name}
@@ -299,19 +339,19 @@ function ProfileSection({ user }) {
             />
           </div>
           <div className="prof-form-field">
-            <label>Email</label>
+            <label>{t('settings.profile.email')}</label>
             <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
           </div>
           <div className="prof-form-field">
-            <label>Phone</label>
+            <label>{t('settings.profile.phone')}</label>
             <input type="text" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
           </div>
           <div className="prof-form-field">
-            <label>Username</label>
+            <label>{t('settings.profile.username')}</label>
             <input type="text" value={user?.username || ''} readOnly className="prof-readonly" />
           </div>
           <div className="prof-form-field">
-            <label>ID No.</label>
+            <label>{t('settings.profile.id_no')}</label>
             <input type="text" value={user?.id_no || ''} readOnly className="prof-readonly" />
           </div>
         </div>
@@ -329,11 +369,11 @@ function ProfileSection({ user }) {
         onClick={handleSave}
         disabled={saving}
       >
-        {saving ? 'Saving...' : 'Save Profile'}
+        {saving ? t('common.saving') : t('settings.profile.save_btn')}
       </button>
 
       <h3 className="panel-title" style={{ marginTop: 28 }}>
-        About
+        {t('settings.profile.about_title')}
       </h3>
       <div className="settings-card about-card">
         <p>
@@ -753,6 +793,14 @@ const AcctIcon = {
       <path d="M14 11v6" />
     </SqIcon>
   ),
+  // Shield with a reset arrow — SYS-only reset another user's 2FA (S-2FA-RESET)
+  reset2fa: (
+    <SqIcon>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="M15 10a3 3 0 1 0-.8 2.9" />
+      <path d="M15 8.5V11h-2.4" />
+    </SqIcon>
+  ),
   // ID card — generate temp password + show provisioning card (Sprint 1.5)
   card: (
     <SqIcon>
@@ -796,6 +844,7 @@ function pwdAgeBadge(lastPwdChange) {
 
 function AccountSection() {
   const { user: currentUser } = useAuth();
+  const { t } = useI18n();
   const [users, setUsers] = useState([]);
   const [onlineList, setOnlineList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -812,6 +861,12 @@ function AccountSection() {
   // password isn't kept in memory longer than needed (it's already hashed
   // server-side and we don't show it again).
   const [provisioning, setProvisioning] = useState(null);
+  // Sprint S-2FA-RESET — SYS-only per-user 2FA reset (lost-phone recovery).
+  // Holds the target user row while the confirm+step-up modal is open.
+  const [reset2fa, setReset2fa] = useState(null); // { user } | null
+  const [reset2faPwd, setReset2faPwd] = useState('');
+  const [reset2faBusy, setReset2faBusy] = useState(false);
+  const [reset2faErr, setReset2faErr] = useState('');
   // P0 client-version banner — keep the latest CLIENT_UPGRADE_NUDGE_SHOWN
   // + CLIENT_VERSION_MATCH_AFTER_UPGRADE audit rows around so the
   // "Phiên bản client" column can render per-operator badges. Empty
@@ -976,6 +1031,39 @@ function AccountSection() {
       flash('success', `Temp password issued for ${u.username}`);
     } catch (e) {
       flash('error', 'Failed to generate temp password: ' + (e.message || 'unknown'));
+    }
+  }
+
+  // Sprint S-2FA-RESET — open the confirm+step-up modal for a target user.
+  function openReset2fa(u) {
+    setReset2faPwd('');
+    setReset2faErr('');
+    setReset2fa({ user: u });
+  }
+
+  async function submitReset2fa() {
+    if (!reset2fa?.user) return;
+    setReset2faBusy(true);
+    setReset2faErr('');
+    try {
+      const r = await costApi.resetUser2fa(reset2fa.user.id, { password: reset2faPwd });
+      // Step-up failure comes back as HTTP 200 { ok:false, code:'bad_password' }
+      // (server avoids 401 so it can't trip the global session-expired logout).
+      if (r && r.ok === false) {
+        setReset2faErr(t('settings.reset2fa.err_pwd'));
+        return;
+      }
+      flash('success', t('settings.reset2fa.toast_ok').replace('{user}', reset2fa.user.username));
+      setReset2fa(null);
+      setReset2faPwd('');
+    } catch (e) {
+      // 403 (not sys / self) + 404 (missing) throw with err.status.
+      const status = e?.status;
+      if (status === 403) setReset2faErr(t('settings.reset2fa.err_forbidden'));
+      else if (status === 404) setReset2faErr(t('settings.reset2fa.err_notfound'));
+      else setReset2faErr(e?.message || 'unknown');
+    } finally {
+      setReset2faBusy(false);
     }
   }
 
@@ -1459,6 +1547,18 @@ function AccountSection() {
                               {AcctIcon.shield}
                             </button>
                           )}
+                          {/* S-2FA-RESET — SYS-only per-user 2FA reset (lost
+                              phone). Distinct from the self "Setup 2FA" above. */}
+                          {!isMe && isSys && (
+                            <button
+                              className="acct-sq-btn acct-sq-reset2fa"
+                              onClick={() => openReset2fa(u)}
+                              title={t('settings.reset2fa.btn_title')}
+                              aria-label={t('settings.reset2fa.btn_title')}
+                            >
+                              {AcctIcon.reset2fa}
+                            </button>
+                          )}
                           {!isMe && isSys && (
                             <button
                               className="acct-sq-btn acct-sq-lock"
@@ -1683,6 +1783,56 @@ function AccountSection() {
         tempPassword={provisioning?.tempPassword || ''}
         serverUrl={provisioning?.serverUrl || ''}
       />
+
+      {/* S-2FA-RESET — SYS-only confirm + step-up modal. */}
+      {reset2fa && (
+        <Modal
+          open
+          onClose={() => (reset2faBusy ? null : setReset2fa(null))}
+          size="sm"
+          severity="warning"
+          draggable
+          ariaLabelledBy="reset2fa-title"
+        >
+          <Modal.Header id="reset2fa-title" title={t('settings.reset2fa.modal_title')} />
+          <Modal.Body>
+            <p className="acct-reset2fa-body">
+              {t('settings.reset2fa.modal_body').replace('{user}', reset2fa.user.username)}
+            </p>
+            <label className="acct-reset2fa-label" htmlFor="reset2fa-pwd">
+              {t('settings.reset2fa.pwd_label')}
+            </label>
+            <input
+              id="reset2fa-pwd"
+              type="password"
+              className="acct-reset2fa-input"
+              autoComplete="off"
+              value={reset2faPwd}
+              disabled={reset2faBusy}
+              onChange={(e) => {
+                setReset2faPwd(e.target.value);
+                if (reset2faErr) setReset2faErr('');
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && reset2faPwd && !reset2faBusy) submitReset2fa();
+              }}
+            />
+            {reset2faErr && <div className="acct-reset2fa-err">{reset2faErr}</div>}
+          </Modal.Body>
+          <Modal.Footer>
+            <button className="op-btn" onClick={() => setReset2fa(null)} disabled={reset2faBusy}>
+              {t('common.cancel')}
+            </button>
+            <button
+              className="op-btn op-btn-danger"
+              onClick={submitReset2fa}
+              disabled={reset2faBusy || !reset2faPwd}
+            >
+              {reset2faBusy ? t('common.saving') : t('settings.reset2fa.confirm_btn')}
+            </button>
+          </Modal.Footer>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -1872,6 +2022,7 @@ function AddUserModal({ onClose, onCreate }) {
 
 function BackupSection() {
   const { hasRole } = useAuth();
+  const { t } = useI18n();
   const [dataBackups, setDataBackups] = useState([]);
   const [codeBackups, setCodeBackups] = useState([]);
   const [dataDir, setDataDir] = useState('');
@@ -1880,6 +2031,7 @@ function BackupSection() {
   const [activeTab, setActiveTab] = useState('data');
   const [msg, setMsg] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const uploadInputRef = useRef(null);
 
   useEffect(() => {
@@ -1949,7 +2101,7 @@ function BackupSection() {
           `Proceed?`
       )
     )
-      return;
+      return false;
     setMsg(null);
     try {
       const res = await costApi.restoreBackup(filename);
@@ -1960,8 +2112,10 @@ function BackupSection() {
         text: `${summary}${warn}. Safety snapshot: ${res.pre_backup}`,
       });
       loadBackups();
+      return !res.partial;
     } catch (e) {
       setMsg({ type: 'error', text: e.message });
+      return false;
     }
   }
 
@@ -2042,7 +2196,12 @@ function BackupSection() {
       {/* Sprint 1.7b — admin-editable backup schedule. Sits at the top so
           operators see "next backup at 02:00, last run ✓" before they
           decide whether to run a manual backup below. */}
-      {hasRole('admin') && <BackupScheduleCard onRunDone={loadBackups} />}
+      {hasRole('admin') && (
+        <BackupScheduleCard
+          onRunDone={loadBackups}
+          onRestore={hasRole('sys') ? () => setRestoreModalOpen(true) : null}
+        />
+      )}
 
       <div className="ifs-tabs" style={{ marginBottom: 12 }}>
         <button
@@ -2165,11 +2324,14 @@ function BackupSection() {
                     <tr key={b.filename}>
                       <td className="row-num">{i + 1}</td>
                       <td className="cell-code">
+                        <BackupKindBadge filename={b.filename} t={t} />
                         {b.filename}
                         {fileLbl}
                       </td>
                       <td className="text-right mono">{sizeLbl}</td>
-                      <td className="cell-date">{b.date || '—'}</td>
+                      <td className="cell-date">
+                        {b.mtimeMs ? fmtTime(b.mtimeMs) : b.date || '—'}
+                      </td>
                       <td
                         className="cell-actions"
                         style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}
@@ -2219,6 +2381,88 @@ function BackupSection() {
           </table>
         </div>
       </div>
+
+      {/* Restore picker — dated list of data backups, newest first.
+          Reuses the existing restoreDataBackup() plumbing (confirm +
+          server-side pre_restore_<ts> safety snapshot + toast). */}
+      <Modal
+        open={restoreModalOpen}
+        onClose={() => setRestoreModalOpen(false)}
+        size="lg"
+        severity="warning"
+        draggable
+      >
+        <Modal.Header title={t('settings.backup.restore_modal_title')} severity="warning" />
+        <Modal.Body>
+          {dataBackups.length === 0 ? (
+            <EmptyState icon="💾" title={t('settings.backup.restore_empty')} />
+          ) : (
+            <div className="bk-restore-wrap">
+              <p className="bk-restore-hint">{t('settings.backup.restore_hint')}</p>
+              <table className="data-table bk-restore-table">
+                <colgroup>
+                  <col className="bk-restore-col-date" />
+                  <col className="bk-restore-col-size" />
+                  <col className="bk-restore-col-file" />
+                  <col className="bk-restore-col-act" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>{t('settings.backup.restore_col_date')}</th>
+                    <th className="text-right">{t('settings.backup.restore_col_size')}</th>
+                    <th>{t('settings.backup.restore_col_file')}</th>
+                    <th className="text-right">{t('settings.backup.restore_col_act')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...dataBackups]
+                    .sort((a, b) =>
+                      b.mtimeMs != null && a.mtimeMs != null
+                        ? b.mtimeMs - a.mtimeMs
+                        : String(b.date || b.filename).localeCompare(String(a.date || a.filename))
+                    )
+                    .map((b) => {
+                      const sizeLbl =
+                        b.size != null
+                          ? b.size > 1024 * 1024
+                            ? `${(b.size / 1024 / 1024).toFixed(1)} MB`
+                            : `${(b.size / 1024).toFixed(1)} KB`
+                          : '—';
+                      return (
+                        <tr key={b.filename}>
+                          <td className="cell-date">
+                            {b.mtimeMs ? fmtTime(b.mtimeMs) : b.date || '—'}
+                          </td>
+                          <td className="text-right mono">{sizeLbl}</td>
+                          <td className="cell-code bk-restore-file" title={b.filename}>
+                            <BackupKindBadge filename={b.filename} t={t} />
+                            {b.filename}
+                          </td>
+                          <td className="text-right">
+                            <button
+                              className="btn btn-sm btn-primary"
+                              onClick={async () => {
+                                const ok = await restoreDataBackup(b.filename);
+                                if (ok) setRestoreModalOpen(false);
+                              }}
+                            >
+                              {t('settings.backup.restore_row_btn')}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <button className="op-btn op-btn-tertiary" onClick={() => setRestoreModalOpen(false)}>
+            {t('settings.backup.restore_close')}
+          </button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }
@@ -2264,7 +2508,34 @@ function fmtTime(iso) {
   }
 }
 
-function BackupScheduleCard({ onRunDone }) {
+// Classify a data-backup file by its filename prefix so the list can tag what
+// each snapshot is. `pre_restore_*` are auto undo-points the server writes
+// BEFORE every restore (dated at the restore, NOT a general backup) — operators
+// kept picking them by mistake to recover deleted quotes. manual_/auto_ are the
+// real recovery points. Returns an i18n key suffix + a css modifier.
+function backupKind(filename) {
+  const f = String(filename || '');
+  if (f.startsWith('pre_restore_')) return 'pre_restore';
+  if (f.startsWith('manual_')) return 'manual';
+  if (f.startsWith('auto_')) return 'auto';
+  return 'other';
+}
+
+function BackupKindBadge({ filename, t }) {
+  const kind = backupKind(filename);
+  if (kind === 'other') return null;
+  return (
+    <span
+      className={`bk-kind bk-kind-${kind}`}
+      title={kind === 'pre_restore' ? t('settings.backup.kind_pre_restore_hint') : undefined}
+    >
+      {t(`settings.backup.kind_${kind}`)}
+    </span>
+  );
+}
+
+function BackupScheduleCard({ onRunDone, onRestore }) {
+  const { t } = useI18n();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -2347,6 +2618,29 @@ function BackupScheduleCard({ onRunDone }) {
     }
   }
 
+  // Open the backup folder in Finder/Explorer (desktop shell only). The path
+  // is the server-reported backupRoot — a real local path on the embedded
+  // SERVER install. On the web / a thin client we can't open a remote folder,
+  // so fall back to flashing the path so the operator can navigate manually.
+  async function handleOpenBackup() {
+    const root = status?.backupRoot;
+    if (!root) {
+      flash('error', 'Backup folder path unavailable');
+      return;
+    }
+    if (window.ops?.shell?.openPath) {
+      try {
+        const r = await window.ops.shell.openPath(root);
+        if (r && r.ok === false) flash('error', 'Could not open folder: ' + (r.error || 'unknown'));
+      } catch (err) {
+        flash('error', 'Could not open folder: ' + (err.message || 'unknown'));
+      }
+    } else {
+      // Not in the desktop shell — surface the path for manual navigation.
+      flash('info', 'Backup folder: ' + root);
+    }
+  }
+
   if (loading) return <div className="bk-sched-card bk-sched-loading">Loading schedule…</div>;
 
   const dirty =
@@ -2368,8 +2662,31 @@ function BackupScheduleCard({ onRunDone }) {
             {status?.enabled
               ? `Next run: ${fmtTime(status.nextRunAt)} (in ${fmtDuration(status.nextRunMs)})`
               : 'Scheduler disabled — only manual backups will run'}
+            {status?.counts?.total != null && (
+              <>
+                {' · '}
+                <b>{status.counts.total}</b> backups stored
+                <small className="bk-sched-counts">
+                  {' '}
+                  ({status.counts.sqlite} db · {status.counts.library} library ·{' '}
+                  {status.counts.data} data)
+                </small>
+              </>
+            )}
           </div>
         </div>
+        <button
+          type="button"
+          className="bk-sched-open-btn"
+          onClick={handleOpenBackup}
+          title={
+            status?.backupRoot
+              ? `Open backup folder · Mở thư mục backup\n${status.backupRoot}`
+              : 'Open backup folder'
+          }
+        >
+          📂 Open folder
+        </button>
         <button
           type="button"
           className="bk-sched-run-btn"
@@ -2460,6 +2777,16 @@ function BackupScheduleCard({ onRunDone }) {
         {dirty && (
           <button type="button" className="btn" onClick={reload} disabled={saving}>
             Discard
+          </button>
+        )}
+        {onRestore && (
+          <button
+            type="button"
+            className="btn"
+            onClick={onRestore}
+            title={t('settings.backup.restore_btn_title')}
+          >
+            ↩ {t('settings.backup.restore_btn')}
           </button>
         )}
       </div>
@@ -2800,7 +3127,7 @@ const DATA_IMPORT_DATASETS = [
     desc: 'Current stock levels synced from IFS',
     accept: '.csv,.xlsx,.xls',
     upload: (file) => importApi.uploadInventory(file),
-    clear: () => importApi.clearInventory(),
+    clear: (password) => importApi.clearInventory(password),
     fetch: () => sharedApi.getInventory(),
     filename: 'inventory',
   },
@@ -2810,27 +3137,20 @@ const DATA_IMPORT_DATASETS = [
     desc: 'FG master data (part numbers, descriptions)',
     accept: '.csv,.xlsx,.xls',
     upload: (file) => importApi.uploadFinishedGoods(file),
-    clear: () => importApi.clearFinishedGoods(),
+    clear: (password) => importApi.clearFinishedGoods(password),
     fetch: () => sharedApi.getProducts(),
     filename: 'finished_goods',
   },
-  {
-    key: 'rawMaterials',
-    label: 'Raw Materials',
-    desc: 'Raw material master data',
-    accept: '.csv,.xlsx,.xls',
-    upload: (file) => importApi.uploadRawMaterials(file),
-    clear: () => importApi.clearRawMaterials(),
-    fetch: () => sharedApi.getMaterials(),
-    filename: 'raw_materials',
-  },
+  // Raw Materials retired 2026-06-25 — raw-material master moved to
+  // Material Cost › IFS Materials (registry-driven import). Server
+  // raw_materials store + route retained for Planning Qty On Hand.
   {
     key: 'bom',
     label: 'BOM / Mfg Structures',
     desc: 'Bill of materials for manufactured parts',
     accept: '.csv,.xlsx,.xls',
     upload: (file) => importApi.uploadBom(file),
-    clear: () => importApi.clearBom(),
+    clear: (password) => importApi.clearBom(password),
     fetch: () => sharedApi.getBOM(),
     filename: 'bom',
   },
@@ -2840,7 +3160,7 @@ const DATA_IMPORT_DATASETS = [
     desc: 'Process routing + work center assignments',
     accept: '.csv,.xlsx,.xls',
     upload: (file) => importApi.uploadRouting(file),
-    clear: () => importApi.clearRouting(),
+    clear: (password) => importApi.clearRouting(password),
     fetch: () => sharedApi.getRouting(),
     filename: 'routing',
   },
@@ -2850,6 +3170,7 @@ function DataImportSection({ importStatus, onRefresh }) {
   const { hasRole } = useAuth();
   const [busy, setBusy] = useState({});
   const [msg, setMsg] = useState(null);
+  const [clearTarget, setClearTarget] = useState(null); // dataset ds | null
   // Editable destination path per dataset — defaults to the server's
   // reported absolute path, user can override to save elsewhere.
   const [paths, setPaths] = useState({});
@@ -2918,23 +3239,11 @@ function DataImportSection({ importStatus, onRefresh }) {
     }
   }
 
-  async function handleClear(ds) {
-    if (
-      !confirm(
-        `Reset "${ds.label}" data?\n\nThe current dataset will be cleared. The server will auto-backup to /data/Backup/Data/ before wiping.\n\nThis cannot be undone via UI — restore must go through the server's Backup folder.`
-      )
-    )
-      return;
-    setBusyFor(ds.key, 'clear');
-    try {
-      await ds.clear();
-      flash('success', `${ds.label} data cleared (backup kept on server)`);
-      onRefresh?.();
-    } catch (e) {
-      flash('error', `${ds.label} clear failed: ${e.message || 'unknown'}`);
-    } finally {
-      setBusyFor(ds.key, null);
-    }
+  // Post-clear reload — the wipe + account-password step-up run inside
+  // ConfirmClearModal (ds.clear(password)). Opened from the Reset button.
+  function afterClear(ds) {
+    flash('success', `${ds.label} data cleared (backup kept on server)`);
+    onRefresh?.();
   }
 
   return (
@@ -3030,7 +3339,7 @@ function DataImportSection({ importStatus, onRefresh }) {
                   <button
                     className="di-btn di-btn-clear"
                     disabled={!canEdit || !info?.exists || state === 'clear'}
-                    onClick={() => handleClear(ds)}
+                    onClick={() => setClearTarget(ds)}
                     title="Wipe dataset (server auto-backs up)"
                   >
                     {state === 'clear' ? '⟳' : '✕'} Reset
@@ -3041,6 +3350,13 @@ function DataImportSection({ importStatus, onRefresh }) {
           })}
         </div>
       </div>
+      <ConfirmClearModal
+        open={!!clearTarget}
+        onClose={() => setClearTarget(null)}
+        datasetLabel={clearTarget?.label}
+        clearApi={(password) => clearTarget.clear(password)}
+        onCleared={() => afterClear(clearTarget)}
+      />
     </section>
   );
 }

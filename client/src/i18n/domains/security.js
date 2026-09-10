@@ -25,6 +25,11 @@ registerStrings({
   'login.remember': { en: 'Remember me', vi: 'Ghi nhớ tôi' },
   'login.submit': { en: 'Sign in', vi: 'Đăng nhập' },
   'login.submitting': { en: 'Signing in…', vi: 'Đang đăng nhập…' },
+  // Live server-reachability indicator under the LAN/IP row on the sign-in
+  // card — green when /health responds, red when it times out / errors.
+  'login.conn.connected': { en: 'Server connected', vi: 'Đã kết nối máy chủ' },
+  'login.conn.disconnected': { en: 'Server disconnected', vi: 'Mất kết nối máy chủ' },
+  'login.conn.checking': { en: 'Checking server…', vi: 'Đang kiểm tra máy chủ…' },
   // Sprint S-P0-FIX-3 (OWASP ASVS V4.0 §6.2.4) — single unified message
   // for every credentials-failure path (unknown user / wrong password /
   // per-username lockout). Server-side audit log retains the rich detail.
@@ -84,6 +89,21 @@ registerStrings({
   'login.change.same': {
     en: 'New password must be different from the current one.',
     vi: 'Mật khẩu mới phải khác mật khẩu hiện tại.',
+  },
+  // Hotfix MES-3-FIX-54 — post-TOTP / post-enrollment dispatch outcomes
+  // for the deferred change-password flow. The {error} interpolation
+  // carries the server's reason (e.g. "Current password incorrect").
+  'login.change.post_totp_failed': {
+    en: 'Password change failed after 2FA: {error}',
+    vi: 'Đổi mật khẩu thất bại sau xác thực 2 bước: {error}',
+  },
+  'login.change.post_enroll_ok': {
+    en: 'Password changed.',
+    vi: 'Mật khẩu đã được đổi.',
+  },
+  'login.change.post_enroll_failed': {
+    en: 'Password change after 2FA enrollment failed: {error}. Use Settings → Change password to retry.',
+    vi: 'Đổi mật khẩu sau khi kích hoạt 2FA thất bại: {error}. Vào Cài đặt → Đổi mật khẩu để thử lại.',
   },
   'login.must_change.title': { en: 'Set a new password', vi: 'Đặt mật khẩu mới' },
   'login.must_change.body': {

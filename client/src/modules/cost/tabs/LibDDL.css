@@ -140,6 +140,181 @@
   text-transform: uppercase;
   letter-spacing: 0.32px;
 }
+/* Card head with a right-aligned action (custom-table "Delete table"). */
+.ddl-card-head--row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ddl-card-head-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* ✎ Rename pencil in every card head. */
+.ddl-title-edit {
+  flex: 0 0 auto;
+  margin-left: auto;
+  border: 1px solid #d0d0d0;
+  background: transparent;
+  color: #525252;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: 0;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background-color 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+.ddl-title-edit:hover {
+  background: #e8e8e8;
+  color: #161616;
+  border-color: #a8a8a8;
+}
+/* When the pencil sits next to a Delete-table action, don't push twice. */
+.ddl-title-edit + .ddl-table-del {
+  margin-left: 0;
+}
+/* Cutter Base Cost — flat/tiered mode-aware row. */
+.ddl-cc-row {
+  border-bottom: 1px solid #f4f4f4;
+}
+.ddl-cc-row:last-of-type {
+  border-bottom: none;
+}
+.ddl-cc-flat {
+  /* inherits .ddl-kv-row input (Carbon underline) via the wrapper */
+  min-width: 0;
+}
+.ddl-cc-toggle {
+  flex: 0 0 auto;
+  margin-left: auto;
+  border: 1px solid #d0d0d0;
+  background: transparent;
+  color: #0f62fe;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 8px;
+  border-radius: 0;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+.ddl-cc-toggle:hover {
+  background: #e8e8e8;
+  border-color: #a8a8a8;
+}
+.ddl-cc-tiers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 16px 10px 28px;
+}
+.ddl-cc-tier {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ddl-cc-upto,
+.ddl-cc-cost {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border: none;
+  border-bottom: 1px solid #c6c6c6;
+  border-radius: 0;
+  background: #f4f4f4;
+  color: #161616;
+  font-size: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  outline: none;
+  box-sizing: border-box;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+.ddl-cc-upto:focus,
+.ddl-cc-cost:focus {
+  border-bottom-color: #0f62fe;
+  background: #ffffff;
+}
+.ddl-cc-upto:disabled {
+  background: #ededed;
+  color: #8d8d8d;
+}
+.ddl-cc-catch {
+  flex: 0 0 auto;
+  min-width: 28px;
+  font-size: 11px;
+  color: #8d8d8d;
+  text-align: center;
+}
+.ddl-cc-addtier {
+  align-self: flex-start;
+  padding-left: 0;
+}
+
+/* "Sync from Tool Life" restore link in the Cutter Cost card. */
+.ddl-restore {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: #0f62fe;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 0.16px;
+}
+.ddl-restore:hover {
+  background: #e8e8e8;
+}
+
+.ddl-table-del {
+  flex: 0 0 auto;
+  border: 1px solid #e0b4b4;
+  background: transparent;
+  color: #a2191f;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.32px;
+  padding: 3px 8px;
+  border-radius: 0;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+.ddl-table-del:hover {
+  background: #da1e28;
+  border-color: #da1e28;
+  color: #ffffff;
+}
+/* New-table modal hint + delete-table confirm text. */
+.ddl-newtable-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #6f6f6f;
+  line-height: 1.4;
+}
+.ddl-deltable-msg {
+  font-size: 13px;
+  color: #161616;
+  line-height: 1.5;
+  margin: 0;
+}
 .ddl-card-body {
   padding: 8px 0;
 }
@@ -160,6 +335,19 @@
 .ddl-kv-row:last-child,
 .ddl-cov-row:last-child {
   border-bottom: none;
+}
+
+/* Coverage rows — taller + airier for easier reading + clicking (GIÃN).
+   Scoped to the coverage card only (later, same-specificity override) so
+   item/kv rows keep their compact 40px height. Inputs stay flex:1 with
+   their own padding, so the extra row height only adds whitespace — it
+   does NOT shrink the two fields. A slightly darker divider + a touch of
+   vertical margin give clearer separation between rows. */
+.ddl-cov-row {
+  height: 48px;
+  gap: 12px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 /* Inputs — IBM Carbon underline */
@@ -199,9 +387,20 @@
   background: #ffffff;
   box-shadow: none;
 }
-.ddl-cov-row input[type='number'] {
-  max-width: 80px;
+/* Coverage value field. DecimalInput renders <input type="text"> (NOT
+   type="number"), so the old input[type='number'] selector never matched
+   and the field grew to full flex:1 width — together with the pt input it
+   consumed the whole row and pushed the delete × off the card edge (clipped
+   → invisible). Target the real class + give it a bounded width, and let
+   both inputs shrink (min-width:0) so the flex:0 0 auto × always keeps its
+   footprint and stays visible. */
+.ddl-cov-row .ddl-cov-val {
+  flex: 0 0 96px;
+  max-width: 96px;
   text-align: right;
+}
+.ddl-cov-row input {
+  min-width: 0;
 }
 .ddl-kv-key {
   font-size: 12px;
@@ -209,6 +408,22 @@
   min-width: 70px;
   font-weight: 400;
   letter-spacing: 0.32px;
+}
+/* Tool Life label = the tool_type name (read-only, can be long). */
+.ddl-kv-key-wide {
+  flex: 0 0 auto;
+  min-width: 120px;
+  max-width: 55%;
+  color: #161616;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ddl-tl-empty {
+  padding: 10px 16px;
+  font-size: 12.5px;
+  color: #6f6f6f;
+  font-style: italic;
 }
 
 /* Delete button */
@@ -219,7 +434,10 @@
   cursor: pointer;
   font-size: 16px;
   padding: 4px 6px;
-  flex-shrink: 0;
+  /* Stable footprint so two flex inputs can never squeeze the × to
+     invisibility (BUG 2 hardening). */
+  flex: 0 0 auto;
+  min-width: 28px;
   border-radius: 0;
   line-height: 1;
   transition:
@@ -229,6 +447,42 @@
 .ddl-del:hover {
   background: #f4f4f4;
   color: #da1e28;
+}
+
+/* ── Add-entry modal (object-keyed tables) ── */
+.ddl-add-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.ddl-add-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #6f6f6f);
+}
+.ddl-add-optional {
+  font-weight: 400;
+  font-style: italic;
+}
+.ddl-add-input {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong, #c6c6c6);
+  border-radius: 4px;
+  background: var(--surface-card, #fff);
+  color: var(--text-primary, #161616);
+  font: inherit;
+  font-size: 13px;
+}
+.ddl-add-input:focus {
+  outline: none;
+  border-color: #0f62fe;
+  box-shadow: 0 0 0 2px color-mix(in oklab, #0f62fe, transparent 78%);
+}
+.ddl-add-err {
+  color: #da1e28;
+  font-size: 12.5px;
 }
 
 /* Add row */
@@ -253,4 +507,22 @@
 .ddl-add:hover {
   background: #e8e8e8;
   color: #0353e9;
+}
+
+/* Anti-clobber conflict banner (PART 3 — DDL _rev) */
+.ddl-conflict {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 12px 0;
+  padding: 10px 14px;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.ddl-conflict button {
+  flex: 0 0 auto;
 }

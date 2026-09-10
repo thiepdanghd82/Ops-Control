@@ -58,7 +58,7 @@ function openStream() {
   const es = new EventSource(url, { withCredentials: true });
 
   const handle = (e) => {
-    let p = null;
+    let p;
     try {
       p = JSON.parse(e.data);
     } catch {

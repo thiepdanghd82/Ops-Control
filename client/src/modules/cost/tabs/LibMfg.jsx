@@ -11,6 +11,7 @@ import { useCallback, useState } from 'react';
 import { sharedApi, importApi } from '../../../services/api';
 import DataBrowser from '../../../components/Shared/DataBrowser';
 import ImportWizard from '../../../components/Shared/ImportWizard';
+import ConfirmClearModal from '../../../components/Shared/ConfirmClearModal';
 import { useCachedFetch, invalidateCache } from '../../../hooks/useCachedFetch';
 
 const COLUMNS = [
@@ -64,9 +65,10 @@ export default function LibMfg() {
   );
   const data = Array.isArray(bomData) ? bomData : [];
   const loading = bomData == null;
-  const [busy, setBusy] = useState(false);
+  const [busy] = useState(false);
   const [msg, setMsg] = useState('');
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [clearOpen, setClearOpen] = useState(false);
 
   const handleWizardCommitted = useCallback(async () => {
     await sharedApi.refreshCache().catch(() => {});
@@ -74,29 +76,14 @@ export default function LibMfg() {
     await reloadBom();
   }, [reloadBom]);
 
-  const handleClear = useCallback(async () => {
-    if (
-      !window.confirm(
-        'Clear all Manufacturing Structures data? The current file will be backed up first.'
-      )
-    )
-      return;
-    setBusy(true);
-    setMsg('Clearing…');
-    try {
-      await importApi.clearBom();
-      await sharedApi.refreshCache().catch(() => {});
-      invalidateCache('lib-mfg-bom');
-      await reloadBom();
-      setMsg('Data cleared');
-      setTimeout(() => setMsg(''), 3000);
-    } catch (err) {
-      console.error('Clear failed:', err);
-      setMsg('Clear failed: ' + (err.message || 'Unknown error'));
-      setTimeout(() => setMsg(''), 5000);
-    } finally {
-      setBusy(false);
-    }
+  // Post-clear reload — the actual wipe + password step-up run inside
+  // ConfirmClearModal (importApi.clearBom(password)).
+  const afterClear = useCallback(async () => {
+    await sharedApi.refreshCache().catch(() => {});
+    invalidateCache('lib-mfg-bom');
+    await reloadBom();
+    setMsg('Data cleared');
+    setTimeout(() => setMsg(''), 3000);
   }, [reloadBom]);
 
   const importSlot = (
@@ -111,7 +98,7 @@ export default function LibMfg() {
       </button>
       <button
         className="db-col-btn db-btn-danger"
-        onClick={handleClear}
+        onClick={() => setClearOpen(true)}
         disabled={busy}
         title="Clear all Manufacturing Structures data (backup kept)"
       >
@@ -164,6 +151,14 @@ export default function LibMfg() {
         datasetKey="bom"
         datasetLabel="Manufacturing Structures (BOM)"
         onCommitted={handleWizardCommitted}
+      />
+      <ConfirmClearModal
+        open={clearOpen}
+        onClose={() => setClearOpen(false)}
+        datasetLabel="Manufacturing Structures (BOM)"
+        rowCount={data.length}
+        clearApi={(password) => importApi.clearBom(password)}
+        onCleared={afterClear}
       />
     </>
   );

@@ -1,12 +1,19 @@
-# Hương Walk-Through Agenda — D-14 (2026-05-26)
+# Hương Walk-Through Agenda — D-14 (2026-06-16)
 
 > Lead Engineer (Đặng Thế Thiệp) walks Backup Engineer (Trần Thị Hương)
 > through repo + runbook + sysadmin scope. Target: 60 min single session,
 > Hương's office or screen-share, before lunch ideally (07:30-08:30 OR
 > 14:00-15:00 ICT).
 >
-> Companion: `BACKUP_ENGINEER_BRIEF_2026-06-09.md` (the binding scope doc).
+> Companion: `BACKUP_ENGINEER_BRIEF_2026-06-30.md` (the binding scope doc).
 > This file = operational agenda for the actual session.
+>
+> **Date refresh (D-21 audit 2026-06-09)**: go-live re-baselined to
+> 2026-06-30. Real D-14 = **2026-06-16** (this session). State-snapshot
+> table below describes work completed AS OF 2026-05-25 (D-15 in the
+> original 2026-06-09 schedule); items remain done — only the cutover
+> calendar moved. Block 5 prod-box readiness now sits at real D-7 =
+> 2026-06-23 deadline.
 
 ---
 
@@ -52,7 +59,7 @@
 
   Then USB-stick the PRIVATE key file (`huong_prod_2026`) to Hương during the session — DO NOT email/Zalo the private key.
 
-- [ ] Print 1 paper copy of `STOP_TRIGGERS_2026-06-09.md` for Hương reference
+- [ ] Print 1 paper copy of `STOP_TRIGGERS_2026-06-30.md` for Hương reference
 - [ ] Open laptop with repo at HEAD ready for screen-share
 - [ ] Notepad ready (Hương's first day notes)
 - [ ] **OPTIONAL**: prepare sealed envelope OPS-EMERGENCY-PM-CONTACT (only if HR call done — else handoff at D-2 per BRIEF line 65)
@@ -67,7 +74,7 @@
 
 **Lead says**:
 
-> "Cảm ơn Hương đã đồng ý. Lý do anh cần Hương: anh là single point of failure cho cả engineering + sysadmin role. Plant Manager đã giao toàn quyền decision nhưng anh cần backup nếu down. Cutover go-live 2026-06-09, anh cần Hương standby từ D-1 (06-08) đến D+7 (06-16). Today walkthrough cover hết những thứ Hương cần biết để tự execute runbook nếu anh unreachable."
+> "Cảm ơn Hương đã đồng ý. Lý do anh cần Hương: anh là single point of failure cho cả engineering + sysadmin role. Plant Manager đã giao toàn quyền decision nhưng anh cần backup nếu down. Cutover go-live 2026-06-30, anh cần Hương standby từ D-1 (06-29) đến D+7 (07-07). Today walkthrough cover hết những thứ Hương cần biết để tự execute runbook nếu anh unreachable."
 
 **Show Hương** (2 min read):
 
@@ -98,15 +105,15 @@
 
    | Priority | Doc                                     | When to read               |
    | -------- | --------------------------------------- | -------------------------- |
-   | 1        | `STOP_TRIGGERS_2026-06-09.md`           | NOW (memorize 11 triggers) |
+   | 1        | `STOP_TRIGGERS_2026-06-30.md`           | NOW (memorize 11 triggers) |
    | 2        | `ROLLBACK-RUNBOOK-20260522.md`          | When `/health` 500 ≥10 min |
    | 3        | `MIGRATION-DAY-0.md`                    | D-1 night + D-0 morning    |
-   | 4        | `BACKUP_ENGINEER_BRIEF_2026-06-09.md`   | Reference card             |
+   | 4        | `BACKUP_ENGINEER_BRIEF_2026-06-30.md`   | Reference card             |
    | 5        | `CLAUDE.md` "Recovery playbook" section | When totally stuck         |
 
 3. **Vietnamese announcements quick-find** (2 min):
    - `ROLLBACK-RUNBOOK.md` Section A.7 + B.4 + B.6 = pre-written Zalo broadcasts
-   - Copy-paste directly into Zalo "OpsControl GoLive 2026-06-09" group
+   - Copy-paste directly into Zalo "OpsControl GoLive 2026-06-30" group
 
 ### Block 3 — Engineering scope (10 min)
 
@@ -476,7 +483,7 @@ When in doubt → wait for Lead. Better to be 10 min late than to ship a bad rol
 **Companion docs (Hương opens AFTER session for self-study)**:
 
 - `docs/cutover/SYSADMIN_DISCOVERY_NOTE_2026-05-25.md` — why she covers BOTH scopes
-- `docs/cutover/STOP_TRIGGERS_2026-06-09.md` — 11 triggers
+- `docs/cutover/STOP_TRIGGERS_2026-06-30.md` — 11 triggers
 - `docs/cutover/ROLLBACK-RUNBOOK-20260522.md` — Runbook A + B
 - `docs/MIGRATION-DAY-0.md` — Day-0 playbook
 - `CLAUDE.md` Recovery playbook section — older detailed runbooks (TOTP rotation, sys-user recovery, bare-metal restore)

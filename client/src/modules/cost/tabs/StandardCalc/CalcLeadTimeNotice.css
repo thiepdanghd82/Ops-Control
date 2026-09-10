@@ -1,0 +1,290 @@
+/* Lead time & Notice sub-tab — Notion/Linear-style 2-column form
+ * (Option C). Each field is a row: label-left (compact, uppercase
+ * letter-spaced) | input-right (full width).
+ *
+ * Sprint S-LEADTIME-TABLE-POLISH (2026-06-19, Option C). Henry's
+ * pivot from horizontal 7-col grid → vertical label-field rows for
+ * an "authored form" feel matching Notion / Linear properties
+ * panels. Better for the textareas which want vertical real-estate;
+ * also reads top-to-bottom like a checklist.
+ *
+ * Zero schema / state / calc / onChange change. JSX adds wrapper
+ * spans for Tooling row + caption but field-input contract is
+ * unchanged so Lesson 18 focus-loss does not apply.
+ */
+
+.ltn-wrap {
+  container-type: inline-size;
+  /* Henry 2026-06-19 — stretch to full screen width (was capped at
+     1100px Notion-style; operator wanted edge-to-edge). Label
+     column stays fixed 180px; only the textarea row expands. */
+  max-width: 100%;
+  padding: 16px 16px 20px;
+}
+
+.ltn-grid {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-slate-200);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-slate-200); /* shows as 1px row separators */
+  gap: 1px;
+  box-shadow:
+    0 1px 3px rgba(15, 35, 65, 0.04),
+    0 1px 2px rgba(15, 35, 65, 0.06);
+}
+
+/* Each row = one field. Label-left fixed width, input-right flex. */
+.ltn-col {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  background: #fff;
+  min-width: 0;
+}
+
+/* Label cell — right-bordered separator, top-aligned (textareas
+   grow vertically; label stays anchored to first line). Uppercase
+   letter-spaced sales-form convention. */
+.ltn-th {
+  padding: 12px 14px;
+  background: var(--color-slate-50);
+  border-right: 1px solid var(--color-slate-200);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-slate-500);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+}
+
+/* Field cell — tight horizontal padding, flex column so textarea +
+   optional caption stack cleanly. */
+.ltn-cell {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Tooling row — read-only metric with inline lock + caption. Whole
+   cell uses subtle muted bg to signal "not editable". */
+.ltn-tooling {
+  background: var(--color-slate-50);
+  cursor: not-allowed;
+  color: var(--color-slate-600);
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ltn-tooling-row {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ltn-tooling-value {
+  font-weight: 700;
+  font-size: clamp(1.1rem, 1.3vw + 0.6rem, 1.3rem);
+  color: var(--color-slate-800);
+  letter-spacing: -0.01em;
+}
+
+.ltn-tooling-lock {
+  opacity: 0.45;
+  font-size: 0.8em;
+  flex-shrink: 0;
+}
+
+.ltn-tooling-caption {
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-slate-400);
+}
+
+/* Textareas — authored-form input: subtle interior shadow + clear
+   focus ring. Default border is muted so the focused row stands
+   out against the un-focused stack. */
+.ltn-input {
+  width: 100%;
+  border: 1px solid var(--color-slate-200);
+  border-radius: 5px;
+  padding: 7px 9px;
+  font-family: inherit;
+  font-size: clamp(0.85rem, 0.9vw + 0.6rem, 0.95rem);
+  line-height: 1.45;
+  resize: vertical;
+  min-height: 2.6em;
+  /* Chromium 123+ / Electron 41+ — auto-grow with content; older
+     browsers fall back to min-height above. */
+  field-sizing: content;
+  background: #fff;
+  color: var(--color-slate-800);
+  box-shadow: inset 0 1px 1px rgba(15, 35, 65, 0.03);
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.ltn-input::placeholder {
+  color: var(--color-slate-400);
+  font-style: italic;
+}
+
+.ltn-input:hover {
+  border-color: var(--color-slate-300);
+}
+
+.ltn-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow:
+    inset 0 1px 1px rgba(15, 35, 65, 0.03),
+    0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Manual-override Material L/T — same violet (#7c3aed) the CONTR % KPI uses.
+   Higher specificity + !important so it beats .ltn-input's slate-800 color
+   (the bare .sc-pack-tier-ovr loses on equal specificity / source order). */
+.ltn-input.sc-pack-tier-ovr {
+  color: var(--color-violet-500) !important;
+  font-weight: 700 !important;
+}
+
+/* Narrow screens — stack label ABOVE field for tablet/portrait. */
+@container (max-width: 600px) {
+  .ltn-col {
+    grid-template-columns: 1fr;
+  }
+  .ltn-th {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-slate-200);
+    padding: 8px 12px;
+  }
+  .ltn-tooling {
+    flex-wrap: wrap;
+  }
+}
+
+/* Read-only Materials MOQ table (synced from Materials section + NPI library). */
+.ltn-matmoq {
+  margin-top: 16px;
+}
+.ltn-matmoq-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 8px;
+}
+.ltn-tol {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.ltn-tol-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  white-space: nowrap;
+}
+.ltn-tol-input {
+  width: 90px;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-slate-800, #1e293b);
+  background: var(--surface-1, #fff);
+  border: 1px solid var(--color-slate-300, #cbd5e1);
+  border-radius: 4px;
+}
+.ltn-tol-input:focus {
+  outline: none;
+  border-color: var(--color-brand-500, #2563eb);
+  box-shadow: 0 0 0 2px var(--color-brand-100, #dbeafe);
+}
+.ltn-matmoq-empty {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-secondary, #94a3b8);
+  padding: 12px;
+  background: var(--color-slate-50, #f8fafc);
+  border: 1px solid var(--color-slate-200, #e2e8f0);
+  border-radius: 4px;
+}
+.ltn-matmoq-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-slate-200, #e2e8f0);
+  border-radius: 4px;
+}
+.ltn-matmoq-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.ltn-matmoq-table thead th {
+  background: var(--color-slate-100, #f1f5f9);
+  color: var(--text-secondary, #475569);
+  font-weight: 700;
+  text-align: left;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--color-slate-200, #e2e8f0);
+  white-space: nowrap;
+}
+.ltn-matmoq-table tbody td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--color-slate-100, #f1f5f9);
+  color: var(--text-primary, #1e293b);
+}
+.ltn-matmoq-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.ltn-matmoq-num {
+  text-align: right;
+  font-family: monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ltn-matmoq-code {
+  font-family: monospace;
+}
+
+/* Checkbox column in the Materials MOQ table (drives the REMARK field). */
+.ltn-matmoq-chk {
+  width: 34px;
+  text-align: center;
+  white-space: nowrap;
+}
+.ltn-matmoq-chk input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: var(--color-blue-600, #2563eb);
+}
+
+/* Match-quality cues on the IFS code cell (Lesson 32 tolerant lookup). */
+.ltn-matmoq-fuzzy {
+  color: var(--color-amber-700, #b45309);
+}
+.ltn-matmoq-approx {
+  font-weight: 700;
+  color: var(--color-amber-600, #d97706);
+}
+.ltn-matmoq-ambiguous {
+  color: var(--color-orange-700, #c2410c);
+  text-decoration: underline dotted;
+}
+.ltn-matmoq-unresolved {
+  color: var(--color-red-600, #dc2626);
+  text-decoration: underline dotted var(--color-red-400, #f87171);
+  text-underline-offset: 2px;
+}

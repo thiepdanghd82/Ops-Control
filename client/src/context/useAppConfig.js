@@ -18,3 +18,17 @@ export function useFeatureFlag(name) {
   const { features } = useContext(AppConfigContext);
   return Boolean(features?.[name]);
 }
+
+/**
+ * Global SYS-controlled sidebar show/hide (Sprint S-SYSCTRL). Returns the
+ * hidden id sets + an optimistic setter. HIDE-ONLY at the render layer — the
+ * Sidebar ANDs these AFTER the real access gates, so this never widens access.
+ */
+export function useSidebarVisibility() {
+  const ctx = useContext(AppConfigContext);
+  return {
+    hiddenTabs: ctx.sidebar?.hiddenTabs || [],
+    hiddenSections: ctx.sidebar?.hiddenSections || [],
+    setSidebarVisibility: ctx.setSidebarVisibility || (() => {}),
+  };
+}

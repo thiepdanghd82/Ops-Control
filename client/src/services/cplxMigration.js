@@ -41,6 +41,74 @@
 // re-save in the calculator.
 export const CPLX_SHAPE_VERSION = 4;
 
+// Phase 1 pricing-snapshot foundation (additive field, NO version bump
+// per PR #110 precedent — heal-on-read is sufficient for purely
+// additive defaults). Mirrors stdMigration.healPricingSnapshot.
+import { createEmptySnapshot } from './pricingSnapshot.js';
+// Multi-drawing heal — per-SP + top-level cover. Idempotent, additive, NO
+// version bump (PR #110 pattern). Keeps each singular *_file mirrored.
+import { healDrawings } from './drawingFiles.js';
+
+function healPricingSnapshot(state) {
+  if (state && state.pricing_snapshot && typeof state.pricing_snapshot === 'object') {
+    return state;
+  }
+  return { ...state, pricing_snapshot: createEmptySnapshot() };
+}
+
+// Sprint S-MAT-LT — seed legacy free-text `lt_material` into the new
+// `lt_material_ovr` override key ONCE (key-presence signal) so already-saved
+// Cpx quotes keep their manual Material L/T as an override. Mirrors
+// stdMigration.healLeadTimeMaterialOvr. Cpx lead_time is quote-level (not
+// per-SP), so this heals the single top-level lead_time object.
+function healLeadTimeMaterialOvr(state) {
+  const lt = state && state.lead_time;
+  if (!lt || typeof lt !== 'object' || Array.isArray(lt)) return state;
+  if ('lt_material_ovr' in lt) return state;
+  const seed = typeof lt.lt_material === 'string' ? lt.lt_material : '';
+  return { ...state, lead_time: { ...lt, lt_material_ovr: seed } };
+}
+
+// Sprint S-PO-LT — seed lt_po_ovr from legacy free-text lt_po ONCE so the
+// auto-derived PO L/T doesn't silently replace a saved manual entry. Mirrors
+// stdMigration.healLeadTimePoOvr; Cpx lead_time is quote-level.
+function healLeadTimePoOvr(state) {
+  const lt = state && state.lead_time;
+  if (!lt || typeof lt !== 'object' || Array.isArray(lt)) return state;
+  if ('lt_po_ovr' in lt) return state;
+  const seed = typeof lt.lt_po === 'string' ? lt.lt_po : '';
+  return { ...state, lead_time: { ...lt, lt_po_ovr: seed } };
+}
+
+// Sprint S-REMARK-SEL — seed lt_remark_ovr from legacy free-text lt_remark ONCE
+// so checkbox-driven REMARK doesn't clobber a saved manual note. Mirrors
+// stdMigration.healLeadTimeRemarkOvr; Cpx lead_time is quote-level.
+function healLeadTimeRemarkOvr(state) {
+  const lt = state && state.lead_time;
+  if (!lt || typeof lt !== 'object' || Array.isArray(lt)) return state;
+  if ('lt_remark_ovr' in lt) return state;
+  const seed = typeof lt.lt_remark === 'string' ? lt.lt_remark : '';
+  return { ...state, lead_time: { ...lt, lt_remark_ovr: seed } };
+}
+
+// Heal drawings on the top-level cover AND every subproduct (Cpx drawings
+// are per-SP). Returns SAME ref when nothing changed so the React-memo
+// short-circuit stays intact for fully-current quotes.
+function healCplxDrawings(state) {
+  if (!state || typeof state !== 'object' || Array.isArray(state)) return state;
+  let out = healDrawings(state);
+  if (Array.isArray(out.subproducts)) {
+    let changed = false;
+    const sps = out.subproducts.map((sp) => {
+      const h = healDrawings(sp);
+      if (h !== sp) changed = true;
+      return h;
+    });
+    if (changed) out = { ...out, subproducts: sps };
+  }
+  return out;
+}
+
 function startsWithFG(code) {
   return typeof code === 'string' && code.toUpperCase().startsWith('FG');
 }
@@ -116,7 +184,10 @@ export function upgradeCplxState(state) {
           sp.processes.every((r) => !r || typeof r !== 'object' || r._mid))
     )
   ) {
-    return state; // already upgraded
+    // already upgraded — still heal snapshot + lead-time override + drawings
+    return healCplxDrawings(
+      healLeadTimePoOvr(healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(healPricingSnapshot(state))))
+    );
   }
 
   const sourceVersion = Number(state._shape_version) || 0;
@@ -169,13 +240,20 @@ export function upgradeCplxState(state) {
 
   const tooling_alloc = Array.isArray(state.tooling_alloc) ? state.tooling_alloc : [];
 
-  return {
+  const upgraded = {
     ...state,
     subproducts: newSps,
     bom,
     tooling_alloc,
     _shape_version: CPLX_SHAPE_VERSION,
   };
+  // Pricing-snapshot heal (Phase 1) — additive default after the
+  // shape-version walk so newly-migrated states get the snapshot too.
+  // Material L/T override heal (Sprint S-MAT-LT) — seed legacy free-text.
+  // Multi-drawing heal — wrap legacy single file(s) per-SP + cover.
+  return healCplxDrawings(
+    healLeadTimePoOvr(healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(healPricingSnapshot(upgraded))))
+  );
 }
 
 /**

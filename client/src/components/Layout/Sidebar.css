@@ -605,3 +605,21 @@
 .app-layout.sidebar-collapsed {
   /* hook available for future fine-tuning (e.g. different padding) */
 }
+
+/* ── System Control: SYS-only cue for globally-hidden items ────────
+   The item is hidden for all non-SYS users; SYS still sees it, muted,
+   with a small dot so they know it's hidden for others. */
+.nav-item-globally-hidden {
+  opacity: 0.55;
+}
+.nav-item-globally-hidden .nav-label {
+  font-style: italic;
+}
+.nav-hidden-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #9333ea;
+  margin-left: auto;
+  flex: 0 0 auto;
+}

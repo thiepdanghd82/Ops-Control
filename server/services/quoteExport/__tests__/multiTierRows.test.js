@@ -112,7 +112,7 @@ function makeStdMultiTier() {
         materials_main: [{ setup_cost: 0.05, run_cost: 0.1, total: 0.15 }],
         materials_alt: [],
         inks: [{ setup_cost: 0.003, run_cost: 0.012, total: 0.015, clicks: 8 }],
-        processes: [{ setup_cost: 0.006, run_cost: 0.038, total: 0.044 }],
+        processes: [{ setup_cost: 0.006, run_cost: 0.038, total: 0.044, setup_mach: 0.006 }],
       },
       tiers: [
         // Tier 0 — active. Match the mirror exactly.
@@ -121,7 +121,7 @@ function makeStdMultiTier() {
             materials_main: [{ setup_cost: 0.05, run_cost: 0.1, total: 0.15 }],
             materials_alt: [],
             inks: [{ setup_cost: 0.003, run_cost: 0.012, total: 0.015, clicks: 8 }],
-            processes: [{ setup_cost: 0.006, run_cost: 0.038, total: 0.044 }],
+            processes: [{ setup_cost: 0.006, run_cost: 0.038, total: 0.044, setup_mach: 0.006 }],
           },
         },
         // Tier 1 — DIFFERENT numbers.
@@ -130,7 +130,7 @@ function makeStdMultiTier() {
             materials_main: [{ setup_cost: 0.025, run_cost: 0.08, total: 0.105 }],
             materials_alt: [],
             inks: [{ setup_cost: 0.0015, run_cost: 0.01, total: 0.0115, clicks: 8 }],
-            processes: [{ setup_cost: 0.003, run_cost: 0.03, total: 0.033 }],
+            processes: [{ setup_cost: 0.003, run_cost: 0.03, total: 0.033, setup_mach: 0.003 }],
           },
         },
         // Tier 2 — different again.
@@ -139,7 +139,7 @@ function makeStdMultiTier() {
             materials_main: [{ setup_cost: 0.005, run_cost: 0.06, total: 0.065 }],
             materials_alt: [],
             inks: [{ setup_cost: 0.0003, run_cost: 0.008, total: 0.0083, clicks: 8 }],
-            processes: [{ setup_cost: 0.0006, run_cost: 0.024, total: 0.0246 }],
+            processes: [{ setup_cost: 0.0006, run_cost: 0.024, total: 0.0246, setup_mach: 0.0006 }],
           },
         },
       ],
@@ -276,23 +276,23 @@ function makeCpxMultiTier() {
 }
 
 // Helpers — find Materials row 5 (first data row after section banner +
-// header) Setup Cost cell (col N=14). For Cpx the section banner adds
-// one extra row per SP so the first data row drifts; the helpers below
-// scan defensively.
+// header) Setup Cost cell (col O=15 after drw_material column insertion
+// shifted it +1). For Cpx the section banner adds one extra row per SP
+// so the first data row drifts; the helpers below scan defensively.
 function readFirstMaterialSetupCost(sheet) {
-  // Walk rows 3..30 looking for the first row where col N is a number.
+  // Full-parity order: Materials Setup Cost = col T (20). The inserted
+  // QPA/Mats-MOQ columns are '—' in these fixtures so scanning col 20 is safe.
   for (let r = 3; r <= 30; r++) {
-    const v = sheet.getCell(r, 14).value;
+    const v = sheet.getCell(r, 20).value;
     if (typeof v === 'number') return v;
   }
   return null;
 }
 
 function readFirstInkSetupCost(sheet) {
-  // Inks header is row 3; data starts row 4 (Std) or 5 (Cpx — extra
-  // section banner). Walk defensively from row 4.
+  // scrap_pct inserted after clicks shifts Inks Setup Cost to col O (15).
   for (let r = 4; r <= 30; r++) {
-    const v = sheet.getCell(r, 14).value;
+    const v = sheet.getCell(r, 15).value;
     if (typeof v === 'number') return v;
   }
   return null;
@@ -367,7 +367,8 @@ test('multi-tier Std: Processes Setup Cost differs per tier xlsx', async () => {
   const zip = await unzipAll(out.buffer);
   const t0 = pickXlsxByMoq(zip, '500');
   const t1 = pickXlsxByMoq(zip, '1000');
-  // Processes Setup Cost = col 17 (Q). Header row 3; data row 4 (Std).
+  // Processes S.Mach = col 17 (Q) in the full-parity layout. Header row 3;
+  // data row 4 (Std). Per-tier setup_mach differs → proves the right tier landed.
   const p0 = t0.getWorksheet('05 Processes').getCell(4, 17).value;
   const p1 = t1.getWorksheet('05 Processes').getCell(4, 17).value;
   assert.equal(p0, 0.006);
@@ -386,9 +387,9 @@ test('multi-tier Std: Materials Subtotal derived from per-tier rows', async () =
   const matT1 = t1.getWorksheet('03 Materials');
   const subRow = findSubtotalRow(matT1);
   assert.ok(subRow, 'Subtotal row missing on tier 1 Materials');
-  // Tier 1 has setup_cost=0.025, run_cost=0.08
-  assert.equal(matT1.getCell(subRow, 14).value, 0.025);
-  assert.equal(matT1.getCell(subRow, 15).value, 0.08);
+  // Tier 1 has setup_cost=0.025, run_cost=0.08 (cols T=20, U=21).
+  assert.equal(matT1.getCell(subRow, 20).value, 0.025);
+  assert.equal(matT1.getCell(subRow, 21).value, 0.08);
 });
 
 // Active-tier subtotal still uses bd_* (rounding-free aggregate)
@@ -408,8 +409,8 @@ test('multi-tier Std: active-tier Materials Subtotal uses bd_mat_* (not row sum)
   const wb = await parseXlsx(out.buffer);
   const mat = wb.getWorksheet('03 Materials');
   const subRow = findSubtotalRow(mat);
-  // Active tier subtotal must still be bd_mat_setup = 0.05, not 0.999
-  assert.equal(mat.getCell(subRow, 14).value, 0.05);
+  // Active tier subtotal must still be bd_mat_setup = 0.05, not 0.999 (col T=20).
+  assert.equal(mat.getCell(subRow, 20).value, 0.05);
 });
 
 // Cpx differential
@@ -578,4 +579,129 @@ test('multi-tier: active-tier xlsx has NO [active-tier] footnote anywhere', asyn
       }
     }
   }
+});
+
+// ── Sprint S-PACK-SHIP-PER-TIER step 4 — sheet 07 per-tier merge ──
+//
+// Pre-sprint, sheet 07 read pack/ship fields straight off `quote.state`
+// regardless of which tier file was being rendered. Multi-tier zips
+// therefore showed identical Packaging + Shipping cells on every MOQ
+// file, even when the operator had entered a per-tier override.
+//
+// The fix threads tierIdx into buildPackShipSheet and field-merges
+// `state.extra_moqs[tierIdx-1].packing` over `state` before rendering.
+// Tests below crack the zip and assert:
+//   - per-tier override surfaces in the right file
+//   - explicit 0 override surfaces as 0 (Henry's dễ-vỡ case at the
+//     exporter layer)
+//   - legacy quote without packing key falls back to base on every
+//     tier without crashing
+//   - single-tier export is byte-equivalent to pre-sprint behavior
+
+// Helper — find a key/value row in sheet 07 by scanning column A for
+// the label, returning column B's value. Defensive against row drift
+// from possible section banner changes.
+function readPackShipValueByLabel(sheet, label) {
+  for (let r = 1; r <= 40; r++) {
+    const a = sheet.getCell(`A${r}`).value;
+    if (typeof a === 'string' && a.includes(label)) {
+      return sheet.getCell(`B${r}`).value;
+    }
+  }
+  return null;
+}
+
+// Multi-tier Std quote carrying per-tier packing override. Reuses the
+// makeStdMultiTier shape; layers base pack/ship + extra_moqs[i].packing.
+function makeStdMultiTierPackShip() {
+  const q = makeStdMultiTier();
+  q.state.packing_method = 'Sheet';
+  q.state.bags_per_box = 10;
+  q.state.box_cost = 1; // base — tier 1 overrides this to 5
+  q.state.other_packing = 0.01;
+  q.state.delivery_term = 'DAP';
+  q.state.container_cost = 10;
+  q.state.other_ship = 50; // base — tier 1 overrides to explicit 0
+  // Override on tier 1 (extra_moqs[0]) and tier 2 (extra_moqs[1]).
+  q.state.extra_moqs[0].packing = {
+    box_cost: 5,
+    other_ship: 0, // explicit 0 — must NOT silently fall back to base 50
+    delivery_term: 'FOB',
+  };
+  q.state.extra_moqs[1].packing = {
+    box_cost: 2,
+  };
+  return q;
+}
+
+test('multi-tier Std sheet 07: per-tier packing override surfaces in the right xlsx', async () => {
+  const out = await exportQuote(makeStdMultiTierPackShip(), {
+    variant: 'internal',
+    lang: 'en',
+    tiers: 'all',
+  });
+  const zip = await unzipAll(out.buffer);
+  const t0 = pickXlsxByMoq(zip, '500').getWorksheet('07 Pack Ship');
+  const t1 = pickXlsxByMoq(zip, '1000').getWorksheet('07 Pack Ship');
+  const t2 = pickXlsxByMoq(zip, '5000').getWorksheet('07 Pack Ship');
+  // Base on tier 0; overridden on tiers 1+2.
+  assert.equal(readPackShipValueByLabel(t0, 'Box cost'), 1, 'tier 0 base box_cost');
+  assert.equal(readPackShipValueByLabel(t1, 'Box cost'), 5, 'tier 1 override box_cost');
+  assert.equal(readPackShipValueByLabel(t2, 'Box cost'), 2, 'tier 2 override box_cost');
+});
+
+test('multi-tier Std sheet 07: explicit-0 override surfaces as 0 (not silent fallback)', async () => {
+  // Henry's dễ-vỡ case at the exporter layer. Tier 1 overrides
+  // other_ship to explicit 0; pre-fix the cell rendered base 50.
+  const out = await exportQuote(makeStdMultiTierPackShip(), {
+    variant: 'internal',
+    lang: 'en',
+    tiers: 'all',
+  });
+  const zip = await unzipAll(out.buffer);
+  const t0 = pickXlsxByMoq(zip, '500').getWorksheet('07 Pack Ship');
+  const t1 = pickXlsxByMoq(zip, '1000').getWorksheet('07 Pack Ship');
+  assert.equal(readPackShipValueByLabel(t0, 'Other shipping'), 50, 'tier 0 base other_ship');
+  assert.equal(readPackShipValueByLabel(t1, 'Other shipping'), 0, 'tier 1 explicit 0 surfaces');
+});
+
+test('multi-tier Std sheet 07: non-numeric override (delivery_term) flows per tier', async () => {
+  const out = await exportQuote(makeStdMultiTierPackShip(), {
+    variant: 'internal',
+    lang: 'en',
+    tiers: 'all',
+  });
+  const zip = await unzipAll(out.buffer);
+  const t0 = pickXlsxByMoq(zip, '500').getWorksheet('07 Pack Ship');
+  const t1 = pickXlsxByMoq(zip, '1000').getWorksheet('07 Pack Ship');
+  assert.equal(readPackShipValueByLabel(t0, 'Delivery Term'), 'DAP', 'tier 0 base');
+  assert.equal(readPackShipValueByLabel(t1, 'Delivery Term'), 'FOB', 'tier 1 override');
+});
+
+test('multi-tier Std sheet 07: legacy quote without packing key falls back to base on every tier', async () => {
+  // Quote with extra_moqs but NO `packing` property — pre-sprint shape.
+  // Should render base on every tier; must not crash.
+  const q = makeStdMultiTier();
+  q.state.box_cost = 7;
+  q.state.other_ship = 42;
+  // No q.state.extra_moqs[i].packing assignment — legacy shape intact.
+  const out = await exportQuote(q, { variant: 'internal', lang: 'en', tiers: 'all' });
+  const zip = await unzipAll(out.buffer);
+  const t0 = pickXlsxByMoq(zip, '500').getWorksheet('07 Pack Ship');
+  const t1 = pickXlsxByMoq(zip, '1000').getWorksheet('07 Pack Ship');
+  assert.equal(readPackShipValueByLabel(t0, 'Box cost'), 7, 'tier 0 base box_cost');
+  assert.equal(readPackShipValueByLabel(t1, 'Box cost'), 7, 'tier 1 falls back to base');
+  assert.equal(readPackShipValueByLabel(t0, 'Other shipping'), 42, 'tier 0 base other_ship');
+  assert.equal(readPackShipValueByLabel(t1, 'Other shipping'), 42, 'tier 1 falls back to base');
+});
+
+test('multi-tier Std sheet 07: single-tier (tier 0 only) renders identically to base — regression', async () => {
+  const q = makeStdMultiTier();
+  q.state.box_cost = 3.5;
+  q.state.extra_moqs = []; // strip extra tiers — single-tier only
+  q.state.active_moq_idx = 0;
+  const out = await exportQuote(q, { variant: 'internal', lang: 'en', tiers: [0] });
+  assert.equal(out.kind, 'xlsx', 'single-tier returns one xlsx, not a zip');
+  const sheet = (await parseXlsx(out.buffer)).getWorksheet('07 Pack Ship');
+  assert.equal(readPackShipValueByLabel(sheet, 'Box cost'), 3.5);
 });

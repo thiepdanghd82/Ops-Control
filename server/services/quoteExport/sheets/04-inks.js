@@ -28,12 +28,25 @@ const INK_COLS = [
   { key: 'area_pct', label: 'ink.area_pct', width: 9, numeric: true },
   { key: 'cov_ovr', label: 'ink.cov_ovr', width: 10, numeric: true },
   { key: 'clicks', label: 'ink.clicks', width: 8, numeric: true },
+  // Scrap % — the app's Σ(process scrap_pct)×100; derived from state, shown on every row.
+  { key: 'scrap_pct', label: 'mat.scrap_pct', width: 8, numeric: true },
   { key: 'ref_price', label: 'mat.ref_price', width: 11, numeric: true, customerHidden: true },
   { key: 'ink_price', label: 'ink.ink_price', width: 11, numeric: true },
   { key: 'setup_cost', label: 'mat.setup_cost', width: 12, numeric: true, computedOnly: true },
   { key: 'run_cost', label: 'mat.run_cost', width: 12, numeric: true, computedOnly: true },
   { key: 'total', label: 'common.total', width: 12, numeric: true, computedOnly: true },
 ];
+
+/** App Inks Scrap% = Σ(process scrap_pct where workcenter set & !hidden) × 100. */
+function sumProcScrapPct(procs) {
+  if (!Array.isArray(procs)) return 0;
+  let s = 0;
+  for (const p of procs) {
+    if (!p || p.hidden || !p.workcenter) continue;
+    s += Number(p.scrap_pct) || 0;
+  }
+  return s * 100;
+}
 
 /**
  * @param {import('exceljs').Workbook} wb
@@ -68,14 +81,17 @@ export function buildInksSheet(wb, ctx) {
           label: `${L('ink.section', lang)} — ${sp.code || `SP${spi + 1}`}`,
           inks: Array.isArray(sp.inks) ? sp.inks : [],
           rowBreakdown: pickCpxTierRows(result, spi, tierIdx, 'inks'),
+          scrap: sumProcScrapPct(sp.processes),
         }))
       : [
           {
             label: null,
             inks: Array.isArray(state.inks) ? state.inks : [],
             rowBreakdown: pickStdTierRows(result, tierIdx, 'inks'),
+            scrap: sumProcScrapPct(state.processes),
           },
         ];
+  const LAST = letterFor(INK_COLS.length);
 
   // Header row
   let r = 3;
@@ -89,13 +105,13 @@ export function buildInksSheet(wb, ctx) {
 
   for (const group of inkGroups) {
     if (group.label) {
-      sheet.mergeCells(`A${r}:P${r}`);
+      sheet.mergeCells(`A${r}:${LAST}${r}`);
       sheet.getCell(`A${r}`).value = group.label;
       applyStyle(sheet.getCell(`A${r}`), 'section');
       r += 1;
     }
     if (group.inks.length === 0) {
-      sheet.mergeCells(`A${r}:P${r}`);
+      sheet.mergeCells(`A${r}:${LAST}${r}`);
       sheet.getCell(`A${r}`).value = '—';
       applyStyle(sheet.getCell(`A${r}`), 'body');
       r += 1;
@@ -107,13 +123,13 @@ export function buildInksSheet(wb, ctx) {
       const rowCost = Array.isArray(group.rowBreakdown) ? group.rowBreakdown[i] : null;
       INK_COLS.forEach((c, ci) => {
         const cell = sheet.getCell(r, ci + 1);
-        cell.value = extractCellValue(c, ink, i, rowCost);
+        cell.value = extractCellValue(c, ink, i, rowCost, group.scrap);
         applyStyle(cell, c.numeric ? (c.computedOnly ? 'numCost' : 'num') : 'body');
-        if (c.computedOnly && !rowCost) {
+        if (c.computedOnly && cell.value === '—') {
           cell.note = 'Computed at calc time, not persisted (legacy quote — re-save to refresh).';
         }
         if (c.key === 'cov_ovr') {
-          cell.note = buildCovNote(ink, lang);
+          cell.note = buildCovNote(ink, lang, rowCost);
         }
       });
       r += 1;
@@ -159,7 +175,7 @@ export function buildInksSheet(wb, ctx) {
 
   // Footnote
   r += 1;
-  sheet.mergeCells(`A${r}:P${r}`);
+  sheet.mergeCells(`A${r}:${LAST}${r}`);
   const note = sheet.getCell(`A${r}`);
   note.value = L('common.computed_at_calc', lang);
   applyStyle(note, 'footnote');
@@ -174,15 +190,13 @@ export function buildInksSheet(wb, ctx) {
   freezeTop(sheet, 1);
 }
 
-function extractCellValue(col, ink, idx, rowCost) {
+function extractCellValue(col, ink, idx, rowCost, scrapPct = 0) {
   if (col.computedOnly) {
-    if (!rowCost) return '—';
-    if (col.key === 'setup_cost') return rowCost.setup_cost ?? '—';
-    if (col.key === 'run_cost') return rowCost.run_cost ?? '—';
-    if (col.key === 'total') return rowCost.total ?? '—';
-    return '—';
+    return rowCost && rowCost[col.key] != null ? rowCost[col.key] : '—';
   }
   switch (col.key) {
+    case 'scrap_pct':
+      return Number.isFinite(scrapPct) && scrapPct !== 0 ? scrapPct : scrapPct === 0 ? 0 : '—';
     case 'label':
       return ink.label || `Ink ${idx + 1}`;
     case 'ifs_code':
@@ -193,16 +207,25 @@ function extractCellValue(col, ink, idx, rowCost) {
       return ink.print_type || '';
     case 'mesh_spec':
       return ink.mesh_spec || '';
+    // Pitch (mm) / Width — effective value (override else Layout) persisted per
+    // row; fall back to the raw input for legacy quotes.
     case 'pitch_mm':
-      return numCell(ink.pitch_mm);
+      return rowCost && rowCost.pitch_mm > 0 ? rowCost.pitch_mm : numCell(ink.pitch_mm);
     case 'width':
-      return numCell(ink.width);
+      return rowCost && rowCost.width > 0 ? rowCost.width : numCell(ink.width);
     case 'setup_kg':
       return numCell(ink.setup_kg);
     case 'area_pct':
       return numCell(ink.area_pct);
     case 'cov_ovr':
-      return numCell(ink.coverage_override);
+      // Show the EFFECTIVE coverage the app displays: the operator override
+      // when set, else the auto-synced coverage (persisted ink_cover_disp).
+      // Indigo rows carry no coverage ('' → em-dash).
+      if (Number(ink.coverage_override) > 0) return Number(ink.coverage_override);
+      if (rowCost && rowCost.ink_cover_disp !== '' && rowCost.ink_cover_disp != null) {
+        return Number(rowCost.ink_cover_disp);
+      }
+      return '—';
     case 'clicks':
       // Indigo subtypes — calcRowBreakdown only attaches clicks when
       // print_type starts with 'Indigo'. Fall back to ink.clicks for
@@ -220,9 +243,15 @@ function extractCellValue(col, ink, idx, rowCost) {
   }
 }
 
-function buildCovNote(ink, lang) {
+function buildCovNote(ink, lang, rowCost) {
   if (ink.coverage_override && Number(ink.coverage_override) > 0) {
     return `Override: ${ink.coverage_override}`;
+  }
+  // Prefer the persisted synced coverage display when present (closes the
+  // long-standing "no coverage snapshot on the server" gap).
+  const synced = rowCost && rowCost.ink_cover_disp;
+  if (synced != null && synced !== '') {
+    return `${L('ink.cov_synced_note', lang)}: ${synced}`;
   }
   if (ink.print_type) {
     return `${L('ink.cov_synced_note', lang)}: ${ink.print_type}`;

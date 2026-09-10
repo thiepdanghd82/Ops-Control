@@ -1,6 +1,15 @@
-# 8-Day Cutover Plan — Ops Control v1.5.10
+# 8-Day Cutover Plan — Ops Control v1.5.10 (HISTORICAL — superseded)
 
-**Plan date**: 2026-05-22 (D-8) | **Go-live**: 2026-05-30 (D-0) | **Buffer**: D+1 (2026-05-31)
+> ⚠️ **HISTORICAL DOC — SUPERSEDED 2026-05-24 + 2026-06-09**. Original
+> 2026-05-30 go-live slipped to 2026-06-09 (`SCHEDULE_DECISION_2026-05-24.md`)
+> then re-baselined to **2026-06-30** (D-21 audit 2026-06-09). This 8-day
+> plan was NEVER EXECUTED at the original calendar. Kept for content
+> reference (scope decision, day-by-day rhythm, risk-gate framework) —
+> but date columns, Zalo group names, and D-X labels below are stale.
+> For the current cutover plan, see (TBD — new plan to be drafted off
+> this template at D-7 = 2026-06-23).
+
+**Plan date**: 2026-05-22 (D-8 from original 2026-05-30) | **Original go-live**: 2026-05-30 (superseded → 2026-06-30)
 **Scope decision**: Ship **Sales + Costing + Quote Export + Kiosk MES + Library + Auth/Backup**. **Defer Planning** (Work Orders, BOM Explosion, Material Check) **to v1.5.11** behind `OPS_FEATURE_PLANNING=0` feature flag.
 **Site**: CCL Design Vietnam, Yen Phong factory. 20 operators. Factory LAN.
 

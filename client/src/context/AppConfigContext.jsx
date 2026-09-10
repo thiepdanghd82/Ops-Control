@@ -27,12 +27,20 @@
  *
  *   const altMaterialsEnabled = useFeatureFlag('alt_materials');
  */
-import { useEffect, useState } from 'react';
-import { AppConfigContext, DEFAULT_FEATURES } from './appConfigInternal.js';
+import { useCallback, useEffect, useState } from 'react';
+import { AppConfigContext, DEFAULT_FEATURES, DEFAULT_SIDEBAR } from './appConfigInternal.js';
+
+function normSidebar(s) {
+  return {
+    hiddenTabs: Array.isArray(s?.hiddenTabs) ? s.hiddenTabs : [],
+    hiddenSections: Array.isArray(s?.hiddenSections) ? s.hiddenSections : [],
+  };
+}
 
 export function AppConfigProvider({ children }) {
   const [config, setConfig] = useState({
     features: DEFAULT_FEATURES,
+    sidebar: DEFAULT_SIDEBAR,
     ready: false,
   });
 
@@ -47,7 +55,8 @@ export function AppConfigProvider({ children }) {
         // added in code but not yet returned by the server defaults to
         // its DEFAULT_FEATURES value (false).
         const features = { ...DEFAULT_FEATURES, ...(j?.features || {}) };
-        setConfig({ features, ready: true });
+        // Sprint S-SYSCTRL — global sidebar hide map rides this same fetch.
+        setConfig({ features, sidebar: normSidebar(j?.sidebar), ready: true });
       })
       .catch((err) => {
         if (err?.name === 'AbortError') return;
@@ -56,7 +65,8 @@ export function AppConfigProvider({ children }) {
         if (typeof console !== 'undefined' && console.warn) {
           console.warn('[AppConfigContext] runtime-config fetch failed; defaults in use', err);
         }
-        if (!cancelled) setConfig({ features: DEFAULT_FEATURES, ready: true });
+        if (!cancelled)
+          setConfig({ features: DEFAULT_FEATURES, sidebar: DEFAULT_SIDEBAR, ready: true });
       });
     return () => {
       cancelled = true;
@@ -64,5 +74,16 @@ export function AppConfigProvider({ children }) {
     };
   }, []);
 
-  return <AppConfigContext.Provider value={config}>{children}</AppConfigContext.Provider>;
+  // Optimistic local update so System Control changes reflect immediately for
+  // the SYS operator who just saved (the persisted map + everyone else's view
+  // catch up on their next runtime-config fetch / reload).
+  const setSidebarVisibility = useCallback((next) => {
+    setConfig((c) => ({ ...c, sidebar: normSidebar(next) }));
+  }, []);
+
+  return (
+    <AppConfigContext.Provider value={{ ...config, setSidebarVisibility }}>
+      {children}
+    </AppConfigContext.Provider>
+  );
 }

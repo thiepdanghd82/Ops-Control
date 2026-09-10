@@ -15,7 +15,12 @@ import path from 'path';
 import { execSync } from 'child_process';
 import Database from 'better-sqlite3';
 import { _resetForTests } from '../db/connection.js';
-import { runBackupCycle } from './backupScheduler.js';
+import {
+  runBackupCycle,
+  getStatus,
+  _shouldBootCatchUp,
+  _resetSchedulerForTests,
+} from './backupScheduler.js';
 
 // connection.js + backup.js + backupScheduler.js share a single
 // singleton DB connection via Node's ESM cache. Each test must call
@@ -142,4 +147,55 @@ test('runBackupCycle is idempotent on same-day re-run', async () => {
   } finally {
     teardown(tmpDir);
   }
+});
+
+// ─── Sprint S-BACKUP-RELIABILITY ───
+// (A) last-run state persists to disk so the UI shows the true last run after
+//     a restart (was in-memory only → "Last run: Never run on this server").
+test('A: runBackupCycle persists last-run JSON; getStatus reads it back', async () => {
+  const { tmpDir, dataDir } = setupTempDataDir('persist');
+  try {
+    _resetSchedulerForTests();
+    const summary = await runBackupCycle({ force: true });
+    const p = path.join(dataDir, 'Library', 'SystemConfig', 'backup-last-run.json');
+    assert.ok(fs.existsSync(p), 'backup-last-run.json should be written');
+    const saved = JSON.parse(fs.readFileSync(p, 'utf-8'));
+    assert.equal(saved.lastRun.startedAt, summary.startedAt, 'persisted startedAt matches cycle');
+    assert.equal(saved.lastRun.ok, true);
+
+    // Simulate a restart: clear in-memory state, then getStatus() must
+    // hydrate lastRun from disk instead of reporting "never".
+    _resetSchedulerForTests();
+    const status = getStatus();
+    assert.ok(status.lastRun, 'getStatus hydrates lastRun from disk after restart');
+    assert.equal(status.lastRun.startedAt, summary.startedAt);
+  } finally {
+    _resetSchedulerForTests();
+    teardown(tmpDir);
+  }
+});
+
+// (B) boot catch-up decision: run iff the scheduled hour already passed today
+//     AND no cycle ran today.
+test('B: _shouldBootCatchUp — past hour + not run today → true', () => {
+  const now = new Date('2026-06-26T16:00:00');
+  assert.equal(_shouldBootCatchUp({ hour: 15, now, lastRunStartedAt: null }), true);
+  // last run was YESTERDAY → still overdue today
+  assert.equal(
+    _shouldBootCatchUp({ hour: 15, now, lastRunStartedAt: '2026-06-25T15:00:00' }),
+    true
+  );
+});
+
+test('B: _shouldBootCatchUp — before hour → false (scheduled run still ahead)', () => {
+  const now = new Date('2026-06-26T10:00:00');
+  assert.equal(_shouldBootCatchUp({ hour: 15, now, lastRunStartedAt: null }), false);
+});
+
+test('B: _shouldBootCatchUp — already ran today → false (no double backup)', () => {
+  const now = new Date('2026-06-26T16:52:00'); // restarted after the 15:00 run
+  assert.equal(
+    _shouldBootCatchUp({ hour: 15, now, lastRunStartedAt: '2026-06-26T15:00:00' }),
+    false
+  );
 });

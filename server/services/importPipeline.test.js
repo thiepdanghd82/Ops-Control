@@ -6,6 +6,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   mapHeaders,
+  matchHeader,
+  resolveHeaderClaims,
   applyMappingOverrides,
   coerceRows,
   buildCanonical,
@@ -16,11 +18,28 @@ import {
   consumePreviewToken,
   _resetTokens,
 } from './importPipeline.js';
-import { getDataset } from './importDatasets.js';
+import { getDataset, DATASETS } from './importDatasets.js';
 
 const BOM = getDataset('bom');
 const ROUTING = getDataset('routing');
 const NPI = getDataset('npi-materials');
+const SOURCING = getDataset('sourcing-db');
+
+// The real headers CCL's "Export Current Data" / report writes (Lesson 32).
+const CCL_NPI_HEADERS = [
+  'UPDATE DATE',
+  'MATERIAL NAME',
+  'USD / M² PRICE',
+  'TYPE / DESCRIPTION',
+  'MM THICKNESS',
+  'COLOR',
+  'SURFACE',
+  'ADHESIVE',
+  'M² MOQ',
+  'DAYS LEAD TIME',
+  'SUPPLIER',
+  'NOTES / REMARKS',
+];
 
 test('mapHeaders: exact match for canonical headers', () => {
   const r = mapHeaders(['Parent Part No', 'Component Part', 'Qty Per Assembly'], BOM);
@@ -246,4 +265,358 @@ test('preview tokens: create + consume = single-use', () => {
 test('preview tokens: unknown token returns null', () => {
   _resetTokens();
   assert.equal(consumePreviewToken('nonexistent'), null);
+});
+
+// ─── Tolerant header matching (Lesson 32) ──────────────────────────
+// Real CCL export headers carry units/punctuation ("USD / M² PRICE",
+// "MM THICKNESS", "M² MOQ", "DAYS LEAD TIME", "NOTES / REMARKS") that the
+// old exact-equality matcher dropped → Price/Thickness/MOQ/Lead/Notes blank.
+
+test('mapHeaders: real CCL NPI export — ALL 12 columns map (none dropped)', () => {
+  const r = mapHeaders(CCL_NPI_HEADERS, NPI);
+  for (const k of NPI.canonicalHeaders) {
+    assert.ok(k in r.mapping, `column "${k}" must be mapped`);
+  }
+  assert.deepEqual(r.unmapped, [], 'no unmapped columns');
+  assert.deepEqual(r.missing, [], 'no missing required headers');
+});
+
+test('mapHeaders: the 5 previously-dropped NPI columns now map', () => {
+  assert.equal(mapHeaders(['USD / M² PRICE'], NPI).mapping.price, 0);
+  assert.equal(mapHeaders(['MM THICKNESS'], NPI).mapping.thick, 0);
+  assert.equal(mapHeaders(['M² MOQ'], NPI).mapping.moq, 0);
+  assert.equal(mapHeaders(['DAYS LEAD TIME'], NPI).mapping.lt, 0);
+  assert.equal(mapHeaders(['NOTES / REMARKS'], NPI).mapping.note, 0);
+});
+
+test('round-trip invariant: every dataset label/canonical maps back to its key', () => {
+  for (const ds of Object.values(DATASETS)) {
+    for (const k of ds.canonicalHeaders) {
+      const label = (ds.prettyLabels && ds.prettyLabels[k]) || k;
+      const r = mapHeaders([label], ds);
+      assert.equal(r.mapping[k], 0, `${ds.key}: export label "${label}" must re-import to "${k}"`);
+    }
+  }
+});
+
+test('matchHeader: cascade confidence + canonical', () => {
+  assert.deepEqual(
+    {
+      c: matchHeader('Material Name', NPI.aliases).canonical,
+      conf: matchHeader('Material Name', NPI.aliases).confidence,
+    },
+    { c: 'name', conf: 1 },
+    'exact alias → 1.0'
+  );
+  const price = matchHeader('USD / M² PRICE', NPI.aliases);
+  assert.equal(price.canonical, 'price');
+  assert.ok(price.confidence >= 0.9, 'token-set equal → ≥0.9');
+  const note = matchHeader('NOTES / REMARKS', NPI.aliases);
+  assert.equal(note.canonical, 'note');
+  assert.ok(note.confidence >= 0.6, 'subset → ≥0.6');
+});
+
+test('matchHeader: unknown column → unmatched + suggestions, never a silent canonical', () => {
+  const r = matchHeader('Totally Unrelated Column 123', NPI.aliases);
+  assert.equal(r.canonical, null);
+  assert.equal(r.status, 'unmatched');
+  assert.ok(Array.isArray(r.suggestions));
+});
+
+test('mapHeaders: per-column report carries status/confidence/suggestions', () => {
+  const r = mapHeaders(['MATERIAL NAME', 'USD / M² PRICE', 'ZzzUnknown'], NPI);
+  assert.ok(Array.isArray(r.columns));
+  const by = Object.fromEntries(r.columns.map((c) => [c.raw, c]));
+  assert.equal(by['MATERIAL NAME'].status, 'matched');
+  assert.equal(by['MATERIAL NAME'].canonical, 'name');
+  assert.equal(by['USD / M² PRICE'].canonical, 'price');
+  assert.ok(['matched', 'low'].includes(by['USD / M² PRICE'].status));
+  assert.equal(by['ZzzUnknown'].status, 'unmatched');
+  assert.equal(by['ZzzUnknown'].canonical, null);
+});
+
+test('mapHeaders: still flags genuinely unknown columns (no false positives)', () => {
+  const r = mapHeaders(['Parent Part No', 'Component Part', 'GiberishCol123'], BOM);
+  assert.ok(r.unmapped.includes(2), 'gibberish column stays unmapped');
+});
+
+// ─── Finished Goods = catalog/deal-price schema, keyed by Catalog No ───
+// FG is a customer deal-price agreement list, NOT a parts-on-hand inventory.
+// It previously inherited the Part-No inventory schema, so the app's own FG
+// export ("Catalog No, Deal Price, …") failed to re-import ("Missing required
+// columns: Part No"). Full Inventory + Raw Materials stay Part-No keyed.
+const FG = getDataset('finished-goods');
+const CCL_FG_HEADERS = [
+  'Catalog No',
+  'Catalog Desc',
+  'Min Quantity',
+  'Currency Code',
+  'Deal Price',
+  'Deal Price Incl Tax',
+  'Deal Price Base',
+  'Deal Price Incl Tax Base',
+  'Valid From Date',
+  'Valid Until',
+  'Agreement Id',
+  'Customer No',
+  'Site',
+  'Name',
+  'Association No',
+];
+
+test('Finished Goods dataset is catalog/deal-price keyed (Catalog No, not Part No)', () => {
+  assert.deepEqual(FG.requiredHeaders, ['Catalog No']);
+  assert.ok(FG.canonicalHeaders.includes('Catalog No'));
+  assert.ok(FG.canonicalHeaders.includes('Deal Price'));
+  assert.ok(!FG.canonicalHeaders.includes('Part No'), 'FG has no Part No column');
+  // Full Inventory + Raw Materials stay Part-No keyed.
+  assert.deepEqual(getDataset('inventory').requiredHeaders, ['Part No']);
+  assert.deepEqual(getDataset('raw-materials').requiredHeaders, ['Part No']);
+});
+
+test('mapHeaders: real Finished Goods export maps, no missing required', () => {
+  const r = mapHeaders(CCL_FG_HEADERS, FG);
+  assert.deepEqual(r.missing, [], 'Catalog No present → nothing missing');
+  for (const k of FG.canonicalHeaders) assert.ok(k in r.mapping, `"${k}" must map`);
+  assert.deepEqual(r.unmapped, []);
+});
+
+test('mapHeaders: FG "Deal Price Base (VND)" variant maps to Deal Price Base', () => {
+  assert.equal(mapHeaders(['Deal Price Base (VND)'], FG).mapping['Deal Price Base'], 0);
+});
+
+test('mergeRows replace: wipes prior rows, keeps only uploaded (NPI)', () => {
+  const existing = [
+    { name: 'OLD-A', supplier: 'X', price: 1 },
+    { name: 'OLD-B', supplier: 'Y', price: 2 },
+  ];
+  const newCanonical = {
+    headers: NPI.canonicalHeaders,
+    rows: [NPI.canonicalHeaders.map((h) => (h === 'name' ? 'NEW-1' : h === 'supplier' ? 'Z' : ''))],
+  };
+  const out = mergeRows({ existing, newCanonical, dataset: NPI, mode: 'replace' });
+  assert.equal(out.length, 1, 'only the uploaded row survives');
+  assert.equal(out[0].name, 'NEW-1');
+  assert.ok(!out.some((r) => String(r.name).startsWith('OLD')), 'no prior rows remain');
+});
+
+// ─── IFS Materials (SupplierforPurchaseParts export) ───────────────
+const IFS = getDataset('ifs-materials');
+// The real data headers the IFS "SupplierforPurchaseParts" upload carries
+// (the operator-trimmed 16-col export, minus the "#" row-index column).
+const IFS_HEADERS = [
+  'Part No',
+  'Part Description',
+  'Supplier ID',
+  'Supplier Name',
+  'Conversion Factor',
+  'Price',
+  'Price incl. Tax',
+  'Currency',
+  'Price Unit Measure',
+  'Tax Code',
+  'Supplier Manufacturing Leadtime',
+  'Tax Code Description',
+  'Status Code',
+  'Status Code Description',
+  'Country of Origin',
+];
+// 3 enrichment columns sourced from the Full Inventory export — not in the
+// SupplierforPurchaseParts upload, blank until a richer file is imported.
+const IFS_ENRICH = ['Thickness', 'Type Designation', 'Part Product Family Description'];
+const IFS_ENRICHED_HEADERS = [...IFS_HEADERS, ...IFS_ENRICH];
+
+test('IFS_DATASET registered: part_no required, [part_no,supplier_id] natural key', () => {
+  assert.ok(IFS, 'ifs-materials dataset is registered');
+  assert.deepEqual(IFS.requiredHeaders, ['part_no']);
+  assert.deepEqual(IFS.naturalKey, ['part_no', 'supplier_id']);
+  assert.equal(IFS.storage.file, 'ifs_materials.json');
+  assert.equal(IFS.canonicalHeaders.length, 18);
+});
+
+test('mapHeaders: real 15-col upload maps all source cols; 3 enrichment cols stay blank', () => {
+  const r = mapHeaders(IFS_HEADERS, IFS);
+  assert.deepEqual(r.unmapped, [], 'every source header maps to a canonical');
+  assert.deepEqual(r.missing, []);
+  const enrich = ['thickness', 'type_designation', 'product_family'];
+  for (const k of IFS.canonicalHeaders) {
+    if (enrich.includes(k)) {
+      assert.ok(!(k in r.mapping), `"${k}" absent until a richer file provides it`);
+    } else {
+      assert.ok(k in r.mapping, `"${k}" must map`);
+    }
+  }
+});
+
+test('mapHeaders: enriched export maps all 18 incl Thickness/Type/Family', () => {
+  const r = mapHeaders(IFS_ENRICHED_HEADERS, IFS);
+  for (const k of IFS.canonicalHeaders) assert.ok(k in r.mapping, `"${k}" must map`);
+  for (const k of ['thickness', 'type_designation', 'product_family']) {
+    assert.ok(k in r.mapping, `"${k}" must map`);
+  }
+  assert.deepEqual(r.missing, []);
+  assert.deepEqual(r.unmapped, []);
+});
+
+test('mapHeaders: the 6 added IFS columns map (Tax/Status/Leadtime/Country)', () => {
+  const r = mapHeaders(IFS_HEADERS, IFS);
+  for (const k of [
+    'tax_code',
+    'leadtime',
+    'tax_code_desc',
+    'status_code',
+    'status_code_desc',
+    'country',
+  ]) {
+    assert.ok(k in r.mapping, `"${k}" must map`);
+  }
+});
+
+test('mapHeaders: "#" row-index column is unmapped, not a canonical', () => {
+  const r = mapHeaders(['#', ...IFS_HEADERS], IFS);
+  assert.ok(r.unmapped.includes(0), '"#" stays unmapped (passthrough)');
+  assert.deepEqual(r.missing, []);
+});
+
+test('mapHeaders: IFS unknown extra column → UNMATCHED, never silent-drop', () => {
+  const r = mapHeaders([...IFS_HEADERS, 'Some Weird Extra Col'], IFS);
+  assert.ok(r.unmapped.includes(IFS_HEADERS.length), 'extra column index is unmapped');
+  assert.deepEqual(r.missing, [], 'required still satisfied');
+  // the extra column is surfaced in the per-column report, not dropped
+  const extra = r.columns.find((c) => c.raw === 'Some Weird Extra Col');
+  assert.equal(extra.status, 'unmatched');
+});
+
+test('mapHeaders: missing Part No blocks (required)', () => {
+  const r = mapHeaders(['Supplier ID', 'Price'], IFS);
+  assert.deepEqual(r.missing, ['part_no']);
+});
+
+test('IFS coercion: conv / price / price_tax coerce to number', () => {
+  const headers = IFS.canonicalHeaders;
+  const idx = Object.fromEntries(headers.map((h, i) => [h, i]));
+  const row = headers.map((h) =>
+    h === 'part_no'
+      ? 'P1'
+      : h === 'conv'
+        ? '1,5'
+        : h === 'price'
+          ? '2.50'
+          : h === 'price_tax'
+            ? '2.75'
+            : ''
+  );
+  const { rows: out } = coerceRows(headers, [row], IFS);
+  assert.equal(out[0][idx.conv], 1.5);
+  assert.equal(out[0][idx.price], 2.5);
+  assert.equal(out[0][idx.price_tax], 2.75);
+});
+
+test('mergeRows replace wipes prior IFS rows, keeps only uploaded', () => {
+  const existing = [{ part_no: 'OLD', supplier_id: 'S1' }];
+  const newCanonical = {
+    headers: IFS.canonicalHeaders,
+    rows: [
+      IFS.canonicalHeaders.map((h) => (h === 'part_no' ? 'NEW' : h === 'supplier_id' ? 'S2' : '')),
+    ],
+  };
+  const out = mergeRows({ existing, newCanonical, dataset: IFS, mode: 'replace' });
+  assert.equal(out.length, 1);
+  assert.equal(out[0].part_no, 'NEW');
+  assert.ok(!out.some((r) => r.part_no === 'OLD'));
+});
+
+// ─── Conflict resolution on the rich 74-col IFS export ─────────────
+// The full "SupplierforPurchaseParts ... _update_type_materials" export has
+// many columns that token-collide with a canonical: "Site Description" vs
+// "Part Description" (desc), "Use Price Incl Tax" (boolean) vs "Price" vs
+// "Price incl. Tax". The matcher must pick the EXACT header, not the first
+// column in file order, and must reject a boolean column from a number field.
+const IFS_RICH = [
+  'Site Description', // → must NOT win desc
+  'Part No',
+  'Part Description', // → desc (exact)
+  'Supplier ID',
+  'Supplier Name', // → supplier (exact)
+  'Use Price Incl Tax', // boolean → must NOT win price
+  'Price', // → price (exact)
+  'Price incl. Tax', // → price_tax (exact)
+];
+const IFS_RICH_SAMPLE = [
+  [
+    'CCL Design Vietnam',
+    '80643750S',
+    '(RF3) RFID LABEL',
+    'ACU581',
+    'ACUBE INFOTECH',
+    false,
+    2.59,
+    2.59,
+  ],
+  ['CCL Design Vietnam', '30030864', '(TWPE5050)', 'ADC581', 'Adcel Vietnam', false, 0.47, 0.47],
+];
+
+test('mapHeaders: exact header wins canonical over an earlier subset match', () => {
+  const r = mapHeaders(IFS_RICH, IFS, IFS_RICH_SAMPLE);
+  assert.equal(r.mapping.desc, 2, 'desc → "Part Description", not "Site Description"');
+  assert.equal(r.mapping.supplier, 4, 'supplier → "Supplier Name"');
+  assert.equal(r.mapping.price, 6, 'price → "Price", not boolean "Use Price Incl Tax"');
+  assert.equal(r.mapping.price_tax, 7, 'price_tax → "Price incl. Tax"');
+  // The losers are reported, never silently applied.
+  const bySite = r.columns.find((c) => c.raw === 'Site Description');
+  assert.equal(bySite.status, 'duplicate');
+  assert.ok(r.unmapped.includes(0), '"Site Description" left unmapped');
+  assert.ok(r.unmapped.includes(5), 'boolean "Use Price Incl Tax" left unmapped');
+});
+
+test('mapHeaders: confidence wins even WITHOUT sample data (title-only)', () => {
+  const r = mapHeaders(IFS_RICH, IFS);
+  assert.equal(r.mapping.desc, 2);
+  assert.equal(r.mapping.price, 6);
+  assert.equal(r.mapping.price_tax, 7);
+});
+
+// resolveHeaderClaims is the shared resolver behind BOTH mapHeaders (registry
+// datasets) and the legacy header-map importer (import.js mapRowsByHeader),
+// so the same confidence-ranked + data-aware logic protects every import path.
+test('resolveHeaderClaims: exact header beats earlier subset match (legacy map)', () => {
+  // A flat { normKey: canonical } map, the shape the legacy importer uses.
+  // Like the registry datasets: the SPECIFIC header is an exact alias while a
+  // generic alias ("description") is what the wrong column subset-matches.
+  const headerMap = {
+    price: 'price',
+    'supplier name': 'supplier',
+    'part description': 'desc',
+    description: 'desc',
+  };
+  const headers = [
+    'Use Price Incl Tax',
+    'Price',
+    'Site Description',
+    'Part Description',
+    'Supplier Name',
+  ];
+  const sample = [
+    [false, 2.59, 'CCL Design Vietnam', '(RF3) RFID', 'ACUBE INFOTECH'],
+    [false, 0.47, 'CCL Design Vietnam', '(TWPE5050)', 'Adcel Vietnam'],
+  ];
+  const { claims } = resolveHeaderClaims(headers, headerMap, {
+    numberFields: ['price'],
+    sampleRows: sample,
+  });
+  assert.equal(claims.price, 1, 'price → "Price" col, not the boolean "Use Price Incl Tax"');
+  assert.equal(claims.desc, 3, 'desc → "Part Description", not "Site Description"');
+  assert.equal(claims.supplier, 4, 'supplier → "Supplier Name"');
+});
+
+test('mapHeaders: data disambiguates two equal-confidence number candidates', () => {
+  // Both subset-match price at 0.7; only the data says which is the real one.
+  const headers = ['Part No', 'Use Price Incl Tax', 'Net Price Value'];
+  const sample = [
+    ['P1', false, 10],
+    ['P2', false, 20],
+  ];
+  const r = mapHeaders(headers, IFS, sample);
+  assert.equal(r.mapping.price, 2, 'numeric "Net Price Value" beats boolean column');
+  assert.ok(r.unmapped.includes(1), 'boolean column rejected for the number field');
 });

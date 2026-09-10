@@ -107,6 +107,9 @@ $existingKioskKey = if ($existingEnv.ContainsKey('OPS_KIOSK_KEY')) {
 $existingExportHmacKey = if ($existingEnv.ContainsKey('OPS_EXPORT_HMAC_KEY')) {
   ($existingEnv['OPS_EXPORT_HMAC_KEY'] -replace '^\s*OPS_EXPORT_HMAC_KEY\s*=\s*','').Trim('"').Trim("'")
 } else { $null }
+$existingLicensePubkey = if ($existingEnv.ContainsKey('OPS_LICENSE_PUBKEY')) {
+  ($existingEnv['OPS_LICENSE_PUBKEY'] -replace '^\s*OPS_LICENSE_PUBKEY\s*=\s*','').Trim('"').Trim("'")
+} else { $null }
 if ($existingEnv.Count -gt 0) {
   Write-Ok "✓  Captured $($existingEnv.Count) existing env line(s) for merge-back"
 }
@@ -129,6 +132,15 @@ if ($existingExportHmacKey) {
 } else {
   Write-Warn "⚠  No existing OPS_EXPORT_HMAC_KEY — operator must set one in .env before boot."
   Write-Warn "    Without it, quote xlsx exports can't be HMAC-signed; preflight blocks server boot."
+}
+# Sprint S-D21-LICENSE-FIX 2026-06-09 — Ed25519 SPKI PEM for license validation.
+# Same whole-file preservation. Without it: server boots OK but every license
+# validation fails → all users locked out. Preflight now gates this key.
+if ($existingLicensePubkey) {
+  Write-Ok "✓  Preserving existing OPS_LICENSE_PUBKEY ($($existingLicensePubkey.Length) chars)"
+} else {
+  Write-Warn "⚠  No existing OPS_LICENSE_PUBKEY — operator must set one in .env before boot."
+  Write-Warn "    Without it, all license validations fail → all users locked out."
 }
 Write-Host ''
 

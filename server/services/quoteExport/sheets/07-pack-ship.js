@@ -1,18 +1,35 @@
 // @ts-check
 /**
  * Sheet 07 — Packaging spec + shipping terms.
+ *
+ * Sprint S-PACK-SHIP-PER-TIER (2026-06-16) — accepts `tierIdx` and
+ * field-merges `state.extra_moqs[tierIdx-1].packing` over the base
+ * `state` before rendering. Pre-sprint every xlsx in a multi-tier
+ * zip showed identical pack/ship cells regardless of tier; mirrors
+ * the tierIdx threading sheets 03/04/05/08 received in PR #58.
+ *
+ * Override merge is field-level (`Object.assign`): keys present in
+ * `em.packing` win (including explicit 0); keys absent fall back
+ * to `state[key]`. Same semantic as calcEngine's getActiveTierState
+ * + buildTierState (Step 1 of the sprint).
  */
 
 import { createSheet, freezeTop } from '../workbook.js';
 import { applyStyle } from '../styles.js';
 import { L } from '../i18n.js';
+import { getActiveIdx } from '../tierRows.js';
+
+function num(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
 
 /**
  * @param {import('exceljs').Workbook} wb
- * @param {{ quote: any, lang: 'en'|'vi'|'bilingual' }} ctx
+ * @param {{ quote: any, lang: 'en'|'vi'|'bilingual', tierIdx?: number }} ctx
  */
 export function buildPackShipSheet(wb, ctx) {
-  const { quote, lang } = ctx;
+  const { quote, lang, tierIdx = 0 } = ctx;
   const sheet = createSheet(wb, {
     name: '07 Pack Ship',
     bannerText: L('pack.section_packaging', lang),
@@ -25,6 +42,12 @@ export function buildPackShipSheet(wb, ctx) {
   ['D', 'E', 'F'].forEach((c) => (sheet.getColumn(c).width = 14));
 
   const state = quote.state || {};
+  // Per-tier merge — when rendering a non-base tier, the override
+  // object (if any) field-merges over the base pack/ship state. Legacy
+  // quotes without `packing` key short-circuit via the `&& em.packing`
+  // guard, so the rest of the sheet sees `state` unchanged.
+  const em = tierIdx > 0 ? state.extra_moqs?.[tierIdx - 1] : null;
+  const ps = em && em.packing ? { ...state, ...em.packing } : state;
   let r = 3;
 
   // Packaging
@@ -33,28 +56,49 @@ export function buildPackShipSheet(wb, ctx) {
     r,
     L('pack.section_packaging', lang),
     [
-      ['pack.method', state.packing_method, ''],
-      ['pack.units_per_carton', state.units_per_carton ?? state.bags_per_box, 'pcs'],
-      ['pack.bags_per_box', state.bags_per_box, ''],
-      ['pack.cartons_per_pallet', state.cartons_per_pallet, ''],
-      ['pack.pallet_dims', state.pallet_dims, ''],
-      ['pack.pallet_weight', state.pallet_weight, 'kg'],
-      ['pack.box_cost', state.box_cost, 'USD'],
-      ['pack.other_packing', state.other_packing, 'USD'],
+      ['pack.method', ps.packing_method, ''],
+      ['pack.units_per_carton', ps.units_per_carton ?? ps.bags_per_box, 'pcs'],
+      ['pack.bags_per_box', ps.bags_per_box, ''],
+      ['pack.cartons_per_pallet', ps.cartons_per_pallet, ''],
+      ['pack.pallet_dims', ps.pallet_dims, ''],
+      ['pack.pallet_weight', ps.pallet_weight, 'kg'],
+      ['pack.box_cost', ps.box_cost, 'USD'],
+      ['pack.other_packing', ps.other_packing, 'USD'],
     ],
     lang
   );
 
   // Shipping
-  writeKV(
+  r = writeKV(
     sheet,
     r,
     L('pack.section_shipping', lang),
     [
-      ['pack.incoterm', state.incoterm, ''],
-      ['pack.delivery_term', state.delivery_term, ''],
-      ['pack.container_cost', state.container_cost, 'USD'],
-      ['pack.other_ship', state.other_ship, 'USD'],
+      ['pack.incoterm', ps.incoterm, ''],
+      ['pack.delivery_term', ps.delivery_term, ''],
+      ['pack.container_cost', ps.container_cost, 'USD'],
+      ['pack.other_ship', ps.other_ship, 'USD'],
+    ],
+    lang
+  );
+
+  // Totals per pcs — the computed Total Packing/pcs + Total Shipping/pcs the
+  // app shows (calcPacking / calcShipping), persisted per tier. The combined
+  // Total Pack & Ship/pcs is the authoritative result.packing_ship.
+  const result = quote.result || {};
+  const activeIdx = getActiveIdx(quote);
+  const tierRes = tierIdx === activeIdx ? result : result.tiers?.[tierIdx] || {};
+  const packingPcs = num(tierRes.packing_pcs) ?? num(result.packing_pcs);
+  const shippingPcs = num(tierRes.shipping_pcs) ?? num(result.shipping_pcs);
+  const packShip = num(result.packing_ship);
+  writeKV(
+    sheet,
+    r,
+    L('pack.section_totals', lang),
+    [
+      ['pack.total_packing_pcs', packingPcs, 'USD'],
+      ['pack.total_shipping_pcs', shippingPcs, 'USD'],
+      ['pack.total_packship_pcs', packShip, 'USD'],
     ],
     lang
   );

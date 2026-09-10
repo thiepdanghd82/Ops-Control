@@ -36,6 +36,69 @@
 // stay readable; export route returns 422 `legacy_no_rows` to prompt re-save.
 export const STD_SHAPE_VERSION = 3;
 
+// Phase 1 pricing-snapshot foundation (additive field, NO version bump
+// per PR #110 / Sprint S-D21-LEADTIME precedent). Imported here, not
+// re-implemented, so the canonical shape stays single-source — same
+// pricingSnapshot.js the calcReducer factories + freezeLib use.
+import { createEmptySnapshot } from './pricingSnapshot.js';
+// Multi-drawing heal — wraps a legacy single layout_file/customer_drw_file
+// into a [file]+active list (idempotent, additive, NO version bump per the
+// PR #110 pattern). Keeps the singular field mirrored to the active file.
+import { healDrawings } from './drawingFiles.js';
+
+// Idempotent: returns SAME reference when state already carries a
+// snapshot object so the React-memo short-circuit in upgradeStdState
+// stays intact for fully-current quotes.
+function healPricingSnapshot(state) {
+  if (state && state.pricing_snapshot && typeof state.pricing_snapshot === 'object') {
+    return state;
+  }
+  return { ...state, pricing_snapshot: createEmptySnapshot() };
+}
+
+// Sprint S-MAT-LT — Material L/T auto-derive override (additive field, NO
+// version bump per PR #110 pattern). A quote saved BEFORE this feature has a
+// `lead_time` object with NO `lt_material_ovr` key — its free-text `lt_material`
+// was a manual entry, so seed `lt_material_ovr` from it ONCE here (key-presence
+// signal) to preserve the override (shows violet) without silently changing
+// already-saved quotes. Post-feature quotes already carry the key (even '') →
+// returned unchanged so the React-memo short-circuit + ↻ reset stay correct.
+function healLeadTimeMaterialOvr(state) {
+  const lt = state && state.lead_time;
+  if (!lt || typeof lt !== 'object' || Array.isArray(lt)) return state;
+  if ('lt_material_ovr' in lt) return state; // feature-aware quote — leave it
+  const seed = typeof lt.lt_material === 'string' ? lt.lt_material : '';
+  return { ...state, lead_time: { ...lt, lt_material_ovr: seed } };
+}
+
+// Sprint S-PO-LT — PO L/T becomes auto-derived (Σ PROD TIME ÷ 8) with a manual
+// override (lt_po_ovr). A quote saved BEFORE this feature has free-text lt_po
+// but NO lt_po_ovr key — that text was a manual entry, so seed lt_po_ovr from it
+// ONCE (key-presence signal) so it survives as a manual override (violet)
+// instead of being silently replaced by the auto value. Post-feature quotes
+// carry the key → returned unchanged.
+function healLeadTimePoOvr(state) {
+  const lt = state && state.lead_time;
+  if (!lt || typeof lt !== 'object' || Array.isArray(lt)) return state;
+  if ('lt_po_ovr' in lt) return state;
+  const seed = typeof lt.lt_po === 'string' ? lt.lt_po : '';
+  return { ...state, lead_time: { ...lt, lt_po_ovr: seed } };
+}
+
+// Sprint S-REMARK-SEL — REMARK becomes checkbox-driven with a manual override
+// (lt_remark_ovr). A quote saved BEFORE this feature has a free-text lt_remark
+// but NO lt_remark_ovr key — that text was a manual note, so seed lt_remark_ovr
+// from it ONCE (key-presence signal) so it survives as a manual override
+// (violet) instead of being clobbered by the auto checkbox block. Post-feature
+// quotes carry the key → returned unchanged.
+function healLeadTimeRemarkOvr(state) {
+  const lt = state && state.lead_time;
+  if (!lt || typeof lt !== 'object' || Array.isArray(lt)) return state;
+  if ('lt_remark_ovr' in lt) return state;
+  const seed = typeof lt.lt_remark === 'string' ? lt.lt_remark : '';
+  return { ...state, lead_time: { ...lt, lt_remark_ovr: seed } };
+}
+
 // Stable _mid generator — duplicated from createStdState() so this
 // module doesn't import calcEngine (keeps migrator pure + zero-dep).
 // Collision risk: Date.now + 6 random chars = ~64 bits of entropy per
@@ -80,7 +143,12 @@ export function upgradeStdState(state) {
       Array.isArray(state.materials_main) &&
       Array.isArray(state.materials_alt) &&
       (state.materials_active === 'main' || state.materials_active === 'alt');
-    if (hasMids && hasAltShape) return state;
+    if (hasMids && hasAltShape)
+      return healDrawings(
+        healLeadTimePoOvr(
+          healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(healPricingSnapshot(state)))
+        )
+      );
   }
 
   let next = state;
@@ -111,6 +179,13 @@ export function upgradeStdState(state) {
   if (next.materials !== live) {
     next = { ...next, materials: live };
   }
+  // Pricing-snapshot heal (Phase 1) — additive, runs after version
+  // chain so newly-migrated states also pick up the empty default.
+  next = healPricingSnapshot(next);
+  // Material L/T override heal (Sprint S-MAT-LT) — seed legacy free-text.
+  next = healLeadTimePoOvr(healLeadTimeRemarkOvr(healLeadTimeMaterialOvr(next)));
+  // Multi-drawing heal — wrap legacy single file(s) into list + active.
+  next = healDrawings(next);
   return next;
 }
 

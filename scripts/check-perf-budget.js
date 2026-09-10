@@ -29,18 +29,27 @@ const DIST_DIR = process.env.OPS_DIST_DIR || path.join(__dirname, '..', 'client'
 /**
  * Per-chunk budgets in raw bytes. Match by prefix of the filename
  * BEFORE Vite's content hash, e.g. `ComplexCalc-AbCd123.js` →
- * prefix `ComplexCalc`. Numbers picked with ~20% headroom over the
- * Sprint 24 build so routine refactors don't trip the gate but a
- * new heavy dependency pull-in will.
+ * prefix `ComplexCalc`. Headroom ~15% over the current build so routine
+ * refactors don't trip the gate but a new heavy dependency pull-in will.
+ *
+ * RE-BASELINED 2026-07-21 (Sprint CI-TRUST, MES-3-FIX-62): the v1.3.0-GA
+ * budgets below (`index`/`HelpTab`/`StandardCalc`) had gone stale — the app
+ * grew v1.3 → v1.6 (alt-materials, snapshot, design tools, RFQ tracking,
+ * multi-drawing, lead-time) and the overage stayed HIDDEN because chronic-red
+ * lint kept the `build` job skipped. Re-baselined to the honest v1.6 size +
+ * ~15% so the gate is ENFORCED again (future growth fails). MES-3-FIX-62
+ * tracks the real reduction (lazy-load PlanningModule / code-split the shell)
+ * — LOWER these back down as that lands.
  */
 export const CHUNK_BUDGETS = [
-  // Core shell + vendored React runtime; everything downstream lazy-loads.
-  // v1.3 raised: bundle marker + 6 i18n domain side-effect imports add ~12 kB.
-  { prefix: 'index', budget: 320_000, label: 'App shell (critical path)' },
+  // Core shell + vendored React runtime + eagerly-mounted Cost/Planning
+  // modules (App.jsx imports both). v1.6 re-baseline (was 320k @ v1.3).
+  { prefix: 'index', budget: 540_000, label: 'App shell (critical path)' },
   // Quoting tabs — the two most loaded surfaces in day-to-day work.
   // v1.3 raised: design-tools handoff + complex header redesign add ~80 kB.
   { prefix: 'ComplexCalc', budget: 100_000, label: 'ComplexCalc tab' },
-  { prefix: 'StandardCalc', budget: 200_000, label: 'StandardCalc tab' },
+  // v1.6 re-baseline (was 200k @ v1.3).
+  { prefix: 'StandardCalc', budget: 230_000, label: 'StandardCalc tab' },
   { prefix: 'InkCalculator', budget: 50_000, label: 'InkCalculator tab' },
   { prefix: 'MaterialLibrary', budget: 40_000, label: 'MaterialLibrary tab' },
   // Settings includes admin tables + audit log viewer + new connection-mode wizard.
@@ -50,8 +59,9 @@ export const CHUNK_BUDGETS = [
   { prefix: 'CalcContext', budget: 50_000, label: 'Calc context + engine' },
   // PDF.js worker — vendor library, fixed footprint.
   { prefix: 'pdf', budget: 350_000, label: 'PDF viewer (vendor)' },
-  // HelpTab embeds Word-doc generators + bilingual help content.
-  { prefix: 'HelpTab', budget: 260_000, label: 'In-app help system' },
+  // HelpTab embeds Word-doc generators + bilingual help content (6.8k-LOC
+  // content.js). v1.6 re-baseline (was 260k @ v1.3).
+  { prefix: 'HelpTab', budget: 360_000, label: 'In-app help system' },
 ];
 
 /**

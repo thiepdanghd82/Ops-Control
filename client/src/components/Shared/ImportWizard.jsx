@@ -25,8 +25,8 @@ const MODE_LABELS = {
     help: 'Update rows that match the natural key; add the rest. Existing rows not in the upload are kept untouched.',
   },
   replace: {
-    label: 'Replace All',
-    help: 'Drop the entire current dataset and replace with the upload. Use only for full re-imports.',
+    label: 'Replace all (xoá toàn bộ dữ liệu cũ)',
+    help: 'Drop the entire current dataset and replace with the upload. Use only for full re-imports. The current data is auto-backed up first.',
   },
   append: {
     label: 'Append',
@@ -54,6 +54,7 @@ export default function ImportWizard({
   const [overrides, setOverrides] = useState({}); // { colIdx: 'CanonicalName' | '__skip__' }
   const [mode, setMode] = useState('upsert');
   const [reason, setReason] = useState('');
+  const [confirmReplace, setConfirmReplace] = useState(false); // replace-mode guard
   const [commitStats, setCommitStats] = useState(null);
 
   // Reset on close
@@ -69,6 +70,7 @@ export default function ImportWizard({
     setOverrides({});
     setMode('upsert');
     setReason('');
+    setConfirmReplace(false);
     setCommitStats(null);
     if (fileRef.current) fileRef.current.value = '';
   }, [open]);
@@ -85,10 +87,22 @@ export default function ImportWizard({
             chosenOverrides && Object.keys(chosenOverrides).length ? chosenOverrides : null,
         });
         setPreview(res);
-        // Auto-pick first sheet for Excel if not yet chosen
+        // Default the sheet picker to the server's AUTO-SELECTED best sheet
+        // (highest header match), not the first sheet. Operator can override.
         if (!chosenSheet && res.meta?.sheets?.length > 0) setSheet(res.meta.sheet);
-        // Warn (but don't block) when there are coercion issues
-        if (res.coercion?.totalIssues > 0) {
+        // Sheet-mismatch warning: if the shown sheet maps fewer than half the
+        // dataset's canonical columns, the operator likely needs a different
+        // sheet. Server already picked the best sheet, so this fires when even
+        // the best is a poor match, or after a manual switch to a bad sheet.
+        const mapped = Object.keys(res.headers?.mapping || {}).length;
+        const total = res.dataset?.canonicalHeaders?.length || 0;
+        const multiSheet = (res.meta?.sheets?.length || 0) > 1;
+        if (multiSheet && total && mapped < Math.ceil(total / 2)) {
+          setWarning(
+            `This sheet doesn't look like ${res.dataset?.label || 'this'} data — showing "${res.meta?.sheet}" (${mapped}/${total} columns matched). Pick a different sheet if this is wrong.`
+          );
+        } else if (res.coercion?.totalIssues > 0) {
+          // Warn (but don't block) when there are coercion issues
           setWarning(
             `${res.coercion.totalIssues} cell(s) had type-coercion issues — see the Issues panel.`
           );
@@ -160,6 +174,16 @@ export default function ImportWizard({
     }
   }, [preview, mode, reason, onCommitted]);
 
+  // Replace wipes the whole dataset — gate it behind an explicit confirm.
+  // (The server still auto-backs-up before any write; this is the human guard.)
+  const requestCommit = useCallback(() => {
+    if (mode === 'replace') {
+      setConfirmReplace(true);
+      return;
+    }
+    handleCommit();
+  }, [mode, handleCommit]);
+
   // Derived: has-blocking-issues?
   const blocking = useMemo(() => {
     if (!preview) return [];
@@ -173,120 +197,167 @@ export default function ImportWizard({
   }, [preview]);
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      size="xl"
-      severity="info"
-      closable={!busy}
-      dismissable={!busy}
-    >
-      <Modal.Header
-        title={`Import — ${datasetLabel || datasetKey}`}
-        subtitle={`Step ${stage <= 3 ? stage : 3} of 3 ${stage === 4 ? '· Done' : ''}`}
-      />
-
-      <Modal.Body className="iw-body">
-        {error && (
-          <div className="iw-banner iw-banner-err" role="alert">
-            {error}
-          </div>
-        )}
-        {warning && stage !== 4 && <div className="iw-banner iw-banner-warn">{warning}</div>}
-
-        {stage === 1 && (
-          <Stage1Upload
-            datasetKey={datasetKey}
-            onPick={() => fileRef.current?.click()}
-            busy={busy}
-          />
-        )}
-
-        {stage === 2 && preview && (
-          <Stage2Review
-            preview={preview}
-            sheet={sheet}
-            overrides={overrides}
-            onSheetChange={handleSheetChange}
-            onOverrideChange={handleOverrideChange}
-            onApplyOverrides={handleApplyOverrides}
-            blocking={blocking}
-          />
-        )}
-
-        {stage === 3 && preview && (
-          <Stage3Commit
-            preview={preview}
-            mode={mode}
-            setMode={setMode}
-            reason={reason}
-            setReason={setReason}
-          />
-        )}
-
-        {stage === 4 && commitStats && <Stage4Success stats={commitStats} />}
-
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".csv,.xlsx,.xls,.txt"
-          className="iw-hidden-file-input"
-          onChange={handleFileChosen}
+    <>
+      <Modal
+        open={open}
+        onClose={onClose}
+        size="xl"
+        severity="info"
+        closable={!busy}
+        dismissable={!busy}
+      >
+        <Modal.Header
+          title={`Import — ${datasetLabel || datasetKey}`}
+          subtitle={`Step ${stage <= 3 ? stage : 3} of 3 ${stage === 4 ? '· Done' : ''}`}
         />
-      </Modal.Body>
 
-      <Modal.Footer>
-        {stage === 1 && (
-          <>
-            <button className="op-btn op-btn-ghost" onClick={onClose} disabled={busy}>
-              Cancel
+        <Modal.Body className="iw-body">
+          {error && (
+            <div className="iw-banner iw-banner-err" role="alert">
+              {error}
+            </div>
+          )}
+          {warning && stage !== 4 && <div className="iw-banner iw-banner-warn">{warning}</div>}
+
+          {stage === 1 && (
+            <Stage1Upload
+              datasetKey={datasetKey}
+              onPick={() => fileRef.current?.click()}
+              busy={busy}
+            />
+          )}
+
+          {stage === 2 && preview && (
+            <Stage2Review
+              preview={preview}
+              sheet={sheet}
+              overrides={overrides}
+              onSheetChange={handleSheetChange}
+              onOverrideChange={handleOverrideChange}
+              onApplyOverrides={handleApplyOverrides}
+              blocking={blocking}
+            />
+          )}
+
+          {stage === 3 && preview && (
+            <Stage3Commit
+              preview={preview}
+              mode={mode}
+              setMode={setMode}
+              reason={reason}
+              setReason={setReason}
+            />
+          )}
+
+          {stage === 4 && commitStats && <Stage4Success stats={commitStats} />}
+
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,.xlsx,.xls,.txt"
+            className="iw-hidden-file-input"
+            onChange={handleFileChosen}
+          />
+        </Modal.Body>
+
+        <Modal.Footer>
+          {stage === 1 && (
+            <>
+              <button className="op-btn op-btn-ghost" onClick={onClose} disabled={busy}>
+                Cancel
+              </button>
+              <button
+                className="op-btn op-btn-primary"
+                onClick={() => fileRef.current?.click()}
+                disabled={busy}
+              >
+                {busy ? 'Parsing…' : 'Choose File'}
+              </button>
+            </>
+          )}
+          {stage === 2 && (
+            <>
+              <button
+                className="op-btn op-btn-ghost"
+                onClick={() => {
+                  setStage(1);
+                  setPreview(null);
+                }}
+              >
+                Back
+              </button>
+              <button className="op-btn op-btn-primary" onClick={() => setStage(3)} disabled={busy}>
+                Continue
+              </button>
+            </>
+          )}
+          {stage === 3 && (
+            <>
+              <button className="op-btn op-btn-ghost" onClick={() => setStage(2)} disabled={busy}>
+                Back
+              </button>
+              <button
+                className="op-btn op-btn-primary iw-commit-btn"
+                onClick={requestCommit}
+                disabled={busy}
+              >
+                {busy ? 'Committing…' : `Commit · ${MODE_LABELS[mode]?.label}`}
+              </button>
+            </>
+          )}
+          {stage === 4 && (
+            <button className="op-btn op-btn-primary" onClick={onClose}>
+              Close
             </button>
-            <button
-              className="op-btn op-btn-primary"
-              onClick={() => fileRef.current?.click()}
-              disabled={busy}
-            >
-              {busy ? 'Parsing…' : 'Choose File'}
-            </button>
-          </>
-        )}
-        {stage === 2 && (
-          <>
-            <button
-              className="op-btn op-btn-ghost"
-              onClick={() => {
-                setStage(1);
-                setPreview(null);
-              }}
-            >
-              Back
-            </button>
-            <button className="op-btn op-btn-primary" onClick={() => setStage(3)} disabled={busy}>
-              Continue
-            </button>
-          </>
-        )}
-        {stage === 3 && (
-          <>
-            <button className="op-btn op-btn-ghost" onClick={() => setStage(2)} disabled={busy}>
-              Back
-            </button>
-            <button
-              className="op-btn op-btn-primary iw-commit-btn"
-              onClick={handleCommit}
-              disabled={busy}
-            >
-              {busy ? 'Committing…' : `Commit · ${MODE_LABELS[mode]?.label}`}
-            </button>
-          </>
-        )}
-        {stage === 4 && (
-          <button className="op-btn op-btn-primary" onClick={onClose}>
-            Close
+          )}
+        </Modal.Footer>
+      </Modal>
+
+      {/* Replace-mode confirm — destructive, so make the operator opt in once
+        more. The server auto-backs-up before the wipe, but this is the human
+        stop. */}
+      <Modal
+        open={confirmReplace}
+        onClose={() => setConfirmReplace(false)}
+        size="sm"
+        severity="danger"
+      >
+        <Modal.Header title="Replace all data? · Xoá toàn bộ dữ liệu cũ?" />
+        <Modal.Body>
+          <p>
+            This will <strong>delete every existing {datasetLabel || datasetKey} row</strong> and
+            replace it with the {preview?.sample?.totalRows ?? ''} uploaded row(s).
+            {preview?.diff?.counts?.removedIfReplace > 0 && (
+              <> {preview.diff.counts.removedIfReplace} current row(s) will be removed.</>
+            )}
+          </p>
+          <p>
+            Việc này sẽ <strong>xoá toàn bộ dữ liệu hiện có</strong> và thay bằng file vừa tải lên.
+            Bản hiện tại được tự động sao lưu trước khi ghi đè (
+            <code>*_backup_&lt;ts&gt;.json</code>).
+          </p>
+        </Modal.Body>
+        <Modal.Footer>
+          <button
+            className="op-btn op-btn-ghost"
+            onClick={() => setConfirmReplace(false)}
+            disabled={busy}
+          >
+            Cancel · Huỷ
           </button>
-        )}
-      </Modal.Footer>
-    </Modal>
+          <button
+            className="op-btn op-btn-danger"
+            onClick={() => {
+              setConfirmReplace(false);
+              handleCommit();
+            }}
+            disabled={busy}
+          >
+            {busy ? 'Committing…' : 'Replace all · Xoá & nhập'}
+          </button>
+        </Modal.Footer>
+      </Modal>
+    </>
   );
 }
 
@@ -295,7 +366,8 @@ export default function ImportWizard({
 // ─────────────────────────────────────────────────────────────────
 function Stage1Upload({ datasetKey, onPick, busy }) {
   const tplUrl = importWizardApi.templateUrl(datasetKey);
-  const exportUrl = importWizardApi.exportUrl(datasetKey, 'xlsx');
+  const exportCsvUrl = importWizardApi.exportUrl(datasetKey, 'csv');
+  const exportXlsxUrl = importWizardApi.exportUrl(datasetKey, 'xlsx');
   return (
     <div className="iw-stage1">
       <div
@@ -323,15 +395,20 @@ function Stage1Upload({ datasetKey, onPick, busy }) {
         </svg>
         <div className="iw-drop-title">Click to choose a CSV or XLSX file</div>
         <div className="iw-drop-help">
-          Up to 10 MB · header row required · auto-detects delimiter and Excel sheets
+          Up to 50 MB · header row required · auto-detects delimiter and Excel sheets
         </div>
       </div>
       <div className="iw-roundtrip">
         <a className="op-btn op-btn-ghost" href={tplUrl}>
           📄 Download Template
         </a>
-        <a className="op-btn op-btn-ghost" href={exportUrl}>
-          ⬇ Export Current Data
+        {/* CSV first — much smaller than XLSX and re-imports cleanly (a full
+            BOM export is ~24 MB as xlsx vs a few MB as csv). */}
+        <a className="op-btn op-btn-ghost" href={exportCsvUrl}>
+          ⬇ Export CSV (re-importable)
+        </a>
+        <a className="op-btn op-btn-ghost" href={exportXlsxUrl}>
+          ⬇ Export XLSX
         </a>
       </div>
     </div>

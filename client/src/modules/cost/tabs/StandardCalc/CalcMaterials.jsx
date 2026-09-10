@@ -17,6 +17,7 @@ import { useI18n } from '../../../../utils/useI18n';
 import { fmtN, parseLocaleNumber } from '../../../../utils/format';
 import DecimalInput from '../../../../utils/DecimalInput';
 import { primaryRowTypeLabel } from '../../../../services/altMaterialsLabels';
+import { resolveLibRow } from '../../lib/codeMatch.js';
 import AltMaterialsToggle from './AltMaterialsToggle';
 
 export default function CalcMaterials() {
@@ -189,14 +190,24 @@ export default function CalcMaterials() {
 
   const lookupMat = useCallback(
     (idx, code) => {
-      const found = getMatByCode(code);
+      // Exact lookup wins (calc-path getMatByCode, untouched). On an exact miss,
+      // fall back to the tolerant matcher so codes like "3M 9183" (≈ "3m9183") or
+      // "PET SB50(A)PA-T111LLY*" (≈ without "*") still auto-fill instead of
+      // leaving the operator to type the price by hand → risk of $0
+      // (CLAUDE.md Lesson 32, code↔library layer). Ambiguous normalized hits
+      // resolve to null — never guess.
+      const found = getMatByCode(code) || resolveLibRow(lib.mat, 'code', code).row;
       if (found) {
         setMaterialField(idx, 'desc', found.description || found.desc || '');
-        if (found.price) setMaterialField(idx, 'g_price', parseFloat(found.price) || 0);
+        if (found.price) {
+          const p = parseFloat(found.price) || 0;
+          setMaterialField(idx, 'g_price', p);
+          setMaterialField(idx, 'latest', p);
+        }
         if (found.width) setMaterialField(idx, 'width', parseFloat(found.width) || 0);
       }
     },
-    [getMatByCode, setMaterialField]
+    [getMatByCode, lib.mat, setMaterialField]
   );
 
   const addRow = useCallback(() => {
@@ -221,7 +232,14 @@ export default function CalcMaterials() {
           setMaterialField(idx, 'code', hit.code || '');
           setMaterialField(idx, 'ifs_code', hit.ifs_code || '');
           setMaterialField(idx, 'desc', hit.desc || '');
-          if (hit.g_price) setMaterialField(idx, 'g_price', Number(hit.g_price) || 0);
+          // Fill BOTH Ref Price (g_price) and MAT PRICE (latest) so the
+          // active cost cell isn't left at $0 after an explicit select.
+          // MAT PRICE stays editable — operator can override afterwards.
+          if (hit.g_price) {
+            const p = Number(hit.g_price) || 0;
+            setMaterialField(idx, 'g_price', p);
+            setMaterialField(idx, 'latest', p);
+          }
         },
       });
     },
@@ -297,7 +315,8 @@ export default function CalcMaterials() {
                   <tr>
                     <th style={{ width: 130 }}>Row</th>
                     <th style={{ width: 85 }}>IFS Code</th>
-                    <th style={{ width: 130 }}>Desc.</th>
+                    <th style={{ width: 110 }}>DRW materials</th>
+                    <th style={{ width: 130 }}>Quote materials</th>
                     <th style={{ width: 55 }}>Usage</th>
                     <th style={{ width: 55 }}>Setup LM</th>
                     <th
@@ -344,13 +363,17 @@ export default function CalcMaterials() {
                     </th>
                     <th
                       className="sc-col-derived"
-                      style={{ width: 50 }}
-                      title="Layout per sheet = parts_across × parts_md"
+                      style={{ width: 70 }}
+                      title="Gross material for MOQ (m²) incl. setup + scrap + offcut"
                     >
-                      L/Sheet
+                      Mats./MOQ (m²)
                     </th>
-                    <th className="sc-col-derived" style={{ width: 50 }} title="Number of webs">
-                      Webs
+                    <th
+                      className="sc-col-derived"
+                      style={{ width: 70 }}
+                      title="Gross material for MOQ (lm) incl. setup + scrap + offcut"
+                    >
+                      Mats./MOQ (lm)
                     </th>
                     <th
                       className="sc-col-derived"
@@ -426,6 +449,14 @@ export default function CalcMaterials() {
                                 style={{ flex: 1 }}
                               />
                             </div>
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              value={mat.drw_material || ''}
+                              onChange={(e) => handleField(i, 'drw_material', e.target.value)}
+                              className="sc-input-sm sc-input-desc"
+                            />
                           </td>
                           <td>
                             <input
@@ -627,10 +658,28 @@ export default function CalcMaterials() {
                           {/* Layout-derived columns */}
                           <td className="sc-td-derived">{r ? fmtN(r.qpa_m2, 6) : '\u2014'}</td>
                           <td className="sc-td-derived">{r ? fmtN(r.qpa_lm, 7) : '\u2014'}</td>
-                          <td className="sc-td-derived">
-                            {r ? r.layout_sheet || layoutCavities || '\u2014' : '\u2014'}
+                          <td
+                            className="sc-td-derived sc-mats-moq"
+                            title="Gross material for MOQ (m\u00b2) incl. setup + scrap + offcut"
+                          >
+                            {r && r.mats_moq_m2
+                              ? r.mats_moq_m2.toLocaleString('en-US', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })
+                              : '\u2014'}
                           </td>
-                          <td className="sc-td-derived">{st.num_webs || '\u2014'}</td>
+                          <td
+                            className="sc-td-derived sc-mats-moq"
+                            title="Gross material for MOQ (lm) incl. setup + scrap + offcut"
+                          >
+                            {r && r.mats_moq_lm
+                              ? r.mats_moq_lm.toLocaleString('en-US', {
+                                  minimumFractionDigits: 1,
+                                  maximumFractionDigits: 1,
+                                })
+                              : '\u2014'}
+                          </td>
                           <td className="sc-td-derived" style={{ color: '#059669' }}>
                             {r ? (scrapDisplay * 100).toFixed(1) + '%' : '\u2014'}
                           </td>

@@ -15,6 +15,11 @@ import {
 } from '../../../../services/calcEngine';
 import { fmtN as _fmtN, parseLocaleNumber } from '../../../../utils/format';
 import DecimalInput from '../../../../utils/DecimalInput';
+import { crewOverrideState, isManualDerivedRow } from './processCrew.helpers';
+import { resolveScrapOnWorkcenterChange } from '../../../../services/scrapDefaults';
+import { layoutToolCostSources, buildLayoutToolCosts } from '../../../../services/layoutToolCost';
+import ToolCostCell from '../../components/ToolCostCell';
+import '../../components/ToolCostCell.css';
 // ProcessBalancing is rendered as separate "Balancing" sub-tab
 
 // Local wrapper: default 4 decimals for process cost fields.
@@ -30,18 +35,28 @@ export default function CalcProcesses() {
 
   const tierSt = useMemo(() => getActiveTierState(st), [st]);
 
+  // Layout-assigned tool costs (Sprint S-LAYOUT-TOOLCOST). CalcProcesses calls
+  // calcProcess DIRECTLY (not through calcAll), so it builds the map here and
+  // passes it explicitly. Derived live from (tierSt, lib) → editing a Plate /
+  // Cutter cost on the Layout tab live-updates any process assigned to it.
+  const layoutSources = useMemo(
+    () => (lib ? layoutToolCostSources(tierSt, lib) : []),
+    [tierSt, lib]
+  );
+  const layoutToolCosts = useMemo(() => buildLayoutToolCosts(layoutSources), [layoutSources]);
+
   const results = useMemo(() => {
     if (!lib) return [];
     return processes.map((proc) => {
       if (proc.hidden || !proc.workcenter) return null;
       try {
         const moq = tierSt.moq || st.moq || 0;
-        return calcProcess(proc, tierSt, moq, lib);
+        return calcProcess(proc, tierSt, moq, lib, { layoutToolCosts });
       } catch {
         return null;
       }
     });
-  }, [processes, tierSt, lib, st.moq]);
+  }, [processes, tierSt, lib, st.moq, layoutToolCosts]);
 
   const handleField = useCallback(
     (idx, field, value, isNum = false) => {
@@ -100,21 +115,31 @@ export default function CalcProcesses() {
 
   const handleProcessType = useCallback(
     (idx, value) => {
+      const prev = processes[idx] || {};
       setProcessField(idx, 'process_type', value);
       setProcessField(idx, 'workcenter', '');
+      // Clearing the workcenter counts as "changing away" — reset an auto FQC
+      // 10% back to 0, but never touch an operator-typed scrap.
+      const scrap = resolveScrapOnWorkcenterChange(prev.workcenter, '', prev.scrap_pct);
+      if (scrap.changed) setProcessField(idx, 'scrap_pct', scrap.value);
     },
-    [setProcessField]
+    [setProcessField, processes]
   );
 
   const handleWorkcenter = useCallback(
     (idx, wc) => {
+      const prev = processes[idx] || {};
       setProcessField(idx, 'workcenter', wc);
+      // FQC → auto 10% scrap; away from FQC → reset the auto 10% to 0. Only
+      // when scrap is still at its default (0 or the prior auto value).
+      const scrap = resolveScrapOnWorkcenterChange(prev.workcenter, wc, prev.scrap_pct);
+      if (scrap.changed) setProcessField(idx, 'scrap_pct', scrap.value);
       if (lib && wc) {
         const rate = getRateByWC(lib, wc);
         if (rate && rate.crew) setProcessField(idx, 'crew', rate.crew);
       }
     },
-    [setProcessField, lib]
+    [setProcessField, lib, processes]
   );
 
   const handleToolType = useCallback(
@@ -148,16 +173,16 @@ export default function CalcProcesses() {
     return Object.keys(lib.ddl.tool_life);
   }, [lib]);
 
-  // Backfill tool_life from DDL when loading a legacy quote where
-  // tool_type was saved but tool_life was never populated (= 0).
-  // The engine already falls back to getToolLife at compute time so
-  // cost is correct — but the UI input only shows proc.tool_life, so
-  // without this heal the column looks empty. Respect tool_life_ovr
-  // so an operator's manual override is never overwritten.
+  // Seed the editable Tool Life column from DDL when a row has none (= 0),
+  // e.g. a legacy quote saved before the column was populated, or right after
+  // a tool_type change. The row value is now the SOURCE OF TRUTH for the
+  // tooling calc (calcEngine calcProcess), so we fill ONLY when the row is 0 —
+  // a value the operator has typed is non-zero and is never overwritten. No
+  // tool_life_ovr guard needed: the `missing` check alone protects edits.
   useEffect(() => {
     if (!lib?.ddl?.tool_life || !processes.length) return;
     processes.forEach((proc, i) => {
-      if (!proc || proc.hidden || proc.tool_life_ovr) return;
+      if (!proc || proc.hidden) return;
       const hasType = !!proc.tool_type;
       const missing = !proc.tool_life || Number(proc.tool_life) === 0;
       if (hasType && missing) {
@@ -221,8 +246,15 @@ export default function CalcProcesses() {
                 <th style={{ width: 110 }}>Process Type</th>
                 <th style={{ width: 110 }}>Workcenter</th>
                 <th style={{ width: 45 }}>Rpt</th>
-                <th style={{ width: 55 }}>Crew</th>
+                <th style={{ width: 70 }}>Crew</th>
                 <th style={{ width: 65 }}>Speed</th>
+                <th
+                  className="sc-col-derived"
+                  style={{ width: 65 }}
+                  title="Speed unit of measure from Rate Table"
+                >
+                  UoM
+                </th>
                 <th style={{ width: 50 }}>Layout</th>
                 <th style={{ width: 50 }}>Eff%</th>
                 <th style={{ width: 55 }}>Setup H</th>
@@ -270,6 +302,10 @@ export default function CalcProcesses() {
                 const i = proc._idx;
                 const r = results[i];
                 const wcOpts = lib ? getWCOptionsByType(lib, proc.process_type) : [];
+                const rateRow = lib ? getRateByWC(lib, proc.workcenter) : null;
+                const uom = rateRow?.speed_uom || '';
+                const crewSt = crewOverrideState(proc.crew, rateRow?.crew);
+                const manualDerived = isManualDerivedRow(r, proc.speed);
                 return (
                   <tr key={proc._mid || `idx-${i}`}>
                     <td className="sc-td-idx">Process {vi + 1}</td>
@@ -311,8 +347,31 @@ export default function CalcProcesses() {
                         style={{ background: '#fef3c7' }}
                       />
                     </td>
-                    <td className="sc-td-auto">
-                      {r ? r.crew || proc.crew || '\u2014' : proc.crew || '\u2014'}
+                    <td>
+                      <div className="sc-pack-row">
+                        <input
+                          type="number"
+                          min="1"
+                          value={crewSt.value}
+                          onChange={(e) => handleField(i, 'crew', e.target.value, true)}
+                          className={`sc-input-sm sc-input-num ${crewSt.isOverride ? 'sc-pack-tier-ovr' : ''}`}
+                          title={
+                            crewSt.isOverride
+                              ? `Override \u2014 rate crew = ${crewSt.base}. Drives labor + manual throughput.`
+                              : 'Crew size \u2014 drives labor + manual MAN UPH'
+                          }
+                        />
+                        {crewSt.isOverride && (
+                          <button
+                            type="button"
+                            className="sc-pack-reset"
+                            onClick={() => setProcessField(i, 'crew', crewSt.base)}
+                            title={`Reset to rate crew (${crewSt.base})`}
+                          >
+                            &#8635;
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <DecimalInput
@@ -321,6 +380,9 @@ export default function CalcProcesses() {
                         placeholder="—"
                         className="sc-input-sm sc-input-num"
                       />
+                    </td>
+                    <td className="sc-td-auto" style={{ fontSize: 10 }}>
+                      {uom || '—'}
                     </td>
                     <td>
                       <input
@@ -370,7 +432,8 @@ export default function CalcProcesses() {
                         type="number"
                         min="0"
                         max="100"
-                        value={proc.scrap_pct != null ? Math.round(proc.scrap_pct * 100) : 3}
+                        placeholder="0"
+                        value={proc.scrap_pct ? Math.round(proc.scrap_pct * 100) : ''}
                         onChange={(e) =>
                           handleField(
                             i,
@@ -385,20 +448,35 @@ export default function CalcProcesses() {
                       {r && r.uph ? Math.round(r.uph).toLocaleString() : '\u2014'}
                     </td>
                     <td>
-                      <DecimalInput
-                        value={proc.manual_uph}
-                        onChange={(v) => setProcessField(i, 'manual_uph', v)}
-                        placeholder="—"
-                        className="sc-input-sm sc-input-num"
-                        style={{ color: '#b45309' }}
-                      />
+                      {manualDerived ? (
+                        <span
+                          className="sc-cell-auto-uph"
+                          title="Auto-synced from Crew × Eff% × Speed — change Crew or Speed to rebalance this manual stage"
+                        >
+                          {Math.round(r.manualUph).toLocaleString()}
+                        </span>
+                      ) : (
+                        <DecimalInput
+                          value={proc.manual_uph}
+                          onChange={(v) => setProcessField(i, 'manual_uph', v)}
+                          placeholder="—"
+                          className="sc-input-sm sc-input-num"
+                          style={{ color: '#b45309' }}
+                        />
+                      )}
                     </td>
                     <td>
-                      <DecimalInput
-                        value={proc.tool_cost}
-                        onChange={(v) => setProcessField(i, 'tool_cost', v)}
+                      <ToolCostCell
+                        proc={proc}
+                        idx={i}
+                        processes={processes}
+                        sources={layoutSources}
+                        layoutToolCosts={layoutToolCosts}
+                        onAssign={(id) => setProcessField(i, 'tool_cost_src', id)}
+                        onUnassign={() => setProcessField(i, 'tool_cost_src', '')}
+                        onManualChange={(v) => setProcessField(i, 'tool_cost', v)}
+                        inputClassName="sc-input-sm sc-input-num"
                         placeholder="—"
-                        className="sc-input-sm sc-input-num"
                       />
                     </td>
                     <td>

@@ -30,7 +30,6 @@ function registerNativeBridges(ipcMain, log) {
   const scanner = safeLoad('./scanner', 'scanner', log);
   const cache = safeLoad('./cache', 'cache', log);
   const fsBridge = safeLoad('./fs', 'fs', log);
-  const importBridge = safeLoad('./import', 'import', log);
 
   if (printer) printer.register(ipcMain, log);
   if (zebra) zebra.register(ipcMain, log);
@@ -38,7 +37,6 @@ function registerNativeBridges(ipcMain, log) {
   if (scanner) scanner.register(ipcMain, log);
   if (cache) cache.register(ipcMain, log);
   if (fsBridge) fsBridge.register(ipcMain, log);
-  if (importBridge) importBridge.register(ipcMain, log);
 
   // Auto-update IPC
   ipcMain.handle('ops:updater.check', () => {

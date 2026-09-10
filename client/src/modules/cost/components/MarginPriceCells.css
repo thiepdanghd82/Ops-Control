@@ -1,0 +1,129 @@
+/* MarginPriceCells — editable VA/Contr/GM inputs + Apply-GM-25% affordance.
+   Class-based only (Lesson 6).
+
+   The Cost Breakdown table (.sc-bd-table) is intentionally left-aligned
+   (a prior user directive) and renders cells as monospace 10px, so these
+   inputs are styled to read as PLAIN NUMBERS that blend with the adjacent
+   cost columns (Material / Ink / … / Subtotal) — no border/box. Below-floor
+   is signalled with red TEXT, never a border. */
+
+.mpc-cell-input {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-weight: 700;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: text;
+}
+/* Subtle focus affordance only — a light tint, never a box/border. */
+.mpc-cell-input:focus {
+  outline: none;
+  background: var(--surface-hover, #eef2f7);
+}
+[data-theme='dark'] .mpc-cell-input:focus {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Metric tint (mirrors the read-only cell colors). */
+.mpc-va {
+  color: #0891b2;
+}
+.mpc-contr {
+  color: #7c3aed;
+}
+.mpc-gm {
+  color: #047857;
+}
+.mpc-gm-neg {
+  color: #dc2626;
+}
+
+/* Below-floor / warn — RED TEXT, never a border box. Overrides the red
+   border that .sc-input-warn (StandardCalc.css) would otherwise draw. */
+.mpc-cell-input.sc-input-warn {
+  border-color: transparent !important;
+  color: #dc2626 !important;
+}
+
+/* Rejected (unsolvable) edit — brief background tint, then revert. No box. */
+.mpc-reject {
+  animation: mpc-reject-flash 1.1s ease-out;
+}
+@keyframes mpc-reject-flash {
+  0%,
+  40% {
+    background: #fef3c7;
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+/* Apply GM-25% affordance — stacked BELOW the price value (line 2),
+   left-aligned under the (left-aligned) price number, compact. */
+.mpc-price-val {
+  display: block;
+}
+.mpc-apply {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 5px;
+  margin-top: 2px;
+}
+.mpc-apply-btn {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  line-height: 16px;
+  text-align: center;
+  border: 1px solid var(--border-subtle, #cbd5e1);
+  border-radius: 5px;
+  background: var(--surface-card, #fff);
+  color: #2563eb;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+}
+.mpc-apply-btn:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: #2563eb;
+}
+.mpc-apply-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.mpc-hint {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+  white-space: nowrap;
+}
+.mpc-apply-warn .mpc-hint {
+  color: #b45309;
+}
+[data-theme='dark'] .mpc-apply-btn {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+/* ── Cost Breakdown column widths (even balance across both tables) ──
+   Hints via <colgroup>; the table stays auto-layout so nothing clips and
+   wide content still scrolls inside .sc-table-wrap. */
+.sc-bd-table col.bdc-tier {
+  width: 5%;
+}
+.sc-bd-table col.bdc-qty {
+  width: 8%;
+}
+.sc-bd-table col.bdc-price {
+  width: 11%;
+}
+.sc-bd-table col.bdc-cost {
+  width: 8%;
+}
+.sc-bd-table col.bdc-metric {
+  width: 6.5%;
+}

@@ -1,124 +1,79 @@
 /**
- * Quote approval workflow — 3-stage chain state machine.
+ * Quote-progress state machine — server-side authority.
  *
- * Pipeline (Cost → Sales → Finance) matches the CCL Design / Brady
- * corporate costing sign-off process. A quote authored by a cost
- * engineer is SUBMITted, reviewed by a sales manager, then by a
- * finance director. Either reviewer can REJECT, after which the cost
- * engineer re-submits with fixes.
+ * Sprint S-QUOTE-PROGRESS-V2 (2026-06-15) — full rewrite. The v1 3-stage
+ * pipeline (Cost → Sales → Finance) was collapsed per Henry's spec into
+ * a flat 5-status dropdown:
  *
- *    draft
- *      │ SUBMIT (any writer: user+)
- *      ▼
- *    pending_sales
- *      │ APPROVE_SALES   (approval_role = sales_mgr OR admin+)
- *      ▼
- *    pending_finance
- *      │ APPROVE_FINANCE (approval_role = finance_dir OR admin+)
- *      ▼
- *    approved
+ *   • draft           — initial state, work in progress
+ *   • quote_to_sale   — sent to Sales for review
+ *   • price_approved  — Sales / Cost Engineer signed off
+ *   • cancelled       — explicit cancel (requires reason)
+ *   • rejected        — explicit reject (requires reason)
  *
- *    pending_sales | pending_finance
- *      │ REJECT (any reviewer / admin+, non-empty reason)
- *      ▼
- *    rejected
- *      │ SUBMIT (re-submits to pending_sales)
- *      ▼
- *    pending_sales ...
+ * Any user with the appropriate role can set the status to any value
+ * via the dropdown — there's no state-graph restriction, only role
+ * gates on the target.
  *
- *    approved
- *      │ REVOKE (sys only, escape hatch)
- *      ▼
- *    draft
+ * Back-compat: quotes saved with the v1 workflow stored
+ *   status ∈ {'submitted', 'pending_sales', 'pending_finance', 'approved'}
+ * Those values are heal-on-read mapped to the new statuses so the
+ * inbox + history table keep working. Writes always use new names.
  *
- * Back-compat: quotes saved with the v1 2-gate workflow stored
- * `status: 'submitted'`. That value is aliased to `pending_sales` on
- * read so the history table + inbox keep working. The legacy `APPROVE`
- * action still resolves — it advances the quote one step (pending_sales
- * → pending_finance, or pending_finance → approved) so scripts that
- * never migrated to the new action names keep functioning.
- *
- * Auth model:
- *   - Hierarchical role (viewonly < user < cost < admin < sys) — used
- *     for SUBMIT and REVOKE.
- *   - `approval_roles: string[]` on the user record — used for
- *     APPROVE_SALES / APPROVE_FINANCE / REJECT. Holding `'sales_mgr'`
- *     authorizes the Sales gate; `'finance_dir'` authorizes the
- *     Finance gate. Anyone with role ≥ admin can approve or reject at
- *     any gate as a safety override.
+ * Auth model (Henry's spec):
+ *   - Hierarchical role (viewonly < user < cost < admin < sys) — cost
+ *     and above can transition to ANY status.
+ *   - approval_roles 'sales' (legacy 'sales_mgr' aliased) — additionally
+ *     allows transition to price_approved / cancelled / rejected.
  *
  * Data model: each quote's `state.approval` object:
  *   {
- *     status,                              // 'draft' | 'pending_sales' | 'pending_finance' | 'approved' | 'rejected'
- *     submitted_at, submitted_by,
- *     sales_approved_at, sales_approved_by,
- *     finance_approved_at, finance_approved_by,
- *     approved_at, approved_by,            // = finance_approved_* (convenience mirror)
- *     rejected_at, rejected_by, rejected_stage, reason,
- *     history: [{ ts, from, to, action, actor, reason? }]
+ *     status,         // current state
+ *     changed_at, changed_by,
+ *     reason,         // present only for cancelled / rejected
+ *     history: [{ ts, from, to, actor, reason? }]   // max 50 entries
  *   }
  *
- * Implementation: pure function `transition()`. Caller is responsible
- * for persisting. The atomic-transition HTTP endpoint in Sprint 6.2
- * reads the quote, calls transition(), then writes back in a single
- * round trip to eliminate the read-modify-write race.
+ * Dropped from v1 (Phase 5 Pricing Snapshot covers what
+ * `rates_snapshot` did):
+ *   - sales_approved_at / sales_approved_by / finance_approved_at /
+ *     finance_approved_by / approved_at / approved_by / submitted_at /
+ *     submitted_by / rejected_stage / rates_snapshot
+ *   The fields are tolerated on input (heal-on-read won't strip them)
+ *   but never written by the new transition().
+ *
+ * Implementation: pure function `transition()` (kept name for callsite
+ * compatibility — caller still passes { approval, action, actorUser,
+ * reason } but `action` is now the target status string). Caller
+ * persists the result.
  */
 
 export const APPROVAL_STATES = [
   'draft',
-  'pending_sales',
-  'pending_finance',
-  'approved',
+  'quote_to_sale',
+  'price_approved',
+  'cancelled',
   'rejected',
 ];
 
-// v1 → v2 read-time aliases. Old quotes with `submitted` are treated
-// as `pending_sales`; writes always use the new status values.
 const LEGACY_STATUS_ALIASES = {
-  submitted: 'pending_sales',
-};
-
-const TRANSITIONS = {
-  draft: {
-    SUBMIT: 'pending_sales',
-  },
-  pending_sales: {
-    APPROVE_SALES: 'pending_finance',
-    APPROVE: 'pending_finance', // legacy alias — advance one gate
-    REJECT: 'rejected',
-  },
-  pending_finance: {
-    APPROVE_FINANCE: 'approved',
-    APPROVE: 'approved', // legacy alias — advance one gate
-    REJECT: 'rejected',
-  },
-  approved: {
-    REVOKE: 'draft',
-  },
-  rejected: {
-    SUBMIT: 'pending_sales',
-  },
+  submitted: 'quote_to_sale',
+  pending_sales: 'quote_to_sale',
+  pending_finance: 'quote_to_sale',
+  approved: 'price_approved',
 };
 
 const ROLE_LEVELS = { viewonly: 1, user: 2, cost: 3, admin: 4, sys: 5 };
 
-// Hierarchical role requirement. Present = use this gate only; absent
-// = fall through to APPROVAL_AUTH (approval_roles-based).
-const REQUIRED_ROLE_FOR_ACTION = {
-  SUBMIT: 'user',
-  REVOKE: 'sys',
+const TARGET_AUTH = {
+  draft: { min_role: 'cost' },
+  quote_to_sale: { min_role: 'cost' },
+  price_approved: { min_role: 'cost', sales_ok: true },
+  cancelled: { min_role: 'cost', sales_ok: true, requires_reason: true },
+  rejected: { min_role: 'cost', sales_ok: true, requires_reason: true },
 };
 
-// approval_roles-based auth. `approval_role` is the required entry in
-// the user's `approval_roles` array; `fallback_role` is the
-// hierarchical role that also grants the action (admin-as-safety-net).
-// Array = any of the listed approval_roles authorizes.
-const APPROVAL_AUTH = {
-  APPROVE_SALES: { approval_role: 'sales_mgr', fallback_role: 'admin' },
-  APPROVE_FINANCE: { approval_role: 'finance_dir', fallback_role: 'admin' },
-  APPROVE: { approval_role: ['sales_mgr', 'finance_dir'], fallback_role: 'admin' },
-  REJECT: { approval_role: ['sales_mgr', 'finance_dir'], fallback_role: 'admin' },
-};
+const SALES_APPROVAL_ROLES = new Set(['sales', 'sales_mgr']);
 
 function currentStatus(approval) {
   if (!approval || !approval.status) return 'draft';
@@ -127,135 +82,72 @@ function currentStatus(approval) {
   return APPROVAL_STATES.includes(raw) ? raw : 'draft';
 }
 
-function describeRequirement(action) {
-  if (REQUIRED_ROLE_FOR_ACTION[action]) {
-    return `role ${REQUIRED_ROLE_FOR_ACTION[action]}+`;
-  }
-  const auth = APPROVAL_AUTH[action];
+function describeRequirement(targetStatus) {
+  const auth = TARGET_AUTH[targetStatus];
   if (!auth) return 'no one';
-  const approval = Array.isArray(auth.approval_role)
-    ? auth.approval_role.join('|')
-    : auth.approval_role;
-  return `approval_role=${approval} OR role=${auth.fallback_role}+`;
+  const parts = [`role ${auth.min_role}+`];
+  if (auth.sales_ok) parts.push(`approval_role=sales`);
+  return parts.join(' OR ');
 }
 
-function canUserTakeAction(user, action) {
-  const role = user?.role || 'viewonly';
-  const userLevel = ROLE_LEVELS[role] || 0;
-  const approvalRoles = Array.isArray(user?.approval_roles) ? user.approval_roles : [];
-
-  const hier = REQUIRED_ROLE_FOR_ACTION[action];
-  if (hier) {
-    return userLevel >= (ROLE_LEVELS[hier] || 999);
-  }
-
-  const auth = APPROVAL_AUTH[action];
+export function canUserSetStatus(user, targetStatus) {
+  if (!user) return false;
+  const auth = TARGET_AUTH[targetStatus];
   if (!auth) return false;
-  const fallbackLevel = ROLE_LEVELS[auth.fallback_role] || 999;
-  if (userLevel >= fallbackLevel) return true;
-  if (auth.approval_role == null) return false;
-  const needed = Array.isArray(auth.approval_role) ? auth.approval_role : [auth.approval_role];
-  return needed.some((r) => approvalRoles.includes(r));
+  const role = user.role || 'viewonly';
+  const userLevel = ROLE_LEVELS[role] || 0;
+  if (userLevel >= (ROLE_LEVELS[auth.min_role] || 999)) return true;
+  if (auth.sales_ok) {
+    const roles = Array.isArray(user.approval_roles) ? user.approval_roles : [];
+    if (roles.some((r) => SALES_APPROVAL_ROLES.has(r))) return true;
+  }
+  return false;
 }
 
 /**
- * Pure state-machine tick. Returns `{ ok, approval }` on success or
- * `{ ok: false, error }` on invalid action / insufficient role /
- * missing reject reason. Never mutates input.
- *
- * Phase 9E.4 — `snapshot` (optional): when the caller passes
- * `{ site, sga_rate_pct }`, the object is frozen into
- * `approval.rates_snapshot` at the APPROVE_FINANCE transition. Clients
- * that read an approved quote should prefer the snapshot over the
- * live Finance config so retroactive SGA edits can't silently shift
- * the margin of a sealed quote.
+ * Pure state-machine tick. `action` here means "target status to set".
+ * (Name kept for backward callsite compat — the route layer + tests
+ * passed `action: 'SUBMIT'` etc. previously.) Returns `{ ok, approval }`
+ * on success or `{ ok: false, error }` on invalid target / insufficient
+ * role / missing reason for cancel|reject. Never mutates input.
  */
-export function transition({ approval, action, actorUser, reason, snapshot }) {
+export function transition({ approval, action, actorUser, reason }) {
   const fromStatus = currentStatus(approval);
-  const target = TRANSITIONS[fromStatus]?.[action];
-  if (!target) {
+  const targetStatus = action;
+
+  if (!APPROVAL_STATES.includes(targetStatus)) {
+    return { ok: false, error: `Unknown target status: ${targetStatus}` };
+  }
+  if (fromStatus === targetStatus) {
+    return { ok: false, error: `Status already ${targetStatus}` };
+  }
+  if (!canUserSetStatus(actorUser, targetStatus)) {
     return {
       ok: false,
-      error: `Cannot ${action} from status ${fromStatus}`,
+      error: `User '${actorUser?.username || 'unknown'}' (role=${actorUser?.role || 'viewonly'}) cannot set status to ${targetStatus} — requires ${describeRequirement(targetStatus)}`,
     };
   }
-  if (!canUserTakeAction(actorUser, action)) {
-    return {
-      ok: false,
-      error: `User '${actorUser?.username || 'unknown'}' (role=${actorUser?.role || 'viewonly'}) cannot perform ${action} — requires ${describeRequirement(action)}`,
-    };
-  }
-  if (action === 'REJECT' && (!reason || !String(reason).trim())) {
-    return { ok: false, error: 'REJECT requires a non-empty reason' };
+  const auth = TARGET_AUTH[targetStatus];
+  if (auth.requires_reason && (!reason || !String(reason).trim())) {
+    return { ok: false, error: `Setting status to ${targetStatus} requires a non-empty reason` };
   }
 
   const nowISO = new Date().toISOString();
   const actor = actorUser?.username || 'unknown';
-  const next = { ...(approval || {}), status: target };
+  const next = { ...(approval || {}), status: targetStatus };
 
-  if (action === 'SUBMIT') {
-    next.submitted_at = nowISO;
-    next.submitted_by = actor;
-    // A re-submission after REJECT clears the rejection fields so the
-    // quote enters the review queue clean. History still records it.
-    delete next.rejected_at;
-    delete next.rejected_by;
-    delete next.rejected_stage;
-    delete next.reason;
-  } else if (
-    action === 'APPROVE_SALES' ||
-    (action === 'APPROVE' && fromStatus === 'pending_sales')
-  ) {
-    next.sales_approved_at = nowISO;
-    next.sales_approved_by = actor;
-  } else if (
-    action === 'APPROVE_FINANCE' ||
-    (action === 'APPROVE' && fromStatus === 'pending_finance')
-  ) {
-    next.finance_approved_at = nowISO;
-    next.finance_approved_by = actor;
-    // Convenience mirror kept for UIs that read the v1 approved_at field.
-    next.approved_at = nowISO;
-    next.approved_by = actor;
-    // Phase 9E.4 — freeze the pricing basis at the moment of final
-    // approval. Later Finance edits (SGA rate bump, site rename) don't
-    // alter what this approved quote reports as its margin. Only set
-    // when the caller supplies a snapshot; tests & legacy callers that
-    // omit it still work, just without snapshot protection.
-    if (snapshot && typeof snapshot === 'object') {
-      next.rates_snapshot = {
-        site: snapshot.site ?? null,
-        sga_rate_pct: Number.isFinite(Number(snapshot.sga_rate_pct))
-          ? Number(snapshot.sga_rate_pct)
-          : 0,
-        frozen_at: nowISO,
-        frozen_by: actor,
-      };
-    }
-  } else if (action === 'REJECT') {
-    next.rejected_at = nowISO;
-    next.rejected_by = actor;
-    next.rejected_stage = fromStatus; // 'pending_sales' or 'pending_finance'
-    next.reason = reason;
-  } else if (action === 'REVOKE') {
-    delete next.approved_at;
-    delete next.approved_by;
-    delete next.finance_approved_at;
-    delete next.finance_approved_by;
-    // REVOKE unfreezes the rate snapshot — if the quote re-enters the
-    // approval chain, a fresh snapshot will be captured at the next
-    // APPROVE_FINANCE using whatever the live Finance config says then.
-    delete next.rates_snapshot;
-  }
+  next.changed_at = nowISO;
+  next.changed_by = actor;
+  if (auth.requires_reason) next.reason = String(reason).trim();
+  else delete next.reason;
 
   next.history = Array.isArray(approval?.history) ? approval.history.slice() : [];
   next.history.push({
     ts: nowISO,
     from: fromStatus,
-    to: target,
-    action,
+    to: targetStatus,
     actor,
-    ...(reason ? { reason } : {}),
+    ...(auth.requires_reason ? { reason: next.reason } : {}),
   });
   if (next.history.length > 50) next.history = next.history.slice(-50);
 
@@ -267,41 +159,34 @@ export function getStatus(approval) {
 }
 
 /**
- * List of actions the given user can legitimately invoke against the
- * given approval object, in order of workflow progression. Used by the
- * UI to render exactly the buttons a user is allowed to click.
+ * Statuses the given user can set on the given quote right now.
+ * Excludes the current status (no-op). Used by the dropdown UI to
+ * decide which options to render or grey out.
  */
-export function availableActions(approval, user) {
-  const fromStatus = currentStatus(approval);
-  const possible = Object.keys(TRANSITIONS[fromStatus] || {});
-  return possible.filter((a) => canUserTakeAction(user, a));
+export function availableTargetStatuses(approval, user) {
+  const current = currentStatus(approval);
+  return APPROVAL_STATES.filter((s) => s !== current && canUserSetStatus(user, s));
 }
 
-const PENDING_STATES = new Set(['pending_sales', 'pending_finance']);
-
 /**
- * Count how many quotes the given user can act on right now. Used by
- * the sidebar badge (Sprint 6.5) to surface a reviewer's queue without
- * needing to load the full inbox.
+ * Sidebar inbox badge counter. In v1 this counted quotes "waiting for
+ * the current user to advance the chain"; in the new flat model the
+ * closest analog is "quotes in quote_to_sale that the current user can
+ * approve" — i.e. the Sales-Team / Cost-Engineer review queue.
  *
  * Pure: no IO. Caller supplies the quote list already loaded.
- * `approval` may be missing (treated as 'draft', which yields 0 actions
- * for most roles) so legacy quotes never inflate the count.
  */
+const ACTIONABLE_FROM = new Set(['quote_to_sale']);
+
 export function countActionable(quotes, user) {
   if (!Array.isArray(quotes) || !user) return 0;
   let n = 0;
   for (const q of quotes) {
-    // Sprint 1.7e — exclude soft-deleted quotes. Sprint 13 added the
-    // soft-delete flag (`deleted_at`); the inbox page already hides
-    // those rows but this counter was scanning the raw `loadQuotes()`
-    // list, so a deleted-but-not-purged quote in PENDING_SALES kept
-    // the sidebar badge stuck on "1" forever. Same kind of fix as the
-    // Dashboard collectMetrics scan (Sprint 1.7).
+    // Sprint 1.7e — exclude soft-deleted quotes from the badge.
     if (q?.deleted_at) continue;
     const approval = q?.state?.approval;
-    if (!PENDING_STATES.has(currentStatus(approval))) continue;
-    if (availableActions(approval, user).length > 0) n++;
+    if (!ACTIONABLE_FROM.has(currentStatus(approval))) continue;
+    if (canUserSetStatus(user, 'price_approved')) n++;
   }
   return n;
 }

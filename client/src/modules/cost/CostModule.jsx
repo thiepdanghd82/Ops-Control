@@ -1,3 +1,7 @@
+/* eslint-disable react-refresh/only-export-components --
+   Co-locates the tab registry (TAB_COMPONENTS / TAB_TITLES / humanise)
+   and the shared <TabContent> with the module component so the window
+   manager and the classic shell read ONE source of truth. */
 import { lazy, Suspense } from 'react';
 // CostLibProvider is hoisted to AppBootstrap (Phase 10K) so library
 // data is preloaded once before the shell renders. No nested provider
@@ -29,6 +33,8 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 //     there to absorb that window gracefully.
 const IFSInventory = lazy(() => import('./tabs/IFSInventory'));
 const QuoteHistory = lazy(() => import('./tabs/QuoteHistory'));
+const NpiPartsList = lazy(() => import('./tabs/NpiPartsList'));
+const RfqTracking = lazy(() => import('./tabs/RfqTracking'));
 const PendingApprovalsInbox = lazy(() => import('./tabs/PendingApprovalsInbox'));
 const MaterialLibrary = lazy(() => import('./tabs/MaterialLibrary'));
 const Settings = lazy(() => import('./tabs/Settings'));
@@ -52,9 +58,6 @@ const Summarize = lazy(() => import('./tabs/Summarize'));
 const FormalQuotation = lazy(() => import('./tabs/FormalQuotation'));
 const AdminMetrics = lazy(() => import('./tabs/AdminMetrics'));
 const AuditLog = lazy(() => import('./tabs/AuditLog'));
-const KioskAdmin = lazy(() => import('./tabs/KioskAdmin.jsx'));
-// MES-3-V2 (KIOSK-002) — admin CRUD for kiosk reason codes.
-const ReasonCodes = lazy(() => import('./tabs/ReasonCodes.jsx'));
 // Help lives at the app level (not cost-specific) but routes through
 // the Cost sidebar since that's where users spend most of their time.
 // Planning module reuses the same HelpTab lazily when needed.
@@ -74,9 +77,11 @@ import './CostModule.css';
 // a sidebar tab can call preloadTab(id) so the chunk is warm by the
 // time the user clicks. Saves the Suspense flash for expected
 // navigation patterns.
-const TAB_COMPONENTS = {
+export const TAB_COMPONENTS = {
   'lib-inventory': IFSInventory,
   'quote-history': QuoteHistory,
+  'npi-parts-list': NpiPartsList,
+  'rfq-tracking': RfqTracking,
   'approvals-inbox': PendingApprovalsInbox,
   'lib-mat': MaterialLibrary,
   settings: Settings,
@@ -100,8 +105,6 @@ const TAB_COMPONENTS = {
   'formal-quote': FormalQuotation,
   metrics: AdminMetrics,
   'audit-log': AuditLog,
-  'kiosk-admin': KioskAdmin,
-  'reason-codes': ReasonCodes,
   help: HelpTab,
 };
 
@@ -120,9 +123,11 @@ function TabLoadingFallback() {
 // in routing + lazy chunks) to a human label. Keeping this here, next to
 // TAB_COMPONENTS, makes the two stay in sync — if you add a tab without a
 // label the fallback is a humanised version of the id.
-const TAB_TITLES = {
+export const TAB_TITLES = {
   'lib-inventory': 'IFS Inventory',
   'quote-history': 'Quote History',
+  'npi-parts-list': 'NPI Parts List',
+  'rfq-tracking': 'RFQ Tracking',
   'approvals-inbox': 'Approvals Inbox',
   'lib-mat': 'Materials Library',
   settings: 'Settings',
@@ -146,11 +151,10 @@ const TAB_TITLES = {
   'formal-quote': 'Formal Quotation',
   metrics: 'Admin Metrics',
   'audit-log': 'Audit Log',
-  'kiosk-admin': 'Kiosk Admin',
   help: 'Help',
 };
 
-function humanise(id) {
+export function humanise(id) {
   return String(id || '')
     .split(/[-_]/)
     .filter(Boolean)
@@ -158,25 +162,43 @@ function humanise(id) {
     .join(' ');
 }
 
-function CostModuleInner({ activeTab, onTabChange }) {
-  useDocumentTitle(TAB_TITLES[activeTab] || humanise(activeTab), 'Cost');
+// Resolve a tabId's human title (browser tab + window titlebar).
+export function tabTitle(tabId) {
+  if (tabId === 'home') return 'Home';
+  if (isLanding(tabId)) {
+    const sid = landingSectionId(tabId);
+    const section = COST_SECTIONS.find((s) => s.id === sid);
+    return section ? humanise(section.id) : humanise(sid);
+  }
+  return TAB_TITLES[tabId] || humanise(tabId);
+}
 
-  // Sprint S-HOME — operator dashboard at activeTab='home'.
-  if (activeTab === 'home') {
+/**
+ * Shared tab renderer — the SINGLE source of truth for what a tab's
+ * content is. Used by both the classic single-tab shell (via
+ * CostModuleInner) and every window in the window manager. `resetKey`
+ * lets a window scope its ErrorBoundary to the window id (so two
+ * windows of the same tab recover independently); it defaults to the
+ * tabId for the classic path (byte-identical to the pre-extraction
+ * behaviour).
+ */
+export function TabContent({ tabId, onTabChange, resetKey }) {
+  const rk = resetKey ?? tabId;
+
+  // Sprint S-HOME — operator dashboard at tabId='home'.
+  if (tabId === 'home') {
     return (
       <div className="cost-module">
-        <ErrorBoundary label="Cost → home" resetKey="home">
+        <ErrorBoundary label="Cost → home" resetKey={rk}>
           <HomePage onTabChange={onTabChange} />
         </ErrorBoundary>
       </div>
     );
   }
 
-  // Sprint S-LANDING — when activeTab is `landing:<sectionId>`, render
-  // the ERPAG-style feature grid for that section. Click on a card
-  // sets activeTab to the real lazy-loaded tab id.
-  if (isLanding(activeTab)) {
-    const sid = landingSectionId(activeTab);
+  // Sprint S-LANDING — `landing:<sectionId>` renders the feature grid.
+  if (isLanding(tabId)) {
+    const sid = landingSectionId(tabId);
     const section = COST_SECTIONS.find((s) => s.id === sid);
     if (!section) {
       return (
@@ -189,41 +211,45 @@ function CostModuleInner({ activeTab, onTabChange }) {
     }
     return (
       <div className="cost-module">
-        <ErrorBoundary label={`Cost → landing/${sid}`} resetKey={activeTab}>
+        <ErrorBoundary label={`Cost → landing/${sid}`} resetKey={rk}>
           <ModuleLanding section={section} onTabChange={onTabChange} />
         </ErrorBoundary>
       </div>
     );
   }
 
-  const Component = TAB_COMPONENTS[activeTab];
+  const Component = TAB_COMPONENTS[tabId];
 
   if (!Component) {
     return (
       <div className="cost-module cost-module-empty">
         <p>
-          Unknown tab: <b>{activeTab}</b>
+          Unknown tab: <b>{tabId}</b>
         </p>
         <p>Select a tab from the sidebar to get started.</p>
       </div>
     );
   }
 
-  // Suspense wraps the lazy component so the fallback renders while
-  // the chunk downloads. `key={activeTab}` makes sure switching tabs
-  // unmounts cleanly (useEffect cleanups fire, etc.) rather than
-  // React attempting to reconcile across tab boundaries.
+  // Suspense wraps the lazy component so the fallback renders while the
+  // chunk downloads. resetKey makes the boundary auto-recover on
+  // navigation (classic) / per-window (WM).
   return (
     <div className="cost-module">
-      <ErrorBoundary label={`Cost → ${activeTab}`} resetKey={activeTab}>
+      <ErrorBoundary label={`Cost → ${tabId}`} resetKey={rk}>
         <Suspense fallback={<TabLoadingFallback />}>
-          <AccessGate tabId={activeTab}>
+          <AccessGate tabId={tabId}>
             <Component />
           </AccessGate>
         </Suspense>
       </ErrorBoundary>
     </div>
   );
+}
+
+function CostModuleInner({ activeTab, onTabChange }) {
+  useDocumentTitle(TAB_TITLES[activeTab] || humanise(activeTab), 'Cost');
+  return <TabContent tabId={activeTab} onTabChange={onTabChange} />;
 }
 
 export default function CostModule(props) {

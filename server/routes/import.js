@@ -12,6 +12,7 @@ import { fileURLToPath } from 'url';
 import { requireRole } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 import { clearCache } from '../services/dataSync.js';
+import { checkPassword, audit } from '../services/authService.js';
 import {
   getBackupRoot,
   resolveBackupTarget,
@@ -33,6 +34,8 @@ import {
   shadowClearInventory,
   shadowClearMaterials,
 } from '../repositories/shadowWrite.js';
+import { resolveHeaderClaims } from '../services/importPipeline.js';
+import { uploadSingle } from '../utils/uploadGuard.js';
 
 // Convert {headers, rows[]} to array-of-objects for shadow-write mappers.
 function rowsAsObjects(headers, rows) {
@@ -86,13 +89,15 @@ function sweepStaleUploads() {
 sweepStaleUploads();
 
 // Configure multer for file uploads
+// 50 MB default: a full BOM/inventory "Export Current Data" now runs ~24 MB as
+// xlsx (≈19.5K rows), and the app must re-import what it exports. The earlier
+// 10 MB cap broke that round-trip. Routes are requireRole(4)-gated (trusted
+// admins only), and CSV export (much smaller) is the recommended path.
+// Override with OPS_IMPORT_MAX_MB.
+const IMPORT_MAX_MB = Number(process.env.OPS_IMPORT_MAX_MB) || 50;
 const upload = multer({
   dest: UPLOAD_TMP_DIR,
-  // Phase 10H — tightened from 50MB to 10MB. Legitimate BOM/routing
-  // imports have never hit 5MB in production; the old cap was a DoS
-  // vector (upload a 50MB zip-bomb Excel and bloat the parser).
-  // Override with OPS_IMPORT_MAX_MB for edge cases.
-  limits: { fileSize: (Number(process.env.OPS_IMPORT_MAX_MB) || 10) * 1024 * 1024 },
+  limits: { fileSize: IMPORT_MAX_MB * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (['.csv', '.xlsx', '.xls'].includes(ext)) {
@@ -219,7 +224,11 @@ function parseCSVLine(line, delimiter) {
  */
 async function parseExcel(filePath) {
   const XLSX = await import('xlsx');
-  const workbook = XLSX.readFile(filePath);
+  // xlsx's ESM build (xlsx.mjs — what `import('xlsx')` resolves to in this
+  // ESM server) does NOT auto-wire node fs, so XLSX.readFile() throws
+  // "Cannot access file" (redacted to internal_error). Read the bytes
+  // ourselves + XLSX.read(buffer) so it works regardless of fs-wiring.
+  const workbook = XLSX.read(fs.readFileSync(filePath));
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
   const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
@@ -284,7 +293,10 @@ const REQUIRED_HEADERS = {
   bom: ['Parent Part No', 'Component Part'],
   routing: ['Part No', 'Operation No', 'Work Centre No'],
   inventory: ['Part No'],
-  finishedGoods: ['Part No'],
+  // Finished Goods is a customer deal-price / catalog agreement list keyed by
+  // Catalog No (distinct from the Part-No inventory schema) — see
+  // FINISHED_GOODS_DATASET in importDatasets.js.
+  finishedGoods: ['Catalog No'],
   rawMaterials: ['Part No'],
 };
 
@@ -302,7 +314,7 @@ function clearJsDataFile(filePath, varName) {
 router.post(
   '/inventory',
   requireRole(4),
-  upload.single('file'),
+  uploadSingle(upload, 'file', IMPORT_MAX_MB),
   requireValidUpload,
   async (req, res) => {
     try {
@@ -370,7 +382,7 @@ router.post(
 router.post(
   '/finished-goods',
   requireRole(4),
-  upload.single('file'),
+  uploadSingle(upload, 'file', IMPORT_MAX_MB),
   requireValidUpload,
   async (req, res) => {
     try {
@@ -411,7 +423,7 @@ router.post(
 router.post(
   '/raw-materials',
   requireRole(4),
-  upload.single('file'),
+  uploadSingle(upload, 'file', IMPORT_MAX_MB),
   requireValidUpload,
   async (req, res) => {
     try {
@@ -449,45 +461,55 @@ router.post(
 );
 
 // POST /api/import/bom - Import manufacturing structures (BOM)
-router.post('/bom', requireRole(4), upload.single('file'), requireValidUpload, async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+router.post(
+  '/bom',
+  requireRole(4),
+  uploadSingle(upload, 'file', IMPORT_MAX_MB),
+  requireValidUpload,
+  async (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-    const ext = path.extname(req.file.originalname).toLowerCase();
-    let parsed;
+      const ext = path.extname(req.file.originalname).toLowerCase();
+      let parsed;
 
-    if (ext === '.csv') {
-      parsed = parseCSV(fs.readFileSync(req.file.path, 'utf-8'));
-    } else {
-      parsed = await parseExcel(req.file.path);
+      if (ext === '.csv') {
+        parsed = parseCSV(fs.readFileSync(req.file.path, 'utf-8'));
+      } else {
+        parsed = await parseExcel(req.file.path);
+      }
+
+      if (parsed.rows.length === 0) return res.status(400).json({ error: 'No data rows' });
+      validateHeaders(parsed.headers, REQUIRED_HEADERS.bom, 'Manufacturing Structures (BOM)');
+
+      const targetFile = path.join(
+        LIBRARY_DIR,
+        'Manufacturing_Structures',
+        'mfg_structures_data.js'
+      );
+      backupFile(targetFile);
+      writeJsDataFile(targetFile, 'window._CCL_MFG_DATA', parsed.headers, parsed.rows);
+      shadowWriteBom(rowsAsObjects(parsed.headers, parsed.rows));
+      clearCache();
+      fs.unlinkSync(req.file.path);
+
+      res.json({ ok: true, stats: { headers: parsed.headers.length, rows: parsed.rows.length } });
+    } catch (err) {
+      console.error('Import bom error:', err);
+      if (req.file?.path)
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {}
+      res.status(err.status || 500).json({ error: err.message });
     }
-
-    if (parsed.rows.length === 0) return res.status(400).json({ error: 'No data rows' });
-    validateHeaders(parsed.headers, REQUIRED_HEADERS.bom, 'Manufacturing Structures (BOM)');
-
-    const targetFile = path.join(LIBRARY_DIR, 'Manufacturing_Structures', 'mfg_structures_data.js');
-    backupFile(targetFile);
-    writeJsDataFile(targetFile, 'window._CCL_MFG_DATA', parsed.headers, parsed.rows);
-    shadowWriteBom(rowsAsObjects(parsed.headers, parsed.rows));
-    clearCache();
-    fs.unlinkSync(req.file.path);
-
-    res.json({ ok: true, stats: { headers: parsed.headers.length, rows: parsed.rows.length } });
-  } catch (err) {
-    console.error('Import bom error:', err);
-    if (req.file?.path)
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch {}
-    res.status(err.status || 500).json({ error: err.message });
   }
-});
+);
 
 // POST /api/import/routing - Import routing operations
 router.post(
   '/routing',
   requireRole(4),
-  upload.single('file'),
+  uploadSingle(upload, 'file', IMPORT_MAX_MB),
   requireValidUpload,
   async (req, res) => {
     try {
@@ -554,6 +576,11 @@ const CLEAR_TARGETS = {
     varName: 'window._CCL_RM_DATA',
     label: 'Raw Materials',
   },
+  'npi-parts': {
+    file: ['NpiParts', 'npi_parts_data.js'],
+    varName: 'window._CCL_NPIPARTS_DATA',
+    label: 'NPI Parts List',
+  },
 };
 
 // Map slug → shadow-clear function so DELETE /:slug also truncates the
@@ -566,25 +593,80 @@ const SHADOW_CLEAR_FNS = {
   'raw-materials': () => shadowClearInventory('raw_materials'),
 };
 
+function clientIp(req) {
+  return req.ip || req.connection?.remoteAddress || '0.0.0.0';
+}
+
+// Best-effort data-row count of a JS-AoA library file (for the audit trail).
+function countRowsInJsFile(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return 0;
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const m = content.match(/=\s*(\{[\s\S]*\})\s*;?\s*$/);
+    if (!m) return 0;
+    const parsed = JSON.parse(m[1]);
+    return Array.isArray(parsed.rows) ? parsed.rows.length : 0;
+  } catch {
+    return 0;
+  }
+}
+
+// Bulk-wipe of an imported dataset requires the caller to re-enter their
+// ACCOUNT PASSWORD (step-up), enforced here so a curl user can't bypass the
+// client modal. POST (not DELETE) because api.delete carries no body. The
+// existing requireRole(4) gate stays; the password check is ADDED on top.
 for (const [slug, cfg] of Object.entries(CLEAR_TARGETS)) {
-  router.delete(`/${slug}`, requireRole(4), (req, res) => {
-    try {
-      const targetFile = path.join(LIBRARY_DIR, ...cfg.file);
-      const backupPath = backupFile(targetFile);
-      clearJsDataFile(targetFile, cfg.varName);
-      const shadowFn = SHADOW_CLEAR_FNS[slug];
-      if (shadowFn) shadowFn();
-      clearCache();
-      res.json({
-        ok: true,
-        message: `${cfg.label} cleared`,
-        stats: { backup: backupPath ? path.basename(backupPath) : null },
-      });
-    } catch (err) {
-      logErr(req, `clear_${slug}`, err);
-      res.status(500).json({ error: redactErrorMessage(err) });
+  router.post(
+    `/${slug}/clear`,
+    requireRole(4),
+    // `password` optional at the schema layer so an ABSENT password takes the
+    // same "bad password" branch below (uniform failure), not a 400.
+    validateBody({ password: { type: 'string', required: false, max: 256 } }),
+    async (req, res) => {
+      const caller = req.user?.user;
+      const ip = clientIp(req);
+      // Verify the caller's CURRENT account password BEFORE wiping. Missing or
+      // wrong → HTTP 200 { ok:false, code:'bad_password' } (NOT 401 — the
+      // client's request() treats any 401 as session-expiry + force-logout).
+      // Nothing is touched. Mirrors the S-2FA-RESET step-up precedent.
+      const { password } = req.body || {};
+      if (!caller || !(await checkPassword(caller, password || ''))) {
+        audit(
+          'DATASET_CLEAR_DENIED',
+          caller?.username || '-',
+          ip,
+          JSON.stringify({ dataset: slug })
+        );
+        return res.json({ ok: false, code: 'bad_password', error: 'Account password incorrect' });
+      }
+      try {
+        const targetFile = path.join(LIBRARY_DIR, ...cfg.file);
+        const rowsBefore = countRowsInJsFile(targetFile);
+        const backupPath = backupFile(targetFile);
+        clearJsDataFile(targetFile, cfg.varName);
+        const shadowFn = SHADOW_CLEAR_FNS[slug];
+        if (shadowFn) shadowFn();
+        clearCache();
+        audit(
+          'DATASET_CLEAR',
+          caller.username,
+          ip,
+          JSON.stringify({ dataset: slug, user_id: caller.id, rows_before: rowsBefore })
+        );
+        res.json({
+          ok: true,
+          message: `${cfg.label} cleared`,
+          stats: {
+            backup: backupPath ? path.basename(backupPath) : null,
+            rows_before: rowsBefore,
+          },
+        });
+      } catch (err) {
+        logErr(req, `clear_${slug}`, err);
+        res.status(500).json({ error: redactErrorMessage(err) });
+      }
     }
-  });
+  );
 }
 
 // ─── NPI Materials & Sourcing DB import ───
@@ -697,20 +779,21 @@ function normKey(s) {
     .replace(/\s+/g, ' ');
 }
 
-function mapRowsByHeader(headers, rows, headerMap) {
-  // Build column-index → field-key lookup once.
-  const colToField = {};
-  headers.forEach((h, i) => {
-    const key = headerMap[normKey(h)];
-    if (key && !(key in colToField)) colToField[key] = i;
-  });
-  const fields = Object.keys(colToField);
+function mapRowsByHeader(headers, rows, headerMap, numberFields = []) {
+  // Tolerant matcher (Lesson 32) + confidence-ranked, data-aware conflict
+  // resolution (PR #211) via the shared resolver — so real export headers like
+  // "USD / M² PRICE" map instead of being silently dropped, AND when several
+  // columns match one field the EXACT header wins over a weak token-subset
+  // match regardless of column order (no more "first column in the file"
+  // stealing a field). `headerMap` is the same { normKey: canonical } shape.
+  const { claims } = resolveHeaderClaims(headers, headerMap, { numberFields, sampleRows: rows });
+  const fields = Object.keys(claims);
   if (fields.length === 0) return [];
   return rows
     .map((row) => {
       const obj = {};
       for (const f of fields) {
-        const v = row[colToField[f]];
+        const v = row[claims[f]];
         if (v !== undefined && v !== null && v !== '') obj[f] = v;
       }
       return obj;
@@ -741,7 +824,12 @@ function handleMaterialsImport(cfg) {
         return res.status(400).json({ ok: false, error: 'File has too few columns' });
       }
 
-      const mappedRows = mapRowsByHeader(parsed.headers, parsed.rows, cfg.headerMap);
+      const mappedRows = mapRowsByHeader(
+        parsed.headers,
+        parsed.rows,
+        cfg.headerMap,
+        cfg.numberFields || []
+      );
       if (mappedRows.length === 0) {
         return res.status(400).json({
           ok: false,
@@ -815,12 +903,13 @@ function handleMaterialsImport(cfg) {
 router.post(
   '/npi-materials',
   requireRole(4),
-  upload.single('file'),
+  uploadSingle(upload, 'file', IMPORT_MAX_MB),
   requireValidUpload,
   handleMaterialsImport({
     label: 'NPI Materials',
     filename: 'npi_materials.json',
     headerMap: NPI_HEADER_MAP,
+    numberFields: ['price', 'thick', 'moq', 'lt'],
     hintHeaders: ['Date', 'Material Name', 'Price', 'Type', 'Thickness', 'Supplier'],
   })
 );
@@ -903,7 +992,7 @@ function normaliseRateRow(raw) {
 router.post(
   '/rate',
   requireRole(4),
-  upload.single('file'),
+  uploadSingle(upload, 'file', IMPORT_MAX_MB),
   requireValidUpload,
   async (req, res) => {
     try {
@@ -919,7 +1008,13 @@ router.post(
       // Map raw rows to internal field keys via fuzzy header matching, then
       // filter out rows without a workcenter name (blank separator rows in
       // the CSV, totals rows, etc.).
-      const mapped = mapRowsByHeader(parsed.headers, parsed.rows, RATE_HEADER_MAP)
+      const mapped = mapRowsByHeader(parsed.headers, parsed.rows, RATE_HEADER_MAP, [
+        'crew',
+        'machine_rate',
+        'labor_rate',
+        'mc_cost',
+        'oh_cost',
+      ])
         .map(normaliseRateRow)
         .filter((r) => r.workcenter && r.workcenter.length > 0);
 
@@ -977,12 +1072,13 @@ router.post(
 router.post(
   '/sourcing-db',
   requireRole(4),
-  upload.single('file'),
+  uploadSingle(upload, 'file', IMPORT_MAX_MB),
   requireValidUpload,
   handleMaterialsImport({
     label: 'Sourcing DB',
     filename: 'sourcing_db.json',
     headerMap: SOURCING_HEADER_MAP,
+    numberFields: ['exw', 'dap', 'moq', 'lt'],
     hintHeaders: ['Req. Date', 'Customer', 'Material', 'EXW Price', 'DAP Price', 'Supplier'],
   })
 );

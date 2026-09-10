@@ -108,26 +108,26 @@ test('variant.customer: Materials Ref Price column is hidden', async () => {
   const out = await exportQuote(makeQuote(), { variant: 'customer', lang: 'en' });
   const wb = await parseBuffer(out.buffer);
   const mat = wb.getWorksheet('03 Materials');
-  // Ref Price is col L (12th)
-  const col = mat.getColumn('L');
-  assert.equal(col.hidden, true, 'col L (Ref Price) must be hidden in customer variant');
+  // Ref Price is col M (13th) after drw_material column inserted at position 3.
+  const col = mat.getColumn('M');
+  assert.equal(col.hidden, true, 'col M (Ref Price) must be hidden in customer variant');
 });
 
 test('variant.internal: Materials Ref Price column is visible', async () => {
   const out = await exportQuote(makeQuote(), { variant: 'internal', lang: 'en' });
   const wb = await parseBuffer(out.buffer);
   const mat = wb.getWorksheet('03 Materials');
-  const col = mat.getColumn('L');
+  const col = mat.getColumn('M');
   // ExcelJS leaves `hidden` undefined when not set
-  assert.notEqual(col.hidden, true, 'col L (Ref Price) must be visible in internal variant');
+  assert.notEqual(col.hidden, true, 'col M (Ref Price) must be visible in internal variant');
 });
 
 test('variant.customer: Inks Ref Price column hidden', async () => {
   const out = await exportQuote(makeQuote(), { variant: 'customer', lang: 'en' });
   const wb = await parseBuffer(out.buffer);
   const inks = wb.getWorksheet('04 Inks');
-  // Ink Ref Price is col 12 (L)
-  const col = inks.getColumn('L');
+  // Ink Ref Price is col 13 (M) after scrap_pct inserted before it.
+  const col = inks.getColumn('M');
   assert.equal(col.hidden, true);
 });
 
@@ -135,15 +135,15 @@ test('variant.customer: Processes Tool Cost + Tool Life hidden', async () => {
   const out = await exportQuote(makeQuote(), { variant: 'customer', lang: 'en' });
   const wb = await parseBuffer(out.buffer);
   const proc = wb.getWorksheet('05 Processes');
-  // Tool Cost col 10 (J), Tool Life col 12 (L)
-  assert.equal(proc.getColumn('J').hidden, true, 'Tool Cost must be hidden');
-  assert.equal(proc.getColumn('L').hidden, true, 'Tool Life must be hidden');
+  // Full-parity order: Tool Cost col 13 (M), Tool Life col 15 (O).
+  assert.equal(proc.getColumn('M').hidden, true, 'Tool Cost must be hidden');
+  assert.equal(proc.getColumn('O').hidden, true, 'Tool Life must be hidden');
 });
 
 test('variant.internal: Processes Tool Cost + Tool Life visible', async () => {
   const out = await exportQuote(makeQuote(), { variant: 'internal', lang: 'en' });
   const wb = await parseBuffer(out.buffer);
   const proc = wb.getWorksheet('05 Processes');
-  assert.notEqual(proc.getColumn('J').hidden, true);
-  assert.notEqual(proc.getColumn('L').hidden, true);
+  assert.notEqual(proc.getColumn('M').hidden, true);
+  assert.notEqual(proc.getColumn('O').hidden, true);
 });

@@ -14,17 +14,35 @@
  *   2. POST to /api/save-layout to persist it under data/Products layout/.
  *   3. Server names the file using the current CCL PN (so it's recoverable).
  */
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { Fragment, useMemo, useState, useEffect, useCallback } from 'react';
 import { useCalc } from '../../../../context/CalcContext';
+import { useCostLib } from '../../../../context/CostLibContext';
 import { sharedApi } from '../../../../services/api';
 import { calcPitch, calcLayoutPerSheet } from '../../../../services/calcEngine';
+import {
+  computePlateCost,
+  getPlateBaseCost,
+  getPlateFilmCost,
+  normPrintType,
+} from '../../../../services/plateCost';
+import { computeCutterCost, effCavity } from '../../../../services/cutterCost';
 import FileUploadZone from '../../../../components/Shared/FileUploadZone';
 import DecimalInput from '../../../../utils/DecimalInput';
 import DesignSyncPicker from './DesignSyncPicker';
 import { validateLayout } from '../../../../services/layoutValidation';
 
+// Print-cost block dropdown (Layout ▸ Print Design Layout). The 4 TOP-LEVEL
+// print types; Flexo + Silkscreen sub-variants are surfaced as a tooltip
+// (NOTE-A). Hardcoded for now — promote to a DDL (editable) or a grouped
+// <optgroup> of sub-variants as a follow-up if Henry wants them selectable.
+const PL_PRINT_TYPES = ['Letter Press', 'Flexo', 'Indigo6800', 'Silkscreen'];
+const PL_PRINT_TYPE_GROUPS =
+  'Nhóm in — Flexo = {Flexo(Gallus4C), Flexo(1C+1Cut Brotech), Flexo(1C+2Cut Brotech), ' +
+  'Flexo(2C+2Cut Brotech), Flexo(2C+1Cut Brotech)}; Silkscreen = {SS(Sheet), SS(Sheet Glue), ' +
+  'SS(R2R), SS(Sheet Auto)}.';
+
 export default function CalcLayout() {
-  const { stdState, setStdField } = useCalc();
+  const { stdState, setStdField, setStdDrawings } = useCalc();
   const st = stdState;
   // Lifted from PrintCutLayout so peer cards (Summary, Suggestion)
   // can show Print/Cut-specific content based on the active sub-tab.
@@ -178,6 +196,7 @@ export default function CalcLayout() {
                 onField={setStdField}
                 activeSub={activeSub}
                 onActiveSubChange={setActiveSub}
+                showCutterCost
               />
 
               <AdvancedLayoutBlock state={st} onField={setStdField} />
@@ -231,24 +250,28 @@ export default function CalcLayout() {
       <div className="cl-upload-grid">
         <FileUploadZone
           label="Design Layout Drawing"
-          file={st.layout_file}
+          multiple
+          files={st.layout_files || []}
+          activeIndex={st.layout_active || 0}
           endCu={st.end_cu}
           directCu={st.direct_cu}
           endCuPn={st.end_cu_pn}
           cclPn={st.ccl_pn}
-          onFileChange={(v) => setStdField('layout_file', v)}
-          onClear={() => setStdField('layout_file', null)}
+          onFilesChange={(next) => setStdDrawings('layout', next)}
+          onActiveChange={(idx) => setStdDrawings('layout', undefined, idx)}
         />
         <FileUploadZone
           label="Customer Drawing"
-          file={st.customer_drw_file}
+          multiple
+          files={st.customer_drw_files || []}
+          activeIndex={st.customer_drw_active || 0}
           endCu={st.end_cu}
           directCu={st.direct_cu}
           endCuPn={st.end_cu_pn}
           cclPn={st.ccl_pn}
           nameSuffix="_cust"
-          onFileChange={(v) => setStdField('customer_drw_file', v)}
-          onClear={() => setStdField('customer_drw_file', null)}
+          onFilesChange={(next) => setStdDrawings('customer_drw', next)}
+          onActiveChange={(idx) => setStdDrawings('customer_drw', undefined, idx)}
         />
       </div>
     </div>
@@ -517,6 +540,12 @@ export function AdvancedLayoutBlock({ state, onField }) {
 // takes a neutral `state` + `onField` shape so both stdState and a
 // sub-product row drive identical behaviour.
 
+// Cutter-cost block (Cutting Design Layout) — 4 type+cost pairs. Types are
+// sourced from the TOOL_TYPE DDL (lib.ddl.tool_type) so the list stays in
+// sync with the Drop-Down Lists editor; costs are calculated + read-only
+// (formula pending Henry). Std only — Cpx parity is a follow-up.
+const CUTTER_PAIR_COUNT = 4;
+
 const CUT_TYPE_OPTIONS = [
   { v: '', label: '(select)' },
   { v: 'kiss-cut', label: 'Kiss-cut (face only)' },
@@ -529,7 +558,13 @@ const CUT_TYPE_OPTIONS = [
 // `activeSub` + `onActiveSubChange` let the parent lift the sub-tab
 // state so peer cards (Layout Summary, Layout Suggestion) can react
 // to the same selection. Defaults to 'cut' when uncontrolled.
-export function PrintCutLayout({ state, onField, activeSub: controlledSub, onActiveSubChange }) {
+export function PrintCutLayout({
+  state,
+  onField,
+  activeSub: controlledSub,
+  onActiveSubChange,
+  showCutterCost = false,
+}) {
   const [localSub, setLocalSub] = useState('print');
   const activeSub = controlledSub !== undefined ? controlledSub : localSub;
   const setActiveSub = onActiveSubChange || setLocalSub;
@@ -679,7 +714,9 @@ export function PrintCutLayout({ state, onField, activeSub: controlledSub, onAct
       </div>
 
       {activeSub === 'print' && <PrintSubTab state={state} onField={onField} />}
-      {activeSub === 'cut' && <CutSubTab state={state} onField={onField} />}
+      {activeSub === 'cut' && (
+        <CutSubTab state={state} onField={onField} showCutterCost={showCutterCost} />
+      )}
     </div>
   );
 }
@@ -687,6 +724,35 @@ export function PrintCutLayout({ state, onField, activeSub: controlledSub, onAct
 // ── Print sub-tab: image net + bleed + plate cylinder ──────────
 
 function PrintSubTab({ state, onField }) {
+  const { lib } = useCostLib();
+  // Plate cost $ (display-only) — Henry's formula, keyed by Print type off the
+  // plate_base_cost DDL section. Not fed into calcEngine/cost/exporter.
+  const plateBase = getPlateBaseCost(lib, state.pl_print_type);
+  const filmCostDefault = getPlateFilmCost(lib); // Letter-press film-per-color suggestion
+  const isLetterPress = normPrintType(state.pl_print_type) === normPrintType('Letter Press');
+  const plateCost = useMemo(
+    () =>
+      computePlateCost(
+        {
+          pt: state.pl_print_type,
+          colors: state.pl_num_colors,
+          webW: state.web_width_td,
+          sheetL: state.sheet_length,
+          filmLp: state.pl_film_lp_cost,
+        },
+        { plateBase }
+      ),
+    [
+      state.pl_print_type,
+      state.pl_num_colors,
+      state.web_width_td,
+      state.sheet_length,
+      state.pl_film_lp_cost,
+      plateBase,
+    ]
+  );
+  const plateCostDisplay = plateCost == null ? '—' : plateCost.toFixed(2);
+
   const platePitch = state.plate_tooth
     ? (state.plate_tooth * (state.tooth_pitch_mm || 3.175)).toFixed(2)
     : '—';
@@ -716,6 +782,66 @@ function PrintSubTab({ state, onField }) {
         <span className="cl-pc-hint-eg">
           Ví dụ: Product 82×52 (thành phẩm) = Image Area 80×50 (vùng thiết kế) + Bleed 1 mm mỗi bên.
         </span>
+      </div>
+      {/* Print-cost block — additive UI, formula TBD (pending Henry). Renders
+          in the Print sub-view only. Shared by Std + Cpx via AdvancedLayoutBlock.
+          NOTE-A: dropdown = 4 top-level options; sub-variants shown as a tooltip.
+          NOTE-B: pl_num_colors is a SEPARATE field from Color Count above — if
+          Henry confirms they're the same quantity, bind "# No of colors" to
+          state.color_count instead of pl_num_colors to avoid double-entry. */}
+      <div className="sc-grid4 sc-print-cost-row">
+        <div className="sc-field" title={PL_PRINT_TYPE_GROUPS}>
+          <label>Print type</label>
+          <select
+            className="sc-input"
+            value={state.pl_print_type || ''}
+            onChange={(e) => onField('pl_print_type', e.target.value)}
+          >
+            <option value="">— Select —</option>
+            {PL_PRINT_TYPES.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div
+          className="sc-field"
+          title="Số màu in cho khối chi phí in. Tách biệt với Color Count ở trên (NOTE-B) trừ khi được xác nhận trùng."
+        >
+          <label># No of colors</label>
+          <DecimalInput
+            value={state.pl_num_colors}
+            onChange={(v) => onField('pl_num_colors', v)}
+            className="sc-input"
+            placeholder="e.g. 4"
+          />
+        </div>
+        <div
+          className="sc-field"
+          title="Film / letterpress plate film cost (USD mỗi màu). Chỉ dùng cho Letter Press; gợi ý = Film cost trong bảng Plate Base Cost."
+        >
+          <label>Film LP cost $</label>
+          <DecimalInput
+            value={state.pl_film_lp_cost}
+            onChange={(v) => onField('pl_film_lp_cost', v)}
+            className="sc-input"
+            placeholder={isLetterPress && filmCostDefault ? String(filmCostDefault) : '0'}
+          />
+        </div>
+        <div
+          className="sc-field"
+          title="Plate cost — tính toán, chỉ đọc (display-only). PB×((W+40)/1000)×((L+40)/1000)×#colors +C×FilmLP (Letter Press) / +7.5 (Flexo) / PB×#colors (Silk screen). PB = XLOOKUP bảng Plate Base Cost theo Print type."
+        >
+          <label>Plate cost $</label>
+          <input
+            type="text"
+            value={plateCostDisplay}
+            disabled
+            readOnly
+            className="sc-input sc-derived"
+          />
+        </div>
       </div>
       <PrintCutSizeMismatch state={state} onField={onField} />
       <div className="sc-grid4">
@@ -899,7 +1025,41 @@ function PrintSubTab({ state, onField }) {
 
 // ── Cut sub-tab: die grid + cut type + magnetic cylinder ──────
 
-function CutSubTab({ state, onField }) {
+function CutSubTab({ state, onField, showCutterCost = false }) {
+  // Cutter-type dropdowns source their options from the TOOL_TYPE DDL so the
+  // list stays in sync with the Drop-Down Lists editor. Fall back to [] if the
+  // library hasn't loaded (or the key is absent). Std only — the parent gates
+  // this via showCutterCost; Cpx never passes it.
+  const { lib } = useCostLib();
+  const toolTypes = Array.isArray(lib?.ddl?.tool_type) ? lib.ddl.tool_type : [];
+  // Array-aware immutable write: clone the pair array, set index i, dispatch
+  // the whole field via onField (mirrors how other indexed state updates go).
+  const setCutterType = (i, v) => {
+    const cur = Array.isArray(state.cutter_types) ? state.cutter_types.slice() : [];
+    while (cur.length < CUTTER_PAIR_COUNT) cur.push('');
+    cur[i] = v;
+    onField('cutter_types', cur);
+  };
+  // Cutter cost is COMPUTED by default (Dao cắt formula) but the cell is an
+  // editable OVERRIDE: state.cutter_costs[i] holds the override ('' = use auto).
+  const setCutterCost = (i, v) => {
+    const cur = Array.isArray(state.cutter_costs) ? state.cutter_costs.slice() : [];
+    while (cur.length < CUTTER_PAIR_COUNT) cur.push('');
+    cur[i] = v;
+    onField('cutter_costs', cur);
+  };
+  const resetCutterCost = (i) => setCutterCost(i, '');
+  // Per-cutter cavity is a computed-default (Cut Total/Shot) + editable
+  // OVERRIDE: state.cutter_cavities[i] ('' = use the global default). The
+  // cost formula uses THIS cavity per cutter (different dies per stage).
+  const setCutterCavity = (i, v) => {
+    const cur = Array.isArray(state.cutter_cavities) ? state.cutter_cavities.slice() : [];
+    while (cur.length < CUTTER_PAIR_COUNT) cur.push('');
+    cur[i] = v;
+    onField('cutter_cavities', cur);
+  };
+  const resetCutterCavity = (i) => setCutterCavity(i, '');
+
   const magPitch = state.magnetic_tooth
     ? (state.magnetic_tooth * (state.tooth_pitch_mm || 3.175)).toFixed(2)
     : '—';
@@ -934,8 +1094,164 @@ function CutSubTab({ state, onField }) {
   //                (all webs cut simultaneously on same stroke).
   const cutTotalPerShot = slit ? cutterCavity : numWebs * cutterCavity;
 
+  // Cutter cost inputs: product size (canonical, falls back to the Print ①
+  // Product Size) + cavity = Cut Total/Shot. Effective cost = the operator's
+  // override if set, else the computed Dao-cắt value.
+  const cutterWmm = Number(state.part_width) || Number(state.print_part_width) || 0;
+  const cutterLmm = Number(state.part_length_md) || Number(state.print_part_length_md) || 0;
+  // Effective cavity per cutter — the per-cutter override if set, else the
+  // global Cut Total/Shot. Cavity display cell (default + override + ↻ reset).
+  const cavityAt = (i) => {
+    const ovr = state.cutter_cavities?.[i];
+    const overridden = ovr != null && String(ovr).trim() !== '';
+    return { value: overridden ? ovr : cutTotalPerShot, overridden };
+  };
+  const cutterCostAt = (i) => {
+    const ovr = state.cutter_costs?.[i];
+    const overridden = ovr != null && String(ovr).trim() !== '';
+    if (overridden) return { value: ovr, overridden: true };
+    // Each cutter's circumference/cost uses ITS own cavity.
+    const dims = {
+      widthMm: cutterWmm,
+      lengthMm: cutterLmm,
+      cavity: effCavity(state.cutter_cavities?.[i], cutTotalPerShot),
+    };
+    const auto = computeCutterCost(state.cutter_types?.[i], dims, lib);
+    return { value: auto, overridden: false };
+  };
+  // Summary rows — one per non-empty Cutter type, using the effective cost.
+  const cutterPairs = [];
+  for (let i = 0; i < CUTTER_PAIR_COUNT; i++) {
+    const t = String(state.cutter_types?.[i] ?? '').trim();
+    if (t) cutterPairs.push({ type: t, cost: cutterCostAt(i).value });
+  }
+
   return (
     <div className="cl-pc-body">
+      {/* Cutter-cost block — additive UI, formula TBD (pending Henry). Sits at
+          the TOP of the Cutting sub-view, above the banner. Std only (gated by
+          showCutterCost); Cpx parity is a follow-up. 4 type+cost pairs: the
+          "Cutter type" dropdown is sourced from the TOOL_TYPE DDL; "Cutter cost"
+          is calculated + read-only. A dashed divider + wider gap separates the
+          block from the die-geometry grid (mirrors the Print .sc-print-cost-row). */}
+      {showCutterCost && (
+        <div className="sc-cutter-cost-row">
+          <div className="sc-cutter-block">
+            <div className="sc-cutter-fields">
+              {Array.from({ length: CUTTER_PAIR_COUNT }).map((_, i) => (
+                <Fragment key={i}>
+                  <div
+                    className="sc-field"
+                    title="Cutter type — nguồn từ danh sách TOOL_TYPE trong Drop-Down Lists editor."
+                  >
+                    <label>Cutter type {i + 1}</label>
+                    <select
+                      className="sc-input"
+                      value={state.cutter_types?.[i] ?? ''}
+                      onChange={(e) => setCutterType(i, e.target.value)}
+                    >
+                      <option value="">— Select —</option>
+                      {toolTypes.map((tt) => (
+                        <option key={tt} value={tt}>
+                          {tt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div
+                    className="sc-field"
+                    title="Số cavity của dao này. Mặc định = Cut Total/Shot; sửa khi dùng nhiều dao với số cavity khác nhau."
+                  >
+                    <label>Cutter cavities {i + 1}</label>
+                    {(() => {
+                      const cv = cavityAt(i);
+                      return (
+                        <div className="sc-cutter-cost-input">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            className={`sc-input${cv.overridden ? ' sc-cutter-cost-ovr' : ''}`}
+                            value={cv.value === '' || cv.value == null ? '' : String(cv.value)}
+                            placeholder="—"
+                            onChange={(e) => setCutterCavity(i, e.target.value)}
+                          />
+                          {cv.overridden && (
+                            <button
+                              type="button"
+                              className="sc-cutter-cost-reset"
+                              title="Reset về tự động"
+                              aria-label="Reset về tự động"
+                              onClick={() => resetCutterCavity(i)}
+                            >
+                              ↻
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                  <div
+                    className="sc-field"
+                    title="Cutter cost — tự tính theo công thức Dao cắt (chu vi × base + hằng số). Mặc định sync, sửa đè được; ↻ để về tự động."
+                  >
+                    <label>Cutter cost {i + 1} $</label>
+                    {(() => {
+                      const cc = cutterCostAt(i);
+                      return (
+                        <div className="sc-cutter-cost-input">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            className={`sc-input${cc.overridden ? ' sc-cutter-cost-ovr' : ''}`}
+                            value={cc.value === '' || cc.value == null ? '' : String(cc.value)}
+                            placeholder="—"
+                            onChange={(e) => setCutterCost(i, e.target.value)}
+                          />
+                          {cc.overridden && (
+                            <button
+                              type="button"
+                              className="sc-cutter-cost-reset"
+                              title="Reset về tự động"
+                              aria-label="Reset về tự động"
+                              onClick={() => resetCutterCost(i)}
+                            >
+                              ↻
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </Fragment>
+              ))}
+            </div>
+            <table className="sc-cutter-summary">
+              <thead>
+                <tr>
+                  <th>Cutter type</th>
+                  <th>Cutter cost $</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cutterPairs.length === 0 ? (
+                  <tr>
+                    <td className="sc-cutter-summary-empty" colSpan={2}>
+                      —
+                    </td>
+                  </tr>
+                ) : (
+                  cutterPairs.map((p, i) => (
+                    <tr key={i}>
+                      <td>{p.type}</td>
+                      <td>{p.cost || '—'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
       <div className="cl-pc-hint">
         <b>✂ Cutting Design Layout</b> — die outer size, grid, cut type, and magnetic cylinder. Die
         size is AUTHORITATIVE for the layout optimizer's geometry.

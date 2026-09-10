@@ -345,19 +345,31 @@ async function startEmbeddedServer() {
     process.env.OPS_TOTP_KEY = totpKey;
   }
 
-  // OPS_KIOSK_KEY — required by domains/planning/server/index.js (MES-2).
-  // Same electron-store pattern as TOTP key: generate once, persist across
-  // app restarts so kiosk JWTs remain valid. resolveKioskKey() throws fatal
-  // in NODE_ENV=production if missing — must populate before spawning server.
-  if (!process.env.OPS_KIOSK_KEY) {
-    let kioskKey = store.get('kioskKey');
-    if (!kioskKey || kioskKey.length !== 64) {
+  // OPS_KIOSK_KEY generation removed 2026-07-22 with the Kiosk PWA. The
+  // previously-persisted electron-store `kioskKey` (if any) is left inert.
+
+  // OPS_EXPORT_HMAC_KEY — required by Sprint S-EXPORT-MVP-2 quote xlsx
+  // export pipeline (preflight refuses prod boot if missing). Same
+  // electron-store pattern as TOTP + KIOSK: generate once, persist
+  // across app restarts so prior signed xlsx exports stay verifiable.
+  // Loss = MVP-3 re-import refuses pre-loss exports (per Recovery
+  // Playbook in CLAUDE.md) — make the generated key extremely durable
+  // via electron-store + `<userData>/.env` fallback path.
+  //
+  // CLIENT-build embedded mode hit this wall on Phase 6 Day 2 hardware
+  // verify (Henry's Mac DMG, 2026-06-10 17:21 onwards): fresh install
+  // had no .env seed → embedded server refused to start. Auto-gen
+  // closes the gap so CCL Hai Duong operators don't see "edit .env
+  // file manually" friction on first run.
+  if (!process.env.OPS_EXPORT_HMAC_KEY) {
+    let hmacKey = store.get('exportHmacKey');
+    if (!hmacKey || hmacKey.length !== 64) {
       const crypto = require('node:crypto');
-      kioskKey = crypto.randomBytes(32).toString('hex');
-      store.set('kioskKey', kioskKey);
-      log.info('[main] Generated new OPS_KIOSK_KEY (saved to electron-store)');
+      hmacKey = crypto.randomBytes(32).toString('hex');
+      store.set('exportHmacKey', hmacKey);
+      log.info('[main] Generated new OPS_EXPORT_HMAC_KEY (saved to electron-store)');
     }
-    process.env.OPS_KIOSK_KEY = kioskKey;
+    process.env.OPS_EXPORT_HMAC_KEY = hmacKey;
   }
 
   // Require Express server hiện tại — KHÔNG sửa code gốc
@@ -459,6 +471,46 @@ function getAppUrl() {
     );
   }
   return `http://127.0.0.1:${embeddedPort}`;
+}
+
+// ─── "Server connecting…" screen + retry-with-backoff ──────────────
+// Instead of firing the scary ERR_CONNECTION_REFUSED recovery dialog on the
+// FIRST loadURL failure (which surfaced during a boot race — renderer beats the
+// embedded server's port bind), show a calm "connecting" screen and poll
+// /health via probeServer (never throws) until the server answers, then load
+// the real app. Only fall back to the recovery dialog after the budget is spent.
+function connectingScreenHtml(url) {
+  return `<!doctype html><html lang="vi"><head><meta charset="utf-8"/>
+<style>
+  html,body{height:100%;margin:0}
+  body{display:flex;align-items:center;justify-content:center;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    background:#0f2341;color:#e6eef8}
+  .wrap{text-align:center;max-width:420px;padding:24px}
+  .spin{width:44px;height:44px;margin:0 auto 20px;border:4px solid rgba(255,255,255,.18);
+    border-top-color:#4f9cff;border-radius:50%;animation:s 1s linear infinite}
+  @keyframes s{to{transform:rotate(360deg)}}
+  h1{font-size:18px;font-weight:600;margin:0 0 8px}
+  p{font-size:13px;line-height:1.5;color:#a9bcd6;margin:6px 0}
+  code{color:#8fb8ff;font-size:12px}
+</style></head><body><div class="wrap">
+  <div class="spin"></div>
+  <h1>Đang kết nối máy chủ Ops Control…</h1>
+  <p>Server connecting — máy chủ đang khởi động, vui lòng chờ.</p>
+  <p><code>${String(url).replace(/[<>&"]/g, '')}</code></p>
+</div></body></html>`;
+}
+
+async function waitForServer(url, timeoutMs = 60000) {
+  const start = Date.now();
+  let delay = 400;
+  while (Date.now() - start < timeoutMs) {
+    const res = await probeServer(url); // { ok } — never throws
+    if (res && res.ok) return true;
+    await new Promise((r) => setTimeout(r, delay));
+    delay = Math.min(delay + 300, 2000); // gentle backoff, cap 2s
+  }
+  return false;
 }
 
 // ─── Tạo cửa sổ chính ──────────────────────────────────────────────
@@ -581,31 +633,75 @@ function createMainWindow() {
 
   const url = getAppUrl();
   log.info('[main] Loading URL:', url);
-  mainWindow.loadURL(url).catch((err) => {
-    log.error('[main] loadURL failed:', err);
-    // Offer one-click recovery: switch back to embedded mode + restart.
-    // Most failures here are user picked thin/smart with an unreachable
-    // remoteUrl; reverting to embedded gives them a working app to fix
-    // the URL from inside Settings.
+
+  // Show the connecting screen first, poll /health, then load the real app.
+  // The recovery dialog only appears after waitForServer's budget is spent —
+  // no more scary ERR_CONNECTION_REFUSED on a transient boot race.
+  mainWindow
+    .loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(connectingScreenHtml(url)))
+    .catch(() => {});
+
+  (async () => {
+    const ready = await waitForServer(url, 60000);
+    if (ready) {
+      try {
+        await mainWindow.loadURL(url);
+        return; // connected — done
+      } catch (err) {
+        log.error('[main] loadURL failed after server became ready:', err);
+        // fall through to the recovery dialog below
+      }
+    } else {
+      log.error('[main] server did not answer /health within budget:', url);
+    }
+    showConnectFailedDialog(url, new Error('ERR_CONNECTION_REFUSED (server unreachable)'));
+  })();
+}
+
+// Recovery dialog, extracted so createMainWindow's retry loop can call it only
+// after the connecting budget is exhausted.
+function showConnectFailedDialog(url, err) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  {
+    // Recovery dialog branches on BUILD_ROLE:
+    //   - server build: offer "Reset về Embedded" (correct — server runs
+    //     embedded; thin only when admin points at another server)
+    //   - client build: offer "Re-run setup wizard" (so operator fixes
+    //     the remoteUrl). DO NOT offer embedded — CLIENT has no DB
+    //     of its own; flipping to embedded creates a fresh empty DB
+    //     and breaks the operator → SERVER LAN topology.
+    // Bug surfaced 2026-06-11 by Henry: prior code defaulted CLIENT to
+    // "Reset về Embedded" which silently switched the role topology.
+    const isClientBuild = BUILD_ROLE === 'client';
     const choice = dialog.showMessageBoxSync(mainWindow, {
       type: 'error',
       title: 'Ops Control — không kết nối được server',
       message: `Không kết nối được tới ${url}`,
-      detail: `${err.message}\n\nApp đang ở mode "${store.get('mode')}". Có thể server LAN tắt, sai IP, hoặc firewall chặn.\n\nChọn "Reset về Embedded" để chuyển về server local và thử lại — config mode sẽ bị reset, anh có thể chỉnh lại trong Settings → ⇄ Chế độ kết nối sau khi vào được app.`,
-      buttons: ['Reset về Embedded + Restart', 'Thoát app', 'Bỏ qua'],
+      detail: isClientBuild
+        ? `${err.message}\n\nApp đang ở mode "${store.get('mode')}". Có thể SERVER LAN tắt, sai IP, hoặc firewall chặn.\n\nChọn "Chạy lại setup wizard" để nhập lại địa chỉ SERVER.`
+        : `${err.message}\n\nApp đang ở mode "${store.get('mode')}". Có thể server LAN tắt, sai IP, hoặc firewall chặn.\n\nChọn "Reset về Embedded" để chuyển về server local và thử lại — config mode sẽ bị reset, anh có thể chỉnh lại trong Settings → ⇄ Chế độ kết nối sau khi vào được app.`,
+      buttons: isClientBuild
+        ? ['Chạy lại setup wizard', 'Thoát app', 'Bỏ qua']
+        : ['Reset về Embedded + Restart', 'Thoát app', 'Bỏ qua'],
       defaultId: 0,
       cancelId: 2,
       noLink: true,
     });
     if (choice === 0) {
-      store.set('mode', 'embedded');
-      store.set('remoteUrl', '');
+      if (isClientBuild) {
+        // Clear remoteUrl so the setup wizard re-shows on relaunch.
+        // Do NOT touch mode — keep it as 'thin' (CLIENT default).
+        store.set('remoteUrl', '');
+      } else {
+        store.set('mode', 'embedded');
+        store.set('remoteUrl', '');
+      }
       app.relaunch();
       app.exit(0);
     } else if (choice === 1) {
       app.exit(1);
     }
-  });
+  }
 }
 
 // ─── Tray icon (chạy nền) ──────────────────────────────────────────
@@ -815,13 +911,30 @@ async function showClientFirstRunDialog() {
     if(!/:\\d+/.test(url)) url = url + ':3100';
     setStatus('Đang test ' + url + ' ...');
     $test.disabled=true;
+    // Probe via webRequest interceptor (handled in main process, Node http →
+    // no CORS). Direct fetch() from this data: URL is cross-origin to the
+    // target server → browser CORS chặn → "Failed to fetch". Bug surfaced
+    // 2026-06-11 (Henry's CCL Vietnam soft-launch). The interceptor reads
+    // the probe result from a callback URL and stuffs it into window.__probeResult.
     try {
-      const ctrl=new AbortController();
-      const t=setTimeout(()=>ctrl.abort(), 4000);
-      const res=await fetch(url + '/api/health', { signal: ctrl.signal });
-      clearTimeout(t);
-      if(res.ok){ setStatus('✓ Server OK — bấm "Lưu & tiếp tục"', 'ok'); $save.disabled=false; lastTestOk=true; $url.value=url; }
-      else { setStatus('✗ Server trả ' + res.status, 'err'); }
+      window.__probeResolve = null;
+      const probePromise = new Promise((resolve) => { window.__probeResolve = resolve; });
+      // Fire the intercepted "fetch" — main process catches the /__probe__
+      // URL pattern, runs probeServer() server-side, and responds back via
+      // a custom callback URL.
+      fetch('/__probe__?url=' + encodeURIComponent(url));
+      const r = await Promise.race([
+        probePromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('probe timeout')), 5000)),
+      ]);
+      if (r.ok) {
+        setStatus('✓ Server v' + (r.version || '?') + ' OK (' + r.ms + ' ms) — bấm "Lưu & tiếp tục"', 'ok');
+        $save.disabled = false;
+        lastTestOk = true;
+        $url.value = url;
+      } else {
+        setStatus('✗ Không kết nối được: ' + (r.error || 'unknown'), 'err');
+      }
     } catch(err){ setStatus('✗ Không kết nối được: ' + err.message, 'err'); }
     finally { $test.disabled=false; }
   });
@@ -860,6 +973,35 @@ async function showClientFirstRunDialog() {
         }
         callback({ cancel: true });
         if (!win.isDestroyed()) win.close();
+      }
+    );
+
+    // Intercept /__probe__?url=… "fetch" calls from the wizard's Test
+    // Connection button. Routes to main-process probeServer() (node:http)
+    // so CORS doesn't apply. Pushes the result back into the renderer via
+    // executeJavaScript → window.__probeResolve(). Bug fix 2026-06-11:
+    // direct fetch() from data: URL is cross-origin and blocked by CORS.
+    win.webContents.session.webRequest.onBeforeRequest(
+      { urls: ['*://*/__probe__*'] },
+      async (details, callback) => {
+        callback({ cancel: true });
+        try {
+          const u = new URL(details.url);
+          const targetUrl = u.searchParams.get('url') || '';
+          const result = await probeServer(targetUrl);
+          if (!win.isDestroyed()) {
+            const json = JSON.stringify(result).replace(/[\\'"]/g, (c) => '\\' + c);
+            win.webContents.executeJavaScript(
+              `window.__probeResolve && window.__probeResolve(JSON.parse('${json}'))`
+            );
+          }
+        } catch (e) {
+          if (!win.isDestroyed()) {
+            win.webContents.executeJavaScript(
+              `window.__probeResolve && window.__probeResolve({ok:false,error:${JSON.stringify(e.message)}})`
+            );
+          }
+        }
       }
     );
     win.on('closed', () => resolve());
@@ -1012,10 +1154,29 @@ app.whenReady().then(async () => {
     // client build → "enter server URL + test" dialog. If client user picks
     // "Skip", mode flips to embedded → we may need to start the local server
     // post-dialog. Server dialog is pure info, no follow-up needed.
+    // Recovery: detect users stuck in invalid state from prior installs
+    // (firstRunCompleted=true + thin + remoteUrl='') — reset the flag so
+    // the wizard fires this boot and they get a chance to set the URL.
+    // Otherwise the app would loadURL('') → ERR_INVALID_URL (-300) and
+    // they need to hand-edit electron-store config.json. Bug surfaced
+    // 2026-06-11 (Henry's CCL Vietnam soft-launch — rc2 CORS bug
+    // strand-stuck multiple operators in this state before PR #133 fix).
+    if (BUILD_ROLE === 'client' && store.get('firstRunCompleted')) {
+      const mode = store.get('mode');
+      const remoteUrl = store.get('remoteUrl') || '';
+      if (mode === 'thin' && remoteUrl.length === 0) {
+        log.warn(
+          '[main] recovering from invalid state: thin + empty remoteUrl → re-running wizard'
+        );
+        store.delete('firstRunCompleted');
+      }
+    }
+
     if (BUILD_ROLE !== 'generic' && !store.get('firstRunCompleted')) {
       try {
         if (BUILD_ROLE === 'server') {
           await showServerFirstRunDialog();
+          store.set('firstRunCompleted', true);
         } else if (BUILD_ROLE === 'client') {
           await showClientFirstRunDialog();
           // Client may have flipped to embedded via Skip — honour it now
@@ -1024,8 +1185,27 @@ app.whenReady().then(async () => {
             log.info('[main] client first-run skipped → starting embedded server');
             await startEmbeddedServer();
           }
+          // Defensive: only mark first-run complete if the wizard left the
+          // CLIENT in a bootable state. The wizard can resolve without the
+          // user saving (test failed, window closed via red X) — without
+          // this guard, app boots next time with mode='thin' + remoteUrl=''
+          // → loadURL('') → ERR_INVALID_URL (-300). Bug surfaced 2026-06-11
+          // when the CORS bug in the test button (PR #133) left users
+          // unable to save the URL → silent escape into the bad state.
+          // Either valid state allows firstRunCompleted=true:
+          //   - mode='thin'    AND remoteUrl non-empty
+          //   - mode='embedded' (no remoteUrl needed)
+          const mode = store.get('mode');
+          const remoteUrl = store.get('remoteUrl') || '';
+          if (mode === 'embedded' || (mode === 'thin' && remoteUrl.length > 0)) {
+            store.set('firstRunCompleted', true);
+          } else {
+            log.warn(
+              '[main] client first-run: wizard closed without saving URL ' +
+                `(mode=${mode}, remoteUrl="${remoteUrl}") — re-running wizard next launch.`
+            );
+          }
         }
-        store.set('firstRunCompleted', true);
       } catch (err) {
         log.error('[main] first-run dialog failed:', err);
       }
@@ -1173,4 +1353,23 @@ ipcMain.handle('ops:shell.openExternalFile', async (_e, { b64Data, ext } = {}) =
   const errMsg = await shell.openPath(tmpPath);
   if (errMsg) throw new Error(`shell.openPath: ${errMsg}`);
   return { path: tmpPath };
+});
+
+// Open a local folder in Finder/Explorer (Settings → Backup "Open backup
+// folder"). Validates the path exists + is a directory before handing it to
+// the OS — the renderer passes the server-reported backupRoot, a real local
+// path on the embedded SERVER install.
+ipcMain.handle('ops:shell.openPath', async (_e, { targetPath } = {}) => {
+  if (typeof targetPath !== 'string' || targetPath.length === 0) {
+    return { ok: false, error: 'openPath: targetPath is required' };
+  }
+  try {
+    if (!fs.statSync(targetPath).isDirectory()) {
+      return { ok: false, error: 'Not a folder' };
+    }
+  } catch {
+    return { ok: false, error: `Folder not found: ${targetPath}` };
+  }
+  const errMsg = await shell.openPath(targetPath);
+  return errMsg ? { ok: false, error: errMsg } : { ok: true };
 });

@@ -133,6 +133,16 @@ async function request(path, options = {}) {
 
   if (res.status === 401) {
     clearToken();
+    // Single-session: distinguish "kicked by a takeover on another machine"
+    // from an ordinary expiry so the UI can save the draft + show the right
+    // message. The server stamps body.reason='session-revoked' on kicked tokens.
+    let reason = '';
+    try {
+      const b = await res.clone().json();
+      reason = b?.reason || '';
+    } catch {
+      /* non-JSON 401 */
+    }
     // Phase 9L.3 — broadcast so the app can show a re-login modal
     // instead of blanking tabs. A custom window event is intercepted
     // by AuthContext (singleton owner of login UI state). Dispatched
@@ -140,16 +150,17 @@ async function request(path, options = {}) {
     // handler swallows the error.
     try {
       if (typeof window !== 'undefined') {
+        const name = reason === 'session-revoked' ? 'ops:session-revoked' : 'ops:session-expired';
         window.dispatchEvent(
-          new CustomEvent('ops:session-expired', {
-            detail: { path, method: (options.method || 'GET').toUpperCase() },
+          new CustomEvent(name, {
+            detail: { path, method: (options.method || 'GET').toUpperCase(), reason },
           })
         );
       }
     } catch {
       /* window missing in SSR/test envs */
     }
-    throw new Error('Session expired');
+    throw new Error(reason === 'session-revoked' ? 'Session revoked' : 'Session expired');
   }
 
   if (!res.ok) {
@@ -214,8 +225,19 @@ export const authApi = {
   // Sprint 1.6 — `remember` (boolean) toggles the 30-day vs 8h session.
   // Defaults to false so existing call sites that pass only (user, pwd)
   // get the original short-TTL behaviour.
-  login: (username, password, remember = false) =>
-    api.post('/auth/login', { username, password, remember: !!remember }),
+  // Single-session: opts carries { installation_id, hostname, force }. Existing
+  // 3-arg callers still work (opts defaults → server treats as 'web', no force).
+  login: (username, password, remember = false, opts = {}) =>
+    api.post('/auth/login', {
+      username,
+      password,
+      remember: !!remember,
+      installation_id: opts.installation_id,
+      hostname: opts.hostname,
+      force: !!opts.force,
+    }),
+  // User chose "Hủy" on the takeover dialog → audit-only (no session granted).
+  cancelSessionConflict: (username) => api.post('/auth/session-conflict-cancelled', { username }),
   logout: () => api.post('/auth/logout', {}),
   me: (opts = {}) => api.get('/auth/me', opts),
   getUsers: () => api.get('/auth/users'),
@@ -272,12 +294,16 @@ export const importApi = {
       file
     ),
   // Clear-data — each endpoint wipes only its own dataset and backs up the
-  // previous contents. Keeps tabs independent.
-  clearBom: () => api.delete('/import/bom'),
-  clearRouting: () => api.delete('/import/routing'),
-  clearInventory: () => api.delete('/import/inventory'),
-  clearFinishedGoods: () => api.delete('/import/finished-goods'),
-  clearRawMaterials: () => api.delete('/import/raw-materials'),
+  // previous contents. Keeps tabs independent. Requires the caller's account
+  // password (step-up); POST (not DELETE) so the { password } body is sent.
+  // Returns 200 { ok:false, code:'bad_password' } on a wrong/missing password
+  // (never thrown) so the confirm modal can show an inline error.
+  clearBom: (password) => api.post('/import/bom/clear', { password }),
+  clearRouting: (password) => api.post('/import/routing/clear', { password }),
+  clearInventory: (password) => api.post('/import/inventory/clear', { password }),
+  clearFinishedGoods: (password) => api.post('/import/finished-goods/clear', { password }),
+  clearRawMaterials: (password) => api.post('/import/raw-materials/clear', { password }),
+  clearNpiParts: (password) => api.post('/import/npi-parts/clear', { password }),
   status: () => api.get('/import/status'),
   // Server-side backup — copies the dataset's data file to destPath
   // (or an auto-named sibling if destPath is omitted). Admins only.
@@ -349,6 +375,8 @@ export const sharedApi = {
   getRouting: (partNo, opts = {}) =>
     partNo ? api.get(`/shared/routing/${partNo}`, opts) : api.get('/shared/routing', opts),
   getWorkCenters: (opts = {}) => api.get('/shared/work-centers', opts),
+  // NPI Parts List — returns { columns, rows, row_count, generated_at }.
+  getNpiParts: (opts = {}) => api.get('/shared/npi-parts', opts),
 
   // Cost data (read directly from JSON files)
   getMaterials: (opts = {}) => api.get('/shared/materials', opts),
@@ -527,6 +555,12 @@ export const costApi = {
   deleteUser: (id) => authCall('delete', `/auth/users/${id}`),
   setSessionTtl: (id, ttlHours) =>
     authCall('post', `/auth/users/${id}/session-ttl`, { ttl_hours: ttlHours }),
+  // Sprint S-2FA-RESET — SYS-only per-user 2FA reset (lost-phone recovery).
+  // Step-up: `password` is the SYS caller's own current password. The target
+  // must re-scan a new QR at their next login. Uses api.post (NOT authCall) so
+  // the 200 `{ ok:false, code:'bad_password' }` step-up response is returned to
+  // the caller instead of thrown — 403/404 still throw with err.status.
+  resetUser2fa: (id, { password }) => api.post(`/auth/users/${id}/reset-2fa`, { password }),
 
   // Rate — v1.3 N6 — migrated from legacy `/rate/*` to canonical
   // `/library/rate/*` (router lives at server/domains/library/routes/rate.js).
@@ -592,11 +626,23 @@ export const costApi = {
   loadAll: () => api.get('/load-all'),
   saveAll: (data) => api.post('/save-all', data),
 
+  // RFQ Tracking master list (registry-driven; distinct from the kanban
+  // rfq-tracker). GET returns the row array; POST bulk-saves (auto-backup).
+  getRfqTracking: (opts = {}) => api.get('/rfq-tracking', opts),
+  saveRfqTracking: (rows) => api.post('/rfq-tracking', rows),
+
   // Layout/drawing files — persisted to server's data/Products layout/ folder
   // Matches COST V1.0's saveLayoutToDisk + /api/layout/:name pattern
   saveLayout: ({ ccl_pn, ext, data, quote_id }) =>
     api.post('/save-layout', { ccl_pn: ccl_pn || 'unknown', ext, data, quote_id }),
   getLayout: (filename) => api.get(`/layout/${encodeURIComponent(filename)}`),
+
+  // System Control — global sidebar show/hide (SYS-only PUT). Read is open to
+  // any authenticated user (the sidebar needs it); the map also rides
+  // /api/runtime-config so normal page loads don't hit this endpoint.
+  getSidebarVisibility: () => api.get('/system/sidebar-visibility'),
+  updateSidebarVisibility: ({ hiddenTabs, hiddenSections }) =>
+    api.put('/system/sidebar-visibility', { hiddenTabs, hiddenSections }),
   listLayouts: () => api.get('/layouts'),
 
   // Quote save: delegates to the server's /api/quotes endpoint which
@@ -648,22 +694,4 @@ export const costApi = {
   // Đợt 6 — sys-only active sessions admin
   getActiveSessions: (opts = {}) => api.get('/auth/sessions', opts),
   revokeUserSessions: (username) => api.post('/auth/sessions/revoke', { username }),
-};
-
-// ─── Planning API (Node.js native) ───
-export const planningApi = {
-  getOrders: () => api.get('/planning/orders'),
-  createOrder: (order) => api.post('/planning/orders', order),
-  updateOrder: (id, data) => api.put(`/planning/orders/${id}`, data),
-  deleteOrder: (id) => api.delete(`/planning/orders/${id}`),
-
-  getWorkOrders: () => api.get('/planning/work-orders'),
-  createWorkOrder: (wo) => api.post('/planning/work-orders', wo),
-  updateWorkOrder: (id, data) => api.put(`/planning/work-orders/${id}`, data),
-
-  getWIP: () => api.get('/planning/wip'),
-  updateWIP: (woId, data) => api.put(`/planning/wip/${woId}`, data),
-
-  getCapacity: () => api.get('/planning/capacity'),
-  getMeta: () => api.get('/planning/meta'),
 };

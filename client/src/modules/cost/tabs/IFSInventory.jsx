@@ -4,6 +4,7 @@ import { useCachedFetch, invalidateCache } from '../../../hooks/useCachedFetch';
 import EmptyState from '../../../components/Shared/EmptyState';
 import SkeletonTable from '../../../components/Shared/SkeletonTable';
 import ImportWizard from '../../../components/Shared/ImportWizard';
+import ConfirmClearModal from '../../../components/Shared/ConfirmClearModal';
 import './IFSInventory.css';
 
 // Per sub-tab clear wiring. Imports go through the unified Import Wizard
@@ -12,19 +13,18 @@ import './IFSInventory.css';
 const IMPORT_CFG = {
   inventory: {
     wizardKey: 'inventory',
-    clear: () => importApi.clearInventory(),
+    clear: (password) => importApi.clearInventory(password),
     label: 'Full Inventory',
   },
   finishedGoods: {
     wizardKey: 'finished-goods',
-    clear: () => importApi.clearFinishedGoods(),
+    clear: (password) => importApi.clearFinishedGoods(password),
     label: 'Finished Goods',
   },
-  rawMaterials: {
-    wizardKey: 'raw-materials',
-    clear: () => importApi.clearRawMaterials(),
-    label: 'Raw Materials',
-  },
+  // Raw Materials retired from IFS Inventory 2026-06-25 — raw-material
+  // master moved to Material Cost › IFS Materials (ifs_materials.json).
+  // The server raw_materials feed stays alive (Planning Qty On Hand)
+  // until qty is migrated onto IFS Materials.
 };
 
 const PER_PAGE = 100;
@@ -75,30 +75,6 @@ const TAB_CONFIG = [
       >
         <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
         <polyline points="22 4 12 14.01 9 11.01" />
-      </svg>
-    ),
-  },
-  {
-    id: 'rawMaterials',
-    label: 'Raw Materials',
-    col: '#7c3aed',
-    brd: '#a855f7',
-    headerBg: '#faf5ff',
-    hover: '#faf5ff',
-    icon: (
-      <svg
-        viewBox="0 0 24 24"
-        width="20"
-        height="20"
-        fill="none"
-        stroke="white"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
-        <line x1="3" y1="6" x2="21" y2="6" />
-        <path d="M16 10a4 4 0 01-8 0" />
       </svg>
     ),
   },
@@ -176,7 +152,7 @@ function saveVisibleCols(tabId, cols) {
 }
 
 const IFS_TAB_KEY = 'ops-ifs-active-tab';
-const ALLOWED_IFS_TABS = ['inventory', 'finishedGoods', 'rawMaterials'];
+const ALLOWED_IFS_TABS = ['inventory', 'finishedGoods'];
 
 export default function IFSInventory() {
   // Sprint AR — hook-managed fetch. Multi-MB inventory response is
@@ -194,7 +170,6 @@ export default function IFSInventory() {
     () => ({
       inventory: rawInv?.inventory || [],
       finishedGoods: rawInv?.finishedGoods || [],
-      rawMaterials: rawInv?.rawMaterials || [],
     }),
     [rawInv]
   );
@@ -208,9 +183,10 @@ export default function IFSInventory() {
       return 'inventory';
     }
   });
-  const [busy, setBusy] = useState(false);
+  const [busy] = useState(false);
   const [msg, setMsg] = useState('');
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [clearOpen, setClearOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -239,26 +215,17 @@ export default function IFSInventory() {
     [activeTab, flash, refresh]
   );
 
-  const handleClear = useCallback(async () => {
-    const cfg = IMPORT_CFG[activeTab];
-    if (!cfg) return;
-    if (!window.confirm(`Clear all ${cfg.label} data? The current file will be backed up first.`))
-      return;
-    setBusy(true);
-    setMsg('Clearing…');
-    try {
-      await cfg.clear();
-      await sharedApi.refreshCache().catch(() => {});
+  // Post-clear reload — the wipe + password step-up run inside
+  // ConfirmClearModal (cfg.clear(password) for the active sub-tab).
+  const afterClear = useCallback(
+    (label) => {
+      sharedApi.refreshCache().catch(() => {});
       invalidateCache('ifs-inventory');
       refresh();
-      flash(`${cfg.label} cleared`);
-    } catch (err) {
-      console.error('Clear failed:', err);
-      flash('Clear failed: ' + (err.message || 'Unknown error'), 5500);
-    } finally {
-      setBusy(false);
-    }
-  }, [activeTab, flash, refresh]);
+      flash(`${label} cleared`);
+    },
+    [flash, refresh]
+  );
 
   if (loading)
     return (
@@ -298,7 +265,7 @@ export default function IFSInventory() {
         <button
           className="inv-header-btn danger"
           disabled={busy}
-          onClick={handleClear}
+          onClick={() => setClearOpen(true)}
           title={`Clear all ${tabCfg.label} data (backup kept)`}
         >
           {'\uD83D\uDDD1 Clear Data'}
@@ -325,6 +292,16 @@ export default function IFSInventory() {
           datasetKey={wizardCfg.wizardKey}
           datasetLabel={wizardCfg.label}
           onCommitted={handleWizardCommitted}
+        />
+      )}
+      {wizardCfg && (
+        <ConfirmClearModal
+          open={clearOpen}
+          onClose={() => setClearOpen(false)}
+          datasetLabel={wizardCfg.label}
+          rowCount={(data[activeTab] || []).length}
+          clearApi={(password) => wizardCfg.clear(password)}
+          onCleared={() => afterClear(wizardCfg.label)}
         />
       )}
     </div>

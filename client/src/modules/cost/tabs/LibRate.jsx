@@ -6,10 +6,20 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useCostLib } from '../../../context/CostLibContext';
 import { costApi, importApi } from '../../../services/api';
 import EmptyState from '../../../components/Shared/EmptyState';
+import Modal from '../../../components/Shared/Modal';
 import { SITES } from '../../../utils/sites';
 import DecimalInput from '../../../utils/DecimalInput';
+import {
+  DEFAULT_SPEED_UOMS,
+  migrateRowsUom,
+  visibleCustomUoms,
+  addCustomUom,
+  renameCustomUom,
+  deleteCustomUom,
+  rowsUseUom,
+  cascadeRowsUom,
+} from './rateUomManage.js';
 import './LibRate.css';
-const DEFAULT_SPEED_UOMS = ['', 'M/min', 'Mtr/Hr', 'Stamp/min', 'Pcs/H', 'Sheets/H', 'Sheet/H'];
 const ADD_NEW_SENTINEL = '__add_new__';
 
 // Custom UOMs persist to localStorage so they survive page reloads.
@@ -41,20 +51,96 @@ export default function LibRate() {
   const [importing, setImporting] = useState(false);
   const fileRef = useRef(null);
   const [customUoms, setCustomUoms] = useState(loadCustomUoms);
-  const allUoms = [
-    ...DEFAULT_SPEED_UOMS,
-    ...customUoms.filter((u) => !DEFAULT_SPEED_UOMS.includes(u)),
-  ];
+  // Manage-UOM modal (replaces the Electron-broken window.prompt).
+  const [manageOpen, setManageOpen] = useState(false);
+  const [newUomInput, setNewUomInput] = useState('');
+  const [manageError, setManageError] = useState('');
+  const [renameDraft, setRenameDraft] = useState({});
+  const allUoms = [...DEFAULT_SPEED_UOMS, ...visibleCustomUoms(customUoms)];
 
   useEffect(() => {
     const siteData = rawRates.rateSites?.[site];
     if (siteData && Array.isArray(siteData)) {
-      setRows(siteData.map((r) => ({ ...r })));
+      // CHANGE 3 — migrate legacy speed_uom labels to the new options for
+      // display/consistency. Label-only: calcEngine aliases the old tokens
+      // so no cost changes; persisted on the operator's next Save.
+      setRows(migrateRowsUom(siteData.map((r) => ({ ...r }))));
     } else {
       setRows([]);
     }
     setDirty(false);
   }, [site, rawRates]);
+
+  const persistCustom = useCallback((list) => {
+    setCustomUoms(list);
+    saveCustomUoms(list);
+  }, []);
+
+  const handleAddCustom = useCallback(() => {
+    const res = addCustomUom(customUoms, newUomInput);
+    if (!res.ok) {
+      setManageError(
+        res.error === 'builtin_collision'
+          ? 'That name is a built-in unit.'
+          : res.error === 'duplicate'
+            ? 'That unit already exists.'
+            : 'Enter a unit name.'
+      );
+      return;
+    }
+    persistCustom(res.list);
+    setNewUomInput('');
+    setManageError('');
+  }, [customUoms, newUomInput, persistCustom]);
+
+  const handleRenameCustom = useCallback(
+    (oldValue) => {
+      const draft = renameDraft[oldValue] ?? oldValue;
+      const res = renameCustomUom(customUoms, oldValue, draft);
+      if (!res.ok) {
+        setManageError(
+          res.error === 'builtin_collision'
+            ? 'That name is a built-in unit.'
+            : res.error === 'duplicate'
+              ? 'That unit already exists.'
+              : 'Enter a unit name.'
+        );
+        return;
+      }
+      persistCustom(res.list);
+      // Cascade the rename to any loaded rows using the old value.
+      setRows((prev) => {
+        const next = cascadeRowsUom(prev, oldValue, draft.trim());
+        if (next !== prev && next.some((r, i) => r !== prev[i])) setDirty(true);
+        return next;
+      });
+      setRenameDraft((d) => {
+        const { [oldValue]: _drop, ...rest } = d;
+        return rest;
+      });
+      setManageError('');
+    },
+    [customUoms, renameDraft, persistCustom]
+  );
+
+  const handleDeleteCustom = useCallback(
+    (value) => {
+      if (rowsUseUom(rows, value)) {
+        setManageError(`"${value}" is in use by a rate row — clear it first.`);
+        return;
+      }
+      persistCustom(deleteCustomUom(customUoms, value));
+      setManageError('');
+    },
+    [customUoms, rows, persistCustom]
+  );
+
+  const openManage = useCallback(() => {
+    setNewUomInput('');
+    setManageError('');
+    setRenameDraft({});
+    setManageOpen(true);
+  }, []);
 
   const updateRow = useCallback((idx, field, value) => {
     setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
@@ -298,29 +384,26 @@ export default function LibRate() {
                     onChange={(e) => {
                       const v = e.target.value;
                       if (v === ADD_NEW_SENTINEL) {
-                        const newUom = prompt('Enter new UOM (e.g. RPM, Cuts/min):');
-                        if (newUom && newUom.trim()) {
-                          const trimmed = newUom.trim();
-                          if (!allUoms.includes(trimmed)) {
-                            const next = [...customUoms, trimmed];
-                            setCustomUoms(next);
-                            saveCustomUoms(next);
-                          }
-                          updateRow(i, 'speed_uom', trimmed);
-                        }
-                        // Reset select back to current value if cancelled
+                        // Reset the select off the sentinel + open the manager.
                         e.target.value = r.speed_uom || '';
+                        openManage();
                       } else {
                         updateRow(i, 'speed_uom', v);
                       }
                     }}
                   >
-                    {allUoms.map((u) => (
-                      <option key={u} value={u}>
-                        {u || '—'}
-                      </option>
-                    ))}
-                    <option value={ADD_NEW_SENTINEL}>+ Add new...</option>
+                    {/* Include the row's current value even if it's a legacy
+                        label dropped from the list (e.g. Mtr/Hr) or a custom
+                        one — so it displays and still computes via the engine
+                        alias, never silently dropped. */}
+                    {(allUoms.includes(r.speed_uom) ? allUoms : [...allUoms, r.speed_uom]).map(
+                      (u) => (
+                        <option key={u} value={u}>
+                          {u || '—'}
+                        </option>
+                      )
+                    )}
+                    <option value={ADD_NEW_SENTINEL}>+ Add new…</option>
                   </select>
                 </td>
                 <td>
@@ -367,6 +450,100 @@ export default function LibRate() {
           </button>
         </div>
       </div>
+
+      <Modal
+        open={manageOpen}
+        onClose={() => setManageOpen(false)}
+        size="md"
+        ariaLabelledBy="lr-uom-title"
+      >
+        <Modal.Header id="lr-uom-title" title="Manage units (UOM)" />
+        <Modal.Body>
+          <div className="lr-uom-add">
+            <input
+              type="text"
+              className="lr-uom-input"
+              placeholder="New unit (e.g. RPM, Cuts/min)"
+              value={newUomInput}
+              onChange={(e) => {
+                setNewUomInput(e.target.value);
+                if (manageError) setManageError('');
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAddCustom();
+              }}
+            />
+            <button
+              type="button"
+              className="op-btn op-btn-primary"
+              onClick={handleAddCustom}
+              disabled={!newUomInput.trim()}
+            >
+              Add
+            </button>
+          </div>
+          {manageError && <div className="lr-uom-err">{manageError}</div>}
+
+          <div className="lr-uom-section">Built-in (used for machine speed — read-only)</div>
+          <ul className="lr-uom-list">
+            {DEFAULT_SPEED_UOMS.filter(Boolean).map((u) => (
+              <li key={u} className="lr-uom-item">
+                <span className="lr-uom-name">{u}</span>
+                <span className="lr-uom-badge">built-in</span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="lr-uom-section">Custom units</div>
+          {visibleCustomUoms(customUoms).length === 0 ? (
+            <div className="lr-uom-empty">No custom units yet.</div>
+          ) : (
+            <ul className="lr-uom-list">
+              {visibleCustomUoms(customUoms).map((u) => (
+                <li key={u} className="lr-uom-item">
+                  <input
+                    type="text"
+                    className="lr-uom-input lr-uom-rename"
+                    value={renameDraft[u] ?? u}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setRenameDraft((d) => ({ ...d, [u]: val }));
+                      if (manageError) setManageError('');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleRenameCustom(u);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="op-btn op-btn-ghost lr-uom-btn"
+                    onClick={() => handleRenameCustom(u)}
+                    disabled={(renameDraft[u] ?? u).trim() === u}
+                  >
+                    Rename
+                  </button>
+                  <button
+                    type="button"
+                    className="op-btn op-btn-ghost lr-uom-btn lr-uom-del"
+                    onClick={() => handleDeleteCustom(u)}
+                  >
+                    Delete
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <button
+            type="button"
+            className="op-btn op-btn-secondary"
+            onClick={() => setManageOpen(false)}
+          >
+            Done
+          </button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }

@@ -19,6 +19,7 @@ import {
   getRoutingForPart,
   getWorkCenters,
   getProducts,
+  getNpiParts,
   clearCache,
 } from '../services/dataSync.js';
 import * as repo from '../repositories/index.js';
@@ -44,18 +45,16 @@ import { inc as incMetric } from '../utils/metrics.js';
 import { redactErrorMessage, logErr } from '../utils/safeError.js';
 import { validateRows, machineProfileSchema } from '../services/librarySchema.js';
 
-// Actions the approval state machine accepts. Mirrored into validation
-// so the router rejects garbage before it reaches the state machine —
-// the 400 response then lists valid actions instead of surfacing the
-// internal machine error.
-const APPROVAL_ACTIONS = [
-  'SUBMIT',
-  'APPROVE_SALES',
-  'APPROVE_FINANCE',
-  'APPROVE',
-  'REJECT',
-  'REVOKE',
-];
+// Target statuses the quote-progress state machine accepts as the
+// `action` field of POST /approvals/:id/transition. Mirrored into
+// validation so the router rejects garbage before it reaches the
+// state machine — the 400 response then lists valid statuses instead
+// of surfacing the internal machine error.
+//
+// Sprint S-QUOTE-PROGRESS-V2 (2026-06-15) — the field name `action`
+// is kept for callsite compatibility with v1 clients still in flight,
+// but the values are now target statuses, not workflow verbs.
+const APPROVAL_ACTIONS = ['draft', 'quote_to_sale', 'price_approved', 'cancelled', 'rejected'];
 
 // sanitizeReason moved to utils/sanitize.js (Phase 9E.2) so it's
 // unit-testable without booting the router. Imported above.
@@ -169,6 +168,21 @@ router.get('/routing/:partNo', (req, res) => {
   }
 });
 
+// GET /api/shared/npi-parts - NPI Parts List (registry dataset 'npi-parts').
+// Reads the live Library file (seeded once from the bundled snapshot); the
+// tab used a static /npi-parts/parts-snapshot.json before import shipped.
+// File-only (no SQLite mirror) → read via dataSync directly, not the repo layer.
+router.get('/npi-parts', (req, res) => {
+  try {
+    const data = getNpiParts();
+    // ETag for the ~15-25 MB payload (25k×64), same pattern as BOM/Routing.
+    sendJsonWithEtag(req, res, data);
+  } catch (err) {
+    console.error('Error loading npi-parts:', err);
+    res.status(500).json({ error: 'Failed to load npi-parts data' });
+  }
+});
+
 // GET /api/shared/work-centers - All work centers
 router.get('/work-centers', (req, res) => {
   try {
@@ -187,8 +201,9 @@ router.get('/materials', (req, res) => {
   try {
     const matDB = readJson(path.join(LIB, 'MaterialCost', 'materials.json')) || [];
     const npiDB = readJson(path.join(LIB, 'MaterialCost', 'npi_materials.json')) || [];
+    const ifsDB = readJson(path.join(LIB, 'MaterialCost', 'ifs_materials.json')) || [];
     const sourcingDB = readJson(path.join(LIB, 'MaterialCost', 'sourcing_db.json')) || [];
-    res.json({ matDB, npiDB, sourcingDB });
+    res.json({ matDB, npiDB, ifsDB, sourcingDB });
   } catch (err) {
     res.status(500).json({ error: 'Failed to load materials' });
   }
@@ -367,7 +382,7 @@ router.post(
       const { current_approval, action, reason } = req.body;
       const result = approvalTransition({
         approval: current_approval,
-        action: String(action).toUpperCase(),
+        action: String(action).toLowerCase(),
         actorUser,
         reason: sanitizeReason(reason),
       });
@@ -380,10 +395,13 @@ router.post(
   }
 );
 
-// ── Atomic approval endpoint (Sprint 6.2) ────────────────────────────
+// ── Atomic quote-progress endpoint (Sprint 6.2 + V2 rewrite) ─────────
 //
 // POST /api/shared/approvals/:quoteId/transition
-// Body: { action: 'SUBMIT'|'APPROVE_SALES'|'APPROVE_FINANCE'|'APPROVE'|'REJECT'|'REVOKE', reason?: string }
+// Body: { action: 'draft'|'quote_to_sale'|'price_approved'|'cancelled'|'rejected', reason?: string }
+//   (Sprint S-QUOTE-PROGRESS-V2 — `action` is now a target status,
+//   not a workflow verb. `reason` required when action ∈ {cancelled,
+//   rejected}.)
 //
 // Reads the current quote from quote_history.json, applies the state
 // machine transition, writes the file atomically, appends a quote
@@ -422,12 +440,26 @@ function clientIp(req) {
 // users; if that grows we'll cache with an mtime check.
 function notificationRecipients({ toStatus, prevApproval, actorUsername }) {
   const users = loadUsers();
-  const usersWithRole = (role) =>
+  const usersWithSalesRole = () =>
     users
-      .filter((u) => u && Array.isArray(u.approval_roles) && u.approval_roles.includes(role))
+      .filter(
+        (u) =>
+          u &&
+          Array.isArray(u.approval_roles) &&
+          u.approval_roles.some((r) => r === 'sales' || r === 'sales_mgr')
+      )
       .map((u) => u.username);
 
-  const submitter = prevApproval?.submitted_by;
+  // Sprint S-QUOTE-PROGRESS-V2 — submitter / approver attribution
+  // collapsed into the single changed_by field. Legacy v1 records may
+  // still carry submitted_by / sales_approved_by / finance_approved_by;
+  // we fall back through them so notifications keep flowing for
+  // pre-rewrite quote data.
+  const lastActor =
+    prevApproval?.changed_by ||
+    prevApproval?.submitted_by ||
+    prevApproval?.sales_approved_by ||
+    prevApproval?.finance_approved_by;
   const out = [];
   const addDistinct = (username, reason) => {
     if (!username || username === actorUsername) return; // never notify the actor
@@ -435,21 +467,16 @@ function notificationRecipients({ toStatus, prevApproval, actorUsername }) {
     out.push({ recipient: username, recipient_reason: reason });
   };
 
-  if (toStatus === 'pending_sales') {
-    for (const u of usersWithRole('sales_mgr')) addDistinct(u, 'sales_mgr review queue');
-  } else if (toStatus === 'pending_finance') {
-    for (const u of usersWithRole('finance_dir')) addDistinct(u, 'finance_dir review queue');
-  } else if (toStatus === 'approved') {
-    if (submitter) addDistinct(submitter, 'your quote was approved');
+  if (toStatus === 'quote_to_sale') {
+    for (const u of usersWithSalesRole()) addDistinct(u, 'sales review queue');
+  } else if (toStatus === 'price_approved') {
+    if (lastActor) addDistinct(lastActor, 'your quote is now price-approved');
   } else if (toStatus === 'rejected') {
-    if (submitter) addDistinct(submitter, 'your quote was rejected — please revise');
+    if (lastActor) addDistinct(lastActor, 'your quote was rejected — please revise');
+  } else if (toStatus === 'cancelled') {
+    if (lastActor) addDistinct(lastActor, 'your quote was cancelled');
   } else if (toStatus === 'draft') {
-    // REVOKE path — tell the submitter + previous approvers their sign-off is cleared.
-    if (submitter) addDistinct(submitter, 'approval revoked — quote returned to draft');
-    if (prevApproval?.sales_approved_by)
-      addDistinct(prevApproval.sales_approved_by, 'sales approval revoked');
-    if (prevApproval?.finance_approved_by)
-      addDistinct(prevApproval.finance_approved_by, 'finance approval revoked');
+    if (lastActor) addDistinct(lastActor, 'quote returned to draft');
   }
   return out;
 }
@@ -487,7 +514,10 @@ router.post(
 
     const { action, reason: rawReason } = req.body;
     const reason = sanitizeReason(rawReason);
-    const normalizedAction = String(action).toUpperCase();
+    // Sprint S-QUOTE-PROGRESS-V2 — `action` is now a target status
+    // string ('draft' / 'quote_to_sale' / 'price_approved' /
+    // 'cancelled' / 'rejected'). Lowercase per the new enum.
+    const normalizedAction = String(action).toLowerCase();
 
     try {
       const result = await withLock(`quote:${quoteId}`, async () => {
@@ -499,48 +529,15 @@ router.post(
         const quote = quotes[idx];
         const prevApproval = quote.state?.approval || null;
 
-        // Phase 9E.4 — when APPROVE_FINANCE fires, freeze the pricing
-        // basis (site + live SGA rate) into the approval record. Read
-        // live Finance config on the server so we don't trust a client-
-        // provided value; this guarantees the snapshot reflects what
-        // Finance actually had at the approval moment.
-        let snapshot = null;
-        if (normalizedAction === 'APPROVE_FINANCE' || normalizedAction === 'APPROVE') {
-          const site = quote.state?.site || 'VN';
-          try {
-            const finSum = readJson(path.join(LIB, 'Finance', 'finance_sum.json')) || {};
-            const ratesBySite = finSum?.sga_rate_pct_by_site || {};
-            // Case-insensitive lookup matches client computeSga behavior.
-            let rate = ratesBySite[site];
-            if (rate == null) {
-              const nkey = String(site).trim().toLowerCase();
-              for (const [k, v] of Object.entries(ratesBySite)) {
-                if (String(k).trim().toLowerCase() === nkey) {
-                  rate = v;
-                  break;
-                }
-              }
-            }
-            snapshot = { site, sga_rate_pct: Number(rate) || 0 };
-          } catch (err) {
-            // Finance config unreadable → graceful-degrade to 0% so the
-            // approval isn't blocked. Sprint 12: log loudly so Ops sees
-            // the silent fallback. Without this the margin reporting on
-            // the approved quote looks fine to the user but uses 0% SGA
-            // when the live rate might have been 5%.
-            console.error(
-              `  ❌  APPROVE_FINANCE snapshot read failed (quote=${quoteId}, site=${site}): ${err?.message || err}. Falling back to 0% SGA.`
-            );
-            snapshot = { site, sga_rate_pct: 0 };
-          }
-        }
-
+        // rates_snapshot (Phase 9E.4 — freeze Finance SGA at
+        // APPROVE_FINANCE) was dropped in V2: Phase 5 Pricing Snapshot
+        // already freezes the entire pricing basis on every Save,
+        // which is broader coverage than the single-rate snapshot.
         const tr = approvalTransition({
           approval: prevApproval,
           action: normalizedAction,
           actorUser,
           reason,
-          snapshot,
         });
         if (!tr.ok) {
           return { status: 400, body: tr };
@@ -565,19 +562,11 @@ router.post(
           console.warn('  ⚠️  approvals append version:', e.message);
         }
 
-        // Sprint 12: include the frozen SGA snapshot in the audit entry
-        // when APPROVE_FINANCE fires. The snapshot is ALSO persisted on
-        // the quote (approval.rates_snapshot), but Finance/compliance
-        // auditors typically look at the append-only audit log first —
-        // having the rate inline makes "who signed off at what rate"
-        // traceable without cross-referencing quote state that could
-        // later be REVOKEd.
-        const snapSuffix = snapshot ? ` sga=${snapshot.sga_rate_pct}% site=${snapshot.site}` : '';
         audit(
           'APPROVAL_TRANSITION',
           actorUser.username,
           clientIp(req),
-          `quote=${quoteId} ${normalizedAction} ${prevApproval?.status || 'draft'}→${tr.approval.status}${snapSuffix}${reason ? ' reason=' + String(reason).slice(0, 200) : ''}`
+          `quote=${quoteId} ${prevApproval?.status || 'draft'}→${tr.approval.status}${reason ? ' reason=' + String(reason).slice(0, 200) : ''}`
         );
 
         // Sprint 6.6: enqueue notification records for the next reviewer
@@ -832,9 +821,26 @@ router.get('/rates', (req, res) => {
 // GET /api/shared/ddl - Drop-down lists
 router.get('/ddl', (req, res) => {
   try {
-    const ddlSites = readJson(path.join(LIB, 'DDL', 'ddl_sites.json')) || {};
+    const ddlSitesPath = path.join(LIB, 'DDL', 'ddl_sites.json');
+    const ddlSites = readJson(ddlSitesPath) || {};
     const ddl = readJson(path.join(LIB, 'DDL', 'ddl.json')) || {};
-    res.json({ ddlSites, ddl });
+    // _rev — content hash of ddl_sites.json (derived, NOT a stored field, so no
+    // schema change). The client echoes it back on /save-all so the server can
+    // reject a stale overwrite (two clients editing DDL) with 409. Empty when
+    // the file doesn't exist yet (first save always allowed).
+    let _rev = '';
+    try {
+      if (fs.existsSync(ddlSitesPath)) {
+        _rev = crypto
+          .createHash('sha256')
+          .update(fs.readFileSync(ddlSitesPath))
+          .digest('hex')
+          .slice(0, 16);
+      }
+    } catch {
+      /* hash best-effort — empty _rev just means "no concurrency check" */
+    }
+    res.json({ ddlSites, ddl, _rev });
   } catch (err) {
     res.status(500).json({ error: 'Failed to load DDL' });
   }
@@ -1734,122 +1740,141 @@ const mtUpload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-router.post('/machine-technical/:kind/import', mtUpload.single('file'), async (req, res) => {
-  const cu = requireWriter(req, res);
-  if (!cu) {
-    if (req.file)
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch {
-        /* ignore */
-      }
-    return;
-  }
-  if (!isAdminPlus(cu)) {
-    if (req.file)
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch {
-        /* ignore */
-      }
-    return res.status(403).json({ error: 'admin_or_sys_required' });
-  }
-  const kind = req.params.kind;
-  if (!mtKindOk(kind)) {
-    if (req.file)
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch {
-        /* ignore */
-      }
-    return res.status(400).json({ error: 'bad_kind' });
-  }
-  if (!req.file) return res.status(400).json({ error: 'no_file' });
-
-  try {
-    const XLSX = (await import('xlsx')).default;
-    const wb = XLSX.readFile(req.file.path);
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-
-    // Detect shape: if first col header is 'Attribute' or contains all
-    // attribute names → transposed (attribute × machine).
-    // Else → rows-are-machines with first row as header.
-    let imported = [];
-    const FIELD_LIST = mtRead()._meta[`_${kind}_fields`] || [];
-    if (rows.length > 0 && FIELD_LIST.includes(String(rows[1]?.[0] || ''))) {
-      // Transposed — rebuild records.
-      const numCols = Math.max(...rows.map((r) => r.length));
-      for (let col = 1; col < numCols; col++) {
-        const rec = {};
-        for (let r = 1; r < rows.length; r++) {
-          const key = String(rows[r]?.[0] || '').trim();
-          if (!FIELD_LIST.includes(key)) continue;
-          let val = rows[r]?.[col];
-          if (val === '' || val === undefined) continue;
-          if (key.startsWith('has_')) val = val === 'Yes' || val === true;
-          rec[key] = val;
+// Sprint B3e / A4-02 (2026-06-19) — defense-in-depth: bulk-import
+// is operator-impactful (replaces machine technical data wholesale)
+// so symmetric `requireTabAccess('lib-machine-tech')` matches the
+// guard pattern on rfq-tracker + sample-tracking attachment routes.
+// The handler's inline `requireWriter` still runs (defense in depth,
+// not a replacement) — a viewer who somehow bypasses the middleware
+// still gets 401/403 from the inline check.
+router.post(
+  '/machine-technical/:kind/import',
+  requireTabAccess('lib-machine-tech'),
+  mtUpload.single('file'),
+  async (req, res) => {
+    const cu = requireWriter(req, res);
+    if (!cu) {
+      if (req.file)
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {
+          /* ignore */
         }
-        if (rec.brand || rec.model) imported.push(rec);
-      }
-    } else {
-      // Flat rows — header row + data rows.
-      const header = rows[0].map((h) => String(h || '').trim());
-      for (let r = 1; r < rows.length; r++) {
-        const rec = {};
-        header.forEach((h, i) => {
-          const v = rows[r]?.[i];
-          if (v !== '' && v !== undefined) rec[h] = v;
-        });
-        if (rec.brand || rec.model) imported.push(rec);
-      }
+      return;
     }
-
-    // Upsert by id (or synthesize id from brand-model).
-    const slug = (s) =>
-      String(s || '')
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 80);
-    let created = 0,
-      updated = 0;
-    await withLock('machine-technical', async () => {
-      const data = mtRead();
-      const list = data[kind];
-      for (const incoming of imported) {
-        const rec = { ...incoming };
-        if (!rec.id) rec.id = slug(`${rec.brand || 'unknown'}-${rec.model || Date.now()}`);
-        const idx = list.findIndex((x) => x.id === rec.id);
-        if (idx >= 0) {
-          list[idx] = { ...list[idx], ...rec };
-          updated++;
-        } else {
-          list.push(rec);
-          created++;
+    if (!isAdminPlus(cu)) {
+      if (req.file)
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {
+          /* ignore */
         }
-      }
-      mtWrite({ [kind]: list });
-      audit('MT_IMPORT', cu.username, req.ip, `${kind}: +${created} created, ~${updated} updated`);
-    });
+      return res.status(403).json({ error: 'admin_or_sys_required' });
+    }
+    const kind = req.params.kind;
+    if (!mtKindOk(kind)) {
+      if (req.file)
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {
+          /* ignore */
+        }
+      return res.status(400).json({ error: 'bad_kind' });
+    }
+    if (!req.file) return res.status(400).json({ error: 'no_file' });
 
     try {
-      fs.unlinkSync(req.file.path);
-    } catch {
-      /* ignore */
-    }
-    res.json({ ok: true, created, updated, total: imported.length });
-  } catch (err) {
-    if (req.file)
+      const XLSX = (await import('xlsx')).default;
+      // xlsx ESM build (xlsx.mjs) has no fs wired → readFile throws
+      // "Cannot access file"; read bytes + XLSX.read(buffer) instead.
+      const wb = XLSX.read(fs.readFileSync(req.file.path));
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // Detect shape: if first col header is 'Attribute' or contains all
+      // attribute names → transposed (attribute × machine).
+      // Else → rows-are-machines with first row as header.
+      let imported = [];
+      const FIELD_LIST = mtRead()._meta[`_${kind}_fields`] || [];
+      if (rows.length > 0 && FIELD_LIST.includes(String(rows[1]?.[0] || ''))) {
+        // Transposed — rebuild records.
+        const numCols = Math.max(...rows.map((r) => r.length));
+        for (let col = 1; col < numCols; col++) {
+          const rec = {};
+          for (let r = 1; r < rows.length; r++) {
+            const key = String(rows[r]?.[0] || '').trim();
+            if (!FIELD_LIST.includes(key)) continue;
+            let val = rows[r]?.[col];
+            if (val === '' || val === undefined) continue;
+            if (key.startsWith('has_')) val = val === 'Yes' || val === true;
+            rec[key] = val;
+          }
+          if (rec.brand || rec.model) imported.push(rec);
+        }
+      } else {
+        // Flat rows — header row + data rows.
+        const header = rows[0].map((h) => String(h || '').trim());
+        for (let r = 1; r < rows.length; r++) {
+          const rec = {};
+          header.forEach((h, i) => {
+            const v = rows[r]?.[i];
+            if (v !== '' && v !== undefined) rec[h] = v;
+          });
+          if (rec.brand || rec.model) imported.push(rec);
+        }
+      }
+
+      // Upsert by id (or synthesize id from brand-model).
+      const slug = (s) =>
+        String(s || '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '')
+          .slice(0, 80);
+      let created = 0,
+        updated = 0;
+      await withLock('machine-technical', async () => {
+        const data = mtRead();
+        const list = data[kind];
+        for (const incoming of imported) {
+          const rec = { ...incoming };
+          if (!rec.id) rec.id = slug(`${rec.brand || 'unknown'}-${rec.model || Date.now()}`);
+          const idx = list.findIndex((x) => x.id === rec.id);
+          if (idx >= 0) {
+            list[idx] = { ...list[idx], ...rec };
+            updated++;
+          } else {
+            list.push(rec);
+            created++;
+          }
+        }
+        mtWrite({ [kind]: list });
+        audit(
+          'MT_IMPORT',
+          cu.username,
+          req.ip,
+          `${kind}: +${created} created, ~${updated} updated`
+        );
+      });
+
       try {
         fs.unlinkSync(req.file.path);
       } catch {
         /* ignore */
       }
-    logErr(req, 'mt:import', err);
-    res.status(500).json({ error: redactErrorMessage(err) });
+      res.json({ ok: true, created, updated, total: imported.length });
+    } catch (err) {
+      if (req.file)
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {
+          /* ignore */
+        }
+      logErr(req, 'mt:import', err);
+      res.status(500).json({ error: redactErrorMessage(err) });
+    }
   }
-});
+);
 
 // GET /api/shared/sample-tracking - Sample tracking
 router.get('/sample-tracking', (req, res) => {
@@ -2360,75 +2385,85 @@ router.delete('/print-area/:sku', async (req, res) => {
 // when calling POST /print-area to save the job metadata. File is
 // content-addressed: re-uploading an identical image is a no-op on
 // disk (hash collision → existing file is reused).
-router.post('/print-area/upload', paUpload.single('artwork'), (req, res) => {
-  if (!requireWriter(req, res)) {
-    // We've consumed a multipart upload — best-effort cleanup of the
-    // disk artifact so a viewonly probe can't fill the tmpdir.
-    try {
-      if (req.file?.path) fs.unlinkSync(req.file.path);
-    } catch {
-      /* ignore */
-    }
-    return;
-  }
-  if (!req.file) return res.status(400).json({ error: 'no_file' });
-  const tmpPath = req.file.path;
-  const ext = path.extname(req.file.originalname || '').toLowerCase() || '.png';
-  try {
-    if (!paVerifyImageMagic(tmpPath, ext)) {
-      return res.status(400).json({ error: 'file_type_mismatch' });
-    }
-    paEnsureDirs();
-    const hash = paHashFile(tmpPath);
-    const finalName = `${hash}${ext}`;
-    const finalPath = path.join(PA_ARTWORK_DIR, finalName);
-    if (!fs.existsSync(finalPath)) {
-      // Move tmp → final. `renameSync` is atomic within a single
-      // filesystem but throws EXDEV across volumes (common on macOS
-      // where /tmp and user data live on different disks). Fall back
-      // to copy-then-unlink — not atomic but still safe because the
-      // content-addressed `finalName` makes the write idempotent.
+//
+// Sprint B3e / A4-02 (2026-06-19) — defense-in-depth: symmetric
+// `requireTabAccess('print-area')` matches the guard pattern used by
+// rfq-tracker + sample-tracking attachment routes. Inline
+// `requireWriter` still runs (defense in depth, not a replacement).
+router.post(
+  '/print-area/upload',
+  requireTabAccess('print-area'),
+  paUpload.single('artwork'),
+  (req, res) => {
+    if (!requireWriter(req, res)) {
+      // We've consumed a multipart upload — best-effort cleanup of the
+      // disk artifact so a viewonly probe can't fill the tmpdir.
       try {
-        fs.renameSync(tmpPath, finalPath);
-      } catch (err) {
-        if (err?.code === 'EXDEV') {
-          fs.copyFileSync(tmpPath, finalPath);
-          try {
-            fs.unlinkSync(tmpPath);
-          } catch {
-            /* ignore cleanup */
+        if (req.file?.path) fs.unlinkSync(req.file.path);
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    if (!req.file) return res.status(400).json({ error: 'no_file' });
+    const tmpPath = req.file.path;
+    const ext = path.extname(req.file.originalname || '').toLowerCase() || '.png';
+    try {
+      if (!paVerifyImageMagic(tmpPath, ext)) {
+        return res.status(400).json({ error: 'file_type_mismatch' });
+      }
+      paEnsureDirs();
+      const hash = paHashFile(tmpPath);
+      const finalName = `${hash}${ext}`;
+      const finalPath = path.join(PA_ARTWORK_DIR, finalName);
+      if (!fs.existsSync(finalPath)) {
+        // Move tmp → final. `renameSync` is atomic within a single
+        // filesystem but throws EXDEV across volumes (common on macOS
+        // where /tmp and user data live on different disks). Fall back
+        // to copy-then-unlink — not atomic but still safe because the
+        // content-addressed `finalName` makes the write idempotent.
+        try {
+          fs.renameSync(tmpPath, finalPath);
+        } catch (err) {
+          if (err?.code === 'EXDEV') {
+            fs.copyFileSync(tmpPath, finalPath);
+            try {
+              fs.unlinkSync(tmpPath);
+            } catch {
+              /* ignore cleanup */
+            }
+          } else {
+            throw err;
           }
-        } else {
-          throw err;
+        }
+      } else {
+        // File is already stored — discard the upload's tmp copy.
+        try {
+          fs.unlinkSync(tmpPath);
+        } catch {
+          /* ignore */
         }
       }
-    } else {
-      // File is already stored — discard the upload's tmp copy.
+      res.json({
+        ok: true,
+        artwork_file: path.join('Library', 'PrintArea', 'artworks', finalName),
+        hash,
+        size: req.file.size,
+        mime: req.file.mimetype,
+      });
+    } catch (err) {
+      // Always try to clean up tmp on error — a failed handler should
+      // not leave artifacts under /tmp.
       try {
         fs.unlinkSync(tmpPath);
       } catch {
         /* ignore */
       }
+      logErr(req, 'print-area:upload', err);
+      res.status(500).json({ error: redactErrorMessage(err) });
     }
-    res.json({
-      ok: true,
-      artwork_file: path.join('Library', 'PrintArea', 'artworks', finalName),
-      hash,
-      size: req.file.size,
-      mime: req.file.mimetype,
-    });
-  } catch (err) {
-    // Always try to clean up tmp on error — a failed handler should
-    // not leave artifacts under /tmp.
-    try {
-      fs.unlinkSync(tmpPath);
-    } catch {
-      /* ignore */
-    }
-    logErr(req, 'print-area:upload', err);
-    res.status(500).json({ error: redactErrorMessage(err) });
   }
-});
+);
 
 /** Parse window._VAR_NAME={...} from .js data file */
 function parseJsDataFile(filePath) {

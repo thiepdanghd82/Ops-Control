@@ -41,6 +41,34 @@
  *   aggregateComplex for Cpx).
  * @returns {KpiBuckets|null} null when no result yet.
  */
+/**
+ * Cost Breakdown "Total Proc" = the FULL process contribution to s_ttl for a
+ * calcAll/tier result: run overhead + run labor + tooling + the setup cluster
+ * (setup mach + setup labor).
+ *
+ * `r.overhead` / `r.labor_cost` are RUN-only — calcEngine strips setup out of
+ * them (calcEngine.js:1178-1179) and tracks it in `bd_setup_mach` /
+ * `bd_setup_labor`, folding setup back only inside the s_ttl aggregate. The
+ * Cost Breakdown "Total Proc" / PROCESS-column displays summed the run-only
+ * fields + tooling and FORGOT the setup cluster, so they read SMALLER than the
+ * sum of their own 5 detail rows (Setup Mach + Setup Labor + Overhead + Labor +
+ * Tooling) whenever setups are non-zero. This helper is the one source of
+ * truth for every such display (Std + Cpx). It equals
+ * getKpiBuckets(r).process + tooling (kpiBuckets keeps tooling as its own
+ * column; the breakdown folds it into Total Proc).
+ */
+export function procTotal(result) {
+  if (!result) return 0;
+  const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+  return (
+    num(result.overhead) +
+    num(result.labor_cost) +
+    num(result.tooling) +
+    num(result.bd_setup_mach) +
+    num(result.bd_setup_labor)
+  );
+}
+
 export function getKpiBuckets(result) {
   if (!result) return null;
   const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);

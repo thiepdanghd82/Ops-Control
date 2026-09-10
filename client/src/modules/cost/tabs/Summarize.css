@@ -98,6 +98,9 @@
   box-shadow: none;
   font-size: 12px;
   letter-spacing: 0.16px;
+  /* Approx column-label row height (padding 10×2 + ~16 line-box + 2 border).
+     Used to stack the select-hint row sticky-below instead of overlapping. */
+  --sum-header-h: 36px;
 }
 .sum-table thead th {
   position: sticky;
@@ -127,6 +130,44 @@
   line-height: 1.4;
   vertical-align: middle;
 }
+/* Multi-line bullet cell for Draw Materials / Quote Materials / Remark
+   / Process / Type of Material. Source string is a "- a\n- b" bullet
+   list (formatted by Summarize.materials.helpers.js); `white-space:
+   pre-line` honours the embedded \n. Cell is capped at 120px with a
+   thin custom scrollbar so a quote with 20 Main.Mat rows or a 12-line
+   Remark doesn't blow the row height to several screens tall — the
+   table layout stays predictable while operator still gets full
+   content via vertical scroll AND the `title` tooltip. */
+.sum-cell-multiline {
+  white-space: pre-line;
+  max-height: 120px;
+  overflow-y: auto;
+  line-height: 1.4;
+  padding: 4px 0;
+}
+.sum-cell-multiline::-webkit-scrollbar {
+  width: 4px;
+}
+.sum-cell-multiline::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+}
+.sum-cell-multiline::-webkit-scrollbar-track {
+  background: transparent;
+}
+/* Sprint S-SUMMARIZE-DATE-COL — DATE column. Mirrors QuoteHistory's
+   .qh-d-date / .qh-d-time cell typography so the two sidebar tables
+   read identically when an operator switches between Cost Breakdown
+   and Quote History. */
+.sum-d-date {
+  font-size: 11px;
+  color: var(--color-slate-600);
+}
+.sum-d-time {
+  font-size: 9px;
+  color: var(--color-slate-400);
+  margin-top: 1px;
+}
 .sum-table tbody tr {
   cursor: pointer;
 }
@@ -147,7 +188,9 @@
   background: #e0edff !important;
 }
 .sum-ctx-menu {
-  position: absolute;
+  /* fixed so the menu escapes the table's overflow clipping; placed
+     edge-aware + draggable by useFloatingMenu (menuPosition.js). */
+  position: fixed;
   z-index: 9999;
   min-width: 220px;
   background: rgba(255, 255, 255, 0.96);
@@ -182,6 +225,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 260px;
+  cursor: move;
+  user-select: none;
 }
 .sum-ctx-divider {
   height: 1px;
@@ -281,7 +326,12 @@
   cursor: pointer;
   vertical-align: middle;
 }
-.sum-select-header-row > th {
+/* Specificity must beat `.sum-table thead th` (1 class + 2 type = 12)
+   so the `top:` override actually wins — without `.sum-table thead`
+   prefix the var resolves to the right value but `top:0` from the
+   broader rule overrides it and both header rows stack at y=0,
+   hiding the column-label row behind the hint row on scroll. */
+.sum-table thead .sum-select-header-row > th {
   background: #f8fafc;
   font-weight: 400;
   font-style: italic;
@@ -291,6 +341,10 @@
   border-bottom: 1px solid #e2e8f0;
   text-align: left;
   cursor: default;
+  /* Stack below the column-label row instead of overlapping at top:0
+     (both rows live in <thead> and inherit position:sticky). */
+  top: var(--sum-header-h);
+  z-index: 1;
 }
 .sum-select-hint {
   letter-spacing: 0.01em;
@@ -298,4 +352,28 @@
 .sum-export-btn[disabled] {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* Phase 4 — Snapshot status pill in the optional Snapshot column.
+   Same Carbon-token palette as <StatusBadge> for visual consistency. */
+.sum-snap-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 12px;
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+}
+.sum-snap-pill-frozen {
+  background: #defbe6;
+  color: #0e6027;
+}
+.sum-snap-pill-live {
+  background: #fef3c7;
+  color: #92400e;
+}
+.sum-snap-pill-empty {
+  background: #e8e8e8;
+  color: #525252;
 }

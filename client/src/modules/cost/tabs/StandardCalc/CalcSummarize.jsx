@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import { calcAll, getActiveTierState } from '../../../../services/calcEngine';
+import { snapshotPricingParams } from '../../../../services/pricingSnapshot';
 import { fmtN, pct, gmClr } from '../../../../utils/format';
 import { KPI_TOOLTIPS } from '../../../../utils/kpiDefinitions';
 import ProcessFlowChart from '../ComplexCalc/ProcessFlowChart';
@@ -18,12 +19,13 @@ export default function CalcSummarize() {
   const tierSt = useMemo(() => getActiveTierState(st), [st]);
   const result = useMemo(() => {
     if (!lib) return null;
+    const { snapshot } = snapshotPricingParams(st, lib);
     try {
-      return calcAll(tierSt, null, lib, null);
+      return calcAll(tierSt, null, lib, null, { snapshot });
     } catch {
       return null;
     }
-  }, [tierSt, lib]);
+  }, [tierSt, lib, st]);
 
   const moqIdx = st.active_moq_idx || 0;
   const moqQty = moqIdx === 0 ? st.moq || 0 : st.extra_moqs?.[moqIdx - 1]?.moq || 0;

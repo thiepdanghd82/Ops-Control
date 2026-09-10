@@ -1,0 +1,61 @@
+# CODEOWNERS — Ops Control
+#
+# Phase 0.5 of Debug Playbook CI Green Sprint (2026-06-20). Pin
+# review ownership on the 5 "tử huyệt" files where regression has
+# the highest blast radius. Combined with branch protection (see
+# docs/ci/branch-protection-policy.md), these paths require explicit
+# approval from a CODEOWNER even when the PR author has merge rights.
+#
+# GitHub semantics: last matching rule wins. Owners listed by handle
+# OR team name (@org/team). For a 1-engineer + backup-engineer team
+# the pattern is "@henry @huong" so either can approve, but at least
+# one human review is required for these paths.
+#
+# When adding a new critical path, also add it to the 5-path list in
+# the Debug Playbook + docs/ci/branch-protection-policy.md table.
+
+# Default fallback — any file not matched below requires repo-admin review
+*                                       @thiepdanghd82
+
+# === 5 critical paths (mandatory 2-person review) ===
+
+# 1. Costing calculation engine — single source of truth for every
+# quote dollar amount. Bug here = financial misquote.
+client/src/services/calcEngine.js       @thiepdanghd82
+
+# 2. Pricing snapshot — the 20-year data reproducibility contract.
+# Bug here = cannot reload historical quotes correctly.
+client/src/services/pricingSnapshot.js  @thiepdanghd82
+
+# 3. Authentication service — TOTP, session, password rotation.
+# Bug here = lockout all 15 operators.
+server/services/authService.js          @thiepdanghd82
+
+# 4. Permission service — 3-layer auth resolution (role + dept + group).
+# Bug here = silent escalation OR unintended access denial.
+server/services/permissionService.js    @thiepdanghd82
+
+# 5. Deploy scripts — production cutover, snapshot rollback, env merge.
+# Bug here = unrecoverable production state.
+deploy.sh                               @thiepdanghd82
+deploy.ps1                              @thiepdanghd82
+
+# === Secondary paths (CODEOWNER review recommended, not enforced) ===
+
+# CI/CD workflow changes affect every PR — review carefully
+.github/workflows/                      @thiepdanghd82
+
+# Security allowlist hygiene — expiry dates encode review cadence
+security-allowlist.json                 @thiepdanghd82
+
+# ESLint config drift can silently allow bad code through
+eslint.config.js                        @thiepdanghd82
+client/eslint.config.js                 @thiepdanghd82
+
+# Commitlint config — change requires consensus on convention
+commitlint.config.js                    @thiepdanghd82
+
+# CLAUDE.md / agent docs — affect every future AI co-pilot session
+CLAUDE.md                               @thiepdanghd82
+AGENT_PRINCIPLES.md                     @thiepdanghd82
+CONTEXT.md                              @thiepdanghd82

@@ -1,0 +1,39 @@
+/* ConfirmClearModal — password step-up for Clear Data. Class-based (Lesson 6). */
+.ccm-body {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary, #1e293b);
+}
+.ccm-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 4px;
+}
+.ccm-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font: inherit;
+  border: 1px solid var(--border-subtle, #cbd5e1);
+  border-radius: 6px;
+  background: var(--surface-card, #fff);
+  color: var(--text-primary, #1e293b);
+}
+.ccm-input:focus {
+  outline: none;
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+.ccm-err {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #dc2626;
+}
+[data-theme='dark'] .ccm-input {
+  background: #0f172a;
+  border-color: #334155;
+}

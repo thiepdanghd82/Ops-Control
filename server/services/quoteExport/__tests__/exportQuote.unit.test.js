@@ -132,7 +132,7 @@ async function parseBuffer(buffer) {
 
 // ── Happy path ──────────────────────────────────────────────────
 
-test('exportQuote: customer variant → single xlsx with 10 sheets', async () => {
+test('exportQuote: customer variant → single xlsx with 11 sheets', async () => {
   const out = await exportQuote(makeFixtureQuote(), {
     variant: 'customer',
     lang: 'en',
@@ -154,10 +154,13 @@ test('exportQuote: customer variant → single xlsx with 10 sheets', async () =>
     .map((s) => s.name);
   // MVP-1 baseline = 10 visible sheets. MVP-2 adds _Audit + _Schema
   // as hidden sheets; they don't count toward the visible-sheet contract.
+  // Phase 4 (Sprint S-D20-PRICING-SNAPSHOT) adds "10 Pricing Snapshot"
+  // as an 11th visible sheet — operator-facing audit metadata for the
+  // frozen rates, distinct from the hidden _Audit forensic sheet.
   assert.equal(
     visibleNames.length,
-    10,
-    `expected 10 visible sheets, got ${visibleNames.length}: ${visibleNames}`
+    11,
+    `expected 11 visible sheets, got ${visibleNames.length}: ${visibleNames}`
   );
   assert.deepEqual(visibleNames, [
     '00 Cover',
@@ -170,6 +173,7 @@ test('exportQuote: customer variant → single xlsx with 10 sheets', async () =>
     '07 Pack Ship',
     '08 Cost Breakdown',
     '09 Summary',
+    '10 Pricing Snapshot',
   ]);
 });
 
@@ -183,7 +187,8 @@ test('exportQuote: internal variant produces same sheet count, different filenam
   assert.match(out.filename, /_internal_v2_/);
   const wb = await parseBuffer(out.buffer);
   const visible = wb.worksheets.filter((s) => s.state !== 'hidden' && s.state !== 'veryHidden');
-  assert.equal(visible.length, 10);
+  // Phase 4 — 10 baseline sheets + 1 Pricing Snapshot = 11.
+  assert.equal(visible.length, 11);
 });
 
 test('exportQuote: Cover sheet contains quote label + version + customer name', async () => {
@@ -201,6 +206,60 @@ test('exportQuote: Cover sheet contains quote label + version + customer name', 
   cover.eachRow((row) => row.eachCell((cell) => labels.push(String(cell.value || ''))));
   assert.ok(labels.includes('RFQ-TEST-001'), 'expected quote label on Cover');
   assert.ok(labels.includes('Test Customer'), 'expected customer on Cover');
+});
+
+// B3a — Sprint S-EXPORTER-SALEOWNER (2026-06-18). MES-3-FIX-58:
+// xlsx sheet 01 (RFQ MOQ) was reading `state.salesperson` — a field
+// that has never existed in the state shape. Canonical is
+// `state.sale_owner` (shared RfqInfoCard, present since MVP-1 and
+// surfaced as the Sale Owner column in Sprint S-SALE-OWNER-COL).
+// Result: the Salesperson row of every exported xlsx since MVP-1
+// has shown "—" even when the operator filled the Sale Owner field.
+// These 3 tests pin the fixed read order (sale_owner → legacy
+// salesperson → '—') so the same drift can't re-introduce silently.
+test('exportQuote: RFQ MOQ sheet Salesperson row reads state.sale_owner (MES-3-FIX-58)', async () => {
+  const q = makeFixtureQuote();
+  q.state.sale_owner = 'Mile Miao';
+  const out = await exportQuote(q, { variant: 'internal', lang: 'en' });
+  const wb = await parseBuffer(out.buffer);
+  const rfqSheet = wb.getWorksheet('01 RFQ MOQ');
+  const values = [];
+  rfqSheet.eachRow((row) => row.eachCell((cell) => values.push(String(cell.value || ''))));
+  assert.ok(
+    values.includes('Mile Miao'),
+    `expected Sale Owner 'Mile Miao' in Salesperson row of 01 RFQ MOQ sheet, got values: ${values.join(', ')}`
+  );
+});
+
+test('exportQuote: RFQ MOQ Salesperson row falls back to legacy state.salesperson', async () => {
+  const q = makeFixtureQuote();
+  q.state.salesperson = 'Legacy Name';
+  // sale_owner deliberately absent — legacy quote shape
+  const out = await exportQuote(q, { variant: 'internal', lang: 'en' });
+  const wb = await parseBuffer(out.buffer);
+  const rfqSheet = wb.getWorksheet('01 RFQ MOQ');
+  const values = [];
+  rfqSheet.eachRow((row) => row.eachCell((cell) => values.push(String(cell.value || ''))));
+  assert.ok(
+    values.includes('Legacy Name'),
+    `expected legacy salesperson 'Legacy Name' in Salesperson row, got values: ${values.join(', ')}`
+  );
+});
+
+test('exportQuote: RFQ MOQ Salesperson row renders em-dash when both fields missing', async () => {
+  const q = makeFixtureQuote(); // neither sale_owner nor salesperson set
+  const out = await exportQuote(q, { variant: 'internal', lang: 'en' });
+  const wb = await parseBuffer(out.buffer);
+  const rfqSheet = wb.getWorksheet('01 RFQ MOQ');
+  // Find the row whose label cell reads "Salesperson" (col A) and read col B.
+  let salespersonValue = null;
+  rfqSheet.eachRow((row) => {
+    const a = String(row.getCell('A').value || '');
+    if (a === 'Salesperson') {
+      salespersonValue = String(row.getCell('B').value || '');
+    }
+  });
+  assert.equal(salespersonValue, '—', 'expected em-dash when neither field set');
 });
 
 test('exportQuote: Materials sheet renders main row IFS code', async () => {

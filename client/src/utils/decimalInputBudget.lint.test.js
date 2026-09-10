@@ -40,8 +40,8 @@ const TABS_ROOT = path.join(__dirname, '..', 'modules', 'cost', 'tabs');
 // introduce native number inputs without being whitelisted here.
 const BUDGETS = {
   'InkCalculator.jsx': 2, // Sprint AD: swept; 2 readonly `calc_vol`/`vol_recipe` remain
-  'ComplexCalc/SubProductRow.jsx': 6, // Sprint AF: pitch_ovr/width/cavities/offcut_pct swept; area_pct/efficiency/scrap_pct/clicks/repeat/layout remain (int-percent × /100 or min=1 integer)
-  'StandardCalc/CalcProcesses.jsx': 4,
+  'ComplexCalc/SubProductRow.jsx': 7, // Sprint AF: pitch_ovr/width/cavities/offcut_pct swept; area_pct/efficiency/scrap_pct/clicks/repeat/layout remain (int-percent × /100 or min=1 integer); +1 crew (S-PROC-CREW, integer count)
+  'StandardCalc/CalcProcesses.jsx': 5, // +1 crew (S-PROC-CREW, integer count like rpt/layout)
   'StandardCalc/CalcMaterials.jsx': 4,
   'LibRate.jsx': 0, // Sprint AE: swept
   'StandardCalc/CalcPackingShip.jsx': 3,
@@ -55,6 +55,7 @@ const BUDGETS = {
   'FormalQuotation.jsx': 0, // Sprint AG: swept
   'ComplexCalc/BomTreeView.jsx': 1, // BOM qty is integer (step=1), no decimal-input bug
   'RFQTracker.jsx': 1, // stage.sla_days is integer days (step=1), no decimal-input bug
+  'RfqTracking.jsx': 5, // uncontrolled inline grid cells: plain num + rounded-int (est_revenue) + pct, plus 2 RangeFilter min/max filter inputs — all display-only / integer, no decimal-precision bug (MOQ/EAU use a text cell for thousands separators; the showcard editor uses DecimalInput)
   'SampleTracking.jsx': 1, // stage.sla_days is integer days (step=1), no decimal-input bug
   'StandardCalc/MachineProfileModal.jsx': 7, // admin CRUD form — integer/locale-free fields; no decimal-input bug
   'MachineTechnicalTab.jsx': 1, // single integer input (FieldInput for *_mm fields) — admin CRUD, not pricing input
@@ -62,7 +63,6 @@ const BUDGETS = {
   'Settings.jsx': 1, // numeric setting field — admin CRUD, integer
   'HardwareSection.jsx': 1, // COM/USB port + baud rate setup — integer hardware param
   'DesignTools/presses/GallusCalc.jsx': 1, // Z-cylinder selector min=1 max=999 — integer cylinder count
-  'ReasonCodeFormModal.jsx': 1, // MES-3-V2: sort_order min=0 max=9999 — integer admin CRUD, no decimal concern
 };
 
 function walk(dir) {

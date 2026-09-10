@@ -156,7 +156,7 @@ export default function AltMaterialsToggle({
   }, [pendingCopy, t]);
 
   return (
-    <div className="alt-mat-toggle" role="group" aria-label="Materials set selector">
+    <div className="alt-mat-toggle" role="group" aria-label="Materials set selector" data-kbd-skip>
       <label className={`alt-mat-pill ${active === 'main' ? 'alt-mat-pill-on' : ''}`}>
         <input
           type="radio"

@@ -318,3 +318,85 @@
   padding: 40px;
   color: var(--color-gray-400);
 }
+
+/* ── Manage-UOM modal (replaces the Electron-broken window.prompt) ── */
+.lr-uom-add {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.lr-uom-input {
+  flex: 1;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong, #c6c6c6);
+  border-radius: 4px;
+  background: var(--surface-card, #fff);
+  color: var(--text-primary, #161616);
+  font: inherit;
+  font-size: 13px;
+}
+.lr-uom-input:focus {
+  outline: none;
+  border-color: #0f62fe;
+  box-shadow: 0 0 0 2px color-mix(in oklab, #0f62fe, transparent 78%);
+}
+.lr-uom-err {
+  color: #da1e28;
+  font-size: 12.5px;
+  margin-bottom: 8px;
+}
+.lr-uom-section {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary, #6f6f6f);
+  margin: 14px 0 6px;
+}
+.lr-uom-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lr-uom-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+.lr-uom-name {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-primary, #161616);
+}
+.lr-uom-badge {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary, #6f6f6f);
+  background: color-mix(in oklab, var(--text-primary, #161616), transparent 92%);
+  border-radius: 3px;
+  padding: 2px 6px;
+}
+.lr-uom-empty {
+  font-size: 12.5px;
+  color: var(--text-secondary, #6f6f6f);
+  font-style: italic;
+}
+.lr-uom-rename {
+  flex: 1;
+  height: 30px;
+}
+.lr-uom-btn {
+  flex: 0 0 auto;
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12.5px;
+}
+.lr-uom-del:hover {
+  color: #da1e28;
+}

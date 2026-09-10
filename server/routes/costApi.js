@@ -11,6 +11,19 @@ import { fileURLToPath } from 'url';
 import multer from 'multer';
 import XLSX from 'xlsx';
 import { atomicWriteFileSync } from '../services/atomicWrite.js';
+import { collectDataBackups } from '../services/dataBackupList.js';
+import { getDataset } from '../services/importDatasets.js';
+import {
+  readSidebarVisibility,
+  validateVisibilityPayload,
+  writeSidebarVisibility,
+} from '../services/sidebarVisibility.js';
+import {
+  readExisting as readDatasetRows,
+  writeDataset as writeDatasetRows,
+  backupDataset,
+  datasetFilePath,
+} from '../services/importPipeline.js';
 import { redactErrorMessage, logErr, asSafeError } from '../utils/safeError.js';
 import { listLanIPv4, pickServerUrl } from '../utils/networkInfo.js';
 import { readFileSync as readFileSyncPkg } from 'fs';
@@ -71,6 +84,34 @@ function ensurePkgBackupDirs() {
   fs.mkdirSync(path.join(root, 'Code'), { recursive: true });
   fs.mkdirSync(path.join(root, 'Data'), { recursive: true });
   return root;
+}
+
+// The backup scheduler writes its daily full-data snapshots to
+// <DATA_DIR>/Backup/Data (sibling of PackageBackups). They carry the SAME
+// restoreFromSnapshot-compatible shape as the manual snapshots in
+// PackageBackups/Data, so the Restore picker must list + restore from BOTH —
+// otherwise operators see "No backups" even when the schedule card counts
+// several "data" snapshots. (Surfaced 2026-06-29 hardware verify.)
+function getAutoDataBackupDir() {
+  return path.join(getDataDir(), 'Backup', 'Data');
+}
+
+// Directories that hold restorable data-backup JSON snapshots, in
+// preference order (manual dir first so a same-named manual snapshot wins).
+function dataBackupDirs() {
+  return [path.join(getPkgBackupDir(), 'Data'), getAutoDataBackupDir()];
+}
+
+// Resolve a data-backup filename to a full path, checking the manual dir
+// first then the scheduler/auto dir. Returns null if not found in either.
+// safeFn guards against path traversal.
+function resolveDataBackupPath(filename) {
+  const fn = safeFn(filename);
+  for (const dir of dataBackupDirs()) {
+    const fp = path.join(dir, fn);
+    if (fs.existsSync(fp)) return fp;
+  }
+  return null;
 }
 
 // Source tree filter — used by both backup (copy out) and restore (copy back).
@@ -219,6 +260,8 @@ import {
   persistSessions,
   userMustHaveTotp,
   revokeSessionsForUser,
+  singleSessionEnabled,
+  findUserSessionConflict,
   listActiveSessions,
   isSys,
   isAdminPlus,
@@ -240,6 +283,8 @@ import {
   upsertQuote,
   VersionConflictError,
 } from '../repositories/quotesStore.js';
+import { filterQuoteHistory } from '../utils/quoteShape.js';
+import { recordSnapshotSave } from '../services/pricingSnapshotMetrics.js';
 import {
   setAuthCookies,
   clearAuthCookies,
@@ -603,7 +648,7 @@ function rateRows(rate) {
 }
 
 // Backup helpers
-function buildBackupSnapshot() {
+export function buildBackupSnapshot() {
   const LIB_DIR = getLibDir();
   const snap = { _backup_at: new Date().toISOString(), _version: 3 };
   const map = {
@@ -611,6 +656,7 @@ function buildBackupSnapshot() {
     summarizeDB: path.join(LIB_DIR, 'SummarizeDB', 'summarize_db.json'),
     matDB: path.join(LIB_DIR, 'MaterialCost', 'materials.json'),
     npiDB: path.join(LIB_DIR, 'MaterialCost', 'npi_materials.json'),
+    ifsDB: path.join(LIB_DIR, 'MaterialCost', 'ifs_materials.json'),
     sourcingDB: path.join(LIB_DIR, 'MaterialCost', 'sourcing_db.json'),
     rateDB: path.join(LIB_DIR, 'Rate', 'rate.json'),
     rateSitesDB: path.join(LIB_DIR, 'Rate', 'rate_sites.json'),
@@ -618,6 +664,11 @@ function buildBackupSnapshot() {
     ddlSitesDB: path.join(LIB_DIR, 'DDL', 'ddl_sites.json'),
     rfqTracker: path.join(LIB_DIR, 'RFQTracker', 'rfq_tracker.json'),
     sampleTracker: path.join(LIB_DIR, 'SampleTracking', 'sample_tracking.json'),
+    // RFQ Tracking master-list (PR #232). Plain JSON file behind
+    // GET/POST /api/rfq-tracking — NOT SQLite-backed, so a raw writeJson
+    // restore (the else-branch below) is correct; keep it OUT of the
+    // quoteHistory dual-writer special-case.
+    rfqTrackingDB: path.join(LIB_DIR, 'RFQTracking', 'rfq_tracking.json'),
     financeWCDB: path.join(LIB_DIR, 'Finance', 'finance_wc.json'),
     financeSumDB: path.join(LIB_DIR, 'Finance', 'finance_sum.json'),
     inkCalcDB: path.join(LIB_DIR, 'InkCalc', 'ink_calc.json'),
@@ -626,16 +677,33 @@ function buildBackupSnapshot() {
     const data = readJson(fp);
     if (data != null) snap[key] = data;
   }
+  // NPI Parts List — a JS-AoA library file (window._CCL_NPIPARTS_DATA={...};),
+  // NOT JSON, so the readJson map above can't handle it. Read via the dataset
+  // reader ({headers, rows}) and stash that; restore writes it back with the
+  // dataset writer so the wrapper survives (Lesson 34 — restore through the
+  // same writer the read path consumes). File-backed, no SQLite dual-writer.
+  try {
+    const npiPartsDs = getDataset('npi-parts');
+    if (npiPartsDs) {
+      const npi = readDatasetRows(npiPartsDs); // { headers, rows }
+      if (npi && Array.isArray(npi.rows) && npi.rows.length > 0) {
+        snap.npiPartsDB = { headers: npi.headers, rows: npi.rows };
+      }
+    }
+  } catch {
+    /* absent / unreadable → nothing to back up */
+  }
   return snap;
 }
 
-function restoreFromSnapshot(snap) {
+export function restoreFromSnapshot(snap) {
   const LIB_DIR = getLibDir();
   const map = {
     quoteHistory: path.join(LIB_DIR, 'QuoteHistory', 'quote_history.json'),
     summarizeDB: path.join(LIB_DIR, 'SummarizeDB', 'summarize_db.json'),
     matDB: path.join(LIB_DIR, 'MaterialCost', 'materials.json'),
     npiDB: path.join(LIB_DIR, 'MaterialCost', 'npi_materials.json'),
+    ifsDB: path.join(LIB_DIR, 'MaterialCost', 'ifs_materials.json'),
     sourcingDB: path.join(LIB_DIR, 'MaterialCost', 'sourcing_db.json'),
     rateDB: path.join(LIB_DIR, 'Rate', 'rate.json'),
     rateSitesDB: path.join(LIB_DIR, 'Rate', 'rate_sites.json'),
@@ -643,6 +711,11 @@ function restoreFromSnapshot(snap) {
     ddlSitesDB: path.join(LIB_DIR, 'DDL', 'ddl_sites.json'),
     rfqTracker: path.join(LIB_DIR, 'RFQTracker', 'rfq_tracker.json'),
     sampleTracker: path.join(LIB_DIR, 'SampleTracking', 'sample_tracking.json'),
+    // RFQ Tracking master-list (PR #232). Plain JSON file behind
+    // GET/POST /api/rfq-tracking — NOT SQLite-backed, so a raw writeJson
+    // restore (the else-branch below) is correct; keep it OUT of the
+    // quoteHistory dual-writer special-case.
+    rfqTrackingDB: path.join(LIB_DIR, 'RFQTracking', 'rfq_tracking.json'),
     financeWCDB: path.join(LIB_DIR, 'Finance', 'finance_wc.json'),
     financeSumDB: path.join(LIB_DIR, 'Finance', 'finance_sum.json'),
     inkCalcDB: path.join(LIB_DIR, 'InkCalc', 'ink_calc.json'),
@@ -650,14 +723,51 @@ function restoreFromSnapshot(snap) {
   const restored = [];
   const failed = [];
   for (const [key, fp] of Object.entries(map)) {
-    if (key in snap) {
-      try {
+    if (!(key in snap)) continue;
+    try {
+      if (key === 'quoteHistory') {
+        // P0 fix (2026-06-29): the box runs OPS_DATA_BACKEND=sqlite, so Quote
+        // History reads ops.db › quotes — NOT quote_history.json. A raw
+        // writeJson here rewrites the file but leaves ops.db at its post-delete
+        // state, so a quote deleted AFTER the backup never reappears on restore
+        // (silent data-loss). Route through the same dual-writer /save-all uses
+        // (saveQuotesStore): atomic JSON write + ops.db reconcile (DELETE … WHERE
+        // id NOT IN(kept) + upsert) so SQLite matches the snapshot exactly.
+        // Filter malformed rows first (parity with /save-all) — log, never drop
+        // silently — so a corrupt backup row can't poison the restore.
+        const { valid, dropped } = filterQuoteHistory(snap[key]);
+        if (dropped.length > 0) {
+          console.warn(
+            `  ⚠️  Restore quoteHistory: dropped ${dropped.length} malformed row(s): ` +
+              JSON.stringify(dropped.slice(0, 5))
+          );
+        }
+        saveQuotesStore(valid);
+      } else {
         writeJson(fp, snap[key]);
-        restored.push(key);
-      } catch (e) {
-        console.warn(`  ⚠️  Restore ${key}: ${e.message}`);
-        failed.push({ key, error: e.message || String(e) });
       }
+      restored.push(key);
+    } catch (e) {
+      console.warn(`  ⚠️  Restore ${key}: ${e.message}`);
+      failed.push({ key, error: e.message || String(e) });
+    }
+  }
+  // NPI Parts List — JS-AoA file; write via the dataset writer so the
+  // window._CCL_NPIPARTS_DATA={...}; wrapper is preserved (a raw writeJson
+  // would corrupt it). Matches dataSync.getNpiParts's read path (Lesson 34).
+  if ('npiPartsDB' in snap) {
+    try {
+      const npiPartsDs = getDataset('npi-parts');
+      if (npiPartsDs) {
+        writeDatasetRows(npiPartsDs, {
+          headers: snap.npiPartsDB.headers || [],
+          rows: snap.npiPartsDB.rows || [],
+        });
+        restored.push('npiPartsDB');
+      }
+    } catch (e) {
+      console.warn(`  ⚠️  Restore npiPartsDB: ${e.message}`);
+      failed.push({ key: 'npiPartsDB', error: e.message || String(e) });
     }
   }
   return { restored, failed };
@@ -676,6 +786,12 @@ router.post(
     // Sprint 1.6 — "Remember me" checkbox. When true, server issues a
     // 30-day session + 30-day cookie maxAge instead of the 8h default.
     remember: { type: 'boolean' },
+    // Single-session (SAP-style): which machine is logging in + its name, and
+    // whether to take over an existing session on another machine. Desktop
+    // sends the License Manager installation_id; web sends 'web'.
+    installation_id: { type: 'string', max: 64 },
+    hostname: { type: 'string', max: 120 },
+    force: { type: 'boolean' },
   }),
   async (req, res) => {
     const ip = clientIp(req);
@@ -686,11 +802,22 @@ router.post(
         .json({ ok: false, msg: '⛔ Too many login attempts. Try again after 60 seconds.' });
     }
     try {
-      const { username: rawUser, password, remember: rawRemember } = req.body || {};
+      const {
+        username: rawUser,
+        password,
+        remember: rawRemember,
+        installation_id: rawInstall,
+        hostname: rawHost,
+        force: rawForce,
+      } = req.body || {};
       const username = (rawUser || '').trim().toLowerCase();
       // Sprint 1.6 — coerce explicitly: only `true` extends TTL, anything
       // else (undefined / 0 / 'false' string) keeps the 8h default.
       const remember = rawRemember === true;
+      // Single-session metadata (default 'web'/'unknown' for browser clients).
+      const installationId = String(rawInstall || 'web').slice(0, 64);
+      const hostname = String(rawHost || 'web').slice(0, 120);
+      const force = rawForce === true;
 
       // Phase 10H per-username lockout. Cheaper than bcrypt verify, so
       // runs first. Sprint S-P0-FIX-3 (OWASP ASVS V4.0 §6.2.4) — response
@@ -727,6 +854,42 @@ router.post(
         return res.status(401).json({ ok: false, error: 'Invalid credentials' });
       }
       clearLoginFailures(username);
+
+      // ── Single-session enforcement (SAP-style takeover) ──────────────────
+      // Password is proven here. If the same user has a live session on ANOTHER
+      // machine, don't let a second one in silently. A non-stale conflict needs
+      // explicit takeover (force=true); a stale (idle) one is taken over
+      // automatically. No role is exempt. OPS_SINGLE_SESSION=0 disables it.
+      if (singleSessionEnabled()) {
+        const conflict = findUserSessionConflict(user.id, installationId);
+        if (conflict && !conflict.stale && !force) {
+          // Surface the conflict; client shows the takeover dialog. We do NOT
+          // create a session here — login is not granted until takeover.
+          return res.status(409).json({
+            ok: false,
+            error: 'session_conflict',
+            conflict: { hostname: conflict.hostname, last_activity: conflict.last_activity },
+          });
+        }
+        if (conflict) {
+          // force=true OR stale → take over: revoke the other machine's
+          // session(s) with a tombstone so it learns it was kicked.
+          const killed = revokeSessionsForUser(user.id, null, 'session-revoked');
+          audit(
+            'SESSION_TAKEOVER',
+            username,
+            ip,
+            JSON.stringify({
+              user: username,
+              from_host: hostname,
+              kicked_host: conflict.hostname,
+              stale: !!conflict.stale,
+              sessions_revoked: killed,
+            })
+          );
+        }
+      }
+
       // Check TOTP. Sprint 40 — fail-CLOSED when the secrets file can't
       // be decrypted. Sprint 41 — role-based hard enforcement closes the
       // "file missing → empty dict → bypass" hole: a user whose role
@@ -749,12 +912,19 @@ router.post(
           remember,
           totpVerified: false,
           totpEnrollmentPending: true,
+          installationId,
+          hostname,
         });
         totpEnrollmentRequired = true;
         audit('TOTP_ENROLLMENT_REQUIRED', username, ip, `role=${user.role}`);
       } else {
         const needsTotp = userHasSecret || secretsUnavailable;
-        token = createSession(user.id, { remember, totpVerified: !needsTotp });
+        token = createSession(user.id, {
+          remember,
+          totpVerified: !needsTotp,
+          installationId,
+          hostname,
+        });
       }
       audit('LOGIN_OK', username, ip);
       // Anomaly detection — runs AFTER the login is fully authenticated
@@ -834,6 +1004,20 @@ router.post(
     }
   }
 );
+
+// POST /api/auth/session-conflict-cancelled — the user saw the takeover dialog
+// and chose Hủy (did NOT kick the other machine). Audit-only; no auth, no state
+// change. Rate-limited to stop audit spam. CSRF-exempt (no session at login).
+router.post('/auth/session-conflict-cancelled', (req, res) => {
+  const ip = clientIp(req);
+  if (!checkRateLimit(ip)) return res.status(429).json({ ok: false });
+  const username = String(req.body?.username || '-')
+    .trim()
+    .toLowerCase()
+    .slice(0, 64);
+  audit('SESSION_CONFLICT_CANCELLED', username, ip, JSON.stringify({ user: username }));
+  return res.json({ ok: true });
+});
 
 // POST /api/auth/logout
 router.post('/auth/logout', (req, res) => {
@@ -1381,6 +1565,91 @@ router.post(
   }
 );
 
+// POST /api/auth/users/:id/reset-2fa
+//
+// Sprint S-2FA-RESET — SYS-only per-user TOTP reset for the "lost phone" case.
+// Deliberately STRICTER than the legacy DELETE /totp/secret/:username (admin+,
+// self-allowed, no audit): sys-only, no self-reset via this path, a step-up
+// password check, an audit row, and target-session revoke so re-enrollment is
+// forced on the target's next login. Removes the target's secret via the
+// race-safe updateTotpSecrets helper (NEVER raw file ops) and leaves
+// target.totp_required untouched so login re-enters the enrollment flow.
+router.post(
+  '/auth/users/:id/reset-2fa',
+  writeRateLimit,
+  validateBody({
+    // Step-up: the SYS caller's OWN current password. Optional at the schema
+    // layer so an absent password takes the SAME "bad password" branch below
+    // (uniform failure) instead of a 400 validation error.
+    password: { type: 'string', required: false, max: 256 },
+  }),
+  async (req, res) => {
+    const caller = getSessionUser(getTokenFromHeader(req));
+    // Gate: SYS only (roleLevel >= 5) — stricter than the old admin+ DELETE.
+    if (!isSys(caller)) return res.status(403).json({ error: 'Forbidden — SYS only' });
+    const uid = parseInt(req.params.id);
+
+    // ── STEP-UP AUTH (Option 2, modular) ──────────────────────────────────
+    // Verify the caller's CURRENT password before a security-sensitive reset,
+    // so an unattended-but-unlocked SYS session can't be abused. Remove this
+    // single block to disable step-up if policy changes.
+    //
+    // Returns HTTP 200 { ok:false, code:'bad_password' } (NOT 401) on mismatch:
+    // the client's global request() treats ANY 401 as session-expiry and
+    // force-logs-out, so a wrong step-up code would nuke the SYS's own session.
+    // This mirrors the /auth/change-pwd precedent (wrong old_pwd → 200 ok:false).
+    const { password } = req.body;
+    if (!(await checkPassword(caller, password || ''))) {
+      audit('TOTP_RESET_STEPUP_FAIL', caller.username, clientIp(req), `target_id=${uid}`);
+      return res.json({ ok: false, code: 'bad_password', error: 'Current password incorrect' });
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
+    const users = loadUsers();
+    const target = users.find((x) => x.id === uid);
+    if (!target) return res.status(404).json({ error: 'User not found' });
+    // No self-reset via this route: SYS resets OTHERS. A SYS who lost their own
+    // phone uses the console recover-sys-user.js path. This closes the
+    // self-reset-without-a-code gap for this endpoint.
+    if (target.id === caller.id)
+      return res.status(403).json({ error: 'Cannot reset your own 2FA via this route' });
+
+    // Remove the target's TOTP secret (keyed by username, case-insensitive)
+    // through the race-safe read-modify-write helper — never a raw file op.
+    let secretRemoved = false;
+    await updateTotpSecrets((secs) => {
+      const key = Object.keys(secs).find(
+        (k) => k.toLowerCase() === String(target.username).toLowerCase()
+      );
+      if (key) {
+        delete secs[key];
+        secretRemoved = true;
+      }
+      return secs;
+    });
+
+    // Revoke the target's active sessions so the reset takes effect at once —
+    // they must re-login (password still valid) and re-enroll a new QR.
+    const killed = revokeSessionsForUser(target.id);
+
+    audit(
+      'TOTP_RESET_BY_SYS',
+      caller.username,
+      clientIp(req),
+      JSON.stringify({
+        actor_id: caller.id,
+        actor_username: caller.username,
+        target_id: target.id,
+        target_username: target.username,
+        secret_removed: secretRemoved,
+        sessions_revoked: killed,
+        ip: clientIp(req),
+      })
+    );
+    res.json({ ok: true, secret_removed: secretRemoved, sessions_revoked: killed });
+  }
+);
+
 // POST /api/auth/users/:id/temp-pwd
 //
 // Sprint 1.5 — SAP/IFS-style provisioning. Generates a cryptographically
@@ -1689,18 +1958,75 @@ router.post(
   }
 );
 
-router.delete('/totp/secret/:username', (req, res) => {
+// MES-3-FIX-61 — self-service 2FA reset must re-verify.
+//   SELF path (caller===target): the caller could previously drop their OWN
+//   TOTP secret with ZERO re-verification, so a stolen/idle session on the
+//   auto-login box could disable 2FA + re-enroll a new authenticator. Now the
+//   self path REQUIRES a valid CURRENT TOTP code OR the caller's password.
+//   OTHERS path (admin+ resetting another user): unchanged. The SYS-only
+//   POST /auth/users/:id/reset-2fa remains the preferred, stricter path.
+router.delete('/totp/secret/:username', async (req, res) => {
   const caller = getSessionUser(getTokenFromHeader(req));
   if (!caller) return res.status(401).json({ error: 'Unauthorized' });
   const usernameReq = decodeURIComponent(req.params.username);
-  if (roleLevel(caller) < 4 && caller.username.toLowerCase() !== usernameReq.toLowerCase()) {
+  const isSelf = caller.username.toLowerCase() === usernameReq.toLowerCase();
+
+  // Others may only be reset by admin+ (unchanged). Self is allowed for any
+  // authenticated user but MUST re-verify below.
+  if (!isSelf && roleLevel(caller) < 4) {
     return res.status(403).json({ error: 'Forbidden' });
   }
-  const secs = loadTotpSecrets();
-  const keyDel = Object.keys(secs).find((k) => k.toLowerCase() === usernameReq.toLowerCase());
-  if (keyDel) {
-    delete secs[keyDel];
-    saveTotpSecrets(secs);
+
+  if (isSelf) {
+    // Step-up: a valid CURRENT TOTP code (verified against the caller's own
+    // secret) OR the caller's password. Missing/wrong → 401, secret untouched.
+    const { code, password } = req.body || {};
+    let verified = false;
+    if (password) verified = await checkPassword(caller, String(password));
+    if (!verified && code) {
+      const secs = loadTotpSecrets();
+      const key = Object.keys(secs).find((k) => k.toLowerCase() === usernameReq.toLowerCase());
+      verified = key ? totpVerify(secs[key], String(code).trim()) : false;
+    }
+    if (!verified) {
+      audit(
+        'TOTP_SELF_RESET_FAIL',
+        caller.username,
+        clientIp(req),
+        JSON.stringify({ user_id: caller.id, ip: clientIp(req) })
+      );
+      return res
+        .status(401)
+        .json({ error: 'Re-verify required: enter your current 2FA code or password.' });
+    }
+    // Race-safe removal (never a raw file op) — mirrors reset-2fa.
+    await updateTotpSecrets((secs) => {
+      const key = Object.keys(secs).find((k) => k.toLowerCase() === usernameReq.toLowerCase());
+      if (key) delete secs[key];
+      return secs;
+    });
+    audit(
+      'TOTP_SELF_RESET',
+      caller.username,
+      clientIp(req),
+      JSON.stringify({ user_id: caller.id, ip: clientIp(req) })
+    );
+    console.log(`  🔐  TOTP self-reset (re-verified) for: ${usernameReq}`);
+    return res.json({ ok: true });
+  }
+
+  // Admin+ resetting ANOTHER user — unchanged behavior + existing audit trail.
+  let removed = false;
+  await updateTotpSecrets((secs) => {
+    const key = Object.keys(secs).find((k) => k.toLowerCase() === usernameReq.toLowerCase());
+    if (key) {
+      delete secs[key];
+      removed = true;
+    }
+    return secs;
+  });
+  if (removed) {
+    audit('TOTP_SECRET_DELETED', caller.username, clientIp(req), `target=${usernameReq}`);
     console.log(`  🗑️  TOTP secret removed for: ${usernameReq}`);
   }
   res.json({ ok: true });
@@ -1773,6 +2099,84 @@ router.post('/heartbeat', (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── System Control — global sidebar show/hide (Sprint S-SYSCTRL) ───
+// GLOBAL visibility layer, distinct from per-user permission groups. HIDE-
+// ONLY: the client ANDs these hidden sets AFTER minRole + permission-group
+// access, so un-hiding never widens access. GET is readable by any
+// authenticated user (the client needs it to render); PUT is SYS-only.
+
+// GET /api/system/sidebar-visibility — any authenticated user may read.
+router.get('/system/sidebar-visibility', (req, res) => {
+  const caller = getSessionUser(getTokenFromHeader(req));
+  if (!caller) return res.status(401).json({ error: 'Unauthorized' });
+  res.json(readSidebarVisibility());
+});
+
+// PUT /api/system/sidebar-visibility — SYS ONLY. Validates ids against the
+// toggleable catalog (rejects unknown / always-on ids), persists, audits.
+router.put('/system/sidebar-visibility', (req, res) => {
+  const caller = getSessionUser(getTokenFromHeader(req));
+  if (!caller) return res.status(401).json({ error: 'Unauthorized' });
+  if (!isSys(caller)) return res.status(403).json({ error: 'Forbidden — SYS only' });
+  const v = validateVisibilityPayload(req.body);
+  if (!v.ok) return res.status(400).json({ error: v.error });
+  const saved = writeSidebarVisibility(v.value, caller.id);
+  audit(
+    'SIDEBAR_VISIBILITY_UPDATE',
+    caller.username,
+    clientIp(req),
+    JSON.stringify({
+      hiddenTabs: v.value.hiddenTabs,
+      hiddenSections: v.value.hiddenSections,
+      user_id: caller.id,
+    })
+  );
+  res.json({ ok: true, ...saved });
+});
+
+// ─── RFQ Tracking (registry-driven master list; RFQ_TRACKING_DATASET) ───
+// Distinct from the kanban `rfq-tracker` tab. Reads + writes go through the
+// SAME import-pipeline storage helpers the Import Wizard uses, so manual
+// inline edits and xlsx imports stay consistent on one JSON file
+// (Library/RFQTracking/rfq_tracking.json). GET tolerates a missing file → [].
+// POST bulk-saves (auto-backup first), gated by requireTabAccess on writes.
+const RFQ_TRACKING_KEY = 'rfq-tracking';
+
+// GET /api/rfq-tracking
+router.get('/rfq-tracking', (req, res) => {
+  const u = getSessionUser(getTokenFromHeader(req));
+  if (!u) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const ds = getDataset(RFQ_TRACKING_KEY);
+    const rows = ds ? readDatasetRows(ds) : [];
+    res.json(Array.isArray(rows) ? rows : []);
+  } catch (err) {
+    logErr(req, 'rfq_tracking_get', err);
+    res.status(500).json({ error: 'Failed to load RFQ Tracking' });
+  }
+});
+
+// POST /api/rfq-tracking — bulk save (auto-backup + atomic write)
+router.post('/rfq-tracking', requireTabAccess(RFQ_TRACKING_KEY), (req, res) => {
+  const u = getSessionUser(getTokenFromHeader(req));
+  if (!u) return res.status(401).json({ error: 'Unauthorized' });
+  if (u.role === 'viewonly') return res.status(403).json({ ok: false, msg: 'View Only' });
+  const ds = getDataset(RFQ_TRACKING_KEY);
+  if (!ds) return res.status(500).json({ error: 'rfq-tracking dataset not registered' });
+  const rows = Array.isArray(req.body) ? req.body : req.body?.rows;
+  if (!Array.isArray(rows)) {
+    return res.status(400).json({ error: 'Expected an array of rows (or { rows: [...] })' });
+  }
+  try {
+    if (fs.existsSync(datasetFilePath(ds))) backupDataset(ds); // sibling _backup_<ts>.json
+    writeDatasetRows(ds, rows);
+    res.json({ ok: true, count: rows.length });
+  } catch (err) {
+    logErr(req, 'rfq_tracking_save', err);
+    res.status(500).json({ error: 'Failed to save RFQ Tracking' });
+  }
+});
+
 // GET /api/load-all
 router.get('/load-all', (req, res) => {
   const u = getSessionUser(getTokenFromHeader(req));
@@ -1839,6 +2243,7 @@ router.get('/load-all', (req, res) => {
     financeSumDB: path.join(LIB, 'Finance', 'finance_sum.json'),
     inkCalcDB: path.join(LIB, 'InkCalc', 'ink_calc.json'),
     npiDB: path.join(LIB, 'MaterialCost', 'npi_materials.json'),
+    ifsDB: path.join(LIB, 'MaterialCost', 'ifs_materials.json'),
     sourcingDB: path.join(LIB, 'MaterialCost', 'sourcing_db.json'),
   };
   for (const [key, fp] of Object.entries(jsonMap)) {
@@ -1869,8 +2274,46 @@ const SAVE_ALL_KNOWN_KEYS = new Set([
   'financeSumDB',
   'inkCalcDB',
   'npiDB',
+  'ifsDB',
   'sourcingDB',
+  // Control field (not a dataset): the DDL concurrency token the client echoes
+  // from /shared/ddl so save-all can reject a stale DDL overwrite. Never written.
+  '_ddlRev',
 ]);
+
+// _rev = content hash of ddl_sites.json on disk. Derived, never stored in the
+// data → no schema change. Empty when the file is missing (first save allowed).
+function ddlRevOf(fp) {
+  try {
+    return crypto.createHash('sha256').update(fs.readFileSync(fp)).digest('hex').slice(0, 16);
+  } catch {
+    return '';
+  }
+}
+
+// Key-level diff between the old and new multi-site DDL for the DDL_SAVE audit.
+// Returns the sites touched + which section keys changed per site (control keys
+// starting with `_` are ignored for the headline). Bounded + sorted.
+function diffDdlSections(oldAll, newAll) {
+  const o = oldAll && typeof oldAll === 'object' ? oldAll : {};
+  const n = newAll && typeof newAll === 'object' ? newAll : {};
+  const sitesChanged = [];
+  const sections = {};
+  for (const site of new Set([...Object.keys(o), ...Object.keys(n)])) {
+    const os = (o[site] && typeof o[site] === 'object' ? o[site] : {}) || {};
+    const ns = (n[site] && typeof n[site] === 'object' ? n[site] : {}) || {};
+    const changed = [];
+    for (const k of new Set([...Object.keys(os), ...Object.keys(ns)])) {
+      if (k.startsWith('_')) continue;
+      if (JSON.stringify(os[k]) !== JSON.stringify(ns[k])) changed.push(k);
+    }
+    if (changed.length) {
+      sitesChanged.push(site);
+      sections[site] = changed.sort();
+    }
+  }
+  return { sites: sitesChanged.sort(), sections };
+}
 
 // Sprint S3 — body-key → tab-id map for permission enforcement. Keys
 // not listed here aren't guarded per-tab (they're either legacy admin
@@ -1898,8 +2341,16 @@ router.post(
     const cu = getSessionUser(getTokenFromHeader(req));
     if (!cu) return res.status(401).json({ error: 'Unauthorized' });
     if (cu.role === 'viewonly') return res.status(403).json({ ok: false, msg: 'View Only' });
-    const LIB = getLibDir();
     const pl = req.body;
+    // Pre-go-live lockdown: editing Drop-Down Lists is admin/sys only. DDL
+    // drives pricing-critical dropdowns (workcenters → rate, coverage, etc.),
+    // so a non-admin must NOT save them even if a permission group granted
+    // lib-ddl edit — those users intentionally lose this. Server-side enforce
+    // (the Sidebar already hides the tab; this closes the curl/bypass path).
+    if ((pl?.ddlSitesDB || pl?.ddlDB) && !isAdminPlus(cu)) {
+      return res.status(403).json({ ok: false, msg: 'Chỉ admin/sys được sửa Drop-Down Lists' });
+    }
+    const LIB = getLibDir();
     // Body must be a plain object — reject arrays, strings, null early so we
     // don't crash halfway through writing some files and leave partial state.
     if (!pl || typeof pl !== 'object' || Array.isArray(pl)) {
@@ -1932,6 +2383,9 @@ router.post(
     // so the client can retry just the failed slice instead of re-posting
     // the whole batch and risk clobbering someone else's concurrent work.
     const saveResults = [];
+    // DDL audit/concurrency state (PART 2 + 3) — populated by the ddlSitesDB write.
+    let ddlOldSites = null;
+    let ddlNewRev = null;
     const runWrite = (key, fn) => {
       try {
         fn();
@@ -2035,10 +2489,29 @@ router.post(
           writeJson(path.join(LIB, 'Rate', 'rate_sites.json'), pl.rateSitesDB)
         );
       if (pl.ddlDB) runWrite('ddlDB', () => writeJson(path.join(LIB, 'DDL', 'ddl.json'), pl.ddlDB));
-      if (pl.ddlSitesDB)
-        runWrite('ddlSitesDB', () =>
-          writeJson(path.join(LIB, 'DDL', 'ddl_sites.json'), pl.ddlSitesDB)
-        );
+      if (pl.ddlSitesDB) {
+        const ddlPath = path.join(LIB, 'DDL', 'ddl_sites.json');
+        // Anti-clobber (warning-level, NOT the quotes optimistic-lock): if the
+        // client sent the _rev it loaded and the file changed since, reject so
+        // it reloads instead of overwriting another admin's edit. Short-circuit
+        // like the finance-summary lock — the whole point is to not clobber.
+        if (pl._ddlRev !== undefined && pl._ddlRev !== null) {
+          const curRev = ddlRevOf(ddlPath);
+          if (curRev !== pl._ddlRev) {
+            return res.status(409).json({
+              ok: false,
+              error: 'ddl_conflict',
+              message: 'DDL đã được người khác sửa — reload trước khi lưu.',
+              current_rev: curRev,
+              saved_keys: saveResults.filter((r) => r.ok).map((r) => r.key),
+            });
+          }
+        }
+        // Capture the old state BEFORE the write so DDL_SAVE can audit a diff.
+        ddlOldSites = readJson(ddlPath) || {};
+        runWrite('ddlSitesDB', () => writeJson(ddlPath, pl.ddlSitesDB));
+        ddlNewRev = ddlRevOf(ddlPath);
+      }
       if (pl.rfqTracker)
         runWrite('rfqTracker', () =>
           writeJson(path.join(LIB, 'RFQTracker', 'rfq_tracker.json'), pl.rfqTracker)
@@ -2097,6 +2570,10 @@ router.post(
       if (pl.npiDB)
         runWrite('npiDB', () =>
           writeJson(path.join(LIB, 'MaterialCost', 'npi_materials.json'), pl.npiDB)
+        );
+      if (pl.ifsDB)
+        runWrite('ifsDB', () =>
+          writeJson(path.join(LIB, 'MaterialCost', 'ifs_materials.json'), pl.ifsDB)
         );
       if (pl.sourcingDB)
         runWrite('sourcingDB', () =>
@@ -2190,6 +2667,7 @@ router.post(
         financeSumDB: 'library.imported',
         inkCalcDB: 'library.imported',
         npiDB: 'library.imported',
+        ifsDB: 'library.imported',
         sourcingDB: 'library.imported',
       };
       // Audit emit per successfully-saved dataset (P0-8b): forensic
@@ -2212,6 +2690,26 @@ router.post(
           /* audit failures must never block save */
         }
       }
+      // PART 2 — richer DDL trail: the generic LIBRARY_SAVE above only logs the
+      // key name. DDL_SAVE adds the section-level diff (which sites + section
+      // keys actually changed) so an edit that breaks quotes is traceable.
+      if (succeeded.includes('ddlSitesDB') && ddlOldSites) {
+        try {
+          const diff = diffDdlSections(ddlOldSites, pl.ddlSitesDB);
+          audit(
+            'DDL_SAVE',
+            cu?.username || '-',
+            clientIp(req) || '-',
+            JSON.stringify({
+              sites_changed: diff.sites,
+              sections_changed: diff.sections,
+              timestamp: ts,
+            })
+          );
+        } catch {
+          /* audit best-effort */
+        }
+      }
 
       const emittedTypes = new Set();
       for (const k of succeeded) {
@@ -2230,6 +2728,9 @@ router.post(
         data_dir: getDataDir(),
         saved_keys: succeeded,
         ignored_keys: unknownKeys,
+        // New DDL concurrency token so the client updates its stored _rev after
+        // a successful DDL save (only present when ddlSitesDB was written).
+        ...(ddlNewRev != null ? { ddl_rev: ddlNewRev } : {}),
       });
     } catch (e) {
       // This catch only runs on non-write failures now (payload parsing,
@@ -2429,6 +2930,7 @@ router.post('/quotes', saveRateLimit, async (req, res) => {
     } catch {
       /* audit failures must never block save */
     }
+    recordSnapshotSave(saved);
     emitDataChange('quote.saved', {
       id: saved?.id,
       version: saved?._version,
@@ -2592,6 +3094,7 @@ router.patch('/quotes/:id', saveRateLimit, async (req, res) => {
     } catch {
       /* audit failures must never block save */
     }
+    recordSnapshotSave(saved);
     emitDataChange('quote.saved', {
       id: saved?.id,
       version: saved?._version,
@@ -3268,25 +3771,12 @@ router.get('/backup/list', (req, res) => {
   const u = getSessionUser(getTokenFromHeader(req));
   if (!u) return res.status(401).json({ error: 'Unauthorized' });
   ensurePkgBackupDirs();
-  const bdir = path.join(getPkgBackupDir(), 'Data');
-  try {
-    const files = fs
-      .readdirSync(bdir)
-      .filter((f) => f.endsWith('.json') && !f.startsWith('.'))
-      .sort()
-      .reverse()
-      .map((f) => {
-        const stat = fs.statSync(path.join(bdir, f));
-        return {
-          filename: f,
-          size: stat.size,
-          date: new Date(stat.mtimeMs).toISOString().slice(0, 19).replace('T', ' '),
-        };
-      });
-    res.json({ ok: true, files, dir: bdir });
-  } catch {
-    res.json({ ok: true, files: [], dir: bdir });
-  }
+  const primaryDir = path.join(getPkgBackupDir(), 'Data');
+  // Merge manual snapshots (PackageBackups/Data) with the scheduler's daily
+  // auto snapshots (Backup/Data) — same JSON shape, both restorable. Deduped by
+  // filename (manual dir wins) + sorted newest-first by the pure helper.
+  const files = collectDataBackups(dataBackupDirs());
+  res.json({ ok: true, files, dir: primaryDir });
 });
 
 // Code backups are now directory snapshots, not single HTML files.
@@ -3311,6 +3801,7 @@ router.get('/backup/code-list', (req, res) => {
         filename: e.name,
         size,
         files: fileCount,
+        mtimeMs: stat.mtimeMs,
         date: new Date(stat.mtimeMs).toISOString().slice(0, 19).replace('T', ' '),
       };
     });
@@ -3328,8 +3819,8 @@ router.get('/backup/download/:name', (req, res) => {
   const u = getSessionUser(getTokenFromHeader(req));
   if (!u) return res.status(401).json({ error: 'Unauthorized' });
   const fname = safeFn(decodeURIComponent(req.params.name));
-  const fpath = path.join(getPkgBackupDir(), 'Data', fname);
-  if (!fs.existsSync(fpath)) return res.status(404).json({ error: 'Not found' });
+  const fpath = resolveDataBackupPath(fname);
+  if (!fpath) return res.status(404).json({ error: 'Not found' });
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
   res.send(fs.readFileSync(fpath));
@@ -3427,8 +3918,8 @@ router.post('/backup/restore', writeRateLimit, (req, res) => {
   const u = getSessionUser(getTokenFromHeader(req));
   if (!isSys(u)) return res.status(403).json({ error: 'Admin only' });
   const { filename } = req.body;
-  const fpath = path.join(getPkgBackupDir(), 'Data', safeFn(filename));
-  if (!fs.existsSync(fpath)) return res.status(404).json({ error: 'Not found' });
+  const fpath = resolveDataBackupPath(filename);
+  if (!fpath) return res.status(404).json({ error: 'Not found' });
   // Parse + validate the snapshot BEFORE touching any real data file.
   // If the JSON is corrupted or the shape is wrong, we abort cleanly rather
   // than wipe live tables with a half-parsed payload.
@@ -3514,6 +4005,7 @@ router.post('/backup/upload', writeRateLimit, backupUpload.single('file'), (req,
       'financeSumDB',
       'inkCalcDB',
       'npiDB',
+      'ifsDB',
       'sourcingDB',
     ];
     const hasKnownKey = KNOWN_KEYS.some((k) => Object.prototype.hasOwnProperty.call(snap, k));
@@ -3555,9 +4047,11 @@ router.post('/backup/delete', writeRateLimit, (req, res) => {
   if (!isSys(u)) return res.status(403).json({ error: 'Admin only' });
   try {
     const { filename, type: btype = 'data' } = req.body;
-    const subdir = btype === 'code' ? 'Code' : 'Data';
-    const fpath = path.join(getPkgBackupDir(), subdir, safeFn(filename));
-    if (!fs.existsSync(fpath)) return res.status(404).json({ error: 'Not found' });
+    const fpath =
+      btype === 'code'
+        ? path.join(getPkgBackupDir(), 'Code', safeFn(filename))
+        : resolveDataBackupPath(filename);
+    if (!fpath || !fs.existsSync(fpath)) return res.status(404).json({ error: 'Not found' });
     // Data backups are single JSON files → unlink. Code backups are folders → rmSync recursive.
     const stat = fs.statSync(fpath);
     if (stat.isDirectory()) fs.rmSync(fpath, { recursive: true, force: true });
@@ -3632,7 +4126,9 @@ router.post('/import-xlsm', xlsmUpload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ ok: false, msg: 'No file uploaded' });
 
   try {
-    const wb = XLSX.readFile(req.file.path, { type: 'file' });
+    // xlsx ESM build (xlsx.mjs) has no fs wired → readFile throws
+    // "Cannot access file"; read the bytes + XLSX.read(buffer) instead.
+    const wb = XLSX.read(fs.readFileSync(req.file.path));
 
     // Find main calc sheet: prefer '2.1','1.1','2','1','Simple','Complex'
     const preferredSheets = [

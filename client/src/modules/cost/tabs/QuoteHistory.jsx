@@ -20,68 +20,22 @@ import { useAutoRefresh, formatLastRefresh } from '../../../utils/useAutoRefresh
 import { subscribeDataEvents } from '../../../services/dataEventBus';
 import { useAccess } from '../../../context/useAccess';
 import ExportModal from './QuoteHistory/ExportModal';
+import { useQuoteFilters } from '../hooks/useQuoteFilters';
+import { applyQuoteFilters, quoteAccessor } from '../lib/quoteFilters';
+import ScopedFilterBar from '../components/ScopedFilterBar';
+import ColumnsToggle from '../../../components/Shared/ColumnsToggle';
+import { useFloatingMenu, useMergedMenuRef } from '../../../components/Shared/useFloatingMenu';
+import { loadVisibleColumns } from '../../../components/Shared/ColumnsToggle.helpers.js';
+import {
+  QUOTE_HISTORY_SORT_FNS,
+  QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS,
+  QUOTE_HISTORY_STORAGE_KEY,
+  resolveSortKey,
+} from './QuoteHistory.columns.js';
 import './QuoteHistory.css';
 import './QuoteHistory/ExportModal.css';
 
 const PAGE_SIZE = 100;
-
-// Ordinal used by sorting — matches workflow progression so ASC goes
-// draft → pending_sales → pending_finance → approved, and rejected
-// sorts to the end so reviewers see actionable items near the top.
-const STATUS_ORDER = {
-  draft: 0,
-  pending_sales: 1,
-  pending_finance: 2,
-  approved: 3,
-  rejected: 4,
-};
-
-const SORT_KEYS = {
-  date: (q) => new Date(q.saved_at || 0).getTime(),
-  rfq: (q) => (q.state?.rfq_number || '').toLowerCase(),
-  npi: (q) => (q.state?.npi_owner || q.npi_owner || '').toLowerCase(),
-  direct_cu: (q) => (q.state?.direct_cu || '').toLowerCase(),
-  // Sprint S-PROJFIX (2026-04-29) — Standard's RfqInfoCard aliases the
-  // End Customer input to state.project (CalcHeader.jsx aliasMap), so
-  // s.project actually holds End Customer text for Standard quotes
-  // and s.end_cu stays empty. Complex has no alias (writes directly
-  // to state.end_cu). The fallback s.end_cu || s.project covers both.
-  // Project column reads state.project_name — the canonical field
-  // written by RfqInfoCard's "Project" input (line 121) for both
-  // calculator types.
-  end_cu: (q) => (q.state?.end_cu || q.state?.project || '').toLowerCase(),
-  project: (q) => (q.state?.project_name || '').toLowerCase(),
-  ifs: (q) => (q.state?.ccl_pn || '').toLowerCase(),
-  dcu_pn: (q) => (q.state?.direct_cu_pn || '').toLowerCase(),
-  moq: (q) => Number(q.state?.moq) || 0,
-  sell: (q) => Number(q.state?.selling_price) || 0,
-  // Sprint 1.7g — PRICE VND column. Auto-synced from RFQ & MOQ Pricing
-  // info via the bi-directional setPriceUsd/setPriceVnd handlers in
-  // CalcHeader, so the field always lives at state.selling_price_vnd.
-  // Fallback: derive USD × usd_rate when only USD was entered (legacy
-  // quotes without the explicit VND mirror).
-  price_vnd: (q) => {
-    const s = q.state || {};
-    if (Number.isFinite(+s.selling_price_vnd)) return Number(s.selling_price_vnd);
-    if (Number.isFinite(+s.selling_price) && Number.isFinite(+s.usd_rate)) {
-      return Number(s.selling_price) * Number(s.usd_rate);
-    }
-    return 0;
-  },
-  gm: (q) => Number(q.result?.gm) || 0,
-  va: (q) => Number(q.result?.va) || 0,
-  // Sprint 1.7f — Contribution% column. calcAll exposes `contribution`
-  // as a fraction (0.25 = 25%), same shape as gm/va. Some legacy quotes
-  // use `contr_pct` (already-100x percentage) — coerce that path back to
-  // a fraction so the sort comparison stays apples-to-apples.
-  contr: (q) => {
-    const r = q.result || {};
-    if (Number.isFinite(+r.contribution)) return Number(r.contribution);
-    if (Number.isFinite(+r.contr_pct)) return Number(r.contr_pct) / 100;
-    return 0;
-  },
-  status: (q) => STATUS_ORDER[getApprovalStatus(q.state?.approval)] ?? 99,
-};
 
 // Module-scoped sort-header cell. Previously defined inside QuoteHistory,
 // which React 19's react-hooks/static-components rule correctly flags
@@ -135,6 +89,391 @@ function gmClass(gm) {
   return p >= 20 ? 'gm-green' : p >= 10 ? 'gm-amber' : 'gm-red';
 }
 
+/**
+ * Full column config — drives BOTH the <thead> sort-header row and the
+ * <tbody> cell render. Lives at module scope so ColumnsToggle's
+ * useEffect (which depends on `columns` identity) doesn't fire every
+ * parent render. Sort fns live in QuoteHistory.columns.js so the pure
+ * pieces can be unit-tested via vanilla node:test.
+ *
+ * Render contract:
+ *   - First arg `q` is the raw quote row.
+ *   - Second arg `ctx` is a per-row bag with `idx`, helper hooks
+ *     (`t`, `rfqColors`, `user`, `altMaterialsEnabled`, `canExport`),
+ *     setters (`setExportModal`, `setHistoryModal`,
+ *     `reloadAfterTransition`), and a pre-computed `derived` block to
+ *     avoid recomputing s/r/gmVal/vaVal/contrVal/etc. per cell.
+ *
+ * Header rendering: `labelKey` resolves through `t()`. Width/thClass
+ * captured here so the popover-driven visible subset re-renders with
+ * the original column widths preserved.
+ */
+const QUOTE_HISTORY_COLUMNS = [
+  {
+    key: 'num',
+    label: '#',
+    required: true,
+    width: 28,
+    thClass: 'qh-c-num',
+    tdClass: 'qh-d-num',
+    render: (q, ctx) => ctx.idx + 1,
+  },
+  {
+    key: 'date',
+    labelKey: 'qh.date',
+    required: true,
+    sortable: true,
+    width: 88,
+    tdClass: 'qh-d-date',
+    render: (q) => (
+      <>
+        <div>{fmtDate(q.saved_at)}</div>
+        <div className="qh-d-time">{fmtTime(q.saved_at)}</div>
+      </>
+    ),
+  },
+  {
+    key: 'rfq',
+    labelKey: 'qh.rfq_number',
+    required: true,
+    sortable: true,
+    width: 120,
+    tdClass: 'qh-d-rfq',
+    // RFQ color tint is dynamic per-row; tdStyleFn lets the renderer
+    // apply `color: rfqColors[s.rfq_number]` without forcing the
+    // cell map to know about the rfqColors store.
+    tdStyleFn: (q, ctx) => ({ color: ctx.rfqColors[q.state?.rfq_number] || undefined }),
+    render: (q) => q.state?.rfq_number || '—',
+  },
+  {
+    key: 'option',
+    labelKey: 'qh.option',
+    width: 180,
+    sortable: true,
+    tdClass: 'qh-d-option',
+    render: (q, ctx) => {
+      const opts = q.state?.options || '';
+      return (
+        <>
+          {opts && (
+            <span className="qh-option-text" title={opts}>
+              {opts}
+            </span>
+          )}
+          <span className={`qh-tb ${q.type === 'complex' ? 'tb-cpx' : 'tb-std'}`}>
+            {q.type === 'complex' ? 'CPX' : 'STD'}
+          </span>
+          {ctx.altMaterialsEnabled && (
+            <MaterialActiveBadge
+              summary={summariseMaterialActive(q.state || {}, q.type)}
+              t={ctx.t}
+            />
+          )}
+        </>
+      );
+    },
+  },
+  {
+    key: 'ul',
+    labelKey: 'qh.ul',
+    width: 32,
+    thClass: 'qh-c-ctr',
+    tdClass: 'qh-d-ul',
+    render: (q) => (q.state?.underwriter ? 'N' : ''),
+  },
+  {
+    key: 'owner',
+    labelKey: 'qh.owner',
+    sortable: true,
+    width: 100,
+    tdClass: 'qh-d-owner',
+    render: (q) => q.state?.npi_owner || q.npi_owner || '—',
+  },
+  // Sprint S-SALE-OWNER-COL (2026-06-16) — Sale Owner from RFQ & MOQ
+  // info sub-tab (shared RfqInfoCard.jsx). Reads top-level state.sale_owner
+  // for both Std + Cpx. Placed next to owner (NPI) so both operator
+  // attribution columns sit together.
+  {
+    key: 'sale',
+    labelKey: 'qh.sale_owner',
+    sortable: true,
+    width: 100,
+    tdClass: 'qh-d-owner',
+    render: (q) => q.state?.sale_owner || '—',
+  },
+  {
+    key: 'direct_cu',
+    labelKey: 'qh.direct_cu',
+    sortable: true,
+    width: 100,
+    tdClass: 'qh-d-dcu',
+    render: (q) => q.state?.direct_cu || '—',
+  },
+  {
+    key: 'end_cu',
+    labelKey: 'qh.end_cu',
+    sortable: true,
+    width: 90,
+    tdClass: 'qh-d-ecu',
+    // S-PROJFIX (Lesson 21) — Standard's aliasMap stores End Customer
+    // text under state.project for Standard quotes; Complex writes to
+    // state.end_cu directly. Fallback covers both.
+    render: (q) => q.state?.end_cu || q.state?.project || '—',
+  },
+  {
+    key: 'project',
+    labelKey: 'qh.project',
+    sortable: true,
+    width: 90,
+    tdClass: 'qh-d-proj',
+    render: (q) => q.state?.project_name || '—',
+  },
+  {
+    key: 'ifs',
+    labelKey: 'qh.ifs_code',
+    sortable: true,
+    width: 130,
+    thClass: 'qh-c-ifs',
+    tdClass: 'qh-d-ifs',
+    render: (q) => q.state?.ccl_pn || '—',
+  },
+  {
+    key: 'dcu_pn',
+    labelKey: 'qh.direct_cu_pn',
+    sortable: true,
+    width: 110,
+    tdClass: 'qh-d-dcupn',
+    render: (q) => q.state?.direct_cu_pn || '—',
+  },
+  {
+    key: 'ecu_pn',
+    labelKey: 'qh.end_cu_pn',
+    width: 90,
+    tdClass: 'qh-d-ecupn',
+    render: (q) => q.state?.end_cu_pn || '—',
+  },
+  {
+    key: 'size',
+    labelKey: 'qh.size',
+    width: 85,
+    tdClass: 'qh-d-size',
+    render: (q, ctx) => fmtSize(ctx.derived.sizeW, ctx.derived.sizeH),
+  },
+  {
+    key: 'materials',
+    labelKey: 'qh.materials',
+    width: 110,
+    tdClass: 'qh-d-mats',
+    // Materials cell needs a title tooltip equal to the cell text, so the
+    // renderer overrides td-level props via tdPropsFn.
+    tdPropsFn: (q, ctx) => ({ title: ctx.derived.matStr }),
+    render: (q, ctx) => ctx.derived.matStr || '—',
+  },
+  {
+    key: 'trade_mode',
+    labelKey: 'qh.trade_mode',
+    width: 80,
+    tdClass: 'qh-d-trade',
+    render: (q) =>
+      q.state?.trade_mode ? <span className="qh-trade">{q.state.trade_mode}</span> : '—',
+  },
+  {
+    key: 'design',
+    labelKey: 'qh.design',
+    width: 75,
+    tdClass: 'qh-d-design',
+    render: (q, ctx) => ctx.derived.design || '—',
+  },
+  {
+    key: 'moq',
+    labelKey: 'qh.moq',
+    sortable: true,
+    width: 75,
+    thClass: 'qh-c-r',
+    tdClass: 'qh-d-moq',
+    render: (q) => fmtNum(q.state?.moq),
+  },
+  {
+    key: 'sell',
+    labelKey: 'qh.sell_price',
+    sortable: true,
+    width: 80,
+    thClass: 'qh-c-r',
+    tdClass: 'qh-d-sell',
+    render: (q) => fmtPrice(q.state?.selling_price),
+  },
+  {
+    key: 'price_vnd',
+    labelKey: 'qh.price_vnd',
+    sortable: true,
+    width: 100,
+    thClass: 'qh-c-r',
+    tdClass: 'qh-d-price-vnd',
+    // Sprint 1.7g — auto-synced from RFQ & MOQ Pricing info. Falls
+    // back to USD × usd_rate when the explicit VND mirror is absent.
+    render: (q) => {
+      const s = q.state || {};
+      if (s.selling_price_vnd != null && s.selling_price_vnd !== '')
+        return fmtNum(s.selling_price_vnd);
+      if (Number.isFinite(+s.selling_price) && Number.isFinite(+s.usd_rate)) {
+        return fmtNum(Number(s.selling_price) * Number(s.usd_rate));
+      }
+      return '—';
+    },
+  },
+  {
+    key: 'target',
+    labelKey: 'qh.target',
+    width: 65,
+    thClass: 'qh-c-r',
+    tdClass: 'qh-d-target',
+    render: (q, ctx) => (ctx.derived.target ? fmtPrice(ctx.derived.target) : '—'),
+  },
+  {
+    key: 'va',
+    labelKey: 'qh.va_pct',
+    sortable: true,
+    width: 50,
+    thClass: 'qh-c-r',
+    tdClass: 'qh-d-va',
+    render: (q, ctx) => (ctx.derived.vaVal != null ? fmtPct(ctx.derived.vaVal) : '—'),
+  },
+  {
+    key: 'contr',
+    labelKey: 'qh.contr_pct',
+    sortable: true,
+    width: 60,
+    thClass: 'qh-c-r',
+    tdClass: 'qh-d-contr',
+    render: (q, ctx) => (ctx.derived.contrVal != null ? fmtPct(ctx.derived.contrVal) : '—'),
+  },
+  {
+    key: 'gm',
+    labelKey: 'qh.gm_pct',
+    sortable: true,
+    width: 55,
+    thClass: 'qh-c-ctr',
+    tdClass: 'qh-d-gm',
+    render: (q, ctx) => {
+      const { gmVal } = ctx.derived;
+      return gmVal != null ? (
+        <span className={`qh-gm ${gmClass(gmVal)}`}>{fmtPct(gmVal)}</span>
+      ) : (
+        '—'
+      );
+    },
+  },
+  {
+    key: 'status',
+    labelKey: 'qh.status',
+    required: true,
+    sortable: true,
+    width: 120,
+    tdClass: 'qh-d-status',
+    tdStyle: { textAlign: 'left' },
+    render: (q, ctx) => (
+      <ApprovalStatusBadge
+        approval={q.state?.approval}
+        onOpenHistory={() =>
+          ctx.setHistoryModal({
+            approval: q.state?.approval || null,
+            label: q.state?.ccl_pn || q.state?.rfq_number || `#${q.id}`,
+          })
+        }
+      />
+    ),
+  },
+  {
+    key: 'approve',
+    labelKey: 'qh.quote_progress',
+    required: true,
+    width: 170,
+    thClass: 'qh-c-ctr',
+    tdClass: 'qh-d-approve',
+    tdStyle: { textAlign: 'center' },
+    render: (q, ctx) => (
+      <ApprovalActionsCell
+        quote={q}
+        user={ctx.user}
+        onAfterTransition={ctx.reloadAfterTransition}
+      />
+    ),
+  },
+  {
+    key: 'layout',
+    labelKey: 'qh.layout',
+    required: true,
+    width: 90,
+    thClass: 'qh-c-ctr',
+    tdClass: 'qh-d-acts',
+    // Layout cell hosts the Export button (xlsx download trigger) +
+    // the layout-attached badge (green ✓ or red ✗). Open/Copy/Delete
+    // live in the right-click context menu, not here.
+    render: (q, ctx) => (
+      <>
+        {ctx.canExport && (
+          <button
+            type="button"
+            className="qe-trigger"
+            title={ctx.t('qexp.button.tooltip')}
+            aria-label={ctx.t('qexp.button.tooltip')}
+            onClick={(e) => {
+              e.stopPropagation();
+              ctx.setExportModal({ quote: q });
+            }}
+          >
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </button>
+        )}
+        {q.has_layout || q.state?.layout_files?.length || q.state?.layout_file?.name ? (
+          <span className="qh-act-layout qh-layout-yes" title="Layout attached">
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#16a34a"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </span>
+        ) : (
+          <span className="qh-act-layout qh-layout-no" title="No layout">
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#dc2626"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </span>
+        )}
+      </>
+    ),
+  },
+];
+
 export default function QuoteHistory() {
   const { hasRole, user } = useAuth();
   const { setPendingQuote } = useCalc();
@@ -156,11 +495,46 @@ export default function QuoteHistory() {
     onError: (err) => err?.name !== 'AbortError' && logErr('Failed to load quotes:', err),
   });
   const quotes = useMemo(() => (Array.isArray(rawQuotes) ? rawQuotes : []), [rawQuotes]);
-  const [search, setSearch] = useState('');
+  const { filter, debouncedFilter, setField, clearField, clearAll, hasActiveFilter } =
+    useQuoteFilters();
   const [filterType, setFilterType] = useState('all');
   const [page, setPage] = useState(0);
+  // Reset to page 0 whenever the applied filter or pill changes so the
+  // user lands on the first page of results instead of an out-of-range page.
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedFilter, filterType]);
   const [sortKey, setSortKey] = useState('date');
   const [sortDir, setSortDir] = useState('desc');
+  // Column visibility — Phase 2. State lives in QuoteHistory so the
+  // table-render path consumes it without prop-drilling through
+  // ScopedFilterBar. ColumnsToggle owns the popover UI + persistence;
+  // onChange feeds the filtered subset back here. Module-scoped
+  // QUOTE_HISTORY_COLUMNS keeps the columns prop identity stable so the
+  // toggle's useEffect doesn't fire every parent render.
+  const toggleColumns = useMemo(
+    () =>
+      QUOTE_HISTORY_COLUMNS.map((c) => ({
+        ...c,
+        label: c.labelKey ? t(c.labelKey) : c.label,
+      })),
+    [t]
+  );
+  const [visibleColumns, setVisibleColumns] = useState(() =>
+    loadVisibleColumns(toggleColumns, QUOTE_HISTORY_STORAGE_KEY, QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS)
+  );
+  // Resilience guard — when the active sortKey is hidden via the toggle
+  // (or rewritten by the legacy 'npi' → 'owner' rename path), snap back
+  // to `date desc` so the sort tick stays well-defined and the header
+  // doesn't render an arrow on a hidden column.
+  useEffect(() => {
+    const visibleKeySet = new Set(visibleColumns.map((c) => c.key));
+    const resolved = resolveSortKey(sortKey, visibleKeySet);
+    if (resolved !== sortKey) {
+      setSortKey(resolved);
+      setSortDir('desc');
+    }
+  }, [visibleColumns, sortKey]);
   const [ctxMenu, setCtxMenu] = useState(null); // { x, y, quote }
   const [historyModal, setHistoryModal] = useState(null); // { approval, label }
   // Sprint 13 UI — Trash modal. Lazy-loads on open: `null` = closed,
@@ -174,6 +548,14 @@ export default function QuoteHistory() {
   const { access: tabAccess } = useAccess();
   const canExport = tabAccess('quote-history') !== 'hidden';
   const ctxRef = useRef(null);
+  // Edge-aware placement (fixed, escapes the table's overflow clipping) +
+  // drag-to-move by the header. Store raw viewport coords in ctxMenu.x/y.
+  const { menuRef: ctxMenuRef, style: ctxMenuStyle } = useFloatingMenu({
+    open: !!ctxMenu,
+    x: ctxMenu?.x ?? 0,
+    y: ctxMenu?.y ?? 0,
+  });
+  const ctxMergedRef = useMergedMenuRef(ctxMenuRef, ctxRef);
   const rfqColors = useRfqColors();
 
   // Close context menu on click outside or Escape
@@ -195,16 +577,10 @@ export default function QuoteHistory() {
 
   function handleContextMenu(e, quote) {
     e.preventDefault();
-    // Get position relative to the qh-root container
-    const rect = e.currentTarget.closest('.qh-root')?.getBoundingClientRect() || {
-      left: 0,
-      top: 0,
-    };
-    setCtxMenu({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-      quote,
-    });
+    // Store raw viewport coords — the menu is position:fixed and placed
+    // edge-aware by useFloatingMenu, so it escapes the table's overflow
+    // clipping (a right-click on a low/edge row is no longer cut off).
+    setCtxMenu({ x: e.clientX, y: e.clientY, quote });
   }
 
   // load + abort-on-unmount now handled by useAbortableFetch above.
@@ -264,33 +640,17 @@ export default function QuoteHistory() {
   const filtered = useMemo(() => {
     let r = quotes;
     if (filterType !== 'all') r = r.filter((q) => q.type === filterType);
-    if (search) {
-      const t = search.toLowerCase();
-      r = r.filter((q) => {
-        const s = q.state || {};
-        // s.project covers Standard's aliased End Customer (see SORT_KEYS.end_cu).
-        return [
-          s.ccl_pn,
-          s.direct_cu,
-          s.project_name,
-          s.end_cu || s.project,
-          q.label,
-          s.rfq_number,
-          s.npi_owner,
-          q.npi_owner,
-          s.sale_owner,
-          s.direct_cu_pn,
-          s.end_cu_pn,
-        ].some((v) => (v || '').toLowerCase().includes(t));
-      });
-    }
-    const getter = SORT_KEYS[sortKey] || SORT_KEYS.date;
+    // Shared scoped + global filter (S-PROJFIX + NPI fallback preserved in
+    // quoteAccessor). AND-combine across query / date range / customer /
+    // part / sale boxes; empty/null fields are skipped.
+    r = applyQuoteFilters(r, debouncedFilter, quoteAccessor);
+    const getter = QUOTE_HISTORY_SORT_FNS[sortKey] || QUOTE_HISTORY_SORT_FNS.date;
     return [...r].sort((a, b) => {
       const va = getter(a),
         vb = getter(b);
       return va < vb ? (sortDir === 'asc' ? -1 : 1) : va > vb ? (sortDir === 'asc' ? 1 : -1) : 0;
     });
-  }, [quotes, search, filterType, sortKey, sortDir]);
+  }, [quotes, debouncedFilter, filterType, sortKey, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   // Defense-in-depth: if the stored page lands out of range (e.g. the
@@ -425,7 +785,7 @@ export default function QuoteHistory() {
 
   return (
     <div className="qh-root">
-      {/* ══ Unified Header Bar — title + search + filter pills in one row ══ */}
+      {/* ══ Header Bar (title + sync info) + ScopedFilterBar below ══ */}
       <div className="qh-headerbar">
         <div className="qh-hb-icon">
           <svg
@@ -471,69 +831,54 @@ export default function QuoteHistory() {
             </button>
           </div>
         </div>
-        <div className="qh-hb-search-wrap">
-          <svg
-            className="qh-si"
-            viewBox="0 0 24 24"
-            width="13"
-            height="13"
-            fill="none"
-            stroke="#94a3b8"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            className="qh-hb-search"
-            placeholder="Search CCL PN / RFQ / Customer / Project / NPI Owner / Sale Owner…"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(0);
-            }}
-          />
-          {search && (
-            <button
-              className="qh-hb-sclear"
-              onClick={() => {
-                setSearch('');
-                setPage(0);
-              }}
-            >
-              ×
-            </button>
-          )}
-        </div>
-        <div className="qh-hb-filters">
-          {[
-            { id: 'all', label: 'All' },
-            { id: 'standard', label: '◇ Standard' },
-            { id: 'complex', label: '◈ Complex' },
-          ].map((f) => (
-            <button
-              key={f.id}
-              className={`qh-hb-fbtn ${filterType === f.id ? 'active' : ''}`}
-              onClick={() => {
-                setFilterType(f.id);
-                setPage(0);
-              }}
-            >
-              {f.label}
-            </button>
-          ))}
-          {/* Sprint 13 UI — Trash bin entry. Lazy-loads server data
-              on click (no polling cost when closed). */}
-          <button
-            className="qh-hb-fbtn qh-hb-trash-btn"
-            onClick={openTrash}
-            title="View soft-deleted quotes · Xem các quote đã xoá (có thể restore)"
-          >
-            🗑 Trash
-          </button>
-        </div>
       </div>
+      <ScopedFilterBar
+        filter={filter}
+        setField={setField}
+        clearField={clearField}
+        clearAll={clearAll}
+        hasActiveFilter={hasActiveFilter}
+        resultCount={filtered.length}
+        totalCount={quotes.length}
+        globalPlaceholder="Search CCL PN / RFQ / Customer / Project / NPI Owner / Sale Owner…"
+        rightSlot={
+          <>
+            {/* Phase 2 — Columns toggle. Placed BEFORE the pill filter
+                buttons so operator sees "Columns | All | Standard | …"
+                left-to-right (parity with Summarize tab pattern). */}
+            <ColumnsToggle
+              columns={toggleColumns}
+              storageKey={QUOTE_HISTORY_STORAGE_KEY}
+              onChange={setVisibleColumns}
+              defaultHiddenKeys={QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS}
+            />
+            <div className="qh-hb-filters">
+              {[
+                { id: 'all', label: 'All' },
+                { id: 'standard', label: '◇ Standard' },
+                { id: 'complex', label: '◈ Complex' },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  className={`qh-hb-fbtn ${filterType === f.id ? 'active' : ''}`}
+                  onClick={() => setFilterType(f.id)}
+                >
+                  {f.label}
+                </button>
+              ))}
+              {/* Sprint 13 UI — Trash bin entry. Lazy-loads server data
+                  on click (no polling cost when closed). */}
+              <button
+                className="qh-hb-fbtn qh-hb-trash-btn"
+                onClick={openTrash}
+                title="View soft-deleted quotes · Xem các quote đã xoá (có thể restore)"
+              >
+                🗑 Trash
+              </button>
+            </div>
+          </>
+        }
+      />
 
       {/* ══ TABLE — flush with header, full screen ══ */}
       <div className="qh-table-full">
@@ -545,90 +890,38 @@ export default function QuoteHistory() {
                   region. TRADE/DESIGN sit next to MATERIALS inside what
                   used to be the PRODUCT group. */}
               <tr className="qh-g2">
-                <th className="qh-col qh-c-num" style={{ width: 28 }}>
-                  #
-                </th>
-                <SortTh {...sortProps} id="date" style={{ width: 88 }}>
-                  {t('qh.date')}
-                </SortTh>
-                <SortTh {...sortProps} id="rfq" style={{ width: 120 }}>
-                  {t('qh.rfq_number')}
-                </SortTh>
-                <th className="qh-col qh-c-ctr" style={{ width: 90 }}>
-                  {t('qh.ver')}
-                </th>
-                <th className="qh-col qh-c-ctr" style={{ width: 32 }}>
-                  {t('qh.ul')}
-                </th>
-                <SortTh {...sortProps} id="npi" style={{ width: 100 }}>
-                  {t('qh.owner')}
-                </SortTh>
-                <SortTh {...sortProps} id="direct_cu" style={{ width: 100 }}>
-                  {t('qh.direct_cu')}
-                </SortTh>
-                <SortTh {...sortProps} id="end_cu" style={{ width: 90 }}>
-                  {t('qh.end_cu')}
-                </SortTh>
-                <SortTh {...sortProps} id="project" style={{ width: 90 }}>
-                  {t('qh.project')}
-                </SortTh>
-                <SortTh {...sortProps} id="ifs" className="qh-c-ifs" style={{ width: 130 }}>
-                  {t('qh.ifs_code')}
-                </SortTh>
-                <SortTh {...sortProps} id="dcu_pn" style={{ width: 110 }}>
-                  {t('qh.direct_cu_pn')}
-                </SortTh>
-                <th className="qh-col" style={{ width: 90 }}>
-                  {t('qh.end_cu_pn')}
-                </th>
-                <th className="qh-col" style={{ width: 85 }}>
-                  {t('qh.size')}
-                </th>
-                <th className="qh-col" style={{ width: 110 }}>
-                  {t('qh.materials')}
-                </th>
-                <th className="qh-col" style={{ width: 80 }}>
-                  {t('qh.trade_mode')}
-                </th>
-                <th className="qh-col" style={{ width: 75 }}>
-                  {t('qh.design')}
-                </th>
-                <SortTh {...sortProps} id="moq" className="qh-c-r" style={{ width: 75 }}>
-                  {t('qh.moq')}
-                </SortTh>
-                <SortTh {...sortProps} id="sell" className="qh-c-r" style={{ width: 80 }}>
-                  {t('qh.sell_price')}
-                </SortTh>
-                <SortTh {...sortProps} id="price_vnd" className="qh-c-r" style={{ width: 100 }}>
-                  {t('qh.price_vnd')}
-                </SortTh>
-                <th className="qh-col qh-c-r" style={{ width: 65 }}>
-                  {t('qh.target')}
-                </th>
-                <SortTh {...sortProps} id="va" className="qh-c-r" style={{ width: 50 }}>
-                  {t('qh.va_pct')}
-                </SortTh>
-                <SortTh {...sortProps} id="contr" className="qh-c-r" style={{ width: 60 }}>
-                  {t('qh.contr_pct')}
-                </SortTh>
-                <SortTh {...sortProps} id="gm" className="qh-c-ctr" style={{ width: 55 }}>
-                  {t('qh.gm_pct')}
-                </SortTh>
-                <SortTh {...sortProps} id="status" style={{ width: 120 }}>
-                  {t('qh.status')}
-                </SortTh>
-                <th className="qh-col qh-c-ctr" style={{ width: 170 }}>
-                  {t('qh.approve_reject')}
-                </th>
-                <th className="qh-col qh-c-ctr" style={{ width: 90 }}>
-                  {t('qh.layout')}
-                </th>
+                {visibleColumns.map((c) => {
+                  const thStyle = c.width ? { width: c.width } : undefined;
+                  const label = c.labelKey ? t(c.labelKey) : c.label;
+                  if (c.sortable) {
+                    return (
+                      <SortTh
+                        key={c.key}
+                        {...sortProps}
+                        id={c.key}
+                        className={c.thClass}
+                        style={thStyle}
+                      >
+                        {label}
+                      </SortTh>
+                    );
+                  }
+                  return (
+                    <th
+                      key={c.key}
+                      className={`qh-col${c.thClass ? ' ' + c.thClass : ''}`}
+                      style={thStyle}
+                    >
+                      {label}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
               {paged.length === 0 ? (
                 <tr>
-                  <td colSpan={26} style={{ padding: 0 }}>
+                  <td colSpan={visibleColumns.length} style={{ padding: 0 }}>
                     <EmptyState
                       icon="📊"
                       title="No quotes found"
@@ -641,8 +934,6 @@ export default function QuoteHistory() {
                   const s = q.state || {};
                   const r = q.result || {};
                   const idx = page * PAGE_SIZE + i;
-                  const verN = Number(q.version) || 0;
-                  const verCls = verN === 0 ? 'v-grn' : verN === 1 ? 'v-blu' : 'v-pur';
                   const rawMats = s.materials || q.materials || [];
                   const matStr = Array.isArray(rawMats)
                     ? rawMats
@@ -666,8 +957,33 @@ export default function QuoteHistory() {
                   const sizeW = s.part_width || s.size_w;
                   const sizeH = s.part_length_md || s.size_h;
                   const design = s.design_process || s.process_design || s.design;
-
                   const rowStatus = getApprovalStatus(s.approval);
+                  // Per-row ctx bag passed to every cell renderer. `derived`
+                  // memoises the s/r/gmVal/vaVal/... computations so each of
+                  // the ~21 visible cells doesn't re-read q.state / q.result.
+                  const ctx = {
+                    idx,
+                    t,
+                    user,
+                    altMaterialsEnabled,
+                    canExport,
+                    rfqColors,
+                    setExportModal,
+                    setHistoryModal,
+                    reloadAfterTransition,
+                    derived: {
+                      s,
+                      r,
+                      gmVal,
+                      vaVal,
+                      contrVal,
+                      target,
+                      sizeW,
+                      sizeH,
+                      design,
+                      matStr,
+                    },
+                  };
                   return (
                     <tr
                       key={q.id || idx}
@@ -675,152 +991,16 @@ export default function QuoteHistory() {
                       className={`qh-row ${ctxMenu?.quote?.id === q.id ? 'qh-row-ctx' : ''}`}
                       onContextMenu={(e) => handleContextMenu(e, q)}
                     >
-                      <td className="qh-d qh-d-num">{idx + 1}</td>
-                      <td className="qh-d qh-d-date">
-                        <div>{fmtDate(q.saved_at)}</div>
-                        <div className="qh-d-time">{fmtTime(q.saved_at)}</div>
-                      </td>
-                      <td
-                        className="qh-d qh-d-rfq"
-                        style={{ color: rfqColors[s.rfq_number] || undefined }}
-                      >
-                        {s.rfq_number || '—'}
-                      </td>
-                      <td className="qh-d qh-d-ver">
-                        <span className={`qh-vb ${verCls}`}>
-                          {verN > 1 ? `${verN} tiers` : `ver.${verN}`}
-                        </span>
-                        <span className={`qh-tb ${q.type === 'complex' ? 'tb-cpx' : 'tb-std'}`}>
-                          {q.type === 'complex' ? 'CPX' : 'STD'}
-                        </span>
-                        {altMaterialsEnabled && (
-                          <MaterialActiveBadge summary={summariseMaterialActive(s, q.type)} t={t} />
-                        )}
-                      </td>
-                      <td className="qh-d qh-d-ul">{s.underwriter ? 'N' : ''}</td>
-                      <td className="qh-d qh-d-owner">{s.npi_owner || q.npi_owner || '—'}</td>
-                      <td className="qh-d qh-d-dcu">{s.direct_cu || '—'}</td>
-                      <td className="qh-d qh-d-ecu">{s.end_cu || s.project || '—'}</td>
-                      <td className="qh-d qh-d-proj">{s.project_name || '—'}</td>
-                      <td className="qh-d qh-d-ifs">{s.ccl_pn || '—'}</td>
-                      <td className="qh-d qh-d-dcupn">{s.direct_cu_pn || '—'}</td>
-                      <td className="qh-d qh-d-ecupn">{s.end_cu_pn || '—'}</td>
-                      <td className="qh-d qh-d-size">{fmtSize(sizeW, sizeH)}</td>
-                      <td className="qh-d qh-d-mats" title={matStr}>
-                        {matStr || '—'}
-                      </td>
-                      <td className="qh-d qh-d-trade">
-                        {s.trade_mode ? <span className="qh-trade">{s.trade_mode}</span> : '—'}
-                      </td>
-                      <td className="qh-d qh-d-design">{design || '—'}</td>
-                      <td className="qh-d qh-d-moq">{fmtNum(s.moq)}</td>
-                      <td className="qh-d qh-d-sell">{fmtPrice(s.selling_price)}</td>
-                      {/* Sprint 1.7g — PRICE VND auto-synced from RFQ & MOQ
-                        Pricing info via the bi-directional setPriceVnd
-                        handler. Same shape for Standard + Complex (both
-                        store at state.selling_price_vnd). Falls back to
-                        USD × usd_rate when the explicit VND mirror is
-                        absent (legacy pre-1.7g quotes). */}
-                      <td className="qh-d qh-d-price-vnd">
-                        {s.selling_price_vnd != null && s.selling_price_vnd !== ''
-                          ? fmtNum(s.selling_price_vnd)
-                          : Number.isFinite(+s.selling_price) && Number.isFinite(+s.usd_rate)
-                            ? fmtNum(Number(s.selling_price) * Number(s.usd_rate))
-                            : '—'}
-                      </td>
-                      <td className="qh-d qh-d-target">{target ? fmtPrice(target) : '—'}</td>
-                      <td className="qh-d qh-d-va">{vaVal != null ? fmtPct(vaVal) : '—'}</td>
-                      <td className="qh-d qh-d-contr">
-                        {contrVal != null ? fmtPct(contrVal) : '—'}
-                      </td>
-                      <td className="qh-d qh-d-gm">
-                        {gmVal != null ? (
-                          <span className={`qh-gm ${gmClass(gmVal)}`}>{fmtPct(gmVal)}</span>
-                        ) : (
-                          '—'
-                        )}
-                      </td>
-                      {/* ── STATUS + APPROVAL ACTIONS (Sprint 6.3) ── */}
-                      <td className="qh-d qh-d-status" style={{ textAlign: 'left' }}>
-                        <ApprovalStatusBadge
-                          approval={s.approval}
-                          onOpenHistory={() =>
-                            setHistoryModal({
-                              approval: s.approval || null,
-                              label: s.ccl_pn || s.rfq_number || `#${q.id}`,
-                            })
-                          }
-                        />
-                      </td>
-                      <td className="qh-d qh-d-approve" style={{ textAlign: 'center' }}>
-                        <ApprovalActionsCell
-                          quote={q}
-                          user={user}
-                          onAfterTransition={reloadAfterTransition}
-                        />
-                      </td>
-                      <td className="qh-d qh-d-acts">
-                        {/* Layout badge + Export trigger. Open/Copy/Delete
-                          moved to the right-click context menu. */}
-                        {canExport && (
-                          <button
-                            type="button"
-                            className="qe-trigger"
-                            title={t('qexp.button.tooltip')}
-                            aria-label={t('qexp.button.tooltip')}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setExportModal({ quote: q });
-                            }}
-                          >
-                            <svg
-                              width="13"
-                              height="13"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              aria-hidden="true"
-                            >
-                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                              <polyline points="7 10 12 15 17 10" />
-                              <line x1="12" y1="15" x2="12" y2="3" />
-                            </svg>
-                          </button>
-                        )}
-                        {q.has_layout || s.layout_file?.name ? (
-                          <span className="qh-act-layout qh-layout-yes" title="Layout attached">
-                            <svg
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="#16a34a"
-                              strokeWidth="2.5"
-                              strokeLinecap="round"
-                            >
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                          </span>
-                        ) : (
-                          <span className="qh-act-layout qh-layout-no" title="No layout">
-                            <svg
-                              width="10"
-                              height="10"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="#dc2626"
-                              strokeWidth="2.5"
-                              strokeLinecap="round"
-                            >
-                              <line x1="18" y1="6" x2="6" y2="18" />
-                              <line x1="6" y1="6" x2="18" y2="18" />
-                            </svg>
-                          </span>
-                        )}
-                      </td>
+                      {visibleColumns.map((c) => {
+                        const cls = `qh-d${c.tdClass ? ' ' + c.tdClass : ''}`;
+                        const style = c.tdStyleFn ? c.tdStyleFn(q, ctx) : c.tdStyle;
+                        const extraProps = c.tdPropsFn ? c.tdPropsFn(q, ctx) : null;
+                        return (
+                          <td key={c.key} className={cls} style={style} {...extraProps}>
+                            {c.render(q, ctx)}
+                          </td>
+                        );
+                      })}
                     </tr>
                   );
                 })
@@ -973,8 +1153,8 @@ export default function QuoteHistory() {
 
       {/* ══ Context Menu (right-click) ══ */}
       {ctxMenu && (
-        <div ref={ctxRef} className="qh-ctx-menu" style={{ left: ctxMenu.x, top: ctxMenu.y }}>
-          <div className="qh-ctx-header">
+        <div ref={ctxMergedRef} className="qh-ctx-menu" style={ctxMenuStyle}>
+          <div className="qh-ctx-header" data-menu-drag-handle>
             Quote #{ctxMenu.quote.id} —{' '}
             {ctxMenu.quote.state?.ccl_pn || ctxMenu.quote.state?.rfq_number || 'Untitled'}
           </div>
@@ -1014,6 +1194,18 @@ export default function QuoteHistory() {
             <span>Open With</span>
             <span className="qh-ctx-arrow">›</span>
           </button>
+          {canExport && (
+            <button
+              className="qh-ctx-item"
+              onClick={() => {
+                setExportModal({ quote: ctxMenu.quote });
+                setCtxMenu(null);
+              }}
+            >
+              <span className="qh-ctx-icon">⬇️</span>
+              <span>Export…</span>
+            </button>
+          )}
           <div className="qh-ctx-divider" />
           {/* Color bar — changes RFQ NO text color only */}
           <div className="qh-ctx-colorbar">

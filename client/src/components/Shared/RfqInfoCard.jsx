@@ -45,14 +45,17 @@ export default function RfqInfoCard({
   // collide, and labels always associate with the right input (WCAG 1.3.1).
   const fid = (k) => `rfq-${datalistId || 'x'}-${k}`;
 
-  // Phase 9E.4 — once a quote has crossed Sales approval (or past) the
-  // pricing basis is considered committed. Changing `site` after that
-  // point would retroactively shift the cost stack because a different
-  // site's rate table / SGA rate applies. We disable the site selector
-  // to prevent that, while allowing unlock via REVOKE (which clears the
-  // rates_snapshot server-side). Drafts + pending_sales stay editable.
+  // Phase 9E.4 + Sprint S-QUOTE-PROGRESS-V2 — once a quote is
+  // price_approved the pricing basis is committed. Changing site
+  // would retroactively shift the cost stack because a different
+  // site's rate table / SGA rate applies. Operator must transition
+  // back to draft / quote_to_sale to unlock. Legacy quote data with
+  // 'pending_finance' or 'approved' still locks (back-compat).
   const approvalStatus = state?.approval?.status || 'draft';
-  const siteLocked = approvalStatus === 'pending_finance' || approvalStatus === 'approved';
+  const siteLocked =
+    approvalStatus === 'price_approved' ||
+    approvalStatus === 'pending_finance' ||
+    approvalStatus === 'approved';
 
   return (
     <div className="sc-card">
@@ -255,7 +258,7 @@ export default function RfqInfoCard({
 
         <div className="sc-rfq-section-title">RFQ &amp; Certification</div>
         <div className="sc-grid4">
-          <div className="sc-field sc-field-span2">
+          <div className="sc-field">
             <label htmlFor={fid('rfq_number')}>RFQ Number</label>
             <div style={{ display: 'flex', gap: 4 }}>
               <input
@@ -275,6 +278,17 @@ export default function RfqInfoCard({
                 &#8635;
               </button>
             </div>
+          </div>
+          <div className="sc-field">
+            <label htmlFor={fid('options')}>Options</label>
+            <textarea
+              id={fid('options')}
+              value={get('options')}
+              onChange={(e) => set('options', e.target.value)}
+              className="sc-input"
+              rows={1}
+              style={{ resize: 'vertical', minHeight: '2.2em', fontFamily: 'inherit' }}
+            />
           </div>
           <div className="sc-field">
             <label htmlFor={fid('request_ul')}>Request UL</label>

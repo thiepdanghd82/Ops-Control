@@ -26,6 +26,7 @@ import { redactErrorMessage, logErr } from '../utils/safeError.js';
 import { audit } from '../services/authService.js';
 import { atomicWriteFileSync } from '../services/atomicWrite.js';
 import { toCsvDocument } from '../utils/csvSafe.js';
+import { uploadSingle } from '../utils/uploadGuard.js';
 
 import { parseUploadedFile } from '../services/importParse.js';
 import { getDataset, listDatasets } from '../services/importDatasets.js';
@@ -97,9 +98,14 @@ try {
 }
 configureStageDir(WIZARD_STAGE_DIR);
 
+// 50 MB default: a full BOM "Export Current Data" (≈19.5K rows) is ~24 MB as
+// xlsx, and the app must be able to re-import what it exports. Overridable via
+// OPS_IMPORT_MAX_MB. Routes are requireRole(4)-gated so the upload surface is
+// trusted admins only. (Prefer the CSV export — much smaller for re-import.)
+const IMPORT_MAX_MB = Number(process.env.OPS_IMPORT_MAX_MB) || 50;
 const upload = multer({
   dest: UPLOAD_TMP_DIR,
-  limits: { fileSize: (Number(process.env.OPS_IMPORT_MAX_MB) || 10) * 1024 * 1024 },
+  limits: { fileSize: IMPORT_MAX_MB * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (['.csv', '.xlsx', '.xls', '.txt'].includes(ext)) cb(null, true);
@@ -170,7 +176,7 @@ router.get('/datasets', (req, res) => {
 router.post(
   '/preview',
   requireRole(4),
-  upload.single('file'),
+  uploadSingle(upload, 'file', IMPORT_MAX_MB),
   requireValidUpload,
   async (req, res) => {
     const cleanup = () => {
@@ -190,7 +196,13 @@ router.post(
       const sheet = req.body.sheet || null;
       const overrides = req.body.overrides ? safeJSON(req.body.overrides) : null;
 
-      const parsed = await parseUploadedFile(req.file, sheet ? { sheet } : {});
+      // When the operator hasn't picked a sheet, auto-select the sheet whose
+      // header row best matches THIS dataset — fixes grabbing the first sheet
+      // (e.g. a Dashboard/title sheet) instead of the data sheet; the Lesson 32
+      // tolerant matcher never saw the right sheet otherwise. Explicit sheet
+      // still wins. `meta.sheetScores` (below) explains the choice to the UI.
+      const scoreHeaders = (headers) => Object.keys(mapHeaders(headers, dataset).mapping).length;
+      const parsed = await parseUploadedFile(req.file, sheet ? { sheet } : { scoreHeaders });
       if (!parsed.headers || parsed.headers.length === 0) {
         cleanup();
         return res.status(400).json({ ok: false, error: 'empty_file' });
@@ -200,7 +212,10 @@ router.post(
         return res.status(400).json({ ok: false, error: 'no_data_rows' });
       }
 
-      const headerMappingRaw = mapHeaders(parsed.headers, dataset);
+      // Pass the parsed rows so the matcher can disambiguate number-typed
+      // canonicals by data (e.g. a real "Price" column vs a boolean "Use
+      // Price Incl Tax" column) — title + data mapping per Lesson 32.
+      const headerMappingRaw = mapHeaders(parsed.headers, dataset, parsed.rows);
       const headerMapping = overrides
         ? applyMappingOverrides(headerMappingRaw, overrides, dataset)
         : headerMappingRaw;
@@ -288,6 +303,9 @@ router.post(
           normalised: headerMapping.normalisedHeaders,
           unmapped: headerMapping.unmapped,
           mapping: headerMapping.mapping,
+          // Per-source-column report (matched/low/unmatched/duplicate +
+          // confidence + suggestions) so the wizard never silent-drops.
+          columns: headerMapping.columns || [],
         },
         sample: {
           headers: canonical.headers,

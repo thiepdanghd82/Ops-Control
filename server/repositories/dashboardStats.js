@@ -15,7 +15,7 @@
  * approval funnel, margin trend, and a single `days` time-range filter
  * applied at collect time so downstream reducers don't have to repeat
  * the cutoff check. Win/loss definition: quote.state.approval.status
- * === 'approved' → won, === 'rejected' → lost. Draft / pending are
+ * === 'price_approved' → won, === 'rejected'|'cancelled' → lost. Draft / pending are
  * excluded from the win-rate denominator.
  */
 import { loadQuotes } from './quotesStore.js';
@@ -92,7 +92,7 @@ export function collectMetrics({ days } = {}) {
         : null;
     const moq = isNum(state.moq) ? state.moq : null;
     const revenue = sp != null && moq != null ? sp * moq : null;
-    const approvalStatus = getApprovalStatus(state.approval); // normalizes legacy 'submitted' → 'pending_sales'
+    const approvalStatus = getApprovalStatus(state.approval); // heal-on-read maps legacy v1 states → quote_to_sale / price_approved
 
     // Customer + part number live in `state.*` in the JSON shape; the
     // SQLite mirror denormalizes them as columns. Fall through both so
@@ -119,7 +119,8 @@ export function collectMetrics({ days } = {}) {
 
 /**
  * Top-level counts + overall averages.
- * Sprint 9.1 additions: pending_count (pending_sales + pending_finance)
+ * Sprint 9.1 additions: pending_count (Sprint S-QUOTE-PROGRESS-V2 —
+ * pending_count now = quote_to_sale; the v1 2-gate pipeline collapsed)
  * and revenue_total (sum of sp*moq where both present).
  *
  * Phase 9F.3 — accepts an optional pre-collected `_metrics` array so a
@@ -158,8 +159,7 @@ export function getOverview({ days, _metrics } = {}) {
       vaSum += m.va;
       vaCount++;
     }
-    if (m.approval_status === 'pending_sales' || m.approval_status === 'pending_finance')
-      pendingCount++;
+    if (m.approval_status === 'quote_to_sale') pendingCount++;
     if (isNum(m.revenue)) revenueTotal += m.revenue;
   }
   return {
@@ -173,10 +173,11 @@ export function getOverview({ days, _metrics } = {}) {
 }
 
 /**
- * Overall win rate. Won = approval.status === 'approved'; Lost =
- * 'rejected'. Draft / pending are tracked separately but excluded from
- * the rate denominator so an inbox of pending quotes doesn't drag the
- * win rate down. Rate is null when decided=0 (avoids 0/0 NaN).
+ * Overall win rate. Won = approval.status === 'price_approved'; Lost =
+ * 'rejected' or 'cancelled'. Draft / pending are tracked separately
+ * but excluded from the rate denominator so an inbox of pending
+ * quotes doesn't drag the win rate down. Rate is null when decided=0
+ * (avoids 0/0 NaN).
  */
 export function getWinRate({ days, _metrics } = {}) {
   const metrics = _metrics || collectMetrics({ days });
@@ -186,14 +187,14 @@ export function getWinRate({ days, _metrics } = {}) {
     draft = 0;
   for (const m of metrics) {
     switch (m.approval_status) {
-      case 'approved':
+      case 'price_approved':
         won++;
         break;
       case 'rejected':
+      case 'cancelled':
         lost++;
         break;
-      case 'pending_sales':
-      case 'pending_finance':
+      case 'quote_to_sale':
         pending++;
         break;
       default:
@@ -213,16 +214,16 @@ export function getWinRate({ days, _metrics } = {}) {
 }
 
 /**
- * Approval funnel — counts per state. Used by a funnel chart to
- * visualize the stage distribution of the quote pipeline.
+ * Quote-progress funnel — counts per state. Used by the funnel chart
+ * to visualize stage distribution of the quote pipeline.
  */
 export function getApprovalFunnel({ days, _metrics } = {}) {
   const metrics = _metrics || collectMetrics({ days });
   const funnel = {
     draft: 0,
-    pending_sales: 0,
-    pending_finance: 0,
-    approved: 0,
+    quote_to_sale: 0,
+    price_approved: 0,
+    cancelled: 0,
     rejected: 0,
   };
   for (const m of metrics) {
@@ -250,8 +251,8 @@ export function getTopCustomers(limit = 10, { days, _metrics } = {}) {
       row.gmN++;
     }
     if (isNum(m.revenue)) row.revenue += m.revenue;
-    if (m.approval_status === 'approved') row.won++;
-    else if (m.approval_status === 'rejected') row.lost++;
+    if (m.approval_status === 'price_approved') row.won++;
+    else if (m.approval_status === 'rejected' || m.approval_status === 'cancelled') row.lost++;
     agg.set(cu, row);
   }
   return [...agg.entries()]

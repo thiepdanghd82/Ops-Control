@@ -1,0 +1,144 @@
+/* ToolCostCell — Sprint S-LAYOUT-TOOLCOST. Class-based only (Lesson 6).
+   Lives inside a narrow Processes-table cell (~70px), so the picker menu is an
+   absolutely-positioned dropdown anchored to the cell. */
+
+.sc-toolsrc-wrap {
+  position: relative;
+}
+
+.sc-toolsrc-manual {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.sc-toolsrc-manual > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.sc-toolsrc-sync {
+  flex: 0 0 auto;
+  font-size: 12px;
+  line-height: 1;
+  background: transparent;
+  border: 1px solid var(--color-violet-500);
+  color: var(--color-violet-500);
+  border-radius: 3px;
+  padding: 0 5px;
+  height: 24px;
+  cursor: pointer;
+}
+.sc-toolsrc-sync:hover {
+  background: var(--color-violet-500);
+  color: #fff;
+}
+
+/* Assigned + present — read-only violet cost + source label + unassign. */
+.sc-toolsrc-assigned {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.sc-toolsrc-cost {
+  color: var(--color-violet-500);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sc-toolsrc-label {
+  color: var(--text-secondary);
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 78px;
+}
+
+/* Assigned but source disappeared — inline warning. */
+.sc-toolsrc-missing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sc-toolsrc-warn {
+  color: #ef4444;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sc-toolsrc-x {
+  flex: 0 0 auto;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.sc-toolsrc-x:hover {
+  color: #ef4444;
+}
+
+/* Picker dropdown — absolute, escapes the narrow cell. */
+.sc-toolsrc-menu {
+  position: absolute;
+  z-index: 40;
+  top: 100%;
+  left: 0;
+  margin-top: 2px;
+  min-width: 200px;
+  max-width: 280px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-strong, #cbd5e1);
+  border-radius: 5px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+  padding: 4px;
+}
+.sc-toolsrc-empty {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.sc-toolsrc-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-primary, #0f172a);
+}
+.sc-toolsrc-opt:hover {
+  background: var(--color-violet-50);
+}
+.sc-toolsrc-opt-suggested {
+  background: var(--color-violet-50);
+  outline: 1px solid var(--color-violet-500);
+}
+.sc-toolsrc-opt-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sc-toolsrc-opt-cost {
+  flex: 0 0 auto;
+  font-weight: 700;
+  color: var(--color-violet-500);
+}
+
+@media (prefers-color-scheme: dark) {
+  .sc-toolsrc-menu {
+    background: var(--surface, #1e293b);
+    border-color: var(--border-strong, #475569);
+  }
+}

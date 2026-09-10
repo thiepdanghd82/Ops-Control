@@ -21,6 +21,8 @@ import {
 import { upgradeCplxState } from '../services/cplxMigration.js';
 import { upgradeStdState } from '../services/stdMigration.js';
 import { applyPrintToCutSync } from '../services/layoutFieldSync.js';
+import { buildDrawingPatch, DRAWING_KINDS } from '../services/drawingFiles.js';
+import { resetProcessesScrap } from '../services/scrapDefaults.js';
 
 // ── Action Types ──
 // Exported so tests + advanced callers can reference canonical strings
@@ -29,6 +31,9 @@ export const CALC_ACTIONS = {
   // Standard state
   SET_STD_FIELD: 'SET_STD_FIELD',
   SET_STD_STATE: 'SET_STD_STATE',
+  // Multi-drawing attachments (Sprint S-MULTI-DRAW). Atomically writes
+  // [kind]_files + [kind]_active + the singular [kind]_file mirror.
+  SET_STD_DRAWINGS: 'SET_STD_DRAWINGS',
   SET_MATERIAL_FIELD: 'SET_MATERIAL_FIELD',
   SET_INK_FIELD: 'SET_INK_FIELD',
   SET_PROCESS_FIELD: 'SET_PROCESS_FIELD',
@@ -44,7 +49,18 @@ export const CALC_ACTIONS = {
   TOGGLE_ROW_HIDDEN: 'TOGGLE_ROW_HIDDEN',
   SET_ACTIVE_MOQ: 'SET_ACTIVE_MOQ',
   SET_EXTRA_MOQ: 'SET_EXTRA_MOQ',
+  // MES-3-FIX-53 — Cpx mirror of SET_EXTRA_MOQ writing to cplxState.
+  // Cpx tier inputs (moq / eau / price / price_vnd / target / target_vnd)
+  // used to dispatch SET_EXTRA_MOQ which only touched the Std slice —
+  // every Cpx tier write landed in the wrong place + data lost on save.
+  SET_CPLX_EXTRA_MOQ: 'SET_CPLX_EXTRA_MOQ',
   SET_NUM_MOQ: 'SET_NUM_MOQ',
+  // Sprint S-PACK-SHIP-PER-TIER — per-MOQ packing/shipping override.
+  // Routes by stdState.active_moq_idx: tier 0 → top-level state[field];
+  // tier>0 → extra_moqs[idx-1].packing[field] (sparse). Empty / null
+  // value deletes the key (revert to base); explicit 0 stores 0.
+  SET_STD_TIER_PACKING_FIELD: 'SET_STD_TIER_PACKING_FIELD',
+  SET_CPLX_TIER_PACKING_FIELD: 'SET_CPLX_TIER_PACKING_FIELD',
 
   // Complex state
   SET_CPLX_FIELD: 'SET_CPLX_FIELD',
@@ -52,6 +68,8 @@ export const CALC_ACTIONS = {
   ADD_SUBPRODUCT: 'ADD_SUBPRODUCT',
   REMOVE_SUBPRODUCT: 'REMOVE_SUBPRODUCT',
   SET_SP_FIELD: 'SET_SP_FIELD',
+  // Multi-drawing attachments per subproduct (Sprint S-MULTI-DRAW).
+  SET_SP_DRAWINGS: 'SET_SP_DRAWINGS',
   SET_SP_MATERIAL_FIELD: 'SET_SP_MATERIAL_FIELD',
   SET_SP_INK_FIELD: 'SET_SP_INK_FIELD',
   SET_SP_PROCESS_FIELD: 'SET_SP_PROCESS_FIELD',
@@ -282,6 +300,21 @@ export function calcReducer(state, action) {
     case A.SET_STD_STATE:
       return { ...state, isDirty: true, stdState: { ...state.stdState, ...payload } };
 
+    case A.SET_STD_DRAWINGS: {
+      // payload { kind, files?, active? } → atomic list + active + singular
+      // mirror so every legacy reader (exporter, QuoteHistory, preview)
+      // keeps seeing the active file. An OMITTED field falls back to the
+      // CURRENT state so append (files-only) then set-active (active-only)
+      // never round-trips a stale list. See services/drawingFiles.js.
+      const meta = DRAWING_KINDS[payload.kind];
+      if (!meta) return state;
+      const cur = state.stdState;
+      const files = payload.files !== undefined ? payload.files : cur[meta.list] || [];
+      const active = payload.active !== undefined ? payload.active : cur[meta.active] || 0;
+      const patch = buildDrawingPatch(payload.kind, files, active);
+      return { ...state, isDirty: true, stdState: { ...cur, ...patch } };
+    }
+
     case A.SET_MATERIAL_FIELD: {
       // Route to active set (main or alt) AND keep state.materials mirror
       // in sync via stdWithMaterials. Mirror keeps legacy readers green.
@@ -317,28 +350,39 @@ export function calcReducer(state, action) {
       const current = stdActiveMaterials(state.stdState);
       const mats = [...current];
       if (mats.length < 20) {
-        mats.push({
-          _mid: `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          row_type: mats.length < 10 ? 'Main.Mat' : 'Process Mat',
-          code: '',
-          ifs_code: '',
-          desc: '',
-          usage: 0,
-          setup_lm: 0,
-          cavities: 0,
-          free_liner: 0,
-          width: 0,
-          log_width: 0,
-          pitch_ovr: 0,
-          offcut_yn: '',
-          slitting_yn: '',
-          df_yn: '',
-          offcut_pct: 0,
-          import_duty: 0,
-          s_price: 0,
-          g_price: 0,
-          latest: 0,
-        });
+        // Prefill from the row above so operators don't re-key shared
+        // fields (code, sizes, prices, flags). Fresh _mid keeps React
+        // keys unique. First row (empty set) keeps the blank template so
+        // the position-based row_type fallback still applies.
+        if (mats.length > 0) {
+          mats.push({
+            ...mats[mats.length - 1],
+            _mid: `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          });
+        } else {
+          mats.push({
+            _mid: `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            row_type: 'Main.Mat',
+            code: '',
+            ifs_code: '',
+            desc: '',
+            usage: 0,
+            setup_lm: 0,
+            cavities: 0,
+            free_liner: 0,
+            width: 0,
+            log_width: 0,
+            pitch_ovr: 0,
+            offcut_yn: '',
+            slitting_yn: '',
+            df_yn: '',
+            offcut_pct: 0,
+            import_duty: 0,
+            s_price: 0,
+            g_price: 0,
+            latest: 0,
+          });
+        }
       }
       return { ...state, isDirty: true, stdState: stdWithMaterials(state.stdState, mats) };
     }
@@ -408,7 +452,30 @@ export function calcReducer(state, action) {
     case A.ADD_INK_ROW: {
       const inks = [...state.stdState.inks];
       if (inks.length < 10) {
+        // Prefill from the row above EXCEPT setup_kg — operators asked
+        // for a fixed editable 0.2 default on new ink rows (never copy
+        // the prior setup_kg). Fresh _mid + sequential label. First row
+        // (empty list) keeps the blank template but still seeds 0.2.
+        const base =
+          inks.length > 0
+            ? { ...inks[inks.length - 1] }
+            : {
+                ifs_code: '',
+                color: '',
+                print_type: '',
+                mesh_spec: '',
+                pitch_mm: 0,
+                base_mat: '',
+                width: 0,
+                coverage: 0,
+                area_pct: 0,
+                clicks: 0,
+                s_price: 0,
+                g_price: 0,
+                latest: 0,
+              };
         inks.push({
+          ...base,
           // Row-identity for React key stability. Without _mid the JSX
           // keyed by index remounts the input on reorder/delete — losing
           // focus + cursor pos mid-typing, and contributing to the
@@ -416,20 +483,7 @@ export function calcReducer(state, action) {
           // materials (Sprint 11 _mid back-fill).
           _mid: `i_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           label: `Ink ${inks.length + 1}`,
-          ifs_code: '',
-          color: '',
-          print_type: '',
-          mesh_spec: '',
-          pitch_mm: 0,
-          base_mat: '',
-          width: 0,
-          coverage: 0,
-          setup_kg: 0,
-          area_pct: 0,
-          clicks: 0,
-          s_price: 0,
-          g_price: 0,
-          latest: 0,
+          setup_kg: 0.2,
         });
       }
       return { ...state, isDirty: true, stdState: { ...state.stdState, inks } };
@@ -457,7 +511,7 @@ export function calcReducer(state, action) {
           layout: 0,
           efficiency: 0.85,
           setup_h: 0,
-          scrap_pct: 0.03,
+          scrap_pct: 0,
           manual_uph: 0,
           tool_cost: 0,
           tool_type: '',
@@ -513,6 +567,43 @@ export function calcReducer(state, action) {
       return { ...state, isDirty: true, stdState: { ...state.stdState, extra_moqs: extra } };
     }
 
+    // MES-3-FIX-53 — Cpx parallel of SET_EXTRA_MOQ. Same shape, but
+    // writes to cplxState.extra_moqs so Cpx tier MOQ/EAU/Price/Target
+    // inputs land in the right slice. Pre-fix the Cpx caller dispatched
+    // SET_EXTRA_MOQ above which targets stdState — visible writes went
+    // to the wrong slice + data loss on save round-trip. Clone-not-
+    // mutate: array new, element new (mirrors Std case).
+    case A.SET_CPLX_EXTRA_MOQ: {
+      const extra = [...(state.cplxState.extra_moqs || [])];
+      extra[payload.idx] = { ...(extra[payload.idx] || {}), [payload.field]: payload.value };
+      return { ...state, isDirty: true, cplxState: { ...state.cplxState, extra_moqs: extra } };
+    }
+
+    // Sprint S-PACK-SHIP-PER-TIER — Std side. Routes by active_moq_idx.
+    // Tier 0 → top-level. Tier>0 → extra_moqs[idx-1].packing[field].
+    // Empty/null value deletes the key (revert to base); explicit 0
+    // stores 0 (Henry's dễ-vỡ case).
+    case A.SET_STD_TIER_PACKING_FIELD: {
+      const { field, value } = payload;
+      const activeIdx = state.stdState.active_moq_idx || 0;
+      if (activeIdx === 0) {
+        return {
+          ...state,
+          isDirty: true,
+          stdState: { ...state.stdState, [field]: value },
+        };
+      }
+      const ei = activeIdx - 1;
+      const extra = (state.stdState.extra_moqs || []).map((em, i) => {
+        if (i !== ei) return em;
+        const packing = { ...(em?.packing || {}) };
+        if (value === '' || value == null) delete packing[field];
+        else packing[field] = value;
+        return { ...em, packing };
+      });
+      return { ...state, isDirty: true, stdState: { ...state.stdState, extra_moqs: extra } };
+    }
+
     // ── Complex ──
     case A.SET_CPLX_FIELD:
       return {
@@ -523,6 +614,29 @@ export function calcReducer(state, action) {
 
     case A.SET_CPLX_STATE:
       return { ...state, isDirty: true, cplxState: { ...state.cplxState, ...payload } };
+
+    // Sprint S-PACK-SHIP-PER-TIER — Cpx mirror of SET_STD_TIER_PACKING_FIELD.
+    // Same delete/explicit-0 semantics; routes against cplxState.active_moq_idx.
+    case A.SET_CPLX_TIER_PACKING_FIELD: {
+      const { field, value } = payload;
+      const activeIdx = state.cplxState.active_moq_idx || 0;
+      if (activeIdx === 0) {
+        return {
+          ...state,
+          isDirty: true,
+          cplxState: { ...state.cplxState, [field]: value },
+        };
+      }
+      const ei = activeIdx - 1;
+      const extra = (state.cplxState.extra_moqs || []).map((em, i) => {
+        if (i !== ei) return em;
+        const packing = { ...(em?.packing || {}) };
+        if (value === '' || value == null) delete packing[field];
+        else packing[field] = value;
+        return { ...em, packing };
+      });
+      return { ...state, isDirty: true, cplxState: { ...state.cplxState, extra_moqs: extra } };
+    }
 
     case A.ADD_SUBPRODUCT: {
       const code =
@@ -576,6 +690,26 @@ export function calcReducer(state, action) {
       // AdvancedLayoutBlock so the same trap surfaces per-SP).
       const sp = state.cplxState.subproducts[payload.spIdx];
       const patch = applyPrintToCutSync(sp, payload.field, payload.value);
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, patch),
+        },
+      };
+    }
+
+    case A.SET_SP_DRAWINGS: {
+      // Multi-drawing per subproduct — atomic list + active + singular
+      // mirror, scoped to subproducts[spIdx]. Omitted files/active fall
+      // back to the subproduct's CURRENT values (see SET_STD_DRAWINGS).
+      const meta = DRAWING_KINDS[payload.kind];
+      if (!meta) return state;
+      const sp = state.cplxState.subproducts[payload.spIdx] || {};
+      const files = payload.files !== undefined ? payload.files : sp[meta.list] || [];
+      const active = payload.active !== undefined ? payload.active : sp[meta.active] || 0;
+      const patch = buildDrawingPatch(payload.kind, files, active);
       return {
         ...state,
         isDirty: true,
@@ -832,7 +966,7 @@ export function calcReducer(state, action) {
           layout: 0,
           efficiency: 0.85,
           setup_h: 0,
-          scrap_pct: 0.03,
+          scrap_pct: 0,
           manual_uph: 0,
           tool_cost: 0,
           tool_type: '',
@@ -923,7 +1057,19 @@ export function calcReducer(state, action) {
 
     // ── Global ──
     case A.LOAD_QUOTE: {
-      const { quoteType, state: qState } = payload;
+      const { quoteType, state: qState, action } = payload;
+      // Phase 3 — `action === 'copy'` resets quote identity (so the
+      // next save creates a NEW server record instead of updating the
+      // source) and stamps `pricing_snapshot._synthesized = true` +
+      // clears `_captured_at` / `_captured_by` so the next save re-
+      // freezes against the current master library + records the
+      // copying operator. `action === 'load'` (or omitted) preserves
+      // identity exactly as pre-Phase-3 — BC for every existing caller.
+      const isCopy = action === 'copy';
+      const copySnapshot = (snap) => {
+        if (!snap || typeof snap !== 'object') return snap;
+        return { ...snap, _synthesized: true, _captured_at: null, _captured_by: null };
+      };
       // Sprint 18: schema migration moved into dedicated migrator
       // modules (stdMigration / cplxMigration). LOAD_QUOTE now spreads
       // the factory defaults first (so legacy quotes missing a field
@@ -934,12 +1080,21 @@ export function calcReducer(state, action) {
       // throughout the reducer.
       if (quoteType === 'std') {
         const merged = { ...createStdState(), ...qState };
-        const next = upgradeStdState(merged);
+        const upgraded = upgradeStdState(merged);
+        const next = isCopy
+          ? {
+              ...upgraded,
+              pricing_snapshot: copySnapshot(upgraded.pricing_snapshot),
+              // Copy = fresh start: re-apply the new-RFQ scrap policy
+              // (0 everywhere, 0.10 for FQC). Open/load preserves saved scrap.
+              processes: resetProcessesScrap(upgraded.processes),
+            }
+          : upgraded;
         return {
           ...state,
           isDirty: false,
-          activeQuoteId: payload.id || null,
-          activeQuoteVersion: payload.version || 0,
+          activeQuoteId: isCopy ? null : payload.id || null,
+          activeQuoteVersion: isCopy ? 0 : payload.version || 0,
           stdState: next,
         };
       }
@@ -959,13 +1114,26 @@ export function calcReducer(state, action) {
           };
         });
       }
-      const next = upgradeCplxState(mergedCplx);
+      const upgradedCpx = upgradeCplxState(mergedCplx);
+      const nextCpx = isCopy
+        ? {
+            ...upgradedCpx,
+            pricing_snapshot: copySnapshot(upgradedCpx.pricing_snapshot),
+            // Copy = fresh start: reset every subproduct's process scrap to
+            // its workcenter default (0, or 0.10 for FQC). Open preserves.
+            subproducts: Array.isArray(upgradedCpx.subproducts)
+              ? upgradedCpx.subproducts.map((sp) =>
+                  sp ? { ...sp, processes: resetProcessesScrap(sp.processes) } : sp
+                )
+              : upgradedCpx.subproducts,
+          }
+        : upgradedCpx;
       return {
         ...state,
         isDirty: false,
-        activeQuoteId: payload.id || null,
-        activeQuoteVersion: payload.version || 0,
-        cplxState: next,
+        activeQuoteId: isCopy ? null : payload.id || null,
+        activeQuoteVersion: isCopy ? 0 : payload.version || 0,
+        cplxState: nextCpx,
       };
     }
 

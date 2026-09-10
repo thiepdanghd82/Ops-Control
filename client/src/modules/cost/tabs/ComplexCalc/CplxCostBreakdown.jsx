@@ -6,83 +6,80 @@
  * two-pass calcAll across all sub-products for each MOQ tier, so the
  * tier row aggregates match the FG sub-product (or fall back to a sum).
  */
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
-import {
-  aggregateComplex,
-  enumerateTiers,
-  inkCostTotal,
-  matCostExcludingInk,
-} from '../../../../services/calcEngine';
-import { fmtN, pct, gmClr } from '../../../../utils/format';
+import { useI18n } from '../../../../utils/useI18n';
+import { snapshotPricingParams } from '../../../../services/pricingSnapshot';
+import { procTotal } from '../../../../services/kpiBuckets';
+import SnapshotPanel from '../../components/SnapshotPanel';
+import { enumerateTiers, inkCostTotal, matCostExcludingInk } from '../../../../services/calcEngine';
+import { aggregateForTier } from '../../../../services/cplxTierAggregate';
+import { fmtN, pct } from '../../../../utils/format';
 import { useBomQtyFlag } from '../../../../utils/useBomQtyFlag';
 import { useSpMoqScalingFlag } from '../../../../utils/useSpMoqScalingFlag';
 import { KPI_TOOLTIPS } from '../../../../utils/kpiDefinitions';
+import {
+  recomputeKpi,
+  isBucketActive,
+  readMask,
+  writeMask,
+} from '../StandardCalc/costStructureWhatIf';
+import {
+  defaultPrice,
+  solvePriceForMetric,
+  planTierPriceWrite,
+  isEmptyPrice,
+} from '../../../../services/priceSolver';
+import { MarginCell, ApplyDefault } from '../../components/MarginPriceCells';
+import { metricWarn } from '../../components/MarginPriceCells.helpers';
 
-// Re-derive VA / Contribution / GM at an arbitrary price without
-// re-running aggregateComplex. Costs are price-independent so only
-// the denominator changes. Formulas mirror aggregateForTier() below
-// (CCL convention: VA excludes labor, Contribution includes it) so
-// Selling-table and Target-table values reconcile cell-for-cell.
-function kpiAtPrice(agg, price) {
-  if (!agg || !price || price <= 0) return { va: null, contribution: null, gm: null };
-  const mats = agg.s_mat_cost || 0;
-  const tool = agg.tooling || 0;
-  const ps = agg.packing_ship || 0;
-  const labor = agg.labor_cost || 0;
-  return {
-    va: 1 - (mats + tool + ps) / price,
-    contribution: 1 - (mats + tool + ps + labor) / price,
-    gm: 1 - (agg.s_ttl || 0) / price,
-  };
-}
+// VA / Contribution / GM re-derivation at a different price now lives in
+// costStructureWhatIf.recomputeKpi (shared with Standard); all-active equals
+// the canonical agg.va/contribution/gm exactly, the active-mask subtracts
+// toggled-off buckets per metric.
 
-// Tier-aware aggregation wrapper — delegates the heavy two-pass calc to
-// aggregateComplex() in calcEngine and then layers tier-specific margin
-// math on top.
-//
-// Sprint 8 B.2 (audit §2.4): Contribution formula was previously
-// `1 - (material + pack) / sp` here while the Summary Bar used
-// `1 - (material + tooling + pack + labor) / sp`. Two different Contr%
-// for the same quote is a cross-tab reliability bug — Finance can't
-// tell which one to quote from. Aligned to the calcEngine CCL
-// convention (includes tooling + labor) so every surface shows the
-// same number. The tooltip on each cell (see kpiDefinitions.js)
-// documents the formula.
-function aggregateForTier(cs, sps, lib, tierIdx, opts) {
-  const { aggregate: agg } = aggregateComplex(cs, sps, lib, tierIdx, opts);
-  if (!agg) return null;
-  const tierSp =
-    tierIdx === 0
-      ? cs.selling_price || 0
-      : ((cs.extra_moqs || [])[tierIdx - 1] || {}).price || cs.selling_price || 0;
-  agg.gm = tierSp > 0 ? (tierSp - (agg.s_ttl || 0)) / tierSp : null;
-  // VA% = 1 - (material + tooling + packing_ship) / sp  (labor excluded)
-  agg.va =
-    tierSp > 0
-      ? (tierSp - (agg.s_mat_cost || 0) - (agg.tooling || 0) - (agg.packing_ship || 0)) / tierSp
-      : null;
-  // Contribution% = 1 - (material + tooling + packing_ship + labor) / sp
-  agg.contribution =
-    tierSp > 0
-      ? (tierSp -
-          (agg.s_mat_cost || 0) -
-          (agg.tooling || 0) -
-          (agg.packing_ship || 0) -
-          (agg.labor_cost || 0)) /
-        tierSp
-      : null;
-  return agg;
-}
+// aggregateForTier (tier-aware Complex aggregation + margin math) now lives in
+// services/cplxTierAggregate.js so the price↔margin solver reads the exact
+// same forward calc as this table.
 
 export default function CplxCostBreakdown() {
-  const { cplxState } = useCalc();
+  const { cplxState, activeQuoteId, dispatch } = useCalc();
   const { lib } = useCostLib();
+  const { t } = useI18n();
   const [bomQtyEnabled] = useBomQtyFlag();
   const [spMoqScalingEnabled] = useSpMoqScalingFlag();
   const cs = cplxState;
+  const rate = cs.usd_rate || 0;
   const sps = useMemo(() => cs.subproducts || [], [cs.subproducts]);
+
+  // Display-only what-if mask (sessionStorage per quote — never quote state /
+  // reducer / server). Mirrors Standard CalcCostBreakdown.
+  const [mask, setMask] = useState(() => readMask(activeQuoteId));
+  useEffect(() => {
+    setMask(readMask(activeQuoteId));
+  }, [activeQuoteId]);
+  const toggleBucket = useCallback(
+    (key) => {
+      setMask((prev) => {
+        const next = { ...prev, [key]: prev[key] === false ? true : false };
+        writeMask(activeQuoteId, next);
+        return next;
+      });
+    },
+    [activeQuoteId]
+  );
+  const resetMask = useCallback(() => {
+    writeMask(activeQuoteId, {});
+    setMask({});
+  }, [activeQuoteId]);
+
+  // Phase 4 — lift snapshot resolve for the SnapshotPanel + propagate
+  // through aggregateForTier → aggregateComplex (Phase 3 opts.snapshot).
+  const { source: snapshotSource, snapshot } = useMemo(
+    () => (lib ? snapshotPricingParams(cs, lib) : { source: 'empty', snapshot: null }),
+    [cs, lib]
+  );
 
   const tiers = useMemo(() => {
     if (!lib) return [];
@@ -91,9 +88,72 @@ export default function CplxCostBreakdown() {
       moq,
       sp,
       eau,
-      result: aggregateForTier(cs, sps, lib, idx, { bomQtyEnabled, spMoqScalingEnabled }),
+      result: aggregateForTier(cs, sps, lib, idx, {
+        bomQtyEnabled,
+        spMoqScalingEnabled,
+        snapshot,
+      }),
     }));
-  }, [cs, sps, lib, bomQtyEnabled, spMoqScalingEnabled]);
+  }, [cs, sps, lib, bomQtyEnabled, spMoqScalingEnabled, snapshot]);
+
+  // ── Price ↔ margin inversion (Cost Breakdown only) ──
+  const solverOpts = useMemo(
+    () => ({ kind: 'cpx', snapshot, sps, bomQtyEnabled, spMoqScalingEnabled }),
+    [snapshot, sps, bomQtyEnabled, spMoqScalingEnabled]
+  );
+  const defaults = useMemo(
+    () => tiers.map((tr) => (tr.result ? defaultPrice(cs, lib, tr.idx, solverOpts) : null)),
+    [tiers, cs, lib, solverOpts]
+  );
+
+  const commitMetric = useCallback(
+    (table, tierIdx, metric, targetFrac) => {
+      const price = solvePriceForMetric(cs, lib, tierIdx, metric, targetFrac, solverOpts);
+      if (price == null || !(price > 0) || !Number.isFinite(price)) return false;
+      for (const a of planTierPriceWrite({ kind: 'cpx', table, tierIdx, usd: price, rate }))
+        dispatch(a);
+      return true;
+    },
+    [cs, lib, solverOpts, rate, dispatch]
+  );
+
+  const applyDefault = useCallback(
+    (table, tierIdx) => {
+      const d = defaultPrice(cs, lib, tierIdx, solverOpts);
+      if (!d || !(d.price > 0)) return;
+      for (const a of planTierPriceWrite({ kind: 'cpx', table, tierIdx, usd: d.price, rate }))
+        dispatch(a);
+    },
+    [cs, lib, solverOpts, rate, dispatch]
+  );
+
+  // Auto-seed the GM-25% default into a FRESH tier only — one whose selling
+  // AND target are both empty. Seeds both once per tier per quote; a manual
+  // value always wins (use ↻ to re-apply). Marked seen only on success.
+  const seededRef = useRef({});
+  useEffect(() => {
+    if (!lib) return;
+    const qid = String(activeQuoteId ?? 'draft');
+    const seen = seededRef.current[qid] || (seededRef.current[qid] = new Set());
+    for (const { idx, result } of tiers) {
+      if (!result || seen.has(idx)) continue;
+      const curSell = idx === 0 ? cs.selling_price : cs.extra_moqs?.[idx - 1]?.price;
+      const curTgt = idx === 0 ? cs.target : cs.extra_moqs?.[idx - 1]?.target;
+      if (!(isEmptyPrice(curSell) && isEmptyPrice(curTgt))) continue; // fresh tier only
+      const d = defaultPrice(cs, lib, idx, solverOpts);
+      if (!d || !(d.price > 0)) continue;
+      seen.add(idx);
+      for (const table of ['selling', 'target'])
+        for (const a of planTierPriceWrite({
+          kind: 'cpx',
+          table,
+          tierIdx: idx,
+          usd: d.price,
+          rate,
+        }))
+          dispatch(a);
+    }
+  }, [tiers, cs, lib, solverOpts, rate, activeQuoteId, dispatch]);
 
   if (!lib) {
     return (
@@ -105,6 +165,9 @@ export default function CplxCostBreakdown() {
 
   const activeIdx = cs.active_moq_idx || 0;
   const activeResult = tiers[activeIdx]?.result;
+  // Phase 4 — site-mismatch / future-warning surface from the
+  // active-tier calcAll result (Phase 2 `_warnings` channel).
+  const activeWarnings = activeResult?._warnings || [];
 
   return (
     <div className="sc-section">
@@ -117,7 +180,25 @@ export default function CplxCostBreakdown() {
           <span className="sc-card-title">Selling /unit (USD)</span>
         </div>
         <div className="sc-card-body sc-table-wrap">
-          <table className="sc-table sc-bd-table">
+          {/* data-kbd-skip: MarginCell VA/Contr/GM cells are edit-to-reprice,
+              not a data-entry grid — keep their native Enter/blur commit
+              (mirrors Standard CalcCostBreakdown). */}
+          <table className="sc-table sc-bd-table" data-kbd-skip>
+            <colgroup>
+              <col className="bdc-tier" />
+              <col className="bdc-qty" />
+              <col className="bdc-qty" />
+              <col className="bdc-price" />
+              <col className="bdc-price" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-metric" />
+              <col className="bdc-metric" />
+              <col className="bdc-metric" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Tier</th>
@@ -142,9 +223,16 @@ export default function CplxCostBreakdown() {
               </tr>
             </thead>
             <tbody>
-              {tiers.map(({ idx, moq, sp, eau, result: r }) => {
+              {tiers.map(({ idx, moq, sp, eau, result: r }, i) => {
                 const isActive = idx === activeIdx;
                 const target = idx === 0 ? cs.target : cs.extra_moqs?.[idx - 1]?.target;
+                const sk = r ? recomputeKpi(r, mask, sp) : null;
+                const def = defaults[i];
+                const sellWarn =
+                  sk &&
+                  (metricWarn('gm', sk.gm) ||
+                    metricWarn('contribution', sk.contribution) ||
+                    metricWarn('va', sk.va));
                 return (
                   <tr key={idx} className={isActive ? 'sc-bd-active' : ''}>
                     <td>
@@ -155,7 +243,12 @@ export default function CplxCostBreakdown() {
                     <td className="right">{moq ? moq.toLocaleString() : '\u2014'}</td>
                     <td className="right">{eau ? eau.toLocaleString() : '\u2014'}</td>
                     <td className="right" style={{ fontWeight: 700, color: '#1e40af' }}>
-                      {sp ? '$' + fmtN(sp, 4) : '\u2014'}
+                      <span className="mpc-price-val">{sp ? '$' + fmtN(sp, 4) : '\u2014'}</span>
+                      <ApplyDefault
+                        def={def}
+                        warn={sellWarn}
+                        onApply={() => applyDefault('selling', idx)}
+                      />
                     </td>
                     <td className="right" style={{ color: '#64748b' }}>
                       {target ? '$' + fmtN(target, 4) : '\u2014'}
@@ -164,27 +257,34 @@ export default function CplxCostBreakdown() {
                       <>
                         <td className="right bd-mat">{fmtN(matCostExcludingInk(r))}</td>
                         <td className="right bd-ink">{fmtN(inkCostTotal(r))}</td>
-                        <td className="right bd-proc">
-                          {fmtN((r.overhead || 0) + (r.labor_cost || 0) + (r.tooling || 0))}
-                        </td>
+                        <td className="right bd-proc">{fmtN(procTotal(r))}</td>
                         <td className="right bd-pack">{fmtN(r.packing_ship)}</td>
                         <td className="right bd-sub" style={{ fontWeight: 800 }}>
                           {fmtN(r.s_ttl)}
                         </td>
-                        <td className="right bd-va" style={{ color: '#0891b2', fontWeight: 700 }}>
-                          {pct(r.va)}
+                        <td className="right bd-va">
+                          <MarginCell
+                            metric="va"
+                            value={sk.va}
+                            warn={metricWarn('va', sk.va)}
+                            onCommit={(f) => commitMetric('selling', idx, 'va', f)}
+                          />
                         </td>
-                        <td
-                          className="right bd-contr"
-                          style={{ color: '#7c3aed', fontWeight: 700 }}
-                        >
-                          {pct(r.contribution)}
+                        <td className="right bd-contr">
+                          <MarginCell
+                            metric="contribution"
+                            value={sk.contribution}
+                            warn={metricWarn('contribution', sk.contribution)}
+                            onCommit={(f) => commitMetric('selling', idx, 'contribution', f)}
+                          />
                         </td>
-                        <td
-                          className="right bd-gm"
-                          style={{ color: gmClr(r.gm), fontWeight: 800, fontSize: 13 }}
-                        >
-                          {pct(r.gm)}
+                        <td className="right bd-gm">
+                          <MarginCell
+                            metric="gm"
+                            value={sk.gm}
+                            warn={metricWarn('gm', sk.gm)}
+                            onCommit={(f) => commitMetric('selling', idx, 'gm', f)}
+                          />
                         </td>
                       </>
                     ) : (
@@ -207,7 +307,25 @@ export default function CplxCostBreakdown() {
           <span className="sc-card-title">Target /unit (USD)</span>
         </div>
         <div className="sc-card-body sc-table-wrap">
-          <table className="sc-table sc-bd-table">
+          {/* data-kbd-skip: MarginCell VA/Contr/GM cells are edit-to-reprice,
+              not a data-entry grid — keep their native Enter/blur commit
+              (mirrors Standard CalcCostBreakdown). */}
+          <table className="sc-table sc-bd-table" data-kbd-skip>
+            <colgroup>
+              <col className="bdc-tier" />
+              <col className="bdc-qty" />
+              <col className="bdc-qty" />
+              <col className="bdc-price" />
+              <col className="bdc-price" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-cost" />
+              <col className="bdc-metric" />
+              <col className="bdc-metric" />
+              <col className="bdc-metric" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Tier</th>
@@ -232,10 +350,17 @@ export default function CplxCostBreakdown() {
               </tr>
             </thead>
             <tbody>
-              {tiers.map(({ idx, moq, sp, eau, result: r }) => {
+              {tiers.map(({ idx, moq, sp, eau, result: r }, i) => {
                 const isActive = idx === activeIdx;
                 const target = idx === 0 ? cs.target : cs.extra_moqs?.[idx - 1]?.target;
-                const tgtKpi = kpiAtPrice(r, target);
+                const tgtKpi = recomputeKpi(r, mask, target);
+                const def = defaults[i];
+                const tgtWarn =
+                  target &&
+                  tgtKpi &&
+                  (metricWarn('gm', tgtKpi.gm) ||
+                    metricWarn('contribution', tgtKpi.contribution) ||
+                    metricWarn('va', tgtKpi.va));
                 return (
                   <tr key={idx} className={isActive ? 'sc-bd-active' : ''}>
                     <td>
@@ -249,37 +374,47 @@ export default function CplxCostBreakdown() {
                       {sp ? '$' + fmtN(sp, 4) : '\u2014'}
                     </td>
                     <td className="right" style={{ fontWeight: 700, color: '#b45309' }}>
-                      {target ? '$' + fmtN(target, 4) : '\u2014'}
+                      <span className="mpc-price-val">
+                        {target ? '$' + fmtN(target, 4) : '\u2014'}
+                      </span>
+                      <ApplyDefault
+                        def={def}
+                        warn={tgtWarn}
+                        onApply={() => applyDefault('target', idx)}
+                      />
                     </td>
                     {r ? (
                       <>
                         <td className="right bd-mat">{fmtN(matCostExcludingInk(r))}</td>
                         <td className="right bd-ink">{fmtN(inkCostTotal(r))}</td>
-                        <td className="right bd-proc">
-                          {fmtN((r.overhead || 0) + (r.labor_cost || 0) + (r.tooling || 0))}
-                        </td>
+                        <td className="right bd-proc">{fmtN(procTotal(r))}</td>
                         <td className="right bd-pack">{fmtN(r.packing_ship)}</td>
                         <td className="right bd-sub" style={{ fontWeight: 800 }}>
                           {fmtN(r.s_ttl)}
                         </td>
-                        <td className="right bd-va" style={{ color: '#0891b2', fontWeight: 700 }}>
-                          {target ? pct(tgtKpi.va) : '\u2014'}
+                        <td className="right bd-va">
+                          <MarginCell
+                            metric="va"
+                            value={target ? tgtKpi.va : null}
+                            warn={metricWarn('va', target ? tgtKpi.va : null)}
+                            onCommit={(f) => commitMetric('target', idx, 'va', f)}
+                          />
                         </td>
-                        <td
-                          className="right bd-contr"
-                          style={{ color: '#7c3aed', fontWeight: 700 }}
-                        >
-                          {target ? pct(tgtKpi.contribution) : '\u2014'}
+                        <td className="right bd-contr">
+                          <MarginCell
+                            metric="contribution"
+                            value={target ? tgtKpi.contribution : null}
+                            warn={metricWarn('contribution', target ? tgtKpi.contribution : null)}
+                            onCommit={(f) => commitMetric('target', idx, 'contribution', f)}
+                          />
                         </td>
-                        <td
-                          className="right bd-gm"
-                          style={{
-                            color: target ? gmClr(tgtKpi.gm) : '#94a3b8',
-                            fontWeight: 800,
-                            fontSize: 13,
-                          }}
-                        >
-                          {target ? pct(tgtKpi.gm) : '\u2014'}
+                        <td className="right bd-gm">
+                          <MarginCell
+                            metric="gm"
+                            value={target ? tgtKpi.gm : null}
+                            warn={metricWarn('gm', target ? tgtKpi.gm : null)}
+                            onCommit={(f) => commitMetric('target', idx, 'gm', f)}
+                          />
                         </td>
                       </>
                     ) : (
@@ -299,73 +434,125 @@ export default function CplxCostBreakdown() {
       {activeResult &&
         (() => {
           const r = activeResult;
+          const sellPrice = tiers[activeIdx]?.sp || 0;
+          const targetPrice = activeIdx === 0 ? cs.target : cs.extra_moqs?.[activeIdx - 1]?.target;
           const rows = [
-            { label: 'Material Cost', value: matCostExcludingInk(r), color: '#2563eb', icon: '◈' },
-            { label: 'Ink Cost', value: inkCostTotal(r), color: '#0891b2', icon: '⊕' },
+            {
+              key: 'material',
+              label: 'Material Cost',
+              value: matCostExcludingInk(r),
+              color: '#2563eb',
+              icon: '◈',
+            },
+            { key: 'ink', label: 'Ink Cost', value: inkCostTotal(r), color: '#0891b2', icon: '⊕' },
             // r.overhead/r.labor_cost are RUN-only (calcEngine 635-636 strips
             // setup). Add bd_setup_mach / bd_setup_labor so the waterfall bars
             // sum to s_ttl and match the Detailed Breakdown's setup+run rows.
             {
+              key: 'overhead',
               label: 'Overhead (Machine)',
               value: (r.overhead || 0) + (r.bd_setup_mach || 0),
               color: '#059669',
               icon: '⚙',
             },
             {
+              key: 'labor',
               label: 'Labor Cost',
               value: (r.labor_cost || 0) + (r.bd_setup_labor || 0),
               color: '#16a34a',
               icon: '⊙',
             },
-            { label: 'Tooling', value: r.tooling, color: '#374151', icon: '⚒' },
-            { label: 'Packing & Shipping', value: r.packing_ship, color: '#0ea5e9', icon: '▣' },
-            { label: 'VAT Loss', value: r.vat_loss, color: '#f59e0b', icon: '⊘' },
+            { key: 'tooling', label: 'Tooling', value: r.tooling, color: '#374151', icon: '⚒' },
+            {
+              key: 'packing',
+              label: 'Packing & Shipping',
+              value: r.packing_ship,
+              color: '#0ea5e9',
+              icon: '▣',
+            },
+            { key: 'vat', label: 'VAT Loss', value: r.vat_loss, color: '#f59e0b', icon: '⊘' },
           ];
-          const totalCost = r.s_ttl || 0;
+          const totalCost = r.s_ttl || 0; // composition-% denominator (unchanged)
           const maxVal = Math.max(...rows.map((x) => Math.abs(x.value || 0)), 0.001);
+          const visible = rows.filter((x) => x.value > 0);
+          const isOff = (x) => !isBucketActive(mask, x.key);
+          const activeSum = visible.reduce((s, x) => s + (isOff(x) ? 0 : x.value), 0);
+          const excluded = visible.reduce((s, x) => s + (isOff(x) ? x.value : 0), 0);
+          const pctOf = (v, p) => (p > 0 ? pct(v / p) : '—');
           return (
             <div className="sc-card" style={{ marginTop: 12 }}>
               <div className="sc-card-header sc-header-dark">
-                <span className="sc-card-title">Cost Structure</span>
+                <span className="sc-card-title">{t('cb.cost_structure')}</span>
               </div>
               <div className="sc-card-body">
-                {rows
-                  .filter((x) => x.value > 0)
-                  .map((x, i) => {
-                    const barW = Math.round((Math.abs(x.value) / maxVal) * 100);
-                    const share = totalCost > 0 ? ((x.value / totalCost) * 100).toFixed(1) : 0;
-                    return (
-                      <div key={i} className="sc-sum-bar-row">
-                        <div className="sc-sum-bar-label">
-                          <span>
-                            {x.icon} {x.label}
-                          </span>
-                          <span style={{ color: '#64748b', fontSize: 11 }}>{share}%</span>
-                        </div>
-                        <div className="sc-sum-bar-track">
-                          <div
-                            className="sc-sum-bar-fill"
-                            style={{ width: barW + '%', background: x.color }}
-                          />
-                        </div>
-                        <div className="sc-sum-bar-val" style={{ color: x.color }}>
-                          ${fmtN(x.value)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                <div className="sc-sum-bar-row sc-sum-bar-total">
-                  <div className="sc-sum-bar-label">
-                    <b>GRAND TOTAL</b>
-                  </div>
+                <div className="sc-sum-bar-row sc-cb-head">
+                  <div className="sc-sum-bar-label">{t('cb.bucket')}</div>
                   <div className="sc-sum-bar-track" />
-                  <div
-                    className="sc-sum-bar-val"
-                    style={{ fontWeight: 900, fontSize: 14, color: '#0f2341' }}
-                  >
-                    ${fmtN(totalCost)}
+                  <div className="sc-sum-bar-val sc-cb-h">{t('cb.value')}</div>
+                  <div className="sc-cb-pct sc-cb-h">{t('cb.pct_sell')}</div>
+                  <div className="sc-cb-pct sc-cb-h">{t('cb.pct_target')}</div>
+                  <div className="sc-cb-active sc-cb-h">
+                    {t('cb.active')}
+                    <button
+                      type="button"
+                      className="sc-cb-reset"
+                      onClick={resetMask}
+                      title={t('cb.reset')}
+                    >
+                      &#8635;
+                    </button>
                   </div>
                 </div>
+                {visible.map((x) => {
+                  const barW = Math.round((Math.abs(x.value) / maxVal) * 100);
+                  const share = totalCost > 0 ? ((x.value / totalCost) * 100).toFixed(1) : 0;
+                  const off = isOff(x);
+                  return (
+                    <div key={x.key} className={`sc-sum-bar-row${off ? ' sc-cb-off' : ''}`}>
+                      <div className="sc-sum-bar-label">
+                        <span>
+                          {x.icon} {x.label}
+                        </span>
+                        <span className="sc-cb-comp">{share}%</span>
+                      </div>
+                      <div className="sc-sum-bar-track">
+                        <div
+                          className="sc-sum-bar-fill"
+                          style={{ width: barW + '%', background: x.color }}
+                        />
+                      </div>
+                      <div className="sc-sum-bar-val" style={{ color: x.color }}>
+                        ${fmtN(x.value)}
+                      </div>
+                      <div className="sc-cb-pct">{pctOf(x.value, sellPrice)}</div>
+                      <div className="sc-cb-pct">{pctOf(x.value, targetPrice)}</div>
+                      <div className="sc-cb-active">
+                        <input
+                          type="checkbox"
+                          className="sc-cb-chk"
+                          checked={!off}
+                          onChange={() => toggleBucket(x.key)}
+                          aria-label={`${t('cb.active')} — ${x.label}`}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="sc-sum-bar-row sc-sum-bar-total">
+                  <div className="sc-sum-bar-label">
+                    <b>{t('cb.grand_total')}</b>
+                  </div>
+                  <div className="sc-sum-bar-track" />
+                  <div className="sc-sum-bar-val sc-cb-grand">${fmtN(activeSum)}</div>
+                  <div className="sc-cb-pct sc-cb-grand">{pctOf(activeSum, sellPrice)}</div>
+                  <div className="sc-cb-pct sc-cb-grand">{pctOf(activeSum, targetPrice)}</div>
+                  <div className="sc-cb-active" />
+                </div>
+                {excluded > 0 && (
+                  <div className="sc-cb-excluded">
+                    {t('cb.excluded')}: &minus;${fmtN(excluded)}
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -444,9 +631,7 @@ export default function CplxCostBreakdown() {
                     </div>
                     <div className="sc-bd-detail-row sc-bd-detail-total">
                       <span>Total Proc</span>
-                      <span>
-                        {fmtN((r.overhead || 0) + (r.labor_cost || 0) + (r.tooling || 0))}
-                      </span>
+                      <span>{fmtN(procTotal(r))}</span>
                     </div>
                   </div>
                   <div className="sc-bd-detail-group">
@@ -471,6 +656,8 @@ export default function CplxCostBreakdown() {
             </div>
           );
         })()}
+      {/* Phase 4 — pricing snapshot audit panel (Cpx symmetric with Std). */}
+      <SnapshotPanel source={snapshotSource} snapshot={snapshot} warnings={activeWarnings} />
     </div>
   );
 }

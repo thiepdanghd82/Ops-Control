@@ -36,6 +36,26 @@ export const STRINGS = {
   'common.loading': { en: 'Loading…', vi: 'Đang tải…' },
   'common.saving': { en: 'Saving…', vi: 'Đang lưu…' },
   'common.unsaved': { en: 'Unsaved', vi: 'Chưa lưu' },
+  // ─── Clear Data password step-up (ConfirmClearModal) ───
+  'clear_confirm.title': { en: 'Clear data — confirm', vi: 'Xoá dữ liệu — xác nhận' },
+  'clear_confirm.body': {
+    en: 'This permanently clears all {rows} rows of {dataset}. The current file is backed up first, but this cannot be undone from the app. Enter your account password to confirm.',
+    vi: 'Thao tác này xoá vĩnh viễn toàn bộ {rows} dòng của {dataset}. File hiện tại được sao lưu trước, nhưng không thể hoàn tác trong ứng dụng. Nhập mật khẩu tài khoản để xác nhận.',
+  },
+  'clear_confirm.body_no_count': {
+    en: 'This permanently clears all of {dataset}. The current file is backed up first, but this cannot be undone from the app. Enter your account password to confirm.',
+    vi: 'Thao tác này xoá vĩnh viễn toàn bộ {dataset}. File hiện tại được sao lưu trước, nhưng không thể hoàn tác trong ứng dụng. Nhập mật khẩu tài khoản để xác nhận.',
+  },
+  'clear_confirm.pwd_label': { en: 'Account password', vi: 'Mật khẩu tài khoản' },
+  'clear_confirm.err_pwd': {
+    en: 'Incorrect account password.',
+    vi: 'Mật khẩu tài khoản không đúng.',
+  },
+  'clear_confirm.err_generic': {
+    en: 'Clear failed. Please try again.',
+    vi: 'Xoá thất bại. Vui lòng thử lại.',
+  },
+  'clear_confirm.confirm_btn': { en: 'Clear data', vi: 'Xoá dữ liệu' },
   'common.saved': { en: 'Saved', vi: 'Đã lưu' },
   'common.active': { en: 'Active', vi: 'Đang dùng' },
   'common.yes': { en: 'Yes', vi: 'Có' },
@@ -54,7 +74,6 @@ export const STRINGS = {
 
   // ─── Sidebar / Nav ───
   'nav.module_cost': { en: 'Ops Cost', vi: 'Ops Cost' },
-  'nav.module_planning': { en: 'Planning', vi: 'Kế hoạch' },
   'nav.section.calculators': { en: 'PRICING WORKSHEET', vi: 'BẢNG TÍNH GIÁ' },
   'nav.section.quoting': { en: 'QUOTING & PRICING', vi: 'BÁO GIÁ' },
   'nav.section.manufacturing': { en: 'MANUFACTURING', vi: 'SẢN XUẤT' },
@@ -71,6 +90,8 @@ export const STRINGS = {
   'nav.tab.cost_breakdown': { en: 'Cost Breakdown', vi: 'Cơ cấu Chi phí' },
   'nav.tab.formal_quotation': { en: 'Formal Quotation', vi: 'Báo giá Chính thức' },
   'nav.tab.quote_history': { en: 'Quote History', vi: 'Lịch sử Báo giá' },
+  'nav.tab.npi_parts_list': { en: 'NPI Parts List', vi: 'Danh sách NPI Parts' },
+  'nav.tab.rfq_tracking': { en: 'RFQ Tracking', vi: 'Danh sách RFQ' },
   'nav.tab.pending_approvals': { en: 'Pending Approvals', vi: 'Chờ Phê duyệt' },
   'nav.tab.mfg_structures': { en: 'Mfg Structures', vi: 'Cấu trúc SX' },
   'nav.tab.routing_ops': { en: 'Routing Ops', vi: 'Công đoạn SX' },
@@ -82,16 +103,170 @@ export const STRINGS = {
   'nav.tab.rate_table': { en: 'Rate Table', vi: 'Bảng Định mức' },
   'nav.tab.ddl': { en: 'Drop-Down Lists', vi: 'Danh sách lựa chọn' },
   'nav.tab.finance_data': { en: 'Finance Data', vi: 'Dữ liệu Tài chính' },
+  'nav.tab.design_tools': { en: 'Design Tools', vi: 'Công cụ Thiết kế' },
+  'nav.tab.machine_technical': { en: 'Machine Technical', vi: 'Thông số máy' },
   'nav.tab.settings': { en: 'Settings', vi: 'Cài đặt' },
-  'nav.tab.metrics': { en: 'Admin metrics', vi: 'Admin metrics' },
-  'nav.tab.audit_log': { en: 'Audit log', vi: 'Nhật ký audit' },
-  'nav.tab.kiosk_admin': { en: 'Kiosk Admin', vi: 'Quản trị Kiosk' },
-  'nav.tab.reason_codes': { en: 'Reason Codes', vi: 'Mã lý do' },
+  'nav.tab.metrics': { en: 'Admin Metrics', vi: 'Số liệu Quản trị' },
+  'nav.tab.audit_log': { en: 'Audit Log', vi: 'Nhật ký Kiểm toán' },
   'nav.tab.help': { en: 'Help', vi: 'Hướng dẫn' },
   'nav.tab.home': { en: 'Home', vi: 'Trang chủ' },
-  'nav.team_online_title': { en: 'Team Online', vi: 'Team đang online' },
+  'nav.team_online_title': { en: 'Team Online', vi: 'Đội ngũ đang online' },
   'nav.team_online_count': { en: '{n} online', vi: '{n} đang online' },
   'nav.badge_pending_tooltip': { en: '{n} awaiting your action', vi: '{n} đang chờ bạn xử lý' },
+  // Sprint S-SYSCTRL — SYS-only cue: this item is globally hidden for others.
+  'nav.hidden_for_others': {
+    en: 'Hidden for other users (System Control)',
+    vi: 'Đang ẩn với người dùng khác (Điều khiển Hệ thống)',
+  },
+  // Footer status — operator-visible at all times.
+  'nav.footer.me_tag': { en: '(me)', vi: '(tôi)' },
+  'nav.footer.active_now': { en: 'Active now', vi: 'Đang hoạt động' },
+
+  // ─── NPI Parts List (Sprint S-NPI-PARTS, v1.6 Option C read-only viewer) ───
+  'npi_parts.title': { en: 'NPI Parts List', vi: 'Danh sách NPI Parts' },
+  'npi_parts.row_count': {
+    en: '{shown} of {total} rows',
+    vi: '{shown} / {total} dòng',
+  },
+  'npi_parts.data_notice': {
+    en: 'Master reference list. Import to replace the set; export CSV/XLSX round-trips losslessly.',
+    vi: 'Danh sách tham chiếu gốc. Import để thay thế; export CSV/XLSX round-trip không mất dữ liệu.',
+  },
+  'npi_parts.import': { en: 'Import…', vi: 'Nhập…' },
+  'npi_parts.import_hint': {
+    en: 'Import NPI Parts from CSV or XLSX (preview + Export/Template inside the wizard)',
+    vi: 'Nhập NPI Parts từ CSV hoặc XLSX (xem trước + Export/Template trong wizard)',
+  },
+  'npi_parts.clear': { en: 'Clear Data', vi: 'Xoá dữ liệu' },
+  'npi_parts.clear_hint': {
+    en: 'Clear all NPI Parts data (the current file is backed up first)',
+    vi: 'Xoá toàn bộ dữ liệu NPI Parts (file hiện tại được sao lưu trước)',
+  },
+  'npi_parts.search_placeholder': {
+    en: 'Search part name, Code IFS, System code, customer, PIC…',
+    vi: 'Tìm theo Part Name, Code IFS, System code, customer, PIC…',
+  },
+  'npi_parts.year_filter_label': { en: 'Filter by year', vi: 'Lọc theo năm' },
+  'npi_parts.year_all': { en: 'All years', vi: 'Tất cả các năm' },
+  'npi_parts.columns_title': { en: 'Visible columns', vi: 'Cột hiển thị' },
+  'npi_parts.no_match': { en: 'No matching rows.', vi: 'Không tìm thấy dòng phù hợp.' },
+  'npi_parts.prev': { en: 'Prev', vi: 'Trước' },
+  'npi_parts.next': { en: 'Next', vi: 'Tiếp' },
+  'npi_parts.page_x_of_y': { en: 'Page {x} of {y}', vi: 'Trang {x} / {y}' },
+  'npi_parts.snapshot_generated_at': {
+    en: 'Snapshot generated {ts}',
+    vi: 'Snapshot tạo {ts}',
+  },
+  'npi_parts.showcard_title': { en: 'Part details', vi: 'Chi tiết Part' },
+  'npi_parts.showcard_tooling_fee': { en: 'Tooling Fees', vi: 'Phí Tooling' },
+  'npi_parts.load_error_title': {
+    en: 'Failed to load NPI parts snapshot',
+    vi: 'Không tải được snapshot NPI parts',
+  },
+  'npi_parts.load_error_hint': {
+    en: 'Check network + reload',
+    vi: 'Kiểm tra mạng và tải lại',
+  },
+
+  // ─── RFQ Tracking (spreadsheet master list; distinct from rfq-tracker) ───
+  'rfq_tracking.title': { en: 'RFQ Tracking', vi: 'Danh sách RFQ' },
+  'rfq_tracking.row_count': { en: '{shown} of {total} rows', vi: '{shown} / {total} dòng' },
+  'rfq_tracking.search_placeholder': {
+    en: 'Search RFQ / customer / part…',
+    vi: 'Tìm RFQ / khách hàng / part…',
+  },
+  'rfq_tracking.add_row': { en: 'Add Row', vi: 'Thêm dòng' },
+  'rfq_tracking.save': { en: 'Save', vi: 'Lưu' },
+  'rfq_tracking.saving': { en: 'Saving…', vi: 'Đang lưu…' },
+  'rfq_tracking.import': { en: 'Import xlsx', vi: 'Nhập xlsx' },
+  'rfq_tracking.import_done': {
+    en: 'Imported {rows} rows → {total} total',
+    vi: 'Đã nhập {rows} dòng → {total} tổng',
+  },
+  'rfq_tracking.prev': { en: 'Prev', vi: 'Trước' },
+  'rfq_tracking.next': { en: 'Next', vi: 'Sau' },
+  'rfq_tracking.page_x_of_y': { en: 'Page {x} of {y}', vi: 'Trang {x}/{y}' },
+  'rfq_tracking.expand_hint': {
+    en: 'Double-click to open the full editor',
+    vi: 'Nhấp đúp để mở trình chỉnh sửa đầy đủ',
+  },
+  'rfq_tracking.delete': { en: 'Delete', vi: 'Xóa' },
+  'rfq_tracking.delete_confirm': { en: 'Delete this RFQ row?', vi: 'Xóa dòng RFQ này?' },
+  'rfq_tracking.close': { en: 'Close', vi: 'Đóng' },
+  'rfq_tracking.save_changes': { en: 'Save Changes', vi: 'Lưu thay đổi' },
+  'rfq_tracking.other': { en: 'Other…', vi: 'Khác…' },
+  'rfq_tracking.other_placeholder': { en: 'Type a value…', vi: 'Nhập giá trị…' },
+  'rfq_tracking.choose_from_list': { en: 'Choose from list', vi: 'Chọn từ danh sách' },
+  'rfq_tracking.reason_required': {
+    en: 'Sale Stage “Rejected/Cancel” requires a Notes/Reason — fill it before saving.',
+    vi: 'Sale Stage “Rejected/Cancel” bắt buộc điền Notes/Reason trước khi lưu.',
+  },
+  'rfq_tracking.reason_required_toast': {
+    en: 'Cannot save — {n} Rejected/Cancel row(s) need a Notes/Reason.',
+    vi: 'Không thể lưu — {n} dòng Rejected/Cancel cần điền Notes/Reason.',
+  },
+  'rfq_tracking.showcard_title': { en: 'RFQ {rfq} · {qtn}', vi: 'RFQ {rfq} · {qtn}' },
+  'rfq_tracking.empty_title': { en: 'No RFQs yet', vi: 'Chưa có RFQ nào' },
+  'rfq_tracking.empty_hint': {
+    en: 'Import the RFQ Master xlsx to get started.',
+    vi: 'Nhập file RFQ Master (xlsx) để bắt đầu.',
+  },
+  // Sort + filter (display-only)
+  'rfq_tracking.filters': { en: 'Filters', vi: 'Bộ lọc' },
+  'rfq_tracking.clear_filters': { en: 'Clear filters', vi: 'Xóa bộ lọc' },
+  'rfq_tracking.sort_hint': {
+    en: 'Sort: click to cycle ↑ / ↓ / off',
+    vi: 'Sắp xếp: nhấp để đổi ↑ / ↓ / tắt',
+  },
+  'rfq_tracking.no_match': {
+    en: 'No rows match the current filters.',
+    vi: 'Không có dòng nào khớp bộ lọc.',
+  },
+  'rfq_tracking.filter.contains': { en: 'contains…', vi: 'chứa…' },
+  'rfq_tracking.filter.min': { en: 'min', vi: 'min' },
+  'rfq_tracking.filter.max': { en: 'max', vi: 'max' },
+  'rfq_tracking.filter.min_pct': { en: 'min %', vi: 'min %' },
+  'rfq_tracking.filter.max_pct': { en: 'max %', vi: 'max %' },
+  'rfq_tracking.filter.all': { en: 'All', vi: 'Tất cả' },
+  'rfq_tracking.filter.n_sel': { en: '{n} selected', vi: 'đã chọn {n}' },
+  'rfq_tracking.filter.no_values': { en: '(no values)', vi: '(không có giá trị)' },
+  'rfq_tracking.filter.clear_col': { en: 'Clear', vi: 'Xóa' },
+  // Showcard field groups
+  'rfq_tracking.group.identity': { en: 'Identity', vi: 'Định danh' },
+  'rfq_tracking.group.materials': { en: 'Materials & Process', vi: 'Vật tư & Công đoạn' },
+  'rfq_tracking.group.dates': { en: 'Dates & Stage', vi: 'Ngày & Giai đoạn' },
+  'rfq_tracking.group.pricing': { en: 'Pricing', vi: 'Giá' },
+  'rfq_tracking.group.sales': { en: 'Sales', vi: 'Bán hàng' },
+  // Column headers (EN = verbatim "RFQ Master" labels; acronyms stay EN in vi)
+  'rfq_tracking.col.rfq_no': { en: 'RFQ No', vi: 'Số RFQ' },
+  'rfq_tracking.col.qtn': { en: 'Qtn #', vi: 'Lần BG' },
+  'rfq_tracking.col.customer': { en: 'Customer', vi: 'Khách hàng' },
+  'rfq_tracking.col.end_customer': { en: 'End Customer/Project', vi: 'KH cuối/Dự án' },
+  'rfq_tracking.col.part_no': { en: 'Part Number', vi: 'Mã hàng' },
+  'rfq_tracking.col.description': { en: 'Description', vi: 'Mô tả' },
+  'rfq_tracking.col.main_material': { en: 'Main Material', vi: 'Vật liệu chính' },
+  'rfq_tracking.col.design_process': { en: 'Design Process', vi: 'Công đoạn' },
+  'rfq_tracking.col.print_type': { en: 'Print (LP/Flexo)', vi: 'In (LP/Flexo)' },
+  'rfq_tracking.col.silkscreen': { en: 'SilkScreen', vi: 'In lụa' },
+  'rfq_tracking.col.moq': { en: 'MOQ', vi: 'MOQ' },
+  'rfq_tracking.col.rfq_date': { en: 'RFQ Date', vi: 'Ngày RFQ' },
+  'rfq_tracking.col.target_date': { en: 'Target Date', vi: 'Ngày mục tiêu' },
+  'rfq_tracking.col.actual_quote_date': { en: 'Actual Quote Date', vi: 'Ngày báo giá' },
+  'rfq_tracking.col.days_in_process': { en: 'Days in Process', vi: 'Số ngày xử lý' },
+  'rfq_tracking.col.month': { en: 'Month', vi: 'Tháng' },
+  'rfq_tracking.col.npi_stage': { en: 'NPI Stage', vi: 'Giai đoạn NPI' },
+  'rfq_tracking.col.npi_pic': { en: 'NPI PIC', vi: 'Phụ trách NPI' },
+  'rfq_tracking.col.control_flag': { en: 'Control Flag', vi: 'Cờ kiểm soát' },
+  'rfq_tracking.col.ccl_price': { en: 'CCL Price ($)', vi: 'Giá CCL ($)' },
+  'rfq_tracking.col.target_price': { en: 'Target Price ($)', vi: 'Giá mục tiêu ($)' },
+  'rfq_tracking.col.va': { en: 'VA %', vi: 'VA %' },
+  'rfq_tracking.col.contr': { en: 'Contr %', vi: 'Đóng góp %' },
+  'rfq_tracking.col.gm': { en: 'GM %', vi: 'GM %' },
+  'rfq_tracking.col.eau': { en: 'EAU / Qty', vi: 'EAU / SL' },
+  'rfq_tracking.col.est_revenue': { en: 'Est. Revenue ($)', vi: 'Doanh thu ước tính ($)' },
+  'rfq_tracking.col.sales_pic': { en: 'Sales PIC', vi: 'Phụ trách bán hàng' },
+  'rfq_tracking.col.sale_stage': { en: 'Sale Stage', vi: 'Giai đoạn bán' },
+  'rfq_tracking.col.notes': { en: 'Notes / Reason', vi: 'Ghi chú / Lý do' },
 
   // ─── Home Page (Sprint S-HOME 2026-05-03) ───
   'home.morning': { en: 'Good morning', vi: 'Chào buổi sáng' },
@@ -119,11 +294,26 @@ export const STRINGS = {
   'home.qa.inventory': { en: 'IFS Inventory', vi: 'Tồn kho IFS' },
   'home.qa.help': { en: 'Help', vi: 'Hướng dẫn' },
 
+  // ─── Modal maximize/restore (opt-in on shared Modal) ───
+  'modal.maximize': { en: 'Maximize', vi: 'Phóng to' },
+  'modal.restore': { en: 'Restore', vi: 'Thu nhỏ' },
+
+  // ─── Window manager (in-app MDI, feature-flagged) ───
+  'window.minimize': { en: 'Minimize', vi: 'Thu nhỏ' },
+  'window.maximize': { en: 'Maximize', vi: 'Phóng to' },
+  'window.restore': { en: 'Restore', vi: 'Khôi phục' },
+  'window.close': { en: 'Close', vi: 'Đóng' },
+  'window.taskbar': { en: 'Open windows', vi: 'Cửa sổ đang mở' },
+  'window.empty': {
+    en: 'Click a sidebar tab to open a window',
+    vi: 'Nhấn một mục ở thanh bên để mở cửa sổ',
+  },
+
   // ─── Library picker (Phase 10M right-click on material/ink rows) ───
   'picker.menu_title': { en: 'Search from library', vi: 'Tìm từ thư viện' },
   'picker.lib.npi': { en: 'NPI Material', vi: 'NPI Material' },
   'picker.lib.sourcing': { en: 'Sourcing DB', vi: 'Sourcing DB' },
-  'picker.lib.raw': { en: 'Raw Materials (IFS)', vi: 'Raw Materials (IFS)' },
+  'picker.lib.ifs': { en: 'IFS Materials', vi: 'IFS Materials' },
   'picker.close': { en: 'Close', vi: 'Đóng' },
   'picker.back': { en: 'Back to library list', vi: 'Quay lại danh sách thư viện' },
   'picker.search_placeholder': {
@@ -131,6 +321,7 @@ export const STRINGS = {
     vi: 'Tìm theo mã, mô tả, nhà cung cấp…',
   },
   'picker.result_count_suffix': { en: 'results', vi: 'kết quả' },
+  'picker.col.date': { en: 'Date', vi: 'Ngày' },
   'picker.col.code': { en: 'Code', vi: 'Mã' },
   'picker.col.desc': { en: 'Description', vi: 'Mô tả' },
   'picker.col.supplier': { en: 'Supplier', vi: 'Nhà cung cấp' },
@@ -246,6 +437,111 @@ export const STRINGS = {
 
   // ─── Hardware Devices + Connection Mode ───
   // v1.3 L3: 90 hw.* + mode.* keys MOVED to client/src/i18n/domains/mes.js.
+
+  // ─── Lead time & Notice — Pricing sub-tab (Std + Cpx) ───
+  // Cover-sheet free-text fields + read-only Tooling cost. Tab label
+  // duplicated as a hardcoded string in SUB_TABS arrays (matching
+  // neighbouring tabs' convention); this key reserved for Help System
+  // + future breadcrumb / Search uses.
+  'lt.tab_label': { en: 'Lead time & Notice', vi: 'L/T & Ghi chú' },
+  'lt.col.tooling_cost': { en: 'Tooling cost (USD)', vi: 'Chi phí Tooling (USD)' },
+  'lt.col.material_lt': { en: 'Material L/T', vi: 'L/T Vật liệu' },
+  'lt.col.sample_lt': { en: 'Sample L/T', vi: 'L/T Mẫu' },
+  'lt.col.po_lt': { en: 'PO L/T', vi: 'L/T PO' },
+  'lt.col.remark': { en: 'Remark', vi: 'Ghi chú' },
+  'lt.col.process': { en: 'Process', vi: 'Công đoạn' },
+  'lt.col.material_type': {
+    en: 'Type of Material (In quotation)',
+    vi: 'Loại vật liệu (Báo giá)',
+  },
+  'lt.tooling.synced_tip': {
+    en: 'Auto-synced from Processes tab — sum of Tool Cost column',
+    vi: 'Tự đồng bộ từ tab Processes — tổng cột Tool Cost',
+  },
+  // Sprint S-LEADTIME-TABLE-POLISH (2026-06-19) — short visible
+  // badge under the Tooling value. Distinct from `synced_tip`
+  // which is the longer hover tooltip.
+  'lt.tooling.caption': {
+    en: 'Read-only · Auto-synced',
+    vi: 'Chỉ đọc · Tự đồng bộ',
+  },
+  'lt.placeholder.multiline': { en: 'Type notes…', vi: 'Nhập ghi chú…' },
+  // Sprint S-MAT-LT (2026-06-25) — Material L/T auto-derive + manual override.
+  'lt.material.auto_caption': {
+    en: 'Auto · max L/T + 7 days',
+    vi: 'Tự động · L/T lớn nhất + 7 ngày',
+  },
+  'lt.material.manual_caption': { en: 'Manual override', vi: 'Nhập tay (ghi đè)' },
+  'lt.material.auto_tip': {
+    en: 'Auto-derived from IFS/NPI Materials lead time of the Main.Mat rows (max + 7 days). Type to override.',
+    vi: 'Tự suy ra từ lead time IFS/NPI của các dòng Main.Mat (lớn nhất + 7 ngày). Gõ để ghi đè.',
+  },
+  'lt.material.manual_tip': {
+    en: 'Manual override active — click ↻ to revert to the auto value.',
+    vi: 'Đang ghi đè thủ công — bấm ↻ để quay lại giá trị tự động.',
+  },
+  'lt.material.auto_placeholder': { en: 'No library match', vi: 'Không khớp thư viện' },
+  'lt.material.reset': { en: 'Reset to auto', vi: 'Đặt lại về tự động' },
+  'lt.po.auto_caption': {
+    en: 'Auto · Σ PROD TIME ÷ 8',
+    vi: 'Tự động · Σ PROD TIME ÷ 8',
+  },
+  'lt.po.manual_caption': { en: 'Manual override', vi: 'Nhập tay (ghi đè)' },
+  'lt.po.auto_tip': {
+    en: 'Auto-derived from total production time (Σ PROD TIME hours ÷ 8-hour day, rounded up). Type to override.',
+    vi: 'Tự suy ra từ tổng thời gian sản xuất (Σ PROD TIME giờ ÷ ngày 8 giờ, làm tròn lên). Gõ để ghi đè.',
+  },
+  'lt.po.manual_tip': {
+    en: 'Manual override active — click ↻ to revert to the auto value.',
+    vi: 'Đang ghi đè thủ công — bấm ↻ để quay lại giá trị tự động.',
+  },
+  'lt.po.auto_placeholder': { en: 'No processes', vi: 'Chưa có công đoạn' },
+  'lt.po.reset': { en: 'Reset to auto', vi: 'Đặt lại về tự động' },
+  // Read-only Materials MOQ table (synced from Materials section + NPI library)
+  'lt.matmoq.title': { en: 'Materials MOQ', vi: 'MOQ Vật tư' },
+  'lt.tol.label': { en: 'Product tolerance (± mm)', vi: 'Dung sai sản phẩm (± mm)' },
+  'lt.matmoq.empty': { en: 'No synced materials', vi: 'Chưa có vật tư' },
+  'lt.matmoq.row': { en: 'Row', vi: 'Dòng' },
+  'lt.matmoq.ifs_code': { en: 'IFS code', vi: 'Mã IFS' },
+  'lt.matmoq.quote_mat': { en: 'Quote Materials', vi: 'Vật tư báo giá' },
+  'lt.matmoq.type': { en: 'Type / Description', vi: 'Loại / Mô tả' },
+  'lt.matmoq.leadtime': { en: 'Leadtime', vi: 'Thời gian giao' },
+  'lt.matmoq.qpa_m2': { en: 'QPA (m²)', vi: 'QPA (m²)' },
+  'lt.matmoq.moq_m2': { en: 'Materials MOQ (m²)', vi: 'MOQ Vật tư (m²)' },
+  'lt.matmoq.clear_pcs': { en: 'Clear Materials MOQ (pcs)', vi: 'MOQ Vật tư (pcs)' },
+  'lt.matmoq.select_all': { en: 'Select all for Remark', vi: 'Chọn tất cả cho Ghi chú' },
+  'lt.matmoq.select_row': { en: 'Include in Remark:', vi: 'Đưa vào Ghi chú:' },
+  'lt.matmoq.fuzzy_tip': {
+    en: '≈ Matched despite spacing/dash difference — clean the code or the library entry',
+    vi: '≈ Khớp dù lệch khoảng trắng/gạch — nên chuẩn hoá mã hoặc dòng thư viện',
+  },
+  'lt.matmoq.ambiguous_tip': {
+    en: 'Ambiguous — the code matches more than one library entry; left unresolved',
+    vi: 'Không rõ ràng — mã khớp nhiều dòng thư viện; để trống',
+  },
+  'lt.matmoq.unresolved_tip': {
+    en: 'No library match — check the IFS code or add it to NPI / IFS Materials',
+    vi: 'Không khớp thư viện — kiểm tra mã IFS hoặc thêm vào NPI / IFS Materials',
+  },
+  // REMARK checkbox-driven auto-sync
+  'lt.remark.auto_placeholder': {
+    en: 'Auto from checked materials — or type to override',
+    vi: 'Tự động từ vật tư đã chọn — hoặc nhập tay để ghi đè',
+  },
+  'lt.remark.auto_caption': { en: 'Auto · from checked rows', vi: 'Tự động · từ dòng đã tick' },
+  'lt.remark.manual_caption': { en: 'Manual override', vi: 'Nhập tay (ghi đè)' },
+  'lt.remark.auto_tip': {
+    en: 'Auto-synced from the checked Materials MOQ rows',
+    vi: 'Tự đồng bộ từ các dòng Materials MOQ đã tick',
+  },
+  'lt.remark.manual_tip': {
+    en: 'Manual override — checkboxes no longer change this. ↻ to re-enable auto.',
+    vi: 'Nhập tay (ghi đè) — checkbox không còn tác động. ↻ để bật lại tự động.',
+  },
+  'lt.remark.reset': {
+    en: 'Reset to auto (from checkboxes)',
+    vi: 'Đặt lại về tự động (từ checkbox)',
+  },
 };
 
 /**

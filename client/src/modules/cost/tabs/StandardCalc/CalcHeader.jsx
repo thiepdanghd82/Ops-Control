@@ -40,6 +40,15 @@ export default function CalcHeader() {
     if (st.site) setActiveSite(st.site);
   }, [st.site, setActiveSite]);
 
+  // EAU is required for tooling amortization (calcProcess uses
+  // st.annual_qty × product_lifetime as the tooling EAU cap). Warn when
+  // any process has tool_cost > 0 but the operator left EAU blank.
+  const showEauWarn = useMemo(
+    () =>
+      (st.processes || []).some((p) => Number(p?.tool_cost) > 0) && !(Number(st.annual_qty) > 0),
+    [st.processes, st.annual_qty]
+  );
+
   const npiOwners = useMemo(() => {
     if (!lib?.ddl?.npi_owner) return [];
     return Array.isArray(lib.ddl.npi_owner) ? lib.ddl.npi_owner : [];
@@ -347,8 +356,11 @@ export default function CalcHeader() {
                       <DecimalInput
                         value={st.annual_qty}
                         onChange={(v) => setStdField('annual_qty', v)}
-                        className="sc-moq-inp"
+                        className={`sc-moq-inp ${showEauWarn ? 'sc-input-warn' : ''}`}
                         thousandSep
+                        title={
+                          showEauWarn ? 'EAU bắt buộc để tính giá khuôn (Tooling) đúng' : undefined
+                        }
                       />
                     </td>
                     <td>

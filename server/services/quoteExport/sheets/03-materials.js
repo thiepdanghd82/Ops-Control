@@ -23,7 +23,8 @@ import { pickStdTierRows, pickCpxTierRows, sumRowCosts, getActiveIdx } from '../
 const MAT_COLS = [
   { key: 'row_type', label: 'mat.row_type', width: 14 },
   { key: 'ifs_code', label: 'mat.ifs_code', width: 14 },
-  { key: 'desc', label: 'mat.desc', width: 22 },
+  { key: 'drw_material', label: 'mat.drw_material', width: 18 },
+  { key: 'desc', label: 'mat.quote_materials', width: 22 },
   { key: 'usage', label: 'mat.usage', width: 8, numeric: true },
   { key: 'setup_lm', label: 'mat.setup_lm', width: 10, numeric: true },
   { key: 'pitch', label: 'mat.pitch', width: 10, numeric: true },
@@ -34,10 +35,28 @@ const MAT_COLS = [
   { key: 'slit', label: 'mat.slit', width: 8 },
   { key: 'ref_price', label: 'mat.ref_price', width: 11, numeric: true, customerHidden: true },
   { key: 'mat_price', label: 'mat.mat_price', width: 11, numeric: true },
+  // Displayed derived columns (CalcMaterials QPA + Mats/MOQ), persisted per row.
+  { key: 'qpa_m2', label: 'mat.qpa_m2', width: 10, numeric: true, computedOnly: true },
+  { key: 'qpa_lm', label: 'mat.qpa_lm', width: 10, numeric: true, computedOnly: true },
+  { key: 'mats_moq_m2', label: 'mat.mats_moq_m2', width: 12, numeric: true, computedOnly: true },
+  { key: 'mats_moq_lm', label: 'mat.mats_moq_lm', width: 12, numeric: true, computedOnly: true },
+  // Scrap % — the app's Σ(process scrap_pct)×100; derived from state, always shown.
+  { key: 'scrap_pct', label: 'mat.scrap_pct', width: 8, numeric: true },
   { key: 'setup_cost', label: 'mat.setup_cost', width: 12, numeric: true, computedOnly: true },
   { key: 'run_cost', label: 'mat.run_cost', width: 12, numeric: true, computedOnly: true },
   { key: 'total', label: 'common.total', width: 12, numeric: true, computedOnly: true },
 ];
+
+/** App Materials Scrap% = Σ(process scrap_pct where workcenter set & !hidden) × 100. */
+function sumProcScrapPct(procs) {
+  if (!Array.isArray(procs)) return 0;
+  let s = 0;
+  for (const p of procs) {
+    if (!p || p.hidden || !p.workcenter) continue;
+    s += Number(p.scrap_pct) || 0;
+  }
+  return s * 100;
+}
 
 /**
  * @param {import('exceljs').Workbook} wb
@@ -76,6 +95,7 @@ export function buildMaterialsSheet(wb, ctx) {
     state.subproducts.forEach((sp, spi) => {
       const mainRows = pickCpxTierRows(result, spi, tierIdx, 'materials_main');
       const altRows = pickCpxTierRows(result, spi, tierIdx, 'materials_alt');
+      const spScrap = sumProcScrapPct(sp.processes);
       const spLabel = `${L('mat.section_main', lang)} — ${sp.code || `SP${spi + 1}`}`;
       r = writeMaterialSection(
         sheet,
@@ -83,7 +103,8 @@ export function buildMaterialsSheet(wb, ctx) {
         spLabel,
         sp.materials_main || sp.materials || [],
         lang,
-        mainRows
+        mainRows,
+        spScrap
       );
       renderedMainArrays.push(mainRows);
       if (Array.isArray(sp.materials_alt) && sp.materials_alt.length > 0) {
@@ -94,7 +115,8 @@ export function buildMaterialsSheet(wb, ctx) {
           `${L('mat.section_alt', lang)} — ${sp.code || `SP${spi + 1}`}`,
           sp.materials_alt,
           lang,
-          altRows
+          altRows,
+          spScrap
         );
         renderedAltArrays.push(altRows);
       }
@@ -105,12 +127,13 @@ export function buildMaterialsSheet(wb, ctx) {
     const main = Array.isArray(state.materials_main) ? state.materials_main : state.materials || [];
     const alt = Array.isArray(state.materials_alt) ? state.materials_alt : [];
     const mainRows = pickStdTierRows(result, tierIdx, 'materials_main');
-    r = writeMaterialSection(sheet, r, L('mat.section_main', lang), main, lang, mainRows);
+    const stdScrap = sumProcScrapPct(state.processes);
+    r = writeMaterialSection(sheet, r, L('mat.section_main', lang), main, lang, mainRows, stdScrap);
     renderedMainArrays.push(mainRows);
     if (alt.length > 0) {
       const altRows = pickStdTierRows(result, tierIdx, 'materials_alt');
       r += 1;
-      r = writeMaterialSection(sheet, r, L('mat.section_alt', lang), alt, lang, altRows);
+      r = writeMaterialSection(sheet, r, L('mat.section_alt', lang), alt, lang, altRows, stdScrap);
       renderedAltArrays.push(altRows);
     }
   }
@@ -154,7 +177,7 @@ export function buildMaterialsSheet(wb, ctx) {
 
   // Footnote
   r += 1;
-  sheet.mergeCells(`A${r}:P${r}`);
+  sheet.mergeCells(`A${r}:${colLetter(MAT_COLS.length)}${r}`);
   const note = sheet.getCell(`A${r}`);
   note.value = L('common.computed_at_calc', lang);
   applyStyle(note, 'footnote');
@@ -171,11 +194,12 @@ export function buildMaterialsSheet(wb, ctx) {
   freezeTop(sheet, 1);
 }
 
-function writeMaterialSection(sheet, startRow, title, rows, lang, rowBreakdown) {
+function writeMaterialSection(sheet, startRow, title, rows, lang, rowBreakdown, scrapPct = 0) {
   let r = startRow;
+  const LAST = colLetter(MAT_COLS.length);
 
   // Section banner
-  sheet.mergeCells(`A${r}:P${r}`);
+  sheet.mergeCells(`A${r}:${LAST}${r}`);
   sheet.getCell(`A${r}`).value = title;
   applyStyle(sheet.getCell(`A${r}`), 'section');
   r += 1;
@@ -191,7 +215,7 @@ function writeMaterialSection(sheet, startRow, title, rows, lang, rowBreakdown) 
 
   // Body rows
   if (rows.length === 0) {
-    sheet.mergeCells(`A${r}:P${r}`);
+    sheet.mergeCells(`A${r}:${LAST}${r}`);
     sheet.getCell(`A${r}`).value = '—';
     applyStyle(sheet.getCell(`A${r}`), 'body');
     return r + 1;
@@ -203,11 +227,11 @@ function writeMaterialSection(sheet, startRow, title, rows, lang, rowBreakdown) 
     const rowCost = Array.isArray(rowBreakdown) ? rowBreakdown[ri] : null;
     MAT_COLS.forEach((c, i) => {
       const cell = sheet.getCell(r, i + 1);
-      cell.value = extractCellValue(c, mat, rowCost);
+      cell.value = extractCellValue(c, mat, rowCost, scrapPct);
       // Computed cells use 5-decimal precision when hydrated; em-dash
-      // when no rowCost (legacy quote).
+      // when the field is missing (legacy quote).
       applyStyle(cell, c.numeric ? (c.computedOnly ? 'numCost' : 'num') : 'body');
-      if (c.computedOnly && !rowCost) {
+      if (c.computedOnly && cell.value === '—') {
         cell.note = 'Computed at calc time, not persisted (legacy quote — re-save to refresh).';
       }
     });
@@ -217,31 +241,35 @@ function writeMaterialSection(sheet, startRow, title, rows, lang, rowBreakdown) 
   return r;
 }
 
-function extractCellValue(col, mat, rowCost) {
+function extractCellValue(col, mat, rowCost, scrapPct = 0) {
   if (col.computedOnly) {
-    if (!rowCost) return '—';
-    if (col.key === 'setup_cost') return rowCost.setup_cost ?? '—';
-    if (col.key === 'run_cost') return rowCost.run_cost ?? '—';
-    if (col.key === 'total') return rowCost.total ?? '—';
-    return '—';
+    // setup_cost / run_cost / total / qpa_m2 / qpa_lm / mats_moq_m2 / mats_moq_lm
+    return rowCost && rowCost[col.key] != null ? rowCost[col.key] : '—';
   }
   switch (col.key) {
+    case 'scrap_pct':
+      return Number.isFinite(scrapPct) && scrapPct !== 0 ? scrapPct : scrapPct === 0 ? 0 : '—';
     case 'row_type':
       return mat.row_type || 'Main.Mat';
     case 'ifs_code':
       return mat.ifs_code || mat.code || '';
+    case 'drw_material':
+      return mat.drw_material || '';
     case 'desc':
       return mat.desc || mat.code || '';
     case 'usage':
       return numCell(mat.usage);
     case 'setup_lm':
       return numCell(mat.setup_lm);
+    // Pitch / Width / Cav — show the effective value the app displays + calc
+    // uses (row override else Layout fallback), persisted per row; fall back to
+    // the raw input for legacy quotes.
     case 'pitch':
-      return numCell(mat.pitch_ovr);
+      return rowCost && rowCost.pitch > 0 ? rowCost.pitch : numCell(mat.pitch_ovr);
     case 'width':
-      return numCell(mat.width);
+      return rowCost && rowCost.width > 0 ? rowCost.width : numCell(mat.width);
     case 'cav':
-      return numCell(mat.cavities);
+      return rowCost && rowCost.cavities > 0 ? rowCost.cavities : numCell(mat.cavities);
     case 'offcut':
       return mat.offcut_yn ?? '';
     case 'offcut_pct':
@@ -263,14 +291,15 @@ function numCell(v) {
 }
 
 function writeSubtotalRow(sheet, r, cols, label, values) {
-  // Label spans the first 3 cols, then aggregate values land in their
-  // matching columns (setup_cost / run_cost / total).
-  sheet.mergeCells(`A${r}:C${r}`);
+  // Label spans the first 4 non-numeric cols (row_type, ifs_code,
+  // drw_material, quote_materials/desc), then aggregate values land in
+  // their matching columns (setup_cost / run_cost / total).
+  sheet.mergeCells(`A${r}:D${r}`);
   const labelCell = sheet.getCell(`A${r}`);
   labelCell.value = label;
   applyStyle(labelCell, 'subtotal');
   cols.forEach((c, i) => {
-    if (i < 3) return; // skipped, merged into label
+    if (i < 4) return; // skipped, merged into label
     const cell = sheet.getCell(r, i + 1);
     if (Object.prototype.hasOwnProperty.call(values, c.key)) {
       const v = values[c.key];

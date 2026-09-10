@@ -77,6 +77,7 @@ const opsAPI = {
   // child window with no print dialog or annotation tools.
   shell: {
     openExternalFile: (b64Data, ext) => invoke('ops:shell.openExternalFile', { b64Data, ext }),
+    openPath: (targetPath) => invoke('ops:shell.openPath', { targetPath }),
   },
 
   // ─── Printer (A4/A3 office printers) ───────────────────────────
@@ -130,13 +131,6 @@ const opsAPI = {
     showOpenDialog: (opts) => invoke('ops:fs.showOpenDialog', opts),
     writeFile: (filePath, data) => invoke('ops:fs.writeFile', filePath, data),
     readFile: (filePath) => invoke('ops:fs.readFile', filePath),
-  },
-
-  // ─── Legacy data import (v1.0 → v1.1 migration) ──────────────
-  import: {
-    pickFolder: (opts) => invoke('ops:import.pickFolder', opts),
-    scanFolder: (path) => invoke('ops:import.scanFolder', path),
-    execute: (path, opts) => invoke('ops:import.execute', path, opts),
   },
 
   // ─── License (S-DIAG-FIX 2026-05-05) ──────────────────────────

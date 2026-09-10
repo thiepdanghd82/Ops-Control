@@ -15,6 +15,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { upgradeStdState, STD_SHAPE_VERSION } from './stdMigration.js';
 
+// A fully-healed drawing shape (Sprint S-MULTI-DRAW). Spread into
+// "already-current" fixtures so healDrawings short-circuits by reference
+// (empty lists + null singular are self-consistent → same-ref return).
+const DRAW_CURRENT = {
+  layout_files: [],
+  layout_active: 0,
+  layout_file: null,
+  customer_drw_files: [],
+  customer_drw_active: 0,
+  customer_drw_file: null,
+};
+
 test('upgradeStdState: null / non-object / array pass through unchanged', () => {
   assert.equal(upgradeStdState(null), null);
   assert.equal(upgradeStdState(undefined), undefined);
@@ -81,6 +93,8 @@ test('upgradeStdState: already-current state returned by reference (short-circui
     num_moq: 1,
     extra_moqs: [],
     materials: [{ code: 'M001', _mid: 'm_0_a' }],
+    pricing_snapshot: {}, // present + object → healPricingSnapshot no-ops
+    ...DRAW_CURRENT, // drawings already-healed → healDrawings short-circuits
   };
   const next = upgradeStdState(current);
   assert.equal(next, current, 'no-op when fully upgraded (reference equality)');
@@ -222,6 +236,8 @@ test('upgradeStdState: already-upgraded quote → returns same ref', () => {
     materials: [{ _mid: 'm1', code: 'M001' }],
     part_width: 462,
     part_length_md: 135,
+    pricing_snapshot: {}, // present + object → healPricingSnapshot no-ops
+    ...DRAW_CURRENT,
   };
   const next = upgradeStdState(quote);
   assert.equal(next, quote, 'short-circuit when nothing needs healing');
@@ -275,6 +291,8 @@ test('upgradeStdState: short-circuit when all _mid populated (no churn)', () => 
     processes: [{ _mid: 'p1', workcenter: 'X' }],
     part_width: 100,
     part_length_md: 50,
+    pricing_snapshot: {}, // present + object → healPricingSnapshot no-ops
+    ...DRAW_CURRENT,
   };
   const next = upgradeStdState(quote);
   assert.equal(next, quote, 'no _mid gaps + no print-cut mismatch → same ref');
@@ -319,4 +337,163 @@ test('upgradeStdState v3: idempotent — applying twice returns same shape', () 
   assert.equal(once._schema_version, 3);
   assert.equal(twice._schema_version, 3);
   assert.equal(twice, once, 'second call returns same ref (short-circuit at v3)');
+});
+
+// ─── Phase 1 pricing snapshot heal-on-read (additive, no version bump)
+
+test('upgradeStdState: legacy state without pricing_snapshot gets empty default', () => {
+  const legacy = {
+    _schema_version: 1,
+    materials: [{ _mid: 'm1', code: 'M1' }],
+  };
+  const upgraded = upgradeStdState(legacy);
+  assert.ok(upgraded.pricing_snapshot, 'pricing_snapshot now present');
+  assert.equal(upgraded.pricing_snapshot._captured_at, null);
+  assert.equal(upgraded.pricing_snapshot._synthesized, false);
+  assert.equal(upgraded.pricing_snapshot._site, null);
+  assert.deepEqual(upgraded.pricing_snapshot.materials, {});
+  assert.deepEqual(upgraded.pricing_snapshot.rates, {});
+  assert.deepEqual(upgraded.pricing_snapshot.coverage, []);
+});
+
+test('upgradeStdState: existing pricing_snapshot is NOT overwritten (idempotent)', () => {
+  const withSnap = {
+    _schema_version: 3,
+    materials_main: [{ _mid: 'm1', code: 'M1' }],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [{ _mid: 'm1', code: 'M1' }],
+    inks: [],
+    processes: [],
+    pricing_snapshot: {
+      _captured_at: '2026-06-09T00:00:00.000Z',
+      _captured_by: null,
+      _synthesized: false,
+      _lib_version: null,
+      _site: 'VN',
+      materials: { M1: { s_price: 5.0 } },
+      coverage: [],
+      rates: {},
+    },
+    ...DRAW_CURRENT,
+  };
+  const upgraded = upgradeStdState(withSnap);
+  // Short-circuit path: same reference, snapshot untouched.
+  assert.equal(upgraded, withSnap);
+  assert.equal(upgraded.pricing_snapshot.materials.M1.s_price, 5.0);
+  assert.equal(upgraded.pricing_snapshot._site, 'VN');
+});
+
+test('upgradeStdState: current-version state missing snapshot still heals via short-circuit path', () => {
+  // Fully-current shape EXCEPT pricing_snapshot — short-circuit must
+  // not return early without adding the snapshot.
+  const currentNoSnap = {
+    _schema_version: 3,
+    materials_main: [{ _mid: 'm1', code: 'M1' }],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [{ _mid: 'm1', code: 'M1' }],
+    inks: [],
+    processes: [],
+  };
+  const upgraded = upgradeStdState(currentNoSnap);
+  assert.notEqual(upgraded, currentNoSnap, 'returns new object because snapshot was added');
+  assert.ok(upgraded.pricing_snapshot);
+  assert.equal(upgraded.pricing_snapshot._captured_at, null);
+});
+
+// Sprint S-MAT-LT — Material L/T override heal-on-read.
+test('upgradeStdState: legacy lt_material seeds lt_material_ovr (pre-feature quote)', () => {
+  const legacy = {
+    _schema_version: 3,
+    materials_main: [{ _mid: 'm1', code: 'M1' }],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [{ _mid: 'm1', code: 'M1' }],
+    inks: [],
+    processes: [],
+    pricing_snapshot: { _captured_at: null },
+    lead_time: { lt_material: '25 days', lt_sample: '' }, // no lt_material_ovr key
+  };
+  const out = upgradeStdState(legacy);
+  assert.equal(out.lead_time.lt_material_ovr, '25 days', 'free text seeded as override');
+  assert.equal(out.lead_time.lt_material, '25 days', 'original preserved');
+});
+
+test('upgradeStdState: legacy lt_po seeds lt_po_ovr (pre-feature quote)', () => {
+  const legacy = {
+    _schema_version: 3,
+    materials_main: [{ _mid: 'm1', code: 'M1' }],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [{ _mid: 'm1', code: 'M1' }],
+    inks: [],
+    processes: [],
+    pricing_snapshot: { _captured_at: null },
+    // has a manual PO L/T, no lt_po_ovr key → seed it as an override so the
+    // auto-derived value doesn't silently replace the saved text.
+    lead_time: { lt_material: '25 days', lt_material_ovr: '', lt_po: '14 days' },
+  };
+  const out = upgradeStdState(legacy);
+  assert.equal(out.lead_time.lt_po_ovr, '14 days', 'free-text PO L/T seeded as override');
+  assert.equal(out.lead_time.lt_po, '14 days', 'original preserved');
+});
+
+test('upgradeStdState: feature-aware quote (lt_material_ovr present) NOT re-seeded', () => {
+  const featureAware = {
+    _schema_version: 3,
+    materials_main: [{ _mid: 'm1', code: 'M1' }],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [{ _mid: 'm1', code: 'M1' }],
+    inks: [],
+    processes: [],
+    pricing_snapshot: { _captured_at: null },
+    // auto mode: overrides empty, lt_material holds the resolved auto value.
+    // Fully feature-aware → all override keys present so heal is a no-op.
+    lead_time: { lt_material: '37 days', lt_material_ovr: '', lt_po_ovr: '', lt_remark_ovr: '' },
+    ...DRAW_CURRENT,
+  };
+  const out = upgradeStdState(featureAware);
+  assert.equal(out.lead_time.lt_material_ovr, '', 'stays empty — reset-safe, no re-seed');
+  assert.equal(out, featureAware, 'same ref (nothing to heal) — React memo friendly');
+});
+
+// Sprint S-REMARK-SEL — REMARK override heal-on-read.
+test('upgradeStdState: legacy lt_remark seeds lt_remark_ovr (pre-feature quote)', () => {
+  const legacy = {
+    _schema_version: 3,
+    materials_main: [{ _mid: 'm1', code: 'M1' }],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [{ _mid: 'm1', code: 'M1' }],
+    inks: [],
+    processes: [],
+    pricing_snapshot: { _captured_at: null },
+    // has an existing manual REMARK, no lt_remark_ovr key + no lt_material_ovr
+    lead_time: { lt_material: '25 days', lt_remark: 'ship by air' },
+  };
+  const out = upgradeStdState(legacy);
+  assert.equal(out.lead_time.lt_remark_ovr, 'ship by air', 'free-text remark seeded as override');
+  assert.equal(out.lead_time.lt_remark, 'ship by air', 'original preserved');
+});
+
+test('upgradeStdState: feature-aware remark (lt_remark_ovr present) NOT re-seeded', () => {
+  const featureAware = {
+    _schema_version: 3,
+    materials_main: [{ _mid: 'm1', code: 'M1' }],
+    materials_alt: [],
+    materials_active: 'main',
+    materials: [{ _mid: 'm1', code: 'M1' }],
+    inks: [],
+    processes: [],
+    pricing_snapshot: { _captured_at: null },
+    lead_time: {
+      lt_material_ovr: '',
+      lt_remark: 'MAT-A: 100 pcs',
+      lt_remark_ovr: '', // auto mode — do not re-seed from lt_remark
+    },
+  };
+  const out = upgradeStdState(featureAware);
+  assert.equal(out.lead_time.lt_remark_ovr, '', 'stays empty — auto mode preserved');
 });

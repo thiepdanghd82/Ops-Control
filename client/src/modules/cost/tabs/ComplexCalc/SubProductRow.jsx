@@ -10,6 +10,7 @@ import { useFeatureFlag } from '../../../../context/useAppConfig';
 import { useI18n } from '../../../../utils/useI18n';
 import { useLibraryPicker } from '../../../../components/LibraryPicker/LibraryPicker';
 import AltMaterialsToggle from '../StandardCalc/AltMaterialsToggle';
+import { resolveLibRow } from '../../lib/codeMatch.js';
 import { sharedApi } from '../../../../services/api';
 import {
   getProcessOptions,
@@ -46,12 +47,17 @@ import {
 import { validateLayout } from '../../../../services/layoutValidation';
 import { primaryRowTypeLabel } from '../../../../services/altMaterialsLabels';
 import { isIndigoPrintType } from '../../../../services/printTypeUtils';
+import { resolveScrapOnWorkcenterChange } from '../../../../services/scrapDefaults';
 import {
   getCovOvrState,
   getCovOvrTooltip,
   MANUAL_OVERRIDE_COLOR,
 } from '../../../../services/covOvrState';
 import '../StandardCalc/StandardCalc.css';
+import { crewOverrideState, isManualDerivedRow } from '../StandardCalc/processCrew.helpers';
+import { layoutToolCostSources, buildLayoutToolCosts } from '../../../../services/layoutToolCost';
+import ToolCostCell from '../../components/ToolCostCell';
+import '../../components/ToolCostCell.css';
 
 export default function SubProductRow({ sp, spi, result, allSps }) {
   const { dispatch, cplxState } = useCalc();
@@ -127,6 +133,14 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
   );
   const setProc = useCallback(
     (pi, f, v) => dispatch(setSpProcessField({ spIdx: spi, idx: pi, field: f, value: v })),
+    [dispatch, spi]
+  );
+  // Multi-drawing (Sprint S-MULTI-DRAW) — atomic list + active + singular
+  // mirror per subproduct. Omitted files/active fall back to current state
+  // in the reducer, so append-then-set-active never round-trips a stale list.
+  const setDraw = useCallback(
+    (kind, files, active) =>
+      dispatch({ type: 'SET_SP_DRAWINGS', payload: { spIdx: spi, kind, files, active } }),
     [dispatch, spi]
   );
 
@@ -253,7 +267,13 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
           setMat(mi, 'code', hit.code || '');
           setMat(mi, 'ifs_code', hit.ifs_code || '');
           setMat(mi, 'desc', hit.desc || '');
-          if (hit.g_price) setMat(mi, 'g_price', Number(hit.g_price) || 0);
+          // Fill BOTH Ref Price (g_price) and MAT PRICE (latest) — mirror
+          // of Std CalcMaterials so the shared picker fills identically.
+          if (hit.g_price) {
+            const p = Number(hit.g_price) || 0;
+            setMat(mi, 'g_price', p);
+            setMat(mi, 'latest', p);
+          }
         },
       });
     },
@@ -320,16 +340,15 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
     [lib]
   );
 
-  // Backfill tool_life from DDL when loading a legacy quote where
-  // tool_type was saved but tool_life was never populated (= 0).
-  // The engine falls back at compute time but the UI input reads
-  // proc.tool_life directly — without this heal the column looks
-  // empty. Respect tool_life_ovr so manual overrides survive.
+  // Seed the editable Tool Life column from DDL when a row has none (= 0) —
+  // legacy quote or right after a tool_type change. The row value is the
+  // SOURCE OF TRUTH for the tooling calc, so we fill ONLY when the row is 0; a
+  // typed value is non-zero and is never overwritten (mirrors CalcProcesses).
   useEffect(() => {
     if (!lib?.ddl?.tool_life) return;
     const list = sp.processes || [];
     list.forEach((proc, i) => {
-      if (!proc || proc.hidden || proc.tool_life_ovr) return;
+      if (!proc || proc.hidden) return;
       const hasType = !!proc.tool_type;
       const missing = !proc.tool_life || Number(proc.tool_life) === 0;
       if (hasType && missing) {
@@ -342,6 +361,13 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
   const mats = (sp.materials || []).filter((m) => !m.hidden);
   const inks = (sp.inks || []).filter((i) => !i.hidden);
   const procs = (sp.processes || []).filter((p) => !p.hidden);
+
+  // Layout-assigned tool costs (Sprint S-LAYOUT-TOOLCOST). Cpx sub-products
+  // carry only PLATE layout fields (no cutter block), so sources = Plate only.
+  // The Cpx money-path builds the same map inside calcAll(spSt); this map is
+  // just for the cell's read-only display + the picker list.
+  const layoutSources = useMemo(() => (lib ? layoutToolCostSources(sp, lib) : []), [sp, lib]);
+  const layoutToolCosts = useMemo(() => buildLayoutToolCosts(layoutSources), [layoutSources]);
 
   // Scrap% display = Σ(process scrap_pct) — mirrors Standard CalcMaterials /
   // CalcInks. Display-only metric; underlying cost math still uses
@@ -623,24 +649,28 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
         <div className="cl-upload-grid">
           <FileUploadZone
             label="Design Layout Drawing"
-            file={sp.layout_file}
+            multiple
+            files={sp.layout_files || []}
+            activeIndex={sp.layout_active || 0}
             endCu={parentEndCu}
             directCu={parentDirectCu}
             endCuPn={parentEndCuPn}
             cclPn={spBase}
-            onFileChange={(v) => setF('layout_file', v)}
-            onClear={() => setF('layout_file', null)}
+            onFilesChange={(next) => setDraw('layout', next)}
+            onActiveChange={(idx) => setDraw('layout', undefined, idx)}
           />
           <FileUploadZone
             label="Customer Drawing"
-            file={sp.customer_drw_file}
+            multiple
+            files={sp.customer_drw_files || []}
+            activeIndex={sp.customer_drw_active || 0}
             endCu={parentEndCu}
             directCu={parentDirectCu}
             endCuPn={parentEndCuPn}
             cclPn={spBase}
             nameSuffix="_cust"
-            onFileChange={(v) => setF('customer_drw_file', v)}
-            onClear={() => setF('customer_drw_file', null)}
+            onFilesChange={(next) => setDraw('customer_drw', next)}
+            onActiveChange={(idx) => setDraw('customer_drw', undefined, idx)}
           />
         </div>
       </div>
@@ -648,7 +678,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
       {/* Materials — full column set matching Standard Calc / COST V1.0 M06
           Input columns: Row Type, IFS Code, Desc, Usage, Setup LM, Pitch Ovr,
           Width, Cav, Offcut, Slit, Ref Price, Mat Price.
-          Derived (purple bg): QPA m², QPA lm, L/Sheet, Webs, Scrap%.
+          Derived (purple bg): QPA m², QPA lm, Mats./MOQ (m²), Mats./MOQ (lm), Scrap%.
           Result (blue bg): Setup Cost, Run Cost, Total. */}
       <div className="cc-det-section">
         <div className="sc-card">
@@ -696,7 +726,8 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                   <tr>
                     <th style={{ width: 120 }}>Row</th>
                     <th style={{ width: 80 }}>IFS Code</th>
-                    <th style={{ width: 120 }}>Desc.</th>
+                    <th style={{ width: 100 }}>DRW materials</th>
+                    <th style={{ width: 120 }}>Quote materials</th>
                     <th style={{ width: 50 }}>Usage</th>
                     <th style={{ width: 55 }}>Setup LM</th>
                     <th style={{ width: 60 }} title="Override pitch from layout">
@@ -720,11 +751,19 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                     <th className="sc-col-derived" style={{ width: 60 }}>
                       QPA (lm)
                     </th>
-                    <th className="sc-col-derived" style={{ width: 50 }}>
-                      L/Sheet
+                    <th
+                      className="sc-col-derived"
+                      style={{ width: 70 }}
+                      title="Gross material for MOQ (m²) incl. setup + scrap + offcut"
+                    >
+                      Mats./MOQ (m²)
                     </th>
-                    <th className="sc-col-derived" style={{ width: 45 }}>
-                      Webs
+                    <th
+                      className="sc-col-derived"
+                      style={{ width: 70 }}
+                      title="Gross material for MOQ (lm) incl. setup + scrap + offcut"
+                    >
+                      Mats./MOQ (lm)
                     </th>
                     <th className="sc-col-derived" style={{ width: 55 }}>
                       Scrap%
@@ -803,13 +842,26 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                               value={m.code || ''}
                               onChange={(e) => setMat(mi, 'code', e.target.value)}
                               onBlur={(e) => {
-                                const f = getMatByCode(e.target.value);
+                                // Exact lookup wins (calc-path getMatByCode). On an
+                                // exact miss, tolerant fallback so spacing/dash/`*`
+                                // variants auto-fill instead of null (Lesson 32).
+                                const f =
+                                  getMatByCode(e.target.value) ||
+                                  resolveLibRow(lib.mat, 'code', e.target.value).row;
                                 if (f) setMat(mi, 'desc', f.description || f.desc || '');
                               }}
                               className="cc-det-inp"
                               style={
                                 isRef ? { color: 'var(--color-violet-500)', fontWeight: 700 } : {}
                               }
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              value={m.drw_material || ''}
+                              onChange={(e) => setMat(mi, 'drw_material', e.target.value)}
+                              className="cc-det-inp cc-det-desc"
                             />
                           </td>
                           <td>
@@ -1019,8 +1071,28 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                           </td>
                           <td className="sc-td-derived">{fmtN(r?.qpa_m2)}</td>
                           <td className="sc-td-derived">{fmtN(r?.qpa_lm)}</td>
-                          <td className="sc-td-derived">{r?.layout_sheet || '\u2014'}</td>
-                          <td className="sc-td-derived">{r?.webs || '\u2014'}</td>
+                          <td
+                            className="sc-td-derived sc-mats-moq"
+                            title="Gross material for MOQ (m\u00b2) incl. setup + scrap + offcut"
+                          >
+                            {r && r.mats_moq_m2
+                              ? r.mats_moq_m2.toLocaleString('en-US', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })
+                              : '\u2014'}
+                          </td>
+                          <td
+                            className="sc-td-derived sc-mats-moq"
+                            title="Gross material for MOQ (lm) incl. setup + scrap + offcut"
+                          >
+                            {r && r.mats_moq_lm
+                              ? r.mats_moq_lm.toLocaleString('en-US', {
+                                  minimumFractionDigits: 1,
+                                  maximumFractionDigits: 1,
+                                })
+                              : '\u2014'}
+                          </td>
                           <td className="sc-td-derived" style={{ color: '#059669' }}>
                             {r ? (scrapDisplay * 100).toFixed(1) + '%' : '\u2014'}
                           </td>
@@ -1203,14 +1275,21 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                         />
                       </td>
                       <td>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={ik.area_pct != null ? Math.round(ik.area_pct * 100) : ''}
-                          onChange={(e) => setInk(ii, 'area_pct', numF(e.target.value) / 100)}
-                          className="cc-det-inp cc-det-num"
-                        />
+                        {(() => {
+                          const isInkReal = !!(ik.color || ik.ifs_code || ik.print_type);
+                          const needsArea = isInkReal && !(Number(ik.area_pct) > 0);
+                          return (
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={ik.area_pct != null ? Math.round(ik.area_pct * 100) : ''}
+                              onChange={(e) => setInk(ii, 'area_pct', numF(e.target.value) / 100)}
+                              className={`cc-det-inp cc-det-num ${needsArea ? 'sc-input-warn' : ''}`}
+                              title={needsArea ? 'AREA % bắt buộc để tính giá mực RUN' : undefined}
+                            />
+                          );
+                        })()}
                       </td>
                       <td>
                         {(() => {
@@ -1359,9 +1438,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                   <th style={{ width: 40 }} title="Repeat">
                     Rpt
                   </th>
-                  <th className="sc-col-derived" style={{ width: 40 }}>
-                    Crew
-                  </th>
+                  <th style={{ width: 60 }}>Crew</th>
                   <th style={{ width: 55 }}>Speed</th>
                   <th className="sc-col-derived" style={{ width: 65 }}>
                     UOM
@@ -1414,10 +1491,11 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                 {procs.map((p, pi) => {
                   const wcOpts = lib ? getWCOptionsByType(lib, p.process_type) : [];
                   const rate = lib ? getRateByWC(lib, p.workcenter) : null;
-                  const crew = rate?.crew || '';
                   const uom = rate?.speed_uom || '';
                   const origIdx = (sp.processes || []).indexOf(p);
                   const r = procResults[origIdx] || null;
+                  const crewSt = crewOverrideState(p.crew, rate?.crew);
+                  const manualDerived = isManualDerivedRow(r, p.speed);
                   return (
                     <tr key={p._mid || `idx-${pi}`}>
                       <td className="sc-td-idx">Process {pi + 1}</td>
@@ -1427,6 +1505,14 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                           onChange={(e) => {
                             setProc(pi, 'process_type', e.target.value);
                             setProc(pi, 'workcenter', '');
+                            // Clearing workcenter = "away" — reset an auto FQC
+                            // 10% to 0; never touch an operator-typed scrap.
+                            const sc = resolveScrapOnWorkcenterChange(
+                              p.workcenter,
+                              '',
+                              p.scrap_pct
+                            );
+                            if (sc.changed) setProc(pi, 'scrap_pct', sc.value);
                           }}
                           className="cc-det-sel sc-select-bare"
                         >
@@ -1441,7 +1527,22 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                       <td>
                         <select
                           value={p.workcenter || ''}
-                          onChange={(e) => setProc(pi, 'workcenter', e.target.value)}
+                          onChange={(e) => {
+                            const wc = e.target.value;
+                            setProc(pi, 'workcenter', wc);
+                            // FQC → auto 10% scrap; away from FQC → reset the
+                            // auto 10% to 0. Only while scrap is at its default.
+                            const sc = resolveScrapOnWorkcenterChange(
+                              p.workcenter,
+                              wc,
+                              p.scrap_pct
+                            );
+                            if (sc.changed) setProc(pi, 'scrap_pct', sc.value);
+                            if (lib && wc) {
+                              const rt = getRateByWC(lib, wc);
+                              if (rt && rt.crew) setProc(pi, 'crew', rt.crew);
+                            }
+                          }}
                           className="cc-det-sel sc-select-bare"
                         >
                           <option value="">--</option>
@@ -1462,7 +1563,32 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                           style={{ background: 'var(--color-warning-100)' }}
                         />
                       </td>
-                      <td className="sc-td-derived">{crew || '\u2014'}</td>
+                      <td>
+                        <div className="sc-pack-row">
+                          <input
+                            type="number"
+                            min="1"
+                            value={crewSt.value}
+                            onChange={(e) => setProc(pi, 'crew', numF(e.target.value))}
+                            className={`cc-det-inp cc-det-num ${crewSt.isOverride ? 'sc-pack-tier-ovr' : ''}`}
+                            title={
+                              crewSt.isOverride
+                                ? `Override \u2014 rate crew = ${crewSt.base}. Drives labor + manual throughput.`
+                                : 'Crew size \u2014 drives labor + manual MAN UPH'
+                            }
+                          />
+                          {crewSt.isOverride && (
+                            <button
+                              type="button"
+                              className="sc-pack-reset"
+                              onClick={() => setProc(pi, 'crew', crewSt.base)}
+                              title={`Reset to rate crew (${crewSt.base})`}
+                            >
+                              &#8635;
+                            </button>
+                          )}
+                        </div>
+                      </td>
                       <td>
                         <DecimalInput
                           value={p.speed}
@@ -1496,11 +1622,20 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                       </td>
                       <td className="sc-td-derived">{r?.uph ? Math.round(r.uph) : '\u2014'}</td>
                       <td>
-                        <DecimalInput
-                          value={p.manual_uph}
-                          onChange={(v) => setProc(pi, 'manual_uph', v)}
-                          className="cc-det-inp cc-det-num"
-                        />
+                        {manualDerived ? (
+                          <span
+                            className="sc-cell-auto-uph"
+                            title="Auto-synced from Crew \u00d7 Eff% \u00d7 Speed \u2014 change Crew or Speed to rebalance this manual stage"
+                          >
+                            {Math.round(r.manualUph).toLocaleString()}
+                          </span>
+                        ) : (
+                          <DecimalInput
+                            value={p.manual_uph}
+                            onChange={(v) => setProc(pi, 'manual_uph', v)}
+                            className="cc-det-inp cc-det-num"
+                          />
+                        )}
                       </td>
                       {/* Sprint 1.6 — per-MOQ Setup H (mirrors Standard fix). */}
                       <td>
@@ -1522,16 +1657,23 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                           type="number"
                           min="0"
                           max="100"
-                          value={p.scrap_pct != null ? Math.round(p.scrap_pct * 100) : 3}
+                          placeholder="0"
+                          value={p.scrap_pct ? Math.round(p.scrap_pct * 100) : ''}
                           onChange={(e) => setProc(pi, 'scrap_pct', numF(e.target.value) / 100)}
                           className="cc-det-inp cc-det-num"
                         />
                       </td>
                       <td>
-                        <DecimalInput
-                          value={p.tool_cost}
-                          onChange={(v) => setProc(pi, 'tool_cost', v)}
-                          className="cc-det-inp cc-det-num"
+                        <ToolCostCell
+                          proc={p}
+                          idx={origIdx}
+                          processes={sp.processes || []}
+                          sources={layoutSources}
+                          layoutToolCosts={layoutToolCosts}
+                          onAssign={(id) => setProc(pi, 'tool_cost_src', id)}
+                          onUnassign={() => setProc(pi, 'tool_cost_src', '')}
+                          onManualChange={(v) => setProc(pi, 'tool_cost', v)}
+                          inputClassName="cc-det-inp cc-det-num"
                         />
                       </td>
                       <td>

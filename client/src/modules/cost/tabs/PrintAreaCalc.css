@@ -510,6 +510,8 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: move;
+  user-select: none;
 }
 .pa-context-menu-item {
   display: flex;

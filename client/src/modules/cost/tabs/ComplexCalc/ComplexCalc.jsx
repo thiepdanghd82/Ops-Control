@@ -3,7 +3,8 @@
  * 5 sub-tabs: Project | MOQ | Breakdown | Packing | Summary
  * Project tab: collapsible header + SP table with expandable detail rows
  */
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useAuth } from '../../../../context/AuthContext';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import {
@@ -12,7 +13,13 @@ import {
   aggregateComplex,
   serializeResultForPersist,
   buildCpxRowsPayload,
+  getActiveSPMaterials,
 } from '../../../../services/calcEngine';
+import { freezeLib, snapshotPricingParams } from '../../../../services/pricingSnapshot';
+import { stripDrawingBytesDeep } from '../../../../services/drawingFiles';
+import { resolveTierField } from '../../../../services/packingTierField';
+import { isCopyMode } from '../../components/SnapshotPanel.helpers';
+import '../../components/SnapshotPanel.css';
 import {
   addSubProduct,
   removeSubProduct,
@@ -27,10 +34,23 @@ import { chatApi, openChatRoom } from '../../../../services/chatApi';
 import { useI18n } from '../../../../utils/useI18n';
 import CplxHeader from './CplxHeader';
 import CplxSummaryBar from './CplxSummaryBar';
+import { shouldShowSummaryBar } from '../costSummaryBarVisibility.js';
 import CplxCostBreakdown from './CplxCostBreakdown';
 import ProcessFlowChart from './ProcessFlowChart';
 import SubProductRow from './SubProductRow';
 import BomTreeView from './BomTreeView';
+import CalcLeadTimeNotice from '../StandardCalc/CalcLeadTimeNotice';
+import {
+  sumToolingCostCpx,
+  deriveMaterialLT,
+  resolveMaterialLtDisplay,
+  derivePoLeadTime,
+  resolvePoLtDisplay,
+  safeLeadTime,
+  buildLeadTimeMaterialsTable,
+  buildRemarkFromSelection,
+  resolveRemarkDisplay,
+} from '../StandardCalc/CalcLeadTimeNotice.helpers.js';
 import { showToast } from '../../../../utils/toast';
 import { fmtN, pct, gmClr } from '../../../../utils/format';
 import DecimalInput from '../../../../utils/DecimalInput';
@@ -38,6 +58,7 @@ import { KPI_TOOLTIPS } from '../../../../utils/kpiDefinitions';
 import SaveChoiceModal from '../../../../utils/SaveChoiceModal';
 import ConflictModal from '../../../../components/Shared/ConflictModal';
 import TabBarOverflow from '../../../../components/Shared/TabBarOverflow';
+import { useGridKeyboardNav } from '../../../../utils/useGridKeyboardNav';
 import '../StandardCalc/StandardCalc.css';
 import './ComplexCalc.css';
 
@@ -48,7 +69,42 @@ const SUB_TABS = [
   { id: 'breakdown', label: 'Cost Breakdown', icon: '≡' },
   { id: 'packing', label: 'Pack & Ship', icon: '▣' },
   { id: 'summary', label: 'Summarize', icon: '☰' },
+  { id: 'lead-time', label: 'Lead time & Notice', icon: '⏱' },
 ];
+
+// Sprint S-PACK-SHIP-PER-TIER — wrapper that appends the ↻ reset
+// button beside an input when the active tier has an override on
+// that field.
+//
+// CRITICAL — DOM IDENTITY: on tier > 0 the wrapper <div> ALWAYS renders.
+// Only the ↻ button is conditional. Pre-fix, the wrapper itself was
+// conditional on cf(field).isOverride — when the operator typed the
+// first character into an inherited field, isOverride flipped
+// false → true and React saw the input's parent change from raw
+// children to <div>{…}</div>, unmounting + remounting the input →
+// losing focus + the keystroke (Henry bug 2026-06-16: "văng khi nhập
+// được 1 ký tự"). Keeping the wrapper stable across the override
+// toggle lets React reconcile the input in place. Tier 0 still returns
+// raw children — no override concept, byte-identical to pre-sprint.
+function CpxPackRow({ field, cf, isTier, activeIdx, onReset, children }) {
+  if (!isTier) return children;
+  const isOverride = cf(field).isOverride;
+  return (
+    <div className="sc-pack-row">
+      {children}
+      {isOverride && (
+        <button
+          type="button"
+          className="sc-pack-reset"
+          title={`Reset MOQ ${activeIdx + 1} override → MOQ 1 base`}
+          onClick={() => onReset(field)}
+        >
+          ↻
+        </button>
+      )}
+    </div>
+  );
+}
 
 const PACK_LABELS = {
   Sheet: { pcsLabel: 'Pcs/Roll', bagLabel: 'Rolls/Box', containerLabel: 'Core Cost' },
@@ -77,6 +133,8 @@ export default function ComplexCalc() {
     activeQuoteVersion,
   } = useCalc();
   const { lib } = useCostLib();
+  // Phase 3 — user id for snapshot `_captured_by` audit field.
+  const { user } = useAuth();
   const [bomQtyEnabled] = useBomQtyFlag();
   const [spMoqScalingEnabled] = useSpMoqScalingFlag();
   const cs = cplxState;
@@ -89,7 +147,7 @@ export default function ComplexCalc() {
   // shows empty default state instead of the requested quote.
   useEffect(() => {
     if (!pendingQuote || pendingQuote.type !== 'complex') return;
-    const { id } = pendingQuote;
+    const { id, action } = pendingQuote;
     let cancelled = false;
     sharedApi
       .getQuotes()
@@ -98,7 +156,9 @@ export default function ComplexCalc() {
         const q = (quotes || []).find((x) => String(x.id) === String(id));
         if (q?.state) {
           // Pass `_version` through for optimistic locking on subsequent saves.
-          loadQuote('cplx', q.state, q.id, q._version || 0);
+          // Phase 3 — `action` propagation for copy-mode reset (mirror
+          // of the Std handler in StandardCalc.jsx).
+          loadQuote('cplx', q.state, q.id, q._version || 0, action);
         } else {
           showToast(`Quote #${id} not found`, 'err');
         }
@@ -138,11 +198,19 @@ export default function ComplexCalc() {
   const { spResults, aggregate, calcErrors } = useMemo(() => {
     if (!lib || !sps.length) return { spResults: [], aggregate: null, calcErrors: [] };
     const tierIdx = cs.active_moq_idx || 0;
+    // Phase 3 — resolve snapshot once per memo cycle, hand to aggregateComplex
+    // through the same `opts` bag it already uses for bomQtyEnabled +
+    // spMoqScalingEnabled.
+    const { snapshot } = snapshotPricingParams(cs, lib);
     const {
       aggregate: agg,
       pass2,
       errors,
-    } = aggregateComplex(cs, sps, lib, tierIdx, { bomQtyEnabled, spMoqScalingEnabled });
+    } = aggregateComplex(cs, sps, lib, tierIdx, {
+      bomQtyEnabled,
+      spMoqScalingEnabled,
+      snapshot,
+    });
     if (!agg) return { spResults: [], aggregate: null, calcErrors: errors };
     // Log pass errors so callers/console see them (helper is pure, doesn't log).
     for (const e of errors) {
@@ -205,22 +273,131 @@ export default function ComplexCalc() {
 
   const [saving, setSaving] = useState(false);
 
+  // Material L/T auto-derive (Sprint S-MAT-LT) — max IFS/NPI lead time across
+  // the active Main.Mat rows of EVERY subproduct + 7 days. Flattened across SPs
+  // so a multi-SP quote takes the longest-lead material. Same parent-useMemo
+  // pattern as Tooling Cost; re-derives when any sp.materials* or lib changes.
+  const materialLtAuto = useMemo(
+    () =>
+      deriveMaterialLT(
+        sps.flatMap((sp) => getActiveSPMaterials(sp)),
+        lib
+      ),
+    [sps, lib]
+  );
+
+  // PO L/T auto-derive (Sprint S-PO-LT) — Σ PROD TIME across EVERY subproduct's
+  // processes ÷ 8-hour day, rounded up. spResults (= pass2) already carries each
+  // SP's procResults (total_time minutes); flatten + derivePoLeadTime. Same
+  // parent-useMemo + manual-override (lt_po_ovr) UX as Material L/T.
+  const poLtAuto = useMemo(
+    () => derivePoLeadTime(spResults.flatMap((r) => (r && r.procResults) || [])),
+    [spResults]
+  );
+
+  // Read-only Materials MOQ table — flatten per-SP rows (st = the subproduct, so
+  // qpa_m2 matches each SP's Materials display) + NPI library. Display-only.
+  const ltMatRows = useMemo(() => {
+    const moq = cs.moq || 0;
+    return sps.flatMap((sp) =>
+      buildLeadTimeMaterialsTable(getActiveSPMaterials(sp), lib, sp, moq, {
+        spCode: sp.code || '',
+      })
+    );
+  }, [sps, lib, cs.moq]);
+
   const buildQuoteData = useCallback(() => {
+    // Phase 3 — capture pricing snapshot. Cpx walks subproducts for
+    // both materials + processes inside freezeLib, so a 3-SP quote with
+    // shared workcenters dedupes naturally. user?.id stamps audit.
+    const snapshot = lib ? freezeLib(lib, cs, { userId: user?.id || null }) : null;
+    // Persist the RESOLVED Material L/T into lt_material (override wins, else
+    // the auto "<n> days") so Summarize + future export read it; lt_material_ovr
+    // remains the override source of truth.
+    const resolvedMatLt = resolveMaterialLtDisplay(cs.lead_time, materialLtAuto).value;
+    // PO L/T: persist the resolved "<n> days" (override wins, else Σ PROD TIME ÷
+    // 8 across every SP); lt_po_ovr stays the override source of truth.
+    const resolvedPoLt = resolvePoLtDisplay(cs.lead_time, poLtAuto).value;
+    // REMARK: persist the resolved checkbox-driven value (or manual override).
+    const autoRemark = buildRemarkFromSelection(ltMatRows, cs.lead_time?.remark_selection);
+    const resolvedRemark = resolveRemarkDisplay(cs.lead_time, autoRemark).value;
+    const leadTimePatched = {
+      ...safeLeadTime(cs.lead_time),
+      lt_material: resolvedMatLt,
+      lt_po: resolvedPoLt,
+      lt_remark: resolvedRemark,
+    };
+    const csPatched = { ...cs, lead_time: leadTimePatched };
+    // Strip per-SP drawing base64 before persist — attachments live on the
+    // server by name; state carries only {name,type} so the quote JSON stays
+    // far under the 2 MB /save-all cap no matter how many drawings/SPs.
+    const stateWithSnapshot = stripDrawingBytesDeep(
+      snapshot ? { ...csPatched, pricing_snapshot: snapshot } : csPatched
+    );
+    const calcOptions = snapshot ? { snapshot } : {};
+    // Re-aggregate with the freshly-frozen snapshot so the persisted
+    // result KPIs (gm/va/contribution/s_ttl/etc.) reflect the values
+    // we just locked in. Without this, a loaded quote whose master lib
+    // has shifted would persist its render-time (old-snapshot) numbers
+    // alongside the new snapshot — internally inconsistent until next
+    // load. ~30ms for typical 3-SP quote; sync to surface errors.
+    let persistedAggregate = aggregate;
+    if (lib && sps.length) {
+      const tierIdx = cs.active_moq_idx || 0;
+      const { aggregate: aggFresh } = aggregateComplex(cs, sps, lib, tierIdx, {
+        bomQtyEnabled,
+        spMoqScalingEnabled,
+        snapshot,
+      });
+      if (aggFresh) {
+        const sp = cs.selling_price || 0;
+        if (sp > 0) {
+          aggFresh.gm = (sp - (aggFresh.s_ttl || 0)) / sp;
+          aggFresh.va =
+            (sp -
+              (aggFresh.s_mat_cost || 0) -
+              (aggFresh.tooling || 0) -
+              (aggFresh.packing_ship || 0)) /
+            sp;
+          aggFresh.contribution =
+            1 -
+            ((aggFresh.s_mat_cost || 0) +
+              (aggFresh.tooling || 0) +
+              (aggFresh.packing_ship || 0) +
+              (aggFresh.labor_cost || 0)) /
+              sp;
+        }
+        persistedAggregate = aggFresh;
+      }
+    }
     // MES-3-FIX-41: per-row Setup/Run/Total per SP per tier — exports
     // now show real numbers everywhere instead of em-dash. Cost ~150ms
     // for 3 SPs × 5 tiers; runs sync so save errors surface cleanly.
-    const cpxRows = lib ? buildCpxRowsPayload(cs, sps, lib) : { subproducts: [] };
+    // Phase 3: rows payload uses the same snapshot so per-SP per-tier
+    // breakdown can't drift from the aggregate result.
+    const cpxRows = lib ? buildCpxRowsPayload(cs, sps, lib, calcOptions) : { subproducts: [] };
     const persisted = serializeResultForPersist(
-      aggregate ? { ...aggregate, subproducts: cpxRows.subproducts } : null
+      persistedAggregate ? { ...persistedAggregate, subproducts: cpxRows.subproducts } : null
     );
     return {
       type: 'complex',
-      state: cs,
+      state: stateWithSnapshot,
       result: persisted,
       saved_at: new Date().toISOString(),
       label: cs.ccl_pn || 'Complex',
     };
-  }, [cs, sps, lib, aggregate]);
+  }, [
+    cs,
+    sps,
+    lib,
+    aggregate,
+    user?.id,
+    bomQtyEnabled,
+    spMoqScalingEnabled,
+    materialLtAuto,
+    poLtAuto,
+    ltMatRows,
+  ]);
 
   const persistAsNew = useCallback(async () => {
     setSaving(true);
@@ -333,24 +510,73 @@ export default function ComplexCalc() {
     [dispatch]
   );
 
+  // Lead time & Notice — Tooling cost cell shows Σ tool_cost across
+  // every process in every subproduct (cross-SP sum). Helper extracted
+  // to enable node:test coverage; reuses sumToolingCostStd internally
+  // so Std and Cpx skip the same `hidden:true` rows by the same rule.
+  const toolingCostTotal = useMemo(
+    () => sumToolingCostCpx(cplxState.subproducts),
+    [cplxState.subproducts]
+  );
+
+  // Sprint S-PACK-SHIP-PER-TIER — per-tier pack/ship binding for the
+  // Packing sub-tab. Mirrors CalcPackingShip.jsx Std logic. `csTierSt`
+  // is the active-tier-merged view (em.packing layered over cs) so
+  // packTotal + shipTotal reflect the override on tier>0.
+  const csActiveIdx = cs.active_moq_idx || 0;
+  const csEm = csActiveIdx > 0 ? (cs.extra_moqs || [])[csActiveIdx - 1] : null;
+  const isCsTier = csActiveIdx > 0;
+  const csTierSt = useMemo(() => {
+    if (!isCsTier || !csEm || !csEm.packing) return cs;
+    return { ...cs, ...csEm.packing };
+  }, [cs, csEm, isCsTier]);
   const packTotal = useMemo(() => {
     try {
-      return calcPacking(cs);
+      return calcPacking(csTierSt);
     } catch {
       return 0;
     }
-  }, [cs]);
+  }, [csTierSt]);
   const shipTotal = useMemo(() => {
     try {
-      return calcShipping(cs);
+      return calcShipping(csTierSt);
     } catch {
       return 0;
     }
-  }, [cs]);
-  const labels = PACK_LABELS[cs.packing_method] || PACK_LABELS.Sheet;
+  }, [csTierSt]);
+  const cf = useCallback((field) => resolveTierField(csEm, cs, field), [csEm, cs]);
+  const setCpxPack = useCallback(
+    (field, value) => dispatch({ type: 'SET_CPLX_TIER_PACKING_FIELD', payload: { field, value } }),
+    [dispatch]
+  );
+  const resetCpxPack = useCallback((field) => setCpxPack(field, ''), [setCpxPack]);
+  const cpxPackCls = useCallback(
+    (field) => {
+      if (!isCsTier) return '';
+      const { isOverride } = cf(field);
+      return isOverride ? 'sc-pack-tier-ovr' : 'sc-pack-tier-inherit';
+    },
+    [isCsTier, cf]
+  );
+  const labels = PACK_LABELS[cf('packing_method').value || 'Sheet'] || PACK_LABELS.Sheet;
+  const copyMode = isCopyMode(cs, activeQuoteId);
+
+  // Spreadsheet-style arrow/Enter cell navigation, scoped to the sub-tab
+  // content root (mirrors StandardCalc).
+  const contentRef = useRef(null);
+  useGridKeyboardNav(contentRef);
 
   return (
     <div className="cc">
+      {/* Phase 4 — Cpx copy-mode banner. Same logic as Std. */}
+      {copyMode && (
+        <div className="snapshot-copy-banner" role="status" aria-live="polite">
+          <span className="snapshot-copy-banner-icon" aria-hidden="true">
+            ⎘
+          </span>
+          <span>Copy mode — saving will create a new quote and freeze current library rates</span>
+        </div>
+      )}
       {/* Sub-tab bar — wrapped in TabBarOverflow for narrow-screen fit */}
       <div className="cc-tab-bar">
         <TabBarOverflow
@@ -406,10 +632,18 @@ export default function ComplexCalc() {
         </TabBarOverflow>
       </div>
 
-      {/* Persistent cost summary bar — always visible below tabs */}
-      <CplxSummaryBar cs={cs} aggregate={aggregate} />
+      {/* Cost summary bar — Sprint S-SUMBAR-HIDE (2026-06-19) gates
+          visibility per active sub-tab so analysis tabs (Cost
+          Breakdown + Summary) don't repeat info already shown below.
+          Data-entry tabs keep it for live margin feedback. See
+          costSummaryBarVisibility.js. NOTE: Cpx id is 'summary'
+          (singular), differs from Std 'summarize' — predicate's
+          kind='cpx' branch uses the right Set. */}
+      {shouldShowSummaryBar(activeSubTab, 'cpx') && (
+        <CplxSummaryBar cs={cs} aggregate={aggregate} />
+      )}
 
-      <div className="cc-content">
+      <div className="cc-content" ref={contentRef}>
         {/* ═══ PROJECT TAB ═══ */}
         {activeSubTab === 'project' && (
           <div className="sc-section sc-rfq-moq-split">
@@ -633,7 +867,10 @@ export default function ComplexCalc() {
 
         {/* ═══ PACKING TAB ═══
             Uses the sc-* classes shared with StandardCalc.css so the
-            styling matches 1-to-1 with the Standard calculator. */}
+            styling matches 1-to-1 with the Standard calculator.
+            Sprint S-PACK-SHIP-PER-TIER — per-MOQ override mirror of
+            Std CalcPackingShip.jsx; same resolveTierField + reducer
+            action so the two stay in lock-step. */}
         {activeSubTab === 'packing' && (
           <div className="sc-section">
             {/* Sprint 41 — assembly-level Pack&Ship hint. Before this sprint
@@ -645,6 +882,18 @@ export default function ComplexCalc() {
               They add on top of any per-sub-product packing entered in the Calculators tab,
               matching how Standard quotes roll up packing and shipping into the final price.
             </div>
+            {isCsTier && (
+              <div className="sc-pack-inherit-hint" role="note">
+                <span aria-hidden="true">ℹ️</span>
+                {t('pricing.pack_ship.inherit_hint')}
+              </div>
+            )}
+            {isCsTier && (
+              <div className="sc-pack-tier-hint" role="note">
+                ▣ Editing <b>MOQ {csActiveIdx + 1}</b> override. Clear an input or click ↻ to revert
+                that field to MOQ 1 base.
+              </div>
+            )}
             <div className="sc-pack-grid">
               <div className="sc-card">
                 <div className="sc-card-header sc-header-emerald">
@@ -654,61 +903,114 @@ export default function ComplexCalc() {
                 <div className="sc-card-body">
                   <div className="sc-field">
                     <label>Packing Method</label>
-                    <select
-                      value={cs.packing_method || 'Sheet'}
-                      onChange={(e) => setCplxField('packing_method', e.target.value)}
-                      className="sc-input"
+                    <CpxPackRow
+                      field="packing_method"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
                     >
-                      <option value="Sheet">Sheet</option>
-                      <option value="Roll">Roll</option>
-                      <option value="Tray">Tray</option>
-                      <option value="PE Bag">PE Bag</option>
-                    </select>
+                      <select
+                        value={cf('packing_method').value || 'Sheet'}
+                        onChange={(e) => setCpxPack('packing_method', e.target.value)}
+                        className={`sc-input ${cpxPackCls('packing_method')}`}
+                      >
+                        <option value="Sheet">Sheet</option>
+                        <option value="Roll">Roll</option>
+                        <option value="Tray">Tray</option>
+                        <option value="PE Bag">PE Bag</option>
+                      </select>
+                    </CpxPackRow>
                   </div>
                   <div className="sc-field">
                     <label>{labels.pcsLabel}</label>
-                    <DecimalInput
-                      value={cs.pcs_per_bag}
-                      placeholder="—"
-                      onChange={(v) => setCplxField('pcs_per_bag', v)}
-                      className="sc-input"
-                    />
+                    <CpxPackRow
+                      field="pcs_per_bag"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
+                    >
+                      <DecimalInput
+                        value={cf('pcs_per_bag').value}
+                        placeholder="—"
+                        onChange={(v) => setCpxPack('pcs_per_bag', v)}
+                        preserveEmpty={isCsTier}
+                        className={`sc-input ${cpxPackCls('pcs_per_bag')}`}
+                      />
+                    </CpxPackRow>
                   </div>
                   <div className="sc-field">
                     <label>{labels.bagLabel}</label>
-                    <DecimalInput
-                      value={cs.bags_per_box}
-                      placeholder="—"
-                      onChange={(v) => setCplxField('bags_per_box', v)}
-                      className="sc-input"
-                    />
+                    <CpxPackRow
+                      field="bags_per_box"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
+                    >
+                      <DecimalInput
+                        value={cf('bags_per_box').value}
+                        placeholder="—"
+                        onChange={(v) => setCpxPack('bags_per_box', v)}
+                        preserveEmpty={isCsTier}
+                        className={`sc-input ${cpxPackCls('bags_per_box')}`}
+                      />
+                    </CpxPackRow>
                   </div>
                   <div className="sc-field">
                     <label>{labels.containerLabel}</label>
-                    <DecimalInput
-                      value={cs.container_cost}
-                      placeholder="—"
-                      onChange={(v) => setCplxField('container_cost', v)}
-                      className="sc-input"
-                    />
+                    <CpxPackRow
+                      field="container_cost"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
+                    >
+                      <DecimalInput
+                        value={cf('container_cost').value}
+                        placeholder="—"
+                        onChange={(v) => setCpxPack('container_cost', v)}
+                        preserveEmpty={isCsTier}
+                        className={`sc-input ${cpxPackCls('container_cost')}`}
+                      />
+                    </CpxPackRow>
                   </div>
                   <div className="sc-field">
                     <label>Box Cost (USD)</label>
-                    <DecimalInput
-                      value={cs.box_cost}
-                      placeholder="—"
-                      onChange={(v) => setCplxField('box_cost', v)}
-                      className="sc-input"
-                    />
+                    <CpxPackRow
+                      field="box_cost"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
+                    >
+                      <DecimalInput
+                        value={cf('box_cost').value}
+                        placeholder="—"
+                        onChange={(v) => setCpxPack('box_cost', v)}
+                        preserveEmpty={isCsTier}
+                        className={`sc-input ${cpxPackCls('box_cost')}`}
+                      />
+                    </CpxPackRow>
                   </div>
                   <div className="sc-field">
                     <label>Other Packing/pcs</label>
-                    <DecimalInput
-                      value={cs.other_packing}
-                      placeholder="—"
-                      onChange={(v) => setCplxField('other_packing', v)}
-                      className="sc-input"
-                    />
+                    <CpxPackRow
+                      field="other_packing"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
+                    >
+                      <DecimalInput
+                        value={cf('other_packing').value}
+                        placeholder="—"
+                        onChange={(v) => setCpxPack('other_packing', v)}
+                        preserveEmpty={isCsTier}
+                        className={`sc-input ${cpxPackCls('other_packing')}`}
+                      />
+                    </CpxPackRow>
                   </div>
                   <div className="sc-pack-total">
                     Total Packing/pcs: <b>{fmtN(packTotal, 6)} USD</b>
@@ -723,52 +1025,90 @@ export default function ComplexCalc() {
                 <div className="sc-card-body">
                   <div className="sc-field">
                     <label>Delivery Term</label>
-                    <input
-                      type="text"
-                      value={cs.delivery_term || ''}
-                      onChange={(e) => setCplxField('delivery_term', e.target.value)}
-                      className="sc-input"
-                      placeholder="FOB, CIF, etc."
-                    />
+                    <CpxPackRow
+                      field="delivery_term"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
+                    >
+                      <input
+                        type="text"
+                        value={cf('delivery_term').value ?? ''}
+                        onChange={(e) => setCpxPack('delivery_term', e.target.value)}
+                        className={`sc-input ${cpxPackCls('delivery_term')}`}
+                        placeholder="FOB, CIF, etc."
+                      />
+                    </CpxPackRow>
                   </div>
                   <div className="sc-field">
                     <label>Deliver Quantity</label>
-                    {/* Auto-sync with MOQ: when ship_qty is 0 we display
-                        MOQ. Clearing reverts to MOQ on next render (engine
-                        also falls back to MOQ in calcShipping L409 so cost
-                        is correct either way). Purple-bold = override. */}
-                    <DecimalInput
-                      value={cs.ship_qty > 0 ? cs.ship_qty : cs.moq || 0}
-                      onChange={(v) => setCplxField('ship_qty', v)}
-                      className="sc-input"
-                      placeholder="—"
-                      style={
-                        cs.ship_qty > 0 ? { color: 'var(--color-violet-500)', fontWeight: 700 } : {}
-                      }
-                      title={
-                        cs.ship_qty > 0
-                          ? 'Override — clear to revert to MOQ'
-                          : 'Auto-synced from MOQ'
-                      }
-                    />
+                    <CpxPackRow
+                      field="ship_qty"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
+                    >
+                      <DecimalInput
+                        value={
+                          isCsTier
+                            ? cf('ship_qty').value
+                            : cs.ship_qty > 0
+                              ? cs.ship_qty
+                              : cs.moq || 0
+                        }
+                        onChange={(v) => setCpxPack('ship_qty', v)}
+                        preserveEmpty={isCsTier}
+                        className={`sc-input ${cpxPackCls('ship_qty')}`}
+                        placeholder="—"
+                        title={
+                          isCsTier
+                            ? cf('ship_qty').isOverride
+                              ? `MOQ ${csActiveIdx + 1} override — click ↻ to revert`
+                              : 'Inherits MOQ 1 base — type to override'
+                            : cs.ship_qty > 0
+                              ? 'Override — clear to revert to MOQ'
+                              : 'Auto-synced from MOQ'
+                        }
+                      />
+                    </CpxPackRow>
                   </div>
                   <div className="sc-field">
                     <label>Shipping Cost (USD total)</label>
-                    <DecimalInput
-                      value={cs.shipping_cost}
-                      placeholder="—"
-                      onChange={(v) => setCplxField('shipping_cost', v)}
-                      className="sc-input"
-                    />
+                    <CpxPackRow
+                      field="shipping_cost"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
+                    >
+                      <DecimalInput
+                        value={cf('shipping_cost').value}
+                        placeholder="—"
+                        onChange={(v) => setCpxPack('shipping_cost', v)}
+                        preserveEmpty={isCsTier}
+                        className={`sc-input ${cpxPackCls('shipping_cost')}`}
+                      />
+                    </CpxPackRow>
                   </div>
                   <div className="sc-field">
                     <label>Other Cost/shipment</label>
-                    <DecimalInput
-                      value={cs.other_ship}
-                      placeholder="—"
-                      onChange={(v) => setCplxField('other_ship', v)}
-                      className="sc-input"
-                    />
+                    <CpxPackRow
+                      field="other_ship"
+                      cf={cf}
+                      isTier={isCsTier}
+                      activeIdx={csActiveIdx}
+                      onReset={resetCpxPack}
+                    >
+                      <DecimalInput
+                        value={cf('other_ship').value}
+                        placeholder="—"
+                        onChange={(v) => setCpxPack('other_ship', v)}
+                        preserveEmpty={isCsTier}
+                        className={`sc-input ${cpxPackCls('other_ship')}`}
+                      />
+                    </CpxPackRow>
                   </div>
                   <div className="sc-ship-total">
                     Total Shipping/pcs: <b>{fmtN(shipTotal, 6)} USD</b>
@@ -890,6 +1230,16 @@ export default function ComplexCalc() {
             it must render even before the first calc pass completes
             (e.g. new quote, no price lib loaded yet). */}
         {activeSubTab === 'summary' && <ProcessFlowChart />}
+        {activeSubTab === 'lead-time' && (
+          <CalcLeadTimeNotice
+            leadTime={cplxState.lead_time}
+            onChange={(next) => setCplxField('lead_time', next)}
+            toolingCostTotal={toolingCostTotal}
+            materialLtAuto={materialLtAuto}
+            poLtAuto={poLtAuto}
+            materialsTable={ltMatRows}
+          />
+        )}
       </div>
 
       <SaveChoiceModal
@@ -1034,6 +1384,16 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField }) {
     return out;
   }, [sps]);
 
+  // EAU required for tooling amortization (calcProcess uses
+  // cs.annual_qty × product_lifetime as the tooling EAU cap). Warn when
+  // any SP process has tool_cost > 0 but EAU left blank.
+  const showEauWarn = useMemo(
+    () =>
+      sps.some((sp) => (sp.processes || []).some((p) => Number(p?.tool_cost) > 0)) &&
+      !(Number(cs.annual_qty) > 0),
+    [sps, cs.annual_qty]
+  );
+
   const showSetupMoqTable = numMoq > 1 && (flatMats.length > 0 || flatProcs.length > 0);
   const fmtIntLocal = (v) =>
     v == null || v === '' || isNaN(+v) ? '\u2014' : Number(v).toLocaleString('en-US');
@@ -1127,9 +1487,15 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField }) {
         else if (field === 'target') patch.target_vnd = +(value * rate).toFixed(0);
         else if (field === 'target_vnd') patch.target = +(value / rate).toFixed(4);
       }
-      // Apply each field via SET_EXTRA_MOQ (one mutation per key).
+      // MES-3-FIX-53 — Cpx tier inputs must target cplxState.extra_moqs.
+      // Pre-fix this loop dispatched SET_EXTRA_MOQ which writes to
+      // stdState (wrong slice) — every Cpx tier MOQ/EAU/Price/Target
+      // keystroke vanished from cplxState. Visible value persisted only
+      // via DecimalInput's local string mirror, masking the data loss
+      // until save round-trip. SET_CPLX_EXTRA_MOQ is the Cpx mirror —
+      // identical payload shape, targets cplxState.
       for (const [f, v] of Object.entries(patch)) {
-        dispatch({ type: 'SET_EXTRA_MOQ', payload: { idx, field: f, value: v } });
+        dispatch({ type: 'SET_CPLX_EXTRA_MOQ', payload: { idx, field: f, value: v } });
       }
     },
     [dispatch, rate]
@@ -1201,8 +1567,11 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField }) {
                   <DecimalInput
                     value={cs.annual_qty}
                     onChange={(v) => setCplxField('annual_qty', v)}
-                    className="sc-moq-inp"
+                    className={`sc-moq-inp ${showEauWarn ? 'sc-input-warn' : ''}`}
                     thousandSep
+                    title={
+                      showEauWarn ? 'EAU bắt buộc để tính giá khuôn (Tooling) đúng' : undefined
+                    }
                   />
                 </td>
                 <td>

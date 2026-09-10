@@ -66,15 +66,34 @@ export function CalcProvider({ children }) {
     (field, value) => dispatch({ type: A.SET_CPLX_FIELD, payload: { field, value } }),
     []
   );
+  // Multi-drawing dispatchers — atomic list + active + singular mirror.
+  const setStdDrawings = useCallback(
+    (kind, files, active) =>
+      dispatch({ type: A.SET_STD_DRAWINGS, payload: { kind, files, active } }),
+    []
+  );
+  const setSpDrawings = useCallback(
+    (spIdx, kind, files, active) =>
+      dispatch({ type: A.SET_SP_DRAWINGS, payload: { spIdx, kind, files, active } }),
+    []
+  );
 
   // Sprint 11 P0-2: `version` is the server's `_version` for this quote.
   // Tracked here (not inside qState) so subsequent PATCH calls include
   // it for optimistic-locking checks. Callers that don't know the
   // version pass 0 / undefined — the server treats that as opt-out and
   // merges without the conflict check.
+  // Phase 3 — `action` carries the operator's intent ('copy' | 'load').
+  // 'copy' resets activeQuoteId so the next save creates a new record
+  // and marks pricing_snapshot._synthesized so the next save re-freezes
+  // against the current master library. Callers omitting action default
+  // to 'load' (BC for every pre-Phase-3 caller).
   const loadQuote = useCallback(
-    (quoteType, qState, id, version = 0) =>
-      dispatch({ type: A.LOAD_QUOTE, payload: { quoteType, state: qState, id, version } }),
+    (quoteType, qState, id, version = 0, action = 'load') =>
+      dispatch({
+        type: A.LOAD_QUOTE,
+        payload: { quoteType, state: qState, id, version, action },
+      }),
     []
   );
   const resetStd = useCallback(() => dispatch({ type: A.RESET_STD }), []);
@@ -140,6 +159,8 @@ export function CalcProvider({ children }) {
       setInkField,
       setProcessField,
       setCplxField,
+      setStdDrawings,
+      setSpDrawings,
       loadQuote,
       resetStd,
       resetCplx,
@@ -161,6 +182,8 @@ export function CalcProvider({ children }) {
       setInkField,
       setProcessField,
       setCplxField,
+      setStdDrawings,
+      setSpDrawings,
       loadQuote,
       resetStd,
       resetCplx,

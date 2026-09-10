@@ -19,6 +19,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import { assertNotProdDbUnderTest } from '../utils/testDataDirGuard.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,6 +43,9 @@ export function getDbPath() {
 export function getDb() {
   if (_db) return _db;
   const p = getDbPath();
+  // Lesson 33 — never let the test runner open the LIVE ops.db (storage tests
+  // write + wipe data). No-op in production + for repo/temp data dirs.
+  assertNotProdDbUnderTest(p);
   fs.mkdirSync(path.dirname(p), { recursive: true });
   _db = new Database(p);
   _db.pragma('journal_mode = WAL');

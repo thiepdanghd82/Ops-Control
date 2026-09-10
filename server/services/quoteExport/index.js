@@ -19,6 +19,7 @@
 import crypto from 'node:crypto';
 import { createWorkbook } from './workbook.js';
 import { buildZip } from './zip.js';
+import { workbookToCsvEntries } from './csv.js';
 import { build1TierName, buildZipName } from './filenames.js';
 import { enumerateTiers } from './tierUtils.js';
 import { buildCoverSheet } from './sheets/00-cover.js';
@@ -31,6 +32,7 @@ import { buildBalancingSheet } from './sheets/06-balancing.js';
 import { buildPackShipSheet } from './sheets/07-pack-ship.js';
 import { buildCostBreakdownSheet } from './sheets/08-cost-breakdown.js';
 import { buildSummarySheet } from './sheets/09-summary.js';
+import { buildPricingSnapshotSheet } from './sheets/10-pricing-snapshot.js';
 // MVP-2 tamper-resistance pipeline
 import { buildAuditSheet } from './audit.js';
 import { encodeSchemaPayload, buildSchemaSheet } from './schema.js';
@@ -56,6 +58,7 @@ export class QuoteExportError extends Error {
  * @typedef {object} ExportOpts
  * @property {'customer'|'internal'} variant
  * @property {'en'|'vi'|'bilingual'} [lang='bilingual']
+ * @property {'xlsx'|'csv'} [format='xlsx']
  * @property {number[]|'all'} [tiers='all']
  * @property {string} [exportedBy]
  * @property {string} [engineSha]
@@ -109,6 +112,10 @@ export async function exportQuote(quote, opts) {
   if (!['en', 'vi', 'bilingual'].includes(lang)) {
     throw new QuoteExportError('bad-lang', `lang must be 'en'|'vi'|'bilingual', got ${lang}`, 400);
   }
+  const format = opts?.format || 'xlsx';
+  if (format !== 'xlsx' && format !== 'csv') {
+    throw new QuoteExportError('bad-format', `format must be 'xlsx'|'csv', got ${format}`, 400);
+  }
 
   // MVP-2: HMAC key is REQUIRED. Tests pass an override; route gets it
   // via deps wiring; preflight rejects boot if env missing.
@@ -131,13 +138,14 @@ export async function exportQuote(quote, opts) {
   for (const idx of requestedIdxs) {
     const tier = tiers[idx];
     const kpis = pickKpisForTier(quote, idx, tier);
-    const { buffer, audit } = await buildOneXlsx({
+    const { buffer, audit, wb } = await buildOneXlsx({
       quote,
       tier,
       tierIdx: idx,
       tierKpis: kpis,
       variant,
       lang,
+      format,
       exportedBy: opts?.exportedBy || '-',
       engineSha: opts?.engineSha,
       rateLookup: opts?.rateLookup,
@@ -155,7 +163,38 @@ export async function exportQuote(quote, opts) {
       version: quote._version ?? 1,
       now: opts?.now,
     });
-    builtPerTier.push({ idx, filename, buffer, audit: { ...audit, tierIdx: idx, filename } });
+    builtPerTier.push({ idx, filename, buffer, wb, audit: { ...audit, tierIdx: idx, filename } });
+  }
+
+  // CSV: serialize every VISIBLE sheet of each tier's workbook to a
+  // BOM-prefixed RFC-4180 CSV and bundle them into a .zip. Single-tier is
+  // still a zip (a quote has 11 tabs → 11 CSVs); multi-tier folders the
+  // CSVs per tier so parity with the xlsx-per-tier zip holds.
+  if (format === 'csv') {
+    const single = builtPerTier.length === 1;
+    let entries;
+    let filename;
+    if (single) {
+      entries = workbookToCsvEntries(builtPerTier[0].wb);
+      filename = builtPerTier[0].filename.replace(/\.xlsx$/i, '_csv.zip');
+    } else {
+      entries = builtPerTier.flatMap((e) =>
+        workbookToCsvEntries(e.wb, { prefix: e.filename.replace(/\.xlsx$/i, '') })
+      );
+      filename = buildZipName({
+        rfq: quote.state?.rfq_number || quote.label,
+        customer: quote.state?.end_cu || quote.state?.direct_cu,
+        version: quote._version ?? 1,
+        now: opts?.now,
+      }).replace(/\.zip$/i, '_csv.zip');
+    }
+    const zipBuf = await buildZip(entries);
+    return {
+      kind: 'zip',
+      filename,
+      buffer: zipBuf,
+      auditMeta: builtPerTier.map((e) => e.audit),
+    };
   }
 
   if (builtPerTier.length === 1) {
@@ -274,6 +313,7 @@ async function buildOneXlsx(ctx) {
     tierKpis,
     variant,
     lang,
+    format = 'xlsx',
     exportedBy,
     engineSha,
     rateLookup,
@@ -300,9 +340,17 @@ async function buildOneXlsx(ctx) {
   buildInksSheet(wb, { quote, tierIdx, variant, lang });
   buildProcessesSheet(wb, { quote, tierIdx, variant, lang, rateLookup });
   buildBalancingSheet(wb, { quote, tierIdx, lang });
-  buildPackShipSheet(wb, { quote, lang });
+  // Sprint S-PACK-SHIP-PER-TIER step 4 — sheet 07 joins 03/04/05/08 in
+  // receiving tierIdx so per-MOQ pack/ship overrides surface in the
+  // right xlsx of a multi-tier zip.
+  buildPackShipSheet(wb, { quote, tierIdx, lang });
   buildCostBreakdownSheet(wb, { quote, tierIdx, variant, lang });
   buildSummarySheet(wb, { quote, tierIdx, tierKpis, variant, lang });
+  // Phase 4 (Sprint S-D20-PRICING-SNAPSHOT) — operator-facing audit
+  // metadata for the pricing snapshot (frozen rates / captured at /
+  // captured by / site / warnings). Distinct from the hidden _Audit
+  // sheet below which carries HMAC + payload sha256.
+  buildPricingSnapshotSheet(wb, { quote, tierIdx, tierKpis, variant, lang });
 
   // 2. MVP-2 Item E — customer watermark BEFORE _Audit/_Schema so the
   //    watermark style is applied to visible sheets only (the items
@@ -331,13 +379,23 @@ async function buildOneXlsx(ctx) {
 
   // 6. MVP-2 Item D — per-sheet password protection. MUST run last so
   //    no later mutation is silently rejected. Sheet protection is
-  //    cosmetic; the real defense is HMAC above.
-  const password = generateWorkbookPassword();
-  const { passwordHash } = await protectAllSheets(wb, password);
+  //    cosmetic (the real defense is the HMAC above), so it applies to the
+  //    CUSTOMER copy only — the INTERNAL copy is left editable so operators
+  //    can work with their own data without a discarded random password
+  //    (Henry, 2026-09-09). _Audit / _Schema / HMAC are unchanged for both.
+  let password = null;
+  let passwordHash = null;
+  if (variant === 'customer') {
+    password = generateWorkbookPassword();
+    ({ passwordHash } = await protectAllSheets(wb, password));
+  }
 
-  const buffer = Buffer.from(await wb.xlsx.writeBuffer());
+  // CSV path reads cell values off `wb` directly (sheet protection +
+  // watermark don't alter values), so skip the xlsx byte serialization.
+  const buffer = format === 'csv' ? null : Buffer.from(await wb.xlsx.writeBuffer());
   return {
     buffer,
+    wb,
     audit: {
       wbPasswordHash: passwordHash,
       schemaSha256: encoded.sha256,
@@ -345,8 +403,9 @@ async function buildOneXlsx(ctx) {
       // Dev-only: sample.gen.js sets includePassword=true so the
       // generator can print the password for manual Excel inspection.
       // Prod route MUST NOT set this flag — the audit log only stores
-      // the hash; raw passwords are not retrievable post-export.
-      ...(ctx.includePassword ? { _devPassword: password } : {}),
+      // the hash; raw passwords are not retrievable post-export. Null on
+      // the internal variant (no protection applied).
+      ...(ctx.includePassword && password ? { _devPassword: password } : {}),
     },
   };
 }

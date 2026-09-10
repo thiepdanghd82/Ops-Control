@@ -7,6 +7,89 @@
  * lib shape: { rate: [], ddl: { coverage: [], click_charges: {}, tool_life: {} } }
  */
 import { isIndigoPrintType } from './printTypeUtils.js';
+import {
+  createEmptySnapshot,
+  getCoverageFromSnapshot,
+  getMatFromSnapshot,
+  getRateFromSnapshot,
+  getSnapshotSite,
+  getToolLifeFromSnapshot,
+  getClickChargesFromSnapshot,
+  getSgaFromSnapshot,
+  detectLegacyPartialFields,
+} from './pricingSnapshot.js';
+import { warn as devWarn } from '../utils/logger.js';
+import {
+  layoutToolCostSources,
+  buildLayoutToolCosts,
+  effectiveToolCost,
+} from './layoutToolCost.js';
+
+/**
+ * Phase 2 resolver — internal helper that reads pricing values via the
+ * persisted snapshot first, falling back to the live `lib.*` master
+ * library on a per-key miss. Snapshot wins on direct hit; miss falls
+ * through to `lib` so post-save additions (operator added a new
+ * material/workcenter after the snapshot was frozen) still calc.
+ *
+ * Resolver pattern is INTERNAL to the calcAll flow only. The public
+ * `getMatByCode(lib, code)` / `getRateByWC(lib, wc)` exports keep
+ * their 2-arg signature for external callers (CostLibContext +
+ * SubProductRow.jsx). Inside calcAll → calcInk / calcProcess we route
+ * the lookups via this resolver instead.
+ *
+ * When `snapshot` is null/empty (legacy quote OR explicit BC mode call
+ * `calcAll(st, allSpResults, lib)` with no options), every accessor
+ * falls through to lib → behavior is identical to pre-Phase-2.
+ */
+function createResolver(snapshot, lib) {
+  return {
+    getMat(code) {
+      const fromSnap = getMatFromSnapshot(snapshot, code);
+      if (fromSnap) return fromSnap;
+      // Match the case-insensitive trimmed lookup `getMatByCode` does
+      // so a snapshot miss falls back identically to the legacy path.
+      if (!lib || !Array.isArray(lib.mat)) return null;
+      const c = String(code || '')
+        .trim()
+        .toLowerCase();
+      return lib.mat.find((m) => String(m.code).trim().toLowerCase() === c) || null;
+    },
+    getRate(wc) {
+      const fromSnap = getRateFromSnapshot(snapshot, wc);
+      if (fromSnap) return fromSnap;
+      if (!lib || !Array.isArray(lib.rate)) return null;
+      return lib.rate.find((r) => r.workcenter === wc) || null;
+    },
+    getCoverage() {
+      const fromSnap = getCoverageFromSnapshot(snapshot);
+      if (fromSnap && fromSnap.length > 0) return fromSnap;
+      return (lib && lib.ddl && lib.ddl.coverage) || [];
+    },
+    // PR-A (2026-06-20): tool_life resolver. Snapshot wins on direct
+    // hit; key-miss returns 0 from snapshot (matching getToolLife's
+    // pre-snapshot fallthrough — callers OR-with proc.tool_life || 1).
+    // Snapshot ENTIRELY MISSING the tool_life cluster (legacy pre-PR-A)
+    // → fall back to live lib so the calc still works; caller can
+    // detect via detectLegacyPartialFields + emit _warnings.
+    getToolLife(toolType) {
+      if (snapshot && Object.prototype.hasOwnProperty.call(snapshot, 'tool_life')) {
+        return getToolLifeFromSnapshot(snapshot, toolType);
+      }
+      // Legacy snapshot: fall back to live lib
+      return lib && lib.ddl && lib.ddl.tool_life ? lib.ddl.tool_life[toolType] || 0 : 0;
+    },
+    // PR-A (2026-06-20): click_charges resolver. Same legacy fallback
+    // pattern as getToolLife. Returns the full charge table (caller
+    // walks keys to find the largest ≤ clicks).
+    getClickCharges() {
+      if (snapshot && Object.prototype.hasOwnProperty.call(snapshot, 'click_charges')) {
+        return getClickChargesFromSnapshot(snapshot);
+      }
+      return (lib && lib.ddl && lib.ddl.click_charges) || {};
+    },
+  };
+}
 
 /**
  * @typedef {Object} CalcResult
@@ -297,6 +380,8 @@ export function calcMat(mat, st, moq, allSpResults, subproducts) {
           _spLabor: 0,
           _spTooling: 0,
           _spVat: 0,
+          mats_moq_m2: 0,
+          mats_moq_lm: 0,
           error: `SP reference "${mat.code}" not computed`,
         };
       }
@@ -333,6 +418,8 @@ export function calcMat(mat, st, moq, allSpResults, subproducts) {
         _spLabor,
         _spTooling,
         _spVat,
+        mats_moq_m2: 0,
+        mats_moq_lm: 0,
       };
     }
   }
@@ -347,6 +434,8 @@ export function calcMat(mat, st, moq, allSpResults, subproducts) {
   const meter_roll = cavities > 0 && pcs_roll > 0 ? ((pcs_roll / cavities) * pitch) / 1000 : 0;
 
   const _blank = {
+    mats_moq_m2: 0,
+    mats_moq_lm: 0,
     setup_s: 0,
     setup_g: 0,
     run_s: 0,
@@ -391,11 +480,24 @@ export function calcMat(mat, st, moq, allSpResults, subproducts) {
   const run_g =
     (((gp + slit_adj) * (effWidth / 1000) * qpa_lm_raw) / scrapDiv / offcutDiv) * (mat.usage || 1);
 
+  // Mats./MOQ — GROSS material consumed for the active-tier MOQ. The quantity
+  // counterpart of run_s + setup_s so it stays in lockstep with the cost
+  // columns: RUN share applies scrap + offcut (like run_s), SETUP share applies
+  // offcut only (like setup_s). usage included exactly once.
+  const _usage = mat.usage || 1;
+  const mats_moq_lm = moq
+    ? (qpa_lm_raw / scrapDiv / offcutDiv) * _usage * moq +
+      ((mat.setup_lm || 0) * _usage) / offcutDiv
+    : 0;
+  const mats_moq_m2 = mats_moq_lm * (effWidth / 1000);
+
   const total_s = setup_s + run_s;
   const total_g = setup_g + run_g;
   const vat = st.trade_mode === 'USD(Book)' ? total_s * 0.15 : 0;
 
   return {
+    mats_moq_m2,
+    mats_moq_lm,
     setup_s,
     setup_g,
     run_s,
@@ -407,6 +509,12 @@ export function calcMat(mat, st, moq, allSpResults, subproducts) {
     qpa_lm,
     mat_po_lm,
     pitch,
+    // Effective width + cavities (row override else Layout fallback) — the
+    // values the app's Width/Cav columns show + the calc actually uses. Exposed
+    // so the export can persist them (server can't recompute the Layout
+    // fallback — calcEngine is client-only).
+    width: effWidth,
+    cavities,
     qpa_lm_raw,
     scrap_factor,
     webs,
@@ -418,7 +526,7 @@ export function calcMat(mat, st, moq, allSpResults, subproducts) {
 
 // ── Ink Cost ──
 
-export function calcInk(ink, st, moq, lib) {
+export function calcInk(ink, st, moq, lib, options = {}) {
   // Row identity gate — V3.3 only checked `ink.color` because that build
   // had a single "Color name" input. Ops Control v1.2 added a separate
   // "IFS Code" column; operators who typed only the IFS code (leaving
@@ -435,7 +543,12 @@ export function calcInk(ink, st, moq, lib) {
   // whole layout. Empty = follow Layout's computed pitch.
   const pitch = Number(ink.pitch_mm) > 0 ? Number(ink.pitch_mm) : calcPitch(st);
   const layout_per_sheet = calcLayoutPerSheet(st);
-  const covArr = (lib.ddl && lib.ddl.coverage) || [];
+  // Phase 2: route coverage lookup through the resolver when calcAll
+  // provides one (post-snapshot path). Falls back to direct lib read
+  // for backward-compat callers (Phase 1 calcInk(ink, st, moq, lib)).
+  const covArr = options.resolver
+    ? options.resolver.getCoverage()
+    : (lib && lib.ddl && lib.ddl.coverage) || [];
   const covObj = covArr.find((c) => c.pt === ink.print_type);
   const ink_cover_val = ink.coverage_override > 0 ? ink.coverage_override : covObj ? covObj.cov : 0;
   const ink_cover_disp = isIndigo ? '' : ink_cover_val || '';
@@ -464,11 +577,16 @@ export function calcInk(ink, st, moq, lib) {
   }
   const width_m = _widthMm / 1000;
 
-  let run_s = 0,
-    setup_s = 0;
+  let run_s, setup_s;
   if (isIndigo) {
     const clicks = ink.clicks || 0;
-    const _ccTbl = (lib.ddl && lib.ddl.click_charges) || {};
+    // PR-A (2026-06-20): route through resolver when calcAll supplies
+    // one — snapshot wins, fallback to live lib (with legacy fallback
+    // inside resolver.getClickCharges). BC-compat for direct calcInk
+    // callers (no options.resolver): read lib directly.
+    const _ccTbl = options.resolver
+      ? options.resolver.getClickCharges()
+      : (lib.ddl && lib.ddl.click_charges) || {};
     const _ccKeys = Object.keys(_ccTbl)
       .map(Number)
       .filter((k) => !isNaN(k) && k > 0)
@@ -489,8 +607,7 @@ export function calcInk(ink, st, moq, lib) {
     // for every ink. qpa_lm = 0 makes run_s fall through to 0, matching
     // the "no layout = no run" intent. The run_s gate below also requires
     // ink_cover_val > 0 && width_m > 0, so this is belt-and-braces.
-    const qpa_lm =
-      layout_per_sheet > 0 ? pitch / 1000 / layout_per_sheet / (st.num_webs || 1) : 0;
+    const qpa_lm = layout_per_sheet > 0 ? pitch / 1000 / layout_per_sheet / (st.num_webs || 1) : 0;
     run_s =
       ink_cover_val > 0 && width_m > 0 && qpa_lm > 0
         ? (price * qpa_lm * (ink.area_pct || 0) * width_m) / ink_cover_val / scrapF
@@ -510,12 +627,23 @@ export function calcInk(ink, st, moq, lib) {
   }
   const total = setup_s + run_s;
   const vat = st.trade_mode === 'USD(Book)' ? total * 0.15 : 0;
-  return { setup_s, run_s, vat, ink_cover_disp, layout_indigo_disp, total };
+  return {
+    setup_s,
+    run_s,
+    vat,
+    ink_cover_disp,
+    layout_indigo_disp,
+    total,
+    // Effective pitch + width (row override else Layout fallback) so the export
+    // shows the same Pitch/Width the app displays instead of raw 0.
+    pitch,
+    width: _widthMm,
+  };
 }
 
 // ── Process Cost ──
 
-export function calcProcess(proc, st, moq, lib) {
+export function calcProcess(proc, st, moq, lib, options = {}) {
   if (!proc.workcenter)
     return {
       setup_mach: 0,
@@ -526,17 +654,30 @@ export function calcProcess(proc, st, moq, lib) {
       extra: 0,
       extra_vat: 0,
       uph: 0,
+      crew: 0,
+      manualUph: 0,
       mach_rate: 0,
       labor_rate: 0,
       speed_uom: '',
       total_time: 0,
       pitch: 0,
     };
-  const rate = getRateByWC(lib, proc.workcenter) || { machine_rate: 0, labor_rate: 0 };
+  // Phase 2: snapshot-first lookups via resolver. Falls back to the
+  // direct `getRateByWC(lib, …)` path for legacy callers that don't
+  // pass `options.resolver`.
+  const rate = (options.resolver
+    ? options.resolver.getRate(proc.workcenter)
+    : getRateByWC(lib, proc.workcenter)) || { machine_rate: 0, labor_rate: 0 };
   const mach_rate = rate.machine_rate || 0;
   const labor_rate = rate.labor_rate || 0;
-  const crew = rate.crew || 1;
-  const manual_rate = (getRateByWC(lib, 'Manual') || {}).labor_rate || 2.54;
+  // CREW column (proc.crew) is the throughput / balancing lever — it overrides
+  // the Rate Table crew when set. Undefined/blank → fall back to rate.crew so
+  // quotes that never touched the column stay byte-identical (BC).
+  const crewRaw = Number(proc.crew);
+  const crew = Number.isFinite(crewRaw) && crewRaw > 0 ? crewRaw : rate.crew || 1;
+  const manual_rate =
+    ((options.resolver ? options.resolver.getRate('Manual') : getRateByWC(lib, 'Manual')) || {})
+      .labor_rate || 2.54;
   const speed_uom = rate.speed_uom || '';
   const pitch = calcPitch(st);
   const layout = proc.layout || 1;
@@ -547,14 +688,27 @@ export function calcProcess(proc, st, moq, lib) {
   let uph = 0;
   const sp = proc.speed || 0;
   const eff = proc.efficiency || 0.85;
+  // UOM → Machine-UPH formula. The UI labels were renamed 2026-08
+  // (Stamp/min→Shot/min, Pcs/H→Pcs/hrs, Sheets/H+Sheet/H→Sheets/Hrs, new
+  // 'Hrs'); the OLD tokens are kept as ALIASES so already-saved rate rows
+  // + quotes compute identically — every rename is label-only, same
+  // formula. 'Hrs' + '' → uph 0 (manual: labor comes from the setup_h →
+  // setup_labor path, no run formula). 'Mtr/Hr' stays aliased even though
+  // it was dropped from the selectable list — legacy rows must compute.
   const _suom = (speed_uom || '').replace(/\s/g, '').toLowerCase();
   if (_suom === 'm/min') uph = ((sp * eff * 60 * 1000) / Math.max(1, pitch)) * layout;
   else if (_suom === 'mtr/hr' || _suom === 'm/hr')
     uph = ((sp * eff * 1000) / Math.max(1, pitch)) * layout;
-  else if (_suom === 'stamp/min') uph = sp * eff * 60 * layout;
-  else if (_suom === 'pcs/h' || _suom === 'pcs/hr') uph = sp * eff;
-  else if (_suom === 'sheets/h' || _suom === 'sheets/hr') uph = sp * eff * layout;
-  else if (_suom === 'sheet/h' || _suom === 'sheet/hr') uph = sp * eff * layout;
+  else if (_suom === 'shot/min' || _suom === 'stamp/min') uph = sp * eff * 60 * layout;
+  else if (_suom === 'pcs/hrs' || _suom === 'pcs/h' || _suom === 'pcs/hr') uph = sp * eff;
+  else if (
+    _suom === 'sheets/hrs' ||
+    _suom === 'sheets/h' ||
+    _suom === 'sheets/hr' ||
+    _suom === 'sheet/h' ||
+    _suom === 'sheet/hr'
+  )
+    uph = sp * eff * layout;
 
   // Sprint S-DFM-P3 — cut_type speed factor for Die_Cut rows.
   // Through / both / perf / emboss all run slower than kiss-cut due
@@ -564,25 +718,68 @@ export function calcProcess(proc, st, moq, lib) {
     uph = uph * getCutTypeSpeedFactor(st.cut_type);
   }
 
+  // MAN UPH — for a MANUAL process (no machine speed → uph === 0) with a
+  // per-operator speed entered, throughput is DERIVED from crew so operators
+  // balance manual stages (Inspection/FQC/OQC) by changing CREW:
+  //   manualUph = crew × eff × speed.
+  // Machine rows + legacy quotes (speed 0, manual_uph typed) keep the typed
+  // value via the else branch — heal-on-read, no schema bump.
+  const manualUph =
+    uph === 0 && Number(proc.speed) > 0 ? crew * eff * Number(proc.speed) : proc.manual_uph || 0;
+
   const setup_h = proc.setup_h || 0;
   const setup_mach = moq ? ((setup_h * mach_rate) / moq) * repeat : 0;
   const setup_labor = moq ? ((setup_h * labor_rate * crew) / moq) * repeat : 0;
   const run_mach = uph > 0 ? (mach_rate / uph / Math.max(0.001, scrapFactor)) * repeat : 0;
+  // Manual-labor crew model — Option A (default): CREW is a throughput lever,
+  // unit cost stays correct. Because manualUph already scales with crew,
+  //   (manual_rate × crew) / (crew × eff × speed) = manual_rate / (eff × speed)
+  // → per-piece manual labor is crew-NEUTRAL; changing crew moves MAN UPH +
+  // PROD TIME (capacity / Balancing), not unit cost. Switch to Option B (crew
+  // lowers unit cost) by setting MANUAL_LABOR_CREW_MULT to 1.
+  const MANUAL_LABOR_CREW_MULT = crew;
   const run_labor =
     ((uph > 0 ? (labor_rate * crew) / uph / Math.max(0.001, scrapFactor) : 0) +
-      (proc.manual_uph > 0 ? manual_rate / proc.manual_uph / Math.max(0.001, scrapFactor) : 0)) *
+      (manualUph > 0
+        ? (manual_rate * MANUAL_LABOR_CREW_MULT) / manualUph / Math.max(0.001, scrapFactor)
+        : 0)) *
     repeat;
 
   const _totalQtyAuto = (st.annual_qty || moq) * (st.product_lifetime || 1);
   const eau = proc.eau_ovr && proc.eau_ovr > 0 ? proc.eau_ovr : _totalQtyAuto;
+  // Safety cap from CCL tooling-cost spec (`2. TEMPLATES/Costing/Cách tính
+  // chi phí tools.xlsx`): amortize over at most 80% of EAU so a die that
+  // outlasts demand doesn't spread its cost too thinly. Henry's decision
+  // 2026-06-15: keep EAU as `annual × lifetime` (multi-year total) and
+  // apply the 0.8 factor uniformly (including operator-overridden EAU).
+  const eauCap = eau * 0.8;
 
   // Tooling
+  // Effective tool cost — a process may ASSIGN a Layout-computed cost
+  // (Plate / Cutter i) via proc.tool_cost_src (Sprint S-LAYOUT-TOOLCOST).
+  // Assigned + present → the Layout source cost from options.layoutToolCosts;
+  // assigned but source gone → 0 (UI warns); unassigned ('') → manual
+  // proc.tool_cost, so quotes without an assignment stay byte-identical (BC).
+  const effToolCost = effectiveToolCost(proc, options.layoutToolCosts);
   let tooling = 0;
-  if (proc.tool_cost > 0) {
-    const tlife =
-      proc.tool_life_ovr && proc.tool_life_ovr !== false
-        ? proc.tool_life || 1
-        : getToolLife(lib, proc.tool_type) || proc.tool_life || 1;
+  if (effToolCost > 0) {
+    // PR-A (2026-06-20): route through resolver when calcAll supplies
+    // one. Snapshot wins; legacy snapshot (pre-PR-A) falls back to lib
+    // inside resolver.getToolLife. BC-compat direct callers (no
+    // options.resolver) read lib directly via getToolLife().
+    const resolvedLife = options.resolver
+      ? options.resolver.getToolLife(proc.tool_type)
+      : getToolLife(lib, proc.tool_type);
+    // The editable per-row Tool Life column is the SOURCE OF TRUTH for the
+    // tooling calc (2026-08): whenever the row holds a positive value it wins,
+    // so editing Tool Life changes the cost. The DDL/snapshot resolvedLife is a
+    // fallback used ONLY when the row is 0/empty (legacy quotes saved before
+    // the column was populated). tool_life_ovr no longer gates the cost — the
+    // row value is inherently frozen with the quote state, so it's reproducible
+    // without the snapshot resolver. Pre-2026-06-21 snapshots that lack
+    // tool_life only matter when rowLife is 0 (the fallback path below).
+    const rowLife = Number(proc.tool_life) || 0;
+    const tlife = rowLife > 0 ? rowLife : resolvedLife || 1;
     // DDL data uses "Jig" but legacy code shipped with "Jig& Fixture".
     // Normalize both to match any variant (whitespace/casing/ampersand) but
     // require EXACT match after normalization so we don't accidentally
@@ -592,10 +789,11 @@ export function calcProcess(proc, st, moq, lib) {
       .replace(/[\s&]/g, '');
     const isJig = ttNorm === 'jig' || ttNorm === 'jigfixture';
     if (isJig) {
-      tooling = tlife > eau ? proc.tool_cost / eau : proc.tool_cost / tlife;
+      // JIG mẫu số KHÔNG nhân Cavity (gá giữ SP, không tiêu hao theo shot × cavity).
+      tooling = tlife > eauCap ? effToolCost / eauCap : effToolCost / tlife;
     } else {
       const totalToolPcs = tlife * layout;
-      tooling = totalToolPcs > eau ? proc.tool_cost / eau : proc.tool_cost / totalToolPcs;
+      tooling = totalToolPcs > eauCap ? effToolCost / eauCap : effToolCost / totalToolPcs;
     }
   }
 
@@ -604,9 +802,7 @@ export function calcProcess(proc, st, moq, lib) {
   const extra_vat = st.trade_mode === 'USD(Book)' ? extra * 0.15 : 0;
 
   const total_time =
-    ((uph > 0 ? moq / uph : 0) + (proc.manual_uph > 0 ? moq / proc.manual_uph : 0) + setup_h) *
-    60 *
-    repeat;
+    ((uph > 0 ? moq / uph : 0) + (manualUph > 0 ? moq / manualUph : 0) + setup_h) * 60 * repeat;
   return {
     setup_mach,
     setup_labor,
@@ -616,6 +812,8 @@ export function calcProcess(proc, st, moq, lib) {
     extra,
     extra_vat,
     uph,
+    crew,
+    manualUph,
     mach_rate,
     labor_rate,
     speed_uom,
@@ -658,14 +856,20 @@ export function calcShipping(st) {
 //
 // Pure function: no IO, no state. Extracted so calcAll stays lean and
 // the formula can be unit-tested without standing up a full quote state.
-export function computeSga({ g_ttl, sp_price, lib, site, snapshot }) {
+//
+// PR-A2 (2026-06-20) — 3-layer precedence for retention:
+//   1. snapshot (approval.rates_snapshot, Phase 9E.4) — approved win
+//   2. pricingSnapshot (state.pricing_snapshot.sga, PR-A2) — draft pin
+//   3. lib.finance.summary — live, last resort + legacy fallback
+//
+// Approved quote carrying both approval.rates_snapshot AND
+// pricing_snapshot.sga (different values) → MUST resolve to approval
+// per the regression-guard test. Draft quote (no approval) with
+// pricing_snapshot.sga → resolves to snapshot. Pre-PR-A2 quote (no
+// snapshot.sga) → live lib (existing behavior unchanged).
+export function computeSga({ g_ttl, sp_price, lib, site, snapshot, pricingSnapshot }) {
   const siteKey = site || 'VN';
-  // Phase 9E.4 — snapshot precedence. When an approved quote carries
-  // state.approval.rates_snapshot (captured at APPROVE_FINANCE), that
-  // frozen rate is authoritative. A later Finance edit bumping SGA
-  // from 0→5% must NOT retroactively change this quote's reported
-  // margin. Callers pass the snapshot explicitly so the computation
-  // stays pure (no hidden dependency on approval state).
+  // Layer 1 — approval.rates_snapshot wins (Phase 9E.4 unchanged)
   if (snapshot && typeof snapshot === 'object') {
     const snapPct = Number(snapshot.sga_rate_pct);
     const pct = Number.isFinite(snapPct) && snapPct > 0 ? snapPct : 0;
@@ -682,6 +886,26 @@ export function computeSga({ g_ttl, sp_price, lib, site, snapshot }) {
     };
   }
 
+  // Layer 2 — PR-A2 pricing_snapshot.sga (draft pin). Only fires when
+  // approval snapshot absent AND pricing snapshot has the sga cluster
+  // (legacy snapshots return null from getSgaFromSnapshot).
+  const psSga = getSgaFromSnapshot(pricingSnapshot);
+  if (psSga && Number.isFinite(psSga.rate_pct)) {
+    const pct = psSga.rate_pct > 0 ? psSga.rate_pct : 0;
+    const psSgaAmount = pct > 0 ? (Number(g_ttl) || 0) * (pct / 100) : 0;
+    const psTtl = (Number(g_ttl) || 0) + psSgaAmount;
+    const psGm = sp_price > 0 ? 1 - psTtl / sp_price : null;
+    return {
+      sga: psSgaAmount,
+      sga_rate_pct: pct,
+      g_ttl_with_sga: psTtl,
+      gm_after_sga: psGm,
+      site: psSga.site_key || siteKey,
+      from_snapshot: true,
+    };
+  }
+
+  // Layer 3 — live lib fallback (pre-A2 legacy + final default)
   const rates = lib?.finance?.summary?.sga_rate_pct_by_site || {};
   // Phase 9E.2 — case-insensitive site lookup. Prior version silently
   // returned 0 SGA if a quote stored `site: 'vn'` (lowercase) but the
@@ -715,9 +939,88 @@ export function computeSga({ g_ttl, sp_price, lib, site, snapshot }) {
 
 // ── Aggregate: calcAll ──
 
-export function calcAll(st, allSpResults, lib, subproducts) {
+/**
+ * @param {object} st - tier state (post buildTierState)
+ * @param {Array|null} allSpResults - sub-product pass-1 results (Cpx aggregation), null for Std
+ * @param {object} lib - master library (post activeSite filter from CostLibContext)
+ * @param {Array|null} subproducts - subproducts array (Cpx context), null for Std
+ * @param {object} [options]
+ * @param {object|null} [options.snapshot] - Phase 2 pricing snapshot to read pricing
+ *   from. Null/undefined → snapshot-less BC mode (lib-only, identical to pre-Phase-2
+ *   behavior). Empty snapshot → resolver falls through to lib on every key (also BC).
+ * @param {boolean} [options.warnSiteMismatch=true] - emit a `_warnings` entry when
+ *   snapshot._site is set, state.site is set, and they diverge (operator changed
+ *   site after the snapshot was frozen). Skip when either side is null.
+ * @param {boolean} [options.collectWarnings=true] - attach `_warnings` array to
+ *   the returned result. False → swallow warnings, no `_warnings` field.
+ * @returns {object} cost-breakdown result; carries `_warnings` array iff
+ *   `collectWarnings !== false` AND at least one warning was raised.
+ */
+export function calcAll(st, allSpResults, lib, subproducts, options = {}) {
   const moq =
     st.moq && st.moq > 0 ? st.moq : st.annual_qty && st.annual_qty > 0 ? st.annual_qty : 1;
+
+  // Phase 2 resolver — snapshot-first, lib-fallback. Snapshot null →
+  // every getter falls through to lib → behavior identical to pre-Phase-2
+  // BC mode. The resolver is created ONCE per calcAll invocation +
+  // propagated to calcInk / calcProcess via the same `options` bag so
+  // callers don't need to know about the resolver shape.
+  const snapshot = options.snapshot || null;
+  const resolver = createResolver(snapshot, lib);
+  // Layout-assigned tool costs (Sprint S-LAYOUT-TOOLCOST): id → cost map for
+  // Plate + Cutter 1~4, derived LIVE from (st, lib) so a process row that
+  // assigned a Layout source resolves its tool cost from here. Built once per
+  // calcAll; the direct calcProcess site (CalcProcesses) + tests may inject via
+  // options.layoutToolCosts (wins). Cpx SPs pass their own spSt so each SP gets
+  // its own plate cost. Rows with empty tool_cost_src ignore it → golden BC.
+  const layoutToolCosts =
+    options.layoutToolCosts ?? buildLayoutToolCosts(layoutToolCostSources(st, lib));
+  const callOptions = { ...options, resolver, layoutToolCosts };
+
+  // Site-mismatch warning collection. Snapshot._site is set when
+  // freezeLib captured state.site; state.site is the live tier site.
+  // Both set + diverge → operator flipped active site after freeze →
+  // calc may be using rates from a site the operator no longer
+  // considers active. Skip silently when either side is null (legacy
+  // / synthesized snapshot OR pre-Sprint-1.x state without site field).
+  //
+  // Note: this is a separate channel from the existing `warnings`
+  // string array (scrap_pct guards) — surfaced via the distinct
+  // `_warnings` field so consumers can opt-in without parsing strings.
+  const siteWarnings = [];
+  const snapSite = getSnapshotSite(snapshot);
+  const stateSite = (st && st.site) || null;
+  if (options.warnSiteMismatch !== false && snapSite && stateSite && snapSite !== stateSite) {
+    const msg = `Site mismatch: snapshot frozen under '${snapSite}', current state.site = '${stateSite}'`;
+    siteWarnings.push({
+      type: 'site_mismatch',
+      snapshot_site: snapSite,
+      state_site: stateSite,
+      message: msg,
+    });
+    // DEV-only console.warn via the repo logger (Vite import.meta.env.DEV
+    // gate; auto-silent in prod + node:test).
+    devWarn('[calcEngine]', msg);
+  }
+
+  // PR-A (2026-06-20): legacy-partial detection. When a persisted snapshot
+  // lacks tool_life or click_charges (pre-2026-06-21 freeze format), the
+  // resolver falls back to live lib for those keys — the calc still runs
+  // but the result is NOT save-time-pinned for those clusters. Emit one
+  // _warnings entry per missing field so audit UI + Phase 2 reproducibility
+  // contract can flag the quote as "partially-pinned".
+  if (snapshot && snapshot._captured_at && !snapshot._synthesized) {
+    const missingFields = detectLegacyPartialFields(snapshot);
+    for (const field of missingFields) {
+      siteWarnings.push({
+        type: 'legacy_snapshot_partial',
+        field,
+        message:
+          `Pre-2026-06-21 snapshot lacks ${field} freeze; ${field === 'tool_life' ? 'tooling cost' : 'Indigo click charges'} ` +
+          'computed from current rate, may differ from save-time. Re-save to upgrade snapshot.',
+      });
+    }
+  }
 
   // Materials
   let s_mat_setup = 0,
@@ -762,7 +1065,7 @@ export function calcAll(st, allSpResults, lib, subproducts) {
   const inkResults = st.inks.map((ik) => {
     if (ik.hidden)
       return { setup_s: 0, run_s: 0, vat: 0, ink_cover_disp: '', layout_indigo_disp: '', total: 0 };
-    const r = calcInk(ik, st, moq, lib);
+    const r = calcInk(ik, st, moq, lib, callOptions);
     s_ink_setup += r.setup_s || 0;
     s_ink_run += r.run_s || 0;
     vat_ink += r.vat || 0;
@@ -798,7 +1101,7 @@ export function calcAll(st, allSpResults, lib, subproducts) {
         total_time: 0,
         pitch: 0,
       };
-    const r = calcProcess(p, st, moq, lib);
+    const r = calcProcess(p, st, moq, lib, callOptions);
     overhead += r.run_mach || 0;
     labor_cost += r.run_labor || 0;
     tooling += r.tooling || 0;
@@ -820,7 +1123,9 @@ export function calcAll(st, allSpResults, lib, subproducts) {
     vat_loss += r._spVat || 0;
   });
 
-  const packing_ship = calcPacking(st) + calcShipping(st);
+  const packing_pcs = calcPacking(st);
+  const shipping_pcs = calcShipping(st);
+  const packing_ship = packing_pcs + shipping_pcs;
   const s_ttl =
     s_mat_cost +
     overhead +
@@ -871,15 +1176,25 @@ export function calcAll(st, allSpResults, lib, subproducts) {
   const gm = sp_price > 0 ? 1 - s_ttl / sp_price : null;
 
   // SGA burden — see computeSga() below for the formula + rationale.
-  // Pass the approval snapshot when the quote is in an approved state
-  // so the frozen rate wins over live Finance data (Phase 9E.4).
+  // PR-A2 (2026-06-20): 3-layer precedence — approval.rates_snapshot
+  // (Phase 9E.4) → pricing_snapshot.sga (this PR) → lib.finance (live).
+  // Approved quote keeps existing approval-snapshot wins behavior; draft
+  // quote now pinned via pricing_snapshot.sga; pre-PR-A2 quotes fall
+  // through to lib.finance unchanged.
   const approvalSnapshot = st.approval?.rates_snapshot || null;
   const {
     sga,
     sga_rate_pct: sgaRatePct,
     g_ttl_with_sga,
     site,
-  } = computeSga({ g_ttl, sp_price, lib, site: st.site, snapshot: approvalSnapshot });
+  } = computeSga({
+    g_ttl,
+    sp_price,
+    lib,
+    site: st.site,
+    snapshot: approvalSnapshot,
+    pricingSnapshot: snapshot, // PR-A2: pricing snapshot from options.snapshot
+  });
   // Sprint 21 follow-up: gm uses s_ttl (supplier basis). gm_after_sga
   // must also use s_ttl so the delta gm - gm_after_sga isolates JUST
   // the SGA burden. Pre-fix, gm_after_sga was s_ttl-vs-g_ttl AND SGA
@@ -903,6 +1218,8 @@ export function calcAll(st, allSpResults, lib, subproducts) {
     vat_loss,
     tooling,
     packing_ship,
+    packing_pcs, // Total Packing/pcs (calcPacking) — for the export's Pack&Ship totals
+    shipping_pcs, // Total Shipping/pcs (calcShipping)
     s_ttl,
     g_ttl,
     va,
@@ -933,6 +1250,12 @@ export function calcAll(st, allSpResults, lib, subproducts) {
     bd_setup_mach: setup_mach_total,
     bd_setup_labor: setup_labor_total,
     warnings,
+    // Phase 2 snapshot/site-mismatch warnings — attached only when
+    // `collectWarnings !== false` AND at least one warning was raised,
+    // so the BC return shape stays untouched for happy-path callers.
+    ...(options.collectWarnings !== false && siteWarnings.length > 0
+      ? { _warnings: siteWarnings }
+      : {}),
   };
 }
 
@@ -968,6 +1291,8 @@ const PERSISTED_RESULT_FIELDS = [
   'labor_cost',
   'tooling',
   'packing_ship',
+  'packing_pcs',
+  'shipping_pcs',
   'vat_loss',
   'bd_mat_setup',
   'bd_mat_run',
@@ -1094,6 +1419,13 @@ export function buildTierState(st, tierIdx, price, moq, eau) {
       em.proc_setup_h[i] != null ? Object.assign({}, p, { setup_h: em.proc_setup_h[i] }) : p
     );
   }
+  // Sprint S-PACK-SHIP-PER-TIER — per-MOQ packing/shipping override.
+  // Field-level merge: any of the 10 pack/ship keys present in
+  // em.packing overrides the base value; keys absent fall back to base.
+  // Mirrors the line in getActiveTierState; buildTierState was missing
+  // it before, so persisted result.tiers[N] + multi-tier xlsx silently
+  // showed base pack/ship for every non-active tier.
+  if (em.packing) Object.assign(base, em.packing);
   return base;
 }
 
@@ -1265,6 +1597,7 @@ export function createStdState() {
     npi_owner: '',
     sale_owner: '',
     description: '',
+    options: '',
     moq: 0,
     annual_qty: 0,
     trade_mode: 'USD(Normal)',
@@ -1334,6 +1667,25 @@ export function createStdState() {
     die_quiet_zone_mm: 0, // clearance around die for reg marks / bearer (0 = none)
     tol_p2p_mm: 0, // print-to-print (color registration) tolerance
     min_slit_lane_width_mm: 0, // override default min slit lane width (0 = 25mm default)
+    // Print-cost block — Layout ▸ Print Design Layout bottom row (additive,
+    // heal-on-read, NO schema bump; same pattern as lead_time). pl_plate_cost
+    // is calculated + read-only — TODO: Plate cost formula pending Henry.
+    // These do NOT feed calcEngine/cost/exporter yet (roll-in is a follow-up).
+    pl_print_type: '',
+    pl_num_colors: '',
+    pl_film_lp_cost: '',
+    pl_plate_cost: '',
+    // Cutter-cost block — Layout ▸ Cutting Design Layout top row (additive,
+    // heal-on-read, NO schema bump; mirrors the pl_* print-cost block). Four
+    // type+cost pairs: cutter_types[i] = a TOOL_TYPE selection; cutter_costs[i]
+    // is CALCULATED + read-only — TODO: Cutter cost formula pending Henry.
+    // These do NOT feed calcEngine/cost/exporter yet (Std only; Cpx follow-up).
+    cutter_types: ['', '', '', ''],
+    cutter_costs: ['', '', '', ''],
+    // Per-cutter cavity override ('' = use the global Cut Total/Shot). Some
+    // jobs run several cutters with different cavity counts per stage; the
+    // cutter-cost formula uses THIS cavity per cutter.
+    cutter_cavities: ['', '', '', ''],
     // ── Phase 4 UX polish ──
     unwind_direction: '', // '' | 'face-in' | 'face-out' — label orientation on roll
     print_direction_md: '', // '' | 'head-first' | 'tail-first' — text reading direction
@@ -1389,6 +1741,7 @@ export function createStdState() {
         _mid: newMid(),
         row_type: i < 10 ? 'Main.Mat' : 'Process Mat',
         code: '',
+        drw_material: '',
         desc: '',
         usage: 0,
         setup_lm: 0,
@@ -1414,6 +1767,7 @@ export function createStdState() {
         _mid: newMid(),
         row_type: i < 10 ? 'Main.Mat' : 'Process Mat',
         code: '',
+        drw_material: '',
         desc: '',
         usage: 0,
         setup_lm: 0,
@@ -1467,9 +1821,10 @@ export function createStdState() {
         layout: 1,
         efficiency: 0.85,
         setup_h: 0,
-        scrap_pct: 0.03,
+        scrap_pct: 0,
         manual_uph: 0,
         tool_cost: 0,
+        tool_cost_src: '',
         tool_type: '',
         tool_life: 0,
         extra_cost: 0,
@@ -1491,8 +1846,41 @@ export function createStdState() {
     other_ship: 0,
     // RFQ
     design_process: '',
+    // Drawings — LIST + active pointer; the singular *_file is the active
+    // mirror (see services/drawingFiles.js) so legacy readers stay green.
     layout_file: null,
+    layout_files: [],
+    layout_active: 0,
     customer_drw_file: null,
+    customer_drw_files: [],
+    customer_drw_active: 0,
+    // Lead time & Notice sub-tab metadata. Free-text fields operator
+    // fills on cover-sheet; zero pricing impact (calcAll never reads
+    // lead_time). Legacy quotes heal via `state.lead_time || {}`
+    // fallback at reducer + UI, so no schema-version bump needed
+    // (PR #110 pattern).
+    lead_time: {
+      lt_material: '',
+      lt_material_ovr: '',
+      lt_sample: '',
+      lt_po: '',
+      // PO L/T auto-derive override source (Σ PROD TIME ÷ 8, mirrors
+      // lt_material_ovr). Heal-on-read seeds from legacy lt_po at migration.
+      lt_po_ovr: '',
+      lt_remark: '',
+      lt_process: '',
+      lt_material_type: '',
+      // Per-quote "Product tolerance: +/- <n>mm" footer of the auto REMARK.
+      // Editable free-text (accepts "0.2" / "0.15"); heal-on-read defaults to
+      // '0.2' via safeLeadTime() so legacy quotes stay valid (no schema bump).
+      product_tolerance: '0.2',
+    },
+    // Pricing snapshot — Phase 1 foundation for fixing the calcEngine
+    // recompute-drift bug (quote.state today does NOT embed pricing
+    // params, so re-opening an old quote after master rates shift
+    // produces a different cost). Empty default; freezeLib(lib, state)
+    // populates at save time (Phase 2). See pricingSnapshot.js.
+    pricing_snapshot: createEmptySnapshot(),
   };
 }
 
@@ -1507,6 +1895,7 @@ export function createEmptyStdState() {
     end_cu_pn: '',
     direct_cu_pn: '',
     description: '',
+    options: '',
     npi_owner: '',
     sale_owner: '',
     moq: 0,
@@ -1539,6 +1928,17 @@ export function createEmptyStdState() {
     min_gap_md: 0,
     rotary_cols: 0,
     pcs_per_roll: 0,
+    // Print-cost block (Layout ▸ Print Design Layout). See createStdState for
+    // the contract — additive, heal-on-read; pl_plate_cost formula pending.
+    pl_print_type: '',
+    pl_num_colors: '',
+    pl_film_lp_cost: '',
+    pl_plate_cost: '',
+    // Cutter-cost block (Layout ▸ Cutting Design Layout). See createStdState
+    // for the contract — additive, heal-on-read; Cutter cost formula pending.
+    cutter_types: ['', '', '', ''],
+    cutter_costs: ['', '', '', ''],
+    cutter_cavities: ['', '', '', ''],
     // Alt-materials feature (Sprint S-ALT-MAT, PR #A). See createStdState
     // for the full contract — materials field is a mirror of the active set.
     materials_main: Array(1)
@@ -1547,6 +1947,7 @@ export function createEmptyStdState() {
         _mid: newMid(),
         row_type: 'Main.Mat',
         code: '',
+        drw_material: '',
         desc: '',
         usage: 0,
         setup_lm: 0,
@@ -1572,6 +1973,7 @@ export function createEmptyStdState() {
         _mid: newMid(),
         row_type: 'Main.Mat',
         code: '',
+        drw_material: '',
         desc: '',
         usage: 0,
         setup_lm: 0,
@@ -1626,6 +2028,7 @@ export function createEmptyStdState() {
         scrap_pct: 0,
         manual_uph: 0,
         tool_cost: 0,
+        tool_cost_src: '',
         tool_type: '',
         tool_life: 0,
         extra_cost: 0,
@@ -1646,11 +2049,39 @@ export function createEmptyStdState() {
     design_process: '',
     request_ul: 'N',
     ul_description: '',
+    // Drawings — LIST + active mirror (see services/drawingFiles.js).
     layout_file: null,
+    layout_files: [],
+    layout_active: 0,
+    customer_drw_file: null,
+    customer_drw_files: [],
+    customer_drw_active: 0,
     num_moq: 1,
     extra_moqs: [],
     active_moq_idx: 0,
     sum_records: [],
+    // Lead time & Notice sub-tab metadata — see createStdState for
+    // the contract; mirrored here so RESET_STD (New button) starts
+    // with the same shape.
+    lead_time: {
+      lt_material: '',
+      lt_material_ovr: '',
+      lt_sample: '',
+      lt_po: '',
+      // PO L/T auto-derive override source (Σ PROD TIME ÷ 8, mirrors
+      // lt_material_ovr). Heal-on-read seeds from legacy lt_po at migration.
+      lt_po_ovr: '',
+      lt_remark: '',
+      lt_process: '',
+      lt_material_type: '',
+      // Per-quote "Product tolerance: +/- <n>mm" footer of the auto REMARK.
+      // Editable free-text (accepts "0.2" / "0.15"); heal-on-read defaults to
+      // '0.2' via safeLeadTime() so legacy quotes stay valid (no schema bump).
+      product_tolerance: '0.2',
+    },
+    // Pricing snapshot — see createStdState for the contract; mirrored
+    // here so RESET_STD (New button) starts with the same empty shape.
+    pricing_snapshot: createEmptySnapshot(),
   };
 }
 
@@ -1661,6 +2092,7 @@ export function createCplxState() {
     direct_cu: '',
     project: '',
     description: '',
+    options: '',
     moq: 0,
     annual_qty: 0,
     product_lifetime: 0,
@@ -1684,7 +2116,13 @@ export function createCplxState() {
     num_moq: 1,
     extra_moqs: [],
     active_moq_idx: 0,
+    // Drawings — LIST + active mirror (see services/drawingFiles.js).
     layout_file: null,
+    layout_files: [],
+    layout_active: 0,
+    customer_drw_file: null,
+    customer_drw_files: [],
+    customer_drw_active: 0,
     packing_method: 'Sheet',
     pcs_per_bag: 0,
     bags_per_box: 0,
@@ -1705,6 +2143,27 @@ export function createCplxState() {
     // groupTitles } — empty object = fully auto-generated from data.
     flow_chart_overrides: {},
     _shape_version: 2,
+    // Lead time & Notice sub-tab metadata — see createStdState for
+    // the contract. Quote-level (not per-SP) per operator scoping.
+    lead_time: {
+      lt_material: '',
+      lt_material_ovr: '',
+      lt_sample: '',
+      lt_po: '',
+      // PO L/T auto-derive override source (Σ PROD TIME ÷ 8, mirrors
+      // lt_material_ovr). Heal-on-read seeds from legacy lt_po at migration.
+      lt_po_ovr: '',
+      lt_remark: '',
+      lt_process: '',
+      lt_material_type: '',
+      // Per-quote "Product tolerance: +/- <n>mm" footer of the auto REMARK.
+      // Editable free-text (accepts "0.2" / "0.15"); heal-on-read defaults to
+      // '0.2' via safeLeadTime() so legacy quotes stay valid (no schema bump).
+      product_tolerance: '0.2',
+    },
+    // Pricing snapshot — quote-level (not per-SP), captures USED rows
+    // from lib at save time. See pricingSnapshot.js / createStdState.
+    pricing_snapshot: createEmptySnapshot(),
   };
 }
 
@@ -1727,6 +2186,7 @@ export function createSubProduct(code) {
         _mid: newMid(),
         row_type: 'Main.Mat',
         code: '',
+        drw_material: '',
         desc: '',
         qpa: 0,
         usage: 0,
@@ -1753,6 +2213,7 @@ export function createSubProduct(code) {
         _mid: newMid(),
         row_type: 'Main.Mat',
         code: '',
+        drw_material: '',
         desc: '',
         qpa: 0,
         usage: 0,
@@ -1804,9 +2265,10 @@ export function createSubProduct(code) {
         layout: 1,
         efficiency: 0.85,
         setup_h: 0,
-        scrap_pct: 0.03,
+        scrap_pct: 0,
         manual_uph: 0,
         tool_cost: 0,
+        tool_cost_src: '',
         tool_type: '',
         tool_life: 0,
         extra_cost: 0,
@@ -1873,6 +2335,12 @@ export function createSubProduct(code) {
     die_quiet_zone_mm: 0,
     tol_p2p_mm: 0,
     min_slit_lane_width_mm: 0,
+    // Print-cost block (Layout ▸ Print Design Layout). See createStdState for
+    // the contract — additive, heal-on-read; pl_plate_cost formula pending.
+    pl_print_type: '',
+    pl_num_colors: '',
+    pl_film_lp_cost: '',
+    pl_plate_cost: '',
     unwind_direction: '',
     print_direction_md: '',
     include_reg_marks: false,
@@ -1880,7 +2348,13 @@ export function createSubProduct(code) {
     plate_thickness_mm: 0,
     anilox_bcm: 0,
     print_to_cut_offset_mm: 0,
+    // Drawings — per-subproduct LIST + active mirror (drawingFiles.js).
     layout_file: null,
+    layout_files: [],
+    layout_active: 0,
+    customer_drw_file: null,
+    customer_drw_files: [],
+    customer_drw_active: 0,
     _layoutOpen: true,
     _bodyOpen: true,
   };
@@ -1972,6 +2446,12 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
     return sp.ship_qty || activeMoq;
   };
 
+  // Phase 3 — extract snapshot from opts (caller injects via the same
+  // `opts` bag already used for bomQtyEnabled / spMoqScalingEnabled).
+  // Passing it down the SP calcAll calls so the aggregate honours the
+  // frozen rates per the parent quote, not the live master library.
+  const calcOpts = opts.snapshot ? { snapshot: opts.snapshot } : {};
+
   const errors = [];
   const pass1 = tieredSps.map((sp, spi) => {
     try {
@@ -1982,7 +2462,7 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
         trade_mode: cs.trade_mode,
         site: cs.site,
       };
-      return calcAll(spSt, null, lib, null);
+      return calcAll(spSt, null, lib, null, calcOpts);
     } catch (err) {
       errors.push({ spi, code: sp.code, pass: 1, message: err?.message || String(err) });
       return null;
@@ -2001,7 +2481,7 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
         trade_mode: cs.trade_mode,
         site: cs.site,
       };
-      const res = calcAll(spSt, pass1, lib, tieredSps);
+      const res = calcAll(spSt, pass1, lib, tieredSps, calcOpts);
       const matErrs = (res?.matResults || []).filter((r) => r?.error).map((r) => r.error);
       if (matErrs.length) errors.push({ spi, code: sp.code, pass: 2, message: matErrs.join('; ') });
       return res;
@@ -2041,6 +2521,8 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
     'bd_setup_mach',
     'bd_setup_labor',
     'packing_ship',
+    'packing_pcs',
+    'shipping_pcs',
     'vat_loss',
     'bd_extra',
   ];
@@ -2115,7 +2597,13 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
   // safe; no NaN risk.
   if (aggregate) {
     try {
-      const parentPsSt = { ...cs, moq: activeMoq };
+      // Sprint S-PACK-SHIP-PER-TIER — merge per-tier parent packing
+      // override (cs.extra_moqs[tierIdx-1].packing) before computing
+      // parent pack/ship. Spread tierPacking BEFORE the explicit moq so
+      // activeMoq always wins even if a packing object accidentally
+      // carried a moq key.
+      const tierPacking = tierIdx > 0 ? cs.extra_moqs?.[tierIdx - 1]?.packing || {} : {};
+      const parentPsSt = { ...cs, ...tierPacking, moq: activeMoq };
       const parentPacking = calcPacking(parentPsSt) || 0;
       const parentShipping = calcShipping(parentPsSt) || 0;
       const parentPs = parentPacking + parentShipping;
@@ -2123,6 +2611,11 @@ export function aggregateComplex(cs, sps, lib, tierIdx = 0, opts = {}) {
         aggregate.packing_ship = (aggregate.packing_ship || 0) + parentPs;
         aggregate.s_ttl = (aggregate.s_ttl || 0) + parentPs;
       }
+      // Expose the packing/shipping split for the export's Pack&Ship totals
+      // (parent-level — per-SP packing is usually 0). The authoritative
+      // combined stays packing_ship.
+      aggregate.packing_pcs = (aggregate.packing_pcs || 0) + parentPacking;
+      aggregate.shipping_pcs = (aggregate.shipping_pcs || 0) + parentShipping;
     } catch (err) {
       errors.push({
         spi: -1,
@@ -2165,16 +2658,39 @@ const _num = (v) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
+// Row extractors persist the SUBSET of each result the export tabs display —
+// the money columns PLUS the derived per-row values operators see in the app
+// (QPA/Mats-per-MOQ for materials; MC UPH / MAN UPH / PROD TIME + the
+// setup/run mach/labor split + tooling for processes). calcEngine stays the
+// only calc engine; the server renders these persisted numbers (Export-parity,
+// 2026-09-09 — extends the MES-3-FIX-41 pattern). Additive: legacy quotes lack
+// the new keys and the sheets fall back to '—' per key until re-saved.
 const _matRowFromResult = (r) => ({
   setup_cost: _num(r && r.setup_s),
   run_cost: _num(r && r.run_s),
   total: _num(r && r.total_s),
+  // Displayed derived columns (CalcMaterials QPA + Mats/MOQ).
+  qpa_m2: _num(r && r.qpa_m2),
+  qpa_lm: _num(r && r.qpa_lm),
+  mats_moq_m2: _num(r && r.mats_moq_m2),
+  mats_moq_lm: _num(r && r.mats_moq_lm),
+  // Effective Pitch / Width / Cavities the app shows (override else Layout).
+  pitch: _num(r && r.pitch),
+  width: _num(r && r.width),
+  cavities: _num(r && r.cavities),
 });
 const _inkRowFromResult = (r, ink) => {
   const row = {
     setup_cost: _num(r && r.setup_s),
     run_cost: _num(r && r.run_s),
     total: _num(r && r.total),
+    // Snapshot the synced coverage display so the export's Cov Ovr note shows
+    // the actual coverage, not just the print type ('' for the N/A variant).
+    ink_cover_disp: r ? r.ink_cover_disp : '',
+    layout_indigo_disp: r ? r.layout_indigo_disp : '',
+    // Effective Pitch (mm) / Width the app shows (override else Layout).
+    pitch_mm: _num(r && r.pitch),
+    width: _num(r && r.width),
   };
   // Indigo subtypes display clicks; non-Indigo omit the field.
   if (ink && String(ink.print_type || '').startsWith('Indigo')) {
@@ -2188,9 +2704,21 @@ const _procRowFromResult = (r) => {
   const tooling = _num(r && r.tooling);
   const extra = _num(r && r.extra);
   return {
+    // Retained: collapsed money columns (subtotal fold + BC).
     setup_cost: setup,
     run_cost: run + tooling + extra,
     total: setup + run + tooling + extra,
+    // Displayed split + throughput (CalcProcesses result columns).
+    setup_mach: _num(r && r.setup_mach),
+    setup_labor: _num(r && r.setup_labor),
+    run_mach: _num(r && r.run_mach),
+    run_labor: _num(r && r.run_labor),
+    tooling,
+    uph: _num(r && r.uph), // MC UPH
+    manual_uph: _num(r && r.manualUph), // MAN UPH (derived value the app shows)
+    total_time: _num(r && r.total_time), // PROD TIME (minutes; sheet renders /60)
+    crew: _num(r && r.crew), // effective crew
+    speed_uom: (r && r.speed_uom) || '', // UOM (from the rate table at calc time)
   };
 };
 
@@ -2203,14 +2731,18 @@ const _procRowFromResult = (r) => {
  * @param {object[]} [allSpResults] — Cpx pass1 results (Std passes null)
  * @param {object[]} [subproducts]  — Cpx subproducts (Std passes null)
  */
-export function calcRowBreakdown(state, lib, allSpResults, subproducts) {
+export function calcRowBreakdown(state, lib, allSpResults, subproducts, options = {}) {
   if (!state || !lib) {
     return { materials_main: [], materials_alt: [], inks: [], processes: [] };
   }
   const activeKey = state.materials_active === 'alt' ? 'materials_alt' : 'materials_main';
   const inactiveKey = activeKey === 'materials_main' ? 'materials_alt' : 'materials_main';
 
-  const activeResult = calcAll(state, allSpResults, lib, subproducts);
+  // Phase 3: propagate snapshot down to the internal calcAll so the
+  // per-row breakdown uses frozen rates/coverage just like the
+  // top-level result does. Without this, save-time rowsPayload would
+  // drift from the displayed cost on legacy quotes after master shift.
+  const activeResult = calcAll(state, allSpResults, lib, subproducts, options);
   const out = {
     materials_main: [],
     materials_alt: [],
@@ -2228,7 +2760,7 @@ export function calcRowBreakdown(state, lib, allSpResults, subproducts) {
       materials: inactiveSet,
       materials_active: activeKey === 'materials_main' ? 'alt' : 'main',
     };
-    const inactiveResult = calcAll(swapped, allSpResults, lib, subproducts);
+    const inactiveResult = calcAll(swapped, allSpResults, lib, subproducts, options);
     out[inactiveKey] = (inactiveResult.matResults || []).map(_matRowFromResult);
   }
   return out;
@@ -2242,7 +2774,7 @@ export function calcRowBreakdown(state, lib, allSpResults, subproducts) {
  * @param {object} state — Std state
  * @param {object} lib
  */
-export function buildStdRowsPayload(state, lib) {
+export function buildStdRowsPayload(state, lib, options = {}) {
   if (!state || !lib) return { rows: null, tiers: [] };
   const tierCount = 1 + (Array.isArray(state.extra_moqs) ? state.extra_moqs.length : 0);
   const activeIdx = Number(state.active_moq_idx) || 0;
@@ -2253,7 +2785,16 @@ export function buildStdRowsPayload(state, lib) {
     const moq = t === 0 ? state.moq : (em?.moq ?? state.moq);
     const eau = t === 0 ? state.annual_qty : (em?.eau ?? state.annual_qty);
     const tierSt = buildTierState(state, t, price, moq, eau);
-    tiers.push({ rows: calcRowBreakdown(tierSt, lib, null, null) });
+    // Phase 3: propagate snapshot through to calcRowBreakdown → calcAll
+    // so per-tier per-row breakdown stays consistent with frozen rates
+    // when buildQuoteData captures the snapshot at save time.
+    // Per-tier Packing/Shipping per-pcs so the export's Pack&Ship totals
+    // reflect this tier's packing override (tierSt already merged it).
+    tiers.push({
+      rows: calcRowBreakdown(tierSt, lib, null, null, options),
+      packing_pcs: calcPacking(tierSt),
+      shipping_pcs: calcShipping(tierSt),
+    });
   }
   return { rows: tiers[activeIdx]?.rows ?? null, tiers };
 }
@@ -2267,7 +2808,7 @@ export function buildStdRowsPayload(state, lib) {
  * @param {object[]} sps — array of subproduct states
  * @param {object} lib
  */
-export function buildCpxRowsPayload(cs, sps, lib) {
+export function buildCpxRowsPayload(cs, sps, lib, options = {}) {
   if (!cs || !Array.isArray(sps) || !sps.length || !lib) return { subproducts: [] };
   const tierCount = 1 + (Array.isArray(cs.extra_moqs) ? cs.extra_moqs.length : 0);
   const activeIdx = Number(cs.active_moq_idx) || 0;
@@ -2285,7 +2826,11 @@ export function buildCpxRowsPayload(cs, sps, lib) {
         trade_mode: cs.trade_mode,
         site: cs.site,
       };
-      tiers.push({ rows: calcRowBreakdown(spSt, lib, null, null) });
+      // Phase 3: propagate snapshot (frozen rates/coverage) into the
+      // per-SP per-tier rows breakdown. Matches buildStdRowsPayload's
+      // pattern — the rows payload now never drifts from the
+      // top-level result when a snapshot is supplied.
+      tiers.push({ rows: calcRowBreakdown(spSt, lib, null, null, options) });
     }
     return { rows: tiers[activeIdx]?.rows ?? null, tiers };
   });

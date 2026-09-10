@@ -8,6 +8,7 @@
    rule flags it but rewriting via subscribe would add complexity. */
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { authApi, setToken, clearToken } from '../services/api';
+import { getInstallationInfo, snapshotDraftOnRevoke } from '../services/singleSession';
 
 const AuthContext = createContext(null);
 
@@ -34,6 +35,10 @@ export function AuthProvider({ children }) {
   // dialog instead of blanking the whole tab; the user keeps their
   // place and doesn't have to retype their username.
   const [sessionExpired, setSessionExpired] = useState(false);
+  // Single-session: distinct from a plain expiry — this machine was kicked by
+  // a login takeover on another machine. We save the in-progress draft first.
+  const [sessionRevoked, setSessionRevoked] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
 
   // Module-scope-ish const — hoisted outside render so useCallback deps
   // don't need to list it (ESLint exhaustive-deps flagged it previously).
@@ -81,6 +86,19 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('ops:session-expired', onExpired);
   }, []);
 
+  // Single-session — this machine was kicked by a takeover elsewhere. Save any
+  // in-progress quote draft locally BEFORE bouncing to login so work isn't lost.
+  useEffect(() => {
+    function onRevoked() {
+      const saved = snapshotDraftOnRevoke();
+      setDraftSaved(saved);
+      setUser(null);
+      setSessionRevoked(true);
+    }
+    window.addEventListener('ops:session-revoked', onRevoked);
+    return () => window.removeEventListener('ops:session-revoked', onRevoked);
+  }, []);
+
   // Check existing session on mount — initial hydration from localStorage.
   // AbortController aborts the hydration /auth/me on Strict-Mode double
   // mount OR app shell unmount, so a slow backend doesn't setState on a
@@ -121,59 +139,78 @@ export function AuthProvider({ children }) {
     return () => ctrl.abort();
   }, []);
 
-  const login = useCallback(async (username, password, remember = false) => {
-    // Sprint 1.6 — pass `remember` through so the server issues a 30-day
-    // session/cookie instead of the 8h default. Token is also stored in
-    // sessionStorage (not localStorage) when remember=false so closing
-    // the browser actually logs the user out.
-    const result = await authApi.login(username, password, remember);
+  const login = useCallback(
+    async (username, password, remember = false, { force = false } = {}) => {
+      // Sprint 1.6 — pass `remember` through so the server issues a 30-day
+      // session/cookie instead of the 8h default. Token is also stored in
+      // sessionStorage (not localStorage) when remember=false so closing
+      // the browser actually logs the user out.
+      // Single-session: attach this machine's identity. A live session on another
+      // machine → server replies 409; we surface { conflict } so the caller can
+      // show the takeover dialog and re-call login with { force: true }.
+      const machine = await getInstallationInfo();
+      let result;
+      try {
+        result = await authApi.login(username, password, remember, {
+          installation_id: machine.installation_id,
+          hostname: machine.hostname,
+          force,
+        });
+      } catch (err) {
+        if (err?.status === 409 && err.body?.conflict) {
+          return { success: false, conflict: err.body.conflict };
+        }
+        throw err;
+      }
 
-    if (!result.ok && result.msg) {
-      throw new Error(result.msg);
-    }
+      if (!result.ok && result.msg) {
+        throw new Error(result.msg);
+      }
 
-    if (result.token) {
-      setToken(result.token, { persistent: !!remember });
+      if (result.token) {
+        setToken(result.token, { persistent: !!remember });
 
-      // Check if TOTP is pending. Server returns two flags:
-      //   - totp_pending: session is not fully verified yet (always true
-      //     when TOTP is in play)
-      //   - totp_enrollment_required (Sprint 41): first-time setup —
-      //     user role requires 2FA but no secret enrolled yet.
-      //     Client renders QR-setup UI instead of OTP-entry UI.
-      const meData = await authApi.me();
-      if (meData.totp_pending) {
-        setTotpPending(true);
-        setTotpEnrollmentRequired(
-          !!meData.totp_enrollment_required || !!result?.totp_enrollment_required
-        );
-        setTotpUsername(meData.user?.username || username);
-        setUser(null);
+        // Check if TOTP is pending. Server returns two flags:
+        //   - totp_pending: session is not fully verified yet (always true
+        //     when TOTP is in play)
+        //   - totp_enrollment_required (Sprint 41): first-time setup —
+        //     user role requires 2FA but no secret enrolled yet.
+        //     Client renders QR-setup UI instead of OTP-entry UI.
+        const meData = await authApi.me();
+        if (meData.totp_pending) {
+          setTotpPending(true);
+          setTotpEnrollmentRequired(
+            !!meData.totp_enrollment_required || !!result?.totp_enrollment_required
+          );
+          setTotpUsername(meData.user?.username || username);
+          setUser(null);
+          return {
+            success: false,
+            totp_required: true,
+            enrollment_required: !!meData.totp_enrollment_required,
+          };
+        }
+
+        const userData = meData.user || meData;
+        setUser(userData);
+        setPwdAge(meData?.pwd_age || result?.pwd_age || null);
+        setTotpPending(false);
+        setTotpEnrollmentRequired(false);
+        setTotpUsername('');
+        // Đợt 4 — surface anomaly hint to the user. Caller can pull
+        // `login_anomaly` off the result and show a one-line toast like
+        // "⚠ Login từ IP mới — đổi password nếu không phải bạn".
         return {
-          success: false,
-          totp_required: true,
-          enrollment_required: !!meData.totp_enrollment_required,
+          success: true,
+          user: userData,
+          login_anomaly: result?.login_anomaly || null,
         };
       }
 
-      const userData = meData.user || meData;
-      setUser(userData);
-      setPwdAge(meData?.pwd_age || result?.pwd_age || null);
-      setTotpPending(false);
-      setTotpEnrollmentRequired(false);
-      setTotpUsername('');
-      // Đợt 4 — surface anomaly hint to the user. Caller can pull
-      // `login_anomaly` off the result and show a one-line toast like
-      // "⚠ Login từ IP mới — đổi password nếu không phải bạn".
-      return {
-        success: true,
-        user: userData,
-        login_anomaly: result?.login_anomaly || null,
-      };
-    }
-
-    throw new Error(result.error || result.msg || 'Login failed');
-  }, []);
+      throw new Error(result.error || result.msg || 'Login failed');
+    },
+    []
+  );
 
   const verifyTOTP = useCallback(async (username, code) => {
     const data = await authApi.verifyTotp(username, code);
@@ -241,6 +278,19 @@ export function AuthProvider({ children }) {
   // Phase 9L.3 — exposes re-login state. After a successful re-login
   // we clear `sessionExpired` so consumers can hide the banner.
   const dismissSessionExpired = useCallback(() => setSessionExpired(false), []);
+  // Single-session: clear the "kicked" banner once the user re-logs in / dismisses.
+  const dismissSessionRevoked = useCallback(() => {
+    setSessionRevoked(false);
+    setDraftSaved(false);
+  }, []);
+  // User chose Hủy on the takeover dialog → audit-only, no session granted.
+  const cancelSessionConflict = useCallback(async (username) => {
+    try {
+      await authApi.cancelSessionConflict(username);
+    } catch {
+      /* audit-only; ignore failures */
+    }
+  }, []);
   const loginAndDismissBanner = useCallback(
     async (username, password) => {
       const r = await login(username, password);
@@ -286,6 +336,10 @@ export function AuthProvider({ children }) {
       dismissSessionExpired,
       reLogin: loginAndDismissBanner,
       pwdAge,
+      sessionRevoked,
+      draftSaved,
+      dismissSessionRevoked,
+      cancelSessionConflict,
     }),
     [
       user,
@@ -304,6 +358,10 @@ export function AuthProvider({ children }) {
       dismissSessionExpired,
       loginAndDismissBanner,
       pwdAge,
+      sessionRevoked,
+      draftSaved,
+      dismissSessionRevoked,
+      cancelSessionConflict,
     ]
   );
 

@@ -1,9 +1,11 @@
-import { useState, useEffect, useDeferredValue, useRef } from 'react';
+import { useState, useEffect, useDeferredValue, useRef, lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AccessProvider } from './context/AccessContext';
 import { AppConfigProvider } from './context/AppConfigContext';
+import { useFeatureFlag } from './context/useAppConfig';
 import { CalcProvider } from './context/CalcContext';
 import { sendFleetHeartbeat } from './services/fleetHeartbeat';
+import { WindowManagerProvider, useWindowManager } from './window/WindowManagerContext';
 import LoginPage from './components/Auth/LoginPage';
 import AppBootstrap from './components/Auth/AppBootstrap';
 import { LibraryPickerProvider } from './components/LibraryPicker/LibraryPicker';
@@ -12,7 +14,6 @@ import TopBar from './components/Layout/TopBar';
 import WarningBar from './components/Layout/WarningBar';
 import PwdAgeBanner from './components/Layout/PwdAgeBanner';
 import CostModule from './modules/cost/CostModule';
-import PlanningModule from './modules/planning/PlanningModule';
 import ImportDialog from './components/Shared/ImportDialog';
 import ChatDrawer from './components/Chat/ChatDrawer';
 import UnreadLoginPopup from './components/Chat/UnreadLoginPopup';
@@ -22,6 +23,10 @@ import ClientUpdateIndicator from './components/Layout/ClientUpdateIndicator';
 import { startConnectionMonitor } from './services/connectionHealth';
 import { startDataEventStream } from './services/dataEventBus';
 import './App.css';
+
+// Window manager desktop — lazy so react-rnd + all window chrome stay
+// out of the classic (flag-OFF) bundle. Only fetched when the flag is on.
+const WindowLayer = lazy(() => import('./window/WindowLayer.jsx'));
 
 // v1.3 P0 — Start connection health monitor at module load time.
 // Singleton pattern; calling more than once is no-op. Uses /health
@@ -59,8 +64,10 @@ function writeLS(key, value) {
   }
 }
 
-function AppContent() {
+function AppShell() {
   const { isAuthenticated, loading, hasRole, sessionExpired } = useAuth();
+  const wm = useWindowManager();
+  const wmEnabled = wm.enabled;
   const [activeModule, setActiveModule] = useState(() => readLS(LS_MODULE_KEY, 'cost'));
   // Sprint S-HOME — first-time login lands on the Home dashboard.
   // Returning users keep their last activeTab (LS persists); only the
@@ -112,6 +119,11 @@ function AppContent() {
   useEffect(() => {
     if (isAuthenticated && !wasAuthenticatedRef.current) {
       setActiveTab('home');
+      // Window-manager mode: seed-if-missing + raise Home to the front so
+      // a returning user with a saved layout starts on Home (not their
+      // last highest-z window). openWindow('home') creates Home if the
+      // hydrated layout somehow lacks it (safety net).
+      if (wmEnabled) wm.openWindow('home');
       // v1.6 License Manager — desktop apps report their license status to the
       // fleet on connect (no-op on web). If the server has a license queued for
       // this machine it is applied locally; surface the restart hint. Fully
@@ -127,20 +139,23 @@ function AppContent() {
         .catch(() => {});
     }
     wasAuthenticatedRef.current = isAuthenticated;
-  }, [isAuthenticated]);
+  }, [isAuthenticated, wmEnabled, wm]);
 
-  // Listen for tab switch events from native components (e.g., Quote History -> Open quote)
+  // Listen for tab switch events from native components (e.g., Quote History -> Open quote).
+  // With the window manager on, route the target through openWindow (the
+  // singleton rule handles the QuoteHistory → open-quote focus handoff).
   useEffect(() => {
     function handleSwitchTab(e) {
       const tab = e.detail;
       if (tab) {
         setActiveModule('cost');
-        setActiveTab(tab);
+        if (wmEnabled) wm.openWindow(tab);
+        else setActiveTab(tab);
       }
     }
     window.addEventListener('ops-switch-tab', handleSwitchTab);
     return () => window.removeEventListener('ops-switch-tab', handleSwitchTab);
-  }, []);
+  }, [wmEnabled, wm]);
 
   // Sprint 9 — F1 opens Help, context-sensitive when the current tab
   // has a matching help entry. window.__helpTarget is consumed by
@@ -156,12 +171,15 @@ function AppContent() {
       const tag = e.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
       e.preventDefault();
-      window.__helpTarget = activeTab;
-      setActiveTab('help');
+      // Help targets whatever is focused: the focused window's tab when
+      // the WM is on, else the classic active tab.
+      window.__helpTarget = (wmEnabled ? wm.focusedTabId : activeTab) || 'home';
+      if (wmEnabled) wm.openWindow('help');
+      else setActiveTab('help');
     }
     window.addEventListener('keydown', handleF1);
     return () => window.removeEventListener('keydown', handleF1);
-  }, [activeTab]);
+  }, [activeTab, wmEnabled, wm]);
 
   // Đợt 5 — admins receive security.alert SSE events as a top-of-app
   // toast so suspicious logins surface even when they're working in
@@ -205,6 +223,17 @@ function AppContent() {
     return <LoginPage compact={sessionExpired} reason={sessionExpired ? 'expired' : null} />;
   }
 
+  // Window-manager couplings: when the WM is on, the FOCUSED window's
+  // tab drives the sidebar highlight, WarningBar, and doc title; a
+  // sidebar click opens/focuses a window instead of swapping activeTab.
+  // When off, everything reads activeTab exactly as before.
+  const effectiveTab = wmEnabled ? wm.focusedTabId : activeTab;
+  const handleSidebarTab = (tabId) => {
+    setActiveModule('cost');
+    if (wmEnabled) wm.openWindow(tabId);
+    else setActiveTab(tabId);
+  };
+
   // Phase 10K — post-login data preload gate. Wraps the whole app
   // shell in AppBootstrap which mounts CostLibProvider + fires
   // auxiliary fetches (chat, approvals) and shows a Loading overlay
@@ -220,9 +249,9 @@ function AppContent() {
           <ErrorBoundary label="Sidebar" fallback={() => null}>
             <Sidebar
               activeModule={activeModule}
-              activeTab={activeTab}
+              activeTab={effectiveTab}
               onModuleChange={setActiveModule}
-              onTabChange={setActiveTab}
+              onTabChange={handleSidebarTab}
               collapsed={sidebarCollapsed}
               onToggleCollapsed={() => setSidebarCollapsed((c) => !c)}
             />
@@ -231,7 +260,7 @@ function AppContent() {
             <ErrorBoundary label="TopBar" fallback={() => null}>
               <TopBar
                 activeModule={activeModule}
-                activeTab={activeTab}
+                activeTab={effectiveTab}
                 onImportClick={hasRole('admin') ? () => setShowImport(true) : null}
               />
             </ErrorBoundary>
@@ -239,27 +268,35 @@ function AppContent() {
               <PwdAgeBanner
                 onOpenSettings={() => {
                   setActiveModule('cost');
-                  setActiveTab('settings');
+                  if (wmEnabled) wm.openWindow('settings');
+                  else setActiveTab('settings');
                 }}
               />
             </ErrorBoundary>
             <div className="app-content">
-              {/* Sprint 1.7i — pass deferredActiveTab so the heavy tab remount
-              happens AFTER the sidebar paint, not before. Sidebar above
-              gets the immediate `activeTab` so its highlight is instant. */}
-              {activeModule === 'cost' && (
-                <CostModule activeTab={deferredActiveTab} onTabChange={setActiveTab} />
-              )}
-              {activeModule === 'planning' && (
-                <PlanningModule activeTab={deferredActiveTab} onTabChange={setActiveTab} />
+              {/* Window manager ON → the desktop of floating windows
+              (lazy chunk, react-rnd). OFF → classic single-tab render.
+              deferredActiveTab keeps the heavy tab remount AFTER the
+              sidebar paint on the classic path (Sprint 1.7i). */}
+              {wmEnabled ? (
+                <ErrorBoundary label="WindowLayer" resetKey="wm">
+                  <Suspense fallback={null}>
+                    <WindowLayer />
+                  </Suspense>
+                </ErrorBoundary>
+              ) : (
+                activeModule === 'cost' && (
+                  <CostModule activeTab={deferredActiveTab} onTabChange={setActiveTab} />
+                )
               )}
             </div>
             {/* Bottom-of-screen validation status bar — renders null unless
             the active tab is Standard or Complex AND warnings > 0. Sits
             here (as a sibling of .app-content) so it's horizontally
-            aligned with the sidebar's Sign Out button. */}
+            aligned with the sidebar's Sign Out button. Follows the focused
+            window when the WM is on. */}
             <ErrorBoundary label="WarningBar" fallback={() => null}>
-              <WarningBar activeModule={activeModule} activeTab={activeTab} />
+              <WarningBar activeModule={activeModule} activeTab={effectiveTab} />
             </ErrorBoundary>
           </div>
           <ImportDialog
@@ -287,6 +324,21 @@ function AppContent() {
         </div>
       </LibraryPickerProvider>
     </AppBootstrap>
+  );
+}
+
+// Thin wrapper: reads the window_manager flag and mounts the (inert when
+// off) WindowManagerProvider around the shell. Kept separate from
+// AppShell so AppShell can consume useWindowManager(). Sits inside
+// AppConfigProvider (for useFeatureFlag) + CalcProvider.
+function AppContent() {
+  const wmEnabled = useFeatureFlag('window_manager');
+  return (
+    // key remounts the provider when the flag resolves false → true so
+    // the reducer re-inits (hydrates) with the settled `enabled` value.
+    <WindowManagerProvider key={wmEnabled ? 'wm-on' : 'wm-off'} enabled={wmEnabled}>
+      <AppShell />
+    </WindowManagerProvider>
   );
 }
 

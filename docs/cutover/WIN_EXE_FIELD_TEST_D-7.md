@@ -279,8 +279,8 @@ If Phase 8 fails (logout / restart):
 ## Companion files
 
 - `docs/cutover/MAC_INSTALL_GUIDE.md` — Mac install/upgrade flow (mirror reference)
-- `docs/cutover/BACKUP_ENGINEER_BRIEF_2026-06-09.md` — Hương standby scope
-- `docs/cutover/STOP_TRIGGERS_2026-06-09.md` — 11 halt criteria
+- `docs/cutover/BACKUP_ENGINEER_BRIEF_2026-06-30.md` — Hương standby scope
+- `docs/cutover/STOP_TRIGGERS_2026-06-30.md` — 11 halt criteria
 - `docs/cutover/8-DAY-CUTOVER-PLAN-20260522.md` — D-7 work block context
 - `docs/cutover/PROMPTS/PROMPT_WIN_EXE_BUILD_2026-05-25.md` — Win EXE build runbook (engineer-side)
 

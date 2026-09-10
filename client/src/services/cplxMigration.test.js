@@ -6,6 +6,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { upgradeCplxState, findAssemblyIndex, CPLX_SHAPE_VERSION } from './cplxMigration.js';
 
+// Fully-healed drawing shape (Sprint S-MULTI-DRAW) — spread into cover +
+// subproducts of "already-current" fixtures so healCplxDrawings short-
+// circuits by reference (empty lists + null singular are self-consistent).
+const DRAW_CURRENT = {
+  layout_files: [],
+  layout_active: 0,
+  layout_file: null,
+  customer_drw_files: [],
+  customer_drw_active: 0,
+  customer_drw_file: null,
+};
+
 test('upgradeCplxState: null/undefined passes through', () => {
   assert.equal(upgradeCplxState(null), null);
   assert.equal(upgradeCplxState(undefined), undefined);
@@ -321,4 +333,55 @@ test('upgradeCplxState v4: idempotent — applying twice returns same shape', ()
   assert.equal(once._shape_version, CPLX_SHAPE_VERSION);
   assert.equal(twice._shape_version, CPLX_SHAPE_VERSION);
   assert.equal(twice, once, 'second call short-circuits when at current version');
+});
+
+// ─── Phase 1 pricing snapshot heal-on-read (additive, no version bump)
+
+test('upgradeCplxState: legacy state without pricing_snapshot gets empty default', () => {
+  const legacy = {
+    _shape_version: 2,
+    subproducts: [],
+    bom: [],
+    tooling_alloc: [],
+  };
+  const upgraded = upgradeCplxState(legacy);
+  assert.ok(upgraded.pricing_snapshot);
+  assert.equal(upgraded.pricing_snapshot._captured_at, null);
+  assert.equal(upgraded.pricing_snapshot._site, null);
+  assert.deepEqual(upgraded.pricing_snapshot.rates, {});
+});
+
+test('upgradeCplxState: existing pricing_snapshot is NOT overwritten', () => {
+  const withSnap = {
+    _shape_version: CPLX_SHAPE_VERSION,
+    bom: [],
+    tooling_alloc: [],
+    subproducts: [
+      {
+        code: 'FG1',
+        is_assembly: true,
+        materials_main: [],
+        materials_alt: [],
+        materials_active: 'main',
+        materials: [],
+        ...DRAW_CURRENT, // per-SP drawings already-healed
+      },
+    ],
+    pricing_snapshot: {
+      _captured_at: '2026-06-09T00:00:00.000Z',
+      _captured_by: null,
+      _synthesized: false,
+      _lib_version: null,
+      _site: 'VN',
+      materials: { 'CPX-MAT': { s_price: 7.5 } },
+      coverage: [],
+      rates: { Slit: { workcenter: 'Slit', labor_rate: 3.08 } },
+    },
+    ...DRAW_CURRENT, // top-level cover drawings already-healed
+  };
+  const upgraded = upgradeCplxState(withSnap);
+  // Short-circuit path: same reference, snapshot untouched.
+  assert.equal(upgraded, withSnap);
+  assert.equal(upgraded.pricing_snapshot.materials['CPX-MAT'].s_price, 7.5);
+  assert.equal(upgraded.pricing_snapshot.rates.Slit.labor_rate, 3.08);
 });

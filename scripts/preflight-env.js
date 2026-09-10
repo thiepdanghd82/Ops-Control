@@ -60,17 +60,7 @@ if (env === 'production') {
       'LOSING THIS VALUE LOCKS ALL USERS OUT OF 2FA.'
   );
 
-  // Sprint MES-2.3 — kiosk JWT signing key. Same shape + threat model as
-  // OPS_TOTP_KEY (64 hex, deploy.sh preserves across releases). Losing
-  // it invalidates every outstanding kiosk session (operators must
-  // re-pair each device).
-  check(
-    'OPS_KIOSK_KEY',
-    process.env.OPS_KIOSK_KEY && process.env.OPS_KIOSK_KEY.length === 64,
-    'must be a 64-char hex string. Generate with: ' +
-      `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))". ` +
-      'LOSING THIS VALUE INVALIDATES ALL KIOSK SESSIONS.'
-  );
+  // OPS_KIOSK_KEY requirement removed 2026-07-22 with the Kiosk PWA.
 
   // Sprint S-EXPORT-MVP-2 — HMAC key for quote xlsx export tamper
   // detection. Same shape + preservation semantics as OPS_TOTP_KEY +
@@ -85,6 +75,24 @@ if (env === 'production') {
     'must be a 64-char hex string. Generate with: ' +
       `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))". ` +
       'LOSING THIS VALUE INVALIDATES TAMPER-DETECTION ON ALL PRE-LOSS QUOTE EXPORTS.'
+  );
+
+  // Sprint S-D21-LICENSE-FIX 2026-06-09 — Ed25519 SPKI PEM bake or env-inject.
+  // Without it licenseService rejects all validation; server boots but operators
+  // see LICENSE_INVALID on every request. Preflight-gate so missing key fails
+  // boot loudly instead of silent runtime lockout. SPKI PEM shape check
+  // (-----BEGIN PUBLIC KEY-----...-----END PUBLIC KEY-----) — strict enough
+  // to catch typos / truncation, permissive enough to accept any valid Ed25519
+  // public key.
+  check(
+    'OPS_LICENSE_PUBKEY',
+    process.env.OPS_LICENSE_PUBKEY &&
+      process.env.OPS_LICENSE_PUBKEY.includes('BEGIN PUBLIC KEY') &&
+      process.env.OPS_LICENSE_PUBKEY.includes('END PUBLIC KEY'),
+    'must be a valid SPKI PEM block ' +
+      '(-----BEGIN PUBLIC KEY----- ... -----END PUBLIC KEY-----). ' +
+      'Source: prod-public.pem from offline license keypair. ' +
+      'LOSING THIS VALUE LOCKS OUT ALL USERS — every license validation fails.'
   );
 
   const corsSet = (process.env.OPS_CORS_ORIGINS || '').trim();

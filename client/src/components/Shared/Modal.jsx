@@ -33,7 +33,8 @@
  *   First primary action button inside the modal is focused on open.
  *   Focus is restored to the previously-active element on close.
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useI18n } from '../../utils/useI18n';
 import './Modal.css';
 
 const SEVERITY_ICONS = {
@@ -130,10 +131,36 @@ export default function Modal({
   dismissable = true,
   closable = true,
   ariaLabelledBy,
+  // Drag the card by its header to reposition. Default: AUTO — on for the
+  // content-rich sizes (lg/xl: showcards, tables, pickers, previews) where
+  // moving the dialog to see the screen behind is useful; off for sm/md
+  // (short confirmations / small forms stay centered). Pass an explicit
+  // boolean to force it either way.
+  draggable,
+  // Opt-in maximize/restore toggle in the header. When maximized the card
+  // grows to ~96vw × ~92vh (class-based, Lesson 6) so wide tables show all
+  // their columns. Default false. `maximized` resets when the modal
+  // remounts (consumers like the library picker unmount on close).
+  maximizable = false,
   children,
 }) {
+  const { t } = useI18n();
+  const isDraggable = draggable ?? (size === 'lg' || size === 'xl');
+  const [maximized, setMaximized] = useState(false);
+  const maximizedRef = useRef(false);
+  useEffect(() => {
+    maximizedRef.current = maximized;
+  }, [maximized]);
   const cardRef = useRef(null);
   const restoreFocusRef = useRef(null);
+  // Keep the latest onClose without retriggering the open/focus effect below.
+  // Consumers pass an inline arrow for onClose (new identity every render), so
+  // listing it as an effect dep re-ran the autofocus on every keystroke and
+  // stole focus back to the primary button after one character. See Lesson 38.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -152,7 +179,7 @@ export default function Modal({
     const onKey = (e) => {
       if (e.key === 'Escape' && dismissable) {
         e.stopPropagation();
-        onClose?.();
+        onCloseRef.current?.();
       }
     };
     document.addEventListener('keydown', onKey);
@@ -173,7 +200,57 @@ export default function Modal({
         }
       }
     };
-  }, [open, dismissable, onClose]);
+  }, [open, dismissable]);
+
+  // Opt-in drag: move the card by its header. Imperative (writes
+  // card.style.transform directly) so there's no per-mousemove re-render and
+  // no dynamic inline style in JSX (Lesson 6). Offset resets each open.
+  useEffect(() => {
+    if (!open || !isDraggable) return;
+    const card = cardRef.current;
+    const header = card?.querySelector('.op-modal-header');
+    if (!card || !header) return;
+    card.style.transform = '';
+    let dx = 0,
+      dy = 0,
+      startX = 0,
+      startY = 0,
+      dragging = false;
+    const onMove = (e) => {
+      if (!dragging) return;
+      card.style.transform = `translate(${dx + e.clientX - startX}px, ${dy + e.clientY - startY}px)`;
+    };
+    const onUp = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      dx += e.clientX - startX;
+      dy += e.clientY - startY;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    const onDown = (e) => {
+      // Left button only; ignore drags that start on an interactive control.
+      // A maximized card is pinned — no drag (CSS also forces transform:none).
+      if (
+        maximizedRef.current ||
+        e.button !== 0 ||
+        e.target.closest('button, a, input, select, textarea')
+      )
+        return;
+      dragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+      e.preventDefault();
+    };
+    header.addEventListener('mousedown', onDown);
+    return () => {
+      header.removeEventListener('mousedown', onDown);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [open, isDraggable]);
 
   if (!open) return null;
 
@@ -185,16 +262,56 @@ export default function Modal({
   const severityClass = severity ? ` op-modal--${severity}` : '';
 
   return (
-    <div className="op-modal-overlay" role="presentation" onMouseDown={handleOverlayMouseDown}>
+    <div
+      className="op-modal-overlay"
+      role="presentation"
+      data-kbd-skip
+      onMouseDown={handleOverlayMouseDown}
+    >
       <div
         ref={cardRef}
-        className={`op-modal-card size-${size}${severityClass}`}
+        className={`op-modal-card size-${size}${severityClass}${isDraggable ? ' op-modal-card--draggable' : ''}${maximized ? ' op-modal-card--max' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={ariaLabelledBy}
         tabIndex={-1}
       >
         {children}
+        {maximizable && (
+          <button
+            type="button"
+            className="op-modal-maxbtn"
+            aria-label={maximized ? t('modal.restore') : t('modal.maximize')}
+            title={maximized ? t('modal.restore') : t('modal.maximize')}
+            onClick={() => setMaximized((m) => !m)}
+          >
+            {maximized ? (
+              <svg
+                viewBox="0 0 16 16"
+                width="13"
+                height="13"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                aria-hidden="true"
+              >
+                <path d="M6 3v3H3M10 13v-3h3M3 10h3v3M13 6h-3V3" />
+              </svg>
+            ) : (
+              <svg
+                viewBox="0 0 16 16"
+                width="13"
+                height="13"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                aria-hidden="true"
+              >
+                <rect x="3" y="3" width="10" height="10" rx="1" />
+              </svg>
+            )}
+          </button>
+        )}
         {closable && (
           <button
             type="button"
