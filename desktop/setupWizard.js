@@ -62,6 +62,16 @@ function markComplete(mode, payload) {
   );
 }
 
+/**
+ * Drop the first-run marker so the wizard runs again on next check.
+ * main.js's recovery path clears electron-store's `firstRunCompleted`;
+ * without also clearing this file `isFirstRun()` keeps reporting false and
+ * boot falls through to the legacy dialog instead of the wizard.
+ */
+function markIncomplete() {
+  fs.rmSync(SETUP_DONE_PATH(), { force: true });
+}
+
 // ─── HTML templates ──────────────────────────────────────────────
 const STYLE = `
   * { box-sizing: border-box; }
@@ -510,4 +520,5 @@ module.exports = {
   isFirstRun,
   showWizard,
   markComplete,
+  markIncomplete,
 };
