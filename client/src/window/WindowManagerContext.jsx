@@ -62,7 +62,9 @@ function openAction(tabId, rect) {
 // a Home window so the desktop isn't blank; an explicitly-empty saved
 // layout stays empty (user closed everything → sidebar relaunches).
 function initEnabled() {
-  let stored = null;
+  // Declared without an initialiser: both branches below assign before any
+  // read, so seeding `null` here is a dead store (no-useless-assignment).
+  let stored;
   try {
     stored = localStorage.getItem(LS_KEY);
   } catch {
