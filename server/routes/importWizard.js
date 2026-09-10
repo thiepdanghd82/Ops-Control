@@ -35,6 +35,7 @@ import {
   applyMappingOverrides,
   coerceRows,
   buildCanonical,
+  dropKeylessRows,
   diffRows,
   readExisting,
   writeDataset,
@@ -242,6 +243,18 @@ router.post(
         includeUnmapped: true,
       });
 
+      // A row with no value for any required header is not a record. The
+      // IFS Full Inventory export ends with 184 such rows; imported, they
+      // sorted ahead of the real data and blanked the first two pages of the
+      // grid. Dropped here so the rows staged for commit are already clean,
+      // and counted so the preview reports it rather than silently shrinking.
+      const keyless = dropKeylessRows({
+        headers: canonical.headers,
+        rows: canonical.rows,
+        dataset,
+      });
+      canonical.rows = keyless.rows;
+
       const { rows: coercedRows, issues } = coerceRows(canonical.headers, canonical.rows, dataset);
       canonical.rows = coercedRows;
 
@@ -313,6 +326,7 @@ router.post(
           totalRows: canonical.rows.length,
         },
         coercion: { issues: issues.slice(0, 50), totalIssues: issues.length },
+        skippedKeylessRows: keyless.skipped,
         diff,
         modes: ['upsert', 'replace', 'append'],
         defaultMode: 'upsert',
@@ -367,10 +381,14 @@ router.post('/commit', requireRole(4), async (req, res) => {
     const dataset = getDataset(stage.datasetKey);
     if (!dataset) return res.status(400).json({ ok: false, error: 'unknown_dataset' });
 
+    // Defence in depth: `stage` arrives from the client, so re-apply the
+    // filter rather than trusting that the preview step did it.
+    const staged = dropKeylessRows({ headers: stage.headers, rows: stage.rows, dataset });
+
     const existing = readExisting(dataset);
     const merged = mergeRows({
       existing,
-      newCanonical: { headers: stage.headers, rows: stage.rows },
+      newCanonical: { headers: stage.headers, rows: staged.rows },
       dataset,
       mode,
     });
