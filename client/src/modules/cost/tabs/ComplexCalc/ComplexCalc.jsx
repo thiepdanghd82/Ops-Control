@@ -63,13 +63,13 @@ import '../StandardCalc/StandardCalc.css';
 import './ComplexCalc.css';
 
 const SUB_TABS = [
-  { id: 'project', label: 'RFQ & MOQ info', icon: '▤' },
-  { id: 'calculators', label: 'Calculators', icon: '⊞' },
-  { id: 'bomtree', label: 'BOM Tree', icon: '⊟' },
-  { id: 'breakdown', label: 'Cost Breakdown', icon: '≡' },
-  { id: 'packing', label: 'Pack & Ship', icon: '▣' },
-  { id: 'summary', label: 'Summarize', icon: '☰' },
-  { id: 'lead-time', label: 'Lead time & Notice', icon: '⏱' },
+  { id: 'project', label: 'RFQ & MOQ info', labelKey: 'pricing.tab.header', icon: '▤' },
+  { id: 'calculators', label: 'Calculators', labelKey: 'pricing.tab.calculators', icon: '⊞' },
+  { id: 'bomtree', label: 'BOM Tree', labelKey: 'pricing.tab.bomtree', icon: '⊟' },
+  { id: 'breakdown', label: 'Cost Breakdown', labelKey: 'pricing.tab.breakdown', icon: '≡' },
+  { id: 'packing', label: 'Pack & Ship', labelKey: 'pricing.tab.packing', icon: '▣' },
+  { id: 'summary', label: 'Summarize', labelKey: 'pricing.tab.summarize', icon: '☰' },
+  { id: 'lead-time', label: 'Lead time & Notice', labelKey: 'pricing.tab.leadtime', icon: '⏱' },
 ];
 
 // Sprint S-PACK-SHIP-PER-TIER — wrapper that appends the ↻ reset
@@ -619,15 +619,15 @@ export default function ComplexCalc() {
               key={tab.id}
               role="tab"
               aria-selected={activeSubTab === tab.id}
-              aria-label={tab.label}
+              aria-label={tab.labelKey ? t(tab.labelKey) : tab.label}
               className={`cc-tab ${activeSubTab === tab.id ? 'active' : ''}`}
               onClick={() => setActiveSubTab(tab.id)}
-              title={tab.label}
+              title={tab.labelKey ? t(tab.labelKey) : tab.label}
             >
               <span className="cc-tab-icon" aria-hidden="true">
                 {tab.icon}
               </span>
-              <span className="cc-tab-label"> {tab.label}</span>
+              <span className="cc-tab-label"> {tab.labelKey ? t(tab.labelKey) : tab.label}</span>
             </button>
           ))}
         </TabBarOverflow>

@@ -79,15 +79,15 @@ import './ProcessBalancing.css';
 // concerns the operator fills together). Summarize moves to the
 // tail position as the final review pane after Balancing.
 const SUB_TABS = [
-  { id: 'header', label: 'RFQ & MOQ Info', icon: '▤' },
-  { id: 'layout', label: 'Layout', icon: '▦' },
+  { id: 'header', label: 'RFQ & MOQ Info', labelKey: 'pricing.tab.header', icon: '▤' },
+  { id: 'layout', label: 'Layout', labelKey: 'pricing.tab.layout', icon: '▦' },
   { id: 'combined', label: 'Materials & Process', labelKey: 'pricing.tab.combined', icon: '⊞' },
-  { id: 'packing', label: 'Pack & Ship', icon: '▣' },
-  { id: 'lead-time', label: 'Lead time & Notice', icon: '⏱' },
-  { id: 'breakdown', label: 'Cost Breakdown', icon: '≡' },
-  { id: 'balancing', label: 'Balancing', icon: '⇆' },
-  { id: 'summarize', label: 'Summarize', icon: '☰' },
-  { id: 'legend', label: 'Legend', icon: 'ⓘ' },
+  { id: 'packing', label: 'Pack & Ship', labelKey: 'pricing.tab.packing', icon: '▣' },
+  { id: 'lead-time', label: 'Lead time & Notice', labelKey: 'pricing.tab.leadtime', icon: '⏱' },
+  { id: 'breakdown', label: 'Cost Breakdown', labelKey: 'pricing.tab.breakdown', icon: '≡' },
+  { id: 'balancing', label: 'Balancing', labelKey: 'pricing.tab.balancing', icon: '⇆' },
+  { id: 'summarize', label: 'Summarize', labelKey: 'pricing.tab.summarize', icon: '☰' },
+  { id: 'legend', label: 'Legend', labelKey: 'pricing.tab.legend', icon: 'ⓘ' },
 ];
 
 // Sprint S-PRICING-COMBINED-P2 — defensive fallback for any caller

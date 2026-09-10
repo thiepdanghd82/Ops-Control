@@ -11,6 +11,13 @@
  * Industry acronyms (MOQ, EAU, GM%, VA%) intentionally stay in EN per
  * the convention documented at the top of strings.js — operators
  * speak them in English regardless of locale.
+ *
+ * Confirmed with the NPI manager 2026-09-10, the terms that stay EN are:
+ * MOQ, EAU, Tier, Coverage — plus the ones this codebase had already
+ * settled on in CalcLegend's bilingual pairs: Layout ("Layout Tab" →
+ * "Tab Layout"), Lead time ("Lead time & Notice" → "Lead time & Ghi
+ * chú"), KPI, BOM, RFQ. The house rule is: keep the trade term,
+ * translate the ordinary words around it.
  */
 import { registerStrings } from '../strings.js';
 
@@ -25,6 +32,20 @@ registerStrings({
   // tabs retired). Key id stays 'pricing.tab.combined' so callers
   // (StandardCalc.jsx SUB_TABS labelKey) keep working without churn.
   'pricing.tab.combined': { en: 'Materials & Process', vi: 'Vật tư & Công đoạn' },
+  // Sprint 2026-09-10 — the remaining Std/Cpx sub-tabs. StandardCalc has had
+  // labelKey wired since S-PRICING-COMBINED-P1 but only `combined` used it,
+  // so in Vietnamese one tab rendered translated and eight rendered English.
+  // Wording reuses what CalcLegend's bilingual pairs already committed to.
+  'pricing.tab.header': { en: 'RFQ & MOQ Info', vi: 'Thông tin RFQ & MOQ' },
+  'pricing.tab.layout': { en: 'Layout', vi: 'Layout' },
+  'pricing.tab.packing': { en: 'Pack & Ship', vi: 'Đóng gói & Vận chuyển' },
+  'pricing.tab.leadtime': { en: 'Lead time & Notice', vi: 'Lead time & Ghi chú' },
+  'pricing.tab.breakdown': { en: 'Cost Breakdown', vi: 'Phân tích chi phí' },
+  'pricing.tab.balancing': { en: 'Balancing', vi: 'Cân bằng chuyền' },
+  'pricing.tab.summarize': { en: 'Summarize', vi: 'Tổng hợp' },
+  'pricing.tab.legend': { en: 'Legend', vi: 'Chú giải' },
+  'pricing.tab.calculators': { en: 'Calculators', vi: 'Bộ tính toán' },
+  'pricing.tab.bomtree': { en: 'BOM Tree', vi: 'Cây BOM' },
   'pricing.section.materials': { en: 'Materials', vi: 'Vật tư' },
   'pricing.section.inks': { en: 'Inks', vi: 'Mực in' },
   'pricing.section.processes': { en: 'Processes', vi: 'Công đoạn' },
