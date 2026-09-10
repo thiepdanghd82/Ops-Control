@@ -5,7 +5,7 @@
  */
 import { useI18n } from '../utils/useI18n';
 
-export default function Taskbar({ windows, focusedId, onFocus, onRestore }) {
+export default function Taskbar({ windows, focusedId, onFocus, onRestore, onCloseAll }) {
   const { t } = useI18n();
   if (!windows.length) return null;
 
@@ -26,6 +26,17 @@ export default function Taskbar({ windows, focusedId, onFocus, onRestore }) {
           </button>
         );
       })}
+      {windows.filter((w) => !w.fixed).length > 1 && (
+        <button
+          type="button"
+          className="opswin-closeall"
+          onClick={onCloseAll}
+          title={t('window.close_all')}
+          aria-label={t('window.close_all')}
+        >
+          {t('window.close_all')}
+        </button>
+      )}
     </div>
   );
 }

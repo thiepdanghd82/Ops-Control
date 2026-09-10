@@ -17,6 +17,7 @@ import {
   DEFAULT_WINDOW_H,
   MIN_WINDOW_W,
   MIN_WINDOW_H,
+  opensMaximized,
 } from './windowLogic.js';
 
 export const WM_ACTIONS = {
@@ -69,7 +70,9 @@ export function windowManagerReducer(state, action) {
             ...state,
             zTop: z,
             windows: state.windows.map((w) =>
-              w.id === existing.id ? { ...w, z, state: 'normal' } : w
+              // Un-minimize, but never un-maximize: clicking the sidebar item
+              // again means "bring it forward", not "shrink it".
+              w.id === existing.id ? { ...w, z, state: w.state === 'min' ? 'normal' : w.state } : w
             ),
           };
         }
@@ -77,6 +80,7 @@ export function windowManagerReducer(state, action) {
       const counter = state.counter + 1;
       const z = raise(state);
       const geo = cascadeRect(state.counter, rect);
+      const maximized = opensMaximized(tabId);
       const win = {
         id: `win-${counter}`,
         tabId,
@@ -86,10 +90,12 @@ export function windowManagerReducer(state, action) {
         w: geo.w,
         h: geo.h,
         z,
-        state: 'normal',
+        state: maximized ? 'max' : 'normal',
         singleton: !!singleton,
         fixed: !!fixed,
-        prevRect: null,
+        // A window that opens maximized still needs somewhere to go when the
+        // operator clicks Restore — the cascade rect it would have had.
+        prevRect: maximized ? { x: geo.x, y: geo.y, w: geo.w, h: geo.h } : null,
       };
       return { ...state, counter, zTop: z, windows: [...state.windows, win] };
     }
