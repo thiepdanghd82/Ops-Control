@@ -892,6 +892,10 @@
   overflow-y: auto;
 }
 .cb-card {
+  /* Positioned ancestor for .login-lang-toggle, which sits in the card's
+     top-right corner. Without this the toggle escapes to .cb-shell (fixed)
+     and lands in the page corner instead. */
+  position: relative;
   width: 100%;
   max-width: 420px;
   background: #fff;
@@ -1281,11 +1285,11 @@
   color: #166534;
 }
 
-/* Language toggle, top-right of the sign-in card. `.login-card` already
-   carries position: relative, so this anchors to the card rather than the
-   page. Placed before the <h1> in DOM order so keyboard and screen-reader
-   users reach it first — the point is to switch language before reading
-   the form, not after failing to. */
+/* Language toggle, top-right of the sign-in card. Anchors to `.cb-card`,
+   which carries position: relative for exactly this reason — see the note
+   there. Placed before the <h1> in DOM order so keyboard and screen-reader
+   users reach it first: the point is to switch language before reading the
+   form, not after failing to. */
 .login-lang-toggle {
   position: absolute;
   top: 12px;
