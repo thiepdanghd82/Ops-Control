@@ -299,6 +299,7 @@ export const STRINGS = {
   'modal.restore': { en: 'Restore', vi: 'Thu nhỏ' },
 
   // ─── Window manager (in-app MDI, feature-flagged) ───
+  'window.close_all': { en: 'Close all', vi: 'Đóng tất cả' },
   'window.minimize': { en: 'Minimize', vi: 'Thu nhỏ' },
   'window.maximize': { en: 'Maximize', vi: 'Phóng to' },
   'window.restore': { en: 'Restore', vi: 'Khôi phục' },
