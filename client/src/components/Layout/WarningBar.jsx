@@ -18,11 +18,11 @@
 import { useMemo, useState, useContext } from 'react';
 import { useCalc } from '../../context/CalcContext';
 import { CostLibContext } from '../../context/CostLibContext';
-import { validateByActiveTab } from '../../services/calcValidation';
+import { validateByActiveTab, gateWarnings } from '../../services/calcValidation';
 import './WarningBar.css';
 
 export default function WarningBar({ activeModule, activeTab }) {
-  const { stdState, cplxState } = useCalc();
+  const { stdState, cplxState, touched, saveAttempted } = useCalc();
   // WarningBar lives outside CostLibProvider, so read context directly
   // (returns null when provider is absent — safe fallback).
   const costLib = useContext(CostLibContext);
@@ -33,10 +33,11 @@ export default function WarningBar({ activeModule, activeTab }) {
   const isCalcTab =
     activeModule === 'cost' && (activeTab === 'standard' || activeTab === 'complex');
 
-  const warnings = useMemo(
-    () => (isCalcTab ? validateByActiveTab(activeTab, stdState, cplxState, lib) : []),
-    [isCalcTab, activeTab, stdState, cplxState, lib]
-  );
+  const warnings = useMemo(() => {
+    if (!isCalcTab) return [];
+    const raw = validateByActiveTab(activeTab, stdState, cplxState, lib);
+    return gateWarnings(raw, { touched, saveAttempted });
+  }, [isCalcTab, activeTab, stdState, cplxState, lib, touched, saveAttempted]);
 
   // Expandable: click the bar to see all warnings stacked; otherwise it
   // shows the first error + a "+N more" chip. No effect needed to reset
