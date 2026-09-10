@@ -584,7 +584,7 @@ export default function ComplexCalc() {
           ariaLabel="Pricing Worksheet (Complex) sub-tabs"
           rightSlot={
             <>
-              {isDirty && <span className="cc-dirty">Unsaved</span>}
+              {isDirty && <span className="cc-dirty">{t('cpx.unsaved')}</span>}
               {activeQuoteId != null && (
                 <button
                   className="cc-btn cc-btn-outline"
@@ -684,9 +684,9 @@ export default function ComplexCalc() {
                     <tr>
                       <th style={{ width: 36 }}></th>
                       <th style={{ width: 90 }}>SP Code</th>
-                      <th style={{ minWidth: 140 }}>Description</th>
-                      <th style={{ width: 110 }}>Main Process</th>
-                      <th style={{ width: 80 }}>Size (mm)</th>
+                      <th style={{ minWidth: 140 }}>{t('cpx.description')}</th>
+                      <th style={{ width: 110 }}>{t('cpx.main_process')}</th>
+                      <th style={{ width: 80 }}>{t('cpx.size_mm')}</th>
                       <th className="right" style={{ width: 85 }}>
                         Mat. Cost
                       </th>
@@ -702,7 +702,7 @@ export default function ComplexCalc() {
                       <th className="right" style={{ width: 90 }}>
                         G.Total
                       </th>
-                      <th style={{ width: 60 }}>Actions</th>
+                      <th style={{ width: 60 }}>{t('cpx.actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -749,7 +749,7 @@ export default function ComplexCalc() {
                               <input
                                 type="text"
                                 value={sp.description || ''}
-                                placeholder="Description"
+                                placeholder={t('cpx.description')}
                                 className="cc-spt-input"
                                 onChange={(e) =>
                                   dispatch(
@@ -766,7 +766,7 @@ export default function ComplexCalc() {
                               <input
                                 type="text"
                                 value={sp.main_process || ''}
-                                placeholder="Process"
+                                placeholder={t('cpx.ph_process')}
                                 className="cc-spt-input"
                                 onChange={(e) =>
                                   dispatch(
@@ -797,14 +797,14 @@ export default function ComplexCalc() {
                               <button
                                 className="cc-spt-act-btn"
                                 onClick={() => toggleSp(spi)}
-                                title="Toggle detail"
+                                title={t('cpx.toggle_detail')}
                               >
                                 {isExpanded ? '\u25B2' : '\u25BC'}
                               </button>
                               <button
                                 className="cc-spt-act-btn cc-spt-act-del"
                                 onClick={() => removeSp(spi)}
-                                title="Remove"
+                                title={t('cpx.remove')}
                               >
                                 &times;
                               </button>
@@ -906,11 +906,11 @@ export default function ComplexCalc() {
               <div className="sc-card">
                 <div className="sc-card-header sc-header-emerald">
                   <span className="sc-card-icon">&#9635;</span>
-                  <span className="sc-card-title">Packing</span>
+                  <span className="sc-card-title">{t('cpx.packing')}</span>
                 </div>
                 <div className="sc-card-body">
                   <div className="sc-field">
-                    <label>Packing Method</label>
+                    <label>{t('cpx.packing_method')}</label>
                     <CpxPackRow
                       field="packing_method"
                       cf={cf}
@@ -923,9 +923,9 @@ export default function ComplexCalc() {
                         onChange={(e) => setCpxPack('packing_method', e.target.value)}
                         className={`sc-input ${cpxPackCls('packing_method')}`}
                       >
-                        <option value="Sheet">Sheet</option>
-                        <option value="Roll">Roll</option>
-                        <option value="Tray">Tray</option>
+                        <option value="Sheet">{t('cpx.sheet')}</option>
+                        <option value="Roll">{t('cpx.roll')}</option>
+                        <option value="Tray">{t('cpx.tray')}</option>
                         <option value="PE Bag">PE Bag</option>
                       </select>
                     </CpxPackRow>
@@ -985,7 +985,7 @@ export default function ComplexCalc() {
                     </CpxPackRow>
                   </div>
                   <div className="sc-field">
-                    <label>Box Cost (USD)</label>
+                    <label>{t('cpx.box_cost')}</label>
                     <CpxPackRow
                       field="box_cost"
                       cf={cf}
@@ -1003,7 +1003,7 @@ export default function ComplexCalc() {
                     </CpxPackRow>
                   </div>
                   <div className="sc-field">
-                    <label>Other Packing/pcs</label>
+                    <label>{t('cpx.other_packing_pcs')}</label>
                     <CpxPackRow
                       field="other_packing"
                       cf={cf}
@@ -1028,11 +1028,11 @@ export default function ComplexCalc() {
               <div className="sc-card">
                 <div className="sc-card-header sc-header-sky">
                   <span className="sc-card-icon">&#8680;</span>
-                  <span className="sc-card-title">Shipping</span>
+                  <span className="sc-card-title">{t('cpx.shipping')}</span>
                 </div>
                 <div className="sc-card-body">
                   <div className="sc-field">
-                    <label>Delivery Term</label>
+                    <label>{t('cpx.delivery_term')}</label>
                     <CpxPackRow
                       field="delivery_term"
                       cf={cf}
@@ -1050,7 +1050,7 @@ export default function ComplexCalc() {
                     </CpxPackRow>
                   </div>
                   <div className="sc-field">
-                    <label>Deliver Quantity</label>
+                    <label>{t('cpx.deliver_qty')}</label>
                     <CpxPackRow
                       field="ship_qty"
                       cf={cf}
@@ -1083,7 +1083,7 @@ export default function ComplexCalc() {
                     </CpxPackRow>
                   </div>
                   <div className="sc-field">
-                    <label>Shipping Cost (USD total)</label>
+                    <label>{t('cpx.shipping_cost')}</label>
                     <CpxPackRow
                       field="shipping_cost"
                       cf={cf}
@@ -1101,7 +1101,7 @@ export default function ComplexCalc() {
                     </CpxPackRow>
                   </div>
                   <div className="sc-field">
-                    <label>Other Cost/shipment</label>
+                    <label>{t('cpx.other_cost_shipment')}</label>
                     <CpxPackRow
                       field="other_ship"
                       cf={cf}
@@ -1137,14 +1137,14 @@ export default function ComplexCalc() {
                 <div className="cc-sum-kpi-sub">EA</div>
               </div>
               <div className="cc-sum-kpi" style={{ borderColor: '#dc2626' }}>
-                <div className="cc-sum-kpi-label">Total Cost</div>
+                <div className="cc-sum-kpi-label">{t('cpx.total_cost')}</div>
                 <div className="cc-sum-kpi-val" style={{ color: '#dc2626' }}>
                   ${fmtN(aggregate.s_ttl)}
                 </div>
                 <div className="cc-sum-kpi-sub">USD</div>
               </div>
               <div className="cc-sum-kpi" style={{ borderColor: '#1e40af' }}>
-                <div className="cc-sum-kpi-label">Selling Price</div>
+                <div className="cc-sum-kpi-label">{t('cpx.selling_price')}</div>
                 <div className="cc-sum-kpi-val">${fmtN(cs.selling_price || 0, 4)}</div>
                 <div className="cc-sum-kpi-sub">USD</div>
               </div>
@@ -1153,7 +1153,7 @@ export default function ComplexCalc() {
                 <div className="cc-sum-kpi-val" style={{ color: '#0891b2' }}>
                   {pct(aggregate.va)}
                 </div>
-                <div className="cc-sum-kpi-sub">Value Add</div>
+                <div className="cc-sum-kpi-sub">{t('cpx.value_add')}</div>
               </div>
               <div
                 className="cc-sum-kpi"
@@ -1164,14 +1164,14 @@ export default function ComplexCalc() {
                 <div className="cc-sum-kpi-val" style={{ color: '#7c3aed' }}>
                   {pct(aggregate.contribution)}
                 </div>
-                <div className="cc-sum-kpi-sub">Contribution</div>
+                <div className="cc-sum-kpi-sub">{t('cpx.contribution')}</div>
               </div>
               <div className="cc-sum-kpi" style={{ borderColor: gmClr(aggregate.gm) }}>
                 <div className="cc-sum-kpi-label">GM%</div>
                 <div className="cc-sum-kpi-val" style={{ color: gmClr(aggregate.gm) }}>
                   {pct(aggregate.gm)}
                 </div>
-                <div className="cc-sum-kpi-sub">Gross Margin</div>
+                <div className="cc-sum-kpi-sub">{t('cpx.gross_margin')}</div>
               </div>
             </div>
             <div className="cc-card" style={{ marginTop: 14 }}>
@@ -1218,7 +1218,7 @@ export default function ComplexCalc() {
                   })}
                 <div className="cc-sum-bar-row cc-sum-bar-total">
                   <div className="cc-sum-bar-label">
-                    <b>GRAND TOTAL</b>
+                    <b>{t('cpx.grand_total')}</b>
                   </div>
                   <div className="cc-sum-bar-track" />
                   <div
@@ -1516,13 +1516,13 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField, markTouched, t }) {
         <span className="sc-card-title">{t('moqcard.title')}</span>
         <span className="sc-moq-tier-count">{numMoq} tier</span>
         <div className="sc-hdr-rate">
-          <label>USD Rate</label>
+          <label>{t('moqcard.usd_rate')}</label>
           <DecimalInput
             value={cs.usd_rate}
             onChange={(v) => setCplxField('usd_rate', v)}
             className="sc-hdr-rate-inp"
             placeholder="25,000"
-            title="VND per 1 USD. Bi-directionally syncs Selling/Target USD ↔ VND. Saved per RFQ."
+            title={t('cpx.usd_rate_tip')}
             thousandSep
           />
         </div>
@@ -1560,7 +1560,7 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField, markTouched, t }) {
                       onChange={() => setActiveMoq(0)}
                     />
                     <span className="sc-moq-tier-label">MOQ 1</span>
-                    <span className="sc-moq-primary-badge">Primary</span>
+                    <span className="sc-moq-primary-badge">{t('cpx.primary')}</span>
                   </label>
                 </td>
                 <td>
@@ -1677,7 +1677,7 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField, markTouched, t }) {
                     <button
                       className="sc-btn-del-circle"
                       onClick={() => removeMoqTier(idx)}
-                      title="Remove MOQ tier"
+                      title={t('cpx.remove_tier')}
                     >
                       &times;
                     </button>
@@ -1697,7 +1697,7 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField, markTouched, t }) {
           <div className="cc-setup-moq-card">
             <div className="cc-setup-moq-hdr">
               <span className="cc-setup-moq-icon">&#8801;</span>
-              <span className="cc-setup-moq-title">Setup Data per MOQ</span>
+              <span className="cc-setup-moq-title">{t('cpx.setup_per_moq')}</span>
               <span className="cc-setup-moq-legend">
                 <span className="cc-legend-amber"></span> amber = MOQ override &nbsp;&nbsp;
                 <span className="cc-legend-white"></span> white = base (MOQ 1)
@@ -1707,7 +1707,7 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField, markTouched, t }) {
               <table className="cc-setup-moq-table">
                 <thead>
                   <tr>
-                    <th className="cc-smt-th-l">Field</th>
+                    <th className="cc-smt-th-l">{t('cpx.field')}</th>
                     <th className="cc-smt-th-l">SP / DB</th>
                     {Array.from({ length: numMoq }, (_, ti) => {
                       const qty = ti === 0 ? cs.moq || 0 : (extraMoqs[ti - 1] || {}).moq || 0;

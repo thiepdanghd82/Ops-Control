@@ -78,6 +78,43 @@ registerStrings({
   // band, so only the ordinary words are translated — the acronyms stay EN
   // per the glossary and because a longer string would wrap the column.
   // Confirmed with the NPI manager 2026-09-10.
+  // Complex Calc — mostly ordinary business vocabulary, so most of it
+  // translates. What stays EN: Contr%, MOQ, SP/DB codes, PE Bag, VND/USD
+  // column heads, and the FOB/CIF placeholder (Incoterms).
+  'cpx.actions': { en: 'Actions', vi: 'Thao tác' },
+  'cpx.contribution': { en: 'Contribution', vi: 'Đóng góp' },
+  'cpx.deliver_qty': { en: 'Deliver Quantity', vi: 'Số lượng giao' },
+  'cpx.delivery_term': { en: 'Delivery Term', vi: 'Điều kiện giao hàng' },
+  'cpx.description': { en: 'Description', vi: 'Mô tả' },
+  'cpx.field': { en: 'Field', vi: 'Trường' },
+  'cpx.grand_total': { en: 'GRAND TOTAL', vi: 'TỔNG CỘNG' },
+  'cpx.gross_margin': { en: 'Gross Margin', vi: 'Lợi nhuận gộp' },
+  'cpx.main_process': { en: 'Main Process', vi: 'Công đoạn chính' },
+  'cpx.packing': { en: 'Packing', vi: 'Đóng gói' },
+  'cpx.packing_method': { en: 'Packing Method', vi: 'Cách đóng gói' },
+  'cpx.primary': { en: 'Primary', vi: 'Chính' },
+  'cpx.selling_price': { en: 'Selling Price', vi: 'Giá bán' },
+  'cpx.setup_per_moq': { en: 'Setup Data per MOQ', vi: 'Dữ liệu setup theo MOQ' },
+  'cpx.shipping': { en: 'Shipping', vi: 'Vận chuyển' },
+  'cpx.size_mm': { en: 'Size (mm)', vi: 'Kích thước (mm)' },
+  'cpx.total_cost': { en: 'Total Cost', vi: 'Tổng chi phí' },
+  'cpx.unsaved': { en: 'Unsaved', vi: 'Chưa lưu' },
+  'cpx.value_add': { en: 'Value Add', vi: 'Giá trị gia tăng' },
+  'cpx.box_cost': { en: 'Box Cost (USD)', vi: 'Chi phí thùng (USD)' },
+  'cpx.other_cost_shipment': { en: 'Other Cost/shipment', vi: 'Chi phí khác/lô' },
+  'cpx.other_packing_pcs': { en: 'Other Packing/pcs', vi: 'Đóng gói khác/pcs' },
+  'cpx.shipping_cost': { en: 'Shipping Cost (USD total)', vi: 'Chi phí vận chuyển (tổng USD)' },
+  'cpx.roll': { en: 'Roll', vi: 'Cuộn' },
+  'cpx.sheet': { en: 'Sheet', vi: 'Tờ' },
+  'cpx.tray': { en: 'Tray', vi: 'Khay' },
+  'cpx.remove': { en: 'Remove', vi: 'Xoá' },
+  'cpx.remove_tier': { en: 'Remove MOQ tier', vi: 'Xoá bậc MOQ' },
+  'cpx.toggle_detail': { en: 'Toggle detail', vi: 'Ẩn/hiện chi tiết' },
+  'cpx.ph_process': { en: 'Process', vi: 'Công đoạn' },
+  'cpx.usd_rate_tip': {
+    en: 'VND per 1 USD. Bi-directionally syncs Selling/Target USD ↔ VND. Saved per RFQ.',
+    vi: 'Số VND cho 1 USD. Đồng bộ hai chiều Giá bán/Mục tiêu USD ↔ VND. Lưu theo từng RFQ.',
+  },
   'moqcard.title': { en: 'MOQ & Pricing info', vi: 'Thông tin MOQ & Giá' },
   'moqcard.usd_rate': { en: 'USD Rate', vi: 'Tỷ giá USD' },
   'common.new': { en: 'New', vi: 'Tạo mới' },
