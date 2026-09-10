@@ -74,6 +74,30 @@ registerStrings({
   'rfqcard.ul_description': { en: 'UL Description', vi: 'Mô tả UL' },
   'rfqcard.generate': { en: 'Generate', vi: 'Tạo' },
   'rfqcard.generate_rfq': { en: 'Generate RFQ number', vi: 'Tạo số RFQ' },
+  // Cost summary strip above the worksheet. 13 columns in a very narrow
+  // band, so only the ordinary words are translated — the acronyms stay EN
+  // per the glossary and because a longer string would wrap the column.
+  // Confirmed with the NPI manager 2026-09-10.
+  'moqcard.title': { en: 'MOQ & Pricing info', vi: 'Thông tin MOQ & Giá' },
+  'moqcard.usd_rate': { en: 'USD Rate', vi: 'Tỷ giá USD' },
+  'common.new': { en: 'New', vi: 'Tạo mới' },
+  'common.save': { en: 'Save', vi: 'Lưu' },
+  'common.saving': { en: 'Saving…', vi: 'Đang lưu…' },
+  'common.select': { en: '-- Select --', vi: '-- Chọn --' },
+  'common.years': { en: 'years', vi: 'năm' },
+  'sumbar.tier': { en: 'Tier', vi: 'Tier' },
+  'sumbar.end_cu_pn': { en: 'End CU PN', vi: 'End CU PN' },
+  'sumbar.ttl_mat': { en: 'Ttl. Mat', vi: 'Ttl. Mat' },
+  'sumbar.process': { en: 'Process', vi: 'Công đoạn' },
+  'sumbar.pack_ship': { en: 'Pack & Ship', vi: 'Đóng gói' },
+  'sumbar.subtotal': { en: 'Subtotal', vi: 'Tạm tính' },
+  'sumbar.sell_price': { en: 'Sell Price', vi: 'Giá bán' },
+  'sumbar.target': { en: 'Target', vi: 'Mục tiêu' },
+  'sumbar.ttl_mat_tip': {
+    en: 'Total Material = Materials + Inks',
+    vi: 'Tổng vật tư = Vật tư + Mực in',
+  },
+
   'rfqcard.site_locked': {
     en: 'Locked after {status} — revoke to change',
     vi: 'Đã khoá sau khi {status} — thu hồi phê duyệt để sửa',

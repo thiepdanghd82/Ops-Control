@@ -532,7 +532,7 @@ export default function StandardCalc() {
                 onClick={handleSave}
                 disabled={!isDirty || saving}
               >
-                {saving ? 'Saving...' : 'Save'}
+                {saving ? t('common.saving') : t('common.save')}
               </button>
             </div>
           }

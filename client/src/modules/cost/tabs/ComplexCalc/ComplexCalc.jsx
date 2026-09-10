@@ -609,7 +609,7 @@ export default function ComplexCalc() {
                 onClick={handleSave}
                 disabled={!isDirty || saving}
               >
-                {saving ? 'Saving…' : 'Save'}
+                {saving ? t('common.saving') : t('common.save')}
               </button>
             </>
           }
@@ -661,6 +661,7 @@ export default function ComplexCalc() {
                 dispatch={dispatch}
                 setCplxField={setCplxField}
                 markTouched={markTouched}
+                t={t}
               />
             </div>
           </div>
@@ -1276,7 +1277,7 @@ export default function ComplexCalc() {
 /* ─────────────────────────────────────────────────────────────
  * ComplexMoqTab — MOQ tier management + Setup Data per MOQ table
  * ───────────────────────────────────────────────────────────── */
-function ComplexMoqTab({ cs, sps, dispatch, setCplxField, markTouched }) {
+function ComplexMoqTab({ cs, sps, dispatch, setCplxField, markTouched, t }) {
   const numMoq = cs.num_moq || 1;
   const extraMoqs = useMemo(() => cs.extra_moqs || [], [cs.extra_moqs]);
   const activeMoqIdx = cs.active_moq_idx || 0;
@@ -1512,7 +1513,7 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField, markTouched }) {
     <div className="sc-card sc-moq-card">
       <div className="sc-card-header sc-moq-card-header">
         <span className="sc-card-icon">&#164;</span>
-        <span className="sc-card-title">MOQ &amp; Pricing info</span>
+        <span className="sc-card-title">{t('moqcard.title')}</span>
         <span className="sc-moq-tier-count">{numMoq} tier</span>
         <div className="sc-hdr-rate">
           <label>USD Rate</label>

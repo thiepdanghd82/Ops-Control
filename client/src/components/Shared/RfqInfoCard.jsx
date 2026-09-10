@@ -244,7 +244,7 @@ export default function RfqInfoCard({
               value={get('product_lifetime')}
               onChange={(v) => set('product_lifetime', v, true)}
               className="sc-input"
-              placeholder="years"
+              placeholder={t('common.years')}
             />
           </div>
           <div className="sc-field">
@@ -256,7 +256,7 @@ export default function RfqInfoCard({
                 onChange={(e) => set('trade_mode', e.target.value)}
                 className="sc-input"
               >
-                <option value="">-- Select --</option>
+                <option value="">{t('common.select')}</option>
                 {tradeModeOpts.map((t) => (
                   <option key={t} value={t}>
                     {t}
@@ -282,7 +282,7 @@ export default function RfqInfoCard({
               onChange={(e) => set('design_process', e.target.value)}
               className={`sc-input ${!get('design_process') ? 'sc-input-warn' : ''}`}
             >
-              <option value="">-- Select --</option>
+              <option value="">{t('common.select')}</option>
               {designProcessOpts.map((p) => (
                 <option key={p} value={p}>
                   {p}
