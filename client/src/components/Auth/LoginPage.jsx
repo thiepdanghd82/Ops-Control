@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { costApi } from '../../services/api';
 import { decideChangePwdDispatch, shouldDispatchAfterTotp } from './loginChangePwdDispatcher';
 import PwdAgeBar from './PwdAgeBar';
+import LangFlagToggle from '../Shared/LangFlagToggle';
 import TotpEnrollment from './TotpEnrollment';
 import { showToast } from '../../utils/toast';
 import { formatLastActivity } from '../../services/singleSession';
@@ -823,6 +824,10 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
               )}
             </div>
           )}
+          {/* An operator who cannot read this form must be able to switch
+              language BEFORE being asked to authenticate — the only other
+              toggle lives in Settings, behind the login. */}
+          <LangFlagToggle className="login-lang-toggle" />
           <h1>
             {compact
               ? t('login.expired_title')

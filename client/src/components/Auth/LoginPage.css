@@ -1280,3 +1280,15 @@
 .ss-revoked-draft {
   color: #166534;
 }
+
+/* Language toggle, top-right of the sign-in card. `.login-card` already
+   carries position: relative, so this anchors to the card rather than the
+   page. Placed before the <h1> in DOM order so keyboard and screen-reader
+   users reach it first — the point is to switch language before reading
+   the form, not after failing to. */
+.login-lang-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+}

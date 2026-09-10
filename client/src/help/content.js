@@ -2594,7 +2594,7 @@ export const HELP_CONTENT = {
   'rfq-tracker': {
     id: 'rfq-tracker',
     section: 'TRACKING',
-    title: bi('RFQ Tracker', 'Theo dõi RFQ'),
+    title: bi('RFQ Progress', 'Theo dõi RFQ'),
     function: bi(
       '5-stage customer RFQ pipeline: Sale → Feasibility → Design → Sourcing → Pricing',
       'Pipeline RFQ khách hàng 5 giai đoạn: Sale → Khả thi → Thiết kế → Sourcing → Báo giá'
