@@ -63,6 +63,7 @@ function validateHeader(st, scopeLabel = 'Header') {
       id: 'hdr-ccl-pn',
       severity: 'error',
       scope: scopeLabel,
+      field: 'ccl_pn',
       message: 'CCL Part Number is required',
     });
   }
@@ -71,6 +72,7 @@ function validateHeader(st, scopeLabel = 'Header') {
       id: 'hdr-moq-neg',
       severity: 'error',
       scope: scopeLabel,
+      field: 'moq',
       message: 'MOQ is negative — must be a positive number',
     });
   } else if (num(st.moq) <= 0) {
@@ -78,6 +80,7 @@ function validateHeader(st, scopeLabel = 'Header') {
       id: 'hdr-moq',
       severity: 'error',
       scope: scopeLabel,
+      field: 'moq',
       message: 'MOQ must be greater than 0 (MOQ = 0 inflates Setup/Tooling)',
     });
   }
@@ -86,6 +89,7 @@ function validateHeader(st, scopeLabel = 'Header') {
       id: 'hdr-eau-neg',
       severity: 'error',
       scope: scopeLabel,
+      field: 'annual_qty',
       message: 'Annual Qty (EAU) is negative — must be a positive number',
     });
   } else if (num(st.annual_qty) <= 0) {
@@ -93,6 +97,7 @@ function validateHeader(st, scopeLabel = 'Header') {
       id: 'hdr-eau',
       severity: 'error',
       scope: scopeLabel,
+      field: 'annual_qty',
       message: 'Annual Qty (EAU) must be greater than 0',
     });
   }

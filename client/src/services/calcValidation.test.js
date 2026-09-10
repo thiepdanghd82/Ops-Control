@@ -239,3 +239,20 @@ test('Bug 2 (Complex): FQC in subproduct with machine_rate=0 → no setup-hours 
   const setupWarn = findWarn(warnings, /Setup Hours is required/);
   assert.equal(setupWarn, undefined, 'Complex path also respects labor-only exemption');
 });
+
+test('header warnings carry the field key that caused them', () => {
+  const out = validateStandard(baseStd({ ccl_pn: '', moq: 0, annual_qty: 0 }));
+
+  const byId = Object.fromEntries(out.map((w) => [w.id, w]));
+  assert.equal(byId['hdr-ccl-pn'].field, 'ccl_pn');
+  assert.equal(byId['hdr-moq'].field, 'moq');
+  assert.equal(byId['hdr-eau'].field, 'annual_qty');
+});
+
+test('negative-value header warnings carry the same field key', () => {
+  const out = validateStandard(baseStd({ moq: -5, annual_qty: -1 }));
+
+  const byId = Object.fromEntries(out.map((w) => [w.id, w]));
+  assert.equal(byId['hdr-moq-neg'].field, 'moq');
+  assert.equal(byId['hdr-eau-neg'].field, 'annual_qty');
+});
