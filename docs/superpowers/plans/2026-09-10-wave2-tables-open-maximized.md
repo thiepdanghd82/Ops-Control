@@ -1,5 +1,9 @@
 # Table Screens Open Maximized Implementation Plan
 
+> **STATUS: SHIPPED — do not re-execute.** Shipped 2026-09-10 — PRs #286 (`b151eb5`), #289 (`5e6f3b0`), #290 (`641c98b`). Every non-calculator screen opens maximized; the four floating utilities and both pricing worksheets were settled in #289/#290. Taskbar "Đóng tất cả" landed with #286.
+>
+> Every box below is ticked because the work is on `main`, not because someone walked the plan a second time. Read it as a record of what was decided and why.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give data-grid screens the full window instead of a 900px floating box they cannot fit in.
@@ -33,7 +37,7 @@
 - Consumes: nothing.
 - Produces: `export const MAXIMIZED_BY_DEFAULT: Set<string>` and `export function opensMaximized(tabId: string): boolean`. Task 2 imports `opensMaximized`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `client/src/window/windowLogic.test.js`:
 
@@ -74,12 +78,12 @@ test('an unknown tab id is not maximized', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd client && node --test src/window/windowLogic.test.js`
 Expected: FAIL — `does not provide an export named 'opensMaximized'`.
 
-- [ ] **Step 3: Add the Set and the predicate**
+- [x] **Step 3: Add the Set and the predicate**
 
 In `client/src/window/windowLogic.js`, directly after the closing `]);` of `MULTI_INSTANCE_TABS`:
 
@@ -113,12 +117,12 @@ export function opensMaximized(tabId) {
 
 `isFixedTab` is already defined in this file; the guard keeps Home floating-free even if someone adds `'home'` to the Set by mistake.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `cd client && node --test src/window/windowLogic.test.js`
 Expected: PASS (4 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add client/src/window/windowLogic.js client/src/window/windowLogic.test.js
@@ -155,7 +159,7 @@ EOF
 - Consumes: `opensMaximized` from Task 1.
 - Produces: a window opened for a `MAXIMIZED_BY_DEFAULT` tab has `state: 'max'` and a non-null `prevRect`. Nothing later depends on this.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `client/src/window/windowManagerReducer.test.js`:
 
@@ -197,16 +201,16 @@ test('re-focusing a minimized window still restores it to normal', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd client && node --test src/window/windowManagerReducer.test.js`
 Expected: FAIL — `Expected values to be strictly equal: 'normal' !== 'max'`.
 
-- [ ] **Step 3: Import the predicate**
+- [x] **Step 3: Import the predicate**
 
 In `client/src/window/windowManagerReducer.js`, extend the existing import from `./windowLogic.js` (the block starting at line 16 that already pulls `DEFAULT_WINDOW_W`) to also import `opensMaximized`.
 
-- [ ] **Step 4: Set the initial state in the OPEN case**
+- [x] **Step 4: Set the initial state in the OPEN case**
 
 Replace the `win` object literal and the singleton re-focus mapper in `case A.OPEN`:
 
@@ -248,17 +252,17 @@ const win = {
 };
 ```
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [x] **Step 5: Run the test to verify it passes**
 
 Run: `cd client && node --test src/window/windowManagerReducer.test.js`
 Expected: PASS, including every pre-existing reducer test.
 
-- [ ] **Step 6: Run the full client suite**
+- [x] **Step 6: Run the full client suite**
 
 Run: `cd client && node --test 'src/**/*.test.js'`
 Expected: PASS.
 
-- [ ] **Step 7: Verify in the running app**
+- [x] **Step 7: Verify in the running app**
 
 The installed app at `:3100` serves a built bundle, not this code. Start the dev client and point its proxy at the live API:
 
@@ -283,7 +287,7 @@ Expected: the Quote History frame reports ~100% of viewport width, against the 6
 
 4. Revert `client/vite.config.js` and confirm `git status` shows it unmodified.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add client/src/window/windowManagerReducer.js client/src/window/windowManagerReducer.test.js
@@ -325,7 +329,7 @@ EOF
 
 Six windows accumulated during a five-minute audit and none of them ever closed themselves. Without a bulk control the operator closes them one at a time or leaves them stacked forever.
 
-- [ ] **Step 1: Add the prop and the button**
+- [x] **Step 1: Add the prop and the button**
 
 In `client/src/window/Taskbar.jsx`, extend the signature on line 8 and render the control at the end of the strip:
 
@@ -353,7 +357,7 @@ Immediately before the closing element of the taskbar strip:
 
 The control only appears once there is more than one closable window, so a single-window session gains no clutter. `t` comes from the same `useI18n()` hook `Window.jsx` already uses for `window.restore` / `window.maximize`.
 
-- [ ] **Step 2: Add the two i18n strings**
+- [x] **Step 2: Add the two i18n strings**
 
 In `client/src/i18n/strings.js`, next to the existing `window.*` keys:
 
@@ -361,7 +365,7 @@ In `client/src/i18n/strings.js`, next to the existing `window.*` keys:
   'window.close_all': { en: 'Close all', vi: 'Đóng tất cả' },
 ```
 
-- [ ] **Step 3: Wire it in WindowLayer**
+- [x] **Step 3: Wire it in WindowLayer**
 
 In `client/src/window/WindowLayer.jsx`, pass a handler that closes every non-fixed window:
 
@@ -373,7 +377,7 @@ In `client/src/window/WindowLayer.jsx`, pass a handler that closes every non-fix
 
 Home is `fixed`, so it survives — the operator lands back on it.
 
-- [ ] **Step 4: Add the style**
+- [x] **Step 4: Add the style**
 
 Append to `client/src/window/WindowLayer.css`:
 
@@ -396,21 +400,21 @@ Append to `client/src/window/WindowLayer.css`:
 }
 ```
 
-- [ ] **Step 5: Run the i18n lint test**
+- [x] **Step 5: Run the i18n lint test**
 
 Run: `cd client && node --test src/i18n/strings.lint.test.js`
 Expected: PASS. This suite enforces that every key has both locales — it is the reason i18n has not rotted the way the design tokens have.
 
-- [ ] **Step 6: Run the full client suite**
+- [x] **Step 6: Run the full client suite**
 
 Run: `cd client && node --test 'src/**/*.test.js'`
 Expected: PASS.
 
-- [ ] **Step 7: Verify in the running app**
+- [x] **Step 7: Verify in the running app**
 
 With the dev client running (same temporary proxy edit as Task 2 Step 7): open four screens, confirm **Close all** appears in the taskbar, click it, and confirm every window closes except Home. Then open one screen and confirm the button is hidden again. Revert the proxy edit afterwards.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add client/src/window/Taskbar.jsx client/src/window/WindowLayer.jsx client/src/window/WindowLayer.css client/src/i18n/strings.js

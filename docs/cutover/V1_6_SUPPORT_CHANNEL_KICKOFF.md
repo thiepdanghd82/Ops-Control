@@ -212,13 +212,13 @@ Self-serve before pinging Henry — these fixes are baked into v1.6 and the oper
 
 ### Setup wizard "Failed to fetch" when testing SERVER connection
 
-v1.6 routes the wizard probe through main process (`/__probe__` sentinel) instead of renderer `fetch()` to bypass the data-URL null-origin CORS block. If operator still sees "Failed to fetch":
+v1.6 routes the wizard probe through the main process over IPC (`ipcRenderer.invoke('ops:setup.testServer')`, and `ops:firstrun.testServer` for the CLIENT first-run dialog) instead of renderer `fetch()`, which the dialog's `data:` URL origin blocks. If operator still sees "Failed to fetch" — or `✗ Không kết nối được: probe timeout` on a CLIENT install:
 
 1. Confirm SERVER URL is reachable from a regular browser (Safari) on the CLIENT Mac.
 2. Confirm SERVER `/health` endpoint returns 200.
 3. Otherwise → P1 bug report with build SHA + CLIENT macOS log excerpt.
 
-**Reference**: Sprint S-WIZARD-CORS (PR #133).
+**Reference**: Sprint S-WIZARD-CORS (PR #133), corrected by S-FIRSTRUN-IPC (PR #279). **On builds before #279 the CLIENT first-run dialog's buttons do nothing at all** — the probe never leaves the renderer, so "probe timeout" there is not a network fault. Check the build SHA before troubleshooting the network.
 
 ### CLIENT app bricks at boot with `ERR_INVALID_URL`
 

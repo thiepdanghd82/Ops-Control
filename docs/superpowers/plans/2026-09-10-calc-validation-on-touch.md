@@ -1,5 +1,9 @@
 # Calculator Validation On Touch Implementation Plan
 
+> **STATUS: SHIPPED — do not re-execute.** Shipped 2026-09-10 — PR #282 (`ed63dad`). A fresh record now opens with 4 warnings instead of 7; `gateWarnings()` returns nothing until a field is touched or save is attempted.
+>
+> Every box below is ticked because the work is on `main`, not because someone walked the plan a second time. Read it as a record of what was decided and why.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Stop a brand-new calculator record from opening with 7 errors, and connect each error to the field that caused it.
@@ -33,7 +37,7 @@
 - Consumes: nothing.
 - Produces: every warning object emitted by `validateHeader` gains a `field` key — a string matching the key used in calc state (`'ccl_pn'`, `'moq'`, `'annual_qty'`). Warnings that do not correspond to a single field omit the key (it is `undefined`). Task 2 and Task 4 both join on `warning.field`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `client/src/services/calcValidation.test.js`:
 
@@ -56,12 +60,12 @@ test('negative-value header warnings carry the same field key', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd client && node --test src/services/calcValidation.test.js`
 Expected: FAIL — `Expected values to be strictly equal: undefined !== 'ccl_pn'`
 
-- [ ] **Step 3: Add the field key**
+- [x] **Step 3: Add the field key**
 
 In `client/src/services/calcValidation.js`, add a `field` property to each object pushed in `validateHeader`:
 
@@ -117,12 +121,12 @@ function validateHeader(st, scopeLabel = 'Header') {
 
 Keep the rest of `validateHeader` below this block exactly as it is. Do not change any `message` string — the existing 14 tests assert on them.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `cd client && node --test src/services/calcValidation.test.js`
 Expected: PASS, including all 14 pre-existing tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add client/src/services/calcValidation.js client/src/services/calcValidation.test.js
@@ -161,7 +165,7 @@ Gate rules:
 3. A warning whose `field` is in `touched` → shown.
 4. Otherwise → hidden.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `client/src/services/calcValidation.test.js`:
 
@@ -208,12 +212,12 @@ test('gateWarnings does not mutate its input', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd client && node --test src/services/calcValidation.test.js`
 Expected: FAIL — `gateWarnings is not a function` (or an import error naming `gateWarnings`).
 
-- [ ] **Step 3: Write the minimal implementation**
+- [x] **Step 3: Write the minimal implementation**
 
 Append to `client/src/services/calcValidation.js`:
 
@@ -236,12 +240,12 @@ export function gateWarnings(warnings, { touched = [], saveAttempted = false } =
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `cd client && node --test src/services/calcValidation.test.js`
 Expected: PASS, all tests including the 14 pre-existing ones.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add client/src/services/calcValidation.js client/src/services/calcValidation.test.js
@@ -282,7 +286,7 @@ EOF
 
   Tasks 4 and 5 consume all five.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `client/src/context/CalcContext.touched.test.js`. This tests the touched-set reducer logic in isolation — no React renderer is available in this suite, so the plan extracts the logic into a pure helper that the provider then uses.
 
@@ -312,12 +316,12 @@ test('blank or missing field names are ignored', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd client && node --test src/context/CalcContext.touched.test.js`
 Expected: FAIL — cannot find module `./touchedState.js`.
 
-- [ ] **Step 3: Write the pure helper**
+- [x] **Step 3: Write the pure helper**
 
 Create `client/src/context/touchedState.js`:
 
@@ -339,12 +343,12 @@ export function addTouched(touched, field) {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `cd client && node --test src/context/CalcContext.touched.test.js`
 Expected: PASS (4 tests).
 
-- [ ] **Step 5: Wire the helper into the provider**
+- [x] **Step 5: Wire the helper into the provider**
 
 In `client/src/context/CalcContext.jsx`:
 
@@ -392,12 +396,12 @@ Add the five new entries to the memoised `value` object and to its dependency ar
 
 Then call `resetTouched()` inside the existing `loadQuote`, `resetStd` and `resetCplx` callbacks, as the last statement of each, so opening or clearing a record starts with a clean slate. Add `resetTouched` to each of those callbacks' own dependency arrays.
 
-- [ ] **Step 6: Run the full client suite to verify nothing regressed**
+- [x] **Step 6: Run the full client suite to verify nothing regressed**
 
 Run: `cd client && node --test 'src/**/*.test.js'`
 Expected: PASS — 1789 tests (1785 pre-existing + 4 new).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add client/src/context/touchedState.js client/src/context/CalcContext.touched.test.js client/src/context/CalcContext.jsx
@@ -441,7 +445,7 @@ This is the component shared by BOTH the Standard and Complex windows, so this t
 
 2. **Match warnings through `realKey()`, not the raw key.** The card maps logical field names to real state keys via `aliasMap` (`realKey(k)`). Today `aliasMap` is `{ end_cu: 'project' }` on Standard only, so the three fields in this task are unaffected — but `errorFor` must still resolve through `realKey` or the join silently breaks the first time someone aliases one of them.
 
-- [ ] **Step 1: Add the required marker and error wiring to the `ccl_pn` field**
+- [x] **Step 1: Add the required marker and error wiring to the `ccl_pn` field**
 
 Replace the `ccl_pn` field block at `client/src/components/Shared/RfqInfoCard.jsx:100-110` with:
 
@@ -473,7 +477,7 @@ Replace the `ccl_pn` field block at `client/src/components/Shared/RfqInfoCard.js
 </div>
 ```
 
-- [ ] **Step 2: Accept the new props and add the `errorFor` helper**
+- [x] **Step 2: Accept the new props and add the `errorFor` helper**
 
 Add the import at the top of `RfqInfoCard.jsx` (one import only — no context import):
 
@@ -519,11 +523,11 @@ const errorFor = (k) => {
 
 Everywhere the field blocks call `markTouched('x')`, call `onTouch(realKey('x'))` instead.
 
-- [ ] **Step 3: Repeat for `moq` and `annual_qty`**
+- [x] **Step 3: Repeat for `moq` and `annual_qty`**
 
 Apply the identical pattern to the `moq` and `annual_qty` field blocks in the same file: `required`, `aria-required="true"`, `aria-invalid`, `aria-describedby`, `onBlur={() => markTouched('moq')}` / `markTouched('annual_qty')`, the `*` marker in the label, and the `sc-field-msg` span. Repeat the markup rather than extracting a component in this task — extraction is a separate refactor and would widen the diff past what a reviewer can check against the audit.
 
-- [ ] **Step 4: Add the styles**
+- [x] **Step 4: Add the styles**
 
 Append to `client/src/components/Shared/RfqInfoCard.css`:
 
@@ -550,7 +554,7 @@ Append to `client/src/components/Shared/RfqInfoCard.css`:
 }
 ```
 
-- [ ] **Step 5: Thread the props from both call sites**
+- [x] **Step 5: Thread the props from both call sites**
 
 `RfqInfoCard` is rendered in exactly two places, and both already destructure `useCalc()`.
 
@@ -613,7 +617,7 @@ import { validateStandard } from '../../../../services/calcValidation';
 
 (`validateComplex` in `CplxHeader.jsx`.) If `useMemo` is already imported in that file, extend the existing import rather than adding a second one.
 
-- [ ] **Step 6: Verify in the running app**
+- [x] **Step 6: Verify in the running app**
 
 Start the app, open **Pricing (Std)** → a new record.
 
@@ -633,12 +637,12 @@ const el = document.querySelector('input[aria-invalid="true"]');
 
 Expected: an id string and the matching message text — not `null`.
 
-- [ ] **Step 7: Run the full client suite**
+- [x] **Step 7: Run the full client suite**
 
 Run: `cd client && node --test 'src/**/*.test.js'`
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add client/src/components/Shared/RfqInfoCard.jsx client/src/modules/cost/tabs/StandardCalc/CalcHeader.jsx client/src/modules/cost/tabs/ComplexCalc/CplxHeader.jsx client/src/components/Shared/RfqInfoCard.css
@@ -677,7 +681,7 @@ EOF
 - Consumes: `gateWarnings` (Task 2); `touched` / `saveAttempted` from `useCalc()` (Task 3).
 - Produces: nothing consumed by later tasks.
 
-- [ ] **Step 1: Gate the memoised warnings**
+- [x] **Step 1: Gate the memoised warnings**
 
 In `client/src/components/Layout/WarningBar.jsx`, extend the import on line 21:
 
@@ -703,7 +707,7 @@ const warnings = useMemo(() => {
 
 The component already returns `null` when `warnings.length === 0`, so a fresh record now renders no bar at all with no further change.
 
-- [ ] **Step 2: Verify in the running app**
+- [x] **Step 2: Verify in the running app**
 
 Open **Pricing (Std)** → new record.
 
@@ -711,7 +715,7 @@ Expected: **no warning bar on open.** Before this plan it read `⚠ 7 errors + 1
 Expected: after touching and clearing CCL PN, the bar appears showing exactly that one error.
 Expected: pressing **Save** on an incomplete record surfaces the full list again, and Save is still refused.
 
-- [ ] **Step 3: Confirm the bar count matches the fields lit red**
+- [x] **Step 3: Confirm the bar count matches the fields lit red**
 
 With CCL PN and MOQ both touched and empty, in the browser console:
 
@@ -724,12 +728,12 @@ With CCL PN and MOQ both touched and empty, in the browser console:
 
 Expected: the bar reports 2 errors and `redFields` is 2. A mismatch means `RfqInfoCard` and `WarningBar` are gating on different inputs — fix by passing the same `warnings` array to both rather than validating twice.
 
-- [ ] **Step 4: Run the full client suite**
+- [x] **Step 4: Run the full client suite**
 
 Run: `cd client && node --test 'src/**/*.test.js'`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add client/src/components/Layout/WarningBar.jsx

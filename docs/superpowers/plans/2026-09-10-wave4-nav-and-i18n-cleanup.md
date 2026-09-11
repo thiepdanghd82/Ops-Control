@@ -1,5 +1,9 @@
 # Navigation and i18n Cleanup Implementation Plan
 
+> **STATUS: SHIPPED — do not re-execute.** Shipped 2026-09-10 — PRs #288 (`4a2ac76`), #291 (`d508dfe`), #292 (`62c12e3`), #293 (`c54fe0b`). Nav labels, login language toggle, TOTP screen, then the pricing worksheet translation (wave 1 of the i18n project).
+>
+> Every box below is ticked because the work is on `main`, not because someone walked the plan a second time. Read it as a record of what was decided and why.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Stop two English nav items from being indistinguishable, and let an operator who cannot read English change the language before they are asked to log in.
@@ -33,7 +37,7 @@
 
 The sidebar shows **RFQ Tracking** under _Quoting & Pricing_ and **RFQ Tracker** under _Tracking_. In English those are the same words; the Home screen's Quick Action says "RFQ Tracker", so there is no way to tell which screen it opens. In Vietnamese the labels are already distinct, so this is an English-only defect.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `client/src/i18n/navLabels.test.js`:
 
@@ -64,14 +68,14 @@ test('no two nav tab labels are identical within a locale', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd client && node --test src/i18n/navLabels.test.js`
 Expected: FAIL naming `nav.tab.rfq_tracking` and `nav.tab.rfq_tracker`.
 
 If it fails instead with an import error, open `client/src/i18n/strings.js`, find the name of the exported key map, and use that name in the test's import. Do not change `strings.js` to suit the test.
 
-- [ ] **Step 3: Rename the two English labels**
+- [x] **Step 3: Rename the two English labels**
 
 In `client/src/i18n/strings.js`:
 
@@ -85,11 +89,11 @@ In `client/src/i18n/strings.js`:
 
 The English now mirrors the Vietnamese that was already right: `Danh sách` is a list of RFQs, `Theo dõi` is tracking their progress. Vietnamese is unchanged.
 
-- [ ] **Step 4: Update the breadcrumb map to match**
+- [x] **Step 4: Update the breadcrumb map to match**
 
 In `client/src/components/Layout/TopBar.jsx`, the label map hardcodes English strings. Change the `rfq-tracking` entry's label to `RFQ List` and the `rfq-tracker` entry's to `RFQ Progress`, so the breadcrumb agrees with the sidebar.
 
-- [ ] **Step 5: Run the tests**
+- [x] **Step 5: Run the tests**
 
 Run: `cd client && node --test src/i18n/navLabels.test.js src/i18n/strings.lint.test.js`
 Expected: PASS both.
@@ -97,7 +101,7 @@ Expected: PASS both.
 Run: `cd client && node --test 'src/**/*.test.js'`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add client/src/i18n/strings.js client/src/i18n/navLabels.test.js client/src/components/Layout/TopBar.jsx
@@ -140,7 +144,7 @@ EOF
 
 `LoginPage.jsx` already calls `useI18n()` (line 218) and makes 35 `t()` calls with zero hardcoded English, so the screen is fully translated; only the switch is missing.
 
-- [ ] **Step 1: Import and render the toggle**
+- [x] **Step 1: Import and render the toggle**
 
 In `client/src/components/Auth/LoginPage.jsx`:
 
@@ -154,7 +158,7 @@ Render it inside the sign-in card, above the `<h1>`/title, so it is the first th
 <LangFlagToggle className="login-lang-toggle" />
 ```
 
-- [ ] **Step 2: Position it**
+- [x] **Step 2: Position it**
 
 Append to `client/src/components/Auth/LoginPage.css`:
 
@@ -172,7 +176,7 @@ Append to `client/src/components/Auth/LoginPage.css`:
 
 If the sign-in card is not already a positioned ancestor, add `position: relative` to its rule rather than positioning the toggle against the page.
 
-- [ ] **Step 3: Verify in the running app**
+- [x] **Step 3: Verify in the running app**
 
 The installed app at `:3100` serves a built bundle. Start the dev client with its proxy temporarily pointed at `http://localhost:3100` (see wave 2 Task 2 Step 7 for the exact edit) and open the login screen **without logging in**.
 
@@ -180,12 +184,12 @@ Expected: the toggle is visible on the card. Clicking it switches every label �
 
 Revert the `vite.config.js` proxy edit afterwards and confirm `git status` shows it unmodified.
 
-- [ ] **Step 4: Run the full client suite**
+- [x] **Step 4: Run the full client suite**
 
 Run: `cd client && node --test 'src/**/*.test.js'`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add client/src/components/Auth/LoginPage.jsx client/src/components/Auth/LoginPage.css
@@ -221,7 +225,7 @@ EOF
 
 `TotpEnrollment.jsx` is 228 lines with **zero** `t()` calls and hardcoded English including `Account` and `Scan with your authenticator app`. It is mandatory security onboarding — the one screen where confusion generates a support call, and the operator has no way to skip it.
 
-- [ ] **Step 1: Inventory every user-visible string**
+- [x] **Step 1: Inventory every user-visible string**
 
 ```bash
 grep -oE ">[A-Za-z][A-Za-z ,.'’-]{3,}<" client/src/components/Auth/TotpEnrollment.jsx
@@ -230,7 +234,7 @@ grep -oE '(placeholder|title|aria-label)="[^"]+"' client/src/components/Auth/Tot
 
 Every line of output needs a key. Do not skip `title` and `aria-label` — a translated screen with English tooltips is still half-English.
 
-- [ ] **Step 2: Add the keys**
+- [x] **Step 2: Add the keys**
 
 In `client/src/i18n/strings.js`, add one entry per string found, namespaced `totp.*`, each with both locales. The two confirmed by the audit:
 
@@ -244,7 +248,7 @@ In `client/src/i18n/strings.js`, add one entry per string found, namespaced `tot
 
 Keep the Vietnamese in the register the rest of the app uses — the operator-facing desktop dialogs are the reference for tone.
 
-- [ ] **Step 3: Route the component through t()**
+- [x] **Step 3: Route the component through t()**
 
 Add the hook at the top of the component body:
 
@@ -260,12 +264,12 @@ import { useI18n } from '../../utils/useI18n';
 
 Replace each hardcoded string with its key, e.g. `>Account<` becomes `>{t('totp.account')}<`.
 
-- [ ] **Step 4: Assert no English survives**
+- [x] **Step 4: Assert no English survives**
 
 Re-run the Step 1 commands.
 Expected: no output, apart from strings that are deliberately not translated (a product name, a code sample). If any remain, either translate them or add a one-line comment saying why they stay.
 
-- [ ] **Step 5: Run the i18n lint and the full suite**
+- [x] **Step 5: Run the i18n lint and the full suite**
 
 Run: `cd client && node --test src/i18n/strings.lint.test.js`
 Expected: PASS — this fails loudly if any new key is missing a locale.
@@ -273,7 +277,7 @@ Expected: PASS — this fails loudly if any new key is missing a locale.
 Run: `cd client && node --test 'src/**/*.test.js'`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add client/src/components/Auth/TotpEnrollment.jsx client/src/i18n/strings.js
