@@ -74,6 +74,220 @@ registerStrings({
   'rfqcard.ul_description': { en: 'UL Description', vi: 'Mô tả UL' },
   'rfqcard.generate': { en: 'Generate', vi: 'Tạo' },
   'rfqcard.generate_rfq': { en: 'Generate RFQ number', vi: 'Tạo số RFQ' },
+  // Cost summary strip above the worksheet. 13 columns in a very narrow
+  // band, so only the ordinary words are translated — the acronyms stay EN
+  // per the glossary and because a longer string would wrap the column.
+  // Confirmed with the NPI manager 2026-09-10.
+  // Complex Calc — mostly ordinary business vocabulary, so most of it
+  // translates. What stays EN: Contr%, MOQ, SP/DB codes, PE Bag, VND/USD
+  // column heads, and the FOB/CIF placeholder (Incoterms).
+  // SubProductRow — a dense table, so a column head only gets translated
+  // when Vietnamese has a word at least as short. Everything else stays EN:
+  // Area% Cav Eff% Scrap% Mesh Offcut Slit Setup H/LM/kg IFS Code
+  // DRW materials Design Layout Layout Process Mat Tool Life Tool Type
+  // Workcenter — trade terms Vietnamese print operators say in English.
+  // Tooltips are full sentences with no layout risk, so all of them are
+  // translated. Coverage stays EN per the glossary.
+  'spr.color': { en: 'Color', vi: 'Màu' },
+  'spr.crew': { en: 'Crew', vi: 'Thợ' },
+  'spr.row': { en: 'Row', vi: 'Dòng' },
+  'spr.type': { en: 'Type', vi: 'Loại' },
+  'spr.usage': { en: 'Usage', vi: 'Định mức' },
+  'spr.width': { en: 'Width', vi: 'Khổ' },
+  'spr.speed': { en: 'Speed', vi: 'Tốc độ' },
+  'spr.label': { en: 'Label', vi: 'Nhãn' },
+  'spr.ink_price': { en: 'Ink Price', vi: 'Giá mực' },
+  'spr.mat_price': { en: 'Mat Price', vi: 'Giá VT' },
+  'spr.ref_price': { en: 'Ref Price', vi: 'Giá tham chiếu' },
+  'spr.tool_cost': { en: 'Tool Cost', vi: 'Chi phí khuôn' },
+  'spr.ship_qty': { en: 'Ship Qty', vi: 'SL giao' },
+  'spr.quote_materials': { en: 'Quote materials', vi: 'Vật tư báo giá' },
+  'spr.print_type': { en: 'Print Type', vi: 'Kiểu in' },
+  'spr.ph_color_name': { en: 'Color name', vi: 'Tên màu' },
+  'spr.lbl_customer_drawing': { en: 'Customer Drawing', vi: 'Bản vẽ khách hàng' },
+  'spr.lbl_design_drawing': { en: 'Design Layout Drawing', vi: 'Bản vẽ Design Layout' },
+  'spr.tip_reset_coverage': {
+    en: 'Reset to default coverage',
+    vi: 'Đặt lại Coverage mặc định',
+  },
+  'spr.tip_remove': { en: 'Remove', vi: 'Xoá' },
+  'spr.tip_repeat': { en: 'Repeat', vi: 'Lặp lại' },
+  'spr.tip_manual_uph': { en: 'Manual UPH', vi: 'UPH thủ công' },
+  'spr.tip_prod_time': { en: 'Production time (hours)', vi: 'Thời gian sản xuất (giờ)' },
+  'spr.tip_run_labor': { en: 'Run labor', vi: 'Nhân công chạy máy' },
+  'spr.tip_run_machine': { en: 'Run machine', vi: 'Máy chạy' },
+  'spr.tip_setup_labor': { en: 'Setup labor', vi: 'Nhân công setup' },
+  'spr.tip_setup_machine': { en: 'Setup machine', vi: 'Máy setup' },
+  'spr.tip_scrap_factor': {
+    en: 'Scrap factor from processes',
+    vi: 'Hệ số hao hụt từ các công đoạn',
+  },
+  'spr.tip_coverage_disabled': {
+    en: 'Coverage override — disabled for Indigo',
+    vi: 'Ghi đè Coverage — không dùng cho Indigo',
+  },
+  'spr.tip_indigo_only': { en: 'Enabled for Indigo only', vi: 'Chỉ dùng cho Indigo' },
+  'spr.tip_override_eau': {
+    en: 'Override EAU (total qty). Empty = annual × lifetime',
+    vi: 'Ghi đè EAU (tổng SL). Để trống = SL năm × vòng đời',
+  },
+  'spr.tip_override_pitch': { en: 'Override pitch from layout', vi: 'Ghi đè pitch từ layout' },
+  'spr.tip_ovr_pitch': {
+    en: 'Override — clear to revert to layout pitch',
+    vi: 'Ghi đè — xoá để quay lại Pitch của Layout',
+  },
+  'spr.tip_auto_layout': { en: 'Auto-synced from Layout', vi: 'Tự đồng bộ từ Layout' },
+  'spr.tip_ovr_webwidth': {
+    en: 'Override — clear to revert to layout Web Width TD',
+    vi: 'Ghi đè — xoá để quay lại Web Width TD của Layout',
+  },
+  'spr.tip_auto_webwidth': {
+    en: 'Auto-synced from Layout Web Width TD',
+    vi: 'Tự đồng bộ từ Web Width TD của Layout',
+  },
+  'spr.tip_ovr_cav': {
+    en: 'Override — clear to revert to Layout/Sheet',
+    vi: 'Ghi đè — xoá để quay lại Layout/Sheet',
+  },
+  'spr.tip_auto_cav': { en: 'Auto-synced from Layout/Sheet', vi: 'Tự đồng bộ từ Layout/Sheet' },
+  'spr.tip_ovr_auto': {
+    en: 'Override — clear to revert to auto',
+    vi: 'Ghi đè — xoá để quay lại tự động',
+  },
+  'spr.tip_auto_offcut_formula': {
+    en: 'Auto = MOD(Cavities, Width) / Cavities',
+    vi: 'Tự động = MOD(Cavities, Width) / Cavities',
+  },
+  'spr.tip_clicks': {
+    en: 'Pick the click count — charges come from Click Charges table',
+    vi: 'Chọn số click — phí lấy từ bảng Click Charges',
+  },
+  'spr.tip_clicks_indigo_only': { en: 'Indigo only', vi: 'Chỉ dùng cho Indigo' },
+  'spr.tip_crew_base': {
+    en: 'Crew size — drives labor + manual MAN UPH',
+    vi: 'Số thợ — chi phối nhân công + MAN UPH thủ công',
+  },
+  'spr.tip_crew_ovr': {
+    en: 'Override — rate crew = {base}. Drives labor + manual throughput.',
+    vi: 'Ghi đè — số thợ định mức = {base}. Chi phối nhân công + năng suất thủ công.',
+  },
+  'spr.tip_moq_base': { en: 'Base value (MOQ 1)', vi: 'Giá trị gốc (MOQ 1)' },
+  'spr.tip_moq_ovr': {
+    en: 'MOQ {n} override (base = {base})',
+    vi: 'Ghi đè MOQ {n} (gốc = {base})',
+  },
+  'spr.tip_moq_inherit': {
+    en: 'Inherits MOQ 1 base ({base}) — type to override',
+    vi: 'Kế thừa gốc MOQ 1 ({base}) — gõ để ghi đè',
+  },
+  'spr.tip_sync_print': {
+    en: 'Sync print design · Pull a saved Design Tools record and apply Print-side fields onto this sub-product',
+    vi: 'Đồng bộ thiết kế in · Lấy bản ghi Design Tools đã lưu và áp các trường phía In vào sub-product này',
+  },
+  'spr.tip_sync_cut': {
+    en: 'Sync cut design · Pull a saved Design Tools record and apply Cut-side fields onto this sub-product',
+    vi: 'Đồng bộ thiết kế cắt · Lấy bản ghi Design Tools đã lưu và áp các trường phía Cắt vào sub-product này',
+  },
+  'spr.tip_offcut_n': { en: 'Offcut=N → 0%', vi: 'Offcut=N → 0%' },
+  'spr.tip_offcut_default': { en: 'Default → 5%', vi: 'Mặc định → 5%' },
+  'spr.tip_area_required': {
+    en: 'AREA % is required to compute RUN ink cost',
+    vi: 'AREA % bắt buộc để tính giá mực RUN',
+  },
+  'spr.tip_auto_uph': {
+    en: 'Auto-synced from Crew × Eff% × Speed — change Crew or Speed to rebalance this manual stage',
+    vi: 'Tự đồng bộ từ Thợ × Eff% × Tốc độ — đổi Thợ hoặc Tốc độ để cân lại công đoạn thủ công này',
+  },
+  'spr.tip_gross_lm': {
+    en: 'Gross material for MOQ (lm) incl. setup + scrap + offcut',
+    vi: 'Vật tư gộp cho MOQ (lm) gồm setup + hao hụt + offcut',
+  },
+  'spr.tip_gross_m2': {
+    en: 'Gross material for MOQ (m²) incl. setup + scrap + offcut',
+    vi: 'Vật tư gộp cho MOQ (m²) gồm setup + hao hụt + offcut',
+  },
+  'spr.tip_layout_count': {
+    en: 'Layout/batch count — required for machine workcenters (see Rate Table Machine USD/H)',
+    vi: 'Số Layout/mẻ — bắt buộc với workcenter máy (xem Machine USD/H ở Bảng Định mức)',
+  },
+  'spr.tip_offcut': {
+    en: 'Offcut % — matches COST V1.0 Sheet 1 formula MOD(Cavities, Width) / Cavities. Type to override.',
+    vi: 'Offcut % — khớp công thức COST V1.0 Sheet 1: MOD(Cavities, Width) / Cavities. Gõ để ghi đè.',
+  },
+  'spr.tip_pitch_default': {
+    en: "Pitch (mm) — defaults to SP Layout's Pitch when blank",
+    vi: 'Pitch (mm) — để trống thì lấy Pitch của SP Layout',
+  },
+  'spr.tip_pitch_inherit': {
+    en: 'Pitch (mm). Empty = inherit from SP Layout. Type to override.',
+    vi: 'Pitch (mm). Để trống = kế thừa từ SP Layout. Gõ để ghi đè.',
+  },
+  'spr.tip_width_default': {
+    en: "Width (mm) — defaults to SP Layout's Web Width TD when blank",
+    vi: 'Khổ (mm) — để trống thì lấy Web Width TD của SP Layout',
+  },
+  'spr.tip_width_inherit': {
+    en: 'Width (mm). Empty = inherit Web Width TD from SP Layout. Type to override.',
+    vi: 'Khổ (mm). Để trống = kế thừa Web Width TD từ SP Layout. Gõ để ghi đè.',
+  },
+  'spr.tip_tool_life': {
+    en: 'Tool life shots — auto-filled from DDL or override',
+    vi: 'Số shot tuổi thọ khuôn — tự điền từ DDL hoặc ghi đè',
+  },
+  'cpx.actions': { en: 'Actions', vi: 'Thao tác' },
+  'cpx.contribution': { en: 'Contribution', vi: 'Đóng góp' },
+  'cpx.deliver_qty': { en: 'Deliver Quantity', vi: 'Số lượng giao' },
+  'cpx.delivery_term': { en: 'Delivery Term', vi: 'Điều kiện giao hàng' },
+  'cpx.description': { en: 'Description', vi: 'Mô tả' },
+  'cpx.field': { en: 'Field', vi: 'Trường' },
+  'cpx.grand_total': { en: 'GRAND TOTAL', vi: 'TỔNG CỘNG' },
+  'cpx.gross_margin': { en: 'Gross Margin', vi: 'Lợi nhuận gộp' },
+  'cpx.main_process': { en: 'Main Process', vi: 'Công đoạn chính' },
+  'cpx.packing': { en: 'Packing', vi: 'Đóng gói' },
+  'cpx.packing_method': { en: 'Packing Method', vi: 'Cách đóng gói' },
+  'cpx.primary': { en: 'Primary', vi: 'Chính' },
+  'cpx.selling_price': { en: 'Selling Price', vi: 'Giá bán' },
+  'cpx.setup_per_moq': { en: 'Setup Data per MOQ', vi: 'Dữ liệu setup theo MOQ' },
+  'cpx.shipping': { en: 'Shipping', vi: 'Vận chuyển' },
+  'cpx.size_mm': { en: 'Size (mm)', vi: 'Kích thước (mm)' },
+  'cpx.total_cost': { en: 'Total Cost', vi: 'Tổng chi phí' },
+  'cpx.unsaved': { en: 'Unsaved', vi: 'Chưa lưu' },
+  'cpx.value_add': { en: 'Value Add', vi: 'Giá trị gia tăng' },
+  'cpx.box_cost': { en: 'Box Cost (USD)', vi: 'Chi phí thùng (USD)' },
+  'cpx.other_cost_shipment': { en: 'Other Cost/shipment', vi: 'Chi phí khác/lô' },
+  'cpx.other_packing_pcs': { en: 'Other Packing/pcs', vi: 'Đóng gói khác/pcs' },
+  'cpx.shipping_cost': { en: 'Shipping Cost (USD total)', vi: 'Chi phí vận chuyển (tổng USD)' },
+  'cpx.roll': { en: 'Roll', vi: 'Cuộn' },
+  'cpx.sheet': { en: 'Sheet', vi: 'Tờ' },
+  'cpx.tray': { en: 'Tray', vi: 'Khay' },
+  'cpx.remove': { en: 'Remove', vi: 'Xoá' },
+  'cpx.remove_tier': { en: 'Remove MOQ tier', vi: 'Xoá bậc MOQ' },
+  'cpx.toggle_detail': { en: 'Toggle detail', vi: 'Ẩn/hiện chi tiết' },
+  'cpx.ph_process': { en: 'Process', vi: 'Công đoạn' },
+  'cpx.usd_rate_tip': {
+    en: 'VND per 1 USD. Bi-directionally syncs Selling/Target USD ↔ VND. Saved per RFQ.',
+    vi: 'Số VND cho 1 USD. Đồng bộ hai chiều Giá bán/Mục tiêu USD ↔ VND. Lưu theo từng RFQ.',
+  },
+  'moqcard.title': { en: 'MOQ & Pricing info', vi: 'Thông tin MOQ & Giá' },
+  'moqcard.usd_rate': { en: 'USD Rate', vi: 'Tỷ giá USD' },
+  'common.new': { en: 'New', vi: 'Tạo mới' },
+  'common.save': { en: 'Save', vi: 'Lưu' },
+  'common.saving': { en: 'Saving…', vi: 'Đang lưu…' },
+  'common.select': { en: '-- Select --', vi: '-- Chọn --' },
+  'common.years': { en: 'years', vi: 'năm' },
+  'sumbar.tier': { en: 'Tier', vi: 'Tier' },
+  'sumbar.end_cu_pn': { en: 'End CU PN', vi: 'End CU PN' },
+  'sumbar.ttl_mat': { en: 'Ttl. Mat', vi: 'Ttl. Mat' },
+  'sumbar.process': { en: 'Process', vi: 'Công đoạn' },
+  'sumbar.pack_ship': { en: 'Pack & Ship', vi: 'Đóng gói' },
+  'sumbar.subtotal': { en: 'Subtotal', vi: 'Tạm tính' },
+  'sumbar.sell_price': { en: 'Sell Price', vi: 'Giá bán' },
+  'sumbar.target': { en: 'Target', vi: 'Mục tiêu' },
+  'sumbar.ttl_mat_tip': {
+    en: 'Total Material = Materials + Inks',
+    vi: 'Tổng vật tư = Vật tư + Mực in',
+  },
+
   'rfqcard.site_locked': {
     en: 'Locked after {status} — revoke to change',
     vi: 'Đã khoá sau khi {status} — thu hồi phê duyệt để sửa',

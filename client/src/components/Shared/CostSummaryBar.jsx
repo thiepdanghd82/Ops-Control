@@ -24,6 +24,7 @@
 import { fmtN, pct, gmClr, fmtInt } from '../../utils/format';
 import { KPI_TOOLTIPS } from '../../utils/kpiDefinitions';
 import { getKpiBuckets } from '../../services/kpiBuckets';
+import { useI18n } from '../../utils/useI18n';
 
 export default function CostSummaryBar({
   result,
@@ -34,6 +35,7 @@ export default function CostSummaryBar({
   sp = 0,
   target = 0,
 }) {
+  const { t } = useI18n();
   const r = result;
   // FIX-47 — TTL.MAT no longer double-counts ink; PROCESS now includes
   // setup mach + setup labor (omitted pre-fix, so SS/Flexo quotes
@@ -44,18 +46,18 @@ export default function CostSummaryBar({
       <table className="sc-sumbar-table">
         <thead>
           <tr>
-            <th className="sc-sumbar-th">Tier</th>
-            <th className="sc-sumbar-th-cupn">End CU PN</th>
+            <th className="sc-sumbar-th">{t('sumbar.tier')}</th>
+            <th className="sc-sumbar-th-cupn">{t('sumbar.end_cu_pn')}</th>
             <th className="sc-sumbar-th">MOQ</th>
             <th className="sc-sumbar-th">EAU</th>
-            <th className="sc-sumbar-th sc-sumbar-th-mat" title="Total Material = Materials + Inks">
-              Ttl. Mat
+            <th className="sc-sumbar-th sc-sumbar-th-mat" title={t('sumbar.ttl_mat_tip')}>
+              {t('sumbar.ttl_mat')}
             </th>
-            <th className="sc-sumbar-th sc-sumbar-th-proc">Process</th>
-            <th className="sc-sumbar-th sc-sumbar-th-pack">Pack &amp; Ship</th>
-            <th className="sc-sumbar-th sc-sumbar-th-sub">Subtotal</th>
-            <th className="sc-sumbar-th sc-sumbar-th-sell">Sell Price</th>
-            <th className="sc-sumbar-th">Target</th>
+            <th className="sc-sumbar-th sc-sumbar-th-proc">{t('sumbar.process')}</th>
+            <th className="sc-sumbar-th sc-sumbar-th-pack">{t('sumbar.pack_ship')}</th>
+            <th className="sc-sumbar-th sc-sumbar-th-sub">{t('sumbar.subtotal')}</th>
+            <th className="sc-sumbar-th sc-sumbar-th-sell">{t('sumbar.sell_price')}</th>
+            <th className="sc-sumbar-th">{t('sumbar.target')}</th>
             <th className="sc-sumbar-th sc-sumbar-th-va" title={KPI_TOOLTIPS.va}>
               VA %
             </th>

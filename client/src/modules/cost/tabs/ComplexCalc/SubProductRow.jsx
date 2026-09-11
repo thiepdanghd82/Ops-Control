@@ -520,7 +520,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                 type="button"
                 className="cl-design-sync-btn cl-design-sync-btn--header"
                 onClick={() => setDesignSyncSide('print')}
-                title="Đồng bộ thiết kế in · Pull a saved Design Tools record and apply Print-side fields onto this sub-product"
+                title={t('spr.tip_sync_print')}
               >
                 🔍 Print Design sync
               </button>
@@ -528,7 +528,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                 type="button"
                 className="cl-design-sync-btn cl-design-sync-btn--header"
                 onClick={() => setDesignSyncSide('cut')}
-                title="Đồng bộ thiết kế cắt · Pull a saved Design Tools record and apply Cut-side fields onto this sub-product"
+                title={t('spr.tip_sync_cut')}
               >
                 🔍 Cut Design sync
               </button>
@@ -589,7 +589,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                 />
                 <div className="sc-grid4" style={{ marginTop: 8 }}>
                   <div className="sc-field">
-                    <label>Ship Qty</label>
+                    <label>{t('spr.ship_qty')}</label>
                     <DecimalInput
                       value={sp.ship_qty}
                       onChange={(v) => setF('ship_qty', v)}
@@ -648,7 +648,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
             parent-level customer fields filled in. */}
         <div className="cl-upload-grid">
           <FileUploadZone
-            label="Design Layout Drawing"
+            label={t('spr.lbl_design_drawing')}
             multiple
             files={sp.layout_files || []}
             activeIndex={sp.layout_active || 0}
@@ -660,7 +660,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
             onActiveChange={(idx) => setDraw('layout', undefined, idx)}
           />
           <FileUploadZone
-            label="Customer Drawing"
+            label={t('spr.lbl_customer_drawing')}
             multiple
             files={sp.customer_drw_files || []}
             activeIndex={sp.customer_drw_active || 0}
@@ -724,27 +724,24 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
               <table className="cc-det-tbl">
                 <thead>
                   <tr>
-                    <th style={{ width: 120 }}>Row</th>
+                    <th style={{ width: 120 }}>{t('spr.row')}</th>
                     <th style={{ width: 80 }}>IFS Code</th>
                     <th style={{ width: 100 }}>DRW materials</th>
-                    <th style={{ width: 120 }}>Quote materials</th>
-                    <th style={{ width: 50 }}>Usage</th>
+                    <th style={{ width: 120 }}>{t('spr.quote_materials')}</th>
+                    <th style={{ width: 50 }}>{t('spr.usage')}</th>
                     <th style={{ width: 55 }}>Setup LM</th>
-                    <th style={{ width: 60 }} title="Override pitch from layout">
+                    <th style={{ width: 60 }} title={t('spr.tip_override_pitch')}>
                       Pitch
                     </th>
-                    <th style={{ width: 50 }}>Width</th>
+                    <th style={{ width: 50 }}>{t('spr.width')}</th>
                     <th style={{ width: 45 }}>Cav</th>
                     <th style={{ width: 50 }}>Offcut</th>
-                    <th
-                      style={{ width: 55 }}
-                      title="Offcut % — matches COST V1.0 Sheet 1 formula MOD(Cavities, Width) / Cavities. Type to override."
-                    >
+                    <th style={{ width: 55 }} title={t('spr.tip_offcut')}>
                       Offcut %
                     </th>
                     <th style={{ width: 45 }}>Slit</th>
-                    <th style={{ width: 60 }}>Ref Price</th>
-                    <th style={{ width: 60 }}>Mat Price</th>
+                    <th style={{ width: 60 }}>{t('spr.ref_price')}</th>
+                    <th style={{ width: 60 }}>{t('spr.mat_price')}</th>
                     <th className="sc-col-derived" style={{ width: 60 }}>
                       QPA (m²)
                     </th>
@@ -754,14 +751,14 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                     <th
                       className="sc-col-derived"
                       style={{ width: 70 }}
-                      title="Gross material for MOQ (m²) incl. setup + scrap + offcut"
+                      title={t('spr.tip_gross_m2')}
                     >
                       Mats./MOQ (m²)
                     </th>
                     <th
                       className="sc-col-derived"
                       style={{ width: 70 }}
-                      title="Gross material for MOQ (lm) incl. setup + scrap + offcut"
+                      title={t('spr.tip_gross_lm')}
                     >
                       Mats./MOQ (lm)
                     </th>
@@ -886,10 +883,13 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                               onChange={(v) => setSpSetupLmActive(mi, v)}
                               title={
                                 isSpSetupLmOverride(mi)
-                                  ? `MOQ ${activeMoqIdxCpx + 1} override (base = ${m.setup_lm ?? 0})`
+                                  ? t('spr.tip_moq_ovr', {
+                                      n: activeMoqIdxCpx + 1,
+                                      base: m.setup_lm ?? 0,
+                                    })
                                   : activeMoqIdxCpx === 0
-                                    ? 'Base value (MOQ 1)'
-                                    : `Inherits MOQ 1 base (${m.setup_lm ?? 0}) — type to override`
+                                    ? t('spr.tip_moq_base')
+                                    : t('spr.tip_moq_inherit', { base: m.setup_lm ?? 0 })
                               }
                               className={`cc-det-inp cc-det-num ${isSpSetupLmOverride(mi) ? 'sc-smt-inp-ovr' : ''}`}
                             />
@@ -927,9 +927,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                                   : { color: 'var(--color-brand-navy)' }
                               }
                               title={
-                                m.pitch_ovr > 0
-                                  ? 'Override — clear to revert to layout pitch'
-                                  : 'Auto-synced from Layout'
+                                m.pitch_ovr > 0 ? t('spr.tip_ovr_pitch') : t('spr.tip_auto_layout')
                               }
                             />
                           </td>
@@ -946,9 +944,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                                   : { color: 'var(--color-brand-navy)' }
                               }
                               title={
-                                m.width > 0
-                                  ? 'Override — clear to revert to layout Web Width TD'
-                                  : 'Auto-synced from Layout Web Width TD'
+                                m.width > 0 ? t('spr.tip_ovr_webwidth') : t('spr.tip_auto_webwidth')
                               }
                             />
                           </td>
@@ -964,11 +960,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                                   ? { color: 'var(--color-violet-500)', fontWeight: 700 }
                                   : { color: 'var(--color-brand-navy)' }
                               }
-                              title={
-                                m.cavities > 0
-                                  ? 'Override — clear to revert to Layout/Sheet'
-                                  : 'Auto-synced from Layout/Sheet'
-                              }
+                              title={m.cavities > 0 ? t('spr.tip_ovr_cav') : t('spr.tip_auto_cav')}
                             />
                           </td>
                           <td>
@@ -1022,8 +1014,8 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                                     }
                                     title={
                                       overridden
-                                        ? 'Override — clear to revert to auto'
-                                        : 'Auto = MOD(Cavities, Width) / Cavities'
+                                        ? t('spr.tip_ovr_auto')
+                                        : t('spr.tip_auto_offcut_formula')
                                     }
                                   />
                                 ) : (
@@ -1033,7 +1025,11 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                                     readOnly
                                     className="cc-det-inp cc-det-num"
                                     style={{ color: 'var(--color-brand-navy)' }}
-                                    title={yn === 'N' ? 'Offcut=N → 0%' : 'Default → 5%'}
+                                    title={
+                                      yn === 'N'
+                                        ? t('spr.tip_offcut_n')
+                                        : t('spr.tip_offcut_default')
+                                    }
                                   />
                                 )}
                               </td>
@@ -1071,10 +1067,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                           </td>
                           <td className="sc-td-derived">{fmtN(r?.qpa_m2)}</td>
                           <td className="sc-td-derived">{fmtN(r?.qpa_lm)}</td>
-                          <td
-                            className="sc-td-derived sc-mats-moq"
-                            title="Gross material for MOQ (m\u00b2) incl. setup + scrap + offcut"
-                          >
+                          <td className="sc-td-derived sc-mats-moq" title={t('spr.tip_gross_m2')}>
                             {r && r.mats_moq_m2
                               ? r.mats_moq_m2.toLocaleString('en-US', {
                                   minimumFractionDigits: 2,
@@ -1082,10 +1075,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                                 })
                               : '\u2014'}
                           </td>
-                          <td
-                            className="sc-td-derived sc-mats-moq"
-                            title="Gross material for MOQ (lm) incl. setup + scrap + offcut"
-                          >
+                          <td className="sc-td-derived sc-mats-moq" title={t('spr.tip_gross_lm')}>
                             {r && r.mats_moq_lm
                               ? r.mats_moq_lm.toLocaleString('en-US', {
                                   minimumFractionDigits: 1,
@@ -1103,7 +1093,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                             <button
                               className="sc-btn-del-circle sc-btn-del-sm"
                               onClick={() => removeMat(mi)}
-                              title="Remove"
+                              title={t('spr.tip_remove')}
                             >
                               &times;
                             </button>
@@ -1153,39 +1143,33 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
             <table className="cc-det-tbl">
               <thead>
                 <tr>
-                  <th style={{ width: 55 }}>Label</th>
-                  <th style={{ width: 70 }}>Color</th>
-                  <th style={{ width: 80 }}>Print Type</th>
+                  <th style={{ width: 55 }}>{t('spr.label')}</th>
+                  <th style={{ width: 70 }}>{t('spr.color')}</th>
+                  <th style={{ width: 80 }}>{t('spr.print_type')}</th>
                   <th style={{ width: 70 }}>Mesh</th>
-                  <th
-                    style={{ width: 55 }}
-                    title="Pitch (mm) — defaults to SP Layout's Pitch when blank"
-                  >
+                  <th style={{ width: 55 }} title={t('spr.tip_pitch_default')}>
                     Pitch mm
                   </th>
-                  <th
-                    style={{ width: 70 }}
-                    title="Width (mm) — defaults to SP Layout's Web Width TD when blank"
-                  >
+                  <th style={{ width: 70 }} title={t('spr.tip_width_default')}>
                     Width
                   </th>
                   <th style={{ width: 55 }}>Setup kg</th>
                   <th style={{ width: 50 }}>Area%</th>
-                  <th style={{ width: 55 }} title="Coverage override — disabled for Indigo">
+                  <th style={{ width: 55 }} title={t('spr.tip_coverage_disabled')}>
                     Cov Ovr
                   </th>
-                  <th style={{ width: 50 }} title="Enabled for Indigo only">
+                  <th style={{ width: 50 }} title={t('spr.tip_indigo_only')}>
                     Clicks
                   </th>
                   <th
                     className="sc-col-derived"
                     style={{ width: 50 }}
-                    title="Scrap factor from processes"
+                    title={t('spr.tip_scrap_factor')}
                   >
                     Scrap%
                   </th>
-                  <th style={{ width: 60 }}>Ref Price</th>
-                  <th style={{ width: 60 }}>Ink Price</th>
+                  <th style={{ width: 60 }}>{t('spr.ref_price')}</th>
+                  <th style={{ width: 60 }}>{t('spr.ink_price')}</th>
                   <th className="sc-col-result" style={{ width: 60 }}>
                     Setup
                   </th>
@@ -1212,7 +1196,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                           value={ik.color || ''}
                           onChange={(e) => setInk(ii, 'color', e.target.value)}
                           className="cc-det-inp"
-                          placeholder="Color name"
+                          placeholder={t('spr.ph_color_name')}
                         />
                       </td>
                       <td>
@@ -1248,7 +1232,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                           value={ik.pitch_mm}
                           onChange={(v) => setInk(ii, 'pitch_mm', v)}
                           placeholder={pitch > 0 ? String(Math.round(pitch * 100) / 100) : '—'}
-                          title="Pitch (mm). Empty = inherit from SP Layout. Type to override."
+                          title={t('spr.tip_pitch_inherit')}
                           className="cc-det-inp cc-det-num"
                           style={
                             ik.pitch_mm > 0 ? { color: '#7c3aed', fontWeight: 700 } : undefined
@@ -1262,7 +1246,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                           placeholder={
                             Number(sp.web_width_td) > 0 ? String(Number(sp.web_width_td)) : '—'
                           }
-                          title="Width (mm). Empty = inherit Web Width TD from SP Layout. Type to override."
+                          title={t('spr.tip_width_inherit')}
                           className="cc-det-inp cc-det-num"
                           style={ik.width > 0 ? { color: '#7c3aed', fontWeight: 700 } : undefined}
                         />
@@ -1286,7 +1270,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                               value={ik.area_pct != null ? Math.round(ik.area_pct * 100) : ''}
                               onChange={(e) => setInk(ii, 'area_pct', numF(e.target.value) / 100)}
                               className={`cc-det-inp cc-det-num ${needsArea ? 'sc-input-warn' : ''}`}
-                              title={needsArea ? 'AREA % bắt buộc để tính giá mực RUN' : undefined}
+                              title={needsArea ? t('spr.tip_area_required') : undefined}
                             />
                           );
                         })()}
@@ -1323,8 +1307,8 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                                   type="button"
                                   className="sc-cov-reset"
                                   onClick={() => setInk(ii, 'coverage_override', null)}
-                                  title="Reset to default coverage"
-                                  aria-label="Reset to default coverage"
+                                  title={t('spr.tip_reset_coverage')}
+                                  aria-label={t('spr.tip_reset_coverage')}
                                 >
                                   ↻
                                 </button>
@@ -1341,11 +1325,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                           }
                           className="cc-det-sel"
                           disabled={!isIndigo}
-                          title={
-                            isIndigo
-                              ? 'Pick the click count — charges come from Click Charges table'
-                              : 'Indigo only'
-                          }
+                          title={isIndigo ? t('spr.tip_clicks') : t('spr.tip_clicks_indigo_only')}
                         >
                           <option value="">—</option>
                           {clickOpts.map((k) => (
@@ -1382,7 +1362,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                         <button
                           className="sc-btn-del-circle sc-btn-del-sm"
                           onClick={() => removeInk(ii)}
-                          title="Remove"
+                          title={t('spr.tip_remove')}
                         >
                           &times;
                         </button>
@@ -1433,13 +1413,13 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
               <thead>
                 <tr>
                   <th style={{ width: 60 }}>#</th>
-                  <th style={{ width: 95 }}>Type</th>
+                  <th style={{ width: 95 }}>{t('spr.type')}</th>
                   <th style={{ width: 100 }}>Workcenter</th>
-                  <th style={{ width: 40 }} title="Repeat">
+                  <th style={{ width: 40 }} title={t('spr.tip_repeat')}>
                     Rpt
                   </th>
-                  <th style={{ width: 60 }}>Crew</th>
-                  <th style={{ width: 55 }}>Speed</th>
+                  <th style={{ width: 60 }}>{t('spr.crew')}</th>
+                  <th style={{ width: 55 }}>{t('spr.speed')}</th>
                   <th className="sc-col-derived" style={{ width: 65 }}>
                     UOM
                   </th>
@@ -1448,37 +1428,50 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                   <th className="sc-col-derived" style={{ width: 60 }}>
                     MC UPH
                   </th>
-                  <th style={{ width: 60 }} title="Manual UPH">
+                  <th style={{ width: 60 }} title={t('spr.tip_manual_uph')}>
                     Man UPH
                   </th>
                   <th style={{ width: 55 }}>Setup H</th>
                   <th style={{ width: 50 }}>Scrap%</th>
-                  <th style={{ width: 65 }}>Tool Cost</th>
+                  <th style={{ width: 65 }}>{t('spr.tool_cost')}</th>
                   <th style={{ width: 85 }}>Tool Type</th>
                   <th style={{ width: 80 }}>Tool Life</th>
-                  <th
-                    style={{ width: 80 }}
-                    title="Override EAU (total qty). Empty = annual × lifetime"
-                  >
+                  <th style={{ width: 80 }} title={t('spr.tip_override_eau')}>
                     EAU Ovr
                   </th>
                   <th
                     className="sc-col-derived"
                     style={{ width: 60 }}
-                    title="Production time (hours)"
+                    title={t('spr.tip_prod_time')}
                   >
                     Prod Time
                   </th>
-                  <th className="sc-col-result" style={{ width: 65 }} title="Setup machine">
+                  <th
+                    className="sc-col-result"
+                    style={{ width: 65 }}
+                    title={t('spr.tip_setup_machine')}
+                  >
                     S.Mach
                   </th>
-                  <th className="sc-col-result" style={{ width: 65 }} title="Setup labor">
+                  <th
+                    className="sc-col-result"
+                    style={{ width: 65 }}
+                    title={t('spr.tip_setup_labor')}
+                  >
                     S.Labor
                   </th>
-                  <th className="sc-col-result" style={{ width: 65 }} title="Run machine">
+                  <th
+                    className="sc-col-result"
+                    style={{ width: 65 }}
+                    title={t('spr.tip_run_machine')}
+                  >
                     R.Mach
                   </th>
-                  <th className="sc-col-result" style={{ width: 65 }} title="Run labor">
+                  <th
+                    className="sc-col-result"
+                    style={{ width: 65 }}
+                    title={t('spr.tip_run_labor')}
+                  >
                     R.Labor
                   </th>
                   <th className="sc-col-result" style={{ width: 65 }}>
@@ -1573,8 +1566,8 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                             className={`cc-det-inp cc-det-num ${crewSt.isOverride ? 'sc-pack-tier-ovr' : ''}`}
                             title={
                               crewSt.isOverride
-                                ? `Override \u2014 rate crew = ${crewSt.base}. Drives labor + manual throughput.`
-                                : 'Crew size \u2014 drives labor + manual MAN UPH'
+                                ? t('spr.tip_crew_ovr', { base: crewSt.base })
+                                : t('spr.tip_crew_base')
                             }
                           />
                           {crewSt.isOverride && (
@@ -1607,7 +1600,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                           onChange={(e) => setProc(pi, 'layout', numF(e.target.value))}
                           placeholder="—"
                           className="cc-det-inp cc-det-num"
-                          title="Layout/batch count — required for machine workcenters (see Rate Table Machine USD/H)"
+                          title={t('spr.tip_layout_count')}
                         />
                       </td>
                       <td>
@@ -1623,10 +1616,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                       <td className="sc-td-derived">{r?.uph ? Math.round(r.uph) : '\u2014'}</td>
                       <td>
                         {manualDerived ? (
-                          <span
-                            className="sc-cell-auto-uph"
-                            title="Auto-synced from Crew \u00d7 Eff% \u00d7 Speed \u2014 change Crew or Speed to rebalance this manual stage"
-                          >
+                          <span className="sc-cell-auto-uph" title={t('spr.tip_auto_uph')}>
                             {Math.round(r.manualUph).toLocaleString()}
                           </span>
                         ) : (
@@ -1644,10 +1634,13 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                           onChange={(v) => setSpSetupHActive(pi, v)}
                           title={
                             isSpSetupHOverride(pi)
-                              ? `MOQ ${activeMoqIdxCpx + 1} override (base = ${p.setup_h ?? 0})`
+                              ? t('spr.tip_moq_ovr', {
+                                  n: activeMoqIdxCpx + 1,
+                                  base: p.setup_h ?? 0,
+                                })
                               : activeMoqIdxCpx === 0
-                                ? 'Base value (MOQ 1)'
-                                : `Inherits MOQ 1 base (${p.setup_h ?? 0}) — type to override`
+                                ? t('spr.tip_moq_base')
+                                : t('spr.tip_moq_inherit', { base: p.setup_h ?? 0 })
                           }
                           className={`cc-det-inp cc-det-num ${isSpSetupHOverride(pi) ? 'sc-smt-inp-ovr' : ''}`}
                         />
@@ -1706,7 +1699,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                               ? { color: 'var(--color-violet-500)', fontWeight: 700 }
                               : {}
                           }
-                          title="Tool life shots — auto-filled from DDL or override"
+                          title={t('spr.tip_tool_life')}
                         />
                       </td>
                       <td>
@@ -1729,7 +1722,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                         <button
                           className="sc-btn-del-circle sc-btn-del-sm"
                           onClick={() => removeProc(pi)}
-                          title="Remove"
+                          title={t('spr.tip_remove')}
                         >
                           &times;
                         </button>
