@@ -340,3 +340,89 @@ describe('machine binding — a session may only speak for its own machine', () 
     assert.equal(r.status, 403);
   });
 });
+
+/**
+ * DELETE /:installation_id — remove a machine from the fleet table.
+ *
+ * Added 2026-09-11. The table only ever grew: a decommissioned or re-imaged
+ * machine stayed forever, and the screenshot that prompted this carried a
+ * nameless trial row last seen three months earlier. Every dead row dilutes
+ * the one question the table exists to answer.
+ *
+ * sys-only, unlike /heartbeat: this is administration of OTHER machines, which
+ * is the same boundary /upload already sits behind. requireOwnMachine would be
+ * exactly wrong here — you are never deleting your own row.
+ */
+describe('B2 forget machine (sys-only)', () => {
+  test('non-sys → 403, machine survives', async () => {
+    const app = buildApp();
+    await req(app, 'POST', '/api/license/fleet/heartbeat', {
+      role: 'user',
+      install: ID,
+      body: { installation_id: ID, hostname: 'keep-me' },
+    });
+    const r = await req(app, 'DELETE', `/api/license/fleet/${ID}`, { role: 'admin' });
+    assert.equal(r.status, 403);
+
+    const list = await req(app, 'GET', '/api/license/fleet', { role: 'sys' });
+    assert.equal(list.body.fleet.length, 1, 'a refused delete must not remove anything');
+  });
+
+  test('sys removes it, and it is audited', async () => {
+    const app = buildApp();
+    await req(app, 'POST', '/api/license/fleet/heartbeat', {
+      role: 'user',
+      install: ID,
+      body: { installation_id: ID, hostname: 'retired' },
+    });
+    const r = await req(app, 'DELETE', `/api/license/fleet/${ID}`, { role: 'sys' });
+    assert.equal(r.status, 200);
+    assert.equal(r.body.removed, true);
+    assert.equal(r.body.had_pending, false);
+
+    const list = await req(app, 'GET', '/api/license/fleet', { role: 'sys' });
+    assert.equal(list.body.fleet.length, 0);
+    assert.ok(auditRows.find((a) => a.event === 'LICENSE_FLEET_FORGET'));
+  });
+
+  test('a queued licence goes with it, and the response says so', async () => {
+    const app = buildApp();
+    await req(app, 'POST', '/api/license/fleet/heartbeat', {
+      role: 'user',
+      install: ID,
+      body: { installation_id: ID, hostname: 'retired' },
+    });
+    await req(app, 'POST', '/api/license/fleet/upload', {
+      role: 'sys',
+      body: { license: signLicense(), installation_id: ID },
+    });
+
+    const r = await req(app, 'DELETE', `/api/license/fleet/${ID}`, { role: 'sys' });
+    assert.equal(r.body.had_pending, true, 'the operator has to be told a signed licence was lost');
+
+    const audit = auditRows.find((a) => a.event === 'LICENSE_FLEET_FORGET');
+    assert.match(audit.detail, /had_pending/, 'the audit row must record it too');
+  });
+
+  test('a malformed id → 400, not a silent no-op', async () => {
+    const r = await req(buildApp(), 'DELETE', '/api/license/fleet/not-a-real-id', { role: 'sys' });
+    assert.equal(r.status, 400);
+  });
+
+  test('deleting an unknown machine → removed:false, and no audit row', async () => {
+    const app = buildApp();
+    const r = await req(app, 'DELETE', `/api/license/fleet/${ID2}`, { role: 'sys' });
+    assert.equal(r.status, 200);
+    assert.equal(r.body.removed, false);
+    assert.equal(
+      auditRows.find((a) => a.event === 'LICENSE_FLEET_FORGET'),
+      undefined,
+      'nothing happened, so nothing to record'
+    );
+  });
+
+  test('unauth → 401', async () => {
+    const r = await req(buildApp(), 'DELETE', `/api/license/fleet/${ID}`, {});
+    assert.equal(r.status, 401);
+  });
+});

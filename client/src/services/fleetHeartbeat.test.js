@@ -14,6 +14,7 @@ import {
   buildExportRequest,
   exportRequestFilename,
   formatLastSeen,
+  createHeartbeatLoop,
 } from './licenseFleetView.js';
 
 const ID = 'a1b2c3d4e5f60718' + '0'.repeat(48);
@@ -146,5 +147,109 @@ describe('formatLastSeen', () => {
     for (const bad of [undefined, null, '', 'not-a-date', 42, {}]) {
       assert.equal(formatLastSeen(bad), '—', `input ${JSON.stringify(bad)}`);
     }
+  });
+});
+
+/**
+ * createHeartbeatLoop — the fleet's "Last seen" was really "last logged in".
+ *
+ * The heartbeat fired once, from App.jsx's login-transition effect. A machine
+ * left running for a week never refreshed, so the column an operator reads to
+ * judge "is this machine alive" answered a different question. The same one
+ * shot also gated licence delivery: a licence queued on Monday waited for the
+ * operator's next login, which the UI described only as "heartbeat kế tiếp".
+ *
+ * The loop lives here rather than in fleetHeartbeat.js for the reason stated
+ * at the top of that file: it imports ./api, which only Vite can resolve, so
+ * node:test cannot load it. Timers and the sender are injected, so these
+ * assertions neither sleep nor depend on fake-timer support.
+ */
+describe('createHeartbeatLoop', () => {
+  function harness(sendImpl) {
+    const calls = [];
+    let scheduled = null;
+    let cancelled = null;
+    const stop = createHeartbeatLoop({
+      intervalMs: 1000,
+      send: async (...a) => {
+        calls.push(a);
+        return sendImpl ? sendImpl(calls.length) : { ok: true };
+      },
+      schedule: (fn) => {
+        scheduled = fn;
+        return 'timer-1';
+      },
+      cancel: (id) => {
+        cancelled = id;
+      },
+    });
+    return { calls, stop, tick: () => scheduled && scheduled(), cancelled: () => cancelled };
+  }
+
+  test('sends once immediately — the operator should not wait an interval', () => {
+    const h = harness();
+    assert.equal(h.calls.length, 1);
+  });
+
+  test('each scheduled tick sends again', () => {
+    const h = harness();
+    h.tick();
+    h.tick();
+    assert.equal(h.calls.length, 3);
+  });
+
+  test('stop() cancels the timer and silences later ticks', () => {
+    const h = harness();
+    h.stop();
+    assert.equal(h.cancelled(), 'timer-1');
+    h.tick();
+    assert.equal(h.calls.length, 1, 'a tick that races the stop must not send');
+  });
+
+  test('onApplied fires only when a licence was actually applied', async () => {
+    const applied = [];
+    const stop = createHeartbeatLoop({
+      intervalMs: 1000,
+      send: async () => ({ ok: true, applied: true, needsRestart: true }),
+      schedule: () => 'T',
+      cancel: () => {},
+      onApplied: () => applied.push(1),
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    stop();
+    assert.equal(applied.length, 1);
+  });
+
+  test('a heartbeat that applied nothing does not prompt', async () => {
+    const applied = [];
+    const stop = createHeartbeatLoop({
+      intervalMs: 1000,
+      send: async () => ({ ok: true, applied: false }),
+      schedule: () => 'T',
+      cancel: () => {},
+      onApplied: () => applied.push(1),
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    stop();
+    assert.equal(applied.length, 0);
+  });
+
+  test('a rejecting send never escapes — login must not break on a fleet error', async () => {
+    // The route can legitimately 403 (a web session, or a stale session opened
+    // before machine binding). That must stay invisible to the user.
+    const stop = createHeartbeatLoop({
+      intervalMs: 1000,
+      send: async () => {
+        throw new Error('403 Forbidden');
+      },
+      schedule: () => 'T',
+      cancel: () => {},
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    stop();
+    assert.ok(true, 'no unhandled rejection');
   });
 });

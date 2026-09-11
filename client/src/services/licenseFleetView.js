@@ -127,3 +127,68 @@ export function formatLastSeen(iso, opts = {}) {
     ...(opts.timeZone ? { timeZone: opts.timeZone } : {}),
   }).format(d);
 }
+
+/** Default gap between heartbeats once a session is up. */
+export const HEARTBEAT_INTERVAL_MS = 15 * 60 * 1000;
+
+/**
+ * Run a heartbeat on a timer for as long as a session lasts.
+ *
+ * Before this the heartbeat fired once, from App.jsx's login-transition
+ * effect, so "Last seen" in the fleet table really meant "last logged in" — a
+ * machine left running for a week never refreshed. The same one shot also
+ * gated licence delivery: a licence queued on Monday waited for the operator's
+ * next login, which the UI described only as "heartbeat kế tiếp".
+ *
+ * `send` is required rather than defaulted: this module must stay importable
+ * by node:test, and the real sender lives in fleetHeartbeat.js, which imports
+ * ./api. fleetHeartbeat.js supplies it — see startFleetHeartbeat there.
+ *
+ * Errors are swallowed on purpose. A 403 is legitimate here (a web session, or
+ * one opened before machine binding landed), and a fleet problem must never
+ * surface to someone who was only trying to log in.
+ *
+ * @param {object} o
+ * @param {() => Promise<{applied?:boolean, needsRestart?:boolean}>} o.send
+ * @param {number} [o.intervalMs]
+ * @param {(fn:Function, ms:number) => any} [o.schedule]
+ * @param {(id:any) => void} [o.cancel]
+ * @param {() => void} [o.onApplied] - called when a licence was actually applied
+ * @returns {() => void} stop
+ */
+export function createHeartbeatLoop({
+  send,
+  intervalMs = HEARTBEAT_INTERVAL_MS,
+  schedule = setInterval,
+  cancel = clearInterval,
+  onApplied,
+} = {}) {
+  let stopped = false;
+  const tick = () => {
+    if (stopped) return;
+    // send() is called synchronously, not deferred through a microtask: the
+    // first heartbeat should be in flight the moment the session opens, not
+    // one turn of the event loop later. The try/catch covers a sender that
+    // throws before returning its promise; .catch covers a rejection.
+    let p;
+    try {
+      p = send();
+    } catch {
+      return;
+    }
+    Promise.resolve(p)
+      .then((r) => {
+        if (stopped) return;
+        if (r?.applied && r?.needsRestart && typeof onApplied === 'function') onApplied();
+      })
+      .catch(() => {
+        /* never surfaced — see above */
+      });
+  };
+  tick();
+  const id = schedule(tick, intervalMs);
+  return () => {
+    stopped = true;
+    cancel(id);
+  };
+}

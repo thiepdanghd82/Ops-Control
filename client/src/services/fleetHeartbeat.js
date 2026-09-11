@@ -12,11 +12,11 @@
  * On a web client (no `window.ops`) every entry point here is a safe no-op.
  */
 import { licenseFleetApi } from './api';
-import { buildHeartbeatPayload } from './licenseFleetView';
+import { buildHeartbeatPayload, createHeartbeatLoop } from './licenseFleetView';
 
 // Re-export the pure helpers (defined in licenseFleetView.js so node:test can
 // import them without resolving the Vite-only api.js module).
-export { deriveStatus, buildHeartbeatPayload } from './licenseFleetView';
+export { deriveStatus, buildHeartbeatPayload, HEARTBEAT_INTERVAL_MS } from './licenseFleetView';
 
 /**
  * Send one heartbeat. Desktop-only; no-op on web. If the server delivers a
@@ -61,4 +61,19 @@ export async function sendFleetHeartbeat() {
     }
   }
   return { ok: true, applied: false };
+}
+
+/**
+ * Keep sending while the session lasts. Returns a stop function for the
+ * caller's effect cleanup.
+ *
+ * The loop itself is createHeartbeatLoop() in licenseFleetView.js — it lives
+ * there so node:test can exercise it, since this module imports ./api and only
+ * Vite resolves that. Here we only bind the real sender to it.
+ *
+ * @param {{intervalMs?:number, onApplied?:() => void}} [opts]
+ * @returns {() => void} stop
+ */
+export function startFleetHeartbeat(opts = {}) {
+  return createHeartbeatLoop({ send: sendFleetHeartbeat, ...opts });
 }

@@ -265,6 +265,8 @@ export const licenseFleetApi = {
   // sys-only: upload an offline-signed license; server verifies before queuing.
   upload: (license, installation_id) =>
     api.post('/license/fleet/upload', { license, installation_id }),
+  // sys-only: forget a machine + any licence still queued for it.
+  forget: (installation_id) => api.delete(`/license/fleet/${encodeURIComponent(installation_id)}`),
   // client confirms it applied the delivered license.
   confirmDistributed: (installation_id) =>
     api.post('/license/fleet/distributed', { installation_id }),

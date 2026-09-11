@@ -93,7 +93,15 @@ export function listFleet(dataDir, nowMs) {
   return Object.values(hb)
     .map((m) => {
       const expMs = m.status?.expires_at ? new Date(m.status.expires_at).getTime() : null;
-      const days_left = Number.isFinite(expMs) ? Math.floor((expMs - now) / 86400000) : null;
+      // Round TOWARDS zero, not down. floor() is the cautious direction only
+      // while a licence is still valid ("270d" = at least 270 whole days);
+      // on an expired one it inflates the elapsed time, which is how a trial
+      // that lapsed 85.2 days ago displayed as "expired 86d ago".
+      const rawDays = Number.isFinite(expMs) ? (expMs - now) / 86400000 : null;
+      // Math.trunc(-0.4) is -0, which is not === 0 and would leak a negative
+      // zero into the API response. Normalise it.
+      const truncated = rawDays === null ? null : Math.trunc(rawDays);
+      const days_left = truncated === 0 ? 0 : truncated;
       return { ...m, days_left, pending_license: !!pending[m.installation_id] };
     })
     .sort((a, b) => (String(a.last_seen) < String(b.last_seen) ? 1 : -1));
@@ -112,6 +120,37 @@ export function queuePendingLicense(dataDir, license, nowIso) {
   all[id] = { license, queued_at: nowIso || new Date().toISOString() };
   writeJson(dataDir, p, all);
   return all[id];
+}
+
+/**
+ * Drop a machine from the fleet table, together with any licence still queued
+ * for it. Returns `had_pending` so the caller can WARN before doing it —
+ * silently discarding an offline-signed licence would be worse than refusing.
+ *
+ * The distribution log is deliberately untouched: it records what was actually
+ * delivered, and forgetting a machine must not erase that history.
+ */
+export function forgetMachine(dataDir, installation_id) {
+  const id = String(installation_id || '');
+  if (!HEX64.test(id)) throw new Error('bad-installation-id');
+
+  const hp = hbPath(dataDir);
+  const hb = readJson(hp, {});
+  const removed = Object.prototype.hasOwnProperty.call(hb, id);
+  if (removed) {
+    delete hb[id];
+    writeJson(dataDir, hp, hb);
+  }
+
+  const pp = pendingPath(dataDir);
+  const pending = readJson(pp, {});
+  const had_pending = Object.prototype.hasOwnProperty.call(pending, id);
+  if (had_pending) {
+    delete pending[id];
+    writeJson(dataDir, pp, pending);
+  }
+
+  return { removed, had_pending };
 }
 
 /** Return the pending signed license for a machine, or null. */
