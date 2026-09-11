@@ -814,6 +814,24 @@ export function getSessionUser(token) {
   return findUserById(s.user_id);
 }
 
+/**
+ * The machine a session was opened from, as reported at login and stored on
+ * the session record above. Returns null for an unknown/expired token, and
+ * for the 'unknown' / 'web' placeholders — callers that need a real machine
+ * identity (the License Manager fleet routes) must fail closed on those.
+ *
+ * Added 2026-09-11: the fleet routes took installation_id from the request
+ * body, so any authenticated user could act as any machine whose id they knew.
+ */
+export function getSessionInstallationId(token) {
+  if (!token) return null;
+  const s = _sessions.get(token);
+  if (!s) return null;
+  if (Date.now() / 1000 > s.expires_at) return null;
+  const id = String(s.installation_id || '');
+  return /^[0-9a-f]{64}$/i.test(id) ? id.toLowerCase() : null;
+}
+
 export function getPreauthSession(token) {
   if (!token) return [null, null];
   const s = _sessions.get(token);

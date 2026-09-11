@@ -45,6 +45,19 @@ const opsAPI = {
     rerunFirstRun: () => invoke('ops:rerun-first-run'),
   },
 
+  // ─── License (v1.6 — fleet heartbeat + offline-signed distribution) ──
+  // status/fingerprint read the local license; applyFromFleet verifies +
+  // backs up + writes a server-delivered (already-signed) license. The app
+  // NEVER signs — applyFromFleet only accepts a license that verifies against
+  // the embedded pubkey AND is bound to this machine's installation_id.
+  license: {
+    status: () => invoke('ops:license.status'),
+    fingerprint: () => invoke('ops:license.fingerprint'),
+    apply: (lic) => invoke('ops:license.apply', lic),
+    applyFromFleet: (lic) => invoke('ops:license.applyFromFleet', lic),
+    tiers: () => invoke('ops:license.tiers'),
+  },
+
   // ─── Auto-update events ────────────────────────────────────────
   updater: {
     checkForUpdates: () => invoke('ops:updater.check'),
@@ -120,20 +133,6 @@ const opsAPI = {
     showOpenDialog: (opts) => invoke('ops:fs.showOpenDialog', opts),
     writeFile: (filePath, data) => invoke('ops:fs.writeFile', filePath, data),
     readFile: (filePath) => invoke('ops:fs.readFile', filePath),
-  },
-
-  // ─── License (S-DIAG-FIX 2026-05-05) ──────────────────────────
-  // Handlers registered in desktop/license.js:309-331; the bridge
-  // was missing here, so renderer's window.ops.license was undefined
-  // and About / Diagnostics threw "Cannot read properties of
-  // undefined" on every license check. Each method is its own
-  // explicit handle (no generic invoke passthrough — keeps the
-  // attack surface limited to these 4 channels).
-  license: {
-    status: () => ipcRenderer.invoke('ops:license.status'),
-    fingerprint: () => ipcRenderer.invoke('ops:license.fingerprint'),
-    apply: (lic) => ipcRenderer.invoke('ops:license.apply', lic),
-    tiers: () => ipcRenderer.invoke('ops:license.tiers'),
   },
 };
 

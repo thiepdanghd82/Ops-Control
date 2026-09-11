@@ -4,6 +4,7 @@ import { AccessProvider } from './context/AccessContext';
 import { AppConfigProvider } from './context/AppConfigContext';
 import { useFeatureFlag } from './context/useAppConfig';
 import { CalcProvider } from './context/CalcContext';
+import { sendFleetHeartbeat } from './services/fleetHeartbeat';
 import { WindowManagerProvider, useWindowManager } from './window/WindowManagerContext';
 import LoginPage from './components/Auth/LoginPage';
 import AppBootstrap from './components/Auth/AppBootstrap';
@@ -123,6 +124,19 @@ function AppShell() {
       // last highest-z window). openWindow('home') creates Home if the
       // hydrated layout somehow lacks it (safety net).
       if (wmEnabled) wm.openWindow('home');
+      // v1.6 License Manager — desktop apps report their license status to the
+      // fleet on connect (no-op on web). If the server has a license queued for
+      // this machine it is applied locally; surface the restart hint. Fully
+      // best-effort: heartbeat failures never block login.
+      sendFleetHeartbeat()
+        .then((r) => {
+          if (r?.applied && r?.needsRestart) {
+            window.alert(
+              'Đã nhận license mới cho máy này. Vui lòng khởi động lại Ops Control để áp dụng.'
+            );
+          }
+        })
+        .catch(() => {});
     }
     wasAuthenticatedRef.current = isAuthenticated;
   }, [isAuthenticated, wmEnabled, wm]);
