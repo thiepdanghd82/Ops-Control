@@ -38,18 +38,31 @@ export default function LicenseManagerSection() {
   const uploadTargetRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  // setError('') deliberately runs AFTER the await, not before it: refresh()
+  // is called straight from a mount effect, and a synchronous setState there
+  // trips react-hooks/set-state-in-effect. The visible difference is only that
+  // a stale error banner now clears when the reload succeeds rather than when
+  // it starts. Suppressing the rule instead does not survive this repo's own
+  // pre-commit `eslint --fix`, which strips the directive as unused because
+  // client/node_modules pins an older eslint-plugin-react-hooks than CI uses.
   const refresh = useCallback(async () => {
-    setError('');
     try {
       const r = await licenseFleetApi.list();
       setFleet(Array.isArray(r?.fleet) ? r.fleet : []);
+      setError('');
     } catch (e) {
       setError(e?.message || 'Không tải được danh sách fleet');
     }
   }, []);
 
   useEffect(() => {
-    refresh();
+    // Wrapped rather than called bare so the mount fetch reads as what it is —
+    // an async load — and so react-hooks/set-state-in-effect stops flagging it.
+    // The substantive half of that fix is above: refresh() no longer touches
+    // state before its first await, so nothing sets state synchronously here.
+    (async () => {
+      await refresh();
+    })();
   }, [refresh]);
 
   const onExportRequest = (m) => {
@@ -73,14 +86,18 @@ export default function LicenseManagerSection() {
       const license = JSON.parse(await file.text());
       const r = await licenseFleetApi.upload(license, uploadTargetRef.current || undefined);
       if (r?.queued) {
-        setMsg(`Đã nhận + xếp hàng license cho máy ${shortId(r.installation_id)}. Sẽ giao ở heartbeat kế tiếp.`);
+        setMsg(
+          `Đã nhận + xếp hàng license cho máy ${shortId(r.installation_id)}. Sẽ giao ở heartbeat kế tiếp.`
+        );
         await refresh();
       } else {
         setError(`Từ chối: ${r?.reason || r?.error || 'verify_failed'}`);
       }
     } catch (err) {
       // Server verify failure comes back as a thrown error with the reason.
-      setError(err?.body?.reason ? `Verify thất bại: ${err.body.reason}` : err?.message || 'Upload lỗi');
+      setError(
+        err?.body?.reason ? `Verify thất bại: ${err.body.reason}` : err?.message || 'Upload lỗi'
+      );
     } finally {
       setBusy(false);
     }
@@ -139,12 +156,16 @@ export default function LicenseManagerSection() {
                   <td className="licmgr-mono">{shortId(m.installation_id)}</td>
                   <td>
                     <span className={`licmgr-badge licmgr-tone-${b.tone}`}>{b.label}</span>
-                    {m.pending_license && <span className="licmgr-badge licmgr-tone-neutral">⏳ pending</span>}
+                    {m.pending_license && (
+                      <span className="licmgr-badge licmgr-tone-neutral">⏳ pending</span>
+                    )}
                   </td>
                   <td>{m.status?.tier || '—'}</td>
                   <td className="licmgr-mono">{m.status?.expires_at?.slice(0, 10) || '—'}</td>
                   <td>{formatDaysLeft(m.days_left)}</td>
-                  <td className="licmgr-mono">{m.last_seen?.slice(0, 16).replace('T', ' ') || '—'}</td>
+                  <td className="licmgr-mono">
+                    {m.last_seen?.slice(0, 16).replace('T', ' ') || '—'}
+                  </td>
                   <td className="licmgr-actions">
                     <button className="op-btn op-btn-sm" onClick={() => onExportRequest(m)}>
                       Export request
