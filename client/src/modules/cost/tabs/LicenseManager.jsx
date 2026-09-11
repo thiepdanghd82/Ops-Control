@@ -9,6 +9,7 @@
  */
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { licenseFleetApi } from '../../../services/api';
+import Modal from '../../../components/Shared/Modal';
 import {
   statusBadge,
   formatDaysLeft,
@@ -36,6 +37,8 @@ export default function LicenseManagerSection() {
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
+  const [copiedId, setCopiedId] = useState('');
+  const [forgetTarget, setForgetTarget] = useState(null);
   const uploadTargetRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -65,6 +68,58 @@ export default function LicenseManagerSection() {
       await refresh();
     })();
   }, [refresh]);
+
+  // The table shows a shortened id, but minting needs all 64 characters.
+  // navigator.clipboard needs a secure context and this app is served over
+  // plain http to the LAN (http://10.102.3.252:3100), so the textarea
+  // fallback is the path that actually runs on an operator's machine — not a
+  // rare edge case. Same shape as ProvisioningCard.jsx.
+  const onCopyId = async (id) => {
+    const flash = () => {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(''), 2000);
+    };
+    try {
+      await navigator.clipboard.writeText(id);
+      flash();
+      return;
+    } catch {
+      /* fall through */
+    }
+    const ta = document.createElement('textarea');
+    ta.value = id;
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      flash();
+    } catch {
+      setError('Không chép được — hãy dùng Export request để lấy Installation ID.');
+    }
+    document.body.removeChild(ta);
+  };
+
+  const onConfirmForget = async () => {
+    const m = forgetTarget;
+    if (!m) return;
+    setBusy(true);
+    setError('');
+    setMsg('');
+    try {
+      const r = await licenseFleetApi.forget(m.installation_id);
+      setMsg(
+        r?.had_pending
+          ? `Đã gỡ ${m.hostname || shortId(m.installation_id)}. Licence đang chờ giao cho máy này đã bị bỏ — mint lại nếu vẫn cần.`
+          : `Đã gỡ ${m.hostname || shortId(m.installation_id)} khỏi bảng.`
+      );
+      setForgetTarget(null);
+      await refresh();
+    } catch (e) {
+      setError(e?.message || 'Không gỡ được máy này');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const onExportRequest = (m) => {
     const payload = buildExportRequest(m, new Date().toISOString());
@@ -167,7 +222,18 @@ export default function LicenseManagerSection() {
               return (
                 <tr key={m.installation_id}>
                   <td>{m.hostname || '—'}</td>
-                  <td className="licmgr-mono">{shortId(m.installation_id)}</td>
+                  <td className="licmgr-mono">
+                    {shortId(m.installation_id)}{' '}
+                    <button
+                      type="button"
+                      className="licmgr-copy"
+                      onClick={() => onCopyId(m.installation_id)}
+                      title="Chép đủ 64 ký tự Installation ID để dán vào mint-license"
+                      aria-label="Chép Installation ID"
+                    >
+                      {copiedId === m.installation_id ? '✓ đã chép' : '⧉'}
+                    </button>
+                  </td>
                   <td>
                     <span className={`licmgr-badge licmgr-tone-${b.tone}`}>{b.label}</span>
                     {m.pending_license && (
@@ -189,6 +255,14 @@ export default function LicenseManagerSection() {
                     >
                       Upload license
                     </button>
+                    <button
+                      className="op-btn op-btn-sm licmgr-forget"
+                      onClick={() => setForgetTarget(m)}
+                      disabled={busy}
+                      title="Gỡ máy này khỏi bảng"
+                    >
+                      Gỡ khỏi bảng
+                    </button>
                   </td>
                 </tr>
               );
@@ -196,6 +270,37 @@ export default function LicenseManagerSection() {
           </tbody>
         </table>
       )}
+
+      <Modal
+        open={!!forgetTarget}
+        onClose={() => setForgetTarget(null)}
+        size="sm"
+        severity="danger"
+        ariaLabelledBy="licmgr-forget-title"
+      >
+        <Modal.Header id="licmgr-forget-title" title="Gỡ máy khỏi bảng?" severity="danger" />
+        <Modal.Body>
+          <p>
+            <strong>{forgetTarget?.hostname || shortId(forgetTarget?.installation_id)}</strong> sẽ
+            biến mất khỏi danh sách. Máy vẫn giữ licence của nó — chỉ bảng theo dõi này quên nó đi.
+          </p>
+          <p>Nếu máy đó còn dùng, nó sẽ tự hiện lại ở heartbeat kế tiếp.</p>
+          {forgetTarget?.pending_license && (
+            <p className="licmgr-alert licmgr-alert-bad">
+              ⚠ Máy này còn một licence đã ký đang chờ giao. Gỡ bảng sẽ <strong>bỏ luôn</strong>{' '}
+              licence đó — phải mint lại nếu vẫn cần.
+            </p>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <button className="op-btn" onClick={() => setForgetTarget(null)} disabled={busy}>
+            Huỷ
+          </button>
+          <button className="op-btn licmgr-forget" onClick={onConfirmForget} disabled={busy}>
+            Gỡ khỏi bảng
+          </button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }

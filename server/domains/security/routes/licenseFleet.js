@@ -15,6 +15,8 @@
  *                             signature + installation_id, queue for delivery
  *                             (sys-only).
  *   - B3  (heartbeat reply) : deliver a queued license to its target machine.
+ *   - B2  DELETE /:id       : forget a machine + any licence queued for it
+ *                             (sys-only — administration of OTHER machines).
  *   - B3  POST /distributed : client confirms it applied → mark delivered
  *                             (own machine only — it deletes from the queue).
  *
@@ -30,6 +32,7 @@ import {
   queuePendingLicense,
   getPendingForInstall,
   markDistributed,
+  forgetMachine,
 } from '../../../services/fleetStore.js';
 
 /**
@@ -159,6 +162,32 @@ export function createLicenseFleetRouter({
       })
     );
     res.json({ ok: true, queued: true, installation_id: v.license.installation_id });
+  });
+
+  // ── B2 — forget a machine (sys-only) ────────────────────────────────────
+  // The fleet table only ever grew: decommissioned and re-imaged machines
+  // stayed forever and diluted the one question it exists to answer.
+  //
+  // sys-only, NOT requireOwnMachine — this is administration of OTHER
+  // machines, the same boundary /upload sits behind. Gating it on the caller's
+  // own machine would be exactly backwards: you never delete your own row.
+  router.delete('/:installation_id', auth, requireSys, (req, res) => {
+    const id = String(req.params.installation_id || '');
+    if (!HEX64.test(id)) {
+      return res.status(400).json({ ok: false, error: 'bad-installation-id' });
+    }
+    const r = forgetMachine(dataDir, id);
+    // Nothing happened → nothing to record. An audit row for a no-op is noise
+    // that makes the real ones harder to find.
+    if (r.removed || r.had_pending) {
+      audit(
+        'LICENSE_FLEET_FORGET',
+        userOf(req),
+        ipOf(req),
+        JSON.stringify({ installation_id: id, ...r })
+      );
+    }
+    res.json({ ok: true, ...r });
   });
 
   // ── B3 — client confirms it applied the delivered license ───────────────

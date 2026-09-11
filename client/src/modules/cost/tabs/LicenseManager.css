@@ -106,3 +106,29 @@
   padding-left: 8px;
   color: var(--color-slate-600);
 }
+
+/* Copy the full 64-char Installation ID out of a cell that only shows 12.
+   Quiet by default — it sits inside a data cell and must not compete with the
+   row's real actions. */
+.licmgr-copy {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 12px;
+  color: var(--color-slate-600);
+}
+.licmgr-copy:hover {
+  color: var(--color-brand-navy);
+}
+
+/* Destructive, so it reads as destructive: border and text carry the meaning,
+   not fill alone (DESIGN.md rule 3 — operators on cheap floor panels, some
+   colour-blind). */
+.licmgr-forget {
+  border-color: var(--color-danger-500);
+  color: var(--color-danger-500);
+}
+.licmgr-forget:hover:not(:disabled) {
+  background: var(--color-danger-50);
+}
