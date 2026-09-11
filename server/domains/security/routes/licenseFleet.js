@@ -72,7 +72,8 @@ export function createLicenseFleetRouter({
   // admin's laptop is still only its own machine. Managing OTHER machines is
   // what the sys-only /upload route is for.
   //
-  // Fails closed: a session with no real machine id (web clients report 'web',
+  // Fails closed: a session with no real machine id (web clients report a
+  // `web-` prefixed per-browser id,
   // sessions opened before this change report 'unknown') is refused. Those
   // clients never call these routes — fleetHeartbeat.js no-ops without
   // window.ops — and a desktop user on a stale session recovers by logging in

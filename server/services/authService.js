@@ -817,7 +817,8 @@ export function getSessionUser(token) {
 /**
  * The machine a session was opened from, as reported at login and stored on
  * the session record above. Returns null for an unknown/expired token, and
- * for the 'unknown' / 'web' placeholders — callers that need a real machine
+ * for the 'unknown' / 'web' placeholders and for the `web-` per-browser ids
+ * — callers that need a real machine
  * identity (the License Manager fleet routes) must fail closed on those.
  *
  * Added 2026-09-11: the fleet routes took installation_id from the request
