@@ -17,7 +17,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateStandard, validateComplex } from './calcValidation.js';
+import { validateStandard, validateComplex, gateWarnings } from './calcValidation.js';
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -238,4 +238,72 @@ test('Bug 2 (Complex): FQC in subproduct with machine_rate=0 → no setup-hours 
   const warnings = validateComplex(cplx, lib);
   const setupWarn = findWarn(warnings, /Setup Hours is required/);
   assert.equal(setupWarn, undefined, 'Complex path also respects labor-only exemption');
+});
+
+test('header warnings carry the field key that caused them', () => {
+  const out = validateStandard(baseStd({ ccl_pn: '', moq: 0, annual_qty: 0 }));
+
+  const byId = Object.fromEntries(out.map((w) => [w.id, w]));
+  assert.equal(byId['hdr-ccl-pn'].field, 'ccl_pn');
+  assert.equal(byId['hdr-moq'].field, 'moq');
+  assert.equal(byId['hdr-eau'].field, 'annual_qty');
+});
+
+test('negative-value header warnings carry the same field key', () => {
+  const out = validateStandard(baseStd({ moq: -5, annual_qty: -1 }));
+
+  const byId = Object.fromEntries(out.map((w) => [w.id, w]));
+  assert.equal(byId['hdr-moq-neg'].field, 'moq');
+  assert.equal(byId['hdr-eau-neg'].field, 'annual_qty');
+});
+
+// ── gateWarnings ──────────────────────────────────────────────────
+
+const W = {
+  cclPn: { id: 'hdr-ccl-pn', severity: 'error', scope: 'Header', field: 'ccl_pn', message: 'x' },
+  moq: { id: 'hdr-moq', severity: 'error', scope: 'Header', field: 'moq', message: 'y' },
+  noField: { id: 'gen-1', severity: 'warn', scope: 'Pricing', message: 'z' },
+};
+
+test('a fresh record with nothing touched shows no field warnings', () => {
+  const out = gateWarnings([W.cclPn, W.moq], { touched: [], saveAttempted: false });
+  assert.deepEqual(out, []);
+});
+
+test('touching one field reveals only that field warning', () => {
+  const out = gateWarnings([W.cclPn, W.moq], { touched: ['ccl_pn'], saveAttempted: false });
+  assert.deepEqual(
+    out.map((w) => w.id),
+    ['hdr-ccl-pn']
+  );
+});
+
+test('attempting save reveals every warning regardless of touch', () => {
+  const out = gateWarnings([W.cclPn, W.moq], { touched: [], saveAttempted: true });
+  assert.equal(out.length, 2);
+});
+
+test('a pristine record shows nothing at all, not even fieldless warnings', () => {
+  // The whole point: opening a new record must not greet the operator with
+  // errors. A fieldless warning cannot be attributed to an input, so showing
+  // it on an untouched record is exactly the nagging this gate removes.
+  const out = gateWarnings([W.cclPn, W.noField], { touched: [], saveAttempted: false });
+  assert.deepEqual(out, []);
+});
+
+test('once any field is touched, fieldless warnings become visible', () => {
+  // The operator has engaged with the record, so record-level problems are
+  // now useful rather than premature.
+  const out = gateWarnings([W.cclPn, W.noField], { touched: ['moq'], saveAttempted: false });
+  assert.deepEqual(
+    out.map((w) => w.id),
+    ['gen-1']
+  );
+});
+
+test('gateWarnings does not mutate its input', () => {
+  const input = [W.cclPn, W.moq];
+  const copy = JSON.parse(JSON.stringify(input));
+  gateWarnings(input, { touched: ['moq'], saveAttempted: false });
+  assert.deepEqual(input, copy);
 });

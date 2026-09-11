@@ -204,3 +204,21 @@
 [data-theme='dark'] .opswin-focused {
   border-color: #4589ff;
 }
+
+/* "Close all" — only rendered when 2+ closable windows exist (see
+   Taskbar.jsx), so a single-window session gains no clutter. Sits at the
+   trailing edge so it never shifts as windows are added or removed. */
+.opswin-closeall {
+  margin-left: auto;
+  padding: 2px 10px;
+  font-size: 11px;
+  border: 1px solid var(--color-slate-200, #e2e8f0);
+  background: transparent;
+  color: var(--color-slate-500, #64748b);
+  cursor: pointer;
+}
+
+.opswin-closeall:hover {
+  background: var(--color-slate-100, #f1f5f9);
+  color: var(--color-slate-700, #334155);
+}

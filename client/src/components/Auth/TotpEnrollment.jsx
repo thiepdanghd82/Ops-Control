@@ -21,6 +21,7 @@
  */
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { authApi } from '../../services/api';
+import { useI18n } from '../../utils/useI18n';
 
 // Generate a cryptographically-strong 160-bit base32 secret (matches
 // RFC 4226 minimum for HMAC-SHA1 TOTP). 160 bits = 20 bytes = 32 base32
@@ -39,6 +40,7 @@ function generateBase32Secret() {
 }
 
 export default function TotpEnrollment({ username, onComplete, onCancel }) {
+  const { t } = useI18n();
   // Lazy init — secret generated exactly once per component mount, so
   // a React re-render doesn't orphan the secret the user just scanned.
   const [secret] = useState(generateBase32Secret);
@@ -132,7 +134,7 @@ export default function TotpEnrollment({ username, onComplete, onCancel }) {
 
   return (
     <form className="totp-enroll" onSubmit={handleSubmit}>
-      <h2 className="totp-enroll-title">Set up 2-Step Verification</h2>
+      <h2 className="totp-enroll-title">{t('totp.enroll.title')}</h2>
       <p className="totp-enroll-sub">
         Your account role requires 2FA. Add this account to your authenticator app (Google
         Authenticator, Authy, 1Password, Microsoft Authenticator) using the secret below, then enter
@@ -140,15 +142,15 @@ export default function TotpEnrollment({ username, onComplete, onCancel }) {
       </p>
 
       <div className="totp-enroll-section">
-        <div className="totp-enroll-label">Account</div>
+        <div className="totp-enroll-label">{t('totp.enroll.account')}</div>
         <div className="totp-enroll-value">{username}</div>
       </div>
 
       <div className="totp-enroll-section">
-        <div className="totp-enroll-label">Scan with your authenticator app</div>
+        <div className="totp-enroll-label">{t('totp.enroll.scan')}</div>
         <div
           className="totp-enroll-qr"
-          aria-label="QR code for TOTP enrollment"
+          aria-label={t('totp.enroll.qr_alt')}
           dangerouslySetInnerHTML={qrSvg ? { __html: qrSvg } : undefined}
         >
           {qrSvg ? undefined : <span className="totp-enroll-qr-loading">Generating QR…</span>}
@@ -157,25 +159,24 @@ export default function TotpEnrollment({ username, onComplete, onCancel }) {
 
       <div className="totp-enroll-section">
         <div className="totp-enroll-label">Can&rsquo;t scan? Enter this secret manually</div>
-        <div
-          className="totp-enroll-secret"
-          title="Paste this into the authenticator's manual-entry field"
-        >
+        <div className="totp-enroll-secret" title={t('totp.enroll.manual_hint')}>
           {secret.match(/.{1,4}/g).join(' ')}
         </div>
       </div>
 
       <div className="totp-enroll-section">
-        <div className="totp-enroll-label">Or copy the otpauth URI (for password managers)</div>
+        <div className="totp-enroll-label">{t('totp.enroll.copy_uri')}</div>
         <button type="button" className="totp-enroll-uri" onClick={copyUri}>
           <span className="totp-enroll-uri-text">{otpauthUri}</span>
-          <span className="totp-enroll-uri-copy">{copied ? '✓ Copied' : 'Copy'}</span>
+          <span className="totp-enroll-uri-copy">
+            {copied ? t('totp.enroll.copied') : t('totp.enroll.copy')}
+          </span>
         </button>
       </div>
 
       <div className="totp-enroll-section">
         <label className="totp-enroll-label" htmlFor="totp-enroll-code">
-          6-digit code from your authenticator
+          {t('totp.enroll.code_label')}
         </label>
         <input
           id="totp-enroll-code"
@@ -207,7 +208,7 @@ export default function TotpEnrollment({ username, onComplete, onCancel }) {
             onClick={onCancel}
             disabled={busy}
           >
-            Back to login
+            {t('totp.enroll.back')}
           </button>
         )}
         <button
@@ -215,14 +216,11 @@ export default function TotpEnrollment({ username, onComplete, onCancel }) {
           className="totp-enroll-btn-submit"
           disabled={code.length !== 6 || busy}
         >
-          {busy ? 'Activating…' : 'Activate 2FA'}
+          {busy ? t('totp.enroll.activating') : t('totp.enroll.activate')}
         </button>
       </div>
 
-      <p className="totp-enroll-help">
-        Save this secret in your password manager as a backup — if you lose your authenticator
-        device, IT can re-enroll you but your existing codes will stop working.
-      </p>
+      <p className="totp-enroll-help">{t('totp.enroll.backup_note')}</p>
     </form>
   );
 }

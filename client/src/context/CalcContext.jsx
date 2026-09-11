@@ -12,7 +12,15 @@
  * instead of a hand-written replica — catches key-mismatch drift
  * immediately.
  */
-import { createContext, useContext, useReducer, useCallback, useEffect, useMemo } from 'react';
+import {
+  createContext,
+  useContext,
+  useReducer,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import {
   withHistory,
   initialHistory,
@@ -21,6 +29,7 @@ import {
   HISTORY_ACTIONS,
 } from './calcHistory.js';
 import { CALC_ACTIONS as A, calcReducer, createInitialState } from './calcReducer.js';
+import { addTouched } from './touchedState.js';
 
 const CalcContext = createContext(null);
 
@@ -88,16 +97,39 @@ export function CalcProvider({ children }) {
   // and marks pricing_snapshot._synthesized so the next save re-freezes
   // against the current master library. Callers omitting action default
   // to 'load' (BC for every pre-Phase-3 caller).
+  // Ephemeral UI state — deliberately NOT in the reducer. Touched/save
+  // state must stay out of undo/redo history: undoing a value change
+  // should not un-touch the field the operator already visited.
+  const [touched, setTouched] = useState([]);
+  const [saveAttempted, setSaveAttempted] = useState(false);
+
+  const markTouched = useCallback((field) => {
+    setTouched((prev) => addTouched(prev, field));
+  }, []);
+  const markSaveAttempted = useCallback(() => setSaveAttempted(true), []);
+  const resetTouched = useCallback(() => {
+    setTouched([]);
+    setSaveAttempted(false);
+  }, []);
+
   const loadQuote = useCallback(
-    (quoteType, qState, id, version = 0, action = 'load') =>
+    (quoteType, qState, id, version = 0, action = 'load') => {
       dispatch({
         type: A.LOAD_QUOTE,
         payload: { quoteType, state: qState, id, version, action },
-      }),
-    []
+      });
+      resetTouched();
+    },
+    [resetTouched]
   );
-  const resetStd = useCallback(() => dispatch({ type: A.RESET_STD }), []);
-  const resetCplx = useCallback(() => dispatch({ type: A.RESET_CPLX }), []);
+  const resetStd = useCallback(() => {
+    dispatch({ type: A.RESET_STD });
+    resetTouched();
+  }, [resetTouched]);
+  const resetCplx = useCallback(() => {
+    dispatch({ type: A.RESET_CPLX });
+    resetTouched();
+  }, [resetTouched]);
   const markClean = useCallback(() => dispatch({ type: A.MARK_CLEAN }), []);
   const setPendingQuote = useCallback(
     (id, type, action, data) =>
@@ -173,6 +205,12 @@ export function CalcProvider({ children }) {
       resetHistory,
       canUndo,
       canRedo,
+      // Ephemeral validation-UX state
+      touched,
+      markTouched,
+      saveAttempted,
+      markSaveAttempted,
+      resetTouched,
     }),
     [
       state,
@@ -195,6 +233,11 @@ export function CalcProvider({ children }) {
       resetHistory,
       canUndo,
       canRedo,
+      touched,
+      markTouched,
+      saveAttempted,
+      markSaveAttempted,
+      resetTouched,
     ]
   );
 

@@ -27,6 +27,8 @@
 
 import { SITES as SITE_OPTIONS } from '../../utils/sites';
 import DecimalInput from '../../utils/DecimalInput';
+import { gateWarnings } from '../../services/calcValidation';
+import { useI18n } from '../../utils/useI18n';
 
 export default function RfqInfoCard({
   state,
@@ -37,13 +39,32 @@ export default function RfqInfoCard({
   tradeModeOpts = [],
   datalistId,
   aliasMap,
+  warnings = [],
+  touched = [],
+  saveAttempted = false,
+  onTouch = () => {},
 }) {
+  // i18n is a global app concern, like theme — Modal.jsx and
+  // ConfirmClearModal.jsx read it directly too. Unlike useCalc(), which
+  // stays out of this component on purpose (see the props above).
+  const { t } = useI18n();
   const realKey = (k) => (aliasMap && aliasMap[k]) || k;
   const get = (k) => state?.[realKey(k)] ?? '';
   const set = (k, value, isNum = false) => onChange(realKey(k), value, isNum);
   // Stable per-instance id so multiple RfqInfoCards on one page never
   // collide, and labels always associate with the right input (WCAG 1.3.1).
   const fid = (k) => `rfq-${datalistId || 'x'}-${k}`;
+
+  // Gated once per render, not once per field — errorFor() is called for
+  // every field below and re-filtering inside it would be O(fields × warnings).
+  const gated = gateWarnings(warnings, { touched, saveAttempted });
+
+  // Warning for one field, or null. Resolves through realKey() so an
+  // aliased field (Standard maps end_cu → project) still joins correctly.
+  const errorFor = (k) => {
+    const key = realKey(k);
+    return gated.find((w) => w.field === key && w.severity === 'error') || null;
+  };
 
   // Phase 9E.4 + Sprint S-QUOTE-PROGRESS-V2 — once a quote is
   // price_approved the pricing basis is committed. Changing site
@@ -61,17 +82,17 @@ export default function RfqInfoCard({
     <div className="sc-card">
       <div className="sc-card-header sc-header-navy">
         <span className="sc-card-icon">&#128203;</span>
-        <span className="sc-card-title">RFQ Information</span>
+        <span className="sc-card-title">{t('rfqcard.title')}</span>
       </div>
       <div className="sc-card-body sc-rfq-body">
-        <div className="sc-rfq-section-title">Identification</div>
+        <div className="sc-rfq-section-title">{t('rfqcard.sec.identification')}</div>
         <div className="sc-grid4">
           <div className="sc-field">
             <label htmlFor={fid('site')}>
-              Site{' '}
+              {t('rfqcard.site')}{' '}
               {siteLocked && (
                 <span
-                  title={`Locked after ${approvalStatus} — revoke to change`}
+                  title={t('rfqcard.site_locked').replace('{status}', approvalStatus)}
                   style={{ fontSize: 10, color: '#8d8d8d', marginLeft: 4 }}
                 >
                   🔒
@@ -97,18 +118,33 @@ export default function RfqInfoCard({
               ))}
             </select>
           </div>
-          <div className="sc-field">
-            <label htmlFor={fid('ccl_pn')}>CCL PN (80#)</label>
+          <div className={`sc-field${errorFor('ccl_pn') ? ' sc-field-error' : ''}`}>
+            <label htmlFor={fid('ccl_pn')}>
+              CCL PN (80#)
+              <span className="sc-required" aria-hidden="true">
+                *
+              </span>
+            </label>
             <input
               id={fid('ccl_pn')}
               type="text"
+              required
+              aria-required="true"
+              aria-invalid={errorFor('ccl_pn') ? 'true' : undefined}
+              aria-describedby={errorFor('ccl_pn') ? `${fid('ccl_pn')}-err` : undefined}
               value={get('ccl_pn')}
               onChange={(e) => set('ccl_pn', e.target.value)}
+              onBlur={() => onTouch(realKey('ccl_pn'))}
               className="sc-input sc-inp-yellow"
             />
+            {errorFor('ccl_pn') && (
+              <span className="sc-field-msg" id={`${fid('ccl_pn')}-err`} role="alert">
+                {errorFor('ccl_pn').message}
+              </span>
+            )}
           </div>
           <div className="sc-field">
-            <label htmlFor={fid('npi_owner')}>NPI Owner</label>
+            <label htmlFor={fid('npi_owner')}>{t('rfqcard.npi_owner')}</label>
             <input
               id={fid('npi_owner')}
               type="text"
@@ -124,7 +160,7 @@ export default function RfqInfoCard({
             </datalist>
           </div>
           <div className="sc-field">
-            <label htmlFor={fid('sale_owner')}>Sale Owner</label>
+            <label htmlFor={fid('sale_owner')}>{t('rfqcard.sale_owner')}</label>
             <input
               id={fid('sale_owner')}
               type="text"
@@ -135,10 +171,10 @@ export default function RfqInfoCard({
           </div>
         </div>
 
-        <div className="sc-rfq-section-title">Customer</div>
+        <div className="sc-rfq-section-title">{t('rfqcard.sec.customer')}</div>
         <div className="sc-grid4">
           <div className="sc-field">
-            <label htmlFor={fid('direct_cu')}>Direct Customer</label>
+            <label htmlFor={fid('direct_cu')}>{t('rfqcard.direct_customer')}</label>
             <input
               id={fid('direct_cu')}
               type="text"
@@ -148,7 +184,7 @@ export default function RfqInfoCard({
             />
           </div>
           <div className="sc-field">
-            <label htmlFor={fid('direct_cu_pn')}>Direct CU PN</label>
+            <label htmlFor={fid('direct_cu_pn')}>{t('rfqcard.direct_cu_pn')}</label>
             <input
               id={fid('direct_cu_pn')}
               type="text"
@@ -158,7 +194,7 @@ export default function RfqInfoCard({
             />
           </div>
           <div className="sc-field">
-            <label htmlFor={fid('end_cu')}>End Customer</label>
+            <label htmlFor={fid('end_cu')}>{t('rfqcard.end_customer')}</label>
             <input
               id={fid('end_cu')}
               type="text"
@@ -168,7 +204,7 @@ export default function RfqInfoCard({
             />
           </div>
           <div className="sc-field">
-            <label htmlFor={fid('end_cu_pn')}>End CU PN</label>
+            <label htmlFor={fid('end_cu_pn')}>{t('rfqcard.end_cu_pn')}</label>
             <input
               id={fid('end_cu_pn')}
               type="text"
@@ -179,10 +215,10 @@ export default function RfqInfoCard({
           </div>
         </div>
 
-        <div className="sc-rfq-section-title">Product</div>
+        <div className="sc-rfq-section-title">{t('rfqcard.sec.product')}</div>
         <div className="sc-grid4">
           <div className="sc-field sc-field-span2">
-            <label htmlFor={fid('project_name')}>Project</label>
+            <label htmlFor={fid('project_name')}>{t('rfqcard.project')}</label>
             <input
               id={fid('project_name')}
               type="text"
@@ -192,7 +228,7 @@ export default function RfqInfoCard({
             />
           </div>
           <div className="sc-field sc-field-span2">
-            <label htmlFor={fid('description')}>Description</label>
+            <label htmlFor={fid('description')}>{t('rfqcard.description')}</label>
             <input
               id={fid('description')}
               type="text"
@@ -202,17 +238,17 @@ export default function RfqInfoCard({
             />
           </div>
           <div className="sc-field">
-            <label htmlFor={fid('product_lifetime')}>Product Life Time</label>
+            <label htmlFor={fid('product_lifetime')}>{t('rfqcard.product_life_time')}</label>
             <DecimalInput
               id={fid('product_lifetime')}
               value={get('product_lifetime')}
               onChange={(v) => set('product_lifetime', v, true)}
               className="sc-input"
-              placeholder="years"
+              placeholder={t('common.years')}
             />
           </div>
           <div className="sc-field">
-            <label htmlFor={fid('trade_mode')}>Trade Mode</label>
+            <label htmlFor={fid('trade_mode')}>{t('rfqcard.trade_mode')}</label>
             {tradeModeOpts.length > 0 ? (
               <select
                 id={fid('trade_mode')}
@@ -220,7 +256,7 @@ export default function RfqInfoCard({
                 onChange={(e) => set('trade_mode', e.target.value)}
                 className="sc-input"
               >
-                <option value="">-- Select --</option>
+                <option value="">{t('common.select')}</option>
                 {tradeModeOpts.map((t) => (
                   <option key={t} value={t}>
                     {t}
@@ -239,14 +275,14 @@ export default function RfqInfoCard({
             )}
           </div>
           <div className="sc-field sc-field-span2">
-            <label htmlFor={fid('design_process')}>Design Process</label>
+            <label htmlFor={fid('design_process')}>{t('rfqcard.design_process')}</label>
             <select
               id={fid('design_process')}
               value={get('design_process')}
               onChange={(e) => set('design_process', e.target.value)}
               className={`sc-input ${!get('design_process') ? 'sc-input-warn' : ''}`}
             >
-              <option value="">-- Select --</option>
+              <option value="">{t('common.select')}</option>
               {designProcessOpts.map((p) => (
                 <option key={p} value={p}>
                   {p}
@@ -256,10 +292,10 @@ export default function RfqInfoCard({
           </div>
         </div>
 
-        <div className="sc-rfq-section-title">RFQ &amp; Certification</div>
+        <div className="sc-rfq-section-title">{t('rfqcard.sec.certification')}</div>
         <div className="sc-grid4">
           <div className="sc-field">
-            <label htmlFor={fid('rfq_number')}>RFQ Number</label>
+            <label htmlFor={fid('rfq_number')}>{t('rfqcard.rfq_number')}</label>
             <div style={{ display: 'flex', gap: 4 }}>
               <input
                 id={fid('rfq_number')}
@@ -272,15 +308,15 @@ export default function RfqInfoCard({
               <button
                 className="sc-btn-sm"
                 onClick={onGenerateRfq}
-                title="Generate"
-                aria-label="Generate RFQ number"
+                title={t('rfqcard.generate')}
+                aria-label={t('rfqcard.generate_rfq')}
               >
                 &#8635;
               </button>
             </div>
           </div>
           <div className="sc-field">
-            <label htmlFor={fid('options')}>Options</label>
+            <label htmlFor={fid('options')}>{t('rfqcard.options')}</label>
             <textarea
               id={fid('options')}
               value={get('options')}
@@ -291,7 +327,7 @@ export default function RfqInfoCard({
             />
           </div>
           <div className="sc-field">
-            <label htmlFor={fid('request_ul')}>Request UL</label>
+            <label htmlFor={fid('request_ul')}>{t('rfqcard.request_ul')}</label>
             <select
               id={fid('request_ul')}
               value={get('request_ul') || 'N'}
@@ -303,7 +339,7 @@ export default function RfqInfoCard({
             </select>
           </div>
           <div className="sc-field">
-            <label htmlFor={fid('ul_description')}>UL Description</label>
+            <label htmlFor={fid('ul_description')}>{t('rfqcard.ul_description')}</label>
             <input
               id={fid('ul_description')}
               type="text"

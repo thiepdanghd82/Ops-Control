@@ -40,10 +40,12 @@ function open(state, tabId, opts = {}) {
 }
 
 test('OPEN pushes a normal window with raised z', () => {
-  const s = open(initialWindowState(), 'standard');
+  // Uses ink-calc, not standard: the pricing worksheets open maximized as of
+  // 2026-09-10, so they are no longer an example of a plain floating window.
+  const s = open(initialWindowState(), 'ink-calc');
   assert.equal(s.windows.length, 1);
   const w = s.windows[0];
-  assert.equal(w.tabId, 'standard');
+  assert.equal(w.tabId, 'ink-calc');
   assert.equal(w.state, 'normal');
   assert.equal(w.z, s.zTop);
   assert.ok(w.z > WINDOW_Z_BASE);
@@ -316,4 +318,44 @@ test('HYDRATE replaces the store', () => {
   const next = reduce(initialWindowState(), { type: A.HYDRATE, payload: hydrated });
   assert.equal(next.windows.length, 1);
   assert.equal(next.windows[0].tabId, 'standard');
+});
+
+// ── Đợt 2: màn dạng bảng mở toàn khung ──────────────────────────
+
+test('a data-grid tab opens maximized with a restorable prevRect', () => {
+  const s = open(initialWindowState(), 'quote-history');
+  const w = s.windows[s.windows.length - 1];
+
+  assert.equal(w.state, 'max');
+  assert.ok(w.prevRect, 'must carry a prevRect or Restore has nowhere to go');
+  assert.ok(w.prevRect.w >= 320 && w.prevRect.h >= 200, 'prevRect must be a usable size');
+});
+
+test('a utility calculator still opens as a normal floating window', () => {
+  // ink-calc is opened alongside a quote to feed a number back into it, so
+  // it must not cover the worksheet.
+  const s = open(initialWindowState(), 'ink-calc');
+  const w = s.windows[s.windows.length - 1];
+
+  assert.equal(w.state, 'normal');
+  assert.equal(w.prevRect, null);
+});
+
+test('re-focusing an already-maximized singleton does not shrink it', () => {
+  let s = open(initialWindowState(), 'quote-history');
+  s = open(s, 'quote-history'); // singleton → focus path, not a second window
+  const w = s.windows[s.windows.length - 1];
+
+  assert.equal(s.windows.length, 1);
+  assert.equal(w.state, 'max', 'clicking the sidebar item again must not un-maximize it');
+});
+
+test('re-focusing a minimized window still restores it to normal', () => {
+  let s = open(initialWindowState(), 'quote-history');
+  const id = s.windows[0].id;
+  s = reduce(s, { type: A.MINIMIZE, payload: { id } });
+  assert.equal(s.windows[0].state, 'min');
+
+  s = open(s, 'quote-history');
+  assert.notEqual(s.windows[0].state, 'min', 'a minimized window must come back');
 });

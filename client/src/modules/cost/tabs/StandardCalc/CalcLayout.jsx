@@ -1,4 +1,22 @@
 /**
+ * NOT TRANSLATED — deliberate, decided with the NPI manager 2026-09-10.
+ *
+ * Nearly every label on this tab is flexo/die-cut trade vocabulary that
+ * Vietnamese print operators say in English: Anilox BCM, Magnetic Pitch,
+ * Magnetic Tooth (T), Die Length MD / Die Width TD, Die Quiet Zone,
+ * Cutter Cavity, Compound die, Min Gap MD/TD, Face-in / Face-out,
+ * Head-first, Cut Parts/Web Across.
+ *
+ * Translating them would make this screen HARDER to read, not easier —
+ * an operator looking for "Anilox BCM" would have to work out what a
+ * Vietnamese rendering was meant to be. The house rule in
+ * i18n/domains/costing.js is "keep the trade term, translate the ordinary
+ * words around it"; on this tab almost everything is the trade term.
+ *
+ * If a genuinely ordinary word is added here later, give it a key rather
+ * than translating the file wholesale.
+ */
+/**
  * CalcLayout — Design Layout Parameters + File Uploads
  * Matches COST V1.0 M05 layout section with layout_file + customer_drw_file.
  *

@@ -4,6 +4,7 @@
  */
 import { useCallback, useEffect, useMemo } from 'react';
 import { useCalc } from '../../../../context/CalcContext';
+import { validateStandard } from '../../../../services/calcValidation';
 import { useCostLib } from '../../../../context/CostLibContext';
 import { getDesignProcessList } from '../../../../utils/ddl';
 import { genRfqNum } from '../../../../utils/rfqGen';
@@ -11,10 +12,14 @@ import { sharedApi } from '../../../../services/api';
 import DecimalInput from '../../../../utils/DecimalInput';
 import RfqInfoCard from '../../../../components/Shared/RfqInfoCard';
 import { parseLocaleNumber } from '../../../../utils/format';
+import { useI18n } from '../../../../utils/useI18n';
 
 export default function CalcHeader() {
-  const { stdState, cplxState, setStdField, dispatch } = useCalc();
+  const { stdState, cplxState, setStdField, dispatch, touched, saveAttempted, markTouched } =
+    useCalc();
+  const { t } = useI18n();
   const { lib, setActiveSite } = useCostLib();
+  const warnings = useMemo(() => validateStandard(stdState, lib), [stdState, lib]);
   const st = stdState;
 
   const handleField = useCallback(
@@ -285,6 +290,10 @@ export default function CalcHeader() {
           // binds to `project` in stdState. Alias here preserves the
           // legacy field naming without touching saved quotes.
           aliasMap={{ end_cu: 'project' }}
+          warnings={warnings}
+          touched={touched}
+          saveAttempted={saveAttempted}
+          onTouch={markTouched}
         />
       </div>
 
@@ -293,10 +302,10 @@ export default function CalcHeader() {
         <div className="sc-card sc-moq-card">
           <div className="sc-card-header sc-moq-card-header">
             <span className="sc-card-icon">&#164;</span>
-            <span className="sc-card-title">MOQ &amp; Pricing info</span>
+            <span className="sc-card-title">{t('moqcard.title')}</span>
             <span className="sc-moq-tier-count">{st.num_moq || 1} tier</span>
             <div className="sc-hdr-rate">
-              <label>USD Rate</label>
+              <label>{t('moqcard.usd_rate')}</label>
               <DecimalInput
                 value={st.usd_rate}
                 onChange={(v) => setStdField('usd_rate', v)}
@@ -348,6 +357,7 @@ export default function CalcHeader() {
                       <DecimalInput
                         value={st.moq}
                         onChange={(v) => setStdField('moq', v)}
+                        onBlur={() => markTouched('moq')}
                         className="sc-moq-inp"
                         thousandSep
                       />
@@ -356,6 +366,7 @@ export default function CalcHeader() {
                       <DecimalInput
                         value={st.annual_qty}
                         onChange={(v) => setStdField('annual_qty', v)}
+                        onBlur={() => markTouched('annual_qty')}
                         className={`sc-moq-inp ${showEauWarn ? 'sc-input-warn' : ''}`}
                         thousandSep
                         title={

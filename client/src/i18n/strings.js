@@ -91,12 +91,12 @@ export const STRINGS = {
   'nav.tab.formal_quotation': { en: 'Formal Quotation', vi: 'Báo giá Chính thức' },
   'nav.tab.quote_history': { en: 'Quote History', vi: 'Lịch sử Báo giá' },
   'nav.tab.npi_parts_list': { en: 'NPI Parts List', vi: 'Danh sách NPI Parts' },
-  'nav.tab.rfq_tracking': { en: 'RFQ Tracking', vi: 'Danh sách RFQ' },
+  'nav.tab.rfq_tracking': { en: 'RFQ List', vi: 'Danh sách RFQ' },
   'nav.tab.pending_approvals': { en: 'Pending Approvals', vi: 'Chờ Phê duyệt' },
   'nav.tab.mfg_structures': { en: 'Mfg Structures', vi: 'Cấu trúc SX' },
   'nav.tab.routing_ops': { en: 'Routing Ops', vi: 'Công đoạn SX' },
   'nav.tab.ifs_inventory': { en: 'IFS Inventory', vi: 'Tồn kho IFS' },
-  'nav.tab.rfq_tracker': { en: 'RFQ Tracker', vi: 'Theo dõi RFQ' },
+  'nav.tab.rfq_tracker': { en: 'RFQ Progress', vi: 'Theo dõi RFQ' },
   'nav.tab.sample_tracking': { en: 'Sample Tracking', vi: 'Theo dõi Mẫu' },
   'nav.tab.dashboard': { en: 'Dashboard', vi: 'Bảng điều khiển' },
   'nav.tab.quote_analysis': { en: 'Quote Analysis', vi: 'Phân tích Báo giá' },
@@ -169,7 +169,7 @@ export const STRINGS = {
   },
 
   // ─── RFQ Tracking (spreadsheet master list; distinct from rfq-tracker) ───
-  'rfq_tracking.title': { en: 'RFQ Tracking', vi: 'Danh sách RFQ' },
+  'rfq_tracking.title': { en: 'RFQ List', vi: 'Danh sách RFQ' },
   'rfq_tracking.row_count': { en: '{shown} of {total} rows', vi: '{shown} / {total} dòng' },
   'rfq_tracking.search_placeholder': {
     en: 'Search RFQ / customer / part…',
@@ -289,7 +289,7 @@ export const STRINGS = {
   },
   'home.qa.new_quote': { en: 'New Quote', vi: 'Báo giá mới' },
   'home.qa.new_order': { en: 'New Order', vi: 'Đơn hàng mới' },
-  'home.qa.rfq': { en: 'RFQ Tracker', vi: 'Theo dõi RFQ' },
+  'home.qa.rfq': { en: 'RFQ Progress', vi: 'Theo dõi RFQ' },
   'home.qa.approvals': { en: 'Approvals', vi: 'Duyệt' },
   'home.qa.inventory': { en: 'IFS Inventory', vi: 'Tồn kho IFS' },
   'home.qa.help': { en: 'Help', vi: 'Hướng dẫn' },
@@ -299,6 +299,40 @@ export const STRINGS = {
   'modal.restore': { en: 'Restore', vi: 'Thu nhỏ' },
 
   // ─── Window manager (in-app MDI, feature-flagged) ───
+  // ── TOTP enrollment (mandatory security onboarding — the one screen
+  // where an untranslated string becomes a support call) ──
+  'totp.enroll.title': { en: 'Set up 2-Step Verification', vi: 'Thiết lập xác thực 2 bước' },
+  'totp.enroll.account': { en: 'Account', vi: 'Tài khoản' },
+  'totp.enroll.scan': {
+    en: 'Scan with your authenticator app',
+    vi: 'Quét bằng ứng dụng xác thực',
+  },
+  'totp.enroll.manual_hint': {
+    en: "Paste this into the authenticator's manual-entry field",
+    vi: 'Dán vào ô nhập thủ công của ứng dụng xác thực',
+  },
+  'totp.enroll.copy_uri': {
+    en: 'Or copy the otpauth URI (for password managers)',
+    vi: 'Hoặc sao chép URI otpauth (cho trình quản lý mật khẩu)',
+  },
+  'totp.enroll.copy': { en: 'Copy', vi: 'Sao chép' },
+  'totp.enroll.qr_alt': {
+    en: 'QR code for TOTP enrollment',
+    vi: 'Mã QR để ghi danh TOTP',
+  },
+  'totp.enroll.copied': { en: '✓ Copied', vi: '✓ Đã chép' },
+  'totp.enroll.code_label': {
+    en: '6-digit code from your authenticator',
+    vi: 'Mã 6 chữ số từ ứng dụng xác thực',
+  },
+  'totp.enroll.back': { en: 'Back to login', vi: 'Quay lại đăng nhập' },
+  'totp.enroll.activate': { en: 'Activate 2FA', vi: 'Kích hoạt 2FA' },
+  'totp.enroll.activating': { en: 'Activating…', vi: 'Đang kích hoạt…' },
+  'totp.enroll.backup_note': {
+    en: 'Save this secret in your password manager as a backup — if you lose your authenticator device, IT can re-enroll you but your existing codes will stop working.',
+    vi: 'Lưu mã bí mật này vào trình quản lý mật khẩu để dự phòng — nếu mất thiết bị xác thực, bộ phận IT có thể ghi danh lại cho bạn nhưng các mã hiện tại sẽ ngừng hoạt động.',
+  },
+  'window.close_all': { en: 'Close all', vi: 'Đóng tất cả' },
   'window.minimize': { en: 'Minimize', vi: 'Thu nhỏ' },
   'window.maximize': { en: 'Maximize', vi: 'Phóng to' },
   'window.restore': { en: 'Restore', vi: 'Khôi phục' },

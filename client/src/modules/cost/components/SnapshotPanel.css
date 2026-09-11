@@ -37,7 +37,7 @@
 
 .snapshot-panel-title {
   font-weight: 600;
-  color: var(--color-slate-900, #0f172a);
+  color: var(--color-brand-navy, #0f172a);
 }
 
 .snapshot-panel-fields {

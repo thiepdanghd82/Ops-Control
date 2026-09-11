@@ -32,7 +32,7 @@
 .ct-toggle-btn-active {
   border-color: var(--color-primary);
   background: var(--color-primary-subtle);
-  color: var(--color-slate-900);
+  color: var(--color-brand-navy);
   font-weight: 600;
 }
 

@@ -353,6 +353,36 @@ export function coerceRows(headers, rows, dataset) {
 // ─────────────────────────────────────────────────────────────────
 
 /**
+ * Drop rows that carry no value for ANY of the dataset's required headers.
+ *
+ * A row with no natural key is not a record. The operator's IFS Full
+ * Inventory export ends with 184 junk rows (an artefact of the IFS report)
+ * whose only content is `Inventory Value (USD) = 0`; imported as records
+ * they sorted ahead of the real data and made the first two pages of the
+ * grid render as empty dashes.
+ *
+ * `requiredHeaders` was already declared but only ever checked for COLUMN
+ * presence after alias mapping, never for a value on the row.
+ *
+ * Returns the count so the preview can report it — silently dropping rows
+ * would leave the operator unable to tell "184 junk rows removed" apart
+ * from "184 rows I needed went missing".
+ *
+ * Pure — returns a new array, never mutates `rows`.
+ */
+export function dropKeylessRows({ headers, rows, dataset }) {
+  const required = dataset?.requiredHeaders || [];
+  // Only consider required headers the file actually supplies. A missing
+  // required COLUMN is refused elsewhere; this must not compound that by
+  // emptying the whole file.
+  const idx = required.map((h) => headers.indexOf(h)).filter((i) => i >= 0);
+  if (idx.length === 0) return { rows: rows.slice(), skipped: 0 };
+
+  const kept = rows.filter((row) => idx.some((i) => String(row[i] ?? '').trim() !== ''));
+  return { rows: kept, skipped: rows.length - kept.length };
+}
+
+/**
  * Build the canonical-shape data: the mapped columns are placed in the
  * dataset's `canonicalHeaders` order; any unmapped columns are appended
  * after, preserving their original header text (so passthrough columns

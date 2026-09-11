@@ -28,7 +28,7 @@
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: var(--color-slate-900, #0f172a);
+  color: var(--color-brand-navy, #0f172a);
 }
 
 .npi-parts-badge {
@@ -210,7 +210,7 @@
 .npi-parts-showcard-row dd {
   margin: 0;
   font-weight: 600;
-  color: var(--color-slate-900, #0f172a);
+  color: var(--color-brand-navy, #0f172a);
   font-variant-numeric: tabular-nums;
 }
 
@@ -238,7 +238,7 @@
   text-transform: capitalize;
 }
 .npi-parts-showcard-tooling-value {
-  color: var(--color-slate-900, #0f172a);
+  color: var(--color-brand-navy, #0f172a);
   font-weight: 600;
 }
 .npi-parts-showcard-tooling-empty {

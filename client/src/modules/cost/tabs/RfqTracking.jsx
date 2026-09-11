@@ -216,7 +216,7 @@ function ImportFileButton({ onDone, disabled }) {
         open={open}
         onClose={() => setOpen(false)}
         datasetKey={DATASET_KEY}
-        datasetLabel="RFQ Tracking"
+        datasetLabel="RFQ List"
         onCommitted={handleCommitted}
       />
     </>

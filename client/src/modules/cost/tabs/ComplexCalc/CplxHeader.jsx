@@ -5,6 +5,7 @@
  */
 import { useCallback, useEffect, useMemo } from 'react';
 import { useCalc } from '../../../../context/CalcContext';
+import { validateComplex } from '../../../../services/calcValidation';
 import { useCostLib } from '../../../../context/CostLibContext';
 import { getDesignProcessList } from '../../../../utils/ddl';
 import { genRfqNum } from '../../../../utils/rfqGen';
@@ -13,8 +14,9 @@ import RfqInfoCard from '../../../../components/Shared/RfqInfoCard';
 import { parseLocaleNumber } from '../../../../utils/format';
 
 export default function CplxHeader() {
-  const { stdState, cplxState, setCplxField } = useCalc();
+  const { stdState, cplxState, setCplxField, touched, saveAttempted, markTouched } = useCalc();
   const { lib, setActiveSite } = useCostLib();
+  const warnings = useMemo(() => validateComplex(cplxState, lib), [cplxState, lib]);
   const cs = cplxState;
 
   const handleField = useCallback(
@@ -63,6 +65,10 @@ export default function CplxHeader() {
       designProcessOpts={designProcessOpts}
       tradeModeOpts={tradeModeOpts}
       datalistId="cc-npi-owners-list"
+      warnings={warnings}
+      touched={touched}
+      saveAttempted={saveAttempted}
+      onTouch={markTouched}
     />
   );
 }

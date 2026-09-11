@@ -14,7 +14,7 @@ const TAB_META = {
   'lib-mfg': { section: 'Manufacturing', label: 'Mfg Structures' },
   'lib-rop': { section: 'Manufacturing', label: 'Routing Ops' },
   'lib-inventory': { section: 'Manufacturing', label: 'IFS Inventory' },
-  'rfq-tracker': { section: 'Tracking', label: 'RFQ Tracker' },
+  'rfq-tracker': { section: 'Tracking', label: 'RFQ Progress' },
   'sample-tracking': { section: 'Tracking', label: 'Sample Tracking' },
   'quote-analysis': { section: 'Reports', label: 'Quote Analysis' },
   'lib-rate': { section: 'Libraries', label: 'Rate Table' },

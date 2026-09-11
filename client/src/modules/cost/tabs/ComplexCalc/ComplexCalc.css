@@ -401,7 +401,7 @@
   font-family: ui-monospace, monospace;
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-slate-900);
+  color: var(--color-brand-navy);
   background: linear-gradient(90deg, #f0f7ff, #e4efff);
 }
 .cc-spt-actions {
@@ -734,7 +734,7 @@
 }
 .cc-moq-kpi b {
   font-size: 17px;
-  color: var(--color-slate-900);
+  color: var(--color-brand-navy);
   font-family: ui-monospace, monospace;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -831,7 +831,7 @@
 }
 .cc-bd-ttl {
   font-weight: 600;
-  color: var(--color-slate-900);
+  color: var(--color-brand-navy);
 }
 .cc-bd-total td {
   background: #161616;
@@ -920,7 +920,7 @@
   flex-shrink: 0;
 }
 .cc-sum-bar-total {
-  border-top: 2px solid var(--color-slate-900);
+  border-top: 2px solid var(--color-brand-navy);
   border-bottom: none;
   padding-top: 10px;
   margin-top: 4px;
@@ -1144,7 +1144,7 @@
 .cc-smt-td-field {
   padding: 5px 8px;
   font-size: 11px;
-  color: var(--color-slate-900);
+  color: var(--color-brand-navy);
   white-space: nowrap;
 }
 .cc-smt-td-db {

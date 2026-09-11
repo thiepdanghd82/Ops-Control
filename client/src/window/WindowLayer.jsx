@@ -78,6 +78,8 @@ export default function WindowLayer() {
         focusedId={focusedId}
         onFocus={focusWindow}
         onRestore={restoreWindow}
+        // Home is `fixed`, so it survives and the operator lands back on it.
+        onCloseAll={() => windows.filter((w) => !w.fixed).forEach((w) => closeWindow(w.id))}
       />
     </div>
   );

@@ -1166,7 +1166,7 @@ select.sc-input {
 .sc-smt-td-field {
   padding: 5px 8px;
   font-size: 11px;
-  color: var(--color-slate-900);
+  color: var(--color-brand-navy);
   white-space: nowrap;
 }
 .sc-smt-td-db {
@@ -1469,7 +1469,7 @@ select.sc-input {
 }
 .sc-td-total {
   font-weight: 600;
-  color: var(--color-slate-900) !important;
+  color: var(--color-brand-navy) !important;
 }
 .sc-td-idx {
   font-size: 10px;
@@ -1662,7 +1662,7 @@ select.sc-input {
 .sc-bd-detail-row span:last-child {
   font-family: monospace;
   font-weight: 600;
-  color: var(--color-slate-900);
+  color: var(--color-brand-navy);
 }
 .sc-bd-detail-total {
   border-top: 2px solid var(--color-slate-200);
@@ -1746,7 +1746,7 @@ select.sc-input {
   flex-shrink: 0;
 }
 .sc-sum-bar-total {
-  border-top: 2px solid var(--color-slate-900);
+  border-top: 2px solid var(--color-brand-navy);
   border-bottom: none;
   padding-top: 10px;
   margin-top: 4px;
@@ -1818,7 +1818,7 @@ select.sc-input {
 }
 .sc-cb-grand {
   font-weight: 900;
-  color: var(--color-slate-900, #0f2341);
+  color: var(--color-brand-navy, #0f2341);
 }
 .sc-cb-excluded {
   text-align: right;
