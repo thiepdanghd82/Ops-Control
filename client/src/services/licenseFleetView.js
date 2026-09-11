@@ -95,3 +95,35 @@ export function exportRequestFilename(m) {
   const host = (m?.hostname || 'machine').replace(/[^a-zA-Z0-9_-]/g, '');
   return `license-request-${host}-${shortId(m?.installation_id).replace(/…/g, '_')}.json`;
 }
+
+/**
+ * Render a stored ISO timestamp in the reader's own clock as `YYYY-MM-DD HH:mm`.
+ *
+ * The fleet table used to slice the ISO string directly, which shows UTC: a
+ * heartbeat recorded at 13:19 Vietnam time read as "06:19". "Last seen" is the
+ * column an operator uses to judge whether a machine is still alive, so seven
+ * hours of apparent staleness is not cosmetic.
+ *
+ * `sv-SE` is not a language choice — it is the locale whose date format is
+ * already ISO-8601, so the column stays sortable by eye and keeps the same
+ * shape as the Hết hạn column beside it.
+ *
+ * @param {unknown} iso
+ * @param {{timeZone?: string}} [opts] - timeZone is injectable so tests do not
+ *   depend on where they run; omit it in app code to use the machine's zone.
+ * @returns {string} formatted time, or '—' when there is nothing to show
+ */
+export function formatLastSeen(iso, opts = {}) {
+  if (typeof iso !== 'string' || !iso) return '—';
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return '—';
+  return new Intl.DateTimeFormat('sv-SE', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    ...(opts.timeZone ? { timeZone: opts.timeZone } : {}),
+  }).format(d);
+}

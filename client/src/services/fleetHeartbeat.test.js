@@ -13,6 +13,7 @@ import {
   shortId,
   buildExportRequest,
   exportRequestFilename,
+  formatLastSeen,
 } from './licenseFleetView.js';
 
 const ID = 'a1b2c3d4e5f60718' + '0'.repeat(48);
@@ -107,5 +108,43 @@ describe('view helpers', () => {
       exportRequestFilename({ hostname: 'op mac/3', installation_id: ID }),
       /^license-request-opmac3-a1b2c3d4_0000\.json$/
     );
+  });
+});
+
+/**
+ * formatLastSeen — "Last seen" must read in the operator's own clock.
+ *
+ * Found 2026-09-11 on the first screenshot after the License Manager shipped.
+ * The column rendered `m.last_seen.slice(0, 16).replace('T', ' ')` — a raw
+ * slice of the stored ISO string, which is UTC. A heartbeat recorded at
+ * 13:19:58 Vietnam time displayed as "2026-09-11 06:19".
+ *
+ * That is the one column an operator reads to judge whether a machine is
+ * still alive, and seven hours of apparent staleness is exactly the kind of
+ * thing that gets a healthy machine chased or a dead one ignored.
+ *
+ * timeZone is injectable so these assertions do not depend on where CI runs.
+ */
+describe('formatLastSeen', () => {
+  const ISO = '2026-09-11T06:19:58.450Z';
+
+  test('renders in the given zone, not UTC', () => {
+    assert.equal(formatLastSeen(ISO, { timeZone: 'Asia/Ho_Chi_Minh' }), '2026-09-11 13:19');
+  });
+
+  test('the same instant in UTC keeps the stored wall clock', () => {
+    assert.equal(formatLastSeen(ISO, { timeZone: 'UTC' }), '2026-09-11 06:19');
+  });
+
+  test('a zone west of UTC rolls the date back', () => {
+    // 06:19Z on the 11th is still the 10th in Los Angeles — the bug class
+    // this guards is a date that looks wrong, not just a time.
+    assert.equal(formatLastSeen(ISO, { timeZone: 'America/Los_Angeles' }), '2026-09-10 23:19');
+  });
+
+  test('missing or unparseable input renders the em dash, never "Invalid Date"', () => {
+    for (const bad of [undefined, null, '', 'not-a-date', 42, {}]) {
+      assert.equal(formatLastSeen(bad), '—', `input ${JSON.stringify(bad)}`);
+    }
   });
 });

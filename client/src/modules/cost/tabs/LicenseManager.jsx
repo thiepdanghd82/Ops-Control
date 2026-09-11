@@ -15,6 +15,7 @@ import {
   shortId,
   buildExportRequest,
   exportRequestFilename,
+  formatLastSeen,
 } from '../../../services/licenseFleetView';
 import './LicenseManager.css';
 
@@ -176,9 +177,7 @@ export default function LicenseManagerSection() {
                   <td>{m.status?.tier || '—'}</td>
                   <td className="licmgr-mono">{m.status?.expires_at?.slice(0, 10) || '—'}</td>
                   <td>{formatDaysLeft(m.days_left)}</td>
-                  <td className="licmgr-mono">
-                    {m.last_seen?.slice(0, 16).replace('T', ' ') || '—'}
-                  </td>
+                  <td className="licmgr-mono">{formatLastSeen(m.last_seen)}</td>
                   <td className="licmgr-actions">
                     <button className="op-btn op-btn-sm" onClick={() => onExportRequest(m)}>
                       Export request
