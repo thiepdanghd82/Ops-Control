@@ -320,8 +320,17 @@ describe('machine binding — a session may only speak for its own machine', () 
 
   test('a session with no bound machine is refused (fails closed)', async () => {
     // Sessions opened before this change carry installation_id 'unknown', and
-    // a web session carries 'web'. Neither may act as a fleet machine.
-    for (const bound of [undefined, 'unknown', 'web']) {
+    // web sessions carry a `web-` id minted per browser by webClientId()
+    // (singleSession.js). The `web-` prefix exists precisely so that shape can
+    // never be mistaken for a 64-hex desktop fingerprint here — a web id that
+    // looked like one would let any browser act as a fleet machine.
+    for (const bound of [
+      undefined,
+      'unknown',
+      'web', // pre-2026-09-11 web sessions
+      `web-${'a'.repeat(32)}`, // the per-browser id minted since
+      `WEB-${'A'.repeat(32)}`, // and it is not case-sensitively sneakable
+    ]) {
       const r = await req(buildApp(), 'POST', '/api/license/fleet/heartbeat', {
         role: 'user',
         install: bound,

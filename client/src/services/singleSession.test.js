@@ -7,6 +7,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   deriveInstallInfo,
+  webClientId,
   formatLastActivity,
   registerDraftProvider,
   captureDraft,
@@ -90,5 +91,101 @@ describe('draft snapshot', () => {
     });
     assert.equal(captureDraft(), null);
     registerDraftProvider(null);
+  });
+});
+
+/**
+ * webClientId — every web client used to report installation_id='web'.
+ *
+ * Found 2026-09-11 in live data: two sessions for the same user, one from
+ * 10.102.3.252 and one from localhost, both alive. findUserSessionConflict
+ * (authService.js:923) skips a session whose installation_id equals the
+ * caller's — "same machine is never a conflict" — so every browser in the
+ * company was the same machine and the takeover prompt could never fire
+ * between two web users. The single-session guarantee simply did not apply
+ * to the web client.
+ *
+ * Two constraints shape the id, and both have teeth:
+ *
+ *  1. It must NOT look like a desktop fingerprint. Those are 64-hex, and
+ *     licenseFleet's requireOwnMachine gates on exactly that shape. A 64-hex
+ *     web id would let any browser act as a fleet machine and undo the fix
+ *     from PR #105. Hence the `web-` prefix.
+ *  2. It must survive `String(installationId).slice(0, 64)` in authService.
+ */
+describe('webClientId', () => {
+  function memStorage(initial = {}) {
+    const map = new Map(Object.entries(initial));
+    return {
+      getItem: (k) => (map.has(k) ? map.get(k) : null),
+      setItem: (k, v) => map.set(k, String(v)),
+      _dump: () => Object.fromEntries(map),
+    };
+  }
+
+  test('mints an id and persists it', () => {
+    const s = memStorage();
+    const id = webClientId(s);
+    assert.ok(id.startsWith('web-'));
+    assert.equal(Object.values(s._dump())[0], id, 'must be written back');
+  });
+
+  test('the same browser keeps the same id', () => {
+    const s = memStorage();
+    assert.equal(webClientId(s), webClientId(s));
+  });
+
+  test('two browsers get different ids — the whole point', () => {
+    assert.notEqual(webClientId(memStorage()), webClientId(memStorage()));
+  });
+
+  test('never 64-hex, so it can never pass requireOwnMachine', () => {
+    for (let i = 0; i < 50; i++) {
+      const id = webClientId(memStorage());
+      assert.ok(!/^[0-9a-f]{64}$/i.test(id), `${id} would be taken for a desktop fingerprint`);
+    }
+  });
+
+  test('fits in the 64 chars authService stores', () => {
+    assert.ok(webClientId(memStorage()).length <= 64);
+  });
+
+  test('a storage that throws degrades to the old constant, not to a random id', () => {
+    // Private browsing, blocked site data. Returning a fresh random id every
+    // page load would be worse than today: each reload would look like a new
+    // machine and prompt a takeover the user cannot explain.
+    const hostile = {
+      getItem: () => {
+        throw new Error('blocked');
+      },
+      setItem: () => {
+        throw new Error('blocked');
+      },
+    };
+    assert.equal(webClientId(hostile), 'web');
+  });
+
+  test('a junk stored value is replaced, not trusted', () => {
+    const s = memStorage({ ops_web_client_id: '' });
+    const id = webClientId(s);
+    assert.ok(id.startsWith('web-'));
+  });
+
+  test('no storage at all → the old constant', () => {
+    assert.equal(webClientId(null), 'web');
+  });
+});
+
+describe('deriveInstallInfo with a web id', () => {
+  test('a desktop fingerprint still wins over the browser id', () => {
+    assert.equal(deriveInstallInfo({ installationId: ID }, 'h', 'web-abc').installation_id, ID);
+  });
+
+  test('without one, the browser id is reported instead of the constant', () => {
+    assert.equal(deriveInstallInfo(null, 'h', 'web-abc').installation_id, 'web-abc');
+  });
+
+  test('omitting it keeps the old behaviour', () => {
+    assert.equal(deriveInstallInfo(null, 'h').installation_id, 'web');
   });
 });

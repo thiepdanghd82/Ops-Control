@@ -788,7 +788,8 @@ router.post(
     remember: { type: 'boolean' },
     // Single-session (SAP-style): which machine is logging in + its name, and
     // whether to take over an existing session on another machine. Desktop
-    // sends the License Manager installation_id; web sends 'web'.
+    // sends the License Manager installation_id (64 hex); a browser sends the
+    // `web-` prefixed per-browser id from singleSession.js webClientId().
     installation_id: { type: 'string', max: 64 },
     hostname: { type: 'string', max: 120 },
     force: { type: 'boolean' },
@@ -814,7 +815,9 @@ router.post(
       // Sprint 1.6 — coerce explicitly: only `true` extends TTL, anything
       // else (undefined / 0 / 'false' string) keeps the 8h default.
       const remember = rawRemember === true;
-      // Single-session metadata (default 'web'/'unknown' for browser clients).
+      // Single-session metadata. A browser supplies its own `web-` id so two
+      // browsers are distinguishable; 'web' is only the degraded fallback when
+      // the browser has no usable storage.
       const installationId = String(rawInstall || 'web').slice(0, 64);
       const hostname = String(rawHost || 'web').slice(0, 120);
       const force = rawForce === true;
