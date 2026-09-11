@@ -19,12 +19,20 @@ const ID = 'a1b2c3d4e5f60718' + '0'.repeat(48);
 
 describe('deriveStatus', () => {
   test('real license', () => {
-    assert.deepEqual(deriveStatus({ hasLicense: true, valid: true, tier: 'M', expires_at: '2027-06-09T00:00:00Z' }), {
-      type: 'real',
-      tier: 'M',
-      expires_at: '2027-06-09T00:00:00Z',
-      isTrial: false,
-    });
+    assert.deepEqual(
+      deriveStatus({
+        hasLicense: true,
+        valid: true,
+        tier: 'M',
+        expires_at: '2027-06-09T00:00:00Z',
+      }),
+      {
+        type: 'real',
+        tier: 'M',
+        expires_at: '2027-06-09T00:00:00Z',
+        isTrial: false,
+      }
+    );
   });
   test('trial', () => {
     assert.equal(deriveStatus({ hasLicense: true, isTrial: true, tier: 'S' }).type, 'trial');
@@ -45,7 +53,12 @@ describe('deriveStatus', () => {
 
 describe('buildHeartbeatPayload', () => {
   test('valid id → payload', () => {
-    const p = buildHeartbeatPayload({ installationId: ID, hostname: 'op-mac', isTrial: true, hasLicense: true });
+    const p = buildHeartbeatPayload({
+      installationId: ID,
+      hostname: 'op-mac',
+      isTrial: true,
+      hasLicense: true,
+    });
     assert.equal(p.installation_id, ID);
     assert.equal(p.hostname, 'op-mac');
     assert.equal(p.status.type, 'trial');
@@ -58,7 +71,8 @@ describe('buildHeartbeatPayload', () => {
 
 describe('statusBadge', () => {
   test('trial → bad', () => assert.equal(statusBadge({ status: { type: 'trial' } }).tone, 'bad'));
-  test('unlicensed → bad', () => assert.equal(statusBadge({ status: { type: 'unlicensed' } }).tone, 'bad'));
+  test('unlicensed → bad', () =>
+    assert.equal(statusBadge({ status: { type: 'unlicensed' } }).tone, 'bad'));
   test('real expired → bad', () =>
     assert.equal(statusBadge({ status: { type: 'real' }, days_left: -3 }).tone, 'bad'));
   test('real expiring <30d → warn', () =>
@@ -78,10 +92,20 @@ describe('view helpers', () => {
     assert.equal(shortId(''), '—');
   });
   test('buildExportRequest', () => {
-    const r = buildExportRequest({ installation_id: ID, hostname: 'op-mac' }, '2026-06-04T00:00:00Z');
-    assert.deepEqual(r, { installation_id: ID, hostname: 'op-mac', requested_at: '2026-06-04T00:00:00Z' });
+    const r = buildExportRequest(
+      { installation_id: ID, hostname: 'op-mac' },
+      '2026-06-04T00:00:00Z'
+    );
+    assert.deepEqual(r, {
+      installation_id: ID,
+      hostname: 'op-mac',
+      requested_at: '2026-06-04T00:00:00Z',
+    });
   });
   test('exportRequestFilename sanitizes', () => {
-    assert.match(exportRequestFilename({ hostname: 'op mac/3', installation_id: ID }), /^license-request-opmac3-a1b2c3d4_0000\.json$/);
+    assert.match(
+      exportRequestFilename({ hostname: 'op mac/3', installation_id: ID }),
+      /^license-request-opmac3-a1b2c3d4_0000\.json$/
+    );
   });
 });

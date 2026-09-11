@@ -27,7 +27,11 @@ describe('fleetStore.recordHeartbeat', () => {
   test('records + sanitizes status, persists JSON', () => {
     const rec = recordHeartbeat(
       dir,
-      { installation_id: ID_A, hostname: 'op3-mac', status: { type: 'trial', tier: 'S', isTrial: true, expires_at: '2026-06-08T00:00:00Z' } },
+      {
+        installation_id: ID_A,
+        hostname: 'op3-mac',
+        status: { type: 'trial', tier: 'S', isTrial: true, expires_at: '2026-06-08T00:00:00Z' },
+      },
       '2026-06-04T00:00:00Z'
     );
     assert.equal(rec.installation_id, ID_A);
@@ -42,20 +46,32 @@ describe('fleetStore.recordHeartbeat', () => {
 
   test('preserves first_seen across heartbeats, updates last_seen', () => {
     recordHeartbeat(dir, { installation_id: ID_A, hostname: 'h1' }, '2026-06-01T00:00:00Z');
-    const r2 = recordHeartbeat(dir, { installation_id: ID_A, hostname: 'h1' }, '2026-06-04T00:00:00Z');
+    const r2 = recordHeartbeat(
+      dir,
+      { installation_id: ID_A, hostname: 'h1' },
+      '2026-06-04T00:00:00Z'
+    );
     assert.equal(r2.first_seen, '2026-06-01T00:00:00Z');
     assert.equal(r2.last_seen, '2026-06-04T00:00:00Z');
   });
 
   test('unknown status.type coerced to "unknown"', () => {
-    const r = recordHeartbeat(dir, { installation_id: ID_A, status: { type: 'hacker' } }, '2026-06-04T00:00:00Z');
+    const r = recordHeartbeat(
+      dir,
+      { installation_id: ID_A, status: { type: 'hacker' } },
+      '2026-06-04T00:00:00Z'
+    );
     assert.equal(r.status.type, 'unknown');
   });
 });
 
 describe('fleetStore.listFleet', () => {
   test('computes days_left + pending flag, sorts by last_seen desc', () => {
-    recordHeartbeat(dir, { installation_id: ID_A, hostname: 'old', status: { expires_at: '2026-07-04T00:00:00Z' } }, '2026-06-01T00:00:00Z');
+    recordHeartbeat(
+      dir,
+      { installation_id: ID_A, hostname: 'old', status: { expires_at: '2026-07-04T00:00:00Z' } },
+      '2026-06-01T00:00:00Z'
+    );
     recordHeartbeat(dir, { installation_id: ID_B, hostname: 'new' }, '2026-06-03T00:00:00Z');
     const now = new Date('2026-06-04T00:00:00Z').getTime();
     const list = listFleet(dir, now);
@@ -72,7 +88,12 @@ describe('fleetStore.listFleet', () => {
 });
 
 describe('fleetStore queue + distribute', () => {
-  const lic = (id) => ({ installation_id: id, tier: 'M', expires_at: '2027-06-09T00:00:00Z', signature: 'x' });
+  const lic = (id) => ({
+    installation_id: id,
+    tier: 'M',
+    expires_at: '2027-06-09T00:00:00Z',
+    signature: 'x',
+  });
 
   test('queue → getPending returns it; list flags pending_license', () => {
     recordHeartbeat(dir, { installation_id: ID_A, hostname: 'h' }, '2026-06-04T00:00:00Z');
@@ -82,14 +103,19 @@ describe('fleetStore queue + distribute', () => {
   });
 
   test('queue rejects bad installation_id', () => {
-    assert.throws(() => queuePendingLicense(dir, { installation_id: 'bad' }), /bad-installation-id/);
+    assert.throws(
+      () => queuePendingLicense(dir, { installation_id: 'bad' }),
+      /bad-installation-id/
+    );
   });
 
   test('markDistributed removes from queue + appends log; false when nothing pending', () => {
     queuePendingLicense(dir, lic(ID_A), '2026-06-04T00:00:00Z');
     assert.equal(markDistributed(dir, ID_A, '2026-06-04T01:00:00Z'), true);
     assert.equal(getPendingForInstall(dir, ID_A), null);
-    const log = JSON.parse(fs.readFileSync(path.join(dir, 'Library', 'Fleet', 'distributed-log.json'), 'utf8'));
+    const log = JSON.parse(
+      fs.readFileSync(path.join(dir, 'Library', 'Fleet', 'distributed-log.json'), 'utf8')
+    );
     assert.equal(log[0].installation_id, ID_A);
     assert.equal(markDistributed(dir, ID_A), false); // already gone
   });

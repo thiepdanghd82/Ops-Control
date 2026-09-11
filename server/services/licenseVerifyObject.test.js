@@ -53,7 +53,10 @@ describe('verifyLicenseObject', () => {
     assert.equal(verifyLicenseObject([]).reason, 'malformed');
   });
   test('trial rejected as not-distributable', () => {
-    assert.equal(verifyLicenseObject({ ...signed(), isTrial: true }).reason, 'trial-not-distributable');
+    assert.equal(
+      verifyLicenseObject({ ...signed(), isTrial: true }).reason,
+      'trial-not-distributable'
+    );
   });
   test('tampered customer → bad-signature', () => {
     const l = signed();
@@ -68,10 +71,16 @@ describe('verifyLicenseObject', () => {
   test('bad installation_id format → bad-installation-id', () => {
     // sign a payload whose id is non-hex; canonicalize over the bad id so the
     // signature itself is valid, proving the id-format gate runs independently.
-    assert.equal(verifyLicenseObject(signed({ installation_id: 'short' })).reason, 'bad-installation-id');
+    assert.equal(
+      verifyLicenseObject(signed({ installation_id: 'short' })).reason,
+      'bad-installation-id'
+    );
   });
   test('expired license → expired', () => {
-    assert.equal(verifyLicenseObject(signed({ expires_at: '2020-01-01T00:00:00Z' })).reason, 'expired');
+    assert.equal(
+      verifyLicenseObject(signed({ expires_at: '2020-01-01T00:00:00Z' })).reason,
+      'expired'
+    );
   });
   test('different keypair → bad-signature', () => {
     const { privateKey: other } = generateKeyPairSync('ed25519');
@@ -85,7 +94,10 @@ describe('verifyLicenseObject', () => {
       expires_at: '2027-06-09T00:00:00Z',
       features: ['costing'],
     };
-    const forged = { ...p, signature: sign(null, Buffer.from(canonicalize(p)), other).toString('base64') };
+    const forged = {
+      ...p,
+      signature: sign(null, Buffer.from(canonicalize(p)), other).toString('base64'),
+    };
     assert.equal(verifyLicenseObject(forged).reason, 'bad-signature');
   });
 });
