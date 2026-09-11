@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { authApi, api, costApi, importApi, sharedApi } from '../../../services/api';
 import EmptyState from '../../../components/Shared/EmptyState';
@@ -11,7 +11,12 @@ import ConnectionInfoSection from './ConnectionInfoSection';
 import HardwareSection from './HardwareSection';
 import ModeSection from './ModeSection';
 import AboutSection from './AboutSection';
-import LicenseManagerSection from './LicenseManager';
+// Lazy: License Manager is one section of this tab and most visits never open
+// it, but a static import put its code in the Settings chunk and pushed that
+// chunk past its 120 kB perf budget. Split out it is 1.7 kB gzipped, fetched
+// once when the section is first opened. Every tab in CostModule is already
+// loaded this way — see client/src/utils/tabPreload.js.
+const LicenseManagerSection = lazy(() => import('./LicenseManager'));
 import ProvisioningCard from '../../../components/Auth/ProvisioningCard';
 // SYS-only, rarely opened → lazy chunk so it stays out of the Settings bundle.
 const SystemControl = React.lazy(() => import('./SystemControl'));
@@ -178,7 +183,11 @@ export default function Settings() {
         {activeSec === 'mode' && <ModeSection />}
         {activeSec === 'about' && <AboutSection />}
         {activeSec === 'account' && <AccountSection />}
-        {activeSec === 'license-mgr' && <LicenseManagerSection />}
+        {activeSec === 'license-mgr' && (
+          <Suspense fallback={null}>
+            <LicenseManagerSection />
+          </Suspense>
+        )}
         {activeSec === 'system-control' && (
           <React.Suspense fallback={null}>
             <SystemControl />
