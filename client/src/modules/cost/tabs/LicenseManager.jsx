@@ -115,6 +115,19 @@ export default function LicenseManagerSection() {
         Ký offline trên máy Lead, phân phối online tại đây. Server KHÔNG bao giờ ký — chỉ verify chữ
         ký + installation_id rồi xếp hàng giao xuống máy đích ở heartbeat kế tiếp.
       </p>
+      {/*
+        Audit 2026-09-11. Trạng thái / Tier / Hết hạn là do CHÍNH MÁY ĐÓ tự khai
+        trong heartbeat; server không có cách nào kiểm chứng, vì chỉ máy đó mới
+        biết license nó đang giữ. Một máy chưa có license hoàn toàn có thể báo
+        "real / L / 2099" và biến mất khỏi tầm ngắm. Từ 2026-09-11 nó chỉ còn
+        khai được cho CHÍNH NÓ (requireOwnMachine), nhưng vẫn khai được về mình.
+        Nói thẳng ra ở đây còn hơn để bảng này trông như một bản kiểm kê đã xác
+        minh. Cột "Giao license" bên dưới thì server tự biết — đó là dữ kiện thật.
+      */}
+      <p className="licmgr-sub licmgr-sub-warn">
+        ⓘ Trạng thái, Tier và Hết hạn là do máy <strong>tự khai</strong> khi gửi heartbeat — server
+        không kiểm chứng được. Dùng để rà soát, đừng dùng làm bằng chứng tuân thủ.
+      </p>
 
       {error && <div className="licmgr-alert licmgr-alert-bad">{error}</div>}
       {msg && <div className="licmgr-alert licmgr-alert-ok">{msg}</div>}
@@ -139,9 +152,9 @@ export default function LicenseManagerSection() {
             <tr>
               <th>Máy</th>
               <th>Installation ID</th>
-              <th>Trạng thái</th>
-              <th>Tier</th>
-              <th>Hết hạn</th>
+              <th title="Máy tự khai trong heartbeat — server không kiểm chứng">Trạng thái ⓘ</th>
+              <th title="Máy tự khai trong heartbeat — server không kiểm chứng">Tier ⓘ</th>
+              <th title="Máy tự khai trong heartbeat — server không kiểm chứng">Hết hạn ⓘ</th>
               <th>Còn lại</th>
               <th>Last seen</th>
               <th>Hành động</th>

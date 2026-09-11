@@ -62,7 +62,14 @@ function buildApp() {
   const stubAuth = (req, res, next) => {
     const role = req.headers['x-test-role'];
     if (!role) return res.status(401).json({ error: 'auth required' });
-    req.user = { user: { role, username: `u-${role}` }, role };
+    // The real authMiddleware attaches the machine the session was opened
+    // from; the fleet routes gate on it, so the stub must carry it too.
+    const install = req.headers['x-test-install'];
+    req.user = {
+      user: { role, username: `u-${role}` },
+      role,
+      installation_id: install || null,
+    };
     next();
   };
   const auditSink = (event, user, ip, detail) => auditRows.push({ event, user, detail });
@@ -73,13 +80,17 @@ function buildApp() {
   return app;
 }
 
-async function req(app, method, p, { role, body } = {}) {
+async function req(app, method, p, { role, body, install } = {}) {
   const server = app.listen(0);
   const port = server.address().port;
   try {
     const res = await fetch(`http://127.0.0.1:${port}${p}`, {
       method,
-      headers: { 'content-type': 'application/json', ...(role ? { 'x-test-role': role } : {}) },
+      headers: {
+        'content-type': 'application/json',
+        ...(role ? { 'x-test-role': role } : {}),
+        ...(install ? { 'x-test-install': install } : {}),
+      },
       body: body ? JSON.stringify(body) : undefined,
     });
     return { status: res.status, body: await res.json().catch(() => ({})) };
@@ -103,18 +114,27 @@ describe('B1 heartbeat', () => {
   test('any authenticated role records heartbeat', async () => {
     const r = await req(buildApp(), 'POST', '/api/license/fleet/heartbeat', {
       role: 'user',
+      install: ID,
       body: { installation_id: ID, hostname: 'op-mac', status: { type: 'trial', isTrial: true } },
     });
     assert.equal(r.status, 200);
     assert.equal(r.body.recorded, true);
     assert.equal(r.body.pending_license, null);
   });
-  test('bad installation_id → 400', async () => {
+  test('malformed installation_id is refused', async () => {
+    // Was 400 (fleetStore's own `bad-installation-id` throw). Since the
+    // machine-binding gate landed it is 403 and never reaches the store: a
+    // session can only ever claim its own id, and that id is HEX64-checked
+    // when it is read off the session. fleetStore keeps its validation as
+    // defence in depth — see fleetStore.test.js — it is simply no longer the
+    // first line for this route.
     const r = await req(buildApp(), 'POST', '/api/license/fleet/heartbeat', {
       role: 'user',
+      install: 'nope',
       body: { installation_id: 'nope' },
     });
-    assert.equal(r.status, 400);
+    assert.equal(r.status, 403);
+    assert.equal(r.body.reason, 'session-not-machine-bound');
   });
 });
 
@@ -127,6 +147,7 @@ describe('B2 fleet list (sys-only)', () => {
     const app = buildApp();
     await req(app, 'POST', '/api/license/fleet/heartbeat', {
       role: 'user',
+      install: ID,
       body: { installation_id: ID, hostname: 'op-mac' },
     });
     const r = await req(app, 'GET', '/api/license/fleet', { role: 'sys' });
@@ -203,6 +224,7 @@ describe('B3 distribution', () => {
     // heartbeat from the target machine → pending license delivered
     const hb1 = await req(app, 'POST', '/api/license/fleet/heartbeat', {
       role: 'user',
+      install: ID,
       body: { installation_id: ID, hostname: 'op-mac' },
     });
     assert.ok(hb1.body.pending_license, 'pending license should be delivered');
@@ -211,6 +233,7 @@ describe('B3 distribution', () => {
     // client confirms applied
     const dist = await req(app, 'POST', '/api/license/fleet/distributed', {
       role: 'user',
+      install: ID,
       body: { installation_id: ID },
     });
     assert.equal(dist.body.distributed, true);
@@ -219,8 +242,101 @@ describe('B3 distribution', () => {
     // subsequent heartbeat → no pending
     const hb2 = await req(app, 'POST', '/api/license/fleet/heartbeat', {
       role: 'user',
+      install: ID,
       body: { installation_id: ID, hostname: 'op-mac' },
     });
     assert.equal(hb2.body.pending_license, null);
+  });
+});
+
+/**
+ * Audit 2026-09-11. Every route below took `installation_id` from the request
+ * body with nothing tying it to the caller's session, so any authenticated
+ * user — `viewonly` included — could speak for any machine whose 64-hex id
+ * they knew. The desktop app already sends its installation_id at login and
+ * authService stores it on the session (authService.js:766), so the binding
+ * was available all along; the routes just never consulted it.
+ */
+describe('machine binding — a session may only speak for its own machine', () => {
+  test('heartbeat for another machine → 403, and no record is written for it', async () => {
+    const app = buildApp();
+    const r = await req(app, 'POST', '/api/license/fleet/heartbeat', {
+      role: 'viewonly',
+      install: ID2, // attacker's own machine
+      body: { installation_id: ID, hostname: 'spoofed', status: { type: 'real' } },
+    });
+    assert.equal(r.status, 403);
+
+    // The victim must not appear in the fleet at all.
+    const list = await req(app, 'GET', '/api/license/fleet', { role: 'sys' });
+    assert.equal(
+      list.body.fleet.find((m) => m.installation_id === ID),
+      undefined,
+      'a spoofed heartbeat must not create or overwrite the victim row'
+    );
+  });
+
+  test('heartbeat cannot harvest another machine pending license', async () => {
+    const app = buildApp();
+    await req(app, 'POST', '/api/license/fleet/upload', {
+      role: 'sys',
+      body: { license: signLicense(), installation_id: ID },
+    });
+    const r = await req(app, 'POST', '/api/license/fleet/heartbeat', {
+      role: 'viewonly',
+      install: ID2,
+      body: { installation_id: ID },
+    });
+    assert.equal(r.status, 403);
+    assert.equal(r.body.pending_license, undefined, 'must not leak the signed license');
+  });
+
+  test('distributed for another machine → 403, and the license stays queued', async () => {
+    const app = buildApp();
+    await req(app, 'POST', '/api/license/fleet/upload', {
+      role: 'sys',
+      body: { license: signLicense(), installation_id: ID },
+    });
+    const bad = await req(app, 'POST', '/api/license/fleet/distributed', {
+      role: 'viewonly',
+      install: ID2,
+      body: { installation_id: ID },
+    });
+    assert.equal(bad.status, 403);
+    assert.equal(
+      auditRows.find((a) => a.event === 'LICENSE_DISTRIBUTED'),
+      undefined,
+      'a refused call must not write a delivery row'
+    );
+
+    // The real machine still receives it.
+    const hb = await req(app, 'POST', '/api/license/fleet/heartbeat', {
+      role: 'user',
+      install: ID,
+      body: { installation_id: ID },
+    });
+    assert.ok(hb.body.pending_license, 'the queued license must survive the refused call');
+  });
+
+  test('a session with no bound machine is refused (fails closed)', async () => {
+    // Sessions opened before this change carry installation_id 'unknown', and
+    // a web session carries 'web'. Neither may act as a fleet machine.
+    for (const bound of [undefined, 'unknown', 'web']) {
+      const r = await req(buildApp(), 'POST', '/api/license/fleet/heartbeat', {
+        role: 'user',
+        install: bound,
+        body: { installation_id: ID },
+      });
+      assert.equal(r.status, 403, `bound=${bound} must be refused`);
+    }
+  });
+
+  test('sys is not exempt — the gate is about identity, not privilege', async () => {
+    const r = await req(buildApp(), 'POST', '/api/license/fleet/heartbeat', {
+      role: 'sys',
+      install: ID2,
+      body: { installation_id: ID },
+    });
+    assert.equal(r.status, 403);
   });
 });

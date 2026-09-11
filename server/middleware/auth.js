@@ -1,7 +1,12 @@
 /**
  * Auth Middleware — uses local session store (no Python dependency)
  */
-import { getSessionUser, getTokenFromHeader, getRevokeReason } from '../services/authService.js';
+import {
+  getSessionUser,
+  getTokenFromHeader,
+  getRevokeReason,
+  getSessionInstallationId,
+} from '../services/authService.js';
 
 export function authMiddleware(req, res, next) {
   const token = getTokenFromHeader(req);
@@ -26,6 +31,10 @@ export function authMiddleware(req, res, next) {
     user: user,
     role: user.role,
     modules: user.modules || { cost: true, planning: true },
+    // The machine this session was opened from (null on web / legacy
+    // sessions). Routes that act per-machine must gate on this rather than
+    // on a body field the caller controls.
+    installation_id: getSessionInstallationId(token),
   };
   next();
 }

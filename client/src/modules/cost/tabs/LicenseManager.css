@@ -97,3 +97,12 @@
 .licmgr-hidden-input {
   display: none;
 }
+
+/* Audit 2026-09-11 — the self-reported-data caveat. Amber rather than red:
+   it is a caveat about what the table means, not an error state. Carries an
+   ⓘ glyph as well as colour (DESIGN.md rule 3 — never colour alone). */
+.licmgr-sub-warn {
+  border-left: 3px solid var(--color-amber-500);
+  padding-left: 8px;
+  color: var(--color-slate-600);
+}
