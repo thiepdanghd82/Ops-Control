@@ -74,7 +74,11 @@
 - **Duration:** ~4-6 sprints
 - **Trigger:** S-WIN-PORT stable + stakeholder confirms web demand
 - **Acceptance:**
-  - Refactor Electron-only IPC sentinels (`__probe__`, `__firstrun__`) to support both Electron + browser
+  - Refactor the Electron-only setup/first-run IPC (`ipcRenderer.invoke` against the
+    `ops:setup.*` / `ops:firstrun.*` channels in `desktop/setupWizard.js` and
+    `desktop/clientFirstRun.js`) to support both Electron + browser. These replaced
+    the old `__probe__` / `__firstrun__` sentinels in PR #279; the concern is
+    unchanged, since `ipcRenderer` has no browser equivalent either
   - CSRF + cookie SameSite + auth flow audited cross-origin
   - FileSystem Access API fallback verified Chrome/Edge/Safari
   - Browser print/PDF stylesheet polish

@@ -1,5 +1,9 @@
 # Lint Warning Ratchet Implementation Plan
 
+> **STATUS: SHIPPED — do not re-execute.** Shipped 2026-09-10 — PR #281 (`996dcf9`). The budget is now 413; it is a **ratchet**, so lower it when you migrate a file and never raise it.
+>
+> Every box below is ticked because the work is on `main`, not because someone walked the plan a second time. Read it as a record of what was decided and why.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Stop the inline-style / lint debt from growing silently by lowering the CI warning budget to today's actual count.
@@ -30,7 +34,7 @@
 - Consumes: nothing.
 - Produces: nothing. This is a CI configuration change with no runtime surface.
 
-- [ ] **Step 1: Read the real warning count off a green CI run**
+- [x] **Step 1: Read the real warning count off a green CI run**
 
 Do not run ESLint locally for this number. Get it from the most recent CI run on `main` after PR #280 merged:
 
@@ -43,7 +47,7 @@ Expected output shape: `✖ 413 problems (0 errors, 413 warnings)`
 
 If the line reads `(1 error, ...)`, PR #280 is not merged yet — stop and merge it first.
 
-- [ ] **Step 2: Verify the current budget is higher than that count**
+- [x] **Step 2: Verify the current budget is higher than that count**
 
 ```bash
 grep -n "max-warnings" .github/workflows/ci.yml
@@ -53,7 +57,7 @@ Expected: `- run: npm run lint -- --max-warnings 435`
 
 435 − 413 = 22 warnings of headroom. That headroom is the bug: debt can grow by 22 before anyone notices.
 
-- [ ] **Step 3: Set the budget to the exact current count**
+- [x] **Step 3: Set the budget to the exact current count**
 
 In `.github/workflows/ci.yml`, change the `--max-warnings` value from `435` to the number from Step 1 (`413` at time of writing), and replace the explanatory comment block above it with:
 
@@ -69,7 +73,7 @@ In `.github/workflows/ci.yml`, change the `--max-warnings` value from `435` to t
 - run: npm run lint -- --max-warnings 413
 ```
 
-- [ ] **Step 4: Verify the change is exactly one value**
+- [x] **Step 4: Verify the change is exactly one value**
 
 ```bash
 git diff .github/workflows/ci.yml
@@ -77,7 +81,7 @@ git diff .github/workflows/ci.yml
 
 Expected: only the `--max-warnings` number and the comment block above it changed. No other job, step, or file touched.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git checkout -b chore/lint-warning-ratchet
@@ -100,7 +104,7 @@ EOF
 )"
 ```
 
-- [ ] **Step 6: Push and confirm CI still passes at the new budget**
+- [x] **Step 6: Push and confirm CI still passes at the new budget**
 
 ```bash
 git push -u origin chore/lint-warning-ratchet

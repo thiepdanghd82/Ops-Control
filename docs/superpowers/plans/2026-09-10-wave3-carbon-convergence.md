@@ -1,5 +1,9 @@
 # Carbon Convergence Implementation Plan
 
+> **STATUS: SHIPPED — do not re-execute.** Shipped 2026-09-10 — PR #287 (`73e4a1f`). Carbon is the canonical design language; the Apple spec is archived and `--color-brand-navy` no longer masquerades as a slate.
+>
+> Every box below is ticked because the work is on `main`, not because someone walked the plan a second time. Read it as a record of what was decided and why.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Leave exactly one documented visual language in the repo, and stop a token whose name contradicts its value from misleading the next contributor.
@@ -35,14 +39,14 @@
 
 A design document nobody follows is worse than none: a new contributor reads it, builds to the Apple spec in good faith, and creates a **fourth** visual language.
 
-- [ ] **Step 1: Move the existing document to the archive**
+- [x] **Step 1: Move the existing document to the archive**
 
 ```bash
 mkdir -p docs/design
 git mv DESIGN.md docs/design/ARCHIVED-2026-09-10-apple-design-system.md
 ```
 
-- [ ] **Step 2: Mark the archived file as superseded**
+- [x] **Step 2: Mark the archived file as superseded**
 
 Insert at the very top of `docs/design/ARCHIVED-2026-09-10-apple-design-system.md`, above the existing `# Design System Inspired by Apple` heading:
 
@@ -60,7 +64,7 @@ Insert at the very top of `docs/design/ARCHIVED-2026-09-10-apple-design-system.m
 > See `docs/superpowers/plans/2026-09-10-wave3-carbon-convergence.md`.
 ```
 
-- [ ] **Step 3: Write the replacement DESIGN.md**
+- [x] **Step 3: Write the replacement DESIGN.md**
 
 Create `DESIGN.md`:
 
@@ -109,7 +113,7 @@ being fixed in one sweep. The CI warning budget in `.github/workflows/ci.yml`
 is a ratchet: lower it whenever you migrate a file, never raise it.
 ```
 
-- [ ] **Step 4: Check nothing still points at the old path**
+- [x] **Step 4: Check nothing still points at the old path**
 
 ```bash
 grep -rn "DESIGN\.md" --include="*.md" --include="*.js" --include="*.jsx" --include="*.json" . \
@@ -118,12 +122,12 @@ grep -rn "DESIGN\.md" --include="*.md" --include="*.js" --include="*.jsx" --incl
 
 Expected: any hit is either the new `DESIGN.md` itself or a reference that still reads correctly. Fix any link that meant the Apple content — it now lives under `docs/design/`.
 
-- [ ] **Step 5: Verify formatting**
+- [x] **Step 5: Verify formatting**
 
 Run: `npx prettier --check DESIGN.md docs/design/ARCHIVED-2026-09-10-apple-design-system.md`
 Expected: `All matched files use Prettier code style!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A DESIGN.md docs/design/
@@ -164,7 +168,7 @@ EOF
 
 `--color-slate-900` is `#0f2341`. Tailwind's slate-900 is `#0f172a`. The value is a deliberate brand navy that consolidated four near-navy hexes (`#0e2550`, `#162c52`, `#243352`, `#1a3a5c` — recorded in the file's own consolidation note). The value is right; the **name** is wrong, and anyone reading the slate scale will assume Tailwind values and get a different colour.
 
-- [ ] **Step 1: Record the exact before-state**
+- [x] **Step 1: Record the exact before-state**
 
 ```bash
 grep -rn "color-slate-900" --include="*.css" --include="*.jsx" --include="*.js" client/src | wc -l
@@ -173,7 +177,7 @@ grep -rl "color-slate-900" --include="*.css" --include="*.jsx" --include="*.js" 
 
 Write the count down. Step 4 asserts it reaches zero and the new name reaches the same count.
 
-- [ ] **Step 2: Rename the definition**
+- [x] **Step 2: Rename the definition**
 
 In `client/src/styles/tokens.css`, replace line 31:
 
@@ -191,7 +195,7 @@ Update the consolidation note further down the same file (around line 161) so it
  *   #0e2550, #162c52, #243352, #1a3a5c  → --color-brand-navy
 ```
 
-- [ ] **Step 3: Rename every reference**
+- [x] **Step 3: Rename every reference**
 
 ```bash
 grep -rl "color-slate-900" --include="*.css" --include="*.jsx" --include="*.js" client/src \
@@ -200,7 +204,7 @@ grep -rl "color-slate-900" --include="*.css" --include="*.jsx" --include="*.js" 
 
 On GNU sed drop the `''` after `-i`.
 
-- [ ] **Step 4: Verify the rename is complete**
+- [x] **Step 4: Verify the rename is complete**
 
 ```bash
 grep -rn "color-slate-900" --include="*.css" --include="*.jsx" --include="*.js" client/src | wc -l   # expect 0
@@ -209,7 +213,7 @@ grep -rn "color-brand-navy" --include="*.css" --include="*.jsx" --include="*.js"
 
 A non-zero first number means a half-rename — worse than the original problem. Do not proceed until it is zero.
 
-- [ ] **Step 5: Verify the app still builds and looks unchanged**
+- [x] **Step 5: Verify the app still builds and looks unchanged**
 
 Run: `cd client && npm run build`
 Expected: `✓ built`, exit 0.
@@ -219,7 +223,7 @@ Expected: PASS.
 
 This task changes no colour values, so the rendered UI must be pixel-identical. If anything looks different, a reference was missed or a fallback (`var(--color-slate-900, #something)`) was silently picking up its fallback — search for the old name once more.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add client/src
