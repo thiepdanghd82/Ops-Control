@@ -440,7 +440,7 @@ const QUOTE_HISTORY_COLUMNS = [
           </button>
         )}
         {q.has_layout || q.state?.layout_files?.length || q.state?.layout_file?.name ? (
-          <span className="qh-act-layout qh-layout-yes" title="Layout attached">
+          <span className="qh-act-layout qh-layout-yes" title={ctx.t('qh.layout_attached')}>
             <svg
               width="12"
               height="12"
@@ -454,7 +454,7 @@ const QUOTE_HISTORY_COLUMNS = [
             </svg>
           </span>
         ) : (
-          <span className="qh-act-layout qh-layout-no" title="No layout">
+          <span className="qh-act-layout qh-layout-no" title={ctx.t('qh.no_layout')}>
             <svg
               width="10"
               height="10"
@@ -772,11 +772,11 @@ export default function QuoteHistory() {
       <div className="qh-root">
         <EmptyState
           icon="⚠️"
-          title="Failed to load quote history"
+          title={t('qh.load_failed')}
           hint={loadError.message || String(loadError)}
           action={
             <button className="op-btn op-btn-primary" onClick={refresh}>
-              Retry
+              {t('common.retry')}
             </button>
           }
         />
@@ -804,7 +804,7 @@ export default function QuoteHistory() {
           </svg>
         </div>
         <div className="qh-hb-titleblock">
-          <div className="qh-hb-title">Quote History</div>
+          <div className="qh-hb-title">{t('qh.title')}</div>
           <div className="qh-hb-meta">
             <span className="qh-hb-badge">{quotes.length}</span>
             <span className="qh-hb-sub">{filtered.length} shown</span>
@@ -825,7 +825,7 @@ export default function QuoteHistory() {
               className="qh-hb-refresh-btn"
               onClick={refresh}
               disabled={isRefreshing || loading}
-              title="Refresh quote list ngay (Cmd/Ctrl+R cho full reload)"
+              title={t('qh.refresh_tip')}
             >
               ↻
             </button>
@@ -871,7 +871,7 @@ export default function QuoteHistory() {
               <button
                 className="qh-hb-fbtn qh-hb-trash-btn"
                 onClick={openTrash}
-                title="View soft-deleted quotes · Xem các quote đã xoá (có thể restore)"
+                title={t('qh.view_deleted')}
               >
                 🗑 Trash
               </button>
@@ -924,7 +924,7 @@ export default function QuoteHistory() {
                   <td colSpan={visibleColumns.length} style={{ padding: 0 }}>
                     <EmptyState
                       icon="📊"
-                      title="No quotes found"
+                      title={t('qh.no_quotes')}
                       hint="Save a Standard or Complex quote — it will appear here with version history."
                     />
                   </td>
@@ -1027,7 +1027,7 @@ export default function QuoteHistory() {
             disabled={page >= totalPages - 1}
             onClick={() => setPage((p) => p + 1)}
           >
-            Next ›
+            {t('qh.next_page')}
           </button>
           <button
             className="qh-pb"
@@ -1071,13 +1071,15 @@ export default function QuoteHistory() {
       >
         <Modal.Header
           id="qh-trash-title"
-          title="Trash"
+          title={t('qh.trash')}
           subtitle={`${trashModal?.items?.length || 0} soft-deleted quote(s) · Soft-deleted, restorable. Permanent delete (purge) is sys-only.`}
           severity="warning"
         />
         <Modal.Body className="flush">
           {trashModal?.loading && (
-            <div style={{ padding: 32, textAlign: 'center', color: '#6f6f6f' }}>Loading…</div>
+            <div style={{ padding: 32, textAlign: 'center', color: '#6f6f6f' }}>
+              {t('common.loading')}
+            </div>
           )}
           {trashModal?.err && (
             <div style={{ padding: 24, color: '#a2191f' }}>Failed: {trashModal.err}</div>
@@ -1086,7 +1088,7 @@ export default function QuoteHistory() {
             <div
               style={{ padding: 32, textAlign: 'center', color: '#6f6f6f', fontStyle: 'italic' }}
             >
-              Trash is empty · Thùng rác trống.
+              {t('qh.trash_empty')}
             </div>
           )}
           {trashModal && (trashModal.items || []).length > 0 && (
@@ -1094,12 +1096,12 @@ export default function QuoteHistory() {
               <thead>
                 <tr style={{ background: '#525252', color: '#fff' }}>
                   <th style={{ padding: '8px 10px', textAlign: 'left' }}>#</th>
-                  <th style={{ padding: '8px 10px', textAlign: 'left' }}>Type</th>
-                  <th style={{ padding: '8px 10px', textAlign: 'left' }}>Label / RFQ</th>
-                  <th style={{ padding: '8px 10px', textAlign: 'left' }}>Direct CU</th>
-                  <th style={{ padding: '8px 10px', textAlign: 'left' }}>Trashed at</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left' }}>{t('common.type')}</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left' }}>{t('qh.label_rfq')}</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left' }}>{t('qh.direct_cu')}</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left' }}>{t('qh.trashed_at')}</th>
                   <th style={{ padding: '8px 10px', textAlign: 'left' }}>By</th>
-                  <th style={{ padding: '8px 10px', textAlign: 'right' }}>Actions</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'right' }}>{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1120,7 +1122,7 @@ export default function QuoteHistory() {
                         className="op-btn op-btn-secondary"
                         style={{ padding: '4px 10px', fontSize: 11, marginRight: 6 }}
                         onClick={() => handleRestore(q)}
-                        title="Restore quote · Khôi phục"
+                        title={t('qh.restore')}
                       >
                         ↩ Restore
                       </button>
@@ -1129,7 +1131,7 @@ export default function QuoteHistory() {
                           className="op-btn op-btn-danger"
                           style={{ padding: '4px 10px', fontSize: 11 }}
                           onClick={() => handlePurge(q)}
-                          title="Permanent delete · Xoá vĩnh viễn (sys only)"
+                          title={t('qh.permanent_delete')}
                         >
                           ⚠ Purge
                         </button>
@@ -1146,7 +1148,7 @@ export default function QuoteHistory() {
             ↻ Refresh
           </button>
           <button className="op-btn op-btn-primary" onClick={closeTrash}>
-            Close
+            {t('common.close')}
           </button>
         </Modal.Footer>
       </Modal>
@@ -1167,7 +1169,7 @@ export default function QuoteHistory() {
             }}
           >
             <span className="qh-ctx-icon">📂</span>
-            <span>Open</span>
+            <span>{t('qh.open')}</span>
             <span className="qh-ctx-shortcut">⌘O</span>
           </button>
           {/* Copy (above Open With) — same behavior as the Action-column
@@ -1180,7 +1182,7 @@ export default function QuoteHistory() {
             }}
           >
             <span className="qh-ctx-icon">📑</span>
-            <span>Copy</span>
+            <span>{t('qh.copy')}</span>
             <span className="qh-ctx-shortcut">⌘C</span>
           </button>
           <button
@@ -1191,7 +1193,7 @@ export default function QuoteHistory() {
             }}
           >
             <span className="qh-ctx-icon">📋</span>
-            <span>Open With</span>
+            <span>{t('qh.open_with')}</span>
             <span className="qh-ctx-arrow">›</span>
           </button>
           {canExport && (
@@ -1203,7 +1205,7 @@ export default function QuoteHistory() {
               }}
             >
               <span className="qh-ctx-icon">⬇️</span>
-              <span>Export…</span>
+              <span>{t('qh.export')}</span>
             </button>
           )}
           <div className="qh-ctx-divider" />
@@ -1227,7 +1229,7 @@ export default function QuoteHistory() {
             })}
             <button
               className="qh-ctx-dot qh-ctx-dot-clear"
-              title="Clear color"
+              title={t('qh.clear_color')}
               onClick={() => {
                 const rfq = ctxMenu.quote.state?.rfq_number;
                 if (rfq) setRfqColor(rfq, null);
@@ -1251,14 +1253,14 @@ export default function QuoteHistory() {
               }}
             >
               <span className="qh-ctx-icon">🗑</span>
-              <span>Move to Trash</span>
+              <span>{t('qh.move_to_trash')}</span>
               <span className="qh-ctx-shortcut">⌘⌫</span>
             </button>
           )}
           <div className="qh-ctx-divider" />
           <button className="qh-ctx-item" onClick={() => setCtxMenu(null)}>
             <span className="qh-ctx-icon">ℹ️</span>
-            <span>Get Info</span>
+            <span>{t('qh.get_info')}</span>
             <span className="qh-ctx-shortcut">⌘I</span>
           </button>
         </div>

@@ -13,6 +13,42 @@
 import { registerStrings } from '../strings.js';
 
 registerStrings({
+  // ─── Quote History actions + empty states (wave 2) ──────────────────────
+  // The qh.* column headers below predate this; these are everything else the
+  // screen says. Several strings were already bilingual by concatenation
+  // ("Restore quote · Khôi phục") — those collapse to one key per language
+  // rather than staying doubled up in both.
+  'qh.title': { en: 'Quote History', vi: 'Lịch sử báo giá' },
+  'qh.label_rfq': { en: 'Label / RFQ', vi: 'Nhãn / RFQ' },
+  'qh.trashed_at': { en: 'Trashed at', vi: 'Xoá lúc' },
+  'qh.open': { en: 'Open', vi: 'Mở' },
+  'qh.open_with': { en: 'Open With', vi: 'Mở bằng' },
+  'qh.copy': { en: 'Copy', vi: 'Chép' },
+  'qh.get_info': { en: 'Get Info', vi: 'Xem thông tin' },
+  'qh.export': { en: 'Export…', vi: 'Xuất…' },
+  'qh.trash': { en: 'Trash', vi: 'Thùng rác' },
+  'qh.move_to_trash': { en: 'Move to Trash', vi: 'Chuyển vào thùng rác' },
+  'qh.trash_empty': { en: 'Trash is empty', vi: 'Thùng rác trống' },
+  'qh.restore': { en: 'Restore quote', vi: 'Khôi phục báo giá' },
+  'qh.permanent_delete': {
+    en: 'Permanent delete (sys only)',
+    vi: 'Xoá vĩnh viễn (chỉ sys)',
+  },
+  'qh.view_deleted': {
+    en: 'View soft-deleted quotes — restorable',
+    vi: 'Xem báo giá đã xoá — có thể khôi phục',
+  },
+  'qh.refresh_tip': {
+    en: 'Refresh the quote list now (Cmd/Ctrl+R for a full reload)',
+    vi: 'Làm mới danh sách ngay (Cmd/Ctrl+R để tải lại toàn bộ)',
+  },
+  'qh.no_quotes': { en: 'No quotes found', vi: 'Không tìm thấy báo giá' },
+  'qh.load_failed': { en: 'Failed to load quote history', vi: 'Không tải được lịch sử báo giá' },
+  'qh.layout_attached': { en: 'Layout attached', vi: 'Có đính kèm layout' },
+  'qh.no_layout': { en: 'No layout', vi: 'Không có layout' },
+  'qh.clear_color': { en: 'Clear color', vi: 'Bỏ màu' },
+  'qh.next_page': { en: 'Next ›', vi: 'Sau ›' },
+
   // ─── Tracker vocabulary shared by RFQ Tracker + Sample Tracking ─────────
   // Added 2026-09-11 (wave 2). The two screens are near-twins — same kanban,
   // same stage/result filters, same attachment and checklist panels — so 44
