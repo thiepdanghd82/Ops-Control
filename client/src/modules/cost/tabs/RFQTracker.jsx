@@ -914,9 +914,9 @@ export default function RFQTracker() {
         <select
           value={filter.stage}
           onChange={(e) => setFilter((f) => ({ ...f, stage: e.target.value }))}
-          aria-label="Filter stage"
+          aria-label={t('track.filter_stage')}
         >
-          <option value="all">All Stages</option>
+          <option value="all">{t('track.all_stages')}</option>
           {PIPELINE.map((p) => (
             <option key={p.key} value={p.key}>
               {p.label}
@@ -926,9 +926,9 @@ export default function RFQTracker() {
         <select
           value={filter.result}
           onChange={(e) => setFilter((f) => ({ ...f, result: e.target.value }))}
-          aria-label="Filter result"
+          aria-label={t('track.filter_result')}
         >
-          <option value="all">All Results</option>
+          <option value="all">{t('track.all_results')}</option>
           {RESULT_OPTS.map((r) => (
             <option key={r} value={r}>
               {r}
@@ -938,9 +938,9 @@ export default function RFQTracker() {
         <select
           value={filter.owner}
           onChange={(e) => setFilter((f) => ({ ...f, owner: e.target.value }))}
-          aria-label="Filter owner"
+          aria-label={t('rfqt.filter_owner')}
         >
-          <option value="all">All Owners</option>
+          <option value="all">{t('rfqt.all_owners')}</option>
           {owners.map((o) => (
             <option key={o} value={o}>
               {o}
@@ -955,14 +955,14 @@ export default function RFQTracker() {
           onDelete={deleteVariant}
         />
 
-        <div className="rfq2-view-toggle" role="tablist" aria-label="View mode">
+        <div className="rfq2-view-toggle" role="tablist" aria-label={t('track.view_mode')}>
           <button
             role="tab"
             aria-selected={view === 'kanban'}
             className={view === 'kanban' ? 'active' : ''}
             onClick={() => setView('kanban')}
           >
-            Kanban
+            {t('track.kanban')}
           </button>
           <button
             role="tab"
@@ -970,14 +970,14 @@ export default function RFQTracker() {
             className={view === 'list' ? 'active' : ''}
             onClick={() => setView('list')}
           >
-            List
+            {t('common.list')}
           </button>
         </div>
 
         <button
           className="rfq2-chip-btn"
           onClick={() => setLegendOpen(true)}
-          title="Field Legend / Chú giải trường"
+          title={t('track.field_legend')}
         >
           📖 Legend
         </button>
@@ -994,9 +994,9 @@ export default function RFQTracker() {
           <button onClick={() => bulkClose('LOSS')}>{t('rfq.mark_loss')}</button>
           <button onClick={() => bulkClose('NEGOTIATING')}>{t('rfq.mark_negotiating')}</button>
           <button className="rfq2-btn-danger" onClick={bulkDelete}>
-            Delete
+            {t('common.delete')}
           </button>
-          <button onClick={() => setSelected(new Set())}>Clear</button>
+          <button onClick={() => setSelected(new Set())}>{t('common.clear')}</button>
         </div>
       )}
 
@@ -1023,7 +1023,7 @@ export default function RFQTracker() {
         <div style={{ padding: 0 }}>
           <EmptyState
             icon="☑"
-            title="No RFQ records match the filters"
+            title={t('rfqt.no_match')}
             hint="Clear the filters or add a new RFQ to get started."
           />
         </div>
@@ -1078,10 +1078,11 @@ function Kpi({ label, value, sub, tone }) {
 }
 
 function KpiBar({ kpis, data }) {
+  const { t } = useI18n();
   const [trendOpen, setTrendOpen] = useState(false);
   return (
     <>
-      <div className="rfq2-kpis" role="group" aria-label="RFQ KPIs">
+      <div className="rfq2-kpis" role="group" aria-label={t('rfqt.rfq_kpis')}>
         <Kpi label="Total RFQ" value={kpis.total} />
         <Kpi label="Active" value={kpis.active} tone="brand" />
         <Kpi label="SLA Breach" value={kpis.breach} tone="danger" />
@@ -1108,6 +1109,7 @@ function KpiBar({ kpis, data }) {
 
 // T3.8 Rolling 6-month chart of Win Rate % + avg cycle time.
 function TrendChart({ data }) {
+  const { t } = useI18n();
   const buckets = useMemo(() => {
     const now = new Date();
     const months = [];
@@ -1156,7 +1158,7 @@ function TrendChart({ data }) {
       <div className="rfq2-trend-head">
         <span>Win Rate % (blue) and Avg Cycle Days (amber) — last 6 months</span>
       </div>
-      <svg width={W} height={H} role="img" aria-label="6-month trend">
+      <svg width={W} height={H} role="img" aria-label={t('track.trend_6m')}>
         {buckets.map((b, i) => {
           const x = PAD + colW * i + 4;
           const barW = colW / 2 - 4;
@@ -1198,6 +1200,7 @@ function TrendChart({ data }) {
 // ── Variant menu ─────────────────────────────────────────────────
 
 function VariantMenu({ variants, onApply, onSave, onDelete }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
@@ -1236,13 +1239,15 @@ function VariantMenu({ variants, onApply, onSave, onDelete }) {
               <button
                 className="rfq2-variant-del"
                 onClick={() => onDelete(v.name)}
-                aria-label="Delete"
+                aria-label={t('common.delete')}
               >
                 ×
               </button>
             </div>
           ))}
-          {variants.length === 0 && <div className="rfq2-variant-empty">No saved views</div>}
+          {variants.length === 0 && (
+            <div className="rfq2-variant-empty">{t('track.no_saved_views')}</div>
+          )}
         </div>
       )}
     </div>
@@ -1252,6 +1257,7 @@ function VariantMenu({ variants, onApply, onSave, onDelete }) {
 // ── Kanban ──────────────────────────────────────────────────────
 
 function KanbanBoard({ data, stageCounts, onOpen, onMoveNext, onMoveBack }) {
+  const { t } = useI18n();
   const grouped = useMemo(() => {
     const buckets = Object.fromEntries(PIPELINE.map((p) => [p.key, []]));
     buckets.done = [];
@@ -1283,7 +1289,7 @@ function KanbanBoard({ data, stageCounts, onOpen, onMoveNext, onMoveBack }) {
               />
             ))}
             {(grouped[cfg.key] || []).length === 0 && (
-              <div className="rfq2-col-empty">No items</div>
+              <div className="rfq2-col-empty">{t('track.no_items')}</div>
             )}
           </div>
         </div>
@@ -1291,7 +1297,7 @@ function KanbanBoard({ data, stageCounts, onOpen, onMoveNext, onMoveBack }) {
       <div className="rfq2-col rfq2-col-done">
         <div className="rfq2-col-head" style={{ background: '#f3f4f6', color: '#374151' }}>
           <span className="rfq2-col-num">✓</span>
-          <span className="rfq2-col-label">Done</span>
+          <span className="rfq2-col-label">{t('common.done')}</span>
           <span className="rfq2-col-count">{stageCounts.done || 0}</span>
         </div>
         <div className="rfq2-col-body">
@@ -1304,7 +1310,9 @@ function KanbanBoard({ data, stageCounts, onOpen, onMoveNext, onMoveBack }) {
               onOpen={() => onOpen(r.id)}
             />
           ))}
-          {(grouped.done || []).length === 0 && <div className="rfq2-col-empty">No items</div>}
+          {(grouped.done || []).length === 0 && (
+            <div className="rfq2-col-empty">{t('track.no_items')}</div>
+          )}
         </div>
       </div>
     </div>
@@ -1312,6 +1320,7 @@ function KanbanBoard({ data, stageCounts, onOpen, onMoveNext, onMoveBack }) {
 }
 
 function KanbanCard({ row, stageCfg, onOpen, onMoveNext, onMoveBack, done }) {
+  const { t } = useI18n();
   const stage = row.pipeline?.[row.pipeline_stage] || {};
   const daysInStage = daysBetween(stage.start);
   const daysToDeadline = daysBetween(new Date().toISOString().slice(0, 10), row.deadline);
@@ -1374,12 +1383,12 @@ function KanbanCard({ row, stageCfg, onOpen, onMoveNext, onMoveBack, done }) {
                 {daysInStage}d in stage
               </span>
             )}
-            {breached && <span className="rfq2-card-breach-tag">Over deadline</span>}
+            {breached && <span className="rfq2-card-breach-tag">{t('rfqt.over_deadline')}</span>}
           </div>
           {(onMoveBack || onMoveNext) && (
             <div className="rfq2-card-nav" onClick={(e) => e.stopPropagation()}>
               {onMoveBack && (
-                <button onClick={onMoveBack} title="Move back">
+                <button onClick={onMoveBack} title={t('track.move_back')}>
                   &larr;
                 </button>
               )}
@@ -1389,7 +1398,7 @@ function KanbanCard({ row, stageCfg, onOpen, onMoveNext, onMoveBack, done }) {
                   disabled={!!blocker}
                   title={blocker ? blocker : 'Advance stage'}
                 >
-                  Next →
+                  {t('track.next')}
                 </button>
               )}
             </div>
@@ -1419,18 +1428,18 @@ function ListView({ data, selected, onToggleSelect, onOpen, onDelete }) {
       <table className="rfq2-list">
         <thead>
           <tr>
-            <th aria-label="Select" />
-            <th>RFQ No.</th>
+            <th aria-label={t('common.select')} />
+            <th>{t('rfqt.rfq_no')}</th>
             <th>{t('rfq.col.customer')}</th>
             <th>{t('rfq.col.product')}</th>
-            <th>EAU</th>
+            <th>{t('rfqt.eau')}</th>
             <th>{t('rfq.col.stage')}</th>
-            <th>Age</th>
-            <th>Deadline</th>
+            <th>{t('rfqt.age')}</th>
+            <th>{t('rfqt.deadline')}</th>
             <th>{t('qh.owner')}</th>
-            <th>Value</th>
+            <th>{t('rfqt.value')}</th>
             <th>{t('rfq.col.result')}</th>
-            <th aria-label="Actions" />
+            <th aria-label={t('common.actions')} />
           </tr>
         </thead>
         <tbody>
@@ -1479,7 +1488,7 @@ function ListView({ data, selected, onToggleSelect, onOpen, onDelete }) {
                   </span>
                 </td>
                 <td onClick={(e) => e.stopPropagation()} className="rfq2-list-actions">
-                  <button onClick={() => onDelete(r.id)} title="Delete">
+                  <button onClick={() => onDelete(r.id)} title={t('common.delete')}>
                     &times;
                   </button>
                 </td>
@@ -1512,6 +1521,7 @@ function DetailDrawer({
   onRemoveChecklist,
   onSync,
 }) {
+  const { t } = useI18n();
   const [tab, setTab] = useState('detail'); // detail | history | attachments
   // Snapshot pattern (insulates pipeline UI from auto-refresh flash).
   //
@@ -1649,7 +1659,7 @@ function DetailDrawer({
         className="rfq2-drawer"
         data-ops-draggable-card
         role="dialog"
-        aria-label="RFQ detail"
+        aria-label={t('rfqt.rfq_detail')}
         onBlur={flush}
       >
         <header className="rfq2-drawer-head" data-ops-drag-handle>
@@ -1659,7 +1669,7 @@ function DetailDrawer({
               {row.customer || ''} {row.product ? '· ' + row.product : ''}
             </div>
           </div>
-          <button className="rfq2-drawer-close" onClick={onClose} aria-label="Close">
+          <button className="rfq2-drawer-close" onClick={onClose} aria-label={t('common.close')}>
             ×
           </button>
         </header>
@@ -1671,7 +1681,7 @@ function DetailDrawer({
             className={tab === 'detail' ? 'active' : ''}
             onClick={() => setTab('detail')}
           >
-            Detail
+            {t('common.detail')}
           </button>
           <button
             role="tab"
@@ -1679,7 +1689,7 @@ function DetailDrawer({
             className={tab === 'history' ? 'active' : ''}
             onClick={() => setTab('history')}
           >
-            History
+            {t('common.history')}
           </button>
           <button
             role="tab"
@@ -1687,14 +1697,14 @@ function DetailDrawer({
             className={tab === 'attachments' ? 'active' : ''}
             onClick={() => setTab('attachments')}
           >
-            Attachments
+            {t('track.attachments')}
           </button>
         </nav>
 
         {tab === 'detail' && (
           <div className="rfq2-drawer-scroll">
             <section className="rfq2-drawer-section">
-              <h4>Identity</h4>
+              <h4>{t('track.identity')}</h4>
               <div className="rfq2-grid-2">
                 <Field
                   label="RFQ No."
@@ -1768,7 +1778,7 @@ function DetailDrawer({
                   onBlur={flush}
                 />
                 <label className="rfq2-field">
-                  <span>Result</span>
+                  <span>{t('common.result')}</span>
                   <select
                     value={draft.result || 'PENDING'}
                     onChange={(e) => {
@@ -1805,7 +1815,7 @@ function DetailDrawer({
                 </label>
               )}
               <label className="rfq2-field rfq2-field-wide">
-                <span>Remarks</span>
+                <span>{t('common.remarks')}</span>
                 <textarea
                   rows={2}
                   value={draft.remarks || ''}
@@ -1816,10 +1826,10 @@ function DetailDrawer({
             </section>
 
             <section className="rfq2-drawer-section">
-              <h4>Print Specs</h4>
+              <h4>{t('rfqt.print_specs')}</h4>
               <div className="rfq2-grid-2">
                 <label className="rfq2-field">
-                  <span>Print Type</span>
+                  <span>{t('rfqt.print_type')}</span>
                   <select
                     value={draft.specs?.print_type || ''}
                     onChange={(e) => {
@@ -1894,7 +1904,7 @@ function DetailDrawer({
                 return (
                   <>
                     <div className="rfq2-drawer-sec-head">
-                      <h4>Pipeline</h4>
+                      <h4>{t('track.pipeline')}</h4>
                       <div className="rfq2-move">
                         <button
                           onClick={handleMoveBack}
@@ -1907,7 +1917,7 @@ function DetailDrawer({
                           disabled={isLastStage || !!blocker}
                           title={blocker || 'Advance stage'}
                         >
-                          Next →
+                          {t('track.next')}
                         </button>
                       </div>
                     </div>
@@ -1945,16 +1955,16 @@ function DetailDrawer({
 
         <footer className="rfq2-drawer-foot">
           <button className="rfq2-btn rfq2-btn-danger" onClick={onDelete}>
-            Delete
+            {t('common.delete')}
           </button>
           <div style={{ flex: 1 }} />
           <button
             className="rfq2-btn rfq2-btn-primary"
             onClick={onSync}
             disabled={!row.rfq_no && !row.customer}
-            title="Open Pricing Worksheet with these fields prefilled"
+            title={t('rfqt.open_pricing_tip')}
           >
-            Sync → Pricing Worksheet
+            {t('rfqt.sync_pricing')}
           </button>
           <span className="rfq2-save-status">{saving ? 'Saving…' : 'Saved'}</span>
         </footer>
@@ -1985,12 +1995,13 @@ function pickEditable(r) {
 
 // T2.6 Document-flow strip — small visual chain of document handoffs.
 function DocumentFlowStrip({ row }) {
+  const { t } = useI18n();
   const linked = row.linked_quotes || [];
   return (
     <section className="rfq2-drawer-section rfq2-flow">
-      <h4>Document Flow</h4>
+      <h4>{t('track.document_flow')}</h4>
       <div className="rfq2-flow-strip">
-        <div className="rfq2-flow-node active" title="This RFQ">
+        <div className="rfq2-flow-node active" title={t('rfqt.this_rfq')}>
           <span className="rfq2-flow-icon">📋</span>
           <span className="rfq2-flow-label">
             RFQ
@@ -2002,7 +2013,7 @@ function DocumentFlowStrip({ row }) {
         <div className={'rfq2-flow-node' + (linked.length ? ' linked' : ' empty')}>
           <span className="rfq2-flow-icon">💰</span>
           <span className="rfq2-flow-label">
-            Pricing Worksheet
+            {t('rfqt.pricing_worksheet')}
             <br />
             {linked.length ? (
               <b>
@@ -2018,9 +2029,9 @@ function DocumentFlowStrip({ row }) {
               onClick={() =>
                 window.dispatchEvent(new CustomEvent('ops-switch-tab', { detail: 'q-hist' }))
               }
-              title="Open Quote History"
+              title={t('rfqt.open_quote_history')}
             >
-              Open ↗
+              {t('rfqt.open_ext')}
             </button>
           )}
         </div>
@@ -2028,7 +2039,7 @@ function DocumentFlowStrip({ row }) {
         <div className="rfq2-flow-node empty">
           <span className="rfq2-flow-icon">📦</span>
           <span className="rfq2-flow-label">
-            Sample Request
+            {t('rfqt.sample_request')}
             <br />
             <i>future</i>
           </span>
@@ -2037,7 +2048,7 @@ function DocumentFlowStrip({ row }) {
         <div className="rfq2-flow-node empty">
           <span className="rfq2-flow-icon">🧾</span>
           <span className="rfq2-flow-label">
-            Customer Order
+            {t('rfqt.customer_order')}
             <br />
             <i>future</i>
           </span>
@@ -2061,6 +2072,7 @@ function StageBlock({
   onAddCheck,
   onRemoveCheck,
 }) {
+  const { t } = useI18n();
   const [newItem, setNewItem] = useState('');
   const checklistDone = (stage.checklist || []).filter((i) => i.checked).length;
   const checklistTotal = (stage.checklist || []).length;
@@ -2113,7 +2125,7 @@ function StageBlock({
           <fieldset disabled={isDone} className="rfq2-stage-fields">
             <div className="rfq2-grid-2">
               <label className="rfq2-field">
-                <span>Status</span>
+                <span>{t('common.status')}</span>
                 <select value={stage.status} onChange={(e) => onUpdate('status', e.target.value)}>
                   {STATUS_OPTS.map((s) => (
                     <option key={s} value={s}>
@@ -2131,7 +2143,7 @@ function StageBlock({
                 />
               </label>
               <label className="rfq2-field">
-                <span>Start</span>
+                <span>{t('common.start')}</span>
                 <input
                   type="date"
                   value={stage.start || ''}
@@ -2139,7 +2151,7 @@ function StageBlock({
                 />
               </label>
               <label className="rfq2-field">
-                <span>Done</span>
+                <span>{t('common.done')}</span>
                 <input
                   type="date"
                   value={stage.done || ''}
@@ -2147,7 +2159,7 @@ function StageBlock({
                 />
               </label>
               <label className="rfq2-field">
-                <span>SLA (days)</span>
+                <span>{t('track.sla_days')}</span>
                 <input
                   type="number"
                   value={stage.sla_days || 0}
@@ -2159,7 +2171,7 @@ function StageBlock({
             {/* T1.3 Blocked reason code */}
             {stage.status === 'blocked' && (
               <label className="rfq2-field rfq2-field-wide">
-                <span>Blocked reason</span>
+                <span>{t('track.blocked_reason')}</span>
                 <select
                   value={stage.reason_code || ''}
                   onChange={(e) => onUpdate('reason_code', e.target.value)}
@@ -2175,7 +2187,7 @@ function StageBlock({
             )}
 
             <label className="rfq2-field rfq2-field-wide">
-              <span>Notes</span>
+              <span>{t('common.notes')}</span>
               <textarea
                 rows={2}
                 value={stage.notes || ''}
@@ -2184,7 +2196,7 @@ function StageBlock({
             </label>
 
             <div className="rfq2-checklist">
-              <div className="rfq2-checklist-title">Checklist</div>
+              <div className="rfq2-checklist-title">{t('track.checklist')}</div>
               {(stage.checklist || []).map((it, i) => (
                 <div key={i} className={'rfq2-checklist-item' + (it.required ? ' required' : '')}>
                   <input
@@ -2198,7 +2210,7 @@ function StageBlock({
                     onChange={(e) => onEditCheck(i, e.target.value)}
                     className={it.checked ? 'rfq2-check-done' : ''}
                   />
-                  <label className="rfq2-checklist-req" title="Mark as required to advance">
+                  <label className="rfq2-checklist-req" title={t('track.mark_required')}>
                     <input
                       type="checkbox"
                       checked={!!it.required}
@@ -2209,7 +2221,7 @@ function StageBlock({
                   <button
                     className="rfq2-checklist-del"
                     onClick={() => onRemoveCheck(i)}
-                    aria-label="Remove"
+                    aria-label={t('common.remove')}
                   >
                     ×
                   </button>
@@ -2218,7 +2230,7 @@ function StageBlock({
               <div className="rfq2-checklist-add">
                 <input
                   type="text"
-                  placeholder="+ Add task"
+                  placeholder={t('track.add_task')}
                   value={newItem}
                   onChange={(e) => setNewItem(e.target.value)}
                   onKeyDown={(e) => {
@@ -2236,7 +2248,7 @@ function StageBlock({
                     }
                   }}
                 >
-                  Add
+                  {t('common.add')}
                 </button>
               </div>
             </div>
@@ -2266,6 +2278,7 @@ function Field({ label, value, onChange, onBlur, type = 'text' }) {
 // ── History tab ─────────────────────────────────────────────────
 
 function HistoryTab({ rfqId }) {
+  const { t } = useI18n();
   // `entries === null` means "loading"; [] = loaded-empty; Array =
   // loaded. No in-effect reset — the parent DetailDrawer already
   // remounts on row change via `key={row.id}`, so HistoryTab mounts
@@ -2296,7 +2309,7 @@ function HistoryTab({ rfqId }) {
   if (entries === null)
     return (
       <div className="rfq2-drawer-scroll" style={{ padding: 20 }}>
-        Loading…
+        {t('common.loading')}
       </div>
     );
   if (err)
@@ -2311,7 +2324,7 @@ function HistoryTab({ rfqId }) {
       <section className="rfq2-drawer-section">
         <h4>Audit Trail ({entries.length} events)</h4>
         {entries.length === 0 ? (
-          <div style={{ color: '#94a3b8', fontSize: 12 }}>No events recorded yet.</div>
+          <div style={{ color: '#94a3b8', fontSize: 12 }}>{t('track.no_events')}</div>
         ) : (
           <ol className="rfq2-audit">
             {[...entries].reverse().map((e, i) => (
@@ -2351,6 +2364,7 @@ function HistoryTab({ rfqId }) {
 // ── Attachments tab ─────────────────────────────────────────────
 
 function AttachmentsTab({ rfqId, myUsername }) {
+  const { t } = useI18n();
   const [list, setList] = useState(null);
   const [busy, setBusy] = useState(false);
   const fileInput = useRef(null);
@@ -2409,21 +2423,21 @@ function AttachmentsTab({ rfqId, myUsername }) {
               e.target.value = '';
             }}
           />
-          {busy && <span className="rfq2-save-status">Uploading…</span>}
+          {busy && <span className="rfq2-save-status">{t('track.uploading')}</span>}
           {myUsername && <span className="rfq2-save-status">Uploading as {myUsername}</span>}
         </div>
         {list === null ? (
-          <div style={{ color: '#94a3b8' }}>Loading…</div>
+          <div style={{ color: '#94a3b8' }}>{t('common.loading')}</div>
         ) : list.length === 0 ? (
-          <div style={{ color: '#94a3b8', fontSize: 12 }}>No attachments yet.</div>
+          <div style={{ color: '#94a3b8', fontSize: 12 }}>{t('rfqt.no_attachments')}</div>
         ) : (
           <table className="rfq2-attach-list">
             <thead>
               <tr>
-                <th>File</th>
-                <th>Size</th>
-                <th>Uploaded by</th>
-                <th>When</th>
+                <th>{t('common.file')}</th>
+                <th>{t('common.size')}</th>
+                <th>{t('track.uploaded_by')}</th>
+                <th>{t('common.when')}</th>
                 <th />
               </tr>
             </thead>
