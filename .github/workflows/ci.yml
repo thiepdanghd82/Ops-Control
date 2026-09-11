@@ -56,9 +56,20 @@ jobs:
       - run: npm ci --ignore-scripts
       # RATCHET — this number may only ever go DOWN, never up.
       # It is the exact CI warning count as of the commit that set it.
-      # CI Node 22 and local Node 24 disagree (V8 / @eslint/js control-flow
-      # analysis differences), so ALWAYS read this number off a CI run,
-      # never off a local `npx eslint .`. Local under-reports by ~60.
+      # A plain local `npx eslint .` under-reports by ~60. It is NOT a Node
+      # version difference (an earlier version of this comment said it was):
+      # `client/node_modules` resolves eslint-plugin-react-hooks 7.0.1, which
+      # does not implement react-hooks/set-state-in-effect, while the root
+      # install and this job resolve 7.1.1, which does. `npm ci` above runs at
+      # the ROOT only, so CI never sees client/node_modules. Measured on one
+      # machine, same Node 24, two clean worktrees of the same commit:
+      # root node_modules alone => 413, plus client/node_modules => 353.
+      # To reproduce the CI number locally, lint in a worktree with only the
+      # root node_modules linked. Note that a local `eslint --fix` (the
+      # pre-commit hook runs one) will DELETE an eslint-disable directive for
+      # that rule as "unused" — so suppressing it in client/ code does not
+      # survive a commit. Restructure instead. Either way, CI is the number
+      # that counts.
       # 303 of these are inline `style={{...}}` (no-restricted-syntax) —
       # the stalled design-token migration. Lower this number as files
       # migrate; a PR that raises it is a PR that added debt.
