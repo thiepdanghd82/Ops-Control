@@ -149,6 +149,7 @@ const SUMMARIZE_COLUMNS = [
   // appearance is purely a UI gap closure.
   { key: 'sale_owner', label: 'Sale Owner', w: 100 },
   { key: 'direct_cu', label: 'Direct Customer', auto: true },
+  { key: 'direct_cu_pn', label: 'Direct CU PN', auto: true },
   { key: 'project', label: 'End Customer', auto: true },
   { key: 'project_name', label: 'Project', auto: true },
   { key: 'end_cu_pn', label: 'End CU PN', auto: true },

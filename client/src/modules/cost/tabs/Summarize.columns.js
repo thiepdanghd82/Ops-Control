@@ -29,6 +29,11 @@
  * 'EAU') between 'quote_materials' and 'moq' so operators see "per
  * year vs per shipment" volumes side by side. Source `r.annual_qty`
  * was already in the row builder; this is a UI gap closure.
+ *
+ * 2026-09-14 added 'direct_cu_pn' (label 'Direct CU PN') after
+ * 'direct_cu'. The row builder always populated it; it was simply
+ * missing from this config, so it neither rendered nor exported while
+ * its sibling 'end_cu_pn' did. Operator asked for it in the export.
  */
 export const SUMMARIZE_COLUMN_KEYS = [
   'row_idx',
@@ -36,6 +41,7 @@ export const SUMMARIZE_COLUMN_KEYS = [
   'rfq_no',
   'sale_owner',
   'direct_cu',
+  'direct_cu_pn',
   'project',
   'project_name',
   'end_cu_pn',

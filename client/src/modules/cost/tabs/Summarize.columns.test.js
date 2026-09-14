@@ -22,7 +22,7 @@ import {
 } from './Summarize.columns.js';
 
 describe('SUMMARIZE_COLUMN_KEYS', () => {
-  test('contains 37 keys in source order — REGRESSION GUARD for table shape', () => {
+  test('contains 38 keys in source order — REGRESSION GUARD for table shape', () => {
     // Header row in Summarize.jsx renders this exact set in this exact
     // order. Drift here means the ColumnsToggle popover ↔ table-render
     // contract broke; bump this number only when intentionally
@@ -34,7 +34,10 @@ describe('SUMMARIZE_COLUMN_KEYS', () => {
     //   - existing snapshot_status + 2 tooling cols brought us to 35
     //   - S-SUMMARIZE-DATE-COL #164 (2026-06-18) +1 update_date → 36
     //   - S-SUMMARIZE-EAU-COL (2026-06-19) +1 annual_qty → 37
-    assert.equal(SUMMARIZE_COLUMN_KEYS.length, 37);
+    //   - direct_cu_pn (2026-09-14) +1 → 38; the row builder always
+    //     populated it but it was missing from the config, so it never
+    //     rendered or exported while end_cu_pn did.
+    assert.equal(SUMMARIZE_COLUMN_KEYS.length, 38);
   });
 
   test('no duplicate keys', () => {
@@ -140,4 +143,29 @@ describe('SUMMARIZE_COLUMNS_STORAGE_KEY', () => {
     // Renaming silently wipes everyone's preferences on next reload.
     assert.equal(SUMMARIZE_COLUMNS_STORAGE_KEY, 'ops-cost-summarize-cols');
   });
+});
+
+// ── Direct CU PN (2026-09-14) ─────────────────────────────────────────
+// The row builder has always carried `direct_cu_pn`, but it was never in
+// the column config, so it neither rendered nor exported — the comment in
+// Summarize.jsx's exportCSV said exactly that ("if Henry needs them back,
+// add to SUMMARIZE_COLUMNS"). Operators need it in the export: the RFQ
+// form has both a Direct CU PN and an End CU PN, and only the latter
+// reached the file.
+
+test('direct_cu_pn is a column, so it renders and exports', () => {
+  assert.ok(
+    SUMMARIZE_COLUMN_KEYS.includes('direct_cu_pn'),
+    'direct_cu_pn missing from the column order'
+  );
+});
+
+test('Direct CU PN sits with the customer it belongs to, ahead of End CU PN', () => {
+  const at = (k) => SUMMARIZE_COLUMN_KEYS.indexOf(k);
+  assert.ok(at('direct_cu') < at('direct_cu_pn'), 'should follow Direct Customer');
+  assert.ok(at('direct_cu_pn') < at('end_cu_pn'), 'should precede End CU PN');
+});
+
+test('direct_cu_pn is not hidden by default', () => {
+  assert.ok(!SUMMARIZE_DEFAULT_HIDDEN_KEYS.includes('direct_cu_pn'));
 });
