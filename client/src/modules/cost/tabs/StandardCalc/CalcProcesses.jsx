@@ -3,6 +3,7 @@
  * Matches COST V1.0 M05 processes section
  */
 import { useCallback, useEffect, useMemo } from 'react';
+import { useI18n } from '../../../../utils/useI18n';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import {
@@ -28,6 +29,7 @@ function fmtN(v, d = 4) {
 }
 
 export default function CalcProcesses() {
+  const { t } = useI18n();
   const { stdState, setProcessField, dispatch } = useCalc();
   const { lib } = useCostLib();
   const st = stdState;
@@ -222,19 +224,21 @@ export default function CalcProcesses() {
       <div className="sc-card">
         <div className="sc-card-header sc-header-green">
           <span className="sc-card-icon">&#9881;</span>
-          <span className="sc-card-title">Processes ({visibleProcs.length} rows)</span>
+          <span className="sc-card-title">
+            {t('cgrid.proc.title')} ({t('cgrid.rows', { n: visibleProcs.length })})
+          </span>
           <div className="sc-header-totals">
             <span className="sc-header-total-item">
-              Mach: <b>${fmtN(totals.setupMach + totals.runMach)}</b>
+              {t('cgrid.mach')} <b>${fmtN(totals.setupMach + totals.runMach)}</b>
             </span>
             <span className="sc-header-total-item">
-              Labor: <b>${fmtN(totals.setupLabor + totals.runLabor)}</b>
+              {t('cgrid.labor')} <b>${fmtN(totals.setupLabor + totals.runLabor)}</b>
             </span>
             <span className="sc-header-total-item">
-              Tool: <b>${fmtN(totals.tooling)}</b>
+              {t('cgrid.tool')} <b>${fmtN(totals.tooling)}</b>
             </span>
             <span className="sc-header-total-item sc-header-total-main">
-              Total: <b>${fmtN(totals.total)}</b>
+              {t('cgrid.total')} <b>${fmtN(totals.total)}</b>
             </span>
           </div>
         </div>
@@ -243,56 +247,56 @@ export default function CalcProcesses() {
             <thead>
               <tr>
                 <th style={{ width: 60 }}>#</th>
-                <th style={{ width: 110 }}>Process Type</th>
-                <th style={{ width: 110 }}>Workcenter</th>
-                <th style={{ width: 45 }}>Rpt</th>
-                <th style={{ width: 70 }}>Crew</th>
-                <th style={{ width: 65 }}>Speed</th>
+                <th style={{ width: 110 }}>{t('cgrid.proc.process_type')}</th>
+                <th style={{ width: 110 }}>{t('cgrid.proc.workcenter')}</th>
+                <th style={{ width: 45 }}>{t('cgrid.proc.rpt')}</th>
+                <th style={{ width: 70 }}>{t('spr.crew')}</th>
+                <th style={{ width: 65 }}>{t('spr.speed')}</th>
                 <th
                   className="sc-col-derived"
                   style={{ width: 65 }}
-                  title="Speed unit of measure from Rate Table"
+                  title={t('cgrid.proc.tip_uom')}
                 >
-                  UoM
+                  {t('cgrid.proc.uom')}
                 </th>
-                <th style={{ width: 50 }}>Layout</th>
-                <th style={{ width: 50 }}>Eff%</th>
-                <th style={{ width: 55 }}>Setup H</th>
-                <th style={{ width: 50 }}>Scrap%</th>
+                <th style={{ width: 50 }}>{t('cgrid.proc.layout')}</th>
+                <th style={{ width: 50 }}>{t('cgrid.proc.eff_pct')}</th>
+                <th style={{ width: 55 }}>{t('cgrid.proc.setup_h')}</th>
+                <th style={{ width: 50 }}>{t('cgrid.scrap_pct')}</th>
                 <th
                   className="sc-col-derived"
                   style={{ width: 60 }}
-                  title="Machine UPH from rate table"
+                  title={t('cgrid.proc.tip_mc_uph')}
                 >
-                  MC UPH
+                  {t('cgrid.proc.mc_uph')}
                 </th>
-                <th style={{ width: 60 }} title="Manual labor UPH (per person)">
-                  Man UPH
+                <th style={{ width: 60 }} title={t('cgrid.proc.tip_man_uph')}>
+                  {t('cgrid.proc.man_uph')}
                 </th>
-                <th style={{ width: 70 }}>Tool Cost</th>
-                <th style={{ width: 90 }}>Tool Type</th>
-                <th style={{ width: 65 }}>Tool Life</th>
+                <th style={{ width: 70 }}>{t('spr.tool_cost')}</th>
+                <th style={{ width: 90 }}>{t('cgrid.proc.tool_type')}</th>
+                <th style={{ width: 65 }}>{t('cgrid.proc.tool_life')}</th>
                 <th
                   className="sc-col-derived"
                   style={{ width: 65 }}
-                  title="Production time in hours"
+                  title={t('cgrid.proc.tip_prod_time')}
                 >
-                  Prod Time
+                  {t('cgrid.proc.prod_time')}
                 </th>
                 <th className="sc-col-result" style={{ width: 65 }}>
-                  S.Mach
+                  {t('cgrid.proc.s_mach')}
                 </th>
                 <th className="sc-col-result" style={{ width: 65 }}>
-                  S.Labor
+                  {t('cgrid.proc.s_labor')}
                 </th>
                 <th className="sc-col-result" style={{ width: 65 }}>
-                  R.Mach
+                  {t('cgrid.proc.r_mach')}
                 </th>
                 <th className="sc-col-result" style={{ width: 65 }}>
-                  R.Labor
+                  {t('cgrid.proc.r_labor')}
                 </th>
                 <th className="sc-col-result" style={{ width: 65 }}>
-                  Tooling
+                  {t('cgrid.proc.tooling')}
                 </th>
                 <th style={{ width: 30 }}></th>
               </tr>
@@ -308,7 +312,9 @@ export default function CalcProcesses() {
                 const manualDerived = isManualDerivedRow(r, proc.speed);
                 return (
                   <tr key={proc._mid || `idx-${i}`}>
-                    <td className="sc-td-idx">Process {vi + 1}</td>
+                    <td className="sc-td-idx">
+                      {t('cgrid.proc.row')} {vi + 1}
+                    </td>
                     <td>
                       <select
                         value={proc.process_type || ''}
@@ -392,7 +398,7 @@ export default function CalcProcesses() {
                         onChange={(e) => handleField(i, 'layout', e.target.value, true)}
                         placeholder="—"
                         className="sc-input-sm sc-input-num"
-                        title="Layout/batch count — required for machine workcenters (see Rate Table Machine USD/H)"
+                        title={t('cgrid.proc.tip_layout')}
                       />
                     </td>
                     <td>
@@ -449,10 +455,7 @@ export default function CalcProcesses() {
                     </td>
                     <td>
                       {manualDerived ? (
-                        <span
-                          className="sc-cell-auto-uph"
-                          title="Auto-synced from Crew × Eff% × Speed — change Crew or Speed to rebalance this manual stage"
-                        >
+                        <span className="sc-cell-auto-uph" title={t('cgrid.proc.tip_man_uph_auto')}>
                           {Math.round(r.manualUph).toLocaleString()}
                         </span>
                       ) : (
@@ -513,7 +516,7 @@ export default function CalcProcesses() {
                       <button
                         className="sc-btn-del-circle sc-btn-del-sm"
                         onClick={() => removeRow(i)}
-                        title="Remove row"
+                        title={t('cgrid.tip_remove_row')}
                       >
                         &times;
                       </button>
@@ -525,7 +528,7 @@ export default function CalcProcesses() {
           </table>
           <div className="sc-add-row">
             <button className="op-btn op-btn-tertiary" onClick={addRow}>
-              + Add Process Row
+              {t('cgrid.proc.add')}
             </button>
           </div>
         </div>
