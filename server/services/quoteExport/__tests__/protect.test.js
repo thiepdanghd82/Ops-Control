@@ -66,7 +66,9 @@ test('protect: every visible sheet has protection enabled after export (customer
   });
   const wb = await loadWb(out.buffer);
   const visible = wb.worksheets.filter((s) => s.state !== 'hidden' && s.state !== 'veryHidden');
-  assert.ok(visible.length >= 10, 'expected ≥10 visible sheets (MVP-1 baseline)');
+  // 5 since the 2026-09-14 consolidation: Cover, Layout, Summarize, Balancing,
+  // Pricing Snapshot. Was 10+ when the six detail tables each had a sheet.
+  assert.ok(visible.length >= 5, 'expected ≥5 visible sheets after consolidation');
   for (const sheet of visible) {
     // ExcelJS surfaces protection via sheet.sheetProtection (raw XLSX
     // model) — checking the presence + flag is sufficient.

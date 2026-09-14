@@ -9,6 +9,7 @@
 process.env.OPS_EXPORT_HMAC_KEY = process.env.OPS_EXPORT_HMAC_KEY || 'a'.repeat(64);
 
 import test from 'node:test';
+import { section } from './sections.js';
 import assert from 'node:assert/strict';
 import ExcelJS from 'exceljs';
 import { exportQuote } from '../index.js';
@@ -108,9 +109,16 @@ async function parse(buffer) {
   return wb;
 }
 
-function findSubtotalRow(sheet, label) {
-  for (let r = 1; r <= 50; r++) {
-    const a = sheet.getCell(`A${r}`);
+/**
+ * Row of the subtotal line, counted from the section banner. Scans the
+ * SECTION rather than the sheet: since the 2026-09-14 consolidation an
+ * absolute 1..50 scan crosses from Materials into Inks and returns whichever
+ * Subtotal it meets first.
+ */
+function findSubtotalRow(sec, label) {
+  const span = sec.endRow - sec.bannerRow + 1;
+  for (let r = 1; r <= span; r++) {
+    const a = sec.cell('A', r);
     if (typeof a.value === 'string' && a.value.includes(label)) return r;
   }
   return null;
@@ -119,13 +127,13 @@ function findSubtotalRow(sheet, label) {
 test('subtotal: Materials shows bd_mat_setup + bd_mat_run', async () => {
   const out = await exportQuote(makeQuote(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const mat = wb.getWorksheet('03 Materials');
+  const mat = section(wb, 'Main materials');
   const r = findSubtotalRow(mat, 'Subtotal');
   assert.ok(r, 'Subtotal row not found on Materials');
   // Full-parity order: setup_cost (col T=20), run_cost (U=21), total (V=22).
-  const setup = mat.getCell(r, 20).value;
-  const run = mat.getCell(r, 21).value;
-  const total = mat.getCell(r, 22).value;
+  const setup = mat.sheet.getCell(mat.row(r), 20).value;
+  const run = mat.sheet.getCell(mat.row(r), 21).value;
+  const total = mat.sheet.getCell(mat.row(r), 22).value;
   assert.equal(setup, 0.002);
   assert.equal(run, 0.073);
   assert.ok(Math.abs(Number(total) - 0.075) < 1e-9);
@@ -134,13 +142,13 @@ test('subtotal: Materials shows bd_mat_setup + bd_mat_run', async () => {
 test('subtotal: Inks shows bd_ink_setup + bd_ink_run', async () => {
   const out = await exportQuote(makeQuote(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const inks = wb.getWorksheet('04 Inks');
+  const inks = section(wb, 'Inks');
   const r = findSubtotalRow(inks, 'Subtotal');
   assert.ok(r, 'Subtotal row not found on Inks');
   // scrap_pct inserted after clicks shifts money cols +1: setup O(15) run P(16) total Q(17).
-  const setup = inks.getCell(r, 15).value;
-  const run = inks.getCell(r, 16).value;
-  const total = inks.getCell(r, 17).value;
+  const setup = inks.sheet.getCell(inks.row(r), 15).value;
+  const run = inks.sheet.getCell(inks.row(r), 16).value;
+  const total = inks.sheet.getCell(inks.row(r), 17).value;
   assert.equal(setup, 0.01);
   assert.equal(run, 0.025);
   assert.ok(Math.abs(Number(total) - 0.035) < 1e-9);
@@ -149,15 +157,15 @@ test('subtotal: Inks shows bd_ink_setup + bd_ink_run', async () => {
 test('subtotal: Processes sums the persisted per-row split (S.Mach/S.Labor/R.Mach/R.Labor/Tooling)', async () => {
   const out = await exportQuote(makeQuote(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const proc = wb.getWorksheet('05 Processes');
+  const proc = section(wb, 'Processes');
   const r = findSubtotalRow(proc, 'Subtotal');
   assert.ok(r, 'Subtotal row not found on Processes');
   // Full-parity columns: Q setup_mach · R setup_labor · S run_mach · T run_labor · U tooling.
-  assert.ok(Math.abs(Number(proc.getCell(r, 17).value) - 0.004) < 1e-9); // Q
-  assert.ok(Math.abs(Number(proc.getCell(r, 18).value) - 0.005) < 1e-9); // R
-  assert.ok(Math.abs(Number(proc.getCell(r, 19).value) - 0.02) < 1e-9); // S
-  assert.ok(Math.abs(Number(proc.getCell(r, 20).value) - 0.006) < 1e-9); // T
-  assert.ok(Math.abs(Number(proc.getCell(r, 21).value) - 0.003) < 1e-9); // U
+  assert.ok(Math.abs(Number(proc.sheet.getCell(proc.row(r), 17).value) - 0.004) < 1e-9); // Q
+  assert.ok(Math.abs(Number(proc.sheet.getCell(proc.row(r), 18).value) - 0.005) < 1e-9); // R
+  assert.ok(Math.abs(Number(proc.sheet.getCell(proc.row(r), 19).value) - 0.02) < 1e-9); // S
+  assert.ok(Math.abs(Number(proc.sheet.getCell(proc.row(r), 20).value) - 0.006) < 1e-9); // T
+  assert.ok(Math.abs(Number(proc.sheet.getCell(proc.row(r), 21).value) - 0.003) < 1e-9); // U
 });
 
 test('subtotal: omitted when result has no aggregate (legacy/empty quote)', async () => {
@@ -175,7 +183,7 @@ test('subtotal: omitted when result has no aggregate (legacy/empty quote)', asyn
   };
   const out = await exportQuote(q, { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const mat = wb.getWorksheet('03 Materials');
+  const mat = section(wb, 'Main materials');
   // No subtotal row should exist
   assert.equal(findSubtotalRow(mat, 'Subtotal'), null);
 });

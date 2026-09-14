@@ -11,7 +11,7 @@
  * aggregate row + a footnote on the sheet.
  */
 
-import { createSheet, freezeTop, hideColumns } from '../workbook.js';
+import { sectionBanner } from '../workbook.js';
 import { applyStyle } from '../styles.js';
 import { L } from '../i18n.js';
 import { pickStdTierRows, pickCpxTierRows, sumRowCosts, getActiveIdx } from '../tierRows.js';
@@ -62,17 +62,12 @@ function sumProcScrapPct(procs) {
  * @param {import('exceljs').Workbook} wb
  * @param {{ quote: any, tierIdx?: number, variant: 'customer'|'internal', lang: 'en'|'vi'|'bilingual' }} ctx
  */
-export function buildMaterialsSheet(wb, ctx) {
+export function buildMaterialsSection(sheet, startRow, ctx) {
   const { quote, variant, lang } = ctx;
   const tierIdx = Number.isInteger(ctx.tierIdx) ? ctx.tierIdx : getActiveIdx(quote);
   const activeIdx = getActiveIdx(quote);
   const isActive = tierIdx === activeIdx;
-  const sheet = createSheet(wb, {
-    name: '03 Materials',
-    bannerText: L('mat.section_main', lang),
-    orientation: 'landscape',
-    bannerSpan: MAT_COLS.length,
-  });
+  const r0 = sectionBanner(sheet, startRow, L('mat.section_main', lang), MAT_COLS.length);
 
   MAT_COLS.forEach((c, i) => {
     sheet.getColumn(i + 1).width = c.width;
@@ -82,7 +77,7 @@ export function buildMaterialsSheet(wb, ctx) {
   const result = quote.result || {};
   const isCpx = quote.type === 'complex';
 
-  let r = 3;
+  let r = r0;
 
   // Track per-tier row arrays so we can derive a subtotal that matches
   // the cells actually rendered (the result.bd_mat_* aggregates are
@@ -104,7 +99,8 @@ export function buildMaterialsSheet(wb, ctx) {
         sp.materials_main || sp.materials || [],
         lang,
         mainRows,
-        spScrap
+        spScrap,
+        variant
       );
       renderedMainArrays.push(mainRows);
       if (Array.isArray(sp.materials_alt) && sp.materials_alt.length > 0) {
@@ -116,7 +112,8 @@ export function buildMaterialsSheet(wb, ctx) {
           sp.materials_alt,
           lang,
           altRows,
-          spScrap
+          spScrap,
+          variant
         );
         renderedAltArrays.push(altRows);
       }
@@ -128,12 +125,30 @@ export function buildMaterialsSheet(wb, ctx) {
     const alt = Array.isArray(state.materials_alt) ? state.materials_alt : [];
     const mainRows = pickStdTierRows(result, tierIdx, 'materials_main');
     const stdScrap = sumProcScrapPct(state.processes);
-    r = writeMaterialSection(sheet, r, L('mat.section_main', lang), main, lang, mainRows, stdScrap);
+    r = writeMaterialSection(
+      sheet,
+      r,
+      L('mat.section_main', lang),
+      main,
+      lang,
+      mainRows,
+      stdScrap,
+      variant
+    );
     renderedMainArrays.push(mainRows);
     if (alt.length > 0) {
       const altRows = pickStdTierRows(result, tierIdx, 'materials_alt');
       r += 1;
-      r = writeMaterialSection(sheet, r, L('mat.section_alt', lang), alt, lang, altRows, stdScrap);
+      r = writeMaterialSection(
+        sheet,
+        r,
+        L('mat.section_alt', lang),
+        alt,
+        lang,
+        altRows,
+        stdScrap,
+        variant
+      );
       renderedAltArrays.push(altRows);
     }
   }
@@ -183,18 +198,19 @@ export function buildMaterialsSheet(wb, ctx) {
   applyStyle(note, 'footnote');
   sheet.getRow(r).height = 24;
 
-  // Hide customer-restricted cols
-  if (variant === 'customer') {
-    const letters = MAT_COLS.map((c, i) => (c.customerHidden ? colLetter(i + 1) : null)).filter(
-      Boolean
-    );
-    hideColumns(sheet, letters);
-  }
-
-  freezeTop(sheet, 1);
+  return r + 1;
 }
 
-function writeMaterialSection(sheet, startRow, title, rows, lang, rowBreakdown, scrapPct = 0) {
+function writeMaterialSection(
+  sheet,
+  startRow,
+  title,
+  rows,
+  lang,
+  rowBreakdown,
+  scrapPct = 0,
+  variant = 'internal'
+) {
   let r = startRow;
   const LAST = colLetter(MAT_COLS.length);
 
@@ -227,7 +243,14 @@ function writeMaterialSection(sheet, startRow, title, rows, lang, rowBreakdown, 
     const rowCost = Array.isArray(rowBreakdown) ? rowBreakdown[ri] : null;
     MAT_COLS.forEach((c, i) => {
       const cell = sheet.getCell(r, i + 1);
-      cell.value = extractCellValue(c, mat, rowCost, scrapPct);
+      // Customer variant suppresses cost-revealing cells HERE rather than by
+      // hiding the column. Since 2026-09-14 these rows share one sheet with
+      // Inks and Processes, and column O is tool_life there but qpa_m2 here —
+      // hiding it would blank a figure customers are meant to see.
+      cell.value =
+        variant === 'customer' && c.customerHidden
+          ? '—'
+          : extractCellValue(c, mat, rowCost, scrapPct);
       // Computed cells use 5-decimal precision when hydrated; em-dash
       // when the field is missing (legacy quote).
       applyStyle(cell, c.numeric ? (c.computedOnly ? 'numCost' : 'num') : 'body');

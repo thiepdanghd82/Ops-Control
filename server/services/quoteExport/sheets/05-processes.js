@@ -4,7 +4,7 @@
  * Tool Life (reveals competitive die info).
  */
 
-import { createSheet, freezeTop, hideColumns } from '../workbook.js';
+import { sectionBanner } from '../workbook.js';
 import { applyStyle } from '../styles.js';
 import { L, biLabel } from '../i18n.js';
 import { pickStdTierRows, pickCpxTierRows, getActiveIdx, getTierMoq } from '../tierRows.js';
@@ -43,18 +43,13 @@ const PROC_COLS = [
  * @param {import('exceljs').Workbook} wb
  * @param {{ quote: any, tierIdx?: number, variant: 'customer'|'internal', lang: 'en'|'vi'|'bilingual', rateLookup?: (wc:string) => any }} ctx
  */
-export function buildProcessesSheet(wb, ctx) {
+export function buildProcessesSection(sheet, startRow, ctx) {
   const { quote, variant, lang, rateLookup } = ctx;
   const tierIdx = Number.isInteger(ctx.tierIdx) ? ctx.tierIdx : getActiveIdx(quote);
   const activeIdx = getActiveIdx(quote);
   const isActive = tierIdx === activeIdx;
   const LASTCOL = letterFor(PROC_COLS.length); // full-width merge span
-  const sheet = createSheet(wb, {
-    name: '05 Processes',
-    bannerText: L('proc.section', lang),
-    orientation: 'landscape',
-    bannerSpan: PROC_COLS.length,
-  });
+  const r0 = sectionBanner(sheet, startRow, L('proc.section', lang), PROC_COLS.length);
   PROC_COLS.forEach((c, i) => {
     sheet.getColumn(i + 1).width = c.width;
   });
@@ -80,7 +75,7 @@ export function buildProcessesSheet(wb, ctx) {
           },
         ];
 
-  let r = 3;
+  let r = r0;
   PROC_COLS.forEach((c, i) => {
     const cell = sheet.getCell(r, i + 1);
     cell.value = L(c.label, lang);
@@ -110,7 +105,14 @@ export function buildProcessesSheet(wb, ctx) {
       const rowCost = Array.isArray(group.rowBreakdown) ? group.rowBreakdown[i] : null;
       PROC_COLS.forEach((c, ci) => {
         const cell = sheet.getCell(r, ci + 1);
-        cell.value = extractCellValue(c, proc, rate, rowCost);
+        // Customer variant suppresses cost-revealing cells HERE rather than by
+        // hiding the column. Since 2026-09-14 these rows share one sheet with
+        // the other detail sections, where the same column letter carries a
+        // different field — hiding it would blank figures customers may see.
+        cell.value =
+          variant === 'customer' && c.customerHidden
+            ? '—'
+            : extractCellValue(c, proc, rate, rowCost);
         applyStyle(cell, c.numeric ? (c.computedOnly ? 'numCost' : 'num') : 'body');
         // Note only when a persisted-derived column is genuinely missing
         // (legacy quote / pre-parity rows) — crew falls back to the rate so
@@ -170,14 +172,7 @@ export function buildProcessesSheet(wb, ctx) {
     sheet.getRow(r).height = lang === 'bilingual' ? 60 : 36;
   }
 
-  if (variant === 'customer') {
-    const letters = PROC_COLS.map((c, i) => (c.customerHidden ? letterFor(i + 1) : null)).filter(
-      Boolean
-    );
-    hideColumns(sheet, letters);
-  }
-
-  freezeTop(sheet, 1);
+  return r + 1;
 }
 
 function extractCellValue(col, proc, rate, rowCost) {

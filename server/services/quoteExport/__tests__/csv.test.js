@@ -170,7 +170,7 @@ function makeMultiTierQuote() {
   return q;
 }
 
-const VISIBLE_SHEETS = 11; // 00 Cover … 10 Pricing Snapshot
+const VISIBLE_SHEETS = 5; // 00 Cover, 01 Layout, 02 Summarize, 03 Balancing, 04 Pricing Snapshot
 
 // ── end-to-end CSV export ────────────────────────────────────────────────────
 
@@ -195,7 +195,7 @@ test('format=csv single-tier → _csv.zip with one CSV per visible tab, no _Audi
   names.forEach((n) => assert.match(n, /\.csv$/));
   assert.ok(!names.some((n) => /_Audit|_Schema/.test(n)), 'forensic sheets must be excluded');
   assert.ok(names.includes('00-Cover.csv'));
-  assert.ok(names.includes('10-Pricing-Snapshot.csv'));
+  assert.ok(names.includes('04-Pricing-Snapshot.csv'));
 
   // BOM present at the head of each CSV (VN-locale Excel decode).
   const cover = await zip.file('00-Cover.csv').async('string');

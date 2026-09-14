@@ -17,7 +17,7 @@
  *     those buckets per tier server-side.
  */
 
-import { createSheet, freezeTop } from '../workbook.js';
+import { sectionBanner } from '../workbook.js';
 import { applyStyle } from '../styles.js';
 import { L } from '../i18n.js';
 import { pickStdTierRows, pickCpxTierRows, sumRowCosts, getActiveIdx } from '../tierRows.js';
@@ -27,17 +27,12 @@ import { renderActiveTierFootnote } from './05-processes.js';
  * @param {import('exceljs').Workbook} wb
  * @param {{ quote: any, tierIdx?: number, variant: 'customer'|'internal', lang: 'en'|'vi'|'bilingual' }} ctx
  */
-export function buildCostBreakdownSheet(wb, ctx) {
+export function buildCostBreakdownSection(sheet, startRow, ctx) {
   const { quote, variant, lang } = ctx;
   const tierIdx = Number.isInteger(ctx.tierIdx) ? ctx.tierIdx : getActiveIdx(quote);
   const activeIdx = getActiveIdx(quote);
   const isActive = tierIdx === activeIdx;
-  const sheet = createSheet(wb, {
-    name: '08 Cost Breakdown',
-    bannerText: L('cb.section', lang),
-    orientation: 'landscape',
-    bannerSpan: 8,
-  });
+  const r0 = sectionBanner(sheet, startRow, L('cb.section', lang), 8);
   sheet.getColumn('A').width = 26;
   sheet.getColumn('B').width = 14;
   sheet.getColumn('C').width = 12;
@@ -55,7 +50,7 @@ export function buildCostBreakdownSheet(wb, ctx) {
   const sTotal = num(result.s_ttl);
   const gTotal = num(result.g_ttl);
 
-  let r = 3;
+  let r = r0;
   // Header
   ['cb.category', 'cb.cost_per_unit', 'cb.pct_of_total'].forEach((k, i) => {
     const cell = sheet.getCell(r, i + 1);
@@ -104,7 +99,7 @@ export function buildCostBreakdownSheet(wb, ctx) {
     sheet.getRow(r).height = lang === 'bilingual' ? 60 : 36;
   }
 
-  freezeTop(sheet, 1);
+  return r + 1;
 }
 
 /**

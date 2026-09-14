@@ -18,6 +18,7 @@
 process.env.OPS_EXPORT_HMAC_KEY = process.env.OPS_EXPORT_HMAC_KEY || 'a'.repeat(64);
 
 import test from 'node:test';
+import { section } from './sections.js';
 import assert from 'node:assert/strict';
 import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
@@ -279,28 +280,32 @@ function makeCpxMultiTier() {
 // header) Setup Cost cell (col O=15 after drw_material column insertion
 // shifted it +1). For Cpx the section banner adds one extra row per SP
 // so the first data row drifts; the helpers below scan defensively.
-function readFirstMaterialSetupCost(sheet) {
+function readFirstMaterialSetupCost(sec) {
   // Full-parity order: Materials Setup Cost = col T (20). The inserted
   // QPA/Mats-MOQ columns are '—' in these fixtures so scanning col 20 is safe.
+  // Rows are counted from the SECTION banner, not the sheet — since the
+  // 2026-09-14 consolidation an absolute row 3 lands in RFQ Information.
   for (let r = 3; r <= 30; r++) {
-    const v = sheet.getCell(r, 20).value;
+    const v = sec.sheet.getCell(sec.row(r), 20).value;
     if (typeof v === 'number') return v;
   }
   return null;
 }
 
-function readFirstInkSetupCost(sheet) {
+function readFirstInkSetupCost(sec) {
   // scrap_pct inserted after clicks shifts Inks Setup Cost to col O (15).
   for (let r = 4; r <= 30; r++) {
-    const v = sheet.getCell(r, 15).value;
+    const v = sec.sheet.getCell(sec.row(r), 15).value;
     if (typeof v === 'number') return v;
   }
   return null;
 }
 
-function findSubtotalRow(sheet, label = 'Subtotal') {
-  for (let r = 1; r <= 60; r++) {
-    const a = sheet.getCell(`A${r}`).value;
+function findSubtotalRow(sec, label = 'Subtotal') {
+  // Bounded to the section: an absolute 1..60 scan of the consolidated sheet
+  // finds whichever Subtotal comes first, not this section's.
+  for (let r = 1; r <= sec.endRow - sec.bannerRow + 1; r++) {
+    const a = sec.cell('A', r).value;
     if (typeof a === 'string' && a.includes(label)) return r;
   }
   return null;
@@ -329,9 +334,9 @@ test('multi-tier Std: Materials Setup Cost differs per tier xlsx', async () => {
   const t1 = pickXlsxByMoq(zip, '1000');
   const t2 = pickXlsxByMoq(zip, '5000');
 
-  const m0 = readFirstMaterialSetupCost(t0.getWorksheet('03 Materials'));
-  const m1 = readFirstMaterialSetupCost(t1.getWorksheet('03 Materials'));
-  const m2 = readFirstMaterialSetupCost(t2.getWorksheet('03 Materials'));
+  const m0 = readFirstMaterialSetupCost(section(t0, 'Main materials'));
+  const m1 = readFirstMaterialSetupCost(section(t1, 'Main materials'));
+  const m2 = readFirstMaterialSetupCost(section(t2, 'Main materials'));
 
   assert.equal(m0, 0.05, 'tier 0 (MOQ500, active) Materials setup mismatch');
   assert.equal(m1, 0.025, 'tier 1 (MOQ1000) Materials setup mismatch');
@@ -350,8 +355,8 @@ test('multi-tier Std: Inks Setup Cost differs per tier xlsx', async () => {
   const zip = await unzipAll(out.buffer);
   const t0 = pickXlsxByMoq(zip, '500');
   const t2 = pickXlsxByMoq(zip, '5000');
-  const i0 = readFirstInkSetupCost(t0.getWorksheet('04 Inks'));
-  const i2 = readFirstInkSetupCost(t2.getWorksheet('04 Inks'));
+  const i0 = readFirstInkSetupCost(section(t0, 'Inks'));
+  const i2 = readFirstInkSetupCost(section(t2, 'Inks'));
   assert.equal(i0, 0.003);
   assert.equal(i2, 0.0003);
   assert.notEqual(i0, i2);
@@ -369,8 +374,14 @@ test('multi-tier Std: Processes Setup Cost differs per tier xlsx', async () => {
   const t1 = pickXlsxByMoq(zip, '1000');
   // Processes S.Mach = col 17 (Q) in the full-parity layout. Header row 3;
   // data row 4 (Std). Per-tier setup_mach differs → proves the right tier landed.
-  const p0 = t0.getWorksheet('05 Processes').getCell(4, 17).value;
-  const p1 = t1.getWorksheet('05 Processes').getCell(4, 17).value;
+  const p0 = (() => {
+    const s = section(t0, 'Processes');
+    return s.sheet.getCell(s.row(4), 17);
+  })().value;
+  const p1 = (() => {
+    const s = section(t1, 'Processes');
+    return s.sheet.getCell(s.row(4), 17);
+  })().value;
   assert.equal(p0, 0.006);
   assert.equal(p1, 0.003);
 });
@@ -384,12 +395,12 @@ test('multi-tier Std: Materials Subtotal derived from per-tier rows', async () =
   });
   const zip = await unzipAll(out.buffer);
   const t1 = pickXlsxByMoq(zip, '1000');
-  const matT1 = t1.getWorksheet('03 Materials');
+  const matT1 = section(t1, 'Main materials');
   const subRow = findSubtotalRow(matT1);
   assert.ok(subRow, 'Subtotal row missing on tier 1 Materials');
   // Tier 1 has setup_cost=0.025, run_cost=0.08 (cols T=20, U=21).
-  assert.equal(matT1.getCell(subRow, 20).value, 0.025);
-  assert.equal(matT1.getCell(subRow, 21).value, 0.08);
+  assert.equal(matT1.sheet.getCell(matT1.row(subRow), 20).value, 0.025);
+  assert.equal(matT1.sheet.getCell(matT1.row(subRow), 21).value, 0.08);
 });
 
 // Active-tier subtotal still uses bd_* (rounding-free aggregate)
@@ -407,10 +418,10 @@ test('multi-tier Std: active-tier Materials Subtotal uses bd_mat_* (not row sum)
   });
   assert.equal(out.kind, 'xlsx');
   const wb = await parseXlsx(out.buffer);
-  const mat = wb.getWorksheet('03 Materials');
+  const mat = section(wb, 'Main materials');
   const subRow = findSubtotalRow(mat);
   // Active tier subtotal must still be bd_mat_setup = 0.05, not 0.999 (col T=20).
-  assert.equal(mat.getCell(subRow, 20).value, 0.05);
+  assert.equal(mat.sheet.getCell(mat.row(subRow), 20).value, 0.05);
 });
 
 // Cpx differential
@@ -428,9 +439,9 @@ test('multi-tier Cpx: per-SP per-tier Materials cells differ', async () => {
 
   // SP1 Materials first data row Setup Cost (col N=14). With Cpx the
   // section banner adds an extra row, so first data row is row 5.
-  const matT0 = t0.getWorksheet('03 Materials');
-  const matT1 = t1.getWorksheet('03 Materials');
-  const matT2 = t2.getWorksheet('03 Materials');
+  const matT0 = section(t0, 'Main materials');
+  const matT1 = section(t1, 'Main materials');
+  const matT2 = section(t2, 'Main materials');
 
   // Read first numeric in col N across rows — should be SP1's first
   // material setup cost.
@@ -453,8 +464,8 @@ test('multi-tier: 05-Processes shows [active-tier] footnote on NON-active tier x
   const t0 = pickXlsxByMoq(zip, '500'); // active
   const t1 = pickXlsxByMoq(zip, '1000'); // non-active
 
-  const procT0 = t0.getWorksheet('05 Processes');
-  const procT1 = t1.getWorksheet('05 Processes');
+  const procT0 = section(t0, 'Processes');
+  const procT1 = section(t1, 'Processes');
 
   // Search for "[active-tier]" across all cells in col A.
   function hasFootnote(sheet) {
@@ -477,10 +488,10 @@ test('multi-tier: 08-CostBreakdown shows [active-tier] footnote on NON-active ti
   });
   const zip = await unzipAll(out.buffer);
   const t1 = pickXlsxByMoq(zip, '1000');
-  const cbT1 = t1.getWorksheet('08 Cost Breakdown');
+  const cbT1 = section(t1, 'Cost Breakdown');
   let found = false;
-  for (let r = 1; r <= 80; r++) {
-    const v = cbT1.getCell(`A${r}`).value;
+  for (let r = 1; r <= cbT1.endRow - cbT1.bannerRow + 1; r++) {
+    const v = cbT1.cell('A', r).value;
     if (typeof v === 'string' && v.includes('[active-tier]')) {
       found = true;
       // Verify the MOQ substitution actually happened
@@ -501,10 +512,10 @@ test('multi-tier: [active-tier] footnote bilingual variant carries EN + VN', asy
   });
   const zip = await unzipAll(out.buffer);
   const t1 = pickXlsxByMoq(zip, '1000');
-  const cbT1 = t1.getWorksheet('08 Cost Breakdown');
+  const cbT1 = section(t1, 'Cost Breakdown');
   let combined = '';
-  for (let r = 1; r <= 80; r++) {
-    const v = cbT1.getCell(`A${r}`).value;
+  for (let r = 1; r <= cbT1.endRow - cbT1.bannerRow + 1; r++) {
+    const v = cbT1.cell('A', r).value;
     if (typeof v === 'string' && (v.includes('[active-tier]') || v.includes('[tier-hoạt-động]'))) {
       combined = v;
       break;
@@ -523,10 +534,10 @@ test('multi-tier: [active-tier] footnote VN-only variant uses Vietnamese only', 
   });
   const zip = await unzipAll(out.buffer);
   const t1 = pickXlsxByMoq(zip, '1000');
-  const cbT1 = t1.getWorksheet('08 Cost Breakdown');
+  const cbT1 = section(t1, 'Cost Breakdown');
   let footnote = '';
-  for (let r = 1; r <= 80; r++) {
-    const v = cbT1.getCell(`A${r}`).value;
+  for (let r = 1; r <= cbT1.endRow - cbT1.bannerRow + 1; r++) {
+    const v = cbT1.cell('A', r).value;
     if (typeof v === 'string' && v.includes('[tier-hoạt-động]')) {
       footnote = v;
       break;
@@ -545,11 +556,11 @@ test('multi-tier: Cost Breakdown material_setup row reflects per-tier value', as
   });
   const zip = await unzipAll(out.buffer);
   const t1 = pickXlsxByMoq(zip, '1000'); // non-active
-  const cbT1 = t1.getWorksheet('08 Cost Breakdown');
+  const cbT1 = section(t1, 'Cost Breakdown');
   // Find the "Material — Setup" row label.
   let matSetupRow = null;
-  for (let r = 1; r <= 30; r++) {
-    const v = cbT1.getCell(`A${r}`).value;
+  for (let r = 1; r <= cbT1.endRow - cbT1.bannerRow + 1; r++) {
+    const v = cbT1.cell('A', r).value;
     if (typeof v === 'string' && v.includes('Material — Setup')) {
       matSetupRow = r;
       break;
@@ -557,7 +568,7 @@ test('multi-tier: Cost Breakdown material_setup row reflects per-tier value', as
   }
   assert.ok(matSetupRow, 'Material — Setup row missing in Cost Breakdown');
   // Tier 1 materials_main[0].setup_cost = 0.025
-  assert.equal(cbT1.getCell(`B${matSetupRow}`).value, 0.025);
+  assert.equal(cbT1.cell('B', matSetupRow).value, 0.025);
 });
 
 // Active-tier file has NO footnote on either sheet
@@ -569,10 +580,13 @@ test('multi-tier: active-tier xlsx has NO [active-tier] footnote anywhere', asyn
   });
   const zip = await unzipAll(out.buffer);
   const t0 = pickXlsxByMoq(zip, '500'); // active
-  for (const sheetName of ['05 Processes', '08 Cost Breakdown']) {
-    const sheet = t0.getWorksheet(sheetName);
-    for (let r = 1; r <= 80; r++) {
-      const v = sheet.getCell(`A${r}`).value;
+  // Was two sheets; both are sections of 02 Summarize since 2026-09-14, so the
+  // scan is bounded to each section — an 80-row absolute sweep would read the
+  // OTHER tier-sensitive section and report its footnote as this one's.
+  for (const sheetName of ['Processes', 'Cost Breakdown']) {
+    const sec = section(t0, sheetName);
+    for (let r = 1; r <= sec.endRow - sec.bannerRow + 1; r++) {
+      const v = sec.cell('A', r).value;
       if (typeof v === 'string') {
         assert.ok(!v.includes('[active-tier]'), `${sheetName} row ${r} unexpected EN footnote`);
         assert.ok(!v.includes('[tier-hoạt-động]'), `${sheetName} row ${r} unexpected VN footnote`);
@@ -601,11 +615,14 @@ test('multi-tier: active-tier xlsx has NO [active-tier] footnote anywhere', asyn
 // Helper — find a key/value row in sheet 07 by scanning column A for
 // the label, returning column B's value. Defensive against row drift
 // from possible section banner changes.
-function readPackShipValueByLabel(sheet, label) {
-  for (let r = 1; r <= 40; r++) {
-    const a = sheet.getCell(`A${r}`).value;
+function readPackShipValueByLabel(sec, label) {
+  // Rows are counted from the Packaging banner, not the sheet — the section
+  // sits ~76 rows down the consolidated sheet since 2026-09-14, and an
+  // absolute 1..40 scan reads RFQ and Materials instead.
+  for (let r = 1; r <= sec.endRow - sec.bannerRow + 1; r++) {
+    const a = sec.cell('A', r).value;
     if (typeof a === 'string' && a.includes(label)) {
-      return sheet.getCell(`B${r}`).value;
+      return sec.cell('B', r).value;
     }
   }
   return null;
@@ -641,9 +658,9 @@ test('multi-tier Std sheet 07: per-tier packing override surfaces in the right x
     tiers: 'all',
   });
   const zip = await unzipAll(out.buffer);
-  const t0 = pickXlsxByMoq(zip, '500').getWorksheet('07 Pack Ship');
-  const t1 = pickXlsxByMoq(zip, '1000').getWorksheet('07 Pack Ship');
-  const t2 = pickXlsxByMoq(zip, '5000').getWorksheet('07 Pack Ship');
+  const t0 = section(pickXlsxByMoq(zip, '500'), 'Packaging');
+  const t1 = section(pickXlsxByMoq(zip, '1000'), 'Packaging');
+  const t2 = section(pickXlsxByMoq(zip, '5000'), 'Packaging');
   // Base on tier 0; overridden on tiers 1+2.
   assert.equal(readPackShipValueByLabel(t0, 'Box cost'), 1, 'tier 0 base box_cost');
   assert.equal(readPackShipValueByLabel(t1, 'Box cost'), 5, 'tier 1 override box_cost');
@@ -659,8 +676,8 @@ test('multi-tier Std sheet 07: explicit-0 override surfaces as 0 (not silent fal
     tiers: 'all',
   });
   const zip = await unzipAll(out.buffer);
-  const t0 = pickXlsxByMoq(zip, '500').getWorksheet('07 Pack Ship');
-  const t1 = pickXlsxByMoq(zip, '1000').getWorksheet('07 Pack Ship');
+  const t0 = section(pickXlsxByMoq(zip, '500'), 'Packaging');
+  const t1 = section(pickXlsxByMoq(zip, '1000'), 'Packaging');
   assert.equal(readPackShipValueByLabel(t0, 'Other shipping'), 50, 'tier 0 base other_ship');
   assert.equal(readPackShipValueByLabel(t1, 'Other shipping'), 0, 'tier 1 explicit 0 surfaces');
 });
@@ -672,8 +689,8 @@ test('multi-tier Std sheet 07: non-numeric override (delivery_term) flows per ti
     tiers: 'all',
   });
   const zip = await unzipAll(out.buffer);
-  const t0 = pickXlsxByMoq(zip, '500').getWorksheet('07 Pack Ship');
-  const t1 = pickXlsxByMoq(zip, '1000').getWorksheet('07 Pack Ship');
+  const t0 = section(pickXlsxByMoq(zip, '500'), 'Packaging');
+  const t1 = section(pickXlsxByMoq(zip, '1000'), 'Packaging');
   assert.equal(readPackShipValueByLabel(t0, 'Delivery Term'), 'DAP', 'tier 0 base');
   assert.equal(readPackShipValueByLabel(t1, 'Delivery Term'), 'FOB', 'tier 1 override');
 });
@@ -687,8 +704,8 @@ test('multi-tier Std sheet 07: legacy quote without packing key falls back to ba
   // No q.state.extra_moqs[i].packing assignment — legacy shape intact.
   const out = await exportQuote(q, { variant: 'internal', lang: 'en', tiers: 'all' });
   const zip = await unzipAll(out.buffer);
-  const t0 = pickXlsxByMoq(zip, '500').getWorksheet('07 Pack Ship');
-  const t1 = pickXlsxByMoq(zip, '1000').getWorksheet('07 Pack Ship');
+  const t0 = section(pickXlsxByMoq(zip, '500'), 'Packaging');
+  const t1 = section(pickXlsxByMoq(zip, '1000'), 'Packaging');
   assert.equal(readPackShipValueByLabel(t0, 'Box cost'), 7, 'tier 0 base box_cost');
   assert.equal(readPackShipValueByLabel(t1, 'Box cost'), 7, 'tier 1 falls back to base');
   assert.equal(readPackShipValueByLabel(t0, 'Other shipping'), 42, 'tier 0 base other_ship');
@@ -702,6 +719,6 @@ test('multi-tier Std sheet 07: single-tier (tier 0 only) renders identically to 
   q.state.active_moq_idx = 0;
   const out = await exportQuote(q, { variant: 'internal', lang: 'en', tiers: [0] });
   assert.equal(out.kind, 'xlsx', 'single-tier returns one xlsx, not a zip');
-  const sheet = (await parseXlsx(out.buffer)).getWorksheet('07 Pack Ship');
+  const sheet = section(await parseXlsx(out.buffer), 'Packaging');
   assert.equal(readPackShipValueByLabel(sheet, 'Box cost'), 3.5);
 });

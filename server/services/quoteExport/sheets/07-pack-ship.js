@@ -14,7 +14,7 @@
  * + buildTierState (Step 1 of the sprint).
  */
 
-import { createSheet, freezeTop } from '../workbook.js';
+import { sectionBanner } from '../workbook.js';
 import { applyStyle } from '../styles.js';
 import { L } from '../i18n.js';
 import { getActiveIdx } from '../tierRows.js';
@@ -28,14 +28,9 @@ function num(v) {
  * @param {import('exceljs').Workbook} wb
  * @param {{ quote: any, lang: 'en'|'vi'|'bilingual', tierIdx?: number }} ctx
  */
-export function buildPackShipSheet(wb, ctx) {
+export function buildPackShipSection(sheet, startRow, ctx) {
   const { quote, lang, tierIdx = 0 } = ctx;
-  const sheet = createSheet(wb, {
-    name: '07 Pack Ship',
-    bannerText: L('pack.section_packaging', lang),
-    orientation: 'portrait',
-    bannerSpan: 6,
-  });
+  const r0 = sectionBanner(sheet, startRow, L('pack.section_packaging', lang), 6);
   sheet.getColumn('A').width = 24;
   sheet.getColumn('B').width = 22;
   sheet.getColumn('C').width = 10;
@@ -48,7 +43,7 @@ export function buildPackShipSheet(wb, ctx) {
   // guard, so the rest of the sheet sees `state` unchanged.
   const em = tierIdx > 0 ? state.extra_moqs?.[tierIdx - 1] : null;
   const ps = em && em.packing ? { ...state, ...em.packing } : state;
-  let r = 3;
+  let r = r0;
 
   // Packaging
   r = writeKV(
@@ -91,7 +86,11 @@ export function buildPackShipSheet(wb, ctx) {
   const packingPcs = num(tierRes.packing_pcs) ?? num(result.packing_pcs);
   const shippingPcs = num(tierRes.shipping_pcs) ?? num(result.shipping_pcs);
   const packShip = num(result.packing_ship);
-  writeKV(
+  // Assign the return: on its own sheet nothing followed this block so
+  // dropping it was harmless, but on the consolidated sheet Cost Breakdown
+  // starts at whatever row comes back — and overwrote Total Shipping/pcs and
+  // Total Pack & Ship/pcs.
+  r = writeKV(
     sheet,
     r,
     L('pack.section_totals', lang),
@@ -103,7 +102,7 @@ export function buildPackShipSheet(wb, ctx) {
     lang
   );
 
-  freezeTop(sheet, 1);
+  return r + 1;
 }
 
 function writeKV(sheet, startRow, title, rows, lang) {

@@ -11,7 +11,7 @@
  * library themselves. Better than silent emptiness.
  */
 
-import { createSheet, freezeTop, hideColumns } from '../workbook.js';
+import { sectionBanner } from '../workbook.js';
 import { applyStyle } from '../styles.js';
 import { L } from '../i18n.js';
 import { pickStdTierRows, pickCpxTierRows, sumRowCosts, getActiveIdx } from '../tierRows.js';
@@ -52,17 +52,12 @@ function sumProcScrapPct(procs) {
  * @param {import('exceljs').Workbook} wb
  * @param {{ quote: any, tierIdx?: number, variant: 'customer'|'internal', lang: 'en'|'vi'|'bilingual' }} ctx
  */
-export function buildInksSheet(wb, ctx) {
+export function buildInksSection(sheet, startRow, ctx) {
   const { quote, variant, lang } = ctx;
   const tierIdx = Number.isInteger(ctx.tierIdx) ? ctx.tierIdx : getActiveIdx(quote);
   const activeIdx = getActiveIdx(quote);
   const isActive = tierIdx === activeIdx;
-  const sheet = createSheet(wb, {
-    name: '04 Inks',
-    bannerText: L('ink.section', lang),
-    orientation: 'landscape',
-    bannerSpan: INK_COLS.length,
-  });
+  const r0 = sectionBanner(sheet, startRow, L('ink.section', lang), INK_COLS.length);
   INK_COLS.forEach((c, i) => {
     sheet.getColumn(i + 1).width = c.width;
   });
@@ -94,7 +89,7 @@ export function buildInksSheet(wb, ctx) {
   const LAST = letterFor(INK_COLS.length);
 
   // Header row
-  let r = 3;
+  let r = r0;
   INK_COLS.forEach((c, i) => {
     const cell = sheet.getCell(r, i + 1);
     cell.value = L(c.label, lang);
@@ -123,7 +118,14 @@ export function buildInksSheet(wb, ctx) {
       const rowCost = Array.isArray(group.rowBreakdown) ? group.rowBreakdown[i] : null;
       INK_COLS.forEach((c, ci) => {
         const cell = sheet.getCell(r, ci + 1);
-        cell.value = extractCellValue(c, ink, i, rowCost, group.scrap);
+        // Customer variant suppresses cost-revealing cells HERE rather than by
+        // hiding the column. Since 2026-09-14 these rows share one sheet with
+        // the other detail sections, where the same column letter carries a
+        // different field — hiding it would blank figures customers may see.
+        cell.value =
+          variant === 'customer' && c.customerHidden
+            ? '—'
+            : extractCellValue(c, ink, i, rowCost, group.scrap);
         applyStyle(cell, c.numeric ? (c.computedOnly ? 'numCost' : 'num') : 'body');
         if (c.computedOnly && cell.value === '—') {
           cell.note = 'Computed at calc time, not persisted (legacy quote — re-save to refresh).';
@@ -180,14 +182,7 @@ export function buildInksSheet(wb, ctx) {
   note.value = L('common.computed_at_calc', lang);
   applyStyle(note, 'footnote');
 
-  if (variant === 'customer') {
-    const letters = INK_COLS.map((c, i) => (c.customerHidden ? letterFor(i + 1) : null)).filter(
-      Boolean
-    );
-    hideColumns(sheet, letters);
-  }
-
-  freezeTop(sheet, 1);
+  return r + 1;
 }
 
 function extractCellValue(col, ink, idx, rowCost, scrapPct = 0) {
