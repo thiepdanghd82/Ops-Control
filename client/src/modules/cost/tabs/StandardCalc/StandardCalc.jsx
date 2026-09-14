@@ -2,7 +2,7 @@
  * StandardCalc — Main wrapper for Standard Calculator
  * Matches COST V1.0 M05 with sub-tab navigation
  */
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { lazy, Suspense, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../../../context/AuthContext';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
@@ -50,7 +50,11 @@ import {
   buildRemarkFromSelection,
   resolveRemarkDisplay,
 } from './CalcLeadTimeNotice.helpers.js';
-import CalcLegend from './CalcLegend';
+// The Legend is a 4,300-line training manual — bilingual copy for every
+// formula since i18n wave 7. Eagerly importing it pushed the StandardCalc
+// chunk over its perf budget, and operators open it rarely, so it loads
+// on demand. Everything else in this tab stays eager.
+const CalcLegend = lazy(() => import('./CalcLegend'));
 import TabBarOverflow from '../../../../components/Shared/TabBarOverflow';
 import { useGridKeyboardNav } from '../../../../utils/useGridKeyboardNav';
 import './StandardCalc.css';
@@ -469,7 +473,11 @@ export default function StandardCalc() {
       );
       break;
     case 'legend':
-      content = <CalcLegend />;
+      content = (
+        <Suspense fallback={<div className="sc-legend-loading">{t('lgd.loading')}</div>}>
+          <CalcLegend />
+        </Suspense>
+      );
       break;
     default:
       content = <CalcHeader />;

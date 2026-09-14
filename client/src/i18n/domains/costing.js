@@ -1121,6 +1121,7 @@ registerStrings({
   // ─── i18n wave 7 (2026-09-14) — CalcLegend chrome. The Legend's body
   // copy stays inline next to the formulas it explains (nameVi / noteVi /
   // bodyVi / vi=); only buttons, toasts, badges and labels live here.
+  'lgd.loading': { en: 'Loading the manual…', vi: 'Đang tải tài liệu…' },
   'lgd.title': { en: 'Formula Reference', vi: 'Tra cứu công thức' },
   'lgd.verified_sub': { en: 'Verified · calcEngine.js', vi: 'Đã xác thực · calcEngine.js' },
   'lgd.word': { en: '⬇ Word', vi: '⬇ Word' },

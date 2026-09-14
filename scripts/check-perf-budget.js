@@ -48,8 +48,11 @@ export const CHUNK_BUDGETS = [
   // Quoting tabs — the two most loaded surfaces in day-to-day work.
   // v1.3 raised: design-tools handoff + complex header redesign add ~80 kB.
   { prefix: 'ComplexCalc', budget: 100_000, label: 'ComplexCalc tab' },
-  // v1.6 re-baseline (was 200k @ v1.3).
-  { prefix: 'StandardCalc', budget: 230_000, label: 'StandardCalc tab' },
+  // v1.6 re-baseline (was 200k @ v1.3), then LOWERED 2026-09-14 once the
+  // Legend became its own lazy chunk: the tab itself is 88 kB again.
+  { prefix: 'StandardCalc', budget: 100_000, label: 'StandardCalc tab' },
+  // Lazy training manual — bilingual copy for all 55 formulas (i18n wave 7).
+  { prefix: 'CalcLegend', budget: 175_000, label: 'StandardCalc → Legend (lazy)' },
   { prefix: 'InkCalculator', budget: 50_000, label: 'InkCalculator tab' },
   { prefix: 'MaterialLibrary', budget: 40_000, label: 'MaterialLibrary tab' },
   // Settings includes admin tables + audit log viewer + new connection-mode wizard.
