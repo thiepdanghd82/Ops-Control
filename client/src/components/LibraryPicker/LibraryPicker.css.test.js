@@ -52,6 +52,25 @@ test('the picker header stays sticky — nothing re-positions it later', () => {
   );
 });
 
+test('the table wrap — not the modal body — is the scroll container', () => {
+  // This is what actually makes the sticky header work. `.op-modal-body`
+  // is `overflow-y: auto`; if the wrap is not itself a bounded scroller,
+  // the body scrolls and the header, stuck to the top of the wrap, goes
+  // with it. Two halves: the body must be a non-scrolling flex column,
+  // and the wrap must be allowed to shrink (min-height: 0 — without it
+  // flex's default `min-height: auto` pins it to content height).
+  const body = rulesFor((s) => s === '.op-modal-body.libp-body')[0];
+  assert.ok(body, 'the picker body needs its own class to stop scrolling');
+  assert.equal(declOf(body.body, 'display'), 'flex');
+  assert.equal(declOf(body.body, 'flex-direction'), 'column');
+  assert.equal(declOf(body.body, 'overflow'), 'hidden', 'the body must not scroll');
+
+  const wrap = rulesFor((s) => s === '.libp-card-tablewrap')[0];
+  assert.ok(wrap, '.libp-card-tablewrap rule missing');
+  assert.equal(declOf(wrap.body, 'overflow'), 'auto', 'the wrap must be the scroller');
+  assert.equal(declOf(wrap.body, 'min-height'), '0', 'without min-height:0 the wrap never shrinks');
+});
+
 test('cells wrap instead of forcing a horizontal scroll', () => {
   const tdRules = rulesFor((s) => s.includes('libp-table-cols') && /\btd\b/.test(s));
   assert.ok(tdRules.length > 0, 'no cell rule found');

@@ -23,6 +23,9 @@ import {
   PICKER_COLUMNS,
   clampColWidth,
   colWidthPercents,
+  visibleColumns,
+  NARROW_PX,
+  VERY_NARROW_PX,
 } from './LibraryPicker.norm.js';
 
 test('normNPI: surfaces date from row.date + keeps core fields', () => {
@@ -234,4 +237,61 @@ test('colWidthPercents ignores stored widths for columns that no longer exist', 
 test('colWidthPercents survives an empty column list', () => {
   assert.deepEqual(colWidthPercents([], {}), {});
   assert.deepEqual(colWidthPercents(undefined, {}), {});
+});
+
+// ── Which columns actually render (2026-09-14) ────────────────────────
+// Twelve columns wrap into unreadable slivers on a narrow card, so the
+// optional ones drop out by priority; and the operator can hide any
+// column by hand. One function decides, so the header, the body and the
+// colgroup can never disagree about the column set.
+
+const npi = () => PICKER_COLUMNS.npi;
+const keys = (cols) => cols.map((c) => c.key);
+
+test('a wide card shows every column', () => {
+  assert.deepEqual(keys(visibleColumns(npi(), { width: 1400 })), keys(npi()));
+  assert.deepEqual(keys(visibleColumns(npi())), keys(npi()), 'no width known → show all');
+});
+
+test('a narrow card drops the nice-to-have columns first', () => {
+  const mid = keys(visibleColumns(npi(), { width: NARROW_PX - 1 }));
+  const tight = keys(visibleColumns(npi(), { width: VERY_NARROW_PX - 1 }));
+  assert.ok(mid.length < npi().length, 'nothing dropped at the narrow breakpoint');
+  assert.ok(tight.length < mid.length, 'the tighter breakpoint must drop more');
+  // The fields the choice turns on survive every breakpoint.
+  for (const k of ['code', 'price']) {
+    assert.ok(tight.includes(k), `${k} must survive the tightest layout`);
+  }
+});
+
+test('hidden columns are removed at any width', () => {
+  const shown = keys(visibleColumns(npi(), { width: 1400, hidden: ['color', 'surface'] }));
+  assert.ok(!shown.includes('color') && !shown.includes('surface'));
+  assert.ok(shown.includes('code'));
+});
+
+test('hiding everything still renders one column rather than an empty table', () => {
+  const all = keys(npi());
+  const shown = visibleColumns(npi(), { width: 1400, hidden: all });
+  assert.equal(shown.length, 1, 'must not collapse to zero columns');
+});
+
+test('visibleColumns tolerates junk input', () => {
+  assert.deepEqual(visibleColumns(undefined, {}), []);
+  assert.deepEqual(visibleColumns([], { width: 100 }), []);
+  assert.deepEqual(keys(visibleColumns(npi(), { hidden: null, width: NaN })), keys(npi()));
+});
+
+test('every library keeps at least one column at the tightest width', () => {
+  for (const [lib, cols] of Object.entries(PICKER_COLUMNS)) {
+    const shown = visibleColumns(cols, { width: 320 });
+    assert.ok(shown.length >= 1, `${lib} collapsed to nothing`);
+  }
+});
+
+test('widths still total 100% after columns drop out', () => {
+  const shown = visibleColumns(npi(), { width: VERY_NARROW_PX - 1 });
+  const pct = colWidthPercents(shown, {});
+  const total = Object.values(pct).reduce((n, v) => n + parseFloat(v), 0);
+  assert.ok(Math.abs(total - 100) < 0.05, `total was ${total}`);
 });

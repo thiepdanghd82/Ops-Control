@@ -42,6 +42,7 @@ import {
   PICKER_COLUMNS,
   clampColWidth,
   colWidthPercents,
+  visibleColumns,
 } from './LibraryPicker.norm.js';
 import './LibraryPicker.css';
 
@@ -49,6 +50,8 @@ const Ctx = createContext(null);
 
 // localStorage prefix for per-library picker column widths.
 const WIDTH_KEY = 'ops_picker_colw';
+// localStorage prefix for columns the operator hid, per library.
+const HIDDEN_KEY = 'ops_picker_colhide';
 
 // Column widths the operator dragged, per library. A stale or corrupt
 // entry must not collapse the table, so a bad read degrades to defaults.
@@ -59,6 +62,16 @@ function readStoredWidths(libraryKey) {
     return parsed && typeof parsed === 'object' ? parsed : {};
   } catch {
     return {};
+  }
+}
+
+function readStoredHidden(libraryKey) {
+  try {
+    const raw = localStorage.getItem(`${HIDDEN_KEY}:${libraryKey}`);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
 }
 
@@ -246,8 +259,39 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
   // Column widths the operator dragged, per library. Persisted so the
   // layout they set for NPI survives closing the picker. Bad/stale values
   // fall back to the column's default rather than collapsing a column.
-  const columns = PICKER_COLUMNS[def?.key] || [];
+  const allColumns = PICKER_COLUMNS[def?.key] || [];
   const [widths, setWidths] = useState(() => readStoredWidths(libraryKey));
+  const [hidden, setHidden] = useState(() => readStoredHidden(libraryKey));
+  const [colMenuOpen, setColMenuOpen] = useState(false);
+  // The card is resizable and maximizable, so the breakpoint that matters
+  // is the table's own width, not the viewport's.
+  const wrapRef = useRef(null);
+  const [wrapWidth, setWrapWidth] = useState(undefined);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(([entry]) => setWrapWidth(entry.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const columns = visibleColumns(allColumns, { hidden, width: wrapWidth });
+  const toggleColumn = (key) => {
+    const next = hidden.includes(key) ? hidden.filter((k) => k !== key) : [...hidden, key];
+    setHidden(next);
+    try {
+      localStorage.setItem(`${HIDDEN_KEY}:${libraryKey}`, JSON.stringify(next));
+    } catch {
+      /* private mode / quota */
+    }
+  };
+  const showAllColumns = () => {
+    setHidden([]);
+    try {
+      localStorage.removeItem(`${HIDDEN_KEY}:${libraryKey}`);
+    } catch {
+      /* ignore */
+    }
+  };
   // Proportions, not pixels — the table fits the card at any size and a
   // drag redistributes space instead of widening the table.
   const pct = colWidthPercents(columns, widths);
@@ -308,7 +352,7 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
             : `${rows.length} ${t('picker.result_count_suffix')}`
         }
       />
-      <Modal.Body className="flush">
+      <Modal.Body className="flush libp-body">
         {onBack && (
           <div className="libp-backrow">
             <button
@@ -335,8 +379,36 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
             {rows.length >= 400 ? `400+` : rows.length}
             &nbsp;{t('picker.result_count_suffix')}
           </span>
+          <div className="libp-colmenu-wrap">
+            <button
+              type="button"
+              className="libp-colmenu-btn"
+              onClick={() => setColMenuOpen((v) => !v)}
+              aria-expanded={colMenuOpen}
+              title={t('picker.columns_title')}
+            >
+              ▦ {t('picker.columns')}
+            </button>
+            {colMenuOpen && (
+              <div className="libp-colmenu" role="menu">
+                {allColumns.map((c) => (
+                  <label key={c.key} className="libp-colmenu-item">
+                    <input
+                      type="checkbox"
+                      checked={!hidden.includes(c.key)}
+                      onChange={() => toggleColumn(c.key)}
+                    />
+                    {t(c.labelKey)}
+                  </label>
+                ))}
+                <button type="button" className="libp-colmenu-all" onClick={showAllColumns}>
+                  {t('picker.columns_all')}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="libp-card-tablewrap">
+        <div className="libp-card-tablewrap" ref={wrapRef}>
           <table className="libp-table libp-table-cols">
             <colgroup>
               {columns.map((c) => (

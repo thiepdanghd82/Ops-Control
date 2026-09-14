@@ -103,36 +103,36 @@ export function normIfsMaterial(row) {
 // the picker remembers the result per library.
 export const PICKER_COLUMNS = {
   npi: [
-    { key: 'date', labelKey: 'picker.col.date', w: 110 },
-    { key: 'code', labelKey: 'picker.col.code', w: 170, mono: true },
-    { key: 'type', labelKey: 'matlib.type_desc', w: 190 },
-    { key: 'thick', labelKey: 'matlib.thickness', w: 80, num: true },
-    { key: 'color', labelKey: 'matlib.color', w: 95 },
-    { key: 'surface', labelKey: 'matlib.surface', w: 95 },
-    { key: 'adhesive', labelKey: 'matlib.adhesive', w: 95 },
-    { key: 'moq', labelKey: 'matlib.moq', w: 85, num: true },
-    { key: 'lt', labelKey: 'matlib.lead_time', w: 90, num: true },
-    { key: 'supplier', labelKey: 'picker.col.supplier', w: 140 },
-    { key: 'price', labelKey: 'picker.col.price', w: 95, num: true },
-    { key: 'note', labelKey: 'matlib.notes_remarks', w: 220 },
+    { key: 'date', labelKey: 'picker.col.date', w: 110, prio: 2 },
+    { key: 'code', labelKey: 'picker.col.code', w: 170, mono: true, prio: 1 },
+    { key: 'type', labelKey: 'matlib.type_desc', w: 190, prio: 2 },
+    { key: 'thick', labelKey: 'matlib.thickness', w: 80, num: true, prio: 2 },
+    { key: 'color', labelKey: 'matlib.color', w: 95, prio: 3 },
+    { key: 'surface', labelKey: 'matlib.surface', w: 95, prio: 3 },
+    { key: 'adhesive', labelKey: 'matlib.adhesive', w: 95, prio: 3 },
+    { key: 'moq', labelKey: 'matlib.moq', w: 85, num: true, prio: 2 },
+    { key: 'lt', labelKey: 'matlib.lead_time', w: 90, num: true, prio: 2 },
+    { key: 'supplier', labelKey: 'picker.col.supplier', w: 140, prio: 2 },
+    { key: 'price', labelKey: 'picker.col.price', w: 95, num: true, prio: 1 },
+    { key: 'note', labelKey: 'matlib.notes_remarks', w: 220, prio: 3 },
   ],
   sourcing: [
-    { key: 'date', labelKey: 'picker.col.date', w: 110 },
-    { key: 'material', labelKey: 'picker.col.code', w: 190, mono: true },
-    { key: 'size', labelKey: 'matlib.size_spec', w: 160 },
-    { key: 'exw', labelKey: 'matlib.exw_price', w: 100, num: true },
-    { key: 'dap', labelKey: 'matlib.dap_price', w: 100, num: true },
-    { key: 'moq', labelKey: 'matlib.moq', w: 85, num: true },
-    { key: 'lt', labelKey: 'matlib.lead_time', w: 90, num: true },
-    { key: 'supplier', labelKey: 'picker.col.supplier', w: 140 },
-    { key: 'status', labelKey: 'matlib.status_remark', w: 180 },
+    { key: 'date', labelKey: 'picker.col.date', w: 110, prio: 2 },
+    { key: 'material', labelKey: 'picker.col.code', w: 190, mono: true, prio: 1 },
+    { key: 'size', labelKey: 'matlib.size_spec', w: 160, prio: 2 },
+    { key: 'exw', labelKey: 'matlib.exw_price', w: 100, num: true, prio: 3 },
+    { key: 'dap', labelKey: 'matlib.dap_price', w: 100, num: true, prio: 1 },
+    { key: 'moq', labelKey: 'matlib.moq', w: 85, num: true, prio: 2 },
+    { key: 'lt', labelKey: 'matlib.lead_time', w: 90, num: true, prio: 2 },
+    { key: 'supplier', labelKey: 'picker.col.supplier', w: 140, prio: 2 },
+    { key: 'status', labelKey: 'matlib.status_remark', w: 180, prio: 3 },
   ],
   ifs: [
-    { key: 'code', labelKey: 'picker.col.code', w: 170, mono: true },
-    { key: 'desc', labelKey: 'picker.col.desc', w: 280 },
-    { key: 'supplier', labelKey: 'picker.col.supplier', w: 160 },
-    { key: 'uom', labelKey: 'matlib.price_uom', w: 100 },
-    { key: 'price', labelKey: 'picker.col.price', w: 110, num: true },
+    { key: 'code', labelKey: 'picker.col.code', w: 170, mono: true, prio: 1 },
+    { key: 'desc', labelKey: 'picker.col.desc', w: 280, prio: 2 },
+    { key: 'supplier', labelKey: 'picker.col.supplier', w: 160, prio: 2 },
+    { key: 'uom', labelKey: 'matlib.price_uom', w: 100, prio: 3 },
+    { key: 'price', labelKey: 'picker.col.price', w: 110, num: true, prio: 1 },
   ],
 };
 
@@ -178,4 +178,32 @@ export function colWidthPercents(columns, widths = {}) {
     out[c.key] = `${pct}%`;
   });
   return out;
+}
+
+// Breakpoints for the picker card, not the viewport — the modal is
+// resizable and maximizable, so what matters is the card's own width.
+export const NARROW_PX = 900;
+export const VERY_NARROW_PX = 640;
+
+/**
+ * The columns that actually render, given the card width and whatever the
+ * operator hid by hand.
+ *
+ * Twelve columns wrap into unreadable slivers on a narrow card, so the
+ * `prio: 3` (nice-to-have) columns drop first and `prio: 2` next; `prio: 1`
+ * — the code and the price — always survive. Header, body and colgroup all
+ * read this one list, so they cannot disagree about the column set.
+ */
+export function visibleColumns(columns, { hidden, width } = {}) {
+  const all = Array.isArray(columns) ? columns : [];
+  if (all.length === 0) return [];
+  const hide = new Set(Array.isArray(hidden) ? hidden : []);
+  let cols = all.filter((c) => !hide.has(c.key));
+  const w = Number(width);
+  if (Number.isFinite(w)) {
+    const maxPrio = w < VERY_NARROW_PX ? 1 : w < NARROW_PX ? 2 : 3;
+    cols = cols.filter((c) => (c.prio || 1) <= maxPrio);
+  }
+  // Never render an empty table — fall back to the first declared column.
+  return cols.length > 0 ? cols : all.slice(0, 1);
 }
