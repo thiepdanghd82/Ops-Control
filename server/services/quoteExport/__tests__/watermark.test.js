@@ -61,7 +61,7 @@ test('watermark: customer variant renders "CUSTOMER COPY" cell on every visible 
   });
   const wb = await loadWb(out.buffer);
   const visible = wb.worksheets.filter((s) => s.state !== 'hidden' && !s.name.startsWith('_'));
-  assert.ok(visible.length >= 10);
+  assert.ok(visible.length >= 5, 'post-consolidation baseline — see protect.test.js');
   for (const sheet of visible) {
     const cell = sheet.getCell(1, WM_COL);
     assert.equal(
@@ -120,25 +120,28 @@ test('watermark: fill color is the documented pink-grey ARGB', async () => {
   assert.equal(fill.fgColor?.argb, _wmInternal.WATERMARK_BG);
 });
 
-test('watermark: cell position (col AA, row 1) does not collide with banner span', async () => {
-  // Banner span ranges from A1 to F1 (cover, 6 cols) up to S1 (Processes,
-  // 19 cols). Col 27 = AA is past all of them.
+test('watermark: cell AA1 is outside every banner merge', async () => {
+  // Was written against '05 Processes', whose banner ended at col S (19).
+  // After the 2026-09-14 consolidation the widest banner is 02 Summarize's
+  // 22 columns (to V), so AA (27) still clears it — but the margin shrank
+  // from 8 columns to 5, and the old test could not have noticed because the
+  // sheet it checked no longer exists. This walks every visible sheet.
   const out = await exportQuote(makeQuote(), {
     variant: 'customer',
     lang: 'en',
     hmacKey: HMAC_KEY,
   });
   const wb = await loadWb(out.buffer);
-  const proc = wb.getWorksheet('05 Processes');
-  // The banner merge ends at col S (19) per builder code. Cells T..Z
-  // should be untouched; watermark lands at AA (27).
-  // Verify no merge covers col 27.
-  const merges = proc.model?.merges || [];
   const wmRef = `${columnLetter(WM_COL)}1`;
-  const collision = merges.some(
-    (m) => typeof m === 'string' && m.split(':').some((c) => c === wmRef)
-  );
-  assert.equal(collision, false, 'watermark cell must not be inside a merged range');
+  const visible = wb.worksheets.filter((sh) => sh.state !== 'hidden' && !sh.name.startsWith('_'));
+  assert.ok(visible.length >= 5);
+  for (const sheet of visible) {
+    const merges = sheet.model?.merges || [];
+    const collision = merges.some(
+      (m) => typeof m === 'string' && m.split(':').some((c) => c === wmRef)
+    );
+    assert.equal(collision, false, `${sheet.name}: watermark cell is inside a merged range`);
+  }
 });
 
 function columnLetter(n) {

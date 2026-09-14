@@ -13,6 +13,7 @@
 process.env.OPS_EXPORT_HMAC_KEY = process.env.OPS_EXPORT_HMAC_KEY || 'a'.repeat(64);
 
 import test from 'node:test';
+import { section } from './sections.js';
 import assert from 'node:assert/strict';
 import ExcelJS from 'exceljs';
 import { exportQuote } from '../index.js';
@@ -84,7 +85,7 @@ async function parse(buffer) {
 test('numFmt: Layout sheet B cells use number format, not percent', async () => {
   const out = await exportQuote(makeQuote(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const layout = wb.getWorksheet('02 Layout');
+  const layout = wb.getWorksheet('01 Layout');
   for (let r = 4; r <= 8; r++) {
     const b = layout.getCell(`B${r}`);
     if (b.value == null) continue;
@@ -98,7 +99,7 @@ test('numFmt: Layout sheet B cells use number format, not percent', async () => 
 test('numFmt: RFQ sheet MOQ + EAU columns render raw integers, not percent', async () => {
   const out = await exportQuote(makeQuote(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const rfq = wb.getWorksheet('01 RFQ MOQ');
+  const rfq = section(wb, 'RFQ Information');
   // MOQ in col B, EAU in col C must NOT be percent-formatted.
   // Target GM / VA / Contr / GM (cols E-H) legitimately use percent.
   rfq.eachRow((row) => {
@@ -117,7 +118,7 @@ test('numFmt: RFQ sheet MOQ + EAU columns render raw integers, not percent', asy
 test('numFmt: Materials sheet numeric body uses number format', async () => {
   const out = await exportQuote(makeQuote(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const mat = wb.getWorksheet('03 Materials');
+  const mat = section(wb, 'Main materials');
   // Check usage / setup_lm / width / latest columns (E..N) for first data row
   // (shifted +1 after drw_material column inserted at position 3).
   // Header is row ~4, first data row ~5
@@ -137,7 +138,7 @@ test('numFmt: Materials sheet numeric body uses number format', async () => {
 test('numFmt: Cost Breakdown pct column DOES use % format (legit case)', async () => {
   const out = await exportQuote(makeQuote(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const cb = wb.getWorksheet('08 Cost Breakdown');
+  const cb = section(wb, 'Cost Breakdown');
   // Pct column is C — at least one numeric value should use percent format
   let foundPct = false;
   cb.eachRow((row) => {

@@ -23,7 +23,7 @@ export function buildBalancingSheet(wb, ctx) {
   const { quote, lang } = ctx;
   const tierIdx = Number.isInteger(ctx.tierIdx) ? ctx.tierIdx : getActiveIdx(quote);
   const sheet = createSheet(wb, {
-    name: '06 Balancing',
+    name: '03 Balancing',
     bannerText: L('bal.section', lang),
     orientation: 'portrait',
     bannerSpan: 8,

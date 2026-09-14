@@ -8,6 +8,7 @@
 process.env.OPS_EXPORT_HMAC_KEY = process.env.OPS_EXPORT_HMAC_KEY || 'a'.repeat(64);
 
 import test from 'node:test';
+import { section } from './sections.js';
 import assert from 'node:assert/strict';
 import ExcelJS from 'exceljs';
 import { exportQuote } from '../index.js';
@@ -104,46 +105,97 @@ async function parseBuffer(buffer) {
   return wb;
 }
 
-test('variant.customer: Materials Ref Price column is hidden', async () => {
+/**
+ * 2026-09-14 — these used to assert `getColumn('M').hidden`. Column hiding was
+ * how the customer variant suppressed cost-revealing fields when Materials,
+ * Inks and Processes each owned a sheet.
+ *
+ * They now share "02 Summarize", where the same letter carries a different
+ * field per section: column O is tool_life in Processes, which a customer must
+ * not see, but qpa_m2 in Materials and setup_cost in Inks, which they are
+ * meant to. Hiding by letter is therefore wrong in both directions — hide the
+ * union and real figures vanish, hide the intersection and tool_life leaks.
+ *
+ * The builders blank those cells at write time instead, so that is what these
+ * assert: the cell reads '—' for a customer and carries a number internally.
+ */
+
+/**
+ * Data cells down one column of a section.
+ *
+ * Keeps only numbers and the em-dash, which is what a data cell ever holds.
+ * That drops the column header, the "per-row breakdown" footnote and the next
+ * section's banner without having to know where any of them sit — the reason
+ * an earlier version of this helper reported a footnote as an unsuppressed
+ * value.
+ */
+function columnValues(sec, col, depth = 14) {
+  const out = [];
+  for (let i = 3; i <= depth; i++) {
+    const v = sec.cell(col, i).value;
+    if (typeof v === 'number' || v === '—') out.push(v);
+  }
+  return out;
+}
+
+test('variant.customer: Materials Ref Price is blanked but QPA m² survives', async () => {
   const out = await exportQuote(makeQuote(), { variant: 'customer', lang: 'en' });
   const wb = await parseBuffer(out.buffer);
-  const mat = wb.getWorksheet('03 Materials');
-  // Ref Price is col M (13th) after drw_material column inserted at position 3.
-  const col = mat.getColumn('M');
-  assert.equal(col.hidden, true, 'col M (Ref Price) must be hidden in customer variant');
+  const mat = section(wb, 'Main materials');
+  const refPrice = columnValues(mat, 'M');
+  assert.ok(refPrice.length > 0, 'fixture must produce Ref Price cells to judge');
+  assert.ok(
+    refPrice.every((v) => v === '—'),
+    `Ref Price must be suppressed for a customer, got ${JSON.stringify(refPrice)}`
+  );
+  // Column O is tool_life in Processes — which a customer must NOT see — but
+  // qpa_m2 here. Hiding column O would have blanked this.
+  assert.ok(
+    columnValues(mat, 'O').some((v) => typeof v === 'number'),
+    'QPA m² shares column O with Processes tool_life and must survive for a customer'
+  );
+});
+
+test('variant.customer: Inks Ref Price is blanked but Setup Cost survives', async () => {
+  const out = await exportQuote(makeQuote(), { variant: 'customer', lang: 'en' });
+  const wb = await parseBuffer(out.buffer);
+  const inks = section(wb, 'Inks');
+  const refPrice = columnValues(inks, 'M');
+  assert.ok(refPrice.length > 0);
+  assert.ok(refPrice.every((v) => v === '—'));
+  assert.ok(
+    columnValues(inks, 'O').some((v) => typeof v === 'number'),
+    'Setup Cost shares column O with Processes tool_life and must survive'
+  );
+});
+
+test('variant.customer: Processes blanks BOTH Tool Cost and Tool Life', async () => {
+  const out = await exportQuote(makeQuote(), { variant: 'customer', lang: 'en' });
+  const wb = await parseBuffer(out.buffer);
+  const proc = section(wb, 'Processes');
+  for (const col of ['M', 'O']) {
+    const vals = columnValues(proc, col);
+    assert.ok(vals.length > 0, `fixture must produce ${col} cells`);
+    assert.ok(
+      vals.every((v) => v === '—'),
+      `${col} must be suppressed for a customer, got ${JSON.stringify(vals)}`
+    );
+  }
 });
 
 test('variant.internal: Materials Ref Price column is visible', async () => {
   const out = await exportQuote(makeQuote(), { variant: 'internal', lang: 'en' });
   const wb = await parseBuffer(out.buffer);
-  const mat = wb.getWorksheet('03 Materials');
+  const mat = section(wb, 'Main materials');
   const col = mat.getColumn('M');
   // ExcelJS leaves `hidden` undefined when not set
   assert.notEqual(col.hidden, true, 'col M (Ref Price) must be visible in internal variant');
 });
 
-test('variant.customer: Inks Ref Price column hidden', async () => {
-  const out = await exportQuote(makeQuote(), { variant: 'customer', lang: 'en' });
-  const wb = await parseBuffer(out.buffer);
-  const inks = wb.getWorksheet('04 Inks');
-  // Ink Ref Price is col 13 (M) after scrap_pct inserted before it.
-  const col = inks.getColumn('M');
-  assert.equal(col.hidden, true);
-});
-
-test('variant.customer: Processes Tool Cost + Tool Life hidden', async () => {
-  const out = await exportQuote(makeQuote(), { variant: 'customer', lang: 'en' });
-  const wb = await parseBuffer(out.buffer);
-  const proc = wb.getWorksheet('05 Processes');
-  // Full-parity order: Tool Cost col 13 (M), Tool Life col 15 (O).
-  assert.equal(proc.getColumn('M').hidden, true, 'Tool Cost must be hidden');
-  assert.equal(proc.getColumn('O').hidden, true, 'Tool Life must be hidden');
-});
-
 test('variant.internal: Processes Tool Cost + Tool Life visible', async () => {
   const out = await exportQuote(makeQuote(), { variant: 'internal', lang: 'en' });
   const wb = await parseBuffer(out.buffer);
-  const proc = wb.getWorksheet('05 Processes');
+  const proc = section(wb, 'Processes');
   assert.notEqual(proc.getColumn('M').hidden, true);
   assert.notEqual(proc.getColumn('O').hidden, true);
 });

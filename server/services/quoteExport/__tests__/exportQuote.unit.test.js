@@ -9,6 +9,7 @@
 process.env.OPS_EXPORT_HMAC_KEY = process.env.OPS_EXPORT_HMAC_KEY || 'a'.repeat(64);
 
 import test from 'node:test';
+import { section } from './sections.js';
 import assert from 'node:assert/strict';
 import ExcelJS from 'exceljs';
 import { exportQuote, QuoteExportError, resolveTierIdxs, pickKpisForTier } from '../index.js';
@@ -152,28 +153,19 @@ test('exportQuote: customer variant → single xlsx with 11 sheets', async () =>
   const visibleNames = wb.worksheets
     .filter((s) => s.state !== 'hidden' && s.state !== 'veryHidden')
     .map((s) => s.name);
-  // MVP-1 baseline = 10 visible sheets. MVP-2 adds _Audit + _Schema
-  // as hidden sheets; they don't count toward the visible-sheet contract.
-  // Phase 4 (Sprint S-D20-PRICING-SNAPSHOT) adds "10 Pricing Snapshot"
-  // as an 11th visible sheet — operator-facing audit metadata for the
-  // frozen rates, distinct from the hidden _Audit forensic sheet.
-  assert.equal(
-    visibleNames.length,
-    11,
-    `expected 11 visible sheets, got ${visibleNames.length}: ${visibleNames}`
-  );
+  // 2026-09-14 consolidation: the six detail tables (RFQ/MOQ, Materials,
+  // Inks, Processes, Pack & Ship, Cost Breakdown) became bands of one
+  // "02 Summarize" sheet and "09 Summary" was dropped, taking the visible
+  // count from 11 to 5. _Audit + _Schema stay hidden and still do not count.
+  //
+  // Asserting the NAMES rather than the count: a future sheet added or
+  // renamed should fail here with something a reader can act on.
   assert.deepEqual(visibleNames, [
     '00 Cover',
-    '01 RFQ MOQ',
-    '02 Layout',
-    '03 Materials',
-    '04 Inks',
-    '05 Processes',
-    '06 Balancing',
-    '07 Pack Ship',
-    '08 Cost Breakdown',
-    '09 Summary',
-    '10 Pricing Snapshot',
+    '01 Layout',
+    '02 Summarize',
+    '03 Balancing',
+    '04 Pricing Snapshot',
   ]);
 });
 
@@ -188,7 +180,7 @@ test('exportQuote: internal variant produces same sheet count, different filenam
   const wb = await parseBuffer(out.buffer);
   const visible = wb.worksheets.filter((s) => s.state !== 'hidden' && s.state !== 'veryHidden');
   // Phase 4 — 10 baseline sheets + 1 Pricing Snapshot = 11.
-  assert.equal(visible.length, 11);
+  assert.equal(visible.length, 5, 'post-consolidation visible-sheet count');
 });
 
 test('exportQuote: Cover sheet contains quote label + version + customer name', async () => {
@@ -222,7 +214,7 @@ test('exportQuote: RFQ MOQ sheet Salesperson row reads state.sale_owner (MES-3-F
   q.state.sale_owner = 'Mile Miao';
   const out = await exportQuote(q, { variant: 'internal', lang: 'en' });
   const wb = await parseBuffer(out.buffer);
-  const rfqSheet = wb.getWorksheet('01 RFQ MOQ');
+  const rfqSheet = section(wb, 'RFQ Information');
   const values = [];
   rfqSheet.eachRow((row) => row.eachCell((cell) => values.push(String(cell.value || ''))));
   assert.ok(
@@ -237,7 +229,7 @@ test('exportQuote: RFQ MOQ Salesperson row falls back to legacy state.salesperso
   // sale_owner deliberately absent — legacy quote shape
   const out = await exportQuote(q, { variant: 'internal', lang: 'en' });
   const wb = await parseBuffer(out.buffer);
-  const rfqSheet = wb.getWorksheet('01 RFQ MOQ');
+  const rfqSheet = section(wb, 'RFQ Information');
   const values = [];
   rfqSheet.eachRow((row) => row.eachCell((cell) => values.push(String(cell.value || ''))));
   assert.ok(
@@ -250,7 +242,7 @@ test('exportQuote: RFQ MOQ Salesperson row renders em-dash when both fields miss
   const q = makeFixtureQuote(); // neither sale_owner nor salesperson set
   const out = await exportQuote(q, { variant: 'internal', lang: 'en' });
   const wb = await parseBuffer(out.buffer);
-  const rfqSheet = wb.getWorksheet('01 RFQ MOQ');
+  const rfqSheet = section(wb, 'RFQ Information');
   // Find the row whose label cell reads "Salesperson" (col A) and read col B.
   let salespersonValue = null;
   rfqSheet.eachRow((row) => {
@@ -265,7 +257,7 @@ test('exportQuote: RFQ MOQ Salesperson row renders em-dash when both fields miss
 test('exportQuote: Materials sheet renders main row IFS code', async () => {
   const out = await exportQuote(makeFixtureQuote(), { variant: 'internal', lang: 'en' });
   const wb = await parseBuffer(out.buffer);
-  const mat = wb.getWorksheet('03 Materials');
+  const mat = section(wb, 'Main materials');
   let foundIfs = false;
   mat.eachRow((row) =>
     row.eachCell((cell) => {
@@ -292,7 +284,7 @@ test('exportQuote: alt-materials section renders when materials_alt non-empty', 
   ];
   const out = await exportQuote(q, { variant: 'internal', lang: 'en' });
   const wb = await parseBuffer(out.buffer);
-  const mat = wb.getWorksheet('03 Materials');
+  const mat = section(wb, 'Main materials');
   let foundAlt = false;
   mat.eachRow((row) =>
     row.eachCell((cell) => {
@@ -305,7 +297,7 @@ test('exportQuote: alt-materials section renders when materials_alt non-empty', 
 test('exportQuote: Inks sheet has rows for each visible ink', async () => {
   const out = await exportQuote(makeFixtureQuote(), { variant: 'internal', lang: 'en' });
   const wb = await parseBuffer(out.buffer);
-  const inks = wb.getWorksheet('04 Inks');
+  const inks = section(wb, 'Inks');
   const printTypes = [];
   inks.eachRow((row) => {
     const pt = row.getCell(4).value; // Print Type col
@@ -318,7 +310,7 @@ test('exportQuote: Inks sheet has rows for each visible ink', async () => {
 test('exportQuote: Cost Breakdown internal variant shows ~12 detailed buckets', async () => {
   const out = await exportQuote(makeFixtureQuote(), { variant: 'internal', lang: 'en' });
   const wb = await parseBuffer(out.buffer);
-  const cb = wb.getWorksheet('08 Cost Breakdown');
+  const cb = section(wb, 'Cost Breakdown');
   let bucketCount = 0;
   cb.eachRow((row, rowIdx) => {
     if (rowIdx < 4) return;
@@ -340,7 +332,7 @@ test('exportQuote: Cost Breakdown internal variant shows ~12 detailed buckets', 
 test('exportQuote: Cost Breakdown customer variant collapses to 5 buckets', async () => {
   const out = await exportQuote(makeFixtureQuote(), { variant: 'customer', lang: 'en' });
   const wb = await parseBuffer(out.buffer);
-  const cb = wb.getWorksheet('08 Cost Breakdown');
+  const cb = section(wb, 'Cost Breakdown');
   let bucketCount = 0;
   cb.eachRow((row, rowIdx) => {
     if (rowIdx < 4) return;

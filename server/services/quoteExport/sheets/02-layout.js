@@ -15,7 +15,7 @@ import { L } from '../i18n.js';
 export function buildLayoutSheet(wb, ctx) {
   const { quote, lang } = ctx;
   const sheet = createSheet(wb, {
-    name: '02 Layout',
+    name: '01 Layout',
     bannerText: L('layout.section_common', lang),
     orientation: 'landscape',
     bannerSpan: 7,

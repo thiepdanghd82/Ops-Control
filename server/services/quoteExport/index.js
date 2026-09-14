@@ -23,15 +23,9 @@ import { workbookToCsvEntries } from './csv.js';
 import { build1TierName, buildZipName } from './filenames.js';
 import { enumerateTiers } from './tierUtils.js';
 import { buildCoverSheet } from './sheets/00-cover.js';
-import { buildRfqMoqSheet } from './sheets/01-rfq-moq.js';
 import { buildLayoutSheet } from './sheets/02-layout.js';
-import { buildMaterialsSheet } from './sheets/03-materials.js';
-import { buildInksSheet } from './sheets/04-inks.js';
-import { buildProcessesSheet } from './sheets/05-processes.js';
+import { buildSummarizeSheet } from './sheets/02-summarize.js';
 import { buildBalancingSheet } from './sheets/06-balancing.js';
-import { buildPackShipSheet } from './sheets/07-pack-ship.js';
-import { buildCostBreakdownSheet } from './sheets/08-cost-breakdown.js';
-import { buildSummarySheet } from './sheets/09-summary.js';
 import { buildPricingSnapshotSheet } from './sheets/10-pricing-snapshot.js';
 // MVP-2 tamper-resistance pipeline
 import { buildAuditSheet } from './audit.js';
@@ -334,18 +328,14 @@ async function buildOneXlsx(ctx) {
   //    mirror — every xlsx in the zip ends up identical (P0 data bug
   //    surfaced 2026-05-20).
   buildCoverSheet(wb, { quote, tierIdx, tierKpis, variant, lang, exportedBy, engineSha });
-  buildRfqMoqSheet(wb, { quote, lang });
   buildLayoutSheet(wb, { quote, lang });
-  buildMaterialsSheet(wb, { quote, tierIdx, variant, lang });
-  buildInksSheet(wb, { quote, tierIdx, variant, lang });
-  buildProcessesSheet(wb, { quote, tierIdx, variant, lang, rateLookup });
+  // 02 Summarize — one sheet carrying what used to be six (RFQ/MOQ,
+  // Materials, Inks, Processes, Pack & Ship, Cost Breakdown). Operator
+  // request 2026-09-14; sheets/02-summarize.js records what consolidation
+  // broke and how the section builders handle it. 09 Summary is dropped
+  // entirely — the target workbook has no equivalent.
+  buildSummarizeSheet(wb, { quote, tierIdx, variant, lang, rateLookup });
   buildBalancingSheet(wb, { quote, tierIdx, lang });
-  // Sprint S-PACK-SHIP-PER-TIER step 4 — sheet 07 joins 03/04/05/08 in
-  // receiving tierIdx so per-MOQ pack/ship overrides surface in the
-  // right xlsx of a multi-tier zip.
-  buildPackShipSheet(wb, { quote, tierIdx, lang });
-  buildCostBreakdownSheet(wb, { quote, tierIdx, variant, lang });
-  buildSummarySheet(wb, { quote, tierIdx, tierKpis, variant, lang });
   // Phase 4 (Sprint S-D20-PRICING-SNAPSHOT) — operator-facing audit
   // metadata for the pricing snapshot (frozen rates / captured at /
   // captured by / site / warnings). Distinct from the hidden _Audit

@@ -96,7 +96,7 @@ function makeQuoteWithSnapshot(snapshot) {
 async function readSnapshotSheet(buf) {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buf);
-  const sheet = wb.getWorksheet('10 Pricing Snapshot');
+  const sheet = wb.getWorksheet('04 Pricing Snapshot');
   assert.ok(sheet, 'sheet "10 Pricing Snapshot" must exist');
   // Build a {label: value} dict from rows 3..13.
   const dict = {};
@@ -200,7 +200,7 @@ test('pricing snapshot sheet — distinct from hidden _Audit sheet (Phase 4 visi
   });
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(out.buffer);
-  const pricingSheet = wb.getWorksheet('10 Pricing Snapshot');
+  const pricingSheet = wb.getWorksheet('04 Pricing Snapshot');
   const auditSheet = wb.getWorksheet('_Audit');
   assert.ok(pricingSheet, 'visible 10 Pricing Snapshot exists');
   assert.ok(auditSheet, 'hidden _Audit (MVP-2 forensic) still exists');

@@ -79,8 +79,11 @@ export function createSheet(wb, opts) {
     headerFooter: { oddFooter: `&L${name} &C&P / &N &R&D` },
   });
 
-  // Banner row
-  const lastCol = String.fromCharCode(64 + bannerSpan); // A=65 → +span
+  // Banner row. `bannerText: null` skips it — the consolidated 02 Summarize
+  // sheet lets each SECTION place its own banner, starting at row 1, so a
+  // sheet-level banner there would merge the same range twice.
+  if (bannerText == null) return sheet;
+  const lastCol = colLetter(bannerSpan);
   sheet.mergeCells(`A1:${lastCol}1`);
   const banner = sheet.getCell('A1');
   banner.value = bannerText;
@@ -88,6 +91,45 @@ export function createSheet(wb, opts) {
   sheet.getRow(1).height = 28;
 
   return sheet;
+}
+
+/**
+ * Write a section banner inside an existing sheet and return the first row a
+ * section may write to.
+ *
+ * 2026-09-14: the export used to put RFQ/MOQ, Materials, Inks, Processes,
+ * Pack & Ship and Cost Breakdown on six sheets of their own. They are now
+ * bands of one "02 Summarize" sheet, so what used to be createSheet()'s
+ * row-1 banner becomes a banner at an arbitrary row. Same look, same span,
+ * different offset — which is the only reason the six builders convert
+ * mechanically rather than being rewritten.
+ *
+ * @param {import('exceljs').Worksheet} sheet
+ * @param {number} row        row to place the banner on
+ * @param {string} text
+ * @param {number} span       columns to merge across
+ * @returns {number} first row the caller may write (banner + 1 blank)
+ */
+export function sectionBanner(sheet, row, text, span) {
+  const lastCol = colLetter(span);
+  sheet.mergeCells(`A${row}:${lastCol}${row}`);
+  const banner = sheet.getCell(`A${row}`);
+  banner.value = text;
+  applyStyle(banner, 'banner');
+  sheet.getRow(row).height = 28;
+  return row + 2;
+}
+
+/** 1 → A, 26 → Z, 27 → AA. createSheet's old String.fromCharCode stopped at Z. */
+export function colLetter(n) {
+  let s = '';
+  let x = n;
+  while (x > 0) {
+    const rem = (x - 1) % 26;
+    s = String.fromCharCode(65 + rem) + s;
+    x = Math.floor((x - 1) / 26);
+  }
+  return s || 'A';
 }
 
 /**

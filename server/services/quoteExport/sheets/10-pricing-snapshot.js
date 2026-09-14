@@ -27,7 +27,7 @@
 import { createSheet } from '../workbook.js';
 import { applyStyle } from '../styles.js';
 
-const SHEET_NAME = '10 Pricing Snapshot';
+const SHEET_NAME = '04 Pricing Snapshot';
 
 /**
  * Compact ISO → human-readable formatter mirroring the client-side

@@ -8,6 +8,7 @@
 process.env.OPS_EXPORT_HMAC_KEY = process.env.OPS_EXPORT_HMAC_KEY || 'a'.repeat(64);
 
 import test from 'node:test';
+import { section } from './sections.js';
 import assert from 'node:assert/strict';
 import ExcelJS from 'exceljs';
 import { exportQuote, QuoteExportError } from '../index.js';
@@ -190,12 +191,12 @@ async function parse(buffer) {
 test('rows: 03-materials renders real setup_cost from result.rows', async () => {
   const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const mat = wb.getWorksheet('03 Materials');
+  const mat = section(wb, 'Main materials');
   // Header at row 4; first data row 5. Full-parity order pushed the money
   // columns right: Setup Cost = T (20), Run Cost = U (21), Total = V (22).
-  const setup1 = mat.getCell('T5').value;
-  const run1 = mat.getCell('U5').value;
-  const total1 = mat.getCell('V5').value;
+  const setup1 = mat.cell('T', 5).value;
+  const run1 = mat.cell('U', 5).value;
+  const total1 = mat.cell('V', 5).value;
   assert.equal(setup1, 0.012);
   assert.equal(run1, 0.06);
   assert.equal(total1, 0.072);
@@ -204,57 +205,57 @@ test('rows: 03-materials renders real setup_cost from result.rows', async () => 
 test('rows: 03-materials renders second material row from result.rows[1]', async () => {
   const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const mat = wb.getWorksheet('03 Materials');
-  const setup2 = mat.getCell('T6').value;
+  const mat = section(wb, 'Main materials');
+  const setup2 = mat.cell('T', 6).value;
   assert.equal(setup2, 0.008);
 });
 
 test('rows: 03-materials renders QPA + Mats/MOQ derived columns from result.rows', async () => {
   const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const mat = wb.getWorksheet('03 Materials');
+  const mat = section(wb, 'Main materials');
   // First data row 5: QPA m² = O (15), QPA lm = P (16), Mats/MOQ m² = Q (17),
   // Mats/MOQ lm = R (18).
-  assert.equal(mat.getCell('O5').value, 0.5);
-  assert.equal(mat.getCell('P5').value, 0.3);
-  assert.equal(mat.getCell('Q5').value, 250);
-  assert.equal(mat.getCell('R5').value, 150);
+  assert.equal(mat.cell('O', 5).value, 0.5);
+  assert.equal(mat.cell('P', 5).value, 0.3);
+  assert.equal(mat.cell('Q', 5).value, 250);
+  assert.equal(mat.cell('R', 5).value, 150);
 });
 
 test('rows: 03-materials renders effective Pitch/Width/Cav from result.rows (not raw 0)', async () => {
   const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const mat = wb.getWorksheet('03 Materials');
+  const mat = section(wb, 'Main materials');
   // Pitch = G (7), Width = H (8), Cav = I (9). Persisted effective values.
-  assert.equal(mat.getCell('G5').value, 3.175);
-  assert.equal(mat.getCell('H5').value, 320);
-  assert.equal(mat.getCell('I5').value, 8);
+  assert.equal(mat.cell('G', 5).value, 3.175);
+  assert.equal(mat.cell('H', 5).value, 320);
+  assert.equal(mat.cell('I', 5).value, 8);
 });
 
 test('rows: 05-processes renders UOM from persisted speed_uom (rateLookup not wired)', async () => {
   const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const proc = wb.getWorksheet('05 Processes');
+  const proc = section(wb, 'Processes');
   // UOM = col F (6).
-  assert.equal(proc.getCell('F4').value, 'm/min');
+  assert.equal(proc.cell('F', 4).value, 'm/min');
 });
 
 test('rows: 04-inks Cov Ovr shows effective coverage from ink_cover_disp (not blank)', async () => {
   const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const inks = wb.getWorksheet('04 Inks');
+  const inks = section(wb, 'Inks');
   // Cov Ovr = col J (10). Second ink (Flexo, row 5) has ink_cover_disp 400.
-  assert.equal(inks.getCell('J5').value, 400);
+  assert.equal(inks.cell('J', 5).value, 400);
 });
 
 test('rows: 07-pack-ship renders Total Packing/pcs + Shipping/pcs + combined', async () => {
   const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const ps = wb.getWorksheet('07 Pack Ship');
+  const ps = section(wb, 'Packaging');
   const findB = (label) => {
-    for (let r = 1; r <= 40; r++) {
-      const a = ps.getCell(`A${r}`).value;
-      if (typeof a === 'string' && a.includes(label)) return ps.getCell(`B${r}`).value;
+    for (let r = 1; r <= ps.endRow - ps.bannerRow + 1; r++) {
+      const a = ps.cell('A', r).value;
+      if (typeof a === 'string' && a.includes(label)) return ps.cell('B', r).value;
     }
     return undefined;
   };
@@ -266,7 +267,7 @@ test('rows: 07-pack-ship renders Total Packing/pcs + Shipping/pcs + combined', a
 test('rows: 06-balancing renders MOQ/EAU run time + bottleneck from persisted total_time', async () => {
   const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const bal = wb.getWorksheet('06 Balancing');
+  const bal = wb.getWorksheet('03 Balancing');
   // MOQ 1000, EAU 10000. Header row 6; first WC data row 7. total_time 12 min
   // → MOQ run time 0.2h; EAU run time 0.2 × (10000/1000) = 2h; shifts 2/8=0.25.
   assert.equal(bal.getCell('E7').value, 0.2); // MOQ run time
@@ -278,11 +279,11 @@ test('rows: 06-balancing renders MOQ/EAU run time + bottleneck from persisted to
 test('rows: 04-inks renders setup_cost + clicks for Indigo row', async () => {
   const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const inks = wb.getWorksheet('04 Inks');
+  const inks = section(wb, 'Inks');
   // First ink data row 4 (header row 3). scrap_pct inserted after clicks
   // pushes setup_cost to col O (15); clicks stays col K (11).
-  const setup = inks.getCell('O4').value;
-  const clicks = inks.getCell('K4').value;
+  const setup = inks.cell('O', 4).value;
+  const clicks = inks.cell('K', 4).value;
   assert.equal(setup, 0.003);
   assert.equal(clicks, 8);
 });
@@ -290,28 +291,28 @@ test('rows: 04-inks renders setup_cost + clicks for Indigo row', async () => {
 test('rows: 04-inks non-Indigo row shows clicks from ink.clicks state (legacy fallback)', async () => {
   const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const inks = wb.getWorksheet('04 Inks');
+  const inks = section(wb, 'Inks');
   // Second ink is Flexo — rowCost has no `clicks` field; falls back to
   // ink.clicks (undefined in our fixture → em-dash).
-  const clicks = inks.getCell('K5').value;
+  const clicks = inks.cell('K', 5).value;
   assert.equal(clicks, '—');
 });
 
 test('rows: 05-processes renders setup + run + total from result.rows', async () => {
   const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const proc = wb.getWorksheet('05 Processes');
+  const proc = section(wb, 'Processes');
   // First data row 4 (header row 3). Full-parity columns (app order):
   //   D crew · K MC UPH · P Prod Time(h) · Q S.Mach · R S.Labor · S R.Mach
   //   · T R.Labor · U Tooling.
-  assert.equal(proc.getCell('D4').value, 2); // crew
-  assert.equal(proc.getCell('K4').value, 5000); // MC UPH (uph)
-  assert.equal(proc.getCell('P4').value, 0.2); // Prod time = total_time 12 / 60
-  assert.equal(proc.getCell('Q4').value, 0.002); // setup_mach
-  assert.equal(proc.getCell('R4').value, 0.003); // setup_labor
-  assert.equal(proc.getCell('S4').value, 0.01); // run_mach
-  assert.equal(proc.getCell('T4').value, 0.006); // run_labor
-  assert.equal(proc.getCell('U4').value, 0.003); // tooling
+  assert.equal(proc.cell('D', 4).value, 2); // crew
+  assert.equal(proc.cell('K', 4).value, 5000); // MC UPH (uph)
+  assert.equal(proc.cell('P', 4).value, 0.2); // Prod time = total_time 12 / 60
+  assert.equal(proc.cell('Q', 4).value, 0.002); // setup_mach
+  assert.equal(proc.cell('R', 4).value, 0.003); // setup_labor
+  assert.equal(proc.cell('S', 4).value, 0.01); // run_mach
+  assert.equal(proc.cell('T', 4).value, 0.006); // run_labor
+  assert.equal(proc.cell('U', 4).value, 0.003); // tooling
 });
 
 test('rows: legacy quote (no result.rows) → 422 legacy_no_rows', async () => {
@@ -390,7 +391,7 @@ test('rows: complex quote with result.subproducts present passes the legacy gate
 test('rows: aggregate subtotal row coexists with per-row data', async () => {
   const out = await exportQuote(makeQuoteWithRows(), { variant: 'internal', lang: 'en' });
   const wb = await parse(out.buffer);
-  const mat = wb.getWorksheet('03 Materials');
+  const mat = section(wb, 'Main materials');
   // Find the Subtotal row label
   let subtotalRow = null;
   for (let r = 1; r <= 30; r++) {

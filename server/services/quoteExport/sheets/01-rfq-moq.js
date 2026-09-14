@@ -3,7 +3,7 @@
  * Sheet 01 — RFQ identification + MOQ tier table.
  */
 
-import { createSheet, freezeTop } from '../workbook.js';
+import { sectionBanner } from '../workbook.js';
 import { applyStyle } from '../styles.js';
 import { L } from '../i18n.js';
 import { enumerateTiers } from '../tierUtils.js';
@@ -14,14 +14,9 @@ import { enumerateTiers } from '../tierUtils.js';
  * @param {object} ctx.quote
  * @param {'en'|'vi'|'bilingual'} ctx.lang
  */
-export function buildRfqMoqSheet(wb, ctx) {
+export function buildRfqMoqSection(sheet, startRow, ctx) {
   const { quote, lang } = ctx;
-  const sheet = createSheet(wb, {
-    name: '01 RFQ MOQ',
-    bannerText: L('rfq.section_id', lang),
-    orientation: 'portrait',
-    bannerSpan: 8,
-  });
+  const r0 = sectionBanner(sheet, startRow, L('rfq.section_id', lang), 8);
 
   sheet.getColumn('A').width = 24;
   sheet.getColumn('B').width = 28;
@@ -45,7 +40,7 @@ export function buildRfqMoqSheet(wb, ctx) {
     ['rfq.salesperson', state.sale_owner || state.salesperson || '—'],
     ['rfq.npi_owner', state.npi_owner || '—'],
   ];
-  let r = 3;
+  let r = r0;
   for (const [key, value] of idRows) {
     const a = sheet.getCell(`A${r}`);
     const b = sheet.getCell(`B${r}`);
@@ -109,7 +104,7 @@ export function buildRfqMoqSheet(wb, ctx) {
     r += 1;
   }
 
-  freezeTop(sheet, 1);
+  return r + 1;
 }
 
 function numOrDash(v, fallback = null) {
