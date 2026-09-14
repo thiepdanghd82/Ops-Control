@@ -50,7 +50,12 @@ export function formatBulletList(items) {
     .map((s) => (typeof s === 'string' ? s.trim() : ''))
     .filter((s) => s.length > 0);
   if (cleaned.length === 0) return '';
-  return cleaned.map((s) => `- ${s}`).join('\n');
+  // `\u2022 ` not `- `: a cell that starts with a dash is read as a
+  // formula by Excel, which is how the Summarize export came out as
+  // #NAME? in the Draw Materials column. csvEscape neutralises that
+  // case too, but a bullet that is simply not a formula character is
+  // the better fix — it also reads better on screen.
+  return cleaned.map((s) => `\u2022 ${s}`).join('\n');
 }
 
 /**

@@ -20,45 +20,45 @@ describe('formatBulletList', () => {
   });
 
   test('single item → single bullet', () => {
-    assert.equal(formatBulletList(['x']), '- x');
+    assert.equal(formatBulletList(['x']), '• x');
   });
 
   test('multiple items → multi-line bullets', () => {
-    assert.equal(formatBulletList(['a', 'b', 'c']), '- a\n- b\n- c');
+    assert.equal(formatBulletList(['a', 'b', 'c']), '• a\n• b\n• c');
   });
 
   test('drops empty / null entries', () => {
-    assert.equal(formatBulletList(['a', '', null, undefined, 'b']), '- a\n- b');
+    assert.equal(formatBulletList(['a', '', null, undefined, 'b']), '• a\n• b');
   });
 
   test('drops whitespace-only entries', () => {
-    assert.equal(formatBulletList(['  ', '\t', 'real', '\n']), '- real');
+    assert.equal(formatBulletList(['  ', '\t', 'real', '\n']), '• real');
   });
 
   test('trims each surviving entry', () => {
-    assert.equal(formatBulletList(['  a  ', '\tb\t']), '- a\n- b');
+    assert.equal(formatBulletList(['  a  ', '\tb\t']), '• a\n• b');
   });
 
   test('non-string entries silently dropped', () => {
-    assert.equal(formatBulletList(['ok', 123, { obj: true }, 'also']), '- ok\n- also');
+    assert.equal(formatBulletList(['ok', 123, { obj: true }, 'also']), '• ok\n• also');
   });
 });
 
 describe('toBulletFromTextarea', () => {
   test('newline-separated input → bullets', () => {
-    assert.equal(toBulletFromTextarea('a\nb\nc'), '- a\n- b\n- c');
+    assert.equal(toBulletFromTextarea('a\nb\nc'), '• a\n• b\n• c');
   });
 
   test('trims each line', () => {
-    assert.equal(toBulletFromTextarea('  a  \n  b  '), '- a\n- b');
+    assert.equal(toBulletFromTextarea('  a  \n  b  '), '• a\n• b');
   });
 
   test('skips blank lines (operator paragraph spacing tolerated)', () => {
-    assert.equal(toBulletFromTextarea('a\n\nb\n\n'), '- a\n- b');
+    assert.equal(toBulletFromTextarea('a\n\nb\n\n'), '• a\n• b');
   });
 
   test('single line → single bullet', () => {
-    assert.equal(toBulletFromTextarea('only one'), '- only one');
+    assert.equal(toBulletFromTextarea('only one'), '• only one');
   });
 
   test('empty / whitespace-only / null → empty string', () => {
@@ -69,7 +69,7 @@ describe('toBulletFromTextarea', () => {
   });
 
   test('CRLF line endings tolerated (trim drops the \\r)', () => {
-    assert.equal(toBulletFromTextarea('a\r\nb\r\nc'), '- a\n- b\n- c');
+    assert.equal(toBulletFromTextarea('a\r\nb\r\nc'), '• a\n• b\n• c');
   });
 });
 
@@ -82,7 +82,7 @@ describe('collectDrwMaterials — Main.Mat filter + bullet format', () => {
         { row_type: 'Main.Mat', drw_material: 'B' },
       ],
     };
-    assert.equal(collectDrwMaterials(state), '- A\n- B');
+    assert.equal(collectDrwMaterials(state), '• A\n• B');
   });
 
   test('Std: legacy "Main.Mat 1" / "Main.Mat 2" treated as Main.Mat', () => {
@@ -94,7 +94,7 @@ describe('collectDrwMaterials — Main.Mat filter + bullet format', () => {
         { row_type: 'Process Mat 3', drw_material: 'X' },
       ],
     };
-    assert.equal(collectDrwMaterials(state), '- A\n- B\n- C');
+    assert.equal(collectDrwMaterials(state), '• A\n• B\n• C');
   });
 
   test('Cpx: filter across all subproducts, preserve duplicates', () => {
@@ -115,7 +115,7 @@ describe('collectDrwMaterials — Main.Mat filter + bullet format', () => {
       ],
     };
     // Process Mat rows skipped; Main.Mat duplicates kept (no dedupe).
-    assert.equal(collectDrwMaterials(state), '- A\n- B');
+    assert.equal(collectDrwMaterials(state), '• A\n• B');
   });
 
   test('Cpx: duplicate Main.Mat across SPs preserved', () => {
@@ -126,7 +126,7 @@ describe('collectDrwMaterials — Main.Mat filter + bullet format', () => {
         { materials: [{ row_type: 'Main.Mat', drw_material: 'MAT-B' }] },
       ],
     };
-    assert.equal(collectDrwMaterials(state), '- MAT-A\n- MAT-A\n- MAT-B');
+    assert.equal(collectDrwMaterials(state), '• MAT-A\n• MAT-A\n• MAT-B');
   });
 
   test('empty drw_material on a Main.Mat row → dropped', () => {
@@ -138,7 +138,7 @@ describe('collectDrwMaterials — Main.Mat filter + bullet format', () => {
         { row_type: 'Main.Mat', drw_material: 'C' },
       ],
     };
-    assert.equal(collectDrwMaterials(state), '- A\n- C');
+    assert.equal(collectDrwMaterials(state), '• A\n• C');
   });
 
   test('all Process Mat → empty string', () => {
@@ -162,7 +162,7 @@ describe('collectDrwMaterials — Main.Mat filter + bullet format', () => {
         { row_type: 'Main.Mat', drw_material: 'B' },
       ],
     };
-    assert.equal(collectDrwMaterials(state), '- B');
+    assert.equal(collectDrwMaterials(state), '• B');
   });
 
   test('empty / null state → empty string', () => {
@@ -178,7 +178,7 @@ describe('collectDrwMaterials — Main.Mat filter + bullet format', () => {
       subproducts: [],
       materials: [{ row_type: 'Main.Mat', drw_material: 'TOP' }],
     };
-    assert.equal(collectDrwMaterials(state), '- TOP');
+    assert.equal(collectDrwMaterials(state), '• TOP');
   });
 });
 
@@ -191,7 +191,7 @@ describe('collectQuoteMaterials — same filter logic on desc', () => {
         { row_type: 'Main.Mat', desc: 'PET 12um' },
       ],
     };
-    assert.equal(collectQuoteMaterials(state), '- BOPP 50um\n- PET 12um');
+    assert.equal(collectQuoteMaterials(state), '• BOPP 50um\n• PET 12um');
   });
 
   test('Cpx: cross-SP bullet desc', () => {
@@ -206,7 +206,7 @@ describe('collectQuoteMaterials — same filter logic on desc', () => {
         { materials: [{ row_type: 'Main.Mat', desc: 'Liner' }] },
       ],
     };
-    assert.equal(collectQuoteMaterials(state), '- Film\n- Liner');
+    assert.equal(collectQuoteMaterials(state), '• Film\n• Liner');
   });
 
   test('drw_material and desc collectors stay independent — no cross-talk', () => {
@@ -216,8 +216,8 @@ describe('collectQuoteMaterials — same filter logic on desc', () => {
         { row_type: 'Process Mat', drw_material: 'CODE-X', desc: 'Display X' },
       ],
     };
-    assert.equal(collectDrwMaterials(state), '- CODE-A');
-    assert.equal(collectQuoteMaterials(state), '- Display A');
+    assert.equal(collectDrwMaterials(state), '• CODE-A');
+    assert.equal(collectQuoteMaterials(state), '• Display A');
   });
 
   test('legacy Main.Mat N suffix carries through to desc collector', () => {
@@ -227,6 +227,6 @@ describe('collectQuoteMaterials — same filter logic on desc', () => {
         { row_type: 'Main.Mat 2', desc: 'two' },
       ],
     };
-    assert.equal(collectQuoteMaterials(state), '- one\n- two');
+    assert.equal(collectQuoteMaterials(state), '• one\n• two');
   });
 });

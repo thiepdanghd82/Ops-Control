@@ -258,3 +258,42 @@ test('saveCsv — no bridge + no picker → legacy <a download> anchor', async (
     globalThis.URL.revokeObjectURL = prevRevoke;
   }
 });
+
+// ── Spreadsheet formula injection (2026-09-14) ────────────────────────
+// An operator exported Summarize and the Draw Materials column read
+// "#NAME?" instead of the material list: the cell starts with "- " (the
+// bullet), so Excel parsed it as a formula. Same class as the classic CSV
+// injection vector, so guard every leading formula character, not just
+// the one that bit us.
+
+test('cells that would be read as a formula are neutralised', () => {
+  for (const lead of ['=', '+', '-', '@']) {
+    const out = csvEscape(`${lead}SUM(A1)`);
+    assert.ok(out.startsWith("'") || out.startsWith('"\''), `"${lead}" not neutralised: ${out}`);
+    assert.ok(out.includes(`${lead}SUM(A1)`), 'the original text must survive');
+  }
+});
+
+test('the bullet list that triggered #NAME? survives intact', () => {
+  const out = csvEscape('- M-Primary\n- M-Secondary');
+  assert.ok(!/^"?-/.test(out), 'still starts with a bare dash');
+  assert.ok(out.includes('M-Primary') && out.includes('M-Secondary'));
+});
+
+test('tab and carriage-return leads are neutralised too', () => {
+  // Excel strips leading whitespace before deciding, so " =1+1" is still
+  // a formula.
+  for (const s of ['\t=1+1', ' =1+1', '\r-1']) {
+    const out = csvEscape(s);
+    assert.ok(out.includes("'"), `whitespace-led formula not neutralised: ${JSON.stringify(out)}`);
+  }
+});
+
+test('ordinary values are untouched', () => {
+  assert.equal(csvEscape('RFQ-2026-S0054'), 'RFQ-2026-S0054');
+  assert.equal(csvEscape('84×66'), '84×66');
+  assert.equal(csvEscape(0), '0');
+  assert.equal(csvEscape(-12.5), '-12.5', 'a negative NUMBER is data, not a formula');
+  assert.equal(csvEscape(''), '');
+  assert.equal(csvEscape(null), '');
+});

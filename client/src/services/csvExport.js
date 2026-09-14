@@ -15,10 +15,32 @@
  *     consumer can re-format).
  */
 
+/**
+ * Leading characters that make a spreadsheet treat a cell as a formula.
+ * Excel skips leading whitespace before deciding, so the test has to as
+ * well. Found in production 2026-09-14: the Summarize "Draw Materials"
+ * column is a bullet list starting with "- ", so Excel evaluated `-M…`
+ * and every cell read `#NAME?` instead of the materials. Same class as
+ * the CSV-injection vector, so guard all four leads rather than the dash.
+ */
+const FORMULA_LEAD = /^[\s]*[=+\-@]/;
+
+/**
+ * Prefixing with an apostrophe is the standard neutraliser: spreadsheets
+ * treat the rest of the cell as text and the original characters survive
+ * for anyone reading the file as data.
+ */
+function neutralizeFormula(s) {
+  return FORMULA_LEAD.test(s) ? `'${s}` : s;
+}
+
 export function csvEscape(value) {
   if (value == null) return '';
-  const s = typeof value === 'string' ? value : String(value);
-  if (s.length === 0) return '';
+  // Numbers are data: -12.5 must stay -12.5, not '-12.5.
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '';
+  const raw = typeof value === 'string' ? value : String(value);
+  if (raw.length === 0) return '';
+  const s = neutralizeFormula(raw);
   if (/[",\n\r]/.test(s)) {
     return `"${s.replace(/"/g, '""')}"`;
   }

@@ -76,8 +76,8 @@ describe('formatCsvCell', () => {
       '2026-06-10T13:54:34.845Z'
     );
     assert.equal(
-      formatCsvCell('- 3M Tape\n- transparent Protector\n- Paper Liner', renderOnlyCol),
-      '- 3M Tape\n- transparent Protector\n- Paper Liner'
+      formatCsvCell('• 3M Tape\n• transparent Protector\n• Paper Liner', renderOnlyCol),
+      '• 3M Tape\n• transparent Protector\n• Paper Liner'
     );
   });
 

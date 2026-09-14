@@ -126,7 +126,7 @@ test('E1: drw_materials applies Main.Mat filter (Process Mat rows skipped)', () 
     },
   };
   const r = deriveInboxRow(q);
-  assert.equal(r.drw_materials, '- M-Primary\n- M-Secondary');
+  assert.equal(r.drw_materials, '• M-Primary\n• M-Secondary');
 });
 
 test('E2: quote_materials applies Main.Mat filter (delegate test)', () => {
@@ -139,7 +139,7 @@ test('E2: quote_materials applies Main.Mat filter (delegate test)', () => {
     },
   };
   const r = deriveInboxRow(q);
-  assert.equal(r.quote_materials, '- PET 50um');
+  assert.equal(r.quote_materials, '• PET 50um');
 });
 
 test('E3: materials empty string when no rows match', () => {
