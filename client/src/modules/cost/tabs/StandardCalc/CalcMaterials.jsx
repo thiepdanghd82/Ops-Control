@@ -272,16 +272,18 @@ export default function CalcMaterials() {
       <div className="sc-card">
         <div className="sc-card-header sc-header-blue">
           <span className="sc-card-icon">&#9672;</span>
-          <span className="sc-card-title">Materials ({visibleMats.length} rows)</span>
+          <span className="sc-card-title">
+            {t('cgrid.mat.title')} ({t('cgrid.rows', { n: visibleMats.length })})
+          </span>
           <div className="sc-header-totals">
             <span className="sc-header-total-item">
-              Setup: <b>${fmtN(totals.setup)}</b>
+              {t('cgrid.setup')} <b>${fmtN(totals.setup)}</b>
             </span>
             <span className="sc-header-total-item">
-              Run: <b>${fmtN(totals.run)}</b>
+              {t('cgrid.run')} <b>${fmtN(totals.run)}</b>
             </span>
             <span className="sc-header-total-item sc-header-total-main">
-              Total: <b>${fmtN(totals.total)}</b>
+              {t('cgrid.total')} <b>${fmtN(totals.total)}</b>
             </span>
           </div>
         </div>
@@ -313,83 +315,71 @@ export default function CalcMaterials() {
               <table className="sc-table sc-mat-table">
                 <thead>
                   <tr>
-                    <th style={{ width: 130 }}>Row</th>
-                    <th style={{ width: 85 }}>IFS Code</th>
-                    <th style={{ width: 110 }}>DRW materials</th>
-                    <th style={{ width: 130 }}>Quote materials</th>
-                    <th style={{ width: 55 }}>Usage</th>
-                    <th style={{ width: 55 }}>Setup LM</th>
-                    <th
-                      style={{ width: 65 }}
-                      title="Override pitch from Layout. Empty = auto from Layout"
-                    >
-                      Pitch
+                    <th style={{ width: 130 }}>{t('spr.row')}</th>
+                    <th style={{ width: 85 }}>{t('cgrid.mat.ifs_code')}</th>
+                    <th style={{ width: 110 }}>{t('cgrid.mat.drw')}</th>
+                    <th style={{ width: 130 }}>{t('spr.quote_materials')}</th>
+                    <th style={{ width: 55 }}>{t('spr.usage')}</th>
+                    <th style={{ width: 55 }}>{t('cgrid.mat.setup_lm')}</th>
+                    <th style={{ width: 65 }} title={t('cgrid.mat.tip_pitch')}>
+                      {t('cgrid.mat.pitch')}
                     </th>
-                    <th
-                      style={{ width: 50 }}
-                      title="Material width. Placeholder from Layout (Web Width TD)"
-                    >
-                      Width
+                    <th style={{ width: 50 }} title={t('cgrid.mat.tip_width')}>
+                      {t('spr.width')}
                     </th>
-                    <th
-                      style={{ width: 45 }}
-                      title="Cavities. Placeholder from Layout (Parts Across × Parts MD)"
-                    >
-                      Cav.
+                    <th style={{ width: 45 }} title={t('cgrid.mat.tip_cav')}>
+                      {t('cgrid.mat.cav')}
                     </th>
-                    <th style={{ width: 50 }}>Offcut</th>
-                    <th
-                      style={{ width: 55 }}
-                      title="Offcut % — matches COST V1.0 Sheet 1 formula MOD(Cavities, Width) / Cavities. Type to override."
-                    >
-                      Offcut %
+                    <th style={{ width: 50 }}>{t('cgrid.mat.offcut')}</th>
+                    <th style={{ width: 55 }} title={t('cgrid.mat.tip_offcut_pct')}>
+                      {t('cgrid.mat.offcut_pct')}
                     </th>
-                    <th style={{ width: 50 }}>Slit</th>
-                    <th style={{ width: 65 }}>Ref. Price</th>
-                    <th style={{ width: 65 }}>Mat Price</th>
+                    <th style={{ width: 50 }}>{t('cgrid.mat.slit')}</th>
+                    <th style={{ width: 65 }}>{t('spr.ref_price')}</th>
+                    <th style={{ width: 65 }}>{t('spr.mat_price')}</th>
                     <th
                       className="sc-col-derived"
                       style={{ width: 65 }}
-                      title="QPA m² = pitch × width / 1e6 / cavities / webs × usage"
+                      title={t('cgrid.mat.tip_qpa_m2')}
                     >
-                      QPA (m²)
+                      {t('cgrid.mat.qpa_m2')}
                     </th>
                     <th
                       className="sc-col-derived"
                       style={{ width: 65 }}
-                      title="QPA lm = pitch / 1000 / cavities / webs × usage"
+                      title={t('cgrid.mat.tip_qpa_lm')}
                     >
-                      QPA (lm)
+                      {t('cgrid.mat.qpa_lm')}
                     </th>
                     <th
                       className="sc-col-derived"
                       style={{ width: 70 }}
-                      title="Gross material for MOQ (m²) incl. setup + scrap + offcut"
+                      title={t('cgrid.mat.tip_moq_m2')}
                     >
-                      Mats./MOQ (m²)
+                      {t('cgrid.mat.moq_m2')}
                     </th>
                     <th
                       className="sc-col-derived"
                       style={{ width: 70 }}
-                      title="Gross material for MOQ (lm) incl. setup + scrap + offcut"
+                      title={t('cgrid.mat.tip_moq_lm')}
                     >
-                      Mats./MOQ (lm)
+                      {t('cgrid.mat.moq_lm')}
                     </th>
                     <th
                       className="sc-col-derived"
                       style={{ width: 55 }}
-                      title="Scrap factor from processes"
+                      title={t('cgrid.tip_scrap')}
                     >
-                      Scrap%
+                      {t('cgrid.scrap_pct')}
                     </th>
                     <th className="sc-col-result" style={{ width: 70 }}>
-                      Setup Cost
+                      {t('cgrid.mat.setup_cost')}
                     </th>
                     <th className="sc-col-result" style={{ width: 70 }}>
-                      Run Cost
+                      {t('cgrid.mat.run_cost')}
                     </th>
                     <th className="sc-col-result" style={{ width: 70 }}>
-                      Total
+                      {t('cgrid.mat.total')}
                     </th>
                     <th style={{ width: 30 }}></th>
                   </tr>
@@ -433,7 +423,7 @@ export default function CalcMaterials() {
                                 className={`sc-row-type-sel ${selClass}`}
                               >
                                 <option value="Main.Mat">{primaryLabel}</option>
-                                <option value="Process Mat">Process Mat</option>
+                                <option value="Process Mat">{t('cgrid.mat.process_mat')}</option>
                               </select>
                               <span className={`sc-row-num ${numClass}`}>{isMain ? mc : pc}</span>
                             </span>
@@ -660,7 +650,7 @@ export default function CalcMaterials() {
                           <td className="sc-td-derived">{r ? fmtN(r.qpa_lm, 7) : '\u2014'}</td>
                           <td
                             className="sc-td-derived sc-mats-moq"
-                            title="Gross material for MOQ (m\u00b2) incl. setup + scrap + offcut"
+                            title={t('cgrid.mat.tip_moq_m2')}
                           >
                             {r && r.mats_moq_m2
                               ? r.mats_moq_m2.toLocaleString('en-US', {
@@ -671,7 +661,7 @@ export default function CalcMaterials() {
                           </td>
                           <td
                             className="sc-td-derived sc-mats-moq"
-                            title="Gross material for MOQ (lm) incl. setup + scrap + offcut"
+                            title={t('cgrid.mat.tip_moq_lm')}
                           >
                             {r && r.mats_moq_lm
                               ? r.mats_moq_lm.toLocaleString('en-US', {
@@ -692,7 +682,7 @@ export default function CalcMaterials() {
                             <button
                               className="sc-btn-del-circle sc-btn-del-sm"
                               onClick={() => removeRow(i)}
-                              title="Remove row"
+                              title={t('cgrid.tip_remove_row')}
                             >
                               &times;
                             </button>
@@ -705,7 +695,7 @@ export default function CalcMaterials() {
               </table>
               <div className="sc-add-row">
                 <button className="op-btn op-btn-tertiary" onClick={addRow}>
-                  + Add Material Row
+                  {t('cgrid.mat.add')}
                 </button>
               </div>
             </>

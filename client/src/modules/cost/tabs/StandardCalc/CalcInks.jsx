@@ -3,6 +3,7 @@
  * Matches COST V1.0 M05 inks section
  */
 import { useCallback, useMemo } from 'react';
+import { useI18n } from '../../../../utils/useI18n';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import { useLibraryPicker } from '../../../../components/LibraryPicker/LibraryPicker';
@@ -17,6 +18,7 @@ import { fmtN, parseLocaleNumber } from '../../../../utils/format';
 import DecimalInput from '../../../../utils/DecimalInput';
 
 export default function CalcInks() {
+  const { t } = useI18n();
   const { stdState, setInkField, dispatch } = useCalc();
   const { lib } = useCostLib();
   const { openMenu } = useLibraryPicker();
@@ -174,16 +176,18 @@ export default function CalcInks() {
       <div className="sc-card">
         <div className="sc-card-header sc-header-cyan">
           <span className="sc-card-icon">&#8853;</span>
-          <span className="sc-card-title">Inks ({visibleInks.length} rows)</span>
+          <span className="sc-card-title">
+            {t('cgrid.ink.title')} ({t('cgrid.rows', { n: visibleInks.length })})
+          </span>
           <div className="sc-header-totals">
             <span className="sc-header-total-item">
-              Setup: <b>${fmtN(totals.setup)}</b>
+              {t('cgrid.setup')} <b>${fmtN(totals.setup)}</b>
             </span>
             <span className="sc-header-total-item">
-              Run: <b>${fmtN(totals.run)}</b>
+              {t('cgrid.run')} <b>${fmtN(totals.run)}</b>
             </span>
             <span className="sc-header-total-item sc-header-total-main">
-              Total: <b>${fmtN(totals.total)}</b>
+              {t('cgrid.total')} <b>${fmtN(totals.total)}</b>
             </span>
           </div>
         </div>
@@ -191,41 +195,34 @@ export default function CalcInks() {
           <table className="sc-table sc-ink-table">
             <thead>
               <tr>
-                <th style={{ width: 55 }}>Label</th>
-                <th style={{ width: 85 }}>IFS Code</th>
-                <th style={{ width: 110 }}>Desc</th>
-                <th style={{ width: 100 }}>Print Type</th>
-                <th style={{ width: 90 }}>Mesh Spec</th>
-                <th style={{ width: 70 }}>Pitch (mm)</th>
-                <th
-                  style={{ width: 80 }}
-                  title="Web width (mm) — defaults to Layout's Web Width TD when blank"
-                >
-                  Width
+                <th style={{ width: 55 }}>{t('spr.label')}</th>
+                <th style={{ width: 85 }}>{t('cgrid.mat.ifs_code')}</th>
+                <th style={{ width: 110 }}>{t('cgrid.ink.desc')}</th>
+                <th style={{ width: 100 }}>{t('spr.print_type')}</th>
+                <th style={{ width: 90 }}>{t('inkc.mesh_spec')}</th>
+                <th style={{ width: 70 }}>{t('cgrid.ink.pitch_mm')}</th>
+                <th style={{ width: 80 }} title={t('cgrid.ink.tip_width_head')}>
+                  {t('spr.width')}
                 </th>
-                <th style={{ width: 55 }}>Setup kg</th>
-                <th style={{ width: 55 }}>Area %</th>
-                <th style={{ width: 55 }} title="Coverage override (non-Indigo)">
-                  Cov Ovr
+                <th style={{ width: 55 }}>{t('cgrid.ink.setup_kg')}</th>
+                <th style={{ width: 55 }}>{t('cgrid.ink.area_pct')}</th>
+                <th style={{ width: 55 }} title={t('cgrid.ink.tip_cov_ovr')}>
+                  {t('cgrid.ink.cov_ovr')}
                 </th>
-                <th style={{ width: 55 }}>Clicks</th>
-                <th
-                  style={{ width: 50 }}
-                  className="sc-col-derived"
-                  title="Scrap factor from processes"
-                >
-                  Scrap%
+                <th style={{ width: 55 }}>{t('cgrid.ink.clicks')}</th>
+                <th style={{ width: 50 }} className="sc-col-derived" title={t('cgrid.tip_scrap')}>
+                  {t('cgrid.scrap_pct')}
                 </th>
-                <th style={{ width: 65 }}>Ref Price</th>
-                <th style={{ width: 65 }}>Ink Price</th>
+                <th style={{ width: 65 }}>{t('spr.ref_price')}</th>
+                <th style={{ width: 65 }}>{t('spr.ink_price')}</th>
                 <th className="sc-col-result" style={{ width: 70 }}>
-                  Setup
+                  {t('cgrid.setup')}
                 </th>
                 <th className="sc-col-result" style={{ width: 70 }}>
-                  Run
+                  {t('cgrid.run')}
                 </th>
                 <th className="sc-col-result" style={{ width: 70 }}>
-                  Total
+                  {t('cgrid.mat.total')}
                 </th>
                 <th style={{ width: 30 }}></th>
               </tr>
@@ -239,14 +236,16 @@ export default function CalcInks() {
                     key={ink._mid || `idx-${i}`}
                     onContextMenu={(e) => handleRowContextMenu(i, e)}
                   >
-                    <td className="sc-td-idx">Ink {vi + 1}</td>
+                    <td className="sc-td-idx">
+                      {t('cgrid.ink.row')} {vi + 1}
+                    </td>
                     <td>
                       <input
                         type="text"
                         value={ink.ifs_code || ''}
                         onChange={(e) => handleField(i, 'ifs_code', e.target.value)}
                         className="sc-input-sm"
-                        placeholder="IFS code"
+                        placeholder={t('cgrid.ink.ph_ifs')}
                       />
                     </td>
                     <td>
@@ -255,7 +254,7 @@ export default function CalcInks() {
                         value={ink.color || ''}
                         onChange={(e) => handleField(i, 'color', e.target.value)}
                         className="sc-input-sm"
-                        placeholder="Description"
+                        placeholder={t('cgrid.ink.ph_desc')}
                       />
                     </td>
                     <td>
@@ -293,7 +292,7 @@ export default function CalcInks() {
                         placeholder={
                           layoutPitch > 0 ? String(Math.round(layoutPitch * 100) / 100) : '—'
                         }
-                        title="Pitch (mm). Empty = inherit from Layout. Type to override per ink."
+                        title={t('cgrid.ink.tip_pitch')}
                         className="sc-input-sm sc-input-num"
                         style={ink.pitch_mm > 0 ? { color: '#7c3aed', fontWeight: 700 } : undefined}
                       />
@@ -303,7 +302,7 @@ export default function CalcInks() {
                         value={ink.width}
                         onChange={(v) => setInkField(i, 'width', v)}
                         placeholder={layoutWebWidth > 0 ? String(layoutWebWidth) : '—'}
-                        title="Width (mm). Empty = inherit Web Width TD from Layout. Type to override per ink."
+                        title={t('cgrid.ink.tip_width')}
                         className="sc-input-sm sc-input-num"
                         style={ink.width > 0 ? { color: '#7c3aed', fontWeight: 700 } : undefined}
                       />
@@ -373,8 +372,8 @@ export default function CalcInks() {
                                 type="button"
                                 className="sc-cov-reset"
                                 onClick={() => setInkField(i, 'coverage_override', null)}
-                                title="Reset to default coverage"
-                                aria-label="Reset to default coverage"
+                                title={t('cgrid.ink.tip_reset_cov')}
+                                aria-label={t('cgrid.ink.tip_reset_cov')}
                               >
                                 ↻
                               </button>
@@ -432,7 +431,7 @@ export default function CalcInks() {
                       <button
                         className="sc-btn-del-circle sc-btn-del-sm"
                         onClick={() => removeRow(i)}
-                        title="Remove row"
+                        title={t('cgrid.tip_remove_row')}
                       >
                         &times;
                       </button>
@@ -444,7 +443,7 @@ export default function CalcInks() {
           </table>
           <div className="sc-add-row">
             <button className="op-btn op-btn-tertiary" onClick={addRow}>
-              + Add Ink Row
+              {t('cgrid.ink.add')}
             </button>
           </div>
         </div>

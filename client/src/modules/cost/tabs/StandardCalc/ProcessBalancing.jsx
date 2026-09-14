@@ -3,6 +3,7 @@
  * Matches COST V1.0 renderProcBalance (lines 5309-5611)
  */
 import { useMemo, useCallback } from 'react';
+import { useI18n } from '../../../../utils/useI18n';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import { calcAll, getActiveTierState } from '../../../../services/calcEngine';
@@ -18,6 +19,7 @@ function fmtN(v, d = 2) {
 }
 
 export default function ProcessBalancing() {
+  const { t } = useI18n();
   const { stdState, setStdField } = useCalc();
   const { lib } = useCostLib();
   const st = stdState;
@@ -160,7 +162,7 @@ export default function ProcessBalancing() {
   if (!lib || active.length === 0) {
     return (
       <div className="pb" style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
-        Add processes with workcenter data first.
+        {t('bal.empty_no_proc')}
       </div>
     );
   }
@@ -168,7 +170,7 @@ export default function ProcessBalancing() {
   if (withUPH.length === 0) {
     return (
       <div className="pb" style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
-        No processes have UPH data. Set MC UPH or Manual UPH in Processes tab.
+        {t('bal.empty_no_uph')}
       </div>
     );
   }
@@ -180,10 +182,8 @@ export default function ProcessBalancing() {
         <div className="pb-header-left">
           <div className="pb-header-icon">&#9881;&#65039;</div>
           <div>
-            <div className="pb-header-title">Process Balancing</div>
-            <div className="pb-header-sub">
-              Bottleneck detection &middot; Crew simulation &middot; Line efficiency
-            </div>
+            <div className="pb-header-title">{t('bal.title')}</div>
+            <div className="pb-header-sub">{t('bal.subtitle')}</div>
           </div>
         </div>
         <div className="pb-kpis">
@@ -191,9 +191,9 @@ export default function ProcessBalancing() {
           <div className="pb-kpi pb-kpi-bn">
             <div className="pb-kpi-dot-red" />
             <div>
-              <div className="pb-kpi-label">BOTTLENECK</div>
+              <div className="pb-kpi-label">{t('bal.bottleneck')}</div>
               <div className="pb-kpi-val pb-kpi-val-bn">
-                Process {bnProc?.visIdx} &mdash;{' '}
+                {t('bal.col.process')} {bnProc?.visIdx} &mdash;{' '}
                 {bnProc?.p.workcenter || bnProc?.p.process_type || '?'}
               </div>
             </div>
@@ -202,17 +202,17 @@ export default function ProcessBalancing() {
           <div
             className={`pb-kpi ${lineEff >= 80 ? 'pb-kpi-green' : lineEff >= 60 ? 'pb-kpi-amber' : 'pb-kpi-red'}`}
           >
-            <div className="pb-kpi-label">BALANCE EFF.</div>
+            <div className="pb-kpi-label">{t('bal.balance_eff')}</div>
             <div className="pb-kpi-val pb-kpi-val-eff">{lineEff.toFixed(1)}%</div>
           </div>
           {/* Total Crew */}
           <div className="pb-kpi pb-kpi-default">
-            <div className="pb-kpi-label">TOTAL CREW</div>
+            <div className="pb-kpi-label">{t('bal.total_crew')}</div>
             <div className="pb-kpi-val">{totalCrew}</div>
           </div>
           {/* Target UPH */}
           <div className="pb-kpi pb-kpi-default">
-            <div className="pb-kpi-label">TARGET UPH</div>
+            <div className="pb-kpi-label">{t('bal.target_uph')}</div>
             <div className="pb-kpi-target">
               <DecimalInput
                 value={targetUPH}
@@ -220,7 +220,7 @@ export default function ProcessBalancing() {
                 onChange={(v) => setStdField('_balanceTakt', v)}
                 className="pb-target-input"
               />
-              <span className="pb-target-unit">pcs/hr</span>
+              <span className="pb-target-unit">{t('bal.pcs_hr')}</span>
             </div>
           </div>
         </div>
@@ -232,81 +232,81 @@ export default function ProcessBalancing() {
           <thead>
             <tr className="pb-group-row">
               <th colSpan={3} className="pb-group pb-group-info">
-                PROCESS INFO
+                {t('bal.grp.process_info')}
               </th>
               <th colSpan={2} className="pb-group pb-group-uph">
-                THROUGHPUT (UPH)
+                {t('bal.grp.throughput')}
               </th>
               <th colSpan={3} className="pb-group pb-group-time">
-                TIME BEFORE ADJ (HRS) &larr; FROM PROCESS DB
+                {t('bal.grp.time_before')}
               </th>
               <th colSpan={2} className="pb-group pb-group-crew">
-                CREW SIMULATION
+                {t('bal.grp.crew_sim')}
               </th>
               <th colSpan={2} className="pb-group pb-group-speed">
-                LINE SPEED
+                {t('bal.grp.line_speed')}
               </th>
               <th colSpan={3} className="pb-group pb-group-analysis">
-                ANALYSIS
+                {t('bal.grp.analysis')}
               </th>
             </tr>
             <tr>
-              <th className="pb-th">PROCESS</th>
-              <th className="pb-th">TYPE</th>
-              <th className="pb-th">WORKCENTER</th>
+              <th className="pb-th">{t('bal.col.process')}</th>
+              <th className="pb-th">{t('bal.col.type')}</th>
+              <th className="pb-th">{t('bal.col.workcenter')}</th>
               <th className="pb-th right">
-                MC UPH
+                {t('bal.col.mc_uph')}
                 <br />
-                <span className="pb-th-sub">MACHINE</span>
+                <span className="pb-th-sub">{t('bal.col.machine')}</span>
               </th>
               <th className="pb-th right">
-                MANUAL UPH
+                {t('bal.col.manual_uph')}
                 <br />
-                <span className="pb-th-sub">PER PERSON</span>
+                <span className="pb-th-sub">{t('bal.col.per_person')}</span>
               </th>
               <th className="pb-th right">
-                SETUP
+                {t('bal.col.setup')}
                 <br />
-                <span className="pb-th-sub">(HRS)</span>
+                <span className="pb-th-sub">{t('bal.col.hrs')}</span>
               </th>
               <th className="pb-th right">
-                RUNNING
+                {t('bal.col.running')}
                 <br />
-                <span className="pb-th-sub">(HRS)</span>
+                <span className="pb-th-sub">{t('bal.col.hrs')}</span>
               </th>
               <th className="pb-th right">
-                PROD TIME
+                {t('bal.col.prod_time')}
                 <br />
-                <span className="pb-th-sub">BEFORE (HRS)</span>
+                <span className="pb-th-sub">{t('bal.col.before_hrs')}</span>
               </th>
               <th className="pb-th center">
-                ADJ.
+                {t('bal.col.adj')}
                 <br />
-                <span className="pb-th-sub">CREW</span>
+                <span className="pb-th-sub">{t('bal.col.crew')}</span>
               </th>
               <th className="pb-th right">
-                PROD TIME
+                {t('bal.col.prod_time')}
                 <br />
-                <span className="pb-th-sub">AFTER (HRS)</span>
+                <span className="pb-th-sub">{t('bal.col.after_hrs')}</span>
               </th>
               <th className="pb-th right">
-                EFF. UPH
+                {t('bal.col.eff_uph')}
                 <br />
-                <span className="pb-th-sub">WITH CREW</span>
+                <span className="pb-th-sub">{t('bal.col.with_crew')}</span>
               </th>
               <th className="pb-th right">
-                CYCLE TIME
+                {t('bal.col.cycle_time')}
                 <br />
-                <span className="pb-th-sub">PER PIECE</span>
+                <span className="pb-th-sub">{t('bal.col.per_piece')}</span>
               </th>
               <th className="pb-th">
-                LOAD{' '}
+                {t('bal.col.load')}{' '}
                 <span className="pb-th-sub" style={{ fontWeight: 400 }}>
-                  | TARGET
+                  {t('bal.col.vs_target')}
                 </span>
               </th>
-              <th className="pb-th center">STATUS</th>
-              <th className="pb-th">CREW SUGGESTION</th>
+              <th className="pb-th center">{t('bal.col.status')}</th>
+              <th className="pb-th">{t('bal.col.crew_suggestion')}</th>
             </tr>
           </thead>
           <tbody>
@@ -361,7 +361,9 @@ export default function ProcessBalancing() {
                 <tr key={proc.i} className={isBN ? 'pb-row-bn' : isSlow ? 'pb-row-slow' : ''}>
                   {/* Process info */}
                   <td>
-                    <span className="pb-proc-label">Process {proc.visIdx}</span>
+                    <span className="pb-proc-label">
+                      {t('bal.col.process')} {proc.visIdx}
+                    </span>
                   </td>
                   <td className="pb-td-type">{proc.p.process_type || '\u2014'}</td>
                   <td className="pb-td-wc">{proc.p.workcenter || '\u2014'}</td>
@@ -466,20 +468,22 @@ export default function ProcessBalancing() {
                   {/* Status */}
                   <td className="pb-td-status">
                     {proc.effUPH === 0 ? (
-                      <span className="pb-badge pb-badge-none">No UPH</span>
+                      <span className="pb-badge pb-badge-none">{t('bal.no_uph')}</span>
                     ) : isBN ? (
-                      <span className="pb-badge pb-badge-bn">BOTTLENECK</span>
+                      <span className="pb-badge pb-badge-bn">{t('bal.bottleneck')}</span>
                     ) : isSlow ? (
-                      <span className="pb-badge pb-badge-slow">SLOW</span>
+                      <span className="pb-badge pb-badge-slow">{t('bal.slow')}</span>
                     ) : (
-                      <span className="pb-badge pb-badge-ok">OK</span>
+                      <span className="pb-badge pb-badge-ok">{t('bal.ok')}</span>
                     )}
                   </td>
 
                   {/* Crew suggestion */}
                   <td className="pb-td-sugg" style={{ color: suggColor }}>
                     {machinePaced ? (
-                      <span style={{ color: '#94a3b8', fontSize: 11 }}>Machine-paced</span>
+                      <span style={{ color: '#94a3b8', fontSize: 11 }}>
+                        {t('bal.machine_paced')}
+                      </span>
                     ) : suggText ? (
                       <span style={{ fontWeight: 600, fontSize: 11 }}>{suggText}</span>
                     ) : null}
@@ -495,12 +499,16 @@ export default function ProcessBalancing() {
       <div className="pb-footer">
         <div className="pb-footer-left">
           <span className="pb-footer-icon">&#9888;&#65039;</span>
-          <span>Setup / Running / Prod Time Before &mdash; synced from Process DB. </span>
-          <b>Prod Time After</b> &mdash; recalculated when Adj. Crew changes (manual component
-          scales by 1/crew). Simulation only &mdash; does <b>not</b> affect cost.
+          <span>{t('bal.foot_synced')} </span>
+          <b>
+            {t('bal.col.prod_time')} {t('bal.col.after_hrs')}
+          </b>{' '}
+          {t('bal.foot_after')} <b>{t('bal.foot_not')}</b> {t('bal.foot_affect')}
         </div>
         <div className="pb-footer-right">
-          Balance Eff. = &Sigma;(CT) / (n &times; CT<sub>BN</sub>) &mdash; target &ge; 85%
+          {t('bal.foot_formula')}
+          <sub>BN</sub>
+          {t('bal.foot_target')}
         </div>
       </div>
     </div>
