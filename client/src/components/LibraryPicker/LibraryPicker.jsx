@@ -35,10 +35,31 @@ import { useI18n } from '../../utils/useI18n';
 import { useCostLib } from '../../context/CostLibContext';
 import Modal from '../Shared/Modal';
 import { useFloatingMenu } from '../Shared/useFloatingMenu';
-import { normNPI, normSourcing, normIfsMaterial } from './LibraryPicker.norm.js';
+import {
+  normNPI,
+  normSourcing,
+  normIfsMaterial,
+  PICKER_COLUMNS,
+  clampColWidth,
+} from './LibraryPicker.norm.js';
 import './LibraryPicker.css';
 
 const Ctx = createContext(null);
+
+// localStorage prefix for per-library picker column widths.
+const WIDTH_KEY = 'ops_picker_colw';
+
+// Column widths the operator dragged, per library. A stale or corrupt
+// entry must not collapse the table, so a bad read degrades to defaults.
+function readStoredWidths(libraryKey) {
+  try {
+    const raw = localStorage.getItem(`${WIDTH_KEY}:${libraryKey}`);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
 
 export function useLibraryPicker() {
   const v = useContext(Ctx);
@@ -67,6 +88,17 @@ function matches(row, q) {
 }
 
 // Thousands separator for display; price is stored as a plain number.
+// One picker cell. Numbers go through fmtPrice so 0.8624 and 39.1236 line
+// up; the CODE column keeps its <code> styling; `date` and blank values
+// render an em dash rather than an empty box.
+function renderCell(row, col) {
+  const v = row[col.key];
+  if (col.mono) return <code>{v || '—'}</code>;
+  if (col.num) return v === '' || v === null || v === undefined ? '—' : fmtPrice(Number(v));
+  if (v === '' || v === null || v === undefined) return '—';
+  return v;
+}
+
 function fmtPrice(n) {
   const v = Number(n);
   if (!Number.isFinite(v)) return '';
@@ -131,6 +163,7 @@ export function LibraryPickerProvider({ children }) {
       {menu && <ContextMenu x={menu.x} y={menu.y} onSelect={selectLibrary} onClose={closeMenu} />}
       {picker && (
         <PickerCard
+          key={picker.libraryKey}
           libraryKey={picker.libraryKey}
           onPick={(hit) => {
             picker.onPick?.(hit);
@@ -209,10 +242,55 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
     return filtered.slice(0, 400); // hard cap — user can narrow search
   }, [def, lib, query]);
 
+  // Column widths the operator dragged, per library. Persisted so the
+  // layout they set for NPI survives closing the picker. Bad/stale values
+  // fall back to the column's default rather than collapsing a column.
+  const columns = PICKER_COLUMNS[def?.key] || [];
+  const [widths, setWidths] = useState(() => readStoredWidths(libraryKey));
+  const widthOf = (c) => clampColWidth(widths[c.key], c.w);
+  const resetWidths = () => {
+    setWidths({});
+    try {
+      localStorage.removeItem(`${WIDTH_KEY}:${libraryKey}`);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  // Drag a header's right edge. Pointer events so the drag keeps tracking
+  // outside the <th> and releases cleanly if the pointer leaves the window.
+  const startResize = (e, col) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startW = clampColWidth(widths[col.key], col.w);
+    let latest = startW;
+    const move = (ev) => {
+      latest = clampColWidth(startW + (ev.clientX - startX));
+      setWidths((prev) => ({ ...prev, [col.key]: latest }));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      // Persist outside the state updater — React may run an updater
+      // twice, and a write belongs in the event handler either way.
+      try {
+        localStorage.setItem(
+          `${WIDTH_KEY}:${libraryKey}`,
+          JSON.stringify({ ...widths, [col.key]: latest })
+        );
+      } catch {
+        /* private mode / quota — widths just don't persist */
+      }
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
   if (!def) return null;
 
   return (
-    <Modal open onClose={onClose} size="lg" maximizable ariaLabelledBy="libp-title">
+    <Modal open onClose={onClose} size="xl" maximizable ariaLabelledBy="libp-title">
       <Modal.Header
         id="libp-title"
         title={t(def.labelKey)}
@@ -251,20 +329,38 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
           </span>
         </div>
         <div className="libp-card-tablewrap">
-          <table className="libp-table">
+          <table className="libp-table libp-table-cols">
+            <colgroup>
+              {columns.map((c) => (
+                <col key={c.key} style={{ width: widthOf(c) }} />
+              ))}
+            </colgroup>
             <thead>
               <tr>
-                <th className="libp-col-date">{t('picker.col.date')}</th>
-                <th className="libp-col-code">{t('picker.col.code')}</th>
-                <th className="libp-col-desc">{t('picker.col.desc')}</th>
-                <th className="libp-col-supplier">{t('picker.col.supplier')}</th>
-                <th className="libp-col-price">{t('picker.col.price')}</th>
+                {columns.map((c) => (
+                  <th
+                    key={c.key}
+                    className={`${c.num ? 'libp-num' : ''} ${c.mono ? 'libp-mono' : ''}`}
+                    style={{ width: widthOf(c) }}
+                  >
+                    <span className="libp-th-label">{t(c.labelKey)}</span>
+                    <span
+                      className="libp-col-grip"
+                      role="separator"
+                      aria-orientation="vertical"
+                      aria-label={t('picker.reset_widths')}
+                      onPointerDown={(e) => startResize(e, c)}
+                      onDoubleClick={resetWidths}
+                      title={t('picker.reset_widths')}
+                    />
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="libp-empty">
+                  <td colSpan={columns.length} className="libp-empty">
                     {t('picker.empty')}
                   </td>
                 </tr>
@@ -275,16 +371,14 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
                   onDoubleClick={() => onPick(r)}
                   title={t('picker.double_click_hint')}
                 >
-                  <td className="libp-col-date">{r.date || '—'}</td>
-                  <td className="libp-col-code">
-                    <code>{r.code}</code>
-                  </td>
-                  <td className="libp-col-desc">
-                    {r.desc}
-                    {r.extra && <span className="libp-extra"> — {r.extra}</span>}
-                  </td>
-                  <td className="libp-col-supplier">{r.supplier}</td>
-                  <td className="libp-col-price">{fmtPrice(r.g_price)}</td>
+                  {columns.map((c) => (
+                    <td
+                      key={c.key}
+                      className={`${c.num ? 'libp-num' : ''} ${c.mono ? 'libp-mono' : ''}`}
+                    >
+                      {renderCell(r, c)}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>

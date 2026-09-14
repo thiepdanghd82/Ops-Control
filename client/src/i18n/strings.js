@@ -376,6 +376,7 @@ export const STRINGS = {
     vi: 'Tìm theo mã, mô tả, nhà cung cấp…',
   },
   'picker.result_count_suffix': { en: 'results', vi: 'kết quả' },
+  'picker.reset_widths': { en: 'Reset column widths', vi: 'Đặt lại độ rộng cột' },
   'picker.col.date': { en: 'Date', vi: 'Ngày' },
   'picker.col.code': { en: 'Code', vi: 'Mã' },
   'picker.col.desc': { en: 'Description', vi: 'Mô tả' },

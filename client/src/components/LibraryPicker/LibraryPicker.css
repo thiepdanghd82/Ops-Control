@@ -348,3 +348,51 @@
   color: var(--text-secondary);
   font-style: italic;
 }
+
+/* ── Resizable columns (2026-09-14) ───────────────────────────────────
+   The picker now renders every column its library carries (12 for NPI),
+   so a fixed layout is essential: without it the browser re-flows widths
+   on every keystroke in the search box. The grip is the draggable right
+   edge of each header cell; double-clicking any grip resets all widths. */
+.libp-table-cols {
+  table-layout: fixed;
+  width: max-content;
+  min-width: 100%;
+}
+.libp-table-cols th {
+  position: relative;
+  overflow: hidden;
+}
+.libp-table-cols td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.libp-th-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 8px;
+}
+.libp-col-grip {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 7px;
+  height: 100%;
+  cursor: col-resize;
+  /* Hit area is wider than the visible hairline so it's grabbable. */
+  border-right: 2px solid transparent;
+}
+.libp-col-grip:hover,
+.libp-col-grip:active {
+  border-right-color: var(--color-brand-blue, #2563eb);
+}
+.libp-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.libp-mono code {
+  white-space: nowrap;
+}

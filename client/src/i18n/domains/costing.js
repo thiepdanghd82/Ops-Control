@@ -738,6 +738,7 @@ registerStrings({
   'matlib.exw_price': { en: 'EXW Price', vi: 'Giá EXW' },
   'matlib.dap_price': { en: 'DAP Price', vi: 'Giá DAP' },
   'matlib.usd_per_m2': { en: 'USD / m²', vi: 'USD / m²' },
+  'matlib.moq': { en: 'MOQ', vi: 'MOQ' },
   'matlib.lead_time': { en: 'Lead Time', vi: 'Thời gian giao' },
   'matlib.mfg_leadtime': { en: 'Mfg Leadtime', vi: 'Thời gian sản xuất' },
   'matlib.tax_code': { en: 'Tax Code', vi: 'Mã thuế' },
