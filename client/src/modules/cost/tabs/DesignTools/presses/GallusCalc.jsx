@@ -23,6 +23,7 @@
  * StandardCalc" if engineers ask.
  */
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useI18n } from '../../../../../utils/useI18n';
 import {
   createGallusInputs,
   rankPrintCylinders,
@@ -70,6 +71,7 @@ const STATUS_TONE = {
 };
 
 export default function GallusCalc() {
+  const { t } = useI18n();
   // Sprint 14e — sessionStorage persistence keeps the in-progress
   // design alive across sidebar tab switches. Key is press-scoped so
   // each press has its own draft (an operator switching from Gallus
@@ -466,31 +468,33 @@ export default function GallusCalc() {
               type="text"
               value={inputs.end_cu_pn || ''}
               onChange={(e) => set('end_cu_pn', e.target.value)}
-              placeholder="e.g. AWW9917CHVC0-0C1"
+              placeholder={t('gal.ph_end_cu_pn')}
               className="gc-input gc-identbar-input"
             />
           </div>
           <div className="gc-identbar-field">
             <label>
-              Project <span className="gc-bi-vi">/ Dự án</span>
+              {t('gal.project')}
+              <span className="gc-bi-vi">/ Dự án</span>
             </label>
             <input
               type="text"
               value={inputs.project || ''}
               onChange={(e) => set('project', e.target.value)}
-              placeholder="e.g. BOSE earbuds Q2"
+              placeholder={t('gal.ph_project')}
               className="gc-input gc-identbar-input"
             />
           </div>
           <div className="gc-identbar-field gc-identbar-grow">
             <label>
-              Designer note <span className="gc-bi-vi">/ Ghi chú thiết kế</span>
+              {t('gal.designer_note')}
+              <span className="gc-bi-vi">/ Ghi chú thiết kế</span>
             </label>
             <input
               type="text"
               value={inputs.designer_note || ''}
               onChange={(e) => set('designer_note', e.target.value)}
-              placeholder="Free text"
+              placeholder={t('gal.free_text')}
               className="gc-input gc-identbar-input"
             />
           </div>
@@ -508,7 +512,7 @@ export default function GallusCalc() {
             type="button"
             className="gc-action gc-action-secondary"
             onClick={startNewDesign}
-            title="Clear loaded record · Tạo thiết kế mới (next Save = new row)"
+            title={t('gal.clear_loaded')}
           >
             ＋ New
           </button>
@@ -516,7 +520,7 @@ export default function GallusCalc() {
             type="button"
             className="gc-action gc-action-secondary"
             onClick={() => setHistoryOpen((o) => !o)}
-            title="Browse saved designs · Mở lịch sử thiết kế"
+            title={t('gal.browse_saved')}
           >
             🕒 History {historyOpen ? '▾' : '▸'}
           </button>
@@ -538,7 +542,7 @@ export default function GallusCalc() {
             className="gc-action gc-action-primary"
             onClick={() => applyToPricing('standard')}
             disabled={hasErrors || !top5[0]}
-            title="Push values to Pricing (Std) and switch to that tab"
+            title={t('gal.push_std')}
           >
             ↗ Apply to Pricing (Std)
           </button>
@@ -547,7 +551,7 @@ export default function GallusCalc() {
             className="gc-action gc-action-secondary"
             onClick={() => applyToPricing('complex')}
             disabled={hasErrors || !top5[0]}
-            title="Push values to Pricing (Cpx) and switch to that tab"
+            title={t('gal.push_cpx')}
           >
             ↗ Pricing (Cpx)
           </button>
@@ -589,8 +593,8 @@ export default function GallusCalc() {
         >
           <span className="gc-subtab-icon">📐</span>
           <span>
-            <div>Print Design</div>
-            <div className="gc-subtab-vi">Thiết kế in</div>
+            <div>{t('gal.print_design')}</div>
+            <div className="gc-subtab-vi">{t('gal.print_design')}</div>
           </span>
         </button>
         <button
@@ -601,8 +605,8 @@ export default function GallusCalc() {
         >
           <span className="gc-subtab-icon">✂</span>
           <span>
-            <div>Cutting Design (Die-cut)</div>
-            <div className="gc-subtab-vi">Thiết kế cắt khuôn</div>
+            <div>{t('gal.cutting_design')}</div>
+            <div className="gc-subtab-vi">{t('gal.cutting_design')}</div>
           </span>
         </button>
       </div>
@@ -676,16 +680,17 @@ function InputsPanel({
   gapSuggestion,
   applyGapSuggestion,
 }) {
+  const { t } = useI18n();
   return (
     <div className="gc-card gc-inputs-card">
       <div className="gc-card-hdr">
         <span className="gc-card-icon">⚙</span>
         <div style={{ flex: 1 }}>
-          <b>Inputs</b>
+          <b>{t('gal.inputs')}</b>
           <span className="gc-bi-vi"> · Thông số đầu vào</span>
         </div>
         {issues.length === 0 && (
-          <span className="gc-pill gc-pill-good" title="All required fields filled">
+          <span className="gc-pill gc-pill-good" title={t('gal.all_filled')}>
             ✓ Ready · Sẵn sàng
           </span>
         )}
@@ -694,7 +699,7 @@ function InputsPanel({
       {issues.length > 0 && <ValidationBanner issues={issues} />}
 
       <div className="gc-card-body">
-        <Section title="1A. Down-web (chiều chạy)">
+        <Section title={t('gal.down_web')}>
           <Field
             en="L — Product length down-web"
             vi="Chiều dài sản phẩm theo chiều chạy"
@@ -768,7 +773,7 @@ function InputsPanel({
           />
         </Section>
 
-        <Section title="1B. Cross-web (chiều ngang web)">
+        <Section title={t('gal.cross_web')}>
           <Field
             en="W — Total web width"
             vi="Chiều rộng web tổng (đo từ mép đến mép)"
@@ -830,7 +835,7 @@ function InputsPanel({
                       color: '#0f62fe',
                       cursor: 'pointer',
                     }}
-                    title="Restore auto-centered E"
+                    title={t('gal.restore_auto_e')}
                   >
                     ↻ Auto
                   </button>
@@ -860,7 +865,7 @@ function InputsPanel({
           />
         </Section>
 
-        <Section title="1C. Die-cut & cost / Khuôn cắt & chi phí">
+        <Section title={t('gal.diecut_cost')}>
           <Field
             en="Z_die — Die-cut cylinder teeth (override)"
             vi="Răng cylinder die-cut (0 = dùng cùng cylinder in)"
@@ -921,7 +926,7 @@ function InputsPanel({
         </Section>
 
         {/* Sprint S-FLEXO-2 — Ink + Anilox section */}
-        <Section title="1D. Ink & Anilox / Mực & Anilox">
+        <Section title={t('gal.ink_anilox')}>
           <SelectField
             en="Material type"
             vi="Loại vật liệu"
@@ -973,7 +978,7 @@ function InputsPanel({
         </Section>
 
         {/* Sprint S-FLEXO-3 — Weighted scoring profile */}
-        <Section title="1E. Ranking weights / Trọng số xếp hạng">
+        <Section title={t('gal.ranking_weights')}>
           <Field
             en="Yield weight"
             vi="Trọng số material yield"
@@ -1031,6 +1036,7 @@ function PrintDesignTab({
   legacyPillVisible,
   onDismissLegacy,
 }) {
+  const { t } = useI18n();
   return (
     <div className="gc-tab-body">
       {/* Sprint 14h — multi-axis winner badges. Three picks for three
@@ -1096,7 +1102,7 @@ function PrintDesignTab({
             <button
               type="button"
               onClick={onDismissLegacy}
-              title="Dismiss"
+              title={t('gal.dismiss')}
               style={{
                 marginLeft: 'auto',
                 padding: '2px 10px',
@@ -1109,7 +1115,7 @@ function PrintDesignTab({
                 cursor: 'pointer',
               }}
             >
-              Legacy render — gaps now display as N uniform stripes ✕
+              {t('gal.legacy_render')}
             </button>
           )}
         </div>
@@ -1123,22 +1129,22 @@ function PrintDesignTab({
             <table className="gc-table">
               <thead>
                 <tr>
-                  <th className="ttl">Rank</th>
+                  <th className="ttl">{t('gal.rank')}</th>
                   <th className="ttl">Z (T)</th>
-                  <th className="ttl">Pitch (mm)</th>
+                  <th className="ttl">{t('gal.pitch_mm')}</th>
                   <th className="ttl">N down</th>
-                  <th className="ttl">Actual gap</th>
+                  <th className="ttl">{t('gal.actual_gap')}</th>
                   <th
                     className="ttl"
                     title="MD axis waste = (pitch − N×L) / pitch. Lower is better."
                   >
-                    Waste %
+                    {t('gal.waste_pct')}
                   </th>
                   <th className="ttl">★ Yield %</th>
                   <th className="ttl">Cost / 1k imp</th>
                   <th className="ttl">Step / Lay</th>
-                  <th className="ttl">Gap diff</th>
-                  <th className="ttl">Status</th>
+                  <th className="ttl">{t('gal.gap_diff')}</th>
+                  <th className="ttl">{t('common.status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1191,7 +1197,7 @@ function PrintDesignTab({
             ▦
           </span>
           <div style={{ flex: 1 }}>
-            <b>Shot layout schematic</b>
+            <b>{t('gal.shot_schematic')}</b>
             <span className="gc-bi-vi"> · Sơ đồ layout 1 shot (1 vòng cylinder)</span>
           </div>
           <ArtworkUploadButton
@@ -1221,6 +1227,7 @@ function PrintDesignTab({
 }
 
 function CrossDirectionCard({ inputs, cross }) {
+  const { t } = useI18n();
   return (
     <div className="gc-card">
       <div className="gc-card-hdr">
@@ -1236,7 +1243,7 @@ function CrossDirectionCard({ inputs, cross }) {
         <div className="gc-validation gc-val-warn" style={{ borderTop: '1px solid #e0e0e0' }}>
           <div className="gc-val-hdr">
             <span aria-hidden>⚠</span>
-            <b>Lane gap below target · Gap lane dưới mức target</b>
+            <b>{t('gal.lane_gap_below')}</b>
           </div>
           <div className="gc-val-list" style={{ paddingLeft: 22, fontSize: 11 }}>
             Actual {fmt.n(cross.lane_gap_actual, 2)} mm &lt; target Lg {fmt.n(inputs.Lg, 2)} mm.
@@ -1370,6 +1377,7 @@ function JobSummaryCard({ summary }) {
 }
 
 function MasterPrintTable({ ranked, isAdmin, onReload }) {
+  const { t } = useI18n();
   const [showAll, setShowAll] = useState(false);
   const [filter, setFilter] = useState('available'); // 'available' | 'all' | 'ok'
   // Sprint 1.7j — admin add-row + per-row toggle.
@@ -1433,9 +1441,9 @@ function MasterPrintTable({ ranked, isAdmin, onReload }) {
         </div>
         <div className="gc-card-toolbar">
           <select value={filter} onChange={(e) => setFilter(e.target.value)} className="gc-select">
-            <option value="available">Available only · Chỉ cylinder có sẵn</option>
-            <option value="ok">OK only · Chỉ status OK</option>
-            <option value="all">All · Tất cả</option>
+            <option value="available">{t('gal.available_only')}</option>
+            <option value="ok">{t('gal.ok_only')}</option>
+            <option value="all">{t('gal.all')}</option>
           </select>
           <button className="gc-mini-btn" onClick={() => setShowAll((s) => !s)}>
             {showAll ? 'Top 30' : `Show all (${ranked.length})`}
@@ -1445,7 +1453,7 @@ function MasterPrintTable({ ranked, isAdmin, onReload }) {
             <button
               className="gc-mini-btn"
               onClick={() => setAddOpen((o) => !o)}
-              title="Add a brand-new cylinder Z (eg. just-purchased)"
+              title={t('gal.add_cylinder_full')}
             >
               {addOpen ? 'Cancel' : '+ Add cylinder'}
             </button>
@@ -1469,21 +1477,22 @@ function MasterPrintTable({ ranked, isAdmin, onReload }) {
             />
           </label>
           <label className="gc-add-cyl-row">
-            <span>Note (optional)</span>
+            <span>{t('gal.note_optional')}</span>
             <input
               type="text"
               value={newNote}
               onChange={(e) => setNewNote(e.target.value)}
-              placeholder="eg. New purchase 2026-04 from supplier X"
+              placeholder={t('gal.ph_cyl_note')}
               maxLength={200}
               className="gc-add-cyl-input"
             />
           </label>
           <button className="gc-mini-btn gc-mini-btn-primary" onClick={submitAdd}>
-            Save cylinder
+            {t('gal.save_cylinder')}
           </button>
           <span className="gc-add-cyl-hint">
-            Defaults to <b>available = Y</b>; toggle in the table after.
+            {t('gal.defaults_to')}
+            <b>available = Y</b>; toggle in the table after.
           </span>
         </div>
       )}
@@ -1492,15 +1501,15 @@ function MasterPrintTable({ ranked, isAdmin, onReload }) {
           <thead>
             <tr>
               <th className="ttl">Z</th>
-              <th className="ttl">Avail</th>
+              <th className="ttl">{t('gal.avail')}</th>
               <th className="ttl">RL (in)</th>
-              <th className="ttl">Pitch (mm)</th>
+              <th className="ttl">{t('gal.pitch_mm')}</th>
               <th className="ttl">N down</th>
-              <th className="ttl">Actual gap</th>
+              <th className="ttl">{t('gal.actual_gap')}</th>
               <th className="ttl">Product %</th>
               <th className="ttl">Gallus %</th>
-              <th className="ttl">Step (mm)</th>
-              <th className="ttl">Status</th>
+              <th className="ttl">{t('gal.step_mm')}</th>
+              <th className="ttl">{t('common.status')}</th>
             </tr>
           </thead>
           <tbody>
@@ -1559,6 +1568,7 @@ function CuttingDesignTab({
   onClearArtwork,
   artworkLoading,
 }) {
+  const { t } = useI18n();
   const top3 = magRanked.slice(0, 3);
   // For the Cut tab schematic, override the cylinder with the chosen
   // die when one is set — operator wants to see the die layout, not the
@@ -1595,7 +1605,7 @@ function CuttingDesignTab({
             ▦
           </span>
           <div style={{ flex: 1 }}>
-            <b>Die-cut shot schematic</b>
+            <b>{t('gal.diecut_schematic')}</b>
             <span className="gc-bi-vi"> · Sơ đồ layout 1 vòng die-cut</span>
           </div>
           <ArtworkUploadButton
@@ -1640,15 +1650,15 @@ function CuttingDesignTab({
             <table className="gc-table">
               <thead>
                 <tr>
-                  <th className="ttl">Rank</th>
+                  <th className="ttl">{t('gal.rank')}</th>
                   <th className="ttl">Z_die (T)</th>
-                  <th className="ttl">Qty in stock</th>
-                  <th className="ttl">Pitch (mm)</th>
+                  <th className="ttl">{t('gal.qty_in_stock')}</th>
+                  <th className="ttl">{t('gal.pitch_mm')}</th>
                   <th className="ttl">N_die</th>
-                  <th className="ttl">Die step (mm)</th>
-                  <th className="ttl">Step diff (mm)</th>
-                  <th className="ttl">Match</th>
-                  <th className="ttl">Note</th>
+                  <th className="ttl">{t('gal.die_step_mm')}</th>
+                  <th className="ttl">{t('gal.step_diff_mm')}</th>
+                  <th className="ttl">{t('gal.match')}</th>
+                  <th className="ttl">{t('gal.note')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1698,20 +1708,20 @@ function CuttingDesignTab({
             <thead>
               <tr>
                 <th className="ttl">Z_die</th>
-                <th className="ttl">Qty</th>
-                <th className="ttl">Pitch (mm)</th>
+                <th className="ttl">{t('gal.qty')}</th>
+                <th className="ttl">{t('gal.pitch_mm')}</th>
                 <th className="ttl">N_die</th>
-                <th className="ttl">Die step (mm)</th>
-                <th className="ttl">Step diff (mm)</th>
-                <th className="ttl">Match</th>
-                <th className="ttl">Note</th>
+                <th className="ttl">{t('gal.die_step_mm')}</th>
+                <th className="ttl">{t('gal.step_diff_mm')}</th>
+                <th className="ttl">{t('gal.match')}</th>
+                <th className="ttl">{t('gal.note')}</th>
               </tr>
             </thead>
             <tbody>
               {magRanked.length === 0 && (
                 <tr>
                   <td colSpan={8} className="gc-empty">
-                    Set a Top-1 print cylinder to populate this table.
+                    {t('gal.set_top1')}
                   </td>
                 </tr>
               )}
@@ -1740,6 +1750,7 @@ function CuttingDesignTab({
 }
 
 function ManualOverrideCard({ inputs, setNum, top5, magRanked, printStep }) {
+  const { t } = useI18n();
   const top1 = top5[0];
   const customZ = inputs.Z_die > 0 ? inputs.Z_die : top1?.z || 0;
   const customMag = magRanked.find((r) => r.z === customZ);
@@ -1776,8 +1787,8 @@ function ManualOverrideCard({ inputs, setNum, top5, magRanked, printStep }) {
             <KV en="Step difference" vi="Sai lệch step" v={`${fmt.n(customMag.step_diff, 4)} mm`} />
             <div className="gc-kv">
               <span className="gc-k">
-                <span>Match status</span>
-                <span className="gc-bi-vi">Trạng thái khớp</span>
+                <span>{t('gal.match_status')}</span>
+                <span className="gc-bi-vi">{t('gal.match_status')}</span>
               </span>
               <span>
                 <StatusBadge status={customMag.match} />
@@ -1817,6 +1828,7 @@ function Field({
   warn = false,
   footer = null,
 }) {
+  const { t } = useI18n();
   // CSS class composes: base + invalid (red border + bg) OR warn (amber).
   // `required` shows a small red asterisk so the operator scans the form
   // and immediately knows which fields the calc cannot proceed without.
@@ -1828,7 +1840,7 @@ function Field({
           {en}
           {unit ? <span className="gc-l-unit"> ({unit})</span> : null}
           {required && (
-            <span className="gc-l-req" title="Required · Bắt buộc">
+            <span className="gc-l-req" title={t('gal.required')}>
               *
             </span>
           )}
@@ -1874,6 +1886,7 @@ function ValidationBanner({ issues }) {
 }
 
 function GapSuggestion({ suggestion, currentG, onApply }) {
+  const { t } = useI18n();
   if (!suggestion) return null;
   const { gap, cylinder_z, n_down, reason, product_film_pct } = suggestion;
   const needsApply = Math.abs(Number(currentG) - gap) > 0.005;
@@ -1886,7 +1899,7 @@ function GapSuggestion({ suggestion, currentG, onApply }) {
       <div className="gc-suggest gc-suggest-good">
         <span aria-hidden>✓</span>
         <span>
-          <b>Optimal · Tối ưu</b> — your G fits Z={cylinder_z} exactly with N={n_down}, film{' '}
+          <b>{t('gal.optimal')}</b> — your G fits Z={cylinder_z} exactly with N={n_down}, film{' '}
           {(product_film_pct * 100).toFixed(1)}%.
           <span className="gc-bi-vi"> Gap hiện tại đã khớp chính xác cylinder Z={cylinder_z}.</span>
         </span>
@@ -1898,7 +1911,8 @@ function GapSuggestion({ suggestion, currentG, onApply }) {
       <div className="gc-suggest gc-suggest-warn">
         <span aria-hidden>💡</span>
         <span>
-          <b>No OK match</b> at current G — try <b>{dpy(gap)} mm</b> for an exact fit with Z=
+          <b>{t('gal.no_ok_match')}</b> at current G — try <b>{dpy(gap)} mm</b> for an exact fit
+          with Z=
           {cylinder_z} (N={n_down}, film {(product_film_pct * 100).toFixed(1)}%).
           <span className="gc-bi-vi">
             {' '}
@@ -1918,7 +1932,7 @@ function GapSuggestion({ suggestion, currentG, onApply }) {
     <div className="gc-suggest gc-suggest-info">
       <span aria-hidden>💡</span>
       <span>
-        <b>Suggested · Đề xuất:</b> <b>{dpy(gap)} mm</b> for exact fit with Z={cylinder_z} (N=
+        <b>{t('gal.suggested')}</b> <b>{dpy(gap)} mm</b> for exact fit with Z={cylinder_z} (N=
         {n_down}, film {(product_film_pct * 100).toFixed(1)}%).
         <span className="gc-bi-vi">
           {' '}
@@ -1996,6 +2010,7 @@ function Empty({ en, vi }) {
 // design spec → gap match). All three may be the same Z; banner
 // collapses to a single "consensus" badge in that case.
 function WinnersBar({ winners, inputs }) {
+  const { t } = useI18n();
   if (!winners.yield) return null; // no OK candidates yet
   const same = winners.yield.z === winners.cost?.z && winners.yield.z === winners.gap?.z;
   if (same) {
@@ -2003,7 +2018,7 @@ function WinnersBar({ winners, inputs }) {
     return (
       <div className="gc-winners gc-winners-consensus">
         <span aria-hidden>🎯</span>
-        <b>Consensus pick · Đề xuất tối ưu:</b>
+        <b>{t('gal.consensus_pick')}</b>
         <span className="gc-winner-z">Z = {w.z}T</span>
         <span className="gc-winner-meta">
           yield {fmt.pct(w.material_yield_pct)} · gap {fmt.n(w.actual_gap, 2)} mm ·
@@ -2015,14 +2030,14 @@ function WinnersBar({ winners, inputs }) {
   return (
     <div className="gc-winners">
       <WinnerCard
-        title="Yield winner"
+        title={t('gal.yield_winner')}
         vi="Tối ưu vật liệu"
         axis="yield"
         cyl={winners.yield}
         rationale={`${fmt.pct(winners.yield.material_yield_pct)} of web → product. Best for HIGH VOLUME.`}
       />
       <WinnerCard
-        title="Cost winner"
+        title={t('gal.cost_winner')}
         vi="Rẻ nhất / 1k imp"
         axis="cost"
         cyl={winners.cost}
@@ -2033,7 +2048,7 @@ function WinnersBar({ winners, inputs }) {
         }
       />
       <WinnerCard
-        title="Gap target"
+        title={t('gal.gap_target')}
         vi="Khớp G nhất"
         axis="gap"
         cyl={winners.gap}
@@ -2044,7 +2059,7 @@ function WinnersBar({ winners, inputs }) {
           one exists; otherwise the closest single-axis match. */}
       {(inputs.parts_md > 0 || inputs.parts_td > 0) && (
         <WinnerCard
-          title="Layout match"
+          title={t('gal.layout_match')}
           vi="Khớp layout mong muốn"
           axis="match"
           cyl={winners.match}
@@ -2085,14 +2100,15 @@ function WinnerCard({ title, vi, axis, cyl, rationale }) {
 }
 
 function WebSuggestionBanner({ sug, onApply }) {
+  const { t } = useI18n();
   return (
     <div className="gc-suggest gc-suggest-info" style={{ marginBottom: 4 }}>
       <span aria-hidden>💡</span>
       <span>
-        <b>Web width suggestion · Đề xuất khổ web:</b> current <b>{sug.current_mm} mm</b> →
-        suggested <b>{sug.suggested_mm} mm</b> ({(sug.savings_pct * 100).toFixed(1)}% savings).
-        Minimum required for current layout: {sug.min_required_mm.toFixed(1)} mm.
-        <span className="gc-bi-vi"> Giảm khổ web → giảm waste TD.</span>
+        <b>{t('gal.web_width_suggestion')}</b> current <b>{sug.current_mm} mm</b> → suggested{' '}
+        <b>{sug.suggested_mm} mm</b> ({(sug.savings_pct * 100).toFixed(1)}% savings). Minimum
+        required for current layout: {sug.min_required_mm.toFixed(1)} mm.
+        <span className="gc-bi-vi">{t('gal.narrower_web')}</span>
       </span>
       <button type="button" className="gc-suggest-apply" onClick={onApply}>
         Apply {sug.suggested_mm} mm
@@ -2107,6 +2123,7 @@ function WebSuggestionBanner({ sug, onApply }) {
 // W is enough, (c) gives one-click escape hatches: "apply minimum W"
 // and "clear targets" (back to solver mode).
 function DesignerModeBanner({ layout, inputs, onClearTargets, onApplyW }) {
+  const { t } = useI18n();
   const labelMode =
     {
       'designer-md': 'Designer mode — N down LOCKED',
@@ -2157,9 +2174,9 @@ function DesignerModeBanner({ layout, inputs, onClearTargets, onApplyW }) {
             className="gc-suggest-apply"
             style={{ background: '#fff', color: '#0f62fe', border: '1px solid #0f62fe' }}
             onClick={onClearTargets}
-            title="Clear targets and return to solver mode (auto-optimise N × n)"
+            title={t('gal.clear_targets_tip')}
           >
-            Clear targets
+            {t('gal.clear_targets')}
           </button>
         </span>
       </div>
@@ -2175,7 +2192,8 @@ function DesignerModeBanner({ layout, inputs, onClearTargets, onApplyW }) {
         {layout.has_target_md && (
           <div>
             <div style={{ fontSize: 12, color: '#525252' }}>
-              <b>Pitch required</b> for N = {layout.target_md} parts down · <i>Pitch tối thiểu</i>
+              <b>{t('gal.pitch_required')}</b> for N = {layout.target_md} parts down ·{' '}
+              <i>{t('gal.min_pitch')}</i>
             </div>
             <div style={{ fontSize: 16, fontWeight: 600, color: '#0f62fe' }}>
               {layout.pitch_required.toFixed(2)} mm
@@ -2198,7 +2216,8 @@ function DesignerModeBanner({ layout, inputs, onClearTargets, onApplyW }) {
         {layout.has_target_td && (
           <div>
             <div style={{ fontSize: 12, color: '#525252' }}>
-              <b>Web width required</b> for n = {layout.target_td} lanes · <i>Khổ web tối thiểu</i>
+              <b>{t('gal.web_width_required')}</b> for n = {layout.target_td} lanes ·{' '}
+              <i>{t('gal.min_web_width')}</i>
             </div>
             <div
               style={{
@@ -2215,7 +2234,8 @@ function DesignerModeBanner({ layout, inputs, onClearTargets, onApplyW }) {
               </span>
               {!w_too_narrow && layout.lane_gap_locked != null && (
                 <div style={{ fontSize: 12, color: '#525252', fontWeight: 400, marginTop: 2 }}>
-                  Actual lane gap on current W: <b>{layout.lane_gap_locked.toFixed(2)} mm</b>
+                  {t('gal.actual_lane_gap')}
+                  <b>{layout.lane_gap_locked.toFixed(2)} mm</b>
                 </div>
               )}
             </div>
@@ -2227,6 +2247,7 @@ function DesignerModeBanner({ layout, inputs, onClearTargets, onApplyW }) {
 }
 
 function ArtworkUploadButton({ current, loading, onUpload, onClear }) {
+  const { t } = useI18n();
   // useRef gives a stable mutable container; the previous useMemo
   // pattern produced a new object whenever the lint tooling thought the
   // memo could re-evaluate, which would silently swap the ref out from
@@ -2268,10 +2289,10 @@ function ArtworkUploadButton({ current, loading, onUpload, onClear }) {
             📎 {current}
           </span>
           <button type="button" className="gc-mini-btn" onClick={() => inputRef.current?.click()}>
-            Replace
+            {t('gal.replace')}
           </button>
           <button type="button" className="gc-mini-btn gc-mini-btn-danger" onClick={onClear}>
-            Clear
+            {t('common.clear')}
           </button>
         </>
       ) : (
@@ -2297,6 +2318,7 @@ function SaveChoiceDialog({
   onUpdate,
   onSaveAsNew,
 }) {
+  const { t } = useI18n();
   const [notice, setNotice] = useState('');
   // Reset the notice every time the dialog opens — operators shouldn't
   // accidentally re-submit the previous justification. Could also be
@@ -2318,7 +2340,7 @@ function SaveChoiceDialog({
     >
       <Modal.Header
         id="gc-save-choice-title"
-        title="Save design"
+        title={t('gal.save_design')}
         subtitle={`Loaded #${activeId} · v${activeVersion} · ${endCuPn || ''}`}
         severity="question"
       />
@@ -2329,12 +2351,12 @@ function SaveChoiceDialog({
         </p>
         <ul className="op-modal-choice-list">
           <li>
-            <b>Update existing</b> — overwrite #{activeId} in place, bump to{' '}
+            <b>{t('gal.update_existing')}</b> — overwrite #{activeId} in place, bump to{' '}
             <b>v{activeVersion + 1}</b>. Anyone who reloads this record will see your changes.
           </li>
           <li>
-            <b>Save as new version</b> — keep #{activeId} untouched and create a separate record
-            (parent_id = #{activeId}). Use this when changes are exploratory.
+            <b>{t('gal.save_new_version')}</b> — keep #{activeId} untouched and create a separate
+            record (parent_id = #{activeId}). Use this when changes are exploratory.
           </li>
         </ul>
 
@@ -2343,7 +2365,8 @@ function SaveChoiceDialog({
         <div className="gc-change-notice">
           <label htmlFor="gc-change-notice-input" className="gc-change-notice-label">
             <b>
-              Design change notice <span style={{ color: '#da1e28' }}>*</span>
+              {t('gal.design_change_notice')}
+              <span style={{ color: '#da1e28' }}>*</span>
             </b>
             <span className="gc-bi-vi"> · Ghi chú thay đổi thiết kế (bắt buộc)</span>
             <span className="gc-l-hint">
@@ -2356,7 +2379,7 @@ function SaveChoiceDialog({
             rows={3}
             value={notice}
             onChange={(e) => setNotice(e.target.value)}
-            placeholder="e.g. Customer requested 4 lanes instead of 3 to fit 270mm web; updated G to 7.225 to match Z=85"
+            placeholder={t('gal.ph_designer_note')}
             autoFocus
           />
           <div className="gc-change-notice-counter">
@@ -2367,7 +2390,7 @@ function SaveChoiceDialog({
       </Modal.Body>
       <Modal.Footer>
         <button type="button" className="op-btn op-btn-ghost" onClick={onClose}>
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           type="button"
@@ -2376,7 +2399,7 @@ function SaveChoiceDialog({
           onClick={() => onSaveAsNew(trimmed)}
           title={valid ? 'Branch as new version' : 'Fill in change notice first'}
         >
-          Save as new version
+          {t('gal.save_new_version')}
         </button>
         <button
           type="button"
@@ -2385,7 +2408,7 @@ function SaveChoiceDialog({
           onClick={() => onUpdate(trimmed)}
           title={valid ? 'Overwrite existing record' : 'Fill in change notice first'}
         >
-          Update existing
+          {t('gal.update_existing')}
         </button>
       </Modal.Footer>
     </Modal>
@@ -2393,6 +2416,7 @@ function SaveChoiceDialog({
 }
 
 function HistoryPanel({ list, onLoad, onClose, onDelete }) {
+  const { t } = useI18n();
   const [filter, setFilter] = useState('');
   const filtered = useMemo(() => {
     if (!filter) return list;
@@ -2408,15 +2432,15 @@ function HistoryPanel({ list, onLoad, onClose, onDelete }) {
   return (
     <div className="gc-history">
       <div className="gc-history-hdr">
-        <b>Saved designs · Lịch sử thiết kế</b>
+        <b>{t('gal.saved_designs')}</b>
         <input
           type="search"
-          placeholder="Filter by End CU PN / project · Lọc theo mã hoặc dự án"
+          placeholder={t('gal.filter_by_pn')}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           className="gc-input gc-history-search"
         />
-        <button className="gc-mini-btn" onClick={onClose} aria-label="Close">
+        <button className="gc-mini-btn" onClick={onClose} aria-label={t('common.close')}>
           ×
         </button>
       </div>
@@ -2429,13 +2453,13 @@ function HistoryPanel({ list, onLoad, onClose, onDelete }) {
         <table className="gc-table gc-table-compact">
           <thead>
             <tr>
-              <th className="ttl">Saved at</th>
+              <th className="ttl">{t('gal.saved_at')}</th>
               <th className="ttl">End CU PN</th>
-              <th className="ttl">Project</th>
+              <th className="ttl">{t('gal.project')}</th>
               <th className="ttl">By</th>
-              <th className="ttl">Cylinder</th>
+              <th className="ttl">{t('viz.cylinder')}</th>
               <th className="ttl">L × Pw</th>
-              <th className="ttl">Note</th>
+              <th className="ttl">{t('gal.note')}</th>
               <th />
             </tr>
           </thead>
@@ -2457,7 +2481,7 @@ function HistoryPanel({ list, onLoad, onClose, onDelete }) {
                 <td>{r.designer_note || ''}</td>
                 <td>
                   <button className="gc-mini-btn" onClick={() => onLoad(r)}>
-                    Load
+                    {t('gal.load')}
                   </button>
                   <button
                     className="gc-mini-btn gc-mini-btn-danger"
@@ -2465,7 +2489,7 @@ function HistoryPanel({ list, onLoad, onClose, onDelete }) {
                     title={`Delete saved design #${r.id}`}
                     style={{ marginLeft: 4 }}
                   >
-                    Delete
+                    {t('common.delete')}
                   </button>
                 </td>
               </tr>
@@ -2493,6 +2517,7 @@ function DieRiskPill({ cross }) {
 
 // ── Sprint S-FLEXO-2 — Ink consumption banner ────────────────
 function InkBanner({ top1, cross, inputs }) {
+  const { t } = useI18n();
   if (!top1 || top1.status !== 'OK') return null;
   // Printed area per job ≈ total_imp × L_eff × Pw_eff (m²).
   const bleed = Math.max(0, Number(inputs.bleed_mm) || 0);
@@ -2515,7 +2540,7 @@ function InkBanner({ top1, cross, inputs }) {
   const totalKg = ink.mass_kg * n;
   return (
     <div className="gc-banner gc-banner-info" role="status">
-      <b>Ink estimate · Ước tính mực:</b>
+      <b>{t('gal.ink_estimate')}</b>
       <span style={{ marginLeft: 8 }}>
         {totalKg.toFixed(2)} kg total ({n} colors × {ink.mass_kg.toFixed(3)} kg/color) · printed
         area {printed_area_m2.toFixed(1)} m²
@@ -2535,6 +2560,7 @@ function InkBanner({ top1, cross, inputs }) {
 
 // ── Sprint S-FLEXO-5 — Color sequence panel ─────────────────
 function ColorSequencePanel({ sequence }) {
+  const { t } = useI18n();
   const issues = validateColorSequence(sequence);
   if (sequence.length === 0) return null;
   const errors = issues.filter((i) => i.severity === 'error');
@@ -2546,7 +2572,7 @@ function ColorSequencePanel({ sequence }) {
     ) : null;
   return (
     <div className={`gc-banner gc-banner-${tone}`}>
-      <b>Color sequence · Trình tự in màu:</b>
+      <b>{t('gal.color_sequence')}</b>
       <span style={{ marginLeft: 8 }}>{sequence.map((c) => c.name).join(' → ')}</span>
       {banner}
       {issues.length > 0 && (

@@ -180,6 +180,449 @@ registerStrings({
     en: 'Inherits MOQ 1 base ({base}) — type to override',
     vi: 'Kế thừa gốc MOQ 1 ({base}) — gõ để ghi đè',
   },
+  // ─── Design Tools / Gallus press calculator (wave 3) ────────────────────
+  // This file carried the most tangled bilingualism of the three calculators:
+  // 21 labels concatenated both languages into ONE string ("All · Tất cả",
+  // "Optimal · Tối ưu"), and 8 more were Vietnamese-only, so an English reader
+  // saw Vietnamese with no English anywhere. Both shapes collapse to one key
+  // with a value per language.
+  //
+  // Press vocabulary stays English — Gallus, ECS340, anilox, pitch, web, lane,
+  // die-cut, MD/TD, RL, imp — and so do the step numbers 1A..1E, which are
+  // positions in a fixed workflow rather than prose.
+  'dt.pick_family': {
+    en: 'Pick a tool family below — each opens a per-machine designer.',
+    vi: 'Chọn nhóm công cụ bên dưới — mỗi nhóm mở một trình thiết kế riêng cho máy.',
+  },
+  'dt.to_bring_up': { en: 'To bring up', vi: 'Để bật' },
+  'gal.actual_lane_gap': {
+    en: 'Actual lane gap on current W:',
+    vi: 'Gap lane thực tế ở khổ W hiện tại:',
+  },
+  'gal.add_cylinder_full': {
+    en: 'Add a brand-new cylinder Z (e.g. just purchased)',
+    vi: 'Thêm cylinder Z mới (ví dụ vừa mua về)',
+  },
+  'gal.clear_targets_tip': {
+    en: 'Clear targets and return to solver mode (auto-optimise N × n)',
+    vi: 'Xoá mục tiêu và quay lại chế độ giải (tự tối ưu N × n)',
+  },
+  'gal.defaults_to': { en: 'Defaults to', vi: 'Mặc định là' },
+  'gal.push_cpx': {
+    en: 'Push values to Pricing (Cpx) and switch to that tab',
+    vi: 'Đẩy số liệu sang Bảng tính giá (Cpx) và chuyển qua tab đó',
+  },
+  'gal.push_std': {
+    en: 'Push values to Pricing (Std) and switch to that tab',
+    vi: 'Đẩy số liệu sang Bảng tính giá (Std) và chuyển qua tab đó',
+  },
+  'gal.set_top1': {
+    en: 'Set a Top-1 print cylinder to populate this table.',
+    vi: 'Chọn cylinder in Top-1 để điền bảng này.',
+  },
+  'gal.ph_end_cu_pn': { en: 'e.g. AWW9917CHVC0-0C1', vi: 'ví dụ AWW9917CHVC0-0C1' },
+  'gal.ph_project': { en: 'e.g. BOSE earbuds Q2', vi: 'ví dụ BOSE earbuds Q2' },
+  'gal.ph_cyl_note': {
+    en: 'e.g. New purchase 2026-04 from supplier X',
+    vi: 'ví dụ Mua mới 2026-04 từ nhà cung cấp X',
+  },
+  'gal.ph_designer_note': {
+    en: 'e.g. Customer requested 4 lanes instead of 3 to fit 270mm web; updated G to 7.225 to match Z=85',
+    vi: 'ví dụ Khách yêu cầu 4 lane thay vì 3 để vừa khổ web 270mm; đã đổi G thành 7.225 cho khớp Z=85',
+  },
+  'gal.legacy_render': {
+    en: 'Legacy render — gaps now display as N uniform stripes ✕',
+    vi: 'Bản vẽ cũ — gap nay hiển thị thành N vạch đều ✕',
+  },
+  'dt.title': { en: 'Design Tools', vi: 'Công cụ thiết kế' },
+  'dt.presses': { en: 'PRESSES', vi: 'MÁY IN' },
+  'dt.press_machine': { en: 'Press machine', vi: 'Máy in' },
+  'dt.tool_family': { en: 'Tool family', vi: 'Nhóm công cụ' },
+  'dt.coming_soon': { en: 'Coming soon', vi: 'Sắp có' },
+
+  'gal.down_web': { en: '1A. Down-web', vi: '1A. Chiều chạy' },
+  'gal.cross_web': { en: '1B. Cross-web', vi: '1B. Chiều ngang web' },
+  'gal.diecut_cost': { en: '1C. Die-cut & cost', vi: '1C. Khuôn cắt & chi phí' },
+  'gal.ink_anilox': { en: '1D. Ink & Anilox', vi: '1D. Mực & Anilox' },
+  'gal.ranking_weights': { en: '1E. Ranking weights', vi: '1E. Trọng số xếp hạng' },
+  'gal.all': { en: 'All', vi: 'Tất cả' },
+  'gal.available_only': { en: 'Available only', vi: 'Chỉ cylinder có sẵn' },
+  'gal.ok_only': { en: 'OK only', vi: 'Chỉ status OK' },
+  'gal.optimal': { en: 'Optimal', vi: 'Tối ưu' },
+  'gal.required': { en: 'Required', vi: 'Bắt buộc' },
+  'gal.suggested': { en: 'Suggested:', vi: 'Đề xuất:' },
+  'gal.consensus_pick': { en: 'Consensus pick:', vi: 'Đề xuất tối ưu:' },
+  'gal.ink_estimate': { en: 'Ink estimate:', vi: 'Ước tính mực:' },
+  'gal.color_sequence': { en: 'Color sequence:', vi: 'Trình tự in màu:' },
+  'gal.web_width_suggestion': { en: 'Web width suggestion:', vi: 'Đề xuất khổ web:' },
+  'gal.saved_designs': { en: 'Saved designs', vi: 'Lịch sử thiết kế' },
+  'gal.browse_saved': { en: 'Browse saved designs', vi: 'Mở lịch sử thiết kế' },
+  'gal.clear_loaded': {
+    en: 'Clear loaded record — next Save creates a new row',
+    vi: 'Tạo thiết kế mới — lần Lưu kế tiếp tạo bản ghi mới',
+  },
+  'gal.filter_by_pn': {
+    en: 'Filter by End CU PN / project',
+    vi: 'Lọc theo mã End CU hoặc dự án',
+  },
+  'gal.lane_gap_below': { en: 'Lane gap below target', vi: 'Gap lane dưới mức target' },
+  'gal.min_web_width': { en: 'Minimum web width', vi: 'Khổ web tối thiểu' },
+  'gal.min_pitch': { en: 'Minimum pitch', vi: 'Pitch tối thiểu' },
+  'gal.narrower_web': {
+    en: 'A narrower web means less TD waste.',
+    vi: 'Giảm khổ web → giảm waste TD.',
+  },
+  'gal.print_design': { en: 'Print Design', vi: 'Thiết kế in' },
+  'gal.cutting_design': { en: 'Cutting Design (Die-cut)', vi: 'Thiết kế cắt khuôn' },
+  'gal.match_status': { en: 'Match status', vi: 'Trạng thái khớp' },
+  'gal.layout_match': { en: 'Layout match', vi: 'Khớp layout' },
+  'gal.no_ok_match': { en: 'No OK match', vi: 'Không có bản khớp OK' },
+  'gal.match': { en: 'Match', vi: 'Khớp' },
+  'gal.inputs': { en: 'Inputs', vi: 'Dữ liệu vào' },
+  'gal.pitch_mm': { en: 'Pitch (mm)', vi: 'Pitch (mm)' },
+  'gal.step_mm': { en: 'Step (mm)', vi: 'Step (mm)' },
+  'gal.die_step_mm': { en: 'Die step (mm)', vi: 'Die step (mm)' },
+  'gal.step_diff_mm': { en: 'Step diff (mm)', vi: 'Lệch step (mm)' },
+  'gal.gap_target': { en: 'Gap target', vi: 'Gap mục tiêu' },
+  'gal.actual_gap': { en: 'Actual gap', vi: 'Gap thực tế' },
+  'gal.gap_diff': { en: 'Gap diff', vi: 'Lệch gap' },
+  'gal.waste_pct': { en: 'Waste %', vi: 'Hao %' },
+  'gal.cost_winner': { en: 'Cost winner', vi: 'Tốt nhất theo giá' },
+  'gal.yield_winner': { en: 'Yield winner', vi: 'Tốt nhất theo hiệu suất' },
+  'gal.rank': { en: 'Rank', vi: 'Hạng' },
+  'gal.qty': { en: 'Qty', vi: 'SL' },
+  'gal.qty_in_stock': { en: 'Qty in stock', vi: 'SL tồn' },
+  'gal.avail': { en: 'Avail', vi: 'Sẵn có' },
+  'gal.project': { en: 'Project', vi: 'Dự án' },
+  'gal.note': { en: 'Note', vi: 'Ghi chú' },
+  'gal.note_optional': { en: 'Note (optional)', vi: 'Ghi chú (không bắt buộc)' },
+  'gal.designer_note': { en: 'Designer note', vi: 'Ghi chú người thiết kế' },
+  'gal.free_text': { en: 'Free text', vi: 'Nhập tự do' },
+  'gal.design_change_notice': { en: 'Design change notice', vi: 'Thông báo đổi thiết kế' },
+  'gal.saved_at': { en: 'Saved at', vi: 'Lưu lúc' },
+  'gal.save_design': { en: 'Save design', vi: 'Lưu thiết kế' },
+  'gal.save_new_version': { en: 'Save as new version', vi: 'Lưu thành phiên bản mới' },
+  'gal.update_existing': { en: 'Update existing', vi: 'Cập nhật bản hiện có' },
+  'gal.save_cylinder': { en: 'Save cylinder', vi: 'Lưu cylinder' },
+  'gal.add_cylinder': { en: 'Add a brand-new cylinder Z', vi: 'Thêm cylinder Z mới' },
+  'gal.load': { en: 'Load', vi: 'Nạp' },
+  'gal.replace': { en: 'Replace', vi: 'Thay' },
+  'gal.dismiss': { en: 'Dismiss', vi: 'Bỏ qua' },
+  'gal.clear_targets': { en: 'Clear targets', vi: 'Xoá mục tiêu' },
+  'gal.restore_auto_e': { en: 'Restore auto-centered E', vi: 'Khôi phục E tự căn giữa' },
+  'gal.shot_schematic': { en: 'Shot layout schematic', vi: 'Sơ đồ shot layout' },
+  'gal.diecut_schematic': { en: 'Die-cut shot schematic', vi: 'Sơ đồ shot khuôn cắt' },
+  'gal.all_filled': { en: 'All required fields filled', vi: 'Đã điền đủ trường bắt buộc' },
+  'gal.pitch_required': { en: 'Pitch required', vi: 'Cần nhập Pitch' },
+  'gal.web_width_required': { en: 'Web width required', vi: 'Cần nhập khổ web' },
+
+  'viz.edge_margin': { en: 'Edge margin (E)', vi: 'Mép web (E)' },
+  'viz.product_cavity': { en: 'Product cavity', vi: 'Sản phẩm' },
+  'viz.reset_zoom': { en: 'Reset zoom · 100%', vi: 'Về 100%' },
+  'viz.zoom': { en: 'Zoom in / out', vi: 'Phóng to / thu nhỏ' },
+  'viz.need_inputs': {
+    en: 'Enter L, Pw, W and pick a Top-1 cylinder to draw the layout.',
+    vi: 'Cần nhập L, Pw, W và có cylinder Top 1 để vẽ layout.',
+  },
+  'viz.lane_gap': { en: 'Lane gap', vi: 'Gap lane' },
+  'viz.gap_md': { en: 'Gap MD', vi: 'Gap MD' },
+  'viz.cylinder': { en: 'Cylinder', vi: 'Cylinder' },
+  'viz.cavities': { en: 'Cavities', vi: 'Cavities' },
+  'viz.product': { en: 'Product', vi: 'Sản phẩm' },
+
+  // ─── Print Area Calculator (wave 3) ─────────────────────────────────────
+  // Stays English: DPI, SKU, ROI, SPOT, Hex, Lab/ΔE76, and the file-type list.
+  // Everything an operator sets or reads while measuring a label is translated.
+  'pac.auto_detect': { en: 'Auto-detect', vi: 'Tự nhận' },
+  'pac.color': { en: 'Color', vi: 'Màu' },
+  'pac.open': { en: 'Open', vi: 'Mở' },
+  'pac.title': { en: 'Print Area Calculator', vi: 'Máy tính diện tích in' },
+  'pac.subtabs': { en: 'Print Area sub-tabs', vi: 'Tab con Diện tích in' },
+  'pac.artwork': { en: 'Artwork', vi: 'File thiết kế' },
+  'pac.drop_here': { en: 'Drop artwork here', vi: 'Thả file thiết kế vào đây' },
+  'pac.no_artwork': { en: 'No artwork yet', vi: 'Chưa có file thiết kế' },
+  'pac.upload_left': { en: 'Upload via the dropzone on the left', vi: 'Tải lên ở ô bên trái' },
+  'pac.remove_artwork': { en: 'Remove artwork', vi: 'Gỡ file thiết kế' },
+  'pac.remove_artwork_tip': {
+    en: 'Remove artwork and upload a new one',
+    vi: 'Gỡ file hiện tại và tải file khác',
+  },
+  'pac.product': { en: 'Product', vi: 'Sản phẩm' },
+  'pac.product_name': { en: 'Product name', vi: 'Tên sản phẩm' },
+  'pac.name': { en: 'Name', vi: 'Tên' },
+  'pac.sku_required': { en: 'SKU / Product code *', vi: 'SKU / Mã sản phẩm *' },
+  'pac.search_ph': {
+    en: 'Search by SKU or product name...',
+    vi: 'Tìm theo SKU hoặc tên sản phẩm...',
+  },
+  'pac.width_mm': { en: 'Width (mm) *', vi: 'Rộng (mm) *' },
+  'pac.height_mm': { en: 'Height (mm) *', vi: 'Cao (mm) *' },
+  'pac.size_mm': { en: 'Size (mm)', vi: 'Kích thước (mm)' },
+  'pac.bleed_mm': { en: 'Bleed (mm)', vi: 'Bleed (mm)' },
+  'pac.bleed_tip': {
+    en: 'Bleed added to all 4 sides of the trim size. Ink printed on the bleed area is measured (counts toward ink consumption) but is outside the finished-label trim. Leave 0 if your artwork is trim-sized.',
+    vi: 'Bleed cộng thêm vào cả 4 cạnh của khổ thành phẩm. Mực in trên vùng bleed vẫn được đo (tính vào lượng mực tiêu thụ) nhưng nằm ngoài khổ cắt thành phẩm. Để 0 nếu file đã đúng khổ thành phẩm.',
+  },
+  'pac.drawing_scale': {
+    en: 'Drawing scale (artwork : physical)',
+    vi: 'Tỷ lệ bản vẽ (thiết kế : thực tế)',
+  },
+  'pac.drawing_scale_tip': {
+    en: 'Use this when the artwork is drawn at a different size than the physical product. e.g. 2:1 means the drawing is 2× the real size, so a 60mm-wide drawing prints at 30mm.',
+    vi: 'Dùng khi file được vẽ ở kích thước khác sản phẩm thật. Ví dụ 2:1 nghĩa là bản vẽ gấp 2 lần thật, nên bản vẽ rộng 60mm sẽ in ra 30mm.',
+  },
+  'pac.rotation': { en: 'Rotation', vi: 'Xoay' },
+  'pac.rotation_tip': {
+    en: "Artwork rotation. 'Auto' flips 90° when the bitmap aspect ratio doesn't match W×H (portrait artwork for a landscape label). Manual override if auto misdetects.",
+    vi: 'Xoay file thiết kế. "Auto" tự lật 90° khi tỷ lệ ảnh không khớp W×H (file dọc cho nhãn ngang). Chỉnh tay nếu auto nhận sai.',
+  },
+  'pac.render_dpi': { en: 'Render DPI', vi: 'DPI render' },
+  'pac.plate': { en: 'Plate', vi: 'Bản in' },
+  'pac.objects': { en: 'Objects', vi: 'Đối tượng' },
+  'pac.objects_tip': {
+    en: 'Number of vector objects drawn on this plate',
+    vi: 'Số đối tượng vector vẽ trên bản in này',
+  },
+  'pac.press': { en: 'Press', vi: 'Máy in' },
+  'pac.print_method': { en: 'Print method', vi: 'Phương pháp in' },
+  'pac.method': { en: 'Method', vi: 'Phương pháp' },
+  'pac.detection': { en: 'Detection', vi: 'Nhận diện' },
+  'pac.background_mode': { en: 'Background mode', vi: 'Chế độ nền' },
+  'pac.auto_4corner': { en: 'Auto (4-corner sample)', vi: 'Tự động (lấy mẫu 4 góc)' },
+  'pac.manual_white': { en: 'Manual (white)', vi: 'Thủ công (trắng)' },
+  'pac.bg_wrong': {
+    en: 'Background detection may be wrong.',
+    vi: 'Nhận diện nền có thể sai.',
+  },
+  'pac.crop_mode': { en: 'Crop mode', vi: 'Chế độ cắt' },
+  'pac.crop_mode_tip': {
+    en: "How to trim the analysis region when you haven't drawn a manual ROI. 'Physical (input-driven)' is the most accurate when artwork has dimension-line margins — it crops to EXACTLY the W×H you entered above, anchored on the content centroid.",
+    vi: 'Cách cắt vùng phân tích khi chưa khoanh ROI thủ công. "Physical (input-driven)" chính xác nhất khi file có lề đường kích thước — nó cắt đúng W×H bạn nhập ở trên, neo theo trọng tâm nội dung.',
+  },
+  'pac.analysis_area': { en: 'Analysis area', vi: 'Vùng phân tích' },
+  'pac.roi_toggle_tip': {
+    en: 'Toggle drag-to-select mode. Drag a rectangle on the preview canvas to define the exact label region.',
+    vi: 'Bật/tắt chế độ kéo chọn. Kéo một hình chữ nhật trên canvas xem trước để khoanh đúng vùng nhãn.',
+  },
+  'pac.roi_remove_tip': {
+    en: 'Remove the manual selection and fall back to auto-crop',
+    vi: 'Xoá vùng chọn thủ công, quay lại cắt tự động',
+  },
+  'pac.inspector_tip': {
+    en: 'Toggle pixel inspector. Click anywhere on the canvas to read its color + which detected ink it belongs to.',
+    vi: 'Bật/tắt soi pixel. Bấm bất kỳ đâu trên canvas để đọc màu và mực nào chứa nó.',
+  },
+  'pac.analyze': { en: 'Analyze', vi: 'Phân tích' },
+  'pac.rerun': { en: 'Re-run', vi: 'Chạy lại' },
+  'pac.run_analysis_tip': { en: 'Run analysis · ⌘↵ / Ctrl ↵', vi: 'Chạy phân tích · ⌘↵ / Ctrl ↵' },
+  'pac.awaiting': { en: 'Awaiting analysis', vi: 'Chờ phân tích' },
+  'pac.run_to_see': {
+    en: 'Run analysis to see per-color breakdown.',
+    vi: 'Chạy phân tích để xem chi tiết theo màu.',
+  },
+  'pac.apply_dims': { en: 'Apply dims →', vi: 'Áp kích thước →' },
+  'pac.apply_dims_tip': {
+    en: 'Overwrite the typed Width/Height with the dimensions implied by the detected die-line bbox, then you can re-analyze for a second pass.',
+    vi: 'Ghi đè Rộng/Cao đã nhập bằng kích thước suy ra từ khung die-line nhận được, rồi chạy phân tích lại.',
+  },
+  'pac.dieline_detected': { en: 'Die-line detected:', vi: 'Nhận được die-line:' },
+  'pac.ignore_dieline': {
+    en: 'Ignore dieline / die-cut outline (magenta)',
+    vi: 'Bỏ qua die-line / đường bế (màu magenta)',
+  },
+  'pac.ignore_dieline_tip': {
+    en: 'Exclude magenta / pink clusters (CAD dieline / cut-mark convention) from the printed total. You can still override any color by clicking its row in the results.',
+    vi: 'Loại cụm magenta/hồng (quy ước die-line/dấu bế của CAD) khỏi tổng in. Vẫn có thể ghi đè từng màu bằng cách bấm vào dòng của nó.',
+  },
+  'pac.colors': { en: 'Colors', vi: 'Số màu' },
+  'pac.swatch': { en: 'Swatch', vi: 'Mẫu màu' },
+  'pac.area_pct': { en: 'Area %', vi: 'Diện tích %' },
+  'pac.area_mm2': { en: 'Area mm²', vi: 'Diện tích mm²' },
+  'pac.print_pct': { en: 'Print %', vi: 'In %' },
+  'pac.print_mm2': { en: 'Print mm²', vi: 'In mm²' },
+  'pac.total_coverage': {
+    en: 'Total print coverage (excluding ignored)',
+    vi: 'Tổng độ phủ in (không tính phần bỏ qua)',
+  },
+  'pac.row_toggle_tip': {
+    en: 'Click a row to toggle ignore',
+    vi: 'Bấm một dòng để bật/tắt bỏ qua',
+  },
+  'pac.highlight_tip': {
+    en: "Click to highlight this ink's area on the canvas",
+    vi: 'Bấm để làm nổi vùng của mực này trên canvas',
+  },
+  'pac.show_ink_tip': {
+    en: 'Show this ink area on the canvas',
+    vi: 'Hiện vùng mực này trên canvas',
+  },
+  'pac.actions_hint': {
+    en: 'Actions — or right-click any row',
+    vi: 'Thao tác — hoặc chuột phải vào dòng bất kỳ',
+  },
+  'pac.pinned_spot': { en: 'Pinned spot inks', vi: 'Mực pha đã ghim' },
+  'pac.remove_rerun': {
+    en: 'Remove. Re-run Analyze to apply.',
+    vi: 'Gỡ. Chạy lại Phân tích để áp dụng.',
+  },
+  'pac.wet_per_label': {
+    en: 'Wet ink volume per single label, given the active print method',
+    vi: 'Lượng mực ướt cho một nhãn, theo phương pháp in đang chọn',
+  },
+  'pac.wet_per_1k': {
+    en: 'Wet ink volume to print 1,000 labels of this size',
+    vi: 'Lượng mực ướt để in 1.000 nhãn cỡ này',
+  },
+  'pac.dot_gain': { en: 'Apply dot gain to ink volume', vi: 'Áp dot gain vào lượng mực' },
+  'pac.dot_gain_tip': {
+    en: 'Fold press dot gain into the ink-volume math. Halftone screens grow on press (50% file ≈ 68% on substrate for flexo). Affects ink volume only — file-coverage % stays the true on-file number.',
+    vi: 'Đưa dot gain của máy in vào phép tính lượng mực. Tram nở khi in (50% trên file ≈ 68% trên vật liệu với flexo). Chỉ ảnh hưởng lượng mực — % phủ trên file vẫn là số thật của file.',
+  },
+  'pac.antialias': {
+    en: 'Anti-aliasing sub-pixel weighting',
+    vi: 'Trọng số sub-pixel khử răng cưa',
+  },
+  'pac.antialias_tip': {
+    en: 'Give anti-aliased edge pixels a fractional ink weight (0..1) instead of counting them as full ink. Default ON — matches how the press actually lays ink. Shrinks coverage by 2-5% on vector art.',
+    vi: 'Cho pixel viền khử răng cưa một trọng số mực lẻ (0..1) thay vì tính đủ. Mặc định BẬT — sát với cách máy in đặt mực thật. Giảm độ phủ 2-5% với file vector.',
+  },
+  'pac.perceptual': {
+    en: 'Perceptual color distance (Lab / ΔE76)',
+    vi: 'Khoảng cách màu thị giác (Lab / ΔE76)',
+  },
+  'pac.perceptual_tip': {
+    en: "Use perceptual Lab color space (ΔE76) for cluster merging and nearest-centroid assignment. Default ON — merges JPG-artifact duplicates the eye can't distinguish. Turn off to reproduce pre-Sprint-8 numbers.",
+    vi: 'Dùng không gian màu Lab (ΔE76) để gộp cụm và gán theo tâm gần nhất. Mặc định BẬT — gộp các bản trùng do nén JPG mà mắt không phân biệt được. Tắt để tái lập số liệu trước Sprint 8.',
+  },
+  'pac.accuracy': { en: 'Accuracy (Sprint 8)', vi: 'Độ chính xác (Sprint 8)' },
+  'pac.morph_tip': {
+    en: "Morphological opening — removes thin strokes (≤ 2×N px wide) after cropping. Use when dim-line annotations share colors with legit label content and the crop alone didn't remove them. 0 = off (reproduces pre-sprint-7 numbers).",
+    vi: 'Morphological opening — xoá nét mảnh (rộng ≤ 2×N px) sau khi cắt. Dùng khi chú thích đường kích thước trùng màu với nội dung nhãn thật và việc cắt chưa loại được. 0 = tắt (tái lập số liệu trước Sprint 7).',
+  },
+  'pac.sep_export_tip': {
+    en: 'Download one PNG per color (film positive — black where the ink prints, white elsewhere)',
+    vi: 'Tải một PNG cho mỗi màu (film dương — đen ở chỗ có mực, trắng ở chỗ còn lại)',
+  },
+  'pac.library': { en: 'Library', vi: 'Thư viện' },
+  'pac.loaded_from_lib': { en: 'Loaded from Library:', vi: 'Đã nạp từ Thư viện:' },
+  'pac.no_saved': { en: 'No saved measurements yet.', vi: 'Chưa có phép đo nào được lưu.' },
+  'pac.created': { en: 'Created', vi: 'Tạo lúc' },
+  'pac.optional': { en: 'Optional', vi: 'Không bắt buộc' },
+  'pac.original': { en: 'Original', vi: 'Gốc' },
+  'pac.zoom_in': { en: 'Zoom in', vi: 'Phóng to' },
+  'pac.zoom_out': { en: 'Zoom out', vi: 'Thu nhỏ' },
+
+  // ─── Ink Calculator (wave 3) ────────────────────────────────────────────
+  // The three floating utility calculators — ink-calc, print-area,
+  // design-tools — are a real grouping, not one invented for this wave:
+  // windowLogic.js FLOATING_BY_DEFAULT is what separates them from the
+  // data-grid screens that open maximised.
+  //
+  // WHAT STAYS ENGLISH HERE, and why it is most of the file:
+  //   * Formulas. "= BCM x 1.55", "Open Area (Calc) = w² / (w+d)² × 100".
+  //     Translating a formula is how a formula becomes wrong.
+  //   * Press vocabulary operators use in English at the machine: BCM, QPA,
+  //     Anilox, Mesh Count, Cell Depth, Cell Opening, Line Count, Thread Dia,
+  //     Open Area, Pitch, Density, Flexo, Silkscreen, CMYK.
+  //   * Dense grid heads already at their width limit, per the rule wave 1
+  //     set in SubProductRow: Act, Spec, Vol (cm³), Wt (g), Supply (g),
+  //     Unit/kg, Syns.
+  // The LEGEND table lower in the file already carries its own EN/VI pair per
+  // row and is left alone — it is data, not chrome.
+  // The notes card used to render an English line and a Vietnamese line
+  // stacked, both at once, in every locale — `.ink-note-vi` divs beside their
+  // English twins. Collapsed to one key per note, so a reader sees their own
+  // language once instead of both languages always.
+  'inkc.color_coding': { en: 'COLOR CODING', vi: 'MÃ MÀU Ô' },
+  'inkc.main_formulas': { en: 'Main Formulas', vi: 'Công thức chính' },
+  'inkc.notes_title_silk': { en: 'SILKSCREEN NOTES', vi: 'GHI CHÚ SILKSCREEN' },
+  'inkc.notes_title_flexo': { en: 'FLEXO NOTES', vi: 'GHI CHÚ FLEXO' },
+  'inkc.note_mesh_count': {
+    en: 'Mesh Count (n/cm) = threads per centimeter',
+    vi: 'Mesh Count (n/cm) = số sợi trên 1 cm',
+  },
+  'inkc.note_volume_recipe': {
+    en: 'Volume Recipe V_r = α_calc × D / 100 (D = thread thickness)',
+    vi: 'Volume Recipe V_r = α_calc × D / 100 (D = độ dày sợi)',
+  },
+  'inkc.note_open_area': {
+    en: 'Open Area (Calc) = w² / (w+d)² × 100',
+    vi: 'Diện tích mở (Calc) = w² / (w+d)² × 100',
+  },
+  'inkc.note_bcm': {
+    en: '(Billion Cubic Microns) — US standard for anilox cell volume',
+    vi: '(Tỷ micron khối) — đơn vị Mỹ đo thể tích ô anilox',
+  },
+  'inkc.note_bcm_conv': { en: '(conversion factor)', vi: '(hệ số quy đổi)' },
+  'inkc.note_transfer_eff': {
+    en: ': typically 50–70% for Flexo',
+    vi: ': thường 50–70% với Flexo',
+  },
+  'inkc.note_adjust_te': {
+    en: 'Adjust Transfer Efficiency per ink/material type in Anilox DB',
+    vi: 'Điều chỉnh Transfer Efficiency theo loại mực/vật liệu trong Anilox DB',
+  },
+  'inkc.subtab_ink_calc': { en: 'Ink Calculator', vi: 'Tính mực' },
+
+  'inkc.title': { en: 'Inks Calculator', vi: 'Máy tính mực' },
+  'inkc.loading': { en: 'Loading Inks Calculator...', vi: 'Đang tải Máy tính mực...' },
+  'inkc.legend': { en: 'Legend', vi: 'Chú giải' },
+  'inkc.search_ph': { en: 'Search...', vi: 'Tìm...' },
+  'inkc.save_db': { en: 'Save DB', vi: 'Lưu DB' },
+  'inkc.anilox_db': { en: 'Anilox DB', vi: 'DB Anilox' },
+  'inkc.mesh_spec': { en: 'Mesh Spec', vi: 'Thông số lưới' },
+  'inkc.ink_price': { en: 'Ink Price', vi: 'Giá mực' },
+  'inkc.unit_price': { en: 'Unit Price', vi: 'Đơn giá' },
+  'inkc.total_unit_price': { en: 'TOTAL UNIT PRICE / UNIT', vi: 'TỔNG ĐƠN GIÁ / ĐƠN VỊ' },
+  'inkc.costs': { en: 'Costs', vi: 'Chi phí' },
+  'inkc.production_costs': { en: 'Production costs', vi: 'Chi phí sản xuất' },
+  'inkc.print_info': { en: 'Print info', vi: 'Thông tin in' },
+  'inkc.spec_info': { en: 'info', vi: 'thông tin' },
+  'inkc.inks_vol_weight': { en: 'Inks volume & weight', vi: 'Thể tích & khối lượng mực' },
+  'inkc.print_area': { en: 'Print Area', vi: 'Diện tích in' },
+  'inkc.total_mat_area': { en: 'Total Mat Area', vi: 'Tổng diện tích VT' },
+  'inkc.mat_width': { en: 'Mat Width', vi: 'Khổ VT' },
+  'inkc.layout': { en: 'Layout', vi: 'Layout' },
+  'inkc.process': { en: 'Process', vi: 'Công đoạn' },
+  'inkc.setup': { en: 'Setup', vi: 'Setup' },
+  'inkc.waste': { en: 'Waste', vi: 'Hao phí' },
+  'inkc.lost_pct': { en: 'Lost %', vi: 'Hao %' },
+  'inkc.tolerance': { en: 'Tolerance', vi: 'Dung sai' },
+  'inkc.efficiency': { en: 'Efficiency', vi: 'Hiệu suất' },
+  'inkc.transfer_eff': { en: 'Transfer Efficiency', vi: 'Hiệu suất truyền' },
+  'inkc.transfer_eff_short': { en: 'Transfer Eff.', vi: 'HS truyền' },
+  'inkc.calc_volume': { en: 'Calc Volume', vi: 'Thể tích tính' },
+  'inkc.volume_recipe': { en: 'Volume Recipe', vi: 'Công thức thể tích' },
+  'inkc.theo_ink_vol': { en: 'Theo. Ink Vol', vi: 'TT mực lý thuyết' },
+  'inkc.actual_ink': { en: 'Actual Ink', vi: 'Mực thực tế' },
+  'inkc.ink_vol_max': { en: 'Ink Vol Max', vi: 'TT mực tối đa' },
+  'inkc.weight_per_time': { en: 'Weight/', vi: 'KL/' },
+  'inkc.total': { en: 'Total', vi: 'Tổng' },
+  'inkc.row': { en: 'Row', vi: 'Dòng' },
+  'inkc.color': { en: 'Color', vi: 'Màu' },
+  'inkc.cavities': { en: 'Cavities', vi: 'Cavities' },
+  'inkc.run_standard': { en: 'Run Standard', vi: 'Chạy Standard' },
+  'inkc.run_complex': { en: 'Run Complex', vi: 'Chạy Complex' },
+  'inkc.run_standard_tip': {
+    en: 'Run calculation from Standard calculator state',
+    vi: 'Tính từ dữ liệu đang có của Standard',
+  },
+  'inkc.run_complex_tip': {
+    en: 'Run calculation from Complex calculator sub-products',
+    vi: 'Tính từ các sub-product của Complex',
+  },
+  'inkc.cal_qpa_cost': { en: 'Cal. QPA and Cost', vi: 'Tính QPA và chi phí' },
+  'inkc.ref_db_tip': {
+    en: 'Reference ink database for cost calculator',
+    vi: 'Cơ sở dữ liệu mực tham chiếu cho máy tính chi phí',
+  },
+  'inkc.no_data': { en: 'No data yet — click', vi: 'Chưa có dữ liệu — bấm' },
+  'inkc.no_records': { en: 'No records — click', vi: 'Chưa có bản ghi — bấm' },
+  'inkc.cells_blue': { en: 'Blue cells', vi: 'Ô xanh dương' },
+  'inkc.cells_green': { en: 'Green cells', vi: 'Ô xanh lá' },
+  'inkc.cells_purple': { en: 'Purple cells', vi: 'Ô tím' },
+  'inkc.cells_yellow': { en: 'Yellow cells', vi: 'Ô vàng' },
+
   'spr.tip_sync_print': {
     en: 'Sync print design · Pull a saved Design Tools record and apply Print-side fields onto this sub-product',
     vi: 'Đồng bộ thiết kế in · Lấy bản ghi Design Tools đã lưu và áp các trường phía In vào sub-product này',
