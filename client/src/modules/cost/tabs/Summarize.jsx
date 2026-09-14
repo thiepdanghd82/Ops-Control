@@ -19,6 +19,7 @@ import { useAbortableFetch } from '../../../hooks/useAbortableFetch';
 import EmptyState from '../../../components/Shared/EmptyState';
 import { err as logErr } from '../../../utils/logger';
 import { buildCsv, saveCsv } from '../../../services/csvExport';
+import { rowsForExport } from './Summarize.exportRows.js';
 import { useQuoteFilters } from '../hooks/useQuoteFilters';
 import { applyQuoteFilters } from '../lib/quoteFilters';
 import ScopedFilterBar from '../components/ScopedFilterBar';
@@ -720,10 +721,11 @@ export default function Summarize() {
       headers.push(colDef && colDef.label ? colDef.label : k);
       seen.add(k);
     }
-    // Export selected-and-visible if any selections; otherwise the full
-    // visible set. Hidden selections (filtered out) are never written.
-    const visibleSelected = sorted.filter((r) => selected.has(r.id));
-    const rowsToExport = visibleSelected.length > 0 ? visibleSelected : sorted;
+    // Selecting any tier of a quote exports EVERY tier of that quote, in
+    // tier order, one row each — an operator asking for "the RFQ" wants
+    // all its MOQs in one file, not the single row they happened to tick.
+    // No selection → the full visible set. Filtered-out rows stay out.
+    const rowsToExport = rowsForExport(sorted, selected);
     if (rowsToExport.length === 0) return; // nothing to write
     // MES-3-FIX-60 (2026-06-19) — apply each column's UI `fmt` to its
     // CSV cell value so operators opening summarize_*.csv see the same
@@ -733,7 +735,7 @@ export default function Summarize() {
     // returns raw; ISO timestamps + plain text untouched.
     const formattedRows = formatCsvRows(rowsToExport, cols, colByKey);
     const csv = buildCsv(formattedRows, cols, { headers });
-    const suggested = `summarize_${new Date().toISOString().slice(0, 10)}${visibleSelected.length > 0 ? `_${visibleSelected.length}rows` : ''}.csv`;
+    const suggested = `summarize_${new Date().toISOString().slice(0, 10)}_${rowsToExport.length}rows.csv`;
     try {
       await saveCsv(csv, suggested);
     } catch (err) {
