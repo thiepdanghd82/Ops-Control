@@ -3811,3 +3811,11 @@ select.sc-input {
   text-transform: uppercase;
   border-bottom: 2px solid var(--border-strong);
 }
+
+/* Suspense fallback while the lazy Legend chunk downloads. Sized so the
+   panel doesn't collapse and bounce the layout when it swaps in. */
+.sc-legend-loading {
+  padding: 24px;
+  font-size: 13px;
+  color: #6b7280;
+}

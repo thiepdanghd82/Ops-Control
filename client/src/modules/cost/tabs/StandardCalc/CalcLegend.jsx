@@ -27,8 +27,10 @@
  * manual. Tables match the CSS of CostBreakdown / Summarize for a
  * consistent look.
  */
-import { useState, useEffect, useRef } from 'react';
+import { createContext, useContext, useMemo, useState, useEffect, useRef } from 'react';
 import { useCalc } from '../../../../context/CalcContext';
+import { useI18n } from '../../../../utils/useI18n';
+import { pickLang } from './legendLang';
 import { createStdState } from '../../../../services/calcEngine';
 import { showToast } from '../../../../utils/toast';
 import './CalcLegend.css';
@@ -174,6 +176,26 @@ const SECTIONS = [
   { id: 'trouble', num: '10', title: 'Troubleshooting', vi: 'Xử lý sự cố' },
 ];
 
+// Troubleshooting severity badge → i18n key. `sev` also drives the CSS
+// modifier, so the English key stays the data and only the label moves.
+const SEV_KEYS = {
+  CRITICAL: 'lgd.sev.critical',
+  MEDIUM: 'lgd.sev.medium',
+  MINOR: 'lgd.sev.minor',
+  INFO: 'lgd.sev.info',
+};
+
+// ── Legend i18n — one language at a time ───────────────────────────
+// CalcLegend reads useI18n() once and provides { locale, t } here so the
+// ~300 bilingual primitives below don't each subscribe. `L(en, vi)` picks
+// the copy for the active locale, English when the Vietnamese twin is
+// missing. Until 2026-09-14 the primitives stacked BOTH languages.
+const LegendI18n = createContext({ locale: 'en', t: (key) => key });
+function useLegend() {
+  const { locale, t } = useContext(LegendI18n);
+  return { t, L: (en, vi) => pickLang(locale, en, vi) };
+}
+
 // ── Small helpers — keep JSX declarative. ──────────────────────────
 const Row = ({ children }) => <tr>{children}</tr>;
 const Th = ({ children, w }) => <th style={w ? { width: w } : undefined}>{children}</th>;
@@ -214,95 +236,69 @@ function FieldTable({ columns, rows }) {
   );
 }
 
-// Callout box — WARN / NOTE / TIP styles. Optional `titleVi` stacks a
-// Vietnamese translation below the English title. Body can be a string
-// or JSX; if `bodyVi` is supplied it renders below in the italic grey
-// style used by the rest of the bilingual UI.
+// Callout box — WARN / NOTE / TIP styles. `titleVi` / `bodyVi` are the
+// Vietnamese twins of `title` / children; exactly one language renders.
 function Callout({ type = 'note', title, titleVi, children, bodyVi }) {
+  const { L } = useLegend();
+  const heading = L(title, titleVi);
   return (
     <div className={`cl-callout cl-callout-${type}`}>
-      {title && (
-        <div className="cl-callout-title">
-          <span className="cl-bi-en">{title}</span>
-          {titleVi && <span className="cl-bi-vi">{titleVi}</span>}
-        </div>
-      )}
-      <div className="cl-callout-body">
-        <div>{children}</div>
-        {bodyVi && (
-          <div className="cl-bi-vi" style={{ marginTop: 4 }}>
-            {bodyVi}
-          </div>
-        )}
-      </div>
+      {heading && <div className="cl-callout-title">{heading}</div>}
+      <div className="cl-callout-body">{L(children, bodyVi)}</div>
     </div>
   );
 }
 
 // Formula block — green-on-black for the formula, gray note below.
-// Bilingual: pass `nameVi` / `noteVi` / `exampleVi` to render VN lines
-// below the English. `expr` stays monolingual (it's code).
+// `nameVi` / `noteVi` / `exampleVi` are the Vietnamese twins; one language
+// renders. `expr` stays monolingual (it's code).
 function Formula({ name, nameVi, expr, note, noteVi, example, exampleVi }) {
+  const { L, t } = useLegend();
+  const noteText = L(note, noteVi);
   return (
     <div className="cl-formula">
-      <div className="cl-formula-name">
-        <span className="cl-bi-en">{name}</span>
-        {nameVi && <span className="cl-bi-vi">{nameVi}</span>}
-      </div>
+      <div className="cl-formula-name">{L(name, nameVi)}</div>
       <pre className="cl-formula-expr">
         <code>{expr}</code>
       </pre>
-      {note && (
-        <div className="cl-formula-note">
-          <div>{note}</div>
-          {noteVi && (
-            <div className="cl-bi-vi" style={{ marginTop: 2 }}>
-              {noteVi}
-            </div>
-          )}
-        </div>
-      )}
+      {noteText && <div className="cl-formula-note">{noteText}</div>}
       {example && (
         <div className="cl-formula-example">
-          <span className="cl-formula-example-label">Ví dụ · Example:</span>
-          <code>{example}</code>
-          {exampleVi && (
-            <div className="cl-bi-vi" style={{ marginTop: 2 }}>
-              {exampleVi}
-            </div>
-          )}
+          <span className="cl-formula-example-label">{t('lgd.example')}</span>
+          <code>{L(example, exampleVi)}</code>
         </div>
       )}
     </div>
   );
 }
 
-// Bilingual row: EN bold, VI italic grey underneath.
+// One line of Legend copy in the active language.
 function BiRow({ en, vi }) {
-  return (
-    <>
-      <span className="cl-bi-en">{en}</span>
-      {vi && <span className="cl-bi-vi">{vi}</span>}
-    </>
-  );
+  const { L } = useLegend();
+  return <span className="cl-bi">{L(en, vi)}</span>;
 }
 
-// Bilingual heading helper — lets section `<h3>` hold EN + VN stacked.
+// Heading text in the active language — lets section `<h3>` stay plain.
 function BiHead({ en, vi }) {
-  return (
-    <>
-      {en}
-      {vi && (
-        <span className="cl-bi-vi" style={{ fontWeight: 500, fontSize: '.85em' }}>
-          {vi}
-        </span>
-      )}
-    </>
-  );
+  const { L } = useLegend();
+  return <>{L(en, vi)}</>;
 }
 
 // ── Main component ─────────────────────────────────────────────────
 export default function CalcLegend() {
+  const { locale, t } = useI18n();
+  const legendI18n = useMemo(() => ({ locale, t }), [locale, t]);
+  return (
+    <LegendI18n.Provider value={legendI18n}>
+      <LegendBody />
+    </LegendI18n.Provider>
+  );
+}
+
+// The manual itself — kept as its own component so the Provider above
+// doesn't re-indent 4,000 lines of JSX. Reads { t, L } like the primitives.
+function LegendBody() {
+  const { t, L } = useLegend();
   const [active, setActive] = useState(SECTIONS[0].id);
   const contentRef = useRef(null);
   const { loadQuote } = useCalc();
@@ -313,10 +309,10 @@ export default function CalcLegend() {
   const loadExample = (builder, label) => {
     try {
       loadQuote('std', builder(), null);
-      showToast(`Loaded: ${label} — switch to Layout tab to inspect.`);
+      showToast(t('lgd.toast.loaded', { label }));
     } catch (err) {
       console.error('Failed to load example:', err);
-      showToast('Failed to load example — see console.', 'err');
+      showToast(t('lgd.toast.load_failed'), 'err');
     }
   };
 
@@ -365,24 +361,24 @@ export default function CalcLegend() {
       {/* Sticky TOC sidebar */}
       <aside className="cl-toc">
         <div className="cl-toc-header">
-          <div className="cl-toc-title">Formula Reference</div>
-          <div className="cl-toc-sub">Verified · calcEngine.js</div>
+          <div className="cl-toc-title">{t('lgd.title')}</div>
+          <div className="cl-toc-sub">{t('lgd.verified_sub')}</div>
           <div className="cl-toc-actions">
             <button
               type="button"
               className="cl-toc-btn"
               onClick={handleExport}
-              title="Download as Word"
+              title={t('lgd.word_title')}
             >
-              ⬇ Word
+              {t('lgd.word')}
             </button>
             <button
               type="button"
               className="cl-toc-btn cl-toc-btn-ghost"
               onClick={handlePrint}
-              title="Print"
+              title={t('lgd.print_title')}
             >
-              🖨 Print
+              {t('lgd.print')}
             </button>
           </div>
         </div>
@@ -396,14 +392,13 @@ export default function CalcLegend() {
             >
               <span className="cl-toc-num">{s.num}</span>
               <span className="cl-toc-txt">
-                <span className="cl-toc-en">{s.title}</span>
-                <span className="cl-toc-vi">{s.vi}</span>
+                <span className="cl-toc-label">{L(s.title, s.vi)}</span>
               </span>
             </button>
           ))}
         </nav>
         <div className="cl-toc-footer">
-          Press <kbd>Cmd/Ctrl+F</kbd> to find any formula or field.
+          {t('lgd.find_hint_pre')} <kbd>Cmd/Ctrl+F</kbd> {t('lgd.find_hint_post')}
         </div>
       </aside>
 
@@ -426,7 +421,8 @@ export default function CalcLegend() {
 
           <Callout
             type="tip"
-            title="✅ Audit provenance · Xuất xứ kiểm chứng"
+            title="✅ Audit provenance"
+            titleVi="✅ Xuất xứ kiểm chứng"
             bodyVi={
               <>
                 Mọi công thức trong tài liệu này đã được đối chiếu với engine sống tại{' '}
@@ -501,24 +497,43 @@ export default function CalcLegend() {
           <FieldTable
             columns={[
               { label: 'KPI', w: '22%' },
-              { label: 'Formula (as implemented)', w: '50%' },
-              { label: 'Audit', w: '28%' },
+              {
+                label: <BiRow en="Formula (as implemented)" vi="Công thức (như đã cài đặt)" />,
+                w: '50%',
+              },
+              { label: <BiRow en="Audit" vi="Kiểm chứng" />, w: '28%' },
             ]}
             rows={[
               [
-                { value: <b>GM% (Gross Margin)</b> },
+                {
+                  value: (
+                    <BiRow en={<b>GM% (Gross Margin)</b>} vi={<b>GM% (Biên lợi nhuận gộp)</b>} />
+                  ),
+                },
                 { value: <code className="cl-ic">1 − s_ttl / sp_price</code>, mono: true },
                 {
                   value: (
-                    <span>
-                      ⚠ <b>Corrected</b> — uses <code>s_ttl</code> (supplier), not{' '}
-                      <code>g_ttl</code>. Sprint 21.
-                    </span>
+                    <BiRow
+                      en={
+                        <>
+                          ⚠ <b>Corrected</b> — uses <code>s_ttl</code> (supplier), not{' '}
+                          <code>g_ttl</code>. Sprint 21.
+                        </>
+                      }
+                      vi={
+                        <>
+                          ⚠ <b>Đã sửa</b> — dùng <code>s_ttl</code> (NCC), không phải{' '}
+                          <code>g_ttl</code>. Sprint 21.
+                        </>
+                      }
+                    />
                   ),
                 },
               ],
               [
-                { value: <b>VA% (Value Add)</b> },
+                {
+                  value: <BiRow en={<b>VA% (Value Add)</b>} vi={<b>VA% (Giá trị gia tăng)</b>} />,
+                },
                 {
                   value: (
                     <code className="cl-ic">
@@ -529,14 +544,25 @@ export default function CalcLegend() {
                 },
                 {
                   value: (
-                    <span>
-                      ⚠ <b>Corrected</b> — supplier mat, not gross.
-                    </span>
+                    <BiRow
+                      en={
+                        <>
+                          ⚠ <b>Corrected</b> — supplier mat, not gross.
+                        </>
+                      }
+                      vi={
+                        <>
+                          ⚠ <b>Đã sửa</b> — vật tư giá NCC, không phải giá gộp.
+                        </>
+                      }
+                    />
                   ),
                 },
               ],
               [
-                { value: <b>CONTR% (Contribution)</b> },
+                {
+                  value: <BiRow en={<b>CONTR% (Contribution)</b>} vi={<b>CONTR% (Đóng góp)</b>} />,
+                },
                 {
                   value: (
                     <code className="cl-ic">
@@ -547,9 +573,18 @@ export default function CalcLegend() {
                 },
                 {
                   value: (
-                    <span>
-                      ⚠ <b>Corrected</b> — RUN labor only; setup labor → GM bucket.
-                    </span>
+                    <BiRow
+                      en={
+                        <>
+                          ⚠ <b>Corrected</b> — RUN labor only; setup labor → GM bucket.
+                        </>
+                      }
+                      vi={
+                        <>
+                          ⚠ <b>Đã sửa</b> — chỉ nhân công RUN; nhân công setup → nhóm GM.
+                        </>
+                      }
+                    />
                   ),
                 },
               ],
@@ -564,7 +599,14 @@ export default function CalcLegend() {
                   ),
                   mono: true,
                 },
-                { value: '✅ Verified — primary basis for GM. Includes proc_extra_vat.' },
+                {
+                  value: (
+                    <BiRow
+                      en="✅ Verified — primary basis for GM. Includes proc_extra_vat."
+                      vi="✅ Đã xác thực — cơ sở chính cho GM. Gồm proc_extra_vat."
+                    />
+                  ),
+                },
               ],
               [
                 { value: <b>G.TOTAL COST</b> },
@@ -577,7 +619,14 @@ export default function CalcLegend() {
                   ),
                   mono: true,
                 },
-                { value: '✅ Verified — purchase-price basis. Includes proc_extra_vat.' },
+                {
+                  value: (
+                    <BiRow
+                      en="✅ Verified — purchase-price basis. Includes proc_extra_vat."
+                      vi="✅ Đã xác thực — cơ sở giá mua. Gồm proc_extra_vat."
+                    />
+                  ),
+                },
               ],
               [
                 { value: <b>UPH (m/min)</b> },
@@ -587,7 +636,14 @@ export default function CalcLegend() {
                   ),
                   mono: true,
                 },
-                { value: '✅ Verified — pitch floored at 1.' },
+                {
+                  value: (
+                    <BiRow
+                      en="✅ Verified — pitch floored at 1."
+                      vi="✅ Đã xác thực — pitch chặn sàn ở 1."
+                    />
+                  ),
+                },
               ],
               [
                 { value: <b>SGA (Sprint 9D)</b> },
@@ -597,9 +653,18 @@ export default function CalcLegend() {
                 },
                 {
                   value: (
-                    <span>
-                      ⚠ <b>Added</b> — absent from xlsx. Per-site, default 0%.
-                    </span>
+                    <BiRow
+                      en={
+                        <>
+                          ⚠ <b>Added</b> — absent from xlsx. Per-site, default 0%.
+                        </>
+                      }
+                      vi={
+                        <>
+                          ⚠ <b>Bổ sung</b> — không có trong xlsx. Theo site, mặc định 0%.
+                        </>
+                      }
+                    />
                   ),
                 },
               ],
@@ -627,15 +692,15 @@ export default function CalcLegend() {
           </h3>
           <FieldTable
             columns={[
-              { label: 'Field', w: '18%' },
-              { label: 'Req?', w: '6%' },
-              { label: 'Example', w: '14%' },
-              { label: 'Description', w: '40%' },
-              { label: 'Affects', w: '22%' },
+              { label: <BiRow en="Field" vi="Trường" />, w: '18%' },
+              { label: <BiRow en="Req?" vi="Bắt buộc?" />, w: '6%' },
+              { label: <BiRow en="Example" vi="Ví dụ" />, w: '14%' },
+              { label: <BiRow en="Description" vi="Mô tả" />, w: '40%' },
+              { label: <BiRow en="Affects" vi="Tác động" />, w: '22%' },
             ]}
             rows={[
               [
-                { value: <b>CCL Part Number</b> },
+                { value: <BiRow en={<b>CCL Part Number</b>} vi={<b>Mã hàng CCL</b>} /> },
                 { value: '✅', center: true },
                 { value: 'T3000001', mono: true },
                 {
@@ -667,7 +732,7 @@ export default function CalcLegend() {
                 },
               ],
               [
-                { value: <b>Annual Qty (EAU)</b> },
+                { value: <BiRow en={<b>Annual Qty (EAU)</b>} vi={<b>Sản lượng năm (EAU)</b>} /> },
                 { value: '✅', center: true },
                 { value: '3,000,000', mono: true },
                 {
@@ -681,7 +746,7 @@ export default function CalcLegend() {
                 { value: <BiRow en="Tooling amortization" vi="Phân bổ khuôn" /> },
               ],
               [
-                { value: <b>Product Lifetime</b> },
+                { value: <BiRow en={<b>Product Lifetime</b>} vi={<b>Vòng đời sản phẩm</b>} /> },
                 { value: '⬜', center: true },
                 { value: '3', mono: true },
                 {
@@ -695,7 +760,7 @@ export default function CalcLegend() {
                 { value: <BiRow en="Tooling lifetime cap" vi="Giới hạn vòng đời khuôn" /> },
               ],
               [
-                { value: <b>Trade Mode</b> },
+                { value: <BiRow en={<b>Trade Mode</b>} vi={<b>Hình thức thương mại</b>} /> },
                 { value: '✅', center: true },
                 { value: 'USD(Normal)', mono: true },
                 {
@@ -730,10 +795,12 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: <BiRow en="DDL lookups, Machine rates" vi="Tra cứu DDL, đơn giá máy" /> },
+                {
+                  value: <BiRow en="DDL lookups, Machine rates" vi="Tra cứu DDL, đơn giá máy" />,
+                },
               ],
               [
-                { value: <b>Selling Price</b> },
+                { value: <BiRow en={<b>Selling Price</b>} vi={<b>Giá bán</b>} /> },
                 { value: '✅', center: true },
                 { value: '0.099', mono: true },
                 {
@@ -747,7 +814,7 @@ export default function CalcLegend() {
                 { value: <BiRow en="VA%, CONTR%, GM%" vi="VA%, CONTR%, GM%" /> },
               ],
               [
-                { value: <b>Target CONTR%</b> },
+                { value: <BiRow en={<b>Target CONTR%</b>} vi={<b>CONTR% mục tiêu</b>} /> },
                 { value: '⬜', center: true },
                 { value: '25', mono: true },
                 {
@@ -761,7 +828,7 @@ export default function CalcLegend() {
                 { value: <BiRow en="Target Price suggestion" vi="Gợi ý giá mục tiêu" /> },
               ],
               [
-                { value: <b>Delivery Term</b> },
+                { value: <BiRow en={<b>Delivery Term</b>} vi={<b>Điều kiện giao hàng</b>} /> },
                 { value: '⬜', center: true },
                 { value: 'DAP', mono: true },
                 { value: <BiRow en="DAP / FOB / EXW / CIF" vi="DAP / FOB / EXW / CIF" /> },
@@ -800,6 +867,31 @@ export default function CalcLegend() {
             type="info"
             title="Layout page UI structure"
             titleVi="Cấu trúc giao diện trang Layout"
+            bodyVi={
+              <ol style={{ margin: '4px 0 0 18px', padding: 0, lineHeight: 1.55 }}>
+                <li>
+                  <b>Thanh tiêu đề</b> — Hai nút <code>🔍 Print/Cut Design sync</code> nằm trên
+                  thanh tiêu đề Design Layout. Mỗi nút mở picker Design Tools và áp dụng các trường
+                  từ bản ghi đã lưu (Print: L, Pw, W, răng bản, gap, mép, số màu; Cut: răng từ,
+                  cavity dao, gap, hình học). Ràng buộc máy in đến qua bản ghi sync — không còn
+                  dropdown press trong tab. CRUD máy in đặt tại sidebar tab <i>Machine Technical</i>
+                  .
+                </li>
+                <li>
+                  <b>Header chung</b> — Web Width TD, Sheet Length MD, # Webs, Rotary Cols, Edge
+                  Trái/Phải, Pcs/Roll (áp dụng cho cả hai sub-tab).
+                </li>
+                <li>
+                  <b>🖨 Print Design Layout</b> — kích thước net + bleed + trục bản in.
+                </li>
+                <li>
+                  <b>✂ Cutting Design Layout</b> — khuôn + grid Parts + kiểu cắt + trục từ.
+                </li>
+                <li>
+                  <b>Cột phải</b> — card Tóm tắt + Đề xuất (nội dung đổi theo sub-tab đang chọn).
+                </li>
+              </ol>
+            }
           >
             <ol style={{ margin: '4px 0 0 18px', padding: 0, lineHeight: 1.55 }}>
               <li>
@@ -824,31 +916,6 @@ export default function CalcLegend() {
               <li>
                 <b>Right column</b> — Layout Summary card (content changes to match the active
                 sub-tab; Cut shows die / cavity / cylinder breakdown).
-              </li>
-            </ol>
-            <ol
-              className="cl-bi-vi"
-              style={{ margin: '8px 0 0 18px', padding: 0, lineHeight: 1.55, fontStyle: 'italic' }}
-            >
-              <li>
-                <b>Thanh tiêu đề</b> — Hai nút <code>🔍 Print/Cut Design sync</code> nằm trên thanh
-                tiêu đề Design Layout. Mỗi nút mở picker Design Tools và áp dụng các trường từ bản
-                ghi đã lưu (Print: L, Pw, W, răng bản, gap, mép, số màu; Cut: răng từ, cavity dao,
-                gap, hình học). Ràng buộc máy in đến qua bản ghi sync — không còn dropdown press
-                trong tab. CRUD máy in đặt tại sidebar tab <i>Machine Technical</i>.
-              </li>
-              <li>
-                <b>Header chung</b> — Web Width TD, Sheet Length MD, # Webs, Rotary Cols, Edge
-                Trái/Phải, Pcs/Roll (áp dụng cho cả hai sub-tab).
-              </li>
-              <li>
-                <b>🖨 Print Design Layout</b> — kích thước net + bleed + trục bản in.
-              </li>
-              <li>
-                <b>✂ Cutting Design Layout</b> — khuôn + grid Parts + kiểu cắt + trục từ.
-              </li>
-              <li>
-                <b>Cột phải</b> — card Tóm tắt + Đề xuất (nội dung đổi theo sub-tab đang chọn).
               </li>
             </ol>
           </Callout>
@@ -936,7 +1003,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Optimizer' },
+                { value: <BiRow en="Optimizer" vi="Bộ tối ưu" /> },
               ],
               [
                 { value: <b>Edge Right (mm)</b> },
@@ -950,7 +1017,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Optimizer' },
+                { value: <BiRow en="Optimizer" vi="Bộ tối ưu" /> },
               ],
               [
                 { value: <b>Pcs/Roll</b> },
@@ -964,7 +1031,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Display' },
+                { value: <BiRow en="Display" vi="Hiển thị" /> },
               ],
               [
                 { value: <b>Print Profile (legacy)</b> },
@@ -978,7 +1045,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Display' },
+                { value: <BiRow en="Display" vi="Hiển thị" /> },
               ],
               [
                 { value: <b>Press Profile (legacy)</b> },
@@ -992,7 +1059,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Display' },
+                { value: <BiRow en="Display" vi="Hiển thị" /> },
               ],
             ]}
           />
@@ -1014,7 +1081,10 @@ export default function CalcLegend() {
             rows={[
               [
                 { value: <b>① Product Size Width TD</b> },
-                { value: 'part_width (synced)', mono: true },
+                {
+                  value: <BiRow en="part_width (synced)" vi="part_width (đồng bộ)" />,
+                  mono: true,
+                },
                 { value: '82', mono: true, center: true },
                 {
                   value: (
@@ -1024,11 +1094,14 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Reference' },
+                { value: <BiRow en="Reference" vi="Tham chiếu" /> },
               ],
               [
                 { value: <b>① Product Size Length MD</b> },
-                { value: 'part_length_md (synced)', mono: true },
+                {
+                  value: <BiRow en="part_length_md (synced)" vi="part_length_md (đồng bộ)" />,
+                  mono: true,
+                },
                 { value: '52', mono: true, center: true },
                 {
                   value: (
@@ -1038,7 +1111,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Reference' },
+                { value: <BiRow en="Reference" vi="Tham chiếu" /> },
               ],
               [
                 { value: <b>② Image Area Width TD</b> },
@@ -1052,7 +1125,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Print Summary' },
+                { value: <BiRow en="Print Summary" vi="Tóm tắt Print" /> },
               ],
               [
                 { value: <b>② Image Area Length MD</b> },
@@ -1063,7 +1136,7 @@ export default function CalcLegend() {
                     <BiRow en="Safe design boundary length." vi="Biên an toàn thiết kế theo MD." />
                   ),
                 },
-                { value: 'Required MD' },
+                { value: <BiRow en="Required MD" vi="MD yêu cầu" /> },
               ],
               [
                 { value: <b>③ Bleed TD (mm)</b> },
@@ -1077,14 +1150,14 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Product Size' },
+                { value: <BiRow en="Product Size" vi="Kích thước sản phẩm" /> },
               ],
               [
                 { value: <b>③ Bleed MD (mm)</b> },
                 { value: 'bleed_md_mm', mono: true },
                 { value: '1', mono: true, center: true },
                 { value: <BiRow en="Bleed EACH side MD." vi="Bleed MỖI BÊN theo MD." /> },
-                { value: 'Required MD' },
+                { value: <BiRow en="Required MD" vi="MD yêu cầu" /> },
               ],
               [
                 { value: <b>Parts in MD</b> },
@@ -1126,7 +1199,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Reference' },
+                { value: <BiRow en="Reference" vi="Tham chiếu" /> },
               ],
               [
                 { value: <b>Plate Tooth (T)</b> },
@@ -1144,7 +1217,7 @@ export default function CalcLegend() {
               ],
               [
                 { value: <b>Plate Pitch (mm)</b> },
-                { value: '(derived)', mono: true },
+                { value: <BiRow en="(derived)" vi="(suy ra)" />, mono: true },
                 { value: '53.98', mono: true, center: true },
                 {
                   value: (
@@ -1154,7 +1227,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Suggestion' },
+                { value: <BiRow en="Suggestion" vi="Gợi ý" /> },
               ],
             ]}
           />
@@ -1186,7 +1259,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'QPA(m²), Optimizer' },
+                { value: <BiRow en="QPA(m²), Optimizer" vi="QPA(m²), Bộ tối ưu" /> },
               ],
               [
                 { value: <b>Die Length MD</b> },
@@ -1237,7 +1310,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Validator' },
+                { value: <BiRow en="Validator" vi="Kiểm tra hợp lệ" /> },
               ],
               [
                 { value: <b>Corner Radius (mm)</b> },
@@ -1248,7 +1321,7 @@ export default function CalcLegend() {
                     <BiRow en="Die corner radius. 0 = square." vi="Bo góc khuôn. 0 = vuông." />
                   ),
                 },
-                { value: 'Validator' },
+                { value: <BiRow en="Validator" vi="Kiểm tra hợp lệ" /> },
               ],
               [
                 { value: <b>Magnetic Tooth (T)</b> },
@@ -1276,7 +1349,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Press check' },
+                { value: <BiRow en="Press check" vi="Kiểm tra máy in" /> },
               ],
               [
                 { value: <b>Tol P2P (mm)</b> },
@@ -1290,7 +1363,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Bleed guard' },
+                { value: <BiRow en="Bleed guard" vi="Bảo vệ bleed" /> },
               ],
               [
                 { value: <b>Die Quiet Zone (mm)</b> },
@@ -1304,7 +1377,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Edge guard' },
+                { value: <BiRow en="Edge guard" vi="Bảo vệ mép" /> },
               ],
               [
                 { value: <b>Min Slit Lane (mm)</b> },
@@ -1318,7 +1391,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Slit guard' },
+                { value: <BiRow en="Slit guard" vi="Bảo vệ slit" /> },
               ],
               [
                 { value: <b>Unwind Direction</b> },
@@ -1332,7 +1405,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Info' },
+                { value: <BiRow en="Info" vi="Thông tin" /> },
               ],
               [
                 { value: <b>Print Direction MD</b> },
@@ -1346,7 +1419,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Info' },
+                { value: <BiRow en="Info" vi="Thông tin" /> },
               ],
               [
                 { value: <b>Include Reg Marks</b> },
@@ -1360,7 +1433,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Edge guard' },
+                { value: <BiRow en="Edge guard" vi="Bảo vệ mép" /> },
               ],
               [
                 { value: <b>Plate Thickness (mm)</b> },
@@ -1374,7 +1447,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Info' },
+                { value: <BiRow en="Info" vi="Thông tin" /> },
               ],
               [
                 { value: <b>Anilox BCM</b> },
@@ -1388,7 +1461,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Info' },
+                { value: <BiRow en="Info" vi="Thông tin" /> },
               ],
               [
                 { value: <b>Print→Cut MD offset</b> },
@@ -1402,11 +1475,11 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Drawing' },
+                { value: <BiRow en="Drawing" vi="Bản vẽ" /> },
               ],
               [
                 { value: <b>Magnetic Pitch (mm)</b> },
-                { value: '(derived)', mono: true },
+                { value: <BiRow en="(derived)" vi="(suy ra)" />, mono: true },
                 { value: '53.98', mono: true, center: true },
                 {
                   value: (
@@ -1416,7 +1489,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Pitch ratio' },
+                { value: <BiRow en="Pitch ratio" vi="Tỉ số pitch" /> },
               ],
               [
                 { value: <b>Slit After Print?</b> },
@@ -1430,7 +1503,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Workflow' },
+                { value: <BiRow en="Workflow" vi="Quy trình" /> },
               ],
               [
                 { value: <b>Slit Lanes</b> },
@@ -1444,11 +1517,11 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Print Cav Across' },
+                { value: <BiRow en="Print Cav Across" vi="Cavity in ngang" /> },
               ],
               [
                 { value: <b>Print Cavities Across</b> },
-                { value: '(derived)', mono: true },
+                { value: <BiRow en="(derived)" vi="(suy ra)" />, mono: true },
                 { value: '9', mono: true, center: true },
                 {
                   value: (
@@ -1458,7 +1531,7 @@ export default function CalcLegend() {
                     />
                   ),
                 },
-                { value: 'Display' },
+                { value: <BiRow en="Display" vi="Hiển thị" /> },
               ],
             ]}
           />
@@ -1574,6 +1647,7 @@ effective_uph = base_uph × cut_type_factor`}
           />
           <Formula
             name="QPA (m²)"
+            nameVi="QPA (m²)"
             expr="QPA = Pitch × Width / 1,000,000 / Cavities / Webs × Usage"
             note="Material area per part"
             noteVi="Diện tích vật liệu trên mỗi part"
@@ -1581,6 +1655,7 @@ effective_uph = base_uph × cut_type_factor`}
           />
           <Formula
             name="QPA (LM)"
+            nameVi="QPA (LM)"
             expr="QPA_LM = Pitch / 1000 / Cavities / Webs × Usage"
             note="Linear meters of material per part"
             noteVi="Số mét dài vật liệu trên mỗi part"
@@ -1812,7 +1887,7 @@ effective_uph = base_uph × cut_type_factor`}
             ]}
             rows={[
               [
-                { value: <b>Row Type</b> },
+                { value: <BiRow en={<b>Row Type</b>} vi={<b>Loại dòng</b>} /> },
                 { value: 'row_type', mono: true },
                 { value: 'Main.Mat', mono: true },
                 {
@@ -1825,7 +1900,7 @@ effective_uph = base_uph × cut_type_factor`}
                 },
               ],
               [
-                { value: <b>Material Code</b> },
+                { value: <BiRow en={<b>Material Code</b>} vi={<b>Mã vật tư</b>} /> },
                 { value: 'code', mono: true },
                 { value: 'T9041-25-82', mono: true },
                 {
@@ -1838,7 +1913,7 @@ effective_uph = base_uph × cut_type_factor`}
                 },
               ],
               [
-                { value: <b>Usage</b> },
+                { value: <BiRow en={<b>Usage</b>} vi={<b>Định mức</b>} /> },
                 { value: 'usage', mono: true },
                 { value: '1.0', mono: true },
                 {
@@ -1864,7 +1939,7 @@ effective_uph = base_uph × cut_type_factor`}
                 },
               ],
               [
-                { value: <b>Width (mm)</b> },
+                { value: <BiRow en={<b>Width (mm)</b>} vi={<b>Khổ (mm)</b>} /> },
                 { value: 'width', mono: true },
                 { value: '82', mono: true },
                 {
@@ -1916,7 +1991,7 @@ effective_uph = base_uph × cut_type_factor`}
                 },
               ],
               [
-                { value: <b>Price S / G</b> },
+                { value: <BiRow en={<b>Price S / G</b>} vi={<b>Giá S / G</b>} /> },
                 { value: 's_price / g_price', mono: true },
                 { value: '2.50 / 2.30', mono: true },
                 {
@@ -1941,6 +2016,14 @@ effective_uph = base_uph × cut_type_factor`}
             type="warn"
             title="⚠ Corrected — Offcut priority order"
             titleVi="⚠ Đã sửa — thứ tự ưu tiên của Offcut"
+            bodyVi={
+              <>
+                Xlsx chỉ ghi một công thức <code>log_width MOD mat_width</code>. Engine thực tế chạy{' '}
+                <b>3 bậc ưu tiên</b>: giá trị <code>offcut_pct</code> người dùng nhập ghi đè thắng,
+                rồi đến suy ra từ Cavities, cuối cùng mới rơi về log_width. Chỉ bậc 1 là xác định
+                theo từng quote.
+              </>
+            }
           >
             The xlsx documented a single <code>log_width MOD mat_width</code> formula. The live
             engine actually runs a <b>3-tier priority</b>: the user-entered
@@ -1949,6 +2032,7 @@ effective_uph = base_uph × cut_type_factor`}
           </Callout>
           <Formula
             name="Offcut % — 3-tier resolver"
+            nameVi="Offcut % — bộ giải 3 bậc ưu tiên"
             expr={`Priority 1 (user override):
   if offcut_pct provided → min(raw > 1 ? raw/100 : raw, 0.999)
 
@@ -1960,33 +2044,42 @@ Priority 2 (Cavities-based, default):
 Priority 3 (legacy log_width fallback):
   OC = min(log_width % width / log_width, 0.999)`}
             note="✅ Verified — priority enforced by calcOffcut(). Capped at 0.999 to avoid div-by-zero downstream."
+            noteVi="✅ Đã xác thực — thứ tự ưu tiên do calcOffcut() đảm bảo. Chặn trần 0.999 để tránh chia cho 0 ở các bước sau."
             example="parts_web_across=4, parts_in_md=1, width=82\ncavities = 4; 4 % 82 = 4; OC = 4 / 4 = 1.0 → capped 0.999\n(a tiny sliver case; real-world widths make this < 0.1 typical)"
           />
           <Formula
             name="Slitting surcharge (slit_adj)"
+            nameVi="Phụ phí slitting (slit_adj)"
             expr={`Y     → $0.50 /LM
 blank → $0.10 /LM  (default when field empty)
 N     → $0.00 /LM`}
             note="✅ Verified — flat per-LM adder on top of material price."
+            noteVi="✅ Đã xác thực — cộng thêm cố định theo mỗi LM trên giá vật tư."
           />
           <Formula
             name="Setup Cost/unit (S price)"
+            nameVi="Chi phí setup/đơn vị (giá S)"
             expr={`Setup_S = MOQ > 0
   ? (sp + slit_adj) × setup_lm × usage × (width/1000) / (1 − OC) / MOQ
   : 0`}
             note="✅ Verified — MOQ=0 short-circuits to 0 (safe)."
+            noteVi="✅ Đã xác thực — MOQ=0 trả về 0 ngay (an toàn)."
             example="sp=2.50, slit=0, setup_lm=50, usage=1, width=82mm, OC=0.05, MOQ=250000\n= (2.50+0) × 50 × 1 × 0.082 / 0.95 / 250000 = $0.0000432 / pcs"
           />
           <Formula
             name="Run Cost/unit (S price)"
+            nameVi="Chi phí chạy máy/đơn vị (giá S)"
             expr="Run_S = (sp + slit_adj) × (width/1000) × qpa_lm_raw / safeYield(scrap) / safeYield(OC) × usage"
             note="✅ Verified — safeYield floors denom at 0.001. qpa_lm_raw is the UN-rounded QPA_LM."
+            noteVi="✅ Đã xác thực — safeYield chặn sàn mẫu số ở 0.001. qpa_lm_raw là QPA_LM CHƯA làm tròn."
             example="sp=2.50, width=82, qpa_lm_raw=0.0135, scrap=0.03, OC=0.05, usage=1\n= 2.50 × 0.082 × 0.0135 / 0.97 / 0.95 × 1 = $0.00300 / pcs"
           />
           <Formula
             name="Run Cost/unit (G price)"
+            nameVi="Chi phí chạy máy/đơn vị (giá G)"
             expr="Run_G = (gp + slit_adj) × (width/1000) × qpa_lm_raw / safeYield(scrap) / safeYield(OC) × usage"
             note="✅ Verified — identical shape, uses purchase price. G feeds G.TOTAL."
+            noteVi="✅ Đã xác thực — cùng dạng công thức, dùng giá mua. G đổ vào G.TOTAL."
           />
           <Formula
             name="Mats./MOQ (LM) & (m²) — gross material for the tier MOQ"
@@ -2004,33 +2097,41 @@ mats_moq_m2 = 3,715 × 0.082 ≈ 304.6 m²`}
           />
           <Formula
             name="VAT Loss"
+            nameVi="VAT Loss"
             expr="VAT = (trade_mode === 'USD(Book)') ? (setup_s + run_s) × 0.15 : 0"
             note="✅ Verified — applied only when trade_mode === 'USD(Book)' literal string match."
+            noteVi="✅ Đã xác thực — chỉ áp dụng khi trade_mode === 'USD(Book)' (so khớp chuỗi nguyên văn)."
           />
           <Formula
             name="Ink Run Cost — SS / Flexo / LP (non-Indigo)"
+            nameVi="Chi phí mực chạy máy — SS / Flexo / LP (không phải Indigo)"
             expr={`qpa_lm_ink = pitch/1000 / layout_per_sheet / (num_webs || 1)
 width_m   = base_mat.width/1000  OR  parse trailing digits from base_mat code
 Ink_Run   = price × qpa_lm_ink × area_pct × width_m / coverage / safeYield(scrap)
             (returns 0 if coverage = 0 OR width_m = 0 — NO division by zero)
 Ink_Setup = price × (setup_kg + coverage>0 ? area_pct×width_m×base_usage/coverage : 0) / MOQ`}
             note="✅ Verified — coverage from lib.ddl.coverage keyed by ink.print_type. Can be overridden per-row via coverage_override."
+            noteVi="✅ Đã xác thực — độ phủ lấy từ lib.ddl.coverage theo khoá ink.print_type. Có thể ghi đè từng dòng qua coverage_override."
             example="price=$30/kg, qpa_lm=0.0135, area_pct=0.1, width=0.082m, coverage=30, scrap=0.03\nInk_Run = 30 × 0.0135 × 0.10 × 0.082 / 30 / 0.97 = $0.0000114 /pcs"
           />
           <Formula
             name="Ink Run Cost — Indigo (click-based)"
+            nameVi="Chi phí mực chạy máy — Indigo (tính theo click)"
             expr={`L_ind     = ⌊980 / pitch⌋ × layout_per_sheet × num_webs
 cc        = LOOKUP(clicks, lib.ddl.click_charges)   [largest key ≤ clicks]
 Ink_Run   = L_ind > 0 ? cc × clicks / L_ind / safeYield(scrap) : 0
 setup_sheets = ⌈base_usage / 0.98⌉
 Ink_Setup = cc × clicks × setup_sheets / MOQ`}
             note="✅ Verified — 980 mm = Indigo sheet width constant; 0.98 = setup-sheet yield. clicks = number of ink channels used on the job."
+            noteVi="✅ Đã xác thực — 980 mm = hằng số khổ sheet Indigo; 0.98 = hiệu suất sheet setup. clicks = số kênh mực dùng cho job."
           />
           <Formula
             name="Totals (s_mat_cost / g_mat_cost)"
+            nameVi="Tổng (s_mat_cost / g_mat_cost)"
             expr={`s_mat_cost = Σ(setup_s + run_s) [materials]  +  Σ(setup_s + run_s) [inks]
 g_mat_cost = Σ(setup_g + run_g) [materials]  +  Σ(setup_s + run_s) [inks]`}
             note="✅ Verified — note inks only have an S price (no separate G) so contribute identically to both totals."
+            noteVi="✅ Đã xác thực — lưu ý mực chỉ có giá S (không có G riêng) nên góp như nhau vào cả hai tổng."
           />
         </section>
 
@@ -2072,7 +2173,7 @@ g_mat_cost = Σ(setup_g + run_g) [materials]  +  Σ(setup_s + run_s) [inks]`}
             ]}
             rows={[
               [
-                { value: <b>Process Type</b> },
+                { value: <BiRow en={<b>Process Type</b>} vi={<b>Loại công đoạn</b>} /> },
                 { value: 'process_type', mono: true },
                 { value: 'Die_Cut', mono: true },
                 {
@@ -2098,7 +2199,7 @@ g_mat_cost = Σ(setup_g + run_g) [materials]  +  Σ(setup_s + run_s) [inks]`}
                 },
               ],
               [
-                { value: <b>Speed</b> },
+                { value: <BiRow en={<b>Speed</b>} vi={<b>Tốc độ</b>} /> },
                 { value: 'speed', mono: true },
                 { value: '60', mono: true },
                 {
@@ -2124,7 +2225,7 @@ g_mat_cost = Σ(setup_g + run_g) [materials]  +  Σ(setup_s + run_s) [inks]`}
                 },
               ],
               [
-                { value: <b>Efficiency</b> },
+                { value: <BiRow en={<b>Efficiency</b>} vi={<b>Hiệu suất</b>} /> },
                 { value: 'efficiency', mono: true },
                 { value: '0.85', mono: true },
                 {
@@ -2137,7 +2238,7 @@ g_mat_cost = Σ(setup_g + run_g) [materials]  +  Σ(setup_s + run_s) [inks]`}
                 },
               ],
               [
-                { value: <b>Setup Hours</b> },
+                { value: <BiRow en={<b>Setup Hours</b>} vi={<b>Giờ setup</b>} /> },
                 { value: 'setup_h', mono: true },
                 { value: '2', mono: true },
                 {
@@ -2158,7 +2259,7 @@ g_mat_cost = Σ(setup_g + run_g) [materials]  +  Σ(setup_s + run_s) [inks]`}
                 },
               ],
               [
-                { value: <b>Scrap %</b> },
+                { value: <BiRow en={<b>Scrap %</b>} vi={<b>% phế phẩm</b>} /> },
                 { value: 'scrap_pct', mono: true },
                 { value: '0.03', mono: true },
                 {
@@ -2171,7 +2272,7 @@ g_mat_cost = Σ(setup_g + run_g) [materials]  +  Σ(setup_s + run_s) [inks]`}
                 },
               ],
               [
-                { value: <b>Tool Cost</b> },
+                { value: <BiRow en={<b>Tool Cost</b>} vi={<b>Chi phí khuôn</b>} /> },
                 { value: 'tool_cost', mono: true },
                 { value: '196', mono: true },
                 {
@@ -2184,7 +2285,7 @@ g_mat_cost = Σ(setup_g + run_g) [materials]  +  Σ(setup_s + run_s) [inks]`}
                 },
               ],
               [
-                { value: <b>Tool Type</b> },
+                { value: <BiRow en={<b>Tool Type</b>} vi={<b>Loại khuôn</b>} /> },
                 { value: 'tool_type', mono: true },
                 { value: 'Pressplate', mono: true },
                 {
@@ -2197,7 +2298,7 @@ g_mat_cost = Σ(setup_g + run_g) [materials]  +  Σ(setup_s + run_s) [inks]`}
                 },
               ],
               [
-                { value: <b>Repeat</b> },
+                { value: <BiRow en={<b>Repeat</b>} vi={<b>Lặp lại</b>} /> },
                 { value: 'repeat', mono: true },
                 { value: '1', mono: true },
                 {
@@ -2222,6 +2323,15 @@ g_mat_cost = Σ(setup_g + run_g) [materials]  +  Σ(setup_s + run_s) [inks]`}
             type="note"
             title="How the engine resolves speed_uom"
             titleVi="Cách engine xử lý speed_uom"
+            bodyVi={
+              <>
+                <code className="cl-ic">speed_uom</code> lấy từ dòng Rate Table của Workcenter đã
+                chọn. Engine chuẩn hoá bằng cách bỏ khoảng trắng + chuyển chữ thường trước khi so
+                khớp, nên "m/min", "M/MIN", "m / min" đều dùng được. UOM không nhận ra sẽ cho{' '}
+                <code>uph = 0</code> → chi phí máy + nhân công bằng 0 (không phải lỗi). Tốc độ cũng
+                được <b>chặn sàn pitch ở 1</b> để tránh chia cho 0 khi tab Layout trống.
+              </>
+            }
           >
             <code className="cl-ic">speed_uom</code> comes from the Rate Table row of the picked
             Workcenter. The engine normalizes by stripping whitespace + lowercasing before matching,
@@ -2231,28 +2341,38 @@ g_mat_cost = Σ(setup_g + run_g) [materials]  +  Σ(setup_s + run_s) [inks]`}
           </Callout>
           <Formula
             name="UPH (m/min)"
+            nameVi="UPH (m/min)"
             expr="uph = speed × eff × 60 × 1000 / max(1, pitch) × layout"
             note="✅ Verified — pitch in mm, ×1000 converts m→mm."
+            noteVi="✅ Đã xác thực — pitch tính bằng mm, ×1000 đổi m→mm."
           />
           <Formula
             name="UPH (Mtr/Hr or m/Hr)"
+            nameVi="UPH (Mtr/Hr hoặc m/Hr)"
             expr="uph = speed × eff × 1000 / max(1, pitch) × layout"
             note="✅ Verified — matches 'mtr/hr' OR 'm/hr' after normalization."
+            noteVi="✅ Đã xác thực — khớp 'mtr/hr' HOẶC 'm/hr' sau khi chuẩn hoá."
           />
           <Formula
             name="UPH (Stamp/min)"
+            nameVi="UPH (Stamp/min)"
             expr="uph = speed × eff × 60 × layout"
             note="✅ Verified — 1 stroke produces Layout cavities simultaneously."
+            noteVi="✅ Đã xác thực — 1 nhát dập cho ra đồng thời số cavity của Layout."
           />
           <Formula
             name="UPH (Pcs/hr, Pcs/h)"
+            nameVi="UPH (Pcs/hr, Pcs/h)"
             expr="uph = speed × eff"
             note="✅ Verified — direct pcs/hr, no Layout multiplier."
+            noteVi="✅ Đã xác thực — pcs/hr trực tiếp, không nhân Layout."
           />
           <Formula
             name="UPH (Sheets/hr, Sheet/hr)"
+            nameVi="UPH (Sheets/hr, Sheet/hr)"
             expr="uph = speed × eff × layout"
             note="✅ Verified — accepts both 'sheets/hr' and 'sheet/hr' variants."
+            noteVi="✅ Đã xác thực — chấp nhận cả hai biến thể 'sheets/hr' và 'sheet/hr'."
           />
 
           <h3>
@@ -2263,30 +2383,39 @@ g_mat_cost = Σ(setup_g + run_g) [materials]  +  Σ(setup_s + run_s) [inks]`}
           </h3>
           <Formula
             name="Setup Machine/unit"
+            nameVi="Máy setup/đơn vị"
             expr="setup_mach = MOQ > 0 ? setup_h × mach_rate / MOQ × repeat : 0"
             note="✅ Verified — MOQ=0 guard returns 0 (no div-by-zero). Default repeat=1."
+            noteVi="✅ Đã xác thực — chốt chặn MOQ=0 trả về 0 (không chia cho 0). Mặc định repeat=1."
           />
           <Formula
             name="Setup Labor/unit"
+            nameVi="Nhân công setup/đơn vị"
             expr="setup_labor = MOQ > 0 ? setup_h × labor_rate × crew / MOQ × repeat : 0"
             note="✅ Verified — crew count from rate table row."
+            noteVi="✅ Đã xác thực — số thợ lấy từ dòng bảng đơn giá."
           />
           <Formula
             name="Run Machine/unit"
+            nameVi="Máy chạy/đơn vị"
             expr={`scrapFactor = 1 − calcMatScrapFactor(st)          [note: SF, not scrap]
 run_mach    = uph > 0 ? mach_rate / uph / max(0.001, scrapFactor) × repeat : 0`}
             note="✅ Verified — floor 0.001 prevents scrap=99.9% from blowing up divisor."
+            noteVi="✅ Đã xác thực — sàn 0.001 ngăn scrap=99.9% làm mẫu số bùng nổ."
           />
           <Formula
             name="Run Labor/unit"
+            nameVi="Nhân công chạy máy/đơn vị"
             expr={`run_labor = ((uph > 0 ? labor_rate × crew / uph / max(0.001, SF) : 0)
               + (manual_uph > 0 ? manual_rate / manual_uph / max(0.001, SF) : 0)
              ) × repeat
   where manual_rate = rate of 'Manual' workcenter || $2.54/h fallback`}
             note="✅ Verified — manual_uph=0 skips the manual addition entirely."
+            noteVi="✅ Đã xác thực — manual_uph=0 bỏ qua hoàn toàn phần cộng thủ công."
           />
           <Formula
             name="EAU (lifetime qty for tooling cap)"
+            nameVi="EAU (sản lượng vòng đời để chặn trần khuôn)"
             expr={`eau    = (eau_ovr > 0) ? eau_ovr
        : (annual_qty || moq) × (product_lifetime || 1)
 eauCap = eau × 0.8      ← only 80% of lifetime EAU is amortizable`}
@@ -2295,15 +2424,18 @@ eauCap = eau × 0.8      ← only 80% of lifetime EAU is amortizable`}
           />
           <Formula
             name="Tooling/unit — Standard"
+            nameVi="Khuôn/đơn vị — Tiêu chuẩn"
             expr={`tlife = (tool_life > 0) ? tool_life : (DDL.tool_life[tool_type] || 1)
 totalToolPcs = tlife × layout
 tool = (totalToolPcs > eauCap)
   ? tool_cost / eauCap           ← EAU cap applies (eauCap = eau × 0.8)
   : tool_cost / totalToolPcs     ← normal amortization`}
             note="✅ Verified — the editable per-row Tool Life column is the source of truth: its value is used whenever positive, so editing it changes the cost. The DDL library life only SEEDS the column and is the fallback when the row is 0/empty (legacy quotes). Divisor floored at the 0.8-capped EAU. If the row is 0 and tool_type is missing from DDL, tlife falls back to 1 → massive per-unit cost (sentinel for broken config)."
+            noteVi="✅ Đã xác thực — cột Tool Life sửa được trên từng dòng là nguồn chuẩn: giá trị đó được dùng hễ dương, nên sửa nó là chi phí đổi theo. Tuổi thọ trong thư viện DDL chỉ GIEO giá trị ban đầu cho cột và là dự phòng khi dòng = 0/trống (quote cũ). Mẫu số chặn sàn ở EAU đã nhân trần 0.8. Nếu dòng = 0 và tool_type không có trong DDL, tlife rơi về 1 → chi phí/đơn vị rất lớn (dấu hiệu cấu hình hỏng)."
           />
           <Formula
             name="Tooling/unit — Jig (special case)"
+            nameVi="Khuôn/đơn vị — Jig (trường hợp đặc biệt)"
             expr={`// Jig/Jig & Fixture are normalized to match either variant
 ttNorm = tool_type.toLowerCase().replace(/[\\s&]/g, '')
 isJig  = ttNorm === 'jig' || ttNorm === 'jigfixture'
@@ -2311,12 +2443,15 @@ if (isJig):
   tool = (tlife > eauCap) ? tool_cost / eauCap : tool_cost / tlife
          (eauCap = eau × 0.8; Jig denominator has NO × layout)`}
             note="⚠ Corrected — xlsx omitted the DDL key normalization step. Writing 'Jig & Fixture' or 'jig' or 'JIG' all work identically. The cap is the same eau × 0.8; unlike Standard, Jig's raw-amortization denominator is tlife alone (no × layout)."
+            noteVi="⚠ Đã sửa — xlsx bỏ sót bước chuẩn hoá khoá DDL. Ghi 'Jig & Fixture' hay 'jig' hay 'JIG' đều cho kết quả như nhau. Trần vẫn là eau × 0.8; khác với Tiêu chuẩn, mẫu số phân bổ thô của Jig chỉ là tlife (không × layout)."
           />
           <Formula
             name="Extra cost per unit"
+            nameVi="Chi phí phụ trên mỗi đơn vị"
             expr={`extra     = (extra_cost > 0) ? extra_cost / max(0.001, SF) : 0
 extra_vat = (trade_mode === 'USD(Book)') ? extra × 0.15 : 0`}
             note="⚠ Added — xlsx omitted this; extra is scrap-adjusted."
+            noteVi="⚠ Bổ sung — xlsx bỏ sót mục này; extra đã hiệu chỉnh theo phế phẩm."
           />
           <Formula
             name="Production time (total_time) & PROD TIME column"
@@ -2330,10 +2465,12 @@ PROD TIME (hrs) = total_time / 60`}
           />
           <Formula
             name="Aggregates (return shape of calcProcess)"
+            nameVi="Tổng hợp (cấu trúc trả về của calcProcess)"
             expr={`Returned per-process: { setup_mach, setup_labor, run_mach, run_labor,
                          tooling, extra, extra_vat, uph, mach_rate,
                          labor_rate, speed_uom, eau, pitch, total_time }`}
             note="✅ Verified — calcAll sums Run + Setup into overhead/labor buckets; see next section for how returned overhead/labor fields differ from the xlsx description."
+            noteVi="✅ Đã xác thực — calcAll cộng Run + Setup vào các nhóm overhead/labor; xem mục kế tiếp để biết các trường overhead/labor trả về khác mô tả trong xlsx thế nào."
           />
         </section>
 
@@ -2360,23 +2497,33 @@ PROD TIME (hrs) = total_time / 60`}
           </h3>
           <Formula
             name="Container/unit"
+            nameVi="Bao/đơn vị"
             expr="Container_cost / pcs_per_bag"
             note="Bag/tray cost divided by pieces per bag"
+            noteVi="Giá bao/khay chia cho số pcs mỗi bao"
           />
           <Formula
             name="Box/unit"
+            nameVi="Thùng/đơn vị"
             expr="Box_cost / bags_per_box / pcs_per_bag"
             note="Carton cost spread equally to each piece"
+            noteVi="Giá thùng carton chia đều cho từng pcs"
           />
-          <Formula name="Other Packing" expr="other_packing  (USD/unit — entered directly)" />
+          <Formula
+            name="Other Packing"
+            nameVi="Đóng gói khác"
+            expr="other_packing  (USD/unit — entered directly)"
+          />
           <Formula
             name="Shipping/unit"
+            nameVi="Vận chuyển/đơn vị"
             expr="(shipping_cost + other_ship) / ship_qty"
             note="✅ Verified — ship_qty = st.ship_qty || st.moq || 1 (falls back to MOQ, then 1)."
             noteVi="✅ Đã xác thực — ship_qty = st.ship_qty || st.moq || 1 (rơi về MOQ, rồi về 1)."
           />
           <Formula
             name="Total Pack & Ship"
+            nameVi="Tổng Đóng gói & Vận chuyển"
             expr="= Container/unit + Box/unit + Other + Shipping/unit"
           />
 
@@ -2478,9 +2625,9 @@ PROD TIME (hrs) = total_time / 60`}
           <FieldTable
             columns={[
               { label: 'KPI', w: '18%' },
-              { label: 'Engine formula', w: '46%' },
-              { label: 'Target', w: '11%' },
-              { label: 'Meaning / Audit', w: '25%' },
+              { label: <BiRow en="Engine formula" vi="Công thức engine" />, w: '46%' },
+              { label: <BiRow en="Target" vi="Mục tiêu" />, w: '11%' },
+              { label: <BiRow en="Meaning / Audit" vi="Ý nghĩa / Kiểm chứng" />, w: '25%' },
             ]}
             rows={[
               [
@@ -2495,7 +2642,14 @@ PROD TIME (hrs) = total_time / 60`}
                   mono: true,
                 },
                 { value: 'N/A', center: true },
-                { value: <b>Primary basis for GM%, VA%, CONTR%</b> },
+                {
+                  value: (
+                    <BiRow
+                      en={<b>Primary basis for GM%, VA%, CONTR%</b>}
+                      vi={<b>Cơ sở chính cho GM%, VA%, CONTR%</b>}
+                    />
+                  ),
+                },
               ],
               [
                 { value: <b>G.TOTAL COST</b> },
@@ -2509,10 +2663,19 @@ PROD TIME (hrs) = total_time / 60`}
                   mono: true,
                 },
                 { value: 'N/A', center: true },
-                { value: 'Purchase-price basis; feeds SGA calc' },
+                {
+                  value: (
+                    <BiRow
+                      en="Purchase-price basis; feeds SGA calc"
+                      vi="Cơ sở giá mua; đổ vào tính SGA"
+                    />
+                  ),
+                },
               ],
               [
-                { value: <b>VA% (Value Add)</b> },
+                {
+                  value: <BiRow en={<b>VA% (Value Add)</b>} vi={<b>VA% (Giá trị gia tăng)</b>} />,
+                },
                 {
                   value: (
                     <code className="cl-ic">
@@ -2522,7 +2685,14 @@ PROD TIME (hrs) = total_time / 60`}
                   mono: true,
                 },
                 { value: '> 30%', center: true, bold: true },
-                { value: <span>⚠ s_mat (not g_mat); CONTR does NOT include VAT/overhead.</span> },
+                {
+                  value: (
+                    <BiRow
+                      en="⚠ s_mat (not g_mat); CONTR does NOT include VAT/overhead."
+                      vi="⚠ s_mat (không phải g_mat); CONTR KHÔNG gồm VAT/overhead."
+                    />
+                  ),
+                },
               ],
               [
                 { value: <b>CONTR%</b> },
@@ -2537,9 +2707,18 @@ PROD TIME (hrs) = total_time / 60`}
                 { value: '> 25%', center: true, bold: true },
                 {
                   value: (
-                    <span>
-                      ⚠ Uses <code>run_labor_only = labor_cost − setup_labor_total</code>.
-                    </span>
+                    <BiRow
+                      en={
+                        <>
+                          ⚠ Uses <code>run_labor_only = labor_cost − setup_labor_total</code>.
+                        </>
+                      }
+                      vi={
+                        <>
+                          ⚠ Dùng <code>run_labor_only = labor_cost − setup_labor_total</code>.
+                        </>
+                      }
+                    />
                   ),
                 },
               ],
@@ -2547,25 +2726,58 @@ PROD TIME (hrs) = total_time / 60`}
                 { value: <b>GM%</b> },
                 { value: <code className="cl-ic">1 − s_ttl / sp_price</code>, mono: true },
                 { value: '> 15%', center: true, bold: true },
-                { value: <span>⚠ Uses s_ttl, not g_ttl!</span> },
-              ],
-              [
-                { value: <b>GM% after SGA</b> },
-                { value: <code className="cl-ic">1 − (s_ttl + sga) / sp_price</code>, mono: true },
-                { value: 'N/A', center: true },
                 {
                   value: (
-                    <span>
-                      ⚠ <b>Added</b> — Sprint 9D.3. SGA per-site.
-                    </span>
+                    <BiRow en="⚠ Uses s_ttl, not g_ttl!" vi="⚠ Dùng s_ttl, không phải g_ttl!" />
                   ),
                 },
               ],
               [
-                { value: <b>Target Selling Price</b> },
-                { value: <em>(not computed by calcAll)</em>, mono: false },
+                { value: <BiRow en={<b>GM% after SGA</b>} vi={<b>GM% sau SGA</b>} /> },
+                {
+                  value: <code className="cl-ic">1 − (s_ttl + sga) / sp_price</code>,
+                  mono: true,
+                },
                 { value: 'N/A', center: true },
-                { value: 'UI-only: user inverts CONTR% formula manually.' },
+                {
+                  value: (
+                    <BiRow
+                      en={
+                        <>
+                          ⚠ <b>Added</b> — Sprint 9D.3. SGA per-site.
+                        </>
+                      }
+                      vi={
+                        <>
+                          ⚠ <b>Bổ sung</b> — Sprint 9D.3. SGA theo site.
+                        </>
+                      }
+                    />
+                  ),
+                },
+              ],
+              [
+                {
+                  value: <BiRow en={<b>Target Selling Price</b>} vi={<b>Giá bán mục tiêu</b>} />,
+                },
+                {
+                  value: (
+                    <BiRow
+                      en={<em>(not computed by calcAll)</em>}
+                      vi={<em>(calcAll không tính)</em>}
+                    />
+                  ),
+                  mono: false,
+                },
+                { value: 'N/A', center: true },
+                {
+                  value: (
+                    <BiRow
+                      en="UI-only: user inverts CONTR% formula manually."
+                      vi="Chỉ trên UI: người dùng tự đảo công thức CONTR%."
+                    />
+                  ),
+                },
               ],
             ]}
           />
@@ -2888,8 +3100,8 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
               lt_material, lt_material_ovr, lt_sample, lt_po, lt_po_ovr, lt_remark, lt_process,
               lt_material_type
             </code>{' '}
-            (default <code>''</code>) + <code>product_tolerance</code> (default <code>'0.2'</code>).{' '}
-            <code>safeLeadTime()</code> additionally heals <code>lt_remark_ovr</code> +{' '}
+            (default <code>''</code>) + <code>product_tolerance</code> (default <code>'0.2'</code>
+            ). <code>safeLeadTime()</code> additionally heals <code>lt_remark_ovr</code> +{' '}
             <code>remark_selection</code> on read of legacy quotes (no schema bump).
           </Callout>
         </section>
@@ -2941,7 +3153,9 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
               [
                 { value: 'Metal', bold: true },
                 { value: '500,000', mono: true, center: true },
-                { value: <BiRow en="High-durability metal die" vi="Khuôn kim loại độ bền cao" /> },
+                {
+                  value: <BiRow en="High-durability metal die" vi="Khuôn kim loại độ bền cao" />,
+                },
                 { value: '$500', mono: true, center: true },
               ],
               [
@@ -3504,10 +3718,10 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
               <div className="cl-fgroup-label">── {grp.group} ──</div>
               <FieldTable
                 columns={[
-                  { label: 'Formula Name', w: '24%' },
-                  { label: 'Expression', w: '50%' },
-                  { label: 'Unit', w: '12%' },
-                  { label: 'Source', w: '14%' },
+                  { label: <BiRow en="Formula Name" vi="Tên công thức" />, w: '24%' },
+                  { label: <BiRow en="Expression" vi="Biểu thức" />, w: '50%' },
+                  { label: <BiRow en="Unit" vi="Đơn vị" />, w: '12%' },
+                  { label: <BiRow en="Source" vi="Nguồn" />, w: '14%' },
                 ]}
                 rows={grp.items.map(([name, expr, unit, src]) => [
                   { value: <b>{name}</b> },
@@ -3531,7 +3745,10 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
               />
             </h2>
             <p className="cl-section-sub">
-              MOQ 250,000 · EAU 3,000,000/yr · Site VN · Trade Mode USD(Normal)
+              <BiRow
+                en="MOQ 250,000 · EAU 3,000,000/yr · Site VN · Trade Mode USD(Normal)"
+                vi="MOQ 250,000 · EAU 3,000,000/năm · Site VN · Trade Mode USD(Normal)"
+              />
             </p>
           </header>
 
@@ -3540,31 +3757,31 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
           </h3>
           <FieldTable
             columns={[
-              { label: 'Field', w: '30%' },
-              { label: 'Value', w: '30%' },
-              { label: 'Notes', w: '40%' },
+              { label: <BiRow en="Field" vi="Trường" />, w: '30%' },
+              { label: <BiRow en="Value" vi="Giá trị" />, w: '30%' },
+              { label: <BiRow en="Notes" vi="Ghi chú" />, w: '40%' },
             ]}
             rows={[
               [{ value: <b>CCL P/N</b> }, { value: 'T3000002', mono: true }, { value: '' }],
               [
                 { value: <b>MOQ</b> },
                 { value: '250,000 pcs', mono: true },
-                { value: '✅ Must be > 0' },
+                { value: <BiRow en="✅ Must be > 0" vi="✅ Phải > 0" /> },
               ],
               [
-                { value: <b>Annual Qty (EAU)</b> },
+                { value: <BiRow en={<b>Annual Qty (EAU)</b>} vi={<b>Sản lượng năm (EAU)</b>} /> },
                 { value: '3,000,000 pcs', mono: true },
                 { value: '' },
               ],
               [
-                { value: <b>Selling Price</b> },
+                { value: <BiRow en={<b>Selling Price</b>} vi={<b>Giá bán</b>} /> },
                 { value: '$0.099', mono: true },
-                { value: 'Target from customer' },
+                { value: <BiRow en="Target from customer" vi="Mục tiêu từ khách hàng" /> },
               ],
               [
-                { value: <b>Trade Mode</b> },
+                { value: <BiRow en={<b>Trade Mode</b>} vi={<b>Hình thức thương mại</b>} /> },
                 { value: 'USD(Normal)', mono: true },
-                { value: 'No VAT loss' },
+                { value: <BiRow en="No VAT loss" vi="Không mất VAT" /> },
               ],
               [{ value: <b>Site</b> }, { value: 'VN', mono: true }, { value: '' }],
             ]}
@@ -3575,31 +3792,45 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
           </h3>
           <FieldTable
             columns={[
-              { label: 'Parameter', w: '30%' },
-              { label: 'Value', w: '28%' },
-              { label: '→ Auto-calc', w: '42%' },
+              { label: <BiRow en="Parameter" vi="Tham số" />, w: '30%' },
+              { label: <BiRow en="Value" vi="Giá trị" />, w: '28%' },
+              { label: <BiRow en="→ Auto-calc" vi="→ Tự tính" />, w: '42%' },
             ]}
             rows={[
-              [{ value: <b>Part Length</b> }, { value: '52 mm', mono: true }, { value: '' }],
               [
-                { value: <b>Min Gap MD</b> },
+                { value: <BiRow en={<b>Part Length</b>} vi={<b>Chiều dài part</b>} /> },
+                { value: '52 mm', mono: true },
+                { value: '' },
+              ],
+              [
+                { value: <BiRow en={<b>Min Gap MD</b>} vi={<b>Khoảng hở MD tối thiểu</b>} /> },
                 { value: '2 mm', mono: true },
                 { value: '→ Pitch = 54 mm', mono: true },
               ],
               [
-                { value: <b>Parts across TD</b> },
+                { value: <BiRow en={<b>Parts across TD</b>} vi={<b>Số part ngang TD</b>} /> },
                 { value: '4', mono: true, center: true },
-                { value: '→ Layout = 4 cavities/stroke', mono: true },
+                {
+                  value: <BiRow en="→ Layout = 4 cavities/stroke" vi="→ Layout = 4 cavity/dập" />,
+                  mono: true,
+                },
               ],
               [
-                { value: <b>Part Width</b> },
+                { value: <BiRow en={<b>Part Width</b>} vi={<b>Chiều rộng part</b>} /> },
                 { value: '82 mm', mono: true },
                 { value: '→ QPA_LM = 54/1000/4 = 0.0135 LM/pcs', mono: true },
               ],
               [
-                { value: <b>Process Scrap (RDC)</b> },
+                {
+                  value: (
+                    <BiRow en={<b>Process Scrap (RDC)</b>} vi={<b>Phế phẩm công đoạn (RDC)</b>} />
+                  ),
+                },
                 { value: '3%', mono: true },
-                { value: '→ Scrap Factor = 3%', mono: true },
+                {
+                  value: <BiRow en="→ Scrap Factor = 3%" vi="→ Hệ số phế phẩm = 3%" />,
+                  mono: true,
+                },
               ],
             ]}
           />
@@ -3609,11 +3840,11 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
           </h3>
           <FieldTable
             columns={[
-              { label: 'Material', w: '30%' },
-              { label: 'Width', w: '12%' },
+              { label: <BiRow en="Material" vi="Vật tư" />, w: '30%' },
+              { label: <BiRow en="Width" vi="Khổ" />, w: '12%' },
               { label: 'G.Price', w: '14%' },
               { label: 'Setup_LM', w: '14%' },
-              { label: 'Output', w: '30%' },
+              { label: <BiRow en="Output" vi="Kết quả" />, w: '30%' },
             ]}
             rows={[
               [
@@ -3631,30 +3862,30 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
           </h3>
           <FieldTable
             columns={[
-              { label: 'Process', w: '20%' },
+              { label: <BiRow en="Process" vi="Công đoạn" />, w: '20%' },
               { label: 'Workcenter', w: '22%' },
-              { label: 'Speed', w: '18%' },
-              { label: 'Tool', w: '24%' },
-              { label: 'Output', w: '16%' },
+              { label: <BiRow en="Speed" vi="Tốc độ" />, w: '18%' },
+              { label: <BiRow en="Tool" vi="Khuôn" />, w: '24%' },
+              { label: <BiRow en="Output" vi="Kết quả" />, w: '16%' },
             ]}
             rows={[
               [
-                { value: <b>SS Print</b> },
+                { value: <BiRow en={<b>SS Print</b>} vi={<b>In SS</b>} /> },
                 { value: 'SS Silkscreen', mono: true },
                 { value: '60 m/min', mono: true, center: true },
                 { value: '$196 Pressplate', mono: true },
                 { value: '' },
               ],
               [
-                { value: <b>RDC Die-Cut</b> },
+                { value: <BiRow en={<b>RDC Die-Cut</b>} vi={<b>Bế RDC</b>} /> },
                 { value: 'RDC350-12', mono: true },
                 { value: '80 stamp/min', mono: true, center: true },
                 { value: '$1,529 RDC', mono: true },
                 { value: '' },
               ],
               [
-                { value: <b>Packing</b> },
-                { value: 'Manual packing', mono: true },
+                { value: <BiRow en={<b>Packing</b>} vi={<b>Đóng gói</b>} /> },
+                { value: <BiRow en="Manual packing" vi="Đóng gói thủ công" />, mono: true },
                 { value: '1,500 pcs/hr', mono: true, center: true },
                 { value: '—', center: true },
                 { value: '' },
@@ -3662,9 +3893,12 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
               [
                 { value: <b>→ Overhead</b>, bold: true },
                 { value: '$0.000893/unit', mono: true, bold: true },
-                { value: <b>→ Labor</b>, bold: true },
+                { value: <BiRow en={<b>→ Labor</b>} vi={<b>→ Nhân công</b>} />, bold: true },
                 { value: '$0.003145/unit', mono: true, bold: true },
-                { value: <b>→ Tooling: $0.002156</b>, bold: true },
+                {
+                  value: <BiRow en={<b>→ Tooling: $0.002156</b>} vi={<b>→ Khuôn: $0.002156</b>} />,
+                  bold: true,
+                },
               ],
             ]}
           />
@@ -3674,28 +3908,36 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
           </h3>
           <FieldTable
             columns={[
-              { label: 'Component', w: '30%' },
-              { label: 'Parameters', w: '46%' },
-              { label: 'Cost/unit', w: '24%' },
+              { label: <BiRow en="Component" vi="Thành phần" />, w: '30%' },
+              { label: <BiRow en="Parameters" vi="Tham số" />, w: '46%' },
+              { label: <BiRow en="Cost/unit" vi="Chi phí/đơn vị" />, w: '24%' },
             ]}
             rows={[
               [
-                { value: <b>Container (bag)</b> },
+                { value: <BiRow en={<b>Container (bag)</b>} vi={<b>Bao (túi)</b>} /> },
                 { value: '100 pcs/bag × $0.02/bag', mono: true },
                 { value: '$0.000200', mono: true, center: true },
               ],
               [
-                { value: <b>Carton (box)</b> },
+                { value: <BiRow en={<b>Carton (box)</b>} vi={<b>Thùng carton (hộp)</b>} /> },
                 { value: '100 bags/box × $0.60/box', mono: true },
                 { value: '$0.000060', mono: true, center: true },
               ],
               [
-                { value: <b>Shipping</b> },
+                { value: <BiRow en={<b>Shipping</b>} vi={<b>Vận chuyển</b>} /> },
                 { value: '$380 / 250,000 pcs', mono: true },
                 { value: '$0.001520', mono: true, center: true },
               ],
               [
-                { value: <b>→ Total Pack & Ship</b>, bold: true },
+                {
+                  value: (
+                    <BiRow
+                      en={<b>→ Total Pack & Ship</b>}
+                      vi={<b>→ Tổng Đóng gói & Vận chuyển</b>}
+                    />
+                  ),
+                  bold: true,
+                },
                 { value: '' },
                 { value: '$0.003782', mono: true, center: true, bold: true },
               ],
@@ -3705,7 +3947,20 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
           <h3>
             <BiHead en="Final results" vi="Kết quả cuối" />
           </h3>
-          <Callout type="note" title="Notes on this worked example" titleVi="Ghi chú về ví dụ này">
+          <Callout
+            type="note"
+            title="Notes on this worked example"
+            titleVi="Ghi chú về ví dụ này"
+            bodyVi={
+              <>
+                Ví dụ này giữ nguyên từ xlsx v3.3 và dùng các con số giá <i>g</i> mà tài liệu
+                training cũ đưa ra. Trong engine hiện tại, GM% / VA% / CONTR% dùng cơ sở giá{' '}
+                <b>s</b> (sửa ở Sprint 21); với trường hợp đơn giản bên dưới, giá <code>s</code> và{' '}
+                <code>g</code> được giả định bằng nhau nên các KPI vẫn khớp. Trên quote thật khi s ≠
+                g, sẽ có chênh lệch nhỏ so với tài liệu cũ.
+              </>
+            }
+          >
             This example is preserved from the xlsx v3.3 and uses the <i>g</i>-price figures that
             the old training manual showed. In the live engine, GM% / VA% / CONTR% use the <b>s</b>
             -price basis (Sprint 21 fix); for the simple case below <code>s</code> and{' '}
@@ -3714,48 +3969,58 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
           </Callout>
           <FieldTable
             columns={[
-              { label: 'Component', w: '32%' },
+              { label: <BiRow en="Component" vi="Thành phần" />, w: '32%' },
               { label: 'USD/unit', w: '24%' },
-              { label: 'Engine field', w: '44%' },
+              { label: <BiRow en="Engine field" vi="Trường engine" />, w: '44%' },
             ]}
             rows={[
               [
-                { value: 'Material cost (supplier)' },
+                { value: <BiRow en="Material cost (supplier)" vi="Chi phí vật tư (NCC)" /> },
                 { value: '$0.002670', mono: true, center: true },
                 { value: <code className="cl-ic">s_mat_cost</code> },
               ],
               [
-                { value: 'Overhead (run only)' },
+                { value: <BiRow en="Overhead (run only)" vi="Overhead (chỉ phần Run)" /> },
                 { value: '$0.000893', mono: true, center: true },
                 { value: <code className="cl-ic">overhead</code> },
               ],
               [
-                { value: 'Labor Cost (run only)' },
+                {
+                  value: <BiRow en="Labor Cost (run only)" vi="Chi phí nhân công (chỉ phần Run)" />,
+                },
                 { value: '$0.003145', mono: true, center: true },
                 { value: <code className="cl-ic">labor_cost</code> },
               ],
               [
-                { value: 'Setup machine' },
-                { value: <em>split out</em>, mono: false, center: true },
+                { value: <BiRow en="Setup machine" vi="Setup máy" /> },
+                {
+                  value: <BiRow en={<em>split out</em>} vi={<em>tách riêng</em>} />,
+                  mono: false,
+                  center: true,
+                },
                 { value: <code className="cl-ic">bd_setup_mach</code> },
               ],
               [
-                { value: 'Setup labor' },
-                { value: <em>split out</em>, mono: false, center: true },
+                { value: <BiRow en="Setup labor" vi="Setup nhân công" /> },
+                {
+                  value: <BiRow en={<em>split out</em>} vi={<em>tách riêng</em>} />,
+                  mono: false,
+                  center: true,
+                },
                 { value: <code className="cl-ic">bd_setup_labor</code> },
               ],
               [
                 { value: 'VAT Loss' },
                 { value: '$0.000000', mono: true, center: true },
-                { value: 'USD(Normal) mode → 0' },
+                { value: <BiRow en="USD(Normal) mode → 0" vi="Chế độ USD(Normal) → 0" /> },
               ],
               [
-                { value: 'Tooling' },
+                { value: <BiRow en="Tooling" vi="Khuôn" /> },
                 { value: '$0.002156', mono: true, center: true },
                 { value: <code className="cl-ic">tooling</code> },
               ],
               [
-                { value: 'Pack & Ship' },
+                { value: <BiRow en="Pack & Ship" vi="Đóng gói & Vận chuyển" /> },
                 { value: '$0.003782', mono: true, center: true },
                 { value: <code className="cl-ic">packing_ship</code> },
               ],
@@ -3765,7 +4030,7 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
                 { value: <code className="cl-ic">s_ttl</code> },
               ],
               [
-                { value: <b>Selling Price</b>, bold: true },
+                { value: <BiRow en={<b>Selling Price</b>} vi={<b>Giá bán</b>} />, bold: true },
                 { value: <b>$0.099000</b>, mono: true, center: true, bold: true },
                 { value: <code className="cl-ic">sp_price</code> },
               ],
@@ -3800,27 +4065,27 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
             type="tip"
             title="💡 Click a card's button to load the example into the current quote"
             titleVi="💡 Bấm nút trong mỗi card để load ví dụ vào quote hiện tại"
+            bodyVi={
+              <>
+                Mỗi card là một tình huống thật tại CCL Hà Nội cho cùng nhãn 82 × 52 mm. Khác biệt
+                là bế cùng máy in (in-line, tỉ số 1:1) hay bế trên máy RDC riêng (off-line, 1:2).
+                Load một ví dụ để thấy tất cả trường đã điền — chuyển qua tab Layout để xem card
+                Print/Cut Summary &amp; Suggestion phản ứng.
+              </>
+            }
           >
             Each card represents a real CCL Hanoi scenario for the same 82 × 52 mm adhesive label.
             The difference is whether the die-cut runs on the same press as the print (in-line, 1:1
             cylinder ratio) or on a separate RDC machine (off-line, 1:2 ratio). Load one to see
             every field populated — then switch to the Layout tab to watch the Print / Cut summary
             &amp; suggestion cards react.
-            <br />
-            <br />
-            <span className="cl-bi-vi">
-              Mỗi card là một tình huống thật tại CCL Hà Nội cho cùng nhãn 82 × 52 mm. Khác biệt là
-              bế cùng máy in (in-line, tỉ số 1:1) hay bế trên máy RDC riêng (off-line, 1:2). Load
-              một ví dụ để thấy tất cả trường đã điền — chuyển qua tab Layout để xem card Print/Cut
-              Summary &amp; Suggestion phản ứng.
-            </span>
           </Callout>
 
           <div className="cl-wf-grid">
             {/* ── Case 1: In-line Gallus ── */}
             <div className="cl-wf-card cl-wf-inline">
               <div className="cl-wf-head">
-                <div className="cl-wf-badge">Case 1</div>
+                <div className="cl-wf-badge">{t('lgd.case', { n: 1 })}</div>
                 <div className="cl-wf-title">
                   <BiHead en="In-line · Gallus EM340" vi="In-line · Gallus EM340" />
                 </div>
@@ -3834,17 +4099,17 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
               <table className="cl-wf-table">
                 <tbody>
                   <tr>
-                    <td>Press · Máy</td>
+                    <td>{L('Press', 'Máy')}</td>
                     <td>
-                      <code>Gallus EM340</code> (Print + Cut)
+                      <code>Gallus EM340</code> {L('(Print + Cut)', '(In + Bế)')}
                     </td>
                   </tr>
                   <tr>
                     <td>Web / Sheet</td>
-                    <td>330 / 54 mm · 1 web</td>
+                    <td>330 / 54 mm · {L('1 web', '1 web')}</td>
                   </tr>
                   <tr>
-                    <td>Net size · Net</td>
+                    <td>{L('Net size', 'Kích thước net')}</td>
                     <td>80 × 50 mm</td>
                   </tr>
                   <tr>
@@ -3852,12 +4117,12 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
                     <td>±1 TD / ±1 MD</td>
                   </tr>
                   <tr>
-                    <td>Die · Khuôn</td>
+                    <td>{L('Die', 'Khuôn')}</td>
                     <td>82 × 52 mm</td>
                   </tr>
                   <tr>
                     <td>Layout</td>
-                    <td>4 across · 1 MD = 4 pcs/shot</td>
+                    <td>{L('4 across · 1 MD = 4 pcs/shot', '4 ngang · 1 MD = 4 pcs/dập')}</td>
                   </tr>
                   <tr>
                     <td>
@@ -3876,15 +4141,15 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
                     </td>
                   </tr>
                   <tr>
-                    <td>Ratio · Tỉ số</td>
-                    <td className="cl-wf-ok">✓ 1 : 1 integer</td>
+                    <td>{L('Ratio', 'Tỉ số')}</td>
+                    <td className="cl-wf-ok">{L('✓ 1 : 1 integer', '✓ 1 : 1 nguyên')}</td>
                   </tr>
                   <tr>
                     <td>MOQ / EAU</td>
                     <td>250,000 / 3,000,000</td>
                   </tr>
                   <tr>
-                    <td>Selling · Giá bán</td>
+                    <td>{L('Selling', 'Giá bán')}</td>
                     <td>$0.099</td>
                   </tr>
                 </tbody>
@@ -3900,14 +4165,14 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
                 className="cl-wf-btn"
                 onClick={() => loadExample(inlineGallusExample, 'In-line Gallus EM340')}
               >
-                📋 Load this example · Nạp ví dụ này
+                {t('lgd.load_example')}
               </button>
             </div>
 
             {/* ── Case 2: Off-line Gallus + RDC350 ── */}
             <div className="cl-wf-card cl-wf-offline">
               <div className="cl-wf-head">
-                <div className="cl-wf-badge">Case 2</div>
+                <div className="cl-wf-badge">{t('lgd.case', { n: 2 })}</div>
                 <div className="cl-wf-title">
                   <BiHead
                     en="Off-line · Gallus EM340 + RDC350"
@@ -3924,7 +4189,7 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
               <table className="cl-wf-table">
                 <tbody>
                   <tr>
-                    <td>Press · Máy</td>
+                    <td>{L('Press', 'Máy')}</td>
                     <td>
                       <code>Gallus EM340</code> → <code>RDC350</code>
                     </td>
@@ -3934,7 +4199,7 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
                     <td>330 / 108 mm · 1 web</td>
                   </tr>
                   <tr>
-                    <td>Net size · Net</td>
+                    <td>{L('Net size', 'Kích thước net')}</td>
                     <td>80 × 50 mm</td>
                   </tr>
                   <tr>
@@ -3942,12 +4207,17 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
                     <td>±1 TD / ±1 MD</td>
                   </tr>
                   <tr>
-                    <td>Die · Khuôn</td>
+                    <td>{L('Die', 'Khuôn')}</td>
                     <td>82 × 52 mm</td>
                   </tr>
                   <tr>
                     <td>Layout</td>
-                    <td>4 across · 2 MD = 8 pcs / cut repeat</td>
+                    <td>
+                      {L(
+                        '4 across · 2 MD = 8 pcs / cut repeat',
+                        '4 ngang · 2 MD = 8 pcs / repeat bế'
+                      )}
+                    </td>
                   </tr>
                   <tr>
                     <td>
@@ -3966,15 +4236,15 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
                     </td>
                   </tr>
                   <tr>
-                    <td>Ratio · Tỉ số</td>
-                    <td className="cl-wf-ok">✓ 1 : 2 integer</td>
+                    <td>{L('Ratio', 'Tỉ số')}</td>
+                    <td className="cl-wf-ok">{L('✓ 1 : 2 integer', '✓ 1 : 2 nguyên')}</td>
                   </tr>
                   <tr>
                     <td>MOQ / EAU</td>
                     <td>500,000 / 6,000,000</td>
                   </tr>
                   <tr>
-                    <td>Selling · Giá bán</td>
+                    <td>{L('Selling', 'Giá bán')}</td>
                     <td>$0.088</td>
                   </tr>
                 </tbody>
@@ -3994,14 +4264,14 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
                 className="cl-wf-btn"
                 onClick={() => loadExample(offlineGallusRdcExample, 'Off-line Gallus + RDC350')}
               >
-                📋 Load this example · Nạp ví dụ này
+                {t('lgd.load_example')}
               </button>
             </div>
 
             {/* ── Case 3: Slit-after-print (9 → 3×3) ── */}
             <div className="cl-wf-card cl-wf-slit">
               <div className="cl-wf-head">
-                <div className="cl-wf-badge">Case 3</div>
+                <div className="cl-wf-badge">{t('lgd.case', { n: 3 })}</div>
                 <div className="cl-wf-title">
                   <BiHead
                     en="Slit · Print 9 cav → Slit 3 lanes → Cut 3/stamp"
@@ -4018,23 +4288,27 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
               <table className="cl-wf-table">
                 <tbody>
                   <tr>
-                    <td>Press · Máy</td>
+                    <td>{L('Press', 'Máy')}</td>
                     <td>
-                      <code>Gallus EM340</code> (in + slit + cut in-line hoặc tách công đoạn)
+                      <code>Gallus EM340</code>{' '}
+                      {L(
+                        '(print + slit + cut in-line or as separate steps)',
+                        '(in + slit + bế in-line hoặc tách công đoạn)'
+                      )}
                     </td>
                   </tr>
                   <tr>
-                    <td>Web (Print)</td>
-                    <td>330 mm (1 wide web)</td>
+                    <td>{L('Web (Print)', 'Web (In)')}</td>
+                    <td>{L('330 mm (1 wide web)', '330 mm (1 web rộng)')}</td>
                   </tr>
                   <tr>
-                    <td>Web (Cut)</td>
+                    <td>{L('Web (Cut)', 'Web (Bế)')}</td>
                     <td>
-                      ~110 mm × <b>3 lanes</b>
+                      ~110 mm × <b>{L('3 lanes', '3 lane')}</b>
                     </td>
                   </tr>
                   <tr>
-                    <td>Net size · Net</td>
+                    <td>{L('Net size', 'Kích thước net')}</td>
                     <td>30 × 50 mm</td>
                   </tr>
                   <tr>
@@ -4042,27 +4316,27 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
                     <td>±1 TD / ±1 MD</td>
                   </tr>
                   <tr>
-                    <td>Die · Khuôn</td>
+                    <td>{L('Die', 'Khuôn')}</td>
                     <td>32 × 52 mm</td>
                   </tr>
                   <tr>
                     <td>
-                      <b>Slit after print?</b>
+                      <b>{L('Slit after print?', 'Slit sau in?')}</b>
                     </td>
                     <td>
-                      <b>✓ YES</b> · 3 lanes
+                      <b>{L('✓ YES', '✓ CÓ')}</b> · {L('3 lanes', '3 lane')}
                     </td>
                   </tr>
                   <tr>
-                    <td>Print cavs across</td>
+                    <td>{L('Print cavs across', 'Cavity in ngang')}</td>
                     <td>
                       <b>9</b> (= 3 × 3)
                     </td>
                   </tr>
                   <tr>
-                    <td>Cut cavs/web × Webs</td>
+                    <td>{L('Cut cavs/web × Webs', 'Cavity bế/web × Số web')}</td>
                     <td>
-                      <b>3 × 3 = 9 pcs/shot</b>
+                      <b>{L('3 × 3 = 9 pcs/shot', '3 × 3 = 9 pcs/dập')}</b>
                     </td>
                   </tr>
                   <tr>
@@ -4091,12 +4365,33 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
                 className="cl-wf-btn"
                 onClick={() => loadExample(slit9to3Example, 'Slit · 9 → 3×3')}
               >
-                📋 Load this example · Nạp ví dụ này
+                {t('lgd.load_example')}
               </button>
             </div>
           </div>
 
-          <Callout type="warn" title="⚠ When to use which?" titleVi="⚠ Khi nào dùng phương án nào?">
+          <Callout
+            type="warn"
+            title="⚠ When to use which?"
+            titleVi="⚠ Khi nào dùng phương án nào?"
+            bodyVi={
+              <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                <li>
+                  <b>In-line (Case 1):</b> đơn nhỏ/vừa (MOQ &lt; 500k), nhãn đơn giản, yêu cầu
+                  register chặt. Một setup → setup/unit rẻ hơn.
+                </li>
+                <li>
+                  <b>Off-line (Case 2):</b> đơn lớn (setup loãng ra), bế phức tạp (foil, emboss,
+                  cold-stamp), hoặc khi Gallus nghẽn. Hai setup nhưng mỗi máy chạy max tốc độ.
+                </li>
+                <li>
+                  <b>Slit (Case 3):</b> nhãn nhỏ (part hẹp), 1 cavity không lấp đủ web — in 3×3 cav
+                  ngang cho nhanh, rồi slit để máy bế chạy 3 khuôn nhỏ song song. Rất hợp SKU số
+                  lượng lớn nhưng nhỏ.
+                </li>
+              </ul>
+            }
+          >
             <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
               <li>
                 <b>In-line (Case 1):</b> small/medium orders (MOQ &lt; 500k), simple labels, tight
@@ -4111,24 +4406,6 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
                 <b>Slit (Case 3):</b> small labels (short part width) where 1 cavity doesn't fill
                 the web — print 3×3 across for speed, then slit so the die-cut machine runs 3 small
                 dies in parallel. Great for high-volume narrow SKUs.
-              </li>
-            </ul>
-            <ul
-              className="cl-bi-vi"
-              style={{ margin: '8px 0 0 16px', padding: 0, fontStyle: 'italic' }}
-            >
-              <li>
-                <b>In-line (Case 1):</b> đơn nhỏ/vừa (MOQ &lt; 500k), nhãn đơn giản, yêu cầu
-                register chặt. Một setup → setup/unit rẻ hơn.
-              </li>
-              <li>
-                <b>Off-line (Case 2):</b> đơn lớn (setup loãng ra), bế phức tạp (foil, emboss,
-                cold-stamp), hoặc khi Gallus nghẽn. Hai setup nhưng mỗi máy chạy max tốc độ.
-              </li>
-              <li>
-                <b>Slit (Case 3):</b> nhãn nhỏ (part hẹp), 1 cavity không lấp đủ web — in 3×3 cav
-                ngang cho nhanh, rồi slit để máy bế chạy 3 khuôn nhỏ song song. Rất hợp SKU số lượng
-                lớn nhưng nhỏ.
               </li>
             </ul>
           </Callout>
@@ -4276,28 +4553,22 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
               <div className="cl-trouble-head">
                 <span className="cl-trouble-num">#{i + 1}</span>
                 <span className={`cl-trouble-sev cl-trouble-sev-${row.sev.toLowerCase()}`}>
-                  {row.sev}
+                  {t(SEV_KEYS[row.sev])}
                 </span>
-                <span className="cl-trouble-symptom">
-                  <span className="cl-bi-en">{row.symptom}</span>
-                  <span className="cl-bi-vi">{row.symptomVi}</span>
-                </span>
+                <span className="cl-trouble-symptom">{L(row.symptom, row.symptomVi)}</span>
               </div>
               <div className="cl-trouble-body">
                 <div>
-                  <span className="cl-trouble-label">Root cause / Nguyên nhân:</span>
-                  <div>{row.root}</div>
-                  <div className="cl-bi-vi">{row.rootVi}</div>
+                  <span className="cl-trouble-label">{t('lgd.trouble.root')}</span>
+                  <div>{L(row.root, row.rootVi)}</div>
                 </div>
                 <div>
-                  <span className="cl-trouble-label">Fix / Cách sửa:</span>
-                  <div>{row.fix}</div>
-                  <div className="cl-bi-vi">{row.fixVi}</div>
+                  <span className="cl-trouble-label">{t('lgd.trouble.fix')}</span>
+                  <div>{L(row.fix, row.fixVi)}</div>
                 </div>
                 <div>
-                  <span className="cl-trouble-label">Prevention / Phòng ngừa:</span>
-                  <div>{row.prev}</div>
-                  <div className="cl-bi-vi">{row.prevVi}</div>
+                  <span className="cl-trouble-label">{t('lgd.trouble.prev')}</span>
+                  <div>{L(row.prev, row.prevVi)}</div>
                 </div>
               </div>
             </div>
@@ -4306,24 +4577,25 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
 
         <footer className="cl-footer">
           <div>
-            <b>End of Formula Reference · Hết tài liệu tham chiếu</b>
+            <b>{t('lgd.footer.end')}</b>
           </div>
           <div className="cl-footer-meta">
-            Source of truth / Nguồn:{' '}
-            <code className="cl-ic">client/src/services/calcEngine.js</code> · Audit date / Ngày
-            soát: {new Date().toISOString().slice(0, 10)} · 14 corrections vs xlsx v3.3 + re-audit
-            refresh (EAU 0.8 cap, Indigo setup; +3 new sections) / 14 điểm sửa so với xlsx v3.3 +
-            soát lại (trần EAU 0.8, setup Indigo; +3 mục mới) — see §00 / xem §00
+            {t('lgd.footer.source')}{' '}
+            <code className="cl-ic">client/src/services/calcEngine.js</code> ·{' '}
+            {t('lgd.footer.audit_date')} {new Date().toISOString().slice(0, 10)} ·{' '}
+            {t('lgd.footer.corrections')}
           </div>
           <div className="cl-footer-note">
-            <div>
-              If you find any discrepancy between this Legend and actual engine behavior, the{' '}
-              <b>engine wins</b>. File an issue and we will fix the Legend — not the engine.
-            </div>
-            <div className="cl-bi-vi">
-              Nếu phát hiện chênh lệch giữa Legend này và hành vi thực tế của engine,
-              <b> engine là chuẩn</b>. Báo issue và chúng ta sẽ sửa Legend — không sửa engine.
-            </div>
+            {L(
+              <div>
+                If you find any discrepancy between this Legend and actual engine behavior, the{' '}
+                <b>engine wins</b>. File an issue and we will fix the Legend — not the engine.
+              </div>,
+              <div>
+                Nếu phát hiện chênh lệch giữa Legend này và hành vi thực tế của engine,
+                <b> engine là chuẩn</b>. Báo issue và chúng ta sẽ sửa Legend — không sửa engine.
+              </div>
+            )}
           </div>
         </footer>
       </main>
