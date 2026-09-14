@@ -13,6 +13,112 @@
 import { registerStrings } from '../strings.js';
 
 registerStrings({
+  // ─── Quote History actions + empty states (wave 2) ──────────────────────
+  // The qh.* column headers below predate this; these are everything else the
+  // screen says. Several strings were already bilingual by concatenation
+  // ("Restore quote · Khôi phục") — those collapse to one key per language
+  // rather than staying doubled up in both.
+  'qh.title': { en: 'Quote History', vi: 'Lịch sử báo giá' },
+  'qh.label_rfq': { en: 'Label / RFQ', vi: 'Nhãn / RFQ' },
+  'qh.trashed_at': { en: 'Trashed at', vi: 'Xoá lúc' },
+  'qh.open': { en: 'Open', vi: 'Mở' },
+  'qh.open_with': { en: 'Open With', vi: 'Mở bằng' },
+  'qh.copy': { en: 'Copy', vi: 'Chép' },
+  'qh.get_info': { en: 'Get Info', vi: 'Xem thông tin' },
+  'qh.export': { en: 'Export…', vi: 'Xuất…' },
+  'qh.trash': { en: 'Trash', vi: 'Thùng rác' },
+  'qh.move_to_trash': { en: 'Move to Trash', vi: 'Chuyển vào thùng rác' },
+  'qh.trash_empty': { en: 'Trash is empty', vi: 'Thùng rác trống' },
+  'qh.restore': { en: 'Restore quote', vi: 'Khôi phục báo giá' },
+  'qh.permanent_delete': {
+    en: 'Permanent delete (sys only)',
+    vi: 'Xoá vĩnh viễn (chỉ sys)',
+  },
+  'qh.view_deleted': {
+    en: 'View soft-deleted quotes — restorable',
+    vi: 'Xem báo giá đã xoá — có thể khôi phục',
+  },
+  'qh.refresh_tip': {
+    en: 'Refresh the quote list now (Cmd/Ctrl+R for a full reload)',
+    vi: 'Làm mới danh sách ngay (Cmd/Ctrl+R để tải lại toàn bộ)',
+  },
+  'qh.no_quotes': { en: 'No quotes found', vi: 'Không tìm thấy báo giá' },
+  'qh.load_failed': { en: 'Failed to load quote history', vi: 'Không tải được lịch sử báo giá' },
+  'qh.layout_attached': { en: 'Layout attached', vi: 'Có đính kèm layout' },
+  'qh.no_layout': { en: 'No layout', vi: 'Không có layout' },
+  'qh.clear_color': { en: 'Clear color', vi: 'Bỏ màu' },
+  'qh.next_page': { en: 'Next ›', vi: 'Sau ›' },
+
+  // ─── Tracker vocabulary shared by RFQ Tracker + Sample Tracking ─────────
+  // Added 2026-09-11 (wave 2). The two screens are near-twins — same kanban,
+  // same stage/result filters, same attachment and checklist panels — so 44
+  // of their strings are literally identical. One key each, used twice.
+  //
+  // GLOSSARY, continuing wave 1's rule: acronyms operators say in English
+  // stay in English — RFQ, EAU, SLA, CS, NPI, IFS, KPI, OK/NG/PARTIAL.
+  // Kanban and Pipeline also stay: they are named view paradigms with no
+  // short Vietnamese equivalent, and they sit beside "Danh sách" in the same
+  // toggle, where a long translation would wrap. Checklist stays for the same
+  // reason — it is the word used on the floor.
+  'track.view_mode': { en: 'View mode', vi: 'Kiểu xem' },
+  'track.kanban': { en: 'Kanban', vi: 'Kanban' },
+  'track.pipeline': { en: 'Pipeline', vi: 'Pipeline' },
+  'track.all_stages': { en: 'All Stages', vi: 'Mọi công đoạn' },
+  'track.all_results': { en: 'All Results', vi: 'Mọi kết quả' },
+  'track.filter_stage': { en: 'Filter stage', vi: 'Lọc công đoạn' },
+  'track.filter_result': { en: 'Filter result', vi: 'Lọc kết quả' },
+  'track.no_items': { en: 'No items', vi: 'Không có mục nào' },
+  'track.no_saved_views': { en: 'No saved views', vi: 'Chưa có bộ lọc đã lưu' },
+  'track.identity': { en: 'Identity', vi: 'Định danh' },
+  'track.attachments': { en: 'Attachments', vi: 'Tệp đính kèm' },
+  'track.checklist': { en: 'Checklist', vi: 'Checklist' },
+  'track.add_task': { en: '+ Add task', vi: '+ Thêm việc' },
+  'track.mark_required': {
+    en: 'Mark as required to advance',
+    vi: 'Đánh dấu bắt buộc để sang bước sau',
+  },
+  'track.blocked_reason': { en: 'Blocked reason', vi: 'Lý do tắc' },
+  'track.document_flow': { en: 'Document Flow', vi: 'Luồng chứng từ' },
+  'track.field_legend': { en: 'Field Legend / Chú giải trường', vi: 'Chú giải trường' },
+  'track.move_back': { en: 'Move back', vi: 'Lùi bước' },
+  'track.next': { en: 'Next →', vi: 'Bước sau →' },
+  'track.sla_days': { en: 'SLA (days)', vi: 'SLA (ngày)' },
+  'track.uploaded_by': { en: 'Uploaded by', vi: 'Người tải lên' },
+  'track.uploading': { en: 'Uploading…', vi: 'Đang tải lên…' },
+  'track.no_events': { en: 'No events recorded yet.', vi: 'Chưa ghi nhận sự kiện nào.' },
+  'track.trend_6m': { en: '6-month trend', vi: 'Xu hướng 6 tháng' },
+  'track.rfq': { en: 'RFQ', vi: 'RFQ' },
+
+  // ─── RFQ Tracker only ───────────────────────────────────────────────────
+  'rfqt.rfq_no': { en: 'RFQ No.', vi: 'Số RFQ' },
+  'rfqt.rfq_detail': { en: 'RFQ detail', vi: 'Chi tiết RFQ' },
+  'rfqt.rfq_kpis': { en: 'RFQ KPIs', vi: 'KPI RFQ' },
+  'rfqt.this_rfq': { en: 'This RFQ', vi: 'RFQ này' },
+  'rfqt.all_owners': { en: 'All Owners', vi: 'Mọi người phụ trách' },
+  'rfqt.filter_owner': { en: 'Filter owner', vi: 'Lọc người phụ trách' },
+  'rfqt.customer_order': { en: 'Customer Order', vi: 'Đơn hàng khách' },
+  'rfqt.deadline': { en: 'Deadline', vi: 'Hạn chót' },
+  'rfqt.over_deadline': { en: 'Over deadline', vi: 'Quá hạn' },
+  'rfqt.age': { en: 'Age', vi: 'Tuổi' },
+  'rfqt.value': { en: 'Value', vi: 'Giá trị' },
+  'rfqt.eau': { en: 'EAU', vi: 'EAU' },
+  'rfqt.print_type': { en: 'Print Type', vi: 'Kiểu in' },
+  'rfqt.print_specs': { en: 'Print Specs', vi: 'Thông số in' },
+  'rfqt.sample_request': { en: 'Sample Request', vi: 'Yêu cầu mẫu' },
+  'rfqt.pricing_worksheet': { en: 'Pricing Worksheet', vi: 'Bảng tính giá' },
+  'rfqt.sync_pricing': { en: 'Sync → Pricing Worksheet', vi: 'Đồng bộ → Bảng tính giá' },
+  'rfqt.open_pricing_tip': {
+    en: 'Open Pricing Worksheet with these fields prefilled',
+    vi: 'Mở Bảng tính giá với các trường đã điền sẵn',
+  },
+  'rfqt.open_quote_history': { en: 'Open Quote History', vi: 'Mở Lịch sử báo giá' },
+  'rfqt.open_ext': { en: 'Open ↗', vi: 'Mở ↗' },
+  'rfqt.no_attachments': { en: 'No attachments yet.', vi: 'Chưa có tệp đính kèm.' },
+  'rfqt.no_match': {
+    en: 'No RFQ records match the filters',
+    vi: 'Không có RFQ nào khớp bộ lọc',
+  },
+
   // Quote History column headers
   'qh.date': { en: 'DATE', vi: 'NGÀY' },
   'qh.rfq_number': { en: 'RFQ NO.', vi: 'SỐ RFQ' },

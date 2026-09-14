@@ -18,6 +18,7 @@
  * audit timeline, etc. Sample-specific surfaces use `st2-*`.
  */
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useI18n } from '../../../utils/useI18n';
 import { sharedApi, costApi } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 import EmptyState from '../../../components/Shared/EmptyState';
@@ -351,6 +352,7 @@ function saveVariants(list) {
 // ── component ───────────────────────────────────────────────────
 
 export default function SampleTracking() {
+  const { t } = useI18n();
   const [filter, setFilter] = useState({
     text: '',
     result: 'all',
@@ -830,7 +832,7 @@ export default function SampleTracking() {
         <input
           type="search"
           className="rfq2-search"
-          placeholder="Search part, customer, CS, IFS..."
+          placeholder={t('sample.search_ph')}
           value={filter.text}
           onChange={(e) => setFilter((f) => ({ ...f, text: e.target.value }))}
         />
@@ -845,9 +847,9 @@ export default function SampleTracking() {
         <select
           value={filter.stage}
           onChange={(e) => setFilter((f) => ({ ...f, stage: e.target.value }))}
-          aria-label="Filter stage"
+          aria-label={t('track.filter_stage')}
         >
-          <option value="all">All Stages</option>
+          <option value="all">{t('track.all_stages')}</option>
           {PIPELINE.map((p) => (
             <option key={p.key} value={p.key}>
               {p.label}
@@ -857,9 +859,9 @@ export default function SampleTracking() {
         <select
           value={filter.result}
           onChange={(e) => setFilter((f) => ({ ...f, result: e.target.value }))}
-          aria-label="Filter result"
+          aria-label={t('track.filter_result')}
         >
-          <option value="all">All Results</option>
+          <option value="all">{t('track.all_results')}</option>
           {RESULT_OPTS.map((r) => (
             <option key={r} value={r}>
               {r}
@@ -869,9 +871,9 @@ export default function SampleTracking() {
         <select
           value={filter.cs}
           onChange={(e) => setFilter((f) => ({ ...f, cs: e.target.value }))}
-          aria-label="Filter CS"
+          aria-label={t('sample.filter_cs')}
         >
-          <option value="all">All CS</option>
+          <option value="all">{t('sample.all_cs')}</option>
           {csOpts.map((c) => (
             <option key={c} value={c}>
               {c}
@@ -881,9 +883,9 @@ export default function SampleTracking() {
         <select
           value={filter.npi}
           onChange={(e) => setFilter((f) => ({ ...f, npi: e.target.value }))}
-          aria-label="Filter NPI"
+          aria-label={t('sample.filter_npi')}
         >
-          <option value="all">All NPI</option>
+          <option value="all">{t('sample.all_npi')}</option>
           {npiOpts.map((c) => (
             <option key={c} value={c}>
               {c}
@@ -898,14 +900,14 @@ export default function SampleTracking() {
           onDelete={deleteVariant}
         />
 
-        <div className="rfq2-view-toggle" role="tablist" aria-label="View mode">
+        <div className="rfq2-view-toggle" role="tablist" aria-label={t('track.view_mode')}>
           <button
             role="tab"
             aria-selected={view === 'kanban'}
             className={view === 'kanban' ? 'active' : ''}
             onClick={() => setView('kanban')}
           >
-            Kanban
+            {t('track.kanban')}
           </button>
           <button
             role="tab"
@@ -913,14 +915,14 @@ export default function SampleTracking() {
             className={view === 'list' ? 'active' : ''}
             onClick={() => setView('list')}
           >
-            List
+            {t('common.list')}
           </button>
         </div>
 
         <button
           className="rfq2-chip-btn"
           onClick={() => setLegendOpen(true)}
-          title="Field Legend / Chú giải trường"
+          title={t('track.field_legend')}
         >
           📖 Legend
         </button>
@@ -932,13 +934,13 @@ export default function SampleTracking() {
       {selected.size > 0 && (
         <div className="rfq2-bulk">
           <span>{selected.size} selected</span>
-          <button onClick={() => bulkResult('OK')}>Mark OK</button>
-          <button onClick={() => bulkResult('NG')}>Mark NG</button>
-          <button onClick={() => bulkResult('PARTIAL')}>Mark PARTIAL</button>
+          <button onClick={() => bulkResult('OK')}>{t('sample.mark_ok')}</button>
+          <button onClick={() => bulkResult('NG')}>{t('sample.mark_ng')}</button>
+          <button onClick={() => bulkResult('PARTIAL')}>{t('sample.mark_partial')}</button>
           <button className="rfq2-btn-danger" onClick={bulkDelete}>
-            Delete
+            {t('common.delete')}
           </button>
-          <button onClick={() => setSelected(new Set())}>Clear</button>
+          <button onClick={() => setSelected(new Set())}>{t('common.clear')}</button>
         </div>
       )}
 
@@ -964,7 +966,7 @@ export default function SampleTracking() {
         <div style={{ padding: 0 }}>
           <EmptyState
             icon="☑"
-            title="No sample records match the filters"
+            title={t('sample.no_match')}
             hint="Clear the filters or add a new sample to get started."
           />
         </div>
@@ -1018,10 +1020,11 @@ function Kpi({ label, value, sub, tone }) {
 }
 
 function KpiBar({ kpis, data }) {
+  const { t } = useI18n();
   const [trendOpen, setTrendOpen] = useState(false);
   return (
     <>
-      <div className="rfq2-kpis" role="group" aria-label="Sample KPIs">
+      <div className="rfq2-kpis" role="group" aria-label={t('sample.kpis')}>
         <Kpi label="Total Samples" value={kpis.total} />
         <Kpi label="Pending" value={kpis.pending} tone="brand" />
         <Kpi label="SLA Breach" value={kpis.breach} tone="danger" />
@@ -1052,6 +1055,7 @@ function KpiBar({ kpis, data }) {
 }
 
 function TrendChart({ data }) {
+  const { t } = useI18n();
   const buckets = useMemo(() => {
     const now = new Date();
     const months = [];
@@ -1098,7 +1102,7 @@ function TrendChart({ data }) {
       <div className="rfq2-trend-head">
         OK Rate % (green) and Avg Cycle Days (amber) — last 6 months
       </div>
-      <svg width={W} height={H} role="img" aria-label="6-month trend">
+      <svg width={W} height={H} role="img" aria-label={t('track.trend_6m')}>
         {buckets.map((b, i) => {
           const x = PAD + colW * i + 4;
           const barW = colW / 2 - 4;
@@ -1139,6 +1143,7 @@ function TrendChart({ data }) {
 
 // Per-NPI-Owner mini KPI strip, mirroring the xlsx summary.
 function NpiBreakdown({ data }) {
+  const { t } = useI18n();
   const rows = useMemo(() => {
     const byOwner = new Map();
     for (const r of data) {
@@ -1157,17 +1162,17 @@ function NpiBreakdown({ data }) {
   if (!rows.length) return null;
   return (
     <div className="st2-npi-strip">
-      <div className="st2-npi-head">NPI OWNER SUMMARY</div>
+      <div className="st2-npi-head">{t('sample.npi_owner_summary')}</div>
       <table>
         <thead>
           <tr>
-            <th>Owner</th>
-            <th>Parts</th>
-            <th>Finished</th>
+            <th>{t('sample.owner')}</th>
+            <th>{t('sample.parts')}</th>
+            <th>{t('sample.finished')}</th>
             <th>OK</th>
             <th>NG</th>
-            <th>OK Rate</th>
-            <th>Spec Released</th>
+            <th>{t('sample.ok_rate')}</th>
+            <th>{t('sample.spec_released')}</th>
           </tr>
         </thead>
         <tbody>
@@ -1199,6 +1204,7 @@ function NpiBreakdown({ data }) {
 // ── Variant menu ────────────────────────────────────────────────
 
 function VariantMenu({ variants, onApply, onSave, onDelete }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
@@ -1237,13 +1243,15 @@ function VariantMenu({ variants, onApply, onSave, onDelete }) {
               <button
                 className="rfq2-variant-del"
                 onClick={() => onDelete(v.name)}
-                aria-label="Delete"
+                aria-label={t('common.delete')}
               >
                 ×
               </button>
             </div>
           ))}
-          {variants.length === 0 && <div className="rfq2-variant-empty">No saved views</div>}
+          {variants.length === 0 && (
+            <div className="rfq2-variant-empty">{t('track.no_saved_views')}</div>
+          )}
         </div>
       )}
     </div>
@@ -1253,6 +1261,7 @@ function VariantMenu({ variants, onApply, onSave, onDelete }) {
 // ── Kanban ──────────────────────────────────────────────────────
 
 function KanbanBoard({ data, stageCounts, onOpen, onMoveNext, onMoveBack }) {
+  const { t } = useI18n();
   const grouped = useMemo(() => {
     const buckets = Object.fromEntries(PIPELINE.map((p) => [p.key, []]));
     buckets.done = [];
@@ -1285,7 +1294,7 @@ function KanbanBoard({ data, stageCounts, onOpen, onMoveNext, onMoveBack }) {
               />
             ))}
             {(grouped[cfg.key] || []).length === 0 && (
-              <div className="rfq2-col-empty">No items</div>
+              <div className="rfq2-col-empty">{t('track.no_items')}</div>
             )}
           </div>
         </div>
@@ -1293,7 +1302,7 @@ function KanbanBoard({ data, stageCounts, onOpen, onMoveNext, onMoveBack }) {
       <div className="rfq2-col rfq2-col-done">
         <div className="rfq2-col-head" style={{ background: '#f3f4f6', color: '#374151' }}>
           <span className="rfq2-col-num">✓</span>
-          <span className="rfq2-col-label">Done</span>
+          <span className="rfq2-col-label">{t('common.done')}</span>
           <span className="rfq2-col-count">{stageCounts.done || 0}</span>
         </div>
         <div className="rfq2-col-body">
@@ -1306,7 +1315,9 @@ function KanbanBoard({ data, stageCounts, onOpen, onMoveNext, onMoveBack }) {
               onOpen={() => onOpen(r.id)}
             />
           ))}
-          {(grouped.done || []).length === 0 && <div className="rfq2-col-empty">No items</div>}
+          {(grouped.done || []).length === 0 && (
+            <div className="rfq2-col-empty">{t('track.no_items')}</div>
+          )}
         </div>
       </div>
     </div>
@@ -1314,6 +1325,7 @@ function KanbanBoard({ data, stageCounts, onOpen, onMoveNext, onMoveBack }) {
 }
 
 function KanbanCard({ row, stageCfg, onOpen, onMoveNext, onMoveBack, done }) {
+  const { t } = useI18n();
   const stage = row.pipeline?.[row.pipeline_stage] || {};
   const daysInStage = daysBetween(stage.start);
   const daysToDue = daysBetween(new Date().toISOString().slice(0, 10), row.due_date);
@@ -1381,12 +1393,12 @@ function KanbanCard({ row, stageCfg, onOpen, onMoveNext, onMoveBack, done }) {
                 {daysInStage}d in stage
               </span>
             )}
-            {breached && <span className="rfq2-card-breach-tag">Past due</span>}
+            {breached && <span className="rfq2-card-breach-tag">{t('sample.past_due')}</span>}
           </div>
           {(onMoveBack || onMoveNext) && (
             <div className="rfq2-card-nav" onClick={(e) => e.stopPropagation()}>
               {onMoveBack && (
-                <button onClick={onMoveBack} title="Move back">
+                <button onClick={onMoveBack} title={t('track.move_back')}>
                   &larr;
                 </button>
               )}
@@ -1396,7 +1408,7 @@ function KanbanCard({ row, stageCfg, onOpen, onMoveNext, onMoveBack, done }) {
                   disabled={!!blocker}
                   title={blocker || 'Advance stage'}
                 >
-                  Next →
+                  {t('track.next')}
                 </button>
               )}
             </div>
@@ -1424,23 +1436,24 @@ function KanbanCard({ row, stageCfg, onOpen, onMoveNext, onMoveBack, done }) {
 // ── List view ───────────────────────────────────────────────────
 
 function ListView({ data, selected, onToggleSelect, onOpen, onDelete }) {
+  const { t } = useI18n();
   return (
     <div className="rfq2-list-wrap">
       <table className="rfq2-list">
         <thead>
           <tr>
-            <th aria-label="Select" />
-            <th>Part No.</th>
-            <th>Customer</th>
-            <th>Type</th>
-            <th>Qty</th>
-            <th>CS / NPI</th>
-            <th>Stage</th>
-            <th>Submit</th>
-            <th>Due</th>
-            <th>Result</th>
-            <th>Reason</th>
-            <th aria-label="Actions" />
+            <th aria-label={t('common.select')} />
+            <th>{t('sample.part_no')}</th>
+            <th>{t('sample.customer')}</th>
+            <th>{t('common.type')}</th>
+            <th>{t('sample.qty')}</th>
+            <th>{t('sample.cs_npi')}</th>
+            <th>{t('sample.stage')}</th>
+            <th>{t('sample.submit')}</th>
+            <th>{t('sample.due')}</th>
+            <th>{t('common.result')}</th>
+            <th>{t('sample.reason')}</th>
+            <th aria-label={t('common.actions')} />
           </tr>
         </thead>
         <tbody>
@@ -1494,7 +1507,7 @@ function ListView({ data, selected, onToggleSelect, onOpen, onDelete }) {
                 </td>
                 <td>{r.reason_code || ''}</td>
                 <td onClick={(e) => e.stopPropagation()} className="rfq2-list-actions">
-                  <button onClick={() => onDelete(r.id)} title="Delete">
+                  <button onClick={() => onDelete(r.id)} title={t('common.delete')}>
                     &times;
                   </button>
                 </td>
@@ -1526,6 +1539,7 @@ function DetailDrawer({
   onAddChecklist,
   onRemoveChecklist,
 }) {
+  const { t } = useI18n();
   const [tab, setTab] = useState('detail');
   // Snapshot pattern (same as RFQTracker.DetailDrawer — see that file
   // for the full rationale). Insulates the pipeline section from the
@@ -1636,7 +1650,7 @@ function DetailDrawer({
         className="rfq2-drawer"
         data-ops-draggable-card
         role="dialog"
-        aria-label="Sample detail"
+        aria-label={t('sample.detail')}
         onBlur={flush}
       >
         <header className="rfq2-drawer-head" data-ops-drag-handle>
@@ -1648,7 +1662,7 @@ function DetailDrawer({
               {row.customer || ''} {row.specs?.sample_type ? '· ' + row.specs.sample_type : ''}
             </div>
           </div>
-          <button className="rfq2-drawer-close" onClick={onClose} aria-label="Close">
+          <button className="rfq2-drawer-close" onClick={onClose} aria-label={t('common.close')}>
             ×
           </button>
         </header>
@@ -1660,7 +1674,7 @@ function DetailDrawer({
             className={tab === 'detail' ? 'active' : ''}
             onClick={() => setTab('detail')}
           >
-            Detail
+            {t('common.detail')}
           </button>
           <button
             role="tab"
@@ -1668,7 +1682,7 @@ function DetailDrawer({
             className={tab === 'history' ? 'active' : ''}
             onClick={() => setTab('history')}
           >
-            History
+            {t('common.history')}
           </button>
           <button
             role="tab"
@@ -1676,14 +1690,14 @@ function DetailDrawer({
             className={tab === 'attachments' ? 'active' : ''}
             onClick={() => setTab('attachments')}
           >
-            Attachments
+            {t('track.attachments')}
           </button>
         </nav>
 
         {tab === 'detail' && (
           <div className="rfq2-drawer-scroll">
             <section className="rfq2-drawer-section">
-              <h4>Identity</h4>
+              <h4>{t('track.identity')}</h4>
               <div className="rfq2-grid-2">
                 <Field
                   label="Customer"
@@ -1755,7 +1769,7 @@ function DetailDrawer({
                   onBlur={flush}
                 />
                 <label className="rfq2-field">
-                  <span>Result</span>
+                  <span>{t('common.result')}</span>
                   <select
                     value={draft.result || 'PENDING'}
                     onChange={(e) => {
@@ -1791,7 +1805,7 @@ function DetailDrawer({
               )}
               {(draft.result === 'NG' || draft.result === 'PARTIAL') && (
                 <label className="rfq2-field rfq2-field-wide">
-                  <span>NG Reason Code</span>
+                  <span>{t('sample.ng_reason_code')}</span>
                   <select
                     value={draft.reason_code || ''}
                     onChange={(e) => {
@@ -1823,7 +1837,7 @@ function DetailDrawer({
                 />
               </div>
               <label className="rfq2-field rfq2-field-wide">
-                <span>Remarks</span>
+                <span>{t('common.remarks')}</span>
                 <textarea
                   rows={2}
                   value={draft.remarks || ''}
@@ -1834,10 +1848,10 @@ function DetailDrawer({
             </section>
 
             <section className="rfq2-drawer-section">
-              <h4>Specs</h4>
+              <h4>{t('sample.specs')}</h4>
               <div className="rfq2-grid-2">
                 <label className="rfq2-field">
-                  <span>Sample Type</span>
+                  <span>{t('sample.type')}</span>
                   <select
                     value={draft.specs?.sample_type || ''}
                     onChange={(e) => {
@@ -1853,7 +1867,7 @@ function DetailDrawer({
                   </select>
                 </label>
                 <label className="rfq2-field">
-                  <span>Product Type</span>
+                  <span>{t('sample.product_type')}</span>
                   <select
                     value={draft.specs?.product_type || ''}
                     onChange={(e) => {
@@ -1919,7 +1933,7 @@ function DetailDrawer({
 
             <section className="rfq2-drawer-section">
               <div className="rfq2-drawer-sec-head">
-                <h4>Pipeline</h4>
+                <h4>{t('track.pipeline')}</h4>
                 <div className="rfq2-move">
                   <button
                     onClick={handleMoveBack}
@@ -1937,7 +1951,7 @@ function DetailDrawer({
                       stageAdvanceBlocker(snapshot, snapshot.pipeline_stage) || 'Advance stage'
                     }
                   >
-                    Next →
+                    {t('track.next')}
                   </button>
                 </div>
               </div>
@@ -1970,7 +1984,7 @@ function DetailDrawer({
 
         <footer className="rfq2-drawer-foot">
           <button className="rfq2-btn rfq2-btn-danger" onClick={onDelete}>
-            Delete
+            {t('common.delete')}
           </button>
           <div style={{ flex: 1 }} />
           <span className="rfq2-save-status">{saving ? 'Saving…' : 'Saved'}</span>
@@ -2005,14 +2019,15 @@ function pickEditable(r) {
 }
 
 function DocumentFlowStrip({ row }) {
+  const { t } = useI18n();
   return (
     <section className="rfq2-drawer-section rfq2-flow">
-      <h4>Document Flow</h4>
+      <h4>{t('track.document_flow')}</h4>
       <div className="rfq2-flow-strip">
         <div className={'rfq2-flow-node' + (row.linked_rfq ? ' linked' : ' empty')}>
           <span className="rfq2-flow-icon">📋</span>
           <span className="rfq2-flow-label">
-            RFQ
+            {t('track.rfq')}
             <br />
             {row.linked_rfq ? <b>{row.linked_rfq}</b> : <i>not linked</i>}
           </span>
@@ -2021,7 +2036,7 @@ function DocumentFlowStrip({ row }) {
         <div className="rfq2-flow-node active">
           <span className="rfq2-flow-icon">🧪</span>
           <span className="rfq2-flow-label">
-            Sample
+            {t('sample.sample')}
             <br />
             <b>{row.part_number || row.ifs_code || '—'}</b>
           </span>
@@ -2030,7 +2045,7 @@ function DocumentFlowStrip({ row }) {
         <div className={'rfq2-flow-node' + (row.linked_production_order ? ' linked' : ' empty')}>
           <span className="rfq2-flow-icon">🏭</span>
           <span className="rfq2-flow-label">
-            Production Order
+            {t('sample.production_order')}
             <br />
             {row.linked_production_order ? <b>{row.linked_production_order}</b> : <i>not linked</i>}
           </span>
@@ -2043,7 +2058,7 @@ function DocumentFlowStrip({ row }) {
         >
           <span className="rfq2-flow-icon">📄</span>
           <span className="rfq2-flow-label">
-            Spec Released
+            {t('sample.spec_released')}
             <br />
             {row.pipeline?.spec?.status === 'done' ? (
               <b>{(row.pipeline.spec.done || '').slice(0, 10)}</b>
@@ -2074,6 +2089,7 @@ function StageBlock({
   onAddCheck,
   onRemoveCheck,
 }) {
+  const { t } = useI18n();
   const [newItem, setNewItem] = useState('');
   const checklistDone = (stage.checklist || []).filter((i) => i.checked).length;
   const checklistTotal = (stage.checklist || []).length;
@@ -2162,7 +2178,7 @@ function StageBlock({
           <fieldset disabled={isDone} className="rfq2-stage-fields">
             <div className="rfq2-grid-2">
               <label className="rfq2-field">
-                <span>Status</span>
+                <span>{t('common.status')}</span>
                 <select value={stage.status} onChange={(e) => onUpdate('status', e.target.value)}>
                   {STATUS_OPTS.map((s) => (
                     <option key={s} value={s}>
@@ -2180,7 +2196,7 @@ function StageBlock({
                 />
               </label>
               <label className="rfq2-field">
-                <span>Start</span>
+                <span>{t('common.start')}</span>
                 <input
                   type="date"
                   value={stage.start || ''}
@@ -2188,7 +2204,7 @@ function StageBlock({
                 />
               </label>
               <label className="rfq2-field">
-                <span>Done</span>
+                <span>{t('common.done')}</span>
                 <input
                   type="date"
                   value={stage.done || ''}
@@ -2196,7 +2212,7 @@ function StageBlock({
                 />
               </label>
               <label className="rfq2-field">
-                <span>SLA (days)</span>
+                <span>{t('track.sla_days')}</span>
                 <input
                   type="number"
                   value={stage.sla_days || 0}
@@ -2207,7 +2223,7 @@ function StageBlock({
 
             {stage.status === 'blocked' && (
               <label className="rfq2-field rfq2-field-wide">
-                <span>Blocked reason</span>
+                <span>{t('track.blocked_reason')}</span>
                 <select
                   value={stage.reason_code || ''}
                   onChange={(e) => onUpdate('reason_code', e.target.value)}
@@ -2223,7 +2239,7 @@ function StageBlock({
             )}
 
             <label className="rfq2-field rfq2-field-wide">
-              <span>Notes</span>
+              <span>{t('common.notes')}</span>
               <textarea
                 rows={2}
                 value={stage.notes || ''}
@@ -2232,7 +2248,7 @@ function StageBlock({
             </label>
 
             <div className="rfq2-checklist">
-              <div className="rfq2-checklist-title">Checklist</div>
+              <div className="rfq2-checklist-title">{t('track.checklist')}</div>
               {(stage.checklist || []).map((it, i) => (
                 <div key={i} className={'rfq2-checklist-item' + (it.required ? ' required' : '')}>
                   <input
@@ -2246,7 +2262,7 @@ function StageBlock({
                     onChange={(e) => onEditCheck(i, e.target.value)}
                     className={it.checked ? 'rfq2-check-done' : ''}
                   />
-                  <label className="rfq2-checklist-req" title="Mark as required to advance">
+                  <label className="rfq2-checklist-req" title={t('track.mark_required')}>
                     <input
                       type="checkbox"
                       checked={!!it.required}
@@ -2257,7 +2273,7 @@ function StageBlock({
                   <button
                     className="rfq2-checklist-del"
                     onClick={() => onRemoveCheck(i)}
-                    aria-label="Remove"
+                    aria-label={t('common.remove')}
                   >
                     ×
                   </button>
@@ -2266,7 +2282,7 @@ function StageBlock({
               <div className="rfq2-checklist-add">
                 <input
                   type="text"
-                  placeholder="+ Add task"
+                  placeholder={t('track.add_task')}
                   value={newItem}
                   onChange={(e) => setNewItem(e.target.value)}
                   onKeyDown={(e) => {
@@ -2284,7 +2300,7 @@ function StageBlock({
                     }
                   }}
                 >
-                  Add
+                  {t('common.add')}
                 </button>
               </div>
             </div>
@@ -2297,6 +2313,7 @@ function StageBlock({
 
 // Prep-stage parallel sub-track (Material / Film / Cutter).
 function PrepTrack({ label, statusField, etaField, nameField, draft, commit, flush, disabled }) {
+  const { t } = useI18n();
   const status = draft.specs?.[statusField] || 'pending';
   const eta = draft.specs?.[etaField] || '';
   const name = nameField ? draft.specs?.[nameField] || '' : null;
@@ -2315,7 +2332,7 @@ function PrepTrack({ label, statusField, etaField, nameField, draft, commit, flu
       {nameField && (
         <input
           type="text"
-          placeholder="Name"
+          placeholder={t('sample.name')}
           value={name}
           disabled={disabled}
           onChange={(e) => setField(nameField, e.target.value)}
@@ -2361,6 +2378,7 @@ function Field({ label, value, onChange, onBlur, type = 'text' }) {
 // ── History tab ─────────────────────────────────────────────────
 
 function HistoryTab({ sampleId }) {
+  const { t } = useI18n();
   // See RFQTracker.HistoryTab for the no-in-effect-reset rationale —
   // the parent DetailDrawer already remounts on row change.
   const [entries, setEntries] = useState(null);
@@ -2386,7 +2404,7 @@ function HistoryTab({ sampleId }) {
   if (entries === null)
     return (
       <div className="rfq2-drawer-scroll" style={{ padding: 20 }}>
-        Loading…
+        {t('common.loading')}
       </div>
     );
   if (err)
@@ -2401,7 +2419,7 @@ function HistoryTab({ sampleId }) {
       <section className="rfq2-drawer-section">
         <h4>Audit Trail ({entries.length} events)</h4>
         {entries.length === 0 ? (
-          <div style={{ color: '#94a3b8', fontSize: 12 }}>No events recorded yet.</div>
+          <div style={{ color: '#94a3b8', fontSize: 12 }}>{t('track.no_events')}</div>
         ) : (
           <ol className="rfq2-audit">
             {[...entries].reverse().map((e, i) => (
@@ -2441,6 +2459,7 @@ function HistoryTab({ sampleId }) {
 // ── Attachments ─────────────────────────────────────────────────
 
 function AttachmentsTab({ sampleId, myUsername }) {
+  const { t } = useI18n();
   const [list, setList] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -2497,11 +2516,11 @@ function AttachmentsTab({ sampleId, myUsername }) {
               e.target.value = '';
             }}
           />
-          {busy && <span className="rfq2-save-status">Uploading…</span>}
+          {busy && <span className="rfq2-save-status">{t('track.uploading')}</span>}
           {myUsername && <span className="rfq2-save-status">as {myUsername}</span>}
         </div>
         {list === null ? (
-          <div style={{ color: '#94a3b8' }}>Loading…</div>
+          <div style={{ color: '#94a3b8' }}>{t('common.loading')}</div>
         ) : list.length === 0 ? (
           <div style={{ color: '#94a3b8', fontSize: 12 }}>
             No attachments yet — try the customer feedback email, sample photo, or QC report.
@@ -2510,10 +2529,10 @@ function AttachmentsTab({ sampleId, myUsername }) {
           <table className="rfq2-attach-list">
             <thead>
               <tr>
-                <th>File</th>
-                <th>Size</th>
-                <th>Uploaded by</th>
-                <th>When</th>
+                <th>{t('common.file')}</th>
+                <th>{t('common.size')}</th>
+                <th>{t('track.uploaded_by')}</th>
+                <th>{t('common.when')}</th>
                 <th />
               </tr>
             </thead>

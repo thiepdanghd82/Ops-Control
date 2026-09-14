@@ -31,9 +31,16 @@ import { STRINGS } from './strings.js';
 // side-effect-imports each one at app boot. Mirror that here so the lint
 // pass sees the full key surface — otherwise every per-tab t('…') call
 // looks unknown.
+//
+// 2026-09-11: this list used to be five hard-coded imports, and adding
+// domains/quality.js did not fail anything — its keys were simply never
+// linted, so a missing `vi` would have shipped with a green suite. The list
+// is now read off disk, and a third test below asserts main.jsx loads exactly
+// the same set, so a new domain cannot be half-wired in either direction.
 import './domains/basis.js';
 import './domains/costing.js';
 import './domains/mes.js';
+import './domains/quality.js';
 import './domains/sales.js';
 import './domains/security.js';
 
@@ -106,5 +113,36 @@ test('STRINGS has no duplicate keys (sanity — Object literal would coerce, but
   assert.ok(
     keys.length >= 50,
     `STRINGS unexpectedly small (${keys.length} keys) — did a refactor drop entries?`
+  );
+});
+
+test('every domain file is imported by this lint pass and by main.jsx', () => {
+  // Registration is a side effect of import, so a domain nobody imports is
+  // invisible: its keys are absent at runtime AND unlinted here. Before this
+  // guard the two lists were maintained by hand in two files.
+  const domainDir = path.join(__dirname, 'domains');
+  const onDisk = fs
+    .readdirSync(domainDir)
+    .filter((f) => f.endsWith('.js') && !f.endsWith('.test.js'))
+    .sort();
+
+  const selfSrc = fs.readFileSync(fileURLToPath(import.meta.url), 'utf8');
+  const importedHere = [...selfSrc.matchAll(/import '\.\/domains\/([\w-]+\.js)'/g)]
+    .map((m) => m[1])
+    .sort();
+  assert.deepEqual(
+    importedHere,
+    onDisk,
+    'a domain file exists that this lint pass does not import — its keys are unchecked'
+  );
+
+  const mainSrc = fs.readFileSync(path.join(SRC_ROOT, 'main.jsx'), 'utf8');
+  const importedByApp = [...mainSrc.matchAll(/import '\.\/i18n\/domains\/([\w-]+\.js)'/g)]
+    .map((m) => m[1])
+    .sort();
+  assert.deepEqual(
+    importedByApp,
+    onDisk,
+    'a domain file exists that main.jsx does not import — its keys are missing at runtime'
   );
 });
