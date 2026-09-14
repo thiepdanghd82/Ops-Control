@@ -1108,7 +1108,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
             {!showSpAltEmptyState && (
               <div className="sc-add-row">
                 <button className="sc-btn-ghost" onClick={addMat}>
-                  + Add Material Row
+                  {t('cgrid.mat.add')}
                 </button>
               </div>
             )}
@@ -1374,7 +1374,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
             </table>
             <div className="sc-add-row">
               <button className="sc-btn-ghost" onClick={addInk}>
-                + Add Ink Row
+                {t('cgrid.ink.add')}
               </button>
             </div>
           </div>
@@ -1734,7 +1734,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
             </table>
             <div className="sc-add-row">
               <button className="sc-btn-ghost" onClick={addProc}>
-                + Add Process Row
+                {t('cgrid.proc.add')}
               </button>
             </div>
           </div>
