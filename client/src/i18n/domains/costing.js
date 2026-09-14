@@ -1117,4 +1117,44 @@ registerStrings({
   'fuz.open_new': { en: 'Open in new window', vi: 'Mở ở cửa sổ mới' },
   'fuz.showing': { en: 'Showing', vi: 'Đang hiện' },
   'fuz.remove_confirm': { en: 'Remove "{name}"?', vi: 'Xoá "{name}"?' },
+
+  // ─── i18n wave 7 (2026-09-14) — CalcLegend chrome. The Legend's body
+  // copy stays inline next to the formulas it explains (nameVi / noteVi /
+  // bodyVi / vi=); only buttons, toasts, badges and labels live here.
+  'lgd.title': { en: 'Formula Reference', vi: 'Tra cứu công thức' },
+  'lgd.verified_sub': { en: 'Verified · calcEngine.js', vi: 'Đã xác thực · calcEngine.js' },
+  'lgd.word': { en: '⬇ Word', vi: '⬇ Word' },
+  'lgd.word_title': { en: 'Download as Word', vi: 'Tải về dạng Word' },
+  'lgd.print': { en: '🖨 Print', vi: '🖨 In' },
+  'lgd.print_title': { en: 'Print', vi: 'In' },
+  'lgd.find_hint_pre': { en: 'Press', vi: 'Nhấn' },
+  'lgd.find_hint_post': {
+    en: 'to find any formula or field.',
+    vi: 'để tìm bất kỳ công thức hay trường nào.',
+  },
+  'lgd.example': { en: 'Example:', vi: 'Ví dụ:' },
+  'lgd.case': { en: 'Case {n}', vi: 'Trường hợp {n}' },
+  'lgd.load_example': { en: '📋 Load this example', vi: '📋 Nạp ví dụ này' },
+  'lgd.toast.loaded': {
+    en: 'Loaded: {label} — switch to Layout tab to inspect.',
+    vi: 'Đã nạp: {label} — chuyển sang tab Layout để xem.',
+  },
+  'lgd.toast.load_failed': {
+    en: 'Failed to load example — see console.',
+    vi: 'Nạp ví dụ thất bại — xem console.',
+  },
+  'lgd.trouble.root': { en: 'Root cause:', vi: 'Nguyên nhân:' },
+  'lgd.trouble.fix': { en: 'Fix:', vi: 'Cách sửa:' },
+  'lgd.trouble.prev': { en: 'Prevention:', vi: 'Phòng ngừa:' },
+  'lgd.sev.critical': { en: 'CRITICAL', vi: 'NGHIÊM TRỌNG' },
+  'lgd.sev.medium': { en: 'MEDIUM', vi: 'TRUNG BÌNH' },
+  'lgd.sev.minor': { en: 'MINOR', vi: 'NHẸ' },
+  'lgd.sev.info': { en: 'INFO', vi: 'THÔNG TIN' },
+  'lgd.footer.end': { en: 'End of Formula Reference', vi: 'Hết tài liệu tham chiếu' },
+  'lgd.footer.source': { en: 'Source of truth:', vi: 'Nguồn:' },
+  'lgd.footer.audit_date': { en: 'Audit date:', vi: 'Ngày soát:' },
+  'lgd.footer.corrections': {
+    en: '14 corrections vs xlsx v3.3 + re-audit refresh (EAU 0.8 cap, Indigo setup; +3 new sections) — see §00',
+    vi: '14 điểm sửa so với xlsx v3.3 + soát lại (trần EAU 0.8, setup Indigo; +3 mục mới) — xem §00',
+  },
 });

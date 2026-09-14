@@ -126,18 +126,11 @@
   flex-direction: column;
   min-width: 0;
 }
-.cl-toc-en {
+.cl-toc-label {
   font-size: 13px;
   font-weight: 600;
   color: #111827;
   line-height: 1.25;
-}
-.cl-toc-vi {
-  font-size: 11px;
-  color: #6b7280;
-  font-style: italic;
-  margin-top: 1px;
-  line-height: 1.2;
 }
 .cl-toc-footer {
   padding: 10px 14px;
@@ -359,15 +352,8 @@
 }
 
 /* ── Bilingual EN/VI pairs inline ─────────────────────── */
-.cl-bi-en {
+.cl-bi {
   display: block;
-}
-.cl-bi-vi {
-  display: block;
-  font-size: 12px;
-  font-style: italic;
-  color: #6b7280;
-  margin-top: 2px;
 }
 
 /* ── Troubleshooting cards ────────────────────────────── */
@@ -486,7 +472,7 @@
 [data-theme='dark'] .cl-toc-item.active {
   background: #1e40af;
 }
-[data-theme='dark'] .cl-toc-en {
+[data-theme='dark'] .cl-toc-label {
   color: #f3f4f6;
 }
 [data-theme='dark'] .cl-toc-footer {
