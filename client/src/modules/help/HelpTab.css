@@ -135,10 +135,6 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.help-index-section-en {
-  font-weight: 500;
-  color: #9ca3af;
-}
 .help-index-item {
   display: flex;
   flex-direction: column;
@@ -162,17 +158,11 @@
   background: #dbeafe;
   border-left-color: #1e40af;
 }
-.help-index-vi {
+.help-index-label {
   font-size: 13px;
   font-weight: 600;
   color: #111827;
   line-height: 1.25;
-}
-.help-index-en {
-  font-size: 11px;
-  color: #6b7280;
-  line-height: 1.15;
-  margin-top: 1px;
 }
 .help-index-empty {
   padding: 16px;
@@ -222,15 +212,6 @@
   gap: 10px;
   flex-wrap: wrap;
 }
-.help-title-en {
-  font-size: 16px;
-  font-weight: 500;
-  color: #6b7280;
-  font-style: italic;
-}
-.help-title-vi {
-  font-weight: 700;
-}
 
 .help-block {
   margin-bottom: 22px;
@@ -243,21 +224,10 @@
   letter-spacing: 0.02em;
 }
 
-.help-bilingual {
+.help-bi {
   margin: 0 0 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.help-bi-en {
   font-size: 13px;
   color: #1f2937;
-  line-height: 1.5;
-}
-.help-bi-vi {
-  font-size: 12.5px;
-  font-style: italic;
-  color: #4b5563;
   line-height: 1.5;
 }
 
@@ -271,18 +241,10 @@
 .help-list li {
   margin-bottom: 6px;
 }
-/* When a list item contains both EN + VI spans (bilingual), show EN
- * inline and VI on a new line as an italic gray sub-line. */
-.help-list li .help-bi-en {
+/* Inside a list item the copy runs inline with the marker. */
+.help-list li .help-bi {
   display: inline;
-}
-.help-list li .help-bi-vi {
-  display: block;
-  font-size: 11.5px;
-  font-style: italic;
-  color: #6b7280;
-  margin-top: 1px;
-  line-height: 1.4;
+  margin: 0;
 }
 .help-item-icon {
   margin-right: 4px;
@@ -632,12 +594,6 @@
   font-size: 11px;
   font-weight: 700;
 }
-.help-procedure-en {
-  font-size: 11.5px;
-  font-weight: 400;
-  color: #6b7280;
-  font-style: italic;
-}
 .help-procedure-note {
   margin: 6px 0 8px;
   padding: 6px 10px;
@@ -647,20 +603,6 @@
   font-size: 12px;
   color: #78350f;
   font-style: italic;
-}
-.help-procedure-note-vi {
-  margin-top: 2px;
-  opacity: 0.85;
-}
-.help-caption-vi {
-  color: #6b7280;
-  font-style: italic;
-  margin-top: 4px;
-}
-.help-empty-vi {
-  color: #6b7280;
-  font-style: italic;
-  margin-top: 4px;
 }
 
 /* Appendix block — reference table with lettered title */
@@ -673,7 +615,7 @@
   font-size: 13px;
   margin-bottom: 6px;
 }
-.help-col-en {
+.help-col-label {
   font-weight: 400;
   font-size: 10px;
   color: #9ca3af;
@@ -729,11 +671,6 @@
 .help-related-chip:hover {
   background: #c7d2fe;
 }
-.help-related-en {
-  font-weight: 400;
-  color: #6366f1;
-  font-size: 10.5px;
-}
 
 /* ── Print styles ─────────────────────────────────────────── */
 @media print {
@@ -782,7 +719,7 @@
 [data-theme='dark'] .help-index-item.active {
   background: #1e40af;
 }
-[data-theme='dark'] .help-index-vi {
+[data-theme='dark'] .help-index-label {
   color: #f3f4f6;
 }
 [data-theme='dark'] .help-main {
@@ -791,7 +728,7 @@
 [data-theme='dark'] .help-content-title {
   color: #f3f4f6;
 }
-[data-theme='dark'] .help-bi-en {
+[data-theme='dark'] .help-bi {
   color: #e5e7eb;
 }
 [data-theme='dark'] .help-list {

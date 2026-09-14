@@ -480,4 +480,105 @@ registerStrings({
   'bootstrap.task.chat_rooms': { en: 'Chat rooms', vi: 'Phòng chat' },
   'bootstrap.task.chat_users': { en: 'User directory', vi: 'Danh bạ người dùng' },
   'bootstrap.task.chat_mentions': { en: 'Mentions inbox', vi: 'Hộp lượt nhắc' },
+
+  // ─── i18n wave 9 (2026-09-14) — Help tab chrome. The help ENTRIES
+  // themselves live in src/help/content.js as { en, vi } pairs and are
+  // picked per locale at render (pickLang), not duplicated here — the
+  // same file feeds the offline Word export.
+  'help.page_title': { en: 'Help', vi: 'Hướng dẫn sử dụng' },
+  'help.aria.region': { en: 'Help', vi: 'Trợ giúp' },
+  'help.aria.sections': { en: 'Help sections', vi: 'Các mục trợ giúp' },
+  'help.aria.search': { en: 'Search help topics', vi: 'Tìm chủ đề trợ giúp' },
+  'help.tip': {
+    en: 'Tip: press F1 inside any tab to jump here',
+    vi: 'Mẹo: nhấn F1 ở bất kỳ tab nào để mở Help',
+  },
+  'help.entries': { en: '{n} entries', vi: '{n} mục' },
+  'help.updated': { en: 'Updated {date}', vi: 'Cập nhật {date}' },
+  'help.word': { en: '⬇ Word', vi: '⬇ Word' },
+  'help.print': { en: '🖨 Print', vi: '🖨 In' },
+  'help.search_ph': {
+    en: 'Search (keyword, field name, formula)',
+    vi: 'Tìm kiếm (từ khoá, tên trường, công thức)',
+  },
+  'help.no_results': { en: 'No results', vi: 'Không tìm thấy' },
+  'help.pick_topic': { en: 'Select a topic from the left.', vi: 'Chọn một chủ đề ở bên trái.' },
+
+  // Entry header
+  'help.function': { en: 'Function', vi: 'Chức năng' },
+  'help.path': { en: 'Path', vi: 'Đường dẫn' },
+  'help.authorization': { en: 'Authorization', vi: 'Phân quyền' },
+
+  // Section headings — SAP-style order, see HelpContentView.
+  'help.sec.use': { en: 'Use', vi: 'Mục đích nghiệp vụ' },
+  'help.sec.integration': { en: 'Integration', vi: 'Tích hợp / Khi dùng' },
+  'help.sec.prereq': { en: 'Prerequisites', vi: 'Điều kiện tiên quyết' },
+  'help.sec.features': { en: 'Features', vi: 'Tính năng' },
+  'help.sec.procedure': { en: 'Procedure', vi: 'Thao tác' },
+  'help.sec.appendix': { en: 'Appendix', vi: 'Phụ lục' },
+  'help.sec.screenshot': { en: 'Screenshot', vi: 'Ảnh minh hoạ' },
+  'help.sec.fields': { en: 'Field reference', vi: 'Trường dữ liệu' },
+  'help.sec.formulas': { en: 'Formulas', vi: 'Công thức' },
+  'help.sec.example': { en: 'Example', vi: 'Ví dụ' },
+  'help.sec.result': { en: 'Result', vi: 'Kết quả đạt được' },
+  'help.sec.constraints': { en: 'Constraints', vi: 'Hạn chế & lỗi thường gặp' },
+  'help.sec.tips': { en: 'Best practices', vi: 'Thực hành tốt' },
+  'help.sec.see_also': { en: 'See also', vi: 'Xem thêm' },
+
+  // In-section labels
+  'help.note': { en: 'Note:', vi: 'Lưu ý:' },
+  'help.meaning': { en: 'Meaning:', vi: 'Ý nghĩa:' },
+  'help.example_label': { en: 'Example:', vi: 'Ví dụ:' },
+  'help.scenario': { en: 'Scenario:', vi: 'Tình huống:' },
+  'help.expected': { en: 'Expected result:', vi: 'Kết quả mong đợi:' },
+  'help.col.field': { en: 'Field', vi: 'Trường' },
+  'help.col.type': { en: 'Type', vi: 'Kiểu' },
+  'help.col.description': { en: 'Description', vi: 'Mô tả' },
+  'help.shot_caption': {
+    en: 'Screenshot for {id}. If missing, run the screenshot capture script (see CLAUDE.md).',
+    vi: 'Ảnh minh hoạ cho {id}. Nếu thiếu, chạy script chụp screenshot (xem CLAUDE.md).',
+  },
+
+  // Glossary
+  'help.glossary': { en: 'Glossary', vi: 'Từ điển chuyên ngành' },
+  'help.glossary.crumb': { en: 'GLOSSARY', vi: 'TỪ ĐIỂN' },
+  'help.glossary.count': { en: 'Count', vi: 'Số lượng' },
+  'help.glossary.terms': { en: '{shown} / {total} terms', vi: '{shown} / {total} thuật ngữ' },
+  'help.glossary.nav': { en: 'Glossary · {n} terms', vi: 'Từ điển · {n} thuật ngữ' },
+  'help.glossary.section': { en: 'Domain terms', vi: 'Thuật ngữ' },
+  'help.glossary.empty': {
+    en: 'No terms match "{q}"',
+    vi: 'Không có thuật ngữ khớp với "{q}"',
+  },
+
+  // Default authorization notes (were 'EN · VI' concatenations).
+  'help.auth.quote': {
+    en: 'Quote authoring — Cost role required to commit.',
+    vi: 'Soạn báo giá — cần role Cost để Save.',
+  },
+  'help.auth.approve': {
+    en: 'Cost / Admin to approve or send.',
+    vi: 'Cost / Admin để duyệt hoặc gửi.',
+  },
+  'help.auth.templates': {
+    en: 'Cost / Admin to edit templates + routing.',
+    vi: 'Cost / Admin để sửa template + routing.',
+  },
+  'help.auth.own_records': {
+    en: 'Everyone can view their own records.',
+    vi: 'Mọi người xem được record của mình.',
+  },
+  'help.auth.export_csv': { en: 'Admin required to export CSV.', vi: 'Cần Admin để export CSV.' },
+  'help.auth.master_data': {
+    en: 'Cost / Admin to edit master data.',
+    vi: 'Cost / Admin để sửa master data.',
+  },
+  'help.auth.sys_only': {
+    en: 'Sys role only for select subscreens.',
+    vi: 'Chỉ role Sys cho một số sub-screen.',
+  },
+  'help.auth.release_wo': {
+    en: 'Cost / Admin to release work orders.',
+    vi: 'Cost / Admin để release work order.',
+  },
 });
