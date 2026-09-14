@@ -22,6 +22,7 @@ import {
   normIfsMaterial,
   PICKER_COLUMNS,
   clampColWidth,
+  colWidthPercents,
 } from './LibraryPicker.norm.js';
 
 test('normNPI: surfaces date from row.date + keeps core fields', () => {
@@ -184,4 +185,53 @@ test('clampColWidth keeps a dragged column usable', () => {
   for (const bad of [NaN, undefined, null, 'x']) {
     assert.equal(clampColWidth(bad, 123), 123, 'unusable input falls back to the default');
   }
+});
+
+// ── Column widths as proportions (2026-09-14) ─────────────────────────
+// The first cut sized columns in px on a `width: max-content` table, so
+// twelve NPI columns produced a long horizontal scroll and the operator
+// could not see a whole row at once. Widths are proportions of the card
+// now: the table always fits, and dragging a column redistributes space
+// instead of growing the table.
+
+const cols3 = [
+  { key: 'a', w: 100 },
+  { key: 'b', w: 200 },
+  { key: 'c', w: 100 },
+];
+
+test('colWidthPercents spreads the defaults across the full width', () => {
+  const pct = colWidthPercents(cols3, {});
+  assert.deepEqual(Object.keys(pct), ['a', 'b', 'c']);
+  assert.equal(pct.a, '25%');
+  assert.equal(pct.b, '50%');
+  assert.equal(pct.c, '25%');
+});
+
+test('colWidthPercents always totals 100% — the table never overflows', () => {
+  for (const widths of [{}, { b: 600 }, { a: 60, b: 60, c: 60 }, { a: 600, b: 600, c: 600 }]) {
+    const pct = colWidthPercents(cols3, widths);
+    const total = Object.values(pct).reduce((n, v) => n + parseFloat(v), 0);
+    assert.ok(Math.abs(total - 100) < 0.05, `total was ${total} for ${JSON.stringify(widths)}`);
+  }
+});
+
+test('dragging one column wider takes space from the others', () => {
+  const before = colWidthPercents(cols3, {});
+  const after = colWidthPercents(cols3, { a: 300 });
+  assert.ok(parseFloat(after.a) > parseFloat(before.a), 'dragged column should grow');
+  assert.ok(parseFloat(after.b) < parseFloat(before.b), 'the others should yield space');
+});
+
+test('colWidthPercents ignores stored widths for columns that no longer exist', () => {
+  // A library's column set can change between releases; a stale key must
+  // not steal width from the columns that are actually rendered.
+  const pct = colWidthPercents(cols3, { gone: 5000 });
+  assert.deepEqual(Object.keys(pct), ['a', 'b', 'c']);
+  assert.equal(pct.a, '25%');
+});
+
+test('colWidthPercents survives an empty column list', () => {
+  assert.deepEqual(colWidthPercents([], {}), {});
+  assert.deepEqual(colWidthPercents(undefined, {}), {});
 });

@@ -349,40 +349,55 @@
   font-style: italic;
 }
 
-/* ── Resizable columns (2026-09-14) ───────────────────────────────────
-   The picker now renders every column its library carries (12 for NPI),
-   so a fixed layout is essential: without it the browser re-flows widths
-   on every keystroke in the search box. The grip is the draggable right
-   edge of each header cell; double-clicking any grip resets all widths. */
+/* ── Wide libraries: sticky header, wrapping cells, resizable columns ──
+   (2026-09-14, revised after operator feedback.)
+
+   Three things this block has to get right, all of which the first cut
+   got wrong:
+
+   1. The header must SURVIVE SCROLLING. `.libp-table thead th` above is
+      already `position: sticky`, so this block must NOT set `position:
+      relative` on the same cells — that silently un-sticks them. Sticky
+      is itself a positioned ancestor, so the grip still anchors to it.
+
+   2. Cells WRAP instead of running off the right edge. Twelve columns on
+      one line forced a wide horizontal scroll; letting a cell break into
+      two or three lines keeps the whole row visible at once, which is
+      what the operator is comparing. Only CODE stays on one line.
+
+   3. The table FITS the card by default (`width: 100%`), and the column
+      widths are proportions the operator can still drag. */
 .libp-table-cols {
   table-layout: fixed;
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
 }
-.libp-table-cols th {
-  position: relative;
-  overflow: hidden;
+/* Sticky is inherited from `.libp-table thead th`; only add what the grip
+   needs. No `position` here — see note 1. */
+.libp-table-cols thead th {
+  padding-right: 14px;
+  z-index: 2;
 }
 .libp-table-cols td {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* Wrap long descriptions / notes onto 2-3 lines rather than clipping. */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
 }
 .libp-th-label {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding-right: 8px;
 }
 .libp-col-grip {
   position: absolute;
   top: 0;
   right: 0;
-  width: 7px;
+  width: 9px;
   height: 100%;
   cursor: col-resize;
-  /* Hit area is wider than the visible hairline so it's grabbable. */
+  touch-action: none; /* let a pointer drag own the gesture */
+  user-select: none;
   border-right: 2px solid transparent;
 }
 .libp-col-grip:hover,
@@ -392,7 +407,9 @@
 .libp-num {
   text-align: right;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .libp-mono code {
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
