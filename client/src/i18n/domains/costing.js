@@ -180,6 +180,188 @@ registerStrings({
     en: 'Inherits MOQ 1 base ({base}) — type to override',
     vi: 'Kế thừa gốc MOQ 1 ({base}) — gõ để ghi đè',
   },
+  // ─── Print Area Calculator (wave 3) ─────────────────────────────────────
+  // Stays English: DPI, SKU, ROI, SPOT, Hex, Lab/ΔE76, and the file-type list.
+  // Everything an operator sets or reads while measuring a label is translated.
+  'pac.auto_detect': { en: 'Auto-detect', vi: 'Tự nhận' },
+  'pac.color': { en: 'Color', vi: 'Màu' },
+  'pac.open': { en: 'Open', vi: 'Mở' },
+  'pac.title': { en: 'Print Area Calculator', vi: 'Máy tính diện tích in' },
+  'pac.subtabs': { en: 'Print Area sub-tabs', vi: 'Tab con Diện tích in' },
+  'pac.artwork': { en: 'Artwork', vi: 'File thiết kế' },
+  'pac.drop_here': { en: 'Drop artwork here', vi: 'Thả file thiết kế vào đây' },
+  'pac.no_artwork': { en: 'No artwork yet', vi: 'Chưa có file thiết kế' },
+  'pac.upload_left': { en: 'Upload via the dropzone on the left', vi: 'Tải lên ở ô bên trái' },
+  'pac.remove_artwork': { en: 'Remove artwork', vi: 'Gỡ file thiết kế' },
+  'pac.remove_artwork_tip': {
+    en: 'Remove artwork and upload a new one',
+    vi: 'Gỡ file hiện tại và tải file khác',
+  },
+  'pac.product': { en: 'Product', vi: 'Sản phẩm' },
+  'pac.product_name': { en: 'Product name', vi: 'Tên sản phẩm' },
+  'pac.name': { en: 'Name', vi: 'Tên' },
+  'pac.sku_required': { en: 'SKU / Product code *', vi: 'SKU / Mã sản phẩm *' },
+  'pac.search_ph': {
+    en: 'Search by SKU or product name...',
+    vi: 'Tìm theo SKU hoặc tên sản phẩm...',
+  },
+  'pac.width_mm': { en: 'Width (mm) *', vi: 'Rộng (mm) *' },
+  'pac.height_mm': { en: 'Height (mm) *', vi: 'Cao (mm) *' },
+  'pac.size_mm': { en: 'Size (mm)', vi: 'Kích thước (mm)' },
+  'pac.bleed_mm': { en: 'Bleed (mm)', vi: 'Bleed (mm)' },
+  'pac.bleed_tip': {
+    en: 'Bleed added to all 4 sides of the trim size. Ink printed on the bleed area is measured (counts toward ink consumption) but is outside the finished-label trim. Leave 0 if your artwork is trim-sized.',
+    vi: 'Bleed cộng thêm vào cả 4 cạnh của khổ thành phẩm. Mực in trên vùng bleed vẫn được đo (tính vào lượng mực tiêu thụ) nhưng nằm ngoài khổ cắt thành phẩm. Để 0 nếu file đã đúng khổ thành phẩm.',
+  },
+  'pac.drawing_scale': {
+    en: 'Drawing scale (artwork : physical)',
+    vi: 'Tỷ lệ bản vẽ (thiết kế : thực tế)',
+  },
+  'pac.drawing_scale_tip': {
+    en: 'Use this when the artwork is drawn at a different size than the physical product. e.g. 2:1 means the drawing is 2× the real size, so a 60mm-wide drawing prints at 30mm.',
+    vi: 'Dùng khi file được vẽ ở kích thước khác sản phẩm thật. Ví dụ 2:1 nghĩa là bản vẽ gấp 2 lần thật, nên bản vẽ rộng 60mm sẽ in ra 30mm.',
+  },
+  'pac.rotation': { en: 'Rotation', vi: 'Xoay' },
+  'pac.rotation_tip': {
+    en: "Artwork rotation. 'Auto' flips 90° when the bitmap aspect ratio doesn't match W×H (portrait artwork for a landscape label). Manual override if auto misdetects.",
+    vi: 'Xoay file thiết kế. "Auto" tự lật 90° khi tỷ lệ ảnh không khớp W×H (file dọc cho nhãn ngang). Chỉnh tay nếu auto nhận sai.',
+  },
+  'pac.render_dpi': { en: 'Render DPI', vi: 'DPI render' },
+  'pac.plate': { en: 'Plate', vi: 'Bản in' },
+  'pac.objects': { en: 'Objects', vi: 'Đối tượng' },
+  'pac.objects_tip': {
+    en: 'Number of vector objects drawn on this plate',
+    vi: 'Số đối tượng vector vẽ trên bản in này',
+  },
+  'pac.press': { en: 'Press', vi: 'Máy in' },
+  'pac.print_method': { en: 'Print method', vi: 'Phương pháp in' },
+  'pac.method': { en: 'Method', vi: 'Phương pháp' },
+  'pac.detection': { en: 'Detection', vi: 'Nhận diện' },
+  'pac.background_mode': { en: 'Background mode', vi: 'Chế độ nền' },
+  'pac.auto_4corner': { en: 'Auto (4-corner sample)', vi: 'Tự động (lấy mẫu 4 góc)' },
+  'pac.manual_white': { en: 'Manual (white)', vi: 'Thủ công (trắng)' },
+  'pac.bg_wrong': {
+    en: 'Background detection may be wrong.',
+    vi: 'Nhận diện nền có thể sai.',
+  },
+  'pac.crop_mode': { en: 'Crop mode', vi: 'Chế độ cắt' },
+  'pac.crop_mode_tip': {
+    en: "How to trim the analysis region when you haven't drawn a manual ROI. 'Physical (input-driven)' is the most accurate when artwork has dimension-line margins — it crops to EXACTLY the W×H you entered above, anchored on the content centroid.",
+    vi: 'Cách cắt vùng phân tích khi chưa khoanh ROI thủ công. "Physical (input-driven)" chính xác nhất khi file có lề đường kích thước — nó cắt đúng W×H bạn nhập ở trên, neo theo trọng tâm nội dung.',
+  },
+  'pac.analysis_area': { en: 'Analysis area', vi: 'Vùng phân tích' },
+  'pac.roi_toggle_tip': {
+    en: 'Toggle drag-to-select mode. Drag a rectangle on the preview canvas to define the exact label region.',
+    vi: 'Bật/tắt chế độ kéo chọn. Kéo một hình chữ nhật trên canvas xem trước để khoanh đúng vùng nhãn.',
+  },
+  'pac.roi_remove_tip': {
+    en: 'Remove the manual selection and fall back to auto-crop',
+    vi: 'Xoá vùng chọn thủ công, quay lại cắt tự động',
+  },
+  'pac.inspector_tip': {
+    en: 'Toggle pixel inspector. Click anywhere on the canvas to read its color + which detected ink it belongs to.',
+    vi: 'Bật/tắt soi pixel. Bấm bất kỳ đâu trên canvas để đọc màu và mực nào chứa nó.',
+  },
+  'pac.analyze': { en: 'Analyze', vi: 'Phân tích' },
+  'pac.rerun': { en: 'Re-run', vi: 'Chạy lại' },
+  'pac.run_analysis_tip': { en: 'Run analysis · ⌘↵ / Ctrl ↵', vi: 'Chạy phân tích · ⌘↵ / Ctrl ↵' },
+  'pac.awaiting': { en: 'Awaiting analysis', vi: 'Chờ phân tích' },
+  'pac.run_to_see': {
+    en: 'Run analysis to see per-color breakdown.',
+    vi: 'Chạy phân tích để xem chi tiết theo màu.',
+  },
+  'pac.apply_dims': { en: 'Apply dims →', vi: 'Áp kích thước →' },
+  'pac.apply_dims_tip': {
+    en: 'Overwrite the typed Width/Height with the dimensions implied by the detected die-line bbox, then you can re-analyze for a second pass.',
+    vi: 'Ghi đè Rộng/Cao đã nhập bằng kích thước suy ra từ khung die-line nhận được, rồi chạy phân tích lại.',
+  },
+  'pac.dieline_detected': { en: 'Die-line detected:', vi: 'Nhận được die-line:' },
+  'pac.ignore_dieline': {
+    en: 'Ignore dieline / die-cut outline (magenta)',
+    vi: 'Bỏ qua die-line / đường bế (màu magenta)',
+  },
+  'pac.ignore_dieline_tip': {
+    en: 'Exclude magenta / pink clusters (CAD dieline / cut-mark convention) from the printed total. You can still override any color by clicking its row in the results.',
+    vi: 'Loại cụm magenta/hồng (quy ước die-line/dấu bế của CAD) khỏi tổng in. Vẫn có thể ghi đè từng màu bằng cách bấm vào dòng của nó.',
+  },
+  'pac.colors': { en: 'Colors', vi: 'Số màu' },
+  'pac.swatch': { en: 'Swatch', vi: 'Mẫu màu' },
+  'pac.area_pct': { en: 'Area %', vi: 'Diện tích %' },
+  'pac.area_mm2': { en: 'Area mm²', vi: 'Diện tích mm²' },
+  'pac.print_pct': { en: 'Print %', vi: 'In %' },
+  'pac.print_mm2': { en: 'Print mm²', vi: 'In mm²' },
+  'pac.total_coverage': {
+    en: 'Total print coverage (excluding ignored)',
+    vi: 'Tổng độ phủ in (không tính phần bỏ qua)',
+  },
+  'pac.row_toggle_tip': {
+    en: 'Click a row to toggle ignore',
+    vi: 'Bấm một dòng để bật/tắt bỏ qua',
+  },
+  'pac.highlight_tip': {
+    en: "Click to highlight this ink's area on the canvas",
+    vi: 'Bấm để làm nổi vùng của mực này trên canvas',
+  },
+  'pac.show_ink_tip': {
+    en: 'Show this ink area on the canvas',
+    vi: 'Hiện vùng mực này trên canvas',
+  },
+  'pac.actions_hint': {
+    en: 'Actions — or right-click any row',
+    vi: 'Thao tác — hoặc chuột phải vào dòng bất kỳ',
+  },
+  'pac.pinned_spot': { en: 'Pinned spot inks', vi: 'Mực pha đã ghim' },
+  'pac.remove_rerun': {
+    en: 'Remove. Re-run Analyze to apply.',
+    vi: 'Gỡ. Chạy lại Phân tích để áp dụng.',
+  },
+  'pac.wet_per_label': {
+    en: 'Wet ink volume per single label, given the active print method',
+    vi: 'Lượng mực ướt cho một nhãn, theo phương pháp in đang chọn',
+  },
+  'pac.wet_per_1k': {
+    en: 'Wet ink volume to print 1,000 labels of this size',
+    vi: 'Lượng mực ướt để in 1.000 nhãn cỡ này',
+  },
+  'pac.dot_gain': { en: 'Apply dot gain to ink volume', vi: 'Áp dot gain vào lượng mực' },
+  'pac.dot_gain_tip': {
+    en: 'Fold press dot gain into the ink-volume math. Halftone screens grow on press (50% file ≈ 68% on substrate for flexo). Affects ink volume only — file-coverage % stays the true on-file number.',
+    vi: 'Đưa dot gain của máy in vào phép tính lượng mực. Tram nở khi in (50% trên file ≈ 68% trên vật liệu với flexo). Chỉ ảnh hưởng lượng mực — % phủ trên file vẫn là số thật của file.',
+  },
+  'pac.antialias': {
+    en: 'Anti-aliasing sub-pixel weighting',
+    vi: 'Trọng số sub-pixel khử răng cưa',
+  },
+  'pac.antialias_tip': {
+    en: 'Give anti-aliased edge pixels a fractional ink weight (0..1) instead of counting them as full ink. Default ON — matches how the press actually lays ink. Shrinks coverage by 2-5% on vector art.',
+    vi: 'Cho pixel viền khử răng cưa một trọng số mực lẻ (0..1) thay vì tính đủ. Mặc định BẬT — sát với cách máy in đặt mực thật. Giảm độ phủ 2-5% với file vector.',
+  },
+  'pac.perceptual': {
+    en: 'Perceptual color distance (Lab / ΔE76)',
+    vi: 'Khoảng cách màu thị giác (Lab / ΔE76)',
+  },
+  'pac.perceptual_tip': {
+    en: "Use perceptual Lab color space (ΔE76) for cluster merging and nearest-centroid assignment. Default ON — merges JPG-artifact duplicates the eye can't distinguish. Turn off to reproduce pre-Sprint-8 numbers.",
+    vi: 'Dùng không gian màu Lab (ΔE76) để gộp cụm và gán theo tâm gần nhất. Mặc định BẬT — gộp các bản trùng do nén JPG mà mắt không phân biệt được. Tắt để tái lập số liệu trước Sprint 8.',
+  },
+  'pac.accuracy': { en: 'Accuracy (Sprint 8)', vi: 'Độ chính xác (Sprint 8)' },
+  'pac.morph_tip': {
+    en: "Morphological opening — removes thin strokes (≤ 2×N px wide) after cropping. Use when dim-line annotations share colors with legit label content and the crop alone didn't remove them. 0 = off (reproduces pre-sprint-7 numbers).",
+    vi: 'Morphological opening — xoá nét mảnh (rộng ≤ 2×N px) sau khi cắt. Dùng khi chú thích đường kích thước trùng màu với nội dung nhãn thật và việc cắt chưa loại được. 0 = tắt (tái lập số liệu trước Sprint 7).',
+  },
+  'pac.sep_export_tip': {
+    en: 'Download one PNG per color (film positive — black where the ink prints, white elsewhere)',
+    vi: 'Tải một PNG cho mỗi màu (film dương — đen ở chỗ có mực, trắng ở chỗ còn lại)',
+  },
+  'pac.library': { en: 'Library', vi: 'Thư viện' },
+  'pac.loaded_from_lib': { en: 'Loaded from Library:', vi: 'Đã nạp từ Thư viện:' },
+  'pac.no_saved': { en: 'No saved measurements yet.', vi: 'Chưa có phép đo nào được lưu.' },
+  'pac.created': { en: 'Created', vi: 'Tạo lúc' },
+  'pac.optional': { en: 'Optional', vi: 'Không bắt buộc' },
+  'pac.original': { en: 'Original', vi: 'Gốc' },
+  'pac.zoom_in': { en: 'Zoom in', vi: 'Phóng to' },
+  'pac.zoom_out': { en: 'Zoom out', vi: 'Thu nhỏ' },
+
   // ─── Ink Calculator (wave 3) ────────────────────────────────────────────
   // The three floating utility calculators — ink-calc, print-area,
   // design-tools — are a real grouping, not one invented for this wave:

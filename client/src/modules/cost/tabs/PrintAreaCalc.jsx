@@ -21,6 +21,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useI18n } from '../../../utils/useI18n';
 import { sharedApi } from '../../../services/api';
 import {
   runPrintAreaAnalysis,
@@ -158,6 +159,7 @@ function nearestZoomStep(value, direction) {
 // the canvas caption-top row, aligned right. Keyboard-accessible via
 // native button semantics; screen readers get a group label.
 function ZoomControls({ value, onChange, label }) {
+  const { t } = useI18n();
   const atMin = Math.abs(value - ZOOM_STEPS[0]) < 0.01;
   const atMax = Math.abs(value - ZOOM_STEPS[ZOOM_STEPS.length - 1]) < 0.01;
   return (
@@ -166,7 +168,7 @@ function ZoomControls({ value, onChange, label }) {
         type="button"
         className="pa-zoom-btn"
         aria-label={`Zoom out ${label}`}
-        title="Zoom out"
+        title={t('pac.zoom_out')}
         disabled={atMin}
         onClick={() => onChange(nearestZoomStep(value, -1))}
       >
@@ -185,7 +187,7 @@ function ZoomControls({ value, onChange, label }) {
         type="button"
         className="pa-zoom-btn"
         aria-label={`Zoom in ${label}`}
-        title="Zoom in"
+        title={t('pac.zoom_in')}
         disabled={atMax}
         onClick={() => onChange(nearestZoomStep(value, +1))}
       >
@@ -197,6 +199,7 @@ function ZoomControls({ value, onChange, label }) {
 
 // ── New Job sub-tab ───────────────────────────────────────────────
 function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
+  const { t } = useI18n();
   const [config, setConfig] = useState(DEFAULT_CONFIG);
   const [sku, setSku] = useState('');
   const [productName, setProductName] = useState('');
@@ -1109,10 +1112,10 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
     <div className="pa-body">
       {/* LEFT: Input panel */}
       <div className="pa-panel">
-        <h4 className="pa-panel-title">Product</h4>
+        <h4 className="pa-panel-title">{t('pac.product')}</h4>
         {openedFromLibrary && (
           <div className="pa-info-banner" role="status" aria-live="polite">
-            <b>Loaded from Library:</b> {openedFromLibrary.sku}
+            <b>{t('pac.loaded_from_lib')}</b> {openedFromLibrary.sku}
             {openedFromLibrary.updatedAt &&
               ` · ${String(openedFromLibrary.updatedAt).slice(0, 16).replace('T', ' ')}`}
             <div style={{ marginTop: 2, fontSize: 11, color: '#1e40af' }}>
@@ -1139,7 +1142,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
           </div>
         )}
         <div className="pa-field">
-          <label>SKU / Mã sản phẩm *</label>
+          <label>{t('pac.sku_required')}</label>
           <input
             type="text"
             value={sku}
@@ -1148,33 +1151,31 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
           />
         </div>
         <div className="pa-field">
-          <label>Product name</label>
+          <label>{t('pac.product_name')}</label>
           <input
             type="text"
             value={productName}
             onChange={(e) => setProductName(e.target.value)}
-            placeholder="Optional"
+            placeholder={t('pac.optional')}
           />
         </div>
         <div className="pa-row">
           <div className="pa-field">
-            <label>Width (mm) *</label>
+            <label>{t('pac.width_mm')}</label>
             <DecimalInput
               value={config.widthMm}
               onChange={(v) => setConfig({ ...config, widthMm: Number(v) || 0 })}
             />
           </div>
           <div className="pa-field">
-            <label>Height (mm) *</label>
+            <label>{t('pac.height_mm')}</label>
             <DecimalInput
               value={config.heightMm}
               onChange={(v) => setConfig({ ...config, heightMm: Number(v) || 0 })}
             />
           </div>
           <div className="pa-field" style={{ maxWidth: 120 }}>
-            <label title="Bleed added to all 4 sides of the trim size. Ink printed on the bleed area is measured (counts toward ink consumption) but is outside the finished-label trim. Leave 0 if your artwork is trim-sized.">
-              Bleed (mm)
-            </label>
+            <label title={t('pac.bleed_tip')}>{t('pac.bleed_mm')}</label>
             <DecimalInput
               value={config.bleedMm || 0}
               onChange={(v) => setConfig({ ...config, bleedMm: Math.max(0, Number(v) || 0) })}
@@ -1183,11 +1184,11 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
         </div>
         <div className="pa-row">
           <div className="pa-field">
-            <label>Drawing scale (artwork : physical)</label>
+            <label>{t('pac.drawing_scale')}</label>
             <select
               value={config.scaleRatio}
               onChange={(e) => setConfig({ ...config, scaleRatio: Number(e.target.value) })}
-              title="Use this when the artwork is drawn at a different size than the physical product. e.g. 2:1 means the drawing is 2× the real size, so a 60mm-wide drawing prints at 30mm."
+              title={t('pac.drawing_scale_tip')}
             >
               <option value={1}>1 : 1 (actual size)</option>
               <option value={2}>2 : 1 (drawing 2× larger)</option>
@@ -1197,7 +1198,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
             </select>
           </div>
           <div className="pa-field">
-            <label>Render DPI</label>
+            <label>{t('pac.render_dpi')}</label>
             <select
               value={config.dpi}
               onChange={(e) => setConfig({ ...config, dpi: Number(e.target.value) })}
@@ -1216,7 +1217,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
         )}
 
         <h4 className="pa-panel-title" style={{ marginTop: 14 }}>
-          Print method
+          {t('pac.print_method')}
         </h4>
         <div className="pa-method-grid">
           {Object.values(INK_PROFILES).map((p) => (
@@ -1241,14 +1242,14 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
         </div>
 
         <h4 className="pa-panel-title pa-title-row" style={{ marginTop: 14 }}>
-          <span>Artwork</span>
+          <span>{t('pac.artwork')}</span>
           {file && (
             <button
               type="button"
               className="pa-clear-btn"
               onClick={clearFile}
-              title="Remove artwork and upload a new one"
-              aria-label="Remove artwork"
+              title={t('pac.remove_artwork_tip')}
+              aria-label={t('pac.remove_artwork')}
             >
               ×
             </button>
@@ -1281,7 +1282,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
                 <polyline points="17 8 12 3 7 8" />
                 <line x1="12" y1="3" x2="12" y2="15" />
               </svg>
-              <strong>Drop artwork here</strong>
+              <strong>{t('pac.drop_here')}</strong>
               <span className="pa-dropzone-hint">
                 click to browse · or paste with{' '}
                 <kbd>{navigator.platform.includes('Mac') ? '⌘V' : 'Ctrl V'}</kbd>
@@ -1297,16 +1298,16 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
         </label>
 
         <h4 className="pa-panel-title" style={{ marginTop: 14 }}>
-          Detection
+          {t('pac.detection')}
         </h4>
         <div className="pa-field">
-          <label>Background mode</label>
+          <label>{t('pac.background_mode')}</label>
           <select
             value={config.bgMode}
             onChange={(e) => setConfig({ ...config, bgMode: e.target.value })}
           >
-            <option value="auto">Auto (4-corner sample)</option>
-            <option value="manual">Manual (white)</option>
+            <option value="auto">{t('pac.auto_4corner')}</option>
+            <option value="manual">{t('pac.manual_white')}</option>
           </select>
         </div>
         <div className="pa-field">
@@ -1341,9 +1342,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
         </div>
 
         <div className="pa-field">
-          <label title="How to trim the analysis region when you haven't drawn a manual ROI. 'Physical (input-driven)' is the most accurate when artwork has dimension-line margins — it crops to EXACTLY the W×H you entered above, anchored on the content centroid.">
-            Crop mode
-          </label>
+          <label title={t('pac.crop_mode_tip')}>{t('pac.crop_mode')}</label>
           <div className="pa-radio-row">
             {[
               {
@@ -1384,7 +1383,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
         </div>
 
         <div className="pa-field">
-          <label title="Morphological opening — removes thin strokes (≤ 2×N px wide) after cropping. Use when dim-line annotations share colors with legit label content and the crop alone didn't remove them. 0 = off (reproduces pre-sprint-7 numbers).">
+          <label title={t('pac.morph_tip')}>
             Thin-stroke removal ({config.thinStrokeIterations || 0})
           </label>
           <input
@@ -1397,9 +1396,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
         </div>
 
         <div className="pa-field">
-          <label title="Artwork rotation. 'Auto' flips 90° when the bitmap aspect ratio doesn't match W×H (portrait artwork for a landscape label). Manual override if auto misdetects.">
-            Rotation
-          </label>
+          <label title={t('pac.rotation_tip')}>{t('pac.rotation')}</label>
           <select
             value={String(config.rotation ?? 'auto')}
             onChange={(e) => {
@@ -1407,7 +1404,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
               setConfig({ ...config, rotation: v === 'auto' ? 'auto' : Number(v) });
             }}
           >
-            <option value="auto">Auto-detect</option>
+            <option value="auto">{t('pac.auto_detect')}</option>
             <option value="0">0°</option>
             <option value="90">90° CW</option>
             <option value="180">180°</option>
@@ -1416,10 +1413,10 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
         </div>
 
         <h4 className="pa-panel-title" style={{ marginTop: 14 }}>
-          Accuracy (Sprint 8)
+          {t('pac.accuracy')}
         </h4>
         <div className="pa-check-row">
-          <label title="Use perceptual Lab color space (ΔE76) for cluster merging and nearest-centroid assignment. Default ON — merges JPG-artifact duplicates the eye can't distinguish. Turn off to reproduce pre-Sprint-8 numbers.">
+          <label title={t('pac.perceptual_tip')}>
             <input
               type="checkbox"
               checked={config.colorMetric !== 'rgb'}
@@ -1427,38 +1424,38 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
                 setConfig({ ...config, colorMetric: e.target.checked ? 'lab' : 'rgb' })
               }
             />
-            <span>Perceptual color distance (Lab / ΔE76)</span>
+            <span>{t('pac.perceptual')}</span>
           </label>
         </div>
         <div className="pa-check-row">
-          <label title="Give anti-aliased edge pixels a fractional ink weight (0..1) instead of counting them as full ink. Default ON — matches how the press actually lays ink. Shrinks coverage by 2-5% on vector art.">
+          <label title={t('pac.antialias_tip')}>
             <input
               type="checkbox"
               checked={config.aaWeighting !== false}
               onChange={(e) => setConfig({ ...config, aaWeighting: e.target.checked })}
             />
-            <span>Anti-aliasing sub-pixel weighting</span>
+            <span>{t('pac.antialias')}</span>
           </label>
         </div>
         <div className="pa-check-row">
-          <label title="Fold press dot gain into the ink-volume math. Halftone screens grow on press (50% file ≈ 68% on substrate for flexo). Affects ink volume only — file-coverage % stays the true on-file number.">
+          <label title={t('pac.dot_gain_tip')}>
             <input
               type="checkbox"
               checked={config.applyDotGain !== false}
               onChange={(e) => setConfig({ ...config, applyDotGain: e.target.checked })}
             />
-            <span>Apply dot gain to ink volume</span>
+            <span>{t('pac.dot_gain')}</span>
           </label>
         </div>
 
         <div className="pa-check-row">
-          <label title="Exclude magenta / pink clusters (CAD dieline / cut-mark convention) from the printed total. You can still override any color by clicking its row in the results.">
+          <label title={t('pac.ignore_dieline_tip')}>
             <input
               type="checkbox"
               checked={config.autoExcludeDieline}
               onChange={(e) => setConfig({ ...config, autoExcludeDieline: e.target.checked })}
             />
-            <span>Ignore dieline / die-cut outline (magenta)</span>
+            <span>{t('pac.ignore_dieline')}</span>
           </label>
         </div>
 
@@ -1467,7 +1464,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
             className="pa-analyze-btn"
             disabled={!file}
             onClick={runAnalyze}
-            title="Run analysis · ⌘↵ / Ctrl ↵"
+            title={t('pac.run_analysis_tip')}
           >
             ▶ Analyze artwork
           </button>
@@ -1484,7 +1481,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
         </div>
 
         <h4 className="pa-panel-title" style={{ marginTop: 14 }}>
-          Notes
+          {t('common.notes')}
         </h4>
         <div className="pa-field">
           <textarea
@@ -1507,7 +1504,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
         <div className="pa-canvas-pair">
           <div className="pa-canvas-side">
             <div className="pa-canvas-caption-top">
-              <span>Original</span>
+              <span>{t('pac.original')}</span>
               {(objectUrl || result) && (
                 <ZoomControls
                   value={originalZoom}
@@ -1545,8 +1542,8 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
                     <circle cx="8.5" cy="8.5" r="1.5" />
                     <polyline points="21 15 16 10 5 21" />
                   </svg>
-                  <strong>No artwork yet</strong>
-                  <span>Upload via the dropzone on the left</span>
+                  <strong>{t('pac.no_artwork')}</strong>
+                  <span>{t('pac.upload_left')}</span>
                 </div>
               )}
             </div>
@@ -1570,7 +1567,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
 
           <div className="pa-canvas-side">
             <div className="pa-canvas-caption-top">
-              <span>Analysis area</span>
+              <span>{t('pac.analysis_area')}</span>
               {analysisDims?.source === 'manual' && (
                 <span className="pa-caption-tag pa-tag-manual">manual ROI</span>
               )}
@@ -1608,10 +1605,11 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
                     <circle cx="11" cy="11" r="8" />
                     <line x1="21" y1="21" x2="16.65" y2="16.65" />
                   </svg>
-                  <strong>Awaiting analysis</strong>
+                  <strong>{t('pac.awaiting')}</strong>
                   <span>
-                    Press <kbd>{navigator.platform.includes('Mac') ? '⌘↵' : 'Ctrl ↵'}</kbd> or click{' '}
-                    <em>Analyze</em>
+                    {t('pac.press')}
+                    <kbd>{navigator.platform.includes('Mac') ? '⌘↵' : 'Ctrl ↵'}</kbd> or click{' '}
+                    <em>{t('pac.analyze')}</em>
                   </span>
                 </div>
               )}
@@ -1637,7 +1635,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
 
         {result?.bg_sanity && !result.bg_sanity.ok && (
           <div className="pa-bg-warning" role="status" aria-live="polite">
-            <b>Background detection may be wrong.</b>{' '}
+            <b>{t('pac.bg_wrong')}</b>{' '}
             {result.bg_sanity.hint || 'Pick BG manually from a margin pixel.'}{' '}
             <span className="pa-bg-warning-meta">
               (printable ratio: {(result.bg_sanity.printable_ratio * 100).toFixed(1)}%)
@@ -1670,7 +1668,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
               <div className="pa-info-banner pa-dieline-banner">
                 <span className="pa-dieline-swatch" style={{ background: result.dieline.hex }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <b>Die-line detected:</b> {result.dieline.hex} (
+                  <b>{t('pac.dieline_detected')}</b> {result.dieline.hex} (
                   {result.dieline.pixel_count.toLocaleString()} px, stroke score{' '}
                   {result.dieline.stroke_score.toFixed(1)}){' · '}
                   <b>
@@ -1689,7 +1687,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
                     type="button"
                     className="pa-roi-btn"
                     style={{ flexShrink: 0 }}
-                    title="Overwrite the typed Width/Height with the dimensions implied by the detected die-line bbox, then you can re-analyze for a second pass."
+                    title={t('pac.apply_dims_tip')}
                     onClick={() =>
                       setConfig((p) => ({
                         ...p,
@@ -1698,7 +1696,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
                       }))
                     }
                   >
-                    Apply dims →
+                    {t('pac.apply_dims')}
                   </button>
                 )}
               </div>
@@ -1711,7 +1709,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
               className={`pa-overlay-chip ${overlayOn.__original ? 'active' : ''}`}
               onClick={() => setOverlayOn({ ...overlayOn, __original: !overlayOn.__original })}
             >
-              Original
+              {t('pac.original')}
             </span>
             {result.crop && (
               <span
@@ -1758,7 +1756,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
                       [`c${pickedPixel.cluster.idx}`]: !prev[`c${pickedPixel.cluster.idx}`],
                     }))
                   }
-                  title="Click to highlight this ink's area on the canvas"
+                  title={t('pac.highlight_tip')}
                 >
                   <span
                     className="pa-pick-swatch sm"
@@ -1814,7 +1812,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
         )}
 
         {Array.isArray(config.pinnedSpotHex) && config.pinnedSpotHex.length > 0 && (
-          <div className="pa-pinned-row" role="list" aria-label="Pinned spot inks">
+          <div className="pa-pinned-row" role="list" aria-label={t('pac.pinned_spot')}>
             <span className="pa-pinned-label">📌 Pinned spot inks:</span>
             {config.pinnedSpotHex.map((hex) => (
               <span key={hex} className="pa-pinned-chip" role="listitem" title={hex}>
@@ -1832,14 +1830,15 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
                     }))
                   }
                   aria-label={`Remove ${hex}`}
-                  title="Remove. Re-run Analyze to apply."
+                  title={t('pac.remove_rerun')}
                 >
                   ×
                 </button>
               </span>
             ))}
             <span className="pa-pinned-hint">
-              Re-run <b>Analyze</b> to apply.
+              {t('pac.rerun')}
+              <b>{t('pac.analyze')}</b> to apply.
             </span>
           </div>
         )}
@@ -1865,7 +1864,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
                     letterSpacing: 0,
                   }}
                 >
-                  Click a row to toggle ignore
+                  {t('pac.row_toggle_tip')}
                 </span>
               )}
             </span>
@@ -1877,7 +1876,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
                   setRoiMode((m) => !m);
                   setPickMode(false);
                 }}
-                title="Toggle drag-to-select mode. Drag a rectangle on the preview canvas to define the exact label region."
+                title={t('pac.roi_toggle_tip')}
               >
                 {roiMode ? '✓ Drawing ROI' : '⬚ Draw ROI'}
               </button>
@@ -1888,7 +1887,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
                   setPickMode((m) => !m);
                   setRoiMode(false);
                 }}
-                title="Toggle pixel inspector. Click anywhere on the canvas to read its color + which detected ink it belongs to."
+                title={t('pac.inspector_tip')}
               >
                 {pickMode ? '✓ Inspect ON' : '🎯 Inspect color'}
               </button>
@@ -1897,7 +1896,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
                   type="button"
                   className="pa-roi-btn pa-roi-clear"
                   onClick={clearRoi}
-                  title="Remove the manual selection and fall back to auto-crop"
+                  title={t('pac.roi_remove_tip')}
                 >
                   ×
                 </button>
@@ -1907,7 +1906,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
                   type="button"
                   className="pa-sep-btn"
                   onClick={downloadSeparations}
-                  title="Download one PNG per color (film positive — black where the ink prints, white elsewhere)"
+                  title={t('pac.sep_export_tip')}
                 >
                   ⬇ Separations
                 </button>
@@ -1926,7 +1925,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
               </div>
               {manualRoi && !roiDrag && (
                 <div style={{ marginTop: 3, opacity: 0.85 }}>
-                  ↻ Re-run <b>Analyze</b> to apply this ROI
+                  ↻ Re-run <b>{t('pac.analyze')}</b> to apply this ROI
                 </div>
               )}
             </div>
@@ -1943,7 +1942,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
           )}
           {!result && (
             <div style={{ color: 'var(--pa-text-subtle)', fontSize: 12, fontStyle: 'italic' }}>
-              Run analysis to see per-color breakdown.
+              {t('pac.run_to_see')}
             </div>
           )}
 
@@ -1990,13 +1989,13 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
                 <thead>
                   <tr>
                     <th style={{ width: 36 }}>#</th>
-                    <th style={{ width: 28 }}>Swatch</th>
-                    <th>Plate</th>
-                    <th>Type</th>
-                    <th className="num">Area %</th>
-                    <th className="num">Area mm²</th>
-                    <th className="num" title="Number of vector objects drawn on this plate">
-                      Objects
+                    <th style={{ width: 28 }}>{t('pac.swatch')}</th>
+                    <th>{t('pac.plate')}</th>
+                    <th>{t('common.type')}</th>
+                    <th className="num">{t('pac.area_pct')}</th>
+                    <th className="num">{t('pac.area_mm2')}</th>
+                    <th className="num" title={t('pac.objects_tip')}>
+                      {t('pac.objects')}
                     </th>
                   </tr>
                 </thead>
@@ -2087,18 +2086,15 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
               <thead>
                 <tr>
                   <th style={{ width: 30 }}>#</th>
-                  <th style={{ width: 40 }}>Color</th>
-                  <th>Name</th>
+                  <th style={{ width: 40 }}>{t('pac.color')}</th>
+                  <th>{t('pac.name')}</th>
                   <th>Hex</th>
-                  <th className="num">Area %</th>
-                  <th className="num">Area mm²</th>
-                  <th
-                    className="num"
-                    title="Wet ink volume per single label, given the active print method"
-                  >
+                  <th className="num">{t('pac.area_pct')}</th>
+                  <th className="num">{t('pac.area_mm2')}</th>
+                  <th className="num" title={t('pac.wet_per_label')}>
                     µL/label
                   </th>
-                  <th className="num" title="Wet ink volume to print 1,000 labels of this size">
+                  <th className="num" title={t('pac.wet_per_1k')}>
                     mL/1k
                   </th>
                 </tr>
@@ -2127,7 +2123,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
                       <td
                         className="pa-show-cell"
                         onClick={toggleOverlay}
-                        title="Show this ink area on the canvas"
+                        title={t('pac.show_ink_tip')}
                       >
                         {c.idx}
                         {overlayActive && (
@@ -2139,7 +2135,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
                       <td
                         className="pa-show-cell"
                         onClick={toggleOverlay}
-                        title="Show this ink area on the canvas"
+                        title={t('pac.show_ink_tip')}
                       >
                         <span className="pa-swatch" style={{ background: c.hex }} />
                       </td>
@@ -2173,7 +2169,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
               <tfoot>
                 <tr>
                   <td colSpan={4} style={{ textAlign: 'right' }}>
-                    Total print coverage (excluding ignored)
+                    {t('pac.total_coverage')}
                   </td>
                   <td className="num">{totalPct}%</td>
                   <td className="num">{totalMm2}</td>
@@ -2201,6 +2197,7 @@ function NewJobTab({ onSaved, initialJob, onInitialConsumed }) {
 
 // ── Library sub-tab ───────────────────────────────────────────────
 function LibraryTab({ jobs, loading, error, onReload, onOpen }) {
+  const { t } = useI18n();
   const [q, setQ] = useState('');
   // Right-click context menu state. `x,y` are viewport-relative
   // (from MouseEvent.clientX/Y) so we position the floating menu via
@@ -2263,7 +2260,7 @@ function LibraryTab({ jobs, loading, error, onReload, onOpen }) {
       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
         <input
           type="text"
-          placeholder="Search by SKU or product name..."
+          placeholder={t('pac.search_ph')}
           value={q}
           onChange={(e) => setQ(e.target.value)}
           style={{ flex: 1, padding: 6, border: '1px solid #d1d5db', borderRadius: 5 }}
@@ -2282,12 +2279,14 @@ function LibraryTab({ jobs, loading, error, onReload, onOpen }) {
         </button>
       </div>
       {loading && (
-        <div style={{ padding: 20, textAlign: 'center', color: '#6b7280' }}>Loading…</div>
+        <div style={{ padding: 20, textAlign: 'center', color: '#6b7280' }}>
+          {t('common.loading')}
+        </div>
       )}
       {error && <div className="pa-error">{error} — showing local results only.</div>}
       {!loading && filtered.length === 0 && (
         <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>
-          No saved measurements yet.
+          {t('pac.no_saved')}
         </div>
       )}
       {filtered.length > 0 && (
@@ -2295,13 +2294,13 @@ function LibraryTab({ jobs, loading, error, onReload, onOpen }) {
           <thead>
             <tr>
               <th>SKU</th>
-              <th>Product</th>
-              <th>Size (mm)</th>
-              <th>Method</th>
-              <th>Colors</th>
-              <th style={{ textAlign: 'right' }}>Print %</th>
-              <th style={{ textAlign: 'right' }}>Print mm²</th>
-              <th>Created</th>
+              <th>{t('pac.product')}</th>
+              <th>{t('pac.size_mm')}</th>
+              <th>{t('pac.method')}</th>
+              <th>{t('pac.colors')}</th>
+              <th style={{ textAlign: 'right' }}>{t('pac.print_pct')}</th>
+              <th style={{ textAlign: 'right' }}>{t('pac.print_mm2')}</th>
+              <th>{t('pac.created')}</th>
               <th style={{ width: 80 }}></th>
             </tr>
           </thead>
@@ -2348,7 +2347,7 @@ function LibraryTab({ jobs, loading, error, onReload, onOpen }) {
                 <td>
                   <button
                     type="button"
-                    title="Actions — or right-click any row"
+                    title={t('pac.actions_hint')}
                     aria-haspopup="menu"
                     className="pa-library-actions-btn"
                     onClick={(e) => {
@@ -2385,7 +2384,8 @@ function LibraryTab({ jobs, loading, error, onReload, onOpen }) {
               onOpen?.(job);
             }}
           >
-            <span className="pa-context-menu-ico">↗</span> Open
+            <span className="pa-context-menu-ico">↗</span>
+            {t('pac.open')}
           </button>
           <button
             type="button"
@@ -2397,7 +2397,8 @@ function LibraryTab({ jobs, loading, error, onReload, onOpen }) {
               handleDelete(sku);
             }}
           >
-            <span className="pa-context-menu-ico">🗑</span> Delete
+            <span className="pa-context-menu-ico">🗑</span>
+            {t('common.delete')}
           </button>
         </div>
       )}
