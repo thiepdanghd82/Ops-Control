@@ -56,12 +56,16 @@ export function buildSummarizeSheet(wb, ctx) {
 
   // Every section places its own banner, the first one on row 1 — which is
   // why createSheet is told not to write a sheet-level banner above.
+  // No extra gap between sections: each already returns one row past its last
+  // written row, and sectionBanner leaves a blank under its own banner. Adding
+  // a further +1 here drifted every section one row further down than the
+  // target workbook, compounding to five by Cost Breakdown.
   let r = buildRfqMoqSection(sheet, 1, ctx);
-  r = buildMaterialsSection(sheet, r + 1, ctx);
-  r = buildInksSection(sheet, r + 1, ctx);
-  r = buildProcessesSection(sheet, r + 1, ctx);
-  r = buildPackShipSection(sheet, r + 1, ctx);
-  buildCostBreakdownSection(sheet, r + 1, ctx);
+  r = buildMaterialsSection(sheet, r, ctx);
+  r = buildInksSection(sheet, r, ctx);
+  r = buildProcessesSection(sheet, r, ctx);
+  r = buildPackShipSection(sheet, r, ctx);
+  buildCostBreakdownSection(sheet, r, ctx);
 
   freezeTop(sheet, 1);
   return sheet;
