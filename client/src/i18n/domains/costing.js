@@ -632,6 +632,45 @@ registerStrings({
     vi: 'Xoá toàn bộ dữ liệu Công đoạn định tuyến (vẫn giữ bản sao lưu)',
   },
 
+  // ─── License Manager (wave 5) ───────────────────────────────────────────
+  // This screen shipped Vietnamese-only in PR #105 — an English reader saw
+  // Vietnamese with no English anywhere, the mirror of what waves 3 and 4 were
+  // fixing elsewhere. My file, so my debt.
+  //
+  // Installation ID, Tier, heartbeat and mint-license stay English: they are
+  // the words the licence workflow and mint-license.command already use.
+  'licmgr.title': { en: 'License Manager', vi: 'License Manager' },
+  'licmgr.machine': { en: 'Machine', vi: 'Máy' },
+  'licmgr.installation_id': { en: 'Installation ID', vi: 'Installation ID' },
+  'licmgr.status': { en: 'Status ⓘ', vi: 'Trạng thái ⓘ' },
+  'licmgr.tier': { en: 'Tier ⓘ', vi: 'Tier ⓘ' },
+  'licmgr.expires': { en: 'Expires ⓘ', vi: 'Hết hạn ⓘ' },
+  'licmgr.remaining': { en: 'Remaining', vi: 'Còn lại' },
+  'licmgr.last_seen': { en: 'Last seen', vi: 'Last seen' },
+  'licmgr.actions': { en: 'Actions', vi: 'Hành động' },
+  'licmgr.export_request': { en: 'Export request', vi: 'Export request' },
+  'licmgr.upload_license': { en: 'Upload license', vi: 'Upload license' },
+  'licmgr.forget': { en: 'Remove from table', vi: 'Gỡ khỏi bảng' },
+  'licmgr.forget_tip': { en: 'Remove this machine from the table', vi: 'Gỡ máy này khỏi bảng' },
+  'licmgr.forget_title': { en: 'Remove machine from the table?', vi: 'Gỡ máy khỏi bảng?' },
+  'licmgr.forget_reappear': {
+    en: 'If that machine is still in use it will reappear at its next heartbeat.',
+    vi: 'Nếu máy đó còn dùng, nó sẽ tự hiện lại ở heartbeat kế tiếp.',
+  },
+  'licmgr.copy_id_aria': { en: 'Copy Installation ID', vi: 'Chép Installation ID' },
+  'licmgr.copy_id_tip': {
+    en: 'Copy the full 64-character Installation ID to paste into mint-license',
+    vi: 'Chép đủ 64 ký tự Installation ID để dán vào mint-license',
+  },
+  'licmgr.self_reported_tip': {
+    en: 'Self-reported by the machine in its heartbeat — the server cannot verify it',
+    vi: 'Máy tự khai trong heartbeat — server không kiểm chứng',
+  },
+  'licmgr.no_machines': {
+    en: 'No machine has sent a heartbeat yet. Desktop installs report themselves when an operator signs in.',
+    vi: 'Chưa có máy nào gửi heartbeat. Máy desktop sẽ tự báo cáo khi operator đăng nhập.',
+  },
+
   // ─── Material Cost libraries (wave 4) ───────────────────────────────────
   // NPI Materials, IFS Materials, Sourcing Database and Material Inquiry.
   // Reference data the costing team reads rather than edits, so the column

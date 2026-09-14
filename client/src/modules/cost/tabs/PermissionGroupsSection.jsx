@@ -11,6 +11,7 @@
  * obvious and symmetrical.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useI18n } from '../../../utils/useI18n';
 import { sharedApi, authApi } from '../../../services/api';
 import Modal from '../../../components/Shared/Modal';
 
@@ -29,6 +30,7 @@ const ACCESS_MODES = [
 ];
 
 export default function PermissionGroupsSection({ isAdminPlus, onFlash }) {
+  const { t } = useI18n();
   const [groups, setGroups] = useState([]);
   const [tabCatalog, setTabCatalog] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -108,13 +110,13 @@ export default function PermissionGroupsSection({ isAdminPlus, onFlash }) {
     });
   }, []);
 
-  if (loading) return <div className="tab-loading">Loading permission groups…</div>;
+  if (loading) return <div className="tab-loading">{t('pg.loading')}</div>;
 
   return (
     <div className="settings-card pg-section">
       <div className="pg-section-head">
         <div>
-          <h4 style={{ margin: 0, fontSize: 13 }}>Permission Groups</h4>
+          <h4 style={{ margin: 0, fontSize: 13 }}>{t('set.permission_groups')}</h4>
           <p style={{ fontSize: 11, color: '#64748b', margin: '2px 0 0' }}>
             {groups.length} groups · {tabCatalog.length} tabs in matrix · per-tab Hidden / Read /
             Edit
@@ -138,14 +140,14 @@ export default function PermissionGroupsSection({ isAdminPlus, onFlash }) {
           'pg-assign-status' + (assignStats.unassigned > 0 ? ' pg-assign-warn' : ' pg-assign-ok')
         }
       >
-        <b>User coverage:</b>
+        <b>{t('pg.user_coverage')}</b>
         <span>
           {assignStats.assigned}/{assignStats.total} users have a permission group assigned
         </span>
         {assignStats.unassigned > 0 && (
           <span className="pg-assign-hint">
             · {assignStats.unassigned} using default all-access (role-only) — assign them in the{' '}
-            <b>Users</b> sub-tab.
+            <b>{t('set.user_accounts')}</b> sub-tab.
           </span>
         )}
       </div>
@@ -154,11 +156,11 @@ export default function PermissionGroupsSection({ isAdminPlus, onFlash }) {
         <thead>
           <tr>
             <th>ID</th>
-            <th>Name</th>
-            <th>Default Dept.</th>
-            <th>Coverage</th>
-            <th>Notes</th>
-            <th style={{ width: 120 }}>Actions</th>
+            <th>{t('pac.name')}</th>
+            <th>{t('pg.default_dept_short')}</th>
+            <th>{t('pg.coverage')}</th>
+            <th>{t('common.notes')}</th>
+            <th style={{ width: 120 }}>{t('common.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -169,7 +171,7 @@ export default function PermissionGroupsSection({ isAdminPlus, onFlash }) {
                 <td className="pg-mono">
                   {g.id}
                   {g.is_system && (
-                    <span className="pg-sys-badge" title="System — protected">
+                    <span className="pg-sys-badge" title={t('pg.system_protected')}>
                       sys
                     </span>
                   )}
@@ -202,15 +204,19 @@ export default function PermissionGroupsSection({ isAdminPlus, onFlash }) {
                       onClick={() =>
                         setEditing({ ...g, tab_permissions: { ...g.tab_permissions } })
                       }
-                      title="Edit"
+                      title={t('common.edit')}
                     >
                       ✎
                     </button>
-                    <button onClick={() => handleDuplicate(g)} title="Duplicate">
+                    <button onClick={() => handleDuplicate(g)} title={t('pg.duplicate')}>
                       ⧉
                     </button>
                     {!g.is_system && isAdminPlus && (
-                      <button onClick={() => handleDelete(g)} className="pg-del" title="Delete">
+                      <button
+                        onClick={() => handleDelete(g)}
+                        className="pg-del"
+                        title={t('common.delete')}
+                      >
                         ×
                       </button>
                     )}
@@ -263,6 +269,7 @@ function PermissionGroupMatrixModal({
   onSaved,
   onFlash,
 }) {
+  const { t } = useI18n();
   const [form, setForm] = useState({ ...group });
   const [saving, setSaving] = useState(false);
 
@@ -339,7 +346,7 @@ function PermissionGroupMatrixModal({
         <div className="pg-modal-form">
           <div className="pg-form-grid">
             <label>
-              <span>ID (slug)</span>
+              <span>{t('pg.id_slug')}</span>
               <input
                 type="text"
                 disabled={!isCreate || group.is_system}
@@ -348,7 +355,7 @@ function PermissionGroupMatrixModal({
               />
             </label>
             <label>
-              <span>Name</span>
+              <span>{t('pac.name')}</span>
               <input
                 type="text"
                 value={form.name || ''}
@@ -356,7 +363,7 @@ function PermissionGroupMatrixModal({
               />
             </label>
             <label>
-              <span>Default Department</span>
+              <span>{t('pg.default_dept')}</span>
               <select
                 value={form.default_department || ''}
                 onChange={(e) => setForm((f) => ({ ...f, default_department: e.target.value }))}
@@ -371,7 +378,7 @@ function PermissionGroupMatrixModal({
             </label>
           </div>
           <label className="pg-form-wide">
-            <span>Notes</span>
+            <span>{t('common.notes')}</span>
             <textarea
               rows={2}
               value={form.notes || ''}
@@ -382,34 +389,34 @@ function PermissionGroupMatrixModal({
 
         <div className="pg-modal-matrix">
           <div className="pg-matrix-head">
-            <span>Tab × Access Mode</span>
+            <span>{t('pg.tab_access_mode')}</span>
             <div className="pg-bulk">
-              <span>Bulk:</span>
+              <span>{t('pg.bulk')}</span>
               <button onClick={() => bulkSet('hidden')} className="pg-bulk-btn pg-bulk-hidden">
-                All Hidden
+                {t('pg.all_hidden')}
               </button>
               <button onClick={() => bulkSet('read')} className="pg-bulk-btn pg-bulk-read">
-                All Read
+                {t('pg.all_read')}
               </button>
               <button onClick={() => bulkSet('edit')} className="pg-bulk-btn pg-bulk-edit">
-                All Edit
+                {t('pg.all_edit')}
               </button>
               <button onClick={() => bulkSet(null)} className="pg-bulk-btn">
-                Clear (default)
+                {t('pg.clear_default')}
               </button>
             </div>
           </div>
           <table className="pg-matrix">
             <thead>
               <tr>
-                <th>Tab ID</th>
-                <th>Label</th>
+                <th>{t('pg.tab_id')}</th>
+                <th>{t('pg.label')}</th>
                 {ACCESS_MODES.map((m) => (
                   <th key={m.v} style={{ color: m.color }}>
                     {m.icon} {m.label}
                   </th>
                 ))}
-                <th title="Clear / default">—</th>
+                <th title={t('pg.clear_slash_default')}>—</th>
               </tr>
             </thead>
             <tbody>
@@ -438,7 +445,7 @@ function PermissionGroupMatrixModal({
                         className="pg-cell-clear"
                         onClick={() => setTabPerm(t.id, null)}
                         disabled={group.is_system || !current}
-                        title="Unset (falls back to default = edit)"
+                        title={t('pg.unset_hint')}
                       >
                         ×
                       </button>
@@ -456,7 +463,7 @@ function PermissionGroupMatrixModal({
         </span>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="op-btn op-btn-ghost" onClick={onClose} disabled={saving}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             className="op-btn op-btn-primary"

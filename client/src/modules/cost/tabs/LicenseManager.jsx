@@ -8,6 +8,7 @@
  * the server verifies + queues for delivery on the machine's next heartbeat.
  */
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useI18n } from '../../../utils/useI18n';
 import { licenseFleetApi } from '../../../services/api';
 import Modal from '../../../components/Shared/Modal';
 import {
@@ -33,6 +34,7 @@ function downloadJson(obj, filename) {
 }
 
 export default function LicenseManagerSection() {
+  const { t } = useI18n();
   const [fleet, setFleet] = useState(null);
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
@@ -162,7 +164,7 @@ export default function LicenseManagerSection() {
   return (
     <div className="licmgr">
       <div className="licmgr-head">
-        <h2>License Manager</h2>
+        <h2>{t('licmgr.title')}</h2>
         <button className="op-btn" onClick={refresh} disabled={busy}>
           ↻ Làm mới
         </button>
@@ -199,21 +201,19 @@ export default function LicenseManagerSection() {
       {fleet == null ? (
         <div className="licmgr-empty">Đang tải…</div>
       ) : fleet.length === 0 ? (
-        <div className="licmgr-empty">
-          Chưa có máy nào gửi heartbeat. Máy desktop sẽ tự báo cáo khi operator đăng nhập.
-        </div>
+        <div className="licmgr-empty">{t('licmgr.no_machines')}</div>
       ) : (
         <table className="licmgr-table">
           <thead>
             <tr>
-              <th>Máy</th>
-              <th>Installation ID</th>
-              <th title="Máy tự khai trong heartbeat — server không kiểm chứng">Trạng thái ⓘ</th>
-              <th title="Máy tự khai trong heartbeat — server không kiểm chứng">Tier ⓘ</th>
-              <th title="Máy tự khai trong heartbeat — server không kiểm chứng">Hết hạn ⓘ</th>
-              <th>Còn lại</th>
-              <th>Last seen</th>
-              <th>Hành động</th>
+              <th>{t('licmgr.machine')}</th>
+              <th>{t('licmgr.installation_id')}</th>
+              <th title={t('licmgr.self_reported_tip')}>{t('licmgr.status')}</th>
+              <th title={t('licmgr.self_reported_tip')}>{t('licmgr.tier')}</th>
+              <th title={t('licmgr.self_reported_tip')}>{t('licmgr.expires')}</th>
+              <th>{t('licmgr.remaining')}</th>
+              <th>{t('licmgr.last_seen')}</th>
+              <th>{t('licmgr.actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -228,8 +228,8 @@ export default function LicenseManagerSection() {
                       type="button"
                       className="licmgr-copy"
                       onClick={() => onCopyId(m.installation_id)}
-                      title="Chép đủ 64 ký tự Installation ID để dán vào mint-license"
-                      aria-label="Chép Installation ID"
+                      title={t('licmgr.copy_id_tip')}
+                      aria-label={t('licmgr.copy_id_aria')}
                     >
                       {copiedId === m.installation_id ? '✓ đã chép' : '⧉'}
                     </button>
@@ -246,22 +246,22 @@ export default function LicenseManagerSection() {
                   <td className="licmgr-mono">{formatLastSeen(m.last_seen)}</td>
                   <td className="licmgr-actions">
                     <button className="op-btn op-btn-sm" onClick={() => onExportRequest(m)}>
-                      Export request
+                      {t('licmgr.export_request')}
                     </button>
                     <button
                       className="op-btn op-btn-sm op-btn-primary"
                       onClick={() => onPickUpload(m)}
                       disabled={busy}
                     >
-                      Upload license
+                      {t('licmgr.upload_license')}
                     </button>
                     <button
                       className="op-btn op-btn-sm licmgr-forget"
                       onClick={() => setForgetTarget(m)}
                       disabled={busy}
-                      title="Gỡ máy này khỏi bảng"
+                      title={t('licmgr.forget_tip')}
                     >
-                      Gỡ khỏi bảng
+                      {t('licmgr.forget')}
                     </button>
                   </td>
                 </tr>
@@ -278,13 +278,13 @@ export default function LicenseManagerSection() {
         severity="danger"
         ariaLabelledBy="licmgr-forget-title"
       >
-        <Modal.Header id="licmgr-forget-title" title="Gỡ máy khỏi bảng?" severity="danger" />
+        <Modal.Header id="licmgr-forget-title" title={t('licmgr.forget_title')} severity="danger" />
         <Modal.Body>
           <p>
             <strong>{forgetTarget?.hostname || shortId(forgetTarget?.installation_id)}</strong> sẽ
             biến mất khỏi danh sách. Máy vẫn giữ licence của nó — chỉ bảng theo dõi này quên nó đi.
           </p>
-          <p>Nếu máy đó còn dùng, nó sẽ tự hiện lại ở heartbeat kế tiếp.</p>
+          <p>{t('licmgr.forget_reappear')}</p>
           {forgetTarget?.pending_license && (
             <p className="licmgr-alert licmgr-alert-bad">
               ⚠ Máy này còn một licence đã ký đang chờ giao. Gỡ bảng sẽ <strong>bỏ luôn</strong>{' '}
@@ -294,10 +294,10 @@ export default function LicenseManagerSection() {
         </Modal.Body>
         <Modal.Footer>
           <button className="op-btn" onClick={() => setForgetTarget(null)} disabled={busy}>
-            Huỷ
+            {t('common.cancel')}
           </button>
           <button className="op-btn licmgr-forget" onClick={onConfirmForget} disabled={busy}>
-            Gỡ khỏi bảng
+            {t('licmgr.forget')}
           </button>
         </Modal.Footer>
       </Modal>
