@@ -23,6 +23,7 @@
  *     engineer who closes + reopens the tab returns to the same press.
  */
 import { useEffect, useState } from 'react';
+import { useI18n } from '../../../../utils/useI18n';
 import GallusCalc from './presses/GallusCalc';
 import './DesignTools.css';
 
@@ -43,6 +44,7 @@ const PRESSES = [
 const SS_KEY = 'ops_design_tools_state';
 
 export default function DesignTools() {
+  const { t } = useI18n();
   const [state, setState] = useState(() => {
     try {
       const raw = sessionStorage.getItem(SS_KEY);
@@ -71,12 +73,12 @@ export default function DesignTools() {
         <div className="dt-title">
           <span className="dt-title-icon">⚒</span>
           <div>
-            <b>Design Tools</b>
+            <b>{t('dt.title')}</b>
             <span className="dt-bi-vi"> · Bộ công cụ thiết kế cho kỹ sư in</span>
           </div>
         </div>
         <div className="dt-page-sub">
-          Pick a tool family below — each opens a per-machine designer.
+          {t('dt.pick_family')}
           <span className="dt-bi-vi">
             {' '}
             Chọn bộ công cụ bên dưới — mỗi bộ mở designer cho từng loại máy.
@@ -85,7 +87,7 @@ export default function DesignTools() {
       </header>
 
       {/* ═════════ Level 1: toolset bar ═════════ */}
-      <div className="dt-toolset-bar" role="tablist" aria-label="Tool family">
+      <div className="dt-toolset-bar" role="tablist" aria-label={t('dt.tool_family')}>
         {TOOLSETS.map((t) => (
           <button
             key={t.id}
@@ -110,7 +112,7 @@ export default function DesignTools() {
 
       {/* ═════════ Level 2: press bar ═════════ */}
       {state.toolset === 'print' && (
-        <div className="dt-press-bar" role="tablist" aria-label="Press machine">
+        <div className="dt-press-bar" role="tablist" aria-label={t('dt.press_machine')}>
           {PRESSES.map((p) => (
             <button
               key={p.id}
@@ -156,20 +158,22 @@ function PressContent({ press }) {
 }
 
 function ComingSoonPanel({ en, vi, pressName }) {
+  const { t } = useI18n();
   return (
     <div className="dt-coming-soon">
       <div className="dt-cs-icon">🚧</div>
       <div className="dt-cs-title">
-        <b>Coming soon</b>
+        <b>{t('dt.coming_soon')}</b>
         <span className="dt-bi-vi"> · Sắp ra mắt</span>
       </div>
       <p>{en}</p>
       <p className="dt-bi-vi">{vi}</p>
       {pressName && (
         <p className="dt-cs-checklist">
-          To bring up <b>{pressName}</b>, drop a <code>{pressName.toLowerCase()}Inventory.js</code>{' '}
-          + <code>{pressName.toLowerCase()}Engine.js</code> in <code>presses/</code> using the
-          Gallus pair as a template, then add the press to <code>PRESSES</code> in{' '}
+          {t('dt.to_bring_up')}
+          <b>{pressName}</b>, drop a <code>{pressName.toLowerCase()}Inventory.js</code> +{' '}
+          <code>{pressName.toLowerCase()}Engine.js</code> in <code>presses/</code> using the Gallus
+          pair as a template, then add the press to <code>{t('dt.presses')}</code> in{' '}
           <code>DesignTools.jsx</code>.
         </p>
       )}

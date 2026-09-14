@@ -23,8 +23,10 @@
  */
 
 import { useState } from 'react';
+import { useI18n } from '../../../../../utils/useI18n';
 
 export default function ShotLayoutViz({ inputs, result, cross, artworkUrl }) {
+  const { t } = useI18n();
   // S-LAYOUT-VIZ-3 (2026-05-06) — zoom state. CSS-scale the SVG inside
   // a scroll-clipped wrapper. preserveAspectRatio handles the SVG's
   // own scaling; this lets operator zoom in to inspect a specific
@@ -56,7 +58,7 @@ export default function ShotLayoutViz({ inputs, result, cross, artworkUrl }) {
     return (
       <div className="slv-empty">
         <div>Layout preview unavailable — fill L, Pw, W, and pick a cylinder above.</div>
-        <div className="slv-empty-vi">Cần nhập L, Pw, W và có cylinder Top 1 để vẽ layout.</div>
+        <div className="slv-empty-vi">{t('viz.need_inputs')}</div>
       </div>
     );
   }
@@ -150,7 +152,8 @@ export default function ShotLayoutViz({ inputs, result, cross, artworkUrl }) {
       <div className="slv-stats">
         <div className="slv-stat">
           <div className="slv-stat-label">
-            Cavities <span className="slv-bi-vi">/ Cavity</span>
+            {t('viz.cavities')}
+            <span className="slv-bi-vi">/ Cavity</span>
           </div>
           <div className="slv-stat-val">{totalCavities}</div>
           <div className="slv-stat-sub">
@@ -159,14 +162,16 @@ export default function ShotLayoutViz({ inputs, result, cross, artworkUrl }) {
         </div>
         <div className="slv-stat">
           <div className="slv-stat-label">
-            Cylinder <span className="slv-bi-vi">/ Trục</span>
+            {t('viz.cylinder')}
+            <span className="slv-bi-vi">/ Trục</span>
           </div>
           <div className="slv-stat-val">{cylZ ? `${cylZ}T` : '—'}</div>
           <div className="slv-stat-sub">Pitch {pitch.toFixed(2)} mm</div>
         </div>
         <div className="slv-stat">
           <div className="slv-stat-label">
-            Product <span className="slv-bi-vi">/ Sản phẩm</span>
+            {t('viz.product')}
+            <span className="slv-bi-vi">/ Sản phẩm</span>
           </div>
           <div className="slv-stat-val">
             {Pw} × {L}
@@ -175,14 +180,16 @@ export default function ShotLayoutViz({ inputs, result, cross, artworkUrl }) {
         </div>
         <div className="slv-stat">
           <div className="slv-stat-label">
-            Gap MD <span className="slv-bi-vi">/ Gap chiều chạy</span>
+            {t('viz.gap_md')}
+            <span className="slv-bi-vi">/ Gap chiều chạy</span>
           </div>
           <div className="slv-stat-val">{actual_gap_md.toFixed(3)}</div>
           <div className="slv-stat-sub">mm (actual)</div>
         </div>
         <div className="slv-stat">
           <div className="slv-stat-label">
-            Lane gap <span className="slv-bi-vi">/ Gap chiều ngang</span>
+            {t('viz.lane_gap')}
+            <span className="slv-bi-vi">/ Gap chiều ngang</span>
           </div>
           <div className="slv-stat-val">{lane_gap_actual.toFixed(2)}</div>
           <div className="slv-stat-sub">mm (TD)</div>
@@ -205,7 +212,7 @@ export default function ShotLayoutViz({ inputs, result, cross, artworkUrl }) {
           type="button"
           onClick={zoomOut}
           disabled={zoom <= 0.5}
-          title="Zoom out"
+          title={t('pac.zoom_out')}
           style={{
             padding: '2px 10px',
             border: '1px solid #c6c6c6',
@@ -218,7 +225,7 @@ export default function ShotLayoutViz({ inputs, result, cross, artworkUrl }) {
         <button
           type="button"
           onClick={zoomReset}
-          title="Reset zoom · 100%"
+          title={t('viz.reset_zoom')}
           style={{
             padding: '2px 10px',
             border: '1px solid #c6c6c6',
@@ -233,7 +240,7 @@ export default function ShotLayoutViz({ inputs, result, cross, artworkUrl }) {
           type="button"
           onClick={zoomIn}
           disabled={zoom >= 4}
-          title="Zoom in"
+          title={t('pac.zoom_in')}
           style={{
             padding: '2px 10px',
             border: '1px solid #c6c6c6',
@@ -243,7 +250,7 @@ export default function ShotLayoutViz({ inputs, result, cross, artworkUrl }) {
         >
           +
         </button>
-        <span style={{ color: '#6f6f6f', marginLeft: 8 }}>Zoom · Phóng to / thu nhỏ</span>
+        <span style={{ color: '#6f6f6f', marginLeft: 8 }}>{t('viz.zoom')}</span>
       </div>
       <div className="slv-svg-wrap" style={{ overflow: 'auto', maxHeight: '70vh' }}>
         <svg
@@ -636,7 +643,8 @@ export default function ShotLayoutViz({ inputs, result, cross, artworkUrl }) {
 
       <div className="slv-legend">
         <span className="slv-legend-item">
-          <span className="slv-swatch slv-swatch-product" /> Product cavity · Sản phẩm
+          <span className="slv-swatch slv-swatch-product" />
+          {t('viz.product_cavity')}
         </span>
         {bleed > 0.05 && (
           <span className="slv-legend-item">
@@ -652,7 +660,8 @@ export default function ShotLayoutViz({ inputs, result, cross, artworkUrl }) {
         )}
         {E > 0 && (
           <span className="slv-legend-item">
-            <span className="slv-swatch slv-swatch-edge" /> Edge margin · Mép web (E)
+            <span className="slv-swatch slv-swatch-edge" />
+            {t('viz.edge_margin')}
           </span>
         )}
         {K > 0 && (
