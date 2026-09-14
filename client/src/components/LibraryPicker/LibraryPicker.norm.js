@@ -148,3 +148,34 @@ export function clampColWidth(px, fallback = COL_MIN_W) {
   if (!Number.isFinite(n)) return fallback;
   return Math.min(COL_MAX_W, Math.max(COL_MIN_W, Math.round(n)));
 }
+
+/**
+ * Column widths as percentages of the table, so the picker always fits its
+ * card and never forces a long horizontal scroll.
+ *
+ * `w` on each column is a RELATIVE weight (the px defaults read naturally
+ * as one), and `widths` holds whatever the operator dragged. Dragging a
+ * column wider therefore takes space from the others rather than growing
+ * the table — the behaviour you want when the point is comparing a whole
+ * row at a glance. Stale keys for columns a later release removed are
+ * ignored, and the result always totals 100%.
+ */
+export function colWidthPercents(columns, widths = {}) {
+  const cols = Array.isArray(columns) ? columns : [];
+  if (cols.length === 0) return {};
+  const weights = cols.map((c) => clampColWidth(widths?.[c.key], c.w));
+  const total = weights.reduce((a, b) => a + b, 0) || 1;
+  const out = {};
+  let used = 0;
+  cols.forEach((c, i) => {
+    if (i === cols.length - 1) {
+      // Last column absorbs the rounding so the row totals exactly 100%.
+      out[c.key] = `${Math.round((100 - used) * 100) / 100}%`;
+      return;
+    }
+    const pct = Math.round((weights[i] / total) * 10000) / 100;
+    used += pct;
+    out[c.key] = `${pct}%`;
+  });
+  return out;
+}

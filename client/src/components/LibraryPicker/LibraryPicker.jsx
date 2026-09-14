@@ -41,6 +41,7 @@ import {
   normIfsMaterial,
   PICKER_COLUMNS,
   clampColWidth,
+  colWidthPercents,
 } from './LibraryPicker.norm.js';
 import './LibraryPicker.css';
 
@@ -247,7 +248,9 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
   // fall back to the column's default rather than collapsing a column.
   const columns = PICKER_COLUMNS[def?.key] || [];
   const [widths, setWidths] = useState(() => readStoredWidths(libraryKey));
-  const widthOf = (c) => clampColWidth(widths[c.key], c.w);
+  // Proportions, not pixels — the table fits the card at any size and a
+  // drag redistributes space instead of widening the table.
+  const pct = colWidthPercents(columns, widths);
   const resetWidths = () => {
     setWidths({});
     try {
@@ -264,9 +267,14 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
     e.stopPropagation();
     const startX = e.clientX;
     const startW = clampColWidth(widths[col.key], col.w);
+    // Pixels the operator drags are converted into weight using the
+    // header's own rendered width, so the edge follows the pointer.
+    const th = e.currentTarget.closest('th');
+    const renderedPx = th ? th.getBoundingClientRect().width : startW;
+    const pxToWeight = renderedPx > 0 ? startW / renderedPx : 1;
     let latest = startW;
     const move = (ev) => {
-      latest = clampColWidth(startW + (ev.clientX - startX));
+      latest = clampColWidth(startW + (ev.clientX - startX) * pxToWeight);
       setWidths((prev) => ({ ...prev, [col.key]: latest }));
     };
     const up = () => {
@@ -332,7 +340,7 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
           <table className="libp-table libp-table-cols">
             <colgroup>
               {columns.map((c) => (
-                <col key={c.key} style={{ width: widthOf(c) }} />
+                <col key={c.key} style={{ width: pct[c.key] }} />
               ))}
             </colgroup>
             <thead>
@@ -341,7 +349,7 @@ function PickerCard({ libraryKey, onPick, onClose, onBack }) {
                   <th
                     key={c.key}
                     className={`${c.num ? 'libp-num' : ''} ${c.mono ? 'libp-mono' : ''}`}
-                    style={{ width: widthOf(c) }}
+                    style={{ width: pct[c.key] }}
                   >
                     <span className="libp-th-label">{t(c.labelKey)}</span>
                     <span
