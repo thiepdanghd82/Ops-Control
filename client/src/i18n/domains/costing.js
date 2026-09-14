@@ -180,6 +180,117 @@ registerStrings({
     en: 'Inherits MOQ 1 base ({base}) — type to override',
     vi: 'Kế thừa gốc MOQ 1 ({base}) — gõ để ghi đè',
   },
+  // ─── Ink Calculator (wave 3) ────────────────────────────────────────────
+  // The three floating utility calculators — ink-calc, print-area,
+  // design-tools — are a real grouping, not one invented for this wave:
+  // windowLogic.js FLOATING_BY_DEFAULT is what separates them from the
+  // data-grid screens that open maximised.
+  //
+  // WHAT STAYS ENGLISH HERE, and why it is most of the file:
+  //   * Formulas. "= BCM x 1.55", "Open Area (Calc) = w² / (w+d)² × 100".
+  //     Translating a formula is how a formula becomes wrong.
+  //   * Press vocabulary operators use in English at the machine: BCM, QPA,
+  //     Anilox, Mesh Count, Cell Depth, Cell Opening, Line Count, Thread Dia,
+  //     Open Area, Pitch, Density, Flexo, Silkscreen, CMYK.
+  //   * Dense grid heads already at their width limit, per the rule wave 1
+  //     set in SubProductRow: Act, Spec, Vol (cm³), Wt (g), Supply (g),
+  //     Unit/kg, Syns.
+  // The LEGEND table lower in the file already carries its own EN/VI pair per
+  // row and is left alone — it is data, not chrome.
+  // The notes card used to render an English line and a Vietnamese line
+  // stacked, both at once, in every locale — `.ink-note-vi` divs beside their
+  // English twins. Collapsed to one key per note, so a reader sees their own
+  // language once instead of both languages always.
+  'inkc.color_coding': { en: 'COLOR CODING', vi: 'MÃ MÀU Ô' },
+  'inkc.main_formulas': { en: 'Main Formulas', vi: 'Công thức chính' },
+  'inkc.notes_title_silk': { en: 'SILKSCREEN NOTES', vi: 'GHI CHÚ SILKSCREEN' },
+  'inkc.notes_title_flexo': { en: 'FLEXO NOTES', vi: 'GHI CHÚ FLEXO' },
+  'inkc.note_mesh_count': {
+    en: 'Mesh Count (n/cm) = threads per centimeter',
+    vi: 'Mesh Count (n/cm) = số sợi trên 1 cm',
+  },
+  'inkc.note_volume_recipe': {
+    en: 'Volume Recipe V_r = α_calc × D / 100 (D = thread thickness)',
+    vi: 'Volume Recipe V_r = α_calc × D / 100 (D = độ dày sợi)',
+  },
+  'inkc.note_open_area': {
+    en: 'Open Area (Calc) = w² / (w+d)² × 100',
+    vi: 'Diện tích mở (Calc) = w² / (w+d)² × 100',
+  },
+  'inkc.note_bcm': {
+    en: '(Billion Cubic Microns) — US standard for anilox cell volume',
+    vi: '(Tỷ micron khối) — đơn vị Mỹ đo thể tích ô anilox',
+  },
+  'inkc.note_bcm_conv': { en: '(conversion factor)', vi: '(hệ số quy đổi)' },
+  'inkc.note_transfer_eff': {
+    en: ': typically 50–70% for Flexo',
+    vi: ': thường 50–70% với Flexo',
+  },
+  'inkc.note_adjust_te': {
+    en: 'Adjust Transfer Efficiency per ink/material type in Anilox DB',
+    vi: 'Điều chỉnh Transfer Efficiency theo loại mực/vật liệu trong Anilox DB',
+  },
+  'inkc.subtab_ink_calc': { en: 'Ink Calculator', vi: 'Tính mực' },
+
+  'inkc.title': { en: 'Inks Calculator', vi: 'Máy tính mực' },
+  'inkc.loading': { en: 'Loading Inks Calculator...', vi: 'Đang tải Máy tính mực...' },
+  'inkc.legend': { en: 'Legend', vi: 'Chú giải' },
+  'inkc.search_ph': { en: 'Search...', vi: 'Tìm...' },
+  'inkc.save_db': { en: 'Save DB', vi: 'Lưu DB' },
+  'inkc.anilox_db': { en: 'Anilox DB', vi: 'DB Anilox' },
+  'inkc.mesh_spec': { en: 'Mesh Spec', vi: 'Thông số lưới' },
+  'inkc.ink_price': { en: 'Ink Price', vi: 'Giá mực' },
+  'inkc.unit_price': { en: 'Unit Price', vi: 'Đơn giá' },
+  'inkc.total_unit_price': { en: 'TOTAL UNIT PRICE / UNIT', vi: 'TỔNG ĐƠN GIÁ / ĐƠN VỊ' },
+  'inkc.costs': { en: 'Costs', vi: 'Chi phí' },
+  'inkc.production_costs': { en: 'Production costs', vi: 'Chi phí sản xuất' },
+  'inkc.print_info': { en: 'Print info', vi: 'Thông tin in' },
+  'inkc.spec_info': { en: 'info', vi: 'thông tin' },
+  'inkc.inks_vol_weight': { en: 'Inks volume & weight', vi: 'Thể tích & khối lượng mực' },
+  'inkc.print_area': { en: 'Print Area', vi: 'Diện tích in' },
+  'inkc.total_mat_area': { en: 'Total Mat Area', vi: 'Tổng diện tích VT' },
+  'inkc.mat_width': { en: 'Mat Width', vi: 'Khổ VT' },
+  'inkc.layout': { en: 'Layout', vi: 'Layout' },
+  'inkc.process': { en: 'Process', vi: 'Công đoạn' },
+  'inkc.setup': { en: 'Setup', vi: 'Setup' },
+  'inkc.waste': { en: 'Waste', vi: 'Hao phí' },
+  'inkc.lost_pct': { en: 'Lost %', vi: 'Hao %' },
+  'inkc.tolerance': { en: 'Tolerance', vi: 'Dung sai' },
+  'inkc.efficiency': { en: 'Efficiency', vi: 'Hiệu suất' },
+  'inkc.transfer_eff': { en: 'Transfer Efficiency', vi: 'Hiệu suất truyền' },
+  'inkc.transfer_eff_short': { en: 'Transfer Eff.', vi: 'HS truyền' },
+  'inkc.calc_volume': { en: 'Calc Volume', vi: 'Thể tích tính' },
+  'inkc.volume_recipe': { en: 'Volume Recipe', vi: 'Công thức thể tích' },
+  'inkc.theo_ink_vol': { en: 'Theo. Ink Vol', vi: 'TT mực lý thuyết' },
+  'inkc.actual_ink': { en: 'Actual Ink', vi: 'Mực thực tế' },
+  'inkc.ink_vol_max': { en: 'Ink Vol Max', vi: 'TT mực tối đa' },
+  'inkc.weight_per_time': { en: 'Weight/', vi: 'KL/' },
+  'inkc.total': { en: 'Total', vi: 'Tổng' },
+  'inkc.row': { en: 'Row', vi: 'Dòng' },
+  'inkc.color': { en: 'Color', vi: 'Màu' },
+  'inkc.cavities': { en: 'Cavities', vi: 'Cavities' },
+  'inkc.run_standard': { en: 'Run Standard', vi: 'Chạy Standard' },
+  'inkc.run_complex': { en: 'Run Complex', vi: 'Chạy Complex' },
+  'inkc.run_standard_tip': {
+    en: 'Run calculation from Standard calculator state',
+    vi: 'Tính từ dữ liệu đang có của Standard',
+  },
+  'inkc.run_complex_tip': {
+    en: 'Run calculation from Complex calculator sub-products',
+    vi: 'Tính từ các sub-product của Complex',
+  },
+  'inkc.cal_qpa_cost': { en: 'Cal. QPA and Cost', vi: 'Tính QPA và chi phí' },
+  'inkc.ref_db_tip': {
+    en: 'Reference ink database for cost calculator',
+    vi: 'Cơ sở dữ liệu mực tham chiếu cho máy tính chi phí',
+  },
+  'inkc.no_data': { en: 'No data yet — click', vi: 'Chưa có dữ liệu — bấm' },
+  'inkc.no_records': { en: 'No records — click', vi: 'Chưa có bản ghi — bấm' },
+  'inkc.cells_blue': { en: 'Blue cells', vi: 'Ô xanh dương' },
+  'inkc.cells_green': { en: 'Green cells', vi: 'Ô xanh lá' },
+  'inkc.cells_purple': { en: 'Purple cells', vi: 'Ô tím' },
+  'inkc.cells_yellow': { en: 'Yellow cells', vi: 'Ô vàng' },
+
   'spr.tip_sync_print': {
     en: 'Sync print design · Pull a saved Design Tools record and apply Print-side fields onto this sub-product',
     vi: 'Đồng bộ thiết kế in · Lấy bản ghi Design Tools đã lưu và áp các trường phía In vào sub-product này',

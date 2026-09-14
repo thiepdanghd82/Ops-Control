@@ -3,6 +3,7 @@
  * Matches COST V1.0 M16: renderLibInkCalc
  */
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useI18n } from '../../../utils/useI18n';
 import { sharedApi, costApi } from '../../../services/api';
 import { useCalc } from '../../../context/CalcContext';
 import { meshRecalc, aniloxRecalc, runInkCalc } from '../../../services/inkCalcCore';
@@ -21,6 +22,7 @@ function fmtN(v, d = 3) {
 
 // ── Mesh Spec Sub-tab ──
 function MeshSpecTab({ data, search, onUpdate, onAdd, onDelete }) {
+  const { t } = useI18n();
   const filtered = useMemo(() => {
     if (!search) return data;
     const q = search.toLowerCase();
@@ -59,7 +61,7 @@ function MeshSpecTab({ data, search, onUpdate, onAdd, onDelete }) {
             <th>
               Mesh Thickness <span style={{ fontWeight: 400, opacity: 0.7 }}>D</span>
             </th>
-            <th>Tolerance</th>
+            <th>{t('inkc.tolerance')}</th>
             <th>
               Mesh Opening <span style={{ fontWeight: 400, opacity: 0.7 }}>w</span>
             </th>
@@ -70,10 +72,12 @@ function MeshSpecTab({ data, search, onUpdate, onAdd, onDelete }) {
               Open Area <span style={{ fontWeight: 400, opacity: 0.7 }}>(calc)</span>
             </th>
             <th>
-              Theo. Ink Vol <span style={{ fontWeight: 400, opacity: 0.7 }}>V</span>
+              {t('inkc.theo_ink_vol')}
+              <span style={{ fontWeight: 400, opacity: 0.7 }}>V</span>
             </th>
             <th>
-              Volume Recipe <span style={{ fontWeight: 400, opacity: 0.7 }}>V_r</span>
+              {t('inkc.volume_recipe')}
+              <span style={{ fontWeight: 400, opacity: 0.7 }}>V_r</span>
             </th>
             <th className="col-act">Act</th>
           </tr>
@@ -166,7 +170,7 @@ function MeshSpecTab({ data, search, onUpdate, onAdd, onDelete }) {
                 <button
                   className="ink-del-btn"
                   onClick={() => onDelete(data.indexOf(filtered[fi]))}
-                  title="Delete"
+                  title={t('common.delete')}
                 >
                   &times;
                 </button>
@@ -186,6 +190,7 @@ function MeshSpecTab({ data, search, onUpdate, onAdd, onDelete }) {
 
 // ── Anilox DB Sub-tab ──
 function AniloxDBTab({ data, search, onUpdate, onAdd, onDelete }) {
+  const { t } = useI18n();
   const filtered = useMemo(() => {
     if (!search) return data;
     const q = search.toLowerCase();
@@ -219,7 +224,7 @@ function AniloxDBTab({ data, search, onUpdate, onAdd, onDelete }) {
             <th>
               Cell Depth <span className="unit-hint">&mu;m</span>
             </th>
-            <th>Tolerance</th>
+            <th>{t('inkc.tolerance')}</th>
             <th>
               Cell Opening <span className="unit-hint">&mu;m</span>
             </th>
@@ -227,10 +232,12 @@ function AniloxDBTab({ data, search, onUpdate, onAdd, onDelete }) {
               Open Area &alpha; <span className="unit-hint">%</span>
             </th>
             <th>
-              Calc Volume <span className="unit-hint">cm&sup3;/m&sup2;</span>
+              {t('inkc.calc_volume')}
+              <span className="unit-hint">cm&sup3;/m&sup2;</span>
             </th>
             <th>
-              Transfer Eff. <span className="unit-hint">%</span>
+              {t('inkc.transfer_eff_short')}
+              <span className="unit-hint">%</span>
             </th>
             <th>
               V_r (Recipe) <span className="unit-hint">cm&sup3;/m&sup2;</span>
@@ -245,7 +252,8 @@ function AniloxDBTab({ data, search, onUpdate, onAdd, onDelete }) {
                 colSpan={12}
                 style={{ padding: 40, textAlign: 'center', color: '#6f6f6f', fontSize: 13 }}
               >
-                No records &mdash; click <b>+ Add Row</b> to begin
+                {t('inkc.no_records')}
+                <b>+ Add Row</b> to begin
               </td>
             </tr>
           )}
@@ -321,7 +329,7 @@ function AniloxDBTab({ data, search, onUpdate, onAdd, onDelete }) {
                 <button
                   className="ink-del-btn"
                   onClick={() => onDelete(data.indexOf(filtered[fi]))}
-                  title="Delete"
+                  title={t('common.delete')}
                 >
                   &times;
                 </button>
@@ -341,6 +349,7 @@ function AniloxDBTab({ data, search, onUpdate, onAdd, onDelete }) {
 
 // ── QPA Cost Sub-tab (Silkscreen or Flexo) ──
 function QPACostTab({ data, type, onRun }) {
+  const { t } = useI18n();
   const totalUnit = data.reduce((s, r) => s + (r.unit_price || 0), 0);
   const totalSetup = data.reduce((s, r) => s + (r.setup_cost || 0), 0);
   const totalCost = data.reduce((s, r) => s + (r.total_cost || 0), 0);
@@ -359,22 +368,22 @@ function QPACostTab({ data, type, onRun }) {
         <button
           className="ink-run-btn ink-run-std"
           onClick={() => onRun && onRun('std')}
-          title="Run calculation from Standard calculator state"
+          title={t('inkc.run_standard_tip')}
         >
           <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor">
             <polygon points="5 3 19 12 5 21 5 3" />
           </svg>
-          Run Standard
+          {t('inkc.run_standard')}
         </button>
         <button
           className="ink-run-btn ink-run-cplx"
           onClick={() => onRun && onRun('cplx')}
-          title="Run calculation from Complex calculator sub-products"
+          title={t('inkc.run_complex_tip')}
         >
           <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor">
             <polygon points="5 3 19 12 5 21 5 3" />
           </svg>
-          Run Complex
+          {t('inkc.run_complex')}
         </button>
         <div style={{ flex: 1 }} />
         {data.length > 0 && (
@@ -401,8 +410,9 @@ function QPACostTab({ data, type, onRun }) {
       </div>
       {data.length === 0 && (
         <div className="ink-empty">
-          No data yet &mdash; click <b style={{ color: '#0f62fe' }}>Run Standard</b> or{' '}
-          <b style={{ color: '#393939' }}>Run Complex</b> to calculate
+          {t('inkc.no_data')}
+          <b style={{ color: '#0f62fe' }}>{t('inkc.run_standard')}</b> or{' '}
+          <b style={{ color: '#393939' }}>{t('inkc.run_complex')}</b> to calculate
         </div>
       )}
       {data.length > 0 && (
@@ -425,24 +435,24 @@ function QPACostTab({ data, type, onRun }) {
                   {specLabel} infor
                 </th>
                 <th className="section" colSpan={4} style={{ background: '#0f766e' }}>
-                  Print infor
+                  {t('inkc.print_info')}
                 </th>
                 <th className="section" colSpan={4} style={{ background: '#7c3aed' }}>
-                  Inks volume &amp; weight
+                  {t('inkc.inks_vol_weight')}
                 </th>
                 <th className="section" colSpan={5} style={{ background: '#b45309' }}>
-                  Production costs
+                  {t('inkc.production_costs')}
                 </th>
                 <th className="section" colSpan={3} style={{ background: '#166534' }}>
-                  Efficiency
+                  {t('inkc.efficiency')}
                 </th>
                 <th className="section" colSpan={5} style={{ background: '#1d4ed8' }}>
-                  Costs
+                  {t('inkc.costs')}
                 </th>
               </tr>
               <tr>
-                <th style={{ background: footBg, textAlign: 'left' }}>Row</th>
-                <th style={{ background: footBg, textAlign: 'left' }}>Color</th>
+                <th style={{ background: footBg, textAlign: 'left' }}>{t('inkc.row')}</th>
+                <th style={{ background: footBg, textAlign: 'left' }}>{t('inkc.color')}</th>
                 <th style={{ background: '#1e40af', textAlign: 'center' }}>
                   {specLabel}
                   <br />
@@ -451,7 +461,7 @@ function QPACostTab({ data, type, onRun }) {
                 <th style={{ background: '#1e40af', textAlign: 'right' }}>{specCountLabel}</th>
                 <th style={{ background: '#1e40af', textAlign: 'center' }}># Repeat</th>
                 <th style={{ background: '#0f766e', textAlign: 'right' }}>
-                  Mat Width
+                  {t('inkc.mat_width')}
                   <br />
                   (mm)
                 </th>
@@ -461,7 +471,7 @@ function QPACostTab({ data, type, onRun }) {
                   (mm)
                 </th>
                 <th style={{ background: '#0f766e', textAlign: 'right' }}>
-                  Print Area
+                  {t('inkc.print_area')}
                   <br />
                   (%)
                 </th>
@@ -471,42 +481,42 @@ function QPACostTab({ data, type, onRun }) {
                   (g/cm&sup3;)
                 </th>
                 <th style={{ background: '#7c3aed', textAlign: 'right' }}>
-                  Total Mat Area
+                  {t('inkc.total_mat_area')}
                   <br />
                   (mm&sup2;)
                 </th>
                 <th style={{ background: '#7c3aed', textAlign: 'right' }}>
-                  Ink Vol Max
+                  {t('inkc.ink_vol_max')}
                   <br />
                   100% (cm&sup3;)
                 </th>
                 <th style={{ background: '#7c3aed', textAlign: 'right' }}>
-                  Actual Ink
+                  {t('inkc.actual_ink')}
                   <br />
                   Vol (cm&sup3;)
                 </th>
                 <th style={{ background: '#7c3aed', textAlign: 'right' }}>
-                  Actual Ink
+                  {t('inkc.actual_ink')}
                   <br />
                   Wt (g)
                 </th>
                 <th style={{ background: '#b45309', textAlign: 'right' }}>
-                  Process
+                  {t('inkc.process')}
                   <br />
-                  Lost %
+                  {t('inkc.lost_pct')}
                 </th>
                 <th style={{ background: '#b45309', textAlign: 'center' }}>
-                  Setup
+                  {t('inkc.setup')}
                   <br />
                   (kg)
                 </th>
                 <th style={{ background: '#b45309', textAlign: 'right' }}>
-                  Waste
+                  {t('inkc.waste')}
                   <br />
                   (g)
                 </th>
                 <th style={{ background: '#b45309', textAlign: 'right' }}>
-                  Weight/
+                  {t('inkc.weight_per_time')}
                   <br />
                   time (g)
                 </th>
@@ -514,9 +524,9 @@ function QPACostTab({ data, type, onRun }) {
                 <th style={{ background: '#166534', textAlign: 'right' }}>Unit/kg</th>
                 <th style={{ background: '#166534', textAlign: 'right' }}>m&sup2;/kg</th>
                 <th style={{ background: '#166534', textAlign: 'right' }}>
-                  Layout
+                  {t('inkc.layout')}
                   <br />
-                  Cavities
+                  {t('inkc.cavities')}
                 </th>
                 <th style={{ background: '#1d4ed8', textAlign: 'right' }}>
                   QPA
@@ -524,22 +534,22 @@ function QPACostTab({ data, type, onRun }) {
                   (kg/cav)
                 </th>
                 <th style={{ background: '#1d4ed8', textAlign: 'center' }}>
-                  Ink Price
+                  {t('inkc.ink_price')}
                   <br />
                   ($/kg)
                 </th>
                 <th style={{ background: '#1d4ed8', textAlign: 'right' }}>
-                  Unit Price
+                  {t('inkc.unit_price')}
                   <br />
                   ($)
                 </th>
                 <th style={{ background: '#1d4ed8', textAlign: 'right' }}>
-                  Setup
+                  {t('inkc.setup')}
                   <br />
                   costs
                 </th>
                 <th style={{ background: '#1d4ed8', textAlign: 'right' }}>
-                  Total
+                  {t('inkc.total')}
                   <br />
                   costs
                 </th>
@@ -677,7 +687,7 @@ function QPACostTab({ data, type, onRun }) {
                     letterSpacing: 0.5,
                   }}
                 >
-                  TOTAL UNIT PRICE / UNIT
+                  {t('inkc.total_unit_price')}
                 </td>
                 <td
                   style={{
@@ -723,6 +733,7 @@ function QPACostTab({ data, type, onRun }) {
 // renders bilingual names so VN-first operators can scan the column letter
 // against the field they remember from the worksheet header.
 function LegendTab({ type }) {
+  const { t } = useI18n();
   const isSilk = type === 'silkscreen';
   const formulas = isSilk
     ? [
@@ -861,33 +872,33 @@ function LegendTab({ type }) {
       </div>
       <div className="ink-legend-grid">
         <div className="ink-legend-card">
-          <div className="ink-legend-card-title">COLOR CODING / MÃ MÀU Ô</div>
+          <div className="ink-legend-card-title">{t('inkc.color_coding')}</div>
           <div className="ink-color-list">
             <div className="ink-color-row">
               <div className="ink-color-swatch ink-swatch-blue" />
               <span>
-                <b className="ink-fg-blue">Blue cells</b> &mdash; Input fields /{' '}
+                <b className="ink-fg-blue">{t('inkc.cells_blue')}</b> &mdash; Input fields /{' '}
                 <b className="ink-fg-blue">Ô xanh</b> — trường nhập
               </span>
             </div>
             <div className="ink-color-row">
               <div className="ink-color-swatch ink-swatch-yellow" />
               <span>
-                <b className="ink-fg-amber">Yellow cells</b> &mdash; Density input /{' '}
+                <b className="ink-fg-amber">{t('inkc.cells_yellow')}</b> &mdash; Density input /{' '}
                 <b className="ink-fg-amber">Ô vàng</b> — nhập tỷ trọng
               </span>
             </div>
             <div className="ink-color-row">
               <div className="ink-color-swatch ink-swatch-purple" />
               <span>
-                <b className="ink-fg-violet">Purple cells</b> &mdash; Auto-calculated /{' '}
+                <b className="ink-fg-violet">{t('inkc.cells_purple')}</b> &mdash; Auto-calculated /{' '}
                 <b className="ink-fg-violet">Ô tím</b> — tự tính
               </span>
             </div>
             <div className="ink-color-row">
               <div className="ink-color-swatch ink-swatch-green" />
               <span>
-                <b className="ink-fg-green">Green cells</b> &mdash; Output results /{' '}
+                <b className="ink-fg-green">{t('inkc.cells_green')}</b> &mdash; Output results /{' '}
                 <b className="ink-fg-green">Ô xanh lá</b> — kết quả
               </span>
             </div>
@@ -895,53 +906,35 @@ function LegendTab({ type }) {
         </div>
         <div className="ink-legend-card">
           <div className="ink-legend-card-title">
-            {isSilk ? 'SILKSCREEN NOTES / GHI CHÚ SILKSCREEN' : 'FLEXO NOTES / GHI CHÚ FLEXO'}
+            {isSilk ? t('inkc.notes_title_silk') : t('inkc.notes_title_flexo')}
           </div>
           <div className="ink-notes-list">
             {isSilk ? (
               <>
-                <div>Mesh Count (n/cm) = threads per centimeter</div>
-                <div className="ink-note-vi">Mesh Count (n/cm) = số sợi trên 1 cm</div>
-                <div>Volume Recipe V_r = &alpha;_calc &times; D / 100</div>
-                <div className="ink-note-vi">
-                  Volume Recipe V_r = &alpha;_calc &times; D / 100 (D = độ dày sợi)
-                </div>
-                <div>Open Area (Calc) = w&sup2; / (w+d)&sup2; &times; 100</div>
-                <div className="ink-note-vi">
-                  Diện tích mở (Calc) = w&sup2; / (w+d)&sup2; &times; 100
-                </div>
+                <div>{t('inkc.note_mesh_count')}</div>
+                <div>{t('inkc.note_volume_recipe')}</div>
+                <div>{t('inkc.note_open_area')}</div>
               </>
             ) : (
               <>
                 <div>
-                  <b>BCM</b> (Billion Cubic Microns) &mdash; US standard for anilox cell volume
-                </div>
-                <div className="ink-note-vi">
-                  <b>BCM</b> (Tỷ micron khối) — đơn vị Mỹ đo thể tích ô anilox
+                  <b>BCM</b> {t('inkc.note_bcm')}
                 </div>
                 <div>
-                  <b>1 BCM &asymp; 1.55 cm&sup3;/m&sup2;</b> (conversion factor)
-                </div>
-                <div className="ink-note-vi">
-                  <b>1 BCM &asymp; 1.55 cm&sup3;/m&sup2;</b> (hệ số quy đổi)
+                  <b>1 BCM &asymp; 1.55 cm&sup3;/m&sup2;</b> {t('inkc.note_bcm_conv')}
                 </div>
                 <div>
-                  <b>Transfer Efficiency</b>: typically 50&ndash;70% for Flexo
+                  <b>{t('inkc.transfer_eff')}</b>
+                  {t('inkc.note_transfer_eff')}
                 </div>
-                <div className="ink-note-vi">
-                  <b>Hiệu suất truyền</b>: thường 50&ndash;70% với Flexo
-                </div>
-                <div>Adjust Transfer Efficiency per ink/material type in Anilox DB</div>
-                <div className="ink-note-vi">
-                  Điều chỉnh Transfer Efficiency theo loại mực/vật liệu trong Anilox DB
-                </div>
+                <div>{t('inkc.note_adjust_te')}</div>
               </>
             )}
           </div>
         </div>
       </div>
       <div className="ink-legend-card ink-legend-formulas-card">
-        <div className="ink-legend-card-title">Main Formulas / Công thức chính</div>
+        <div className="ink-legend-card-title">{t('inkc.main_formulas')}</div>
         <div className="ink-formula-grid">
           {formulas.map(([col, nameEn, nameVi, formula, bg, color]) => (
             <div key={col} className="ink-formula-item" style={{ background: bg }}>
@@ -965,6 +958,7 @@ function LegendTab({ type }) {
 
 // ── Main Component ──
 export default function InkCalculator() {
+  const { t } = useI18n();
   const { stdState, cplxState } = useCalc();
   const [inkCalc, setInkCalc] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1135,7 +1129,7 @@ export default function InkCalculator() {
   if (loading || !inkCalc)
     return (
       <div className="ink-calc" style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
-        Loading Inks Calculator...
+        {t('inkc.loading')}
       </div>
     );
 
@@ -1187,8 +1181,8 @@ export default function InkCalculator() {
         <div className="ink-calc-header-top">
           <div className="ink-calc-icon">&#127912;</div>
           <div className="ink-calc-title-wrap">
-            <div className="ink-calc-title">Inks Calculator</div>
-            <div className="ink-calc-subtitle">Reference ink database for cost calculator</div>
+            <div className="ink-calc-title">{t('inkc.title')}</div>
+            <div className="ink-calc-subtitle">{t('inkc.ref_db_tip')}</div>
           </div>
           <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
             <button
@@ -1213,12 +1207,12 @@ export default function InkCalculator() {
           <input
             className="ink-search"
             type="text"
-            placeholder="Search..."
+            placeholder={t('inkc.search_ph')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
           <button className="ink-save-btn" onClick={handleSave}>
-            Save DB
+            {t('inkc.save_db')}
           </button>
         </div>
         {/* Sub tabs — wrapped in TabBarOverflow for uniform responsive
@@ -1230,29 +1224,29 @@ export default function InkCalculator() {
               <button
                 role="tab"
                 aria-selected={silkSub === 'meshSpec'}
-                aria-label="Mesh Spec"
+                aria-label={t('inkc.mesh_spec')}
                 className={`ink-sub-btn ${silkSub === 'meshSpec' ? 'active' : ''}`}
                 onClick={() => setSilkSub('meshSpec')}
               >
-                Mesh Spec
+                {t('inkc.mesh_spec')}
               </button>
               <button
                 role="tab"
                 aria-selected={silkSub === 'qpaCost'}
-                aria-label="Cal. QPA and Cost"
+                aria-label={t('inkc.cal_qpa_cost')}
                 className={`ink-sub-btn ${silkSub === 'qpaCost' ? 'active' : ''}`}
                 onClick={() => setSilkSub('qpaCost')}
               >
-                Cal. QPA and Cost
+                {t('inkc.cal_qpa_cost')}
               </button>
               <button
                 role="tab"
                 aria-selected={silkSub === 'legend'}
-                aria-label="Legend"
+                aria-label={t('inkc.legend')}
                 className={`ink-sub-btn ${silkSub === 'legend' ? 'active' : ''}`}
                 onClick={() => setSilkSub('legend')}
               >
-                Legend
+                {t('inkc.legend')}
               </button>
             </TabBarOverflow>
           </div>
@@ -1263,29 +1257,29 @@ export default function InkCalculator() {
               <button
                 role="tab"
                 aria-selected={flexoSub === 'aniloxDB'}
-                aria-label="Anilox DB"
+                aria-label={t('inkc.anilox_db')}
                 className={`ink-sub-btn ${flexoSub === 'aniloxDB' ? 'active' : ''}`}
                 onClick={() => setFlexoSub('aniloxDB')}
               >
-                Anilox DB
+                {t('inkc.anilox_db')}
               </button>
               <button
                 role="tab"
                 aria-selected={flexoSub === 'qpaCost'}
-                aria-label="Ink Calculator"
+                aria-label={t('inkc.subtab_ink_calc')}
                 className={`ink-sub-btn ${flexoSub === 'qpaCost' ? 'active' : ''}`}
                 onClick={() => setFlexoSub('qpaCost')}
               >
-                Ink Calculator
+                {t('inkc.subtab_ink_calc')}
               </button>
               <button
                 role="tab"
                 aria-selected={flexoSub === 'legend'}
-                aria-label="Legend"
+                aria-label={t('inkc.legend')}
                 className={`ink-sub-btn ${flexoSub === 'legend' ? 'active' : ''}`}
                 onClick={() => setFlexoSub('legend')}
               >
-                Legend
+                {t('inkc.legend')}
               </button>
             </TabBarOverflow>
           </div>
