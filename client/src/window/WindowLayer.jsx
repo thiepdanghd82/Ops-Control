@@ -30,7 +30,7 @@ export default function WindowLayer() {
     resizeWindow,
   } = useWindowManager();
 
-  useDocumentTitle(focusedTabId ? tabTitle(focusedTabId) : 'Windows', 'Cost');
+  useDocumentTitle(focusedTabId ? tabTitle(focusedTabId, t) : t('window.windows'), 'Cost');
 
   // The focused window = highest-z non-minimized. Compute the id here so
   // Window + Taskbar agree on the highlight.

@@ -1649,3 +1649,11 @@ button.pa-pick-row.pa-pick-pin.pinned {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* Bilingual explainer: show the half that matches the reader's locale.
+   Both halves stay in the DOM but `display:none` hides one from screen
+   readers too, so nobody hears the panel twice. */
+.pa-legend-wrap[data-lang='en'] .pa-bi-vi,
+.pa-legend-wrap[data-lang='vi'] .pa-bi-en {
+  display: none;
+}

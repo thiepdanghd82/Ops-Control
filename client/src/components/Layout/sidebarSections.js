@@ -99,6 +99,30 @@ export const COST_SECTIONS = [
 ];
 
 /** Every sidebar section (Cost only — Planning module removed 2026-07-22). */
+/**
+ * tabId → i18n label key, derived from the catalog above.
+ *
+ * Window titles, the browser tab title and the taskbar used to read from a
+ * separate TAB_TITLES map of English strings in CostModule.jsx. Two lists of
+ * the same names drift: the sidebar said "RFQ List" while the window titlebar
+ * said whatever TAB_TITLES happened to hold. Deriving from the catalog means
+ * a renamed nav item renames its window too, and there is nothing to keep in
+ * step by hand.
+ */
+export const TAB_LABEL_KEYS = Object.freeze(
+  COST_SECTIONS.reduce((acc, section) => {
+    for (const tab of section.tabs || []) {
+      if (tab.id && tab.labelKey) acc[tab.id] = tab.labelKey;
+    }
+    return acc;
+  }, {})
+);
+
+/** The label key for a tab, or '' when the catalog does not list it. */
+export function tabLabelKey(tabId) {
+  return TAB_LABEL_KEYS[tabId] || '';
+}
+
 export function allSections() {
   return [...COST_SECTIONS];
 }

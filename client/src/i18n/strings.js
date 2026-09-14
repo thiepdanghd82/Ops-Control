@@ -352,6 +352,7 @@ export const STRINGS = {
     en: 'Save this secret in your password manager as a backup — if you lose your authenticator device, IT can re-enroll you but your existing codes will stop working.',
     vi: 'Lưu mã bí mật này vào trình quản lý mật khẩu để dự phòng — nếu mất thiết bị xác thực, bộ phận IT có thể ghi danh lại cho bạn nhưng các mã hiện tại sẽ ngừng hoạt động.',
   },
+  'window.windows': { en: 'Windows', vi: 'Cửa sổ' },
   'window.close_all': { en: 'Close all', vi: 'Đóng tất cả' },
   'window.minimize': { en: 'Minimize', vi: 'Thu nhỏ' },
   'window.maximize': { en: 'Maximize', vi: 'Phóng to' },

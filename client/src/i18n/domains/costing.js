@@ -330,6 +330,32 @@ registerStrings({
   'viz.cavities': { en: 'Cavities', vi: 'Cavities' },
   'viz.product': { en: 'Product', vi: 'Sản phẩm' },
 
+  // ─── Print Area explainer headings (wave 6) ─────────────────────────────
+  // These carried both languages in ONE string ("Pipeline / Quy trình xử lý"),
+  // so every reader saw both. The paragraphs below them are handled
+  // differently — they are authored as EN/VI element pairs and CSS shows the
+  // matching half; see LegendTab in PrintAreaCalc.jsx.
+  'pac.h_pipeline': { en: 'Pipeline', vi: 'Quy trình xử lý' },
+  'pac.h_print_methods': {
+    en: 'Print methods (ink transfer factor + film thickness)',
+    vi: 'Phương pháp in (hệ số truyền + độ dày màng mực)',
+  },
+  'pac.h_manual_roi': {
+    en: 'Manual ROI + drawing scale',
+    vi: 'ROI thủ công + tỷ lệ bản vẽ',
+  },
+  'pac.h_separations': { en: 'Color separations export', vi: 'Xuất tách màu' },
+  'pac.h_tuning': { en: 'Tuning', vi: 'Điều chỉnh tham số' },
+  'pac.h_spot_detection': {
+    en: 'Sprint 9 — Spot-color detection (red warnings, brand inks)',
+    vi: 'Sprint 9 — Phát hiện màu pha (cảnh báo đỏ, mực thương hiệu)',
+  },
+  'pac.h_storage': { en: 'Storage', vi: 'Lưu trữ' },
+  'pac.h_extension': {
+    en: 'Extension — import from product layout',
+    vi: 'Mở rộng — import từ product layout',
+  },
+
   // ─── Print Area Calculator (wave 3) ─────────────────────────────────────
   // Stays English: DPI, SKU, ROI, SPOT, Hex, Lab/ΔE76, and the file-type list.
   // Everything an operator sets or reads while measuring a label is translated.
