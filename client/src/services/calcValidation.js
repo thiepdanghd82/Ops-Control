@@ -439,6 +439,45 @@ export function validateByActiveTab(activeTab, stdState, cplxState, lib = null) 
  *
  * Pure — returns a new array, never mutates `warnings`.
  */
+/**
+ * Fields the RFQ & MOQ tab will not let the operator leave without.
+ *
+ * These four poison every downstream tab when blank rather than failing
+ * loudly: `usd_rate` drives the Selling/Target VND mirrors (0 silently
+ * zeroes them), `annual_qty` × `product_lifetime` is the tooling EAU cap
+ * (a blank cap amortises tooling over 1 piece), and `moq` divides every
+ * setup cost. Requested by the operator 2026-09-14 after quotes reached
+ * Cost Breakdown with an empty USD rate.
+ *
+ * This gate governs NAVIGATION only. Save is still governed by the error
+ * set from validateStandard / validateComplex, which is unchanged.
+ */
+export const HEADER_GATE_FIELDS = ['moq', 'annual_qty', 'usd_rate', 'product_lifetime'];
+
+/**
+ * Which of HEADER_GATE_FIELDS are still unusable, in declaration order.
+ * Zero, blank, whitespace, null and negative all count as missing — none
+ * of the four has a meaningful non-positive value.
+ */
+export function headerGateMissing(state) {
+  if (!state) return HEADER_GATE_FIELDS.slice();
+  return HEADER_GATE_FIELDS.filter((f) => !(num(state[f]) > 0));
+}
+
+/**
+ * Whether a sub-tab change is allowed to proceed, and why not.
+ *
+ * Returns the still-missing gate fields ([] = allow). The gate is an EXIT
+ * check on the entry tab only: once the operator is past it they navigate
+ * freely, and re-selecting the entry tab is never blocked. Both
+ * calculators call this rather than each re-deriving the rule — the entry
+ * tab is 'header' in Standard and 'project' in Complex.
+ */
+export function gateSubTabChange(currentTab, nextTab, headerTabId, state) {
+  if (currentTab !== headerTabId || nextTab === headerTabId) return [];
+  return headerGateMissing(state);
+}
+
 export function gateWarnings(warnings, { touched = [], saveAttempted = false } = {}) {
   if (saveAttempted) return warnings.slice();
   if (touched.length === 0) return [];

@@ -1,0 +1,16 @@
+/* Missing-field list — matches the red the blocked inputs now carry so
+   the dialog and the form read as one signal. */
+.hg-list {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #b91c1c;
+  line-height: 1.7;
+}
+.hg-why {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.55;
+}

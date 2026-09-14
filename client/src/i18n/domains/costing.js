@@ -1220,4 +1220,33 @@ registerStrings({
     vi: 'Thao tác này xoá thông tin khách hàng, toàn bộ dòng sản phẩm và điều khoản. Nếu còn phần chưa lưu, hãy bấm Huỷ và Lưu trước.',
   },
   'formal.reset.confirm': { en: 'Discard & Start New', vi: 'Bỏ và tạo mới' },
+
+  // ─── Header entry gate (2026-09-14) — MOQ / EAU / USD rate / Product
+  // lifetime must be filled before the RFQ & MOQ tab releases navigation.
+  'gate.title': { en: 'Fill the required fields first', vi: 'Điền các trường bắt buộc trước' },
+  'gate.subtitle': {
+    en: 'RFQ & MOQ Info — {n} field(s) still empty',
+    vi: 'Thông tin RFQ & MOQ — còn {n} trường trống',
+  },
+  'gate.body': {
+    en: 'These drive every later tab: the USD rate converts Selling/Target to VND, and EAU × Product lifetime caps tooling amortisation. Leaving them empty produces a quote with silently wrong costs.',
+    vi: 'Các trường này chi phối mọi tab sau: USD rate quy đổi Giá bán/Mục tiêu sang VND, còn EAU × Vòng đời sản phẩm là mức trần phân bổ khuôn. Bỏ trống sẽ ra báo giá sai chi phí mà không báo lỗi.',
+  },
+  'gate.ok': { en: 'Back to the form', vi: 'Quay lại điền' },
+  'gate.field.moq': { en: 'MOQ', vi: 'MOQ' },
+  'gate.field.annual_qty': { en: 'EAU (Annual Qty)', vi: 'EAU (Sản lượng năm)' },
+  'gate.field.usd_rate': { en: 'USD rate', vi: 'Tỉ giá USD' },
+  'gate.field.product_lifetime': { en: 'Product lifetime', vi: 'Vòng đời sản phẩm' },
+  'gate.required_tip': {
+    en: 'Required — fill this before leaving the tab',
+    vi: 'Bắt buộc — điền trước khi rời tab',
+  },
+  'moqcard.eau_required': {
+    en: 'EAU is required for tooling cost to be correct',
+    vi: 'EAU bắt buộc để tính giá khuôn (Tooling) đúng',
+  },
+  'moqcard.usd_rate_tip_std': {
+    en: 'VND per 1 USD. Bi-directionally syncs Selling/Target USD ↔ VND. Saved per RFQ.',
+    vi: 'VND cho 1 USD. Đồng bộ hai chiều Giá bán/Mục tiêu USD ↔ VND. Lưu theo từng RFQ.',
+  },
 });

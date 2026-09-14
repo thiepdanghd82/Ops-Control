@@ -309,9 +309,14 @@ export default function CalcHeader() {
               <DecimalInput
                 value={st.usd_rate}
                 onChange={(v) => setStdField('usd_rate', v)}
-                className="sc-hdr-rate-inp"
+                onBlur={() => markTouched('usd_rate')}
+                className={`sc-hdr-rate-inp ${!(Number(st.usd_rate) > 0) ? 'sc-input-warn' : ''}`}
                 placeholder="25,000"
-                title="VND per 1 USD. Bi-directionally syncs Selling/Target USD ↔ VND. Saved per RFQ."
+                title={
+                  !(Number(st.usd_rate) > 0)
+                    ? t('gate.required_tip')
+                    : t('moqcard.usd_rate_tip_std')
+                }
                 thousandSep
               />
             </div>
@@ -358,7 +363,8 @@ export default function CalcHeader() {
                         value={st.moq}
                         onChange={(v) => setStdField('moq', v)}
                         onBlur={() => markTouched('moq')}
-                        className="sc-moq-inp"
+                        className={`sc-moq-inp ${!(Number(st.moq) > 0) ? 'sc-input-warn' : ''}`}
+                        title={!(Number(st.moq) > 0) ? t('gate.required_tip') : undefined}
                         thousandSep
                       />
                     </td>
@@ -367,10 +373,14 @@ export default function CalcHeader() {
                         value={st.annual_qty}
                         onChange={(v) => setStdField('annual_qty', v)}
                         onBlur={() => markTouched('annual_qty')}
-                        className={`sc-moq-inp ${showEauWarn ? 'sc-input-warn' : ''}`}
+                        className={`sc-moq-inp ${!(Number(st.annual_qty) > 0) || showEauWarn ? 'sc-input-warn' : ''}`}
                         thousandSep
                         title={
-                          showEauWarn ? 'EAU bắt buộc để tính giá khuôn (Tooling) đúng' : undefined
+                          !(Number(st.annual_qty) > 0)
+                            ? t('gate.required_tip')
+                            : showEauWarn
+                              ? t('moqcard.eau_required')
+                              : undefined
                         }
                       />
                     </td>

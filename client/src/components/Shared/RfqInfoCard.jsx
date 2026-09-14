@@ -243,7 +243,9 @@ export default function RfqInfoCard({
               id={fid('product_lifetime')}
               value={get('product_lifetime')}
               onChange={(v) => set('product_lifetime', v, true)}
-              className="sc-input"
+              onBlur={() => onTouch(realKey('product_lifetime'))}
+              className={`sc-input ${!(Number(get('product_lifetime')) > 0) ? 'sc-input-warn' : ''}`}
+              title={!(Number(get('product_lifetime')) > 0) ? t('gate.required_tip') : undefined}
               placeholder={t('common.years')}
             />
           </div>
