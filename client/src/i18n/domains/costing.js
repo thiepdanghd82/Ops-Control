@@ -1158,4 +1158,66 @@ registerStrings({
     en: '14 corrections vs xlsx v3.3 + re-audit refresh (EAU 0.8 cap, Indigo setup; +3 new sections) — see §00',
     vi: '14 điểm sửa so với xlsx v3.3 + soát lại (trần EAU 0.8, setup Indigo; +3 mục mới) — xem §00',
   },
+
+  // ─── i18n wave 8 (2026-09-14) — Cost Breakdown detail (Standard +
+  // Complex share this block) and the Formal Quotation toolbar. The
+  // Formal Quotation DOCUMENT itself stays English on purpose — see the
+  // note at the top of FormalQuotation.jsx.
+  'cb.loading_lib': { en: 'Loading library data...', vi: 'Đang tải dữ liệu thư viện...' },
+  'cb.enter_data': { en: 'Enter data to calculate', vi: 'Nhập dữ liệu để tính' },
+  'cb.target_unit': { en: 'Target /unit (USD)', vi: 'Giá mục tiêu /sản phẩm (USD)' },
+  'cb.detail_title': { en: 'Detailed Breakdown — MOQ {n}', vi: 'Phân tích chi tiết — MOQ {n}' },
+  'cb.setup_mat': { en: 'Setup Mat', vi: 'Vật tư setup' },
+  'cb.run_mat': { en: 'Run Mat', vi: 'Vật tư chạy máy' },
+  'cb.total_mat': { en: 'Total Mat', vi: 'Tổng vật tư' },
+  'cb.setup_ink': { en: 'Setup Ink', vi: 'Mực setup' },
+  'cb.run_ink': { en: 'Run Ink', vi: 'Mực chạy máy' },
+  'cb.total_ink': { en: 'Total Ink', vi: 'Tổng mực' },
+  'cb.setup_mach': { en: 'Setup Mach', vi: 'Máy setup' },
+  'cb.setup_labor': { en: 'Setup Labor', vi: 'Nhân công setup' },
+  'cb.overhead': { en: 'Overhead', vi: 'Overhead' },
+  'cb.labor': { en: 'Labor', vi: 'Nhân công' },
+  'cb.tooling': { en: 'Tooling', vi: 'Khuôn' },
+  'cb.total_proc': { en: 'Total Proc', vi: 'Tổng công đoạn' },
+  'cb.other': { en: 'Other', vi: 'Khác' },
+  'cb.packing_ship': { en: 'Packing & Ship', vi: 'Đóng gói & Vận chuyển' },
+  'cb.vat_loss': { en: 'VAT Loss', vi: 'Hao VAT' },
+  'cb.extra': { en: 'Extra', vi: 'Chi phí phụ' },
+
+  'formal.title': { en: 'Formal Quotation', vi: 'Báo giá chính thức' },
+  'formal.released': { en: 'RELEASED', vi: 'ĐÃ PHÁT HÀNH' },
+  'formal.new': { en: 'New', vi: 'Tạo mới' },
+  'formal.print': { en: 'Print', vi: 'In' },
+  'formal.release': { en: 'Release', vi: 'Phát hành' },
+  'formal.save': { en: 'Save', vi: 'Lưu' },
+  'formal.saving': { en: 'Saving…', vi: 'Đang lưu…' },
+  'formal.cancel': { en: 'Cancel', vi: 'Huỷ' },
+  'formal.add_product': { en: '+ Add Product', vi: '+ Thêm sản phẩm' },
+  'formal.remove_product': { en: 'Remove this product row', vi: 'Xoá dòng sản phẩm này' },
+  'formal.toast.saved': { en: 'Quotation saved', vi: 'Đã lưu báo giá' },
+  'formal.toast.save_failed': {
+    en: 'Save failed — JSON backup downloaded instead',
+    vi: 'Lưu thất bại — đã tải về bản sao lưu JSON thay thế',
+  },
+  'formal.toast.released': { en: 'Quotation released', vi: 'Đã phát hành báo giá' },
+  'formal.toast.reset': { en: 'Quotation reset', vi: 'Đã đặt lại báo giá' },
+  'formal.release.title': { en: 'Release this quotation?', vi: 'Phát hành báo giá này?' },
+  'formal.release.subtitle': {
+    en: 'Released quotations are read-only. Customer-facing pricing should be final before this step.',
+    vi: 'Báo giá đã phát hành là chỉ đọc. Giá gửi khách phải chốt xong trước bước này.',
+  },
+  'formal.release.body': {
+    en: 'You can still print and save, but you will not be able to edit any field once released. This is intentional — a customer must always see the same numbers as the audit log.',
+    vi: 'Bạn vẫn in và lưu được, nhưng sẽ không sửa được bất kỳ trường nào sau khi phát hành. Đây là chủ đích — khách hàng phải luôn thấy đúng những con số như trong nhật ký kiểm toán.',
+  },
+  'formal.reset.title': { en: 'Start a new quotation?', vi: 'Bắt đầu báo giá mới?' },
+  'formal.reset.subtitle': {
+    en: 'All current fields will be cleared.',
+    vi: 'Toàn bộ trường hiện tại sẽ bị xoá.',
+  },
+  'formal.reset.body': {
+    en: 'This wipes the customer information, all product rows, and the terms. If you have unsaved work, click Cancel and Save first.',
+    vi: 'Thao tác này xoá thông tin khách hàng, toàn bộ dòng sản phẩm và điều khoản. Nếu còn phần chưa lưu, hãy bấm Huỷ và Lưu trước.',
+  },
+  'formal.reset.confirm': { en: 'Discard & Start New', vi: 'Bỏ và tạo mới' },
 });
