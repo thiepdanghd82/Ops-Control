@@ -232,3 +232,110 @@ test('non-array items returns []', () => {
   assert.deepEqual(applyQuoteFilters(null, EMPTY_FILTER), []);
   assert.deepEqual(applyQuoteFilters(undefined, EMPTY_FILTER), []);
 });
+
+// ── Summarize's RFQ column (2026-09-14) ───────────────────────────────
+// Reported from production: typing an RFQ number into the Cost Breakdown
+// (Summarize) search returned nothing, while the same RFQ was plainly
+// visible in the unfiltered table. Summarize rows store the number as
+// `rfq_no` (Summarize.jsx builds `rfq_no: st.rfq_number || \`Q${id}\``),
+// but this filter only ever read `rfq_number` — so the field was
+// undefined on every Summarize row and the query could never hit it.
+// Quote History and the Approvals inbox pass `quoteAccessor`, which
+// exposes `rfq_number`, which is why only Summarize was affected.
+
+test('the global query matches a Summarize row by its rfq_no', () => {
+  const rows = [
+    { rfq_no: 'RFQ-2026-S0003', direct_cu: 'Wingsburg' },
+    { rfq_no: 'RFQ-2026-S0050', direct_cu: 'Samsung' },
+  ];
+  const out = applyQuoteFilters(rows, { query: 'RFQ-2026-S0003' });
+  assert.equal(out.length, 1);
+  assert.equal(out[0].rfq_no, 'RFQ-2026-S0003');
+});
+
+test('rfq_no matching is case-insensitive and partial, like every other field', () => {
+  const rows = [{ rfq_no: 'RFQ-2026-S0003' }];
+  for (const q of ['rfq-2026-s0003', 'S0003', '2026']) {
+    assert.equal(applyQuoteFilters(rows, { query: q }).length, 1, `"${q}" should match`);
+  }
+  assert.equal(applyQuoteFilters(rows, { query: 'S0004' }).length, 0);
+});
+
+test('the accessor-based shape keeps working — rfq_number still matches', () => {
+  const rows = [{ rfq_number: 'RFQ-1' }, { rfq_number: 'RFQ-2' }];
+  assert.equal(applyQuoteFilters(rows, { query: 'RFQ-1' }).length, 1);
+});
+
+test('a row carrying both keys is not double-counted or dropped', () => {
+  const rows = [{ rfq_no: 'Q42', rfq_number: 'RFQ-2026-S0003' }];
+  assert.equal(applyQuoteFilters(rows, { query: 'Q42' }).length, 1);
+  assert.equal(applyQuoteFilters(rows, { query: 'S0003' }).length, 1);
+});
+
+// ── Summarize's date column (2026-09-14) ──────────────────────────────
+// Same class as the rfq_no bug, found by auditing the other fields this
+// filter reads against what Summarize.jsx actually puts on a row. The
+// date-range branch reads `saved_at`; Summarize rows carry the timestamp
+// as `update_date` (`update_date: q.saved_at`). `if (!day) return false`
+// means EVERY Summarize row was dropped the moment a date range was set.
+
+test('the date range matches a Summarize row by its update_date', () => {
+  const rows = [
+    { rfq_no: 'A', update_date: '2026-09-14T16:20:00.000Z' },
+    { rfq_no: 'B', update_date: '2026-09-01T09:00:00.000Z' },
+  ];
+  const out = applyQuoteFilters(rows, { dateFrom: '2026-09-10', dateTo: '2026-09-20' });
+  assert.deepEqual(
+    out.map((r) => r.rfq_no),
+    ['A']
+  );
+});
+
+test('a date range no longer empties the whole Summarize table', () => {
+  const rows = [{ rfq_no: 'A', update_date: '2026-09-14T16:20:00.000Z' }];
+  assert.equal(applyQuoteFilters(rows, { dateFrom: '2026-01-01' }).length, 1);
+  assert.equal(applyQuoteFilters(rows, { dateTo: '2026-12-31' }).length, 1);
+});
+
+test('saved_at still wins where both exist, and rows with neither are excluded', () => {
+  const rows = [
+    { rfq_no: 'both', saved_at: '2026-09-14T00:00:00Z', update_date: '2020-01-01T00:00:00Z' },
+    { rfq_no: 'neither' },
+  ];
+  const out = applyQuoteFilters(rows, { dateFrom: '2026-09-01', dateTo: '2026-09-30' });
+  assert.deepEqual(
+    out.map((r) => r.rfq_no),
+    ['both']
+  );
+});
+
+// Guard the whole class rather than the two instances: if this filter
+// starts reading a field, the Summarize row builder has to provide it
+// under that name (or an alias handled above). The two bugs fixed on
+// 2026-09-14 were both "filter reads X, Summarize row has Y".
+test('every field this filter reads is reachable on a Summarize-shaped row', () => {
+  // Keys Summarize.jsx puts on a row (see the record builder there).
+  const summarizeRow = {
+    update_date: '2026-09-14T16:20:00Z',
+    rfq_no: 'RFQ-2026-S0003',
+    direct_cu: 'Wingsburg',
+    end_cu: 'Wingsburg',
+    end_cu_pn: 'G-EHB-HC-DISNEY',
+    direct_cu_pn: '',
+    project: 'DISNEY',
+    project_name: 'DISNEY',
+    description: 'Label',
+    sale_owner: 'Dora',
+    npi_owner: '',
+    trade_mode: 'USD(Normal)',
+    size: '84×66',
+  };
+  // Each of these must be able to find the row on its own value.
+  for (const [key, value] of Object.entries(summarizeRow)) {
+    if (key === 'update_date' || !value) continue;
+    const out = applyQuoteFilters([summarizeRow], { query: value });
+    assert.equal(out.length, 1, `query on ${key} ("${value}") found nothing`);
+  }
+  // …and the date range must not empty the table.
+  assert.equal(applyQuoteFilters([summarizeRow], { dateFrom: '2026-09-01' }).length, 1);
+});

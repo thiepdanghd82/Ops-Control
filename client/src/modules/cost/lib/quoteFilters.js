@@ -46,7 +46,12 @@ export function applyQuoteFilters(items, filter, accessor = identity) {
     if (!r) return false;
 
     if (hasDateFrom || hasDateTo) {
-      const day = String(r.saved_at || '').slice(0, 10);
+      // `update_date` for the same reason as `rfq_no` below: Summarize
+      // builds flat rows (`update_date: q.saved_at`) while the accessor-
+      // based tabs expose `saved_at`. Reading only `saved_at` made the
+      // `if (!day) return false` guard drop EVERY Summarize row as soon
+      // as a date range was set.
+      const day = String(r.saved_at || r.update_date || '').slice(0, 10);
       if (!day) return false;
       if (hasDateFrom && day < f.dateFrom) return false;
       if (hasDateTo && day > f.dateTo) return false;
@@ -82,7 +87,14 @@ export function applyQuoteFilters(items, filter, accessor = identity) {
         r.size,
         r.trade_mode,
         r.description,
+        // Both spellings on purpose: Quote History and the Approvals
+        // inbox come through `quoteAccessor`, which exposes `rfq_number`,
+        // while Summarize builds flat rows keyed `rfq_no`. Reading only
+        // one of them silently broke RFQ search on the other (Summarize,
+        // reported 2026-09-14 — the RFQ was visible in the table and
+        // unfindable by search).
         r.rfq_number,
+        r.rfq_no,
       ];
       const hit = fields.some((v) => lc(v).includes(q));
       if (!hit) return false;
