@@ -1998,7 +1998,7 @@ export function MdTdLegendCard() {
           🧭
         </span>
         <b>MD · TD — what do the suffixes mean?</b>
-        <span className="cl-bi-vi cl-bi-vi--inline">MD · TD — ý nghĩa của các hậu tố</span>
+        <span className="cl-mdtd-vi cl-mdtd-vi--inline">MD · TD — ý nghĩa của các hậu tố</span>
         <span className="cl-mdtd-chevron" aria-hidden="true">
           {open ? '▾' : '▸'}
         </span>
@@ -2013,7 +2013,7 @@ export function MdTdLegendCard() {
                 roll unwinds. Runs along the length of the roll, parallel to the print / die
                 cylinder's rotation.
               </div>
-              <div className="cl-bi-vi">
+              <div className="cl-mdtd-vi">
                 <b>Chiều máy (chiều chạy)</b> — hướng vật liệu chạy qua máy khi cuộn tháo ra. Chạy
                 dọc theo chiều dài cuộn, song song với trục quay của trục in / trục bế.
               </div>
@@ -2029,7 +2029,7 @@ export function MdTdLegendCard() {
                 <b>Transverse Direction</b> (also CD — Cross Direction) — perpendicular to MD,
                 running across the web width. Measures part width, web width, and edge margins.
               </div>
-              <div className="cl-bi-vi">
+              <div className="cl-mdtd-vi">
                 <b>Chiều ngang web</b> (còn gọi CD — Cross Direction) — vuông góc với MD, theo bề
                 rộng web. Đo chiều rộng part, bề rộng web và edge trái/phải.
               </div>

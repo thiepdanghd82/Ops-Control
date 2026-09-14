@@ -3112,8 +3112,14 @@ select.sc-input {
 .cl-mdtd-en b {
   color: #0f172a;
 }
-.cl-mdtd-col .cl-bi-vi {
+.cl-mdtd-vi {
+  display: block;
   font-size: 12px;
+  font-style: italic;
+  color: #6b7280;
+  margin-top: 2px;
+}
+.cl-mdtd-col .cl-mdtd-vi {
   margin-bottom: 8px;
 }
 .cl-mdtd-fields {
@@ -3570,7 +3576,7 @@ select.sc-input {
 .cl-pc-checkbox {
   margin-right: 6px;
 }
-.cl-bi-vi--inline {
+.cl-mdtd-vi--inline {
   margin-left: 8px;
 }
 
