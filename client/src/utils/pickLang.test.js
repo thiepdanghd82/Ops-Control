@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { pickLang } from './legendLang.js';
+import { pickLang } from './pickLang.js';
 
 test('pickLang returns the Vietnamese twin when the locale is vi', () => {
   assert.equal(pickLang('vi', 'Field', 'Trường'), 'Trường');

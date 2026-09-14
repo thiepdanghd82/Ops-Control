@@ -30,7 +30,7 @@
 import { createContext, useContext, useMemo, useState, useEffect, useRef } from 'react';
 import { useCalc } from '../../../../context/CalcContext';
 import { useI18n } from '../../../../utils/useI18n';
-import { pickLang } from './legendLang';
+import { pickLang } from '../../../../utils/pickLang';
 import { createStdState } from '../../../../services/calcEngine';
 import { showToast } from '../../../../utils/toast';
 import './CalcLegend.css';

@@ -14,7 +14,7 @@
  * (via the useF1Help hook) and press F1; the sidebar handler routes to
  * the Help tab and this component reads __helpTarget on mount.
  */
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { createContext, useContext, useMemo, useState, useEffect, useRef } from 'react';
 import {
   HELP_SECTIONS,
   HELP_CONTENT,
@@ -22,6 +22,8 @@ import {
   GLOSSARY,
   getHelpIndex,
 } from '../../help/content.js';
+import { useI18n } from '../../utils/useI18n';
+import { pickLang } from '../../utils/pickLang';
 import './HelpTab.css';
 
 // Default entry when nothing is selected. 'help' is its own entry —
@@ -35,41 +37,40 @@ const DEFAULT_ID = 'help';
 const DEFAULT_AUTH_BY_SECTION = {
   CALCULATORS: {
     roleRequired: 'User',
-    notes:
-      'Quote authoring — Cost role required to commit. · Soạn báo giá — cần role Cost để Save.',
+    notesKey: 'help.auth.quote',
   },
   QUOTING: {
     roleRequired: 'User',
-    notes: 'Cost / Admin to approve or send. · Cost / Admin để duyệt hoặc gửi.',
+    notesKey: 'help.auth.approve',
   },
   MANUFACTURING: {
     roleRequired: 'User',
-    notes: 'Cost / Admin to edit templates + routing. · Cost / Admin để sửa template + routing.',
+    notesKey: 'help.auth.templates',
   },
   TRACKING: {
     roleRequired: 'User',
-    notes: 'Everyone can view their own records. · Mọi người xem được record của mình.',
+    notesKey: 'help.auth.own_records',
   },
   REPORTS: {
     roleRequired: 'User',
-    notes: 'Admin required to export CSV. · Cần Admin để export CSV.',
+    notesKey: 'help.auth.export_csv',
   },
   LIBRARIES: {
     roleRequired: 'User',
-    notes: 'Cost / Admin to edit master data. · Cost / Admin để sửa master data.',
+    notesKey: 'help.auth.master_data',
   },
   SYSTEM: {
     roleRequired: 'Admin',
-    notes: 'Sys role only for select subscreens. · Chỉ role Sys cho một số sub-screen.',
+    notesKey: 'help.auth.sys_only',
   },
   PLANNING: {
     roleRequired: 'User',
-    notes: 'Cost / Admin to release work orders. · Cost / Admin để release work order.',
+    notesKey: 'help.auth.release_wo',
   },
 };
 function resolveAuth(entry) {
   if (entry?.authorization) return entry.authorization;
-  return DEFAULT_AUTH_BY_SECTION[entry?.section] || { roleRequired: 'User', notes: '' };
+  return DEFAULT_AUTH_BY_SECTION[entry?.section] || { roleRequired: 'User' };
 }
 
 // Coerce a value (string OR { en, vi } bilingual object) to a string for
@@ -112,57 +113,56 @@ function matchesQuery(entry, q) {
   return haystack.includes(needle);
 }
 
-function Bilingual({ en, vi, tag: Tag = 'p' }) {
-  if (!en && !vi) return null;
-  return (
-    <Tag className="help-bilingual">
-      {en && <span className="help-bi-en">{en}</span>}
-      {vi && <span className="help-bi-vi">{vi}</span>}
-    </Tag>
-  );
+// ── Help i18n — one language at a time ─────────────────────────────
+// Entry copy lives in content.js as { en, vi } pairs (the offline Word
+// export reads the same file), so it can't move into STRINGS. HelpTab
+// reads useI18n() once and provides it here; `L(en, vi)` picks the half
+// for the active locale, English when the Vietnamese twin is missing.
+// Until 2026-09-14 every pair below rendered BOTH halves stacked.
+const HelpI18n = createContext({ locale: 'en', t: (key) => key });
+function useHelp() {
+  const { locale, t } = useContext(HelpI18n);
+  return { t, locale, L: (en, vi) => pickLang(locale, en, vi) };
 }
 
-// Sprint 1.6 — defensive coercion for slots the renderer treated as
-// plain strings but content authors filled with bi() / bilingual objects
-// (formulas[].name + .notes, keyFields[].desc). Rendering an object
-// directly throws React error #31 ("objects are not valid as a React
-// child"), which crashed the whole Help tab. This helper picks the VI
-// value when present (the help UI defaults VI-first), falls back to EN,
-// and passes strings through unchanged.
-function asText(v) {
+// One line of entry copy in the active language.
+function Bilingual({ en, vi, tag: Tag = 'p' }) {
+  const { L } = useHelp();
+  const text = L(en, vi);
+  if (!text) return null;
+  return <Tag className="help-bi">{text}</Tag>;
+}
+
+// Picks the active locale's half of a bilingual value. Content authors
+// migrated strings → { en, vi } objects progressively, so both shapes
+// reach here; a plain string is already single-language and passes
+// through. Before 2026-09-14 this returned `vi || en` unconditionally,
+// which showed Vietnamese formula names to English users.
+function asText(v, locale) {
   if (v == null) return '';
   if (typeof v === 'string') return v;
-  if (typeof v === 'object') return v.vi || v.en || '';
+  if (typeof v === 'object') return pickLang(locale, v.en, v.vi) || '';
   return String(v);
 }
 
-// Same shape as Bilingual but tolerates EITHER a string OR a {en,vi}
-// object — handy for slots where some entries use one shape and some
-// use the other. Returns null if both halves are empty.
+// Same as Bilingual but tolerates EITHER a string OR an { en, vi }
+// object — some content slots use one shape, some the other.
 function FlexBilingual({ value, tag: Tag = 'div' }) {
   if (!value) return null;
-  if (typeof value === 'string')
-    return (
-      <Tag className="help-bilingual">
-        <span className="help-bi-en">{value}</span>
-      </Tag>
-    );
+  if (typeof value === 'string') return <Tag className="help-bi">{value}</Tag>;
   return <Bilingual en={value.en} vi={value.vi} tag={Tag} />;
 }
 
-// BiItem renders a list item that may be a plain string (legacy,
-// rendered as-is) or a { en, vi } object (new bilingual form).
-// Content authors progressively migrate strings → objects; the UI
-// handles both without breaking.
+// A list item that may be a plain string (legacy) or an { en, vi }
+// object. Renders the active locale's half only.
 function BiItem({ value, icon }) {
+  const { locale } = useHelp();
   const isObj = value && typeof value === 'object' && !Array.isArray(value);
-  const en = isObj ? value.en : value;
-  const vi = isObj ? value.vi : null;
+  const text = isObj ? asText(value, locale) : value;
   return (
     <li>
       {icon && <span className="help-item-icon">{icon} </span>}
-      <span className="help-bi-en">{en}</span>
-      {vi && vi !== en && <span className="help-bi-vi">{vi}</span>}
+      <span className="help-bi">{text}</span>
     </li>
   );
 }
@@ -178,8 +178,9 @@ function SectionBlock({ heading, children, id }) {
 }
 
 function HelpContentView({ entry, onRelatedClick }) {
+  const { t, locale, L } = useHelp();
   if (!entry) {
-    return <div className="help-empty">Select a topic from the left.</div>;
+    return <div className="help-empty">{t('help.pick_topic')}</div>;
   }
   const sectionLabel = HELP_SECTIONS.find((s) => s.key === entry.section);
 
@@ -208,26 +209,20 @@ function HelpContentView({ entry, onRelatedClick }) {
     <article className="help-content">
       <header className="help-content-header">
         <div className="help-breadcrumb">
-          {sectionLabel ? `${sectionLabel.label.en} · ${sectionLabel.label.vi}` : entry.section}
+          {sectionLabel ? L(sectionLabel.label.en, sectionLabel.label.vi) : entry.section}
         </div>
-        <h2 className="help-content-title">
-          <span className="help-title-en">{entry.title.en}</span>
-          <span className="help-title-vi">{entry.title.vi}</span>
-        </h2>
+        <h2 className="help-content-title">{L(entry.title.en, entry.title.vi)}</h2>
         {(entry.function || entry.path) && (
           <dl className="help-meta-row">
             {entry.function && (
               <>
-                <dt>Function</dt>
-                <dd>
-                  {entry.function.en}
-                  {entry.function.vi && <em> · {entry.function.vi}</em>}
-                </dd>
+                <dt>{t('help.function')}</dt>
+                <dd>{L(entry.function.en, entry.function.vi)}</dd>
               </>
             )}
             {entry.path && (
               <>
-                <dt>Path · Đường dẫn</dt>
+                <dt>{t('help.path')}</dt>
                 <dd>
                   <code className="help-path">{entry.path}</code>
                 </dd>
@@ -237,10 +232,12 @@ function HelpContentView({ entry, onRelatedClick }) {
               const a = resolveAuth(entry);
               return (
                 <>
-                  <dt>Authorization · Phân quyền</dt>
+                  <dt>{t('help.authorization')}</dt>
                   <dd>
                     <span className="help-role-badge">{a.roleRequired}</span>
-                    {a.notes && <em> · {a.notes}</em>}
+                    {(a.notesKey || a.notes) && (
+                      <em> · {a.notesKey ? t(a.notesKey) : asText(a.notes, locale)}</em>
+                    )}
                   </dd>
                 </>
               );
@@ -252,21 +249,21 @@ function HelpContentView({ entry, onRelatedClick }) {
       {/* 1. Use — business scenario. SAP convention: this is WHY the
           screen exists for the business, not WHAT it does technically. */}
       {useContent && (
-        <SectionBlock heading="Use · Mục đích nghiệp vụ" id="use">
+        <SectionBlock heading={t('help.sec.use')} id="use">
           <Bilingual en={useContent.en} vi={useContent.vi} />
         </SectionBlock>
       )}
 
       {/* 2. Integration — where this sits in the broader flow. */}
       {entry.whenToUse && (
-        <SectionBlock heading="Integration · Tích hợp / Khi dùng" id="integration">
+        <SectionBlock heading={t('help.sec.integration')} id="integration">
           <Bilingual en={entry.whenToUse.en} vi={entry.whenToUse.vi} />
         </SectionBlock>
       )}
 
       {/* 3. Prerequisites — what must exist / be true first. */}
       {entry.preRequisites?.length > 0 && (
-        <SectionBlock heading="Prerequisites · Điều kiện tiên quyết" id="prereq">
+        <SectionBlock heading={t('help.sec.prereq')} id="prereq">
           <ul className="help-list">
             {entry.preRequisites.map((s, i) => (
               <BiItem key={i} value={s} />
@@ -277,7 +274,7 @@ function HelpContentView({ entry, onRelatedClick }) {
 
       {/* 4. Features — capabilities the screen exposes (SAP-style bullets). */}
       {entry.features?.length > 0 && (
-        <SectionBlock heading="Features · Tính năng" id="features">
+        <SectionBlock heading={t('help.sec.features')} id="features">
           <ul className="help-list">
             {entry.features.map((f, i) => (
               <BiItem key={i} value={f} icon="▸" />
@@ -289,7 +286,7 @@ function HelpContentView({ entry, onRelatedClick }) {
       {/* 5. Procedure (activities). Legacy `workflow` array renders as
           flat steps; `procedures` array renders as grouped activities. */}
       {entry.workflow?.length > 0 && (
-        <SectionBlock heading="Procedure · Thao tác" id="workflow">
+        <SectionBlock heading={t('help.sec.procedure')} id="workflow">
           <ol className="help-list help-list-num">
             {entry.workflow.map((s, i) => (
               <BiItem key={i} value={s} />
@@ -299,22 +296,18 @@ function HelpContentView({ entry, onRelatedClick }) {
       )}
 
       {entry.procedures?.length > 0 && (
-        <SectionBlock heading="Procedure · Thao tác" id="procedures">
+        <SectionBlock heading={t('help.sec.procedure')} id="procedures">
           <div className="help-procedures">
             {entry.procedures.map((prc, i) => (
               <div key={i} className="help-procedure">
                 <h4 className="help-procedure-title">
                   <span className="help-procedure-num">{i + 1}.</span>
-                  <span>{prc.title.vi}</span>
-                  <span className="help-procedure-en">({prc.title.en})</span>
+                  <span>{L(prc.title.en, prc.title.vi)}</span>
                 </h4>
                 {prc.note && (
                   <div className="help-procedure-note">
-                    <b>Note · Lưu ý:</b>
-                    {prc.note.en && <div>{prc.note.en}</div>}
-                    {prc.note.vi && prc.note.vi !== prc.note.en && (
-                      <div className="help-procedure-note-vi">{prc.note.vi}</div>
-                    )}
+                    <b>{t('help.note')}</b>
+                    <div>{L(prc.note.en, prc.note.vi)}</div>
                   </div>
                 )}
                 <ol className="help-list help-list-num">
@@ -339,21 +332,17 @@ function HelpContentView({ entry, onRelatedClick }) {
       )}
 
       {entry.appendices?.length > 0 && (
-        <SectionBlock heading="Appendix · Phụ lục" id="appendices">
+        <SectionBlock heading={t('help.sec.appendix')} id="appendices">
           {entry.appendices.map((app, i) => (
             <div key={i} className="help-appendix">
               <div className="help-appendix-title">
-                {String.fromCharCode(65 + i)}. {app.title.vi}{' '}
-                <span className="help-title-en">({app.title.en})</span>
+                {String.fromCharCode(65 + i)}. {L(app.title.en, app.title.vi)}
               </div>
               <table className="help-table">
                 <thead>
                   <tr>
                     {app.columns.map((c) => (
-                      <th key={c.key}>
-                        {c.vi || c.en}
-                        {c.vi && c.en && c.vi !== c.en && <div className="help-col-en">{c.en}</div>}
-                      </th>
+                      <th key={c.key}>{L(c.en, c.vi)}</th>
                     ))}
                   </tr>
                 </thead>
@@ -373,7 +362,7 @@ function HelpContentView({ entry, onRelatedClick }) {
       )}
 
       {entry.screenshot && (
-        <SectionBlock heading="Screenshot · Ảnh minh hoạ" id="screenshot">
+        <SectionBlock heading={t('help.sec.screenshot')} id="screenshot">
           <img
             src={`/help/screenshots/${entry.screenshot}`}
             alt={entry.title.en}
@@ -382,33 +371,18 @@ function HelpContentView({ entry, onRelatedClick }) {
               e.currentTarget.style.display = 'none';
             }}
           />
-          <div className="help-screenshot-caption">
-            <div>
-              Screenshot for <code>{entry.id}</code>. If missing, run the screenshot capture script
-              (see CLAUDE.md).
-            </div>
-            <div className="help-caption-vi">
-              Ảnh minh hoạ cho <code>{entry.id}</code>. Nếu thiếu, chạy script chụp screenshot (xem
-              CLAUDE.md).
-            </div>
-          </div>
+          <div className="help-screenshot-caption">{t('help.shot_caption', { id: entry.id })}</div>
         </SectionBlock>
       )}
 
       {entry.keyFields?.length > 0 && (
-        <SectionBlock heading="Field reference · Trường dữ liệu" id="fields">
+        <SectionBlock heading={t('help.sec.fields')} id="fields">
           <table className="help-table">
             <thead>
               <tr>
-                <th>
-                  Field<div className="help-col-en">Trường</div>
-                </th>
-                <th>
-                  Type<div className="help-col-en">Kiểu</div>
-                </th>
-                <th>
-                  Description<div className="help-col-en">Mô tả</div>
-                </th>
+                <th>{t('help.col.field')}</th>
+                <th>{t('help.col.type')}</th>
+                <th>{t('help.col.description')}</th>
               </tr>
             </thead>
             <tbody>
@@ -421,15 +395,15 @@ function HelpContentView({ entry, onRelatedClick }) {
               {entry.keyFields.map((f, i) => (
                 <tr key={i}>
                   <td>
-                    <code>{asText(f.field) || asText(f.name)}</code>
+                    <code>{asText(f.field, locale) || asText(f.name, locale)}</code>
                     {f.label &&
-                      (typeof f.label === 'object' ||
-                        asText(f.label) !== (asText(f.field) || asText(f.name))) && (
-                        <div className="help-col-en">{asText(f.label)}</div>
+                      asText(f.label, locale) !==
+                        (asText(f.field, locale) || asText(f.name, locale)) && (
+                        <div className="help-col-label">{asText(f.label, locale)}</div>
                       )}
                   </td>
                   <td>
-                    <span className="help-type">{asText(f.type)}</span>
+                    <span className="help-type">{asText(f.type, locale)}</span>
                   </td>
                   <td>
                     <FlexBilingual value={f.notes ?? f.desc} tag="div" />
@@ -442,7 +416,7 @@ function HelpContentView({ entry, onRelatedClick }) {
       )}
 
       {entry.formulas?.length > 0 && (
-        <SectionBlock heading="Formulas · Công thức" id="formulas">
+        <SectionBlock heading={t('help.sec.formulas')} id="formulas">
           <div className="help-formulas">
             {entry.formulas.map((f, i) => (
               <div key={i} className="help-formula">
@@ -450,21 +424,21 @@ function HelpContentView({ entry, onRelatedClick }) {
                     OR plain strings depending on the entry's vintage.
                     asText() / FlexBilingual coerce safely so the page
                     no longer crashes on the bilingual variants. */}
-                <div className="help-formula-name">{asText(f.name)}</div>
+                <div className="help-formula-name">{asText(f.name, locale)}</div>
                 <pre className="help-formula-expr">
-                  <code>{asText(f.expr) || asText(f.formula)}</code>
+                  <code>{asText(f.expr, locale) || asText(f.formula, locale)}</code>
                 </pre>
                 {f.meaning && (
                   <div className="help-formula-meaning">
-                    <span className="help-formula-label">Ý nghĩa · Meaning:</span>
-                    {typeof f.meaning === 'string' ? f.meaning : f.meaning.vi || f.meaning.en}
+                    <span className="help-formula-label">{t('help.meaning')}</span>
+                    {asText(f.meaning, locale)}
                   </div>
                 )}
                 {f.example && (
                   <div className="help-formula-example">
-                    <span className="help-formula-label">Ví dụ · Example:</span>
+                    <span className="help-formula-label">{t('help.example_label')}</span>
                     <pre>
-                      <code>{asText(f.example)}</code>
+                      <code>{asText(f.example, locale)}</code>
                     </pre>
                   </div>
                 )}
@@ -477,11 +451,11 @@ function HelpContentView({ entry, onRelatedClick }) {
 
       {/* 11. Example — centralized end-to-end scenario (SAP-style box). */}
       {entry.example && (
-        <SectionBlock heading="Example · Ví dụ" id="example">
+        <SectionBlock heading={t('help.sec.example')} id="example">
           <div className="help-example">
             {entry.example.scenario && (
               <div className="help-example-scenario">
-                <span className="help-example-label">Scenario · Tình huống:</span>
+                <span className="help-example-label">{t('help.scenario')}</span>
                 {typeof entry.example.scenario === 'object' ? (
                   <Bilingual en={entry.example.scenario.en} vi={entry.example.scenario.vi} />
                 ) : (
@@ -498,7 +472,7 @@ function HelpContentView({ entry, onRelatedClick }) {
             )}
             {entry.example.expected && (
               <div className="help-example-expected">
-                <span className="help-example-label">Expected result · Kết quả mong đợi:</span>
+                <span className="help-example-label">{t('help.expected')}</span>
                 {typeof entry.example.expected === 'object' ? (
                   <Bilingual en={entry.example.expected.en} vi={entry.example.expected.vi} />
                 ) : (
@@ -512,14 +486,14 @@ function HelpContentView({ entry, onRelatedClick }) {
 
       {/* 12. Result — what the user achieves after completing the procedure. */}
       {entry.result && (
-        <SectionBlock heading="Result · Kết quả đạt được" id="result">
+        <SectionBlock heading={t('help.sec.result')} id="result">
           <Bilingual en={entry.result.en} vi={entry.result.vi} />
         </SectionBlock>
       )}
 
       {/* 13. Constraints — pitfalls renamed to SAP terminology. */}
       {(entry.constraints?.length > 0 || entry.pitfalls?.length > 0) && (
-        <SectionBlock heading="Constraints · Hạn chế & lỗi thường gặp" id="constraints">
+        <SectionBlock heading={t('help.sec.constraints')} id="constraints">
           <ul className="help-list help-list-pit">
             {(entry.constraints || []).map((s, i) => (
               <BiItem key={`c-${i}`} value={s} icon="⚠️" />
@@ -533,7 +507,7 @@ function HelpContentView({ entry, onRelatedClick }) {
 
       {/* 14. Best practices — tips renamed. */}
       {entry.tips?.length > 0 && (
-        <SectionBlock heading="Best practices · Thực hành tốt" id="tips">
+        <SectionBlock heading={t('help.sec.tips')} id="tips">
           <ul className="help-list help-list-tips">
             {entry.tips.map((s, i) => (
               <BiItem key={i} value={s} icon="💡" />
@@ -544,7 +518,7 @@ function HelpContentView({ entry, onRelatedClick }) {
 
       {/* 15. See also — relatedTabs renamed to SAP terminology. */}
       {entry.relatedTabs?.length > 0 && (
-        <SectionBlock heading="See also · Xem thêm" id="see-also">
+        <SectionBlock heading={t('help.sec.see_also')} id="see-also">
           <div className="help-related">
             {entry.relatedTabs.map((relId) => {
               const rel = HELP_CONTENT[relId];
@@ -556,7 +530,7 @@ function HelpContentView({ entry, onRelatedClick }) {
                   className="help-related-chip"
                   onClick={() => onRelatedClick?.(relId)}
                 >
-                  {rel.title.vi} <span className="help-related-en">({rel.title.en})</span>
+                  {L(rel.title.en, rel.title.vi)}
                 </button>
               );
             })}
@@ -571,6 +545,7 @@ function HelpContentView({ entry, onRelatedClick }) {
 // alternative right-pane when the user picks "Glossary" in the sidebar
 // (entry id = '__glossary' sentinel).
 function GlossaryView({ query }) {
+  const { t, L } = useHelp();
   const q = (query || '').trim().toLowerCase();
   const filtered = q
     ? GLOSSARY.filter((g) => `${g.term} ${g.en} ${g.vi}`.toLowerCase().includes(q))
@@ -578,33 +553,26 @@ function GlossaryView({ query }) {
   return (
     <article className="help-content">
       <header className="help-content-header">
-        <div className="help-breadcrumb">GLOSSARY · TỪ ĐIỂN</div>
-        <h2 className="help-content-title">
-          <span className="help-title-en">Glossary</span>
-          <span className="help-title-vi">Từ điển chuyên ngành</span>
-        </h2>
+        <div className="help-breadcrumb">{t('help.glossary.crumb')}</div>
+        <h2 className="help-content-title">{t('help.glossary')}</h2>
         <dl className="help-meta-row">
-          <dt>Count · Số lượng</dt>
-          <dd>
-            {filtered.length} / {GLOSSARY.length} terms · thuật ngữ
-          </dd>
+          <dt>{t('help.glossary.count')}</dt>
+          <dd>{t('help.glossary.terms', { shown: filtered.length, total: GLOSSARY.length })}</dd>
         </dl>
       </header>
-      <SectionBlock heading="Domain terms · Thuật ngữ" id="glossary-terms">
+      <SectionBlock heading={t('help.glossary.section')} id="glossary-terms">
         <dl className="help-glossary">
           {filtered.map((g) => (
             <div key={g.term} className="help-glossary-entry">
               <dt className="help-glossary-term">{g.term}</dt>
               <dd>
-                <div className="help-bi-en">{g.en}</div>
-                {g.vi && g.vi !== g.en && <div className="help-bi-vi">{g.vi}</div>}
+                <div className="help-bi">{L(g.en, g.vi)}</div>
               </dd>
             </div>
           ))}
           {filtered.length === 0 && (
             <div className="help-glossary-empty">
-              <div>No terms match &quot;{query}&quot;</div>
-              <div className="help-empty-vi">Không có thuật ngữ khớp với &quot;{query}&quot;</div>
+              <div>{t('help.glossary.empty', { q: query })}</div>
             </div>
           )}
         </dl>
@@ -614,6 +582,9 @@ function GlossaryView({ query }) {
 }
 
 export default function HelpTab() {
+  const { locale, t } = useI18n();
+  const helpI18n = useMemo(() => ({ locale, t }), [locale, t]);
+  const L = (en, vi) => pickLang(locale, en, vi);
   // Deep-link: any tab can set window.__helpTarget to a help entry id
   // before navigating here via F1. We read it on mount + on each focus
   // to support the use-F1-twice case (close + re-open with a new target).
@@ -669,92 +640,90 @@ export default function HelpTab() {
   }
 
   return (
-    <div className="help-tab" role="region" aria-label="Help">
-      <div className="help-toolbar">
-        <div className="help-toolbar-left">
-          <h2 className="help-page-title">Help · Hướng dẫn sử dụng</h2>
-          <span className="help-tip-pill">
-            Tip · Mẹo: press <kbd>F1</kbd> inside any tab to jump here · nhấn <kbd>F1</kbd> ở bất kỳ
-            tab nào để mở Help
-          </span>
-          <span className="help-version-pill" title={`Updated · Cập nhật ${HELP_META.lastUpdated}`}>
-            {HELP_META.version} · {HELP_META.totalEntries} entries · mục
-          </span>
+    <HelpI18n.Provider value={helpI18n}>
+      <div className="help-tab" role="region" aria-label={t('help.aria.region')}>
+        <div className="help-toolbar">
+          <div className="help-toolbar-left">
+            <h2 className="help-page-title">{t('help.page_title')}</h2>
+            <span className="help-tip-pill">{t('help.tip')}</span>
+            <span
+              className="help-version-pill"
+              title={t('help.updated', { date: HELP_META.lastUpdated })}
+            >
+              {HELP_META.version} · {t('help.entries', { n: HELP_META.totalEntries })}
+            </span>
+          </div>
+          <div className="help-toolbar-right">
+            <button type="button" className="help-btn" onClick={handleExport}>
+              {t('help.word')}
+            </button>
+            <button type="button" className="help-btn help-btn-ghost" onClick={handlePrint}>
+              {t('help.print')}
+            </button>
+          </div>
         </div>
-        <div className="help-toolbar-right">
-          <button type="button" className="help-btn" onClick={handleExport}>
-            ⬇ Word
-          </button>
-          <button type="button" className="help-btn help-btn-ghost" onClick={handlePrint}>
-            🖨 Print
-          </button>
-        </div>
-      </div>
 
-      <div className="help-body">
-        <aside className="help-sidebar">
-          <input
-            type="search"
-            className="help-search"
-            placeholder="Search · Tìm kiếm (keyword, field name, formula)"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            aria-label="Search help topics · Tìm chủ đề trợ giúp"
-          />
-          <nav className="help-index" aria-label="Help sections">
-            {/* Glossary — always visible at the top of the index. SAP
+        <div className="help-body">
+          <aside className="help-sidebar">
+            <input
+              type="search"
+              className="help-search"
+              placeholder={t('help.search_ph')}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label={t('help.aria.search')}
+            />
+            <nav className="help-index" aria-label={t('help.aria.sections')}>
+              {/* Glossary — always visible at the top of the index. SAP
                 convention: domain vocabulary is a first-class reference,
                 not a nested appendix. */}
-            <div className="help-index-section">
-              <div className="help-index-section-label">
-                Từ điển <span className="help-index-section-en">(Glossary)</span>
+              <div className="help-index-section">
+                <div className="help-index-section-label">{t('help.glossary')}</div>
+                <button
+                  type="button"
+                  className={`help-index-item ${selected === '__glossary' ? 'active' : ''}`}
+                  onClick={() => setSelected('__glossary')}
+                >
+                  <span className="help-index-label">
+                    {t('help.glossary.nav', { n: GLOSSARY.length })}
+                  </span>
+                </button>
               </div>
-              <button
-                type="button"
-                className={`help-index-item ${selected === '__glossary' ? 'active' : ''}`}
-                onClick={() => setSelected('__glossary')}
-              >
-                <span className="help-index-vi">Từ điển chuyên ngành</span>
-                <span className="help-index-en">Glossary · {GLOSSARY.length} terms</span>
-              </button>
-            </div>
 
-            {HELP_SECTIONS.map((s) => {
-              const entries = shownIndex[s.key] || [];
-              if (entries.length === 0) return null;
-              return (
-                <div key={s.key} className="help-index-section">
-                  <div className="help-index-section-label">
-                    {s.label.vi} <span className="help-index-section-en">({s.label.en})</span>
+              {HELP_SECTIONS.map((s) => {
+                const entries = shownIndex[s.key] || [];
+                if (entries.length === 0) return null;
+                return (
+                  <div key={s.key} className="help-index-section">
+                    <div className="help-index-section-label">{L(s.label.en, s.label.vi)}</div>
+                    {entries.map((e) => (
+                      <button
+                        key={e.id}
+                        type="button"
+                        className={`help-index-item ${e.id === selected ? 'active' : ''}`}
+                        onClick={() => setSelected(e.id)}
+                      >
+                        <span className="help-index-label">{L(e.title.en, e.title.vi)}</span>
+                      </button>
+                    ))}
                   </div>
-                  {entries.map((e) => (
-                    <button
-                      key={e.id}
-                      type="button"
-                      className={`help-index-item ${e.id === selected ? 'active' : ''}`}
-                      onClick={() => setSelected(e.id)}
-                    >
-                      <span className="help-index-vi">{e.title.vi}</span>
-                      <span className="help-index-en">{e.title.en}</span>
-                    </button>
-                  ))}
-                </div>
-              );
-            })}
-            {Object.keys(shownIndex).length === 0 && (
-              <div className="help-index-empty">No results · Không tìm thấy</div>
-            )}
-          </nav>
-        </aside>
+                );
+              })}
+              {Object.keys(shownIndex).length === 0 && (
+                <div className="help-index-empty">{t('help.no_results')}</div>
+              )}
+            </nav>
+          </aside>
 
-        <main className="help-main" ref={contentRef}>
-          {selected === '__glossary' ? (
-            <GlossaryView query={query} />
-          ) : (
-            <HelpContentView entry={selectedEntry} onRelatedClick={setSelected} />
-          )}
-        </main>
+          <main className="help-main" ref={contentRef}>
+            {selected === '__glossary' ? (
+              <GlossaryView query={query} />
+            ) : (
+              <HelpContentView entry={selectedEntry} onRelatedClick={setSelected} />
+            )}
+          </main>
+        </div>
       </div>
-    </div>
+    </HelpI18n.Provider>
   );
 }
