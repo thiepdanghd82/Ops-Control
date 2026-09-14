@@ -3,6 +3,7 @@
  * Matches COST V1.0 M17: renderLibFinanceHub
  */
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { useI18n } from '../../../utils/useI18n';
 import { useCostLib } from '../../../context/CostLibContext';
 import { useAuth } from '../../../context/AuthContext';
 import { costApi } from '../../../services/api';
@@ -30,6 +31,7 @@ function fmtPct(v) {
 }
 
 export default function LibFinance() {
+  const { t } = useI18n();
   const { finance, setFinance, refreshLib } = useCostLib();
   const { hasRole } = useAuth();
   const canEditSga = hasRole('admin');
@@ -202,25 +204,25 @@ export default function LibFinance() {
   return (
     <div className="lib-finance">
       <div className="lf-toolbar">
-        <div className="lf-title">Finance Data</div>
+        <div className="lf-title">{t('lib.finance_data')}</div>
         <div className="lf-tabs">
           <button
             className={`lf-tab ${activeTab === 'wc' ? 'active' : ''}`}
             onClick={() => setActiveTab('wc')}
           >
-            Work Center Rates
+            {t('lib.work_center_rates')}
           </button>
           <button
             className={`lf-tab ${activeTab === 'db' ? 'active' : ''}`}
             onClick={() => setActiveTab('db')}
           >
-            DB Finance Data
+            {t('lib.db_finance_data')}
           </button>
           <button
             className={`lf-tab ${activeTab === 'expenses' ? 'active' : ''}`}
             onClick={() => setActiveTab('expenses')}
           >
-            Expenses
+            {t('lib.expenses')}
           </button>
         </div>
         {yearKeys.length > 1 && (
@@ -246,11 +248,9 @@ export default function LibFinance() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#161616' }}>
-            SGA Overhead by Site
+            {t('lib.sga_by_site')}
           </div>
-          <div style={{ fontSize: 11, color: '#6f6f6f' }}>
-            Applied as a percent of COGS (g_ttl) per quote. 0 = no SGA burden.
-          </div>
+          <div style={{ fontSize: 11, color: '#6f6f6f' }}>{t('lib.sga_pct_hint')}</div>
           {canEditSga && (
             <button
               onClick={handleSgaSave}
@@ -301,13 +301,13 @@ export default function LibFinance() {
                     onClick={handleSgaReloadAfterConflict}
                     className="op-btn op-btn-secondary op-btn-sm"
                   >
-                    Reload server values
+                    {t('lib.reload_server')}
                   </button>
                 )}
                 <button
                   onClick={() => setSgaBanner(null)}
                   className="op-btn op-btn-ghost op-btn-sm"
-                  aria-label="Dismiss"
+                  aria-label={t('common.dismiss')}
                   style={{ padding: '2px 8px' }}
                 >
                   ✕
@@ -360,7 +360,7 @@ export default function LibFinance() {
         </div>
         {!canEditSga && (
           <div style={{ marginTop: 6, fontSize: 10, color: '#8d8d8d' }}>
-            Read-only — admin role required to edit SGA rates.
+            {t('lib.read_only_admin')}
           </div>
         )}
       </div>
@@ -370,7 +370,7 @@ export default function LibFinance() {
           <div className="lf-search-bar">
             <input
               type="text"
-              placeholder="Search by WC code or name..."
+              placeholder={t('lib.ph_search_wc')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="lf-search"
@@ -382,20 +382,20 @@ export default function LibFinance() {
               <thead>
                 <tr>
                   <th>#</th>
-                  <th style={{ color: '#065f46' }}>WC Code</th>
-                  <th>Description</th>
-                  <th>Prod Hrs</th>
-                  <th style={{ color: '#0369a1' }}>Labor</th>
+                  <th style={{ color: '#065f46' }}>{t('lib.wc_code')}</th>
+                  <th>{t('lib.description')}</th>
+                  <th>{t('lib.prod_hrs')}</th>
+                  <th style={{ color: '#0369a1' }}>{t('lib.labor')}</th>
                   <th style={{ color: '#0369a1' }}>KH May</th>
                   <th style={{ color: '#0369a1' }}>KH NX</th>
                   <th style={{ color: '#0369a1' }}>GT+OH</th>
-                  <th style={{ color: '#b45309' }}>Power</th>
+                  <th style={{ color: '#b45309' }}>{t('lib.power')}</th>
                   <th style={{ color: '#059669' }}>OH SX</th>
-                  <th style={{ color: '#1d4ed8' }}>Total Alloc</th>
+                  <th style={{ color: '#1d4ed8' }}>{t('lib.total_alloc')}</th>
                   <th style={{ color: '#7c3aed' }}>Labor/hr</th>
                   <th style={{ color: '#7c3aed' }}>Dep/hr</th>
                   <th style={{ color: '#7c3aed' }}>OH/hr</th>
-                  <th style={{ color: '#059669', fontWeight: 700 }}>Total Rate</th>
+                  <th style={{ color: '#059669', fontWeight: 700 }}>{t('lib.total_rate')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -445,7 +445,7 @@ export default function LibFinance() {
                     <td colSpan={15} style={{ padding: 0 }}>
                       <EmptyState
                         icon="💰"
-                        title="No work-center cost data"
+                        title={t('lib.no_wc_cost')}
                         hint="Try a different year or verify Finance data was imported."
                       />
                     </td>
@@ -463,14 +463,14 @@ export default function LibFinance() {
             <>
               {yearData.db.kpi && (
                 <div className="lf-section">
-                  <h3 className="lf-section-title">KPI Summary</h3>
+                  <h3 className="lf-section-title">{t('lib.kpi_summary')}</h3>
                   <table className="lf-table lf-table-compact">
                     <thead>
                       <tr>
-                        <th>Item</th>
+                        <th>{t('lib.item')}</th>
                         <th>YTD</th>
                         <th>%</th>
-                        <th>Note</th>
+                        <th>{t('common.notes')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -488,14 +488,14 @@ export default function LibFinance() {
               )}
               {yearData.db.costGroups && (
                 <div className="lf-section">
-                  <h3 className="lf-section-title">Cost Groups</h3>
+                  <h3 className="lf-section-title">{t('lib.cost_groups')}</h3>
                   <table className="lf-table lf-table-compact">
                     <thead>
                       <tr>
-                        <th>Group</th>
-                        <th>Item</th>
+                        <th>{t('lib.group')}</th>
+                        <th>{t('lib.item')}</th>
                         <th>YTD</th>
-                        <th>Rate</th>
+                        <th>{t('lib.rate')}</th>
                         <th>%</th>
                       </tr>
                     </thead>
@@ -517,16 +517,16 @@ export default function LibFinance() {
               )}
               {yearData.db.wcSummary && (
                 <div className="lf-section">
-                  <h3 className="lf-section-title">WC Cost Summary</h3>
+                  <h3 className="lf-section-title">{t('lib.wc_cost_summary')}</h3>
                   <table className="lf-table lf-table-compact">
                     <thead>
                       <tr>
-                        <th>Group</th>
-                        <th>Item</th>
+                        <th>{t('lib.group')}</th>
+                        <th>{t('lib.item')}</th>
                         <th>YTD</th>
-                        <th>Rate</th>
+                        <th>{t('lib.rate')}</th>
                         <th>%</th>
-                        <th>Basis</th>
+                        <th>{t('lib.basis')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -553,7 +553,7 @@ export default function LibFinance() {
           ) : (
             <EmptyState
               icon="📊"
-              title="No DB Finance data"
+              title={t('lib.no_db_finance')}
               hint={`Verify Finance dataset was imported${selectedYear ? ` for ${selectedYear}` : ''}.`}
             />
           )}
@@ -577,7 +577,7 @@ export default function LibFinance() {
                       <table className="lf-table lf-table-compact">
                         <thead>
                           <tr>
-                            <th>Item</th>
+                            <th>{t('lib.item')}</th>
                             {[
                               'Jan',
                               'Feb',
@@ -637,7 +637,7 @@ export default function LibFinance() {
           ) : (
             <EmptyState
               icon="💵"
-              title="No expense data"
+              title={t('lib.no_expense_data')}
               hint={`Verify P&L/expense sheet was imported${selectedYear ? ` for ${selectedYear}` : ''}.`}
             />
           )}
