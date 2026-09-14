@@ -3,6 +3,7 @@
  * Matches COST V1.0 M12: renderLibDDL
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useI18n } from '../../../utils/useI18n';
 import { useCostLib } from '../../../context/CostLibContext';
 import { costApi } from '../../../services/api';
 import EmptyState from '../../../components/Shared/EmptyState';
@@ -96,6 +97,7 @@ const RESERVED_LABELS = Object.values(SECTION_LABELS);
 // consistently. `onRename` opens the rename modal (built-in + custom cards);
 // `onDeleteTable` (custom pair-tables only) shows the "Delete table" action.
 function DdlCardHead({ label, onRename, onDeleteTable }) {
+  const { t } = useI18n();
   return (
     <div className="ddl-card-head ddl-card-head--row">
       <span className="ddl-card-head-label">{label}</span>
@@ -103,8 +105,8 @@ function DdlCardHead({ label, onRename, onDeleteTable }) {
         <button
           type="button"
           className="ddl-title-edit"
-          title="Rename this table"
-          aria-label="Rename table"
+          title={t('lib.rename_this_table')}
+          aria-label={t('lib.rename_table')}
           onClick={onRename}
         >
           ✎
@@ -114,10 +116,10 @@ function DdlCardHead({ label, onRename, onDeleteTable }) {
         <button
           type="button"
           className="ddl-table-del"
-          title="Delete this custom table"
+          title={t('lib.delete_this_custom_table')}
           onClick={onDeleteTable}
         >
-          Delete table
+          {t('lib.delete_table')}
         </button>
       )}
     </div>
@@ -132,6 +134,7 @@ function DdlCardHead({ label, onRename, onDeleteTable }) {
 // table" affordance. Module-scope so a keystroke re-renders (not remounts) —
 // inputs keep focus.
 function PairTableCard({ label, rows, config, onRowsChange, onRename, onDeleteTable }) {
+  const { t } = useI18n();
   const { labelField, valueField, labelPlaceholder, valuePlaceholder, valueDecimal, newRow } =
     config;
   const list = Array.isArray(rows) ? rows : [];
@@ -166,8 +169,8 @@ function PairTableCard({ label, rows, config, onRowsChange, onRename, onDeleteTa
             )}
             <button
               className="ddl-del"
-              title="Delete row"
-              aria-label="Delete row"
+              title={t('lib.delete_row')}
+              aria-label={t('lib.delete_row')}
               onClick={() => onRowsChange(deleteArrayIndex(list, i))}
             >
               &times;
@@ -190,6 +193,7 @@ function PairTableCard({ label, rows, config, onRowsChange, onRename, onDeleteTa
 // Governed by tool_type + row delete/exclusion just like the flat version.
 // Module-scope so a keystroke re-renders (not remounts) — inputs keep focus.
 function CutterCostRow({ label, entry, onSetEntry, onDeleteRow }) {
+  const { t } = useI18n();
   const tiered = isTiered(entry);
   const tiers = tiered && Array.isArray(entry.tiers) ? entry.tiers : [];
   return (
@@ -203,7 +207,7 @@ function CutterCostRow({ label, entry, onSetEntry, onDeleteRow }) {
             className="ddl-cc-flat"
             type="text"
             value={entry ?? ''}
-            placeholder="cost $"
+            placeholder={t('lib.cost_usd')}
             onChange={(e) => onSetEntry(e.target.value)}
           />
         )}
@@ -217,8 +221,8 @@ function CutterCostRow({ label, entry, onSetEntry, onDeleteRow }) {
         </button>
         <button
           className="ddl-del"
-          title="Delete row"
-          aria-label="Delete row"
+          title={t('lib.delete_row')}
+          aria-label={t('lib.delete_row')}
           onClick={onDeleteRow}
         >
           &times;
@@ -244,20 +248,20 @@ function CutterCostRow({ label, entry, onSetEntry, onDeleteRow }) {
                   className="ddl-cc-cost"
                   type="text"
                   value={t?.cost ?? ''}
-                  placeholder="cost $"
+                  placeholder={t('lib.cost_usd')}
                   onChange={(e) =>
                     onSetEntry({ tiers: setTierField(tiers, i, 'cost', e.target.value) })
                   }
                 />
                 {isCatch ? (
-                  <span className="ddl-cc-catch" title="Catch-all: mọi chu vi ≥ mốc cuối">
+                  <span className="ddl-cc-catch" title={t('lib.catch_all_tier')}>
                     above
                   </span>
                 ) : (
                   <button
                     className="ddl-del"
-                    title="Remove tier"
-                    aria-label="Remove tier"
+                    title={t('lib.remove_tier')}
+                    aria-label={t('lib.remove_tier')}
                     onClick={() => onSetEntry({ tiers: removeTier(tiers, i) })}
                   >
                     &times;
@@ -280,6 +284,7 @@ function CutterCostRow({ label, entry, onSetEntry, onDeleteRow }) {
 }
 
 export default function LibDDL() {
+  const { t } = useI18n();
   const { rawDDL, setRawDDL, refreshLib } = useCostLib();
   const [site, setSite] = useState('VN');
   const [sections, setSections] = useState({});
@@ -691,7 +696,7 @@ export default function LibDDL() {
   return (
     <div className="lib-ddl">
       <div className="ddl-toolbar">
-        <div className="ddl-title">Drop-Down Lists</div>
+        <div className="ddl-title">{t('lib.ddl_title')}</div>
         <div className="ddl-sites">
           {SITES.map((s) => (
             <button
@@ -709,7 +714,7 @@ export default function LibDDL() {
             + New Table
           </button>
           <button className="ddl-btn" onClick={handleBackup}>
-            Backup
+            {t('lib.backup')}
           </button>
           <button className="ddl-btn ddl-btn-save" onClick={handleSave} disabled={!dirty || saving}>
             {saving ? 'Saving...' : 'Save'}
@@ -724,7 +729,7 @@ export default function LibDDL() {
             trước khi lưu (chỉnh sửa của bạn vẫn còn cho tới khi bấm Tải lại).
           </span>
           <button className="ddl-btn ddl-btn-save" onClick={handleReload}>
-            Tải lại
+            {t('lib.reload')}
           </button>
         </div>
       )}
@@ -795,7 +800,7 @@ export default function LibDDL() {
                   <DdlCardHead label={label} onRename={() => openRename(key, label)} />
                   <div className="ddl-card-body">
                     {toolTypes.length === 0 && (
-                      <div className="ddl-tl-empty">Add tool types in the Tool Type card.</div>
+                      <div className="ddl-tl-empty">{t('lib.add_tool_types_hint')}</div>
                     )}
                     {toolTypes.map((tt, i) => (
                       <div key={`${tt}-${i}`} className="ddl-kv-row">
@@ -834,7 +839,7 @@ export default function LibDDL() {
                   <DdlCardHead label={label} onRename={() => openRename(key, label)} />
                   <div className="ddl-card-body">
                     {toolTypes.length === 0 && (
-                      <div className="ddl-tl-empty">Add tool types in the Tool Type card.</div>
+                      <div className="ddl-tl-empty">{t('lib.add_tool_types_hint')}</div>
                     )}
                     {toolTypes.map((tt, i) => (
                       <CutterCostRow
@@ -872,7 +877,7 @@ export default function LibDDL() {
                   <DdlCardHead label={label} onRename={() => openRename(key, label)} />
                   <div className="ddl-card-body">
                     {toolTypes.length === 0 && (
-                      <div className="ddl-tl-empty">Add tool types in the Tool Type card.</div>
+                      <div className="ddl-tl-empty">{t('lib.add_tool_types_hint')}</div>
                     )}
                     {toolTypes.map((tt, i) => (
                       <div key={`${tt}-${i}`} className="ddl-kv-row">
@@ -886,8 +891,8 @@ export default function LibDDL() {
                         />
                         <button
                           className="ddl-del"
-                          title="Delete row"
-                          aria-label="Delete row"
+                          title={t('lib.delete_row')}
+                          aria-label={t('lib.delete_row')}
                           onClick={() => deleteCutterAddonRow(tt)}
                         >
                           &times;
@@ -921,7 +926,7 @@ export default function LibDDL() {
                   <DdlCardHead label={label} onRename={() => openRename(key, label)} />
                   <div className="ddl-card-body">
                     {toolTypes.length === 0 && (
-                      <div className="ddl-tl-empty">Add tool types in the Tool Type card.</div>
+                      <div className="ddl-tl-empty">{t('lib.add_tool_types_hint')}</div>
                     )}
                     {toolTypes.map((tt, i) => (
                       <div key={`${tt}-${i}`} className="ddl-kv-row">
@@ -935,8 +940,8 @@ export default function LibDDL() {
                         />
                         <button
                           className="ddl-del"
-                          title="Delete row"
-                          aria-label="Delete row"
+                          title={t('lib.delete_row')}
+                          aria-label={t('lib.delete_row')}
                           onClick={() => deleteCutterMinRow(tt)}
                         >
                           &times;
@@ -969,8 +974,8 @@ export default function LibDDL() {
                         />
                         <button
                           className="ddl-del"
-                          title="Delete row"
-                          aria-label="Delete row"
+                          title={t('lib.delete_row')}
+                          aria-label={t('lib.delete_row')}
                           onClick={() => deleteObjectEntry(key, ek)}
                         >
                           &times;
@@ -1026,7 +1031,7 @@ export default function LibDDL() {
         <Modal.Body>
           <div className="ddl-add-field">
             <label className="ddl-add-label" htmlFor="ddl-add-key">
-              Key
+              {t('lib.key')}
             </label>
             <input
               id="ddl-add-key"
@@ -1048,7 +1053,8 @@ export default function LibDDL() {
           </div>
           <div className="ddl-add-field">
             <label className="ddl-add-label" htmlFor="ddl-add-val">
-              Value <span className="ddl-add-optional">(optional)</span>
+              {t('lib.value')}
+              <span className="ddl-add-optional">(optional)</span>
             </label>
             <input
               id="ddl-add-val"
@@ -1065,7 +1071,7 @@ export default function LibDDL() {
         </Modal.Body>
         <Modal.Footer>
           <button type="button" className="op-btn op-btn-ghost" onClick={() => setAddModal(null)}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="button"
@@ -1073,7 +1079,7 @@ export default function LibDDL() {
             onClick={confirmAddObjectEntry}
             disabled={!newKeyInput.trim()}
           >
-            Add
+            {t('common.add')}
           </button>
         </Modal.Footer>
       </Modal>
@@ -1085,18 +1091,18 @@ export default function LibDDL() {
         size="sm"
         ariaLabelledBy="ddl-newtable-title"
       >
-        <Modal.Header id="ddl-newtable-title" title="New custom table" />
+        <Modal.Header id="ddl-newtable-title" title={t('lib.new_custom_table')} />
         <Modal.Body>
           <div className="ddl-add-field">
             <label className="ddl-add-label" htmlFor="ddl-newtable-name">
-              Table name
+              {t('lib.table_name')}
             </label>
             <input
               id="ddl-newtable-name"
               type="text"
               className="ddl-add-input"
               data-modal-autofocus
-              placeholder="e.g. Freight Rates"
+              placeholder={t('lib.ph_table_name')}
               value={newTableName}
               onChange={(e) => {
                 setNewTableName(e.target.value);
@@ -1119,7 +1125,7 @@ export default function LibDDL() {
             className="op-btn op-btn-ghost"
             onClick={() => setNewTableOpen(false)}
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="button"
@@ -1127,7 +1133,7 @@ export default function LibDDL() {
             onClick={confirmNewTable}
             disabled={!newTableName.trim()}
           >
-            Create
+            {t('common.new')}
           </button>
         </Modal.Footer>
       </Modal>
@@ -1140,11 +1146,12 @@ export default function LibDDL() {
         severity="danger"
         ariaLabelledBy="ddl-deltable-title"
       >
-        <Modal.Header id="ddl-deltable-title" title="Delete table" />
+        <Modal.Header id="ddl-deltable-title" title={t('lib.delete_table')} />
         <Modal.Body>
           <p className="ddl-deltable-msg">
-            Delete the custom table <b>{deleteTableModal?.label}</b> and all its rows? This cannot
-            be undone (until you reload without saving).
+            {t('lib.delete_custom_table')}
+            <b>{deleteTableModal?.label}</b> and all its rows? This cannot be undone (until you
+            reload without saving).
           </p>
         </Modal.Body>
         <Modal.Footer>
@@ -1153,10 +1160,10 @@ export default function LibDDL() {
             className="op-btn op-btn-ghost"
             onClick={() => setDeleteTableModal(null)}
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="button" className="op-btn op-btn-danger" onClick={confirmDeleteTable}>
-            Delete table
+            {t('lib.delete_table')}
           </button>
         </Modal.Footer>
       </Modal>
@@ -1169,11 +1176,11 @@ export default function LibDDL() {
         size="sm"
         ariaLabelledBy="ddl-rename-title"
       >
-        <Modal.Header id="ddl-rename-title" title="Rename table" />
+        <Modal.Header id="ddl-rename-title" title={t('lib.rename_table')} />
         <Modal.Body>
           <div className="ddl-add-field">
             <label className="ddl-add-label" htmlFor="ddl-rename-input">
-              Table title
+              {t('lib.table_title')}
             </label>
             <input
               id="ddl-rename-input"
@@ -1202,7 +1209,7 @@ export default function LibDDL() {
             className="op-btn op-btn-ghost"
             onClick={() => setRenameModal(null)}
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="button"
@@ -1210,7 +1217,7 @@ export default function LibDDL() {
             onClick={confirmRename}
             disabled={!renameInput.trim()}
           >
-            Save
+            {t('common.save')}
           </button>
         </Modal.Footer>
       </Modal>

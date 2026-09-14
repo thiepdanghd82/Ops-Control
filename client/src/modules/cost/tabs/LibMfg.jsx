@@ -8,6 +8,7 @@
  * are string-literal header names with spaces, not camelCase.
  */
 import { useCallback, useState } from 'react';
+import { useI18n } from '../../../utils/useI18n';
 import { sharedApi, importApi } from '../../../services/api';
 import DataBrowser from '../../../components/Shared/DataBrowser';
 import ImportWizard from '../../../components/Shared/ImportWizard';
@@ -55,6 +56,7 @@ const COLUMNS = [
 ];
 
 export default function LibMfg() {
+  const { t } = useI18n();
   // Sprint 1.7h Phase 2 — SWR cache. First visit = network fetch (the
   // 6 MB BOM hits the wire); every subsequent tab switch in the same
   // session returns the cached array INSTANTLY + revalidates in the
@@ -92,7 +94,7 @@ export default function LibMfg() {
         className="db-col-btn db-btn-primary"
         onClick={() => setWizardOpen(true)}
         disabled={busy}
-        title="Import manufacturing structures from CSV or XLSX (preview before commit)"
+        title={t('lib.mfg_import')}
       >
         {'⬆ Import…'}
       </button>
@@ -100,7 +102,7 @@ export default function LibMfg() {
         className="db-col-btn db-btn-danger"
         onClick={() => setClearOpen(true)}
         disabled={busy}
-        title="Clear all Manufacturing Structures data (backup kept)"
+        title={t('lib.mfg_clear')}
       >
         {'🗑 Clear Data'}
       </button>
@@ -111,7 +113,7 @@ export default function LibMfg() {
   if (loading) {
     return (
       <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
-        Loading Manufacturing Structures...
+        {t('lib.mfg_loading')}
       </div>
     );
   }
@@ -137,7 +139,7 @@ export default function LibMfg() {
   return (
     <>
       <DataBrowser
-        title="Manufacturing Structures"
+        title={t('lib.mfg_structures')}
         icon={mfgIcon}
         data={data}
         columns={COLUMNS}

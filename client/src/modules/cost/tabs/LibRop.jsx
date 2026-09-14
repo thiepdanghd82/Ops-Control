@@ -7,6 +7,7 @@
  * are string-literal header names with spaces (not camelCase).
  */
 import { useCallback, useState } from 'react';
+import { useI18n } from '../../../utils/useI18n';
 import { sharedApi, importApi } from '../../../services/api';
 import DataBrowser from '../../../components/Shared/DataBrowser';
 import ImportWizard from '../../../components/Shared/ImportWizard';
@@ -72,6 +73,7 @@ const COLUMNS = [
 ];
 
 export default function LibRop() {
+  const { t } = useI18n();
   // Sprint 1.7h Phase 2 — SWR cache. Routing Ops is the heaviest tab
   // at 16 MB; first visit unavoidably hits the wire, repeat visits are
   // instant from in-memory cache + background revalidate (304 if no
@@ -108,7 +110,7 @@ export default function LibRop() {
         className="db-col-btn db-btn-primary"
         onClick={() => setWizardOpen(true)}
         disabled={busy}
-        title="Import routing operations from CSV or XLSX (preview before commit)"
+        title={t('lib.rop_import')}
       >
         {'⬆ Import…'}
       </button>
@@ -116,7 +118,7 @@ export default function LibRop() {
         className="db-col-btn db-btn-danger"
         onClick={() => setClearOpen(true)}
         disabled={busy}
-        title="Clear all Routing Operations data (backup kept)"
+        title={t('lib.rop_clear')}
       >
         {'🗑 Clear Data'}
       </button>
@@ -127,7 +129,7 @@ export default function LibRop() {
   if (loading) {
     return (
       <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
-        Loading Routing Operations...
+        {t('lib.rop_loading')}
       </div>
     );
   }
@@ -151,7 +153,7 @@ export default function LibRop() {
   return (
     <>
       <DataBrowser
-        title="Routing Operations"
+        title={t('lib.rop_title')}
         icon={ropIcon}
         data={data}
         columns={COLUMNS}

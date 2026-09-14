@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useI18n } from '../../../utils/useI18n';
 import { sharedApi, costApi } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 import EmptyState from '../../../components/Shared/EmptyState';
@@ -193,6 +194,7 @@ function ImportFileButton({ datasetKey, label, onDone, disabled, inline }) {
 }
 
 function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
+  const { t } = useI18n();
   const [search, setSearch] = useState('');
   const [yearFilter, setYearFilter] = useState('');
   const [page, setPage] = useState(0);
@@ -275,7 +277,7 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
           </svg>
         </div>
         <div className="ml-hb-titleblock">
-          <div className="ml-hb-title">NPI Materials</div>
+          <div className="ml-hb-title">{t('matlib.npi_materials')}</div>
           <div className="ml-hb-meta">
             <span className="ml-hb-badge">{data.length}</span>
             <span className="ml-hb-sub">
@@ -301,7 +303,7 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
             ref={searchRef}
             type="text"
             className="ml-hb-search"
-            placeholder="Search by material name, type, supplier…"
+            placeholder={t('matlib.ph_search_material')}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -322,7 +324,7 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
             setPage(0);
           }}
         >
-          <option value="">All years</option>
+          <option value="">{t('matlib.all_years')}</option>
           {years.map((y) => (
             <option key={y} value={y}>
               {y}
@@ -343,7 +345,7 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            Add Row
+            {t('matlib.add_row')}
           </button>
         )}
         {canImport && (
@@ -366,40 +368,43 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
                   #
                 </th>
                 <th className="th-d" style={{ width: 88 }}>
-                  Update Date
+                  {t('matlib.update_date')}
                 </th>
                 <th className="th-d" style={{ minWidth: 190 }}>
-                  Material Name
+                  {t('matlib.material_name')}
                 </th>
                 <th className="th-b" style={{ width: 96 }}>
-                  <span className="th-sub">USD / m²</span>Price
+                  <span className="th-sub">{t('matlib.usd_per_m2')}</span>
+                  {t('matlib.price')}
                 </th>
                 <th className="th-d" style={{ minWidth: 150 }}>
-                  Type / Description
+                  {t('matlib.type_desc')}
                 </th>
                 <th className="th-g" style={{ width: 80 }}>
-                  <span className="th-sub-g">mm</span>Thickness
+                  <span className="th-sub-g">mm</span>
+                  {t('matlib.thickness')}
                 </th>
                 <th className="th-d" style={{ width: 80 }}>
-                  Color
+                  {t('matlib.color')}
                 </th>
                 <th className="th-d" style={{ width: 78 }}>
-                  Surface
+                  {t('matlib.surface')}
                 </th>
                 <th className="th-d" style={{ width: 88 }}>
-                  Adhesive
+                  {t('matlib.adhesive')}
                 </th>
                 <th className="th-y" style={{ width: 85 }}>
                   <span className="th-sub-y">m²</span>MOQ
                 </th>
                 <th className="th-y" style={{ width: 85 }}>
-                  <span className="th-sub-y">days</span>Lead Time
+                  <span className="th-sub-y">days</span>
+                  {t('matlib.lead_time')}
                 </th>
                 <th className="th-d" style={{ width: 125 }}>
-                  Supplier
+                  {t('matlib.supplier')}
                 </th>
                 <th className="th-d" style={{ minWidth: 200 }}>
-                  Notes / Remarks
+                  {t('matlib.notes_remarks')}
                 </th>
               </tr>
             </thead>
@@ -409,7 +414,7 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
                   <td colSpan={13} style={{ padding: 0 }}>
                     <EmptyState
                       icon="📋"
-                      title="No materials found"
+                      title={t('matlib.no_materials')}
                       hint="Try clearing the search or import a fresh NPI materials CSV."
                     />
                   </td>
@@ -459,7 +464,7 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
             disabled={page >= totalPages - 1}
             onClick={() => setPage((p) => p + 1)}
           >
-            Next →
+            {t('matlib.next')}
           </button>
         </div>
       )}
@@ -495,6 +500,7 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
 }
 
 function NPIEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }) {
+  const { t } = useI18n();
   const [form, setForm] = useState({ ...row });
   const set = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
 
@@ -507,7 +513,7 @@ function NPIEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
         severity="info"
       />
       <Modal.Body>
-        <Section color="#1e40af" icon="📅" title="Identification">
+        <Section color="#1e40af" icon="📅" title={t('matlib.identification')}>
           <Field
             label="Update Date"
             value={form.date}
@@ -528,7 +534,7 @@ function NPIEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
             disabled={isViewOnly}
           />
         </Section>
-        <Section color="#0369a1" icon="🔬" title="Specifications">
+        <Section color="#0369a1" icon="🔬" title={t('matlib.specifications')}>
           <Field
             label="Type / Description"
             value={form.type}
@@ -562,7 +568,7 @@ function NPIEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
             disabled={isViewOnly}
           />
         </Section>
-        <Section color="#047857" icon="💰" title="Pricing">
+        <Section color="#047857" icon="💰" title={t('matlib.pricing')}>
           <Field
             label="EXW Price (USD/m²)"
             value={form.exw}
@@ -576,7 +582,7 @@ function NPIEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
             disabled={isViewOnly}
           />
         </Section>
-        <Section color="#92400e" icon="📦" title="Logistics">
+        <Section color="#92400e" icon="📦" title={t('matlib.logistics')}>
           <Field
             label="MOQ (m²)"
             value={form.moq}
@@ -590,14 +596,14 @@ function NPIEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
             disabled={isViewOnly}
           />
         </Section>
-        <Section color="#7c3aed" icon="📝" title="Notes / Remarks" single>
+        <Section color="#7c3aed" icon="📝" title={t('matlib.notes_remarks')} single>
           <div className="op-form-field op-form-field--wide">
             <textarea
               className="op-form-input"
               value={form.note || ''}
               disabled={isViewOnly}
               onChange={(e) => set('note', e.target.value)}
-              placeholder="Additional notes…"
+              placeholder={t('matlib.ph_notes')}
               rows={3}
             />
           </div>
@@ -606,18 +612,18 @@ function NPIEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
       <Modal.Footer align="between">
         {!isNew && onDelete && !isViewOnly ? (
           <button type="button" className="op-btn op-btn-danger" onClick={onDelete}>
-            Delete
+            {t('common.delete')}
           </button>
         ) : (
           <span />
         )}
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" className="op-btn op-btn-ghost" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
           {!isViewOnly && (
             <button type="button" className="op-btn op-btn-primary" onClick={() => onSave(form)}>
-              Save Changes
+              {t('matlib.save_changes')}
             </button>
           )}
         </div>
@@ -630,6 +636,7 @@ function NPIEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
 // IFS MATERIALS TAB (IFS SupplierforPurchaseParts — 9 columns)
 // ═══════════════════════════════════════════════════════════
 function IFSTab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
+  const { t } = useI18n();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [editIdx, setEditIdx] = useState(null);
@@ -693,7 +700,7 @@ function IFSTab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
           </svg>
         </div>
         <div className="ml-hb-titleblock">
-          <div className="ml-hb-title">IFS Materials</div>
+          <div className="ml-hb-title">{t('matlib.ifs_materials')}</div>
           <div className="ml-hb-meta">
             <span className="ml-hb-badge">{data.length}</span>
             <span className="ml-hb-sub">
@@ -719,7 +726,7 @@ function IFSTab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
             ref={searchRef}
             type="text"
             className="ml-hb-search"
-            placeholder="Search by part no, description, supplier…"
+            placeholder={t('matlib.ph_search_part')}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -746,7 +753,7 @@ function IFSTab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            Add Row
+            {t('matlib.add_row')}
           </button>
         )}
         {canImport && (
@@ -768,58 +775,58 @@ function IFSTab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
                   #
                 </th>
                 <th className="th-d" style={{ minWidth: 150 }}>
-                  Part No
+                  {t('matlib.part_no')}
                 </th>
                 <th className="th-d" style={{ minWidth: 220 }}>
-                  Part Description
+                  {t('matlib.part_description')}
                 </th>
                 <th className="th-d" style={{ width: 110 }}>
-                  Supplier ID
+                  {t('matlib.supplier_id')}
                 </th>
                 <th className="th-d" style={{ minWidth: 160 }}>
-                  Supplier Name
+                  {t('matlib.supplier_name')}
                 </th>
                 <th className="th-b" style={{ width: 90 }}>
-                  Conversion
+                  {t('matlib.conversion')}
                 </th>
                 <th className="th-b" style={{ width: 96 }}>
-                  Price
+                  {t('matlib.price')}
                 </th>
                 <th className="th-b" style={{ width: 110 }}>
-                  Price incl. Tax
+                  {t('matlib.price_incl_tax')}
                 </th>
                 <th className="th-d" style={{ width: 80 }}>
-                  Currency
+                  {t('matlib.currency')}
                 </th>
                 <th className="th-d" style={{ width: 100 }}>
-                  Price UoM
+                  {t('matlib.price_uom')}
                 </th>
                 <th className="th-d" style={{ width: 80 }}>
-                  Tax Code
+                  {t('matlib.tax_code')}
                 </th>
                 <th className="th-d" style={{ width: 90 }}>
-                  Mfg Leadtime
+                  {t('matlib.mfg_leadtime')}
                 </th>
                 <th className="th-d" style={{ width: 90 }}>
-                  Thickness
+                  {t('matlib.thickness')}
                 </th>
                 <th className="th-d" style={{ width: 130 }}>
-                  Type Designation
+                  {t('matlib.type_designation')}
                 </th>
                 <th className="th-d" style={{ minWidth: 170 }}>
-                  Product Family
+                  {t('matlib.product_family')}
                 </th>
                 <th className="th-d" style={{ minWidth: 150 }}>
-                  Tax Code Desc.
+                  {t('matlib.tax_code_desc')}
                 </th>
                 <th className="th-d" style={{ width: 80 }}>
-                  Status
+                  {t('common.status')}
                 </th>
                 <th className="th-d" style={{ width: 110 }}>
-                  Status Desc.
+                  {t('matlib.status_desc')}
                 </th>
                 <th className="th-d" style={{ width: 110 }}>
-                  Country
+                  {t('matlib.country')}
                 </th>
               </tr>
             </thead>
@@ -829,7 +836,7 @@ function IFSTab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
                   <td colSpan={19} style={{ padding: 0 }}>
                     <EmptyState
                       icon="📋"
-                      title="No materials found"
+                      title={t('matlib.no_materials')}
                       hint="Try clearing the search or import a fresh IFS materials file."
                     />
                   </td>
@@ -888,7 +895,7 @@ function IFSTab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
             disabled={page >= totalPages - 1}
             onClick={() => setPage((p) => p + 1)}
           >
-            Next →
+            {t('matlib.next')}
           </button>
         </div>
       )}
@@ -921,6 +928,7 @@ function IFSTab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
 }
 
 function IFSEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }) {
+  const { t } = useI18n();
   const [form, setForm] = useState({ ...row });
   const set = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
 
@@ -933,7 +941,7 @@ function IFSEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
         severity="info"
       />
       <Modal.Body>
-        <Section color="#1e40af" icon="🏷️" title="Identification">
+        <Section color="#1e40af" icon="🏷️" title={t('matlib.identification')}>
           <Field
             label="Part No"
             value={form.part_no}
@@ -961,7 +969,7 @@ function IFSEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
             disabled={isViewOnly}
           />
         </Section>
-        <Section color="#047857" icon="💰" title="Pricing">
+        <Section color="#047857" icon="💰" title={t('matlib.pricing')}>
           <Field
             label="Conversion Factor"
             value={form.conv}
@@ -996,7 +1004,7 @@ function IFSEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
             disabled={isViewOnly}
           />
         </Section>
-        <Section color="#0f766e" icon="📐" title="Specs">
+        <Section color="#0f766e" icon="📐" title={t('matlib.specs')}>
           <Field
             label="Thickness"
             value={form.thickness}
@@ -1018,7 +1026,7 @@ function IFSEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
             disabled={isViewOnly}
           />
         </Section>
-        <Section color="#92400e" icon="🏛️" title="Tax & Status">
+        <Section color="#92400e" icon="🏛️" title={t('matlib.tax_status')}>
           <Field
             label="Tax Code"
             value={form.tax_code}
@@ -1062,18 +1070,18 @@ function IFSEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
       <Modal.Footer align="between">
         {!isNew && onDelete && !isViewOnly ? (
           <button type="button" className="op-btn op-btn-danger" onClick={onDelete}>
-            Delete
+            {t('common.delete')}
           </button>
         ) : (
           <span />
         )}
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" className="op-btn op-btn-ghost" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
           {!isViewOnly && (
             <button type="button" className="op-btn op-btn-primary" onClick={() => onSave(form)}>
-              Save Changes
+              {t('matlib.save_changes')}
             </button>
           )}
         </div>
@@ -1087,6 +1095,7 @@ function IFSEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
 // ═══════════════════════════════════════════════════════════
 
 function SourcingTab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
+  const { t } = useI18n();
   const [search, setSearch] = useState('');
   const [yearFilter, setYearFilter] = useState('');
   const [page, setPage] = useState(0);
@@ -1165,7 +1174,7 @@ function SourcingTab({ data, setData, markDirty, isViewOnly, canImport, reload }
           </svg>
         </div>
         <div className="ml-hb-titleblock">
-          <div className="ml-hb-title">Sourcing Database</div>
+          <div className="ml-hb-title">{t('matlib.sourcing_db')}</div>
           <div className="ml-hb-meta">
             <span className="ml-hb-badge">{data.length}</span>
             <span className="ml-hb-sub">
@@ -1190,7 +1199,7 @@ function SourcingTab({ data, setData, markDirty, isViewOnly, canImport, reload }
           <input
             type="text"
             className="ml-hb-search"
-            placeholder="Search by material, supplier, customer…"
+            placeholder={t('matlib.ph_search_sourcing')}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -1211,7 +1220,7 @@ function SourcingTab({ data, setData, markDirty, isViewOnly, canImport, reload }
             setPage(0);
           }}
         >
-          <option value="">All years</option>
+          <option value="">{t('matlib.all_years')}</option>
           {years.map((y) => (
             <option key={y} value={y}>
               {y}
@@ -1232,7 +1241,7 @@ function SourcingTab({ data, setData, markDirty, isViewOnly, canImport, reload }
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            Add Row
+            {t('matlib.add_row')}
           </button>
         )}
         {canImport && (
@@ -1250,37 +1259,41 @@ function SourcingTab({ data, setData, markDirty, isViewOnly, canImport, reload }
                   #
                 </th>
                 <th className="th-d" style={{ width: 82 }}>
-                  Req. Date
+                  {t('matlib.req_date')}
                 </th>
                 <th className="th-d" style={{ width: 80 }}>
-                  Requester
+                  {t('matlib.requester')}
                 </th>
                 <th className="th-g" style={{ width: 100 }}>
-                  Customer / Project
+                  {t('matlib.customer_project')}
                 </th>
                 <th className="th-d" style={{ minWidth: 210 }}>
-                  Material Inquiry
+                  {t('matlib.material_inquiry')}
                 </th>
                 <th className="th-d" style={{ minWidth: 155 }}>
-                  Size / Spec
+                  {t('matlib.size_spec')}
                 </th>
                 <th className="th-b" style={{ width: 105 }}>
-                  <span className="th-sub">USD / m²</span>EXW Price
+                  <span className="th-sub">{t('matlib.usd_per_m2')}</span>
+                  {t('matlib.exw_price')}
                 </th>
                 <th className="th-b" style={{ width: 115 }}>
-                  <span className="th-sub">USD / m²</span>DAP Price
+                  <span className="th-sub">{t('matlib.usd_per_m2')}</span>
+                  {t('matlib.dap_price')}
                 </th>
                 <th className="th-y" style={{ width: 110 }}>
-                  <span className="th-sub-y">min qty</span>Supplier MOQ
+                  <span className="th-sub-y">min qty</span>
+                  {t('matlib.supplier_moq')}
                 </th>
                 <th className="th-y" style={{ width: 100 }}>
-                  <span className="th-sub-y">days/weeks</span>Lead Time
+                  <span className="th-sub-y">days/weeks</span>
+                  {t('matlib.lead_time')}
                 </th>
                 <th className="th-d" style={{ width: 130 }}>
-                  Supplier
+                  {t('matlib.supplier')}
                 </th>
                 <th className="th-d" style={{ minWidth: 160 }}>
-                  Status / Remark
+                  {t('matlib.status_remark')}
                 </th>
               </tr>
             </thead>
@@ -1290,7 +1303,7 @@ function SourcingTab({ data, setData, markDirty, isViewOnly, canImport, reload }
                   <td colSpan={12} style={{ padding: 0 }}>
                     <EmptyState
                       icon="📦"
-                      title="No sourcing records"
+                      title={t('matlib.no_sourcing')}
                       hint="Import sourcing quotes or add a new record to get started."
                     />
                   </td>
@@ -1339,7 +1352,7 @@ function SourcingTab({ data, setData, markDirty, isViewOnly, canImport, reload }
             disabled={page >= totalPages - 1}
             onClick={() => setPage((p) => p + 1)}
           >
-            Next →
+            {t('matlib.next')}
           </button>
         </div>
       )}
@@ -1373,6 +1386,7 @@ function SourcingTab({ data, setData, markDirty, isViewOnly, canImport, reload }
 }
 
 function SrcEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }) {
+  const { t } = useI18n();
   const [form, setForm] = useState({ ...row });
   const set = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
 
@@ -1385,7 +1399,7 @@ function SrcEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
         severity="info"
       />
       <Modal.Body>
-        <Section color="#0f766e" icon="📅" title="Request Info">
+        <Section color="#0f766e" icon="📅" title={t('matlib.request_info')}>
           <Field
             label="Req. Date"
             value={form.month}
@@ -1405,7 +1419,7 @@ function SrcEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
             disabled={isViewOnly}
           />
         </Section>
-        <Section color="#1e40af" icon="🔍" title="Material Inquiry">
+        <Section color="#1e40af" icon="🔍" title={t('matlib.material_inquiry')}>
           <Field
             label="Material Inquiry"
             value={form.material}
@@ -1421,7 +1435,7 @@ function SrcEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
             disabled={isViewOnly}
           />
         </Section>
-        <Section color="#047857" icon="💰" title="Pricing">
+        <Section color="#047857" icon="💰" title={t('matlib.pricing')}>
           <Field
             label="EXW Price (USD/m²)"
             value={form.exw}
@@ -1435,7 +1449,7 @@ function SrcEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
             disabled={isViewOnly}
           />
         </Section>
-        <Section color="#92400e" icon="📦" title="Logistics">
+        <Section color="#92400e" icon="📦" title={t('matlib.logistics')}>
           <Field
             label="Supplier MOQ"
             value={form.moq}
@@ -1455,14 +1469,14 @@ function SrcEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
             disabled={isViewOnly}
           />
         </Section>
-        <Section color="#7c3aed" icon="📝" title="Status / Remark" single>
+        <Section color="#7c3aed" icon="📝" title={t('matlib.status_remark')} single>
           <div className="op-form-field op-form-field--wide">
             <textarea
               className="op-form-input"
               value={form.status || ''}
               disabled={isViewOnly}
               onChange={(e) => set('status', e.target.value)}
-              placeholder="Status or remarks…"
+              placeholder={t('matlib.ph_status')}
               rows={3}
             />
           </div>
@@ -1471,18 +1485,18 @@ function SrcEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
       <Modal.Footer align="between">
         {!isNew && onDelete && !isViewOnly ? (
           <button type="button" className="op-btn op-btn-danger" onClick={onDelete}>
-            Delete
+            {t('common.delete')}
           </button>
         ) : (
           <span />
         )}
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" className="op-btn op-btn-ghost" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
           {!isViewOnly && (
             <button type="button" className="op-btn op-btn-primary" onClick={() => onSave(form)}>
-              Save Changes
+              {t('matlib.save_changes')}
             </button>
           )}
         </div>

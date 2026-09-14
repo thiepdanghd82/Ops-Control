@@ -3,6 +3,7 @@
  * Matches COST V1.0 M10: renderLibRate
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useI18n } from '../../../utils/useI18n';
 import { useCostLib } from '../../../context/CostLibContext';
 import { costApi, importApi } from '../../../services/api';
 import EmptyState from '../../../components/Shared/EmptyState';
@@ -40,6 +41,7 @@ function saveCustomUoms(list) {
 }
 
 export default function LibRate() {
+  const { t } = useI18n();
   const { rawRates, refreshLib } = useCostLib();
   const [site, setSite] = useState('VN');
   const [rows, setRows] = useState([]);
@@ -268,7 +270,7 @@ export default function LibRate() {
   return (
     <div className="lib-rate">
       <div className="lr-toolbar">
-        <div className="lr-title">Work Center Rate Table</div>
+        <div className="lr-title">{t('lib.rate_table')}</div>
         <div className="lr-sites">
           {SITES.map((s) => (
             <button
@@ -293,18 +295,18 @@ export default function LibRate() {
             className="lr-btn lr-btn-import"
             onClick={() => fileRef.current?.click()}
             disabled={importing}
-            title="Import rates from CSV or XLSX (auto-maps columns, filters blank rows, syncs to server)"
+            title={t('lib.import_rates')}
           >
             {importing ? 'Importing…' : '⭡ Import'}
           </button>
           <button className="lr-btn lr-btn-csv" onClick={handleExportCsv}>
-            Export CSV
+            {t('common.export_csv')}
           </button>
           <button className="lr-btn lr-btn-backup" onClick={handleBackup}>
-            Backup
+            {t('lib.backup')}
           </button>
           <button className="lr-btn lr-btn-restore" onClick={loadBackups}>
-            Restore
+            {t('lib.restore')}
           </button>
           <button className="lr-btn lr-btn-save" onClick={handleSave} disabled={!dirty || saving}>
             {saving ? 'Saving...' : 'Save'}
@@ -316,10 +318,10 @@ export default function LibRate() {
         <div className="lr-backup-panel">
           <div className="lr-backup-head">
             <span>Backups for {site}</span>
-            <button onClick={() => setShowBackups(false)}>Close</button>
+            <button onClick={() => setShowBackups(false)}>{t('common.close')}</button>
           </div>
           {backups.length === 0 ? (
-            <p className="lr-backup-empty">No backups found</p>
+            <p className="lr-backup-empty">{t('lib.no_backups')}</p>
           ) : (
             <ul className="lr-backup-list">
               {backups.map((b, i) => (
@@ -328,7 +330,7 @@ export default function LibRate() {
                   <button
                     onClick={() => handleRestore(typeof b === 'string' ? b : b.name || b.filename)}
                   >
-                    Restore
+                    {t('lib.restore')}
                   </button>
                 </li>
               ))}
@@ -342,12 +344,12 @@ export default function LibRate() {
           <thead>
             <tr>
               <th className="lr-th-idx">#</th>
-              <th>Workcenter Name</th>
-              <th>Crew</th>
+              <th>{t('lib.workcenter_name')}</th>
+              <th>{t('lib.crew')}</th>
               <th>Machine USD/H</th>
               <th>Labor USD/H</th>
               <th>UOM</th>
-              <th style={{ color: '#0d9488' }}>OH Cost</th>
+              <th style={{ color: '#0d9488' }}>{t('lib.oh_cost')}</th>
               <th style={{ color: '#7c3aed' }}>W/C</th>
               <th></th>
             </tr>
@@ -422,7 +424,11 @@ export default function LibRate() {
                   />
                 </td>
                 <td>
-                  <button className="lr-del" onClick={() => deleteRow(i)} title="Delete">
+                  <button
+                    className="lr-del"
+                    onClick={() => deleteRow(i)}
+                    title={t('common.delete')}
+                  >
                     &times;
                   </button>
                 </td>
@@ -445,7 +451,7 @@ export default function LibRate() {
             to reach after scrolling a long list than hunting for it in
             the sticky toolbar. */}
         <div className="lr-add-row-wrap">
-          <button className="lr-add-row-btn" onClick={addRow} title="Add a new workcenter row">
+          <button className="lr-add-row-btn" onClick={addRow} title={t('lib.add_wc_row')}>
             + Add Row
           </button>
         </div>
@@ -457,13 +463,13 @@ export default function LibRate() {
         size="md"
         ariaLabelledBy="lr-uom-title"
       >
-        <Modal.Header id="lr-uom-title" title="Manage units (UOM)" />
+        <Modal.Header id="lr-uom-title" title={t('lib.manage_uom')} />
         <Modal.Body>
           <div className="lr-uom-add">
             <input
               type="text"
               className="lr-uom-input"
-              placeholder="New unit (e.g. RPM, Cuts/min)"
+              placeholder={t('lib.ph_new_unit')}
               value={newUomInput}
               onChange={(e) => {
                 setNewUomInput(e.target.value);
@@ -479,12 +485,12 @@ export default function LibRate() {
               onClick={handleAddCustom}
               disabled={!newUomInput.trim()}
             >
-              Add
+              {t('common.add')}
             </button>
           </div>
           {manageError && <div className="lr-uom-err">{manageError}</div>}
 
-          <div className="lr-uom-section">Built-in (used for machine speed — read-only)</div>
+          <div className="lr-uom-section">{t('lib.builtin_units')}</div>
           <ul className="lr-uom-list">
             {DEFAULT_SPEED_UOMS.filter(Boolean).map((u) => (
               <li key={u} className="lr-uom-item">
@@ -494,9 +500,9 @@ export default function LibRate() {
             ))}
           </ul>
 
-          <div className="lr-uom-section">Custom units</div>
+          <div className="lr-uom-section">{t('lib.custom_units')}</div>
           {visibleCustomUoms(customUoms).length === 0 ? (
-            <div className="lr-uom-empty">No custom units yet.</div>
+            <div className="lr-uom-empty">{t('lib.no_custom_units')}</div>
           ) : (
             <ul className="lr-uom-list">
               {visibleCustomUoms(customUoms).map((u) => (
@@ -520,14 +526,14 @@ export default function LibRate() {
                     onClick={() => handleRenameCustom(u)}
                     disabled={(renameDraft[u] ?? u).trim() === u}
                   >
-                    Rename
+                    {t('lib.rename')}
                   </button>
                   <button
                     type="button"
                     className="op-btn op-btn-ghost lr-uom-btn lr-uom-del"
                     onClick={() => handleDeleteCustom(u)}
                   >
-                    Delete
+                    {t('common.delete')}
                   </button>
                 </li>
               ))}
@@ -540,7 +546,7 @@ export default function LibRate() {
             className="op-btn op-btn-secondary"
             onClick={() => setManageOpen(false)}
           >
-            Done
+            {t('common.done')}
           </button>
         </Modal.Footer>
       </Modal>
