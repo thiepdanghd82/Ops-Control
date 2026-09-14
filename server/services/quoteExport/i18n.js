@@ -227,10 +227,7 @@ export const LABELS = {
   'cb.margin_usd': { en: 'Margin (USD)', vi: 'Margin (USD)' },
 
   // ── 09 Summary ──────────────────────────────────────────────────
-  'summary.section': { en: 'Summary', vi: 'Tổng kết' },
-  'summary.approval_status': { en: 'Approval status', vi: 'Trạng thái duyệt' },
   'summary.target_compare': { en: 'Target vs Actual', vi: 'Mục tiêu vs Thực tế' },
-  'summary.feedback': { en: 'Customer feedback', vi: 'Phản hồi khách hàng' },
 
   // ── Approval status enum values ──────────────────────────────────
   'status.pending': { en: 'Pending', vi: 'Chờ duyệt' },
