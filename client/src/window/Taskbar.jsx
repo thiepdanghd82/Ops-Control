@@ -4,6 +4,7 @@
  * sidebar (which stays the launcher) rather than replacing it.
  */
 import { useI18n } from '../utils/useI18n';
+import { tabTitle } from '../modules/cost/CostModule.jsx';
 
 export default function Taskbar({ windows, focusedId, onFocus, onRestore, onCloseAll }) {
   const { t } = useI18n();
@@ -19,10 +20,10 @@ export default function Taskbar({ windows, focusedId, onFocus, onRestore, onClos
             type="button"
             className={`opswin-taskitem ${active ? 'active' : ''} ${w.state === 'min' ? 'minimized' : ''}`}
             onClick={() => (w.state === 'min' ? onRestore(w.id) : onFocus(w.id))}
-            title={w.title}
+            title={tabTitle(w.tabId, t) || w.title}
           >
             <span className="opswin-taskdot" aria-hidden />
-            <span className="opswin-tasklabel">{w.title}</span>
+            <span className="opswin-tasklabel">{tabTitle(w.tabId, t) || w.title}</span>
           </button>
         );
       })}

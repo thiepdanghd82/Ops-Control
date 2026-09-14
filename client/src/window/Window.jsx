@@ -12,7 +12,7 @@
 import { useMemo } from 'react';
 import { Rnd } from 'react-rnd';
 import { useI18n } from '../utils/useI18n';
-import { TabContent } from '../modules/cost/CostModule.jsx';
+import { TabContent, tabTitle } from '../modules/cost/CostModule.jsx';
 import { MIN_WINDOW_W, MIN_WINDOW_H } from './windowLogic.js';
 
 export default function Window({
@@ -68,8 +68,12 @@ export default function Window({
     >
       <div className="opswin-frame" onMouseDownCapture={focusIfNeeded}>
         <div className="opswin-titlebar">
-          <span className="opswin-title" title={win.title}>
-            {win.title}
+          {/* Title is derived from tabId at render, not read from win.title:
+              the stored string is captured when the window opens, so a
+              language switch would leave every open window in the old
+              language. win.title stays as the pre-React hydration fallback. */}
+          <span className="opswin-title" title={tabTitle(win.tabId, t) || win.title}>
+            {tabTitle(win.tabId, t) || win.title}
           </span>
           {/* Fixed (Home) is the base layer — no minimize/maximize/close. */}
           {!isFixed && (

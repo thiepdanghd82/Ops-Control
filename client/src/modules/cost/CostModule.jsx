@@ -3,6 +3,7 @@
    and the shared <TabContent> with the module component so the window
    manager and the classic shell read ONE source of truth. */
 import { lazy, Suspense } from 'react';
+import { tabLabelKey } from '../../components/Layout/sidebarSections.js';
 // CostLibProvider is hoisted to AppBootstrap (Phase 10K) so library
 // data is preloaded once before the shell renders. No nested provider
 // here — it'd re-mount + re-fetch every time the user leaves and
@@ -162,14 +163,29 @@ export function humanise(id) {
     .join(' ');
 }
 
-// Resolve a tabId's human title (browser tab + window titlebar).
-export function tabTitle(tabId) {
-  if (tabId === 'home') return 'Home';
+/**
+ * Resolve a tabId's human title — browser tab, window titlebar, taskbar.
+ *
+ * Pass `t` to get the operator's language. The label key comes from the
+ * sidebar catalog (sidebarSections.TAB_LABEL_KEYS), so a window title is
+ * always the same words as the nav item that opens it; TAB_TITLES below is
+ * now only the fallback for callers that have no `t` — the window manager
+ * hydrates a saved layout before React mounts, and a title has to exist then.
+ *
+ * @param {string} tabId
+ * @param {(key: string) => string} [t]
+ */
+export function tabTitle(tabId, t) {
+  const tr = typeof t === 'function' ? t : null;
+  if (tabId === 'home') return tr ? tr('nav.tab.home') : 'Home';
   if (isLanding(tabId)) {
     const sid = landingSectionId(tabId);
     const section = COST_SECTIONS.find((s) => s.id === sid);
+    if (tr && section?.labelKey) return tr(section.labelKey);
     return section ? humanise(section.id) : humanise(sid);
   }
+  const key = tabLabelKey(tabId);
+  if (tr && key) return tr(key);
   return TAB_TITLES[tabId] || humanise(tabId);
 }
 

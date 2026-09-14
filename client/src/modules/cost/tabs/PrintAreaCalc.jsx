@@ -2412,70 +2412,95 @@ function LibraryTab({ jobs, loading, error, onReload, onOpen }) {
 // in italic grey beneath. Operators trained in either language can
 // scan the same page without translation friction.
 function LegendTab() {
+  const { locale, t } = useI18n();
+  // Every paragraph in this panel is authored in BOTH languages — an English
+  // line with a `.pa-bi-vi` twin nested under it — and until 2026-09-14 both
+  // rendered, in every locale. The prose is technical and carries inline
+  // markup, so rather than move ~46 paragraphs into keys, each English half is
+  // wrapped in `.pa-bi-en` and CSS shows the half that matches `data-lang`.
   return (
-    <div className="pa-legend-wrap">
+    <div className="pa-legend-wrap" data-lang={locale}>
       <div className="pa-legend-card">
-        <h3>Pipeline / Quy trình xử lý</h3>
+        <h3>{t('pac.h_pipeline')}</h3>
         <ol>
           <li>
-            Render artwork to a canvas sized <code>widthMm × heightMm × (dpi / 25.4)</code> pixels
-            (PDF/AI via pdf.js, raster via createImageBitmap).
+            <span className="pa-bi-en">
+              Render artwork to a canvas sized <code>widthMm × heightMm × (dpi / 25.4)</code> pixels
+              (PDF/AI via pdf.js, raster via createImageBitmap).
+            </span>
             <div className="pa-bi-vi">
               Render artwork lên canvas kích thước <code>widthMm × heightMm × (dpi / 25.4)</code>{' '}
               pixel (PDF/AI dùng pdf.js, ảnh raster dùng createImageBitmap).
             </div>
           </li>
           <li>
-            Detect background: sample 4 corners, pick the most-agreed color (robust to one rogue
-            corner).
+            <span className="pa-bi-en">
+              Detect background: sample 4 corners, pick the most-agreed color (robust to one rogue
+              corner).
+            </span>
             <div className="pa-bi-vi">
               Phát hiện nền: lấy mẫu 4 góc, chọn màu có nhiều phiếu nhất (chịu được 1 góc bất
               thường).
             </div>
           </li>
           <li>
-            Crop to region of interest — <b>manual ROI wins</b>; else auto-erode dim lines + take
-            bbox; else use full canvas.
+            <span className="pa-bi-en">
+              Crop to region of interest — <b>manual ROI wins</b>; else auto-erode dim lines + take
+              bbox; else use full canvas.
+            </span>
             <div className="pa-bi-vi">
               Cắt vùng quan tâm — <b>ROI thủ công ưu tiên</b>; không thì auto erode + lấy bbox; cuối
               cùng dùng full canvas.
             </div>
           </li>
           <li>
-            Mask out BG pixels using Euclidean RGB distance ≤ tolerance (transparent px always BG).
+            <span className="pa-bi-en">
+              Mask out BG pixels using Euclidean RGB distance ≤ tolerance (transparent px always
+              BG).
+            </span>
             <div className="pa-bi-vi">
               Loại pixel nền theo khoảng cách RGB Euclid ≤ tolerance (pixel trong suốt luôn = nền).
             </div>
           </li>
           <li>
-            Quantize remaining pixels into K clusters via median-cut.
+            <span className="pa-bi-en">
+              Quantize remaining pixels into K clusters via median-cut.
+            </span>
             <div className="pa-bi-vi">Phân cụm pixel còn lại thành K cluster bằng median-cut.</div>
           </li>
           <li>
-            Merge clusters whose centroids are within <code>mergeThreshold</code> — removes JPG halo
-            duplicates.
+            <span className="pa-bi-en">
+              Merge clusters whose centroids are within <code>mergeThreshold</code> — removes JPG
+              halo duplicates.
+            </span>
             <div className="pa-bi-vi">
               Gộp cluster có centroid gần nhau trong <code>mergeThreshold</code> — loại halo trùng
               do nén JPG.
             </div>
           </li>
           <li>
-            Apply scale ratio: physical mm² = (entered mm / scale)² so output reflects the real
-            label, not the drawing.
+            <span className="pa-bi-en">
+              Apply scale ratio: physical mm² = (entered mm / scale)² so output reflects the real
+              label, not the drawing.
+            </span>
             <div className="pa-bi-vi">
               Áp tỷ lệ vẽ: mm² thực = (mm nhập / scale)² để kết quả phản ánh nhãn thật, không phải
               bản vẽ.
             </div>
           </li>
           <li>
-            Apply ink profile: per-color µL = area_mm² × film_µm × transfer_factor × 0.001.
+            <span className="pa-bi-en">
+              Apply ink profile: per-color µL = area_mm² × film_µm × transfer_factor × 0.001.
+            </span>
             <div className="pa-bi-vi">
               Áp ink profile: µL/màu = area_mm² × film_µm × transfer_factor × 0.001.
             </div>
           </li>
           <li>
-            Report pixel count → <code>% of canvas</code> → <code>mm² of physical area</code> →{' '}
-            <code>µL/label</code> + <code>mL/1k</code>.
+            <span className="pa-bi-en">
+              Report pixel count → <code>% of canvas</code> → <code>mm² of physical area</code> →{' '}
+              <code>µL/label</code> + <code>mL/1k</code>.
+            </span>
             <div className="pa-bi-vi">
               Báo: số pixel → <code>% canvas</code> → <code>mm² thực tế</code> →{' '}
               <code>µL/nhãn</code> + <code>mL/1k</code>.
@@ -2484,10 +2509,7 @@ function LegendTab() {
         </ol>
       </div>
       <div className="pa-legend-card">
-        <h3>
-          Print methods (ink transfer factor + film thickness) / Phương pháp in (hệ số truyền + độ
-          dày màng mực)
-        </h3>
+        <h3>{t('pac.h_print_methods')}</h3>
         <table className="pa-results">
           <thead>
             <tr>
@@ -2512,12 +2534,15 @@ function LegendTab() {
         </table>
       </div>
       <div className="pa-legend-card">
-        <h3>Manual ROI + drawing scale / ROI thủ công + tỷ lệ bản vẽ</h3>
+        <h3>{t('pac.h_manual_roi')}</h3>
         <ul>
           <li>
-            <b>Manual ROI</b> — toggle "Draw selection on canvas", drag a rectangle on the preview;
-            the analysis runs only inside that box. Use this when auto-crop picks up unwanted
-            technical annotations, multi-up layouts, or front+back drawings on the same sheet.
+            <span className="pa-bi-en">
+              <b>Manual ROI</b> — toggle "Draw selection on canvas", drag a rectangle on the
+              preview; the analysis runs only inside that box. Use this when auto-crop picks up
+              unwanted technical annotations, multi-up layouts, or front+back drawings on the same
+              sheet.
+            </span>
             <div className="pa-bi-vi">
               <b>ROI thủ công</b> — bật "Draw selection on canvas", kéo 1 hình chữ nhật trên
               preview; phân tích chỉ chạy trong khung đó. Dùng khi auto-crop bắt nhầm chú thích kỹ
@@ -2525,9 +2550,11 @@ function LegendTab() {
             </div>
           </li>
           <li>
-            <b>Drawing scale</b> — pick a ratio when the artwork file is drawn at non-1:1. Example:
-            a 60×40 mm artwork drawn at 2:1 prints as 30×20 mm physical. Pixel % is unchanged; mm² +
-            µL outputs use the physical dims.
+            <span className="pa-bi-en">
+              <b>Drawing scale</b> — pick a ratio when the artwork file is drawn at non-1:1.
+              Example: a 60×40 mm artwork drawn at 2:1 prints as 30×20 mm physical. Pixel % is
+              unchanged; mm² + µL outputs use the physical dims.
+            </span>
             <div className="pa-bi-vi">
               <b>Tỷ lệ bản vẽ</b> — chọn khi file artwork không vẽ 1:1. Ví dụ: artwork 60×40 mm vẽ
               tỷ lệ 2:1 → in thực 30×20 mm. % pixel không đổi; mm² + µL dùng kích thước thực.
@@ -2536,13 +2563,15 @@ function LegendTab() {
         </ul>
       </div>
       <div className="pa-legend-card">
-        <h3>Color separations export / Xuất tách màu</h3>
-        <p>
-          Click <b>⬇ Separations</b> in the Results panel to download one PNG per detected color.
-          Each PNG is a film-positive — the color's pixels rendered as solid black on white, sized
-          to the analysed region. Drop these straight into your screen-burning workflow (silkscreen)
-          or plate-imaging step (flexo / letterpress).
-        </p>
+        <span className="pa-bi-en">
+          <h3>{t('pac.h_separations')}</h3>
+          <p>
+            Click <b>⬇ Separations</b> in the Results panel to download one PNG per detected color.
+            Each PNG is a film-positive — the color's pixels rendered as solid black on white, sized
+            to the analysed region. Drop these straight into your screen-burning workflow
+            (silkscreen) or plate-imaging step (flexo / letterpress).
+          </p>
+        </span>
         <p className="pa-bi-vi">
           Click <b>⬇ Separations</b> ở panel Results để tải 1 PNG cho mỗi màu phát hiện. Mỗi PNG là
           film positive — pixel của màu đó vẽ thành đen đặc trên nền trắng, đúng kích thước vùng đã
@@ -2551,31 +2580,40 @@ function LegendTab() {
         </p>
       </div>
       <div className="pa-legend-card">
-        <h3>Tuning / Điều chỉnh tham số</h3>
+        <h3>{t('pac.h_tuning')}</h3>
         <ul>
           <li>
-            <b>BG tolerance</b> — raise for noisy scans, lower for clean vector art (default 12).
+            <span className="pa-bi-en">
+              <b>BG tolerance</b> — raise for noisy scans, lower for clean vector art (default 12).
+            </span>
             <div className="pa-bi-vi">
               <b>Tolerance nền</b> — tăng cho ảnh scan nhiễu, giảm cho vector sạch (mặc định 12).
             </div>
           </li>
           <li>
-            <b>K colors</b> — upper bound (1–16); merge step reduces to true color count. Default 8
-            reserves headroom for rare spot inks.
+            <span className="pa-bi-en">
+              <b>K colors</b> — upper bound (1–16); merge step reduces to true color count. Default
+              8 reserves headroom for rare spot inks.
+            </span>
             <div className="pa-bi-vi">
               <b>K màu</b> — giới hạn trên (1–16); bước merge giảm về số màu thật. Mặc định 8 chừa
               chỗ cho mực pha hiếm.
             </div>
           </li>
           <li>
-            <b>Merge threshold</b> — 18 works for most CMYK labels; raise to 24+ for heavy JPG
-            compression.
+            <span className="pa-bi-en">
+              <b>Merge threshold</b> — 18 works for most CMYK labels; raise to 24+ for heavy JPG
+              compression.
+            </span>
             <div className="pa-bi-vi">
               <b>Ngưỡng merge</b> — 18 phù hợp đa số nhãn CMYK; tăng lên 24+ với ảnh nén JPG nặng.
             </div>
           </li>
           <li>
-            <b>DPI</b> — 300 is the standard label print DPI; 600 doubles accuracy and render time.
+            <span className="pa-bi-en">
+              <b>DPI</b> — 300 is the standard label print DPI; 600 doubles accuracy and render
+              time.
+            </span>
             <div className="pa-bi-vi">
               <b>DPI</b> — 300 là DPI in nhãn chuẩn; 600 tăng gấp đôi độ chính xác và thời gian
               render.
@@ -2585,96 +2623,110 @@ function LegendTab() {
       </div>
 
       <div className="pa-legend-card">
-        <h3>
-          Sprint 9 — Spot-color detection (red warnings, brand inks) / Phát hiện màu pha (cảnh báo
-          đỏ, mực thương hiệu)
-        </h3>
-        <p>
-          Pre-Sprint-9, MMCQ (median-cut quantization) absorbed tiny but visually distinct spot inks
-          into dominant clusters because the algorithm is pixel-density-biased. The classic failure:
-          a mostly-black label with 0.3% red "Wash / Rinse / Spin" warning text lost the red
-          entirely. Three independent safeguards now guarantee spot inks survive, each with a
-          distinct failure mode.
-        </p>
-        <p className="pa-bi-vi">
-          Trước Sprint 9, MMCQ (median-cut quantization) gộp các mực pha nhỏ nhưng rõ thị giác vào
-          cluster chính vì thuật toán thiên về mật độ pixel. Lỗi điển hình: nhãn gần như đen với
-          0.3% chữ đỏ "Wash / Rinse / Spin" mất hoàn toàn màu đỏ. Giờ có 3 lớp bảo vệ độc lập, mỗi
-          lớp xử lý một dạng thất bại khác nhau.
-        </p>
-        <ol>
-          <li>
-            <b>Chroma-weighted sampling</b> <em>(on by default)</em> — before MMCQ runs, pixels with
-            perceptual chroma C* &gt; 20 in Lab space are replicated 1–8× (scaling with chroma) so
-            the color-space histogram reads spot inks as "dense enough" to claim a cluster.
-            Replication only affects centroid SELECTION; the subsequent nearest-centroid counting
-            pass runs against the original pixel list, so coverage totals are unaffected.
-            <div className="pa-bi-vi">
-              <b>Lấy mẫu theo chroma</b> <em>(mặc định bật)</em> — trước khi chạy MMCQ, pixel có
-              chroma cảm nhận C* &gt; 20 trong Lab được nhân 1–8× (theo chroma) để histogram màu coi
-              mực pha là "đủ dày" để giữ cluster. Việc nhân chỉ ảnh hưởng CHỌN centroid; pass đếm
-              sau đó chạy trên pixel gốc nên tổng coverage không đổi.
-            </div>
-          </li>
-          <li>
-            <b>Outlier rescue</b> <em>(on by default)</em> — after quantize + merge, every printable
-            pixel's distance to the nearest centroid is measured; pixels beyond ΔE &gt; 15 are
-            sub-quantized (up to 3 new centroids). Candidates whose weight is ≥ 0.1% of the
-            printable total are promoted to real clusters and the full pixel set is re-counted. This
-            is the safety net when chroma-boost alone cannot surface a rare ink.
-            <div className="pa-bi-vi">
-              <b>Cứu outlier</b> <em>(mặc định bật)</em> — sau khi quantize + merge, đo khoảng cách
-              của mỗi pixel in được tới centroid gần nhất; pixel vượt ΔE &gt; 15 sẽ được phân cụm
-              con (tối đa 3 centroid mới). Ứng viên có trọng lượng ≥ 0.1% tổng pixel in được sẽ
-              thành cluster thật, sau đó đếm lại toàn bộ. Đây là lưới an toàn khi chroma-boost một
-              mình không bắt được mực hiếm.
-            </div>
-          </li>
-          <li>
-            <b>📌 Pin as spot ink</b> <em>(manual override)</em> — toggle <b>🎯 Inspect color</b>,
-            click the exact pixel of the color you want preserved, then press{' '}
-            <b>📌 Pin as spot ink</b>. The hex is added to the job's pinned list, and every future
-            Analyze forces a centroid at that color. Pinned hexes persist with the saved job. Use
-            this when both automatic safeguards miss a sub-visual-threshold ink (e.g., a &lt; 0.05%
-            lot-number stamp).
-            <div className="pa-bi-vi">
-              <b>📌 Pin làm mực pha</b> <em>(can thiệp thủ công)</em> — bật <b>🎯 Inspect color</b>,
-              click chính xác vào pixel màu cần giữ, rồi nhấn <b>📌 Pin as spot ink</b>. Hex được
-              thêm vào danh sách pinned của job, và mỗi lần Analyze sau đều ép 1 centroid tại màu
-              đó. Hex pinned được lưu cùng job. Dùng khi cả 2 lớp tự động đều bỏ qua mực dưới ngưỡng
-              cảm nhận (ví dụ con dấu lot-number &lt; 0.05%).
-            </div>
-          </li>
-        </ol>
-        <p className="pa-legend-disclaimer">
-          All three safeguards preserve total printed mm² exactly — they only change how that total
-          is split between per-color rows. Pricing math based on per-ink volume therefore becomes
-          more accurate, never less.
-        </p>
+        <span className="pa-bi-en">
+          <span className="pa-bi-en">
+            <h3>{t('pac.h_spot_detection')}</h3>
+            <p>
+              Pre-Sprint-9, MMCQ (median-cut quantization) absorbed tiny but visually distinct spot
+              inks into dominant clusters because the algorithm is pixel-density-biased. The classic
+              failure: a mostly-black label with 0.3% red "Wash / Rinse / Spin" warning text lost
+              the red entirely. Three independent safeguards now guarantee spot inks survive, each
+              with a distinct failure mode.
+            </p>
+          </span>
+          <p className="pa-bi-vi">
+            Trước Sprint 9, MMCQ (median-cut quantization) gộp các mực pha nhỏ nhưng rõ thị giác vào
+            cluster chính vì thuật toán thiên về mật độ pixel. Lỗi điển hình: nhãn gần như đen với
+            0.3% chữ đỏ "Wash / Rinse / Spin" mất hoàn toàn màu đỏ. Giờ có 3 lớp bảo vệ độc lập, mỗi
+            lớp xử lý một dạng thất bại khác nhau.
+          </p>
+          <ol>
+            <li>
+              <span className="pa-bi-en">
+                <b>Chroma-weighted sampling</b> <em>(on by default)</em> — before MMCQ runs, pixels
+                with perceptual chroma C* &gt; 20 in Lab space are replicated 1–8× (scaling with
+                chroma) so the color-space histogram reads spot inks as "dense enough" to claim a
+                cluster. Replication only affects centroid SELECTION; the subsequent
+                nearest-centroid counting pass runs against the original pixel list, so coverage
+                totals are unaffected.
+              </span>
+              <div className="pa-bi-vi">
+                <b>Lấy mẫu theo chroma</b> <em>(mặc định bật)</em> — trước khi chạy MMCQ, pixel có
+                chroma cảm nhận C* &gt; 20 trong Lab được nhân 1–8× (theo chroma) để histogram màu
+                coi mực pha là "đủ dày" để giữ cluster. Việc nhân chỉ ảnh hưởng CHỌN centroid; pass
+                đếm sau đó chạy trên pixel gốc nên tổng coverage không đổi.
+              </div>
+            </li>
+            <li>
+              <span className="pa-bi-en">
+                <b>Outlier rescue</b> <em>(on by default)</em> — after quantize + merge, every
+                printable pixel's distance to the nearest centroid is measured; pixels beyond ΔE
+                &gt; 15 are sub-quantized (up to 3 new centroids). Candidates whose weight is ≥ 0.1%
+                of the printable total are promoted to real clusters and the full pixel set is
+                re-counted. This is the safety net when chroma-boost alone cannot surface a rare
+                ink.
+              </span>
+              <div className="pa-bi-vi">
+                <b>Cứu outlier</b> <em>(mặc định bật)</em> — sau khi quantize + merge, đo khoảng
+                cách của mỗi pixel in được tới centroid gần nhất; pixel vượt ΔE &gt; 15 sẽ được phân
+                cụm con (tối đa 3 centroid mới). Ứng viên có trọng lượng ≥ 0.1% tổng pixel in được
+                sẽ thành cluster thật, sau đó đếm lại toàn bộ. Đây là lưới an toàn khi chroma-boost
+                một mình không bắt được mực hiếm.
+              </div>
+            </li>
+            <li>
+              <span className="pa-bi-en">
+                <b>📌 Pin as spot ink</b> <em>(manual override)</em> — toggle{' '}
+                <b>🎯 Inspect color</b>, click the exact pixel of the color you want preserved, then
+                press <b>📌 Pin as spot ink</b>. The hex is added to the job's pinned list, and
+                every future Analyze forces a centroid at that color. Pinned hexes persist with the
+                saved job. Use this when both automatic safeguards miss a sub-visual-threshold ink
+                (e.g., a &lt; 0.05% lot-number stamp).
+              </span>
+              <div className="pa-bi-vi">
+                <b>📌 Pin làm mực pha</b> <em>(can thiệp thủ công)</em> — bật{' '}
+                <b>🎯 Inspect color</b>, click chính xác vào pixel màu cần giữ, rồi nhấn{' '}
+                <b>📌 Pin as spot ink</b>. Hex được thêm vào danh sách pinned của job, và mỗi lần
+                Analyze sau đều ép 1 centroid tại màu đó. Hex pinned được lưu cùng job. Dùng khi cả
+                2 lớp tự động đều bỏ qua mực dưới ngưỡng cảm nhận (ví dụ con dấu lot-number &lt;
+                0.05%).
+              </div>
+            </li>
+          </ol>
+          <p className="pa-legend-disclaimer">
+            All three safeguards preserve total printed mm² exactly — they only change how that
+            total is split between per-color rows. Pricing math based on per-ink volume therefore
+            becomes more accurate, never less.
+          </p>
+        </span>
         <p className="pa-bi-vi pa-legend-disclaimer">
           Cả 3 lớp bảo vệ giữ NGUYÊN tổng mm² in được — chỉ thay đổi cách phân chia giữa các dòng
           màu. Tính giá theo µL mỗi mực chỉ chính xác hơn, không kém đi.
         </p>
       </div>
       <div className="pa-legend-card">
-        <h3>Storage / Lưu trữ</h3>
-        <p>
-          Jobs are saved keyed by <b>SKU / mã sản phẩm</b>. Re-measuring the same SKU overwrites its
-          prior entry. The artwork file is uploaded once and referenced by hash to avoid duplicates
-          on disk.
-        </p>
+        <span className="pa-bi-en">
+          <h3>{t('pac.h_storage')}</h3>
+          <p>
+            Jobs are saved keyed by <b>SKU / mã sản phẩm</b>. Re-measuring the same SKU overwrites
+            its prior entry. The artwork file is uploaded once and referenced by hash to avoid
+            duplicates on disk.
+          </p>
+        </span>
         <p className="pa-bi-vi">
           Job được lưu khoá theo <b>SKU / mã sản phẩm</b>. Đo lại cùng SKU sẽ ghi đè bản trước. File
           artwork được upload 1 lần và tham chiếu theo hash để tránh trùng trên disk.
         </p>
       </div>
       <div className="pa-legend-card">
-        <h3>Extension — import from product layout / Mở rộng — import từ product layout</h3>
-        <p>
-          A future button in Standard / Complex calc will hand over{' '}
-          <code>{'{ sku, widthMm, heightMm, artworkUrl }'}</code> directly to this tab, so
-          dimensions never need to be re-entered. The core pipeline already accepts this shape.
-        </p>
+        <span className="pa-bi-en">
+          <h3>{t('pac.h_extension')}</h3>
+          <p>
+            A future button in Standard / Complex calc will hand over{' '}
+            <code>{'{ sku, widthMm, heightMm, artworkUrl }'}</code> directly to this tab, so
+            dimensions never need to be re-entered. The core pipeline already accepts this shape.
+          </p>
+        </span>
         <p className="pa-bi-vi">
           Nút sắp tới ở Standard / Complex calc sẽ chuyển{' '}
           <code>{'{ sku, widthMm, heightMm, artworkUrl }'}</code> trực tiếp vào tab này, không phải
