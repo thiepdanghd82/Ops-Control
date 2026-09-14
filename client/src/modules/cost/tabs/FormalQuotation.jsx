@@ -1,8 +1,24 @@
 /**
  * FormalQuotation — Formal quote document generator
  * Matches COST V1.0 M20: renderFormalQuotation
+ *
+ * i18n scope (decided 2026-09-14) — this screen IS the printed document:
+ * `handlePrint` calls window.print() and the print stylesheet hides only
+ * `.fq-toolbar`, so every label below the toolbar reaches the customer.
+ *
+ *   TRANSLATED — operator chrome that never prints: the toolbar, the
+ *   toasts, both confirm modals, and the row add/remove controls (those
+ *   are now print-hidden too, so a Vietnamese button can't leak into an
+ *   English quotation).
+ *
+ *   ENGLISH ON PURPOSE — the document itself: card headers, field
+ *   labels, the product table headers and the default terms. CCL quotes
+ *   international customers in English; a locale switch must not change
+ *   what the customer receives. Do not "finish" this file by wrapping
+ *   those in t() — FormalQuotation.lint.test.js fails if you do.
  */
 import { useState, useCallback } from 'react';
+import { useI18n } from '../../../utils/useI18n';
 import { costApi } from '../../../services/api';
 import DecimalInput from '../../../utils/DecimalInput';
 import Modal from '../../../components/Shared/Modal';
@@ -65,6 +81,7 @@ function createEmptyFQState() {
 }
 
 export default function FormalQuotation() {
+  const { t } = useI18n();
   const [fq, setFq] = useState(createEmptyFQState);
   const [saving, setSaving] = useState(false);
   const [confirmKind, setConfirmKind] = useState(null); // 'release' | 'reset' | null
@@ -102,7 +119,7 @@ export default function FormalQuotation() {
     setSaving(true);
     try {
       await costApi.saveQuotation(fq);
-      showToast('Quotation saved', 'ok');
+      showToast(t('formal.toast.saved'), 'ok');
     } catch (e) {
       logErr('Failed to save quotation:', e);
       // Fallback: download as JSON so the operator never loses their work
@@ -113,25 +130,25 @@ export default function FormalQuotation() {
       a.download = `${fq.ref_no || 'quotation'}_${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast('Save failed — JSON backup downloaded instead', 'err');
+      showToast(t('formal.toast.save_failed'), 'err');
     } finally {
       setSaving(false);
     }
-  }, [fq]);
+  }, [fq, t]);
 
   const handlePrint = useCallback(() => window.print(), []);
 
   const performRelease = useCallback(() => {
     setFq((prev) => ({ ...prev, released: true, released_at: new Date().toISOString() }));
     setConfirmKind(null);
-    showToast('Quotation released', 'ok');
-  }, []);
+    showToast(t('formal.toast.released'), 'ok');
+  }, [t]);
 
   const performReset = useCallback(() => {
     setFq(createEmptyFQState());
     setConfirmKind(null);
-    showToast('Quotation reset', 'ok');
-  }, []);
+    showToast(t('formal.toast.reset'), 'ok');
+  }, [t]);
 
   const ro = fq.released;
 
@@ -139,22 +156,22 @@ export default function FormalQuotation() {
     <div className="fq">
       {/* Toolbar */}
       <div className="fq-toolbar">
-        <div className="fq-toolbar-title">Formal Quotation</div>
-        {fq.released && <span className="fq-released-badge">RELEASED</span>}
+        <div className="fq-toolbar-title">{t('formal.title')}</div>
+        {fq.released && <span className="fq-released-badge">{t('formal.released')}</span>}
         <div style={{ flex: 1 }} />
         <button className="fq-btn fq-btn-reset" onClick={() => setConfirmKind('reset')}>
-          New
+          {t('formal.new')}
         </button>
         <button className="fq-btn fq-btn-print" onClick={handlePrint}>
-          Print
+          {t('formal.print')}
         </button>
         {!ro && (
           <button className="fq-btn fq-btn-release" onClick={() => setConfirmKind('release')}>
-            Release
+            {t('formal.release')}
           </button>
         )}
         <button className="fq-btn fq-btn-save" onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? t('formal.saving') : t('formal.save')}
         </button>
       </div>
 
@@ -364,7 +381,12 @@ export default function FormalQuotation() {
                     ))}
                     {!ro && (
                       <td>
-                        <button className="fq-del-btn" onClick={() => removeProduct(i)}>
+                        <button
+                          className="fq-del-btn"
+                          onClick={() => removeProduct(i)}
+                          title={t('formal.remove_product')}
+                          aria-label={t('formal.remove_product')}
+                        >
                           &times;
                         </button>
                       </td>
@@ -375,7 +397,7 @@ export default function FormalQuotation() {
             </table>
             {!ro && (
               <button className="fq-add-btn" onClick={addProduct}>
-                + Add Product
+                {t('formal.add_product')}
               </button>
             )}
           </div>
@@ -449,20 +471,14 @@ export default function FormalQuotation() {
         size="sm"
         severity="warning"
       >
-        <Modal.Header
-          title="Release this quotation?"
-          subtitle="Released quotations are read-only. Customer-facing pricing should be final before this step."
-        />
-        <Modal.Body>
-          You can still print and save, but you will not be able to edit any field once released.
-          This is intentional — a customer must always see the same numbers as the audit log.
-        </Modal.Body>
+        <Modal.Header title={t('formal.release.title')} subtitle={t('formal.release.subtitle')} />
+        <Modal.Body>{t('formal.release.body')}</Modal.Body>
         <Modal.Footer>
           <button className="op-btn op-btn-ghost" onClick={() => setConfirmKind(null)}>
-            Cancel
+            {t('formal.cancel')}
           </button>
           <button className="op-btn op-btn-primary" onClick={performRelease}>
-            Release
+            {t('formal.release')}
           </button>
         </Modal.Footer>
       </Modal>
@@ -473,20 +489,14 @@ export default function FormalQuotation() {
         size="sm"
         severity="danger"
       >
-        <Modal.Header
-          title="Start a new quotation?"
-          subtitle="All current fields will be cleared."
-        />
-        <Modal.Body>
-          This wipes the customer information, all product rows, and the terms. If you have unsaved
-          work, click Cancel and Save first.
-        </Modal.Body>
+        <Modal.Header title={t('formal.reset.title')} subtitle={t('formal.reset.subtitle')} />
+        <Modal.Body>{t('formal.reset.body')}</Modal.Body>
         <Modal.Footer>
           <button className="op-btn op-btn-ghost" onClick={() => setConfirmKind(null)}>
-            Cancel
+            {t('formal.cancel')}
           </button>
           <button className="op-btn op-btn-primary op-btn-danger" onClick={performReset}>
-            Discard &amp; Start New
+            {t('formal.reset.confirm')}
           </button>
         </Modal.Footer>
       </Modal>

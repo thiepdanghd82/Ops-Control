@@ -193,6 +193,12 @@
   .fq-toolbar {
     display: none;
   }
+  /* Editing controls are operator chrome and are translated; keep them
+     out of the customer's copy so the printed quotation stays English. */
+  .fq-add-btn,
+  .fq-del-btn {
+    display: none;
+  }
   .fq-body {
     padding: 0;
   }

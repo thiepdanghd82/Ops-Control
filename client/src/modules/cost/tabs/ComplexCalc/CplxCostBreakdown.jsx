@@ -158,7 +158,7 @@ export default function CplxCostBreakdown() {
   if (!lib) {
     return (
       <div className="sc-section" style={{ padding: 20, color: '#94a3b8', textAlign: 'center' }}>
-        Loading library data...
+        {t('cb.loading_lib')}
       </div>
     );
   }
@@ -177,7 +177,7 @@ export default function CplxCostBreakdown() {
       <div className="sc-card">
         <div className="sc-card-header sc-header-dark">
           <span className="sc-card-icon">&#8801;</span>
-          <span className="sc-card-title">Selling /unit (USD)</span>
+          <span className="sc-card-title">{t('pricing.selling_unit')}</span>
         </div>
         <div className="sc-card-body sc-table-wrap">
           {/* data-kbd-skip: MarginCell VA/Contr/GM cells are edit-to-reprice,
@@ -201,24 +201,24 @@ export default function CplxCostBreakdown() {
             </colgroup>
             <thead>
               <tr>
-                <th>Tier</th>
-                <th className="right">MOQ</th>
-                <th className="right">EAU</th>
-                <th className="right">Sell Price</th>
-                <th className="right">Target</th>
-                <th className="right bd-mat">Material</th>
-                <th className="right bd-ink">Ink</th>
-                <th className="right bd-proc">Process</th>
-                <th className="right bd-pack">Pack &amp; Ship</th>
-                <th className="right bd-sub">Subtotal</th>
+                <th>{t('pricing.tier')}</th>
+                <th className="right">{t('pricing.moq')}</th>
+                <th className="right">{t('pricing.eau')}</th>
+                <th className="right">{t('pricing.sell_price')}</th>
+                <th className="right">{t('pricing.target')}</th>
+                <th className="right bd-mat">{t('pricing.material')}</th>
+                <th className="right bd-ink">{t('pricing.ink')}</th>
+                <th className="right bd-proc">{t('pricing.process')}</th>
+                <th className="right bd-pack">{t('pricing.pack_ship')}</th>
+                <th className="right bd-sub">{t('pricing.subtotal')}</th>
                 <th className="right bd-va" title={KPI_TOOLTIPS.va}>
-                  VA%
+                  {t('pricing.va_pct')}
                 </th>
                 <th className="right bd-contr" title={KPI_TOOLTIPS.contribution}>
-                  Contr%
+                  {t('pricing.contr_pct')}
                 </th>
                 <th className="right bd-gm" title={KPI_TOOLTIPS.gm}>
-                  GM%
+                  {t('pricing.gm_pct')}
                 </th>
               </tr>
             </thead>
@@ -289,7 +289,7 @@ export default function CplxCostBreakdown() {
                       </>
                     ) : (
                       <td className="right" colSpan={8} style={{ color: '#94a3b8' }}>
-                        Enter data to calculate
+                        {t('cb.enter_data')}
                       </td>
                     )}
                   </tr>
@@ -304,7 +304,7 @@ export default function CplxCostBreakdown() {
       <div className="sc-card" style={{ marginTop: 12 }}>
         <div className="sc-card-header sc-header-dark">
           <span className="sc-card-icon">&#9678;</span>
-          <span className="sc-card-title">Target /unit (USD)</span>
+          <span className="sc-card-title">{t('cb.target_unit')}</span>
         </div>
         <div className="sc-card-body sc-table-wrap">
           {/* data-kbd-skip: MarginCell VA/Contr/GM cells are edit-to-reprice,
@@ -328,24 +328,24 @@ export default function CplxCostBreakdown() {
             </colgroup>
             <thead>
               <tr>
-                <th>Tier</th>
-                <th className="right">MOQ</th>
-                <th className="right">EAU</th>
-                <th className="right">Sell Price</th>
-                <th className="right">Target</th>
-                <th className="right bd-mat">Material</th>
-                <th className="right bd-ink">Ink</th>
-                <th className="right bd-proc">Process</th>
-                <th className="right bd-pack">Pack &amp; Ship</th>
-                <th className="right bd-sub">Subtotal</th>
+                <th>{t('pricing.tier')}</th>
+                <th className="right">{t('pricing.moq')}</th>
+                <th className="right">{t('pricing.eau')}</th>
+                <th className="right">{t('pricing.sell_price')}</th>
+                <th className="right">{t('pricing.target')}</th>
+                <th className="right bd-mat">{t('pricing.material')}</th>
+                <th className="right bd-ink">{t('pricing.ink')}</th>
+                <th className="right bd-proc">{t('pricing.process')}</th>
+                <th className="right bd-pack">{t('pricing.pack_ship')}</th>
+                <th className="right bd-sub">{t('pricing.subtotal')}</th>
                 <th className="right bd-va" title={KPI_TOOLTIPS.va}>
-                  VA%
+                  {t('pricing.va_pct')}
                 </th>
                 <th className="right bd-contr" title={KPI_TOOLTIPS.contribution}>
-                  Contr%
+                  {t('pricing.contr_pct')}
                 </th>
                 <th className="right bd-gm" title={KPI_TOOLTIPS.gm}>
-                  GM%
+                  {t('pricing.gm_pct')}
                 </th>
               </tr>
             </thead>
@@ -419,7 +419,7 @@ export default function CplxCostBreakdown() {
                       </>
                     ) : (
                       <td className="right" colSpan={8} style={{ color: '#94a3b8' }}>
-                        Enter data to calculate
+                        {t('cb.enter_data')}
                       </td>
                     )}
                   </tr>
@@ -565,89 +565,87 @@ export default function CplxCostBreakdown() {
           return (
             <div className="sc-card" style={{ marginTop: 12 }}>
               <div className="sc-card-header sc-header-slate">
-                <span className="sc-card-title">
-                  Detailed Breakdown &mdash; MOQ {activeIdx + 1}
-                </span>
+                <span className="sc-card-title">{t('cb.detail_title', { n: activeIdx + 1 })}</span>
               </div>
               <div className="sc-card-body">
                 <div className="sc-bd-detail-grid">
                   <div className="sc-bd-detail-group">
                     <div className="sc-bd-detail-title" style={{ color: '#2563eb' }}>
-                      Materials
+                      {t('pricing.section.materials')}
                     </div>
                     <div className="sc-bd-detail-row">
-                      <span>Setup Mat</span>
+                      <span>{t('cb.setup_mat')}</span>
                       <span>{fmtN(r.bd_mat_setup)}</span>
                     </div>
                     <div className="sc-bd-detail-row">
-                      <span>Run Mat</span>
+                      <span>{t('cb.run_mat')}</span>
                       <span>{fmtN(r.bd_mat_run)}</span>
                     </div>
                     <div className="sc-bd-detail-row sc-bd-detail-total">
-                      <span>Total Mat</span>
+                      <span>{t('cb.total_mat')}</span>
                       <span>{fmtN(matCostExcludingInk(r))}</span>
                     </div>
                   </div>
                   <div className="sc-bd-detail-group">
                     <div className="sc-bd-detail-title" style={{ color: '#0891b2' }}>
-                      Inks
+                      {t('pricing.section.inks')}
                     </div>
                     <div className="sc-bd-detail-row">
-                      <span>Setup Ink</span>
+                      <span>{t('cb.setup_ink')}</span>
                       <span>{fmtN(r.bd_ink_setup)}</span>
                     </div>
                     <div className="sc-bd-detail-row">
-                      <span>Run Ink</span>
+                      <span>{t('cb.run_ink')}</span>
                       <span>{fmtN(r.bd_ink_run)}</span>
                     </div>
                     <div className="sc-bd-detail-row sc-bd-detail-total">
-                      <span>Total Ink</span>
+                      <span>{t('cb.total_ink')}</span>
                       <span>{fmtN(inkCostTotal(r))}</span>
                     </div>
                   </div>
                   <div className="sc-bd-detail-group">
                     <div className="sc-bd-detail-title" style={{ color: '#059669' }}>
-                      Processes
+                      {t('pricing.section.processes')}
                     </div>
                     <div className="sc-bd-detail-row">
-                      <span>Setup Mach</span>
+                      <span>{t('cb.setup_mach')}</span>
                       <span>{fmtN(r.bd_setup_mach)}</span>
                     </div>
                     <div className="sc-bd-detail-row">
-                      <span>Setup Labor</span>
+                      <span>{t('cb.setup_labor')}</span>
                       <span>{fmtN(r.bd_setup_labor)}</span>
                     </div>
                     <div className="sc-bd-detail-row">
-                      <span>Overhead</span>
+                      <span>{t('cb.overhead')}</span>
                       <span>{fmtN(r.overhead)}</span>
                     </div>
                     <div className="sc-bd-detail-row">
-                      <span>Labor</span>
+                      <span>{t('cb.labor')}</span>
                       <span>{fmtN(r.labor_cost)}</span>
                     </div>
                     <div className="sc-bd-detail-row">
-                      <span>Tooling</span>
+                      <span>{t('cb.tooling')}</span>
                       <span>{fmtN(r.tooling)}</span>
                     </div>
                     <div className="sc-bd-detail-row sc-bd-detail-total">
-                      <span>Total Proc</span>
+                      <span>{t('cb.total_proc')}</span>
                       <span>{fmtN(procTotal(r))}</span>
                     </div>
                   </div>
                   <div className="sc-bd-detail-group">
                     <div className="sc-bd-detail-title" style={{ color: '#0ea5e9' }}>
-                      Other
+                      {t('cb.other')}
                     </div>
                     <div className="sc-bd-detail-row">
-                      <span>Packing &amp; Ship</span>
+                      <span>{t('cb.packing_ship')}</span>
                       <span>{fmtN(r.packing_ship)}</span>
                     </div>
                     <div className="sc-bd-detail-row">
-                      <span>VAT Loss</span>
+                      <span>{t('cb.vat_loss')}</span>
                       <span>{fmtN(r.vat_loss)}</span>
                     </div>
                     <div className="sc-bd-detail-row">
-                      <span>Extra</span>
+                      <span>{t('cb.extra')}</span>
                       <span>{fmtN(r.bd_extra)}</span>
                     </div>
                   </div>
