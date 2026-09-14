@@ -143,7 +143,7 @@ export default function Settings() {
     <div className="settings-layout">
       {/* Left Menu Panel */}
       <aside className="settings-menu">
-        <div className="settings-menu-header">Settings</div>
+        <div className="settings-menu-header">{t('set.settings')}</div>
         {MENU_SECTIONS.map((section) => {
           const visibleItems = section.items.filter(
             (it) => !it.minRole || userLevel >= (ROLE_LEVELS[it.minRole] || 0)
@@ -295,7 +295,9 @@ function ProfileSection({ user }) {
             )}
             <div className="prof-avatar-overlay">
               <span style={{ fontSize: 18 }}>📷</span>
-              <span style={{ fontSize: '8.5px', color: 'white', fontWeight: 700 }}>CHANGE</span>
+              <span style={{ fontSize: '8.5px', color: 'white', fontWeight: 700 }}>
+                {t('set.h_change')}
+              </span>
             </div>
             {avatar && (
               <button
@@ -389,7 +391,7 @@ function ProfileSection({ user }) {
           <strong>Ops Control</strong> v
           {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'}
         </p>
-        <p>CCL Design Vietnam — Integrated Cost & Planning Platform</p>
+        <p>{t('set.platform_tagline')}</p>
         <p className="about-tech">Henry Dang — NPI Manager · React + Node.js (Electron 33)</p>
       </div>
     </div>
@@ -451,7 +453,7 @@ function AppearanceSection() {
       {/* Theme group */}
       <div
         role="radiogroup"
-        aria-label="Theme preference"
+        aria-label={t('set.theme_pref')}
         style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 500 }}
       >
         {themeOpts.map((o) => {
@@ -505,7 +507,7 @@ function AppearanceSection() {
       </div>
       <div
         role="radiogroup"
-        aria-label="Language preference"
+        aria-label={t('set.language_pref')}
         style={{ display: 'flex', gap: 8, maxWidth: 500 }}
       >
         {langOpts.map((o) => {
@@ -542,9 +544,10 @@ function AppearanceSection() {
           borderLeft: '3px solid var(--color-primary)',
         }}
       >
-        <b>Note:</b> Most Ops Control surfaces use CSS tokens and flip automatically. A few legacy
-        tabs (Standard/Complex calculators, Settings → Account Control) are still being migrated and
-        may appear light even in dark mode. Those will be addressed in a follow-up sprint.
+        <b>{t('set.note_label')}</b> Most Ops Control surfaces use CSS tokens and flip
+        automatically. A few legacy tabs (Standard/Complex calculators, Settings → Account Control)
+        are still being migrated and may appear light even in dark mode. Those will be addressed in
+        a follow-up sprint.
       </div>
     </div>
   );
@@ -555,6 +558,7 @@ function AppearanceSection() {
 // ═══════════════════════════════════════════════════════════
 
 function PasswordSection() {
+  const { t } = useI18n();
   const { user } = useAuth();
   const [oldPwd, setOldPwd] = useState('');
   const [newPwd, setNewPwd] = useState('');
@@ -588,7 +592,7 @@ function PasswordSection() {
       <div className="settings-card">
         <form className="pwd-form" onSubmit={handleSubmit}>
           <div className="form-field">
-            <label className="form-label-upper">Current Password</label>
+            <label className="form-label-upper">{t('set.current_password')}</label>
             <input
               type="password"
               value={oldPwd}
@@ -597,17 +601,17 @@ function PasswordSection() {
             />
           </div>
           <div className="form-field">
-            <label className="form-label-upper">New Password</label>
+            <label className="form-label-upper">{t('set.new_password')}</label>
             <input
               type="password"
               value={newPwd}
               onChange={(e) => setNewPwd(e.target.value)}
               required
-              placeholder="Min 6 characters"
+              placeholder={t('set.min_6_chars')}
             />
           </div>
           <div className="form-field">
-            <label className="form-label-upper">Confirm New Password</label>
+            <label className="form-label-upper">{t('set.confirm_new_password')}</label>
             <input
               type="password"
               value={confirm}
@@ -1173,14 +1177,14 @@ function AccountSection() {
     }
   }
 
-  if (loading) return <div className="tab-loading">Loading users...</div>;
+  if (loading) return <div className="tab-loading">{t('set.loading_users')}</div>;
 
   return (
     <div className="settings-panel settings-panel-wide">
       <div className="acct-header">
         <div>
           <h3 className="panel-title" style={{ margin: 0 }}>
-            User Accounts
+            {t('set.user_accounts')}
           </h3>
           <p className="panel-subtitle">
             {users.length} users · {onlineList.length} online · 5-level permissions
@@ -1192,25 +1196,25 @@ function AccountSection() {
               className={`acct-tab-btn ${acctTab === 'users' ? 'active' : ''}`}
               onClick={() => setAcctTab('users')}
             >
-              Users
+              {t('set.users')}
             </button>
             <button
               className={`acct-tab-btn ${acctTab === 'perms' ? 'active' : ''}`}
               onClick={() => setAcctTab('perms')}
             >
-              Permissions
+              {t('set.permissions')}
             </button>
             <button
               className={`acct-tab-btn ${acctTab === 'groups' ? 'active' : ''}`}
               onClick={() => setAcctTab('groups')}
             >
-              Permission Groups
+              {t('set.permission_groups')}
             </button>
             <button
               className={`acct-tab-btn ${acctTab === 'connection' ? 'active' : ''}`}
               onClick={() => setAcctTab('connection')}
             >
-              Connection
+              {t('set.connection')}
             </button>
             {isSys && (
               <button
@@ -1220,7 +1224,7 @@ function AccountSection() {
                   loadSessions();
                 }}
               >
-                Sessions
+                {t('set.sessions')}
               </button>
             )}
           </div>
@@ -1253,44 +1257,32 @@ function AccountSection() {
             <table className="acct-table">
               <thead>
                 <tr>
-                  <th className="acct-col-user">USERNAME / DISPLAY</th>
-                  <th className="acct-col-fullname">FULL NAME (VN)</th>
-                  <th className="acct-col-id text-center">ID NO.</th>
-                  <th className="acct-col-email">EMAIL</th>
-                  <th className="acct-col-phone">PHONE</th>
-                  <th className="acct-col-role text-center">ROLE</th>
-                  <th
-                    className="acct-col-dept text-center"
-                    title="Department (Sprint S2 — informational + default group assignment)"
-                  >
-                    DEPT.
+                  <th className="acct-col-user">{t('set.h_username_display')}</th>
+                  <th className="acct-col-fullname">{t('set.h_full_name')}</th>
+                  <th className="acct-col-id text-center">{t('set.h_id_no')}</th>
+                  <th className="acct-col-email">{t('set.h_email')}</th>
+                  <th className="acct-col-phone">{t('set.h_phone')}</th>
+                  <th className="acct-col-role text-center">{t('set.h_role')}</th>
+                  <th className="acct-col-dept text-center" title={t('set.dept_hint')}>
+                    {t('set.h_dept')}
                   </th>
-                  <th
-                    className="acct-col-pg text-center"
-                    title="Permission Group — controls tab visibility and read/edit mode"
-                  >
-                    PERM. GROUP
+                  <th className="acct-col-pg text-center" title={t('set.perm_group_hint')}>
+                    {t('set.h_perm_group')}
                   </th>
-                  <th className="acct-col-token text-center" title="Session token duration">
+                  <th className="acct-col-token text-center" title={t('set.session_duration')}>
                     ⏱ TOKEN
                   </th>
-                  <th className="acct-col-pwd text-center">PWD C</th>
-                  <th className="acct-col-del text-center" title="Can Delete Quotes">
-                    DEL?
+                  <th className="acct-col-pwd text-center">{t('set.h_pwd_c')}</th>
+                  <th className="acct-col-del text-center" title={t('set.can_delete_quotes')}>
+                    {t('set.h_del')}
                   </th>
-                  <th
-                    className="acct-col-approval text-center"
-                    title="Approval chain (Cost→Sales→Finance) — who can sign off at each gate"
-                  >
-                    APPROVAL
+                  <th className="acct-col-approval text-center" title={t('set.approval_chain')}>
+                    {t('set.h_approval')}
                   </th>
-                  <th
-                    className="acct-col-client-ver text-center"
-                    title="Phiên bản client của operator — xanh: khớp server, cam: cũ, xám: chưa có audit trong 7 ngày"
-                  >
-                    CLIENT VER
+                  <th className="acct-col-client-ver text-center" title={t('set.client_ver_hint')}>
+                    {t('set.h_client_ver')}
                   </th>
-                  <th className="acct-col-actions text-center">ACTIONS</th>
+                  <th className="acct-col-actions text-center">{t('set.h_actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1449,7 +1441,7 @@ function AccountSection() {
                                 {hasSales && (
                                   <span
                                     className="acct-approval-pill acct-approval-sales"
-                                    title="Sales manager approval"
+                                    title={t('set.sales_approval')}
                                   >
                                     S
                                   </span>
@@ -1457,7 +1449,7 @@ function AccountSection() {
                                 {hasFinance && (
                                   <span
                                     className="acct-approval-pill acct-approval-finance"
-                                    title="Finance director approval"
+                                    title={t('set.finance_approval')}
                                   >
                                     F
                                   </span>
@@ -1523,7 +1515,7 @@ function AccountSection() {
                             <button
                               className="acct-sq-btn acct-sq-edit"
                               onClick={() => handleEdit(u)}
-                              title="Edit profile"
+                              title={t('set.edit_profile')}
                             >
                               {AcctIcon.edit}
                             </button>
@@ -1542,7 +1534,7 @@ function AccountSection() {
                             <button
                               className="acct-sq-btn acct-sq-card"
                               onClick={() => handleGenerateTempPwd(u)}
-                              title="Generate temp password & provisioning card"
+                              title={t('set.gen_temp_password')}
                             >
                               {AcctIcon.card}
                             </button>
@@ -1551,7 +1543,7 @@ function AccountSection() {
                             <button
                               className="acct-sq-btn acct-sq-shield"
                               onClick={() => flash('info', '2FA / TOTP setup coming soon')}
-                              title="Setup 2FA"
+                              title={t('set.setup_2fa')}
                             >
                               {AcctIcon.shield}
                             </button>
@@ -1581,7 +1573,7 @@ function AccountSection() {
                             <button
                               className="acct-sq-btn acct-sq-trash"
                               onClick={() => handleDelete(u)}
-                              title="Delete user"
+                              title={t('set.delete_user')}
                             >
                               {AcctIcon.trash}
                             </button>
@@ -1625,15 +1617,15 @@ function AccountSection() {
 
           {/* Permission Matrix */}
           <h4 style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', margin: '20px 0 4px' }}>
-            Permission Matrix
+            {t('set.permission_matrix')}
           </h4>
           <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 12px' }}>
-            Module access by role
+            {t('set.module_access_by_role')}
           </p>
           <table className="perm-matrix">
             <thead>
               <tr>
-                <th>MODULE / FUNCTION</th>
+                <th>{t('set.h_module')}</th>
                 {['sys', 'admin', 'cost', 'user', 'viewonly'].map((r) => (
                   <th key={r} style={{ textAlign: 'center', color: ACCT_ROLE_COLORS[r] }}>
                     {ACCT_ROLE_ICONS[r]} {r.toUpperCase()}
@@ -1657,7 +1649,7 @@ function AccountSection() {
                           ) : row[r] === 'view' ? (
                             <span className="perm-view">👁</span>
                           ) : row[r] === 'Own' ? (
-                            <span className="perm-own">Own</span>
+                            <span className="perm-own">{t('set.own')}</span>
                           ) : (
                             <span className="perm-no">—</span>
                           )}
@@ -1700,12 +1692,12 @@ function AccountSection() {
           <table className="acct-table">
             <thead>
               <tr>
-                <th>USER</th>
-                <th className="text-center">ROLE</th>
+                <th>{t('set.h_user')}</th>
+                <th className="text-center">{t('set.h_role')}</th>
                 <th className="text-center">2FA</th>
-                <th>TOKEN</th>
-                <th>EXPIRES</th>
-                <th className="text-center">ACTIONS</th>
+                <th>{t('set.h_token')}</th>
+                <th>{t('set.h_expires')}</th>
+                <th className="text-center">{t('set.h_actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -1767,7 +1759,7 @@ function AccountSection() {
                           title={`Revoke all sessions for ${s.username}`}
                           style={{ color: '#a2191f', borderColor: '#fecdd3' }}
                         >
-                          Revoke
+                          {t('set.revoke')}
                         </button>
                       </td>
                     </tr>
@@ -1848,6 +1840,7 @@ function AccountSection() {
 
 // ── Add User Modal — mirrors COST V1.0's _newUserModal ──────
 function AddUserModal({ onClose, onCreate }) {
+  const { t } = useI18n();
   const [form, setForm] = useState({
     username: '',
     password: '',
@@ -1898,36 +1891,36 @@ function AddUserModal({ onClose, onCreate }) {
     <Modal open onClose={onClose} size="md" severity="info" ariaLabelledBy="add-user-title">
       <Modal.Header
         id="add-user-title"
-        title="Create New User"
-        subtitle="Required fields marked with ★"
+        title={t('set.create_user')}
+        subtitle={t('set.required_star')}
         severity="info"
       />
       <Modal.Body>
         <form id="add-user-form" onSubmit={handleSubmit}>
           <div className="op-form-grid">
             <div className="op-form-field">
-              <label>Username ★</label>
+              <label>{t('set.username_req')}</label>
               <input
                 className="op-form-input"
                 type="text"
                 value={form.username}
                 onChange={(e) => set('username', e.target.value)}
-                placeholder="Login username"
+                placeholder={t('set.login_username')}
                 autoFocus
               />
             </div>
             <div className="op-form-field">
-              <label>Password ★</label>
+              <label>{t('set.password_req')}</label>
               <input
                 className="op-form-input"
                 type="password"
                 value={form.password}
                 onChange={(e) => set('password', e.target.value)}
-                placeholder="Min 6 chars"
+                placeholder={t('set.min_6_short')}
               />
             </div>
             <div className="op-form-field">
-              <label>Full Name (VN)</label>
+              <label>{t('set.full_name_vn')}</label>
               <input
                 className="op-form-input"
                 type="text"
@@ -1936,37 +1929,37 @@ function AddUserModal({ onClose, onCreate }) {
               />
             </div>
             <div className="op-form-field">
-              <label>English Name</label>
+              <label>{t('set.english_name')}</label>
               <input
                 className="op-form-input"
                 type="text"
                 value={form.english_name}
                 onChange={(e) => set('english_name', e.target.value)}
-                placeholder="For NPI Owner"
+                placeholder={t('set.for_npi_owner')}
               />
             </div>
             <div className="op-form-field">
-              <label>ID No.</label>
+              <label>{t('set.id_no')}</label>
               <input
                 className="op-form-input"
                 type="text"
                 value={form.id_no}
                 onChange={(e) => set('id_no', e.target.value)}
-                placeholder="CCCD / Employee ID"
+                placeholder={t('set.cccd')}
               />
             </div>
             <div className="op-form-field">
-              <label>Email</label>
+              <label>{t('set.email')}</label>
               <input
                 className="op-form-input"
                 type="email"
                 value={form.email}
                 onChange={(e) => set('email', e.target.value)}
-                placeholder="email@company.com"
+                placeholder={t('set.ph_email')}
               />
             </div>
             <div className="op-form-field">
-              <label>Phone</label>
+              <label>{t('set.phone')}</label>
               <input
                 className="op-form-input"
                 type="text"
@@ -1976,28 +1969,28 @@ function AddUserModal({ onClose, onCreate }) {
               />
             </div>
             <div className="op-form-field">
-              <label>Role</label>
+              <label>{t('set.role')}</label>
               <select
                 className="op-form-input"
                 value={form.role}
                 onChange={(e) => set('role', e.target.value)}
               >
-                <option value="user">USER — Standard</option>
-                <option value="cost">COST — Cost Engineer</option>
-                <option value="admin">ADMIN — Dept Manager</option>
-                <option value="sys">SYS — Super Admin</option>
-                <option value="viewonly">VIEW — Read Only</option>
+                <option value="user">{t('set.role_user')}</option>
+                <option value="cost">{t('set.role_cost')}</option>
+                <option value="admin">{t('set.role_admin')}</option>
+                <option value="sys">{t('set.role_sys')}</option>
+                <option value="viewonly">{t('set.role_view')}</option>
               </select>
             </div>
             <div className="op-form-field">
-              <label>Can Delete Quotes?</label>
+              <label>{t('set.can_delete_quotes_q')}</label>
               <select
                 className="op-form-input"
                 value={form.canDelete ? '1' : '0'}
                 onChange={(e) => set('canDelete', e.target.value === '1')}
               >
                 <option value="0">No</option>
-                <option value="1">Yes</option>
+                <option value="1">{t('set.yes')}</option>
               </select>
             </div>
           </div>
@@ -2010,7 +2003,7 @@ function AddUserModal({ onClose, onCreate }) {
       </Modal.Body>
       <Modal.Footer>
         <button type="button" className="op-btn op-btn-ghost" onClick={onClose}>
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           type="submit"
@@ -2194,13 +2187,13 @@ function BackupSection() {
     }
   }
 
-  if (loading) return <div className="tab-loading">Loading backups...</div>;
+  if (loading) return <div className="tab-loading">{t('set.loading_backups')}</div>;
 
   const backups = activeTab === 'data' ? dataBackups : codeBackups;
 
   return (
     <div className="settings-panel">
-      <h3 className="panel-title">Backup / Restore</h3>
+      <h3 className="panel-title">{t('set.backup_restore')}</h3>
 
       {/* Sprint 1.7b — admin-editable backup schedule. Sits at the top so
           operators see "next backup at 02:00, last run ✓" before they
@@ -2217,14 +2210,14 @@ function BackupSection() {
           className={`ifs-tab ${activeTab === 'data' ? 'active' : ''}`}
           onClick={() => setActiveTab('data')}
         >
-          Data Backups
+          {t('set.data_backups')}
           <span className="ifs-tab-count">{dataBackups.length}</span>
         </button>
         <button
           className={`ifs-tab ${activeTab === 'code' ? 'active' : ''}`}
           onClick={() => setActiveTab('code')}
         >
-          Code Backups
+          {t('set.code_backups')}
           <span className="ifs-tab-count">{codeBackups.length}</span>
         </button>
       </div>
@@ -2233,7 +2226,7 @@ function BackupSection() {
         {activeTab === 'data' && (
           <>
             <button className="btn btn-primary" onClick={createDataBackup}>
-              Create Data Backup
+              {t('set.create_data_backup')}
             </button>
             {hasRole('sys') && (
               <>
@@ -2248,7 +2241,7 @@ function BackupSection() {
                   className="btn"
                   onClick={() => uploadInputRef.current?.click()}
                   disabled={uploading}
-                  title="Upload backup từ máy khác (USB / off-site copy)"
+                  title={t('set.upload_backup')}
                 >
                   {uploading ? '⏳ Uploading…' : '📤 Upload từ máy khác…'}
                 </button>
@@ -2258,17 +2251,14 @@ function BackupSection() {
         )}
         {activeTab === 'code' && hasRole('admin') && (
           <button className="btn btn-primary" onClick={createCodeBackup}>
-            Create Code Backup
+            {t('set.create_code_backup')}
           </button>
         )}
       </div>
 
       {/* Backup folder path — mirrors the IFS dataset path row so the user can
           see (and copy) the exact on-disk location where snapshots are stored. */}
-      <div
-        className="di-row-path bk-path-row"
-        title="Folder where backups are stored on the server"
-      >
+      <div className="di-row-path bk-path-row" title={t('set.backup_folder_hint')}>
         <span className="di-path-icon">📂</span>
         <input
           type="text"
@@ -2277,12 +2267,16 @@ function BackupSection() {
           readOnly
           spellCheck={false}
         />
-        <button className="di-path-copy" title="Reload backup list" onClick={() => loadBackups()}>
+        <button
+          className="di-path-copy"
+          title={t('set.reload_backup_list')}
+          onClick={() => loadBackups()}
+        >
           ↺
         </button>
         <button
           className="di-path-copy"
-          title="Copy path"
+          title={t('set.copy_path')}
           onClick={() => {
             const p = activeTab === 'data' ? dataDir : codeDir;
             if (p) {
@@ -2303,10 +2297,10 @@ function BackupSection() {
             <thead>
               <tr>
                 <th>#</th>
-                <th>Filename</th>
-                <th className="text-right">Size</th>
-                <th>Date</th>
-                <th>Actions</th>
+                <th>{t('set.filename')}</th>
+                <th className="text-right">{t('common.size')}</th>
+                <th>{t('set.date')}</th>
+                <th>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -2315,7 +2309,7 @@ function BackupSection() {
                   <td colSpan="5" style={{ padding: 0 }}>
                     <EmptyState
                       icon="💾"
-                      title="No backups yet"
+                      title={t('set.no_backups_yet')}
                       hint="Trigger a manual backup from the button above or wait for the daily auto-backup."
                     />
                   </td>
@@ -2352,7 +2346,7 @@ function BackupSection() {
                             target="_blank"
                             rel="noreferrer"
                           >
-                            Download
+                            {t('common.export_csv')}
                           </a>
                         )}
                         {hasRole('sys') && (
@@ -2369,7 +2363,7 @@ function BackupSection() {
                                 : 'Restore source code from this snapshot'
                             }
                           >
-                            Restore
+                            {t('lib.restore')}
                           </button>
                         )}
                         {hasRole('sys') && (
@@ -2378,7 +2372,7 @@ function BackupSection() {
                             onClick={() => deleteBackup(b.filename)}
                             style={{ color: '#dc2626' }}
                           >
-                            Delete
+                            {t('common.delete')}
                           </button>
                         )}
                       </td>
@@ -2650,7 +2644,8 @@ function BackupScheduleCard({ onRunDone, onRestore }) {
     }
   }
 
-  if (loading) return <div className="bk-sched-card bk-sched-loading">Loading schedule…</div>;
+  if (loading)
+    return <div className="bk-sched-card bk-sched-loading">{t('set.loading_schedule')}</div>;
 
   const dirty =
     status &&
@@ -2666,7 +2661,7 @@ function BackupScheduleCard({ onRunDone, onRestore }) {
       <div className="bk-sched-head">
         <div className="bk-sched-icon">⏰</div>
         <div className="bk-sched-head-text">
-          <div className="bk-sched-title">Scheduled backup · Sao lưu định kỳ</div>
+          <div className="bk-sched-title">{t('set.scheduled_backup')}</div>
           <div className="bk-sched-sub">
             {status?.enabled
               ? `Next run: ${fmtTime(status.nextRunAt)} (in ${fmtDuration(status.nextRunMs)})`
@@ -2701,7 +2696,7 @@ function BackupScheduleCard({ onRunDone, onRestore }) {
           className="bk-sched-run-btn"
           onClick={handleRunNow}
           disabled={running}
-          title="Trigger one backup cycle right now (independent of schedule)"
+          title={t('set.trigger_now')}
         >
           {running ? '⟳ Running…' : '▶ Run now'}
         </button>
@@ -2711,14 +2706,14 @@ function BackupScheduleCard({ onRunDone, onRestore }) {
         <label className="bk-sched-row">
           <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
           <span>
-            <b>Enable nightly backup</b>
+            <b>{t('set.enable_nightly')}</b>
             <br />
-            <small>Server runs the backup cycle once per day at the chosen hour.</small>
+            <small>{t('set.backup_cycle_hint')}</small>
           </span>
         </label>
 
         <label className="bk-sched-row">
-          <span className="bk-sched-label">Run at hour</span>
+          <span className="bk-sched-label">{t('set.run_at_hour')}</span>
           <select
             value={hour}
             onChange={(e) => setHour(e.target.value)}
@@ -2731,13 +2726,11 @@ function BackupScheduleCard({ onRunDone, onRestore }) {
               </option>
             ))}
           </select>
-          <small className="bk-sched-hint">
-            Server local time. 02:00 is the default — pick low-activity hours.
-          </small>
+          <small className="bk-sched-hint">{t('set.backup_hour_hint')}</small>
         </label>
 
         <label className="bk-sched-row">
-          <span className="bk-sched-label">Retention (days)</span>
+          <span className="bk-sched-label">{t('set.retention_days')}</span>
           <input
             type="number"
             min="1"
@@ -2746,14 +2739,12 @@ function BackupScheduleCard({ onRunDone, onRestore }) {
             onChange={(e) => setRetentionDays(e.target.value)}
             className="bk-sched-input"
           />
-          <small className="bk-sched-hint">
-            Snapshots older than this are pruned after each run (min 10 most-recent always kept).
-          </small>
+          <small className="bk-sched-hint">{t('set.retention_hint')}</small>
         </label>
       </div>
 
       <div className="bk-sched-last-run">
-        <b>Last run:</b>{' '}
+        <b>{t('set.last_run')}</b>{' '}
         {status?.lastRun ? (
           <>
             <span className={`bk-sched-badge ${status.lastRun.ok ? 'ok' : 'fail'}`}>
@@ -2765,11 +2756,11 @@ function BackupScheduleCard({ onRunDone, onRestore }) {
             </small>
           </>
         ) : (
-          <small>Never run on this server</small>
+          <small>{t('set.never_run')}</small>
         )}
         {status?.lastError && (
           <div className="bk-sched-err">
-            <b>Last error:</b> {status.lastError}
+            <b>{t('set.last_error')}</b> {status.lastError}
           </div>
         )}
       </div>
@@ -2785,7 +2776,7 @@ function BackupScheduleCard({ onRunDone, onRestore }) {
         </button>
         {dirty && (
           <button type="button" className="btn" onClick={reload} disabled={saving}>
-            Discard
+            {t('set.discard')}
           </button>
         )}
         {onRestore && (
@@ -2810,6 +2801,7 @@ function BackupScheduleCard({ onRunDone, onRestore }) {
 }
 
 function LogsSection() {
+  const { t } = useI18n();
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [importStatus, setImportStatus] = useState(null);
@@ -2839,11 +2831,11 @@ function LogsSection() {
     }
   }
 
-  if (loading) return <div className="tab-loading">Loading system info...</div>;
+  if (loading) return <div className="tab-loading">{t('set.loading_sysinfo')}</div>;
 
   return (
     <div className="settings-panel">
-      <h3 className="panel-title">System Logs</h3>
+      <h3 className="panel-title">{t('set.system_logs')}</h3>
 
       {/* Online Users */}
       <section className="log-section">
@@ -2854,7 +2846,7 @@ function LogsSection() {
         <div className="settings-card">
           {onlineUsers.length === 0 ? (
             <p className="empty-state" style={{ padding: 12 }}>
-              No users online
+              {t('set.no_users_online')}
             </p>
           ) : (
             <div className="online-grid">
@@ -2873,7 +2865,7 @@ function LogsSection() {
       {/* IFS Data Status */}
       {importStatus && (
         <section className="log-section">
-          <h4>IFS Data Status</h4>
+          <h4>{t('set.ifs_data_status')}</h4>
           <div className="settings-card">
             <div className="data-status-grid">
               {Object.entries(importStatus).map(([key, info]) => (
@@ -2921,6 +2913,7 @@ function LogsSection() {
 // ═══════════════════════════════════════════════════════════
 
 function AuditLogSection() {
+  const { t } = useI18n();
   const { user } = useAuth();
   const isSys = user?.role === 'sys';
 
@@ -2977,10 +2970,10 @@ function AuditLogSection() {
   if (!isSys) {
     return (
       <section className="log-section">
-        <h4>Audit Log</h4>
+        <h4>{t('set.audit_log')}</h4>
         <div className="settings-card">
           <p className="empty-state" style={{ padding: 12 }}>
-            Audit log requires sys role.
+            {t('set.audit_needs_sys')}
           </p>
         </div>
       </section>
@@ -2998,27 +2991,27 @@ function AuditLogSection() {
           style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10, alignItems: 'end' }}
         >
           <label style={{ fontSize: 11, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ color: '#64748b' }}>Event contains</span>
+            <span style={{ color: '#64748b' }}>{t('set.event_contains')}</span>
             <input
               type="text"
               value={evFilter}
               onChange={(e) => setEvFilter(e.target.value)}
-              placeholder="e.g. LOGIN / APPROVE"
+              placeholder={t('set.ph_event')}
               style={{ padding: '4px 8px', width: 160 }}
             />
           </label>
           <label style={{ fontSize: 11, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ color: '#64748b' }}>User (exact)</span>
+            <span style={{ color: '#64748b' }}>{t('set.user_exact')}</span>
             <input
               type="text"
               value={userFilter}
               onChange={(e) => setUserFilter(e.target.value)}
-              placeholder="username"
+              placeholder={t('set.ph_username')}
               style={{ padding: '4px 8px', width: 140 }}
             />
           </label>
           <label style={{ fontSize: 11, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ color: '#64748b' }}>Since</span>
+            <span style={{ color: '#64748b' }}>{t('set.since')}</span>
             <input
               type="date"
               value={sinceFilter}
@@ -3027,7 +3020,7 @@ function AuditLogSection() {
             />
           </label>
           <label style={{ fontSize: 11, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ color: '#64748b' }}>Limit</span>
+            <span style={{ color: '#64748b' }}>{t('set.limit')}</span>
             <select
               value={limit}
               onChange={(e) => setLimit(Number(e.target.value))}
@@ -3056,7 +3049,7 @@ function AuditLogSection() {
             }}
             disabled={loading}
           >
-            Reset
+            {t('common.clear')}
           </button>
         </div>
 
@@ -3079,18 +3072,18 @@ function AuditLogSection() {
 
         {entries.length === 0 && !loading && !error ? (
           <p className="empty-state" style={{ padding: 12 }}>
-            No matching audit entries.
+            {t('set.no_audit_entries')}
           </p>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
-                  <th style={{ padding: '4px 6px', whiteSpace: 'nowrap' }}>Timestamp</th>
-                  <th style={{ padding: '4px 6px' }}>Event</th>
-                  <th style={{ padding: '4px 6px' }}>User</th>
+                  <th style={{ padding: '4px 6px', whiteSpace: 'nowrap' }}>{t('set.timestamp')}</th>
+                  <th style={{ padding: '4px 6px' }}>{t('set.event')}</th>
+                  <th style={{ padding: '4px 6px' }}>{t('set.user')}</th>
                   <th style={{ padding: '4px 6px' }}>IP</th>
-                  <th style={{ padding: '4px 6px' }}>Detail</th>
+                  <th style={{ padding: '4px 6px' }}>{t('common.detail')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -3176,6 +3169,7 @@ const DATA_IMPORT_DATASETS = [
 ];
 
 function DataImportSection({ importStatus, onRefresh }) {
+  const { t } = useI18n();
   const { hasRole } = useAuth();
   const [busy, setBusy] = useState({});
   const [msg, setMsg] = useState(null);
@@ -3257,10 +3251,10 @@ function DataImportSection({ importStatus, onRefresh }) {
 
   return (
     <section className="log-section">
-      <h4>Data Import</h4>
+      <h4>{t('set.data_import')}</h4>
       <p className="di-hint">
         Each dataset below can be imported from a CSV/XLSX file, backed up as a local JSON snapshot,
-        or reset. Import and reset require <b>Admin</b>+ role.
+        or reset. Import and reset require <b>{t('set.admin')}</b>+ role.
       </p>
       {msg && (
         <div className={`form-msg ${msg.type}`} style={{ marginBottom: 10 }}>
@@ -3281,10 +3275,7 @@ function DataImportSection({ importStatus, onRefresh }) {
                     {info?.exists && <span className="di-size">{info.sizeHuman}</span>}
                   </div>
                   <div className="di-row-desc">{ds.desc}</div>
-                  <div
-                    className="di-row-path"
-                    title="Path used by both Import (source) and Backup (destination). Click to edit."
-                  >
+                  <div className="di-row-path" title={t('set.backup_path_hint')}>
                     <span className="di-path-icon">📂</span>
                     <input
                       type="text"
@@ -3296,7 +3287,7 @@ function DataImportSection({ importStatus, onRefresh }) {
                     />
                     <button
                       className="di-path-copy"
-                      title="Reset to default path"
+                      title={t('set.reset_default_path')}
                       disabled={!info?.absPath}
                       onClick={() => setPaths((prev) => ({ ...prev, [ds.key]: info.absPath }))}
                     >
@@ -3304,7 +3295,7 @@ function DataImportSection({ importStatus, onRefresh }) {
                     </button>
                     <button
                       className="di-path-copy"
-                      title="Copy path"
+                      title={t('set.copy_path')}
                       onClick={() => {
                         const p = paths[ds.key] || info?.absPath || info?.path || '';
                         if (p) navigator.clipboard?.writeText(p);
@@ -3333,7 +3324,7 @@ function DataImportSection({ importStatus, onRefresh }) {
                     className="di-btn di-btn-import"
                     disabled={!canEdit || state === 'import'}
                     onClick={() => fileRefs.current[ds.key]?.click()}
-                    title="Import CSV / XLSX"
+                    title={t('set.import_csv_xlsx')}
                   >
                     {state === 'import' ? '⟳' : '↑'} Import
                   </button>
@@ -3341,7 +3332,7 @@ function DataImportSection({ importStatus, onRefresh }) {
                     className="di-btn di-btn-backup"
                     disabled={!info?.exists || state === 'backup'}
                     onClick={() => handleBackup(ds)}
-                    title="Download as JSON"
+                    title={t('set.download_json')}
                   >
                     {state === 'backup' ? '⟳' : '↓'} Backup
                   </button>
@@ -3349,7 +3340,7 @@ function DataImportSection({ importStatus, onRefresh }) {
                     className="di-btn di-btn-clear"
                     disabled={!canEdit || !info?.exists || state === 'clear'}
                     onClick={() => setClearTarget(ds)}
-                    title="Wipe dataset (server auto-backs up)"
+                    title={t('set.wipe_dataset')}
                   >
                     {state === 'clear' ? '⟳' : '✕'} Reset
                   </button>

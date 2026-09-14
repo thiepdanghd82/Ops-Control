@@ -13,6 +13,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { useI18n } from '../../../utils/useI18n';
 import desktop from '../../../services/desktopBridge';
 import './AboutSection.css';
 
@@ -25,6 +26,7 @@ const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '
 const BUILD_TIMESTAMP = '2026-05-20 15:31 GMT+7';
 
 export default function AboutSection() {
+  const { t } = useI18n();
   const [config, setConfig] = useState(null);
   const [license, setLicense] = useState(null);
   const [runtime, setRuntime] = useState(null);
@@ -187,7 +189,7 @@ export default function AboutSection() {
 
       {/* ─── Version & Build ─── */}
       <div className="about-card">
-        <h3 className="about-card-title">Version</h3>
+        <h3 className="about-card-title">{t('about.version')}</h3>
         <div className="about-grid">
           <Row label="App version">{APP_VERSION}</Row>
           <Row label="Build">{BUILD_TIMESTAMP}</Row>
@@ -202,7 +204,7 @@ export default function AboutSection() {
       {/* ─── Runtime (Electron only) ─── */}
       {runtime?.isElectron && (
         <div className="about-card">
-          <h3 className="about-card-title">Runtime</h3>
+          <h3 className="about-card-title">{t('about.runtime')}</h3>
           <div className="about-grid">
             <Row label="Platform">{runtime.platform}</Row>
             <Row label="Electron">{runtime.versions?.electron}</Row>
@@ -215,7 +217,7 @@ export default function AboutSection() {
       {/* ─── License ─── */}
       {license && (
         <div className="about-card">
-          <h3 className="about-card-title">License</h3>
+          <h3 className="about-card-title">{t('about.license')}</h3>
           <div className="about-grid">
             <Row label="Status">
               {license.valid ? (
@@ -245,10 +247,8 @@ export default function AboutSection() {
       {/* ─── Diagnostics ─── */}
       {desktop.isAvailable && (
         <div className="about-card">
-          <h3 className="about-card-title">Diagnostics</h3>
-          <p className="about-card-desc">
-            Run quick health checks. Useful when reporting bugs to vendor.
-          </p>
+          <h3 className="about-card-title">{t('about.diagnostics')}</h3>
+          <p className="about-card-desc">{t('about.diagnostics_hint')}</p>
           <div className="about-diag-grid">
             {tests.map((t) => {
               const r = diagnostics[t.key];
@@ -284,7 +284,7 @@ export default function AboutSection() {
 
       {/* ─── Report copy ─── */}
       <div className="about-card">
-        <h3 className="about-card-title">Bug report</h3>
+        <h3 className="about-card-title">{t('about.bug_report')}</h3>
         <p className="about-card-desc">
           Copy diagnostic snapshot dạng JSON để gửi cho vendor khi báo lỗi. Sẽ chứa version,
           runtime, license info, và kết quả diagnostics đã chạy (KHÔNG chứa password / TOTP secret).
