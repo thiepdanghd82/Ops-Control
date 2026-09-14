@@ -17,7 +17,14 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateStandard, validateComplex, gateWarnings } from './calcValidation.js';
+import {
+  validateStandard,
+  validateComplex,
+  gateWarnings,
+  headerGateMissing,
+  gateSubTabChange,
+  HEADER_GATE_FIELDS,
+} from './calcValidation.js';
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -306,4 +313,81 @@ test('gateWarnings does not mutate its input', () => {
   const copy = JSON.parse(JSON.stringify(input));
   gateWarnings(input, { touched: ['moq'], saveAttempted: false });
   assert.deepEqual(input, copy);
+});
+
+// ── Header entry gate (2026-09-14) ────────────────────────────────────
+// The operator asked for a hard stop: MOQ, EAU, USD rate and Product
+// lifetime must all be filled before the RFQ & MOQ tab lets them move on.
+// A missing value here silently poisons every downstream tab — usd_rate
+// drives the VND mirrors, product_lifetime and EAU drive the tooling cap.
+
+const gateState = (over = {}) => ({
+  moq: 250000,
+  annual_qty: 3000000,
+  usd_rate: 25000,
+  product_lifetime: 3,
+  ...over,
+});
+
+test('headerGateMissing returns nothing when all four fields are filled', () => {
+  assert.deepEqual(headerGateMissing(gateState()), []);
+});
+
+test('headerGateMissing names each blank field, in a stable order', () => {
+  assert.deepEqual(headerGateMissing({}), HEADER_GATE_FIELDS);
+  assert.deepEqual(headerGateMissing(gateState({ usd_rate: 0 })), ['usd_rate']);
+  assert.deepEqual(headerGateMissing(gateState({ product_lifetime: '' })), ['product_lifetime']);
+  assert.deepEqual(headerGateMissing(gateState({ moq: 0, usd_rate: null })), ['moq', 'usd_rate']);
+});
+
+test('headerGateMissing treats zero, blank and negative alike — all are unusable', () => {
+  for (const bad of [0, '0', '', null, undefined, -1, '  ']) {
+    assert.deepEqual(
+      headerGateMissing(gateState({ usd_rate: bad })),
+      ['usd_rate'],
+      `usd_rate=${JSON.stringify(bad)} should be missing`
+    );
+  }
+});
+
+test('headerGateMissing accepts numeric strings the inputs actually produce', () => {
+  // DecimalInput's thousandSep is display-only — it calls onChange with a
+  // parsed number — but legacy quote JSON can still hold plain numeric
+  // strings, so both shapes must pass.
+  assert.deepEqual(headerGateMissing(gateState({ usd_rate: '25000' })), []);
+  assert.deepEqual(headerGateMissing(gateState({ product_lifetime: '3' })), []);
+});
+
+test('headerGateMissing tolerates a null state (window opened before load)', () => {
+  assert.deepEqual(headerGateMissing(null), HEADER_GATE_FIELDS);
+  assert.deepEqual(headerGateMissing(undefined), HEADER_GATE_FIELDS);
+});
+
+test('the gate does not change what validateStandard / validateComplex report', () => {
+  // Scope guard: the gate blocks navigation only. Save is still governed
+  // by the existing error set, so adding the gate must not add errors.
+  const before = validateStandard(gateState({ ccl_pn: 'T3000001', usd_rate: 0 }));
+  assert.ok(!before.some((w) => w.field === 'usd_rate'));
+  assert.ok(!before.some((w) => w.field === 'product_lifetime'));
+});
+
+test('gateSubTabChange only blocks when LEAVING the header tab', () => {
+  const empty = {};
+  // Leaving the header tab with blanks — blocked, and says what's missing.
+  assert.deepEqual(gateSubTabChange('header', 'layout', 'header', empty), HEADER_GATE_FIELDS);
+  // Staying put, or re-selecting the header tab — never blocked.
+  assert.deepEqual(gateSubTabChange('header', 'header', 'header', empty), []);
+  // Already past the header tab — the gate is an exit check, not a lock.
+  assert.deepEqual(gateSubTabChange('layout', 'packing', 'header', empty), []);
+  assert.deepEqual(gateSubTabChange('layout', 'header', 'header', empty), []);
+});
+
+test('gateSubTabChange lets a complete header through', () => {
+  assert.deepEqual(gateSubTabChange('header', 'layout', 'header', gateState()), []);
+});
+
+test('gateSubTabChange honours the caller\'s header tab id (Complex uses "project")', () => {
+  assert.deepEqual(gateSubTabChange('project', 'breakdown', 'project', {}), HEADER_GATE_FIELDS);
+  // 'header' is not Complex's entry tab, so it must not gate there.
+  assert.deepEqual(gateSubTabChange('project', 'breakdown', 'header', {}), []);
 });

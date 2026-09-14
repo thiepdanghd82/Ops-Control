@@ -56,6 +56,8 @@ import {
 // on demand. Everything else in this tab stays eager.
 const CalcLegend = lazy(() => import('./CalcLegend'));
 import TabBarOverflow from '../../../../components/Shared/TabBarOverflow';
+import HeaderGateModal from '../../components/HeaderGateModal';
+import { gateSubTabChange } from '../../../../services/calcValidation';
 import { useGridKeyboardNav } from '../../../../utils/useGridKeyboardNav';
 import './StandardCalc.css';
 import './ProcessBalancing.css';
@@ -111,6 +113,9 @@ export default function StandardCalc() {
   // 'combined' instead of a blank pane.
   const [activeSubTab, _setActiveSubTab] = useState(() => resolveActiveSubTab('header'));
   const setActiveSubTab = (id) => _setActiveSubTab(resolveActiveSubTab(id));
+  // Leaving the RFQ & MOQ tab requires MOQ / EAU / USD rate / Product
+  // lifetime — see HEADER_GATE_FIELDS. Mirrors ComplexCalc exactly.
+  const [gateMissing, setGateMissing] = useState([]);
   const { t } = useI18n();
   const {
     stdState,
@@ -123,6 +128,7 @@ export default function StandardCalc() {
     clearPendingQuote,
     activeQuoteId,
     activeQuoteVersion,
+    markTouched,
   } = useCalc();
   const { lib } = useCostLib();
   // Phase 3 — pull current user id so freezeLib can stamp
@@ -490,6 +496,18 @@ export default function StandardCalc() {
   const contentRef = useRef(null);
   useGridKeyboardNav(contentRef);
 
+  // Navigation gate — see HEADER_GATE_FIELDS. Marks the offenders touched
+  // so the WarningBar names them too, then refuses the tab change.
+  const requestSubTab = (id) => {
+    const missing = gateSubTabChange(activeSubTab, id, 'header', stdState);
+    if (missing.length > 0) {
+      missing.forEach((f) => markTouched(f));
+      setGateMissing(missing);
+      return;
+    }
+    setActiveSubTab(id);
+  };
+
   return (
     <div className="sc">
       {/* Phase 4 — copy-mode banner. Appears when operator right-clicked
@@ -507,6 +525,7 @@ export default function StandardCalc() {
       {/* Sub-tab bar — wrapped in TabBarOverflow so arrows + fade
           appear automatically when the bar is wider than viewport
           (common on 14" laptops with sidebar expanded). */}
+      <HeaderGateModal missing={gateMissing} onClose={() => setGateMissing([])} />
       <div className="sc-subtab-bar">
         <TabBarOverflow
           ariaLabel="Pricing Worksheet sub-tabs"
@@ -558,7 +577,7 @@ export default function StandardCalc() {
                 aria-selected={activeSubTab === tab.id}
                 aria-label={visibleLabel}
                 className={`sc-subtab-btn ${activeSubTab === tab.id ? 'active' : ''}`}
-                onClick={() => setActiveSubTab(tab.id)}
+                onClick={() => requestSubTab(tab.id)}
                 title={visibleLabel}
               >
                 <span className="sc-subtab-icon" aria-hidden="true">

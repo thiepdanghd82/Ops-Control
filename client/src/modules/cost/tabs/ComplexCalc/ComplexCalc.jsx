@@ -58,6 +58,8 @@ import { KPI_TOOLTIPS } from '../../../../utils/kpiDefinitions';
 import SaveChoiceModal from '../../../../utils/SaveChoiceModal';
 import ConflictModal from '../../../../components/Shared/ConflictModal';
 import TabBarOverflow from '../../../../components/Shared/TabBarOverflow';
+import HeaderGateModal from '../../components/HeaderGateModal';
+import { gateSubTabChange } from '../../../../services/calcValidation';
 import { useGridKeyboardNav } from '../../../../utils/useGridKeyboardNav';
 import '../StandardCalc/StandardCalc.css';
 import './ComplexCalc.css';
@@ -115,6 +117,10 @@ const PACK_LABELS = {
 
 export default function ComplexCalc() {
   const [activeSubTab, setActiveSubTab] = useState('project');
+  // Leaving the RFQ & MOQ tab requires MOQ / EAU / USD rate / Product
+  // lifetime. They're blocking rather than advisory because a blank one
+  // silently produces wrong costs on every later tab.
+  const [gateMissing, setGateMissing] = useState([]);
   const [expandedSps, setExpandedSps] = useState({});
   const [saveChoiceOpen, setSaveChoiceOpen] = useState(false);
   // v1.3 Đợt 2 — see StandardCalc.jsx for the pattern; replaces blunt
@@ -567,6 +573,18 @@ export default function ComplexCalc() {
   const contentRef = useRef(null);
   useGridKeyboardNav(contentRef);
 
+  // Navigation gate — see HEADER_GATE_FIELDS. Marks the offenders touched
+  // so the WarningBar names them too, then refuses the tab change.
+  const requestSubTab = (id) => {
+    const missing = gateSubTabChange(activeSubTab, id, 'project', cs);
+    if (missing.length > 0) {
+      missing.forEach((f) => markTouched(f));
+      setGateMissing(missing);
+      return;
+    }
+    setActiveSubTab(id);
+  };
+
   return (
     <div className="cc">
       {/* Phase 4 — Cpx copy-mode banner. Same logic as Std. */}
@@ -578,6 +596,7 @@ export default function ComplexCalc() {
           <span>Copy mode — saving will create a new quote and freeze current library rates</span>
         </div>
       )}
+      <HeaderGateModal missing={gateMissing} onClose={() => setGateMissing([])} />
       {/* Sub-tab bar — wrapped in TabBarOverflow for narrow-screen fit */}
       <div className="cc-tab-bar">
         <TabBarOverflow
@@ -621,7 +640,7 @@ export default function ComplexCalc() {
               aria-selected={activeSubTab === tab.id}
               aria-label={tab.labelKey ? t(tab.labelKey) : tab.label}
               className={`cc-tab ${activeSubTab === tab.id ? 'active' : ''}`}
-              onClick={() => setActiveSubTab(tab.id)}
+              onClick={() => requestSubTab(tab.id)}
               title={tab.labelKey ? t(tab.labelKey) : tab.label}
             >
               <span className="cc-tab-icon" aria-hidden="true">
@@ -1520,9 +1539,10 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField, markTouched, t }) {
           <DecimalInput
             value={cs.usd_rate}
             onChange={(v) => setCplxField('usd_rate', v)}
-            className="sc-hdr-rate-inp"
+            onBlur={() => markTouched('usd_rate')}
+            className={`sc-hdr-rate-inp ${!(Number(cs.usd_rate) > 0) ? 'sc-input-warn' : ''}`}
             placeholder="25,000"
-            title={t('cpx.usd_rate_tip')}
+            title={!(Number(cs.usd_rate) > 0) ? t('gate.required_tip') : t('cpx.usd_rate_tip')}
             thousandSep
           />
         </div>
@@ -1568,7 +1588,8 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField, markTouched, t }) {
                     value={cs.moq}
                     onChange={(v) => setCplxField('moq', v)}
                     onBlur={() => markTouched('moq')}
-                    className="sc-moq-inp"
+                    className={`sc-moq-inp ${!(Number(cs.moq) > 0) ? 'sc-input-warn' : ''}`}
+                    title={!(Number(cs.moq) > 0) ? t('gate.required_tip') : undefined}
                     thousandSep
                   />
                 </td>
@@ -1577,10 +1598,14 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField, markTouched, t }) {
                     value={cs.annual_qty}
                     onChange={(v) => setCplxField('annual_qty', v)}
                     onBlur={() => markTouched('annual_qty')}
-                    className={`sc-moq-inp ${showEauWarn ? 'sc-input-warn' : ''}`}
+                    className={`sc-moq-inp ${!(Number(cs.annual_qty) > 0) || showEauWarn ? 'sc-input-warn' : ''}`}
                     thousandSep
                     title={
-                      showEauWarn ? 'EAU bắt buộc để tính giá khuôn (Tooling) đúng' : undefined
+                      !(Number(cs.annual_qty) > 0)
+                        ? t('gate.required_tip')
+                        : showEauWarn
+                          ? t('moqcard.eau_required')
+                          : undefined
                     }
                   />
                 </td>
