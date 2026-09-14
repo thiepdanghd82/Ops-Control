@@ -242,9 +242,23 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The sticky header only works if THIS element is the scroll container.
+   `.op-modal-body` is `overflow-y: auto` but not a flex container, so the
+   old `flex: 1` here was inert: the wrap grew to content height, the body
+   did the scrolling, and the header — stuck to the top of the wrap —
+   scrolled away with it. `.libp-body` below makes the body a flex column
+   that does not scroll, and `min-height: 0` lets this child actually
+   shrink (the flexbox overflow trap: default `min-height: auto` would
+   keep it at content height). */
 .libp-card-tablewrap {
-  flex: 1;
-  overflow: auto; /* both axes — PRICE stays reachable by horizontal scroll */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto; /* both axes — the last column stays reachable */
+}
+.op-modal-body.libp-body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .libp-table {
@@ -257,11 +271,6 @@
   font-size: 12.5px;
 }
 
-/* When the modal is maximized, the picker fills it and every column
-   shows without scrolling (the ~96vw card is far wider than min-width). */
-.op-modal-card--max .libp-card-tablewrap {
-  overflow: auto;
-}
 .libp-table thead th {
   position: sticky;
   top: 0;
@@ -404,6 +413,65 @@
 .libp-col-grip:active {
   border-right-color: var(--color-brand-blue, #2563eb);
 }
+/* Columns menu — checkbox list, anchored to its button in the search row. */
+.libp-colmenu-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+.libp-colmenu-btn {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.libp-colmenu-btn:hover {
+  border-color: #0f62fe;
+}
+.libp-colmenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 5;
+  min-width: 190px;
+  max-height: 320px;
+  overflow: auto;
+  padding: 6px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.libp-colmenu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  font-size: 12.5px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.libp-colmenu-item:hover {
+  background: color-mix(in oklab, #0f62fe, transparent 92%);
+}
+.libp-colmenu-all {
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px;
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  background: transparent;
+  color: #0f62fe;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
 .libp-num {
   text-align: right;
   font-variant-numeric: tabular-nums;
