@@ -4,7 +4,7 @@
  * quietly cross it.
  *
  *  1. UI chrome — the name the operator reads on screen. Renamed to
- *     "CCL- NPI Costing module".
+ *     "CCL - NPI Costing module".
  *
  *  2. Identity — three places where "Ops Control" is not a caption but a
  *     reference to something that still carries that name:
@@ -29,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 const SRC = path.dirname(fileURLToPath(import.meta.url));
 const read = (p) => fs.readFileSync(path.join(SRC, p), 'utf8');
 
-const APP_NAME = 'CCL- NPI Costing module';
+const APP_NAME = 'CCL - NPI Costing module';
 
 test('UI chrome carries the new name', () => {
   const chrome = {
