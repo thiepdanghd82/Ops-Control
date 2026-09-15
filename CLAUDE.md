@@ -518,9 +518,15 @@ failures.
   from the 2026-06-20 Phase-0 CI-Green hotfix; lower as tickets close) +
   `format:check`. Deterministic — a NEW error or crossing the warning cap
   fails it. Never raise the cap to hide new warnings.
-- **Commit messages** / **Commit-msg hook smoke** — Conventional Commits
-  (see the commitlint convention: scope `costing` not `pricing`, lowercase
-  subject, no trailing period, body ≤120).
+- **Commit messages** / **Commit-msg hook smoke** — Conventional Commits.
+  The full convention lives in **CONTRIBUTING.md §5**, and `.gitmessage`
+  (enabled by `npm install`) carries it as a template so you see the closed
+  scope list while writing. Both are generated from / checked against
+  `commitlint.config.js` by `scripts/commit-convention.test.js`, so they
+  cannot drift — CONTRIBUTING.md was teaching two invalid scopes until
+  2026-09-15. The usual trip-ups: scope `costing` not `pricing`,
+  `apps/server` not `server`, lowercase subject, no trailing period,
+  body wrapped at 120 (never a single-line `-m`).
 - **Runtime deps declared**, **Router has sibling tests**, **Die-cut test
   coverage**, **Build artefacts** — structural guards; a red here is real.
   Build runs `perf-budget` (bundle-size gate). Its budgets were re-baselined

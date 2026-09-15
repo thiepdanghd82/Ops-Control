@@ -130,16 +130,68 @@ CI (`.github/workflows/ci.yml`) runs all of the above on push.
 
 ## 5. Conventional commits
 
-```
-feat(security): add license-status endpoint
-fix(costing): handle bleed=0 backwards-compat in print-area calc
-refactor(server): extract audit router to security domain
-chore: bump electron 33 → 38
-docs(security): document key rotation runbook
-test(license): add seat enforcement integration test
+`commitlint` runs twice — the `.husky/commit-msg` hook rejects a bad message as
+you type it, and CI re-validates every commit on the PR. A message that lands
+badly can only be fixed by rewriting history, so it is worth getting right the
+first time.
+
+**Turn on the template** (once per clone — `npm install` does it for you):
+
+```bash
+git config commit.template .gitmessage
 ```
 
-`commitlint` runs in CI; non-conformant commits get rejected.
+`.gitmessage` carries the whole cheatsheet as comments, generated from
+`commitlint.config.js`, so it cannot drift from the rules it describes.
+
+### The rules that actually reject
+
+|                     |                                                                         |
+| ------------------- | ----------------------------------------------------------------------- |
+| header (first line) | ≤ **100** characters                                                    |
+| each body line      | ≤ **120** characters — **never** write the body as one long `-m` string |
+| subject             | imperative, lower-case, **no trailing period**                          |
+| blank line          | required between subject and body                                       |
+| scope               | a **closed list** (below) — anything else is rejected                   |
+| scope omitted       | allowed; warns, does not fail                                           |
+
+### The scope follows the DOMAIN, not the folder
+
+This is the one that catches people. There is **no** `pricing`, `server`,
+`client`, `desktop`, `help`, `scripts` or `ops` scope:
+
+| Group      | Scopes                                                                                   |
+| ---------- | ---------------------------------------------------------------------------------------- |
+| Domain     | `costing` `library` `sales` `planning` `quality` `security` `basis` `mes`                |
+| Platform   | `platform` and `platform/{auth,audit,cache,sync,i18n,ui-kit,http,storage,observability}` |
+| App shells | `apps` `apps/server` `apps/client` `apps/desktop`                                        |
+| Tooling    | `ci` `deps` `docs` `tests` `release`                                                     |
+
+### Good
+
+```
+feat(costing): per-tier packing cost on the Standard worksheet
+
+A quote could only carry one packing cost, so a second MOQ tier silently
+reused tier 1's figure. The override lives on the tier and falls back to
+tier 1 when absent, so existing quotes are unchanged.
+
+Closes MES-3-FIX-12
+```
+
+### Bad
+
+```
+feat(pricing): Added per-tier packing cost.
+```
+
+Four rejections in one line: `pricing` is not a scope (it is `costing`),
+`Added` is not imperative, the subject is sentence-cased, and it ends with a
+period.
+
+> Writing `Closes MES-3-FIX-N` mid-prose is fine — `footer-leading-blank` is
+> off on purpose (MES-3-FIX-25). Real trailers such as `Co-Authored-By` still
+> need their own blank line above them.
 
 ## 6. Security review triggers
 

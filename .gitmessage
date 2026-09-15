@@ -1,0 +1,38 @@
+# <type>(<scope>): <subject in the imperative, no trailing period>
+#
+# Then a blank line, then the body. Explain WHY, not what the diff
+# already shows. Wrap every body line at 120 characters — never write the
+# body as one long -m string, it will be rejected.
+#
+# ── Limits (enforced by .husky/commit-msg and by CI) ──────────────
+#   header (the first line)   ≤ 100 characters
+#   each body line            ≤ 120 characters
+#   subject                   imperative, lower-case, NO trailing period
+#   blank line                required between subject and body
+#
+# ── type ─────────────────────────────────────────────────────────
+#   feat  fix  refactor  perf  test  docs  chore  ci  build  style  revert
+#
+# ── scope — CLOSED list. Anything else is rejected. ───────────────
+#   Domain (server/domains/*):
+#     costing  library  sales  planning
+#     quality  security  basis  mes
+#   Platform (cross-cutting):
+#     platform  platform/auth  platform/audit  platform/cache
+#     platform/sync  platform/i18n  platform/ui-kit  platform/http
+#     platform/storage  platform/observability
+#   App shells:
+#     apps  apps/server  apps/client  apps/desktop
+#   Tooling:
+#     ci  deps  docs  tests
+#     release
+#
+#   The scope follows the DOMAIN, not the folder name. There is no
+#   pricing / server / client / desktop / help / scripts / ops scope —
+#   use costing, apps/server, apps/client, apps/desktop, docs, tests.
+#   The scope may be omitted (a warning, not an error).
+#
+# ── Trailers ─────────────────────────────────────────────────────
+#   Writing "Closes MES-3-FIX-N" mid-prose is fine — that rule is off
+#   on purpose. Real trailers (Co-Authored-By, BREAKING CHANGE) still
+#   need their own blank line above them.

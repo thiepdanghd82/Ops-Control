@@ -40,7 +40,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "husky"
+    "prepare": "husky && (git config commit.template .gitmessage || true)"
   },
   "lint-staged": {
     "*.{js,jsx,mjs,cjs}": [
