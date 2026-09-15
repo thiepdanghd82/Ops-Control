@@ -149,6 +149,129 @@ test('exportQuote: POST sends correct body + Content-Type + CSRF skipped when no
   assert.equal(downloaded[0].name, 'Quote_test.xlsx');
 });
 
+// ─── Authorization header (web surface) ─────────────────────────────
+//
+// The Secure cookie set at login (server/utils/authCookie.js — secure:
+// !!isProd, and desktop/main.js forces NODE_ENV=production) is only stored
+// by a browser over HTTPS or on http://localhost. The desktop app loads
+// http://127.0.0.1:3100, a secure context, so the cookie works there; a
+// browser reaching the same server over http://<LAN-IP>:3100 silently
+// drops it. Cookie-only auth therefore sent NO credentials on the web
+// surface and the server answered 401 "Authentication required".
+//
+// Every other client service already sends Authorization: Bearer from
+// the shared getToken() (services/api.js). These pin that this wrapper
+// does too — including the sessionStorage store, which is where the
+// token lives when "Remember me" is unchecked (MES-3-FIX-54's bug was
+// exactly a hand-rolled fetch that only read localStorage).
+
+/** Install fake Web Storage globals; returns a restore fn. */
+function stubStorage({ local = null, session = null } = {}) {
+  const prior = [];
+  for (const [name, value] of [
+    ['localStorage', local],
+    ['sessionStorage', session],
+  ]) {
+    prior.push([name, Object.getOwnPropertyDescriptor(globalThis, name)]);
+    Object.defineProperty(globalThis, name, {
+      configurable: true,
+      writable: true,
+      value: { getItem: (k) => (k === 'ops_token' ? value : null) },
+    });
+  }
+  return () => {
+    for (const [name, desc] of prior) {
+      if (desc) Object.defineProperty(globalThis, name, desc);
+      else delete globalThis[name];
+    }
+  };
+}
+
+async function captureHeaders(storage) {
+  const restore = stubStorage(storage);
+  try {
+    let captured = null;
+    await exportQuote({
+      quoteId: 7,
+      variant: 'internal',
+      lang: 'bilingual',
+      tiers: 'all',
+      fetchImpl: async (_url, init) => {
+        captured = init;
+        return makeOkResponse();
+      },
+      downloadImpl: () => {},
+    });
+    return captured.headers;
+  } finally {
+    restore();
+  }
+}
+
+test('exportQuote: sends Authorization: Bearer from localStorage (web surface)', async () => {
+  const headers = await captureHeaders({ local: 'tok-local' });
+  assert.equal(headers.Authorization, 'Bearer tok-local');
+});
+
+test('exportQuote: reads the token from sessionStorage too (Remember-me OFF)', async () => {
+  const headers = await captureHeaders({ session: 'tok-session' });
+  assert.equal(headers.Authorization, 'Bearer tok-session');
+});
+
+test('exportQuote: sessionStorage wins over localStorage, matching getToken()', async () => {
+  const headers = await captureHeaders({ local: 'tok-local', session: 'tok-session' });
+  assert.equal(headers.Authorization, 'Bearer tok-session');
+});
+
+test('exportQuote: omits Authorization when no token is stored (cookie-only path unchanged)', async () => {
+  const headers = await captureHeaders({});
+  assert.ok(
+    !('Authorization' in headers),
+    'must not send a "Bearer null"/"Bearer undefined" header when no token exists'
+  );
+  // The desktop path still relies on the cookie.
+  assert.equal(headers['Content-Type'], 'application/json');
+});
+
+test('exportQuote: survives an environment with no Web Storage at all', async () => {
+  // Private mode / blocked site data / a sandboxed context: reading storage
+  // throws. getToken() must return null rather than throw out of the request,
+  // so the export still goes out and falls back to the cookie.
+  const prior = ['localStorage', 'sessionStorage'].map((n) => [
+    n,
+    Object.getOwnPropertyDescriptor(globalThis, n),
+  ]);
+  for (const [n] of prior) {
+    Object.defineProperty(globalThis, n, {
+      configurable: true,
+      get() {
+        throw new Error('site data blocked');
+      },
+    });
+  }
+  try {
+    let captured = null;
+    await exportQuote({
+      quoteId: 7,
+      variant: 'internal',
+      lang: 'bilingual',
+      tiers: 'all',
+      fetchImpl: async (_url, init) => {
+        captured = init;
+        return makeOkResponse();
+      },
+      downloadImpl: () => {},
+    });
+    assert.ok(!('Authorization' in captured.headers));
+    assert.equal(captured.credentials, 'include');
+  } finally {
+    for (const [n, d] of prior) {
+      if (d) Object.defineProperty(globalThis, n, d);
+      else delete globalThis[n];
+    }
+  }
+});
+
 test('exportQuote: multi-tier zip response sets kind=zip via X-Ops-Export-Format', async () => {
   const fetchImpl = async () => makeOkResponse({ filename: 'Quote_RFQ-1_all.zip', kind: 'zip' });
   const downloadImpl = () => {};
