@@ -114,3 +114,138 @@ test('installation-ID formatter passes through non-64-char inputs unchanged', ()
   assert.equal(formatInstallationIdForDisplay('short'), 'short');
   assert.equal(formatInstallationIdForDisplay(null), null);
 });
+
+// ─── Installation-ID resolver (cache + stable fingerprint) ────────────
+// Sprint S-LICENSE-IDSTABLE: regression tests for the "same machine, two
+// different Installation IDs" bug. This imports the REAL pure module
+// (no electron) so it exercises the shipping code, not a re-implementation.
+const { computeFingerprint, resolveInstallationId, HEX64 } = require('./installationId');
+const { createHash } = require('node:crypto');
+const sha = (s) => createHash('sha256').update(s).digest('hex');
+
+// In-memory deps harness. machineIdSeq is consumed one value per
+// resolve/compute call (last value repeats); null simulates a REG.exe failure.
+function harness({ initialCache = null, machineIdSeq = [null], fallbackParts = [] } = {}) {
+  const seq = Array.isArray(machineIdSeq) ? [...machineIdSeq] : [machineIdSeq];
+  const state = { cache: initialCache, writes: 0, i: 0, logs: [] };
+  const deps = {
+    readCache: () => state.cache,
+    writeCache: (id) => {
+      state.cache = id;
+      state.writes += 1;
+    },
+    getMachineId: () => {
+      const v = state.i < seq.length ? seq[state.i] : seq[seq.length - 1];
+      state.i += 1;
+      return v;
+    },
+    getFallbackParts: () => fallbackParts,
+    log: (m) => state.logs.push(m),
+  };
+  return { deps, state };
+}
+
+test('computeFingerprint prefers machine-id and matches sha256(raw) byte-for-byte', () => {
+  const r = computeFingerprint({
+    machineId: 'WIN-GUID-1234',
+    fallbackParts: ['h', 'win32', 'x64', 'cpu'],
+  });
+  assert.equal(r.source, 'machine-id');
+  assert.equal(r.id, sha('WIN-GUID-1234')); // backward-compat with pre-fix hashing
+});
+
+test('computeFingerprint falls back joining parts with "|" (byte-compat with old code)', () => {
+  const fb = ['HOST', 'win32', 'x64', 'Intel(R) Core'];
+  const r = computeFingerprint({ machineId: null, fallbackParts: fb });
+  assert.equal(r.source, 'fallback');
+  assert.equal(r.id, sha('HOST|win32|x64|Intel(R) Core'));
+});
+
+test('REGRESSION: cache hit returns the same ID even when machine-id later fails', () => {
+  const guid = 'WIN-MACHINE-GUID-1234';
+  const fb = ['HOST', 'win32', 'x64', 'Intel'];
+  const { deps, state } = harness({ machineIdSeq: [guid, null], fallbackParts: fb });
+
+  // Boot 1: REG works → canonical ID computed + cached.
+  const first = resolveInstallationId(deps);
+  assert.equal(first, sha(guid));
+  assert.equal(state.writes, 1);
+
+  // Boot 2: REG.exe fails (AV/EDR/timeout). Pre-fix this returned the fallback
+  // hash → "installation-mismatch". Now the cache pins the identity.
+  const second = resolveInstallationId(deps);
+  assert.equal(second, sha(guid), 'must NOT flip to the fallback fingerprint');
+  assert.notEqual(second, sha(fb.join('|')));
+  assert.equal(state.writes, 1, 'no second write — cache is authoritative');
+});
+
+test('fallback-sourced ID is NOT cached; a later good machine-id read becomes authoritative', () => {
+  const guid = 'GOOD-GUID';
+  const fb = ['HOST', 'win32', 'x64', 'Intel'];
+  const { deps, state } = harness({ machineIdSeq: [null, guid], fallbackParts: fb });
+
+  // Boot 1: REG unavailable → fallback returned live, NOT cached.
+  const first = resolveInstallationId(deps);
+  assert.equal(first, sha(fb.join('|')));
+  assert.equal(state.writes, 0);
+  assert.equal(state.cache, null);
+
+  // Boot 2: REG now works → canonical ID computed + cached.
+  const second = resolveInstallationId(deps);
+  assert.equal(second, sha(guid));
+  assert.equal(state.writes, 1);
+
+  // Boot 3: cache hit forever after.
+  assert.equal(resolveInstallationId(deps), sha(guid));
+  assert.equal(state.writes, 1);
+});
+
+test('corrupt cache is ignored and recomputed', () => {
+  const { deps } = harness({
+    initialCache: 'not-valid-hex',
+    machineIdSeq: ['G'],
+    fallbackParts: ['a', 'b', 'c', 'd'],
+  });
+  const id = resolveInstallationId(deps);
+  assert.equal(id, sha('G'));
+  assert.ok(HEX64.test(id));
+});
+
+test('cache value is normalized (trim + lowercase) on hit and skips recompute', () => {
+  const raw = `  ${'AB'.repeat(32)}\n`; // 64 hex chars, upper-case, padded
+  const { deps, state } = harness({
+    initialCache: raw,
+    machineIdSeq: ['SHOULD-NOT-BE-READ'],
+    fallbackParts: [],
+  });
+  const id = resolveInstallationId(deps);
+  assert.equal(id, 'ab'.repeat(32));
+  assert.equal(state.i, 0, 'machine-id source must not be consulted on a cache hit');
+  assert.equal(state.writes, 0);
+});
+
+test('readCache throwing is swallowed → recompute', () => {
+  const { deps } = harness({ machineIdSeq: ['G'], fallbackParts: ['a', 'b', 'c', 'd'] });
+  deps.readCache = () => {
+    throw new Error('EACCES');
+  };
+  assert.equal(resolveInstallationId(deps), sha('G'));
+});
+
+test('writeCache throwing is swallowed → still returns the computed ID', () => {
+  const { deps } = harness({ machineIdSeq: ['G'], fallbackParts: ['a', 'b', 'c', 'd'] });
+  deps.writeCache = () => {
+    throw new Error('EROFS');
+  };
+  assert.equal(resolveInstallationId(deps), sha('G'));
+});
+
+test('getMachineId throwing is treated as unavailable → fallback (not cached)', () => {
+  const fb = ['HOST', 'win32', 'x64', 'Intel'];
+  const { deps, state } = harness({ fallbackParts: fb });
+  deps.getMachineId = () => {
+    throw new Error('REG.exe blocked');
+  };
+  assert.equal(resolveInstallationId(deps), sha(fb.join('|')));
+  assert.equal(state.writes, 0);
+});
