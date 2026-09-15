@@ -93,6 +93,7 @@ export const LABELS = {
   'layout.bleed_md': { en: 'Bleed MD', vi: 'Bleed MD' },
   'layout.pitch': { en: 'Pitch', vi: 'Bước in' },
   'layout.print_cav': { en: 'Print Cav Across', vi: 'Cav in ngang' },
+  'layout.parts_in_md': { en: 'Parts in MD', vi: 'Số nhãn theo MD' },
   'layout.print_total_shot': { en: 'Print Total / Shot', vi: 'Tổng in / nhịp' },
   'layout.plate_cyl': { en: 'Plate Cyl', vi: 'Cylinder' },
   'layout.section_cut': { en: 'Cutting Design', vi: 'Thiết kế cắt' },

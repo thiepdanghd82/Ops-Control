@@ -60,6 +60,11 @@ export function buildLayoutSheet(wb, ctx) {
         'mm',
       ],
       ['layout.print_cav', state.parts_web_across, ''],
+      // The other half of the product printed on the next row. Same field
+      // the Cut block shows as "Cut Cav" — the Layout tab takes it once
+      // and displays it on both its Print and Cut sub-tabs — so the two
+      // cells must always agree.
+      ['layout.parts_in_md', state.parts_in_md, ''],
       [
         'layout.print_total_shot',
         (Number(state.parts_web_across) || 0) * (Number(state.parts_in_md) || 0) || null,
