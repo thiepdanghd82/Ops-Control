@@ -29,7 +29,7 @@ export const AUTO_HIDE_KEY = 'ops_sidebar_autohide';
  * nodes, because rules elsewhere already key off it.
  *
  * @param {{autoHide?: boolean, collapsed?: boolean, revealed?: boolean}} s
- * @returns {{layout: string, aside: string, showHotzone: boolean, inert: boolean}}
+ * @returns {{layout: string, aside: string, showHandle: boolean, inert: boolean}}
  */
 export function resolveSidebarLayout(s = {}) {
   const autoHide = !!s.autoHide;
@@ -49,9 +49,9 @@ export function resolveSidebarLayout(s = {}) {
   return {
     layout: layout.join(' '),
     aside: aside.join(' '),
-    // The edge strip only exists while hidden — leaving it live under a
+    // The handle only exists while hidden — leaving it live under a
     // revealed sidebar would swallow clicks meant for the first nav item.
-    showHotzone: autoHide && !revealed,
+    showHandle: autoHide && !revealed,
     // Off-canvas content must not be reachable by Tab or read aloud.
     inert: autoHide && !revealed,
   };
@@ -59,7 +59,7 @@ export function resolveSidebarLayout(s = {}) {
 
 /**
  * Henry's rule: "when you select the work area, it hides." A pointer press
- * that lands inside the sidebar (or on the edge strip) is the operator
+ * that lands inside the sidebar (or on the edge handle) is the operator
  * still using the sidebar, so it must NOT dismiss.
  *
  * @param {EventTarget|null} target  event.target of the pointer press
@@ -70,10 +70,10 @@ export function shouldHideOnPointerDown(target, sidebarEl) {
   if (!sidebarEl || typeof sidebarEl.contains !== 'function') return false;
   if (!target) return false;
   if (sidebarEl.contains(target)) return false;
-  // The strip is a sibling of the sidebar, not a child.
+  // The handle is a sibling of the sidebar, not a child.
   const el = /** @type {any} */ (target);
   if (el.classList && typeof el.classList.contains === 'function') {
-    if (el.classList.contains('sidebar-edge-hotzone')) return false;
+    if (el.classList.contains('sidebar-edge-handle')) return false;
   }
   return true;
 }

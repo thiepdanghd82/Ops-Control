@@ -289,17 +289,6 @@ function AppShell() {
           }
           ref={sidebarWrapRef}
         >
-          {resolveSidebarLayout({
-            autoHide: sidebarAutoHide,
-            collapsed: sidebarCollapsed,
-            revealed: sidebarRevealed,
-          }).showHotzone && (
-            <div
-              className="sidebar-edge-hotzone"
-              onMouseEnter={() => setSidebarRevealed(true)}
-              aria-hidden="true"
-            />
-          )}
           {/* Shell widgets each wrapped so a crash in one (e.g. Sidebar
           context desync, TopBar notification poll, WarningBar selector)
           doesn't blank the whole app. Fallback renders null — losing a

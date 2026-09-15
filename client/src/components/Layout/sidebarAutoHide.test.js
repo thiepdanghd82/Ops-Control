@@ -9,7 +9,7 @@ test('pinned mode is byte-identical to the behaviour before auto-hide existed', 
   assert.deepEqual(cls({}), {
     layout: 'app-layout',
     aside: 'sidebar',
-    showHotzone: false,
+    showHandle: false,
     inert: false,
   });
   const collapsed = cls({ collapsed: true });
@@ -22,21 +22,21 @@ test('a pinned sidebar is never treated as hidden, whatever `revealed` says', ()
   const out = cls({ autoHide: false, revealed: false });
   assert.equal(out.aside, 'sidebar');
   assert.equal(out.inert, false);
-  assert.equal(out.showHotzone, false);
+  assert.equal(out.showHandle, false);
 });
 
-test('auto-hide while hidden: edge strip on, content inert', () => {
+test('auto-hide while hidden: edge handle on, content inert', () => {
   const out = cls({ autoHide: true, revealed: false });
   assert.equal(out.layout, 'app-layout sidebar-auto');
   assert.equal(out.aside, 'sidebar sidebar-auto');
-  assert.equal(out.showHotzone, true);
+  assert.equal(out.showHandle, true);
   assert.equal(out.inert, true, 'off-canvas nav must be out of the tab order');
 });
 
-test('auto-hide while revealed: strip off so it cannot swallow the first nav click', () => {
+test('auto-hide while revealed: handle off so it cannot swallow the first nav click', () => {
   const out = cls({ autoHide: true, revealed: true });
   assert.equal(out.aside, 'sidebar sidebar-auto sidebar-revealed');
-  assert.equal(out.showHotzone, false);
+  assert.equal(out.showHandle, false);
   assert.equal(out.inert, false);
 });
 
@@ -63,8 +63,8 @@ test('a press inside the sidebar does NOT hide', () => {
   assert.equal(shouldHideOnPointerDown(inside, fakeSidebar(inside)), false);
 });
 
-test('a press on the edge strip does NOT hide — that gesture is opening it', () => {
-  assert.equal(shouldHideOnPointerDown(el('sidebar-edge-hotzone'), fakeSidebar(el('x'))), false);
+test('a press on the edge handle does NOT hide — that gesture is opening it', () => {
+  assert.equal(shouldHideOnPointerDown(el('sidebar-edge-handle'), fakeSidebar(el('x'))), false);
 });
 
 test('missing node or target is safe', () => {

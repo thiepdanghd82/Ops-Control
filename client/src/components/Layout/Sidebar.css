@@ -636,7 +636,11 @@
   left: 0;
   top: 0;
   bottom: 0;
-  z-index: 60;
+  /* Above the MDI window layer (.opswin-window is 4500) — none of the
+     ancestors create a stacking context, so that 4500 competes at the
+     root and would otherwise paint straight over this overlay. Below the
+     modal/banner tier (9999+), which must still cover the sidebar. */
+  z-index: 5000;
   transform: translateX(-100%);
   transition: transform 0.18s ease;
 }
@@ -650,13 +654,36 @@
    never sit on top of a revealed sidebar and swallow the first nav click.
    8px is wide enough to hit by throwing the pointer at the screen edge
    without being wide enough to trigger while reading the left column. */
-.sidebar-edge-hotzone {
+/* The way back. This was an invisible 8px strip and that was wrong twice
+   over: it sat UNDER the MDI windows so it never received the pointer, and
+   even fixed, nothing on screen told you the sidebar was still there — the
+   only control that leaves auto-hide lives inside the thing that hid. It is
+   now a real, visible button, one z-layer under the sidebar it opens. */
+.sidebar-edge-handle {
   position: fixed;
   left: 0;
   top: 0;
   bottom: 0;
-  width: 8px;
-  z-index: 59;
+  width: 14px;
+  z-index: 4999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid rgb(255 255 255 / 12%);
+  background: #1e3a5f;
+  color: rgb(255 255 255 / 70%);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.sidebar-edge-handle:hover,
+.sidebar-edge-handle:focus-visible {
+  background: #2a4f7c;
+  color: #fff;
 }
 
 /* Pin / unpin lives beside the collapse chevron and uses its styling. */
