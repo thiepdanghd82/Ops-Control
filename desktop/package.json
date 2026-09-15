@@ -59,6 +59,7 @@
       "auto-update.js",
       "smart-client.js",
       "license.js",
+      "installationId.js",
       "setupWizard.js",
       "clientFirstRun.js",
       "utils/**/*",

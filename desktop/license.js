@@ -34,7 +34,9 @@
 const crypto = require('node:crypto');
 const path = require('node:path');
 const fs = require('node:fs');
+const os = require('node:os');
 const { app, dialog } = require('electron');
+const { resolveInstallationId } = require('./installationId');
 
 let machineIdSync = null;
 try {
@@ -49,6 +51,10 @@ const TIER_LIMITS = Object.freeze({ S: 15, M: 20, L: 50 });
 const VALID_TIERS = Object.freeze(['S', 'M', 'L']);
 
 const LICENSE_PATH = () => path.join(app.getPath('userData'), 'license.json');
+// Cache for the resolved Installation ID. Once written, this pins the machine
+// identity so an intermittent node-machine-id (REG.exe) failure can no longer
+// flip the fingerprint. See installationId.js for the full rationale.
+const INSTALL_ID_PATH = () => path.join(app.getPath('userData'), 'installation-id');
 const TRIAL_DAYS = 14;
 
 // Public key (PEM/SPKI, Ed25519). At build time, electron-builder may
@@ -87,20 +93,43 @@ function getPublicKey() {
 }
 
 // ─── Hardware fingerprint ──────────────────────────────────────────
-function getHardwareFingerprint() {
-  let machineId;
-  if (machineIdSync) {
+// Read the raw MachineGuid via node-machine-id, retrying a few times to ride
+// out transient REG.exe failures (AV/EDR spawn-throttling, slow boot). Returns
+// null only when the source is genuinely unavailable this boot — the caller
+// then falls back to host attributes WITHOUT caching, so a later good read can
+// still establish the canonical cached ID.
+function readMachineIdWithRetry(attempts = 3) {
+  if (!machineIdSync) return null;
+  for (let i = 0; i < attempts; i += 1) {
     try {
-      machineId = machineIdSync(true);
+      const v = machineIdSync(true);
+      if (v && String(v).trim()) return String(v).trim();
     } catch {
-      machineId = null;
+      /* transient — retry */
     }
   }
-  if (!machineId) {
-    const os = require('node:os');
-    machineId = `${os.hostname()}|${os.platform()}|${os.arch()}|${os.cpus()[0]?.model || ''}`;
-  }
-  return crypto.createHash('sha256').update(machineId).digest('hex');
+  return null;
+}
+
+function getHardwareFingerprint() {
+  return resolveInstallationId({
+    readCache: () => {
+      const p = INSTALL_ID_PATH();
+      return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null;
+    },
+    writeCache: (id) => {
+      fs.writeFileSync(INSTALL_ID_PATH(), id, { encoding: 'utf8', mode: 0o600 });
+    },
+    getMachineId: () => readMachineIdWithRetry(3),
+    getFallbackParts: () => [os.hostname(), os.platform(), os.arch(), os.cpus()[0]?.model || ''],
+    log: (m) => {
+      try {
+        console.log(m);
+      } catch {
+        /* noop */
+      }
+    },
+  });
 }
 
 // ─── Canonicalisation (must match scripts/generate-license.mjs) ────
