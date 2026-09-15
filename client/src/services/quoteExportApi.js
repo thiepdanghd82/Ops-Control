@@ -17,7 +17,20 @@
  * CSRF: same readCsrfCookie() pattern as services/api.js + planning/v2/api.js
  * (MES-3-FIX-9 dedup ticket). Inlined here rather than touching services/api.js
  * to keep PR scope tight.
+ *
+ * Auth: BOTH the ops_session cookie (credentials:'include') and the
+ * Authorization: Bearer header, because neither covers every surface alone.
+ * Login sets the cookie Secure (server/utils/authCookie.js `secure: !!isProd`,
+ * and desktop/main.js pins NODE_ENV=production), and a browser only keeps a
+ * Secure cookie over HTTPS or on http://localhost. So the desktop app at
+ * http://127.0.0.1:3100 gets it and a browser at http://<LAN-IP>:3100 does
+ * not — which made this wrapper, the one client service that was cookie-only,
+ * fail with 401 "Authentication required" on the web surface while every
+ * other screen worked. The token comes from services/api.js getToken() so
+ * there is ONE reader covering both storage backends (MES-3-FIX-54).
  */
+
+import { getToken } from './api.js';
 
 const BASE_URL = ''; // same-origin; matches services/api.js
 const CSRF_COOKIE = 'ops_csrf';
@@ -209,9 +222,11 @@ export async function exportQuote(args) {
   }
 
   const csrf = readCsrfCookie();
+  const token = getToken();
   const headers = {
     'Content-Type': 'application/json',
     ...(csrf ? { 'X-CSRF-Token': csrf } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
   let res;

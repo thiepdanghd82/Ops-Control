@@ -31,14 +31,25 @@ const CSRF_COOKIE = 'ops_csrf';
 //   sessionStorage — cleared on browser close, so unchecking the box
 //                    actually means "don't keep me logged in past today"
 // getToken checks BOTH so a token issued in either path keeps working.
-function getToken() {
+// Exported so other hand-rolled fetch wrappers (quoteExportApi.js) read the
+// token through ONE path. MES-3-FIX-54 was exactly a hand-rolled fetch that
+// only read localStorage and so broke for Remember-me-OFF users.
+export function getToken() {
   try {
     const fromSession = sessionStorage.getItem('ops_token');
     if (fromSession) return fromSession;
   } catch {
     /* private mode / quota — fall through */
   }
-  return localStorage.getItem('ops_token');
+  try {
+    return localStorage.getItem('ops_token');
+  } catch {
+    // Same guard the sessionStorage read above already had. Web Storage can
+    // throw (private mode, site data blocked) or be absent entirely; callers
+    // all treat a null token as "unauthenticated", so returning null keeps
+    // them on their fallback path instead of throwing out of the request.
+    return null;
+  }
 }
 
 export function setToken(token, { persistent = true } = {}) {
