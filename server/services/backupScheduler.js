@@ -403,6 +403,19 @@ export async function runBackupCycle({ force = false } = {}) {
     const retention = getRetentionSettings();
     const pruned = pruneOldBackups({ backupRoot, ...retention });
     summary.steps.push({ name: 'prune', ok: true, ...pruned, ...retention });
+
+    // The Library tarballs were the one artefact nothing ever deleted.
+    // getBackupRoot() resolves to Backup/Data, so the prune above never
+    // reached Backup/Library — while the library step writes a ~30 MB
+    // tarball every day. On the live box that had reached 92 files /
+    // 2.7 GB spanning 130 days, under the same 30-day retention the
+    // SQLite backups were already honouring. Same rule, same keepMin
+    // floor, so a quiet month still cannot wipe the only copies on disk.
+    const libPruned = pruneOldBackups({
+      backupRoot: path.join(backupDir(), 'Library'),
+      ...retention,
+    });
+    summary.steps.push({ name: 'prune_library', ok: true, ...libPruned, ...retention });
   } catch (err) {
     // Pruning failure is non-fatal — the backup itself succeeded — but
     // we surface it so an admin notices before the disk fills.

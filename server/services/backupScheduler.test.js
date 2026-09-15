@@ -199,3 +199,55 @@ test('B: _shouldBootCatchUp — already ran today → false (no double backup)',
     false
   );
 });
+
+// ── Library retention (2026-09-15) ───────────────────────────────────
+//
+// The library step writes a ~30 MB tarball per day and NOTHING deleted
+// them: getBackupRoot() resolves to Backup/Data, so the cycle's prune
+// never reached Backup/Library. The live box had 92 files / 2.7 GB over
+// 130 days, while SQLite under the same retention setting held 25.
+
+/** Age `n` tarballs into the Library backup dir so they are prune-eligible. */
+function seedOldTarballs(dataDir, n) {
+  const libDir = path.join(dataDir, 'Backup', 'Library');
+  fs.mkdirSync(libDir, { recursive: true });
+  const old = new Date(Date.now() - 400 * 86400000);
+  for (let i = 0; i < n; i++) {
+    const p = path.join(libDir, `library_old${String(i).padStart(4, '0')}.tar.gz`);
+    fs.writeFileSync(p, 'x');
+    fs.utimesSync(p, old, old);
+  }
+  return libDir;
+}
+
+test('the cycle prunes Library tarballs under the same retention', async () => {
+  const { tmpDir, dataDir } = setupTempDataDir('libprune');
+  try {
+    const libDir = seedOldTarballs(dataDir, 15);
+    const summary = await runBackupCycle({ force: true });
+
+    const step = summary.steps.find((x) => x.name === 'prune_library');
+    assert.ok(step, `no prune_library step; got: ${summary.steps.map((x) => x.name).join(', ')}`);
+    assert.equal(step.ok, true);
+    assert.ok(step.deleted > 0, 'expired tarballs beyond keepMin should be deleted');
+
+    const left = fs.readdirSync(libDir).filter((f) => f.endsWith('.tar.gz'));
+    assert.ok(left.length >= step.keepMin, 'keepMin must still floor the count');
+    assert.ok(left.length < 16, 'something must actually have been removed');
+  } finally {
+    teardown(tmpDir);
+  }
+});
+
+test('prune_library keeps the newest tarballs even when all are expired', async () => {
+  const { tmpDir, dataDir } = setupTempDataDir('libfloor');
+  try {
+    seedOldTarballs(dataDir, 3);
+    const summary = await runBackupCycle({ force: true });
+    const step = summary.steps.find((x) => x.name === 'prune_library');
+    assert.ok(step, 'prune_library step should exist');
+    assert.equal(step.deleted, 0, 'below keepMin nothing may be deleted, however old');
+  } finally {
+    teardown(tmpDir);
+  }
+});
