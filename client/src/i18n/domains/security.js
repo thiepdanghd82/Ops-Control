@@ -71,6 +71,11 @@ registerStrings({
   'login.totp_submitting': { en: 'Verifying…', vi: 'Đang xác minh…' },
   'login.totp_back': { en: 'Back to login', vi: 'Quay lại đăng nhập' },
   'login.pwd_age_label': { en: 'Password age', vi: 'Thời hạn mật khẩu' },
+  'login.pwd_age_expired': { en: 'Password expired', vi: 'Mật khẩu đã hết hạn' },
+  // Vietnamese does not inflect for plural, so both resolve to 'ngày'; the
+  // split is for English and keeps locale logic out of the call site.
+  'login.pwd_age_day': { en: 'day', vi: 'ngày' },
+  'login.pwd_age_days': { en: 'days', vi: 'ngày' },
   'login.change.toggle': { en: 'Change password', vi: 'Đổi mật khẩu' },
   'login.change.cancel': { en: 'Cancel password change', vi: 'Hủy đổi mật khẩu' },
   'login.change.new': { en: 'New password', vi: 'Mật khẩu mới' },
