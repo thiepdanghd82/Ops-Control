@@ -6182,101 +6182,116 @@ export const HELP_CONTENT = {
   'whats-new': {
     id: 'whats-new',
     section: 'SYSTEM',
-    title: bi("What's new — v1.3 (April 2026)", 'Mới — v1.3 (Tháng 4/2026)'),
+    title: bi("What's new — v1.6 (September 2026)", 'Mới — v1.6 (Tháng 9/2026)'),
     function: bi(
-      'Release notes — 6 đợt enterprise hardening',
-      'Ghi chú phát hành — 6 đợt hardening enterprise'
+      'Release notes — what an operator will notice after upgrading from v1.5',
+      'Ghi chú phát hành — operator sẽ thấy gì khác sau khi nâng cấp từ v1.5'
     ),
     path: "Ops Cost > System > Help > What's new",
     purpose: bi(
-      'v1.3 ships 6 đợt of LAN-readiness hardening: SSE real-time, ConflictModal, login anomaly detection, sessions admin, SQLite primary, off-site backup, HTTPS Caddy. Read first on any major release.',
-      'v1.3 ship 6 đợt hardening sẵn sàng LAN: SSE real-time, ConflictModal, phát hiện login bất thường, sessions admin, SQLite primary, off-site backup, HTTPS Caddy. Đọc đầu tiên ở mỗi bản lớn.'
+      'v1.6 is mostly about what you SEE: the app now speaks Vietnamese end to end, data screens open full-window, the material picker shows the whole library row, and the exported workbook was restructured. Read this first after installing a new build so nothing on screen is a surprise.',
+      'v1.6 chủ yếu thay đổi thứ bạn NHÌN THẤY: toàn app nói tiếng Việt, màn dữ liệu mở toàn khung, bảng chọn vật tư hiện đủ cột thư viện, và file xuất được sắp lại. Đọc mục này ngay sau khi cài bản mới để không bị bất ngờ.'
     ),
     whenToUse: bi(
-      "After installing the v1.3 DMG/EXE; when an operator reports new behavior they don't recognize.",
-      'Sau khi cài DMG/EXE v1.3; khi operator báo có hành vi mới chưa biết.'
+      'Right after installing the v1.6 build; when an operator reports behaviour they do not recognise.',
+      'Ngay sau khi cài bản v1.6; khi operator báo thấy hành vi lạ chưa biết.'
     ),
     preRequisites: [],
     features: [
       feat(
-        'Đợt 1: Connection banner (top-of-app) when server unreachable, useAutoRefresh on QuoteHistory/RFQ/Sample/Approvals tabs (poll every 30-60s, pause when hidden)',
-        'Đợt 1: Banner kết nối (top app) khi server không reachable, useAutoRefresh trên QuoteHistory/RFQ/Sample/Approvals (poll 30-60s, pause khi tab ẩn)'
+        'Vietnamese everywhere. Ten translation waves covered the pricing worksheet, the tracking screens, the floating calculators, the Material Cost libraries, Settings, the Legend, Cost Breakdown, Help, and the Materials/Inks/Processes data grids. The language switch now changes EVERY screen, window titles included.',
+        'Tiếng Việt toàn bộ. Mười đợt dịch đã phủ bảng tính giá, các màn theo dõi, ba calculator nổi, thư viện Material Cost, Settings, Legend, Cost Breakdown, Help, và các lưới nhập Vật tư/Mực/Công đoạn. Nút đổi ngôn ngữ giờ đổi MỌI màn hình, kể cả tiêu đề cửa sổ.'
       ),
       feat(
-        'Đợt 2: SSE event bus — server emits quote.saved, rfq.updated, sample.updated, approval.transition, library.imported. Tabs refetch instantly (< 50ms) instead of waiting for poll. ConflictModal replaces blunt window.confirm() with 3-button (Reload / Overwrite / Cancel) preserving user edits.',
-        'Đợt 2: SSE event bus — server emit quote.saved, rfq.updated, sample.updated, approval.transition, library.imported. Tab refetch tức thì (< 50ms) thay vì chờ poll. ConflictModal thay window.confirm() bằng 3-button (Reload / Overwrite / Cancel) giữ user edits.'
+        'The Legend and Help tabs show ONE language at a time. They used to print both halves stacked, so every heading and table cell read twice and the language switch appeared to do nothing.',
+        'Tab Legend và Help chỉ hiện MỘT ngôn ngữ. Trước đây chúng in chồng cả hai nửa nên mọi tiêu đề và ô bảng đọc thành hai lần, và nút đổi ngôn ngữ trông như không có tác dụng.'
       ),
       feat(
-        'Đợt 3: Active users indicator (TopBar góc phải — "● N online" pill, click xem list). Backup upload from disk (sys-only). Off-site backup helper script (scripts/backup-offsite.sh). HTTPS Caddy helper (scripts/setup-https-caddy.sh).',
-        'Đợt 3: Indicator user đang online (TopBar góc phải — pill "● N online", click xem list). Upload backup từ disk (sys-only). Script off-site backup (scripts/backup-offsite.sh). Script Caddy HTTPS (scripts/setup-https-caddy.sh).'
+        'Data screens open full-window. Only four windows still float, because they are opened BESIDE a quote to feed a number back into it: Ink Calculator, Print Area, Design Tools, Messages.',
+        'Màn dữ liệu mở toàn khung. Chỉ còn bốn cửa sổ nổi, vì chúng được mở BÊN CẠNH một báo giá để đưa số liệu trở lại vào đó: Ink Calculator, Print Area, Design Tools, Messages.'
       ),
       feat(
-        'Đợt 4: Login anomaly detection — server marks LOGIN_ANOMALY in audit + emits SSE security.alert when (a) same user logged in from 2+ IPs in 5min, (b) login from new IP not seen in 30d, (c) login at unusual hour (22h-6h). Admins see real-time toast; user themselves sees yellow toast post-login to spot session hijack.',
-        'Đợt 4: Phát hiện login bất thường — server stamp LOGIN_ANOMALY trong audit + emit SSE security.alert khi (a) cùng user login từ 2+ IP trong 5min, (b) login từ IP mới chưa thấy trong 30d, (c) login giờ bất thường (22h-6h). Admin thấy toast real-time; user thấy toast vàng sau login để phát hiện session hijack.'
+        'The material picker shows every column of the library you picked — NPI carries twelve, including thickness, surface, adhesive, MOQ and lead time. Drag a header edge to resize, or use the ▦ Columns menu to hide what you do not need; both choices are remembered per library.',
+        'Bảng chọn vật tư hiện đủ mọi cột của thư viện đang chọn — NPI có mười hai cột, gồm độ dày, bề mặt, keo, MOQ và lead time. Kéo mép tiêu đề để chỉnh rộng, hoặc dùng menu ▦ Columns để ẩn cột không cần; cả hai lựa chọn được nhớ riêng theo từng thư viện.'
       ),
       feat(
-        'Đợt 5: SQLite primary backend default — removes JSON-mutex bottleneck @ 20 concurrent saves. AboutSection 3 new diagnostic tests (Quote backend parity, SSE subscribers, Active users count).',
-        'Đợt 5: SQLite primary backend mặc định — bỏ bottleneck JSON-mutex @ 20 user save đồng thời. AboutSection 3 diagnostic test mới (parity Quote backend, SSE subscribers, count Active users).'
+        'The exported workbook was restructured to five visible sheets: 00 Cover, 01 Layout, 02 Summarize, 03 Balancing, 04 Pricing Snapshot. RFQ/MOQ, Materials, Inks, Processes, Pack & Ship and Cost Breakdown are now sections inside 02 Summarize.',
+        'File xuất được sắp lại còn năm sheet hiện: 00 Cover, 01 Layout, 02 Summarize, 03 Balancing, 04 Pricing Snapshot. RFQ/MOQ, Vật tư, Mực, Công đoạn, Pack & Ship và Cost Breakdown nay là các phần bên trong 02 Summarize.'
       ),
       feat(
-        'Đợt 6: Active Sessions admin tab (sys-only, in Account Control) — see all active logins (username, role, 2FA status, token prefix, expires-in). Per-row Revoke button kicks user from all machines.',
-        'Đợt 6: Tab Sessions admin (sys-only, trong Account Control) — xem mọi session đang đăng nhập (username, role, 2FA status, token prefix, expires-in). Nút Revoke mỗi dòng kick user khỏi mọi máy.'
+        'Export fixes you will notice: selecting any one MOQ tier now exports EVERY tier of that quote in one file; the Layout sheet prints Parts in MD, so Print Total / Shot reads as the two rows above it multiplied; Cost Breakdown exports a Direct CU PN column; and bullet cells no longer come out as #NAME? in Excel.',
+        'Các sửa lỗi xuất file bạn sẽ thấy: chọn một bậc MOQ bất kỳ nay xuất MỌI bậc của báo giá đó trong một file; sheet Layout in thêm Parts in MD nên Print Total / Shot đọc đúng bằng hai dòng trên nhân nhau; Cost Breakdown xuất thêm cột Direct CU PN; và ô dạng gạch đầu dòng không còn ra #NAME? trong Excel.'
+      ),
+      feat(
+        'The RFQ & MOQ tab will not hand over to another sub-tab until MOQ, EAU, USD rate and Product lifetime are filled. A blank USD rate used to zero the VND mirrors and a blank EAU collapsed the tooling cap — wrong numbers with nothing on screen saying so.',
+        'Tab RFQ & MOQ không cho chuyển sang sub-tab khác cho tới khi điền đủ MOQ, EAU, tỷ giá USD và Product lifetime. Bỏ trống tỷ giá USD từng làm các ô VND về 0, bỏ trống EAU làm sập trần khuôn — ra số sai mà không có gì báo.'
+      ),
+      feat(
+        'Cost Breakdown search accepts an RFQ number and a date again. Both silently matched nothing before, because that screen keys its rows differently from Quote History.',
+        'Ô tìm kiếm ở Cost Breakdown nhận lại số RFQ và ngày. Trước đây cả hai đều âm thầm không khớp gì, do màn này đặt khoá dòng khác với Quote History.'
+      ),
+      feat(
+        'Cost Breakdown shows whether a quote was priced on frozen rates or live ones: 🟢 Frozen at save time / 🟡 Live rates / ⚪ No snapshot, with the full audit block at the bottom of the tab and a matching 04 Pricing Snapshot sheet in the export.',
+        'Cost Breakdown cho biết báo giá được tính theo giá đã đóng băng hay giá sống: 🟢 Đóng băng lúc lưu / 🟡 Giá sống / ⚪ Không có snapshot, kèm khối audit đầy đủ ở cuối tab và sheet 04 Pricing Snapshot tương ứng trong file xuất.'
+      ),
+      feat(
+        'Settings gained a License Manager section (sys only): the fleet of installed machines, when each was last seen — shown in YOUR clock, not UTC — days left on each licence, and a way to forget a machine that was decommissioned.',
+        'Settings có thêm phần License Manager (chỉ sys): danh sách máy đã cài, lần cuối mỗi máy còn sống — hiện theo ĐỒNG HỒ CỦA BẠN, không phải UTC — số ngày licence còn lại, và cách gỡ một máy đã ngừng dùng.'
       ),
     ],
     workflow: [
-      bs('Read through the 6 đợt highlights above.', 'Đọc qua 6 đợt highlights ở trên.'),
       bs(
-        'Settings → ℹ️ About / Diagnostics → click "Quote backend" — verify backend=sqlite + parity OK.',
-        'Settings → ℹ️ About / Diagnostics → click "Quote backend" — xác nhận backend=sqlite + parity OK.'
+        'Switch the language toggle and walk one quote end to end. Every label, column head and window title should follow.',
+        'Bấm nút đổi ngôn ngữ rồi đi hết một báo giá. Mọi nhãn, tên cột và tiêu đề cửa sổ đều phải đổi theo.'
       ),
       bs(
-        'Login from máy thứ 2 (cùng tài khoản) → bạn sẽ thấy toast vàng "Có session khác đang mở từ IP …".',
-        'Login từ máy thứ 2 (cùng tài khoản) → bạn sẽ thấy toast vàng "Có session khác đang mở từ IP …".'
+        'Open a quote, right-click a material row → the picker now fills the window. Drag a column edge and open ▦ Columns; reopen it to confirm your layout was remembered.',
+        'Mở một báo giá, chuột phải vào dòng vật tư → bảng chọn nay lấp đầy cửa sổ. Kéo mép một cột và mở ▦ Columns; mở lại để xác nhận bố cục đã được nhớ.'
       ),
       bs(
-        'Settings → Account Control → Sessions tab (chỉ sys) — verify thấy 2 sessions; click Revoke để kick session kia.',
-        'Settings → Account Control → Sessions tab (chỉ sys) — verify thấy 2 sessions; click Revoke để kick session kia.'
+        'Quote History → right-click a quote → Export. Open the file: five sheets, and 01 Layout shows Parts in MD between Print Cav Across and Print Total / Shot.',
+        'Quote History → chuột phải một báo giá → Export. Mở file: năm sheet, và 01 Layout có Parts in MD nằm giữa Print Cav Across và Print Total / Shot.'
       ),
       bs(
-        'Settings → Backup / Restore → click "📤 Upload từ máy khác…" để test restore từ snapshot ngoài.',
-        'Settings → Backup / Restore → click "📤 Upload từ máy khác…" để test restore từ snapshot ngoài.'
+        'Start a new quote and try to leave the RFQ & MOQ tab with a field blank — a dialog should name exactly what is missing.',
+        'Tạo báo giá mới rồi thử rời tab RFQ & MOQ khi còn ô trống — một hộp thoại phải nêu đúng ô nào đang thiếu.'
       ),
     ],
     keyFields: [],
     formulas: [],
     tips: [
       bt(
-        'SSE real-time push only works when server + client share the same origin or proxy passes Connection: keep-alive (default). nginx behind Caddy: ensure no buffering on /api/events/stream.',
-        'SSE real-time push chỉ hoạt động khi server + client cùng origin hoặc proxy pass Connection: keep-alive (mặc định). nginx sau Caddy: đảm bảo không buffer trên /api/events/stream.'
+        'Trade terms stay in English on purpose: MOQ, EAU, Tier, Coverage, QPA, LM, UPH, IFS, DRW, Pitch, Offcut, Slit, Cav., Eff%, Clicks, Setup LM. They are the words the team says out loud, and a column head that grows longer would push the numbers off screen.',
+        'Thuật ngữ ngành cố ý giữ tiếng Anh: MOQ, EAU, Tier, Coverage, QPA, LM, UPH, IFS, DRW, Pitch, Offcut, Slit, Cav., Eff%, Clicks, Setup LM. Đó là những từ cả nhóm nói hằng ngày, và tên cột dài thêm sẽ đẩy các ô số ra ngoài màn hình.'
       ),
       bt(
-        "Login anomaly thresholds tuned for low false-positive: night-shift operators won't fire after 3 nights of normal shift logins (history baseline).",
-        'Threshold anomaly tuned để false-positive thấp: operator ca đêm sẽ không trigger sau 3 đêm login bình thường (baseline history).'
+        'The Formal Quotation body stays English even in Vietnamese mode. That screen IS the printed document — only its toolbar and dialogs are translated, so a Vietnamese UI can never hand a Vietnamese quotation to an international customer.',
+        'Phần thân Formal Quotation vẫn tiếng Anh kể cả khi đang ở chế độ tiếng Việt. Màn đó CHÍNH LÀ văn bản in ra — chỉ thanh công cụ và hộp thoại được dịch, nên giao diện tiếng Việt không bao giờ gửi một bản báo giá tiếng Việt cho khách quốc tế.'
       ),
       bt(
-        'SQLite backend gives 5-10× faster list queries (indexed columns) vs JSON scan. Switch back to file via OPS_DATA_BACKEND=file env if SQLite issue.',
-        'Backend SQLite cho list query nhanh 5-10× (cột indexed) so với scan JSON. Quay lại file qua env OPS_DATA_BACKEND=file nếu SQLite lỗi.'
+        'Help search still reads BOTH languages, so you can type an English field name while the interface is in Vietnamese and still find the entry.',
+        'Ô tìm trong Help vẫn đọc CẢ HAI ngôn ngữ, nên bạn có thể gõ tên trường tiếng Anh trong khi giao diện đang tiếng Việt mà vẫn tìm ra mục cần.'
       ),
       bt(
-        'Sessions tab is sys-only (not admin). Grant sys role only to ops/IT.',
-        'Tab Sessions chỉ sys (không phải admin). Cấp role sys chỉ cho ops/IT.'
+        'Full detail for this release, including the operator and admin guides for Pricing Snapshot, is in RELEASE-NOTES-v1.6.0.md and docs/cutover/ in the repository.',
+        'Chi tiết đầy đủ của bản này, gồm hướng dẫn cho operator và admin về Pricing Snapshot, nằm trong RELEASE-NOTES-v1.6.0.md và docs/cutover/ của repository.'
       ),
     ],
     pitfalls: [
       bp(
-        "SQLite cutover: JSON file is still mirrored as backup safety net. Don't delete quote_history.json manually — let the next /save-all rewrite it.",
-        'Cutover SQLite: file JSON vẫn mirror làm safety net. Đừng xoá quote_history.json bằng tay — để /save-all kế tự ghi lại.'
+        'Exporting from Cost Breakdown now writes every MOQ tier of the quote you ticked, not just that row. Rows your current filter hides still stay out of the file — the export never writes something you cannot see on screen.',
+        'Xuất từ Cost Breakdown nay ghi mọi bậc MOQ của báo giá bạn tick, không chỉ dòng đó. Những dòng đang bị bộ lọc ẩn vẫn không vào file — bản xuất không bao giờ ghi thứ bạn không nhìn thấy trên màn hình.'
       ),
       bp(
-        'Revoking sessions kills the user instantly on every machine. Communicate before doing it on a prod user mid-shift.',
-        'Revoke session kill user ngay trên mọi máy. Báo trước khi làm với prod user giữa ca.'
+        'The RFQ required-field rule blocks NAVIGATION, not Save. Quotes created before v1.6 can still be opened and saved with those fields empty; fill them before trusting the numbers.',
+        'Quy tắc bắt buộc ở tab RFQ chặn CHUYỂN TAB, không chặn Lưu. Báo giá tạo trước v1.6 vẫn mở và lưu được dù các ô đó trống; hãy điền đủ trước khi tin vào các con số.'
       ),
       bp(
-        "SSE doesn't survive nginx default buffering. If clients show stale data despite save, check proxy_buffering off; on /api/events/stream location.",
-        'SSE không sống sót qua nginx buffering mặc định. Nếu client thấy data cũ dù đã save, check proxy_buffering off; ở location /api/events/stream.'
+        'If a screen still shows English after switching language, it is a gap worth reporting rather than a setting. Send the screen name and a screenshot — the translation is enforced by a test, so a miss means a surface nobody listed.',
+        'Nếu một màn vẫn hiện tiếng Anh sau khi đổi ngôn ngữ, đó là lỗ hổng đáng báo chứ không phải do cài đặt. Gửi tên màn và ảnh chụp — phần dịch được một test canh giữ, nên sót nghĩa là có bề mặt chưa ai liệt kê.'
       ),
     ],
-    relatedTabs: ['help', 'settings-account-control', 'settings-backup-restore', 'metrics'],
+    relatedTabs: ['help', 'settings-account-control', 'summarize', 'quote-history'],
     screenshot: null,
   },
 
