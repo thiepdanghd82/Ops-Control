@@ -178,7 +178,7 @@ export default function Sidebar({
               </svg>
             </span>
             <span className="sidebar-title">
-              <span className="sidebar-app-name">CCL- NPI Costing module</span>
+              <span className="sidebar-app-name">CCL - NPI Costing module</span>
             </span>
           </button>
           {/* Collapse toggle — IBM Carbon chevron pattern. Sits at the

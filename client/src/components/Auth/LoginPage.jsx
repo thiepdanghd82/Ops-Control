@@ -837,7 +837,7 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
                   ? t('login.change.toggle')
                   : t('login.heading.signin')}
           </h1>
-          <p className="cb-card-sub">CCL- NPI Costing module · {serverInfo.version}</p>
+          <p className="cb-card-sub">CCL - NPI Costing module · {serverInfo.version}</p>
 
           {compact && (
             <p className="cb-card-hint">

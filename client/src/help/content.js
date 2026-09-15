@@ -257,7 +257,7 @@ export const HELP_CONTENT = {
       'Trang dashboard ngay sau khi đăng nhập. Hiển thị khối lượng công việc hiện tại + quick actions cho thao tác thường dùng. Bố cục co giãn theo kích thước cửa sổ và trạng thái sidebar — chạy mượt từ laptop 13" đến màn 4K / ultrawide.'
     ),
     whenToUse: bi(
-      'Every login. Daily morning routine to scan workload + open the day plan. Click the "CCL- NPI Costing module" logo (top-left of the sidebar) anytime to return here from any other tab.',
+      'Every login. Daily morning routine to scan workload + open the day plan. Click the "CCL - NPI Costing module" logo (top-left of the sidebar) anytime to return here from any other tab.',
       'Mỗi lần đăng nhập. Routine buổi sáng để quét khối lượng công việc + mở kế hoạch ngày. Click logo "Ops Control" (góc trên-trái sidebar) bất cứ lúc nào để quay về Home từ bất kỳ tab nào.'
     ),
     preRequisites: [],
@@ -283,8 +283,8 @@ export const HELP_CONTENT = {
         'Quick Actions (6 nút) — New Quote · New Order · RFQ Tracker · Approvals · IFS Inventory · Help. Theo quyền: ẩn nếu role không có truy cập.'
       ),
       feat(
-        'Sidebar logo → Home — click the "CCL- NPI Costing module" wordmark in the sidebar header to return to Home from any tab.',
-        'Logo sidebar → Home — click chữ "CCL- NPI Costing module" ở phần đầu sidebar để quay về Home từ tab bất kỳ.'
+        'Sidebar logo → Home — click the "CCL - NPI Costing module" wordmark in the sidebar header to return to Home from any tab.',
+        'Logo sidebar → Home — click chữ "CCL - NPI Costing module" ở phần đầu sidebar để quay về Home từ tab bất kỳ.'
       ),
       feat(
         'Auto-redirect after login — successful sign-in lands you on Home regardless of last-active-tab. Covers fresh logins + post-logout returns.',
@@ -310,8 +310,8 @@ export const HELP_CONTENT = {
         'Dùng lưới Modules HOẶC Quick Actions để vào workflow (vd New Quote).'
       ),
       bs(
-        'Click the "CCL- NPI Costing module" logo in the sidebar header anytime to return here.',
-        'Click logo "CCL- NPI Costing module" ở đầu sidebar bất kỳ lúc nào để quay lại đây.'
+        'Click the "CCL - NPI Costing module" logo in the sidebar header anytime to return here.',
+        'Click logo "CCL - NPI Costing module" ở đầu sidebar bất kỳ lúc nào để quay lại đây.'
       ),
     ],
     keyFields: [],
