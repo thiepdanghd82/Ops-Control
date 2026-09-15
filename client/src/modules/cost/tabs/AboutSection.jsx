@@ -185,7 +185,7 @@ export default function AboutSection() {
 
   return (
     <div className="about-section">
-      <h2 className="about-title">ℹ About — Ops Control</h2>
+      <h2 className="about-title">ℹ About — CCL- NPI Costing module</h2>
 
       {/* ─── Version & Build ─── */}
       <div className="about-card">

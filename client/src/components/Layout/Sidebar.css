@@ -71,10 +71,11 @@
 }
 
 .sidebar-app-name {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.3px;
+  line-height: 1.2;
 }
 
 .sidebar-app-ver {
