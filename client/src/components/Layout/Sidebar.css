@@ -624,3 +624,75 @@
   margin-left: auto;
   flex: 0 0 auto;
 }
+
+/* ── Auto-hide mode (2026-09-15) ────────────────────────────────────────
+   The sidebar leaves the layout's flex row and slides OVER the work area.
+   Overlaying is the point: if revealing it widened the row instead, every
+   hover near the left edge would reflow the table underneath and the row
+   under the cursor would jump. `position: fixed` also means the work area
+   is already full-width while hidden — nothing to animate on the right. */
+.app-layout.sidebar-auto .sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  /* Above the MDI window layer (.opswin-window is 4500) — none of the
+     ancestors create a stacking context, so that 4500 competes at the
+     root and would otherwise paint straight over this overlay. Below the
+     modal/banner tier (9999+), which must still cover the sidebar. */
+  z-index: 5000;
+  transform: translateX(-100%);
+  transition: transform 0.18s ease;
+}
+
+.app-layout.sidebar-auto .sidebar.sidebar-revealed {
+  transform: translateX(0);
+  box-shadow: 4px 0 24px rgb(15 35 65 / 28%);
+}
+
+/* The strip that brings it back. Rendered only while hidden, so it can
+   never sit on top of a revealed sidebar and swallow the first nav click.
+   8px is wide enough to hit by throwing the pointer at the screen edge
+   without being wide enough to trigger while reading the left column. */
+/* The way back. This was an invisible 8px strip and that was wrong twice
+   over: it sat UNDER the MDI windows so it never received the pointer, and
+   even fixed, nothing on screen told you the sidebar was still there — the
+   only control that leaves auto-hide lives inside the thing that hid. It is
+   now a real, visible button, one z-layer under the sidebar it opens. */
+.sidebar-edge-handle {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  z-index: 4999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid rgb(255 255 255 / 12%);
+  background: #1e3a5f;
+  color: rgb(255 255 255 / 70%);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.sidebar-edge-handle:hover,
+.sidebar-edge-handle:focus-visible {
+  background: #2a4f7c;
+  color: #fff;
+}
+
+/* Pin / unpin lives beside the collapse chevron and uses its styling. */
+.sidebar-pin-btn.is-unpinned {
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-layout.sidebar-auto .sidebar {
+    transition: none;
+  }
+}

@@ -10,6 +10,11 @@ import LoginPage from './components/Auth/LoginPage';
 import AppBootstrap from './components/Auth/AppBootstrap';
 import { LibraryPickerProvider } from './components/LibraryPicker/LibraryPicker';
 import Sidebar from './components/Layout/Sidebar';
+import {
+  AUTO_HIDE_KEY,
+  resolveSidebarLayout,
+  shouldHideOnPointerDown,
+} from './components/Layout/sidebarAutoHide';
 import TopBar from './components/Layout/TopBar';
 import WarningBar from './components/Layout/WarningBar';
 import PwdAgeBanner from './components/Layout/PwdAgeBanner';
@@ -48,6 +53,7 @@ if (typeof window !== 'undefined') {
 const LS_MODULE_KEY = 'ops_active_module';
 const LS_TAB_KEY = 'ops_active_tab';
 const LS_SIDEBAR_COLLAPSED = 'ops_sidebar_collapsed';
+
 function readLS(key, fallback) {
   try {
     const v = localStorage.getItem(key);
@@ -99,6 +105,15 @@ function AppShell() {
     return typeof window !== 'undefined' && window.innerWidth < 1400;
   });
 
+  // Auto-hide — a THIRD sidebar mode, orthogonal to the width choice
+  // above: `sidebarCollapsed` says how wide, this says whether it takes
+  // up room at all. Off by default; nobody gets a disappearing sidebar
+  // they did not ask for.
+  const [sidebarAutoHide, setSidebarAutoHide] = useState(() => readLS(AUTO_HIDE_KEY, null) === '1');
+  // Not persisted — a peek is a moment, not a preference.
+  const [sidebarRevealed, setSidebarRevealed] = useState(false);
+  const sidebarWrapRef = useRef(null);
+
   // Mirror module/tab back to localStorage so subsequent reloads land
   // on the same screen.
   useEffect(() => {
@@ -110,6 +125,26 @@ function AppShell() {
   useEffect(() => {
     writeLS(LS_SIDEBAR_COLLAPSED, sidebarCollapsed ? '1' : '0');
   }, [sidebarCollapsed]);
+  useEffect(() => {
+    writeLS(AUTO_HIDE_KEY, sidebarAutoHide ? '1' : '0');
+    // Leaving auto-hide must not strand the reveal flag on; re-entering it
+    // should start hidden rather than half-open.
+    setSidebarRevealed(false);
+  }, [sidebarAutoHide]);
+
+  // "When you select the work area, it hides." pointerdown rather than
+  // click so the sidebar is gone before the work area repaints, and
+  // capture so a handler that stops propagation cannot keep it open.
+  useEffect(() => {
+    if (!sidebarAutoHide || !sidebarRevealed) return undefined;
+    const onDown = (e) => {
+      if (shouldHideOnPointerDown(e.target, sidebarWrapRef.current)) {
+        setSidebarRevealed(false);
+      }
+    };
+    document.addEventListener('pointerdown', onDown, true);
+    return () => document.removeEventListener('pointerdown', onDown, true);
+  }, [sidebarAutoHide, sidebarRevealed]);
 
   // Sprint S-HOME — every fresh login lands on the Home dashboard.
   // Detect the false → true transition of `isAuthenticated` (don't fire
@@ -244,7 +279,16 @@ function AppShell() {
   return (
     <AppBootstrap>
       <LibraryPickerProvider>
-        <div className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        <div
+          className={
+            resolveSidebarLayout({
+              autoHide: sidebarAutoHide,
+              collapsed: sidebarCollapsed,
+              revealed: sidebarRevealed,
+            }).layout
+          }
+          ref={sidebarWrapRef}
+        >
           {/* Shell widgets each wrapped so a crash in one (e.g. Sidebar
           context desync, TopBar notification poll, WarningBar selector)
           doesn't blank the whole app. Fallback renders null — losing a
@@ -257,6 +301,11 @@ function AppShell() {
               onTabChange={handleSidebarTab}
               collapsed={sidebarCollapsed}
               onToggleCollapsed={() => setSidebarCollapsed((c) => !c)}
+              autoHide={sidebarAutoHide}
+              revealed={sidebarRevealed}
+              onToggleAutoHide={() => setSidebarAutoHide((v) => !v)}
+              onReveal={() => setSidebarRevealed(true)}
+              onHide={() => setSidebarRevealed(false)}
             />
           </ErrorBoundary>
           <div className="app-main">
