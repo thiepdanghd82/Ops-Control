@@ -131,9 +131,9 @@ export default function ProvisioningCard({
 
             <ol className="prov-card-steps">
               <li>
-                <b>Open</b> the Ops Control app
+                <b>Open</b> the CCL- NPI Costing module app
                 <br />
-                <span className="prov-card-steps-vi">Mở ứng dụng Ops Control</span>
+                <span className="prov-card-steps-vi">Mở ứng dụng CCL- NPI Costing module</span>
               </li>
               <li>
                 <b>Sign in</b> with the username and temp password above

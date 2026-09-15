@@ -15,7 +15,7 @@
 
 import { useEffect } from 'react';
 
-const APP_SUFFIX = 'Ops Control';
+const APP_SUFFIX = 'CCL- NPI Costing module';
 
 export function useDocumentTitle(label, scope = '') {
   useEffect(() => {

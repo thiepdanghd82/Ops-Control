@@ -388,7 +388,7 @@ function ProfileSection({ user }) {
       </h3>
       <div className="settings-card about-card">
         <p>
-          <strong>Ops Control</strong> v
+          <strong>CCL- NPI Costing module</strong> v
           {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'}
         </p>
         <p>{t('set.platform_tagline')}</p>
