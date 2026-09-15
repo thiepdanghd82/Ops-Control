@@ -139,6 +139,8 @@ export const STRINGS = {
     vi: 'Đang ẩn với người dùng khác (Điều khiển Hệ thống)',
   },
   // Footer status — operator-visible at all times.
+  'nav.sidebar.pin': { en: 'Pin the sidebar open', vi: 'Ghim thanh bên luôn hiện' },
+  'nav.sidebar.unpin': { en: 'Auto-hide the sidebar', vi: 'Tự ẩn thanh bên' },
   'nav.footer.me_tag': { en: '(me)', vi: '(tôi)' },
   'nav.footer.active_now': { en: 'Active now', vi: 'Đang hoạt động' },
 

@@ -624,3 +624,48 @@
   margin-left: auto;
   flex: 0 0 auto;
 }
+
+/* ── Auto-hide mode (2026-09-15) ────────────────────────────────────────
+   The sidebar leaves the layout's flex row and slides OVER the work area.
+   Overlaying is the point: if revealing it widened the row instead, every
+   hover near the left edge would reflow the table underneath and the row
+   under the cursor would jump. `position: fixed` also means the work area
+   is already full-width while hidden — nothing to animate on the right. */
+.app-layout.sidebar-auto .sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 60;
+  transform: translateX(-100%);
+  transition: transform 0.18s ease;
+}
+
+.app-layout.sidebar-auto .sidebar.sidebar-revealed {
+  transform: translateX(0);
+  box-shadow: 4px 0 24px rgb(15 35 65 / 28%);
+}
+
+/* The strip that brings it back. Rendered only while hidden, so it can
+   never sit on top of a revealed sidebar and swallow the first nav click.
+   8px is wide enough to hit by throwing the pointer at the screen edge
+   without being wide enough to trigger while reading the left column. */
+.sidebar-edge-hotzone {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  z-index: 59;
+}
+
+/* Pin / unpin lives beside the collapse chevron and uses its styling. */
+.sidebar-pin-btn.is-unpinned {
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-layout.sidebar-auto .sidebar {
+    transition: none;
+  }
+}

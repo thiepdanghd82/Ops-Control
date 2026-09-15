@@ -12,6 +12,8 @@ import { SidebarIcon } from './SidebarIcon.jsx';
 import { COST_SECTIONS, applySidebarVisibility } from './sidebarSections.js';
 import './Sidebar.css';
 
+import { resolveSidebarLayout } from './sidebarAutoHide';
+
 const COLLAPSE_KEY = 'opsctl.sidebar.section-collapsed.v1';
 
 function loadCollapsedSections() {
@@ -29,6 +31,11 @@ export default function Sidebar({
   onModuleChange,
   onTabChange,
   collapsed = false,
+  autoHide = false,
+  revealed = false,
+  onToggleAutoHide,
+  onReveal,
+  onHide,
   onToggleCollapsed,
 }) {
   const { user, hasModule, logout } = useAuth();
@@ -62,6 +69,7 @@ export default function Sidebar({
   // Persists per section ID across reloads via localStorage so the
   // operator's last layout sticks.
   const [collapsedSections, setCollapsedSections] = useState(loadCollapsedSections);
+  const { aside: asideClass, inert } = resolveSidebarLayout({ autoHide, collapsed, revealed });
   const toggleSection = useCallback((id) => {
     setCollapsedSections((prev) => {
       const next = new Set(prev);
@@ -124,7 +132,14 @@ export default function Sidebar({
   }
 
   return (
-    <aside className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''}`}>
+    <aside
+      className={asideClass}
+      inert={inert || undefined}
+      onMouseLeave={autoHide ? onHide : undefined}
+      // Tabbing into the off-canvas nav must bring it on screen, or a
+      // keyboard user would be driving something they cannot see.
+      onFocusCapture={autoHide ? onReveal : undefined}
+    >
       {/* Header — logo + title click → Home (S-HOME, 2026-05-08) */}
       <div className="sidebar-header">
         <button
@@ -158,6 +173,18 @@ export default function Sidebar({
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             <span aria-hidden="true">{collapsed ? '⏵' : '⏴'}</span>
+          </button>
+        )}
+        {onToggleAutoHide && (
+          <button
+            type="button"
+            className={`sidebar-collapse-btn sidebar-pin-btn ${autoHide ? 'is-unpinned' : ''}`}
+            onClick={onToggleAutoHide}
+            aria-pressed={autoHide}
+            aria-label={autoHide ? t('nav.sidebar.pin') : t('nav.sidebar.unpin')}
+            title={autoHide ? t('nav.sidebar.pin') : t('nav.sidebar.unpin')}
+          >
+            <span aria-hidden="true">{autoHide ? '📌' : '📍'}</span>
           </button>
         )}
       </div>
