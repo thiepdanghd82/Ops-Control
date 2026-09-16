@@ -3085,3 +3085,26 @@ button.acct-approval-pill.on:hover {
   color: #d1d5db;
   border-color: rgba(156, 163, 175, 0.35);
 }
+
+/* Off-site mirror health on the Backup card.
+   'bad' is red rather than amber on purpose: "the mirror has never worked"
+   is not a caution, it means every backup is on one disk. */
+.bk-offsite {
+  margin-top: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.bk-offsite-ok {
+  color: var(--color-success, #198038);
+}
+.bk-offsite-warn {
+  color: var(--color-warning, #b28600);
+  font-weight: 600;
+}
+.bk-offsite-bad {
+  color: var(--color-danger, #da1e28);
+  font-weight: 700;
+}
+.bk-offsite-none {
+  color: var(--color-text-muted, #6f6f6f);
+}

@@ -352,3 +352,46 @@ test('the status card and every prune step report the SAME retention', async () 
     teardown(tmpDir);
   }
 });
+
+// ── What the REAL tarball contains ────────────────────────────────────
+// The P1-8 test above runs its own copy of the tar command, so editing
+// tarLibrary() without editing that test leaves it green. This one drives
+// runBackupCycle and opens what actually shipped.
+
+test('the tarball the cycle really produces carries no credentials it cannot use', async () => {
+  const { tmpDir, dataDir } = setupTempDataDir('tarsecrets');
+  try {
+    // setupTempDataDir already seeds totp_secrets.enc + users.json.
+    fs.writeFileSync(
+      path.join(dataDir, 'Library', 'Users', 'sessions.json'),
+      JSON.stringify({ 'tok-LIVE-BEARER': { username: 'henry' } })
+    );
+
+    const summary = await runBackupCycle({ force: true });
+    const step = summary.steps.find((s) => s.name === 'library');
+    assert.equal(step.ok, true, `library step failed: ${JSON.stringify(step)}`);
+
+    const listing = execSync(`tar tzf "${step.file}"`, { encoding: 'utf-8' })
+      .split('\n')
+      .filter(Boolean);
+
+    assert.deepEqual(
+      listing.filter((l) => l.includes('sessions.json')),
+      [],
+      'live bearer tokens must not ride along in a backup'
+    );
+    assert.deepEqual(
+      listing.filter((l) => l.includes('totp_secrets')),
+      [],
+      'TOTP secrets stay out (P1-8) — undecryptable under a different OPS_TOTP_KEY'
+    );
+    // users.json is the line between "no useless credentials" and "cannot
+    // restore logins". It must still be in there.
+    assert.ok(
+      listing.some((l) => l.includes('users.json')),
+      `users.json is required to restore accounts — got: ${listing.join(' | ')}`
+    );
+  } finally {
+    teardown(tmpDir);
+  }
+});

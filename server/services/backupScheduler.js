@@ -36,6 +36,7 @@ import { getDb, getDbPath } from '../db/connection.js';
 // silently swallow backup failures, and so the local backup directory
 // doesn't grow without bound.
 import { pruneOldBackups, getRetentionSettings, getBackupRoot } from '../utils/backupPath.js';
+import { readOffsiteStatus, resolveOffsiteHealth } from './offsiteStatus.js';
 import { audit } from './authService.js';
 
 let _timer = null;
@@ -234,9 +235,16 @@ function tarLibrary() {
     // brick all 2FA because the encrypted secrets won't decrypt with
     // the new key. Excluding them means users re-enroll on restore —
     // operationally cleaner than half-broken 2FA.
+    // sessions.json holds LIVE bearer tokens. They have no restore value —
+    // a restored server issues new sessions and these are already invalid —
+    // but they travel inside every copy of this tarball, including any that
+    // leaves the box. A credential with no recovery use has no business in
+    // a backup. (users.json stays: password hashes ARE needed to restore
+    // accounts, and a tarball that cannot restore logins is not a backup.)
     execSync(
       `tar czf "${outFile}" -C "${dataRoot}" ` +
         `--exclude='Library/Users/totp_secrets*' ` +
+        `--exclude='Library/Users/sessions.json' ` +
         `Library`,
       {
         stdio: 'pipe',
@@ -533,6 +541,10 @@ export function getStatus() {
     // "Open backup folder" button + count badge.
     backupRoot: backupDir(),
     counts: countBackups(),
+    // The off-site mirror is a separate LaunchAgent, but this card is where
+    // someone looks to ask "are my backups safe". Leaving it out is how a
+    // mirror can fail for 84 days without anyone noticing.
+    offsite: resolveOffsiteHealth(readOffsiteStatus(path.dirname(getDbPath()))),
   };
 }
 

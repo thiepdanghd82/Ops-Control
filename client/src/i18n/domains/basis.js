@@ -88,6 +88,23 @@ registerStrings({
   'set.reload_backup_list': { en: 'Reload backup list', vi: 'Tải lại danh sách sao lưu' },
   'set.enable_nightly': { en: 'Enable nightly backup', vi: 'Bật sao lưu hằng đêm' },
   'set.scheduled_backup': { en: 'Scheduled backup', vi: 'Sao lưu định kỳ' },
+  // Off-site mirror health on the Backup card. 'never' is deliberately the
+  // loudest of these: a job that runs on time and has never once succeeded
+  // is the failure mode that hid for 84 days.
+  'set.offsite': { en: 'Off-site', vi: 'Bản sao ngoài máy' },
+  'set.offsite.ok': { en: 'OK', vi: 'Bình thường' },
+  'set.offsite.stale': { en: 'no successful copy for', vi: 'chưa sao chép thành công trong' },
+  'set.offsite.never': {
+    en: 'NEVER succeeded — backups exist only on this disk',
+    vi: 'CHƯA BAO GIỜ thành công — backup chỉ nằm trên ổ đĩa này',
+  },
+  'set.offsite.last_failed': {
+    en: 'mirror is current but the last attempt failed',
+    vi: 'bản sao còn mới nhưng lần chạy gần nhất thất bại',
+  },
+  'set.offsite.bad_time': { en: 'unreadable timestamp', vi: 'dấu thời gian không đọc được' },
+  'set.offsite.none': { en: 'not configured', vi: 'chưa thiết lập' },
+  'set.offsite.ago': { en: 'ago', vi: 'trước' },
   'set.run_at_hour': { en: 'Run at hour', vi: 'Chạy lúc giờ' },
   'set.retention_days': { en: 'Retention (days)', vi: 'Giữ lại (ngày)' },
   'set.last_run': { en: 'Last run:', vi: 'Chạy lần cuối:' },
