@@ -50,22 +50,11 @@ export async function backupOpsDb({ force = false } = {}) {
     await db.backup(dest);
     const sizeMb = (fs.statSync(dest).size / 1024 / 1024).toFixed(1);
 
-    // Retention prune
-    const retentionDays = Number(process.env.OPS_BACKUP_RETENTION_DAYS || 30);
-    const cutoffMs = Date.now() - retentionDays * 86400000;
-    let pruned = 0;
-    for (const f of fs.readdirSync(dir)) {
-      if (!f.startsWith('ops_') || !f.endsWith('.sqlite')) continue;
-      const fp = path.join(dir, f);
-      try {
-        if (fs.statSync(fp).mtimeMs < cutoffMs) {
-          fs.unlinkSync(fp);
-          pruned++;
-        }
-      } catch {
-        /* best-effort */
-      }
-    }
+    // Retention prune — see pruneSqliteBackups below for why the
+    // sidecars matter.
+    const { pruned } = pruneSqliteBackups(dir, {
+      retentionDays: Number(process.env.OPS_BACKUP_RETENTION_DAYS || 30),
+    });
 
     // `file` is the basename (legacy callers); `path` is the absolute path
     // (added 2026-05-08 — verifyBackup needs the full path to call
@@ -75,4 +64,74 @@ export async function backupOpsDb({ force = false } = {}) {
   } catch (err) {
     return { ok: false, error: err.message };
   }
+}
+
+/**
+ * Delete expired `ops_*.sqlite` backups, and never leave a sidecar behind.
+ *
+ * SQLite writes `<name>-shm` and `<name>-wal` beside a database. This prune
+ * used to filter on `.endsWith('.sqlite')`, so every backup it deleted
+ * abandoned both companions permanently — 136 orphans against 25 real
+ * backups on the live box. Harmless for disk (2.8 MB), but it made the
+ * directory report 205 files when only 25 were backups, which is exactly
+ * the kind of number that sends someone chasing a bug that is not there.
+ *
+ * One rule covers both halves: **a sidecar with no parent `.sqlite` is
+ * deleted**. A fresh prune therefore never orphans anything, and the
+ * orphans already on disk are swept on the next cycle without a migration.
+ *
+ * Only `ops_*` files are ever touched — anything else in the directory
+ * belongs to someone else.
+ *
+ * @param {string} dir  the SQLite backup directory
+ * @param {{retentionDays?: number}} opts
+ * @returns {{pruned: number, orphansSwept: number}}
+ */
+export function pruneSqliteBackups(dir, { retentionDays = 30 } = {}) {
+  const result = { pruned: 0, orphansSwept: 0 };
+  let names;
+  try {
+    names = fs.readdirSync(dir);
+  } catch {
+    return result; // directory not created yet — nothing to do
+  }
+
+  const cutoffMs = Date.now() - retentionDays * 86400000;
+  const rm = (p) => {
+    try {
+      fs.unlinkSync(p);
+      return true;
+    } catch {
+      return false; // best-effort: a locked or already-gone file is not fatal
+    }
+  };
+
+  // 1. Expired backups, each taking its own sidecars with it.
+  for (const f of names) {
+    if (!f.startsWith('ops_') || !f.endsWith('.sqlite')) continue;
+    const fp = path.join(dir, f);
+    try {
+      if (fs.statSync(fp).mtimeMs >= cutoffMs) continue;
+    } catch {
+      continue;
+    }
+    // Only the backup itself — the sweep below takes its sidecars, since
+    // deleting the parent is precisely what orphans them. Doing it here
+    // as well passed every test either way, which is how I noticed it was
+    // two mechanisms for one rule.
+    if (rm(fp)) result.pruned++;
+  }
+
+  // 2. Sidecars whose parent is gone. This covers BOTH halves: the ones
+  //    just orphaned by step 1, and the 136 left behind by the older
+  //    prune, which nothing else would ever remove.
+  for (const f of names) {
+    if (!f.startsWith('ops_')) continue;
+    const suffix = f.endsWith('-shm') ? '-shm' : f.endsWith('-wal') ? '-wal' : null;
+    if (!suffix) continue;
+    if (fs.existsSync(path.join(dir, f.slice(0, -suffix.length)))) continue;
+    if (rm(path.join(dir, f))) result.orphansSwept++;
+  }
+
+  return result;
 }
