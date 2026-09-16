@@ -732,6 +732,10 @@ registerStrings({
   'matlib.supplier_moq': { en: 'Supplier MOQ', vi: 'MOQ nhà cung cấp' },
   'matlib.country': { en: 'Country', vi: 'Quốc gia' },
   'matlib.currency': { en: 'Currency', vi: 'Tiền tệ' },
+  'matlib.sort_by_date': {
+    en: 'Sort by update date — newest first, click again for oldest first',
+    vi: 'Sắp xếp theo ngày cập nhật — mới nhất trước, bấm lần nữa để cũ nhất trước',
+  },
   'matlib.price': { en: 'Price', vi: 'Giá' },
   'matlib.price_uom': { en: 'Price UoM', vi: 'ĐVT giá' },
   'matlib.price_incl_tax': { en: 'Price incl. Tax', vi: 'Giá đã gồm thuế' },
