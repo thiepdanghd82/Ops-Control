@@ -1,0 +1,606 @@
+diff --git a/client/public/ccl-logo.svg b/client/public/ccl-logo.svg
+new file mode 100644
+index 0000000..d3e0b3c
+--- /dev/null
++++ b/client/public/ccl-logo.svg
+@@ -0,0 +1,11 @@
++<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 80" role="img" aria-label="CCL Design Vietnam">
++  <title>CCL</title>
++  <!-- Wordmark — uses currentColor so callers control light/dark via CSS color -->
++  <text x="0" y="62" font-family="'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="72" letter-spacing="-2" fill="currentColor">CCL</text>
++  <!-- Mark — square + clipped circle. Right-aligned. -->
++  <g transform="translate(190 0)">
++    <rect width="80" height="80" fill="#0e0e0e"/>
++    <circle cx="55" cy="25" r="20" fill="#1f5fd8"/>
++    <polygon points="0,0 52,0 0,52" fill="#ffffff"/>
++  </g>
++</svg>
+diff --git a/client/public/ccl-mark.svg b/client/public/ccl-mark.svg
+new file mode 100644
+index 0000000..5934f33
+--- /dev/null
++++ b/client/public/ccl-mark.svg
+@@ -0,0 +1,6 @@
++<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" role="img" aria-label="CCL mark">
++  <title>CCL</title>
++  <rect width="80" height="80" fill="#0e0e0e"/>
++  <circle cx="55" cy="25" r="20" fill="#1f5fd8"/>
++  <polygon points="0,0 52,0 0,52" fill="#ffffff"/>
++</svg>
+diff --git a/client/src/components/Auth/LoginPage.css b/client/src/components/Auth/LoginPage.css
+index 5da545f..431ee76 100644
+--- a/client/src/components/Auth/LoginPage.css
++++ b/client/src/components/Auth/LoginPage.css
+@@ -543,10 +543,14 @@
+ }
+ .cb-hero-brand-mark {
+   width: 28px; height: 28px;
+-  background: #0f62fe;
+-  display: grid; place-items: center;
+-  color: #fff; font-weight: 700; font-size: 16px;
++  display: inline-flex; align-items: center; justify-content: center;
++  /* Subtle outline so the black square reads against the dark navy hero
++     without losing the white wedge on the inside. */
++  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
++  border-radius: 4px;
++  overflow: hidden;
+ }
++.cb-hero-brand-mark svg { display: block; }
+ .cb-hero-body { position: relative; z-index: 1; max-width: 520px; }
+ .cb-hero-tag {
+   font-size: 12px;
+diff --git a/client/src/components/Auth/LoginPage.jsx b/client/src/components/Auth/LoginPage.jsx
+index c04a314..ccbfb10 100644
+--- a/client/src/components/Auth/LoginPage.jsx
++++ b/client/src/components/Auth/LoginPage.jsx
+@@ -489,7 +489,14 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
+     <aside className="cb-hero" aria-hidden="true">
+       <ParticleCanvas />
+       <div className="cb-hero-brand">
+-        <div className="cb-hero-brand-mark">⌬</div>
++        {/* CCL mark — black square + blue circle + white wedge. Sits well on the dark navy hero. */}
++        <span className="cb-hero-brand-mark" aria-hidden="true">
++          <svg width="28" height="28" viewBox="0 0 80 80" fill="none">
++            <rect width="80" height="80" rx="6" fill="#0e0e0e" />
++            <circle cx="55" cy="25" r="20" fill="#1f5fd8" />
++            <polygon points="0,0 52,0 0,52" fill="#ffffff" />
++          </svg>
++        </span>
+         <span>CCL Design Vietnam</span>
+       </div>
+       <div className="cb-hero-body">
+diff --git a/client/src/components/Layout/Sidebar.jsx b/client/src/components/Layout/Sidebar.jsx
+index 63a4d0a..0ebeae8 100644
+--- a/client/src/components/Layout/Sidebar.jsx
++++ b/client/src/components/Layout/Sidebar.jsx
+@@ -217,11 +217,11 @@ export default function Sidebar({
+           title={t('home.go_to_home') || 'Home'}
+         >
+           <span className="sidebar-logo" aria-hidden="true">
+-            <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+-              <rect width="32" height="32" rx="7" fill="#1e3a5f" />
+-              <rect x="7" y="14" width="4.5" height="12" rx="1.2" fill="#ef4444" />
+-              <rect x="13.75" y="8" width="4.5" height="18" rx="1.2" fill="#22c55e" />
+-              <rect x="20.5" y="11" width="4.5" height="15" rx="1.2" fill="#3b82f6" />
++            {/* CCL mark — black square + blue circle (top-right) + white wedge (top-left). */}
++            <svg width="28" height="28" viewBox="0 0 80 80" fill="none">
++              <rect width="80" height="80" rx="6" fill="#0e0e0e" />
++              <circle cx="55" cy="25" r="20" fill="#1f5fd8" />
++              <polygon points="0,0 52,0 0,52" fill="#ffffff" />
+             </svg>
+           </span>
+           <span className="sidebar-title">
+diff --git a/releases/v1.5.1/DEPLOYMENT.md b/releases/v1.5.1/DEPLOYMENT.md
+new file mode 100644
+index 0000000..cc90d38
+--- /dev/null
++++ b/releases/v1.5.1/DEPLOYMENT.md
+@@ -0,0 +1,198 @@
++# Ops Control v1.5.1 — Deployment Runbook
++
++This runbook covers Phase 2 Day 1 rollout. Follow each section in order; do not skip
++the smoke tests.
++
++---
++
++## 1. Mac operator workstation (admin / sales / quality)
++
++**Target**: macOS 12+ on Apple Silicon (arm64).
++
++1. Copy `OpsControl-Client-v1.5.1-mac-arm64.dmg` to the operator's Mac.
++2. Double-click the DMG → drag **OpsControl CLIENT** to `/Applications`.
++3. Launch from Launchpad (the first launch may show a Gatekeeper prompt — right-click
++   the app, choose **Open**, then confirm).
++4. The smart-client setup wizard runs on first launch:
++   - **Embedded mode** (default): server runs in-process — no remote connection needed.
++   - **Thin mode**: point at the production server URL (e.g. `http://10.102.3.61:3000`).
++
++**Smoke test (matches DMG v13 hardware-test plan that passed 6/6)**:
++- [ ] App launches without "ERR_CONNECTION_REFUSED" or splash crash
++- [ ] Login screen renders; demo creds work (`demo / demo1234`)
++- [ ] Standard Calc tab loads (verifies SQLite + UI bundle)
++- [ ] Layout PDF preview renders in Standard Calc (verifies PR #16 cherry-pick)
++- [ ] RFQ Tracker drawer stays stable through ≥1 60-second auto-refresh tick (verifies PR #16 snapshot)
++- [ ] Sidebar logo click returns to Home (verifies PR #18 click-to-Home)
++
++**Rollback**: keep `desktop/dist-electron-v13/OpsControl-Server-v1.5.1-mac-arm64.dmg`
++(SHA256 `628270e6dc5a2fd79933fccd941a6227442ea46df18e35a88ba4794259f8cd72`) on hand.
++Drop new DMG out of `/Applications`, install v13 from the rollback file.
++
++---
++
++## 2. Windows kiosk (shop floor)
++
++**Target**: Windows 10/11 x64.
++
++1. Copy `OpsControl-Client-v1.5.1-win-x64.exe` to the kiosk PC (USB or shared folder).
++2. Run as Administrator → NSIS wizard → choose install location (default
++   `%LocalAppData%\Programs\OpsControl CLIENT`).
++3. Allow the desktop shortcut + Start Menu entry.
++4. First launch — same setup wizard as Mac:
++   - For shop-floor kiosks pointing at the central server, choose **Thin mode** + server
++     URL `http://10.102.3.61:3000`.
++
++**Smoke test**:
++- [ ] App launches without DLL-load failure or "module not found"
++- [ ] Login + Standard Calc same as Mac
++- [ ] Hardware: scanner / serial label printer detected (Hardware tab in Settings)
++
++**If launch fails with `better_sqlite3.node` error**: this build's native binary is
++PE32+ x86-64. Verify with `file resources\app\node_modules\better-sqlite3\build\Release\better_sqlite3.node`
++inside the install dir. If the binary is wrong, build on a Windows host (see §4).
++
++**Rollback**: each Windows install keeps the previous `app.asar` in
++`%LocalAppData%\Programs\OpsControl CLIENT\resources\` if the user ran v1.5.0 first.
++Otherwise reinstall the previous v1.5.0 EXE from the offsite backup.
++
++---
++
++## 3. Production server (remote Windows at 10.102.3.61:3000)
++
++**Important**: this is a **Node.js Express server**, NOT a packaged Electron app.
++Deploys via `deploy.ps1` from the repo working tree.
++
++**Pre-deploy checklist**:
++- [ ] Confirm the deploy.ps1 target IP in the script header (`$ServerHost`)
++- [ ] Confirm `OPS_TOTP_KEY` is preserved in remote `.env` (Sprint 1.7 gate; misset key
++      bricks every user's 2FA — see CLAUDE.md "TOTP key rotation runbook")
++- [ ] Confirm latest backup exists in `\\<server>\backups\ops-control\` and is < 24h old
++- [ ] Run `npm run preflight` locally to validate the env
++
++**Deploy steps**:
++1. From a Windows admin workstation with PowerShell:
++   ```powershell
++   cd C:\Path\To\Ops Control v1.2
++   git checkout main
++   git pull
++   git rev-parse HEAD   # confirm = ccf49fe or newer
++   .\deploy.ps1 -ServerHost user@10.102.3.61
++   ```
++2. The script:
++   - Snapshots live `/opt/ops-control` to `/opt/ops-control/releases/<timestamp>/` (5-snapshot retention)
++   - MERGES new `.env` into existing (preserves `OPS_TOTP_KEY`)
++   - Runs preflight gate; aborts on validation failure
++   - Stops the service, rsyncs new code, starts the service
++3. Watch the logs:
++   ```powershell
++   ssh user@10.102.3.61 "Get-EventLog -LogName Application -Source 'NSSM' -Newest 30"
++   # Or the service log file directly
++   ```
++4. Confirm `🔐 TOTP boot probe OK — N user(s) enrolled, key fp …` in the boot log.
++
++**Smoke test (production)**:
++- [ ] `curl http://10.102.3.61:3000/health` returns `{"status":"ok",...}`
++- [ ] `curl http://10.102.3.61:3000/ready` returns 200
++- [ ] Login from a browser at `http://10.102.3.61:3000/`
++- [ ] Existing user can pass 2FA (proves OPS_TOTP_KEY preserved)
++- [ ] Quote History loads (proves SQLite + Library/ data intact)
++
++**Rollback bad deploy** (per CLAUDE.md "Bad deploy" runbook):
++```powershell
++ssh user@10.102.3.61
++sudo systemctl stop ops-control   # or: nssm stop ops-control
++ls /opt/ops-control/releases       # pick previous timestamp dir
++PREV=20260508-200000               # immediately before the bad deploy
++cd /opt/ops-control
++cp -R releases/$PREV/server releases/$PREV/client releases/$PREV/scripts ./
++cp releases/$PREV/package.json releases/$PREV/package-lock.json ./
++sudo systemctl start ops-control
++```
++
++---
++
++## 4. Build Windows EXE on a Windows host (fallback)
++
++The Mac-host cross-build that produced `releases/v1.5.1/OpsControl-*-win-x64.exe` works
++because better-sqlite3 ships prebuilt PE32+ x64 binaries via npm. If a future native
++dep doesn't have prebuilds, cross-build from Mac will fail with
++`node-gyp does not support cross-compiling native modules from source`.
++
++In that case, build on Windows directly:
++
++```powershell
++# On a Windows 10/11 x64 dev machine with Node 24 + Visual Studio Build Tools 2022
++cd C:\Build\OpsControl
++git clone https://github.com/thiepdanghd82/Ops-Control.git .
++git checkout v1.5.1   # tag once production validates
++cd client && npm install && npx vite build && cd ..
++cd desktop
++npm install   # rebuilds natives for Windows + Electron
++$env:OPS_BUILD_ROLE="Server"
++npx electron-builder --win --x64 `
++  --config.extraMetadata.opsMode=server `
++  --config.productName="OpsControl SERVER" `
++  --config.npmRebuild=false
++$env:OPS_BUILD_ROLE="Client"
++npx electron-builder --win --x64 `
++  --config.extraMetadata.opsMode=client `
++  --config.productName="OpsControl CLIENT" `
++  --config.npmRebuild=false
++```
++
++Both EXEs land in `desktop\dist-electron\`. Run the Lesson 28 hash check on each:
++```powershell
++Get-FileHash "dist-electron\win-unpacked\resources\app\node_modules\better-sqlite3\build\Release\better_sqlite3.node" -Algorithm SHA256
++Get-FileHash "dist-electron\win-unpacked\resources\app.asar.unpacked\node_modules\better-sqlite3\build\Release\better_sqlite3.node" -Algorithm SHA256
++```
++Both hashes must be identical.
++
++---
++
++## 5. Multi-client LAN smoke test
++
++Once one Mac is running the SERVER variant successfully:
++
++1. **Mac A** (server): launch `OpsControl SERVER`, choose **Embedded** mode. Note the IP
++   shown in the About panel (e.g. `192.168.1.42:3000`).
++2. **Mac B** (client): launch `OpsControl CLIENT`, choose **Thin** mode, point at
++   `http://192.168.1.42:3000`.
++3. Verify:
++   - [ ] Mac B login screen loads (no CORS / connection-refused)
++   - [ ] Mac B can save a quote → Mac A's Quote History shows it within 60s (SSE push)
++   - [ ] Mac A can transition an approval → Mac B sees the new state on next refresh
++
++This proves the SERVER + CLIENT split works end-to-end on the same wire that production
++will use.
++
++---
++
++## 6. Tagging the release
++
++After production smoke test confirms green:
++
++```bash
++cd "/Volumes/Macintosh Data/Claude-Cowork/3. PROJECTS/Ops Control v1.2"
++git checkout main
++git pull
++git tag -a v1.5.1 ccf49fe -m "Phase 1 final — 21 PRs + 14 critical fixes"
++git push origin v1.5.1
++```
++
++The tag becomes the immutable provenance for `releases/v1.5.1/SHA256SUMS.txt`. Future
++audits can prove every shipped binary traces back to commit `ccf49fe` on `main`.
++
++If a user-visible change lands between this build and tagging, bump the version in
++`package.json` to `1.5.2` first, rebuild, and tag the new commit.
++
++---
++
++## Known good rollback targets
++
++| Version | SHA256 of Mac arm64 SERVER DMG | Build SHA |
++|---|---|---|
++| v13 (hardware-tested) | `628270e6dc5a2fd79933fccd941a6227442ea46df18e35a88ba4794259f8cd72` | `7a83682` |
++| v14 (this release) | `737808e7b9f6a324a21b0191113300dca0b40cb7591d1601f6e2e078484c46e3` | `ccf49fe` |
++
++Keep both DMGs on hand for at least 7 days post-rollout.
+diff --git a/releases/v1.5.1/MANIFEST.txt b/releases/v1.5.1/MANIFEST.txt
+new file mode 100644
+index 0000000..3813def
+--- /dev/null
++++ b/releases/v1.5.1/MANIFEST.txt
+@@ -0,0 +1,97 @@
++Ops Control v1.5.1 — Phase 2 Day 1 final release (canonical)
++=============================================================
++Built:        2026-05-08T14:42:00Z (Mac arm64 host)
++Built from:   fix/day1-regressions-printer-sse-backup → main @ 7e8de542e263d4562d8b79fb84491d1c07409d3f (PR #22)
++Promoted:     2026-05-08 — DMG v16-fix passed user hardware test of all 4 Day-1 fixes
++Build env:    Node v24.15.0, Electron 41.3.0
++better-sqlite3: 12.9.0 (NMV 145, prebuilds for darwin-arm64 + win32-x64)
++extraResources overlay: verified — Lesson 28 fix in place
++
++Canonical artifacts (top-level)
++-------------------------------
++OpsControl-Server-v1.5.1-mac-arm64.dmg   166 MB   Mac arm64 SERVER variant (PR #22 fixes)
++OpsControl-Client-v1.5.1-mac-arm64.dmg   166 MB   Mac arm64 CLIENT variant (PR #22 fixes)
++
++SHA256:
++  Server  798e0959369becdd43006f24942354991a7fb403f26ef488d62a9f3146bcf1d0
++  Client  b13ee422d400457dc2c2178dc02a1712f41e77f14ac602444027c71ed0410b31
++
++Each installer ships its own role manifest (build-role.json) that the runtime reads to
++choose embedded-server vs thin-client behavior — no env-var configuration needed.
++
++Archived builds (releases/v1.5.1/archive/)
++------------------------------------------
++v14-{Server,Client}.{dmg,exe}        Phase 2 Day 1 initial build (main @ ccf49fe)
++                                     — PRE-DAY-1-HARDWARE-FIX. Has the 4 macOS bugs
++                                       that PR #22 fixed (printer.list, SSE 401,
++                                       backup path inside .app, verifyBackup basename).
++                                     — Windows EXEs unaffected; can ship if needed.
++
++v15-fix/                             Intermediate Mac DMG with 3-of-4 fixes
++                                     (printer + SSE + cosmetic backup path).
++                                     Hardware test on this revealed the
++                                     verifyBackup deeper bug — not shipped.
++
++v16-fix-README.txt                   Original README from v16-fix/ folder before promotion
++v16-fix-SHA256SUMS.txt               Original v16-fix checksums file before promotion
++
++Why v14 isn't the canonical Mac DMG
++-----------------------------------
++Phase 2 Day 1 hardware test on v14 surfaced 4 pre-existing macOS bugs (printer
++"OS not supported", SSE HTTP 401, backup path inside read-only .app bundle,
++backup cycle "unable to open database file"). PR #22 (SHA: `7e8de54`) shipped
++all 4 fixes and DMG v16 passes the full hardware test. v16 is therefore the
++canonical Mac shipment for v1.5.1.
++
++Windows EXEs were not rebuilt for the day-1 fixes because:
++  - Bug A (printer.list): only the macOS branch needed adding; Windows path unchanged
++  - Bug B (SSE 401): server-side fix; Windows EXE re-uses the same server bundle
++  - Bug C+D (backup paths): server-side fix; same server bundle
++A Windows rebuild from PR #22 SHA can be produced when needed — see
++DEPLOYMENT.md §4 for the build steps. The v14 Windows EXEs in archive/ have
++the OLD (broken) server bundle; do NOT ship them as canonical Windows artifacts.
++
++Lesson 28 verification (canonical Mac DMGs)
++-------------------------------------------
++Both DMGs:
++  app/node_modules/better-sqlite3/.../better_sqlite3.node           e8c5e5e4...da5eb1
++  app.asar.unpacked/node_modules/better-sqlite3/.../better_sqlite3.node  e8c5e5e4...da5eb1
++  → IDENTICAL — embedded server resolves the correct NMV 145 binary
++
++PR chain in canonical release
++-----------------------------
++  #9   Cohort 5 ReasonCodes UI                       3a93a18
++  #10  better-sqlite3 v12 bump                       3401f40
++  #14  Desktop hardening                             130f969
++  #15  Lesson 28 docs (initial, amended later)      a8dca0a
++  #16  RFQ snapshot + ABI overlay + Layout PDF       5e9d152
++  #17  CLAUDE.md sprint-history cleanup              8c929dc
++  #18  Home polish + auto-redirect + logo->Home      9a81c47
++  #19  CI lint plugin (closes MES-3-FIX-17)          5a1a630
++  #20  shared.js req fix in print-area catch         be33a15
++  #21  Sprint history + MES-3-FIX-20 ticket          ccf49fe
++  #22  Day-1 regressions: printer/SSE/backup paths   7e8de54  ← canonical Mac DMG built from this
++  #23  Lesson 30 + sprint history + FIX-21 ticket    4abfc45  (docs only)
++
++Distribution targets
++--------------------
++Mac admin / sales / quality operators:
++  open OpsControl-Client-v1.5.1-mac-arm64.dmg → drag .app to /Applications → launch.
++  Per-machine smart-client wizard runs on first start.
++
++Windows kiosk (shop floor):
++  See DEPLOYMENT.md §4 — build on a Windows host from main @ 4abfc45 (or any commit
++  ≥ 7e8de54). The archived v14 Windows EXEs have the broken server bundle; ship a
++  fresh build instead.
++
++Production server (remote Windows at 10.102.3.61):
++  This is a Node.js Express server running directly — NOT a packaged Electron app.
++  Deploy via deploy.ps1 from the repo (see CLAUDE.md "Deployment topology" + the
++  releases/v1.5.1/DEPLOYMENT.md runbook).
++
++Verification
++------------
++SHA256 checksums:                  releases/v1.5.1/SHA256SUMS.txt
++Deployment runbook:                releases/v1.5.1/DEPLOYMENT.md
++Hardware-tested rollback target:   desktop/dist-electron-v13/  (DMG v13, SHA 628270e6)
++Day-1 build trail:                 releases/v1.5.1/archive/  (v14 + v15 + v16-fix originals)
+diff --git a/releases/v1.5.1/OpsControl-Client-v1.5.1-mac-arm64.dmg b/releases/v1.5.1/OpsControl-Client-v1.5.1-mac-arm64.dmg
+new file mode 100644
+index 0000000..255cfd2
+Binary files /dev/null and b/releases/v1.5.1/OpsControl-Client-v1.5.1-mac-arm64.dmg differ
+diff --git a/releases/v1.5.1/OpsControl-Client-v1.5.1-mac-arm64.dmg.blockmap b/releases/v1.5.1/OpsControl-Client-v1.5.1-mac-arm64.dmg.blockmap
+new file mode 100644
+index 0000000..cf2d0b2
+Binary files /dev/null and b/releases/v1.5.1/OpsControl-Client-v1.5.1-mac-arm64.dmg.blockmap differ
+diff --git a/releases/v1.5.1/OpsControl-Server-v1.5.1-mac-arm64.dmg b/releases/v1.5.1/OpsControl-Server-v1.5.1-mac-arm64.dmg
+new file mode 100644
+index 0000000..0e567c8
+Binary files /dev/null and b/releases/v1.5.1/OpsControl-Server-v1.5.1-mac-arm64.dmg differ
+diff --git a/releases/v1.5.1/OpsControl-Server-v1.5.1-mac-arm64.dmg.blockmap b/releases/v1.5.1/OpsControl-Server-v1.5.1-mac-arm64.dmg.blockmap
+new file mode 100644
+index 0000000..d9c9c0e
+Binary files /dev/null and b/releases/v1.5.1/OpsControl-Server-v1.5.1-mac-arm64.dmg.blockmap differ
+diff --git a/releases/v1.5.1/SHA256SUMS.txt b/releases/v1.5.1/SHA256SUMS.txt
+new file mode 100644
+index 0000000..d9028f6
+--- /dev/null
++++ b/releases/v1.5.1/SHA256SUMS.txt
+@@ -0,0 +1,2 @@
++b13ee422d400457dc2c2178dc02a1712f41e77f14ac602444027c71ed0410b31  OpsControl-Client-v1.5.1-mac-arm64.dmg
++798e0959369becdd43006f24942354991a7fb403f26ef488d62a9f3146bcf1d0  OpsControl-Server-v1.5.1-mac-arm64.dmg
+diff --git a/releases/v1.5.1/archive/v14-Client.dmg b/releases/v1.5.1/archive/v14-Client.dmg
+new file mode 100644
+index 0000000..f29be47
+Binary files /dev/null and b/releases/v1.5.1/archive/v14-Client.dmg differ
+diff --git a/releases/v1.5.1/archive/v14-Client.dmg.blockmap b/releases/v1.5.1/archive/v14-Client.dmg.blockmap
+new file mode 100644
+index 0000000..3f3d7ae
+Binary files /dev/null and b/releases/v1.5.1/archive/v14-Client.dmg.blockmap differ
+diff --git a/releases/v1.5.1/archive/v14-Client.exe b/releases/v1.5.1/archive/v14-Client.exe
+new file mode 100644
+index 0000000..eaed17d
+Binary files /dev/null and b/releases/v1.5.1/archive/v14-Client.exe differ
+diff --git a/releases/v1.5.1/archive/v14-Client.exe.blockmap b/releases/v1.5.1/archive/v14-Client.exe.blockmap
+new file mode 100644
+index 0000000..d5fedb0
+Binary files /dev/null and b/releases/v1.5.1/archive/v14-Client.exe.blockmap differ
+diff --git a/releases/v1.5.1/archive/v14-Server.dmg b/releases/v1.5.1/archive/v14-Server.dmg
+new file mode 100644
+index 0000000..d7f9672
+Binary files /dev/null and b/releases/v1.5.1/archive/v14-Server.dmg differ
+diff --git a/releases/v1.5.1/archive/v14-Server.dmg.blockmap b/releases/v1.5.1/archive/v14-Server.dmg.blockmap
+new file mode 100644
+index 0000000..b784b64
+Binary files /dev/null and b/releases/v1.5.1/archive/v14-Server.dmg.blockmap differ
+diff --git a/releases/v1.5.1/archive/v14-Server.exe b/releases/v1.5.1/archive/v14-Server.exe
+new file mode 100644
+index 0000000..eace8a3
+Binary files /dev/null and b/releases/v1.5.1/archive/v14-Server.exe differ
+diff --git a/releases/v1.5.1/archive/v14-Server.exe.blockmap b/releases/v1.5.1/archive/v14-Server.exe.blockmap
+new file mode 100644
+index 0000000..dac334e
+Binary files /dev/null and b/releases/v1.5.1/archive/v14-Server.exe.blockmap differ
+diff --git a/releases/v1.5.1/archive/v15-fix/OpsControl-Client-v1.5.1-mac-arm64.dmg b/releases/v1.5.1/archive/v15-fix/OpsControl-Client-v1.5.1-mac-arm64.dmg
+new file mode 100644
+index 0000000..2c93066
+Binary files /dev/null and b/releases/v1.5.1/archive/v15-fix/OpsControl-Client-v1.5.1-mac-arm64.dmg differ
+diff --git a/releases/v1.5.1/archive/v15-fix/OpsControl-Client-v1.5.1-mac-arm64.dmg.blockmap b/releases/v1.5.1/archive/v15-fix/OpsControl-Client-v1.5.1-mac-arm64.dmg.blockmap
+new file mode 100644
+index 0000000..2e285ee
+Binary files /dev/null and b/releases/v1.5.1/archive/v15-fix/OpsControl-Client-v1.5.1-mac-arm64.dmg.blockmap differ
+diff --git a/releases/v1.5.1/archive/v15-fix/OpsControl-Server-v1.5.1-mac-arm64.dmg b/releases/v1.5.1/archive/v15-fix/OpsControl-Server-v1.5.1-mac-arm64.dmg
+new file mode 100644
+index 0000000..917e17d
+Binary files /dev/null and b/releases/v1.5.1/archive/v15-fix/OpsControl-Server-v1.5.1-mac-arm64.dmg differ
+diff --git a/releases/v1.5.1/archive/v15-fix/OpsControl-Server-v1.5.1-mac-arm64.dmg.blockmap b/releases/v1.5.1/archive/v15-fix/OpsControl-Server-v1.5.1-mac-arm64.dmg.blockmap
+new file mode 100644
+index 0000000..8b86083
+Binary files /dev/null and b/releases/v1.5.1/archive/v15-fix/OpsControl-Server-v1.5.1-mac-arm64.dmg.blockmap differ
+diff --git a/releases/v1.5.1/archive/v15-fix/README.txt b/releases/v1.5.1/archive/v15-fix/README.txt
+new file mode 100644
+index 0000000..c411007
+--- /dev/null
++++ b/releases/v1.5.1/archive/v15-fix/README.txt
+@@ -0,0 +1,50 @@
++Ops Control v1.5.1 — DMG v15 Day-1 regression fix build
++========================================================
++Built:        2026-05-08T13:57:00Z (Mac arm64 host)
++Built from:   fix/day1-regressions-printer-sse-backup @ 018945cde6ca9ca6461f184af99daecc5249d398
++PR:           https://github.com/thiepdanghd82/Ops-Control/pull/22
++Build env:    Node v24.15.0, Electron 41.3.0, better-sqlite3 12.9.0
++Status:       UNMERGED — this DMG is for hardware-test verification
++
++Fixes vs DMG v14
++----------------
++A. desktop/native/printer.js — macOS/Linux now use lpstat/lp via CUPS.
++   Windows path unchanged.
++B. server/routes/events.js — SSE auth now uses getTokenFromHeader
++   instead of req.cookies (cookie-parser middleware never mounted).
++C. server/routes/costApi.js — Backup paths resolve via lazy
++   getPkgBackupDir() reading DATA_DIR each call. Old constant landed
++   inside read-only .app bundle on macOS.
++
++Lesson 28 ABI verification
++--------------------------
++Both DMGs pass: app/node_modules/better-sqlite3/.../better_sqlite3.node
++                AND app.asar.unpacked/.../better_sqlite3.node
++                hash to e8c5e5e4b5b2b8fec4eeaf3ca18df78d40271bde738ec57faddb19bcedda5eb1
++
++Test plan (4 critical scenarios)
++---------------------------------
++1. Settings → Diagnostics → "Liệt kê máy in"
++   Expected: list of CUPS printers (or empty array). NOT "Operating System not supported".
++
++2. Settings → Diagnostics → "SSE event stream"
++   Expected: HTTP 200 with initial "ready" event. NOT 401.
++
++3. Settings → Backup / Restore → path display
++   Expected: <userData>/data/Backup/PackageBackups/Data
++   NOT: /Applications/OpsControl SERVER.app/Contents/Resources/app/Backup & restore/Data
++
++4. Settings → Backup / Restore → "Run now"
++   Expected: succeeds OR fails with a different error than "unable to open database file"
++   (the latter would indicate the deferred runBackupCycle issue still needs work)
++
++Distribution
++------------
++Mac arm64 SERVER:  OpsControl-Server-v1.5.1-mac-arm64.dmg  (166 MB)
++                   SHA256: 0a27dfa01a470a452cc490514c292206f732393bb58828900b30fb943395d491
++Mac arm64 CLIENT:  OpsControl-Client-v1.5.1-mac-arm64.dmg  (166 MB)
++                   SHA256: e8321800d04bd1eb2ec868bbfead89cae1b7d6a6abf9e31d92478587d226e631
++
++DO NOT replace releases/v1.5.1/*.dmg with these until PR #22 merges and DMG v15
++hardware test confirms all 4 scenarios pass. v14 remains the official "release
++candidate" until v15 is validated.
+diff --git a/releases/v1.5.1/archive/v15-fix/SHA256SUMS.txt b/releases/v1.5.1/archive/v15-fix/SHA256SUMS.txt
+new file mode 100644
+index 0000000..853fb1c
+--- /dev/null
++++ b/releases/v1.5.1/archive/v15-fix/SHA256SUMS.txt
+@@ -0,0 +1,2 @@
++e8321800d04bd1eb2ec868bbfead89cae1b7d6a6abf9e31d92478587d226e631  OpsControl-Client-v1.5.1-mac-arm64.dmg
++0a27dfa01a470a452cc490514c292206f732393bb58828900b30fb943395d491  OpsControl-Server-v1.5.1-mac-arm64.dmg
+diff --git a/releases/v1.5.1/archive/v16-fix-README.txt b/releases/v1.5.1/archive/v16-fix-README.txt
+new file mode 100644
+index 0000000..d676192
+--- /dev/null
++++ b/releases/v1.5.1/archive/v16-fix-README.txt
+@@ -0,0 +1,57 @@
++Ops Control v1.5.1 — DMG v16 verifyBackup root-cause fix
++=========================================================
++Built:        2026-05-08T14:42:00Z (Mac arm64 host)
++Built from:   fix/day1-regressions-printer-sse-backup @ 72a48e4682c66c539063afd9e19c503cb79d6411
++PR:           https://github.com/thiepdanghd82/Ops-Control/pull/22 (additive commit)
++Build env:    Node v24.15.0, Electron 41.3.0, better-sqlite3 12.9.0
++Status:       UNMERGED — for hardware-test verification
++
++What changed vs DMG v15
++-----------------------
++1 additional commit (72a48e4): backupOpsDb now returns BOTH `file`
++(basename, legacy) and `path` (absolute, new). runBackupCycle's
++verify step uses `path` instead of `file`.
++
++Root cause that DMG v15 still had
++---------------------------------
++verifyBackup was being called with a basename like
++"ops_20260508_142439.sqlite". SQLite resolves relative paths
++against process.cwd() which on packaged Electron is APP_ROOT
++(inside the read-only signed .app bundle). The basename did not
++exist there, so SQLite threw "unable to open database file".
++
++DMG v15 already had:
++- Cosmetic UI path display fix (PKG_BACKUP_DIR → getPkgBackupDir())
++- Printer macOS branch (lpstat / lp)
++- SSE auth via getTokenFromHeader
++
++DMG v16 adds the actual runBackupCycle fix on top.
++
++Lesson 28 ABI verification
++--------------------------
++Both DMGs pass: app/node_modules/better-sqlite3/.../better_sqlite3.node
++                AND app.asar.unpacked/.../better_sqlite3.node
++                hash to e8c5e5e4b5b2b8fec4eeaf3ca18df78d40271bde738ec57faddb19bcedda5eb1
++
++Test plan
++---------
++1. Settings → Backup / Restore → "Run now"
++   Expected: succeeds, last run shows ✓ OK
++   If it still says "unable to open database file": runtime trace
++   needed (would point to a different undiscovered step).
++
++2. Other v15 fixes still verified:
++   - Diagnostics → "Liệt kê máy in" → printer list (or empty)
++   - Diagnostics → "SSE event stream" → 200 + "ready"
++   - Backup path display = <userData>/data/Backup/PackageBackups/Data
++
++Distribution
++------------
++Mac arm64 SERVER:  OpsControl-Server-v1.5.1-mac-arm64.dmg  (166 MB)
++                   SHA256: 798e0959369becdd43006f24942354991a7fb403f26ef488d62a9f3146bcf1d0
++Mac arm64 CLIENT:  OpsControl-Client-v1.5.1-mac-arm64.dmg  (166 MB)
++                   SHA256: b13ee422d400457dc2c2178dc02a1712f41e77f14ac602444027c71ed0410b31
++
++DO NOT replace releases/v1.5.1/*.dmg with these until PR #22 merges
++and the v16 hardware test confirms backup "Run now" succeeds.
++v14 remains the official "release candidate" until v16 is validated.
+diff --git a/releases/v1.5.1/archive/v16-fix-SHA256SUMS.txt b/releases/v1.5.1/archive/v16-fix-SHA256SUMS.txt
+new file mode 100644
+index 0000000..d9028f6
+--- /dev/null
++++ b/releases/v1.5.1/archive/v16-fix-SHA256SUMS.txt
+@@ -0,0 +1,2 @@
++b13ee422d400457dc2c2178dc02a1712f41e77f14ac602444027c71ed0410b31  OpsControl-Client-v1.5.1-mac-arm64.dmg
++798e0959369becdd43006f24942354991a7fb403f26ef488d62a9f3146bcf1d0  OpsControl-Server-v1.5.1-mac-arm64.dmg

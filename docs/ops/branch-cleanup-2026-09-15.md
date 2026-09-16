@@ -110,3 +110,93 @@ gh pr view <n> --json headRefOid --jq .headRefOid   # vs  git rev-parse <branch>
   The pure helpers (`validationIgnore.js`, 14 tests) still apply; only the
   `WarningBar.jsx` UI needs redoing against the rewrite in #282. Worth revisiting
   if operators report the warning bar staying red on errors they left on purpose.
+
+---
+
+# Remote branch cleanup — 2026-09-16
+
+The 2026-09-15 pass deleted **local** refs only; all 28 remote heads survived
+it. This is the remote half.
+
+## How "safe to delete" was decided, and where it stopped
+
+Same test as last time — compare the remote tip against the SHA GitHub
+recorded as merged:
+
+```bash
+gh pr view <n> --json headRefOid --jq .headRefOid   # vs  git rev-parse origin/<branch>
+```
+
+**20 of 22 matched exactly.** Two did not, and that is the whole reason this
+check exists rather than trusting `git branch --merged` or a diff:
+
+| Branch                                 | Remote tip | GitHub merged | Extra commit                                                                 |
+| -------------------------------------- | ---------- | ------------- | ---------------------------------------------------------------------------- |
+| `feat/pricing-snapshot-phase-4`        | `b63d449`  | `cbcb898`     | `fix(costing): improve SnapshotPanel toggle affordance`                      |
+| `sprint/pending-approvals-cols-search` | `d23adc5`  | `a67e11f`     | `feat(costing): reorder inbox cols — rfq after age, quoted-by before status` |
+
+`CLAUDE.md` says both shipped — the S-SNAPSHOT-PHASE-4 entry names `b63d449`
+explicitly, and S-INBOX-COLS describes the rc3 column reorder. But grepping
+main for the added lines came back **mixed**, because `SnapshotPanel` and
+`PendingApprovalsInbox.jsx` were both rewritten by the i18n waves afterwards,
+so an exact-line match proves nothing either way.
+
+**So they were kept.** A ref costs nothing; deleting work I cannot prove landed
+costs something. "The sprint history says so" is not the same as verifying it.
+
+A `git diff main...<branch>` on these reported _644 files changed_ — the same
+meaningless number the 2026-09-15 pass already recorded as a wrong heuristic
+under squash-merge. It is noted again only because it is tempting to read as
+evidence.
+
+## Deleted — work landed via a merged PR, tip matched exactly (20)
+
+| Branch                                     | Tip SHA   | Merged as |
+| ------------------------------------------ | --------- | --------- |
+| `chore/lint-warning-ratchet`               | `d481796` | #281      |
+| `docs/carbon-convergence`                  | `a34448f` | #287      |
+| `docs/uiux-improvement-plans`              | `c6a5058` | #283      |
+| `feat/calc-validation-on-touch`            | `5433e63` | #282      |
+| `feat/cost-breakdown-whatif`               | `9d090d5` | #221      |
+| `feat/cutter-base-cost-tiers`              | `8254e96` | #273      |
+| `feat/draggable-modals-lessons`            | `f3a57b3` | #220      |
+| `feat/i18n-calc-header`                    | `49c4de0` | #292      |
+| `feat/materials-mats-per-moq`              | `d272446` | #218      |
+| `feat/process-crew-driven-labor`           | `487e1b8` | #217      |
+| `feat/remove-import-legacy-restore-picker` | `41ffcdf` | #219      |
+| `feat/tables-open-maximized`               | `214e83f` | #286      |
+| `fix/client-firstrun-ipc`                  | `2b47d74` | #279      |
+| `fix/ifs-inventory-import-mapping`         | `a9b95f1` | #284      |
+| `fix/import-skip-keyless-rows`             | `c1f5d85` | #285      |
+| `fix/lint-useless-assignment`              | `c2fbbb1` | #280      |
+| `fix/login-lang-toggle-position`           | `dd7797e` | #291      |
+| `fix/maximize-all-non-calculator-tabs`     | `a2434ea` | #289      |
+| `fix/maximize-pricing-calculators`         | `9328289` | #290      |
+| `fix/nav-and-i18n-cleanup`                 | `56d0f0b` | #288      |
+
+## Deleted — other dispositions (3)
+
+| Branch                               | Tip SHA   | Disposition                                |
+| ------------------------------------ | --------- | ------------------------------------------ |
+| `chore/sync-version-1.5.9`           | `7b9b35d` | obsolete — bumps to 1.5.9; repo is 1.6.0   |
+| `fix/login-screen-remaining-english` | `1ab71b1` | superseded-by #325 (per 2026-09-15 record) |
+| `fix/pre-golive-audit`               | `e9a594e` | obsolete-on-triage (per 2026-09-15 record) |
+
+## Kept (4)
+
+| Branch                                 | Tip SHA   | Why                                                                                                                                                         |
+| -------------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `feat/quote-validation-ignore-list`    | `2403b96` | deferred by decision 2026-09-15, not obsolete                                                                                                               |
+| `keep/stash-0-anti-flash-ink`          | `096fdfc` | the `keep/` prefix is somebody's deliberate preservation; its content overlaps a stash another audit called already-shipped, but not provably the same work |
+| `feat/pricing-snapshot-phase-4`        | `b63d449` | tip ≠ merged SHA, extra commit unproven (above)                                                                                                             |
+| `sprint/pending-approvals-cols-search` | `d23adc5` | tip ≠ merged SHA, extra commit unproven (above)                                                                                                             |
+
+## Recovering one
+
+Unchanged from the section above — the commits survive in the object store,
+and for the merged ones they are reachable from `main` forever:
+
+```bash
+git fetch origin <sha>
+git branch <name> <sha>
+```
