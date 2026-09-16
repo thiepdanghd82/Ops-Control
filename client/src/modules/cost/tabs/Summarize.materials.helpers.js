@@ -113,6 +113,24 @@ export function collectDrwMaterials(state) {
  * @param {object|null|undefined} state
  * @returns {string}
  */
+/**
+ * The value shown in the grid's "IFS CODE" column, for one material row.
+ *
+ * That column is bound to `mat.code`, not `mat.ifs_code` — `ifs_code` is a
+ * shadow field with no input of its own, written only as a side effect of
+ * picking from the library (`CalcMaterials.jsx` onPick). Measured across the
+ * 132 live quotes: it is set on 4 material rows out of 656 populated ones, and
+ * never holds a value different from `code`. So `code` is the source and
+ * `ifs_code` merely wins when both are present.
+ *
+ * This is the resolution the xlsx Materials sheet already ships
+ * (`server/services/quoteExport/sheets/03-materials.js`), reused verbatim so
+ * the two exports cannot disagree about what an IFS code is.
+ */
+function ifsCodeOf(m) {
+  return m.ifs_code || m.code;
+}
+
 export function collectQuoteMaterials(state) {
   if (!state || typeof state !== 'object') return '';
   let items;
@@ -120,11 +138,11 @@ export function collectQuoteMaterials(state) {
     items = state.subproducts
       .flatMap((sp) => (Array.isArray(sp?.materials) ? sp.materials : []))
       .filter((m) => m && isMainMat(m.row_type))
-      .map((m) => m.desc);
+      .map(ifsCodeOf);
   } else {
     items = (Array.isArray(state.materials) ? state.materials : [])
       .filter((m) => m && isMainMat(m.row_type))
-      .map((m) => m.desc);
+      .map(ifsCodeOf);
   }
   return formatBulletList(items.filter(nonEmpty));
 }

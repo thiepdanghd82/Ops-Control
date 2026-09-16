@@ -129,17 +129,21 @@ test('E1: drw_materials applies Main.Mat filter (Process Mat rows skipped)', () 
   assert.equal(r.drw_materials, '• M-Primary\n• M-Secondary');
 });
 
+// `quote_materials` is derived here but the inbox renders `drw_materials`
+// (PendingApprovalsInbox.jsx:517) — the only screen that shows this field is
+// Summarize. It sources the IFS Code column as of 2026-09-16, so the delegate
+// test follows; the filter behaviour it is actually pinning is unchanged.
 test('E2: quote_materials applies Main.Mat filter (delegate test)', () => {
   const q = {
     state: {
       materials: [
-        { row_type: 'Main.Mat', desc: 'PET 50um' },
-        { row_type: 'Process Mat', desc: 'Release liner — skipped' },
+        { row_type: 'Main.Mat', code: 'PET-50', desc: 'PET 50um' },
+        { row_type: 'Process Mat', code: 'RL-01', desc: 'Release liner — skipped' },
       ],
     },
   };
   const r = deriveInboxRow(q);
-  assert.equal(r.quote_materials, '• PET 50um');
+  assert.equal(r.quote_materials, '• PET-50');
 });
 
 test('E3: materials empty string when no rows match', () => {
