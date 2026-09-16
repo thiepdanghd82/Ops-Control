@@ -139,6 +139,10 @@ const SUMMARIZE_COLUMNS = [
     render: (r) => <DateCell value={r.update_date} />,
   },
   { key: 'rfq_no', label: 'RFQ NO', w: 140, required: true },
+  // The CCL part number identifies the quote alongside the RFQ number,
+  // so it sits next to it. Label drops the form's `*` — that marks the
+  // field as required on the RFQ card, it is not part of the name.
+  { key: 'ccl_pn', label: 'CCL PN (80#)', w: 150 },
   // Sprint S-SALE-OWNER-COL (2026-06-16, moved 2026-06-17) — operator-
   // entered free-text Sale Owner from Pricing (Std/Cpx) → RFQ & MOQ
   // info sub-tab (shared component RfqInfoCard.jsx). Positioned
@@ -522,6 +526,7 @@ export default function Summarize() {
             // quote state, falls back to the numeric quote id prefixed
             // with Q# if the user never generated/typed an RFQ number.
             rfq_no: st.rfq_number || `Q${q.id}`,
+            ccl_pn: st.ccl_pn || '',
             update_date: q.saved_at,
             type: q.type,
             direct_cu: st.direct_cu || '',

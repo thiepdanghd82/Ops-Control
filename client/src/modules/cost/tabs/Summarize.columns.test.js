@@ -22,7 +22,7 @@ import {
 } from './Summarize.columns.js';
 
 describe('SUMMARIZE_COLUMN_KEYS', () => {
-  test('contains 38 keys in source order — REGRESSION GUARD for table shape', () => {
+  test('contains 39 keys in source order — REGRESSION GUARD for table shape', () => {
     // Header row in Summarize.jsx renders this exact set in this exact
     // order. Drift here means the ColumnsToggle popover ↔ table-render
     // contract broke; bump this number only when intentionally
@@ -37,7 +37,11 @@ describe('SUMMARIZE_COLUMN_KEYS', () => {
     //   - direct_cu_pn (2026-09-14) +1 → 38; the row builder always
     //     populated it but it was missing from the config, so it never
     //     rendered or exported while end_cu_pn did.
-    assert.equal(SUMMARIZE_COLUMN_KEYS.length, 38);
+    //   - ccl_pn (2026-09-16) +1 → 39; the CCL part number identifies a
+    //     quote alongside the RFQ number and 110 of the 133 live quotes
+    //     carry one, but neither the config nor the row builder had it,
+    //     so it reached no export at all. Placed right after rfq_no.
+    assert.equal(SUMMARIZE_COLUMN_KEYS.length, 39);
   });
 
   test('no duplicate keys', () => {

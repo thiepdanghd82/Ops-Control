@@ -39,6 +39,7 @@ export const SUMMARIZE_COLUMN_KEYS = [
   'row_idx',
   'update_date',
   'rfq_no',
+  'ccl_pn',
   'sale_owner',
   'direct_cu',
   'direct_cu_pn',
