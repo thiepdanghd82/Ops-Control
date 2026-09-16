@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useI18n } from '../../../utils/useI18n';
 import { sharedApi, costApi } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
+import { useCostLib } from '../../../context/CostLibContext';
 import EmptyState from '../../../components/Shared/EmptyState';
 import SkeletonTable from '../../../components/Shared/SkeletonTable';
 import Modal from '../../../components/Shared/Modal';
@@ -22,6 +23,9 @@ export default function MaterialLibrary() {
   const { hasRole } = useAuth();
   const isViewOnly = !hasRole('user');
   const canImport = hasRole('admin');
+  // Shared library context — the calculators and the material picker read
+  // from here, not from this screen's local copy.
+  const { refreshLib } = useCostLib();
   const [npiDB, setNpiDB] = useState([]);
   const [ifsDB, setIfsDB] = useState([]);
   const [sourcingDB, setSourcingDB] = useState([]);
@@ -51,6 +55,15 @@ export default function MaterialLibrary() {
     try {
       await costApi.saveAll({ npiDB, ifsDB, sourcingDB });
       setIsDirty(false);
+      // This screen keeps its OWN copy of the three material libraries, so a
+      // save used to leave CostLibContext holding whatever it loaded at app
+      // start. Everything that prices a quote reads the context -- the material
+      // picker included -- so a brand-new code appeared here and stayed
+      // unfindable in Pricing until the next app restart. Refetch, the way
+      // LibRate / LibDDL / LibFinance / InkCalculator already do, rather than
+      // pushing local state in: the server normalises rows on save, and the
+      // picker should show what was actually stored.
+      await refreshLib();
     } catch (e) {
       alert('Save failed: ' + e.message);
     }
