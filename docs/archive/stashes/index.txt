@@ -1,0 +1,47 @@
+# Stash export from: _ARCHIVE/Ops Control (old-build 2026-05-30)
+# branch HEAD: 998ae7c
+# exported 2026-06-04 10:18:39
+# format: <n>.patch  <=  git stash show -p --include-untracked stash@{n}
+#
+# Disposition audited + actioned 2026-06-04 (against main 2771b10).
+# Patches were classified by LOGIC vs current main (all conflict on
+# `git apply` because main advanced far past the 998ae7c export point).
+
+0.patch  (493 bytes)  stash@{0}: On main: wip-lockfile
+  => DELETED 2026-06-04. client/package-lock.json WIP only; lockfiles
+     regenerate on npm install — no source value.
+
+1.patch  (45824 bytes)  stash@{1}: feat/quote-export-mvp-2: anti-flash optimistic + ink layout
+  => DELETED 2026-06-04. ALREADY SHIPPED. main has
+     useAbortableFetch.initialLoading + ApprovalActionsCell busy/optimistic
+     rollback (anti-flash sprint) and the ink-layout sync (S-INKS-LAYOUT-SYNC).
+
+2.patch  (1496 bytes)  stash@{2}: fix/pricing-std-bug-triage-bundle: CalcMaterials context menu (PR #40 c1 WIP)
+  => DELETED 2026-06-04. ALREADY SHIPPED. main CalcMaterials.jsx renders
+     onContextMenu={handleRowContextMenu} (landed with the PR #40 alt-materials series).
+
+3.patch  (29766 bytes)  stash@{3}: feat/ccl-logo-rebrand: ccl-logo-rebrand-pending
+  => KEPT. STILL VALUABLE — not shipped. ccl-logo.svg / ccl-mark.svg are
+     absent on main and unreferenced by LoginPage/Sidebar.
+     STATUS: pending design sign-off (cosmetic rebrand, low priority).
+     WHEN SHIPPING: cherry-pick SOURCE ONLY — LoginPage.css, LoginPage.jsx,
+     Sidebar.jsx, client/public/ccl-logo.svg, client/public/ccl-mark.svg.
+     DROP the releases/v1.5.1/*.dmg + *.blockmap + MANIFEST/SHA256 binaries
+     (release artifacts — must not enter git). Suggested branch: feat/ccl-logo-rebrand.
+
+4.patch  (508488 bytes)  stash@{4}: sprint/inv-1c-cohort-5: wip-cohort-split-backup
+  => DELETED 2026-06-04. OBSOLETE. Mostly "4. CLAUDE OUTPUT" scratch notes +
+     deferred *.full.jsx snapshots + an inventory-era eslint.config.js;
+     superseded by shipped inventory sprints.
+
+5.patch  (2858 bytes)  stash@{5}: release/v1.3: kiosk optimistic-revert + server HSTS gate
+  => DELETED 2026-06-04. Both halves resolved:
+       - kiosk optimistic-revert (MES-3-FIX-13) SHIPPED via PR #101 -> main 2771b10
+         (branch fix/kiosk-optimistic-revert-hsts-gate, commit a89b084).
+       - server HSTS gate (MES-3-FIX-14) was ALREADY on main as the
+         OPS_ALLOW_SAME_ORIGIN / ALLOW_HTTP gate (shipped with v1.5.1).
+
+6.patch  (5122 bytes)  stash@{6}: release/v1.3: desktop wip pre-existing
+  => DELETED 2026-06-04. ALREADY SHIPPED. main desktop/main.js has
+     loadUserEnv() + the will-download handler (S-EXPORT-UAT-SETUP); the
+     dist-electron *.yml entries were build artifacts.
