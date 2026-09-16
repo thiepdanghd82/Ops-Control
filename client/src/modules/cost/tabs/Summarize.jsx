@@ -19,7 +19,7 @@ import { useAbortableFetch } from '../../../hooks/useAbortableFetch';
 import EmptyState from '../../../components/Shared/EmptyState';
 import { err as logErr } from '../../../utils/logger';
 import { buildCsv, saveCsv } from '../../../services/csvExport';
-import { rowsForExport } from './Summarize.exportRows.js';
+import { rowsForExport, orderBySelection } from './Summarize.exportRows.js';
 import { useQuoteFilters } from '../hooks/useQuoteFilters';
 import { applyQuoteFilters } from '../lib/quoteFilters';
 import ScopedFilterBar from '../components/ScopedFilterBar';
@@ -671,6 +671,13 @@ export default function Summarize() {
     });
   }, []);
 
+  // Ticked quotes float to the top so the operator can SEE the set before
+  // writing the file — a tick three screens down is invisible and the
+  // counter alone ("3 row(s) selected") cannot be checked against anything.
+  // The table and the export read this same order, so what sits on top is
+  // what the file gets.
+  const shown = useMemo(() => orderBySelection(sorted, selected), [sorted, selected]);
+
   const allVisibleSelected = sorted.length > 0 && sorted.every((r) => selected.has(r.id));
   const someVisibleSelected = !allVisibleSelected && sorted.some((r) => selected.has(r.id));
   const toggleSelectAll = useCallback(() => {
@@ -735,7 +742,7 @@ export default function Summarize() {
     // tier order, one row each — an operator asking for "the RFQ" wants
     // all its MOQs in one file, not the single row they happened to tick.
     // No selection → the full visible set. Filtered-out rows stay out.
-    const rowsToExport = rowsForExport(sorted, selected);
+    const rowsToExport = rowsForExport(shown, selected);
     if (rowsToExport.length === 0) return; // nothing to write
     // MES-3-FIX-60 (2026-06-19) — apply each column's UI `fmt` to its
     // CSV cell value so operators opening summarize_*.csv see the same
@@ -755,7 +762,7 @@ export default function Summarize() {
       // inside saveCsv.
       window.alert(`Export failed: ${err?.message || err}`);
     }
-  }, [sorted, selected, visibleColumns]);
+  }, [shown, selected, visibleColumns]);
 
   // selectedVisibleCount = how many currently-visible rows are selected.
   // Used for the button label so it never lies about "N rows" when
@@ -916,7 +923,7 @@ export default function Summarize() {
                 </td>
               </tr>
             )}
-            {sorted.map((r, ri) => {
+            {shown.map((r, ri) => {
               const rowCtx = ctxMenu?.row?.id === r.id;
               return (
                 <tr
