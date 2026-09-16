@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
+import { offsiteLine } from './Settings.offsite.js';
 import { useAuth } from '../../../context/AuthContext';
 import { authApi, api, costApi, importApi, sharedApi } from '../../../services/api';
 import EmptyState from '../../../components/Shared/EmptyState';
@@ -2678,6 +2679,14 @@ function BackupScheduleCard({ onRunDone, onRestore }) {
               </>
             )}
           </div>
+          {(() => {
+            const o = offsiteLine(status?.offsite, t);
+            return (
+              <div className={`bk-offsite bk-offsite-${o.tone}`} title={o.title}>
+                {o.text}
+              </div>
+            );
+          })()}
         </div>
         <button
           type="button"
