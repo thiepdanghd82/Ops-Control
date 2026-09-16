@@ -19,7 +19,13 @@ import { useAbortableFetch } from '../../../hooks/useAbortableFetch';
 import EmptyState from '../../../components/Shared/EmptyState';
 import { err as logErr } from '../../../utils/logger';
 import { buildCsv, saveCsv } from '../../../services/csvExport';
-import { rowsForExport, orderBySelection } from './Summarize.exportRows.js';
+import {
+  rowsForExport,
+  orderBySelection,
+  toggleQuoteSelection,
+  pinSelected,
+  quoteKeyOf,
+} from './Summarize.exportRows.js';
 import { useQuoteFilters } from '../hooks/useQuoteFilters';
 import { applyQuoteFilters } from '../lib/quoteFilters';
 import ScopedFilterBar from '../components/ScopedFilterBar';
@@ -662,38 +668,46 @@ export default function Summarize() {
   // so the operator never accidentally writes hidden rows to disk.
   const [selected, setSelected] = useState(() => new Set());
 
-  const toggleSelected = useCallback((id) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
+  // A tick selects the QUOTE, not the row: rowsForExport already expands a
+  // ticked tier to every tier of its quote (#317), so a per-row checkbox left
+  // sibling tiers un-ticked in the middle of the selection while the file
+  // took them anyway. Resolved against `records` (pre-filter) so a tier the
+  // search box is hiding is ticked too.
+  const toggleSelected = useCallback(
+    (id) => setSelected((prev) => toggleQuoteSelection(records, prev, id)),
+    [records]
+  );
 
   // Ticked quotes float to the top so the operator can SEE the set before
   // writing the file — a tick three screens down is invisible and the
   // counter alone ("3 row(s) selected") cannot be checked against anything.
   // The table and the export read this same order, so what sits on top is
   // what the file gets.
-  const shown = useMemo(() => orderBySelection(sorted, selected), [sorted, selected]);
+  // Ticked rows stay on screen even when the current search excludes them —
+  // an operator builds an export by searching one RFQ, ticking it, searching
+  // the next. Pin first, then float, so the basket reads in tick order.
+  const shown = useMemo(
+    () => orderBySelection(pinSelected(records, sorted, selected), selected),
+    [records, sorted, selected]
+  );
 
   const allVisibleSelected = sorted.length > 0 && sorted.every((r) => selected.has(r.id));
   const someVisibleSelected = !allVisibleSelected && sorted.some((r) => selected.has(r.id));
+  // Select-all ticks every QUOTE the filter kept, tiers included — same rule
+  // as a single checkbox, so the header box and the row boxes cannot disagree.
   const toggleSelectAll = useCallback(() => {
     setSelected((prev) => {
-      if (sorted.every((r) => prev.has(r.id))) {
-        // All visible already selected → clear (intersect with non-visible)
-        const next = new Set(prev);
-        for (const r of sorted) next.delete(r.id);
-        return next;
-      }
-      // Otherwise add all visible
+      const allOn = sorted.length > 0 && sorted.every((r) => prev.has(r.id));
+      const keys = new Set(sorted.map((r) => quoteKeyOf(r)));
       const next = new Set(prev);
-      for (const r of sorted) next.add(r.id);
+      for (const r of records) {
+        if (!keys.has(quoteKeyOf(r))) continue;
+        if (allOn) next.delete(r.id);
+        else next.add(r.id);
+      }
       return next;
     });
-  }, [sorted]);
+  }, [sorted, records]);
 
   const exportCSV = useCallback(async () => {
     // CSV column composition (Option B agreed at Phase-1 scope):
@@ -764,14 +778,14 @@ export default function Summarize() {
     }
   }, [shown, selected, visibleColumns]);
 
-  // selectedVisibleCount = how many currently-visible rows are selected.
-  // Used for the button label so it never lies about "N rows" when
-  // some selections are hidden by the search filter.
+  // Counted over `shown`, the list actually on screen. Since `pinSelected`
+  // keeps every ticked row there, this now equals `selected.size` — the label
+  // and the file can no longer disagree.
   const selectedVisibleCount = useMemo(
-    () => sorted.reduce((n, r) => n + (selected.has(r.id) ? 1 : 0), 0),
-    [sorted, selected]
+    () => shown.reduce((n, r) => n + (selected.has(r.id) ? 1 : 0), 0),
+    [shown, selected]
   );
-  const exportCount = selectedVisibleCount > 0 ? selectedVisibleCount : sorted.length;
+  const exportCount = selectedVisibleCount > 0 ? selectedVisibleCount : shown.length;
 
   // Column layout per user spec — declared MODULE-SCOPED above as
   // `SUMMARIZE_COLUMNS` so the ColumnsToggle helper can load persisted
@@ -891,7 +905,7 @@ export default function Summarize() {
               {/* Checkbox column already occupies leftmost via rowSpan=2 above. */}
               <th colSpan={visibleColumns.length} className="sum-select-hint">
                 {selectedVisibleCount > 0
-                  ? `${selectedVisibleCount} row(s) selected — only those will be exported${selected.size > selectedVisibleCount ? ` (${selected.size - selectedVisibleCount} more hidden by filter)` : ''}`
+                  ? `${selectedVisibleCount} row(s) selected — only those will be exported`
                   : 'No rows selected — export will include all visible rows'}
               </th>
             </tr>

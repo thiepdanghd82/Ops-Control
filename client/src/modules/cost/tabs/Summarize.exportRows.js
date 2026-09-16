@@ -35,6 +35,75 @@ export function rowsForExport(visibleRows, selectedIds) {
 }
 
 /**
+ * Tick or un-tick a row — and with it every other tier of the same quote.
+ *
+ * `rowsForExport` has always expanded a ticked tier to the whole quote
+ * (#317), so a per-row checkbox told the operator something the file did not
+ * do: tick one tier of a 2-tier quote and five ticks became seven exported
+ * rows, with two of them sitting un-ticked in the middle of the selection.
+ * Ticking the quote makes that rule visible in the checkboxes instead of
+ * hidden in the export, and the counter finally equals the row count of the
+ * file.
+ *
+ * Works off ALL rows, not the visible ones, so a tier currently hidden by the
+ * search box is ticked too — otherwise clearing the filter would reveal an
+ * un-ticked sibling of a quote the operator believes is fully selected.
+ *
+ * @param {Array<object>} allRows every row, pre-filter
+ * @param {Set<string>} selectedIds current selection
+ * @param {string} rowId the row whose checkbox was clicked
+ * @returns {Set<string>} the new selection
+ */
+export function toggleQuoteSelection(allRows, selectedIds, rowId) {
+  const rows = Array.isArray(allRows) ? allRows : [];
+  const next = new Set(selectedIds instanceof Set ? selectedIds : selectedIds || []);
+  const clicked = rows.find((r) => r && r.id === rowId);
+  // A row we cannot resolve to a quote still toggles itself — never a no-op
+  // checkbox.
+  if (!clicked) {
+    if (next.has(rowId)) next.delete(rowId);
+    else next.add(rowId);
+    return next;
+  }
+  const key = quoteKeyOf(clicked);
+  const siblings = rows.filter((r) => r && quoteKeyOf(r) === key).map((r) => r.id);
+  const turningOff = next.has(rowId);
+  for (const id of siblings) {
+    if (turningOff) next.delete(id);
+    else next.add(id);
+  }
+  return next;
+}
+
+/**
+ * Keep ticked rows on screen even when the current search excludes them.
+ *
+ * An operator builds an export by searching for one RFQ, ticking it,
+ * searching for the next, ticking that — so the previous picks must survive
+ * the next search or there is no way to see the basket being assembled. They
+ * used to vanish, leaving the header reading "NO ROWS SELECTED" over a table
+ * whose selection was still very much alive in memory.
+ *
+ * Pinned rows are prepended; `orderBySelection` then puts every ticked quote
+ * in tick order, so the caller composes the two.
+ *
+ * @param {Array<object>} allRows every row, pre-filter
+ * @param {Array<object>} visibleRows the rows the current filter kept
+ * @param {Set<string>|Array<string>} selectedIds
+ * @returns {Array<object>} visible rows plus any ticked row the filter dropped
+ */
+export function pinSelected(allRows, visibleRows, selectedIds) {
+  const visible = Array.isArray(visibleRows) ? visibleRows : [];
+  const picked = selectedIds instanceof Set ? selectedIds : new Set(selectedIds || []);
+  if (picked.size === 0) return visible;
+  const shown = new Set(visible.map((r) => r && r.id));
+  const missing = (Array.isArray(allRows) ? allRows : []).filter(
+    (r) => r && picked.has(r.id) && !shown.has(r.id)
+  );
+  return missing.length === 0 ? visible : [...missing, ...visible];
+}
+
+/**
  * Float the quotes the operator ticked to the top of the table, in the order
  * they were ticked.
  *
