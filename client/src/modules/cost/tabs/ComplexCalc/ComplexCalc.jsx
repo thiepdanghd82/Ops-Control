@@ -44,7 +44,7 @@ import {
   sumToolingCostCpx,
   deriveMaterialLT,
   resolveMaterialLtDisplay,
-  derivePoLeadTime,
+  derivePoProdHours,
   resolvePoLtDisplay,
   safeLeadTime,
   buildLeadTimeMaterialsTable,
@@ -295,10 +295,10 @@ export default function ComplexCalc() {
 
   // PO L/T auto-derive (Sprint S-PO-LT) — Σ PROD TIME across EVERY subproduct's
   // processes ÷ 8-hour day, rounded up. spResults (= pass2) already carries each
-  // SP's procResults (total_time minutes); flatten + derivePoLeadTime. Same
+  // SP's procResults (total_time minutes); flatten + derivePoProdHours. Same
   // parent-useMemo + manual-override (lt_po_ovr) UX as Material L/T.
-  const poLtAuto = useMemo(
-    () => derivePoLeadTime(spResults.flatMap((r) => (r && r.procResults) || [])),
+  const poProdHours = useMemo(
+    () => derivePoProdHours(spResults.flatMap((r) => (r && r.procResults) || [])),
     [spResults]
   );
 
@@ -324,7 +324,7 @@ export default function ComplexCalc() {
     const resolvedMatLt = resolveMaterialLtDisplay(cs.lead_time, materialLtAuto).value;
     // PO L/T: persist the resolved "<n> days" (override wins, else Σ PROD TIME ÷
     // 8 across every SP); lt_po_ovr stays the override source of truth.
-    const resolvedPoLt = resolvePoLtDisplay(cs.lead_time, poLtAuto).value;
+    const resolvedPoLt = resolvePoLtDisplay(cs.lead_time, poProdHours).value;
     // REMARK: persist the resolved checkbox-driven value (or manual override).
     const autoRemark = buildRemarkFromSelection(ltMatRows, cs.lead_time?.remark_selection);
     const resolvedRemark = resolveRemarkDisplay(cs.lead_time, autoRemark).value;
@@ -402,7 +402,7 @@ export default function ComplexCalc() {
     bomQtyEnabled,
     spMoqScalingEnabled,
     materialLtAuto,
-    poLtAuto,
+    poProdHours,
     ltMatRows,
   ]);
 
@@ -1263,7 +1263,7 @@ export default function ComplexCalc() {
             onChange={(next) => setCplxField('lead_time', next)}
             toolingCostTotal={toolingCostTotal}
             materialLtAuto={materialLtAuto}
-            poLtAuto={poLtAuto}
+            poProdHours={poProdHours}
             materialsTable={ltMatRows}
           />
         )}

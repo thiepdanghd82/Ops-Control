@@ -263,50 +263,84 @@ export function resolveMaterialLtDisplay(leadTime, autoVal) {
   return { value: autoVal || '', isOverride: false };
 }
 
-// PO L/T auto-derive (Sprint S-PO-LT). Total production time drives the PO lead
-// time: Σ over all processes of the PROD TIME hours (total_time minutes / 60),
-// divided by an 8-hour working day and rounded UP. Mirrors the Material L/T
-// auto + manual-override UX (lt_po_ovr + violet + ↻ reset).
+// PO L/T auto-derive (Sprint S-PO-LT, rule replaced Sprint S-PO-LT-RANGE).
+//
+// The first rule was `ceil(Σ PROD TIME / 8)` and it quoted a single number —
+// "1 days" for the 4.76 production hours of a typical label job. That is the
+// machine time, not the lead time: it says nothing about queue, material on
+// hand, or the PO sitting in purchasing, so it was never a date anyone could
+// commit to a customer.
+//
+// The rule Henry asked for quotes the commercial window instead. Under 100
+// production hours the answer is a flat `7~14 working days`; past that, every
+// 8-hour block of production pushes BOTH ends out by a day, so a job carrying
+// real machine time reads as the longer promise it is.
 export const PO_LT_WORK_HOURS_PER_DAY = 8;
+/** Below this many production hours the window does not move. */
+export const PO_LT_FLAT_HOURS = 100;
+/** The window quoted for anything under the threshold. */
+export const PO_LT_BASE_DAYS = [7, 14];
 
 /**
- * Derive the PO lead time in whole days from the active-tier process results.
- * `total_time` is the per-process production time in MINUTES (calcProcess /
- * calcAll procResults); the PROD TIME column shows the same value / 60 hours.
+ * Total production time in HOURS across the active-tier processes, or null.
  *
- * poDays = ceil( Σ(total_time / 60) / 8 ), or null when there is no production
- * time (0 processes / all hidden / non-finite) so the caller shows an empty cell
- * rather than "0 days". Cpx: pass the process results flattened across every
- * subproduct.
+ * `total_time` is per-process production time in MINUTES (calcProcess /
+ * calcAll procResults); the PROD TIME column shows the same value / 60.
+ * Returns null when there is no production time at all (0 processes / all
+ * hidden / non-finite) so the caller leaves the cell empty rather than
+ * quoting a lead time for a quote that has no processes yet.
  *
- * @param {Array|null|undefined} processResults  calcAll(...).procResults (active tier)
- * @returns {number|null}  whole days, or null
+ * Cpx: pass the process results flattened across every subproduct.
+ *
+ * @param {Array|null|undefined} processResults  calcAll(...).procResults
+ * @returns {number|null}  hours, or null
  */
-export function derivePoLeadTime(processResults) {
+export function derivePoProdHours(processResults) {
   if (!Array.isArray(processResults)) return null;
   let totalHours = 0;
   for (const r of processResults) {
     const t = Number(r && r.total_time);
     if (Number.isFinite(t) && t > 0) totalHours += t / 60;
   }
-  if (!(totalHours > 0)) return null;
-  return Math.ceil(totalHours / PO_LT_WORK_HOURS_PER_DAY);
+  return totalHours > 0 ? totalHours : null;
+}
+
+/**
+ * The PO lead-time window for a given number of production hours.
+ *
+ * ≤ 100 h                -> `7~14 working days`
+ * every 8 h above 100 h  -> both ends +1 day: `8~15`, `9~16`, …
+ *
+ * The block count is a CEILING, so being over the threshold at all already
+ * costs the first day — 100.5 hours reads `8~ 15`, not `7~ 14`. Exactly 100
+ * is still inside the flat band.
+ *
+ * @param {number|null|undefined} hours  derivePoProdHours() result
+ * @returns {string}  the window, or '' when there are no production hours
+ */
+export function formatPoLeadTime(hours) {
+  const h = Number(hours);
+  if (!Number.isFinite(h) || h <= 0) return '';
+  const over = h - PO_LT_FLAT_HOURS;
+  const blocks = over > 0 ? Math.ceil(over / PO_LT_WORK_HOURS_PER_DAY) : 0;
+  const [lo, hi] = PO_LT_BASE_DAYS;
+  return `${lo + blocks}~${hi + blocks} working days`;
 }
 
 /**
  * Resolve what the PO L/T cell shows: the manual override when set, otherwise
- * the auto-derived "<n> days". `lt_po_ovr` is the override source of truth; an
+ * the auto-derived window. `lt_po_ovr` is the override source of truth; an
  * empty / whitespace override means "auto".
  *
  * @param {object|null|undefined} leadTime  state.lead_time
- * @param {number|null} poDays  derivePoLeadTime() result
+ * @param {number|null} prodHours  derivePoProdHours() result
  * @returns {{value:string, isOverride:boolean}}
  */
-export function resolvePoLtDisplay(leadTime, poDays) {
+export function resolvePoLtDisplay(leadTime, prodHours) {
   const lt = leadTime && typeof leadTime === 'object' ? leadTime : {};
   const ovr = typeof lt.lt_po_ovr === 'string' ? lt.lt_po_ovr : '';
   if (ovr.trim() !== '') return { value: ovr, isOverride: true };
-  return { value: poDays != null ? `${poDays} days` : '', isOverride: false };
+  return { value: formatPoLeadTime(prodHours), isOverride: false };
 }
 
 // ── REMARK checkbox-driven auto-sync (Sprint S-REMARK-SEL) ──

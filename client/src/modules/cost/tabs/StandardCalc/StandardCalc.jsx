@@ -43,7 +43,7 @@ import {
   sumToolingCostStd,
   deriveMaterialLT,
   resolveMaterialLtDisplay,
-  derivePoLeadTime,
+  derivePoProdHours,
   resolvePoLtDisplay,
   safeLeadTime,
   buildLeadTimeMaterialsTable,
@@ -224,14 +224,14 @@ export default function StandardCalc() {
 
   // PO L/T auto-derive (Sprint S-PO-LT) — Σ PROD TIME (process total_time/60 h)
   // ÷ 8-hour day, rounded up. Runs calcAll on the active-tier state to read the
-  // same procResults the PROD TIME column shows, then derivePoLeadTime. Same
+  // same procResults the PROD TIME column shows, then derivePoProdHours. Same
   // parent-useMemo + manual-override (lt_po_ovr) UX as Material L/T.
-  const poLtAuto = useMemo(() => {
+  const poProdHours = useMemo(() => {
     if (!lib) return null;
     try {
       const tierSt = getActiveTierState(stdState);
       const res = calcAll(tierSt, null, lib);
-      return derivePoLeadTime(res && res.procResults);
+      return derivePoProdHours(res && res.procResults);
     } catch {
       return null;
     }
@@ -268,7 +268,7 @@ export default function StandardCalc() {
     const resolvedMatLt = resolveMaterialLtDisplay(stdState.lead_time, materialLtAuto).value;
     // PO L/T: persist the resolved "<n> days" (override wins, else Σ PROD TIME ÷
     // 8) so Summarize / export read the value; lt_po_ovr stays override source.
-    const resolvedPoLt = resolvePoLtDisplay(stdState.lead_time, poLtAuto).value;
+    const resolvedPoLt = resolvePoLtDisplay(stdState.lead_time, poProdHours).value;
     // REMARK: persist the resolved value (checkbox-driven auto text unless a
     // manual override) so Summarize / export read it; remark_selection +
     // lt_remark_ovr remain the source of truth.
@@ -307,7 +307,7 @@ export default function StandardCalc() {
       saved_at: new Date().toISOString(),
       label: stdState.ccl_pn || stdState.rfq_number || 'Untitled',
     };
-  }, [stdState, lib, user?.id, materialLtAuto, poLtAuto, ltMatRows]);
+  }, [stdState, lib, user?.id, materialLtAuto, poProdHours, ltMatRows]);
 
   const persistAsNew = useCallback(async () => {
     setSaving(true);
@@ -473,7 +473,7 @@ export default function StandardCalc() {
           onChange={(next) => setStdField('lead_time', next)}
           toolingCostTotal={toolingCostTotal}
           materialLtAuto={materialLtAuto}
-          poLtAuto={poLtAuto}
+          poProdHours={poProdHours}
           materialsTable={ltMatRows}
         />
       );

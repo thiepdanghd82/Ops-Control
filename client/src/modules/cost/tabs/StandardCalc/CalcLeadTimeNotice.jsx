@@ -5,6 +5,7 @@ import {
   safeLeadTime,
   resolveMaterialLtDisplay,
   resolvePoLtDisplay,
+  formatPoLeadTime,
   buildRemarkBlock,
   resolveRemarkDisplay,
   remarkSelectAllState,
@@ -60,7 +61,7 @@ export default function CalcLeadTimeNotice({
   onChange,
   toolingCostTotal,
   materialLtAuto = null,
-  poLtAuto = null,
+  poProdHours = null,
   materialsTable = [],
 }) {
   const { t } = useI18n();
@@ -91,7 +92,7 @@ export default function CalcLeadTimeNotice({
 
   // PO L/T: manual override (violet + ↻) wins, else the auto-derived "<n> days"
   // = Σ PROD TIME ÷ 8. Editing writes lt_po_ovr (the override source of truth).
-  const poLt = resolvePoLtDisplay(lt, poLtAuto);
+  const poLt = resolvePoLtDisplay(lt, poProdHours);
   const poLtLabel = t('lt.col.po_lt');
 
   // REMARK: checkbox-driven auto text ("<IFS code>: <Clear MOQ> pcs" per checked
@@ -186,7 +187,7 @@ export default function CalcLeadTimeNotice({
                 rows={3}
                 value={poLt.value}
                 onChange={(e) => handleField('lt_po_ovr', e.target.value)}
-                placeholder={poLtAuto != null ? `${poLtAuto} days` : t('lt.po.auto_placeholder')}
+                placeholder={formatPoLeadTime(poProdHours) || t('lt.po.auto_placeholder')}
                 className={`ltn-input${poLt.isOverride ? ' sc-pack-tier-ovr' : ''}`}
                 aria-label={poLtLabel}
                 title={poLt.isOverride ? t('lt.po.manual_tip') : t('lt.po.auto_tip')}
