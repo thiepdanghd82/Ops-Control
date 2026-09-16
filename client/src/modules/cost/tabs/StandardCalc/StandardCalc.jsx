@@ -47,7 +47,7 @@ import {
   resolvePoLtDisplay,
   safeLeadTime,
   buildLeadTimeMaterialsTable,
-  buildRemarkFromSelection,
+  buildRemarkBlock,
   resolveRemarkDisplay,
 } from './CalcLeadTimeNotice.helpers.js';
 // The Legend is a 4,300-line training manual — bilingual copy for every
@@ -271,8 +271,15 @@ export default function StandardCalc() {
     const resolvedPoLt = resolvePoLtDisplay(stdState.lead_time, poProdHours).value;
     // REMARK: persist the resolved value (checkbox-driven auto text unless a
     // manual override) so Summarize / export read it; remark_selection +
-    // lt_remark_ovr remain the source of truth.
-    const autoRemark = buildRemarkFromSelection(ltMatRows, stdState.lead_time?.remark_selection);
+    // lt_remark_ovr remain the source of truth. MUST be buildRemarkBlock —
+    // the same builder the screen renders — or the saved text loses the
+    // "1. Clear materials MOQ." header and the tolerance footer while the
+    // operator is looking at both (pinned by remarkBuilder.lint.test.js).
+    const autoRemark = buildRemarkBlock(
+      ltMatRows,
+      stdState.lead_time?.remark_selection,
+      stdState.lead_time?.product_tolerance
+    );
     const resolvedRemark = resolveRemarkDisplay(stdState.lead_time, autoRemark).value;
     const leadTimePatched = {
       ...safeLeadTime(stdState.lead_time),
