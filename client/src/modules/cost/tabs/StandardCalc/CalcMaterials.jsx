@@ -14,6 +14,8 @@ import {
   getActiveTierState,
 } from '../../../../services/calcEngine';
 import { useI18n } from '../../../../utils/useI18n';
+import { priceInUsd } from '../materialCurrency.js';
+import { showToast } from '../../../../utils/toast';
 import { fmtN, parseLocaleNumber } from '../../../../utils/format';
 import DecimalInput from '../../../../utils/DecimalInput';
 import { primaryRowTypeLabel } from '../../../../services/altMaterialsLabels';
@@ -235,15 +237,32 @@ export default function CalcMaterials() {
           // Fill BOTH Ref Price (g_price) and MAT PRICE (latest) so the
           // active cost cell isn't left at $0 after an explicit select.
           // MAT PRICE stays editable — operator can override afterwards.
-          if (hit.g_price) {
-            const p = Number(hit.g_price) || 0;
-            setMaterialField(idx, 'g_price', p);
-            setMaterialField(idx, 'latest', p);
+          //
+          // A library row priced in VND is converted HERE, against THIS
+          // quote's own USD rate, and only the result enters the quote. The
+          // library row keeps the supplier's original number and currency
+          // untouched, and calcEngine stays currency-blind.
+          const res = priceInUsd(
+            { price: hit.price_raw ?? hit.g_price, currency: hit.currency },
+            st.usd_rate
+          );
+          if (res.ok) {
+            setMaterialField(idx, 'g_price', res.usd);
+            setMaterialField(idx, 'latest', res.usd);
+          } else if (res.reason === 'no_usd_rate') {
+            // Refusing beats writing Infinity. 61 of the 132 live quotes carry
+            // no usable rate, so this branch is reached in practice.
+            showToast(t('matlib.currency_usd_only'), 'warn');
+          } else {
+            // Blank, or prose like "Change to FLD" / "no more production" --
+            // 453 rows look like that. Writing 0 would cost the material at
+            // nothing and say so nowhere.
+            showToast(t('matlib.price_unusable'), 'warn');
           }
         },
       });
     },
-    [openMenu, setMaterialField]
+    [openMenu, setMaterialField, st.usd_rate, t]
   );
 
   // Build the render list: tag each material with its original index (`_idx`)

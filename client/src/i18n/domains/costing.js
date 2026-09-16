@@ -738,6 +738,17 @@ registerStrings({
   'matlib.exw_price': { en: 'EXW Price', vi: 'Giá EXW' },
   'matlib.dap_price': { en: 'DAP Price', vi: 'Giá DAP' },
   'matlib.usd_per_m2': { en: 'USD / m²', vi: 'USD / m²' },
+  // The NPI price column no longer asserts USD in its header — the row says
+  // which currency it is in. The unit (per square metre) still belongs there.
+  'matlib.per_m2': { en: 'm²', vi: 'm²' },
+  'matlib.currency_usd_only': {
+    en: 'Enter the USD rate in RFQ & MOQ Info before picking a VND-priced material',
+    vi: 'Nhập USD rate ở tab RFQ & MOQ Info trước khi chọn vật tư báo giá bằng VND',
+  },
+  'matlib.price_unusable': {
+    en: 'This material has no usable price',
+    vi: 'Vật tư này chưa có giá dùng được',
+  },
   'matlib.moq': { en: 'MOQ', vi: 'MOQ' },
   'matlib.lead_time': { en: 'Lead Time', vi: 'Thời gian giao' },
   'matlib.mfg_leadtime': { en: 'Mfg Leadtime', vi: 'Thời gian sản xuất' },

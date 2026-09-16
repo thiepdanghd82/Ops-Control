@@ -29,6 +29,11 @@ export function normNPI(row) {
     ifs_code: '',
     desc: [row.type, row.thick, row.color].filter(Boolean).join(' · ') || row.name || '',
     g_price: Number(row.price) || 0,
+    // Raw, uncoerced — the consumer converts VND with the quote's own rate and
+    // needs to tell "no price" from "$0". `g_price` above stays numeric for
+    // every existing caller.
+    price_raw: row.price,
+    currency: row.currency,
     supplier: row.supplier || '',
     extra: row.note || '',
     date: row.date || '', // "Update Date" in the NPI library.

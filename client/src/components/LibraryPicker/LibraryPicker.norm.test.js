@@ -295,3 +295,28 @@ test('widths still total 100% after columns drop out', () => {
   const total = Object.values(pct).reduce((n, v) => n + parseFloat(v), 0);
   assert.ok(Math.abs(total - 100) < 0.05, `total was ${total}`);
 });
+
+// ── The link the VND conversion hangs on ──────────────────────────────
+// CalcMaterials / SubProductRow convert a VND-priced row using the quote's
+// usd_rate, and they can only do that if the normalizer carries the currency
+// and the UNCOERCED price through. Drop either and the conversion silently
+// falls back to treating every number as USD — a 26,000x costing error that
+// nothing else would catch.
+test('npi normalizer carries currency and the raw price to the consumer', () => {
+  const r = normNPI({
+    name: 'KCW/RPS6/KDL',
+    price: '64000',
+    currency: 'VND',
+    type: 'Gloss Silver PET',
+    supplier: 'UPM',
+  });
+  assert.equal(r.currency, 'VND', 'without this the consumer cannot know to convert');
+  assert.equal(r.price_raw, '64000', 'uncoerced, so "no price" is distinguishable from $0');
+  assert.equal(r.g_price, 64000, 'g_price stays numeric for every existing caller');
+});
+
+test('npi normalizer leaves currency undefined on the 3060 rows that predate the field', () => {
+  const r = normNPI({ name: 'PET SB50', price: '3.35' });
+  assert.equal(r.currency, undefined, 'normalizeCurrency() defaults these to USD downstream');
+  assert.equal(r.g_price, 3.35);
+});

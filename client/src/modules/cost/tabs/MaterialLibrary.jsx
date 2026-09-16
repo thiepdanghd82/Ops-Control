@@ -4,6 +4,7 @@ import { sharedApi, costApi } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 import { useCostLib } from '../../../context/CostLibContext';
 import { todayISO, todayMonthISO, yearOf, yearOptions } from './materialDate.js';
+import { CURRENCIES, DEFAULT_CURRENCY, normalizeCurrency } from './materialCurrency.js';
 import EmptyState from '../../../components/Shared/EmptyState';
 import SkeletonTable from '../../../components/Shared/SkeletonTable';
 import Modal from '../../../components/Shared/Modal';
@@ -386,8 +387,11 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
                   {t('matlib.material_name')}
                 </th>
                 <th className="th-b" style={{ width: 96 }}>
-                  <span className="th-sub">{t('matlib.usd_per_m2')}</span>
+                  <span className="th-sub">{t('matlib.per_m2')}</span>
                   {t('matlib.price')}
+                </th>
+                <th className="th-b" style={{ width: 78 }}>
+                  {t('matlib.currency')}
                 </th>
                 <th className="th-d" style={{ minWidth: 150 }}>
                   {t('matlib.type_desc')}
@@ -423,7 +427,7 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
             <tbody>
               {paged.length === 0 ? (
                 <tr>
-                  <td colSpan={13} style={{ padding: 0 }}>
+                  <td colSpan={14} style={{ padding: 0 }}>
                     <EmptyState
                       icon="📋"
                       title={t('matlib.no_materials')}
@@ -444,6 +448,7 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
                       <td className="td-date">{r.date || '—'}</td>
                       <td className="td-name">{r.name || '—'}</td>
                       <td className="td-price">{fmtPrice(r.price)}</td>
+                      <td className="td-text">{normalizeCurrency(r.currency)}</td>
                       <td className="td-type">{r.type || '—'}</td>
                       <td className="td-dim">{r.thick != null ? r.thick : '—'}</td>
                       <td className="td-text">{r.color || '—'}</td>
@@ -502,7 +507,7 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
           // Seeded with today so a date is not hand-typed on every new
           // material. Typing it is how this library ended up holding four
           // different shapes plus 754 rows that just say "Old".
-          row={{ date: todayISO() }}
+          row={{ date: todayISO(), currency: DEFAULT_CURRENCY }}
           idx={-1}
           onSave={handleAdd}
           onClose={() => setAddMode(false)}
@@ -584,14 +589,24 @@ function NPIEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
           />
         </Section>
         <Section color="#047857" icon="💰" title={t('matlib.pricing')}>
+          {/* One selector covers both prices: a supplier quotes EXW and DAP
+              in the same currency. The labels no longer assert USD — the row
+              itself now records which currency its numbers are in. */}
           <Field
-            label="EXW Price (USD/m²)"
+            label={t('matlib.currency')}
+            value={normalizeCurrency(form.currency)}
+            onChange={(v) => set('currency', v)}
+            options={CURRENCIES}
+            disabled={isViewOnly}
+          />
+          <Field
+            label="EXW Price (/m²)"
             value={form.exw}
             onChange={(v) => set('exw', v)}
             disabled={isViewOnly}
           />
           <Field
-            label="DAP Price (USD/m²)"
+            label="DAP Price (/m²)"
             value={form.price}
             onChange={(v) => set('price', v)}
             disabled={isViewOnly}
@@ -1541,7 +1556,28 @@ function Section({ color, icon, title, single, children }) {
 // SHARED FIELD COMPONENT
 // ═══════════════════════════════════════════════════════════
 
-function Field({ label, value, onChange, type = 'text', wide, disabled }) {
+function Field({ label, value, onChange, type = 'text', wide, disabled, options }) {
+  // `options` renders a closed <select>. Used for Currency, where a free-text
+  // box would invite a third currency nothing downstream can convert.
+  if (options) {
+    return (
+      <div className={`op-form-field ${wide ? 'op-form-field--wide' : ''}`}>
+        <label>{label}</label>
+        <select
+          className="op-form-input"
+          value={value || options[0]}
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          {options.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }
   // Sprint AG — numeric fields route through DecimalInput so partial
   // decimals like "0.1" don't get clobbered by the native-number +
   // parent re-render loop. The value-fallback below (text path) is
