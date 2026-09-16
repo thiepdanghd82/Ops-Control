@@ -65,3 +65,69 @@ export function yearOptions(rows, field) {
   }
   return [...set].sort().reverse();
 }
+
+/**
+ * A sortable key for a free-text date cell: `YYYYMMDD` as a number, or `null`
+ * when the cell does not START with a date.
+ *
+ * Anchored at the start on purpose. Measured on the live NPI library (3061
+ * rows): 2116 are `YYYY-MM-DD`, 754 say "Old", 91 say "DAP", 15 are `7.2023`
+ * (month.year, no day), and a handful are `26.05.2025 (add 20% on 1.4.2026)` —
+ * a real update date followed by a pricing note. Two rows are ONLY the note,
+ * `(add 15% on 1.4.2026)`.
+ *
+ * A "first date anywhere in the string" rule reads those two as 2026-04-01 and
+ * files them among the newest rows, which is exactly wrong: they carry no
+ * update date at all. Anchoring gets both cases right for free — the update
+ * date is what the cell begins with, anything after it is commentary.
+ *
+ * Missing parts sort low within their year (`7.2023` -> 20230700, `2023` ->
+ * 20230000), so a month-only row lands before any dated row in that month
+ * rather than pretending to be the 1st.
+ */
+export function dateSortKey(value) {
+  const s = String(value ?? '').trim();
+  if (!s) return null;
+  const Y = '(?:19|20|21)\\d{2}';
+  let m;
+  // YYYY-MM-DD / YYYY.MM.DD / YYYY/MM/DD
+  if ((m = new RegExp(`^(${Y})[./-](\\d{1,2})[./-](\\d{1,2})`).exec(s)))
+    return +m[1] * 10000 + +m[2] * 100 + +m[3];
+  // DD.MM.YYYY / DD/MM/YYYY — European, day first
+  if ((m = new RegExp(`^(\\d{1,2})[./-](\\d{1,2})[./-](${Y})`).exec(s)))
+    return +m[3] * 10000 + +m[2] * 100 + +m[1];
+  // YYYY-MM
+  if ((m = new RegExp(`^(${Y})[./-](\\d{1,2})(?![\\d./-])`).exec(s)))
+    return +m[1] * 10000 + +m[2] * 100;
+  // M.YYYY — two numbers, the second a year (e.g. `7.2023`)
+  if ((m = new RegExp(`^(\\d{1,2})[./-](${Y})(?![\\d./-])`).exec(s)))
+    return +m[2] * 10000 + +m[1] * 100;
+  // A bare year
+  if ((m = new RegExp(`^(${Y})(?![\\d./-])`).exec(s))) return +m[1] * 10000;
+  return null;
+}
+
+/**
+ * Sort rows by a free-text date field. Returns a NEW array; the input is left
+ * alone so React sees a changed reference.
+ *
+ * Rows with no readable date ("Old", "DAP", blank — 850 of them) stay together
+ * at the BOTTOM in BOTH directions, keeping their existing relative order.
+ * Floating them to the top on an ascending sort would bury the genuinely
+ * oldest entries under 850 rows of "Old", which is the opposite of what
+ * sorting by date is for.
+ */
+export function sortByDate(rows, dir, field = 'date') {
+  const list = Array.isArray(rows) ? rows : [];
+  const sign = dir === 'asc' ? 1 : -1;
+  // `sort` is stable, so equal keys — and the whole undated block — keep the
+  // order they arrived in.
+  return [...list].sort((a, b) => {
+    const ka = dateSortKey(a?.[field]);
+    const kb = dateSortKey(b?.[field]);
+    if (ka == null && kb == null) return 0;
+    if (ka == null) return 1; // undated always last
+    if (kb == null) return -1;
+    return (ka - kb) * sign;
+  });
+}

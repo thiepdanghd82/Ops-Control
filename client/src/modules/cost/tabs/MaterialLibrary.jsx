@@ -3,7 +3,7 @@ import { useI18n } from '../../../utils/useI18n';
 import { sharedApi, costApi } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 import { useCostLib } from '../../../context/CostLibContext';
-import { todayISO, todayMonthISO, yearOf, yearOptions } from './materialDate.js';
+import { todayISO, todayMonthISO, yearOf, yearOptions, sortByDate } from './materialDate.js';
 import { CURRENCIES, DEFAULT_CURRENCY, normalizeCurrency } from './materialCurrency.js';
 import EmptyState from '../../../components/Shared/EmptyState';
 import SkeletonTable from '../../../components/Shared/SkeletonTable';
@@ -215,7 +215,18 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
   const [page, setPage] = useState(0);
   const [editIdx, setEditIdx] = useState(null);
   const [addMode, setAddMode] = useState(false);
+  // null = the order the library was imported in. Clicking Update Date sorts
+  // newest-first, then toggles — the same first-click direction Quote History
+  // uses, so the two tables behave the same way under the same gesture.
+  const [dateSort, setDateSort] = useState(null);
   const searchRef = useRef(null);
+
+  function toggleDateSort() {
+    setDateSort((d) => (d === 'desc' ? 'asc' : 'desc'));
+    // Back to page 0: sorting while on page 8 would drop the operator into
+    // the middle of a brand-new order with no idea what they are looking at.
+    setPage(0);
+  }
 
   const filtered = useMemo(() => {
     let result = data;
@@ -230,12 +241,19 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
     return result;
   }, [data, search, yearFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  // Sort AFTER the filter and BEFORE the page slice, so the whole matching
+  // set is ordered rather than the 200 rows that happen to be on screen.
+  const visible = useMemo(
+    () => (dateSort ? sortByDate(filtered, dateSort) : filtered),
+    [filtered, dateSort]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(visible.length / PER_PAGE));
   // Clamp page into range instead of resetting in an effect — avoids the
   // React 19 "setState in effect" warning and handles shrinking data
   // (e.g. rows deleted) more gracefully than a hard reset.
   const effectivePage = Math.min(page, totalPages - 1);
-  const paged = filtered.slice(effectivePage * PER_PAGE, (effectivePage + 1) * PER_PAGE);
+  const paged = visible.slice(effectivePage * PER_PAGE, (effectivePage + 1) * PER_PAGE);
 
   function handleAdd(row) {
     setData((prev) => [...prev, row]);
@@ -294,7 +312,7 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
           <div className="ml-hb-meta">
             <span className="ml-hb-badge">{data.length}</span>
             <span className="ml-hb-sub">
-              {paged.length} of {filtered.length}
+              {paged.length} of {visible.length}
             </span>
           </div>
         </div>
@@ -380,8 +398,24 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
                 <th className="th-d" style={{ width: 42, textAlign: 'center' }}>
                   #
                 </th>
-                <th className="th-d" style={{ width: 88 }}>
-                  {t('matlib.update_date')}
+                <th
+                  className={`th-d ml-th-sort ${dateSort ? 'ml-th-sort-on' : ''}`}
+                  style={{ width: 88 }}
+                  aria-sort={
+                    dateSort === 'asc' ? 'ascending' : dateSort === 'desc' ? 'descending' : 'none'
+                  }
+                >
+                  <button
+                    type="button"
+                    className="ml-th-sort-btn"
+                    onClick={toggleDateSort}
+                    title={t('matlib.sort_by_date')}
+                  >
+                    {t('matlib.update_date')}
+                    <span className="ml-th-sort-ind" aria-hidden="true">
+                      {dateSort === 'asc' ? '↑' : dateSort === 'desc' ? '↓' : '↕'}
+                    </span>
+                  </button>
                 </th>
                 <th className="th-d" style={{ minWidth: 190 }}>
                   {t('matlib.material_name')}
