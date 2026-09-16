@@ -4,7 +4,14 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { coerce, coerceNumber, coerceDate, coerceBoolean, trimCell } from './importTypeCoerce.js';
+import {
+  coerce,
+  coerceNumber,
+  coerceDate,
+  coerceBoolean,
+  coerceEnum,
+  trimCell,
+} from './importTypeCoerce.js';
 
 test('trimCell strips NBSP and zero-width chars', () => {
   assert.equal(trimCell('  hello world  '), 'hello world');
@@ -131,4 +138,38 @@ test('coerce dispatches by type name', () => {
   assert.equal(coerce('Yes', 'boolean').value, true);
   assert.equal(coerce('  hello  ', 'string').value, 'hello');
   assert.equal(coerce('3.7', 'integer').value, 3);
+});
+
+// ─── enum (NPI currency) ───────────────────────────────────────────
+const CCY = { values: ['USD', 'VND'] };
+
+test('coerceEnum: a declared value passes through in its canonical spelling', () => {
+  assert.deepEqual(
+    ['USD', 'vnd', ' Usd ', 'VND'].map((v) => coerceEnum(v, CCY).value),
+    ['USD', 'VND', 'USD', 'VND']
+  );
+});
+
+test('coerceEnum: blank stays blank — an added column is empty on older rows', () => {
+  for (const v of ['', '   ', null, undefined]) {
+    const r = coerceEnum(v, CCY);
+    assert.equal(r.ok, true, `blank ${JSON.stringify(v)} must import`);
+    assert.equal(r.value, '');
+  }
+});
+
+test('coerceEnum: a third currency is an ISSUE, not a silent USD', () => {
+  const r = coerceEnum('VNĐ', CCY);
+  assert.equal(r.ok, false);
+  assert.match(r.reason, /bad_enum/);
+  assert.match(r.reason, /USD, VND/, 'the message names what was expected');
+});
+
+test('coerceEnum: no declared values → passes the trimmed text through', () => {
+  assert.deepEqual(coerceEnum('  EUR ', {}), { ok: true, value: 'EUR', raw: '  EUR ' });
+});
+
+test('coerce dispatches enum', () => {
+  assert.equal(coerce('vnd', 'enum', CCY).value, 'VND');
+  assert.equal(coerce('EUR', 'enum', CCY).ok, false);
 });

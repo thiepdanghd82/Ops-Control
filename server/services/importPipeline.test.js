@@ -274,11 +274,49 @@ test('preview tokens: unknown token returns null', () => {
 
 test('mapHeaders: real CCL NPI export — ALL 12 columns map (none dropped)', () => {
   const r = mapHeaders(CCL_NPI_HEADERS, NPI);
-  for (const k of NPI.canonicalHeaders) {
-    assert.ok(k in r.mapping, `column "${k}" must be mapped`);
+  for (const h of CCL_NPI_HEADERS) {
+    assert.ok(
+      Object.values(r.mapping).includes(CCL_NPI_HEADERS.indexOf(h)),
+      `header "${h}" must be mapped`
+    );
   }
   assert.deepEqual(r.unmapped, [], 'no unmapped columns');
   assert.deepEqual(r.missing, [], 'no missing required headers');
+});
+
+// This fixture is a file exported BEFORE the currency column existed, so it
+// carries no Currency header and `currency` is legitimately absent from the
+// mapping. Asserting "every canonical key is present" would make the guard
+// refuse a legacy file — the opposite of what it is for. The current export
+// round-trip is pinned by the next test instead.
+test('mapHeaders: a pre-currency export still imports — currency simply unset', () => {
+  const r = mapHeaders(CCL_NPI_HEADERS, NPI);
+  assert.equal('currency' in r.mapping, false, 'no Currency column in a legacy file');
+  assert.deepEqual(r.unmapped, [], 'and nothing is dropped because of it');
+});
+
+test('mapHeaders: the CURRENT NPI export header row maps every canonical key', () => {
+  const exported = NPI.canonicalHeaders.map((k) => NPI.prettyLabels[k]);
+  const r = mapHeaders(exported, NPI);
+  for (const k of NPI.canonicalHeaders) {
+    assert.ok(k in r.mapping, `exported column "${k}" must re-import`);
+  }
+  assert.deepEqual(r.unmapped, [], 'no unmapped columns');
+});
+
+test('mapHeaders: Currency auto-matches the spellings a real file uses', () => {
+  assert.equal(mapHeaders(['Currency'], NPI).mapping.currency, 0);
+  assert.equal(mapHeaders(['CURRENCY'], NPI).mapping.currency, 0);
+  assert.equal(mapHeaders(['Currency (USD/VND)'], NPI).mapping.currency, 0);
+  assert.equal(mapHeaders(['Tiền tệ'], NPI).mapping.currency, 0);
+});
+
+// The header lost its USD assertion when the currency column arrived, so the
+// export label changed too. Files exported under the old label must still
+// import, or every file the operator already has on disk becomes unreadable.
+test('mapHeaders: both the old and new price labels map to price', () => {
+  assert.equal(mapHeaders(['Price (USD/m²)'], NPI).mapping.price, 0);
+  assert.equal(mapHeaders(['Price (/m²)'], NPI).mapping.price, 0);
 });
 
 test('mapHeaders: the 5 previously-dropped NPI columns now map', () => {

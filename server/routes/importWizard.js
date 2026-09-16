@@ -29,7 +29,7 @@ import { toCsvDocument } from '../utils/csvSafe.js';
 import { uploadSingle } from '../utils/uploadGuard.js';
 
 import { parseUploadedFile } from '../services/importParse.js';
-import { getDataset, listDatasets } from '../services/importDatasets.js';
+import { getDataset, listDatasets, exportCell } from '../services/importDatasets.js';
 import {
   mapHeaders,
   applyMappingOverrides,
@@ -505,7 +505,7 @@ router.get('/export/:dataset', requireRole(4), async (req, res) => {
     if (Array.isArray(existing)) {
       const canon = dataset.canonicalHeaders;
       headers = canon.map((k) => dataset.prettyLabels?.[k] || k);
-      rows = existing.map((obj) => canon.map((k) => obj[k] ?? ''));
+      rows = existing.map((obj) => canon.map((k) => exportCell(dataset, obj, k)));
     } else {
       headers = existing.headers || [];
       rows = existing.rows || [];

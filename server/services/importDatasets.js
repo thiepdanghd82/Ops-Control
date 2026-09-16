@@ -44,6 +44,26 @@ function aliasMap(spec) {
   return m;
 }
 
+/**
+ * One export cell: the row's own value, or the dataset's `exportDefaults`
+ * entry when the row has none.
+ *
+ * A column added after rows were written is absent (or blank) on every older
+ * row. `exportDefaults` says what the app already SHOWS for those rows, so an
+ * export matches the screen rather than reading as "no data" — NPI currency
+ * is the case: 3058 rows predate the column and every one of them displays
+ * USD, because that is what the old `USD / m²` header promised.
+ *
+ * Blank counts as unset, not as a value: a blank cell survives an
+ * export → re-import round-trip, so treating `''` as data would make the
+ * default apply on the first export and never again.
+ */
+export function exportCell(dataset, row, k) {
+  const v = row?.[k];
+  if (v == null || v === '') return dataset?.exportDefaults?.[k] ?? '';
+  return v;
+}
+
 export function normKey(s) {
   return String(s || '')
     .trim()
@@ -412,6 +432,7 @@ const NPI_DATASET = {
     'date',
     'name',
     'price',
+    'currency',
     'type',
     'thick',
     'color',
@@ -426,7 +447,11 @@ const NPI_DATASET = {
   prettyLabels: {
     date: 'Date',
     name: 'Material Name',
-    price: 'Price (USD/m²)',
+    // The price column stopped asserting USD when the currency column landed
+    // (PR #343), so the export header drops it too. Files exported under the
+    // old `Price (USD/m²)` label still import — that alias is kept below.
+    price: 'Price (/m²)',
+    currency: 'Currency',
     type: 'Type / Description',
     thick: 'Thickness (mm)',
     color: 'Color',
@@ -441,11 +466,22 @@ const NPI_DATASET = {
   naturalKey: ['name', 'supplier'],
   columnTypes: {
     price: 'number',
+    currency: 'enum',
     thick: 'number',
     moq: 'number',
     lt: 'number',
     date: 'date',
   },
+  // Only these two are selectable in the UI, so only these two may be
+  // imported. Blank is fine and means USD (see exportDefaults below); a third
+  // currency must SURFACE, because `normalizeCurrency` on the client falls
+  // back to USD, and a VND price of 64000 read as $64000 is invisible until
+  // someone reads the margin.
+  columnEnums: { currency: ['USD', 'VND'] },
+  // Rows written before the column existed hold no currency at all. The app
+  // shows them as USD (that is what the old `USD / m²` header promised), so
+  // the export says USD too — otherwise the file contradicts the screen.
+  exportDefaults: { currency: 'USD' },
   // Aliases also list the literal strings CCL's export writes verbatim
   // (belt-and-suspenders on top of the tolerant token matcher — Lesson 32).
   aliases: aliasMap({
@@ -458,9 +494,11 @@ const NPI_DATASET = {
       'Unit Price',
       'Giá',
       'Price (USD/m²)',
+      'Price (/m²)',
       'USD / m²',
       'USD / M² PRICE',
     ],
+    currency: ['Currency', 'CCY', 'Currency (USD/VND)', 'Tiền tệ', 'Đơn vị tiền'],
     type: ['Type', 'Description', 'Desc', 'Type / Description', 'Mô tả'],
     thick: [
       'Thick',
