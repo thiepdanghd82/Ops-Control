@@ -23,6 +23,7 @@ import { upgradeStdState } from '../services/stdMigration.js';
 import { applyPrintToCutSync } from '../services/layoutFieldSync.js';
 import { buildDrawingPatch, DRAWING_KINDS } from '../services/drawingFiles.js';
 import { resetProcessesScrap } from '../services/scrapDefaults.js';
+import { clearTargets } from '../services/copyResetTargets.js';
 
 // ── Action Types ──
 // Exported so tests + advanced callers can reference canonical strings
@@ -1082,13 +1083,13 @@ export function calcReducer(state, action) {
         const merged = { ...createStdState(), ...qState };
         const upgraded = upgradeStdState(merged);
         const next = isCopy
-          ? {
+          ? clearTargets({
               ...upgraded,
               pricing_snapshot: copySnapshot(upgraded.pricing_snapshot),
               // Copy = fresh start: re-apply the new-RFQ scrap policy
               // (0 everywhere, 0.10 for FQC). Open/load preserves saved scrap.
               processes: resetProcessesScrap(upgraded.processes),
-            }
+            })
           : upgraded;
         return {
           ...state,
@@ -1116,7 +1117,7 @@ export function calcReducer(state, action) {
       }
       const upgradedCpx = upgradeCplxState(mergedCplx);
       const nextCpx = isCopy
-        ? {
+        ? clearTargets({
             ...upgradedCpx,
             pricing_snapshot: copySnapshot(upgradedCpx.pricing_snapshot),
             // Copy = fresh start: reset every subproduct's process scrap to
@@ -1126,7 +1127,7 @@ export function calcReducer(state, action) {
                   sp ? { ...sp, processes: resetProcessesScrap(sp.processes) } : sp
                 )
               : upgradedCpx.subproducts,
-          }
+          })
         : upgradedCpx;
       return {
         ...state,
