@@ -48,7 +48,7 @@ import {
   resolvePoLtDisplay,
   safeLeadTime,
   buildLeadTimeMaterialsTable,
-  buildRemarkFromSelection,
+  buildRemarkBlock,
   resolveRemarkDisplay,
 } from '../StandardCalc/CalcLeadTimeNotice.helpers.js';
 import { showToast } from '../../../../utils/toast';
@@ -326,7 +326,12 @@ export default function ComplexCalc() {
     // 8 across every SP); lt_po_ovr stays the override source of truth.
     const resolvedPoLt = resolvePoLtDisplay(cs.lead_time, poProdHours).value;
     // REMARK: persist the resolved checkbox-driven value (or manual override).
-    const autoRemark = buildRemarkFromSelection(ltMatRows, cs.lead_time?.remark_selection);
+    // Same builder the screen uses — see remarkBuilder.lint.test.js.
+    const autoRemark = buildRemarkBlock(
+      ltMatRows,
+      cs.lead_time?.remark_selection,
+      cs.lead_time?.product_tolerance
+    );
     const resolvedRemark = resolveRemarkDisplay(cs.lead_time, autoRemark).value;
     const leadTimePatched = {
       ...safeLeadTime(cs.lead_time),

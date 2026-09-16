@@ -604,7 +604,11 @@ export default function Summarize() {
                 material_lt: lt.lt_material,
                 sample_lt: lt.lt_sample,
                 po_lt: lt.lt_po,
-                remark: toBulletFromTextarea(lt.lt_remark),
+                // NOT re-bulleted: the remark is already a formatted block
+                // (numbered headings + its own dashes), so prefixing every
+                // line would render "• 1. Clear materials MOQ.". The other
+                // two are plain operator notes and do want bullets.
+                remark: lt.lt_remark,
                 process: toBulletFromTextarea(lt.lt_process),
                 type_of_material: toBulletFromTextarea(lt.lt_material_type),
               };
