@@ -182,51 +182,83 @@ describe('collectDrwMaterials — Main.Mat filter + bullet format', () => {
   });
 });
 
-describe('collectQuoteMaterials — same filter logic on desc', () => {
-  test('Std: bullet desc for Main.Mat only', () => {
+describe('collectQuoteMaterials — reads the IFS Code column', () => {
+  test('Std: bullet the code for Main.Mat only', () => {
     const state = {
       materials: [
-        { row_type: 'Main.Mat', desc: 'BOPP 50um' },
-        { row_type: 'Process Mat', desc: 'Release liner' },
-        { row_type: 'Main.Mat', desc: 'PET 12um' },
+        { row_type: 'Main.Mat', code: 'BW-7513', desc: 'BOPP 50um' },
+        { row_type: 'Process Mat', code: 'RL-0001', desc: 'Release liner' },
+        { row_type: 'Main.Mat', code: 'PET-0012', desc: 'PET 12um' },
       ],
     };
-    assert.equal(collectQuoteMaterials(state), '• BOPP 50um\n• PET 12um');
+    assert.equal(collectQuoteMaterials(state), '• BW-7513\n• PET-0012');
   });
 
-  test('Cpx: cross-SP bullet desc', () => {
+  test('Cpx: cross-SP bullet the code', () => {
     const state = {
       subproducts: [
         {
           materials: [
-            { row_type: 'Main.Mat', desc: 'Film' },
-            { row_type: 'Process Mat', desc: 'Primer' },
+            { row_type: 'Main.Mat', code: 'F-1', desc: 'Film' },
+            { row_type: 'Process Mat', code: 'P-1', desc: 'Primer' },
           ],
         },
-        { materials: [{ row_type: 'Main.Mat', desc: 'Liner' }] },
+        { materials: [{ row_type: 'Main.Mat', code: 'L-1', desc: 'Liner' }] },
       ],
     };
-    assert.equal(collectQuoteMaterials(state), '• Film\n• Liner');
+    assert.equal(collectQuoteMaterials(state), '• F-1\n• L-1');
   });
 
-  test('drw_material and desc collectors stay independent — no cross-talk', () => {
+  test('the two collectors stay independent — no cross-talk', () => {
     const state = {
       materials: [
-        { row_type: 'Main.Mat', drw_material: 'CODE-A', desc: 'Display A' },
-        { row_type: 'Process Mat', drw_material: 'CODE-X', desc: 'Display X' },
+        { row_type: 'Main.Mat', code: 'IFS-A', drw_material: 'CODE-A', desc: 'Display A' },
+        { row_type: 'Process Mat', code: 'IFS-X', drw_material: 'CODE-X', desc: 'Display X' },
       ],
     };
     assert.equal(collectDrwMaterials(state), '• CODE-A');
-    assert.equal(collectQuoteMaterials(state), '• Display A');
+    assert.equal(collectQuoteMaterials(state), '• IFS-A');
   });
 
-  test('legacy Main.Mat N suffix carries through to desc collector', () => {
+  test('legacy Main.Mat N suffix still classifies', () => {
     const state = {
       materials: [
-        { row_type: 'Main.Mat 1', desc: 'one' },
-        { row_type: 'Main.Mat 2', desc: 'two' },
+        { row_type: 'Main.Mat 1', code: 'one' },
+        { row_type: 'Main.Mat 2', code: 'two' },
       ],
     };
     assert.equal(collectQuoteMaterials(state), '• one\n• two');
+  });
+
+  // The grid column headed "IFS CODE" is bound to `mat.code`; `mat.ifs_code`
+  // is a shadow field with no input of its own, written only as a side effect
+  // of picking from the library. Across the 132 live quotes it is populated on
+  // 4 material rows out of 656 and NEVER holds a value different from `code`.
+  // Reading it alone would blank the column for 652 rows, so `code` is the
+  // source and `ifs_code` merely wins when both are set -- the same resolution
+  // the xlsx Materials sheet already ships (`03-materials.js`), so the two
+  // exports cannot disagree about what an IFS code is.
+  test('prefers ifs_code when the library filled it', () => {
+    const state = {
+      materials: [{ row_type: 'Main.Mat', code: 'TYPED-1', ifs_code: 'FROM-LIB', desc: 'x' }],
+    };
+    assert.equal(collectQuoteMaterials(state), '• FROM-LIB');
+  });
+
+  test('falls back to code on a hand-typed row — the 652-row case', () => {
+    const state = {
+      materials: [{ row_type: 'Main.Mat', code: 'BW-7513', desc: 'PP (Synthetic)' }],
+    };
+    assert.equal(collectQuoteMaterials(state), '• BW-7513');
+  });
+
+  test('a row with neither drops out instead of bulleting an empty line', () => {
+    const state = {
+      materials: [
+        { row_type: 'Main.Mat', desc: 'has a description but no code' },
+        { row_type: 'Main.Mat', code: 'KEEP-1' },
+      ],
+    };
+    assert.equal(collectQuoteMaterials(state), '• KEEP-1');
   });
 });
