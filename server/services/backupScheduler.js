@@ -164,10 +164,13 @@ function effectiveSettings() {
     persisted.hour != null
       ? Math.max(0, Math.min(23, parseInt(persisted.hour, 10) || 2))
       : parseInt(process.env.OPS_BACKUP_HOUR, 10) || 2;
-  const retentionDays =
-    persisted.retentionDays != null
-      ? Math.max(1, parseInt(persisted.retentionDays, 10) || 30)
-      : parseInt(process.env.OPS_BACKUP_RETENTION_DAYS, 10) || 30;
+  // Read through the same resolver the prune steps use. This is a DEDUP,
+  // not a fix: the local copy this replaced returned the same number in
+  // every case (persisted / env / absent / malformed), which is why no test
+  // catches its removal — deleting this line leaves the suite green. It
+  // earns its place by leaving one definition of "retention" instead of
+  // two, so the next change to the rule cannot land in only one of them.
+  const retentionDays = getRetentionSettings().keepDays;
   return { enabled, hour, retentionDays };
 }
 

@@ -34,6 +34,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { atomicWriteFileSync } from '../services/atomicWrite.js';
+import { getDbPath } from '../db/connection.js';
 
 export const BACKUP_SUBDIR = path.join('Backup', 'Data');
 export const DEFAULT_QUOTA_MB = 500;
@@ -301,11 +302,43 @@ export function pruneOldBackups({ backupRoot, keepDays = 30, keepMin = 10 } = {}
 }
 
 /** Resolve retention settings from env with sane defaults. */
+/**
+ * `retentionDays` as saved by Settings → Backup, or null when there is no
+ * config yet (fresh install) or it cannot be read.
+ *
+ * The scheduler persists the admin's choice to backup-schedule.json and
+ * getStatus() reports it — but until 2026-09-16 no prune ever read it, so
+ * setting 60 days in the UI still deleted at 30. The card promised a number
+ * nothing obeyed. Resolving retention in ONE place is what stops the card
+ * and the prune drifting apart again; every caller goes through here.
+ */
+function persistedRetentionDays() {
+  try {
+    const cfgPath = path.join(
+      path.dirname(getDbPath()),
+      'Library',
+      'SystemConfig',
+      'backup-schedule.json'
+    );
+    const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'));
+    if (!cfg || typeof cfg !== 'object' || cfg.retentionDays == null) return null;
+    const n = parseInt(cfg.retentionDays, 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  } catch {
+    // Absent on a fresh install, unreadable if hand-edited — either way the
+    // env/default below still applies. A bad config must never stop a backup.
+    return null;
+  }
+}
+
 export function getRetentionSettings() {
   const days = Number(process.env.OPS_BACKUP_RETENTION_DAYS);
   const min = Number(process.env.OPS_BACKUP_RETENTION_MIN);
+  const envDays = Number.isFinite(days) && days > 0 ? Math.floor(days) : 30;
   return {
-    keepDays: Number.isFinite(days) && days > 0 ? Math.floor(days) : 30,
+    // Saved setting wins; env is the fallback for installs that have never
+    // opened Settings. keepMin has no UI field, so it stays env-only.
+    keepDays: persistedRetentionDays() ?? envDays,
     keepMin: Number.isFinite(min) && min > 0 ? Math.floor(min) : 10,
   };
 }

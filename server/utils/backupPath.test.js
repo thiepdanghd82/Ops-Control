@@ -337,3 +337,82 @@ test('cleanup: remove tmp dir', () => {
     /* noop */
   }
 });
+
+// ── Retention: the Settings value must actually govern pruning ────────
+// Settings → Backup persists `retentionDays` to backup-schedule.json and
+// getStatus() reports it, but every prune path resolved retention from the
+// ENV var alone, so an admin who set 60 days in the UI still had backups
+// deleted at 30. The UI was reporting a number nothing obeyed.
+import { _resetForTests as _resetDbForTests } from '../db/connection.js';
+
+function withPersistedSchedule(cfg, fn) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ops-sched-'));
+  const prevDbPath = process.env.OPS_DB_PATH;
+  process.env.OPS_DB_PATH = path.join(dir, 'ops.db');
+  _resetDbForTests();
+  fs.mkdirSync(path.join(dir, 'Library', 'SystemConfig'), { recursive: true });
+  if (cfg) {
+    fs.writeFileSync(
+      path.join(dir, 'Library', 'SystemConfig', 'backup-schedule.json'),
+      JSON.stringify(cfg)
+    );
+  }
+  try {
+    return fn();
+  } finally {
+    if (prevDbPath == null) delete process.env.OPS_DB_PATH;
+    else process.env.OPS_DB_PATH = prevDbPath;
+    _resetDbForTests();
+  }
+}
+
+test('getRetentionSettings: persisted retentionDays beats the env var', () => {
+  process.env.OPS_BACKUP_RETENTION_DAYS = '7';
+  try {
+    const s = withPersistedSchedule({ enabled: true, hour: 2, retentionDays: 77 }, () =>
+      getRetentionSettings()
+    );
+    assert.equal(s.keepDays, 77, 'the value an admin saved in Settings must win');
+  } finally {
+    delete process.env.OPS_BACKUP_RETENTION_DAYS;
+  }
+});
+
+test('getRetentionSettings: env still applies when nothing is persisted', () => {
+  process.env.OPS_BACKUP_RETENTION_DAYS = '7';
+  try {
+    const s = withPersistedSchedule(null, () => getRetentionSettings());
+    assert.equal(s.keepDays, 7, 'env remains the fallback for fresh installs');
+  } finally {
+    delete process.env.OPS_BACKUP_RETENTION_DAYS;
+  }
+});
+
+test('getRetentionSettings: a corrupt schedule file falls back, never throws', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ops-sched-bad-'));
+  const prev = process.env.OPS_DB_PATH;
+  process.env.OPS_DB_PATH = path.join(dir, 'ops.db');
+  _resetDbForTests();
+  fs.mkdirSync(path.join(dir, 'Library', 'SystemConfig'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'Library', 'SystemConfig', 'backup-schedule.json'), '{not json');
+  try {
+    const s = getRetentionSettings();
+    assert.equal(s.keepDays, 30, 'unreadable config must not break the backup cycle');
+    assert.equal(s.keepMin, 10);
+  } finally {
+    if (prev == null) delete process.env.OPS_DB_PATH;
+    else process.env.OPS_DB_PATH = prev;
+    _resetDbForTests();
+  }
+});
+
+test('getRetentionSettings: keepMin stays env-driven (no Settings field for it)', () => {
+  process.env.OPS_BACKUP_RETENTION_MIN = '4';
+  try {
+    const s = withPersistedSchedule({ retentionDays: 77 }, () => getRetentionSettings());
+    assert.equal(s.keepMin, 4, 'keepMin has no UI, so env remains its only override');
+    assert.equal(s.keepDays, 77);
+  } finally {
+    delete process.env.OPS_BACKUP_RETENTION_MIN;
+  }
+});
