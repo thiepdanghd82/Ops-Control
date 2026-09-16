@@ -8,6 +8,8 @@ import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import { useFeatureFlag } from '../../../../context/useAppConfig';
 import { useI18n } from '../../../../utils/useI18n';
+import { priceInUsd } from '../materialCurrency.js';
+import { showToast } from '../../../../utils/toast';
 import { useLibraryPicker } from '../../../../components/LibraryPicker/LibraryPicker';
 import AltMaterialsToggle from '../StandardCalc/AltMaterialsToggle';
 import { resolveLibRow } from '../../lib/codeMatch.js';
@@ -268,16 +270,25 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
           setMat(mi, 'ifs_code', hit.ifs_code || '');
           setMat(mi, 'desc', hit.desc || '');
           // Fill BOTH Ref Price (g_price) and MAT PRICE (latest) — mirror
-          // of Std CalcMaterials so the shared picker fills identically.
-          if (hit.g_price) {
-            const p = Number(hit.g_price) || 0;
-            setMat(mi, 'g_price', p);
-            setMat(mi, 'latest', p);
+          // of Std CalcMaterials so the shared picker fills identically,
+          // VND conversion included. The rate is the QUOTE's, not the
+          // sub-product's: usd_rate is quote-level state.
+          const res = priceInUsd(
+            { price: hit.price_raw ?? hit.g_price, currency: hit.currency },
+            cplxState.usd_rate
+          );
+          if (res.ok) {
+            setMat(mi, 'g_price', res.usd);
+            setMat(mi, 'latest', res.usd);
+          } else if (res.reason === 'no_usd_rate') {
+            showToast(t('matlib.currency_usd_only'), 'warn');
+          } else {
+            showToast(t('matlib.price_unusable'), 'warn');
           }
         },
       });
     },
-    [openMenu, setMat]
+    [openMenu, setMat, cplxState.usd_rate, t]
   );
   // Ref Price column is bound to s_price and calcInk reads s_price as
   // the source ink price — so we mirror the picker price into BOTH
