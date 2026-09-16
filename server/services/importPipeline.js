@@ -336,7 +336,9 @@ export function coerceRows(headers, rows, dataset) {
     const next = headers.map((h, i) => {
       const t = types[h];
       if (!t) return row[i] ?? '';
-      const r = coerce(row[i], t);
+      // `columnEnums` names the closed value set for an 'enum' column; every
+      // other type ignores the option.
+      const r = coerce(row[i], t, { values: dataset.columnEnums?.[h] });
       if (!r.ok) {
         issues.push({ row: rowIdx, col: h, raw: row[i], reason: r.reason });
         return row[i] ?? ''; // keep raw on failure so the operator can fix

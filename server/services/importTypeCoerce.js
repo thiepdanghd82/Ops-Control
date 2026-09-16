@@ -189,10 +189,38 @@ export function coerceBoolean(v, opts = {}) {
 }
 
 /**
+ * Coerce a cell to one of a closed set of values (`opts.values`).
+ *
+ * Blank is OK and stays blank: a column added to an existing dataset is empty
+ * on every row written before it, and refusing those would refuse the whole
+ * file. Anything else must match a declared value (case- and space-
+ * insensitively) and is rewritten to that value's canonical spelling.
+ *
+ * A non-matching cell is an ISSUE, not a silent default. The wizard's Issues
+ * panel shows it and the raw text is kept so the operator can fix the file —
+ * the alternative is a value the app quietly reinterprets, which is the
+ * failure mode this whole column exists to remove.
+ */
+export function coerceEnum(v, opts = {}) {
+  const values = Array.isArray(opts.values) ? opts.values : [];
+  const s = trimCell(v);
+  if (s === '') return { ok: true, value: '', raw: v };
+  if (values.length === 0) return { ok: true, value: s, raw: v };
+  const hit = values.find((allowed) => String(allowed).toUpperCase() === s.toUpperCase());
+  if (hit != null) return { ok: true, value: hit, raw: v };
+  return {
+    ok: false,
+    value: null,
+    raw: v,
+    reason: `bad_enum: ${s} (expected ${values.join(', ')})`,
+  };
+}
+
+/**
  * Generic coerce by named type. The single entry-point used by the pipeline.
  *
  * type:
- *   'string' (default), 'number', 'integer', 'date', 'boolean'
+ *   'string' (default), 'number', 'integer', 'date', 'boolean', 'enum'
  */
 export function coerce(value, type = 'string', opts = {}) {
   switch ((type || 'string').toLowerCase()) {
@@ -212,6 +240,8 @@ export function coerce(value, type = 'string', opts = {}) {
     case 'boolean':
     case 'bool':
       return coerceBoolean(value, opts);
+    case 'enum':
+      return coerceEnum(value, opts);
     case 'string':
     default:
       return coerceString(value);
