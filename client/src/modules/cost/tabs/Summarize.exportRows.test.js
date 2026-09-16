@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { rowsForExport, quoteKeyOf, orderBySelection } from './Summarize.exportRows.js';
+import {
+  rowsForExport,
+  quoteKeyOf,
+  orderBySelection,
+  toggleQuoteSelection,
+  pinSelected,
+} from './Summarize.exportRows.js';
 
 // Summarize flattens a quote into one row per MOQ tier: id = `${quoteId}-${tier}`.
 const row = (quoteId, tier) => ({ id: `${quoteId}-${tier}`, quote_id: quoteId, tier });
@@ -138,4 +144,94 @@ test('orderBySelection + rowsForExport agree on the export set and its order', (
   const sel = new Set(['3-1', '1-2']);
   const ordered = orderBySelection(TABLE, sel);
   assert.deepEqual(ids(rowsForExport(ordered, sel)), ['3-1', '3-2', '1-1', '1-2']);
+});
+
+// ─── toggleQuoteSelection — a tick selects the QUOTE ───────────────
+// Reported from the running app: 5 ticks, 7 rows floated, two of them
+// sitting un-ticked in the middle of the selection. They were the sibling
+// tiers of quote #27 and quote #104, which rowsForExport was exporting
+// anyway — the checkbox was telling the operator something the file did
+// not do.
+
+test('toggleQuoteSelection: ticking one tier ticks every tier of that quote', () => {
+  const next = toggleQuoteSelection(TABLE, new Set(), '1-1');
+  assert.deepEqual([...next].sort(), ['1-1', '1-2']);
+});
+
+test('toggleQuoteSelection: un-ticking one tier un-ticks the whole quote', () => {
+  const on = toggleQuoteSelection(TABLE, new Set(), '2-1');
+  const off = toggleQuoteSelection(TABLE, on, '2-2');
+  assert.equal(off.size, 0, 'clicking either tier clears both');
+});
+
+test('toggleQuoteSelection: other quotes are untouched', () => {
+  let sel = toggleQuoteSelection(TABLE, new Set(), '1-1');
+  sel = toggleQuoteSelection(TABLE, sel, '3-2');
+  assert.deepEqual([...sel].sort(), ['1-1', '1-2', '3-1', '3-2']);
+  sel = toggleQuoteSelection(TABLE, sel, '1-2');
+  assert.deepEqual([...sel].sort(), ['3-1', '3-2']);
+});
+
+// The tier hidden by the search box must be ticked too, or clearing the
+// filter reveals an un-ticked sibling of a quote the operator believes is
+// fully selected.
+test('toggleQuoteSelection: reaches tiers the current filter is hiding', () => {
+  const visibleOnly = [row(1, 1)]; // tier 2 filtered out of view
+  const next = toggleQuoteSelection(TABLE, new Set(), '1-1');
+  assert.equal(next.has('1-2'), true, 'ticked from the full row set, not the visible one');
+  assert.equal(toggleQuoteSelection(visibleOnly, new Set(), '1-1').has('1-2'), false);
+});
+
+test('toggleQuoteSelection: an unresolvable row still toggles itself', () => {
+  const next = toggleQuoteSelection(TABLE, new Set(), 'ghost-9');
+  assert.deepEqual([...next], ['ghost-9']);
+  assert.equal(toggleQuoteSelection(TABLE, next, 'ghost-9').size, 0);
+});
+
+test('toggleQuoteSelection: never mutates the selection it was given', () => {
+  const before = new Set(['1-1']);
+  toggleQuoteSelection(TABLE, before, '3-1');
+  assert.deepEqual([...before], ['1-1']);
+});
+
+// ─── pinSelected — the basket survives the next search ─────────────
+// An operator searches an RFQ, ticks it, searches the next, ticks that.
+// The earlier picks used to vanish, leaving "NO ROWS SELECTED" over a
+// table whose selection was still alive in memory.
+
+test('pinSelected: a ticked row the filter dropped comes back', () => {
+  const visible = [row(3, 1), row(3, 2)]; // search matched quote 3 only
+  const out = pinSelected(TABLE, visible, new Set(['1-1', '1-2']));
+  assert.deepEqual(ids(out), ['1-1', '1-2', '3-1', '3-2']);
+});
+
+test('pinSelected: a ticked row the filter KEPT is not duplicated', () => {
+  const visible = [row(1, 1), row(1, 2)];
+  const out = pinSelected(TABLE, visible, new Set(['1-1', '1-2']));
+  assert.deepEqual(ids(out), ['1-1', '1-2']);
+});
+
+test('pinSelected: no selection returns the visible rows untouched', () => {
+  const visible = [row(2, 1)];
+  assert.equal(pinSelected(TABLE, visible, new Set()), visible);
+});
+
+test('pinSelected: tolerates junk input', () => {
+  assert.deepEqual(pinSelected(null, null, new Set(['1-1'])), []);
+  assert.deepEqual(ids(pinSelected(TABLE, [], new Set(['2-2']))), ['2-2']);
+});
+
+// The whole reported workflow, end to end.
+test('tick quote 1, search away to quote 3, tick that: both baskets visible and exported', () => {
+  let sel = toggleQuoteSelection(TABLE, new Set(), '1-2');
+  const afterSearch = [row(3, 1), row(3, 2)]; // the new search result
+  sel = toggleQuoteSelection(TABLE, sel, '3-1');
+  const shown = orderBySelection(pinSelected(TABLE, afterSearch, sel), sel);
+  assert.deepEqual(ids(shown), ['1-1', '1-2', '3-1', '3-2'], 'earlier pick first, newest behind');
+  assert.equal(
+    shown.every((r) => sel.has(r.id)),
+    true,
+    'no un-ticked row among the selection'
+  );
+  assert.deepEqual(ids(rowsForExport(shown, sel)), ['1-1', '1-2', '3-1', '3-2']);
 });
