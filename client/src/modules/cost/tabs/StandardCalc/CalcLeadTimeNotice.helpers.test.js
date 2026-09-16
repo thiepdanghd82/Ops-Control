@@ -309,43 +309,76 @@ describe('resolveMaterialLtDisplay', () => {
   });
 });
 
-describe('derivePoLeadTime — Σ PROD TIME ÷ 8, round up', () => {
-  const { derivePoLeadTime } = helpersNs;
+describe('derivePoProdHours — Σ PROD TIME in hours', () => {
+  const { derivePoProdHours } = helpersNs;
   const R = (t) => ({ total_time: t });
 
-  test('screenshot quote: total_time [151.4,548,583,1714,158,30] min → 7 days', () => {
-    // hours ≈ 2.52+9.14+9.73+28.57+2.64+0.50 = 53.07 → /8 = 6.63 → ceil 7
-    assert.equal(derivePoLeadTime([151.4, 548, 583, 1714, 158, 30].map(R)), 7);
-  });
-
-  test('rounds UP (8h1min total → 481 min → 8.017h/8 = 1.002 → 2 days)', () => {
-    assert.equal(derivePoLeadTime([R(481)]), 2);
-  });
-
-  test('exact multiple of a day is NOT rounded up (480 min = 8h → 1 day)', () => {
-    assert.equal(derivePoLeadTime([R(480)]), 1);
+  test('sums total_time minutes into hours', () => {
+    // 151.4+548+583+1714+158+30 = 3184.4 min = 53.073… h
+    const h = derivePoProdHours([151.4, 548, 583, 1714, 158, 30].map(R));
+    assert.ok(Math.abs(h - 53.0733) < 0.001, `got ${h}`);
   });
 
   test('0 / NaN / negative total_time ignored', () => {
-    assert.equal(derivePoLeadTime([R(0), R(NaN), R(-5), R(480)]), 1);
+    assert.equal(derivePoProdHours([R(0), R(NaN), R(-5), R(480)]), 8);
   });
 
-  test('no processes / all zero → null (empty cell, never "0 days")', () => {
-    assert.equal(derivePoLeadTime([]), null);
-    assert.equal(derivePoLeadTime([R(0), R(0)]), null);
+  test('no processes / all zero → null, so the cell stays empty', () => {
+    assert.equal(derivePoProdHours([]), null);
+    assert.equal(derivePoProdHours([R(0), R(0)]), null);
   });
 
   test('null / non-array → null', () => {
-    assert.equal(derivePoLeadTime(null), null);
-    assert.equal(derivePoLeadTime(undefined), null);
-    assert.equal(derivePoLeadTime('x'), null);
+    assert.equal(derivePoProdHours(null), null);
+    assert.equal(derivePoProdHours(undefined), null);
+    assert.equal(derivePoProdHours('x'), null);
   });
 
   test('Cpx flatten: two SP process arrays combined before summing', () => {
-    const sp1 = [R(480)]; // 8h
-    const sp2 = [R(480), R(480)]; // 16h
-    // parent flattens; 8+16 = 24h /8 = 3 days
-    assert.equal(derivePoLeadTime([...sp1, ...sp2]), 3);
+    assert.equal(derivePoProdHours([R(480), R(480), R(480)]), 24);
+  });
+});
+
+describe('formatPoLeadTime — flat under 100 h, +1 day per 8 h above', () => {
+  const { formatPoLeadTime, PO_LT_FLAT_HOURS, PO_LT_WORK_HOURS_PER_DAY } = helpersNs;
+
+  test('the constants the rule is written against', () => {
+    assert.equal(PO_LT_FLAT_HOURS, 100);
+    assert.equal(PO_LT_WORK_HOURS_PER_DAY, 8);
+  });
+
+  test('anything at or under 100 h quotes the flat window', () => {
+    for (const h of [0.1, 4.76, 53.07, 99.9, 100]) {
+      assert.equal(formatPoLeadTime(h), '7~ 14 working days', `${h} h`);
+    }
+  });
+
+  // Being over the threshold at all already costs the first day — the block
+  // count is a CEILING, so 100.1 h is one block, not zero.
+  test('the first 8-hour block starts the moment 100 h is passed', () => {
+    assert.equal(formatPoLeadTime(100.1), '8~ 15 working days');
+    assert.equal(formatPoLeadTime(107.9), '8~ 15 working days');
+    assert.equal(formatPoLeadTime(108), '8~ 15 working days');
+  });
+
+  test('each further 8-hour block pushes BOTH ends out one more day', () => {
+    assert.equal(formatPoLeadTime(108.1), '9~ 16 working days');
+    assert.equal(formatPoLeadTime(116), '9~ 16 working days');
+    assert.equal(formatPoLeadTime(124), '10~ 17 working days');
+    assert.equal(formatPoLeadTime(200), '20~ 27 working days');
+  });
+
+  test('the gap between the two ends is always 7 days', () => {
+    for (const h of [1, 100, 101, 150, 500]) {
+      const [lo, hi] = formatPoLeadTime(h).match(/\d+/g).map(Number);
+      assert.equal(hi - lo, 7, `${h} h`);
+    }
+  });
+
+  test('no production hours → empty string, never a quoted window', () => {
+    for (const h of [null, undefined, 0, -5, NaN, 'x']) {
+      assert.equal(formatPoLeadTime(h), '', JSON.stringify(h));
+    }
   });
 });
 
@@ -353,24 +386,25 @@ describe('resolvePoLtDisplay', () => {
   const { resolvePoLtDisplay } = helpersNs;
 
   test('non-empty override wins', () => {
-    assert.deepEqual(resolvePoLtDisplay({ lt_po_ovr: '10 days' }, 7), {
+    assert.deepEqual(resolvePoLtDisplay({ lt_po_ovr: '10 days' }, 53), {
       value: '10 days',
       isOverride: true,
     });
   });
 
-  test('empty / whitespace override → auto "<n> days"', () => {
-    assert.deepEqual(resolvePoLtDisplay({ lt_po_ovr: '' }, 7), {
-      value: '7 days',
+  test('empty / whitespace override → the auto window', () => {
+    assert.deepEqual(resolvePoLtDisplay({ lt_po_ovr: '' }, 53), {
+      value: '7~ 14 working days',
       isOverride: false,
     });
-    assert.deepEqual(resolvePoLtDisplay({ lt_po_ovr: '  ' }, 7), {
-      value: '7 days',
+    // 120 h -> ceil((120-100)/8) = ceil(2.5) = 3 blocks, not 2.
+    assert.deepEqual(resolvePoLtDisplay({ lt_po_ovr: '  ' }, 120), {
+      value: '10~ 17 working days',
       isOverride: false,
     });
   });
 
-  test('null poDays + no override → empty string', () => {
+  test('null hours + no override → empty string', () => {
     assert.deepEqual(resolvePoLtDisplay({}, null), { value: '', isOverride: false });
     assert.deepEqual(resolvePoLtDisplay(null, null), { value: '', isOverride: false });
   });

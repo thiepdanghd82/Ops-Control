@@ -3020,8 +3020,8 @@ Material L/T = round( max(pool) + 7 ) + " days"
             expr={`totalHours = Σ over processes ( total_time_minutes / 60 )   [PROD TIME hrs]
 PO L/T     = ceil( totalHours / 8 ) + " days"
            = null when totalHours ≤ 0`}
-            note="⚠ Added — PO_LT_WORK_HOURS_PER_DAY = 8. Sums the PROD TIME column (per-process total_time ÷ 60 hrs), divides by an 8-hour work-day, rounds UP to whole days."
-            noteVi="⚠ Bổ sung — PO_LT_WORK_HOURS_PER_DAY = 8. Cộng cột PROD TIME (total_time ÷ 60 giờ mỗi công đoạn), chia cho ngày làm việc 8 giờ, làm tròn LÊN thành số ngày nguyên."
+            note="⚠ Added — sums the PROD TIME column (per-process total_time ÷ 60 hrs). At or under PO_LT_FLAT_HOURS = 100 the window is a flat 7~ 14 working days; above it, every 8-hour block (PO_LT_WORK_HOURS_PER_DAY, rounded UP) pushes BOTH ends out one day — 8~ 15, 9~ 16, …"
+            noteVi="⚠ Bổ sung — cộng cột PROD TIME (total_time ÷ 60 giờ mỗi công đoạn). Từ PO_LT_FLAT_HOURS = 100 giờ trở xuống thì cố định 7~ 14 working days; trên mức đó, mỗi khối 8 giờ (PO_LT_WORK_HOURS_PER_DAY, làm tròn LÊN) đẩy cả hai đầu thêm 1 ngày — 8~ 15, 9~ 16, …"
             example='Σ PROD TIME = 17.2 hrs → ceil(17.2 / 8) = ceil(2.15) = 3 → "3 days"'
           />
 
@@ -3680,7 +3680,7 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
                   'PO L/T',
                   'ceil( Σ(total_time_min / 60) / 8 ) + " days"',
                   'days',
-                  'derivePoLeadTime()',
+                  'derivePoProdHours() + formatPoLeadTime()',
                 ],
                 [
                   'Clear MOQ',
