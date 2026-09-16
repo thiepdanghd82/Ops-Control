@@ -3,6 +3,7 @@ import { useI18n } from '../../../utils/useI18n';
 import { sharedApi, costApi } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 import { useCostLib } from '../../../context/CostLibContext';
+import { todayISO, todayMonthISO, yearOf, yearOptions } from './materialDate.js';
 import EmptyState from '../../../components/Shared/EmptyState';
 import SkeletonTable from '../../../components/Shared/SkeletonTable';
 import Modal from '../../../components/Shared/Modal';
@@ -217,7 +218,7 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
 
   const filtered = useMemo(() => {
     let result = data;
-    if (yearFilter) result = result.filter((r) => String(r.date || '').startsWith(yearFilter));
+    if (yearFilter) result = result.filter((r) => yearOf(r.date) === yearFilter);
     if (search) {
       const terms = search.toLowerCase().split(/\s+/).filter(Boolean);
       result = result.filter((r) => {
@@ -257,16 +258,14 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
     markDirty();
   }
 
-  const years = useMemo(() => {
-    const s = new Set();
-    data.forEach((r) => {
-      if (r.date) {
-        const ds = String(r.date);
-        if (ds.length >= 4) s.add(ds.slice(-4));
-      }
-    });
-    return [...s].sort().reverse();
-  }, [data]);
+  // Was `String(r.date).slice(-4)` — the LAST four characters — while the
+  // filter below matched the FIRST. On the dominant `YYYY-MM-DD` that yields
+  // "9-16" as a "year", so the dropdown carried 289 options and every one of
+  // them filtered to zero rows. Reading the real year gives 9.
+  //
+  // The Sourcing tab below is NOT the same bug: it slices (0, 4), which agrees
+  // with its own startsWith, and its filter works. Left alone.
+  const years = useMemo(() => yearOptions(data, 'date'), [data]);
 
   return (
     <>
@@ -500,7 +499,10 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
       {/* Add Modal */}
       {addMode && (
         <NPIEditModal
-          row={{}}
+          // Seeded with today so a date is not hand-typed on every new
+          // material. Typing it is how this library ended up holding four
+          // different shapes plus 754 rows that just say "Old".
+          row={{ date: todayISO() }}
           idx={-1}
           onSave={handleAdd}
           onClose={() => setAddMode(false)}
@@ -1386,7 +1388,8 @@ function SourcingTab({ data, setData, markDirty, isViewOnly, canImport, reload }
       )}
       {addMode && (
         <SrcEditModal
-          row={{}}
+          // `month` is YYYY-MM here, not a full date — 1928 of 2234 rows.
+          row={{ month: todayMonthISO() }}
           idx={-1}
           onSave={handleAdd}
           onClose={() => setAddMode(false)}
