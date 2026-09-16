@@ -272,7 +272,7 @@ export function resolveMaterialLtDisplay(leadTime, autoVal) {
 // commit to a customer.
 //
 // The rule Henry asked for quotes the commercial window instead. Under 100
-// production hours the answer is a flat `7~ 14 working days`; past that, every
+// production hours the answer is a flat `7~14 working days`; past that, every
 // 8-hour block of production pushes BOTH ends out by a day, so a job carrying
 // real machine time reads as the longer promise it is.
 export const PO_LT_WORK_HOURS_PER_DAY = 8;
@@ -308,8 +308,8 @@ export function derivePoProdHours(processResults) {
 /**
  * The PO lead-time window for a given number of production hours.
  *
- * ≤ 100 h                -> `7~ 14 working days`
- * every 8 h above 100 h  -> both ends +1 day: `8~ 15`, `9~ 16`, …
+ * ≤ 100 h                -> `7~14 working days`
+ * every 8 h above 100 h  -> both ends +1 day: `8~15`, `9~16`, …
  *
  * The block count is a CEILING, so being over the threshold at all already
  * costs the first day — 100.5 hours reads `8~ 15`, not `7~ 14`. Exactly 100
@@ -324,7 +324,7 @@ export function formatPoLeadTime(hours) {
   const over = h - PO_LT_FLAT_HOURS;
   const blocks = over > 0 ? Math.ceil(over / PO_LT_WORK_HOURS_PER_DAY) : 0;
   const [lo, hi] = PO_LT_BASE_DAYS;
-  return `${lo + blocks}~ ${hi + blocks} working days`;
+  return `${lo + blocks}~${hi + blocks} working days`;
 }
 
 /**

@@ -349,23 +349,23 @@ describe('formatPoLeadTime — flat under 100 h, +1 day per 8 h above', () => {
 
   test('anything at or under 100 h quotes the flat window', () => {
     for (const h of [0.1, 4.76, 53.07, 99.9, 100]) {
-      assert.equal(formatPoLeadTime(h), '7~ 14 working days', `${h} h`);
+      assert.equal(formatPoLeadTime(h), '7~14 working days', `${h} h`);
     }
   });
 
   // Being over the threshold at all already costs the first day — the block
   // count is a CEILING, so 100.1 h is one block, not zero.
   test('the first 8-hour block starts the moment 100 h is passed', () => {
-    assert.equal(formatPoLeadTime(100.1), '8~ 15 working days');
-    assert.equal(formatPoLeadTime(107.9), '8~ 15 working days');
-    assert.equal(formatPoLeadTime(108), '8~ 15 working days');
+    assert.equal(formatPoLeadTime(100.1), '8~15 working days');
+    assert.equal(formatPoLeadTime(107.9), '8~15 working days');
+    assert.equal(formatPoLeadTime(108), '8~15 working days');
   });
 
   test('each further 8-hour block pushes BOTH ends out one more day', () => {
-    assert.equal(formatPoLeadTime(108.1), '9~ 16 working days');
-    assert.equal(formatPoLeadTime(116), '9~ 16 working days');
-    assert.equal(formatPoLeadTime(124), '10~ 17 working days');
-    assert.equal(formatPoLeadTime(200), '20~ 27 working days');
+    assert.equal(formatPoLeadTime(108.1), '9~16 working days');
+    assert.equal(formatPoLeadTime(116), '9~16 working days');
+    assert.equal(formatPoLeadTime(124), '10~17 working days');
+    assert.equal(formatPoLeadTime(200), '20~27 working days');
   });
 
   test('the gap between the two ends is always 7 days', () => {
@@ -394,12 +394,12 @@ describe('resolvePoLtDisplay', () => {
 
   test('empty / whitespace override → the auto window', () => {
     assert.deepEqual(resolvePoLtDisplay({ lt_po_ovr: '' }, 53), {
-      value: '7~ 14 working days',
+      value: '7~14 working days',
       isOverride: false,
     });
     // 120 h -> ceil((120-100)/8) = ceil(2.5) = 3 blocks, not 2.
     assert.deepEqual(resolvePoLtDisplay({ lt_po_ovr: '  ' }, 120), {
-      value: '10~ 17 working days',
+      value: '10~17 working days',
       isOverride: false,
     });
   });
