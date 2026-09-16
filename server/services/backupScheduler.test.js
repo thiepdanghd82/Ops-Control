@@ -208,10 +208,10 @@ test('B: _shouldBootCatchUp — already ran today → false (no double backup)',
 // 130 days, while SQLite under the same retention setting held 25.
 
 /** Age `n` tarballs into the Library backup dir so they are prune-eligible. */
-function seedOldTarballs(dataDir, n) {
+function seedOldTarballs(dataDir, n, ageDays = 400) {
   const libDir = path.join(dataDir, 'Backup', 'Library');
   fs.mkdirSync(libDir, { recursive: true });
-  const old = new Date(Date.now() - 400 * 86400000);
+  const old = new Date(Date.now() - ageDays * 86400000);
   for (let i = 0; i < n; i++) {
     const p = path.join(libDir, `library_old${String(i).padStart(4, '0')}.tar.gz`);
     fs.writeFileSync(p, 'x');
@@ -247,6 +247,107 @@ test('prune_library keeps the newest tarballs even when all are expired', async 
     const step = summary.steps.find((x) => x.name === 'prune_library');
     assert.ok(step, 'prune_library step should exist');
     assert.equal(step.deleted, 0, 'below keepMin nothing may be deleted, however old');
+  } finally {
+    teardown(tmpDir);
+  }
+});
+
+// ── The Settings retention value must govern the prune ────────────────
+// Settings → Backup persists `retentionDays`; getStatus() reports it. But
+// every prune resolved retention from the env var alone, so the number on
+// the card and the number the cycle deleted by could differ with nothing
+// to reconcile them. These pin that they are the same number.
+
+function writeSchedule(dataDir, cfg) {
+  const dir = path.join(dataDir, 'Library', 'SystemConfig');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'backup-schedule.json'), JSON.stringify(cfg, null, 2));
+}
+
+function seedOldSqliteBackups(dataDir, n, ageDays) {
+  const dir = path.join(dataDir, 'Backup', 'SQLite');
+  fs.mkdirSync(dir, { recursive: true });
+  const old = new Date(Date.now() - ageDays * 86400000);
+  const names = [];
+  for (let i = 0; i < n; i++) {
+    const name = `ops_old${String(i).padStart(4, '0')}_000000.sqlite`;
+    const p = path.join(dir, name);
+    fs.writeFileSync(p, 'x');
+    fs.utimesSync(p, old, old);
+    names.push(name);
+  }
+  return { dir, names };
+}
+
+test('a longer persisted retention keeps tarballs the 30-day default would delete', async () => {
+  const { tmpDir, dataDir } = setupTempDataDir('libretention');
+  try {
+    writeSchedule(dataDir, { enabled: true, hour: 2, retentionDays: 400 });
+    // 100 days old: expired under the 30-day default, well inside 400.
+    // 15 files so the keepMin=10 floor cannot be what saves them.
+    const libDir = seedOldTarballs(dataDir, 15, 100);
+
+    const summary = await runBackupCycle({ force: true });
+    const step = summary.steps.find((x) => x.name === 'prune_library');
+
+    assert.equal(step.keepDays, 400, 'the prune must use the value an admin saved');
+    assert.equal(step.deleted, 0, 'nothing is expired at 400 days — none may be deleted');
+    const left = fs.readdirSync(libDir).filter((f) => f.startsWith('library_old'));
+    assert.equal(left.length, 15, 'every seeded tarball must survive');
+  } finally {
+    teardown(tmpDir);
+  }
+});
+
+test('a shorter persisted retention deletes what the 30-day default would keep', async () => {
+  const { tmpDir, dataDir } = setupTempDataDir('libshort');
+  try {
+    writeSchedule(dataDir, { enabled: true, hour: 2, retentionDays: 3 });
+    // 10 days old: safe under the 30-day default, expired at 3.
+    seedOldTarballs(dataDir, 15, 10);
+
+    const summary = await runBackupCycle({ force: true });
+    const step = summary.steps.find((x) => x.name === 'prune_library');
+
+    assert.equal(step.keepDays, 3);
+    assert.ok(step.deleted > 0, 'a tightened retention must actually tighten the prune');
+  } finally {
+    teardown(tmpDir);
+  }
+});
+
+test('the SQLite prune honours the persisted retention too', async () => {
+  const { tmpDir, dataDir } = setupTempDataDir('sqlretention');
+  try {
+    writeSchedule(dataDir, { enabled: true, hour: 2, retentionDays: 400 });
+    const { dir, names } = seedOldSqliteBackups(dataDir, 3, 100);
+
+    await runBackupCycle({ force: true });
+
+    for (const n of names) {
+      assert.ok(fs.existsSync(path.join(dir, n)), `${n} is inside 400 days and must survive`);
+    }
+  } finally {
+    teardown(tmpDir);
+  }
+});
+
+test('the status card and every prune step report the SAME retention', async () => {
+  const { tmpDir, dataDir } = setupTempDataDir('agree');
+  try {
+    writeSchedule(dataDir, { enabled: true, hour: 2, retentionDays: 45 });
+    const summary = await runBackupCycle({ force: true });
+    const shown = getStatus().retentionDays;
+
+    assert.equal(shown, 45, 'the card shows what was saved');
+    for (const name of ['prune', 'prune_library']) {
+      const step = summary.steps.find((x) => x.name === name);
+      assert.equal(
+        step.keepDays,
+        shown,
+        `${name} deleted by ${step.keepDays}d while the card promised ${shown}d`
+      );
+    }
   } finally {
     teardown(tmpDir);
   }

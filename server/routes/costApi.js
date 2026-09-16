@@ -26,6 +26,42 @@ import {
 } from '../services/importPipeline.js';
 import { redactErrorMessage, logErr, asSafeError } from '../utils/safeError.js';
 import { listLanIPv4, pickServerUrl } from '../utils/networkInfo.js';
+import { getRetentionSettings } from '../utils/backupPath.js';
+
+/**
+ * Delete `auto_*.json` snapshots older than `retentionDays` from one dir.
+ *
+ * Extracted from the /save-all handler so the retention rule is checkable
+ * on its own — it deletes files, and it was the one prune with no test.
+ * `manual_*` snapshots are deliberately untouched: an operator asked for
+ * those, so retention is not ours to apply to them.
+ *
+ * Best-effort per file: a locked or already-gone snapshot must not abort
+ * the save that triggered this.
+ */
+export function pruneAutoJsonBackups(autoDir, retentionDays) {
+  const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+  let pruned = 0;
+  let names;
+  try {
+    names = fs.readdirSync(autoDir);
+  } catch {
+    return 0; // dir not created yet
+  }
+  for (const f of names) {
+    if (!f.startsWith('auto_') || !f.endsWith('.json')) continue;
+    const fp = path.join(autoDir, f);
+    try {
+      if (fs.statSync(fp).mtimeMs < cutoff) {
+        fs.unlinkSync(fp);
+        pruned++;
+      }
+    } catch {
+      /* best-effort */
+    }
+  }
+  return pruned;
+}
 import { readFileSync as readFileSyncPkg } from 'fs';
 
 // Local copy of PKG_VERSION resolution (server/index.js owns the same
@@ -2599,21 +2635,8 @@ router.post(
           console.log(`  📦  Auto daily backup → ${bfname}`);
           // Prune auto backups older than retention window (manual_ prefixed
           // backups are preserved regardless — they were explicit user actions).
-          const retentionDays = Number(process.env.OPS_BACKUP_RETENTION_DAYS || 30);
-          const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
-          let pruned = 0;
-          for (const f of fs.readdirSync(autoDir)) {
-            if (!f.startsWith('auto_') || !f.endsWith('.json')) continue;
-            const fp = path.join(autoDir, f);
-            try {
-              if (fs.statSync(fp).mtimeMs < cutoff) {
-                fs.unlinkSync(fp);
-                pruned++;
-              }
-            } catch {
-              /* best-effort */
-            }
-          }
+          const { keepDays: retentionDays } = getRetentionSettings();
+          const pruned = pruneAutoJsonBackups(autoDir, retentionDays);
           if (pruned > 0)
             console.log(`  🧹  Pruned ${pruned} auto-backup(s) older than ${retentionDays}d`);
         }

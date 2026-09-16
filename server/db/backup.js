@@ -12,6 +12,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getDb, getDbPath } from './connection.js';
+import { getRetentionSettings } from '../utils/backupPath.js';
 
 function backupDir() {
   // Put ops.db backups alongside the existing JSON auto-backups so
@@ -52,8 +53,11 @@ export async function backupOpsDb({ force = false } = {}) {
 
     // Retention prune — see pruneSqliteBackups below for why the
     // sidecars matter.
+    // Same resolver as the scheduler's prune steps, so a retention saved in
+    // Settings governs SQLite backups too — this read the env var directly
+    // and silently ignored the UI value.
     const { pruned } = pruneSqliteBackups(dir, {
-      retentionDays: Number(process.env.OPS_BACKUP_RETENTION_DAYS || 30),
+      retentionDays: getRetentionSettings().keepDays,
     });
 
     // `file` is the basename (legacy callers); `path` is the absolute path
