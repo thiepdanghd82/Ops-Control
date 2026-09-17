@@ -1014,8 +1014,16 @@ Retention: 5 most recent snapshots, automatically pruned by `deploy.ps1`.
 > 2026-09-16). That box is the windowed desktop app, not a `/opt/ops-control`
 > service, and it has no `OPS_BACKUP_OFFSITE_DEST` — its off-site copy is an
 > rsync mirror of the whole userData tree at
-> `smb://10.102.1.2/Departments$ → NPI/Henry/ops-control-mirror`, refreshed every
-> four hours by the LaunchAgent `vn.ccldesign.opsbackup.offsite`. Three
+> `smb://10.102.1.2/Departments$/NPI/Henry` (mounts as `/Volumes/Henry`), into the
+> `ops-control-mirror` subfolder there. **It is refreshed MANUALLY, not on a
+> schedule** (corrected 2026-09-17): the LaunchAgent
+> `vn.ccldesign.opsbackup.offsite` is disabled because it has never once
+> succeeded unattended at this destination — see Lesson 44, where the cause is
+> recorded as unresolved. Run it with
+> `bash ~/Library/Application\ Support/ops-offsite-backup/offsite-backup.sh`,
+> which takes ~50 s incremental and requires the share to be mounted in Finder.
+> **So the age of the off-site copy is the age of the last manual run** — read it
+> off the Settings → Backup card before trusting it in a recovery. Four
 > consequences:
 >
 > 1. **Copy the backup to local disk before opening it.** `sqlite3` cannot open a
@@ -1024,13 +1032,17 @@ Retention: 5 most recent snapshots, automatically pruned by `deploy.ps1`.
 >    fine once it is local. Verified by drill 2026-09-16: `integrity_check ok`,
 >    131 quotes / 3058 materials / 15057 ifs_inventory / 54 quote_versions all
 >    matching live.
-> 2. **The mirror alone cannot rebuild a server.** The destination is a shared
+> 2. **The `ops-control-mirror` subfolder is load-bearing, not tidiness.** The job
+>    runs `rsync --delete`, and the script refuses to run unless the destination
+>    path ends in that folder — so a typo can never empty the shared `NPI/Henry`
+>    directory, and anything else kept there is safe from the mirror.
+> 3. **The mirror alone cannot rebuild a server.** The destination is a shared
 >    drive, so `.env`, `users.json` and `totp_secrets.enc` are deliberately
 >    excluded (Lesson 39). They live separately at `~/ops-control-secrets/` with
 >    a guide for making an encrypted copy. Without them the DATA all comes back;
 >    accounts are recreated via `scripts/recover-sys-user.js` and 2FA via
 >    `npm run reset-totp`.
-> 3. **`Backup/Library/*.tar.gz` are local-only** for the same reason, so
+> 4. **`Backup/Library/*.tar.gz` are local-only** for the same reason, so
 >    point-in-time history of `PermissionGroups` / `MachineProfiles` does not
 >    survive a disk loss. Current state does — the live `data/Library` tree is
 >    mirrored, and `Backup/Data/*.json` carries the business datasets in history
