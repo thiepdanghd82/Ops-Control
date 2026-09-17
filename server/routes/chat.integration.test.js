@@ -50,6 +50,14 @@ fs.writeFileSync(
         pwd_bcrypt: '$2b$10$test',
         approval_roles: ['finance_dir'],
       },
+      {
+        id: 4,
+        username: 'boss',
+        role: 'admin',
+        pwd: 'x',
+        pwd_bcrypt: '$2b$10$test',
+        approval_roles: [],
+      },
     ],
     null,
     2
@@ -78,6 +86,7 @@ saveQuotes([
 let server, baseUrl;
 const tokenHana = createSession(1, { totpVerified: true });
 const tokenSonia = createSession(2, { totpVerified: true });
+const tokenBoss = createSession(4, { totpVerified: true });
 
 test.before(
   () =>
@@ -598,7 +607,9 @@ test('DELETE — second delete returns 410', async () => {
 test('GET /api/chat/users returns directory for autocomplete', async () => {
   const r = await fetch(`${baseUrl}/api/chat/users`, { headers: h(tokenHana) });
   const body = await r.json();
-  assert.equal(body.users.length, 3);
+  // 4 since the recall-override tests seed an admin ('boss', id 4);
+  // the directory lists every seeded user, so this count tracks the fixture.
+  assert.equal(body.users.length, 4);
   assert.ok(body.users.every((u) => u.id && u.username));
   // Passwords + bcrypt hashes NOT leaked
   assert.ok(body.users.every((u) => u.pwd == null && u.pwd_bcrypt == null));
@@ -618,4 +629,96 @@ test('chat disabled: returns 503 with clear error', async () => {
 test('unauthenticated → 401', async () => {
   const r = await fetch(`${baseUrl}/api/chat/rooms`);
   assert.equal(r.status, 401);
+});
+
+// ── Recall: admin override + no time limit ──
+
+test('DELETE — admin in the room can recall another user`s message', async () => {
+  const { getOrCreateRoom, addMember } = await import('../repositories/chatStore.js');
+  const room = getOrCreateRoom({ kind: 'team', key: 'team:moderation' });
+  [1, 4].forEach((userId) => addMember({ roomId: room.id, userId }));
+
+  const sent = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
+    method: 'POST',
+    headers: h(tokenHana),
+    body: JSON.stringify({ body: 'something to moderate' }),
+  }).then((r) => r.json());
+
+  const del = await fetch(`${baseUrl}/api/chat/messages/${sent.message.id}`, {
+    method: 'DELETE',
+    headers: h(tokenBoss),
+  });
+  assert.equal(del.status, 200, 'admin override goes through the route, not just the store');
+
+  const hist = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
+    headers: h(tokenHana),
+  }).then((r) => r.json());
+  const found = hist.messages.find((m) => m.id === sent.message.id);
+  assert.ok(found.deleted_at, 'tombstone, not a purge');
+  assert.equal(found.deleted_by, 4, 'author can tell an admin removed it');
+  assert.equal(found.body, null, 'body still scrubbed');
+});
+
+test('DELETE — admin NOT in the room gets 403, message untouched', async () => {
+  const dmRes = await fetch(`${baseUrl}/api/chat/dm/sonia`, { headers: h(tokenHana) });
+  const { room } = await dmRes.json();
+  const sent = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
+    method: 'POST',
+    headers: h(tokenHana),
+    body: JSON.stringify({ body: 'private to hana + sonia' }),
+  }).then((r) => r.json());
+
+  const del = await fetch(`${baseUrl}/api/chat/messages/${sent.message.id}`, {
+    method: 'DELETE',
+    headers: h(tokenBoss),
+  });
+  assert.equal(del.status, 403, 'being an admin does not open other people`s DMs');
+
+  const hist = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
+    headers: h(tokenHana),
+  }).then((r) => r.json());
+  assert.equal(
+    hist.messages.find((m) => m.id === sent.message.id).deleted_at,
+    null,
+    'message untouched'
+  );
+});
+
+test('DELETE — a non-admin member still cannot recall someone else`s message', async () => {
+  const { getOrCreateRoom, addMember } = await import('../repositories/chatStore.js');
+  const room = getOrCreateRoom({ kind: 'team', key: 'team:ordinary' });
+  [1, 2].forEach((userId) => addMember({ roomId: room.id, userId }));
+  const sent = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
+    method: 'POST',
+    headers: h(tokenHana),
+    body: JSON.stringify({ body: 'not yours' }),
+  }).then((r) => r.json());
+
+  const del = await fetch(`${baseUrl}/api/chat/messages/${sent.message.id}`, {
+    method: 'DELETE',
+    headers: h(tokenSonia),
+  });
+  assert.equal(del.status, 403);
+});
+
+test('DELETE — an old message is still recallable by its author (no time limit)', async () => {
+  const { getOrCreateRoom, addMember } = await import('../repositories/chatStore.js');
+  const { getDb } = await import('../db/connection.js');
+  const room = getOrCreateRoom({ kind: 'team', key: 'team:aged' });
+  addMember({ roomId: room.id, userId: 1 });
+  const sent = await fetch(`${baseUrl}/api/chat/rooms/${room.id}/messages`, {
+    method: 'POST',
+    headers: h(tokenHana),
+    body: JSON.stringify({ body: 'sent long ago' }),
+  }).then((r) => r.json());
+
+  getDb()
+    .prepare(`UPDATE chat_messages SET created_at = ? WHERE id = ?`)
+    .run(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), sent.message.id);
+
+  const del = await fetch(`${baseUrl}/api/chat/messages/${sent.message.id}`, {
+    method: 'DELETE',
+    headers: h(tokenHana),
+  });
+  assert.equal(del.status, 200, 'a month-old message still recalls');
 });

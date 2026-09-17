@@ -37,7 +37,13 @@ import {
   quoteKey,
 } from '../repositories/chatStore.js';
 import { getQuoteById } from '../repositories/quotesStore.js';
-import { loadUsers, getSessionUser, getTokenFromHeader } from '../services/authService.js';
+import {
+  loadUsers,
+  getSessionUser,
+  getTokenFromHeader,
+  isAdminPlus,
+  audit,
+} from '../services/authService.js';
 import { parseMentions, sanitizeChatBody } from '../utils/chatMentions.js';
 import { normalizeApprovalRoles, MAX_DEFAULT_ROOMS_PER_USER } from '../utils/chatDefaults.js';
 import { validateBody } from '../middleware/validate.js';
@@ -361,22 +367,41 @@ router.delete('/messages/:id', chatEditRateLimit, (req, res) => {
     return res.json({ ok: true, id: messageId, purged: true });
   }
 
-  const result = deleteMessage({ messageId, userId: user.id });
+  // Recall has no time limit and admins may recall a message in a room they
+  // belong to. `window_expired` is therefore unreachable here — the branch
+  // was removed rather than left as a status nothing can return. Edit and
+  // purge still answer 409 for it on their own routes.
+  const result = deleteMessage({ messageId, userId: user.id, isAdmin: isAdminPlus(user) });
   if (!result.ok) {
     const status =
       result.reason === 'forbidden'
         ? 403
         : result.reason === 'not_found'
           ? 404
-          : result.reason === 'window_expired'
-            ? 409
-            : result.reason === 'already_deleted'
-              ? 410
-              : 400;
+          : result.reason === 'already_deleted'
+            ? 410
+            : 400;
     return res.status(status).json({ ok: false, error: result.reason });
   }
 
   inc('chat_messages_deleted_total');
+
+  // An admin removing somebody else's message is the one case here that
+  // needs a trail: the author only sees a tombstone, so the audit log is
+  // where "who removed this, and when" actually lives. Own-recalls are
+  // logged too so the two cannot be told apart by absence.
+  audit(
+    result.override ? 'CHAT_MESSAGE_DELETE_OVERRIDE' : 'CHAT_MESSAGE_DELETE',
+    user.username || String(user.id),
+    req.ip || '-',
+    JSON.stringify({
+      message_id: messageId,
+      room_id: result.room_id,
+      author_id: result.author_id,
+      deleted_by: result.deleted_by,
+      override: result.override,
+    })
+  );
 
   publish(
     listMembers(result.room_id).map((m) => m.user_id),
@@ -385,6 +410,7 @@ router.delete('/messages/:id', chatEditRateLimit, (req, res) => {
       room_id: result.room_id,
       message_id: messageId,
       deleted_at: result.deleted_at,
+      deleted_by: result.deleted_by,
     }
   );
   res.json({ ok: true, id: messageId });

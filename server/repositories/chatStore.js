@@ -106,6 +106,12 @@ const COLUMN_ADDS = [
   // (see markDelivered). Additive, nullable column — existing deploys
   // upgrade cleanly.
   `ALTER TABLE chat_messages ADD COLUMN delivered_at TEXT`,
+  // Who recalled the message. Needed once an admin can recall someone
+  // else's: without it the author's message just vanishes with no way
+  // to tell an admin removed it from one they recalled themselves.
+  // Additive, nullable — existing rows read null and render the plain
+  // tombstone, which is what they were.
+  `ALTER TABLE chat_messages ADD COLUMN deleted_by INTEGER`,
 ];
 
 let _schemaReady = false;
@@ -471,18 +477,41 @@ export function purgeMessage({ messageId, userId }) {
  * API response layer. The REST handler sets the response body to
  * a sentinel so clients know to render "(deleted)".
  */
-export function deleteMessage({ messageId, userId }) {
+export function deleteMessage({ messageId, userId, isAdmin = false }) {
   ensureSchema();
   const db = getDb();
   const row = db.prepare(`SELECT * FROM chat_messages WHERE id = ?`).get(Number(messageId));
   if (!row) return { ok: false, reason: 'not_found' };
   if (row.deleted_at) return { ok: false, reason: 'already_deleted' };
-  if (Number(row.author_id) !== Number(userId)) return { ok: false, reason: 'forbidden' };
-  if (ageMs(row.created_at) > EDIT_WINDOW_MS) return { ok: false, reason: 'window_expired' };
 
+  const isAuthor = Number(row.author_id) === Number(userId);
+  // Admin override is scoped to rooms the admin actually belongs to, which
+  // is exactly what they can already READ — `GET /rooms/:id/messages`
+  // answers 403 to a non-member. Without the membership half, a bare id in
+  // a curl would delete a private DM the caller cannot even open. An admin
+  // who needs to moderate a room joins it, and joining is itself visible.
+  const canModerate = isAdmin === true && isMember({ roomId: row.room_id, userId });
+  if (!isAuthor && !canModerate) return { ok: false, reason: 'forbidden' };
+
+  // NO time limit on recall, deliberately (Henry, 2026-09-17): a message
+  // worth taking back is often one noticed hours later. `editMessage` and
+  // `purgeMessage` KEEP their 15-minute window — editing silently rewrites
+  // history and purging destroys the row, while this leaves a tombstone
+  // everyone can see. Two regression guards pin that distinction.
   const now = new Date().toISOString();
-  db.prepare(`UPDATE chat_messages SET deleted_at = ? WHERE id = ?`).run(now, Number(messageId));
-  return { ok: true, room_id: row.room_id, deleted_at: now };
+  db.prepare(`UPDATE chat_messages SET deleted_at = ?, deleted_by = ? WHERE id = ?`).run(
+    now,
+    Number(userId),
+    Number(messageId)
+  );
+  return {
+    ok: true,
+    room_id: row.room_id,
+    deleted_at: now,
+    deleted_by: Number(userId),
+    author_id: Number(row.author_id),
+    override: !isAuthor,
+  };
 }
 
 // ── Search (Phase 10D) ───────────────────────────────────────────────
