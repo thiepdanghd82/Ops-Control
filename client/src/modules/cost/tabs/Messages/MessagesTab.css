@@ -762,8 +762,9 @@
   color: var(--color-red-600, #dc2626);
 }
 /* Incoming rows sit on the left, so the button would collide with the
-   avatar — it flips to the trailing edge there. Only own messages can
-   be recalled today, so this is defensive rather than reachable. */
+   avatar — it flips to the trailing edge there. This IS reachable now:
+   an admin recalling someone else's message sees the control on an
+   incoming bubble. */
 .msg-bubble-row.in .msg-recall-btn {
   right: auto;
   left: calc(100% + 6px);

@@ -619,3 +619,107 @@ test('cleanup', () => {
     /* noop */
   }
 });
+
+// ── Recall: admin override + no time limit (Henry's decision 2026-09-17) ──
+// Soft delete alone changed. editMessage and purgeMessage keep the
+// 15-minute window on purpose — see the two regression guards at the end.
+
+test('deleteMessage: author can recall a message far older than the edit window', () => {
+  _wipeChatForTests();
+  const r = getOrCreateRoom({ kind: 'team', key: 'team:x' });
+  addMember({ roomId: r.id, userId: 1 });
+  const m = insertMessage({ roomId: r.id, authorId: 1, body: 'last week' });
+  getDb()
+    .prepare(`UPDATE chat_messages SET created_at = ? WHERE id = ?`)
+    .run(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), m.id);
+  const result = deleteMessage({ messageId: m.id, userId: 1 });
+  assert.equal(result.ok, true, 'a week-old message is still recallable');
+  assert.equal(result.override, false, 'the author is not an override');
+});
+
+test('deleteMessage: admin who is a member of the room can recall another user`s message', () => {
+  _wipeChatForTests();
+  const r = getOrCreateRoom({ kind: 'team', key: 'team:x' });
+  [1, 2].forEach((u) => addMember({ roomId: r.id, userId: u }));
+  const m = insertMessage({ roomId: r.id, authorId: 1, body: 'moderate me' });
+  const result = deleteMessage({ messageId: m.id, userId: 2, isAdmin: true });
+  assert.equal(result.ok, true);
+  assert.equal(result.override, true, 'flagged so the route can audit it as an override');
+  assert.equal(result.deleted_by, 2);
+});
+
+test('deleteMessage: admin NOT in the room cannot reach the message', () => {
+  // Reading a room is gated on membership, so an admin who is not a member
+  // cannot see this message in any UI. Without this guard a bare id in a
+  // curl would still delete a private DM nobody can read.
+  _wipeChatForTests();
+  const r = getOrCreateRoom({ kind: 'dm', key: 'dm:1:3' });
+  [1, 3].forEach((u) => addMember({ roomId: r.id, userId: u }));
+  const m = insertMessage({ roomId: r.id, authorId: 1, body: 'private' });
+  const result = deleteMessage({ messageId: m.id, userId: 2, isAdmin: true });
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'forbidden');
+  const row = getDb().prepare(`SELECT deleted_at FROM chat_messages WHERE id = ?`).get(m.id);
+  assert.equal(row.deleted_at, null, 'message untouched');
+});
+
+test('deleteMessage: ordinary member cannot recall someone else`s message', () => {
+  _wipeChatForTests();
+  const r = getOrCreateRoom({ kind: 'team', key: 'team:x' });
+  [1, 2].forEach((u) => addMember({ roomId: r.id, userId: u }));
+  const m = insertMessage({ roomId: r.id, authorId: 1, body: 'mine' });
+  assert.equal(deleteMessage({ messageId: m.id, userId: 2 }).reason, 'forbidden');
+  assert.equal(
+    deleteMessage({ messageId: m.id, userId: 2, isAdmin: false }).reason,
+    'forbidden',
+    'explicit isAdmin:false behaves like omitting it'
+  );
+});
+
+test('deleteMessage: records who deleted it, so the tombstone can say', () => {
+  _wipeChatForTests();
+  const r = getOrCreateRoom({ kind: 'team', key: 'team:x' });
+  [1, 2].forEach((u) => addMember({ roomId: r.id, userId: u }));
+  const own = insertMessage({ roomId: r.id, authorId: 1, body: 'a' });
+  deleteMessage({ messageId: own.id, userId: 1 });
+  const other = insertMessage({ roomId: r.id, authorId: 1, body: 'b' });
+  deleteMessage({ messageId: other.id, userId: 2, isAdmin: true });
+  const rows = listMessages({ roomId: r.id });
+  const byId = new Map(rows.map((x) => [x.id, x]));
+  assert.equal(byId.get(own.id).deleted_by, 1);
+  assert.equal(byId.get(other.id).deleted_by, 2);
+  assert.equal(byId.get(other.id).body, null, 'body still scrubbed');
+});
+
+// ── Regression guards: ONLY soft delete changed ──
+
+test('editMessage still refuses past the 15-minute window', () => {
+  _wipeChatForTests();
+  const r = getOrCreateRoom({ kind: 'team', key: 'team:x' });
+  addMember({ roomId: r.id, userId: 1 });
+  const m = insertMessage({ roomId: r.id, authorId: 1, body: 'old' });
+  getDb()
+    .prepare(`UPDATE chat_messages SET created_at = ? WHERE id = ?`)
+    .run(new Date(Date.now() - EDIT_WINDOW_MS - 1000).toISOString(), m.id);
+  assert.equal(
+    editMessage({ messageId: m.id, userId: 1, body: 'rewrite history' }).reason,
+    'window_expired',
+    'editing silently rewrites history — it keeps its window'
+  );
+});
+
+test('purgeMessage still refuses past the window AND for a room admin', () => {
+  _wipeChatForTests();
+  const r = getOrCreateRoom({ kind: 'team', key: 'team:x' });
+  [1, 2].forEach((u) => addMember({ roomId: r.id, userId: u }));
+  const m = insertMessage({ roomId: r.id, authorId: 1, body: 'permanent' });
+  assert.equal(
+    purgeMessage({ messageId: m.id, userId: 2, isAdmin: true }).reason,
+    'forbidden',
+    'permanent destruction stays author-only — no admin override'
+  );
+  getDb()
+    .prepare(`UPDATE chat_messages SET created_at = ? WHERE id = ?`)
+    .run(new Date(Date.now() - EDIT_WINDOW_MS - 1000).toISOString(), m.id);
+  assert.equal(purgeMessage({ messageId: m.id, userId: 1 }).reason, 'window_expired');
+});

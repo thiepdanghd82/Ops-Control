@@ -297,6 +297,14 @@ registerStrings({
     en: 'Unsend this message? The recipient will see it was recalled.',
     vi: 'Thu hồi tin nhắn này? Người nhận sẽ thấy tin đã bị thu hồi.',
   },
+  // Admin recalling someone ELSE's message. Deliberately not worded as
+  // "unsend" — you cannot unsend what you did not send, and the operator
+  // whose message it was will see a tombstone naming an administrator.
+  'chat.recall_other': { en: 'Remove message', vi: 'Gỡ tin nhắn' },
+  'chat.recall_other_confirm': {
+    en: "Remove this person's message? Everyone in the room will see it was removed by an administrator, and the action is recorded in the audit log.",
+    vi: 'Gỡ tin nhắn của người này? Mọi người trong phòng sẽ thấy tin bị quản trị viên gỡ, và hành động được ghi vào nhật ký kiểm toán.',
+  },
   'chat.delete_forever': { en: 'Delete permanently', vi: 'Xóa hoàn toàn' },
   'chat.purge_confirm': {
     en: "Permanently delete this message? It will be removed from everyone's view and leaves no trace.",

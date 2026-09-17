@@ -24,7 +24,7 @@ import { chatApi, openChatStream } from '../../../../services/chatApi';
 import UserPickerModal from '../../../../components/Chat/UserPickerModal';
 import Modal from '../../../../components/Shared/Modal';
 import { useI18n } from '../../../../utils/useI18n';
-import { canDeleteMessage } from './messageActions';
+import { canDeleteMessage, isAdminOverride } from './messageActions';
 import './MessagesTab.css';
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -373,14 +373,18 @@ function DeliveryTick({ msg, isSelf, conv, meId }) {
   );
 }
 
-function Bubble({ msg, prev, meId, authorName, conv, onDelete, t }) {
+function Bubble({ msg, prev, meId, authorName, conv, onDelete, isAdmin, t }) {
   if (msg.deleted_at) {
     return (
       <div className={`msg-bubble-row ${Number(msg.author_id) === Number(meId) ? 'out' : 'in'}`}>
         {Number(msg.author_id) !== Number(meId) && (
           <div className="mini-avatar">{initialsOf(authorName)}</div>
         )}
-        <div className="msg-bubble deleted">(message deleted)</div>
+        <div className="msg-bubble deleted">
+          {msg.deleted_by != null && Number(msg.deleted_by) !== Number(msg.author_id)
+            ? '(removed by an administrator)'
+            : '(message deleted)'}
+        </div>
       </div>
     );
   }
@@ -391,10 +395,11 @@ function Bubble({ msg, prev, meId, authorName, conv, onDelete, t }) {
     !prev.deleted_at &&
     new Date(msg.created_at).getTime() - new Date(prev.created_at).getTime() < 2 * 60 * 1000;
   const body = String(msg.body || '');
-  // Own, not-yet-recalled, still inside the server's 15-min window. The
-  // server refuses regardless — this only avoids offering a button that
-  // would answer 403/409. See messageActions.js.
-  const canDelete = typeof onDelete === 'function' && canDeleteMessage(msg, meId);
+  // Own message, or an admin acting on someone else's. No time limit.
+  // The server refuses regardless — this only avoids offering a button
+  // that would answer 403. See messageActions.js.
+  const canDelete = typeof onDelete === 'function' && canDeleteMessage(msg, meId, { isAdmin });
+  const overriding = canDelete && isAdminOverride(msg, meId);
   // Jumbomoji — short emoji-only strings render bigger.
   const isEmojiOnly =
     /^(\s|\p{Extended_Pictographic}|\u200D|\uFE0F)+$/u.test(body.trim()) &&
@@ -409,8 +414,8 @@ function Bubble({ msg, prev, meId, authorName, conv, onDelete, t }) {
           <button
             type="button"
             className="msg-recall-btn"
-            title={t('chat.recall')}
-            aria-label={t('chat.recall')}
+            title={overriding ? t('chat.recall_other') : t('chat.recall')}
+            aria-label={overriding ? t('chat.recall_other') : t('chat.recall')}
             onClick={() => onDelete(msg)}
           >
             ↩
@@ -426,7 +431,7 @@ function Bubble({ msg, prev, meId, authorName, conv, onDelete, t }) {
   );
 }
 
-function Feed({ messages, conv, meId, userById, loading, onDelete, t }) {
+function Feed({ messages, conv, meId, userById, loading, onDelete, isAdmin, t }) {
   const scrollRef = useRef(null);
   const atBottomRef = useRef(true);
 
@@ -479,6 +484,7 @@ function Feed({ messages, conv, meId, userById, loading, onDelete, t }) {
         authorName={name}
         conv={conv}
         onDelete={onDelete}
+        isAdmin={isAdmin}
         t={t}
       />
     );
@@ -637,6 +643,9 @@ export default function MessagesTab() {
   const { t } = useI18n();
   const { user } = useAuth();
   const meId = Number(user?.id) || 0;
+  // Same inline shape the other tabs use (MachineTechnicalTab.jsx:114) —
+  // there is no shared client-side role helper to reuse.
+  const isAdmin = user?.role === 'admin' || user?.role === 'sys';
 
   const [conversations, setConversations] = useState([]);
   const [convLoading, setConvLoading] = useState(true);
@@ -670,6 +679,10 @@ export default function MessagesTab() {
       setDeleteErr(e?.message || 'delete failed');
     }
   }, [pendingDelete]);
+
+  // Unsending your own and removing another person's are different enough
+  // acts that one confirm sentence cannot honestly cover both.
+  const pendingOverride = isAdminOverride(pendingDelete, meId);
 
   const userById = useMemo(() => {
     const m = new Map();
@@ -859,7 +872,11 @@ export default function MessagesTab() {
             } else {
               const at = ev.deleted_at || new Date().toISOString();
               setMessages((prev) =>
-                prev.map((x) => (x.id === id ? { ...x, deleted_at: at, body: null } : x))
+                prev.map((x) =>
+                  x.id === id
+                    ? { ...x, deleted_at: at, deleted_by: ev.deleted_by ?? null, body: null }
+                    : x
+                )
               );
               // The sidebar preview reads `last_message`, which this
               // handler used not to touch — so a recalled message kept
@@ -976,9 +993,12 @@ export default function MessagesTab() {
         size="sm"
         severity="warning"
       >
-        <Modal.Header title={t('chat.recall')} severity="warning" />
+        <Modal.Header
+          title={pendingOverride ? t('chat.recall_other') : t('chat.recall')}
+          severity="warning"
+        />
         <Modal.Body>
-          <p>{t('chat.recall_confirm')}</p>
+          <p>{pendingOverride ? t('chat.recall_other_confirm') : t('chat.recall_confirm')}</p>
           {deleteErr && <p className="msg-recall-err">{deleteErr}</p>}
         </Modal.Body>
         <Modal.Footer>
@@ -992,7 +1012,7 @@ export default function MessagesTab() {
             {t('chat.edit_cancel')}
           </button>
           <button className="op-btn op-btn-primary" onClick={confirmDelete}>
-            {t('chat.recall')}
+            {pendingOverride ? t('chat.recall_other') : t('chat.recall')}
           </button>
         </Modal.Footer>
       </Modal>
@@ -1055,6 +1075,7 @@ export default function MessagesTab() {
               userById={userById}
               loading={msgLoading}
               onDelete={setPendingDelete}
+              isAdmin={isAdmin}
               t={t}
             />
             <Composer onSend={onSend} disabled={!activeId} />
