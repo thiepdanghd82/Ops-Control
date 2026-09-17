@@ -857,11 +857,24 @@ export default function MessagesTab() {
             if (ev.type === 'message_purged') {
               setMessages((prev) => prev.filter((x) => x.id !== id));
             } else {
+              const at = ev.deleted_at || new Date().toISOString();
               setMessages((prev) =>
-                prev.map((x) =>
-                  x.id === id
-                    ? { ...x, deleted_at: ev.deleted_at || new Date().toISOString(), body: null }
-                    : x
+                prev.map((x) => (x.id === id ? { ...x, deleted_at: at, body: null } : x))
+              );
+              // The sidebar preview reads `last_message`, which this
+              // handler used not to touch — so a recalled message kept
+              // showing its text in the conversation list until the next
+              // full refresh, while the bubble beside it already read
+              // "(message deleted)". ConversationRow has always had the
+              // tombstone branch; it simply never got the update.
+              // Purge is deliberately left alone: the correct preview
+              // there is the PREVIOUS message, which the client does not
+              // hold, so it needs a refetch rather than a local patch.
+              setConversations((prev) =>
+                prev.map((c) =>
+                  c.last_message && Number(c.last_message.id) === Number(id)
+                    ? { ...c, last_message: { ...c.last_message, deleted_at: at, body: null } }
+                    : c
                 )
               );
             }
