@@ -725,3 +725,51 @@
   font-size: 10.5px;
   color: #6b7280;
 }
+
+/* ── Recall (soft-delete) affordance ────────────────────────────────
+   Hidden until the row is hovered or the button itself takes keyboard
+   focus. The :focus-visible half is not decoration — without it the
+   control is unreachable by keyboard, since a button that never shows
+   can still be tabbed to and would then be invisible while focused. */
+/* NB: the absolute positioning below anchors on `.msg-bubble`, which
+   already declares `position: relative` further up this file. Do NOT
+   re-declare it here — a second `position` on the same selector later
+   in the file is how PR #315 silently un-stuck a sticky header. */
+.msg-recall-btn {
+  position: absolute;
+  top: 2px;
+  right: calc(100% + 6px);
+  opacity: 0;
+  pointer-events: none;
+  border: 1px solid var(--color-slate-300, #cbd5e1);
+  background: var(--color-white, #fff);
+  color: var(--color-slate-600, #475569);
+  border-radius: 999px;
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  font-size: 12px;
+  cursor: pointer;
+  transition: opacity 0.12s ease;
+}
+.msg-bubble-row:hover .msg-recall-btn,
+.msg-recall-btn:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.msg-recall-btn:hover {
+  border-color: var(--color-red-400, #f87171);
+  color: var(--color-red-600, #dc2626);
+}
+/* Incoming rows sit on the left, so the button would collide with the
+   avatar — it flips to the trailing edge there. Only own messages can
+   be recalled today, so this is defensive rather than reachable. */
+.msg-bubble-row.in .msg-recall-btn {
+  right: auto;
+  left: calc(100% + 6px);
+}
+.msg-recall-err {
+  margin: 8px 0 0;
+  color: var(--color-red-600, #dc2626);
+  font-size: 12px;
+}

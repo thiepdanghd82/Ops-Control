@@ -22,6 +22,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../../../../context/AuthContext';
 import { chatApi, openChatStream } from '../../../../services/chatApi';
 import UserPickerModal from '../../../../components/Chat/UserPickerModal';
+import Modal from '../../../../components/Shared/Modal';
+import { useI18n } from '../../../../utils/useI18n';
+import { canDeleteMessage } from './messageActions';
 import './MessagesTab.css';
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -370,7 +373,7 @@ function DeliveryTick({ msg, isSelf, conv, meId }) {
   );
 }
 
-function Bubble({ msg, prev, meId, authorName, conv }) {
+function Bubble({ msg, prev, meId, authorName, conv, onDelete, t }) {
   if (msg.deleted_at) {
     return (
       <div className={`msg-bubble-row ${Number(msg.author_id) === Number(meId) ? 'out' : 'in'}`}>
@@ -388,6 +391,10 @@ function Bubble({ msg, prev, meId, authorName, conv }) {
     !prev.deleted_at &&
     new Date(msg.created_at).getTime() - new Date(prev.created_at).getTime() < 2 * 60 * 1000;
   const body = String(msg.body || '');
+  // Own, not-yet-recalled, still inside the server's 15-min window. The
+  // server refuses regardless — this only avoids offering a button that
+  // would answer 403/409. See messageActions.js.
+  const canDelete = typeof onDelete === 'function' && canDeleteMessage(msg, meId);
   // Jumbomoji — short emoji-only strings render bigger.
   const isEmojiOnly =
     /^(\s|\p{Extended_Pictographic}|\u200D|\uFE0F)+$/u.test(body.trim()) &&
@@ -398,6 +405,17 @@ function Bubble({ msg, prev, meId, authorName, conv }) {
       <div className={`msg-bubble ${isEmojiOnly ? 'jumbo' : ''}`}>
         {!isSelf && !isGrouped && conv?.kind !== 'dm' && <div className="author">{authorName}</div>}
         <div>{body}</div>
+        {canDelete && (
+          <button
+            type="button"
+            className="msg-recall-btn"
+            title={t('chat.recall')}
+            aria-label={t('chat.recall')}
+            onClick={() => onDelete(msg)}
+          >
+            ↩
+          </button>
+        )}
         <div className="msg-meta">
           <span>{fmtBubbleTime(msg.created_at)}</span>
           {msg.edited_at && <span title="edited">· edited</span>}
@@ -408,7 +426,7 @@ function Bubble({ msg, prev, meId, authorName, conv }) {
   );
 }
 
-function Feed({ messages, conv, meId, userById, loading }) {
+function Feed({ messages, conv, meId, userById, loading, onDelete, t }) {
   const scrollRef = useRef(null);
   const atBottomRef = useRef(true);
 
@@ -452,7 +470,18 @@ function Feed({ messages, conv, meId, userById, loading }) {
       );
     const author = userById.get(Number(m.author_id));
     const name = author ? author.full_name || author.username : 'Unknown';
-    nodes.push(<Bubble key={m.id} msg={m} prev={prev} meId={meId} authorName={name} conv={conv} />);
+    nodes.push(
+      <Bubble
+        key={m.id}
+        msg={m}
+        prev={prev}
+        meId={meId}
+        authorName={name}
+        conv={conv}
+        onDelete={onDelete}
+        t={t}
+      />
+    );
     prev = m;
   }
   return (
@@ -605,6 +634,7 @@ function InfoPanel({ conv, userById }) {
 // ── Main tab ────────────────────────────────────────────────────
 
 export default function MessagesTab() {
+  const { t } = useI18n();
   const { user } = useAuth();
   const meId = Number(user?.id) || 0;
 
@@ -619,7 +649,27 @@ export default function MessagesTab() {
   const [infoOpen, setInfoOpen] = useState(true);
   const [onlineSet, setOnlineSet] = useState(new Set());
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deleteErr, setDeleteErr] = useState(null);
   const seenTimerRef = useRef(null);
+
+  // Soft delete (recall). The SSE `message_deleted` fan-out below is
+  // what flips the bubble to a tombstone — including for the author, so
+  // there is no optimistic write here to drift out of step with it.
+  const confirmDelete = useCallback(async () => {
+    const target = pendingDelete;
+    if (!target) return;
+    setDeleteErr(null);
+    try {
+      await chatApi.deleteMessage(target.id);
+      setPendingDelete(null);
+    } catch (e) {
+      // Keep the dialog open and say why — the common refusals are a
+      // 409 for a message that aged past the window while the dialog
+      // was sitting there, and a 410 for one already recalled elsewhere.
+      setDeleteErr(e?.message || 'delete failed');
+    }
+  }, [pendingDelete]);
 
   const userById = useMemo(() => {
     const m = new Map();
@@ -807,11 +857,24 @@ export default function MessagesTab() {
             if (ev.type === 'message_purged') {
               setMessages((prev) => prev.filter((x) => x.id !== id));
             } else {
+              const at = ev.deleted_at || new Date().toISOString();
               setMessages((prev) =>
-                prev.map((x) =>
-                  x.id === id
-                    ? { ...x, deleted_at: ev.deleted_at || new Date().toISOString(), body: null }
-                    : x
+                prev.map((x) => (x.id === id ? { ...x, deleted_at: at, body: null } : x))
+              );
+              // The sidebar preview reads `last_message`, which this
+              // handler used not to touch — so a recalled message kept
+              // showing its text in the conversation list until the next
+              // full refresh, while the bubble beside it already read
+              // "(message deleted)". ConversationRow has always had the
+              // tombstone branch; it simply never got the update.
+              // Purge is deliberately left alone: the correct preview
+              // there is the PREVIOUS message, which the client does not
+              // hold, so it needs a refetch rather than a local patch.
+              setConversations((prev) =>
+                prev.map((c) =>
+                  c.last_message && Number(c.last_message.id) === Number(id)
+                    ? { ...c, last_message: { ...c.last_message, deleted_at: at, body: null } }
+                    : c
                 )
               );
             }
@@ -904,6 +967,35 @@ export default function MessagesTab() {
         filter={filter}
         setFilter={setFilter}
       />
+      <Modal
+        open={pendingDelete != null}
+        onClose={() => {
+          setPendingDelete(null);
+          setDeleteErr(null);
+        }}
+        size="sm"
+        severity="warning"
+      >
+        <Modal.Header title={t('chat.recall')} severity="warning" />
+        <Modal.Body>
+          <p>{t('chat.recall_confirm')}</p>
+          {deleteErr && <p className="msg-recall-err">{deleteErr}</p>}
+        </Modal.Body>
+        <Modal.Footer>
+          <button
+            className="op-btn"
+            onClick={() => {
+              setPendingDelete(null);
+              setDeleteErr(null);
+            }}
+          >
+            {t('chat.edit_cancel')}
+          </button>
+          <button className="op-btn op-btn-primary" onClick={confirmDelete}>
+            {t('chat.recall')}
+          </button>
+        </Modal.Footer>
+      </Modal>
       <UserPickerModal
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
@@ -962,6 +1054,8 @@ export default function MessagesTab() {
               meId={meId}
               userById={userById}
               loading={msgLoading}
+              onDelete={setPendingDelete}
+              t={t}
             />
             <Composer onSend={onSend} disabled={!activeId} />
           </>
