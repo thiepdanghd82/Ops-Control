@@ -36,7 +36,7 @@ import {
   isEmptyPrice,
 } from '../../../../services/priceSolver';
 import { MarginCell, ApplyDefault, HoldTick } from '../../components/MarginPriceCells';
-import { metricWarn, pinDrift, planAutoHold } from '../../components/MarginPriceCells.helpers';
+import { metricWarn, pinDrift } from '../../components/MarginPriceCells.helpers';
 import { getStatus as approvalStatus } from '../../../../utils/approvalWorkflow.js';
 
 // VA / Contribution / GM re-derivation at a different price now lives in
@@ -115,7 +115,6 @@ export default function CplxCostBreakdown() {
   // price only while the quote is a draft.
   const isDraft = approvalStatus(cs.approval) === 'draft';
   const heldMetric = readPinMetric(cs);
-  const liveHold = isDraft ? heldMetric : null;
 
   const commitMetric = useCallback(
     (table, tierIdx, metric, targetFrac) => {
@@ -144,28 +143,12 @@ export default function CplxCostBreakdown() {
     [heldMetric, tiers, dispatch]
   );
 
-  const lastAutoRef = useRef({});
-  useEffect(() => {
-    if (!liveHold || !lib) return;
-    for (const { idx, result } of tiers) {
-      if (!result) continue;
-      const pin = readTierPin(cs, idx);
-      const drift = pinDrift(pin, liveHold, result[liveHold]);
-      if (!drift) continue;
-      const solved = solvePriceForMetric(cs, lib, idx, liveHold, pin.pct, solverOpts);
-      const price = planAutoHold(drift, solved, lastAutoRef.current[idx]);
-      if (price == null) continue;
-      lastAutoRef.current[idx] = price;
-      for (const a of planTierPriceWrite({
-        kind: 'cpx',
-        table: 'selling',
-        tierIdx: idx,
-        usd: price,
-        rate,
-      }))
-        dispatch(a);
-    }
-  }, [liveHold, tiers, cs, lib, solverOpts, rate, dispatch]);
+  // The effect that HOLDS the metric deliberately does not live here.
+  // Sub-tabs mount exclusively, so a driver in this file is unmounted
+  // exactly while the operator is on Materials & Process changing the
+  // costs it exists to react to. It runs in the calculator instead —
+  // see useMarginHold. This file owns the tick, the drift hint and the
+  // manual re-apply; it does not own the automatic write.
 
   const reapplyPin = useCallback(
     (tierIdx) => {
