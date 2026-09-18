@@ -22,10 +22,12 @@ import {
   defaultPrice,
   solvePriceForMetric,
   planTierPriceWrite,
+  planTierPinWrite,
+  readTierPin,
   isEmptyPrice,
 } from '../../../../services/priceSolver';
 import { MarginCell, ApplyDefault } from '../../components/MarginPriceCells';
-import { metricWarn } from '../../components/MarginPriceCells.helpers';
+import { metricWarn, pinDrift } from '../../components/MarginPriceCells.helpers';
 
 // VA / Contribution / GM re-derivation at a different price now lives in
 // costStructureWhatIf.recomputeKpi (anchored to r's canonical numerators so
@@ -104,9 +106,26 @@ export default function CalcCostBreakdown() {
       if (price == null || !(price > 0) || !Number.isFinite(price)) return false;
       for (const a of planTierPriceWrite({ kind: 'std', table, tierIdx, usd: price, rate }))
         dispatch(a);
+      // Remember WHAT was asked for, on the Selling side only. Target is the
+      // customer's number (#345) — you cannot hold someone else's price to
+      // your own margin, so pinning it would promise something meaningless.
+      if (table === 'selling')
+        for (const a of planTierPinWrite({ kind: 'std', tierIdx, metric, pct: targetFrac }))
+          dispatch(a);
       return true;
     },
     [st, lib, solverOpts, rate, dispatch]
+  );
+
+  // Re-solve a tier's selling price at the target pinned earlier. Goes through
+  // commitMetric so the pin is re-stamped by the same code that set it — one
+  // path writes the price, never two that can disagree.
+  const reapplyPin = useCallback(
+    (tierIdx) => {
+      const pin = readTierPin(st, tierIdx);
+      if (pin) commitMetric('selling', tierIdx, pin.metric, pin.pct);
+    },
+    [st, commitMetric]
   );
 
   // Apply the GM-25% default to a tier's selling or target price.
@@ -255,6 +274,8 @@ export default function CalcCostBreakdown() {
                             metric="va"
                             value={sk.va}
                             warn={metricWarn('va', sk.va)}
+                            drift={pinDrift(readTierPin(st, idx), 'va', sk.va)}
+                            onReapply={() => reapplyPin(idx)}
                             onCommit={(f) => commitMetric('selling', idx, 'va', f)}
                           />
                         </td>
@@ -263,6 +284,8 @@ export default function CalcCostBreakdown() {
                             metric="contribution"
                             value={sk.contribution}
                             warn={metricWarn('contribution', sk.contribution)}
+                            drift={pinDrift(readTierPin(st, idx), 'contribution', sk.contribution)}
+                            onReapply={() => reapplyPin(idx)}
                             onCommit={(f) => commitMetric('selling', idx, 'contribution', f)}
                           />
                         </td>
@@ -271,6 +294,8 @@ export default function CalcCostBreakdown() {
                             metric="gm"
                             value={sk.gm}
                             warn={metricWarn('gm', sk.gm)}
+                            drift={pinDrift(readTierPin(st, idx), 'gm', sk.gm)}
+                            onReapply={() => reapplyPin(idx)}
                             onCommit={(f) => commitMetric('selling', idx, 'gm', f)}
                           />
                         </td>
