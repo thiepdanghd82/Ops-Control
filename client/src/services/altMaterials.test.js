@@ -92,7 +92,6 @@ function buildCpxFixture() {
   cs.moq = 50000;
   cs.annual_qty = 200000;
   cs.usd_rate = 25000;
-  cs.target_contr = 25;
   cs.num_moq = 2;
   cs.extra_moqs = [{ moq: 100000, price: 0.15, eau: 250000 }];
   cs.active_moq_idx = 0;

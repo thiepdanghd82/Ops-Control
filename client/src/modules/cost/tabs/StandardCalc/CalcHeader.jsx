@@ -13,6 +13,7 @@ import DecimalInput from '../../../../utils/DecimalInput';
 import RfqInfoCard from '../../../../components/Shared/RfqInfoCard';
 import { parseLocaleNumber } from '../../../../utils/format';
 import { useI18n } from '../../../../utils/useI18n';
+import { eauTooltipKey } from '../../lib/eauTooltip';
 
 export default function CalcHeader() {
   const { stdState, cplxState, setStdField, dispatch, touched, saveAttempted, markTouched } =
@@ -48,11 +49,12 @@ export default function CalcHeader() {
   // EAU is required for tooling amortization (calcProcess uses
   // st.annual_qty × product_lifetime as the tooling EAU cap). Warn when
   // any process has tool_cost > 0 but the operator left EAU blank.
-  const showEauWarn = useMemo(
-    () =>
-      (st.processes || []).some((p) => Number(p?.tool_cost) > 0) && !(Number(st.annual_qty) > 0),
-    [st.processes, st.annual_qty]
+  const hasTooling = useMemo(
+    () => (st.processes || []).some((p) => Number(p?.tool_cost) > 0),
+    [st.processes]
   );
+  const showEauWarn = hasTooling && !(Number(st.annual_qty) > 0);
+  const eauTip = eauTooltipKey({ annualQty: st.annual_qty, hasTooling });
 
   const npiOwners = useMemo(() => {
     if (!lib?.ddl?.npi_owner) return [];
@@ -375,13 +377,7 @@ export default function CalcHeader() {
                         onBlur={() => markTouched('annual_qty')}
                         className={`sc-moq-inp ${!(Number(st.annual_qty) > 0) || showEauWarn ? 'sc-input-warn' : ''}`}
                         thousandSep
-                        title={
-                          !(Number(st.annual_qty) > 0)
-                            ? t('gate.required_tip')
-                            : showEauWarn
-                              ? t('moqcard.eau_required')
-                              : undefined
-                        }
+                        title={eauTip ? t(eauTip) : undefined}
                       />
                     </td>
                     <td>
