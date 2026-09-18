@@ -234,9 +234,9 @@ test('T3 die-cut Jig: tooling = tool_cost / tlife (ignores layout cavity multipl
   // tooling = 1000 / 50,000 = 0.02 USD/pc (NOT divided by layout=4)
   assert.equal(
     tooling,
-    0.02,
+    0.025,
     `Jig formula must NOT multiply by layout. If Jig regresses to non-Jig path, ` +
-      `tooling = 1000/(50,000×4) = 0.005 (4× undercharge). Spec: calcEngine.js:662-664`
+      `tooling = 1000 x ceil(80,000/200,000) / 80,000 = 0.0125 (2x undercharge). Spec: calcEngine.js:662-664`
   );
 });
 
@@ -247,7 +247,7 @@ test('T4 die-cut Jig spelling: "Jig" / "Jig& Fixture" / "jig" / "JIGFIXTURE" all
   // whitespace+ampersand, then checks against {jig, jigfixture}.
   // All 4 spellings should produce identical tooling cost.
   const lib = makeDieCutLib();
-  const expected = 0.02; // matches T3
+  const expected = 0.025; // matches T3 — 2 jigs x 1000 / 80,000 cap
   const variants = ['Jig', 'Jig& Fixture', 'jig', 'JIGFIXTURE', 'jig & fixture', 'JIG & FIXTURE'];
   for (const variant of variants) {
     const st = makeDieCutStdState({
@@ -299,7 +299,7 @@ test('T5 die-cut Pinacle die (NPI canonical spelling) reads tool_life from DDL',
   // tooling = 1200 / 60,000 = 0.02 USD/pc
   assert.equal(
     tooling,
-    0.02,
+    0.03,
     `"Pinacle die" must resolve to DDL value 60,000. If DDL lookup case- or spelling-sensitive ` +
       `mismatch causes fallback to tool_life=1, tooling = 1200/1 = $1200/pc (60,000× overcharge).`
   );
@@ -329,7 +329,7 @@ test('T6 die-cut woodie (NPI canonical lowercase) reads tool_life from DDL', () 
   // tooling = 300 / 30,000 = 0.01 USD/pc
   assert.equal(
     tooling,
-    0.01,
+    0.015,
     `"woodie" (lowercase) must resolve to DDL value 30,000. If a future refactor uppercases ` +
       `the DDL lookup, this falls back to tool_life=1 → 300/1 = $300/pc (30,000× overcharge).`
   );
@@ -363,9 +363,9 @@ test('T7 die-cut tool_life_ovr=true: operator value overrides DDL', () => {
   // If override flag ignored: 1000 / 100,000 = 0.01 (half)
   assert.equal(
     tooling,
-    0.02,
+    0.025,
     `tool_life_ovr=true must use proc.tool_life over DDL. ` +
-      `If flag silently ignored, tooling = 0.01 instead of 0.02. Spec: calcEngine.js:650-653`
+      `If flag silently ignored, DDL life 100,000 needs 1 die -> 0.0125 instead of 0.025. Spec: calcEngine.js:650-653`
   );
 });
 
@@ -455,8 +455,16 @@ test('T9 die-cut mixed Cpx: SP-A Pinacle + SP-B Rotary + SP-C Jig — each indep
   // SP-C Jig:     tlife=500,000 > 80,000 (Jig path no layout mult) → cap → 800/80,000 = 0.01
   assert.ok(Array.isArray(result.pass2), 'aggregateComplex returns pass2 array');
   assert.equal(result.pass2.length, 3, '3 SP results in pass2');
-  assert.equal(result.pass2[0].tooling, 0.02, 'SP-A Pinacle tooling = 1200/60,000 = 0.02');
-  assert.equal(result.pass2[1].tooling, 0.0125, 'SP-B Rotary tooling = 1000/80,000 (cap) = 0.0125');
+  assert.equal(
+    result.pass2[0].tooling,
+    0.03,
+    'SP-A Pinacle: 60,000 good pcs vs 80,000 cap -> 2 dies -> 2x1200/80,000'
+  );
+  assert.equal(
+    result.pass2[1].tooling,
+    0.0125,
+    'SP-B Rotary outlasts the cap -> 1 die -> 1000/80,000 (unchanged)'
+  );
   assert.equal(
     result.pass2[2].tooling,
     0.01,
@@ -566,7 +574,7 @@ test('T12 die-cut NC die (production NPI canonical) reads tool_life from DDL', (
   // eau = 100,000 → eauCap = 80,000
   // totalToolPcs = 50,000 ≤ 80,000 → no cap
   // tooling = 500 / 50,000 = 0.01 USD/pc
-  assert.equal(tooling, 0.01, '"NC die" must resolve to DDL value 50,000');
+  assert.equal(tooling, 0.0125, '"NC die" must resolve to DDL value 50,000');
 });
 
 test('T10 die-cut Lesson 24: DIE_MIN_GAP_MM.rotary_magnetic = 1.5 (NOT 1.0 pre-Sprint-S-FLEXO-1)', () => {
