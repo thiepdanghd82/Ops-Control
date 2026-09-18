@@ -247,46 +247,65 @@ export function belowFloor(metrics, policy = MARGIN_POLICY) {
   );
 }
 
-// ── Pinned margin target (per tier) ──────────────────────────────────────
+// ── Held margin metric (quote-level) + per-tier target ───────────────────
 //
-// The operator types a % into a MarginCell and the solver writes a price.
-// Without a record of WHICH metric and WHICH target they asked for, the next
-// cost edit silently moves the metric while the price stands still — the
-// number they pinned is simply forgotten. These two helpers persist that
-// intent per tier so the UI can say "you asked for 30%, it is now 27.3%".
+// The operator ticks ONE of VA / Contr / GM in the Cost Breakdown header.
+// That choice is quote-level — a header cell spans every tier, so a tick
+// there cannot mean different things on different rows. The VALUE held is
+// per tier, because each tier has its own price and its own costs: ticking
+// Contr means "every tier keeps the Contr it has right now", not "every
+// tier jumps to one shared number".
 //
-// Field names are the same on the base tier and on an extra tier; only the
-// holder differs (state vs extra_moqs[i]), exactly like the price fields.
-// Stored on the Selling side ONLY — see the note in the Cost Breakdown tab.
+// Stored on the Selling side only. Target is the customer's number (#345)
+// and cannot be held to our margin.
 
-/** Read the pinned {metric, pct} for a tier, or null when nothing is pinned. */
-export function readTierPin(state, tierIdx) {
+const PIN_METRICS = ['va', 'contribution', 'gm'];
+
+/** Which metric the quote holds, or null. Quote-level (header tick). */
+export function readPinMetric(state) {
+  const m = state?.pin_metric;
+  return PIN_METRICS.includes(m) ? m : null;
+}
+
+/** The target value this tier holds, or null. Per tier. */
+export function readTierPinPct(state, tierIdx) {
   const holder = tierIdx === 0 ? state : (state?.extra_moqs || [])[tierIdx - 1];
-  const metric = holder?.pin_metric;
   const pct = Number(holder?.pin_pct);
-  if (!metric || !Number.isFinite(pct)) return null;
-  if (metric !== 'va' && metric !== 'contribution' && metric !== 'gm') return null;
-  return { metric, pct };
+  return Number.isFinite(pct) ? pct : null;
 }
 
 /**
- * Actions that record (or clear) a tier's pinned target. Pass metric=null to
- * clear. Mirrors planTierPriceWrite's tier-0-vs-extra and std-vs-cpx routing
- * so the two cannot drift apart.
+ * Both halves together, or null when either is missing. A half-written pin
+ * cannot say what was promised, so it promises nothing.
  */
-export function planTierPinWrite({ kind, tierIdx, metric, pct }) {
-  const clearing = !metric;
-  const pctVal = clearing ? null : +Number(pct).toFixed(6);
-  if (!clearing && !Number.isFinite(pctVal)) return [];
-  const pairs = [
-    ['pin_metric', clearing ? null : metric],
-    ['pin_pct', pctVal],
-  ];
+export function readTierPin(state, tierIdx) {
+  const metric = readPinMetric(state);
+  if (!metric) return null;
+  const pct = readTierPinPct(state, tierIdx);
+  return pct == null ? null : { metric, pct };
+}
+
+/** Action setting (or clearing, with metric=null) the quote-level metric. */
+export function planPinMetricWrite({ kind, metric }) {
+  const value = PIN_METRICS.includes(metric) ? metric : null;
+  const type = kind === 'cpx' ? 'SET_CPLX_FIELD' : 'SET_STD_FIELD';
+  return [{ type, payload: { field: 'pin_metric', value } }];
+}
+
+/**
+ * Action storing one tier's held value (pct=null clears it). Routes
+ * tier-0-vs-extra and std-vs-cpx exactly like planTierPriceWrite so the two
+ * cannot drift apart — sending a Cpx write through the Std action lands it
+ * in stdState and loses it on save (MES-3-FIX-53).
+ */
+export function planTierPinWrite({ kind, tierIdx, pct }) {
+  const clearing = pct == null || pct === '';
+  const value = clearing ? null : +Number(pct).toFixed(6);
+  if (!clearing && !Number.isFinite(value)) return [];
   if (tierIdx === 0) {
     const type = kind === 'cpx' ? 'SET_CPLX_FIELD' : 'SET_STD_FIELD';
-    return pairs.map(([field, value]) => ({ type, payload: { field, value } }));
+    return [{ type, payload: { field: 'pin_pct', value } }];
   }
   const type = kind === 'cpx' ? 'SET_CPLX_EXTRA_MOQ' : 'SET_EXTRA_MOQ';
-  const idx = tierIdx - 1;
-  return pairs.map(([field, value]) => ({ type, payload: { idx, field, value } }));
+  return [{ type, payload: { idx: tierIdx - 1, field: 'pin_pct', value } }];
 }
