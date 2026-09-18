@@ -66,6 +66,7 @@ import { gateSubTabChange } from '../../../../services/calcValidation';
 import { useGridKeyboardNav } from '../../../../utils/useGridKeyboardNav';
 import '../StandardCalc/StandardCalc.css';
 import './ComplexCalc.css';
+import { eauTooltipKey } from '../../lib/eauTooltip';
 
 const SUB_TABS = [
   { id: 'project', label: 'RFQ & MOQ info', labelKey: 'pricing.tab.header', icon: '▤' },
@@ -1450,12 +1451,12 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField, markTouched, t }) {
   // EAU required for tooling amortization (calcProcess uses
   // cs.annual_qty × product_lifetime as the tooling EAU cap). Warn when
   // any SP process has tool_cost > 0 but EAU left blank.
-  const showEauWarn = useMemo(
-    () =>
-      sps.some((sp) => (sp.processes || []).some((p) => Number(p?.tool_cost) > 0)) &&
-      !(Number(cs.annual_qty) > 0),
-    [sps, cs.annual_qty]
+  const hasTooling = useMemo(
+    () => sps.some((sp) => (sp.processes || []).some((p) => Number(p?.tool_cost) > 0)),
+    [sps]
   );
+  const showEauWarn = hasTooling && !(Number(cs.annual_qty) > 0);
+  const eauTip = eauTooltipKey({ annualQty: cs.annual_qty, hasTooling });
 
   const showSetupMoqTable = numMoq > 1 && (flatMats.length > 0 || flatProcs.length > 0);
   const fmtIntLocal = (v) =>
@@ -1636,13 +1637,7 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField, markTouched, t }) {
                     onBlur={() => markTouched('annual_qty')}
                     className={`sc-moq-inp ${!(Number(cs.annual_qty) > 0) || showEauWarn ? 'sc-input-warn' : ''}`}
                     thousandSep
-                    title={
-                      !(Number(cs.annual_qty) > 0)
-                        ? t('gate.required_tip')
-                        : showEauWarn
-                          ? t('moqcard.eau_required')
-                          : undefined
-                    }
+                    title={eauTip ? t(eauTip) : undefined}
                   />
                 </td>
                 <td>
