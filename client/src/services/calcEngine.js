@@ -788,13 +788,17 @@ export function calcProcess(proc, st, moq, lib, options = {}) {
       .toLowerCase()
       .replace(/[\s&]/g, '');
     const isJig = ttNorm === 'jig' || ttNorm === 'jigfixture';
-    if (isJig) {
-      // JIG mẫu số KHÔNG nhân Cavity (gá giữ SP, không tiêu hao theo shot × cavity).
-      tooling = tlife > eauCap ? effToolCost / eauCap : effToolCost / tlife;
-    } else {
-      const totalToolPcs = tlife * layout;
-      tooling = totalToolPcs > eauCap ? effToolCost / eauCap : effToolCost / totalToolPcs;
-    }
+    // JIG mẫu số KHÔNG nhân Cavity (gá giữ SP, không tiêu hao theo shot × cavity),
+    // nhưng vẫn giữ cả phần phế nên vẫn nhân yield như mọi tool khác.
+    const cav = isJig ? 1 : layout;
+    // Capacity in GOOD pieces. `tlife × cav` is what the tool can PHYSICALLY
+    // produce; scrap comes out of that, so per GOOD piece it wears
+    // proportionally faster — the same reason run_labor and `extra` divide by
+    // the yield a few lines up. It also puts both sides of the comparison in
+    // one unit: eauCap is good-piece DEMAND, so comparing it against produced
+    // pieces was choosing the smaller of two different things.
+    const goodPcsPerTool = tlife * cav * safeYieldDivisor(1 - scrapFactor);
+    tooling = goodPcsPerTool > eauCap ? effToolCost / eauCap : effToolCost / goodPcsPerTool;
   }
 
   const extra_raw = proc.extra_cost || 0;
