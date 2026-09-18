@@ -30,11 +30,14 @@ import {
   solvePriceForMetric,
   planTierPriceWrite,
   planTierPinWrite,
+  planPinMetricWrite,
   readTierPin,
+  readPinMetric,
   isEmptyPrice,
 } from '../../../../services/priceSolver';
-import { MarginCell, ApplyDefault } from '../../components/MarginPriceCells';
-import { metricWarn, pinDrift } from '../../components/MarginPriceCells.helpers';
+import { MarginCell, ApplyDefault, HoldTick } from '../../components/MarginPriceCells';
+import { metricWarn, pinDrift, planAutoHold } from '../../components/MarginPriceCells.helpers';
+import { getStatus as approvalStatus } from '../../../../utils/approvalWorkflow.js';
 
 // VA / Contribution / GM re-derivation at a different price now lives in
 // costStructureWhatIf.recomputeKpi (shared with Standard); all-active equals
@@ -108,6 +111,12 @@ export default function CplxCostBreakdown() {
     [tiers, cs, lib, solverOpts]
   );
 
+  // Twin of the Standard gate — see the comment there. Holding drives the
+  // price only while the quote is a draft.
+  const isDraft = approvalStatus(cs.approval) === 'draft';
+  const heldMetric = readPinMetric(cs);
+  const liveHold = isDraft ? heldMetric : null;
+
   const commitMetric = useCallback(
     (table, tierIdx, metric, targetFrac) => {
       const price = solvePriceForMetric(cs, lib, tierIdx, metric, targetFrac, solverOpts);
@@ -115,13 +124,48 @@ export default function CplxCostBreakdown() {
       for (const a of planTierPriceWrite({ kind: 'cpx', table, tierIdx, usd: price, rate }))
         dispatch(a);
       // Selling side only — see the twin comment in CalcCostBreakdown.
-      if (table === 'selling')
-        for (const a of planTierPinWrite({ kind: 'cpx', tierIdx, metric, pct: targetFrac }))
-          dispatch(a);
+      if (table === 'selling' && readPinMetric(cs) === metric)
+        for (const a of planTierPinWrite({ kind: 'cpx', tierIdx, pct: targetFrac })) dispatch(a);
       return true;
     },
     [cs, lib, solverOpts, rate, dispatch]
   );
+
+  const toggleHold = useCallback(
+    (metric) => {
+      const next = heldMetric === metric ? null : metric;
+      for (const a of planPinMetricWrite({ kind: 'cpx', metric: next })) dispatch(a);
+      for (const { idx, result } of tiers) {
+        const raw = next && result ? result[next] : null;
+        const pct = typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
+        for (const a of planTierPinWrite({ kind: 'cpx', tierIdx: idx, pct })) dispatch(a);
+      }
+    },
+    [heldMetric, tiers, dispatch]
+  );
+
+  const lastAutoRef = useRef({});
+  useEffect(() => {
+    if (!liveHold || !lib) return;
+    for (const { idx, result } of tiers) {
+      if (!result) continue;
+      const pin = readTierPin(cs, idx);
+      const drift = pinDrift(pin, liveHold, result[liveHold]);
+      if (!drift) continue;
+      const solved = solvePriceForMetric(cs, lib, idx, liveHold, pin.pct, solverOpts);
+      const price = planAutoHold(drift, solved, lastAutoRef.current[idx]);
+      if (price == null) continue;
+      lastAutoRef.current[idx] = price;
+      for (const a of planTierPriceWrite({
+        kind: 'cpx',
+        table: 'selling',
+        tierIdx: idx,
+        usd: price,
+        rate,
+      }))
+        dispatch(a);
+    }
+  }, [liveHold, tiers, cs, lib, solverOpts, rate, dispatch]);
 
   const reapplyPin = useCallback(
     (tierIdx) => {
@@ -227,12 +271,20 @@ export default function CplxCostBreakdown() {
                 <th className="right bd-sub">{t('pricing.subtotal')}</th>
                 <th className="right bd-va" title={KPI_TOOLTIPS.va}>
                   {t('pricing.va_pct')}
+                  <HoldTick metric="va" held={heldMetric} live={isDraft} onToggle={toggleHold} />
                 </th>
                 <th className="right bd-contr" title={KPI_TOOLTIPS.contribution}>
                   {t('pricing.contr_pct')}
+                  <HoldTick
+                    metric="contribution"
+                    held={heldMetric}
+                    live={isDraft}
+                    onToggle={toggleHold}
+                  />
                 </th>
                 <th className="right bd-gm" title={KPI_TOOLTIPS.gm}>
                   {t('pricing.gm_pct')}
+                  <HoldTick metric="gm" held={heldMetric} live={isDraft} onToggle={toggleHold} />
                 </th>
               </tr>
             </thead>
@@ -282,6 +334,7 @@ export default function CplxCostBreakdown() {
                             value={sk.va}
                             warn={metricWarn('va', sk.va)}
                             drift={pinDrift(readTierPin(cs, idx), 'va', sk.va)}
+                            disabled={!!heldMetric && heldMetric !== 'va'}
                             onReapply={() => reapplyPin(idx)}
                             onCommit={(f) => commitMetric('selling', idx, 'va', f)}
                           />
@@ -292,6 +345,7 @@ export default function CplxCostBreakdown() {
                             value={sk.contribution}
                             warn={metricWarn('contribution', sk.contribution)}
                             drift={pinDrift(readTierPin(cs, idx), 'contribution', sk.contribution)}
+                            disabled={!!heldMetric && heldMetric !== 'contribution'}
                             onReapply={() => reapplyPin(idx)}
                             onCommit={(f) => commitMetric('selling', idx, 'contribution', f)}
                           />
@@ -302,6 +356,7 @@ export default function CplxCostBreakdown() {
                             value={sk.gm}
                             warn={metricWarn('gm', sk.gm)}
                             drift={pinDrift(readTierPin(cs, idx), 'gm', sk.gm)}
+                            disabled={!!heldMetric && heldMetric !== 'gm'}
                             onReapply={() => reapplyPin(idx)}
                             onCommit={(f) => commitMetric('selling', idx, 'gm', f)}
                           />

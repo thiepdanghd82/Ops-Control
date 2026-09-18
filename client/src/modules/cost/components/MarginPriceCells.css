@@ -162,3 +162,36 @@
   opacity: 0.45;
   cursor: default;
 }
+
+/* ── Header "hold this metric" tick ─────────────────────────────────────
+   Sits in the column header, so it governs every tier — a header cell
+   cannot mean different things on different rows. */
+.mpc-hold {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 5px;
+  vertical-align: middle;
+  cursor: pointer;
+}
+.mpc-hold input {
+  margin: 0;
+  cursor: pointer;
+  accent-color: #0f62fe;
+}
+.mpc-hold-dot {
+  display: none;
+}
+.mpc-hold-on input {
+  accent-color: #b45309;
+}
+.mpc-hold-paused,
+.mpc-hold-paused input {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+/* A held column reads as the one being driven, not just another number. */
+.mpc-cell-input:disabled {
+  background: transparent;
+  border-color: transparent;
+  color: #475569;
+}

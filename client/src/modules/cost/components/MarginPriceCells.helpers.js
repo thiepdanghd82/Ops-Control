@@ -68,3 +68,29 @@ export function formatPinHint(drift, suggestedPrice) {
     ? `${head} Click to re-apply at $${Number(suggestedPrice).toFixed(4)}.`
     : `${head} Click to re-apply.`;
 }
+
+/**
+ * Should the held metric write a new price for this tier, and which?
+ *
+ * Extracted from the effect that drives it because this is the one piece
+ * that can genuinely misbehave: an effect that writes state it also reads
+ * will spin forever if the write does not settle. It normally settles in one
+ * pass — re-solving lands the metric back on its target, so the next pass
+ * sees no drift — but a tier whose price granularity is coarse next to its
+ * margin (a cent-scale price, where one 4-decimal step moves the margin more
+ * than the tolerance) would never converge. Refusing to write the SAME price
+ * twice running breaks that cycle without needing to predict which tiers are
+ * at risk.
+ *
+ * @param {{pinned:number,actual:number,delta:number}|null} drift
+ * @param {number|null} solved       price the solver returned
+ * @param {number|undefined} lastWritten  price this tier was last auto-given
+ * @returns {number|null} rounded price to write, or null to leave it alone
+ */
+export function planAutoHold(drift, solved, lastWritten) {
+  if (!drift) return null;
+  if (solved == null || !Number.isFinite(solved) || !(solved > 0)) return null;
+  const rounded = +Number(solved).toFixed(4); // matches planTierPriceWrite
+  if (lastWritten === rounded) return null;
+  return rounded;
+}

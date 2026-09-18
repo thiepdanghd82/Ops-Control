@@ -23,11 +23,14 @@ import {
   solvePriceForMetric,
   planTierPriceWrite,
   planTierPinWrite,
+  planPinMetricWrite,
   readTierPin,
+  readPinMetric,
   isEmptyPrice,
 } from '../../../../services/priceSolver';
-import { MarginCell, ApplyDefault } from '../../components/MarginPriceCells';
-import { metricWarn, pinDrift } from '../../components/MarginPriceCells.helpers';
+import { MarginCell, ApplyDefault, HoldTick } from '../../components/MarginPriceCells';
+import { metricWarn, pinDrift, planAutoHold } from '../../components/MarginPriceCells.helpers';
+import { getStatus as approvalStatus } from '../../../../utils/approvalWorkflow.js';
 
 // VA / Contribution / GM re-derivation at a different price now lives in
 // costStructureWhatIf.recomputeKpi (anchored to r's canonical numerators so
@@ -92,6 +95,16 @@ export default function CalcCostBreakdown() {
   // ── Price ↔ margin inversion (Cost Breakdown only) ──
   // The solver reads the SAME snapshot + calc path the tables use.
   const solverOpts = useMemo(() => ({ kind: 'std', snapshot }), [snapshot]);
+
+  // The header tick holds ONE metric for the whole quote. It drives the price
+  // automatically only while the quote is a DRAFT: once it has left the
+  // costing desk — sent to sales, approved, cancelled or rejected — somebody
+  // is reviewing a specific number, and a price that moves under them is the
+  // hazard this gate closes. The tick stays visible and drift is still
+  // reported; only the automatic re-solve stops.
+  const isDraft = approvalStatus(st.approval) === 'draft';
+  const heldMetric = readPinMetric(st);
+  const liveHold = isDraft ? heldMetric : null;
   // GM-25% default price per tier (raised if a secondary floor binds higher).
   const defaults = useMemo(
     () => tiers.map((tr) => (tr.result ? defaultPrice(st, lib, tr.idx, solverOpts) : null)),
@@ -106,16 +119,64 @@ export default function CalcCostBreakdown() {
       if (price == null || !(price > 0) || !Number.isFinite(price)) return false;
       for (const a of planTierPriceWrite({ kind: 'std', table, tierIdx, usd: price, rate }))
         dispatch(a);
-      // Remember WHAT was asked for, on the Selling side only. Target is the
-      // customer's number (#345) — you cannot hold someone else's price to
-      // your own margin, so pinning it would promise something meaningless.
-      if (table === 'selling')
-        for (const a of planTierPinWrite({ kind: 'std', tierIdx, metric, pct: targetFrac }))
-          dispatch(a);
+      // Selling side only — Target is the customer's number (#345) and cannot
+      // be held to our margin. Typing into the HELD metric's cell updates what
+      // that tier holds; the other two cells are read-only while a metric is
+      // held, so this can never record a value for a metric nobody picked.
+      if (table === 'selling' && readPinMetric(st) === metric)
+        for (const a of planTierPinWrite({ kind: 'std', tierIdx, pct: targetFrac })) dispatch(a);
       return true;
     },
     [st, lib, solverOpts, rate, dispatch]
   );
+
+  // Tick / untick a metric in the header. Ticking snapshots each tier's
+  // CURRENT value of that metric as the number it will hold — "keep what you
+  // have", not "jump to one shared figure", because each tier has its own
+  // price and its own costs. The snapshot reads the tier's canonical result,
+  // never the what-if masked view, so exploring a mask cannot pin a
+  // hypothetical the operator was only trying out.
+  const toggleHold = useCallback(
+    (metric) => {
+      const next = heldMetric === metric ? null : metric;
+      for (const a of planPinMetricWrite({ kind: 'std', metric: next })) dispatch(a);
+      for (const { idx, result } of tiers) {
+        const raw = next && result ? result[next] : null;
+        const pct = typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
+        for (const a of planTierPinWrite({ kind: 'std', tierIdx: idx, pct })) dispatch(a);
+      }
+    },
+    [heldMetric, tiers, dispatch]
+  );
+
+  // Hold the ticked metric: when a cost edit moves it off the number a tier
+  // holds, re-solve that tier's price. Converges in one pass because the
+  // re-solve lands the metric back on its target — but a tier whose price
+  // granularity is coarse next to its margin could oscillate, so a tier that
+  // would be written the SAME price twice running is left alone. That guard is
+  // what makes this safe to run from an effect at all.
+  const lastAutoRef = useRef({});
+  useEffect(() => {
+    if (!liveHold || !lib) return;
+    for (const { idx, result } of tiers) {
+      if (!result) continue;
+      const pin = readTierPin(st, idx);
+      const drift = pinDrift(pin, liveHold, result[liveHold]);
+      if (!drift) continue;
+      const solved = solvePriceForMetric(st, lib, idx, liveHold, pin.pct, solverOpts);
+      const price = planAutoHold(drift, solved, lastAutoRef.current[idx]);
+      if (price == null) continue;
+      lastAutoRef.current[idx] = price;
+      for (const a of planTierPriceWrite({
+        kind: 'std',
+        table: 'selling',
+        tierIdx: idx,
+        usd: price,
+        rate,
+      }))
+        dispatch(a);
+    }
+  }, [liveHold, tiers, st, lib, solverOpts, rate, dispatch]);
 
   // Re-solve a tier's selling price at the target pinned earlier. Goes through
   // commitMetric so the pin is re-stamped by the same code that set it — one
@@ -223,9 +284,23 @@ export default function CalcCostBreakdown() {
                 <th className="right bd-proc">{t('pricing.process')}</th>
                 <th className="right bd-pack">{t('pricing.pack_ship')}</th>
                 <th className="right bd-sub">{t('pricing.subtotal')}</th>
-                <th className="right bd-va">{t('pricing.va_pct')}</th>
-                <th className="right bd-contr">{t('pricing.contr_pct')}</th>
-                <th className="right bd-gm">{t('pricing.gm_pct')}</th>
+                <th className="right bd-va">
+                  {t('pricing.va_pct')}
+                  <HoldTick metric="va" held={heldMetric} live={isDraft} onToggle={toggleHold} />
+                </th>
+                <th className="right bd-contr">
+                  {t('pricing.contr_pct')}
+                  <HoldTick
+                    metric="contribution"
+                    held={heldMetric}
+                    live={isDraft}
+                    onToggle={toggleHold}
+                  />
+                </th>
+                <th className="right bd-gm">
+                  {t('pricing.gm_pct')}
+                  <HoldTick metric="gm" held={heldMetric} live={isDraft} onToggle={toggleHold} />
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -275,6 +350,7 @@ export default function CalcCostBreakdown() {
                             value={sk.va}
                             warn={metricWarn('va', sk.va)}
                             drift={pinDrift(readTierPin(st, idx), 'va', sk.va)}
+                            disabled={!!heldMetric && heldMetric !== 'va'}
                             onReapply={() => reapplyPin(idx)}
                             onCommit={(f) => commitMetric('selling', idx, 'va', f)}
                           />
@@ -285,6 +361,7 @@ export default function CalcCostBreakdown() {
                             value={sk.contribution}
                             warn={metricWarn('contribution', sk.contribution)}
                             drift={pinDrift(readTierPin(st, idx), 'contribution', sk.contribution)}
+                            disabled={!!heldMetric && heldMetric !== 'contribution'}
                             onReapply={() => reapplyPin(idx)}
                             onCommit={(f) => commitMetric('selling', idx, 'contribution', f)}
                           />
@@ -295,6 +372,7 @@ export default function CalcCostBreakdown() {
                             value={sk.gm}
                             warn={metricWarn('gm', sk.gm)}
                             drift={pinDrift(readTierPin(st, idx), 'gm', sk.gm)}
+                            disabled={!!heldMetric && heldMetric !== 'gm'}
                             onReapply={() => reapplyPin(idx)}
                             onCommit={(f) => commitMetric('selling', idx, 'gm', f)}
                           />

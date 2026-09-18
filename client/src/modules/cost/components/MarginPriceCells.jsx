@@ -125,3 +125,35 @@ export function ApplyDefault({ def, onApply, warn }) {
     </div>
   );
 }
+
+/**
+ * Header tick that holds ONE metric for the whole quote. Exactly one of the
+ * three can be held: ticking a second releases the first, because "hold VA
+ * and GM at once" over-determines the price — two equations, one unknown.
+ * That is why these are checkboxes in behaviour but a radio group in law.
+ *
+ * `live` is false once the quote has left draft. The tick stays visible (a
+ * reviewer should see what it was priced to hold) but stops driving the
+ * price, and the control is disabled so nobody re-arms it on a quote
+ * somebody else is reviewing.
+ */
+export function HoldTick({ metric, held, live, onToggle }) {
+  const on = held === metric;
+  const title = !live
+    ? 'Holding is paused — this quote has left draft'
+    : on
+      ? 'Holding this. Price follows cost changes; click to release.'
+      : 'Hold this metric — the price will follow cost changes to keep it';
+  return (
+    <label className={`mpc-hold${on ? ' mpc-hold-on' : ''}${live ? '' : ' mpc-hold-paused'}`}>
+      <input
+        type="checkbox"
+        checked={on}
+        disabled={!live}
+        onChange={() => onToggle(metric)}
+        aria-label={`Hold ${metric} — price follows cost changes`}
+      />
+      <span className="mpc-hold-dot" title={title} />
+    </label>
+  );
+}
