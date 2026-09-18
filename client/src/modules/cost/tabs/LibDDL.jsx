@@ -230,15 +230,15 @@ function CutterCostRow({ label, entry, onSetEntry, onDeleteRow }) {
       </div>
       {tiered && (
         <div className="ddl-cc-tiers">
-          {tiers.map((t, i) => {
-            const isCatch = t && t.upto_m == null;
+          {tiers.map((tier, i) => {
+            const isCatch = tier && tier.upto_m == null;
             return (
               <div key={i} className="ddl-cc-tier">
                 <input
                   className="ddl-cc-upto"
                   type="text"
                   disabled={isCatch}
-                  value={isCatch ? '' : (t?.upto_m ?? '')}
+                  value={isCatch ? '' : (tier?.upto_m ?? '')}
                   placeholder={isCatch ? '∞ (above)' : 'up to (m)'}
                   onChange={(e) =>
                     onSetEntry({ tiers: setTierField(tiers, i, 'upto_m', e.target.value) })
@@ -247,7 +247,7 @@ function CutterCostRow({ label, entry, onSetEntry, onDeleteRow }) {
                 <input
                   className="ddl-cc-cost"
                   type="text"
-                  value={t?.cost ?? ''}
+                  value={tier?.cost ?? ''}
                   placeholder={t('lib.cost_usd')}
                   onChange={(e) =>
                     onSetEntry({ tiers: setTierField(tiers, i, 'cost', e.target.value) })

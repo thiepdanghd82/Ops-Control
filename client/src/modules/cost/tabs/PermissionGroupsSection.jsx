@@ -420,21 +420,21 @@ function PermissionGroupMatrixModal({
               </tr>
             </thead>
             <tbody>
-              {tabCatalog.map((t) => {
-                const current = form.tab_permissions?.[t.id];
+              {tabCatalog.map((tab) => {
+                const current = form.tab_permissions?.[tab.id];
                 return (
-                  <tr key={t.id} className={'pg-matrix-row' + (current ? ' pg-matrix-set' : '')}>
-                    <td className="pg-mono">{t.id}</td>
+                  <tr key={tab.id} className={'pg-matrix-row' + (current ? ' pg-matrix-set' : '')}>
+                    <td className="pg-mono">{tab.id}</td>
                     <td>
-                      <b>{t.label}</b>
+                      <b>{tab.label}</b>
                     </td>
                     {ACCESS_MODES.map((m) => (
                       <td key={m.v} style={{ textAlign: 'center' }}>
                         <input
                           type="radio"
-                          name={`perm-${t.id}`}
+                          name={`perm-${tab.id}`}
                           checked={current === m.v}
-                          onChange={() => setTabPerm(t.id, m.v)}
+                          onChange={() => setTabPerm(tab.id, m.v)}
                           style={{ accentColor: m.color }}
                           disabled={group.is_system}
                         />
@@ -443,7 +443,7 @@ function PermissionGroupMatrixModal({
                     <td style={{ textAlign: 'center' }}>
                       <button
                         className="pg-cell-clear"
-                        onClick={() => setTabPerm(t.id, null)}
+                        onClick={() => setTabPerm(tab.id, null)}
                         disabled={group.is_system || !current}
                         title={t('pg.unset_hint')}
                       >
