@@ -1067,12 +1067,20 @@ test('calcProcess [regression]: tool_type "Jig" (exact) still hits Jig branch', 
   const r = calcProcess(st.processes[0], st, 10_000, lib);
   // Row Tool Life is now authoritative (2026-08): rowLife 100 wins over the
   // DDL Jig life. The Jig branch omits the layout multiplier, so
-  // tooling = tool_cost / tlife = 1000 / 100 = 10. A non-Jig tool_type would
-  // divide by tlife × layout (1000 / (100×4) = 2.5) — asserting 10 (not 2.5)
-  // proves the Jig branch is still taken. (eauCap = 800k ≫ 100, so no cap.)
+  // tooling = tool_cost / (tlife × yield) = 1000 / (100 × 0.97) = 10.3093.
+  // A non-Jig tool_type would also divide by layout (1000 / (100×4×0.97) =
+  // 2.5773) — asserting 10.31 (not 2.58) proves the Jig branch is still
+  // taken, which is what this test is for. (eauCap = 800k ≫ 97, so no cap.)
+  //
+  // The NUMBER moved on 2026-09-18 and the intent did not: tooling now
+  // amortises over GOOD pieces, and this fixture carries scrap_pct 0.03, so
+  // the tool yields 97 good pieces rather than 100. Updated with the reason
+  // rather than silently re-baselined — the discriminator (Jig vs non-Jig)
+  // is unchanged and still 4× apart.
+  const jigYield = 1 - 0.03;
   assert.ok(
-    Math.abs(r.tooling - 10) < 1e-9,
-    `expected Jig-branch cost/tlife = 10; got ${r.tooling}`
+    Math.abs(r.tooling - 1000 / (100 * jigYield)) < 1e-9,
+    `expected Jig-branch cost/(tlife×yield) = ${1000 / (100 * jigYield)}; got ${r.tooling}`
   );
 });
 
