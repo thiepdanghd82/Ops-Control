@@ -415,13 +415,13 @@ test('calcProcess [regression]: 80% EAU cap matches CCL "Cách tính chi phí to
   // Override DDL Tool Life per scenario via tool_life_ovr to isolate the
   // formula. Each row pairs (tool_type, tool_life_shots, expected $/pc).
   const cases = [
-    // Etching: Life×Cav = 20k ≤ eauCap 72k → chia theo đời khuôn = 1000/20k = $0.05
-    { tool_type: 'Etching', tool_life: 20_000, expected: 1000 / 20_000 },
-    // Carving: Life×Cav = 40k ≤ eauCap 72k → chia theo đời khuôn = 1000/40k = $0.025
-    { tool_type: 'Carving', tool_life: 40_000, expected: 1000 / 40_000 },
-    // Metal: Life×Cav = 500k > eauCap 72k → chia theo trần = 1000/72k ≈ $0.01389
+    // Etching: 20k pcs/khuôn, cần ceil(72k/20k) = 4 khuôn → 4×1000/72k = $0.05556
+    { tool_type: 'Etching', tool_life: 20_000, expected: (4 * 1000) / 72_000 },
+    // Carving: 40k pcs/khuôn, cần ceil(72k/40k) = 2 khuôn → 2×1000/72k = $0.02778
+    { tool_type: 'Carving', tool_life: 40_000, expected: (2 * 1000) / 72_000 },
+    // Metal: 500k > trần 72k → chỉ cần 1 khuôn → 1000/72k ≈ $0.01389 (KHÔNG đổi)
     { tool_type: 'Metal', tool_life: 500_000, expected: 1000 / 72_000 },
-    // Jig: KHÔNG nhân Cavity. tlife 1M > eauCap 72k → chia theo trần = 1000/72k.
+    // Jig: KHÔNG nhân Cavity. 1M > trần 72k → 1 khuôn → 1000/72k (KHÔNG đổi).
     { tool_type: 'Jig', tool_life: 1_000_000, expected: 1000 / 72_000 },
   ];
   for (const { tool_type, tool_life, expected } of cases) {
@@ -1077,11 +1077,11 @@ test('calcProcess [regression]: tool_type "Jig" (exact) still hits Jig branch', 
   // the tool yields 97 good pieces rather than 100. Updated with the reason
   // rather than silently re-baselined — the discriminator (Jig vs non-Jig)
   // is unchanged and still 4× apart.
-  const jigYield = 1 - 0.03;
-  assert.ok(
-    Math.abs(r.tooling - 1000 / (100 * jigYield)) < 1e-9,
-    `expected Jig-branch cost/(tlife×yield) = ${1000 / (100 * jigYield)}; got ${r.tooling}`
-  );
+  // 100 × 0.97 = 97 good pcs per jig; cap = 800_000 → ceil(800_000/97) = 8248 jigs
+  // → 8248 × 1000 / 800_000 = 10.31. A non-Jig tool_type would also divide by
+  // layout 4 (388 pcs → 2062 tools → 2.5775) — asserting 10.31 not 2.5775 is
+  // what proves the Jig branch is still taken, and they are still 4× apart.
+  assert.ok(Math.abs(r.tooling - 10.31) < 1e-9, `expected Jig-branch 10.31; got ${r.tooling}`);
 });
 
 // ── Tool Life column is the SOURCE OF TRUTH for tooling (2026-08) ──
@@ -1119,10 +1119,10 @@ test('calcProcess: editing Tool Life changes the tooling cost (row wins over DDL
 test('calcProcess: row Tool Life 0 falls back to the DDL/resolved life (legacy quote)', () => {
   const lib = makeLib();
   const st = makeState({ annual_qty: 1_000_000, product_lifetime: 1 });
-  // rowLife 0 → DDL Metal 500_000 → 2000/500_000 = 0.004.
+  // rowLife 0 → DDL Metal 500_000 → ceil(800k/500k) = 2 khuôn → 2×2000/800k = 0.005.
   const r = calcProcess(toolLifeProc({ tool_life: 0 }), st, 10_000, lib);
   assert.ok(
-    Math.abs(r.tooling - 2000 / 500_000) < 1e-12,
+    Math.abs(r.tooling - (2 * 2000) / 800_000) < 1e-12,
     `expected DDL fallback; got ${r.tooling}`
   );
 });
@@ -1156,10 +1156,10 @@ test('calcProcess: snapshot resolver life is used ONLY when the row is 0', () =>
     Math.abs(withRow.tooling - 0.02) < 1e-9,
     `row wins over resolver; got ${withRow.tooling}`
   );
-  // rowLife 0 → resolver life used: 2000/300_000.
+  // rowLife 0 → resolver life 300_000 → ceil(800k/300k) = 3 khuôn → 3×2000/800k = 0.0075.
   const withResolver = calcProcess(toolLifeProc({ tool_life: 0 }), st, 10_000, lib, { resolver });
   assert.ok(
-    Math.abs(withResolver.tooling - 2000 / 300_000) < 1e-12,
+    Math.abs(withResolver.tooling - (3 * 2000) / 800_000) < 1e-12,
     `resolver used when row 0; got ${withResolver.tooling}`
   );
 });

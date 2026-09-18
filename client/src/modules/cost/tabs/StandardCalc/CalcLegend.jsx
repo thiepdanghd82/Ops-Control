@@ -2427,11 +2427,12 @@ eauCap = eau × 0.8      ← only 80% of lifetime EAU is amortizable`}
             nameVi="Khuôn/đơn vị — Tiêu chuẩn"
             expr={`tlife = (tool_life > 0) ? tool_life : (DDL.tool_life[tool_type] || 1)
 goodPcs = tlife × layout × yield   ← yield = 1 − scrap; see note
-tool = (goodPcs > eauCap)
-  ? tool_cost / eauCap           ← EAU cap applies (eauCap = eau × 0.8)
-  : tool_cost / goodPcs          ← normal amortization`}
-            note="✅ Verified — the editable per-row Tool Life column is the source of truth: its value is used whenever positive, so editing it changes the cost. The DDL library life only SEEDS the column and is the fallback when the row is 0/empty (legacy quotes). Divisor floored at the 0.8-capped EAU. If the row is 0 and tool_type is missing from DDL, tlife falls back to 1 → massive per-unit cost (sentinel for broken config). ⚠ Corrected 2026-09-18 — the denominator counts GOOD pieces: tlife × layout is what the tool can physically make, and scrap comes out of that, so it is multiplied by yield (1 − scrap) exactly as run labour and Extra cost are divided by it. This also puts both sides of the comparison in one unit, since eauCap is good-piece demand. The cap branch is untouched — it is a 1.25× policy floor, not a wear model."
-            noteVi="✅ Đã xác thực — cột Tool Life sửa được trên từng dòng là nguồn chuẩn: giá trị đó được dùng hễ dương, nên sửa nó là chi phí đổi theo. Tuổi thọ trong thư viện DDL chỉ GIEO giá trị ban đầu cho cột và là dự phòng khi dòng = 0/trống (quote cũ). Mẫu số chặn sàn ở EAU đã nhân trần 0.8. Nếu dòng = 0 và tool_type không có trong DDL, tlife rơi về 1 → chi phí/đơn vị rất lớn (dấu hiệu cấu hình hỏng). ⚠ Đã sửa 18/09/2026 — mẫu số đếm sản phẩm ĐẠT: tlife × layout là số cái khuôn dập ra được về mặt vật lý, phế nằm trong đó, nên nhân thêm yield (1 − scrap) đúng như công lao động chạy và Extra cost đang chia cho nó. Nhờ vậy hai vế so sánh về cùng một đơn vị, vì eauCap là nhu cầu tính theo hàng đạt. Nhánh trần giữ nguyên — đó là sàn chính sách 1.25×, không phải mô hình mài mòn."
+tools   = max(1, CEIL(eauCap / goodPcs))   ← khuôn mua nguyên cái
+tool    = tool_cost × tools / eauCap       ← phân bổ / tổng số pcs
+         (khuôn sống lâu hơn nhu cầu → tools = 1 → tool_cost / eauCap,
+          đúng bằng nhánh trần cũ; eauCap = eau × 0.8)`}
+            note="✅ Verified — the editable per-row Tool Life column is the source of truth: its value is used whenever positive, so editing it changes the cost. The DDL library life only SEEDS the column and is the fallback when the row is 0/empty (legacy quotes). Divisor floored at the 0.8-capped EAU. If the row is 0 and tool_type is missing from DDL, tlife falls back to 1 → massive per-unit cost (sentinel for broken config). ⚠ Corrected 2026-09-18 — the denominator counts GOOD pieces: tlife × layout is what the tool can physically make, and scrap comes out of that, so it is multiplied by yield (1 − scrap) exactly as run labour and Extra cost are divided by it. This also puts both sides of the comparison in one unit, since eauCap is good-piece demand. The cap branch is untouched — it is a 1.25× policy floor, not a wear model. ⚠ Corrected again 2026-09-18 — you cannot buy a third of a die: needing 1.33 tools means buying 2, so the count is rounded UP and the whole spend is divided by the run. The count is taken against eauCap, not raw EAU, so the 0.8 floor above is preserved rather than removed as a side effect."
+            noteVi="✅ Đã xác thực — cột Tool Life sửa được trên từng dòng là nguồn chuẩn: giá trị đó được dùng hễ dương, nên sửa nó là chi phí đổi theo. Tuổi thọ trong thư viện DDL chỉ GIEO giá trị ban đầu cho cột và là dự phòng khi dòng = 0/trống (quote cũ). Mẫu số chặn sàn ở EAU đã nhân trần 0.8. Nếu dòng = 0 và tool_type không có trong DDL, tlife rơi về 1 → chi phí/đơn vị rất lớn (dấu hiệu cấu hình hỏng). ⚠ Đã sửa 18/09/2026 — mẫu số đếm sản phẩm ĐẠT: tlife × layout là số cái khuôn dập ra được về mặt vật lý, phế nằm trong đó, nên nhân thêm yield (1 − scrap) đúng như công lao động chạy và Extra cost đang chia cho nó. Nhờ vậy hai vế so sánh về cùng một đơn vị, vì eauCap là nhu cầu tính theo hàng đạt. Nhánh trần giữ nguyên — đó là sàn chính sách 1.25×, không phải mô hình mài mòn. ⚠ Sửa tiếp 18/09/2026 — không mua được 1/3 cái khuôn: cần 1,33 khuôn nghĩa là mua 2, nên số khuôn làm tròn LÊN rồi chia toàn bộ tiền cho tổng số pcs. Số khuôn đếm theo eauCap chứ không phải EAU thô, để giữ nguyên trần 0.8 ở trên chứ không xoá nó đi một cách vô tình."
           />
           <Formula
             name="Tooling/unit — Jig (special case)"
@@ -2441,8 +2442,10 @@ ttNorm = tool_type.toLowerCase().replace(/[\\s&]/g, '')
 isJig  = ttNorm === 'jig' || ttNorm === 'jigfixture'
 if (isJig):
   goodPcs = tlife × yield        ← NO × layout, but yield still applies
-  tool = (goodPcs > eauCap) ? tool_cost / eauCap : tool_cost / goodPcs
-         (eauCap = eau × 0.8; a jig holds the scrapped pieces too)`}
+  tools   = max(1, CEIL(eauCap / goodPcs))
+  tool    = tool_cost × tools / eauCap
+         (eauCap = eau × 0.8; a jig holds the scrapped pieces too,
+          and is bought whole like any other tool)`}
             note="⚠ Corrected — xlsx omitted the DDL key normalization step. Writing 'Jig & Fixture' or 'jig' or 'JIG' all work identically. The cap is the same eau × 0.8; unlike Standard, Jig's raw-amortization denominator is tlife alone (no × layout)."
             noteVi="⚠ Đã sửa — xlsx bỏ sót bước chuẩn hoá khoá DDL. Ghi 'Jig & Fixture' hay 'jig' hay 'JIG' đều cho kết quả như nhau. Trần vẫn là eau × 0.8; khác với Tiêu chuẩn, mẫu số phân bổ thô của Jig chỉ là tlife (không × layout)."
           />

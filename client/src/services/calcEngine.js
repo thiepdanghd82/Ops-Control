@@ -798,7 +798,16 @@ export function calcProcess(proc, st, moq, lib, options = {}) {
     // one unit: eauCap is good-piece DEMAND, so comparing it against produced
     // pieces was choosing the smaller of two different things.
     const goodPcsPerTool = tlife * cav * safeYieldDivisor(1 - scrapFactor);
-    tooling = goodPcsPerTool > eauCap ? effToolCost / eauCap : effToolCost / goodPcsPerTool;
+    // You cannot buy a third of a die. Needing 1.33 tools means buying 2, so
+    // the count is rounded UP and the whole spend is spread across the run
+    // (Henry, 2026-09-18). A tool that outlasts demand needs exactly 1 and
+    // lands back on `cost / eauCap` — the old cap branch, so the 0.8 policy
+    // floor from 2026-06-15 survives rather than being removed by a side
+    // effect. The count is taken against eauCap, NOT raw EAU: counting and
+    // dividing by raw EAU would make a long-life tool 20% cheaper, which is
+    // that safety factor silently deleted.
+    const toolsNeeded = goodPcsPerTool > 0 ? Math.max(1, Math.ceil(eauCap / goodPcsPerTool)) : 1;
+    tooling = (effToolCost * toolsNeeded) / eauCap;
   }
 
   const extra_raw = proc.extra_cost || 0;
