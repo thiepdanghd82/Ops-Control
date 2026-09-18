@@ -160,29 +160,43 @@ test('clearing a tier value writes null; nonsense writes nothing', () => {
 
 // ── planAutoHold: the guard that keeps the auto-write from spinning ──
 test('no drift → write nothing', () => {
-  assert.equal(planAutoHold(null, 0.99, undefined), null);
+  assert.equal(planAutoHold(null, 0.99, 0.5), null);
 });
 
-test('drift with a fresh price → write it, rounded the way prices are stored', () => {
+test('drift with a new price → write it, rounded the way prices are stored', () => {
   const d = pinDrift(PIN, 'contribution', 0.273);
-  assert.equal(planAutoHold(d, 0.991234567, undefined), 0.9912);
+  assert.equal(planAutoHold(d, 0.991234567, 0.88), 0.9912);
 });
 
-test('the SAME price twice running is refused — this is the loop guard', () => {
-  // An effect that writes what it reads spins forever unless the write
-  // settles. Normally it settles in one pass; on a cent-scale price one
-  // 4-decimal step can move the margin more than the tolerance and it never
-  // would. Refusing a repeat breaks the cycle without guessing which tiers
-  // are at risk.
+test('a price already equal to the solved one is refused — this is the loop guard', () => {
+  // The effect writes state it also reads, so it must have a stop condition.
+  // The stop is "the tier already holds this price": writing it would change
+  // nothing, so there is nothing to do and the next pass has no work either.
   const d = pinDrift(PIN, 'contribution', 0.273);
   assert.equal(planAutoHold(d, 0.9912, 0.9912), null);
-  assert.equal(planAutoHold(d, 0.99123, 0.9912), null, 'same after rounding');
-  assert.equal(planAutoHold(d, 0.9913, 0.9912), 0.9913, 'a genuinely new price still writes');
+  assert.equal(planAutoHold(d, 0.99123, 0.9912), null, 'equal after rounding');
+  assert.equal(planAutoHold(d, 0.9913, 0.9912), 0.9913, 'a different price still writes');
+});
+
+test('a price the operator typed by hand is corrected, not refused', () => {
+  // The reason this compares against the CURRENT price and not against the
+  // last price the driver wrote: with a remembered-write guard, typing a
+  // price of your own would be met with silence -- the metric would stay
+  // wrong and nothing would say why.
+  const d = pinDrift(PIN, 'contribution', 0.273);
+  assert.equal(planAutoHold(d, 0.9912, 0.95), 0.9912);
+});
+
+test('a tier with no price yet still gets one', () => {
+  const d = pinDrift(PIN, 'contribution', 0.273);
+  for (const empty of [0, null, undefined, NaN, '']) {
+    assert.equal(planAutoHold(d, 0.9912, empty), 0.9912);
+  }
 });
 
 test('an unsolvable target writes nothing rather than a junk price', () => {
   const d = pinDrift(PIN, 'contribution', 0.273);
   for (const v of [null, undefined, NaN, Infinity, 0, -1]) {
-    assert.equal(planAutoHold(d, v, undefined), null);
+    assert.equal(planAutoHold(d, v, 0.88), null);
   }
 });

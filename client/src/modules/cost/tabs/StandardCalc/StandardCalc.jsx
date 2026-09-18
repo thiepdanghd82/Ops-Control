@@ -8,12 +8,15 @@ import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import {
   calcAll,
+  buildTierState,
+  enumerateTiers,
   getActiveTierState,
   serializeResultForPersist,
   buildStdRowsPayload,
   getActiveMaterials,
 } from '../../../../services/calcEngine';
 import { freezeLib } from '../../../../services/pricingSnapshot';
+import { useMarginHold } from '../../hooks/useMarginHold';
 import { stripDrawingBytesDeep } from '../../../../services/drawingFiles';
 import { isCopyMode } from '../../components/SnapshotPanel.helpers';
 import '../../components/SnapshotPanel.css';
@@ -221,6 +224,33 @@ export default function StandardCalc() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [stdState.materials_main, stdState.materials_alt, stdState.materials_active, lib]
   );
+
+  // Hold the ticked margin (VA%/Contr%/GM%) wherever the operator is editing.
+  // It lives here rather than in Cost Breakdown because sub-tabs mount
+  // exclusively: a driver inside that tab is unmounted precisely while
+  // Materials & Process is open, which is where the costs it reacts to change.
+  const holdTiers = useCallback(
+    (snapshot) => {
+      if (!lib) return [];
+      return enumerateTiers(stdState).map(({ idx, moq, sp, eau }) => {
+        try {
+          const tierSt = buildTierState(stdState, idx, sp, moq, eau);
+          return { idx, sp, result: calcAll(tierSt, null, lib, null, { snapshot }) };
+        } catch {
+          return { idx, sp, result: null };
+        }
+      });
+    },
+    [stdState, lib]
+  );
+  useMarginHold({
+    kind: 'std',
+    state: stdState,
+    lib,
+    rate: stdState.usd_rate || 0,
+    dispatch,
+    computeTiers: holdTiers,
+  });
 
   // PO L/T auto-derive (Sprint S-PO-LT) — Σ PROD TIME (process total_time/60 h)
   // ÷ 8-hour day, rounded up. Runs calcAll on the active-tier state to read the

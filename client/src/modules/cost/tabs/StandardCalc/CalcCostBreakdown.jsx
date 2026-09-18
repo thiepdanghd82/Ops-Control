@@ -29,7 +29,7 @@ import {
   isEmptyPrice,
 } from '../../../../services/priceSolver';
 import { MarginCell, ApplyDefault, HoldTick } from '../../components/MarginPriceCells';
-import { metricWarn, pinDrift, planAutoHold } from '../../components/MarginPriceCells.helpers';
+import { metricWarn, pinDrift } from '../../components/MarginPriceCells.helpers';
 import { getStatus as approvalStatus } from '../../../../utils/approvalWorkflow.js';
 
 // VA / Contribution / GM re-derivation at a different price now lives in
@@ -104,7 +104,6 @@ export default function CalcCostBreakdown() {
   // reported; only the automatic re-solve stops.
   const isDraft = approvalStatus(st.approval) === 'draft';
   const heldMetric = readPinMetric(st);
-  const liveHold = isDraft ? heldMetric : null;
   // GM-25% default price per tier (raised if a secondary floor binds higher).
   const defaults = useMemo(
     () => tiers.map((tr) => (tr.result ? defaultPrice(st, lib, tr.idx, solverOpts) : null)),
@@ -149,34 +148,12 @@ export default function CalcCostBreakdown() {
     [heldMetric, tiers, dispatch]
   );
 
-  // Hold the ticked metric: when a cost edit moves it off the number a tier
-  // holds, re-solve that tier's price. Converges in one pass because the
-  // re-solve lands the metric back on its target — but a tier whose price
-  // granularity is coarse next to its margin could oscillate, so a tier that
-  // would be written the SAME price twice running is left alone. That guard is
-  // what makes this safe to run from an effect at all.
-  const lastAutoRef = useRef({});
-  useEffect(() => {
-    if (!liveHold || !lib) return;
-    for (const { idx, result } of tiers) {
-      if (!result) continue;
-      const pin = readTierPin(st, idx);
-      const drift = pinDrift(pin, liveHold, result[liveHold]);
-      if (!drift) continue;
-      const solved = solvePriceForMetric(st, lib, idx, liveHold, pin.pct, solverOpts);
-      const price = planAutoHold(drift, solved, lastAutoRef.current[idx]);
-      if (price == null) continue;
-      lastAutoRef.current[idx] = price;
-      for (const a of planTierPriceWrite({
-        kind: 'std',
-        table: 'selling',
-        tierIdx: idx,
-        usd: price,
-        rate,
-      }))
-        dispatch(a);
-    }
-  }, [liveHold, tiers, st, lib, solverOpts, rate, dispatch]);
+  // The effect that HOLDS the metric deliberately does not live here.
+  // Sub-tabs mount exclusively, so a driver in this file is unmounted
+  // exactly while the operator is on Materials & Process changing the
+  // costs it exists to react to. It runs in the calculator instead —
+  // see useMarginHold. This file owns the tick, the drift hint and the
+  // manual re-apply; it does not own the automatic write.
 
   // Re-solve a tier's selling price at the target pinned earlier. Goes through
   // commitMetric so the pin is re-stamped by the same code that set it — one

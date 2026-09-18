@@ -74,23 +74,27 @@ export function formatPinHint(drift, suggestedPrice) {
  *
  * Extracted from the effect that drives it because this is the one piece
  * that can genuinely misbehave: an effect that writes state it also reads
- * will spin forever if the write does not settle. It normally settles in one
- * pass — re-solving lands the metric back on its target, so the next pass
- * sees no drift — but a tier whose price granularity is coarse next to its
- * margin (a cent-scale price, where one 4-decimal step moves the margin more
- * than the tolerance) would never converge. Refusing to write the SAME price
- * twice running breaks that cycle without needing to predict which tiers are
- * at risk.
+ * will spin forever if the write never settles. The stop condition is that
+ * the solved price is ALREADY the tier's price -- writing it would change
+ * nothing, so there is nothing to do and the loop ends.
+ *
+ * Comparing against the tier's CURRENT price rather than against the last
+ * price this driver wrote is what makes a manual override recoverable: if
+ * the operator types a price of their own, current no longer matches what
+ * the hold wants, so the hold corrects it on the next pass. A guard that
+ * remembered its own last write would refuse, and the metric would sit
+ * wrong with nothing explaining why.
  *
  * @param {{pinned:number,actual:number,delta:number}|null} drift
- * @param {number|null} solved       price the solver returned
- * @param {number|undefined} lastWritten  price this tier was last auto-given
+ * @param {number|null} solved   price the solver returned
+ * @param {number} currentPrice  the price this tier holds right now
  * @returns {number|null} rounded price to write, or null to leave it alone
  */
-export function planAutoHold(drift, solved, lastWritten) {
+export function planAutoHold(drift, solved, currentPrice) {
   if (!drift) return null;
   if (solved == null || !Number.isFinite(solved) || !(solved > 0)) return null;
   const rounded = +Number(solved).toFixed(4); // matches planTierPriceWrite
-  if (lastWritten === rounded) return null;
+  const current = Number(currentPrice);
+  if (Number.isFinite(current) && +current.toFixed(4) === rounded) return null;
   return rounded;
 }

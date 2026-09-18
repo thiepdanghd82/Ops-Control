@@ -29,6 +29,9 @@ import {
 } from '../../../../context/calcReducer';
 import { useBomQtyFlag } from '../../../../utils/useBomQtyFlag';
 import { useSpMoqScalingFlag } from '../../../../utils/useSpMoqScalingFlag';
+import { enumerateTiers } from '../../../../services/calcEngine';
+import { aggregateForTier } from '../../../../services/cplxTierAggregate';
+import { useMarginHold } from '../../hooks/useMarginHold';
 import { costApi, sharedApi } from '../../../../services/api';
 import { chatApi, openChatRoom } from '../../../../services/chatApi';
 import { useI18n } from '../../../../utils/useI18n';
@@ -146,6 +149,34 @@ export default function ComplexCalc() {
   const [spMoqScalingEnabled] = useSpMoqScalingFlag();
   const cs = cplxState;
   const sps = useMemo(() => cs.subproducts || [], [cs.subproducts]);
+
+  // Hold the ticked margin — see useMarginHold; the driver must outlive the
+  // Cost Breakdown sub-tab, which unmounts whenever costs are being edited.
+  const holdTiers = useCallback(
+    (snapshot) => {
+      if (!lib) return [];
+      return enumerateTiers(cs).map(({ idx, moq, sp, eau }) => ({
+        idx,
+        sp,
+        result: aggregateForTier(cs, sps, lib, idx, {
+          bomQtyEnabled,
+          spMoqScalingEnabled,
+          snapshot,
+        }),
+        moq,
+        eau,
+      }));
+    },
+    [cs, sps, lib, bomQtyEnabled, spMoqScalingEnabled]
+  );
+  useMarginHold({
+    kind: 'cpx',
+    state: cs,
+    lib,
+    rate: cs.usd_rate || 0,
+    dispatch,
+    computeTiers: holdTiers,
+  });
 
   // Consume pending quote handoff from QuoteHistory via Context.
   // Clear pendingQuote AFTER the fetch resolves — clearing it first
