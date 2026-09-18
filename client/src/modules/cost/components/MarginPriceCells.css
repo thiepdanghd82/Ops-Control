@@ -127,3 +127,38 @@
 .sc-bd-table col.bdc-metric {
   width: 6.5%;
 }
+
+/* ── Drifted off the operator's pinned target ───────────────────────────
+   Amber, deliberately NOT the red `.sc-input-warn` used for the company
+   floor: drifting off your own pin is "this needs a look", while breaching
+   the floor is "this must not ship". Two different messages, two colours. */
+.mpc-pin-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.mpc-cell-input.mpc-drift {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  font-weight: 700;
+}
+.mpc-pin-btn {
+  border: 1px solid #f59e0b;
+  background: #fffbeb;
+  color: #b45309;
+  border-radius: 3px;
+  width: 17px;
+  height: 17px;
+  line-height: 1;
+  font-size: 11px;
+  padding: 0;
+  cursor: pointer;
+  flex: none;
+}
+.mpc-pin-btn:hover:not(:disabled) {
+  background: #fde68a;
+}
+.mpc-pin-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

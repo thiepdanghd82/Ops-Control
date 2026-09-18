@@ -246,3 +246,47 @@ export function belowFloor(metrics, policy = MARGIN_POLICY) {
     lt(metrics.gm, policy.gm) || lt(metrics.contribution, policy.contr) || lt(metrics.va, policy.va)
   );
 }
+
+// ── Pinned margin target (per tier) ──────────────────────────────────────
+//
+// The operator types a % into a MarginCell and the solver writes a price.
+// Without a record of WHICH metric and WHICH target they asked for, the next
+// cost edit silently moves the metric while the price stands still — the
+// number they pinned is simply forgotten. These two helpers persist that
+// intent per tier so the UI can say "you asked for 30%, it is now 27.3%".
+//
+// Field names are the same on the base tier and on an extra tier; only the
+// holder differs (state vs extra_moqs[i]), exactly like the price fields.
+// Stored on the Selling side ONLY — see the note in the Cost Breakdown tab.
+
+/** Read the pinned {metric, pct} for a tier, or null when nothing is pinned. */
+export function readTierPin(state, tierIdx) {
+  const holder = tierIdx === 0 ? state : (state?.extra_moqs || [])[tierIdx - 1];
+  const metric = holder?.pin_metric;
+  const pct = Number(holder?.pin_pct);
+  if (!metric || !Number.isFinite(pct)) return null;
+  if (metric !== 'va' && metric !== 'contribution' && metric !== 'gm') return null;
+  return { metric, pct };
+}
+
+/**
+ * Actions that record (or clear) a tier's pinned target. Pass metric=null to
+ * clear. Mirrors planTierPriceWrite's tier-0-vs-extra and std-vs-cpx routing
+ * so the two cannot drift apart.
+ */
+export function planTierPinWrite({ kind, tierIdx, metric, pct }) {
+  const clearing = !metric;
+  const pctVal = clearing ? null : +Number(pct).toFixed(6);
+  if (!clearing && !Number.isFinite(pctVal)) return [];
+  const pairs = [
+    ['pin_metric', clearing ? null : metric],
+    ['pin_pct', pctVal],
+  ];
+  if (tierIdx === 0) {
+    const type = kind === 'cpx' ? 'SET_CPLX_FIELD' : 'SET_STD_FIELD';
+    return pairs.map(([field, value]) => ({ type, payload: { field, value } }));
+  }
+  const type = kind === 'cpx' ? 'SET_CPLX_EXTRA_MOQ' : 'SET_EXTRA_MOQ';
+  const idx = tierIdx - 1;
+  return pairs.map(([field, value]) => ({ type, payload: { idx, field, value } }));
+}

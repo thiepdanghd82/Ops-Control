@@ -29,10 +29,12 @@ import {
   defaultPrice,
   solvePriceForMetric,
   planTierPriceWrite,
+  planTierPinWrite,
+  readTierPin,
   isEmptyPrice,
 } from '../../../../services/priceSolver';
 import { MarginCell, ApplyDefault } from '../../components/MarginPriceCells';
-import { metricWarn } from '../../components/MarginPriceCells.helpers';
+import { metricWarn, pinDrift } from '../../components/MarginPriceCells.helpers';
 
 // VA / Contribution / GM re-derivation at a different price now lives in
 // costStructureWhatIf.recomputeKpi (shared with Standard); all-active equals
@@ -112,9 +114,21 @@ export default function CplxCostBreakdown() {
       if (price == null || !(price > 0) || !Number.isFinite(price)) return false;
       for (const a of planTierPriceWrite({ kind: 'cpx', table, tierIdx, usd: price, rate }))
         dispatch(a);
+      // Selling side only — see the twin comment in CalcCostBreakdown.
+      if (table === 'selling')
+        for (const a of planTierPinWrite({ kind: 'cpx', tierIdx, metric, pct: targetFrac }))
+          dispatch(a);
       return true;
     },
     [cs, lib, solverOpts, rate, dispatch]
+  );
+
+  const reapplyPin = useCallback(
+    (tierIdx) => {
+      const pin = readTierPin(cs, tierIdx);
+      if (pin) commitMetric('selling', tierIdx, pin.metric, pin.pct);
+    },
+    [cs, commitMetric]
   );
 
   const applyDefault = useCallback(
@@ -267,6 +281,8 @@ export default function CplxCostBreakdown() {
                             metric="va"
                             value={sk.va}
                             warn={metricWarn('va', sk.va)}
+                            drift={pinDrift(readTierPin(cs, idx), 'va', sk.va)}
+                            onReapply={() => reapplyPin(idx)}
                             onCommit={(f) => commitMetric('selling', idx, 'va', f)}
                           />
                         </td>
@@ -275,6 +291,8 @@ export default function CplxCostBreakdown() {
                             metric="contribution"
                             value={sk.contribution}
                             warn={metricWarn('contribution', sk.contribution)}
+                            drift={pinDrift(readTierPin(cs, idx), 'contribution', sk.contribution)}
+                            onReapply={() => reapplyPin(idx)}
                             onCommit={(f) => commitMetric('selling', idx, 'contribution', f)}
                           />
                         </td>
@@ -283,6 +301,8 @@ export default function CplxCostBreakdown() {
                             metric="gm"
                             value={sk.gm}
                             warn={metricWarn('gm', sk.gm)}
+                            drift={pinDrift(readTierPin(cs, idx), 'gm', sk.gm)}
+                            onReapply={() => reapplyPin(idx)}
                             onCommit={(f) => commitMetric('selling', idx, 'gm', f)}
                           />
                         </td>
