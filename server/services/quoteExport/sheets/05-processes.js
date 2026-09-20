@@ -30,7 +30,7 @@ const PROC_COLS = [
   { key: 'manual_uph', label: 'proc.manual_uph', width: 11, numeric: true, computedOnly: true },
   { key: 'tool_cost', label: 'proc.tool_cost', width: 11, numeric: true, customerHidden: true },
   { key: 'tool_type', label: 'proc.tool_type', width: 12 },
-  { key: 'tool_life', label: 'proc.tool_life', width: 11, numeric: true, customerHidden: true },
+  { key: 'tool_life', label: 'proc.tool_life', width: 15, numeric: true, customerHidden: true },
   { key: 'prod_time', label: 'proc.prod_time', width: 10, numeric: true, computedOnly: true },
   { key: 'setup_mach', label: 'proc.s_mach', width: 10, numeric: true, computedOnly: true },
   { key: 'setup_labor', label: 'proc.s_labor', width: 10, numeric: true, computedOnly: true },

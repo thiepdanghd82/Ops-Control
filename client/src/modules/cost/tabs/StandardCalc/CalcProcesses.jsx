@@ -275,7 +275,9 @@ export default function CalcProcesses() {
                 </th>
                 <th style={{ width: 70 }}>{t('spr.tool_cost')}</th>
                 <th style={{ width: 90 }}>{t('cgrid.proc.tool_type')}</th>
-                <th style={{ width: 65 }}>{t('cgrid.proc.tool_life')}</th>
+                <th style={{ width: 65 }} title={t('cgrid.proc.tip_tool_life')}>
+                  {t('cgrid.proc.tool_life')}
+                </th>
                 <th
                   className="sc-col-derived"
                   style={{ width: 65 }}

@@ -1397,7 +1397,14 @@ registerStrings({
     vi: 'Tự đồng bộ từ Số thợ × Hiệu suất % × Tốc độ — đổi Số thợ hoặc Tốc độ để cân lại công đoạn thủ công này',
   },
   'cgrid.proc.tool_type': { en: 'Tool Type', vi: 'Loại khuôn' },
-  'cgrid.proc.tool_life': { en: 'Tool Life', vi: 'Tuổi thọ khuôn' },
+  'cgrid.proc.tool_life': { en: 'Tool Life (shot)', vi: 'Tuổi thọ khuôn (shot)' },
+  // The unit is IN the header on purpose. tool_life is a SHOT count, EAU is a
+  // PIECE count, and the engine bridges them with `tool_life × layout` — the
+  // one thing an operator cannot see from the number alone (Henry, 2026-09-20).
+  'cgrid.proc.tip_tool_life': {
+    en: 'Tool life counted in SHOTS, not pieces. Pieces per tool = Tool Life × Layout (a Jig ignores Layout).',
+    vi: 'Tuổi thọ khuôn tính bằng SHOT, không phải pcs. Số pcs/khuôn = Tuổi thọ × Layout (Jig không nhân Layout).',
+  },
   'cgrid.proc.prod_time': { en: 'Prod Time', vi: 'Thời gian SX' },
   'cgrid.proc.tip_prod_time': {
     en: 'Production time in hours',
