@@ -119,40 +119,37 @@ const UPLOAD_ROUTES = [
   ['/api/import-wizard/preview', 'file'],
 ];
 
-test('all eight multer routes still mount and answer a multipart POST', async () => {
-  // A multer that fails to construct, or whose middleware signature moved,
-  // shows up here as a 404 or as no answer at all. This is the sweep
-  // MES-3-FIX-59 asked for, minus the DMG.
+test('every upload route refuses an anonymous POST BEFORE multer parses it', async () => {
+  // Two things at once, because they fail the same way.
   //
-  // Deliberately NOT asserting 401/403: six routes gate before multer runs,
-  // but /api/backup/upload and /api/import-xlsm parse the body FIRST and
-  // check the session inside the handler, so an anonymous POST there is
-  // answered by the fileFilter instead. That ordering is a real finding of
-  // this bump (MES-3-FIX-59 assumed every instance sat behind a gate) and is
-  // reported separately rather than pinned here as if it were intended.
+  // (a) Wiring: a multer that fails to construct, or whose middleware
+  //     signature moved, shows up here as a 404 or as no answer at all.
+  //     This is the eight-route sweep MES-3-FIX-59 asked for, minus the DMG.
+  //
+  // (b) Ordering: MES-3-FIX-59 deferred the multer bump for three months on
+  //     the rationale that all eight instances sat behind a gate. Two did
+  //     not -- /api/backup/upload and /api/import-xlsm ran multer FIRST and
+  //     checked the session inside the handler, so an unauthenticated caller
+  //     made the server spool up to 200 MB (and 50 MB with no rate limit at
+  //     all) before being refused. That is exactly the surface the advisories
+  //     describe, on a server that listens on 0.0.0.0 for LAN clients.
+  //
+  // An auth refusal here proves the gate ran before the body was consumed:
+  // if multer had gone first, the fileFilter on those two would have rejected
+  // a .png with a 500 instead. A new ungated upload route therefore cannot be
+  // added quietly -- it lands in `parsedAnyway` and this test names it.
+  const parsedAnyway = [];
   for (const [routePath, field] of UPLOAD_ROUTES) {
     const r = await post(routePath, [{ name: field, filename: 't.png', body: PNG_1x1 }], null);
-    assert.notEqual(r.status, 404, `${routePath} is not mounted — multer middleware missing?`);
-    assert.ok(r.status >= 100, `${routePath} did not answer at all`);
-  }
-});
-
-test('the two pre-auth routes are the only ones that parse before gating', async () => {
-  // Pins the SIZE of the exposure, not its acceptability. If a future route
-  // is added without a gate in front of multer, this count moves and someone
-  // has to look. If the two are fixed, it moves the other way — also worth
-  // looking at, and the message says so.
-  const anonymous = [];
-  for (const [routePath, field] of UPLOAD_ROUTES) {
-    const r = await post(routePath, [{ name: field, filename: 't.png', body: PNG_1x1 }], null);
-    if (r.status !== 401 && r.status !== 403) anonymous.push(`${routePath} -> ${r.status}`);
+    assert.notEqual(r.status, 404, `${routePath} is not mounted -- multer middleware missing?`);
+    if (r.status !== 401 && r.status !== 403) parsedAnyway.push(`${routePath} -> ${r.status}`);
   }
   assert.deepEqual(
-    anonymous.sort(),
-    ['/api/backup/upload -> 500', '/api/import-xlsm -> 500'],
-    'the set of routes that parse an anonymous multipart body changed — ' +
-      'either a new ungated upload appeared, or the two known ones were fixed ' +
-      '(good: move the gate ahead of multer and update this list)'
+    parsedAnyway,
+    [],
+    'these upload routes answered something other than an auth refusal, which means ' +
+      'the body was parsed before the caller was gated: ' +
+      parsedAnyway.join(', ')
   );
 });
 
