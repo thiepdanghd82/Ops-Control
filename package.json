@@ -61,7 +61,7 @@
     "exceljs": "^4.4.0",
     "express": "^4.21.0",
     "jszip": "^3.10.1",
-    "multer": "^2.0.2",
+    "multer": "^2.4.0",
     "proper-lockfile": "^4.1.2",
     "xlsx": "npm:@e965/xlsx@^0.20.3"
   },
