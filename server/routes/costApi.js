@@ -314,6 +314,11 @@ import {
 import { validateBody } from '../middleware/validate.js';
 import { writeRateLimit, saveRateLimit, totpVerifyRateLimit } from '../middleware/rateLimit.js';
 import { requireTabAccess, requireBodyTabAccess } from '../services/permissionService.js';
+// Gates for the two upload routes that used to parse BEFORE authenticating.
+// costApiRouter is mounted without authMiddleware (auth happens inside each
+// handler), so these two routes opt in explicitly rather than the whole router
+// changing shape.
+import { authMiddleware, requireRole } from '../middleware/auth.js';
 import {
   saveQuotes as saveQuotesStore,
   upsertQuote,
@@ -3993,80 +3998,90 @@ const backupUpload = multer({
   },
 });
 
-router.post('/backup/upload', writeRateLimit, backupUpload.single('file'), (req, res) => {
-  const u = getSessionUser(getTokenFromHeader(req));
-  if (!isSys(u)) {
-    if (req.file)
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch {
-        /* ignore */
-      }
-    return res.status(403).json({ error: 'sys role required to upload backups' });
-  }
-  if (!req.file) return res.status(400).json({ error: 'no file' });
-  try {
-    // Validate the JSON is actually a snapshot before persisting.
-    const buf = fs.readFileSync(req.file.path);
-    let snap;
+// The gate runs BEFORE multer on purpose: multer spools the body to disk, and
+// until 2026-09-20 it did so for anyone who could reach the port. The in-handler
+// isSys() check below is kept as defence in depth, not replaced.
+router.post(
+  '/backup/upload',
+  writeRateLimit,
+  authMiddleware,
+  requireRole(5),
+  backupUpload.single('file'),
+  (req, res) => {
+    const u = getSessionUser(getTokenFromHeader(req));
+    if (!isSys(u)) {
+      if (req.file)
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {
+          /* ignore */
+        }
+      return res.status(403).json({ error: 'sys role required to upload backups' });
+    }
+    if (!req.file) return res.status(400).json({ error: 'no file' });
     try {
-      snap = JSON.parse(buf.toString('utf-8'));
-    } catch {
-      throw new Error('File is not valid JSON');
-    }
-    if (!snap || typeof snap !== 'object' || Array.isArray(snap)) {
-      throw new Error('Backup snapshot must be a JSON object');
-    }
-    // Heuristic shape check — full schema validation runs at restore time,
-    // but we want to reject obvious junk early.
-    const KNOWN_KEYS = [
-      'quoteHistory',
-      'matDB',
-      'rateDB',
-      'ddlDB',
-      'summarizeDB',
-      'rfqTracker',
-      'sampleTracker',
-      'financeWCDB',
-      'financeSumDB',
-      'inkCalcDB',
-      'npiDB',
-      'ifsDB',
-      'sourcingDB',
-    ];
-    const hasKnownKey = KNOWN_KEYS.some((k) => Object.prototype.hasOwnProperty.call(snap, k));
-    if (!hasKnownKey) {
-      throw new Error(
-        `File looks like JSON but does not contain any known backup key (${KNOWN_KEYS.slice(0, 3).join(', ')}, …)`
-      );
-    }
-    ensurePkgBackupDirs();
-    const original = safeFn(req.file.originalname || 'uploaded.json');
-    const tag = timestampTag();
-    const fname = `uploaded_${tag}_${original}`;
-    const dest = path.join(getPkgBackupDir(), 'Data', fname);
-    atomicWriteFileSync(dest, buf);
-    audit(
-      'BACKUP_UPLOAD',
-      u.username,
-      clientIp(req),
-      `${fname} (${(buf.length / 1024).toFixed(0)} KB, keys=${Object.keys(snap)
-        .filter((k) => KNOWN_KEYS.includes(k))
-        .join(',')})`
-    );
-    res.json({ ok: true, filename: fname, size: buf.length });
-  } catch (e) {
-    logErr(req, 'backup_upload', e);
-    res.status(400).json({ ok: false, error: e.message });
-  } finally {
-    if (req.file)
+      // Validate the JSON is actually a snapshot before persisting.
+      const buf = fs.readFileSync(req.file.path);
+      let snap;
       try {
-        fs.unlinkSync(req.file.path);
+        snap = JSON.parse(buf.toString('utf-8'));
       } catch {
-        /* ignore */
+        throw new Error('File is not valid JSON');
       }
+      if (!snap || typeof snap !== 'object' || Array.isArray(snap)) {
+        throw new Error('Backup snapshot must be a JSON object');
+      }
+      // Heuristic shape check — full schema validation runs at restore time,
+      // but we want to reject obvious junk early.
+      const KNOWN_KEYS = [
+        'quoteHistory',
+        'matDB',
+        'rateDB',
+        'ddlDB',
+        'summarizeDB',
+        'rfqTracker',
+        'sampleTracker',
+        'financeWCDB',
+        'financeSumDB',
+        'inkCalcDB',
+        'npiDB',
+        'ifsDB',
+        'sourcingDB',
+      ];
+      const hasKnownKey = KNOWN_KEYS.some((k) => Object.prototype.hasOwnProperty.call(snap, k));
+      if (!hasKnownKey) {
+        throw new Error(
+          `File looks like JSON but does not contain any known backup key (${KNOWN_KEYS.slice(0, 3).join(', ')}, …)`
+        );
+      }
+      ensurePkgBackupDirs();
+      const original = safeFn(req.file.originalname || 'uploaded.json');
+      const tag = timestampTag();
+      const fname = `uploaded_${tag}_${original}`;
+      const dest = path.join(getPkgBackupDir(), 'Data', fname);
+      atomicWriteFileSync(dest, buf);
+      audit(
+        'BACKUP_UPLOAD',
+        u.username,
+        clientIp(req),
+        `${fname} (${(buf.length / 1024).toFixed(0)} KB, keys=${Object.keys(snap)
+          .filter((k) => KNOWN_KEYS.includes(k))
+          .join(',')})`
+      );
+      res.json({ ok: true, filename: fname, size: buf.length });
+    } catch (e) {
+      logErr(req, 'backup_upload', e);
+      res.status(400).json({ ok: false, error: e.message });
+    } finally {
+      if (req.file)
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {
+          /* ignore */
+        }
+    }
   }
-});
+);
 
 router.post('/backup/delete', writeRateLimit, (req, res) => {
   const u = getSessionUser(getTokenFromHeader(req));
@@ -4144,186 +4159,196 @@ const xlsmUpload = multer({
   },
 });
 
-router.post('/import-xlsm', xlsmUpload.single('file'), (req, res) => {
-  const cu = getSessionUser(getTokenFromHeader(req));
-  if (!cu) return res.status(401).json({ error: 'Unauthorized' });
-  if (cu.role === 'viewonly') return res.status(403).json({ ok: false, msg: 'View Only' });
+// Gate ahead of multer, same reason as /backup/upload. This route also had NO
+// rate limit, which is what made it the widest of the two: 50 MB parsed per
+// anonymous request, unbounded.
+router.post(
+  '/import-xlsm',
+  writeRateLimit,
+  authMiddleware,
+  requireRole(2),
+  xlsmUpload.single('file'),
+  (req, res) => {
+    const cu = getSessionUser(getTokenFromHeader(req));
+    if (!cu) return res.status(401).json({ error: 'Unauthorized' });
+    if (cu.role === 'viewonly') return res.status(403).json({ ok: false, msg: 'View Only' });
 
-  if (!req.file) return res.status(400).json({ ok: false, msg: 'No file uploaded' });
+    if (!req.file) return res.status(400).json({ ok: false, msg: 'No file uploaded' });
 
-  try {
-    // xlsx ESM build (xlsx.mjs) has no fs wired → readFile throws
-    // "Cannot access file"; read the bytes + XLSX.read(buffer) instead.
-    const wb = XLSX.read(fs.readFileSync(req.file.path));
-
-    // Find main calc sheet: prefer '2.1','1.1','2','1','Simple','Complex'
-    const preferredSheets = [
-      '2.1',
-      '1.1',
-      '2',
-      '1',
-      'Simple',
-      'Complex',
-      'Flexo sample',
-      'SS sample',
-    ];
-    let sheetName = wb.SheetNames.find((sn) => preferredSheets.includes(sn.trim()));
-    if (!sheetName) sheetName = wb.SheetNames[0];
-    const ws = wb.Sheets[sheetName];
-
-    // Cell read helpers (1-indexed row, column letter)
-    function cv(r, c) {
-      const addr = c + r;
-      const cell = ws[addr];
-      if (!cell || cell.v == null) return null;
-      return typeof cell.v === 'string' ? cell.v.trim() : cell.v;
-    }
-    function n(r, c, d = 0) {
-      const v = cv(r, c);
-      if (v == null) return d;
-      const f = parseFloat(v);
-      return isNaN(f) ? d : f;
-    }
-    function s(r, c, d = '') {
-      const v = cv(r, c);
-      return v != null ? String(v) : d;
-    }
-
-    // ── HEADER (row 2) ──
-    const state = {
-      direct_cu: s(2, 'B'),
-      project: s(2, 'C'),
-      end_cu_pn: s(2, 'D'),
-      direct_cu_pn: s(2, 'E'),
-      description: s(2, 'F'),
-      moq: Math.round(n(2, 'H', 0)),
-      trade_mode: s(2, 'T', 'USD(Normal)'),
-      annual_qty: Math.round(n(2, 'U', 0)),
-      selling_price: n(2, 'Z', 0),
-      target: cv(2, 'AA') != null ? n(2, 'AA', null) : null,
-      currency: 'USD',
-      site: 'VN',
-    };
-
-    // ── LAYOUT (rows 22-26) ──
-    Object.assign(state, {
-      part_width: n(22, 'L', 0),
-      part_length_md: n(22, 'N', 0),
-      web_width_td: n(23, 'L', 0),
-      sheet_length: n(23, 'N', 0),
-      num_webs: Math.round(n(24, 'L', 1)) || 1,
-      parts_in_md: Math.round(n(24, 'N', 1)) || 1,
-      parts_web_across: Math.round(n(25, 'L', 1)) || 1,
-      min_gap_md: n(26, 'N', 0),
-    });
-
-    // ── MATERIALS (rows 11-30) ──
-    const materials = [];
-    for (let i = 0; i < 20; i++) {
-      const row = 11 + i;
-      const label = i < 10 ? `Main Mat. ${i + 1}` : `Process Mat. ${i + 11}`;
-      materials.push({
-        label,
-        code: s(row, 'B'),
-        desc: s(row, 'C'),
-        usage: n(row, 'F'),
-        setup_lm: n(row, 'G'),
-        free_liner: n(row, 'H'),
-        pitch_ovr: n(row, 'I'),
-        width: n(row, 'J'),
-        cavities: Math.round(n(row, 'K', 0)),
-        log_width: 0,
-        offcut_yn: s(row, 'M', 'N'),
-        slitting_yn: s(row, 'N', 'N'),
-        df_yn: s(row, 'O', ''),
-        import_duty: n(row, 'P'),
-        s_price: n(row, 'Q'),
-        g_price: n(row, 'R'),
-        latest: n(row, 'S'),
-      });
-    }
-    state.materials = materials;
-
-    // ── INKS (rows 33-42) ──
-    const inks = [];
-    for (let i = 0; i < 10; i++) {
-      const row = 33 + i;
-      inks.push({
-        label: `Ink ${i + 1}`,
-        color: s(row, 'B'),
-        print_type: s(row, 'C'),
-        base_mat: s(row, 'D'),
-        coverage: n(row, 'F'),
-        setup_kg: n(row, 'G'),
-        area_pct: n(row, 'H'),
-        clicks: n(row, 'I'),
-        s_price: n(row, 'Q'),
-        g_price: 0,
-        latest: n(row, 'S'),
-      });
-    }
-    state.inks = inks;
-
-    // ── PROCESSES (rows 45-54) ──
-    const processes = [];
-    for (let i = 0; i < 10; i++) {
-      const row = 45 + i;
-      let scrap = n(row, 'L', 0);
-      const yld = n(row, 'M', 0);
-      if (scrap === 0 && yld > 0 && yld < 1) {
-        scrap = Math.round((1.0 - yld) * 10000) / 10000;
-      }
-      processes.push({
-        label: `Process ${i + 1}`,
-        process_type: s(row, 'B'),
-        workcenter: s(row, 'C'),
-        speed: n(row, 'E'),
-        layout: Math.round(n(row, 'G', 1)) || 1,
-        efficiency: n(row, 'H', 0.85),
-        setup_h: n(row, 'K'),
-        scrap_pct: scrap,
-        manual_uph: n(row, 'J'),
-        tool_cost: n(row, 'N'),
-        tool_type: s(row, 'O'),
-        tool_life: Math.round(n(row, 'P', 0)),
-        extra_cost: 0,
-        product_life: 1,
-        eau_ovr: 0,
-        repeat: 1,
-      });
-    }
-    state.processes = processes;
-
-    // ── PACKING (rows 57-64) ──
-    Object.assign(state, {
-      packing_method: s(58, 'C') || 'Sheet',
-      pcs_per_bag: Math.round(n(59, 'C', 50)),
-      bags_per_box: Math.round(n(60, 'C', 100)),
-      container_cost: n(61, 'C'),
-      box_cost: n(62, 'C'),
-      other_packing: n(63, 'C'),
-    });
-
-    // ── SHIPPING (rows 67-70) ──
-    Object.assign(state, {
-      delivery_term: s(67, 'C') || 'DAP',
-      ship_qty: Math.round(n(68, 'C', 0)),
-      shipping_cost: n(69, 'C'),
-      other_ship: n(70, 'C'),
-    });
-
-    console.log(`  📥  XLSM imported from sheet '${sheetName}'`);
-    res.json({ ok: true, state, sheet: sheetName });
-  } catch (err) {
-    logErr(req, 'xlsm_import', err);
-    res.status(500).json({ ok: false, msg: redactErrorMessage(err) });
-  } finally {
-    // Cleanup temp file
     try {
-      fs.unlinkSync(req.file.path);
-    } catch {}
+      // xlsx ESM build (xlsx.mjs) has no fs wired → readFile throws
+      // "Cannot access file"; read the bytes + XLSX.read(buffer) instead.
+      const wb = XLSX.read(fs.readFileSync(req.file.path));
+
+      // Find main calc sheet: prefer '2.1','1.1','2','1','Simple','Complex'
+      const preferredSheets = [
+        '2.1',
+        '1.1',
+        '2',
+        '1',
+        'Simple',
+        'Complex',
+        'Flexo sample',
+        'SS sample',
+      ];
+      let sheetName = wb.SheetNames.find((sn) => preferredSheets.includes(sn.trim()));
+      if (!sheetName) sheetName = wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+
+      // Cell read helpers (1-indexed row, column letter)
+      function cv(r, c) {
+        const addr = c + r;
+        const cell = ws[addr];
+        if (!cell || cell.v == null) return null;
+        return typeof cell.v === 'string' ? cell.v.trim() : cell.v;
+      }
+      function n(r, c, d = 0) {
+        const v = cv(r, c);
+        if (v == null) return d;
+        const f = parseFloat(v);
+        return isNaN(f) ? d : f;
+      }
+      function s(r, c, d = '') {
+        const v = cv(r, c);
+        return v != null ? String(v) : d;
+      }
+
+      // ── HEADER (row 2) ──
+      const state = {
+        direct_cu: s(2, 'B'),
+        project: s(2, 'C'),
+        end_cu_pn: s(2, 'D'),
+        direct_cu_pn: s(2, 'E'),
+        description: s(2, 'F'),
+        moq: Math.round(n(2, 'H', 0)),
+        trade_mode: s(2, 'T', 'USD(Normal)'),
+        annual_qty: Math.round(n(2, 'U', 0)),
+        selling_price: n(2, 'Z', 0),
+        target: cv(2, 'AA') != null ? n(2, 'AA', null) : null,
+        currency: 'USD',
+        site: 'VN',
+      };
+
+      // ── LAYOUT (rows 22-26) ──
+      Object.assign(state, {
+        part_width: n(22, 'L', 0),
+        part_length_md: n(22, 'N', 0),
+        web_width_td: n(23, 'L', 0),
+        sheet_length: n(23, 'N', 0),
+        num_webs: Math.round(n(24, 'L', 1)) || 1,
+        parts_in_md: Math.round(n(24, 'N', 1)) || 1,
+        parts_web_across: Math.round(n(25, 'L', 1)) || 1,
+        min_gap_md: n(26, 'N', 0),
+      });
+
+      // ── MATERIALS (rows 11-30) ──
+      const materials = [];
+      for (let i = 0; i < 20; i++) {
+        const row = 11 + i;
+        const label = i < 10 ? `Main Mat. ${i + 1}` : `Process Mat. ${i + 11}`;
+        materials.push({
+          label,
+          code: s(row, 'B'),
+          desc: s(row, 'C'),
+          usage: n(row, 'F'),
+          setup_lm: n(row, 'G'),
+          free_liner: n(row, 'H'),
+          pitch_ovr: n(row, 'I'),
+          width: n(row, 'J'),
+          cavities: Math.round(n(row, 'K', 0)),
+          log_width: 0,
+          offcut_yn: s(row, 'M', 'N'),
+          slitting_yn: s(row, 'N', 'N'),
+          df_yn: s(row, 'O', ''),
+          import_duty: n(row, 'P'),
+          s_price: n(row, 'Q'),
+          g_price: n(row, 'R'),
+          latest: n(row, 'S'),
+        });
+      }
+      state.materials = materials;
+
+      // ── INKS (rows 33-42) ──
+      const inks = [];
+      for (let i = 0; i < 10; i++) {
+        const row = 33 + i;
+        inks.push({
+          label: `Ink ${i + 1}`,
+          color: s(row, 'B'),
+          print_type: s(row, 'C'),
+          base_mat: s(row, 'D'),
+          coverage: n(row, 'F'),
+          setup_kg: n(row, 'G'),
+          area_pct: n(row, 'H'),
+          clicks: n(row, 'I'),
+          s_price: n(row, 'Q'),
+          g_price: 0,
+          latest: n(row, 'S'),
+        });
+      }
+      state.inks = inks;
+
+      // ── PROCESSES (rows 45-54) ──
+      const processes = [];
+      for (let i = 0; i < 10; i++) {
+        const row = 45 + i;
+        let scrap = n(row, 'L', 0);
+        const yld = n(row, 'M', 0);
+        if (scrap === 0 && yld > 0 && yld < 1) {
+          scrap = Math.round((1.0 - yld) * 10000) / 10000;
+        }
+        processes.push({
+          label: `Process ${i + 1}`,
+          process_type: s(row, 'B'),
+          workcenter: s(row, 'C'),
+          speed: n(row, 'E'),
+          layout: Math.round(n(row, 'G', 1)) || 1,
+          efficiency: n(row, 'H', 0.85),
+          setup_h: n(row, 'K'),
+          scrap_pct: scrap,
+          manual_uph: n(row, 'J'),
+          tool_cost: n(row, 'N'),
+          tool_type: s(row, 'O'),
+          tool_life: Math.round(n(row, 'P', 0)),
+          extra_cost: 0,
+          product_life: 1,
+          eau_ovr: 0,
+          repeat: 1,
+        });
+      }
+      state.processes = processes;
+
+      // ── PACKING (rows 57-64) ──
+      Object.assign(state, {
+        packing_method: s(58, 'C') || 'Sheet',
+        pcs_per_bag: Math.round(n(59, 'C', 50)),
+        bags_per_box: Math.round(n(60, 'C', 100)),
+        container_cost: n(61, 'C'),
+        box_cost: n(62, 'C'),
+        other_packing: n(63, 'C'),
+      });
+
+      // ── SHIPPING (rows 67-70) ──
+      Object.assign(state, {
+        delivery_term: s(67, 'C') || 'DAP',
+        ship_qty: Math.round(n(68, 'C', 0)),
+        shipping_cost: n(69, 'C'),
+        other_ship: n(70, 'C'),
+      });
+
+      console.log(`  📥  XLSM imported from sheet '${sheetName}'`);
+      res.json({ ok: true, state, sheet: sheetName });
+    } catch (err) {
+      logErr(req, 'xlsm_import', err);
+      res.status(500).json({ ok: false, msg: redactErrorMessage(err) });
+    } finally {
+      // Cleanup temp file
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch {}
+    }
   }
-});
+);
 
 // ═══════════════════════════════════════════════════════════════
 // CODE RESTORE — copy a Backup & restore/Code/code_<ts>/ snapshot back
