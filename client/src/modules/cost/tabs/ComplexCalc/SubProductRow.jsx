@@ -1446,7 +1446,9 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                   <th style={{ width: 50 }}>Scrap%</th>
                   <th style={{ width: 65 }}>{t('spr.tool_cost')}</th>
                   <th style={{ width: 85 }}>Tool Type</th>
-                  <th style={{ width: 80 }}>Tool Life</th>
+                  <th style={{ width: 80 }} title={t('cgrid.proc.tip_tool_life')}>
+                    {t('cgrid.proc.tool_life')}
+                  </th>
                   <th style={{ width: 80 }} title={t('spr.tip_override_eau')}>
                     EAU Ovr
                   </th>

@@ -159,7 +159,10 @@ export const LABELS = {
   'proc.manual_uph': { en: 'Manual UPH', vi: 'UPH thủ công' },
   'proc.tool_cost': { en: 'Tool Cost', vi: 'Giá khuôn' },
   'proc.tool_type': { en: 'Tool Type', vi: 'Loại khuôn' },
-  'proc.tool_life': { en: 'Tool Life', vi: 'Tuổi thọ khuôn' },
+  // Unit named in the header so the exported file cannot disagree with the
+  // screen, which carries it too (Henry, 2026-09-20). tool_life counts SHOTS;
+  // pieces per tool is tool_life × layout.
+  'proc.tool_life': { en: 'Tool Life (shot)', vi: 'Tuổi thọ khuôn (shot)' },
   'proc.extra_cost': { en: 'Extra Cost', vi: 'Chi phí khác' },
   'proc.mach_rate': { en: 'Machine Rate', vi: 'Đơn giá máy' },
   'proc.labor_rate': { en: 'Labor Rate', vi: 'Đơn giá nhân công' },

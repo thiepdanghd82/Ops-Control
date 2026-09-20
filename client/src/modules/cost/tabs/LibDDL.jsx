@@ -44,7 +44,7 @@ const SECTION_LABELS = {
   trade_mode: 'Trade Mode',
   coverage: 'Coverage Table',
   click_charges: 'Click Charges',
-  tool_life: 'Tool Life',
+  tool_life: 'Tool Life (shot)',
   cutter_cost: 'Cutter Cost $',
   cutter_addon: 'Cutter Add-on $',
   cutter_min: 'Min Tools Price $',
