@@ -33,6 +33,7 @@ const fs = require('node:fs');
 const net = require('node:net');
 const { spawn } = require('node:child_process');
 const log = require('electron-log/main');
+const { isExternalUrlAllowed, isPermissionAllowed } = require('./utils/rendererPolicy');
 const Store = require('electron-store');
 
 const { initAutoUpdater } = require('./auto-update.js');
@@ -515,6 +516,25 @@ async function waitForServer(url, timeoutMs = 60000) {
 }
 
 // ─── Tạo cửa sổ chính ──────────────────────────────────────────────
+/**
+ * `shell.openExternal` hands the URL to the OS, which launches whatever app
+ * claims the scheme — so a `file:`, `smb:` or any registered custom scheme
+ * becomes an app launch, not a browser tab. Three call sites below route
+ * every URL the renderer failed to keep in-app through here, and a quoting
+ * app only ever needs to open the web.
+ *
+ * Returns whether the URL was opened, so a caller can tell "handed to the
+ * browser" from "refused" if it ever needs to.
+ */
+function openExternalSafely(url) {
+  if (!isExternalUrlAllowed(url)) {
+    log.warn('[main] Refused shell.openExternal for', url);
+    return false;
+  }
+  shell.openExternal(url);
+  return true;
+}
+
 function createMainWindow() {
   const bounds = store.get('windowBounds');
 
@@ -582,7 +602,7 @@ function createMainWindow() {
     const allowed = ['http://127.0.0.1', 'http://localhost', 'file://'];
     if (!allowed.some((p) => url.startsWith(p))) {
       e.preventDefault();
-      shell.openExternal(url);
+      openExternalSafely(url);
     }
   });
   // Save window bounds khi user resize/move
@@ -614,7 +634,7 @@ function createMainWindow() {
     ) {
       return { action: 'allow' };
     }
-    shell.openExternal(url);
+    openExternalSafely(url);
     return { action: 'deny' };
   });
 
@@ -624,7 +644,7 @@ function createMainWindow() {
     if (!allowed.some((origin) => url.startsWith(origin))) {
       log.warn('[main] Blocked navigation to', url);
       event.preventDefault();
-      shell.openExternal(url);
+      openExternalSafely(url);
     }
   });
 
@@ -864,6 +884,24 @@ app.whenReady().then(async () => {
   // filename. Force-apply the suggested filename + drop into ~/Downloads
   // so quote-export xlsx/zip files land where operators expect.
   const { session } = require('electron');
+
+  // Electron GRANTS a permission request by default. This app asks for
+  // exactly one thing — writing to the clipboard (Provisioning Card, TOTP
+  // enrolment, Installation ID, 8 call sites) — and never reads it back.
+  // Everything else (camera, microphone, geolocation, notifications, HID,
+  // serial, midi) has no caller, so the honest allowlist is one entry.
+  // Set on defaultSession rather than per-window so it also covers the setup
+  // wizard and first-run dialog, which still run with nodeIntegration.
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
+    const ok = isPermissionAllowed(permission);
+    if (!ok) log.warn('[main] Denied permission request:', permission);
+    callback(ok);
+  });
+  session.defaultSession.setPermissionCheckHandler((_wc, permission) => {
+    const ok = isPermissionAllowed(permission);
+    if (!ok) log.warn('[main] Denied permission check:', permission);
+    return ok;
+  });
   session.defaultSession.on('will-download', (_event, item) => {
     try {
       const suggested = item.getFilename();
