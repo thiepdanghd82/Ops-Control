@@ -20,6 +20,28 @@
 - **Production runtime DB** lives at
   `~/Library/Application Support/ops-control-desktop/data/ops.db` (NOT `server/data/ops.db`).
 
+## Screen names (the label moved; the id did not)
+
+Renaming a tab changes its **label only**. Tab ids are serialised into every user's saved
+window layout, so they keep the old spelling forever: `rfq-tracker` is still `rfq-tracker`
+in ids, routes and logs while the screen itself reads _RFQ Progress_. Seeing the old word
+in code is not evidence the rename was missed.
+
+- **RFQ List** / _Danh sách RFQ_ — id `rfq-tracking`, key `nav.tab.rfq_tracking`, under Quoting.
+- **RFQ Progress** / _Theo dõi RFQ_ — id `rfq-tracker`, key `nav.tab.rfq_tracker`, under Tracking.
+  Was "RFQ Tracker" until #288 (`4a2ac76`); English followed the Vietnamese, which had always
+  been unambiguous. Attachments live here — `/api/shared/rfq-tracker/attachments/:id`.
+- **Materials & Process** / _Vật tư & Công đoạn_ — id `combined`, key `pricing.tab.combined`.
+  Was "Combined" until #162 (`5063219`), which also retired the Materials / Inks / Processes
+  sub-tabs into it.
+- **Tool Life (shot)** — key `cgrid.proc.tool_life`. The unit is part of the label on purpose
+  (#379, `ad81e03`): `tool_life` counts SHOTS while EAU counts PIECES.
+
+**Rule — read the key, do not recall the name.** Two of these screens both contain "RFQ", and a
+stale label sends an operator hunting for a screen that no longer exists. This section was written
+because an agent told Henry to open "RFQ Tracker" on 2026-09-20, five months after it stopped
+being called that.
+
 ## Quote / pricing engine
 
 - **calcEngine** — the pricing calculator; **CLIENT-ONLY** single source of truth. Never on server.
