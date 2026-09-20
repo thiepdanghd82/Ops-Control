@@ -71,6 +71,60 @@ app.whenReady().then(async () => {
     assert.equal(setupWizard.isFirstRun('client'), true);
   });
 
+  // ── XSS guard on setAlert ────────────────────────────────────────────────
+  //
+  // The wizard renderer runs with nodeIntegration: true and
+  // contextIsolation: false, so HTML parsed in it has full Node access. The
+  // alert box used to be built with innerHTML, and msg is not always our own
+  // literal: ops:setup.initDb returns e.message from fs.mkdirSync(dataPath),
+  // and Node embeds the operator-typed path verbatim -- so a path containing
+  // markup reached innerHTML and executed.
+  //
+  // Driven against the REAL wizard HTML in a real BrowserWindow rather than
+  // grepping the source, because what matters is whether the DOM parses it.
+  await test('setAlert renders a markup payload as TEXT, never as an element', async () => {
+    const { BrowserWindow } = require('electron');
+    const win = new BrowserWindow({
+      show: false,
+      webPreferences: { nodeIntegration: true, contextIsolation: false, sandbox: false },
+    });
+    try {
+      const html = setupWizard.renderClientWizard();
+      await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+
+      // Exactly the shape fs.mkdirSync produces for an unwritable path the
+      // operator typed, with a payload inside it.
+      const payload =
+        'EACCES: permission denied, mkdir \'/x/<img src=x onerror="window.__pwned=1">\'';
+
+      const zone = await win.webContents.executeJavaScript(
+        '(function(){var z=document.querySelector(\'[id^="alert-"]\');return z?z.id:null;})()'
+      );
+      assert.ok(zone, 'the client wizard must expose an alert zone to write into');
+
+      await win.webContents.executeJavaScript(
+        'setAlert(' + JSON.stringify(zone) + ", 'bad', " + JSON.stringify(payload) + ');'
+      );
+
+      const seen = await win.webContents.executeJavaScript(
+        '({ imgs: document.querySelectorAll("img").length,' +
+          '   pwned: typeof window.__pwned,' +
+          '   text: document.getElementById(' +
+          JSON.stringify(zone) +
+          ').textContent })'
+      );
+
+      assert.equal(seen.imgs, 0, 'the payload must not become an <img> element');
+      assert.equal(seen.pwned, 'undefined', 'no script from the payload may run');
+      assert.ok(
+        seen.text.includes('<img src=x'),
+        'the operator must still SEE the offending path, verbatim, as text'
+      );
+    } finally {
+      win.destroy();
+    }
+  });
+
   console.log(`\n${pass} passed, ${fail} failed`);
   app.exit(fail === 0 ? 0 : 1);
 });

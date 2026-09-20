@@ -132,7 +132,19 @@ const SCRIPT_BASE = `
   function setAlert(zone, kind, msg) {
     const el = document.getElementById(zone);
     if (!el) return;
-    el.innerHTML = msg ? '<div class="alert alert-' + kind + '">' + msg + '</div>' : '';
+    // Built as DOM, never as markup. This renderer runs with
+    // nodeIntegration: true and contextIsolation: false, so anything parsed
+    // as HTML here gets full Node access -- and msg is NOT always our own
+    // literal. ops:setup.initDb returns e.message from fs.mkdirSync(dataPath),
+    // and Node embeds the operator-typed path verbatim in that message, so a
+    // path containing markup used to reach innerHTML and execute.
+    // textContent cannot parse, so there is nothing left to escape.
+    el.textContent = '';
+    if (!msg) return;
+    const box = document.createElement('div');
+    box.className = 'alert alert-' + kind;
+    box.textContent = msg;
+    el.appendChild(box);
   }
 `;
 
@@ -521,4 +533,7 @@ module.exports = {
   showWizard,
   markComplete,
   markIncomplete,
+  // Exported for tests only: lets the XSS guard load the REAL wizard HTML in
+  // a BrowserWindow instead of asserting on the source text of setAlert.
+  renderClientWizard,
 };
