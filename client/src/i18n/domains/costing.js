@@ -1034,6 +1034,12 @@ registerStrings({
   'pricing.selling_unit': { en: 'Selling /unit (USD)', vi: 'Giá bán /sản phẩm (USD)' },
   // Cost Breakdown — Cost Structure what-if (display-only)
   'cb.cost_structure': { en: 'Cost Structure', vi: 'Cấu trúc chi phí' },
+  // Says view-only in the tooltip, because otherwise an operator has to
+  // guess whether picking a tier here re-points the whole quote.
+  'cb.tier_view_aria': {
+    en: 'View another MOQ tier (does not change the quote)',
+    vi: 'Xem tier MOQ khác (không đổi tier của quote)',
+  },
   'cb.bucket': { en: 'Cost bucket', vi: 'Khoản mục' },
   'cb.value': { en: 'Value', vi: 'Giá trị' },
   'cb.pct_sell': { en: '% Sell', vi: '% Bán' },
