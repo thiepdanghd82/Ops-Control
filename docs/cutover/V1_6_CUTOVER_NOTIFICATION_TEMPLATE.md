@@ -1,6 +1,6 @@
 # v1.6 Cut-over Notification Template — Zalo / Teams
 
-> For Henry to send via Zalo Group "Ops Control" + Hương + CCL Hai Duong Plant Manager.
+> For Henry to send via Zalo Group "Ops Control" + Hương + CCL Hai Phong Plant Manager.
 > Send 7 days, 24h, and 1h before the cut-over. Three timestamps + a post-cut-over confirmation.
 
 ---
@@ -266,7 +266,7 @@ For each timestamp:
 
 - [ ] Zalo Group "Ops Control" — main operator channel
 - [ ] Direct message Hương (Backup Engineer)
-- [ ] Direct message CCL Hai Duong Plant Manager
+- [ ] Direct message CCL Hai Phong Plant Manager
 - [ ] Email blast operator list (optional, redundant with Zalo)
 - [ ] Pin in Slack/Teams `#ops-control` channel
 

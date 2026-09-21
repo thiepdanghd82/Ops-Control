@@ -12,13 +12,13 @@
 - [ ] Type: Public (no PII shared — operator screenshots get cropped)
 - [ ] Topic: `v1.6 go-live support · Henry on-call · Daily summary at 17:00 ICT`
 - [ ] Description: `Bug reports, questions, drift verification. EN+VI both welcome.`
-- [ ] Members: All CCL Vietnam Hai Duong operators + Hương + Plant Manager + Henry
+- [ ] Members: All CCL Vietnam Hai Phong operators + Hương + Plant Manager + Henry
 - [ ] Reminders: `every weekday at 17:00, send "Daily v1.6 health snapshot" to channel`
 - [ ] Auto-archive: 2026-08-21 (30 days after go-live + 2-day grace)
 
 ### Teams (alternative)
 
-- [ ] Team: "CCL Vietnam Hai Duong"
+- [ ] Team: "CCL Vietnam Hai Phong"
 - [ ] Channel: `Ops Control v1.6 Support`
 - [ ] Privacy: Standard (visible to team)
 - [ ] Connectors: None needed (manual updates)

@@ -9,7 +9,15 @@
 
 - **Henry / Đặng Thế Thiệp** — project owner; runs the operator hardware tests.
 - **Hương** — Backup Engineer (SPOF mitigation; onboarding brief in `docs/cutover/`).
-- **CCL Vietnam (Yen Phong)** — production site. Go-live target: **2026-06-30**.
+- **CCL Vietnam (Hai Phong)** — production site. Go-live target: **2026-06-30**.
+  The site is **Hai Phong**, and the licence card reads `CCL Design Vietnam — Hai Phong`.
+  Two older names survive on purpose. **Yen Phong** and **Hai Duong** are left untouched in
+  dated records (CLAUDE.md sprint history, CHANGELOG, `docs/cutover/*-2026-*.md`,
+  `docs/archive/`) because rewriting a dated document to say something it did not say is
+  worse than the confusion it saves. They also stay in **test data** — `Hai Duong` is a site
+  KEY in `sga_rate_pct_by_site` inside the frozen-quote fixtures, so changing it would break
+  the 20-year reproducibility contract for a cosmetic reason. Seeing either name in those
+  places is expected; seeing it in a living doc is a miss.
 - **Remote prod box** — Windows server `10.102.3.61:3000` (NSSM service via `deploy.ps1`).
 
 ## Runtime surfaces (which bundle is served — ask the URL first)

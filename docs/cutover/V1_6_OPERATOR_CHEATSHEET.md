@@ -42,4 +42,4 @@
 
 ---
 
-**v1.6.0 · CCL Vietnam Hai Duong · go-live 2026-07-30**
+**v1.6.0 · CCL Vietnam Hai Phong · go-live 2026-07-30**

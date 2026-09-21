@@ -1,20 +1,20 @@
-# SCOPE LOCK — Ops Control v1.6 Go-Live · CCL Design Hai Duong
+# SCOPE LOCK — Ops Control v1.6 Go-Live · CCL Design Hai Phong
 
 ## v1.6 Go-Live Scope Lock Agreement — Khóa phạm vi go-live v1.6
 
 **Document version:** 1.0 (draft for stakeholder signature)
 **Workshop deadline · Hạn workshop:** 2026-06-26 (D-65)
 **Go-live date · Ngày go-live:** **2026-08-30 (D-0)**
-**Site · Địa điểm:** CCL Design **Hai Duong**, Vietnam
+**Site · Địa điểm:** CCL Design **Hai Phong**, Vietnam
 **Owner · Chủ trì:** Henry Đặng Thế Thiệp (Lead Engineer)
 
 ---
 
 ## 🔒 LOCKED DEFINITION · ĐỊNH NGHĨA KHÓA
 
-> **EN:** "v1.6 go-live 2026-08-30 = **Mac SERVER + CLIENT** application for **CCL Design Hai Duong** site only, supporting **15 internal users** (10 sales + 3 NPI + 1 finance + 1 admin estimate — confirm exact split at workshop) for the **costing + quotation + reporting** workflow."
+> **EN:** "v1.6 go-live 2026-08-30 = **Mac SERVER + CLIENT** application for **CCL Design Hai Phong** site only, supporting **15 internal users** (10 sales + 3 NPI + 1 finance + 1 admin estimate — confirm exact split at workshop) for the **costing + quotation + reporting** workflow."
 >
-> **VI:** "v1.6 go-live ngày 30-08-2026 = ứng dụng **Mac SERVER + CLIENT** cho duy nhất site **CCL Design Hai Duong**, phục vụ **15 user nội bộ** (ước lượng 10 sales + 3 NPI + 1 finance + 1 admin — xác nhận số chính xác tại workshop) cho luồng **tính giá thành + báo giá + báo cáo**."
+> **VI:** "v1.6 go-live ngày 30-08-2026 = ứng dụng **Mac SERVER + CLIENT** cho duy nhất site **CCL Design Hai Phong**, phục vụ **15 user nội bộ** (ước lượng 10 sales + 3 NPI + 1 finance + 1 admin — xác nhận số chính xác tại workshop) cho luồng **tính giá thành + báo giá + báo cáo**."
 
 ---
 
@@ -44,7 +44,7 @@
 | **Hybrid cloud component**                | No cloud sync, no centralized reporting, no SaaS layer. Off-site backup rsync ≠ Hybrid in this sense               | S-HYBRID-CLOUD → 2027 Q2-Q3 (depends on definition decision at workshop, see STAKEHOLDER_QUESTIONS Q2) |
 | **SAP / ERP integration**                 | 0 LOC today. xlsx export is the only data exchange surface                                                         | M-2 SAP CO-PC feasibility → 2027 Q1                                                                    |
 | **iOS / Android mobile apps**             | Tab UI not designed for phone form factor                                                                          | No roadmap (out of scope indefinitely unless business case)                                            |
-| **MES Kiosk PWA at Hai Duong**            | Shop-floor work-order kiosk exists (`apps/kiosk/`) but feature-flagged off for v1.6; deferred to MES-3 sprint      | MES-3 → 2027                                                                                           |
+| **MES Kiosk PWA at Hai Phong**            | Shop-floor work-order kiosk exists (`apps/kiosk/`) but feature-flagged off for v1.6; deferred to MES-3 sprint      | MES-3 → 2027                                                                                           |
 | **Multi-site rollout (Bắc Ninh, etc.)**   | v1.6 is single-site pilot. Multi-site requires SAP sync + license fleet                                            | Conditional on workshop answer Q1 (CCL Design = global or single-site)                                 |
 | **Customer-variant export approval gate** | Snapshot pin solves data drift; gate is workflow discipline                                                        | S-EXPORT-GATE-APPROVAL → post-go-live (stakeholder decides)                                            |
 
@@ -56,7 +56,7 @@ This scope lock IS contingent on the following workshop confirmations (see `STAK
 
 > Cam kết scope khóa này phụ thuộc xác nhận tại workshop (chi tiết `STAKEHOLDER_QUESTIONS.md`):
 
-1. **Q1 confirmed:** CCL Design = Hai Duong-only pilot OR multi-site global rollout? (If global → multi-site is OUT of v1.6 but roadmap escalates)
+1. **Q1 confirmed:** CCL Design = Hai Phong-only pilot OR multi-site global rollout? (If global → multi-site is OUT of v1.6 but roadmap escalates)
 2. **Q2 confirmed:** "Hybrid" = off-site backup rsync (already in scope) OR cloud component (OUT of v1.6)?
 3. **Q3 confirmed:** 20-year retention basis (legal vs business — affects 12-control compliance scope)
 4. **Q7 confirmed:** Mac-only pilot acceptance

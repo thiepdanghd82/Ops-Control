@@ -2,7 +2,7 @@
 
 > 10-slide bilingual deck for Thursday 2026-07-30 09:00 ICT operator training session.
 > Duration · Thời lượng: 60-90 min (presentation 40 min + live demo 30 min + Q&A 20 min).
-> Audience · Đối tượng: CCL Vietnam Hai Duong Cost / Sales / NPI / Plant operators.
+> Audience · Đối tượng: CCL Vietnam Hai Phong Cost / Sales / NPI / Plant operators.
 > Format: Markdown — render via any deck tool (Marp, Slidev, or just paginate by `---`).
 
 ---
@@ -23,7 +23,7 @@
 
 Presented by · Trình bày: Henry Dang (Đặng Thế Thiệp)
 Training date · Ngày training: Thursday 2026-07-30 · 09:00 ICT
-Location · Địa điểm: CCL Vietnam Hai Duong · [Conference room name]
+Location · Địa điểm: CCL Vietnam Hai Phong · [Conference room name]
 ```
 
 ---

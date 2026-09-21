@@ -15,7 +15,7 @@ cd /d "%~dp0"
 cls
 echo ===============================================================
 echo   OPS CONTROL SERVER -- Auto-start Install (Windows)
-echo   CCL Design Hai Duong -- v1.6.0
+echo   CCL Design Hai Phong -- v1.6.0
 echo ===============================================================
 echo.
 echo Script nay se cai Scheduled Task de Ops Control SERVER:

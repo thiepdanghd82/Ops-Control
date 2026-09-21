@@ -1,6 +1,6 @@
 # Operator licenses — registry + mint workflow
 
-Per-installation Ed25519 licenses for the CCL Vietnam Yen Phong deployment.
+Per-installation Ed25519 licenses for the CCL Vietnam Hai Phong deployment.
 Each Ops Control install (Mac SERVER + Mac/Win CLIENTs) is HW-bound: the
 runtime hashes a hardware fingerprint into a 64-hex-char **Installation
 ID**, and the license file at `<userData>/license.json` must carry a
@@ -67,7 +67,7 @@ the input / cross-reference.
 # REQUIRED (no in-repo default since the 2026-06-04 rotation):
 node scripts/license/generate-license.mjs \
   --installation-id <hex64 from operator> \
-  --customer "CCL Design Vietnam — Yen Phong" \
+  --customer "CCL Design Vietnam — Hai Phong" \
   --tier M \
   --expires <YYYY-MM-DD, ~1 year out> \
   --key ~/OpsControl-license-keys/prod-private.pem \
@@ -90,13 +90,13 @@ node scripts/license/generate-license.mjs \
 | Tier  | `max_users` | Use case                                    |
 | ----- | ----------- | ------------------------------------------- |
 | S     | 15          | Small site (≤10 operator headcount)         |
-| **M** | **20**      | **Yen Phong default — 6 operator + buffer** |
+| **M** | **20**      | **Hai Phong default — 6 operator + buffer** |
 | L     | 50          | Plant-scale deployment                      |
 
 ### Features bitmap
 
 `--features` defaults to all 6: `costing,library,sales,planning,quality,mes`.
-Trim only if commercially justified (per-tier upsell). Yen Phong = full
+Trim only if commercially justified (per-tier upsell). Hai Phong = full
 unlock.
 
 ## Registry — provisioned operators

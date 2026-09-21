@@ -4,7 +4,7 @@
 > Run on D-1 of any cutover; verify success criteria at each step
 > before proceeding to next. Closes audit finding P0-6.
 
-> **Role clarification (2026-05-25 discovery)**: At CCL Vietnam Yen Phong, "Sysadmin" is a functional role held by the Lead Engineer (Đặng Thế Thiệp). Every "Owner: Sysadmin" line in this playbook = Lead Engineer executing the sysadmin function. Backup Engineer (Trần Thị Hương) is the standby for sysadmin tasks during Lead unreachable incidents — she has SSH + NSSM + cron skills confirmed via phone 2026-05-25.
+> **Role clarification (2026-05-25 discovery)**: At CCL Vietnam Hai Phong, "Sysadmin" is a functional role held by the Lead Engineer (Đặng Thế Thiệp). Every "Owner: Sysadmin" line in this playbook = Lead Engineer executing the sysadmin function. Backup Engineer (Trần Thị Hương) is the standby for sysadmin tasks during Lead unreachable incidents — she has SSH + NSSM + cron skills confirmed via phone 2026-05-25.
 
 ## Audience
 
@@ -164,7 +164,7 @@ Open client UI in browser (`http://10.102.3.61:3000`):
 - [ ] Login as a known operator account (NOT `ops_test_user` — that account is deleted per P1-5)
 - [ ] Quote History loads ≥ N quotes (N = pre-migration row count from Step 4 dry-run report)
 - [ ] Materials tab shows ≥ N rows (per dry-run report)
-- [ ] Rate dropdown lists 7 sites (Yen Phong, Linh Trung, …)
+- [ ] Rate dropdown lists 7 sites (Hai Phong, Linh Trung, …)
 - [ ] Settings → About shows the expected version string (e.g. `v1.5.10`)
 - [ ] No console errors in browser DevTools on tab switch through the 6 main tabs
 
