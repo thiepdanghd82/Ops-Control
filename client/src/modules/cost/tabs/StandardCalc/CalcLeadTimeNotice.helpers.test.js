@@ -593,22 +593,37 @@ describe('REMARK checkbox-driven auto-sync', () => {
     assert.equal(formatThousands(NaN), '—');
   });
 
-  test('all checked (default {}) → one "- " line per coded row, in order', () => {
+  test('all checked (default {}) → a line per coded row that HAS a conversion', () => {
+    // MAT-B is checked and has no clear_pcs, so it contributes no line at all.
     assert.equal(
       buildRemarkFromSelection(ROWS, {}),
-      '- MAT-A: 269,191 pcs\n- MAT-B: —\n- MAT-C: 1,899,409 pcs'
+      '- MAT-A: 269,191 pcs\n- MAT-C: 1,899,409 pcs'
     );
   });
 
   test('uncheck a row → its line disappears', () => {
-    assert.equal(
-      buildRemarkFromSelection(ROWS, { 'MAT-A': false }),
-      '- MAT-B: —\n- MAT-C: 1,899,409 pcs'
-    );
+    assert.equal(buildRemarkFromSelection(ROWS, { 'MAT-A': false }), '- MAT-C: 1,899,409 pcs');
   });
 
-  test('clear_pcs null → "- <code>: —"', () => {
-    assert.equal(buildRemarkFromSelection([{ ifs_code: 'X', clear_pcs: null }], {}), '- X: —');
+  test('no Clear Materials MOQ → the row is omitted, never printed as "—"', () => {
+    // The remark reaches the customer; "X: —" states nothing they can act on.
+    // The row stays checked and the Materials MOQ table still shows the dash,
+    // so the missing conversion is not hidden from the operator.
+    assert.equal(buildRemarkFromSelection([{ ifs_code: 'X', clear_pcs: null }], {}), '');
+    assert.equal(buildRemarkFromSelection([{ ifs_code: 'X', clear_pcs: 0 }], {}), '');
+    assert.equal(buildRemarkFromSelection([{ ifs_code: 'X', clear_pcs: NaN }], {}), '');
+  });
+
+  test('every checked row lacking a conversion → header + footer, no bullets', () => {
+    const block = helpersNs.buildRemarkBlock(
+      [
+        { ifs_code: 'X', clear_pcs: null },
+        { ifs_code: 'Y', clear_pcs: null },
+      ],
+      {},
+      '0.2'
+    );
+    assert.equal(block, '1. Clear materials MOQ.\n2. Product tolerance: +/- 0.2mm');
   });
 
   test('blank-code rows excluded even when others checked', () => {

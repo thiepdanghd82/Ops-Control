@@ -376,9 +376,18 @@ export function buildRemarkFromSelection(rows, selection) {
     const code = String(r.ifs_code || '').trim();
     if (!code) continue;
     if (!isRemarkRowSelected(selection, code)) continue;
-    const clear =
-      r.clear_pcs != null && r.clear_pcs > 0 ? `${formatThousands(r.clear_pcs)} pcs` : '—';
-    lines.push(`- ${r.ifs_code}: ${clear}`);
+    // A row with no Clear Materials MOQ is dropped, not printed as "— ".
+    // `clear_pcs` is null whenever the conversion could not be made — no NPI
+    // match, or qpa_m2 = 0 — and it is deliberately never fabricated. This
+    // block is the CUSTOMER-facing remark, where "UTP50-4: —" states nothing
+    // the customer can act on.
+    //
+    // Nothing is hidden from the operator: the row stays checked and the
+    // Materials MOQ table below still shows it with the em-dash, so a missing
+    // conversion is still visible to whoever is quoting. Only the sentence
+    // that would have gone out saying nothing is removed.
+    if (r.clear_pcs == null || !(r.clear_pcs > 0)) continue;
+    lines.push(`- ${r.ifs_code}: ${formatThousands(r.clear_pcs)} pcs`);
   }
   return lines.join('\n');
 }

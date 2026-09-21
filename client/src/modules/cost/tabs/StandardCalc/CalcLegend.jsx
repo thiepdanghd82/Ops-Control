@@ -3073,13 +3073,13 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
             nameVi="REMARK tự động (buildRemarkBlock)"
             expr={`1. Clear materials MOQ.
 - <ifs_code>: <Clear MOQ> pcs      ← one "- " line per selected material
-- <ifs_code>: —                    ← "—" when Clear MOQ unavailable
+(a selected material with NO Clear MOQ produces no line at all)
 2. Product tolerance: +/- <product_tolerance>mm`}
-            note='⚠ Added — REMARK_MOQ_HEADER = "1. Clear materials MOQ." Each selected material renders a "- " dash line "<ifs_code>: <n,nnn> pcs". Footer is "2. Product tolerance: +/- {product_tolerance}mm" — literal ASCII "+/-" (not ±), no space before "mm". product_tolerance defaults to "0.2" (editable per quote; heal-on-read).'
-            noteVi='⚠ Bổ sung — REMARK_MOQ_HEADER = "1. Clear materials MOQ." Mỗi material chọn tạo một dòng gạch "- " "<ifs_code>: <n,nnn> pcs". Chân là "2. Product tolerance: +/- {product_tolerance}mm" — dùng "+/-" ASCII (không phải ±), không có dấu cách trước "mm". product_tolerance mặc định "0.2" (sửa được theo quote; heal-on-read).'
+            note='⚠ Added — REMARK_MOQ_HEADER = "1. Clear materials MOQ." A selected material renders a "- " dash line "<ifs_code>: <n,nnn> pcs" ONLY when clear_pcs resolves; a row with no Clear MOQ (no NPI match, or qpa_m2 = 0) is OMITTED — the remark reaches the CUSTOMER, where "<code>: —" states nothing they can act on. The row stays checked and the Materials MOQ table still shows the dash, so nothing is hidden from the operator. Footer is "2. Product tolerance: +/- {product_tolerance}mm" — literal ASCII "+/-" (not ±), no space before "mm". product_tolerance defaults to "0.2" (editable per quote; heal-on-read).'
+            noteVi='⚠ Bổ sung — REMARK_MOQ_HEADER = "1. Clear materials MOQ." Material được chọn chỉ tạo dòng gạch "- " "<ifs_code>: <n,nnn> pcs" KHI clear_pcs tính được; hàng không có Clear MOQ (không khớp NPI, hoặc qpa_m2 = 0) bị BỬe QUA — remark là thứ gửi tới KHÁCH, mà "<code>: —" không nói lên điều gì để họ xử lý. Hàng vẫn được tick và bảng Materials MOQ vẫn hiện dấu gạch, nên không giấu gì với người lập giá. Chân là "2. Product tolerance: +/- {product_tolerance}mm" — dùng "+/-" ASCII (không phải ±), không có dấu cách trước "mm". product_tolerance mặc định "0.2" (sửa được theo quote; heal-on-read).'
             example={`1. Clear materials MOQ.
 - MAT-PET50: 112,918 pcs
-- MAT-LINER: —
+(MAT-LINER is checked but has no Clear MOQ → no line)
 2. Product tolerance: +/- 0.2mm`}
           />
           <Callout
