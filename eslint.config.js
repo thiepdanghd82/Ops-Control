@@ -45,7 +45,7 @@ export default [
   js.configs.recommended,
   // 3. Server (Node) — CommonJS + ESM mixed
   {
-    files: ['server/**/*.js', 'scripts/**/*.{js,mjs}'],
+    files: ['server/**/*.js', 'scripts/**/*.{js,mjs}', 'audit/**/*.{js,mjs}'],
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
