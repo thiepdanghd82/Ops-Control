@@ -18,7 +18,7 @@
     "check:sha": "node scripts/sprint-history-sha.js",
     "reset-totp": "node scripts/reset-totp.js",
     "build:npi-parts": "node scripts/build-npi-parts-snapshot.mjs",
-    "test": "jest --passWithNoTests && node --test --test-concurrency=1 \"server/**/*.test.js\" \"scripts/**/*.test.js\" && cd desktop && npm run test:license && npm run test:manifest",
+    "test": "jest --passWithNoTests && node --test --test-concurrency=1 \"server/**/*.test.js\" \"scripts/**/*.test.js\" && cd desktop && npm run test:license && npm run test:manifest && npm run test:utils",
     "fix": "eslint --fix .",
     "perf-budget": "node scripts/check-perf-budget.js",
     "lint:client": "cd client && npm run lint",
