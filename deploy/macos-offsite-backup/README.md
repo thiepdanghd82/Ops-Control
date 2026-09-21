@@ -40,6 +40,33 @@ hãy giữ ổ ngoài ở nơi an toàn.
 bash "deploy/macos-offsite-backup/uninstall.sh"
 ```
 
+## Tạm giữ agent (không gỡ hẳn)
+
+`uninstall.sh` **xoá** plist. Khi chỉ muốn ngừng chạy tự động mà vẫn giữ cấu hình,
+đổi tên plist kèm ngày:
+
+```bash
+launchctl bootout gui/$(id -u)/vn.ccldesign.opsbackup.offsite 2>/dev/null
+mv ~/Library/LaunchAgents/vn.ccldesign.opsbackup.offsite.plist{,.disabled-$(date +%Y%m%d)}
+```
+
+`install.sh` **nhận ra dấu này**: nó vẫn cập nhật script và làm mới plist đang giữ,
+nhưng không `launchctl load`, và in ra lý do. Bật lại thì xoá hậu tố `.disabled-*`
+bằng tay rồi chạy `install.sh`; cần ép trong một lần thì
+`OPS_FORCE_ENABLE_AGENT=1 bash install.sh`.
+
+**Trạng thái hiện tại trên máy SERVER: agent đang bị giữ từ 2026-09-17.** Nó chưa một
+lần nào chạy thành công khi không có người khởi động — job của `launchd` không đọc được
+SMB share do Finder mount, còn `mount_smbfs` của chính nó bị từ chối vì Finder đang giữ
+đúng share đó. Mọi lần chạy theo lịch vì thế rơi vào nhánh `error` (không phải `skip`),
+làm thẻ **Settings → Backup** đỏ mỗi 4 tiếng trong khi các lần chạy tay vẫn ghi `ok` —
+một chỉ báo sức khoẻ lúc xanh lúc đỏ thì tệ hơn là sai đều, vì không ai biết tin cái nào.
+Nguyên nhân gốc vẫn **chưa tìm ra** (CLAUDE.md, Bài học 44). Chạy tay khi cần:
+
+```bash
+bash ~/Library/Application\ Support/ops-offsite-backup/offsite-backup.sh
+```
+
 ## Lưu ý hoàn thiện 3-2-1
 
 Đây là bản sao **thứ 2** (ổ ngoài). Để đủ quy tắc 3-2-1, thêm 1 đích **ngoài toà nhà**
