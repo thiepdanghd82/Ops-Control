@@ -18,7 +18,7 @@ OUTDIR="$HOME/OpsControl-license-keys/issued"
 # that date says Yen Phong and keeps saying it -- `customer` is a SIGNED
 # field, so an existing licence cannot be corrected by editing the JSON; it
 # has to be re-minted here and re-issued to that machine.
-CUSTOMER="CCL Design Vietnam — Hai Phong"
+CUSTOMER="CCL Design Vietnam- Hai Phong"
 
 # Resolve repo dir. _SALVAGE/ ships in two layouts and the arithmetic differs:
 #   anh em  — <parent>/_SALVAGE/fleet-audit  cạnh  <parent>/Ops-Control   → ../../Ops-Control

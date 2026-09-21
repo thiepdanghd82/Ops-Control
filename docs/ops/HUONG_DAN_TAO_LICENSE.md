@@ -50,7 +50,7 @@ export PATH="/opt/homebrew/opt/node@24/bin:$PATH"   # node keg-only trên máy n
 
 node scripts/license/generate-license.mjs \
   --installation-id <DÁN_64_HEX_TỪ_KHÁCH> \
-  --customer "CCL Design Vietnam — Hai Phong" \
+  --customer "CCL Design Vietnam- Hai Phong" \
   --tier M \
   --expires 2029-06-09 \
   --key ~/OpsControl-license-keys/prod-private.pem \
@@ -91,7 +91,7 @@ File output sẽ có dạng đúng như license thật đang chạy:
 {
   "version": 2,
   "installation_id": "323778c829bba9800dbbd70c7346c546ac141f5bc68a28e36d2ef7c2d84a73c8",
-  "customer": "CCL Design Vietnam — Hai Phong",
+  "customer": "CCL Design Vietnam- Hai Phong",
   "tier": "M",
   "max_users": 20,
   "issued_at": "2026-06-22T04:49:55.554Z",

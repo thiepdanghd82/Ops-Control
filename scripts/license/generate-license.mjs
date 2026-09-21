@@ -8,7 +8,7 @@
  * Usage:
  *   node scripts/license/generate-license.mjs \
  *     --installation-id <hex64 from customer> \
- *     --customer "CCL Design Vietnam — Plant Hai Phong" \
+ *     --customer "CCL Design Vietnam- Hai Phong" \
  *     --tier M \
  *     --expires 2027-04-29 \
  *     [--features costing,library,sales,planning,quality,mes] \
