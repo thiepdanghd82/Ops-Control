@@ -7,6 +7,8 @@
  * tier row aggregates match the FG sub-product (or fall back to a sum).
  */
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { tierOptionLabel } from '../../../../components/Shared/CostSummaryBar.helpers.js';
+import { clampTierIdx, planTierViewSync } from '../../components/tierSelect.helpers.js';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import { useI18n } from '../../../../utils/useI18n';
@@ -196,6 +198,23 @@ export default function CplxCostBreakdown() {
     }
   }, [tiers, cs, lib, solverOpts, rate, activeQuoteId, dispatch]);
 
+  const activeIdx = cs.active_moq_idx || 0;
+
+  // Cost Structure + Detailed Breakdown read a tier of their OWN. Picking one
+  // here is VIEW-ONLY: it never touches active_moq_idx, which is saved with the
+  // quote and drives the summary bar, the other tabs and the margin hold. It
+  // does follow when the summary bar above moves the active tier, because both
+  // are on screen together. Same helper as Standard so the two cannot drift
+  // (Lesson 48). See tierSelect.helpers.js.
+  //
+  // Declared ABOVE the `if (!lib)` early return below: a hook placed after it
+  // is called conditionally, which breaks React's hook ordering on the render
+  // where the library has not loaded yet.
+  const [tierView, setTierView] = useState({ idx: activeIdx, seenActive: activeIdx });
+  const tierViewSync = planTierViewSync(tierView, activeIdx);
+  if (tierViewSync) setTierView(tierViewSync);
+  const viewIdx = clampTierIdx((tierViewSync || tierView).idx, tiers.length);
+
   if (!lib) {
     return (
       <div className="sc-section" style={{ padding: 20, color: '#94a3b8', textAlign: 'center' }}>
@@ -204,8 +223,9 @@ export default function CplxCostBreakdown() {
     );
   }
 
-  const activeIdx = cs.active_moq_idx || 0;
   const activeResult = tiers[activeIdx]?.result;
+  const viewResult = tiers[viewIdx]?.result;
+
   // Phase 4 — site-mismatch / future-warning surface from the
   // active-tier calcAll result (Phase 2 `_warnings` channel).
   const activeWarnings = activeResult?._warnings || [];
@@ -488,12 +508,12 @@ export default function CplxCostBreakdown() {
         </div>
       </div>
 
-      {/* Cost Structure waterfall for active tier */}
-      {activeResult &&
+      {/* Cost Structure waterfall for the VIEWED tier — see viewIdx above */}
+      {viewResult &&
         (() => {
-          const r = activeResult;
-          const sellPrice = tiers[activeIdx]?.sp || 0;
-          const targetPrice = activeIdx === 0 ? cs.target : cs.extra_moqs?.[activeIdx - 1]?.target;
+          const r = viewResult;
+          const sellPrice = tiers[viewIdx]?.sp || 0;
+          const targetPrice = viewIdx === 0 ? cs.target : cs.extra_moqs?.[viewIdx - 1]?.target;
           const rows = [
             {
               key: 'material',
@@ -539,8 +559,29 @@ export default function CplxCostBreakdown() {
           const pctOf = (v, p) => (p > 0 ? pct(v / p) : '—');
           return (
             <div className="sc-card" style={{ marginTop: 12 }}>
-              <div className="sc-card-header sc-header-dark">
+              <div className="sc-card-header sc-header-dark sc-cb-tier-head">
                 <span className="sc-card-title">{t('cb.cost_structure')}</span>
+                {/* Options come from `tiers` — the SAME array the card and the
+                    Detailed Breakdown read — so the list can never offer a tier
+                    the sections cannot show (Lesson 41). */}
+                {tiers.length > 1 && (
+                  <select
+                    className="sc-cb-tier-select"
+                    value={viewIdx}
+                    onChange={(e) => {
+                      const next = Number(e.target.value);
+                      setTierView({ idx: next, seenActive: activeIdx });
+                    }}
+                    aria-label={t('cb.tier_view_aria')}
+                    title={t('cb.tier_view_aria')}
+                  >
+                    {tiers.map((tr) => (
+                      <option key={tr.idx} value={tr.idx}>
+                        {tierOptionLabel(tr)}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               <div className="sc-card-body">
                 <div className="sc-sum-bar-row sc-cb-head">
@@ -616,14 +657,15 @@ export default function CplxCostBreakdown() {
           );
         })()}
 
-      {/* Detailed breakdown for active tier */}
-      {activeResult &&
+      {/* Detailed breakdown — follows the Cost Structure picker above, so the
+          two adjacent cards always describe the same tier. */}
+      {viewResult &&
         (() => {
-          const r = activeResult;
+          const r = viewResult;
           return (
             <div className="sc-card" style={{ marginTop: 12 }}>
               <div className="sc-card-header sc-header-slate">
-                <span className="sc-card-title">{t('cb.detail_title', { n: activeIdx + 1 })}</span>
+                <span className="sc-card-title">{t('cb.detail_title', { n: viewIdx + 1 })}</span>
               </div>
               <div className="sc-card-body">
                 <div className="sc-bd-detail-grid">

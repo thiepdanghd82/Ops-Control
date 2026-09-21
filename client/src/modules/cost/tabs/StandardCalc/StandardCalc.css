@@ -646,8 +646,14 @@ select.sc-input {
 }
 /* Tier dropdown — same Carbon block as the badge so operators recognise
    the cell, plus a caret so it reads as something you can click. Replaces
-   a trip back to the RFQ card just to change which tier is active. */
-.sc-sumbar-tier-select {
+   a trip back to the RFQ card just to change which tier is active.
+
+   .sc-cb-tier-select is the Cost Structure card's view-only twin. It shares
+   this ONE rule block rather than copying the declarations, because two
+   copies of a look are two things that can drift apart. Both sit on a dark
+   header, so the same colours apply unchanged. */
+.sc-sumbar-tier-select,
+.sc-cb-tier-select {
   display: inline-block;
   padding: 4px 26px 4px 12px;
   background-color: #161616;
@@ -666,15 +672,18 @@ select.sc-input {
   background-repeat: no-repeat;
   background-position: right 9px center;
 }
-.sc-sumbar-tier-select:hover {
+.sc-sumbar-tier-select:hover,
+.sc-cb-tier-select:hover {
   background-color: #333;
 }
-.sc-sumbar-tier-select:focus-visible {
+.sc-sumbar-tier-select:focus-visible,
+.sc-cb-tier-select:focus-visible {
   border-color: #fff;
 }
 /* The options themselves render in the OS menu, which does not inherit
    the dark block — pin readable colours so the list is legible. */
-.sc-sumbar-tier-select option {
+.sc-sumbar-tier-select option,
+.sc-cb-tier-select option {
   background: #fff;
   color: #161616;
 }
@@ -3859,4 +3868,12 @@ select.sc-input {
   padding: 24px;
   font-size: 13px;
   color: #6b7280;
+}
+
+/* Cost Structure card header: title left, tier picker right. */
+.sc-cb-tier-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
