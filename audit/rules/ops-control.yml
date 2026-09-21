@@ -4,7 +4,7 @@ rules:
   - id: opsctl-electron-node-integration
     languages: [javascript]
     severity: ERROR
-    message: "BrowserWindow bật nodeIntegration – renderer bị XSS sẽ chạy được lệnh hệ thống. Dùng contextIsolation + preload."
+    message: 'BrowserWindow bật nodeIntegration – renderer bị XSS sẽ chạy được lệnh hệ thống. Dùng contextIsolation + preload.'
     pattern-either:
       - pattern: |
           new BrowserWindow({..., webPreferences: {..., nodeIntegration: true, ...}, ...})
@@ -18,13 +18,13 @@ rules:
   - id: opsctl-electron-sandbox-off
     languages: [javascript]
     severity: WARNING
-    message: "BrowserWindow tắt sandbox. Chấp nhận nếu contextIsolation: true và preload chỉ expose hàm qua contextBridge; tốt hơn là chuyển việc cần Node sang main process và bật sandbox."
+    message: 'BrowserWindow tắt sandbox. Chấp nhận nếu contextIsolation: true và preload chỉ expose hàm qua contextBridge; tốt hơn là chuyển việc cần Node sang main process và bật sandbox.'
     pattern: 'new BrowserWindow({..., webPreferences: {..., sandbox: false, ...}, ...})'
 
   - id: opsctl-electron-open-external-untrusted
     languages: [javascript]
     severity: WARNING
-    message: "shell.openExternal với URL không phải hằng số – kiểm tra scheme http/https trước khi mở."
+    message: 'shell.openExternal với URL không phải hằng số – kiểm tra scheme http/https trước khi mở.'
     patterns:
       - pattern: shell.openExternal($URL, ...)
       - pattern-not: shell.openExternal("...", ...)
@@ -32,7 +32,7 @@ rules:
   - id: opsctl-ipc-handler-no-validation
     languages: [javascript]
     severity: INFO
-    message: "IPC handler nhận tham số từ renderer – đảm bảo validate kiểu/đường dẫn trước khi dùng (fs, child_process, sqlite)."
+    message: 'IPC handler nhận tham số từ renderer – đảm bảo validate kiểu/đường dẫn trước khi dùng (fs, child_process, sqlite).'
     pattern-either:
       - pattern: 'ipcMain.handle($CH, ($E, $ARG, ...) => { ... })'
       - pattern: 'ipcMain.on($CH, ($E, $ARG, ...) => { ... })'
@@ -40,7 +40,7 @@ rules:
   - id: opsctl-express-cors-wildcard
     languages: [javascript]
     severity: WARNING
-    message: "CORS mở cho mọi origin. Với app nội bộ nên giới hạn origin cụ thể (localhost cổng cố định, file, app scheme)."
+    message: 'CORS mở cho mọi origin. Với app nội bộ nên giới hạn origin cụ thể (localhost cổng cố định, file, app scheme).'
     pattern-either:
       - pattern: cors()
       - pattern: 'cors({..., origin: "*", ...})'
@@ -49,7 +49,7 @@ rules:
   - id: opsctl-path-join-from-request
     languages: [javascript]
     severity: ERROR
-    message: "Đường dẫn file dựng từ dữ liệu request – nguy cơ path traversal (../). Dùng path.basename hoặc kiểm tra kết quả nằm trong thư mục cho phép."
+    message: 'Đường dẫn file dựng từ dữ liệu request – nguy cơ path traversal (../). Dùng path.basename hoặc kiểm tra kết quả nằm trong thư mục cho phép.'
     pattern-either:
       - pattern: path.join(..., $REQ.params.$X, ...)
       - pattern: path.join(..., $REQ.query.$X, ...)
@@ -63,7 +63,7 @@ rules:
   - id: opsctl-sqlite-string-concat
     languages: [javascript]
     severity: ERROR
-    message: "Câu SQL ghép chuỗi bằng + – SQL injection nếu biến đến từ request. Dùng placeholder (?) với better-sqlite3 prepare()."
+    message: 'Câu SQL ghép chuỗi bằng + – SQL injection nếu biến đến từ request. Dùng placeholder (?) với better-sqlite3 prepare().'
     pattern-either:
       - pattern: $DB.prepare("..." + $X + "...")
       - pattern: $DB.prepare("..." + $X)
@@ -72,7 +72,7 @@ rules:
   - id: opsctl-sqlite-template-literal
     languages: [javascript]
     severity: WARNING
-    message: "SQL dùng template literal ${...}. Chấp nhận được nếu biến là tên bảng/cột từ hằng số nội bộ hoặc chuỗi placeholder; KHÔNG chấp nhận nếu biến đến từ req.body/params/query."
+    message: 'SQL dùng template literal ${...}. Chấp nhận được nếu biến là tên bảng/cột từ hằng số nội bộ hoặc chuỗi placeholder; KHÔNG chấp nhận nếu biến đến từ req.body/params/query.'
     pattern-either:
       - pattern: $DB.prepare(`...${$X}...`)
       - pattern: $DB.exec(`...${$X}...`)
@@ -80,7 +80,7 @@ rules:
   - id: opsctl-child-process-with-input
     languages: [javascript]
     severity: ERROR
-    message: "child_process.exec với chuỗi động – command injection. Dùng execFile/spawn với mảng tham số."
+    message: 'child_process.exec với chuỗi động – command injection. Dùng execFile/spawn với mảng tham số.'
     pattern-either:
       - pattern: 'exec(`...${$X}...`, ...)'
       - pattern: exec("..." + $X, ...)
@@ -90,7 +90,7 @@ rules:
   - id: opsctl-hardcoded-secret-assignment
     languages: [javascript]
     severity: WARNING
-    message: "Có vẻ là secret/mật khẩu hard-code. Chuyển sang biến môi trường (.env) và đảm bảo .env không commit."
+    message: 'Có vẻ là secret/mật khẩu hard-code. Chuyển sang biến môi trường (.env) và đảm bảo .env không commit.'
     patterns:
       - pattern-either:
           - pattern: $KEY = "$VAL"
@@ -116,7 +116,7 @@ rules:
   - id: opsctl-express-no-helmet
     languages: [javascript]
     severity: INFO
-    message: "Express app không thấy helmet() – cân nhắc thêm để đặt security header (CSP, X-Frame-Options)."
+    message: 'Express app không thấy helmet() – cân nhắc thêm để đặt security header (CSP, X-Frame-Options).'
     patterns:
       - pattern: $APP = express()
       - pattern-not-inside: |
