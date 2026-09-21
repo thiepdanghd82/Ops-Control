@@ -6,15 +6,16 @@
  * This wrapper owns the compute path: run `calcAll` on the
  * active-tier stdState and hand the result down.
  */
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import { calcAll, getActiveTierState } from '../../../../services/calcEngine';
 import { snapshotPricingParams } from '../../../../services/pricingSnapshot';
 import CostSummaryBar from '../../../../components/Shared/CostSummaryBar';
+import { buildTierOptions } from '../../../../components/Shared/CostSummaryBar.helpers.js';
 
 export default function CalcSummaryBar() {
-  const { stdState } = useCalc();
+  const { stdState, dispatch } = useCalc();
   const { lib } = useCostLib();
   const st = stdState;
 
@@ -36,6 +37,16 @@ export default function CalcSummaryBar() {
   const sp = moqIdx === 0 ? st.selling_price || 0 : st.extra_moqs?.[moqIdx - 1]?.price || 0;
   const target = moqIdx === 0 ? st.target || 0 : st.extra_moqs?.[moqIdx - 1]?.target || 0;
 
+  const tiers = useMemo(() => buildTierOptions(st), [st]);
+  // Standard writes the active tier through SET_ACTIVE_MOQ, which the
+  // reducer lands in `stdState`. Complex must NOT reuse this action
+  // (MES-3-FIX-53) — hence each wrapper owning its own setter rather
+  // than the shared bar dispatching.
+  const onTierChange = useCallback(
+    (idx) => dispatch({ type: 'SET_ACTIVE_MOQ', payload: { idx } }),
+    [dispatch]
+  );
+
   return (
     <CostSummaryBar
       result={result}
@@ -45,6 +56,8 @@ export default function CalcSummaryBar() {
       eau={eau}
       sp={sp}
       target={target}
+      tiers={tiers}
+      onTierChange={onTierChange}
     />
   );
 }

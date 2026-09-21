@@ -994,6 +994,9 @@ registerStrings({
   'common.select': { en: '-- Select --', vi: '-- Chọn --' },
   'common.years': { en: 'years', vi: 'năm' },
   'sumbar.tier': { en: 'Tier', vi: 'Tier' },
+  // MOQ and Tier stay English per the glossary confirmed with the NPI
+  // manager 2026-09-10; only the ordinary words around them translate.
+  'sumbar.tier_select_aria': { en: 'Switch MOQ tier', vi: 'Đổi tier MOQ' },
   'sumbar.end_cu_pn': { en: 'End CU PN', vi: 'End CU PN' },
   'sumbar.ttl_mat': { en: 'Ttl. Mat', vi: 'Ttl. Mat' },
   'sumbar.process': { en: 'Process', vi: 'Công đoạn' },
