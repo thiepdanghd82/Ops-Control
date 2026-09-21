@@ -238,7 +238,7 @@ function buildDocument() {
     })
   );
   sections.push(
-    p('CCL Design Hai Duong — Ops Control v1.6 go-live 2026-08-30', {
+    p('CCL Design Hai Phong — Ops Control v1.6 go-live 2026-08-30', {
       alignment: AlignmentType.CENTER,
       italics: true,
       color: '6B7280',

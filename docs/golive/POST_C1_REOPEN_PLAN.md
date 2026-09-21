@@ -13,7 +13,7 @@
 
 **Trigger condition**: C-1 workshop closes with all of:
 
-- Q1 = (a) Hai Duong-only pilot
+- Q1 = (a) Hai Phong-only pilot
 - Q2 = A (off-site backup = Hybrid)
 - Q7 = (a) Mac-only accepted
 
@@ -196,7 +196,7 @@
 - [ ] Updated capacity model (engineers × weeks × scope)
 - [ ] Revised timeline + revised D-0
 - [ ] Renegotiate stakeholder commitments + budget approval
-- [ ] Communicate to Hai Duong site (pilot won't happen 2026-08-30)
+- [ ] Communicate to Hai Phong site (pilot won't happen 2026-08-30)
 - [ ] Decide v1.5.12 Mac DMG distribution as interim (operators may need stop-gap)
 
 **Reason for trigger-only**: Re-charter is leadership decision space, not engineering planning space. Building speculative plans pre-decision wastes effort.

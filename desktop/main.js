@@ -361,7 +361,7 @@ async function startEmbeddedServer() {
   // CLIENT-build embedded mode hit this wall on Phase 6 Day 2 hardware
   // verify (Henry's Mac DMG, 2026-06-10 17:21 onwards): fresh install
   // had no .env seed → embedded server refused to start. Auto-gen
-  // closes the gap so CCL Hai Duong operators don't see "edit .env
+  // closes the gap so CCL Hai Phong operators don't see "edit .env
   // file manually" friction on first run.
   if (!process.env.OPS_EXPORT_HMAC_KEY) {
     let hmacKey = store.get('exportHmacKey');

@@ -8,7 +8,7 @@
 **UAT script · Kịch bản**: `docs/uat/pricing-snapshot-uat.md` (30 scenarios, ~3-4h per operator)
 **Output · Đầu ra**: Signed UAT acceptance report (this doc's checklist + per-operator signature in `C5_UAT_CHECKLIST.md`)
 
-**Critical · Quan trọng**: Booking operator lead-time is the schedule risk. CCL Design Hai Duong sales operators have customer deadlines + production cycles — schedule UAT WEEKS in advance, not days.
+**Critical · Quan trọng**: Booking operator lead-time is the schedule risk. CCL Design Hai Phong sales operators have customer deadlines + production cycles — schedule UAT WEEKS in advance, not days.
 
 ---
 
@@ -35,7 +35,7 @@ You are invited to participate in **User Acceptance Testing (UAT)** for Ops Cont
 
 **Time commitment**: 3-4 hours per session, **before 2026-08-09**. Can be split into 2 × 2h sessions if more convenient.
 
-**Where**: CCL Design Hai Duong, your normal workstation (Mac CLIENT app)
+**Where**: CCL Design Hai Phong, your normal workstation (Mac CLIENT app)
 
 **Why this matters**: Without your sign-off, we cannot confirm the system meets sales-floor needs. Henry's pre-test does not count — you're the actual user. If we ship without your validation and you find issues on day 1, the cutover risks recall.
 
@@ -70,7 +70,7 @@ Bạn được mời tham gia **User Acceptance Testing (UAT)** cho Ops Control 
 
 **Thời gian cần**: 3-4 giờ mỗi buổi, **trước 2026-08-09**. Có thể chia 2 buổi × 2h nếu tiện hơn.
 
-**Địa điểm**: CCL Design Hai Duong, workstation của bạn (Mac CLIENT app)
+**Địa điểm**: CCL Design Hai Phong, workstation của bạn (Mac CLIENT app)
 
 **Tại sao quan trọng**: Không có chữ ký của bạn, không thể xác nhận hệ thống đáp ứng nhu cầu sales floor. Henry test trước KHÔNG ĐỦ — bạn là người dùng thật. Nếu ship mà không có validation của bạn và phát hiện vấn đề day 1, cutover có rủi ro phải rollback.
 

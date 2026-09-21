@@ -12,7 +12,7 @@
 
 ### Stakeholder answer pattern · Pattern câu trả lời stakeholder
 
-- Q1 = (a) Hai Duong-only pilot
+- Q1 = (a) Hai Phong-only pilot
 - Q2 = A (off-site backup = Hybrid)
 - Q3 = (b) business requirement OR (a) confirmed-but-Tier-1-only
 - Q4 = (a) or (b) (no shift turnover surprise)
@@ -49,7 +49,7 @@
 
 ### Probability assessment · Đánh giá xác suất
 
-**~20%** — possible because Hai Duong office reportedly mixes Mac and Win workstations historically; not every operator's machine has been confirmed Mac-only. If sales team or back-office finance uses Win laptops, stakeholder may push for Day-1 parity.
+**~20%** — possible because Hai Phong office reportedly mixes Mac and Win workstations historically; not every operator's machine has been confirmed Mac-only. If sales team or back-office finance uses Win laptops, stakeholder may push for Day-1 parity.
 
 ### Henry's negotiation pre-script · Kịch bản đàm phán
 
@@ -119,7 +119,7 @@
 
 - Mac pilot stays in scope
 - Web/Win/multi-site become formal **v2.0** project starting 2026-10 with: dedicated kick-off, full requirements gathering, hire/contract additional engineer(s) if budget permits, formal 6-month delivery to 2027-Q1
-- Pros: Hai Duong gets value 2026-08-30; v2 done properly with capacity
+- Pros: Hai Phong gets value 2026-08-30; v2 done properly with capacity
 - Cons: Stakeholder doesn't get "all platforms in v1.6"
 
 **Option C2 — Dời go-live 2027-Q1, full multi-platform**
@@ -127,7 +127,7 @@
 - v1.6 becomes v2.0; abandon 2026-08-30 target
 - Add 2nd engineer (contract or hire) for capacity
 - Pros: All-platforms together, clean release
-- Cons: Hai Duong waits 6 more months; budget impact (engineer cost); risk of project losing momentum
+- Cons: Hai Phong waits 6 more months; budget impact (engineer cost); risk of project losing momentum
 
 **Option C3 — Stakeholder reduces scope ask**
 

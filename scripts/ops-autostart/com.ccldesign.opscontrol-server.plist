@@ -4,7 +4,7 @@
   -------------------------------------------------
   Auto-start the Ops Control SERVER Electron app at user login + auto-
   restart if the app crashes. Designed for the Mac mini physically at
-  CCL Design Hai Duong that hosts the embedded Express + SQLite for
+  CCL Design Hai Phong that hosts the embedded Express + SQLite for
   operator CLIENT machines on the LAN.
 
   Behavior:

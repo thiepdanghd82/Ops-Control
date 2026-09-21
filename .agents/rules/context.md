@@ -14,7 +14,7 @@ description: Ops Control shared-language glossary.
 
 - **Henry / Đặng Thế Thiệp** — project owner; runs the operator hardware tests.
 - **Hương** — Backup Engineer (SPOF mitigation; onboarding brief in `docs/cutover/`).
-- **CCL Vietnam (Yen Phong)** — production site. Go-live target: **2026-06-30**.
+- **CCL Vietnam (Hai Phong)** — production site. Go-live target: **2026-06-30**.
 - **Remote prod box** — Windows server `10.102.3.61:3000` (NSSM service via `deploy.ps1`).
 
 ## Runtime surfaces (which bundle is served — ask the URL first)

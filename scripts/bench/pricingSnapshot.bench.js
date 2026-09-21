@@ -4,7 +4,7 @@
  * Pricing-snapshot perf benchmark. Times `freezeLib` (save path) and
  * `snapshotPricingParams` (render/calc path) across synthetic fixtures
  * sized 100 / 1k / 10k quotes so we can prove the snapshot work added
- * no measurable hot-path cost before the CCL Vietnam Hai Duong go-live
+ * no measurable hot-path cost before the CCL Vietnam Hai Phong go-live
  * on 2026-07-21.
  *
  * Goals (each operation, p95):

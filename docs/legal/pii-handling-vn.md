@@ -22,7 +22,7 @@ No biometric, health, racial, religious, political-opinion, or other "sensitive 
 
 ## 2. Storage Location + Access Controls
 
-- **All PII storage**: factory LAN at Yen Phong. NO data leaves Vietnam.
+- **All PII storage**: factory LAN at Hai Phong. NO data leaves Vietnam.
 - **File system mode**: `chmod 600` enforced on `users.json`, `totp_secrets.*`, `.env`, `ops.db`.
 - **Network access**: factory LAN-only (no public internet exposure). Firewall ACL limits ingress to operator subnet.
 - **Application access**: 3-layer permission model (role + department + permission_group_id) per `server/services/permissionService.js`.
@@ -60,7 +60,7 @@ Per Decree 13 Art. 25: any cross-border transfer requires impact assessment + MP
 
 **Current status**: NO cross-border transfer.
 
-- Ops Control runs on-prem (Yen Phong factory LAN)
+- Ops Control runs on-prem (Hai Phong factory LAN)
 - Backups archive LOCALLY (USB or NAS, factory premises)
 - No cloud APIs, no analytics SDKs, no telemetry, no third-party processors
 - xlsx exports sent to customers via email are NOT considered transfers (customer is the data controller for their own data)

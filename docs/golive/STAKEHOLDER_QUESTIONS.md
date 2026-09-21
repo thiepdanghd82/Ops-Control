@@ -8,19 +8,19 @@
 
 ---
 
-## Q1. CCL Design = Hai Duong only OR multi-site global?
+## Q1. CCL Design = Hai Phong only OR multi-site global?
 
-**🇬🇧 EN:** Is "CCL Design" referring to (a) the single Hai Duong site pilot OR (b) a global CCL corporate entity with multiple sites (Vietnam + Indonesia + Thailand + global brand accounts)?
+**🇬🇧 EN:** Is "CCL Design" referring to (a) the single Hai Phong site pilot OR (b) a global CCL corporate entity with multiple sites (Vietnam + Indonesia + Thailand + global brand accounts)?
 
-**🇻🇳 VI:** "CCL Design" trong scope này chỉ (a) duy nhất site Hai Duong (pilot) HAY (b) tập đoàn CCL toàn cầu nhiều site?
+**🇻🇳 VI:** "CCL Design" trong scope này chỉ (a) duy nhất site Hai Phong (pilot) HAY (b) tập đoàn CCL toàn cầu nhiều site?
 
 ### Why ask
 
-Memory `project_golive.md` originally said "CCL Vietnam Hai Duong". The Re-evaluation prompt 2026-06-20 said "CCL Design". This may be a rename OR a scope expansion. Impacts SAP integration priority + license fleet + rollout wave.
+Memory `project_golive.md` originally said "CCL Vietnam Hai Phong". The Re-evaluation prompt 2026-06-20 said "CCL Design". This may be a rename OR a scope expansion. Impacts SAP integration priority + license fleet + rollout wave.
 
 ### Options
 
-- (a) **Hai Duong-only pilot** → multi-site is OUT of v1.6, future rollout sprint(s) sau go-live ổn định
+- (a) **Hai Phong-only pilot** → multi-site is OUT of v1.6, future rollout sprint(s) sau go-live ổn định
 - (b) **CCL Design global** → multi-site IN scope for roadmap; SAP integration M-2 ESCALATES to P1 (avoid shadow-IT divergence); license fleet management UI ESCALATES from `feat/license-manager-tab` branch backlog
 
 ### Impact on scope

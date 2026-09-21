@@ -18,7 +18,7 @@ cd "$(dirname "$0")"
 clear
 echo "═══════════════════════════════════════════════════════════════"
 echo "  OPS CONTROL SERVER — Auto-start Install (macOS)"
-echo "  CCL Design Hai Duong · v1.6.0"
+echo "  CCL Design Hai Phong · v1.6.0"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 echo "Script này sẽ cài LaunchAgent để Ops Control SERVER:"

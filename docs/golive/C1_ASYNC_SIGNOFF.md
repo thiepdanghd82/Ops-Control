@@ -98,7 +98,7 @@ Lead Engineer, Ops Control v1.6
 
 ```
 ================================================================
-SCOPE-LOCK SIGN-OFF FORM — Ops Control v1.6 (CCL Design Hai Duong)
+SCOPE-LOCK SIGN-OFF FORM — Ops Control v1.6 (CCL Design Hai Phong)
 Deadline: 2026-06-26 23:59 ICT  ·  Hạn: 2026-06-26 23:59 ICT
 ================================================================
 
@@ -109,7 +109,7 @@ Date · Ngày phản hồi:          _______________________
 ----------------------------------------------------------------
 Q1. "CCL Design" scope · Phạm vi "CCL Design"
 ----------------------------------------------------------------
-  [ ] (a) Hai Duong-only pilot  ✅ RECOMMENDED
+  [ ] (a) Hai Phong-only pilot  ✅ RECOMMENDED
   [ ] (b) CCL Design global multi-site
   Notes: _______________________________________________
 

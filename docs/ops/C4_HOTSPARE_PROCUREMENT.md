@@ -18,8 +18,8 @@
 
 **Mitigation now required** (work to schedule into C-4 drill day):
 
-1. **Fast-ship pre-arrangement** — identify local Hai Duong / Hanoi Apple reseller able to ship Mac mini same-day or next-day during business hours. Worst-case RTO drops to ~3-5 days instead of 14-22. Henry to confirm vendor + capture phone+address before D-7 (2026-08-23).
-2. **Loaner Mac inventory** — if any Mac in Hai Duong office (any department) can be temporarily commandeered as emergency SERVER for ≤72h, document the loaner candidate + escalation contact. Even Henry's personal Mac counts in true emergency.
+1. **Fast-ship pre-arrangement** — identify local Hai Phong / Hanoi Apple reseller able to ship Mac mini same-day or next-day during business hours. Worst-case RTO drops to ~3-5 days instead of 14-22. Henry to confirm vendor + capture phone+address before D-7 (2026-08-23).
+2. **Loaner Mac inventory** — if any Mac in Hai Phong office (any department) can be temporarily commandeered as emergency SERVER for ≤72h, document the loaner candidate + escalation contact. Even Henry's personal Mac counts in true emergency.
 3. **Operator workaround SOP** — if SERVER down >24h, document fallback to xlsx-only quote workflow (operators paste lib values from last printed price list, generate quote in Excel, re-enter into Ops Control when service restored). Loses snapshot freezing for affected quotes but keeps business running.
 4. **Faster off-site backup cadence** — consider tightening rsync from nightly to every 6h to bound RPO further during the no-hotspare risk window.
 
@@ -42,7 +42,7 @@
 
 **Today's risk · Rủi ro hiện tại**:
 
-- 1 SERVER Mac mini running the embedded Express + SQLite at CCL Design Hai Duong
+- 1 SERVER Mac mini running the embedded Express + SQLite at CCL Design Hai Phong
 - If disk fails / OS bricks / Mac is stolen / power surge fries motherboard → **production stops immediately**
 - Restore-from-backup requires: provisioning new Mac mini (~14 day ship), reinstalling app + config (4-6h), restoring SQLite + Library (1-2h)
 - **Realistic RTO without hot-spare: 18-22 days** during ship time
@@ -87,7 +87,7 @@
 ### Step 1: Henry assembles purchase request (today, 2026-06-20)
 
 - [ ] Confirm budget availability with Henry's manager (~$700-830)
-- [ ] Get vendor quote (Apple authorized reseller in Hai Duong / Hanoi)
+- [ ] Get vendor quote (Apple authorized reseller in Hai Phong / Hanoi)
 - [ ] Confirm 14-day ship feasibility
 - [ ] Justification memo: cite this doc + `project_golive` C-4 + B-3 SPOF reduction
 
@@ -95,7 +95,7 @@
 
 - [ ] Henry's manager signs off purchase order
 - [ ] Finance issues PO to vendor
-- [ ] Confirm payment terms + shipping address (CCL Design Hai Duong office)
+- [ ] Confirm payment terms + shipping address (CCL Design Hai Phong office)
 
 ### Step 3: Order placement (target 2026-06-27)
 
@@ -105,8 +105,8 @@
 
 ### Step 4: Receipt + provisioning (target 2026-07-15)
 
-- [ ] Mac mini arrives at CCL Design Hai Duong
-- [ ] Henry unboxes + setup macOS (admin account, English locale, set Hai Duong timezone)
+- [ ] Mac mini arrives at CCL Design Hai Phong
+- [ ] Henry unboxes + setup macOS (admin account, English locale, set Hai Phong timezone)
 - [ ] Install Ops Control SERVER DMG (latest v1.6 rc)
 - [ ] Configure as SERVER role (Settings → Connection Mode → SERVER + provision admin)
 - [ ] Network: assign static IP (proposed: 10.102.3.62 if available; same VLAN as primary SERVER 10.102.3.61)

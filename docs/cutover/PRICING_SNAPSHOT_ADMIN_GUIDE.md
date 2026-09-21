@@ -195,7 +195,7 @@ The Prometheus endpoint is part of the existing `server/index.js` exposure (Spri
 ## 7. Going forward · Kế hoạch tiếp theo
 
 - Phase 5 (this work) — pre-go-live UAT, docs, metrics, benchmark. Lands 2026-06-10 → 2026-06-15.
-- Phase 6 (post-go-live) — stage rollout → production cut-over → CCL Vietnam Hai Duong go-live 2026-07-30.
+- Phase 6 (post-go-live) — stage rollout → production cut-over → CCL Vietnam Hai Phong go-live 2026-07-30.
 - Backlog ticket if needed — MES-3-FIX-48 (xlsx sheet 11-leadtime, parallel surface to `10 Pricing Snapshot`).
 
 ---

@@ -25,12 +25,12 @@
 
 ## Q1 — CCL Design scope · Phạm vi CCL Design
 
-**Question**: Hai Duong-only OR multi-site global?
+**Question**: Hai Phong-only OR multi-site global?
 **Stakeholder answer · Stakeholder trả lời**: \***\*\*\*\*\*\*\***\_\_\_\***\*\*\*\*\*\*\***
 
 | Option                   | Selected? | Impact captured                                             |
 | ------------------------ | --------- | ----------------------------------------------------------- |
-| (a) Hai Duong-only pilot | [ ]       | SCOPE_LOCK unchanged                                        |
+| (a) Hai Phong-only pilot | [ ]       | SCOPE_LOCK unchanged                                        |
 | (b) Multi-site global    | [ ]       | S-WIN-PORT, SAP M-2, multi-site rollout escalate to roadmap |
 
 **Notes**: \***\*\*\*\*\***\*\*\***\*\*\*\*\***\_\_\_\_\***\*\*\*\*\***\*\*\***\*\*\*\*\***

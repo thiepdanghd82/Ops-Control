@@ -39,7 +39,7 @@
 - [ ] Primary SERVER SQLite + Library/\* current
 - [ ] PR #193 (bit-rot cron) merged + on main
 - [ ] `scripts/bitrot-check.mjs` + `server/db/bitrotCheck.js` present in latest SERVER DMG
-- [ ] Drill date booked: 4h window (08:00-12:00 Hai Duong time, low operator load)
+- [ ] Drill date booked: 4h window (08:00-12:00 Hai Phong time, low operator load)
 - [ ] Hương informed + has read this runbook + has questions answered
 - [ ] Backup notepad + pen to log timestamps + observations
 - [ ] Henry's calendar blocked (4h, observe-only mode)
@@ -58,7 +58,7 @@
 
 ## ⏱️ Drill timeline · Lịch trình drill
 
-| Time (Hai Duong) | Block · Phần                                                               | Owner | Output                                           |
+| Time (Hai Phong) | Block · Phần                                                               | Owner | Output                                           |
 | ---------------- | -------------------------------------------------------------------------- | ----- | ------------------------------------------------ |
 | 08:00-08:15      | Pre-drill briefing (Henry reads objectives, Hương asks questions)          | Henry | Both aligned                                     |
 | 08:15-09:30      | **Block 1 — Backup restore drill** (cold-start from off-site to hot-spare) | Hương | Hot-spare serving traffic                        |
@@ -226,7 +226,7 @@ crontab -e
 crontab -l | grep bitrot
 ```
 
-**Acceptance**: crontab shows the new line. (Or, if Hai Duong uses launchd, install equivalent launchd plist — runbook should note which.)
+**Acceptance**: crontab shows the new line. (Or, if Hai Phong uses launchd, install equivalent launchd plist — runbook should note which.)
 
 #### 2.5 Test cron execution (simulate by running command identical to cron line)
 

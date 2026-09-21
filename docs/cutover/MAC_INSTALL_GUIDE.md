@@ -5,7 +5,7 @@
 > common first-run errors. Print 1 paper copy per Mac operator and
 > circulate via Zalo before D-6 (2026-06-03) UAT kickoff.
 >
-> **Target**: 7 Mac operators on CCL Vietnam Yen Phong shop floor.
+> **Target**: 7 Mac operators on CCL Vietnam Hai Phong shop floor.
 > **DMG roles**: SERVER (1 install on Lead's Mac — port 3100 LAN host),
 > CLIENT (6 installs on operator Macs — thin shell, connect to SERVER over LAN).
 
@@ -288,5 +288,5 @@ BACKUP ENGINEER:  +84988749869 (Trần Thị Hương)
 
 **Document version**: 1.1 (D-21 audit refresh 2026-06-09 — go-live re-baselined 2026-06-09 → 2026-06-30; D-14 = 2026-06-16)
 **Owner**: Lead Engineer (Đặng Thế Thiệp)
-**Audience**: 7 Mac operators (1 SERVER + 6 CLIENT) at CCL Vietnam Yen Phong
+**Audience**: 7 Mac operators (1 SERVER + 6 CLIENT) at CCL Vietnam Hai Phong
 **Print + circulate**: D-15 evening or D-14 morning before walkthrough

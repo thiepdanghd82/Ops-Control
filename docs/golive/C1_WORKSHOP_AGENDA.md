@@ -21,7 +21,7 @@
 | ---------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------- | ------------------------------------------------- |
 | 0:00-0:05  | **Opening** · Welcome + workshop purpose (scope-lock cho v1.6 go-live 2026-08-30)                            | Henry                           | Stakeholder hiểu mục đích buổi họp                |
 | 0:05-0:15  | **Context recap** · Read SCOPE_LOCK IN/OUT matrix aloud; stakeholder asks clarifications                     | Henry                           | Common understanding of proposed scope            |
-| 0:15-0:30  | **Q1 — CCL Design = Hai Duong-only OR multi-site global?**                                                   | Henry asks, stakeholder answers | Binding decision logged in C1_DECISION_LOG        |
+| 0:15-0:30  | **Q1 — CCL Design = Hai Phong-only OR multi-site global?**                                                   | Henry asks, stakeholder answers | Binding decision logged in C1_DECISION_LOG        |
 | 0:30-0:45  | **Q2 — "Hybrid" definition** (rsync backup / cloud BI / web access / SaaS)                                   | Henry asks, stakeholder answers | Binding decision logged                           |
 | 0:45-1:00  | **Q3 — 20-year retention basis** (legal/compliance vs business)                                              | Henry asks, stakeholder answers | Binding decision (drives R10-R12 scope)           |
 | 1:00-1:10  | **Break**                                                                                                    | —                               | —                                                 |
@@ -50,7 +50,7 @@
 
 | Trigger · Tình huống                             | Action · Hành động                                                                                                                                                                      |
 | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Q1 = "global multi-site, expected in v1.6"       | Escalate immediately. v1.6 = pilot; multi-site requires SAP + license fleet (Q2-2027). Counter-propose: pilot stays Hai Duong-only, multi-site rollout becomes 2027-Q2 separate sprint. |
+| Q1 = "global multi-site, expected in v1.6"       | Escalate immediately. v1.6 = pilot; multi-site requires SAP + license fleet (Q2-2027). Counter-propose: pilot stays Hai Phong-only, multi-site rollout becomes 2027-Q2 separate sprint. |
 | Q2 = "full SaaS multi-tenant rewrite"            | Escalate. 1 engineer / 10 weeks = NOT feasible. Counter-propose: dời go-live 2027-Q1 OR ship v1.6 Mac-pilot first, SaaS as 2027 program.                                                |
 | Q6 = "SAP integration MUST in v1.6"              | Escalate. ~3 month SAP CO-PC feasibility minimum. Counter-propose: defer to 2027-Q1; ship xlsx export as v1.6 manual workaround.                                                        |
 | Q7 = "Must include Windows in v1.6"              | Negotiate: S-WIN-PORT bundles into v1.6 → D-0 slips to 2026-09-15 minimum, OR Mac-only pilot 2026-08-30 + Win in 2026-Q4. Pick one.                                                     |

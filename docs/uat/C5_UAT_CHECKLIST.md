@@ -32,7 +32,7 @@
 | --- | ---------------------------------------------------------------- | ---- | ---- | ------ |
 | 1   | Mac CLIENT app version matches latest v1.6-rc                    | [ ]  | [ ]  | **\_** |
 | 2   | Login works + TOTP enrolled                                      | [ ]  | [ ]  | **\_** |
-| 3   | Settings → About shows correct site (CCL Design Hai Duong)       | [ ]  | [ ]  | **\_** |
+| 3   | Settings → About shows correct site (CCL Design Hai Phong)       | [ ]  | [ ]  | **\_** |
 | 4   | Library data current (latest Materials/Workcenters/Rate rows)    | [ ]  | [ ]  | **\_** |
 | 5   | At least 3 pre-existing quote fixtures available (for Copy test) | [ ]  | [ ]  | **\_** |
 | 6   | Network: server :3000 reachable (test by opening Quote History)  | [ ]  | [ ]  | **\_** |
