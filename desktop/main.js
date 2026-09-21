@@ -585,7 +585,17 @@ function createMainWindow() {
   // Vite's dev styles; production builds already serve hashed CSS.
   const CSP = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Vite + React dev needs eval; tightened in P5
+    // 'self' only -- the same policy server/index.js already serves to the web
+    // surface, so it is proven rather than hoped for. The loose version here
+    // was for the Vite dev server and carried a note promising "tightened in
+    // P5"; P5 never came, and a packaged build has no dev server. Measured
+    // before removing each keyword: the built index.html has TWO scripts, both
+    // with src=, ZERO inline scripts and ZERO inline handlers; the three
+    // runtime createElement('script') sites are React's preload APIs and all
+    // set src. The only Function() in the bundle is pdf.js's own CSP feature
+    // detection -- `try { Function('') } catch` -- which exists precisely so it
+    // can take the non-eval path when a policy forbids it.
+    "script-src 'self'",
     "style-src 'self' 'unsafe-inline'", // Vite injects inline styles
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
@@ -597,6 +607,11 @@ function createMainWindow() {
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
+    // A violation must be visible, not silent. /api/csp-report already exists
+    // (server/index.js) and console.warn()s the report, which lands in
+    // main.log -- so if this policy ever blocks something real, it says so
+    // instead of a screen quietly rendering wrong.
+    'report-uri /api/csp-report',
   ].join('; ');
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, cb) => {
     const headers = { ...details.responseHeaders, 'Content-Security-Policy': [CSP] };
