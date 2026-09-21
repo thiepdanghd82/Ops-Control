@@ -22,6 +22,7 @@
     "test:utils": "node --test \"utils/**/*.test.js\"",
     "test:firstrun": "env -u ELECTRON_RUN_AS_NODE electron --no-deprecation clientFirstRun.test.js",
     "test:wizard": "env -u ELECTRON_RUN_AS_NODE electron --no-deprecation setupWizard.test.js",
+    "test:sandbox": "env -u ELECTRON_RUN_AS_NODE electron --no-deprecation preloadSandbox.test.js",
     "postinstall": "electron-builder install-app-deps"
   },
   "devDependencies": {

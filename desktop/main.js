@@ -551,7 +551,15 @@ function createMainWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false, // Cần false để preload truy cập node modules
+      // sandbox: true — the renderer runs inside the OS sandbox. The comment
+      // that used to sit here said preload needed node modules; that stopped
+      // being true once every filesystem call moved behind IPC. preload.js
+      // requires only `electron` and reads process.platform / process.versions,
+      // all of which a sandboxed preload still has. Pinned by
+      // preloadSandbox.test.js, which loads THIS preload under sandbox: true
+      // and round-trips a real IPC call, because nothing else in the suite
+      // touches the main window.
+      sandbox: true,
       spellcheck: false,
       devTools: !app.isPackaged || process.env.OPS_DESKTOP_DEVTOOLS === '1',
       // v1.3 P1.4 — webview disabled and webSecurity locked. Defence
