@@ -19,14 +19,50 @@
 #    that they are gone, because a name-based filter cannot see inside a
 #    tarball. Set SHARED_DEST=1 below for any destination other people can
 #    read. See README.md for what you must then keep elsewhere.
+#
+# EDIT THE REPO COPY, NOT THE INSTALLED ONE.
+# install.sh copies deploy/macos-offsite-backup/offsite-backup.sh over
+# ~/Library/Application Support/ops-offsite-backup/offsite-backup.sh, so an edit made
+# in place is silently reverted by the next install. It also drifts the other way:
+# on 2026-09-17 the self-mount and sentinel work was written into the installed copy
+# only, and by 2026-09-21 the repo held a 156-line script still pointing at
+# /Volumes/OPSBACKUP -- the drive that had never once succeeded -- which install.sh
+# would have deployed over a working one.
 
 # ── EDIT THESE ─────────────────────────────────────────────────────────
-DEST_VOLUME="/Volumes/OPSBACKUP"       # e.g. '/Volumes/Departments$' for an SMB share
-DEST_SUBPATH="ops-control-mirror"      # folder created under DEST_VOLUME
-MOUNT_SENTINEL=""                      # a dir that exists ONLY when mounted, relative
+# The share mounts in more than one shape and both are legitimate. Finder
+# "Connect to Server" on smb://…/Departments$/NPI/Henry lands at
+# /Volumes/Henry; on the share ROOT it lands at /Volumes/Departments$ and the
+# same mirror is then two levels down. On 2026-09-21 the second shape read as
+# "destination unreachable" and the job refused to run against a share that was
+# mounted and writable the whole time. Listing candidates costs nothing; being
+# wrong about which one is mounted costs a backup.
+DEST_VOLUME_CANDIDATES=(
+  '/Volumes/Henry'                       # …/Departments$/NPI/Henry mounted directly
+  '/Volumes/Departments$/NPI/Henry'      # share root mounted, mirror two levels down
+)
+DEST_VOLUME="${DEST_VOLUME_CANDIDATES[0]}"   # replaced below by whichever is live
+DEST_SUBPATH="ops-control-mirror"      # folder created under DEST_VOLUME. Keeping this
+                                       # subfolder is what lets rsync --delete run safely:
+                                       # it prunes inside the mirror and can never touch
+                                       # anything else the operator keeps in NPI/Henry.
+MOUNT_SENTINEL="ops-control-mirror"    # a dir that exists ONLY when mounted, relative
                                        # to DEST_VOLUME (e.g. 'NPI'). Empty = just
                                        # check DEST_VOLUME itself.
-SHARED_DEST=0                          # 1 if anyone else can read the destination
+SHARED_DEST=1                          # 1 if anyone else can read the destination
+
+# ── Self-mount ────────────────────────────────────────────────────────────
+# An SMB share mounted by the Finder belongs to the GUI LOGIN SESSION that
+# mounted it. launchd gives every job its OWN audit session, so the agent sees
+# the mountpoint, can stat it, and gets "Operation not permitted" on any read
+# or write. Measured 2026-09-17: shell session 3331 could list the share while
+# the agent in session 3843 could not, same user, same second. That is why
+# every manual run succeeded and every scheduled run failed — and why granting
+# Full Disk Access changed nothing: it was never a privacy permission.
+#
+# So the job mounts its OWN copy, inside its own session, and unmounts after.
+SMB_URL='//henry_dang@10.102.1.2/Departments%24/NPI/Henry'   # %24 = the '$' in the share name
+OWN_MNT="$HOME/.ops-offsite-mnt"                   # our private mountpoint
 # ───────────────────────────────────────────────────────────────────────
 
 SRC="$HOME/Library/Application Support/ops-control-desktop"
@@ -67,6 +103,55 @@ if [ ! -d "$SRC" ]; then
   write_status error "source not found"
   exit 0
 fi
+
+# Reachability, not existence: the directory can be present and still refuse
+# every read when the mount belongs to another login session (see Self-mount
+# above). `ls` is the cheapest honest test.
+WE_MOUNTED=0
+# Pick the candidate whose SENTINEL is readable, not merely whose volume
+# exists. That distinction is the safety: an unmounted share leaves an empty
+# directory of the same name behind, so a stale /Volumes/Henry must not win
+# over a live mount elsewhere. Reachability, not existence -- a mount owned by
+# another login session can be stat-ed and still refuse every read.
+for _cand in "${DEST_VOLUME_CANDIDATES[@]}"; do
+  if ls "$_cand/$MOUNT_SENTINEL" >/dev/null 2>&1; then
+    DEST_VOLUME="$_cand"
+    DEST="$DEST_VOLUME/$DEST_SUBPATH"
+    echo "[$(ts)] destination resolved: $DEST" >> "$LOG"
+    break
+  fi
+done
+
+if ! ls "$DEST_VOLUME/$MOUNT_SENTINEL" >/dev/null 2>&1; then
+  mkdir -p "$OWN_MNT"
+  if mount_smbfs -N "$SMB_URL" "$OWN_MNT" >>"$LOG" 2>&1; then
+    WE_MOUNTED=1
+    DEST_VOLUME="$OWN_MNT"
+    DEST="$DEST_VOLUME/$DEST_SUBPATH"
+    echo "[$(ts)] mounted own copy at $OWN_MNT" >> "$LOG"
+  else
+    # -N means never prompt, so this is almost always a missing or wrong
+    # credential in ~/Library/Preferences/nsmb.conf.
+    # NOT a skip. A skip means "nothing to do" (the drive is unplugged); this
+    # means the backup did not happen and nobody would know. Two known causes:
+    # no credentials in ~/Library/Preferences/nsmb.conf, or the share is
+    # already mounted by the Finder session — smbfs refuses to mount the same
+    # share twice, so leaving it mounted there locks the agent out.
+    echo "[$(ts)] ERROR: cannot reach $DEST_VOLUME and mount_smbfs failed" >> "$LOG"
+    write_status error "destination unreachable and self-mount failed"
+    rmdir "$OWN_MNT" 2>/dev/null
+    exit 0
+  fi
+fi
+
+# Unmount our own copy on the way out, however we leave.
+cleanup_mount() {
+  if [ "$WE_MOUNTED" = "1" ]; then
+    umount "$OWN_MNT" 2>/dev/null || diskutil unmount force "$OWN_MNT" >/dev/null 2>&1
+    rmdir "$OWN_MNT" 2>/dev/null
+  fi
+}
+trap cleanup_mount EXIT
 
 # An unmounted SMB share can leave an empty directory of the same name behind,
 # and rsync --delete into that would look like it worked. When a sentinel is
