@@ -193,6 +193,21 @@ if [ "$SHARED_DEST" = "1" ]; then
     --exclude 'sessions.json'
     --exclude '/data/Backup/Library/'
   )
+  # Library/Fleet/ goes wholesale, at DIRECTORY level, and that is the point
+  # rather than laziness. It holds heartbeats.json today (hashed fingerprints
+  # and hostnames, no customer name), but the same directory is where
+  # pending-licenses.json appears the first time the fleet distribution flow is
+  # used — and that file holds FULL SIGNED LICENCES for every other machine.
+  # A per-file exclude would not have caught it, because the filename differs
+  # from license.json*, so the hole would have opened silently on the day that
+  # feature first ships. Excluding the directory covers whatever fleetStore.js
+  # adds to it next.
+  #
+  # The cost is real and small: after a disk loss the fleet table comes back
+  # EMPTY rather than broken — fleetStore reads it as readJson(path, {}) and
+  # POST /api/heartbeat refills it as machines check in. What does not come
+  # back is first_seen, and the row of any machine that never checks in again.
+  #
   # Held back but NOT a secret, which is why it is a separate list. A licence
   # is signed, cannot be edited without breaking its own signature, and is
   # useless on another machine because installation_id is that machine's
@@ -204,6 +219,13 @@ if [ "$SHARED_DEST" = "1" ]; then
   # mint-license.command, which is the documented path anyway.
   SHARED_HOLDBACKS=(
     --exclude 'license.json*'
+    --exclude '/data/Library/Fleet/'
+    # The bare fingerprint, cached at <userData>/installation-id. Missed by the
+    # first sweep because that audit only grepped *.json. Costs nothing to drop:
+    # resolveInstallationId() treats a cache miss by recomputing sha256(machineId)
+    # and re-caching, so it comes back identical on the same hardware — and on
+    # different hardware the licence would need re-minting anyway.
+    --exclude '/installation-id'
   )
 fi
 
@@ -254,6 +276,20 @@ if [ "$SHARED_DEST" = "1" ]; then
     rm -f "$h"; HELD=$((HELD + 1))
     echo "[$(ts)] REMOVED (not for a shared drive): ${h#$DEST/}" >> "$LOG"
   done < <(find "$DEST" -type f -name 'license.json*' 2>/dev/null)
+
+  # Directory form of the same cleanup. `$DEST` was already refused above
+  # unless it ends in "$DEST_SUBPATH", so this rm -rf cannot escape the mirror,
+  # and the path is written out literally rather than built from a glob.
+  if [ -d "$DEST/data/Library/Fleet" ]; then
+    rm -rf "$DEST/data/Library/Fleet"
+    HELD=$((HELD + 1))
+    echo "[$(ts)] REMOVED (not for a shared drive): data/Library/Fleet/" >> "$LOG"
+  fi
+  if [ -f "$DEST/installation-id" ]; then
+    rm -f "$DEST/installation-id"
+    HELD=$((HELD + 1))
+    echo "[$(ts)] REMOVED (not for a shared drive): installation-id" >> "$LOG"
+  fi
 fi
 
 if [ $RC -eq 0 ] && [ $LEAKS -gt 0 ]; then
