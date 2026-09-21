@@ -67,7 +67,7 @@ the input / cross-reference.
 # REQUIRED (no in-repo default since the 2026-06-04 rotation):
 node scripts/license/generate-license.mjs \
   --installation-id <hex64 from operator> \
-  --customer "CCL Design Vietnam — Hai Phong" \
+  --customer "CCL Design Vietnam- Hai Phong" \
   --tier M \
   --expires <YYYY-MM-DD, ~1 year out> \
   --key ~/OpsControl-license-keys/prod-private.pem \
