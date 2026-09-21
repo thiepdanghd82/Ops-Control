@@ -20,11 +20,24 @@
  *   endCuPn     — string for the End CU PN cell
  *   moqIdx      — 0-based tier index
  *   moqQty, eau, sp, target — tier-level numbers
+ *   tiers       — [{ idx, moq }] from `buildTierOptions`; when it holds
+ *                 more than one entry AND `onTierChange` is supplied the
+ *                 TIER cell becomes a dropdown, so the operator can switch
+ *                 tier from here instead of going back to the RFQ card.
+ *                 One tier keeps the plain badge: a dropdown with a single
+ *                 option is a control that cannot do anything.
+ *   onTierChange — (idx) => void. Supplied by the wrapper, never dispatched
+ *                 from here, because Standard and Complex write the same
+ *                 field through DIFFERENT actions — Std `SET_ACTIVE_MOQ`
+ *                 lands in `stdState`, Cpx must route through
+ *                 `SET_CPLX_FIELD` or the write is lost on save
+ *                 (MES-3-FIX-53). This component stays presentational.
  */
 import { fmtN, pct, gmClr, fmtInt } from '../../utils/format';
 import { KPI_TOOLTIPS } from '../../utils/kpiDefinitions';
 import { getKpiBuckets } from '../../services/kpiBuckets';
 import { useI18n } from '../../utils/useI18n';
+import { tierOptionLabel } from './CostSummaryBar.helpers.js';
 
 export default function CostSummaryBar({
   result,
@@ -34,6 +47,8 @@ export default function CostSummaryBar({
   eau = 0,
   sp = 0,
   target = 0,
+  tiers = [],
+  onTierChange = null,
 }) {
   const { t } = useI18n();
   const r = result;
@@ -72,7 +87,23 @@ export default function CostSummaryBar({
         <tbody>
           <tr>
             <td>
-              <span className="sc-sumbar-tier-badge">MOQ {moqIdx + 1}</span>
+              {tiers.length > 1 && onTierChange ? (
+                <select
+                  className="sc-sumbar-tier-select"
+                  value={moqIdx}
+                  onChange={(e) => onTierChange(Number(e.target.value))}
+                  aria-label={t('sumbar.tier_select_aria')}
+                  title={t('sumbar.tier_select_aria')}
+                >
+                  {tiers.map((o) => (
+                    <option key={o.idx} value={o.idx}>
+                      {tierOptionLabel(o)}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="sc-sumbar-tier-badge">MOQ {moqIdx + 1}</span>
+              )}
             </td>
             <td className="sc-sumbar-td-cupn" title={endCuPn || ''}>
               {endCuPn || '\u2014'}

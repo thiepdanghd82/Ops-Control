@@ -554,6 +554,17 @@ export default function ComplexCalc() {
     [dispatch]
   );
 
+  // Active tier, for the summary bar's TIER dropdown. ComplexMoqTab has
+  // its own `setActiveMoq` for the RFQ-card radios, but that lives in a
+  // sibling component and cannot be reached from here. Routed through
+  // setCplxField so the write lands in `cplxState` — Standard's
+  // SET_ACTIVE_MOQ writes `stdState` and would be lost on save
+  // (MES-3-FIX-53).
+  const setActiveMoqTier = useCallback(
+    (idx) => setCplxField('active_moq_idx', idx),
+    [setCplxField]
+  );
+
   // Lead time & Notice — Tooling cost cell shows Σ tool_cost across
   // every process in every subproduct (cross-SP sum). Helper extracted
   // to enable node:test coverage; reuses sumToolingCostStd internally
@@ -697,7 +708,7 @@ export default function ComplexCalc() {
           (singular), differs from Std 'summarize' — predicate's
           kind='cpx' branch uses the right Set. */}
       {shouldShowSummaryBar(activeSubTab, 'cpx') && (
-        <CplxSummaryBar cs={cs} aggregate={aggregate} />
+        <CplxSummaryBar cs={cs} aggregate={aggregate} onTierChange={setActiveMoqTier} />
       )}
 
       <div className="cc-content" ref={contentRef}>
