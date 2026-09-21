@@ -15,6 +15,14 @@ description: Ops Control shared-language glossary.
 - **Henry / Đặng Thế Thiệp** — project owner; runs the operator hardware tests.
 - **Hương** — Backup Engineer (SPOF mitigation; onboarding brief in `docs/cutover/`).
 - **CCL Vietnam (Hai Phong)** — production site. Go-live target: **2026-06-30**.
+  The site is **Hai Phong**, and the licence card reads `CCL Design Vietnam — Hai Phong`.
+  Two older names survive on purpose. **Yen Phong** and **Hai Duong** are left untouched in
+  dated records (CLAUDE.md sprint history, CHANGELOG, `docs/cutover/*-2026-*.md`,
+  `docs/archive/`) because rewriting a dated document to say something it did not say is
+  worse than the confusion it saves. They also stay in **test data** — `Hai Duong` is a site
+  KEY in `sga_rate_pct_by_site` inside the frozen-quote fixtures, so changing it would break
+  the 20-year reproducibility contract for a cosmetic reason. Seeing either name in those
+  places is expected; seeing it in a living doc is a miss.
 - **Remote prod box** — Windows server `10.102.3.61:3000` (NSSM service via `deploy.ps1`).
 
 ## Runtime surfaces (which bundle is served — ask the URL first)
@@ -24,6 +32,28 @@ description: Ops Control shared-language glossary.
 - **Prod remote** — `10.102.3.61:3000`, same but rebuild **and** deploy.
 - **Production runtime DB** lives at
   `~/Library/Application Support/ops-control-desktop/data/ops.db` (NOT `server/data/ops.db`).
+
+## Screen names (the label moved; the id did not)
+
+Renaming a tab changes its **label only**. Tab ids are serialised into every user's saved
+window layout, so they keep the old spelling forever: `rfq-tracker` is still `rfq-tracker`
+in ids, routes and logs while the screen itself reads _RFQ Progress_. Seeing the old word
+in code is not evidence the rename was missed.
+
+- **RFQ List** / _Danh sách RFQ_ — id `rfq-tracking`, key `nav.tab.rfq_tracking`, under Quoting.
+- **RFQ Progress** / _Theo dõi RFQ_ — id `rfq-tracker`, key `nav.tab.rfq_tracker`, under Tracking.
+  Was "RFQ Tracker" until #288 (`4a2ac76`); English followed the Vietnamese, which had always
+  been unambiguous. Attachments live here — `/api/shared/rfq-tracker/attachments/:id`.
+- **Materials & Process** / _Vật tư & Công đoạn_ — id `combined`, key `pricing.tab.combined`.
+  Was "Combined" until #162 (`5063219`), which also retired the Materials / Inks / Processes
+  sub-tabs into it.
+- **Tool Life (shot)** — key `cgrid.proc.tool_life`. The unit is part of the label on purpose
+  (#379, `ad81e03`): `tool_life` counts SHOTS while EAU counts PIECES.
+
+**Rule — read the key, do not recall the name.** Two of these screens both contain "RFQ", and a
+stale label sends an operator hunting for a screen that no longer exists. This section was written
+because an agent told Henry to open "RFQ Tracker" on 2026-09-20, five months after it stopped
+being called that.
 
 ## Quote / pricing engine
 
