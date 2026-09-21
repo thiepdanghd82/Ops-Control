@@ -178,6 +178,7 @@ esac
 mkdir -p "$DEST"
 
 SECRET_EXCLUDES=()
+SHARED_HOLDBACKS=()
 if [ "$SHARED_DEST" = "1" ]; then
   # '*.env' not '.env': the exact-name form let 'ops-migration.env' through
   # carrying live 64-hex keys. And Backup/Library/*.tar.gz EMBED
@@ -192,10 +193,23 @@ if [ "$SHARED_DEST" = "1" ]; then
     --exclude 'sessions.json'
     --exclude '/data/Backup/Library/'
   )
+  # Held back but NOT a secret, which is why it is a separate list. A licence
+  # is signed, cannot be edited without breaking its own signature, and is
+  # useless on another machine because installation_id is that machine's
+  # hardware fingerprint. What it does do on a departmental share is publish
+  # this box's fingerprint, the customer name, tier and expiry to everyone who
+  # can open the folder. The glob carries the '*' so the dated
+  # license.json.before-* copies go with it — the same reason 'users.json*'
+  # does. Restoring a licence after a disk loss means re-minting with
+  # mint-license.command, which is the documented path anyway.
+  SHARED_HOLDBACKS=(
+    --exclude 'license.json*'
+  )
 fi
 
 rsync -a --delete \
   "${SECRET_EXCLUDES[@]}" \
+  "${SHARED_HOLDBACKS[@]}" \
   --exclude 'Cache' \
   --exclude 'GPUCache' \
   --exclude 'Code Cache' \
@@ -211,6 +225,7 @@ RC=$?
 # shared destination a miss is silent and not undoable. Sweep what actually
 # landed and delete anything that looks like a credential.
 LEAKS=0
+HELD=0
 if [ "$SHARED_DEST" = "1" ]; then
   while IFS= read -r f; do
     grep -qE '^[A-Z_]+=[0-9a-fA-F]{32,}' "$f" 2>/dev/null || continue
@@ -223,6 +238,22 @@ if [ "$SHARED_DEST" = "1" ]; then
     rm -f "$t"; LEAKS=$((LEAKS + 1))
     echo "[$(ts)] LEAK REMOVED (archive holds credentials): ${t#$DEST/}" >> "$LOG"
   done < <(find "$DEST" -type f -name '*.tar.gz' 2>/dev/null)
+
+  # Held-back files, swept separately from credentials on purpose. Counting
+  # them as LEAKS would relabel a signed artefact as a credential AND set
+  # RC=99, turning the Settings → Backup card red for something that is not
+  # an incident — the alarm crying wolf, which is how people learn to ignore
+  # the one that matters.
+  #
+  # This loop is also what CLEANS UP. `rsync --delete` does not remove a file
+  # already on the destination once it is excluded: rsync stops considering
+  # it at all. Adding --delete-excluded would have changed that for every
+  # exclude at once; sweeping here removes exactly the held-back files and
+  # leaves the rest of --delete alone.
+  while IFS= read -r h; do
+    rm -f "$h"; HELD=$((HELD + 1))
+    echo "[$(ts)] REMOVED (not for a shared drive): ${h#$DEST/}" >> "$LOG"
+  done < <(find "$DEST" -type f -name 'license.json*' 2>/dev/null)
 fi
 
 if [ $RC -eq 0 ] && [ $LEAKS -gt 0 ]; then
