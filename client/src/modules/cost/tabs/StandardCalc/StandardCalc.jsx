@@ -618,7 +618,11 @@ export default function StandardCalc() {
       <HeaderGateModal missing={gateMissing} onClose={() => setGateMissing([])} />
       <UsdRateNoticeModal
         notice={pendingSubTab ? rateNotice : null}
-        onConfirm={() => {
+        onConfirm={(rate) => {
+          // The rate may have been corrected in the dialog: write whatever
+          // was confirmed, not what was inherited. Writing an unchanged
+          // value is a no-op, which is cheaper than branching on it.
+          setStdField('usd_rate', rate);
           // Acknowledged: retire the notice and complete the navigation the
           // operator asked for, rather than making them click the tab twice.
           const next = pendingSubTab;

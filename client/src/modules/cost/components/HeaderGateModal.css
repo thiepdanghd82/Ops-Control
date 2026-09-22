@@ -15,12 +15,25 @@
   line-height: 1.55;
 }
 
-/* The inherited rate, stated large enough to actually be read before the
-   operator clicks Confirm -- a number they skim past defeats the notice. */
-.hg-rate {
-  margin: 0 0 6px;
+/* The inherited rate, as an INPUT and large enough to actually be read
+   before the operator clicks Confirm -- a number they skim past defeats the
+   notice, and the person being asked to confirm it is the one who knows
+   whether it is right. */
+.hg-rate-inp {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 7px;
+  background: white;
   font-size: 26px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: #0f2341;
+  outline: none;
+}
+.hg-rate-inp:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
