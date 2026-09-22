@@ -1262,6 +1262,23 @@ registerStrings({
     vi: 'Các trường này chi phối mọi tab sau: USD rate quy đổi Giá bán/Mục tiêu sang VND, còn EAU × Vòng đời sản phẩm là mức trần phân bổ khuôn. Bỏ trống sẽ ra báo giá sai chi phí mà không báo lỗi.',
   },
   'gate.ok': { en: 'Back to the form', vi: 'Quay lại điền' },
+  // USD rate inherited from the most recently saved quote — stated once on
+  // the way out of the RFQ tab so the operator knows nobody typed it.
+  'rate_notice.title': { en: 'USD Rate carried over', vi: 'Tỷ giá USD được mang sang' },
+  'rate_notice.from': {
+    en: 'Taken from your most recent quote ({from}).',
+    vi: 'Lấy từ báo giá gần nhất của bạn ({from}).',
+  },
+  'rate_notice.from_any': {
+    en: 'Taken from your most recent saved quote.',
+    vi: 'Lấy từ báo giá đã lưu gần nhất của bạn.',
+  },
+  'rate_notice.body': {
+    en: 'Nobody entered this for this RFQ. Confirm to continue, or go back and change it.',
+    vi: 'Chưa ai nhập số này cho RFQ hiện tại. Xác nhận để tiếp tục, hoặc quay lại sửa.',
+  },
+  'rate_notice.confirm': { en: 'Confirm', vi: 'Xác nhận' },
+  'rate_notice.edit': { en: 'Go back and edit', vi: 'Quay lại sửa' },
   'gate.field.moq': { en: 'MOQ', vi: 'MOQ' },
   'gate.field.annual_qty': { en: 'EAU (Annual Qty)', vi: 'EAU (Sản lượng năm)' },
   'gate.field.usd_rate': { en: 'USD rate', vi: 'Tỉ giá USD' },

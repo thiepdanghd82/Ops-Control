@@ -70,6 +70,7 @@ import {
   getQuoteById,
   quotesBackendStatus,
 } from '../repositories/quotesStore.js';
+import { pickLatestUsdRate } from '../utils/latestUsdRate.js';
 import { emitDataChange } from '../services/eventBus.js';
 
 import { fileURLToPath } from 'url';
@@ -699,6 +700,22 @@ router.get('/admin/quotes-backend', (req, res) => {
 });
 
 // GET /api/shared/quotes - Quote history
+// GET /api/shared/latest-usd-rate — the rate a NEW quote should start from.
+//
+// Its own route rather than something the client derives from GET /quotes,
+// because that list returns the full quote objects: 26.6 MB to read one
+// number. Answers `{ rate: null }` when nothing is inheritable (fresh
+// install, or every quote saved without a rate) — the client keeps the
+// blank-field navigation block for exactly that case.
+router.get('/latest-usd-rate', (req, res) => {
+  try {
+    res.json(pickLatestUsdRate(loadQuotes()) || { rate: null });
+  } catch (err) {
+    console.error('  ❌  latest usd rate failed:', err);
+    res.status(500).json({ error: 'Failed to read latest USD rate' });
+  }
+});
+
 router.get('/quotes', (req, res) => {
   try {
     const all = loadQuotes();

@@ -394,6 +394,9 @@ export const sharedApi = {
   // Cost data (read directly from JSON files)
   getMaterials: (opts = {}) => api.get('/shared/materials', opts),
   getQuotes: (opts = {}) => api.get('/shared/quotes', opts),
+  // One number, its own route: GET /shared/quotes returns the full quote
+  // objects and that list is 26.6 MB.
+  getLatestUsdRate: (opts = {}) => api.get('/shared/latest-usd-rate', opts),
   // Sprint 6.2 atomic approval transition. Server reads the quote, applies
   // the state machine, writes the file, appends a version, and audits — all
   // under a per-quote lock. Callers MUST re-fetch quotes after resolve; the

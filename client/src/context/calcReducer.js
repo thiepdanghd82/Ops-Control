@@ -281,6 +281,19 @@ export function createInitialState() {
 }
 
 // ── Reducer ──
+/**
+ * Apply an inherited USD rate to a freshly created or copied state.
+ *
+ * A seed of 0/null means there was nothing to inherit — leave the field
+ * alone so the blank-field navigation gate still fires, which is the case
+ * it was written for (#311: a blank rate zeroes both VND mirrors silently).
+ */
+function withSeededRate(st, seedUsdRate) {
+  const n = Number(seedUsdRate);
+  if (!Number.isFinite(n) || n <= 0) return st;
+  return { ...st, usd_rate: n };
+}
+
 export function calcReducer(state, action) {
   const { type, payload } = action;
 
@@ -1084,7 +1097,7 @@ export function calcReducer(state, action) {
         const upgraded = upgradeStdState(merged);
         const next = isCopy
           ? clearTargets({
-              ...upgraded,
+              ...withSeededRate(upgraded, payload?.seedUsdRate),
               pricing_snapshot: copySnapshot(upgraded.pricing_snapshot),
               // Copy = fresh start: re-apply the new-RFQ scrap policy
               // (0 everywhere, 0.10 for FQC). Open/load preserves saved scrap.
@@ -1118,7 +1131,7 @@ export function calcReducer(state, action) {
       const upgradedCpx = upgradeCplxState(mergedCplx);
       const nextCpx = isCopy
         ? clearTargets({
-            ...upgradedCpx,
+            ...withSeededRate(upgradedCpx, payload?.seedUsdRate),
             pricing_snapshot: copySnapshot(upgradedCpx.pricing_snapshot),
             // Copy = fresh start: reset every subproduct's process scrap to
             // its workcenter default (0, or 0.10 for FQC). Open preserves.
@@ -1144,7 +1157,7 @@ export function calcReducer(state, action) {
         isDirty: false,
         activeQuoteId: null,
         activeQuoteVersion: 0,
-        stdState: createEmptyStdState(),
+        stdState: withSeededRate(createEmptyStdState(), payload?.seedUsdRate),
       };
 
     case A.RESET_CPLX:
@@ -1153,7 +1166,7 @@ export function calcReducer(state, action) {
         isDirty: false,
         activeQuoteId: null,
         activeQuoteVersion: 0,
-        cplxState: createCplxState(),
+        cplxState: withSeededRate(createCplxState(), payload?.seedUsdRate),
       };
 
     case A.MARK_CLEAN:

@@ -14,3 +14,13 @@
   color: #6b7280;
   line-height: 1.55;
 }
+
+/* The inherited rate, stated large enough to actually be read before the
+   operator clicks Confirm -- a number they skim past defeats the notice. */
+.hg-rate {
+  margin: 0 0 6px;
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #0f2341;
+}

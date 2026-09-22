@@ -60,6 +60,8 @@ import {
 const CalcLegend = lazy(() => import('./CalcLegend'));
 import TabBarOverflow from '../../../../components/Shared/TabBarOverflow';
 import HeaderGateModal from '../../components/HeaderGateModal';
+import UsdRateNoticeModal from '../../components/UsdRateNoticeModal';
+import { noticeFromSeed, noticeStillApplies } from '../../../../services/usdRateSeed';
 import { gateSubTabChange } from '../../../../services/calcValidation';
 import { useGridKeyboardNav } from '../../../../utils/useGridKeyboardNav';
 import './StandardCalc.css';
@@ -119,6 +121,13 @@ export default function StandardCalc() {
   // Leaving the RFQ & MOQ tab requires MOQ / EAU / USD rate / Product
   // lifetime — see HEADER_GATE_FIELDS. Mirrors ComplexCalc exactly.
   const [gateMissing, setGateMissing] = useState([]);
+  // USD rate inherited from the most recently saved quote (New / Copy).
+  // Deliberately component state, not quote state: it is an acknowledgement,
+  // not data, and persisting it would ride into every save and into the
+  // signed _Schema payload of every export for something only this screen
+  // reads -- what `target_contr` did for months before anyone noticed.
+  const [rateNotice, setRateNotice] = useState(null);
+  const [pendingSubTab, setPendingSubTab] = useState(null);
   const { t } = useI18n();
   const {
     stdState,
@@ -172,7 +181,28 @@ export default function StandardCalc() {
           // the reducer can branch: copy mode resets activeQuoteId +
           // marks pricing_snapshot._synthesized so the next save
           // re-freezes against the current master library.
-          loadQuote('std', q.state, q.id, q._version || 0, action);
+          // A copy is a NEW RFQ, so it takes the CURRENT rate rather than
+          // the source's, which may be months old and was never chosen for
+          // this quote -- the same rule #345 applied to the Target price.
+          // Opening a quote is untouched: it keeps the rate it was saved with.
+          if (action === 'copy') {
+            sharedApi
+              .getLatestUsdRate()
+              .then((seed) => {
+                if (cancelled) return;
+                const n = noticeFromSeed(seed);
+                loadQuote('std', q.state, q.id, q._version || 0, action, n ? n.rate : 0);
+                setRateNotice(n);
+              })
+              .catch(() => {
+                if (cancelled) return;
+                loadQuote('std', q.state, q.id, q._version || 0, action);
+                setRateNotice(null);
+              });
+          } else {
+            loadQuote('std', q.state, q.id, q._version || 0, action);
+            setRateNotice(null);
+          }
         } else {
           showToast(`Quote #${id} not found`, 'err');
         }
@@ -468,7 +498,23 @@ export default function StandardCalc() {
   }, [handleSave, isDirty, saving]);
 
   const handleReset = useCallback(() => {
-    dispatch({ type: 'RESET_STD' });
+    // A new RFQ starts from the rate on the most recently saved quote --
+    // it barely moves (27 of the last 30 live quotes share one), and
+    // retyping it every time was the friction. Nothing inheritable leaves
+    // the field blank, so the blank-rate gate still covers a fresh install.
+    sharedApi
+      .getLatestUsdRate()
+      .then((seed) => {
+        const n = noticeFromSeed(seed);
+        dispatch({ type: 'RESET_STD', payload: { seedUsdRate: n ? n.rate : 0 } });
+        setRateNotice(n);
+      })
+      .catch(() => {
+        // A rate is a convenience, never a precondition: if the lookup
+        // fails the quote still opens, just without one.
+        dispatch({ type: 'RESET_STD' });
+        setRateNotice(null);
+      });
   }, [dispatch]);
 
   // Lead time & Notice — read-only Tooling cost cell derives Σ tool_cost
@@ -542,6 +588,13 @@ export default function StandardCalc() {
       setGateMissing(missing);
       return;
     }
+    // The rate was inherited and the operator has not touched it: say so
+    // once, on the way out, rather than letting a number nobody set ride
+    // into the pricing. Editing the rate retires the notice on its own.
+    if (noticeStillApplies(rateNotice, stdState.usd_rate)) {
+      setPendingSubTab(id);
+      return;
+    }
     setActiveSubTab(id);
   };
 
@@ -563,6 +616,18 @@ export default function StandardCalc() {
           appear automatically when the bar is wider than viewport
           (common on 14" laptops with sidebar expanded). */}
       <HeaderGateModal missing={gateMissing} onClose={() => setGateMissing([])} />
+      <UsdRateNoticeModal
+        notice={pendingSubTab ? rateNotice : null}
+        onConfirm={() => {
+          // Acknowledged: retire the notice and complete the navigation the
+          // operator asked for, rather than making them click the tab twice.
+          const next = pendingSubTab;
+          setRateNotice(null);
+          setPendingSubTab(null);
+          if (next) setActiveSubTab(next);
+        }}
+        onEdit={() => setPendingSubTab(null)}
+      />
       <div className="sc-subtab-bar">
         <TabBarOverflow
           ariaLabel="Pricing Worksheet sub-tabs"
