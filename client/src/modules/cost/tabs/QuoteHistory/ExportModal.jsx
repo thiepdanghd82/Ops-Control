@@ -112,7 +112,11 @@ export default function ExportModal({ open, quote, onClose, onSuccess }) {
         format,
         signal: ctrl.signal,
       });
-      onSuccess?.(out.filename);
+      // A cancelled Save dialog wrote nothing, so there is nothing to
+      // announce — onSuccess pops an alert naming the file, and showing
+      // "exported foo.xlsx" to someone who just pressed Cancel is telling
+      // them the opposite of what happened. Close either way: they said no.
+      if (out.savedTo !== null) onSuccess?.(out.filename);
       onClose?.();
     } catch (err) {
       if (err instanceof QuoteExportError) {
