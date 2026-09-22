@@ -774,6 +774,7 @@ registerStrings({
   'matlib.no_sourcing': { en: 'No sourcing records', vi: 'Chưa có bản ghi nguồn cung' },
   'matlib.ph_notes': { en: 'Additional notes…', vi: 'Ghi chú thêm…' },
   'matlib.ph_status': { en: 'Status or remarks…', vi: 'Trạng thái hoặc nhận xét…' },
+  'matlib.search_clear': { en: 'Clear search', vi: 'Xoá ô tìm kiếm' },
   'matlib.ph_search_material': {
     en: 'Search by material name, type, supplier…',
     vi: 'Tìm theo tên vật tư, loại, nhà cung cấp…',
