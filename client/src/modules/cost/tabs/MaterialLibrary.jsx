@@ -53,9 +53,19 @@ export default function MaterialLibrary() {
     }
   }
 
-  async function handleSave() {
+  /**
+   * Write the three libraries to the server.
+   *
+   * `patch` carries the array the caller JUST built, and it wins over this
+   * component's state on purpose. A row added or deleted in a child tab is
+   * saved in the same click, and at that moment `setData` has not flushed --
+   * reading `npiDB` here would POST the array as it was BEFORE the edit and
+   * drop the operator's row while reporting success. `materialLibrarySave`
+   * .lint.test.js pins that every handler hands its own fresh array over.
+   */
+  async function persist(patch = {}) {
     try {
-      await costApi.saveAll({ npiDB, ifsDB, sourcingDB });
+      await costApi.saveAll({ npiDB, ifsDB, sourcingDB, ...patch });
       setIsDirty(false);
       // This screen keeps its OWN copy of the three material libraries, so a
       // save used to leave CostLibContext holding whatever it loaded at app
@@ -67,13 +77,16 @@ export default function MaterialLibrary() {
       // picker should show what was actually stored.
       await refreshLib();
     } catch (e) {
+      // The edit is already in local state, so leave the Save Changes chip up
+      // rather than losing it: the operator can retry without re-typing. This
+      // is the only path that still raises the chip now that every edit saves
+      // on its own, so when it appears it means "the last save failed".
+      setIsDirty(true);
       alert('Save failed: ' + e.message);
     }
   }
 
-  function markDirty() {
-    setIsDirty(true);
-  }
+  const handleSave = () => persist();
 
   if (loading)
     return (
@@ -122,7 +135,7 @@ export default function MaterialLibrary() {
           <NPITab
             data={npiDB}
             setData={setNpiDB}
-            markDirty={markDirty}
+            saveNow={(rows) => persist({ npiDB: rows })}
             isViewOnly={isViewOnly}
             canImport={canImport}
             reload={loadData}
@@ -132,7 +145,7 @@ export default function MaterialLibrary() {
           <IFSTab
             data={ifsDB}
             setData={setIfsDB}
-            markDirty={markDirty}
+            saveNow={(rows) => persist({ ifsDB: rows })}
             isViewOnly={isViewOnly}
             canImport={canImport}
             reload={loadData}
@@ -142,7 +155,7 @@ export default function MaterialLibrary() {
           <SourcingTab
             data={sourcingDB}
             setData={setSourcingDB}
-            markDirty={markDirty}
+            saveNow={(rows) => persist({ sourcingDB: rows })}
             isViewOnly={isViewOnly}
             canImport={canImport}
             reload={loadData}
@@ -208,7 +221,7 @@ function ImportFileButton({ datasetKey, label, onDone, disabled, inline }) {
   );
 }
 
-function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
+function NPITab({ data, setData, saveNow, isViewOnly, canImport, reload }) {
   const { t } = useI18n();
   const [search, setSearch] = useState('');
   const [yearFilter, setYearFilter] = useState('');
@@ -256,25 +269,25 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
   const paged = visible.slice(effectivePage * PER_PAGE, (effectivePage + 1) * PER_PAGE);
 
   function handleAdd(row) {
-    setData((prev) => [...prev, row]);
-    markDirty();
+    const next = [...data, row];
+    setData(next);
     setAddMode(false);
+    saveNow(next);
   }
 
   function handleEditSave(idx, row) {
-    setData((prev) => {
-      const n = [...prev];
-      n[idx] = row;
-      return n;
-    });
-    markDirty();
+    const next = [...data];
+    next[idx] = row;
+    setData(next);
     setEditIdx(null);
+    saveNow(next);
   }
 
   function handleDelete(idx) {
     if (!confirm('Delete this NPI material?')) return;
-    setData((prev) => prev.filter((_, i) => i !== idx));
-    markDirty();
+    const next = data.filter((_, i) => i !== idx);
+    setData(next);
+    saveNow(next);
   }
 
   // Was `String(r.date).slice(-4)` — the LAST four characters — while the
@@ -341,6 +354,31 @@ function NPITab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
               setPage(0);
             }}
           />
+          {search && (
+            <button
+              type="button"
+              className="ml-hb-search-clear"
+              title={t('matlib.search_clear')}
+              aria-label={t('matlib.search_clear')}
+              onClick={() => {
+                setSearch('');
+                setPage(0);
+                // Clearing means "start over", so put the caret back in the
+                // box -- otherwise focus is left on a button that just
+                // unmounted itself.
+                searchRef.current?.focus();
+              }}
+            >
+              <svg width="11" height="11" viewBox="0 0 11 11" aria-hidden="true">
+                <path
+                  d="M1 1l9 9M10 1l-9 9"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          )}
           {search && filtered.length < data.length && (
             <span className="ml-hb-search-badge">
               {filtered.length} / {data.length}
@@ -699,7 +737,7 @@ function NPIEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
 // ═══════════════════════════════════════════════════════════
 // IFS MATERIALS TAB (IFS SupplierforPurchaseParts — 9 columns)
 // ═══════════════════════════════════════════════════════════
-function IFSTab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
+function IFSTab({ data, setData, saveNow, isViewOnly, canImport, reload }) {
   const { t } = useI18n();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
@@ -724,23 +762,23 @@ function IFSTab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
   const paged = filtered.slice(effectivePage * PER_PAGE, (effectivePage + 1) * PER_PAGE);
 
   function handleAdd(row) {
-    setData((prev) => [...prev, row]);
-    markDirty();
+    const next = [...data, row];
+    setData(next);
     setAddMode(false);
+    saveNow(next);
   }
   function handleEditSave(idx, row) {
-    setData((prev) => {
-      const n = [...prev];
-      n[idx] = row;
-      return n;
-    });
-    markDirty();
+    const next = [...data];
+    next[idx] = row;
+    setData(next);
     setEditIdx(null);
+    saveNow(next);
   }
   function handleDelete(idx) {
     if (!confirm('Delete this IFS material?')) return;
-    setData((prev) => prev.filter((_, i) => i !== idx));
-    markDirty();
+    const next = data.filter((_, i) => i !== idx);
+    setData(next);
+    saveNow(next);
   }
 
   return (
@@ -797,6 +835,31 @@ function IFSTab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
               setPage(0);
             }}
           />
+          {search && (
+            <button
+              type="button"
+              className="ml-hb-search-clear"
+              title={t('matlib.search_clear')}
+              aria-label={t('matlib.search_clear')}
+              onClick={() => {
+                setSearch('');
+                setPage(0);
+                // Clearing means "start over", so put the caret back in the
+                // box -- otherwise focus is left on a button that just
+                // unmounted itself.
+                searchRef.current?.focus();
+              }}
+            >
+              <svg width="11" height="11" viewBox="0 0 11 11" aria-hidden="true">
+                <path
+                  d="M1 1l9 9M10 1l-9 9"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          )}
           {search && filtered.length < data.length && (
             <span className="ml-hb-search-badge">
               {filtered.length} / {data.length}
@@ -1158,7 +1221,8 @@ function IFSEditModal({ row, idx, onSave, onDelete, onClose, isNew, isViewOnly }
 // SOURCING DATABASE TAB
 // ═══════════════════════════════════════════════════════════
 
-function SourcingTab({ data, setData, markDirty, isViewOnly, canImport, reload }) {
+function SourcingTab({ data, setData, saveNow, isViewOnly, canImport, reload }) {
+  const searchRef = useRef(null);
   const { t } = useI18n();
   const [search, setSearch] = useState('');
   const [yearFilter, setYearFilter] = useState('');
@@ -1186,23 +1250,23 @@ function SourcingTab({ data, setData, markDirty, isViewOnly, canImport, reload }
   const paged = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
 
   function handleAdd(row) {
-    setData((prev) => [...prev, row]);
-    markDirty();
+    const next = [...data, row];
+    setData(next);
     setAddMode(false);
+    saveNow(next);
   }
   function handleEditSave(idx, row) {
-    setData((prev) => {
-      const n = [...prev];
-      n[idx] = row;
-      return n;
-    });
-    markDirty();
+    const next = [...data];
+    next[idx] = row;
+    setData(next);
     setEditIdx(null);
+    saveNow(next);
   }
   function handleDelete(idx) {
     if (!confirm('Delete this sourcing record?')) return;
-    setData((prev) => prev.filter((_, i) => i !== idx));
-    markDirty();
+    const next = data.filter((_, i) => i !== idx);
+    setData(next);
+    saveNow(next);
   }
 
   const years = useMemo(() => {
@@ -1261,6 +1325,7 @@ function SourcingTab({ data, setData, markDirty, isViewOnly, canImport, reload }
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
           <input
+            ref={searchRef}
             type="text"
             className="ml-hb-search"
             placeholder={t('matlib.ph_search_sourcing')}
@@ -1270,6 +1335,31 @@ function SourcingTab({ data, setData, markDirty, isViewOnly, canImport, reload }
               setPage(0);
             }}
           />
+          {search && (
+            <button
+              type="button"
+              className="ml-hb-search-clear"
+              title={t('matlib.search_clear')}
+              aria-label={t('matlib.search_clear')}
+              onClick={() => {
+                setSearch('');
+                setPage(0);
+                // Clearing means "start over", so put the caret back in the
+                // box -- otherwise focus is left on a button that just
+                // unmounted itself.
+                searchRef.current?.focus();
+              }}
+            >
+              <svg width="11" height="11" viewBox="0 0 11 11" aria-hidden="true">
+                <path
+                  d="M1 1l9 9M10 1l-9 9"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          )}
           {search && filtered.length < data.length && (
             <span className="ml-hb-search-badge">
               {filtered.length} / {data.length}

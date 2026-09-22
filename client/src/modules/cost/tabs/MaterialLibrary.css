@@ -172,7 +172,10 @@
 }
 .ml-hb-search {
   width: 100%;
-  padding: 6px 12px 6px 28px;
+  /* Right padding clears the clear-search button, and is CONSTANT rather than
+     applied only while the button is shown -- otherwise the text shifts the
+     moment the first character is typed. */
+  padding: 6px 26px 6px 28px;
   box-sizing: border-box;
   border: 1.5px solid #cbd5e1;
   border-radius: 7px;
@@ -195,7 +198,10 @@
 }
 .ml-hb-search-badge {
   position: absolute;
-  right: 8px;
+  /* Sits LEFT of the clear button. The badge only renders when a search is
+     active, which is exactly when the button is there too, so this offset is
+     unconditional. */
+  right: 26px;
   top: 50%;
   transform: translateY(-50%);
   font-size: 9.5px;
@@ -994,4 +1000,31 @@
 .ml-th-sort-on .ml-th-sort-ind {
   opacity: 1;
   color: #0f62fe;
+}
+
+/* Clear-search button -- faint until hovered, so it reads as an affordance
+   rather than competing with the value the operator just typed. */
+.ml-hb-search-clear {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    background 0.12s;
+}
+.ml-hb-search-clear:hover {
+  color: #334155;
+  background: #e2e8f0;
 }
