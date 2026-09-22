@@ -8,6 +8,7 @@
  * through the same two-pass per-tier calc that ComplexCalc uses.
  */
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { costColumnsFromResult } from './Summarize.costColumns.js';
 import { useCalc } from '../../../context/CalcContext';
 import { useCostLib } from '../../../context/CostLibContext';
 import { calcAll, buildTierState, applyCplxTierToSp } from '../../../services/calcEngine';
@@ -359,6 +360,12 @@ function aggregateCplxTier(cs, sps, lib, tierIdx, options = {}) {
     s_mat_cost: sum('s_mat_cost'),
     overhead: sum('overhead'),
     labor_cost: sum('labor_cost'),
+    // bd_* are the FULL figures (setup included); `overhead`/`labor_cost`
+    // above are run-only. The export columns read the bd_ pair, so this
+    // synthetic aggregate has to carry them too or a Complex quote with no
+    // FG sub-product renders blank cells.
+    bd_overhead: sum('bd_overhead'),
+    bd_labor: sum('bd_labor'),
     tooling: sum('tooling'),
     packing_ship: sum('packing_ship'),
     bd_ink_setup: sum('bd_ink_setup'),
@@ -564,13 +571,13 @@ export default function Summarize() {
             moq,
             annual_qty: eau,
             yield_pct,
-            s_mat_cost: r.s_mat_cost,
-            overhead: r.overhead,
-            labor_cost: r.labor_cost,
+            // The five cost cells + G.Total come from ONE helper so the
+            // decomposition is assertable — it was short by the setup cluster
+            // on every exported row until 2026-09-22, and a column that is
+            // merely too small looks exactly like a column that is right.
+            // See Summarize.costColumns.js.
+            ...costColumnsFromResult(r),
             vat_loss: r.vat_loss,
-            tooling: r.tooling,
-            pack_ship: r.packing_ship,
-            g_ttl_cost: r.s_ttl,
             target,
             usd_price: usdPrice,
             // Per-tier raw VND from CalcHeader (Sprint 1.7g mirror).
