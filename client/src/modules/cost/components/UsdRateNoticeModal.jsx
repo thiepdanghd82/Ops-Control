@@ -25,7 +25,7 @@
  *
  * Shared by the Standard and Complex calculators — do not fork it.
  */
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Modal from '../../../components/Shared/Modal';
 import DecimalInput from '../../../utils/DecimalInput';
 import { useI18n } from '../../../utils/useI18n';
@@ -40,15 +40,11 @@ function fmtDate(iso) {
 
 export default function UsdRateNoticeModal({ notice, onConfirm, onEdit }) {
   const { t } = useI18n();
+  // A fresh notice must not keep the previous dialog's typing. Reset comes
+  // from the `key` the calculators pass, not from an effect that syncs state
+  // to a prop -- that pattern re-renders twice and is what
+  // react-hooks/set-state-in-effect flags.
   const [rate, setRate] = useState(notice ? notice.rate : 0);
-
-  // A fresh notice (New, then New again) must not keep the previous
-  // dialog's typing. Keyed on the rate itself rather than the object,
-  // which is rebuilt on every render of the parent.
-  const seeded = notice ? notice.rate : 0;
-  useEffect(() => {
-    setRate(seeded);
-  }, [seeded]);
 
   if (!notice) return null;
   const from = [notice.rfq_number, fmtDate(notice.saved_at)].filter(Boolean).join(' · ');

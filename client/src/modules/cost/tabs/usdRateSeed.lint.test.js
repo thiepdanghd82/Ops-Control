@@ -118,7 +118,18 @@ test('the dialog edits the rate with the SAME widget as the RFQ card', () => {
 });
 
 test('a second notice does not inherit the previous dialog typing', () => {
-  assert.match(MODAL, /useEffect\(\(\) => \{\s*setRate\(seeded\);\s*\}, \[seeded\]\)/);
+  // Reset via the remount key the calculators pass, NOT an effect that syncs
+  // state to a prop: that renders twice and is what
+  // react-hooks/set-state-in-effect flags -- a rule that fires on CI and not
+  // locally, so it cost a red build before it cost anything else.
+  assert.doesNotMatch(MODAL, /useEffect/, 'no state-sync effect');
+  for (const [name, SRC] of Object.entries(FILES)) {
+    assert.match(
+      SRC,
+      /key=\{rateNotice \? rateNotice\.rate : 'none'\}/,
+      name + ' must remount the dialog on a new notice'
+    );
+  }
 });
 
 for (const [name, SRC] of Object.entries(FILES)) {

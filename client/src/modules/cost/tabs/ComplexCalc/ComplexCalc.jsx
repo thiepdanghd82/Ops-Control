@@ -699,6 +699,9 @@ export default function ComplexCalc() {
       )}
       <HeaderGateModal missing={gateMissing} onClose={() => setGateMissing([])} />
       <UsdRateNoticeModal
+        // Remount on a new notice so the rate input re-initialises -- the
+        // documented way to reset state, and it costs no extra render.
+        key={rateNotice ? rateNotice.rate : 'none'}
         notice={pendingSubTab ? rateNotice : null}
         onConfirm={(rate) => {
           // The rate may have been corrected in the dialog: write whatever
