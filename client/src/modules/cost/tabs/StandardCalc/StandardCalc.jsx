@@ -62,6 +62,7 @@ import TabBarOverflow from '../../../../components/Shared/TabBarOverflow';
 import HeaderGateModal from '../../components/HeaderGateModal';
 import UsdRateNoticeModal from '../../components/UsdRateNoticeModal';
 import { noticeFromSeed, noticeStillApplies } from '../../../../services/usdRateSeed';
+import { fetchPendingQuote } from '../../../../services/pendingQuoteLoad';
 import { gateSubTabChange } from '../../../../services/calcValidation';
 import { useGridKeyboardNav } from '../../../../utils/useGridKeyboardNav';
 import './StandardCalc.css';
@@ -169,11 +170,13 @@ export default function StandardCalc() {
     if (!pendingQuote || pendingQuote.type !== 'standard') return;
     const { id, action } = pendingQuote;
     let cancelled = false;
-    sharedApi
-      .getQuotes()
-      .then((quotes) => {
+    fetchPendingQuote(action, {
+      getQuotes: () => sharedApi.getQuotes(),
+      getLatestUsdRate: () => sharedApi.getLatestUsdRate(),
+    })
+      .then(({ quotes, seed }) => {
         if (cancelled) return;
-        const q = (quotes || []).find((x) => String(x.id) === String(id));
+        const q = quotes.find((x) => String(x.id) === String(id));
         if (q?.state) {
           // Pass `_version` through so subsequent Update-existing saves
           // include it in the PATCH for optimistic-locking enforcement.
@@ -185,24 +188,12 @@ export default function StandardCalc() {
           // the source's, which may be months old and was never chosen for
           // this quote -- the same rule #345 applied to the Target price.
           // Opening a quote is untouched: it keeps the rate it was saved with.
-          if (action === 'copy') {
-            sharedApi
-              .getLatestUsdRate()
-              .then((seed) => {
-                if (cancelled) return;
-                const n = noticeFromSeed(seed);
-                loadQuote('std', q.state, q.id, q._version || 0, action, n ? n.rate : 0);
-                setRateNotice(n);
-              })
-              .catch(() => {
-                if (cancelled) return;
-                loadQuote('std', q.state, q.id, q._version || 0, action);
-                setRateNotice(null);
-              });
-          } else {
-            loadQuote('std', q.state, q.id, q._version || 0, action);
-            setRateNotice(null);
-          }
+          // One synchronous block: seed, load, clear. Nothing awaits
+          // between them, so clearPendingQuote() cannot tear this effect
+          // down before the seeded load has happened.
+          const n = noticeFromSeed(seed);
+          loadQuote('std', q.state, q.id, q._version || 0, action, n ? n.rate : 0);
+          setRateNotice(n);
         } else {
           showToast(`Quote #${id} not found`, 'err');
         }

@@ -33,23 +33,39 @@ const FILES = {
 const REDUCER = readFileSync(join(HERE, '..', '..', '..', 'context', 'calcReducer.js'), 'utf8');
 
 for (const [name, SRC] of Object.entries(FILES)) {
-  test(`${name}: New and Copy inherit the rate`, () => {
-    assert.equal(
-      (SRC.match(/getLatestUsdRate\(\)/g) || []).length,
-      2,
-      'once for New, once for Copy — and no more, or some other path is re-rating a quote'
+  test(`${name}: New inherits the rate, and the pending-quote fetch is delegated`, () => {
+    assert.match(SRC, /getLatestUsdRate\(\)/, 'New asks for the rate');
+    assert.match(
+      SRC,
+      /fetchPendingQuote\(action, \{/,
+      'Open and Copy go through the shared helper, which fetches both in one ' +
+        'await -- the nested version resolved AFTER clearPendingQuote() had ' +
+        'torn this effect down, so the seeded load never ran'
     );
-    assert.match(SRC, /action === 'copy'/, 'the copy branch must be explicit');
   });
 
-  test(`${name}: opening a saved quote keeps its own rate`, () => {
-    // The seed is the 6th argument of loadQuote. It must appear ONLY inside
-    // the copy branch: a quote already sent to a customer must not silently
-    // re-price itself when someone opens it to look.
-    const seeded = SRC.match(/loadQuote\([^)]*,\s*action,\s*[^)]*\)/g) || [];
-    assert.equal(seeded.length, 1, 'exactly one loadQuote call passes a seed');
-    const plain = SRC.match(/loadQuote\([^)]*,\s*action\)/g) || [];
-    assert.ok(plain.length >= 2, 'the open path and the copy-failure path pass no seed');
+  test(`${name}: exactly ONE load path, so no branch can diverge`, () => {
+    // The bug had three: a seeded load, an unseeded fallback and an open
+    // path. Whether opening re-rates a quote is now decided in
+    // pendingQuoteLoad.js and covered by a REAL test there ("opening does
+    // not ask for the rate at all") rather than by grepping for a branch.
+    // Scoped to calls that carry an `action`: the other loadQuote sites in
+    // these files (restore-a-version, resolve-a-conflict) are always opens
+    // and pass none, so counting every call would flag them too.
+    const withAction = SRC.match(/loadQuote\('(std|cplx)',[^;]*?\baction\b[^;]*?\)/g) || [];
+    assert.equal(withAction.length, 1, 'one loadQuote call can be a copy, and only one');
+    assert.doesNotMatch(
+      SRC,
+      /loadQuote\('(std|cplx)',[^;]*,\s*action\)/,
+      'the unseeded copy fallback is gone -- it was the branch that ran when ' +
+        'the nested rate fetch lost its race, and it kept the source rate'
+    );
+    assert.match(
+      SRC,
+      /loadQuote\('(std|cplx)', q\.state, q\.id, q\._version \|\| 0, action, n \? n\.rate : 0\)/,
+      'and it passes the seed the helper resolved -- null for an open, so a ' +
+        'quote already sent to a customer cannot re-price itself'
+    );
   });
 
   test(`${name}: the notice is component state, never quote state`, () => {
