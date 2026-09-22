@@ -31,6 +31,7 @@
  */
 
 import { getToken } from './api.js';
+import { saveBlob } from './saveFile.js';
 
 const BASE_URL = ''; // same-origin; matches services/api.js
 const CSRF_COOKIE = 'ops_csrf';
@@ -212,7 +213,11 @@ export async function exportQuote(args) {
     format = 'xlsx',
     signal,
     fetchImpl = typeof fetch !== 'undefined' ? fetch : null,
-    downloadImpl = triggerBlobDownload,
+    // saveBlob gives the operator a Save dialog and, on the thin CLIENT,
+    // a path that works at all — `<a download>` from an insecure origin
+    // was already diagnosed unreliable there. triggerBlobDownload stays
+    // exported as saveBlob's own tier-3 fallback and for injection.
+    downloadImpl = saveBlob,
   } = args;
   if (!fetchImpl) {
     throw new QuoteExportError('NETWORK', 'fetch API not available');
@@ -261,7 +266,10 @@ export async function exportQuote(args) {
     parseContentDisposition(res.headers.get('Content-Disposition')) || `quote-${quoteId}-export`;
   const kind = res.headers.get('X-Ops-Export-Format') === 'zip' ? 'zip' : 'xlsx';
 
-  downloadImpl(blob, filename);
+  // Awaited: the operator picks where the file goes, and cancelling the Save
+  // dialog must NOT be reported as a successful export. `savedTo` is null on
+  // cancel — nothing was written and there is nothing to announce.
+  const savedTo = await downloadImpl(blob, filename);
 
-  return { kind, filename, size: blob.size };
+  return { kind, filename, size: blob.size, savedTo };
 }
