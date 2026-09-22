@@ -62,6 +62,8 @@ import SaveChoiceModal from '../../../../utils/SaveChoiceModal';
 import ConflictModal from '../../../../components/Shared/ConflictModal';
 import TabBarOverflow from '../../../../components/Shared/TabBarOverflow';
 import HeaderGateModal from '../../components/HeaderGateModal';
+import UsdRateNoticeModal from '../../components/UsdRateNoticeModal';
+import { noticeFromSeed, noticeStillApplies } from '../../../../services/usdRateSeed';
 import { gateSubTabChange } from '../../../../services/calcValidation';
 import { useGridKeyboardNav } from '../../../../utils/useGridKeyboardNav';
 import '../StandardCalc/StandardCalc.css';
@@ -125,6 +127,13 @@ export default function ComplexCalc() {
   // lifetime. They're blocking rather than advisory because a blank one
   // silently produces wrong costs on every later tab.
   const [gateMissing, setGateMissing] = useState([]);
+  // USD rate inherited from the most recently saved quote (New / Copy).
+  // Deliberately component state, not quote state: it is an acknowledgement,
+  // not data, and persisting it would ride into every save and into the
+  // signed _Schema payload of every export for something only this screen
+  // reads -- what `target_contr` did for months before anyone noticed.
+  const [rateNotice, setRateNotice] = useState(null);
+  const [pendingSubTab, setPendingSubTab] = useState(null);
   const [expandedSps, setExpandedSps] = useState({});
   const [saveChoiceOpen, setSaveChoiceOpen] = useState(false);
   // v1.3 Đợt 2 — see StandardCalc.jsx for the pattern; replaces blunt
@@ -197,7 +206,28 @@ export default function ComplexCalc() {
           // Pass `_version` through for optimistic locking on subsequent saves.
           // Phase 3 — `action` propagation for copy-mode reset (mirror
           // of the Std handler in StandardCalc.jsx).
-          loadQuote('cplx', q.state, q.id, q._version || 0, action);
+          // A copy is a NEW RFQ, so it takes the CURRENT rate rather than
+          // the source's, which may be months old and was never chosen for
+          // this quote -- the same rule #345 applied to the Target price.
+          // Opening a quote is untouched: it keeps the rate it was saved with.
+          if (action === 'copy') {
+            sharedApi
+              .getLatestUsdRate()
+              .then((seed) => {
+                if (cancelled) return;
+                const n = noticeFromSeed(seed);
+                loadQuote('cplx', q.state, q.id, q._version || 0, action, n ? n.rate : 0);
+                setRateNotice(n);
+              })
+              .catch(() => {
+                if (cancelled) return;
+                loadQuote('cplx', q.state, q.id, q._version || 0, action);
+                setRateNotice(null);
+              });
+          } else {
+            loadQuote('cplx', q.state, q.id, q._version || 0, action);
+            setRateNotice(null);
+          }
         } else {
           showToast(`Quote #${id} not found`, 'err');
         }
@@ -547,7 +577,23 @@ export default function ComplexCalc() {
 
   // `saving` is wired into the Save button below so the user can't double-fire.
   const handleReset = useCallback(() => {
-    dispatch({ type: 'RESET_CPLX' });
+    // A new RFQ starts from the rate on the most recently saved quote --
+    // it barely moves (27 of the last 30 live quotes share one), and
+    // retyping it every time was the friction. Nothing inheritable leaves
+    // the field blank, so the blank-rate gate still covers a fresh install.
+    sharedApi
+      .getLatestUsdRate()
+      .then((seed) => {
+        const n = noticeFromSeed(seed);
+        dispatch({ type: 'RESET_CPLX', payload: { seedUsdRate: n ? n.rate : 0 } });
+        setRateNotice(n);
+      })
+      .catch(() => {
+        // A rate is a convenience, never a precondition: if the lookup
+        // fails the quote still opens, just without one.
+        dispatch({ type: 'RESET_CPLX' });
+        setRateNotice(null);
+      });
   }, [dispatch]);
   const setCplxField = useCallback(
     (f, v) => dispatch({ type: 'SET_CPLX_FIELD', payload: { field: f, value: v } }),
@@ -630,6 +676,13 @@ export default function ComplexCalc() {
       setGateMissing(missing);
       return;
     }
+    // The rate was inherited and the operator has not touched it: say so
+    // once, on the way out, rather than letting a number nobody set ride
+    // into the pricing. Editing the rate retires the notice on its own.
+    if (noticeStillApplies(rateNotice, cs.usd_rate)) {
+      setPendingSubTab(id);
+      return;
+    }
     setActiveSubTab(id);
   };
 
@@ -645,6 +698,18 @@ export default function ComplexCalc() {
         </div>
       )}
       <HeaderGateModal missing={gateMissing} onClose={() => setGateMissing([])} />
+      <UsdRateNoticeModal
+        notice={pendingSubTab ? rateNotice : null}
+        onConfirm={() => {
+          // Acknowledged: retire the notice and complete the navigation the
+          // operator asked for, rather than making them click the tab twice.
+          const next = pendingSubTab;
+          setRateNotice(null);
+          setPendingSubTab(null);
+          if (next) setActiveSubTab(next);
+        }}
+        onEdit={() => setPendingSubTab(null)}
+      />
       {/* Sub-tab bar — wrapped in TabBarOverflow for narrow-screen fit */}
       <div className="cc-tab-bar">
         <TabBarOverflow

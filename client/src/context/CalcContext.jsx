@@ -113,23 +113,36 @@ export function CalcProvider({ children }) {
   }, []);
 
   const loadQuote = useCallback(
-    (quoteType, qState, id, version = 0, action = 'load') => {
+    (quoteType, qState, id, version = 0, action = 'load', seedUsdRate = 0) => {
       dispatch({
         type: A.LOAD_QUOTE,
-        payload: { quoteType, state: qState, id, version, action },
+        // seedUsdRate is used ONLY on a copy -- a copy is a new RFQ, so it
+        // takes the current rate rather than the source quote's, which may
+        // be months old and was never chosen for this quote (#345's rule,
+        // applied to the rate).
+        payload: { quoteType, state: qState, id, version, action, seedUsdRate },
       });
       resetTouched();
     },
     [resetTouched]
   );
-  const resetStd = useCallback(() => {
-    dispatch({ type: A.RESET_STD });
-    resetTouched();
-  }, [resetTouched]);
-  const resetCplx = useCallback(() => {
-    dispatch({ type: A.RESET_CPLX });
-    resetTouched();
-  }, [resetTouched]);
+  // `seedUsdRate` is the rate inherited from the most recently saved quote
+  // (server: GET /shared/latest-usd-rate). Omitted or 0 leaves the field
+  // blank, which keeps the blank-rate navigation gate in charge.
+  const resetStd = useCallback(
+    (seedUsdRate) => {
+      dispatch({ type: A.RESET_STD, payload: { seedUsdRate } });
+      resetTouched();
+    },
+    [resetTouched]
+  );
+  const resetCplx = useCallback(
+    (seedUsdRate) => {
+      dispatch({ type: A.RESET_CPLX, payload: { seedUsdRate } });
+      resetTouched();
+    },
+    [resetTouched]
+  );
   const markClean = useCallback(() => dispatch({ type: A.MARK_CLEAN }), []);
   const setPendingQuote = useCallback(
     (id, type, action, data) =>
