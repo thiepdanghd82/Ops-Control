@@ -38,7 +38,7 @@ import {
   isEmptyPrice,
 } from '../../../../services/priceSolver';
 import { MarginCell, ApplyDefault, HoldTick } from '../../components/MarginPriceCells';
-import { metricWarn, pinDrift } from '../../components/MarginPriceCells.helpers';
+import { metricWarn, actionablePinDrift } from '../../components/MarginPriceCells.helpers';
 import { getStatus as approvalStatus } from '../../../../utils/approvalWorkflow.js';
 
 // VA / Contribution / GM re-derivation at a different price now lives in
@@ -293,6 +293,14 @@ export default function CplxCostBreakdown() {
             </thead>
             <tbody>
               {tiers.map(({ idx, moq, sp, eau, result: r }, i) => {
+                // The three margin cells of a row share one pin, so solve once here.
+                // The solved price decides whether the drift cue has a remedy at all:
+                // if it rounds to the price this tier already holds, re-applying would
+                // write the same number and the cue could never clear.
+                const tierPin = readTierPin(cs, idx);
+                const pinSolved = tierPin
+                  ? solvePriceForMetric(cs, lib, idx, tierPin.metric, tierPin.pct, solverOpts)
+                  : null;
                 const isActive = idx === activeIdx;
                 const target = idx === 0 ? cs.target : cs.extra_moqs?.[idx - 1]?.target;
                 const sk = r ? recomputeKpi(r, mask, sp) : null;
@@ -336,7 +344,7 @@ export default function CplxCostBreakdown() {
                             metric="va"
                             value={sk.va}
                             warn={metricWarn('va', sk.va)}
-                            drift={pinDrift(readTierPin(cs, idx), 'va', sk.va)}
+                            drift={actionablePinDrift(tierPin, 'va', sk.va, pinSolved, sp)}
                             disabled={!!heldMetric && heldMetric !== 'va'}
                             onReapply={() => reapplyPin(idx)}
                             onCommit={(f) => commitMetric('selling', idx, 'va', f)}
@@ -347,7 +355,13 @@ export default function CplxCostBreakdown() {
                             metric="contribution"
                             value={sk.contribution}
                             warn={metricWarn('contribution', sk.contribution)}
-                            drift={pinDrift(readTierPin(cs, idx), 'contribution', sk.contribution)}
+                            drift={actionablePinDrift(
+                              tierPin,
+                              'contribution',
+                              sk.contribution,
+                              pinSolved,
+                              sp
+                            )}
                             disabled={!!heldMetric && heldMetric !== 'contribution'}
                             onReapply={() => reapplyPin(idx)}
                             onCommit={(f) => commitMetric('selling', idx, 'contribution', f)}
@@ -358,7 +372,7 @@ export default function CplxCostBreakdown() {
                             metric="gm"
                             value={sk.gm}
                             warn={metricWarn('gm', sk.gm)}
-                            drift={pinDrift(readTierPin(cs, idx), 'gm', sk.gm)}
+                            drift={actionablePinDrift(tierPin, 'gm', sk.gm, pinSolved, sp)}
                             disabled={!!heldMetric && heldMetric !== 'gm'}
                             onReapply={() => reapplyPin(idx)}
                             onCommit={(f) => commitMetric('selling', idx, 'gm', f)}
