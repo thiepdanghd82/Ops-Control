@@ -1028,3 +1028,95 @@
   color: #334155;
   background: #e2e8f0;
 }
+
+/* Row right-click menu. Mirrors Quote History's menu visually but owns its
+   own classes: borrowing `.qh-ctx-*` would work only while both tabs land in
+   one chunk, and silently lose its styling the moment they do not. */
+.ml-ctx-menu {
+  /* fixed so the menu escapes the table's overflow clipping; placed
+     edge-aware + draggable by useFloatingMenu (menuPosition.js). */
+  position: fixed;
+  z-index: 9999;
+  min-width: 200px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 4px 0;
+  animation: ml-ctx-in 0.12s ease-out;
+}
+
+@keyframes ml-ctx-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.ml-ctx-header {
+  padding: 6px 12px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+  cursor: move;
+  user-select: none;
+}
+
+.ml-ctx-divider {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.08);
+  margin: 3px 0;
+}
+
+.ml-ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 12px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: #1e293b;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.08s;
+  white-space: nowrap;
+}
+.ml-ctx-item:hover {
+  background: #2563eb;
+  color: white;
+  border-radius: 4px;
+  margin: 0 4px;
+  width: calc(100% - 8px);
+  padding-left: 8px;
+  padding-right: 8px;
+}
+.ml-ctx-item:hover .ml-ctx-icon {
+  filter: brightness(10);
+}
+.ml-ctx-danger {
+  color: #b91c1c;
+}
+.ml-ctx-danger:hover {
+  background: #dc2626;
+}
+
+/* The row the menu belongs to, so it is obvious which one an action hits. */
+.ml-row-ctx {
+  background: #eff6ff !important;
+  box-shadow: inset 2px 0 0 #2563eb;
+}

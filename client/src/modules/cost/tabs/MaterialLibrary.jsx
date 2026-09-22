@@ -4,6 +4,8 @@ import { sharedApi, costApi } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 import { useCostLib } from '../../../context/CostLibContext';
 import { todayISO, todayMonthISO, yearOf, yearOptions, sortByDate } from './materialDate.js';
+import { copySeed } from './materialRowActions.js';
+import { useFloatingMenu, useMergedMenuRef } from '../../../components/Shared/useFloatingMenu';
 import { CURRENCIES, DEFAULT_CURRENCY, normalizeCurrency } from './materialCurrency.js';
 import EmptyState from '../../../components/Shared/EmptyState';
 import SkeletonTable from '../../../components/Shared/SkeletonTable';
@@ -221,6 +223,72 @@ function ImportFileButton({ datasetKey, label, onDone, disabled, inline }) {
   );
 }
 
+/**
+ * Right-click menu for one material row — ONE component for all three tabs.
+ *
+ * The tabs are already near-duplicates of each other (MES-3-FIX-56), so a
+ * menu written three times would be three places for Open / Copy / Delete to
+ * drift apart. Placement, edge-flipping and drag come from the shared
+ * `useFloatingMenu`, the same hook Quote History's menu uses: the menu is
+ * `position: fixed` so a right-click on the last visible row is not clipped
+ * by the table's own overflow.
+ *
+ * Items are passed in rather than hard-coded, because what a row can do
+ * depends on the tab's permission: a view-only operator gets Open and
+ * nothing else.
+ */
+function RowContextMenu({ x, y, title, items, onClose }) {
+  const boxRef = useRef(null);
+  const { menuRef, style } = useFloatingMenu({ open: true, x, y });
+  const mergedRef = useMergedMenuRef(menuRef, boxRef);
+
+  useEffect(() => {
+    function onDown(e) {
+      if (boxRef.current && !boxRef.current.contains(e.target)) onClose();
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
+
+  return (
+    <div ref={mergedRef} className="ml-ctx-menu" style={style} role="menu">
+      <div className="ml-ctx-header" data-menu-drag-handle title={title}>
+        {title}
+      </div>
+      <div className="ml-ctx-divider" />
+      {items.map((it) =>
+        it.divider ? (
+          <div key={it.key} className="ml-ctx-divider" />
+        ) : (
+          <button
+            key={it.key}
+            type="button"
+            role="menuitem"
+            className={`ml-ctx-item${it.danger ? ' ml-ctx-danger' : ''}`}
+            onClick={() => {
+              // Close FIRST: Delete opens a confirm() that blocks the thread,
+              // and leaving the menu painted over the dialog reads as if the
+              // click had not registered.
+              onClose();
+              it.run();
+            }}
+          >
+            <span className="ml-ctx-icon">{it.icon}</span>
+            <span>{it.label}</span>
+          </button>
+        )
+      )}
+    </div>
+  );
+}
+
 function NPITab({ data, setData, saveNow, isViewOnly, canImport, reload }) {
   const { t } = useI18n();
   const [search, setSearch] = useState('');
@@ -228,6 +296,9 @@ function NPITab({ data, setData, saveNow, isViewOnly, canImport, reload }) {
   const [page, setPage] = useState(0);
   const [editIdx, setEditIdx] = useState(null);
   const [addMode, setAddMode] = useState(false);
+  // Right-click target: { x, y, idx, row }. `addMode` doubles as the Add
+  // modal's seed -- `true` for a blank row, an object when copying one.
+  const [ctx, setCtx] = useState(null);
   // null = the order the library was imported in. Clicking Update Date sorts
   // newest-first, then toggles — the same first-click direction Quote History
   // uses, so the two tables behave the same way under the same gesture.
@@ -513,8 +584,16 @@ function NPITab({ data, setData, saveNow, isViewOnly, canImport, reload }) {
                   return (
                     <tr
                       key={realIdx}
-                      className="ml-row"
+                      className={`ml-row${ctx?.idx === realIdx ? ' ml-row-ctx' : ''}`}
                       onClick={() => !isViewOnly && setEditIdx(realIdx)}
+                      onContextMenu={(e) => {
+                        // A view-only row cannot be opened by left-click
+                        // either; leave the browser's own menu rather than
+                        // handing this operator Copy and Delete.
+                        if (isViewOnly) return;
+                        e.preventDefault();
+                        setCtx({ x: e.clientX, y: e.clientY, idx: realIdx, row: r });
+                      }}
                     >
                       <td className="td-num">{page * PER_PAGE + i + 1}</td>
                       <td className="td-date">{r.date || '—'}</td>
@@ -559,6 +638,43 @@ function NPITab({ data, setData, saveNow, isViewOnly, canImport, reload }) {
       )}
 
       {/* Edit Modal */}
+      {ctx && (
+        <RowContextMenu
+          x={ctx.x}
+          y={ctx.y}
+          title={ctx.row?.name || '—'}
+          onClose={() => setCtx(null)}
+          items={[
+            {
+              key: 'open',
+              icon: '📂',
+              label: t('matlib.ctx_open'),
+              run: () => setEditIdx(ctx.idx),
+            },
+            {
+              key: 'copy',
+              icon: '📑',
+              label: t('matlib.ctx_copy'),
+              // Opens the Add modal pre-filled -- NOT saved. A copy that wrote
+              // itself would put a second row under a near-identical name on
+              // the server before anyone had looked at it.
+              run: () =>
+                setAddMode(
+                  copySeed(ctx.row, 'name', { date: todayISO(), currency: DEFAULT_CURRENCY })
+                ),
+            },
+            { key: 'sep', divider: true },
+            {
+              key: 'delete',
+              icon: '🗑️',
+              label: t('matlib.ctx_delete'),
+              danger: true,
+              run: () => handleDelete(ctx.idx),
+            },
+          ]}
+        />
+      )}
+
       {editIdx !== null && (
         <NPIEditModal
           row={data[editIdx]}
@@ -579,7 +695,7 @@ function NPITab({ data, setData, saveNow, isViewOnly, canImport, reload }) {
           // Seeded with today so a date is not hand-typed on every new
           // material. Typing it is how this library ended up holding four
           // different shapes plus 754 rows that just say "Old".
-          row={{ date: todayISO(), currency: DEFAULT_CURRENCY }}
+          row={addMode === true ? { date: todayISO(), currency: DEFAULT_CURRENCY } : addMode}
           idx={-1}
           onSave={handleAdd}
           onClose={() => setAddMode(false)}
@@ -743,6 +859,9 @@ function IFSTab({ data, setData, saveNow, isViewOnly, canImport, reload }) {
   const [page, setPage] = useState(0);
   const [editIdx, setEditIdx] = useState(null);
   const [addMode, setAddMode] = useState(false);
+  // Right-click target: { x, y, idx, row }. `addMode` doubles as the Add
+  // modal's seed -- `true` for a blank row, an object when copying one.
+  const [ctx, setCtx] = useState(null);
   const searchRef = useRef(null);
 
   const filtered = useMemo(() => {
@@ -974,8 +1093,16 @@ function IFSTab({ data, setData, saveNow, isViewOnly, canImport, reload }) {
                   return (
                     <tr
                       key={realIdx}
-                      className="ml-row"
+                      className={`ml-row${ctx?.idx === realIdx ? ' ml-row-ctx' : ''}`}
                       onClick={() => !isViewOnly && setEditIdx(realIdx)}
+                      onContextMenu={(e) => {
+                        // A view-only row cannot be opened by left-click
+                        // either; leave the browser's own menu rather than
+                        // handing this operator Copy and Delete.
+                        if (isViewOnly) return;
+                        e.preventDefault();
+                        setCtx({ x: e.clientX, y: e.clientY, idx: realIdx, row: r });
+                      }}
                     >
                       <td className="td-num">{page * PER_PAGE + i + 1}</td>
                       <td className="td-name">{r.part_no || '—'}</td>
@@ -1027,6 +1154,40 @@ function IFSTab({ data, setData, saveNow, isViewOnly, canImport, reload }) {
         </div>
       )}
 
+      {ctx && (
+        <RowContextMenu
+          x={ctx.x}
+          y={ctx.y}
+          title={ctx.row?.part_no || '—'}
+          onClose={() => setCtx(null)}
+          items={[
+            {
+              key: 'open',
+              icon: '📂',
+              label: t('matlib.ctx_open'),
+              run: () => setEditIdx(ctx.idx),
+            },
+            {
+              key: 'copy',
+              icon: '📑',
+              label: t('matlib.ctx_copy'),
+              // Opens the Add modal pre-filled -- NOT saved. A copy that wrote
+              // itself would put a second row under a near-identical name on
+              // the server before anyone had looked at it.
+              run: () => setAddMode(copySeed(ctx.row, 'part_no', {})),
+            },
+            { key: 'sep', divider: true },
+            {
+              key: 'delete',
+              icon: '🗑️',
+              label: t('matlib.ctx_delete'),
+              danger: true,
+              run: () => handleDelete(ctx.idx),
+            },
+          ]}
+        />
+      )}
+
       {editIdx !== null && (
         <IFSEditModal
           row={data[editIdx]}
@@ -1042,7 +1203,7 @@ function IFSTab({ data, setData, saveNow, isViewOnly, canImport, reload }) {
       )}
       {addMode && (
         <IFSEditModal
-          row={{}}
+          row={addMode === true ? {} : addMode}
           idx={-1}
           onSave={handleAdd}
           onClose={() => setAddMode(false)}
@@ -1229,6 +1390,9 @@ function SourcingTab({ data, setData, saveNow, isViewOnly, canImport, reload }) 
   const [page, setPage] = useState(0);
   const [editIdx, setEditIdx] = useState(null);
   const [addMode, setAddMode] = useState(false);
+  // Right-click target: { x, y, idx, row }. `addMode` doubles as the Add
+  // modal's seed -- `true` for a blank row, an object when copying one.
+  const [ctx, setCtx] = useState(null);
 
   const filtered = useMemo(() => {
     let result = data;
@@ -1468,8 +1632,16 @@ function SourcingTab({ data, setData, saveNow, isViewOnly, canImport, reload }) 
                   return (
                     <tr
                       key={realIdx}
-                      className="ml-row"
+                      className={`ml-row${ctx?.idx === realIdx ? ' ml-row-ctx' : ''}`}
                       onClick={() => !isViewOnly && setEditIdx(realIdx)}
+                      onContextMenu={(e) => {
+                        // A view-only row cannot be opened by left-click
+                        // either; leave the browser's own menu rather than
+                        // handing this operator Copy and Delete.
+                        if (isViewOnly) return;
+                        e.preventDefault();
+                        setCtx({ x: e.clientX, y: e.clientY, idx: realIdx, row: r });
+                      }}
                     >
                       <td className="td-num">{page * PER_PAGE + i + 1}</td>
                       <td className="td-date">{r.month || '—'}</td>
@@ -1512,6 +1684,40 @@ function SourcingTab({ data, setData, saveNow, isViewOnly, canImport, reload }) 
       )}
 
       {/* Edit Modal */}
+      {ctx && (
+        <RowContextMenu
+          x={ctx.x}
+          y={ctx.y}
+          title={ctx.row?.material || '—'}
+          onClose={() => setCtx(null)}
+          items={[
+            {
+              key: 'open',
+              icon: '📂',
+              label: t('matlib.ctx_open'),
+              run: () => setEditIdx(ctx.idx),
+            },
+            {
+              key: 'copy',
+              icon: '📑',
+              label: t('matlib.ctx_copy'),
+              // Opens the Add modal pre-filled -- NOT saved. A copy that wrote
+              // itself would put a second row under a near-identical name on
+              // the server before anyone had looked at it.
+              run: () => setAddMode(copySeed(ctx.row, 'material', { month: todayMonthISO() })),
+            },
+            { key: 'sep', divider: true },
+            {
+              key: 'delete',
+              icon: '🗑️',
+              label: t('matlib.ctx_delete'),
+              danger: true,
+              run: () => handleDelete(ctx.idx),
+            },
+          ]}
+        />
+      )}
+
       {editIdx !== null && (
         <SrcEditModal
           row={data[editIdx]}
@@ -1528,7 +1734,7 @@ function SourcingTab({ data, setData, saveNow, isViewOnly, canImport, reload }) 
       {addMode && (
         <SrcEditModal
           // `month` is YYYY-MM here, not a full date — 1928 of 2234 rows.
-          row={{ month: todayMonthISO() }}
+          row={addMode === true ? { month: todayMonthISO() } : addMode}
           idx={-1}
           onSave={handleAdd}
           onClose={() => setAddMode(false)}

@@ -146,3 +146,56 @@ test('the clear-search button is on all three search boxes and restores focus', 
     'an icon-only button needs a name'
   );
 });
+
+// ── row context menu ────────────────────────────────────────────────
+
+test('the row menu is written ONCE and used by all three tabs', () => {
+  assert.equal(
+    (SRC.match(/^function RowContextMenu\(/gm) || []).length,
+    1,
+    'the three tabs are already near-duplicates (MES-3-FIX-56); a menu written ' +
+      'per tab is three places for Open / Copy / Delete to drift apart'
+  );
+  assert.equal(
+    // The trailing class is load-bearing: without it <RowContextMenuNPI>
+    // still matches, so a per-tab fork would pass this very assertion.
+    (SRC.match(/<RowContextMenu[\s/>]/g) || []).length,
+    3,
+    'NPI, IFS and Sourcing each render it'
+  );
+});
+
+test('Copy pre-fills the Add modal and does NOT save on its own', () => {
+  // This is the invariant the save-on-card change created. handleAdd now
+  // persists, so a Copy routed through it would put a second row under a
+  // near-identical name on the server before anyone had looked at it.
+  const copies = SRC.match(/label: t\('matlib\.ctx_copy'\),[\s\S]{0,400}?\n {12}\},/g) || [];
+  assert.equal(copies.length, 3, 'each tab copies through copySeed into the Add modal');
+  for (const c of copies) {
+    assert.match(c, /setAddMode\(/, 'Copy opens the Add modal');
+    assert.doesNotMatch(c, /handleAdd|saveNow/, 'Copy must not write to the server');
+  }
+});
+
+test('Delete goes through the handler that confirms first', () => {
+  const dels =
+    SRC.match(/label: t\('matlib\.ctx_delete'\),[\s\S]{0,140}?run: \(\) => ([^,\n]+)/g) || [];
+  assert.equal(dels.length, 3, 'one Delete item per tab');
+  for (const d of dels) {
+    assert.match(
+      d,
+      /handleDelete\(ctx\.idx\)/,
+      'Delete must reuse handleDelete — it owns the confirm() and the save, and a ' +
+        'second deletion path would be free to skip either'
+    );
+  }
+});
+
+test('a view-only row shows the browser menu, not ours', () => {
+  assert.equal(
+    (SRC.match(/if \(isViewOnly\) return;\s*\n\s*e\.preventDefault\(\);/g) || []).length,
+    3,
+    'those rows cannot be opened by left-click either, so the menu must not ' +
+      'hand them a capability they do not have'
+  );
+});
