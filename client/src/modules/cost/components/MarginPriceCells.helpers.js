@@ -90,6 +90,16 @@ export function formatPinHint(drift, suggestedPrice) {
  * @param {number} currentPrice  the price this tier holds right now
  * @returns {number|null} rounded price to write, or null to leave it alone
  */
+
+export function planAutoHold(drift, solved, currentPrice) {
+  if (!drift) return null;
+  if (solved == null || !Number.isFinite(solved) || !(solved > 0)) return null;
+  const rounded = +Number(solved).toFixed(4); // matches planTierPriceWrite
+  const current = Number(currentPrice);
+  if (Number.isFinite(current) && +current.toFixed(4) === rounded) return null;
+  return rounded;
+}
+
 /**
  * The drift worth SHOWING: pinned, off target, and something can be done.
  *
@@ -119,13 +129,4 @@ export function actionablePinDrift(pin, metric, actual, solved, currentPrice) {
   const drift = pinDrift(pin, metric, actual);
   if (!drift) return null;
   return planAutoHold(drift, solved, currentPrice) == null ? null : drift;
-}
-
-export function planAutoHold(drift, solved, currentPrice) {
-  if (!drift) return null;
-  if (solved == null || !Number.isFinite(solved) || !(solved > 0)) return null;
-  const rounded = +Number(solved).toFixed(4); // matches planTierPriceWrite
-  const current = Number(currentPrice);
-  if (Number.isFinite(current) && +current.toFixed(4) === rounded) return null;
-  return rounded;
 }
