@@ -31,7 +31,7 @@ import {
   isEmptyPrice,
 } from '../../../../services/priceSolver';
 import { MarginCell, ApplyDefault, HoldTick } from '../../components/MarginPriceCells';
-import { metricWarn, pinDrift } from '../../components/MarginPriceCells.helpers';
+import { metricWarn, actionablePinDrift } from '../../components/MarginPriceCells.helpers';
 import { getStatus as approvalStatus } from '../../../../utils/approvalWorkflow.js';
 
 // VA / Contribution / GM re-derivation at a different price now lives in
@@ -295,6 +295,14 @@ export default function CalcCostBreakdown() {
             </thead>
             <tbody>
               {tiers.map(({ idx, moq, sp, eau, result: r }, i) => {
+                // The three margin cells of a row share one pin, so solve once here.
+                // The solved price decides whether the drift cue has a remedy at all:
+                // if it rounds to the price this tier already holds, re-applying would
+                // write the same number and the cue could never clear.
+                const tierPin = readTierPin(st, idx);
+                const pinSolved = tierPin
+                  ? solvePriceForMetric(st, lib, idx, tierPin.metric, tierPin.pct, solverOpts)
+                  : null;
                 const isActive = idx === (st.active_moq_idx || 0);
                 const target = idx === 0 ? st.target : st.extra_moqs?.[idx - 1]?.target;
                 // What-if KPIs at the selling price; all-active === r.va/contr/gm.
@@ -339,7 +347,7 @@ export default function CalcCostBreakdown() {
                             metric="va"
                             value={sk.va}
                             warn={metricWarn('va', sk.va)}
-                            drift={pinDrift(readTierPin(st, idx), 'va', sk.va)}
+                            drift={actionablePinDrift(tierPin, 'va', sk.va, pinSolved, sp)}
                             disabled={!!heldMetric && heldMetric !== 'va'}
                             onReapply={() => reapplyPin(idx)}
                             onCommit={(f) => commitMetric('selling', idx, 'va', f)}
@@ -350,7 +358,13 @@ export default function CalcCostBreakdown() {
                             metric="contribution"
                             value={sk.contribution}
                             warn={metricWarn('contribution', sk.contribution)}
-                            drift={pinDrift(readTierPin(st, idx), 'contribution', sk.contribution)}
+                            drift={actionablePinDrift(
+                              tierPin,
+                              'contribution',
+                              sk.contribution,
+                              pinSolved,
+                              sp
+                            )}
                             disabled={!!heldMetric && heldMetric !== 'contribution'}
                             onReapply={() => reapplyPin(idx)}
                             onCommit={(f) => commitMetric('selling', idx, 'contribution', f)}
@@ -361,7 +375,7 @@ export default function CalcCostBreakdown() {
                             metric="gm"
                             value={sk.gm}
                             warn={metricWarn('gm', sk.gm)}
-                            drift={pinDrift(readTierPin(st, idx), 'gm', sk.gm)}
+                            drift={actionablePinDrift(tierPin, 'gm', sk.gm, pinSolved, sp)}
                             disabled={!!heldMetric && heldMetric !== 'gm'}
                             onReapply={() => reapplyPin(idx)}
                             onCommit={(f) => commitMetric('selling', idx, 'gm', f)}

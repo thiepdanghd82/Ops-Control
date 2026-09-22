@@ -90,6 +90,37 @@ export function formatPinHint(drift, suggestedPrice) {
  * @param {number} currentPrice  the price this tier holds right now
  * @returns {number|null} rounded price to write, or null to leave it alone
  */
+/**
+ * The drift worth SHOWING: pinned, off target, and something can be done.
+ *
+ * `pinDrift` answers "is this off the pinned number", which is not the same
+ * question the amber cue asks. The cue means "this is not what you asked for,
+ * and clicking will fix it" — so when nothing can be written, it is an alarm
+ * with no remedy. Clicking re-apply re-solves, rounds to the same 4 decimals,
+ * writes the price that is already there, and the cue never clears.
+ *
+ * That is not hypothetical. Price is stored to 4dp, so on a low-value label a
+ * target can be unreachable outright: at cost 0.02382 a pinned GM of 20.0%
+ * wants 0.029775, which rounds to 0.0298 and reads back as 20.07% — while the
+ * neighbouring price 0.0297 reads 19.80%. No 4dp price gives 20.0%, so the old
+ * cue fired forever on 21 of 147 live quotes, all of them low-price.
+ *
+ * The condition is deliberately `planAutoHold`'s and not a second copy of it:
+ * the cue and the remedy must agree by construction, or one of them is lying.
+ *
+ * @param {{metric:string,pct:number}|null} pin
+ * @param {string} metric
+ * @param {number|null} actual
+ * @param {number|null} solved   price the solver returns for the pin
+ * @param {number} currentPrice  the price this tier holds right now
+ * @returns {{pinned:number,actual:number,delta:number}|null}
+ */
+export function actionablePinDrift(pin, metric, actual, solved, currentPrice) {
+  const drift = pinDrift(pin, metric, actual);
+  if (!drift) return null;
+  return planAutoHold(drift, solved, currentPrice) == null ? null : drift;
+}
+
 export function planAutoHold(drift, solved, currentPrice) {
   if (!drift) return null;
   if (solved == null || !Number.isFinite(solved) || !(solved > 0)) return null;

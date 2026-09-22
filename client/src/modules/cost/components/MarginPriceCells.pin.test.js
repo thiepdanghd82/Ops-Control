@@ -4,6 +4,7 @@ import {
   pinDrift,
   formatPinHint,
   planAutoHold,
+  actionablePinDrift,
   PIN_TOLERANCE,
 } from './MarginPriceCells.helpers.js';
 import {
@@ -198,5 +199,77 @@ test('an unsolvable target writes nothing rather than a junk price', () => {
   const d = pinDrift(PIN, 'contribution', 0.273);
   for (const v of [null, undefined, NaN, Infinity, 0, -1]) {
     assert.equal(planAutoHold(d, v, 0.88), null);
+  }
+});
+
+// ── actionablePinDrift: the cue only fires when it has a remedy ───────
+
+const GM_PIN = { metric: 'gm', pct: 0.2 };
+
+test('no pin, or on target: nothing to show', () => {
+  assert.equal(actionablePinDrift(null, 'gm', 0.2007, 0.029775, 0.0298), null);
+  assert.equal(actionablePinDrift(GM_PIN, 'gm', 0.2, 0.03, 0.0298), null);
+  assert.equal(
+    actionablePinDrift(GM_PIN, 'va', 0.9, 0.05, 0.0298),
+    null,
+    'a pin on another metric says nothing about this cell'
+  );
+});
+
+test('drifted AND a different price would help: the cue fires', () => {
+  const d = actionablePinDrift(GM_PIN, 'gm', 0.24, 0.0312, 0.0298);
+  assert.ok(d, 'this one is worth showing — re-applying changes the price');
+  assert.equal(d.pinned, 0.2);
+  assert.equal(d.actual, 0.24);
+});
+
+test('drifted but the solved price IS the current one: no cue', () => {
+  // The whole fix. The old code showed amber here and offered "click to
+  // re-apply", which re-solved to the same 4dp price and left the cue up
+  // forever — an alarm with no remedy is the one people learn to ignore.
+  assert.equal(actionablePinDrift(GM_PIN, 'gm', 0.2007, 0.029775, 0.0298), null);
+});
+
+test('the real case: GM 20% is unreachable at a 4-decimal price', () => {
+  // cost 0.02382 → exact price 0.029775 → stored 0.0298 → reads back 20.07%.
+  // The neighbouring price 0.0297 reads 19.80%, so NO 4dp price gives 20.0%.
+  const cost = 0.02382;
+  const exact = cost / (1 - 0.2);
+  const stored = +exact.toFixed(4);
+  const readBack = (stored - cost) / stored;
+  assert.equal(stored, 0.0298);
+  assert.ok(Math.abs(readBack - 0.2) > PIN_TOLERANCE, 'it really is outside tolerance');
+  assert.ok(pinDrift(GM_PIN, 'gm', readBack), 'pinDrift alone still calls it drifted');
+  assert.equal(
+    actionablePinDrift(GM_PIN, 'gm', readBack, exact, stored),
+    null,
+    'but there is nothing to act on, so the cue must stay silent'
+  );
+});
+
+test('an unusable solved price shows no cue rather than a dead button', () => {
+  for (const bad of [null, undefined, NaN, Infinity, 0, -1]) {
+    assert.equal(actionablePinDrift(GM_PIN, 'gm', 0.24, bad, 0.0298), null);
+  }
+});
+
+test('the cue and the remedy agree by construction', () => {
+  // Whenever the cue shows, planAutoHold must have a price to write; whenever
+  // it does not, planAutoHold must have none. Two conditions that could drift
+  // apart is exactly how this bug existed.
+  const cases = [
+    [0.24, 0.0312, 0.0298],
+    [0.2007, 0.029775, 0.0298],
+    [0.2, 0.0298, 0.0298],
+    [0.31, 0.0432, 0.0298],
+  ];
+  for (const [actual, solved, current] of cases) {
+    const cue = actionablePinDrift(GM_PIN, 'gm', actual, solved, current);
+    const remedy = planAutoHold(pinDrift(GM_PIN, 'gm', actual), solved, current);
+    assert.equal(
+      Boolean(cue),
+      remedy != null,
+      `cue and remedy disagree for actual=${actual} solved=${solved} current=${current}`
+    );
   }
 });
