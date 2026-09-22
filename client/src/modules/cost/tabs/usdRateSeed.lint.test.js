@@ -97,3 +97,54 @@ test('a seed of 0 leaves the field blank so the old gate still fires', () => {
     'withSeededRate must return the state untouched for a non-positive seed'
   );
 });
+
+// ── correcting the rate on the confirm dialog ───────────────────────
+
+const MODAL = readFileSync(join(HERE, '..', 'components', 'UsdRateNoticeModal.jsx'), 'utf8');
+
+test('the dialog refuses to confirm a non-positive rate', () => {
+  // A zero silently zeroes both VND mirrors (#311). The one dialog whose
+  // purpose is to make the operator look at this number must not be the
+  // thing that accepts a bad one.
+  assert.match(MODAL, /const ok = Number\(rate\) > 0;/);
+  assert.match(MODAL, /disabled=\{!ok\}/, 'Confirm is gated on it');
+});
+
+test('the dialog edits the rate with the SAME widget as the RFQ card', () => {
+  // DecimalInput is what both calculators bind usd_rate to. A hand-rolled
+  // input here would parse differently from the field it writes into.
+  assert.match(MODAL, /import DecimalInput from/);
+  assert.match(MODAL, /<DecimalInput\s/);
+});
+
+test('a second notice does not inherit the previous dialog typing', () => {
+  // Reset via the remount key the calculators pass, NOT an effect that syncs
+  // state to a prop: that renders twice and is what
+  // react-hooks/set-state-in-effect flags -- a rule that fires on CI and not
+  // locally, so it cost a red build before it cost anything else.
+  assert.doesNotMatch(MODAL, /useEffect/, 'no state-sync effect');
+  for (const [name, SRC] of Object.entries(FILES)) {
+    assert.match(
+      SRC,
+      /key=\{rateNotice \? rateNotice\.rate : 'none'\}/,
+      name + ' must remount the dialog on a new notice'
+    );
+  }
+});
+
+for (const [name, SRC] of Object.entries(FILES)) {
+  test(`${name}: Confirm writes the rate the operator confirmed`, () => {
+    assert.match(
+      SRC,
+      /onConfirm=\{\(rate\) => \{[\s\S]{0,400}?set(Std|Cplx)Field\('usd_rate', rate\)/,
+      'the dialog may have corrected it, so the confirmed value is what gets written'
+    );
+  });
+}
+
+test('Complex writes through its OWN setter — MES-3-FIX-53', () => {
+  // Sending this through the Standard action lands the write in stdState and
+  // loses it on save. That cost 36 days of silent data loss in May.
+  assert.match(FILES.Complex, /setCplxField\('usd_rate', rate\)/);
+  assert.doesNotMatch(FILES.Complex, /setStdField\('usd_rate', rate\)/);
+});
