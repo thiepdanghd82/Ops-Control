@@ -211,7 +211,17 @@ function extractCellValue(col, proc, rate, rowCost) {
     case 'scrap_pct':
       return numCell(proc.scrap_pct);
     case 'tool_cost':
-      return numCell(proc.tool_cost);
+      // Layout-assigned rows keep their own cell at 0 and carry a
+      // tool_cost_src, so the raw field is 0 for exactly the rows that DO
+      // have a tool. The effective cost is persisted by the client.
+      // Quotes saved before this shipped carry no such field and fall back
+      // to the raw cell — correct for a manual cost, and 0 for an assigned
+      // one, i.e. unchanged rather than newly wrong.
+      return numCell(
+        rowCost && rowCost.tool_cost_effective != null
+          ? rowCost.tool_cost_effective
+          : proc.tool_cost
+      );
     case 'tool_type':
       return proc.tool_type || '';
     case 'tool_life':
