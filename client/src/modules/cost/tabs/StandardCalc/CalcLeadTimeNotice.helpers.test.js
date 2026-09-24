@@ -881,3 +881,59 @@ describe('buildLeadTimeMaterialsTable — tolerant code↔library matcher (Lesso
     assert.equal(res.ambiguous, false);
   });
 });
+
+// ── Layout-assigned tooling (the `—` Henry reported 2026-09-24) ───────────
+//
+// A process can take its tool cost from the LAYOUT tab (a Plate or a Cutter)
+// instead of from its own cell. When it does, `effectiveToolCost` — the
+// resolver the money path uses — ignores `proc.tool_cost` ENTIRELY and reads
+// the Layout map. The row's own field stays 0.
+//
+// Summing the raw field therefore returns 0 for every such row. Measured on
+// live data 2026-09-24: 48 processes carry a `tool_cost_src` and ALL 48 hold
+// `tool_cost: 0`, so the roll-up read `—` on every quote that assigns tooling
+// from Layout — including the Cost Breakdown column that EXPORTS to CSV.
+//
+// This is the trap S-TOOLLIFE-UNIT recorded catching me by hand in September,
+// written down as a hazard for humans while the product's own roll-up carried
+// it unnoticed.
+describe('sumToolingCostStd — Layout-assigned rows', () => {
+  // Henry's screenshot: Process 2 = Plate $25.21, Process 6 = Cutter $234.24.
+  const LAYOUT = { plate: 25.21, 'cutter-0': 234.24 };
+  const processes = [
+    { process_type: 'Die_Cut' },
+    { process_type: 'Print', tool_cost_src: 'plate', tool_cost: 0 },
+    { process_type: 'Die_Cut', tool_cost_src: 'cutter-0', tool_cost: 0 },
+  ];
+
+  test('reads the Layout cost, not the row cell', () => {
+    assert.equal(
+      Number(sumToolingCostStd(processes, LAYOUT).toFixed(2)),
+      259.45,
+      'the money path charges 25.21 + 234.24; the roll-up must agree with it'
+    );
+  });
+
+  test('without the map the assigned rows contribute 0 — the reported bug', () => {
+    // Pinned deliberately: this is what the helper did for every caller, and
+    // it must stay reproducible so a future "simplification" back to the raw
+    // field is visibly a regression rather than a silent one.
+    assert.equal(sumToolingCostStd(processes), 0);
+  });
+
+  test('a MANUAL row is unchanged — no src means the row cell still wins', () => {
+    const manual = [{ tool_cost: 120 }, { tool_cost_src: '', tool_cost: 30 }];
+    assert.equal(sumToolingCostStd(manual, LAYOUT), 150);
+  });
+
+  test('assigned to a source that has since disappeared → 0, never the stale cell', () => {
+    // effectiveToolCost force-0s this case on purpose; a stale 99 left in the
+    // row is exactly the number that misled me in September.
+    assert.equal(sumToolingCostStd([{ tool_cost_src: 'cutter-9', tool_cost: 99 }], LAYOUT), 0);
+  });
+
+  test('hidden rows stay excluded', () => {
+    const withHidden = [...processes, { tool_cost_src: 'plate', hidden: true }];
+    assert.equal(Number(sumToolingCostStd(withHidden, LAYOUT).toFixed(2)), 259.45);
+  });
+});

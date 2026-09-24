@@ -11,6 +11,11 @@
 
 import { isMainMat, isProcessMat } from '../../lib/rowTypeNormalize.js';
 import { calcMat } from '../../../../services/calcEngine.js';
+import {
+  effectiveToolCost,
+  layoutToolCostSources,
+  buildLayoutToolCosts,
+} from '../../../../services/layoutToolCost.js';
 import { normCode, resolveLibRow } from '../../lib/codeMatch.js';
 
 // Re-exported for existing callers/tests that import the tolerant matcher from
@@ -35,9 +40,50 @@ function safeNum(v) {
  * @param {Array|null|undefined} processes - stdState.processes
  * @returns {number}
  */
-export function sumToolingCostStd(processes) {
+/**
+ * The Layout-derived tool-cost map for a Standard quote (or one Cpx
+ * sub-product). Kept HERE rather than at each call site so the three
+ * consumers of the tooling roll-up — Lead time (Std), Lead time (Cpx) and the
+ * Cost Breakdown column that exports to CSV — cannot derive it differently.
+ * @param {object} state stdState, or a Cpx subproduct
+ * @param {object} lib
+ * @returns {Record<string, number>}
+ */
+export function layoutCostsFor(state, lib) {
+  if (!lib) return {};
+  return buildLayoutToolCosts(layoutToolCostSources(state || {}, lib));
+}
+
+/** Per-sub-product maps, parallel to `subproducts`. */
+export function layoutCostsForCpx(subproducts, lib) {
+  if (!Array.isArray(subproducts)) return [];
+  return subproducts.map((sp) => layoutCostsFor(sp, lib));
+}
+
+/**
+ * Σ tool cost across Standard quote processes.
+ *
+ * Resolves through `effectiveToolCost` — the SAME resolver `calcProcess` uses
+ * — rather than reading `p.tool_cost`, because a process that takes its cost
+ * from the Layout tab leaves its own cell at 0 and carries a `tool_cost_src`
+ * instead. Summing the raw field returned 0 for every such row: measured
+ * 2026-09-24, all 48 Layout-assigned processes in live data hold
+ * `tool_cost: 0`, so this read `—` on every quote that assigns tooling from
+ * Layout, and the Cost Breakdown column exported that 0 to CSV.
+ *
+ * Sharing the resolver is the point: the roll-up and the money path can no
+ * longer disagree about what a tool costs (Lesson 21).
+ *
+ * @param {Array|null|undefined} processes - stdState.processes
+ * @param {Record<string,number>} [layoutToolCosts] - from `layoutCostsFor`
+ * @returns {number}
+ */
+export function sumToolingCostStd(processes, layoutToolCosts) {
   if (!Array.isArray(processes)) return 0;
-  return processes.reduce((s, p) => (isVisibleProc(p) ? s + safeNum(p.tool_cost) : s), 0);
+  return processes.reduce(
+    (s, p) => (isVisibleProc(p) ? s + safeNum(effectiveToolCost(p, layoutToolCosts)) : s),
+    0
+  );
 }
 
 /**
@@ -45,9 +91,13 @@ export function sumToolingCostStd(processes) {
  * @param {Array|null|undefined} subproducts - cplxState.subproducts
  * @returns {number}
  */
-export function sumToolingCostCpx(subproducts) {
+export function sumToolingCostCpx(subproducts, layoutToolCostsBySp) {
   if (!Array.isArray(subproducts)) return 0;
-  return subproducts.reduce((acc, sp) => acc + sumToolingCostStd(sp && sp.processes), 0);
+  const maps = Array.isArray(layoutToolCostsBySp) ? layoutToolCostsBySp : [];
+  return subproducts.reduce(
+    (acc, sp, i) => acc + sumToolingCostStd(sp && sp.processes, maps[i]),
+    0
+  );
 }
 
 // Single USD formatter instance — cheap to reuse across renders.

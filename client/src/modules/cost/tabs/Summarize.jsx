@@ -50,6 +50,8 @@ import {
 import {
   sumToolingCostStd,
   sumToolingCostCpx,
+  layoutCostsFor,
+  layoutCostsForCpx,
   safeLeadTime,
   fmtUsd,
   fmtVnd,
@@ -606,8 +608,8 @@ export default function Summarize() {
             // processes. Both helpers tolerate missing arrays.
             tooling_cost_usd:
               q.type === 'complex'
-                ? sumToolingCostCpx(st.subproducts)
-                : sumToolingCostStd(st.processes),
+                ? sumToolingCostCpx(st.subproducts, layoutCostsForCpx(st.subproducts, lib))
+                : sumToolingCostStd(st.processes, layoutCostsFor(st, lib)),
             // 6 Lead Time & Notice fields — heal-on-read via
             // safeLeadTime so legacy quotes (saved before Sprint S-D21-
             // LEADTIME) get empty strings, not undefined → no
