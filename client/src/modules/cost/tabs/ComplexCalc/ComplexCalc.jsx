@@ -45,6 +45,7 @@ import BomTreeView from './BomTreeView';
 import CalcLeadTimeNotice from '../StandardCalc/CalcLeadTimeNotice';
 import {
   sumToolingCostCpx,
+  layoutCostsForCpx,
   deriveMaterialLT,
   resolveMaterialLtDisplay,
   derivePoProdHours,
@@ -607,8 +608,9 @@ export default function ComplexCalc() {
   // to enable node:test coverage; reuses sumToolingCostStd internally
   // so Std and Cpx skip the same `hidden:true` rows by the same rule.
   const toolingCostTotal = useMemo(
-    () => sumToolingCostCpx(cplxState.subproducts),
-    [cplxState.subproducts]
+    // Per-SP Layout maps — each sub-product carries its own Plate block.
+    () => sumToolingCostCpx(cplxState.subproducts, layoutCostsForCpx(cplxState.subproducts, lib)),
+    [cplxState.subproducts, lib]
   );
 
   // Sprint S-PACK-SHIP-PER-TIER — per-tier pack/ship binding for the

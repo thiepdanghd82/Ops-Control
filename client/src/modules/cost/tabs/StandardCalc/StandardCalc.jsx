@@ -44,6 +44,7 @@ import ProcessBalancing from './ProcessBalancing';
 import CalcLeadTimeNotice from './CalcLeadTimeNotice';
 import {
   sumToolingCostStd,
+  layoutCostsFor,
   deriveMaterialLT,
   resolveMaterialLtDisplay,
   derivePoProdHours,
@@ -513,8 +514,11 @@ export default function StandardCalc() {
   // stdState.processes[i].tool_cost. Helper extracted to enable
   // node:test coverage (CalcLeadTimeNotice.helpers.test.js).
   const toolingCostTotal = useMemo(
-    () => sumToolingCostStd(stdState.processes),
-    [stdState.processes]
+    // Resolves Layout-assigned costs through the money path's own resolver —
+    // a process sourcing its tool from the Layout tab leaves tool_cost at 0
+    // (all 48 such rows in live data did), so the raw field read 0 here.
+    () => sumToolingCostStd(stdState.processes, layoutCostsFor(stdState, lib)),
+    [stdState, lib]
   );
 
   let content;
