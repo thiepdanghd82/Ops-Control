@@ -833,6 +833,12 @@ export function calcProcess(proc, st, moq, lib, options = {}) {
     eau,
     pitch,
     total_time,
+    // The cost actually charged for this tool. A Layout-assigned row leaves
+    // proc.tool_cost at 0 and carries a tool_cost_src, so the raw cell is not
+    // the number anyone wants to read back — the xlsx Processes sheet showed 0
+    // for every such row. Persisted here because the SERVER never recomputes
+    // prices; it reads quote.result (the MVP-1.5 / MES-3-FIX-41 pattern).
+    tool_cost_effective: effToolCost,
   };
 }
 
@@ -2722,6 +2728,7 @@ const _procRowFromResult = (r) => {
     // Displayed split + throughput (CalcProcesses result columns).
     setup_mach: _num(r && r.setup_mach),
     setup_labor: _num(r && r.setup_labor),
+    tool_cost_effective: _num(r && r.tool_cost_effective),
     run_mach: _num(r && r.run_mach),
     run_labor: _num(r && r.run_labor),
     tooling,
