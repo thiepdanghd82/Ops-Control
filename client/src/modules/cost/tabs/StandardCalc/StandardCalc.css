@@ -3877,3 +3877,36 @@ select.sc-input {
   justify-content: space-between;
   gap: 12px;
 }
+
+/* Row reorder arrows (Processes, Std + Cpx). Faded until hover so they do not
+   compete with the data; disabled at the visible edge via canMoveRow, so the
+   cue and the action share ONE condition rather than two free to disagree
+   (S-PIN-ACTIONABLE). StandardCalc.css is imported by SubProductRow too, so
+   one definition serves both twins. */
+.sc-row-move {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.sc-row-move-btn {
+  border: 1px solid var(--color-slate-300, #cbd5e1);
+  background: transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 9px;
+  line-height: 1;
+  padding: 1px 3px;
+  opacity: 0.45;
+  transition:
+    opacity 0.12s ease,
+    background 0.12s ease;
+}
+.sc-row-move-btn:hover:not(:disabled) {
+  opacity: 1;
+  background: var(--color-slate-100, #f1f5f9);
+}
+.sc-row-move-btn:disabled {
+  opacity: 0.15;
+  cursor: default;
+}

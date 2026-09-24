@@ -34,7 +34,9 @@ import {
   removeSpInkRow,
   addSpProcessRow,
   removeSpProcessRow,
+  moveSpProcessRow,
 } from '../../../../context/calcReducer';
+import { canMoveRow } from '../../lib/moveRow';
 import { fmtN, parseLocaleNumber } from '../../../../utils/format';
 import FileUploadZone from '../../../../components/Shared/FileUploadZone';
 import DecimalInput from '../../../../utils/DecimalInput';
@@ -372,6 +374,12 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
   const mats = (sp.materials || []).filter((m) => !m.hidden);
   const inks = (sp.inks || []).filter((i) => !i.hidden);
   const procs = (sp.processes || []).filter((p) => !p.hidden);
+  // Raw indices of the VISIBLE processes. `procs` above drops hidden rows, so
+  // `pi` cannot address sp.processes — the reorder needs the real index.
+  const procRawIdx = (sp.processes || []).reduce((acc, p, i) => {
+    if (!p.hidden) acc.push(i);
+    return acc;
+  }, []);
 
   // Layout-assigned tool costs (Sprint S-LAYOUT-TOOLCOST). Cpx sub-products
   // carry only PLATE layout fields (no cutter block), so sources = Plate only.
@@ -1504,7 +1512,39 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                   const manualDerived = isManualDerivedRow(r, p.speed);
                   return (
                     <tr key={p._mid || `idx-${pi}`}>
-                      <td className="sc-td-idx">Process {pi + 1}</td>
+                      <td className="sc-td-idx">
+                        Process {pi + 1}
+                        <span className="sc-row-move">
+                          <button
+                            type="button"
+                            className="sc-row-move-btn"
+                            disabled={!canMoveRow(sp.processes, procRawIdx[pi], 'up')}
+                            onClick={() =>
+                              dispatch(
+                                moveSpProcessRow({ spIdx: spi, idx: procRawIdx[pi], dir: 'up' })
+                              )
+                            }
+                            title={t('cgrid.proc.move_up')}
+                            aria-label={t('cgrid.proc.move_up')}
+                          >
+                            ▲
+                          </button>
+                          <button
+                            type="button"
+                            className="sc-row-move-btn"
+                            disabled={!canMoveRow(sp.processes, procRawIdx[pi], 'down')}
+                            onClick={() =>
+                              dispatch(
+                                moveSpProcessRow({ spIdx: spi, idx: procRawIdx[pi], dir: 'down' })
+                              )
+                            }
+                            title={t('cgrid.proc.move_down')}
+                            aria-label={t('cgrid.proc.move_down')}
+                          >
+                            ▼
+                          </button>
+                        </span>
+                      </td>
                       <td>
                         <select
                           value={p.process_type || ''}

@@ -23,6 +23,7 @@ import { upgradeStdState } from '../services/stdMigration.js';
 import { applyPrintToCutSync } from '../services/layoutFieldSync.js';
 import { buildDrawingPatch, DRAWING_KINDS } from '../services/drawingFiles.js';
 import { resetProcessesScrap } from '../services/scrapDefaults.js';
+import { moveRowAmongVisible } from '../modules/cost/lib/moveRow.js';
 import { clearTargets } from '../services/copyResetTargets.js';
 
 // ── Action Types ──
@@ -47,6 +48,7 @@ export const CALC_ACTIONS = {
   REMOVE_INK_ROW: 'REMOVE_INK_ROW',
   ADD_PROCESS_ROW: 'ADD_PROCESS_ROW',
   REMOVE_PROCESS_ROW: 'REMOVE_PROCESS_ROW',
+  MOVE_PROCESS_ROW: 'MOVE_PROCESS_ROW',
   TOGGLE_ROW_HIDDEN: 'TOGGLE_ROW_HIDDEN',
   SET_ACTIVE_MOQ: 'SET_ACTIVE_MOQ',
   SET_EXTRA_MOQ: 'SET_EXTRA_MOQ',
@@ -83,6 +85,7 @@ export const CALC_ACTIONS = {
   REMOVE_SP_INK_ROW: 'REMOVE_SP_INK_ROW',
   ADD_SP_PROCESS_ROW: 'ADD_SP_PROCESS_ROW',
   REMOVE_SP_PROCESS_ROW: 'REMOVE_SP_PROCESS_ROW',
+  MOVE_SP_PROCESS_ROW: 'MOVE_SP_PROCESS_ROW',
 
   // BOM tree (structural, cost-aggregation-neutral per Sprint 3.4 deferral)
   SET_SP_ASSEMBLY: 'SET_SP_ASSEMBLY',
@@ -158,6 +161,10 @@ export function addSpProcessRow(payload) {
 /** @param {SpRowScopePayload} payload */
 export function removeSpProcessRow(payload) {
   return { type: A.REMOVE_SP_PROCESS_ROW, payload };
+}
+/** Reorder one sub-product process by a visible position. @param {object} payload */
+export function moveSpProcessRow(payload) {
+  return { type: A.MOVE_SP_PROCESS_ROW, payload };
 }
 /**
  * REMOVE_SUBPRODUCT — one of the Sprint 11 bugs was callers passing a
@@ -541,6 +548,16 @@ export function calcReducer(state, action) {
 
     case A.REMOVE_PROCESS_ROW: {
       const procs = state.stdState.processes.filter((_, i) => i !== payload.idx);
+      return { ...state, isDirty: true, stdState: { ...state.stdState, processes: procs } };
+    }
+
+    // Reorder by one VISIBLE position (moveRowAmongVisible skips hidden rows,
+    // which are in the array but not on screen). Returns the same reference
+    // at the visible edge, so a clamped move is a genuine no-op rather than a
+    // spurious isDirty flag on the quote.
+    case A.MOVE_PROCESS_ROW: {
+      const procs = moveRowAmongVisible(state.stdState.processes, payload.idx, payload.dir);
+      if (procs === state.stdState.processes) return state;
       return { ...state, isDirty: true, stdState: { ...state.stdState, processes: procs } };
     }
 
@@ -997,6 +1014,22 @@ export function calcReducer(state, action) {
         cplxState: {
           ...state.cplxState,
           subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, { processes: procs }),
+        },
+      };
+    }
+
+    case A.MOVE_SP_PROCESS_ROW: {
+      const spM = state.cplxState.subproducts[payload.spIdx];
+      const moved = moveRowAmongVisible(spM && spM.processes, payload.idx, payload.dir);
+      if (!spM || moved === spM.processes) return state;
+      return {
+        ...state,
+        isDirty: true,
+        cplxState: {
+          ...state.cplxState,
+          subproducts: updateSP(state.cplxState.subproducts, payload.spIdx, {
+            processes: moved,
+          }),
         },
       };
     }

@@ -1400,6 +1400,8 @@ registerStrings({
   'cgrid.proc.title': { en: 'Processes', vi: 'Công đoạn' },
   'cgrid.proc.add': { en: '+ Add Process Row', vi: '+ Thêm dòng công đoạn' },
   'cgrid.proc.row': { en: 'Process', vi: 'Công đoạn' },
+  'cgrid.proc.move_up': { en: 'Move up', vi: 'Chuyển lên' },
+  'cgrid.proc.move_down': { en: 'Move down', vi: 'Chuyển xuống' },
   'cgrid.proc.process_type': { en: 'Process Type', vi: 'Loại công đoạn' },
   'cgrid.proc.workcenter': { en: 'Workcenter', vi: 'Trạm/Máy' },
   'cgrid.proc.rpt': { en: 'Rpt', vi: 'Lặp' },

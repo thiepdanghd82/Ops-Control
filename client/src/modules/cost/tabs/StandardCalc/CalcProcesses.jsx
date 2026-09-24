@@ -19,6 +19,7 @@ import DecimalInput from '../../../../utils/DecimalInput';
 import { crewOverrideState, isManualDerivedRow } from './processCrew.helpers';
 import { resolveScrapOnWorkcenterChange } from '../../../../services/scrapDefaults';
 import { layoutToolCostSources, buildLayoutToolCosts } from '../../../../services/layoutToolCost';
+import { canMoveRow } from '../../lib/moveRow';
 import ToolCostCell from '../../components/ToolCostCell';
 import '../../components/ToolCostCell.css';
 // ProcessBalancing is rendered as separate "Balancing" sub-tab
@@ -316,6 +317,32 @@ export default function CalcProcesses() {
                   <tr key={proc._mid || `idx-${i}`}>
                     <td className="sc-td-idx">
                       {t('cgrid.proc.row')} {vi + 1}
+                      <span className="sc-row-move">
+                        <button
+                          type="button"
+                          className="sc-row-move-btn"
+                          disabled={!canMoveRow(processes, i, 'up')}
+                          onClick={() =>
+                            dispatch({ type: 'MOVE_PROCESS_ROW', payload: { idx: i, dir: 'up' } })
+                          }
+                          title={t('cgrid.proc.move_up')}
+                          aria-label={t('cgrid.proc.move_up')}
+                        >
+                          ▲
+                        </button>
+                        <button
+                          type="button"
+                          className="sc-row-move-btn"
+                          disabled={!canMoveRow(processes, i, 'down')}
+                          onClick={() =>
+                            dispatch({ type: 'MOVE_PROCESS_ROW', payload: { idx: i, dir: 'down' } })
+                          }
+                          title={t('cgrid.proc.move_down')}
+                          aria-label={t('cgrid.proc.move_down')}
+                        >
+                          ▼
+                        </button>
+                      </span>
                     </td>
                     <td>
                       <select
