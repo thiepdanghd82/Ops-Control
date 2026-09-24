@@ -85,6 +85,19 @@ export function useGridKeyboardNav(scopeRef) {
       const tag = active.tagName;
       if (tag !== 'INPUT' && tag !== 'SELECT' && tag !== 'TEXTAREA') return;
 
+      // A TEXTAREA owns Enter — that IS how a newline is typed. Driving focus
+      // with it (down, or up on Shift) meant every multi-line box inside a
+      // calculator sub-tab could not take a line break at all: the five on
+      // Lead time & Notice (Remark, Process, Type of material, …) swallowed
+      // both Enter AND Shift+Enter, because this listener is on the capture
+      // phase and the textarea never saw the key. Reported 2026-09-24.
+      //
+      // Arrow keys are deliberately NOT exempted here: they still step rows,
+      // which is the behaviour every single-line cell in these grids relies
+      // on. Caret-stepping inside a wrapped textarea would need the same
+      // boundary check Left/Right already does, and that is a separate call.
+      if (isEnter && tag === 'TEXTAREA') return;
+
       // Left/Right only leave a text cell at its caret boundary.
       if (dir === 'left' || dir === 'right') {
         const { atStart, atEnd } = caretBoundary(active);
