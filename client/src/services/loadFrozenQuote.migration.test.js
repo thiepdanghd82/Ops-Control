@@ -21,6 +21,18 @@
  * (2) is the one that would have caught a mistake. A change to a shared
  * divisor is exactly the kind that leaks sideways into materials or inks
  * without anybody noticing, because every number still looks plausible.
+ *
+ * SECOND DELIBERATE BREAK — 2026-09-25, the ink make-ready length.
+ * ─────────────────────────────────────────────────────────────────
+ * Setup ink spans the material's `setup_lm` metres of make-ready, not the
+ * 1 metre it charged before (see inkSetupMakeReady.test.js for why the old
+ * reading could never resolve). So each archived quote now drifts on a
+ * SECOND chain, and the confinement assertion below covers both.
+ *
+ * The control worth knowing: the Indigo fixture is byte-identical across
+ * this change, because Indigo bills click-charges by SHEET and never enters
+ * the coverage branch. Three fixtures moved, one did not — which is what
+ * shows the change landed where it was aimed.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -29,13 +41,19 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { calcAll } from './calcEngine.js';
 
-const ARCHIVE = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '__fixtures__',
-  'pre-tooling-yield'
+const FIX_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '__fixtures__');
+/**
+ * One directory per deliberate break, holding the fixtures as they stood
+ * BEFORE it. `pre-tooling-yield` predates both changes; `pre-ink-makeready`
+ * predates only the ink one. A quote from either era must still open.
+ */
+const ARCHIVES = ['pre-tooling-yield', 'pre-ink-makeready'];
+const load = (dir, f) => JSON.parse(readFileSync(path.join(FIX_ROOT, dir, f), 'utf8'));
+const FIXTURES = ARCHIVES.flatMap((dir) =>
+  readdirSync(path.join(FIX_ROOT, dir))
+    .filter((f) => f.endsWith('.json'))
+    .map((f) => [dir, f])
 );
-const load = (f) => JSON.parse(readFileSync(path.join(ARCHIVE, f), 'utf8'));
-const FIXTURES = readdirSync(ARCHIVE).filter((f) => f.endsWith('.json'));
 
 /** Fields the tooling fix is allowed to move, and everything it rolls up into. */
 const TOOLING_CHAIN = new Set([
@@ -55,13 +73,28 @@ const TOOLING_CHAIN = new Set([
   'gm_after_sga',
 ]);
 
-test('the archive is present — the old baseline must not be deleted', () => {
-  assert.equal(FIXTURES.length, 4, `expected 4 archived fixtures, found ${FIXTURES.length}`);
+/**
+ * Fields the ink make-ready fix is allowed to move. Setup ink now spans
+ * `setup_lm` metres instead of 1, so `bd_ink_setup` moves — and the two
+ * material-cost roll-ups move with it, because MES-3-FIX-47 established that
+ * `s_mat_cost` already aggregates ink subcost despite its name.
+ */
+const INK_SETUP_CHAIN = new Set(['bd_ink_setup', 's_mat_cost', 'g_mat_cost']);
+
+/** Everything a DOCUMENTED deliberate break may touch. Nothing else may move. */
+const ALLOWED = new Set([...TOOLING_CHAIN, ...INK_SETUP_CHAIN]);
+
+test('the archive is present — no old baseline may be deleted', () => {
+  assert.equal(
+    FIXTURES.length,
+    8,
+    `expected 8 archived fixtures across ${ARCHIVES.length} breaks, found ${FIXTURES.length}`
+  );
 });
 
-for (const file of FIXTURES) {
-  test(`${file}: a 2026 quote still computes — no throw, no NaN, no dropped field`, () => {
-    const { lib, state, expected_result: was } = load(file);
+for (const [dir, file] of FIXTURES) {
+  test(`${dir}/${file}: a 2026 quote still computes — no throw, no NaN, no dropped field`, () => {
+    const { lib, state, expected_result: was } = load(dir, file);
     const now = calcAll(state, null, lib, null, {});
     assert.ok(now && typeof now === 'object', 'calcAll returned nothing');
     for (const [k, v] of Object.entries(was)) {
@@ -71,19 +104,19 @@ for (const file of FIXTURES) {
     }
   });
 
-  test(`${file}: the drift is confined to the tooling chain`, () => {
-    const { lib, state, expected_result: was } = load(file);
+  test(`${dir}/${file}: the drift is confined to the chains we deliberately changed`, () => {
+    const { lib, state, expected_result: was } = load(dir, file);
     const now = calcAll(state, null, lib, null, {});
     const leaked = [];
     for (const [k, v] of Object.entries(was)) {
-      if (typeof v !== 'number' || TOOLING_CHAIN.has(k)) continue;
+      if (typeof v !== 'number' || ALLOWED.has(k)) continue;
       // Tolerance is float noise only, not a budget for real movement.
       if (Math.abs((now[k] ?? 0) - v) > 1e-9) leaked.push(`${k}: ${v} → ${now[k]}`);
     }
     assert.deepEqual(
       leaked,
       [],
-      `the tooling fix moved fields outside the tooling chain:\n  ${leaked.join('\n  ')}`
+      `a deliberate change moved fields outside the tooling + ink-setup chains:\n  ${leaked.join('\n  ')}`
     );
   });
 }
