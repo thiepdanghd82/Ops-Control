@@ -5518,6 +5518,25 @@ export const HELP_CONTENT = {
           'Sửa workcenter công đoạn → ink RUN cost trên cùng màn hình cập nhật ngay (không cần chuyển tab). Cả 3 section dùng chung React state qua useCalc().'
         ),
       ]),
+      proc(
+        'In-line print + cut: plate and die on one press',
+        'In-cắt liền: plate và dao cắt trên một máy',
+        null,
+        [
+          bs(
+            "Brotech and Gallus can print and cut in one pass, but the plate and the die have different costs and tool lives, and one process row carries one tool. Give the press its own row with its workcenter, and in that row's Tool Cost cell assign the Plate from Layout.",
+            'Brotech và Gallus có thể in và cắt trong một lượt, nhưng plate và dao cắt có giá và tool life khác nhau, trong khi mỗi dòng công đoạn chỉ mang một khuôn. Dòng máy in: chọn workcenter của máy, và ở ô Tool Cost của dòng đó gán Plate từ Layout.'
+          ),
+          bs(
+            'Add a second row with NO workcenter for the die: assign the Cutter from Layout (or type its cost), and fill its Tool Type, Tool Life and layout. That row is charged its tooling only — no setup, no run, because the machine time is already on the press row.',
+            'Thêm một dòng thứ hai KHÔNG chọn workcenter cho dao cắt: gán Cutter từ Layout (hoặc nhập giá khuôn), điền Tool Type, Tool Life và layout của nó. Dòng này chỉ tính tiền khuôn — không có setup, không có run, vì thời gian máy đã nằm ở dòng máy in.'
+          ),
+          bs(
+            "Do not pick the press again on the second row: that bills the machine's setup and run a second time.",
+            'Đừng chọn lại máy in ở dòng thứ hai: làm vậy sẽ tính setup và run của máy thêm một lần nữa.'
+          ),
+        ]
+      ),
       proc('Section deep dives', 'Tra cứu chi tiết từng section', null, [
         bs(
           'For deep field-by-field documentation of each section, see the Materials / Inks / Processes help entries via search — they retain the original detail content from when those were standalone tabs.',
