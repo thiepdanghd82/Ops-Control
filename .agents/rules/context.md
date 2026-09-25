@@ -74,6 +74,16 @@ being called that.
   legacy `state.materials` is kept as a MIRROR of the active set so old readers stay green.
 - **result shape**: per-row data in `result.rows`, per-tier in `result.tiers[N].rows`,
   per-subproduct in `result.subproducts[spi].rows`.
+- **Saved vs display result** — opening a quote recomputes it live against its frozen
+  `pricing_snapshot`; every xlsx/CSV, Quote History and the Cost Breakdown list read the
+  persisted `quote.result`. An engine change moves the first and not the second until the
+  quote is saved again. The drift banner compares the two — never against what Save would
+  write — and lights Save (S-SAVED-DRIFT, Lesson 53).
+- **Layout-assigned tool cost** — a process whose tool comes from the Layout tab carries
+  `tool_cost_src` (`plate`, `cutter-N`) and leaves `tool_cost` at **0**. Resolve through
+  `effectiveToolCost`, never the raw cell; the server reads the persisted
+  `result.rows.processes[].tool_cost_effective`. A row with no `workcenter` charges
+  nothing, tooling included — open question since 2026-09-25 (S-TOOL-COST-READERS).
 
 ## Printing & manufacturing
 
@@ -88,6 +98,11 @@ being called that.
   `part_width`, `part_length_md`. `applyPrintToCutSync` auto-mirrors while canonical is 0
   (FIX-32/34).
 - **CLICKS** — Indigo click charges. **COV OVR** — coverage override (auto vs manual; `covOvrState.js`).
+- **setup_lm / make-ready length** — metres of material run at setup. Material setup, ink
+  setup (`area × width × setup_lm / coverage`) and Indigo setup (`⌈setup_lm / 0.98⌉` frames;
+  0.98 m is the 980 mm Indigo frame, not a yield) all read it — source: the costing
+  workbook, cell T33, column G. `usage` is a per-piece multiplier, not a length, and
+  `ink.base_mat` has held a WIDTH since FIX-40 (S-INK-MAKEREADY, Lesson 52).
 - **Gallus / plate cylinder / pitch / K / bleed_mm** — flexo cylinder design. **K** = unusable
   plate zone ("vùng cylinder không in"), a constraint `(pitch − K)`, not a display %.
   `bleed_mm` defaults 2 mm/side (print footprint ≠ trim). Magnetic die min lane gap = 1.5 mm.
