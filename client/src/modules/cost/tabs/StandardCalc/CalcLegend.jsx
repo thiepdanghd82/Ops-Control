@@ -472,7 +472,8 @@ function LegendBody() {
                 được tài liệu hóa tại đây. <b>Bản cập nhật này</b> còn sửa hai điểm lệch
                 Legend-vs-code phát hiện khi soát lại — mức trần khuôn là <code>eau × 0.8</code>{' '}
                 (trước thiếu hệ số 0.8) và công thức setup mực Indigo là{' '}
-                <code>cc × clicks × ⌈base_usage/0.98⌉ / MOQ</code> — và bổ sung ba phần engine trước
+                <code>cc × clicks × ⌈base_usage/0.98⌉ / MOQ</code> (từ 25/09/2026 đọc{' '}
+                <code>⌈setup_lm/0.98⌉</code> theo file Excel gốc) — và bổ sung ba phần engine trước
                 đây chưa có: <b>Lead time &amp; Notice</b> (§06B), <b>What-if Cost Breakdown</b>{' '}
                 (§06 D), và <b>Mats./MOQ gộp</b> (§04).
               </>
@@ -486,8 +487,9 @@ function LegendBody() {
             entirely missing from the xlsx — documented here for the first time. <b>This refresh</b>{' '}
             additionally corrected two Legend-vs-code drifts found in the re-audit — the tooling EAU
             cap is <code>eau × 0.8</code> (the 0.8 factor was missing) and the Indigo ink-setup
-            formula is <code>cc × clicks × ⌈base_usage/0.98⌉ / MOQ</code> — and newly documented
-            three engine surfaces absent before: <b>Lead time &amp; Notice</b> (§06B),{' '}
+            formula is <code>cc × clicks × ⌈base_usage/0.98⌉ / MOQ</code> (read as{' '}
+            <code>⌈setup_lm/0.98⌉</code> since 2026-09-25, per the source workbook) — and newly
+            documented three engine surfaces absent before: <b>Lead time &amp; Notice</b> (§06B),{' '}
             <b>Cost Breakdown what-if</b> (§06 D), and <b>Mats./MOQ gross</b> (§04).
           </Callout>
 
@@ -2122,10 +2124,10 @@ Ink_Setup = price × (setup_kg + coverage>0 ? area_pct×width_m×setup_lm/covera
             expr={`L_ind     = ⌊980 / pitch⌋ × layout_per_sheet × num_webs
 cc        = LOOKUP(clicks, lib.ddl.click_charges)   [largest key ≤ clicks]
 Ink_Run   = L_ind > 0 ? cc × clicks / L_ind / safeYield(scrap) : 0
-setup_sheets = ⌈base_usage / 0.98⌉
+setup_sheets = ⌈setup_lm / 0.98⌉    [setup_lm metres ÷ 0.98 m frame, whole frames]
 Ink_Setup = cc × clicks × setup_sheets / MOQ`}
-            note="✅ Verified — 980 mm = Indigo sheet width constant; 0.98 = setup-sheet yield. clicks = number of ink channels used on the job."
-            noteVi="✅ Đã xác thực — 980 mm = hằng số khổ sheet Indigo; 0.98 = hiệu suất sheet setup. clicks = số kênh mực dùng cho job."
+            note="✅ Verified against the source workbook (T33: ROUNDUP(Setup lm / 0.98, 0)) — 980 mm is the Indigo frame length along the web, so setup_lm metres of make-ready ÷ 0.98 m = frames, rounded up to whole frames. setup_lm is read off the material row, the same field material setup uses. Until 2026-09-25 the app read the material's per-piece `usage` here instead and charged 2 frames on every row. clicks = number of ink channels used on the job."
+            noteVi="✅ Đã đối chiếu file Excel gốc (T33: ROUNDUP(Setup lm / 0.98, 0)) — 980 mm là chiều dài khung Indigo theo chiều chạy giấy, nên setup_lm mét make-ready ÷ 0.98 m = số khung, làm tròn lên khung nguyên. setup_lm lấy từ dòng vật liệu, đúng trường mà setup vật liệu dùng. Trước 25/09/2026 app đọc nhầm `usage` (hệ số/pcs) ở đây nên mọi dòng chỉ tính 2 khung. clicks = số kênh mực dùng cho job."
           />
           <Formula
             name="Totals (s_mat_cost / g_mat_cost)"
@@ -3523,7 +3525,7 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
                 ['Ink Run Cost', 'Ink = cc × clicks / L_ind / (1−S)', 'USD/pcs', 'calcInk()'],
                 [
                   'Ink Setup Cost',
-                  'Setup = cc × clicks × ⌈base_usage / 0.98⌉ / MOQ',
+                  'Setup = cc × clicks × ⌈setup_lm / 0.98⌉ / MOQ',
                   'USD/pcs',
                   'calcInk()',
                 ],

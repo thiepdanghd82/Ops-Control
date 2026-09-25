@@ -100,3 +100,94 @@ test('run cost is untouched by setup_lm', () => {
   assert.equal(a, b, 'setup_lm is a setup-only input');
   assert.ok(Math.abs(a - 0.0009687109) < 1e-9, `run should stay at Excel's 0.000969, got ${a}`);
 });
+
+// ── Indigo: the SAME make-ready length, counted in 980 mm frames ─────────────
+//
+// The source workbook (CCL vina (Samsung).xlsm, cell T33) reads ONE column for
+// both branches: `VLOOKUP(D33, B11:G20, 6,)` — the 6th column of B:G is G,
+// headed "Setup lm". The Indigo branch divides it by 0.98, i.e. counts metres
+// of make-ready in 0.98 m (980 mm) Indigo frames, the same frame the run
+// formula divides the pitch into. The port mapped column 6 to `usage` (column
+// F, the 5th) in BOTH branches; #427 fixed the coverage branch, this is the
+// other half. Henry's own Excel for RFQ-2026-S0073 gives 0.0084 × 8 × 41 / 1000.
+
+/** RFQ-2026-S0073 as saved 2026-09-25 06:13. */
+function s0073(setupLm = 40) {
+  const st = createStdState();
+  st.web_width_td = 270;
+  st.sheet_length = 957;
+  st.min_gap_md = 3; // pitch 960 → ⌊980/960⌋ = 1 repeat per frame
+  st.parts_web_across = 4;
+  st.parts_in_md = 11;
+  st.num_webs = 1;
+  st.materials = [
+    {
+      code: 'SW-7325F',
+      row_type: 'Main.Mat',
+      setup_lm: setupLm,
+      usage: 1,
+      width: 0,
+      latest: 0.4483,
+    },
+  ];
+  st.processes = [{ workcenter: 'FQC', scrap_pct: 0.1 }];
+  return st;
+}
+const INDIGO = { color: 'CMYK', print_type: 'Indigo', clicks: 8, setup_kg: 0.05, area_pct: 1 };
+const LIB_I = {
+  ddl: {
+    coverage: [],
+    click_charges: {
+      1: 0.030036,
+      2: 0.0074,
+      4: 0.0074,
+      6: 0.0084,
+      8: 0.0084,
+      10: 0.0084,
+      12: 0.0084,
+      14: 0.0084,
+    },
+  },
+};
+const MOQ_I = 1000;
+
+test('Indigo setup counts setup_lm in 980 mm frames — matches the Excel sheet', () => {
+  // ⌈40 / 0.98⌉ = 41 frames × 0.0084 × 8 clicks / 1000
+  const r = calcInk({ ...INDIGO }, s0073(40), MOQ_I, LIB_I);
+  assert.ok(
+    Math.abs(r.setup_s - 0.0027552) < 1e-12,
+    `expected Excel's 0.0027552, got ${r.setup_s}`
+  );
+});
+
+test('Indigo run is untouched by the make-ready length', () => {
+  const a = calcInk({ ...INDIGO }, s0073(40), MOQ_I, LIB_I).run_s;
+  const b = calcInk({ ...INDIGO }, s0073(1230), MOQ_I, LIB_I).run_s;
+  assert.equal(a, b, 'setup_lm is a setup-only input');
+  // 0.0084 × 8 / 44 / 0.9
+  assert.ok(Math.abs(a - 0.0016969696969697) < 1e-12, `run should stay at 0.001697, got ${a}`);
+});
+
+test('Indigo frames are whole — an exact multiple of 0.98 m must not gain a frame', () => {
+  // 19.6 / 0.98 is 20.000000000000004 in IEEE 754, so a bare ceil() charges 21.
+  // Measured: 73 setup_lm values between 0.05 m and 2000 m hit this.
+  const r = calcInk({ ...INDIGO }, s0073(19.6), MOQ_I, LIB_I);
+  const frames = (r.setup_s * MOQ_I) / (0.0084 * 8);
+  assert.ok(Math.abs(frames - 20) < 1e-9, `19.6 m is exactly 20 frames, got ${frames}`);
+});
+
+test('Indigo reads the same length as the coverage branch — `usage` moves neither', () => {
+  const st = s0073(40);
+  st.materials[0].usage = 5;
+  const r = calcInk({ ...INDIGO }, st, MOQ_I, LIB_I);
+  assert.ok(
+    Math.abs(r.setup_s - 0.0027552) < 1e-12,
+    `usage must not move Indigo setup, got ${r.setup_s}`
+  );
+});
+
+test('Indigo with no material row charges no make-ready frames, never a phantom two', () => {
+  const st = s0073(40);
+  st.materials = [];
+  assert.equal(calcInk({ ...INDIGO }, st, MOQ_I, LIB_I).setup_s, 0);
+});
