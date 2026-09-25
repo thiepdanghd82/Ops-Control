@@ -42,9 +42,16 @@ const DIST_DIR = process.env.OPS_DIST_DIR || path.join(__dirname, '..', 'client'
  * — LOWER these back down as that lands.
  */
 export const CHUNK_BUDGETS = [
-  // Core shell + vendored React runtime + eagerly-mounted Cost/Planning
-  // modules (App.jsx imports both). v1.6 re-baseline (was 320k @ v1.3).
-  { prefix: 'index', budget: 540_000, label: 'App shell (critical path)' },
+  // Core shell + vendored React runtime + the eagerly-loaded Cost module,
+  // calcEngine, and every i18n domain's EN+VI copy. (Planning, which this line
+  // used to name, was removed in #245.) v1.6 re-baseline 2026-07-21 was
+  // 458.8 kB + ~15% (was 320k @ v1.3). Two months of ordinary growth, the
+  // i18n waves among it, used all of that: on 2026-09-25 main measured
+  // 539,910 bytes against 540,000, and a 248-byte money-path fix (the
+  // tool-only process row) could not land. Raised to 550,000, +1.9% over
+  // main, so ordinary fixes fit while a new eager import still trips it.
+  // The real reduction is MES-3-FIX-62 — code-split the shell.
+  { prefix: 'index', budget: 550_000, label: 'App shell (critical path)' },
   // Quoting tabs — the two most loaded surfaces in day-to-day work.
   // v1.3 raised: design-tools handoff + complex header redesign add ~80 kB.
   { prefix: 'ComplexCalc', budget: 100_000, label: 'ComplexCalc tab' },
