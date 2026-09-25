@@ -33,6 +33,19 @@
  * this change, because Indigo bills click-charges by SHEET and never enters
  * the coverage branch. Three fixtures moved, one did not — which is what
  * shows the change landed where it was aimed.
+ *
+ * THIRD DELIBERATE BREAK — 2026-09-25, the same length in Indigo frames.
+ * ───────────────────────────────────────────────────────────────────────
+ * The Indigo branch had the identical port error — the source workbook reads
+ * "Setup lm" there too, as ROUNDUP(setup_lm / 0.98, 0) frames — and charged 2
+ * frames on every row. Now it counts setup_lm in 980 mm frames.
+ *
+ * The controls invert, which is the evidence for both changes at once: here
+ * ONLY the Indigo fixture moved, and the three coverage fixtures regenerated
+ * byte-identical. No third archive directory: the Indigo fixture as it stood
+ * before this change is byte-identical to `pre-ink-makeready/`'s copy, so the
+ * baseline is already kept. Its drift (bd_ink_setup 0.6 → 15.6, 2 → 52 frames)
+ * lands entirely inside ALLOWED, so the confinement assertion needs no change.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -74,8 +87,9 @@ const TOOLING_CHAIN = new Set([
 ]);
 
 /**
- * Fields the ink make-ready fix is allowed to move. Setup ink now spans
- * `setup_lm` metres instead of 1, so `bd_ink_setup` moves — and the two
+ * Fields the two ink make-ready fixes are allowed to move. Setup ink now spans
+ * `setup_lm` metres (coverage branch) or ⌈setup_lm / 0.98⌉ frames (Indigo)
+ * instead of 1 metre / 2 frames, so `bd_ink_setup` moves — and the two
  * material-cost roll-ups move with it, because MES-3-FIX-47 established that
  * `s_mat_cost` already aggregates ink subcost despite its name.
  */

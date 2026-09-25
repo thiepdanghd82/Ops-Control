@@ -577,6 +577,32 @@ export function calcInk(ink, st, moq, lib, options = {}) {
   }
   const width_m = _widthMm / 1000;
 
+  // Setup ink is consumed over the make-ready LENGTH of web. That length is
+  // `setup_lm` on the material row — the SAME field calcMat uses for material
+  // setup, so ink and material agree about one make-ready. Both branches read
+  // it: the coverage branch spreads it over the printed area, and the Indigo
+  // branch counts it in 980 mm frames.
+  //
+  // This replaces `baseMat.usage`, which was wrong twice over: `usage` is a
+  // per-piece multiplier, not a length; and the `ink.base_mat` lookup could
+  // never resolve, because that field has held a WIDTH ever since
+  // MES-3-FIX-40 renamed the column to "Width" (measured on live data
+  // 2026-09-25: 258 ink rows carry a base_mat, ZERO match a material code —
+  // the values are '340', '270', '255', …). So every coverage row in the
+  // database charged exactly 1 metre of make-ready, and every Indigo row 2
+  // frames. The source workbook (T33) reads column 6 of the materials block,
+  // headed "Setup lm", in BOTH branches; the port mapped it to `usage`, which
+  // is column 5.
+  //
+  // base_mat is still tried FIRST so a row that genuinely names a material
+  // keeps its own web; otherwise the printed web is the primary Main.Mat row.
+  // Nothing resolvable → 0: an unknown make-ready length must contribute
+  // nothing rather than a phantom metre.
+  const _mats = Array.isArray(st.materials) ? st.materials : [];
+  const _namedMat = ink.base_mat ? _mats.find((m) => m.code === ink.base_mat) : null;
+  const _primaryMat = _mats.find((m) => !m.hidden && m.code && m.row_type === 'Main.Mat');
+  const setup_len_m = Number((_namedMat || _primaryMat || {}).setup_lm) || 0;
+
   let run_s, setup_s;
   if (isIndigo) {
     const clicks = ink.clicks || 0;
@@ -597,9 +623,14 @@ export function calcInk(ink, st, moq, lib, options = {}) {
       else break;
     }
     run_s = layout_indigo_val > 0 ? (click_charge * clicks) / layout_indigo_val / scrapF : 0;
-    const baseMat = st.materials.find((m) => m.code === ink.base_mat);
-    const baseMat_usage = baseMat ? baseMat.usage || 1 : 1;
-    const setup_sheets = Math.ceil(baseMat_usage / 0.98);
+    // Make-ready in Indigo FRAMES: setup_lm metres ÷ 0.98 m — the same 980 mm
+    // frame the run formula divides the pitch into (source workbook T33:
+    // ROUNDUP(VLOOKUP(D33,B11:G20,6,)/0.98,0), column 6 = "Setup lm").
+    // The epsilon stops an exact multiple of 0.98 m gaining a frame: 19.6/0.98
+    // is 20.000000000000004 in IEEE 754, and 73 setup_lm values between 0.05 m
+    // and 2000 m hit that — the same guard calcPitch uses for rotary snaps.
+    // The `> 0` branch returns a real 0, never Math.ceil(-1e-9) === -0.
+    const setup_sheets = setup_len_m > 0 ? Math.ceil(setup_len_m / 0.98 - 1e-9) : 0;
     setup_s = moq ? (click_charge * clicks * setup_sheets) / moq : 0;
   } else {
     // Guard against layout_per_sheet = 0 (operator zeroed parts_web_across
@@ -612,27 +643,6 @@ export function calcInk(ink, st, moq, lib, options = {}) {
       ink_cover_val > 0 && width_m > 0 && qpa_lm > 0
         ? (price * qpa_lm * (ink.area_pct || 0) * width_m) / ink_cover_val / scrapF
         : 0;
-    // Setup ink is consumed over the make-ready LENGTH of web. That length is
-    // `setup_lm` on the material row — the SAME field calcMat uses for material
-    // setup, so the two now agree about one make-ready instead of disagreeing
-    // by a factor of setup_lm.
-    //
-    // This replaces `baseMat.usage`, which was wrong twice over: `usage` is a
-    // per-piece multiplier, not a length; and the `ink.base_mat` lookup could
-    // never resolve, because that field has held a WIDTH ever since
-    // MES-3-FIX-40 renamed the column to "Width" (measured on live data
-    // 2026-09-25: 258 ink rows carry a base_mat, ZERO match a material code —
-    // the values are '340', '270', '255', …). So every ink row in the database
-    // was charging exactly 1 metre of make-ready.
-    //
-    // base_mat is still tried FIRST so a row that genuinely names a material
-    // keeps its own web; otherwise the printed web is the primary Main.Mat row.
-    // Nothing resolvable → 0: an unknown make-ready length must contribute
-    // nothing rather than a phantom metre.
-    const _mats = Array.isArray(st.materials) ? st.materials : [];
-    const _namedMat = ink.base_mat ? _mats.find((m) => m.code === ink.base_mat) : null;
-    const _primaryMat = _mats.find((m) => !m.hidden && m.code && m.row_type === 'Main.Mat');
-    const setup_len_m = Number((_namedMat || _primaryMat || {}).setup_lm) || 0;
     // Guard setup_ink_qty the same way as run_s: when coverage data is
     // missing (ink_cover_val = 0) the coverage-based portion of setup
     // should also be zero — otherwise we divide by 1 and produce an
