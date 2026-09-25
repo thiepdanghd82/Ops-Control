@@ -2455,6 +2455,16 @@ if (isJig):
             noteVi="⚠ Đã sửa — xlsx bỏ sót bước chuẩn hoá khoá DDL. Ghi 'Jig & Fixture' hay 'jig' hay 'JIG' đều cho kết quả như nhau. Trần vẫn là eau × 0.8; khác với Tiêu chuẩn, mẫu số phân bổ thô của Jig chỉ là tlife (không × layout)."
           />
           <Formula
+            name="Tooling/unit — tool-only row (no workcenter)"
+            nameVi="Khuôn/đơn vị — dòng chỉ tính khuôn (không có workcenter)"
+            expr={`if (workcenter is empty):       ← the row has no machine of its own
+  setup = run = extra = 0       ← the press row already carries the machine time
+  tool  = tool_cost × tools / eauCap   ← the same tooling formula as above
+         (tool_cost may come from Layout: Plate / Cutter N)`}
+            note="Added 2026-09-25 — an in-line print+cut press (Brotech, Gallus) runs the plate and the die on one machine, but the two have different costs and tool lives, and a process row carries one tool. So the press row carries the plate and a second row with NO workcenter carries the die: that row is charged its tooling and nothing else, and it is not asked for a workcenter or a speed (picking the press again would bill its machine time twice). Its own scrap % does not enter the yield — only rows with a workcenter do, so the press row carries the scrap. Before this, a row without a workcenter was charged nothing at all: the die was missing from the price while the Tooling Cost on Lead time & Notice still counted it."
+            noteVi="Thêm 25/09/2026 — máy in-cắt liền (Brotech, Gallus) chạy cả plate lẫn dao cắt trên một máy, nhưng hai khuôn có giá và tool life khác nhau, trong khi mỗi dòng công đoạn chỉ mang được một khuôn. Vì vậy dòng máy in mang plate, còn một dòng thứ hai KHÔNG có workcenter mang dao cắt: dòng đó chỉ tính tiền khuôn, không tính gì khác, và không bị đòi workcenter hay speed (chọn lại máy in sẽ tính thời gian máy hai lần). Scrap % của chính dòng này không vào yield — chỉ các dòng có workcenter mới vào, nên dòng máy in mang phần phế. Trước đây dòng không có workcenter không được tính gì cả: dao cắt không nằm trong giá bán trong khi ô Tooling Cost ở tab Lead time & Notice vẫn cộng nó."
+          />
+          <Formula
             name="Extra cost per unit"
             nameVi="Chi phí phụ trên mỗi đơn vị"
             expr={`extra     = (extra_cost > 0) ? extra_cost / max(0.001, SF) : 0

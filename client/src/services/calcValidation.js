@@ -250,7 +250,13 @@ function validateProcesses(processes, scopeLabel = 'Processes', lib = null) {
 
   started.forEach((p, origIdx) => {
     const rowNum = (processes || []).indexOf(p) + 1;
-    if (isBlank(p.workcenter)) {
+    // A row with no workcenter that carries a tool is a TOOL-ONLY row: the die
+    // of an in-line print+cut press, whose machine time sits on the press row
+    // (calcProcess charges it tooling only). It needs no workcenter and no
+    // speed — asking for them pushes the operator to pick the press again and
+    // bill its machine time twice. The tool checks below still apply.
+    const toolOnly = isBlank(p.workcenter) && (!isBlank(p.tool_cost_src) || num(p.tool_cost) > 0);
+    if (isBlank(p.workcenter) && !toolOnly) {
       out.push({
         id: `proc-wc-${origIdx}`,
         severity: 'error',
@@ -262,7 +268,9 @@ function validateProcesses(processes, scopeLabel = 'Processes', lib = null) {
     const uom = getUomForWC(lib, p.workcenter);
     const hrsMode = isHrsUom(uom);
 
-    if (hrsMode) {
+    if (toolOnly) {
+      // No machine of its own: nothing to set up, no speed to run at.
+    } else if (hrsMode) {
       // Hrs-UOM workcenters: cost is purely time-based (Setup H), no Speed needed.
       // BUT: if the workcenter's Machine USD/H (machine_rate) in Rate Table is 0/blank,
       // there is no machine cost to depend on Setup Hours — e.g. FQC (labor-only inspection).

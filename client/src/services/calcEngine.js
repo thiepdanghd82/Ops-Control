@@ -672,14 +672,101 @@ export function calcInk(ink, st, moq, lib, options = {}) {
 
 // ── Process Cost ──
 
+// Tooling for one process row: the tool's cost spread over the good pieces the
+// quote needs. Shared by both paths of calcProcess — a machine row and a
+// TOOL-ONLY row with no workcenter — so the two cannot compute a tool
+// differently. It reads the tool, the row's layout, and the quote's yield and
+// EAU, never a machine rate, which is what lets a row without a machine carry
+// it. The yield counts only rows WITH a workcenter (calcMatScrapFactor), so a
+// tool-only row's own scrap_pct does not move it — the press row carries the
+// scrap.
+function processTooling(proc, st, moq, lib, options) {
+  const _totalQtyAuto = (st.annual_qty || moq) * (st.product_lifetime || 1);
+  const eau = proc.eau_ovr && proc.eau_ovr > 0 ? proc.eau_ovr : _totalQtyAuto;
+  // Safety cap from CCL tooling-cost spec (`2. TEMPLATES/Costing/Cách tính
+  // chi phí tools.xlsx`): amortize over at most 80% of EAU so a die that
+  // outlasts demand doesn't spread its cost too thinly. Henry's decision
+  // 2026-06-15: keep EAU as `annual × lifetime` (multi-year total) and
+  // apply the 0.8 factor uniformly (including operator-overridden EAU).
+  const eauCap = eau * 0.8;
+
+  // Tooling
+  // Effective tool cost — a process may ASSIGN a Layout-computed cost
+  // (Plate / Cutter i) via proc.tool_cost_src (Sprint S-LAYOUT-TOOLCOST).
+  // Assigned + present → the Layout source cost from options.layoutToolCosts;
+  // assigned but source gone → 0 (UI warns); unassigned ('') → manual
+  // proc.tool_cost, so quotes without an assignment stay byte-identical (BC).
+  const effToolCost = effectiveToolCost(proc, options.layoutToolCosts);
+  let tooling = 0;
+  if (effToolCost > 0) {
+    const layout = proc.layout || 1;
+    const scrapFactor = 1 - calcMatScrapFactor(st);
+    // PR-A (2026-06-20): route through resolver when calcAll supplies
+    // one. Snapshot wins; legacy snapshot (pre-PR-A) falls back to lib
+    // inside resolver.getToolLife. BC-compat direct callers (no
+    // options.resolver) read lib directly via getToolLife().
+    const resolvedLife = options.resolver
+      ? options.resolver.getToolLife(proc.tool_type)
+      : getToolLife(lib, proc.tool_type);
+    // The editable per-row Tool Life column is the SOURCE OF TRUTH for the
+    // tooling calc (2026-08): whenever the row holds a positive value it wins,
+    // so editing Tool Life changes the cost. The DDL/snapshot resolvedLife is a
+    // fallback used ONLY when the row is 0/empty (legacy quotes saved before
+    // the column was populated). tool_life_ovr no longer gates the cost — the
+    // row value is inherently frozen with the quote state, so it's reproducible
+    // without the snapshot resolver. Pre-2026-06-21 snapshots that lack
+    // tool_life only matter when rowLife is 0 (the fallback path below).
+    const rowLife = Number(proc.tool_life) || 0;
+    const tlife = rowLife > 0 ? rowLife : resolvedLife || 1;
+    // DDL data uses "Jig" but legacy code shipped with "Jig& Fixture".
+    // Normalize both to match any variant (whitespace/casing/ampersand) but
+    // require EXACT match after normalization so we don't accidentally
+    // classify user-entered values like "jigsaw" / "jigging" as Jig.
+    const ttNorm = String(proc.tool_type || '')
+      .toLowerCase()
+      .replace(/[\s&]/g, '');
+    const isJig = ttNorm === 'jig' || ttNorm === 'jigfixture';
+    // JIG mẫu số KHÔNG nhân Cavity (gá giữ SP, không tiêu hao theo shot × cavity),
+    // nhưng vẫn giữ cả phần phế nên vẫn nhân yield như mọi tool khác.
+    const cav = isJig ? 1 : layout;
+    // Capacity in GOOD pieces. `tlife × cav` is what the tool can PHYSICALLY
+    // produce; scrap comes out of that, so per GOOD piece it wears
+    // proportionally faster — the same reason run_labor and `extra` divide by
+    // the yield a few lines up. It also puts both sides of the comparison in
+    // one unit: eauCap is good-piece DEMAND, so comparing it against produced
+    // pieces was choosing the smaller of two different things.
+    const goodPcsPerTool = tlife * cav * safeYieldDivisor(1 - scrapFactor);
+    // You cannot buy a third of a die. Needing 1.33 tools means buying 2, so
+    // the count is rounded UP and the whole spend is spread across the run
+    // (Henry, 2026-09-18). A tool that outlasts demand needs exactly 1 and
+    // lands back on `cost / eauCap` — the old cap branch, so the 0.8 policy
+    // floor from 2026-06-15 survives rather than being removed by a side
+    // effect. The count is taken against eauCap, NOT raw EAU: counting and
+    // dividing by raw EAU would make a long-life tool 20% cheaper, which is
+    // that safety factor silently deleted.
+    const toolsNeeded = goodPcsPerTool > 0 ? Math.max(1, Math.ceil(eauCap / goodPcsPerTool)) : 1;
+    tooling = (effToolCost * toolsNeeded) / eauCap;
+  }
+  return { tooling, eau, effToolCost };
+}
+
 export function calcProcess(proc, st, moq, lib, options = {}) {
-  if (!proc.workcenter)
+  // A row with no workcenter has no machine of its own, so no setup and no
+  // run. It can still carry a TOOL: an in-line print+cut press (Brotech,
+  // Gallus) runs the plate and the die on one machine, their costs and tool
+  // lives differ, and a row carries one tool — so the press row carries the
+  // plate and a second row with no workcenter carries the die (Henry,
+  // 2026-09-25). That row is charged its tooling and nothing else. It used to
+  // return all zeros, tooling included, which left RFQ-2026-S0069's die out of
+  // the price while the Lead time roll-up still counted it.
+  if (!proc.workcenter) {
+    const { tooling, effToolCost } = processTooling(proc, st, moq, lib, options);
     return {
       setup_mach: 0,
       setup_labor: 0,
       run_mach: 0,
       run_labor: 0,
-      tooling: 0,
+      tooling,
       extra: 0,
       extra_vat: 0,
       uph: 0,
@@ -690,7 +777,9 @@ export function calcProcess(proc, st, moq, lib, options = {}) {
       speed_uom: '',
       total_time: 0,
       pitch: 0,
+      tool_cost_effective: effToolCost,
     };
+  }
   // Phase 2: snapshot-first lookups via resolver. Falls back to the
   // direct `getRateByWC(lib, …)` path for legacy callers that don't
   // pass `options.resolver`.
@@ -774,70 +863,7 @@ export function calcProcess(proc, st, moq, lib, options = {}) {
         : 0)) *
     repeat;
 
-  const _totalQtyAuto = (st.annual_qty || moq) * (st.product_lifetime || 1);
-  const eau = proc.eau_ovr && proc.eau_ovr > 0 ? proc.eau_ovr : _totalQtyAuto;
-  // Safety cap from CCL tooling-cost spec (`2. TEMPLATES/Costing/Cách tính
-  // chi phí tools.xlsx`): amortize over at most 80% of EAU so a die that
-  // outlasts demand doesn't spread its cost too thinly. Henry's decision
-  // 2026-06-15: keep EAU as `annual × lifetime` (multi-year total) and
-  // apply the 0.8 factor uniformly (including operator-overridden EAU).
-  const eauCap = eau * 0.8;
-
-  // Tooling
-  // Effective tool cost — a process may ASSIGN a Layout-computed cost
-  // (Plate / Cutter i) via proc.tool_cost_src (Sprint S-LAYOUT-TOOLCOST).
-  // Assigned + present → the Layout source cost from options.layoutToolCosts;
-  // assigned but source gone → 0 (UI warns); unassigned ('') → manual
-  // proc.tool_cost, so quotes without an assignment stay byte-identical (BC).
-  const effToolCost = effectiveToolCost(proc, options.layoutToolCosts);
-  let tooling = 0;
-  if (effToolCost > 0) {
-    // PR-A (2026-06-20): route through resolver when calcAll supplies
-    // one. Snapshot wins; legacy snapshot (pre-PR-A) falls back to lib
-    // inside resolver.getToolLife. BC-compat direct callers (no
-    // options.resolver) read lib directly via getToolLife().
-    const resolvedLife = options.resolver
-      ? options.resolver.getToolLife(proc.tool_type)
-      : getToolLife(lib, proc.tool_type);
-    // The editable per-row Tool Life column is the SOURCE OF TRUTH for the
-    // tooling calc (2026-08): whenever the row holds a positive value it wins,
-    // so editing Tool Life changes the cost. The DDL/snapshot resolvedLife is a
-    // fallback used ONLY when the row is 0/empty (legacy quotes saved before
-    // the column was populated). tool_life_ovr no longer gates the cost — the
-    // row value is inherently frozen with the quote state, so it's reproducible
-    // without the snapshot resolver. Pre-2026-06-21 snapshots that lack
-    // tool_life only matter when rowLife is 0 (the fallback path below).
-    const rowLife = Number(proc.tool_life) || 0;
-    const tlife = rowLife > 0 ? rowLife : resolvedLife || 1;
-    // DDL data uses "Jig" but legacy code shipped with "Jig& Fixture".
-    // Normalize both to match any variant (whitespace/casing/ampersand) but
-    // require EXACT match after normalization so we don't accidentally
-    // classify user-entered values like "jigsaw" / "jigging" as Jig.
-    const ttNorm = String(proc.tool_type || '')
-      .toLowerCase()
-      .replace(/[\s&]/g, '');
-    const isJig = ttNorm === 'jig' || ttNorm === 'jigfixture';
-    // JIG mẫu số KHÔNG nhân Cavity (gá giữ SP, không tiêu hao theo shot × cavity),
-    // nhưng vẫn giữ cả phần phế nên vẫn nhân yield như mọi tool khác.
-    const cav = isJig ? 1 : layout;
-    // Capacity in GOOD pieces. `tlife × cav` is what the tool can PHYSICALLY
-    // produce; scrap comes out of that, so per GOOD piece it wears
-    // proportionally faster — the same reason run_labor and `extra` divide by
-    // the yield a few lines up. It also puts both sides of the comparison in
-    // one unit: eauCap is good-piece DEMAND, so comparing it against produced
-    // pieces was choosing the smaller of two different things.
-    const goodPcsPerTool = tlife * cav * safeYieldDivisor(1 - scrapFactor);
-    // You cannot buy a third of a die. Needing 1.33 tools means buying 2, so
-    // the count is rounded UP and the whole spend is spread across the run
-    // (Henry, 2026-09-18). A tool that outlasts demand needs exactly 1 and
-    // lands back on `cost / eauCap` — the old cap branch, so the 0.8 policy
-    // floor from 2026-06-15 survives rather than being removed by a side
-    // effect. The count is taken against eauCap, NOT raw EAU: counting and
-    // dividing by raw EAU would make a long-life tool 20% cheaper, which is
-    // that safety factor silently deleted.
-    const toolsNeeded = goodPcsPerTool > 0 ? Math.max(1, Math.ceil(eauCap / goodPcsPerTool)) : 1;
-    tooling = (effToolCost * toolsNeeded) / eauCap;
-  }
+  const { tooling, eau, effToolCost } = processTooling(proc, st, moq, lib, options);
 
   const extra_raw = proc.extra_cost || 0;
   const extra = extra_raw > 0 ? extra_raw / Math.max(0.001, scrapFactor) : 0;

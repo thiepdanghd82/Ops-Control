@@ -391,3 +391,49 @@ test('gateSubTabChange honours the caller\'s header tab id (Complex uses "projec
   // 'header' is not Complex's entry tab, so it must not gate there.
   assert.deepEqual(gateSubTabChange('project', 'breakdown', 'header', {}), []);
 });
+
+// ── Tool-only rows (Henry, 2026-09-25) ───────────────────────────
+// An in-line print+cut press carries the plate on its own row; the die rides
+// on a second row with NO workcenter, which charges only its tooling (see
+// calcEngine.toolOnlyRow.test.js). Telling the operator that row needs a
+// workcenter pushes them to pick the press again — and bill its machine time
+// twice. A started row with no tool still gets the error.
+
+const TOOL_ONLY_LIB = { rate: [{ workcenter: 'PRINT', machine_rate: 10, speed_uom: 'pcs/hr' }] };
+const pressRow = { workcenter: 'PRINT', speed: 100, efficiency: 85, layout: 8 };
+const rowTwo = (warnings) => warnings.filter((w) => /Process row 2:/.test(w.message));
+
+test('tool-only row with a Layout-assigned die → no Workcenter / Speed / Efficiency complaint', () => {
+  const dieRow = {
+    process_type: 'Die_Cut',
+    tool_cost_src: 'cutter-0',
+    tool_type: 'Magnetic Rotary',
+    layout: 8,
+  };
+  const warnings = validateStandard(baseStd({ processes: [pressRow, dieRow] }), TOOL_ONLY_LIB);
+  assert.deepEqual(rowTwo(warnings), [], JSON.stringify(rowTwo(warnings)));
+});
+
+test('tool-only row with a manual tool cost → no Workcenter / Speed complaint', () => {
+  const dieRow = {
+    process_type: 'Die_Cut',
+    tool_cost: 234.24,
+    tool_type: 'Magnetic Rotary',
+    layout: 8,
+  };
+  const warnings = validateStandard(baseStd({ processes: [pressRow, dieRow] }), TOOL_ONLY_LIB);
+  assert.deepEqual(rowTwo(warnings), [], JSON.stringify(rowTwo(warnings)));
+});
+
+test('a started row with no workcenter and NO tool still needs a workcenter', () => {
+  const half = { process_type: 'Die_Cut', speed: 1 };
+  const warnings = validateStandard(baseStd({ processes: [pressRow, half] }), TOOL_ONLY_LIB);
+  assert.ok(findWarn(warnings, /Process row 2: Workcenter is required/));
+});
+
+test('tool-only row keeps the Tool Type check — tool life would fall back to 1', () => {
+  const dieRow = { process_type: 'Die_Cut', tool_cost: 234.24, tool_type: '' };
+  const warnings = validateStandard(baseStd({ processes: [pressRow, dieRow] }), TOOL_ONLY_LIB);
+  assert.ok(findWarn(warnings, /Process row 2: Tool Type is required/));
+  assert.equal(findWarn(warnings, /Process row 2: Workcenter is required/), undefined);
+});
