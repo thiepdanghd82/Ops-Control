@@ -113,14 +113,17 @@ export function CalcProvider({ children }) {
   }, []);
 
   const loadQuote = useCallback(
-    (quoteType, qState, id, version = 0, action = 'load', seedUsdRate = 0) => {
+    (quoteType, qState, id, version = 0, action = 'load', seedUsdRate = 0, savedResult = null) => {
       dispatch({
         type: A.LOAD_QUOTE,
         // seedUsdRate is used ONLY on a copy -- a copy is a new RFQ, so it
         // takes the current rate rather than the source quote's, which may
         // be months old and was never chosen for this quote (#345's rule,
         // applied to the rate).
-        payload: { quoteType, state: qState, id, version, action, seedUsdRate },
+        // savedResult: the result the quote was persisted with, so the screen
+        // can say when the engine now computes something different. The
+        // reducer ignores it on a copy, which has nothing saved yet.
+        payload: { quoteType, state: qState, id, version, action, seedUsdRate, savedResult },
       });
       resetTouched();
     },

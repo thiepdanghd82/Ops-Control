@@ -32,6 +32,17 @@ registerStrings({
   // tabs retired). Key id stays 'pricing.tab.combined' so callers
   // (StandardCalc.jsx SUB_TABS labelKey) keep working without churn.
   'pricing.tab.combined': { en: 'Materials & Process', vi: 'Vật tư & Công đoạn' },
+  // Saved-result drift banner (Std + Cpx). Trade terms stay English per the
+  // glossary rule: Subtotal, Save, Quote History, Cost Breakdown.
+  'pricing.drift.title': {
+    en: 'Recalculated numbers differ from the saved quote',
+    vi: 'Số tính lại khác số đã lưu',
+  },
+  'pricing.drift.subtotal': { en: 'Subtotal {was} → {now}', vi: 'Subtotal {was} → {now}' },
+  'pricing.drift.body': {
+    en: 'Exports, Quote History and the Cost Breakdown list still show the saved numbers. Save to update them.',
+    vi: 'File xuất, Quote History và danh sách Cost Breakdown vẫn hiện số đã lưu. Bấm Save để cập nhật.',
+  },
   // Sprint 2026-09-10 — the remaining Std/Cpx sub-tabs. StandardCalc has had
   // labelKey wired since S-PRICING-COMBINED-P1 but only `combined` used it,
   // so in Vietnamese one tab rendered translated and eight rendered English.

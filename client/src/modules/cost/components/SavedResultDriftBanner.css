@@ -1,0 +1,29 @@
+/* Amber, not the red the margin floor uses: the quote is not wrong, it is
+   out of date in the files — a look, not an alarm (the S-MARGIN-PIN split). */
+.srd-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 8px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--color-warning-500, #f59e0b);
+  border-left-width: 4px;
+  background: var(--color-warning-50, #fffbeb);
+  color: var(--color-warning-600, #b45309);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.srd-banner-icon {
+  font-size: 16px;
+  line-height: 1.2;
+}
+.srd-banner-text {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 12px;
+  row-gap: 2px;
+}
+.srd-banner-num {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}

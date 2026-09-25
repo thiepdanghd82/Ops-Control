@@ -16,6 +16,8 @@ import {
   getActiveSPMaterials,
 } from '../../../../services/calcEngine';
 import { freezeLib, snapshotPricingParams } from '../../../../services/pricingSnapshot';
+import { savedResultDrift } from '../../../../services/savedResultDrift';
+import SavedResultDriftBanner from '../../components/SavedResultDriftBanner';
 import { stripDrawingBytesDeep } from '../../../../services/drawingFiles';
 import { resolveTierField } from '../../../../services/packingTierField';
 import { isCopyMode } from '../../components/SnapshotPanel.helpers';
@@ -153,6 +155,7 @@ export default function ComplexCalc() {
     activeQuoteId,
     activeQuoteVersion,
     markTouched,
+    savedResultCplx,
   } = useCalc();
   const { lib } = useCostLib();
   // Phase 3 — user id for snapshot `_captured_by` audit field.
@@ -218,7 +221,7 @@ export default function ComplexCalc() {
           // between them, so clearPendingQuote() cannot tear this effect
           // down before the seeded load has happened.
           const n = noticeFromSeed(seed);
-          loadQuote('cplx', q.state, q.id, q._version || 0, action, n ? n.rate : 0);
+          loadQuote('cplx', q.state, q.id, q._version || 0, action, n ? n.rate : 0, q.result);
           setRateNotice(n);
         } else {
           showToast(`Quote #${id} not found`, 'err');
@@ -298,6 +301,15 @@ export default function ComplexCalc() {
     }
     return { spResults: pass2, aggregate: agg, calcErrors: errors };
   }, [cs, sps, lib, bomQtyEnabled, spMoqScalingEnabled]);
+
+  // Saved result vs today's engine. `aggregate` above IS what the screen shows
+  // (the quote's own pricing snapshot), so the warning and the KPI strip agree.
+  // Only for a saved quote nobody has edited yet — once they edit, Save is
+  // enabled anyway and "differs from saved" describes their own change.
+  const savedDrift = useMemo(
+    () => (activeQuoteId != null && !isDirty ? savedResultDrift(savedResultCplx, aggregate) : null),
+    [activeQuoteId, isDirty, savedResultCplx, aggregate]
+  );
 
   // Surface calc errors to user once per change (dedup by message)
   useEffect(() => {
@@ -468,8 +480,13 @@ export default function ComplexCalc() {
   const persistAsNew = useCallback(async () => {
     setSaving(true);
     try {
-      const saved = await costApi.saveQuote(buildQuoteData());
+      const data = buildQuoteData();
+      const saved = await costApi.saveQuote(data);
       markClean();
+      dispatch({
+        type: 'MARK_SAVED',
+        payload: { kind: 'cplx', result: data.result, snapshot: data.state?.pricing_snapshot },
+      });
       if (saved?.id != null) {
         dispatch({
           type: 'SET_ACTIVE_QUOTE_ID',
@@ -492,6 +509,14 @@ export default function ComplexCalc() {
       const payload = { ...buildQuoteData(), _version: activeQuoteVersion };
       const saved = await costApi.updateQuote(activeQuoteId, payload);
       markClean();
+      dispatch({
+        type: 'MARK_SAVED',
+        payload: {
+          kind: 'cplx',
+          result: payload.result,
+          snapshot: payload.state?.pricing_snapshot,
+        },
+      });
       if (saved?._version != null) {
         dispatch({
           type: 'SET_ACTIVE_QUOTE_ID',
@@ -520,7 +545,7 @@ export default function ComplexCalc() {
   const handleConflictReload = useCallback(() => {
     if (!conflict?.current) return;
     const c = conflict.current;
-    loadQuote('cplx', c.state || {}, c.id, c._version || 0);
+    loadQuote('cplx', c.state || {}, c.id, c._version || 0, 'load', 0, c.result);
     setConflict(null);
     showToast('Reloaded server version — your unsaved edits were discarded');
   }, [conflict, loadQuote]);
@@ -532,6 +557,14 @@ export default function ComplexCalc() {
       const payload = { ...buildQuoteData(), _version: conflict.actual_version };
       const saved = await costApi.updateQuote(activeQuoteId, payload);
       markClean();
+      dispatch({
+        type: 'MARK_SAVED',
+        payload: {
+          kind: 'cplx',
+          result: payload.result,
+          snapshot: payload.state?.pricing_snapshot,
+        },
+      });
       if (saved?._version != null) {
         dispatch({
           type: 'SET_ACTIVE_QUOTE_ID',
@@ -560,12 +593,14 @@ export default function ComplexCalc() {
     function onKey(e) {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
-        if (isDirty && !saving) handleSave();
+        // Same condition as the Save button — one rule, so the shortcut and
+        // the button can never disagree about whether there is anything to save.
+        if ((isDirty || savedDrift) && !saving) handleSave();
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [handleSave, isDirty, saving]);
+  }, [handleSave, isDirty, savedDrift, saving]);
 
   // `saving` is wired into the Save button below so the user can't double-fire.
   const handleReset = useCallback(() => {
@@ -710,6 +745,7 @@ export default function ComplexCalc() {
         }}
         onEdit={() => setPendingSubTab(null)}
       />
+      <SavedResultDriftBanner drift={savedDrift} />
       {/* Sub-tab bar — wrapped in TabBarOverflow for narrow-screen fit */}
       <div className="cc-tab-bar">
         <TabBarOverflow
@@ -739,7 +775,7 @@ export default function ComplexCalc() {
               <button
                 className="cc-btn cc-btn-primary"
                 onClick={handleSave}
-                disabled={!isDirty || saving}
+                disabled={!(isDirty || savedDrift) || saving}
               >
                 {saving ? t('common.saving') : t('common.save')}
               </button>

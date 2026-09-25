@@ -1326,7 +1326,7 @@ export function calcAll(st, allSpResults, lib, subproducts, options = {}) {
  * procResults). Those are recomputable from state and would inflate
  * the quote_history.json size by ~5-10×.
  */
-const PERSISTED_RESULT_FIELDS = [
+export const PERSISTED_RESULT_FIELDS = [
   'sp',
   's_ttl',
   'g_ttl',
