@@ -612,8 +612,27 @@ export function calcInk(ink, st, moq, lib, options = {}) {
       ink_cover_val > 0 && width_m > 0 && qpa_lm > 0
         ? (price * qpa_lm * (ink.area_pct || 0) * width_m) / ink_cover_val / scrapF
         : 0;
-    const baseMat = st.materials.find((m) => m.code === ink.base_mat);
-    const baseMat_usage = baseMat ? baseMat.usage || 1 : 1;
+    // Setup ink is consumed over the make-ready LENGTH of web. That length is
+    // `setup_lm` on the material row — the SAME field calcMat uses for material
+    // setup, so the two now agree about one make-ready instead of disagreeing
+    // by a factor of setup_lm.
+    //
+    // This replaces `baseMat.usage`, which was wrong twice over: `usage` is a
+    // per-piece multiplier, not a length; and the `ink.base_mat` lookup could
+    // never resolve, because that field has held a WIDTH ever since
+    // MES-3-FIX-40 renamed the column to "Width" (measured on live data
+    // 2026-09-25: 258 ink rows carry a base_mat, ZERO match a material code —
+    // the values are '340', '270', '255', …). So every ink row in the database
+    // was charging exactly 1 metre of make-ready.
+    //
+    // base_mat is still tried FIRST so a row that genuinely names a material
+    // keeps its own web; otherwise the printed web is the primary Main.Mat row.
+    // Nothing resolvable → 0: an unknown make-ready length must contribute
+    // nothing rather than a phantom metre.
+    const _mats = Array.isArray(st.materials) ? st.materials : [];
+    const _namedMat = ink.base_mat ? _mats.find((m) => m.code === ink.base_mat) : null;
+    const _primaryMat = _mats.find((m) => !m.hidden && m.code && m.row_type === 'Main.Mat');
+    const setup_len_m = Number((_namedMat || _primaryMat || {}).setup_lm) || 0;
     // Guard setup_ink_qty the same way as run_s: when coverage data is
     // missing (ink_cover_val = 0) the coverage-based portion of setup
     // should also be zero — otherwise we divide by 1 and produce an
@@ -621,7 +640,7 @@ export function calcInk(ink, st, moq, lib, options = {}) {
     const setup_ink_qty =
       (ink.setup_kg || 0) +
       (ink_cover_val > 0 && width_m > 0
-        ? ((ink.area_pct || 0) * width_m * baseMat_usage) / ink_cover_val
+        ? ((ink.area_pct || 0) * width_m * setup_len_m) / ink_cover_val
         : 0);
     setup_s = moq ? (price * setup_ink_qty) / moq : 0;
   }

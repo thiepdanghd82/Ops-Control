@@ -2106,13 +2106,15 @@ mats_moq_m2 = 3,715 × 0.082 ≈ 304.6 m²`}
             name="Ink Run Cost — SS / Flexo / LP (non-Indigo)"
             nameVi="Chi phí mực chạy máy — SS / Flexo / LP (không phải Indigo)"
             expr={`qpa_lm_ink = pitch/1000 / layout_per_sheet / (num_webs || 1)
-width_m   = base_mat.width/1000  OR  parse trailing digits from base_mat code
+width_m   = ink.width/1000  OR  web_width_td/1000   (legacy fallback: base_mat)
+setup_lm  = make-ready LENGTH in metres, read off the material row — the SAME
+            field calcMat uses for material setup, so both agree on one make-ready
 Ink_Run   = price × qpa_lm_ink × area_pct × width_m / coverage / safeYield(scrap)
             (returns 0 if coverage = 0 OR width_m = 0 — NO division by zero)
-Ink_Setup = price × (setup_kg + coverage>0 ? area_pct×width_m×base_usage/coverage : 0) / MOQ`}
-            note="✅ Verified — coverage from lib.ddl.coverage keyed by ink.print_type. Can be overridden per-row via coverage_override."
-            noteVi="✅ Đã xác thực — độ phủ lấy từ lib.ddl.coverage theo khoá ink.print_type. Có thể ghi đè từng dòng qua coverage_override."
-            example="price=$30/kg, qpa_lm=0.0135, area_pct=0.1, width=0.082m, coverage=30, scrap=0.03\nInk_Run = 30 × 0.0135 × 0.10 × 0.082 / 30 / 0.97 = $0.0000114 /pcs"
+Ink_Setup = price × (setup_kg + coverage>0 ? area_pct×width_m×setup_lm/coverage : 0) / MOQ`}
+            note="✅ Verified — coverage from lib.ddl.coverage keyed by ink.print_type, in m²/kg (how many m² one kg covers); can be overridden per-row via coverage_override. setup_lm is in METRES. Until 2026-09-25 the setup term used the material's per-piece `usage` instead of setup_lm, so every ink row charged 1 metre of make-ready."
+            noteVi="✅ Đã xác thực — độ phủ lấy từ lib.ddl.coverage theo khoá ink.print_type, đơn vị m²/kg (1 kg mực phủ được bao nhiêu m²); ghi đè từng dòng qua coverage_override. setup_lm tính bằng MÉT. Trước 25/09/2026 phần setup dùng nhầm `usage` (hệ số/pcs) thay cho setup_lm, nên mọi dòng mực chỉ tính 1 mét make-ready."
+            example="price=$30/kg, qpa_lm=0.0135, area_pct=0.1, width=0.082m, coverage=30, scrap=0.03\nInk_Run = 30 × 0.0135 × 0.10 × 0.082 / 30 / 0.97 = $0.0000114 /pcs\n\nRFQ-2026-S0069: price=$50/kg, setup_kg=0.1, area_pct=0.7, width=0.170m, coverage=180, setup_lm=20m, MOQ=20,000\nInk_Setup = 50 × (0.1 + 0.7 × 0.170 × 20 / 180) / 20,000 = $0.000283 /pcs"
           />
           <Formula
             name="Ink Run Cost — Indigo (click-based)"
