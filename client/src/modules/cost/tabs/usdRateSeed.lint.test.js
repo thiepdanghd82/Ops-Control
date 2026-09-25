@@ -62,7 +62,11 @@ for (const [name, SRC] of Object.entries(FILES)) {
     );
     assert.match(
       SRC,
-      /loadQuote\('(std|cplx)', q\.state, q\.id, q\._version \|\| 0, action, n \? n\.rate : 0\)/,
+      // The seed is the 6th argument. Arguments may FOLLOW it — the saved result
+      // is passed 7th (savedResultDrift) — so match `,` or `)` after it rather
+      // than insisting the call ends there. What this pins is unchanged: the
+      // seed passed is the one the helper resolved.
+      /loadQuote\('(std|cplx)', q\.state, q\.id, q\._version \|\| 0, action, n \? n\.rate : 0[,)]/,
       'and it passes the seed the helper resolved -- null for an open, so a ' +
         'quote already sent to a customer cannot re-price itself'
     );

@@ -98,6 +98,7 @@ export const CALC_ACTIONS = {
   RESET_STD: 'RESET_STD',
   RESET_CPLX: 'RESET_CPLX',
   MARK_CLEAN: 'MARK_CLEAN',
+  MARK_SAVED: 'MARK_SAVED',
   SET_ACTIVE_QUOTE_ID: 'SET_ACTIVE_QUOTE_ID',
   SET_PENDING_QUOTE: 'SET_PENDING_QUOTE',
   CLEAR_PENDING_QUOTE: 'CLEAR_PENDING_QUOTE',
@@ -280,6 +281,14 @@ export function createInitialState() {
     // server can detect stale overwrites; reset to 0 on resets / new
     // quotes. See quotesStore.upsertQuote for server-side enforcement.
     activeQuoteVersion: 0,
+    // The result each open quote was SAVED with, per kind. The screen
+    // recomputes live but every export, Quote History and the Cost
+    // Breakdown list read the persisted result — so when the engine
+    // changes, the calculator compares the two (savedResultDrift) to warn
+    // and to enable Save without inventing an edit. Null = nothing saved
+    // to differ from (a New or a Copy).
+    savedResultStd: null,
+    savedResultCplx: null,
     // Cross-tab "load this quote when the calculator mounts" handoff.
     // Previously stored in sessionStorage which was race-prone across
     // mount/useEffect timing and tab navigation.
@@ -1142,6 +1151,7 @@ export function calcReducer(state, action) {
           isDirty: false,
           activeQuoteId: isCopy ? null : payload.id || null,
           activeQuoteVersion: isCopy ? 0 : payload.version || 0,
+          savedResultStd: isCopy ? null : payload.savedResult || null,
           stdState: next,
         };
       }
@@ -1180,6 +1190,7 @@ export function calcReducer(state, action) {
         isDirty: false,
         activeQuoteId: isCopy ? null : payload.id || null,
         activeQuoteVersion: isCopy ? 0 : payload.version || 0,
+        savedResultCplx: isCopy ? null : payload.savedResult || null,
         cplxState: nextCpx,
       };
     }
@@ -1190,6 +1201,7 @@ export function calcReducer(state, action) {
         isDirty: false,
         activeQuoteId: null,
         activeQuoteVersion: 0,
+        savedResultStd: null,
         stdState: withSeededRate(createEmptyStdState(), payload?.seedUsdRate),
       };
 
@@ -1199,11 +1211,30 @@ export function calcReducer(state, action) {
         isDirty: false,
         activeQuoteId: null,
         activeQuoteVersion: 0,
+        savedResultCplx: null,
         cplxState: withSeededRate(createCplxState(), payload?.seedUsdRate),
       };
 
     case A.MARK_CLEAN:
       return { ...state, isDirty: false };
+
+    // A save succeeded. Record what was persisted AND the pricing snapshot
+    // that produced it: Save re-freezes the snapshot from today's library,
+    // and if the screen kept computing with the old one, a quote whose
+    // library prices had moved would show the drift warning again the
+    // moment it was saved — and no number of saves would clear it.
+    // Not an edit, so isDirty is left exactly as the caller set it.
+    case A.MARK_SAVED: {
+      const { kind, result, snapshot } = payload || {};
+      const cplx = kind === 'cplx';
+      const sliceKey = cplx ? 'cplxState' : 'stdState';
+      const slice = state[sliceKey];
+      return {
+        ...state,
+        [cplx ? 'savedResultCplx' : 'savedResultStd']: result || null,
+        [sliceKey]: snapshot ? { ...slice, pricing_snapshot: snapshot } : slice,
+      };
+    }
 
     case A.SET_ACTIVE_QUOTE_ID:
       return {

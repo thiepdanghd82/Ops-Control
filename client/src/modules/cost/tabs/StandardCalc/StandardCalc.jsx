@@ -15,7 +15,9 @@ import {
   buildStdRowsPayload,
   getActiveMaterials,
 } from '../../../../services/calcEngine';
-import { freezeLib } from '../../../../services/pricingSnapshot';
+import { freezeLib, snapshotPricingParams } from '../../../../services/pricingSnapshot';
+import { savedResultDrift } from '../../../../services/savedResultDrift';
+import SavedResultDriftBanner from '../../components/SavedResultDriftBanner';
 import { useMarginHold } from '../../hooks/useMarginHold';
 import { stripDrawingBytesDeep } from '../../../../services/drawingFiles';
 import { isCopyMode } from '../../components/SnapshotPanel.helpers';
@@ -143,6 +145,7 @@ export default function StandardCalc() {
     activeQuoteId,
     activeQuoteVersion,
     markTouched,
+    savedResultStd,
   } = useCalc();
   const { lib } = useCostLib();
   // Phase 3 — pull current user id so freezeLib can stamp
@@ -193,7 +196,7 @@ export default function StandardCalc() {
           // between them, so clearPendingQuote() cannot tear this effect
           // down before the seeded load has happened.
           const n = noticeFromSeed(seed);
-          loadQuote('std', q.state, q.id, q._version || 0, action, n ? n.rate : 0);
+          loadQuote('std', q.state, q.id, q._version || 0, action, n ? n.rate : 0, q.result);
           setRateNotice(n);
         } else {
           showToast(`Quote #${id} not found`, 'err');
@@ -289,6 +292,26 @@ export default function StandardCalc() {
     }
   }, [stdState, lib]);
 
+  // What the screen computes for this quote right now: the SAME expression
+  // CalcSummaryBar renders (active tier, the quote's own pricing snapshot), so
+  // the drift warning and the KPI strip can never disagree about a number.
+  const liveResult = useMemo(() => {
+    if (!lib) return null;
+    try {
+      const { snapshot } = snapshotPricingParams(stdState, lib);
+      return calcAll(getActiveTierState(stdState), null, lib, null, { snapshot });
+    } catch {
+      return null;
+    }
+  }, [stdState, lib]);
+  // Saved result vs today's engine — only for a saved quote nobody has edited
+  // yet. Once they edit, Save is enabled anyway, and "differs from saved" is
+  // then a description of their own change rather than news.
+  const savedDrift = useMemo(
+    () => (activeQuoteId != null && !isDirty ? savedResultDrift(savedResultStd, liveResult) : null),
+    [activeQuoteId, isDirty, savedResultStd, liveResult]
+  );
+
   // Read-only Materials MOQ table for the Lead time tab — synced from the active
   // material rows + NPI library (same parent-useMemo pattern as materialLtAuto;
   // qpa_m2 via the active-tier state so it matches the Materials tab exactly).
@@ -371,8 +394,13 @@ export default function StandardCalc() {
   const persistAsNew = useCallback(async () => {
     setSaving(true);
     try {
-      const saved = await costApi.saveQuote(buildQuoteData());
+      const data = buildQuoteData();
+      const saved = await costApi.saveQuote(data);
       markClean();
+      dispatch({
+        type: 'MARK_SAVED',
+        payload: { kind: 'std', result: data.result, snapshot: data.state?.pricing_snapshot },
+      });
       // Mark the new id + version as active so subsequent Update saves
       // can Update it with the correct version for optimistic locking.
       if (saved?.id != null) {
@@ -399,6 +427,10 @@ export default function StandardCalc() {
       const payload = { ...buildQuoteData(), _version: activeQuoteVersion };
       const saved = await costApi.updateQuote(activeQuoteId, payload);
       markClean();
+      dispatch({
+        type: 'MARK_SAVED',
+        payload: { kind: 'std', result: payload.result, snapshot: payload.state?.pricing_snapshot },
+      });
       // Bump local version so the next save uses the fresh number.
       if (saved?._version != null) {
         dispatch({
@@ -434,7 +466,7 @@ export default function StandardCalc() {
   const handleConflictReload = useCallback(() => {
     if (!conflict?.current) return;
     const c = conflict.current;
-    loadQuote('std', c.state || {}, c.id, c._version || 0);
+    loadQuote('std', c.state || {}, c.id, c._version || 0, 'load', 0, c.result);
     setConflict(null);
     showToast('Reloaded server version — your unsaved edits were discarded');
   }, [conflict, loadQuote]);
@@ -446,6 +478,10 @@ export default function StandardCalc() {
       const payload = { ...buildQuoteData(), _version: conflict.actual_version };
       const saved = await costApi.updateQuote(activeQuoteId, payload);
       markClean();
+      dispatch({
+        type: 'MARK_SAVED',
+        payload: { kind: 'std', result: payload.result, snapshot: payload.state?.pricing_snapshot },
+      });
       if (saved?._version != null) {
         dispatch({
           type: 'SET_ACTIVE_QUOTE_ID',
@@ -482,12 +518,14 @@ export default function StandardCalc() {
         // different calculator (we check by seeing if the current wrapper
         // is still mounted — trivially true while this effect runs).
         e.preventDefault();
-        if (isDirty && !saving) handleSave();
+        // Same condition as the Save button — one rule, so the shortcut and
+        // the button can never disagree about whether there is anything to save.
+        if ((isDirty || savedDrift) && !saving) handleSave();
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [handleSave, isDirty, saving]);
+  }, [handleSave, isDirty, savedDrift, saving]);
 
   const handleReset = useCallback(() => {
     // A new RFQ starts from the rate on the most recently saved quote --
@@ -607,6 +645,7 @@ export default function StandardCalc() {
           <span>Copy mode — saving will create a new quote and freeze current library rates</span>
         </div>
       )}
+      <SavedResultDriftBanner drift={savedDrift} />
       {/* Sub-tab bar — wrapped in TabBarOverflow so arrows + fade
           appear automatically when the bar is wider than viewport
           (common on 14" laptops with sidebar expanded). */}
@@ -661,7 +700,7 @@ export default function StandardCalc() {
               <button
                 className="op-btn op-btn-primary op-btn-sm"
                 onClick={handleSave}
-                disabled={!isDirty || saving}
+                disabled={!(isDirty || savedDrift) || saving}
               >
                 {saving ? t('common.saving') : t('common.save')}
               </button>
