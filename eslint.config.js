@@ -39,6 +39,11 @@ export default [
       // imported by code paths today; lint surfaces `no-undef` on
       // window which is irrelevant for these fixture files.
       'Data for import/',
+      // Vendored verbatim from cloudflare/security-audit-skill and pinned by a
+      // computedHash in skills-lock.json, so it must not be "fixed" here. Its
+      // helper scripts run only when an agent invokes the skill; nothing in
+      // the app, the server or CI loads them.
+      '.agents/skills/security-audit/',
     ],
   },
   // 2. Base recommended

@@ -476,9 +476,9 @@ user sees stale-chunk errors.**
    Both must pass before proceeding.
 
 2b. **Security review — automatic, every iteration.** After tests are green and before rebuilding or
-   committing, run the `security-audit` skill (`.agents/skills/security-audit/SKILL.md`) in guidance mode
-   on this iteration's diff. Henry does not need to ask. Scope, skip rules and the blocking gate
-   (confirmed Critical/High must be fixed first) are in `.agents/rules/security-review.md`.
+committing, run the `security-audit` skill (`.agents/skills/security-audit/SKILL.md`) in guidance mode
+on this iteration's diff. Henry does not need to ask. Scope, skip rules and the blocking gate
+(confirmed Critical/High must be fixed first) are in `.agents/rules/security-review.md`.
 
 3. **Rebuild the client:**
 
