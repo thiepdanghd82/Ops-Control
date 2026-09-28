@@ -90,6 +90,10 @@ being called that.
   is costed as hand labour. The grid marks it red and keeps the stored name visible, since a
   select whose value matches no option shows `--` (`unknownWorkcenter`, S-SAVE-GUARD,
   Lesson 55).
+- **FQC auto-scrap** — picking `FQC` for a process row whose scrap is still at a default
+  value sets 10%, and picking another workcenter resets it; a typed value is never
+  overwritten (`resolveScrapOnWorkcenterChange`, `scrapDefaults.js`, shared by the Standard
+  and Complex grids). A write straight into the data skips it (Lesson 54).
 
 ## Printing & manufacturing
 
