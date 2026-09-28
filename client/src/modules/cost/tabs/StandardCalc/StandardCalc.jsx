@@ -311,6 +311,11 @@ export default function StandardCalc() {
     () => (activeQuoteId != null && !isDirty ? savedResultDrift(savedResultStd, liveResult) : null),
     [activeQuoteId, isDirty, savedResultStd, liveResult]
   );
+  // A drift the operator can save from the banner. An implausible one — the
+  // subtotal moving by more than half the selling price — does not light Save:
+  // some input reads differently than when the quote was saved, and one click
+  // would write that into every file. The banner still says the two differ.
+  const driftCanSave = !!savedDrift && !savedDrift.implausible;
 
   // Read-only Materials MOQ table for the Lead time tab — synced from the active
   // material rows + NPI library (same parent-useMemo pattern as materialLtAuto;
@@ -520,12 +525,12 @@ export default function StandardCalc() {
         e.preventDefault();
         // Same condition as the Save button — one rule, so the shortcut and
         // the button can never disagree about whether there is anything to save.
-        if ((isDirty || savedDrift) && !saving) handleSave();
+        if ((isDirty || driftCanSave) && !saving) handleSave();
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [handleSave, isDirty, savedDrift, saving]);
+  }, [handleSave, isDirty, driftCanSave, saving]);
 
   const handleReset = useCallback(() => {
     // A new RFQ starts from the rate on the most recently saved quote --
@@ -700,7 +705,7 @@ export default function StandardCalc() {
               <button
                 className="op-btn op-btn-primary op-btn-sm"
                 onClick={handleSave}
-                disabled={!(isDirty || savedDrift) || saving}
+                disabled={!(isDirty || driftCanSave) || saving}
               >
                 {saving ? t('common.saving') : t('common.save')}
               </button>

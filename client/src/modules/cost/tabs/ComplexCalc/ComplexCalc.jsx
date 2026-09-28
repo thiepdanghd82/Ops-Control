@@ -310,6 +310,11 @@ export default function ComplexCalc() {
     () => (activeQuoteId != null && !isDirty ? savedResultDrift(savedResultCplx, aggregate) : null),
     [activeQuoteId, isDirty, savedResultCplx, aggregate]
   );
+  // A drift the operator can save from the banner. An implausible one — the
+  // subtotal moving by more than half the selling price — does not light Save:
+  // some input reads differently than when the quote was saved, and one click
+  // would write that into every file. The banner still says the two differ.
+  const driftCanSave = !!savedDrift && !savedDrift.implausible;
 
   // Surface calc errors to user once per change (dedup by message)
   useEffect(() => {
@@ -595,12 +600,12 @@ export default function ComplexCalc() {
         e.preventDefault();
         // Same condition as the Save button — one rule, so the shortcut and
         // the button can never disagree about whether there is anything to save.
-        if ((isDirty || savedDrift) && !saving) handleSave();
+        if ((isDirty || driftCanSave) && !saving) handleSave();
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [handleSave, isDirty, savedDrift, saving]);
+  }, [handleSave, isDirty, driftCanSave, saving]);
 
   // `saving` is wired into the Save button below so the user can't double-fire.
   const handleReset = useCallback(() => {
@@ -775,7 +780,7 @@ export default function ComplexCalc() {
               <button
                 className="cc-btn cc-btn-primary"
                 onClick={handleSave}
-                disabled={!(isDirty || savedDrift) || saving}
+                disabled={!(isDirty || driftCanSave) || saving}
               >
                 {saving ? t('common.saving') : t('common.save')}
               </button>

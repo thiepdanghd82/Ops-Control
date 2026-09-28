@@ -58,13 +58,20 @@ for (const tw of TWINS) {
   });
 
   test(`${tw.name}: the Save button AND Cmd+S use the same condition`, () => {
-    assert.match(src, /disabled=\{!\(isDirty \|\| savedDrift\) \|\| saving\}/, 'Save button');
-    assert.match(src, /if \(\(isDirty \|\| savedDrift\) && !saving\) handleSave\(\)/, 'Cmd+S');
+    assert.match(src, /disabled=\{!\(isDirty \|\| driftCanSave\) \|\| saving\}/, 'Save button');
+    assert.match(src, /if \(\(isDirty \|\| driftCanSave\) && !saving\) handleSave\(\)/, 'Cmd+S');
     assert.doesNotMatch(
       src,
       /disabled=\{!isDirty \|\| saving\}/,
       'the old dirty-only gate must be gone'
     );
+  });
+
+  test(`${tw.name}: an implausible drift does not light Save`, () => {
+    // One click would write numbers like $444/pc into every file; the banner
+    // still says the two differ, but saving takes an edit first.
+    assert.match(src, /const driftCanSave = !!savedDrift && !savedDrift\.implausible;/);
+    assert.doesNotMatch(src, /isDirty \|\| savedDrift\)/, 'no gate may use the raw drift');
   });
 
   test(`${tw.name}: warns only on an unedited saved quote`, () => {
@@ -94,3 +101,13 @@ for (const tw of TWINS) {
     assert.match(src, /q\._version \|\| 0, action, n \? n\.rate : 0, q\.result\)/);
   });
 }
+
+test('the shared banner switches to its blocked form for an implausible drift', () => {
+  const src = code('components/SavedResultDriftBanner.jsx');
+  assert.match(src, /drift\.implausible/);
+  assert.match(src, /srd-banner--blocked/);
+  assert.match(src, /'pricing\.drift\.blocked_title'/);
+  assert.match(src, /'pricing\.drift\.blocked_body'/);
+  const css = readFileSync(path.join(HERE, 'components/SavedResultDriftBanner.css'), 'utf8');
+  assert.match(css, /\.srd-banner--blocked\s*\{/, 'the banner owns the blocked style (#309)');
+});
