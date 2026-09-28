@@ -75,6 +75,9 @@ being called that.
   quote is saved again. The drift banner compares the two — never against what Save would
   write — and lights Save (S-SAVED-DRIFT, Lesson 53), unless the subtotal moves by more
   than half the selling price: then it turns red and Save waits for an edit (S-DRIFT-GUARD).
+  At the moment of saving the check runs again, this time against what Save WILL write; a
+  move of more than half the price turns the Update / Save-as-new dialog red, its default
+  button going back (S-SAVE-GUARD).
 - **Layout-assigned tool cost** — a process whose tool comes from the Layout tab carries
   `tool_cost_src` (`plate`, `cutter-N`) and leaves `tool_cost` at **0**. Resolve through
   `effectiveToolCost`, never the raw cell; the server reads the persisted
@@ -82,6 +85,11 @@ being called that.
   **tool-only row**: charged its tooling and nothing else — the die of an in-line
   print+cut press (Brotech, Gallus), whose machine time sits on the press row
   (S-TOOL-ONLY-ROW).
+- **Unknown workcenter** — a process row naming a workcenter the Rate Table no longer lists
+  and the quote's own snapshot did not freeze. It reads rate 0: no overhead, and its speed
+  is costed as hand labour. The grid marks it red and keeps the stored name visible, since a
+  select whose value matches no option shows `--` (`unknownWorkcenter`, S-SAVE-GUARD,
+  Lesson 55).
 
 ## Printing & manufacturing
 
