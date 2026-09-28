@@ -43,6 +43,14 @@ registerStrings({
     en: 'Exports, Quote History and the Cost Breakdown list still show the saved numbers. Save to update them.',
     vi: 'File xuất, Quote History và danh sách Cost Breakdown vẫn hiện số đã lưu. Bấm Save để cập nhật.',
   },
+  'pricing.drift.blocked_title': {
+    en: 'Recalculated numbers are far from the saved quote',
+    vi: 'Số tính lại lệch quá xa số đã lưu',
+  },
+  'pricing.drift.blocked_body': {
+    en: 'The subtotal would move by {pct}% of the selling price — more than a formula change explains. An input probably reads differently than when this quote was saved (tool life, speed, workcenter). Check them first; Save turns on once you edit.',
+    vi: 'Subtotal sẽ thay đổi {pct}% giá bán — lớn hơn mức một thay đổi công thức có thể giải thích. Có thể một ô nhập đang được hiểu khác so với lúc báo giá này được lưu (tool life, speed, workcenter). Hãy kiểm tra trước; nút Save sẽ bật khi có chỉnh sửa.',
+  },
   // Sprint 2026-09-10 — the remaining Std/Cpx sub-tabs. StandardCalc has had
   // labelKey wired since S-PRICING-COMBINED-P1 but only `combined` used it,
   // so in Vietnamese one tab rendered translated and eight rendered English.

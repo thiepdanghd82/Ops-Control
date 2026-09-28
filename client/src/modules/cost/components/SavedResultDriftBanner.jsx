@@ -19,13 +19,21 @@ export default function SavedResultDriftBanner({ drift }) {
   const { t } = useI18n();
   if (!drift) return null;
   const hasSubtotal = Number.isFinite(drift.savedSubtotal) && Number.isFinite(drift.liveSubtotal);
+  // More than half the selling price is not a formula refinement: an input
+  // reads differently than when the quote was saved. Say so, in red, and do not
+  // invite the one-click save (the calculators keep Save off for it).
+  const blocked = !!drift.implausible;
   return (
-    <div className="srd-banner" role="status" aria-live="polite">
+    <div
+      className={blocked ? 'srd-banner srd-banner--blocked' : 'srd-banner'}
+      role="status"
+      aria-live="polite"
+    >
       <span className="srd-banner-icon" aria-hidden="true">
         ⚠
       </span>
       <div className="srd-banner-text">
-        <strong>{t('pricing.drift.title')}</strong>
+        <strong>{t(blocked ? 'pricing.drift.blocked_title' : 'pricing.drift.title')}</strong>
         {hasSubtotal && (
           <span className="srd-banner-num">
             {t('pricing.drift.subtotal', {
@@ -34,7 +42,11 @@ export default function SavedResultDriftBanner({ drift }) {
             })}
           </span>
         )}
-        <span>{t('pricing.drift.body')}</span>
+        <span>
+          {blocked
+            ? t('pricing.drift.blocked_body', { pct: Math.round(drift.share * 100) })
+            : t('pricing.drift.body')}
+        </span>
       </div>
     </div>
   );

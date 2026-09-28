@@ -21,16 +21,29 @@
  * prices moved since it was saved and invite re-pricing old quotes wholesale,
  * which is precisely what the snapshot exists to prevent. This flags only what
  * the operator can already SEE differ on screen.
+ *
+ * A drift also carries its SIZE: how far the subtotal moves as a share of the
+ * selling price (of the saved subtotal when there is no price). More than half
+ * is `implausible` — not a formula refinement but an input that today's engine
+ * reads differently from when the quote was saved (a tool with no tool life
+ * falling back to 1; a manual-labour speed read per operator). Measured
+ * 2026-09-28 over the 44 Standard quotes still drifting: 40 moved by under 31%
+ * of their price, 9 by 196% or more, none in between — RFQ-2026-S0007 would
+ * save $444/pc. The calculators do not let such a drift light Save.
  */
 import { PERSISTED_RESULT_FIELDS } from './calcEngine.js';
 
 /** Float noise only — not a budget for real movement. */
 const REL_TOL = 1e-9;
 
+/** A subtotal moving by more than this share of the selling price is not saved with one click. */
+export const IMPLAUSIBLE_DRIFT_SHARE = 0.5;
+
 /**
  * @param {Record<string, any>|null|undefined} saved  quote.result as persisted
  * @param {Record<string, any>|null|undefined} live   result the screen computes now
- * @returns {{ fields: string[], savedSubtotal: number|undefined, liveSubtotal: number|undefined } | null}
+ * @returns {{ fields: string[], savedSubtotal: number|undefined, liveSubtotal: number|undefined,
+ *   share: number|undefined, implausible: boolean } | null}
  */
 export function savedResultDrift(saved, live) {
   if (!saved || !live || typeof saved !== 'object' || typeof live !== 'object') return null;
@@ -43,5 +56,14 @@ export function savedResultDrift(saved, live) {
     if (Math.abs(a - b) > REL_TOL * Math.max(1, Math.abs(a), Math.abs(b))) fields.push(k);
   }
   if (!fields.length) return null;
-  return { fields, savedSubtotal: saved.s_ttl, liveSubtotal: live.s_ttl };
+  const savedSubtotal = saved.s_ttl;
+  const liveSubtotal = live.s_ttl;
+  const price =
+    Number(live.sp) > 0 ? Number(live.sp) : Number(saved.sp) > 0 ? Number(saved.sp) : savedSubtotal;
+  const share =
+    Number.isFinite(savedSubtotal) && Number.isFinite(liveSubtotal) && price > 0
+      ? Math.abs(liveSubtotal - savedSubtotal) / price
+      : undefined;
+  const implausible = share !== undefined && share > IMPLAUSIBLE_DRIFT_SHARE;
+  return { fields, savedSubtotal, liveSubtotal, share, implausible };
 }

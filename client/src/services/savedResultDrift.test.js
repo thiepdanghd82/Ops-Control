@@ -17,7 +17,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { savedResultDrift } from './savedResultDrift.js';
+import { savedResultDrift, IMPLAUSIBLE_DRIFT_SHARE } from './savedResultDrift.js';
 import { calcAll } from './calcEngine.js';
 
 const BASE = { sp: 0.0496, s_ttl: 0.046762, bd_ink_setup: 0.00226275, gm: 0.057, site: 'VN' };
@@ -88,4 +88,60 @@ test('the archived Indigo quote shows drift from PR 428 alone', () => {
   const fx = load('pre-ink-makeready/frozen-quote-indigo-2026.json');
   const d = savedResultDrift(fx.expected_result, recompute(fx));
   assert.ok(d && d.fields.includes('bd_ink_setup'), `fields: ${d && d.fields}`);
+});
+
+// ── The size of a drift, and when it is too big to save with one click ──
+// Measured 2026-09-28 over the 44 Standard quotes still showing the banner:
+// 40 move by under 31% of their selling price, 9 by 196% or more, and none in
+// between. The nine are old quotes whose inputs today's engine reads
+// differently (a tool with no tool life falling back to 1; a manual-labour
+// speed read per operator) — RFQ-2026-S0007 would save $444/pc. Half the
+// selling price sits in the middle of that gap.
+
+const close = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-12, `${msg}: ${a} vs ${b}`);
+
+test('the threshold is half the selling price', () => {
+  assert.equal(IMPLAUSIBLE_DRIFT_SHARE, 0.5);
+});
+
+test('a drift carries its size as a share of the selling price — S0069, +5.3%', () => {
+  const d = savedResultDrift(
+    { ...BASE, sp: 0.0276, s_ttl: 0.020638 },
+    { ...BASE, sp: 0.0276, s_ttl: 0.022102 }
+  );
+  close(d.share, (0.022102 - 0.020638) / 0.0276, 'share');
+  assert.equal(d.implausible, false);
+});
+
+test('RFQ-2026-S0007: $0.09 → $444 is implausible', () => {
+  const d = savedResultDrift(
+    { ...BASE, sp: 0.1334, s_ttl: 0.090095 },
+    { ...BASE, sp: 0.1334, s_ttl: 444.528177 }
+  );
+  assert.equal(d.implausible, true);
+});
+
+test('exactly half the selling price is still saveable; more is not', () => {
+  const at = savedResultDrift({ ...BASE, sp: 1, s_ttl: 1 }, { ...BASE, sp: 1, s_ttl: 1.5 });
+  const over = savedResultDrift({ ...BASE, sp: 1, s_ttl: 1 }, { ...BASE, sp: 1, s_ttl: 1.5000001 });
+  assert.equal(at.implausible, false);
+  assert.equal(over.implausible, true);
+});
+
+test('a fall counts the same as a rise', () => {
+  const d = savedResultDrift({ ...BASE, sp: 1, s_ttl: 2 }, { ...BASE, sp: 1, s_ttl: 1.2 });
+  assert.equal(d.implausible, true);
+});
+
+test('no selling price → measured against the saved subtotal instead', () => {
+  const big = savedResultDrift({ ...BASE, sp: 0, s_ttl: 1 }, { ...BASE, sp: 0, s_ttl: 1.6 });
+  const small = savedResultDrift({ ...BASE, sp: 0, s_ttl: 1 }, { ...BASE, sp: 0, s_ttl: 1.4 });
+  assert.equal(big.implausible, true);
+  assert.equal(small.implausible, false);
+});
+
+test('a drift with no subtotal to measure is never blocked — it cannot be judged', () => {
+  const d = savedResultDrift({ gm: 0.2, sp: 1 }, { gm: 0.3, sp: 1 });
+  assert.deepEqual(d.fields, ['gm']);
+  assert.equal(d.implausible, false);
 });

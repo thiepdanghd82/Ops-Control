@@ -27,3 +27,12 @@
   font-family: 'IBM Plex Mono', ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
 }
+
+/* Red, not amber: a move of more than half the selling price is not "out of
+   date" — an input reads differently than when the quote was saved, and one
+   click would write that into every file. Save stays off until an edit. */
+.srd-banner--blocked {
+  border-color: var(--color-danger-500, #dc2626);
+  background: var(--color-danger-50, #fef2f2);
+  color: var(--color-danger-500, #dc2626);
+}
