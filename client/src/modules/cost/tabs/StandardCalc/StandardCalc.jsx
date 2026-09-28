@@ -514,7 +514,9 @@ export default function StandardCalc() {
     // an edit re-enables Save, so fixing one field could carry an unrelated
     // misread into every file (RFQ-2026-S0002, 2026-09-28).
     if (activeQuoteId != null) {
-      let pending = null;
+      // Declared without an initialiser: both branches below assign before any
+      // read, so seeding `null` here is a dead store (no-useless-assignment).
+      let pending;
       try {
         pending = buildQuoteData();
       } catch {
