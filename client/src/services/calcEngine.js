@@ -725,7 +725,9 @@ function processTooling(proc, st, moq, lib, options) {
     const ttNorm = String(proc.tool_type || '')
       .toLowerCase()
       .replace(/[\s&]/g, '');
-    const isJig = ttNorm === 'jig' || ttNorm === 'jigfixture';
+    // Today's tool list spells it "Jig&Ficture" (sic): without that spelling a
+    // jig picked from the list is costed as a die, multiplied by layout.
+    const isJig = ttNorm === 'jig' || ttNorm === 'jigfixture' || ttNorm === 'jigficture';
     // JIG mẫu số KHÔNG nhân Cavity (gá giữ SP, không tiêu hao theo shot × cavity),
     // nhưng vẫn giữ cả phần phế nên vẫn nhân yield như mọi tool khác.
     const cav = isJig ? 1 : layout;

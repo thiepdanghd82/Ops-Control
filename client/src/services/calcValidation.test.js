@@ -25,6 +25,7 @@ import {
   gateSubTabChange,
   HEADER_GATE_FIELDS,
   unknownWorkcenter,
+  toolLifeMissing,
 } from './calcValidation.js';
 
 // ── Helpers ───────────────────────────────────────────────────────
@@ -521,4 +522,112 @@ test('Complex: a sub-product row on an unknown workcenter is flagged too', () =>
       /workcenter "RDC12\(Baytra\)" is not in the Rate Table/
     )
   );
+});
+
+// ── A tool with no tool life (2026-09-28) ────────────────────────
+// 114 live rows carry a tool type today's list no longer offers (Knife, Jig,
+// Pinnacle Die…). Most have a tool life of their own and price correctly. The
+// dangerous ones carry a tool and no life at all, so calcProcess falls back to
+// a life of 1 shot and buys a die every few pieces — how RFQ-2026-S0007 once
+// read $444/pc. Those, and only those, must say so.
+
+const TOOL_LIB = { ddl: { tool_life: { 'Knife/ Wood': 20000, 'Jig&Ficture': 1000000 } } };
+
+test('toolLifeMissing: a type the list gives a life is fine', () => {
+  assert.equal(toolLifeMissing({ tool_type: 'Knife/ Wood', tool_cost: 98 }, TOOL_LIB), false);
+});
+
+test('toolLifeMissing: an unlisted type with a tool and no life on the row is flagged', () => {
+  assert.equal(
+    toolLifeMissing({ tool_type: 'Knife', tool_cost: 98, tool_life: 0 }, TOOL_LIB),
+    true
+  );
+});
+
+test('toolLifeMissing: an unlisted type is fine while the row carries its own life', () => {
+  assert.equal(
+    toolLifeMissing({ tool_type: 'Knife', tool_cost: 98, tool_life: 200000 }, TOOL_LIB),
+    false
+  );
+});
+
+test('toolLifeMissing: a Layout-assigned tool counts although its tool_cost reads 0', () => {
+  assert.equal(
+    toolLifeMissing({ tool_type: 'Knife', tool_cost: 0, tool_cost_src: 'cutter-0' }, TOOL_LIB),
+    true
+  );
+});
+
+test('toolLifeMissing: no tool, no tooling, nothing to flag', () => {
+  assert.equal(toolLifeMissing({ tool_type: 'Knife', tool_cost: 0 }, TOOL_LIB), false);
+});
+
+test("toolLifeMissing: the quote's own snapshot still carrying the life makes it fine", () => {
+  assert.equal(
+    toolLifeMissing({ tool_type: 'Knife', tool_cost: 98 }, TOOL_LIB, { Knife: 20000 }),
+    false
+  );
+});
+
+test('toolLifeMissing: a listed type whose life in the list is 0 is flagged too', () => {
+  const lib = { ddl: { tool_life: { Stencil: 0 } } };
+  assert.equal(toolLifeMissing({ tool_type: 'Stencil', tool_cost: 50 }, lib), true);
+});
+
+test('toolLifeMissing: a blank type is left to the Tool Type check', () => {
+  assert.equal(toolLifeMissing({ tool_type: '', tool_cost: 98 }, TOOL_LIB), false);
+});
+
+test('toolLifeMissing: nothing is flagged before the tool list has loaded', () => {
+  assert.equal(toolLifeMissing({ tool_type: 'Knife', tool_cost: 98 }, { ddl: {} }), false);
+  assert.equal(toolLifeMissing({ tool_type: 'Knife', tool_cost: 98 }, null), false);
+});
+
+const NO_LIFE_ROW = {
+  workcenter: 'PRINT',
+  speed: 100,
+  efficiency: 0.85,
+  tool_type: 'Pinnacle Die',
+  tool_cost: 1000,
+  tool_life: 0,
+};
+
+test('Standard: a row whose tool has no life is an error that names the type', () => {
+  assert.ok(
+    findWarn(
+      validateStandard(baseStd({ processes: [NO_LIFE_ROW] }), TOOL_LIB),
+      /Process row 1: no tool life for "Pinnacle Die"/
+    )
+  );
+});
+
+test("Standard: no such error while the quote's snapshot carries the life", () => {
+  const st = baseStd({
+    processes: [NO_LIFE_ROW],
+    pricing_snapshot: { tool_life: { 'Pinnacle Die': 50000 } },
+  });
+  assert.equal(findWarn(validateStandard(st, TOOL_LIB), /no tool life for/), undefined);
+});
+
+test('Complex: a sub-product row whose tool has no life is flagged too', () => {
+  const cplx = {
+    ccl_pn: 'CPLX-001',
+    moq: 1000,
+    annual_qty: 10000,
+    trade_mode: 'USD Normal',
+    site: 'VN01',
+    selling_price: 1,
+    subproducts: [
+      {
+        code: 'SPA',
+        part_width: 100,
+        part_length_md: 50,
+        parts_in_md: 5,
+        parts_web_across: 2,
+        materials: [{ code: 'M1', usage: 1, width: 10, s_price: 5 }],
+        processes: [NO_LIFE_ROW],
+      },
+    ],
+  };
+  assert.ok(findWarn(validateComplex(cplx, TOOL_LIB), /no tool life for "Pinnacle Die"/));
 });

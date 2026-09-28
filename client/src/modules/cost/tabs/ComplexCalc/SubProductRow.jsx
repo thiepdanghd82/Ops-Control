@@ -52,7 +52,7 @@ import { validateLayout } from '../../../../services/layoutValidation';
 import { primaryRowTypeLabel } from '../../../../services/altMaterialsLabels';
 import { isIndigoPrintType } from '../../../../services/printTypeUtils';
 import { resolveScrapOnWorkcenterChange } from '../../../../services/scrapDefaults';
-import { unknownWorkcenter } from '../../../../services/calcValidation';
+import { unknownWorkcenter, toolLifeMissing } from '../../../../services/calcValidation';
 import {
   getCovOvrState,
   getCovOvrTooltip,
@@ -1510,6 +1510,11 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                     lib,
                     cplxState?.pricing_snapshot?.rates
                   );
+                  const toolNoLife = toolLifeMissing(
+                    p,
+                    lib,
+                    cplxState?.pricing_snapshot?.tool_life
+                  );
                   const rate = lib ? getRateByWC(lib, p.workcenter) : null;
                   const uom = rate?.speed_uom || '';
                   const origIdx = (sp.processes || []).indexOf(p);
@@ -1744,9 +1749,17 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                               if (l > 0) setProc(pi, 'tool_life', l);
                             }
                           }}
-                          className="cc-det-sel sc-select-bare"
+                          className={`cc-det-sel sc-select-bare${toolNoLife ? ' sc-input-warn' : ''}`}
+                          title={
+                            toolNoLife
+                              ? t('cgrid.proc.tool_life_missing', { tt: p.tool_type })
+                              : undefined
+                          }
                         >
                           <option value="">--</option>
+                          {p.tool_type && !toolTypeOpts.includes(p.tool_type) && (
+                            <option value={p.tool_type}>{p.tool_type}</option>
+                          )}
                           {toolTypeOpts.map((t) => (
                             <option key={t} value={t}>
                               {t}
