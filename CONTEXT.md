@@ -73,12 +73,15 @@ being called that.
   `pricing_snapshot`; every xlsx/CSV, Quote History and the Cost Breakdown list read the
   persisted `quote.result`. An engine change moves the first and not the second until the
   quote is saved again. The drift banner compares the two — never against what Save would
-  write — and lights Save (S-SAVED-DRIFT, Lesson 53).
+  write — and lights Save (S-SAVED-DRIFT, Lesson 53), unless the subtotal moves by more
+  than half the selling price: then it turns red and Save waits for an edit (S-DRIFT-GUARD).
 - **Layout-assigned tool cost** — a process whose tool comes from the Layout tab carries
   `tool_cost_src` (`plate`, `cutter-N`) and leaves `tool_cost` at **0**. Resolve through
   `effectiveToolCost`, never the raw cell; the server reads the persisted
-  `result.rows.processes[].tool_cost_effective`. A row with no `workcenter` charges
-  nothing, tooling included — open question since 2026-09-25 (S-TOOL-COST-READERS).
+  `result.rows.processes[].tool_cost_effective`. A row with no `workcenter` is a
+  **tool-only row**: charged its tooling and nothing else — the die of an in-line
+  print+cut press (Brotech, Gallus), whose machine time sits on the press row
+  (S-TOOL-ONLY-ROW).
 
 ## Printing & manufacturing
 
