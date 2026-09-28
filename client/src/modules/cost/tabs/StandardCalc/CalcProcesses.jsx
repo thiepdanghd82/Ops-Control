@@ -20,7 +20,7 @@ import { crewOverrideState, isManualDerivedRow } from './processCrew.helpers';
 import { resolveScrapOnWorkcenterChange } from '../../../../services/scrapDefaults';
 import { layoutToolCostSources, buildLayoutToolCosts } from '../../../../services/layoutToolCost';
 import { canMoveRow } from '../../lib/moveRow';
-import { unknownWorkcenter } from '../../../../services/calcValidation';
+import { unknownWorkcenter, toolLifeMissing } from '../../../../services/calcValidation';
 import ToolCostCell from '../../components/ToolCostCell';
 import '../../components/ToolCostCell.css';
 // ProcessBalancing is rendered as separate "Balancing" sub-tab
@@ -39,6 +39,7 @@ export default function CalcProcesses() {
   // Rates the quote froze when it was saved: a workcenter they carry is priced
   // correctly even after the Rate Table drops it, so it is not flagged.
   const snapshotRates = st.pricing_snapshot?.rates;
+  const snapshotToolLife = st.pricing_snapshot?.tool_life;
 
   const tierSt = useMemo(() => getActiveTierState(st), [st]);
 
@@ -314,6 +315,7 @@ export default function CalcProcesses() {
                 const r = results[i];
                 const wcOpts = lib ? getWCOptionsByType(lib, proc.process_type) : [];
                 const wcUnknown = unknownWorkcenter(proc.workcenter, lib, snapshotRates);
+                const toolNoLife = toolLifeMissing(proc, lib, snapshotToolLife);
                 const rateRow = lib ? getRateByWC(lib, proc.workcenter) : null;
                 const uom = rateRow?.speed_uom || '';
                 const crewSt = crewOverrideState(proc.crew, rateRow?.crew);
@@ -528,9 +530,17 @@ export default function CalcProcesses() {
                       <select
                         value={proc.tool_type || ''}
                         onChange={(e) => handleToolType(i, e.target.value)}
-                        className="sc-input-sm sc-select-bare"
+                        className={`sc-input-sm sc-select-bare${toolNoLife ? ' sc-input-warn' : ''}`}
+                        title={
+                          toolNoLife
+                            ? t('cgrid.proc.tool_life_missing', { tt: proc.tool_type })
+                            : undefined
+                        }
                       >
                         <option value="">--</option>
+                        {proc.tool_type && !toolTypeOpts.includes(proc.tool_type) && (
+                          <option value={proc.tool_type}>{proc.tool_type}</option>
+                        )}
                         {toolTypeOpts.map((t) => (
                           <option key={t} value={t}>
                             {t}

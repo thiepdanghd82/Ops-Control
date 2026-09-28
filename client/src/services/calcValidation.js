@@ -258,7 +258,32 @@ export function unknownWorkcenter(wc, lib, snapshotRates = null) {
   return !(frozen && typeof frozen === 'object');
 }
 
-function validateProcesses(processes, scopeLabel = 'Processes', lib = null, snapshotRates = null) {
+/**
+ * True when a process row carries a tool but no tool life can be found for it:
+ * the row's own life is 0, and neither today's tool list nor the quote's own
+ * pricing snapshot gives its type one. calcProcess then falls back to a life of
+ * 1 shot and buys a die every few pieces (RFQ-2026-S0007 read $444/pc that way).
+ * A Layout-assigned tool counts although its tool_cost cell reads 0. A blank
+ * type is the Tool Type check's case, and nothing is flagged before the list
+ * has loaded. As with unknownWorkcenter, the snapshot can only clear a row.
+ */
+export function toolLifeMissing(proc, lib, snapshotToolLife = null) {
+  if (!proc || isBlank(proc.tool_type)) return false;
+  if (!(num(proc.tool_cost) > 0) && isBlank(proc.tool_cost_src)) return false;
+  if (num(proc.tool_life) > 0) return false;
+  const list = lib && lib.ddl && lib.ddl.tool_life;
+  if (!list || Object.keys(list).length === 0) return false;
+  if (num(list[proc.tool_type]) > 0) return false;
+  return !(snapshotToolLife && num(snapshotToolLife[proc.tool_type]) > 0);
+}
+
+function validateProcesses(
+  processes,
+  scopeLabel = 'Processes',
+  lib = null,
+  snapshotRates = null,
+  snapshotToolLife = null
+) {
   const out = [];
   const started = (processes || []).filter(processStarted);
 
@@ -346,6 +371,14 @@ function validateProcesses(processes, scopeLabel = 'Processes', lib = null, snap
         message: `Process row ${rowNum}: Tool Type is required when Tool Cost > 0 (otherwise tool_life falls back to 1)`,
       });
     }
+    if (toolLifeMissing(p, lib, snapshotToolLife)) {
+      out.push({
+        id: `proc-tool-nolife-${origIdx}`,
+        severity: 'error',
+        scope: scopeLabel,
+        message: `Process row ${rowNum}: no tool life for "${p.tool_type}" — the row has none and the tool list gives none, so its tooling is costed as if the tool lasted 1 shot. Enter the tool life, or pick the type again.`,
+      });
+    }
 
     // Layout (batch count) is required only for machine workcenters.
     // Rate Table: machine_rate > 0 → machine hours drive cost → Layout
@@ -408,7 +441,13 @@ export function validateStandard(stdState, lib = null) {
     ...validateHeader(stdState, 'Header'),
     ...validateLayout(stdState, 'Layout'),
     ...validateMaterials(stdState.materials, 'Materials', num(stdState.part_width)),
-    ...validateProcesses(stdState.processes, 'Processes', lib, stdState.pricing_snapshot?.rates),
+    ...validateProcesses(
+      stdState.processes,
+      'Processes',
+      lib,
+      stdState.pricing_snapshot?.rates,
+      stdState.pricing_snapshot?.tool_life
+    ),
     ...validateMOQ(stdState, 'MOQ'),
   ];
 }
@@ -450,7 +489,8 @@ export function validateComplex(cplxState, lib = null) {
       sp.processes,
       `${spLabel} · Processes`,
       lib,
-      cplxState?.pricing_snapshot?.rates
+      cplxState?.pricing_snapshot?.rates,
+      cplxState?.pricing_snapshot?.tool_life
     ).forEach((w) => {
       out.push({ ...w, id: `${w.id}-sp${idx}` });
     });

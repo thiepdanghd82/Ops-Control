@@ -101,7 +101,8 @@ test('one piece short of a multiple buys the next tool', () => {
 
 test('a Jig ignores layout, counts good pieces, and is bought whole too', () => {
   // 10000 × 0.9 = 9000 per jig → 80000/9000 = 8.89 → 9 jigs.
-  for (const type of ['Jig', 'Jig& Fixture', 'jigfixture']) {
+  // `Jig&Ficture` (sic) is how today's tool list spells it — the name an operator picks.
+  for (const type of ['Jig', 'Jig& Fixture', 'jigfixture', 'Jig&Ficture']) {
     const s = st(0.1, { tool_type: type });
     assert.ok(Math.abs(tooling(s) - (9 * 1000) / CAP) < 1e-12, type);
   }

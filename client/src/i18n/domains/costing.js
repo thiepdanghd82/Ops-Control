@@ -55,6 +55,10 @@ registerStrings({
     en: 'Workcenter "{wc}" is not in the Rate Table — its rates read as 0, and a speed on it is costed as hand labour. Pick it again from the list.',
     vi: 'Workcenter "{wc}" không có trong Rate Table — đơn giá đọc thành 0, và speed trên dòng này bị tính như nhân công thủ công. Hãy chọn lại từ danh sách.',
   },
+  'cgrid.proc.tool_life_missing': {
+    en: 'No tool life for "{tt}": the row has none and the tool list gives none, so its tooling is costed as if the tool lasted 1 shot. Enter the tool life, or pick the type again.',
+    vi: 'Không có tool life cho "{tt}": dòng này chưa nhập và danh sách loại dao cũng không có, nên tiền dao đang tính như dao chỉ dùng được 1 shot. Hãy nhập tool life, hoặc chọn lại loại dao.',
+  },
   'savechoice.title': { en: 'Save quote', vi: 'Lưu báo giá' },
   'savechoice.quote': { en: 'Quote #{id}', vi: 'Báo giá #{id}' },
   'savechoice.prompt': {
