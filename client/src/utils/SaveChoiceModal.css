@@ -1,0 +1,17 @@
+/* The save is about to write a subtotal more than half the selling price away
+   from the saved one — the same line the red drift banner draws. Its own
+   stylesheet rather than a class borrowed from a component that happens to
+   share a chunk (#309). */
+.scm-drift {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-danger-500, #dc2626);
+  border-left-width: 4px;
+  background: var(--color-danger-50, #fef2f2);
+  color: var(--color-danger-500, #dc2626);
+  font-size: 13px;
+  line-height: 1.45;
+}

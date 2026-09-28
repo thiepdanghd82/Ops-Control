@@ -153,6 +153,9 @@ export default function StandardCalc() {
   // (pure pricingSnapshot.js can't reach AuthContext directly).
   const { user } = useAuth();
   const [saveChoiceOpen, setSaveChoiceOpen] = useState(false);
+  // The drift of what Save is about to write, when it is too far from the
+  // saved result (see handleSave); null otherwise.
+  const [saveDrift, setSaveDrift] = useState(null);
   // v1.3 Đợt 2 — replace blunt window.confirm() with ConflictModal.
   // `conflict` is null when no conflict, otherwise { current, attempted,
   // savedBy, savedAt } so the modal can show server vs ours + offer
@@ -505,14 +508,27 @@ export default function StandardCalc() {
   const handleConflictCancel = useCallback(() => setConflict(null), []);
 
   const handleSave = useCallback(() => {
-    // If a quote was loaded from history, let the user pick Update vs
-    // Save-as-new. Otherwise save straight away as a new record.
+    // A loaded quote gets the Update / Save-as-new choice; a new one saves
+    // straight away. Before the choice, check what Save is about to write
+    // against the saved result: the banner hides once anything is edited and
+    // an edit re-enables Save, so fixing one field could carry an unrelated
+    // misread into every file (RFQ-2026-S0002, 2026-09-28).
     if (activeQuoteId != null) {
+      // Declared without an initialiser: both branches below assign before any
+      // read, so seeding `null` here is a dead store (no-useless-assignment).
+      let pending;
+      try {
+        pending = buildQuoteData();
+      } catch {
+        pending = null;
+      }
+      const d = pending ? savedResultDrift(savedResultStd, pending.result) : null;
+      setSaveDrift(d && d.implausible ? d : null);
       setSaveChoiceOpen(true);
     } else {
       persistAsNew();
     }
-  }, [activeQuoteId, persistAsNew]);
+  }, [activeQuoteId, persistAsNew, buildQuoteData, savedResultStd]);
 
   // Ctrl/Cmd+S → Save. Triggered only when the calculator is focused (not
   // in an unrelated tab), tied to isDirty so we don't spam no-op saves.
@@ -754,6 +770,7 @@ export default function StandardCalc() {
         open={saveChoiceOpen}
         quoteId={activeQuoteId}
         quoteLabel={stdState.ccl_pn || stdState.rfq_number}
+        drift={saveDrift}
         onCancel={() => setSaveChoiceOpen(false)}
         onUpdate={() => {
           setSaveChoiceOpen(false);

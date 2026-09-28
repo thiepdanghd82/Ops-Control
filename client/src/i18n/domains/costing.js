@@ -51,6 +51,38 @@ registerStrings({
     en: 'The subtotal would move by {pct}% of the selling price — more than a formula change explains. An input probably reads differently than when this quote was saved (tool life, speed, workcenter). Check them first; Save turns on once you edit.',
     vi: 'Subtotal sẽ thay đổi {pct}% giá bán — lớn hơn mức một thay đổi công thức có thể giải thích. Có thể một ô nhập đang được hiểu khác so với lúc báo giá này được lưu (tool life, speed, workcenter). Hãy kiểm tra trước; nút Save sẽ bật khi có chỉnh sửa.',
   },
+  'cgrid.proc.wc_unknown': {
+    en: 'Workcenter "{wc}" is not in the Rate Table — its rates read as 0, and a speed on it is costed as hand labour. Pick it again from the list.',
+    vi: 'Workcenter "{wc}" không có trong Rate Table — đơn giá đọc thành 0, và speed trên dòng này bị tính như nhân công thủ công. Hãy chọn lại từ danh sách.',
+  },
+  'savechoice.title': { en: 'Save quote', vi: 'Lưu báo giá' },
+  'savechoice.quote': { en: 'Quote #{id}', vi: 'Báo giá #{id}' },
+  'savechoice.prompt': {
+    en: 'This quote was loaded from history. How would you like to save your changes?',
+    vi: 'Báo giá này được mở từ lịch sử. Chọn cách lưu các thay đổi:',
+  },
+  'savechoice.update_label': { en: 'Update existing', vi: 'Cập nhật bản hiện có' },
+  'savechoice.update_desc': {
+    en: 'replace the current revision in place. Anyone viewing quote #{id} will see the new values.',
+    vi: 'thay thế bản hiện tại. Ai đang xem báo giá #{id} sẽ thấy số mới.',
+  },
+  'savechoice.saveas_label': { en: 'Save as new version', vi: 'Lưu thành bản mới' },
+  'savechoice.saveas_desc': {
+    en: 'keep the original quote untouched and create a separate revision from your edits.',
+    vi: 'giữ nguyên báo giá gốc và tạo một bản riêng từ các chỉnh sửa.',
+  },
+  'savechoice.cancel': { en: 'Cancel', vi: 'Huỷ' },
+  'savechoice.drift_title': {
+    en: 'What you are about to save is far from the saved quote',
+    vi: 'Số sắp lưu lệch quá xa số đã lưu',
+  },
+  'savechoice.drift_body': {
+    en: 'Subtotal {was} → {now}: {pct}% of the selling price — more than a formula change explains. Check the workcenters, speeds and tool life first.',
+    vi: 'Subtotal {was} → {now}: {pct}% giá bán — lớn hơn mức một thay đổi công thức có thể giải thích. Hãy kiểm tra workcenter, speed và tool life trước.',
+  },
+  'savechoice.go_back': { en: 'Go back and check', vi: 'Quay lại kiểm tra' },
+  'savechoice.update_anyway': { en: 'Update anyway', vi: 'Vẫn cập nhật' },
+  'savechoice.saveas_anyway': { en: 'Save as new anyway', vi: 'Vẫn lưu bản mới' },
   // Sprint 2026-09-10 — the remaining Std/Cpx sub-tabs. StandardCalc has had
   // labelKey wired since S-PRICING-COMBINED-P1 but only `combined` used it,
   // so in Vietnamese one tab rendered translated and eight rendered English.

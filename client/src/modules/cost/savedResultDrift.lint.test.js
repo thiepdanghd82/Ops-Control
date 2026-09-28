@@ -74,6 +74,14 @@ for (const tw of TWINS) {
     assert.doesNotMatch(src, /isDirty \|\| savedDrift\)/, 'no gate may use the raw drift');
   });
 
+  test(`${tw.name}: Save checks what it is about to write against the saved result`, () => {
+    // The banner hides once anything is edited, and an edit re-enables Save —
+    // so on 2026-09-28 fixing a tool type let a labour misread through. The
+    // check has to run on the result Save is about to write.
+    assert.match(src, new RegExp(`savedResultDrift\\(${tw.slot}, pending\\.result\\)`));
+    assert.match(src, /<SaveChoiceModal[\s\S]*?drift=\{saveDrift\}/);
+  });
+
   test(`${tw.name}: warns only on an unedited saved quote`, () => {
     assert.match(src, /activeQuoteId != null && !isDirty \? savedResultDrift\(/);
   });
@@ -110,4 +118,14 @@ test('the shared banner switches to its blocked form for an implausible drift', 
   assert.match(src, /'pricing\.drift\.blocked_body'/);
   const css = readFileSync(path.join(HERE, 'components/SavedResultDriftBanner.css'), 'utf8');
   assert.match(css, /\.srd-banner--blocked\s*\{/, 'the banner owns the blocked style (#309)');
+});
+
+test('SaveChoiceModal: a far-off save is explained, and Enter goes back rather than saving', () => {
+  const src = code('../../utils/SaveChoiceModal.jsx');
+  assert.match(src, /'savechoice\.drift_title'/);
+  assert.match(src, /'savechoice\.drift_body'/);
+  // Modal autofocuses the first .op-btn-primary, so while drifted only the
+  // go-back button may carry it.
+  assert.match(src, /drift \? 'op-btn op-btn-primary' : 'op-btn op-btn-ghost'/);
+  assert.match(src, /drift \? 'op-btn op-btn-secondary' : 'op-btn op-btn-primary'/);
 });

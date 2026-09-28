@@ -52,6 +52,7 @@ import { validateLayout } from '../../../../services/layoutValidation';
 import { primaryRowTypeLabel } from '../../../../services/altMaterialsLabels';
 import { isIndigoPrintType } from '../../../../services/printTypeUtils';
 import { resolveScrapOnWorkcenterChange } from '../../../../services/scrapDefaults';
+import { unknownWorkcenter } from '../../../../services/calcValidation';
 import {
   getCovOvrState,
   getCovOvrTooltip,
@@ -1504,6 +1505,11 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
               <tbody>
                 {procs.map((p, pi) => {
                   const wcOpts = lib ? getWCOptionsByType(lib, p.process_type) : [];
+                  const wcUnknown = unknownWorkcenter(
+                    p.workcenter,
+                    lib,
+                    cplxState?.pricing_snapshot?.rates
+                  );
                   const rate = lib ? getRateByWC(lib, p.workcenter) : null;
                   const uom = rate?.speed_uom || '';
                   const origIdx = (sp.processes || []).indexOf(p);
@@ -1589,9 +1595,15 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                               if (rt && rt.crew) setProc(pi, 'crew', rt.crew);
                             }
                           }}
-                          className="cc-det-sel sc-select-bare"
+                          className={`cc-det-sel sc-select-bare${wcUnknown ? ' sc-input-warn' : ''}`}
+                          title={
+                            wcUnknown ? t('cgrid.proc.wc_unknown', { wc: p.workcenter }) : undefined
+                          }
                         >
                           <option value="">--</option>
+                          {p.workcenter && !wcOpts.includes(p.workcenter) && (
+                            <option value={p.workcenter}>{p.workcenter}</option>
+                          )}
                           {wcOpts.map((w) => (
                             <option key={w} value={w}>
                               {w}

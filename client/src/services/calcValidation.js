@@ -234,7 +234,31 @@ function isHrsUom(uom) {
   return uom === 'hrs' || uom === 'hr';
 }
 
-function validateProcesses(processes, scopeLabel = 'Processes', lib = null) {
+/**
+ * A workcenter the Rate Table does not list — renamed or removed since the quote
+ * was made — and that the quote's own pricing snapshot does not carry either.
+ * calcProcess then reads its machine and labour rates as 0, and a speed on the
+ * row takes the manual path: it is costed as hand labour at the Manual rate, the
+ * machine's speed read as one worker's pieces per hour (2026-09-28: 26 live rows,
+ * and an RFQ-2026-S0002 quote at GM −238% after a save). A rate the snapshot froze
+ * is what the calc uses, so that row is fine; an entry frozen as null is not.
+ * Judged only once the Rate Table has loaded, so an empty library cannot flag
+ * every row. Both process grids use this too, so the red cell and the WarningBar
+ * cannot disagree about which rows are unknown.
+ * @param {string} wc
+ * @param {{ rate?: Array<{ workcenter?: string }> } | null} lib
+ * @param {Record<string, object|null> | null} [snapshotRates]
+ */
+export function unknownWorkcenter(wc, lib, snapshotRates = null) {
+  if (isBlank(wc)) return false;
+  const rates = lib && Array.isArray(lib.rate) ? lib.rate : null;
+  if (!rates || rates.length === 0) return false;
+  if (rates.some((r) => r && r.workcenter === wc)) return false;
+  const frozen = snapshotRates && snapshotRates[wc];
+  return !(frozen && typeof frozen === 'object');
+}
+
+function validateProcesses(processes, scopeLabel = 'Processes', lib = null, snapshotRates = null) {
   const out = [];
   const started = (processes || []).filter(processStarted);
 
@@ -262,6 +286,14 @@ function validateProcesses(processes, scopeLabel = 'Processes', lib = null) {
         severity: 'error',
         scope: scopeLabel,
         message: `Process row ${rowNum}: Workcenter is required`,
+      });
+    }
+    if (unknownWorkcenter(p.workcenter, lib, snapshotRates)) {
+      out.push({
+        id: `proc-wc-unknown-${origIdx}`,
+        severity: 'error',
+        scope: scopeLabel,
+        message: `Process row ${rowNum}: workcenter "${p.workcenter}" is not in the Rate Table — its rates read as 0 and a speed on it is costed as hand labour. Pick it again from the list.`,
       });
     }
 
@@ -376,7 +408,7 @@ export function validateStandard(stdState, lib = null) {
     ...validateHeader(stdState, 'Header'),
     ...validateLayout(stdState, 'Layout'),
     ...validateMaterials(stdState.materials, 'Materials', num(stdState.part_width)),
-    ...validateProcesses(stdState.processes, 'Processes', lib),
+    ...validateProcesses(stdState.processes, 'Processes', lib, stdState.pricing_snapshot?.rates),
     ...validateMOQ(stdState, 'MOQ'),
   ];
 }
@@ -414,7 +446,12 @@ export function validateComplex(cplxState, lib = null) {
       out.push({ ...w, id: `${w.id}-sp${idx}` });
     });
     // Processes
-    validateProcesses(sp.processes, `${spLabel} · Processes`, lib).forEach((w) => {
+    validateProcesses(
+      sp.processes,
+      `${spLabel} · Processes`,
+      lib,
+      cplxState?.pricing_snapshot?.rates
+    ).forEach((w) => {
       out.push({ ...w, id: `${w.id}-sp${idx}` });
     });
   });

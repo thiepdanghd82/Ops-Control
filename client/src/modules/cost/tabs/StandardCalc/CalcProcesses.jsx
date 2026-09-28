@@ -20,6 +20,7 @@ import { crewOverrideState, isManualDerivedRow } from './processCrew.helpers';
 import { resolveScrapOnWorkcenterChange } from '../../../../services/scrapDefaults';
 import { layoutToolCostSources, buildLayoutToolCosts } from '../../../../services/layoutToolCost';
 import { canMoveRow } from '../../lib/moveRow';
+import { unknownWorkcenter } from '../../../../services/calcValidation';
 import ToolCostCell from '../../components/ToolCostCell';
 import '../../components/ToolCostCell.css';
 // ProcessBalancing is rendered as separate "Balancing" sub-tab
@@ -35,6 +36,9 @@ export default function CalcProcesses() {
   const { lib } = useCostLib();
   const st = stdState;
   const processes = useMemo(() => st.processes || [], [st.processes]);
+  // Rates the quote froze when it was saved: a workcenter they carry is priced
+  // correctly even after the Rate Table drops it, so it is not flagged.
+  const snapshotRates = st.pricing_snapshot?.rates;
 
   const tierSt = useMemo(() => getActiveTierState(st), [st]);
 
@@ -309,6 +313,7 @@ export default function CalcProcesses() {
                 const i = proc._idx;
                 const r = results[i];
                 const wcOpts = lib ? getWCOptionsByType(lib, proc.process_type) : [];
+                const wcUnknown = unknownWorkcenter(proc.workcenter, lib, snapshotRates);
                 const rateRow = lib ? getRateByWC(lib, proc.workcenter) : null;
                 const uom = rateRow?.speed_uom || '';
                 const crewSt = crewOverrideState(proc.crew, rateRow?.crew);
@@ -362,9 +367,17 @@ export default function CalcProcesses() {
                       <select
                         value={proc.workcenter || ''}
                         onChange={(e) => handleWorkcenter(i, e.target.value)}
-                        className="sc-input-sm sc-select-bare"
+                        className={`sc-input-sm sc-select-bare${wcUnknown ? ' sc-input-warn' : ''}`}
+                        title={
+                          wcUnknown
+                            ? t('cgrid.proc.wc_unknown', { wc: proc.workcenter })
+                            : undefined
+                        }
                       >
                         <option value="">--</option>
+                        {proc.workcenter && !wcOpts.includes(proc.workcenter) && (
+                          <option value={proc.workcenter}>{proc.workcenter}</option>
+                        )}
                         {wcOpts.map((w) => (
                           <option key={w} value={w}>
                             {w}

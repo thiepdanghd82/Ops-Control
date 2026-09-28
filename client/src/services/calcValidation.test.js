@@ -24,6 +24,7 @@ import {
   headerGateMissing,
   gateSubTabChange,
   HEADER_GATE_FIELDS,
+  unknownWorkcenter,
 } from './calcValidation.js';
 
 // ── Helpers ───────────────────────────────────────────────────────
@@ -436,4 +437,88 @@ test('tool-only row keeps the Tool Type check — tool life would fall back to 1
   const warnings = validateStandard(baseStd({ processes: [pressRow, dieRow] }), TOOL_ONLY_LIB);
   assert.ok(findWarn(warnings, /Process row 2: Tool Type is required/));
   assert.equal(findWarn(warnings, /Process row 2: Workcenter is required/), undefined);
+});
+
+// ── A workcenter the Rate Table no longer lists (2026-09-28) ─────
+// 26 live rows point at workcenters renamed or removed since their quote was
+// made (FB, RDC12(Baytra), Flexo(Brotech2C)…). calcProcess reads their rates as
+// 0 and costs a speed on them as hand labour at the Manual rate, which is how
+// an RFQ-2026-S0002 quote reached GM −238% on its next save. The row must say so.
+
+const RATES_LIB = {
+  rate: [{ workcenter: 'Flatbed', speed_uom: 'Shot/min', machine_rate: 11.92, labor_rate: 3.13 }],
+};
+
+test('unknownWorkcenter: a name the Rate Table lists is known', () => {
+  assert.equal(unknownWorkcenter('Flatbed', RATES_LIB), false);
+});
+
+test('unknownWorkcenter: a name it does not list is unknown', () => {
+  assert.equal(unknownWorkcenter('FB', RATES_LIB), true);
+});
+
+test("unknownWorkcenter: the quote's own snapshot still carrying the rate makes it known", () => {
+  assert.equal(
+    unknownWorkcenter('FB', RATES_LIB, { FB: { workcenter: 'FB', machine_rate: 10 } }),
+    false
+  );
+});
+
+test('unknownWorkcenter: a snapshot entry frozen as null does not count', () => {
+  assert.equal(unknownWorkcenter('FB', RATES_LIB, { FB: null }), true);
+});
+
+test('unknownWorkcenter: nothing is flagged before the Rate Table has loaded', () => {
+  assert.equal(unknownWorkcenter('FB', { rate: [] }), false);
+  assert.equal(unknownWorkcenter('FB', null), false);
+});
+
+test('unknownWorkcenter: a blank workcenter is not unknown', () => {
+  assert.equal(unknownWorkcenter('', RATES_LIB), false);
+});
+
+test('Standard: a row on an unknown workcenter is an error that names it', () => {
+  const st = baseStd({ processes: [{ workcenter: 'FB', speed: 45, efficiency: 0.85, layout: 1 }] });
+  assert.ok(
+    findWarn(
+      validateStandard(st, RATES_LIB),
+      /Process row 1: workcenter "FB" is not in the Rate Table/
+    )
+  );
+});
+
+test("Standard: no such error while the quote's snapshot carries the rate", () => {
+  const st = baseStd({
+    processes: [{ workcenter: 'FB', speed: 45, efficiency: 0.85, layout: 1 }],
+    pricing_snapshot: { rates: { FB: { workcenter: 'FB', machine_rate: 10 } } },
+  });
+  assert.equal(findWarn(validateStandard(st, RATES_LIB), /not in the Rate Table/), undefined);
+});
+
+test('Complex: a sub-product row on an unknown workcenter is flagged too', () => {
+  const cplx = {
+    ccl_pn: 'CPLX-001',
+    moq: 1000,
+    annual_qty: 10000,
+    trade_mode: 'USD Normal',
+    site: 'VN01',
+    selling_price: 1,
+    subproducts: [
+      {
+        code: 'SPA',
+        part_width: 100,
+        part_length_md: 50,
+        parts_in_md: 5,
+        parts_web_across: 2,
+        materials: [{ code: 'M1', usage: 1, width: 10, s_price: 5 }],
+        processes: [{ workcenter: 'RDC12(Baytra)', speed: 20, efficiency: 0.85, layout: 1 }],
+      },
+    ],
+  };
+  assert.ok(
+    findWarn(
+      validateComplex(cplx, RATES_LIB),
+      /workcenter "RDC12\(Baytra\)" is not in the Rate Table/
+    )
+  );
 });
