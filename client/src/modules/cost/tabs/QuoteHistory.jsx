@@ -202,6 +202,15 @@ const QUOTE_HISTORY_COLUMNS = [
     render: (q) => q.state?.sale_owner || '—',
   },
   {
+    key: 'ccl_pn',
+    labelKey: 'qh.ccl_pn',
+    sortable: true,
+    width: 130,
+    thClass: 'qh-c-cclpn',
+    tdClass: 'qh-d-cclpn',
+    render: (q) => q.state?.ccl_pn || '—',
+  },
+  {
     key: 'direct_cu',
     labelKey: 'qh.direct_cu',
     sortable: true,
@@ -227,15 +236,6 @@ const QUOTE_HISTORY_COLUMNS = [
     width: 90,
     tdClass: 'qh-d-proj',
     render: (q) => q.state?.project_name || '—',
-  },
-  {
-    key: 'ifs',
-    labelKey: 'qh.ifs_code',
-    sortable: true,
-    width: 130,
-    thClass: 'qh-c-ifs',
-    tdClass: 'qh-d-ifs',
-    render: (q) => q.state?.ccl_pn || '—',
   },
   {
     key: 'dcu_pn',

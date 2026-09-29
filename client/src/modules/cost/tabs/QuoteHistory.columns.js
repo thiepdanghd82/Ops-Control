@@ -51,10 +51,15 @@ export const QUOTE_HISTORY_COLUMN_KEYS = [
   // adjacent to `owner` (NPI Owner) so the two operator-attribution
   // columns sit together visually.
   'sale',
+  // CCL PN (80#) — the RFQ card's CCL part number, placed right before
+  // Direct CU. 2026-09-29: this IS the former 'ifs' column ("IFS CODE",
+  // hidden by default), which already rendered state.ccl_pn under a label
+  // that named a different thing. Renamed, moved and shown by default
+  // rather than duplicated; a saved sort on 'ifs' rewrites to 'ccl_pn'.
+  'ccl_pn',
   'direct_cu',
   'end_cu',
   'project',
-  'ifs',
   'dcu_pn',
   'ecu_pn',
   'size',
@@ -95,7 +100,7 @@ export const QUOTE_HISTORY_REQUIRED_KEYS = new Set([
  * choice (via ColumnsToggle.helpers.loadHiddenKeys) supersedes this on
  * subsequent reloads.
  */
-export const QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS = ['ul', 'ifs', 'dcu_pn', 'ecu_pn', 'target'];
+export const QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS = ['ul', 'dcu_pn', 'ecu_pn', 'target'];
 
 /**
  * Pure sort functions per column key. Returns a primitive comparable
@@ -121,6 +126,7 @@ export const QUOTE_HISTORY_SORT_FNS = {
   // Sprint S-SALE-OWNER-COL — operator-entered free-text from RFQ
   // & MOQ info (shared RfqInfoCard); same field for Std + Cpx.
   sale: (q) => (q.state?.sale_owner || '').toLowerCase(),
+  ccl_pn: (q) => (q.state?.ccl_pn || '').toLowerCase(),
   direct_cu: (q) => (q.state?.direct_cu || '').toLowerCase(),
   // Sprint S-PROJFIX (2026-04-29) — Standard's RfqInfoCard aliases the
   // End Customer input to state.project (CalcHeader.jsx aliasMap), so
@@ -131,7 +137,6 @@ export const QUOTE_HISTORY_SORT_FNS = {
   // Project column reads state.project_name — the canonical field
   // written by RfqInfoCard's "Project" input for both calculator types.
   project: (q) => (q.state?.project_name || '').toLowerCase(),
-  ifs: (q) => (q.state?.ccl_pn || '').toLowerCase(),
   dcu_pn: (q) => (q.state?.direct_cu_pn || '').toLowerCase(),
   moq: (q) => Number(q.state?.moq) || 0,
   sell: (q) => Number(q.state?.selling_price) || 0,
@@ -177,6 +182,8 @@ export function resolveSortKey(currentKey, visibleKeys) {
   // Sprint S-OPTIONS-COL (2026-06-12) — VER column repurposed as Option.
   // Saved sort prefs from v1.6.0-rc6 carrying 'ver' rewrite to 'option'.
   if (rewritten === 'ver') rewritten = 'option';
+  // 2026-09-29 — IFS CODE column became CCL PN (80#).
+  if (rewritten === 'ifs') rewritten = 'ccl_pn';
   if (!rewritten) return 'date';
   const set = visibleKeys instanceof Set ? visibleKeys : new Set(visibleKeys || []);
   if (!QUOTE_HISTORY_SORT_FNS[rewritten]) return 'date';

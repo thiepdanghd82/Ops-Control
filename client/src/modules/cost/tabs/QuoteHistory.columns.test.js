@@ -17,7 +17,13 @@ describe('QUOTE_HISTORY_COLUMN_KEYS', () => {
     // contract broke; bump this number only when intentionally
     // adding/removing a column.
     // Sprint S-SALE-OWNER-COL (2026-06-16) bumped 26 → 27 by adding 'sale'.
+    // 2026-09-29 'ifs' renamed to 'ccl_pn' and moved before 'direct_cu' — count unchanged.
     assert.equal(QUOTE_HISTORY_COLUMN_KEYS.length, 27);
+  });
+
+  test('ccl_pn sits immediately before direct_cu', () => {
+    const i = QUOTE_HISTORY_COLUMN_KEYS.indexOf('ccl_pn');
+    assert.equal(QUOTE_HISTORY_COLUMN_KEYS[i + 1], 'direct_cu');
   });
 
   test('no duplicate keys', () => {
@@ -65,10 +71,10 @@ describe('QUOTE_HISTORY_SORT_FNS — basic shape', () => {
       'option',
       'owner',
       'sale',
+      'ccl_pn',
       'direct_cu',
       'end_cu',
       'project',
-      'ifs',
       'dcu_pn',
       'moq',
       'sell',
@@ -141,8 +147,23 @@ describe('QUOTE_HISTORY_SORT_FNS — text columns', () => {
     );
   });
 
-  test('ifs reads state.ccl_pn', () => {
-    assert.equal(QUOTE_HISTORY_SORT_FNS.ifs({ state: { ccl_pn: '12345' } }), '12345');
+  test('no IFS CODE column survives the rename', () => {
+    assert.equal(QUOTE_HISTORY_COLUMN_KEYS.includes('ifs'), false);
+    assert.equal(QUOTE_HISTORY_SORT_FNS.ifs, undefined);
+  });
+
+  test('legacy saved sort key ifs rewrites to ccl_pn', () => {
+    assert.equal(resolveSortKey('ifs', []), 'ccl_pn');
+    assert.equal(resolveSortKey('ifs', new Set(['date', 'ccl_pn'])), 'ccl_pn');
+  });
+
+  test('ccl_pn reads state.ccl_pn, empty when missing', () => {
+    assert.equal(
+      QUOTE_HISTORY_SORT_FNS.ccl_pn({ state: { ccl_pn: 'LABEL ETC-MAIN' } }),
+      'label etc-main'
+    );
+    assert.equal(QUOTE_HISTORY_SORT_FNS.ccl_pn({ state: {} }), '');
+    assert.equal(QUOTE_HISTORY_SORT_FNS.ccl_pn({}), '');
   });
 
   test('dcu_pn reads state.direct_cu_pn', () => {
@@ -292,17 +313,19 @@ describe('resolveSortKey', () => {
 });
 
 describe('QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS (Phase 2 Q7 option C)', () => {
-  test('hides exactly 5 cols → 22 visible by default', () => {
+  test('hides exactly 4 cols → 23 visible by default', () => {
     // Sprint S-SALE-OWNER-COL (2026-06-16) bumped column total 26 → 27,
     // so visible-by-default went 21 → 22 (5 default-hidden unchanged).
-    assert.equal(QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS.length, 5);
-    assert.equal(QUOTE_HISTORY_COLUMN_KEYS.length - QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS.length, 22);
+    // 2026-09-29 'ifs' left the hidden list as it became the visible 'ccl_pn'.
+    assert.equal(QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS.length, 4);
+    // 2026-09-29 'ccl_pn' (ex-'ifs') now visible → 23.
+    assert.equal(QUOTE_HISTORY_COLUMN_KEYS.length - QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS.length, 23);
   });
 
   test('Option C list', () => {
     assert.deepEqual(
       new Set(QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS),
-      new Set(['ul', 'ifs', 'dcu_pn', 'ecu_pn', 'target'])
+      new Set(['ul', 'dcu_pn', 'ecu_pn', 'target'])
     );
   });
 });
