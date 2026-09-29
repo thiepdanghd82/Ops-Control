@@ -134,10 +134,10 @@ registerStrings({
   // Sprint S-SALE-OWNER-COL (2026-06-16) — Sale Owner column in Quote
   // History; source = state.sale_owner from RFQ & MOQ info sub-tab.
   'qh.sale_owner': { en: 'SALE OWNER', vi: 'NV BÁN HÀNG' },
+  'qh.ccl_pn': { en: 'CCL PN (80#)', vi: 'CCL PN (80#)' },
   'qh.direct_cu': { en: 'DIRECT CU', vi: 'KH TRỰC TIẾP' },
   'qh.end_cu': { en: 'END CU', vi: 'KH CUỐI' },
   'qh.project': { en: 'PROJECT', vi: 'DỰ ÁN' },
-  'qh.ifs_code': { en: 'IFS CODE', vi: 'MÃ IFS' },
   'qh.direct_cu_pn': { en: 'DIRECT CU PN', vi: 'PN KH TRỰC TIẾP' },
   'qh.end_cu_pn': { en: 'END CU PN', vi: 'PN KH CUỐI' },
   'qh.size': { en: 'SIZE', vi: 'KÍCH THƯỚC' },
