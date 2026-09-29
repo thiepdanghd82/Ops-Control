@@ -20,7 +20,8 @@ const read = (rel) => fs.readFileSync(path.join(SRC, rel), 'utf8');
 // File → how many Contribution formulas it holds.
 const SITES = {
   'services/cplxTierAggregate.js': 1,
-  'modules/cost/tabs/ComplexCalc/ComplexCalc.jsx': 2,
+  // One since 2026-09-29: the save path margins through aggregateForTier (cplxTierAggregate).
+  'modules/cost/tabs/ComplexCalc/ComplexCalc.jsx': 1,
   'modules/cost/tabs/StandardCalc/costStructureWhatIf.js': 2, // canonical + labor bucket
   'modules/cost/tabs/Summarize.jsx': 1,
 };

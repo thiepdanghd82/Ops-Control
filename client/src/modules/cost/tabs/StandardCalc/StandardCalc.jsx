@@ -386,9 +386,16 @@ export default function StandardCalc() {
     // breakdown can't drift from the top-level result.
     const rowsPayload = lib
       ? buildStdRowsPayload(stdState, lib, calcOptions)
-      : { rows: null, tiers: [] };
+      : { rows: null, tiers: [], tier_kpis: [] };
     const persisted = serializeResultForPersist(
-      result ? { ...result, rows: rowsPayload.rows, tiers: rowsPayload.tiers } : null
+      result
+        ? {
+            ...result,
+            rows: rowsPayload.rows,
+            tiers: rowsPayload.tiers,
+            tier_kpis: rowsPayload.tier_kpis,
+          }
+        : null
     );
     return {
       type: 'standard',

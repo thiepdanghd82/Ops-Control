@@ -132,3 +132,36 @@ test('a tier with no price shows a dash on the Cover, not 0', async () => {
   assert.ok(!coverNumbers(wb).includes(0), 'a missing price must not become 0');
   assert.equal(rfqPrice(wb, 'MOQ 2'), '—');
 });
+
+// ── Per-tier KPIs (result.tier_kpis, persisted by the client since 2026-09-29) ──
+
+function withTierKpis() {
+  const q = makeQuote([{ moq: 200000, eau: 600000, price: 0.00443 }]);
+  q.result.tier_kpis = [
+    { idx: 0, sp: 0.0045, s_ttl: 0.0036, gm: 0.2, va: 0.27, contribution: 0.25 },
+    { idx: 1, sp: 0.00443, s_ttl: 0.0035, gm: 0.21, va: 0.3, contribution: 0.28 },
+  ];
+  return q;
+}
+
+test('the Cover of a non-active tier shows that tier’s margins', async () => {
+  const out = await exportQuote(withTierKpis(), { variant: 'internal', lang: 'en', tiers: [1] });
+  const nums = coverNumbers(await parse(out.buffer));
+  for (const v of [0.00443, 0.21, 0.3, 0.28]) {
+    assert.ok(nums.includes(v), `Cover should carry ${v}; got ${nums.join(', ')}`);
+  }
+});
+
+test('the RFQ table shows every tier’s VA, Contr and GM', async () => {
+  const out = await exportQuote(withTierKpis(), { variant: 'internal', lang: 'en', tiers: [0] });
+  const wb = await parse(out.buffer);
+  const row = (label) => {
+    let r;
+    section(wb, 'RFQ Information').eachRow((x) => {
+      if (x.getCell('A').value === label) r = x;
+    });
+    return ['F', 'G', 'H'].map((c) => r.getCell(c).value);
+  };
+  assert.deepEqual(row('MOQ 1'), [0.27, 0.25, 0.2], 'active tier from the top-level result');
+  assert.deepEqual(row('MOQ 2'), [0.3, 0.28, 0.21], 'non-active tier from tier_kpis');
+});
