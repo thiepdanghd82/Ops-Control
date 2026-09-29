@@ -601,11 +601,22 @@ export default function CplxCostBreakdown() {
               </div>
               <div className="sc-card-body">
                 <div className="sc-sum-bar-row sc-cb-head">
-                  <div className="sc-sum-bar-label">{t('cb.bucket')}</div>
+                  <div className="sc-sum-bar-label">
+                    <span>{t('cb.bucket')}</span>
+                    <span className="sc-cb-comp" title={t('cb.pct_cost_tip')}>
+                      {t('cb.pct_cost')}
+                    </span>
+                  </div>
                   <div className="sc-sum-bar-track" />
-                  <div className="sc-sum-bar-val sc-cb-h">{t('cb.value')}</div>
-                  <div className="sc-cb-pct sc-cb-h">{t('cb.pct_sell')}</div>
-                  <div className="sc-cb-pct sc-cb-h">{t('cb.pct_target')}</div>
+                  <div className="sc-sum-bar-val sc-cb-h" title={t('cb.value_tip')}>
+                    {t('cb.value')}
+                  </div>
+                  <div className="sc-cb-pct sc-cb-h" title={t('cb.pct_sell_tip')}>
+                    {t('cb.pct_sell')}
+                  </div>
+                  <div className="sc-cb-pct sc-cb-h" title={t('cb.pct_target_tip')}>
+                    {t('cb.pct_target')}
+                  </div>
                   <div className="sc-cb-active sc-cb-h">
                     {t('cb.active')}
                     <button
@@ -628,7 +639,9 @@ export default function CplxCostBreakdown() {
                         <span>
                           {x.icon} {x.label}
                         </span>
-                        <span className="sc-cb-comp">{share}%</span>
+                        <span className="sc-cb-comp" title={t('cb.pct_cost_tip')}>
+                          {share}%
+                        </span>
                       </div>
                       <div className="sc-sum-bar-track">
                         <div

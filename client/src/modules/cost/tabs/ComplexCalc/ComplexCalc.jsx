@@ -11,6 +11,7 @@ import {
   calcPacking,
   calcShipping,
   aggregateComplex,
+  laborFull,
   serializeResultForPersist,
   buildCpxRowsPayload,
   getActiveSPMaterials,
@@ -294,10 +295,7 @@ export default function ComplexCalc() {
       agg.va = (sp - (agg.s_mat_cost || 0) - (agg.tooling || 0) - (agg.packing_ship || 0)) / sp;
       agg.contribution =
         1 -
-        ((agg.s_mat_cost || 0) +
-          (agg.tooling || 0) +
-          (agg.packing_ship || 0) +
-          (agg.labor_cost || 0)) /
+        ((agg.s_mat_cost || 0) + (agg.tooling || 0) + (agg.packing_ship || 0) + laborFull(agg)) /
           sp;
     } else {
       agg.gm = agg.va = agg.contribution = null;
@@ -450,7 +448,7 @@ export default function ComplexCalc() {
             ((aggFresh.s_mat_cost || 0) +
               (aggFresh.tooling || 0) +
               (aggFresh.packing_ship || 0) +
-              (aggFresh.labor_cost || 0)) /
+              laborFull(aggFresh)) /
               sp;
         }
         persistedAggregate = aggFresh;

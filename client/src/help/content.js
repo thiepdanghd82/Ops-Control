@@ -67,8 +67,8 @@ export const GLOSSARY = [
   },
   {
     term: 'CONTR%',
-    en: 'Contribution margin. 1 − (s_mat_cost + tooling + packing_ship + run_labor_only) / sp_price. Target ≥ 25%.',
-    vi: 'Biên đóng góp. Mục tiêu ≥ 25%.',
+    en: 'Contribution margin. 1 − (s_mat_cost + tooling + packing_ship + all labor, run + setup) / sp_price. Target ≥ 25%.',
+    vi: 'Biên đóng góp. 1 − (vật tư + khuôn + đóng gói & vận chuyển + toàn bộ nhân công, chạy máy + setup) / giá bán. Mục tiêu ≥ 25%.',
   },
   {
     term: 'DDL',

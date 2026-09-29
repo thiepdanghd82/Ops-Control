@@ -1238,15 +1238,14 @@ export function calcAll(st, allSpResults, lib, subproducts, options = {}) {
   // 1. Switched from `g_mat_cost` (gross list price) to `s_mat_cost`
   //    (supplier/purchase price) so `va` matches the "Material"
   //    column UI renders (which uses s_mat_cost).
-  // 2. Contribution uses RUN-only labor (`labor_cost - setup_labor_total`)
-  //    to match the `labor_cost` field returned to consumers. Setup
-  //    labor is tracked separately in `bd_setup_labor` and folded into
-  //    s_ttl (so GM still includes it); Contribution's denominator
-  //    aligns with the "Labor" column users see.
-  const run_labor_only = labor_cost - setup_labor_total;
+  // 2. Contribution subtracts ALL labor — run and setup together — since
+  //    2026-09-29 (Henry: labor is not separated for Contr). Before that it
+  //    used run labor only (`labor_cost - setup_labor_total`). `labor_cost`
+  //    here is still the full figure; the returned field is split below, so
+  //    readers of a result rebuild it with laborFull() (Cpx aggregate, what-if).
   const va = sp_price > 0 ? 1 - (s_mat_cost + tooling + packing_ship) / sp_price : null;
   const contribution =
-    sp_price > 0 ? 1 - (s_mat_cost + tooling + packing_ship + run_labor_only) / sp_price : null;
+    sp_price > 0 ? 1 - (s_mat_cost + tooling + packing_ship + labor_cost) / sp_price : null;
   // GM uses s_ttl / sp_price — s_ttl is the full supplier-price subtotal
   // (material + run + setup + tooling + packing + vat_loss).
   const gm = sp_price > 0 ? 1 - s_ttl / sp_price : null;
@@ -1435,6 +1434,19 @@ export function inkCostTotal(result) {
  * @param {Partial<CalcResult>|null|undefined} result
  * @returns {number}
  */
+/**
+ * All labor on a result — run plus setup. `result.labor_cost` is RUN-only (setup is split
+ * out into `bd_setup_labor`, Lesson 21), and it is what the Cpx aggregate sums per
+ * sub-product, so the full figure is rebuilt from the two fields every result carries.
+ * Contribution subtracts this since 2026-09-29 (Henry: setup labor is not separated).
+ * @param {Partial<CalcResult>|null|undefined} result
+ * @returns {number}
+ */
+export function laborFull(result) {
+  if (!result || typeof result !== 'object') return 0;
+  return (result.labor_cost || 0) + (result.bd_setup_labor || 0);
+}
+
 export function matCostExcludingInk(result) {
   if (!result || typeof result !== 'object') return 0;
   return (result.s_mat_cost || 0) - inkCostTotal(result);

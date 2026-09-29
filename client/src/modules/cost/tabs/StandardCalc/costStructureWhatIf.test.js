@@ -15,7 +15,7 @@ import {
 // Fixture WITH proc_extra folded into s_ttl (extra = 7) so we prove the anchor
 // approach stays exact even though no toggleable row surfaces "extra".
 //   ink = 2+3 = 5 ; matExcl = 25-5 = 20 ; overheadFull = 12+3 = 15
-//   laborFull = 6+4 = 10 ; runLabor = 6 ; tooling = 10 ; packing = 8 ; vat = 2
+//   laborFull = 6+4 = 10 (run + setup) ; tooling = 10 ; packing = 8 ; vat = 2
 //   s_ttl = 25+15+10+10+8+2 + 7(extra) = 77
 const R = {
   s_mat_cost: 25,
@@ -31,8 +31,9 @@ const R = {
   s_ttl: 77,
 };
 const PRICE = 100;
-// Canonical (calcEngine): va=1-(25+10+8)/100; contr=1-(43+6)/100; gm=1-77/100
-const CANON = { va: 0.57, contribution: 0.51, gm: 0.23 };
+// Canonical (calcEngine): va=1-(25+10+8)/100; contr=1-(43+10)/100 — ALL labor, run and
+// setup, since 2026-09-29; gm=1-77/100
+const CANON = { va: 0.57, contribution: 0.47, gm: 0.23 };
 const close = (a, b) => Math.abs(a - b) < 1e-9;
 
 test('all-active recompute === canonical va/contr/gm EXACTLY (incl. proc_extra)', () => {
@@ -49,10 +50,10 @@ test('uncheck Overhead → GM rises by (overhead+setup_mach)/price; VA & Contr U
   assert.ok(close(k.gm, CANON.gm + 15 / PRICE), 'GM +0.15');
 });
 
-test('uncheck Labor → Contr drops run labor, GM drops full labor; VA unchanged', () => {
+test('uncheck Labor → Contr and GM both drop full labor; VA unchanged', () => {
   const k = recomputeKpi(R, { labor: false }, PRICE);
   assert.ok(close(k.va, CANON.va), 'VA unchanged');
-  assert.ok(close(k.contribution, CANON.contribution + 6 / PRICE), 'Contr +run labor 6');
+  assert.ok(close(k.contribution, CANON.contribution + 10 / PRICE), 'Contr +full labor 10');
   assert.ok(close(k.gm, CANON.gm + 10 / PRICE), 'GM +full labor 10');
 });
 
@@ -90,7 +91,7 @@ test('buildBuckets: per-metric membership (overhead/labor/vat zero where exclude
   const b = buildBuckets(R);
   assert.deepEqual({ va: b.overhead.va, contr: b.overhead.contr }, { va: 0, contr: 0 });
   assert.equal(b.labor.va, 0, 'labor not in VA');
-  assert.equal(b.labor.contr, 6, 'labor Contr = run-only');
+  assert.equal(b.labor.contr, 10, 'labor Contr = full (run + setup)');
   assert.equal(b.labor.gm, 10, 'labor GM = full');
   assert.deepEqual({ va: b.vat.va, contr: b.vat.contr }, { va: 0, contr: 0 });
   assert.equal(b.vat.gm, 2);

@@ -30,6 +30,7 @@ import {
   calcPacking,
   calcShipping,
   calcAll,
+  laborFull,
   buildTierState,
   applyCplxTierToSp,
   createStdState,
@@ -2332,6 +2333,45 @@ test('calcAll contribution: positive sp with near-zero costs → contribution �
   // (Default state may carry tiny packing defaults — tolerate < 1% slack.)
   assert.ok(r.contribution !== null, 'contribution must be computed');
   assert.ok(r.contribution > 0.99, `contribution ≈ 1 expected, got ${r.contribution}`);
+});
+
+test('calcAll contribution subtracts ALL labor — run and setup together (Henry, 2026-09-29)', () => {
+  // Until 2026-09-29 Contr% subtracted run labor only; setup labor sat inside GM
+  // and nowhere in Contr. The Flexo row below carries setup_h 0.5, so setup labor
+  // is non-zero and the two formulas cannot agree by accident.
+  const lib = makeLib();
+  const st = makeState({
+    materials: [
+      { code: 'M001', width: 200, usage: 1, cavities: 4, g_price: 2.5, s_price: 2.5, latest: 0 },
+    ],
+    processes: [
+      {
+        process_type: 'Flexo',
+        workcenter: 'Flexo-A',
+        speed: 10,
+        layout: 4,
+        efficiency: 0.85,
+        setup_h: 0.5,
+        scrap_pct: 0.03,
+        tool_cost: 0,
+        tool_type: '',
+        tool_life: 0,
+        product_life: 1,
+        eau_ovr: 0,
+        repeat: 1,
+      },
+    ],
+    selling_price: 1.0,
+  });
+  const r = calcAll(st, null, lib, null);
+  assert.ok(r.bd_setup_labor > 0, 'the fixture must carry setup labor to discriminate');
+  assert.ok(Math.abs(r.bd_labor - (r.labor_cost + r.bd_setup_labor)) < 1e-12);
+  const full = r.s_mat_cost + r.tooling + r.packing_ship + r.labor_cost + r.bd_setup_labor;
+  assert.ok(
+    Math.abs(r.contribution - (1 - full / 1.0)) < 1e-12,
+    `contribution ${r.contribution} must subtract run + setup labor`
+  );
+  assert.equal(laborFull(r), r.labor_cost + r.bd_setup_labor);
 });
 
 // ── serializeResultForPersist — Sprint 14 anti-drift ────────────────

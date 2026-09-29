@@ -1100,9 +1100,28 @@ registerStrings({
     vi: 'Xem tier MOQ khác (không đổi tier của quote)',
   },
   'cb.bucket': { en: 'Cost bucket', vi: 'Khoản mục' },
-  'cb.value': { en: 'Value', vi: 'Giá trị' },
-  'cb.pct_sell': { en: '% Sell', vi: '% Bán' },
-  'cb.pct_target': { en: '% Target', vi: '% Mục tiêu' },
+  // Each ratio column names what it is divided BY (Henry, 2026-09-29): the three
+  // percentages have three different denominators and read alike otherwise.
+  'cb.pct_cost': { en: '% of cost', vi: '% chi phí' },
+  'cb.pct_cost_tip': {
+    en: "Share of total cost: this bucket ÷ the table's total cost (S.TOTAL, plus SGA when the table shows an SGA row).",
+    vi: 'Tỷ trọng trong tổng chi phí: khoản mục này ÷ tổng chi phí của bảng (S.TOTAL, cộng SGA nếu bảng có dòng SGA).',
+  },
+  'cb.value': { en: 'Value $/pc', vi: 'Giá trị $/pc' },
+  'cb.value_tip': {
+    en: 'Cost of this bucket per piece, in USD.',
+    vi: 'Chi phí của khoản mục này trên mỗi sản phẩm, tính bằng USD.',
+  },
+  'cb.pct_sell': { en: '% of sell', vi: '% giá bán' },
+  'cb.pct_sell_tip': {
+    en: 'This bucket ÷ the selling price. 100% minus the Grand Total here is GM%.',
+    vi: 'Khoản mục này ÷ giá bán. 100% trừ dòng Tổng cộng ở cột này chính là GM%.',
+  },
+  'cb.pct_target': { en: '% of target', vi: '% giá target' },
+  'cb.pct_target_tip': {
+    en: "This bucket ÷ the customer's target price. A Grand Total above 100% means cost exceeds the target.",
+    vi: 'Khoản mục này ÷ giá target của khách. Tổng cộng trên 100% nghĩa là chi phí đã vượt giá target.',
+  },
   'cb.active': { en: 'Active', vi: 'Áp dụng' },
   'cb.reset': { en: 'Reset — re-check all buckets', vi: 'Đặt lại — bật lại tất cả' },
   'cb.grand_total': { en: 'GRAND TOTAL', vi: 'TỔNG CỘNG' },
