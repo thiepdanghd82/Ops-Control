@@ -15,7 +15,7 @@ import { calcAll, buildTierState, applyCplxTierToSp } from '../../../services/ca
 import { snapshotPricingParams } from '../../../services/pricingSnapshot';
 import { sharedApi } from '../../../services/api';
 import { RFQ_COLOR_PALETTE, setRfqColor, useRfqColors } from '../../../services/rfqColors';
-import { fmtN, pct, gmClr, fmtInt } from '../../../utils/format';
+import { fmtN, pct, gmClr, fmtInt, PRICE_DP } from '../../../utils/format';
 import { useAbortableFetch } from '../../../hooks/useAbortableFetch';
 import EmptyState from '../../../components/Shared/EmptyState';
 import { err as logErr } from '../../../utils/logger';
@@ -210,12 +210,12 @@ const SUMMARIZE_COLUMNS = [
   { key: 'tooling', label: 'Tooling/pcs', w: 75, right: true, fmt: (v) => fmtN(v) },
   { key: 'pack_ship', label: 'Pack&Ship', w: 65, right: true, fmt: (v) => fmtN(v) },
   { key: 'g_ttl_cost', label: 'G.Total', w: 70, right: true, fmt: (v) => fmtN(v), bold: true },
-  { key: 'target', label: 'Target Price', w: 75, right: true, fmt: (v) => fmtN(v, 4) },
+  { key: 'target', label: 'Target Price', w: 75, right: true, fmt: (v) => fmtN(v, PRICE_DP) },
   // Label change "Price" → "Price (USD)" so the new VND column reads
   // unambiguously next to it. Key stays `usd_price` to keep
   // localStorage `ops-cost-summarize-cols` operator state intact
   // (key-based toggle persistence — Phase 1 ColumnsToggle contract).
-  { key: 'usd_price', label: 'Price (USD)', w: 75, right: true, fmt: (v) => fmtN(v, 4) },
+  { key: 'usd_price', label: 'Price (USD)', w: 75, right: true, fmt: (v) => fmtN(v, PRICE_DP) },
   // Per-tier VND price — raw read from state.selling_price_vnd
   // (tier 0) / extra_moqs[i].price_vnd (tier 1+). fmtVnd → "10,450"
   // or "—" for 0 / NaN / non-finite. en-US locale match fmtUsd so

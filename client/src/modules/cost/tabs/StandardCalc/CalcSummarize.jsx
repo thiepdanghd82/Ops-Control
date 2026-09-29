@@ -7,7 +7,7 @@ import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import { calcAll, getActiveTierState } from '../../../../services/calcEngine';
 import { snapshotPricingParams } from '../../../../services/pricingSnapshot';
-import { fmtN, pct, gmClr } from '../../../../utils/format';
+import { fmtN, pct, gmClr, PRICE_DP } from '../../../../utils/format';
 import { KPI_TOOLTIPS } from '../../../../utils/kpiDefinitions';
 import ProcessFlowChart from '../ComplexCalc/ProcessFlowChart';
 
@@ -66,7 +66,7 @@ export default function CalcSummarize() {
         </div>
         <div className="sc-sum-kpi" style={{ borderColor: '#1e40af' }}>
           <div className="sc-sum-kpi-label">Selling Price</div>
-          <div className="sc-sum-kpi-val">${fmtN(sp, 4)}</div>
+          <div className="sc-sum-kpi-val">${fmtN(sp, PRICE_DP)}</div>
           <div className="sc-sum-kpi-sub">USD/unit</div>
         </div>
         <div className="sc-sum-kpi" style={{ borderColor: '#0891b2' }} title={KPI_TOOLTIPS.va}>

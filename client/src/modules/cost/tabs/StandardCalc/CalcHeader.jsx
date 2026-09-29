@@ -11,7 +11,7 @@ import { genRfqNum } from '../../../../utils/rfqGen';
 import { sharedApi } from '../../../../services/api';
 import DecimalInput from '../../../../utils/DecimalInput';
 import RfqInfoCard from '../../../../components/Shared/RfqInfoCard';
-import { parseLocaleNumber } from '../../../../utils/format';
+import { parseLocaleNumber, roundPrice } from '../../../../utils/format';
 import { useI18n } from '../../../../utils/useI18n';
 import { eauTooltipKey } from '../../lib/eauTooltip';
 
@@ -108,13 +108,13 @@ export default function CalcHeader() {
           mirrorVal = +(v * rate).toFixed(0);
         } else if (field === 'price_vnd') {
           mirrorField = 'price';
-          mirrorVal = +(v / rate).toFixed(4);
+          mirrorVal = roundPrice(v / rate);
         } else if (field === 'target') {
           mirrorField = 'target_vnd';
           mirrorVal = +(v * rate).toFixed(0);
         } else if (field === 'target_vnd') {
           mirrorField = 'target';
-          mirrorVal = +(v / rate).toFixed(4);
+          mirrorVal = roundPrice(v / rate);
         }
         if (mirrorField)
           dispatch({
@@ -142,7 +142,7 @@ export default function CalcHeader() {
     (field, usdField, v) => {
       const updates = { [field]: v };
       const rate = st.usd_rate || 0;
-      if (rate > 0 && typeof v === 'number') updates[usdField] = +(v / rate).toFixed(4);
+      if (rate > 0 && typeof v === 'number') updates[usdField] = roundPrice(v / rate);
       dispatch({ type: 'SET_STD_STATE', payload: updates });
     },
     [dispatch, st.usd_rate]

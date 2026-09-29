@@ -12,6 +12,7 @@ import SkeletonTable from '../../../components/Shared/SkeletonTable';
 import Modal from '../../../components/Shared/Modal';
 import ImportWizard from '../../../components/Shared/ImportWizard';
 import DecimalInput from '../../../utils/DecimalInput';
+import { PRICE_DP } from '../../../utils/format';
 import './MaterialLibrary.css';
 
 const PER_PAGE = 200;
@@ -20,7 +21,7 @@ function fmtPrice(v) {
   if (v == null || v === '') return '—';
   const n = Number(v);
   if (!Number.isFinite(n)) return v;
-  return n.toFixed(3).replace(/\.?0+$/, '');
+  return n.toFixed(PRICE_DP).replace(/\.?0+$/, '');
 }
 
 export default function MaterialLibrary() {

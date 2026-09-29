@@ -36,6 +36,7 @@ import { applyQuoteFilters, quoteAccessor } from '../lib/quoteFilters';
 import { subscribeDataEvents } from '../../../services/dataEventBus';
 import { err as logErr } from '../../../utils/logger';
 import { deriveInboxRow } from './PendingApprovalsInbox.columns.helpers';
+import { PRICE_DP } from '../../../utils/format';
 
 // Sprint S-QUOTE-PROGRESS-V2 — the "pending" review queue collapsed
 // from {pending_sales, pending_finance} to the single quote_to_sale
@@ -78,7 +79,7 @@ function fmtNum(v) {
 function fmtPrice(v) {
   if (v == null || v === '') return '—';
   return Number(v)
-    .toFixed(4)
+    .toFixed(PRICE_DP)
     .replace(/\.?0+$/, '');
 }
 // en-US 0-decimals VND; '—' for null/0/non-finite. Matches the

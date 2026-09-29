@@ -149,3 +149,48 @@ test('numFmt: Cost Breakdown pct column DOES use % format (legit case)', async (
   });
   assert.ok(foundPct, 'Cost Breakdown pct column should keep % format');
 });
+
+// ── Prices keep 5 decimals (Henry, 2026-09-29) ───────────────────────────
+// The client stores and shows every price to PRICE_DP = 5 decimals. A price cell
+// formatted with the body `num` style (2 dp) showed a $0.8624 material as 0.86, and
+// the Cover KPI (4 dp) cut a 0.00443 selling price to 0.0044.
+
+/** The first numeric cell in `ws` holding exactly `value`, or null. */
+function cellWithValue(ws, value) {
+  let hit = null;
+  ws.eachRow((row) =>
+    row.eachCell((cell) => {
+      if (!hit && cell.value === value) hit = cell;
+    })
+  );
+  return hit;
+}
+
+const FIVE_DP = /0\.00000/;
+
+test('numFmt: material and ink unit prices export with 5 decimals', async () => {
+  const q = makeQuote();
+  q.state.materials_main[0].latest = 0.86241;
+  q.state.inks = [
+    { _iid: 'i1', ifs_code: 'INK1', color: 'Black', print_type: 'Flexo', latest: 12.34567 },
+  ];
+  const out = await exportQuote(q, { variant: 'internal', lang: 'en' });
+  const wb = await parse(out.buffer);
+  const mat = cellWithValue(section(wb, 'Main materials'), 0.86241);
+  assert.ok(mat, 'the material price cell is present');
+  assert.match(mat.numFmt || '', FIVE_DP, `material price numFmt: ${mat.numFmt}`);
+  const ink = cellWithValue(section(wb, 'Inks'), 12.34567);
+  assert.ok(ink, 'the ink price cell is present');
+  assert.match(ink.numFmt || '', FIVE_DP, `ink price numFmt: ${ink.numFmt}`);
+});
+
+test('numFmt: the Cover selling-price KPI shows 5 decimals', async () => {
+  const q = makeQuote();
+  q.state.selling_price = 0.00443;
+  q.result.sp = 0.00443;
+  const out = await exportQuote(q, { variant: 'internal', lang: 'en' });
+  const wb = await parse(out.buffer);
+  const cell = cellWithValue(wb.worksheets[0], 0.00443);
+  assert.ok(cell, 'the sell-price KPI cell is present');
+  assert.match(cell.numFmt || '', FIVE_DP, `Cover KPI numFmt: ${cell.numFmt}`);
+});

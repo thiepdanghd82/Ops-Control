@@ -78,6 +78,19 @@ export function parseLocaleNumber(v) {
   return Number.isFinite(n) ? n : NaN;
 }
 
+/**
+ * Decimal places for a stored or displayed price — a selling / target price per unit and a
+ * material or ink unit price. Henry, 2026-09-29: 5 on every quote, raised from 4 because a
+ * 0.0001 step on a sub-cent price moved Contr% by about 2.3pp (RFQ-2026-S0078: 25% typed,
+ * 24.5% stored). One constant so the solver, the VND mirror and every display cannot disagree.
+ */
+export const PRICE_DP = 5;
+
+/** Round a price to PRICE_DP decimals, as a number. */
+export function roundPrice(v) {
+  return +Number(v).toFixed(PRICE_DP);
+}
+
 export function fmtN(v, d = 5) {
   if (v == null || isNaN(v) || v === 0) return EMDASH;
   return Number(v).toFixed(d);

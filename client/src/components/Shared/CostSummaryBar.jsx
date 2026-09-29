@@ -33,7 +33,7 @@
  *                 `SET_CPLX_FIELD` or the write is lost on save
  *                 (MES-3-FIX-53). This component stays presentational.
  */
-import { fmtN, pct, gmClr, fmtInt } from '../../utils/format';
+import { fmtN, pct, gmClr, fmtInt, PRICE_DP } from '../../utils/format';
 import { KPI_TOOLTIPS } from '../../utils/kpiDefinitions';
 import { getKpiBuckets } from '../../services/kpiBuckets';
 import { useI18n } from '../../utils/useI18n';
@@ -124,8 +124,10 @@ export default function CostSummaryBar({
             </td>
             <td className="sc-sumbar-td-pack">{buckets ? fmtN(buckets.pack_ship) : '\u2014'}</td>
             <td className="sc-sumbar-td-sub">{buckets ? fmtN(buckets.subtotal) : '\u2014'}</td>
-            <td className="sc-sumbar-td-sell">{sp ? '$' + fmtN(sp, 4) : '\u2014'}</td>
-            <td className="sc-sumbar-td-target">{target ? '$' + fmtN(target, 4) : '\u2014'}</td>
+            <td className="sc-sumbar-td-sell">{sp ? '$' + fmtN(sp, PRICE_DP) : '\u2014'}</td>
+            <td className="sc-sumbar-td-target">
+              {target ? '$' + fmtN(target, PRICE_DP) : '\u2014'}
+            </td>
             <td className="sc-sumbar-td-va">{r ? pct(r.va) : '\u2014'}</td>
             <td className="sc-sumbar-td-contr">{r ? pct(r.contribution) : '\u2014'}</td>
             <td className="sc-sumbar-td-gm" style={{ color: r ? gmClr(r.gm) : '#94a3b8' }}>

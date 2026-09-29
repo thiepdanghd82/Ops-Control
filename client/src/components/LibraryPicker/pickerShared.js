@@ -8,6 +8,8 @@
  * normalizers and the column tables stay in the lazy card's chunk.
  */
 
+import { PRICE_DP } from '../../utils/format.js';
+
 export const WIDTH_KEY = 'ops_picker_colw';
 
 export const HIDDEN_KEY = 'ops_picker_colhide';
@@ -29,5 +31,5 @@ export function fmtPrice(n) {
   const v = Number(n);
   if (!Number.isFinite(v)) return '';
   if (v === 0) return '';
-  return v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 4 });
+  return v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: PRICE_DP });
 }

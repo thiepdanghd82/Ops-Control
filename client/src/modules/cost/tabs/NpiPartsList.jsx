@@ -33,6 +33,7 @@ import ConfirmClearModal from '../../../components/Shared/ConfirmClearModal';
 import EmptyState from '../../../components/Shared/EmptyState';
 import SkeletonTable from '../../../components/Shared/SkeletonTable';
 import Modal from '../../../components/Shared/Modal';
+import { PRICE_DP } from '../../../utils/format';
 import './NpiPartsList.css';
 
 const PER_PAGE = 200;
@@ -139,7 +140,7 @@ function fmtUsd(v) {
   if (v == null || v === '') return '—';
   const n = Number(v);
   if (!Number.isFinite(n)) return String(v);
-  return n.toFixed(4);
+  return n.toFixed(PRICE_DP);
 }
 
 function fmtInt(v) {

@@ -13,6 +13,7 @@
 // (Lesson 3).
 import { calcAll, buildTierState, enumerateTiers } from './calcEngine.js';
 import { aggregateForTier } from './cplxTierAggregate.js';
+import { roundPrice } from '../utils/format.js';
 
 // Margin floors. `primary` is the labeled anchor (GM 25%); the default
 // price is raised if a secondary floor needs a higher price. Tunable here.
@@ -216,7 +217,7 @@ export function priceFields(table, tierIdx) {
  */
 export function planTierPriceWrite({ kind, table, tierIdx, usd, rate }) {
   const { usd: usdField, vnd: vndField } = priceFields(table, tierIdx);
-  const roundedUsd = +Number(usd).toFixed(4);
+  const roundedUsd = roundPrice(usd);
   if (!Number.isFinite(roundedUsd)) return [];
   const vnd = rate > 0 ? +(roundedUsd * rate).toFixed(0) : null;
   const actions = [];
