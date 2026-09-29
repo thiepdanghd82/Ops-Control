@@ -242,8 +242,11 @@ test('golden std quote: full calcAll produces canonical money outputs', () => {
   const expected_va = 1 - (r.s_mat_cost + r.tooling + r.packing_ship) / r.sp;
   assert.ok(Math.abs(r.va - expected_va) < 1e-9, 'VA formula canonical');
 
-  // Contribution canonical: 1 - (mat + tool + pack + labor) / sp.
-  const expected_contrib = 1 - (r.s_mat_cost + r.tooling + r.packing_ship + r.labor_cost) / r.sp;
+  // Contribution canonical: 1 - (mat + tool + pack + ALL labor) / sp. `labor_cost` on a result
+  // is run-only, so setup labor is added back (Henry, 2026-09-29).
+  assert.ok(r.bd_setup_labor > 0, 'the golden quote carries setup labor, so this discriminates');
+  const expected_contrib =
+    1 - (r.s_mat_cost + r.tooling + r.packing_ship + r.labor_cost + r.bd_setup_labor) / r.sp;
   assert.ok(Math.abs(r.contribution - expected_contrib) < 1e-9, 'Contribution formula canonical');
 
   // GM canonical: 1 - s_ttl / sp.
@@ -277,7 +280,11 @@ test('golden std quote: serializeResultForPersist output can rebuild canonical K
   // Recompute Contribution.
   const contr2 =
     1 -
-    (persisted.s_mat_cost + persisted.tooling + persisted.packing_ship + persisted.labor_cost) /
+    (persisted.s_mat_cost +
+      persisted.tooling +
+      persisted.packing_ship +
+      persisted.labor_cost +
+      persisted.bd_setup_labor) /
       persisted.sp;
   assert.ok(Math.abs(contr2 - full.contribution) < 1e-9, 'recomputed Contribution matches');
 

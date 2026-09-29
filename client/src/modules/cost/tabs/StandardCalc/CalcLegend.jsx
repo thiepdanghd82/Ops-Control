@@ -568,7 +568,8 @@ function LegendBody() {
                 {
                   value: (
                     <code className="cl-ic">
-                      1 − (s_mat_cost + tooling + packing_ship + run_labor_only) / sp_price
+                      1 − (s_mat_cost + tooling + packing_ship + labor_cost + bd_setup_labor) /
+                      sp_price
                     </code>
                   ),
                   mono: true,
@@ -578,12 +579,16 @@ function LegendBody() {
                     <BiRow
                       en={
                         <>
-                          ⚠ <b>Corrected</b> — RUN labor only; setup labor → GM bucket.
+                          ⚠ <b>Changed 2026-09-29</b> — ALL labor, run + setup (
+                          <code>labor_cost</code> on a result is run-only, so{' '}
+                          <code>bd_setup_labor</code> is added back). Before, run labor only.
                         </>
                       }
                       vi={
                         <>
-                          ⚠ <b>Đã sửa</b> — chỉ nhân công RUN; nhân công setup → nhóm GM.
+                          ⚠ <b>Đổi ngày 29/09/2026</b> — TOÀN BỘ nhân công, chạy máy + setup (
+                          <code>labor_cost</code> trên kết quả chỉ là phần chạy máy, nên cộng lại{' '}
+                          <code>bd_setup_labor</code>). Trước đó chỉ trừ nhân công chạy máy.
                         </>
                       }
                     />
@@ -2718,7 +2723,8 @@ PROD TIME (hrs) = total_time / 60`}
                 {
                   value: (
                     <code className="cl-ic">
-                      1 − (s_mat_cost + tooling + packing_ship + run_labor_only) / sp_price
+                      1 − (s_mat_cost + tooling + packing_ship + labor_cost + bd_setup_labor) /
+                      sp_price
                     </code>
                   ),
                   mono: true,
@@ -2729,12 +2735,14 @@ PROD TIME (hrs) = total_time / 60`}
                     <BiRow
                       en={
                         <>
-                          ⚠ Uses <code>run_labor_only = labor_cost − setup_labor_total</code>.
+                          ⚠ Labor = run + setup since 2026-09-29; it used run labor only (
+                          <code>labor_cost − setup_labor_total</code>) before.
                         </>
                       }
                       vi={
                         <>
-                          ⚠ Dùng <code>run_labor_only = labor_cost − setup_labor_total</code>.
+                          ⚠ Nhân công = chạy máy + setup từ 29/09/2026; trước đó chỉ trừ phần chạy
+                          máy (<code>labor_cost − setup_labor_total</code>).
                         </>
                       }
                     />
@@ -2869,8 +2877,10 @@ PROD TIME (hrs) = total_time / 60`}
             bodyVi={
               <>
                 Cost Breakdown có bảng what-if cho phép operator <b>bật/tắt từng bucket chi phí</b>{' '}
-                và xem hai cột <b>% Sell</b> (theo giá bán của tier) và <b>% Target</b> (theo giá
-                mục tiêu). Đây là công cụ <b>chỉ hiển thị</b> — mask lưu ở{' '}
+                và xem hai cột <b>% giá bán</b> (so với giá bán của tier) và <b>% giá target</b> (so
+                với giá target). Con số <b>% chi phí</b> cạnh tên mỗi khoản mục là tỷ trọng trong
+                tổng chi phí của bảng (S.TOTAL, cộng SGA nếu có) — mẫu số khác, nên ba loại % này
+                không so trực tiếp với nhau được. Đây là công cụ <b>chỉ hiển thị</b> — mask lưu ở{' '}
                 <code className="cl-ic">sessionStorage</code> (khóa{' '}
                 <code>ops-cb-whatif-mask-v1</code>), <b>không</b> ghi vào quote / reducer / server /
                 snapshot / exporter.
@@ -2878,11 +2888,13 @@ PROD TIME (hrs) = total_time / 60`}
             }
           >
             Cost Breakdown carries a what-if panel that lets an operator{' '}
-            <b>toggle cost buckets off</b> and read two columns — <b>% Sell</b> (against the tier
-            selling price) and <b>% Target</b> (against the target price). It is <b>display-only</b>
-            : the mask persists to <code className="cl-ic">sessionStorage</code> (key{' '}
-            <code>ops-cb-whatif-mask-v1</code>) and never writes the quote / reducer / server /
-            snapshot / exporter.
+            <b>toggle cost buckets off</b> and read two columns — <b>% of sell</b> (against the tier
+            selling price) and <b>% of target</b> (against the target price). The <b>% of cost</b>{' '}
+            figure beside each bucket name is its share of the table's total cost (S.TOTAL, plus SGA
+            when shown) — a different denominator, so the three percentages are not comparable with
+            each other. It is <b>display-only</b>: the mask persists to{' '}
+            <code className="cl-ic">sessionStorage</code> (key <code>ops-cb-whatif-mask-v1</code>)
+            and never writes the quote / reducer / server / snapshot / exporter.
           </Callout>
           <Formula
             name="% Sell / % Target — per-row recompute"
@@ -2942,8 +2954,8 @@ GM%    = 1 − gm   / price
                 {
                   value: (
                     <BiRow
-                      en="Contr uses RUN labor; GM uses full labor (+ bd_setup_labor)"
-                      vi="Contr dùng labor RUN; GM dùng labor đầy đủ (+ bd_setup_labor)"
+                      en="Contr and GM both use full labor — run + bd_setup_labor (Contr used run only before 2026-09-29)"
+                      vi="Contr và GM đều dùng labor đầy đủ — chạy máy + bd_setup_labor (trước 29/09/2026 Contr chỉ dùng phần chạy máy)"
                     />
                   ),
                 },
@@ -2973,8 +2985,8 @@ GM%    = 1 − gm   / price
           />
           <Callout type="note" title="Membership recap" titleVi="Tóm tắt thành phần">
             <BiRow
-              en="VA = {material, ink, tooling, packing}. Contr = VA + run labor. GM = everything (adds overhead+setup machine, full labor+setup labor, vat). SGA is NOT a toggle bucket. 'Setup' is not its own bucket — setup machine rides in overhead, setup labor rides in labor."
-              vi="VA = {vật tư, mực, khuôn, đóng gói}. Contr = VA + labor run. GM = tất cả (thêm overhead+setup máy, labor đầy đủ+setup labor, vat). SGA KHÔNG phải bucket bật/tắt. 'Setup' không phải bucket riêng — setup máy nằm trong overhead, setup labor nằm trong labor."
+              en="VA = {material, ink, tooling, packing}. Contr = VA + full labor (run + setup). GM = everything (adds overhead+setup machine, full labor+setup labor, vat). SGA is NOT a toggle bucket. 'Setup' is not its own bucket — setup machine rides in overhead, setup labor rides in labor."
+              vi="VA = {vật tư, mực, khuôn, đóng gói}. Contr = VA + labor đầy đủ (chạy máy + setup). GM = tất cả (thêm overhead+setup máy, labor đầy đủ+setup labor, vat). SGA KHÔNG phải bucket bật/tắt. 'Setup' không phải bucket riêng — setup máy nằm trong overhead, setup labor nằm trong labor."
             />
           </Callout>
         </section>
@@ -3654,10 +3666,10 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
                   'calcAll()',
                 ],
                 [
-                  'run_labor_only',
-                  'labor_cost − setup_labor_total  [used in CONTR%]',
+                  'laborFull(result)',
+                  'labor_cost + bd_setup_labor  [all labor, used in CONTR% since 2026-09-29]',
                   'USD/pcs',
-                  'calcAll()',
+                  'calcEngine.js',
                 ],
               ],
             },
@@ -3672,7 +3684,7 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
                 ],
                 [
                   'CONTR%  ⚠ Corrected',
-                  '1 − (s_mat_cost + tooling + packing_ship + run_labor_only) / sp_price',
+                  '1 − (s_mat_cost + tooling + packing_ship + labor_cost + bd_setup_labor) / sp_price',
                   '%',
                   'calcAll()',
                 ],
@@ -3726,7 +3738,7 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
                 ],
                 [
                   'Bucket membership',
-                  'VA={mat,ink,tool,pack} · Contr=VA+run labor · GM=all(+overhead+setup+vat)',
+                  'VA={mat,ink,tool,pack} · Contr=VA+full labor (run+setup) · GM=all(+overhead+setup+vat)',
                   '—',
                   'buildBuckets()',
                 ],
@@ -4067,7 +4079,11 @@ Lead time = max( NPI 'lt', IFS 'leadtime' )       (per row, positive only)`}
                 { value: <b>CONTR%</b>, bold: true },
                 { value: <b>≈ 88.0%</b>, mono: true, center: true, bold: true },
                 {
-                  value: <code className="cl-ic">1 − (s_mat + tool + pack + run_labor) / sp</code>,
+                  value: (
+                    <code className="cl-ic">
+                      1 − (s_mat + tool + pack + labor + setup labor) / sp — setup labor is 0 here
+                    </code>
+                  ),
                 },
               ],
             ]}

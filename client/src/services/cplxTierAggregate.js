@@ -11,7 +11,7 @@
 // layers the tier-specific margin math (gm / va / contribution) on top,
 // reading the tier's selling price from `cs` (tier 0 = cs.selling_price;
 // tier>0 = cs.extra_moqs[tierIdx-1].price).
-import { aggregateComplex } from './calcEngine.js';
+import { aggregateComplex, laborFull } from './calcEngine.js';
 
 /**
  * @param {object} cs      complex state (cplxState)
@@ -34,14 +34,14 @@ export function aggregateForTier(cs, sps, lib, tierIdx, opts) {
     tierSp > 0
       ? (tierSp - (agg.s_mat_cost || 0) - (agg.tooling || 0) - (agg.packing_ship || 0)) / tierSp
       : null;
-  // Contribution% = 1 - (material + tooling + packing_ship + labor) / sp
+  // Contribution% = 1 - (material + tooling + packing_ship + ALL labor, run + setup) / sp
   agg.contribution =
     tierSp > 0
       ? (tierSp -
           (agg.s_mat_cost || 0) -
           (agg.tooling || 0) -
           (agg.packing_ship || 0) -
-          (agg.labor_cost || 0)) /
+          laborFull(agg)) /
         tierSp
       : null;
   return agg;

@@ -20,7 +20,7 @@
  * lives in s_ttl but has no toggleable row (summing visible buckets would miss
  * it). Unchecking a bucket subtracts precisely its metric amount.
  */
-import { matCostExcludingInk, inkCostTotal } from '../../../../services/calcEngine.js';
+import { matCostExcludingInk, inkCostTotal, laborFull } from '../../../../services/calcEngine.js';
 
 // Order matches the Cost Structure rows. SGA is intentionally NOT here — it
 // only affects gm_after_sga (out of scope) and stays non-toggleable.
@@ -43,8 +43,8 @@ export function buildBuckets(r) {
   const material = matCostExcludingInk(r);
   const ink = inkCostTotal(r);
   const overheadFull = (r.overhead || 0) + (r.bd_setup_mach || 0);
-  const laborFull = (r.labor_cost || 0) + (r.bd_setup_labor || 0);
-  const runLabor = r.labor_cost || 0; // calcAll already returns run-only labor
+  // Contr subtracts ALL labor, run + setup, since 2026-09-29 — same as GM.
+  const labor = laborFull(r);
   const tooling = r.tooling || 0;
   const packing = r.packing_ship || 0;
   const vat = r.vat_loss || 0;
@@ -52,7 +52,7 @@ export function buildBuckets(r) {
     material: { va: material, contr: material, gm: material, value: material },
     ink: { va: ink, contr: ink, gm: ink, value: ink },
     overhead: { va: 0, contr: 0, gm: overheadFull, value: overheadFull },
-    labor: { va: 0, contr: runLabor, gm: laborFull, value: laborFull },
+    labor: { va: 0, contr: labor, gm: labor, value: labor },
     tooling: { va: tooling, contr: tooling, gm: tooling, value: tooling },
     packing: { va: packing, contr: packing, gm: packing, value: packing },
     vat: { va: 0, contr: 0, gm: vat, value: vat },
@@ -64,8 +64,7 @@ function canonicalCost(r) {
   const mats = r.s_mat_cost || 0;
   const tool = r.tooling || 0;
   const ps = r.packing_ship || 0;
-  const runLabor = r.labor_cost || 0;
-  return { va: mats + tool + ps, contr: mats + tool + ps + runLabor, gm: r.s_ttl || 0 };
+  return { va: mats + tool + ps, contr: mats + tool + ps + laborFull(r), gm: r.s_ttl || 0 };
 }
 
 /** A bucket is active unless the mask explicitly turns it off (default true). */

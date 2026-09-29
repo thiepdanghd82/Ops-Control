@@ -11,7 +11,12 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { costColumnsFromResult } from './Summarize.costColumns.js';
 import { useCalc } from '../../../context/CalcContext';
 import { useCostLib } from '../../../context/CostLibContext';
-import { calcAll, buildTierState, applyCplxTierToSp } from '../../../services/calcEngine';
+import {
+  calcAll,
+  buildTierState,
+  applyCplxTierToSp,
+  laborFull,
+} from '../../../services/calcEngine';
 import { snapshotPricingParams } from '../../../services/pricingSnapshot';
 import { sharedApi } from '../../../services/api';
 import { RFQ_COLOR_PALETTE, setRfqColor, useRfqColors } from '../../../services/rfqColors';
@@ -368,6 +373,8 @@ function aggregateCplxTier(cs, sps, lib, tierIdx, options = {}) {
     // FG sub-product renders blank cells.
     bd_overhead: sum('bd_overhead'),
     bd_labor: sum('bd_labor'),
+    // laborFull() = labor_cost + bd_setup_labor feeds Contribution below.
+    bd_setup_labor: sum('bd_setup_labor'),
     tooling: sum('tooling'),
     packing_ship: sum('packing_ship'),
     bd_ink_setup: sum('bd_ink_setup'),
@@ -530,7 +537,7 @@ export default function Summarize() {
                   (r.s_mat_cost || 0) -
                   (r.tooling || 0) -
                   (r.packing_ship || 0) -
-                  (r.labor_cost || 0)) /
+                  laborFull(r)) /
                 tierSp
               : null;
           rows.push({

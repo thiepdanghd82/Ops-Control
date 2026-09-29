@@ -46,6 +46,14 @@
  * before this change is byte-identical to `pre-ink-makeready/`'s copy, so the
  * baseline is already kept. Its drift (bd_ink_setup 0.6 → 15.6, 2 → 52 frames)
  * lands entirely inside ALLOWED, so the confinement assertion needs no change.
+ *
+ * FOURTH DELIBERATE BREAK — 2026-09-29, Contribution counts ALL labor.
+ * ─────────────────────────────────────────────────────────────────────
+ * Contr% subtracted run labor only; Henry ruled that labor is not separated,
+ * so it now subtracts run + setup labor. `pre-contr-full-labor/` keeps the four
+ * fixtures as they stood before it. Every fixture carries setup labor, so all
+ * four moved — and ONLY `contribution` moved, by exactly bd_setup_labor / sp,
+ * which the dedicated test below pins so a later change cannot hide inside it.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -60,7 +68,7 @@ const FIX_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '__fixt
  * BEFORE it. `pre-tooling-yield` predates both changes; `pre-ink-makeready`
  * predates only the ink one. A quote from either era must still open.
  */
-const ARCHIVES = ['pre-tooling-yield', 'pre-ink-makeready'];
+const ARCHIVES = ['pre-tooling-yield', 'pre-ink-makeready', 'pre-contr-full-labor'];
 const load = (dir, f) => JSON.parse(readFileSync(path.join(FIX_ROOT, dir, f), 'utf8'));
 const FIXTURES = ARCHIVES.flatMap((dir) =>
   readdirSync(path.join(FIX_ROOT, dir))
@@ -101,8 +109,8 @@ const ALLOWED = new Set([...TOOLING_CHAIN, ...INK_SETUP_CHAIN]);
 test('the archive is present — no old baseline may be deleted', () => {
   assert.equal(
     FIXTURES.length,
-    8,
-    `expected 8 archived fixtures across ${ARCHIVES.length} breaks, found ${FIXTURES.length}`
+    12,
+    `expected 12 archived fixtures across ${ARCHIVES.length} breaks, found ${FIXTURES.length}`
   );
 });
 
@@ -132,5 +140,24 @@ for (const [dir, file] of FIXTURES) {
       [],
       `a deliberate change moved fields outside the tooling + ink-setup chains:\n  ${leaked.join('\n  ')}`
     );
+  });
+}
+
+// The fourth break must move Contribution and nothing else, by exactly the setup labor
+// it now subtracts. Tolerance is relative: the Indigo fixture's Contribution is about
+// −11045, where one ulp is already about 2e-12.
+for (const file of readdirSync(path.join(FIX_ROOT, 'pre-contr-full-labor')).filter((f) =>
+  f.endsWith('.json')
+)) {
+  test(`pre-contr-full-labor/${file}: only Contribution moves, by setup labor / price`, () => {
+    const { lib, state, expected_result: was } = load('pre-contr-full-labor', file);
+    const now = calcAll(state, null, lib, null, {});
+    const close = (a, b) => Math.abs(a - b) <= 1e-12 * Math.max(1, Math.abs(b));
+    const moved = Object.entries(was)
+      .filter(([k, v]) => typeof v === 'number' && !close(now[k] ?? 0, v))
+      .map(([k]) => k);
+    assert.deepEqual(moved, ['contribution']);
+    assert.ok(was.bd_setup_labor > 0, 'the fixture carries setup labor');
+    assert.ok(close(now.contribution, was.contribution - was.bd_setup_labor / was.sp));
   });
 }
