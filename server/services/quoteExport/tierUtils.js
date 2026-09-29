@@ -23,7 +23,7 @@ export function enumerateTiers(state) {
       label: 'MOQ 1',
       moq: numOrNull(state.moq),
       eau: numOrNull(state.annual_qty),
-      sellingPrice: numOrNull(state.selling_price),
+      sellingPrice: priceOrNull(state.selling_price),
     },
   ];
   const extras = Array.isArray(state.extra_moqs) ? state.extra_moqs : [];
@@ -34,10 +34,22 @@ export function enumerateTiers(state) {
       label: `MOQ ${i + 2}`,
       moq: numOrNull(em.moq),
       eau: numOrNull(em.eau != null ? em.eau : state.annual_qty),
-      sellingPrice: numOrNull(em.selling_price ?? em.sp ?? null),
+      // The app stores a tier's price as `price` (SET_EXTRA_MOQ / SET_CPLX_EXTRA_MOQ);
+      // `selling_price` / `sp` stay as fallbacks for older exporter-shaped data.
+      sellingPrice: priceOrNull(em.price ?? em.selling_price ?? em.sp),
     });
   }
   return out;
+}
+
+/**
+ * A price, or null when none is set. Unlike numOrNull, a missing or blank value is
+ * null rather than 0 — `Number(null)` and `Number('')` are both 0, which exported a
+ * tier with no price as a price of 0.
+ */
+function priceOrNull(v) {
+  if (v == null || v === '') return null;
+  return numOrNull(v);
 }
 
 function numOrNull(v) {

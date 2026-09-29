@@ -150,6 +150,8 @@ export function buildCoverSheet(wb, ctx) {
 }
 
 function num(v, fallback = null) {
+  // Number(null) and Number('') are 0 — a missing KPI or price must fall back, not read 0.
+  if (v == null || v === '') return fallback;
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
 }

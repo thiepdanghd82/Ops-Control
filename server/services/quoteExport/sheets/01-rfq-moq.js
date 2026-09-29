@@ -108,6 +108,8 @@ export function buildRfqMoqSection(sheet, startRow, ctx) {
 }
 
 function numOrDash(v, fallback = null) {
+  // Number(null) and Number('') are 0 — a missing KPI or price must fall back, not read 0.
+  if (v == null || v === '') return fallback ?? '—';
   const n = Number(v);
   if (!Number.isFinite(n)) return fallback ?? '—';
   return n;
