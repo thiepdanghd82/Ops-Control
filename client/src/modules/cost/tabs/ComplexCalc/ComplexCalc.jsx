@@ -12,6 +12,7 @@ import {
   calcShipping,
   aggregateComplex,
   laborFull,
+  tierKpisOf,
   serializeResultForPersist,
   buildCpxRowsPayload,
   getActiveSPMaterials,
@@ -426,33 +427,19 @@ export default function ComplexCalc() {
     // alongside the new snapshot — internally inconsistent until next
     // load. ~30ms for typical 3-SP quote; sync to surface errors.
     let persistedAggregate = aggregate;
+    let tierKpis = [];
     if (lib && sps.length) {
       const tierIdx = cs.active_moq_idx || 0;
-      const { aggregate: aggFresh } = aggregateComplex(cs, sps, lib, tierIdx, {
-        bomQtyEnabled,
-        spMoqScalingEnabled,
-        snapshot,
-      });
-      if (aggFresh) {
-        const sp = cs.selling_price || 0;
-        if (sp > 0) {
-          aggFresh.gm = (sp - (aggFresh.s_ttl || 0)) / sp;
-          aggFresh.va =
-            (sp -
-              (aggFresh.s_mat_cost || 0) -
-              (aggFresh.tooling || 0) -
-              (aggFresh.packing_ship || 0)) /
-            sp;
-          aggFresh.contribution =
-            1 -
-            ((aggFresh.s_mat_cost || 0) +
-              (aggFresh.tooling || 0) +
-              (aggFresh.packing_ship || 0) +
-              laborFull(aggFresh)) /
-              sp;
-        }
-        persistedAggregate = aggFresh;
-      }
+      const aggOpts = { bomQtyEnabled, spMoqScalingEnabled, snapshot };
+      // aggregateForTier margins the aggregate at THAT tier's price. Until 2026-09-29 this
+      // block used cs.selling_price — MOQ 1's price — whatever tier was active.
+      const aggFresh = aggregateForTier(cs, sps, lib, tierIdx, aggOpts);
+      if (aggFresh) persistedAggregate = aggFresh;
+      // KPIs of every tier, as the Cost Breakdown table computes them, so an export of a
+      // non-active tier has margins to show (the server never runs calcEngine).
+      tierKpis = enumerateTiers(cs).map((t) =>
+        tierKpisOf(t.idx, t.sp, aggregateForTier(cs, sps, lib, t.idx, aggOpts))
+      );
     }
     // MES-3-FIX-41: per-row Setup/Run/Total per SP per tier — exports
     // now show real numbers everywhere instead of em-dash. Cost ~150ms
@@ -461,7 +448,9 @@ export default function ComplexCalc() {
     // breakdown can't drift from the aggregate result.
     const cpxRows = lib ? buildCpxRowsPayload(cs, sps, lib, calcOptions) : { subproducts: [] };
     const persisted = serializeResultForPersist(
-      persistedAggregate ? { ...persistedAggregate, subproducts: cpxRows.subproducts } : null
+      persistedAggregate
+        ? { ...persistedAggregate, subproducts: cpxRows.subproducts, tier_kpis: tierKpis }
+        : null
     );
     return {
       type: 'complex',

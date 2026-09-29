@@ -15,6 +15,9 @@ import {
   createStdState,
   createCplxState,
   createSubProduct,
+  buildTierState,
+  enumerateTiers,
+  serializeResultForPersist,
 } from './calcEngine.js';
 
 function makeLib(overrides = {}) {
@@ -329,6 +332,47 @@ test('buildStdRowsPayload: top-level rows equals active tier rows', () => {
   });
   const payload = buildStdRowsPayload(st, makeLib());
   assert.deepEqual(payload.rows, payload.tiers[1].rows);
+});
+
+// ── Per-tier KPIs (2026-09-29) ────────────────────────────────
+// The app stores a tier's price as extra_moqs[i].price. The fixtures above carry
+// `selling_price`, the field the payload used to read; these use the saved shape.
+
+test('buildStdRowsPayload: tier_kpis equal what the Cost Breakdown table computes', () => {
+  const st = makeStdState({
+    extra_moqs: [{ moq: 200_000, price: 0.45, eau: 500_000 }],
+    num_moq: 2,
+  });
+  const lib = makeLib();
+  const payload = buildStdRowsPayload(st, lib);
+  assert.equal(payload.tier_kpis.length, 2);
+  for (const t of enumerateTiers(st)) {
+    const r = calcAll(buildTierState(st, t.idx, t.sp, t.moq, t.eau), null, lib, null);
+    const k = payload.tier_kpis[t.idx];
+    assert.equal(k.idx, t.idx);
+    assert.equal(k.sp, t.sp);
+    for (const f of ['s_ttl', 'gm', 'va', 'contribution']) {
+      assert.ok(Math.abs(k[f] - r[f]) < 1e-12, `tier ${t.idx} ${f}: ${k[f]} vs screen ${r[f]}`);
+    }
+  }
+  assert.equal(payload.tier_kpis[1].sp, 0.45, "MOQ 2 is margined at its own price, not MOQ 1's");
+});
+
+test('buildStdRowsPayload: a tier with no price of its own has no KPIs', () => {
+  const st = makeStdState({ extra_moqs: [{ moq: 200_000, eau: 500_000 }] });
+  const payload = buildStdRowsPayload(st, makeLib());
+  assert.equal(payload.tier_kpis[1], null);
+  assert.ok(payload.tier_kpis[0], 'the base tier still has its KPIs');
+});
+
+test('buildStdRowsPayload: legacy selling_price on a tier is still read', () => {
+  const st = makeStdState({ extra_moqs: [{ moq: 200_000, selling_price: 0.45, eau: 500_000 }] });
+  assert.equal(buildStdRowsPayload(st, makeLib()).tier_kpis[1].sp, 0.45);
+});
+
+test('serializeResultForPersist keeps tier_kpis', () => {
+  const tier_kpis = [{ idx: 0, sp: 1, s_ttl: 0.5, gm: 0.5, va: 0.6, contribution: 0.55 }];
+  assert.deepEqual(serializeResultForPersist({ sp: 1, tier_kpis }).tier_kpis, tier_kpis);
 });
 
 // ── Cpx ───────────────────────────────────────────────────────

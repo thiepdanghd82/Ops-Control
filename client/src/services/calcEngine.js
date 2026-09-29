@@ -1392,6 +1392,10 @@ export const PERSISTED_RESULT_FIELDS = [
   'rows',
   'tiers',
   'subproducts',
+  // 2026-09-29: KPIs of EVERY tier, [{ idx, sp, s_ttl, gm, va, contribution } | null],
+  // computed on the client at save — the server never runs calcEngine, and the top-level
+  // gm / va / contribution cover the active tier only, so a MOQ 2 export had none.
+  'tier_kpis',
 ];
 
 /**
@@ -2861,14 +2865,29 @@ export function calcRowBreakdown(state, lib, allSpResults, subproducts, options 
  * @param {object} state — Std state
  * @param {object} lib
  */
+/**
+ * The KPIs an export needs for one tier, from a calcAll-style result at that tier's price.
+ * @param {number} idx
+ * @param {number} sp the tier's own selling price
+ * @param {any} r
+ */
+export function tierKpisOf(idx, sp, r) {
+  if (!r || !(Number(sp) > 0)) return null;
+  return { idx, sp: Number(sp), s_ttl: r.s_ttl, gm: r.gm, va: r.va, contribution: r.contribution };
+}
+
 export function buildStdRowsPayload(state, lib, options = {}) {
-  if (!state || !lib) return { rows: null, tiers: [] };
+  if (!state || !lib) return { rows: null, tiers: [], tier_kpis: [] };
   const tierCount = 1 + (Array.isArray(state.extra_moqs) ? state.extra_moqs.length : 0);
   const activeIdx = Number(state.active_moq_idx) || 0;
   const tiers = [];
+  const tier_kpis = [];
   for (let t = 0; t < tierCount; t++) {
     const em = t === 0 ? null : (state.extra_moqs || [])[t - 1];
-    const price = t === 0 ? state.selling_price : (em?.selling_price ?? state.selling_price);
+    // The app stores a tier's price as `price`; `selling_price` never existed on
+    // extra_moqs, so until 2026-09-29 every tier after MOQ 1 was costed at MOQ 1's price.
+    const ownPrice = t === 0 ? state.selling_price : (em?.price ?? em?.selling_price);
+    const price = t === 0 ? state.selling_price : (ownPrice ?? state.selling_price);
     const moq = t === 0 ? state.moq : (em?.moq ?? state.moq);
     const eau = t === 0 ? state.annual_qty : (em?.eau ?? state.annual_qty);
     const tierSt = buildTierState(state, t, price, moq, eau);
@@ -2882,8 +2901,11 @@ export function buildStdRowsPayload(state, lib, options = {}) {
       packing_pcs: calcPacking(tierSt),
       shipping_pcs: calcShipping(tierSt),
     });
+    // The same calcAll the Cost Breakdown table runs for this tier; null when the tier
+    // has no price of its own, rather than margins computed at another tier's price.
+    tier_kpis.push(tierKpisOf(t, ownPrice, calcAll(tierSt, null, lib, null, options)));
   }
-  return { rows: tiers[activeIdx]?.rows ?? null, tiers };
+  return { rows: tiers[activeIdx]?.rows ?? null, tiers, tier_kpis };
 }
 
 /**

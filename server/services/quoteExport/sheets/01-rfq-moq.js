@@ -6,7 +6,7 @@
 import { sectionBanner } from '../workbook.js';
 import { applyStyle } from '../styles.js';
 import { L } from '../i18n.js';
-import { enumerateTiers } from '../tierUtils.js';
+import { enumerateTiers, tierMargins } from '../tierUtils.js';
 
 /**
  * @param {import('exceljs').Workbook} wb
@@ -77,11 +77,10 @@ export function buildRfqMoqSection(sheet, startRow, ctx) {
   sheet.getRow(headerRow).height = 32;
   r += 1;
 
-  // Tier rows — pulled from extra_moqs + base. KPIs (VA/CONTR/GM) only
-  // exist in quote.result for the active tier; other tiers stay em-dash.
+  // Tier rows — pulled from extra_moqs + base. KPIs (VA/CONTR/GM) come from quote.result
+  // for the active tier and from result.tier_kpis for the others (tierMargins); a quote
+  // saved before 2026-09-29 has no per-tier KPIs and shows dashes until re-saved.
   const tiers = enumerateTiers(state);
-  const activeIdx = Number(state.active_moq_idx) || 0;
-  const result = quote.result || {};
   for (const t of tiers) {
     const row = sheet.getRow(r);
     row.getCell(1).value = t.label;
@@ -94,12 +93,12 @@ export function buildRfqMoqSection(sheet, startRow, ctx) {
     applyStyle(row.getCell(4), 'numCost');
     row.getCell(5).value = numOrDash(state.target_margin, 0.25);
     applyStyle(row.getCell(5), 'numPct');
-    const isActive = t.idx === activeIdx;
-    row.getCell(6).value = isActive ? numOrDash(result.va) : '—';
+    const m = tierMargins(quote, t.idx);
+    row.getCell(6).value = numOrDash(m.va);
     applyStyle(row.getCell(6), 'numPct');
-    row.getCell(7).value = isActive ? numOrDash(result.contribution) : '—';
+    row.getCell(7).value = numOrDash(m.contribution);
     applyStyle(row.getCell(7), 'numPct');
-    row.getCell(8).value = isActive ? numOrDash(result.gm) : '—';
+    row.getCell(8).value = numOrDash(m.gm);
     applyStyle(row.getCell(8), 'numPct');
     r += 1;
   }
@@ -108,6 +107,8 @@ export function buildRfqMoqSection(sheet, startRow, ctx) {
 }
 
 function numOrDash(v, fallback = null) {
+  // Number(null) and Number('') are 0 — a missing KPI or price must fall back, not read 0.
+  if (v == null || v === '') return fallback ?? '—';
   const n = Number(v);
   if (!Number.isFinite(n)) return fallback ?? '—';
   return n;

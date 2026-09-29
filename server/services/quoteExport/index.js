@@ -21,7 +21,7 @@ import { createWorkbook } from './workbook.js';
 import { buildZip } from './zip.js';
 import { workbookToCsvEntries } from './csv.js';
 import { build1TierName, buildZipName } from './filenames.js';
-import { enumerateTiers } from './tierUtils.js';
+import { enumerateTiers, tierMargins } from './tierUtils.js';
 import { buildCoverSheet } from './sheets/00-cover.js';
 import { buildLayoutSheet } from './sheets/02-layout.js';
 import { buildSummarizeSheet } from './sheets/02-summarize.js';
@@ -269,18 +269,21 @@ function pickKpisForTier(quote, tierIdx, tier) {
   const state = quote.state || {};
   const activeIdx = Number(state.active_moq_idx) || 0;
   const isActive = tierIdx === activeIdx;
+  const m = tierMargins(quote, tierIdx);
   return {
     moq: tier.moq,
     eau: tier.eau,
     sp: isActive ? num(result.sp) : tier.sellingPrice,
-    gm: isActive ? num(result.gm) : null,
-    va: isActive ? num(result.va) : null,
-    contribution: isActive ? num(result.contribution) : null,
+    gm: m.gm,
+    va: m.va,
+    contribution: m.contribution,
     targetGm: num(state.target_margin, 0.25),
   };
 }
 
 function num(v, fallback = null) {
+  // Number(null) and Number('') are 0 — a missing KPI or price must fall back, not read 0.
+  if (v == null || v === '') return fallback;
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
 }
