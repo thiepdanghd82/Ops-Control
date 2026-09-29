@@ -41,6 +41,7 @@ const { registerNativeBridges } = require('./native');
 const license = require('./license.js');
 const smartClient = require('./smart-client.js');
 const { probeServer } = require('./utils/netProbe.js');
+const { connectThenLoad, activateAction } = require('./utils/mainWindowBoot');
 const { showClientFirstRunDialog } = require('./clientFirstRun.js');
 
 // ─── Logging ────────────────────────────────────────────────────────
@@ -156,6 +157,9 @@ const store = new Store({
 });
 
 let mainWindow = null;
+// Set once the startup path has created the main window; until then `activate`
+// waits (utils/mainWindowBoot.js, activateAction).
+let startupDone = false;
 let tray = null;
 let embeddedServer = null;
 let embeddedPort = 0;
@@ -681,25 +685,21 @@ function createMainWindow() {
   // Show the connecting screen first, poll /health, then load the real app.
   // The recovery dialog only appears after waitForServer's budget is spent —
   // no more scary ERR_CONNECTION_REFUSED on a transient boot race.
-  mainWindow
-    .loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(connectingScreenHtml(url)))
-    .catch(() => {});
-
-  (async () => {
-    const ready = await waitForServer(url, 60000);
-    if (ready) {
-      try {
-        await mainWindow.loadURL(url);
-        return; // connected — done
-      } catch (err) {
-        log.error('[main] loadURL failed after server became ready:', err);
-        // fall through to the recovery dialog below
-      }
+  // connectThenLoad lets the connecting screen finish loading before the app
+  // loads, and drives this window only — both raised a false dialog on 2026-09-28.
+  connectThenLoad(mainWindow, {
+    connectingUrl: 'data:text/html;charset=utf-8,' + encodeURIComponent(connectingScreenHtml(url)),
+    appUrl: url,
+    waitReady: () => waitForServer(url, 60000),
+  }).then((res) => {
+    if (res.ok) return; // connected — done
+    if (res.reason === 'load-failed') {
+      log.error('[main] loadURL failed after server became ready:', res.err);
     } else {
       log.error('[main] server did not answer /health within budget:', url);
     }
     showConnectFailedDialog(url, new Error('ERR_CONNECTION_REFUSED (server unreachable)'));
-  })();
+  });
 }
 
 // Recovery dialog, extracted so createMainWindow's retry loop can call it only
@@ -1111,6 +1111,7 @@ app.whenReady().then(async () => {
     }
 
     createMainWindow();
+    startupDone = true;
     createTray();
 
     // Smart-client engine chỉ start khi mode = 'smart' (Sprint 3)
@@ -1139,9 +1140,13 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
+  const action = activateAction({
+    startupDone,
+    windowCount: BrowserWindow.getAllWindows().length,
+  });
+  if (action === 'create') {
     createMainWindow();
-  } else if (mainWindow) {
+  } else if (action === 'show' && mainWindow) {
     mainWindow.show();
   }
 });
