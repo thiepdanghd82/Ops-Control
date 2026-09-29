@@ -32,6 +32,7 @@ import {
   QUOTE_HISTORY_STORAGE_KEY,
   resolveSortKey,
 } from './QuoteHistory.columns.js';
+import { PRICE_DP } from '../../../utils/format';
 import './QuoteHistory.css';
 import './QuoteHistory/ExportModal.css';
 
@@ -72,7 +73,7 @@ function fmtPrice(v) {
   return v == null || v === ''
     ? '—'
     : Number(v)
-        .toFixed(4)
+        .toFixed(PRICE_DP)
         .replace(/\.?0+$/, '');
 }
 function fmtPct(v) {

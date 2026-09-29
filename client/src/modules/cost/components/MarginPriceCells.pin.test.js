@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { PRICE_DP, roundPrice } from '../../../utils/format.js';
 import {
   pinDrift,
   formatPinHint,
@@ -166,7 +167,8 @@ test('no drift → write nothing', () => {
 
 test('drift with a new price → write it, rounded the way prices are stored', () => {
   const d = pinDrift(PIN, 'contribution', 0.273);
-  assert.equal(planAutoHold(d, 0.991234567, 0.88), 0.9912);
+  // Prices are stored to PRICE_DP = 5 decimals: 0.991234567 → 0.99123.
+  assert.equal(planAutoHold(d, 0.991234567, 0.88), 0.99123);
 });
 
 test('a price already equal to the solved one is refused — this is the loop guard', () => {
@@ -175,8 +177,8 @@ test('a price already equal to the solved one is refused — this is the loop gu
   // nothing, so there is nothing to do and the next pass has no work either.
   const d = pinDrift(PIN, 'contribution', 0.273);
   assert.equal(planAutoHold(d, 0.9912, 0.9912), null);
-  assert.equal(planAutoHold(d, 0.99123, 0.9912), null, 'equal after rounding');
-  assert.equal(planAutoHold(d, 0.9913, 0.9912), 0.9913, 'a different price still writes');
+  assert.equal(planAutoHold(d, 0.991203, 0.9912), null, 'equal after rounding to 5 dp');
+  assert.equal(planAutoHold(d, 0.99121, 0.9912), 0.99121, 'one 5-dp step away still writes');
 });
 
 test('a price the operator typed by hand is corrected, not refused', () => {
@@ -225,19 +227,38 @@ test('drifted AND a different price would help: the cue fires', () => {
 
 test('drifted but the solved price IS the current one: no cue', () => {
   // The whole fix. The old code showed amber here and offered "click to
-  // re-apply", which re-solved to the same 4dp price and left the cue up
+  // re-apply", which re-solved to the same stored price and left the cue up
   // forever — an alarm with no remedy is the one people learn to ignore.
-  assert.equal(actionablePinDrift(GM_PIN, 'gm', 0.2007, 0.029775, 0.0298), null);
+  // Cost 0.00354768 at GM 20% (the real case below): solved 0.0044346, stored 0.00443.
+  assert.equal(actionablePinDrift(GM_PIN, 'gm', 0.199169, 0.0044346, 0.00443), null);
 });
 
-test('the real case: GM 20% is unreachable at a 4-decimal price', () => {
-  // cost 0.02382 → exact price 0.029775 → stored 0.0298 → reads back 20.07%.
-  // The neighbouring price 0.0297 reads 19.80%, so NO 4dp price gives 20.0%.
+test('the 2026-09-22 case reaches its pin once prices keep 5 decimals', () => {
+  // cost 0.02382, GM 20%: at 4 dp the price stored as 0.0298 and read back 20.07%,
+  // outside tolerance, with 0.0297 at 19.80% — no 4-dp price gave 20.0%. At 5 dp the
+  // exact 0.029775 sits halfway between two steps; in binary it is 0.0297749…, so it
+  // stores 0.02977 and reads back 19.99% (0.02978 would read 20.01%) — both inside the
+  // 0.05pp tolerance.
+  assert.equal(PRICE_DP, 5);
   const cost = 0.02382;
-  const exact = cost / (1 - 0.2);
-  const stored = +exact.toFixed(4);
+  const stored = roundPrice(cost / (1 - 0.2));
+  assert.equal(stored, 0.02977);
   const readBack = (stored - cost) / stored;
-  assert.equal(stored, 0.0298);
+  assert.ok(Math.abs(readBack - 0.2) < PIN_TOLERANCE);
+  assert.equal(pinDrift(GM_PIN, 'gm', readBack), null);
+});
+
+test('the real case: GM 20% is unreachable at a 5-decimal price near $0.0044', () => {
+  // RFQ-2026-S0078's scale. cost 0.00354768 → exact price 0.0044346 → stored 0.00443 →
+  // reads back 19.917%. The neighbouring price 0.00444 reads 20.097%, so NO 5-dp price
+  // gives 20.0%: one 0.00001 step is 0.23% of a price this small.
+  const cost = 0.00354768;
+  const exact = cost / (1 - 0.2);
+  const stored = roundPrice(exact);
+  const readBack = (stored - cost) / stored;
+  assert.equal(stored, 0.00443);
+  const up = (0.00444 - cost) / 0.00444;
+  assert.ok(Math.abs(up - 0.2) > PIN_TOLERANCE, 'the next price up misses too');
   assert.ok(Math.abs(readBack - 0.2) > PIN_TOLERANCE, 'it really is outside tolerance');
   assert.ok(pinDrift(GM_PIN, 'gm', readBack), 'pinDrift alone still calls it drifted');
   assert.equal(

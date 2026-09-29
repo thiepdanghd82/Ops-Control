@@ -18,7 +18,7 @@ import {
 import { snapshotPricingParams } from '../../../../services/pricingSnapshot';
 import { procTotal } from '../../../../services/kpiBuckets';
 import SnapshotPanel from '../../components/SnapshotPanel';
-import { fmtN, pct } from '../../../../utils/format';
+import { fmtN, pct, PRICE_DP } from '../../../../utils/format';
 import { recomputeKpi, isBucketActive, readMask, writeMask } from './costStructureWhatIf';
 import {
   defaultPrice,
@@ -323,7 +323,9 @@ export default function CalcCostBreakdown() {
                     <td className="right">{moq ? moq.toLocaleString() : '\u2014'}</td>
                     <td className="right">{eau ? eau.toLocaleString() : '\u2014'}</td>
                     <td className="right" style={{ fontWeight: 700, color: '#1e40af' }}>
-                      <span className="mpc-price-val">{sp ? '$' + fmtN(sp, 4) : '\u2014'}</span>
+                      <span className="mpc-price-val">
+                        {sp ? '$' + fmtN(sp, PRICE_DP) : '\u2014'}
+                      </span>
                       <ApplyDefault
                         def={def}
                         warn={sellWarn}
@@ -331,7 +333,7 @@ export default function CalcCostBreakdown() {
                       />
                     </td>
                     <td className="right" style={{ color: '#64748b' }}>
-                      {target ? '$' + fmtN(target, 4) : '\u2014'}
+                      {target ? '$' + fmtN(target, PRICE_DP) : '\u2014'}
                     </td>
                     {r ? (
                       <>
@@ -466,11 +468,11 @@ export default function CalcCostBreakdown() {
                     <td className="right">{moq ? moq.toLocaleString() : '\u2014'}</td>
                     <td className="right">{eau ? eau.toLocaleString() : '\u2014'}</td>
                     <td className="right" style={{ color: '#64748b' }}>
-                      {sp ? '$' + fmtN(sp, 4) : '\u2014'}
+                      {sp ? '$' + fmtN(sp, PRICE_DP) : '\u2014'}
                     </td>
                     <td className="right" style={{ fontWeight: 700, color: '#b45309' }}>
                       <span className="mpc-price-val">
-                        {target ? '$' + fmtN(target, 4) : '\u2014'}
+                        {target ? '$' + fmtN(target, PRICE_DP) : '\u2014'}
                       </span>
                       <ApplyDefault
                         def={def}

@@ -30,8 +30,15 @@ const INK_COLS = [
   { key: 'clicks', label: 'ink.clicks', width: 8, numeric: true },
   // Scrap % — the app's Σ(process scrap_pct)×100; derived from state, shown on every row.
   { key: 'scrap_pct', label: 'mat.scrap_pct', width: 8, numeric: true },
-  { key: 'ref_price', label: 'mat.ref_price', width: 11, numeric: true, customerHidden: true },
-  { key: 'ink_price', label: 'ink.ink_price', width: 11, numeric: true },
+  {
+    key: 'ref_price',
+    label: 'mat.ref_price',
+    width: 11,
+    numeric: true,
+    price: true,
+    customerHidden: true,
+  },
+  { key: 'ink_price', label: 'ink.ink_price', width: 11, numeric: true, price: true },
   { key: 'setup_cost', label: 'mat.setup_cost', width: 12, numeric: true, computedOnly: true },
   { key: 'run_cost', label: 'mat.run_cost', width: 12, numeric: true, computedOnly: true },
   { key: 'total', label: 'common.total', width: 12, numeric: true, computedOnly: true },
@@ -126,7 +133,7 @@ export function buildInksSection(sheet, startRow, ctx) {
           variant === 'customer' && c.customerHidden
             ? '—'
             : extractCellValue(c, ink, i, rowCost, group.scrap);
-        applyStyle(cell, c.numeric ? (c.computedOnly ? 'numCost' : 'num') : 'body');
+        applyStyle(cell, c.numeric ? (c.computedOnly || c.price ? 'numCost' : 'num') : 'body');
         if (c.computedOnly && cell.value === '—') {
           cell.note = 'Computed at calc time, not persisted (legacy quote — re-save to refresh).';
         }

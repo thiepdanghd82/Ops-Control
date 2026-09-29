@@ -58,7 +58,7 @@ import {
   resolveRemarkDisplay,
 } from '../StandardCalc/CalcLeadTimeNotice.helpers.js';
 import { showToast } from '../../../../utils/toast';
-import { fmtN, pct, gmClr } from '../../../../utils/format';
+import { fmtN, pct, gmClr, PRICE_DP, roundPrice } from '../../../../utils/format';
 import DecimalInput from '../../../../utils/DecimalInput';
 import { KPI_TOOLTIPS } from '../../../../utils/kpiDefinitions';
 import SaveChoiceModal from '../../../../utils/SaveChoiceModal';
@@ -1339,7 +1339,7 @@ export default function ComplexCalc() {
               </div>
               <div className="cc-sum-kpi" style={{ borderColor: '#1e40af' }}>
                 <div className="cc-sum-kpi-label">{t('cpx.selling_price')}</div>
-                <div className="cc-sum-kpi-val">${fmtN(cs.selling_price || 0, 4)}</div>
+                <div className="cc-sum-kpi-val">${fmtN(cs.selling_price || 0, PRICE_DP)}</div>
                 <div className="cc-sum-kpi-sub">USD</div>
               </div>
               <div className="cc-sum-kpi" style={{ borderColor: '#0891b2' }}>
@@ -1659,7 +1659,7 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField, markTouched, t }) {
   const setSellingVnd = useCallback(
     (v) => {
       const patch = { selling_price_vnd: v };
-      if (rate > 0 && v != null) patch.selling_price = +(v / rate).toFixed(4);
+      if (rate > 0 && v != null) patch.selling_price = roundPrice(v / rate);
       dispatch({ type: 'SET_CPLX_STATE', payload: patch });
     },
     [dispatch, rate]
@@ -1675,7 +1675,7 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField, markTouched, t }) {
   const setTargetVnd = useCallback(
     (v) => {
       const patch = { target_vnd: v };
-      if (rate > 0 && v != null) patch.target = +(v / rate).toFixed(4);
+      if (rate > 0 && v != null) patch.target = roundPrice(v / rate);
       dispatch({ type: 'SET_CPLX_STATE', payload: patch });
     },
     [dispatch, rate]
@@ -1686,9 +1686,9 @@ function ComplexMoqTab({ cs, sps, dispatch, setCplxField, markTouched, t }) {
       const patch = { [field]: value };
       if (rate > 0 && value != null) {
         if (field === 'price') patch.price_vnd = +(value * rate).toFixed(0);
-        else if (field === 'price_vnd') patch.price = +(value / rate).toFixed(4);
+        else if (field === 'price_vnd') patch.price = roundPrice(value / rate);
         else if (field === 'target') patch.target_vnd = +(value * rate).toFixed(0);
-        else if (field === 'target_vnd') patch.target = +(value / rate).toFixed(4);
+        else if (field === 'target_vnd') patch.target = roundPrice(value / rate);
       }
       // MES-3-FIX-53 — Cpx tier inputs must target cplxState.extra_moqs.
       // Pre-fix this loop dispatched SET_EXTRA_MOQ which writes to

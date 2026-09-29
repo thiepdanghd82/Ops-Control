@@ -33,8 +33,15 @@ const MAT_COLS = [
   { key: 'offcut', label: 'mat.offcut', width: 8 },
   { key: 'offcut_pct', label: 'mat.offcut_pct', width: 10, numeric: true },
   { key: 'slit', label: 'mat.slit', width: 8 },
-  { key: 'ref_price', label: 'mat.ref_price', width: 11, numeric: true, customerHidden: true },
-  { key: 'mat_price', label: 'mat.mat_price', width: 11, numeric: true },
+  {
+    key: 'ref_price',
+    label: 'mat.ref_price',
+    width: 11,
+    numeric: true,
+    price: true,
+    customerHidden: true,
+  },
+  { key: 'mat_price', label: 'mat.mat_price', width: 11, numeric: true, price: true },
   // Displayed derived columns (CalcMaterials QPA + Mats/MOQ), persisted per row.
   { key: 'qpa_m2', label: 'mat.qpa_m2', width: 10, numeric: true, computedOnly: true },
   { key: 'qpa_lm', label: 'mat.qpa_lm', width: 10, numeric: true, computedOnly: true },
@@ -253,7 +260,9 @@ function writeMaterialSection(
           : extractCellValue(c, mat, rowCost, scrapPct);
       // Computed cells use 5-decimal precision when hydrated; em-dash
       // when the field is missing (legacy quote).
-      applyStyle(cell, c.numeric ? (c.computedOnly ? 'numCost' : 'num') : 'body');
+      // Unit prices share the cost precision (5 dp, PRICE_DP on the client) — at the
+      // body `num` style's 2 dp a $0.8624 material price exported as 0.86.
+      applyStyle(cell, c.numeric ? (c.computedOnly || c.price ? 'numCost' : 'num') : 'body');
       if (c.computedOnly && cell.value === '—') {
         cell.note = 'Computed at calc time, not persisted (legacy quote — re-save to refresh).';
       }

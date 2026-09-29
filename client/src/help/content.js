@@ -2268,8 +2268,8 @@ export const HELP_CONTENT = {
           'Double-click dòng → modal mở với 9 trường quan trọng (RFQ date / Quoted date / System code / Code IFS / Unit price VND / Unit price USD / Customer / MOQ / Process) + 5 dòng tooling fee (woodie / Pinacle die / Rotary Die / Dieset / NC die).'
         ),
         bs(
-          'VND format en-US 0 decimals; USD format 4 decimals; tabular-nums alignment.',
-          'Định dạng VND en-US 0 chữ số thập phân; USD 4 chữ số; căn tabular-nums.'
+          'VND format en-US 0 decimals; USD format 5 decimals; tabular-nums alignment.',
+          'Định dạng VND en-US 0 chữ số thập phân; USD 5 chữ số; căn tabular-nums.'
         ),
       ]),
       proc('Pagination', 'Phân trang', null, [

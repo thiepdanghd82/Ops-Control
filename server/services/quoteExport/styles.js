@@ -84,7 +84,7 @@ export const STYLES = {
     font: { name: 'Calibri', size: 14, bold: true, color: { argb: COLORS.bodyText } },
     alignment: { vertical: 'middle', horizontal: 'center' },
     border: BORDER_THIN,
-    numFmt: '#,##0.0000',
+    numFmt: '#,##0.00000',
   },
   kpiPct: {
     font: { name: 'Calibri', size: 14, bold: true, color: { argb: COLORS.bodyText } },

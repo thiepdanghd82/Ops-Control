@@ -3,6 +3,7 @@
 // Explicit .js — this file carries unit tests, and `node --test` resolves
 // ESM strictly. Same reason CalcLeadTimeNotice.helpers.js spells it out.
 import { MARGIN_POLICY } from '../../../services/priceSolver.js';
+import { PRICE_DP, roundPrice } from '../../../utils/format.js';
 
 export const FLOORS = {
   va: MARGIN_POLICY.va,
@@ -19,7 +20,7 @@ export function metricWarn(metric, value) {
 /** Human hint for the suggested default price (GM 25%, noting any raise). */
 export function formatDefaultHint(def) {
   if (!def || !(def.price > 0)) return null;
-  const p = '$' + def.price.toFixed(4);
+  const p = '$' + def.price.toFixed(PRICE_DP);
   if (def.boundBy === 'va') return `GM 25% → ${p} · raised to keep VA ≥ 30%`;
   if (def.boundBy === 'contribution') return `GM 25% → ${p} · raised to keep Contr ≥ 25%`;
   return `GM 25% → ${p}`;
@@ -65,7 +66,7 @@ export function formatPinHint(drift, suggestedPrice) {
   const dir = drift.delta < 0 ? 'below' : 'above';
   const head = `Now ${p(drift.actual)} — ${p(Math.abs(drift.delta))} ${dir} the ${p(drift.pinned)} you pinned.`;
   return suggestedPrice > 0 && Number.isFinite(suggestedPrice)
-    ? `${head} Click to re-apply at $${Number(suggestedPrice).toFixed(4)}.`
+    ? `${head} Click to re-apply at $${Number(suggestedPrice).toFixed(PRICE_DP)}.`
     : `${head} Click to re-apply.`;
 }
 
@@ -94,9 +95,9 @@ export function formatPinHint(drift, suggestedPrice) {
 export function planAutoHold(drift, solved, currentPrice) {
   if (!drift) return null;
   if (solved == null || !Number.isFinite(solved) || !(solved > 0)) return null;
-  const rounded = +Number(solved).toFixed(4); // matches planTierPriceWrite
+  const rounded = roundPrice(solved); // matches planTierPriceWrite
   const current = Number(currentPrice);
-  if (Number.isFinite(current) && +current.toFixed(4) === rounded) return null;
+  if (Number.isFinite(current) && roundPrice(current) === rounded) return null;
   return rounded;
 }
 

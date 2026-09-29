@@ -13,6 +13,7 @@ import {
   matCostExcludingInk,
 } from '../../../../services/calcEngine';
 import { snapshotPricingParams } from '../../../../services/pricingSnapshot';
+import { PRICE_DP } from '../../../../utils/format';
 
 function fmtN(v, d = 2) {
   if (v == null || isNaN(v)) return '\u2014';
@@ -78,7 +79,7 @@ export default function SummaryBox() {
       <div className="sc-summary-row">
         <span className="sc-summary-label">{t('pricing.sell_price')}</span>
         <span className="sc-summary-val" style={{ color: '#1e40af' }}>
-          ${fmtN(sp, 4)}
+          ${fmtN(sp, PRICE_DP)}
         </span>
       </div>
       <div className="sc-summary-row">
