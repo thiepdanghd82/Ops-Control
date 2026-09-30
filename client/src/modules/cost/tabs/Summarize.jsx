@@ -8,15 +8,10 @@
  * through the same two-pass per-tier calc that ComplexCalc uses.
  */
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { costColumnsFromResult } from './Summarize.costColumns.js';
+import { costColumnsFromResult, marginsAt } from './Summarize.costColumns.js';
 import { useCalc } from '../../../context/CalcContext';
 import { useCostLib } from '../../../context/CostLibContext';
-import {
-  calcAll,
-  buildTierState,
-  applyCplxTierToSp,
-  laborFull,
-} from '../../../services/calcEngine';
+import { calcAll, buildTierState, applyCplxTierToSp } from '../../../services/calcEngine';
 import { snapshotPricingParams } from '../../../services/pricingSnapshot';
 import { sharedApi } from '../../../services/api';
 import { RFQ_COLOR_PALETTE, setRfqColor, useRfqColors } from '../../../services/rfqColors';
@@ -215,7 +210,6 @@ const SUMMARIZE_COLUMNS = [
   { key: 'tooling', label: 'Tooling/pcs', w: 75, right: true, fmt: (v) => fmtN(v) },
   { key: 'pack_ship', label: 'Pack&Ship', w: 65, right: true, fmt: (v) => fmtN(v) },
   { key: 'g_ttl_cost', label: 'G.Total', w: 70, right: true, fmt: (v) => fmtN(v), bold: true },
-  { key: 'target', label: 'Target Price', w: 75, right: true, fmt: (v) => fmtN(v, PRICE_DP) },
   // Label change "Price" → "Price (USD)" so the new VND column reads
   // unambiguously next to it. Key stays `usd_price` to keep
   // localStorage `ops-cost-summarize-cols` operator state intact
@@ -261,6 +255,20 @@ const SUMMARIZE_COLUMNS = [
   { key: 'gm_pct', label: 'GM%', w: 55, right: true, fmt: (v) => pct(v), color: true },
   { key: 'trade_mode', label: 'Trade', w: 60 },
   { key: 'npi_owner', label: 'NPI Owner', w: 90 },
+  // The customer's target price and the margins it would give, beside each
+  // other (2026-09-30). Same formulas as the Target /unit table on Cost
+  // Breakdown, through marginsAt() like the selling-price margins above.
+  { key: 'target', label: 'Target Price', w: 75, right: true, fmt: (v) => fmtN(v, PRICE_DP) },
+  { key: 'target_va_pct', label: 'Target VA%', w: 70, right: true, fmt: (v) => pct(v) },
+  { key: 'target_contr_pct', label: 'Target Contr. %', w: 80, right: true, fmt: (v) => pct(v) },
+  {
+    key: 'target_gm_pct',
+    label: 'Target GM%',
+    w: 70,
+    right: true,
+    fmt: (v) => pct(v),
+    color: true,
+  },
   // Phase 4 — pricing-snapshot status pill (default hidden; operator
   // opts in via ColumnsToggle when auditing whether quotes are frozen
   // vs running on live rates).
@@ -519,27 +527,11 @@ export default function Summarize() {
             yield_pct = yieldFromProcesses(tierSt);
           }
           if (!r) continue;
-          const tierSp = usdPrice || 0;
-          const gm = tierSp > 0 ? (tierSp - (r.s_ttl || 0)) / tierSp : null;
-          // VA% and Contribution% must follow the canonical kpiDefinitions
-          // formula so Summary agrees with Cost Breakdown + Summary Bar
-          // on the same quote. Prior impl omitted tooling from VA and
-          // omitted tooling + labor from Contribution — quotes with
-          // non-trivial tooling cost looked 3–8% better here than on
-          // the Cost Breakdown tab. Aligned 2026-04-19 audit.
-          const va =
-            tierSp > 0
-              ? (tierSp - (r.s_mat_cost || 0) - (r.tooling || 0) - (r.packing_ship || 0)) / tierSp
-              : null;
-          const contr =
-            tierSp > 0
-              ? (tierSp -
-                  (r.s_mat_cost || 0) -
-                  (r.tooling || 0) -
-                  (r.packing_ship || 0) -
-                  laborFull(r)) /
-                tierSp
-              : null;
+          // VA% and Contribution% follow the canonical kpiDefinitions formula
+          // so Summary agrees with Cost Breakdown + Summary Bar (2026-04-19
+          // audit). One helper for the selling and the target price.
+          const { va, contr, gm } = marginsAt(r, usdPrice);
+          const tgt = marginsAt(r, target);
           rows.push({
             id: `${q.id}-${t + 1}`,
             quote_id: q.id,
@@ -596,6 +588,9 @@ export default function Summarize() {
             va_pct: va,
             contr_pct: contr,
             gm_pct: gm,
+            target_va_pct: tgt.va,
+            target_contr_pct: tgt.contr,
+            target_gm_pct: tgt.gm,
             trade_mode: st.trade_mode || '',
             delivery_term: st.delivery_term || '',
             npi_owner: st.npi_owner || '',

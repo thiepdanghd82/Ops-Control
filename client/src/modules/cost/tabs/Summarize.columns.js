@@ -59,7 +59,6 @@ export const SUMMARIZE_COLUMN_KEYS = [
   'tooling',
   'pack_ship',
   'g_ttl_cost',
-  'target',
   'usd_price',
   'vnd_price',
   'tooling_cost_usd',
@@ -74,6 +73,11 @@ export const SUMMARIZE_COLUMN_KEYS = [
   'gm_pct',
   'trade_mode',
   'npi_owner',
+  // The customer's target price and the margins it would give (2026-09-30).
+  'target',
+  'target_va_pct',
+  'target_contr_pct',
+  'target_gm_pct',
   'snapshot_status',
 ];
 

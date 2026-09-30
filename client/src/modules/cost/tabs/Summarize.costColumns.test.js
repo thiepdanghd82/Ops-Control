@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { costColumnsFromResult, costColumnsGap } from './Summarize.costColumns.js';
+import { costColumnsFromResult, costColumnsGap, marginsAt } from './Summarize.costColumns.js';
 
 /**
  * Quote 214 tier 1 (RFQ-2026-S0066), read out of the live store on 2026-09-22.
@@ -96,4 +96,40 @@ test('non-finite fields read as 0 rather than poisoning the row', () => {
   assert.equal(c.s_mat_cost, 0);
   assert.equal(c.overhead, 0);
   assert.equal(c.g_ttl_cost, 5);
+});
+
+// ── marginsAt (2026-09-30): the same three margins at any price ──
+// Henry asked for VA / Contr / GM at the TARGET price beside the selling-price
+// ones. Both go through this one function so the two sets cannot disagree
+// about what a margin is (Lesson 48).
+const R = {
+  s_mat_cost: 0.5,
+  tooling: 0.1,
+  packing_ship: 0.05,
+  labor_cost: 0.08, // run-only on a result (Lesson 21)
+  bd_setup_labor: 0.02,
+  s_ttl: 0.9,
+};
+
+test('marginsAt: VA, Contr (all labor) and GM, derived by hand at price 1', () => {
+  const m = marginsAt(R, 1);
+  assert.ok(Math.abs(m.va - (1 - 0.65)) < 1e-12); // 0.5 + 0.1 + 0.05
+  assert.ok(Math.abs(m.contr - (1 - 0.75)) < 1e-12); // + 0.08 run + 0.02 setup labor
+  assert.ok(Math.abs(m.gm - (1 - 0.9)) < 1e-12);
+});
+
+test('marginsAt: the target row on screen — subtotal 0.01187 at target 0.035 reads GM 66.1%', () => {
+  const m = marginsAt({ s_ttl: 0.01187 }, 0.035);
+  assert.equal(+(m.gm * 100).toFixed(1), 66.1);
+});
+
+test('marginsAt: no price, a blank price or a string price does not invent margins', () => {
+  for (const p of [0, null, undefined, '', -1, 'abc']) {
+    assert.deepEqual(marginsAt(R, p), { va: null, contr: null, gm: null }, String(p));
+  }
+  assert.ok(Math.abs(marginsAt(R, '1').gm - 0.1) < 1e-12, 'a numeric string is a price');
+});
+
+test('marginsAt: a missing result yields no margins rather than throwing', () => {
+  assert.deepEqual(marginsAt(null, 1), { va: null, contr: null, gm: null });
 });

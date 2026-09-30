@@ -27,6 +27,8 @@
  * surfacing as another "the export is wrong" report.
  */
 
+import { laborFull } from '../../../services/calcEngine.js';
+
 const num = (v) => (Number.isFinite(v) ? v : 0);
 
 /**
@@ -61,4 +63,28 @@ export function costColumnsFromResult(result) {
 export function costColumnsGap(result) {
   const c = costColumnsFromResult(result);
   return c.g_ttl_cost - (c.s_mat_cost + c.overhead + c.labor_cost + c.tooling + c.pack_ship);
+}
+
+/**
+ * VA, Contribution and GM at a given price (2026-09-30).
+ *
+ * One definition for the selling-price margins and the target-price margins
+ * Henry asked for beside them, so the two sets cannot drift apart (Lesson 48).
+ * Contribution subtracts ALL labor through laborFull() — a result's
+ * `labor_cost` is run-only (Lesson 21). A missing or non-positive price has no
+ * margins rather than invented ones.
+ *
+ * @param {object|null} r  a calcAll / aggregateComplex result
+ * @param {*} price
+ * @returns {{va:number|null, contr:number|null, gm:number|null}}
+ */
+export function marginsAt(r, price) {
+  const p = price === '' || price == null ? NaN : Number(price);
+  if (!r || !(p > 0)) return { va: null, contr: null, gm: null };
+  const variable = num(r.s_mat_cost) + num(r.tooling) + num(r.packing_ship);
+  return {
+    va: 1 - variable / p,
+    contr: 1 - (variable + laborFull(r)) / p,
+    gm: 1 - num(r.s_ttl) / p,
+  };
 }
