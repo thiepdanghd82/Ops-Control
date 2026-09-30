@@ -65,6 +65,8 @@ export const SUMMARIZE_COLUMN_KEYS = [
   'material_lt',
   'sample_lt',
   'po_lt',
+  // Pack & Ship Delivery Term, per tier (2026-09-30).
+  'delivery_term',
   'remark',
   'process',
   'type_of_material',

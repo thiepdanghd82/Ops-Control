@@ -143,6 +143,7 @@ registerStrings({
   'qh.size': { en: 'SIZE', vi: 'KÍCH THƯỚC' },
   'qh.materials': { en: 'MATERIALS', vi: 'VẬT LIỆU' },
   'qh.trade_mode': { en: 'TRADE MODE', vi: 'PHƯƠNG THỨC' },
+  'qh.delivery_term': { en: 'DELIVERY TERM', vi: 'ĐIỀU KIỆN GIAO HÀNG' },
   'qh.design': { en: 'DESIGN', vi: 'THIẾT KẾ' },
   'qh.moq': { en: 'MOQ', vi: 'MOQ' },
   'qh.sell_price': { en: 'PRICE USD', vi: 'GIÁ USD' },

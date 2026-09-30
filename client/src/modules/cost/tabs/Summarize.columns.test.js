@@ -22,7 +22,7 @@ import {
 } from './Summarize.columns.js';
 
 describe('SUMMARIZE_COLUMN_KEYS', () => {
-  test('contains 42 keys in source order — REGRESSION GUARD for table shape', () => {
+  test('contains 43 keys in source order — REGRESSION GUARD for table shape', () => {
     // Header row in Summarize.jsx renders this exact set in this exact
     // order. Drift here means the ColumnsToggle popover ↔ table-render
     // contract broke; bump this number only when intentionally
@@ -44,7 +44,9 @@ describe('SUMMARIZE_COLUMN_KEYS', () => {
     //   - target_va_pct / target_contr_pct / target_gm_pct (2026-09-30) +3 → 42;
     //     the margins at the customer's target price, beside the Target
     //     Price column, which moved to follow NPI Owner.
-    assert.equal(SUMMARIZE_COLUMN_KEYS.length, 42);
+    //   - delivery_term (2026-09-30) +1 → 43; the row builder always carried
+    //     it (and the CSV comment said it was dropped); now shown after PO L/T.
+    assert.equal(SUMMARIZE_COLUMN_KEYS.length, 43);
   });
 
   test('no duplicate keys', () => {
@@ -196,4 +198,10 @@ test('the target columns are visible by default, so they reach the export', () =
   for (const k of ['target', 'target_va_pct', 'target_contr_pct', 'target_gm_pct']) {
     assert.ok(!SUMMARIZE_DEFAULT_HIDDEN_KEYS.includes(k), k);
   }
+});
+
+test('Delivery Term follows PO L/T and is visible by default', () => {
+  const i = SUMMARIZE_COLUMN_KEYS.indexOf('po_lt');
+  assert.equal(SUMMARIZE_COLUMN_KEYS[i + 1], 'delivery_term');
+  assert.ok(!SUMMARIZE_DEFAULT_HIDDEN_KEYS.includes('delivery_term'));
 });

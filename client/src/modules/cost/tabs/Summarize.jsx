@@ -9,6 +9,7 @@
  */
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { costColumnsFromResult, marginsAt } from './Summarize.costColumns.js';
+import { tierPackingValue } from '../../../services/packingTierField';
 import { useCalc } from '../../../context/CalcContext';
 import { useCostLib } from '../../../context/CostLibContext';
 import { calcAll, buildTierState, applyCplxTierToSp } from '../../../services/calcEngine';
@@ -237,6 +238,9 @@ const SUMMARIZE_COLUMNS = [
   { key: 'material_lt', label: 'Material L/T', w: 110 },
   { key: 'sample_lt', label: 'Sample L/T', w: 110 },
   { key: 'po_lt', label: 'PO L/T', w: 110 },
+  // Pack & Ship Delivery Term (2026-09-30). Per tier: a tier's own override,
+  // else MOQ 1's — tierPackingValue, the resolution the Pack & Ship tab shows.
+  { key: 'delivery_term', label: 'Delivery Term', w: 90 },
   // 3 multi-line Lead Time cells — operator types newline-separated
   // text in the source textarea (Pricing Std/Cpx Lead Time & Notice
   // sub-tab); row builder converts to a bullet list via
@@ -592,7 +596,7 @@ export default function Summarize() {
             target_contr_pct: tgt.contr,
             target_gm_pct: tgt.gm,
             trade_mode: st.trade_mode || '',
-            delivery_term: st.delivery_term || '',
+            delivery_term: tierPackingValue(st, t, 'delivery_term') || '',
             npi_owner: st.npi_owner || '',
             sale_owner: st.sale_owner || '',
             // ─── Schema-extend sprint (2026-06-10) ──────────────────
@@ -727,7 +731,7 @@ export default function Summarize() {
     //     with Quote History + multi-tier MOQ diff + timestamp forensic.
     //   - Then visibleColumns (post-toggle): respects operator's column
     //     toggle for display fields. Empty hidden = original full set
-    //     (minus `direct_cu_pn` / `vat_loss` / `delivery_term` which
+    //     (minus `direct_cu_pn` / `vat_loss` which
     //     were never in displayed columns config — same drop as pre-
     //     toggle behavior; if Henry needs them back, add to
     //     SUMMARIZE_COLUMNS as required: false. `annual_qty` was

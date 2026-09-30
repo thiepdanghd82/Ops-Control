@@ -279,6 +279,14 @@ const QUOTE_HISTORY_COLUMNS = [
       q.state?.trade_mode ? <span className="qh-trade">{q.state.trade_mode}</span> : '—',
   },
   {
+    key: 'delivery_term',
+    labelKey: 'qh.delivery_term',
+    width: 80,
+    tdClass: 'qh-d-trade',
+    render: (q) =>
+      q.state?.delivery_term ? <span className="qh-trade">{q.state.delivery_term}</span> : '—',
+  },
+  {
     key: 'design',
     labelKey: 'qh.design',
     width: 75,

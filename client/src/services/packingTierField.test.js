@@ -11,7 +11,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { resolveTierField, blurEmptyValue } from './packingTierField.js';
+import { resolveTierField, blurEmptyValue, tierPackingValue } from './packingTierField.js';
 
 test('resolveTierField: tier 0 (em null) returns base + isOverride false', () => {
   const st = { pcs_per_bag: 100, other_ship: 50 };
@@ -83,4 +83,26 @@ test('blurEmptyValue: preserveEmpty=false returns 0 — explicit opt-out matches
 
 test('blurEmptyValue: preserveEmpty=true returns empty string — opt-in for tier-override fields', () => {
   assert.equal(blurEmptyValue(true), '');
+});
+
+// ── tierPackingValue (2026-09-30): the value a tier actually uses ──
+// Delivery Term can be overridden per MOQ tier on Pack & Ship; the export
+// shows each tier's own, falling back to MOQ 1's.
+const ST = {
+  delivery_term: 'DAP',
+  extra_moqs: [{ moq: 5000 }, { moq: 9000, packing: { delivery_term: 'EXW' } }],
+};
+
+test('tierPackingValue: MOQ 1 reads the base field', () => {
+  assert.equal(tierPackingValue(ST, 0, 'delivery_term'), 'DAP');
+});
+test('tierPackingValue: a tier without an override inherits MOQ 1', () => {
+  assert.equal(tierPackingValue(ST, 1, 'delivery_term'), 'DAP');
+});
+test('tierPackingValue: a tier with an override reads its own', () => {
+  assert.equal(tierPackingValue(ST, 2, 'delivery_term'), 'EXW');
+});
+test('tierPackingValue: a missing tier or state falls back without throwing', () => {
+  assert.equal(tierPackingValue(ST, 7, 'delivery_term'), 'DAP');
+  assert.equal(tierPackingValue(null, 0, 'delivery_term'), undefined);
 });

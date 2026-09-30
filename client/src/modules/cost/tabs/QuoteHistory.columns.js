@@ -65,6 +65,9 @@ export const QUOTE_HISTORY_COLUMN_KEYS = [
   'size',
   'materials',
   'trade_mode',
+  // Pack & Ship Delivery Term (2026-09-30), beside Trade Mode — this table
+  // has no PO L/T column. MOQ 1's, like the prices it shows.
+  'delivery_term',
   'design',
   'moq',
   'sell',
