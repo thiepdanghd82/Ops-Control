@@ -3,7 +3,7 @@
  *
  * Sidebar now lists section names only (PRICING WORKSHEET, QUOTING &
  * PRICING, ...). When the operator clicks a section, App.jsx routes to
- * `landing:<sectionId>` which CostModule / PlanningModule renders via
+ * `landing:<sectionId>` which CostModule renders via
  * this component: a grid of icon + label cards, one per visible tab
  * inside the section.
  *
