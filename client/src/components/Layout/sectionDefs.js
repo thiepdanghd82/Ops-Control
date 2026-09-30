@@ -112,7 +112,7 @@ export function findSectionForTab(sections, tabId) {
 
 /**
  * Landing-page virtual tab id pattern. Sidebar emits these on section
- * click; CostModule + PlanningModule detect the prefix and render
+ * click; CostModule detects the prefix and renders
  * <ModuleLanding> for the matching section.
  */
 export const LANDING_PREFIX = 'landing:';

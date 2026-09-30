@@ -8,7 +8,8 @@
  * shared component the app had three gaps:
  *   1. Top-of-tree: if Sidebar / TopBar / WarningBar crashed, the
  *      whole screen went blank.
- *   2. PlanningModule: no tab boundary equivalent to CostModule's.
+ *   2. PlanningModule: no tab boundary equivalent to CostModule's
+ *      (the module itself was removed 2026-07-22, PR 245).
  *   3. ChatDrawer: a floating widget that can crash independently —
  *      a network parse error shouldn't take down the quoting UI.
  *
