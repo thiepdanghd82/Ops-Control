@@ -325,8 +325,36 @@ test('the SQLite prune honours the persisted retention too', async () => {
     await runBackupCycle({ force: true });
 
     for (const n of names) {
-      assert.ok(fs.existsSync(path.join(dir, n)), `${n} is inside 400 days and must survive`);
+      // Survives either plain or gzipped — older backups are compressed since 2026-09-30.
+      const kept = fs.existsSync(path.join(dir, n)) || fs.existsSync(path.join(dir, n + '.gz'));
+      assert.ok(kept, `${n} is inside 400 days and must survive`);
     }
+  } finally {
+    teardown(tmpDir);
+  }
+});
+
+test('the cycle keeps the fresh backup plain and gzips the older ones', async () => {
+  const { tmpDir, dataDir } = setupTempDataDir('compress');
+  try {
+    const { dir, names } = seedOldSqliteBackups(dataDir, 2, 3);
+    const summary = await runBackupCycle({ force: true });
+
+    const step = summary.steps.find((x) => x.name === 'compress');
+    assert.equal(step.ok, true);
+    const verify = summary.steps.find((x) => x.name === 'verify');
+    assert.equal(
+      verify.ok,
+      true,
+      'the fresh backup was integrity-checked before anything was compressed'
+    );
+
+    const left = fs.readdirSync(dir);
+    const plain = left.filter((f) => f.endsWith('.sqlite'));
+    assert.equal(plain.length, 1, `exactly one plain backup — got ${left.join(', ')}`);
+    assert.match(plain[0], /^ops_\d{8}_\d{6}\.sqlite$/, 'and it is the one just taken');
+    for (const n of names) assert.ok(left.includes(n + '.gz'), `${n} must be gzipped`);
+    assert.equal(getStatus().counts.sqlite, 3, 'the card counts gzipped backups too');
   } finally {
     teardown(tmpDir);
   }

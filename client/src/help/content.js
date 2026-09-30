@@ -4631,8 +4631,8 @@ export const HELP_CONTENT = {
         'Auto daily backup chạy nền (đợt 5 default ON) — auto_<YYYYMMDD>_<HHMMSS>.json. Giữ 30 ngày, tự prune.'
       ),
       bs(
-        'SQLite online backup chạy song song mỗi ngày 02:00 → server/data/Backup/SQLite/ops_<ts>.sqlite (PRAGMA integrity_check sau mỗi backup).',
-        'SQLite online backup chạy song song mỗi ngày 02:00 → server/data/Backup/SQLite/ops_<ts>.sqlite (PRAGMA integrity_check sau mỗi backup).'
+        'SQLite online backup runs daily at 02:00 → Backup/SQLite/ops_<ts>.sqlite (PRAGMA integrity_check after each backup). Only the newest stays a plain .sqlite; older ones are gzipped to ops_<ts>.sqlite.gz (~5× smaller) — gunzip one to local disk before opening it.',
+        'SQLite online backup chạy mỗi ngày 02:00 → Backup/SQLite/ops_<ts>.sqlite (PRAGMA integrity_check sau mỗi backup). Chỉ bản mới nhất để dạng .sqlite; các bản cũ hơn được nén thành ops_<ts>.sqlite.gz (nhỏ hơn ~5 lần) — giải nén (gunzip) ra ổ máy trước khi mở.'
       ),
       bs(
         'Đợt 3 (v1.3) — UPLOAD từ máy khác: nút "📤 Upload từ máy khác…" (sys-only). Pick file .json từ USB / off-site copy → server validate có ≥1 known dataset key → save vào Backup & restore/Data/uploaded_<ts>_<original>.json. Sau đó click Restore từ list.',
