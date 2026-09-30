@@ -118,8 +118,8 @@ function loadPersistedLastRun() {
 // setTimeout for the NEXT HH:00; if the box was off / mid-restart at the
 // scheduled hour, that day got NO backup and nothing ran it later. On boot,
 // if the scheduled hour has already passed today AND no cycle has run today,
-// run one shortly after boot. backupOpsDb's "one backup per day" skip makes
-// this idempotent — it only actually writes when today's backup is missing.
+// run one shortly after boot. The last-run check below keeps it to one per
+// local day; it writes even if another backup exists for the same UTC day.
 const BOOT_CATCHUP_DELAY_MS = 15_000;
 
 /**
@@ -472,9 +472,16 @@ export function startBackupScheduler() {
     return { skipped: true };
   }
 
+  // The scheduled cycle always writes. backupOpsDb's once-a-day skip keys on
+  // the UTC date while this timer fires at LOCAL HH:00, so on the UTC+7 box a
+  // /save-all backup taken the previous afternoon (same UTC day as local
+  // 02:00) made the nightly run skip and left a day of edits in no nightly
+  // backup (2026-09-30). The skip stays for /save-all's own backup.
+  const runScheduledCycle = () => runBackupCycle({ force: true });
+
   const tick = async () => {
     try {
-      await runBackupCycle();
+      await runScheduledCycle();
     } catch (err) {
       console.error('[backup] tick error:', err);
     }
@@ -488,15 +495,15 @@ export function startBackupScheduler() {
 
   // B: boot catch-up — if the scheduled hour already passed today and no
   // cycle has run today, run one shortly after boot so a day the server was
-  // down at the scheduled hour doesn't leave a gap. Non-blocking; the per-day
-  // skip in backupOpsDb makes it a no-op when today's backup already exists.
+  // down at the scheduled hour doesn't leave a gap. Non-blocking; it runs at
+  // most once a local day because _shouldBootCatchUp reads the last run.
   let catchupScheduled = false;
   if (
     _shouldBootCatchUp({ hour, now: new Date(), lastRunStartedAt: _lastRun?.startedAt || null })
   ) {
     catchupScheduled = true;
     setTimeout(() => {
-      runBackupCycle()
+      runScheduledCycle()
         .then((s) => {
           if (!s?.steps?.[0]?.skipped) console.log('[backup] boot catch-up ran (missed window)');
         })
