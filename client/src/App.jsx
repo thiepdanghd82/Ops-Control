@@ -19,9 +19,6 @@ import TopBar from './components/Layout/TopBar';
 import WarningBar from './components/Layout/WarningBar';
 import PwdAgeBanner from './components/Layout/PwdAgeBanner';
 import CostModule from './modules/cost/CostModule';
-import ImportDialog from './components/Shared/ImportDialog';
-import ChatDrawer from './components/Chat/ChatDrawer';
-import UnreadLoginPopup from './components/Chat/UnreadLoginPopup';
 import ErrorBoundary from './components/Shared/ErrorBoundary';
 import ConnectionBanner from './components/Layout/ConnectionBanner';
 import ClientUpdateIndicator from './components/Layout/ClientUpdateIndicator';
@@ -32,6 +29,12 @@ import './App.css';
 // Window manager desktop — lazy so react-rnd + all window chrome stay
 // out of the classic (flag-OFF) bundle. Only fetched when the flag is on.
 const WindowLayer = lazy(() => import('./window/WindowLayer.jsx'));
+// Not needed to draw the first screen, so kept out of the shell (MES-3-FIX-62,
+// 2026-09-30: the shell stood at 545,982 of 550,000 bytes). Chat still mounts
+// right after login, from its own chunk; the import dialog loads on first open.
+const ChatDrawer = lazy(() => import('./components/Chat/ChatDrawer'));
+const UnreadLoginPopup = lazy(() => import('./components/Chat/UnreadLoginPopup'));
+const ImportDialog = lazy(() => import('./components/Shared/ImportDialog'));
 
 // v1.3 P0 — Start connection health monitor at module load time.
 // Singleton pattern; calling more than once is no-op. Uses /health
@@ -94,6 +97,9 @@ function AppShell() {
   // the new lazy chunk loads — but the sidebar visual update lands first.
   const deferredActiveTab = useDeferredValue(activeTab);
   const [showImport, setShowImport] = useState(false);
+  // Latched on first open and kept mounted after, so closing still keeps the
+  // dialog's "import into" choice for the next open, as it did when eager.
+  const [importOpened, setImportOpened] = useState(false);
   // Sidebar collapse — responsive UX. Persists across reloads so the
   // user isn't surprised by sidebar re-expanding. Collapsed defaults
   // to true on narrow viewports (laptop screens) for out-of-the-box fit.
@@ -313,7 +319,14 @@ function AppShell() {
               <TopBar
                 activeModule={activeModule}
                 activeTab={effectiveTab}
-                onImportClick={hasRole('admin') ? () => setShowImport(true) : null}
+                onImportClick={
+                  hasRole('admin')
+                    ? () => {
+                        setImportOpened(true);
+                        setShowImport(true);
+                      }
+                    : null
+                }
               />
             </ErrorBoundary>
             <ErrorBoundary label="PwdAgeBanner" fallback={() => null}>
@@ -351,27 +364,35 @@ function AppShell() {
               <WarningBar activeModule={activeModule} activeTab={effectiveTab} />
             </ErrorBoundary>
           </div>
-          <ImportDialog
-            isOpen={showImport}
-            onClose={() => setShowImport(false)}
-            onImportComplete={() => {
-              // no-op: ImportDialog handles its own success UI
-            }}
-          />
+          {importOpened && (
+            <Suspense fallback={null}>
+              <ImportDialog
+                isOpen={showImport}
+                onClose={() => setShowImport(false)}
+                onImportComplete={() => {
+                  // no-op: ImportDialog handles its own success UI
+                }}
+              />
+            </Suspense>
+          )}
           {/* Phase 10A — floating chat. Self-contained; renders nothing
           if the server returns 503 (chat_disabled) so users on a
           pre-chat deploy see the app unchanged. Wrapped in its own
           boundary so a chat crash (e.g. bad payload from the poller)
           doesn't take down the quoting UI. */}
           <ErrorBoundary label="Chat" fallback={() => null}>
-            <ChatDrawer />
+            <Suspense fallback={null}>
+              <ChatDrawer />
+            </Suspense>
           </ErrorBoundary>
           {/* Phase 11 — one-shot unread-on-login popup. Self-contained:
           renders null unless the user has just logged in AND has at
           least one unread conversation. A crash here must not blank
           the shell, hence the dedicated boundary. */}
           <ErrorBoundary label="UnreadLoginPopup" fallback={() => null}>
-            <UnreadLoginPopup />
+            <Suspense fallback={null}>
+              <UnreadLoginPopup />
+            </Suspense>
           </ErrorBoundary>
         </div>
       </LibraryPickerProvider>
