@@ -182,7 +182,7 @@ fi
 # ssh (one bad path = wipe wrong dir). For remote targets, configure
 # the destination's own retention policy.
 if [[ "$TARGET" != *":"* && "$RETAIN_DAYS" -gt 0 && "$DRY_RUN" != "1" ]]; then
-  PRUNED=$(find "$TARGET" \( -name "*.sqlite" -o -name "*.tar.gz" \) \
+  PRUNED=$(find "$TARGET" \( -name "*.sqlite" -o -name "*.sqlite.gz" -o -name "*.tar.gz" \) \
     -type f -mtime "+$RETAIN_DAYS" -print -delete 2>/dev/null | wc -l | tr -d ' ')
   if [[ "$PRUNED" -gt 0 ]]; then
     log "pruned $PRUNED local-target file(s) older than ${RETAIN_DAYS}d"

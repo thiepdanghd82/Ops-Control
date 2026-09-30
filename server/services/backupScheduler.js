@@ -30,7 +30,7 @@
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
-import { backupOpsDb } from '../db/backup.js';
+import { backupOpsDb, compressOlderSqliteBackups } from '../db/backup.js';
 import { getDb, getDbPath } from '../db/connection.js';
 // Sprint 1.7 — wire pruning + audit-always so a missing webhook can't
 // silently swallow backup failures, and so the local backup directory
@@ -204,7 +204,7 @@ function countBackups() {
       return 0;
     }
   };
-  const sqlite = countIn('SQLite', '.sqlite');
+  const sqlite = countIn('SQLite', '.sqlite') + countIn('SQLite', '.sqlite.gz');
   const library = countIn('Library', '.tar.gz');
   const data = countIn('Data', '.json');
   return { sqlite, library, data, total: sqlite + library + data };
@@ -256,6 +256,33 @@ function tarLibrary() {
   } catch (err) {
     return { ok: false, error: err.message };
   }
+}
+
+/**
+ * Gzip every SQLite backup except the newest plain one (2026-09-30). Runs after the
+ * verify step, so the backup it leaves plain is the one just integrity-checked, and it
+ * also picks up backups made by /save-all, which the scheduler never verifies. 180 MB
+ * becomes about 33 MB; 30 days of backups drops from ~5.4 GB to ~1 GB.
+ */
+async function compressStep() {
+  const dir = path.join(backupDir(), 'SQLite');
+  let plain;
+  try {
+    plain = fs.readdirSync(dir).filter((f) => f.startsWith('ops_') && f.endsWith('.sqlite'));
+  } catch {
+    return { name: 'compress', ok: true, compressed: 0 }; // no backups yet
+  }
+  const mtime = (f) => fs.statSync(path.join(dir, f)).mtimeMs;
+  const newest = plain.sort((a, b) => mtime(a) - mtime(b)).pop() || null;
+  const r = await compressOlderSqliteBackups(dir, newest);
+  return r.failed.length
+    ? {
+        name: 'compress',
+        ok: false,
+        compressed: r.compressed,
+        error: `compress: ${r.failed.join('; ')}`,
+      }
+    : { name: 'compress', ok: true, compressed: r.compressed, kept_plain: newest };
 }
 
 /**
@@ -399,6 +426,13 @@ export async function runBackupCycle({ force = false } = {}) {
     } catch (err) {
       summary.steps.push({ name: 'verify', ok: false, error: err.message });
     }
+  }
+
+  // Step 3b: keep only the newest SQLite backup plain; gzip the rest.
+  try {
+    summary.steps.push(await compressStep());
+  } catch (err) {
+    summary.steps.push({ name: 'compress', ok: false, error: `compress: ${err.message}` });
   }
 
   // Sprint 1.7 — Step 4: prune old backups so the local backup directory

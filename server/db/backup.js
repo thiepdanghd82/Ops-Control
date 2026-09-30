@@ -11,6 +11,9 @@
  */
 import fs from 'fs';
 import path from 'path';
+import zlib from 'zlib';
+import { Writable } from 'stream';
+import { pipeline } from 'stream/promises';
 import { getDb, getDbPath } from './connection.js';
 import { getRetentionSettings } from '../utils/backupPath.js';
 
@@ -71,7 +74,7 @@ export async function backupOpsDb({ force = false } = {}) {
 }
 
 /**
- * Delete expired `ops_*.sqlite` backups, and never leave a sidecar behind.
+ * Delete expired `ops_*.sqlite` / `ops_*.sqlite.gz` backups, and never leave a sidecar behind.
  *
  * SQLite writes `<name>-shm` and `<name>-wal` beside a database. This prune
  * used to filter on `.endsWith('.sqlite')`, so every backup it deleted
@@ -112,7 +115,7 @@ export function pruneSqliteBackups(dir, { retentionDays = 30 } = {}) {
 
   // 1. Expired backups, each taking its own sidecars with it.
   for (const f of names) {
-    if (!f.startsWith('ops_') || !f.endsWith('.sqlite')) continue;
+    if (!f.startsWith('ops_') || !(f.endsWith('.sqlite') || f.endsWith('.sqlite.gz'))) continue;
     const fp = path.join(dir, f);
     try {
       if (fs.statSync(fp).mtimeMs >= cutoffMs) continue;
@@ -137,5 +140,82 @@ export function pruneSqliteBackups(dir, { retentionDays = 30 } = {}) {
     if (rm(path.join(dir, f))) result.orphansSwept++;
   }
 
+  return result;
+}
+
+/** Bytes a gzip file decompresses to; throws if it is truncated or corrupt (gunzip checks the CRC). */
+async function gunzipLength(file) {
+  let n = 0;
+  await pipeline(
+    fs.createReadStream(file),
+    zlib.createGunzip(),
+    new Writable({
+      write(chunk, _enc, cb) {
+        n += chunk.length;
+        cb();
+      },
+    })
+  );
+  return n;
+}
+
+async function archiveIsComplete(gz, expectedSize) {
+  try {
+    return (await gunzipLength(gz)) === expectedSize;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Gzip every `ops_*.sqlite` in `dir` except `keepName` (Henry, 2026-09-30).
+ *
+ * A daily backup is a full copy of ops.db — 180 MB on the live box, 33 MB gzipped —
+ * so 30 days of plain copies is 5.4 GB where gzipped ones are about 1 GB. The newest
+ * stays plain so it can be opened or restored at once; the scheduler calls this after
+ * it has integrity-checked that newest one, so each run compresses yesterday's.
+ *
+ * Each archive is written to `.gz.tmp`, checked by decompressing it in full, renamed,
+ * and given the source's mtime — the prune ages backups by mtime — and only then is
+ * the source (and its sidecars) removed. An interrupted run leaves either the source
+ * or a complete archive, never neither. Streams, so the event loop is not blocked.
+ *
+ * @param {string} dir  the SQLite backup directory
+ * @param {string|null} keepName  basename to leave uncompressed (the newest backup)
+ * @returns {Promise<{compressed: number, failed: string[]}>}
+ */
+export async function compressOlderSqliteBackups(dir, keepName) {
+  const result = { compressed: 0, failed: [] };
+  let names;
+  try {
+    names = fs.readdirSync(dir);
+  } catch {
+    return result;
+  }
+  for (const f of names) {
+    if (!f.startsWith('ops_') || !f.endsWith('.sqlite') || f === keepName) continue;
+    const src = path.join(dir, f);
+    const gz = src + '.gz';
+    const tmp = gz + '.tmp';
+    try {
+      const st = fs.statSync(src);
+      if (!(fs.existsSync(gz) && (await archiveIsComplete(gz, st.size)))) {
+        await pipeline(
+          fs.createReadStream(src),
+          zlib.createGzip({ level: 6 }),
+          fs.createWriteStream(tmp)
+        );
+        if (!(await archiveIsComplete(tmp, st.size))) throw new Error('archive check failed');
+        fs.renameSync(tmp, gz);
+      }
+      fs.utimesSync(gz, st.atime, st.mtime);
+      fs.unlinkSync(src);
+      for (const sc of ['-shm', '-wal']) fs.rmSync(src + sc, { force: true });
+      result.compressed++;
+    } catch (err) {
+      fs.rmSync(tmp, { force: true });
+      result.failed.push(`${f}: ${err.message}`);
+    }
+  }
   return result;
 }
