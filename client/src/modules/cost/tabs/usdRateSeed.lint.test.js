@@ -146,8 +146,10 @@ test('a second notice does not inherit the previous dialog typing', () => {
   for (const [name, SRC] of Object.entries(FILES)) {
     assert.match(
       SRC,
-      /key=\{rateNotice \? rateNotice\.rate : 'none'\}/,
-      name + ' must remount the dialog on a new notice'
+      /key=\{rateNoticeKey\(rateNotice, !!pendingSubTab\)\}/,
+      // Keyed on the rate alone, the dialog never remounted when it opened and
+      // showed an empty rate box (2026-09-30). The key must follow the open state.
+      name + ' must remount the dialog when it opens'
     );
   }
 });

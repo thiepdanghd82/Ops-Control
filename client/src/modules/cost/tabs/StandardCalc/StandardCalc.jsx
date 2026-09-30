@@ -64,7 +64,11 @@ const CalcLegend = lazy(() => import('./CalcLegend'));
 import TabBarOverflow from '../../../../components/Shared/TabBarOverflow';
 import HeaderGateModal from '../../components/HeaderGateModal';
 import UsdRateNoticeModal from '../../components/UsdRateNoticeModal';
-import { noticeFromSeed, noticeStillApplies } from '../../../../services/usdRateSeed';
+import {
+  noticeFromSeed,
+  noticeStillApplies,
+  rateNoticeKey,
+} from '../../../../services/usdRateSeed';
 import { fetchPendingQuote } from '../../../../services/pendingQuoteLoad';
 import { gateSubTabChange } from '../../../../services/calcValidation';
 import { useGridKeyboardNav } from '../../../../utils/useGridKeyboardNav';
@@ -679,9 +683,9 @@ export default function StandardCalc() {
           (common on 14" laptops with sidebar expanded). */}
       <HeaderGateModal missing={gateMissing} onClose={() => setGateMissing([])} />
       <UsdRateNoticeModal
-        // Remount on a new notice so the rate input re-initialises -- the
-        // documented way to reset state, and it costs no extra render.
-        key={rateNotice ? rateNotice.rate : 'none'}
+        // Remount when the dialog OPENS so the rate input starts from the
+        // inherited rate -- it is mounted while hidden, with a null notice.
+        key={rateNoticeKey(rateNotice, !!pendingSubTab)}
         notice={pendingSubTab ? rateNotice : null}
         onConfirm={(rate) => {
           // The rate may have been corrected in the dialog: write whatever
