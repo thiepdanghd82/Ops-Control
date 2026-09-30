@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { noticeFromSeed, noticeStillApplies } from './usdRateSeed.js';
+import { noticeFromSeed, noticeStillApplies, rateNoticeKey } from './usdRateSeed.js';
 
 test('a usable seed becomes a notice carrying its provenance', () => {
   const n = noticeFromSeed({
@@ -50,4 +50,29 @@ test('editing the rate retires the notice', () => {
 test('no notice never applies', () => {
   assert.equal(noticeStillApplies(null, 26090), false);
   assert.equal(noticeStillApplies(undefined, 26090), false);
+});
+
+// ── rateNoticeKey (2026-09-30) ──
+// The dialog stays mounted while hidden, so its rate input is initialised
+// from a null notice (0). A key that changed only with the rate never
+// remounted it when the dialog OPENED, and the operator met an empty box
+// under "Taken from your most recent quote". The key must change on open.
+test('rateNoticeKey: opening the dialog changes the key, so the input re-initialises', () => {
+  const n = { rate: 26090, rfq_number: 'RFQ-2026-S0081', saved_at: '2026-09-30T01:00:00Z' };
+  assert.notEqual(rateNoticeKey(n, false), rateNoticeKey(n, true));
+});
+
+test('rateNoticeKey: a different inherited rate is a different key while open', () => {
+  assert.notEqual(rateNoticeKey({ rate: 26090 }, true), rateNoticeKey({ rate: 26341 }, true));
+});
+
+test('rateNoticeKey: reopening after Go back remounts again (typing is not kept)', () => {
+  const n = { rate: 26090 };
+  const seq = [false, true, false, true].map((open) => rateNoticeKey(n, open));
+  assert.notEqual(seq[0], seq[1]);
+  assert.notEqual(seq[1], seq[2]);
+});
+
+test('rateNoticeKey: no notice is the closed key whatever the open flag', () => {
+  assert.equal(rateNoticeKey(null, true), rateNoticeKey(null, false));
 });

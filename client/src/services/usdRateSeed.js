@@ -62,3 +62,21 @@ export function noticeStillApplies(notice, currentRate) {
   if (!notice) return false;
   return num(currentRate) === num(notice.rate);
 }
+
+/**
+ * The React key for UsdRateNoticeModal (2026-09-30).
+ *
+ * The dialog stays mounted while hidden, so its rate input is initialised
+ * from a null notice — 0. A key that changed only with the rate never
+ * remounted it when the dialog OPENED, and the operator met an empty box
+ * under "Taken from your most recent quote". So the key changes on open (the
+ * input starts from the inherited rate) and on close (reopening after Go back
+ * starts fresh rather than keeping half-typed digits).
+ *
+ * @param {{rate:number}|null} notice
+ * @param {boolean} open  whether the dialog is showing
+ */
+export function rateNoticeKey(notice, open) {
+  if (!notice) return 'none';
+  return open ? `open-${notice.rate}` : 'closed';
+}
