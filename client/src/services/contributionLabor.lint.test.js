@@ -23,7 +23,9 @@ const SITES = {
   // One since 2026-09-29: the save path margins through aggregateForTier (cplxTierAggregate).
   'modules/cost/tabs/ComplexCalc/ComplexCalc.jsx': 1,
   'modules/cost/tabs/StandardCalc/costStructureWhatIf.js': 2, // canonical + labor bucket
-  'modules/cost/tabs/Summarize.jsx': 1,
+  // Moved 2026-09-30: Summarize margins its tiers through marginsAt(), at both the
+  // selling and the target price.
+  'modules/cost/tabs/Summarize.costColumns.js': 1,
 };
 
 test('laborFull is run labor plus setup labor', () => {
