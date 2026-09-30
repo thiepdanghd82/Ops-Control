@@ -49,3 +49,19 @@ export function resolveTierField(em, st, field) {
 export function blurEmptyValue(preserveEmpty = false) {
   return preserveEmpty ? '' : 0;
 }
+
+/**
+ * The value tier `t` actually uses for a Pack & Ship field (2026-09-30).
+ * Tier 0 (MOQ 1) reads the base field; a later tier reads its own override
+ * when it has one and inherits MOQ 1 otherwise — the resolution the Pack &
+ * Ship tab itself shows. Used by the Cost Breakdown export for Delivery Term.
+ *
+ * @param {object|null} st  quote state
+ * @param {number} t  tier index (0 = MOQ 1)
+ * @param {string} field
+ */
+export function tierPackingValue(st, t, field) {
+  if (!st) return undefined;
+  const em = t > 0 ? (st.extra_moqs || [])[t - 1] : null;
+  return resolveTierField(em, st, field).value;
+}
