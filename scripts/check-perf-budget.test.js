@@ -7,7 +7,15 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { checkBudgets, extractPrefix } from './check-perf-budget.js';
+import {
+  checkBudgets,
+  extractPrefix,
+  CHUNK_BUDGETS,
+  staticImportsOf,
+  entryFilesOf,
+  firstPaintPath,
+  FIRST_PAINT_BUDGET,
+} from './check-perf-budget.js';
 
 test('extractPrefix: strips Vite content hash', () => {
   assert.equal(extractPrefix('ComplexCalc-BscMztTy.js'), 'ComplexCalc');
@@ -122,4 +130,68 @@ test('checkBudgets: mixed set produces per-bucket classification', () => {
   assert.equal(report.failures.length, 1);
   assert.equal(report.warnings.length, 1);
   assert.equal(report.ok.length, 1);
+});
+
+// ── First-paint path (2026-10-01) ──
+// The gate measured the `index` file alone while labelling it "critical path".
+// On 2026-09-30 lazy-loading chat cut what loads before first paint by
+// 29,977 bytes, yet `index` moved only 2,321, because the i18n chunk that had
+// been a separate file bundled into it. The path is index.html's entries plus
+// every chunk they import statically; lazy chunks (dynamic import) are not on it.
+
+test('staticImportsOf: picks static and side-effect imports, not dynamic ones', () => {
+  const code =
+    'import{a as b}from"./api-JdrA-Pgr.js";import"./chunk-QTnfLwEv.js";' +
+    'const C=lazy(()=>import("./ChatDrawer-BXjTBaX5.js"));' +
+    'n(()=>import(`./Help-XX.js`),__vite__mapDeps([1]));export{x}from"./jsx-runtime-KLUqzItW.js";';
+  assert.deepEqual(staticImportsOf(code).sort(), [
+    'api-JdrA-Pgr.js',
+    'chunk-QTnfLwEv.js',
+    'jsx-runtime-KLUqzItW.js',
+  ]);
+});
+
+test('entryFilesOf: the module script and every modulepreload, root scripts included', () => {
+  const html =
+    '<script src="/theme-init.js"></script>' +
+    '<script type="module" crossorigin src="/assets/index-Jw0_T-Dn.js"></script>' +
+    '<link rel="modulepreload" crossorigin href="/assets/api-JdrA-Pgr.js">' +
+    '<link rel="stylesheet" href="/assets/index-AAA.css">';
+  assert.deepEqual(entryFilesOf(html), [
+    'theme-init.js',
+    'assets/index-Jw0_T-Dn.js',
+    'assets/api-JdrA-Pgr.js',
+  ]);
+});
+
+test('firstPaintPath: follows static imports transitively, once each, and skips lazy chunks', () => {
+  const files = {
+    'assets/index-A.js':
+      'import{x}from"./shared-B.js";const L=()=>import("./Lazy-C.js");' + 'x'.repeat(100),
+    'assets/shared-B.js': 'import"./deep-D.js";' + 'y'.repeat(50),
+    'assets/deep-D.js': 'import"./shared-B.js";' + 'z'.repeat(20),
+    'assets/Lazy-C.js': 'w'.repeat(999999),
+  };
+  const r = firstPaintPath(['assets/index-A.js'], (f) => files[f] ?? null);
+  assert.deepEqual(r.files.map((f) => f.name).sort(), [
+    'assets/deep-D.js',
+    'assets/index-A.js',
+    'assets/shared-B.js',
+  ]);
+  const expected = ['assets/index-A.js', 'assets/shared-B.js', 'assets/deep-D.js']
+    .map((f) => Buffer.byteLength(files[f]))
+    .reduce((a, b) => a + b, 0);
+  assert.equal(r.total, expected);
+});
+
+test('firstPaintPath: a referenced file that does not exist is reported, not silently dropped', () => {
+  const r = firstPaintPath(['assets/index-A.js'], (f) =>
+    f === 'assets/index-A.js' ? 'import"./gone-Z.js";' : null
+  );
+  assert.deepEqual(r.missing, ['assets/gone-Z.js']);
+});
+
+test('the index file is budgeted at the first-paint budget, never above it', () => {
+  const rule = CHUNK_BUDGETS.find((b) => b.prefix === 'index');
+  assert.equal(rule.budget, FIRST_PAINT_BUDGET);
 });

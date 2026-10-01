@@ -102,3 +102,36 @@ test('perf-budget CLI: chunk without explicit budget uses global cap', () => {
   assert.match(r.stdout, /global cap/);
   assert.match(r.stdout, /RandomTab/);
 });
+
+// ── First-paint path (2026-10-01) ──
+function setupTmpBuild({ indexBytes, sharedBytes, lazyBytes }) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ops-perf-fp-'));
+  const assets = path.join(dir, 'assets');
+  fs.mkdirSync(assets, { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, 'index.html'),
+    '<script type="module" src="/assets/index-AbCd1234.js"></script>'
+  );
+  const head = 'import"./shared-EeFf5678.js";const L=()=>import("./Lazy-GgHh9012.js");';
+  fs.writeFileSync(
+    path.join(assets, 'index-AbCd1234.js'),
+    head + 'x'.repeat(indexBytes - head.length)
+  );
+  fs.writeFileSync(path.join(assets, 'shared-EeFf5678.js'), 'y'.repeat(sharedBytes));
+  fs.writeFileSync(path.join(assets, 'Lazy-GgHh9012.js'), 'z'.repeat(lazyBytes));
+  return assets;
+}
+
+test('perf-budget CLI: a statically imported chunk counts toward the first-paint budget', () => {
+  // Each file is under its own budget (index 450k, shared 150k under the 200k
+  // global cap), but together they exceed the 585k first-paint budget.
+  const r = runCli(setupTmpBuild({ indexBytes: 450_000, sharedBytes: 150_000, lazyBytes: 10 }));
+  assert.equal(r.status, 1, `expected exit 1\n${r.stdout}`);
+  assert.match(r.stdout, /First-paint path/);
+});
+
+test('perf-budget CLI: a lazy chunk is not on the first-paint path', () => {
+  const r = runCli(setupTmpBuild({ indexBytes: 400_000, sharedBytes: 50_000, lazyBytes: 190_000 }));
+  assert.equal(r.status, 0, `expected exit 0\n${r.stdout}`);
+  assert.match(r.stdout, /First-paint path: .* in 2 files/);
+});
