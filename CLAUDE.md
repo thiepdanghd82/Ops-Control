@@ -638,6 +638,12 @@ failures.
   539,910 of 540,000 bytes — two months of ordinary growth, the i18n waves
   among it, had used the whole July headroom — and a 248-byte money-path fix
   could not land. Raised to 550,000 (+1.9%); MES-3-FIX-62 is still the reduction.
+  **Since 2026-10-01 the shell is gated as a PATH, not a file**: `FIRST_PAINT_BUDGET`
+  (585,000) covers index.html's scripts and modulepreloads plus every chunk they
+  import statically — lazy chunks are not on it. The `index` file alone hid both
+  directions: lazy-loading chat cut the path by 29,977 bytes while `index` moved
+  2,321, because a split-off i18n chunk merged into it. A missing `index.html` on
+  the real build fails the gate rather than skipping it.
 
 **ADVISORY (non-blocking — reports in logs, never fails the required set):**
 
