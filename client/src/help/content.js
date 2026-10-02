@@ -1638,8 +1638,8 @@ export const HELP_CONTENT = {
     ),
     path: 'Ops Cost > Quoting > Cost Breakdown',
     purpose: bi(
-      'Browseable cross-quote table — one row per (quote × MOQ tier). ~32 sortable columns covering identity (#, DATE, RFQ NO, Sale Owner, Direct/End Customer, Project, PNs, materials), economics (MOQ, USD Price, VND Price, Tooling, GM%, VA%, Contr%), and Snapshot status. Single source for cross-quote filtering, CSV export, and right-click forensic flags.',
-      'Bảng cross-quote duyệt được — một dòng cho mỗi (báo giá × bậc MOQ). ~32 cột sortable bao phủ identity (#, DATE, RFQ NO, Sale Owner, Direct/End Customer, Project, PN, vật tư), kinh tế (MOQ, USD Price, VND Price, Tooling, GM%, VA%, Contr%), và trạng thái Snapshot. Nguồn duy nhất cho lọc cross-quote, xuất CSV, gắn cờ forensic bằng chuột phải.'
+      'Browseable cross-quote table — one row per (quote × MOQ tier). 44 columns, each sortable from its header, covering identity (#, DATE, RFQ NO, Sale Owner, Direct/End Customer, Project, PNs, materials), economics (MOQ, USD Price, VND Price, Tooling, GM%, VA%, Contr%), and Snapshot status; the last column, Quoted by, names who created the quote. Single source for cross-quote filtering, CSV export, and right-click forensic flags.',
+      'Bảng cross-quote duyệt được — một dòng cho mỗi (báo giá × bậc MOQ). 44 cột, cột nào cũng sort được từ header, bao phủ identity (#, DATE, RFQ NO, Sale Owner, Direct/End Customer, Project, PN, vật tư), kinh tế (MOQ, USD Price, VND Price, Tooling, GM%, VA%, Contr%), và trạng thái Snapshot; cột cuối, Quoted by, ghi ai tạo báo giá. Nguồn duy nhất cho lọc cross-quote, xuất CSV, gắn cờ forensic bằng chuột phải.'
     ),
     whenToUse: bi(
       'Daily scan for margin outliers; cross-quote filtering by Sale Owner / Date / Customer; CSV pull for Excel reconciliation; right-click an RFQ to colour-flag while reviewing a batch.',
@@ -1656,8 +1656,8 @@ export const HELP_CONTENT = {
         'Scan + sort the table',
         'Quét + sắp xếp bảng',
         bi(
-          '~32 columns; click any header to sort ASC/DESC. Click again to flip. Sort indicator (▲/▼) appears on the active column.',
-          '~32 cột; click header bất kỳ để sort ASC/DESC. Click lại để đảo. Chỉ báo sort (▲/▼) hiển thị trên cột đang active.'
+          '44 columns (37 shown by default); click any header to sort ASC/DESC. Click again to flip. Sort indicator (▲/▼) appears on the active column.',
+          '44 cột (37 cột hiện mặc định); click header bất kỳ để sort ASC/DESC. Click lại để đảo. Chỉ báo sort (▲/▼) hiển thị trên cột đang active.'
         ),
         [
           bs(
@@ -1912,13 +1912,13 @@ export const HELP_CONTENT = {
     section: 'QUOTING',
     title: bi('Quote History', 'Lịch sử Báo giá'),
     function: bi(
-      'Sortable browseable table of every saved quote with 27-column config + scoped filter + Trash bin',
-      'Bảng duyệt sortable của mọi báo giá đã lưu với cấu hình 27 cột + filter scoped + Trash bin'
+      'Sortable browseable table of every saved quote with 29-column config + scoped filter + Trash bin',
+      'Bảng duyệt sortable của mọi báo giá đã lưu với cấu hình 29 cột + filter scoped + Trash bin'
     ),
     path: 'Ops Cost > Quoting > Quote History',
     purpose: bi(
-      'The browseable history of every saved quote (draft / pending_sales / pending_finance / price_approved / cancelled / rejected). 27 sortable columns — 6 required (anchors), 5 default-hidden (rare). Adds Sale Owner (PR #156), Option column (replaces VER badge), Material Active badge (Main/Alt/Mixed). Drives operator scan, xlsx export per row, soft-delete + restore.',
-      'Lịch sử duyệt được của mọi báo giá đã lưu (draft / pending_sales / pending_finance / price_approved / cancelled / rejected). 27 cột sortable — 6 required (anchor), 5 mặc định ẩn (ít dùng). Thêm Sale Owner (PR #156), cột Option (thay badge VER), Material Active badge (Main/Alt/Mixed). Phục vụ operator scan, xuất xlsx từng dòng, soft-delete + restore.'
+      'The browseable history of every saved quote (draft / quote_to_sale / price_approved / cancelled / rejected). 29 columns, 18 of them sortable — 6 required (anchors), 4 hidden by default (rare). Adds Sale Owner (PR #156), Option column (replaces VER badge), Quoted by (who created the quote), Material Active badge (Main/Alt/Mixed). Drives operator scan, xlsx export per row, soft-delete + restore.',
+      'Lịch sử duyệt được của mọi báo giá đã lưu (draft / quote_to_sale / price_approved / cancelled / rejected). 29 cột, 18 cột sort được — 6 required (anchor), 4 mặc định ẩn (ít dùng). Thêm Sale Owner (PR #156), cột Option (thay badge VER), Quoted by (ai tạo báo giá), Material Active badge (Main/Alt/Mixed). Phục vụ operator scan, xuất xlsx từng dòng, soft-delete + restore.'
     ),
     whenToUse: bi(
       'Cross-quote scan (sort by Sale Owner, Option text, GM% etc.); export xlsx per row for customer/internal review; right-click to soft-delete or restore from Trash bin.',
@@ -1927,16 +1927,16 @@ export const HELP_CONTENT = {
     preRequisites: [],
     procedures: [
       proc(
-        'Scan + sort the 27-column table',
-        'Quét + sort bảng 27 cột',
+        'Scan + sort the 29-column table',
+        'Quét + sort bảng 29 cột',
         bi(
-          'Required anchors (cannot be hidden): #, DATE, RFQ, STATUS, APPROVE action, LAYOUT (xlsx export). Default-hidden: UL, IFS, dcu_pn, ecu_pn, target — opt in via Columns toggle.',
-          'Anchor required (không ẩn được): #, DATE, RFQ, STATUS, APPROVE, LAYOUT (xuất xlsx). Mặc định ẩn: UL, IFS, dcu_pn, ecu_pn, target — opt in qua Columns toggle.'
+          'Required anchors (cannot be hidden): #, DATE, RFQ, STATUS, APPROVE action, LAYOUT (xlsx export). Default-hidden: UL, dcu_pn, ecu_pn, target — opt in via Columns toggle.',
+          'Anchor required (không ẩn được): #, DATE, RFQ, STATUS, APPROVE, LAYOUT (xuất xlsx). Mặc định ẩn: UL, dcu_pn, ecu_pn, target — opt in qua Columns toggle.'
         ),
         [
           bs(
-            'Click any header to sort ASC/DESC (▲/▼ indicator). STATUS uses workflow ordinal — draft → pending_sales → pending_finance → price_approved with cancelled/rejected sinking to bottom.',
-            'Click header bất kỳ để sort ASC/DESC (chỉ báo ▲/▼). STATUS dùng ordinal workflow — draft → pending_sales → pending_finance → price_approved, cancelled/rejected chìm xuống cuối.'
+            'Click a sortable header to sort ASC/DESC (▲/▼ indicator). STATUS sorts in workflow order — draft → quote_to_sale → price_approved, with cancelled / rejected last; older quotes still marked pending_sales / pending_finance sort as quote_to_sale.',
+            'Click header của cột sort được để sort ASC/DESC (chỉ báo ▲/▼). STATUS sort theo thứ tự workflow — draft → quote_to_sale → price_approved, cancelled / rejected xuống cuối; báo giá cũ còn trạng thái pending_sales / pending_finance được xếp như quote_to_sale.'
           ),
           bs(
             'Sale Owner column (Sprint S-SALE-OWNER-COL) — sortable; reads state.sale_owner from Pricing → RFQ & MOQ info sub-tab.',
@@ -1945,6 +1945,10 @@ export const HELP_CONTENT = {
           bs(
             'Option column (Sprint S-OPTIONS-FIELD) — replaces the old VER badge. Free-text notes from RFQ Information; truncated with ellipsis + native title tooltip; sortable.',
             'Cột Option (Sprint S-OPTIONS-FIELD) — thay badge VER cũ. Ghi chú free-text từ RFQ Information; cắt ngắn ellipsis + tooltip native title; sortable.'
+          ),
+          bs(
+            'Quoted by column (the last one) — the username of whoever created the quote, recorded when it is first saved. A later save does not change it, and a copy is credited to whoever copied it. Quotes created before 2026-05-26 have no record and show a dash. Sortable.',
+            'Cột Quoted by (cột cuối) — username của người tạo báo giá, ghi lại khi lưu lần đầu. Lưu lại sau đó không đổi tên này, còn bản copy ghi tên người copy. Báo giá tạo trước 26/05/2026 không có dữ liệu nên hiện dấu —. Sortable.'
           ),
           bs(
             'STD/CPX type badge + Material Active badge — alt-materials surface shows Main / Alt / Mixed (N alt / M main) at quote / per-SP level (Sprint S-ALT-MAT PR #C).',
@@ -1961,8 +1965,8 @@ export const HELP_CONTENT = {
         ),
         [
           bs(
-            'Click Columns icon above the table → check/uncheck per column. 27 keys total, 5 default-hidden (UL, IFS, dcu_pn, ecu_pn, target).',
-            'Click icon Columns phía trên bảng → check/uncheck từng cột. Tổng 27 key, 5 mặc định ẩn (UL, IFS, dcu_pn, ecu_pn, target).'
+            'Click Columns icon above the table → check/uncheck per column. 29 keys total, 4 default-hidden (UL, dcu_pn, ecu_pn, target).',
+            'Click icon Columns phía trên bảng → check/uncheck từng cột. Tổng 29 key, 4 mặc định ẩn (UL, dcu_pn, ecu_pn, target).'
           ),
           bs(
             'Hiding the currently-sorted column auto-snaps sort back to DATE DESC. Legacy `npi` → `owner` and `ver` → `option` sort-key rewrites preserve saved sort prefs across upgrades.',
