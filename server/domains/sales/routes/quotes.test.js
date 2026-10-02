@@ -161,6 +161,19 @@ describe('quotes router — POST /', () => {
     assert.equal(r.status, 200);
     assert.equal(r.body.quote.id, 1); // server-assigned, not 999
   });
+
+  test('records the session user as creator, not a value from the body', async () => {
+    const app = buildApp();
+    const r = await request(app, {
+      method: 'POST',
+      path: '/api/sales/quotes',
+      headers: { 'x-test-role': 'user' },
+      body: { type: 'standard', created_by: 'mallory' },
+    });
+    assert.equal(r.status, 200);
+    assert.equal(r.body.quote.created_by, 'tester');
+    assert.equal(store[0].created_by, 'tester');
+  });
 });
 
 describe('quotes router — PATCH /:id', () => {
@@ -187,6 +200,20 @@ describe('quotes router — PATCH /:id', () => {
     assert.equal(r.status, 200);
     assert.equal(r.body.quote.customer, 'B');
     assert.equal(r.body.quote._version, 2);
+  });
+
+  test('keeps the stored creator whatever the body says', async () => {
+    const app = buildApp();
+    store.push({ id: 5, type: 'standard', customer: 'A', created_by: 'Jet', _version: 1 });
+    const r = await request(app, {
+      method: 'PATCH',
+      path: '/api/sales/quotes/5',
+      headers: { 'x-test-role': 'user' },
+      body: { customer: 'B', created_by: 'mallory' },
+    });
+    assert.equal(r.status, 200);
+    assert.equal(r.body.quote.customer, 'B');
+    assert.equal(store[0].created_by, 'Jet');
   });
 });
 

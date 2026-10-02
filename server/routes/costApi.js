@@ -27,6 +27,7 @@ import {
 import { redactErrorMessage, logErr, asSafeError } from '../utils/safeError.js';
 import { listLanIPv4, pickServerUrl } from '../utils/networkInfo.js';
 import { getRetentionSettings } from '../utils/backupPath.js';
+import { withCreator, withoutCreator } from '../utils/quoteCreator.js';
 
 /**
  * Delete `auto_*.json` snapshots older than `retentionDays` from one dir.
@@ -2940,7 +2941,10 @@ router.post('/quotes', saveRateLimit, async (req, res) => {
     // Drop any client-provided id on POST — the server assigns next-free.
     // Also drop _version: POST is for NEW quotes, so there's nothing
     // to collide with.
-    const saved = await upsertQuote({ ...cleansed, id: undefined, _version: undefined });
+    // The session user is the creator ("Quoted by"); a client cannot name one.
+    const saved = await upsertQuote(
+      withCreator({ ...cleansed, id: undefined, _version: undefined }, cu.username)
+    );
     // Audit emit (P0-8a): compliance forensic trail for VN Decree 13/2023
     // PII + Law on Accounting Art. 41 (10-yr retention). Wrapped in try/catch
     // so audit failures never block the save — mirrors existing pattern at
@@ -3106,7 +3110,8 @@ router.patch('/quotes/:id', saveRateLimit, async (req, res) => {
     const { getQuoteById } = await import('../repositories/quotesStore.js');
     const prevQuote = getQuoteById(id);
     const cleansed = emitAltMaterialsAuditAndStrip({ ...body, id }, prevQuote, cu, clientIp(req));
-    const saved = await upsertQuote({ ...cleansed });
+    // An update keeps the creator POST stamped, whatever the body says.
+    const saved = await upsertQuote(withoutCreator(cleansed));
     // Audit emit (P0-8a): compliance forensic trail — update path.
     // is_new: false distinguishes from POST create.
     try {

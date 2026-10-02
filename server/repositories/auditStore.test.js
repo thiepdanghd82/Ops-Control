@@ -10,7 +10,13 @@ import path from 'node:path';
 
 import * as connection from '../db/connection.js';
 import { initSchema } from '../db/init.js';
-import { appendAudit, tailAudit, auditRowCount, bulkAppendAudit } from './auditStore.js';
+import {
+  appendAudit,
+  tailAudit,
+  auditRowCount,
+  bulkAppendAudit,
+  quoteCreators,
+} from './auditStore.js';
 
 function setupTmp() {
   connection._resetForTests();
@@ -140,4 +146,57 @@ test('auditStore: index by event speeds up filter (smoke)', () => {
     .all('LOGIN');
   const uses = plan.some((r) => String(r.detail || '').includes('idx_audit_event'));
   assert.ok(uses, `expected idx_audit_event use — got: ${JSON.stringify(plan)}`);
+});
+
+// ── quoteCreators: who created each quote, from POST /api/quotes's audit rows ──
+
+function quoteSave(user, detail) {
+  appendAudit({
+    ts: '2026-09-30T00:00:00Z',
+    event: 'QUOTE_SAVE',
+    user,
+    ip: '10.0.0.1',
+    detail: typeof detail === 'string' ? detail : JSON.stringify(detail),
+  });
+}
+
+test('auditStore: quoteCreators maps each quote to the user whose save created it', () => {
+  setupTmp();
+  quoteSave('Jet', { id: 140, version: 1, type: 'standard', is_new: true });
+  quoteSave('Hana', { id: 140, version: 2, type: 'standard', is_new: false }); // a later update
+  quoteSave('Administrator', { id: 141, version: 1, type: 'complex', is_new: true });
+  appendAudit({
+    ts: '2026-09-30T00:00:01Z',
+    event: 'QUOTE_TRASH',
+    user: 'Hana',
+    detail: 'trashed quote #141',
+  });
+  const creators = quoteCreators();
+  assert.equal(creators.size, 2);
+  assert.equal(creators.get(140), 'Jet');
+  assert.equal(creators.get(141), 'Administrator');
+});
+
+test('auditStore: quoteCreators — a reused id belongs to its latest creation', () => {
+  // upsertQuote assigns max(id) + 1, so purging the newest quote hands its
+  // id to the next new one.
+  setupTmp();
+  quoteSave('Hana', { id: 150, is_new: true });
+  quoteSave('Jet', { id: 150, is_new: true });
+  assert.equal(quoteCreators().get(150), 'Jet');
+});
+
+test('auditStore: quoteCreators skips rows it cannot attribute', () => {
+  setupTmp();
+  quoteSave('-', { id: 1, is_new: true });
+  quoteSave('Jet', 'not json');
+  quoteSave('Jet', { is_new: true });
+  assert.equal(quoteCreators().size, 0);
+});
+
+test('auditStore: quoteCreators is empty when the DB is unavailable', () => {
+  connection._resetForTests();
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ops-audit-nodb-'));
+  process.env.OPS_DB_PATH = path.join(dir, 'missing.db');
+  assert.equal(quoteCreators().size, 0);
 });

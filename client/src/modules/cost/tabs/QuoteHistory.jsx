@@ -22,6 +22,7 @@ import { useAccess } from '../../../context/useAccess';
 import ExportModal from './QuoteHistory/ExportModal';
 import { useQuoteFilters } from '../hooks/useQuoteFilters';
 import { applyQuoteFilters, quoteAccessor } from '../lib/quoteFilters';
+import { quotedBy } from '../lib/quoteCreator';
 import ScopedFilterBar from '../components/ScopedFilterBar';
 import ColumnsToggle from '../../../components/Shared/ColumnsToggle';
 import { useFloatingMenu, useMergedMenuRef } from '../../../components/Shared/useFloatingMenu';
@@ -480,6 +481,16 @@ const QUOTE_HISTORY_COLUMNS = [
         )}
       </>
     ),
+  },
+  // Who created the quote (2026-10-02). Quotes created before the audit log
+  // recorded it, on 2026-05-26, have no name and show a dash.
+  {
+    key: 'quoted_by',
+    labelKey: 'qh.quoted_by',
+    sortable: true,
+    width: 100,
+    tdClass: 'qh-d-owner',
+    render: (q) => quotedBy(q) || '—',
   },
 ];
 

@@ -11,7 +11,7 @@ import {
 } from './QuoteHistory.columns.js';
 
 describe('QUOTE_HISTORY_COLUMN_KEYS', () => {
-  test('contains 28 keys in source order — REGRESSION GUARD for table shape', () => {
+  test('contains 29 keys in source order — REGRESSION GUARD for table shape', () => {
     // Header row in QuoteHistory.jsx renders this exact set in this exact
     // order. Drift here means the ColumnsToggle popover ↔ table-render
     // contract broke; bump this number only when intentionally
@@ -19,7 +19,8 @@ describe('QUOTE_HISTORY_COLUMN_KEYS', () => {
     // Sprint S-SALE-OWNER-COL (2026-06-16) bumped 26 → 27 by adding 'sale'.
     // 2026-09-29 'ifs' renamed to 'ccl_pn' and moved before 'direct_cu' — count unchanged.
     // 2026-09-30 bumped 27 → 28 by adding 'delivery_term' after 'trade_mode'.
-    assert.equal(QUOTE_HISTORY_COLUMN_KEYS.length, 28);
+    // 2026-10-02 bumped 28 → 29 by adding 'quoted_by' after 'layout'.
+    assert.equal(QUOTE_HISTORY_COLUMN_KEYS.length, 29);
   });
 
   test('ccl_pn sits immediately before direct_cu', () => {
@@ -84,6 +85,7 @@ describe('QUOTE_HISTORY_SORT_FNS — basic shape', () => {
       'contr',
       'gm',
       'status',
+      'quoted_by',
     ]);
     const actual = new Set(Object.keys(QUOTE_HISTORY_SORT_FNS));
     assert.deepEqual(actual, expected);
@@ -314,14 +316,15 @@ describe('resolveSortKey', () => {
 });
 
 describe('QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS (Phase 2 Q7 option C)', () => {
-  test('hides exactly 4 cols → 24 visible by default', () => {
+  test('hides exactly 4 cols → 25 visible by default', () => {
     // Sprint S-SALE-OWNER-COL (2026-06-16) bumped column total 26 → 27,
     // so visible-by-default went 21 → 22 (5 default-hidden unchanged).
     // 2026-09-29 'ifs' left the hidden list as it became the visible 'ccl_pn'.
     assert.equal(QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS.length, 4);
     // 2026-09-29 'ccl_pn' (ex-'ifs') now visible → 23.
     // 2026-09-30 'delivery_term' added visible → 24.
-    assert.equal(QUOTE_HISTORY_COLUMN_KEYS.length - QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS.length, 24);
+    // 2026-10-02 'quoted_by' added visible → 25.
+    assert.equal(QUOTE_HISTORY_COLUMN_KEYS.length - QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS.length, 25);
   });
 
   test('Option C list', () => {
@@ -336,4 +339,16 @@ test('Delivery Term sits right after Trade Mode (Quote History has no PO L/T col
   const i = QUOTE_HISTORY_COLUMN_KEYS.indexOf('trade_mode');
   assert.equal(QUOTE_HISTORY_COLUMN_KEYS[i + 1], 'delivery_term');
   assert.ok(!QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS.includes('delivery_term'));
+});
+
+test('Quoted by follows Layout, as the last column, visible by default', () => {
+  const i = QUOTE_HISTORY_COLUMN_KEYS.indexOf('layout');
+  assert.equal(QUOTE_HISTORY_COLUMN_KEYS[i + 1], 'quoted_by');
+  assert.equal(QUOTE_HISTORY_COLUMN_KEYS.at(-1), 'quoted_by');
+  assert.ok(!QUOTE_HISTORY_DEFAULT_HIDDEN_KEYS.includes('quoted_by'));
+});
+
+test('quoted_by sorts by the creator the server keeps on the quote row', () => {
+  assert.equal(QUOTE_HISTORY_SORT_FNS.quoted_by({ created_by: 'Jet', state: {} }), 'jet');
+  assert.equal(QUOTE_HISTORY_SORT_FNS.quoted_by({ state: {} }), '');
 });

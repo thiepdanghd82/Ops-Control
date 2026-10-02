@@ -133,3 +133,34 @@ export function bulkAppendAudit(rows) {
     return 0;
   }
 }
+
+/**
+ * Who created each quote, from the QUOTE_SAVE rows POST /api/quotes writes
+ * with `is_new: true` — recorded since 2026-05-26 (quote id 130 onwards).
+ * A later row wins for the same id, because purging the newest quote hands
+ * its id to the next new one. Empty when the DB is unavailable (fail-open).
+ *
+ * @returns {Map<number, string>} quote id → username
+ */
+export function quoteCreators() {
+  const creators = new Map();
+  if (!dbReady()) return creators;
+  try {
+    const rows = getDb()
+      .prepare(
+        `SELECT user, json_extract(detail, '$.id') AS quote_id FROM audit_log
+          WHERE event = 'QUOTE_SAVE' AND json_valid(detail)
+            AND json_extract(detail, '$.is_new') = 1
+          ORDER BY id`
+      )
+      .all();
+    for (const r of rows) {
+      if (Number.isFinite(r.quote_id) && r.user && r.user !== '-') {
+        creators.set(r.quote_id, r.user);
+      }
+    }
+  } catch (err) {
+    console.warn('  ⚠️  audit DB read failed:', err?.message || err);
+  }
+  return creators;
+}
