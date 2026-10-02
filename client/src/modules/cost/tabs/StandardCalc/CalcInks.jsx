@@ -7,7 +7,12 @@ import { useI18n } from '../../../../utils/useI18n';
 import { useCalc } from '../../../../context/CalcContext';
 import { useCostLib } from '../../../../context/CostLibContext';
 import { useLibraryPicker } from '../../../../components/LibraryPicker/LibraryPicker';
-import { calcInk, calcPitch, getActiveTierState } from '../../../../services/calcEngine';
+import {
+  calcInk,
+  calcPitch,
+  calcMatScrapFactor,
+  getActiveTierState,
+} from '../../../../services/calcEngine';
 import { isIndigoPrintType } from '../../../../services/printTypeUtils';
 import {
   getCovOvrState,
@@ -102,14 +107,11 @@ export default function CalcInks() {
     [openMenu, setInkField]
   );
 
-  // Scrap% display = Σ(process scrap_pct). Display-only metric;
-  // underlying cost math still uses calcMatScrapFactor (compound yield).
-  const scrapDisplay = useMemo(() => {
-    return (st.processes || []).reduce((acc, p) => {
-      if (!p.workcenter || p.hidden) return acc;
-      return acc + (p.scrap_pct || 0);
-    }, 0);
-  }, [st.processes]);
+  // Scrap% shows the factor the engine prices with: calcMatScrapFactor over
+  // the active tier's processes, 1 − ∏(1 − scrap). It used to add scrap_pct
+  // up over the base tier, which overstated it on every quote with more than
+  // one scrap step (RFQ-2026-S0049: 50.0% shown, 41.0% priced; 2026-10-02).
+  const scrapFactor = useMemo(() => calcMatScrapFactor(tierSt), [tierSt]);
 
   const visibleInks = inks.map((ik, i) => ({ ...ik, _idx: i })).filter((ik) => !ik.hidden);
 
@@ -405,7 +407,7 @@ export default function CalcInks() {
                       </select>
                     </td>
                     <td className="sc-td-derived" style={{ color: '#059669' }}>
-                      {(scrapDisplay * 100).toFixed(1) + '%'}
+                      {(scrapFactor * 100).toFixed(1) + '%'}
                     </td>
                     <td>
                       <DecimalInput
