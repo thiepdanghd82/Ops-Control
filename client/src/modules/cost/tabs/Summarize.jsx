@@ -30,6 +30,7 @@ import {
 } from './Summarize.exportRows.js';
 import { useQuoteFilters } from '../hooks/useQuoteFilters';
 import { applyQuoteFilters } from '../lib/quoteFilters';
+import { quotedBy } from '../lib/quoteCreator';
 import ScopedFilterBar from '../components/ScopedFilterBar';
 import ColumnsToggle from '../../../components/Shared/ColumnsToggle';
 import { loadVisibleColumns } from '../../../components/Shared/ColumnsToggle.helpers';
@@ -291,6 +292,9 @@ const SUMMARIZE_COLUMNS = [
       return <span className="sum-snap-pill sum-snap-pill-frozen">Frozen</span>;
     },
   },
+  // Who created the quote (2026-10-02), as the last column. Blank for quotes
+  // created before the audit log recorded it, on 2026-05-26.
+  { key: 'quoted_by', label: 'Quoted by', w: 90 },
 ];
 // Sprint B3b / A3-03 (2026-06-19) — shape constants now live in
 // the React-free Summarize.columns.js companion (imported at the
@@ -599,6 +603,7 @@ export default function Summarize() {
             delivery_term: tierPackingValue(st, t, 'delivery_term') || '',
             npi_owner: st.npi_owner || '',
             sale_owner: st.sale_owner || '',
+            quoted_by: quotedBy(q),
             // ─── Schema-extend sprint (2026-06-10) ──────────────────
             // Sync from Pricing (Std/Cpx) sub-tabs into the row so the
             // operator can browse + filter + CSV-export without round-

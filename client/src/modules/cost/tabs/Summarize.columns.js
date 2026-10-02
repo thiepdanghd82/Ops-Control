@@ -81,6 +81,8 @@ export const SUMMARIZE_COLUMN_KEYS = [
   'target_contr_pct',
   'target_gm_pct',
   'snapshot_status',
+  // Who created the quote (2026-10-02), as the last column.
+  'quoted_by',
 ];
 
 /**

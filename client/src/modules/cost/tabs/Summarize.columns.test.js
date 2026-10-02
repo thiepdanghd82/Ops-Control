@@ -22,7 +22,7 @@ import {
 } from './Summarize.columns.js';
 
 describe('SUMMARIZE_COLUMN_KEYS', () => {
-  test('contains 43 keys in source order — REGRESSION GUARD for table shape', () => {
+  test('contains 44 keys in source order — REGRESSION GUARD for table shape', () => {
     // Header row in Summarize.jsx renders this exact set in this exact
     // order. Drift here means the ColumnsToggle popover ↔ table-render
     // contract broke; bump this number only when intentionally
@@ -46,7 +46,8 @@ describe('SUMMARIZE_COLUMN_KEYS', () => {
     //     Price column, which moved to follow NPI Owner.
     //   - delivery_term (2026-09-30) +1 → 43; the row builder always carried
     //     it (and the CSV comment said it was dropped); now shown after PO L/T.
-    assert.equal(SUMMARIZE_COLUMN_KEYS.length, 43);
+    //   - quoted_by (2026-10-02) +1 → 44, the last column: who created the quote.
+    assert.equal(SUMMARIZE_COLUMN_KEYS.length, 44);
   });
 
   test('no duplicate keys', () => {
@@ -204,4 +205,9 @@ test('Delivery Term follows PO L/T and is visible by default', () => {
   const i = SUMMARIZE_COLUMN_KEYS.indexOf('po_lt');
   assert.equal(SUMMARIZE_COLUMN_KEYS[i + 1], 'delivery_term');
   assert.ok(!SUMMARIZE_DEFAULT_HIDDEN_KEYS.includes('delivery_term'));
+});
+
+test('Quoted by is the last column and visible by default, so it reaches the export', () => {
+  assert.equal(SUMMARIZE_COLUMN_KEYS.at(-1), 'quoted_by');
+  assert.ok(!SUMMARIZE_DEFAULT_HIDDEN_KEYS.includes('quoted_by'));
 });

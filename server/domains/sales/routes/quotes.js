@@ -30,6 +30,7 @@
  */
 
 import express from 'express';
+import { withCreator, withoutCreator } from '../../../utils/quoteCreator.js';
 
 /**
  * @param {object} deps
@@ -81,7 +82,10 @@ export function createQuotesRouter(deps) {
     }
     try {
       // Drop client-provided id + _version on POST — server assigns next-free.
-      const saved = await deps.upsertQuote({ ...body, id: undefined, _version: undefined });
+      // The session user is the creator ("Quoted by"); a client cannot name one.
+      const saved = await deps.upsertQuote(
+        withCreator({ ...body, id: undefined, _version: undefined }, cu.username)
+      );
       deps.emitDataChange('quote.saved', {
         id: saved?.id,
         version: saved?._version,
@@ -108,7 +112,8 @@ export function createQuotesRouter(deps) {
       return res.status(400).json({ ok: false, error: 'Body must be a quote patch object' });
     }
     try {
-      const saved = await deps.upsertQuote({ ...body, id });
+      // An update keeps the creator POST stamped, whatever the body says.
+      const saved = await deps.upsertQuote(withoutCreator({ ...body, id }));
       deps.emitDataChange('quote.saved', {
         id: saved?.id,
         version: saved?._version,

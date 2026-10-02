@@ -71,6 +71,8 @@ import {
   quotesBackendStatus,
 } from '../repositories/quotesStore.js';
 import { pickLatestUsdRate } from '../utils/latestUsdRate.js';
+import { fillCreatedBy } from '../utils/quoteCreator.js';
+import { quoteCreators } from '../repositories/auditStore.js';
 import { emitDataChange } from '../services/eventBus.js';
 
 import { fileURLToPath } from 'url';
@@ -718,7 +720,9 @@ router.get('/latest-usd-rate', (req, res) => {
 
 router.get('/quotes', (req, res) => {
   try {
-    const all = loadQuotes();
+    // "Quoted by": quotes saved before created_by existed take it from the
+    // audit record of their creation (utils/quoteCreator.js).
+    const all = fillCreatedBy(loadQuotes(), quoteCreators());
     // Sprint 13 — soft-delete. Default response excludes trashed
     // quotes (deleted_at is set); pass `?include=deleted` to list
     // both, or `?trashed=1` for just the bin (Trash tab).
@@ -745,7 +749,7 @@ router.get('/quotes/:id', (req, res) => {
   try {
     const q = getQuoteById(id);
     if (!q) return res.status(404).json({ error: 'not found' });
-    res.json(q);
+    res.json(fillCreatedBy([q], quoteCreators())[0]);
   } catch (err) {
     console.error('  ❌  get quote failed:', err);
     res.status(500).json({ error: 'Failed to load quote' });

@@ -14,6 +14,7 @@
  */
 
 import { getStatus as getApprovalStatus } from '../../../utils/approvalWorkflow.js';
+import { quotedBy } from '../lib/quoteCreator.js';
 
 /**
  * Ordinal used by status-column sorting — matches workflow progression
@@ -79,6 +80,8 @@ export const QUOTE_HISTORY_COLUMN_KEYS = [
   'status',
   'approve',
   'layout',
+  // Quoted by — the username of whoever created the quote (2026-10-02).
+  'quoted_by',
 ];
 
 /**
@@ -169,6 +172,7 @@ export const QUOTE_HISTORY_SORT_FNS = {
     return 0;
   },
   status: (q) => STATUS_ORDER[getApprovalStatus(q.state?.approval)] ?? 99,
+  quoted_by: (q) => quotedBy(q).toLowerCase(),
 };
 
 /**
