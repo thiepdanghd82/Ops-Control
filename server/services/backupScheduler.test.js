@@ -20,6 +20,8 @@ import {
   getStatus,
   _shouldBootCatchUp,
   _resetSchedulerForTests,
+  startBackupScheduler,
+  stopBackupScheduler,
 } from './backupScheduler.js';
 
 // connection.js + backup.js + backupScheduler.js share a single
@@ -420,6 +422,68 @@ test('the tarball the cycle really produces carries no credentials it cannot use
       `users.json is required to restore accounts — got: ${listing.join(' | ')}`
     );
   } finally {
+    teardown(tmpDir);
+  }
+});
+
+// ─── 2026-09-30 — the nightly cycle skipped behind a same-UTC-day backup ───
+// backupOpsDb's "one backup per day" key is the UTC date, while the scheduler
+// fires at LOCAL HH:00. On the box (UTC+7) local 02:00 on day D+1 is 19:00Z on
+// day D, so the /save-all backup taken at 10:17 local on 29/09
+// (ops_20260929_031743.sqlite) made the 30/09 nightly run report
+// "daily backup already taken" — and a day of edits was in no nightly backup.
+// This drives the real timer path of startBackupScheduler with that clock.
+test('scheduled nightly cycle writes a backup even when one exists for the same UTC day', async () => {
+  const { tmpDir, dataDir } = setupTempDataDir('nightly-utc-day');
+  const prevTz = process.env.TZ;
+  const prevSchedule = process.env.OPS_BACKUP_SCHEDULE;
+  const prevHour = process.env.OPS_BACKUP_HOUR;
+  process.env.TZ = 'Asia/Ho_Chi_Minh';
+  process.env.OPS_BACKUP_SCHEDULE = '1';
+  process.env.OPS_BACKUP_HOUR = '2';
+  _resetSchedulerForTests();
+  const sqliteDir = path.join(dataDir, 'Backup', 'SQLite');
+  fs.mkdirSync(sqliteDir, { recursive: true });
+  // The /save-all backup of 10:17 local on 29/09.
+  fs.copyFileSync(path.join(dataDir, 'ops.db'), path.join(sqliteDir, 'ops_20260929_031743.sqlite'));
+  // 01:30 local on 30/09 — the 02:00 run is 30 minutes away, no boot catch-up.
+  test.mock.timers.enable({
+    apis: ['setTimeout', 'Date'],
+    now: Date.parse('2026-09-29T18:30:00Z'),
+  });
+  try {
+    const started = startBackupScheduler();
+    assert.equal(started.ok, true, `scheduler should start, got ${JSON.stringify(started)}`);
+    assert.equal(started.catchupScheduled, false);
+    test.mock.timers.tick(30 * 60 * 1000); // → 02:00 local, 19:00Z
+    // The tick is async; wait on real I/O for the cycle to record itself.
+    for (let i = 0; i < 2000 && !getStatus().lastRun; i++) {
+      await new Promise((r) => setImmediate(r));
+    }
+    const lastRun = getStatus().lastRun;
+    assert.ok(lastRun, 'the scheduled cycle should have run');
+    assert.equal(lastRun.startedAt, '2026-09-29T19:00:00.000Z');
+    const sqliteStep = lastRun.steps.find((s) => s.name === 'sqlite');
+    assert.notEqual(
+      sqliteStep.skipped,
+      true,
+      `the nightly cycle must not skip, got ${JSON.stringify(sqliteStep)}`
+    );
+    assert.equal(sqliteStep.ok, true);
+    assert.ok(
+      fs.existsSync(path.join(sqliteDir, sqliteStep.file)),
+      'the new backup should be on disk'
+    );
+  } finally {
+    stopBackupScheduler();
+    test.mock.timers.reset();
+    _resetSchedulerForTests();
+    if (prevTz === undefined) delete process.env.TZ;
+    else process.env.TZ = prevTz;
+    if (prevSchedule === undefined) delete process.env.OPS_BACKUP_SCHEDULE;
+    else process.env.OPS_BACKUP_SCHEDULE = prevSchedule;
+    if (prevHour === undefined) delete process.env.OPS_BACKUP_HOUR;
+    else process.env.OPS_BACKUP_HOUR = prevHour;
     teardown(tmpDir);
   }
 });
