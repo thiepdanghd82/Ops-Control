@@ -97,6 +97,23 @@ test('calcAll builds layoutToolCosts internally: process assigned to plate uses 
   assert.ok(Math.abs(res.procResults[0].tooling - 23.056 / 1000) < 1e-9);
 });
 
+test('calcAll: a process assigned to Print 2 is charged Print 2’s plate, not Print 1’s', () => {
+  const st = createStdState();
+  st.pl_print_type = 'Letter Press';
+  st.pl_num_colors = 2;
+  st.web_width_td = 200;
+  st.sheet_length = 300;
+  st.pl_film_lp_cost = 5;
+  // Print 2: Letter Press, 1 colour → 80 × 0.24 × 0.34 × 1 + 1 × 5 = 11.528.
+  st.pl_plates = [{ print_type: 'Letter Press', num_colors: 1, film_lp_cost: 5 }];
+  st.annual_qty = 100000;
+  st.product_lifetime = 1;
+  st.moq = 1000;
+  st.processes = [{ ...baseProc, tool_cost_src: 'plate-1', _mid: 'p1' }];
+  const res = calcAll(st, [], LIB, undefined, {});
+  assert.ok(Math.abs(res.tooling - 11.528 / 1000) < 1e-9, `res.tooling ${res.tooling}`);
+});
+
 test('calcAll BC — no tool_cost_src anywhere → identical with/without a bogus map', () => {
   const st = createStdState();
   st.moq = 1000;

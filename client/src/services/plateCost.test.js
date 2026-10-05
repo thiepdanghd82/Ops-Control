@@ -12,6 +12,11 @@ import {
   getPlateFilmCost,
   normPrintType,
   DEFAULT_PLATE_BASE,
+  PLATE_COUNT,
+  plateAt,
+  plateFieldPatch,
+  plateCostAt,
+  plateSourceId,
 } from './plateCost.js';
 
 const near = (a, b) => Math.abs(a - b) < 1e-9;
@@ -115,4 +120,72 @@ test('getPlateFilmCost reads the "Film cost" row; fallback 0', () => {
 test('end-to-end: lib lookup feeds the formula', () => {
   const pb = getPlateBaseCost(LIB, 'Silkscreen');
   assert.equal(computePlateCost({ pt: 'Silkscreen', colors: 4 }, { plateBase: pb }), 440);
+});
+
+// ── Print 1–4 (2026-10-05): one plate per print type, like Cutter 1–4 ──────
+
+test('there are four plates, as there are four cutters', () => {
+  assert.equal(PLATE_COUNT, 4);
+});
+
+test('Print 1 reads the fields every quote already stores', () => {
+  const s = { pl_print_type: 'Flexo', pl_num_colors: 3, pl_film_lp_cost: '', pl_plate_cost: '' };
+  assert.deepEqual(plateAt(s, 0), {
+    print_type: 'Flexo',
+    num_colors: 3,
+    film_lp_cost: '',
+    plate_cost: '',
+  });
+});
+
+test('Prints 2-4 read pl_plates, and a quote without it has three empty plates', () => {
+  const s = { pl_plates: [{ print_type: 'Silk screen', num_colors: 2 }] };
+  assert.equal(plateAt(s, 1).print_type, 'Silk screen');
+  assert.equal(plateAt(s, 1).num_colors, 2);
+  assert.equal(plateAt(s, 2).print_type, '');
+  assert.equal(plateAt({}, 3).print_type, '');
+});
+
+test('a field of Print 1 is written to its own field, of Prints 2-4 to the pl_plates array', () => {
+  assert.deepEqual(plateFieldPatch({}, 0, 'print_type', 'Flexo'), ['pl_print_type', 'Flexo']);
+  assert.deepEqual(plateFieldPatch({}, 0, 'plate_cost', '12'), ['pl_plate_cost', '12']);
+  const s = { pl_plates: [{ print_type: 'Flexo' }] };
+  const [key, value] = plateFieldPatch(s, 3, 'num_colors', 4);
+  assert.equal(key, 'pl_plates');
+  assert.deepEqual(value, [{ print_type: 'Flexo' }, {}, { num_colors: 4 }]);
+  assert.deepEqual(s.pl_plates, [{ print_type: 'Flexo' }], 'the state is not mutated');
+});
+
+test('plate cost: the formula by default, the override when one is entered', () => {
+  const s = {
+    web_width_td: 100,
+    sheet_length: 200,
+    pl_plates: [{ print_type: 'Letter Press', num_colors: 2, film_lp_cost: 5 }],
+  };
+  const auto = plateCostAt(s, 1, LIB);
+  assert.ok(near(auto.cost, 15.376), `got ${auto.cost}`);
+  assert.equal(auto.overridden, false);
+  s.pl_plates[0].plate_cost = '12,5'; // typed the Vietnamese way
+  const ovr = plateCostAt(s, 1, LIB);
+  assert.equal(ovr.cost, 12.5);
+  assert.equal(ovr.overridden, true);
+  assert.ok(near(ovr.auto, 15.376), 'the formula value stays available for display');
+});
+
+test('a blank override is no override; Print 1 overrides through pl_plate_cost', () => {
+  const s = {
+    web_width_td: 100,
+    sheet_length: 200,
+    pl_print_type: 'Letter Press',
+    pl_num_colors: 2,
+    pl_film_lp_cost: 5,
+    pl_plate_cost: '  ',
+  };
+  assert.equal(plateCostAt(s, 0, LIB).overridden, false);
+  s.pl_plate_cost = 30;
+  assert.equal(plateCostAt(s, 0, LIB).cost, 30);
+});
+
+test('source ids: Print 1 keeps "plate", the id saved process rows already point at', () => {
+  assert.deepEqual([0, 1, 2, 3].map(plateSourceId), ['plate', 'plate-1', 'plate-2', 'plate-3']);
 });

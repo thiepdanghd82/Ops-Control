@@ -2018,6 +2018,10 @@ select.sc-input {
   margin-bottom: 16px;
   border-bottom: 1px dashed #e2e8f0;
 }
+/* Print 1~4 — one .sc-grid4 per plate; space them like the rows of one grid. */
+.sc-print-plate + .sc-print-plate {
+  margin-top: 10px;
+}
 
 /* Cutter-cost block (Cutting Design Layout) — same faint dashed divider +
    wider gap as .sc-print-cost-row, separating the 4 type+cost pairs from

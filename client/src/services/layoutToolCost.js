@@ -2,8 +2,8 @@
 /**
  * Layout → Process TOOL COST sources (Sprint S-LAYOUT-TOOLCOST).
  *
- * Operators can ASSIGN a Layout-computed cost — the Plate cost (Print Design
- * Layout) or one of the Cutter cost 1~4 (Cutting Design Layout) — to a Process
+ * Operators can ASSIGN a Layout-computed cost — one of the Plate cost 1~4 (Print
+ * Design Layout) or of the Cutter cost 1~4 (Cutting Design Layout) — to a Process
  * row's tool cost via a pick-once dropdown. The assigned cost then flows into
  * that process's tooling (tooling = tool_cost / tool_life) and the quote total.
  *
@@ -23,9 +23,9 @@
  *
  * Cpx note: Complex sub-products carry only PLATE layout fields (no cutter
  * arrays / no cutting block), so `layoutToolCostSources(sp, lib)` yields the
- * Plate source only for Cpx. Std yields Plate + Cutter 1~4.
+ * Plate 1~4 sources only for Cpx. Std yields Plate 1~4 + Cutter 1~4.
  */
-import { computePlateCost, getPlateBaseCost } from './plateCost.js';
+import { PLATE_COUNT, plateAt, plateCostAt, plateSourceId } from './plateCost.js';
 import { computeCutterCost, effCavity } from './cutterCost.js';
 
 const CUTTER_PAIR_COUNT = 4;
@@ -68,25 +68,20 @@ export function layoutToolCostSources(state, lib) {
   const s = state || {};
   const out = [];
 
-  // Plate — reproduces CalcLayout plateCost (computePlateCost + getPlateBaseCost).
-  const plateBase = getPlateBaseCost(lib, s.pl_print_type);
-  const plateCost = computePlateCost(
-    {
-      pt: s.pl_print_type,
-      colors: s.pl_num_colors,
-      webW: s.web_width_td,
-      sheetL: s.sheet_length,
-      filmLp: s.pl_film_lp_cost,
-    },
-    { plateBase }
-  );
-  if (Number.isFinite(plateCost) && Number(plateCost) > 0) {
-    out.push({
-      id: 'plate',
-      kind: 'plate',
-      label: `Plate · ${s.pl_print_type || '—'}`,
-      cost: Number(plateCost),
-    });
+  // Plates 1~4 — the cost the Print Design Layout shows, through the same
+  // plateCostAt (override, else formula). Print 1 keeps the id 'plate'.
+  for (let i = 0; i < PLATE_COUNT; i++) {
+    const type = String(plateAt(s, i).print_type ?? '').trim();
+    if (!type) continue;
+    const { cost } = plateCostAt(s, i, lib);
+    if (Number.isFinite(cost) && Number(cost) > 0) {
+      out.push({
+        id: plateSourceId(i),
+        kind: 'plate',
+        label: `Plate ${i + 1} · ${type}`,
+        cost: Number(cost),
+      });
+    }
   }
 
   // Cutters 1~4 — reproduces CalcLayout cutterCostAt(i): operator override

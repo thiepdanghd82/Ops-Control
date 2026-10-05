@@ -38,10 +38,12 @@ import { useCostLib } from '../../../../context/CostLibContext';
 import { sharedApi } from '../../../../services/api';
 import { calcPitch, calcLayoutPerSheet } from '../../../../services/calcEngine';
 import {
-  computePlateCost,
-  getPlateBaseCost,
   getPlateFilmCost,
   normPrintType,
+  PLATE_COUNT,
+  plateAt,
+  plateCostAt,
+  plateFieldPatch,
 } from '../../../../services/plateCost';
 import { computeCutterCost, effCavity } from '../../../../services/cutterCost';
 import FileUploadZone from '../../../../components/Shared/FileUploadZone';
@@ -743,33 +745,12 @@ export function PrintCutLayout({
 
 function PrintSubTab({ state, onField }) {
   const { lib } = useCostLib();
-  // Plate cost $ (display-only) — Henry's formula, keyed by Print type off the
-  // plate_base_cost DDL section. Not fed into calcEngine/cost/exporter.
-  const plateBase = getPlateBaseCost(lib, state.pl_print_type);
+  // Plates 1~4 (2026-10-05), like Cutter 1~4. Each plate's cost comes from
+  // plateCostAt — the override when entered, else Henry's formula keyed by its
+  // Print type off the plate_base_cost DDL section — the same function that
+  // prices a process row assigned to it (layoutToolCost.js).
   const filmCostDefault = getPlateFilmCost(lib); // Letter-press film-per-color suggestion
-  const isLetterPress = normPrintType(state.pl_print_type) === normPrintType('Letter Press');
-  const plateCost = useMemo(
-    () =>
-      computePlateCost(
-        {
-          pt: state.pl_print_type,
-          colors: state.pl_num_colors,
-          webW: state.web_width_td,
-          sheetL: state.sheet_length,
-          filmLp: state.pl_film_lp_cost,
-        },
-        { plateBase }
-      ),
-    [
-      state.pl_print_type,
-      state.pl_num_colors,
-      state.web_width_td,
-      state.sheet_length,
-      state.pl_film_lp_cost,
-      plateBase,
-    ]
-  );
-  const plateCostDisplay = plateCost == null ? '—' : plateCost.toFixed(2);
+  const setPlate = (i, field, v) => onField(...plateFieldPatch(state, i, field, v));
 
   const platePitch = state.plate_tooth
     ? (state.plate_tooth * (state.tooth_pitch_mm || 3.175)).toFixed(2)
@@ -801,65 +782,96 @@ function PrintSubTab({ state, onField }) {
           Ví dụ: Product 82×52 (thành phẩm) = Image Area 80×50 (vùng thiết kế) + Bleed 1 mm mỗi bên.
         </span>
       </div>
-      {/* Print-cost block — additive UI, formula TBD (pending Henry). Renders
-          in the Print sub-view only. Shared by Std + Cpx via AdvancedLayoutBlock.
+      {/* Print-cost block — Print 1~4, one row per plate (2026-10-05), like the
+          Cutter 1~4 block. Renders in the Print sub-view only. Shared by Std +
+          Cpx via AdvancedLayoutBlock. Print 1 keeps the pl_* fields every quote
+          already stores; Prints 2~4 live in pl_plates (plateAt / plateFieldPatch).
           NOTE-A: dropdown = 4 top-level options; sub-variants shown as a tooltip.
-          NOTE-B: pl_num_colors is a SEPARATE field from Color Count above — if
-          Henry confirms they're the same quantity, bind "# No of colors" to
-          state.color_count instead of pl_num_colors to avoid double-entry. */}
-      <div className="sc-grid4 sc-print-cost-row">
-        <div className="sc-field" title={PL_PRINT_TYPE_GROUPS}>
-          <label>Print type</label>
-          <select
-            className="sc-input"
-            value={state.pl_print_type || ''}
-            onChange={(e) => onField('pl_print_type', e.target.value)}
-          >
-            <option value="">— Select —</option>
-            {PL_PRINT_TYPES.map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div
-          className="sc-field"
-          title="Số màu in cho khối chi phí in. Tách biệt với Color Count ở trên (NOTE-B) trừ khi được xác nhận trùng."
-        >
-          <label># No of colors</label>
-          <DecimalInput
-            value={state.pl_num_colors}
-            onChange={(v) => onField('pl_num_colors', v)}
-            className="sc-input"
-            placeholder="e.g. 4"
-          />
-        </div>
-        <div
-          className="sc-field"
-          title="Film / letterpress plate film cost (USD mỗi màu). Chỉ dùng cho Letter Press; gợi ý = Film cost trong bảng Plate Base Cost."
-        >
-          <label>Film LP cost $</label>
-          <DecimalInput
-            value={state.pl_film_lp_cost}
-            onChange={(v) => onField('pl_film_lp_cost', v)}
-            className="sc-input"
-            placeholder={isLetterPress && filmCostDefault ? String(filmCostDefault) : '0'}
-          />
-        </div>
-        <div
-          className="sc-field"
-          title="Plate cost — tính toán, chỉ đọc (display-only). PB×((W+40)/1000)×((L+40)/1000)×#colors +C×FilmLP (Letter Press) / +7.5 (Flexo) / PB×#colors (Silk screen). PB = XLOOKUP bảng Plate Base Cost theo Print type."
-        >
-          <label>Plate cost $</label>
-          <input
-            type="text"
-            value={plateCostDisplay}
-            disabled
-            readOnly
-            className="sc-input sc-derived"
-          />
-        </div>
+          NOTE-B: # No of colors is a SEPARATE field from Color Count above — if
+          Henry confirms they're the same quantity, bind it to state.color_count
+          to avoid double-entry. */}
+      <div className="sc-print-cost-row">
+        {Array.from({ length: PLATE_COUNT }).map((_, i) => {
+          const p = plateAt(state, i);
+          const pc = plateCostAt(state, i, lib);
+          const isLetterPress = normPrintType(p.print_type) === normPrintType('Letter Press');
+          return (
+            <div key={i} className="sc-grid4 sc-print-plate">
+              <div className="sc-field" title={PL_PRINT_TYPE_GROUPS}>
+                <label>Print type {i + 1}</label>
+                <select
+                  className="sc-input"
+                  value={p.print_type || ''}
+                  onChange={(e) => setPlate(i, 'print_type', e.target.value)}
+                >
+                  <option value="">— Select —</option>
+                  {PL_PRINT_TYPES.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div
+                className="sc-field"
+                title="Số màu in của bản in này. Tách biệt với Color Count ở trên (NOTE-B) trừ khi được xác nhận trùng."
+              >
+                <label># No of colors {i + 1}</label>
+                <DecimalInput
+                  value={p.num_colors}
+                  onChange={(v) => setPlate(i, 'num_colors', v)}
+                  className="sc-input"
+                  placeholder="e.g. 4"
+                />
+              </div>
+              <div
+                className="sc-field"
+                title="Film / letterpress plate film cost (USD mỗi màu). Chỉ dùng cho Letter Press; gợi ý = Film cost trong bảng Plate Base Cost."
+              >
+                <label>Film LP cost {i + 1} $</label>
+                <DecimalInput
+                  value={p.film_lp_cost}
+                  onChange={(v) => setPlate(i, 'film_lp_cost', v)}
+                  className="sc-input"
+                  placeholder={isLetterPress && filmCostDefault ? String(filmCostDefault) : '0'}
+                />
+              </div>
+              <div
+                className="sc-field"
+                title="Plate cost — tự tính: PB×((W+40)/1000)×((L+40)/1000)×#colors +C×FilmLP (Letter Press) / +7.5 (Flexo) / PB×#colors (Silk screen); PB = bảng Plate Base Cost theo Print type. Mặc định sync, sửa đè được; ↻ để về tự động."
+              >
+                <label>Plate cost {i + 1} $</label>
+                <div className="sc-cutter-cost-input">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    className={`sc-input${pc.overridden ? ' sc-cutter-cost-ovr' : ''}`}
+                    value={
+                      pc.overridden
+                        ? String(p.plate_cost)
+                        : pc.auto == null
+                          ? ''
+                          : pc.auto.toFixed(2)
+                    }
+                    placeholder="—"
+                    onChange={(e) => setPlate(i, 'plate_cost', e.target.value)}
+                  />
+                  {pc.overridden && (
+                    <button
+                      type="button"
+                      className="sc-cutter-cost-reset"
+                      title="Reset về tự động"
+                      aria-label="Reset về tự động"
+                      onClick={() => setPlate(i, 'plate_cost', '')}
+                    >
+                      ↻
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
       <PrintCutSizeMismatch state={state} onField={onField} />
       <div className="sc-grid4">
