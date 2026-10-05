@@ -10,6 +10,11 @@
  * must write through plateFieldPatch, which keeps Print 1 in the pl_* fields
  * saved quotes already carry and Prints 2~4 in pl_plates.
  *
+ * Both summary tables — plates on the Print side, cutters on the Cut side —
+ * end in the same Total tools cost, so both must take it from layoutToolsTotal
+ * and render through the one ToolSummaryTable; a second table built by hand is
+ * free to total differently.
+ *
  * No React test infrastructure in this repo, so source inspection is the only
  * way to assert it — same approach as quotedBy.lint and scrapColumn.lint.
  */
@@ -56,4 +61,11 @@ test('the Layout writes each plate through plateFieldPatch', () => {
     'no plate field is written around plateFieldPatch'
   );
   assert.doesNotMatch(layout, /state\.pl_/, 'no plate field is read around plateAt');
+});
+
+test('both summary tables end in one Total tools cost, from layoutToolsTotal', () => {
+  const count = (re) => (layout.match(re) || []).length;
+  assert.equal(count(/<ToolSummaryTable\b/g), 2, 'the Print and the Cut table share one component');
+  assert.equal(count(/layoutToolsTotal\(state, lib\)/g), 2, 'each side takes the total from it');
+  assert.equal(count(/className="sc-cutter-summary"/g), 1, 'no table is built beside it by hand');
 });

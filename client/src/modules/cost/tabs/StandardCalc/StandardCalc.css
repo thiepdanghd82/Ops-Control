@@ -2072,6 +2072,19 @@ select.sc-input {
   text-align: center;
   color: #94a3b8;
 }
+/* Total tools cost — the last row of both summary tables (plates + cutters). */
+.sc-cutter-summary-total th,
+.sc-cutter-summary-total td {
+  font-weight: 700;
+  color: #1e293b;
+  background: #f8fafc;
+  border-top: 2px solid #cbd5e1;
+}
+/* Print 1~4 rows beside the plate summary table, as the cutter fields are. */
+.sc-cutter-block .sc-print-plates {
+  flex: 1 1 480px;
+  min-width: 0;
+}
 /* Cutter cost cell — computed default with editable override + ↻ reset. */
 .sc-cutter-cost-input {
   display: flex;

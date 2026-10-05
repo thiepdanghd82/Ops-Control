@@ -117,6 +117,25 @@ export function layoutToolCostSources(state, lib) {
 }
 
 /**
+ * Total tools cost — the last row of both Layout summary tables (2026-10-05):
+ * every Plate 1~4 and Cutter 1~4 the Layout prices, each counted once at its
+ * price. Summed in cents, the figure each table row shows, so the total equals
+ * the rows above it; plate formulas run to more decimals than the rows show.
+ * Informational: nothing charges this total — a tool reaches the price only
+ * through a process row that takes it.
+ * @param {object} state calcEngine state (Std) or a subproduct (Cpx).
+ * @param {object} lib
+ * @returns {number}
+ */
+export function layoutToolsTotal(state, lib) {
+  const cents = layoutToolCostSources(state, lib).reduce(
+    (sum, s) => sum + Math.round(s.cost * 100),
+    0
+  );
+  return cents / 100;
+}
+
+/**
  * Flatten sources → { id: cost } map, threaded to calcAll → calcProcess via
  * options.layoutToolCosts.
  * @param {Array<{id:string,cost:number}>} sources

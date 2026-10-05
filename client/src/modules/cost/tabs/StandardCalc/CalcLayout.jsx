@@ -46,6 +46,7 @@ import {
   plateFieldPatch,
 } from '../../../../services/plateCost';
 import { computeCutterCost, effCavity } from '../../../../services/cutterCost';
+import { layoutToolsTotal } from '../../../../services/layoutToolCost';
 import FileUploadZone from '../../../../components/Shared/FileUploadZone';
 import DecimalInput from '../../../../utils/DecimalInput';
 import DesignSyncPicker from './DesignSyncPicker';
@@ -741,6 +742,49 @@ export function PrintCutLayout({
   );
 }
 
+// ── Tool summary table (Print + Cutting design) ─────────────────
+// One beside each block — Print type / Plate cost by the plates, Cutter type /
+// Cutter cost by the cutters — both ending in the same Total tools cost: every
+// plate and cutter the Layout prices, from layoutToolsTotal (2026-10-05).
+const TOOLS_TOTAL_TIP =
+  'Tổng giá các tool trên Layout: Plate 1~4 (bản in) + Cutter 1~4 (dao cắt), mỗi tool tính ' +
+  'một lần theo giá của nó. Tool gõ tay ở dòng process không tính ở đây.';
+
+function ToolSummaryTable({ typeLabel, costLabel, rows, total }) {
+  return (
+    <table className="sc-cutter-summary">
+      <thead>
+        <tr>
+          <th>{typeLabel}</th>
+          <th>{costLabel}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.length === 0 ? (
+          <tr>
+            <td className="sc-cutter-summary-empty" colSpan={2}>
+              —
+            </td>
+          </tr>
+        ) : (
+          rows.map((r, i) => (
+            <tr key={i}>
+              <td>{r.type}</td>
+              <td>{r.cost || '—'}</td>
+            </tr>
+          ))
+        )}
+      </tbody>
+      <tfoot>
+        <tr className="sc-cutter-summary-total" title={TOOLS_TOTAL_TIP}>
+          <th>Total tools cost</th>
+          <td>{total > 0 ? total.toFixed(2) : '—'}</td>
+        </tr>
+      </tfoot>
+    </table>
+  );
+}
+
 // ── Print sub-tab: image net + bleed + plate cylinder ──────────
 
 function PrintSubTab({ state, onField }) {
@@ -751,6 +795,20 @@ function PrintSubTab({ state, onField }) {
   // prices a process row assigned to it (layoutToolCost.js).
   const filmCostDefault = getPlateFilmCost(lib); // Letter-press film-per-color suggestion
   const setPlate = (i, field, v) => onField(...plateFieldPatch(state, i, field, v));
+  // Summary rows — one per plate with a Print type, its cost as the Plate cost
+  // cell shows it — and the Total tools cost under them.
+  const platePairs = [];
+  for (let i = 0; i < PLATE_COUNT; i++) {
+    const p = plateAt(state, i);
+    const type = String(p.print_type ?? '').trim();
+    if (!type) continue;
+    const pc = plateCostAt(state, i, lib);
+    platePairs.push({
+      type,
+      cost: pc.overridden ? String(p.plate_cost) : pc.auto > 0 ? pc.auto.toFixed(2) : '',
+    });
+  }
+  const toolsTotal = layoutToolsTotal(state, lib);
 
   const platePitch = state.plate_tooth
     ? (state.plate_tooth * (state.tooth_pitch_mm || 3.175)).toFixed(2)
@@ -791,87 +849,97 @@ function PrintSubTab({ state, onField }) {
           Henry confirms they're the same quantity, bind it to state.color_count
           to avoid double-entry. */}
       <div className="sc-print-cost-row">
-        {Array.from({ length: PLATE_COUNT }).map((_, i) => {
-          const p = plateAt(state, i);
-          const pc = plateCostAt(state, i, lib);
-          const isLetterPress = normPrintType(p.print_type) === normPrintType('Letter Press');
-          return (
-            <div key={i} className="sc-grid4 sc-print-plate">
-              <div className="sc-field" title={PL_PRINT_TYPE_GROUPS}>
-                <label>Print type {i + 1}</label>
-                <select
-                  className="sc-input"
-                  value={p.print_type || ''}
-                  onChange={(e) => setPlate(i, 'print_type', e.target.value)}
-                >
-                  <option value="">— Select —</option>
-                  {PL_PRINT_TYPES.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div
-                className="sc-field"
-                title="Số màu in của bản in này. Tách biệt với Color Count ở trên (NOTE-B) trừ khi được xác nhận trùng."
-              >
-                <label># No of colors {i + 1}</label>
-                <DecimalInput
-                  value={p.num_colors}
-                  onChange={(v) => setPlate(i, 'num_colors', v)}
-                  className="sc-input"
-                  placeholder="e.g. 4"
-                />
-              </div>
-              <div
-                className="sc-field"
-                title="Film / letterpress plate film cost (USD mỗi màu). Chỉ dùng cho Letter Press; gợi ý = Film cost trong bảng Plate Base Cost."
-              >
-                <label>Film LP cost {i + 1} $</label>
-                <DecimalInput
-                  value={p.film_lp_cost}
-                  onChange={(v) => setPlate(i, 'film_lp_cost', v)}
-                  className="sc-input"
-                  placeholder={isLetterPress && filmCostDefault ? String(filmCostDefault) : '0'}
-                />
-              </div>
-              <div
-                className="sc-field"
-                title="Plate cost — tự tính: PB×((W+40)/1000)×((L+40)/1000)×#colors +C×FilmLP (Letter Press) / +7.5 (Flexo) / PB×#colors (Silk screen); PB = bảng Plate Base Cost theo Print type. Mặc định sync, sửa đè được; ↻ để về tự động."
-              >
-                <label>Plate cost {i + 1} $</label>
-                <div className="sc-cutter-cost-input">
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    className={`sc-input${pc.overridden ? ' sc-cutter-cost-ovr' : ''}`}
-                    value={
-                      pc.overridden
-                        ? String(p.plate_cost)
-                        : pc.auto == null
-                          ? ''
-                          : pc.auto.toFixed(2)
-                    }
-                    placeholder="—"
-                    onChange={(e) => setPlate(i, 'plate_cost', e.target.value)}
-                  />
-                  {pc.overridden && (
-                    <button
-                      type="button"
-                      className="sc-cutter-cost-reset"
-                      title="Reset về tự động"
-                      aria-label="Reset về tự động"
-                      onClick={() => setPlate(i, 'plate_cost', '')}
+        <div className="sc-cutter-block">
+          <div className="sc-print-plates">
+            {Array.from({ length: PLATE_COUNT }).map((_, i) => {
+              const p = plateAt(state, i);
+              const pc = plateCostAt(state, i, lib);
+              const isLetterPress = normPrintType(p.print_type) === normPrintType('Letter Press');
+              return (
+                <div key={i} className="sc-grid4 sc-print-plate">
+                  <div className="sc-field" title={PL_PRINT_TYPE_GROUPS}>
+                    <label>Print type {i + 1}</label>
+                    <select
+                      className="sc-input"
+                      value={p.print_type || ''}
+                      onChange={(e) => setPlate(i, 'print_type', e.target.value)}
                     >
-                      ↻
-                    </button>
-                  )}
+                      <option value="">— Select —</option>
+                      {PL_PRINT_TYPES.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div
+                    className="sc-field"
+                    title="Số màu in của bản in này. Tách biệt với Color Count ở trên (NOTE-B) trừ khi được xác nhận trùng."
+                  >
+                    <label># No of colors {i + 1}</label>
+                    <DecimalInput
+                      value={p.num_colors}
+                      onChange={(v) => setPlate(i, 'num_colors', v)}
+                      className="sc-input"
+                      placeholder="e.g. 4"
+                    />
+                  </div>
+                  <div
+                    className="sc-field"
+                    title="Film / letterpress plate film cost (USD mỗi màu). Chỉ dùng cho Letter Press; gợi ý = Film cost trong bảng Plate Base Cost."
+                  >
+                    <label>Film LP cost {i + 1} $</label>
+                    <DecimalInput
+                      value={p.film_lp_cost}
+                      onChange={(v) => setPlate(i, 'film_lp_cost', v)}
+                      className="sc-input"
+                      placeholder={isLetterPress && filmCostDefault ? String(filmCostDefault) : '0'}
+                    />
+                  </div>
+                  <div
+                    className="sc-field"
+                    title="Plate cost — tự tính: PB×((W+40)/1000)×((L+40)/1000)×#colors +C×FilmLP (Letter Press) / +7.5 (Flexo) / PB×#colors (Silk screen); PB = bảng Plate Base Cost theo Print type. Mặc định sync, sửa đè được; ↻ để về tự động."
+                  >
+                    <label>Plate cost {i + 1} $</label>
+                    <div className="sc-cutter-cost-input">
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        className={`sc-input${pc.overridden ? ' sc-cutter-cost-ovr' : ''}`}
+                        value={
+                          pc.overridden
+                            ? String(p.plate_cost)
+                            : pc.auto == null
+                              ? ''
+                              : pc.auto.toFixed(2)
+                        }
+                        placeholder="—"
+                        onChange={(e) => setPlate(i, 'plate_cost', e.target.value)}
+                      />
+                      {pc.overridden && (
+                        <button
+                          type="button"
+                          className="sc-cutter-cost-reset"
+                          title="Reset về tự động"
+                          aria-label="Reset về tự động"
+                          onClick={() => setPlate(i, 'plate_cost', '')}
+                        >
+                          ↻
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+          <ToolSummaryTable
+            typeLabel="Print type"
+            costLabel="Plate cost $"
+            rows={platePairs}
+            total={toolsTotal}
+          />
+        </div>
       </div>
       <PrintCutSizeMismatch state={state} onField={onField} />
       <div className="sc-grid4">
@@ -1155,6 +1223,7 @@ function CutSubTab({ state, onField, showCutterCost = false }) {
     const t = String(state.cutter_types?.[i] ?? '').trim();
     if (t) cutterPairs.push({ type: t, cost: cutterCostAt(i).value });
   }
+  const toolsTotal = layoutToolsTotal(state, lib);
 
   return (
     <div className="cl-pc-body">
@@ -1255,30 +1324,12 @@ function CutSubTab({ state, onField, showCutterCost = false }) {
                 </Fragment>
               ))}
             </div>
-            <table className="sc-cutter-summary">
-              <thead>
-                <tr>
-                  <th>Cutter type</th>
-                  <th>Cutter cost $</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cutterPairs.length === 0 ? (
-                  <tr>
-                    <td className="sc-cutter-summary-empty" colSpan={2}>
-                      —
-                    </td>
-                  </tr>
-                ) : (
-                  cutterPairs.map((p, i) => (
-                    <tr key={i}>
-                      <td>{p.type}</td>
-                      <td>{p.cost || '—'}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <ToolSummaryTable
+              typeLabel="Cutter type"
+              costLabel="Cutter cost $"
+              rows={cutterPairs}
+              total={toolsTotal}
+            />
           </div>
         </div>
       )}
