@@ -11,6 +11,7 @@ import {
   calcMat,
   calcPitch,
   calcLayoutPerSheet,
+  calcMatScrapFactor,
   getActiveTierState,
 } from '../../../../services/calcEngine';
 import { useI18n } from '../../../../utils/useI18n';
@@ -93,15 +94,11 @@ export default function CalcMaterials() {
     }
   }, [parts_web_across, parts_in_md, num_webs]);
 
-  // Scrap% display = Σ(process scrap_pct). Display-only metric; the
-  // underlying cost math still uses calcMatScrapFactor (compound yield)
-  // via calcMat.
-  const scrapDisplay = useMemo(() => {
-    return (st.processes || []).reduce((acc, p) => {
-      if (!p.workcenter || p.hidden) return acc;
-      return acc + (p.scrap_pct || 0);
-    }, 0);
-  }, [st.processes]);
+  // Scrap% shows the factor the engine prices with: calcMatScrapFactor over
+  // the active tier's processes, 1 − ∏(1 − scrap). It used to add scrap_pct
+  // up over the base tier, which overstated it on every quote with more than
+  // one scrap step (RFQ-2026-S0049: 50.0% shown, 41.0% priced; 2026-10-02).
+  const scrapFactor = useMemo(() => calcMatScrapFactor(tierSt), [tierSt]);
 
   const results = useMemo(() => {
     if (!lib) return [];
@@ -690,7 +687,7 @@ export default function CalcMaterials() {
                               : '\u2014'}
                           </td>
                           <td className="sc-td-derived" style={{ color: '#059669' }}>
-                            {r ? (scrapDisplay * 100).toFixed(1) + '%' : '\u2014'}
+                            {r ? (scrapFactor * 100).toFixed(1) + '%' : '\u2014'}
                           </td>
                           <td className="sc-td-result">{r ? fmtN(r.setup_s) : '\u2014'}</td>
                           <td className="sc-td-result">{r ? fmtN(r.run_s) : '\u2014'}</td>

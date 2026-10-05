@@ -22,6 +22,8 @@ import {
   calcPitch,
   calcLayoutPerSheet,
   calcPcsPerRoll,
+  calcMatScrapFactor,
+  applyCplxTierToSp,
 } from '../../../../services/calcEngine';
 import {
   setSpField,
@@ -389,15 +391,14 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
   const layoutSources = useMemo(() => (lib ? layoutToolCostSources(sp, lib) : []), [sp, lib]);
   const layoutToolCosts = useMemo(() => buildLayoutToolCosts(layoutSources), [layoutSources]);
 
-  // Scrap% display = Σ(process scrap_pct) — mirrors Standard CalcMaterials /
-  // CalcInks. Display-only metric; underlying cost math still uses
-  // calcMatScrapFactor via calcAll.
-  const scrapDisplay = useMemo(() => {
-    return (sp.processes || []).reduce((acc, p) => {
-      if (!p.workcenter || p.hidden) return acc;
-      return acc + (p.scrap_pct || 0);
-    }, 0);
-  }, [sp.processes]);
+  // Scrap% shows the factor the engine prices this sub-product with:
+  // calcMatScrapFactor of the same tiered sub-product aggregateComplex builds,
+  // 1 − ∏(1 − scrap) — as Standard CalcMaterials / CalcInks do. It used to add
+  // scrap_pct up, which overstated it whenever several steps scrap (2026-10-02).
+  const scrapFactor = useMemo(
+    () => calcMatScrapFactor(applyCplxTierToSp(cplxState, sp, spi, activeMoqIdxCpx)),
+    [cplxState, sp, spi, activeMoqIdxCpx]
+  );
 
   // Live totals for the Materials / Inks / Processes card headers — match
   // the Setup/Run/Total and Mach/Labor/Tool/Total breakdowns in Standard.
@@ -1104,7 +1105,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                               : '\u2014'}
                           </td>
                           <td className="sc-td-derived" style={{ color: '#059669' }}>
-                            {r ? (scrapDisplay * 100).toFixed(1) + '%' : '\u2014'}
+                            {r ? (scrapFactor * 100).toFixed(1) + '%' : '\u2014'}
                           </td>
                           <td className="sc-td-result">{fmtN(r?.setup_s)}</td>
                           <td className="sc-td-result">{fmtN(r?.run_s)}</td>
@@ -1356,7 +1357,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                         </select>
                       </td>
                       <td className="sc-td-derived" style={{ color: '#059669' }}>
-                        {(scrapDisplay * 100).toFixed(1) + '%'}
+                        {(scrapFactor * 100).toFixed(1) + '%'}
                       </td>
                       <td>
                         <DecimalInput
