@@ -744,11 +744,11 @@ export function PrintCutLayout({
 
 // ── Tool summary table (Print + Cutting design) ─────────────────
 // One beside each block — Print type / Plate cost by the plates, Cutter type /
-// Cutter cost by the cutters — both ending in the same Total tools cost: every
-// plate and cutter the Layout prices, from layoutToolsTotal (2026-10-05).
+// Cutter cost by the cutters — each ending in a Total tools cost of its own
+// side, from layoutToolsTotal (2026-10-05).
 const TOOLS_TOTAL_TIP =
-  'Tổng giá các tool trên Layout: Plate 1~4 (bản in) + Cutter 1~4 (dao cắt), mỗi tool tính ' +
-  'một lần theo giá của nó. Tool gõ tay ở dòng process không tính ở đây.';
+  'Tổng giá các tool trong bảng này, mỗi tool tính một lần theo giá của nó. ' +
+  'Tool gõ tay ở dòng process không tính ở đây.';
 
 function ToolSummaryTable({ typeLabel, costLabel, rows, total }) {
   return (
@@ -808,7 +808,7 @@ function PrintSubTab({ state, onField }) {
       cost: pc.overridden ? String(p.plate_cost) : pc.auto > 0 ? pc.auto.toFixed(2) : '',
     });
   }
-  const toolsTotal = layoutToolsTotal(state, lib);
+  const toolsTotal = layoutToolsTotal(state, lib, 'plate');
 
   const platePitch = state.plate_tooth
     ? (state.plate_tooth * (state.tooth_pitch_mm || 3.175)).toFixed(2)
@@ -1223,7 +1223,7 @@ function CutSubTab({ state, onField, showCutterCost = false }) {
     const t = String(state.cutter_types?.[i] ?? '').trim();
     if (t) cutterPairs.push({ type: t, cost: cutterCostAt(i).value });
   }
-  const toolsTotal = layoutToolsTotal(state, lib);
+  const toolsTotal = layoutToolsTotal(state, lib, 'cutter');
 
   return (
     <div className="cl-pc-body">
