@@ -56,7 +56,8 @@ test('sources include Plate with correct label + cost matching computePlateCost'
   const plate = srcs.find((x) => x.id === 'plate');
   assert.ok(plate, 'plate source present');
   assert.equal(plate.kind, 'plate');
-  assert.equal(plate.label, 'Plate · Letter Press');
+  // Numbered like the cutters since Prints 2-4 exist; the saved id stays 'plate'.
+  assert.equal(plate.label, 'Plate 1 · Letter Press');
   const expected = computePlateCost(
     { pt: 'Letter Press', colors: 2, webW: 200, sheetL: 300, filmLp: 5 },
     { plateBase: getPlateBaseCost(lib, 'Letter Press') }
@@ -73,6 +74,66 @@ test('Plate excluded when print type missing (cost null → not > 0)', () => {
   assert.equal(
     srcs.find((x) => x.id === 'plate'),
     undefined
+  );
+});
+
+// ── layoutToolCostSources — Print 1–4 (2026-10-05) ───────────────────────────
+
+test('Prints 2-4 add plate sources beside Print 1, numbered like the cutters', () => {
+  const s = stdState();
+  s.pl_plates = [
+    { print_type: 'Silk screen', num_colors: 3 },
+    {},
+    { print_type: 'Flexo', num_colors: 1 },
+  ];
+  const plates = layoutToolCostSources(s, lib).filter((x) => x.kind === 'plate');
+  assert.deepEqual(
+    plates.map((p) => [p.id, p.label]),
+    [
+      ['plate', 'Plate 1 · Letter Press'],
+      ['plate-1', 'Plate 2 · Silk screen'],
+      ['plate-3', 'Plate 4 · Flexo'],
+    ]
+  );
+  assert.equal(plates[1].cost, 330, 'Silk screen: base 110 × 3 colors');
+  // Flexo: 340 × (240/1000) × (340/1000) × 1 + 7.5 = 35.244
+  assert.ok(Math.abs(plates[2].cost - 35.244) < 1e-9, `flexo ${plates[2].cost}`);
+});
+
+test('an override sets a plate cost, also for a type the formula cannot price', () => {
+  const s = stdState();
+  s.pl_plate_cost = '40';
+  s.pl_plates = [{ print_type: 'Indigo6800', num_colors: 4 }];
+  const ids = () =>
+    layoutToolCostSources(s, lib)
+      .filter((x) => x.kind === 'plate')
+      .map((p) => [p.id, p.cost]);
+  assert.deepEqual(ids(), [['plate', 40]], 'Indigo has no plate formula, so no source yet');
+  s.pl_plates[0].plate_cost = '15';
+  assert.deepEqual(ids(), [
+    ['plate', 40],
+    ['plate-1', 15],
+  ]);
+});
+
+test('a quote saved before Prints 2-4 existed yields exactly the plate source it had', () => {
+  const plates = layoutToolCostSources(stdState(), lib).filter((x) => x.kind === 'plate');
+  assert.equal(plates.length, 1);
+  assert.equal(plates[0].id, 'plate');
+  assert.ok(Math.abs(plates[0].cost - 23.056) < 1e-9, `plate ${plates[0].cost}`);
+});
+
+test('a Complex sub-product offers its own plates 1-4 and no cutters', () => {
+  const sp = {
+    pl_print_type: 'Flexo',
+    pl_num_colors: 1,
+    web_width_td: 200,
+    sheet_length: 300,
+    pl_plates: [{ print_type: 'Silk screen', num_colors: 2 }],
+  };
+  assert.deepEqual(
+    layoutToolCostSources(sp, lib).map((x) => x.id),
+    ['plate', 'plate-1']
   );
 });
 
@@ -143,7 +204,7 @@ test('Cpx sub-product (no cutter arrays) yields Plate only', () => {
   const srcs = layoutToolCostSources(sp, lib);
   assert.equal(srcs.length, 1);
   assert.equal(srcs[0].id, 'plate');
-  assert.equal(srcs[0].label, 'Plate · Flexo');
+  assert.equal(srcs[0].label, 'Plate 1 · Flexo');
 });
 
 // ── buildLayoutToolCosts ─────────────────────────────────────────────────────
