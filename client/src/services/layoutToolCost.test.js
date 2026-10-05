@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   layoutToolCostSources,
+  layoutToolsTotal,
   buildLayoutToolCosts,
   effectiveToolCost,
   availableToolCostSources,
@@ -208,6 +209,60 @@ test('Cpx sub-product (no cutter arrays) yields Plate only', () => {
 });
 
 // ── buildLayoutToolCosts ─────────────────────────────────────────────────────
+
+// ── layoutToolsTotal — Total tools cost per side (2026-10-05) ───────────────
+// The last row of each Layout summary table totals that table's own tools —
+// the plates on the Print side, the cutters on the Cut side — each counted once
+// at its price in cents, the figure each row shows, so a total equals the rows
+// above it.
+
+test('each side totals its own tools: the plates on Print, the cutters on Cut', () => {
+  // Plate 1 Letter Press 23.056 shows as 23.06; Cutter 1 Knife/Wood 36.40.
+  assert.equal(layoutToolsTotal(stdState(), lib, 'plate'), 23.06);
+  assert.equal(layoutToolsTotal(stdState(), lib, 'cutter'), 36.4);
+});
+
+test('Total tools cost adds each tool as its row shows it, in cents', () => {
+  const s = stdState();
+  s.pl_plates = [{ print_type: 'Letter Press', num_colors: 2, film_lp_cost: 5 }];
+  // Two plates of 23.056 show as 23.06 each: 23.06 + 23.06 = 46.12, where
+  // rounding the raw sum (46.112) would read a cent short of the rows.
+  assert.equal(layoutToolsTotal(s, lib, 'plate'), 46.12);
+});
+
+test('Total tools cost counts overrides and Prints 2-4', () => {
+  const s = stdState();
+  s.pl_plates = [{ print_type: 'Silk screen', num_colors: 3 }];
+  s.cutter_costs = ['25', '', '', ''];
+  assert.equal(layoutToolsTotal(s, lib, 'plate'), 353.06, '23.06 + 330');
+  assert.equal(layoutToolsTotal(s, lib, 'cutter'), 25);
+});
+
+test('a tool with no cost adds nothing to Total tools cost', () => {
+  const s = stdState();
+  s.pl_plates = [{ print_type: 'Indigo6800', num_colors: 4 }];
+  s.cutter_types = ['Knife/Wood', 'Knife/Wood', '', ''];
+  s.cutter_cavities = ['2', '', '', ''];
+  s.part_width = 0; // no geometry: the computed cutters have no cost yet
+  s.print_part_width = 0;
+  assert.equal(layoutToolsTotal(s, lib, 'plate'), 23.06);
+  assert.equal(layoutToolsTotal(s, lib, 'cutter'), 0);
+});
+
+test('a Complex sub-product totals its plates, having no cutters', () => {
+  const sp = {
+    pl_print_type: 'Silk screen',
+    pl_num_colors: 2,
+    pl_plates: [{ print_type: 'Silk screen', num_colors: 1 }],
+  };
+  assert.equal(layoutToolsTotal(sp, lib, 'plate'), 330);
+  assert.equal(layoutToolsTotal(sp, lib, 'cutter'), 0);
+});
+
+test('Total tools cost is 0 when the Layout prices no tool', () => {
+  assert.equal(layoutToolsTotal({}, lib, 'plate'), 0);
+  assert.equal(layoutToolsTotal(undefined, lib, 'cutter'), 0);
+});
 
 test('buildLayoutToolCosts flattens to id→cost map', () => {
   const map = buildLayoutToolCosts([
