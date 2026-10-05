@@ -12,6 +12,24 @@ import { exportCell, getDataset } from './importDatasets.js';
 
 const NPI = getDataset('npi-materials');
 
+test('NPI exports EXW right before the DAP price, each under its own label', () => {
+  const i = NPI.canonicalHeaders.indexOf('exw');
+  assert.ok(i >= 0, 'NPI declares an exw column');
+  assert.equal(
+    NPI.canonicalHeaders[i + 1],
+    'price',
+    'EXW sits right before DAP, as supplier sheets do'
+  );
+  assert.equal(NPI.prettyLabels.exw, 'EXW Price (/m²)');
+  assert.equal(
+    NPI.prettyLabels.price,
+    'DAP Price (/m²)',
+    'the export names the price the app costs with'
+  );
+  assert.equal(NPI.columnTypes.exw, 'number');
+  assert.equal(exportCell(NPI, { name: 'PS Black Normal t0.4', exw: 2.3, price: 2.8 }, 'exw'), 2.3);
+});
+
 test('NPI declares Currency, positioned right after Price as on screen', () => {
   const i = NPI.canonicalHeaders.indexOf('currency');
   assert.ok(i > 0, 'currency is a canonical column');

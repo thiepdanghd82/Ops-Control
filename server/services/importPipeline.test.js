@@ -319,6 +319,74 @@ test('mapHeaders: both the old and new price labels map to price', () => {
   assert.equal(mapHeaders(['Price (/m²)'], NPI).mapping.price, 0);
 });
 
+// A supplier sheet quotes EXW and DAP side by side. NPI had no EXW column, so
+// the tolerant matcher handed "EXW price (m2)" to `price` — which the app shows
+// and costs as the DAP price — and dropped "DAP Price (m2)" (2026-10-05, the
+// Grandupward PS rows imported 2026-10-03: DAP stored 2.3, the EXW figure).
+const SUPPLIER_EXW_DAP_HEADERS = [
+  'Update Date',
+  'Supplier',
+  'Material Name',
+  'Type / Description',
+  'Thickness',
+  'Color',
+  'Surface',
+  'Adhesive',
+  'Currency',
+  'EXW price (m2)',
+  'DAP Price (m2)',
+  'MOQ (m2)',
+  'Lead time (days)',
+  'Notes / Remarks',
+];
+
+test('mapHeaders: a sheet with EXW and DAP columns maps each to its own field', () => {
+  const r = mapHeaders(SUPPLIER_EXW_DAP_HEADERS, NPI);
+  assert.equal(r.mapping.exw, SUPPLIER_EXW_DAP_HEADERS.indexOf('EXW price (m2)'));
+  assert.equal(r.mapping.price, SUPPLIER_EXW_DAP_HEADERS.indexOf('DAP Price (m2)'));
+  assert.deepEqual(r.unmapped, [], 'no column dropped');
+});
+
+test('importing that sheet stores EXW in exw and DAP in price, the field the app costs with', () => {
+  const rows = [
+    ['02.10.2026', 'Grandupward', 'PS Black Normal t0.4', 'Black PS', 0.4, 'Black', '', 'Nil'],
+    ['02.10.2026', 'Grandupward', 'PS White Normal t0.4', 'White PS', 0.4, 'White', '', 'Nil'],
+  ].map((head, i) => [...head, 'USD', 2.3, [2.8, 2.9][i], 1000, 35, '']);
+  const out = buildCanonical({
+    headers: SUPPLIER_EXW_DAP_HEADERS,
+    rows,
+    dataset: NPI,
+    headerMapping: mapHeaders(SUPPLIER_EXW_DAP_HEADERS, NPI),
+  });
+  const at = (r, k) => r[out.headers.indexOf(k)];
+  assert.deepEqual(
+    out.rows.map((r) => [at(r, 'name'), at(r, 'exw'), at(r, 'price')]),
+    [
+      ['PS Black Normal t0.4', 2.3, 2.8],
+      ['PS White Normal t0.4', 2.3, 2.9],
+    ]
+  );
+});
+
+test('mapHeaders: an EXW column alone never lands in the DAP price', () => {
+  const r = mapHeaders(['EXW price (m2)'], NPI);
+  assert.equal(r.mapping.exw, 0);
+  assert.equal('price' in r.mapping, false);
+});
+
+test('mapHeaders: DAP labels map to price, and the older price labels still do', () => {
+  for (const h of [
+    'DAP Price (/m²)',
+    'DAP Price (m2)',
+    'DAP',
+    'Price (/m²)',
+    'Price (USD/m²)',
+    'Price',
+  ]) {
+    assert.equal(mapHeaders([h], NPI).mapping.price, 0, `"${h}" must map to price`);
+  }
+});
+
 test('mapHeaders: the 5 previously-dropped NPI columns now map', () => {
   assert.equal(mapHeaders(['USD / M² PRICE'], NPI).mapping.price, 0);
   assert.equal(mapHeaders(['MM THICKNESS'], NPI).mapping.thick, 0);

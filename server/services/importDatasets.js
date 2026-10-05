@@ -431,6 +431,7 @@ const NPI_DATASET = {
   canonicalHeaders: [
     'date',
     'name',
+    'exw',
     'price',
     'currency',
     'type',
@@ -447,10 +448,14 @@ const NPI_DATASET = {
   prettyLabels: {
     date: 'Date',
     name: 'Material Name',
-    // The price column stopped asserting USD when the currency column landed
-    // (PR #343), so the export header drops it too. Files exported under the
-    // old `Price (USD/m²)` label still import — that alias is kept below.
-    price: 'Price (/m²)',
+    // `price` is the DAP price: the edit card labels it so and the calculators
+    // cost with it. Supplier sheets quote EXW beside it, and with no EXW column
+    // the tolerant matcher handed "EXW price (m2)" to `price` and dropped the
+    // DAP column (2026-10-05). EXW now has its own column, and the export names
+    // both. Files exported under the older `Price (USD/m²)` and `Price (/m²)`
+    // labels still import — those aliases are kept below.
+    exw: 'EXW Price (/m²)',
+    price: 'DAP Price (/m²)',
     currency: 'Currency',
     type: 'Type / Description',
     thick: 'Thickness (mm)',
@@ -465,6 +470,7 @@ const NPI_DATASET = {
   requiredHeaders: ['name'],
   naturalKey: ['name', 'supplier'],
   columnTypes: {
+    exw: 'number',
     price: 'number',
     currency: 'enum',
     thick: 'number',
@@ -487,7 +493,12 @@ const NPI_DATASET = {
   aliases: aliasMap({
     date: ['Date', 'Update Date', 'Updated', 'Ngày'],
     name: ['Material Name', 'Material', 'Name', 'Tên vật tư'],
+    exw: ['EXW', 'EXW Price', 'EXW Price (/m²)', 'Giá EXW'],
     price: [
+      'DAP',
+      'DAP Price',
+      'DAP Price (/m²)',
+      'Giá DAP',
       'Price',
       'USD/m²',
       'USD per m2',
