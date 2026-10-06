@@ -18,9 +18,11 @@
  * simple abuse. Replace with Redis/leaky-bucket when you go multi-instance.
  *
  * Phase 9E.1 hardening:
- *  1. `x-forwarded-for` only trusted when Express `trust proxy` is set
- *     (index.js does `app.set('trust proxy', 1)`). Prevents a direct
- *     client from spoofing any IP via the header to bypass per-IP counts.
+ *  1. `x-forwarded-for` only trusted from a proxy on this machine
+ *     (index.js sets `trust proxy` to loopback, utils/trustProxy.js). A
+ *     direct client cannot spoof its IP via the header to bypass per-IP
+ *     counts. (Until 2026-10-06 it was a hop count of 1, which trusted any
+ *     first hop — so a direct client could.)
  *  2. Env-configured max is validated: NaN / non-positive falls back to
  *     default, so `OPS_WRITE_RATE_MAX=abc` no longer silently disables
  *     the limiter (prior bug: Number('abc')=NaN, count > NaN = false).

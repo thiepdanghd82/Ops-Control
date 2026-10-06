@@ -8,6 +8,7 @@ import crypto from 'crypto';
 import dotenv from 'dotenv';
 import { describeEnvSources } from './utils/envSources.js';
 import { resolveUpdatesDir } from './utils/updatesDir.js';
+import { TRUST_PROXY } from './utils/trustProxy.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -90,13 +91,11 @@ if (process.env.NODE_ENV === 'production') {
   console.log('✅  production preflight passed: TOTP/KIOSK/HMAC keys set, CORS configured');
 }
 
-// Trust the first reverse-proxy hop (nginx, ALB, Cloudflare). Express
-// then populates req.ip from X-Forwarded-For when the hop is trusted,
-// and rateLimit.js reads req.ip rather than the raw header — stopping
-// direct-to-app clients from spoofing IPs to bypass per-IP counters.
-// If the deployment has more than one proxy hop, raise this count or
-// switch to an explicit subnet allowlist.
-app.set('trust proxy', 1);
+// Believe X-Forwarded-For only from a proxy on this machine (loopback) —
+// see utils/trustProxy.js. Clients that reach the app directly read as
+// their own socket address, so they cannot forge req.ip, which the audit
+// log and rateLimit.js's per-IP counters both use.
+app.set('trust proxy', TRUST_PROXY);
 
 // ─── Resolve DATA_DIR ───
 let DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
