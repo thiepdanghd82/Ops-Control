@@ -85,6 +85,13 @@ being called that.
   **tool-only row**: charged its tooling and nothing else — the die of an in-line
   print+cut press (Brotech, Gallus), whose machine time sits on the press row
   (S-TOOL-ONLY-ROW).
+- **Process Layout sync** — a Print or Die_Cut row's `layout` (cavities per repeat: it drives
+  machine UPH and tool wear) follows the Layout tab: the cutter its `tool_type` names
+  (Cutter cavities N, else Cut Total/Shot), else Print Total/Shot for a Print row
+  (`processLayoutSync.js`). The reducer writes the number into `layout` after every action,
+  so every reader still sees one plain number; `layout_ovr` marks a typed override (violet,
+  ↻), and a quote saved before 2026-10-06 opens with any differing number as an override
+  (S-PROCESS-LAYOUT-SYNC).
 - **Unknown workcenter** — a process row naming a workcenter the Rate Table no longer lists
   and the quote's own snapshot did not freeze. It reads rate 0: no overhead, and its speed
   is costed as hand labour. The grid marks it red and keeps the stored name visible, since a
