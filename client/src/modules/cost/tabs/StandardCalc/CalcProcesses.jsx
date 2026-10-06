@@ -22,6 +22,7 @@ import { layoutToolCostSources, buildLayoutToolCosts } from '../../../../service
 import { canMoveRow } from '../../lib/moveRow';
 import { unknownWorkcenter, toolLifeMissing } from '../../../../services/calcValidation';
 import ToolCostCell from '../../components/ToolCostCell';
+import ProcessLayoutCell from '../../components/ProcessLayoutCell';
 import '../../components/ToolCostCell.css';
 // ProcessBalancing is rendered as separate "Balancing" sub-tab
 
@@ -265,7 +266,7 @@ export default function CalcProcesses() {
                 >
                   {t('cgrid.proc.uom')}
                 </th>
-                <th style={{ width: 50 }}>{t('cgrid.proc.layout')}</th>
+                <th style={{ width: 64 }}>{t('cgrid.proc.layout')}</th>
                 <th style={{ width: 50 }}>{t('cgrid.proc.eff_pct')}</th>
                 <th style={{ width: 55 }}>{t('cgrid.proc.setup_h')}</th>
                 <th style={{ width: 50 }}>{t('cgrid.scrap_pct')}</th>
@@ -435,13 +436,12 @@ export default function CalcProcesses() {
                       {uom || '—'}
                     </td>
                     <td>
-                      <input
-                        type="number"
-                        min="0"
-                        value={proc.layout || ''}
-                        onChange={(e) => handleField(i, 'layout', e.target.value, true)}
-                        placeholder="—"
-                        className="sc-input-sm sc-input-num"
+                      <ProcessLayoutCell
+                        proc={proc}
+                        state={st}
+                        onChange={(v) => handleField(i, 'layout', v, true)}
+                        onReset={() => setProcessField(i, 'layout_ovr', false)}
+                        inputClassName="sc-input-sm sc-input-num"
                         title={t('cgrid.proc.tip_layout')}
                       />
                     </td>

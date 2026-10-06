@@ -28,7 +28,7 @@
 import { PLATE_COUNT, plateAt, plateCostAt, plateSourceId } from './plateCost.js';
 import { computeCutterCost, effCavity } from './cutterCost.js';
 
-const CUTTER_PAIR_COUNT = 4;
+export const CUTTER_PAIR_COUNT = 4;
 
 const num = (v) => {
   const n = Number(v);
