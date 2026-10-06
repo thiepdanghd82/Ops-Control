@@ -382,3 +382,27 @@ test('P95_ALERT_MS is exported and sane (> warn)', () => {
   // threshold relationship silently.
   assert.ok(P95_ALERT_MS > 500, 'alert threshold must exceed 500 ms');
 });
+
+test('histogramSummary: p95 in the +Inf bucket is a finite number, not NaN', () => {
+  // Regression: Number('+Inf') is NaN, so a route whose p95 landed past the
+  // largest finite bucket made the whole latency chart render NaN attributes.
+  const rows = [
+    { name: 'lat_count', labels: { method: 'GET', route: '/slow' }, value: 10 },
+    { name: 'lat_bucket', labels: { method: 'GET', route: '/slow', le: '5000' }, value: 2 },
+    { name: 'lat_bucket', labels: { method: 'GET', route: '/slow', le: '10000' }, value: 3 },
+    { name: 'lat_bucket', labels: { method: 'GET', route: '/slow', le: '+Inf' }, value: 10 },
+  ];
+  const [s] = histogramSummary(rows, 'lat');
+  assert.equal(s.p95, 10000, 'reported as the largest finite bound (a lower bound)');
+  assert.equal(s.p50, 10000);
+  assert.ok(s.buckets.every((b) => !Number.isNaN(b.le)));
+});
+
+test('histogramSummary: only a +Inf bucket yields null, not NaN', () => {
+  const rows = [
+    { name: 'lat_count', labels: { method: 'GET', route: '/x' }, value: 4 },
+    { name: 'lat_bucket', labels: { method: 'GET', route: '/x', le: '+Inf' }, value: 4 },
+  ];
+  const [s] = histogramSummary(rows, 'lat');
+  assert.equal(s.p95, null);
+});

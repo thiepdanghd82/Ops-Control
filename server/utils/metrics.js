@@ -98,7 +98,8 @@ export function renderPrometheus() {
   for (const key of HISTOGRAMS.keys()) histNames.add(key.split('|', 1)[0]);
   for (const name of histNames) {
     lines.push(`# TYPE ${name} histogram`);
-    for (const [, h] of HISTOGRAMS) {
+    for (const [key, h] of HISTOGRAMS) {
+      if (key.split('|', 1)[0] !== name) continue;
       for (let i = 0; i < LATENCY_BUCKETS_MS.length; i++) {
         const lbl = { ...h.labels, le: String(LATENCY_BUCKETS_MS[i]) };
         lines.push(`${name}_bucket${formatLabels(lbl)} ${h.buckets[i]}`);
