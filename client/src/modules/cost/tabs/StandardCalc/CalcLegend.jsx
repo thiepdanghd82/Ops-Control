@@ -2227,8 +2227,8 @@ g_mat_cost = Σ(setup_g + run_g) [materials]  +  Σ(setup_s + run_s) [inks]`}
                 {
                   value: (
                     <BiRow
-                      en="Cavities/stroke for this process (usually = global Layout)"
-                      vi="Số cavity/chu kỳ cho công đoạn này (thường = Layout chung)"
+                      en="Cavities/stroke for this process. A Print row follows Print Total/Shot on the Layout tab; a Print or Die_Cut row whose Tool Type names a Layout cutter follows that cutter's cavities. Typed over = violet, ↻ to follow again"
+                      vi="Số cavity/chu kỳ cho công đoạn này. Dòng Print theo Print Total/Shot ở tab Layout; dòng Print hoặc Die_Cut có Tool Type trùng một Cutter ở tab Layout theo số cavity của cutter đó. Gõ đè = màu tím, bấm ↻ để theo lại"
                     />
                   ),
                 },

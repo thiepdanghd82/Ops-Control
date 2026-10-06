@@ -1489,6 +1489,23 @@ registerStrings({
     en: 'Layout/batch count — required for machine workcenters (see Rate Table Machine USD/H)',
     vi: 'Số layout/mẻ — bắt buộc với trạm máy (xem Machine USD/H ở bảng đơn giá)',
   },
+  // Layout follows the Layout tab (2026-10-06) — ProcessLayoutCell.
+  'cgrid.proc.layout_sync_print': {
+    en: 'Follows Print Total / Shot on the Layout tab ({n}). Type another number to override it.',
+    vi: 'Theo Print Total / Shot ở tab Layout ({n}). Gõ số khác để ghi đè.',
+  },
+  'cgrid.proc.layout_sync_cutter': {
+    en: 'Follows the cavities of Cutter {i} · {type} on the Layout tab ({n}). Type another number to override it.',
+    vi: 'Theo số cavity của Cutter {i} · {type} ở tab Layout ({n}). Gõ số khác để ghi đè.',
+  },
+  'cgrid.proc.layout_ovr': {
+    en: 'Typed over — the Layout tab gives {n}.',
+    vi: 'Đã gõ đè — tab Layout cho {n}.',
+  },
+  'cgrid.proc.layout_reset': {
+    en: 'Follow the Layout tab again ({n})',
+    vi: 'Theo lại tab Layout ({n})',
+  },
   'cgrid.proc.eff_pct': { en: 'Eff%', vi: 'Hiệu suất %' },
   'cgrid.proc.setup_h': { en: 'Setup H', vi: 'Giờ setup' },
   'cgrid.proc.mc_uph': { en: 'MC UPH', vi: 'UPH máy' },

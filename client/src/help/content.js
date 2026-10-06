@@ -5532,8 +5532,8 @@ export const HELP_CONTENT = {
             'Brotech và Gallus có thể in và cắt trong một lượt, nhưng plate và dao cắt có giá và tool life khác nhau, trong khi mỗi dòng công đoạn chỉ mang một khuôn. Dòng máy in: chọn workcenter của máy, và ở ô Tool Cost của dòng đó gán Plate từ Layout.'
           ),
           bs(
-            'Add a second row with NO workcenter for the die: assign the Cutter from Layout (or type its cost), and fill its Tool Type, Tool Life and layout. That row is charged its tooling only — no setup, no run, because the machine time is already on the press row.',
-            'Thêm một dòng thứ hai KHÔNG chọn workcenter cho dao cắt: gán Cutter từ Layout (hoặc nhập giá khuôn), điền Tool Type, Tool Life và layout của nó. Dòng này chỉ tính tiền khuôn — không có setup, không có run, vì thời gian máy đã nằm ở dòng máy in.'
+            "Add a second row with NO workcenter for the die: assign the Cutter from Layout (or type its cost), and fill its Tool Type and Tool Life; when the Tool Type is that cutter, its layout follows the cutter's cavities. That row is charged its tooling only — no setup, no run, because the machine time is already on the press row.",
+            'Thêm một dòng thứ hai KHÔNG chọn workcenter cho dao cắt: gán Cutter từ Layout (hoặc nhập giá khuôn), điền Tool Type và Tool Life; khi Tool Type là loại của cutter đó, layout tự theo số cavity của cutter. Dòng này chỉ tính tiền khuôn — không có setup, không có run, vì thời gian máy đã nằm ở dòng máy in.'
           ),
           bs(
             "Do not pick the press again on the second row: that bills the machine's setup and run a second time.",
@@ -5541,6 +5541,20 @@ export const HELP_CONTENT = {
           ),
         ]
       ),
+      proc('Layout follows the Layout tab', 'Layout theo tab Layout', null, [
+        bs(
+          "A Print row takes Print Total / Shot from the Print Design Layout. A Print or Die_Cut row whose Tool Type is one of the Cutter types on the Cutting Design Layout takes that cutter's cavities — its Cutter cavities cell, or Cut Total / Shot when the cell is blank. The number shows in blue and follows the Layout tab when it changes.",
+          'Dòng Print lấy Print Total / Shot ở Print Design Layout. Dòng Print hoặc Die_Cut có Tool Type trùng một Cutter type ở Cutting Design Layout lấy số cavity của cutter đó — ô Cutter cavities, hoặc Cut Total / Shot khi ô trống. Số hiện màu xanh và đổi theo khi tab Layout đổi.'
+        ),
+        bs(
+          'Typing another number overrides it: the cell turns violet and keeps that number. Click ↻ — or pick the Tool Type or Process Type again — to follow the Layout tab once more. Rows with no tool, or a tool no cutter has, are typed by hand as before.',
+          'Gõ số khác sẽ ghi đè: ô chuyển màu tím và giữ số đó. Bấm ↻ — hoặc chọn lại Tool Type hay Process Type — để theo lại tab Layout. Dòng không có tool, hoặc tool không có trong các cutter, vẫn gõ tay như trước.'
+        ),
+        bs(
+          'Quotes saved before this keep their numbers: a saved Layout that differs from the Layout tab opens as an override.',
+          'Báo giá lưu trước đó giữ nguyên số: Layout đã lưu khác số ở tab Layout sẽ mở ra ở dạng gõ đè.'
+        ),
+      ]),
       proc('Section deep dives', 'Tra cứu chi tiết từng section', null, [
         bs(
           'For deep field-by-field documentation of each section, see the Materials / Inks / Processes help entries via search — they retain the original detail content from when those were standalone tabs.',
@@ -5941,6 +5955,12 @@ export const HELP_CONTENT = {
         bs(
           'Per-SP alt-materials toggle (Maint.Mat ↔ Alternative.Mat) lives in each SP block — independent of other SPs.',
           'Toggle alt-materials per-SP (Maint.Mat ↔ Alternative.Mat) nằm trong mỗi block SP — độc lập với SP khác.'
+        ),
+      ]),
+      proc('Layout follows the sub-product Layout', 'Layout theo Layout của sub-product', null, [
+        bs(
+          "A Print row takes the sub-product's Print Total / Shot and follows it when the Layout block changes. Typing another number overrides it (violet); ↻ follows the Layout again. Sub-products have no Cutter types, so Die_Cut rows are typed by hand.",
+          'Dòng Print lấy Print Total / Shot của sub-product và đổi theo khi khối Layout đổi. Gõ số khác sẽ ghi đè (màu tím); bấm ↻ để theo lại Layout. Sub-product chưa có Cutter type nên dòng Die_Cut vẫn gõ tay.'
         ),
       ]),
       proc('Cross-SP per-tier overrides', 'Override cross-SP theo tier', null, [

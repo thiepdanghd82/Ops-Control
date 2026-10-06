@@ -47,6 +47,7 @@ import {
 } from '../../../../services/plateCost';
 import { computeCutterCost, effCavity } from '../../../../services/cutterCost';
 import { layoutToolsTotal } from '../../../../services/layoutToolCost';
+import { layoutPrintTotal } from '../../../../services/processLayoutSync';
 import FileUploadZone from '../../../../components/Shared/FileUploadZone';
 import DecimalInput from '../../../../utils/DecimalInput';
 import DesignSyncPicker from './DesignSyncPicker';
@@ -825,7 +826,7 @@ function PrintSubTab({ state, onField }) {
   // Print-side total (per print repeat) — used in the slit/no-slit hint
   // text below. The mismatch-vs-cut banner lives in PrintLayoutSummary,
   // so this component does not need to surface cutTotal itself.
-  const printTotal = printCavAcross * partsInMd;
+  const printTotal = layoutPrintTotal(state);
 
   return (
     <div className="cl-pc-body">
@@ -1588,7 +1589,7 @@ function CutSubTab({ state, onField, showCutterCost = false }) {
               ℹ Slit ON — sau slit mỗi lane chạy riêng 1 cutter:
               <span className="cl-pc-banner--md">
                 • <b>Print</b> 1 web × {printCavAcross} cav × {partsInMd} MD ={' '}
-                <b>{printCavAcross * partsInMd}</b> parts/print-repeat
+                <b>{layoutPrintTotal(state)}</b> parts/print-repeat
               </span>
               <span className="cl-pc-banner--md">
                 • <b>Slit</b> thành {slitCount} lane ({partsAcross} cav/lane × {partsInMd} MD ={' '}
@@ -1796,7 +1797,7 @@ export function PrintLayoutSummary({ state, pitch }) {
   const partsInMd = Math.max(1, Number(state.parts_in_md) || 1);
   const numWebs = Math.max(1, Number(state.num_webs) || 1);
   const printCavAcross = slit ? slitCount * partsAcross : numWebs * partsAcross;
-  const printTotal = printCavAcross * partsInMd;
+  const printTotal = layoutPrintTotal(state);
 
   // ── Bidirectional inference (Sprint 13d) ──────────────────────
   // Physical relationship:  plate_circ = pitch × parts_in_md

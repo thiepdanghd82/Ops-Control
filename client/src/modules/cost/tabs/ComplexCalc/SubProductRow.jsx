@@ -64,6 +64,7 @@ import '../StandardCalc/StandardCalc.css';
 import { crewOverrideState, isManualDerivedRow } from '../StandardCalc/processCrew.helpers';
 import { layoutToolCostSources, buildLayoutToolCosts } from '../../../../services/layoutToolCost';
 import ToolCostCell from '../../components/ToolCostCell';
+import ProcessLayoutCell from '../../components/ProcessLayoutCell';
 import '../../components/ToolCostCell.css';
 
 export default function SubProductRow({ sp, spi, result, allSps }) {
@@ -1444,7 +1445,7 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                   <th className="sc-col-derived" style={{ width: 65 }}>
                     UOM
                   </th>
-                  <th style={{ width: 50 }}>Layout</th>
+                  <th style={{ width: 64 }}>{t('cgrid.proc.layout')}</th>
                   <th style={{ width: 50 }}>Eff%</th>
                   <th className="sc-col-derived" style={{ width: 60 }}>
                     MC UPH
@@ -1664,13 +1665,12 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
                         {uom || '\u2014'}
                       </td>
                       <td>
-                        <input
-                          type="number"
-                          min="0"
-                          value={p.layout || ''}
-                          onChange={(e) => setProc(pi, 'layout', numF(e.target.value))}
-                          placeholder="—"
-                          className="cc-det-inp cc-det-num"
+                        <ProcessLayoutCell
+                          proc={p}
+                          state={sp}
+                          onChange={(v) => setProc(pi, 'layout', numF(v))}
+                          onReset={() => setProc(pi, 'layout_ovr', false)}
+                          inputClassName="cc-det-inp cc-det-num"
                           title={t('spr.tip_layout_count')}
                         />
                       </td>

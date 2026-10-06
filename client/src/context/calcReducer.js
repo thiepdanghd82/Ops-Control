@@ -21,6 +21,11 @@ import {
 import { upgradeCplxState } from '../services/cplxMigration.js';
 import { upgradeStdState } from '../services/stdMigration.js';
 import { applyPrintToCutSync } from '../services/layoutFieldSync.js';
+import {
+  healLayoutOverrides,
+  layoutOverrideFlag,
+  syncProcessLayouts,
+} from '../services/processLayoutSync.js';
 import { buildDrawingPatch, DRAWING_KINDS } from '../services/drawingFiles.js';
 import { resetProcessesScrap } from '../services/scrapDefaults.js';
 import { moveRowAmongVisible } from '../modules/cost/lib/moveRow.js';
@@ -310,7 +315,59 @@ function withSeededRate(st, seedUsdRate) {
   return { ...st, usd_rate: n };
 }
 
+// Each process row's Layout follows the Layout tab's cavity (Print Total/Shot,
+// or the cutter its tool type names) — services/processLayoutSync.js. The sync
+// runs after EVERY action, so a Layout tab edit moves the Processes grid while
+// that sub-tab is unmounted (Lesson 45), and no action can bypass it.
 export function calcReducer(state, action) {
+  return withProcessLayoutSync(state, reduceCalc(state, action), action);
+}
+
+function withProcessLayoutSync(prev, next, action) {
+  if (!next || next === prev) return next;
+  const { type, payload } = action || {};
+  const heal = type === A.LOAD_QUOTE;
+  let out = next;
+  if (next.stdState && next.stdState !== prev.stdState) {
+    const edit = type === A.SET_PROCESS_FIELD ? payload : null;
+    const st = syncLayoutSlice(next.stdState, heal, edit);
+    if (st !== next.stdState) out = { ...out, stdState: st };
+  }
+  const subs = next.cplxState?.subproducts;
+  if (next.cplxState !== prev.cplxState && Array.isArray(subs)) {
+    const synced = subs.map((sp, i) => {
+      const edit = type === A.SET_SP_PROCESS_FIELD && payload?.spIdx === i ? payload : null;
+      return sp ? syncLayoutSlice(sp, heal, edit) : sp;
+    });
+    if (synced.some((sp, i) => sp !== subs[i])) {
+      out = { ...out, cplxState: { ...next.cplxState, subproducts: synced } };
+    }
+  }
+  return out;
+}
+
+// One Std state or one Cpx subproduct: on opening a quote, a saved Layout
+// that differs from the Layout tab becomes an override (no saved price moves);
+// typing a Layout decides the override; a new tool or process type drops it.
+function syncLayoutSlice(slice, heal, edit) {
+  let processes = heal ? healLayoutOverrides(slice.processes, slice) : slice.processes;
+  const row = edit && Array.isArray(processes) ? processes[edit.idx] : null;
+  if (row) {
+    let flag = row.layout_ovr;
+    if (edit.field === 'layout') flag = layoutOverrideFlag(row, slice, edit.value);
+    else if (edit.field === 'tool_type' || edit.field === 'process_type') {
+      if (row.layout_ovr) flag = false;
+    }
+    if (flag !== row.layout_ovr) {
+      processes = processes.slice();
+      processes[edit.idx] = { ...row, layout_ovr: flag };
+    }
+  }
+  processes = syncProcessLayouts(processes, slice);
+  return processes === slice.processes ? slice : { ...slice, processes };
+}
+
+function reduceCalc(state, action) {
   const { type, payload } = action;
 
   switch (type) {

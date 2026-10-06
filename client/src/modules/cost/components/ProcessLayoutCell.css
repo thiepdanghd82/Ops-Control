@@ -1,0 +1,42 @@
+/* ProcessLayoutCell — the Processes-table LAYOUT cell that follows the Layout
+   tab (2026-10-06). Class-based only (Lesson 6); owned by the cell so it styles
+   the same in Std and Cpx whatever chunk each lands in. */
+
+/* Follows the Layout tab: the derived blue the grid uses for synced values. */
+.plc-sync {
+  color: var(--color-blue-700, #1a4a8a);
+  font-weight: 700;
+}
+
+/* Typed over: the violet the Layout and Pack & Ship cells use for overrides. */
+.plc-ovr {
+  color: var(--color-violet-500);
+  font-weight: 700;
+}
+
+.plc-ovr-wrap {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.plc-ovr-wrap > input {
+  flex: 1;
+  min-width: 0;
+}
+
+.plc-reset {
+  flex: 0 0 auto;
+  font-size: 11px;
+  line-height: 1;
+  background: transparent;
+  border: 1px solid var(--color-violet-500);
+  color: var(--color-violet-500);
+  border-radius: 3px;
+  padding: 0 4px;
+  height: 22px;
+  cursor: pointer;
+}
+.plc-reset:hover {
+  background: var(--color-violet-500);
+  color: #fff;
+}
