@@ -62,3 +62,19 @@ test('deprecated_calls_total use-case (9M.2)', () => {
   const out = renderPrometheus();
   assert.ok(out.includes('deprecated_calls_total{endpoint="/api/shared/approval/transition"} 3'));
 });
+
+test('each histogram is rendered only under its own name', () => {
+  // Regression: the render loop iterated every histogram under every name,
+  // so web_vitals_ms series appeared as http_request_duration_ms and vice versa.
+  _resetMetrics();
+  observeLatency('http_request_duration_ms', 12, { method: 'GET', route: '/api/x' });
+  observeLatency('web_vitals_ms', 300, { name: 'INP', route: '/' });
+  const out = renderPrometheus();
+  const counts = out.split('\n').filter((l) => /_count[{ ]/.test(l));
+  assert.deepEqual(counts, [
+    'http_request_duration_ms_count{method="GET",route="/api/x"} 1',
+    'web_vitals_ms_count{name="INP",route="/"} 1',
+  ]);
+  assert.ok(!out.includes('http_request_duration_ms_bucket{le="5",name="INP"'));
+  assert.ok(!out.includes('web_vitals_ms_bucket{le="5",method="GET"'));
+});

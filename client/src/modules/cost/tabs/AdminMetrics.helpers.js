@@ -118,17 +118,22 @@ export function histogramSummary(rows, name) {
   for (const r of buckets) {
     const key = `${r.labels.method || ''} ${r.labels.route || ''}`.trim();
     const agg = byRoute.get(key);
-    if (agg) agg.buckets.push({ le: Number(r.labels.le), v: r.value });
+    // `le="+Inf"` is not a number (Number('+Inf') is NaN); keep it as Infinity.
+    if (agg)
+      agg.buckets.push({ le: r.labels.le === '+Inf' ? Infinity : Number(r.labels.le), v: r.value });
   }
   for (const agg of byRoute.values()) {
     agg.buckets.sort((a, b) => a.le - b.le);
     const pct = (p) => {
       if (!agg.count) return null;
       const target = agg.count * p;
-      for (const b of agg.buckets) {
+      // A percentile past the largest finite bound is reported as that bound
+      // (a lower bound) so the chart always gets a finite number.
+      const finite = agg.buckets.filter((b) => Number.isFinite(b.le));
+      for (const b of finite) {
         if (b.v >= target) return b.le;
       }
-      return agg.buckets.at(-1)?.le ?? null;
+      return finite.at(-1)?.le ?? null;
     };
     agg.p50 = pct(0.5);
     agg.p95 = pct(0.95);
