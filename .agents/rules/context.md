@@ -141,6 +141,10 @@ being called that.
 - **Untouchable .env keys** (never rotate casually; deploy scripts preserve them):
   `OPS_TOTP_KEY`, `OPS_EXPORT_HMAC_KEY`, `OPS_KIOSK_KEY`, `LICENSE_PUBKEY`.
 - **Library/** is a trust boundary — validated via `librarySchema.js` on read.
+- **trust proxy = loopback** — `req.ip` believes `X-Forwarded-For` only from a proxy on the
+  same machine (deploy.sh's nginx → 127.0.0.1); a client connecting directly reads as its
+  own socket address (`server/utils/trustProxy.js`). A proxy on another machine must be
+  listed there, or every client reads as the proxy (S-TRUST-PROXY).
 
 ## Build / release / CI
 
