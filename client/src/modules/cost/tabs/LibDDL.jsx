@@ -19,7 +19,7 @@ import {
   pairTableConfig,
   createCustomTable,
   deleteCustomTable,
-  isCustomSection,
+  ddlCardKind,
   orderSectionKeys,
   applyTitleOverride,
   addExcludedType,
@@ -49,6 +49,7 @@ const SECTION_LABELS = {
   cutter_addon: 'Cutter Add-on $',
   cutter_min: 'Min Tools Price $',
   plate_base_cost: 'Plate Base Cost $',
+  core_od: 'Core OD',
   pre_cut: 'Pre Cut',
   die_cut: 'Die Cut',
   print_type_list: 'Print Type',
@@ -60,16 +61,6 @@ const SECTION_LABELS = {
   colors: 'Colors',
 };
 
-// Keys that are objects (not simple arrays)
-const OBJECT_KEYS = new Set([
-  'click_charges',
-  'tool_life',
-  'cutter_cost',
-  'cutter_addon',
-  'cutter_min',
-  'plate_base_cost',
-  'coverage',
-]);
 // Internal keys to skip.
 //   `print` (2026-05-11): redundant press-subtype panel — duplicated
 //   `print_type_list` semantics with parens/spacing variations (e.g.
@@ -748,11 +739,12 @@ export default function LibDDL() {
             // default; the section KEY is unchanged (code/calc key off it).
             const label = sections._custom_names?.[key] || SECTION_LABELS[key] || key;
             const value = sections[key];
+            const kind = ddlCardKind(key, value, sections);
 
             // Coverage — array of {pt, cov}. Renders via the shared pair
             // renderer; keeps its EXACT shape (money-path). Not deletable as
             // a table (built-in).
-            if (key === 'coverage' && Array.isArray(value)) {
+            if (kind === 'coverage') {
               return (
                 <PairTableCard
                   key={key}
@@ -771,7 +763,7 @@ export default function LibDDL() {
             // once saved, a custom table is committed and the button hides,
             // keeping the title bar clean. Editing any field brings it back
             // (you're inherently editing when you want to delete one).
-            if (isCustomSection(sections, key) && Array.isArray(value)) {
+            if (kind === 'custom') {
               return (
                 <PairTableCard
                   key={key}
@@ -791,7 +783,7 @@ export default function LibDDL() {
             // rename / delete — the set is driven entirely by tool_type, so
             // tool_life stays keyed exactly by tool_type and getToolLife
             // resolves for every selectable tool type (money-path).
-            if (key === 'tool_life' && typeof value === 'object' && !Array.isArray(value)) {
+            if (kind === 'tool_life') {
               const toolTypes = Array.isArray(sections.tool_type)
                 ? sections.tool_type
                 : Object.keys(value);
@@ -825,7 +817,7 @@ export default function LibDDL() {
             // nothing consumes cutter_cost yet (a future getCutterCost helper
             // would mirror getToolLife). cutter_cost stays keyed exactly by
             // tool_type via the same reconcile + rename/delete cascades.
-            if (key === 'cutter_cost' && typeof value === 'object' && !Array.isArray(value)) {
+            if (kind === 'cutter_cost') {
               const allTypes = Array.isArray(sections.tool_type)
                 ? sections.tool_type
                 : Object.keys(value);
@@ -863,7 +855,7 @@ export default function LibDDL() {
             // Cutter Add-on $ — the additive constant per cutter type (Dao-cắt
             // formula). GOVERNED by tool_type like Cutter Cost: read-only-label
             // rows, plain numeric value, per-row delete via the exclusion set.
-            if (key === 'cutter_addon' && typeof value === 'object' && !Array.isArray(value)) {
+            if (kind === 'cutter_addon') {
               const allTypes = Array.isArray(sections.tool_type)
                 ? sections.tool_type
                 : Object.keys(value);
@@ -912,7 +904,7 @@ export default function LibDDL() {
             // Min Tools Price $ — the per-type floor threshold (Dao-cắt formula:
             // computed <= min → min + addon/cavities). GOVERNED by tool_type like
             // Cutter Add-on: read-only-label rows, numeric value, per-row delete.
-            if (key === 'cutter_min' && typeof value === 'object' && !Array.isArray(value)) {
+            if (kind === 'cutter_min') {
               const allTypes = Array.isArray(sections.tool_type)
                 ? sections.tool_type
                 : Object.keys(value);
@@ -958,8 +950,8 @@ export default function LibDDL() {
               );
             }
 
-            // Object sections (click_charges)
-            if (OBJECT_KEYS.has(key) && typeof value === 'object' && !Array.isArray(value)) {
+            // Every other object section (click_charges, plate_base_cost, core_od)
+            if (kind === 'object') {
               return (
                 <div key={key} className="ddl-card">
                   <DdlCardHead label={label} onRename={() => openRename(key, label)} />
@@ -991,7 +983,7 @@ export default function LibDDL() {
             }
 
             // Array sections (most common)
-            if (Array.isArray(value)) {
+            if (kind === 'list') {
               return (
                 <div key={key} className="ddl-card">
                   <DdlCardHead label={label} onRename={() => openRename(key, label)} />
