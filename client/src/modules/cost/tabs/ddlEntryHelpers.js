@@ -342,3 +342,26 @@ export function renameToolLifeKey(toolLife, oldName, newName) {
   if (newKey) next[newKey] = carried;
   return next;
 }
+
+// Object sections the editor draws with a card of its own. Every other plain
+// object goes to the key/value card.
+const OWN_OBJECT_CARDS = new Set(['tool_life', 'cutter_cost', 'cutter_addon', 'cutter_min']);
+
+/**
+ * Which card the DDL editor draws for a section. One decision instead of a
+ * chain of conditions in LibDDL, so a section the data carries cannot fall
+ * through to nothing: `core_od` did, because the key/value card took only
+ * objects named in a hand-kept allowlist.
+ * Arrays → 'coverage' | 'custom' | 'list'. Objects → 'tool_life' |
+ * 'cutter_cost' | 'cutter_addon' | 'cutter_min' | 'object'. Anything no
+ * card can draw (null, a number, a string) → null.
+ */
+export function ddlCardKind(key, value, sections) {
+  if (Array.isArray(value)) {
+    if (key === 'coverage') return 'coverage';
+    if (isCustomSection(sections, key)) return 'custom';
+    return 'list';
+  }
+  if (value === null || typeof value !== 'object') return null;
+  return OWN_OBJECT_CARDS.has(key) ? key : 'object';
+}
