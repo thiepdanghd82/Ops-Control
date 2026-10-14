@@ -64,7 +64,7 @@ function loadGroups() {
 
 /**
  * @param {object|null} user    session user ({ role, permission_group_id, ... })
- * @param {string} tabId        sidebar tab id (e.g. 'standard', 'rfq-tracker')
+ * @param {string} tabId        sidebar tab id (e.g. 'standard', 'quote-history')
  * @returns {'hidden'|'read'|'edit'}
  */
 export function resolveTabAccess(user, tabId) {
@@ -118,8 +118,8 @@ export function requireTabAccess(tabId, requiredMode = 'edit') {
  *
  * Example:
  *   requireBodyTabAccess({
- *     rfqTracker: 'rfq-tracker',
- *     sampleTracker: 'sample-tracking',
+ *     quoteHistory: 'quote-history',
+ *     matDB: 'lib-mat',
  *   })
  */
 export function requireBodyTabAccess(keyMap) {

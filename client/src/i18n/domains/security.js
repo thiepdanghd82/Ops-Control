@@ -15,9 +15,6 @@ registerStrings({
   // ─── Login + TOTP (login.* — was platform/auth in v1.3 layout) ───
   // 33 keys covering: form, totp, expired session, password-age bar,
   // forced-change-on-first-login banner.
-  'login.app_title': { en: 'Operations Cost', vi: 'Quản lý Chi phí Sản xuất' },
-  'login.subtitle': { en: 'Server version.', vi: 'Phiên bản máy chủ.' },
-  'login.cta': { en: 'Sign in to continue', vi: 'Đăng nhập để tiếp tục' },
   'login.username': { en: 'Username', vi: 'Tên đăng nhập' },
   'login.username_placeholder': { en: 'Enter username', vi: 'Nhập tên đăng nhập' },
   'login.password': { en: 'Password', vi: 'Mật khẩu' },
@@ -60,16 +57,6 @@ registerStrings({
     en: "Your place in the app is preserved; you won't lose your current tab.",
     vi: 'Vị trí của bạn trong ứng dụng được giữ lại; bạn sẽ không mất tab hiện tại.',
   },
-  'login.totp_title': { en: '2-Step Verification', vi: 'Xác thực 2 lớp' },
-  'login.totp_hint_prefix': { en: 'Open', vi: 'Mở' },
-  'login.totp_hint_suffix': {
-    en: 'and enter the 6-digit code for account',
-    vi: 'và nhập mã 6 chữ số cho tài khoản',
-  },
-  'login.totp_label': { en: 'Authenticator Code', vi: 'Mã xác thực' },
-  'login.totp_submit': { en: 'Verify Code', vi: 'Xác minh' },
-  'login.totp_submitting': { en: 'Verifying…', vi: 'Đang xác minh…' },
-  'login.totp_back': { en: 'Back to login', vi: 'Quay lại đăng nhập' },
   'login.pwd_age_label': { en: 'Password age', vi: 'Thời hạn mật khẩu' },
   'login.pwd_age_expired': { en: 'Password expired', vi: 'Mật khẩu đã hết hạn' },
   // Vietnamese does not inflect for plural, so both resolve to 'ngày'; the
@@ -117,28 +104,6 @@ registerStrings({
   },
 
   // Audit log table
-  'audit.title': { en: 'Audit log', vi: 'Nhật ký audit' },
-  'audit.subtitle': {
-    en: 'Append-only event stream. Newest first.',
-    vi: 'Dòng sự kiện ghi-thêm. Mới nhất trước.',
-  },
-  'audit.col.time': { en: 'Time', vi: 'Thời gian' },
-  'audit.col.action': { en: 'Action', vi: 'Hành động' },
-  'audit.col.actor': { en: 'Actor', vi: 'Người thực hiện' },
-  'audit.col.target': { en: 'Target', vi: 'Đối tượng' },
-  'audit.col.result': { en: 'Result', vi: 'Kết quả' },
-  'audit.col.ip': { en: 'IP', vi: 'IP' },
-  'audit.col.details': { en: 'Details', vi: 'Chi tiết' },
-  'audit.filter.event': { en: 'Event', vi: 'Sự kiện' },
-  'audit.filter.user': { en: 'User', vi: 'Người dùng' },
-  'audit.filter.from': { en: 'From (ISO ts)', vi: 'Từ (ISO ts)' },
-  'audit.filter.to': { en: 'To (ISO ts)', vi: 'Đến (ISO ts)' },
-  'audit.filter.limit': { en: 'Limit', vi: 'Giới hạn' },
-  'audit.refresh': { en: 'Refresh', vi: 'Tải lại' },
-  'audit.empty': {
-    en: 'No audit events match the current filter.',
-    vi: 'Không có sự kiện audit khớp bộ lọc hiện tại.',
-  },
 
   // ─── Connection info (Phase A.2 admin dashboard) ───
   // Surfaces serverName / serverId / autodetected URL + QR for hand-off

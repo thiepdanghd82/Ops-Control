@@ -25,15 +25,3 @@ export const SITES = Object.freeze([
   '54 site',
   'India',
 ]);
-
-export const DEFAULT_SITE = 'VN';
-
-/**
- * Case-insensitive membership check. Use for sanity when a quote
- * stored `site: 'vn'` through some legacy path — treat as valid.
- */
-export function isKnownSite(site) {
-  if (!site) return false;
-  const needle = String(site).trim().toLowerCase();
-  return SITES.some((s) => s.toLowerCase() === needle);
-}

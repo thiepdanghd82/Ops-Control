@@ -42,7 +42,6 @@ import { canMoveRow } from '../../lib/moveRow';
 import { fmtN, parseLocaleNumber } from '../../../../utils/format';
 import FileUploadZone from '../../../../components/Shared/FileUploadZone';
 import DecimalInput from '../../../../utils/DecimalInput';
-import DesignSyncPicker from '../StandardCalc/DesignSyncPicker';
 import {
   AdvancedLayoutBlock,
   PrintCutLayout,
@@ -494,9 +493,6 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
   // can show Print/Cut-specific content based on the active sub-tab.
   // S-LAYOUT-DEFAULT (2026-05-05) — match StandardCalc default.
   const [activeSub, setActiveSub] = useState('print');
-  // Sprint 14e — Design Tools sync picker open state (parity with
-  // StandardCalc CalcLayout). 'print' / 'cut' / null.
-  const [designSyncSide, setDesignSyncSide] = useState(null);
   useEffect(() => {
     sharedApi
       .getMachineProfiles()
@@ -535,26 +531,6 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
             <span className="sc-card-icon">&#9638;</span>
             <span className="sc-card-title">Design Layout</span>
             {sp.code && <span className="cl-sp-code">{sp.code}</span>}
-            {/* Sprint 14n-2 — sync buttons promoted from body to header
-                (parity with StandardCalc). */}
-            <div className="cl-header-sync-actions">
-              <button
-                type="button"
-                className="cl-design-sync-btn cl-design-sync-btn--header"
-                onClick={() => setDesignSyncSide('print')}
-                title={t('spr.tip_sync_print')}
-              >
-                🔍 Print Design sync
-              </button>
-              <button
-                type="button"
-                className="cl-design-sync-btn cl-design-sync-btn--header"
-                onClick={() => setDesignSyncSide('cut')}
-                title={t('spr.tip_sync_cut')}
-              >
-                🔍 Cut Design sync
-              </button>
-            </div>
             {(validation.errors.length > 0 || validation.warnings.length > 0) && (
               <span className="cl-validation-pill">
                 {validation.errors.length > 0 && (
@@ -651,18 +627,6 @@ export default function SubProductRow({ sp, spi, result, allSps }) {
 
         {/* MachineProfileModal mount removed Sprint 14n — see press
             bar comment. CRUD moved to Machine Technical sidebar tab. */}
-
-        {/* Sprint 14e — Design Tools sync picker for Complex sub-products.
-            Pushes the picker's mapped fields onto THIS sub-product (not
-            the parent cplxState) via setF. */}
-        <DesignSyncPicker
-          open={!!designSyncSide}
-          side={designSyncSide || 'print'}
-          onClose={() => setDesignSyncSide(null)}
-          onApply={(fields) => {
-            for (const [k, v] of Object.entries(fields)) setF(k, v);
-          }}
-        />
 
         {/* File Uploads — auto-named {Customer}_{EndCuPN}_{stamp}[suffix].
             Customer info comes from the top-level cplxState; sub-product

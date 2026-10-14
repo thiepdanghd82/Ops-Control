@@ -51,9 +51,7 @@ export default function HomePage({ onTabChange }) {
     () =>
       [
         { id: 'standard', icon: 'calc_std', labelKey: 'home.qa.new_quote' },
-        { id: 'rfq-tracker', icon: 'rfq_tracker', labelKey: 'home.qa.rfq' },
         { id: 'approvals-inbox', icon: 'approvals', labelKey: 'home.qa.approvals' },
-        { id: 'lib-inventory', icon: 'ifs', labelKey: 'home.qa.inventory' },
         { id: 'help', icon: 'help', labelKey: 'home.qa.help' },
       ].filter((qa) => access(qa.id) !== 'hidden'),
     [access]
@@ -64,8 +62,6 @@ export default function HomePage({ onTabChange }) {
   const moduleShortcuts = useMemo(
     () => [
       { sid: 'calculators', icon: 'calc_std', labelKey: 'nav.section.calculators' },
-      { sid: 'manufacturing', icon: 'mfg', labelKey: 'nav.section.manufacturing' },
-      { sid: 'tracking', icon: 'rfq_tracker', labelKey: 'nav.section.tracking' },
       { sid: 'reports', icon: 'dashboard', labelKey: 'nav.section.reports' },
     ],
     []

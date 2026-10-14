@@ -67,14 +67,11 @@ export function init(dataDir) {
     path.join(LIB_DIR, 'Rate', 'backups'),
     path.join(LIB_DIR, 'DDL'),
     path.join(LIB_DIR, 'DDL', 'backups'),
-    path.join(LIB_DIR, 'RFQTracker'),
-    path.join(LIB_DIR, 'SampleTracking'),
     path.join(LIB_DIR, 'Finance'),
     path.join(LIB_DIR, 'InkCalc'),
     path.join(dataDir, 'Products layout'),
     path.join(dataDir, 'Backup', 'Data'),
     path.join(dataDir, 'Backup', 'Code'),
-    path.join(LIB_DIR, 'ReleasedQuotation'),
   ]) {
     fs.mkdirSync(d, { recursive: true });
   }

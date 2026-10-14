@@ -249,7 +249,6 @@ test('isSingleton classification', () => {
   assert.equal(isSingleton('standard'), true);
   assert.equal(isSingleton('complex'), true);
   assert.equal(isSingleton('quote-history'), true, 'audit-safe singleton');
-  assert.equal(isSingleton('rfq-tracking'), true, 'audit-safe singleton');
   assert.equal(isSingleton('lib-mat'), false);
   assert.equal(isSingleton('dashboard'), false);
   assert.equal(isSingleton('help'), false);

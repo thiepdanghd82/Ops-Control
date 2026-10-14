@@ -277,12 +277,6 @@
 .qa-kpi-primary {
   --qa-tile-accent: var(--qa-primary);
 }
-.qa-kpi-cyan {
-  --qa-tile-accent: var(--qa-cyan);
-}
-.qa-kpi-neutral {
-  --qa-tile-accent: var(--qa-neutral);
-}
 
 /* S-DESIGN-1 — Dashboard-aligned tone classes. Replaces the decorative
    qa-kpi-primary / qa-kpi-cyan / qa-kpi-neutral set. The 3px left rail
@@ -373,9 +367,7 @@
   color: var(--qa-negative);
   background: rgba(218, 30, 40, 0.08);
 }
-.qa-delta-flat {
-  color: var(--qa-text-3);
-}
+
 /* S-DESIGN-1 — neutral pill for non-directional metrics (count tiles).
    Total Parts going up is neither "good" nor "bad" without context. */
 .qa-delta-neutral {
@@ -453,12 +445,7 @@
   display: grid;
   gap: 16px;
 }
-.qa-grid-2 {
-  grid-template-columns: 1fr 1fr;
-}
-.qa-grid-3 {
-  grid-template-columns: 1fr 1fr 1fr;
-}
+
 /* Sprint S-QA-CONSOL — primary breakdown 60/40 split: pivot table on
    left, GM mix sidecar on right. Stacks on narrow viewports. */
 /* S-RESP-1 — breakdown 3-tier responsive. sm/md: stack. lg: 60/40.
@@ -844,11 +831,7 @@
 }
 
 /* ── GM bucket dots (status indicator) ────────────────────────── */
-.qa-table-buckets td:first-child {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+
 .qa-bucket-dot {
   width: 10px;
   height: 10px;

@@ -49,34 +49,6 @@ function setCache(key, data, sourceFiles = []) {
 }
 
 /**
- * Parse a .js data file that contains: window._VARNAME={...} or window._VARNAME=[...]
- * Format is {headers: [...], rows: [[...],...]} — converts to array of objects
- * Returns array of objects with header keys
- */
-function parseJsDataFile(filePath) {
-  const content = fs.readFileSync(filePath, 'utf-8');
-  // Find first '=' and parse everything after it
-  const eqIdx = content.indexOf('=');
-  if (eqIdx === -1) throw new Error(`Cannot parse JS data file: ${filePath}`);
-
-  let jsonStr = content.slice(eqIdx + 1).trim();
-  // Remove trailing semicolon if present
-  if (jsonStr.endsWith(';')) jsonStr = jsonStr.slice(0, -1).trim();
-
-  const parsed = JSON.parse(jsonStr);
-
-  // If format is {headers: [], rows: [[]]} → convert to array of objects
-  if (parsed && parsed.headers && Array.isArray(parsed.rows)) {
-    return parsed.rows.map((row) =>
-      Object.fromEntries(parsed.headers.map((h, i) => [h, row[i] ?? '']))
-    );
-  }
-
-  // Otherwise return as-is (already array of objects)
-  return Array.isArray(parsed) ? parsed : [parsed];
-}
-
-/**
  * Read a JSON file directly
  */
 function readJsonFile(filePath) {
@@ -85,87 +57,6 @@ function readJsonFile(filePath) {
 }
 
 // ─── Public API ───
-
-/**
- * Get IFS Inventory data (all parts)
- */
-export function getInventory() {
-  const cached = getCached('inventory');
-  if (cached) return cached;
-
-  const invDir = path.join(LIBRARY_DIR, 'IFS_Inventory');
-  const result = {};
-
-  // Load each JS data file
-  const files = {
-    inventory: 'inventory_data.js',
-    finishedGoods: 'finished_good_data.js',
-    rawMaterials: 'raw_materials_data.js',
-  };
-
-  const sourcePaths = [];
-  for (const [key, filename] of Object.entries(files)) {
-    const filePath = path.join(invDir, filename);
-    if (fs.existsSync(filePath)) {
-      sourcePaths.push(filePath);
-      try {
-        result[key] = parseJsDataFile(filePath);
-      } catch (e) {
-        console.warn(`Failed to parse ${filename}:`, e.message);
-        result[key] = [];
-      }
-    }
-  }
-
-  setCache('inventory', result, sourcePaths);
-  return result;
-}
-
-/**
- * Get Manufacturing Structures (BOM data)
- */
-export function getManufacturingStructures() {
-  const cached = getCached('mfgStructures');
-  if (cached) return cached;
-
-  const filePath = path.join(LIBRARY_DIR, 'Manufacturing_Structures', 'mfg_structures_data.js');
-  if (!fs.existsSync(filePath)) return [];
-
-  const data = parseJsDataFile(filePath);
-  setCache('mfgStructures', data, [filePath]);
-  return data;
-}
-
-/**
- * Get BOM for a specific part number
- */
-export function getBOMForPart(partNo) {
-  const structures = getManufacturingStructures();
-  return structures.filter((s) => s['Parent Part No'] === partNo || s['parent_part_no'] === partNo);
-}
-
-/**
- * Get Routing Operations
- */
-export function getRoutingOperations() {
-  const cached = getCached('routingOps');
-  if (cached) return cached;
-
-  const filePath = path.join(LIBRARY_DIR, 'Routing_Operations', 'routing_ops_data.js');
-  if (!fs.existsSync(filePath)) return [];
-
-  const data = parseJsDataFile(filePath);
-  setCache('routingOps', data, [filePath]);
-  return data;
-}
-
-/**
- * Get Routing for a specific part number
- */
-export function getRoutingForPart(partNo) {
-  const operations = getRoutingOperations();
-  return operations.filter((op) => op['Part No'] === partNo || op['part_no'] === partNo);
-}
 
 // ── NPI Parts List (registry dataset 'npi-parts', STORAGE_JS_AOA) ──
 // Read/serve path for the NPI Parts tab. Distinct from the bundled static
@@ -282,25 +173,6 @@ export function getWorkCenters() {
   const wcs = [...wcSet].sort();
   setCache('workCenters', wcs, [filePath]);
   return wcs;
-}
-
-/**
- * Get Products (from IFS Finished Goods)
- */
-export function getProducts() {
-  const cached = getCached('products');
-  if (cached) return cached;
-
-  const inv = getInventory();
-  const products = (inv.finishedGoods || []).map((fg) => ({
-    partNo: fg['Part No'] || fg['part_no'] || '',
-    description: fg['Part Description'] || fg['description'] || '',
-    type: fg['Type'] || fg['type'] || '',
-    uom: fg['UOM'] || fg['uom'] || '',
-  }));
-
-  setCache('products', products); // inherits invalidation from inventory cache
-  return products;
 }
 
 /**

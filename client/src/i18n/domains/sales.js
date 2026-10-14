@@ -60,64 +60,8 @@ registerStrings({
   // short Vietnamese equivalent, and they sit beside "Danh sách" in the same
   // toggle, where a long translation would wrap. Checklist stays for the same
   // reason — it is the word used on the floor.
-  'track.view_mode': { en: 'View mode', vi: 'Kiểu xem' },
-  'track.kanban': { en: 'Kanban', vi: 'Kanban' },
-  'track.pipeline': { en: 'Pipeline', vi: 'Pipeline' },
-  'track.all_stages': { en: 'All Stages', vi: 'Mọi công đoạn' },
-  'track.all_results': { en: 'All Results', vi: 'Mọi kết quả' },
-  'track.filter_stage': { en: 'Filter stage', vi: 'Lọc công đoạn' },
-  'track.filter_result': { en: 'Filter result', vi: 'Lọc kết quả' },
-  'track.no_items': { en: 'No items', vi: 'Không có mục nào' },
-  'track.no_saved_views': { en: 'No saved views', vi: 'Chưa có bộ lọc đã lưu' },
-  'track.identity': { en: 'Identity', vi: 'Định danh' },
-  'track.attachments': { en: 'Attachments', vi: 'Tệp đính kèm' },
-  'track.checklist': { en: 'Checklist', vi: 'Checklist' },
-  'track.add_task': { en: '+ Add task', vi: '+ Thêm việc' },
-  'track.mark_required': {
-    en: 'Mark as required to advance',
-    vi: 'Đánh dấu bắt buộc để sang bước sau',
-  },
-  'track.blocked_reason': { en: 'Blocked reason', vi: 'Lý do tắc' },
-  'track.document_flow': { en: 'Document Flow', vi: 'Luồng chứng từ' },
-  'track.field_legend': { en: 'Field Legend / Chú giải trường', vi: 'Chú giải trường' },
-  'track.move_back': { en: 'Move back', vi: 'Lùi bước' },
-  'track.next': { en: 'Next →', vi: 'Bước sau →' },
-  'track.sla_days': { en: 'SLA (days)', vi: 'SLA (ngày)' },
-  'track.uploaded_by': { en: 'Uploaded by', vi: 'Người tải lên' },
-  'track.uploading': { en: 'Uploading…', vi: 'Đang tải lên…' },
-  'track.no_events': { en: 'No events recorded yet.', vi: 'Chưa ghi nhận sự kiện nào.' },
-  'track.trend_6m': { en: '6-month trend', vi: 'Xu hướng 6 tháng' },
-  'track.rfq': { en: 'RFQ', vi: 'RFQ' },
 
   // ─── RFQ Tracker only ───────────────────────────────────────────────────
-  'rfqt.rfq_no': { en: 'RFQ No.', vi: 'Số RFQ' },
-  'rfqt.rfq_detail': { en: 'RFQ detail', vi: 'Chi tiết RFQ' },
-  'rfqt.rfq_kpis': { en: 'RFQ KPIs', vi: 'KPI RFQ' },
-  'rfqt.this_rfq': { en: 'This RFQ', vi: 'RFQ này' },
-  'rfqt.all_owners': { en: 'All Owners', vi: 'Mọi người phụ trách' },
-  'rfqt.filter_owner': { en: 'Filter owner', vi: 'Lọc người phụ trách' },
-  'rfqt.customer_order': { en: 'Customer Order', vi: 'Đơn hàng khách' },
-  'rfqt.deadline': { en: 'Deadline', vi: 'Hạn chót' },
-  'rfqt.over_deadline': { en: 'Over deadline', vi: 'Quá hạn' },
-  'rfqt.age': { en: 'Age', vi: 'Tuổi' },
-  'rfqt.value': { en: 'Value', vi: 'Giá trị' },
-  'rfqt.eau': { en: 'EAU', vi: 'EAU' },
-  'rfqt.print_type': { en: 'Print Type', vi: 'Kiểu in' },
-  'rfqt.print_specs': { en: 'Print Specs', vi: 'Thông số in' },
-  'rfqt.sample_request': { en: 'Sample Request', vi: 'Yêu cầu mẫu' },
-  'rfqt.pricing_worksheet': { en: 'Pricing Worksheet', vi: 'Bảng tính giá' },
-  'rfqt.sync_pricing': { en: 'Sync → Pricing Worksheet', vi: 'Đồng bộ → Bảng tính giá' },
-  'rfqt.open_pricing_tip': {
-    en: 'Open Pricing Worksheet with these fields prefilled',
-    vi: 'Mở Bảng tính giá với các trường đã điền sẵn',
-  },
-  'rfqt.open_quote_history': { en: 'Open Quote History', vi: 'Mở Lịch sử báo giá' },
-  'rfqt.open_ext': { en: 'Open ↗', vi: 'Mở ↗' },
-  'rfqt.no_attachments': { en: 'No attachments yet.', vi: 'Chưa có tệp đính kèm.' },
-  'rfqt.no_match': {
-    en: 'No RFQ records match the filters',
-    vi: 'Không có RFQ nào khớp bộ lọc',
-  },
 
   // Quote History column headers
   'qh.date': { en: 'DATE', vi: 'NGÀY' },
@@ -157,22 +101,10 @@ registerStrings({
   'qh.layout': { en: 'LAYOUT', vi: 'BỐ CỤC' },
 
   // RFQ Tracker actions + columns
-  'rfq.mark_win': { en: 'Mark WIN', vi: 'Đánh dấu THẮNG' },
-  'rfq.mark_loss': { en: 'Mark LOSS', vi: 'Đánh dấu THUA' },
-  'rfq.mark_negotiating': { en: 'Mark NEGOTIATING', vi: 'Đánh dấu ĐÀM PHÁN' },
-  'rfq.col.customer': { en: 'Customer', vi: 'Khách hàng' },
-  'rfq.col.product': { en: 'Product', vi: 'Sản phẩm' },
-  'rfq.col.stage': { en: 'Stage', vi: 'Giai đoạn' },
-  'rfq.col.result': { en: 'Result', vi: 'Kết quả' },
-  'rfq.search_placeholder': {
-    en: 'Search RFQ, customer, product...',
-    vi: 'Tìm RFQ, khách hàng, sản phẩm...',
-  },
 
   // ─── Quote Export UI (Sprint S-EXPORT-UI 2026-05-19) ───
   // User-facing surface for the MVP-1/1.5/2 server export pipeline.
   // Trigger: download icon in Quote History row → modal → POST /api/quotes/:id/export.
-  'qexp.button.label': { en: 'Export', vi: 'Xuất' },
   'qexp.button.tooltip': { en: 'Export to xlsx', vi: 'Xuất ra xlsx' },
   'qexp.modal.title': { en: 'Export Quote', vi: 'Xuất báo giá' },
   'qexp.field.variant.label': { en: 'Variant', vi: 'Phiên bản' },

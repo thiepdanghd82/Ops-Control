@@ -413,45 +413,7 @@
 }
 
 /* Manage modal */
-.mt-enum-modal-scrim {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.45);
-  z-index: 250;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: mtFade 0.15s ease;
-}
-.mt-enum-modal {
-  background: #fff;
-  border-radius: 10px;
-  width: min(480px, 92vw);
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
-  overflow: hidden;
-}
-.mt-enum-modal-head {
-  display: flex;
-  align-items: center;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--color-gray-200);
-  background: linear-gradient(180deg, #f0f9ff 0%, #fff 100%);
-}
-.mt-enum-modal-head h3 {
-  flex: 1;
-  margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  color: #0c4a6e;
-}
-.mt-enum-modal-body {
-  flex: 1;
-  overflow: auto;
-  padding: 14px 18px;
-}
+
 .mt-enum-help {
   font-size: 11px;
   color: #64748b;
@@ -528,12 +490,4 @@
   padding-top: 10px;
   border-top: 1px dashed var(--color-gray-200);
   margin-top: 4px;
-}
-.mt-enum-modal-foot {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 18px;
-  background: #fafafa;
-  border-top: 1px solid var(--color-gray-200);
 }

@@ -119,10 +119,6 @@ registerStrings({
     en: 'Folder where backups are stored on the server',
     vi: 'Thư mục chứa bản sao lưu trên server',
   },
-  'set.backup_path_hint': {
-    en: 'Path used by both Import (source) and Backup (destination). Click to edit.',
-    vi: 'Đường dẫn dùng cho cả Import (nguồn) và Backup (đích). Bấm để sửa.',
-  },
   'set.backup_hour_hint': {
     en: 'Server local time. 02:00 is the default — pick low-activity hours.',
     vi: 'Giờ máy chủ. Mặc định 02:00 — chọn giờ ít người dùng.',
@@ -139,12 +135,7 @@ registerStrings({
     en: 'Trigger one backup cycle right now (independent of schedule)',
     vi: 'Chạy ngay một chu kỳ sao lưu (không phụ thuộc lịch)',
   },
-  'set.reset_default_path': { en: 'Reset to default path', vi: 'Về đường dẫn mặc định' },
   'set.copy_path': { en: 'Copy path', vi: 'Chép đường dẫn' },
-  'set.wipe_dataset': {
-    en: 'Wipe dataset (server auto-backs up)',
-    vi: 'Xoá sạch bộ dữ liệu (server tự sao lưu trước)',
-  },
 
   'set.audit_log': { en: 'Audit Log', vi: 'Nhật ký kiểm toán' },
   'set.audit_needs_sys': {
@@ -154,11 +145,7 @@ registerStrings({
   'set.no_audit_entries': { en: 'No matching audit entries.', vi: 'Không có bản ghi khớp.' },
   'set.event_contains': { en: 'Event contains', vi: 'Sự kiện chứa' },
   'set.user_exact': { en: 'User (exact)', vi: 'Người dùng (chính xác)' },
-  'set.download_json': { en: 'Download as JSON', vi: 'Tải về dạng JSON' },
   'set.system_logs': { en: 'System Logs', vi: 'Nhật ký hệ thống' },
-  'set.data_import': { en: 'Data Import', vi: 'Nhập dữ liệu' },
-  'set.import_csv_xlsx': { en: 'Import CSV / XLSX', vi: 'Nhập CSV / XLSX' },
-  'set.ifs_data_status': { en: 'IFS Data Status', vi: 'Trạng thái dữ liệu IFS' },
   'set.connection': { en: 'Connection', vi: 'Kết nối' },
   'set.language_pref': { en: 'Language preference', vi: 'Ngôn ngữ hiển thị' },
   'set.theme_pref': { en: 'Theme preference', vi: 'Giao diện hiển thị' },
@@ -203,7 +190,6 @@ registerStrings({
   'set.settings': { en: 'Settings', vi: 'Cài đặt' },
   'set.users': { en: 'Users', vi: 'Người dùng' },
   'set.user': { en: 'User', vi: 'Người dùng' },
-  'set.admin': { en: 'Admin', vi: 'Quản trị' },
   'set.own': { en: 'Own', vi: 'Của mình' },
   'set.yes': { en: 'Yes', vi: 'Có' },
   'set.date': { en: 'Date', vi: 'Ngày' },
@@ -252,69 +238,9 @@ registerStrings({
   },
 
   // ─── Chat (Phase 10A-10F) ───
-  'chat.open': { en: 'Open chat', vi: 'Mở chat' },
-  'chat.close': { en: 'Close chat', vi: 'Đóng chat' },
-  'chat.header_rooms': { en: 'Messages', vi: 'Tin nhắn' },
-  'chat.header_mentions': { en: 'Mentions', vi: 'Lượt nhắc' },
-  'chat.back_to_rooms': { en: 'Back to rooms', vi: 'Quay lại danh sách' },
-  'chat.mentions_button': { en: 'Your @mentions', vi: 'Lượt nhắc đến bạn' },
-  'chat.search_placeholder': { en: 'Search messages…', vi: 'Tìm trong tin nhắn…' },
-  'chat.search_searching': { en: 'Searching…', vi: 'Đang tìm…' },
-  'chat.search_no_match': { en: 'No matches', vi: 'Không có kết quả' },
-  'chat.rooms_empty': {
-    en: 'No rooms yet. Open a DM from a teammate to start chatting.',
-    vi: 'Chưa có phòng nào. Mở DM với đồng nghiệp để bắt đầu trò chuyện.',
-  },
-  'chat.mentions_empty': {
-    en: "No mentions yet. You'll see a badge here when someone @mentions you.",
-    vi: 'Chưa có lượt nhắc nào. Bạn sẽ thấy thông báo ở đây khi có người @nhắc đến.',
-  },
-  'chat.messages_empty': {
-    en: 'No messages yet. Say hi 👋',
-    vi: 'Chưa có tin nhắn. Chào một câu 👋',
-  },
-  'chat.loading': { en: 'Loading…', vi: 'Đang tải…' },
-  'chat.loading_older': { en: 'Loading older…', vi: 'Đang tải tin nhắn cũ…' },
-  'chat.conversation_start': { en: '— beginning of conversation —', vi: '— đầu cuộc trò chuyện —' },
-  'chat.compose_placeholder': {
-    en: 'Type a message, Enter to send',
-    vi: 'Nhập tin nhắn, nhấn Enter để gửi',
-  },
-  'chat.send': { en: 'Send', vi: 'Gửi' },
-  'chat.sending': { en: '…', vi: '…' },
-  'chat.edit': { en: 'Edit', vi: 'Sửa' },
-  'chat.delete': { en: 'Delete', vi: 'Xóa' },
-  'chat.edit_save': { en: 'Save', vi: 'Lưu' },
-  'chat.edit_cancel': { en: 'Cancel', vi: 'Hủy' },
-  'chat.edited_mark': { en: ' · edited', vi: ' · đã sửa' },
-  'chat.deleted_body': { en: '(message deleted)', vi: '(tin nhắn đã xóa)' },
-  'chat.delete_confirm': {
-    en: 'Delete this message? This cannot be undone.',
-    vi: 'Xóa tin nhắn này? Không thể hoàn tác.',
-  },
-  'chat.recall': { en: 'Unsend', vi: 'Thu hồi' },
-  'chat.recall_confirm': {
-    en: 'Unsend this message? The recipient will see it was recalled.',
-    vi: 'Thu hồi tin nhắn này? Người nhận sẽ thấy tin đã bị thu hồi.',
-  },
   // Admin recalling someone ELSE's message. Deliberately not worded as
   // "unsend" — you cannot unsend what you did not send, and the operator
   // whose message it was will see a tombstone naming an administrator.
-  'chat.recall_other': { en: 'Remove message', vi: 'Gỡ tin nhắn' },
-  'chat.recall_other_confirm': {
-    en: "Remove this person's message? Everyone in the room will see it was removed by an administrator, and the action is recorded in the audit log.",
-    vi: 'Gỡ tin nhắn của người này? Mọi người trong phòng sẽ thấy tin bị quản trị viên gỡ, và hành động được ghi vào nhật ký kiểm toán.',
-  },
-  'chat.delete_forever': { en: 'Delete permanently', vi: 'Xóa hoàn toàn' },
-  'chat.purge_confirm': {
-    en: "Permanently delete this message? It will be removed from everyone's view and leaves no trace.",
-    vi: 'Xóa vĩnh viễn tin nhắn này? Tin sẽ biến mất khỏi mọi người và không để lại dấu vết.',
-  },
-  'chat.more_actions': { en: 'More actions', vi: 'Thêm hành động' },
-  'chat.emoji_picker': { en: 'Emoji', vi: 'Emoji' },
-  'chat.discuss': { en: '💬 Discuss', vi: '💬 Thảo luận' },
-  'chat.discuss_title': { en: 'Discuss this quote in chat', vi: 'Thảo luận quote này trong chat' },
-  'chat.unavailable': { en: 'Chat unavailable: {msg}', vi: 'Chat không khả dụng: {msg}' },
 
   // ─── Dashboard (Enterprise Dashboard tab) ───
   'dashboard.title': { en: 'Enterprise Dashboard', vi: 'Bảng điều khiển Doanh nghiệp' },
@@ -418,9 +344,6 @@ registerStrings({
     en: 'To recover deleted data, pick a Manual or Scheduled backup dated BEFORE the deletion. "Pre-restore" snapshots are auto undo-points taken before each restore — not general backups.',
     vi: 'Để khôi phục dữ liệu đã xoá, chọn bản Thủ công hoặc Định kỳ có NGÀY TRƯỚC khi xoá. Bản "Trước restore" là điểm hoàn-tác tự động tạo trước mỗi lần khôi phục — không phải bản backup thường.',
   },
-  'settings.backup.kind_manual': { en: 'Manual', vi: 'Thủ công' },
-  'settings.backup.kind_auto': { en: 'Scheduled', vi: 'Định kỳ' },
-  'settings.backup.kind_pre_restore': { en: 'Pre-restore', vi: 'Trước restore' },
   'settings.backup.kind_pre_restore_hint': {
     en: 'Auto undo-point saved right before a restore — dated at the restore, not a general backup.',
     vi: 'Điểm hoàn-tác tự động lưu ngay trước một lần khôi phục — ngày là lúc restore, không phải bản backup thường.',

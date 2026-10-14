@@ -37,7 +37,6 @@ import { enumerateTiers } from '../../../../services/calcEngine';
 import { aggregateForTier } from '../../../../services/cplxTierAggregate';
 import { useMarginHold } from '../../hooks/useMarginHold';
 import { costApi, sharedApi } from '../../../../services/api';
-import { chatApi, openChatRoom } from '../../../../services/chatApi';
 import { useI18n } from '../../../../utils/useI18n';
 import CplxHeader from './CplxHeader';
 import CplxSummaryBar from './CplxSummaryBar';
@@ -246,25 +245,6 @@ export default function ComplexCalc() {
     return () => {
       cancelled = true;
     };
-  }, [pendingQuote, loadQuote, clearPendingQuote]);
-
-  // Sprint 14e — handle 'rfq-sync' prefill push from Design Tools
-  // (Apply to Pricing (Cpx) button) and from RFQ Tracker. Merges the
-  // prefill data into cplxState top-level fields. For Complex,
-  // sub-product geometry (L/Pw/W) doesn't apply at the top level, so
-  // we only carry the identifier + cross-sub-product fields. Operator
-  // pushes per-SP geometry explicitly via the Cut/Print Design sync
-  // buttons inside each SubProductRow.
-  useEffect(() => {
-    if (!pendingQuote || pendingQuote.type !== 'rfq-sync') return;
-    const prefill = pendingQuote.data || {};
-    const nextState = { ...cplxState, ...prefill };
-    loadQuote('cplx', nextState, null);
-    showToast(
-      'Prefilled from Design Tools / RFQ — geometry for each SP must still be set per sub-product'
-    );
-    clearPendingQuote();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingQuote, loadQuote, clearPendingQuote]);
 
   // Two-pass calculation (shared helper — also used by CplxCostBreakdown)
@@ -770,22 +750,6 @@ export default function ComplexCalc() {
           rightSlot={
             <>
               {isDirty && <span className="cc-dirty">{t('cpx.unsaved')}</span>}
-              {activeQuoteId != null && (
-                <button
-                  className="cc-btn cc-btn-outline"
-                  onClick={async () => {
-                    try {
-                      const r = await chatApi.openQuote(activeQuoteId);
-                      openChatRoom(r.room.id);
-                    } catch (e) {
-                      showToast(t('chat.unavailable', { msg: e.message || 'error' }), 'warning');
-                    }
-                  }}
-                  title={t('chat.discuss_title')}
-                >
-                  {t('chat.discuss')}
-                </button>
-              )}
               <button className="cc-btn cc-btn-outline" onClick={handleReset}>
                 New
               </button>

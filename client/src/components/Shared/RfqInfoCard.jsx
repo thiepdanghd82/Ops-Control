@@ -29,6 +29,7 @@ import { SITES as SITE_OPTIONS } from '../../utils/sites';
 import DecimalInput from '../../utils/DecimalInput';
 import { gateWarnings } from '../../services/calcValidation';
 import { useI18n } from '../../utils/useI18n';
+import './RfqInfoCard.css';
 
 export default function RfqInfoCard({
   state,

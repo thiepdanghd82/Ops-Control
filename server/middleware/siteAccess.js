@@ -48,15 +48,3 @@ export function enforceSiteAccess(req, res, next) {
   }
   next();
 }
-
-/**
- * Return the set of sites the user is allowed to see, or null for
- * unrestricted. Handy for routes that want to pre-filter results
- * (e.g. "list only quotes for my sites").
- */
-export function allowedSitesFor(user) {
-  if (!user) return null;
-  const u = user.user || user; // unwrap req.user if caller passed wrapper
-  const sites = Array.isArray(u.sites) ? u.sites : [];
-  return sites.length === 0 ? null : sites;
-}

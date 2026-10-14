@@ -144,21 +144,6 @@ export function applyStyle(cell, preset, overrides) {
 }
 
 /**
- * Apply a STYLES preset to every cell in a row range.
- *
- * @param {import('exceljs').Row} row
- * @param {keyof typeof STYLES} preset
- * @param {number} [from=1]
- * @param {number} [to]
- */
-export function styleRow(row, preset, from = 1, to) {
-  const last = to ?? row.cellCount;
-  for (let c = from; c <= last; c++) {
-    applyStyle(row.getCell(c), preset);
-  }
-}
-
-/**
  * Conditional-format helper for GM%-style cells.
  * @param {import('exceljs').Worksheet} sheet
  * @param {string} ref e.g. 'D5:D5'

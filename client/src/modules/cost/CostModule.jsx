@@ -32,10 +32,8 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 //   - A tab chunk is small enough (~30-80 kB) that the fallback
 //     flashes for < 100 ms on a normal connection; SkeletonTable is
 //     there to absorb that window gracefully.
-const IFSInventory = lazy(() => import('./tabs/IFSInventory'));
 const QuoteHistory = lazy(() => import('./tabs/QuoteHistory'));
 const NpiPartsList = lazy(() => import('./tabs/NpiPartsList'));
-const RfqTracking = lazy(() => import('./tabs/RfqTracking'));
 const PendingApprovalsInbox = lazy(() => import('./tabs/PendingApprovalsInbox'));
 const MaterialLibrary = lazy(() => import('./tabs/MaterialLibrary'));
 const Settings = lazy(() => import('./tabs/Settings'));
@@ -43,20 +41,12 @@ const LibRate = lazy(() => import('./tabs/LibRate'));
 const LibDDL = lazy(() => import('./tabs/LibDDL'));
 const LibFinance = lazy(() => import('./tabs/LibFinance'));
 const MachineTechnicalTab = lazy(() => import('./tabs/MachineTechnicalTab'));
-const LibMfg = lazy(() => import('./tabs/LibMfg'));
-const LibRop = lazy(() => import('./tabs/LibRop'));
-const RFQTracker = lazy(() => import('./tabs/RFQTracker'));
-const SampleTracking = lazy(() => import('./tabs/SampleTracking'));
 const QuoteAnalysis = lazy(() => import('./tabs/QuoteAnalysis'));
 const Dashboard = lazy(() => import('./tabs/Dashboard'));
 const InkCalculator = lazy(() => import('./tabs/InkCalculator'));
-const PrintAreaCalc = lazy(() => import('./tabs/PrintAreaCalc'));
-const DesignTools = lazy(() => import('./tabs/DesignTools/DesignTools'));
-const MessagesTab = lazy(() => import('./tabs/Messages/MessagesTab'));
 const StandardCalc = lazy(() => import('./tabs/StandardCalc/StandardCalc'));
 const ComplexCalc = lazy(() => import('./tabs/ComplexCalc/ComplexCalc'));
 const Summarize = lazy(() => import('./tabs/Summarize'));
-const FormalQuotation = lazy(() => import('./tabs/FormalQuotation'));
 const AdminMetrics = lazy(() => import('./tabs/AdminMetrics'));
 const AuditLog = lazy(() => import('./tabs/AuditLog'));
 // Help lives at the app level (not cost-specific) but routes through
@@ -79,10 +69,8 @@ import './CostModule.css';
 // time the user clicks. Saves the Suspense flash for expected
 // navigation patterns.
 export const TAB_COMPONENTS = {
-  'lib-inventory': IFSInventory,
   'quote-history': QuoteHistory,
   'npi-parts-list': NpiPartsList,
-  'rfq-tracking': RfqTracking,
   'approvals-inbox': PendingApprovalsInbox,
   'lib-mat': MaterialLibrary,
   settings: Settings,
@@ -90,20 +78,12 @@ export const TAB_COMPONENTS = {
   'lib-ddl': LibDDL,
   'lib-finance': LibFinance,
   'lib-machine-tech': MachineTechnicalTab,
-  'lib-mfg': LibMfg,
-  'lib-rop': LibRop,
-  'rfq-tracker': RFQTracker,
-  'sample-tracking': SampleTracking,
   'quote-analysis': QuoteAnalysis,
   dashboard: Dashboard,
   'ink-calc': InkCalculator,
-  'print-area': PrintAreaCalc,
-  'design-tools': DesignTools,
-  messages: MessagesTab,
   standard: StandardCalc,
   complex: ComplexCalc,
   summarize: Summarize,
-  'formal-quote': FormalQuotation,
   metrics: AdminMetrics,
   'audit-log': AuditLog,
   help: HelpTab,
@@ -125,31 +105,21 @@ function TabLoadingFallback() {
 // TAB_COMPONENTS, makes the two stay in sync — if you add a tab without a
 // label the fallback is a humanised version of the id.
 export const TAB_TITLES = {
-  'lib-inventory': 'IFS Inventory',
   'quote-history': 'Quote History',
   'npi-parts-list': 'NPI Parts List',
-  'rfq-tracking': 'RFQ List',
   'approvals-inbox': 'Approvals Inbox',
   'lib-mat': 'Materials Library',
   settings: 'Settings',
   'lib-rate': 'Rate Library',
   'lib-ddl': 'Drop-down Lists',
-  'lib-finance': 'Finance Library',
+  'lib-finance': 'Cost refer',
   'lib-machine-tech': 'Machine Technical',
-  'lib-mfg': 'Mfg Structure',
-  'lib-rop': 'Routing Operations',
-  'rfq-tracker': 'RFQ Progress',
-  'sample-tracking': 'Sample Tracking',
   'quote-analysis': 'Quote Analysis',
   dashboard: 'Dashboard',
   'ink-calc': 'Ink Calculator',
-  'print-area': 'Print Area Calc',
-  'design-tools': 'Design Tools',
-  messages: 'Messages',
   standard: 'Standard Calc',
   complex: 'Complex Calc',
   summarize: 'Summarize',
-  'formal-quote': 'Formal Quotation',
   metrics: 'Admin Metrics',
   'audit-log': 'Audit Log',
   help: 'Help',

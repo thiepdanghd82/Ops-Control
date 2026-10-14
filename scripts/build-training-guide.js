@@ -119,8 +119,8 @@ function sheetContents(lang) {
               6,
               t('06_Libraries', '06_Thư viện'),
               t(
-                'Rate Table, Drop-Down Lists, Finance Data, Material Library — per site',
-                'Bảng Rate, Drop-Down, Finance Data, Thư viện vật tư — theo site'
+                'Rate Table, Drop-Down Lists, Cost refer, Material Library — per site',
+                'Bảng Rate, Drop-Down, Cost refer, Thư viện vật tư — theo site'
               ),
             ],
             [
@@ -278,7 +278,7 @@ function sheetContents(lang) {
             ],
             [
               'LIBRARIES',
-              'Rate Table (⏱) · Drop-Down Lists (⏷) · Finance Data (⚖)',
+              'Rate Table (⏱) · Drop-Down Lists (⏷) · Cost refer (⚖)',
               t('Cost engineers maintaining rates and DDLs', 'Cost engineer quản lý rate và DDL'),
             ],
             [

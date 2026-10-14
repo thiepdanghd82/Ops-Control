@@ -54,21 +54,6 @@ const { createSession, bcryptHash, loadUsers, saveUsers, getAuditLog } =
 const LIB = path.join(tmp, 'Library');
 const DATASETS = [
   {
-    slug: 'bom',
-    file: ['Manufacturing_Structures', 'mfg_structures_data.js'],
-    varName: 'window._CCL_MFG_DATA',
-  },
-  {
-    slug: 'routing',
-    file: ['Routing_Operations', 'routing_ops_data.js'],
-    varName: 'window._CCL_ROP_DATA',
-  },
-  {
-    slug: 'inventory',
-    file: ['IFS_Inventory', 'inventory_data.js'],
-    varName: 'window._CCL_INV_DATA',
-  },
-  {
     slug: 'npi-parts',
     file: ['NpiParts', 'npi_parts_data.js'],
     varName: 'window._CCL_NPIPARTS_DATA',

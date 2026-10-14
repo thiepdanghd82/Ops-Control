@@ -231,96 +231,7 @@
   color: var(--text-secondary);
 }
 
-.home-card-link {
-  border: 0;
-  background: none;
-  color: var(--color-primary, #1976d2);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-family: inherit;
-}
-.home-card-link:hover {
-  background: var(--surface-hover);
-}
-
-.home-empty {
-  margin: 0;
-  padding: 24px 8px;
-  font-size: 13px;
-  color: var(--text-tertiary);
-  text-align: center;
-  font-style: italic;
-}
-
 /* My Queue list */
-.home-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.home-list-item {
-  display: grid;
-  grid-template-columns: 110px 1fr auto;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 6px;
-  cursor: pointer;
-  transition:
-    background-color 0.1s,
-    border-color 0.1s;
-}
-.home-list-item:hover {
-  background: var(--surface-hover);
-  border-color: var(--color-primary, #1976d2);
-}
-.home-list-item:focus-visible {
-  outline: 2px solid var(--color-primary, #1976d2);
-  outline-offset: 1px;
-}
-.home-list-item.is-overdue {
-  border-left: 3px solid #dc2626;
-}
-.home-list-item.is-today {
-  border-left: 3px solid #f59e0b;
-}
-
-.home-list-code {
-  font-family: var(--cds-mono, ui-monospace, monospace);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.home-list-meta {
-  font-size: 13px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.home-list-due {
-  font-size: 12px;
-  color: var(--text-tertiary);
-  font-variant-numeric: tabular-nums;
-}
-.home-list-due.overdue {
-  color: #dc2626;
-  font-weight: 600;
-}
-.home-list-due.today {
-  color: #b45309;
-  font-weight: 600;
-}
 
 /* Module shortcuts grid */
 .home-module-grid {
@@ -463,20 +374,6 @@
 [data-theme='dark'] .home-card {
   background: rgba(255, 255, 255, 0.03);
   border-color: rgba(255, 255, 255, 0.1);
-}
-
-[data-theme='dark'] .home-list-item {
-  border-color: rgba(255, 255, 255, 0.08);
-}
-[data-theme='dark'] .home-list-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: #4dabf7;
-}
-[data-theme='dark'] .home-list-due.overdue {
-  color: #f87171;
-}
-[data-theme='dark'] .home-list-due.today {
-  color: #fbbf24;
 }
 
 [data-theme='dark'] .home-module-card {

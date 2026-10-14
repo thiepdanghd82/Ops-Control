@@ -29,11 +29,6 @@ export const SESSION_COOKIE = 'ops_session';
 export const CSRF_COOKIE = 'ops_csrf';
 export const CSRF_HEADER = 'x-csrf-token';
 const COOKIE_MAX_AGE_MS = 8 * 60 * 60 * 1000; // 8h — matches default SESSION_TTL
-// Sprint 1.6 — "Remember me" checkbox extends both server-side TTL and the
-// cookie Max-Age to 30 days. Tied here so the cookie expires together with
-// the session it represents (browser drop happens at the same moment the
-// server would invalidate the token anyway).
-export const REMEMBER_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30d
 
 /**
  * Parse the `Cookie` header into a flat { name: value } object.

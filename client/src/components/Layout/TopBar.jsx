@@ -9,17 +9,11 @@ const TAB_META = {
   'lib-mat': { section: 'Calculators', label: 'Material Cost' },
   'ink-calc': { section: 'Calculators', label: 'Inks Calculator' },
   summarize: { section: 'Quoting & Pricing', label: 'Cost Breakdown' },
-  'formal-quote': { section: 'Quoting & Pricing', label: 'Formal Quotation' },
   'quote-history': { section: 'Quoting & Pricing', label: 'Quote History' },
-  'lib-mfg': { section: 'Manufacturing', label: 'Mfg Structures' },
-  'lib-rop': { section: 'Manufacturing', label: 'Routing Ops' },
-  'lib-inventory': { section: 'Manufacturing', label: 'IFS Inventory' },
-  'rfq-tracker': { section: 'Tracking', label: 'RFQ Progress' },
-  'sample-tracking': { section: 'Tracking', label: 'Sample Tracking' },
   'quote-analysis': { section: 'Reports', label: 'Quote Analysis' },
   'lib-rate': { section: 'Libraries', label: 'Rate Table' },
   'lib-ddl': { section: 'Libraries', label: 'Drop-Down Lists' },
-  'lib-finance': { section: 'Libraries', label: 'Finance Data' },
+  'lib-finance': { section: 'Libraries', label: 'Cost refer' },
   settings: { section: 'System', label: 'Settings' },
 };
 

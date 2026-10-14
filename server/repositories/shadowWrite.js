@@ -23,69 +23,9 @@ function numOrNull(v) {
   const n = typeof v === 'number' ? v : Number(v);
   return Number.isFinite(n) ? n : null;
 }
-function intOrNull(v) {
-  const n = numOrNull(v);
-  return n == null ? null : Math.trunc(n);
-}
 
 // ─── mappers (source row → DB row). Must match migrate-to-sqlite.js. ─
 const MAPPERS = {
-  bom(r) {
-    return {
-      parent_part: r['Parent Part No'] ?? null,
-      parent_desc: r['Parent Part Description'] ?? null,
-      component_part: r['Component Part'] ?? null,
-      component_desc: r['Component Part Description'] ?? null,
-      qty_per_assembly: numOrNull(r['Qty Per Assembly']),
-      scrap: numOrNull(r['Component Scrap']),
-      scrap_pct: numOrNull(r['Scrap Factor (%)']),
-      uom: r['UOM'] ?? null,
-      pitch: numOrNull(r['Pitch']),
-      cavity: intOrNull(r['Cavity']),
-      color_nums: intOrNull(r['Color Nums']),
-      structure_type: r['Structure Type'] ?? null,
-      alternative_no: r['Alternative No'] ?? null,
-      effectivity: r['Structure Effectivity'] ?? null,
-      planner: r['Planner'] ?? null,
-      raw_json: JSON.stringify(r),
-    };
-  },
-  routing(r) {
-    return {
-      part_no: r['Part No'] ?? null,
-      part_desc: r['Part Description'] ?? null,
-      operation_no: intOrNull(r['Operation No']),
-      operation_desc: r['Operation Description'] ?? null,
-      work_centre_no: r['Work Centre No'] ?? null,
-      work_centre_desc: r['Work Centre Desc'] ?? null,
-      mach_setup_time: numOrNull(r['Mach Setup Time']),
-      labour_setup_time: numOrNull(r['Labour Setup Time']),
-      mach_run_factor: numOrNull(r['Mach Run Factor']),
-      labour_run_factor: numOrNull(r['Labour Run Factor']),
-      factor_unit: r['Factor Unit'] ?? null,
-      setup_crew_size: intOrNull(r['Setup Crew Size']),
-      crew_size: intOrNull(r['Crew Size']),
-      alternative: r['Alternative'] ?? null,
-      routing_revision: r['Routing Revision'] ?? null,
-      routing_type: r['Routing Type'] ?? null,
-      efficiency_factor: numOrNull(r['Efficiency Factor']),
-      site: r['Site'] ?? null,
-      state: r['State'] ?? null,
-      raw_json: JSON.stringify(r),
-    };
-  },
-  inventory(r, kind) {
-    return {
-      kind,
-      part_no: r['Part No'] ?? r['Part'] ?? null,
-      part_desc: r['Part Description'] ?? r['Description'] ?? null,
-      qty_on_hand: numOrNull(r['Qty On Hand'] ?? r['Qty'] ?? r['Quantity']),
-      uom: r['UOM'] ?? r['Unit'] ?? null,
-      location: r['Location'] ?? r['Location No'] ?? null,
-      lot_no: r['Lot/Batch'] ?? r['Lot No'] ?? r['Lot'] ?? null,
-      raw_json: JSON.stringify(r),
-    };
-  },
   materials(r, kind) {
     return {
       kind,
@@ -111,7 +51,7 @@ const MAPPERS = {
 /**
  * Replace all rows in `table` with a fresh set, atomically.
  * Optional `deleteFilter` narrows the delete scope — used for
- * ifs_inventory + materials where we only replace rows of the
+ * materials where we only replace rows of the
  * matching `kind`, not the whole table.
  *
  * Returns { ok, rowsInserted, error? }. Never throws — callers stay
@@ -165,9 +105,6 @@ function atomicReplace(table, rowsMapped, deleteWhere = null) {
 }
 
 function datasetFromTable(table, deleteWhere) {
-  if (table === 'bom') return 'bom';
-  if (table === 'routing_operations') return 'routing';
-  if (table === 'ifs_inventory') return `inventory_${deleteWhere?.kind || 'all'}`;
   if (table === 'materials') return `materials_${deleteWhere?.kind || 'all'}`;
   return table;
 }
@@ -192,28 +129,6 @@ function updateState(dataset, rowCount, mode) {
 }
 
 // ─── Public shadow-write functions (one per dataset) ──────────────
-export function shadowWriteBom(rowObjects) {
-  return atomicReplace('bom', rowObjects.map(MAPPERS.bom));
-}
-
-export function shadowWriteRouting(rowObjects) {
-  return atomicReplace('routing_operations', rowObjects.map(MAPPERS.routing));
-}
-
-export function shadowWriteInventory(
-  rowObjects,
-  kind /* 'inventory' | 'finished_goods' | 'raw_materials' */
-) {
-  if (!['inventory', 'finished_goods', 'raw_materials'].includes(kind)) {
-    return { ok: false, error: `invalid inventory kind: ${kind}` };
-  }
-  return atomicReplace(
-    'ifs_inventory',
-    rowObjects.map((r) => MAPPERS.inventory(r, kind)),
-    { sql: 'kind = ?', params: [kind], kind }
-  );
-}
-
 export function shadowWriteMaterials(rowObjects, kind /* 'npi' | 'sourcing' */) {
   if (!['npi', 'sourcing'].includes(kind)) {
     return { ok: false, error: `invalid materials kind: ${kind}` };
@@ -226,15 +141,6 @@ export function shadowWriteMaterials(rowObjects, kind /* 'npi' | 'sourcing' */) 
 }
 
 // ─── Clear helpers (mirror DELETE /api/import/:slug) ──────────────
-export function shadowClearBom() {
-  return atomicReplace('bom', []);
-}
-export function shadowClearRouting() {
-  return atomicReplace('routing_operations', []);
-}
-export function shadowClearInventory(kind) {
-  return atomicReplace('ifs_inventory', [], { sql: 'kind = ?', params: [kind], kind });
-}
 export function shadowClearMaterials(kind) {
   return atomicReplace('materials', [], { sql: 'kind = ?', params: [kind], kind });
 }

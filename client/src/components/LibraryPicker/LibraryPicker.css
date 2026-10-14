@@ -92,19 +92,7 @@
 }
 
 /* ── Picker card (modal) ── */
-.libp-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(12, 18, 32, 0.5);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
-  z-index: 9100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
-  animation: libp-backdrop-in 160ms ease-out;
-}
+
 @keyframes libp-backdrop-in {
   from {
     opacity: 0;
@@ -114,21 +102,6 @@
   }
 }
 
-.libp-card {
-  width: 100%;
-  max-width: 840px;
-  max-height: calc(100vh - 80px);
-  background: var(--surface-card);
-  color: var(--text-primary);
-  border: 1px solid var(--border-subtle);
-  border-radius: 4px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
-  display: flex;
-  flex-direction: column;
-  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
-  overflow: hidden;
-  animation: libp-card-in 160ms ease-out;
-}
 @keyframes libp-card-in {
   from {
     opacity: 0;
@@ -140,46 +113,7 @@
   }
 }
 /* Top accent bar matches the login card */
-.libp-card::before {
-  content: '';
-  height: 3px;
-  background: linear-gradient(90deg, #0f62fe 0%, #4589ff 100%);
-}
 
-.libp-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-.libp-card-title {
-  font-size: 15px;
-  font-weight: 600;
-}
-.libp-card-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.libp-card-close {
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  border-radius: 50%;
-  font-size: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition:
-    background 0.12s,
-    color 0.12s;
-  padding: 0;
-  line-height: 1;
-}
 /* A dedicated row above the search input so the auto-width text button
    never overlaps the modal title/subtitle (was an icon-only 28px circle
    that overflowed the long "Back to library list" label). */
@@ -204,9 +138,7 @@
     background 0.12s,
     color 0.12s;
 }
-.libp-card-close:hover {
-  background: color-mix(in oklab, var(--text-primary), transparent 90%);
-}
+
 .libp-card-back:hover {
   background: color-mix(in oklab, var(--text-primary), transparent 90%);
   color: #0f62fe;
@@ -301,45 +233,6 @@
   background: color-mix(in oklab, #0f62fe, transparent 88%);
 }
 
-.libp-col-date {
-  width: 96px;
-  white-space: nowrap;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-.libp-col-code {
-  width: 160px;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 12px;
-}
-.libp-col-code code {
-  background: color-mix(in oklab, var(--text-primary), transparent 94%);
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 11.5px;
-}
-.libp-col-desc {
-  min-width: 200px;
-}
-.libp-extra {
-  color: var(--text-secondary);
-  font-size: 11px;
-}
-.libp-col-supplier {
-  width: 160px;
-  color: var(--text-secondary);
-}
-.libp-col-price {
-  width: 110px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-weight: 500;
-  color: #0f62fe;
-}
-[data-theme='dark'] .libp-col-price {
-  color: #78a9ff;
-}
-
 .libp-empty {
   text-align: center;
   color: var(--text-secondary);
@@ -347,11 +240,6 @@
   font-style: italic;
 }
 
-.libp-card-foot {
-  padding: 10px 20px;
-  border-top: 1px solid var(--border-subtle);
-  background: var(--surface-subtle);
-}
 .libp-hint {
   font-size: 11px;
   color: var(--text-secondary);

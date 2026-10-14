@@ -25,9 +25,6 @@ export const COST_SECTIONS = [
       { id: 'complex', icon: 'calc_cplx', labelKey: 'nav.tab.complex' },
       { id: 'lib-mat', icon: 'material', labelKey: 'nav.tab.material_cost' },
       { id: 'ink-calc', icon: 'ink', labelKey: 'nav.tab.inks_calc' },
-      { id: 'print-area', icon: 'print_area', labelKey: 'nav.tab.print_area' },
-      { id: 'design-tools', icon: 'design', labelKey: 'nav.tab.design_tools' },
-      { id: 'messages', icon: 'messages', labelKey: 'nav.tab.messages' },
     ],
   },
   {
@@ -35,28 +32,9 @@ export const COST_SECTIONS = [
     labelKey: 'nav.section.quoting',
     tabs: [
       { id: 'summarize', icon: 'summarize', labelKey: 'nav.tab.cost_breakdown' },
-      { id: 'formal-quote', icon: 'formal_quote', labelKey: 'nav.tab.formal_quotation' },
       { id: 'quote-history', icon: 'history', labelKey: 'nav.tab.quote_history' },
       { id: 'npi-parts-list', icon: 'parts_list', labelKey: 'nav.tab.npi_parts_list' },
-      { id: 'rfq-tracking', icon: 'rfq_tracking', labelKey: 'nav.tab.rfq_tracking' },
       { id: 'approvals-inbox', icon: 'approvals', labelKey: 'nav.tab.pending_approvals' },
-    ],
-  },
-  {
-    id: 'manufacturing',
-    labelKey: 'nav.section.manufacturing',
-    tabs: [
-      { id: 'lib-mfg', icon: 'mfg', labelKey: 'nav.tab.mfg_structures' },
-      { id: 'lib-rop', icon: 'routing', labelKey: 'nav.tab.routing_ops' },
-      { id: 'lib-inventory', icon: 'ifs', labelKey: 'nav.tab.ifs_inventory' },
-    ],
-  },
-  {
-    id: 'tracking',
-    labelKey: 'nav.section.tracking',
-    tabs: [
-      { id: 'rfq-tracker', icon: 'rfq_tracker', labelKey: 'nav.tab.rfq_tracker' },
-      { id: 'sample-tracking', icon: 'samples', labelKey: 'nav.tab.sample_tracking' },
     ],
   },
   {

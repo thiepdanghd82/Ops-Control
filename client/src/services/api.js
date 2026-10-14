@@ -289,11 +289,6 @@ export const licenseFleetApi = {
 // the uploaded headers+rows, then clears the server cache so subsequent
 // reads via sharedApi return the new data immediately.
 export const importApi = {
-  uploadBom: (file) => uploadFile('/import/bom', file),
-  uploadRouting: (file) => uploadFile('/import/routing', file),
-  uploadInventory: (file) => uploadFile('/import/inventory', file),
-  uploadFinishedGoods: (file) => uploadFile('/import/finished-goods', file),
-  uploadRawMaterials: (file) => uploadFile('/import/raw-materials', file),
   // Material Cost tab → NPI Materials + Sourcing DB. Server does the
   // CSV/XLSX parsing and writes the mapped rows to the corresponding
   // JSON file under Library/MaterialCost/.
@@ -311,16 +306,7 @@ export const importApi = {
   // password (step-up); POST (not DELETE) so the { password } body is sent.
   // Returns 200 { ok:false, code:'bad_password' } on a wrong/missing password
   // (never thrown) so the confirm modal can show an inline error.
-  clearBom: (password) => api.post('/import/bom/clear', { password }),
-  clearRouting: (password) => api.post('/import/routing/clear', { password }),
-  clearInventory: (password) => api.post('/import/inventory/clear', { password }),
-  clearFinishedGoods: (password) => api.post('/import/finished-goods/clear', { password }),
-  clearRawMaterials: (password) => api.post('/import/raw-materials/clear', { password }),
   clearNpiParts: (password) => api.post('/import/npi-parts/clear', { password }),
-  status: () => api.get('/import/status'),
-  // Server-side backup — copies the dataset's data file to destPath
-  // (or an auto-named sibling if destPath is omitted). Admins only.
-  backup: (key, destPath) => api.post('/import/backup', { key, destPath }),
 };
 
 // ─── Import Wizard API ────────────────────────────────────────────────
@@ -381,12 +367,6 @@ export const importWizardApi = {
 // ─── Shared Data API (Node.js reads files directly — no Python dependency) ───
 export const sharedApi = {
   // IFS data
-  getInventory: (opts = {}) => api.get('/shared/inventory', opts),
-  getProducts: (opts = {}) => api.get('/shared/products', opts),
-  getBOM: (partNo, opts = {}) =>
-    partNo ? api.get(`/shared/bom/${partNo}`, opts) : api.get('/shared/bom', opts),
-  getRouting: (partNo, opts = {}) =>
-    partNo ? api.get(`/shared/routing/${partNo}`, opts) : api.get('/shared/routing', opts),
   getWorkCenters: (opts = {}) => api.get('/shared/work-centers', opts),
   // NPI Parts List — returns { columns, rows, row_count, generated_at }.
   getNpiParts: (opts = {}) => api.get('/shared/npi-parts', opts),
@@ -408,40 +388,8 @@ export const sharedApi = {
   getMyApprovalCount: (opts = {}) => api.get('/shared/approvals/my-count', opts),
   getRates: (opts = {}) => api.get('/shared/rates', opts),
 
-  // ── Design Tools (Sprint 14e) ──
-  // List + create the per-press design library used by the Gallus
-  // (and future Letter Press / Brotech / etc.) calculators. Records
-  // are keyed by End CU PN + saved_at; the operator can pull a past
-  // design back into the editor or push it across into Pricing
-  // (Std/Cpx) via the existing pendingQuote handoff.
-  listDesigns: ({ press } = {}, opts = {}) =>
-    api.get(`/shared/design-tools${press ? '?press=' + encodeURIComponent(press) : ''}`, opts),
-  saveDesign: (payload) => api.post('/shared/design-tools', payload),
-  // Sprint 14k — overwrite an existing record in place (bumps version).
-  // Used by the Save Choice dialog's "Update existing" path.
-  updateDesign: (id, payload) => api.put(`/shared/design-tools/${id}`, payload),
-  deleteDesign: (id) => api.delete(`/shared/design-tools/${id}`),
   getDDL: (opts = {}) => api.get('/shared/ddl', opts),
   getSummarize: (opts = {}) => api.get('/shared/summarize', opts),
-  getRFQTracker: (opts = {}) => api.get('/shared/rfq-tracker', opts),
-  // RFQ audit log — append-only, server stamps user + ts
-  getRFQAudit: (rfqId, opts = {}) =>
-    api.get(`/shared/rfq-tracker/audit/${encodeURIComponent(rfqId)}`, opts),
-  appendRFQAudit: (rfqId, entry) =>
-    api.post(`/shared/rfq-tracker/audit/${encodeURIComponent(rfqId)}`, entry),
-  // RFQ attachments
-  listRFQAttachments: (rfqId, opts = {}) =>
-    api.get(`/shared/rfq-tracker/attachments/${encodeURIComponent(rfqId)}`, opts),
-  uploadRFQAttachment: (rfqId, file) =>
-    uploadFile(`/shared/rfq-tracker/attachments/${encodeURIComponent(rfqId)}`, file, 'file'),
-  deleteRFQAttachment: (rfqId, attId) =>
-    api.delete(
-      `/shared/rfq-tracker/attachments/${encodeURIComponent(rfqId)}/${encodeURIComponent(attId)}`
-    ),
-  // Download URL — caller can put this in an <a href>
-  rfqAttachmentUrl: (rfqId, attId) =>
-    `/api/shared/rfq-tracker/attachments/${encodeURIComponent(rfqId)}/${encodeURIComponent(attId)}/download`,
-  getSampleTracking: (opts = {}) => api.get('/shared/sample-tracking', opts),
   // Machine profiles — press library for Layout optimizer
   getMachineProfiles: (opts = {}) => api.get('/shared/machine-profiles', opts),
   createMachineProfile: (profile) => api.post('/shared/machine-profiles', profile),
@@ -470,60 +418,8 @@ export const sharedApi = {
     uploadFile(`/shared/machine-technical/${encodeURIComponent(kind)}/import`, file, 'file'),
   updateMachineTechnicalEnum: (key, values) =>
     api.put(`/shared/machine-technical/enums/${encodeURIComponent(key)}`, { values }),
-  // Sample Tracking audit + attachments (SAP parity with RFQ Tracker)
-  getSampleAudit: (id, opts = {}) =>
-    api.get(`/shared/sample-tracking/audit/${encodeURIComponent(id)}`, opts),
-  appendSampleAudit: (id, entry) =>
-    api.post(`/shared/sample-tracking/audit/${encodeURIComponent(id)}`, entry),
-  listSampleAttachments: (id, opts = {}) =>
-    api.get(`/shared/sample-tracking/attachments/${encodeURIComponent(id)}`, opts),
-  uploadSampleAttachment: (id, file) =>
-    uploadFile(`/shared/sample-tracking/attachments/${encodeURIComponent(id)}`, file, 'file'),
-  deleteSampleAttachment: (id, attId) =>
-    api.delete(
-      `/shared/sample-tracking/attachments/${encodeURIComponent(id)}/${encodeURIComponent(attId)}`
-    ),
-  sampleAttachmentUrl: (id, attId) =>
-    `/api/shared/sample-tracking/attachments/${encodeURIComponent(id)}/${encodeURIComponent(attId)}/download`,
   getInkCalc: (opts = {}) => api.get('/shared/ink-calc', opts),
   getFinance: (opts = {}) => api.get('/shared/finance', opts),
-
-  // ─── Print Area Calculator — Phase 11 ───
-  // Jobs are keyed by SKU (mã sản phẩm). POST upserts; DELETE takes
-  // the SKU in the URL so cross-tab links keep working even if the
-  // job's internal `id` changes. Upload endpoint is multipart and
-  // shares the same cookie+CSRF contract as importApi (see uploadFile).
-  getPrintAreaJobs: (opts = {}) => api.get('/shared/print-area', opts),
-  savePrintAreaJob: (job) => api.post('/shared/print-area', job),
-  deletePrintAreaJob: (sku) => api.delete(`/shared/print-area/${encodeURIComponent(sku)}`),
-  uploadPrintAreaArtwork: (file) => uploadFile('/shared/print-area/upload', file, 'artwork'),
-  // Binary fetch for files under server/data/ (e.g. saved print-area
-  // artworks). Uses the same session cookie + optional Bearer header
-  // as JSON calls but returns a Blob. Used by Library → Open to
-  // rehydrate the artwork file so the user can re-analyze without
-  // re-uploading.
-  getDataFile: async (dataRelPath, opts = {}) => {
-    const safeRel = String(dataRelPath || '').replace(/^\/+/, '');
-    const url = '/data/' + safeRel.split('/').map(encodeURIComponent).join('/');
-    let token = '';
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        token = window.localStorage.getItem('ops_token') || '';
-      }
-    } catch {
-      /* storage disabled — rely on cookie */
-    }
-    const res = await fetch(url, {
-      credentials: 'include',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      signal: opts.signal,
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(err.error || err.detail || `Fetch failed: ${res.status}`);
-    }
-    return res.blob();
-  },
 
   refreshCache: () => api.post('/shared/refresh-cache', {}),
 };
@@ -552,14 +448,6 @@ export const costApi = {
   getBackupSchedule: () => api.get('/admin/backup-schedule'),
   setBackupSchedule: (patch) => authCall('put', '/admin/backup-schedule', patch),
   runBackupNow: () => authCall('post', '/admin/backup-schedule/run-now', {}),
-
-  // Sprint 1.7j — admin-managed Master Cylinder catalog (Gallus print
-  // cylinders Z=60..220). Read open to all logged-in users (Design Tools
-  // tab needs the list); writes restricted to admin/sys.
-  getMasterCylinders: () => api.get('/admin/master-cylinders'),
-  updateMasterCylinder: (z, patch) => authCall('put', `/admin/master-cylinders/${z}`, patch),
-  addMasterCylinder: (data) => authCall('post', '/admin/master-cylinders', data),
-  deleteMasterCylinder: (z) => authCall('delete', `/admin/master-cylinders/${z}`),
 
   // Phase A.2 — server connection-info dashboard (admin-only)
   getServerInfo: () => api.get('/server-info'),
@@ -641,11 +529,6 @@ export const costApi = {
   // Load/Save all
   loadAll: () => api.get('/load-all'),
   saveAll: (data) => api.post('/save-all', data),
-
-  // RFQ Tracking master list (registry-driven; distinct from the kanban
-  // rfq-tracker). GET returns the row array; POST bulk-saves (auto-backup).
-  getRfqTracking: (opts = {}) => api.get('/rfq-tracking', opts),
-  saveRfqTracking: (rows) => api.post('/rfq-tracking', rows),
 
   // Layout/drawing files — persisted to server's data/Products layout/ folder
   // Matches COST V1.0's saveLayoutToDisk + /api/layout/:name pattern

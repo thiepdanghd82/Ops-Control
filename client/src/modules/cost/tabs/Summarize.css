@@ -44,28 +44,7 @@
   letter-spacing: 0.16px;
   flex-shrink: 0;
 }
-.sum-header-spacer {
-  flex: 1;
-}
-.sum-search {
-  padding: 0 16px;
-  height: 32px;
-  border: none;
-  border-bottom: 2px solid #c6c6c6;
-  border-radius: 0;
-  font-size: 14px;
-  width: 240px;
-  background: #ffffff;
-  color: #161616;
-  outline: none;
-  letter-spacing: 0.16px;
-}
-.sum-search::placeholder {
-  color: #6f6f6f;
-}
-.sum-search:focus {
-  border-bottom-color: #0f62fe;
-}
+
 .sum-export-btn {
   padding: 7px 16px;
   background: #0f62fe;

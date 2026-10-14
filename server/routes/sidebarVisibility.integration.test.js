@@ -88,7 +88,7 @@ test('runtime-config includes `sidebar` and tolerates a missing file', async () 
 });
 
 test('PUT as non-sys → 403, nothing persisted', async () => {
-  const r = await put(opToken(), { hiddenTabs: ['rfq-tracking'], hiddenSections: [] });
+  const r = await put(opToken(), { hiddenTabs: ['quote-history'], hiddenSections: [] });
   assert.equal(r.status, 403);
   assert.deepEqual(readSidebarVisibility(), { hiddenTabs: [], hiddenSections: [] });
 });
@@ -96,14 +96,14 @@ test('PUT as non-sys → 403, nothing persisted', async () => {
 test('PUT as sys with valid ids → 200, persists + audit row', async () => {
   const before = auditCount('SIDEBAR_VISIBILITY_UPDATE');
   const r = await put(sysToken(), {
-    hiddenTabs: ['rfq-tracking', 'quote-analysis'],
-    hiddenSections: ['tracking'],
+    hiddenTabs: ['quote-history', 'quote-analysis'],
+    hiddenSections: ['reports'],
   });
   assert.equal(r.status, 200);
   const stored = readSidebarVisibility();
   assert.deepEqual(sortMap(stored), {
-    hiddenTabs: ['quote-analysis', 'rfq-tracking'],
-    hiddenSections: ['tracking'],
+    hiddenTabs: ['quote-analysis', 'quote-history'],
+    hiddenSections: ['reports'],
   });
   assert.equal(auditCount('SIDEBAR_VISIBILITY_UPDATE'), before + 1, 'audit written');
 });
@@ -112,7 +112,7 @@ test('PUT with an unknown tab id → 400, prior state untouched', async () => {
   const r = await put(sysToken(), { hiddenTabs: ['not-a-real-tab'], hiddenSections: [] });
   assert.equal(r.status, 400);
   // The valid PUT above must still be the persisted state.
-  assert.deepEqual(readSidebarVisibility().hiddenSections, ['tracking']);
+  assert.deepEqual(readSidebarVisibility().hiddenSections, ['reports']);
 });
 
 test('PUT rejects an always-on id (settings / system)', async () => {
@@ -127,8 +127,8 @@ test('GET returns the persisted map for any authenticated user', async () => {
   const r = await get(opToken());
   assert.equal(r.status, 200);
   assert.deepEqual(sortMap(r.body), {
-    hiddenTabs: ['quote-analysis', 'rfq-tracking'],
-    hiddenSections: ['tracking'],
+    hiddenTabs: ['quote-analysis', 'quote-history'],
+    hiddenSections: ['reports'],
   });
   // Unauthenticated → 401.
   const anon = await fetch(`${baseUrl}/api/system/sidebar-visibility`);
@@ -138,8 +138,8 @@ test('GET returns the persisted map for any authenticated user', async () => {
 test('runtime-config now reflects the persisted hidden map', async () => {
   const j = await (await fetch(`${baseUrl}/api/runtime-config`)).json();
   assert.deepEqual(sortMap(j.sidebar), {
-    hiddenTabs: ['quote-analysis', 'rfq-tracking'],
-    hiddenSections: ['tracking'],
+    hiddenTabs: ['quote-analysis', 'quote-history'],
+    hiddenSections: ['reports'],
   });
 });
 

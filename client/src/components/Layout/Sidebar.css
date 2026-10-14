@@ -78,12 +78,6 @@
   line-height: 1.2;
 }
 
-.sidebar-app-ver {
-  font-size: 11px;
-  color: var(--text-tertiary);
-  margin-top: 1px;
-}
-
 /* ─── Module Switcher ─── */
 .module-switcher {
   display: flex;

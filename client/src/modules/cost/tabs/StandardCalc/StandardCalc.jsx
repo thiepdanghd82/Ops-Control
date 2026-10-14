@@ -23,7 +23,6 @@ import { stripDrawingBytesDeep } from '../../../../services/drawingFiles';
 import { isCopyMode } from '../../components/SnapshotPanel.helpers';
 import '../../components/SnapshotPanel.css';
 import { costApi, sharedApi } from '../../../../services/api';
-import { chatApi, openChatRoom } from '../../../../services/chatApi';
 import { useI18n } from '../../../../utils/useI18n';
 import { showToast } from '../../../../utils/toast';
 import SaveChoiceModal from '../../../../utils/SaveChoiceModal';
@@ -219,28 +218,6 @@ export default function StandardCalc() {
     return () => {
       cancelled = true;
     };
-  }, [pendingQuote, loadQuote, clearPendingQuote]);
-
-  // RFQ Tracker → Pricing Worksheet handoff. The RFQ Tracker pushes
-  // a prefill payload via setPendingQuote(rfqId, 'rfq-sync', 'prefill',
-  // { rfq_number, direct_cu, description, annual_qty, moq, npi_owner,
-  //   sale_owner, part_width, part_length_md, ... }) then navigates
-  // to the Pricing (Std) tab. We merge the payload into the current
-  // std state (preserving user edits the operator may already have
-  // made) and jump to the RFQ & MOQ Info sub-tab so they see what
-  // landed.
-  useEffect(() => {
-    if (!pendingQuote || pendingQuote.type !== 'rfq-sync') return;
-    const prefill = pendingQuote.data || {};
-    const nextState = { ...stdState, ...prefill };
-    loadQuote('std', nextState, null);
-    setActiveSubTab('header');
-    showToast('Prefilled from RFQ ' + (prefill.rfq_number || prefill._rfq_no || ''));
-    clearPendingQuote();
-    // Intentionally NOT depending on stdState — we want the merge to
-    // use whatever state was in place WHEN the sync request arrived,
-    // not every keystroke after.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingQuote, loadQuote, clearPendingQuote]);
 
   const [saving, setSaving] = useState(false);
@@ -707,22 +684,6 @@ export default function StandardCalc() {
           rightSlot={
             <div className="sc-toolbar">
               {isDirty && <span className="sc-dirty-badge">Unsaved</span>}
-              {activeQuoteId != null && (
-                <button
-                  className="op-btn op-btn-secondary op-btn-sm"
-                  onClick={async () => {
-                    try {
-                      const r = await chatApi.openQuote(activeQuoteId);
-                      openChatRoom(r.room.id);
-                    } catch (e) {
-                      showToast(t('chat.unavailable', { msg: e.message || 'error' }), 'warning');
-                    }
-                  }}
-                  title={t('chat.discuss_title')}
-                >
-                  {t('chat.discuss')}
-                </button>
-              )}
               <button
                 className="op-btn op-btn-secondary op-btn-sm sc-btn-reset"
                 onClick={handleReset}
