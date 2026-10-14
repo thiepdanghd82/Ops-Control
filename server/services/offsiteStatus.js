@@ -1,9 +1,10 @@
 /**
  * Off-site mirror health, for Settings → Backup.
  *
- * The off-site job is a LaunchAgent shell script outside this app, so the app
- * does not run it and must not parse its log. The script drops a small status
- * file instead; this reads it and turns it into a verdict the card can show.
+ * The mirror writes a small status file after each run (backupMirror.js since
+ * 2026-10-14; a LaunchAgent shell script before that, which is why it is a
+ * file and not memory); this reads it and turns it into a verdict the card
+ * can show.
  *
  * Why it exists: the mirror ran every 4 hours for 84 days and skipped every
  * single time because its target drive was never plugged in. 478 runs, 0

@@ -3,7 +3,8 @@
  *
  * IBM 3-2-1 backup rule: 3 copies, 2 media, 1 off-site.
  * This module covers the LOCAL portion (3 copies on local disk).
- * Off-site rsync is a separate cron job (scripts/backup-offsite.sh).
+ * The off-site mirror runs after each cycle (backupMirror.js); on Linux
+ * installs scripts/backup-offsite.sh remains available as a cron job.
  *
  * Activation: set OPS_BACKUP_SCHEDULE=1 (default OFF for dev).
  *
@@ -37,6 +38,7 @@ import { getDb, getDbPath } from '../db/connection.js';
 // doesn't grow without bound.
 import { pruneOldBackups, getRetentionSettings, getBackupRoot } from '../utils/backupPath.js';
 import { readOffsiteStatus, resolveOffsiteHealth } from './offsiteStatus.js';
+import { readMirrorConfig, runMirror, isMirrorRunning } from './backupMirror.js';
 import { audit } from './authService.js';
 
 let _timer = null;
@@ -485,8 +487,28 @@ export async function runBackupCycle({ force = false } = {}) {
   // run after a restart (was in-memory only → "Never run on this server").
   persistLastRun();
 
+  // Mirror the fresh backups to the second disk, in the background so a
+  // multi-minute copy never holds up the cycle or the Run now request. Its
+  // result goes to the status file the Backup card reads, not to `summary`:
+  // a missing USB drive is not a failed backup.
+  summary.mirror = startMirrorAfterCycle();
+
   console.log(`[backup] cycle ${summary.ok ? '✓' : '✗'} ${summary.durationMs}ms`);
   return summary;
+}
+
+export function getMirrorDataDir() {
+  return path.dirname(getDbPath());
+}
+
+function startMirrorAfterCycle() {
+  const dataDir = getMirrorDataDir();
+  const cfg = readMirrorConfig(dataDir);
+  if (!cfg.dest || !cfg.auto) return 'off';
+  runMirror(dataDir)
+    .then((r) => console.log(`[backup] mirror ${r.state}${r.detail ? ': ' + r.detail : ''}`))
+    .catch((err) => console.error('[backup] mirror error:', err));
+  return 'started';
 }
 
 /**
@@ -586,6 +608,7 @@ export function getStatus() {
     // someone looks to ask "are my backups safe". Leaving it out is how a
     // mirror can fail for 84 days without anyone noticing.
     offsite: resolveOffsiteHealth(readOffsiteStatus(path.dirname(getDbPath()))),
+    mirror: { ...readMirrorConfig(getMirrorDataDir()), running: isMirrorRunning() },
   };
 }
 
