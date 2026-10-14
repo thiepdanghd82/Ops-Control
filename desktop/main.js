@@ -42,6 +42,7 @@ const license = require('./license.js');
 const smartClient = require('./smart-client.js');
 const { probeServer } = require('./utils/netProbe.js');
 const { connectThenLoad, activateAction } = require('./utils/mainWindowBoot');
+const { closeAction, quitNeedsConfirm } = require('./utils/serverWindowPolicy');
 const { showClientFirstRunDialog } = require('./clientFirstRun.js');
 
 // ─── Logging ────────────────────────────────────────────────────────
@@ -675,6 +676,16 @@ function createMainWindow() {
     }
   });
 
+  // SERVER build: closing the window hides the app to the menu bar and the
+  // embedded server keeps answering the clients. Only Thoát / Cmd+Q stops it.
+  mainWindow.on('close', (e) => {
+    if (closeAction({ buildRole: BUILD_ROLE, isQuitting: !!app.isQuitting }) === 'hide') {
+      e.preventDefault();
+      mainWindow.hide();
+      if (process.platform === 'darwin') app.dock?.hide();
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -762,7 +773,7 @@ function createTray() {
   tray.setToolTip('Ops Control');
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: 'Mở Ops Control', click: () => mainWindow?.show() },
+      { label: 'Mở Ops Control', click: () => showMainWindow() },
       { type: 'separator' },
       { label: 'Kiểm tra cập nhật', click: () => initAutoUpdater(true) },
       { label: `Mode: ${store.get('mode')}`, enabled: false },
@@ -776,7 +787,17 @@ function createTray() {
       },
     ])
   );
-  tray.on('double-click', () => mainWindow?.show());
+  tray.on('double-click', () => showMainWindow());
+}
+
+function showMainWindow() {
+  if (process.platform === 'darwin') app.dock?.show();
+  if (!mainWindow) {
+    if (startupDone) createMainWindow();
+    return;
+  }
+  mainWindow.show();
+  mainWindow.focus();
 }
 
 // ─── App Menu (Edit/View/Help) ─────────────────────────────────────
@@ -1147,11 +1168,40 @@ app.on('activate', () => {
   if (action === 'create') {
     createMainWindow();
   } else if (action === 'show' && mainWindow) {
-    mainWindow.show();
+    showMainWindow();
   }
 });
 
-app.on('before-quit', () => {
+// Quitting the SERVER app stops the server and disconnects every client, so
+// it asks first. A logout or shutdown is not held up by the dialog.
+let quitConfirmed = false;
+let shuttingDown = false;
+app.whenReady().then(() => {
+  const { powerMonitor } = require('electron');
+  powerMonitor.on('shutdown', () => {
+    shuttingDown = true;
+  });
+});
+
+app.on('before-quit', (e) => {
+  if (quitNeedsConfirm({ buildRole: BUILD_ROLE, confirmed: quitConfirmed, shuttingDown })) {
+    const choice = dialog.showMessageBoxSync({
+      type: 'warning',
+      buttons: ['Thoát và tắt server', 'Huỷ'],
+      defaultId: 1,
+      cancelId: 1,
+      message: 'Thoát Ops Control SERVER?',
+      detail:
+        'Server sẽ tắt và các máy client sẽ mất kết nối cho tới khi mở lại app.\n\n' +
+        'Muốn server tiếp tục chạy thì chỉ cần đóng cửa sổ — app vẫn chạy ở thanh menu.',
+    });
+    if (choice !== 0) {
+      e.preventDefault();
+      app.isQuitting = false;
+      return;
+    }
+    quitConfirmed = true;
+  }
   app.isQuitting = true;
   smartClient.stop();
   if (embeddedServer) {
