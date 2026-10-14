@@ -27,6 +27,10 @@ import {
 } from '../../../services/clientVersionBadge';
 import './Settings.css';
 
+// Only admins on the Backup page need it; kept out of the Settings chunk,
+// which sits near its size budget.
+const BackupMirrorCard = lazy(() => import('./BackupMirrorCard'));
+
 // ─── Settings menu structure (matches COST V1.0) ───
 // Icons use monochrome Unicode glyphs (not colour emoji) to match the
 // geometric glyph style of the main sidebar. The colour comes from
@@ -2204,6 +2208,11 @@ function BackupSection() {
           onRunDone={loadBackups}
           onRestore={hasRole('sys') ? () => setRestoreModalOpen(true) : null}
         />
+      )}
+      {hasRole('admin') && (
+        <Suspense fallback={null}>
+          <BackupMirrorCard />
+        </Suspense>
       )}
 
       <div className="ifs-tabs" style={{ marginBottom: 12 }}>

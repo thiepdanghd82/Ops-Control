@@ -92,6 +92,60 @@ registerStrings({
   // loudest of these: a job that runs on time and has never once succeeded
   // is the failure mode that hid for 84 days.
   'set.offsite': { en: 'Off-site', vi: 'Bản sao ngoài máy' },
+  'set.mirror.title': { en: 'Mirror', vi: 'Mirror (bản sao sang ổ khác)' },
+  'set.mirror.sub': {
+    en: 'A second copy of the data and backups on another disk. Passwords and keys are never copied.',
+    vi: 'Bản sao thứ hai của dữ liệu và backup trên một ổ khác. Mật khẩu và khoá không bao giờ được chép.',
+  },
+  'set.mirror.dest': { en: 'Destination', vi: 'Nơi lưu' },
+  'set.mirror.folder': { en: 'A folder on this machine', vi: 'Một thư mục trên máy này' },
+  'set.mirror.pick': { en: 'Choose folder…', vi: 'Chọn thư mục…' },
+  'set.mirror.free_of': { en: 'free of', vi: 'trống / tổng' },
+  'set.mirror.same_disk': { en: 'same disk as the data', vi: 'cùng ổ với dữ liệu' },
+  'set.mirror.same_disk_long': {
+    en: 'This is the disk the data lives on: the copy will not survive that disk failing. Prefer a USB or external drive.',
+    vi: 'Đây là ổ đang chứa dữ liệu: nếu ổ này hỏng thì bản sao cũng mất. Nên chọn USB hoặc ổ gắn ngoài.',
+  },
+  'set.mirror.read_only': { en: 'read-only', vi: 'chỉ đọc' },
+  'set.mirror.no_drives': {
+    en: 'No external drive is plugged in.',
+    vi: 'Chưa gắn ổ ngoài nào.',
+  },
+  'set.mirror.auto': {
+    en: 'Run automatically after each nightly backup (when the drive is plugged in)',
+    vi: 'Tự chạy sau mỗi lần backup đêm (khi ổ đang được gắn)',
+  },
+  'set.mirror.save': { en: 'Save', vi: 'Lưu' },
+  'set.mirror.saved': { en: 'Mirror settings saved', vi: 'Đã lưu cài đặt mirror' },
+  'set.mirror.run': { en: 'Mirror now', vi: 'Mirror ngay' },
+  'set.mirror.running': { en: 'Mirroring…', vi: 'Đang mirror…' },
+  'set.mirror.save_first': { en: 'Save the changes first', vi: 'Lưu thay đổi trước' },
+  'set.mirror.err.not_absolute': {
+    en: 'Enter a full folder path (starting with /).',
+    vi: 'Nhập đường dẫn thư mục đầy đủ (bắt đầu bằng /).',
+  },
+  'set.mirror.err.missing': {
+    en: 'That folder does not exist, or the drive is not plugged in.',
+    vi: 'Thư mục không tồn tại, hoặc ổ chưa được gắn.',
+  },
+  'set.mirror.err.not_directory': {
+    en: 'That path is a file, not a folder.',
+    vi: 'Đường dẫn là một file, không phải thư mục.',
+  },
+  'set.mirror.err.inside_data': {
+    en: 'The mirror cannot go inside the data folder it copies.',
+    vi: 'Không thể đặt mirror bên trong chính thư mục dữ liệu đang được sao chép.',
+  },
+  'set.mirror.err.not_writable': {
+    en: 'The app cannot write to that folder.',
+    vi: 'App không ghi được vào thư mục đó.',
+  },
+  'set.mirror.err.not_configured': {
+    en: 'Choose a destination first.',
+    vi: 'Hãy chọn nơi lưu trước.',
+  },
+  'set.mirror.err.running': { en: 'A mirror is already running.', vi: 'Một lần mirror đang chạy.' },
+  'set.mirror.err.generic': { en: 'The mirror request failed.', vi: 'Yêu cầu mirror bị lỗi.' },
   'set.offsite.ok': { en: 'OK', vi: 'Bình thường' },
   'set.offsite.stale': { en: 'no successful copy for', vi: 'chưa sao chép thành công trong' },
   'set.offsite.never': {

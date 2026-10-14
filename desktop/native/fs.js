@@ -63,6 +63,16 @@ function register(ipcMain, log) {
 
   ipcMain.handle('ops:fs.showOpenDialog', async (evt, opts = {}) => {
     const win = BrowserWindow.fromWebContents(evt.sender);
+    // A folder, not a file: Settings → Backup picks where the mirror goes.
+    // Nothing is remembered as writable — the server validates the path and
+    // does the writing itself.
+    if (opts.directory) {
+      return dialog.showOpenDialog(win, {
+        title: opts.title || 'Chọn thư mục',
+        defaultPath: opts.defaultPath,
+        properties: ['openDirectory', 'createDirectory'],
+      });
+    }
     const result = await dialog.showOpenDialog(win, {
       title: opts.title || 'Chọn tệp',
       defaultPath: opts.defaultPath,

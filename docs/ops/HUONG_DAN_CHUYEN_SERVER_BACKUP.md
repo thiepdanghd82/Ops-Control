@@ -57,18 +57,10 @@ App chạy 1 chu kỳ/ngày vào giờ đã đặt (Settings → Backup/Restore)
 ## PHẦN C — Backup OFF-SITE (việc còn THIẾU — nên làm trước go-live)
 
 Hiện mọi backup nằm **cùng ổ đĩa** với dữ liệu sống → hỏng đĩa là mất hết (xem audit H-1).
-Tối thiểu nên copy thư mục `Backup/` ra **ổ ngoài** mỗi đêm:
-
-```bash
-# Ví dụ: copy backup ra ổ SSD ngoài tên "OPSBACKUP", giữ nguyên cấu trúc
-rsync -a --delete \
-  "$HOME/Library/Application Support/ops-control-desktop/data/Backup/" \
-  "/Volumes/OPSBACKUP/ops-control-backup/"
-```
-
-Tự động hoá bằng `launchd` (chạy 02:30 mỗi đêm) — tạo
-`~/Library/LaunchAgents/vn.ccldesign.opsbackup.offsite.plist` rồi `launchctl load`. (Có thể nhờ tôi
-viết file plist cụ thể.)
+Tối thiểu nên có một bản sao trên **ổ ngoài** (USB hoặc SSD gắn ngoài). Từ 2026-10-14 app tự làm việc
+này: vào **Settings → Backup/Restore → Mirror**, chọn ổ trong danh sách (hoặc một thư mục), bật
+**"Tự chạy sau mỗi lần backup đêm"** rồi bấm **Lưu**. Bấm **Mirror ngay** để chạy tức thì. Bản sao nằm ở
+`<ổ>/ops-control-mirror/data`; mật khẩu và khoá không được chép (giữ riêng ở `~/ops-control-secrets`).
 
 Lý tưởng: thêm 1 đích thứ 2 ngoài toà nhà (NAS phòng IT hoặc cloud có mã hoá) → đủ quy tắc 3-2-1.
 

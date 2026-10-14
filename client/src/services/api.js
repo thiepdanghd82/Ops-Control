@@ -448,6 +448,11 @@ export const costApi = {
   getBackupSchedule: () => api.get('/admin/backup-schedule'),
   setBackupSchedule: (patch) => authCall('put', '/admin/backup-schedule', patch),
   runBackupNow: () => authCall('post', '/admin/backup-schedule/run-now', {}),
+  // Off-site mirror (Settings → Backup → Mirror). Errors carry a stable
+  // `code` in err.body so the card can word them.
+  getBackupMirror: () => api.get('/admin/backup-mirror'),
+  setBackupMirror: (cfg) => api.put('/admin/backup-mirror', cfg),
+  runBackupMirror: () => api.post('/admin/backup-mirror/run', {}),
 
   // Phase A.2 — server connection-info dashboard (admin-only)
   getServerInfo: () => api.get('/server-info'),

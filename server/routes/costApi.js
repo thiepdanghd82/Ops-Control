@@ -3527,6 +3527,101 @@ router.post('/admin/backup-schedule/run-now', writeRateLimit, async (req, res) =
   }
 });
 
+// Off-site mirror (Settings → Backup). Runs in the app since 2026-10-14; the
+// destination is a mounted drive or any folder on this machine, chosen here.
+// Same admin+ gate as the schedule. Credentials never reach the mirror
+// (backupMirror.js excludes and sweeps them).
+async function mirrorModules() {
+  const sched = await import('../services/backupScheduler.js');
+  const mirror = await import('../services/backupMirror.js');
+  const offsite = await import('../services/offsiteStatus.js');
+  return { sched, mirror, offsite };
+}
+
+router.get('/admin/backup-mirror', async (req, res) => {
+  const u = getSessionUser(getTokenFromHeader(req));
+  if (!isAdminPlus(u)) return res.status(403).json({ error: 'Forbidden — admin only' });
+  try {
+    const { sched, mirror, offsite } = await mirrorModules();
+    const dataDir = sched.getMirrorDataDir();
+    const config = mirror.readMirrorConfig(dataDir);
+    res.json({
+      ok: true,
+      config,
+      running: mirror.isMirrorRunning(),
+      destCheck: config.dest ? mirror.validateMirrorDest(config.dest, dataDir) : null,
+      health: offsite.resolveOffsiteHealth(offsite.readOffsiteStatus(dataDir)),
+      targets: mirror.listMirrorTargets(dataDir),
+    });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: redactErrorMessage(err) });
+  }
+});
+
+router.put(
+  '/admin/backup-mirror',
+  validateBody({
+    dest: { type: 'string', max: 1024 },
+    auto: { type: 'boolean' },
+  }),
+  async (req, res) => {
+    const u = getSessionUser(getTokenFromHeader(req));
+    if (!isAdminPlus(u)) return res.status(403).json({ error: 'Forbidden — admin only' });
+    try {
+      const { sched, mirror } = await mirrorModules();
+      const dataDir = sched.getMirrorDataDir();
+      const dest = (req.body?.dest || '').trim() || null;
+      if (dest) {
+        const v = mirror.validateMirrorDest(dest, dataDir);
+        if (!v.ok) return res.status(400).json({ ok: false, code: v.code });
+      }
+      const config = mirror.writeMirrorConfig(
+        dataDir,
+        { dest, auto: req.body?.auto !== false },
+        u.username
+      );
+      audit(
+        'BACKUP_MIRROR_CONFIG',
+        u.username,
+        clientIp(req),
+        JSON.stringify({ dest: config.dest, auto: config.auto })
+      );
+      res.json({ ok: true, config });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: redactErrorMessage(err) });
+    }
+  }
+);
+
+router.post('/admin/backup-mirror/run', writeRateLimit, async (req, res) => {
+  const u = getSessionUser(getTokenFromHeader(req));
+  if (!isAdminPlus(u)) return res.status(403).json({ error: 'Forbidden — admin only' });
+  try {
+    const { sched, mirror } = await mirrorModules();
+    const dataDir = sched.getMirrorDataDir();
+    if (!mirror.readMirrorConfig(dataDir).dest) {
+      return res.status(400).json({ ok: false, code: 'not_configured' });
+    }
+    if (mirror.isMirrorRunning()) return res.status(409).json({ ok: false, code: 'running' });
+    audit('BACKUP_MIRROR_RUN', u.username, clientIp(req), '');
+    // The copy can take minutes; the card polls GET /admin/backup-mirror.
+    mirror
+      .runMirror(dataDir)
+      .then((r) =>
+        audit(
+          'BACKUP_MIRROR_DONE',
+          u.username,
+          clientIp(req),
+          JSON.stringify({ state: r.state, detail: r.detail })
+        )
+      )
+      .catch((err) => console.error('[mirror] run error:', err));
+    res.json({ ok: true, started: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: redactErrorMessage(err) });
+  }
+});
+
 router.get('/backup/list', (req, res) => {
   const u = getSessionUser(getTokenFromHeader(req));
   if (!u) return res.status(401).json({ error: 'Unauthorized' });

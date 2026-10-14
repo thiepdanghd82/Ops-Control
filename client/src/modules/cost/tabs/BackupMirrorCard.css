@@ -1,0 +1,99 @@
+/* BackupMirrorCard — Settings → Backup/Restore → Mirror. */
+.bm-card {
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  background: var(--bg-card, #fff);
+}
+.bm-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.bm-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+.bm-sub {
+  font-size: 12px;
+  color: var(--text-secondary, #525252);
+  margin-top: 2px;
+}
+.bm-label {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 6px 0 4px;
+}
+.bm-targets {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.bm-target {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  flex-wrap: wrap;
+}
+.bm-target.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.bm-target-name {
+  font-weight: 500;
+}
+.bm-target-size {
+  font-size: 12px;
+  color: var(--text-secondary, #525252);
+  font-variant-numeric: tabular-nums;
+}
+.bm-warn {
+  font-size: 12px;
+  color: var(--color-warning-700, #b45309);
+}
+.bm-empty {
+  font-size: 12px;
+  color: var(--text-secondary, #525252);
+  font-style: italic;
+}
+.bm-folder {
+  display: flex;
+  gap: 6px;
+  margin-left: 22px;
+}
+.bm-folder-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  padding: 4px 6px;
+}
+.bm-auto {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  margin: 10px 0 6px;
+}
+.bm-error {
+  font-size: 12px;
+  color: var(--color-danger-600, #dc2626);
+  margin: 4px 0;
+}
+.bm-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.bm-path {
+  font-size: 11px;
+  color: var(--text-secondary, #525252);
+  word-break: break-all;
+}
