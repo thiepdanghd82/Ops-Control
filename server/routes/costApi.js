@@ -21,8 +21,6 @@ import {
 import {
   readExisting as readDatasetRows,
   writeDataset as writeDatasetRows,
-  backupDataset,
-  datasetFilePath,
 } from '../services/importPipeline.js';
 import { redactErrorMessage, logErr, asSafeError } from '../utils/safeError.js';
 import { listLanIPv4, pickServerUrl } from '../utils/networkInfo.js';
@@ -314,7 +312,7 @@ import {
 } from '../services/authService.js';
 import { validateBody } from '../middleware/validate.js';
 import { writeRateLimit, saveRateLimit, totpVerifyRateLimit } from '../middleware/rateLimit.js';
-import { requireTabAccess, requireBodyTabAccess } from '../services/permissionService.js';
+import { requireBodyTabAccess } from '../services/permissionService.js';
 // Gates for the two upload routes that used to parse BEFORE authenticating.
 // costApiRouter is mounted without authMiddleware (auth happens inside each
 // handler), so these two routes opt in explicitly rather than the whole router
@@ -704,13 +702,6 @@ export function buildBackupSnapshot() {
     rateSitesDB: path.join(LIB_DIR, 'Rate', 'rate_sites.json'),
     ddlDB: path.join(LIB_DIR, 'DDL', 'ddl.json'),
     ddlSitesDB: path.join(LIB_DIR, 'DDL', 'ddl_sites.json'),
-    rfqTracker: path.join(LIB_DIR, 'RFQTracker', 'rfq_tracker.json'),
-    sampleTracker: path.join(LIB_DIR, 'SampleTracking', 'sample_tracking.json'),
-    // RFQ Tracking master-list (PR #232). Plain JSON file behind
-    // GET/POST /api/rfq-tracking — NOT SQLite-backed, so a raw writeJson
-    // restore (the else-branch below) is correct; keep it OUT of the
-    // quoteHistory dual-writer special-case.
-    rfqTrackingDB: path.join(LIB_DIR, 'RFQTracking', 'rfq_tracking.json'),
     financeWCDB: path.join(LIB_DIR, 'Finance', 'finance_wc.json'),
     financeSumDB: path.join(LIB_DIR, 'Finance', 'finance_sum.json'),
     inkCalcDB: path.join(LIB_DIR, 'InkCalc', 'ink_calc.json'),
@@ -751,13 +742,6 @@ export function restoreFromSnapshot(snap) {
     rateSitesDB: path.join(LIB_DIR, 'Rate', 'rate_sites.json'),
     ddlDB: path.join(LIB_DIR, 'DDL', 'ddl.json'),
     ddlSitesDB: path.join(LIB_DIR, 'DDL', 'ddl_sites.json'),
-    rfqTracker: path.join(LIB_DIR, 'RFQTracker', 'rfq_tracker.json'),
-    sampleTracker: path.join(LIB_DIR, 'SampleTracking', 'sample_tracking.json'),
-    // RFQ Tracking master-list (PR #232). Plain JSON file behind
-    // GET/POST /api/rfq-tracking — NOT SQLite-backed, so a raw writeJson
-    // restore (the else-branch below) is correct; keep it OUT of the
-    // quoteHistory dual-writer special-case.
-    rfqTrackingDB: path.join(LIB_DIR, 'RFQTracking', 'rfq_tracking.json'),
     financeWCDB: path.join(LIB_DIR, 'Finance', 'finance_wc.json'),
     financeSumDB: path.join(LIB_DIR, 'Finance', 'finance_sum.json'),
     inkCalcDB: path.join(LIB_DIR, 'InkCalc', 'ink_calc.json'),
@@ -2179,49 +2163,6 @@ router.put('/system/sidebar-visibility', (req, res) => {
   res.json({ ok: true, ...saved });
 });
 
-// ─── RFQ Tracking (registry-driven master list; RFQ_TRACKING_DATASET) ───
-// Distinct from the kanban `rfq-tracker` tab. Reads + writes go through the
-// SAME import-pipeline storage helpers the Import Wizard uses, so manual
-// inline edits and xlsx imports stay consistent on one JSON file
-// (Library/RFQTracking/rfq_tracking.json). GET tolerates a missing file → [].
-// POST bulk-saves (auto-backup first), gated by requireTabAccess on writes.
-const RFQ_TRACKING_KEY = 'rfq-tracking';
-
-// GET /api/rfq-tracking
-router.get('/rfq-tracking', (req, res) => {
-  const u = getSessionUser(getTokenFromHeader(req));
-  if (!u) return res.status(401).json({ error: 'Unauthorized' });
-  try {
-    const ds = getDataset(RFQ_TRACKING_KEY);
-    const rows = ds ? readDatasetRows(ds) : [];
-    res.json(Array.isArray(rows) ? rows : []);
-  } catch (err) {
-    logErr(req, 'rfq_tracking_get', err);
-    res.status(500).json({ error: 'Failed to load RFQ Tracking' });
-  }
-});
-
-// POST /api/rfq-tracking — bulk save (auto-backup + atomic write)
-router.post('/rfq-tracking', requireTabAccess(RFQ_TRACKING_KEY), (req, res) => {
-  const u = getSessionUser(getTokenFromHeader(req));
-  if (!u) return res.status(401).json({ error: 'Unauthorized' });
-  if (u.role === 'viewonly') return res.status(403).json({ ok: false, msg: 'View Only' });
-  const ds = getDataset(RFQ_TRACKING_KEY);
-  if (!ds) return res.status(500).json({ error: 'rfq-tracking dataset not registered' });
-  const rows = Array.isArray(req.body) ? req.body : req.body?.rows;
-  if (!Array.isArray(rows)) {
-    return res.status(400).json({ error: 'Expected an array of rows (or { rows: [...] })' });
-  }
-  try {
-    if (fs.existsSync(datasetFilePath(ds))) backupDataset(ds); // sibling _backup_<ts>.json
-    writeDatasetRows(ds, rows);
-    res.json({ ok: true, count: rows.length });
-  } catch (err) {
-    logErr(req, 'rfq_tracking_save', err);
-    res.status(500).json({ error: 'Failed to save RFQ Tracking' });
-  }
-});
-
 // GET /api/load-all
 router.get('/load-all', (req, res) => {
   const u = getSessionUser(getTokenFromHeader(req));
@@ -2282,8 +2223,6 @@ router.get('/load-all', (req, res) => {
     quoteHistory: path.join(LIB, 'QuoteHistory', 'quote_history.json'),
     summarizeDB: path.join(LIB, 'SummarizeDB', 'summarize_db.json'),
     ddlDB: path.join(LIB, 'DDL', 'ddl.json'),
-    rfqTracker: path.join(LIB, 'RFQTracker', 'rfq_tracker.json'),
-    sampleTracker: path.join(LIB, 'SampleTracking', 'sample_tracking.json'),
     financeWCDB: path.join(LIB, 'Finance', 'finance_wc.json'),
     financeSumDB: path.join(LIB, 'Finance', 'finance_sum.json'),
     inkCalcDB: path.join(LIB, 'InkCalc', 'ink_calc.json'),
@@ -2313,8 +2252,6 @@ const SAVE_ALL_KNOWN_KEYS = new Set([
   'rateSitesDB',
   'ddlDB',
   'ddlSitesDB',
-  'rfqTracker',
-  'sampleTracker',
   'financeWCDB',
   'financeSumDB',
   'inkCalcDB',
@@ -2364,8 +2301,6 @@ function diffDdlSections(oldAll, newAll) {
 // not listed here aren't guarded per-tab (they're either legacy admin
 // scopes or aggregate data that any writer with role ≥ user may save).
 const SAVE_ALL_TAB_MAP = {
-  rfqTracker: 'rfq-tracker',
-  sampleTracker: 'sample-tracking',
   quoteHistory: 'quote-history',
   summarizeDB: 'summarize',
   matDB: 'lib-mat',
@@ -2557,14 +2492,6 @@ router.post(
         runWrite('ddlSitesDB', () => writeJson(ddlPath, pl.ddlSitesDB));
         ddlNewRev = ddlRevOf(ddlPath);
       }
-      if (pl.rfqTracker)
-        runWrite('rfqTracker', () =>
-          writeJson(path.join(LIB, 'RFQTracker', 'rfq_tracker.json'), pl.rfqTracker)
-        );
-      if (pl.sampleTracker)
-        runWrite('sampleTracker', () =>
-          writeJson(path.join(LIB, 'SampleTracking', 'sample_tracking.json'), pl.sampleTracker)
-        );
       if (pl.financeWCDB)
         runWrite('financeWCDB', () =>
           writeJson(path.join(LIB, 'Finance', 'finance_wc.json'), pl.financeWCDB)
@@ -2689,8 +2616,6 @@ router.post(
       // the next 30/60s poll.
       const SAVE_ALL_EVENT_MAP = {
         quoteHistory: 'quote.saved',
-        rfqTracker: 'rfq.updated',
-        sampleTracker: 'sample.updated',
         matDB: 'library.imported',
         rateDB: 'library.imported',
         ddlDB: 'library.imported',
@@ -3542,63 +3467,6 @@ router.post('/ddl/sync-csv', (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
-// RELEASED QUOTATIONS
-// ═══════════════════════════════════════════════════════════════
-
-router.get('/released-quotations', (req, res) => {
-  const u = getSessionUser(getTokenFromHeader(req));
-  if (!u) return res.status(401).json({ error: 'Unauthorized' });
-  const dir = path.join(getLibDir(), 'ReleasedQuotation');
-  try {
-    const files = fs
-      .readdirSync(dir)
-      .filter((f) => f.endsWith('.json') && !f.startsWith('.'))
-      .sort()
-      .reverse()
-      .map((f) => {
-        const stat = fs.statSync(path.join(dir, f));
-        return { filename: f, size: stat.size, modified: stat.mtimeMs / 1000 };
-      });
-    res.json({ ok: true, files });
-  } catch {
-    res.json({ ok: true, files: [] });
-  }
-});
-
-router.get('/released-quotation/:name', (req, res) => {
-  const u = getSessionUser(getTokenFromHeader(req));
-  if (!u) return res.status(401).json({ error: 'Unauthorized' });
-  const fname = safeFn(decodeURIComponent(req.params.name));
-  const fpath = path.join(getLibDir(), 'ReleasedQuotation', fname);
-  if (!fs.existsSync(fpath)) return res.status(404).json({ error: 'not found' });
-  res.json(readJson(fpath));
-});
-
-router.post('/save-quotation', saveRateLimit, (req, res) => {
-  const cu = getSessionUser(getTokenFromHeader(req));
-  if (!cu) return res.status(401).json({ error: 'Unauthorized' });
-  if (cu.role === 'viewonly') return res.status(403).json({ ok: false, msg: 'View Only' });
-  const pl = req.body;
-  // Body shape guard — reject non-object payloads before filename derivation
-  // would crash on null. Quotation shape is too varied for strict field
-  // validation, so we just enforce plain-object + ref_no bounds.
-  if (!pl || typeof pl !== 'object' || Array.isArray(pl)) {
-    return res.status(400).json({ ok: false, error: 'Payload must be a JSON object' });
-  }
-  if (pl.ref_no != null && (typeof pl.ref_no !== 'string' || pl.ref_no.length > 128)) {
-    return res.status(400).json({ ok: false, error: 'ref_no must be a string ≤128 chars' });
-  }
-  const ref = safeFn((pl.ref_no || 'QUOT').replace(/\//g, '_').replace(/ /g, '-'));
-  const ts = new Date().toISOString().replace(/[:.T]/g, '').slice(0, 15);
-  const fname = `${ref}_${ts}.json`;
-  pl._saved_at = new Date().toISOString();
-  pl._filename = fname;
-  writeJson(path.join(getLibDir(), 'ReleasedQuotation', fname), pl);
-  console.log(`  📄  Released quotation → ${fname}`);
-  res.json({ ok: true, filename: fname, saved_at: pl._saved_at });
-});
-
-// ═══════════════════════════════════════════════════════════════
 // BACKUP ROUTES
 // ═══════════════════════════════════════════════════════════════
 
@@ -3657,150 +3525,6 @@ router.post('/admin/backup-schedule/run-now', writeRateLimit, async (req, res) =
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
-});
-
-// ─── Master Cylinder catalog (Sprint 1.7j) ───────────────────────
-//
-// Admin-managed Z=60..220 print cylinder availability for the Gallus
-// Design Tools press. Defaults seeded from gallusInventory.js on first
-// read; subsequent edits persist to JSON. Sys/admin-only writes:
-//   - PUT /admin/master-cylinders/:z  → toggle availability or update note
-//   - POST /admin/master-cylinders     → add a brand-new Z (eg. press buys
-//                                        a non-standard cylinder)
-//   - DELETE /admin/master-cylinders/:z → remove (admin-added rows only)
-// Reads are open to any logged-in user (the Design Tools tab uses them).
-const MASTER_CYL_PATH = () =>
-  path.join(getDataDir(), 'Library', 'SystemConfig', 'master-cylinders.json');
-
-function defaultPrintCylinders() {
-  // Mirrors gallusInventory.js DEFAULT range; admins customise from here.
-  const list = [];
-  for (let z = 60; z <= 220; z++) {
-    // Z=80..135 + Z=210 are factory-stocked; the rest are 'N' until
-    // an admin marks otherwise. Matches the original hardcoded list.
-    const stocked = new Set([
-      80, 83, 85, 86, 88, 90, 94, 96, 98, 100, 101, 106, 108, 110, 111, 114, 116, 120, 122, 127,
-      129, 132, 135, 210,
-    ]);
-    list.push({ z, available: stocked.has(z), note: '', source: 'default' });
-  }
-  return list;
-}
-
-function loadMasterCylinders() {
-  const p = MASTER_CYL_PATH();
-  try {
-    if (fs.existsSync(p)) {
-      const j = JSON.parse(fs.readFileSync(p, 'utf-8'));
-      if (Array.isArray(j?.cylinders)) return j.cylinders;
-    }
-  } catch (err) {
-    console.warn('[master-cylinders] load failed:', err.message);
-  }
-  return defaultPrintCylinders();
-}
-
-function saveMasterCylinders(cylinders, actor) {
-  const p = MASTER_CYL_PATH();
-  fs.mkdirSync(path.dirname(p), { recursive: true });
-  const payload = {
-    cylinders: cylinders.sort((a, b) => a.z - b.z),
-    updatedAt: new Date().toISOString(),
-    updatedBy: actor || '-',
-  };
-  atomicWriteFileSync(p, JSON.stringify(payload, null, 2));
-}
-
-router.get('/admin/master-cylinders', (req, res) => {
-  const u = getSessionUser(getTokenFromHeader(req));
-  if (!u) return res.status(401).json({ error: 'Unauthorized' });
-  res.json({ ok: true, cylinders: loadMasterCylinders() });
-});
-
-router.put(
-  '/admin/master-cylinders/:z',
-  validateBody({
-    available: { type: 'boolean' },
-    note: { type: 'string', max: 200 },
-  }),
-  (req, res) => {
-    const u = getSessionUser(getTokenFromHeader(req));
-    if (!isAdminPlus(u)) return res.status(403).json({ error: 'Forbidden — admin only' });
-    const z = parseInt(req.params.z, 10);
-    if (!Number.isFinite(z) || z < 1 || z > 999) {
-      return res.status(400).json({ ok: false, error: 'Invalid Z' });
-    }
-    const list = loadMasterCylinders();
-    const idx = list.findIndex((c) => c.z === z);
-    if (idx === -1) return res.status(404).json({ ok: false, error: `Cylinder Z=${z} not found` });
-    const before = { ...list[idx] };
-    if (typeof req.body?.available === 'boolean') list[idx].available = req.body.available;
-    if (typeof req.body?.note === 'string') list[idx].note = req.body.note;
-    saveMasterCylinders(list, u.username);
-    audit(
-      'CYLINDER_UPDATE',
-      u.username,
-      clientIp(req),
-      `Z=${z} avail:${before.available}→${list[idx].available}`
-    );
-    res.json({ ok: true, cylinder: list[idx] });
-  }
-);
-
-router.post(
-  '/admin/master-cylinders',
-  validateBody({
-    z: { type: 'number', required: true },
-    available: { type: 'boolean' },
-    note: { type: 'string', max: 200 },
-  }),
-  (req, res) => {
-    const u = getSessionUser(getTokenFromHeader(req));
-    if (!isAdminPlus(u)) return res.status(403).json({ error: 'Forbidden — admin only' });
-    const z = parseInt(req.body.z, 10);
-    if (!Number.isFinite(z) || z < 1 || z > 999) {
-      return res.status(400).json({ ok: false, error: 'Invalid Z (1-999)' });
-    }
-    const list = loadMasterCylinders();
-    if (list.some((c) => c.z === z)) {
-      return res
-        .status(409)
-        .json({ ok: false, error: `Cylinder Z=${z} already exists — use PUT to edit` });
-    }
-    const newCyl = {
-      z,
-      available: req.body.available !== false, // default true for admin-added
-      note: String(req.body.note || ''),
-      source: 'admin',
-      addedBy: u.username,
-      addedAt: new Date().toISOString(),
-    };
-    list.push(newCyl);
-    saveMasterCylinders(list, u.username);
-    audit('CYLINDER_ADD', u.username, clientIp(req), `Z=${z} avail=${newCyl.available}`);
-    res.json({ ok: true, cylinder: newCyl });
-  }
-);
-
-router.delete('/admin/master-cylinders/:z', (req, res) => {
-  const u = getSessionUser(getTokenFromHeader(req));
-  if (!isAdminPlus(u)) return res.status(403).json({ error: 'Forbidden — admin only' });
-  const z = parseInt(req.params.z, 10);
-  const list = loadMasterCylinders();
-  const idx = list.findIndex((c) => c.z === z);
-  if (idx === -1) return res.status(404).json({ ok: false, error: `Z=${z} not found` });
-  if (list[idx].source !== 'admin') {
-    // Refuse to delete factory-default cylinders — toggle availability
-    // to false instead so the operator never loses the canonical Z range.
-    return res.status(400).json({
-      ok: false,
-      error: `Z=${z} is a factory default; toggle availability instead of deleting`,
-    });
-  }
-  list.splice(idx, 1);
-  saveMasterCylinders(list, u.username);
-  audit('CYLINDER_DELETE', u.username, clientIp(req), `Z=${z}`);
-  res.json({ ok: true });
 });
 
 router.get('/backup/list', (req, res) => {
@@ -4044,8 +3768,6 @@ router.post(
         'rateDB',
         'ddlDB',
         'summarizeDB',
-        'rfqTracker',
-        'sampleTracker',
         'financeWCDB',
         'financeSumDB',
         'inkCalcDB',

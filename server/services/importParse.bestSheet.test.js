@@ -3,8 +3,11 @@
  *   node --test server/services/importParse.bestSheet.test.js
  *
  * Fixtures are built in a throwaway tmp dir with the `xlsx` package (no
- * binary committed). Sheet scoring is exercised against the real
- * RFQ_TRACKING_DATASET via the wizard's mapHeaders matcher.
+ * binary committed). Sheet scoring is exercised through the wizard's
+ * mapHeaders matcher, against a fixture dataset whose canonicals are the 29
+ * RFQ Master headers below. (It used the real RFQ_TRACKING_DATASET until
+ * the RFQ List tab was removed on 2026-10-14; the sheet picker it tests is
+ * shared by every dataset.)
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -15,10 +18,7 @@ import XLSX from 'xlsx';
 
 import { parseExcelFile } from './importParse.js';
 import { mapHeaders } from './importPipeline.js';
-import { getDataset } from './importDatasets.js';
-
-const RFQ = getDataset('rfq-tracking');
-const scoreHeaders = (headers) => Object.keys(mapHeaders(headers, RFQ).mapping).length;
+import { normKey } from './importDatasets.js';
 
 const RFQ_MASTER_HEADERS = [
   'RFQ No',
@@ -51,6 +51,9 @@ const RFQ_MASTER_HEADERS = [
   'Sale Stage',
   'Notes / Reason',
 ];
+const RFQ = { aliases: Object.fromEntries(RFQ_MASTER_HEADERS.map((h) => [normKey(h), h])) };
+const scoreHeaders = (headers) => Object.keys(mapHeaders(headers, RFQ).mapping).length;
+
 const RFQ_ROW_1 = [
   2367,
   '1st',

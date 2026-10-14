@@ -87,41 +87,6 @@ function readJsonFile(filePath) {
 // ─── Public API ───
 
 /**
- * Get IFS Inventory data (all parts)
- */
-export function getInventory() {
-  const cached = getCached('inventory');
-  if (cached) return cached;
-
-  const invDir = path.join(LIBRARY_DIR, 'IFS_Inventory');
-  const result = {};
-
-  // Load each JS data file
-  const files = {
-    inventory: 'inventory_data.js',
-    finishedGoods: 'finished_good_data.js',
-    rawMaterials: 'raw_materials_data.js',
-  };
-
-  const sourcePaths = [];
-  for (const [key, filename] of Object.entries(files)) {
-    const filePath = path.join(invDir, filename);
-    if (fs.existsSync(filePath)) {
-      sourcePaths.push(filePath);
-      try {
-        result[key] = parseJsDataFile(filePath);
-      } catch (e) {
-        console.warn(`Failed to parse ${filename}:`, e.message);
-        result[key] = [];
-      }
-    }
-  }
-
-  setCache('inventory', result, sourcePaths);
-  return result;
-}
-
-/**
  * Get Manufacturing Structures (BOM data)
  */
 export function getManufacturingStructures() {
@@ -282,25 +247,6 @@ export function getWorkCenters() {
   const wcs = [...wcSet].sort();
   setCache('workCenters', wcs, [filePath]);
   return wcs;
-}
-
-/**
- * Get Products (from IFS Finished Goods)
- */
-export function getProducts() {
-  const cached = getCached('products');
-  if (cached) return cached;
-
-  const inv = getInventory();
-  const products = (inv.finishedGoods || []).map((fg) => ({
-    partNo: fg['Part No'] || fg['part_no'] || '',
-    description: fg['Part Description'] || fg['description'] || '',
-    type: fg['Type'] || fg['type'] || '',
-    uom: fg['UOM'] || fg['uom'] || '',
-  }));
-
-  setCache('products', products); // inherits invalidation from inventory cache
-  return products;
 }
 
 /**

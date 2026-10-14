@@ -27,11 +27,9 @@ import { atomicWriteFileSync } from '../services/atomicWrite.js';
 import {
   shadowWriteBom,
   shadowWriteRouting,
-  shadowWriteInventory,
   shadowWriteMaterials,
   shadowClearBom,
   shadowClearRouting,
-  shadowClearInventory,
   shadowClearMaterials,
 } from '../repositories/shadowWrite.js';
 import { resolveHeaderClaims } from '../services/importPipeline.js';
@@ -292,12 +290,6 @@ function validateHeaders(headers, required, label) {
 const REQUIRED_HEADERS = {
   bom: ['Parent Part No', 'Component Part'],
   routing: ['Part No', 'Operation No', 'Work Centre No'],
-  inventory: ['Part No'],
-  // Finished Goods is a customer deal-price / catalog agreement list keyed by
-  // Catalog No (distinct from the Part-No inventory schema) — see
-  // FINISHED_GOODS_DATASET in importDatasets.js.
-  finishedGoods: ['Catalog No'],
-  rawMaterials: ['Part No'],
 };
 
 /**
@@ -309,156 +301,6 @@ function clearJsDataFile(filePath, varName) {
 }
 
 // ─── Import Endpoints ───
-
-// POST /api/import/inventory - Import full IFS inventory
-router.post(
-  '/inventory',
-  requireRole(4),
-  uploadSingle(upload, 'file', IMPORT_MAX_MB),
-  requireValidUpload,
-  async (req, res) => {
-    try {
-      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-
-      const ext = path.extname(req.file.originalname).toLowerCase();
-      let parsed;
-
-      if (ext === '.csv') {
-        const content = fs.readFileSync(req.file.path, 'utf-8');
-        parsed = parseCSV(content);
-      } else {
-        parsed = await parseExcel(req.file.path);
-      }
-
-      // Validate we got meaningful data
-      if (!parsed.headers || parsed.headers.length < 3) {
-        return res.status(400).json({ error: 'File has too few columns' });
-      }
-      if (parsed.rows.length === 0) {
-        return res.status(400).json({ error: 'File has no data rows' });
-      }
-
-      // Refuse wrong-dataset uploads — keeps tabs independent
-      validateHeaders(parsed.headers, REQUIRED_HEADERS.inventory, 'IFS Inventory');
-
-      // Backup existing file
-      const targetFile = path.join(LIBRARY_DIR, 'IFS_Inventory', 'inventory_data.js');
-      const backupPath = backupFile(targetFile);
-
-      // Write new data
-      writeJsDataFile(targetFile, 'window._CCL_INV_DATA', parsed.headers, parsed.rows);
-
-      // Shadow-write to SQLite. Non-blocking: file write is source of truth.
-      // A failure here logs but doesn't fail the request.
-      shadowWriteInventory(rowsAsObjects(parsed.headers, parsed.rows), 'inventory');
-
-      // Clear cache so new data is served immediately
-      clearCache();
-
-      // Cleanup temp file
-      fs.unlinkSync(req.file.path);
-
-      res.json({
-        ok: true,
-        message: 'Inventory data imported successfully',
-        stats: {
-          headers: parsed.headers.length,
-          rows: parsed.rows.length,
-          backup: backupPath ? path.basename(backupPath) : null,
-        },
-      });
-    } catch (err) {
-      logErr(req, 'import_inventory', err);
-      if (req.file?.path)
-        try {
-          fs.unlinkSync(req.file.path);
-        } catch {}
-      res.status(err.status || 500).json({ error: redactErrorMessage(err) });
-    }
-  }
-);
-
-// POST /api/import/finished-goods - Import finished goods
-router.post(
-  '/finished-goods',
-  requireRole(4),
-  uploadSingle(upload, 'file', IMPORT_MAX_MB),
-  requireValidUpload,
-  async (req, res) => {
-    try {
-      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-
-      const ext = path.extname(req.file.originalname).toLowerCase();
-      let parsed;
-
-      if (ext === '.csv') {
-        parsed = parseCSV(fs.readFileSync(req.file.path, 'utf-8'));
-      } else {
-        parsed = await parseExcel(req.file.path);
-      }
-
-      if (parsed.rows.length === 0) return res.status(400).json({ error: 'No data rows' });
-      validateHeaders(parsed.headers, REQUIRED_HEADERS.finishedGoods, 'Finished Goods');
-
-      const targetFile = path.join(LIBRARY_DIR, 'IFS_Inventory', 'finished_good_data.js');
-      backupFile(targetFile);
-      writeJsDataFile(targetFile, 'window._CCL_FG_DATA', parsed.headers, parsed.rows);
-      shadowWriteInventory(rowsAsObjects(parsed.headers, parsed.rows), 'finished_goods');
-      clearCache();
-      fs.unlinkSync(req.file.path);
-
-      res.json({ ok: true, stats: { headers: parsed.headers.length, rows: parsed.rows.length } });
-    } catch (err) {
-      console.error('Import finished-goods error:', err);
-      if (req.file?.path)
-        try {
-          fs.unlinkSync(req.file.path);
-        } catch {}
-      res.status(err.status || 500).json({ error: err.message });
-    }
-  }
-);
-
-// POST /api/import/raw-materials - Import raw materials
-router.post(
-  '/raw-materials',
-  requireRole(4),
-  uploadSingle(upload, 'file', IMPORT_MAX_MB),
-  requireValidUpload,
-  async (req, res) => {
-    try {
-      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-
-      const ext = path.extname(req.file.originalname).toLowerCase();
-      let parsed;
-
-      if (ext === '.csv') {
-        parsed = parseCSV(fs.readFileSync(req.file.path, 'utf-8'));
-      } else {
-        parsed = await parseExcel(req.file.path);
-      }
-
-      if (parsed.rows.length === 0) return res.status(400).json({ error: 'No data rows' });
-      validateHeaders(parsed.headers, REQUIRED_HEADERS.rawMaterials, 'Raw Materials');
-
-      const targetFile = path.join(LIBRARY_DIR, 'IFS_Inventory', 'raw_materials_data.js');
-      backupFile(targetFile);
-      writeJsDataFile(targetFile, 'window._CCL_RM_DATA', parsed.headers, parsed.rows);
-      shadowWriteInventory(rowsAsObjects(parsed.headers, parsed.rows), 'raw_materials');
-      clearCache();
-      fs.unlinkSync(req.file.path);
-
-      res.json({ ok: true, stats: { headers: parsed.headers.length, rows: parsed.rows.length } });
-    } catch (err) {
-      console.error('Import raw-materials error:', err);
-      if (req.file?.path)
-        try {
-          fs.unlinkSync(req.file.path);
-        } catch {}
-      res.status(err.status || 500).json({ error: err.message });
-    }
-  }
-);
 
 // POST /api/import/bom - Import manufacturing structures (BOM)
 router.post(
@@ -561,21 +403,6 @@ const CLEAR_TARGETS = {
     varName: 'window._CCL_ROP_DATA',
     label: 'Routing Operations',
   },
-  inventory: {
-    file: ['IFS_Inventory', 'inventory_data.js'],
-    varName: 'window._CCL_INV_DATA',
-    label: 'Full Inventory',
-  },
-  'finished-goods': {
-    file: ['IFS_Inventory', 'finished_good_data.js'],
-    varName: 'window._CCL_FG_DATA',
-    label: 'Finished Goods',
-  },
-  'raw-materials': {
-    file: ['IFS_Inventory', 'raw_materials_data.js'],
-    varName: 'window._CCL_RM_DATA',
-    label: 'Raw Materials',
-  },
   'npi-parts': {
     file: ['NpiParts', 'npi_parts_data.js'],
     varName: 'window._CCL_NPIPARTS_DATA',
@@ -588,9 +415,6 @@ const CLEAR_TARGETS = {
 const SHADOW_CLEAR_FNS = {
   bom: () => shadowClearBom(),
   routing: () => shadowClearRouting(),
-  inventory: () => shadowClearInventory('inventory'),
-  'finished-goods': () => shadowClearInventory('finished_goods'),
-  'raw-materials': () => shadowClearInventory('raw_materials'),
 };
 
 function clientIp(req) {
@@ -1085,9 +909,6 @@ router.post(
 
 // Shared registry of dataset → source file. Used by /status and /backup.
 const DATASET_FILES = {
-  inventory: { file: ['IFS_Inventory', 'inventory_data.js'], label: 'IFS Inventory' },
-  finishedGoods: { file: ['IFS_Inventory', 'finished_good_data.js'], label: 'Finished Goods' },
-  rawMaterials: { file: ['IFS_Inventory', 'raw_materials_data.js'], label: 'Raw Materials' },
   bom: {
     file: ['Manufacturing_Structures', 'mfg_structures_data.js'],
     label: 'BOM / Mfg Structures',
@@ -1104,16 +925,13 @@ router.post(
   '/backup',
   requireRole(4),
   validateBody({
-    // key is restricted to the five known datasets — anything else would
+    // key is restricted to the known datasets — anything else would
     // fail the cfg lookup below anyway, but rejecting early gives a
     // uniform 400 shape instead of a bespoke error string.
     key: {
       type: 'enum',
       required: true,
       values: Object.keys({
-        inventory: 1,
-        finishedGoods: 1,
-        rawMaterials: 1,
         bom: 1,
         routing: 1,
       }),
@@ -1239,9 +1057,6 @@ router.post(
 // GET /api/import/status - Check current data file stats
 router.get('/status', (req, res) => {
   const files = {
-    inventory: path.join(LIBRARY_DIR, 'IFS_Inventory', 'inventory_data.js'),
-    finishedGoods: path.join(LIBRARY_DIR, 'IFS_Inventory', 'finished_good_data.js'),
-    rawMaterials: path.join(LIBRARY_DIR, 'IFS_Inventory', 'raw_materials_data.js'),
     bom: path.join(LIBRARY_DIR, 'Manufacturing_Structures', 'mfg_structures_data.js'),
     routing: path.join(LIBRARY_DIR, 'Routing_Operations', 'routing_ops_data.js'),
   };

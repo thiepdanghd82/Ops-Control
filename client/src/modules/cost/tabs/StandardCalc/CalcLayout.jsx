@@ -50,7 +50,6 @@ import { layoutToolsTotal } from '../../../../services/layoutToolCost';
 import { layoutPrintTotal } from '../../../../services/processLayoutSync';
 import FileUploadZone from '../../../../components/Shared/FileUploadZone';
 import DecimalInput from '../../../../utils/DecimalInput';
-import DesignSyncPicker from './DesignSyncPicker';
 import { validateLayout } from '../../../../services/layoutValidation';
 
 // Print-cost block dropdown (Layout ▸ Print Design Layout). The 4 TOP-LEVEL
@@ -71,10 +70,6 @@ export default function CalcLayout() {
   // S-LAYOUT-DEFAULT (2026-05-05) — open Print Design first; engineer
   // typically locks plate cylinder before fitting the die.
   const [activeSub, setActiveSub] = useState('print');
-  // Sprint 14e — Design Tools handoff (pull direction). `null` means
-  // the picker is closed; 'print' / 'cut' selects which field-subset
-  // gets pushed when the operator picks a saved record.
-  const [designSyncSide, setDesignSyncSide] = useState(null);
 
   // Machine profiles — loaded once per tab mount. The Layout Suggestion
   // card below receives the selected profile so the optimizer can
@@ -143,28 +138,6 @@ export default function CalcLayout() {
         <div className="sc-card-header sc-header-teal">
           <span className="sc-card-icon">&#9638;</span>
           <span className="sc-card-title">Design Layout</span>
-          {/* Sprint 14n-2 — sync buttons promoted from body to header so the
-              Design Layout title bar carries the workflow's two primary
-              actions inline with its label. Operators reported the body
-              position competed visually with the params grid below. */}
-          <div className="cl-header-sync-actions">
-            <button
-              type="button"
-              className="cl-design-sync-btn cl-design-sync-btn--header"
-              onClick={() => setDesignSyncSide('print')}
-              title="Đồng bộ thiết kế in · Pull a saved Design Tools record and apply Print-side fields (L, Pw, W, plate tooth, gaps, edges, color count)"
-            >
-              🔍 Print Design sync
-            </button>
-            <button
-              type="button"
-              className="cl-design-sync-btn cl-design-sync-btn--header"
-              onClick={() => setDesignSyncSide('cut')}
-              title="Đồng bộ thiết kế cắt · Pull a saved Design Tools record and apply Cut-side fields (magnetic tooth, cutter cavity, gaps, geometry)"
-            >
-              🔍 Cut Design sync
-            </button>
-          </div>
           {(validation.errors.length > 0 || validation.warnings.length > 0) && (
             <span className="cl-validation-pill">
               {validation.errors.length > 0 && (
@@ -250,23 +223,6 @@ export default function CalcLayout() {
 
       {/* MachineProfileModal mount removed Sprint 14n — see press bar
           comment. CRUD moved to the Machine Technical sidebar tab. */}
-
-      {/* Sprint 14e — Design Tools sync picker. `designSyncSide` toggles
-          between 'print' and 'cut', controlling which field-subset
-          gets pushed when the operator picks a record. */}
-      <DesignSyncPicker
-        open={!!designSyncSide}
-        side={designSyncSide || 'print'}
-        onClose={() => setDesignSyncSide(null)}
-        onApply={(fields) => {
-          // Apply each mapped field via setStdField. Values are RAW
-          // (no rounding) — operators specifically requested precision
-          // preserved through the sync round-trip.
-          for (const [k, v] of Object.entries(fields)) {
-            setStdField(k, v);
-          }
-        }}
-      />
 
       {/* File Uploads — auto-named {Customer}_{EndCuPN}_{stamp}[suffix] */}
       <div className="cl-upload-grid">

@@ -20,7 +20,9 @@
  * What these tests do earn their place for is the failure mode one step
  * worse — two nav items rendering the exact same text, which is a real and
  * easy mistake when a screen is added or a label edited. That the guard was
- * absent is why nobody noticed the pair drifting this close together.
+ * absent is why nobody noticed the pair drifting this close together. *
+ * Both RFQ screens were removed on 2026-10-14; the test that compared the
+ * two labels went with them, and this one stays.
  */
 
 import test from 'node:test';
@@ -42,18 +44,5 @@ test('no two nav tab labels are identical within a locale', () => {
       );
       seen.set(label, key);
     }
-  }
-});
-
-test('the two RFQ screens are distinguishable in every locale', () => {
-  const tracking = STRINGS['nav.tab.rfq_tracking'];
-  const tracker = STRINGS['nav.tab.rfq_tracker'];
-
-  for (const locale of SUPPORTED_LOCALES) {
-    assert.notEqual(
-      tracking[locale],
-      tracker[locale],
-      `${locale}: the RFQ list and the RFQ progress screen read the same`
-    );
   }
 });

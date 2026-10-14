@@ -144,15 +144,6 @@ export const saveRateLimit = makeLimiter({
   defaultMax: 120,
 });
 
-// Chat send — per-IP cap on message POSTs. Generous because a typing
-// conversation averages 10-20 msg/min; we only care about stopping
-// bots / runaway scripts. 30/min = 300/10min default.
-export const chatSendRateLimit = makeLimiter({
-  name: 'chat',
-  maxEnv: 'OPS_CHAT_RATE_MAX',
-  defaultMax: 300,
-});
-
 // ─────────────────────────────────────────────────────────────────────
 // v1.3 P0 — Per-USER rate limit (keyed by req.user.id thay vì IP).
 //
@@ -233,14 +224,4 @@ export const userWriteRateLimit = makeUserLimiter({
   name: 'user-write',
   maxEnv: 'OPS_USER_WRITE_RATE_MAX',
   defaultMax: 30,
-});
-
-// Chat edit/delete — lower cap because genuine usage should be a
-// handful per session ("typo fix" + "oops wrong channel"). A script
-// hammering these is either testing our 15-min window or probing
-// for authz bugs, neither of which needs to run fast. 60/10min.
-export const chatEditRateLimit = makeLimiter({
-  name: 'chat-edit',
-  maxEnv: 'OPS_CHAT_EDIT_RATE_MAX',
-  defaultMax: 60,
 });

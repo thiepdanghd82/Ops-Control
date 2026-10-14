@@ -10,7 +10,9 @@
  *
  * WHY THIS FILE EXISTS AT ALL: MES-3-FIX-59 deferred the bump because it
  * spans EIGHT multer instances and asked for a hand smoke of each on a DMG.
- * Only ONE of the eight had any multipart coverage (print-area). A hand
+ * Only ONE of the eight had any multipart coverage (print-area, removed with
+ * its tab on 2026-10-14 along with the two tracker routes and the inventory
+ * import, which leaves four in the sweep below). A hand
  * smoke is also a one-shot — it proves nothing about the NEXT bump. The
  * mount sweep below is the automated half: it will not exercise each route's
  * business logic, but it does catch the realistic breakage from a multer
@@ -106,16 +108,14 @@ async function post(routePath, parts, token) {
   return { status: res.status, text: await res.text().catch(() => '') };
 }
 
-// The eight multer-fronted routes, by the config each one uses. Every one is
-// `.single(...)` over disk storage; five add a fileFilter, three do not.
+// The multer-fronted routes, by the config each one uses. Every one is
+// `.single(...)` over disk storage. (Eight until 2026-10-14; RFQ Progress,
+// Sample Tracking, Print Area and the IFS inventory import were removed.)
 const UPLOAD_ROUTES = [
-  ['/api/shared/rfq-tracker/attachments/1', 'file'],
   ['/api/shared/machine-technical/printing/import', 'file'],
-  ['/api/shared/sample-tracking/attachments/1', 'file'],
-  ['/api/shared/print-area/upload', 'artwork'],
   ['/api/backup/upload', 'file'],
   ['/api/import-xlsm', 'file'],
-  ['/api/import/inventory', 'file'],
+  ['/api/import/bom', 'file'],
   ['/api/import-wizard/preview', 'file'],
 ];
 
@@ -162,10 +162,10 @@ test('a body with hostile field names is answered, not left hanging', async () =
     { name: 'a'.repeat(4000), body: 'x' },
     { name: 'f[' + '9'.repeat(300) + ']', body: 'x' },
     { name: '['.repeat(500) + ']'.repeat(500), body: 'x' },
-    { name: 'artwork', filename: 't.png', contentType: 'image/png', body: PNG_1x1 },
+    { name: 'file', filename: 't.csv', contentType: 'text/csv', body: 'a,b\n1,2\n' },
   ];
   const started = Date.now();
-  const r = await post('/api/shared/print-area/upload', hostile, token);
+  const r = await post('/api/shared/machine-technical/printing/import', hostile, token);
   const elapsed = Date.now() - started;
 
   assert.ok(r.status > 0, 'the request must be answered at all');
@@ -178,13 +178,14 @@ test('a body with hostile field names is answered, not left hanging', async () =
 });
 
 test('the fileSize limit still rejects an oversized upload', async () => {
-  // print-area caps at OPS_PRINT_AREA_MAX_MB (default 30). If a bump ever
-  // silently drops `limits`, this is where it shows.
+  // The machine-technical import caps at 10 MB. If a bump ever silently
+  // drops `limits`, this is where it shows. (It used print-area's 30 MB cap
+  // until that route was removed on 2026-10-14.)
   const token = createSession(1);
-  const tooBig = Buffer.alloc(31 * 1024 * 1024, 0x41);
+  const tooBig = Buffer.alloc(11 * 1024 * 1024, 0x41);
   const r = await post(
-    '/api/shared/print-area/upload',
-    [{ name: 'artwork', filename: 'big.png', contentType: 'image/png', body: tooBig }],
+    '/api/shared/machine-technical/printing/import',
+    [{ name: 'file', filename: 'big.csv', contentType: 'text/csv', body: tooBig }],
     token
   );
   assert.notEqual(r.status, 200, 'an over-limit upload must not be accepted');

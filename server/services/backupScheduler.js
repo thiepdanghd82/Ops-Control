@@ -18,7 +18,7 @@
  *
  * Self-verification after each backup:
  *   - Open the .sqlite, run PRAGMA integrity_check; fail → alert
- *   - Count rows in critical tables (quotes, materials, ifs_inventory)
+ *   - Count rows in critical tables (quotes, materials)
  *   - Compare row counts vs live DB; >10% drop → flag suspicious
  *
  * Retention: prune backups older than OPS_BACKUP_RETENTION_DAYS (30d).
@@ -297,7 +297,7 @@ async function verifyBackup(backupPath) {
     if (integrity?.integrity_check !== 'ok') {
       return { ok: false, error: `integrity_check: ${integrity?.integrity_check || 'unknown'}` };
     }
-    const tables = ['quotes', 'materials', 'ifs_inventory', 'rfq_tracker', 'sample_tracker'];
+    const tables = ['quotes', 'materials'];
     const counts = {};
     for (const t of tables) {
       try {

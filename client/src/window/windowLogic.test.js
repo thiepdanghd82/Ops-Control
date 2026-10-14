@@ -17,17 +17,7 @@ import assert from 'node:assert/strict';
 import { opensMaximized } from './windowLogic.js';
 
 test('data-grid screens open maximized', () => {
-  for (const id of [
-    'quote-history',
-    'rfq-tracking',
-    'lib-inventory',
-    'npi-parts-list',
-    'rfq-tracker',
-    'sample-tracking',
-    'lib-mat',
-    'approvals-inbox',
-    'audit-log',
-  ]) {
+  for (const id of ['quote-history', 'npi-parts-list', 'lib-mat', 'approvals-inbox', 'audit-log']) {
     assert.equal(opensMaximized(id), true, `${id} should open maximized`);
   }
 });
@@ -42,13 +32,11 @@ test('the two pricing worksheets open maximized', () => {
   }
 });
 
-test('the utility calculators stay floating', () => {
-  // These are opened ALONGSIDE a quote being priced — an ink calculation or
-  // a print-area check feeds a number back into the worksheet, so covering
-  // the worksheet with them would defeat the point.
-  for (const id of ['ink-calc', 'print-area', 'design-tools', 'messages']) {
-    assert.equal(opensMaximized(id), false, `${id} should stay floating`);
-  }
+test('the ink calculator stays floating', () => {
+  // It is opened ALONGSIDE a quote being priced — an ink calculation feeds a
+  // number back into the worksheet, so covering the worksheet would defeat
+  // the point.
+  assert.equal(opensMaximized('ink-calc'), false);
 });
 
 test('home is never maximized — it is the fixed base layer', () => {
@@ -61,17 +49,12 @@ test('every non-calculator screen opens maximized', () => {
     'standard',
     'complex',
     'summarize',
-    'formal-quote',
     'quote-history',
     'npi-parts-list',
-    'rfq-tracking',
     'approvals-inbox',
     'lib-mfg',
     'lib-rop',
-    'lib-inventory',
     'lib-mat',
-    'rfq-tracker',
-    'sample-tracking',
     'dashboard',
     'quote-analysis',
     'lib-rate',

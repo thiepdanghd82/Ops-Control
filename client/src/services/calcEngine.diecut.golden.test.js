@@ -15,14 +15,12 @@
  * - T7  `tool_life_ovr=true` overrides DDL
  * - T8  Unknown die-type fallback (silent 100k× overcharge risk)
  * - T9  Mixed-die Cpx quote (SP-A Pinacle + SP-B Rotary + SP-C Jig)
- * - T10 Lesson 24 magnetic die min gap = 1.5mm (HARD_MIN_GAP_MM)
  *
  *   node --test client/src/services/calcEngine.diecut.golden.test.js
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { calcAll, aggregateComplex, createSubProduct, buildTierState } from './calcEngine.js';
-import { DIE_MIN_GAP_MM } from '../modules/cost/tabs/DesignTools/presses/gallusEngine.js';
 
 // ─── Fixtures ────────────────────────────────────────────────────
 
@@ -529,8 +527,6 @@ function makeSpWithDie(code, toolType, toolCost, layout) {
   return sp;
 }
 
-// ─── T10 — Lesson 24 magnetic die min gap = 1.5mm ────────────────
-
 // ─── T11 — Dieset (production NPI canonical) reads DDL ───────────
 
 test('T11 die-cut Dieset (production NPI canonical) reads tool_life from DDL', () => {
@@ -575,20 +571,4 @@ test('T12 die-cut NC die (production NPI canonical) reads tool_life from DDL', (
   // totalToolPcs = 50,000 ≤ 80,000 → no cap
   // tooling = 500 / 50,000 = 0.01 USD/pc
   assert.equal(tooling, 0.0125, '"NC die" must resolve to DDL value 50,000');
-});
-
-test('T10 die-cut Lesson 24: DIE_MIN_GAP_MM.rotary_magnetic = 1.5 (NOT 1.0 pre-Sprint-S-FLEXO-1)', () => {
-  // Pinning the 3 die-type minimum gaps so a future "looks-like-mm
-  // standardization" PR doesn't accidentally revert magnetic to 1.0mm
-  // (which would let chip particles wedge between lanes — Lesson 24).
-  // HARD_MIN_GAP_MM (internal alias of rotary_magnetic) is module-local,
-  // not exported; this assertion covers the public surface that drives it.
-  assert.equal(
-    DIE_MIN_GAP_MM.rotary_magnetic,
-    1.5,
-    'Rotary magnetic die min gap = 1.5mm. Reverting to 1.0mm (pre-Sprint S-FLEXO-1 default) ' +
-      'breaks chip clearance on long runs. Lesson 24.'
-  );
-  assert.equal(DIE_MIN_GAP_MM.laser, 0.3, 'Laser die min gap = 0.3mm');
-  assert.equal(DIE_MIN_GAP_MM.flat, 2.0, 'Flat die min gap = 2.0mm');
 });

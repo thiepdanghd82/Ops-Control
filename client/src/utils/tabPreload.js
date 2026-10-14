@@ -13,7 +13,6 @@
  */
 
 const COST_LOADERS = {
-  'lib-inventory': () => import('../modules/cost/tabs/IFSInventory'),
   'quote-history': () => import('../modules/cost/tabs/QuoteHistory'),
   'approvals-inbox': () => import('../modules/cost/tabs/PendingApprovalsInbox'),
   'lib-mat': () => import('../modules/cost/tabs/MaterialLibrary'),
@@ -23,17 +22,12 @@ const COST_LOADERS = {
   'lib-finance': () => import('../modules/cost/tabs/LibFinance'),
   'lib-mfg': () => import('../modules/cost/tabs/LibMfg'),
   'lib-rop': () => import('../modules/cost/tabs/LibRop'),
-  'rfq-tracker': () => import('../modules/cost/tabs/RFQTracker'),
-  'sample-tracking': () => import('../modules/cost/tabs/SampleTracking'),
   'quote-analysis': () => import('../modules/cost/tabs/QuoteAnalysis'),
   dashboard: () => import('../modules/cost/tabs/Dashboard'),
   'ink-calc': () => import('../modules/cost/tabs/InkCalculator'),
-  'print-area': () => import('../modules/cost/tabs/PrintAreaCalc'),
-  messages: () => import('../modules/cost/tabs/Messages/MessagesTab'),
   standard: () => import('../modules/cost/tabs/StandardCalc/StandardCalc'),
   complex: () => import('../modules/cost/tabs/ComplexCalc/ComplexCalc'),
   summarize: () => import('../modules/cost/tabs/Summarize'),
-  'formal-quote': () => import('../modules/cost/tabs/FormalQuotation'),
   'audit-log': () => import('../modules/cost/tabs/AuditLog'),
   help: () => import('../modules/help/HelpTab'),
 };

@@ -64,11 +64,6 @@ const DATASETS = [
     varName: 'window._CCL_ROP_DATA',
   },
   {
-    slug: 'inventory',
-    file: ['IFS_Inventory', 'inventory_data.js'],
-    varName: 'window._CCL_INV_DATA',
-  },
-  {
     slug: 'npi-parts',
     file: ['NpiParts', 'npi_parts_data.js'],
     varName: 'window._CCL_NPIPARTS_DATA',

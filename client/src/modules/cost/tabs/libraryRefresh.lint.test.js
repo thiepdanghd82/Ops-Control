@@ -17,10 +17,11 @@
  * it an omission rather than a decision — and exactly the kind a structural
  * test catches for the NEXT editor somebody adds.
  *
- * Deliberately NOT flagged: SampleTracking / RFQTracker / QuoteHistory also
- * call saveAll, but they persist tracking data no calculator reads out of the
- * library context. A guard that fired on those would cry wolf, and a check
- * people learn to ignore is worse than no check (Lesson 0).
+ * Deliberately NOT flagged: a tab whose saveAll persists data no calculator
+ * reads out of the library context. A guard that fired on those would cry
+ * wolf, and a check people learn to ignore is worse than no check (Lesson 0).
+ * (SampleTracking and RFQTracker were the two such tabs, and the test that
+ * pinned their exemption went with them on 2026-10-14.)
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -91,15 +92,4 @@ test('the guard actually looks at something — library savers exist to check', 
     savers.length >= 4,
     `expected the known library editors (rate, DDL, finance, ink, materials); found ${savers.length}`
   );
-});
-
-test('tracking tabs are out of scope — the guard must not cry wolf', () => {
-  for (const n of ['SampleTracking.jsx', 'RFQTracker.jsx']) {
-    const src = fs.readFileSync(path.join(HERE, n), 'utf-8');
-    const saveCalls = src.match(/saveAll\(\s*\{[^}]*\}/gs) || [];
-    assert.ok(
-      !saveCalls.some((c) => LIBRARY_KEYS.some((k) => c.includes(k))),
-      `${n} would now be flagged — re-check whether it really saves library data`
-    );
-  }
 });

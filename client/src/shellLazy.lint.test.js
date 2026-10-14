@@ -4,9 +4,9 @@
  * (MES-3-FIX-62, 2026-09-30).
  *
  * The shell (`index`) measured 545,982 of its 550,000-byte budget, and the
- * floating chat (ChatDrawer + UserPickerModal + UnreadLoginPopup, ~21 kB) and
- * the import dialog (~4 kB) were bundled into it although none of them is
- * needed to draw the first screen. They are lazy-loaded from App.jsx now.
+ * floating chat (~21 kB) and the import dialog (~4 kB) were bundled into it
+ * although neither is needed to draw the first screen. Chat was removed on
+ * 2026-10-14; the import dialog is lazy-loaded from App.jsx.
  * One static `import X from` in App.jsx pulls a module back into the shell
  * with nothing red but the size gate, weeks later — this pins it.
  */
@@ -20,8 +20,6 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APP = fs.readFileSync(path.join(HERE, 'App.jsx'), 'utf8');
 
 const LAZY = {
-  ChatDrawer: './components/Chat/ChatDrawer',
-  UnreadLoginPopup: './components/Chat/UnreadLoginPopup',
   ImportDialog: './components/Shared/ImportDialog',
 };
 

@@ -38,9 +38,6 @@ async function main() {
   const datasets = [
     ['bom', 'listBom'],
     ['routing', 'listRouting'],
-    ['inventory', 'listInventory'],
-    ['finishedGoods', 'listFinishedGoods'],
-    ['rawMaterials', 'listRawMaterials'],
     ['materialsNpi', 'listMaterialsNpi'],
     ['materialsSourcing', 'listMaterialsSourcing'],
     // Sprint 7.1 shadow-write target. Until /save-all has run at

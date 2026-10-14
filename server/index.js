@@ -314,8 +314,7 @@ app.use((req, res, next) => {
 // — gzip cuts both ~70 % on the LAN deploy at http://10.102.3.61:3000
 // (no reverse proxy currently in front of Express).
 //
-// SSE / streaming endpoints (`server/routes/events.js`,
-// `server/routes/chat.js`) MUST be excluded — the middleware buffers
+// SSE / streaming endpoints (`server/routes/events.js`) MUST be excluded — the middleware buffers
 // until threshold and the SSE keepalive frames would never reach the
 // client. The filter checks both the request `Accept` header (covers
 // well-behaved EventSource clients) AND the response `Content-Type`
@@ -665,7 +664,6 @@ import { readSidebarVisibility } from './services/sidebarVisibility.js';
 import sharedRouter from './routes/shared.js';
 import importRouter from './routes/import.js';
 import importWizardRouter from './routes/importWizard.js';
-import chatRouter from './routes/chat.js';
 import syncRouter from './routes/sync.js';
 import eventsRouter from './routes/events.js';
 import { authMiddleware, requireRole } from './middleware/auth.js';
@@ -1069,15 +1067,6 @@ if (fs.existsSync(updatesDir)) {
   console.log(`📦 [updates] dir not found at ${updatesDir} — endpoint disabled`);
 }
 
-// Phase 10A — chat routes. Feature-gated per-route via
-// `requireChatEnabled` so the router stays mounted even when
-// OPS_CHAT_ENABLED=0. Auth happens inside the route (session user
-// looked up from the cookie/token); we skip authMiddleware wrapping
-// here because the SSE stream needs to set custom response headers
-// BEFORE authMiddleware could fail-fast.
-app.use('/api/chat', chatRouter);
-app.use('/api/v1/chat', chatRouter);
-
 // v1.1 — Smart-client sync endpoints (Sprint 3). Auth-required:
 // Tier 1 (Electron) phải có session token y như call REST thường.
 app.use('/api/sync', authMiddleware, syncRouter);
@@ -1087,30 +1076,6 @@ app.use('/api/v1/sync', authMiddleware, syncRouter);
 // Auth handled inside events.js (cookie/Bearer/?t= fallback).
 app.use('/api/events', eventsRouter);
 app.use('/api/v1/events', eventsRouter);
-
-// Phase 10G — opt-in chat retention. `OPS_CHAT_PRUNE_DAYS=180` runs a
-// prune at boot then every 24h. Skipped entirely when unset so the
-// default deploy never drops chat history by surprise.
-{
-  const ttlDays = Number(process.env.OPS_CHAT_PRUNE_DAYS);
-  if (Number.isFinite(ttlDays) && ttlDays > 0 && process.env.NODE_ENV !== 'test') {
-    const { pruneOldMessages } = await import('./repositories/chatStore.js');
-    const { inc: metricsInc } = await import('./utils/metrics.js');
-    const runPrune = () => {
-      try {
-        const r = pruneOldMessages({ ttlDays });
-        if (r.pruned > 0) {
-          console.log(`  🧹  chat: pruned ${r.pruned} message(s) older than ${ttlDays}d`);
-          metricsInc('chat_messages_pruned_total', {}, r.pruned);
-        }
-      } catch (e) {
-        console.warn('  ⚠️   chat prune failed:', e.message);
-      }
-    };
-    runPrune();
-    setInterval(runPrune, 24 * 3600 * 1000).unref();
-  }
-}
 
 // ─── Serve React SPA in production ───
 //

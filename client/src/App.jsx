@@ -30,10 +30,8 @@ import './App.css';
 // out of the classic (flag-OFF) bundle. Only fetched when the flag is on.
 const WindowLayer = lazy(() => import('./window/WindowLayer.jsx'));
 // Not needed to draw the first screen, so kept out of the shell (MES-3-FIX-62,
-// 2026-09-30: the shell stood at 545,982 of 550,000 bytes). Chat still mounts
-// right after login, from its own chunk; the import dialog loads on first open.
-const ChatDrawer = lazy(() => import('./components/Chat/ChatDrawer'));
-const UnreadLoginPopup = lazy(() => import('./components/Chat/UnreadLoginPopup'));
+// 2026-09-30: the shell stood at 545,982 of 550,000 bytes). The import dialog
+// loads on first open.
 const ImportDialog = lazy(() => import('./components/Shared/ImportDialog'));
 
 // v1.3 P0 — Start connection health monitor at module load time.
@@ -280,7 +278,7 @@ function AppShell() {
 
   // Phase 10K — post-login data preload gate. Wraps the whole app
   // shell in AppBootstrap which mounts CostLibProvider + fires
-  // auxiliary fetches (chat, approvals) and shows a Loading overlay
+  // auxiliary fetches (approvals) and shows a Loading overlay
   // until every dataset is in. Once ready, children render normally.
   return (
     <AppBootstrap>
@@ -375,25 +373,6 @@ function AppShell() {
               />
             </Suspense>
           )}
-          {/* Phase 10A — floating chat. Self-contained; renders nothing
-          if the server returns 503 (chat_disabled) so users on a
-          pre-chat deploy see the app unchanged. Wrapped in its own
-          boundary so a chat crash (e.g. bad payload from the poller)
-          doesn't take down the quoting UI. */}
-          <ErrorBoundary label="Chat" fallback={() => null}>
-            <Suspense fallback={null}>
-              <ChatDrawer />
-            </Suspense>
-          </ErrorBoundary>
-          {/* Phase 11 — one-shot unread-on-login popup. Self-contained:
-          renders null unless the user has just logged in AND has at
-          least one unread conversation. A crash here must not blank
-          the shell, hence the dedicated boundary. */}
-          <ErrorBoundary label="UnreadLoginPopup" fallback={() => null}>
-            <Suspense fallback={null}>
-              <UnreadLoginPopup />
-            </Suspense>
-          </ErrorBoundary>
         </div>
       </LibraryPickerProvider>
     </AppBootstrap>

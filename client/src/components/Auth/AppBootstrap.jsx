@@ -4,8 +4,7 @@
  * Sits between successful auth and the main app shell. Mounts
  * CostLibProvider (which fires rates/DDL/materials/finance/inkCalc
  * in parallel), plus triggers a few auxiliary fetches the rest of
- * the UI will want within the first few seconds (chat rooms + users,
- * approvals count). The user sees a Carbon-styled loading screen
+ * the UI will want within the first few seconds (approvals count). The user sees a Carbon-styled loading screen
  * with per-task progress until every required dataset is in.
  *
  * Why gate here and not just lazy-load per screen: first-impression.
@@ -19,7 +18,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { CostLibProvider, useCostLib } from '../../context/CostLibContext';
 import { sharedApi } from '../../services/api';
-import { chatApi } from '../../services/chatApi';
 import { useI18n } from '../../utils/useI18n';
 import './AppBootstrap.css';
 
@@ -29,9 +27,6 @@ import './AppBootstrap.css';
 function makeBootstrapTasks() {
   return [
     { key: 'approvals', label: 'Approvals status', run: () => sharedApi.getMyApprovalCount?.() },
-    { key: 'chat_rooms', label: 'Chat rooms', run: () => chatApi.rooms() },
-    { key: 'chat_users', label: 'User directory', run: () => chatApi.users() },
-    { key: 'chat_mentions', label: 'Mentions inbox', run: () => chatApi.mentions({ limit: 50 }) },
   ].filter((t) => typeof t.run === 'function');
 }
 

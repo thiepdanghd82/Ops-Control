@@ -30,15 +30,14 @@ export const MIN_WINDOW_H = 200;
  * which is the fail-safe against sessionStorage-key collisions and
  * shared-quote confusion.
  *
- * Per review decision (2026-08-06): quote-history + rfq-tracking are
- * SINGLETON (audit-safe) despite being browse-ish — they hold fixed
- * sessionStorage view/handoff keys.
+ * Per review decision (2026-08-06): quote-history is SINGLETON
+ * (audit-safe) despite being browse-ish — it holds fixed sessionStorage
+ * view/handoff keys.
  */
 export const MULTI_INSTANCE_TABS = new Set([
   // NB: 'home' is intentionally NOT here — it's the single fixed base
   // window (see isFixedTab). One instance, never duplicated.
   'dashboard',
-  'lib-inventory',
   'lib-mat',
   'lib-rate',
   'lib-ddl',
@@ -47,12 +46,9 @@ export const MULTI_INSTANCE_TABS = new Set([
   'lib-mfg',
   'lib-rop',
   'npi-parts-list',
-  'rfq-tracker',
-  'sample-tracking',
   'quote-analysis',
   'approvals-inbox',
   'ink-calc',
-  'print-area',
   'metrics',
   'audit-log',
   'help',
@@ -66,10 +62,11 @@ export const MULTI_INSTANCE_TABS = new Set([
  * windows, and the next person to add a data screen would have hit the
  * same gap. Naming the exceptions is the shorter, more stable list.
  *
- * These four are exceptions because they are opened ALONGSIDE a quote being
- * priced: an ink calculation or a print-area check feeds a number back into
- * the worksheet, so covering the worksheet with them defeats the point, and
- * chat belongs beside the work rather than on top of it.
+ * Ink Calculator is the exception because it is opened ALONGSIDE a quote
+ * being priced: an ink calculation feeds a number back into the worksheet,
+ * so covering the worksheet with it defeats the point. (Print Area, Design
+ * Tools and Messages were the other three until they were removed on
+ * 2026-10-14.)
  *
  * Standard and Complex were on this list until 2026-09-10, on the theory
  * that operators compare the two side by side. The operator who runs the
@@ -81,7 +78,7 @@ export const MULTI_INSTANCE_TABS = new Set([
  * scrollWidth 3333px. A floating window shows about a quarter of the
  * columns and leaves 38% of the screen empty behind it.
  */
-export const FLOATING_BY_DEFAULT = new Set(['ink-calc', 'print-area', 'design-tools', 'messages']);
+export const FLOATING_BY_DEFAULT = new Set(['ink-calc']);
 
 /** True when this tab should open filling the frame rather than floating. */
 export function opensMaximized(tabId) {

@@ -5,11 +5,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import {
-  getInventory,
-  getManufacturingStructures,
-  getRoutingOperations,
-} from '../../services/dataSync.js';
+import { getManufacturingStructures, getRoutingOperations } from '../../services/dataSync.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,18 +30,6 @@ export default {
   listRouting() {
     return getRoutingOperations();
   },
-  listInventory() {
-    const all = getInventory();
-    return all.inventory || [];
-  },
-  listFinishedGoods() {
-    const all = getInventory();
-    return all.finishedGoods || [];
-  },
-  listRawMaterials() {
-    const all = getInventory();
-    return all.rawMaterials || [];
-  },
   listMaterialsNpi() {
     const fp = path.join(LIB, 'MaterialCost', 'npi_materials.json');
     return fs.existsSync(fp) ? readJson(fp) : [];
@@ -56,14 +40,6 @@ export default {
   },
   listQuotes() {
     const fp = path.join(LIB, 'QuoteHistory', 'quote_history.json');
-    return fs.existsSync(fp) ? readJson(fp) : [];
-  },
-  listRfqTracker() {
-    const fp = path.join(LIB, 'RFQTracker', 'rfq_tracker.json');
-    return fs.existsSync(fp) ? readJson(fp) : [];
-  },
-  listSampleTracker() {
-    const fp = path.join(LIB, 'SampleTracking', 'sample_tracking.json');
     return fs.existsSync(fp) ? readJson(fp) : [];
   },
 };

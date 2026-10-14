@@ -1,6 +1,5 @@
 /**
- * ImportDialog — multi-target IFS data file upload (inventory, finished
- * goods, raw materials, BOM, routing). Migrated to the shared Modal
+ * ImportDialog — multi-target IFS data file upload (BOM, routing). Migrated to the shared Modal
  * primitive in the 2026-04-24 modal-design refresh.
  */
 import { useState, useRef } from 'react';
@@ -8,15 +7,12 @@ import Modal from './Modal';
 import './ImportDialog.css';
 
 const IMPORT_TARGETS = {
-  inventory: { label: 'IFS Inventory (Full)', endpoint: '/api/import/inventory', icon: '📊' },
-  finishedGoods: { label: 'Finished Goods', endpoint: '/api/import/finished-goods', icon: '📦' },
-  // Raw Materials retired 2026-06-25 — import via Material Cost › IFS Materials.
   bom: { label: 'Manufacturing Structures (BOM)', endpoint: '/api/import/bom', icon: '⚙️' },
   routing: { label: 'Routing Operations', endpoint: '/api/import/routing', icon: '🔄' },
 };
 
 export default function ImportDialog({ isOpen, onClose, onImportComplete }) {
-  const [target, setTarget] = useState('inventory');
+  const [target, setTarget] = useState('bom');
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState(null);

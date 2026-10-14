@@ -102,11 +102,8 @@ const QUOTE_INSERT_SQL = `
 const ALLOWED_QUERIES = {
   bom: { kinds: null },
   routing_operations: { kinds: null },
-  ifs_inventory: { kinds: new Set(['inventory', 'finished_goods', 'raw_materials']) },
   materials: { kinds: new Set(['npi', 'sourcing']) },
   quotes: { kinds: null },
-  rfq_tracker: { kinds: null },
-  sample_tracker: { kinds: null },
 };
 
 function rowsFromTable(table, kind = null) {
@@ -141,15 +138,6 @@ export default {
   },
   listRouting() {
     return rowsFromTable('routing_operations') ?? fileBackend.listRouting();
-  },
-  listInventory() {
-    return rowsFromTable('ifs_inventory', 'inventory') ?? fileBackend.listInventory();
-  },
-  listFinishedGoods() {
-    return rowsFromTable('ifs_inventory', 'finished_goods') ?? fileBackend.listFinishedGoods();
-  },
-  listRawMaterials() {
-    return rowsFromTable('ifs_inventory', 'raw_materials') ?? fileBackend.listRawMaterials();
   },
   listMaterialsNpi() {
     return rowsFromTable('materials', 'npi') ?? fileBackend.listMaterialsNpi();
@@ -269,40 +257,5 @@ export default {
         reason: err?.message || 'bulk-upsert-failed',
       };
     }
-  },
-  listRfqTracker() {
-    // Empty SQLite table is legitimate here (tracker starts empty).
-    // Distinguish "table exists with 0 rows" (legit) from "table missing
-    // entirely" (fall back) by checking schema first.
-    const conn = db();
-    if (!conn) return fileBackend.listRfqTracker();
-    const has = conn
-      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='rfq_tracker'")
-      .get();
-    if (!has) return fileBackend.listRfqTracker();
-    const rows = conn.prepare('SELECT raw_json FROM rfq_tracker').all();
-    return rows.map((r) => {
-      try {
-        return JSON.parse(r.raw_json);
-      } catch {
-        return {};
-      }
-    });
-  },
-  listSampleTracker() {
-    const conn = db();
-    if (!conn) return fileBackend.listSampleTracker();
-    const has = conn
-      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='sample_tracker'")
-      .get();
-    if (!has) return fileBackend.listSampleTracker();
-    const rows = conn.prepare('SELECT raw_json FROM sample_tracker').all();
-    return rows.map((r) => {
-      try {
-        return JSON.parse(r.raw_json);
-      } catch {
-        return {};
-      }
-    });
   },
 };

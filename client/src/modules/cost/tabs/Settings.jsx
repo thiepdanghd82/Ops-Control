@@ -2476,9 +2476,6 @@ function BackupSection() {
 // ═══════════════════════════════════════════════════════════
 
 const IFS_LABELS = {
-  inventory: 'Inventory',
-  finishedGoods: 'Finished Goods',
-  rawMaterials: 'Raw Materials',
   bom: 'BOM / Mfg Structures',
   routing: 'Routing Ops',
 };
@@ -3132,29 +3129,6 @@ function AuditLogSection() {
 // ═══════════════════════════════════════════════════════════
 
 const DATA_IMPORT_DATASETS = [
-  {
-    key: 'inventory',
-    label: 'IFS Inventory',
-    desc: 'Current stock levels synced from IFS',
-    accept: '.csv,.xlsx,.xls',
-    upload: (file) => importApi.uploadInventory(file),
-    clear: (password) => importApi.clearInventory(password),
-    fetch: () => sharedApi.getInventory(),
-    filename: 'inventory',
-  },
-  {
-    key: 'finishedGoods',
-    label: 'Finished Goods',
-    desc: 'FG master data (part numbers, descriptions)',
-    accept: '.csv,.xlsx,.xls',
-    upload: (file) => importApi.uploadFinishedGoods(file),
-    clear: (password) => importApi.clearFinishedGoods(password),
-    fetch: () => sharedApi.getProducts(),
-    filename: 'finished_goods',
-  },
-  // Raw Materials retired 2026-06-25 — raw-material master moved to
-  // Material Cost › IFS Materials (registry-driven import). Server
-  // raw_materials store + route retained for Planning Qty On Hand.
   {
     key: 'bom',
     label: 'BOM / Mfg Structures',

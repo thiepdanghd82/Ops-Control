@@ -45,10 +45,10 @@ test('toggleableSections excludes the always-on system section', () => {
 
 test('always-on tabs (settings) are NOT in the toggleable tab list', () => {
   assert.equal(TOGGLEABLE_TAB_IDS.includes('settings'), false);
-  assert.equal(TOGGLEABLE_TAB_IDS.includes('rfq-tracking'), true);
+  assert.equal(TOGGLEABLE_TAB_IDS.includes('quote-history'), true);
   assert.equal(TOGGLEABLE_SECTION_IDS.includes('system'), false);
   // Flat helper annotates each tab with its section id.
-  assert.equal(allToggleableTabs().find((t) => t.id === 'rfq-tracking').sectionId, 'quoting');
+  assert.equal(allToggleableTabs().find((t) => t.id === 'quote-history').sectionId, 'quoting');
 });
 
 // ── applySidebarVisibility ────────────────────────────────────────
