@@ -55,12 +55,6 @@
  *     </table>
  *   </div>
  * ─────────────────────────────────────────────────────────────────── */
-.data-table-wrap {
-  flex: 1;
-  overflow: auto;
-  padding: 0;
-  background: #ffffff;
-}
 
 .data-table {
   width: 100%;
@@ -133,69 +127,6 @@
  * Existing modals still render inline styles — these classes are the
  * migration target for new ones.
  * ─────────────────────────────────────────────────────────────────── */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--modal-overlay-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
-}
-
-.modal-card {
-  background: var(--modal-card-bg);
-  border: 1px solid var(--modal-card-border);
-  box-shadow: var(--modal-card-shadow);
-  max-width: 92vw;
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-title {
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--modal-card-border);
-  font-size: 14px;
-  font-weight: 600;
-  color: #161616;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.modal-body {
-  padding: 18px;
-  overflow-y: auto;
-  flex: 1;
-}
-
-.modal-footer {
-  padding: 10px 18px;
-  border-top: 1px solid var(--modal-card-border);
-  background: #f4f4f4;
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-.modal-close-btn {
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: 1px solid var(--border-strong, #e0e0e0);
-  background: #ffffff;
-  color: #6f6f6f;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1;
-  border-radius: 2px;
-}
-.modal-close-btn:hover {
-  background: #f4f4f4;
-}
 
 /* ───────────────────────────────────────────────────────────────────
  * 3. STATUS BADGES — CSS mirror of StatusBadge.jsx palette
@@ -257,26 +188,10 @@
  * Adopt gradually — replace inline `style={{ color: '#6f6f6f' }}` with
  * `className="text-muted"` on new code.
  * ─────────────────────────────────────────────────────────────────── */
-.text-muted {
-  color: var(--text-secondary, #525252);
-}
-.text-tertiary {
-  color: var(--text-tertiary, #8d8d8d);
-}
-.text-primary {
-  color: var(--text-primary, #161616);
-}
-.text-strong {
-  font-weight: 600;
-}
+
 .tabular {
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum';
-}
-
-.em-dash-muted::before {
-  content: '\2014';
-  color: var(--text-tertiary, #8d8d8d);
 }
 
 /* ───────────────────────────────────────────────────────────────────
@@ -284,10 +199,6 @@
  * WCAG AA requires a visible focus indicator. Apply by default on
  * interactive elements via utility or override.
  * ─────────────────────────────────────────────────────────────────── */
-.focus-ring-subtle:focus-visible {
-  outline: 2px solid var(--border-focus, #0f62fe);
-  outline-offset: 2px;
-}
 
 /* Global: ensure keyboard focus is never invisible. Opt-out on a per
    element basis with `outline: none` if genuinely needed. */

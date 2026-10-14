@@ -210,18 +210,3 @@ function makeUserLimiter({ name, maxEnv, defaultMax }) {
   mw._max = () => max;
   return mw;
 }
-
-// 60 saves / user / 10 min = 6 saves/min — generous for normal editing,
-// catches runaway scripts. Apply on save endpoints AFTER authMiddleware.
-export const userSaveRateLimit = makeUserLimiter({
-  name: 'user-save',
-  maxEnv: 'OPS_USER_SAVE_RATE_MAX',
-  defaultMax: 60,
-});
-
-// 30 writes / user / 10 min — for bulk imports, library updates, etc.
-export const userWriteRateLimit = makeUserLimiter({
-  name: 'user-write',
-  maxEnv: 'OPS_USER_WRITE_RATE_MAX',
-  defaultMax: 30,
-});

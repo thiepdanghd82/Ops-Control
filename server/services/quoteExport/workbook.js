@@ -133,34 +133,6 @@ export function colLetter(n) {
 }
 
 /**
- * Hide a column in customer variant. ExcelJS supports hiding via
- * column.hidden = true. Looking up by letter avoids fragile index math.
- *
- * @param {ExcelJS.Worksheet} sheet
- * @param {string[]} columnLetters  e.g. ['L', 'M']
- */
-export function hideColumns(sheet, columnLetters) {
-  for (const letter of columnLetters) {
-    const col = sheet.getColumn(letter);
-    if (col) col.hidden = true;
-  }
-}
-
-/**
- * Add a watermark to the worksheet's first-page header using
- * Excel header/footer codes. Customer variant only.
- *
- * @param {ExcelJS.Worksheet} sheet
- * @param {string} text  e.g. 'CUSTOMER COPY'
- */
-export function setWatermark(sheet, text) {
-  sheet.headerFooter.differentFirst = false;
-  // &C = center · &"font,Bold" · &14 = 14pt · &K + ARGB hex (no FF prefix)
-  sheet.headerFooter.oddHeader = `&C&"Calibri,Bold"&14&KDA1E28${text}`;
-  sheet.headerFooter.evenHeader = sheet.headerFooter.oddHeader;
-}
-
-/**
  * Set freeze pane via the worksheet's `views` array. Common case: freeze
  * the top N rows (banner + header).
  *

@@ -167,31 +167,6 @@
 }
 
 /* ─── Profile Section ─── */
-.profile-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-}
-
-.profile-field {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.profile-field label {
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.48);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-.profile-field span {
-  font-size: 14px;
-  color: #1d1d1f;
-  letter-spacing: -0.224px;
-}
 
 /* Role badges */
 .role-badge {
@@ -226,22 +201,6 @@
 }
 
 /* Module tags */
-.mod-tag {
-  display: inline-block;
-  padding: 1px 6px;
-  border-radius: 0;
-  font-size: 10px;
-  font-weight: 600;
-  margin-right: 3px;
-}
-.mod-cost {
-  background: #dcfce7;
-  color: #166534;
-}
-.mod-plan {
-  background: #dbeafe;
-  color: var(--color-brand-700);
-}
 
 /* Status dot */
 .status-dot {
@@ -524,11 +483,7 @@
   width: 36px;
   text-align: center;
 }
-.cell-id {
-  color: var(--color-slate-400);
-  font-size: 12px;
-  font-family: monospace;
-}
+
 .cell-code {
   font-family: monospace;
   font-size: 12px;
@@ -539,9 +494,7 @@
   font-size: 12px;
   color: var(--color-slate-500);
 }
-.cell-modules {
-  white-space: nowrap;
-}
+
 .cell-actions {
   white-space: nowrap;
 }
@@ -612,146 +565,10 @@
 }
 
 /* ─── Toolbar ─── */
-.ifs-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.ifs-search {
-  flex: 1;
-  max-width: 340px;
-  padding: 7px 14px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 0;
-  font-size: 14px;
-  color: #1d1d1f;
-  background: #fff;
-  letter-spacing: -0.224px;
-}
-
-.ifs-search:focus {
-  outline: none;
-  border-color: #0071e3;
-  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.16);
-}
-
-.ifs-count {
-  font-size: 12px;
-  color: var(--color-slate-400);
-}
 
 /* ─── Pagination ─── */
-.ifs-pagination {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: center;
-  padding: 12px 0;
-}
-
-.page-info {
-  font-size: 12px;
-  color: var(--color-slate-500);
-  min-width: 120px;
-  text-align: center;
-}
 
 /* ─── DDL Section (matching COST V1.0 card grid) ─── */
-.ddl-header {
-  padding: 10px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #f4f4f4;
-  border-bottom: 2px solid var(--border-strong);
-  box-shadow: none;
-}
-.ddl-header-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  letter-spacing: 0.16px;
-}
-.ddl-header-badges {
-  display: flex;
-  gap: 6px;
-  margin-top: 4px;
-}
-.ddl-hbadge {
-  padding: 4px 8px;
-  border-radius: 24px;
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 0.32px;
-}
-.ddl-hb-lists {
-  background: #edf5ff;
-  color: var(--btn-primary-bg);
-}
-.ddl-hb-items {
-  background: #defbe6;
-  color: #24a148;
-}
-.ddl-header-actions {
-  display: flex;
-  gap: 8px;
-}
-.ddl-action-btn {
-  padding: 7px 16px;
-  border: 1px solid #c6c6c6;
-  border-radius: 0;
-  background: #ffffff;
-  color: var(--text-primary);
-  font-size: 14px;
-  font-weight: 400;
-  cursor: pointer;
-  letter-spacing: 0.16px;
-  transition: background-color 0.15s;
-}
-
-.ddl-site-tabs {
-  display: flex;
-  gap: 0;
-  border-bottom: 2px solid var(--color-slate-200);
-  padding: 0 16px;
-}
-.ddl-site-tab {
-  padding: 8px 18px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-slate-500);
-  border-bottom: 2.5px solid transparent;
-  margin-bottom: -2px;
-  transition: all 0.15s;
-}
-.ddl-site-tab.active {
-  color: #0369a1;
-  font-weight: 600;
-  border-bottom-color: #0ea5e9;
-}
-
-.ddl-cards {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  padding: 16px;
-  background: #eef2f7;
-}
-@media (max-width: 1200px) {
-  .ddl-cards {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-@media (max-width: 900px) {
-  .ddl-cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
 
 .ddl-card {
   background: white;
@@ -761,148 +578,14 @@
   display: flex;
   flex-direction: column;
 }
-.ddl-card-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--color-slate-100);
-}
-.ddl-card-count {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #0ea5e9;
-  color: white;
-  font-size: 11px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.ddl-card-title {
-  flex: 1;
-  font-size: 13px;
-  font-weight: 600;
-  color: #0f172a;
-}
-.ddl-card-add {
-  width: 24px;
-  height: 24px;
-  border-radius: 0;
-  border: 1.5px solid #d1d5db;
-  background: white;
-  color: var(--color-slate-500);
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.ddl-card-add:hover {
-  background: #f0fdf4;
-  border-color: #22c55e;
-  color: #22c55e;
-}
 
 .ddl-card-body {
   padding: 4px 0;
   max-height: 280px;
   overflow-y: auto;
 }
-.ddl-card-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-}
-.ddl-card-row:hover {
-  background: var(--color-slate-50);
-}
-.ddl-card-idx {
-  font-size: 10px;
-  color: var(--color-slate-400);
-  font-weight: 600;
-  width: 16px;
-  text-align: right;
-  flex-shrink: 0;
-}
-.ddl-card-val {
-  flex: 1;
-  font-size: 13px;
-  color: var(--color-slate-700);
-  padding: 4px 8px;
-  border: 1px solid transparent;
-  border-radius: 0;
-  background: transparent;
-}
-.ddl-card-del {
-  width: 18px;
-  height: 18px;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  color: #ef4444;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-.ddl-card-row:hover .ddl-card-del {
-  opacity: 1;
-}
 
 /* ─── Finance ─── */
-.finance-data {
-}
-
-.finance-group {
-  margin-bottom: 20px;
-}
-
-.finance-group-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-slate-600);
-  text-transform: capitalize;
-  margin: 0 0 8px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--color-slate-200);
-}
-
-.finance-kv-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 8px;
-}
-
-.finance-kv {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 6px 8px;
-  background: var(--color-slate-50);
-  border-radius: 0;
-}
-
-.fk {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-slate-400);
-  text-transform: capitalize;
-}
-
-.fv {
-  font-size: 13px;
-  color: #1e293b;
-  font-family: monospace;
-}
 
 /* ─── Backup Actions ─── */
 .backup-actions {
@@ -943,91 +626,6 @@
 }
 
 /* ─── Data Status (from logs) ─── */
-.data-status-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-}
-
-.data-status-item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 14px 16px;
-  border-radius: 0;
-  border: none;
-  background: #fff;
-  box-shadow: rgba(0, 0, 0, 0.04) 0px 1px 6px;
-}
-
-.data-status-item.ds-ok {
-  background: #fff;
-}
-
-.data-status-item.ds-fail {
-  background: #fff;
-}
-
-.ds-row-top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.ds-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.ds-dot.ok {
-  background: #22c55e;
-  box-shadow: 0 0 4px rgba(34, 197, 94, 0.45);
-}
-.ds-dot.fail {
-  background: #ef4444;
-}
-
-.ds-label {
-  flex: 1;
-  font-size: 13px;
-  font-weight: 600;
-  color: #0f172a;
-}
-
-.ds-badge {
-  padding: 2px 10px;
-  border-radius: 24px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-}
-.ds-badge.ok {
-  background: #dcfce7;
-  color: #16a34a;
-  border: 1px solid #bbf7d0;
-}
-.ds-badge.fail {
-  background: #fee2e2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
-}
-
-.ds-row-meta {
-  display: flex;
-  gap: 10px;
-  padding-left: 17px;
-}
-.ds-size {
-  font-size: 11px;
-  color: #475569;
-  font-family: monospace;
-  font-weight: 600;
-}
-.ds-date {
-  font-size: 10px;
-  color: #94a3b8;
-}
 
 .online-user-name {
   font-weight: 600;
@@ -1047,65 +645,7 @@
 }
 
 /* ─── Data Import Section ─── */
-.di-hint {
-  font-size: 12px;
-  color: #64748b;
-  margin: 0 0 10px;
-}
-.di-card {
-  padding: 0;
-  overflow: hidden;
-}
-.di-list {
-  display: flex;
-  flex-direction: column;
-}
-.di-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--color-slate-100);
-  transition: background 0.15s;
-}
-.di-row:last-child {
-  border-bottom: none;
-}
-.di-row:hover {
-  background: #f8fafc;
-}
-.di-row-info {
-  flex: 1;
-  min-width: 0;
-}
-.di-row-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.di-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #0f172a;
-}
-.di-size {
-  margin-left: 4px;
-  padding: 1px 8px;
-  background: #f0f9ff;
-  color: #0369a1;
-  border: 1px solid #bae6fd;
-  border-radius: 24px;
-  font-size: 10px;
-  font-weight: 600;
-  font-family: monospace;
-}
-.di-row-desc {
-  font-size: 12px;
-  color: #94a3b8;
-  margin-top: 2px;
-  padding-left: 19px;
-}
+
 .di-row-path {
   display: flex;
   align-items: center;
@@ -1116,19 +656,7 @@
 .di-path-icon {
   font-size: 11px;
 }
-.di-path-text {
-  font-family: 'SF Mono', Menlo, Consolas, monospace;
-  font-size: 10.5px;
-  color: #475569;
-  background: #f1f5f9;
-  padding: 2px 8px;
-  border-radius: 0;
-  border: 1px solid var(--color-slate-200);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 460px;
-}
+
 .di-path-input {
   flex: 1;
   min-width: 260px;
@@ -1166,50 +694,16 @@
   background: #f1f5f9;
   color: #0f172a;
 }
-.di-row-actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-}
-.di-btn {
-  padding: 7px 14px;
-  border-radius: 0;
-  border: 1px solid transparent;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.15s;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.di-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-.di-btn-import {
-  background: #0ea5e9;
-  color: white;
-  border-color: #0284c7;
-}
+
 .di-btn-import:hover:not(:disabled) {
   background: #0284c7;
 }
-.di-btn-backup {
-  background: #f0fdf4;
-  color: #16a34a;
-  border-color: #bbf7d0;
-}
+
 .di-btn-backup:hover:not(:disabled) {
   background: #dcfce7;
   border-color: #86efac;
 }
-.di-btn-clear {
-  background: #fef2f2;
-  color: #dc2626;
-  border-color: #fecaca;
-}
+
 .di-btn-clear:hover:not(:disabled) {
   background: #fee2e2;
   border-color: #fca5a5;
@@ -1682,36 +1176,6 @@ button.acct-approval-pill.on:hover {
   gap: 6px;
   justify-content: center;
 }
-.acct-act-btn {
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 0;
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.15s;
-}
-.acct-act-btn:hover {
-  transform: scale(1.1);
-}
-.acct-act-edit {
-  background: var(--color-brand-50);
-}
-.acct-act-pwd {
-  background: #fef3c7;
-}
-.acct-act-totp {
-  background: #dbeafe;
-}
-.acct-act-lock {
-  background: var(--color-slate-100);
-}
-.acct-act-del {
-  background: #fee2e2;
-}
 
 /* macOS-style squircle action buttons — mirrors COST V1.0 `_sqBtn`.
    Gradient background + subtle inset highlight + drop shadow + scale-hover. */
@@ -1861,114 +1325,8 @@ button.acct-approval-pill.on:hover {
 }
 
 /* Add User Modal — Apple sheet style */
-.acct-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.acct-modal {
-  background: white;
-  border-radius: 0;
-  padding: 24px;
-  width: 560px;
-  max-width: 95vw;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: rgba(0, 0, 0, 0.22) 3px 5px 30px 0px;
-}
-.acct-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  font-family: 'IBM Plex Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  font-size: 17px;
-  font-weight: 600;
-  color: #1d1d1f;
-  letter-spacing: -0.374px;
-}
-.acct-modal-close {
-  border: none;
-  background: rgba(0, 0, 0, 0.06);
-  border-radius: 50%;
-  width: 28px;
-  height: 28px;
-  cursor: pointer;
-  font-size: 16px;
-  color: rgba(0, 0, 0, 0.48);
-  transition: background 0.15s;
-}
-.acct-modal-close:hover {
-  background: rgba(0, 0, 0, 0.1);
-}
-.acct-modal-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.acct-modal-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px 14px;
-}
-.acct-modal-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.acct-modal-field label {
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.56);
-  letter-spacing: -0.12px;
-}
-.acct-modal-field input,
-.acct-modal-field select {
-  height: 36px;
-  box-sizing: border-box;
-  padding: 0 12px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 0;
-  font-size: 14px;
-  background: #fff;
-  color: #1d1d1f;
-  letter-spacing: -0.224px;
-  outline: none;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
-}
-.acct-modal-field input:focus,
-.acct-modal-field select:focus {
-  border-color: #0071e3;
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.16);
-}
-.acct-modal-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: 8px;
-}
 
 /* Online count badge on tab button */
-.acct-online-count {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 1px 7px;
-  background: #dcfce7;
-  color: #16a34a;
-  border-radius: 24px;
-  font-size: 10px;
-  font-weight: 600;
-  border: 1px solid #bbf7d0;
-}
 
 /* Permission Matrix */
 .perm-role-cards {
@@ -2061,330 +1419,12 @@ button.acct-approval-pill.on:hover {
 }
 
 /* ─── Finance Section (matching COST V1.0) ─── */
-.fin-year-tabs {
-  display: flex;
-  gap: 8px;
-  padding: 10px 16px;
-  background: #f4f4f4;
-  border-bottom: 2px solid var(--border-strong);
-}
-.fin-year-tab {
-  padding: 8px 16px;
-  border: 1px solid #c6c6c6;
-  border-radius: 0;
-  background: #ffffff;
-  color: #525252;
-  font-size: 14px;
-  font-weight: 400;
-  cursor: pointer;
-  transition: background-color 0.15s;
-  letter-spacing: 0.16px;
-}
-.fin-year-tab.active {
-  background: var(--btn-primary-bg);
-  color: #ffffff;
-  border-color: var(--btn-primary-bg);
-}
-.fin-year-tab:hover {
-  background: #e8e8e8;
-}
-.fin-year-badge {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 1px 8px;
-  border-radius: 0;
-  background: #22c55e;
-  color: white;
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.fin-header {
-  padding: 10px 16px;
-  background: #f4f4f4;
-  border-bottom: 2px solid var(--border-strong);
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.fin-header-icon {
-  font-size: 28px;
-}
-.fin-header-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  letter-spacing: 0.16px;
-}
-.fin-header-meta {
-  display: flex;
-  gap: 8px;
-  margin-top: 4px;
-}
-.fin-badge {
-  padding: 4px 8px;
-  border-radius: 24px;
-  font-size: 12px;
-  font-weight: 400;
-  background: #defbe6;
-  color: #24a148;
-  letter-spacing: 0.32px;
-}
-.fin-badge-site {
-  padding: 4px 8px;
-  border-radius: 24px;
-  font-size: 12px;
-  font-weight: 400;
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.fin-subtabs {
-  display: flex;
-  border-bottom: 2px solid var(--color-slate-200);
-  padding: 0 16px;
-}
-.fin-subtab {
-  padding: 10px 18px;
-  border: none;
-  background: transparent;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-slate-500);
-  cursor: pointer;
-  border-bottom: 2.5px solid transparent;
-  margin-bottom: -2px;
-  transition: all 0.15s;
-}
-.fin-subtab.active {
-  color: var(--btn-primary-bg);
-  font-weight: 600;
-  border-bottom-color: var(--btn-primary-bg);
-}
-.fin-subtab-count {
-  display: inline-block;
-  margin-left: 4px;
-  padding: 1px 6px;
-  border-radius: 0;
-  font-size: 10px;
-  font-weight: 600;
-  background: var(--color-slate-200);
-  color: var(--color-slate-500);
-}
-.fin-subtab.active .fin-subtab-count {
-  background: var(--btn-primary-bg);
-  color: white;
-}
-
-.fin-section {
-  margin-bottom: 28px;
-}
-.fin-sec-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #0f172a;
-  margin-bottom: 4px;
-  letter-spacing: -0.2px;
-}
-.fin-sec-sub {
-  font-size: 11px;
-  color: var(--color-slate-400);
-  margin-bottom: 10px;
-}
-
-.fin-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.fin-table thead th {
-  padding: 8px 10px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--color-slate-500);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 2px solid var(--color-slate-200);
-  white-space: nowrap;
-}
-.fin-table tbody td {
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--color-slate-100);
-  font-size: 13px;
-  color: var(--color-slate-700);
-  white-space: nowrap;
-}
-.fin-table tbody tr:hover {
-  background: var(--color-slate-50);
-}
-.fin-row-bold td {
-  font-weight: 600 !important;
-  background: var(--color-slate-50);
-}
-.fin-num {
-  text-align: right;
-  font-family: ui-monospace, monospace;
-  font-size: 13px;
-}
 
 /* Monthly expense tables: 14+ columns need horizontal scroll */
-.fin-table-monthly {
-  min-width: 1320px;
-  table-layout: fixed;
-}
-.fin-table-monthly th:first-child,
-.fin-table-monthly td:first-child {
-  width: 200px;
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  background: inherit;
-}
-.fin-table-monthly thead th:first-child {
-  background: var(--color-slate-100);
-}
-.fin-table-monthly tbody tr:nth-child(odd) td:first-child {
-  background: #fff;
-}
-.fin-table-monthly tbody tr:nth-child(even) td:first-child {
-  background: #fff;
-}
-.fin-table-monthly tbody tr:hover td:first-child {
-  background: var(--color-slate-50);
-}
-.fin-row-bold td:first-child {
-  background: var(--color-slate-50) !important;
-}
-.fin-table-monthly th:last-child {
-  background: #f0fdf4;
-}
-.fin-table-monthly td:last-child {
-  background: #fafff9;
-}
 
 /* Scroll wrapper for wide tables */
-.table-wrap-scroll {
-  overflow-x: auto;
-  max-width: 100%;
-  border: 1px solid var(--color-slate-200);
-  border-radius: 0;
-}
-.table-wrap-scroll::-webkit-scrollbar {
-  height: 8px;
-}
-.table-wrap-scroll::-webkit-scrollbar-track {
-  background: var(--color-slate-100);
-  border-radius: 0;
-}
-.table-wrap-scroll::-webkit-scrollbar-thumb {
-  background: var(--color-slate-400);
-  border-radius: 0;
-}
-.table-wrap-scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--color-slate-500);
-}
-.fin-pos {
-  color: var(--color-success-500);
-}
-.fin-neg {
-  color: var(--color-danger-500);
-}
-.fin-note {
-  font-size: 12px;
-  color: var(--color-slate-500);
-}
 
 /* ─── Rate Section (matching COST V1.0) ─── */
-.rate-header {
-  background: #f4f4f4;
-  padding: 10px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: none;
-  border-bottom: 2px solid var(--border-strong);
-}
-.rate-header-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  letter-spacing: 0.16px;
-}
-.rate-header-badges {
-  display: flex;
-  gap: 6px;
-  margin-top: 4px;
-}
-.rate-badge {
-  padding: 4px 8px;
-  border-radius: 24px;
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 0.32px;
-}
-.rate-badge-count {
-  background: #edf5ff;
-  color: var(--btn-primary-bg);
-}
-.rate-badge-site {
-  background: var(--border-strong);
-  color: var(--text-primary);
-}
-.rate-badge-unit {
-  background: var(--border-strong);
-  color: #525252;
-}
-.rate-header-actions {
-  display: flex;
-  gap: 8px;
-}
-.rate-action-btn {
-  padding: 7px 16px;
-  border-radius: 0;
-  border: 1px solid #c6c6c6;
-  background: #ffffff;
-  color: var(--text-primary);
-  font-size: 14px;
-  font-weight: 400;
-  cursor: pointer;
-  transition: background-color 0.15s;
-  letter-spacing: 0.16px;
-}
-.rate-action-btn:hover {
-  background: #e8e8e8;
-}
-.rate-btn-backup {
-  color: var(--text-primary);
-  border-color: #c6c6c6;
-}
-.rate-btn-save {
-  background: var(--btn-primary-bg);
-  color: #ffffff;
-  border: none;
-}
-
-.rate-site-tabs {
-  display: flex;
-  gap: 0;
-  border-bottom: 2px solid var(--color-slate-200);
-  padding: 0 16px;
-}
-.rate-site-tab {
-  padding: 8px 16px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-slate-500);
-  border-bottom: 2.5px solid transparent;
-  margin-bottom: -2px;
-  transition: all 0.15s;
-}
-.rate-site-tab.active {
-  color: #0369a1;
-  font-weight: 600;
-  border-bottom-color: #0ea5e9;
-}
 
 .rate-table {
   width: 100%;
@@ -2408,12 +1448,6 @@ button.acct-approval-pill.on:hover {
 .rate-table tbody tr:hover {
   background: var(--color-slate-50);
 }
-.rate-cell-num {
-  text-align: center;
-  font-family: ui-monospace, monospace;
-  font-size: 13px;
-  color: #1e293b;
-}
 
 /* ─── Loading ─── */
 .tab-loading {
@@ -2430,15 +1464,7 @@ button.acct-approval-pill.on:hover {
 /* Sizes, dates, and counts throughout Settings pages used monospace inline
    via font-family. Switch to font-variant-numeric so digits align while
    keeping the IBM Plex Sans body font for labels. */
-.ds-size,
-.backup-table .size,
-.backup-table .ts,
-.data-status-item .size,
-.users-table .count,
-.rate-badge {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum';
-}
+
 /* If the Settings table body is ever re-styled with the .tbl-pro base,
    this rule would be redundant — but currently Settings uses per-section
    classes. This keeps alignment correct without a wholesale refactor. */
@@ -2547,26 +1573,7 @@ button.acct-approval-pill.on:hover {
 }
 
 /* ── Matrix modal ── */
-.pg-modal-scrim {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.45);
-  z-index: 220;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: pgFade 0.15s ease;
-}
-.pg-modal {
-  background: #fff;
-  border-radius: 10px;
-  width: min(1040px, 94vw);
-  max-height: 86vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
-  overflow: hidden;
-}
+
 @keyframes pgFade {
   from {
     opacity: 0;
@@ -2574,34 +1581,6 @@ button.acct-approval-pill.on:hover {
   to {
     opacity: 1;
   }
-}
-.pg-modal-head {
-  display: flex;
-  align-items: center;
-  padding: 14px 20px;
-  background: linear-gradient(180deg, #eff6ff 0%, #fff 100%);
-  border-bottom: 1px solid #e2e8f0;
-}
-.pg-modal-head h3 {
-  flex: 1;
-  margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  color: #0f172a;
-}
-.pg-close {
-  width: 28px;
-  height: 28px;
-  background: transparent;
-  border: none;
-  font-size: 22px;
-  color: #64748b;
-  cursor: pointer;
-  border-radius: 4px;
-}
-.pg-close:hover {
-  background: #f1f5f9;
-  color: #0f172a;
 }
 
 .pg-modal-form {
@@ -2749,15 +1728,6 @@ button.acct-approval-pill.on:hover {
   cursor: not-allowed;
 }
 
-.pg-modal-foot {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
-  border-top: 1px solid #e2e8f0;
-  background: #fafafa;
-}
 .pg-sys-note {
   margin-right: auto;
   font-size: 11px;

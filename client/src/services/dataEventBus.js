@@ -142,7 +142,3 @@ export function subscribeDataEvents(channels, fn) {
     if (idx >= 0) listeners.splice(idx, 1);
   };
 }
-
-export function isDataEventConnected() {
-  return _connected;
-}

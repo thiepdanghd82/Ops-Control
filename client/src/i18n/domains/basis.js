@@ -238,12 +238,6 @@ registerStrings({
   },
 
   // ─── Chat (Phase 10A-10F) ───
-  'chat.sending': { en: '…', vi: '…' },
-  'chat.delete': { en: 'Delete', vi: 'Xóa' },
-  'chat.delete_confirm': {
-    en: 'Delete this message? This cannot be undone.',
-    vi: 'Xóa tin nhắn này? Không thể hoàn tác.',
-  },
   // Admin recalling someone ELSE's message. Deliberately not worded as
   // "unsend" — you cannot unsend what you did not send, and the operator
   // whose message it was will see a tombstone naming an administrator.
@@ -350,9 +344,6 @@ registerStrings({
     en: 'To recover deleted data, pick a Manual or Scheduled backup dated BEFORE the deletion. "Pre-restore" snapshots are auto undo-points taken before each restore — not general backups.',
     vi: 'Để khôi phục dữ liệu đã xoá, chọn bản Thủ công hoặc Định kỳ có NGÀY TRƯỚC khi xoá. Bản "Trước restore" là điểm hoàn-tác tự động tạo trước mỗi lần khôi phục — không phải bản backup thường.',
   },
-  'settings.backup.kind_manual': { en: 'Manual', vi: 'Thủ công' },
-  'settings.backup.kind_auto': { en: 'Scheduled', vi: 'Định kỳ' },
-  'settings.backup.kind_pre_restore': { en: 'Pre-restore', vi: 'Trước restore' },
   'settings.backup.kind_pre_restore_hint': {
     en: 'Auto undo-point saved right before a restore — dated at the restore, not a general backup.',
     vi: 'Điểm hoàn-tác tự động lưu ngay trước một lần khôi phục — ngày là lúc restore, không phải bản backup thường.',

@@ -55,13 +55,6 @@ if (
   console.log('[repositories] backend resolution:', _summary);
 }
 
-export function getBackendName() {
-  return BACKEND_NAME;
-}
-export function getBackendSummary() {
-  return { master: BACKEND_NAME, datasets: { ..._summary } };
-}
-
 // Public read API. Each method picks its backend from per-dataset env
 // overrides so ops can flip one dataset at a time during cutover.
 export function listMaterialsNpi() {

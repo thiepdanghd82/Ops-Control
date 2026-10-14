@@ -35,28 +35,10 @@ const KNOWN_ORPHANS = new Set([
   // as the "new components should use this" standard. No consumer yet
   // because the existing codebase predates it; kept as a north star.
   'components/Shared/Button.jsx',
-  // Quote-version diff panel — backend endpoints exist + tested in
-  // http.integration.test.js, but the UI-side viewer has no caller
-  // yet. Planned for the Quote History "diff vs current" button.
-  'components/Shared/QuoteVersionDiff.jsx',
-  // Sprint 10 audit remediation primitives. Wired into new catch blocks
-  // as they're added during the error-toast hardening pass. Kept as
-  // aspirational-standard library utilities.
-  'utils/apiTry.js',
+  // utils/logger.js was listed here as aspirational; it has callers now.
+  // QuoteVersionDiff, apiTry, MachineProfileModal and LayoutSuggestionCard
+  // were removed in the 2026-10-14 cleanup (backup kept outside the repo).
   'utils/logger.js',
-  // Sprint 14n — press profile CRUD modal. Originally accessed from
-  // the "Manage" button in Pricing (Std/Cpx) Layout, removed when we
-  // recognised CRUD-in-worksheet as anti-pattern (Carbon/SAP guidance).
-  // Source kept so a future Press Library tab (or re-introducing the
-  // button if operators ask) can wire it back without rebuilding.
-  'modules/cost/tabs/StandardCalc/MachineProfileModal.jsx',
-  // Sprint 14n-3 — Cut Layout Suggestion card. Removed at operator
-  // request ("không meaningful" — duplicated work that lives in the
-  // Design Tools Gallus calculator). Source kept because the optimizer
-  // it drives (services/layoutOptimizer.js) is non-trivial pure-math
-  // code with full test coverage, and the card can be re-mounted in a
-  // future tab if a re-optimizer flow is wanted.
-  'modules/cost/tabs/StandardCalc/LayoutSuggestionCard.jsx',
 ]);
 
 // Files the scan skips entirely (entry points, tests, style sheets).

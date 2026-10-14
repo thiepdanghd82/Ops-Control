@@ -53,7 +53,6 @@ const BUDGETS = {
   'LibFinance.jsx': 0, // Sprint AE: swept
   'LibDDL.jsx': 0, // Sprint AE: swept
   'ComplexCalc/BomTreeView.jsx': 1, // BOM qty is integer (step=1), no decimal-input bug
-  'StandardCalc/MachineProfileModal.jsx': 7, // admin CRUD form — integer/locale-free fields; no decimal-input bug
   'MachineTechnicalTab.jsx': 1, // single integer input (FieldInput for *_mm fields) — admin CRUD, not pricing input
   'AuditLog.jsx': 1, // limit selector min=1 max=10000, integer page size — no decimal input concern
   'Settings.jsx': 1, // numeric setting field — admin CRUD, integer

@@ -74,17 +74,6 @@ export const COST_SECTIONS = [
 ];
 
 /**
- * Find the section containing a given tab id. Used by Sidebar to
- * highlight the parent section when a real tab is active.
- */
-export function findSectionForTab(sections, tabId) {
-  for (const section of sections) {
-    if (section.tabs.some((t) => t.id === tabId)) return section;
-  }
-  return null;
-}
-
-/**
  * Landing-page virtual tab id pattern. Sidebar emits these on section
  * click; CostModule detects the prefix and renders
  * <ModuleLanding> for the matching section.

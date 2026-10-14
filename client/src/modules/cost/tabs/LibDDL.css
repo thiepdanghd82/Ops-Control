@@ -110,12 +110,7 @@
   padding: 16px;
   background: #f4f4f4;
 }
-.ddl-empty {
-  text-align: center;
-  padding: 40px;
-  color: #6f6f6f;
-  font-size: 13px;
-}
+
 .ddl-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

@@ -20,7 +20,6 @@
  */
 
 export const MANUAL_OVERRIDE_COLOR = '#7c3aed'; // violet-600
-export const AUTO_PLACEHOLDER_COLOR = '#9ca3af'; // gray-400
 export const EMPTY_PLACEHOLDER = '—'; // em dash
 
 export function getCovOvrState({ override, printType, covLookup, isIndigo }) {

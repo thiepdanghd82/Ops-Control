@@ -14,23 +14,7 @@
 }
 
 /* Loading */
-.qh-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  height: 100%;
-  color: var(--color-slate-400);
-  font-size: 14px;
-}
-.qh-spinner {
-  width: 18px;
-  height: 18px;
-  border: 2.5px solid var(--color-slate-200);
-  border-top-color: var(--color-brand-500);
-  border-radius: 50%;
-  animation: qhs 0.7s linear infinite;
-}
+
 @keyframes qhs {
   to {
     transform: rotate(360deg);
@@ -102,59 +86,6 @@
   color: white;
   font-size: 9.5px;
   font-weight: 600;
-}
-
-.qh-hb-search-wrap {
-  position: relative;
-  flex: 1;
-  min-width: 180px;
-  max-width: 460px;
-}
-.qh-hb-search-wrap .qh-si {
-  position: absolute;
-  left: 9px;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-.qh-hb-search {
-  width: 100%;
-  padding: 6px 30px 6px 28px;
-  box-sizing: border-box;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 7px;
-  background: white;
-  font-size: 12px;
-  outline: none;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
-}
-.qh-hb-search:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
-}
-.qh-hb-sclear {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 17px;
-  height: 17px;
-  border: none;
-  border-radius: 50%;
-  background: #cbd5e1;
-  color: #475569;
-  font-size: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-.qh-hb-sclear:hover {
-  background: #94a3b8;
-  color: white;
 }
 
 .qh-hb-filters {
@@ -561,12 +492,6 @@
    .qh-act-layout badge above stays in the Action (now LAYOUT) column. */
 
 /* Empty */
-.qh-empty {
-  text-align: center;
-  padding: 48px;
-  color: var(--color-slate-400);
-  font-style: italic;
-}
 
 /* ─── Pagination ─── */
 .qh-pag {

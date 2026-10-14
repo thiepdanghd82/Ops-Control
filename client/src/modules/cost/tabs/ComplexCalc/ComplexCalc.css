@@ -10,32 +10,6 @@
 }
 
 /* Floating KPI */
-.cc-float-kpi {
-  position: fixed;
-  top: 72px;
-  right: 24px;
-  z-index: 20;
-  background: #161616;
-  border-radius: 0;
-  padding: 16px;
-  min-width: 160px;
-  box-shadow: none;
-}
-.cc-fk-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 2px 0;
-  font-size: 12px;
-}
-.cc-fk-label {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 10px;
-}
-.cc-fk-val {
-  color: white;
-  font-weight: 600;
-  font-family: ui-monospace, monospace;
-}
 
 /* Tab bar */
 .cc-tab-bar {
@@ -121,147 +95,10 @@
 }
 
 /* RFQ + MOQ side-by-side split (Project tab) */
-.cc-rfq-moq-split {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  gap: 14px;
-  align-items: stretch;
-}
-.cc-rfq-moq-split .cc-rfq-col {
-  margin-bottom: 0;
-  display: flex;
-  flex-direction: column;
-}
-.cc-rfq-moq-split .cc-rfq-col > .cc-header-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 0;
-}
-.cc-rfq-moq-split .cc-rfq-col > .cc-header-card > .cc-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  box-shadow: none;
-  border-radius: 0;
-}
-.cc-rfq-moq-split .cc-moq-col {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-.cc-rfq-moq-split .cc-moq-col > .cc-card {
-  margin-top: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-.cc-rfq-moq-split .cc-moq-col > .cc-card > .cc-card-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-@media (max-width: 1100px) {
-  .cc-rfq-moq-split {
-    grid-template-columns: 1fr;
-    align-items: start;
-  }
-  .cc-rfq-moq-split .cc-rfq-col,
-  .cc-rfq-moq-split .cc-moq-col,
-  .cc-rfq-moq-split .cc-rfq-col > .cc-header-card,
-  .cc-rfq-moq-split .cc-rfq-col > .cc-header-card > .cc-card,
-  .cc-rfq-moq-split .cc-moq-col > .cc-card,
-  .cc-rfq-moq-split .cc-moq-col > .cc-card > .cc-card-body {
-    display: block;
-    flex: none;
-  }
-}
 
 /* RFQ card — 2-column grid layout with sections */
-.cc-rfq-body {
-  padding: 16px 18px 18px;
-}
-.cc-rfq-section-title {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-brand-700);
-  padding: 0 0 8px;
-  margin-top: 14px;
-  border-bottom: 1px solid var(--color-slate-200);
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.cc-rfq-section-title::before {
-  content: '';
-  width: 3px;
-  height: 12px;
-  background: linear-gradient(180deg, var(--color-brand-700), var(--color-brand-500));
-  border-radius: 2px;
-}
-.cc-rfq-section-title:first-child {
-  margin-top: 0;
-}
-.cc-rfq-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 16px;
-}
-.cc-rfq-grid .cc-field {
-  margin-bottom: 0;
-}
-.cc-rfq-grid .cc-field-full {
-  grid-column: 1 / -1;
-}
-@media (max-width: 640px) {
-  .cc-rfq-grid {
-    grid-template-columns: 1fr;
-  }
-}
 
 /* Collapsible Header */
-.cc-header-card {
-  background: #ffffff;
-  border-radius: 0;
-  overflow: hidden;
-  box-shadow: none;
-  margin-bottom: 16px;
-}
-.cc-header-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  background: #f4f4f4;
-  color: #161616;
-  cursor: pointer;
-  border-bottom: 2px solid #e0e0e0;
-}
-.cc-header-toggle {
-  font-size: 11px;
-  width: 16px;
-}
-.cc-header-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #161616;
-}
-.cc-header-metrics {
-  display: flex;
-  gap: 14px;
-  margin-left: auto;
-  font-size: 12px;
-}
-.cc-hm {
-  color: #525252;
-}
-.cc-hm b {
-  color: #161616;
-  font-family: 'IBM Plex Mono', monospace;
-}
 
 /* SP Table Card */
 .cc-sp-table-card {
@@ -460,28 +297,7 @@
 .cc-det-section {
   margin-bottom: 14px;
 }
-.cc-det-title {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-  margin-bottom: 6px;
-}
-.cc-det-grid6 {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 6px 10px;
-}
-.cc-det-f {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.cc-det-f label {
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--color-slate-500);
-  text-transform: uppercase;
-}
+
 .cc-det-inp {
   width: 100%;
   padding: 4px 6px;
@@ -520,11 +336,7 @@
 .cc-select-bare::-ms-expand {
   display: none;
 }
-.cc-det-idx {
-  font-size: 9px;
-  color: var(--color-slate-400);
-  font-weight: 600;
-}
+
 .cc-det-tw {
   overflow-x: auto;
   border: 1px solid var(--color-slate-200);
@@ -580,33 +392,6 @@
   background: var(--color-slate-50, #e8e8e8);
 }
 
-.cc-det-add {
-  margin-top: 4px;
-  padding: 3px 10px;
-  border: 1px dashed #d1d5db;
-  background: white;
-  border-radius: 6px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--color-slate-500);
-  cursor: pointer;
-}
-.cc-det-add:hover {
-  border-color: #93c5fd;
-  color: var(--color-brand-700);
-}
-.cc-det-del {
-  background: none;
-  border: none;
-  color: var(--color-danger-500);
-  cursor: pointer;
-  font-size: 14px;
-  opacity: 0.4;
-}
-.cc-det-del:hover {
-  opacity: 1;
-}
-
 /* Cards (MOQ, Breakdown, Packing, Summary) */
 .cc-card {
   background: #ffffff;
@@ -632,113 +417,12 @@
 }
 /* Inline USD-rate control on the MOQ & Pricing card header.
    Compact so it doesn't push the badges to the next line on desktop. */
-.cc-card-hdr-rate {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-}
-.cc-card-hdr-rate label {
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 0.32px;
-  text-transform: uppercase;
-  color: #525252;
-}
-.cc-card-hdr-rate-inp {
-  width: 90px;
-  padding: 4px 8px;
-  font-size: 14px;
-  font-weight: 600;
-  border: none;
-  border-bottom: 2px solid #c6c6c6;
-  border-radius: 0;
-  background: #e0e0e0;
-  color: #161616;
-  outline: none;
-  text-align: right;
-  letter-spacing: 0.16px;
-}
-.cc-card-hdr-rate-inp::placeholder {
-  color: #6f6f6f;
-  font-weight: 400;
-}
-.cc-card-hdr-rate-inp:focus {
-  background: #ffffff;
-  border-bottom-color: #0f62fe;
-}
+
 .cc-card-body {
   padding: 14px 16px;
 }
-.cc-field {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: 8px;
-}
-.cc-field label {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--color-slate-500);
-}
-.cc-input {
-  width: 100%;
-  padding: 5px 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 12px;
-}
-.cc-input:focus {
-  outline: none;
-  border-color: var(--color-brand-500);
-}
-.cc-inp-gold {
-  background: var(--color-warning-100);
-  border-color: #f59e0b;
-  font-weight: 600;
-}
-.cc-input-warn {
-  border-color: #ef4444 !important;
-}
 
 /* MOQ */
-.cc-moq-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px 14px;
-}
-.cc-moq-summary {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: auto;
-  padding: 14px 16px;
-  background: linear-gradient(135deg, var(--color-slate-50) 0%, var(--color-brand-50) 100%);
-  border-radius: 12px;
-  border: 1px solid #dbeafe;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-}
-.cc-moq-kpi {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 8px 10px;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid var(--color-slate-200);
-  font-size: 10px;
-  color: var(--color-slate-500);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.cc-moq-kpi b {
-  font-size: 17px;
-  color: var(--color-brand-navy);
-  font-family: ui-monospace, monospace;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
 
 /* Packing */
 /* Sprint 41 — assembly-level Pack&Ship explanatory hint. */
@@ -759,96 +443,8 @@
   border-color: #059669;
   color: #6ee7b7;
 }
-.cc-pack-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  align-items: stretch;
-}
-.cc-pack-grid > .cc-card {
-  display: flex;
-  flex-direction: column;
-  margin-top: 0;
-}
-.cc-pack-grid > .cc-card > .cc-card-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-.cc-pack-grid > .cc-card > .cc-card-body > .cc-pack-total,
-.cc-pack-grid > .cc-card > .cc-card-body > .cc-ship-total {
-  margin-top: auto;
-}
-.cc-pack-total,
-.cc-ship-total {
-  margin-top: 10px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-}
-.cc-pack-total {
-  background: #f0fdf4;
-  border: 1px solid #86efac;
-  color: #166534;
-}
-.cc-ship-total {
-  background: var(--color-brand-50);
-  border: 1px solid #93c5fd;
-  color: var(--color-brand-700);
-}
 
 /* Breakdown */
-.cc-bd-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-.cc-bd-table th {
-  padding: 8px 8px;
-  background: var(--color-slate-100);
-  color: var(--color-slate-600);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  border-bottom: 2px solid var(--color-slate-200);
-  text-align: left;
-}
-.cc-bd-table .right {
-  text-align: right;
-}
-.cc-bd-table td {
-  padding: 8px 8px;
-  border-bottom: 1px solid var(--color-slate-100);
-  font-family: monospace;
-  font-size: 11px;
-}
-.cc-bd-table tbody tr:hover {
-  background: var(--color-slate-50);
-}
-.cc-bd-fg {
-  background: #f5f3ff !important;
-}
-.cc-bd-ttl {
-  font-weight: 600;
-  color: var(--color-brand-navy);
-}
-.cc-bd-total td {
-  background: #161616;
-  color: white;
-  font-weight: 400;
-  border: none;
-  letter-spacing: 0.16px;
-}
-.cc-sp-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-size: 10px;
-  font-weight: 600;
-  background: #ede9fe;
-  color: #7c3aed;
-}
 
 /* Summary */
 .cc-summary {
@@ -936,112 +532,8 @@
 /* Layout section migrated to shared .sc-card + .cl-* classes (StandardCalc.css).
    The previous `.cc-det-layout-*` / `.cc-det-upload-*` / `.cc-det-preview-*`
    rules are removed as orphans; FileUploadZone supplies its own styling. */
-.cc-det-preview-clear {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  padding: 3px 8px;
-  border: 1px solid #fca5a5;
-  background: #fef2f2;
-  color: var(--color-danger-500);
-  border-radius: 5px;
-  font-size: 10px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.cc-det-preview-clear:hover {
-  background: #fee2e2;
-}
 
 /* ── Complex MOQ tier UI ── */
-.cc-moq-tier-badge {
-  background: #e0e0e0;
-  color: #161616;
-  font-size: 12px;
-  font-weight: 400;
-  padding: 4px 8px;
-  border-radius: 0;
-  margin-left: 8px;
-  letter-spacing: 0.32px;
-}
-.cc-moq-active-badge {
-  background: #fbbf24;
-  color: #78350f;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 10px;
-  margin-left: 6px;
-}
-.cc-moq-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--color-slate-100);
-}
-.cc-moq-tab {
-  padding: 6px 14px;
-  border: 2px solid #d1d5db;
-  background: white;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-slate-500);
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.cc-moq-tab.active {
-  border-color: var(--color-brand-700);
-  background: var(--color-brand-50);
-  color: var(--color-brand-700);
-}
-.cc-moq-tab:hover {
-  border-color: #93c5fd;
-}
-.cc-moq-primary-tag {
-  font-size: 9px;
-  background: #dbeafe;
-  color: #1d4ed8;
-  padding: 1px 5px;
-  border-radius: 8px;
-  font-weight: 600;
-}
-.cc-moq-fields {
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-.cc-field-sm label {
-  font-size: 9px;
-}
-.cc-moq-del {
-  background: #fee2e2;
-  color: var(--color-danger-500);
-  border: none;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.cc-moq-del:hover {
-  background: #fecaca;
-}
-.cc-add-moq-tier {
-  margin-top: 10px;
-  padding: 6px 14px;
-  font-size: 11px;
-}
 
 /* Setup Data per MOQ (Complex) */
 .cc-setup-moq-card {
@@ -1222,32 +714,14 @@
   background: var(--color-warning-50);
 }
 
-@media (max-width: 900px) {
-  /* Layout + upload responsive behavior now inherited from StandardCalc.css
-     via .sc-grid4 and .cl-upload-grid breakpoint rules. */
-  .cc-det-grid4 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
 @media (max-width: 768px) {
-  .cc-moq-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-  .cc-pack-grid {
-    grid-template-columns: 1fr;
-  }
   .cc-sum-kpis {
     grid-template-columns: repeat(2, 1fr);
   }
-  .cc-det-grid6 {
-    grid-template-columns: repeat(2, 1fr);
-  }
+
   /* Floating KPI panel overlaps content on narrow screens; hide and
      let the user scroll to the regular summary section instead. */
-  .cc-float-kpi {
-    display: none;
-  }
+
   .cc-tab-bar {
     padding: 4px 8px;
     gap: 4px;
@@ -1302,14 +776,8 @@
   .cc-dirty {
     display: none;
   } /* regained for the primary action buttons */
-  .cc-moq-grid {
-    grid-template-columns: 1fr;
-  }
+
   .cc-sum-kpis {
-    grid-template-columns: 1fr;
-  }
-  .cc-det-grid6,
-  .cc-det-grid4 {
     grid-template-columns: 1fr;
   }
 }
@@ -1618,11 +1086,7 @@
   color: #1e40af;
   background: #eff6ff;
 }
-.pfc-add-btn.pfc-add-p:hover {
-  border-color: #475569;
-  color: #1f2937;
-  background: #f1f5f9;
-}
+
 .pfc-add-btn.pfc-add-o:hover {
   border-color: #16a34a;
   color: #166534;

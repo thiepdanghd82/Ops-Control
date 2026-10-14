@@ -90,14 +90,7 @@
   opacity: 0.42;
   cursor: default;
 }
-.lr-btn-add {
-  background: #0f62fe;
-  color: #ffffff;
-  border-color: #0f62fe;
-}
-.lr-btn-add:hover {
-  background: #0353e9;
-}
+
 /* Import button sits first in the action group; mild amber tint so it's
    visually distinct from the white Export/Backup/Restore buttons. */
 .lr-btn-import {
@@ -312,11 +305,6 @@
 .lr-del:hover {
   background: #fef2f2;
   border-radius: 4px;
-}
-.lr-empty {
-  text-align: center;
-  padding: 40px;
-  color: var(--color-gray-400);
 }
 
 /* ── Manage-UOM modal (replaces the Electron-broken window.prompt) ── */

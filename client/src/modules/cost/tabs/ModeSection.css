@@ -96,16 +96,6 @@
   flex-wrap: wrap;
 }
 
-.mode-card-badge {
-  background: #fef3c7;
-  color: #92400e;
-  padding: 1px 6px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
 .mode-card-tag-active {
   background: #d1fae5;
   color: #047857;

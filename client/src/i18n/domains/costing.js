@@ -246,8 +246,6 @@ registerStrings({
   // die-cut, MD/TD, RL, imp — and so do the step numbers 1A..1E, which are
   // positions in a fixed workflow rather than prose.
 
-  'gal.add_cylinder': { en: 'Add a brand-new cylinder Z', vi: 'Thêm cylinder Z mới' },
-
   // ─── Print Area explainer headings (wave 6) ─────────────────────────────
   // These carried both languages in ONE string ("Pipeline / Quy trình xử lý"),
   // so every reader saw both. The paragraphs below them are handled
@@ -257,10 +255,7 @@ registerStrings({
   // ─── Print Area Calculator (wave 3) ─────────────────────────────────────
   // Stays English: DPI, SKU, ROI, SPOT, Hex, Lab/ΔE76, and the file-type list.
   // Everything an operator sets or reads while measuring a label is translated.
-  'pac.title': { en: 'Print Area Calculator', vi: 'Máy tính diện tích in' },
-  'pac.subtabs': { en: 'Print Area sub-tabs', vi: 'Tab con Diện tích in' },
   'pac.name': { en: 'Name', vi: 'Tên' },
-  'pac.library': { en: 'Library', vi: 'Thư viện' },
 
   // ─── Library tabs: DDL, Finance, Rates, Mfg, Routing (wave 4) ───────────
   // Accounting and work-centre abbreviations stay as the finance team writes
@@ -553,7 +548,6 @@ registerStrings({
   'inkc.costs': { en: 'Costs', vi: 'Chi phí' },
   'inkc.production_costs': { en: 'Production costs', vi: 'Chi phí sản xuất' },
   'inkc.print_info': { en: 'Print info', vi: 'Thông tin in' },
-  'inkc.spec_info': { en: 'info', vi: 'thông tin' },
   'inkc.inks_vol_weight': { en: 'Inks volume & weight', vi: 'Thể tích & khối lượng mực' },
   'inkc.print_area': { en: 'Print Area', vi: 'Diện tích in' },
   'inkc.total_mat_area': { en: 'Total Mat Area', vi: 'Tổng diện tích VT' },
@@ -782,17 +776,6 @@ registerStrings({
   // Library-side material picker shares its search-placeholder string
   // here; the calc-side InkCalculator + PrintAreaCalc tabs use these
   // tiny labels too.
-  'material_lib.search_placeholder': {
-    en: 'Search by material name, type, supplier…',
-    vi: 'Tìm theo tên vật liệu, loại, nhà cung cấp…',
-  },
-  'printarea.search_placeholder': {
-    en: 'Search by SKU or product name…',
-    vi: 'Tìm theo SKU hoặc tên sản phẩm…',
-  },
-  'printarea.optional': { en: 'Optional', vi: 'Tuỳ chọn' },
-  'inks.mesh_code': { en: 'Mesh Code', vi: 'Mã lưới' },
-  'inks.anilox_code': { en: 'Anilox Code', vi: 'Mã Anilox' },
 
   // ─── Alt-materials toggle (Sprint S-ALT-MAT, PR #A) ───
   // Two parallel material sets per quote (Main + Alternative); operator
@@ -807,7 +790,6 @@ registerStrings({
     en: 'Copy from Maint.Mat',
     vi: 'Sao chép từ Maint.Mat',
   },
-  'pricing.materials.badge.row_count': { en: '{n}', vi: '{n}' },
   'pricing.materials.copy.tooltip': {
     en: 'Copy materials between Main ↔ Alternative',
     vi: 'Sao chép vật liệu giữa Main ↔ Alternative',
@@ -842,17 +824,12 @@ registerStrings({
     en: 'Which materials set drives this quote’s cost',
     vi: 'Bộ vật tư nào đang driver chi phí báo giá',
   },
-  'pricing.materials.tier.alt_override_hint': {
-    en: 'Per-tier Setup LM override applies to the ACTIVE material set (currently {set}). Switch the Maint.Mat / Alternative.Mat toggle to edit the other set.',
-    vi: 'Setup LM ghi đè theo tier áp dụng vào bộ vật tư ĐANG ACTIVE ({set}). Chuyển toggle Maint.Mat / Alternative.Mat để edit bộ kia.',
-  },
 
   // ─── Sprint S-MULTI-DRAW — FileUploadZone multi-drawing gallery ───
   'fuz.count': { en: '{n} files', vi: '{n} tệp' },
   'fuz.add': { en: 'Add drawing', vi: 'Thêm bản vẽ' },
   'fuz.remove': { en: 'Remove drawing', vi: 'Xoá bản vẽ' },
   'fuz.open_new': { en: 'Open in new window', vi: 'Mở ở cửa sổ mới' },
-  'fuz.showing': { en: 'Showing', vi: 'Đang hiện' },
   'fuz.remove_confirm': { en: 'Remove "{name}"?', vi: 'Xoá "{name}"?' },
 
   // ─── i18n wave 7 (2026-09-14) — CalcLegend chrome. The Legend's body

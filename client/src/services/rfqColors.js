@@ -50,11 +50,6 @@ function persist() {
   }
 }
 
-export function getRfqColor(rfq) {
-  if (!rfq) return null;
-  return state[rfq] || null;
-}
-
 export function setRfqColor(rfq, color) {
   if (!rfq) return;
   // Replace the whole object so useSyncExternalStore's identity check fires.

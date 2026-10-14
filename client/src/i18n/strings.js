@@ -47,7 +47,6 @@ export const STRINGS = {
   'common.dismiss': { en: 'Dismiss', vi: 'Đóng' },
   'common.loading': { en: 'Loading…', vi: 'Đang tải…' },
   'common.saving': { en: 'Saving…', vi: 'Đang lưu…' },
-  'common.unsaved': { en: 'Unsaved', vi: 'Chưa lưu' },
   // ─── Clear Data password step-up (ConfirmClearModal) ───
   'clear_confirm.title': { en: 'Clear data — confirm', vi: 'Xoá dữ liệu — xác nhận' },
   'clear_confirm.body': {
@@ -68,10 +67,7 @@ export const STRINGS = {
     vi: 'Xoá thất bại. Vui lòng thử lại.',
   },
   'clear_confirm.confirm_btn': { en: 'Clear data', vi: 'Xoá dữ liệu' },
-  'common.saved': { en: 'Saved', vi: 'Đã lưu' },
   'common.active': { en: 'Active', vi: 'Đang dùng' },
-  'common.yes': { en: 'Yes', vi: 'Có' },
-  'common.no': { en: 'No', vi: 'Không' },
   'common.export_csv': { en: 'Export CSV', vi: 'Xuất CSV' },
   'common.all_time': { en: 'All time', vi: 'Toàn thời gian' },
   'common.last_30_days': { en: 'Last 30 days', vi: '30 ngày qua' },
@@ -99,7 +95,6 @@ export const STRINGS = {
   'nav.tab.quote_history': { en: 'Quote History', vi: 'Lịch sử Báo giá' },
   'nav.tab.npi_parts_list': { en: 'NPI Parts List', vi: 'Danh sách NPI Parts' },
   'nav.tab.pending_approvals': { en: 'Pending Approvals', vi: 'Chờ Phê duyệt' },
-  'nav.tab.ifs_inventory': { en: 'IFS Inventory', vi: 'Tồn kho IFS' },
   'nav.tab.dashboard': { en: 'Dashboard', vi: 'Bảng điều khiển' },
   'nav.tab.quote_analysis': { en: 'Quote Analysis', vi: 'Phân tích Báo giá' },
   'nav.tab.rate_table': { en: 'Rate Table', vi: 'Bảng Định mức' },
@@ -175,65 +170,18 @@ export const STRINGS = {
   // ─── RFQ Tracking (spreadsheet master list; distinct from rfq-tracker) ───
   // Sort + filter (display-only)
   // Showcard field groups
-  'rfq_tracking.group.identity': { en: 'Identity', vi: 'Định danh' },
-  'rfq_tracking.group.materials': { en: 'Materials & Process', vi: 'Vật tư & Công đoạn' },
-  'rfq_tracking.group.dates': { en: 'Dates & Stage', vi: 'Ngày & Giai đoạn' },
-  'rfq_tracking.group.pricing': { en: 'Pricing', vi: 'Giá' },
-  'rfq_tracking.group.sales': { en: 'Sales', vi: 'Bán hàng' },
   // Column headers (EN = verbatim "RFQ Master" labels; acronyms stay EN in vi)
-  'rfq_tracking.col.rfq_no': { en: 'RFQ No', vi: 'Số RFQ' },
-  'rfq_tracking.col.qtn': { en: 'Qtn #', vi: 'Lần BG' },
-  'rfq_tracking.col.customer': { en: 'Customer', vi: 'Khách hàng' },
-  'rfq_tracking.col.end_customer': { en: 'End Customer/Project', vi: 'KH cuối/Dự án' },
-  'rfq_tracking.col.part_no': { en: 'Part Number', vi: 'Mã hàng' },
-  'rfq_tracking.col.description': { en: 'Description', vi: 'Mô tả' },
-  'rfq_tracking.col.main_material': { en: 'Main Material', vi: 'Vật liệu chính' },
-  'rfq_tracking.col.design_process': { en: 'Design Process', vi: 'Công đoạn' },
-  'rfq_tracking.col.print_type': { en: 'Print (LP/Flexo)', vi: 'In (LP/Flexo)' },
-  'rfq_tracking.col.silkscreen': { en: 'SilkScreen', vi: 'In lụa' },
-  'rfq_tracking.col.moq': { en: 'MOQ', vi: 'MOQ' },
-  'rfq_tracking.col.rfq_date': { en: 'RFQ Date', vi: 'Ngày RFQ' },
-  'rfq_tracking.col.target_date': { en: 'Target Date', vi: 'Ngày mục tiêu' },
-  'rfq_tracking.col.actual_quote_date': { en: 'Actual Quote Date', vi: 'Ngày báo giá' },
-  'rfq_tracking.col.days_in_process': { en: 'Days in Process', vi: 'Số ngày xử lý' },
-  'rfq_tracking.col.month': { en: 'Month', vi: 'Tháng' },
-  'rfq_tracking.col.npi_stage': { en: 'NPI Stage', vi: 'Giai đoạn NPI' },
-  'rfq_tracking.col.npi_pic': { en: 'NPI PIC', vi: 'Phụ trách NPI' },
-  'rfq_tracking.col.control_flag': { en: 'Control Flag', vi: 'Cờ kiểm soát' },
-  'rfq_tracking.col.ccl_price': { en: 'CCL Price ($)', vi: 'Giá CCL ($)' },
-  'rfq_tracking.col.target_price': { en: 'Target Price ($)', vi: 'Giá mục tiêu ($)' },
-  'rfq_tracking.col.va': { en: 'VA %', vi: 'VA %' },
-  'rfq_tracking.col.contr': { en: 'Contr %', vi: 'Đóng góp %' },
-  'rfq_tracking.col.gm': { en: 'GM %', vi: 'GM %' },
-  'rfq_tracking.col.eau': { en: 'EAU / Qty', vi: 'EAU / SL' },
-  'rfq_tracking.col.est_revenue': { en: 'Est. Revenue ($)', vi: 'Doanh thu ước tính ($)' },
-  'rfq_tracking.col.sales_pic': { en: 'Sales PIC', vi: 'Phụ trách bán hàng' },
-  'rfq_tracking.col.sale_stage': { en: 'Sale Stage', vi: 'Giai đoạn bán' },
-  'rfq_tracking.col.notes': { en: 'Notes / Reason', vi: 'Ghi chú / Lý do' },
 
   // ─── Home Page (Sprint S-HOME 2026-05-03) ───
   'home.morning': { en: 'Good morning', vi: 'Chào buổi sáng' },
   'home.afternoon': { en: 'Good afternoon', vi: 'Chào buổi chiều' },
   'home.evening': { en: 'Good evening', vi: 'Chào buổi tối' },
-  'home.loading': { en: 'Loading…', vi: 'Đang tải…' },
-  'home.view_all': { en: 'View all', vi: 'Xem tất cả' },
   'home.go_to_home': { en: 'Go to Home', vi: 'Về trang chủ' },
-  'home.kpi.active_wos': { en: 'Active Work Orders', vi: 'Lệnh sản xuất đang hoạt động' },
-  'home.kpi.due_today': { en: 'Due Today', vi: 'Đến hạn hôm nay' },
   'home.kpi.my_approvals': { en: 'My Approvals', vi: 'Đang chờ tôi duyệt' },
-  'home.kpi.active_orders': { en: 'Open Orders', vi: 'Đơn hàng mở' },
-  'home.kpi.overdue_suffix': { en: 'overdue', vi: 'quá hạn' },
-  'home.section.todays_focus': { en: "Today's Focus", vi: 'Trọng tâm hôm nay' },
   'home.section.modules': { en: 'Modules', vi: 'Phân hệ' },
   'home.section.quick_actions': { en: 'Quick Actions', vi: 'Thao tác nhanh' },
-  'home.empty.no_active_wo': {
-    en: 'No active work orders. Time for a coffee ☕',
-    vi: 'Không có lệnh sản xuất nào đang chạy. Nghỉ một chút ☕',
-  },
   'home.qa.new_quote': { en: 'New Quote', vi: 'Báo giá mới' },
-  'home.qa.new_order': { en: 'New Order', vi: 'Đơn hàng mới' },
   'home.qa.approvals': { en: 'Approvals', vi: 'Duyệt' },
-  'home.qa.inventory': { en: 'IFS Inventory', vi: 'Tồn kho IFS' },
   'home.qa.help': { en: 'Help', vi: 'Hướng dẫn' },
 
   // ─── Modal maximize/restore (opt-in on shared Modal) ───
@@ -318,90 +266,6 @@ export const STRINGS = {
   },
 
   // ─── Reason Codes admin (MES-3-V2 KIOSK-002) ─────────────────────
-  'library.reasonCodes.title': { en: 'Reason Codes', vi: 'Mã lý do' },
-  'library.reasonCodes.subtitle': {
-    en: 'Codes available to operators when pausing an operation on the kiosk.',
-    vi: 'Mã hiển thị trên kiosk khi vận hành tạm dừng công đoạn.',
-  },
-  'library.reasonCodes.searchPlaceholder': {
-    en: 'Search by code or label…',
-    vi: 'Tìm theo mã hoặc nhãn…',
-  },
-  'library.reasonCodes.showDisabled': { en: 'Show disabled', vi: 'Hiện đã vô hiệu' },
-  'library.reasonCodes.add': { en: 'Add Reason Code', vi: 'Thêm mã lý do' },
-  'library.reasonCodes.edit': { en: 'Edit Reason Code', vi: 'Sửa mã lý do' },
-  'library.reasonCodes.disable': { en: 'Disable', vi: 'Vô hiệu hoá' },
-  'library.reasonCodes.enable': { en: 'Enable', vi: 'Kích hoạt' },
-  'library.reasonCodes.code': { en: 'Code', vi: 'Mã' },
-  'library.reasonCodes.codeHint': {
-    en: 'Uppercase letters/digits/underscore. 2–32 chars.',
-    vi: 'Chữ in hoa/số/dấu gạch dưới. 2–32 ký tự.',
-  },
-  'library.reasonCodes.labelEn': { en: 'Label (English)', vi: 'Nhãn (Tiếng Anh)' },
-  'library.reasonCodes.labelVi': { en: 'Label (Vietnamese)', vi: 'Nhãn (Tiếng Việt)' },
-  'library.reasonCodes.category': { en: 'Category', vi: 'Phân loại' },
-  'library.reasonCodes.sortOrder': { en: 'Sort', vi: 'Thứ tự' },
-  'library.reasonCodes.status': { en: 'Status', vi: 'Trạng thái' },
-  'library.reasonCodes.statusActive': { en: 'Active', vi: 'Đang dùng' },
-  'library.reasonCodes.statusDisabled': { en: 'Disabled', vi: 'Đã vô hiệu' },
-  'library.reasonCodes.formSubtitle': {
-    en: 'All four label fields are required (EN + VN parity).',
-    vi: 'Bắt buộc đủ 4 trường nhãn (song ngữ EN + VN).',
-  },
-  'library.reasonCodes.disableTitle': {
-    en: 'Disable {code}?',
-    vi: 'Vô hiệu {code}?',
-  },
-  'library.reasonCodes.disableSubtitle': {
-    en: 'Soft-delete only. Historical pause events keep their label.',
-    vi: 'Chỉ xoá mềm. Sự kiện cũ vẫn giữ nguyên nhãn.',
-  },
-  'library.reasonCodes.confirmDisable': {
-    en: 'Disable {code}? It will hide from kiosk pickers but stay in history.',
-    vi: 'Vô hiệu {code}? Mã sẽ ẩn khỏi kiosk nhưng vẫn lưu trong lịch sử.',
-  },
-  'library.reasonCodes.disableEffect.kiosk': {
-    en: 'Operators will no longer see this code on kiosk pause pickers.',
-    vi: 'Vận hành sẽ không còn thấy mã này trên kiosk khi tạm dừng.',
-  },
-  'library.reasonCodes.disableEffect.history': {
-    en: 'Audit log + historical events keep their reference to this code.',
-    vi: 'Nhật ký kiểm toán và sự kiện cũ vẫn giữ tham chiếu đến mã này.',
-  },
-  'library.reasonCodes.disableEffect.reenable': {
-    en: 'You can re-enable it anytime — Show Disabled toggle reveals all rows.',
-    vi: 'Có thể kích hoạt lại bất kỳ lúc nào — bật "Hiện đã vô hiệu" để xem.',
-  },
-  'library.reasonCodes.empty.title': { en: 'No reason codes yet', vi: 'Chưa có mã lý do' },
-  'library.reasonCodes.empty.hint': {
-    en: 'Add your first code to seed the kiosk picker.',
-    vi: 'Thêm mã đầu tiên để hiển thị trên kiosk.',
-  },
-  'library.reasonCodes.category.downtime': { en: 'Downtime', vi: 'Dừng máy' },
-  'library.reasonCodes.category.quality': { en: 'Quality', vi: 'Chất lượng' },
-  'library.reasonCodes.category.planned': { en: 'Planned', vi: 'Có kế hoạch' },
-  'library.reasonCodes.category.other': { en: 'Other', vi: 'Khác' },
-  'library.reasonCodes.err.codePattern': {
-    en: 'Code must be uppercase letters/digits/underscore (2–32 chars).',
-    vi: 'Mã phải là chữ in hoa/số/gạch dưới (2–32 ký tự).',
-  },
-  'library.reasonCodes.err.required': { en: 'Required', vi: 'Bắt buộc' },
-  'library.reasonCodes.err.range': {
-    en: 'Sort must be 0–9999.',
-    vi: 'Thứ tự phải từ 0 đến 9999.',
-  },
-  'library.reasonCodes.err.collision': {
-    en: 'Code already exists. Pick a different code.',
-    vi: 'Mã đã tồn tại. Hãy chọn mã khác.',
-  },
-  'library.reasonCodes.err.pattern': {
-    en: 'Invalid format.',
-    vi: 'Định dạng không hợp lệ.',
-  },
-  'library.reasonCodes.err.enum': {
-    en: 'Invalid value.',
-    vi: 'Giá trị không hợp lệ.',
-  },
 
   // ─── Chat (Phase 10A-10F) ───
   // v1.3 K1: 34 chat.* keys MOVED to client/src/i18n/domains/basis.js.
@@ -424,7 +288,6 @@ export const STRINGS = {
   // duplicated as a hardcoded string in SUB_TABS arrays (matching
   // neighbouring tabs' convention); this key reserved for Help System
   // + future breadcrumb / Search uses.
-  'lt.tab_label': { en: 'Lead time & Notice', vi: 'L/T & Ghi chú' },
   'lt.col.tooling_cost': { en: 'Tooling cost (USD)', vi: 'Chi phí Tooling (USD)' },
   'lt.col.material_lt': { en: 'Material L/T', vi: 'L/T Vật liệu' },
   'lt.col.sample_lt': { en: 'Sample L/T', vi: 'L/T Mẫu' },

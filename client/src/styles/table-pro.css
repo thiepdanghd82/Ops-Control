@@ -70,10 +70,3 @@
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum';
 }
-
-.tbl-pro-bold {
-  font-weight: 600;
-}
-.tbl-pro-muted {
-  color: #6f6f6f;
-}

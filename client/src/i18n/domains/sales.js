@@ -105,7 +105,6 @@ registerStrings({
   // ─── Quote Export UI (Sprint S-EXPORT-UI 2026-05-19) ───
   // User-facing surface for the MVP-1/1.5/2 server export pipeline.
   // Trigger: download icon in Quote History row → modal → POST /api/quotes/:id/export.
-  'qexp.button.label': { en: 'Export', vi: 'Xuất' },
   'qexp.button.tooltip': { en: 'Export to xlsx', vi: 'Xuất ra xlsx' },
   'qexp.modal.title': { en: 'Export Quote', vi: 'Xuất báo giá' },
   'qexp.field.variant.label': { en: 'Variant', vi: 'Phiên bản' },

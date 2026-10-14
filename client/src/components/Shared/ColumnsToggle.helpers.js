@@ -110,5 +110,3 @@ export function saveHiddenKeys(storageKey, hiddenKeys, storage) {
     /* quota / disabled — operator can re-toggle next session */
   }
 }
-
-export const COLUMNS_TOGGLE_STORAGE_VERSION = STORAGE_VERSION;
