@@ -15,24 +15,24 @@ import { fileURLToPath } from 'node:url';
 import { parseSprintEntries, findEntriesWithoutSha, HISTORY_MARKER } from './sprint-history-sha.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLAUDE_MD = fs.readFileSync(path.join(ROOT, 'CLAUDE.md'), 'utf8');
+const HISTORY_MD = fs.readFileSync(path.join(ROOT, 'docs', 'history', 'SPRINT_HISTORY.md'), 'utf8');
 
 const HEADER = `> **${HISTORY_MARKER.replace(/\*\*/g, '')}** (SHA-discipline per Lesson 0):\n>\n`;
 
 // ── the real file ───────────────────────────────────────────────────
 
-test('every sprint entry in CLAUDE.md cites a commit', () => {
-  const bad = findEntriesWithoutSha(CLAUDE_MD);
+test('every sprint entry in SPRINT_HISTORY.md cites a commit', () => {
+  const bad = findEntriesWithoutSha(HISTORY_MD);
   assert.deepEqual(
     bad,
     [],
     'entries citing no commit:\n' +
-      bad.map((b) => `  CLAUDE.md:${b.line} Sprint ${b.name}`).join('\n')
+      bad.map((b) => `  SPRINT_HISTORY.md:${b.line} Sprint ${b.name}`).join('\n')
   );
 });
 
 test('the history section is actually found, so a pass is not vacuous', () => {
-  const entries = parseSprintEntries(CLAUDE_MD);
+  const entries = parseSprintEntries(HISTORY_MD);
   assert.ok(entries.length > 40, `expected the full history, parsed only ${entries.length}`);
   const names = entries.map((e) => e.name);
   assert.ok(

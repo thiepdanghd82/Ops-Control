@@ -57,5 +57,6 @@ commitlint.config.js                    @thiepdanghd82
 
 # CLAUDE.md / agent docs — affect every future AI co-pilot session
 CLAUDE.md                               @thiepdanghd82
-AGENT_PRINCIPLES.md                     @thiepdanghd82
+.agents/AGENT_PRINCIPLES.md             @thiepdanghd82
+.agents/rules/lessons-learned.md        @thiepdanghd82
 CONTEXT.md                              @thiepdanghd82

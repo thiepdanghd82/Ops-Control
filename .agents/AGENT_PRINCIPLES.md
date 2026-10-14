@@ -23,11 +23,11 @@
 
 ## Precedence
 
-If anything here conflicts with `AUTO_EXECUTE.md`, another instruction file, or the
+If anything here conflicts with `.agents/AUTO_EXECUTE.md`, another instruction file, or the
 specific task you were given, **surface the conflict and ask** — do not silently pick a
 side. In particular: the checkpoint-pause rule in principle 4 overrides any blanket
 "run everything unattended" directive **unless** Henry has explicitly invoked
-`AUTO_EXECUTE.md` for an approved upgrade in this session (see that file's dormant/opt-in
+`.agents/AUTO_EXECUTE.md` for an approved upgrade in this session (see that file's dormant/opt-in
 header).
 
 ---
@@ -81,7 +81,7 @@ header).
 
   and **pause at each checkpoint** for confirmation before moving on. Do not execute the
   whole plan in one unattended pass (unless running under an explicitly-invoked
-  `AUTO_EXECUTE.md` session).
+  `.agents/AUTO_EXECUTE.md` session).
 
 - Definition of Done for any code change includes the existing
   **"After every UI/client-code change — MANDATORY checklist"** in `CLAUDE.md` (tests

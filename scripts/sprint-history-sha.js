@@ -29,7 +29,8 @@
  * entry passes if a commit-ish token appears anywhere in its block, including
  * its child bullets, in whatever prose form the author chose.
  *
- * Runner:  node scripts/sprint-history-sha.js [path/to/CLAUDE.md]
+ * Runner:  node scripts/sprint-history-sha.js [path/to/SPRINT_HISTORY.md]
+ * The history moved out of CLAUDE.md into docs/history/SPRINT_HISTORY.md (2026-10-14).
  * Exits 1 and names the offending entries when any claim is unprovable.
  */
 import fs from 'node:fs';
@@ -89,7 +90,7 @@ export function findEntriesWithoutSha(md) {
 
 function main() {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-  const file = process.argv[2] || path.join(root, 'CLAUDE.md');
+  const file = process.argv[2] || path.join(root, 'docs', 'history', 'SPRINT_HISTORY.md');
   const md = fs.readFileSync(file, 'utf8');
 
   const entries = parseSprintEntries(md);
@@ -104,7 +105,7 @@ function main() {
     return;
   }
   console.error(`FAIL: ${bad.length} of ${entries.length} sprint entries cite no commit:`);
-  for (const e of bad) console.error(`  CLAUDE.md:${e.line}  Sprint ${e.name}`);
+  for (const e of bad) console.error(`  ${path.relative(root, file)}:${e.line}  Sprint ${e.name}`);
   console.error('\nLesson 0: every ship claim needs a SHA a reader can `git show`.');
   process.exit(1);
 }
