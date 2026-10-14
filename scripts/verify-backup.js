@@ -77,7 +77,7 @@ ok(`Backup root: ${backupRoot}`);
 // ── 2. Detect backup format ──────────────────────────────────
 // Two supported shapes:
 //   (a) Directory-style — Library/PermissionGroups/groups.json,
-//       Library/Rate/rate_sites.json, etc. Used by ./deploy.sh
+//       Library/Rate/rate_sites.json, etc. Used by ./tools/deploy/deploy.sh
 //       and full-disk snapshots.
 //   (b) Single-file snapshot — { _backup_at, quoteHistory, users,
 //       permissionGroups, machineProfiles, ... }. Produced by the

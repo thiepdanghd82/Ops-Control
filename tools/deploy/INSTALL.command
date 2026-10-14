@@ -2,7 +2,7 @@
 # Ops Control v1.0 — Installer (macOS)
 # Double-click để cài đặt dependencies
 
-cd "$(dirname "${BASH_SOURCE[0]}")"
+cd "$(dirname "${BASH_SOURCE[0]}")/../.."  # repo root — this script lives in tools/deploy/
 
 clear
 echo ""
@@ -50,7 +50,7 @@ echo ""
 echo "  ══════════════════════════════════════════"
 echo "  ✅  Installation complete!"
 echo ""
-echo "  To start:  Double-click START_SERVER.command"
+echo "  To start:  Double-click tools/deploy/START_SERVER.command"
 echo "  URL:       http://localhost:3000"
 echo "  ══════════════════════════════════════════"
 echo ""

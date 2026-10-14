@@ -213,7 +213,7 @@ on this iteration's diff. Henry does not need to ask. Scope, skip rules and the 
 7. **If remote, deploy:**
 
    ```bash
-   cd "3. PROJECTS/Ops Control" && ./deploy.sh user@10.102.3.61
+   cd "3. PROJECTS/Ops Control" && ./tools/deploy/deploy.sh user@10.102.3.61
    ```
 
    Confirm deploy target the first time each session.
@@ -346,7 +346,7 @@ and the affected tab renders the ErrorBoundary fallback with
 Server code in `server/**` is served by `node server/index.js`. It doesn't auto-restart on file changes unless the user has set up nodemon. After editing server code:
 
 - Ask the user to restart the node process, OR
-- On the remote Windows server, the systemd/service equivalent needs restarting after `./deploy.sh` pushes the new code.
+- On the remote Windows server, the systemd/service equivalent needs restarting after `./tools/deploy/deploy.sh` pushes the new code.
 
 ## Key files
 

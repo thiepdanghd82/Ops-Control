@@ -7,9 +7,9 @@
 # on both OSes — only the file sync + service setup differ.
 #
 # Usage:
-#   .\deploy.ps1                          # Local build only
-#   .\deploy.ps1 -Remote user@10.102.3.61 # Deploy over SSH (OpenSSH)
-#   .\deploy.ps1 -Remote ... -SkipBuild   # Don't rebuild client
+#   .\tools\deploy\deploy.ps1                          # Local build only
+#   .\tools\deploy\deploy.ps1 -Remote user@10.102.3.61 # Deploy over SSH (OpenSSH)
+#   .\tools\deploy\deploy.ps1 -Remote ... -SkipBuild   # Don't rebuild client
 #
 # Prerequisites on Windows client:
 #   - PowerShell 5.1+ (or PowerShell Core 7+)
@@ -41,7 +41,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $scriptDir = Split-Path -Parent $PSCommandPath
-Set-Location $scriptDir
+Set-Location (Join-Path $scriptDir "..\..")  # repo root — this script lives in tools\deploy\
 
 function Write-Step($msg) { Write-Host "  $msg" -ForegroundColor Cyan }
 function Write-Ok($msg)   { Write-Host "  $msg" -ForegroundColor Green }

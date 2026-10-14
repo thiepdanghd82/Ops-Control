@@ -1,5 +1,5 @@
 # Rule Semgrep riêng cho Ops-Control (Express + Electron + SQLite)
-# Chạy: semgrep --config audit/rules/ops-control.yml .
+# Chạy: semgrep --config tools/audit/rules/ops-control.yml .
 rules:
   - id: opsctl-electron-node-integration
     languages: [javascript]

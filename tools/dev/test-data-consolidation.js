@@ -12,8 +12,9 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const ROOT = path.resolve(__dirname, '..', '..'); // repo root — this script lives in tools/dev/
 
-const LIB = path.join(__dirname, 'server', 'data', 'Library');
+const LIB = path.join(ROOT, 'server', 'data', 'Library');
 let passed = 0;
 let failed = 0;
 const errors = [];
@@ -189,22 +190,16 @@ if (fs.existsSync(usersFile)) {
 
 // ─── 12. Backup Directory ───
 console.log('\n📦 Backup Infrastructure');
-const backupDataDir = path.join(__dirname, 'server', 'data', 'Backup', 'Data');
-const backupCodeDir = path.join(__dirname, 'server', 'data', 'Backup', 'Code');
+const backupDataDir = path.join(ROOT, 'server', 'data', 'Backup', 'Data');
+const backupCodeDir = path.join(ROOT, 'server', 'data', 'Backup', 'Code');
 assert('Backup/Data directory exists', fs.existsSync(backupDataDir));
 assert('Backup/Code directory exists', fs.existsSync(backupCodeDir));
 
 // ─── 13. API Route Coverage ───
 console.log('\n📦 API Route Coverage (React ↔ Server)');
-const apiFile = fs.readFileSync(
-  path.join(__dirname, 'client', 'src', 'services', 'api.js'),
-  'utf-8'
-);
-const costApiFile = fs.readFileSync(
-  path.join(__dirname, 'server', 'routes', 'costApi.js'),
-  'utf-8'
-);
-const sharedFile = fs.readFileSync(path.join(__dirname, 'server', 'routes', 'shared.js'), 'utf-8');
+const apiFile = fs.readFileSync(path.join(ROOT, 'client', 'src', 'services', 'api.js'), 'utf-8');
+const costApiFile = fs.readFileSync(path.join(ROOT, 'server', 'routes', 'costApi.js'), 'utf-8');
+const sharedFile = fs.readFileSync(path.join(ROOT, 'server', 'routes', 'shared.js'), 'utf-8');
 
 // Check that key endpoints exist in both client and server
 const endpointChecks = [
@@ -231,7 +226,7 @@ for (const ep of endpointChecks) {
 // ─── 14. Settings Component Verification ───
 console.log('\n📦 Settings Component Structure');
 const settingsFile = fs.readFileSync(
-  path.join(__dirname, 'client', 'src', 'modules', 'cost', 'tabs', 'Settings.jsx'),
+  path.join(ROOT, 'client', 'src', 'modules', 'cost', 'tabs', 'Settings.jsx'),
   'utf-8'
 );
 
@@ -260,7 +255,7 @@ assert('Settings uses sharedApi', settingsFile.includes('sharedApi'));
 // ─── 15. Sidebar Access ───
 console.log('\n📦 Sidebar Configuration');
 const sidebarFile = fs.readFileSync(
-  path.join(__dirname, 'client', 'src', 'components', 'Layout', 'Sidebar.jsx'),
+  path.join(ROOT, 'client', 'src', 'components', 'Layout', 'Sidebar.jsx'),
   'utf-8'
 );
 assert(

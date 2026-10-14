@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Ops-Control pre-release audit. Chạy từ gốc repo: ./audit/run-audit.sh
-# Không sửa code, chỉ đọc. Kết quả: audit/reports/<timestamp>/
+# Ops-Control pre-release audit. Chạy từ gốc repo: ./tools/audit/run-audit.sh
+# Không sửa code, chỉ đọc. Kết quả: tools/audit/reports/<timestamp>/
 set -u
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 export PATH="$HOME/.local/bin:$PATH"
 export SEMGREP_SEND_METRICS=off
 TS="$(date +%Y%m%d-%H%M%S)"
-OUT="$ROOT/audit/reports/$TS"
+OUT="$ROOT/tools/audit/reports/$TS"
 mkdir -p "$OUT"
 SCAN_DIRS="server client/src desktop scripts"
 EXCL=(--exclude node_modules --exclude dist --exclude dist-electron --exclude build --exclude '*.test.js' --exclude '*.test.mjs')
@@ -42,7 +42,7 @@ git ls-files | grep -E '(^|/)\.env$|users\.json|\.db$|\.sqlite3?$|\.pem$|\.key$'
 say "3/5 Semgrep"
 if have semgrep; then
   # rule riêng (offline, luôn chạy được)
-  timeout 600 semgrep --metrics=off --config audit/rules/ops-control.yml "${EXCL[@]}" --quiet \
+  timeout 600 semgrep --metrics=off --config tools/audit/rules/ops-control.yml "${EXCL[@]}" --quiet \
     --json -o "$OUT/semgrep-custom.json" $SCAN_DIRS 2>>"$OUT/semgrep.err"
   # rule cộng đồng (cần mạng tới semgrep.dev; bỏ qua nếu offline)
   if timeout 900 semgrep --metrics=off --config p/nodejs --config p/javascript --config p/electron \
@@ -63,8 +63,8 @@ if have npx; then
 fi
 
 say "5/5 Tổng hợp"
-python3 "$ROOT/audit/summarize.py" "$OUT" > "$OUT/SUMMARY.md" 2>/dev/null || node "$ROOT/audit/summarize.mjs" "$OUT" > "$OUT/SUMMARY.md"
+python3 "$ROOT/tools/audit/summarize.py" "$OUT" > "$OUT/SUMMARY.md" 2>/dev/null || node "$ROOT/tools/audit/summarize.mjs" "$OUT" > "$OUT/SUMMARY.md"
 cat "$OUT/SUMMARY.md"
 echo
 echo "Báo cáo đầy đủ: $OUT"
-echo "Bước tiếp theo: mở audit/CHECKLIST.md và đánh dấu mục kiểm tra tay."
+echo "Bước tiếp theo: mở tools/audit/CHECKLIST.md và đánh dấu mục kiểm tra tay."

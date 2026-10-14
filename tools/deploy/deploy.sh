@@ -4,8 +4,8 @@
 # ═══════════════════════════════════════════════════════════════
 #
 # Usage:
-#   ./deploy.sh                    # Deploy to localhost
-#   ./deploy.sh user@server-ip     # Deploy to remote server via SSH
+#   ./tools/deploy/deploy.sh                    # Deploy to localhost
+#   ./tools/deploy/deploy.sh user@server-ip     # Deploy to remote server via SSH
 #
 # Prerequisites on server:
 #   - Node.js 18+ with npm
@@ -34,7 +34,7 @@ echo ""
 
 # ── Build client locally first ────────────────────────────
 echo "  🔨  Building client..."
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/../.."  # repo root — this script lives in tools/deploy/
 cd client && npx vite build && cd ..
 echo "  ✓  Client built"
 echo ""
@@ -45,7 +45,7 @@ if [ -z "$REMOTE" ]; then
     echo "  ✓  App ready at: http://localhost:$PORT"
     echo ""
     echo "  Start with: node server/index.js"
-    echo "  Or:         ./START_SERVER.command"
+    echo "  Or:         ./tools/deploy/START_SERVER.command"
     exit 0
 fi
 

@@ -1,4 +1,4 @@
-// Tổng hợp kết quả audit thành SUMMARY.md. Dùng: node audit/summarize.mjs <thư mục report>
+// Tổng hợp kết quả audit thành SUMMARY.md. Dùng: node tools/audit/summarize.mjs <thư mục report>
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -108,6 +108,6 @@ if (gate.length) {
   lines.push('**CHƯA ĐẠT – chặn release:**', '');
   for (const g of gate) lines.push(`- ${g}`);
 } else {
-  lines.push('**Tự động: ĐẠT.** Còn phần kiểm tra tay trong audit/CHECKLIST.md.');
+  lines.push('**Tự động: ĐẠT.** Còn phần kiểm tra tay trong tools/audit/CHECKLIST.md.');
 }
 console.log(lines.join('\n'));

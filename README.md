@@ -15,10 +15,13 @@ ops-control/
 ├── server/        API Express + SQLite (domains/, routes/, services/, repositories/, db/)
 ├── desktop/       Electron shell, license, setup wizard, build DMG/EXE
 ├── scripts/       Script build, kiểm tra, vận hành (một phần được đóng gói vào app)
-├── deploy/        Công cụ cấp license cho fleet
-├── audit/         Bộ quy tắc + script audit tĩnh
+├── tools/         Công cụ dev/ops, KHÔNG đóng gói vào app
+│   ├── deploy/    deploy.sh/.ps1/.bat, START_SERVER.*, INSTALL.command
+│   ├── license/   fleet-license (mint/check license)
+│   ├── audit/     Bộ quy tắc + script audit tĩnh
+│   └── dev/       Script kiểm tra tay cho dev
 ├── docs/          Tài liệu — xem docs/README.md
-├── .agents/       Rules + skills dùng chung cho AI agent
+├── .agents/       Rules, lessons learned, skills dùng chung cho AI agent
 ├── CLAUDE.md      Luật + lesson learned cho Claude Code (tự nạp mỗi phiên)
 ├── CONTEXT.md     Thuật ngữ nghiệp vụ (mirror ở .agents/rules/context.md)
 ├── CHANGELOG.md   Lịch sử thay đổi

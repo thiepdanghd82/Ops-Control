@@ -44,7 +44,7 @@ This makes the deployed v1.5.0 server read its data from the OLD `COST_V1.0/CCL_
 
 **Implications**:
 
-- If the operator runs `./deploy.sh user@10.102.3.61` for the first time on a fresh box (no v1.0 install), the systemd unit will start the server pointing at a non-existent directory → service will fail to boot.
+- If the operator runs `./tools/deploy/deploy.sh user@10.102.3.61` for the first time on a fresh box (no v1.0 install), the systemd unit will start the server pointing at a non-existent directory → service will fail to boot.
 - If the operator is upgrading **on top of** an existing v1.0 install at the sibling `COST_V1.0/` path, this is intentional (data migration in place). But that's a **specific deployment topology** that should be documented, not silently hardcoded.
 
 **Could not verify on remote** — depends on whether `10.102.3.61` actually has a `COST_V1.0/CCL_Pricing/data/` sibling. If yes, this is intentional and only needs a comment. If no, this is a 🔴 BLOCKER.

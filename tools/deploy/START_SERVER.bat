@@ -3,7 +3,7 @@ chcp 65001 >nul
 setlocal enabledelayedexpansion
 title Ops Control v1.0
 
-cd /d "%~dp0"
+cd /d "%~dp0..\.."
 
 echo.
 echo  ╔══════════════════════════════════════════════════════╗

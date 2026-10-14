@@ -204,7 +204,7 @@ Tick each item before pressing deploy. Date / signer / evidence link mandatory.
 
 ### Deploy
 
-- [ ] `./deploy.sh user@10.102.3.61` runs to completion (exit 0)
+- [ ] `./tools/deploy/deploy.sh user@10.102.3.61` runs to completion (exit 0)
 - [ ] `releases/<ts>/` snapshot created on prod
 - [ ] `journalctl -u ops-control -n 30` shows clean boot incl. "🔐 TOTP boot probe OK"
 - [ ] `curl http://10.102.3.61:3000/health` returns 200 with v1.5.0

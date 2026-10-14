@@ -1,7 +1,7 @@
 # Checklist kiểm tra tay trước khi đưa Ops-Control vào sử dụng
 
 Đánh dấu `[x]` khi đã kiểm tra. Mục có **(chặn)** phải đạt mới được release.
-Kết quả tự động: xem `audit/reports/<mới nhất>/SUMMARY.md`.
+Kết quả tự động: xem `tools/audit/reports/<mới nhất>/SUMMARY.md`.
 
 ## A. Dữ liệu (rủi ro lớn nhất với app quản lý sản xuất)
 

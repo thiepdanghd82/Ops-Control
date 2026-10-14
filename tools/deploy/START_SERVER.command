@@ -2,7 +2,7 @@
 # Ops Control v1.0 — Server Launcher (macOS)
 # Double-click file này để khởi động server
 
-cd "$(dirname "${BASH_SOURCE[0]}")"
+cd "$(dirname "${BASH_SOURCE[0]}")/../.."  # repo root — this script lives in tools/deploy/
 
 clear
 echo ""

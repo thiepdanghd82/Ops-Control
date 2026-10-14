@@ -1,11 +1,11 @@
-# Ops-Control pre-release audit (Windows). Chạy từ gốc repo: .\audit\run-audit.ps1
+# Ops-Control pre-release audit (Windows). Chạy từ gốc repo: .\tools\audit\run-audit.ps1
 # Cần: Node/npm; semgrep (pip install semgrep) tuỳ chọn; gitleaks (scoop install gitleaks) tuỳ chọn.
 $ErrorActionPreference = 'Continue'
-$Root = Resolve-Path (Join-Path $PSScriptRoot '..')
+$Root = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 Set-Location $Root
 $env:SEMGREP_SEND_METRICS = 'off'
 $Ts  = Get-Date -Format 'yyyyMMdd-HHmmss'
-$Out = Join-Path $Root "audit\reports\$Ts"
+$Out = Join-Path $Root "tools\audit\reports\$Ts"
 New-Item -ItemType Directory -Force -Path $Out | Out-Null
 $ScanDirs = @('server','client/src','desktop','scripts')
 $Excl = @('--exclude','node_modules','--exclude','dist','--exclude','dist-electron','--exclude','build','--exclude','*.test.js','--exclude','*.test.mjs')
@@ -37,7 +37,7 @@ git ls-files | Select-String -Pattern '(^|/)\.env$|users\.json|\.db$|\.sqlite3?$
 
 Write-Host "`n== 3/5 Semgrep =="
 if (Have semgrep) {
-  semgrep --metrics=off --config audit/rules/ops-control.yml @Excl --quiet --json -o (Join-Path $Out 'semgrep-custom.json') @ScanDirs 2>> (Join-Path $Out 'semgrep.err')
+  semgrep --metrics=off --config tools/audit/rules/ops-control.yml @Excl --quiet --json -o (Join-Path $Out 'semgrep-custom.json') @ScanDirs 2>> (Join-Path $Out 'semgrep.err')
   semgrep --metrics=off --config p/nodejs --config p/javascript --config p/electron --config p/owasp-top-ten --config p/secrets @Excl --quiet --json -o (Join-Path $Out 'semgrep-registry.json') @ScanDirs 2>> (Join-Path $Out 'semgrep.err')
   if ($LASTEXITCODE -ne 0) { Write-Host "  registry rules: bỏ qua (offline?)" }
 } else { Write-Host "  semgrep chưa cài: pip install semgrep" }
@@ -46,5 +46,5 @@ Write-Host "`n== 4/5 Electronegativity =="
 npx --yes @doyensec/electronegativity -i desktop -o (Join-Path $Out 'electronegativity.csv') -s medium 2> (Join-Path $Out 'electronegativity.err') | Out-Null
 
 Write-Host "`n== 5/5 Tổng hợp =="
-node (Join-Path $Root 'audit\summarize.mjs') $Out | Tee-Object -FilePath (Join-Path $Out 'SUMMARY.md')
+node (Join-Path $Root 'tools\audit\summarize.mjs') $Out | Tee-Object -FilePath (Join-Path $Out 'SUMMARY.md')
 Write-Host "`nBáo cáo: $Out"
