@@ -107,7 +107,7 @@ export const STRINGS = {
   'nav.tab.quote_analysis': { en: 'Quote Analysis', vi: 'Phân tích Báo giá' },
   'nav.tab.rate_table': { en: 'Rate Table', vi: 'Bảng Định mức' },
   'nav.tab.ddl': { en: 'Drop-Down Lists', vi: 'Danh sách lựa chọn' },
-  'nav.tab.finance_data': { en: 'Finance Data', vi: 'Dữ liệu Tài chính' },
+  'nav.tab.finance_data': { en: 'Cost refer', vi: 'Cost refer' },
   'nav.tab.machine_technical': { en: 'Machine Technical', vi: 'Thông số máy' },
   'nav.tab.settings': { en: 'Settings', vi: 'Cài đặt' },
   'nav.tab.metrics': { en: 'Admin Metrics', vi: 'Số liệu Quản trị' },

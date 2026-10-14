@@ -132,8 +132,8 @@ export const GLOSSARY = [
   },
   {
     term: 'SGA',
-    en: 'Selling, General & Administrative overhead. Per-site rate configured in Finance Data. Default 0%.',
-    vi: 'Chi phí bán hàng, quản lý chung. Cấu hình theo site trong Finance Data. Mặc định 0%.',
+    en: 'Selling, General & Administrative overhead. Per-site rate configured in Cost refer. Default 0%.',
+    vi: 'Chi phí bán hàng, quản lý chung. Cấu hình theo site trong Cost refer. Mặc định 0%.',
   },
   {
     term: 'SKU',
@@ -2276,12 +2276,12 @@ export const HELP_CONTENT = {
   'lib-finance': {
     id: 'lib-finance',
     section: 'LIBRARIES',
-    title: bi('Finance Data', 'Dữ liệu Tài chính'),
+    title: bi('Cost refer', 'Cost refer'),
     function: bi(
       'Company-wide finance aggregates (P&L, balances, transfer pricing)',
       'Tổng hợp tài chính công ty (P&L, số dư, transfer pricing)'
     ),
-    path: 'Ops Cost > Libraries > Finance Data',
+    path: 'Ops Cost > Libraries > Cost refer',
     purpose: bi(
       'Company-wide finance aggregates: P&L by cost group, balance snapshots, transfer pricing rates.',
       'Tổng hợp tài chính toàn công ty: P&L theo cost group, snapshot số dư, transfer pricing.'

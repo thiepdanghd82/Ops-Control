@@ -15,7 +15,7 @@ const TAB_META = {
   'quote-analysis': { section: 'Reports', label: 'Quote Analysis' },
   'lib-rate': { section: 'Libraries', label: 'Rate Table' },
   'lib-ddl': { section: 'Libraries', label: 'Drop-Down Lists' },
-  'lib-finance': { section: 'Libraries', label: 'Finance Data' },
+  'lib-finance': { section: 'Libraries', label: 'Cost refer' },
   settings: { section: 'System', label: 'Settings' },
 };
 

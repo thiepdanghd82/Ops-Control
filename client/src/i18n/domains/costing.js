@@ -294,7 +294,7 @@ registerStrings({
   },
   'lib.ph_table_name': { en: 'e.g. Freight Rates', vi: 'ví dụ Freight Rates' },
 
-  'lib.finance_data': { en: 'Finance Data', vi: 'Dữ liệu tài chính' },
+  'lib.finance_data': { en: 'Cost refer', vi: 'Cost refer' },
   'lib.db_finance_data': { en: 'DB Finance Data', vi: 'Dữ liệu tài chính DB' },
   'lib.no_db_finance': { en: 'No DB Finance data', vi: 'Chưa có dữ liệu tài chính DB' },
   'lib.cost_groups': { en: 'Cost Groups', vi: 'Nhóm chi phí' },

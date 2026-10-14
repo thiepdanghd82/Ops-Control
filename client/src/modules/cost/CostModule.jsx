@@ -116,7 +116,7 @@ export const TAB_TITLES = {
   settings: 'Settings',
   'lib-rate': 'Rate Library',
   'lib-ddl': 'Drop-down Lists',
-  'lib-finance': 'Finance Library',
+  'lib-finance': 'Cost refer',
   'lib-machine-tech': 'Machine Technical',
   'lib-mfg': 'Mfg Structure',
   'lib-rop': 'Routing Operations',
