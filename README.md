@@ -81,6 +81,11 @@ cd apps/desktop && npm run build:client:mac
 
 Kết quả ở `apps/desktop/dist-electron/`. Code chỉ có hiệu lực trên máy sau khi **cài** DMG mới.
 
+Khi đóng gói, hook `apps/desktop/prune-dev-deps.js` (electron-builder `afterPack`) bỏ khỏi `app/node_modules` mọi gói
+`package-lock.json` đánh dấu `"dev": true` (~175 MB → ~63 MB) và dừng build nếu việc đó làm gãy một phụ thuộc.
+Thêm thư viện mà server dùng lúc chạy thì phải khai báo ở `dependencies`, không phải `devDependencies`
+(CI `check-runtime-deps` cũng kiểm tra điều này). Bỏ qua bước này khi cần gấp: `OPS_SKIP_PRUNE_DEV_DEPS=1`.
+
 ## Tài liệu
 
 - [docs/README.md](docs/README.md) — mục lục tài liệu

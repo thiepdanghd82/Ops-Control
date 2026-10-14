@@ -36,6 +36,7 @@ const PKG_PATH = path.join(__dirname, 'package.json');
 // Patterns of file basenames that are intentionally NOT packed.
 const EXEMPT_PATTERNS = [
   /\.test\.js$/, // unit tests — never ship
+  /^prune-dev-deps\.js$/, // electron-builder afterPack hook — runs at build time, not part of the app
 ];
 
 // build.files entries that are GENERATED AT BUILD TIME and therefore do

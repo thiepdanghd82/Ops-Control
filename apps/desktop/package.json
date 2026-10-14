@@ -18,7 +18,7 @@
     "build:client:win": "node ../scripts/build-windows-installers.mjs client",
     "build:server:win": "node ../scripts/build-windows-installers.mjs server",
     "test:license": "node --test license.test.js",
-    "test:manifest": "node --test build-manifest.test.js",
+    "test:manifest": "node --test build-manifest.test.js prune-dev-deps.test.js",
     "test:utils": "node --test \"utils/**/*.test.js\"",
     "test:firstrun": "env -u ELECTRON_RUN_AS_NODE electron --no-deprecation clientFirstRun.test.js",
     "test:wizard": "env -u ELECTRON_RUN_AS_NODE electron --no-deprecation setupWizard.test.js",
@@ -46,6 +46,7 @@
     "copyright": "Copyright © 2026 CCL Design Vietnam",
     "artifactName": "OpsControl-${env.OPS_BUILD_ROLE}-v${version}-${os}-${arch}.${ext}",
     "asar": true,
+    "afterPack": "./prune-dev-deps.js",
     "asarUnpack": [
       "**/node_modules/better-sqlite3/**",
       "**/node_modules/serialport/**",
