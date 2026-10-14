@@ -16,14 +16,11 @@
     "analyze": "ANALYZE=1 vite build"
   },
   "dependencies": {
-    "lucide-react": "^1.8.0",
     "pdfjs-dist": "^4.10.38",
     "qrcode": "^1.5.4",
-    "quantize": "^1.0.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-rnd": "^10.5.3",
-    "react-router-dom": "^6.30.3"
+    "react-rnd": "^10.5.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

@@ -16,19 +16,14 @@
       "ticket": "MES-3-FIX-NN-exceljs-major (file post-go-live)",
       "added": "2026-06-20",
       "expiry": "2026-12-31"
-    },
-    {
-      "cve": "Jest 29 transitive js-yaml chain (18 advisories)",
-      "package": "jest + @jest/* + babel-plugin-istanbul + @istanbuljs/load-nyc-config",
-      "via": "js-yaml moderate (CVE-2025-XXXX) cascading through Jest 29 internal deps",
-      "severity": "moderate",
-      "reason": "Jest 29.7.0 is dev-only test runner; --omit=dev excludes from runtime audit. Fix requires Jest major bump 29 → 30 (semver-major) which changes test API surface. Already covered by root job's --omit=dev flag; this entry documents the chain for review cadence. Schedule Jest 30 bump alongside React 19 testing infrastructure setup (S-TEST-INFRA, Q1 2027).",
-      "ticket": "S-TEST-INFRA (file Q1 2027)",
-      "added": "2026-06-20",
-      "expiry": "2027-03-31"
     }
   ],
   "_history": [
+    {
+      "date": "2026-10-14",
+      "actor": "Henry + AI",
+      "action": "Removed the Jest 29 js-yaml chain entry: jest was uninstalled (it discovered 0 tests; npm test now runs node --test only), so the chain no longer exists."
+    },
     {
       "date": "2026-06-20",
       "actor": "Henry + AI",

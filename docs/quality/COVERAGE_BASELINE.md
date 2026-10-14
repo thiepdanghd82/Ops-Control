@@ -2,7 +2,7 @@
 
 > **Captured:** 2026-04-29 23:00 GMT+7 (after K1–K6)
 > **Reproduce:** `node --experimental-test-coverage --test <files>` (see §3)
-> **Threshold gate:** `package.json:jest.coverageThreshold` = 70% lines, 60% branches, 70% functions/statements
+> **Threshold gate:** none — the old `package.json:jest.coverageThreshold` (70/60/70/70) was dead config (Jest found 0 tests, audit F0-1) and was removed with jest on 2026-10-14.
 
 ## 1. Files extracted in v1.3 — coverage today
 

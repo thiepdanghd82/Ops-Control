@@ -71,16 +71,16 @@ Each script has a sibling `.test.js` with full unit coverage. Dry-run mode is th
 
 ## 3. Test layout
 
-| Layer               | Location                                                                | Runner               | Count (Sprint 25) |
-| ------------------- | ----------------------------------------------------------------------- | -------------------- | ----------------- |
-| Engine pure         | `apps/client/src/services/*.test.js`                                    | `node --test`        | 100+              |
-| Engine golden       | `apps/client/src/services/*.golden.test.js`                             | `node --test`        | 22                |
-| Reducer contract    | `apps/client/src/context/spFieldReducer.test.js`                        | `node --test`        | 10                |
-| Migrations          | `apps/client/src/services/*Migration.test.js`, `apps/scripts/*.test.js` | `node --test`        | 27                |
-| UI utils            | `apps/client/src/utils/*.test.js`                                       | `node --test`        | 40+               |
-| Server HTTP         | `apps/server/http.integration.test.js`                                  | `node --test`        | 25                |
-| Server repo/service | `apps/server/repositories/*.test.js`, `apps/server/services/*.test.js`  | `node --test` + Jest | 200+              |
-| Perf budget         | `apps/scripts/check-perf-budget.test.js`                                | `node --test`        | 10                |
+| Layer               | Location                                                                | Runner        | Count (Sprint 25) |
+| ------------------- | ----------------------------------------------------------------------- | ------------- | ----------------- |
+| Engine pure         | `apps/client/src/services/*.test.js`                                    | `node --test` | 100+              |
+| Engine golden       | `apps/client/src/services/*.golden.test.js`                             | `node --test` | 22                |
+| Reducer contract    | `apps/client/src/context/spFieldReducer.test.js`                        | `node --test` | 10                |
+| Migrations          | `apps/client/src/services/*Migration.test.js`, `apps/scripts/*.test.js` | `node --test` | 27                |
+| UI utils            | `apps/client/src/utils/*.test.js`                                       | `node --test` | 40+               |
+| Server HTTP         | `apps/server/http.integration.test.js`                                  | `node --test` | 25                |
+| Server repo/service | `apps/server/repositories/*.test.js`, `apps/server/services/*.test.js`  | `node --test` | 200+              |
+| Perf budget         | `apps/scripts/check-perf-budget.test.js`                                | `node --test` | 10                |
 
 **Running tests**
 
@@ -88,9 +88,9 @@ Each script has a sibling `.test.js` with full unit coverage. Dry-run mode is th
 cd apps/client && npm test              # client-side (uses quoted glob — see note below)
 cd apps/client && npm run typecheck     # @ts-check pass
 cd apps/client && npm run analyze       # Sprint 32 — emit dist/bundle-stats.{html,json}
-cd ..     && npm test              # server (Jest + node --test)
-cd ..     && npm run perf-budget   # post-build bundle budget gate
-cd ..     && npm run verify        # build + perf-budget + tests (end-to-end gate)
+cd ../..  && npm test              # server (node --test)
+cd ../..  && npm run perf-budget   # post-build bundle budget gate
+cd ../..  && npm run verify        # build + perf-budget + tests (end-to-end gate)
 ```
 
 **Why the glob is quoted** (`'src/**/*.test.js'`): bash's default `**` doesn't recurse past 1 level. Quoted glob lets Node's test runner do the expansion — catches depth-3 files like `components/Shared/ErrorBoundary.test.js`. If you drop the quotes, tests at depth ≥3 will silently skip.

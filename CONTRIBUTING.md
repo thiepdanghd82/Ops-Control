@@ -111,12 +111,11 @@ npm run lint
 node --check <touched-files>
 
 # 2. tests
-npm test                              # server (jest + node:test)
+npm test                              # server (node:test)
 cd apps/client && npm test                 # client (node:test)
 node --test apps/desktop/license.test.js   # desktop (CJS tests)
 
-# 3. coverage delta — at minimum, don't drop. See package.json:jest.coverageThreshold.
-npx jest --coverage --silent          # if jest path applies
+# 3. coverage delta — at minimum, don't drop (node --experimental-test-coverage, see docs/quality/COVERAGE_BASELINE.md).
 
 # 4. vuln gate
 npm audit --audit-level=high          # all 3 packages (root, client, desktop)

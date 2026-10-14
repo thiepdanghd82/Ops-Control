@@ -18,7 +18,7 @@
     "check:sha": "node apps/scripts/sprint-history-sha.js",
     "reset-totp": "node apps/scripts/reset-totp.js",
     "build:npi-parts": "node apps/scripts/build-npi-parts-snapshot.mjs",
-    "test": "jest --passWithNoTests && node --test --test-concurrency=1 \"apps/server/**/*.test.js\" \"apps/scripts/**/*.test.js\" && cd apps/desktop && npm run test:license && npm run test:manifest && npm run test:utils",
+    "test": "node --test --test-concurrency=1 \"apps/server/**/*.test.js\" \"apps/scripts/**/*.test.js\" && cd apps/desktop && npm run test:license && npm run test:manifest && npm run test:utils",
     "fix": "eslint --fix .",
     "perf-budget": "node apps/scripts/check-perf-budget.js",
     "lint:client": "cd apps/client && npm run lint",
@@ -69,7 +69,6 @@
     "@commitlint/cli": "^20.5.2",
     "@commitlint/config-conventional": "^20.5.0",
     "@eslint/js": "^10.0.1",
-    "@playwright/test": "^1.61.0",
     "concurrently": "^9.0.1",
     "docx": "^9.6.1",
     "eslint": "^10.2.1",
@@ -77,34 +76,9 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.5.0",
     "husky": "^9.1.7",
-    "jest": "^29.7.0",
     "lint-staged": "^16.4.0",
     "nodemon": "^3.1.4",
     "prettier": "^3.8.3",
     "puppeteer-core": "^24.42.0"
-  },
-  "jest": {
-    "testPathIgnorePatterns": [
-      "/node_modules/",
-      "/Backup & restore/",
-      "/client/",
-      "/server/",
-      "/scripts/",
-      "/_legacy/",
-      "/desktop/"
-    ],
-    "coverageReporters": [
-      "text-summary",
-      "lcov",
-      "html"
-    ],
-    "coverageThreshold": {
-      "global": {
-        "lines": 70,
-        "branches": 60,
-        "functions": 70,
-        "statements": 70
-      }
-    }
   }
 }

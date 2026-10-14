@@ -254,7 +254,7 @@ failures.
 **REQUIRED (must be green — a red here is a real regression, do NOT merge):**
 
 - **Client tests** (`cd apps/client && npm test`) — 1525+ vanilla node:test.
-- **Server tests** (`npm test`) — runs jest + kiosk + `node --test` + desktop
+- **Server tests** (`npm test`) — runs `node --test` + desktop
   license/manifest. The `node --test` glob uses **`--test-concurrency=1`**
   (serialized) to eliminate the MES-3-FIX-52 runner deserialize race between
   parallel worker children — ~2.7× slower but deterministic. The one chronic

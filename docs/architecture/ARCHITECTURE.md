@@ -77,7 +77,7 @@ flowchart LR
 | License  | Ed25519 (`node:crypto`)                                        | –           |
 | Desktop  | Electron 38+ + electron-builder 26                             | latest      |
 | Native   | `serialport`, `node-hid`, `pdf-to-printer`, `electron-store 8` | unchanged   |
-| Test     | `node:test` (server) + Jest 29 (root) + `node:test` (client)   | –           |
+| Test     | `node:test` (server) + `node:test` (client)                    | –           |
 | Lint     | ESLint 9 (flat config) + Prettier 3                            | –           |
 | CI       | GitHub Actions 5 jobs                                          | –           |
 
