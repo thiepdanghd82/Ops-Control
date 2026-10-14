@@ -5,7 +5,6 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getManufacturingStructures, getRoutingOperations } from '../../services/dataSync.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,12 +23,6 @@ function readJson(fp) {
 }
 
 export default {
-  listBom() {
-    return getManufacturingStructures();
-  },
-  listRouting() {
-    return getRoutingOperations();
-  },
   listMaterialsNpi() {
     const fp = path.join(LIB, 'MaterialCost', 'npi_materials.json');
     return fs.existsSync(fp) ? readJson(fp) : [];

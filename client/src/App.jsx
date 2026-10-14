@@ -29,10 +29,6 @@ import './App.css';
 // Window manager desktop — lazy so react-rnd + all window chrome stay
 // out of the classic (flag-OFF) bundle. Only fetched when the flag is on.
 const WindowLayer = lazy(() => import('./window/WindowLayer.jsx'));
-// Not needed to draw the first screen, so kept out of the shell (MES-3-FIX-62,
-// 2026-09-30: the shell stood at 545,982 of 550,000 bytes). The import dialog
-// loads on first open.
-const ImportDialog = lazy(() => import('./components/Shared/ImportDialog'));
 
 // v1.3 P0 — Start connection health monitor at module load time.
 // Singleton pattern; calling more than once is no-op. Uses /health
@@ -94,10 +90,6 @@ function AppShell() {
   // The Suspense boundary inside CostModule still shows its fallback while
   // the new lazy chunk loads — but the sidebar visual update lands first.
   const deferredActiveTab = useDeferredValue(activeTab);
-  const [showImport, setShowImport] = useState(false);
-  // Latched on first open and kept mounted after, so closing still keeps the
-  // dialog's "import into" choice for the next open, as it did when eager.
-  const [importOpened, setImportOpened] = useState(false);
   // Sidebar collapse — responsive UX. Persists across reloads so the
   // user isn't surprised by sidebar re-expanding. Collapsed defaults
   // to true on narrow viewports (laptop screens) for out-of-the-box fit.
@@ -314,18 +306,7 @@ function AppShell() {
           </ErrorBoundary>
           <div className="app-main">
             <ErrorBoundary label="TopBar" fallback={() => null}>
-              <TopBar
-                activeModule={activeModule}
-                activeTab={effectiveTab}
-                onImportClick={
-                  hasRole('admin')
-                    ? () => {
-                        setImportOpened(true);
-                        setShowImport(true);
-                      }
-                    : null
-                }
-              />
+              <TopBar activeModule={activeModule} activeTab={effectiveTab} />
             </ErrorBoundary>
             <ErrorBoundary label="PwdAgeBanner" fallback={() => null}>
               <PwdAgeBanner
@@ -362,17 +343,6 @@ function AppShell() {
               <WarningBar activeModule={activeModule} activeTab={effectiveTab} />
             </ErrorBoundary>
           </div>
-          {importOpened && (
-            <Suspense fallback={null}>
-              <ImportDialog
-                isOpen={showImport}
-                onClose={() => setShowImport(false)}
-                onImportComplete={() => {
-                  // no-op: ImportDialog handles its own success UI
-                }}
-              />
-            </Suspense>
-          )}
         </div>
       </LibraryPickerProvider>
     </AppBootstrap>

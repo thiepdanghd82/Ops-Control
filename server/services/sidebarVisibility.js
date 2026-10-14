@@ -26,7 +26,6 @@ import { atomicWriteFileSync } from './atomicWrite.js';
 export const TOGGLEABLE_SECTION_IDS = Object.freeze([
   'calculators',
   'quoting',
-  'manufacturing',
   'reports',
   'libraries',
 ]);
@@ -40,8 +39,6 @@ export const TOGGLEABLE_TAB_IDS = Object.freeze([
   'quote-history',
   'npi-parts-list',
   'approvals-inbox',
-  'lib-mfg',
-  'lib-rop',
   'dashboard',
   'quote-analysis',
   'lib-rate',

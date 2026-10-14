@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { offsiteLine } from './Settings.offsite.js';
 import { useAuth } from '../../../context/AuthContext';
-import { authApi, api, costApi, importApi, sharedApi } from '../../../services/api';
+import { authApi, api, costApi, sharedApi } from '../../../services/api';
 import EmptyState from '../../../components/Shared/EmptyState';
 import Modal from '../../../components/Shared/Modal';
 import ConfirmClearModal from '../../../components/Shared/ConfirmClearModal';
@@ -2471,15 +2471,6 @@ function BackupSection() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════
-// SYSTEM LOGS SECTION
-// ═══════════════════════════════════════════════════════════
-
-const IFS_LABELS = {
-  bom: 'BOM / Mfg Structures',
-  routing: 'Routing Ops',
-};
-
 // ═══════════════════════════════════════════════════════════════
 // Sprint 1.7b — BACKUP SCHEDULE CARD
 // ═══════════════════════════════════════════════════════════════
@@ -2810,7 +2801,6 @@ function LogsSection() {
   const { t } = useI18n();
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [importStatus, setImportStatus] = useState(null);
 
   useEffect(() => {
     loadLogs();
@@ -2821,15 +2811,11 @@ function LogsSection() {
   async function loadLogs() {
     setLoading(true);
     try {
-      const [statusRes, importRes] = await Promise.all([
-        costApi.getUsersStatus().catch(() => ({ users: [] })),
-        api.get('/import/status').catch(() => null),
-      ]);
+      const statusRes = await costApi.getUsersStatus().catch(() => ({ users: [] }));
       // Server returns `users: [{id, username, role, online, last_seen, full_name}, ...]`
       const list = Array.isArray(statusRes?.users) ? statusRes.users : [];
       // Only keep users who are actually online (filtered by the online flag)
       setOnlineUsers(list.filter((u) => u && u.online));
-      setImportStatus(importRes);
     } catch (e) {
       console.error('Logs load failed:', e);
     } finally {
@@ -2867,41 +2853,6 @@ function LogsSection() {
           )}
         </div>
       </section>
-
-      {/* IFS Data Status */}
-      {importStatus && (
-        <section className="log-section">
-          <h4>{t('set.ifs_data_status')}</h4>
-          <div className="settings-card">
-            <div className="data-status-grid">
-              {Object.entries(importStatus).map(([key, info]) => (
-                <div key={key} className={`data-status-item ${info.exists ? 'ds-ok' : 'ds-fail'}`}>
-                  <div className="ds-row-top">
-                    <span className={`ds-dot ${info.exists ? 'ok' : 'fail'}`} />
-                    <span className="ds-label">
-                      {IFS_LABELS[key] || key.replace(/([A-Z])/g, ' $1').trim()}
-                    </span>
-                    <span className={`ds-badge ${info.exists ? 'ok' : 'fail'}`}>
-                      {info.exists ? 'OK' : 'Not found'}
-                    </span>
-                  </div>
-                  {info.exists && (
-                    <div className="ds-row-meta">
-                      <span className="ds-size">{info.sizeHuman}</span>
-                      <span className="ds-date">
-                        {new Date(info.modified).toLocaleString('vi-VN')}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Data Import — per-dataset upload / backup / reset */}
-      <DataImportSection importStatus={importStatus} onRefresh={loadLogs} />
 
       {/* Sprint 36 — Audit log viewer. Sys-only access (server returns
           403 for lesser roles). Leverages the Sprint 31 filter API:
@@ -3120,226 +3071,6 @@ function AuditLogSection() {
           </div>
         )}
       </div>
-    </section>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════
-// DATA IMPORT SECTION — per-dataset upload / backup / reset
-// ═══════════════════════════════════════════════════════════
-
-const DATA_IMPORT_DATASETS = [
-  {
-    key: 'bom',
-    label: 'BOM / Mfg Structures',
-    desc: 'Bill of materials for manufactured parts',
-    accept: '.csv,.xlsx,.xls',
-    upload: (file) => importApi.uploadBom(file),
-    clear: (password) => importApi.clearBom(password),
-    fetch: () => sharedApi.getBOM(),
-    filename: 'bom',
-  },
-  {
-    key: 'routing',
-    label: 'Routing Operations',
-    desc: 'Process routing + work center assignments',
-    accept: '.csv,.xlsx,.xls',
-    upload: (file) => importApi.uploadRouting(file),
-    clear: (password) => importApi.clearRouting(password),
-    fetch: () => sharedApi.getRouting(),
-    filename: 'routing',
-  },
-];
-
-function DataImportSection({ importStatus, onRefresh }) {
-  const { t } = useI18n();
-  const { hasRole } = useAuth();
-  const [busy, setBusy] = useState({});
-  const [msg, setMsg] = useState(null);
-  const [clearTarget, setClearTarget] = useState(null); // dataset ds | null
-  // Editable destination path per dataset — defaults to the server's
-  // reported absolute path, user can override to save elsewhere.
-  const [paths, setPaths] = useState({});
-  const fileRefs = useRef({});
-  const canEdit = hasRole('admin');
-
-  // Seed path inputs from importStatus when it arrives / refreshes.
-  useEffect(() => {
-    if (!importStatus) return;
-    setPaths((prev) => {
-      const next = { ...prev };
-      for (const ds of DATA_IMPORT_DATASETS) {
-        const info = importStatus[ds.key];
-        // Only seed if the user hasn't typed a custom value yet.
-        if (!next[ds.key] && info?.absPath) next[ds.key] = info.absPath;
-      }
-      return next;
-    });
-  }, [importStatus]);
-
-  function flash(type, text) {
-    setMsg({ type, text });
-    setTimeout(() => setMsg(null), 4000);
-  }
-
-  function setBusyFor(key, flag) {
-    setBusy((prev) => ({ ...prev, [key]: flag }));
-  }
-
-  async function handleUpload(ds, file) {
-    if (!file) return;
-    setBusyFor(ds.key, 'import');
-    try {
-      await ds.upload(file);
-      flash('success', `${ds.label} imported successfully`);
-      onRefresh?.();
-    } catch (e) {
-      flash('error', `${ds.label} import failed: ${e.message || 'unknown'}`);
-    } finally {
-      setBusyFor(ds.key, null);
-    }
-  }
-
-  async function handleBackup(ds) {
-    // Server-side backup: copies the dataset's data file to the path
-    // shown in the editable input. If the user leaves it at the default
-    // (the original file path), the server picks a sibling folder with
-    // a timestamped filename so the original isn't overwritten.
-    setBusyFor(ds.key, 'backup');
-    try {
-      const info = importStatus?.[ds.key];
-      const typed = (paths[ds.key] || '').trim();
-      // If the user left the input as the current data file path,
-      // pass undefined so the server auto-generates a timestamp name.
-      const destPath = typed && typed !== info?.absPath ? typed : undefined;
-      const r = await importApi.backup(ds.key, destPath);
-      if (r?.ok) {
-        flash('success', `${ds.label} backup saved to ${r.path}`);
-      } else {
-        throw new Error(r?.error || 'Backup failed');
-      }
-    } catch (e) {
-      flash('error', `${ds.label} backup failed: ${e.message || 'unknown'}`);
-    } finally {
-      setBusyFor(ds.key, null);
-    }
-  }
-
-  // Post-clear reload — the wipe + account-password step-up run inside
-  // ConfirmClearModal (ds.clear(password)). Opened from the Reset button.
-  function afterClear(ds) {
-    flash('success', `${ds.label} data cleared (backup kept on server)`);
-    onRefresh?.();
-  }
-
-  return (
-    <section className="log-section">
-      <h4>{t('set.data_import')}</h4>
-      <p className="di-hint">
-        Each dataset below can be imported from a CSV/XLSX file, backed up as a local JSON snapshot,
-        or reset. Import and reset require <b>{t('set.admin')}</b>+ role.
-      </p>
-      {msg && (
-        <div className={`form-msg ${msg.type}`} style={{ marginBottom: 10 }}>
-          {msg.text}
-        </div>
-      )}
-      <div className="settings-card di-card">
-        <div className="di-list">
-          {DATA_IMPORT_DATASETS.map((ds) => {
-            const info = importStatus?.[ds.key];
-            const state = busy[ds.key];
-            return (
-              <div key={ds.key} className="di-row">
-                <div className="di-row-info">
-                  <div className="di-row-title">
-                    <span className={`ds-dot ${info?.exists ? 'ok' : 'fail'}`} />
-                    <span className="di-label">{ds.label}</span>
-                    {info?.exists && <span className="di-size">{info.sizeHuman}</span>}
-                  </div>
-                  <div className="di-row-desc">{ds.desc}</div>
-                  <div className="di-row-path" title={t('set.backup_path_hint')}>
-                    <span className="di-path-icon">📂</span>
-                    <input
-                      type="text"
-                      className="di-path-input"
-                      value={paths[ds.key] || ''}
-                      placeholder={info?.absPath || info?.path || '(file not found — set a path)'}
-                      onChange={(e) => setPaths((prev) => ({ ...prev, [ds.key]: e.target.value }))}
-                      spellCheck={false}
-                    />
-                    <button
-                      className="di-path-copy"
-                      title={t('set.reset_default_path')}
-                      disabled={!info?.absPath}
-                      onClick={() => setPaths((prev) => ({ ...prev, [ds.key]: info.absPath }))}
-                    >
-                      ↺
-                    </button>
-                    <button
-                      className="di-path-copy"
-                      title={t('set.copy_path')}
-                      onClick={() => {
-                        const p = paths[ds.key] || info?.absPath || info?.path || '';
-                        if (p) navigator.clipboard?.writeText(p);
-                        flash('success', 'Path copied to clipboard');
-                      }}
-                    >
-                      ⧉
-                    </button>
-                  </div>
-                </div>
-                <div className="di-row-actions">
-                  <input
-                    ref={(el) => {
-                      fileRefs.current[ds.key] = el;
-                    }}
-                    type="file"
-                    accept={ds.accept}
-                    style={{ display: 'none' }}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleUpload(ds, f);
-                      e.target.value = '';
-                    }}
-                  />
-                  <button
-                    className="di-btn di-btn-import"
-                    disabled={!canEdit || state === 'import'}
-                    onClick={() => fileRefs.current[ds.key]?.click()}
-                    title={t('set.import_csv_xlsx')}
-                  >
-                    {state === 'import' ? '⟳' : '↑'} Import
-                  </button>
-                  <button
-                    className="di-btn di-btn-backup"
-                    disabled={!info?.exists || state === 'backup'}
-                    onClick={() => handleBackup(ds)}
-                    title={t('set.download_json')}
-                  >
-                    {state === 'backup' ? '⟳' : '↓'} Backup
-                  </button>
-                  <button
-                    className="di-btn di-btn-clear"
-                    disabled={!canEdit || !info?.exists || state === 'clear'}
-                    onClick={() => setClearTarget(ds)}
-                    title={t('set.wipe_dataset')}
-                  >
-                    {state === 'clear' ? '⟳' : '✕'} Reset
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      <ConfirmClearModal
-        open={!!clearTarget}
-        onClose={() => setClearTarget(null)}
-        datasetLabel={clearTarget?.label}
-        clearApi={(password) => clearTarget.clear(password)}
-        onCleared={() => afterClear(clearTarget)}
-      />
     </section>
   );
 }

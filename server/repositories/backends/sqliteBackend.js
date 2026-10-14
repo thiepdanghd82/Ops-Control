@@ -100,8 +100,6 @@ const QUOTE_INSERT_SQL = `
 // with a table/kind not in this map throws — prevents SQL injection
 // regressions if a future caller accidentally passes user input.
 const ALLOWED_QUERIES = {
-  bom: { kinds: null },
-  routing_operations: { kinds: null },
   materials: { kinds: new Set(['npi', 'sourcing']) },
   quotes: { kinds: null },
 };
@@ -133,12 +131,6 @@ function rowsFromTable(table, kind = null) {
 }
 
 export default {
-  listBom() {
-    return rowsFromTable('bom') ?? fileBackend.listBom();
-  },
-  listRouting() {
-    return rowsFromTable('routing_operations') ?? fileBackend.listRouting();
-  },
   listMaterialsNpi() {
     return rowsFromTable('materials', 'npi') ?? fileBackend.listMaterialsNpi();
   },

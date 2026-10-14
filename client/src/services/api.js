@@ -289,8 +289,6 @@ export const licenseFleetApi = {
 // the uploaded headers+rows, then clears the server cache so subsequent
 // reads via sharedApi return the new data immediately.
 export const importApi = {
-  uploadBom: (file) => uploadFile('/import/bom', file),
-  uploadRouting: (file) => uploadFile('/import/routing', file),
   // Material Cost tab → NPI Materials + Sourcing DB. Server does the
   // CSV/XLSX parsing and writes the mapped rows to the corresponding
   // JSON file under Library/MaterialCost/.
@@ -308,13 +306,7 @@ export const importApi = {
   // password (step-up); POST (not DELETE) so the { password } body is sent.
   // Returns 200 { ok:false, code:'bad_password' } on a wrong/missing password
   // (never thrown) so the confirm modal can show an inline error.
-  clearBom: (password) => api.post('/import/bom/clear', { password }),
-  clearRouting: (password) => api.post('/import/routing/clear', { password }),
   clearNpiParts: (password) => api.post('/import/npi-parts/clear', { password }),
-  status: () => api.get('/import/status'),
-  // Server-side backup — copies the dataset's data file to destPath
-  // (or an auto-named sibling if destPath is omitted). Admins only.
-  backup: (key, destPath) => api.post('/import/backup', { key, destPath }),
 };
 
 // ─── Import Wizard API ────────────────────────────────────────────────
@@ -375,10 +367,6 @@ export const importWizardApi = {
 // ─── Shared Data API (Node.js reads files directly — no Python dependency) ───
 export const sharedApi = {
   // IFS data
-  getBOM: (partNo, opts = {}) =>
-    partNo ? api.get(`/shared/bom/${partNo}`, opts) : api.get('/shared/bom', opts),
-  getRouting: (partNo, opts = {}) =>
-    partNo ? api.get(`/shared/routing/${partNo}`, opts) : api.get('/shared/routing', opts),
   getWorkCenters: (opts = {}) => api.get('/shared/work-centers', opts),
   // NPI Parts List — returns { columns, rows, row_count, generated_at }.
   getNpiParts: (opts = {}) => api.get('/shared/npi-parts', opts),

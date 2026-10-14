@@ -119,10 +119,6 @@ registerStrings({
     en: 'Folder where backups are stored on the server',
     vi: 'Thư mục chứa bản sao lưu trên server',
   },
-  'set.backup_path_hint': {
-    en: 'Path used by both Import (source) and Backup (destination). Click to edit.',
-    vi: 'Đường dẫn dùng cho cả Import (nguồn) và Backup (đích). Bấm để sửa.',
-  },
   'set.backup_hour_hint': {
     en: 'Server local time. 02:00 is the default — pick low-activity hours.',
     vi: 'Giờ máy chủ. Mặc định 02:00 — chọn giờ ít người dùng.',
@@ -139,12 +135,7 @@ registerStrings({
     en: 'Trigger one backup cycle right now (independent of schedule)',
     vi: 'Chạy ngay một chu kỳ sao lưu (không phụ thuộc lịch)',
   },
-  'set.reset_default_path': { en: 'Reset to default path', vi: 'Về đường dẫn mặc định' },
   'set.copy_path': { en: 'Copy path', vi: 'Chép đường dẫn' },
-  'set.wipe_dataset': {
-    en: 'Wipe dataset (server auto-backs up)',
-    vi: 'Xoá sạch bộ dữ liệu (server tự sao lưu trước)',
-  },
 
   'set.audit_log': { en: 'Audit Log', vi: 'Nhật ký kiểm toán' },
   'set.audit_needs_sys': {
@@ -154,11 +145,7 @@ registerStrings({
   'set.no_audit_entries': { en: 'No matching audit entries.', vi: 'Không có bản ghi khớp.' },
   'set.event_contains': { en: 'Event contains', vi: 'Sự kiện chứa' },
   'set.user_exact': { en: 'User (exact)', vi: 'Người dùng (chính xác)' },
-  'set.download_json': { en: 'Download as JSON', vi: 'Tải về dạng JSON' },
   'set.system_logs': { en: 'System Logs', vi: 'Nhật ký hệ thống' },
-  'set.data_import': { en: 'Data Import', vi: 'Nhập dữ liệu' },
-  'set.import_csv_xlsx': { en: 'Import CSV / XLSX', vi: 'Nhập CSV / XLSX' },
-  'set.ifs_data_status': { en: 'IFS Data Status', vi: 'Trạng thái dữ liệu IFS' },
   'set.connection': { en: 'Connection', vi: 'Kết nối' },
   'set.language_pref': { en: 'Language preference', vi: 'Ngôn ngữ hiển thị' },
   'set.theme_pref': { en: 'Theme preference', vi: 'Giao diện hiển thị' },
@@ -203,7 +190,6 @@ registerStrings({
   'set.settings': { en: 'Settings', vi: 'Cài đặt' },
   'set.users': { en: 'Users', vi: 'Người dùng' },
   'set.user': { en: 'User', vi: 'Người dùng' },
-  'set.admin': { en: 'Admin', vi: 'Quản trị' },
   'set.own': { en: 'Own', vi: 'Của mình' },
   'set.yes': { en: 'Yes', vi: 'Có' },
   'set.date': { en: 'Date', vi: 'Ngày' },

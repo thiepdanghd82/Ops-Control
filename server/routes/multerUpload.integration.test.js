@@ -11,8 +11,8 @@
  * WHY THIS FILE EXISTS AT ALL: MES-3-FIX-59 deferred the bump because it
  * spans EIGHT multer instances and asked for a hand smoke of each on a DMG.
  * Only ONE of the eight had any multipart coverage (print-area, removed with
- * its tab on 2026-10-14 along with the two tracker routes and the inventory
- * import, which leaves four in the sweep below). A hand
+ * its tab on 2026-10-14 along with the two tracker routes and the inventory,
+ * BOM and routing imports). A hand
  * smoke is also a one-shot — it proves nothing about the NEXT bump. The
  * mount sweep below is the automated half: it will not exercise each route's
  * business logic, but it does catch the realistic breakage from a multer
@@ -110,12 +110,13 @@ async function post(routePath, parts, token) {
 
 // The multer-fronted routes, by the config each one uses. Every one is
 // `.single(...)` over disk storage. (Eight until 2026-10-14; RFQ Progress,
-// Sample Tracking, Print Area and the IFS inventory import were removed.)
+// Sample Tracking, Print Area and the IFS inventory, BOM and routing imports
+// were removed.)
 const UPLOAD_ROUTES = [
   ['/api/shared/machine-technical/printing/import', 'file'],
   ['/api/backup/upload', 'file'],
   ['/api/import-xlsm', 'file'],
-  ['/api/import/bom', 'file'],
+  ['/api/import/npi-materials', 'file'],
   ['/api/import-wizard/preview', 'file'],
 ];
 

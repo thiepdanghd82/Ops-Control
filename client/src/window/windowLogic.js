@@ -43,8 +43,6 @@ export const MULTI_INSTANCE_TABS = new Set([
   'lib-ddl',
   'lib-finance',
   'lib-machine-tech',
-  'lib-mfg',
-  'lib-rop',
   'npi-parts-list',
   'quote-analysis',
   'approvals-inbox',

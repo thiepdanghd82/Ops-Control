@@ -11,16 +11,7 @@ import os from 'os';
 import multer from 'multer';
 import { atomicWriteFileSync } from '../services/atomicWrite.js';
 import { sendJsonWithEtag } from '../utils/etag.js';
-import {
-  getManufacturingStructures,
-  getBOMForPart,
-  getRoutingOperations,
-  getRoutingForPart,
-  getWorkCenters,
-  getNpiParts,
-  clearCache,
-} from '../services/dataSync.js';
-import * as repo from '../repositories/index.js';
+import { getWorkCenters, getNpiParts, clearCache } from '../services/dataSync.js';
 import {
   audit,
   getSessionUser,
@@ -94,54 +85,6 @@ function readJson(filePath) {
 }
 
 const router = Router();
-
-// GET /api/shared/bom - All manufacturing structures
-// Routed through repository so OPS_DATA_BACKEND=sqlite picks up indexed
-// reads. Default env → file backend, identical pre-migration behavior.
-router.get('/bom', (req, res) => {
-  try {
-    const data = repo.listBom();
-    // Sprint 1.7h — ETag for the 6 MB Mfg Structures payload.
-    sendJsonWithEtag(req, res, data);
-  } catch (err) {
-    console.error('Error loading BOM:', err);
-    res.status(500).json({ error: 'Failed to load BOM data' });
-  }
-});
-
-// GET /api/shared/bom/:partNo - BOM for specific part
-router.get('/bom/:partNo', (req, res) => {
-  try {
-    const data = repo.listBomForPart(req.params.partNo);
-    res.json(data);
-  } catch (err) {
-    console.error('Error loading BOM for part:', err);
-    res.status(500).json({ error: 'Failed to load BOM data' });
-  }
-});
-
-// GET /api/shared/routing - All routing operations
-router.get('/routing', (req, res) => {
-  try {
-    const data = repo.listRouting();
-    // Sprint 1.7h — ETag for the 16 MB Routing Ops payload (biggest win).
-    sendJsonWithEtag(req, res, data);
-  } catch (err) {
-    console.error('Error loading routing:', err);
-    res.status(500).json({ error: 'Failed to load routing data' });
-  }
-});
-
-// GET /api/shared/routing/:partNo - Routing for specific part
-router.get('/routing/:partNo', (req, res) => {
-  try {
-    const data = repo.listRoutingForPart(req.params.partNo);
-    res.json(data);
-  } catch (err) {
-    console.error('Error loading routing for part:', err);
-    res.status(500).json({ error: 'Failed to load routing data' });
-  }
-});
 
 // GET /api/shared/npi-parts - NPI Parts List (registry dataset 'npi-parts').
 // Reads the live Library file (seeded once from the bundled snapshot); the

@@ -166,7 +166,6 @@ export const HELP_SECTIONS = [
   { key: 'HOME', label: bi('Home', 'Trang chủ') },
   { key: 'CALCULATORS', label: bi('Pricing Worksheet', 'Bảng tính giá') },
   { key: 'QUOTING', label: bi('Quoting', 'Báo giá') },
-  { key: 'MANUFACTURING', label: bi('Manufacturing', 'Sản xuất') },
   { key: 'REPORTS', label: bi('Reports', 'Báo cáo') },
   { key: 'LIBRARIES', label: bi('Libraries', 'Dữ liệu chuẩn') },
   { key: 'SYSTEM', label: bi('System', 'Hệ thống') },
@@ -927,7 +926,7 @@ export const HELP_CONTENT = {
         'Nhập yield thập phân thay vì phần trăm: 0.95 vs 95 sẽ lệch 95×. Ô luôn là phần trăm.'
       ),
     ],
-    relatedTabs: ['standard', 'lib-mfg', 'lib-rop', 'summarize'],
+    relatedTabs: ['standard', 'summarize'],
     screenshot: 'complex.png',
   },
 
@@ -1754,200 +1753,6 @@ export const HELP_CONTENT = {
   // MANUFACTURING
   // ─────────────────────────────────────────────────────────────
 
-  'lib-mfg': {
-    id: 'lib-mfg',
-    section: 'MANUFACTURING',
-    title: bi('Mfg Structures', 'Cấu trúc Sản xuất'),
-    function: bi(
-      'Reusable BOM + process templates for Complex calc',
-      'Template BOM + công đoạn dùng lại cho Complex calc'
-    ),
-    path: 'Ops Cost > Manufacturing > Mfg Structures',
-    purpose: bi(
-      'Reusable BOM + process templates. Define once, reuse across every Complex quote for the same product family.',
-      'Template BOM + công đoạn dùng lại. Định nghĩa một lần, dùng cho mọi báo giá Complex của cùng dòng sản phẩm.'
-    ),
-    whenToUse: bi(
-      'Onboarding new product family; factory adds new process chain.',
-      'Onboard dòng sản phẩm mới; nhà máy mở chuỗi công đoạn mới.'
-    ),
-    preRequisites: [
-      br(
-        'Routing Ops library populated (templates reference operations from there).',
-        'Thư viện Routing Ops đã có data (template tham chiếu công đoạn từ đó).'
-      ),
-    ],
-    procedures: [
-      proc('Create template', 'Tạo template', null, [
-        bs('Click + New Template.', 'Click + New Template.'),
-        bs(
-          'Name — use descriptive convention "Multi-layer v2024-Q3" to preserve history.',
-          'Name — dùng quy ước mô tả "Multi-layer v2024-Q3" để giữ lịch sử.'
-        ),
-        bs(
-          'Product family — pick from LOV (drives which quotes can use this template).',
-          'Product family — chọn từ LOV (quyết định báo giá nào được dùng template này).'
-        ),
-      ]),
-      proc('Define levels', 'Định nghĩa các cấp', null, [
-        bs(
-          'Click Add Level — level 0 = finished product, higher = sub-assemblies.',
-          'Click Add Level — level 0 = thành phẩm, cao hơn = sub-assembly.'
-        ),
-        bs(
-          'For each level: Materials (from Material Library) + Operations (from Routing Ops).',
-          'Với mỗi cấp: Materials (từ Material Library) + Operations (từ Routing Ops).'
-        ),
-        bs(
-          'Set default Yield % per level — operators can override per quote.',
-          'Đặt Yield % mặc định cho mỗi cấp — operator có thể ghi đè theo báo giá.'
-        ),
-      ]),
-      proc(
-        'Save + version',
-        'Lưu + quản lý phiên bản',
-        bi(
-          'Templates referenced by saved quotes MUST not be deleted — rename or create v2 instead.',
-          'Template đang được báo giá cũ dùng KHÔNG được xoá — đổi tên hoặc tạo v2.'
-        ),
-        [
-          bs(
-            'Click Save → template becomes available in Complex calc New BOM picker.',
-            'Click Save → template có sẵn trong picker New BOM của Complex calc.'
-          ),
-          bs(
-            'To version: click Save As → new template name (suffix v2, v3).',
-            'Để version: click Save As → tên template mới (hậu tố v2, v3).'
-          ),
-          bs(
-            'Deprecate old versions via toggle — hidden from picker but existing quotes still open.',
-            'Deprecate phiên bản cũ qua toggle — ẩn khỏi picker nhưng báo giá cũ vẫn mở được.'
-          ),
-        ]
-      ),
-    ],
-    workflow: null,
-    keyFields: [],
-    formulas: [],
-    tips: [
-      bt(
-        'Version templates: suffix with date (e.g., "Multi-layer v2024-Q3") to preserve history.',
-        'Version template: thêm hậu tố theo ngày (vd "Multi-layer v2024-Q3") để giữ lịch sử.'
-      ),
-    ],
-    pitfalls: [
-      bp(
-        'Deleting a template used by saved quotes breaks their re-open path; rename instead.',
-        'Xoá template đang được báo giá cũ dùng sẽ làm hỏng re-open; nên đổi tên thay vì xoá.'
-      ),
-    ],
-    relatedTabs: ['complex', 'lib-rop'],
-    screenshot: null,
-  },
-
-  'lib-rop': {
-    id: 'lib-rop',
-    section: 'MANUFACTURING',
-    title: bi('Routing Ops', 'Công đoạn Sản xuất'),
-    function: bi(
-      'Master list of factory operations (setup, run rate, yield)',
-      'Danh sách gốc công đoạn (setup, tốc độ, yield)'
-    ),
-    path: 'Ops Cost > Manufacturing > Routing Ops',
-    purpose: bi(
-      'Master list of all factory operations: setup time, run rate, yield, hourly rate ref, work-cell.',
-      'Danh sách gốc mọi công đoạn: setup time, tốc độ chạy, yield, ref hourly rate, work-cell.'
-    ),
-    whenToUse: bi(
-      'Setting up a new press; updating run rates after a press upgrade or maintenance event.',
-      'Lắp máy mới; cập nhật tốc độ chạy sau khi nâng cấp/bảo dưỡng máy.'
-    ),
-    preRequisites: [
-      br(
-        'Rate Table populated with the hourly rate for each work-cell.',
-        'Rate Table đã có đơn giá/giờ cho từng work-cell.'
-      ),
-    ],
-    procedures: [
-      proc('Search + filter', 'Tìm + lọc', null, [
-        bs('Filter by work-cell (LOV).', 'Lọc theo work-cell (LOV).'),
-        bs('Search by operation code or description.', 'Search theo code công đoạn hoặc mô tả.'),
-        bs(
-          'Sort by last-updated to see recent changes.',
-          'Sort theo last-updated để xem thay đổi gần đây.'
-        ),
-      ]),
-      proc('Add / edit operation', 'Thêm / sửa công đoạn', null, [
-        bs(
-          'Click + (or pencil icon to edit existing).',
-          'Click + (hoặc icon bút chì để sửa có sẵn).'
-        ),
-        bs(
-          'Fill Operation code (5 chars) + description (max 20).',
-          'Điền Operation code (5 ký tự) + mô tả (tối đa 20).'
-        ),
-        bs(
-          'Pick Work cell from LOV → hourly rate auto-looks up from Rate Table.',
-          'Chọn Work cell từ LOV → đơn giá/giờ tự tra từ Rate Table.'
-        ),
-        bs(
-          'Enter Setup hours + Run rate (units/hour) + Yield %.',
-          'Nhập Setup hours + Run rate (units/giờ) + Yield %.'
-        ),
-        bs(
-          'Click Save → operation available in Mfg Structures + Complex calc.',
-          'Click Save → công đoạn có sẵn trong Mfg Structures + Complex calc.'
-        ),
-      ]),
-      proc(
-        'Periodic rate audit',
-        'Audit tốc độ định kỳ',
-        bi(
-          'Press run rate decays 2-5% per year without maintenance. Quarterly audit.',
-          'Tốc độ máy xuống cấp 2-5%/năm nếu không bảo dưỡng. Audit hàng quý.'
-        ),
-        [
-          bs(
-            'Pull the last 3 months of shop floor logs for the operation.',
-            'Lấy 3 tháng gần nhất shop floor log cho công đoạn.'
-          ),
-          bs(
-            'Compare actual avg run rate vs. library value.',
-            'So sánh tốc độ trung bình thực tế vs giá trị library.'
-          ),
-          bs(
-            'Update if delta > 5%; note reason in the audit trail.',
-            'Update nếu delta > 5%; note lý do vào audit trail.'
-          ),
-        ]
-      ),
-    ],
-    workflow: null,
-    keyFields: [
-      field('Run rate', 'units/hour', 'Realistic sustained rate, not nameplate.'),
-      field(
-        'Yield',
-        'percent',
-        'Good units out / units in. Defaults from typical; override per process.'
-      ),
-    ],
-    formulas: [],
-    tips: [
-      bt(
-        'Track run rate decay — press ages, rates drop 2-5% per year without maintenance.',
-        'Theo dõi tốc độ xuống cấp — máy càng cũ, tốc độ giảm 2-5%/năm nếu không bảo dưỡng.'
-      ),
-    ],
-    pitfalls: [
-      bp(
-        'Over-optimistic run rates cause under-priced quotes → margin loss at month-end.',
-        'Tốc độ quá lạc quan → báo giá thấp → mất margin cuối tháng.'
-      ),
-    ],
-    relatedTabs: ['lib-mfg', 'complex', 'lib-rate'],
-    screenshot: null,
-  },
-
   // ─────────────────────────────────────────────────────────────
   // TRACKING
   // ─────────────────────────────────────────────────────────────
@@ -2222,7 +2027,7 @@ export const HELP_CONTENT = {
         'Backdate effective date sẽ retroactively đổi tính toán báo giá cũ. Tránh trừ khi sửa lỗi rõ ràng.'
       ),
     ],
-    relatedTabs: ['lib-rop', 'standard', 'complex'],
+    relatedTabs: ['standard', 'complex'],
     screenshot: null,
   },
 
@@ -3952,7 +3757,7 @@ export const HELP_CONTENT = {
     ],
     // Sprint S-PRICING-COMBINED-P2 — Processes section now lives inside
     // the merged "Materials & Process" tab. standard-combined as primary nav.
-    relatedTabs: ['standard-combined', 'standard', 'standard-balancing', 'lib-rop', 'lib-rate'],
+    relatedTabs: ['standard-combined', 'standard', 'standard-balancing', 'lib-rate'],
     screenshot: null,
   },
 
@@ -4503,7 +4308,7 @@ export const HELP_CONTENT = {
         ]
       ),
     ],
-    relatedTabs: ['complex', 'complex-cost-breakdown', 'lib-mfg'],
+    relatedTabs: ['complex', 'complex-cost-breakdown'],
     screenshot: null,
   },
 
@@ -5092,7 +4897,7 @@ export const HELP_CONTENT = {
         'Đổi BOM giữa run sẽ phá explosion — freeze phiên bản BOM cho đơn đang hoạt động.'
       ),
     ],
-    relatedTabs: ['order-entry', 'material-check', 'lib-mfg'],
+    relatedTabs: ['order-entry', 'material-check'],
     screenshot: 'bom-explosion.png',
   },
 

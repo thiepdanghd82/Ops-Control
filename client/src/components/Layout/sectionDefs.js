@@ -37,16 +37,6 @@ export const COST_SECTIONS = [
     ],
   },
   {
-    id: 'manufacturing',
-    labelKey: 'nav.section.manufacturing',
-    label: 'Manufacturing',
-    icon: 'mfg',
-    tabs: [
-      { id: 'lib-mfg', icon: 'mfg', labelKey: 'nav.tab.mfg_structures' },
-      { id: 'lib-rop', icon: 'routing', labelKey: 'nav.tab.routing_ops' },
-    ],
-  },
-  {
     id: 'reports',
     labelKey: 'nav.section.reports',
     label: 'Reports',

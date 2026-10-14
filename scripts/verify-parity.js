@@ -36,8 +36,6 @@ async function main() {
   const sqlite = await loadBackend('sqlite');
 
   const datasets = [
-    ['bom', 'listBom'],
-    ['routing', 'listRouting'],
     ['materialsNpi', 'listMaterialsNpi'],
     ['materialsSourcing', 'listMaterialsSourcing'],
     // Sprint 7.1 shadow-write target. Until /save-all has run at

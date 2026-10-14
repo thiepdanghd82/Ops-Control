@@ -355,33 +355,6 @@ registerStrings({
   'lib.rename': { en: 'Rename', vi: 'Đổi tên' },
   'lib.backup': { en: 'Backup', vi: 'Sao lưu' },
 
-  'lib.mfg_structures': { en: 'Manufacturing Structures', vi: 'Cấu trúc sản xuất' },
-  'lib.mfg_loading': {
-    en: 'Loading Manufacturing Structures...',
-    vi: 'Đang tải Cấu trúc sản xuất...',
-  },
-  'lib.mfg_import': {
-    en: 'Import manufacturing structures from CSV or XLSX (preview before commit)',
-    vi: 'Nhập cấu trúc sản xuất từ CSV hoặc XLSX (xem trước khi ghi)',
-  },
-  'lib.mfg_clear': {
-    en: 'Clear all Manufacturing Structures data (backup kept)',
-    vi: 'Xoá toàn bộ dữ liệu Cấu trúc sản xuất (vẫn giữ bản sao lưu)',
-  },
-  'lib.rop_title': { en: 'Routing Operations', vi: 'Công đoạn định tuyến' },
-  'lib.rop_loading': {
-    en: 'Loading Routing Operations...',
-    vi: 'Đang tải Công đoạn định tuyến...',
-  },
-  'lib.rop_import': {
-    en: 'Import routing operations from CSV or XLSX (preview before commit)',
-    vi: 'Nhập công đoạn định tuyến từ CSV hoặc XLSX (xem trước khi ghi)',
-  },
-  'lib.rop_clear': {
-    en: 'Clear all Routing Operations data (backup kept)',
-    vi: 'Xoá toàn bộ dữ liệu Công đoạn định tuyến (vẫn giữ bản sao lưu)',
-  },
-
   // ─── License Manager (wave 5) ───────────────────────────────────────────
   // This screen shipped Vietnamese-only in PR #105 — an English reader saw
   // Vietnamese with no English anywhere, the mirror of what waves 3 and 4 were

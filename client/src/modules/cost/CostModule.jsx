@@ -41,8 +41,6 @@ const LibRate = lazy(() => import('./tabs/LibRate'));
 const LibDDL = lazy(() => import('./tabs/LibDDL'));
 const LibFinance = lazy(() => import('./tabs/LibFinance'));
 const MachineTechnicalTab = lazy(() => import('./tabs/MachineTechnicalTab'));
-const LibMfg = lazy(() => import('./tabs/LibMfg'));
-const LibRop = lazy(() => import('./tabs/LibRop'));
 const QuoteAnalysis = lazy(() => import('./tabs/QuoteAnalysis'));
 const Dashboard = lazy(() => import('./tabs/Dashboard'));
 const InkCalculator = lazy(() => import('./tabs/InkCalculator'));
@@ -80,8 +78,6 @@ export const TAB_COMPONENTS = {
   'lib-ddl': LibDDL,
   'lib-finance': LibFinance,
   'lib-machine-tech': MachineTechnicalTab,
-  'lib-mfg': LibMfg,
-  'lib-rop': LibRop,
   'quote-analysis': QuoteAnalysis,
   dashboard: Dashboard,
   'ink-calc': InkCalculator,
@@ -118,8 +114,6 @@ export const TAB_TITLES = {
   'lib-ddl': 'Drop-down Lists',
   'lib-finance': 'Cost refer',
   'lib-machine-tech': 'Machine Technical',
-  'lib-mfg': 'Mfg Structure',
-  'lib-rop': 'Routing Operations',
   'quote-analysis': 'Quote Analysis',
   dashboard: 'Dashboard',
   'ink-calc': 'Ink Calculator',

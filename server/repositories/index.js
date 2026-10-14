@@ -24,8 +24,6 @@ const BACKEND_NAME = (process.env.OPS_DATA_BACKEND || 'file').toLowerCase();
 // for phased rollout. Value is either 'file' or 'sqlite'. Invalid /
 // missing values fall back to BACKEND_NAME.
 const DATASET_ENV = {
-  bom: 'OPS_BACKEND_BOM',
-  routing: 'OPS_BACKEND_ROUTING',
   materials_npi: 'OPS_BACKEND_MATERIALS_NPI',
   materials_sourcing: 'OPS_BACKEND_MATERIALS_SOURCING',
   quotes: 'OPS_BACKEND_QUOTES',
@@ -66,30 +64,11 @@ export function getBackendSummary() {
 
 // Public read API. Each method picks its backend from per-dataset env
 // overrides so ops can flip one dataset at a time during cutover.
-export function listBom() {
-  return backendFor('bom').listBom();
-}
-export function listRouting() {
-  return backendFor('routing').listRouting();
-}
 export function listMaterialsNpi() {
   return backendFor('materials_npi').listMaterialsNpi();
 }
 export function listMaterialsSourcing() {
   return backendFor('materials_sourcing').listMaterialsSourcing();
-}
-
-// Per-part filters. In file backend these walk the array in-memory;
-// sqlite backend could use indexed `WHERE part_no = ?` but the results
-// are bucketed via raw_json reconstruction, so we keep it backend-
-// agnostic: just filter the full list. Still O(n) but n < 40k and
-// these endpoints are rarely called (quote detail views only).
-export function listBomForPart(partNo) {
-  return listBom().filter((r) => r['Parent Part No'] === partNo || r['parent_part_no'] === partNo);
-}
-
-export function listRoutingForPart(partNo) {
-  return listRouting().filter((r) => r['Part No'] === partNo || r['part_no'] === partNo);
 }
 
 export function listQuotes() {

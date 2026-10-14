@@ -19,9 +19,8 @@ import {
   _resetTokens,
 } from './importPipeline.js';
 import { getDataset, DATASETS } from './importDatasets.js';
+import { BOM_DATASET as BOM, ROUTING_DATASET as ROUTING } from './importPipeline.fixtures.js';
 
-const BOM = getDataset('bom');
-const ROUTING = getDataset('routing');
 const NPI = getDataset('npi-materials');
 const SOURCING = getDataset('sourcing-db');
 

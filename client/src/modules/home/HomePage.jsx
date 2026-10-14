@@ -62,7 +62,6 @@ export default function HomePage({ onTabChange }) {
   const moduleShortcuts = useMemo(
     () => [
       { sid: 'calculators', icon: 'calc_std', labelKey: 'nav.section.calculators' },
-      { sid: 'manufacturing', icon: 'mfg', labelKey: 'nav.section.manufacturing' },
       { sid: 'reports', icon: 'dashboard', labelKey: 'nav.section.reports' },
     ],
     []
