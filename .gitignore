@@ -65,6 +65,6 @@ desktop/package.json.backup-*
 Data for import/
 
 # UAT raw feedback — contains customer PII, never commit
-   docs/uat/runs/*/feedback.md
-   docs/uat/runs/*/screenshots/
+   docs/quality/uat/runs/*/feedback.md
+   docs/quality/uat/runs/*/screenshots/
 

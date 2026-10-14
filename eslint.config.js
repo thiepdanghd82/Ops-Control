@@ -26,7 +26,7 @@ export default [
       '_legacy/',
       'backup/',
       'dist/',
-      'docs/audit-2026-04-17/',
+      'docs/quality/audit/2026-04-17/',
       // Claude Code Agent worktrees — temporary on-disk clones used by
       // sub-agents (see Agent tool docs). Treating them as source rots
       // lint output with duplicates of files that already get linted

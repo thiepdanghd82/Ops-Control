@@ -92,7 +92,7 @@ if (-not (Test-Path $CertPath)) {
   Write-Host "  ✓ Exported CER (for GPO push): $CertExportPath" -ForegroundColor Green
   Write-Host ""
   Write-Host "  NEXT: Send $CertExportPath to IT để push qua GPO." -ForegroundColor Cyan
-  Write-Host "        Xem hướng dẫn: docs/INTERNAL_TRUST_SETUP.md"   -ForegroundColor Cyan
+  Write-Host "        Xem hướng dẫn: docs/operations/INTERNAL_TRUST_SETUP.md"   -ForegroundColor Cyan
   Write-Host ""
 }
 else {
@@ -130,4 +130,4 @@ Write-Host "  ✓ Signer: $($signResult.SignerCertificate.Subject)"
 Write-Host ""
 Write-Host "═══ Done ═══" -ForegroundColor Cyan
 Write-Host "Verify: signtool verify /v /pa `"$InstallerPath`""
-Write-Host "GPO push: docs/INTERNAL_TRUST_SETUP.md"
+Write-Host "GPO push: docs/operations/INTERNAL_TRUST_SETUP.md"

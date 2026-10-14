@@ -4593,8 +4593,8 @@ export const HELP_CONTENT = {
         'Ô tìm trong Help vẫn đọc CẢ HAI ngôn ngữ, nên bạn có thể gõ tên trường tiếng Anh trong khi giao diện đang tiếng Việt mà vẫn tìm ra mục cần.'
       ),
       bt(
-        'Full detail for this release, including the operator and admin guides for Pricing Snapshot, is in RELEASE-NOTES-v1.6.0.md and docs/cutover/ in the repository.',
-        'Chi tiết đầy đủ của bản này, gồm hướng dẫn cho operator và admin về Pricing Snapshot, nằm trong RELEASE-NOTES-v1.6.0.md và docs/cutover/ của repository.'
+        'Full detail for this release, including the operator and admin guides for Pricing Snapshot, is in docs/releases/RELEASE-NOTES-v1.6.0.md and docs/operations/cutover/ in the repository.',
+        'Chi tiết đầy đủ của bản này, gồm hướng dẫn cho operator và admin về Pricing Snapshot, nằm trong docs/releases/RELEASE-NOTES-v1.6.0.md và docs/operations/cutover/ của repository.'
       ),
     ],
     pitfalls: [

@@ -23,7 +23,7 @@
  *   1 = fatal error (cannot read xlsx, cannot reach API, auth failure)
  *   2 = usage error (bad flags / missing required flag)
  *
- * Reference: docs/cutover/ROLLBACK-RUNBOOK-20260522.md §B.5
+ * Reference: docs/operations/cutover/ROLLBACK-RUNBOOK-20260522.md §B.5
  */
 import XLSX from 'xlsx';
 import path from 'path';

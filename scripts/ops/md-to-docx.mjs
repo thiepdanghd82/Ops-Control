@@ -3,7 +3,7 @@
  * md-to-docx.mjs — lightweight Markdown → .docx converter for the ops runbooks.
  *
  * No pandoc on the box + no markdown parser in node_modules, so this hand-rolls
- * just the subset used by docs/ops/*.md: H1/H2/H3, paragraphs, **bold**,
+ * just the subset used by docs/operations/ops/*.md: H1/H2/H3, paragraphs, **bold**,
  * `inline code`, [text](url), tables, "- " bullets, "- [ ]" checkboxes,
  * ``` fenced code, "> " blockquotes, "---" horizontal rule, emoji.
  *

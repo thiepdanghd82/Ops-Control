@@ -13,11 +13,11 @@ description: Ops Control shared-language glossary.
 ## People & places
 
 - **Henry / Đặng Thế Thiệp** — project owner; runs the operator hardware tests.
-- **Hương** — Backup Engineer (SPOF mitigation; onboarding brief in `docs/cutover/`).
+- **Hương** — Backup Engineer (SPOF mitigation; onboarding brief in `docs/operations/cutover/`).
 - **CCL Vietnam (Hai Phong)** — production site. Go-live target: **2026-06-30**.
   The site is **Hai Phong**, and the licence card reads `CCL Design Vietnam — Hai Phong`.
   Two older names survive on purpose. **Yen Phong** and **Hai Duong** are left untouched in
-  dated records (CLAUDE.md sprint history, CHANGELOG, `docs/cutover/*-2026-*.md`,
+  dated records (CLAUDE.md sprint history, CHANGELOG, `docs/operations/cutover/*-2026-*.md`,
   `docs/archive/`) because rewriting a dated document to say something it did not say is
   worse than the confusion it saves. They also stay in **test data** — `Hai Duong` is a site
   KEY in `sga_rate_pct_by_site` inside the frozen-quote fixtures, so changing it would break

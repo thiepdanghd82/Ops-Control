@@ -98,7 +98,7 @@ echo "  ✓ client/dist ($(du -sh client/dist | cut -f1))"
 
 # ─── 3. Build installers ─────────────────────────────────────────────
 # Note: Mặc định CHẠY UNSIGNED + post-build sign bằng self-signed
-# (Win: PowerShell script, Mac: ad-hoc). Xem docs/INTERNAL_TRUST_SETUP.md
+# (Win: PowerShell script, Mac: ad-hoc). Xem docs/operations/INTERNAL_TRUST_SETUP.md
 # để hiểu cách push trust qua GPO / IT-distribute.
 # Nếu sau này có EV cert thật: set CSC_LINK + CSC_KEY_PASSWORD trước
 # khi chạy release.sh, electron-builder sẽ ưu tiên dùng cert đó.

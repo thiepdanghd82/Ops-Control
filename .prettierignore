@@ -7,7 +7,8 @@ server/data/
 _legacy/
 backup/
 dist/
-docs/audit-2026-04-17/
+docs/releases/RELEASE_NOTES_v1.3.0*.md
+docs/quality/audit/2026-04-17/
 client/public/help/
 *.lock
 package-lock.json

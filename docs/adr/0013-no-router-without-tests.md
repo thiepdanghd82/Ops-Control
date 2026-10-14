@@ -96,7 +96,7 @@ once `basis/backup.test.js` lands.
 - **Pattern enforcement automatic.** New engineers can't ship a
   router without realising tests are required — they discover it
   at PR time, not at incident time.
-- **Coverage trend tracks reality.** `docs/COVERAGE_BASELINE.md`
+- **Coverage trend tracks reality.** `docs/quality/COVERAGE_BASELINE.md`
   stays accurate because every router file has a paired test
   file contributing to the measured surface.
 

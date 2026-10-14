@@ -4,7 +4,7 @@
  * for Rollback Runbook B (operational outage fallback to Excel).
  *
  * Usage: node scripts/build-fallback-templates.mjs
- * Output: docs/cutover/templates/Fallback_*.xlsx
+ * Output: docs/operations/cutover/templates/Fallback_*.xlsx
  *
  * Re-run this script if any column/order changes — the xlsx files are
  * the canonical operator templates and SHOULD be committed (small files
@@ -22,7 +22,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TEMPLATES_DIR = path.resolve(__dirname, '../docs/cutover/templates');
+const TEMPLATES_DIR = path.resolve(__dirname, '../docs/operations/cutover/templates');
 
 // Per Runbook §B.4 — 7 columns
 const QUOTE_COLUMNS = [

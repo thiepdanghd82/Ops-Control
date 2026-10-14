@@ -101,7 +101,9 @@ export function logBootIntegrityProbe() {
   console.error('       Errors (first 5):');
   for (const e of result.errors.slice(0, 5)) console.error(`         - ${e}`);
   console.error('');
-  console.error('       Recovery (per docs/retention/RETENTION_20Y_STRATEGY.md + CLAUDE.md');
+  console.error(
+    '       Recovery (per docs/operations/retention/RETENTION_20Y_STRATEGY.md + CLAUDE.md'
+  );
   console.error('       "All data gone after a restore" playbook):');
   console.error('       1. STOP — do NOT continue boot, do NOT take a new backup');
   console.error('          (would propagate corruption to off-site rsync)');

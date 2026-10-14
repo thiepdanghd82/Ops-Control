@@ -19,7 +19,7 @@
 #   blockage.
 #
 # Trust model:
-#   Operator verifies the DMG SHA-256 against `dist/checksums.txt` BEFORE
+#   Operator verifies the DMG SHA-256 against `docs/releases/checksums-v1.3.0.txt` BEFORE
 #   running this script. The checksum is published on the trusted CCL HQ
 #   channel (Drive, internal portal). The bundle marker inside each DMG
 #   (verifiable via scripts/verify-bundle-marker.sh) ties the binary to

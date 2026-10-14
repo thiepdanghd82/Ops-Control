@@ -11,7 +11,7 @@
  *          $HOME/Library/Application Support/ops-control-desktop/data/ops.db
  *   --db OPS_DATA_DIR/ops.db when OPS_DATA_DIR is set (standalone server)
  *
- * The template at docs/uat/smoke-quotes/2026-06-09-baseline.md expects
+ * The template at docs/quality/uat/smoke-quotes/2026-06-09-baseline.md expects
  * 11 fields per quote. Field-name mapping (template → result.<key>):
  *   GM%           → gm
  *   VA%           → va

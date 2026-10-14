@@ -22,7 +22,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const LOG_PATH = path.resolve(__dirname, '..', 'UPGRADE_LOG.md');
+const LOG_PATH = path.resolve(__dirname, '..', 'docs', 'releases', 'UPGRADE_LOG.md');
 
 function parsePhases(md) {
   const lines = md.split('\n');

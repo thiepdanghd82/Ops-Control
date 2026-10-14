@@ -16,7 +16,7 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const OUT_DIR = path.join(__dirname, '..', 'Use guide');
+const OUT_DIR = path.join(__dirname, '..', 'docs', 'user-guide');
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
 // ── Palette (matches the reference CCL_Pricing_Training file) ───

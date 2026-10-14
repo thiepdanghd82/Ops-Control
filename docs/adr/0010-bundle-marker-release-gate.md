@@ -33,7 +33,7 @@ be:
 
 1. Tagged as a release in git.
 2. Posted to the customer download page.
-3. Listed in `RELEASE_NOTES_v1.3.md` or `dist/checksums.txt`.
+3. Listed in `RELEASE_NOTES_v1.3.md` or `docs/releases/checksums-v1.3.0.txt`.
 4. Installed on a CCL Vietnam plant production machine.
 
 ### Build-time invariants
@@ -52,7 +52,7 @@ We do NOT ask customers to verify the marker (they can't be expected
 to run a bash script). The marker is a chain-of-custody mechanism:
 
 - CCL HQ verifies before publishing → checksum is in
-  `dist/checksums.txt` → customer verifies SHA-256 of the DMG they
+  `docs/releases/checksums-v1.3.0.txt` → customer verifies SHA-256 of the DMG they
   downloaded matches the checksum.
 
 If the SHA-256 matches, the marker matches by construction (the
@@ -126,7 +126,7 @@ revisited then.
 ### Hashing the entire dist/ tree
 
 Rejected. SHA-256 already covers that — it's already in
-`dist/checksums.txt`. The marker is for a DIFFERENT question:
+`docs/releases/checksums-v1.3.0.txt`. The marker is for a DIFFERENT question:
 "is this binary from the source commit I claim?" — not "are these
 bytes intact?". Different questions, different mechanisms.
 

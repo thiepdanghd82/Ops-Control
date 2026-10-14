@@ -22,6 +22,7 @@ import puppeteer from 'puppeteer-core';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { REVIEW_MIRROR_DIR } from './reviewMirrorDir.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -167,7 +168,7 @@ try {
   await browser.close();
 }
 
-const outPath = path.resolve(__dirname, '../../../../4. CLAUDE OUTPUT/self-test-report.json');
+const outPath = path.join(REVIEW_MIRROR_DIR, 'self-test-report.json');
 fs.mkdirSync(path.dirname(outPath), { recursive: true });
 fs.writeFileSync(outPath, JSON.stringify(report, null, 2));
 

@@ -165,5 +165,5 @@ license re-issue to be a JSON file swap, not a reinstall.
 - `scripts/license/generate-license.mjs` — CCL HQ signing CLI
 - `scripts/license/generate-keypair.mjs` — Ed25519 keypair generator
 - `docs/SECURITY.md §3` — license verification chain
-- `docs/ARCHITECTURE.md §5` — license flow diagram
+- `docs/architecture/ARCHITECTURE.md §5` — license flow diagram
 - ADR-0003 — Ed25519 license signing (asymmetric replaces HMAC)

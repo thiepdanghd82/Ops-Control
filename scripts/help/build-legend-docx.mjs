@@ -20,6 +20,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { REVIEW_MIRROR_DIR } from './reviewMirrorDir.mjs';
 import {
   Document,
   Packer,
@@ -1697,7 +1698,7 @@ const doc = new Document({
 
 // ── Write outputs ─────────────────────────────────────────────
 const PUBLIC_OUT = path.resolve(__dirname, '../../client/public/help/PricingLegend.docx');
-const REVIEW_OUT = path.resolve(__dirname, '../../../../4. CLAUDE OUTPUT/PricingLegend.docx');
+const REVIEW_OUT = path.join(REVIEW_MIRROR_DIR, 'PricingLegend.docx');
 
 const buffer = await Packer.toBuffer(doc);
 fs.mkdirSync(path.dirname(PUBLIC_OUT), { recursive: true });

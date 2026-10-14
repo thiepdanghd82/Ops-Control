@@ -142,4 +142,4 @@ if (desktop.isAvailable) {
 
 - Chi tiết kiến trúc + lộ trình: [`SOLUTION_v1.1.md`](../SOLUTION_v1.1.md)
 - Codebase v1.0: [`CLAUDE.md`](../CLAUDE.md)
-- IT deployment guide: `docs/DESKTOP_DEPLOYMENT.md` (Sprint 5)
+- IT deployment guide: `docs/operations/DESKTOP_DEPLOYMENT.md` (Sprint 5)

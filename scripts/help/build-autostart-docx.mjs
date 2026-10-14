@@ -10,13 +10,14 @@
  * Usage:
  *   node scripts/help/build-autostart-docx.mjs
  *
- * Companion to docs/ops/AUTOSTART_SETUP.md (developer-facing markdown).
+ * Companion to docs/operations/ops/AUTOSTART_SETUP.md (developer-facing markdown).
  * This .docx targets Hương + sales operators who need printable copy.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { REVIEW_MIRROR_DIR } from './reviewMirrorDir.mjs';
 import {
   Document,
   Packer,
@@ -630,7 +631,7 @@ async function main() {
 
   // Output to 2 locations
   const publicDir = path.join(ROOT, 'client', 'public', 'help');
-  const mirrorDir = path.resolve(ROOT, '..', '..', '4. CLAUDE OUTPUT');
+  const mirrorDir = REVIEW_MIRROR_DIR;
 
   fs.mkdirSync(publicDir, { recursive: true });
   const primaryOut = path.join(publicDir, 'Autostart_Setup_Guide.docx');

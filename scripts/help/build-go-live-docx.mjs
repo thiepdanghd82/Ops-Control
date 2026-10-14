@@ -1,5 +1,5 @@
 /**
- * build-go-live-docx.mjs — convert docs/GO_LIVE_GUIDE.md → DOCX.
+ * build-go-live-docx.mjs — convert docs/operations/GO_LIVE_GUIDE.md → DOCX.
  *
  * Outputs:
  *   - client/public/help/OpsControl_GoLiveGuide_v1.2.docx   (canonical, inside worktree)
@@ -23,6 +23,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { REVIEW_MIRROR_DIR } from './reviewMirrorDir.mjs';
 import {
   Document,
   Packer,
@@ -43,7 +44,7 @@ import {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
-const SRC = path.join(ROOT, 'docs', 'GO_LIVE_GUIDE.md');
+const SRC = path.join(ROOT, 'docs', 'operations', 'GO_LIVE_GUIDE.md');
 
 // Canonical output — always inside the worktree, always succeeds.
 const PUBLIC_OUT = path.join(ROOT, 'client', 'public', 'help', 'OpsControl_GoLiveGuide_v1.2.docx');
@@ -51,9 +52,7 @@ const PUBLIC_OUT = path.join(ROOT, 'client', 'public', 'help', 'OpsControl_GoLiv
 // Optional review mirror to the sibling "4. CLAUDE OUTPUT/" dir used by the
 // canonical CCL Cowork layout. Override with OPS_DOCS_MIRROR_DIR; skipped
 // when the target parent isn't writable (e.g. /tmp/ worktrees, fresh clones).
-const MIRROR_DIR = process.env.OPS_DOCS_MIRROR_DIR
-  ? path.resolve(process.env.OPS_DOCS_MIRROR_DIR)
-  : path.resolve(ROOT, '..', '..', '4. CLAUDE OUTPUT');
+const MIRROR_DIR = REVIEW_MIRROR_DIR;
 const MIRROR_FILE = path.join(MIRROR_DIR, 'OpsControl_GoLiveGuide_v1.2.docx');
 
 if (!fs.existsSync(SRC)) {

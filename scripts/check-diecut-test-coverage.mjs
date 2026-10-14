@@ -4,7 +4,7 @@
  * sibling test coverage in calcEngine.diecut.golden.test.js.
  *
  * Phase 1.3 of Debug Playbook (2026-06-20). Enforces the
- * docs/tests/diecut-coverage-gap.md rule:
+ * docs/quality/tests/diecut-coverage-gap.md rule:
  *   "Mỗi lần operator thêm tool_life type mới qua DDL → bắt buộc
  *    kèm 1 golden test."
  *
@@ -136,7 +136,7 @@ async function main() {
     );
     console.error(
       `\nWhy this matters: a die type in DDL but not pinned by a known-answer test silently ` +
-        `accepts any drift in the tooling formula. Per docs/tests/diecut-coverage-gap.md Phase 1.3 rule.`
+        `accepts any drift in the tooling formula. Per docs/quality/tests/diecut-coverage-gap.md Phase 1.3 rule.`
     );
     process.exit(1);
   }

@@ -89,7 +89,7 @@ The legacy URL retires when ALL of:
 1. Client UI no longer hits the legacy URL (grep `client/src/**` for
    the literal path; should return zero matches).
 2. No external scripts / external integrations are documented to
-   hit it (check `Use guide/`, `INSTALL.command`, customer-facing
+   hit it (check `docs/user-guide/`, `INSTALL.command`, customer-facing
    docs).
 3. Two consecutive sprints pass without a defect filed against the
    new URL — proves the new path is stable.

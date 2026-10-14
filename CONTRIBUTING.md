@@ -212,7 +212,7 @@ If your change touches ANY of:
 
 When in doubt about WHERE a new piece of code goes, consult:
 
-- `docs/ARCHITECTURE.md §9` — current ADR table (6 entries).
+- `docs/architecture/ARCHITECTURE.md §9` — current ADR table (6 entries).
 - For NEW architectural decisions: write `docs/adr/NNNN-<short-name>.md`
   (numbered, dated, lists alternatives + rationale + impact).
 

@@ -77,7 +77,7 @@ if (jsonOut) {
     console.error(`  ...and ${result.drift.length - 10} more (see --json for full list)`);
   }
   console.error('');
-  console.error('Recovery (per docs/retention/RETENTION_20Y_STRATEGY.md):');
+  console.error('Recovery (per docs/operations/retention/RETENTION_20Y_STRATEGY.md):');
   console.error('  1. STOP — do NOT take fresh backup (would propagate drift)');
   console.error('  2. Inspect drift row IDs above + cross-reference application logs');
   console.error('  3. Restore affected rows from last good backup (per quote_id)');

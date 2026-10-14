@@ -3,7 +3,7 @@
  * (2026-06-20). Mirrors calcEngine.golden.test.js pattern (node:test,
  * locked numeric outputs) but focuses on tooling cost formula across
  * die types + edge cases identified in
- * docs/tests/diecut-coverage-gap.md.
+ * docs/quality/tests/diecut-coverage-gap.md.
  *
  * Coverage targets the 6 real gaps in the gap doc:
  * - T1  0.8 EAU cap factor explicit pin (Henry 2026-06-15 spec)

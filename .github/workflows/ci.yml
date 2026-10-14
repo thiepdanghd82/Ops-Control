@@ -94,7 +94,7 @@ jobs:
 
   diecut-test-coverage:
     # Phase 1.3 of Debug Playbook (2026-06-20). Enforces the rule
-    # in docs/tests/diecut-coverage-gap.md: every die type added to
+    # in docs/quality/tests/diecut-coverage-gap.md: every die type added to
     # the test fixture must have a sibling golden test exercising
     # it via tool_type. Catches silent acceptance of formula drift
     # for new die types.

@@ -181,7 +181,7 @@ upgrade status per operator in Settings → Account Control.
 ## [Unreleased] — Step B P0 fixes (Production Readiness Audit closure)
 
 Branch: `fix/pre-go-live-p0` — 7 commits + 1 commit on `main` (Fix 6 B3 disposition).
-Verdict: ⚠ GO WITH CONDITIONS → ✅ **GO** (2026-05-04). Full report: `docs/audit/STEP-B-fix-summary.md`.
+Verdict: ⚠ GO WITH CONDITIONS → ✅ **GO** (2026-05-04). Full report: `docs/quality/audit/STEP-B-fix-summary.md`.
 
 ### Security
 
@@ -194,7 +194,7 @@ Verdict: ⚠ GO WITH CONDITIONS → ✅ **GO** (2026-05-04). Full report: `docs/
   Per-username lockout response also unified (was 429, now 401); `Retry-After` HTTP header preserved
   per RFC 7231 §7.1.3. Server-side audit log keeps rich branch detail for forensics. Client i18n:
   `login.error.invalid_credentials` (EN/VI) plus legacy-string mapper for the kiosk-PWA stale-cache
-  window. Operator guide: `docs/Use guide/login-retry.md` (EN+VI).
+  window. Operator guide: `docs/user-guide/login-retry.md` (EN+VI).
 - Closes per-username lockout enumeration vector as a side effect (was leaking via 429 vs 401 status
   - readable lockout text).
 
@@ -242,13 +242,13 @@ misconfig)`. Secret-named values masked to `<N chars>` via expanded pattern
   re-issue, no client URL update, no downtime). New §9 Feature flags (`mes.workOrder.enabled`,
   `mes.kiosk.enabled` both default-false, `OPS_KIOSK_KEY` env var). Rewritten §10 Rollback with
   Sprint 1.7 snapshot pattern. §11 Deferred items now points to CLAUDE.md MES-3 backlog.
-- **Step B audit summary** (`docs/audit/STEP-B-fix-summary.md`) — per-fix evidence, hidden-findings
+- **Step B audit summary** (`docs/quality/audit/STEP-B-fix-summary.md`) — per-fix evidence, hidden-findings
   registry (4 items), cumulative test count, final P0 status table.
-- **Fix 6 WIP triage report** (`docs/audit/FIX-6-CLASSIFICATION.md`, commit `d48afa8`) — 42 working-
+- **Fix 6 WIP triage report** (`docs/quality/audit/FIX-6-CLASSIFICATION.md`, commit `d48afa8`) — 42 working-
   tree entries classified into A (audit evidence) / B1 (UI redesign sprint, deferred) / B2 (Order
   Entry FG sync feature, deferred) / B3 (ERPAG research, committed to main as `970163a`). Triple
   recovery anchor (git tag + tarball + git stash verify).
-- 6 verify-screenshot artifacts committed to `docs/audit/screenshots/` (Fix 3 locale switch + unified
+- 6 verify-screenshot artifacts committed to `docs/quality/audit/screenshots/` (Fix 3 locale switch + unified
   error in EN/VI; Fix 4 a11y in EN/VI). Future audit replays can compare against same baseline
   without re-running Puppeteer.
 - ERPAG market-survey research filed against `main` (`970163a`, separate from the P0 hotfix branch).
@@ -285,7 +285,7 @@ misconfig)`. Secret-named values masked to `<N chars>` via expanded pattern
 
 ## [1.4.1-mes-2-kiosk] — Sprint MES-2 (Shop-floor Kiosk + Dispatch)
 
-Branch `feature/mes-2-kiosk-dispatch` · 9 commits · ~3,286 code-only LOC added (+28% over plan; first-of-kind UI overhead absorbed) · 980 / 980 server tests green at sprint exit (was 696 pre-MES-2; +284 across the sprint) plus 3 Playwright e2e specs (compile-checked via `npx playwright test --list`; runtime needs `npx playwright install chromium` once on the dev box). Feature-flagged behind `mes.kiosk.enabled` (default `false` — production fail-closed; reuses `mes.workOrder.enabled` flag-file convention from MES-1). See `docs/MES_EXTENSION_PLAN.md` §3.3 for sprint scope.
+Branch `feature/mes-2-kiosk-dispatch` · 9 commits · ~3,286 code-only LOC added (+28% over plan; first-of-kind UI overhead absorbed) · 980 / 980 server tests green at sprint exit (was 696 pre-MES-2; +284 across the sprint) plus 3 Playwright e2e specs (compile-checked via `npx playwright test --list`; runtime needs `npx playwright install chromium` once on the dev box). Feature-flagged behind `mes.kiosk.enabled` (default `false` — production fail-closed; reuses `mes.workOrder.enabled` flag-file convention from MES-1). See `docs/plans/mes/MES_EXTENSION_PLAN.md` §3.3 for sprint scope.
 
 ### Added
 
@@ -411,7 +411,7 @@ Brief one-liners; full ACs in `CLAUDE.md` "## MES-3 Backlog" section.
 
 ## [1.4.0-mes-extension] — Sprint MES-1 (Work Order Core)
 
-Branch `feature/mes-1-work-order` · 7 commits · 6,110 LOC added · 107 planning-domain tests across 38 suites, all green. Feature-flagged behind `mes.workOrder.enabled` (default `false` — production fail-closed). See `docs/MES_EXTENSION_PLAN.md` §3.1 + §4 for sprint scope and roadmap.
+Branch `feature/mes-1-work-order` · 7 commits · 6,110 LOC added · 107 planning-domain tests across 38 suites, all green. Feature-flagged behind `mes.workOrder.enabled` (default `false` — production fail-closed). See `docs/plans/mes/MES_EXTENSION_PLAN.md` §3.1 + §4 for sprint scope and roadmap.
 
 ### Added
 
@@ -470,10 +470,10 @@ Bundle delta gzipped: ~7 KB for the entire feature-flagged Work Orders v2 UI.
 
 ### References
 
-- `docs/MES_EXTENSION_PLAN.md` §3.1 (Production Control core), §4 sprint roadmap
-- `docs/MES_PROMPTING_GUIDE.md` §4.1 MES-1 prompt template
-- `docs/MES_ANTIGRAVITY_PROMPTS.md` (Antigravity execution flow used for the sprint)
-- `docs/MES_ANTIGRAVITY_PROMPTS_SPRINT_MES-2.md` (next-sprint launch prompt, generated at retro)
+- `docs/plans/mes/MES_EXTENSION_PLAN.md` §3.1 (Production Control core), §4 sprint roadmap
+- `docs/plans/mes/MES_PROMPTING_GUIDE.md` §4.1 MES-1 prompt template
+- `docs/plans/mes/MES_ANTIGRAVITY_PROMPTS.md` (Antigravity execution flow used for the sprint)
+- `docs/plans/mes/MES_ANTIGRAVITY_PROMPTS_SPRINT_MES-2.md` (next-sprint launch prompt, generated at retro)
 - ADR-0001 (on-prem stack — drove every "stay simple" decision)
 
 ### Manual smoke checklist (must pass before staging flip)
@@ -549,7 +549,7 @@ Same-day re-release after a focused 6-fix sweep landed in response to install-ti
 
 ## [1.3.0] — 2026-04-30 (GA, initial)
 
-Promoted from rc.5 with no deltas other than the version bump. Full operator-facing changelog in `dist/RELEASE_NOTES_v1.3.0.md`.
+Promoted from rc.5 with no deltas other than the version bump. Full operator-facing changelog in `docs/releases/RELEASE_NOTES_v1.3.0.md`.
 
 ### Test pass rate at GA
 
@@ -557,7 +557,7 @@ Promoted from rc.5 with no deltas other than the version bump. Full operator-fac
 - Desktop license: 6 / 6
 - Client (incl. i18n + DecimalInput budget): 572 / 572
 - Scripts: 17 / 17
-- **Total: 670 / 670** (pre-existing v1.2 tests in `server/routes/chat.*` and `server/repositories/quotesStore.*` excluded — see `dist/RELEASE_NOTES_v1.3.0.md` "Known issues").
+- **Total: 670 / 670** (pre-existing v1.2 tests in `server/routes/chat.*` and `server/repositories/quotesStore.*` excluded — see `docs/releases/RELEASE_NOTES_v1.3.0.md` "Known issues").
 
 ### Test fixes during the GA gate
 
@@ -567,7 +567,7 @@ Promoted from rc.5 with no deltas other than the version bump. Full operator-fac
 
 ## [1.3.0-rc.5] — 2026-04-30
 
-Release candidate before promoting to `1.3.0` final. See `dist/RELEASE_NOTES_v1.3.0-rc.5.md`.
+Release candidate before promoting to `1.3.0` final. See `docs/releases/RELEASE_NOTES_v1.3.0-rc.5.md`.
 
 ### Changed
 
@@ -579,8 +579,8 @@ Release candidate before promoting to `1.3.0` final. See `dist/RELEASE_NOTES_v1.
 - `server/domains/security/routes/audit.test.js` — 8 contract tests pinning the audit router's auth/role/filter/error behaviour.
 - `server/domains/basis/routes/backup.test.js` — 7 tests covering schedule GET/PUT + run-now lifecycle.
 - `server/platform/csv/index.test.js` — 10 tests pinning rateRows + ddlToCsvRows.
-- `docs/COSTAPI_EXTRACTION_ROADMAP.md` — 69-endpoint inventory, P1–P7 sprint plan, ADR-0009 retirement criteria.
-- `dist/RELEASE_NOTES_v1.3.0-rc.5.md`.
+- `docs/plans/COSTAPI_EXTRACTION_ROADMAP.md` — 69-endpoint inventory, P1–P7 sprint plan, ADR-0009 retirement criteria.
+- `docs/releases/RELEASE_NOTES_v1.3.0-rc.5.md`.
 
 ### Migrated
 
@@ -696,7 +696,7 @@ basis,mes}/`. First extracted router: `security/routes/audit.js`.
 ### Build
 
 - 4 macOS DMG installers built (CLIENT + SERVER × arm64 + x64),
-  staged in `dist/` with SHA-256 checksums in `dist/checksums.txt`.
+  staged in `dist/` with SHA-256 checksums in `docs/releases/checksums-v1.3.0.txt`.
 - Windows `.exe` builds deferred — no Windows host or Wine on the
   current build env. CI workflow includes a path for it on
   `macos-14`/`windows-latest`.
@@ -742,9 +742,9 @@ Fresh start branch from v1.1. Same baseline (Carbon Login + Hardware UI + Import
 
 ### Documentation
 
-- [docs/LAN_DEPLOYMENT_GUIDE.md](docs/LAN_DEPLOYMENT_GUIDE.md) — 6/20-user setup chi tiết: macOS launchd + Windows NSSM + backup cron + multi-user behavior + troubleshooting matrix
-- [docs/GO_LIVE_READINESS.md](docs/GO_LIVE_READINESS.md) — P0/P1/P2 audit + risk register + verdict
-- [docs/ENTERPRISE_HARDENING.md](docs/ENTERPRISE_HARDENING.md) — IBM-style 3-2-1 backup proposal, 3 mục tiêu (auto-start + reconnect, data protection, security), roadmap 3 đợt
+- [docs/operations/LAN_DEPLOYMENT_GUIDE.md](docs/operations/LAN_DEPLOYMENT_GUIDE.md) — 6/20-user setup chi tiết: macOS launchd + Windows NSSM + backup cron + multi-user behavior + troubleshooting matrix
+- [docs/operations/GO_LIVE_READINESS.md](docs/operations/GO_LIVE_READINESS.md) — P0/P1/P2 audit + risk register + verdict
+- [docs/operations/ENTERPRISE_HARDENING.md](docs/operations/ENTERPRISE_HARDENING.md) — IBM-style 3-2-1 backup proposal, 3 mục tiêu (auto-start + reconnect, data protection, security), roadmap 3 đợt
 
 ### Audit findings (concurrency-safe verified)
 
@@ -814,7 +814,7 @@ Fresh start branch from v1.1. Same baseline (Carbon Login + Hardware UI + Import
 
 - **Active Sessions admin tab** — [Settings.jsx AccountSection](client/src/modules/cost/tabs/Settings.jsx) → Sessions sub-tab (sys-only). Shows username, role, 2FA status, token prefix, expires-in for every active session. "Revoke" button per-row → POST `/api/auth/sessions/revoke` kicks user from all machines. Pairs with login anomaly detection: when admin sees `LOGIN_ANOMALY` toast, they can immediately revoke the suspicious user's sessions from this tab.
 - **Runtime smoke test** — [scripts/smoke-runtime.sh](scripts/smoke-runtime.sh) curl-based 8-check post-install validator. READ-ONLY (no kill / signal / mutation). Verifies `/health`, `/assets/* → 404`, `/api/events/stream` auth gate, `/api/users/status` auth gate, etc. With `OPS_TOKEN=<token>` env, runs deep checks (parity, SSE subs, online count).
-- **LAN Client Quickstart** — [docs/LAN_CLIENT_QUICKSTART.md](docs/LAN_CLIENT_QUICKSTART.md) one-page setup guide for end users on machines #2-#20: install DMG/EXE, point at server URL via Settings → Mode → Thin, first login + 2FA. Includes troubleshooting matrix (chunk errors, conflict modal, TOTP fail) + ops section (smoke test, off-site backup, Caddy HTTPS, anomaly grep).
+- **LAN Client Quickstart** — [docs/operations/LAN_CLIENT_QUICKSTART.md](docs/operations/LAN_CLIENT_QUICKSTART.md) one-page setup guide for end users on machines #2-#20: install DMG/EXE, point at server URL via Settings → Mode → Thin, first login + 2FA. Includes troubleshooting matrix (chunk errors, conflict modal, TOTP fail) + ops section (smoke test, off-site backup, Caddy HTTPS, anomaly grep).
 
 ### Bug fixes (Đợt 6)
 
@@ -880,8 +880,8 @@ Desktop app release. Web app v1.0 codebase wrapped in Electron 33 với native h
 - **Release script** ([scripts/release.sh](scripts/release.sh)) — bump version + build client + bytenode + electron-builder + post-build sign + rsync upload tới `10.102.3.61:/var/www/updates/`.
 - **Documentation**:
   - [SOLUTION_v1.1.md](SOLUTION_v1.1.md) — kiến trúc 3-tier + roadmap 5-sprint + bug log 19 entries + cost analysis
-  - [docs/DESKTOP_DEPLOYMENT.md](docs/DESKTOP_DEPLOYMENT.md) — IT guide deploy 50 máy (firewall, GPO, MDM, troubleshooting matrix)
-  - [docs/INTERNAL_TRUST_SETUP.md](docs/INTERNAL_TRUST_SETUP.md) — free signing migration path (self-signed + GPO + ad-hoc + LAN distribution)
+  - [docs/operations/DESKTOP_DEPLOYMENT.md](docs/operations/DESKTOP_DEPLOYMENT.md) — IT guide deploy 50 máy (firewall, GPO, MDM, troubleshooting matrix)
+  - [docs/operations/INTERNAL_TRUST_SETUP.md](docs/operations/INTERNAL_TRUST_SETUP.md) — free signing migration path (self-signed + GPO + ad-hoc + LAN distribution)
   - [desktop/README.md](desktop/README.md) — dev quick-start + 5-step install + hardware compatibility matrix
 
 ### Changed
