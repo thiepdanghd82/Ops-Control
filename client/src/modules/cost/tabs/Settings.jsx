@@ -2802,12 +2802,6 @@ function LogsSection() {
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadLogs();
-    const t = setInterval(loadLogs, 30000);
-    return () => clearInterval(t);
-  }, []);
-
   async function loadLogs() {
     setLoading(true);
     try {
@@ -2822,6 +2816,12 @@ function LogsSection() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    loadLogs();
+    const t = setInterval(loadLogs, 30000);
+    return () => clearInterval(t);
+  }, []);
 
   if (loading) return <div className="tab-loading">{t('set.loading_sysinfo')}</div>;
 
