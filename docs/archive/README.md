@@ -10,7 +10,7 @@ Seven stashes were exported from a retired build tree (`_ARCHIVE/Ops Control
 main `2771b10`. Six were deleted with a recorded reason; `3.patch` was KEPT
 because its work had not shipped. `index.txt` carries that audit in full.
 
-Re-checked 2026-09-16: `client/public/ccl-logo.svg` and `ccl-mark.svg` are
+Re-checked 2026-09-16: `apps/client/public/ccl-logo.svg` and `ccl-mark.svg` are
 **still absent from the tree**, so the disposition still holds — this is
 unshipped work, not a stale duplicate.
 

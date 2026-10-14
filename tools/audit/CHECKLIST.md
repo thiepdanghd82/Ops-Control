@@ -10,7 +10,7 @@ Kết quả tự động: xem `tools/audit/reports/<mới nhất>/SUMMARY.md`.
 - [ ] Backup lưu ở nơi khác ổ cài app (NAS/OneDrive), giữ ít nhất 7 bản.
 - [ ] Import Excel (raw materials, finished goods, BOM) với file sai định dạng → app báo lỗi, không ghi đè dữ liệu cũ.
 - [ ] Số liệu costing (VA%, Contribution%) tính lại khớp với file Excel chuẩn của phòng (chọn 3 quote mẫu).
-- [ ] Log audit (`scripts/verify-audit-chain.mjs`) còn nguyên vẹn sau khi sửa/xoá bản ghi.
+- [ ] Log audit (`apps/scripts/verify-audit-chain.mjs`) còn nguyên vẹn sau khi sửa/xoá bản ghi.
 
 ## B. Đăng nhập & phân quyền
 

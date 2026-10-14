@@ -38,28 +38,28 @@
 
 ### B.1 Bằng chứng audit (đã verify trong code)
 
-| #   | Cơ chế                                                                                                                           | Có trong code?                        | Tác dụng                                                                |
-| --- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | ----------------------------------------------------------------------- |
-| 1   | **SQLite WAL mode** ([server/db/connection.js:47](../../server/db/connection.js))                                                | ✅ `journal_mode = WAL`               | Nhiều reader cùng lúc, 1 writer tại 1 thời điểm — không corrupt         |
-| 2   | **busy_timeout 5s**                                                                                                              | ✅ `busy_timeout = 5000`              | Writer #2 chờ 5s nếu writer #1 đang ghi, không fail                     |
-| 3   | **Async mutex per resource** ([server/utils/asyncLock.js](../../server/utils/asyncLock.js))                                      | ✅ `withLock(key, fn)`                | Serialize read-modify-write — không race condition                      |
-| 4   | **Atomic file write** ([server/services/atomicWrite.js](../../server/services/atomicWrite.js))                                   | ✅ `tmp + fsync + rename`             | File JSON Library/\* không bao giờ partial-write                        |
-| 5   | **Optimistic locking trên quotes** ([server/repositories/quotesStore.js:228](../../server/repositories/quotesStore.js))          | ✅ `_version` field                   | User A và B cùng sửa quote #5 → B nhận HTTP 409 → reload hoặc overwrite |
-| 6   | **DB transactions** ([server/repositories/auditStore.js:111](../../server/repositories/auditStore.js), quoteVersions, chatStore) | ✅ `db.transaction()`                 | Bulk insert atomic — all-or-nothing                                     |
-| 7   | **Rate limit ghi** ([server/middleware/rateLimit.js:116](../../server/middleware/rateLimit.js))                                  | ✅ `writeRateLimit + saveRateLimit`   | Chống user/script spam ghi quá 30/min                                   |
-| 8   | **Server bind 0.0.0.0** ([server/index.js:717](../../server/index.js))                                                           | ✅ `app.listen(PORT, '0.0.0.0', ...)` | Sẵn sàng accept LAN connection                                          |
+| #   | Cơ chế                                                                                                                                     | Có trong code?                        | Tác dụng                                                                |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------- | ----------------------------------------------------------------------- |
+| 1   | **SQLite WAL mode** ([apps/server/db/connection.js:47](../../apps/server/db/connection.js))                                                | ✅ `journal_mode = WAL`               | Nhiều reader cùng lúc, 1 writer tại 1 thời điểm — không corrupt         |
+| 2   | **busy_timeout 5s**                                                                                                                        | ✅ `busy_timeout = 5000`              | Writer #2 chờ 5s nếu writer #1 đang ghi, không fail                     |
+| 3   | **Async mutex per resource** ([apps/server/utils/asyncLock.js](../../apps/server/utils/asyncLock.js))                                      | ✅ `withLock(key, fn)`                | Serialize read-modify-write — không race condition                      |
+| 4   | **Atomic file write** ([apps/server/services/atomicWrite.js](../../apps/server/services/atomicWrite.js))                                   | ✅ `tmp + fsync + rename`             | File JSON Library/\* không bao giờ partial-write                        |
+| 5   | **Optimistic locking trên quotes** ([apps/server/repositories/quotesStore.js:228](../../apps/server/repositories/quotesStore.js))          | ✅ `_version` field                   | User A và B cùng sửa quote #5 → B nhận HTTP 409 → reload hoặc overwrite |
+| 6   | **DB transactions** ([apps/server/repositories/auditStore.js:111](../../apps/server/repositories/auditStore.js), quoteVersions, chatStore) | ✅ `db.transaction()`                 | Bulk insert atomic — all-or-nothing                                     |
+| 7   | **Rate limit ghi** ([apps/server/middleware/rateLimit.js:116](../../apps/server/middleware/rateLimit.js))                                  | ✅ `writeRateLimit + saveRateLimit`   | Chống user/script spam ghi quá 30/min                                   |
+| 8   | **Server bind 0.0.0.0** ([apps/server/index.js:717](../../apps/server/index.js))                                                           | ✅ `app.listen(PORT, '0.0.0.0', ...)` | Sẵn sàng accept LAN connection                                          |
 
 ### B.2 Real-time sync — TRUNG THỰC
 
 **Hiện tại:** ⚠️ KHÔNG có push real-time cho data thường (chỉ chat dùng SSE).
 
-| Loại data                                        | Cập nhật như thế nào?                                                                         |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| Chat messages                                    | ✅ **Real-time push** qua SSE (`text/event-stream`) — User B thấy tin User A trong < 1 giây   |
-| Dashboard KPI                                    | ⏱ **Auto-refresh 60s** ([Dashboard.jsx:87](../../client/src/modules/cost/tabs/Dashboard.jsx)) |
-| System Logs / online users                       | ⏱ **Auto-refresh 30s** ([Settings.jsx:537](../../client/src/modules/cost/tabs/Settings.jsx))  |
-| Quotes / RFQ Tracker / Sample Tracking / Library | ❌ **KHÔNG auto-refresh** — User B phải đóng/mở tab hoặc Cmd+R để thấy data User A vừa save   |
-| Approvals Inbox                                  | ⏱ Badge count refresh khi đổi tab; list không auto-refresh                                    |
+| Loại data                                        | Cập nhật như thế nào?                                                                              |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| Chat messages                                    | ✅ **Real-time push** qua SSE (`text/event-stream`) — User B thấy tin User A trong < 1 giây        |
+| Dashboard KPI                                    | ⏱ **Auto-refresh 60s** ([Dashboard.jsx:87](../../apps/client/src/modules/cost/tabs/Dashboard.jsx)) |
+| System Logs / online users                       | ⏱ **Auto-refresh 30s** ([Settings.jsx:537](../../apps/client/src/modules/cost/tabs/Settings.jsx))  |
+| Quotes / RFQ Tracker / Sample Tracking / Library | ❌ **KHÔNG auto-refresh** — User B phải đóng/mở tab hoặc Cmd+R để thấy data User A vừa save        |
+| Approvals Inbox                                  | ⏱ Badge count refresh khi đổi tab; list không auto-refresh                                         |
 
 **Hệ quả thực tế cho 6 user:**
 
@@ -116,7 +116,7 @@
 
 1. Trên máy dev của anh, copy nguyên thư mục `Ops Control v1.2/` vào USB hoặc share LAN
 2. Trên máy server, copy vào `~/ops-control/` (vd `/Users/admin/ops-control/`)
-3. KHÔNG copy `node_modules/`, `dist-electron/`, `client/dist/` — sẽ rebuild
+3. KHÔNG copy `node_modules/`, `dist-electron/`, `apps/client/dist/` — sẽ rebuild
 
 **Bước 3: Cài dependencies** (~5 phút)
 Mở Terminal, chạy:
@@ -124,7 +124,7 @@ Mở Terminal, chạy:
 ```bash
 cd ~/ops-control
 npm install --omit=dev
-cd client && npm install && npm run build && cd ..
+cd apps/client && npm install && npm run build && cd ../..
 ```
 
 **Bước 4: Cấu hình môi trường** (~2 phút)
@@ -168,7 +168,7 @@ Ghi lại IP, vd `192.168.1.50`.
 
 ```bash
 cd ~/ops-control
-node server/index.js
+node apps/server/index.js
 ```
 
 Nếu thấy:
@@ -269,7 +269,7 @@ Mở **Command Prompt** (Admin), chạy:
 ```cmd
 cd C:\ops-control
 npm install --omit=dev
-cd client && npm install && npm run build && cd ..
+cd apps/client && npm install && npm run build && cd ../..
 ```
 
 **Bước 4: Cấu hình môi trường**
@@ -427,7 +427,7 @@ cd ~/ops-control   # macOS
 # hoặc cd C:\ops-control   trên Windows
 
 # Reset admin password (in ra password mới):
-OPS_TOTP_KEY=$(grep OPS_TOTP_KEY .env | cut -d= -f2) node scripts/reset-totp.js
+OPS_TOTP_KEY=$(grep OPS_TOTP_KEY .env | cut -d= -f2) node apps/scripts/reset-totp.js
 ```
 
 Login bằng admin → Settings → System → Account Control → tạo 6 tài khoản user:

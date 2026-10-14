@@ -168,12 +168,12 @@ Invoke Runbook B when ANY of the following is true:
 
 Per the 8-Day Cutover Plan D-5 deliverables, these files MUST exist before D-0:
 
-| File                                  | Location                        | Owner            | Purpose                   |
-| ------------------------------------- | ------------------------------- | ---------------- | ------------------------- |
-| `Fallback_Quote_Manual_v1.0.xlsx`     | `\\server\OpsControl\Fallback\` | Sales Lead       | Quote entry during outage |
-| `Fallback_WorkOrder_Manual_v1.0.xlsx` | `\\server\OpsControl\Fallback\` | Production Lead  | WO tracking during outage |
-| `scripts/import-fallback-xlsx.js`     | Repo `scripts/`                 | Lead Engineer    | Re-import after recovery  |
-| Paper copies of both xlsx             | Supervisor desk per shift       | Floor supervisor | LAN-down fallback         |
+| File                                   | Location                        | Owner            | Purpose                   |
+| -------------------------------------- | ------------------------------- | ---------------- | ------------------------- |
+| `Fallback_Quote_Manual_v1.0.xlsx`      | `\\server\OpsControl\Fallback\` | Sales Lead       | Quote entry during outage |
+| `Fallback_WorkOrder_Manual_v1.0.xlsx`  | `\\server\OpsControl\Fallback\` | Production Lead  | WO tracking during outage |
+| `apps/scripts/import-fallback-xlsx.js` | Repo `apps/scripts/`            | Lead Engineer    | Re-import after recovery  |
+| Paper copies of both xlsx              | Supervisor desk per shift       | Floor supervisor | LAN-down fallback         |
 
 If any of these is missing on D-0 → Runbook B is NOT executable. Plant manager must decide between (a) wait for engineer fix even if hours long, or (b) operate "blind" without records (NOT recommended).
 
@@ -231,14 +231,14 @@ scp user@<file-server>:/OpsControl/Fallback/Fallback_Quote_Manual_*.xlsx ./tmp/
 scp user@<file-server>:/OpsControl/Fallback/Fallback_WorkOrder_Manual_*.xlsx ./tmp/
 
 # 4. Dry-run the import (does NOT write to DB; prints what would be written)
-node scripts/import-fallback-xlsx.js --dry-run \
+node apps/scripts/import-fallback-xlsx.js --dry-run \
   --quotes=./tmp/Fallback_Quote_Manual_*.xlsx \
   --workorders=./tmp/Fallback_WorkOrder_Manual_*.xlsx
 
 # 5. Review output — fix any rejected rows in the xlsx, repeat dry-run
 
 # 6. Commit the import
-node scripts/import-fallback-xlsx.js --commit \
+node apps/scripts/import-fallback-xlsx.js --commit \
   --quotes=./tmp/Fallback_Quote_Manual_*.xlsx \
   --workorders=./tmp/Fallback_WorkOrder_Manual_*.xlsx
 
@@ -313,7 +313,7 @@ mv server/data/ops.db server/data/ops.db.BAD-$(date +%Y%m%d-%H%M%S)
 mv server/data/ops.db.NEW server/data/ops.db
 
 # 5. Restore Library tarball if needed
-cd server/data/
+cd apps/server/data/
 tar xzf Backup/Library/library_20260530.tar.gz
 # Verify all expected subdirectories present
 
@@ -332,7 +332,7 @@ If all users locked out after restore:
 cd /opt/ops-control
 # Option A (preferred): restore .env that was paired with the restored DB
 # Option B: re-enroll every user
-OPS_TOTP_KEY=$(npm run preflight | grep TOTP) node scripts/reset-totp.js
+OPS_TOTP_KEY=$(npm run preflight | grep TOTP) node apps/scripts/reset-totp.js
 # Users prompted for new QR on next login
 ```
 
@@ -343,7 +343,7 @@ Full TOTP rotation playbook is in CLAUDE.md "TOTP key rotation runbook".
 ```bash
 ssh user@<host>
 cd /opt/ops-control
-node scripts/recover-sys-user.js
+node apps/scripts/recover-sys-user.js
 # Type CONFIRM-RECOVER at prompt
 # Choose [1] reset existing OR [2] create "recovery-sys" user
 # Script prints temp pwd ONCE — copy it

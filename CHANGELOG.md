@@ -11,7 +11,7 @@ All notable changes to Ops Control. Format follows [Keep a Changelog](https://ke
   CCL Vietnam Yen Phong deployment. First entry: `mpham` Win box (tier M,
   expires 2027-06-09). Companion `README.md` documents:
   - Mint workflow (operator copies Installation ID from error dialog →
-    Lead runs `scripts/license/generate-license.mjs` → JSON delivered via
+    Lead runs `apps/scripts/license/generate-license.mjs` → JSON delivered via
     Zalo → placed at `<userData>/license.json`)
   - Tier reference (S/M/L per `max_users` ceiling)
   - Registry table (one row per provisioned operator, sorted chronologically)
@@ -29,15 +29,15 @@ All notable changes to Ops Control. Format follows [Keep a Changelog](https://ke
 ### Security
 
 - **License signing key rotated (2026-06-04).** The old Ed25519 signing
-  keypair was a dev key whose **private** half (`scripts/license/dev-private.pem`)
+  keypair was a dev key whose **private** half (`apps/scripts/license/dev-private.pem`)
   had been committed to this public repo — anyone with a clone could mint
   forged licenses for any installation/tier/expiry. Redaction alone could
   not fix this; the key had to be rotated.
   - Generated a fresh offline keypair (label `prod`, public SHA-256 fp
     `044e1ad7…`). Private key lives only at
     `~/OpsControl-license-keys/prod-private.pem` (chmod 600, outside repo).
-  - Embedded the new **public** key in both verifiers (`desktop/license.js`
-    `EMBEDDED_PUBKEY_PEM` + `server/services/licenseService.js`); `git rm`'d
+  - Embedded the new **public** key in both verifiers (`apps/desktop/license.js`
+    `EMBEDDED_PUBKEY_PEM` + `apps/server/services/licenseService.js`); `git rm`'d
     the old `dev-{private,public}.pem`.
   - `generate-license.mjs` now REQUIRES `--key <offline-private-key>` (no
     in-repo default). `generate-keypair.mjs` gained `--out-dir` so keys
@@ -64,7 +64,7 @@ Patch release closing operator-reported follow-up to PR #95.
   before the operator can type the next digit.
 
   Fix: swap to `<DecimalInput>` (existing component at
-  `client/src/utils/DecimalInput.jsx`) which keeps a local string
+  `apps/client/src/utils/DecimalInput.jsx`) which keeps a local string
   buffer during edit and commits parsed number on blur. Matches what
   ComplexCalc `SubProductRow` already does for the same three fields
   (`SubProductRow.jsx:1467,1531,1558`).
@@ -164,7 +164,7 @@ upgrade status per operator in Settings → Account Control.
 
 ### Release plumbing (PR #94)
 
-- `package.json` / `client/package.json` / `desktop/package.json`
+- `package.json` / `apps/client/package.json` / `apps/desktop/package.json`
   bumped from 1.5.10 to 1.5.11. PR #92 introduced the v1.5.11
   CHANGELOG entry but the actual package.json bump was skipped; this
   closes the gap so the DMG/EXE filename + electron-builder version
@@ -174,8 +174,8 @@ upgrade status per operator in Settings → Account Control.
   the hand-maintained `'1.5.10'` literal that surfaced during the
   2026-05-29 Mac DMG smoke test ("Settings → About still shows
   v1.5.10" while `/health` correctly reported 1.5.11).
-- `client/eslint.config.js` declares `__APP_VERSION__` as a readonly
-  global so the `cd client && npm run lint` path doesn't `no-undef`
+- `apps/client/eslint.config.js` declares `__APP_VERSION__` as a readonly
+  global so the `cd apps/client && npm run lint` path doesn't `no-undef`
   on the new references.
 
 ## [Unreleased] — Step B P0 fixes (Production Readiness Audit closure)
@@ -226,7 +226,7 @@ Verdict: ⚠ GO WITH CONDITIONS → ✅ **GO** (2026-05-04). Full report: `docs/
   - uses deploy.ps1 (no leak), so this was dormant in current production but real for any future
     Linux deploy.
 - **Env-var provenance startup logging** (bonus, closes F4-5 root-cause class, commit `5fc6268`).
-  New `server/utils/envSources.js` pure helper + `server/index.js` boot block. For each tracked var
+  New `apps/server/utils/envSources.js` pure helper + `apps/server/index.js` boot block. For each tracked var
   (NODE_ENV, OPS_PORT, PORT, DATA_DIR, OPS_CORS_ORIGINS, OPS_TOTP_KEY, OPS_KIOSK_KEY,
   OPS_ALLOW_SAME_ORIGIN), reports source as `os env` / `.env file` / `<unset>` / `<empty> (likely
 misconfig)`. Secret-named values masked to `<N chars>` via expanded pattern
@@ -358,7 +358,7 @@ MES-2.3 helper-extraction surfaced a `wo-terminal-edit` body-shape collision: th
 ### Operational caveats
 
 - `mes.kiosk.enabled` and `mes.workOrder.enabled` both default `false`; operator must flip in `server/data/Library/SystemConfig/feature-flags.json` and restart to expose surfaces.
-- `OPS_KIOSK_KEY` preservation across deploys — `deploy.sh` + `deploy.ps1` capture and merge-back the existing remote `.env`; `scripts/preflight-env.js` fails the deploy if the key is missing or wrong length in production. Mirrors Sprint 1.7 `OPS_TOTP_KEY` pattern.
+- `OPS_KIOSK_KEY` preservation across deploys — `deploy.sh` + `deploy.ps1` capture and merge-back the existing remote `.env`; `apps/scripts/preflight-env.js` fails the deploy if the key is missing or wrong length in production. Mirrors Sprint 1.7 `OPS_TOTP_KEY` pattern.
 - `groups.json` `kiosk-admin` permission entries ship via runtime fallback (no `permission_group_id` → `'edit'`) plus manual operator migration. KIOSK-006b will automate the additive groups.json update.
 - Chromium binary required once for Playwright (`npx playwright install chromium`, ~200 MB; gated on each dev box).
 - Dev DB needs the MES-2.1 additive migration applied on first server boot via `init.js applyAdditiveMigrations()`; e2e harness sidesteps via isolated `DATA_DIR` + `OPS_DB_PATH` per run.
@@ -511,25 +511,25 @@ Same-day re-release after a focused 6-fix sweep landed in response to install-ti
 
 ### Security
 
-- **Per-install random admin password** (`server/services/authService.js`) — Administrator first-run seed was a compile-time hardcoded string. Now random per install + `must_change_password=true` forces rotation on first login. Sidecar README + console log surface the value.
+- **Per-install random admin password** (`apps/server/services/authService.js`) — Administrator first-run seed was a compile-time hardcoded string. Now random per install + `must_change_password=true` forces rotation on first login. Sidecar README + console log surface the value.
 
 ### UX
 
-- **Installation-ID dialog formatter** (`desktop/license.js`) — 64-char hex now chunks into 4×16 with single-space separators (avoids the line-wrap-hyphen confusion that caused a real install-time `installation-mismatch` incident). Adds "Copy Installation ID" button.
+- **Installation-ID dialog formatter** (`apps/desktop/license.js`) — 64-char hex now chunks into 4×16 with single-space separators (avoids the line-wrap-hyphen confusion that caused a real install-time `installation-mismatch` incident). Adds "Copy Installation ID" button.
 
 ### Test infrastructure / regression guards
 
-- `desktop/build-manifest.test.js` (NEW, 2 tests) — every desktop top-level `.js` file MUST be in `package.json` `build.files` or fail CI. Would have caught the `setupWizard.js` packaging bug before initial GA. Wired into CI's desktop test step.
-- `server/repositories/dashboardStats.test.js` — fixture seeded fields into wrong shape (raw SQL columns vs raw_json blob). Now seeds full shape inside raw_json. Plus `isoMonthsAgo()` fixed for month-overflow on month-end dates.
-- `client/src/i18n/strings.test.js` + `strings.lint.test.js` — already fixed pre-GA.
-- `server/routes/rbacConsistency.test.js` — `APP_LEVEL_AUTH` map extended with `routes/sync.js` + `routes/importWizard.js` + per-file mount-path map (was deriving from filename, which broke for kebab-case mounts).
+- `apps/desktop/build-manifest.test.js` (NEW, 2 tests) — every desktop top-level `.js` file MUST be in `package.json` `build.files` or fail CI. Would have caught the `setupWizard.js` packaging bug before initial GA. Wired into CI's desktop test step.
+- `apps/server/repositories/dashboardStats.test.js` — fixture seeded fields into wrong shape (raw SQL columns vs raw_json blob). Now seeds full shape inside raw_json. Plus `isoMonthsAgo()` fixed for month-overflow on month-end dates.
+- `apps/client/src/i18n/strings.test.js` + `strings.lint.test.js` — already fixed pre-GA.
+- `apps/server/routes/rbacConsistency.test.js` — `APP_LEVEL_AUTH` map extended with `routes/sync.js` + `routes/importWizard.js` + per-file mount-path map (was deriving from filename, which broke for kebab-case mounts).
 - `npm test` script reworked: dropped `'**/*.test.js'` glob (shell wouldn't expand on path-with-spaces) in favour of directory args; chained `desktop/test:license` + `desktop/test:manifest`.
 - Jest `testPathIgnorePatterns` now includes `/desktop/`.
-- `scripts/help/self-test.mjs` renamed → `self-check.mjs` (was tripping `node --test` filename glob).
+- `apps/scripts/help/self-test.mjs` renamed → `self-check.mjs` (was tripping `node --test` filename glob).
 
 ### Distribution
 
-- **`scripts/install-from-dmg.sh`** (NEW, ships in `dist/`) — operator one-shot installer: verify checksum → mount DMG → copy to `/Applications` → strip `com.apple.quarantine`. App launches by double-click without Gatekeeper warning. No Apple Developer ID required (free alternative to the $99/year program).
+- **`apps/scripts/install-from-dmg.sh`** (NEW, ships in `dist/`) — operator one-shot installer: verify checksum → mount DMG → copy to `/Applications` → strip `com.apple.quarantine`. App launches by double-click without Gatekeeper warning. No Apple Developer ID required (free alternative to the $99/year program).
 - `MIGRATION_GUIDE.md` §2 + §3 rewritten to point at the installer script.
 
 ### Test pass rate at re-release
@@ -557,13 +557,13 @@ Promoted from rc.5 with no deltas other than the version bump. Full operator-fac
 - Desktop license: 6 / 6
 - Client (incl. i18n + DecimalInput budget): 572 / 572
 - Scripts: 17 / 17
-- **Total: 670 / 670** (pre-existing v1.2 tests in `server/routes/chat.*` and `server/repositories/quotesStore.*` excluded — see `docs/releases/RELEASE_NOTES_v1.3.0.md` "Known issues").
+- **Total: 670 / 670** (pre-existing v1.2 tests in `apps/server/routes/chat.*` and `apps/server/repositories/quotesStore.*` excluded — see `docs/releases/RELEASE_NOTES_v1.3.0.md` "Known issues").
 
 ### Test fixes during the GA gate
 
-- `client/src/i18n/strings.test.js` + `strings.lint.test.js` — added side-effect imports for the 6 domain modules so the lint sees the full key surface (per ADR-0012).
-- `client/src/utils/decimalInputBudget.lint.test.js` — added BUDGETS entries for `AuditLog.jsx`, `Settings.jsx`, `HardwareSection.jsx`, `DesignTools/presses/GallusCalc.jsx` (all integer-only fields, not decimal-input regressions).
-- `scripts/check-perf-budget.js` — raised `index` (290 → 320 kB), `StandardCalc` (100 → 200 kB), `Settings` (55 → 120 kB) to reflect v1.3 reality; added explicit budgets for `pdf` (350 kB) and `HelpTab` (260 kB) so they don't fall under the global 200 kB cap.
+- `apps/client/src/i18n/strings.test.js` + `strings.lint.test.js` — added side-effect imports for the 6 domain modules so the lint sees the full key surface (per ADR-0012).
+- `apps/client/src/utils/decimalInputBudget.lint.test.js` — added BUDGETS entries for `AuditLog.jsx`, `Settings.jsx`, `HardwareSection.jsx`, `DesignTools/presses/GallusCalc.jsx` (all integer-only fields, not decimal-input regressions).
+- `apps/scripts/check-perf-budget.js` — raised `index` (290 → 320 kB), `StandardCalc` (100 → 200 kB), `Settings` (55 → 120 kB) to reflect v1.3 reality; added explicit budgets for `pdf` (350 kB) and `HelpTab` (260 kB) so they don't fall under the global 200 kB cap.
 
 ## [1.3.0-rc.5] — 2026-04-30
 
@@ -571,14 +571,14 @@ Release candidate before promoting to `1.3.0` final. See `docs/releases/RELEASE_
 
 ### Changed
 
-- **DMG matrix collapsed to Apple Silicon only** — `desktop/package.json` `mac.target.arch` reduced to `["arm64"]`. CCL Vietnam fleet is fully M-series; Intel target dropped.
-- `server/domains/security/routes/audit.js` refactored to factory pattern `createAuditRouter({...})` to enable the contract tests below.
+- **DMG matrix collapsed to Apple Silicon only** — `apps/desktop/package.json` `mac.target.arch` reduced to `["arm64"]`. CCL Vietnam fleet is fully M-series; Intel target dropped.
+- `apps/server/domains/security/routes/audit.js` refactored to factory pattern `createAuditRouter({...})` to enable the contract tests below.
 
 ### Added
 
-- `server/domains/security/routes/audit.test.js` — 8 contract tests pinning the audit router's auth/role/filter/error behaviour.
-- `server/domains/basis/routes/backup.test.js` — 7 tests covering schedule GET/PUT + run-now lifecycle.
-- `server/platform/csv/index.test.js` — 10 tests pinning rateRows + ddlToCsvRows.
+- `apps/server/domains/security/routes/audit.test.js` — 8 contract tests pinning the audit router's auth/role/filter/error behaviour.
+- `apps/server/domains/basis/routes/backup.test.js` — 7 tests covering schedule GET/PUT + run-now lifecycle.
+- `apps/server/platform/csv/index.test.js` — 10 tests pinning rateRows + ddlToCsvRows.
 - `docs/plans/COSTAPI_EXTRACTION_ROADMAP.md` — 69-endpoint inventory, P1–P7 sprint plan, ADR-0009 retirement criteria.
 - `docs/releases/RELEASE_NOTES_v1.3.0-rc.5.md`.
 
@@ -598,7 +598,7 @@ for per-phase decisions and `MIGRATION_GUIDE.md` for operator notes.
 
 ### Phase digest
 
-Generated by `node scripts/summarise-upgrade-log.mjs --markdown`:
+Generated by `node apps/scripts/summarise-upgrade-log.mjs --markdown`:
 
 | Phase | Title                                                                                                       | Tasks |
 | ----- | ----------------------------------------------------------------------------------------------------------- | ----- |
@@ -629,7 +629,7 @@ Generated by `node scripts/summarise-upgrade-log.mjs --markdown`:
 - **License tier enforcement (S=15, M=20, L=50)** — server-side
   middleware `requireSeatAvailable()` blocks `POST /api/users` with
   HTTP 402 when over the seat cap. Tested at all 3 tiers.
-- **Setup wizards** (`desktop/setupWizard.js`):
+- **Setup wizards** (`apps/desktop/setupWizard.js`):
   - SERVER edition (4 steps) — License → Data path → Network/port → admin user
   - CLIENT edition (2 steps) — Server URL → connection test
 - **Content Security Policy** on every BrowserWindow response
@@ -637,16 +637,16 @@ Generated by `node scripts/summarise-upgrade-log.mjs --markdown`:
   `allowRunningInsecureContent: false`. External links route through
   `shell.openExternal()` instead of replacing the SPA.
 - **Dev license keypair + signer**:
-  `scripts/license/{dev-private,dev-public}.pem` and
-  `scripts/license/generate-license.mjs` — CLI used by CCL HQ to mint
+  `apps/scripts/license/{dev-private,dev-public}.pem` and
+  `apps/scripts/license/generate-license.mjs` — CLI used by CCL HQ to mint
   signed customer licenses.
-- **Server-side license verification** — `server/services/licenseService.js`
+- **Server-side license verification** — `apps/server/services/licenseService.js`
   - 7 tests (sign/tamper/expired/unlicensed-fallback + middleware).
-- **Per-domain i18n registration** — `client/src/i18n/strings.js`
+- **Per-domain i18n registration** — `apps/client/src/i18n/strings.js`
   exposes `registerStrings(slice)`; first domain module
   (`i18n/domains/security.js`) registers audit log keys at boot.
 - **Domain-folder scaffolding** for v1.3 architecture (server-side):
-  `server/domains/{costing,library,sales,planning,quality,security,
+  `apps/server/domains/{costing,library,sales,planning,quality,security,
 basis,mes}/`. First extracted router: `security/routes/audit.js`.
 - **GitHub Actions CI** (`.github/workflows/ci.yml`) — 5 jobs:
   audit / lint / test-server / test-client / build. `npm audit
@@ -662,11 +662,11 @@ basis,mes}/`. First extracted router: `security/routes/audit.js`.
 - **Electron 33 → latest** — vás 3 high CVE (ASAR Integrity Bypass,
   AppleScript injection, executeJavaScript IPC spoof).
 - **electron-builder 25 → 26**, **postcss latest** — 0 high vulns
-  remaining in `desktop/` and `client/`.
+  remaining in `apps/desktop/` and `apps/client/`.
 - **ESLint 9 unified** at root (was 8/9 split between root/client).
 - **Prettier 3** added with `.prettierrc.json` + `.prettierignore`.
-- `desktop/license.js` — full rewrite for v2 format. v1.2 HMAC
-  licenses are NO LONGER ACCEPTED; old `desktop/license.js` and tests
+- `apps/desktop/license.js` — full rewrite for v2 format. v1.2 HMAC
+  licenses are NO LONGER ACCEPTED; old `apps/desktop/license.js` and tests
   archived to `_legacy/`.
 
 ### Security
@@ -703,7 +703,7 @@ basis,mes}/`. First extracted router: `security/routes/audit.js`.
 
 ### Deferred / known follow-ups
 
-- `server/routes/costApi.js` god-file (2891 LOC) split — only the
+- `apps/server/routes/costApi.js` god-file (2891 LOC) split — only the
   audit router was extracted as POC. Full migration mapped per
   domain in `MIGRATION_GUIDE.md`.
 - v1.3 build artefact cleanup — sandbox blocked the cross-project
@@ -720,18 +720,18 @@ Fresh start branch from v1.1. Same baseline (Carbon Login + Hardware UI + Import
 
 ### Added — Sprint 1.3 (UI)
 
-- **Settings → 🔁 Chế độ kết nối** ([ModeSection.jsx](client/src/modules/cost/tabs/ModeSection.jsx) + [ModeSection.css](client/src/modules/cost/tabs/ModeSection.css)) — visual picker giữa 3 mode (`embedded` / `thin` / `smart`) với card UI hiển thị icon + title + subtitle + description + ưu/trade-off + ACTIVE/PREVIEW badge. URL editor cho thin/smart. Save qua `desktop.app.setConfig()` IPC + restart prompt khi mode đổi. Web mode hiện banner "không khả dụng".
-- **Settings → ℹ️ About / Diagnostics** ([AboutSection.jsx](client/src/modules/cost/tabs/AboutSection.jsx) + [AboutSection.css](client/src/modules/cost/tabs/AboutSection.css)) — hiển thị Version (1.2.0 + build timestamp + mode + URL), Runtime (Electron/Node/Chrome/Platform), License (status + customer + expires + features + installation_id 24-char prefix), 5 Diagnostic test buttons (printer list, cache R/W roundtrip, license status, HW fingerprint, server /health) với latency hiển thị, Bug-report copy-to-clipboard JSON snapshot (KHÔNG chứa secrets). Dùng cho IT troubleshooting + bug report.
+- **Settings → 🔁 Chế độ kết nối** ([ModeSection.jsx](apps/client/src/modules/cost/tabs/ModeSection.jsx) + [ModeSection.css](apps/client/src/modules/cost/tabs/ModeSection.css)) — visual picker giữa 3 mode (`embedded` / `thin` / `smart`) với card UI hiển thị icon + title + subtitle + description + ưu/trade-off + ACTIVE/PREVIEW badge. URL editor cho thin/smart. Save qua `desktop.app.setConfig()` IPC + restart prompt khi mode đổi. Web mode hiện banner "không khả dụng".
+- **Settings → ℹ️ About / Diagnostics** ([AboutSection.jsx](apps/client/src/modules/cost/tabs/AboutSection.jsx) + [AboutSection.css](apps/client/src/modules/cost/tabs/AboutSection.css)) — hiển thị Version (1.2.0 + build timestamp + mode + URL), Runtime (Electron/Node/Chrome/Platform), License (status + customer + expires + features + installation_id 24-char prefix), 5 Diagnostic test buttons (printer list, cache R/W roundtrip, license status, HW fingerprint, server /health) với latency hiển thị, Bug-report copy-to-clipboard JSON snapshot (KHÔNG chứa secrets). Dùng cho IT troubleshooting + bug report.
 
 ### Added — Sprint 2.1 v1.3 hardening (P0 user-facing, IBM-style enterprise)
 
-- **Server-side scheduled backup cron** ([server/services/backupScheduler.js](server/services/backupScheduler.js) — 220 dòng) — daily SQLite `db.backup()` (online-safe) + Library `tar czf` + self-verify (PRAGMA integrity_check + row counts vs live) + retention 30d + webhook alert on fail. Activated via `OPS_BACKUP_SCHEDULE=1`. Default OFF cho dev. Wired vào [server/index.js](server/index.js) startup.
-- **Audit log rotation + monthly archive** ([server/services/auditRetention.js](server/services/auditRetention.js) — 200 dòng) — daily move events > 30 days to `audit_log_archive/audit_YYYYMM.json.gz` (gzipped), keep active log fast. Prune archives > 12 months. Activated via `OPS_AUDIT_RETENTION=1`.
-- **Connection health monitor** ([client/src/services/connectionHealth.js](client/src/services/connectionHealth.js) — 180 dòng) — singleton ping `/api/health` mỗi 15s, exponential backoff khi offline (15s → 30s → 60s → 5min), pause khi tab hidden (visibilitychange API), auto-resume khi visible. Pub-sub pattern với `subscribeConnection(fn)`.
-- **Connection status banner** ([client/src/components/Layout/ConnectionBanner.jsx](client/src/components/Layout/ConnectionBanner.jsx) + CSS) — top-of-app sticky banner: hidden khi online; warning vàng "Đang kiểm tra kết nối..." khi offline 5-30s; đỏ "⚠ Mất kết nối server (Xs)" khi offline > 30s; xanh toast "✓ Kết nối lại — Refresh" 8s khi reconnect. Aria-live cho screen readers.
+- **Server-side scheduled backup cron** ([apps/server/services/backupScheduler.js](apps/server/services/backupScheduler.js) — 220 dòng) — daily SQLite `db.backup()` (online-safe) + Library `tar czf` + self-verify (PRAGMA integrity_check + row counts vs live) + retention 30d + webhook alert on fail. Activated via `OPS_BACKUP_SCHEDULE=1`. Default OFF cho dev. Wired vào [apps/server/index.js](apps/server/index.js) startup.
+- **Audit log rotation + monthly archive** ([apps/server/services/auditRetention.js](apps/server/services/auditRetention.js) — 200 dòng) — daily move events > 30 days to `audit_log_archive/audit_YYYYMM.json.gz` (gzipped), keep active log fast. Prune archives > 12 months. Activated via `OPS_AUDIT_RETENTION=1`.
+- **Connection health monitor** ([apps/client/src/services/connectionHealth.js](apps/client/src/services/connectionHealth.js) — 180 dòng) — singleton ping `/api/health` mỗi 15s, exponential backoff khi offline (15s → 30s → 60s → 5min), pause khi tab hidden (visibilitychange API), auto-resume khi visible. Pub-sub pattern với `subscribeConnection(fn)`.
+- **Connection status banner** ([apps/client/src/components/Layout/ConnectionBanner.jsx](apps/client/src/components/Layout/ConnectionBanner.jsx) + CSS) — top-of-app sticky banner: hidden khi online; warning vàng "Đang kiểm tra kết nối..." khi offline 5-30s; đỏ "⚠ Mất kết nối server (Xs)" khi offline > 30s; xanh toast "✓ Kết nối lại — Refresh" 8s khi reconnect. Aria-live cho screen readers.
 - **`fetchWithRetry` helper** (in connectionHealth.js) — exponential backoff 200/500/1500ms cho READ requests; KHÔNG retry 4xx (client error) hay save endpoints (tránh duplicate qua optimistic-lock 409 path).
-- **`useAutoRefresh` hook** ([client/src/utils/useAutoRefresh.js](client/src/utils/useAutoRefresh.js) — 100 dòng) — generic polling hook với pause-when-hidden, in-flight guard, last-refreshed timestamp. Applied to **QuoteHistory tab** (poll 30s). Documented for RFQ Tracker / Sample Tracking / Approvals (Đợt 2).
-- **`ConflictModal` component** ([client/src/components/Shared/ConflictModal.jsx](client/src/components/Shared/ConflictModal.jsx) + CSS) — friendly 409 conflict UI thay `window.confirm()`: 3 button "↻ Reload" / "⚠ Overwrite" / "Hủy", default focus Reload (safer), ESC-to-cancel, hiển thị server v + our v + savedBy. Sẵn sàng wire vào StandardCalc/ComplexCalc save flow (Đợt 2).
+- **`useAutoRefresh` hook** ([apps/client/src/utils/useAutoRefresh.js](apps/client/src/utils/useAutoRefresh.js) — 100 dòng) — generic polling hook với pause-when-hidden, in-flight guard, last-refreshed timestamp. Applied to **QuoteHistory tab** (poll 30s). Documented for RFQ Tracker / Sample Tracking / Approvals (Đợt 2).
+- **`ConflictModal` component** ([apps/client/src/components/Shared/ConflictModal.jsx](apps/client/src/components/Shared/ConflictModal.jsx) + CSS) — friendly 409 conflict UI thay `window.confirm()`: 3 button "↻ Reload" / "⚠ Overwrite" / "Hủy", default focus Reload (safer), ESC-to-cancel, hiển thị server v + our v + savedBy. Sẵn sàng wire vào StandardCalc/ComplexCalc save flow (Đợt 2).
 
 ### Changed
 
@@ -759,22 +759,22 @@ Fresh start branch from v1.1. Same baseline (Carbon Login + Hardware UI + Import
 
 ### Added — Sprint 2.2 v1.3 hardening (Đợt 2 — scaling + real-time)
 
-- **Per-user rate limit factory** ([server/middleware/rateLimit.js](server/middleware/rateLimit.js)) — `userSaveRateLimit` (60/10min/user) + `userWriteRateLimit` (30/10min/user) keyed by `req.user.id` với IP fallback. Một user xấu không kéo cả LAN xuống.
-- **In-process event bus** ([server/services/eventBus.js](server/services/eventBus.js)) — pub-sub `emitDataChange(type, payload, opts)` + `subscribeEvents(send, opts)` với audience filter + sequence numbers + dead-subscriber cleanup.
-- **SSE endpoint `/api/events/stream`** ([server/routes/events.js](server/routes/events.js)) — auth via cookie/Bearer/?t= query, heartbeat 25s, X-Accel-Buffering hint cho nginx, ready event on connect.
+- **Per-user rate limit factory** ([apps/server/middleware/rateLimit.js](apps/server/middleware/rateLimit.js)) — `userSaveRateLimit` (60/10min/user) + `userWriteRateLimit` (30/10min/user) keyed by `req.user.id` với IP fallback. Một user xấu không kéo cả LAN xuống.
+- **In-process event bus** ([apps/server/services/eventBus.js](apps/server/services/eventBus.js)) — pub-sub `emitDataChange(type, payload, opts)` + `subscribeEvents(send, opts)` với audience filter + sequence numbers + dead-subscriber cleanup.
+- **SSE endpoint `/api/events/stream`** ([apps/server/routes/events.js](apps/server/routes/events.js)) — auth via cookie/Bearer/?t= query, heartbeat 25s, X-Accel-Buffering hint cho nginx, ready event on connect.
 - **Server emit hooks** — wired vào write paths:
-  - `quote.saved` + `quote.deleted` từ POST/DELETE/restore/PATCH `/api/quotes` ([server/routes/costApi.js](server/routes/costApi.js))
+  - `quote.saved` + `quote.deleted` từ POST/DELETE/restore/PATCH `/api/quotes` ([apps/server/routes/costApi.js](apps/server/routes/costApi.js))
   - `library.imported` batched từ POST `/api/save-all` (per dataset, deduped)
-  - `rfq.updated` + `sample.updated` từ audit/attachment add/remove ([server/routes/shared.js](server/routes/shared.js))
+  - `rfq.updated` + `sample.updated` từ audit/attachment add/remove ([apps/server/routes/shared.js](apps/server/routes/shared.js))
   - `approval.transition` từ atomic transition route + auto `quote.saved` follow-up
-- **Client SSE subscriber** ([client/src/services/dataEventBus.js](client/src/services/dataEventBus.js)) — singleton EventSource, channel-filtered pub-sub (`subscribeDataEvents(channels, fn)`), seq-gap detection, auto-reconnect via browser EventSource native behavior.
+- **Client SSE subscriber** ([apps/client/src/services/dataEventBus.js](apps/client/src/services/dataEventBus.js)) — singleton EventSource, channel-filtered pub-sub (`subscribeDataEvents(channels, fn)`), seq-gap detection, auto-reconnect via browser EventSource native behavior.
 - **4 tabs subscribed to SSE** — instant refetch (< 50ms) thay vì chờ poll:
-  - [QuoteHistory.jsx](client/src/modules/cost/tabs/QuoteHistory.jsx) — `quote.saved` + `quote.deleted` + `approval.transition`
-  - [RFQTracker.jsx](client/src/modules/cost/tabs/RFQTracker.jsx) — `rfq.updated`
-  - [SampleTracking.jsx](client/src/modules/cost/tabs/SampleTracking.jsx) — `sample.updated`
-  - [PendingApprovalsInbox.jsx](client/src/modules/cost/tabs/PendingApprovalsInbox.jsx) — `approval.transition` + `quote.saved`
+  - [QuoteHistory.jsx](apps/client/src/modules/cost/tabs/QuoteHistory.jsx) — `quote.saved` + `quote.deleted` + `approval.transition`
+  - [RFQTracker.jsx](apps/client/src/modules/cost/tabs/RFQTracker.jsx) — `rfq.updated`
+  - [SampleTracking.jsx](apps/client/src/modules/cost/tabs/SampleTracking.jsx) — `sample.updated`
+  - [PendingApprovalsInbox.jsx](apps/client/src/modules/cost/tabs/PendingApprovalsInbox.jsx) — `approval.transition` + `quote.saved`
 - **`useAutoRefresh` applied broader** — RFQ Tracker (60s), Sample Tracking (60s), Approvals Inbox (30s). Polling là fallback khi SSE rớt.
-- **ConflictModal wired into save flow** — [StandardCalc.jsx](client/src/modules/cost/tabs/StandardCalc/StandardCalc.jsx) + [ComplexCalc.jsx](client/src/modules/cost/tabs/ComplexCalc/ComplexCalc.jsx) thay `window.confirm()` bằng modal 3-button (Reload / Overwrite / Cancel) preserve user edits.
+- **ConflictModal wired into save flow** — [StandardCalc.jsx](apps/client/src/modules/cost/tabs/StandardCalc/StandardCalc.jsx) + [ComplexCalc.jsx](apps/client/src/modules/cost/tabs/ComplexCalc/ComplexCalc.jsx) thay `window.confirm()` bằng modal 3-button (Reload / Overwrite / Cancel) preserve user edits.
 
 ### Changed (Đợt 2)
 
@@ -782,19 +782,19 @@ Fresh start branch from v1.1. Same baseline (Carbon Login + Hardware UI + Import
 
 ### Added — Sprint 2.3 v1.3 hardening (Đợt 3)
 
-- **Off-site backup helper** ([scripts/backup-offsite.sh](scripts/backup-offsite.sh)) — IBM 3-2-1 rule's "1 off-site" copy. Picks newest local SQLite + Library tarball, rsync's to USB/NAS/SSH target, sha256-verifies destination, optional retention prune (local-mount only), webhook alert on failure. Cron-friendly (e.g. `30 2 * * *` after the in-process scheduler at 02:00).
-- **ActiveUsersIndicator** ([client/src/components/Layout/ActiveUsersIndicator.jsx](client/src/components/Layout/ActiveUsersIndicator.jsx) + CSS) — TopBar widget showing "● N online" pill. Click → popover liệt kê tên + role + recent-offline với last-seen. Polls `/api/users/status` mỗi 30s + refresh trên SSE write events (free presence signal). Pause khi tab hidden.
+- **Off-site backup helper** ([apps/scripts/backup-offsite.sh](apps/scripts/backup-offsite.sh)) — IBM 3-2-1 rule's "1 off-site" copy. Picks newest local SQLite + Library tarball, rsync's to USB/NAS/SSH target, sha256-verifies destination, optional retention prune (local-mount only), webhook alert on failure. Cron-friendly (e.g. `30 2 * * *` after the in-process scheduler at 02:00).
+- **ActiveUsersIndicator** ([apps/client/src/components/Layout/ActiveUsersIndicator.jsx](apps/client/src/components/Layout/ActiveUsersIndicator.jsx) + CSS) — TopBar widget showing "● N online" pill. Click → popover liệt kê tên + role + recent-offline với last-seen. Polls `/api/users/status` mỗi 30s + refresh trên SSE write events (free presence signal). Pause khi tab hidden.
 - **Backup upload UI** — Settings → Backup/Restore mới có nút "📤 Upload từ máy khác…" (sys-only). POST `/api/backup/upload` validates JSON shape (must have ≥1 known dataset key) trước khi persist vào `Backup & restore/Data/`. Xong rồi user click Restore từ list. Cho phép restore từ off-site copy / USB stick mà không cần rsync vào folder.
-- **HTTPS Caddy helper** ([scripts/setup-https-caddy.sh](scripts/setup-https-caddy.sh)) — one-shot TLS reverse proxy generator. Self-signed mode (Caddy internal CA) cho LAN deploy, public ACME mode (Let's Encrypt) cho hosts có DNS public. Generates `Caddyfile` reverse-proxy 443 → 3100 với gzip + X-Forwarded-\* headers + access log rotation. Trust-CA instructions cho macOS/Windows clients.
+- **HTTPS Caddy helper** ([apps/scripts/setup-https-caddy.sh](apps/scripts/setup-https-caddy.sh)) — one-shot TLS reverse proxy generator. Self-signed mode (Caddy internal CA) cho LAN deploy, public ACME mode (Let's Encrypt) cho hosts có DNS public. Generates `Caddyfile` reverse-proxy 443 → 3100 với gzip + X-Forwarded-\* headers + access log rotation. Trust-CA instructions cho macOS/Windows clients.
 
 ### Bug fixes (Đợt 3)
 
-- **Smart mode → ERR_ADDRESS_INVALID (-108)** — [desktop/main.js](desktop/main.js): `startEmbeddedServer()` chỉ chạy khi mode='embedded', smart mode rớt vào `getAppUrl()` → `http://127.0.0.1:0` (embeddedPort chưa set) → renderer crash với ERR_ADDRESS_INVALID. Fix: smart mode cũng start embedded server (smart cần local cache + remote sync). Plus `getAppUrl()` throw rõ ràng nếu port=0 thay vì silent fail.
+- **Smart mode → ERR_ADDRESS_INVALID (-108)** — [apps/desktop/main.js](apps/desktop/main.js): `startEmbeddedServer()` chỉ chạy khi mode='embedded', smart mode rớt vào `getAppUrl()` → `http://127.0.0.1:0` (embeddedPort chưa set) → renderer crash với ERR_ADDRESS_INVALID. Fix: smart mode cũng start embedded server (smart cần local cache + remote sync). Plus `getAppUrl()` throw rõ ràng nếu port=0 thay vì silent fail.
 - **Default remoteUrl** — đã thay `http://10.102.3.61:3000` (LAN cũ) bằng môi trường-aware default. User vẫn override được qua Settings → Mode UI.
 
 ### Added — Sprint 2.4 v1.3 hardening (Đợt 4)
 
-- **Login anomaly detection** ([server/services/loginAnomaly.js](server/services/loginAnomaly.js)) — server-side, in-memory, runs after successful auth. Heuristics:
+- **Login anomaly detection** ([apps/server/services/loginAnomaly.js](apps/server/services/loginAnomaly.js)) — server-side, in-memory, runs after successful auth. Heuristics:
   - `concurrent_multi_ip` — same user logged in from 2+ IPs within 5min window
   - `new_ip` — IP not seen in last 30d for this user (skipped on first-ever login)
   - `unusual_hour` — login at 22:00–06:00 when user has no prior unusual-hour history (3+ login baseline)
@@ -803,8 +803,8 @@ Fresh start branch from v1.1. Same baseline (Carbon Login + Hardware UI + Import
 
 ### Added — Sprint 2.5 v1.3 hardening (Đợt 5 — backend cutover)
 
-- **SQLite primary backend default for desktop** — [desktop/main.js](desktop/main.js) now sets `OPS_DATA_BACKEND=sqlite` + `OPS_BACKUP_SCHEDULE=1` + `OPS_AUDIT_RETENTION=1` by default. Removes JSON-mutex serialization bottleneck @ 20 concurrent saves; reads now indexed-fast in SQLite. JSON write still mirrors as backup safety net (will remove after 14d observation per Sprint 7.4 plan).
-- **AboutSection diagnostic tests +3** — [client/src/modules/cost/tabs/AboutSection.jsx](client/src/modules/cost/tabs/AboutSection.jsx):
+- **SQLite primary backend default for desktop** — [apps/desktop/main.js](apps/desktop/main.js) now sets `OPS_DATA_BACKEND=sqlite` + `OPS_BACKUP_SCHEDULE=1` + `OPS_AUDIT_RETENTION=1` by default. Removes JSON-mutex serialization bottleneck @ 20 concurrent saves; reads now indexed-fast in SQLite. JSON write still mirrors as backup safety net (will remove after 14d observation per Sprint 7.4 plan).
+- **AboutSection diagnostic tests +3** — [apps/client/src/modules/cost/tabs/AboutSection.jsx](apps/client/src/modules/cost/tabs/AboutSection.jsx):
   - `Quote backend` — shows current backend (sqlite/file) + row counts (parity at-a-glance)
   - `SSE event stream` — number of subscribers (sanity check that SSE infra is live)
   - `Active users` — N online of total registered
@@ -812,8 +812,8 @@ Fresh start branch from v1.1. Same baseline (Carbon Login + Hardware UI + Import
 
 ### Added — Sprint 2.6 v1.3 hardening (Đợt 6 — operator tools)
 
-- **Active Sessions admin tab** — [Settings.jsx AccountSection](client/src/modules/cost/tabs/Settings.jsx) → Sessions sub-tab (sys-only). Shows username, role, 2FA status, token prefix, expires-in for every active session. "Revoke" button per-row → POST `/api/auth/sessions/revoke` kicks user from all machines. Pairs with login anomaly detection: when admin sees `LOGIN_ANOMALY` toast, they can immediately revoke the suspicious user's sessions from this tab.
-- **Runtime smoke test** — [scripts/smoke-runtime.sh](scripts/smoke-runtime.sh) curl-based 8-check post-install validator. READ-ONLY (no kill / signal / mutation). Verifies `/health`, `/assets/* → 404`, `/api/events/stream` auth gate, `/api/users/status` auth gate, etc. With `OPS_TOKEN=<token>` env, runs deep checks (parity, SSE subs, online count).
+- **Active Sessions admin tab** — [Settings.jsx AccountSection](apps/client/src/modules/cost/tabs/Settings.jsx) → Sessions sub-tab (sys-only). Shows username, role, 2FA status, token prefix, expires-in for every active session. "Revoke" button per-row → POST `/api/auth/sessions/revoke` kicks user from all machines. Pairs with login anomaly detection: when admin sees `LOGIN_ANOMALY` toast, they can immediately revoke the suspicious user's sessions from this tab.
+- **Runtime smoke test** — [apps/scripts/smoke-runtime.sh](apps/scripts/smoke-runtime.sh) curl-based 8-check post-install validator. READ-ONLY (no kill / signal / mutation). Verifies `/health`, `/assets/* → 404`, `/api/events/stream` auth gate, `/api/users/status` auth gate, etc. With `OPS_TOKEN=<token>` env, runs deep checks (parity, SSE subs, online count).
 - **LAN Client Quickstart** — [docs/operations/LAN_CLIENT_QUICKSTART.md](docs/operations/LAN_CLIENT_QUICKSTART.md) one-page setup guide for end users on machines #2-#20: install DMG/EXE, point at server URL via Settings → Mode → Thin, first login + 2FA. Includes troubleshooting matrix (chunk errors, conflict modal, TOTP fail) + ops section (smoke test, off-site backup, Caddy HTTPS, anomaly grep).
 
 ### Bug fixes (Đợt 6)
@@ -822,7 +822,7 @@ Fresh start branch from v1.1. Same baseline (Carbon Login + Hardware UI + Import
 - **Hardcoded "v1.0" / "v1.1"** — Settings → About panel + LoginPage session-expired card both used hardcoded version strings. Now dynamic from `app.getVersion()` via `serverInfo.version` IPC.
 - **Session-expired card stuck top-left** — compact CSS removed `position: fixed` + `min-height` so the card had no viewport to center against. Re-added grid centering + viewport-fill background.
 - **smoke-runtime.sh killing user's app** — earlier iteration paired the test with `kill $(lsof -t -iTCP:3100)` cleanup which would unintentionally SIGTERM the desktop app's embedded server. All kill/signal logic removed; script is now strictly READ-ONLY.
-- **Thin-mode self-loop → ERR_CONNECTION_REFUSED** — when user picks Thin mode but `remoteUrl` points at this machine's own IP (loopback or local NIC), [main.js](desktop/main.js) now auto-starts the embedded server and uses the loopback URL. Realistic case: one Mac is BOTH server AND client desktop.
+- **Thin-mode self-loop → ERR_CONNECTION_REFUSED** — when user picks Thin mode but `remoteUrl` points at this machine's own IP (loopback or local NIC), [main.js](apps/desktop/main.js) now auto-starts the embedded server and uses the loopback URL. Realistic case: one Mac is BOTH server AND client desktop.
 
 ### Bug fixes
 
@@ -831,7 +831,7 @@ Fresh start branch from v1.1. Same baseline (Carbon Login + Hardware UI + Import
 
 ### Changed
 
-- `desktop/main.js` — `ops:set-config` IPC handler giờ **dynamic mode swap** giữa `thin ↔ smart` không cần restart full. Chỉ start/stop smart-client engine on-the-fly. Embedded ↔ thin/smart vẫn cần restart (server boot heavy). URL change trong cùng mode vẫn cần restart (cookie/session tied to old URL).
+- `apps/desktop/main.js` — `ops:set-config` IPC handler giờ **dynamic mode swap** giữa `thin ↔ smart` không cần restart full. Chỉ start/stop smart-client engine on-the-fly. Embedded ↔ thin/smart vẫn cần restart (server boot heavy). URL change trong cùng mode vẫn cần restart (cookie/session tied to old URL).
 
 ### Planned (still)
 
@@ -855,41 +855,41 @@ Desktop app release. Web app v1.0 codebase wrapped in Electron 33 với native h
 
 ### Added
 
-- **Electron 33 desktop shell** ([desktop/main.js](desktop/main.js)) — 3-tier smart client (Tier 1 Presentation + Tier 2 Express embedded + Tier 3 SQLite local). 3 modes: `embedded` (in-process server), `thin` (gọi remote), `smart` (hybrid offline-capable, Sprint 3+).
-- **Native hardware bridges** ([desktop/native/](desktop/native/)):
+- **Electron 33 desktop shell** ([apps/desktop/main.js](apps/desktop/main.js)) — 3-tier smart client (Tier 1 Presentation + Tier 2 Express embedded + Tier 3 SQLite local). 3 modes: `embedded` (in-process server), `thin` (gọi remote), `smart` (hybrid offline-capable, Sprint 3+).
+- **Native hardware bridges** ([apps/desktop/native/](apps/desktop/native/)):
   - Zebra/TSC label printer (TCP:9100 raw socket — không cần driver)
   - Office printer A4/A3 (pdf-to-printer + SumatraPDF bundled)
   - Cân điện tử RS232/USB-Serial (serialport + parser regex)
   - Scanner USB-HID raw + keyboard wedge fallback
   - Sandboxed file dialogs với whitelist path
   - SQLite local cache (KV + master_cache + outbox queue + sync_state)
-- **Settings → 🔌 Thiết bị phần cứng** ([HardwareSection.jsx](client/src/modules/cost/tabs/HardwareSection.jsx)) — UI cấu hình IP printer, COM port cân, scanner mode, default office printer. Live test: ping printer, đọc weight realtime, scan barcode preview.
-- **Settings → 📥 Import data v1.0** ([ImportLegacySection.jsx](client/src/modules/cost/tabs/ImportLegacySection.jsx)) — folder picker → scan + preview (table + sizes) → 1-click copy. Schema validation peek 5 core tables (`quotes`, `materials`, `ifs_inventory`, `bom`, `routing_operations`) trước import — block button + warning nếu folder pick có ops.db sai schema. Skip Users + totp + audit để giữ login + 2FA hiện tại.
-- **License manager** ([desktop/license.js](desktop/license.js)) — HW fingerprint SHA256 (CPU + MAC + motherboard SN qua node-machine-id) + HMAC-signed license file + trial 14 ngày auto-issued + boot probe. `OPS_LICENSE_SECRET` env override cho production.
-- **Auto-update** ([desktop/auto-update.js](desktop/auto-update.js)) — electron-updater polling `http://10.102.3.61/updates/` (configurable). Background download + restart prompt.
-- **Smart-client sync engine** ([desktop/smart-client.js](desktop/smart-client.js)) — pull delta theo `_saved_at`, push outbox FIFO, ping online detection mỗi 15s, broadcast status qua IPC.
-- **Server sync routes** ([server/routes/sync.js](server/routes/sync.js)) — `GET /api/sync/{manifest,pull}` + `POST /api/sync/push`. Auth-required.
-- **🎨 Carbon split-screen Login UI** ([LoginPage.jsx](client/src/components/Auth/LoginPage.jsx)) — IBM Carbon + IFS Cloud + SAP Fiori inspired. Hero panel bên trái (đen, brand mark + "Pricing & planning, **online or off.**" + version footer) + form card bên phải (sharp corners, monospace accents, big blue Sign in button với arrow). 3 screens cùng style: Login / TOTP / Enrollment. Compact mode (session-expired modal) + responsive < 880px + dark mode auto.
+- **Settings → 🔌 Thiết bị phần cứng** ([HardwareSection.jsx](apps/client/src/modules/cost/tabs/HardwareSection.jsx)) — UI cấu hình IP printer, COM port cân, scanner mode, default office printer. Live test: ping printer, đọc weight realtime, scan barcode preview.
+- **Settings → 📥 Import data v1.0** ([ImportLegacySection.jsx](apps/client/src/modules/cost/tabs/ImportLegacySection.jsx)) — folder picker → scan + preview (table + sizes) → 1-click copy. Schema validation peek 5 core tables (`quotes`, `materials`, `ifs_inventory`, `bom`, `routing_operations`) trước import — block button + warning nếu folder pick có ops.db sai schema. Skip Users + totp + audit để giữ login + 2FA hiện tại.
+- **License manager** ([apps/desktop/license.js](apps/desktop/license.js)) — HW fingerprint SHA256 (CPU + MAC + motherboard SN qua node-machine-id) + HMAC-signed license file + trial 14 ngày auto-issued + boot probe. `OPS_LICENSE_SECRET` env override cho production.
+- **Auto-update** ([apps/desktop/auto-update.js](apps/desktop/auto-update.js)) — electron-updater polling `http://10.102.3.61/updates/` (configurable). Background download + restart prompt.
+- **Smart-client sync engine** ([apps/desktop/smart-client.js](apps/desktop/smart-client.js)) — pull delta theo `_saved_at`, push outbox FIFO, ping online detection mỗi 15s, broadcast status qua IPC.
+- **Server sync routes** ([apps/server/routes/sync.js](apps/server/routes/sync.js)) — `GET /api/sync/{manifest,pull}` + `POST /api/sync/push`. Auth-required.
+- **🎨 Carbon split-screen Login UI** ([LoginPage.jsx](apps/client/src/components/Auth/LoginPage.jsx)) — IBM Carbon + IFS Cloud + SAP Fiori inspired. Hero panel bên trái (đen, brand mark + "Pricing & planning, **online or off.**" + version footer) + form card bên phải (sharp corners, monospace accents, big blue Sign in button với arrow). 3 screens cùng style: Login / TOTP / Enrollment. Compact mode (session-expired modal) + responsive < 880px + dark mode auto.
 - **30 unit tests**:
-  - 7 tests cho `server/routes/sync.js` (route mounting, auth gate, manifest, pull filter, push validation)
-  - 10 tests cho `desktop/license.js` (HW fingerprint determinism, sign canonical, verify {bad-sig, hw-mismatch, expired, valid}, trial issue, applyLicense)
-  - 13 tests cho `desktop/native/cache.js` (KV roundtrip, master_cache upsert/list, outbox enqueue/markDone/markFailed, sync_state)
-- **Free signing scripts** ([scripts/sign-windows.ps1](scripts/sign-windows.ps1) + [scripts/sign-macos.sh](scripts/sign-macos.sh)) — Windows self-signed cert auto-generate (10 năm) + GPO push instructions; macOS ad-hoc sign + clear quarantine. Tiết kiệm 401 USD/năm so với EV cert + Apple Dev ID.
-- **Build wrapper** ([scripts/build-desktop.sh](scripts/build-desktop.sh)) — workaround node-gyp space-in-path bug bằng cách sync sang `/tmp/ops-build/` rồi build, copy artifact về.
+  - 7 tests cho `apps/server/routes/sync.js` (route mounting, auth gate, manifest, pull filter, push validation)
+  - 10 tests cho `apps/desktop/license.js` (HW fingerprint determinism, sign canonical, verify {bad-sig, hw-mismatch, expired, valid}, trial issue, applyLicense)
+  - 13 tests cho `apps/desktop/native/cache.js` (KV roundtrip, master_cache upsert/list, outbox enqueue/markDone/markFailed, sync_state)
+- **Free signing scripts** ([apps/scripts/sign-windows.ps1](apps/scripts/sign-windows.ps1) + [apps/scripts/sign-macos.sh](apps/scripts/sign-macos.sh)) — Windows self-signed cert auto-generate (10 năm) + GPO push instructions; macOS ad-hoc sign + clear quarantine. Tiết kiệm 401 USD/năm so với EV cert + Apple Dev ID.
+- **Build wrapper** ([apps/scripts/build-desktop.sh](apps/scripts/build-desktop.sh)) — workaround node-gyp space-in-path bug bằng cách sync sang `/tmp/ops-build/` rồi build, copy artifact về.
 - **Bytenode IP compile** ([scripts/build-bytecode.js](scripts/build-bytecode.js)) — Sprint 4: compile 4 file IP cốt lõi (`calcEngine`, `inkCalcCore`, `layoutOptimizer`, `printAreaCore`) sang V8 bytecode `.jsc` cho anti-piracy.
-- **Release script** ([scripts/release.sh](scripts/release.sh)) — bump version + build client + bytenode + electron-builder + post-build sign + rsync upload tới `10.102.3.61:/var/www/updates/`.
+- **Release script** ([apps/scripts/release.sh](apps/scripts/release.sh)) — bump version + build client + bytenode + electron-builder + post-build sign + rsync upload tới `10.102.3.61:/var/www/updates/`.
 - **Documentation**:
   - [SOLUTION_v1.1.md](SOLUTION_v1.1.md) — kiến trúc 3-tier + roadmap 5-sprint + bug log 19 entries + cost analysis
   - [docs/operations/DESKTOP_DEPLOYMENT.md](docs/operations/DESKTOP_DEPLOYMENT.md) — IT guide deploy 50 máy (firewall, GPO, MDM, troubleshooting matrix)
   - [docs/operations/INTERNAL_TRUST_SETUP.md](docs/operations/INTERNAL_TRUST_SETUP.md) — free signing migration path (self-signed + GPO + ad-hoc + LAN distribution)
-  - [desktop/README.md](desktop/README.md) — dev quick-start + 5-step install + hardware compatibility matrix
+  - [apps/desktop/README.md](apps/desktop/README.md) — dev quick-start + 5-step install + hardware compatibility matrix
 
 ### Changed
 
-- `server/services/authService.js` — TOTP cipher từ `chacha20-poly1305` → `aes-256-gcm` (Electron BoringSSL compat — bug 18 fix)
-- `server/index.js` — mount `/api/sync` + `/api/v1/sync` routes với authMiddleware
-- `client/src/services/desktopBridge.js` — abstraction layer Electron API ↔ web fallback. Keyboard wedge mode cho scanner trong web mode.
-- `desktop/package.json` — Electron 33.4.11 + electron-store v8.2.0 (downgrade từ v10 ESM-only) + better-sqlite3 + node-hid + serialport + node-machine-id
+- `apps/server/services/authService.js` — TOTP cipher từ `chacha20-poly1305` → `aes-256-gcm` (Electron BoringSSL compat — bug 18 fix)
+- `apps/server/index.js` — mount `/api/sync` + `/api/v1/sync` routes với authMiddleware
+- `apps/client/src/services/desktopBridge.js` — abstraction layer Electron API ↔ web fallback. Keyboard wedge mode cho scanner trong web mode.
+- `apps/desktop/package.json` — Electron 33.4.11 + electron-store v8.2.0 (downgrade từ v10 ESM-only) + better-sqlite3 + node-hid + serialport + node-machine-id
 
 ### Fixed
 

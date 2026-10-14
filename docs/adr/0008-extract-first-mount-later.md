@@ -9,8 +9,8 @@
 
 ## Context
 
-We are gradually splitting `server/routes/costApi.js` (2891 LOC) into
-per-SAP-domain routers under `server/domains/<sap>/routes/`. Two
+We are gradually splitting `apps/server/routes/costApi.js` (2891 LOC) into
+per-SAP-domain routers under `apps/server/domains/<sap>/routes/`. Two
 approaches are possible for each cohesive group of endpoints:
 
 **(A) Big-bang extract-and-mount:**
@@ -27,7 +27,7 @@ approaches are possible for each cohesive group of endpoints:
 - Add unit tests that drive the factory through stubbed deps.
 - LEAVE the original endpoints in `costApi.js` running.
 - The new router is dead code from the runtime's perspective until
-  it is wired into `server/index.js`.
+  it is wired into `apps/server/index.js`.
 
 We've used pattern (B) twice now (G1 rate router, H1 ddl router).
 This ADR captures why.
@@ -125,7 +125,7 @@ For each unmounted router:
 ```
 1. Confirm all helper deps exist as named exports somewhere
    (authService, atomicWrite, validate middleware, etc.).
-2. Add the mount in server/index.js BEFORE costApiRouter so the
+2. Add the mount in apps/server/index.js BEFORE costApiRouter so the
    explicit route wins:
      app.use('/api/<sap>/<resource>',  createXxxRouter(deps));
      app.use('/api/v1/<sap>/<resource>', createXxxRouter(deps));
@@ -141,9 +141,9 @@ For each unmounted router:
 
 ## References
 
-- `server/domains/library/routes/rate.js` (G1) — first proof of pattern
-- `server/domains/library/routes/ddl.js` (H1) — second proof
-- `server/domains/security/routes/audit.js` (P3.1) — pattern (A) example
-- `server/domains/security/routes/license.js` (P5.1) — pattern (A) example
+- `apps/server/domains/library/routes/rate.js` (G1) — first proof of pattern
+- `apps/server/domains/library/routes/ddl.js` (H1) — second proof
+- `apps/server/domains/security/routes/audit.js` (P3.1) — pattern (A) example
+- `apps/server/domains/security/routes/license.js` (P5.1) — pattern (A) example
 - `CONTRIBUTING.md §2` — domain router factory template
 - `MIGRATION_GUIDE.md §5` — endpoint path mapping

@@ -35,7 +35,7 @@ echo ""
 # ── Build client locally first ────────────────────────────
 echo "  🔨  Building client..."
 cd "$(dirname "$0")/../.."  # repo root — this script lives in tools/deploy/
-cd client && npx vite build && cd ..
+cd apps/client && npx vite build && cd ../..
 echo "  ✓  Client built"
 echo ""
 
@@ -44,7 +44,7 @@ if [ -z "$REMOTE" ]; then
     echo "  📂  Deploying locally..."
     echo "  ✓  App ready at: http://localhost:$PORT"
     echo ""
-    echo "  Start with: node server/index.js"
+    echo "  Start with: node apps/server/index.js"
     echo "  Or:         ./tools/deploy/START_SERVER.command"
     exit 0
 fi
@@ -104,7 +104,7 @@ else
     echo "      Generate: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
 fi
 # Sprint S-D21-LICENSE-FIX 2026-06-09 — Ed25519 SPKI PEM for license
-# validation (server/services/licenseService.js + desktop/license.js).
+# validation (apps/server/services/licenseService.js + apps/desktop/license.js).
 # Whole-file merge preserves the value; this block surfaces missing-key
 # state. Without it server boots OK (legacy preflight didn't gate it)
 # but every license check fails → all users locked out post-deploy.
@@ -140,21 +140,30 @@ ls -1t $APP_DIR/releases 2>/dev/null | tail -n +6 | xargs -I {} rm -rf $APP_DIR/
 
 # Sync files (excluding node_modules, .git, etc.)
 echo "  📤  Uploading files..."
+# The remote keeps its flat layout ($APP_DIR/server, scripts, client/dist,
+# package.json) — the repo nests them under apps/, so each is synced to its
+# old place. Remote server/data is never touched (no --delete, excluded).
 rsync -avz --progress \
     --exclude 'node_modules' \
     --exclude '.git' \
-    --exclude 'client/node_modules' \
-    --exclude 'client/src' \
-    --exclude 'client/public' \
+    --exclude 'apps' \
     --exclude '*.command' \
     --exclude '*.bat' \
     --exclude 'releases' \
-    --exclude 'server/data' \
     ./ "$REMOTE:$APP_DIR/"
+rsync -avz --progress \
+    --exclude 'node_modules' \
+    --exclude '/data' \
+    apps/server/ "$REMOTE:$APP_DIR/server/"
+rsync -avz --progress \
+    --exclude 'node_modules' \
+    --exclude '*.command' \
+    --exclude '*.bat' \
+    apps/scripts/ "$REMOTE:$APP_DIR/scripts/"
 
 # Upload built client
 rsync -avz --progress \
-    client/dist/ "$REMOTE:$APP_DIR/client/dist/"
+    apps/client/dist/ "$REMOTE:$APP_DIR/client/dist/"
 
 echo ""
 
@@ -194,7 +203,7 @@ fi
 # systemd. A failed preflight aborts the deploy with a clear error
 # instead of leaving systemd in restart-loop with the new bundle.
 echo "  🔎  Running preflight against staged .env..."
-if ! ssh "$REMOTE" "cd $APP_DIR && NODE_ENV=production npm run preflight"; then
+if ! ssh "$REMOTE" "cd $APP_DIR && NODE_ENV=production node scripts/preflight-env.js"; then
     echo "  ✘  Preflight failed — refusing to restart the service."
     echo "     The new bundle is uploaded but NOT yet activated. Fix .env"
     echo "     on the remote, then re-run this deploy.sh to retry."

@@ -48,37 +48,37 @@
 **P1.1 — argon2id replaces bcryptjs**
 
 - Installed `argon2` (native binding, OWASP recommended).
-- `server/services/authService.js`: `bcryptHash()` now produces `$argon2id$` strings; `checkPassword()` auto-routes by hash prefix (`$argon2*` vs `$2[aby]$`).
+- `apps/server/services/authService.js`: `bcryptHash()` now produces `$argon2id$` strings; `checkPassword()` auto-routes by hash prefix (`$argon2*` vs `$2[aby]$`).
 - `upgradeLegacyPasswordIfNeeded()` extended to silently rehash bcrypt → argon2id on next successful login (transparent migration ladder: jsHash → bcrypt → argon2id).
 - 18 auth tests pass (totpFailClosed + loginLockout).
 
 **P1.2 — Electron + dependency bumps**
 
-- `desktop/`: `electron 33 → latest`, `electron-builder 25 → 26`. Vulns: 10 high → **0**.
-- `client/`: `postcss` bump. Vulns: 1 moderate → **0**.
+- `apps/desktop/`: `electron 33 → latest`, `electron-builder 25 → 26`. Vulns: 10 high → **0**.
+- `apps/client/`: `postcss` bump. Vulns: 1 moderate → **0**.
 - Root: `exceljs` latest. 2 moderate remain (transitive uuid via exceljs; dev-only — accepted, fix would require exceljs major downgrade).
 
 **P1.3 — License HMAC → Ed25519 asymmetric**
 
-- Archived `desktop/license.js` → `_legacy/license.v1.2.js` and old test → `_legacy/license.v1.2.test.js`.
-- New `desktop/license.js` (v2 license format with `version`, `tier`, `max_users`, `signature`).
+- Archived `apps/desktop/license.js` → `_legacy/license.v1.2.js` and old test → `_legacy/license.v1.2.test.js`.
+- New `apps/desktop/license.js` (v2 license format with `version`, `tier`, `max_users`, `signature`).
 - Tier definitions: S=15, M=20, L=50.
 - Build-time pubkey via `OPS_LICENSE_PUBKEY` env or `resources/license-pubkey.pem`; dev fallback baked in.
-- `scripts/license/{dev-private,dev-public}.pem` — dev-only Ed25519 keypair.
-- `scripts/license/generate-license.mjs` — CLI to mint signed licenses (used by CCL HQ).
+- `apps/scripts/license/{dev-private,dev-public}.pem` — dev-only Ed25519 keypair.
+- `apps/scripts/license/generate-license.mjs` — CLI to mint signed licenses (used by CCL HQ).
 - 6 new license tests (sign/verify/tamper/keypair-mismatch/canonicalisation/all-tiers) pass.
 - v1.2 HMAC licenses are NO LONGER ACCEPTED — operators must request a v2 license.
 
 **P1.4 — Content Security Policy + nav lockdown**
 
-- `desktop/main.js`: CSP injected on every BrowserWindow response (default-src 'self', no frame, no object).
+- `apps/desktop/main.js`: CSP injected on every BrowserWindow response (default-src 'self', no frame, no object).
 - `webview` disabled, `allowRunningInsecureContent: false`.
 - `will-navigate` + `setWindowOpenHandler` route external links via `shell.openExternal()` instead of replacing the SPA.
 
 **P1.5 — Verify**
 
 - `npm run build` (client): ✅ 318 ms.
-- `desktop/main.js` syntax: ✅.
+- `apps/desktop/main.js` syntax: ✅.
 - 24/24 security tests pass (auth + license).
 
 **Result:** ✅ done. Vuln state: root 2 moderate (dev), client 0, desktop 0.
@@ -113,9 +113,9 @@
 
 **P3.1 — Domain shell + audit-router POC**
 
-- Created `server/domains/{costing,library,sales,planning,quality,security,basis,mes}/{routes,services}/` with per-domain README. SAP-aligned naming.
-- Extracted `/api/audit` (was inline in `server/index.js`) into `server/domains/security/routes/audit.js`. Mounted via `app.use('/api/audit', auditRouter)`. **Pattern to follow** for the remaining costApi.js extraction.
-- `server/index.js` syntax-clean post-refactor. No client change needed (URL unchanged).
+- Created `apps/server/domains/{costing,library,sales,planning,quality,security,basis,mes}/{routes,services}/` with per-domain README. SAP-aligned naming.
+- Extracted `/api/audit` (was inline in `apps/server/index.js`) into `apps/server/domains/security/routes/audit.js`. Mounted via `app.use('/api/audit', auditRouter)`. **Pattern to follow** for the remaining costApi.js extraction.
+- `apps/server/index.js` syntax-clean post-refactor. No client change needed (URL unchanged).
 - **Deferred**: full split of `costApi.js` (2891 LOC → 6 routers) is multi-week work. Migration map captured in `MIGRATION_GUIDE.md`.
 
 **P3.2 — Client domain folder shell**
@@ -124,9 +124,9 @@
 
 **P3.3 — i18n per-domain registration**
 
-- Added `registerStrings(slice)` extension point to `client/src/i18n/strings.js`.
-- Created `client/src/i18n/domains/security.js` (audit + future TOTP/users keys). Pattern proven; future per-domain modules follow the same shape.
-- `client/src/main.jsx` side-effect-imports the new module at boot — additive, no breaking change.
+- Added `registerStrings(slice)` extension point to `apps/client/src/i18n/strings.js`.
+- Created `apps/client/src/i18n/domains/security.js` (audit + future TOTP/users keys). Pattern proven; future per-domain modules follow the same shape.
+- `apps/client/src/main.jsx` side-effect-imports the new module at boot — additive, no breaking change.
 
 **P3.4 — v1.3 cleanup**
 
@@ -148,7 +148,7 @@
 
 ### Phase 4 — Setup wizards · 2026-04-29 19:25 GMT+7
 
-**P4 — `desktop/setupWizard.js`** (NEW, 320 LOC)
+**P4 — `apps/desktop/setupWizard.js`** (NEW, 320 LOC)
 
 - 2 wizards in one module: `mode='server'` (4 steps: License → Data → Network → Admin) and `mode='client'` (2 steps: URL → Test).
 - Renders inline HTML in a stand-alone BrowserWindow (no React import — runs before SPA bundle loads).
@@ -156,7 +156,7 @@
 - `setup-done.json` in `userData/` marks completion → wizard skipped on subsequent boots.
 - Vietnamese UX strings throughout (target user: nhà máy in operator).
 
-**Wiring into main.js** is the ONE manual integration step left for Henry — `desktop/main.js` should call:
+**Wiring into main.js** is the ONE manual integration step left for Henry — `apps/desktop/main.js` should call:
 
 ```js
 const setupWizard = require('./setupWizard');
@@ -179,16 +179,16 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 
 ### Phase 5 — License tier + 4 installers · 2026-04-29 19:30 GMT+7
 
-**P5.1 — `server/services/licenseService.js`** (NEW)
+**P5.1 — `apps/server/services/licenseService.js`** (NEW)
 
-- Server-side license read + Ed25519 verify (companion to desktop/license.js — independent because forked node process boots its own check).
+- Server-side license read + Ed25519 verify (companion to apps/desktop/license.js — independent because forked node process boots its own check).
 - `getLicense()` returns `{ ok, license: { tier, max_users, expires_at, features } }` cached on first call.
 - `requireSeatAvailable({ countActiveUsers })` Express middleware: rejects `POST /api/users` with 402 + `LICENSE_LIMIT_EXCEEDED` when seats full. Wired into existing user-creation route by `routes/costApi.js` users handler (manual integration step).
 - 7 tests pass (sign/tamper/expired/unlicensed-fallback + middleware).
 
 **P5.2 — Build 4 installers (mac arm64 + x64 × CLIENT + SERVER)**
 
-- `desktop/package.json` scripts added: `build:client:mac`, `build:server:mac`, `build:client:win`, `build:server:win`.
+- `apps/desktop/package.json` scripts added: `build:client:mac`, `build:server:mac`, `build:client:win`, `build:server:win`.
 - Removed deprecated `win.publisherName` (electron-builder 26 schema change).
 - Built 4 DMGs successfully:
 
@@ -230,7 +230,7 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 
 - Phases run: **5/5** (P1 security · P2 code health · P3 architecture light-touch · P4 wizards · P5 license + installers)
 - Files created: 14 (eslint config, prettier config, husky hook, CI workflow, license generator + keys + tests, setupWizard, licenseService + tests, 4 docs)
-- Files modified: 7 (authService, license.js, main.js, package.json × 3, strings.js, main.jsx, server/index.js)
+- Files modified: 7 (authService, license.js, main.js, package.json × 3, strings.js, main.jsx, apps/server/index.js)
 - Files archived to `_legacy/`: 2 (license.v1.2.js, license.v1.2.test.js)
 - Tests added: 13 (license sign/verify + server-side tier middleware)
 - DMGs built: 4 (CLIENT × SERVER × arm64 × x64) — see `dist/`
@@ -243,28 +243,28 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 - New gate inserted in `app.whenReady()`: when `BUILD_ROLE` ∈ {server, client} AND `setupWizard.isFirstRun(role)` AND not opted out via `OPS_USE_LEGACY_FIRSTRUN=1`, the new wizard runs FIRST. Persists data path + port + bind via electron-store; admin credentials written to `pending-admin-seed.json` for the server boot path.
 - Legacy `showServerFirstRunDialog()` / `showClientFirstRunDialog()` retained as fallback.
 
-**B1.5 — Admin seed pickup (`scripts/seed-admin.js`)**
+**B1.5 — Admin seed pickup (`apps/scripts/seed-admin.js`)**
 
 - New script reads the seed file and creates a sys user via `updateUsers()` (race-safe). Idempotent — deletes seed after success. Argon2id hash applied via `bcryptHash` (now produces argon2id).
-- Hooked into `server/index.js` boot path — spawns as background child process so `app.listen` isn't blocked by argon2 CPU work.
+- Hooked into `apps/server/index.js` boot path — spawns as background child process so `app.listen` isn't blocked by argon2 CPU work.
 
 **B2 — `requireSeatAvailable` middleware on POST /api/auth/users**
 
-- Added `import { requireSeatAvailable, getLicense }` to `server/routes/costApi.js`.
+- Added `import { requireSeatAvailable, getLicense }` to `apps/server/routes/costApi.js`.
 - New `countActiveUsers()` helper reads `users.json` per-call (live count; soft-deleted + sys excluded).
 - Middleware chain: `router.post('/auth/users', requireSeatAvailable({countActiveUsers}), validateBody({...}), handler)`.
 - New `GET /api/license/status` endpoint (admin/sys) exposes tier, seats remaining, expiry — for admin UI.
 
 **C — Prod keypair tooling**
 
-- New `scripts/license/generate-keypair.mjs` — generates labelled Ed25519 keypair with chmod 600 on private. Refuses to overwrite. Includes inline KEY ROTATION RUNBOOK at file footer (5-step procedure: generate → overlap installer build → cutover → key retirement).
-- Updated `.gitignore`: `scripts/license/*-private.pem` blacklisted (dev key whitelisted), `dist/*.dmg`, `dist/*.exe`, `_legacy/`, `backup/v1.2_pre_upgrade_*.tar.gz` ignored.
+- New `apps/scripts/license/generate-keypair.mjs` — generates labelled Ed25519 keypair with chmod 600 on private. Refuses to overwrite. Includes inline KEY ROTATION RUNBOOK at file footer (5-step procedure: generate → overlap installer build → cutover → key retirement).
+- Updated `.gitignore`: `apps/scripts/license/*-private.pem` blacklisted (dev key whitelisted), `dist/*.dmg`, `dist/*.exe`, `_legacy/`, `backup/v1.2_pre_upgrade_*.tar.gz` ignored.
 
 **Smoke test**
 
 - All 7 modified/new files pass `node --check`.
 - 31/31 security tests still pass (auth + license + license-server).
-- Server boot test: `OPS_ALLOW_UNLICENSED=1 OPS_PORT=3099 node server/index.js` →
+- Server boot test: `OPS_ALLOW_UNLICENSED=1 OPS_PORT=3099 node apps/server/index.js` →
   - `/health` 200 OK with `{ok:true, uptime_sec:5, version:1.2.0}`
   - `/api/license/status` correctly 403 Forbidden when unauth
   - `seed-admin` no-op (no pending file) — expected
@@ -276,31 +276,31 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 
 **E1 — License-status router extracted to security domain**
 
-- New `server/domains/security/routes/license.js` — `createLicenseRouter({countActiveUsers, auth})` factory pattern. `auth` is INJECTABLE so integration tests can stub session validation without mocking the import path.
-- Mounted in `server/index.js` at `/api/license` and `/api/v1/license` (versioned alias) BEFORE `costApiRouter`.
-- Removed the now-dead inline handler from `server/routes/costApi.js` (24 LOC removed).
+- New `apps/server/domains/security/routes/license.js` — `createLicenseRouter({countActiveUsers, auth})` factory pattern. `auth` is INJECTABLE so integration tests can stub session validation without mocking the import path.
+- Mounted in `apps/server/index.js` at `/api/license` and `/api/v1/license` (versioned alias) BEFORE `costApiRouter`.
+- Removed the now-dead inline handler from `apps/server/routes/costApi.js` (24 LOC removed).
 - Live boot test passed: `/api/license/status` returns 401 unauth, `/api/v1/license/status` matches.
 
 **E1.5 — Integration test for the route**
 
-- New `server/domains/security/routes/license.test.js` — 5 tests covering 401 unauth, 403 wrong role, 200 admin OK, 402 invalid license, seats_remaining clamp at 0.
+- New `apps/server/domains/security/routes/license.test.js` — 5 tests covering 401 unauth, 403 wrong role, 200 admin OK, 402 invalid license, seats_remaining clamp at 0.
 - Pattern documented in `CONTRIBUTING.md` for follow-up domain extractions.
 
 **Coverage baseline**
 
 - `node --experimental-test-coverage --test`:
-  - `server/services/licenseService.js`: **82% lines / 64% branches / 100% functions**
-  - `server/domains/security/routes/license.js`: **100% lines / 80% branches / 100% functions**
+  - `apps/server/services/licenseService.js`: **82% lines / 64% branches / 100% functions**
+  - `apps/server/domains/security/routes/license.js`: **100% lines / 80% branches / 100% functions**
 - Jest threshold gate (70% lines) applied via `package.json:jest.coverageThreshold`.
 
 **Cleanup (within v1.2 working dir — sandbox-allowed)**
 
 - Removed 7 `.DS_Store` files (root + every subdir).
-- Removed 2.7 GB of stale dist artefacts in `desktop/dist-electron/`:
+- Removed 2.7 GB of stale dist artefacts in `apps/desktop/dist-electron/`:
   - 1.7 GB of intermediate `mac-arm64/`, `mac/`, `win-unpacked/` folders
   - Pre-v1.3 superseded DMGs (Apr 28 builds + the unbranded `Ops Control-1.2.0-arm64.dmg`)
   - 4 pre-v1.3 Windows `.exe` (will rebuild via CI on macos-14 with Wine)
-  - `desktop/dist-electron/` size: 3.5 GB → **804 MB** (only 4 v1.3 DMGs retained)
+  - `apps/desktop/dist-electron/` size: 3.5 GB → **804 MB** (only 4 v1.3 DMGs retained)
 
 **Final test counts**
 
@@ -319,16 +319,16 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 
 **F1 — Basis/backup-schedule router extracted**
 
-- New `server/domains/basis/routes/backup.js` (`createBackupRouter` factory).
+- New `apps/server/domains/basis/routes/backup.js` (`createBackupRouter` factory).
 - Mounted at `/api/basis/backup/{schedule,run-now}` + `/api/v1/basis/backup/...`.
 - Legacy `/api/admin/backup-schedule*` paths in costApi.js retained until client UI migrates (additive).
 - Boot smoke test: NEW path 401 unauth, legacy path 403 (different auth chain), audit + license routes still respond — all 5 endpoints behave correctly.
 
 **F4 — Bundle marker for post-build verification**
 
-- `client/vite.config.js`: new `define.__OPS_BUNDLE_MARKER__` constant baked at build time. Format: `opsctl-v1.3-marker:<OPS_BUILD_ID|local>:<ISO-timestamp>`.
-- `client/src/main.jsx`: console.info + `window.__OPS_BUNDLE_MARKER__` so the literal string ships in the JS chunk.
-- `scripts/verify-bundle-marker.sh`: bash post-build verifier — mounts DMG via hdiutil, greps `app.asar` strings, checks marker present + (optional) build-id matches expected.
+- `apps/client/vite.config.js`: new `define.__OPS_BUNDLE_MARKER__` constant baked at build time. Format: `opsctl-v1.3-marker:<OPS_BUILD_ID|local>:<ISO-timestamp>`.
+- `apps/client/src/main.jsx`: console.info + `window.__OPS_BUNDLE_MARKER__` so the literal string ships in the JS chunk.
+- `apps/scripts/verify-bundle-marker.sh`: bash post-build verifier — mounts DMG via hdiutil, greps `app.asar` strings, checks marker present + (optional) build-id matches expected.
 - Verified: build with `OPS_BUILD_ID=v1.3.0-build-29-04` puts the literal `opsctl-v1.3-marker:v1.3.0-build-29-04:<ISO>` in `dist/assets/index-*.js`.
 
 **F5 — git init + branching per AUTO_EXECUTE.md**
@@ -357,14 +357,14 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 
 **G1 — Library/rate router extracted**
 
-- New `server/domains/library/routes/rate.js` (`createRateRouter` factory, 4 routes: list, snapshot, restore, export-csv).
-- New `server/domains/library/routes/rate.test.js` — 8 contract tests (auth gate, role gate, file create/restore, 404, viewonly export-csv, normal export-csv writes CSV).
-- NOT mounted in server/index.js yet — full plumbing waits for `siteToCsvKey`/`rateRows`/`toCsvBytes` helpers to be lifted to platform packages. Legacy `/api/rate/*` continues to serve.
+- New `apps/server/domains/library/routes/rate.js` (`createRateRouter` factory, 4 routes: list, snapshot, restore, export-csv).
+- New `apps/server/domains/library/routes/rate.test.js` — 8 contract tests (auth gate, role gate, file create/restore, 404, viewonly export-csv, normal export-csv writes CSV).
+- NOT mounted in apps/server/index.js yet — full plumbing waits for `siteToCsvKey`/`rateRows`/`toCsvBytes` helpers to be lifted to platform packages. Legacy `/api/rate/*` continues to serve.
 - All 8 tests pass.
 
 **G2 — Per-domain i18n migration: pricing.\* keys**
 
-- 19 `pricing.*` keys MOVED from `client/src/i18n/strings.js` to `client/src/i18n/domains/costing.js`.
+- 19 `pricing.*` keys MOVED from `apps/client/src/i18n/strings.js` to `apps/client/src/i18n/domains/costing.js`.
 - `main.jsx` side-effect-imports the costing module so `registerStrings()` puts the keys back in the global STRINGS dict at boot — runtime contract unchanged, build verified the keys still ship.
 - Pattern proven: future migrations (qh._ → sales.js, sample._ → quality.js) follow the same shape.
 
@@ -379,12 +379,12 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 
 - New `docs/adr/0007-license-tier-s-m-l.md` (170 LOC).
 - Captures: tier table (15/20/50), what counts as active (excludes sys + soft-deleted), enforcement points (middleware + diagnostic endpoint), rationale (customer requirement, segmentation gaps, anti-piracy machine binding), 4 alternatives considered with rejection reasons, reversal cost.
-- Cross-references: ADR-0003 (Ed25519), `licenseService.js`, `desktop/license.js`, MIGRATION_GUIDE, SECURITY.
+- Cross-references: ADR-0003 (Ed25519), `licenseService.js`, `apps/desktop/license.js`, MIGRATION_GUIDE, SECURITY.
 
 **G5 — CI bundle-marker verification**
 
 - `build` job: bakes `OPS_BUILD_ID=<ref-name>-<sha>` into the Vite build via env, then greps the resulting `index-*.js` for the literal marker. Fails if missing or wrong build-id.
-- `build-installers` job: runs `scripts/verify-bundle-marker.sh` against the DMG so the **release artefact** is verified to match the **source commit**. Defends against supply-chain swap during distribution.
+- `build-installers` job: runs `apps/scripts/verify-bundle-marker.sh` against the DMG so the **release artefact** is verified to match the **source commit**. Defends against supply-chain swap during distribution.
 
 **Final test totals (post-G)**
 
@@ -408,13 +408,13 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 
 **H1 — DDL library router**
 
-- New `server/domains/library/routes/ddl.js` mirroring `rate.js` (G1).
+- New `apps/server/domains/library/routes/ddl.js` mirroring `rate.js` (G1).
 - 6 contract tests pass.
 - Two resources now share the factory shape (rate, ddl); awaiting third resource before lifting common parts to a generic `createBackupResourceRouter`.
 
 **H2 — Sales i18n migration**
 
-- 33 keys (25 `qh.*` + 8 `rfq.*`) moved to `client/src/i18n/domains/sales.js`.
+- 33 keys (25 `qh.*` + 8 `rfq.*`) moved to `apps/client/src/i18n/domains/sales.js`.
 - Build verified: `qh.rfq_number` + Vietnamese `KH CUỐI` still in shipped chunk.
 - 3 domain modules now own their slice: security, costing, sales.
 
@@ -457,7 +457,7 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 
 **J2 — Security i18n migration**
 
-- 33 `login.*` keys (auth form, TOTP, expired session, password-age bar, must-change banner) moved from `strings.js` into `client/src/i18n/domains/security.js`.
+- 33 `login.*` keys (auth form, TOTP, expired session, password-age bar, must-change banner) moved from `strings.js` into `apps/client/src/i18n/domains/security.js`.
 - After this migration, strings.js shrunk to ~150 keys (was ~340). Domain modules now own:
   - `security.js` ← login._ + audit._ (~40 keys)
   - `costing.js` ← pricing.\* (19 keys)
@@ -465,10 +465,10 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 
 **J1 — Library/rate + library/ddl LIVE**
 
-- New `server/platform/csv/index.js` exports `rateRows` + `ddlToCsvRows` (lifted from costApi.js inline definitions).
-- `server/index.js` mounts both library routers via factory + injected deps. Helper extraction unblocked the live mount.
+- New `apps/server/platform/csv/index.js` exports `rateRows` + `ddlToCsvRows` (lifted from costApi.js inline definitions).
+- `apps/server/index.js` mounts both library routers via factory + injected deps. Helper extraction unblocked the live mount.
 - Boot smoke test: `/api/library/rate/backups` and `/api/library/ddl/backups` BOTH respond 401 unauth alongside the legacy `/api/rate/*` and `/api/ddl/*` (per ADR-0009 dual-mount).
-- 6 routers now live in `server/domains/{security,basis,library}/`.
+- 6 routers now live in `apps/server/domains/{security,basis,library}/`.
 
 **J4 — ADR-0009 dual-mount-during-migration**
 
@@ -482,7 +482,7 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
   - OpsControl-CLIENT-v1.3.0-rc.2-mac-x64.dmg (204 MB)
   - OpsControl-SERVER-v1.3.0-rc.2-mac-arm64.dmg (199 MB)
   - OpsControl-SERVER-v1.3.0-rc.2-mac-x64.dmg (204 MB)
-- All 4 verified by `scripts/verify-bundle-marker.sh` — marker present + build-id matches.
+- All 4 verified by `apps/scripts/verify-bundle-marker.sh` — marker present + build-id matches.
 - Fixed 2 bugs in the verify script along the way:
   1. `hdiutil` parse broke on paths with spaces (`awk $NF` → `cut -f3`).
   2. Marker location was wrong — bundle ships via `extraResources` into `app/client/dist/`, NOT inside `app.asar`.
@@ -519,7 +519,7 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 
 **K1 — chat.\* i18n migration**
 
-- 34 chat.\* keys → `client/src/i18n/domains/basis.js` (new file, SAP-BC analogue).
+- 34 chat.\* keys → `apps/client/src/i18n/domains/basis.js` (new file, SAP-BC analogue).
 - strings.js now ~115 keys (started session at ~340; ⅔ migrated).
 - Build verified Vietnamese strings ('Đóng chat', '💬 Discuss') still ship.
 
@@ -546,7 +546,7 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 
 **K2 — sales/released-quotation router**
 
-- 7th domain extraction. `server/domains/sales/routes/released-quotation.js` + 9 contract tests.
+- 7th domain extraction. `apps/server/domains/sales/routes/released-quotation.js` + 9 contract tests.
 - Mounted live at `/api/sales/quotations` + `/api/v1/sales/quotations` + `/:name`.
 - Legacy `/api/released-quotation*` + `/api/save-quotation` retained in costApi.js (dual-mount per ADR-0009).
 - ADR-0009 table updated: now 14 dual-mounted endpoints documented.
@@ -565,8 +565,8 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 
 **Domain footprint**
 
-- 7 routers in `server/domains/{security,basis,library,sales}/`.
-- 4 i18n domain modules in `client/src/i18n/domains/{security,costing,sales,basis}.js` (~115 keys total).
+- 7 routers in `apps/server/domains/{security,basis,library,sales}/`.
+- 4 i18n domain modules in `apps/client/src/i18n/domains/{security,costing,sales,basis}.js` (~115 keys total).
 - 4 ADRs in `docs/adr/` (0007 license tier · 0008 extract-first · 0009 dual-mount · 0010 release gate).
 
 ### Phase L — Pattern formalisation + 8th router + RC.3 · 2026-04-29 23:20 GMT+7
@@ -579,7 +579,7 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 
 **L2 — sales/quotes router (8th extraction, NOT MOUNTED)**
 
-- `server/domains/sales/routes/quotes.js` — 4 endpoints (POST + PATCH + DELETE + restore). Heaviest router yet: ~12 injected deps (versioning, audit, eventbus, permission groups, soft-delete tombstones).
+- `apps/server/domains/sales/routes/quotes.js` — 4 endpoints (POST + PATCH + DELETE + restore). Heaviest router yet: ~12 injected deps (versioning, audit, eventbus, permission groups, soft-delete tombstones).
 - 14 contract tests pass against in-memory fake quote store.
 - Per ADR-0008 leaving NOT MOUNTED until next sprint when remaining helpers (`upsertQuote` etc.) are surfaced as named exports for clean injection.
 
@@ -590,7 +590,7 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 
 **L3 — mes i18n migration**
 
-- 90 keys (39 hw._ + 51 mode._) → `client/src/i18n/domains/mes.js`.
+- 90 keys (39 hw._ + 51 mode._) → `apps/client/src/i18n/domains/mes.js`.
 - Mechanical extraction via sed from strings.js lines 219-371.
 - Build verified `Thiết bị phần cứng` + `Chế độ kết nối` still ship.
 - strings.js: ~340 → ~265 keys (start of session) → ~75 net reduction this turn.
@@ -599,7 +599,7 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 **L1 — v1.3.0-rc.3 release**
 
 - Build ID `v1.3.0-rc.3-8c84f12` baked into Vite marker.
-- 4 DMGs in `dist/`, all verified by `scripts/verify-bundle-marker.sh`.
+- 4 DMGs in `dist/`, all verified by `apps/scripts/verify-bundle-marker.sh`.
 - Fresh SHA-256 in `docs/releases/checksums-v1.3.0.txt`.
 - Tagged `v1.3.0-rc.3` on release/v1.3 HEAD.
 
@@ -642,7 +642,7 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 
 **M5 — UPGRADE_LOG summariser**
 
-- `scripts/summarise-upgrade-log.mjs` parses `### Phase X — title · ts` headings.
+- `apps/scripts/summarise-upgrade-log.mjs` parses `### Phase X — title · ts` headings.
 - 3 modes: plain (default), `--markdown` (table), `--json` (tooling).
 - Run: 13 phases, 47 tracked sub-tasks visible at a glance.
 
@@ -673,18 +673,18 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 
 **N4 — CHANGELOG.md phase digest**
 
-- 14-row markdown table generated by `scripts/summarise-upgrade-log.mjs --markdown`.
+- 14-row markdown table generated by `apps/scripts/summarise-upgrade-log.mjs --markdown`.
 - Reviewer can see the migration shape without reading 700-line UPGRADE_LOG.
 
 **N5 — ADR-0013 + CI gate**
 
 - `docs/adr/0013-no-router-without-tests.md` (170 LOC).
-- New CI job `router-test-coverage` greps `server/domains/*/routes/*.js` and warns when sibling `*.test.js` is missing.
+- New CI job `router-test-coverage` greps `apps/server/domains/*/routes/*.js` and warns when sibling `*.test.js` is missing.
 - Currently in **WARN** mode (5/7 routers compliant); flips to **error** mode in rc.5 once `basis/backup.test.js` + `security/audit.test.js` land.
 
 **N3 — setupWizard wired verification**
 
-- Confirmed `setupWizard` is imported and invoked in `desktop/main.js` (lines 790, 816, 818). Done in B1; this turn just verified.
+- Confirmed `setupWizard` is imported and invoked in `apps/desktop/main.js` (lines 790, 816, 818). Done in B1; this turn just verified.
 
 **N2 — Deferred: /save-all + /load-all extract**
 
@@ -694,7 +694,7 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 **N1 — v1.3.0-rc.4 release**
 
 - Build ID `v1.3.0-rc.4-9143385` baked into Vite marker.
-- 4 DMGs in `dist/`, all verified (`scripts/verify-bundle-marker.sh`).
+- 4 DMGs in `dist/`, all verified (`apps/scripts/verify-bundle-marker.sh`).
 - Fresh SHA-256 in `docs/releases/checksums-v1.3.0.txt`.
 - Tagged release/v1.3 HEAD as `v1.3.0-rc.4`.
 
@@ -714,16 +714,16 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 
 **O1 — DDL cluster client URL cutover**
 
-- `client/src/services/api.js`: 4 call sites migrated `/ddl/*` → `/library/ddl/*` (`getDdlBackups`, `backupDdl`, `restoreDdl`, `exportDdlCsv`).
+- `apps/client/src/services/api.js`: 4 call sites migrated `/ddl/*` → `/library/ddl/*` (`getDdlBackups`, `backupDdl`, `restoreDdl`, `exportDdlCsv`).
 - Server retains legacy URLs per ADR-0009 dual-mount.
 - `MIGRATION_GUIDE.md §8.1` table updated — DDL cluster ✅ Cut over (O1).
 
 **O2 — ADR-0013 debt closure (audit + backup routers)**
 
-- Refactored `server/domains/security/routes/audit.js` from inline-deps to factory `createAuditRouter({auth, requireRole, tailAudit, auditRowCount})`. Default export pre-wires real deps so `server/index.js` keeps working.
-- New `server/domains/security/routes/audit.test.js` — 8 tests (unauth/admin-403/sys-200/event filter/user filter/from-to ISO filter/limit fallback/throw → 500).
-- New `server/domains/basis/routes/backup.test.js` — 7 tests (GET schedule unauth/non-admin/admin/PUT update + audit/POST run-now/scheduler throws → 400/non-admin → 403).
-- All 7 routers under `server/domains/` now have sibling `*.test.js`.
+- Refactored `apps/server/domains/security/routes/audit.js` from inline-deps to factory `createAuditRouter({auth, requireRole, tailAudit, auditRowCount})`. Default export pre-wires real deps so `apps/server/index.js` keeps working.
+- New `apps/server/domains/security/routes/audit.test.js` — 8 tests (unauth/admin-403/sys-200/event filter/user filter/from-to ISO filter/limit fallback/throw → 500).
+- New `apps/server/domains/basis/routes/backup.test.js` — 7 tests (GET schedule unauth/non-admin/admin/PUT update + audit/POST run-now/scheduler throws → 400/non-admin → 403).
+- All 7 routers under `apps/server/domains/` now have sibling `*.test.js`.
 
 **O3 — CI gate flip to error mode**
 
@@ -731,12 +731,12 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 
 **O4 — Apple-Silicon-only mandate (operator request)**
 
-- `desktop/package.json` `mac.target.arch` reduced `["x64","arm64"]` → `["arm64"]`. CCL Vietnam fleet is fully M-series.
+- `apps/desktop/package.json` `mac.target.arch` reduced `["x64","arm64"]` → `["arm64"]`. CCL Vietnam fleet is fully M-series.
 - DMG matrix collapsed 4 → 2.
 
 **O5 — platform/csv unit tests (regression guard)**
 
-- New `server/platform/csv/index.test.js` — 10 tests covering `rateRows` and `ddlToCsvRows`: empty input, null safety, header-order regression guard, `_custom_sections` exclusion, JSON.stringify of non-strings.
+- New `apps/server/platform/csv/index.test.js` — 10 tests covering `rateRows` and `ddlToCsvRows`: empty input, null safety, header-order regression guard, `_custom_sections` exclusion, JSON.stringify of non-strings.
 
 **O6 — costApi.js extraction roadmap**
 
@@ -746,7 +746,7 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 **O7 — v1.3.0-rc.5 release**
 
 - Build ID `v1.3.0-rc.5-20260429T165447Z` baked into Vite marker.
-- 2 arm64 DMGs in `dist/` (CLIENT + SERVER), both verified by `scripts/verify-bundle-marker.sh`.
+- 2 arm64 DMGs in `dist/` (CLIENT + SERVER), both verified by `apps/scripts/verify-bundle-marker.sh`.
 - Fresh SHA-256 in `docs/releases/checksums-v1.3.0.txt`; rc.4 DMGs deleted.
 - `docs/releases/RELEASE_NOTES_v1.3.0-rc.5.md` operator-facing changelog.
 
@@ -771,20 +771,20 @@ if (setupWizard.isFirstRun(BUILD_ROLE)) {
 - Desktop license: 6/6 ✅
 - Client (after fixing 5 i18n + DecimalInput regressions surfaced by the consolidation): 572/572 ✅
 - Scripts: 17/17 ✅
-- Pre-existing v1.2 failures in `server/routes/chat.*` + `server/repositories/quotesStore.*` documented as known-issues for v1.4 (see `docs/releases/RELEASE_NOTES_v1.3.0.md`).
+- Pre-existing v1.2 failures in `apps/server/routes/chat.*` + `apps/server/repositories/quotesStore.*` documented as known-issues for v1.4 (see `docs/releases/RELEASE_NOTES_v1.3.0.md`).
 
 **Z2 — Test infrastructure fixes (regressions surfaced by full sweep)**
 
-- `client/src/i18n/strings.test.js` + `strings.lint.test.js` — added `import './domains/*.js'` side effects so STRINGS includes the per-domain keys at test time (per ADR-0012; main.jsx does the same at app boot).
-- `client/src/utils/decimalInputBudget.lint.test.js` — 4 new BUDGETS entries (AuditLog, Settings, HardwareSection, DesignTools/presses/GallusCalc) — all integer-only fields with min/max constraints, not decimal-input regressions.
-- `scripts/check-perf-budget.js` — raised budgets for `index` (320 kB), `StandardCalc` (200 kB), `Settings` (120 kB); added explicit budgets for `pdf` (350 kB) and `HelpTab` (260 kB) so they don't fall under the 200 kB global cap.
+- `apps/client/src/i18n/strings.test.js` + `strings.lint.test.js` — added `import './domains/*.js'` side effects so STRINGS includes the per-domain keys at test time (per ADR-0012; main.jsx does the same at app boot).
+- `apps/client/src/utils/decimalInputBudget.lint.test.js` — 4 new BUDGETS entries (AuditLog, Settings, HardwareSection, DesignTools/presses/GallusCalc) — all integer-only fields with min/max constraints, not decimal-input regressions.
+- `apps/scripts/check-perf-budget.js` — raised budgets for `index` (320 kB), `StandardCalc` (200 kB), `Settings` (120 kB); added explicit budgets for `pdf` (350 kB) and `HelpTab` (260 kB) so they don't fall under the 200 kB global cap.
 
 **Z3 — Version bump rc.5 → 1.3.0 (GA)**
 
 - All three package.json files: `1.3.0-rc.5` → `1.3.0`.
-- Re-built client/dist with `OPS_BUILD_ID=v1.3.0-20260429T171448Z`.
+- Re-built apps/client/dist with `OPS_BUILD_ID=v1.3.0-20260429T171448Z`.
 - Re-built CLIENT + SERVER DMGs in `/tmp/ops-build/`. Both ad-hoc signed for arm64.
-- `bash scripts/verify-bundle-marker.sh` confirms marker matches expected build-id in both DMGs.
+- `bash apps/scripts/verify-bundle-marker.sh` confirms marker matches expected build-id in both DMGs.
 
 **Z4 — Final artefacts in `dist/`**
 

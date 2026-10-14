@@ -1,7 +1,7 @@
 # Hướng dẫn TẠO LICENSE — Ops Control
 
 > Dành cho người giữ private key (CCL HQ / Henry). Mọi thông tin đã kiểm chứng từ
-> `scripts/license/generate-license.mjs` + `desktop/license.js` + license thật đã cấp.
+> `apps/scripts/license/generate-license.mjs` + `apps/desktop/license.js` + license thật đã cấp.
 
 ## 0. Cơ chế (đọc 1 lần cho hiểu)
 
@@ -48,7 +48,7 @@ dấu cách). Tuyệt đối không để lẫn ký tự khác.
 cd "/Users/henrydang/Downloads/Claude-Cowork/3. PROJECT/Ops-Control"
 export PATH="/opt/homebrew/opt/node@24/bin:$PATH"   # node keg-only trên máy này
 
-node scripts/license/generate-license.mjs \
+node apps/scripts/license/generate-license.mjs \
   --installation-id <DÁN_64_HEX_TỪ_KHÁCH> \
   --customer "CCL Design Vietnam- Hai Phong" \
   --tier M \
@@ -114,7 +114,7 @@ Cách xử lý:
    > Vì bạn giữ private key nên **tự cấp lại được, không cần ai khác**. Hãy backup private key ra nơi
    > an toàn (offline) — mất nó là mất khả năng cấp license.
 
-## 5. Các lỗi license thường gặp (từ `desktop/license.js`)
+## 5. Các lỗi license thường gặp (từ `apps/desktop/license.js`)
 
 | reason                       | Nghĩa                              | Xử lý                                    |
 | ---------------------------- | ---------------------------------- | ---------------------------------------- |

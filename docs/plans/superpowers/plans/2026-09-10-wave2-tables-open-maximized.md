@@ -21,7 +21,7 @@
 - **`prevRect` is what Restore returns to.** A window that opens maximized must still carry a sensible `prevRect`, or clicking Restore leaves it with nothing to restore to.
 - Follow the existing Set idiom in `windowLogic.js` — a new classifier goes next to `MULTI_INSTANCE_TABS`, not into a config file or a component.
 - Test style follows `window/windowManagerReducer.test.js`: `import test from 'node:test'`, `import assert from 'node:assert/strict'`, and the local `open(state, tabId, opts)` helper.
-- Run: `cd client && node --test 'src/**/*.test.js'` (1797 tests green as of this plan).
+- Run: `cd apps/client && node --test 'src/**/*.test.js'` (1797 tests green as of this plan).
 
 ---
 
@@ -29,8 +29,8 @@
 
 **Files:**
 
-- Modify: `client/src/window/windowLogic.js` (add after the `MULTI_INSTANCE_TABS` block, around line 58)
-- Test: `client/src/window/windowLogic.test.js` (create)
+- Modify: `apps/client/src/window/windowLogic.js` (add after the `MULTI_INSTANCE_TABS` block, around line 58)
+- Test: `apps/client/src/window/windowLogic.test.js` (create)
 
 **Interfaces:**
 
@@ -39,7 +39,7 @@
 
 - [x] **Step 1: Write the failing test**
 
-Create `client/src/window/windowLogic.test.js`:
+Create `apps/client/src/window/windowLogic.test.js`:
 
 ```js
 import test from 'node:test';
@@ -80,12 +80,12 @@ test('an unknown tab id is not maximized', () => {
 
 - [x] **Step 2: Run the test to verify it fails**
 
-Run: `cd client && node --test src/window/windowLogic.test.js`
+Run: `cd apps/client && node --test src/window/windowLogic.test.js`
 Expected: FAIL — `does not provide an export named 'opensMaximized'`.
 
 - [x] **Step 3: Add the Set and the predicate**
 
-In `client/src/window/windowLogic.js`, directly after the closing `]);` of `MULTI_INSTANCE_TABS`:
+In `apps/client/src/window/windowLogic.js`, directly after the closing `]);` of `MULTI_INSTANCE_TABS`:
 
 ```js
 /**
@@ -119,13 +119,13 @@ export function opensMaximized(tabId) {
 
 - [x] **Step 4: Run the test to verify it passes**
 
-Run: `cd client && node --test src/window/windowLogic.test.js`
+Run: `cd apps/client && node --test src/window/windowLogic.test.js`
 Expected: PASS (4 tests).
 
 - [x] **Step 5: Commit**
 
 ```bash
-git add client/src/window/windowLogic.js client/src/window/windowLogic.test.js
+git add apps/client/src/window/windowLogic.js apps/client/src/window/windowLogic.test.js
 git commit -m "$(cat <<'EOF'
 feat(apps/client): classify which tabs should open maximized
 
@@ -151,8 +151,8 @@ EOF
 
 **Files:**
 
-- Modify: `client/src/window/windowManagerReducer.js:58-94` (the `A.OPEN` case) and its import block at the top
-- Test: `client/src/window/windowManagerReducer.test.js`
+- Modify: `apps/client/src/window/windowManagerReducer.js:58-94` (the `A.OPEN` case) and its import block at the top
+- Test: `apps/client/src/window/windowManagerReducer.test.js`
 
 **Interfaces:**
 
@@ -161,7 +161,7 @@ EOF
 
 - [x] **Step 1: Write the failing test**
 
-Append to `client/src/window/windowManagerReducer.test.js`:
+Append to `apps/client/src/window/windowManagerReducer.test.js`:
 
 ```js
 test('a data-grid tab opens maximized with a restorable prevRect', () => {
@@ -203,12 +203,12 @@ test('re-focusing a minimized window still restores it to normal', () => {
 
 - [x] **Step 2: Run the test to verify it fails**
 
-Run: `cd client && node --test src/window/windowManagerReducer.test.js`
+Run: `cd apps/client && node --test src/window/windowManagerReducer.test.js`
 Expected: FAIL — `Expected values to be strictly equal: 'normal' !== 'max'`.
 
 - [x] **Step 3: Import the predicate**
 
-In `client/src/window/windowManagerReducer.js`, extend the existing import from `./windowLogic.js` (the block starting at line 16 that already pulls `DEFAULT_WINDOW_W`) to also import `opensMaximized`.
+In `apps/client/src/window/windowManagerReducer.js`, extend the existing import from `./windowLogic.js` (the block starting at line 16 that already pulls `DEFAULT_WINDOW_W`) to also import `opensMaximized`.
 
 - [x] **Step 4: Set the initial state in the OPEN case**
 
@@ -254,19 +254,19 @@ const win = {
 
 - [x] **Step 5: Run the test to verify it passes**
 
-Run: `cd client && node --test src/window/windowManagerReducer.test.js`
+Run: `cd apps/client && node --test src/window/windowManagerReducer.test.js`
 Expected: PASS, including every pre-existing reducer test.
 
 - [x] **Step 6: Run the full client suite**
 
-Run: `cd client && node --test 'src/**/*.test.js'`
+Run: `cd apps/client && node --test 'src/**/*.test.js'`
 Expected: PASS.
 
 - [x] **Step 7: Verify in the running app**
 
 The installed app at `:3100` serves a built bundle, not this code. Start the dev client and point its proxy at the live API:
 
-1. In `client/vite.config.js`, temporarily change the three `target: 'http://localhost:3000'` entries to `http://localhost:3100` and add `'/health'` and `'/metrics'` proxy entries. **This edit is for verification only — revert it before committing.**
+1. In `apps/client/vite.config.js`, temporarily change the three `target: 'http://localhost:3000'` entries to `http://localhost:3100` and add `'/health'` and `'/metrics'` proxy entries. **This edit is for verification only — revert it before committing.**
 2. Start the dev server on port 5174 and log in.
 3. Open **Quote History**.
 
@@ -285,12 +285,12 @@ Confirm from the browser console:
 
 Expected: the Quote History frame reports ~100% of viewport width, against the 62% measured before this change.
 
-4. Revert `client/vite.config.js` and confirm `git status` shows it unmodified.
+4. Revert `apps/client/vite.config.js` and confirm `git status` shows it unmodified.
 
 - [x] **Step 8: Commit**
 
 ```bash
-git add client/src/window/windowManagerReducer.js client/src/window/windowManagerReducer.test.js
+git add apps/client/src/window/windowManagerReducer.js apps/client/src/window/windowManagerReducer.test.js
 git commit -m "$(cat <<'EOF'
 feat(apps/client): open data-grid screens maximized
 
@@ -319,8 +319,8 @@ EOF
 
 **Files:**
 
-- Modify: `client/src/window/Taskbar.jsx`
-- Modify: `client/src/window/WindowLayer.css` (append the button rule)
+- Modify: `apps/client/src/window/Taskbar.jsx`
+- Modify: `apps/client/src/window/WindowLayer.css` (append the button rule)
 
 **Interfaces:**
 
@@ -331,7 +331,7 @@ Six windows accumulated during a five-minute audit and none of them ever closed 
 
 - [x] **Step 1: Add the prop and the button**
 
-In `client/src/window/Taskbar.jsx`, extend the signature on line 8 and render the control at the end of the strip:
+In `apps/client/src/window/Taskbar.jsx`, extend the signature on line 8 and render the control at the end of the strip:
 
 ```jsx
 export default function Taskbar({ windows, focusedId, onFocus, onRestore, onCloseAll }) {
@@ -359,7 +359,7 @@ The control only appears once there is more than one closable window, so a singl
 
 - [x] **Step 2: Add the two i18n strings**
 
-In `client/src/i18n/strings.js`, next to the existing `window.*` keys:
+In `apps/client/src/i18n/strings.js`, next to the existing `window.*` keys:
 
 ```js
   'window.close_all': { en: 'Close all', vi: 'Đóng tất cả' },
@@ -367,7 +367,7 @@ In `client/src/i18n/strings.js`, next to the existing `window.*` keys:
 
 - [x] **Step 3: Wire it in WindowLayer**
 
-In `client/src/window/WindowLayer.jsx`, pass a handler that closes every non-fixed window:
+In `apps/client/src/window/WindowLayer.jsx`, pass a handler that closes every non-fixed window:
 
 ```jsx
         onCloseAll={() =>
@@ -379,7 +379,7 @@ Home is `fixed`, so it survives — the operator lands back on it.
 
 - [x] **Step 4: Add the style**
 
-Append to `client/src/window/WindowLayer.css`:
+Append to `apps/client/src/window/WindowLayer.css`:
 
 ```css
 /* Only shown when 2+ closable windows exist — see Taskbar.jsx. Sits at the
@@ -402,12 +402,12 @@ Append to `client/src/window/WindowLayer.css`:
 
 - [x] **Step 5: Run the i18n lint test**
 
-Run: `cd client && node --test src/i18n/strings.lint.test.js`
+Run: `cd apps/client && node --test src/i18n/strings.lint.test.js`
 Expected: PASS. This suite enforces that every key has both locales — it is the reason i18n has not rotted the way the design tokens have.
 
 - [x] **Step 6: Run the full client suite**
 
-Run: `cd client && node --test 'src/**/*.test.js'`
+Run: `cd apps/client && node --test 'src/**/*.test.js'`
 Expected: PASS.
 
 - [x] **Step 7: Verify in the running app**
@@ -417,7 +417,7 @@ With the dev client running (same temporary proxy edit as Task 2 Step 7): open f
 - [x] **Step 8: Commit**
 
 ```bash
-git add client/src/window/Taskbar.jsx client/src/window/WindowLayer.jsx client/src/window/WindowLayer.css client/src/i18n/strings.js
+git add apps/client/src/window/Taskbar.jsx apps/client/src/window/WindowLayer.jsx apps/client/src/window/WindowLayer.css apps/client/src/i18n/strings.js
 git commit -m "$(cat <<'EOF'
 feat(apps/client): add "Close all" to the window taskbar
 

@@ -31,7 +31,7 @@ flowchart LR
   end
   subgraph HQ[CCL HQ - offline]
     PRIV[Ed25519 private key]
-    GEN[scripts/license/generate-license.mjs]
+    GEN[apps/scripts/license/generate-license.mjs]
     PRIV --> GEN
   end
   GEN -.->|email license.json| LIC
@@ -42,8 +42,8 @@ flowchart LR
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  apps/                  electron + node entry points         │
-│  └── desktop/main.js    Electron, forks node server          │
-│  └── server/index.js    Express boot, mounts routers         │
+│  └── apps/desktop/main.js    Electron, forks node server          │
+│  └── apps/server/index.js    Express boot, mounts routers         │
 ├─────────────────────────────────────────────────────────────┤
 │  domains/               bounded contexts (in-progress migration)│
 │  ├── security/          users, audit, permission groups      │
@@ -119,7 +119,7 @@ sequenceDiagram
   App->>App: Hash machine fingerprint (SHA-256)
   App-->>Customer: Display Installation ID
   Customer->>HQ: Email Installation ID + customer name + tier
-  HQ->>HQ: scripts/license/generate-license.mjs --installation-id ... --tier M
+  HQ->>HQ: apps/scripts/license/generate-license.mjs --installation-id ... --tier M
   HQ->>HQ: sign(canonicalize(payload), Ed25519 private key)
   HQ-->>Customer: license.json
   Customer->>App: Paste license JSON in wizard
@@ -161,7 +161,7 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-  src[Source<br/>client/src + server/]
+  src[Source<br/>apps/client/src + apps/server/]
   build1[npm run build<br/>vite build]
   build2[electron-builder]
   src -->|client| build1 -->|client/dist| build2

@@ -60,7 +60,7 @@ This makes the deployed v1.5.0 server read its data from the OLD `COST_V1.0/CCL_
 
 ### `.env.example` template
 
-`scripts/preflight-env.js` enforces production requirements:
+`apps/scripts/preflight-env.js` enforces production requirements:
 
 | Required (production)                             | Constraint             | Failure mode if missing                                              |
 | ------------------------------------------------- | ---------------------- | -------------------------------------------------------------------- |
@@ -96,7 +96,7 @@ That's the **only** env var set locally. Dev mode runs without `OPS_TOTP_KEY` (P
 
 ### Structure
 
-[`server/index.js:240-260`](server/index.js#L240-L260) — request log middleware:
+[`apps/server/index.js:240-260`](server/index.js#L240-L260) — request log middleware:
 
 ```js
 app.use((req, res, next) => {
@@ -136,11 +136,11 @@ app.use((req, res, next) => {
 - `console.warn()` — recoverable conditions (e.g. "TOTP boot probe threw")
 - `console.error()` — fatals + Phase-1 boot diagnostics (refuses to start in prod with missing keys)
 
-There is also a `client/src/utils/logger.js` (DEV-only `log/warn`, always-on `err`) used by some client code — Phase 1 F1-5 noted only partial migration.
+There is also a `apps/client/src/utils/logger.js` (DEV-only `log/warn`, always-on `err`) used by some client code — Phase 1 F1-5 noted only partial migration.
 
 ### PII redaction
 
-- 5xx response bodies wrapped in `redactErrorMessage(err)` from [`server/utils/safeError.js:66`](server/utils/safeError.js#L66) — strips paths, stack traces.
+- 5xx response bodies wrapped in `redactErrorMessage(err)` from [`apps/server/utils/safeError.js:66`](apps/server/utils/safeError.js#L66) — strips paths, stack traces.
 - Login fail audit row stores **plaintext reason** (`LOGIN_FAIL`) — flagged by CLAUDE.md MES-3-FIX-3 (P3, deferred). Auditor-facing only; not user-facing.
 - Request log does **not** include request body, query strings, or session IDs — clean.
 
@@ -192,13 +192,13 @@ Per-route × per-status counters. Sufficient for a Prometheus + Grafana setup.
 
 ### Backup tooling
 
-| Component                            | Purpose                                                                              |
-| ------------------------------------ | ------------------------------------------------------------------------------------ |
-| `server/services/backupScheduler.js` | In-process daily cron. Activate with `OPS_BACKUP_SCHEDULE=1`. Default OFF for dev.   |
-| `scripts/backup-offsite.sh`          | 3-2-1 rule "1 off-site" copy via rsync/scp. Companion to scheduler.                  |
-| `scripts/verify-backup.js`           | Verify a snapshot is restorable. `--strict` schema-validates critical Library files. |
-| `Backup & restore/Code/`             | Operator-facing restore tooling (CLAUDE.md "All data gone after a restore" runbook). |
-| `Backup & restore/Data/`             | Operator backup target (dev workspace empty — production-only).                      |
+| Component                                 | Purpose                                                                              |
+| ----------------------------------------- | ------------------------------------------------------------------------------------ |
+| `apps/server/services/backupScheduler.js` | In-process daily cron. Activate with `OPS_BACKUP_SCHEDULE=1`. Default OFF for dev.   |
+| `apps/scripts/backup-offsite.sh`          | 3-2-1 rule "1 off-site" copy via rsync/scp. Companion to scheduler.                  |
+| `apps/scripts/verify-backup.js`           | Verify a snapshot is restorable. `--strict` schema-validates critical Library files. |
+| `Backup & restore/Code/`                  | Operator-facing restore tooling (CLAUDE.md "All data gone after a restore" runbook). |
+| `Backup & restore/Data/`                  | Operator backup target (dev workspace empty — production-only).                      |
 
 ### `verify-backup` run (live, on this dev workspace)
 
@@ -271,7 +271,7 @@ sudo systemctl start ops-control
 
 ### Help system in-app
 
-CLAUDE.md "Help system" — `client/src/help/content.js` (6 056 LOC) is the single source for in-app Help tab + Word user guide. `prebuild` hook regenerates `OpsControl_UserGuide.docx` on every `npm run build` so the offline doc shipped to operators stays fresh.
+CLAUDE.md "Help system" — `apps/client/src/help/content.js` (6 056 LOC) is the single source for in-app Help tab + Word user guide. `prebuild` hook regenerates `OpsControl_UserGuide.docx` on every `npm run build` so the offline doc shipped to operators stays fresh.
 
 | ID    | Severity | Finding                                                                                                                                                                                                                                                    |
 | ----- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -301,7 +301,7 @@ CLAUDE.md "Help system" — `client/src/help/content.js` (6 056 LOC) is the sing
 
 **Coverage gaps I found**:
 
-- `domains/planning/server/routes/operationV2.js` + `workOrderV2.js` use a **local** `requireTabAccess` shim ([`kiosksV2.js:55`](domains/planning/server/routes/kiosksV2.js#L55)) instead of importing the canonical one from `server/services/permissionService.js`. CLAUDE.md MES-3-FIX-8 (promoted P2) acknowledges this — defense-in-depth gap, not currently exploitable because role + state-machine guards still apply.
+- `domains/planning/server/routes/operationV2.js` + `workOrderV2.js` use a **local** `requireTabAccess` shim ([`kiosksV2.js:55`](domains/planning/server/routes/kiosksV2.js#L55)) instead of importing the canonical one from `apps/server/services/permissionService.js`. CLAUDE.md MES-3-FIX-8 (promoted P2) acknowledges this — defense-in-depth gap, not currently exploitable because role + state-machine guards still apply.
 
 | ID    | Severity | Finding                                                                                                                                                                                                                                                                                    |
 | ----- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -314,10 +314,10 @@ CLAUDE.md "Help system" — `client/src/help/content.js` (6 056 LOC) is the sing
 
 ### Surface
 
-- **68 `audit()` callsites** across `server/` + `domains/`.
-- Storage: SQLite `audit_log` table (migrated from JSON file in v1.3 P0 per [`server/repositories/auditStore.js:5`](server/repositories/auditStore.js#L5)).
+- **68 `audit()` callsites** across `apps/server/` + `domains/`.
+- Storage: SQLite `audit_log` table (migrated from JSON file in v1.3 P0 per [`apps/server/repositories/auditStore.js:5`](apps/server/repositories/auditStore.js#L5)).
 - Schema: `(ts, event, user, ip, detail)` with indexes on each (Phase 1 §1.4.2).
-- Rotation: `server/services/auditRetention.js` (v1.3 P0) — daily.
+- Rotation: `apps/server/services/auditRetention.js` (v1.3 P0) — daily.
 
 ### Top events captured
 
@@ -343,12 +343,12 @@ Coverage spans:
 
 ### Schema versioning
 
-- **No schema-version table.** F1-25 (Phase 1) flagged this. Migrations are forward-only via `IF NOT EXISTS` + `pragma_table_info` checks in [`server/db/init.js`](server/db/init.js).
+- **No schema-version table.** F1-25 (Phase 1) flagged this. Migrations are forward-only via `IF NOT EXISTS` + `pragma_table_info` checks in [`apps/server/db/init.js`](apps/server/db/init.js).
 - Down-migration path = **restore from `releases/<ts>/` snapshot** (per F4-17 above) + nightly DB backup.
 
 ### Library file → SQLite shadow
 
-- `server/repositories/shadowWrite.js` mirrors xlsx imports into SQLite while keeping the JSON file as ground truth.
+- `apps/server/repositories/shadowWrite.js` mirrors xlsx imports into SQLite while keeping the JSON file as ground truth.
 - F1-22 noted no FK from quotes → materials.code (acceptable for v1; document).
 
 ### v1.0 → v1.5 migration documented

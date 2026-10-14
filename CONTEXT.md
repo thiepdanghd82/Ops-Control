@@ -22,8 +22,8 @@
 
 ## Runtime surfaces (which bundle is served — ask the URL first)
 
-- **Vite dev** — `:5173`/`:5175`, serves `client/src/**` live via HMR. No rebuild needed.
-- **Prod local** — `:3000`, serves the pre-built `client/dist/**`. Rebuild after edits.
+- **Vite dev** — `:5173`/`:5175`, serves `apps/client/src/**` live via HMR. No rebuild needed.
+- **Prod local** — `:3000`, serves the pre-built `apps/client/dist/**`. Rebuild after edits.
 - **Prod remote** — `10.102.3.61:3000`, same but rebuild **and** deploy.
 - **Production runtime DB** lives at
   `~/Library/Application Support/ops-control-desktop/data/ops.db` (NOT `server/data/ops.db`).
@@ -138,7 +138,7 @@ being called that.
 - **Library/** is a trust boundary — validated via `librarySchema.js` on read.
 - **trust proxy = loopback** — `req.ip` believes `X-Forwarded-For` only from a proxy on the
   same machine (deploy.sh's nginx → 127.0.0.1); a client connecting directly reads as its
-  own socket address (`server/utils/trustProxy.js`). A proxy on another machine must be
+  own socket address (`apps/server/utils/trustProxy.js`). A proxy on another machine must be
   listed there, or every client reads as the proxy (S-TRUST-PROXY).
 
 ## Build / release / CI
@@ -150,4 +150,4 @@ being called that.
 - **Conventions**: conventional commits; commitlint `body-max-line-length = 120` (wrap body
   lines ≤120); every "shipped/landed" claim cites a commit SHA (Lesson 0).
 - **Key commands**: `npm test`, `npm run build` (prebuild hook regenerates Word docs),
-  `npm run preflight`, `node scripts/help/self-check.mjs` (smoke-checks every tab).
+  `npm run preflight`, `node apps/scripts/help/self-check.mjs` (smoke-checks every tab).

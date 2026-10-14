@@ -8,14 +8,14 @@
 # at `2. TEMPLATES/Cost Ref data/NPI/NPI Quote part list.xlsx`. Run
 # `npm run build:npi-parts` from repo root before `npm run build` so
 # Vite copies it into the client bundle. See Sprint S-NPI-PARTS.
-client/public/npi-parts/parts-snapshot.json
+apps/client/public/npi-parts/parts-snapshot.json
 
 # v1.3 — Ed25519 license signing keys. Private keys NEVER commit; they
 # live OFFLINE in the license admin's vault (~/OpsControl-license-keys).
 # Rotation 2026-06-04 retired the old in-repo dev key; tests now sign with
 # runtime-ephemeral keypairs, so no private key needs to be tracked.
-scripts/license/*-private.pem
-desktop/license-pubkey.pem
+apps/scripts/license/*-private.pem
+apps/desktop/license-pubkey.pem
 
 # v1.3 — autonomous-upgrade artefacts (UPGRADE_LOG.md is checked in;
 # raw backups + generated installers are not).
@@ -29,12 +29,12 @@ _legacy/
 **/totp_secrets.enc.corrupt-*
 
 # Runtime DATA_DIR if someone sets it inside the repo by accident.
-server/data/
-!server/data/.gitkeep
+apps/server/data/
+!apps/server/data/.gitkeep
 
 # Build output
-client/dist/
-client/node_modules/
+apps/client/dist/
+apps/client/node_modules/
 node_modules/
 
 # OS / editor noise
@@ -53,15 +53,15 @@ npm-debug.log*
 # outside the desktop sandbox (i.e. directly from the project root).
 /users.json
 /README_FIRST_LOGIN.txt
-client/public/help/*.docx
+apps/client/public/help/*.docx
 
 # Sprint MES-2.8 — Playwright e2e artefacts.
 playwright-report/
 test-results/
 .playwright-tmp/
 dist-release/
-desktop/dist-electron/
-desktop/package.json.backup-*
+apps/desktop/dist-electron/
+apps/desktop/package.json.backup-*
 Data for import/
 
 # UAT raw feedback — contains customer PII, never commit

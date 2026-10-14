@@ -47,7 +47,7 @@ This is the foundation we build on, **not** something we re-invent.
 | `basis`    | BC           | Settings, Backup/Restore + scheduled, Smart/Thin sync, Notifications, Import wizard, Health                    |
 | `mes`      | MES/PLM      | IFS Inventory mirror, Machine Technical, Hardware Devices, Connection Mode                                     |
 
-### 2.2 Schema in place (`server/db/schema.sql`)
+### 2.2 Schema in place (`apps/server/db/schema.sql`)
 
 - `materials`, `bom`, `routing_operations`, `ifs_inventory`
 - `quotes`, `quote_versions` (with state hashing for diff/undo)

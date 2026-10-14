@@ -8,13 +8,13 @@ Read in order (full content, do NOT skip):
 4. docs/plans/mes/MES_EXTENSION_PLAN.md (read carefully sections 3.1, 3.3, 6.5)
 5. docs/plans/mes/MES_ANTIGRAVITY_PROMPTS_SPRINT_MES-2.md (template sprint nay - full content)
 6. docs/plans/mes/MES_PROMPTING_GUIDE.md section 4.2
-7. server/domains/planning/README.md
+7. apps/server/domains/planning/README.md
 8. domains/planning/server/index.js (mountPlanning factory pattern - se extend)
 9. domains/planning/server/routes/workOrderV2.js (RFC-7807 envelope - mirror cho v2/operations/*)
 10. domains/planning/server/domain/workOrderTransition.js (pattern cho opStatusTransition)
 11. domains/planning/shared/constants/workOrderStates.js (WO_OP_STATUSES da co)
 12. domains/planning/server/services/workOrderService.js (atomic + audit pattern)
-13. server/db/schema.sql (location de append reason_code seed table)
+13. apps/server/db/schema.sql (location de append reason_code seed table)
 
 Then tra loi 6 cau (max 350 tu tong):
 

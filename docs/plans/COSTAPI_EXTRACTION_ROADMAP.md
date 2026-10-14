@@ -1,20 +1,20 @@
 # costApi.js extraction roadmap (v1.3 → v1.4)
 
 **Status:** living document — update as endpoints migrate.
-**Source of truth:** `server/routes/costApi.js` (2,913 LOC, 69 endpoints as of rc.5).
+**Source of truth:** `apps/server/routes/costApi.js` (2,913 LOC, 69 endpoints as of rc.5).
 **Goal:** retire `costApi.js` entirely once every endpoint has a domain-router twin and the legacy URLs satisfy ADR-0009 retirement criteria.
 
 ---
 
 ## Why this exists
 
-Through v1.3 we extracted 8 routers under `server/domains/<sap>/` (basis/backup, library/rate, library/ddl, sales/released-quotation, sales/quotes, security/license, security/audit). The other 61 endpoints still live in `costApi.js`. This file groups them by SAP domain so the next sprint can pull a coherent slice instead of cherry-picking by file location.
+Through v1.3 we extracted 8 routers under `apps/server/domains/<sap>/` (basis/backup, library/rate, library/ddl, sales/released-quotation, sales/quotes, security/license, security/audit). The other 61 endpoints still live in `costApi.js`. This file groups them by SAP domain so the next sprint can pull a coherent slice instead of cherry-picking by file location.
 
 Per **ADR-0008** (extract-first-mount-later) and **ADR-0009** (dual-mount during migration), every extraction follows three steps:
 
-1. **Scaffold** — copy handler into `server/domains/<sap>/routes/<feature>.js` as a factory, write sibling `*.test.js` (ADR-0013).
-2. **Mount alongside** — add new canonical URL to `server/index.js` BEFORE `costApiRouter`. Legacy URL stays live.
-3. **Cut over client** — flip `client/src/services/api.js` call sites to the canonical URL, then wait the 2-sprint cool-down before deleting from `costApi.js`.
+1. **Scaffold** — copy handler into `apps/server/domains/<sap>/routes/<feature>.js` as a factory, write sibling `*.test.js` (ADR-0013).
+2. **Mount alongside** — add new canonical URL to `apps/server/index.js` BEFORE `costApiRouter`. Legacy URL stays live.
+3. **Cut over client** — flip `apps/client/src/services/api.js` call sites to the canonical URL, then wait the 2-sprint cool-down before deleting from `costApi.js`.
 
 ## Endpoint inventory by target SAP domain
 
@@ -38,7 +38,7 @@ Per **ADR-0008** (extract-first-mount-later) and **ADR-0009** (dual-mount during
 | 1065 | GET    | `/auth/sessions`              | active sessions list                                                             |
 | 1076 | POST   | `/auth/sessions/revoke`       | force-logout                                                                     |
 | 1091 | POST   | `/auth/verify-pwd`            | re-auth gate                                                                     |
-| 1107 | POST   | `/auth/migrate-users`         | one-shot migration tool — could move to `scripts/`                               |
+| 1107 | POST   | `/auth/migrate-users`         | one-shot migration tool — could move to `apps/scripts/`                          |
 | 1130 | GET    | `/totp/secret/:username`      | provisioning                                                                     |
 | 1143 | POST   | `/totp/secret`                | enroll                                                                           |
 | 1168 | POST   | `/totp/verify`                | login second factor                                                              |
@@ -48,36 +48,36 @@ Per **ADR-0008** (extract-first-mount-later) and **ADR-0009** (dual-mount during
 
 **Recommended grouping:**
 
-- `server/domains/security/routes/auth.js` — lines 483–1107 minus migrate-users
-- `server/domains/security/routes/totp.js` — lines 1130–1245
-- `server/domains/security/routes/sessions.js` — lines 1065 + 1076 + 2673
+- `apps/server/domains/security/routes/auth.js` — lines 483–1107 minus migrate-users
+- `apps/server/domains/security/routes/totp.js` — lines 1130–1245
+- `apps/server/domains/security/routes/sessions.js` — lines 1065 + 1076 + 2673
 
 ### basis/ — health, backup, ops infra (17 endpoints)
 
-| Line | Verb | Path                             | Notes                                                       |
-| ---- | ---- | -------------------------------- | ----------------------------------------------------------- |
-| 1268 | GET  | `/ping`                          | liveness — already split in `server/index.js` /health probe |
-| 1305 | GET  | `/users/status`                  | online roster                                               |
-| 1312 | POST | `/heartbeat`                     | client keep-alive                                           |
-| 2235 | GET  | `/admin/backup-schedule`         | **dual-mounted** — canonical at `/basis/backup/schedule` ✅ |
-| 2246 | PUT  | `/admin/backup-schedule`         | **dual-mounted** ✅                                         |
-| 2264 | POST | `/admin/backup-schedule/run-now` | **dual-mounted** at `/basis/backup/run-now` ✅              |
-| 2406 | GET  | `/backup/list`                   | data backup file listing                                    |
-| 2427 | GET  | `/backup/code-list`              | code-snapshot listing                                       |
-| 2457 | GET  | `/backup/download/:name`         | data download                                               |
-| 2470 | GET  | `/backup/code-download/:name`    | code download                                               |
-| 2474 | POST | `/backup/data`                   | manual data backup trigger                                  |
-| 2499 | POST | `/backup/code-server`            | snapshot server tree                                        |
-| 2537 | GET  | `/backup/code`                   | code-backup status                                          |
-| 2541 | POST | `/backup/restore`                | restore from data backup                                    |
-| 2590 | POST | `/backup/upload`                 | accept uploaded backup file                                 |
-| 2632 | POST | `/backup/delete`                 | remove a backup                                             |
-| 2877 | POST | `/backup/code-restore`           | restore from code snapshot                                  |
+| Line | Verb | Path                             | Notes                                                            |
+| ---- | ---- | -------------------------------- | ---------------------------------------------------------------- |
+| 1268 | GET  | `/ping`                          | liveness — already split in `apps/server/index.js` /health probe |
+| 1305 | GET  | `/users/status`                  | online roster                                                    |
+| 1312 | POST | `/heartbeat`                     | client keep-alive                                                |
+| 2235 | GET  | `/admin/backup-schedule`         | **dual-mounted** — canonical at `/basis/backup/schedule` ✅      |
+| 2246 | PUT  | `/admin/backup-schedule`         | **dual-mounted** ✅                                              |
+| 2264 | POST | `/admin/backup-schedule/run-now` | **dual-mounted** at `/basis/backup/run-now` ✅                   |
+| 2406 | GET  | `/backup/list`                   | data backup file listing                                         |
+| 2427 | GET  | `/backup/code-list`              | code-snapshot listing                                            |
+| 2457 | GET  | `/backup/download/:name`         | data download                                                    |
+| 2470 | GET  | `/backup/code-download/:name`    | code download                                                    |
+| 2474 | POST | `/backup/data`                   | manual data backup trigger                                       |
+| 2499 | POST | `/backup/code-server`            | snapshot server tree                                             |
+| 2537 | GET  | `/backup/code`                   | code-backup status                                               |
+| 2541 | POST | `/backup/restore`                | restore from data backup                                         |
+| 2590 | POST | `/backup/upload`                 | accept uploaded backup file                                      |
+| 2632 | POST | `/backup/delete`                 | remove a backup                                                  |
+| 2877 | POST | `/backup/code-restore`           | restore from code snapshot                                       |
 
 **Recommended grouping:**
 
-- `server/domains/basis/routes/health.js` — `/ping`, `/users/status`, `/heartbeat`
-- `server/domains/basis/routes/backup-files.js` — all `/backup/*` (separate from existing `backup.js` which only handles the _schedule_)
+- `apps/server/domains/basis/routes/health.js` — `/ping`, `/users/status`, `/heartbeat`
+- `apps/server/domains/basis/routes/backup-files.js` — all `/backup/*` (separate from existing `backup.js` which only handles the _schedule_)
 
 ### library/ — rate, DDL, master cylinders, layouts, lib (19 endpoints)
 
@@ -106,10 +106,10 @@ Per **ADR-0008** (extract-first-mount-later) and **ADR-0009** (dual-mount during
 
 **Recommended grouping:**
 
-- `server/domains/library/routes/layouts.js` — `/layouts`, `/layout/*`, `/save-layout`
-- `server/domains/library/routes/master-cylinders.js` — `/admin/master-cylinders/*`
-- `server/domains/library/routes/import.js` — `/import-xlsm`, `/sync-csv`, `/ddl/sync-csv`
-- `server/domains/library/routes/lib-fetch.js` — `/lib/*` (read-only)
+- `apps/server/domains/library/routes/layouts.js` — `/layouts`, `/layout/*`, `/save-layout`
+- `apps/server/domains/library/routes/master-cylinders.js` — `/admin/master-cylinders/*`
+- `apps/server/domains/library/routes/import.js` — `/import-xlsm`, `/sync-csv`, `/ddl/sync-csv`
+- `apps/server/domains/library/routes/lib-fetch.js` — `/lib/*` (read-only)
 
 ### costing/ — quote lifecycle (6 endpoints)
 
@@ -124,10 +124,10 @@ Per **ADR-0008** (extract-first-mount-later) and **ADR-0009** (dual-mount during
 
 **Recommended grouping:**
 
-- `server/domains/costing/routes/quotes.js` — `/quotes/*` lifecycle
-- `server/domains/costing/routes/save-all.js` — `/load-all` + `/save-all` (paired contract)
+- `apps/server/domains/costing/routes/quotes.js` — `/quotes/*` lifecycle
+- `apps/server/domains/costing/routes/save-all.js` — `/load-all` + `/save-all` (paired contract)
 
-`POST /quotes` is the trickiest because the existing `server/domains/sales/routes/quotes.js` already exists; that one handles `/sales/quotes` (released quotation publishing). They are NOT the same surface — costing/quotes is the working draft, sales/quotes is the published artefact. Don't merge them.
+`POST /quotes` is the trickiest because the existing `apps/server/domains/sales/routes/quotes.js` already exists; that one handles `/sales/quotes` (released quotation publishing). They are NOT the same surface — costing/quotes is the working draft, sales/quotes is the published artefact. Don't merge them.
 
 ### sales/ — released quotations (3 endpoints)
 
@@ -139,7 +139,7 @@ Per **ADR-0008** (extract-first-mount-later) and **ADR-0009** (dual-mount during
 
 **Recommended grouping:**
 
-- Merge into existing `server/domains/sales/routes/released-quotation.js` — these legacy URLs need to be cut over per ADR-0009 (still pending in `MIGRATION_GUIDE.md` §8.1).
+- Merge into existing `apps/server/domains/sales/routes/released-quotation.js` — these legacy URLs need to be cut over per ADR-0009 (still pending in `MIGRATION_GUIDE.md` §8.1).
 
 ## Suggested sprint cadence
 
@@ -162,11 +162,11 @@ Sum ≈ 3,070 LOC of which costApi.js will trim to **~0** if discipline holds. T
 The file deletes from disk only when ALL of:
 
 1. Every endpoint listed above has a domain-router twin live in production.
-2. `client/src/services/api.js` references zero legacy URLs.
+2. `apps/client/src/services/api.js` references zero legacy URLs.
 3. Two consecutive sprints pass post-cutover with no defect tickets on the new URL surface.
-4. `server/index.js` no longer imports `costApiRouter`.
+4. `apps/server/index.js` no longer imports `costApiRouter`.
 
-Until then, `server/routes/costApi.js` stays — including the dual-mounts already done in v1.3.
+Until then, `apps/server/routes/costApi.js` stays — including the dual-mounts already done in v1.3.
 
 ## Tracking table
 

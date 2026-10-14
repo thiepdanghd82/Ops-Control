@@ -47,7 +47,7 @@
 
 **Scope**:
 
-- Modify `server/services/authService.js audit()` to call `appendHashed(_lastHash, row)` before persisting
+- Modify `apps/server/services/authService.js audit()` to call `appendHashed(_lastHash, row)` before persisting
 - Module-level `_lastHash` cache hydrated from last row on `authService.init()`
 - Failure mode: if hash computation throws, log error + persist UNCHAINED row (don't lose the audit entry)
 
@@ -70,7 +70,7 @@
 
 **Scope**:
 
-- Add `prev_hash TEXT, hash TEXT` columns to `audit_log` table via migration v2 in `server/db/migrations/`
+- Add `prev_hash TEXT, hash TEXT` columns to `audit_log` table via migration v2 in `apps/server/db/migrations/`
 - Update `repositories/auditStore.js` INSERT to include the 2 new columns
 - Read paths unchanged (backward compatible — old rows have NULL hash columns, new rows populated)
 
@@ -126,7 +126,7 @@
 
 **Scope**:
 
-- Nightly cron on prod: `0 2 * * * cd /opt/ops-control && node scripts/verify-audit-chain.mjs --json | jq -e '.ok' > /dev/null || alert "audit-chain broken on $(hostname)"`
+- Nightly cron on prod: `0 2 * * * cd /opt/ops-control && node apps/scripts/verify-audit-chain.mjs --json | jq -e '.ok' > /dev/null || alert "audit-chain broken on $(hostname)"`
 - Windows NSSM equivalent: Task Scheduler + PowerShell wrapper (mirror pattern from bit-rot cron)
 - Optional startup probe via `OPS_VERIFY_AUDIT_CHAIN=1` env gate (adds ~50ms boot for 10k entries — opt-in)
 - Hương deploys via runbook update (bundle with C-4 drill day learning — mirror bit-rot deploy pattern from `docs/operations/ops/C4_DRILL_RUNBOOK.md`)

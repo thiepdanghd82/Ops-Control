@@ -19,7 +19,7 @@
 - **`strings.lint.test.js` is the gate.** Every key must carry both `en` and `vi`. This suite is the reason i18n stayed healthy while the design tokens rotted — do not add a key without both locales.
 - **Do not rename tab ids.** `rfq-tracking` and `rfq-tracker` are persisted in saved window layouts (`serializeLayout` / `deserializeLayout`). Renaming an id orphans a saved layout. Only the _labels_ change.
 - **Vietnamese is already correct for the nav collision.** `Danh sách RFQ` and `Theo dõi RFQ` are distinct and clear. Only the English labels collide.
-- Run: `cd client && node --test 'src/**/*.test.js'` (1797 tests green as of this plan).
+- Run: `cd apps/client && node --test 'src/**/*.test.js'` (1797 tests green as of this plan).
 
 ---
 
@@ -27,8 +27,8 @@
 
 **Files:**
 
-- Modify: `client/src/i18n/strings.js:94` and `:99`
-- Modify: `client/src/components/Layout/TopBar.jsx` (the breadcrumb label map)
+- Modify: `apps/client/src/i18n/strings.js:94` and `:99`
+- Modify: `apps/client/src/components/Layout/TopBar.jsx` (the breadcrumb label map)
 
 **Interfaces:**
 
@@ -39,7 +39,7 @@ The sidebar shows **RFQ Tracking** under _Quoting & Pricing_ and **RFQ Tracker**
 
 - [x] **Step 1: Write the failing test**
 
-Create `client/src/i18n/navLabels.test.js`:
+Create `apps/client/src/i18n/navLabels.test.js`:
 
 ```js
 import test from 'node:test';
@@ -70,14 +70,14 @@ test('no two nav tab labels are identical within a locale', () => {
 
 - [x] **Step 2: Run the test to verify it fails**
 
-Run: `cd client && node --test src/i18n/navLabels.test.js`
+Run: `cd apps/client && node --test src/i18n/navLabels.test.js`
 Expected: FAIL naming `nav.tab.rfq_tracking` and `nav.tab.rfq_tracker`.
 
-If it fails instead with an import error, open `client/src/i18n/strings.js`, find the name of the exported key map, and use that name in the test's import. Do not change `strings.js` to suit the test.
+If it fails instead with an import error, open `apps/client/src/i18n/strings.js`, find the name of the exported key map, and use that name in the test's import. Do not change `strings.js` to suit the test.
 
 - [x] **Step 3: Rename the two English labels**
 
-In `client/src/i18n/strings.js`:
+In `apps/client/src/i18n/strings.js`:
 
 ```js
   'nav.tab.rfq_tracking': { en: 'RFQ List', vi: 'Danh sách RFQ' },
@@ -91,20 +91,20 @@ The English now mirrors the Vietnamese that was already right: `Danh sách` is a
 
 - [x] **Step 4: Update the breadcrumb map to match**
 
-In `client/src/components/Layout/TopBar.jsx`, the label map hardcodes English strings. Change the `rfq-tracking` entry's label to `RFQ List` and the `rfq-tracker` entry's to `RFQ Progress`, so the breadcrumb agrees with the sidebar.
+In `apps/client/src/components/Layout/TopBar.jsx`, the label map hardcodes English strings. Change the `rfq-tracking` entry's label to `RFQ List` and the `rfq-tracker` entry's to `RFQ Progress`, so the breadcrumb agrees with the sidebar.
 
 - [x] **Step 5: Run the tests**
 
-Run: `cd client && node --test src/i18n/navLabels.test.js src/i18n/strings.lint.test.js`
+Run: `cd apps/client && node --test src/i18n/navLabels.test.js src/i18n/strings.lint.test.js`
 Expected: PASS both.
 
-Run: `cd client && node --test 'src/**/*.test.js'`
+Run: `cd apps/client && node --test 'src/**/*.test.js'`
 Expected: PASS.
 
 - [x] **Step 6: Commit**
 
 ```bash
-git add client/src/i18n/strings.js client/src/i18n/navLabels.test.js client/src/components/Layout/TopBar.jsx
+git add apps/client/src/i18n/strings.js apps/client/src/i18n/navLabels.test.js apps/client/src/components/Layout/TopBar.jsx
 git commit -m "$(cat <<'EOF'
 fix(apps/client): give the two RFQ screens distinguishable English labels
 
@@ -132,12 +132,12 @@ EOF
 
 **Files:**
 
-- Modify: `client/src/components/Auth/LoginPage.jsx`
-- Modify: `client/src/components/Auth/LoginPage.css`
+- Modify: `apps/client/src/components/Auth/LoginPage.jsx`
+- Modify: `apps/client/src/components/Auth/LoginPage.css`
 
 **Interfaces:**
 
-- Consumes: `LangFlagToggle` from `client/src/components/Shared/LangFlagToggle.jsx`, which takes `{ className }` and reads `useI18n()` itself.
+- Consumes: `LangFlagToggle` from `apps/client/src/components/Shared/LangFlagToggle.jsx`, which takes `{ className }` and reads `useI18n()` itself.
 - Produces: nothing.
 
 `LangFlagToggle` renders only inside `HardwareSection.jsx` and `ModeSection.jsx` — both buried in Settings. An operator who cannot read English must log in through an English screen before they can reach the control that would have made it Vietnamese.
@@ -146,7 +146,7 @@ EOF
 
 - [x] **Step 1: Import and render the toggle**
 
-In `client/src/components/Auth/LoginPage.jsx`:
+In `apps/client/src/components/Auth/LoginPage.jsx`:
 
 ```jsx
 import LangFlagToggle from '../Shared/LangFlagToggle';
@@ -160,7 +160,7 @@ Render it inside the sign-in card, above the `<h1>`/title, so it is the first th
 
 - [x] **Step 2: Position it**
 
-Append to `client/src/components/Auth/LoginPage.css`:
+Append to `apps/client/src/components/Auth/LoginPage.css`:
 
 ```css
 /* Top-right of the sign-in card. An operator who cannot read the form must
@@ -186,13 +186,13 @@ Revert the `vite.config.js` proxy edit afterwards and confirm `git status` shows
 
 - [x] **Step 4: Run the full client suite**
 
-Run: `cd client && node --test 'src/**/*.test.js'`
+Run: `cd apps/client && node --test 'src/**/*.test.js'`
 Expected: PASS.
 
 - [x] **Step 5: Commit**
 
 ```bash
-git add client/src/components/Auth/LoginPage.jsx client/src/components/Auth/LoginPage.css
+git add apps/client/src/components/Auth/LoginPage.jsx apps/client/src/components/Auth/LoginPage.css
 git commit -m "$(cat <<'EOF'
 feat(apps/client): put the language toggle on the login screen
 
@@ -215,8 +215,8 @@ EOF
 
 **Files:**
 
-- Modify: `client/src/components/Auth/TotpEnrollment.jsx`
-- Modify: `client/src/i18n/strings.js`
+- Modify: `apps/client/src/components/Auth/TotpEnrollment.jsx`
+- Modify: `apps/client/src/i18n/strings.js`
 
 **Interfaces:**
 
@@ -228,15 +228,15 @@ EOF
 - [x] **Step 1: Inventory every user-visible string**
 
 ```bash
-grep -oE ">[A-Za-z][A-Za-z ,.'’-]{3,}<" client/src/components/Auth/TotpEnrollment.jsx
-grep -oE '(placeholder|title|aria-label)="[^"]+"' client/src/components/Auth/TotpEnrollment.jsx
+grep -oE ">[A-Za-z][A-Za-z ,.'’-]{3,}<" apps/client/src/components/Auth/TotpEnrollment.jsx
+grep -oE '(placeholder|title|aria-label)="[^"]+"' apps/client/src/components/Auth/TotpEnrollment.jsx
 ```
 
 Every line of output needs a key. Do not skip `title` and `aria-label` — a translated screen with English tooltips is still half-English.
 
 - [x] **Step 2: Add the keys**
 
-In `client/src/i18n/strings.js`, add one entry per string found, namespaced `totp.*`, each with both locales. The two confirmed by the audit:
+In `apps/client/src/i18n/strings.js`, add one entry per string found, namespaced `totp.*`, each with both locales. The two confirmed by the audit:
 
 ```js
   'totp.account': { en: 'Account', vi: 'Tài khoản' },
@@ -271,16 +271,16 @@ Expected: no output, apart from strings that are deliberately not translated (a 
 
 - [x] **Step 5: Run the i18n lint and the full suite**
 
-Run: `cd client && node --test src/i18n/strings.lint.test.js`
+Run: `cd apps/client && node --test src/i18n/strings.lint.test.js`
 Expected: PASS — this fails loudly if any new key is missing a locale.
 
-Run: `cd client && node --test 'src/**/*.test.js'`
+Run: `cd apps/client && node --test 'src/**/*.test.js'`
 Expected: PASS.
 
 - [x] **Step 6: Commit**
 
 ```bash
-git add client/src/components/Auth/TotpEnrollment.jsx client/src/i18n/strings.js
+git add apps/client/src/components/Auth/TotpEnrollment.jsx apps/client/src/i18n/strings.js
 git commit -m "$(cat <<'EOF'
 feat(apps/client): translate the TOTP enrollment screen
 

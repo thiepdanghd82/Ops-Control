@@ -50,7 +50,7 @@ is true:**
   in their next sprint without any server change. No coordinated
   big-bang.
 - **Rollback is just a route comment.** If the new router has a bug,
-  comment out the new mount in `server/index.js`; the legacy keeps
+  comment out the new mount in `apps/server/index.js`; the legacy keeps
   serving. No data loss, no rollback DB migration.
 - **A/B comparison is trivial.** Dev can `curl` both URLs side-by-side
   and confirm they return the same JSON shape — proves parity before
@@ -79,14 +79,14 @@ is true:**
 
 ### Reversal cost
 
-Trivial. Comment out the new mount in `server/index.js`. Legacy keeps
+Trivial. Comment out the new mount in `apps/server/index.js`. Legacy keeps
 working unchanged. Re-enable when the new router is fixed.
 
 ## Retirement criteria — when does the legacy URL go away?
 
 The legacy URL retires when ALL of:
 
-1. Client UI no longer hits the legacy URL (grep `client/src/**` for
+1. Client UI no longer hits the legacy URL (grep `apps/client/src/**` for
    the literal path; should return zero matches).
 2. No external scripts / external integrations are documented to
    hit it (check `docs/user-guide/`, `INSTALL.command`, customer-facing
@@ -153,7 +153,7 @@ Update this table whenever a new dual-mount lands.
 ## References
 
 - ADR-0008 — extract-first-mount-later (the prior step)
-- `server/index.js` — mount points
-- `server/routes/costApi.js` — legacy handlers retained
+- `apps/server/index.js` — mount points
+- `apps/server/routes/costApi.js` — legacy handlers retained
 - `MIGRATION_GUIDE.md §5` — operator-facing path table
 - `CHANGELOG.md` — release notes that flip retirement

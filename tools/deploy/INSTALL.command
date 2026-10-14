@@ -37,13 +37,13 @@ echo "  ✓  Server dependencies installed"
 echo ""
 
 echo "  📦  Installing React client dependencies..."
-cd client && npm install && cd ..
+cd apps/client && npm install && cd ../..
 echo "  ✓  Client dependencies installed"
 echo ""
 
 # Build
 echo "  🔨  Building React client..."
-cd client && npx vite build && cd ..
+cd apps/client && npx vite build && cd ../..
 echo "  ✓  Client built successfully"
 echo ""
 

@@ -1,15 +1,15 @@
 node_modules/
-client/node_modules/
-desktop/node_modules/
-client/dist/
-desktop/dist-electron/
-server/data/
+apps/client/node_modules/
+apps/desktop/node_modules/
+apps/client/dist/
+apps/desktop/dist-electron/
+apps/server/data/
 _legacy/
 backup/
 dist/
 docs/releases/RELEASE_NOTES_v1.3.0*.md
 docs/quality/audit/2026-04-17/
-client/public/help/
+apps/client/public/help/
 *.lock
 package-lock.json
 

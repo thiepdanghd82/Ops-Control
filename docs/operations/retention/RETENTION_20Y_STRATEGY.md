@@ -27,20 +27,20 @@ Failure modes if retention contract breaks:
 
 ## 12-Control Matrix — Status post-Phase-2
 
-| #       | Control                                                                                | Tier | Status                                                                                | Closing artifact                                                                                                              | Schedule                           |
-| ------- | -------------------------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| **R1**  | Pricing snapshot frozen at save (materials/rates/coverage/tool_life/click_charges/sga) | 1    | ✅ **DONE 2026-06-20**                                                                | PR-A #188 + PR-A2 #189 (C-6 closeout)                                                                                         | Pre-D-0                            |
-| **R2**  | "load 5y-old quote = identical" test contract                                          | 1    | ✅ **DONE**                                                                           | `loadFrozenQuote.test.js` + `loadFrozenQuotesAll.test.js` + 4 fixtures (Phase 2.1 + PR-B #190)                                | Pre-D-0                            |
-| **R3**  | Audit log hash-chain integrity                                                         | 1    | 🟡 **FOUNDATION DONE; wiring deferred**                                               | `server/services/auditChain.js` + 21 tests + CLI verify (PR #187); wiring → Hypercare D+7-14 via 4 tickets (S-AUDIT-CHAIN-\*) | Pre-D-0 foundation; Hypercare wire |
-| **R4**  | Tiered archival (HOT/WARM/COLD)                                                        | 2    | ⬜ Not started                                                                        | Q4 2026 — see `DEFERRAL_ROADMAP`                                                                                              | 2026 Q4                            |
-| **R5**  | Annual restore-drill from COLD tier                                                    | 2    | ⬜ Not started                                                                        | Depends on R4                                                                                                                 | 2027 Q1 first drill                |
-| **R6**  | Bit-rot detection (monthly sha256 walk + alert on drift)                               | 2    | 🟡 **IN-FLIGHT Track B (Phase 3 M-5b)**                                               | Phase 3 PR this week                                                                                                          | Pre-D-0                            |
-| **R7**  | Format-longevity test suite (cross-version load test)                                  | 2    | ⬜ Ongoing per-sprint                                                                 | Add 1 fixture per minor version (frozen-quote-YYYY-N.json pattern)                                                            | Ongoing                            |
-| **R8**  | "If better-sqlite3 abandoned" escape hatch (CSV+JSON-LD dump)                          | 3    | ⬜ Not started                                                                        | 2027 Q1                                                                                                                       | 2027 Q1                            |
-| **R9**  | Triple-storage: on-prem + off-site rsync + cloud (S3 Glacier Deep Archive)             | 3    | 🟡 **2 of 3 done** (on-prem + off-site rsync); cloud DEPENDS on Hybrid scope decision | If Q2 = cloud → impl Q2 2027                                                                                                  | 2027 Q2 (conditional)              |
-| **R10** | Auditor read-only export tool (RFQ → all historical snapshots in 1 PDF)                | 3    | ⬜ Not started                                                                        | Q2 2027                                                                                                                       | 2027 Q2                            |
-| **R11** | Legal hold flag (cannot delete even by sys role)                                       | 3    | ⬜ Not started                                                                        | Q2 2027                                                                                                                       | 2027 Q2                            |
-| **R12** | RFC 3161 cryptographic timestamping (audit log monthly digest)                         | 3    | ⬜ Not started                                                                        | Q3 2027                                                                                                                       | 2027 Q3                            |
+| #       | Control                                                                                | Tier | Status                                                                                | Closing artifact                                                                                                                   | Schedule                           |
+| ------- | -------------------------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| **R1**  | Pricing snapshot frozen at save (materials/rates/coverage/tool_life/click_charges/sga) | 1    | ✅ **DONE 2026-06-20**                                                                | PR-A #188 + PR-A2 #189 (C-6 closeout)                                                                                              | Pre-D-0                            |
+| **R2**  | "load 5y-old quote = identical" test contract                                          | 1    | ✅ **DONE**                                                                           | `loadFrozenQuote.test.js` + `loadFrozenQuotesAll.test.js` + 4 fixtures (Phase 2.1 + PR-B #190)                                     | Pre-D-0                            |
+| **R3**  | Audit log hash-chain integrity                                                         | 1    | 🟡 **FOUNDATION DONE; wiring deferred**                                               | `apps/server/services/auditChain.js` + 21 tests + CLI verify (PR #187); wiring → Hypercare D+7-14 via 4 tickets (S-AUDIT-CHAIN-\*) | Pre-D-0 foundation; Hypercare wire |
+| **R4**  | Tiered archival (HOT/WARM/COLD)                                                        | 2    | ⬜ Not started                                                                        | Q4 2026 — see `DEFERRAL_ROADMAP`                                                                                                   | 2026 Q4                            |
+| **R5**  | Annual restore-drill from COLD tier                                                    | 2    | ⬜ Not started                                                                        | Depends on R4                                                                                                                      | 2027 Q1 first drill                |
+| **R6**  | Bit-rot detection (monthly sha256 walk + alert on drift)                               | 2    | 🟡 **IN-FLIGHT Track B (Phase 3 M-5b)**                                               | Phase 3 PR this week                                                                                                               | Pre-D-0                            |
+| **R7**  | Format-longevity test suite (cross-version load test)                                  | 2    | ⬜ Ongoing per-sprint                                                                 | Add 1 fixture per minor version (frozen-quote-YYYY-N.json pattern)                                                                 | Ongoing                            |
+| **R8**  | "If better-sqlite3 abandoned" escape hatch (CSV+JSON-LD dump)                          | 3    | ⬜ Not started                                                                        | 2027 Q1                                                                                                                            | 2027 Q1                            |
+| **R9**  | Triple-storage: on-prem + off-site rsync + cloud (S3 Glacier Deep Archive)             | 3    | 🟡 **2 of 3 done** (on-prem + off-site rsync); cloud DEPENDS on Hybrid scope decision | If Q2 = cloud → impl Q2 2027                                                                                                       | 2027 Q2 (conditional)              |
+| **R10** | Auditor read-only export tool (RFQ → all historical snapshots in 1 PDF)                | 3    | ⬜ Not started                                                                        | Q2 2027                                                                                                                            | 2027 Q2                            |
+| **R11** | Legal hold flag (cannot delete even by sys role)                                       | 3    | ⬜ Not started                                                                        | Q2 2027                                                                                                                            | 2027 Q2                            |
+| **R12** | RFC 3161 cryptographic timestamping (audit log monthly digest)                         | 3    | ⬜ Not started                                                                        | Q3 2027                                                                                                                            | 2027 Q3                            |
 
 ### Tier definitions
 
@@ -54,7 +54,7 @@ Failure modes if retention contract breaks:
 
 ### Tier-1 controls (the foundational 3)
 
-#### R1 Pricing snapshot — `client/src/services/pricingSnapshot.js`
+#### R1 Pricing snapshot — `apps/client/src/services/pricingSnapshot.js`
 
 - **Captures:** materials + rates + coverage + tool_life + click_charges + sga + site context
 - **Captured at:** every quote save (Std + Cpx)
@@ -64,7 +64,7 @@ Failure modes if retention contract breaks:
 
 #### R2 Reproducibility test contract
 
-- **Test file:** `client/src/services/loadFrozenQuote.test.js` + `loadFrozenQuotesAll.test.js`
+- **Test file:** `apps/client/src/services/loadFrozenQuote.test.js` + `loadFrozenQuotesAll.test.js`
 - **Fixtures:** 4 frozen-quote JSONs (baseline + diecut + indigo + draft-sga)
 - **Guarantee:** TODAY engine on saved 2026-06-20 state → byte-identical to expected_result
 - **Enforcement:** CI test failure on any future engine drift; explicit regen script with warning header for deliberate changes
@@ -72,8 +72,8 @@ Failure modes if retention contract breaks:
 
 #### R3 Audit log hash-chain
 
-- **Foundation:** `server/services/auditChain.js` — pure SHA-256 chain primitives + 21 tests
-- **CLI verify:** `scripts/verify-audit-chain.mjs` — exit 0/1/2 for cron integration
+- **Foundation:** `apps/server/services/auditChain.js` — pure SHA-256 chain primitives + 21 tests
+- **CLI verify:** `apps/scripts/verify-audit-chain.mjs` — exit 0/1/2 for cron integration
 - **Wiring deferred:** PR-A2 wire-into-audit() + SQLite schema migration + genesis migration + cron = 4 tickets for Hypercare (see `docs/operations/retention/audit-chain.md` Phase 2.2a-d)
 - **Evidence:** PR #187 commit history
 
@@ -137,10 +137,10 @@ Re-evaluate priority based on workshop answer to Q3 (legal vs business retention
 - `docs/operations/golive/DEFERRAL_ROADMAP.md` — R4/R5/R7-R12 schedule
 - `docs/operations/golive/STAKEHOLDER_QUESTIONS.md` — Q3 (retention basis) blocks compliance scope decision
 - `docs/operations/retention/audit-chain.md` — R3 rollout 4-phase plan (2.2a/b/c/d)
-- `client/src/services/loadFrozenQuote.test.js` — R2 contract test
-- `client/src/services/loadFrozenQuotesAll.test.js` — R2 extension (3 fixtures PR-B #190)
-- `server/services/auditChain.js` + tests — R3 foundation
-- `scripts/regen-frozen-quotes.mjs` — R2 fixture regen tool
-- `scripts/verify-audit-chain.mjs` — R3 CLI verify tool
+- `apps/client/src/services/loadFrozenQuote.test.js` — R2 contract test
+- `apps/client/src/services/loadFrozenQuotesAll.test.js` — R2 extension (3 fixtures PR-B #190)
+- `apps/server/services/auditChain.js` + tests — R3 foundation
+- `apps/scripts/regen-frozen-quotes.mjs` — R2 fixture regen tool
+- `apps/scripts/verify-audit-chain.mjs` — R3 CLI verify tool
 - [project_golive memory] — Conditional GO C-2 status
 - Enterprise Re-evaluation 2026-06-20 — R1-R12 numbering source

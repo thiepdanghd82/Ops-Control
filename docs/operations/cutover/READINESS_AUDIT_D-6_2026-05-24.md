@@ -64,7 +64,7 @@ D-5 work cannot fully execute because:
 | ---------------------------------------------- | --------------------------------- | --------------------------------------------------------------------------- |
 | `Fallback_Quote_Manual_v1.0.xlsx` template     | (none — net new)                  | ❌ Does not exist                                                           |
 | `Fallback_WorkOrder_Manual_v1.0.xlsx` template | (none — net new)                  | ❌ Does not exist                                                           |
-| `scripts/import-fallback-xlsx.js` (P1-3)       | (none — net new)                  | ❌ Does not exist                                                           |
+| `apps/scripts/import-fallback-xlsx.js` (P1-3)  | (none — net new)                  | ❌ Does not exist                                                           |
 | `deploy.ps1` snapshot patch (P1-2)             | Windows host access               | ❌ No `robocopy.*releases` block in deploy.ps1                              |
 | Provision 13 more user accounts (P1-5)         | Sprint 1.5 provisioning-card flow | ⚠️ FLOW EXISTS but 13 accounts not provisioned (7/20 today)                 |
 | DELETE `ops_test_user` from prod (P1-5)        | (none)                            | ❌ `ops_test_user role=sys` STILL in `server/data/Library/Users/users.json` |
@@ -102,13 +102,13 @@ Currently most recent SQLite backup is `manual-PRIMARY-20260522_144256.sqlite` f
 
 - ❌ `releases/` directory does not exist on prod (no snapshot infra; depends on `deploy.ps1` patch from D-5)
 - ❌ `npm run backup:run` script not in `package.json` (referenced in Runbook A.4 verification + B.5 step 2)
-- ✅ `scripts/recover-sys-user.js` exists (Runbook A admin recovery intact)
+- ✅ `apps/scripts/recover-sys-user.js` exists (Runbook A admin recovery intact)
 
 ### Runbook B (operational fallback) — 🔴 BLOCKED
 
 - ❌ `Fallback_Quote_Manual_v1.0.xlsx` does not exist anywhere in repo
 - ❌ `Fallback_WorkOrder_Manual_v1.0.xlsx` does not exist
-- ❌ `scripts/import-fallback-xlsx.js` does not exist
+- ❌ `apps/scripts/import-fallback-xlsx.js` does not exist
 - ❌ Paper copies cannot be printed (no template to print from)
 
 **Operator workflow during outage** (Section B.4 in runbook) tells supervisor to open `\\server\OpsControl\Fallback\Fallback_Quote_Manual_v1.0.xlsx` — **file does not exist**, so the runbook step is impossible.
@@ -137,8 +137,8 @@ Not all is doom. These items are correctly in place:
 | 3 cutover docs in repo (`docs/operations/cutover/`)                  | ✅ Filed                                           |
 | CLAUDE.md sprint history per Lesson 0 (PR #62 + #64 backfill)        | ✅ Complete                                        |
 | Working tree clean                                                   | ✅                                                 |
-| `scripts/recover-sys-user.js` (admin lockout recovery)               | ✅ Exists                                          |
-| `scripts/preflight-env.js` (deploy gate)                             | ✅ Exists                                          |
+| `apps/scripts/recover-sys-user.js` (admin lockout recovery)          | ✅ Exists                                          |
+| `apps/scripts/preflight-env.js` (deploy gate)                        | ✅ Exists                                          |
 | Multi-tier P0 verified in code (tierRows.js)                         | ✅                                                 |
 | Engineer has bilingual coverage + on-floor coordination plan         | ✅ Documented                                      |
 
@@ -162,7 +162,7 @@ These 4 are foundational; without them, the rest cascades:
 
 5. **`deploy.ps1` snapshot patch** (~2h, 30 LOC PowerShell). Closes P1-2. Without this, Runbook A is impossible.
 
-6. **`scripts/import-fallback-xlsx.js` + 2 Fallback xlsx templates** (~6h). Closes P1-3. Without this, Runbook B is impossible.
+6. **`apps/scripts/import-fallback-xlsx.js` + 2 Fallback xlsx templates** (~6h). Closes P1-3. Without this, Runbook B is impossible.
 
 7. **`docs/operations/MIGRATION-DAY-0.md`** (~4h). Closes P0-6. Day-0 sysadmin checklist.
 
@@ -215,7 +215,7 @@ Static audit cannot verify these from repo state. Sysadmin must check:
 - [ ] `.env` on prod box has all required keys
 - [ ] CI workflow ACTUALLY runs (vs being a stub)
 - [ ] Backup files exist at `server/data/Backup/SQLite/` on prod (locally we see only 2 files, oldest May 4)
-- [ ] `scripts/recover-sys-user.js` permissions correct (chmod 600 users.json)
+- [ ] `apps/scripts/recover-sys-user.js` permissions correct (chmod 600 users.json)
 - [ ] Off-site target writable from prod
 
 ---
@@ -232,7 +232,7 @@ For engineer (Đặng Thế Thiệp) Monday 2026-05-25 morning:
 
 Tuesday 2026-05-26 (D-4):
 
-1. **AM**: write `scripts/import-fallback-xlsx.js` + 2 Fallback xlsx templates + dry-run test
+1. **AM**: write `apps/scripts/import-fallback-xlsx.js` + 2 Fallback xlsx templates + dry-run test
 2. **PM**: patch `deploy.ps1` snapshot block + run rollback drill on staging Win
 
 After Tuesday EOD: **re-audit. If P0 count >0, escalate to plant manager for date-slip decision Wed morning.**

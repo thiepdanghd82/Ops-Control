@@ -67,7 +67,7 @@ The line was present in the very first commit (`a8b559f`), part of the "v1.2 + v
 
 ### 5. dotenv precedence — empirically confirmed
 
-[`server/index.js:12`](server/index.js#L12) calls `dotenv.config({ path: …})` **without** `override: true`. By default, dotenv **does not** overwrite an env var already in `process.env`. Reproduction:
+[`apps/server/index.js:12`](server/index.js#L12) calls `dotenv.config({ path: …})` **without** `override: true`. By default, dotenv **does not** overwrite an env var already in `process.env`. Reproduction:
 
 ```
 $ node dotenv-test.mjs

@@ -45,28 +45,28 @@ Plus 6 verify-artifact screenshots saved to disk during Step B fix verification 
 
 Cohesive feature: ERPAG-style sidebar (sections only) → click section → `ModuleLanding` shows tab cards → click card → tab opens. Plus Dashboard month/year picker + scroll fix + QuoteAnalysis professional redesign + new HomePage operator dashboard.
 
-| #   | File                                             | Status | LOC delta           | Tier                                   |
-| --- | ------------------------------------------------ | ------ | ------------------- | -------------------------------------- |
-| 1   | `client/src/App.jsx`                             | M      | (small wiring)      | Core                                   |
-| 2   | `client/src/components/Layout/Sidebar.jsx`       | M      | (sections-only nav) | Core                                   |
-| 3   | `client/src/components/Layout/Sidebar.css`       | M      | (sections styling)  | Core                                   |
-| 4   | `client/src/components/Layout/TopBar.jsx`        | M      | +127                | Core                                   |
-| 5   | `client/src/components/Layout/TopBar.css`        | M      | +44                 | Core                                   |
-| 6   | `client/src/components/Layout/ModuleLanding.jsx` | ??     | 81                  | Core (NEW component)                   |
-| 7   | `client/src/components/Layout/ModuleLanding.css` | ??     | 110                 | Core                                   |
-| 8   | `client/src/components/Layout/sectionDefs.js`    | ??     | 156                 | Core (data-driven sections)            |
-| 9   | `client/src/i18n/strings.js`                     | M      | +26                 | i18n                                   |
-| 10  | `client/src/i18n/domains/basis.js`               | M      | +6                  | i18n                                   |
-| 11  | `client/src/modules/cost/CostModule.jsx`         | M      | +43                 | Wiring (landing route)                 |
-| 12  | `client/src/modules/cost/tabs/Dashboard.jsx`     | M      | +484 ⚠ massive      | Dashboard redesign                     |
-| 13  | `client/src/modules/cost/tabs/Dashboard.css`     | ??     | 235                 | Dashboard redesign                     |
-| 14  | `client/src/modules/cost/tabs/QuoteAnalysis.jsx` | M      | +406 ⚠ massive      | QA redesign                            |
-| 15  | `client/src/modules/cost/tabs/QuoteAnalysis.css` | M      | +306                | QA redesign                            |
-| 16  | `client/src/modules/cost/tabs/PrintAreaCalc.jsx` | M      | +12                 | Small (likely incidental)              |
-| 17  | `client/src/modules/home/HomePage.jsx`           | ??     | 325                 | Sprint S-HOME (NEW operator dashboard) |
-| 18  | `client/src/modules/home/HomePage.css`           | ??     | 502                 | Sprint S-HOME                          |
-| 19  | `client/src/modules/planning/PlanningModule.jsx` | M      | +42                 | Wiring (landing route)                 |
-| 20  | `server/repositories/dashboardStats.js`          | M      | +52                 | Server-side for Dashboard redesign     |
+| #   | File                                                  | Status | LOC delta           | Tier                                   |
+| --- | ----------------------------------------------------- | ------ | ------------------- | -------------------------------------- |
+| 1   | `apps/client/src/App.jsx`                             | M      | (small wiring)      | Core                                   |
+| 2   | `apps/client/src/components/Layout/Sidebar.jsx`       | M      | (sections-only nav) | Core                                   |
+| 3   | `apps/client/src/components/Layout/Sidebar.css`       | M      | (sections styling)  | Core                                   |
+| 4   | `apps/client/src/components/Layout/TopBar.jsx`        | M      | +127                | Core                                   |
+| 5   | `apps/client/src/components/Layout/TopBar.css`        | M      | +44                 | Core                                   |
+| 6   | `apps/client/src/components/Layout/ModuleLanding.jsx` | ??     | 81                  | Core (NEW component)                   |
+| 7   | `apps/client/src/components/Layout/ModuleLanding.css` | ??     | 110                 | Core                                   |
+| 8   | `apps/client/src/components/Layout/sectionDefs.js`    | ??     | 156                 | Core (data-driven sections)            |
+| 9   | `apps/client/src/i18n/strings.js`                     | M      | +26                 | i18n                                   |
+| 10  | `apps/client/src/i18n/domains/basis.js`               | M      | +6                  | i18n                                   |
+| 11  | `apps/client/src/modules/cost/CostModule.jsx`         | M      | +43                 | Wiring (landing route)                 |
+| 12  | `apps/client/src/modules/cost/tabs/Dashboard.jsx`     | M      | +484 ⚠ massive      | Dashboard redesign                     |
+| 13  | `apps/client/src/modules/cost/tabs/Dashboard.css`     | ??     | 235                 | Dashboard redesign                     |
+| 14  | `apps/client/src/modules/cost/tabs/QuoteAnalysis.jsx` | M      | +406 ⚠ massive      | QA redesign                            |
+| 15  | `apps/client/src/modules/cost/tabs/QuoteAnalysis.css` | M      | +306                | QA redesign                            |
+| 16  | `apps/client/src/modules/cost/tabs/PrintAreaCalc.jsx` | M      | +12                 | Small (likely incidental)              |
+| 17  | `apps/client/src/modules/home/HomePage.jsx`           | ??     | 325                 | Sprint S-HOME (NEW operator dashboard) |
+| 18  | `apps/client/src/modules/home/HomePage.css`           | ??     | 502                 | Sprint S-HOME                          |
+| 19  | `apps/client/src/modules/planning/PlanningModule.jsx` | M      | +42                 | Wiring (landing route)                 |
+| 20  | `apps/server/repositories/dashboardStats.js`          | M      | +52                 | Server-side for Dashboard redesign     |
 
 **Subtotal:** 20 files, ~3,000 LOC.
 **Proposed action:** create `feature/ui-redesign-home-erpag-landing` branch off `main`, cherry-pick or simple checkout these 20 files there, commit as a multi-step sprint (suggest 3-4 commits per natural feature seam).
@@ -77,23 +77,23 @@ Cohesive feature: ERPAG-style sidebar (sections only) → click section → `Mod
 
 Cohesive feature: optional `orderNumber` (server auto-generates `ORD-{nextId}`) + multer Excel-import endpoint + IFS Finished Goods `Catalog No`/`Catalog Desc` mapping fix + number/string PN coercion.
 
-| #   | File                                                    | Status | LOC delta | Tier                                    |
-| --- | ------------------------------------------------------- | ------ | --------- | --------------------------------------- |
-| 1   | `client/src/modules/planning/tabs/OrderEntry.jsx`       | M      | +358      | Core                                    |
-| 2   | `client/src/modules/planning/tabs/OrderEntry.css`       | M      | +131      | Core                                    |
-| 3   | `client/src/modules/planning/tabs/BOMExplosion.jsx`     | M      | +101      | Adjacent                                |
-| 4   | `client/src/modules/planning/tabs/CapacityPlanning.jsx` | M      | +7        | Touch-up                                |
-| 5   | `client/src/modules/planning/tabs/MaterialCheck.jsx`    | M      | +5        | Touch-up                                |
-| 6   | `client/src/modules/planning/tabs/WorkOrdersLegacy.jsx` | M      | +5        | Touch-up                                |
-| 7   | `client/src/utils/fieldMap.js`                          | M      | +8        | FG field mapping                        |
-| 8   | `client/src/services/api.js`                            | M      | +31       | Excel-import client wrapper             |
-| 9   | `server/repositories/index.js`                          | M      | +9        | Repo wiring                             |
-| 10  | `server/routes/planning.js`                             | M      | +233      | multer + Excel import                   |
-| 11  | `server/routes/shared.js`                               | M      | +26       | Shared helper                           |
-| 12  | `server/services/dataSync.js`                           | M      | +55       | Number-vs-string PN fix (CLAUDE.md L21) |
-| 13  | `server/services/planningStore.js`                      | M      | +3        | Auto orderNumber gen                    |
-| 14  | `server/routes/planning.coerceDueDate.test.js`          | ??     | 58        | Test for due-date coercion              |
-| 15  | `server/services/getProducts.test.js`                   | ??     | 91        | Test for FG catalog mapping             |
+| #   | File                                                         | Status | LOC delta | Tier                                    |
+| --- | ------------------------------------------------------------ | ------ | --------- | --------------------------------------- |
+| 1   | `apps/client/src/modules/planning/tabs/OrderEntry.jsx`       | M      | +358      | Core                                    |
+| 2   | `apps/client/src/modules/planning/tabs/OrderEntry.css`       | M      | +131      | Core                                    |
+| 3   | `apps/client/src/modules/planning/tabs/BOMExplosion.jsx`     | M      | +101      | Adjacent                                |
+| 4   | `apps/client/src/modules/planning/tabs/CapacityPlanning.jsx` | M      | +7        | Touch-up                                |
+| 5   | `apps/client/src/modules/planning/tabs/MaterialCheck.jsx`    | M      | +5        | Touch-up                                |
+| 6   | `apps/client/src/modules/planning/tabs/WorkOrdersLegacy.jsx` | M      | +5        | Touch-up                                |
+| 7   | `apps/client/src/utils/fieldMap.js`                          | M      | +8        | FG field mapping                        |
+| 8   | `apps/client/src/services/api.js`                            | M      | +31       | Excel-import client wrapper             |
+| 9   | `apps/server/repositories/index.js`                          | M      | +9        | Repo wiring                             |
+| 10  | `apps/server/routes/planning.js`                             | M      | +233      | multer + Excel import                   |
+| 11  | `apps/server/routes/shared.js`                               | M      | +26       | Shared helper                           |
+| 12  | `apps/server/services/dataSync.js`                           | M      | +55       | Number-vs-string PN fix (CLAUDE.md L21) |
+| 13  | `apps/server/services/planningStore.js`                      | M      | +3        | Auto orderNumber gen                    |
+| 14  | `apps/server/routes/planning.coerceDueDate.test.js`          | ??     | 58        | Test for due-date coercion              |
+| 15  | `apps/server/services/getProducts.test.js`                   | ??     | 91        | Test for FG catalog mapping             |
 
 **Subtotal:** 15 files, ~1,120 LOC.
 **Proposed action:** the branch name `feature/order-entry-fg-sync-and-import` already describes this work. Move these 15 files to that branch (or a fresh `feature/order-entry-fg-sync-and-import-v2` cut from `main`), commit as 2-3 logical commits (route+server, client UI, tests).
@@ -152,7 +152,7 @@ Every file has clear provenance to one of the 3 themes (Step B verify, UI redesi
 | **D** Sensitive               | 0     | —                        | (none)                                                                              |
 | **Total**                     | 47\*  | —                        | —                                                                                   |
 
-\*Total slightly higher than 42 because B1 + B2 untracked sub-files were broken out of dir-level entries (e.g. `client/src/modules/home/` → 2 files, `docs/archive/erpag-survey/` → 5 files).
+\*Total slightly higher than 42 because B1 + B2 untracked sub-files were broken out of dir-level entries (e.g. `apps/client/src/modules/home/` → 2 files, `docs/archive/erpag-survey/` → 5 files).
 
 ---
 

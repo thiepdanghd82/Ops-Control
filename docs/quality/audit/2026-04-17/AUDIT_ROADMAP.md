@@ -36,7 +36,7 @@ Ops Control is a **functionally complete** internal costing/quoting tool for CCL
 
 ## 1. Current state — what's working ✅
 
-1. **Pure calc engine** — `client/src/services/calcEngine.js` is fully deterministic, 11 exported functions, no React dependency. Extractable to other products (mobile app, Excel add-in).
+1. **Pure calc engine** — `apps/client/src/services/calcEngine.js` is fully deterministic, 11 exported functions, no React dependency. Extractable to other products (mobile app, Excel add-in).
 2. **Centralized state** — `useReducer` + `CalcContext` eliminates prop drilling across 10+ sub-tabs.
 3. **Nested-tab architecture** — StandardCalc sub-tabs (Header, Layout, Materials, Inks, Processes, Balancing, Packing, Breakdown, Summarize) are cleanly split, each owns its handlers.
 4. **Two-pass SP resolution** — `ComplexCalc.jsx:74-132` elegantly handles SP-to-SP material references.
@@ -93,7 +93,7 @@ Standard accounting: **Contribution = (SP − Variable Cost) / SP**, where varia
 
 ### 2.5 Data layer: no ACID, file-based `.js` DB
 
-**Files:** `server/services/dataSync.js`, all `/data/Library/*/` stores
+**Files:** `apps/server/services/dataSync.js`, all `/data/Library/*/` stores
 
 - 17MB `materials_data.js` parsed on every import read
 - Two simultaneous saves = race condition, last-write-wins
@@ -120,7 +120,7 @@ XOR stream + SHA256 keystream derived from admin password hash. Not AEAD, no aut
 
 ### 2.8 Security: no request validation layer
 
-**File:** all routes under `server/routes/`
+**File:** all routes under `apps/server/routes/`
 
 `POST /auth/users` accepts arbitrary fields; typos like `ddlSites` vs `ddlSitesDB` silently no-op (acknowledged in code comments but still unresolved).
 
@@ -253,7 +253,7 @@ Migration script: read current `.js` files → INSERT INTO → verify row counts
 
 ### Sprint 2 — **Backend hardening** (2 weeks)
 - [ ] Persist sessions to `server/data/sessions.json`
-- [ ] Add Zod schemas for all `server/routes/*` request bodies
+- [ ] Add Zod schemas for all `apps/server/routes/*` request bodies
 - [ ] Tighten CORS to known origins
 - [ ] Rate limit `/import/*`, `/backup/*` (10/user/day default)
 - [ ] Migrate custom TOTP crypto to libsodium
@@ -264,7 +264,7 @@ Migration script: read current `.js` files → INSERT INTO → verify row counts
 
 ### Sprint 3 — **SQLite migration** (2 weeks)
 - [ ] Define schema (section 4.2)
-- [ ] Write migration script `scripts/migrate-to-sqlite.js`
+- [ ] Write migration script `apps/scripts/migrate-to-sqlite.js`
 - [ ] Rewrite `services/dataSync.js` as DB query layer (keep same function signatures)
 - [ ] Add transaction wrapper for `/save-all`
 - [ ] Dual-write period: keep legacy `.js` file export for 2 releases (rollback safety)
@@ -362,26 +362,26 @@ Can ship next:
 ## Appendix A — files touched during improvement
 
 **Critical edits:**
-- `client/src/services/calcEngine.js` — formula fixes (sprints 1, 5)
-- `client/src/services/calcValidation.js` — new warnings + severity links to Save
-- `client/src/modules/cost/tabs/ComplexCalc/ComplexCalc.jsx` — aggregation fix, data model refactor
-- `client/src/modules/cost/tabs/StandardCalc/ProcessBalancing.jsx` — persist state
-- `server/services/authService.js` — session persistence, TOTP crypto swap
-- `server/services/dataSync.js` — rewrite as DB layer
-- `server/routes/*` — Zod validation, rate limits
+- `apps/client/src/services/calcEngine.js` — formula fixes (sprints 1, 5)
+- `apps/client/src/services/calcValidation.js` — new warnings + severity links to Save
+- `apps/client/src/modules/cost/tabs/ComplexCalc/ComplexCalc.jsx` — aggregation fix, data model refactor
+- `apps/client/src/modules/cost/tabs/StandardCalc/ProcessBalancing.jsx` — persist state
+- `apps/server/services/authService.js` — session persistence, TOTP crypto swap
+- `apps/server/services/dataSync.js` — rewrite as DB layer
+- `apps/server/routes/*` — Zod validation, rate limits
 
 **New files:**
 - `server/data/ops.db` — SQLite DB
-- `scripts/migrate-to-sqlite.js`
-- `client/src/styles/semantic-tokens.css`
-- `client/src/components/Empty.jsx`, `SkeletonTable.jsx`, `StatusBadge.jsx`
-- `client/src/utils/safeNum.js`
-- `server/middleware/requestId.js`, `logger.js`
+- `apps/scripts/migrate-to-sqlite.js`
+- `apps/client/src/styles/semantic-tokens.css`
+- `apps/client/src/components/Empty.jsx`, `SkeletonTable.jsx`, `StatusBadge.jsx`
+- `apps/client/src/utils/safeNum.js`
+- `apps/server/middleware/requestId.js`, `logger.js`
 - `docs/calc-formula-reference.md` — formula documentation for Finance audit
 
 **Deprecations:**
 - `server/legacy/` folder (confirm unused, remove)
-- `server/routes/legacy.js`
+- `apps/server/routes/legacy.js`
 - Custom `jsHash()` fallback in `authService.js`
 
 ---

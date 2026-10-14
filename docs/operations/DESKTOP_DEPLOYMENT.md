@@ -226,7 +226,7 @@ sudo systemctl reload nginx
 
 ### 5.2 Push update từ vendor
 
-CCL Design chạy `scripts/release.sh 1.1.x` (xem file đó) — sẽ rsync 4-5 file:
+CCL Design chạy `apps/scripts/release.sh 1.1.x` (xem file đó) — sẽ rsync 4-5 file:
 
 ```
 /var/www/updates/Ops-Control-Setup-1.1.x.exe

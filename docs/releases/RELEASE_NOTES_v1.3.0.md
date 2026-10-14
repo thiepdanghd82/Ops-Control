@@ -23,9 +23,9 @@ shasum -a 256 -c checksums.txt
 # Recommended install — drops Gatekeeper warning permanently:
 bash install-from-dmg.sh OpsControl-SERVER-v1.3.0-mac-arm64.dmg
 
-bash scripts/verify-bundle-marker.sh \
+bash apps/scripts/verify-bundle-marker.sh \
   OpsControl-CLIENT-v1.3.0-mac-arm64.dmg v1.3.0-20260429T235836Z
-bash scripts/verify-bundle-marker.sh \
+bash apps/scripts/verify-bundle-marker.sh \
   OpsControl-SERVER-v1.3.0-mac-arm64.dmg v1.3.0-20260429T235836Z
 ```
 
@@ -39,18 +39,18 @@ v1.3.0 is an **in-place security + maintainability hardening pass** of v1.2. The
 - **Ed25519 license signing** replaces v1.2 HMAC-SHA256. Server holds the private key; client embeds only the public key. License v2 file format with `tier`, `max_users`, signed canonical payload. v1.2 HMAC licenses are NO LONGER ACCEPTED.
 - **License-tier enforcement** (S = 15 / M = 20 / L = 50 active users) — `POST /api/users` returns HTTP 402 LICENSE_LIMIT_EXCEEDED when over cap.
 - **Content Security Policy** + navigation lockdown on every Electron BrowserWindow.
-- **10 high-CVE upgrades** in `desktop/` (electron 33 → latest, electron-builder 25 → 26).
+- **10 high-CVE upgrades** in `apps/desktop/` (electron 33 → latest, electron-builder 25 → 26).
 
 ### Operations
 
 - **Setup wizard** on first launch. Server edition: 4 steps (License → Data path → Network/port → admin user). Client edition: 2 steps (Server URL → connection test).
-- **Bundle marker** (`opsctl-v1.3-marker:<build-id>:<iso-ts>`) baked into every client chunk + verifiable via `scripts/verify-bundle-marker.sh`. Defends against supply-chain swap during distribution.
+- **Bundle marker** (`opsctl-v1.3-marker:<build-id>:<iso-ts>`) baked into every client chunk + verifiable via `apps/scripts/verify-bundle-marker.sh`. Defends against supply-chain swap during distribution.
 - **Apple Silicon only** target (M1 → M5). Intel target dropped (CCL Vietnam fleet is fully M-series).
 
 ### Architecture
 
-- **8 SAP-aligned domain folders** under `server/domains/{costing,library,sales,planning,quality,security,basis,mes}/`. 8 routers extracted from `costApi.js` so far: basis/backup, library/rate, library/ddl, sales/released-quotation, sales/quotes, security/license, security/audit + the existing platform-level audit.
-- **Per-domain i18n registration** (ADR-0012) — `client/src/i18n/strings.js` is now a 72-key platform shell; per-tab strings live in `client/src/i18n/domains/<sap>.js` and register at module-load time.
+- **8 SAP-aligned domain folders** under `apps/server/domains/{costing,library,sales,planning,quality,security,basis,mes}/`. 8 routers extracted from `costApi.js` so far: basis/backup, library/rate, library/ddl, sales/released-quotation, sales/quotes, security/license, security/audit + the existing platform-level audit.
+- **Per-domain i18n registration** (ADR-0012) — `apps/client/src/i18n/strings.js` is now a 72-key platform shell; per-tab strings live in `apps/client/src/i18n/domains/<sap>.js` and register at module-load time.
 - **Router factory pattern** (ADR-0011) — every domain router is `createXRouter({...injected deps})`, which makes them stub-driven testable.
 
 ### Code health
@@ -74,9 +74,9 @@ v1.3.0 is an **in-place security + maintainability hardening pass** of v1.2. The
 
 These existed before the v1.3 upgrade and are tracked for v1.4:
 
-- `server/repositories/quotesStore.test.js` — 4 `_version` optimistic-locking tests fail in isolation (depend on a fixture ordering not present after schema reset).
-- `server/routes/chat.integration.test.js` — middleware shape mismatch (`req.user.id` undefined in test setup).
-- `server/routes/sync.js POST /push` — `rbacConsistency.test.js` flags this route as missing an auth gate. Pre-existing v1.2 condition; route is gated at the wrapping mount point but the lint can't see it.
+- `apps/server/repositories/quotesStore.test.js` — 4 `_version` optimistic-locking tests fail in isolation (depend on a fixture ordering not present after schema reset).
+- `apps/server/routes/chat.integration.test.js` — middleware shape mismatch (`req.user.id` undefined in test setup).
+- `apps/server/routes/sync.js POST /push` — `rbacConsistency.test.js` flags this route as missing an auth gate. Pre-existing v1.2 condition; route is gated at the wrapping mount point but the lint can't see it.
 
 The v1.3 work neither introduced nor masked these. They are queued behind the costApi.js extraction work in `docs/plans/COSTAPI_EXTRACTION_ROADMAP.md`.
 
@@ -104,12 +104,12 @@ See `MIGRATION_GUIDE.md`:
 
 After the initial v1.3.0 GA build a focused 6-fix pass landed in response to install-time issues + a comprehensive regression sweep:
 
-1. **Per-install random admin password** (`server/services/authService.js`) — the `Administrator` first-run seed was a compile-time hardcoded string (`hpu6mxWr6KLx`). Anyone who decompiled one DMG could log into every fresh CCL deploy. Now: random per install + `must_change_password=true` forces rotation on first login. Sidecar README + console log surface the value.
-2. **`desktop/build-manifest.test.js`** — regression guard so the next net-new desktop module either lands in `package.json` `build.files` or fails CI. Adds a sibling test that lists the desktop top-level `.js` files and asserts each is declared. Would have caught the `setupWizard.js` packaging bug before GA. CI job extended.
-3. **Installation-ID dialog** (`desktop/license.js`) — the 64-char hex was wrapping mid-string in the dialog with what looked like a literal hyphen. Real incident: an installation_id was emailed back with the wrap-hyphen included → signed license failed verification. Now: 4 groups of 16, single-space separators (whitespace-stripped on the signing side; no character ambiguity). Plus a "Copy Installation ID" button writes the canonical (no-space) form to the clipboard.
+1. **Per-install random admin password** (`apps/server/services/authService.js`) — the `Administrator` first-run seed was a compile-time hardcoded string (`hpu6mxWr6KLx`). Anyone who decompiled one DMG could log into every fresh CCL deploy. Now: random per install + `must_change_password=true` forces rotation on first login. Sidecar README + console log surface the value.
+2. **`apps/desktop/build-manifest.test.js`** — regression guard so the next net-new desktop module either lands in `package.json` `build.files` or fails CI. Adds a sibling test that lists the desktop top-level `.js` files and asserts each is declared. Would have caught the `setupWizard.js` packaging bug before GA. CI job extended.
+3. **Installation-ID dialog** (`apps/desktop/license.js`) — the 64-char hex was wrapping mid-string in the dialog with what looked like a literal hyphen. Real incident: an installation_id was emailed back with the wrap-hyphen included → signed license failed verification. Now: 4 groups of 16, single-space separators (whitespace-stripped on the signing side; no character ambiguity). Plus a "Copy Installation ID" button writes the canonical (no-space) form to the clipboard.
 4. **3 pre-existing v1.2 test failures fixed** — `chat.integration.test.js` + `quotesStore.test.js` were failing on path-with-spaces hosts because `better-sqlite3`'s native binding wasn't built (lesson #25). Solved by `prebuild-install` for Node ABI 115. `rbacConsistency.test.js` wasn't finding sync.js's auth gate because `routes/sync.js` wasn't on the `APP_LEVEL_AUTH` list — fixed + extended to use a per-file mount-path map.
-5. **Free-of-charge alternative to Apple Developer ID** — `scripts/install-from-dmg.sh` automates the install: verify checksum → mount DMG → copy to `/Applications` → strip `com.apple.quarantine` xattr. Result: app launches by double-click without the Gatekeeper "from unidentified developer" warning. No $99/year Apple program needed; trust chain anchors on the published SHA-256 + bundle marker.
-6. **Jest config hygiene** — added `/desktop/` to `testPathIgnorePatterns` so Jest no longer trips on Electron-only `cache.test.js`. `npm test` script also reworked: dropped the `'**/*.test.js'` glob (which the shell silently failed to expand on path-with-spaces hosts) in favour of directory args. `scripts/help/self-test.mjs` renamed to `self-check.mjs` to escape the `node --test` filename glob.
+5. **Free-of-charge alternative to Apple Developer ID** — `apps/scripts/install-from-dmg.sh` automates the install: verify checksum → mount DMG → copy to `/Applications` → strip `com.apple.quarantine` xattr. Result: app launches by double-click without the Gatekeeper "from unidentified developer" warning. No $99/year Apple program needed; trust chain anchors on the published SHA-256 + bundle marker.
+6. **Jest config hygiene** — added `/desktop/` to `testPathIgnorePatterns` so Jest no longer trips on Electron-only `cache.test.js`. `npm test` script also reworked: dropped the `'**/*.test.js'` glob (which the shell silently failed to expand on path-with-spaces hosts) in favour of directory args. `apps/scripts/help/self-test.mjs` renamed to `self-check.mjs` to escape the `node --test` filename glob.
 
 **Cumulative test count after this pass: 1,278 / 1,278 passing** (706 root + desktop + 572 client). The 12 failures from the initial GA sweep all fixed; no remaining "known issues" carried over from v1.2.
 

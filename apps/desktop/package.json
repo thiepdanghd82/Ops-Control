@@ -1,0 +1,187 @@
+{
+  "name": "ops-control-desktop",
+  "version": "1.6.0",
+  "description": "Ops Control Desktop — Electron shell (smart client, IBM/SAP/IFS-style 3-tier)",
+  "private": true,
+  "main": "main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "start:dev": "OPS_DESKTOP_MODE=embedded electron .",
+    "start:thin": "OPS_DESKTOP_MODE=thin OPS_REMOTE_URL=http://10.102.3.61:3000 electron .",
+    "build": "electron-builder --config.npmRebuild=false",
+    "build:win": "electron-builder --win --config.npmRebuild=false",
+    "build:mac": "electron-builder --mac --config.npmRebuild=false",
+    "build:all": "electron-builder -mw --config.npmRebuild=false",
+    "build:client:mac": "node ../scripts/build-mac-installers.mjs client",
+    "build:server:mac": "node ../scripts/build-mac-installers.mjs server",
+    "build:client:win": "node ../scripts/build-windows-installers.mjs client",
+    "build:server:win": "node ../scripts/build-windows-installers.mjs server",
+    "test:license": "node --test license.test.js",
+    "test:manifest": "node --test build-manifest.test.js",
+    "test:utils": "node --test \"utils/**/*.test.js\"",
+    "test:firstrun": "env -u ELECTRON_RUN_AS_NODE electron --no-deprecation clientFirstRun.test.js",
+    "test:wizard": "env -u ELECTRON_RUN_AS_NODE electron --no-deprecation setupWizard.test.js",
+    "test:sandbox": "env -u ELECTRON_RUN_AS_NODE electron --no-deprecation preloadSandbox.test.js",
+    "test:connect": "env -u ELECTRON_RUN_AS_NODE electron --no-deprecation connectThenLoad.test.js",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "devDependencies": {
+    "electron": "^41.10.7",
+    "electron-builder": "^26.8.1"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.9.0",
+    "electron-log": "^5.2.0",
+    "electron-store": "^8.2.0",
+    "electron-updater": "^6.8.9",
+    "node-hid": "^3.1.2",
+    "node-machine-id": "^1.1.12",
+    "pdf-to-printer": "^5.6.0",
+    "serialport": "^12.0.0"
+  },
+  "build": {
+    "appId": "vn.ccldesign.opscontrol",
+    "productName": "Ops Control",
+    "copyright": "Copyright © 2026 CCL Design Vietnam",
+    "artifactName": "OpsControl-${env.OPS_BUILD_ROLE}-v${version}-${os}-${arch}.${ext}",
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/better-sqlite3/**",
+      "**/node_modules/serialport/**",
+      "**/node_modules/node-hid/**",
+      "**/node_modules/@serialport/**"
+    ],
+    "directories": {
+      "output": "dist-electron",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "auto-update.js",
+      "smart-client.js",
+      "license.js",
+      "installationId.js",
+      "setupWizard.js",
+      "clientFirstRun.js",
+      "utils/**/*",
+      "native/**/*",
+      "package.json",
+      "build-role.json",
+      "!**/*.map",
+      "!**/*.test.js"
+    ],
+    "extraResources": [
+      {
+        "from": "../server",
+        "to": "app/server",
+        "filter": [
+          "**/*",
+          "!**/*.test.js",
+          "!**/legacy/**",
+          "!data/**"
+        ]
+      },
+      {
+        "from": "../client/dist",
+        "to": "app/client/dist"
+      },
+      {
+        "from": "../scripts",
+        "to": "app/scripts",
+        "filter": [
+          "**/*.js",
+          "!**/*.test.js"
+        ]
+      },
+      {
+        "from": "../../package.json",
+        "to": "app/package.json"
+      },
+      {
+        "from": "../../node_modules",
+        "to": "app/node_modules",
+        "filter": [
+          "**/*",
+          "!**/{*.test.js,*.md,*.markdown,*.html,test/**,tests/**,examples/**,docs/**,.bin/**,.cache/**}",
+          "!**/better-sqlite3/**",
+          "!**/node-hid/**",
+          "!**/serialport/**",
+          "!**/@serialport/**"
+        ]
+      },
+      {
+        "from": "node_modules/better-sqlite3",
+        "to": "app/node_modules/better-sqlite3"
+      },
+      {
+        "from": "node_modules/node-hid",
+        "to": "app/node_modules/node-hid"
+      },
+      {
+        "from": "node_modules/serialport",
+        "to": "app/node_modules/serialport"
+      },
+      {
+        "from": "node_modules/@serialport",
+        "to": "app/node_modules/@serialport"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "verifyUpdateCodeSignature": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Ops Control",
+      "deleteAppDataOnUninstall": false,
+      "include": "build/installer.nsh"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "build/icon.icns",
+      "category": "public.app-category.business",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "dmg": {
+      "title": "Ops Control ${version}",
+      "icon": "build/icon.icns"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "http://10.102.3.61:3000/updates/",
+        "channel": "latest"
+      }
+    ]
+  }
+}

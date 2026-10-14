@@ -65,8 +65,8 @@ Morning (4h):
 
 Afternoon (3h):
 
-- [ ] Add `audit('QUOTE_SAVE', cu.username, ip, JSON.stringify({id, type, version, label}))` post-`upsertQuote` in `server/routes/costApi.js:2317-2358` (closes P0-8a)
-- [ ] Add per-key audit emit inside `/save-all` success branch at `server/routes/costApi.js:1851-2167` with summary `{key, before_row_count, after_row_count, removed_unknown_keys}` (closes P0-8b)
+- [ ] Add `audit('QUOTE_SAVE', cu.username, ip, JSON.stringify({id, type, version, label}))` post-`upsertQuote` in `apps/server/routes/costApi.js:2317-2358` (closes P0-8a)
+- [ ] Add per-key audit emit inside `/save-all` success branch at `apps/server/routes/costApi.js:1851-2167` with summary `{key, before_row_count, after_row_count, removed_unknown_keys}` (closes P0-8b)
 - [ ] Add 3 tests: quote save emits audit, library save emits audit, no double-emit
 - [ ] Run `npm test` locally on Node 24 — expect 816+ server / 800+ client / 53 kiosk all green
 - [ ] Push commit; wait for CI green on PR #56
@@ -85,7 +85,7 @@ Morning (4h):
   1. Take baseline backup on empty fresh install
   2. Rsync `Data for import/data/Library/* → server/data/Library/`
   3. `chmod 600` on Users/ + TOTP secrets
-  4. `node scripts/migrate-to-sqlite.js --dry-run` for parity report
+  4. `node apps/scripts/migrate-to-sqlite.js --dry-run` for parity report
   5. `--commit` and verify SQLite tables populated
   6. Run `npm run preflight` (must pass)
   7. Manual smoke: Quote History loads ≥ N quotes, Materials tab shows ≥ N rows, Rate dropdown lists 7 sites
@@ -123,7 +123,7 @@ Morning (4h):
 
 Afternoon (4h):
 
-- [ ] Write `scripts/import-fallback-xlsx.js` (~150 LOC + 5 tests):
+- [ ] Write `apps/scripts/import-fallback-xlsx.js` (~150 LOC + 5 tests):
   - Read both xlsx via `xlsx` package (already in deps)
   - POST `/api/quotes` per row with `_version=0`
   - POST `/api/planning/v2/work-orders` per row (gated behind `OPS_FEATURE_PLANNING=1` — won't run on v1.5.10 by default; quote import always runs)
@@ -167,13 +167,13 @@ Morning (4h):
     ```json
     "backup:run": "node -e \"import('./server/services/backupScheduler.js').then(m=>m.runBackupCycle({force:true}).then(s=>{console.log(JSON.stringify(s,null,2)); process.exit(s.ok?0:2);}))\""
     ```
-  - Run `NODE_ENV=production node scripts/preflight-env.js` → must exit 0 (closes P0-1 prereq)
+  - Run `NODE_ENV=production node apps/scripts/preflight-env.js` → must exit 0 (closes P0-1 prereq)
   - Manual force backup: `npm run backup:run` → verify file at `server/data/Backup/SQLite/ops_<ts>.sqlite` + `server/data/Backup/Library/library_<date>.tar.gz`
   - Run `npm run verify-backup` → exit 0 (closes P0-1)
 - [ ] Provision off-site backup (closes P0-2):
   - USB external drive (minimum) or NAS (preferred) physically at Yen Phong
   - Set `OPS_OFFSITE_TARGET=<path>`
-  - Cron `30 2 * * *` runs `scripts/backup-offsite.sh`
+  - Cron `30 2 * * *` runs `apps/scripts/backup-offsite.sh`
   - Dry-run: `OPS_OFFSITE_DRY_RUN=1 ./scripts/backup-offsite.sh` shows correct target
 - [ ] Add `--exclude='Library/Users/totp_secrets*'` to tar command in `backupScheduler.js:124-129` OR document in MAINTAINERS that restore requires same `OPS_TOTP_KEY` (closes P1-8). Print + safe-store the `OPS_TOTP_KEY` value in factory safe.
 - [ ] Identify second engineer (backup on-call); brief on recovery playbook; share Zalo group (closes P1-9)
@@ -230,7 +230,7 @@ Afternoon (3h):
 - [ ] Merge PR #56 to `main`
 - [ ] Tag `v1.5.10`: `git tag -a v1.5.10 -m "v1.5.10 — go-live build (multi-tier export P0 + audit emit + CI fix)"`
 - [ ] Push tag: `git push origin v1.5.10` → triggers CI build-installers job (Mac arm64)
-- [ ] Manually build Windows installer on Windows host: `cd desktop && npx electron-builder --win --x64` (closes P1-4 — fresh Win installer with multi-tier fix)
+- [ ] Manually build Windows installer on Windows host: `cd apps/desktop && npx electron-builder --win --x64` (closes P1-4 — fresh Win installer with multi-tier fix)
 - [ ] Upload BOTH installers + both `latest*.yml` to `<DATA_DIR>/../updates/` on prod box
 - [ ] **`mkdir C:\opt\ops-control\updates`** if not exists (closes P2-8)
 
@@ -254,7 +254,7 @@ Morning (4h):
 - [ ] Verify `/health` returns 200 + `/ready` returns `db_ok=true`
 - [ ] Pair all 4 kiosks (issue fresh tokens via planner → kiosk redeem)
 - [ ] Smoke test on prod: 1 quote save (Std + Cpx) + 1 multi-tier export download → open in Excel, verify per-tier cells differ
-- [ ] Regenerate `OpsControl_UserGuide.docx`: `node scripts/help/build-user-guide.mjs` → confirm published to `client/dist/help/`
+- [ ] Regenerate `OpsControl_UserGuide.docx`: `node apps/scripts/help/build-user-guide.mjs` → confirm published to `apps/client/dist/help/`
 - [ ] Print 20 cheat-sheets per shift (3 shifts × 20 ops × 1 page = 60 cheat-sheets), laminate, place at each kiosk + workstation
 
 Afternoon (3h):

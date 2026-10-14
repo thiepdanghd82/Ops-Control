@@ -48,7 +48,7 @@ If ANY pre-condition fails → halt + resolve before running the field test.
 ### Phase 1 — Install the EXE (5 min)
 
 - [ ] Double-click `Ops Control CLIENT Setup 1.5.10.exe` (the NSIS
-      installer built by `node scripts/build-windows-installers.mjs client`;
+      installer built by `node apps/scripts/build-windows-installers.mjs client`;
       `Setup` suffix is electron-builder's NSIS default and is intentional)
 - [ ] Windows SmartScreen banner appears: "Microsoft Defender SmartScreen
       prevented an unrecognized app from starting"
@@ -102,7 +102,7 @@ auto-skip role detection and go straight to server URL config.
   ```bash
   # On Lead's Mac
   cd "3. PROJECTS/Ops Control v1.2"
-  node scripts/license/generate-license.mjs \
+  node apps/scripts/license/generate-license.mjs \
     --installation-id "<paste full ID>" \
     --customer "CCL Vietnam Yen Phong" \
     --expires 2027-06-09
@@ -117,7 +117,7 @@ auto-skip role detection and go straight to server URL config.
 private key exists at `~/OpsControl-license-keys/prod-private.pem` and that
 `--key` points at it (post 2026-06-04 rotation: there is no in-repo default).
 **STOP if**: license accepted in modal but banner persists → check that the
-installer embeds the NEW pubkey (`desktop/license.js:EMBEDDED_PUBKEY_PEM`,
+installer embeds the NEW pubkey (`apps/desktop/license.js:EMBEDDED_PUBKEY_PEM`,
 fp `044e1ad7…`) or that `OPS_LICENSE_PUBKEY` in the Mac SERVER's `.env`
 matches it (Sprint S-D15 incident — Mac DMG shipped with the pubkey missing,
 fixed at build time).
@@ -256,7 +256,7 @@ If Phase 1-4 fails (install / setup wizard / license / login):
 - Likely cause: Electron / native-module / build artifact issue
 - Escalate to Lead Engineer immediately
 - Lead may need to rebuild Win EXE from a fresh `git pull origin main`
-  - `node scripts/build-windows-installers.mjs client`
+  - `node apps/scripts/build-windows-installers.mjs client`
 
 If Phase 5-7 fails (calculator math / Inks tab / CSV):
 

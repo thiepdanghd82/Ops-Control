@@ -72,7 +72,7 @@ header).
 
 - Definition of Done for any code change includes the existing
   **"After every UI/client-code change — MANDATORY checklist"** in `CLAUDE.md` (tests
-  green -> rebuild -> restart node if `server/**` was touched -> bundle self-check ->
+  green -> rebuild -> restart node if `apps/server/**` was touched -> bundle self-check ->
   stale-chunk 404 guard) **and** a cited commit SHA per Lesson 0.
 
 ---
@@ -119,13 +119,13 @@ simple tasks.
 
 There are **two runtime surfaces** that can serve the UI. Which one the user is viewing determines what you must do after a code change.
 
-| Surface                          | URL                                                | Source it serves                    | After-edit action                |
-| -------------------------------- | -------------------------------------------------- | ----------------------------------- | -------------------------------- |
-| **Vite dev**                     | `http://localhost:5173` (or 5175 when auto-bumped) | `client/src/**` live, via HMR       | Nothing — HMR picks it up        |
-| **Prod server (local)**          | `http://localhost:3000`                            | `client/dist/**` (pre-built bundle) | `cd client && npm run build`     |
-| **Prod server (remote Windows)** | `http://10.102.3.61:3000`                          | `client/dist/**` on THAT machine    | Build **+** deploy to the remote |
+| Surface                          | URL                                                | Source it serves                         | After-edit action                 |
+| -------------------------------- | -------------------------------------------------- | ---------------------------------------- | --------------------------------- |
+| **Vite dev**                     | `http://localhost:5173` (or 5175 when auto-bumped) | `apps/client/src/**` live, via HMR       | Nothing — HMR picks it up         |
+| **Prod server (local)**          | `http://localhost:3000`                            | `apps/client/dist/**` (pre-built bundle) | `cd apps/client && npm run build` |
+| **Prod server (remote Windows)** | `http://10.102.3.61:3000`                          | `apps/client/dist/**` on THAT machine    | Build **+** deploy to the remote  |
 
-The Vite dev server (`npm run dev`, defined as `client-dev` in `.claude/launch.json`) is the only surface that auto-refreshes. The node production server (`server/index.js`) serves whatever bundle is physically in `client/dist/` at request time — it does NOT watch source files.
+The Vite dev server (`npm run dev`, defined as `client-dev` in `.claude/launch.json`) is the only surface that auto-refreshes. The node production server (`apps/server/index.js`) serves whatever bundle is physically in `apps/client/dist/` at request time — it does NOT watch source files.
 
 ## After every UI/client-code change — MANDATORY checklist
 
@@ -167,12 +167,12 @@ on this iteration's diff. Henry does not need to ask. Scope, skip rules and the 
    The bundle hash (e.g. `index-BZT3rIjg.js`) MUST change when source
    changed. If it didn't, the source isn't actually in the build.
 
-4. **If server code (`server/**`) was touched, RESTART the node process:\*\*
+4. **If server code (`apps/server/**`) was touched, RESTART the node process:\*\*
 
    ```bash
    OLDPID=$(lsof -nP -iTCP:3000 -sTCP:LISTEN -t 2>/dev/null)
    kill $OLDPID 2>/dev/null; sleep 1
-   cd "3. PROJECTS/Ops Control" && node server/index.js > /tmp/ops-server.log 2>&1 &
+   cd "3. PROJECTS/Ops Control" && node apps/server/index.js > /tmp/ops-server.log 2>&1 &
    sleep 2
    ```
 
@@ -207,7 +207,7 @@ on this iteration's diff. Henry does not need to ask. Scope, skip rules and the 
 
    Expect `404` (NOT 200). If this returns 200 the server is falling
    back to `index.html` for missing chunks, which causes the MIME-type
-   crash. See `server/index.js` — there must be a route for
+   crash. See `apps/server/index.js` — there must be a route for
    `/assets/*` that returns 404 **before** the SPA catch-all.
 
 7. **If remote, deploy:**
@@ -253,7 +253,7 @@ failures.
 
 **REQUIRED (must be green — a red here is a real regression, do NOT merge):**
 
-- **Client tests** (`cd client && npm test`) — 1525+ vanilla node:test.
+- **Client tests** (`cd apps/client && npm test`) — 1525+ vanilla node:test.
 - **Server tests** (`npm test`) — runs jest + kiosk + `node --test` + desktop
   license/manifest. The `node --test` glob uses **`--test-concurrency=1`**
   (serialized) to eliminate the MES-3-FIX-52 runner deserialize race between
@@ -264,17 +264,17 @@ failures.
 - **Lint + format** — `npm run lint -- --max-warnings 413` (`ci.yml:76`; ratcheted 435 → 413 by
   #281 and ONLY ever downward — lower it as tickets close, never raise it to absorb a new
   warning). **Local under-reports by ~60**: `eslint-plugin-react-hooks` is installed twice and
-  the root's 7.1.1 implements `react-hooks/set-state-in-effect` while `client/`'s 7.0.1 does
+  the root's 7.1.1 implements `react-hooks/set-state-in-effect` while `apps/client/`'s 7.0.1 does
   not, and the job runs `npm ci` at the root ONLY. So a clean local run means little; the cap
-  is CI's. Hiding `client/node_modules` does NOT simulate this — it breaks config resolution
-  and yields tens of thousands of bogus problems (measured 2026-09-22). **It misses ERRORS too** (measured 2026-09-28): `client/**` is linted with `client/eslint.config.js`, whose `@eslint/js` resolves to `client/node_modules` (9.39.4) locally and to the root's 10.0.1 on CI. 10's recommended set adds `no-unassigned-vars`, `no-useless-assignment` and `preserve-caught-error`, all errors, so a dead store passes locally and fails CI — #280's error and #436's. A local run that means something forces those three on (`--rule 'no-useless-assignment: error'` and the other two), after reproducing a known hit. +
+  is CI's. Hiding `apps/client/node_modules` does NOT simulate this — it breaks config resolution
+  and yields tens of thousands of bogus problems (measured 2026-09-22). **It misses ERRORS too** (measured 2026-09-28): `apps/client/**` is linted with `apps/client/eslint.config.js`, whose `@eslint/js` resolves to `apps/client/node_modules` (9.39.4) locally and to the root's 10.0.1 on CI. 10's recommended set adds `no-unassigned-vars`, `no-useless-assignment` and `preserve-caught-error`, all errors, so a dead store passes locally and fails CI — #280's error and #436's. A local run that means something forces those three on (`--rule 'no-useless-assignment: error'` and the other two), after reproducing a known hit. +
   `format:check`. Deterministic — a NEW error or crossing the warning cap
   fails it. Never raise the cap to hide new warnings.
 - **Commit messages** / **Commit-msg hook smoke** — Conventional Commits.
   The full convention lives in **CONTRIBUTING.md §5**, and `.gitmessage`
   (enabled by `npm install`) carries it as a template so you see the closed
   scope list while writing. Both are generated from / checked against
-  `commitlint.config.js` by `scripts/commit-convention.test.js`, so they
+  `commitlint.config.js` by `apps/scripts/commit-convention.test.js`, so they
   cannot drift — CONTRIBUTING.md was teaching two invalid scopes until
   2026-09-15. The usual trip-ups: scope `costing` not `pricing`,
   `apps/server` not `server`, lowercase subject, no trailing period,
@@ -331,32 +331,32 @@ That's only true on the dev surface. If the user is on `:3000` (local or remote)
 and the affected tab renders the ErrorBoundary fallback with
 `Cost → <tab-id> crashed`.
 
-**Root cause**: browser holds an old `index.js` referencing chunk hashes that no longer exist in `client/dist/`. The old `express.static` fallthrough returned `index.html` for any unknown path, so the browser loaded HTML when it expected JS and choked on the `text/html` content type.
+**Root cause**: browser holds an old `index.js` referencing chunk hashes that no longer exist in `apps/client/dist/`. The old `express.static` fallthrough returned `index.html` for any unknown path, so the browser loaded HTML when it expected JS and choked on the `text/html` content type.
 
 **Fix in place**:
 
-1. `server/index.js` has a `/assets/*` 404 route BEFORE the SPA catch-all. Unknown chunks now return a real 404.
+1. `apps/server/index.js` has a `/assets/*` 404 route BEFORE the SPA catch-all. Unknown chunks now return a real 404.
 2. `components/Shared/ErrorBoundary.js` detects the three common chunk-load error messages and force-reloads the page once per session (guarded via `sessionStorage['ops_chunk_reload_done']` so a genuine bug can't melt the browser in a loop).
-3. `server/index.js` sets `Cache-Control: public, max-age=31536000, immutable` on `/assets/*` and `no-cache` on `index.html` so the browser can safely trust hashed chunks and always revalidate the entry point.
+3. `apps/server/index.js` sets `Cache-Control: public, max-age=31536000, immutable` on `/assets/*` and `no-cache` on `index.html` so the browser can safely trust hashed chunks and always revalidate the entry point.
 
 **What to do when it happens again**: run step 6 of the checklist above. If the 404 check is failing, one of those three defences has been removed — restore it.
 
 ## Backend changes
 
-Server code in `server/**` is served by `node server/index.js`. It doesn't auto-restart on file changes unless the user has set up nodemon. After editing server code:
+Server code in `apps/server/**` is served by `node apps/server/index.js`. It doesn't auto-restart on file changes unless the user has set up nodemon. After editing server code:
 
 - Ask the user to restart the node process, OR
 - On the remote Windows server, the systemd/service equivalent needs restarting after `./tools/deploy/deploy.sh` pushes the new code.
 
 ## Key files
 
-- `client/src/components/Layout/Sidebar.jsx` — left-side navigation shell
-- `client/src/services/printAreaCore.js` — Print Area Calculator pure algorithm (framework-free, has its own Jest tests)
-- `client/src/modules/cost/tabs/PrintAreaCalc.jsx` — Print Area Calculator UI
-- `client/src/help/content.js` — **Help system source of truth** (see "Help system" below)
-- `client/src/modules/help/HelpTab.jsx` — in-app Help tab component
-- `scripts/help/build-user-guide.mjs` — builds the Word user guide from content.js
-- `server/index.js` — node server entry point (serves `client/dist` + API routes)
+- `apps/client/src/components/Layout/Sidebar.jsx` — left-side navigation shell
+- `apps/client/src/services/printAreaCore.js` — Print Area Calculator pure algorithm (framework-free, has its own Jest tests)
+- `apps/client/src/modules/cost/tabs/PrintAreaCalc.jsx` — Print Area Calculator UI
+- `apps/client/src/help/content.js` — **Help system source of truth** (see "Help system" below)
+- `apps/client/src/modules/help/HelpTab.jsx` — in-app Help tab component
+- `apps/scripts/help/build-user-guide.mjs` — builds the Word user guide from content.js
+- `apps/server/index.js` — node server entry point (serves `apps/client/dist` + API routes)
 - `deploy.sh` — Linux SSH deploy → systemd; `deploy.ps1` is the Windows counterpart (NSSM service) and was the script used for `10.102.3.61`. Both share the same .env-merge + snapshot + preflight gate; DATA_DIR is `.env`-driven on both since Sprint S-P0-FIX-1 (2026-05-03, SHA: `e75cac9`)
 - `.claude/launch.json` — defines `client-dev` and `ops-control` preview targets
 
@@ -364,20 +364,20 @@ Server code in `server/**` is served by `node server/index.js`. It doesn't auto-
 
 Centralized, searchable in-app help with a Word-export mirror.
 
-**Single source of truth:** `client/src/help/content.js`. Every tab has one entry keyed by its tab ID (matches the Sidebar + router). Both the in-app Help tab and the Word user guide read from here, so they can never drift.
+**Single source of truth:** `apps/client/src/help/content.js`. Every tab has one entry keyed by its tab ID (matches the Sidebar + router). Both the in-app Help tab and the Word user guide read from here, so they can never drift.
 
 **Where it lives in the UI:** SYSTEM → Help in the sidebar (below Metrics). `F1` anywhere in the app deep-links to the entry for the current tab.
 
 **Workflow for editing help:**
 
-1. Edit `client/src/help/content.js` — add/update the entry for the affected tab.
-2. If you added a screenshot reference, capture a PNG and drop it at `client/public/help/screenshots/<id>.png`. 16:10 aspect, 1280×800 recommended.
+1. Edit `apps/client/src/help/content.js` — add/update the entry for the affected tab.
+2. If you added a screenshot reference, capture a PNG and drop it at `apps/client/public/help/screenshots/<id>.png`. 16:10 aspect, 1280×800 recommended.
 3. Rebuild the Word file so operators who download it see the new content:
    ```bash
-   cd "3. PROJECTS/Ops Control" && node scripts/help/build-user-guide.mjs
+   cd "3. PROJECTS/Ops Control" && node apps/scripts/help/build-user-guide.mjs
    ```
-   Output goes to `client/public/help/OpsControl_UserGuide.docx` AND is mirrored to `4. CLAUDE OUTPUT/OpsControl_UserGuide.docx` for review.
-4. `npm run build` + deploy as usual (the `.docx` is a static asset served from `client/dist/help/`).
+   Output goes to `apps/client/public/help/OpsControl_UserGuide.docx` AND is mirrored to `4. CLAUDE OUTPUT/OpsControl_UserGuide.docx` for review.
+4. `npm run build` + deploy as usual (the `.docx` is a static asset served from `apps/client/dist/help/`).
 
 **Capturing screenshots:** the app is behind auth, so programmatic capture via Claude Preview isn't possible. After logging in:
 
@@ -388,7 +388,7 @@ Centralized, searchable in-app help with a Word-export mirror.
 
 **Missing screenshots** are handled gracefully — the in-app Help hides the `<img>` on error, and the Word export prints `[Screenshot pending: <name>]` as a placeholder. Shipping without screenshots is acceptable; adding them later is an additive improvement.
 
-**Word generators run automatically on `npm run build`** via the `prebuild` hook (see `client/package.json`). `scripts/help/build-all-docs.mjs` orchestrates the User Guide + Pricing Legend generators. Any new doc should be added to that script so a prod build always ships fresh offline docs.
+**Word generators run automatically on `npm run build`** via the `prebuild` hook (see `apps/client/package.json`). `apps/scripts/help/build-all-docs.mjs` orchestrates the User Guide + Pricing Legend generators. Any new doc should be added to that script so a prod build always ships fresh offline docs.
 
 ## Authorization model (Sprint S1-S3, 2026-04-24)
 
@@ -451,7 +451,7 @@ Senior-auditor review ran across 9 dimensions — code quality, UI/UX consistenc
 
 - **TOTP key mismatch at boot locks out all users.** If the server restarts with a different `OPS_TOTP_KEY` env than last boot, all user 2FA secrets become undecryptable. Recovery: `npm run reset-totp` (re-enrolls every user). Deploy scripts (`deploy.sh`/`deploy.ps1`) now preserve the existing key across deploys (Sprint 11 P2-1); `npm run preflight` fails the pipeline if prod env is missing it.
 - **Admin can delete all users / data without soft-delete.** `costApi.js` deletes are hard; backup is the only recovery. Always take a backup before any admin bulk action. Sprint 13 will add soft-delete + Trash tab.
-- **~~`dataSync.js` caches legacy `window._VARNAME = {...}` files without schema validation.~~** **FIXED Sprint 11 P0-1.** Critical Library files (PermissionGroups, MachineProfiles, Rate tables) now validate via `server/services/librarySchema.js`; unknown keys are stripped in strict mode for auth-critical data. Rows failing schema are dropped with stderr log. Treat `Library/` as a trust boundary: even trusted operators can drop a malformed xlsx export, and schema validation keeps the server running.
+- **~~`dataSync.js` caches legacy `window._VARNAME = {...}` files without schema validation.~~** **FIXED Sprint 11 P0-1.** Critical Library files (PermissionGroups, MachineProfiles, Rate tables) now validate via `apps/server/services/librarySchema.js`; unknown keys are stripped in strict mode for auth-critical data. Rows failing schema are dropped with stderr log. Treat `Library/` as a trust boundary: even trusted operators can drop a malformed xlsx export, and schema validation keeps the server running.
 
 ## Lessons learned (patterns that kept biting us)
 

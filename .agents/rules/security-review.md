@@ -16,10 +16,10 @@ before rebuild, commit or PR**. Re-run it if the fix for a finding changes code.
 
 Scope = the diff of this iteration (`git diff` + staged + new files). Always review when the diff touches any of:
 
-- `server/**` — routes, auth / `requireTabAccess`, SQL, file I/O, uploads, exports, Express bind/CORS
-- `desktop/**` — Electron main, preload, IPC, `nodeIntegration` / `contextIsolation`, Setup Wizard / First-Run
-- `client/**` code that handles HTML rendering, URLs, tokens, storage, or data from the server
-- `package.json` / lockfiles, `scripts/**`, `deploy/**`, installers, `.env*`, `security-allowlist.json`
+- `apps/server/**` — routes, auth / `requireTabAccess`, SQL, file I/O, uploads, exports, Express bind/CORS
+- `apps/desktop/**` — Electron main, preload, IPC, `nodeIntegration` / `contextIsolation`, Setup Wizard / First-Run
+- `apps/client/**` code that handles HTML rendering, URLs, tokens, storage, or data from the server
+- `package.json` / lockfiles, `apps/scripts/**`, `deploy/**`, installers, `.env*`, `security-allowlist.json`
 
 Docs-only, CSS-only or test-only diffs: skip and write one line `Security review: skipped (<reason>)`.
 

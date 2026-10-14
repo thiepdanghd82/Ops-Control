@@ -9,7 +9,7 @@
 
 **v1.2 candidate features** (chờ user define):
 
-- [x] **Settings UI: Mode switcher (embedded/thin/smart)** ✅ Done — [ModeSection.jsx](../../client/src/modules/cost/tabs/ModeSection.jsx)
+- [x] **Settings UI: Mode switcher (embedded/thin/smart)** ✅ Done — [ModeSection.jsx](../../apps/client/src/modules/cost/tabs/ModeSection.jsx)
 - [ ] Sprint 5 deployment: nginx update repo trên 10.102.3.61 + auto-update flow end-to-end
 - [ ] Pilot rollout 3 máy + thu thập feedback
 - [ ] Smart-client mode `smart` thực sự (Sprint 3 backend đã xong, frontend wire chưa — Mode UI cho phép pick nhưng app cần restart trong mode smart để engine khởi động)
@@ -125,7 +125,7 @@ Vấn đề của mô hình hiện tại:
                        ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  Tier 2 — APPLICATION LAYER                                 │
-│  Express server tại 10.102.3.61 (giữ nguyên server/index.js)│
+│  Express server tại 10.102.3.61 (giữ nguyên apps/server/index.js)│
 │  • REST API hiện hữu                                        │
 │  • TOTP, RBAC, audit, rate-limit                            │
 │  • Sync endpoint mới /api/sync/* cho smart client cache     │
@@ -160,7 +160,7 @@ Khuyến nghị mặc định: **mode `thin` cho production**, **mode `smart` ch
 
 ### 2.4 Bảo mật
 
-**Lớp 1 — Code obfuscation:** dùng `bytenode` compile các file IP cốt lõi (`server/services/calcEngine.js`, `inkCalcCore.js`, `layoutOptimizer.js`, `printAreaCore.js`) thành V8 bytecode `.jsc`. Bytecode rất khó decompile và gắn với version Node cụ thể.
+**Lớp 1 — Code obfuscation:** dùng `bytenode` compile các file IP cốt lõi (`apps/server/services/calcEngine.js`, `inkCalcCore.js`, `layoutOptimizer.js`, `printAreaCore.js`) thành V8 bytecode `.jsc`. Bytecode rất khó decompile và gắn với version Node cụ thể.
 
 **Lớp 2 — Asar integrity:** đóng gói tất cả file JS vào `app.asar` với `--integrity` flag. Electron sẽ verify hash mỗi lần load — nếu user vá file, app refuse to start.
 
@@ -207,16 +207,16 @@ Về phía server, IT chạy script `desktop:build:win` + `desktop:build:mac` r�
 
 **Mục tiêu:** chạy được Ops Control v1.0 trong vỏ Electron trên máy dev, không sửa code v1.0.
 
-| Task                                                    | Owner | Effort | Output               |
-| ------------------------------------------------------- | ----- | ------ | -------------------- |
-| Setup folder `desktop/` + `package.json`                | Dev   | 2h     | desktop/package.json |
-| Viết `main.js` (window mgmt + Express embedded)         | Dev   | 6h     | desktop/main.js      |
-| Viết `preload.js` + IPC contract                        | Dev   | 4h     | desktop/preload.js   |
-| `electron-builder.yml` cho dev build                    | Dev   | 3h     | build config         |
-| Test smoke trên Windows 11 + macOS Sonoma               | QA    | 4h     | Demo video           |
-| Verify 12/12 self-test smoke checks pass trong Electron | QA    | 4h     | Test report          |
-| Fix issue phát sinh                                     | Dev   | 8h     | —                    |
-| Buffer / docs                                           | —     | 1h     | —                    |
+| Task                                                    | Owner | Effort | Output                    |
+| ------------------------------------------------------- | ----- | ------ | ------------------------- |
+| Setup folder `apps/desktop/` + `package.json`           | Dev   | 2h     | apps/desktop/package.json |
+| Viết `main.js` (window mgmt + Express embedded)         | Dev   | 6h     | apps/desktop/main.js      |
+| Viết `preload.js` + IPC contract                        | Dev   | 4h     | apps/desktop/preload.js   |
+| `electron-builder.yml` cho dev build                    | Dev   | 3h     | build config              |
+| Test smoke trên Windows 11 + macOS Sonoma               | QA    | 4h     | Demo video                |
+| Verify 12/12 self-test smoke checks pass trong Electron | QA    | 4h     | Test report               |
+| Fix issue phát sinh                                     | Dev   | 8h     | —                         |
+| Buffer / docs                                           | —     | 1h     | —                         |
 
 **Định nghĩa hoàn thành (DoD):**
 
@@ -230,17 +230,17 @@ Về phía server, IT chạy script `desktop:build:win` + `desktop:build:mac` r�
 
 **Mục tiêu:** Renderer gọi được printer / scanner / scale / Zebra qua `window.ops.*`.
 
-| Task                                                                        | Owner         | Effort | Output                               |
-| --------------------------------------------------------------------------- | ------------- | ------ | ------------------------------------ |
-| Native module: Zebra/TSC TCP raw                                            | Dev           | 4h     | desktop/native/zebra.js              |
-| Native module: pdf-to-printer                                               | Dev           | 3h     | desktop/native/printer.js            |
-| Native module: serialport scale                                             | Dev           | 5h     | desktop/native/scale.js              |
-| Native module: node-hid scanner                                             | Dev           | 4h     | desktop/native/scanner.js            |
-| Client service `desktopBridge.js` (fallback web/electron)                   | Dev           | 3h     | client/src/services/desktopBridge.js |
-| UI: Settings tab "Thiết bị phần cứng" (chọn printer mặc định, COM port cân) | Dev           | 6h     | client UI                            |
-| Test với máy in Zebra ZD420 thật + cân Mettler PB                           | QA + Operator | 6h     | Test report + video                  |
-| Fix bug                                                                     | Dev           | 4h     | —                                    |
-| Docs                                                                        | Dev           | 1h     | desktop/HARDWARE.md                  |
+| Task                                                                        | Owner         | Effort | Output                                    |
+| --------------------------------------------------------------------------- | ------------- | ------ | ----------------------------------------- |
+| Native module: Zebra/TSC TCP raw                                            | Dev           | 4h     | apps/desktop/native/zebra.js              |
+| Native module: pdf-to-printer                                               | Dev           | 3h     | apps/desktop/native/printer.js            |
+| Native module: serialport scale                                             | Dev           | 5h     | apps/desktop/native/scale.js              |
+| Native module: node-hid scanner                                             | Dev           | 4h     | apps/desktop/native/scanner.js            |
+| Client service `desktopBridge.js` (fallback web/electron)                   | Dev           | 3h     | apps/client/src/services/desktopBridge.js |
+| UI: Settings tab "Thiết bị phần cứng" (chọn printer mặc định, COM port cân) | Dev           | 6h     | client UI                                 |
+| Test với máy in Zebra ZD420 thật + cân Mettler PB                           | QA + Operator | 6h     | Test report + video                       |
+| Fix bug                                                                     | Dev           | 4h     | —                                         |
+| Docs                                                                        | Dev           | 1h     | desktop/HARDWARE.md                       |
 
 **DoD:**
 
@@ -252,15 +252,15 @@ Về phía server, IT chạy script `desktop:build:win` + `desktop:build:mac` r�
 
 **Mục tiêu:** Mode `smart` hoạt động với offline read + write queue + sync.
 
-| Task                                                         | Owner | Effort | Output                   |
-| ------------------------------------------------------------ | ----- | ------ | ------------------------ |
-| Schema cache SQLite local (subset master tables)             | Dev   | 4h     | desktop/cache/schema.sql |
-| Sync engine: pull master data theo `_saved_at`               | Dev   | 6h     | desktop/smart-client.js  |
-| Write queue: mỗi action offline → enqueue → POST khi có mạng | Dev   | 8h     | —                        |
-| Conflict resolution rule (last-write-wins + flag)            | Dev   | 4h     | —                        |
-| Backend: `/api/sync/pull?since=<ts>` + `/api/sync/push`      | Dev   | 6h     | server/routes/sync.js    |
-| UI banner "Đang offline" / "Đang sync (3 changes)"           | Dev   | 3h     | —                        |
-| Test ngắt mạng giả lập                                       | QA    | 1h     | —                        |
+| Task                                                         | Owner | Effort | Output                       |
+| ------------------------------------------------------------ | ----- | ------ | ---------------------------- |
+| Schema cache SQLite local (subset master tables)             | Dev   | 4h     | desktop/cache/schema.sql     |
+| Sync engine: pull master data theo `_saved_at`               | Dev   | 6h     | apps/desktop/smart-client.js |
+| Write queue: mỗi action offline → enqueue → POST khi có mạng | Dev   | 8h     | —                            |
+| Conflict resolution rule (last-write-wins + flag)            | Dev   | 4h     | —                            |
+| Backend: `/api/sync/pull?since=<ts>` + `/api/sync/push`      | Dev   | 6h     | apps/server/routes/sync.js   |
+| UI banner "Đang offline" / "Đang sync (3 changes)"           | Dev   | 3h     | —                            |
+| Test ngắt mạng giả lập                                       | QA    | 1h     | —                            |
 
 **DoD:**
 
@@ -280,7 +280,7 @@ Về phía server, IT chạy script `desktop:build:win` + `desktop:build:mac` r�
 | Apple Developer ID + provisioning profile                           | Admin | 4h (queue) | .p12 + profile                   |
 | `electron-builder` Windows NSIS + sign                              | Dev   | 4h         | dist/Ops-Control-Setup-1.1.0.exe |
 | `electron-builder` macOS DMG + notarize                             | Dev   | 6h         | dist/Ops-Control-1.1.0.dmg       |
-| Hardware fingerprint + license check                                | Dev   | 8h         | desktop/license.js               |
+| Hardware fingerprint + license check                                | Dev   | 8h         | apps/desktop/license.js          |
 | Test installer trên Windows 10/11 sạch                              | QA    | 2h         | —                                |
 | Test DMG trên macOS Intel + Apple Silicon                           | QA    | 2h         | —                                |
 
@@ -295,14 +295,14 @@ Về phía server, IT chạy script `desktop:build:win` + `desktop:build:mac` r�
 
 **Mục tiêu:** Pilot 3 máy → full rollout 50 máy với auto-update server hoạt động.
 
-| Task                                                  | Owner            | Effort    | Output             |
-| ----------------------------------------------------- | ---------------- | --------- | ------------------ |
-| Setup nginx tại 10.102.3.61 phục vụ /updates/         | Admin            | 2h        | —                  |
-| CI script: build + upload `latest.yml` + installer    | Dev              | 4h        | scripts/release.sh |
-| Telemetry (opt-in): gửi version + crash log về server | Dev              | 4h        | —                  |
-| Pilot 3 máy: quan sát trong 3 ngày                    | QA + Pilot users | 6h spread | Daily report       |
-| Fix bug từ pilot                                      | Dev              | 6h        | —                  |
-| Full rollout: gửi installer cho IT công ty triển khai | Admin            | 2h        | Email + GPO/manual |
+| Task                                                  | Owner            | Effort    | Output                  |
+| ----------------------------------------------------- | ---------------- | --------- | ----------------------- |
+| Setup nginx tại 10.102.3.61 phục vụ /updates/         | Admin            | 2h        | —                       |
+| CI script: build + upload `latest.yml` + installer    | Dev              | 4h        | apps/scripts/release.sh |
+| Telemetry (opt-in): gửi version + crash log về server | Dev              | 4h        | —                       |
+| Pilot 3 máy: quan sát trong 3 ngày                    | QA + Pilot users | 6h spread | Daily report            |
+| Fix bug từ pilot                                      | Dev              | 6h        | —                       |
+| Full rollout: gửi installer cho IT công ty triển khai | Admin            | 2h        | Email + GPO/manual      |
 
 **DoD:**
 
@@ -441,7 +441,7 @@ Sau Sprint 5, anh nghiệm thu khi đầy đủ các điểm sau:
 
 ## 8. Quyết định cần anh phê duyệt
 
-PoC đã viết xong **14/14 file Sprint 1–4** (~1.500 dòng code) trong `desktop/` + `client/src/services/desktopBridge.js`. Trước khi triển khai Sprint 3 backend (`server/routes/sync.js`) và Sprint 5 deployment, anh xác nhận giúp:
+PoC đã viết xong **14/14 file Sprint 1–4** (~1.500 dòng code) trong `apps/desktop/` + `apps/client/src/services/desktopBridge.js`. Trước khi triển khai Sprint 3 backend (`apps/server/routes/sync.js`) và Sprint 5 deployment, anh xác nhận giúp:
 
 **Q1.** Đồng ý phương án **Electron 33** thay vì Tauri/PWA? (Khuyến nghị: ✅)
 
@@ -465,44 +465,44 @@ PoC đã viết xong **14/14 file Sprint 1–4** (~1.500 dòng code) trong `desk
 
 **Sprint 1 — wrapping:**
 
-- `desktop/package.json` ✅ — Electron 33 + electron-builder + native deps
-- `desktop/main.js` ✅ — Main process, Express embedded, window/tray/menu
-- `desktop/preload.js` ✅ — contextBridge `window.ops.*` API
-- `desktop/native/index.js` ✅ — bridge registry (auto safe-load)
-- `desktop/native/fs.js` ✅ — sandboxed file dialogs
-- `desktop/auto-update.js` ✅ — electron-updater wrapper
-- `desktop/build/installer.nsh` ✅ — NSIS firewall + registry + Defender
-- `desktop/build/entitlements.mac.plist` ✅ — macOS hardened runtime
-- `desktop/README.md` ✅ — dev/IT guide
+- `apps/desktop/package.json` ✅ — Electron 33 + electron-builder + native deps
+- `apps/desktop/main.js` ✅ — Main process, Express embedded, window/tray/menu
+- `apps/desktop/preload.js` ✅ — contextBridge `window.ops.*` API
+- `apps/desktop/native/index.js` ✅ — bridge registry (auto safe-load)
+- `apps/desktop/native/fs.js` ✅ — sandboxed file dialogs
+- `apps/desktop/auto-update.js` ✅ — electron-updater wrapper
+- `apps/desktop/build/installer.nsh` ✅ — NSIS firewall + registry + Defender
+- `apps/desktop/build/entitlements.mac.plist` ✅ — macOS hardened runtime
+- `apps/desktop/README.md` ✅ — dev/IT guide
 
 **Sprint 2 — native bridges:**
 
-- `desktop/native/zebra.js` ✅ — Zebra/TSC TCP:9100 raw socket
-- `desktop/native/printer.js` ✅ — pdf-to-printer (A4/A3)
-- `desktop/native/scale.js` ✅ — serialport cho cân điện tử
-- `desktop/native/scanner.js` ✅ — node-hid USB barcode scanner
-- `client/src/services/desktopBridge.js` ✅ — abstraction web/electron + keyboard wedge fallback
+- `apps/desktop/native/zebra.js` ✅ — Zebra/TSC TCP:9100 raw socket
+- `apps/desktop/native/printer.js` ✅ — pdf-to-printer (A4/A3)
+- `apps/desktop/native/scale.js` ✅ — serialport cho cân điện tử
+- `apps/desktop/native/scanner.js` ✅ — node-hid USB barcode scanner
+- `apps/client/src/services/desktopBridge.js` ✅ — abstraction web/electron + keyboard wedge fallback
 
 **Sprint 3 — smart client:**
 
-- `desktop/native/cache.js` ✅ — better-sqlite3 local cache + outbox queue
-- `desktop/smart-client.js` ✅ — sync engine (pull delta + push outbox + ping online)
+- `apps/desktop/native/cache.js` ✅ — better-sqlite3 local cache + outbox queue
+- `apps/desktop/smart-client.js` ✅ — sync engine (pull delta + push outbox + ping online)
 
 **Sprint 4 — bảo mật:**
 
-- `desktop/license.js` ✅ — HW fingerprint + signed license + trial 14 ngày
+- `apps/desktop/license.js` ✅ — HW fingerprint + signed license + trial 14 ngày
 
 **Sprint 1.1 — data migration UI (added 2026-04-27):**
 
-- `desktop/native/import.js` ✅ — IPC handler `ops:import.{pickFolder,scanFolder,execute}` (245 dòng — validate source, skip Users+totp+audit_log, backup ops.db, recursive copy, **schema validation v2 với better-sqlite3 peek 5 REQUIRED_TABLES**)
-- `client/src/modules/cost/tabs/ImportLegacySection.jsx` ✅ — UI 3-step (pick folder → scan preview với table → execute + restart prompt). 230 dòng React + 180 dòng CSS, **block button + warning tag ⚠ SCHEMA INVALID nếu thiếu tables**
+- `apps/desktop/native/import.js` ✅ — IPC handler `ops:import.{pickFolder,scanFolder,execute}` (245 dòng — validate source, skip Users+totp+audit_log, backup ops.db, recursive copy, **schema validation v2 với better-sqlite3 peek 5 REQUIRED_TABLES**)
+- `apps/client/src/modules/cost/tabs/ImportLegacySection.jsx` ✅ — UI 3-step (pick folder → scan preview với table → execute + restart prompt). 230 dòng React + 180 dòng CSS, **block button + warning tag ⚠ SCHEMA INVALID nếu thiếu tables**
 - Mounted vào Settings → Maintenance → "📥 Import data v1.0" (admin-only)
 - Backup `ops.db.before-import-<timestamp>` trước mỗi import
 
 **Sprint 1.2 — Login UI Carbon redesign (added 2026-04-27):**
 
-- `client/src/components/Auth/LoginPage.jsx` (refactored — giữ NGUYÊN logic + state, đổi structure)
-- `client/src/components/Auth/LoginPage.css` (+260 dòng `.cb-*` classes)
+- `apps/client/src/components/Auth/LoginPage.jsx` (refactored — giữ NGUYÊN logic + state, đổi structure)
+- `apps/client/src/components/Auth/LoginPage.css` (+260 dòng `.cb-*` classes)
 - Split-screen layout (IBM Carbon + IFS Cloud + SAP Fiori inspired): hero đen bên trái + form Carbon-style bên phải
 - 3 screens cùng style: Login / TOTP verify / TOTP enrollment
 - Compact mode (session-expired modal) hide hero + full-width card
@@ -514,14 +514,14 @@ PoC đã viết xong **14/14 file Sprint 1–4** (~1.500 dòng code) trong `desk
 
 Các file dưới đây nằm phía Tier 2 / CI / docs, không nằm trong PoC desktop. Sẽ viết khi triển khai sprint tương ứng:
 
-- `server/routes/sync.js` — endpoints `/api/sync/pull` + `/api/sync/push` (Sprint 3 backend)
+- `apps/server/routes/sync.js` — endpoints `/api/sync/pull` + `/api/sync/push` (Sprint 3 backend)
 - `scripts/build-bytecode.js` — bytenode compile 4 file IP (Sprint 4)
-- `scripts/release.sh` — CI build + rsync upload `/updates/` (Sprint 5)
+- `apps/scripts/release.sh` — CI build + rsync upload `/updates/` (Sprint 5)
 - `docs/operations/DESKTOP_DEPLOYMENT.md` — IT deployment guide (Sprint 5)
 
 ### 9.3 Wiring đã hoàn tất (2026-04-27 16:40)
 
-`desktop/main.js` đã wire xong:
+`apps/desktop/main.js` đã wire xong:
 
 - Top: `require('./license.js')` + `require('./smart-client.js')`
 - `app.whenReady`: gọi `license.register(ipcMain)`, boot probe khi `app.isPackaged`, start smart-client khi `mode === 'smart'`
@@ -531,27 +531,27 @@ Các file dưới đây nằm phía Tier 2 / CI / docs, không nằm trong PoC d
 
 Trong quá trình chạy PoC end-to-end đã gặp + fix 8 bug:
 
-| #   | Bug                                                                             | Root cause                                                                                                                             | Fix                                                                                                                                                                                                                                                                                                                                                                      |
-| --- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | npm install `EACCES /Users/thiepdt/.npm/_cacache`                               | Cache cũ chứa root-owned files                                                                                                         | Dùng `--cache /tmp/npm-cache-ops`                                                                                                                                                                                                                                                                                                                                        |
-| 2   | node-gyp `ModuleNotFoundError: distutils`                                       | Python 3.13 đã remove `distutils` khỏi stdlib, node-gyp 9.4.1 chưa update                                                              | `pip install setuptools` (vẫn không tự inject — phải dùng workaround #3)                                                                                                                                                                                                                                                                                                 |
-| 3   | better-sqlite3 build fail rồi node-hid build fail vì path có space              | clang++ không escape path khi gọi từ make                                                                                              | `npm install --ignore-scripts` rồi `electron-builder install-app-deps` cho better-sqlite3 + serialport (NAPI prebuild của node-hid dùng được luôn không cần rebuild)                                                                                                                                                                                                     |
-| 4   | `Electron failed to install correctly`                                          | `--ignore-scripts` skip cả `node install.js` của electron module                                                                       | Chạy `node install.js` thủ công trong `node_modules/electron/` để fetch binary 150MB                                                                                                                                                                                                                                                                                     |
-| 5   | `electron-store@10` `ERR_REQUIRE_ESM`                                           | electron-store v10 chuyển pure ESM, main.js dùng CommonJS                                                                              | Downgrade về `electron-store@^8.2.0` + bỏ `.default` ở require                                                                                                                                                                                                                                                                                                           |
-| 6   | `electron-updater Cannot read getVersion of undefined`                          | electron-updater v6 init eager khi require, app chưa ready                                                                             | Defer require qua `getAutoUpdater()` lazy getter trong `auto-update.js`                                                                                                                                                                                                                                                                                                  |
-| 7   | `app.requestSingleInstanceLock is undefined`                                    | Shell có sẵn `ELECTRON_RUN_AS_NODE=1` (VSCode inject) → mọi Electron binary chạy như Node thuần                                        | `env -u ELECTRON_RUN_AS_NODE` khi launch (hoặc unset trong launch script)                                                                                                                                                                                                                                                                                                |
-| 8   | `EADDRINUSE port 3000`                                                          | Server v1.0 đã listen `*:3000`, findFreePort kiểm tra `127.0.0.1` thay vì `0.0.0.0` nên báo "free" sai                                 | Đổi findFreePort sang test bind `0.0.0.0`, range mặc định 3100–3199                                                                                                                                                                                                                                                                                                      |
-| 9   | `node-gyp space-path crash khi electron-builder rebuild x64`                    | clang++ không escape path có space khi gọi từ make                                                                                     | Build trong `/tmp/ops-build/` (no spaces); chỉ build arm64 nếu host arm64                                                                                                                                                                                                                                                                                                |
-| 10  | electron-builder copy `node_modules/.bin` symlinks bị materialize → bin invalid | `cp -r` không follow symlinks chuẩn                                                                                                    | Fresh `npm install` trong `/tmp/ops-build/desktop/`                                                                                                                                                                                                                                                                                                                      |
-| 11  | Built app version vẫn `1.0.0`                                                   | desktop/package.json chưa bump                                                                                                         | Bump → `1.1.0`                                                                                                                                                                                                                                                                                                                                                           |
-| 12  | Built `.app` bị Gatekeeper kill silent                                          | DMG unsigned (PoC) → ad-hoc sign vẫn cần entitlements                                                                                  | `codesign --force --deep --sign - <app>` + `xattr -cr <app>` để clear quarantine                                                                                                                                                                                                                                                                                         |
-| 13  | Server spawn fail `import statement outside a module`                           | Bundle thiếu parent package.json với `"type": "module"`                                                                                | Thêm `from: ../package.json, to: app/package.json` vào extraResources                                                                                                                                                                                                                                                                                                    |
-| 14  | Server's `better-sqlite3` không có `.node` binary                               | Native chưa rebuild cho Electron Node ABI                                                                                              | `electron-rebuild --module-dir /tmp/ops-build --only better-sqlite3 --arch arm64`                                                                                                                                                                                                                                                                                        |
-| 15  | EPIPE crash khi launch built app từ Finder                                      | electron-log console transport ghi vào stdout, mà stdout pipe đóng khi launched từ LaunchServices                                      | Disable console transport khi `app.isPackaged` + add stdout/stderr error handler + uncaughtException guard                                                                                                                                                                                                                                                               |
-| 16  | `cache.test.js` báo "incompatible architecture x86_64 / need arm64"             | better-sqlite3 binary còn lại từ build x64 attempt trước                                                                               | `electron-rebuild --only better-sqlite3 --arch arm64` trong desktop/                                                                                                                                                                                                                                                                                                     |
-| 17  | `sign-macos.sh` crash: `app…: unbound variable`                                 | `set -u` + Unicode `…` (U+2026) ngay sau `$app` → bash misparse tên biến                                                               | Đổi `…` thành ASCII `...` trong tất cả script bash dùng `set -u`                                                                                                                                                                                                                                                                                                         |
-| 18  | TOTP enroll trả 500 "Unknown cipher"                                            | Server dùng `chacha20-poly1305` cipher, mà Electron 33's bundled Node 20 dùng BoringSSL không có cipher này                            | Đổi 6 vị trí trong `server/services/authService.js` từ `chacha20-poly1305` → `aes-256-gcm` (universal, security tương đương). Hot-patch áp được cho cả app đã cài (sed in-place trong app.asar resources)                                                                                                                                                                |
-| 19  | Dashboard "database_shape_mismatch" → "no such table: quotes"                   | User pick folder Import có ops.db chỉ chứa 4 chat tables (backup chat-only) thay vì full 14 tables (quotes/materials/ifs_inventory...) | (a) Restore từ `Ops Control/server/data/ops.db` trực tiếp; (b) Improve `desktop/native/import.js` scan: peek sqlite_master, check 5 REQUIRED_TABLES (quotes/materials/ifs_inventory/bom/routing_operations), trả `schemaValid: false` + `missingCoreTables` nếu thiếu; (c) UI block button "Bắt đầu import" + warning tag "⚠ SCHEMA INVALID" + ghi chi tiết tables thiếu |
+| #   | Bug                                                                             | Root cause                                                                                                                             | Fix                                                                                                                                                                                                                                                                                                                                                                           |
+| --- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | npm install `EACCES /Users/thiepdt/.npm/_cacache`                               | Cache cũ chứa root-owned files                                                                                                         | Dùng `--cache /tmp/npm-cache-ops`                                                                                                                                                                                                                                                                                                                                             |
+| 2   | node-gyp `ModuleNotFoundError: distutils`                                       | Python 3.13 đã remove `distutils` khỏi stdlib, node-gyp 9.4.1 chưa update                                                              | `pip install setuptools` (vẫn không tự inject — phải dùng workaround #3)                                                                                                                                                                                                                                                                                                      |
+| 3   | better-sqlite3 build fail rồi node-hid build fail vì path có space              | clang++ không escape path khi gọi từ make                                                                                              | `npm install --ignore-scripts` rồi `electron-builder install-app-deps` cho better-sqlite3 + serialport (NAPI prebuild của node-hid dùng được luôn không cần rebuild)                                                                                                                                                                                                          |
+| 4   | `Electron failed to install correctly`                                          | `--ignore-scripts` skip cả `node install.js` của electron module                                                                       | Chạy `node install.js` thủ công trong `node_modules/electron/` để fetch binary 150MB                                                                                                                                                                                                                                                                                          |
+| 5   | `electron-store@10` `ERR_REQUIRE_ESM`                                           | electron-store v10 chuyển pure ESM, main.js dùng CommonJS                                                                              | Downgrade về `electron-store@^8.2.0` + bỏ `.default` ở require                                                                                                                                                                                                                                                                                                                |
+| 6   | `electron-updater Cannot read getVersion of undefined`                          | electron-updater v6 init eager khi require, app chưa ready                                                                             | Defer require qua `getAutoUpdater()` lazy getter trong `auto-update.js`                                                                                                                                                                                                                                                                                                       |
+| 7   | `app.requestSingleInstanceLock is undefined`                                    | Shell có sẵn `ELECTRON_RUN_AS_NODE=1` (VSCode inject) → mọi Electron binary chạy như Node thuần                                        | `env -u ELECTRON_RUN_AS_NODE` khi launch (hoặc unset trong launch script)                                                                                                                                                                                                                                                                                                     |
+| 8   | `EADDRINUSE port 3000`                                                          | Server v1.0 đã listen `*:3000`, findFreePort kiểm tra `127.0.0.1` thay vì `0.0.0.0` nên báo "free" sai                                 | Đổi findFreePort sang test bind `0.0.0.0`, range mặc định 3100–3199                                                                                                                                                                                                                                                                                                           |
+| 9   | `node-gyp space-path crash khi electron-builder rebuild x64`                    | clang++ không escape path có space khi gọi từ make                                                                                     | Build trong `/tmp/ops-build/` (no spaces); chỉ build arm64 nếu host arm64                                                                                                                                                                                                                                                                                                     |
+| 10  | electron-builder copy `node_modules/.bin` symlinks bị materialize → bin invalid | `cp -r` không follow symlinks chuẩn                                                                                                    | Fresh `npm install` trong `/tmp/ops-build/desktop/`                                                                                                                                                                                                                                                                                                                           |
+| 11  | Built app version vẫn `1.0.0`                                                   | apps/desktop/package.json chưa bump                                                                                                    | Bump → `1.1.0`                                                                                                                                                                                                                                                                                                                                                                |
+| 12  | Built `.app` bị Gatekeeper kill silent                                          | DMG unsigned (PoC) → ad-hoc sign vẫn cần entitlements                                                                                  | `codesign --force --deep --sign - <app>` + `xattr -cr <app>` để clear quarantine                                                                                                                                                                                                                                                                                              |
+| 13  | Server spawn fail `import statement outside a module`                           | Bundle thiếu parent package.json với `"type": "module"`                                                                                | Thêm `from: ../package.json, to: app/package.json` vào extraResources                                                                                                                                                                                                                                                                                                         |
+| 14  | Server's `better-sqlite3` không có `.node` binary                               | Native chưa rebuild cho Electron Node ABI                                                                                              | `electron-rebuild --module-dir /tmp/ops-build --only better-sqlite3 --arch arm64`                                                                                                                                                                                                                                                                                             |
+| 15  | EPIPE crash khi launch built app từ Finder                                      | electron-log console transport ghi vào stdout, mà stdout pipe đóng khi launched từ LaunchServices                                      | Disable console transport khi `app.isPackaged` + add stdout/stderr error handler + uncaughtException guard                                                                                                                                                                                                                                                                    |
+| 16  | `cache.test.js` báo "incompatible architecture x86_64 / need arm64"             | better-sqlite3 binary còn lại từ build x64 attempt trước                                                                               | `electron-rebuild --only better-sqlite3 --arch arm64` trong desktop/                                                                                                                                                                                                                                                                                                          |
+| 17  | `sign-macos.sh` crash: `app…: unbound variable`                                 | `set -u` + Unicode `…` (U+2026) ngay sau `$app` → bash misparse tên biến                                                               | Đổi `…` thành ASCII `...` trong tất cả script bash dùng `set -u`                                                                                                                                                                                                                                                                                                              |
+| 18  | TOTP enroll trả 500 "Unknown cipher"                                            | Server dùng `chacha20-poly1305` cipher, mà Electron 33's bundled Node 20 dùng BoringSSL không có cipher này                            | Đổi 6 vị trí trong `apps/server/services/authService.js` từ `chacha20-poly1305` → `aes-256-gcm` (universal, security tương đương). Hot-patch áp được cho cả app đã cài (sed in-place trong app.asar resources)                                                                                                                                                                |
+| 19  | Dashboard "database_shape_mismatch" → "no such table: quotes"                   | User pick folder Import có ops.db chỉ chứa 4 chat tables (backup chat-only) thay vì full 14 tables (quotes/materials/ifs_inventory...) | (a) Restore từ `Ops Control/server/data/ops.db` trực tiếp; (b) Improve `apps/desktop/native/import.js` scan: peek sqlite_master, check 5 REQUIRED_TABLES (quotes/materials/ifs_inventory/bom/routing_operations), trả `schemaValid: false` + `missingCoreTables` nếu thiếu; (c) UI block button "Bắt đầu import" + warning tag "⚠ SCHEMA INVALID" + ghi chi tiết tables thiếu |
 
 ### 9.5 Smoke test results
 

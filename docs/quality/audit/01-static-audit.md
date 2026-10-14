@@ -21,16 +21,16 @@
 
 ### 1.1.1 ESLint
 
-| Tree                                                 | Errors | Warnings | Notes                                                                                                                                                           |
-| ---------------------------------------------------- | -----: | -------: | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Root (`server/`, `scripts/`, `domains/`, `desktop/`) | **87** |  **393** | 63 errors are `no-undef` `console`/`process` in `scripts/help/capture-*.mjs` (browser puppeteer scripts run with Node globals not declared in their eslint env) |
-| Client (`client/src/`)                               | **10** |  **318** | 296 warnings = `no-restricted-syntax` (inline `style={{...}}` rule from CLAUDE.md lesson 6, deliberate Sprint-12 deferred)                                      |
-| Total                                                | **97** |  **711** |                                                                                                                                                                 |
+| Tree                                                                | Errors | Warnings | Notes                                                                                                                                                                |
+| ------------------------------------------------------------------- | -----: | -------: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Root (`apps/server/`, `apps/scripts/`, `domains/`, `apps/desktop/`) | **87** |  **393** | 63 errors are `no-undef` `console`/`process` in `apps/scripts/help/capture-*.mjs` (browser puppeteer scripts run with Node globals not declared in their eslint env) |
+| Client (`apps/client/src/`)                                         | **10** |  **318** | 296 warnings = `no-restricted-syntax` (inline `style={{...}}` rule from CLAUDE.md lesson 6, deliberate Sprint-12 deferred)                                           |
+| Total                                                               | **97** |  **711** |                                                                                                                                                                      |
 
 **Error breakdown (root, top causes)**:
 | Count | Rule | Cause |
 |---:|---|---|
-| 63 | `no-undef` | `console`, `process` not in env config for `scripts/help/capture-*.mjs` (Puppeteer scripts) — easy fix |
+| 63 | `no-undef` | `console`, `process` not in env config for `apps/scripts/help/capture-*.mjs` (Puppeteer scripts) — easy fix |
 | 5 | `no-unused-vars` | Stale references after refactor |
 | 4 | `no-irregular-whitespace` | Imported xlsx test fixtures with trailing NBSP |
 | 3 | `no-useless-assignment` | Dev oversight |
@@ -39,17 +39,17 @@
 **Error breakdown (client, all 10)**:
 | File:Line | Rule | Description |
 |---|---|---|
-| [`Sidebar.jsx:164-165`](client/src/components/Layout/Sidebar.jsx) | `no-unused-vars` | `collapsedSections`, `toggleSection` orphaned after section-collapse refactor (CLAUDE.md lesson 26) |
-| [`connectionHealth.js:44, 165`](client/src/services/connectionHealth.js) | `no-unused-vars` | `_` placeholder unused |
-| [`DecimalInput.jsx:29`](client/src/utils/DecimalInput.jsx) | `no-unused-vars` | `toDisplay` defined but unused |
-| [`printAreaCore.js:1213-1214`](client/src/services/printAreaCore.js) | `no-empty` | Empty catch `{}` × 2 |
-| [`Dashboard.jsx:55`](client/src/modules/cost/tabs/Dashboard.jsx) | React 19 lint | `useMemo(buildYearOptions, [])` — should be `useMemo(() => buildYearOptions(), [])` (introduced in this audit branch's WIP) |
-| [`HardwareSection.jsx:295`](client/src/modules/cost/tabs/HardwareSection.jsx) | React 19 lint | `useEffect(() => { refresh(); }, [])` — set-state-in-effect cascading-render warning |
-| [`ConnectionBanner.jsx:65`](client/src/components/Layout/ConnectionBanner.jsx) | React 19 lint | `Date.now()` called during render — impure (should be in effect or memoized) |
+| [`Sidebar.jsx:164-165`](apps/client/src/components/Layout/Sidebar.jsx) | `no-unused-vars` | `collapsedSections`, `toggleSection` orphaned after section-collapse refactor (CLAUDE.md lesson 26) |
+| [`connectionHealth.js:44, 165`](apps/client/src/services/connectionHealth.js) | `no-unused-vars` | `_` placeholder unused |
+| [`DecimalInput.jsx:29`](apps/client/src/utils/DecimalInput.jsx) | `no-unused-vars` | `toDisplay` defined but unused |
+| [`printAreaCore.js:1213-1214`](apps/client/src/services/printAreaCore.js) | `no-empty` | Empty catch `{}` × 2 |
+| [`Dashboard.jsx:55`](apps/client/src/modules/cost/tabs/Dashboard.jsx) | React 19 lint | `useMemo(buildYearOptions, [])` — should be `useMemo(() => buildYearOptions(), [])` (introduced in this audit branch's WIP) |
+| [`HardwareSection.jsx:295`](apps/client/src/modules/cost/tabs/HardwareSection.jsx) | React 19 lint | `useEffect(() => { refresh(); }, [])` — set-state-in-effect cascading-render warning |
+| [`ConnectionBanner.jsx:65`](apps/client/src/components/Layout/ConnectionBanner.jsx) | React 19 lint | `Date.now()` called during render — impure (should be in effect or memoized) |
 
 **Warning breakdown**:
 
-- **296 inline-style warnings** across **42 files**. CLAUDE.md lesson 6 explicitly accepts this — Sprint 12 component-size refactor deferred. Top 5 offenders are excluded in `client/eslint.config.js` ignore list (`PrintAreaCalc`, `Settings`, `InkCalculator`, `SubProductRow`, `Dashboard`). The rule blocks NEW additions without blocking the build.
+- **296 inline-style warnings** across **42 files**. CLAUDE.md lesson 6 explicitly accepts this — Sprint 12 component-size refactor deferred. Top 5 offenders are excluded in `apps/client/eslint.config.js` ignore list (`PrintAreaCalc`, `Settings`, `InkCalculator`, `SubProductRow`, `Dashboard`). The rule blocks NEW additions without blocking the build.
 - **13 `react-hooks/exhaustive-deps`** in 5 files. Mostly intentional (e.g., `ProcessFlowChart.jsx:178` chains 7 callbacks on the same `overrides` literal — a valid optimization opportunity but not a correctness bug).
 
 | ID   | Severity | Finding                                                                                                                                                                                                                                                                                                                                                                        |
@@ -70,12 +70,12 @@
 
 ### 1.1.3 console.log in production code
 
-**66 occurrences** of `console.log/debug/info` in `client/src` + `server` + `domains`. Sample inspection:
+**66 occurrences** of `console.log/debug/info` in `apps/client/src` + `server` + `domains`. Sample inspection:
 
-- `server/index.js`: 9 calls — boot diagnostics ("✅ production preflight passed", "🚀 Ops Control server running at…"), legitimate startup logs.
-- `server/index.js:257`: `console.log(JSON.stringify(entry))` — structured request log, intentional.
-- `client/src/components/Auth/AppBootstrap.jsx:76`: `[bootstrap] aux tasks settled in Xms` — dev debug, leaks to prod console.
-- `client/src/modules/cost/tabs/AboutSection.jsx:165`: `=== Ops Control diagnostic snapshot ===` — operator-facing copy-to-clipboard helper, intentional.
+- `apps/server/index.js`: 9 calls — boot diagnostics ("✅ production preflight passed", "🚀 Ops Control server running at…"), legitimate startup logs.
+- `apps/server/index.js:257`: `console.log(JSON.stringify(entry))` — structured request log, intentional.
+- `apps/client/src/components/Auth/AppBootstrap.jsx:76`: `[bootstrap] aux tasks settled in Xms` — dev debug, leaks to prod console.
+- `apps/client/src/modules/cost/tabs/AboutSection.jsx:165`: `=== Ops Control diagnostic snapshot ===` — operator-facing copy-to-clipboard helper, intentional.
 
 CLAUDE.md mentions `utils/logger.js` (DEV-only `log/warn` + always-on `err`) was added in Sprint 10 (P2-4). Some sites adopt it (AdminMetrics, apiTry); others still use raw `console.*`.
 
@@ -85,7 +85,7 @@ CLAUDE.md mentions `utils/logger.js` (DEV-only `log/warn` + always-on `err`) was
 
 ### 1.1.4 Dead code / unused imports
 
-ESLint catches `no-unused-vars` (5 root + 5 client). The repo also has a custom orphan-module lint at [`client/src/utils/deadCode.lint.test.js`](client/src/utils/deadCode.lint.test.js) — **594 client tests pass**, so no current orphan modules exist (CLAUDE.md lesson 2 — `KNOWN_ORPHANS` whitelist enforced).
+ESLint catches `no-unused-vars` (5 root + 5 client). The repo also has a custom orphan-module lint at [`apps/client/src/utils/deadCode.lint.test.js`](apps/client/src/utils/deadCode.lint.test.js) — **594 client tests pass**, so no current orphan modules exist (CLAUDE.md lesson 2 — `KNOWN_ORPHANS` whitelist enforced).
 
 | ID   | Severity | Finding                                                                                                                              |
 | ---- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
@@ -95,11 +95,11 @@ ESLint catches `no-unused-vars` (5 root + 5 client). The repo also has a custom 
 
 Verified with `madge --circular`:
 
-| Tree          | Files scanned | Circular |
-| ------------- | ------------: | :------: |
-| `server/`     |           149 | **0** ✅ |
-| `client/src/` |           297 | **0** ✅ |
-| `domains/`    |            65 | **0** ✅ |
+| Tree               | Files scanned | Circular |
+| ------------------ | ------------: | :------: |
+| `apps/server/`     |           149 | **0** ✅ |
+| `apps/client/src/` |           297 | **0** ✅ |
+| `domains/`         |            65 | **0** ✅ |
 
 | ID   | Severity | Finding                                                                 |
 | ---- | -------- | ----------------------------------------------------------------------- |
@@ -146,10 +146,10 @@ Patterns scanned: `(api[_-]?key|secret[_-]?key|access[_-]?token|bearer|password)
 
 | File                                                    |              Line | Interpolated value                       | Source                                                                                                                         | Verdict |
 | ------------------------------------------------------- | ----------------: | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------- |
-| `server/repositories/shadowWrite.js`                    |           131-150 | `${table}`, `${deleteWhere.sql}`         | Internal whitelisted table-name map; `deleteWhere.sql` is hardcoded WHERE clause from same module                              | ✅ Safe |
-| `server/repositories/backends/sqliteBackend.js`         |      114-115, 233 | `${table}`, `${kind}`, `${placeholders}` | Internal switch on enum + `?, ?, ?` placeholders                                                                               | ✅ Safe |
-| `server/db/init.js`                                     |                47 | `${col}`                                 | Iterates literal array `['started_at','paused_at',…]`                                                                          | ✅ Safe |
-| `server/services/backupScheduler.js`                    |          148, 168 | `${t}`, `${table}`                       | Internal table iteration array                                                                                                 | ✅ Safe |
+| `apps/server/repositories/shadowWrite.js`               |           131-150 | `${table}`, `${deleteWhere.sql}`         | Internal whitelisted table-name map; `deleteWhere.sql` is hardcoded WHERE clause from same module                              | ✅ Safe |
+| `apps/server/repositories/backends/sqliteBackend.js`    |      114-115, 233 | `${table}`, `${kind}`, `${placeholders}` | Internal switch on enum + `?, ?, ?` placeholders                                                                               | ✅ Safe |
+| `apps/server/db/init.js`                                |                47 | `${col}`                                 | Iterates literal array `['started_at','paused_at',…]`                                                                          | ✅ Safe |
+| `apps/server/services/backupScheduler.js`               |          148, 168 | `${t}`, `${table}`                       | Internal table iteration array                                                                                                 | ✅ Safe |
 | `domains/planning/server/repositories/workOrderRepo.js` | 97, 108, 124, 215 | `${where}`, `${sets.join(', ')}`         | `where` from `buildWhere()` (param-bound); `sets` filtered by `HEADER_PATCHABLE_FIELDS.includes(k)` whitelist + values via `?` | ✅ Safe |
 
 **ALL user-supplied values go through `?` parameter binding via better-sqlite3's prepared statements**. No string-concat-with-user-input found anywhere.
@@ -162,11 +162,11 @@ Patterns scanned: `(api[_-]?key|secret[_-]?key|access[_-]?token|bearer|password)
 
 `dangerouslySetInnerHTML` usage — 8 occurrences in 3 files:
 
-| File                  |                   Line | Content source                                        | Verdict                                                                |
-| --------------------- | ---------------------: | ----------------------------------------------------- | ---------------------------------------------------------------------- |
-| `TotpEnrollment.jsx`  |                    125 | `qrSvg` from server (TOTP QR code, server-controlled) | ✅ Safe — server output, not user input                                |
-| `HardwareSection.jsx` |                67, 340 | `t('hw.banner.p1')`, `t('hw.sn.wedge_label')`         | ✅ Safe — i18n strings from `client/src/i18n/` (compile-time literals) |
-| `ModeSection.jsx`     | 85, 192, 194, 195, 286 | `t('mode.…')` × 5                                     | ✅ Safe — i18n strings                                                 |
+| File                  |                   Line | Content source                                        | Verdict                                                                     |
+| --------------------- | ---------------------: | ----------------------------------------------------- | --------------------------------------------------------------------------- |
+| `TotpEnrollment.jsx`  |                    125 | `qrSvg` from server (TOTP QR code, server-controlled) | ✅ Safe — server output, not user input                                     |
+| `HardwareSection.jsx` |                67, 340 | `t('hw.banner.p1')`, `t('hw.sn.wedge_label')`         | ✅ Safe — i18n strings from `apps/client/src/i18n/` (compile-time literals) |
+| `ModeSection.jsx`     | 85, 192, 194, 195, 286 | `t('mode.…')` × 5                                     | ✅ Safe — i18n strings                                                      |
 
 **Zero `eval(`, zero `new Function(`, zero `.innerHTML =` in source**.
 
@@ -174,7 +174,7 @@ Patterns scanned: `(api[_-]?key|secret[_-]?key|access[_-]?token|bearer|password)
 | ----- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | F1-11 | 🟢 OK    | All `dangerouslySetInnerHTML` callsites bind to compile-time-trusted content (i18n literals or server-issued QR SVG). No user-controlled HTML rendered. No `eval`/`new Function`/`innerHTML` writes. |
 
-### 1.2.5 Web-security headers (verified in `server/index.js`)
+### 1.2.5 Web-security headers (verified in `apps/server/index.js`)
 
 | Header                      | Setting                                                                                                                                                                                                                                                                                 | Phase      |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
@@ -202,7 +202,7 @@ Posture: **default-deny in production** (production + empty `OPS_CORS_ORIGINS` =
 ### 1.2.7 CSRF
 
 - Pattern: double-submit cookie (`ops_csrf` non-httpOnly + matching `X-CSRF-Token` header).
-- Middleware in `server/index.js:565` rejects mismatches with `403 csrf_failed`.
+- Middleware in `apps/server/index.js:565` rejects mismatches with `403 csrf_failed`.
 - Exempt paths: `/api/auth/login`, `/api/totp/verify`, `/api/totp/enroll` — bootstrap-time only, before session cookie exists.
 
 | ID    | Severity | Finding                                                                                                            |
@@ -211,7 +211,7 @@ Posture: **default-deny in production** (production + empty `OPS_CORS_ORIGINS` =
 
 ### 1.2.8 Rate limiting
 
-`server/middleware/rateLimit.js` exports `writeRateLimit`, `saveRateLimit`. Applied at:
+`apps/server/middleware/rateLimit.js` exports `writeRateLimit`, `saveRateLimit`. Applied at:
 
 - `app.use('/api/import', authMiddleware, writeRateLimit, importRouter)` — bulk import
 - `/api/save-all`, `/api/quotes` — `saveRateLimit`
@@ -294,15 +294,15 @@ Posture: **default-deny in production** (production + empty `OPS_CORS_ORIGINS` =
 
 ### 1.3.4 Bundle size (current build)
 
-| Chunk                       |      Size | Notes                                  |
-| --------------------------- | --------: | -------------------------------------- |
-| `index-49Sd2Fm4.js`         |    332 kB | Shell + router + auth                  |
-| `pdf-CAmqcJLH.js`           |    330 kB | `pdfjs-dist` lazy chunk                |
-| `HelpTab--V0tmcgU.js`       |    254 kB | Help registry (6 056 LOC `content.js`) |
-| `StandardCalc-B2K4PjhR.js`  |    183 kB | Pricing calc — biggest tab             |
-| `Settings-DgxkBx44.js`      |    109 kB |                                        |
-| `ConflictModal-CY7X_FP6.js` |     98 kB |                                        |
-| **Total `client/dist`**     | **19 MB** | All static assets including fonts      |
+| Chunk                        |      Size | Notes                                  |
+| ---------------------------- | --------: | -------------------------------------- |
+| `index-49Sd2Fm4.js`          |    332 kB | Shell + router + auth                  |
+| `pdf-CAmqcJLH.js`            |    330 kB | `pdfjs-dist` lazy chunk                |
+| `HelpTab--V0tmcgU.js`        |    254 kB | Help registry (6 056 LOC `content.js`) |
+| `StandardCalc-B2K4PjhR.js`   |    183 kB | Pricing calc — biggest tab             |
+| `Settings-DgxkBx44.js`       |    109 kB |                                        |
+| `ConflictModal-CY7X_FP6.js`  |     98 kB |                                        |
+| **Total `apps/client/dist`** | **19 MB** | All static assets including fonts      |
 
 Initial paint: ~330 kB JS + maybe 30 kB CSS, gzipped ≈ 103 kB. Lazy chunks load on demand (CLAUDE.md per-tab code split). Acceptable for an internal LAN ERP.
 
@@ -316,8 +316,8 @@ Initial paint: ~330 kB JS + maybe 30 kB CSS, gzipped ≈ 103 kB. Lazy chunks loa
 
 ### 1.4.1 Schema files
 
-- `server/db/schema.sql` — primary schema (Phase-1 typed reference data: materials, BOM, routing, ifs_inventory, quotes, quote_versions, rfq_tracker, sample_tracker, audit_log, work_order, work_order_op, kiosk_pairing, op_status_event, idempotency_ledger).
-- `server/db/init.js` — additive migrations (idempotent `IF NOT EXISTS` + `pragma_table_info` checks before `ALTER TABLE`).
+- `apps/server/db/schema.sql` — primary schema (Phase-1 typed reference data: materials, BOM, routing, ifs_inventory, quotes, quote_versions, rfq_tracker, sample_tracker, audit_log, work_order, work_order_op, kiosk_pairing, op_status_event, idempotency_ledger).
+- `apps/server/db/init.js` — additive migrations (idempotent `IF NOT EXISTS` + `pragma_table_info` checks before `ALTER TABLE`).
 
 ### 1.4.2 Indexes
 
@@ -370,7 +370,7 @@ Soft-delete present in:
 
 - `quotes`: `state.deleted_at` (Sprint 13). `DELETE /api/sales/quotes/:id` sets `deleted_at`; `?purge=1` (sys-only) does hard delete after audit row.
 - `chat_messages`: `deleted_at TEXT` column (`chatStore.js:101`).
-- `users`: `deleted_at` filter in `server/index.js:593` for active-user count.
+- `users`: `deleted_at` filter in `apps/server/index.js:593` for active-user count.
 
 Hard-delete remains for:
 
@@ -383,7 +383,7 @@ Hard-delete remains for:
 
 ### 1.4.6 Migration rollback
 
-**No down-migration support found**. `server/db/init.js` is forward-only via additive `IF NOT EXISTS` and `ALTER TABLE … ADD COLUMN`. There is no `migrate-down`, no schema-version table, no migration framework (knex/prisma/etc.).
+**No down-migration support found**. `apps/server/db/init.js` is forward-only via additive `IF NOT EXISTS` and `ALTER TABLE … ADD COLUMN`. There is no `migrate-down`, no schema-version table, no migration framework (knex/prisma/etc.).
 
 Rollback strategy in CLAUDE.md "Bad deploy — need to roll back": **restore from `releases/<ts>/` snapshot**, not from a schema rollback. The 5-snapshot retention + nightly backup is the de facto undo path.
 

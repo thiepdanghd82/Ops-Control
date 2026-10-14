@@ -6,7 +6,7 @@
 
 ## TL;DR
 
-**Existing:** 7 golden test cases trên `client/src/services/calcEngine.golden.test.js` cover RDC Die amortization basic flow. K-aware Gallus (Lessons 16-17) + Magnetic die min gap 1.5mm (Lesson 24) + bleed_mm=0 edge case ĐÃ có tests.
+**Existing:** 7 golden test cases trên `apps/client/src/services/calcEngine.golden.test.js` cover RDC Die amortization basic flow. K-aware Gallus (Lessons 16-17) + Magnetic die min gap 1.5mm (Lesson 24) + bleed_mm=0 edge case ĐÃ có tests.
 
 **Real gaps (6):**
 
@@ -19,7 +19,7 @@
 
 ## Code surface inspected
 
-### Primary calc — `client/src/services/calcEngine.js`
+### Primary calc — `apps/client/src/services/calcEngine.js`
 
 **`calcProcess()`** lines 550-695 — tooling logic at lines 638-668:
 
@@ -40,7 +40,7 @@ if (tool_cost > 0):
 
 **`getToolLife(lib, toolType)`** line 117 — reads `lib.ddl.tool_life[toolType]` (operator-configurable DDL, persisted in `Library/DesignTools/ddl_sites.json` per site).
 
-### Gallus die-cut — `client/src/modules/cost/tabs/DesignTools/presses/gallusEngine.js`
+### Gallus die-cut — `apps/client/src/modules/cost/tabs/DesignTools/presses/gallusEngine.js`
 
 - **`DIE_MIN_GAP_MM`** line 592: `{ rotary_magnetic: 1.5, laser: 0.3, flat: 2.0 }` per Lesson 24
 - **`HARD_MIN_GAP_MM`** line 597: alias for `DIE_MIN_GAP_MM.rotary_magnetic` (1.5)
@@ -67,7 +67,7 @@ if (tool_cost > 0):
 
 ## Test plan — 10 new golden tests (Phase 1.2)
 
-File: `client/src/services/calcEngine.diecut.golden.test.js` (new sibling, mirrors `calcEngine.golden.test.js` pattern; vanilla `node --test`)
+File: `apps/client/src/services/calcEngine.diecut.golden.test.js` (new sibling, mirrors `calcEngine.golden.test.js` pattern; vanilla `node --test`)
 
 | #   | Test name                                                               | Pins behavior                                                                               | Catches                                                              |
 | --- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |

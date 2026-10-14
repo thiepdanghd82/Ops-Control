@@ -1,5 +1,5 @@
 {
-  "$schema": "./scripts/check-security-allowlist.schema.json",
+  "$schema": "./apps/scripts/check-security-allowlist.schema.json",
   "_doc": "CVE allowlist for npm audit. Every entry MUST have an expiry. CI fails if any entry is expired OR if a high+/critical CVE exists outside this allowlist. Owner: Henry. Maintenance: review monthly.",
   "_policy": {
     "max_expiry_days": 90,

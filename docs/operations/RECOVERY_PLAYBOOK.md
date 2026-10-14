@@ -53,7 +53,7 @@ context. Treat the key with the same operational discipline as
 cd "3. PROJECTS/Ops Control"
 # Option A (preferred): restore the previous OPS_TOTP_KEY from .env backup
 # Option B: re-enroll every user
-OPS_TOTP_KEY=$(new_key) node scripts/reset-totp.js
+OPS_TOTP_KEY=$(new_key) node apps/scripts/reset-totp.js
 # Users will be prompted to scan a new QR on next login.
 ```
 
@@ -154,7 +154,7 @@ Backups are at `server/data/Library/**/*.backup.*` and `Backup & restore/`. Rest
 
 ### "npm run build fails at prebuild"
 
-The prebuild hook runs Word-doc generators. If any fails, the build aborts. Check `scripts/help/build-all-docs.mjs` — common failure is missing `docx` dep (install: `npm install --save-dev docx`) or a corrupt `client/src/help/content.js`.
+The prebuild hook runs Word-doc generators. If any fails, the build aborts. Check `apps/scripts/help/build-all-docs.mjs` — common failure is missing `docx` dep (install: `npm install --save-dev docx`) or a corrupt `apps/client/src/help/content.js`.
 
 ### "All admin / sys users lost access" (Sprint 1.7)
 
@@ -163,7 +163,7 @@ Web UI requires an existing sys session to mint a sys user — chicken-and-egg i
 ```bash
 ssh user@server
 cd /opt/ops-control            # or wherever DATA_DIR points
-node scripts/recover-sys-user.js
+node apps/scripts/recover-sys-user.js
 # Type CONFIRM-RECOVER at the prompt
 # Choose [1] reset existing user OR [2] create "recovery-sys" user
 # Script prints temp pwd ONCE — copy it before closing the terminal
@@ -272,7 +272,7 @@ Retention: 5 most recent snapshots, automatically pruned by `deploy.ps1`.
 >    drive, so `.env`, `users.json` and `totp_secrets.enc` are deliberately
 >    excluded (Lesson 39). They live separately at `~/ops-control-secrets/` with
 >    a guide for making an encrypted copy. Without them the DATA all comes back;
->    accounts are recreated via `scripts/recover-sys-user.js` and 2FA via
+>    accounts are recreated via `apps/scripts/recover-sys-user.js` and 2FA via
 >    `npm run reset-totp`.
 > 4. **`Backup/Library/*.tar.gz` are local-only** for the same reason, so
 >    point-in-time history of `PermissionGroups` / `MachineProfiles` does not

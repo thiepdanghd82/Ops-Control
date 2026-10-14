@@ -38,13 +38,13 @@ be:
 
 ### Build-time invariants
 
-| Stage          | Required                                                                                                           | Where enforced                                  |
-| -------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
-| Vite build     | `OPS_BUILD_ID` env set, embedded into chunk via `define.__OPS_BUNDLE_MARKER__`                                     | `client/vite.config.js`                         |
-| Local dev      | Fallback to `local`-tagged marker so dev boot doesn't crash                                                        | same                                            |
-| CI build       | `OPS_BUILD_ID=<ref>-<sha>`, post-build grep verifies presence + match                                              | `.github/workflows/ci.yml` build job (G5)       |
-| CI release     | `scripts/verify-bundle-marker.sh` runs against the DMG, fails the job if marker missing or build-id mismatch       | `.github/workflows/ci.yml` build-installers job |
-| Manual release | Engineer runs `bash scripts/verify-bundle-marker.sh dist/<dmg> <expected-build-id>` for each DMG before publishing | release runbook                                 |
+| Stage          | Required                                                                                                                | Where enforced                                  |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Vite build     | `OPS_BUILD_ID` env set, embedded into chunk via `define.__OPS_BUNDLE_MARKER__`                                          | `apps/client/vite.config.js`                    |
+| Local dev      | Fallback to `local`-tagged marker so dev boot doesn't crash                                                             | same                                            |
+| CI build       | `OPS_BUILD_ID=<ref>-<sha>`, post-build grep verifies presence + match                                                   | `.github/workflows/ci.yml` build job (G5)       |
+| CI release     | `apps/scripts/verify-bundle-marker.sh` runs against the DMG, fails the job if marker missing or build-id mismatch       | `.github/workflows/ci.yml` build-installers job |
+| Manual release | Engineer runs `bash apps/scripts/verify-bundle-marker.sh dist/<dmg> <expected-build-id>` for each DMG before publishing | release runbook                                 |
 
 ### Customer-side invariants
 
@@ -145,12 +145,12 @@ When cutting a new release:
 1. Confirm release/v1.3 HEAD is the commit you want shipped.
 2. BUILD_ID="v1.3.0-<rcN>-$(git rev-parse --short HEAD)"
    export OPS_BUILD_ID="$BUILD_ID"
-3. cd client && npm run build
+3. cd apps/client && npm run build
    # Verify locally:
    grep -o "opsctl-v1.3-marker:$BUILD_ID:" dist/assets/index-*.js | head -1
 4. cd ../desktop && npx electron-builder --mac --arm64 ...
-5. cd .. && bash scripts/verify-bundle-marker.sh \
-     "desktop/dist-electron/OpsControl <ROLE>-1.2.0-<arch>.dmg" \
+5. cd .. && bash apps/scripts/verify-bundle-marker.sh \
+     "apps/desktop/dist-electron/OpsControl <ROLE>-1.2.0-<arch>.dmg" \
      "$BUILD_ID"
 6. Stage to dist/, generate checksums:
      cd dist && shasum -a 256 *.dmg | tee checksums.txt
@@ -164,7 +164,7 @@ When cutting a new release:
 - F4 — Vite define block + verify script
 - G5 — CI bundle-marker verification step
 - J6 — actual DMG build with verified markers (rc.2)
-- `client/vite.config.js` — define block
-- `scripts/verify-bundle-marker.sh` — post-build verifier
+- `apps/client/vite.config.js` — define block
+- `apps/scripts/verify-bundle-marker.sh` — post-build verifier
 - `.github/workflows/ci.yml` — CI gate
 - ADR-0003 — Ed25519 license signing (sibling integrity mechanism)

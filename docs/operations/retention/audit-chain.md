@@ -20,11 +20,11 @@
 
 **What:** Pure primitives + tests + CLI verify tool. **Zero production behavior change.**
 
-| File                                 | Purpose                                                                                                      |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| `server/services/auditChain.js`      | `canonicalEntryJson`, `hashEntry`, `appendHashed`, `preChainFingerprint`, `buildGenesisEntry`, `verifyChain` |
-| `server/services/auditChain.test.js` | 21 unit tests covering clean/mutated/inserted/deleted/reordered/legacy scenarios                             |
-| `scripts/verify-audit-chain.mjs`     | CLI: read JSON audit log, run verifier, exit 0/1/2                                                           |
+| File                                      | Purpose                                                                                                      |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `apps/server/services/auditChain.js`      | `canonicalEntryJson`, `hashEntry`, `appendHashed`, `preChainFingerprint`, `buildGenesisEntry`, `verifyChain` |
+| `apps/server/services/auditChain.test.js` | 21 unit tests covering clean/mutated/inserted/deleted/reordered/legacy scenarios                             |
+| `apps/scripts/verify-audit-chain.mjs`     | CLI: read JSON audit log, run verifier, exit 0/1/2                                                           |
 
 **Acceptance:**
 
@@ -34,7 +34,7 @@
 
 ### Phase 2.2a — WIRE INTO `audit()` (DEFERRED — Henry sign-off)
 
-**What:** Modify `server/services/authService.js audit()` to call `appendHashed(prevHash, row)` before persisting.
+**What:** Modify `apps/server/services/authService.js audit()` to call `appendHashed(prevHash, row)` before persisting.
 
 **Why deferred:**
 
@@ -82,7 +82,7 @@ export function audit(event, user, ip, detail) {
 **Implementation outline:**
 
 ```sql
--- v2 migration in server/db/migrations/
+-- v2 migration in apps/server/db/migrations/
 ALTER TABLE audit_log ADD COLUMN prev_hash TEXT;
 ALTER TABLE audit_log ADD COLUMN hash TEXT;
 CREATE INDEX idx_audit_hash ON audit_log(hash);
@@ -125,19 +125,19 @@ Then update `appendAudit(row)` INSERT statement to include the two new columns.
 **Nightly cron** (Linux):
 
 ```cron
-0 2 * * * cd /opt/ops-control && node scripts/verify-audit-chain.mjs --json | jq -e '.ok' > /dev/null || /usr/local/bin/alert "audit-chain broken on $(hostname)"
+0 2 * * * cd /opt/ops-control && node apps/scripts/verify-audit-chain.mjs --json | jq -e '.ok' > /dev/null || /usr/local/bin/alert "audit-chain broken on $(hostname)"
 ```
 
 **Windows NSSM service**: equivalent via Task Scheduler + PowerShell wrapper.
 
-**Startup probe** (optional, adds ~50ms boot for 10k entries): add to `server/index.js` boot sequence with `OPS_VERIFY_AUDIT_CHAIN=1` env gate.
+**Startup probe** (optional, adds ~50ms boot for 10k entries): add to `apps/server/index.js` boot sequence with `OPS_VERIFY_AUDIT_CHAIN=1` env gate.
 
 **Pre-rotate-keys gate**: before TOTP / OPS_EXPORT_HMAC_KEY rotation, run verify to capture an authenticated chain snapshot.
 
 ## Recovery playbook (when verify CLI fails)
 
 1. **DO NOT panic-restore** — broken chain may be legitimate (Phase 2.2a wire bug, file corruption mid-write, network partition during dual-write)
-2. Run `node scripts/verify-audit-chain.mjs --json` to capture exact `breakIndex` + `message`
+2. Run `node apps/scripts/verify-audit-chain.mjs --json` to capture exact `breakIndex` + `message`
 3. Diff `audit_log.json` (file) vs `SELECT * FROM audit_log` (SQLite) for the broken index — if one is intact, the other is corrupted (restore from intact source)
 4. If both corrupted: restore `audit_log.json` from previous nightly backup, accept loss of audit entries since last backup, file incident report in `docs/break-glass/<date>-audit-chain-restore.md`
 5. Notify Henry + Hương; chain is broken → forensic trail for the window between break and restore is compromised; may require SOX disclosure depending on regulatory regime (consult legal)

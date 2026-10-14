@@ -9,18 +9,18 @@ export SEMGREP_SEND_METRICS=off
 TS="$(date +%Y%m%d-%H%M%S)"
 OUT="$ROOT/tools/audit/reports/$TS"
 mkdir -p "$OUT"
-SCAN_DIRS="server client/src desktop scripts"
+SCAN_DIRS="apps/server apps/client/src apps/desktop apps/scripts"
 EXCL=(--exclude node_modules --exclude dist --exclude dist-electron --exclude build --exclude '*.test.js' --exclude '*.test.mjs')
 say() { printf '\n== %s ==\n' "$*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
 say "1/5 npm audit (root, client, desktop) – chỉ production deps"
-for d in . client desktop; do
+for d in . apps/client apps/desktop; do
   name=$(basename "$(cd "$d" && pwd)")
   (cd "$d" && npm audit --omit=dev --audit-level=high > "$OUT/npm-audit-$name.txt" 2>&1)
   echo "  $name: exit $? (0 = sạch)"
 done
-[ -f scripts/check-security-allowlist.mjs ] && node scripts/check-security-allowlist.mjs > "$OUT/allowlist-check.txt" 2>&1 && echo "  allowlist: OK" || echo "  allowlist: xem $OUT/allowlist-check.txt"
+[ -f apps/scripts/check-security-allowlist.mjs ] && node apps/scripts/check-security-allowlist.mjs > "$OUT/allowlist-check.txt" 2>&1 && echo "  allowlist: OK" || echo "  allowlist: xem $OUT/allowlist-check.txt"
 
 say "2/5 Secrets"
 if have gitleaks; then
@@ -58,7 +58,7 @@ fi
 
 say "4/5 Electronegativity (cấu hình Electron)"
 if have npx; then
-  timeout 300 npx --yes @doyensec/electronegativity -i desktop -o "$OUT/electronegativity.csv" -s medium >/dev/null 2>"$OUT/electronegativity.err" \
+  timeout 300 npx --yes @doyensec/electronegativity -i apps/desktop -o "$OUT/electronegativity.csv" -s medium >/dev/null 2>"$OUT/electronegativity.err" \
     && echo "  OK -> electronegativity.csv" || echo "  bỏ qua/lỗi (xem electronegativity.err)"
 fi
 

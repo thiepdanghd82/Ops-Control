@@ -29,7 +29,7 @@ Phần dưới chi tiết từng mục tiêu + priorty + estimated code change.
 | Hạng mục                                    | Status                                          | Chi tiết                                                                                         |
 | ------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | Server auto-start when machine boots        | ✅ Có                                           | launchd (Mac) + NSSM (Win) — documented trong [LAN_DEPLOYMENT_GUIDE.md](LAN_DEPLOYMENT_GUIDE.md) |
-| Server graceful shutdown                    | ✅ Có                                           | SIGTERM handler 2s drain ([server/index.js:729](../../server/index.js))                          |
+| Server graceful shutdown                    | ✅ Có                                           | SIGTERM handler 2s drain ([apps/server/index.js:729](../../apps/server/index.js))                |
 | Server auto-restart on crash                | ✅ Có                                           | launchd `KeepAlive=true`, NSSM Default Restart                                                   |
 | Server health endpoint                      | ✅ Có                                           | `/health` returns `{ok, uptime, version, memory}`                                                |
 | Server graceful uncaughtException           | ✅ Có                                           | Exit code 1 → external supervisor restart                                                        |
@@ -48,7 +48,7 @@ Phần dưới chi tiết từng mục tiêu + priorty + estimated code change.
 **Bonus quick win:** Thêm `/ready` endpoint phân biệt "server up" vs "server up + DB ready". Đã có `/health` check sơ bộ; nâng thêm DB ping + Library file check:
 
 ```js
-// server/index.js
+// apps/server/index.js
 app.get('/ready', (req, res) => {
   try {
     getDb().prepare('SELECT 1').get();
@@ -64,7 +64,7 @@ External supervisor (launchd/NSSM) hoặc nginx healthcheck dùng `/ready` thay 
 
 #### 1.2.2 Client-side (4h)
 
-**A. Connection health monitor** ([client/src/services/connectionHealth.js](#) — 60 dòng)
+**A. Connection health monitor** ([apps/client/src/services/connectionHealth.js](#) — 60 dòng)
 
 ```js
 // Singleton hook, ping /health mỗi 15s, broadcast online/offline state
@@ -72,27 +72,27 @@ External supervisor (launchd/NSSM) hoặc nginx healthcheck dùng `/ready` thay 
 // Backoff khi offline (15s → 30s → 60s → max 5min)
 ```
 
-**B. Top-level banner** ([client/src/components/Layout/ConnectionBanner.jsx](#) — 50 dòng)
+**B. Top-level banner** ([apps/client/src/components/Layout/ConnectionBanner.jsx](#) — 50 dòng)
 
 - Đỏ banner sticky top khi offline > 10s: "⚠ Mất kết nối server. Đang thử lại..."
 - Xanh toast khi reconnected: "✓ Kết nối lại — refresh dữ liệu?"
 - Click "Refresh" → invalidate cache + re-fetch active tab
 
-**C. API retry with exponential backoff** ([client/src/services/api.js](#) — patch 30 dòng)
+**C. API retry with exponential backoff** ([apps/client/src/services/api.js](#) — patch 30 dòng)
 
 - 5xx + network error → retry 3 lần (200ms / 500ms / 1500ms)
 - Save endpoints: NO retry (vì optimistic lock — retry có thể tạo duplicate). Show error.
 - Read endpoints: silent retry với backoff
 - Authorization-failed (401/403): KHÔNG retry — kick to login
 
-**D. Stale-data refresh prompt** ([client/src/services/connectionHealth.js](#) — thêm callback)
+**D. Stale-data refresh prompt** ([apps/client/src/services/connectionHealth.js](#) — thêm callback)
 
 - Khi reconnect sau > 30s offline: hiện modal "Đã offline 2 phút. Refresh data để tránh xung đột?"
 - 3 lựa chọn: "Refresh" / "Tiếp tục với data cũ (rủi ro 409)" / "Logout"
 
 #### 1.2.3 Smart-client offline queue (4h, optional v1.3+)
 
-Mode `smart` đã có outbox queue trong [desktop/native/cache.js](#). Cần wire frontend:
+Mode `smart` đã có outbox queue trong [apps/desktop/native/cache.js](#). Cần wire frontend:
 
 - Khi offline + user save: queue vào outbox + show "💾 Đã lưu local, sẽ sync khi online"
 - Khi online lại: drain outbox, show toast per success
@@ -106,21 +106,21 @@ Mode `smart` đã có outbox queue trong [desktop/native/cache.js](#). Cần wir
 
 ### 2.1 Hiện trạng
 
-| Hạng mục                         | Status               | Chi tiết                                                                                                          |
-| -------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Data integrity locks             | ✅ Có                | SQLite WAL + busy_timeout 5s + asyncLock + atomicWriteFileSync                                                    |
-| Quote version history            | ✅ Có                | quote_versions table — keep last 20 per quote ([quoteVersions.js:19](../../server/repositories/quoteVersions.js)) |
-| Optimistic lock conflict         | ✅ Có                | HTTP 409 với version detail                                                                                       |
-| Manual backup endpoints          | ✅ Có                | 5 datasets: inventory/finishedGoods/rawMaterials/bom/routing + Library/Rate + Library/DDL                         |
-| `db.backup()` SQLite online-safe | ✅ Có                | [server/db/backup.js](../../server/db/backup.js)                                                                  |
-| verify-backup.js script          | ✅ Có                | Schema validate critical files                                                                                    |
-| Backup retention 30d             | ✅ Có                | `OPS_BACKUP_RETENTION_DAYS` (default 30)                                                                          |
-| Code backup endpoint             | ✅ Có                | `/api/backup/code-server` zips entire repo                                                                        |
-| **Auto-trigger backup cron**     | ❌ KHÔNG có          | Backup chỉ chạy khi admin click hoặc trong save flow                                                              |
-| **Off-site backup**              | ❌ KHÔNG có          | Tất cả backup local → mất disk = mất data                                                                         |
-| **Backup verify daily**          | ❌ KHÔNG có          | Có script nhưng không tự chạy                                                                                     |
-| **Restore UX**                   | ⚠️ CLI only          | Admin phải SSH + chạy script — không UI                                                                           |
-| **Encryption at rest**           | ❌ ops.db plain text | Anyone với file access đọc được toàn bộ data                                                                      |
+| Hạng mục                         | Status               | Chi tiết                                                                                                               |
+| -------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Data integrity locks             | ✅ Có                | SQLite WAL + busy_timeout 5s + asyncLock + atomicWriteFileSync                                                         |
+| Quote version history            | ✅ Có                | quote_versions table — keep last 20 per quote ([quoteVersions.js:19](../../apps/server/repositories/quoteVersions.js)) |
+| Optimistic lock conflict         | ✅ Có                | HTTP 409 với version detail                                                                                            |
+| Manual backup endpoints          | ✅ Có                | 5 datasets: inventory/finishedGoods/rawMaterials/bom/routing + Library/Rate + Library/DDL                              |
+| `db.backup()` SQLite online-safe | ✅ Có                | [apps/server/db/backup.js](../../apps/server/db/backup.js)                                                             |
+| verify-backup.js script          | ✅ Có                | Schema validate critical files                                                                                         |
+| Backup retention 30d             | ✅ Có                | `OPS_BACKUP_RETENTION_DAYS` (default 30)                                                                               |
+| Code backup endpoint             | ✅ Có                | `/api/backup/code-server` zips entire repo                                                                             |
+| **Auto-trigger backup cron**     | ❌ KHÔNG có          | Backup chỉ chạy khi admin click hoặc trong save flow                                                                   |
+| **Off-site backup**              | ❌ KHÔNG có          | Tất cả backup local → mất disk = mất data                                                                              |
+| **Backup verify daily**          | ❌ KHÔNG có          | Có script nhưng không tự chạy                                                                                          |
+| **Restore UX**                   | ⚠️ CLI only          | Admin phải SSH + chạy script — không UI                                                                                |
+| **Encryption at rest**           | ❌ ops.db plain text | Anyone với file access đọc được toàn bộ data                                                                           |
 
 ### 2.2 Cải tiến đề xuất
 
@@ -140,7 +140,7 @@ Tiêu chuẩn IBM cho enterprise:
 
 #### 2.2.2 Implementation: Server-side backup scheduler (3h)
 
-**A. In-process scheduler** ([server/services/backupScheduler.js](#) — 120 dòng, MỚI)
+**A. In-process scheduler** ([apps/server/services/backupScheduler.js](#) — 120 dòng, MỚI)
 
 ```js
 // Cron-like internal scheduler. Runs daily at 02:00 (off-hours).
@@ -161,7 +161,7 @@ Activated by `OPS_BACKUP_SCHEDULE=1` env. Default OFF cho dev.
 - Fail → mark backup `untrusted` trong audit log
 - Alert qua webhook nếu 2 backup liên tiếp fail
 
-**C. Off-site rsync helper** ([scripts/backup-offsite.sh](#) — 50 dòng, MỚI)
+**C. Off-site rsync helper** ([apps/scripts/backup-offsite.sh](#) — 50 dòng, MỚI)
 
 ```bash
 #!/usr/bin/env bash
@@ -234,7 +234,7 @@ Documented trong LAN_DEPLOYMENT_GUIDE Phần H.1. Recap:
 
 #### 3.2.2 Audit log retention + archive (1h, P0)
 
-[server/services/auditRetention.js](#) — MỚI, 80 dòng:
+[apps/server/services/auditRetention.js](#) — MỚI, 80 dòng:
 
 - Daily cron: rotate audit_log.json > 30 days → `audit_log_archive/audit_YYYYMM.json.gz`
 - Active log keep last 30 days
@@ -243,7 +243,7 @@ Documented trong LAN_DEPLOYMENT_GUIDE Phần H.1. Recap:
 
 #### 3.2.3 Per-user rate limit (1h, P0 cho 20 user)
 
-[server/middleware/rateLimit.js](#) — patch 30 dòng:
+[apps/server/middleware/rateLimit.js](#) — patch 30 dòng:
 
 - Add new limiter `userRateLimit(60/min)` keyed by `req.user.id` thay req.ip
 - Apply trên save endpoints
@@ -251,7 +251,7 @@ Documented trong LAN_DEPLOYMENT_GUIDE Phần H.1. Recap:
 
 #### 3.2.4 Anomaly detection (2h, P1)
 
-[server/services/loginAnomaly.js](#) — MỚI, 100 dòng:
+[apps/server/services/loginAnomaly.js](#) — MỚI, 100 dòng:
 
 - Track login pattern per user: usual IPs (last 30 days), usual hours
 - Trigger alert if:
@@ -262,7 +262,7 @@ Documented trong LAN_DEPLOYMENT_GUIDE Phần H.1. Recap:
 
 #### 3.2.5 IP-level brute-force block (30 phút, P1)
 
-[server/middleware/ipBlock.js](#) — MỚI, 50 dòng:
+[apps/server/middleware/ipBlock.js](#) — MỚI, 50 dòng:
 
 - Track failed login per IP (in-memory map, persist mỗi 5 phút)
 - 10 fails / 1 hour → block IP 1 hour
@@ -277,41 +277,41 @@ Phân chia thành 3 đợt ship để tránh big-bang risk:
 
 ### Đợt 1 — v1.2.1 (4 ngày dev): User-facing P0 — go-live ready cho 6 user
 
-| Item                               | Hours  | Files                                                                            |
-| ---------------------------------- | ------ | -------------------------------------------------------------------------------- |
-| Auto-refresh hook + apply 4 tabs   | 1.5    | client/src/utils/useAutoRefresh.js + 4 tab patches                               |
-| Connection health monitor + banner | 1.5    | client/src/services/connectionHealth.js + components/Layout/ConnectionBanner.jsx |
-| API retry with backoff             | 1      | client/src/services/api.js (patch)                                               |
-| 409 conflict modal                 | 1      | client/src/components/Shared/ConflictModal.jsx                                   |
-| Server `/ready` endpoint           | 0.5    | server/index.js (patch)                                                          |
-| Auto-trigger backup cron           | 1.5    | server/services/backupScheduler.js (NEW)                                         |
-| Audit log rotation                 | 1      | server/services/auditRetention.js (NEW)                                          |
-| **Tổng đợt 1**                     | **8h** | **= ~1 day senior dev**                                                          |
+| Item                               | Hours  | Files                                                                                 |
+| ---------------------------------- | ------ | ------------------------------------------------------------------------------------- |
+| Auto-refresh hook + apply 4 tabs   | 1.5    | apps/client/src/utils/useAutoRefresh.js + 4 tab patches                               |
+| Connection health monitor + banner | 1.5    | apps/client/src/services/connectionHealth.js + components/Layout/ConnectionBanner.jsx |
+| API retry with backoff             | 1      | apps/client/src/services/api.js (patch)                                               |
+| 409 conflict modal                 | 1      | apps/client/src/components/Shared/ConflictModal.jsx                                   |
+| Server `/ready` endpoint           | 0.5    | apps/server/index.js (patch)                                                          |
+| Auto-trigger backup cron           | 1.5    | apps/server/services/backupScheduler.js (NEW)                                         |
+| Audit log rotation                 | 1      | apps/server/services/auditRetention.js (NEW)                                          |
+| **Tổng đợt 1**                     | **8h** | **= ~1 day senior dev**                                                               |
 
 → Sau đợt 1, **ship cho 6-user pilot** (lộ trình A).
 
 ### Đợt 2 — v1.2.2 (3 ngày dev): Scaling cho 20 user
 
-| Item                                   | Hours     | Files                                                 |
-| -------------------------------------- | --------- | ----------------------------------------------------- |
-| JSON quotes → SQLite primary migration | 4         | server/repositories/quotesStore.js (refactor) + tests |
-| SSE event stream `/api/events`         | 4         | server/routes/events.js (NEW) + client subscriber     |
-| Per-user rate limit                    | 1         | server/middleware/rateLimit.js (patch)                |
-| Bcrypt rounds 10→8 (config)            | 0.5       | server/services/authService.js (patch)                |
-| Restore UX (Settings UI)               | 3         | client/src/modules/cost/tabs/RestoreSection.jsx (NEW) |
-| **Tổng đợt 2**                         | **12.5h** | **= ~1.5 day senior dev**                             |
+| Item                                   | Hours     | Files                                                      |
+| -------------------------------------- | --------- | ---------------------------------------------------------- |
+| JSON quotes → SQLite primary migration | 4         | apps/server/repositories/quotesStore.js (refactor) + tests |
+| SSE event stream `/api/events`         | 4         | apps/server/routes/events.js (NEW) + client subscriber     |
+| Per-user rate limit                    | 1         | apps/server/middleware/rateLimit.js (patch)                |
+| Bcrypt rounds 10→8 (config)            | 0.5       | apps/server/services/authService.js (patch)                |
+| Restore UX (Settings UI)               | 3         | apps/client/src/modules/cost/tabs/RestoreSection.jsx (NEW) |
+| **Tổng đợt 2**                         | **12.5h** | **= ~1.5 day senior dev**                                  |
 
 ### Đợt 3 — v1.3 (1 tuần dev): Enterprise polish
 
-| Item                          | Hours     | Files                                        |
-| ----------------------------- | --------- | -------------------------------------------- |
-| Off-site backup rsync helper  | 1         | scripts/backup-offsite.sh (NEW)              |
-| Login anomaly detection       | 2         | server/services/loginAnomaly.js (NEW)        |
-| IP brute-force block          | 0.5       | server/middleware/ipBlock.js (NEW)           |
-| HTTPS Caddy setup automation  | 1         | scripts/setup-caddy.sh (NEW) + docs          |
-| Smart-client offline queue UI | 4         | client wire + outbox UI                      |
-| Active user list (header)     | 2         | client/src/components/Layout/OnlineUsers.jsx |
-| **Tổng đợt 3**                | **10.5h** | **= ~1.5 day**                               |
+| Item                          | Hours     | Files                                             |
+| ----------------------------- | --------- | ------------------------------------------------- |
+| Off-site backup rsync helper  | 1         | apps/scripts/backup-offsite.sh (NEW)              |
+| Login anomaly detection       | 2         | apps/server/services/loginAnomaly.js (NEW)        |
+| IP brute-force block          | 0.5       | apps/server/middleware/ipBlock.js (NEW)           |
+| HTTPS Caddy setup automation  | 1         | scripts/setup-caddy.sh (NEW) + docs               |
+| Smart-client offline queue UI | 4         | client wire + outbox UI                           |
+| Active user list (header)     | 2         | apps/client/src/components/Layout/OnlineUsers.jsx |
+| **Tổng đợt 3**                | **10.5h** | **= ~1.5 day**                                    |
 
 **Tổng cộng 3 đợt = ~31h dev = 4-5 ngày senior dev full-time**.
 

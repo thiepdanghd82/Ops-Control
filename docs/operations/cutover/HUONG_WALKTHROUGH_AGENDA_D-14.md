@@ -27,7 +27,7 @@
 | Sysadmin discovery cascade         | ✅ DONE               | PRs #80/#81/#82/#83 — Lead Engineer = Sysadmin = same person documented                 |
 | Mac DMG SERVER + CLIENT            | ✅ DONE               | Built + smoke-tested; license pubkey shipped in bundle                                  |
 | Win EXE CLIENT                     | ⚠️ FIELD TEST PENDING | Built locally; checklist at `docs/operations/cutover/WIN_EXE_FIELD_TEST_D-7.md` for D-7 |
-| BL-4 smoke-quote baseline helper   | ✅ DONE               | PR #84 — `scripts/cutover/dump-baseline-numbers.mjs`                                    |
+| BL-4 smoke-quote baseline helper   | ✅ DONE               | PR #84 — `apps/scripts/cutover/dump-baseline-numbers.mjs`                               |
 | Settings reset-pwd button (broken) | ✅ FIXED              | PR #85 — hidden; admins use Provisioning Card flow                                      |
 | Prod box `10.102.3.61` provisioned | ⚠️ NOT YET            | Dev currently runs on Lead's Mac; affects Block 5 drill                                 |
 | HR call for PM direct contact      | ⏳ SCHEDULED          | 2026-05-25 Monday AM (today) — fill BRIEF via amendment PR                              |
@@ -93,12 +93,12 @@
 **Lead opens** (screen-share):
 
 1. **Repo structure** (3 min) — `tree -L 2 -I node_modules`
-   - `server/` = Node.js backend (Express + SQLite)
-   - `client/` = React SPA (admin UI)
-   - `desktop/` = Electron wrapper (Mac SERVER + Win CLIENT)
+   - `apps/server/` = Node.js backend (Express + SQLite)
+   - `apps/client/` = React SPA (admin UI)
+   - `apps/desktop/` = Electron wrapper (Mac SERVER + Win CLIENT)
    - `apps/kiosk/` = PWA (shop-floor terminals)
    - `domains/planning/` = MES module (work orders, dispatch)
-   - `scripts/` = ops scripts (preflight, backup, recovery)
+   - `apps/scripts/` = ops scripts (preflight, backup, recovery)
    - `docs/operations/cutover/` = THE folder Hương lives in during incidents
 
 2. **Top 5 docs Hương MUST know** (5 min):
@@ -129,9 +129,9 @@
    - `gh pr view <N>` (PR details)
 
 2. **Read JavaScript** (3 min) — show Hương the 3 places she might need to look:
-   - `server/routes/costApi.js` = quote save/load logic
-   - `client/src/services/calcEngine.js` = pricing math
-   - `server/services/backupScheduler.js` = backup cron
+   - `apps/server/routes/costApi.js` = quote save/load logic
+   - `apps/client/src/services/calcEngine.js` = pricing math
+   - `apps/server/services/backupScheduler.js` = backup cron
 
    Hương does NOT need to debug — just READ to understand what an error message references.
 
@@ -217,7 +217,7 @@ Show the 4 env keys Hương CAN safely change:
 
 #### 4.4 — Backup activation + verification (4 min)
 
-> **Status as of D-15 (2026-05-25)**: scheduler activated via PR #74 (`server/services/backupScheduler.js` honoring `OPS_BACKUP_SCHEDULE` + `OPS_BACKUP_HOUR`; TOTP secrets excluded from tarball via `--exclude='Library/Users/totp_secrets*'`). Manual trigger + verifier are the operator-facing entry points; cron itself is engineer-installed.
+> **Status as of D-15 (2026-05-25)**: scheduler activated via PR #74 (`apps/server/services/backupScheduler.js` honoring `OPS_BACKUP_SCHEDULE` + `OPS_BACKUP_HOUR`; TOTP secrets excluded from tarball via `--exclude='Library/Users/totp_secrets*'`). Manual trigger + verifier are the operator-facing entry points; cron itself is engineer-installed.
 
 ```powershell
 # Manual backup trigger (use during incident or test) — Windows PowerShell
@@ -333,17 +333,17 @@ If any step fails → re-do that step with Lead coaching.
 For Hương who wants deeper sysadmin knowledge:
 
 1. **Releases snapshot dir** (`/opt/ops-control/releases/`)
-   - Show structure: `<timestamp>/server/ + client/ + scripts/`
+   - Show structure: `<timestamp>/server/ + client/ + apps/scripts/`
    - 5-snapshot retention
    - Used by Runbook A rollback
 
-2. **`scripts/recover-sys-user.js`** (chicken-and-egg recovery)
+2. **`apps/scripts/recover-sys-user.js`** (chicken-and-egg recovery)
    - When ALL admin/sys users locked out
    - Console-only escape hatch
    - Hương types `CONFIRM-RECOVER` at prompt
    - New temp password printed ONCE
 
-3. **`scripts/preflight-env.js`**
+3. **`apps/scripts/preflight-env.js`**
    - Run BEFORE every prod deploy
    - Validates all required env keys present + correct format
    - Exits non-zero if any check fails

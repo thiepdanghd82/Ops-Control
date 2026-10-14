@@ -79,9 +79,9 @@ verify that information enumeration is not possible via login,
 password reset, or forgot-account functionality.
 
 The technical implementation is in
-[`server/routes/costApi.js:483-583`](../../server/routes/costApi.js)
+[`apps/server/routes/costApi.js:483-583`](../../apps/server/routes/costApi.js)
 (login route) and
-[`server/services/authService.js`](../../server/services/authService.js)
+[`apps/server/services/authService.js`](../../apps/server/services/authService.js)
 (`equalizeTimingForUnknownUser` + per-username lockout state). Per-IP
 rate-limit stays unchanged (10 attempts / 60 s window) because IP-bound
 limits do not leak username existence.

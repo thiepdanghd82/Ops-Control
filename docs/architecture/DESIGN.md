@@ -12,11 +12,11 @@ Do not build to it.
 
 Tokens are CSS custom properties, defined in three files loaded in this order:
 
-| File                                    | Holds                                         |
-| --------------------------------------- | --------------------------------------------- |
-| `client/src/styles/tokens.css`          | raw values — colours, spacing, font sizes     |
-| `client/src/styles/semantic-tokens.css` | component classes that reference those values |
-| `client/src/styles/table-pro.css`       | the data-table system                         |
+| File                                         | Holds                                         |
+| -------------------------------------------- | --------------------------------------------- |
+| `apps/client/src/styles/tokens.css`          | raw values — colours, spacing, font sizes     |
+| `apps/client/src/styles/semantic-tokens.css` | component classes that reference those values |
+| `apps/client/src/styles/table-pro.css`       | the data-table system                         |
 
 **Read a token before inventing a colour.** `tokens.css` records how many
 places already use each value, so the comments tell you which token is the

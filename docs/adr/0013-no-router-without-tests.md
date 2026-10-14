@@ -22,7 +22,7 @@ shape.
 
 Beyond the literal `basis/backup.js` gap, we also lack an
 ENFORCEMENT mechanism. Nothing in CI fails when a new
-`server/domains/*/routes/*.js` lands without a matching
+`apps/server/domains/*/routes/*.js` lands without a matching
 `*.test.js`. ADR-0008 says "extract first" implies tests; ADR-0011
 says the test template is mandatory; neither is enforced.
 
@@ -57,7 +57,7 @@ router-test-coverage:
     - uses: actions/checkout@v4
     - name: Every domain router has a sibling test file
       run: |
-        cd server/domains
+        cd apps/server/domains
         missing=0
         for router in $(find . -name '*.js' \
                           -path '*/routes/*' \
@@ -141,15 +141,15 @@ break that. CI is the only enforcement layer that survives.
 
 ## Routers conformance status (as of 2026-04-29 / rc.4)
 
-| Router                                              | Sibling test? | Test count | Compliant?            |
-| --------------------------------------------------- | ------------- | ---------- | --------------------- |
-| `server/domains/security/routes/audit.js`           | –             | 0          | ❌ debt — open ticket |
-| `server/domains/security/routes/license.js`         | ✅            | 5          | ✅                    |
-| `server/domains/basis/routes/backup.js`             | –             | 0          | ❌ debt — open ticket |
-| `server/domains/library/routes/rate.js`             | ✅            | 8          | ✅                    |
-| `server/domains/library/routes/ddl.js`              | ✅            | 6          | ✅                    |
-| `server/domains/sales/routes/released-quotation.js` | ✅            | 9          | ✅                    |
-| `server/domains/sales/routes/quotes.js`             | ✅            | 14         | ✅                    |
+| Router                                                   | Sibling test? | Test count | Compliant?            |
+| -------------------------------------------------------- | ------------- | ---------- | --------------------- |
+| `apps/server/domains/security/routes/audit.js`           | –             | 0          | ❌ debt — open ticket |
+| `apps/server/domains/security/routes/license.js`         | ✅            | 5          | ✅                    |
+| `apps/server/domains/basis/routes/backup.js`             | –             | 0          | ❌ debt — open ticket |
+| `apps/server/domains/library/routes/rate.js`             | ✅            | 8          | ✅                    |
+| `apps/server/domains/library/routes/ddl.js`              | ✅            | 6          | ✅                    |
+| `apps/server/domains/sales/routes/released-quotation.js` | ✅            | 9          | ✅                    |
+| `apps/server/domains/sales/routes/quotes.js`             | ✅            | 14         | ✅                    |
 
 **Conformance: 5/7 (71 %)**. CI gate enables `warn` mode at
 rc.4; `error` mode at rc.5 once the 2 debt routers (`audit`,

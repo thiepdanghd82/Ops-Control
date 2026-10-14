@@ -14,7 +14,7 @@ Tell the agent to read in this exact order at the start of every session:
 3. `CLAUDE.md` (root) — project-specific context the agent must respect.
 4. `.claude/rules/security.md` — non-negotiable auth/audit invariants.
 5. `docs/plans/mes/MES_EXTENSION_PLAN.md` — the new MES brief.
-6. The README of the domain you are about to touch: `server/domains/<name>/README.md`.
+6. The README of the domain you are about to touch: `apps/server/domains/<name>/README.md`.
 
 If the agent skips any of these, stop it and ask it to re-read.
 
@@ -53,7 +53,7 @@ and the planner UI list/detail/release flow per MES_EXTENSION_PLAN.md §3.1>
 Read in order:
 1. docs/archive/v1.3-readme-first/README.md, ARCHITECTURE.md
 2. docs/plans/mes/MES_EXTENSION_PLAN.md (focus on the section for this sprint)
-3. The target domain README: server/domains/<name>/README.md
+3. The target domain README: apps/server/domains/<name>/README.md
 4. .claude/rules/security.md, .claude/rules/database.md,
    .claude/rules/api-conventions.md
 
@@ -209,7 +209,7 @@ Express + JSON-on-disk. Re-architect using only the existing platform layer
 (platform/cache, platform/sync, platform/storage, platform/audit). Show me the alternative.
 ```
 
-### 5.2 If the agent edits client/src/modules/cost/tabs/ (v1.2 path)
+### 5.2 If the agent edits apps/client/src/modules/cost/tabs/ (v1.2 path)
 
 ```
 That path is v1.2. We are on v1.3. The destination for this work is

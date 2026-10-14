@@ -38,7 +38,7 @@
 4. Mở app → nếu là máy mới chạy **Setup Wizard**; nếu upgrade từ v1.2/v1.3/v1.4.x → app boot thẳng (cấu hình cũ giữ nguyên).
 5. Server boot xong → mở Settings → License để confirm tier hiển thị đúng.
 
-> **Lưu ý:** v1.5 KHÔNG yêu cầu Apple Developer ID (CCL không trả phí $99/năm). Bù lại, mỗi DMG ship kèm `checksums.txt` để operator verify SHA-256 + bundle marker bên trong DMG (verify qua `scripts/verify-bundle-marker.sh`). Trust chain: CCL HQ ký build → publish checksums lên kênh nội bộ → operator verify trước khi cài.
+> **Lưu ý:** v1.5 KHÔNG yêu cầu Apple Developer ID (CCL không trả phí $99/năm). Bù lại, mỗi DMG ship kèm `checksums.txt` để operator verify SHA-256 + bundle marker bên trong DMG (verify qua `apps/scripts/verify-bundle-marker.sh`). Trust chain: CCL HQ ký build → publish checksums lên kênh nội bộ → operator verify trước khi cài.
 
 ## 3. Cài đặt CLIENT edition (Apple Silicon)
 
@@ -61,7 +61,7 @@
 | `pwd = abc123` legacy 32-bit hash (rất cũ) | `pwd_bcrypt = $argon2id$...`, field `pwd` xoá      |
 | `pwd_bcrypt = $argon2id$...` (v1.3+)       | giữ nguyên                                         |
 
-Logic ở `server/services/authService.js:upgradeLegacyPasswordIfNeeded()`. Idempotent dưới concurrent login.
+Logic ở `apps/server/services/authService.js:upgradeLegacyPasswordIfNeeded()`. Idempotent dưới concurrent login.
 
 ## 5. Behavioral changes (operator-facing)
 
@@ -220,7 +220,7 @@ sudo systemctl start ops-control
 Đầy đủ runbooks trong `CLAUDE.md` §"Recovery playbook":
 
 - "All users are locked out of 2FA" → `npm run reset-totp`
-- "All admin / sys users lost access" → `node scripts/recover-sys-user.js` (console-only)
+- "All admin / sys users lost access" → `node apps/scripts/recover-sys-user.js` (console-only)
 - "Bad deploy — need to roll back" → snapshot rollback (10.1)
 - "Bare-metal restore — disk dies / fresh box" → off-site restore + preflight
 

@@ -11,10 +11,12 @@ Phiên bản: **1.6.0** · Ghi chú phát hành: [docs/releases/RELEASE-NOTES-v1
 
 ```
 ops-control/
-├── client/        Giao diện React/Vite (modules/cost = NPI cost, services, components)
-├── server/        API Express + SQLite (domains/, routes/, services/, repositories/, db/)
-├── desktop/       Electron shell, license, setup wizard, build DMG/EXE
-├── scripts/       Script build, kiểm tra, vận hành (một phần được đóng gói vào app)
+├── apps/          Toàn bộ code — cùng bố cục với thư mục app/ bên trong gói DMG
+│   ├── client/    Giao diện React/Vite (modules/cost = NPI cost, services, components)
+│   ├── server/    API Express + SQLite (domains/, routes/, services/, repositories/, db/)
+│   ├── desktop/   Electron shell, license, setup wizard, build DMG/EXE
+│   └── scripts/   Script build, kiểm tra, vận hành (*.js được đóng gói vào app)
+├── package.json   Gói của server + công cụ dev (node_modules ở gốc)
 ├── tools/         Công cụ dev/ops, KHÔNG đóng gói vào app
 │   ├── deploy/    deploy.sh/.ps1/.bat, START_SERVER.*, INSTALL.command
 │   ├── license/   fleet-license (mint/check license)
@@ -30,7 +32,19 @@ ops-control/
 
 Dữ liệu **đang chạy** không nằm trong repo: app lưu ở
 `~/Library/Application Support/ops-control-desktop/data/` (SQLite `ops.db` + `Library/…`).
-`server/data/` trong repo chỉ là dữ liệu thử khi chạy dev.
+`apps/server/data/` trong repo chỉ là dữ liệu thử khi chạy dev.
+
+Ba bố cục cùng tồn tại, code tìm `.env` / `package.json` ở cả hai chỗ (cạnh `server/` trước, rồi tới gốc repo):
+
+| Nơi chạy                         | `server/` nằm ở                   | `.env`, `package.json` |
+| -------------------------------- | --------------------------------- | ---------------------- |
+| Repo (dev)                       | `apps/server/`                    | gốc repo               |
+| Gói DMG                          | `Resources/app/server/`           | `Resources/app/`       |
+| Server headless (deploy.sh/.ps1) | `$APP_DIR/server/` (bố cục phẳng) | `$APP_DIR/`            |
+
+Trên server headless, các lệnh `npm run …` của `package.json` trỏ vào `apps/…` nên **không dùng** — chạy thẳng
+`node server/index.js`, `node scripts/preflight-env.js` (deploy.sh/.ps1 đã làm vậy).
+`DATA_DIR` tương đối (vd `./server/data`) được tính từ thư mục chứa `server/`, nên vẫn giữ nguyên giá trị cũ.
 
 ## Chạy dev
 
@@ -38,18 +52,18 @@ Yêu cầu: Node **24.x** (đúng phiên bản của Electron 41), Xcode Command
 
 ```bash
 npm ci
-cd client && npm ci && cd ..
-cd desktop && npm ci && cd ..
+cd apps/client && npm ci && cd ../..
+cd apps/desktop && npm ci && cd ../..
 ```
 
 ```bash
-cd client && npm run dev
+cd apps/client && npm run dev
 ```
 
 ## Kiểm tra
 
 ```bash
-cd client && npm test && cd ..
+cd apps/client && npm test && cd ../..
 DATA_DIR="$(mktemp -d)" npm test
 ```
 
@@ -58,14 +72,14 @@ Luôn chạy test server với `DATA_DIR` tạm — không bao giờ trỏ vào 
 ## Build bộ cài
 
 ```bash
-cd desktop && npm run build:server:mac
+cd apps/desktop && npm run build:server:mac
 ```
 
 ```bash
-cd desktop && npm run build:client:mac
+cd apps/desktop && npm run build:client:mac
 ```
 
-Kết quả ở `desktop/dist-electron/`. Code chỉ có hiệu lực trên máy sau khi **cài** DMG mới.
+Kết quả ở `apps/desktop/dist-electron/`. Code chỉ có hiệu lực trên máy sau khi **cài** DMG mới.
 
 ## Tài liệu
 

@@ -38,7 +38,7 @@
 - [ ] Off-site rsync target reachable + nightly backup verified ≤ 24h old
 - [ ] Primary SERVER SQLite + Library/\* current
 - [ ] PR #193 (bit-rot cron) merged + on main
-- [ ] `scripts/bitrot-check.mjs` + `server/db/bitrotCheck.js` present in latest SERVER DMG
+- [ ] `apps/scripts/bitrot-check.mjs` + `apps/server/db/bitrotCheck.js` present in latest SERVER DMG
 - [ ] Drill date booked: 4h window (08:00-12:00 Hai Phong time, low operator load)
 - [ ] Hương informed + has read this runbook + has questions answered
 - [ ] Backup notepad + pen to log timestamps + observations
@@ -64,7 +64,7 @@
 | 08:15-09:30      | **Block 1 — Backup restore drill** (cold-start from off-site to hot-spare) | Hương | Hot-spare serving traffic                        |
 | 09:30-09:45      | RTO logged + Q&A on restore gaps                                           | Both  | Time recorded                                    |
 | 09:45-10:45      | **Block 2 — Bit-rot cron deploy on primary SERVER**                        | Hương | Cron installed + first baseline manifest written |
-| 10:45-11:00      | Verify cron via manual `node scripts/bitrot-check.mjs --json`              | Hương | OK status confirmed                              |
+| 10:45-11:00      | Verify cron via manual `node apps/scripts/bitrot-check.mjs --json`         | Hương | OK status confirmed                              |
 | 11:00-11:30      | **Block 3 — Failover rehearsal** (switch primary off, route to hot-spare)  | Hương | Hot-spare actually used                          |
 | 11:30-12:00      | Debrief + runbook updates + Henry-Hương Q&A                                | Both  | Runbook improvements filed                       |
 
@@ -188,7 +188,7 @@ ls /Applications/Ops\ Control\ SERVER.app/Contents/Resources/app/server/db/bitro
 cd /Applications/Ops\ Control\ SERVER.app/Contents/Resources/app/
 
 # First run — writes baseline manifest
-node scripts/bitrot-check.mjs
+node apps/scripts/bitrot-check.mjs
 
 # Expected output:
 # [bitrot-check] BASELINE WRITTEN — N rows tracked at /Users/.../Library/Application Support/ops-control-desktop/data/Library/bitrot-manifest.json
@@ -203,7 +203,7 @@ cat ~/Library/Application\ Support/ops-control-desktop/data/Library/bitrot-manif
 #### 2.3 Test second run (should report OK + no drift)
 
 ```bash
-node scripts/bitrot-check.mjs
+node apps/scripts/bitrot-check.mjs
 
 # Expected output:
 # [bitrot-check] OK — N/N rows verified, 0 newly aged into baseline
@@ -218,7 +218,7 @@ node scripts/bitrot-check.mjs
 crontab -e
 
 # Add line:
-0 3 1 * * cd /Applications/Ops\ Control\ SERVER.app/Contents/Resources/app/ && /usr/local/bin/node scripts/bitrot-check.mjs --json >> ~/bitrot-check.log 2>&1
+0 3 1 * * cd /Applications/Ops\ Control\ SERVER.app/Contents/Resources/app/ && /usr/local/bin/node apps/scripts/bitrot-check.mjs --json >> ~/bitrot-check.log 2>&1
 
 # Save + exit (vim: Esc :wq Enter)
 
@@ -232,7 +232,7 @@ crontab -l | grep bitrot
 
 ```bash
 cd /Applications/Ops\ Control\ SERVER.app/Contents/Resources/app/ && \
-  /usr/local/bin/node scripts/bitrot-check.mjs --json >> ~/bitrot-check.log 2>&1
+  /usr/local/bin/node apps/scripts/bitrot-check.mjs --json >> ~/bitrot-check.log 2>&1
 
 # Inspect log
 cat ~/bitrot-check.log
@@ -333,7 +333,7 @@ After Block 3 completes, Henry + Hương spend 30 min on:
 
 - `docs/operations/ops/C4_HOTSPARE_PROCUREMENT.md` — hot-spare purchase prereq
 - `docs/operations/retention/RETENTION_20Y_STRATEGY.md` — R6 bit-rot control specification
-- `server/db/bitrotCheck.js` — bit-rot detection module (M-5b)
-- `scripts/bitrot-check.mjs` — CLI wrapper for cron
+- `apps/server/db/bitrotCheck.js` — bit-rot detection module (M-5b)
+- `apps/scripts/bitrot-check.mjs` — CLI wrapper for cron
 - `CLAUDE.md` Recovery playbook — "Bare-metal restore" runbook (cross-validate with this drill's findings)
 - [project_golive memory] — C-4 + B-3 SPOF tracking

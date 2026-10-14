@@ -35,17 +35,17 @@ if [ ! -d "node_modules" ]; then
     echo ""
 fi
 
-if [ ! -d "client/node_modules" ]; then
+if [ ! -d "apps/client/node_modules" ]; then
     echo "  📦  Đang cài client dependencies..."
-    cd client && npm install --silent && cd ..
+    cd apps/client && npm install --silent && cd ../..
     echo "  ✓  Client dependencies đã cài xong"
     echo ""
 fi
 
 # ── Build client nếu chưa có dist ─────────────────────────
-if [ ! -d "client/dist" ]; then
+if [ ! -d "apps/client/dist" ]; then
     echo "  🔨  Đang build client..."
-    cd client && npx vite build --silent && cd ..
+    cd apps/client && npx vite build --silent && cd ../..
     echo "  ✓  Client build xong"
     echo ""
 fi
@@ -107,7 +107,7 @@ echo ""
 # ── Khởi động Ops Control server ──────────────────────────
 echo "  ✓  Ops Control starting (Node.js only, no Python required)..."
 echo ""
-NODE_NO_WARNINGS=1 "$NODE" server/index.js
+NODE_NO_WARNINGS=1 "$NODE" apps/server/index.js
 
 # ── Cleanup ───────────────────────────────────────────────
 echo ""

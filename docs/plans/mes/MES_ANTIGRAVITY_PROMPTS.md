@@ -72,10 +72,10 @@ extension trên codebase Ops Control v1.3 (CCL Design Vietnam).
 7. .claude/rules/code-style.md
 8. docs/plans/mes/MES_EXTENSION_PLAN.md (CHỦ ĐỘNG đọc kỹ §1, §2, §3.1, §6, §9)
 9. docs/plans/mes/MES_PROMPTING_GUIDE.md
-10. server/db/schema.sql
-11. server/domains/planning/README.md (nếu có) hoặc tạo file để hiểu structure
-12. server/domains/security/README.md (nếu có) — để biết audit_log convention
-13. server/routes/planning.js (đọc lướt để biết style)
+10. apps/server/db/schema.sql
+11. apps/server/domains/planning/README.md (nếu có) hoặc tạo file để hiểu structure
+12. apps/server/domains/security/README.md (nếu có) — để biết audit_log convention
+13. apps/server/routes/planning.js (đọc lướt để biết style)
 
 Sau đó trả lời cho tôi (≤300 từ tổng):
 
@@ -185,8 +185,8 @@ Yêu cầu:
 1. Tạo file scripts/migrations/2026-04-30-mes-1-work-order.sql với DDL từ
    MES_EXTENSION_PLAN.md §3.1 (work_order + work_order_op).
 2. Migration phải IDEMPOTENT (CREATE TABLE IF NOT EXISTS, CREATE INDEX IF NOT EXISTS).
-3. Cập nhật server/db/schema.sql để consolidate các table mới (giữ nguyên format hiện có).
-4. Cập nhật server/db/init.js để run migration mới khi DB chưa có.
+3. Cập nhật apps/server/db/schema.sql để consolidate các table mới (giữ nguyên format hiện có).
+4. Cập nhật apps/server/db/init.js để run migration mới khi DB chưa có.
 5. Tạo test scripts/migrations/2026-04-30-mes-1-work-order.test.js dùng node --test:
    - Spin up SQLite trong memory
    - Run migration
@@ -234,24 +234,24 @@ CREATED → RELEASED → SCHEDULED → IN_PROGRESS → COMPLETED → QC_RELEASED
 
 Files cần tạo:
 
-1. server/domains/planning/server/domain/workOrderTransition.js
+1. apps/server/domains/planning/server/domain/workOrderTransition.js
    - export function canTransition(from, to) → boolean
    - export const VALID_TRANSITIONS (frozen object)
    - export class InvalidTransitionError extends Error (có code 'BMES-PLAN-001')
    - 100% pure: no DB, no I/O
 
-2. server/domains/planning/tests/unit/workOrderTransition.test.js
+2. apps/server/domains/planning/tests/unit/workOrderTransition.test.js
    - node --test
    - ≥15 test cases: tất cả valid transition + 5 invalid transition + edge cases
    - Coverage: assert ≥95%
 
-3. server/domains/planning/server/repositories/workOrderRepo.js
+3. apps/server/domains/planning/server/repositories/workOrderRepo.js
    - Sử dụng better-sqlite3 prepared statements
    - Methods: insert(wo), findById(id), findByStatus(status, paging), update(id, patch),
      softDelete(id, reason)
    - Tất cả method PURE — chỉ DB I/O, không business logic
 
-4. server/domains/planning/server/services/workOrderService.js
+4. apps/server/domains/planning/server/services/workOrderService.js
    - Sử dụng workOrderRepo + workOrderTransition + platform/audit
    - Methods:
      * createWorkOrder(cmd, actor) → WO  (status=CREATED)
@@ -261,7 +261,7 @@ Files cần tạo:
    - Mỗi state transition gọi audit() với event 'WO_<TRANSITION>'
    - Throw InvalidTransitionError với HTTP 409 mapping ở route layer
 
-5. server/domains/planning/tests/integration/workOrderService.test.js
+5. apps/server/domains/planning/tests/integration/workOrderService.test.js
    - Spin up in-memory SQLite + chạy migration
    - Test happy path: create → release → cancel
    - Test invalid transition: CREATED → IN_PROGRESS phải throw
@@ -297,11 +297,11 @@ Khi xong, paste:
 /build task MES-1.4 (Express routes + DTOs + validation).
 
 Triển khai 13 endpoints từ MES_EXTENSION_PLAN.md §3.1 trong:
-server/domains/planning/server/routes/workOrder.js
+apps/server/domains/planning/server/routes/workOrder.js
 
 Files cần tạo/sửa:
 
-1. server/domains/planning/server/routes/workOrder.js
+1. apps/server/domains/planning/server/routes/workOrder.js
    - Express Router
    - Mỗi route gọi workOrderService
    - Route guards: middleware checkRole(...) từ platform/auth
@@ -310,18 +310,18 @@ Files cần tạo/sửa:
    - Error mapping: InvalidTransitionError → 409, NotFound → 404, validation → 400
    - Tất cả response theo RFC 7807 ProblemDetail khi error
 
-2. server/domains/planning/shared/schema/workOrderSchema.js
+2. apps/server/domains/planning/shared/schema/workOrderSchema.js
    - Zod schemas (or JSON Schema fallback) cho mọi DTO
 
-3. server/domains/planning/server/index.js (mount function)
+3. apps/server/domains/planning/server/index.js (mount function)
    - export function mountPlanning(app) {...}
    - app.use('/api/planning', router)
 
-4. apps/server/index.js (hoặc server/index.js)
+4. apps/server/index.js (hoặc apps/server/index.js)
    - Add mountPlanning(app) call
    - VERIFY không break route hiện có
 
-5. server/domains/planning/tests/integration/workOrderRoutes.test.js
+5. apps/server/domains/planning/tests/integration/workOrderRoutes.test.js
    - Supertest hoặc fetch native
    - 13 happy path tests + 5 error tests (401, 403, 400, 404, 409)
    - Mock JWT cho production.planner role
@@ -354,9 +354,9 @@ Khi xong, paste:
 ```
 /build task MES-1.5 (Planner UI list + detail) và MES-1.6 (Release action + audit) — gộp.
 
-Files cần tạo trong client/src/ (theo v1.3 layout):
+Files cần tạo trong apps/client/src/ (theo v1.3 layout):
 
-1. server/domains/planning/client/pages/WorkOrderList.jsx
+1. apps/server/domains/planning/client/pages/WorkOrderList.jsx
    - Bảng list với columns: code, customer, ccl_pn, qty_planned, due_date, status (badge)
    - Filter: status dropdown, date range, customer search
    - Pagination: 50/page
@@ -364,27 +364,27 @@ Files cần tạo trong client/src/ (theo v1.3 layout):
    - Use platform/cache useSWR pattern
    - Use platform/ui-kit Table, Badge, Skeleton
 
-2. server/domains/planning/client/pages/WorkOrderDetail.jsx
+2. apps/server/domains/planning/client/pages/WorkOrderDetail.jsx
    - Header: code, status badge, customer
    - Operations table (work_order_op rows)
    - Actions: Release (chỉ visible khi status=CREATED), Cancel
    - Audit timeline (read-only, từ audit_log filter event LIKE 'WO_%')
 
-3. server/domains/planning/client/components/ReleaseWorkOrderModal.jsx
+3. apps/server/domains/planning/client/components/ReleaseWorkOrderModal.jsx
    - Confirm modal với checklist: "Materials reserved? Plates ready?"
    - On confirm → POST /api/planning/work-orders/:id/release
    - Show toast on success/error
    - Use platform/ui-kit Modal
 
-4. server/domains/planning/client/hooks/useWorkOrders.js
+4. apps/server/domains/planning/client/hooks/useWorkOrders.js
    - useSWR wrapper cho list + detail
    - useWorkOrderActions() trả về release, cancel, addOperation
 
-5. server/domains/planning/shared/strings/en.js + vn.js
+5. apps/server/domains/planning/shared/strings/en.js + vn.js
    - i18n keys cho mọi label/button/error
    - Đảm bảo VN parity (không key nào missing)
 
-6. server/domains/planning/client/index.js
+6. apps/server/domains/planning/client/index.js
    - Register sidebar item: "Work Orders" với icon
    - Register routes
    - Register i18n
@@ -392,7 +392,7 @@ Files cần tạo trong client/src/ (theo v1.3 layout):
 7. apps/client/src/App.jsx
    - Mount domains/planning/client routes nếu chưa có
 
-8. server/domains/planning/tests/integration/workOrderUi.test.jsx
+8. apps/server/domains/planning/tests/integration/workOrderUi.test.jsx
    - Vitest + React Testing Library
    - Test list render, filter, pagination
    - Test release flow (mock API)

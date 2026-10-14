@@ -145,7 +145,7 @@ When user said "convert back grid sidebar về thiết kế sideline", first imp
 ### 5.3 Test naming + organization
 
 - `<scope>.<feature>.test.js` — e.g. `authService.timing.test.js`, `auth.login.test.js`
-- Pure helpers in `<scope>/utils/` folder so they're testable without booting the server (e.g. `server/utils/envSources.js` → `envSources.test.js`)
+- Pure helpers in `<scope>/utils/` folder so they're testable without booting the server (e.g. `apps/server/utils/envSources.js` → `envSources.test.js`)
 - Test-gate noisy boot logs with `if (NODE_ENV !== 'test')` so 1 600+ tests stay readable
 
 ### 5.4 Documentation patterns

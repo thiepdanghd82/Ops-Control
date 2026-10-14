@@ -6,19 +6,19 @@
 
 ### Password hashing (argon2id)
 
-- **Lưu ở:** `server/services/authService.js` (`bcryptHash`, `checkPassword`).
+- **Lưu ở:** `apps/server/services/authService.js` (`bcryptHash`, `checkPassword`).
 - **Hash format:** `$argon2id$v=19$m=65536,t=3,p=4$...`
 - **Tham số:** memory 64 MiB, time 3 iterations, parallelism 4 — ≈80 ms/hash trên hardware 2026 (M-series / Xeon Skylake).
 - **Migration ladder** (silent, transparent):
   - v1.2 `pwd_bcrypt` ($2a$…) → v1.3 `pwd_bcrypt` ($argon2id$…)
   - Legacy 32-bit `pwd` jsHash → argon2id
   - Idempotent dưới concurrent login (file lock + check `isArgonHash` trước rehash).
-- **Test:** `server/services/authService.totpFailClosed.test.js` + `loginLockout.test.js` — 18/18 pass.
+- **Test:** `apps/server/services/authService.totpFailClosed.test.js` + `loginLockout.test.js` — 18/18 pass.
 
 ### Lockout
 
 - **Policy:** 5 fails / 15 min. Persistent across server restart (SQLite-backed).
-- **Lưu ở:** `server/services/authService.js` (`recordLoginAttempt`, `isLockedOut`).
+- **Lưu ở:** `apps/server/services/authService.js` (`recordLoginAttempt`, `isLockedOut`).
 - **Test:** `loginLockout.test.js` — verifies count, lockout window, automatic clearance.
 
 ### TOTP fail-closed
@@ -34,7 +34,7 @@
 
 ## 2. Authorization
 
-- **Server enforcement:** `requireRole(level)` middleware in `server/middleware/auth.js`. Role levels: viewonly=1, user=2, cost=3, admin=4, sys=5.
+- **Server enforcement:** `requireRole(level)` middleware in `apps/server/middleware/auth.js`. Role levels: viewonly=1, user=2, cost=3, admin=4, sys=5.
 - **Client gating:** `useAuth().hasRole('admin')` for hide-in-UI (UX layer; defense-in-depth pairs with server).
 - **Permission groups:** per-tab `hidden | read | edit` matrix; `permissionService.resolveTabAccess(user, tabId)`.
 
@@ -43,9 +43,9 @@
 ### Asymmetric Ed25519
 
 - **Private key:** OFFLINE only at `~/OpsControl-license-keys/prod-private.pem` (license admin's box). Rotated 2026-06-04 — old in-repo dev key retired (private half had leaked via the public repo). Public fp `044e1ad7…`.
-- **Public key:** baked into client app via `OPS_LICENSE_PUBKEY` env at build time, fallback `desktop/license.js:EMBEDDED_PUBKEY_PEM` (mirrored in `server/services/licenseService.js`).
-- **Sign tool:** `scripts/license/generate-license.mjs` — CLI for CCL HQ ops.
-- **Verify:** `desktop/license.js:verifyLicense()` (Electron) + `server/services/licenseService.js:getLicense()` (Node server).
+- **Public key:** baked into client app via `OPS_LICENSE_PUBKEY` env at build time, fallback `apps/desktop/license.js:EMBEDDED_PUBKEY_PEM` (mirrored in `apps/server/services/licenseService.js`).
+- **Sign tool:** `apps/scripts/license/generate-license.mjs` — CLI for CCL HQ ops.
+- **Verify:** `apps/desktop/license.js:verifyLicense()` (Electron) + `apps/server/services/licenseService.js:getLicense()` (Node server).
 
 ### Tier enforcement
 
@@ -53,7 +53,7 @@
 - **Server:** `requireSeatAvailable({ countActiveUsers })` middleware blocks `POST /api/users` with HTTP 402 when seats full.
 - Soft-deleted users (`deleted_at IS NOT NULL`) DO NOT count.
 - Sys recovery account DOES NOT count (protects recovery path from license lockout).
-- **Test:** `server/services/licenseService.test.js` — 7/7 pass.
+- **Test:** `apps/server/services/licenseService.test.js` — 7/7 pass.
 
 ### Anti-bypass design
 
@@ -63,7 +63,7 @@
 
 ## 4. Content Security Policy
 
-- **Where:** `desktop/main.js` `mainWindow.webContents.session.webRequest.onHeadersReceived`.
+- **Where:** `apps/desktop/main.js` `mainWindow.webContents.session.webRequest.onHeadersReceived`.
 - **Policy:**
   ```
   default-src 'self'
@@ -87,22 +87,22 @@
 ## 6. Input validation
 
 - `validate.js` middleware on every state-changing route.
-- Path traversal: `safeFn()` in `server/services/authService.js` (regex `[^\w\s.-]` → `_`, capped 200 chars, dot-only names rejected).
+- Path traversal: `safeFn()` in `apps/server/services/authService.js` (regex `[^\w\s.-]` → `_`, capped 200 chars, dot-only names rejected).
 
 ## 7. Audit log
 
 - **Append-only** `audit_log` SQLite table.
 - **Retention:** monthly archive to gzipped JSON in `data/Library/Users/audit_log_archive/audit_YYYYMM.json.gz`.
-- **Endpoint:** `GET /api/audit` (sys-only) — extracted to `server/domains/security/routes/audit.js` in P3.1.
+- **Endpoint:** `GET /api/audit` (sys-only) — extracted to `apps/server/domains/security/routes/audit.js` in P3.1.
 - **Audited events:** login OK/fail, password change, role change, permission group change, cylinder add/delete, sys recovery, TOTP enroll/rotate.
 
 ## 8. Dependency vulnerability gate
 
-| Package    | Pre-v1.3                      | Post-v1.3                       |
-| ---------- | ----------------------------- | ------------------------------- |
-| `desktop/` | 10 high                       | **0**                           |
-| `client/`  | 1 moderate                    | **0**                           |
-| `root/`    | 2 moderate (uuid via exceljs) | 2 moderate (dev-only, accepted) |
+| Package         | Pre-v1.3                      | Post-v1.3                       |
+| --------------- | ----------------------------- | ------------------------------- |
+| `apps/desktop/` | 10 high                       | **0**                           |
+| `apps/client/`  | 1 moderate                    | **0**                           |
+| `root/`         | 2 moderate (uuid via exceljs) | 2 moderate (dev-only, accepted) |
 
 CI workflow `.github/workflows/ci.yml` runs `npm audit --audit-level=high` on push/PR — high vulns block merge.
 
@@ -119,8 +119,8 @@ CI workflow `.github/workflows/ci.yml` runs `npm audit --audit-level=high` on pu
 
 - ☐ `npm audit` clean on all 3 packages (high+).
 - ☐ Server tests pass (`npm test`).
-- ☐ Client tests pass (`cd client && npm test`).
-- ☐ License tests pass (`node --test desktop/license.test.js server/services/licenseService.test.js`).
+- ☐ Client tests pass (`cd apps/client && npm test`).
+- ☐ License tests pass (`node --test apps/desktop/license.test.js apps/server/services/licenseService.test.js`).
 - ☐ CSP headers verified (`curl -I http://localhost:3000`).
 - ☐ Bundle marker grep on each DMG (after Sprint v1.3.1 adds it).
 - ☐ Documentation reviewed (this file + ARCHITECTURE.md + MIGRATION_GUIDE.md).

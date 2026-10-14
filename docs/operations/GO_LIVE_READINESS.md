@@ -117,7 +117,7 @@
 
 1. Trên server, cài nginx (Mac: `brew install nginx` / Win: nssm + nginx.exe) hoặc dùng Caddy thay
 2. Config serve `/var/www/updates/` qua port 80
-3. CI script `scripts/release.sh` đã có — vendor build + rsync `latest-mac.yml` + DMG lên server
+3. CI script `apps/scripts/release.sh` đã có — vendor build + rsync `latest-mac.yml` + DMG lên server
 4. App tự check mỗi 6h
 
 **Estimated effort:** 1h server setup + 30 phút test

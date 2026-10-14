@@ -28,7 +28,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO="${OPS_REPO:-}"
 if [ -z "$REPO" ]; then
   for CAND in "$SCRIPT_DIR/../../Ops-Control" "$SCRIPT_DIR/../.."; do
-    if [ -f "$CAND/scripts/license/generate-license.mjs" ]; then
+    if [ -f "$CAND/apps/scripts/license/generate-license.mjs" ]; then
       REPO="$(cd "$CAND" && pwd)"
       break
     fi
@@ -53,7 +53,7 @@ fi
 command -v node >/dev/null 2>&1 || die "Không tìm thấy Node (đã dò ~/.local/node24, Homebrew, nvm). Cài Node 20+ rồi chạy lại."
 [ -f "$KEY" ] || die "Không thấy private key offline tại: $KEY
    (Đây là máy Lead chứ? Key phải nằm offline, không trong repo.)"
-[ -n "$REPO" ] && [ -f "$REPO/scripts/license/generate-license.mjs" ] || \
+[ -n "$REPO" ] && [ -f "$REPO/apps/scripts/license/generate-license.mjs" ] || \
   die "Không tìm thấy repo Ops-Control. Đặt biến OPS_REPO=<đường dẫn repo> rồi chạy lại."
 
 # ── Prompts ────────────────────────────────────────────────────────────────
@@ -84,7 +84,7 @@ OUT="$OUTDIR/$(date +%F)-$PLATFORM-$OPERATOR.json"
 
 echo ""
 echo "→ Ký license offline…"
-node "$REPO/scripts/license/generate-license.mjs" \
+node "$REPO/apps/scripts/license/generate-license.mjs" \
   --installation-id "$INSTALL_ID" \
   --customer "$CUSTOMER" \
   --tier "$TIER" \
@@ -95,7 +95,7 @@ node "$REPO/scripts/license/generate-license.mjs" \
 # ── Self-verify with the REAL embedded pubkey (server verifier) ─────────────
 echo "→ Verify chữ ký bằng pubkey embedded (verifier thật)…"
 VERIFY=$(cd "$REPO" && OPS_LICENSE_FILE="$OUT" node --input-type=module -e '
-import { getLicense } from "./server/services/licenseService.js";
+import { getLicense } from "./apps/server/services/licenseService.js";
 const r = getLicense();
 if (r.ok) { console.log("OK", r.license.tier, r.license.max_users, r.license.expires_at); }
 else { console.log("FAIL", r.reason); process.exit(2); }

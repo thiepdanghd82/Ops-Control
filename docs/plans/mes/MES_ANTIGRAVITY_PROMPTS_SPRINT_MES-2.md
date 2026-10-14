@@ -25,13 +25,13 @@ Read in order (full content, do NOT skip):
 3. CLAUDE.md (root)
 4. docs/plans/mes/MES_EXTENSION_PLAN.md (read carefully §3.1, §3.3, §6.5)
 5. docs/plans/mes/MES_PROMPTING_GUIDE.md §4.2 (MES-2 prompt template)
-6. server/domains/planning/README.md (current state)
+6. apps/server/domains/planning/README.md (current state)
 7. domains/planning/server/index.js (mountPlanning factory pattern)
 8. domains/planning/server/routes/workOrderV2.js (RFC-7807 envelope pattern to mirror)
 9. domains/planning/server/domain/workOrderTransition.js (extend for op-status state machine)
 10. domains/planning/shared/constants/workOrderStates.js (WO_OP_STATUSES already exported)
 11. domains/planning/server/services/workOrderService.js (atomic-with-audit pattern)
-12. server/db/schema.sql (where to append the schema additions, idempotent style)
+12. apps/server/db/schema.sql (where to append the schema additions, idempotent style)
 
 Then answer 6 questions (≤350 words total):
 
@@ -69,7 +69,7 @@ Constraints (carry from MES-1):
 - Schema changes go through scripts/migrations/ + schema.sql append (idempotent).
 - Every state transition writes to audit_log within db.transaction (atomicity NFR).
 - New routes register via mountPlanning(app) — no app.use directly in apps/server.
-- i18n strings register per-domain via client/src/i18n/domains/planning.js +
+- i18n strings register per-domain via apps/client/src/i18n/domains/planning.js +
   EN+VN parity (CI lint enforced).
 - All errors RFC-7807 application/problem+json.
 - Reuse Shared/Modal.jsx for any planner-side modals; touch-first kiosk needs
@@ -235,9 +235,9 @@ swapped.
 
 **Client:**
 
-- `client/src/modules/planning/v2/api.js` — extend with machine-token fetcher
-- `client/src/modules/planning/v2/useMesWorkOrderFlag.js` — clone for `useMesKioskFlag`
-- `client/src/modules/planning/v2/formHelpers.jsx` — Field + mapServerErrors
+- `apps/client/src/modules/planning/v2/api.js` — extend with machine-token fetcher
+- `apps/client/src/modules/planning/v2/useMesWorkOrderFlag.js` — clone for `useMesKioskFlag`
+- `apps/client/src/modules/planning/v2/formHelpers.jsx` — Field + mapServerErrors
 
 **Tests:**
 

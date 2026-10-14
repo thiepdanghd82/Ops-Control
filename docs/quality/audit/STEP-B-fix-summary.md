@@ -50,7 +50,7 @@ carried over without review. Step A established that prod
 ## Fix 2 — F3-1 compression middleware
 
 **Commit**: [`6a63421`](../../) — `fix(platform): enable gzip compression middleware (p0 f3-1)`
-**Files**: 3 (server/index.js, package.json, package-lock.json)
+**Files**: 3 (apps/server/index.js, package.json, package-lock.json)
 **LOC**: +81 / −1
 **Dependency added**: `compression@^1.8.1` (runtime, not dev)
 
@@ -144,14 +144,14 @@ Raw sample data: `/tmp/p0-f2-1-timing-after.json` (transient).
 
 ### C. Implementation summary
 
-**Bước 1** — Dummy hash + helper ([`authService.js`](../../../server/services/authService.js)):
+**Bước 1** — Dummy hash + helper ([`authService.js`](../../../apps/server/services/authService.js)):
 
 - `const DUMMY_ARGON2_HASH` — pre-computed argon2id constant (16-byte random salt; verified to never match any input; ~38 ms verify cost matching real argon2id verify)
 - `export async function equalizeTimingForUnknownUser(plain)` — calls `verifyHash(plain, DUMMY_ARGON2_HASH)`, always returns `false`. Caller must `await`.
 - `+ _resetRateLimit()` test hook (sibling of `_resetLoginLockouts()`)
 - `authService.timing.test.js` — 4 smoke tests (always returns false, tolerates non-string, runs argon2 ≥ 5 ms, deterministic)
 
-**Bước 2** — Branch unification ([`costApi.js`](../../../server/routes/costApi.js)):
+**Bước 2** — Branch unification ([`costApi.js`](../../../apps/server/routes/costApi.js)):
 
 - Added `equalizeTimingForUnknownUser` import
 - Branch C (line 506-512): 429 + msg + retry_after_ms → 401 + error + Retry-After header
@@ -159,7 +159,7 @@ Raw sample data: `/tmp/p0-f2-1-timing-after.json` (transient).
 - Branch B (line 525): msg → error; "Incorrect password" → "Invalid credentials"
 - All 3 branches retain their detailed `audit('LOGIN_FAIL'/'LOGIN_LOCKED', user, ip, detail)` callsites server-side
 
-**Bước 3** — Client i18n ([`security.js`](../../../client/src/i18n/domains/security.js), [`LoginPage.jsx`](../../../client/src/components/Auth/LoginPage.jsx)):
+**Bước 3** — Client i18n ([`security.js`](../../../apps/client/src/i18n/domains/security.js), [`LoginPage.jsx`](../../../apps/client/src/components/Auth/LoginPage.jsx)):
 
 - Added `login.error.invalid_credentials` (EN: "Invalid credentials" / VI: "Thông tin đăng nhập không hợp lệ")
 - Added `login.error.fallback` (EN: "Login failed" / VI: "Đăng nhập thất bại")
@@ -176,7 +176,7 @@ Raw sample data: `/tmp/p0-f2-1-timing-after.json` (transient).
 
 | ID                | Finding                                                                                                                                                                                                                                                                                       | Severity              | Source                                                                       |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | ---------------------------------------------------------------------------- |
-| **F-FOLLOW-UP-1** | [`LoginPage.jsx:561`](../../../client/src/components/Auth/LoginPage.jsx#L561) hardcoded `'Sign in'` fallback bypasses i18n. The h1 always renders English when none of `expired_title` / `must_change.title` / `change.toggle` apply. Add `login.heading.signin` key.                         | 🟡 MINOR              | Discovered during Bước 3 puppeteer smoke                                     |
+| **F-FOLLOW-UP-1** | [`LoginPage.jsx:561`](../../../apps/client/src/components/Auth/LoginPage.jsx#L561) hardcoded `'Sign in'` fallback bypasses i18n. The h1 always renders English when none of `expired_title` / `must_change.title` / `change.toggle` apply. Add `login.heading.signin` key.                    | 🟡 MINOR              | Discovered during Bước 3 puppeteer smoke                                     |
 | **F-FOLLOW-UP-2** | Wire-format inconsistency `msg` → `error` was incidentally fixed by Fix 3. AuthContext.jsx:162 was already preferring `error` first; the field rename closes a latent inconsistency surfaced at Bước 2 review.                                                                                | 🟢 (closed)           | Discovered during Bước 2                                                     |
 | **F-FOLLOW-UP-3** | bcrypt → argon2 migration window leak (~330 ms residual). Auto-closes per-user; re-evaluate if migration not complete after **30 days post-deploy**. Track via `auditLegacyPasswords()` count in server boot log.                                                                             | 🟡 MINOR (time-bound) | Documented in code at `authService.js` `DUMMY_ARGON2_HASH` block + this file |
 | **F-FOLLOW-UP-4** | Other auth-adjacent endpoints (`/auth/forgot-password`, `/auth/register`, `/users/:username`) reviewed in Bước 0 Finding 4 — **no enumeration vector found** in any of them (forgot-pwd doesn't exist; register/user-mgmt is admin-only-gated 403). Documented for future endpoint additions. | 🟢 (verified)         | Bước 0 finding                                                               |
@@ -236,7 +236,7 @@ Phase 2 audit flagged 2 separate WCAG findings on the login form:
 ### Verification
 
 - 246 LOC final, 12 sections, 8 code fences (even, balanced)
-- All 8 facts cross-checked: package.json v1.5.0, MES-1=8 + MES-2=11 endpoints (CHANGELOG line 218 + 95), `OPS_KIOSK_KEY` in deploy.ps1, `OPS_TOTP_KEY` in .env.example, `mes.workOrder.enabled` in server/index.js:840, `feature-flags.json` at `server/data/Library/SystemConfig/`
+- All 8 facts cross-checked: package.json v1.5.0, MES-1=8 + MES-2=11 endpoints (CHANGELOG line 218 + 95), `OPS_KIOSK_KEY` in deploy.ps1, `OPS_TOTP_KEY` in .env.example, `mes.workOrder.enabled` in apps/server/index.js:840, `feature-flags.json` at `server/data/Library/SystemConfig/`
 - Manual lint pass: TOC links work, code blocks have language tags, no broken internal refs
 
 ---
@@ -275,21 +275,21 @@ Before any destructive operation:
 
 ### Sidebar revert (post-Fix-6 follow-up)
 
-Per operator request after Step B closure, the new ERPAG-style "sections-only" sidebar was reverted to the original v1.5 sidebar via `git checkout main -- client/src/components/Layout/Sidebar.{jsx,css}`. HomePage + Dashboard redesign + sectionDefs.js (still imported by HomePage) preserved. Pre-revert state anchored as `pre-sidebar-revert-20260504-090729` git tag. Vite build green (exit 0) post-revert.
+Per operator request after Step B closure, the new ERPAG-style "sections-only" sidebar was reverted to the original v1.5 sidebar via `git checkout main -- apps/client/src/components/Layout/Sidebar.{jsx,css}`. HomePage + Dashboard redesign + sectionDefs.js (still imported by HomePage) preserved. Pre-revert state anchored as `pre-sidebar-revert-20260504-090729` git tag. Vite build green (exit 0) post-revert.
 
 ---
 
 ## Fix 7 — env-var provenance startup logging (bonus)
 
 **Commit**: [`5fc6268`](../../) — `fix(platform): log env-var provenance at boot (p0 fix-7 bonus)`
-**Files**: 3 (server/utils/envSources.js NEW, envSources.test.js NEW, server/index.js +24 LOC)
+**Files**: 3 (apps/server/utils/envSources.js NEW, envSources.test.js NEW, apps/server/index.js +24 LOC)
 **LOC**: +167 / −0
 
 F4-5's root-cause class — operator could not tell at incident time whether `DATA_DIR` came from `.env` or a deploy-script fallback — survived the Fix 1 fix because the fix was reactive (removed the bad fallback) not preventive (didn't add visibility). Fix 7 adds the visibility so the next F4-5-style incident is diagnosable from `grep '🌱' boot.log` alone.
 
 ### Implementation
 
-`server/utils/envSources.js` — pure helper, no I/O:
+`apps/server/utils/envSources.js` — pure helper, no I/O:
 
 ```js
 export const SENSITIVE_PATTERN = /KEY|SECRET|TOKEN|PASSWORD|PWD|AUTH|HASH|PRIVATE/i;
@@ -300,7 +300,7 @@ export function describeEnvSources(envSnapshotBeforeDotenv, varNames) {
 }
 ```
 
-`server/index.js`:
+`apps/server/index.js`:
 
 ```js
 const _envSnapshotBeforeDotenv = new Set(Object.keys(process.env));
@@ -355,7 +355,7 @@ if (process.env.NODE_ENV !== 'test') {
   OPS_KIOSK_KEY: <64 chars> (from .env file)
 ```
 
-**Tests**: 6/6 pass (`server/utils/envSources.test.js` — os-env vs .env-file attribution × 2, unset / empty / secret-masked / expanded-pattern coverage).
+**Tests**: 6/6 pass (`apps/server/utils/envSources.test.js` — os-env vs .env-file attribution × 2, unset / empty / secret-masked / expanded-pattern coverage).
 
 ---
 

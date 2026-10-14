@@ -13,7 +13,7 @@
 
 | Surface                        | Framework                | Version         | Build      |
 | ------------------------------ | ------------------------ | --------------- | ---------- |
-| `client/` (main web UI)        | React + react-router-dom | 19.2.4 / 6.30.3 | Vite 8.0.4 |
+| `apps/client/` (main web UI)   | React + react-router-dom | 19.2.4 / 6.30.3 | Vite 8.0.4 |
 | `apps/kiosk/` (shop-floor PWA) | React                    | 19.2.4          | Vite 8.0.4 |
 
 ### Backend
@@ -38,7 +38,7 @@
 - ESLint 10.2 + Prettier 3.8 + Husky 9.1 + commitlint 20.5 + lint-staged 16.4
 - Jest 29.7 (root only — see §5 caveat) + `node --test` (server / domains / desktop)
 - Playwright 1.55 (kiosk e2e)
-- Puppeteer-core 24.42 (likely for `scripts/help/self-check.mjs`)
+- Puppeteer-core 24.42 (likely for `apps/scripts/help/self-check.mjs`)
 
 ### CI / CD
 
@@ -63,10 +63,10 @@ ops-control/                        ← root package "ops-control" v1.5.0
 ├── docs/user-guide/                      ← Operator-facing docs (xlsx training manuals)
 ├── Backup & restore/               ← Backup/restore tooling
 ├── _legacy/                        ← Quarantined legacy code (excluded from tests)
-└── desktop/dist + client/dist      ← Build artefacts
+└── desktop/dist + apps/client/dist      ← Build artefacts
 ```
 
-**File count**: 439 source files (`.js`, `.jsx`) under `client/src`, `server`, `domains`, `apps/kiosk/src`, `desktop/main.js` — excluding tests/legacy/dist/node_modules.
+**File count**: 439 source files (`.js`, `.jsx`) under `apps/client/src`, `server`, `domains`, `apps/kiosk/src`, `apps/desktop/main.js` — excluding tests/legacy/dist/node_modules.
 
 ---
 
@@ -74,25 +74,25 @@ ops-control/                        ← root package "ops-control" v1.5.0
 
 ### Frontend modules
 
-- **Cost** (`client/src/modules/cost/`) — 89 files. Tabs: Standard/Complex calc, MaterialLibrary, InkCalculator, PrintAreaCalc, DesignTools, Dashboard, QuoteAnalysis, Summarize, FormalQuotation, QuoteHistory, PendingApprovalsInbox, RFQTracker, SampleTracking, IFSInventory, Settings, Help, AdminMetrics, AuditLog, KioskAdmin, Messages, plus 7 library tabs.
-- **Planning** (`client/src/modules/planning/`) — Order Entry, BOM Explosion, Material Check, Capacity Planning, Work Orders Legacy + v2.
-- **Home** (`client/src/modules/home/`) — operator dashboard (untracked, this branch).
-- **Help** (`client/src/help/`) — `content.js` is **6 056 LOC** of help registry (single source for in-app help + Word user guide).
+- **Cost** (`apps/client/src/modules/cost/`) — 89 files. Tabs: Standard/Complex calc, MaterialLibrary, InkCalculator, PrintAreaCalc, DesignTools, Dashboard, QuoteAnalysis, Summarize, FormalQuotation, QuoteHistory, PendingApprovalsInbox, RFQTracker, SampleTracking, IFSInventory, Settings, Help, AdminMetrics, AuditLog, KioskAdmin, Messages, plus 7 library tabs.
+- **Planning** (`apps/client/src/modules/planning/`) — Order Entry, BOM Explosion, Material Check, Capacity Planning, Work Orders Legacy + v2.
+- **Home** (`apps/client/src/modules/home/`) — operator dashboard (untracked, this branch).
+- **Help** (`apps/client/src/help/`) — `content.js` is **6 056 LOC** of help registry (single source for in-app help + Word user guide).
 
 ### Backend route surface
 
 **238 endpoint definitions** across 8 main route files:
 
-| Route file                      | Endpoints | Notes                                                                          |
-| ------------------------------- | --------: | ------------------------------------------------------------------------------ |
-| `server/routes/costApi.js`      |        69 | Largest — flagged for extraction in `docs/plans/COSTAPI_EXTRACTION_ROADMAP.md` |
-| `server/routes/shared.js`       |        64 | Quotes / dashboard / common reads                                              |
-| `server/routes/chat.js`         |        15 | Internal messaging                                                             |
-| `server/routes/planning.js`     |        13 | Planning module HTTP layer                                                     |
-| `server/routes/import.js`       |        11 | Bulk import flows                                                              |
-| `server/routes/importWizard.js` |         8 | Step-wise import                                                               |
-| `server/routes/sync.js`         |         3 | Multi-client sync                                                              |
-| `server/routes/events.js`       |         2 | Server-sent events                                                             |
+| Route file                           | Endpoints | Notes                                                                          |
+| ------------------------------------ | --------: | ------------------------------------------------------------------------------ |
+| `apps/server/routes/costApi.js`      |        69 | Largest — flagged for extraction in `docs/plans/COSTAPI_EXTRACTION_ROADMAP.md` |
+| `apps/server/routes/shared.js`       |        64 | Quotes / dashboard / common reads                                              |
+| `apps/server/routes/chat.js`         |        15 | Internal messaging                                                             |
+| `apps/server/routes/planning.js`     |        13 | Planning module HTTP layer                                                     |
+| `apps/server/routes/import.js`       |        11 | Bulk import flows                                                              |
+| `apps/server/routes/importWizard.js` |         8 | Step-wise import                                                               |
+| `apps/server/routes/sync.js`         |         3 | Multi-client sync                                                              |
+| `apps/server/routes/events.js`       |         2 | Server-sent events                                                             |
 
 Plus `domains/planning/server/routes/*` (operationV2, workOrderV2, etc. — Sprint MES-1/2/3 work).
 
@@ -102,30 +102,30 @@ Plus `domains/planning/server/routes/*` (operationV2, workOrderV2, etc. — Spri
 
 ### Files > 1 000 LOC (16 source files; node_modules excluded)
 
-|   LOC | File                                                              | Risk                                                             |
-| ----: | ----------------------------------------------------------------- | ---------------------------------------------------------------- |
-| 6 056 | `client/src/help/content.js`                                      | Acceptable — pure data registry                                  |
-| 2 913 | `server/routes/costApi.js`                                        | 🟠 Extraction planned (docs/plans/COSTAPI_EXTRACTION_ROADMAP.md) |
-| 2 468 | `client/src/modules/cost/tabs/DesignTools/presses/GallusCalc.jsx` | 🟡 Calc UI                                                       |
-| 2 367 | `server/routes/shared.js`                                         | 🟠 Mixed concerns                                                |
-| 2 265 | `client/src/modules/cost/tabs/Settings.jsx`                       | 🟠 Flagged in CLAUDE.md (Sprint 12 deferred refactor)            |
-| 2 087 | `client/src/modules/cost/tabs/PrintAreaCalc.jsx`                  | 🟠 Flagged in CLAUDE.md                                          |
-| 1 721 | `client/src/services/printAreaCore.js`                            | 🟡 Pure algorithm with own tests                                 |
-| 1 701 | `client/src/modules/cost/tabs/StandardCalc/CalcLegend.jsx`        | 🟡                                                               |
-| 1 634 | `client/src/modules/cost/tabs/RFQTracker.jsx`                     | 🟡                                                               |
-| 1 548 | `client/src/modules/cost/tabs/SampleTracking.jsx`                 | 🟡                                                               |
-| 1 462 | `server/services/authService.js`                                  | 🟠 Auth — high blast radius                                      |
-| 1 390 | `client/src/services/calcEngine.js`                               | 🟡 Pricing source-of-truth (CLAUDE.md lesson 3)                  |
-| 1 276 | `…/DesignTools/presses/gallusEngine.js`                           | 🟡 Pure engine                                                   |
-| 1 248 | `client/src/modules/cost/tabs/StandardCalc/CalcLayout.jsx`        | 🟡                                                               |
-| 1 123 | `server/index.js`                                                 | 🟠 Entry point — concerns mixing                                 |
-| 1 019 | `desktop/main.js`                                                 | 🟡 Electron shell                                                |
+|   LOC | File                                                                   | Risk                                                             |
+| ----: | ---------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| 6 056 | `apps/client/src/help/content.js`                                      | Acceptable — pure data registry                                  |
+| 2 913 | `apps/server/routes/costApi.js`                                        | 🟠 Extraction planned (docs/plans/COSTAPI_EXTRACTION_ROADMAP.md) |
+| 2 468 | `apps/client/src/modules/cost/tabs/DesignTools/presses/GallusCalc.jsx` | 🟡 Calc UI                                                       |
+| 2 367 | `apps/server/routes/shared.js`                                         | 🟠 Mixed concerns                                                |
+| 2 265 | `apps/client/src/modules/cost/tabs/Settings.jsx`                       | 🟠 Flagged in CLAUDE.md (Sprint 12 deferred refactor)            |
+| 2 087 | `apps/client/src/modules/cost/tabs/PrintAreaCalc.jsx`                  | 🟠 Flagged in CLAUDE.md                                          |
+| 1 721 | `apps/client/src/services/printAreaCore.js`                            | 🟡 Pure algorithm with own tests                                 |
+| 1 701 | `apps/client/src/modules/cost/tabs/StandardCalc/CalcLegend.jsx`        | 🟡                                                               |
+| 1 634 | `apps/client/src/modules/cost/tabs/RFQTracker.jsx`                     | 🟡                                                               |
+| 1 548 | `apps/client/src/modules/cost/tabs/SampleTracking.jsx`                 | 🟡                                                               |
+| 1 462 | `apps/server/services/authService.js`                                  | 🟠 Auth — high blast radius                                      |
+| 1 390 | `apps/client/src/services/calcEngine.js`                               | 🟡 Pricing source-of-truth (CLAUDE.md lesson 3)                  |
+| 1 276 | `…/DesignTools/presses/gallusEngine.js`                                | 🟡 Pure engine                                                   |
+| 1 248 | `apps/client/src/modules/cost/tabs/StandardCalc/CalcLayout.jsx`        | 🟡                                                               |
+| 1 123 | `apps/server/index.js`                                                 | 🟠 Entry point — concerns mixing                                 |
+| 1 019 | `apps/desktop/main.js`                                                 | 🟡 Electron shell                                                |
 
 **Total source files > 500 LOC**: ~30 (full list in scratch). Sprint 12 component-size refactor deferred per CLAUDE.md "Known operational risks".
 
 ### TODO / FIXME / HACK / XXX scan
 
-**Only 2 TODOs found across 439 source files** — comment hygiene is exceptional. Both in `client/src/services/pdfVectorInk.js`:
+**Only 2 TODOs found across 439 source files** — comment hygiene is exceptional. Both in `apps/client/src/services/pdfVectorInk.js`:
 
 - L265: `// TODO Phase 2: distinguish evenodd vs nonzero fill rule.`
 - L384: `// RENDERING holes visible. See TODO above.`
@@ -138,16 +138,16 @@ No `FIXME`, `HACK`, or `XXX` markers. Suggests deliberate hygiene policy.
 
 ### Test execution baseline (all green)
 
-| Surface                                 | Runner                               |     Count |      Pass |
-| --------------------------------------- | ------------------------------------ | --------: | --------: |
-| Server (root `npm test` step 2)         | `node --test`                        |       668 |       668 |
-| Domains (`node --test domains`)         | `node --test`                        |       285 |       285 |
-| Scripts (`node --test scripts`)         | `node --test`                        |        45 |        45 |
-| **Server total**                        | `node --test server scripts domains` |   **998** |   **998** |
-| Client (`cd client && node --test src`) | `node --test`                        |       594 |       594 |
-| Desktop license                         | `node --test`                        |         8 |         8 |
-| Desktop manifest                        | `node --test build-manifest.test.js` |         2 |         2 |
-| **Grand total**                         | —                                    | **1 602** | **1 602** |
+| Surface                                      | Runner                               |     Count |      Pass |
+| -------------------------------------------- | ------------------------------------ | --------: | --------: |
+| Server (root `npm test` step 2)              | `node --test`                        |       668 |       668 |
+| Domains (`node --test domains`)              | `node --test`                        |       285 |       285 |
+| Scripts (`node --test scripts`)              | `node --test`                        |        45 |        45 |
+| **Server total**                             | `node --test server scripts domains` |   **998** |   **998** |
+| Client (`cd apps/client && node --test src`) | `node --test`                        |       594 |       594 |
+| Desktop license                              | `node --test`                        |         8 |         8 |
+| Desktop manifest                             | `node --test build-manifest.test.js` |         2 |         2 |
+| **Grand total**                              | —                                    | **1 602** | **1 602** |
 
 Plus Playwright kiosk e2e (3 specs — KIOSK-008 currently red per CLAUDE.md MES-3 backlog).
 
@@ -170,7 +170,7 @@ But `testPathIgnorePatterns` excludes EVERY real source directory:
 
 Jest discovers **0 test files**. `npm test` runs `jest --passWithNoTests` (passes vacuously) then chains `node --test` for the real work. The 70 % threshold therefore guards nothing.
 
-**Why this matters**: A reviewer reading `package.json` infers a 70 % coverage gate. There is no gate. Real coverage of `client/src` and `server/` has never been measured by any tool wired into CI.
+**Why this matters**: A reviewer reading `package.json` infers a 70 % coverage gate. There is no gate. Real coverage of `apps/client/src` and `apps/server/` has never been measured by any tool wired into CI.
 
 **Suggested action (P1, post-go-live)**: Either delete the `coverageThreshold` block (honest signal), or migrate to `c8` / `nyc` running over the `node --test` runners. Acceptable to defer — not a blocker since 1 602 tests exist and pass.
 
@@ -201,18 +201,18 @@ Jest discovers **0 test files**. `npm test` runs `jest --passWithNoTests` (passe
 
 ### New files (untracked)
 
-- `client/src/components/Layout/{ModuleLanding.jsx,ModuleLanding.css,sectionDefs.js}` — ERPAG-style landing pages
-- `client/src/modules/cost/tabs/Dashboard.css` — Enterprise Dashboard scrollable layout
-- `client/src/modules/home/` — Home/operator dashboard
+- `apps/client/src/components/Layout/{ModuleLanding.jsx,ModuleLanding.css,sectionDefs.js}` — ERPAG-style landing pages
+- `apps/client/src/modules/cost/tabs/Dashboard.css` — Enterprise Dashboard scrollable layout
+- `apps/client/src/modules/home/` — Home/operator dashboard
 - `docs/{erpag-survey,reports}/` — research artefacts
-- `server/routes/planning.coerceDueDate.test.js`, `server/services/getProducts.test.js` — new tests
+- `apps/server/routes/planning.coerceDueDate.test.js`, `apps/server/services/getProducts.test.js` — new tests
 
 ### Modified (highlights)
 
-- `client/src/components/Layout/{Sidebar,TopBar}.{jsx,css}` — section nav redesign + topbar relocation
-- `client/src/modules/cost/tabs/{Dashboard,QuoteAnalysis,PrintAreaCalc}.jsx` — title strip, KPI redesign, pivot consolidation
-- `server/{routes/shared.js, routes/planning.js, repositories/*, services/*}` — month/year filter, planning store, dashboard stats
-- `client/src/i18n/{strings.js,domains/basis.js}` — new keys for range/full-year/12m hint
+- `apps/client/src/components/Layout/{Sidebar,TopBar}.{jsx,css}` — section nav redesign + topbar relocation
+- `apps/client/src/modules/cost/tabs/{Dashboard,QuoteAnalysis,PrintAreaCalc}.jsx` — title strip, KPI redesign, pivot consolidation
+- `apps/server/{routes/shared.js, routes/planning.js, repositories/*, services/*}` — month/year filter, planning store, dashboard stats
+- `apps/client/src/i18n/{strings.js,domains/basis.js}` — new keys for range/full-year/12m hint
 
 **Audit implication**: This audit covers the working tree as it stands (the code about to ship), not the last tagged commit `0aacb3c` (v1.5.0). Findings will reference the actual files.
 
@@ -241,7 +241,7 @@ The repo already contains substantial pre-existing audit + readiness documents. 
 | ---- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | F0-1 | 🟠 MAJOR      | Jest `coverageThreshold` is dead config (`testPathIgnorePatterns` excludes every source dir, Jest discovers 0 files)                                                                   | Re-confirmed  |
 | F0-2 | 🟡 MINOR      | Sub-package version drift: root `1.5.0` vs `client` `1.3.0` vs `desktop` `1.3.0` vs kiosk `0.1.0`. CHANGELOG tracks root only.                                                         | Doc-time      |
-| F0-3 | 🟡 MINOR      | `desktop/` pins `better-sqlite3@11.3` while server pins `12.9`. Different ABI runtimes are expected (lesson 25 + FIX-15) but version drift across same dep deserves a note.            | Cross-check   |
+| F0-3 | 🟡 MINOR      | `apps/desktop/` pins `better-sqlite3@11.3` while server pins `12.9`. Different ABI runtimes are expected (lesson 25 + FIX-15) but version drift across same dep deserves a note.       | Cross-check   |
 | F0-4 | 🟡 MINOR      | 6 source files > 2 000 LOC, 2 over 2 500. Refactor backlog real (Sprint 12 deferred) but not blocking.                                                                                 | Already known |
 | F0-5 | 🟢 (positive) | Comment hygiene exceptional: 2 TODOs total, 0 FIXME/HACK/XXX. Suggests strict review discipline.                                                                                       | —             |
 | F0-6 | 🟡 MINOR      | Audit branch cut with **27 modified + 9 untracked paths** (UI redesign from prior session). Audit covers working tree, not tagged HEAD. Operator should commit this WIP before deploy. | Phase 4       |

@@ -25,7 +25,7 @@ No biometric, health, racial, religious, political-opinion, or other "sensitive 
 - **All PII storage**: factory LAN at Hai Phong. NO data leaves Vietnam.
 - **File system mode**: `chmod 600` enforced on `users.json`, `totp_secrets.*`, `.env`, `ops.db`.
 - **Network access**: factory LAN-only (no public internet exposure). Firewall ACL limits ingress to operator subnet.
-- **Application access**: 3-layer permission model (role + department + permission_group_id) per `server/services/permissionService.js`.
+- **Application access**: 3-layer permission model (role + department + permission_group_id) per `apps/server/services/permissionService.js`.
 - **Audit logging**: every PII read/write recorded in `audit_log.db` (12-mo active + cold archive per retention policy).
 
 ## 3. Data Subject Rights (Decree 13 Art. 9-15)

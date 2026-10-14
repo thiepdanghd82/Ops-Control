@@ -19,25 +19,25 @@
 | P0-5 | BL-1 BOM scrap factor                      | **DEFERRED to v1.5.11** (scope-down)              | Planning module behind `OPS_FEATURE_PLANNING=0` flag; verify env var unset on prod  |
 | P0-6 | Day-0 migration playbook                   | PR #72                                            | `docs/operations/MIGRATION-DAY-0.md` exists                                         |
 | P0-7 | Training refresh                           | D-1 webinar 16:30 today                           | Attendance roster signed ≥18/20                                                     |
-| P0-8 | Audit emit gap (quote save + library save) | PR #70                                            | `grep -c 'QUOTE_SAVE\|LIBRARY_SAVE' server/routes/costApi.js` ≥ 3                   |
+| P0-8 | Audit emit gap (quote save + library save) | PR #70                                            | `grep -c 'QUOTE_SAVE\|LIBRARY_SAVE' apps/server/routes/costApi.js` ≥ 3              |
 
 ## P1 closures (13 total)
 
-| #     | Finding                                                        | Closed by                                    | Verify                                                                                 |
-| ----- | -------------------------------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------- |
-| P1-1  | Kiosk OpDetail optimistic-revert snapshot                      | DEFERRED to MES-3 (MES-3-FIX-13 outstanding) | `stash@{4}` audit OR live fix verified; non-blocking for cutover                       |
-| P1-2  | deploy.ps1 snapshot patch                                      | PR #71                                       | `grep -c 'robocopy.*releases' deploy.ps1` ≥ 1                                          |
-| P1-3  | Fallback xlsx templates + import script (Runbook B executable) | PR #73                                       | `ls docs/operations/cutover/templates/Fallback_*.xlsx scripts/import-fallback-xlsx.js` |
-| P1-4  | Windows installer rebuilt from v1.5.10                         | PROMPT 9 Step 4 (engineer on Win host)       | `dir desktop\dist-electron\OpsControl-Server-v1.5.10*.exe`                             |
-| P1-5  | Provision 13 ops + delete ops_test_user                        | D-7 sysadmin work (operator session)         | `users.json` shows 20 active + no `ops_test_user` row                                  |
-| P1-6  | PII handling policy (VN Decree 13/2023)                        | PR #75                                       | `ls docs/maintainers/legal/pii-handling-vn.md`                                         |
-| P1-7  | Data retention policy (Law on Acc. Art. 41)                    | PR #75                                       | `ls docs/maintainers/legal/data-retention-policy.md`                                   |
-| P1-8  | TOTP secrets excluded from backup tarball                      | PR #74                                       | `grep -c "exclude.*totp_secrets" server/services/backupScheduler.js` ≥ 1               |
-| P1-9  | (audit identifier unused / merged into P1-1 cascade)           | —                                            | —                                                                                      |
-| P1-10 | (audit identifier unused / merged into P1-2 cascade)           | —                                            | —                                                                                      |
-| P1-11 | `OPS_KIOSK_KEY=` block in `.env.example`                       | PR #68                                       | `grep -c "OPS_KIOSK_KEY" .env.example` ≥ 1                                             |
-| P1-12 | OPS_AUDIT_RETENTION configurable                               | PR #74 (.env block) + sysadmin Part B        | `grep -c "OPS_AUDIT_RETENTION" .env.example` ≥ 1                                       |
-| P1-13 | `Data for import/README.md`                                    | DEFERRED (post-go-live operator doc)         | Operator import flow self-documenting via Day-0 playbook §2                            |
+| #     | Finding                                                        | Closed by                                    | Verify                                                                                      |
+| ----- | -------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| P1-1  | Kiosk OpDetail optimistic-revert snapshot                      | DEFERRED to MES-3 (MES-3-FIX-13 outstanding) | `stash@{4}` audit OR live fix verified; non-blocking for cutover                            |
+| P1-2  | deploy.ps1 snapshot patch                                      | PR #71                                       | `grep -c 'robocopy.*releases' deploy.ps1` ≥ 1                                               |
+| P1-3  | Fallback xlsx templates + import script (Runbook B executable) | PR #73                                       | `ls docs/operations/cutover/templates/Fallback_*.xlsx apps/scripts/import-fallback-xlsx.js` |
+| P1-4  | Windows installer rebuilt from v1.5.10                         | PROMPT 9 Step 4 (engineer on Win host)       | `dir desktop\dist-electron\OpsControl-Server-v1.5.10*.exe`                                  |
+| P1-5  | Provision 13 ops + delete ops_test_user                        | D-7 sysadmin work (operator session)         | `users.json` shows 20 active + no `ops_test_user` row                                       |
+| P1-6  | PII handling policy (VN Decree 13/2023)                        | PR #75                                       | `ls docs/maintainers/legal/pii-handling-vn.md`                                              |
+| P1-7  | Data retention policy (Law on Acc. Art. 41)                    | PR #75                                       | `ls docs/maintainers/legal/data-retention-policy.md`                                        |
+| P1-8  | TOTP secrets excluded from backup tarball                      | PR #74                                       | `grep -c "exclude.*totp_secrets" apps/server/services/backupScheduler.js` ≥ 1               |
+| P1-9  | (audit identifier unused / merged into P1-1 cascade)           | —                                            | —                                                                                           |
+| P1-10 | (audit identifier unused / merged into P1-2 cascade)           | —                                            | —                                                                                           |
+| P1-11 | `OPS_KIOSK_KEY=` block in `.env.example`                       | PR #68                                       | `grep -c "OPS_KIOSK_KEY" .env.example` ≥ 1                                                  |
+| P1-12 | OPS_AUDIT_RETENTION configurable                               | PR #74 (.env block) + sysadmin Part B        | `grep -c "OPS_AUDIT_RETENTION" .env.example` ≥ 1                                            |
+| P1-13 | `Data for import/README.md`                                    | DEFERRED (post-go-live operator doc)         | Operator import flow self-documenting via Day-0 playbook §2                                 |
 
 ## BL findings (baseline, non-P0/P1)
 

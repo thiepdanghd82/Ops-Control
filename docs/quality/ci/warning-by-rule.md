@@ -6,15 +6,15 @@
 
 ## Tổng quan
 
-| Rule                                                  | Count | Status                                                | Ticket                                                                                                   |
-| ----------------------------------------------------- | ----- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `no-restricted-syntax` (inline style `style={{...}}`) | 315   | **ACCEPTED TECH DEBT** — Sprint 12 deferred migration | Existing Sprint 12 (top-5 offenders allowlisted in `client/eslint.config.js`); ongoing per-tab migration |
-| `no-unused-vars` (imports, vars, func args)           | 42    | **DEFERRED** — file-by-file cleanup                   | Open new ticket: **S-LINT-UNUSED-IMPORTS** (XS-S effort, 1 sprint)                                       |
-| `react-compiler/*` ("renders" violations)             | 4     | **AUDIT NEEDED** per MES-3-FIX-20 method              | Existing **MES-3-FIX-38** (escalate; was P2)                                                             |
-| `react-hooks/exhaustive-deps`                         | 3     | **AUDIT NEEDED** per MES-3-FIX-20 method              | MES-3-FIX-38                                                                                             |
-| `react-hooks/set-state-in-effect`                     | 1     | **AUDIT NEEDED** per MES-3-FIX-20 method              | MES-3-FIX-38                                                                                             |
-| `no-empty` (in eslint output strings — not real)      | 2     | False positive in awk parse                           | —                                                                                                        |
-| Unused eslint-disable directives                      | ~3    | Cleanup as touched                                    | MES-3-FIX-38 part 2                                                                                      |
+| Rule                                                  | Count | Status                                                | Ticket                                                                                                        |
+| ----------------------------------------------------- | ----- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `no-restricted-syntax` (inline style `style={{...}}`) | 315   | **ACCEPTED TECH DEBT** — Sprint 12 deferred migration | Existing Sprint 12 (top-5 offenders allowlisted in `apps/client/eslint.config.js`); ongoing per-tab migration |
+| `no-unused-vars` (imports, vars, func args)           | 42    | **DEFERRED** — file-by-file cleanup                   | Open new ticket: **S-LINT-UNUSED-IMPORTS** (XS-S effort, 1 sprint)                                            |
+| `react-compiler/*` ("renders" violations)             | 4     | **AUDIT NEEDED** per MES-3-FIX-20 method              | Existing **MES-3-FIX-38** (escalate; was P2)                                                                  |
+| `react-hooks/exhaustive-deps`                         | 3     | **AUDIT NEEDED** per MES-3-FIX-20 method              | MES-3-FIX-38                                                                                                  |
+| `react-hooks/set-state-in-effect`                     | 1     | **AUDIT NEEDED** per MES-3-FIX-20 method              | MES-3-FIX-38                                                                                                  |
+| `no-empty` (in eslint output strings — not real)      | 2     | False positive in awk parse                           | —                                                                                                             |
+| Unused eslint-disable directives                      | ~3    | Cleanup as touched                                    | MES-3-FIX-38 part 2                                                                                           |
 
 **Total accounted: 370 warnings, 100% mapped to ticket or accepted debt.**
 
@@ -28,7 +28,7 @@
 
 **Reason for warn:** Inline styles bypass CSS class theming, break dark-mode token cascade, prevent CSS caching across renders, complicate Sprint 12 design-token rollout (Lesson 6, Sprint 11 P-1).
 
-**Why not error:** Codebase has 315 pre-existing instances accumulated pre-rule. Migrating each to a CSS class requires per-instance theme/dark-mode/hover verify (12+ hours per tab). Sprint 12 explicitly deferred this work; top-5 offenders documented in `client/eslint.config.js` ignores list to be picked up as each tab is touched.
+**Why not error:** Codebase has 315 pre-existing instances accumulated pre-rule. Migrating each to a CSS class requires per-instance theme/dark-mode/hover verify (12+ hours per tab). Sprint 12 explicitly deferred this work; top-5 offenders documented in `apps/client/eslint.config.js` ignores list to be picked up as each tab is touched.
 
 **Hotspot files (top 5):**
 

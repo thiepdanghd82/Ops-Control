@@ -8,7 +8,7 @@
 # `git apply` because main advanced far past the 998ae7c export point).
 
 0.patch  (493 bytes)  stash@{0}: On main: wip-lockfile
-  => DELETED 2026-06-04. client/package-lock.json WIP only; lockfiles
+  => DELETED 2026-06-04. apps/client/package-lock.json WIP only; lockfiles
      regenerate on npm install — no source value.
 
 1.patch  (45824 bytes)  stash@{1}: feat/quote-export-mvp-2: anti-flash optimistic + ink layout
@@ -25,7 +25,7 @@
      absent on main and unreferenced by LoginPage/Sidebar.
      STATUS: pending design sign-off (cosmetic rebrand, low priority).
      WHEN SHIPPING: cherry-pick SOURCE ONLY — LoginPage.css, LoginPage.jsx,
-     Sidebar.jsx, client/public/ccl-logo.svg, client/public/ccl-mark.svg.
+     Sidebar.jsx, apps/client/public/ccl-logo.svg, apps/client/public/ccl-mark.svg.
      DROP the releases/v1.5.1/*.dmg + *.blockmap + MANIFEST/SHA256 binaries
      (release artifacts — must not enter git). Suggested branch: feat/ccl-logo-rebrand.
 
@@ -42,6 +42,6 @@
          OPS_ALLOW_SAME_ORIGIN / ALLOW_HTTP gate (shipped with v1.5.1).
 
 6.patch  (5122 bytes)  stash@{6}: release/v1.3: desktop wip pre-existing
-  => DELETED 2026-06-04. ALREADY SHIPPED. main desktop/main.js has
+  => DELETED 2026-06-04. ALREADY SHIPPED. main apps/desktop/main.js has
      loadUserEnv() + the will-download handler (S-EXPORT-UAT-SETUP); the
      dist-electron *.yml entries were build artifacts.

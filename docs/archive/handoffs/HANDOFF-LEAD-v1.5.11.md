@@ -2,7 +2,7 @@
 
 **Date built:** 2026-05-29
 **Tag:** `v1.5.11` (commit `50c81a0`)
-**Artifact:** `desktop/dist-electron/Ops Control SERVER 1.5.11-arm64.dmg`
+**Artifact:** `apps/desktop/dist-electron/Ops Control SERVER 1.5.11-arm64.dmg`
 **Size:** 210 MB
 **SHA256:** `9116bcb05ee9c6ee253b6d82e568f14dab742eed7ed0dec329821b95190b22bf`
 
@@ -17,7 +17,7 @@
 
 ## Smoke verification (done locally)
 
-- ✅ Mac DMG built clean via `node scripts/build-mac-installers.mjs server` (electron-builder 26.8.1, electron 41.3.0, ad-hoc signed, npmRebuild skipped per Lesson 25)
+- ✅ Mac DMG built clean via `node apps/scripts/build-mac-installers.mjs server` (electron-builder 26.8.1, electron 41.3.0, ad-hoc signed, npmRebuild skipped per Lesson 25)
 - ✅ better-sqlite3 binary parity verified per Lesson 28: SHA256 `e8c5e5e4b5b2b8fec4eeaf3ca18df78d40271bde738ec57faddb19bcedda5eb1` matches at both `app/node_modules/better-sqlite3/.../better_sqlite3.node` AND `app.asar.unpacked/node_modules/better-sqlite3/.../better_sqlite3.node`. No NMV mismatch trap.
 - ✅ Native overlay preflight clean: `better-sqlite3`, `node-hid`, `@serialport/bindings-cpp` all have matching `extraResources` entries.
 

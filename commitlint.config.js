@@ -34,7 +34,7 @@ export default {
       2,
       'always',
       [
-        // SAP-aligned domains (server/domains/*)
+        // SAP-aligned domains (apps/server/domains/*)
         'costing',
         'library',
         'sales',

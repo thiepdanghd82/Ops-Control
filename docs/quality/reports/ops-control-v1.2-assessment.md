@@ -25,13 +25,13 @@ Kết quả khảo sát 5 phân hệ cốt lõi trên ERPAG (Môi trường Tria
 
 ## Module Mapping Table
 
-| ERPAG Module                    | Ops Control v1.2 Equivalent                         | Fit / Gap Analysis                                                                                                                    |
-| :------------------------------ | :-------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------ |
-| **Manufacturing → Work Orders** | `domains/planning/`                                 | **Fit**: Ops Control xử lý sâu hơn cho máy in Gallus (OpDetail). **Gap**: ERPAG thiếu concept Kiosk terminal cho Operator tại chuyền. |
-| **Manufacturing → BOM**         | `client/src/modules/planning/tabs/BOMExplosion.jsx` | **Gap**: Logic Scrap hiện tại (1.125 multiplier vs 3% Factor của ERPAG).                                                              |
-| **Inventory → Items**           | `IFS_Inventory` (JSON store)                        | **Fit**: API 2 chiều dễ dàng đồng bộ thay vì dùng JSON cục bộ.                                                                        |
-| **Costing**                     | `domains/costing/`                                  | **Gap**: Ops Control tính Costing qua Print Area/Ink Coverage đặc thù in, ERPAG tính trung bình chuẩn không phù hợp lắm.              |
-| **Warehouse**                   | Kiosk (Routing)                                     | **Gap**: Ops Control chỉ có tracking hàng mẫu/trạng thái, thiếu module quản lý vị trí rack/bin thực thụ.                              |
+| ERPAG Module                    | Ops Control v1.2 Equivalent                              | Fit / Gap Analysis                                                                                                                    |
+| :------------------------------ | :------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------ |
+| **Manufacturing → Work Orders** | `domains/planning/`                                      | **Fit**: Ops Control xử lý sâu hơn cho máy in Gallus (OpDetail). **Gap**: ERPAG thiếu concept Kiosk terminal cho Operator tại chuyền. |
+| **Manufacturing → BOM**         | `apps/client/src/modules/planning/tabs/BOMExplosion.jsx` | **Gap**: Logic Scrap hiện tại (1.125 multiplier vs 3% Factor của ERPAG).                                                              |
+| **Inventory → Items**           | `IFS_Inventory` (JSON store)                             | **Fit**: API 2 chiều dễ dàng đồng bộ thay vì dùng JSON cục bộ.                                                                        |
+| **Costing**                     | `domains/costing/`                                       | **Gap**: Ops Control tính Costing qua Print Area/Ink Coverage đặc thù in, ERPAG tính trung bình chuẩn không phù hợp lắm.              |
+| **Warehouse**                   | Kiosk (Routing)                                          | **Gap**: Ops Control chỉ có tracking hàng mẫu/trạng thái, thiếu module quản lý vị trí rack/bin thực thụ.                              |
 
 ## Feasibility Score: 8.5/10
 

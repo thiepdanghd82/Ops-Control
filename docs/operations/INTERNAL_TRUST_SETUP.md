@@ -19,14 +19,14 @@
 Trên build machine của vendor (CCL Design dev/build server, Windows 10+):
 
 ```powershell
-pwsh -File scripts/sign-windows.ps1 -InstallerPath "desktop/dist-electron/Ops-Control-Setup-1.1.0.exe"
+pwsh -File apps/scripts/sign-windows.ps1 -InstallerPath "apps/desktop/dist-electron/Ops-Control-Setup-1.1.0.exe"
 ```
 
 Lần đầu, script tự generate self-signed cert hợp lệ **10 năm**, output 2 file:
 
 ```
-desktop/build/internal-cert.pfx   # PRIVATE — không share, dùng để sign
-desktop/build/internal-cert.cer   # PUBLIC — gửi cho IT để push GPO
+apps/desktop/build/internal-cert.pfx   # PRIVATE — không share, dùng để sign
+apps/desktop/build/internal-cert.cer   # PUBLIC — gửi cho IT để push GPO
 ```
 
 Random password 24 ký tự được sinh → **lưu vào password manager** (1Password / Bitwarden) cho lần build kế. Set vào env `OPS_CERT_PASSWORD` để CI sign tự động.
@@ -112,7 +112,7 @@ Trong `release.sh` đã wire sẵn:
 
 ```bash
 # Sau khi electron-builder tạo .app
-./scripts/sign-macos.sh "desktop/dist-electron/mac-arm64/Ops Control.app"
+./scripts/sign-macos.sh "apps/desktop/dist-electron/mac-arm64/Ops Control.app"
 
 # Xong mới repackage thành DMG
 ```
@@ -201,7 +201,7 @@ Hoặc UI: Right-click `Ops Control.app` → `Open` → Gatekeeper sẽ hỏi 1 
 
 ### 3.1 Windows
 
-Trong `desktop/package.json`:
+Trong `apps/desktop/package.json`:
 
 ```json
 "build": {

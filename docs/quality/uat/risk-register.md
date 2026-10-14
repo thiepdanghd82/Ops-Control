@@ -106,7 +106,7 @@ So R3 doesn't break the UAT — but discovering a key-mismatch mid-UAT undermine
 
 ### Pre-existing context
 
-- `OPS_EXPORT_HMAC_KEY` must be 64 hex chars per `scripts/preflight-env.js`.
+- `OPS_EXPORT_HMAC_KEY` must be 64 hex chars per `apps/scripts/preflight-env.js`.
 - HMAC is over the DECODED payload BUFFER, not the base64 string, so the signature is invariant under base64 alphabet drift (theoretical concern; in practice Node + Excel produce identical b64 — kept in the contract for cleanliness).
 - Symmetric HMAC chosen over Ed25519 because we're proving "came from THIS server install", not building a multi-party trust chain. Same box signs + verifies.
 

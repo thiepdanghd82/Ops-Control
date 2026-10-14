@@ -1,6 +1,19 @@
 # Phương án sắp xếp lại cấu trúc Ops-Control
 
-Ngày 2026-10-14 · trên `main` @ `1a4d433` · trạng thái: **ĐỀ XUẤT, chưa thực hiện**
+Ngày 2026-10-14 · trên `main` @ `1a4d433` · trạng thái: **ĐÃ THỰC HIỆN đợt 0–4** trên nhánh
+`chore/restructure-repo` của bản sao `NPI cost module/ops-control` (repo gốc không đổi).
+
+> **Khác với phương án dưới đây khi thực hiện:**
+>
+> - `.agents/` giữ tên (đó là quy ước chung cho skill nhiều agent), không đổi thành `.ai/`. Lesson learned ở
+>   `.agents/rules/lessons-learned.md`, được `CLAUDE.md` nạp bằng `@import`.
+> - `CONTEXT.md` và `docs/SECURITY.md` giữ chỗ (test mirror + quy ước GitHub).
+> - `scripts/` vào `apps/scripts/` cùng ba app, để `apps/` có đúng bố cục thư mục `app/` trong gói DMG — các
+>   đường dẫn `../server`, `../scripts`, `../client/dist` giữa chúng không đổi.
+> - Code tìm `.env`/`package.json` ở cạnh `server/` trước rồi tới gốc repo; server headless giữ bố cục phẳng
+>   (deploy.sh/.ps1 đồng bộ từng thư mục về chỗ cũ). Xem mục "Ba bố cục" trong `README.md`.
+>
+> Những phần mô tả "hiện trạng" bên dưới là trạng thái TRƯỚC khi sắp xếp.
 
 Ràng buộc: sau khi sắp xếp, chương trình và dữ liệu đang chạy **không được bị ảnh hưởng**.
 

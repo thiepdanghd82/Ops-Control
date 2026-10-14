@@ -18,14 +18,14 @@ functional baseline. v1.3 changes WHERE code lives, not WHAT it does.
 By the end of v1.2 the repository hit several scale limits familiar to anyone who has shipped a
 SAP/IFS-class app:
 
-| Symptom (v1.2)                                                    | Root cause                                                    |
-| ----------------------------------------------------------------- | ------------------------------------------------------------- |
-| `client/src/modules/cost/tabs/` had 30+ unrelated `.jsx` files    | "Cost" was used as a junk drawer for every non-planning tab   |
-| `server/routes/costApi.js` exceeded ~3 000 LOC                    | All HTTP handlers — pricing, library, master-data — colocated |
-| `i18n/strings.js` was a single ~5 000-line module                 | No per-domain ownership of translation keys                   |
-| `scripts/` mixed build, recovery, migration and dev tools         | No separation by purpose or audit risk                        |
-| `.claude/` only contained `launch.json`                           | Agent workflow not codified                                   |
-| Cross-cutting concerns (ETag, audit, sync) lived next to features | Hard to reuse across domains, easy to fork accidentally       |
+| Symptom (v1.2)                                                      | Root cause                                                    |
+| ------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `apps/client/src/modules/cost/tabs/` had 30+ unrelated `.jsx` files | "Cost" was used as a junk drawer for every non-planning tab   |
+| `apps/server/routes/costApi.js` exceeded ~3 000 LOC                 | All HTTP handlers — pricing, library, master-data — colocated |
+| `i18n/strings.js` was a single ~5 000-line module                   | No per-domain ownership of translation keys                   |
+| `apps/scripts/` mixed build, recovery, migration and dev tools      | No separation by purpose or audit risk                        |
+| `.claude/` only contained `launch.json`                             | Agent workflow not codified                                   |
+| Cross-cutting concerns (ETag, audit, sync) lived next to features   | Hard to reuse across domains, easy to fork accidentally       |
 
 v1.3 fixes those by adopting the **vertical-slice / bounded-context** layout used in mature ERPs
 (SAP modules CO/MM/PP/SD/QM/HR/BC; IFS _components_).
@@ -63,7 +63,7 @@ Each `domains/<name>/` mirrors the same shape:
 
 ```
 domains/costing/
-├── client/      React components + hooks + styles (was client/src/modules/cost/tabs/...)
+├── client/      React components + hooks + styles (was apps/client/src/modules/cost/tabs/...)
 ├── server/      Express router + services + repositories
 ├── shared/      Types, constants, validation schemas (importable from both sides)
 ├── tests/       Domain-scoped unit + integration tests

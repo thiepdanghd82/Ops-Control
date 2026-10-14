@@ -24,7 +24,7 @@ Mitigates C-4 BCP gap post no-hotspare decision (`C4_HOTSPARE_PROCUREMENT.md` 20
 
 ```bash
 cd /path/to/Ops-Control
-sh scripts/ops-autostart/install-macos.sh
+sh apps/scripts/ops-autostart/install-macos.sh
 ```
 
 Output:
@@ -65,7 +65,7 @@ pgrep -fl "Ops Control SERVER"
 **Uninstall · Gỡ**:
 
 ```bash
-sh scripts/ops-autostart/uninstall-macos.sh
+sh apps/scripts/ops-autostart/uninstall-macos.sh
 ```
 
 ---
@@ -77,7 +77,7 @@ sh scripts/ops-autostart/uninstall-macos.sh
 - Ops Control SERVER Setup .exe đã cài (default: `%LOCALAPPDATA%\Programs\Ops Control\`)
 - Auto-login đã bật: `netplwiz` → uncheck "Users must enter a user name and password to use this computer" (cần thiết để Task Scheduler trigger AtLogon sau khi reboot)
 
-> **Why not a Windows Service?** Electron apps require a GUI session — they fail in Session 0 (the service session). Task Scheduler "At log on" trigger is the correct pattern for a desktop SERVER role. NSSM would be appropriate only if we were running a headless `node server/index.js` instead of the Electron-wrapped server.
+> **Why not a Windows Service?** Electron apps require a GUI session — they fail in Session 0 (the service session). Task Scheduler "At log on" trigger is the correct pattern for a desktop SERVER role. NSSM would be appropriate only if we were running a headless `node apps/server/index.js` instead of the Electron-wrapped server.
 
 **Install · Cài**:
 
@@ -190,10 +190,10 @@ Before considering the SERVER box production-ready, confirm:
 
 ## Cross-reference
 
-- `scripts/ops-autostart/com.ccldesign.opscontrol-server.plist` — macOS LaunchAgent template
-- `scripts/ops-autostart/install-macos.sh` + `uninstall-macos.sh` — macOS install/uninstall
-- `scripts/ops-autostart/OpsControlServer.Task.xml` — Windows Task Scheduler template
-- `scripts/ops-autostart/install-windows.ps1` + `uninstall-windows.ps1` — Windows install/uninstall
+- `apps/scripts/ops-autostart/com.ccldesign.opscontrol-server.plist` — macOS LaunchAgent template
+- `apps/scripts/ops-autostart/install-macos.sh` + `uninstall-macos.sh` — macOS install/uninstall
+- `apps/scripts/ops-autostart/OpsControlServer.Task.xml` — Windows Task Scheduler template
+- `apps/scripts/ops-autostart/install-windows.ps1` + `uninstall-windows.ps1` — Windows install/uninstall
 - `docs/operations/ops/C4_HOTSPARE_PROCUREMENT.md` — no-hotspare decision (why this mitigation matters)
 - `docs/operations/ops/C4_DRILL_RUNBOOK.md` — companion BCP drill (combine auto-start verify with Test 1-3 above into the drill day)
 - CLAUDE.md "Recovery playbook" — Linux systemctl equivalent for the prod 10.102.3.61 Windows server

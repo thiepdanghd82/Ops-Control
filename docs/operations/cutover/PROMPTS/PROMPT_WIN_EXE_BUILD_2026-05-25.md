@@ -7,13 +7,13 @@
 > Lead Engineer: Đặng Thế Thiệp (executes on Win host directly OR delegates to operator with this doc).
 > Expected wall-clock: 60-120 min if first-time build; 20-30 min on warm box.
 >
-> Precedent: Mac SERVER DMG `OpsControl-Server-v1.5.10-mac-arm64.dmg` built Sunday 2026-05-24 05:24 (180 MB) via `scripts/build-desktop.sh mac arm64`.
+> Precedent: Mac SERVER DMG `OpsControl-Server-v1.5.10-mac-arm64.dmg` built Sunday 2026-05-24 05:24 (180 MB) via `apps/scripts/build-desktop.sh mac arm64`.
 
 ---
 
 ## Context — what we're building
 
-**Architecture** (3-tier per `desktop/package.json`):
+**Architecture** (3-tier per `apps/desktop/package.json`):
 
 ```
                    ┌────────────────────────┐
@@ -39,11 +39,11 @@
 
 **Mode**: thin CLIENT (NOT embedded SERVER).
 
-- `OPS_DESKTOP_MODE=thin` (per `desktop/package.json:11`)
+- `OPS_DESKTOP_MODE=thin` (per `apps/desktop/package.json:11`)
 - `OPS_REMOTE_URL=http://10.102.3.61:3000` (prod box)
 - App = Electron shell pointing to remote URL, no embedded SQLite startup.
 
-**Artifact naming** (per `desktop/package.json:42`):
+**Artifact naming** (per `apps/desktop/package.json:42`):
 
 ```
 OpsControl-Client-v1.5.10-win-x64.exe       (NSIS installer)
@@ -51,7 +51,7 @@ OpsControl-Client-v1.5.10-win-x64.exe       (portable variant — same target)
 latest.yml                                  (electron-updater manifest)
 ```
 
-Build script: `npm run build:client:win` (from repo root `desktop/`).
+Build script: `npm run build:client:win` (from repo root `apps/desktop/`).
 
 ---
 
@@ -140,7 +140,7 @@ npm ci --ignore-scripts
 # --ignore-scripts skips postinstall hooks (we'll run them manually)
 # Expected duration: 5-10 min first time, ~1 min from cache
 
-cd desktop
+cd apps/desktop
 npm ci --ignore-scripts
 # Installs Electron + electron-builder + native deps
 # Expected duration: 5-20 min first time (downloads Electron ~200MB)
@@ -332,7 +332,7 @@ findstr "opsctl-v1.3-marker" extracted-app\assets\*.js
 # Should show marker line containing your OPS_BUILD_ID from Step 4
 ```
 
-If marker missing or wrong build ID → bundle was built from stale `client/dist/` — go back to Step 4.
+If marker missing or wrong build ID → bundle was built from stale `apps/client/dist/` — go back to Step 4.
 
 ---
 
@@ -424,7 +424,7 @@ latest.yml                                          | <XXX B>   | -
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | Step 3 npm ci fails with permission/network errors | Try Admin PowerShell + proxy config. If still failing > 30 min → ping em                   |
 | Step 5 electron-rebuild fails (NMV mismatch)       | Try `npm run build` with `--config.npmRebuild=true` instead. If still failing → ping em    |
-| Step 6 electron-builder fails with asar error      | Check `desktop/package.json` `files` + `asarUnpack` paths. Ping em with full error         |
+| Step 6 electron-builder fails with asar error      | Check `apps/desktop/package.json` `files` + `asarUnpack` paths. Ping em with full error    |
 | Step 7 EXE crashes on launch                       | DO NOT SHIP. Capture crash log from `%LOCALAPPDATA%\Programs\OpsControl CLIENT\` → ping em |
 | Anh fatigue / 90+ min spent without progress       | Pause. Lunch + rest. Resume later. Don't push tired through hardware setup                 |
 
@@ -455,11 +455,11 @@ latest.yml                                          | <XXX B>   | -
 
 ## Companion docs
 
-- `desktop/package.json` — build configuration source of truth
-- `scripts/build-desktop.sh` — Mac build wrapper (this Win flow runs natively, doesn't use this script)
+- `apps/desktop/package.json` — build configuration source of truth
+- `apps/scripts/build-desktop.sh` — Mac build wrapper (this Win flow runs natively, doesn't use this script)
 - `CLAUDE.md` Lesson 25 — paths-with-spaces trap
 - `CLAUDE.md` Lesson 28 — Electron native module ABI trap
-- `CLAUDE.md` MES-3-FIX-26 — node-hid + serialport extraResources overlays (covered by current `desktop/package.json`)
+- `CLAUDE.md` MES-3-FIX-26 — node-hid + serialport extraResources overlays (covered by current `apps/desktop/package.json`)
 - `docs/operations/MIGRATION-DAY-0.md` — Day-0 deployment playbook
 - `docs/operations/cutover/D-1_FINAL_CHECKLIST_2026-06-08.md` — checklist item #6 references both DMG + EXE
 
@@ -467,7 +467,7 @@ latest.yml                                          | <XXX B>   | -
 
 ## Next steps after Win EXE build success
 
-1. **Commit nothing** — built artifacts are NOT committed to git (they're in `desktop/dist-electron/` which is gitignored)
+1. **Commit nothing** — built artifacts are NOT committed to git (they're in `apps/desktop/dist-electron/` which is gitignored)
 2. **Upload to prod /updates/** — covered above
 3. **Update D-1 checklist** — when ticking checklist item #6, both Mac DMG + Win EXE must be confirmed on prod
 4. **Ping em** with Deliverable Report — em updates task #44/#43 status + STOP_TRIGGERS sign-off if anh wants

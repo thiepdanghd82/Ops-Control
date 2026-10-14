@@ -12,7 +12,7 @@
 
 **Tech Stack:** CSS custom properties, Markdown.
 
-**Spec:** UI/UX audit findings, 2026-09-10 (this session). Measured on `client/src`: **965** `style={{`, **768** hardcoded hex colours, **87** `var(--token)` uses in JSX — roughly 9:1 against the token system. The top repeated hexes mix two palettes: IBM Carbon (`#525252`, `#e0e0e0`, `#0f62fe`) and Tailwind (`#7c3aed`, `#1e40af`, `#94a3b8`, `#dc2626`, `#16a34a`, `#fef3c7`), while `DESIGN.md` documents a third — Apple.
+**Spec:** UI/UX audit findings, 2026-09-10 (this session). Measured on `apps/client/src`: **965** `style={{`, **768** hardcoded hex colours, **87** `var(--token)` uses in JSX — roughly 9:1 against the token system. The top repeated hexes mix two palettes: IBM Carbon (`#525252`, `#e0e0e0`, `#0f62fe`) and Tailwind (`#7c3aed`, `#1e40af`, `#94a3b8`, `#dc2626`, `#16a34a`, `#fef3c7`), while `DESIGN.md` documents a third — Apple.
 
 ## Global Constraints
 
@@ -20,7 +20,7 @@
 - **Do not restyle components in this wave.** No `style={{` removals, no colour swaps in JSX. Those belong to the ratchet's gradual squeeze.
 - **`DESIGN.md` is history, not a lie to be deleted.** It records a real decision that was made and abandoned. Archive it with a note; do not rewrite it to pretend Carbon was always the plan.
 - **A token rename must be complete in one commit.** A half-renamed token is worse than a misnamed one.
-- Run: `cd client && node --test 'src/**/*.test.js'`, then `npx prettier --check` on touched files.
+- Run: `cd apps/client && node --test 'src/**/*.test.js'`, then `npx prettier --check` on touched files.
 
 ---
 
@@ -82,11 +82,11 @@ An earlier Apple-inspired specification was never built and is archived at
 
 Tokens are CSS custom properties, defined in three files loaded in this order:
 
-| File                                    | Holds                                         |
-| --------------------------------------- | --------------------------------------------- |
-| `client/src/styles/tokens.css`          | raw values — colours, spacing, font sizes     |
-| `client/src/styles/semantic-tokens.css` | component classes that reference those values |
-| `client/src/styles/table-pro.css`       | the data-table system                         |
+| File                                         | Holds                                         |
+| -------------------------------------------- | --------------------------------------------- |
+| `apps/client/src/styles/tokens.css`          | raw values — colours, spacing, font sizes     |
+| `apps/client/src/styles/semantic-tokens.css` | component classes that reference those values |
+| `apps/client/src/styles/table-pro.css`       | the data-table system                         |
 
 **Read a token before inventing a colour.** `tokens.css` records how many
 places already use each value, so the comments tell you which token is the
@@ -158,7 +158,7 @@ EOF
 
 **Files:**
 
-- Modify: `client/src/styles/tokens.css:31` and the consolidation note at line ~161
+- Modify: `apps/client/src/styles/tokens.css:31` and the consolidation note at line ~161
 - Modify: every file that references `--color-slate-900` (11 files at time of writing)
 
 **Interfaces:**
@@ -171,15 +171,15 @@ EOF
 - [x] **Step 1: Record the exact before-state**
 
 ```bash
-grep -rn "color-slate-900" --include="*.css" --include="*.jsx" --include="*.js" client/src | wc -l
-grep -rl "color-slate-900" --include="*.css" --include="*.jsx" --include="*.js" client/src
+grep -rn "color-slate-900" --include="*.css" --include="*.jsx" --include="*.js" apps/client/src | wc -l
+grep -rl "color-slate-900" --include="*.css" --include="*.jsx" --include="*.js" apps/client/src
 ```
 
 Write the count down. Step 4 asserts it reaches zero and the new name reaches the same count.
 
 - [x] **Step 2: Rename the definition**
 
-In `client/src/styles/tokens.css`, replace line 31:
+In `apps/client/src/styles/tokens.css`, replace line 31:
 
 ```css
 /* Brand navy. NOT Tailwind slate-900 (#0f172a) — this is a deliberate
@@ -198,7 +198,7 @@ Update the consolidation note further down the same file (around line 161) so it
 - [x] **Step 3: Rename every reference**
 
 ```bash
-grep -rl "color-slate-900" --include="*.css" --include="*.jsx" --include="*.js" client/src \
+grep -rl "color-slate-900" --include="*.css" --include="*.jsx" --include="*.js" apps/client/src \
   | xargs sed -i '' 's/--color-slate-900/--color-brand-navy/g'
 ```
 
@@ -207,18 +207,18 @@ On GNU sed drop the `''` after `-i`.
 - [x] **Step 4: Verify the rename is complete**
 
 ```bash
-grep -rn "color-slate-900" --include="*.css" --include="*.jsx" --include="*.js" client/src | wc -l   # expect 0
-grep -rn "color-brand-navy" --include="*.css" --include="*.jsx" --include="*.js" client/src | wc -l  # expect the Step 1 count
+grep -rn "color-slate-900" --include="*.css" --include="*.jsx" --include="*.js" apps/client/src | wc -l   # expect 0
+grep -rn "color-brand-navy" --include="*.css" --include="*.jsx" --include="*.js" apps/client/src | wc -l  # expect the Step 1 count
 ```
 
 A non-zero first number means a half-rename — worse than the original problem. Do not proceed until it is zero.
 
 - [x] **Step 5: Verify the app still builds and looks unchanged**
 
-Run: `cd client && npm run build`
+Run: `cd apps/client && npm run build`
 Expected: `✓ built`, exit 0.
 
-Run: `cd client && node --test 'src/**/*.test.js'`
+Run: `cd apps/client && node --test 'src/**/*.test.js'`
 Expected: PASS.
 
 This task changes no colour values, so the rendered UI must be pixel-identical. If anything looks different, a reference was missed or a fallback (`var(--color-slate-900, #something)`) was silently picking up its fallback — search for the old name once more.
@@ -226,7 +226,7 @@ This task changes no colour values, so the rendered UI must be pixel-identical. 
 - [x] **Step 6: Commit**
 
 ```bash
-git add client/src
+git add apps/client/src
 git commit -m "$(cat <<'EOF'
 refactor(apps/client): rename --color-slate-900 to --color-brand-navy
 

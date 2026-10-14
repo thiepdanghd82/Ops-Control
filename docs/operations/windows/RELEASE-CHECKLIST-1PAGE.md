@@ -35,7 +35,7 @@ Broadcast 4 hash này lên Zalo; operator tự `certutil -hashfile` / `shasum -a
 3. [ ] Cài bản **SERVER** mới: Mac kéo `.app` vào `/Applications` (Gatekeeper: chuột phải → Open);
        Win chạy `Ops Control SERVER Setup 1.5.12.exe`.
 4. [ ] Chạy **dịch vụ nền + di trú dữ liệu**:
-   - Mac: `scripts/headless/mac/ops-server-install-daemon.command` (xin sudo).
+   - Mac: `apps/scripts/headless/mac/ops-server-install-daemon.command` (xin sudo).
    - Win: `scripts\headless\win\ops-server-install-service.bat` (Run as Administrator).
    - Khi hỏi **migrate** → thoát app cũ rồi gõ **y**. Chờ `MIGRATE-OK` + `row-count verify OK`.
    - Nếu verify **FAIL**: daemon KHÔNG start, data cũ giữ nguyên → DỪNG, báo lại.

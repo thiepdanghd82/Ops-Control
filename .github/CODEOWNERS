@@ -21,19 +21,19 @@
 
 # 1. Costing calculation engine — single source of truth for every
 # quote dollar amount. Bug here = financial misquote.
-client/src/services/calcEngine.js       @thiepdanghd82
+apps/client/src/services/calcEngine.js       @thiepdanghd82
 
 # 2. Pricing snapshot — the 20-year data reproducibility contract.
 # Bug here = cannot reload historical quotes correctly.
-client/src/services/pricingSnapshot.js  @thiepdanghd82
+apps/client/src/services/pricingSnapshot.js  @thiepdanghd82
 
 # 3. Authentication service — TOTP, session, password rotation.
 # Bug here = lockout all 15 operators.
-server/services/authService.js          @thiepdanghd82
+apps/server/services/authService.js          @thiepdanghd82
 
 # 4. Permission service — 3-layer auth resolution (role + dept + group).
 # Bug here = silent escalation OR unintended access denial.
-server/services/permissionService.js    @thiepdanghd82
+apps/server/services/permissionService.js    @thiepdanghd82
 
 # 5. Deploy scripts — production cutover, snapshot rollback, env merge.
 # Bug here = unrecoverable production state.
@@ -50,7 +50,7 @@ security-allowlist.json                 @thiepdanghd82
 
 # ESLint config drift can silently allow bad code through
 eslint.config.js                        @thiepdanghd82
-client/eslint.config.js                 @thiepdanghd82
+apps/client/eslint.config.js                 @thiepdanghd82
 
 # Commitlint config — change requires consensus on convention
 commitlint.config.js                    @thiepdanghd82

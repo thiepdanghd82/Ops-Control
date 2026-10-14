@@ -76,11 +76,11 @@ thành `…/data.migrated-backup-<ngày>` để app embedded không thể chạy
 
 ## 🍎 macOS
 
-Thư mục script: `scripts/headless/mac/`
+Thư mục script: `apps/scripts/headless/mac/`
 
 ### 1) Cài đặt · Install
 
-1. Mở Finder → vào `scripts/headless/mac/`.
+1. Mở Finder → vào `apps/scripts/headless/mac/`.
 2. **Double-click** `ops-server-install-daemon.command`.
    - Lần đầu macOS có thể chặn: **chuột phải → Open → Open**.
 3. Cửa sổ Terminal hiện ra. Nó **xin mật khẩu Mac của bạn** (sudo) — gõ mật khẩu
@@ -127,14 +127,14 @@ Cách nào cũng được:
 
 ## 🪟 Windows
 
-Thư mục script: `scripts/headless/win/`
+Thư mục script: `apps/scripts/headless/win/`
 
 > Cơ chế: **Task Scheduler** (có sẵn trong Windows) — chạy lúc boot bằng tài khoản
 > SYSTEM, trước login, tự restart, chạy ẩn. Không cần cài thêm phần mềm.
 
 ### 1) Cài đặt · Install
 
-1. Mở thư mục `scripts/headless/win/`.
+1. Mở thư mục `apps/scripts/headless/win/`.
 2. **Chuột phải** `ops-server-install-service.bat` → **Run as administrator**.
    (Nếu quên, script tự bật cửa sổ UAC xin quyền — bấm **Yes**.)
 3. Cửa sổ đen hiện các bước [1/7]…[7/7]. Nếu phát hiện app embedded cũ, script

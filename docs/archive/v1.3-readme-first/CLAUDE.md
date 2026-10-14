@@ -21,7 +21,7 @@ tree is reorganised around bounded contexts (domains) and a platform layer. See
 file-by-file mapping.
 
 **Auto-mode prompt for AI agents:** when the user asks for a change, locate the affected
-**domain** first, then decide whether the change belongs in `client/`, `server/`, `shared/`, or
+**domain** first, then decide whether the change belongs in `apps/client/`, `apps/server/`, `shared/`, or
 `tests/` of that domain. If you find yourself wanting to add code to two domains at once, lift
 the shared piece to `platform/`.
 

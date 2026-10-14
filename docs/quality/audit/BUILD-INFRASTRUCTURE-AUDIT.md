@@ -3,7 +3,7 @@
 **Audit date:** 2026-05-04
 **Branch:** `main` (post v1.5.1)
 **Scope:** Read-only inspection. Goal: assess readiness for distributing Ops Control to 50 clients across Windows + macOS with central server (Win or Mac) running as a service/daemon, with auto-update.
-**Method:** Inspected `package.json` × 4 + `desktop/build` config + `auto-update.js` + `deploy.{sh,ps1,bat}` + `.github/workflows/ci.yml` + `desktop/dist-electron/` artifacts. No code changes, no installs, no builds.
+**Method:** Inspected `package.json` × 4 + `apps/desktop/build` config + `auto-update.js` + `deploy.{sh,ps1,bat}` + `.github/workflows/ci.yml` + `apps/desktop/dist-electron/` artifacts. No code changes, no installs, no builds.
 
 ---
 
@@ -31,16 +31,16 @@ The gaps are **operational** (CI doesn't build Windows installers; no automated 
 
 ## 1. Workspace structure
 
-| Item              | Value                                                                                                       |
-| ----------------- | ----------------------------------------------------------------------------------------------------------- |
-| Workspace type    | **Standalone** (no npm workspaces, no lerna, no monorepo tooling)                                           |
-| Package count     | 4 source `package.json` (`./`, `client/`, `desktop/`, `apps/kiosk/`) + 1 auto-generated inside built `.app` |
-| Root version      | `1.5.0` (will become `1.5.1` once tag-driven)                                                               |
-| Client version    | `1.3.0` (drift — F0-2 in audit)                                                                             |
-| Desktop version   | `1.3.0` (drift)                                                                                             |
-| Kiosk version     | `0.1.0`                                                                                                     |
-| Module type       | `"type": "module"` at root (ESM)                                                                            |
-| Workspace tooling | None — each subfolder has its own `npm install` lifecycle                                                   |
+| Item              | Value                                                                                                                 |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Workspace type    | **Standalone** (no npm workspaces, no lerna, no monorepo tooling)                                                     |
+| Package count     | 4 source `package.json` (`./`, `apps/client/`, `apps/desktop/`, `apps/kiosk/`) + 1 auto-generated inside built `.app` |
+| Root version      | `1.5.0` (will become `1.5.1` once tag-driven)                                                                         |
+| Client version    | `1.3.0` (drift — F0-2 in audit)                                                                                       |
+| Desktop version   | `1.3.0` (drift)                                                                                                       |
+| Kiosk version     | `0.1.0`                                                                                                               |
+| Module type       | `"type": "module"` at root (ESM)                                                                                      |
+| Workspace tooling | None — each subfolder has its own `npm install` lifecycle                                                             |
 
 **Implication for distribution:** the lack of npm workspaces means each install/build path is independent. CI already handles this via `npm ci` per subfolder (root + client + desktop). For 50-client distribution, the 4-package layout works fine but version sync is manual (release-please candidate from F0-2).
 
@@ -50,8 +50,8 @@ The gaps are **operational** (CI doesn't build Windows installers; no automated 
 
 ### Current method
 
-- **Plain `node server/index.js`** — no `pkg`/`nexe`/`caxa` standalone bundling. Requires Node 20.x installed on the host.
-- **Embedded path:** server code is BUNDLED inside the Electron `.app` via `desktop/package.json` `build.extraResources` block:
+- **Plain `node apps/server/index.js`** — no `pkg`/`nexe`/`caxa` standalone bundling. Requires Node 20.x installed on the host.
+- **Embedded path:** server code is BUNDLED inside the Electron `.app` via `apps/desktop/package.json` `build.extraResources` block:
   ```
   ../server  → app/server         (excludes *.test.js, legacy/)
   ../scripts → app/scripts        (only *.js, no test files)
@@ -59,13 +59,13 @@ The gaps are **operational** (CI doesn't build Windows installers; no automated 
   ../package.json → app/package.json
   ```
   This means `OpsControl SERVER.app` (built via `build:server:mac` / `build:server:win`) physically ships the server code inside the bundle. No separate Node install on the operator box required.
-- **Standalone path** (current 10.102.3.61 prod): operator runs `node server/index.js` directly with system Node.
+- **Standalone path** (current 10.102.3.61 prod): operator runs `node apps/server/index.js` directly with system Node.
 
 ### Service install
 
 | Platform | Method                                                                                             | Status                                                                                       |
 | -------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Linux    | systemd unit (deploy.sh ExecStart=/usr/bin/node server/index.js, Restart=on-failure)               | ✅ Automated end-to-end in deploy.sh                                                         |
+| Linux    | systemd unit (deploy.sh ExecStart=/usr/bin/node apps/server/index.js, Restart=on-failure)          | ✅ Automated end-to-end in deploy.sh                                                         |
 | Windows  | NSSM service (deploy.ps1 prints install commands; operator runs `nssm install`/`set`/`start` once) | 🟡 Manual first-time install; subsequent restarts automated via `nssm restart` in deploy.ps1 |
 | macOS    | None — no launchd plist anywhere                                                                   | 🚫 Missing entirely                                                                          |
 
@@ -121,10 +121,10 @@ Already documented in §2. Means `OpsControl SERVER.app` is a single-DMG/EXE del
 
 ### Renderer + main wiring
 
-- `desktop/auto-update.js` — wraps `electron-updater` with lazy-init pattern (electron-updater@6 initialises eagerly on access, so it's gated behind `getAutoUpdater()`)
+- `apps/desktop/auto-update.js` — wraps `electron-updater` with lazy-init pattern (electron-updater@6 initialises eagerly on access, so it's gated behind `getAutoUpdater()`)
 - `_autoUpdater.autoDownload = true; _autoUpdater.autoInstallOnAppQuit = true` — auto-flow ready
 - Event handlers wired: `checking-for-update`, `update-available`, `update-not-available`, `error`, `download-progress`
-- IPC bridge in `desktop/preload.js`: `ops:updater.check` exposed to renderer
+- IPC bridge in `apps/desktop/preload.js`: `ops:updater.check` exposed to renderer
 
 ### Publish provider (already configured)
 
@@ -140,7 +140,7 @@ Already documented in §2. Means `OpsControl SERVER.app` is a single-DMG/EXE del
 
 ### Update content artifacts (already-generated samples)
 
-`desktop/dist-electron/` contains:
+`apps/desktop/dist-electron/` contains:
 
 - `latest.yml` (Windows update manifest)
 - `latest-mac.yml` (macOS update manifest)
@@ -167,7 +167,7 @@ Proves the generation half of the pipeline works end-to-end. **Missing:** automa
 | `lint`                 | ubuntu-latest                      | eslint + format check                                                         |
 | `commitlint`           | ubuntu-latest                      | Re-validates Conventional Commits on PR                                       |
 | `router-test-coverage` | ubuntu-latest                      | ADR-0013 — every domain router has sibling test                               |
-| `build`                | ubuntu-latest                      | Client build + perf-budget; uploads `client/dist/` artifact                   |
+| `build`                | ubuntu-latest                      | Client build + perf-budget; uploads `apps/client/dist/` artifact              |
 | `build-installers`     | **macos-14 only**, **on tag only** | `npx electron-builder --mac --arm64`; verifies bundle marker; uploads `*.dmg` |
 
 ### Critical gaps for cross-platform distribution
@@ -181,13 +181,13 @@ Proves the generation half of the pipeline works end-to-end. **Missing:** automa
 
 ## 6. apps/ folder
 
-| Folder               | Purpose                                                             | Status                                                 |
-| -------------------- | ------------------------------------------------------------------- | ------------------------------------------------------ |
-| `apps/kiosk/`        | MES-2 Kiosk PWA workspace (Vite + React 19) — separate from desktop | ✅ Operational, version 0.1.0                          |
-| (no `apps/desktop/`) | n/a                                                                 | The main desktop is at `desktop/`, not `apps/desktop/` |
-| (no `apps/server/`)  | n/a                                                                 | Server lives at `server/`, not `apps/server/`          |
+| Folder               | Purpose                                                             | Status                                                      |
+| -------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `apps/kiosk/`        | MES-2 Kiosk PWA workspace (Vite + React 19) — separate from desktop | ✅ Operational, version 0.1.0                               |
+| (no `apps/desktop/`) | n/a                                                                 | The main desktop is at `apps/desktop/`, not `apps/desktop/` |
+| (no `apps/server/`)  | n/a                                                                 | Server lives at `apps/server/`, not `apps/server/`          |
 
-The `apps/` folder structure proposed in `docs/archive/v1.3-readme-first/CLAUDE.md` (the v1.3 reorg map) NEVER SHIPPED. The repo retained the v1.2 layout: `client/` + `server/` + `desktop/` + `apps/kiosk/` (added in MES-2). Per Step B retrospective F-FU-4, the docs/archive/v1.3-readme-first/ docs describe an aspirational reorg that was never executed.
+The `apps/` folder structure proposed in `docs/archive/v1.3-readme-first/CLAUDE.md` (the v1.3 reorg map) NEVER SHIPPED. The repo retained the v1.2 layout: `apps/client/` + `apps/server/` + `apps/desktop/` + `apps/kiosk/` (added in MES-2). Per Step B retrospective F-FU-4, the docs/archive/v1.3-readme-first/ docs describe an aspirational reorg that was never executed.
 
 ---
 
@@ -195,18 +195,18 @@ The `apps/` folder structure proposed in `docs/archive/v1.3-readme-first/CLAUDE.
 
 ### Already done (✅ — no work needed)
 
-| Capability                                                                               | Where it lives                                |
-| ---------------------------------------------------------------------------------------- | --------------------------------------------- |
-| Electron 41 + electron-builder 26 + electron-updater 6                                   | desktop/package.json                          |
-| Hybrid CLIENT/SERVER product builds (single codebase)                                    | `extraMetadata.opsMode` + 4 dedicated scripts |
-| Auto-update with generic provider pointed at 10.102.3.61                                 | desktop/auto-update.js + build.publish        |
-| ASAR + native-module unpacking (better-sqlite3, serialport, node-hid)                    | desktop/package.json `asarUnpack`             |
-| Server bundled INSIDE Electron app (no separate Node install)                            | desktop/package.json `extraResources`         |
-| Linux systemd service install                                                            | deploy.sh                                     |
-| Windows NSSM service restart automation                                                  | deploy.ps1                                    |
-| Backup + rollback runbook (Sprint 1.7 snapshot pattern)                                  | CLAUDE.md "Recovery playbook"                 |
-| CI: vulnerability scan + lint + commitlint + tests + perf-budget + macOS arm64 DMG build | .github/workflows/ci.yml                      |
-| Bundle marker verification (anti-tamper)                                                 | scripts/verify-bundle-marker.sh + CI step     |
+| Capability                                                                               | Where it lives                                 |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Electron 41 + electron-builder 26 + electron-updater 6                                   | apps/desktop/package.json                      |
+| Hybrid CLIENT/SERVER product builds (single codebase)                                    | `extraMetadata.opsMode` + 4 dedicated scripts  |
+| Auto-update with generic provider pointed at 10.102.3.61                                 | apps/desktop/auto-update.js + build.publish    |
+| ASAR + native-module unpacking (better-sqlite3, serialport, node-hid)                    | apps/desktop/package.json `asarUnpack`         |
+| Server bundled INSIDE Electron app (no separate Node install)                            | apps/desktop/package.json `extraResources`     |
+| Linux systemd service install                                                            | deploy.sh                                      |
+| Windows NSSM service restart automation                                                  | deploy.ps1                                     |
+| Backup + rollback runbook (Sprint 1.7 snapshot pattern)                                  | CLAUDE.md "Recovery playbook"                  |
+| CI: vulnerability scan + lint + commitlint + tests + perf-budget + macOS arm64 DMG build | .github/workflows/ci.yml                       |
+| Bundle marker verification (anti-tamper)                                                 | apps/scripts/verify-bundle-marker.sh + CI step |
 
 ### To add (🚫 missing — required for the goal)
 
@@ -276,7 +276,7 @@ The `apps/` folder structure proposed in `docs/archive/v1.3-readme-first/CLAUDE.
 - v1.5.1 release (most recent baseline): `git show v1.5.1`
 - Sprint 1.7 deploy snapshot pattern: `CLAUDE.md` § "Recovery playbook" → "Bad deploy"
 - Native-module + paths-with-spaces caveat: `CLAUDE.md` lesson 25
-- v1.3 GA build evidence: `desktop/dist-electron/mac-arm64/` (already-built sample)
+- v1.3 GA build evidence: `apps/desktop/dist-electron/mac-arm64/` (already-built sample)
 - Audit findings F0-2 (version drift), F0-3 (better-sqlite3 drift), F1-16 (electron-store), F1-17 (ESLint): `docs/quality/audit/FINAL-REPORT.md` §2 Bug Inventory
 - Step B retrospective on infrastructure assumptions: `docs/quality/audit/STEP-B-RETROSPECTIVE.md` §4.4 (Phase 4 .sh-biased) + F-FU-3 (deploy script triple drift)
 
@@ -316,17 +316,17 @@ Defer rationale: 50-user single-server deploy doesn't require multi-profile UX (
 
 ### Hidden findings extracted during Phase A v2
 
-| ID     | Phase         | Finding                                                                                                                                                                                                                |
-| ------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A.0-F1 | A.0 audit     | `desktop/setupWizard.js` already exists with 4-step structure → recast A.1 as EXTEND not CREATE (scope reduction)                                                                                                      |
-| A.0-F2 | A.0 audit     | `desktop/smart-client.js` (223 LOC) + `client/src/modules/cost/tabs/ModeSection.jsx` (300 LOC) already mature → A.3 trims to wiring + import flow (scope reduction)                                                    |
-| A.0-F3 | A.0 audit     | Caddy reverse proxy script exists but was NEVER deployed on prod 10.102.3.61 → pivot from Caddy to Express static for /updates/                                                                                        |
-| A.1-F4 | A.1 implement | better-sqlite3 version drift — root `^12.9` vs desktop `^11.3` → logged as backlog, not blocking                                                                                                                       |
-| A.4-F5 | A.4 smoke     | express.static `dotfiles: 'deny'` calls `next()` instead of terminating → SPA catch-all swallows the request and returns index.html with 200 → required defensive 404 guard                                            |
-| A.4-F6 | A.4 smoke     | `curl` client-side normalizes `..` in URLs before sending → traversal probe needs `--path-as-is` to actually reach the server                                                                                          |
-| A.4-F7 | A.4 design    | Default compression filter does NOT skip `.exe` / `.dmg` / `.nupkg` (they arrive as `application/octet-stream`) → explicit path-prefix skip needed in filter callback                                                  |
-| A.6-F8 | A.6 verify    | `desktop/build-manifest.test.js` only checked TOP-LEVEL .js → utils/netProbe.js (sub-directory) regression went undetected at PR-time → fix glob to `utils/**/*` + new test assertion enumerating subdir runtime files |
-| FU-7   | A.4 commit    | Husky lint-staged silently re-stages all working-tree files into the index after commit → required `git reset HEAD` between commits when WIP held in working tree (saved to feedback memory)                           |
+| ID     | Phase         | Finding                                                                                                                                                                                                                     |
+| ------ | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A.0-F1 | A.0 audit     | `apps/desktop/setupWizard.js` already exists with 4-step structure → recast A.1 as EXTEND not CREATE (scope reduction)                                                                                                      |
+| A.0-F2 | A.0 audit     | `apps/desktop/smart-client.js` (223 LOC) + `apps/client/src/modules/cost/tabs/ModeSection.jsx` (300 LOC) already mature → A.3 trims to wiring + import flow (scope reduction)                                               |
+| A.0-F3 | A.0 audit     | Caddy reverse proxy script exists but was NEVER deployed on prod 10.102.3.61 → pivot from Caddy to Express static for /updates/                                                                                             |
+| A.1-F4 | A.1 implement | better-sqlite3 version drift — root `^12.9` vs desktop `^11.3` → logged as backlog, not blocking                                                                                                                            |
+| A.4-F5 | A.4 smoke     | express.static `dotfiles: 'deny'` calls `next()` instead of terminating → SPA catch-all swallows the request and returns index.html with 200 → required defensive 404 guard                                                 |
+| A.4-F6 | A.4 smoke     | `curl` client-side normalizes `..` in URLs before sending → traversal probe needs `--path-as-is` to actually reach the server                                                                                               |
+| A.4-F7 | A.4 design    | Default compression filter does NOT skip `.exe` / `.dmg` / `.nupkg` (they arrive as `application/octet-stream`) → explicit path-prefix skip needed in filter callback                                                       |
+| A.6-F8 | A.6 verify    | `apps/desktop/build-manifest.test.js` only checked TOP-LEVEL .js → utils/netProbe.js (sub-directory) regression went undetected at PR-time → fix glob to `utils/**/*` + new test assertion enumerating subdir runtime files |
+| FU-7   | A.4 commit    | Husky lint-staged silently re-stages all working-tree files into the index after commit → required `git reset HEAD` between commits when WIP held in working tree (saved to feedback memory)                                |
 
 ### Recovery anchors preserved
 

@@ -17,7 +17,7 @@ Docs-only. 3 files changed, 168 lines added, 0 deleted.
 ## Pre-merge verification (already done by agent)
 
 - ✅ License JSON parses (`node -e "JSON.parse(...)"`)
-- ✅ Schema matches `scripts/license/generate-license.mjs` output format
+- ✅ Schema matches `apps/scripts/license/generate-license.mjs` output format
 - ✅ Ed25519 signature field present (64-byte base64, 88 chars)
 - ✅ All existing license tests still pass on main (unchanged baseline)
 - ✅ PR mergeable, 0 conflicts
@@ -51,7 +51,7 @@ Docs-only. 3 files changed, 168 lines added, 0 deleted.
 
 4. **Verify mpham can still log in** from his Win box (sanity — this license was already deployed live on 2026-05-29 during Win operator install support session, so login should already be working). No action needed if mpham is operational.
 
-5. **For future operators**: follow the workflow in [README.md](docs/operations/licenses/README.md#mint-a-license-for-a-new-operator) — single command via `scripts/license/generate-license.mjs` + append row to the registry table.
+5. **For future operators**: follow the workflow in [README.md](docs/operations/licenses/README.md#mint-a-license-for-a-new-operator) — single command via `apps/scripts/license/generate-license.mjs` + append row to the registry table.
 
 ## Rollback (if needed)
 
@@ -75,10 +75,10 @@ git branch -D chore/operator-licenses-registry
 
 ## Refs
 
-- License pipeline: [`scripts/license/generate-license.mjs`](../../../scripts/license/generate-license.mjs)
-- Dev keypair: [`scripts/license/dev-private.pem`](../../../scripts/license/dev-private.pem) + [`scripts/license/dev-public.pem`](../../../scripts/license/dev-public.pem)
-- Runtime verification: [`desktop/license.js`](../../../desktop/license.js) + [`desktop/license.test.js`](../../../desktop/license.test.js)
-- Server-side: [`server/services/licenseService.js`](../../../server/services/licenseService.js) + tests
+- License pipeline: [`apps/scripts/license/generate-license.mjs`](../../../apps/scripts/license/generate-license.mjs)
+- Dev keypair: [`apps/scripts/license/dev-private.pem`](../../../scripts/license/dev-private.pem) + [`apps/scripts/license/dev-public.pem`](../../../scripts/license/dev-public.pem)
+- Runtime verification: [`apps/desktop/license.js`](../../../apps/desktop/license.js) + [`apps/desktop/license.test.js`](../../../apps/desktop/license.test.js)
+- Server-side: [`apps/server/services/licenseService.js`](../../../apps/server/services/licenseService.js) + tests
 - Companion ops runbook: [`docs/operations/version-banner.md`](../version-banner.md) (P0 banner pattern reference)
 - Win EXE 1.5.12 build artifacts (D-7 distribution): [`4. CLAUDE OUTPUT/HANDOFF-LEAD-v1.5.12.md`](../../../4.%20CLAUDE%20OUTPUT/HANDOFF-LEAD-v1.5.12.md)
 

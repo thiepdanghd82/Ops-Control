@@ -186,7 +186,7 @@ Operators open each cleared quote → badge = 🟡 Live rates → save → re-fr
 
 ### 6.3 `/metrics` endpoint exposing snapshot counters to public
 
-The Prometheus endpoint is part of the existing `server/index.js` exposure (Sprint 13). If your prod box exposes :3000 to internet, that's a separate access-control issue — `OPS_ALLOW_SAME_ORIGIN` env + nginx ACL govern this. Snapshot counters do NOT contain customer data (only counts + site labels).
+The Prometheus endpoint is part of the existing `apps/server/index.js` exposure (Sprint 13). If your prod box exposes :3000 to internet, that's a separate access-control issue — `OPS_ALLOW_SAME_ORIGIN` env + nginx ACL govern this. Snapshot counters do NOT contain customer data (only counts + site labels).
 
 `/metrics` là endpoint Prometheus từ Sprint 13. Nếu prod box mở :3000 ra internet → là vấn đề access-control riêng (`OPS_ALLOW_SAME_ORIGIN` + nginx ACL). Snapshot counter KHÔNG chứa data customer (chỉ count + label site).
 
@@ -204,8 +204,8 @@ The Prometheus endpoint is part of the existing `server/index.js` exposure (Spri
 
 - Operator guide · Hướng dẫn người dùng: [PRICING_SNAPSHOT_OPERATOR_GUIDE.md](PRICING_SNAPSHOT_OPERATOR_GUIDE.md)
 - UAT script: [../uat/pricing-snapshot-uat.md](../../quality/uat/pricing-snapshot-uat.md)
-- Benchmark: `scripts/bench/pricingSnapshot.bench.js` (run `node scripts/bench/pricingSnapshot.bench.js`)
-- Metrics helper: `server/services/pricingSnapshotMetrics.js`
+- Benchmark: `apps/scripts/bench/pricingSnapshot.bench.js` (run `node apps/scripts/bench/pricingSnapshot.bench.js`)
+- Metrics helper: `apps/server/services/pricingSnapshotMetrics.js`
 - Sprint history entries: search CLAUDE.md for `S-SNAPSHOT-PHASE-`
 
 ---

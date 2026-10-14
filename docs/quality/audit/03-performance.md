@@ -34,7 +34,7 @@
 **Note**: Vite's prod server in `vite preview` ships uncompressed bytes. Real prod (Express + `compression` middleware would gzip) cuts these ~70 % → ~110 KB JS + 20 KB CSS over the wire. Verify Express has `compression()` enabled before deploy:
 
 ```
-$ grep -n "compression" server/index.js
+$ grep -n "compression" apps/server/index.js
 (empty — Express compression middleware is NOT applied)
 ```
 
@@ -71,7 +71,7 @@ $ grep -n "compression" server/index.js
 |  81 KB | `DesignTools-BelrEjvD.js`   | Design Tools                                      |
 |  78 KB | `ComplexCalc-D37JjZRN.js`   | Pricing (Cpx)                                     |
 
-**Total `client/dist/assets/`**: **3.83 MB** across 116 files. With pdfjs + StandardCalc fully loaded the operator has fetched ~1.5 MB; rest pulled lazily as tabs are visited. Pattern from CLAUDE.md "Phase 9I — every tab is a lazy chunk" verified working.
+**Total `apps/client/dist/assets/`**: **3.83 MB** across 116 files. With pdfjs + StandardCalc fully loaded the operator has fetched ~1.5 MB; rest pulled lazily as tabs are visited. Pattern from CLAUDE.md "Phase 9I — every tab is a lazy chunk" verified working.
 
 ### 3.1.4 Cache headers
 
@@ -168,7 +168,7 @@ parallel  wallclock(ms)  errors  p50    p95    p99    max
 
 ### 3.2.4 BOM Explosion algorithmic benchmark — ⚠ **🟠 MAJOR**
 
-The current implementation in [`BOMExplosion.jsx:107-109`](client/src/modules/planning/tabs/BOMExplosion.jsx#L107) does:
+The current implementation in [`BOMExplosion.jsx:107-109`](apps/client/src/modules/planning/tabs/BOMExplosion.jsx#L107) does:
 
 ```js
 const components = bomData.filter((b) => String(getField(b, 'parentPartNo')) === targetPn);
@@ -277,7 +277,7 @@ EOF
 
 ### Top risks
 
-1. **F3-1 — No HTTP compression on `/assets/*`.** 419 KB JS + 102 KB CSS go over the wire raw. With `compression()` middleware → ~150 KB. **5-line fix in [`server/index.js`](server/index.js)** (Phase 1 inspection confirmed `helmet`/`compression` are not used). Target: get this in before deploy.
+1. **F3-1 — No HTTP compression on `/assets/*`.** 419 KB JS + 102 KB CSS go over the wire raw. With `compression()` middleware → ~150 KB. **5-line fix in [`apps/server/index.js`](apps/server/index.js)** (Phase 1 inspection confirmed `helmet`/`compression` are not used). Target: get this in before deploy.
 2. **F3-8 — BOM Explosion O(N²).** Acceptable at current production scale (<1 000 active orders); UI freezes above 5 000 orders. Trivial Map-index fix. Sprint+1.
 
 ### What looks **mature**
@@ -299,7 +299,7 @@ Phase 3 complete. **No 🔴 BLOCKER**. 2× 🟠 MAJOR + 3× 🟡 MINOR + 5× �
 
 **Top action items before deploy**:
 
-1. **F3-1**: Add `app.use(compression())` to `server/index.js`. 5 minutes.
+1. **F3-1**: Add `app.use(compression())` to `apps/server/index.js`. 5 minutes.
 2. **F3-3 / F3-4**: Tighten login-page a11y (3 unlabelled controls + heading order). 15 minutes.
 3. **F3-8**: BOM Explosion Map-index. 6 lines. Can ship in this branch or Sprint+1; not blocking.
 

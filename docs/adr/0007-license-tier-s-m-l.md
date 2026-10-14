@@ -51,12 +51,12 @@ script).
 
 ### Enforcement points
 
-| Layer             | Code                                                            | Behaviour                                                                 |
-| ----------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Server middleware | `requireSeatAvailable()` in `server/services/licenseService.js` | `POST /api/auth/users` returns 402 `LICENSE_LIMIT_EXCEEDED` when at cap   |
-| Server diagnostic | `GET /api/license/status` (admin/sys)                           | Reads tier + counts, exposes `seats_remaining` for admin UI               |
-| Client UX         | (deferred to v1.3.1)                                            | Disable the "Add user" button when status returns `seats_remaining === 0` |
-| Bypass prevention | Server-only enforcement                                         | Client UI changes don't allow more users; the curl path also fails        |
+| Layer             | Code                                                                 | Behaviour                                                                 |
+| ----------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Server middleware | `requireSeatAvailable()` in `apps/server/services/licenseService.js` | `POST /api/auth/users` returns 402 `LICENSE_LIMIT_EXCEEDED` when at cap   |
+| Server diagnostic | `GET /api/license/status` (admin/sys)                                | Reads tier + counts, exposes `seats_remaining` for admin UI               |
+| Client UX         | (deferred to v1.3.1)                                                 | Disable the "Add user" button when status returns `seats_remaining === 0` |
+| Bypass prevention | Server-only enforcement                                              | Client UI changes don't allow more users; the curl path also fails        |
 
 ### Why these specific numbers
 
@@ -89,7 +89,7 @@ explicitly supersede this section.
 ### Positive
 
 - Single source of truth: `TIER_LIMITS` constant in
-  `server/services/licenseService.js` and `desktop/license.js` —
+  `apps/server/services/licenseService.js` and `apps/desktop/license.js` —
   changing a number changes both server enforcement and client UI.
 - Tier upgrade is a license re-issue, not a rebuild — operator
   installs the new license JSON, server caches invalidate on restart.
@@ -150,7 +150,7 @@ license re-issue to be a JSON file swap, not a reinstall.
 
 ## Compliance + audit
 
-- Every license issuance logged in `scripts/license/generate-license.mjs`
+- Every license issuance logged in `apps/scripts/license/generate-license.mjs`
   output (CCL HQ side; not visible to customer).
 - Every license verification logged via `audit('LICENSE_LOAD', ...)`
   on server boot (sys-only audit log).
@@ -160,10 +160,10 @@ license re-issue to be a JSON file swap, not a reinstall.
 ## References
 
 - `IMPROVEMENT_BRIEF.md` §4.5 — original customer requirement
-- `server/services/licenseService.js` — `getLicense`, `requireSeatAvailable`, `TIERS`
-- `desktop/license.js` — client-side `verifyLicense` + `TIER_LIMITS`
-- `scripts/license/generate-license.mjs` — CCL HQ signing CLI
-- `scripts/license/generate-keypair.mjs` — Ed25519 keypair generator
+- `apps/server/services/licenseService.js` — `getLicense`, `requireSeatAvailable`, `TIERS`
+- `apps/desktop/license.js` — client-side `verifyLicense` + `TIER_LIMITS`
+- `apps/scripts/license/generate-license.mjs` — CCL HQ signing CLI
+- `apps/scripts/license/generate-keypair.mjs` — Ed25519 keypair generator
 - `docs/SECURITY.md §3` — license verification chain
 - `docs/architecture/ARCHITECTURE.md §5` — license flow diagram
 - ADR-0003 — Ed25519 license signing (asymmetric replaces HMAC)

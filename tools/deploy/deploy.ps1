@@ -56,7 +56,7 @@ Write-Host ''
 # ── 1. Build client (unless skipped) ───────────────────────────
 if (-not $SkipBuild) {
   Write-Step '🔨  Building client…'
-  Push-Location .\client
+  Push-Location .\apps\client
   try { & npx vite build }
   finally { Pop-Location }
   Write-Ok '✓  Client built'
@@ -68,7 +68,7 @@ if (-not $Remote) {
   Write-Step '📂  Local deployment only.'
   Write-Ok  "✓  App ready at: http://localhost:$Port"
   Write-Host ''
-  Write-Host '  Start with: node server\index.js'
+  Write-Host '  Start with: node apps\server\index.js'
   Write-Host "  Or:         npm start"
   return
 }
@@ -181,12 +181,12 @@ Write-Host ''
 # but universally available with OpenSSH. For large deltas,
 # install rsync on the server (MSYS2 or Cygwin) and swap in.
 Write-Step '📤  Uploading server + build artifacts…'
-scp -r server              "${Remote}:$RemoteDir/"
-scp -r client\dist         "${Remote}:$RemoteDir/client/"
+scp -r apps\server        "${Remote}:$RemoteDir/"
+scp -r apps\client\dist    "${Remote}:$RemoteDir/client/"
 scp    package.json        "${Remote}:$RemoteDir/"
 scp    package-lock.json   "${Remote}:$RemoteDir/"
-if (Test-Path 'scripts') {
-  scp -r scripts           "${Remote}:$RemoteDir/"
+if (Test-Path 'apps\scripts') {
+  scp -r apps\scripts      "${Remote}:$RemoteDir/"
 }
 
 # ── 6. Write .env merging captured remote values + new release keys ──
@@ -230,7 +230,7 @@ ssh $Remote "cd /d `"$RemoteDir`" && npm install --production"
 # the service. A failed preflight aborts the deploy with a clear error
 # instead of leaving NSSM in restart-loop with the new bundle.
 Write-Step '🔎  Running preflight against staged .env…'
-ssh $Remote "cd /d `"$RemoteDir`" && set NODE_ENV=production && npm run preflight"
+ssh $Remote "cd /d `"$RemoteDir`" && set NODE_ENV=production && node scripts\preflight-env.js"
 if ($LASTEXITCODE -ne 0) {
   Write-Warn '✘  Preflight failed — refusing to restart the service.'
   Write-Warn '   The new bundle is uploaded but NOT yet activated. Fix .env'

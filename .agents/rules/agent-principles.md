@@ -75,7 +75,7 @@ header).
 
 - Definition of Done for any code change includes the existing
   **"After every UI/client-code change — MANDATORY checklist"** in `CLAUDE.md` (tests
-  green -> rebuild -> restart node if `server/**` was touched -> bundle self-check ->
+  green -> rebuild -> restart node if `apps/server/**` was touched -> bundle self-check ->
   stale-chunk 404 guard) **and** a cited commit SHA per Lesson 0.
 
 ---

@@ -282,7 +282,7 @@ BACKUP ENGINEER:  +84988749869 (Trần Thị Hương)
 - `docs/operations/cutover/BACKUP_ENGINEER_BRIEF_2026-06-30.md` — Hương scope + contacts
 - `docs/operations/cutover/STOP_TRIGGERS_2026-06-30.md` — 11 halt criteria
 - `docs/operations/cutover/ROLLBACK-RUNBOOK-20260522.md` — incident playbook (engineer-facing)
-- `client/public/help/OpsControl_UserGuide.docx` — full user guide (in-app: Help tab)
+- `apps/client/public/help/OpsControl_UserGuide.docx` — full user guide (in-app: Help tab)
 
 ---
 

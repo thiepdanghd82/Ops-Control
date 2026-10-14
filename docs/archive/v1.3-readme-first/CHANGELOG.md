@@ -309,7 +309,7 @@ typed and validated.
 #### Plumbing
 
 - `shared/i18n.js` — 35 new `mes.machine.*` keys (en + vi).
-- `client/index.js` + `server/index.js` — barrel re-exports added.
+- `client/index.js` + `apps/server/index.js` — barrel re-exports added.
 - `Sidebar.jsx` + `App.jsx` — `/mes/machine` registered under MES (user-role).
 
 #### Test + bundle results
@@ -745,7 +745,7 @@ into the hash router and Sidebar.
 
 #### domains/basis — Audit Log viewer + Settings
 
-- **`server/routes/basisRouter.js`** — added `GET /api/basis/audit` (sys-only)
+- **`apps/server/routes/basisRouter.js`** — added `GET /api/basis/audit` (sys-only)
   wrapping `@platform/audit/query()`. Filters: action, actor, from, to, limit
   (1–10000, default 200). Returns `{ rows, total }`.
 - **`client/audit/AuditLogViewer.jsx`** — sys-only filterable table view of the
@@ -800,7 +800,7 @@ review and operator beta.
 
 - `appId: com.ccldesign.opscontrol` · `asar: true` · `directories.output: dist-electron`.
 - `extraMetadata.opsMode` defaulted to `'client'`; build script overrides per variant.
-- `files` glob: bundles client/dist + server + platform + domains + node_modules,
+- `files` glob: bundles apps/client/dist + server + platform + domains + node_modules,
   excludes test files, `.bak`, `.gitkeep`, `.DS_Store`, `.npm-cache`.
 - `mac.target: dmg arm64` with `artifactName ${productName}-${version}-${arch}.dmg`.
   No code-signing in alpha (`hardenedRuntime: false`).
@@ -904,11 +904,11 @@ multi-site safety in place; client-error beacons land in audit + metrics.
 - **`SEED_GROUPS`** carried from v1.2: `all_access` (sys-gated, readonly) +
   7 department defaults (`leader`, `sales`, `cs`, `npi`, `purchasing`, `production`,
   `quality`). `KNOWN_ROUTES_LIST` mirrors the Sidebar nav for the admin matrix.
-- **`server/repositories/permissionGroupStore.js`** — JSON store at
+- **`apps/server/repositories/permissionGroupStore.js`** — JSON store at
   `data/library/security/permission-groups.json`. **Auto-seeds on first read** so a fresh
   install is usable without a manual seed step. `saveGroup` refuses on `readonly: true`
   (`GROUP_READONLY` 409). `softDeleteGroup` likewise.
-- **`server/routes/permissionGroupRoutes.js`** — 4 endpoints. GET list / GET routes
+- **`apps/server/routes/permissionGroupRoutes.js`** — 4 endpoints. GET list / GET routes
   catalogue (open to authenticated users — Sidebar uses for client-side gating). PUT/DELETE
   sys-only.
 - **`tests/permissionGroup.test.js`** — 12 tests including: bad id format, bad level,
@@ -920,7 +920,7 @@ multi-site safety in place; client-error beacons land in audit + metrics.
 
 #### Security — User admin (P1 closed)
 
-- **`server/routes/userRoutes.js`** — sys-only. 5 endpoints: GET list, GET :username,
+- **`apps/server/routes/userRoutes.js`** — sys-only. 5 endpoints: GET list, GET :username,
   POST create, PUT update (role/dept/group/site patch with optimistic-lock), POST
   reset-password (forces `must_change_password=true`), DELETE soft.
 - Audit events: `USER_CREATE`, `USER_UPDATE`, `USER_PWD_RESET`, `USER_DELETE`.
@@ -994,7 +994,7 @@ audit log.
 - **`shared/schema/costingQuote.js`** — schema for either `kind: 'standard'` or
   `kind: 'complex'`, with opaque `input` payload + meta (title, customer, rfq_no,
   released_at, released_to_quote_no).
-- **`server/repositories/quotesStore.js`** — JSON store at `data/library/costing/quotes.json`.
+- **`apps/server/repositories/quotesStore.js`** — JSON store at `data/library/costing/quotes.json`.
   - `saveCostingQuote` is upsert: create on first call, update with `ifMatchVersion`
     optimistic-lock on subsequent.
   - `listCostingQuotes` STRIPS the heavy `input` field from list responses (a draft
@@ -1002,7 +1002,7 @@ audit log.
     `_input_size` meta tells the UI how big the full draft is before fetching.
   - `softDeleteCostingQuote` REFUSES on `released_at` non-null (v1.2 invariant: a
     released draft belongs to sales now, not deletable from costing).
-- **`server/routes/costingRouter.js`** + **4 endpoints** (cost role minimum):
+- **`apps/server/routes/costingRouter.js`** + **4 endpoints** (cost role minimum):
   `GET /api/costing/quotes`, `GET /:id`, `PUT /:id` (upsert), `DELETE /:id`.
   GET list is ETag-cached. Audit `COSTING_QUOTE_SAVE` / `COSTING_QUOTE_DELETE`.
 - **`tests/quotesStore.test.js`** — 9 tests: schema validation, upsert lifecycle,
@@ -1142,11 +1142,11 @@ because every operator-facing entry point can authenticate.
 
 - **`shared/schema/user.js`** — User schema with redaction. `redact()` strips `password_hash`
   and `totp_blob` so they NEVER cross a route boundary. Roles: viewonly < user < cost < admin < sys.
-- **`server/repositories/userStore.js`** — JSON-on-disk user store at
+- **`apps/server/repositories/userStore.js`** — JSON-on-disk user store at
   `data/library/security/users.json`. `_getInternal()` returns the FULL row (incl. password_hash)
   for the auth service; all PUBLIC reads (`getUser`, `listUsers`) are pre-redacted.
   `softDeleteUser` REFUSES on `sys` role to prevent accidental lockout.
-- **`server/services/authService.js`** — composes userStore + `@platform/auth` primitives:
+- **`apps/server/services/authService.js`** — composes userStore + `@platform/auth` primitives:
   - `login({username, password})` — bcrypt verify + lockout (5/15min, persisted) + audit
     `LOGIN_OK`/`LOGIN_FAIL`/`LOGIN_LOCKED`. Returns `{totp_required: true}` if user has TOTP
     enrolled, otherwise issues JWT cookie immediately.
@@ -1157,7 +1157,7 @@ because every operator-facing entry point can authenticate.
   - `ensureSysUser({tempPassword})` — first-boot bootstrap. Idempotent (no-op if `sys` exists).
   - **Constant-time username enumeration defence** — even when the user doesn't exist, we run
     bcryptVerify against a placeholder hash so timing doesn't leak account existence.
-- **`server/routes/authRoutes.js`** — 5 endpoints mounted by securityRouter:
+- **`apps/server/routes/authRoutes.js`** — 5 endpoints mounted by securityRouter:
   - `POST /api/auth/login` — IP rate-limited (10/10min via `makeIpLimiter`); validates body
     pattern.
   - `POST /api/auth/login/totp` — second TOTP step.
@@ -1165,7 +1165,7 @@ because every operator-facing entry point can authenticate.
   - `POST /api/auth/logout` — clears the session cookie + audits `LOGOUT`.
   - `POST /api/auth/change-password` — requires auth + clears cookie post-success so the
     client must re-login with the new password.
-- **`scripts/ops/recover-sys-user.js`** — console-only escape hatch. Requires typing
+- **`apps/scripts/ops/recover-sys-user.js`** — console-only escape hatch. Requires typing
   `CONFIRM-RECOVER` (the v1.2 Sprint 1.7 invariant). On confirm: resets sys password OR
   creates sys if missing. Generates a 16-char ambiguous-pair-free random temp password,
   prints ONCE, sets `must_change_password=true`. Audit `SYS_RECOVERY` for forensics.
@@ -1181,7 +1181,7 @@ because every operator-facing entry point can authenticate.
   the tree shape. Schema bounds depth at 10 (planning's BOM explosion alerts at 7, refuses 10).
 - **`shared/schema/routingOps.js`** — flat `ops[]` with `seq`/`op_code`/`machine`/
   `cycle_seconds`/`setup_hr`. `seq` must be unique per routing; sorted ascending on persist.
-- **`server/repositories/{mfgStructureStore,routingOpsStore}.js`** — same upsert pattern as
+- **`apps/server/repositories/{mfgStructureStore,routingOpsStore}.js`** — same upsert pattern as
   financeStore (create on first call, update with optimistic-lock on subsequent).
 - **`libraryRouter.js`** extended: 4 + 4 = 8 new endpoints. Library now has **25 endpoints
   total** (up from 17 in Sprint 1.3.7).
@@ -1250,7 +1250,7 @@ GET  /api/auth/me                                      → 401 (no cookie)
 
 #### Basis — backup runtime loop
 
-- **`server/services/backupRunner.js`** — actually performs the backup the schedule describes.
+- **`apps/server/services/backupRunner.js`** — actually performs the backup the schedule describes.
   In-process timer, re-arms on `basis.backup_schedule.updated` event, ZIP via spawn (`zip`
   with `tar -czf` fallback for Windows), prunes ZIPs older than `retention_days`, audit
   `BACKUP_RUN` (or `BACKUP_FAILED` — v1.2 Sprint 1.7 invariant: audit always emits regardless
@@ -1345,12 +1345,12 @@ with most-specific keys first.
   - `shared/schema/connectionMode.js` — three modes (`embedded`/`thin`/`smart`); `thin` and
     `smart` require `server_url`. Defaults `poll_seconds=30`.
   - `shared/schema/ifsRow.js` — read-only validator for the upstream-populated mirror.
-  - `server/services/connectionMode.js` — read/write to
+  - `apps/server/services/connectionMode.js` — read/write to
     `data/library/SystemConfig/connection-mode.json` via atomic write +
     `withLock('mes.connection-mode')` + `publish('mes.connection_mode.updated', value)`.
-  - `server/repositories/ifsInventoryStore.js` — read-only mirror at
+  - `apps/server/repositories/ifsInventoryStore.js` — read-only mirror at
     `data/library/mes/ifs-inventory.json`.
-  - `server/routes/mesRouter.js` — `GET/PUT /api/mes/mode` (admin only PUT) +
+  - `apps/server/routes/mesRouter.js` — `GET/PUT /api/mes/mode` (admin only PUT) +
     `GET /api/mes/ifs-inventory` (ETag-cached).
   - `client/mode/ConnectionModeCard.jsx` — read-only display.
   - `shared/i18n.js` — 11 EN/VN keys under `mes.*`.
@@ -1372,12 +1372,12 @@ basis, mes]`.
 - **`domains/security`** — Approval workflow slice.
   - `shared/schema/approval.js` — state machine `Pending → InReview → Approved | Rejected
 | Recalled`; `Recalled` is the requester withdrawing.
-  - `server/repositories/approvalStore.js` — JSON-on-disk store with optimistic locking,
+  - `apps/server/repositories/approvalStore.js` — JSON-on-disk store with optimistic locking,
     soft-delete, **and the `countActionable(actor)` helper that the v1.2 sidebar badge bug
     came from missing the `deleted_at` filter**. v1.3 keeps the filter as a load-bearing
     invariant. AuthZ enforced inside `transitionApproval` — only assignee/admin can
     Approve/Reject; only requester/admin can Recall (throws `AppError 403 FORBIDDEN`).
-  - `server/routes/securityRouter.js` — 5 endpoints incl. `/count_actionable` (the
+  - `apps/server/routes/securityRouter.js` — 5 endpoints incl. `/count_actionable` (the
     sidebar-badge feed). Audit dual-write on every transition.
   - `client/approvals/PendingApprovalsInbox.jsx` — read-only listing.
   - `tests/approvalWorkflow.test.js` — 7 tests including the deleted_at filter
@@ -1387,10 +1387,10 @@ basis, mes]`.
 - **`domains/basis`** — Dashboard UI + backup schedule slice.
   - `shared/schema/backupSchedule.js` — frequency `off|hourly|daily|weekly`, hour 0–23,
     retention 1–365 days; defaults daily/03:00/30 days.
-  - `server/services/backupScheduler.js` — read/write to
+  - `apps/server/services/backupScheduler.js` — read/write to
     `data/library/SystemConfig/backup-schedule.json` + publishes
     `basis.backup_schedule.updated`.
-  - `server/routes/basisRouter.js` — `GET/PUT /api/basis/backup-schedule` (admin-only PUT).
+  - `apps/server/routes/basisRouter.js` — `GET/PUT /api/basis/backup-schedule` (admin-only PUT).
   - `client/dashboard/Dashboard.jsx` — 4-tile KPI shell that calls
     `/api/dashboard/metrics` (cross-domain endpoint owned by apps/server).
   - `tests/backupSchedule.test.js` — 6 tests including event-bus publish.
@@ -1415,9 +1415,9 @@ locking + audit dual-write + ETag-cached reads.
 
 - `shared/schema/order.js` — state machine `Draft → Released → InProgress → Completed | Cancelled`
   with `canTransition` validator. Strict-mode field stripping (forward-compat hardening).
-- `server/repositories/orderStore.js` — JSON-on-disk store at `data/planning/orders.json`,
+- `apps/server/repositories/orderStore.js` — JSON-on-disk store at `data/planning/orders.json`,
   optimistic lock via `version`, soft-delete refused on `InProgress` (must Cancel first).
-- `server/routes/planningRouter.js` — 5 endpoints (`GET list` ETag-cached, `GET :no`,
+- `apps/server/routes/planningRouter.js` — 5 endpoints (`GET list` ETag-cached, `GET :no`,
   `POST` create, `POST :no/transition`, `DELETE :no` admin-only soft-delete). Audit events
   `ORDER_CREATE`/`ORDER_TRANSITION`/`ORDER_DELETE`.
 - `client/order-entry/OrderList.jsx` — read-only list via `useCachedFetch` + `StatusBadge` per
@@ -1431,10 +1431,10 @@ locking + audit dual-write + ETag-cached reads.
 - `shared/schema/quote.js` — state machine `Draft → InReview → Approved → Released → Archived`
   - `Cancelled` terminal. Currency cross-sync (USD ↔ VND from `fx_rate` snapshot).
     `withDerived()` computes `contr_pct` on read (never persisted — v1.2 lesson).
-- `server/repositories/quoteStore.js` — store at `data/library/sales/quotes.json`. Auto-syncs
+- `apps/server/repositories/quoteStore.js` — store at `data/library/sales/quotes.json`. Auto-syncs
   currencies on create. Stamps `released_at` on `Released`. Refuses `softDelete` on `Released`
   (archive instead). Optimistic lock + soft-delete + version bump per transition.
-- `server/routes/salesRouter.js` — 5 endpoints + cross-domain handoff: on `Released`
+- `apps/server/routes/salesRouter.js` — 5 endpoints + cross-domain handoff: on `Released`
   publishes `sales.quote.released` via `@platform/observability/eventBus`. Audit dual-write
   on every mutation.
 - `client/quote-history/QuoteHistory.jsx` — table with PRICE USD + PRICE VND + Contr.%
@@ -1447,9 +1447,9 @@ locking + audit dual-write + ETag-cached reads.
 
 - `shared/schema/sample.js` — state machine `Requested → InProduction → ReadyForReview →
 Approved | Rejected` with rework path back from ReadyForReview to InProduction.
-- `server/repositories/sampleStore.js` — same patterns as orders/quotes. `Rejected` requires a
+- `apps/server/repositories/sampleStore.js` — same patterns as orders/quotes. `Rejected` requires a
   `rejectReason`; sanitised via `@platform/http/sanitizeReason` before persist.
-- `server/routes/qualityRouter.js` — 5 endpoints. Audit events
+- `apps/server/routes/qualityRouter.js` — 5 endpoints. Audit events
   `SAMPLE_CREATE`/`SAMPLE_TRANSITION`/`SAMPLE_DELETE`.
 - `client/sample-tracking/SampleTracking.jsx` — read-only list with status badges per state.
 - `shared/i18n.js` — 11 EN/VN keys under `quality.sample.*`.
@@ -1484,12 +1484,12 @@ registration, and optimistic locking.
   `MAGNETIC_CYLINDERS` (22 stocks) + `GALLUS_DEFAULTS` + runtime override
   (`getPrintCylinders`/`setRuntimePrintCylinders`) + `FACTORY_DEFAULT_ZS` set
   (used by service to refuse DELETE on factory rows).
-- `server/services/cylinderService.js` — `listCylinders`/`toggleCylinder`/`addCylinder`/
+- `apps/server/services/cylinderService.js` — `listCylinders`/`toggleCylinder`/`addCylinder`/
   `deleteCylinder`. Persists to `data/library/SystemConfig/master-cylinders.json` via
   `@platform/storage/atomicWriteJson` under `withLock('costing.master-cylinders')`.
   Audit dual-write (`CYLINDER_ADD`/`CYLINDER_UPDATE`/`CYLINDER_DELETE`). Throws
   `AppError('CYLINDER_PROTECTED', 409)` on factory-row delete attempts.
-- `server/routes/costingRouter.js` — 4 endpoints (`GET`/`PUT`/`POST`/`DELETE`
+- `apps/server/routes/costingRouter.js` — 4 endpoints (`GET`/`PUT`/`POST`/`DELETE`
   `/api/costing/cylinders[/:z]`) wired with `@platform/http/validateBody+validateParams`,
   `@platform/auth/requireAuth+requireRole('admin')`, `asyncHandler`. Mounted via
   `mountCosting(app)` from the server.
@@ -1507,11 +1507,11 @@ registration, and optimistic locking.
   validator. Required fields: `code`, `name`, `kind`, `unit`. Allowed kinds:
   `substrate | ink | adhesive | liner | core | accessory`. Strict mode strips unknown
   keys (forward-compat hardening from v1.2 P0-1).
-- `server/repositories/materialStore.js` — JSON-on-disk store with optimistic locking
+- `apps/server/repositories/materialStore.js` — JSON-on-disk store with optimistic locking
   via `version` column, soft-delete via `deleted_at`, in-process lock around RMW.
   Read paths filter `deleted_at` (the v1.2 lesson). All writes through
   `@platform/storage/atomicWriteJson`.
-- `server/routes/libraryRouter.js` — 5 endpoints (`GET list`, `GET :code`, `POST`,
+- `apps/server/routes/libraryRouter.js` — 5 endpoints (`GET list`, `GET :code`, `POST`,
   `PUT :code` with `If-Match` version, `DELETE :code` soft). GET uses
   `@platform/cache/sendJsonWithEtag` for 304 short-circuit. Audit dual-write on every
   mutation (`MATERIAL_CREATE`/`MATERIAL_UPDATE`/`MATERIAL_DELETE`). Mounted via

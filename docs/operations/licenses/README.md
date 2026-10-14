@@ -52,7 +52,7 @@ the input / cross-reference.
 - The signing **private** key is NOT in the repo. As of the 2026-06-04
   rotation it lives OFFLINE only (`~/OpsControl-license-keys/prod-private.pem`
   on the license admin's box). Only the **public** key is embedded in
-  `desktop/license.js` + `server/services/licenseService.js`. Cloning the
+  `apps/desktop/license.js` + `apps/server/services/licenseService.js`. Cloning the
   repo therefore does NOT let anyone forge licenses.
 - See "Production key rotation" below for the rotation record.
 
@@ -65,7 +65,7 @@ the input / cross-reference.
 
 # Lead runs on the box that holds the OFFLINE private key. --key is
 # REQUIRED (no in-repo default since the 2026-06-04 rotation):
-node scripts/license/generate-license.mjs \
+node apps/scripts/license/generate-license.mjs \
   --installation-id <hex64 from operator> \
   --customer "CCL Design Vietnam- Hai Phong" \
   --tier M \
@@ -121,8 +121,8 @@ What was done (branch `fix/license-key-rotation`):
    Private key lives ONLY at `~/OpsControl-license-keys/prod-private.pem`
    (chmod 600, outside the repo, not in any cloud-sync zone).
 2. Embedded the new **public** key in both verifiers
-   (`desktop/license.js` + `server/services/licenseService.js`) and
-   `git rm`'d the old `scripts/license/dev-{private,public}.pem`.
+   (`apps/desktop/license.js` + `apps/server/services/licenseService.js`) and
+   `git rm`'d the old `apps/scripts/license/dev-{private,public}.pem`.
 3. `generate-license.mjs` now REQUIRES `--key <offline-private-key>`
    (no in-repo default). Tests sign with runtime-ephemeral keypairs.
 4. Re-minted every live license under the new key + rebuilt/redistributed
@@ -132,7 +132,7 @@ What was done (branch `fix/license-key-rotation`):
 **Storage policy for the new key:** the private key never leaves
 `~/OpsControl-license-keys/`; record its location + the public fingerprint
 out-of-band (not in this repo). To rotate again, repeat with a new label
-(`node scripts/license/generate-keypair.mjs prod-2027 --out-dir ~/OpsControl-license-keys`).
+(`node apps/scripts/license/generate-keypair.mjs prod-2027 --out-dir ~/OpsControl-license-keys`).
 Because the old private key is public forever, rotation — not redaction —
 is the only thing that invalidates it.
 

@@ -16,12 +16,12 @@
    - `better-sqlite3@11.x` installed
 
 3. **DB infrastructure**
-   - `server/db/schema.sql` — typed tables for BOM, Routing, IFS Inventory (3 kinds), Materials (NPI + Sourcing) + `_migration_state` tracker
-   - `server/db/connection.js` — singleton w/ WAL, busy_timeout=5000, foreign_keys=on
-   - `server/db/init.js` — idempotent schema applier
+   - `apps/server/db/schema.sql` — typed tables for BOM, Routing, IFS Inventory (3 kinds), Materials (NPI + Sourcing) + `_migration_state` tracker
+   - `apps/server/db/connection.js` — singleton w/ WAL, busy_timeout=5000, foreign_keys=on
+   - `apps/server/db/init.js` — idempotent schema applier
 
 4. **Migration**
-   - `scripts/migrate-to-sqlite.js` — supports `--dry-run`, `--commit`, `--dataset=X`, `--force`
+   - `apps/scripts/migrate-to-sqlite.js` — supports `--dry-run`, `--commit`, `--dataset=X`, `--force`
    - Every dataset inserted inside a single transaction — abort = `ROLLBACK`
    - Row count + SHA256 checksum verified against source after commit
    - **Migrated datasets** (production `server/data/ops.db`, 116 MB):
@@ -36,12 +36,12 @@
      | materials (sourcing) | 2,234 | — | — | ✓ |
 
 5. **Repository layer**
-   - `server/repositories/index.js` — picks backend by `OPS_DATA_BACKEND` env var
-   - `server/repositories/backends/fileBackend.js` — delegates to `dataSync.js` (zero behavior change)
-   - `server/repositories/backends/sqliteBackend.js` — reads from ops.db, **per-dataset fallback to file backend** if SQLite table is empty
+   - `apps/server/repositories/index.js` — picks backend by `OPS_DATA_BACKEND` env var
+   - `apps/server/repositories/backends/fileBackend.js` — delegates to `dataSync.js` (zero behavior change)
+   - `apps/server/repositories/backends/sqliteBackend.js` — reads from ops.db, **per-dataset fallback to file backend** if SQLite table is empty
 
 6. **Parity verifier**
-   - `scripts/verify-parity.js` — loads every dataset from both backends, compares count + sorted-row SHA256
+   - `apps/scripts/verify-parity.js` — loads every dataset from both backends, compares count + sorted-row SHA256
    - Latest run: **7/7 datasets parity-match, 0 drift**
 
 7. **Wired into 2 HTTP routes**
@@ -64,10 +64,10 @@
 
 ```bash
 # Re-run dry-run on current source files
-cd "server/data/../.." && node scripts/migrate-to-sqlite.js --dry-run
+cd "server/data/../.." && node apps/scripts/migrate-to-sqlite.js --dry-run
 
 # Parity check (expects both backends to match)
-node scripts/verify-parity.js
+node apps/scripts/verify-parity.js
 
 # Start server with SQLite backend
 OPS_DATA_BACKEND=sqlite npm run dev:server
@@ -97,10 +97,10 @@ The Library snapshot at `server/data/.pre-sqlite-20260417_231938/` exists as a *
 
 Revert these commits:
 
-- `server/db/**` (new dir)
-- `server/repositories/**` (new dir)
-- `scripts/migrate-to-sqlite.js`, `scripts/verify-parity.js` (new files)
-- `server/routes/shared.js` (only 2 route handlers changed to use `repo.*` — trivial revert)
+- `apps/server/db/**` (new dir)
+- `apps/server/repositories/**` (new dir)
+- `apps/scripts/migrate-to-sqlite.js`, `apps/scripts/verify-parity.js` (new files)
+- `apps/server/routes/shared.js` (only 2 route handlers changed to use `repo.*` — trivial revert)
 - `package.json` — remove `better-sqlite3` dep
 
 No production code behavior changes when `OPS_DATA_BACKEND` is unset.
@@ -109,7 +109,7 @@ No production code behavior changes when `OPS_DATA_BACKEND` is unset.
 
 ## What still needs a real sprint
 
-1. **Shadow-write on imports** — update `server/routes/import.js` to also call `sqliteBackend.upsertXxx()` so ops.db stays current. 1-2 days.
+1. **Shadow-write on imports** — update `apps/server/routes/import.js` to also call `sqliteBackend.upsertXxx()` so ops.db stays current. 1-2 days.
 2. **Migrate transactional datasets** (quotes + trackers) — schema design + code changes on `/save-all` path. 3-4 days.
 3. **Wire remaining /api/shared routes** through `repo.*`. 0.5 day.
 4. **Per-dataset cutover** (shadow-read then sqlite-only). 2 days observation.
@@ -161,21 +161,21 @@ BOM row #10000 byte-equal: true
 
 **New:**
 
-- `server/db/schema.sql`
-- `server/db/connection.js`
-- `server/db/init.js`
-- `server/repositories/index.js`
-- `server/repositories/backends/fileBackend.js`
-- `server/repositories/backends/sqliteBackend.js`
-- `scripts/migrate-to-sqlite.js`
-- `scripts/verify-parity.js`
+- `apps/server/db/schema.sql`
+- `apps/server/db/connection.js`
+- `apps/server/db/init.js`
+- `apps/server/repositories/index.js`
+- `apps/server/repositories/backends/fileBackend.js`
+- `apps/server/repositories/backends/sqliteBackend.js`
+- `apps/scripts/migrate-to-sqlite.js`
+- `apps/scripts/verify-parity.js`
 - `server/data/ops.db` (data file, 116 MB)
 - `server/data/.pre-sqlite-20260417_231938/` (safety snapshot, 46 MB, can delete after 30 days)
 
 **Modified:**
 
 - `package.json` + `package-lock.json` (better-sqlite3 dep)
-- `server/routes/shared.js` — `/bom` and `/routing` handlers call `repo.*`
+- `apps/server/routes/shared.js` — `/bom` and `/routing` handlers call `repo.*`
 
 **Not modified:**
 

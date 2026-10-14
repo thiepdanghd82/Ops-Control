@@ -10,7 +10,7 @@
 ## Context
 
 Across G1, H1, J1, K2 we extracted 7 routers from `costApi.js` into
-`server/domains/<sap>/routes/`. Without a written-down convention,
+`apps/server/domains/<sap>/routes/`. Without a written-down convention,
 every extraction reinvents:
 
 - Where deps come from (closure over module-level globals?
@@ -31,8 +31,8 @@ follow the same shape with zero negotiation.
 ### 1. File layout
 
 ```
-server/domains/<sap>/routes/<resource>.js          ← factory
-server/domains/<sap>/routes/<resource>.test.js     ← contract tests
+apps/server/domains/<sap>/routes/<resource>.js          ← factory
+apps/server/domains/<sap>/routes/<resource>.test.js     ← contract tests
 ```
 
 `<sap>` is one of: `costing | library | sales | planning | quality |
@@ -87,7 +87,7 @@ export function create<Resource>Router(deps) {
 export default create<Resource>Router;
 ```
 
-### 3. Mounting in `server/index.js`
+### 3. Mounting in `apps/server/index.js`
 
 ```js
 import { create<Resource>Router } from './domains/<sap>/routes/<resource>.js';
@@ -232,7 +232,7 @@ toward a specific status code. Coverage target: 90 %+ lines,
   ADR's templates; deviations stand out at a glance.
 - **Refactoring helpers is safe.** When `safeFn` moves from
   `authService.js` to `platform/storage`, only the
-  `server/index.js` mount call changes — no router file touches.
+  `apps/server/index.js` mount call changes — no router file touches.
 - **Cross-domain consistency.** `library/rate.js`, `library/ddl.js`,
   `sales/released-quotation.js`, `security/license.js` all read
   the same way. Operators who learn one understand them all.
@@ -243,7 +243,7 @@ toward a specific status code. Coverage target: 90 %+ lines,
   factory + a 100-line test file. Manual class-based controllers
   would be shorter — but they wouldn't unit-test cleanly.
 - **Deps object grows large.** `library/rate.js` injects 14 deps.
-  Mitigation: shared `libRouterDeps` object in `server/index.js`
+  Mitigation: shared `libRouterDeps` object in `apps/server/index.js`
   spread into each call (current K2 mount uses this).
 - **No DI container.** Each factory call passes deps explicitly.
   Could be replaced by an `awilix`/`tsyringe` container; we don't
@@ -286,14 +286,14 @@ framework migration just for routing organisation.
 
 ## Currently-conforming routers (as of 2026-04-29)
 
-| Router                                              | Routes | Tests                     | Coverage (lines) |
-| --------------------------------------------------- | ------ | ------------------------- | ---------------- |
-| `server/domains/security/routes/audit.js`           | 1      | (covered via integration) | n/a              |
-| `server/domains/security/routes/license.js`         | 1      | 5                         | 100 %            |
-| `server/domains/basis/routes/backup.js`             | 3      | – (deferred)              | –                |
-| `server/domains/library/routes/rate.js`             | 4      | 8                         | 90.8 %           |
-| `server/domains/library/routes/ddl.js`              | 4      | 6                         | 95.6 %           |
-| `server/domains/sales/routes/released-quotation.js` | 3      | 9                         | 96.0 %           |
+| Router                                                   | Routes | Tests                     | Coverage (lines) |
+| -------------------------------------------------------- | ------ | ------------------------- | ---------------- |
+| `apps/server/domains/security/routes/audit.js`           | 1      | (covered via integration) | n/a              |
+| `apps/server/domains/security/routes/license.js`         | 1      | 5                         | 100 %            |
+| `apps/server/domains/basis/routes/backup.js`             | 3      | – (deferred)              | –                |
+| `apps/server/domains/library/routes/rate.js`             | 4      | 8                         | 90.8 %           |
+| `apps/server/domains/library/routes/ddl.js`              | 4      | 6                         | 95.6 %           |
+| `apps/server/domains/sales/routes/released-quotation.js` | 3      | 9                         | 96.0 %           |
 
 7 routers · 16 endpoints · 28 contract tests · mean coverage 96 %.
 
@@ -302,5 +302,5 @@ framework migration just for routing organisation.
 - ADR-0008 — extract-first-mount-later (when to extract)
 - ADR-0009 — dual-mount-during-migration (how to retire legacy)
 - CONTRIBUTING.md §2 — domain router factory template (shorter)
-- `server/domains/library/routes/rate.js` — canonical example
-- `server/domains/sales/routes/released-quotation.js` — most recent
+- `apps/server/domains/library/routes/rate.js` — canonical example
+- `apps/server/domains/sales/routes/released-quotation.js` — most recent

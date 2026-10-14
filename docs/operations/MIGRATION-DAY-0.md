@@ -86,7 +86,7 @@ chmod 600 server/data/ops.db 2>/dev/null || true
 ls -la server/data/Library/Users/
 ```
 
-The OS account running `ops-control` is the trust boundary — anyone with shell access to the data dir can mint a sys user via `scripts/recover-sys-user.js`. Verify the deploy user is the only account with `r/w` on these files.
+The OS account running `ops-control` is the trust boundary — anyone with shell access to the data dir can mint a sys user via `apps/scripts/recover-sys-user.js`. Verify the deploy user is the only account with `r/w` on these files.
 
 ## Step 4 — Dry-run migration to SQLite
 
@@ -96,7 +96,7 @@ The OS account running `ops-control` is the trust boundary — anyone with shell
 ```bash
 ssh user@10.102.3.61
 cd /opt/ops-control
-node scripts/migrate-to-sqlite.js --dry-run
+node apps/scripts/migrate-to-sqlite.js --dry-run
 echo "Exit: $?"   # must be 0
 ```
 
@@ -114,20 +114,20 @@ Capture the dry-run row counts to a scratch note (used in Step 7 verification �
 **Acceptance**: Row counts match dry-run report from Step 4.
 
 ```bash
-node scripts/migrate-to-sqlite.js --commit
+node apps/scripts/migrate-to-sqlite.js --commit
 echo "Exit: $?"   # must be 0
 ```
 
 If a specific dataset failed in dry-run + got fixed at source, migrate only that one:
 
 ```bash
-node scripts/migrate-to-sqlite.js --commit --dataset=materials
+node apps/scripts/migrate-to-sqlite.js --commit --dataset=materials
 ```
 
 Last resort if `--commit` refuses due to a pre-existing partial migration:
 
 ```bash
-node scripts/migrate-to-sqlite.js --commit --force
+node apps/scripts/migrate-to-sqlite.js --commit --force
 # Use only AFTER Step 1 backup exists and Lead Engineer approves
 ```
 
@@ -229,7 +229,7 @@ Full plan: `docs/operations/cutover/8-DAY-CUTOVER-PLAN-20260522.md` (D-1 section
 - `docs/operations/cutover/ROLLBACK-RUNBOOK-20260522.md` — Rollback Runbook A (software) + B (operational Excel fallback)
 - `CLAUDE.md` "Recovery playbook" section — older detailed runbooks
 - `CLAUDE.md` "TOTP key rotation runbook" — if 2FA lockout
-- `CLAUDE.md` "All admin/sys users lost access" — chicken-and-egg recovery via `scripts/recover-sys-user.js`
+- `CLAUDE.md` "All admin/sys users lost access" — chicken-and-egg recovery via `apps/scripts/recover-sys-user.js`
 
 ---
 

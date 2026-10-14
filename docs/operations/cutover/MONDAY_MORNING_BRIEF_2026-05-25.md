@@ -69,14 +69,14 @@ git push origin main
 
 ## State snapshot (verified 2026-05-25 08:10 ICT)
 
-| Item            | State                                                                                            |
-| --------------- | ------------------------------------------------------------------------------------------------ |
-| HEAD            | `0681703` on `main` + `origin/main` synced                                                       |
-| Tag             | `v1.5.10` at `f33d5c8` (PR #76)                                                                  |
-| Working tree    | Clean (no uncommitted)                                                                           |
-| Mac DMG         | `desktop/dist-electron/OpsControl-Server-v1.5.10-mac-arm64.dmg` (180 MB, built 2026-05-24 05:24) |
-| Win EXE         | ❌ NOT BUILT (CI workflow trigger gap — pending Windows host)                                    |
-| Backup engineer | ✅ NAMED (Trần Thị Hương), ⏳ pending phone consent                                              |
+| Item            | State                                                                                                 |
+| --------------- | ----------------------------------------------------------------------------------------------------- |
+| HEAD            | `0681703` on `main` + `origin/main` synced                                                            |
+| Tag             | `v1.5.10` at `f33d5c8` (PR #76)                                                                       |
+| Working tree    | Clean (no uncommitted)                                                                                |
+| Mac DMG         | `apps/desktop/dist-electron/OpsControl-Server-v1.5.10-mac-arm64.dmg` (180 MB, built 2026-05-24 05:24) |
+| Win EXE         | ❌ NOT BUILT (CI workflow trigger gap — pending Windows host)                                         |
+| Backup engineer | ✅ NAMED (Trần Thị Hương), ⏳ pending phone consent                                                   |
 
 ---
 

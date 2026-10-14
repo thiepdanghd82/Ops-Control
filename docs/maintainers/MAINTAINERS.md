@@ -55,15 +55,15 @@ Companion docs: [`DESIGN.md`](../architecture/DESIGN.md) (visual language), [`do
 
 ## 2. Scripts inventory
 
-All scripts sit under [`scripts/`](../../scripts/). Run from repo root.
+All scripts sit under [`apps/scripts/`](../../apps/scripts/). Run from repo root.
 
-| Script                                                                         | Purpose                                                                                                                                  | Idempotent | Backup?                 |
-| ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ----------------------- |
-| [`scripts/migrate-quote-va.js`](../../scripts/migrate-quote-va.js)             | Recompute canonical `va` / `contribution` / `gm` on stored quote results. Applied Sprint 9 + Sprint 21 (after engine formula alignment). | ✅         | `*.pre-va-migration-*`  |
-| [`scripts/backfill-quote-results.js`](../../scripts/backfill-quote-results.js) | Upgrade thin-schema result (`{gm, va, s_ttl}`) to full breakdown via calcAll. Applied Sprint 15 for 9 historical quotes.                 | ✅         | `*.pre-backfill-*`      |
-| [`scripts/backfill-audit-log.js`](../../scripts/backfill-audit-log.js)         | **Sprint 30** — import legacy `audit_log.json` into SQLite `audit_log` table. Idempotent with `--force-reimport` escape hatch.           | ✅         | N/A (append-only table) |
-| [`scripts/migrate-planning-data.js`](scripts/migrate-planning-data.js)         | Planning module migration (pre-existing, untouched by Sprint 1-34).                                                                      | —          | —                       |
-| [`scripts/check-perf-budget.js`](../../scripts/check-perf-budget.js)           | Fail if any built chunk exceeds its budget. Wired into `npm run verify`. Smoke tests (Sprint 27) verify the CLI exit code contract.      | ✅         | N/A                     |
+| Script                                                                                   | Purpose                                                                                                                                  | Idempotent | Backup?                 |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ----------------------- |
+| [`apps/scripts/migrate-quote-va.js`](../../apps/scripts/migrate-quote-va.js)             | Recompute canonical `va` / `contribution` / `gm` on stored quote results. Applied Sprint 9 + Sprint 21 (after engine formula alignment). | ✅         | `*.pre-va-migration-*`  |
+| [`apps/scripts/backfill-quote-results.js`](../../apps/scripts/backfill-quote-results.js) | Upgrade thin-schema result (`{gm, va, s_ttl}`) to full breakdown via calcAll. Applied Sprint 15 for 9 historical quotes.                 | ✅         | `*.pre-backfill-*`      |
+| [`apps/scripts/backfill-audit-log.js`](../../apps/scripts/backfill-audit-log.js)         | **Sprint 30** — import legacy `audit_log.json` into SQLite `audit_log` table. Idempotent with `--force-reimport` escape hatch.           | ✅         | N/A (append-only table) |
+| [`scripts/migrate-planning-data.js`](scripts/migrate-planning-data.js)                   | Planning module migration (pre-existing, untouched by Sprint 1-34).                                                                      | —          | —                       |
+| [`apps/scripts/check-perf-budget.js`](../../apps/scripts/check-perf-budget.js)           | Fail if any built chunk exceeds its budget. Wired into `npm run verify`. Smoke tests (Sprint 27) verify the CLI exit code contract.      | ✅         | N/A                     |
 
 Each script has a sibling `.test.js` with full unit coverage. Dry-run mode is the default; apply with `--apply` (or `--dry-run` flag toggle per script — check `--help`).
 
@@ -71,23 +71,23 @@ Each script has a sibling `.test.js` with full unit coverage. Dry-run mode is th
 
 ## 3. Test layout
 
-| Layer               | Location                                                      | Runner               | Count (Sprint 25) |
-| ------------------- | ------------------------------------------------------------- | -------------------- | ----------------- |
-| Engine pure         | `client/src/services/*.test.js`                               | `node --test`        | 100+              |
-| Engine golden       | `client/src/services/*.golden.test.js`                        | `node --test`        | 22                |
-| Reducer contract    | `client/src/context/spFieldReducer.test.js`                   | `node --test`        | 10                |
-| Migrations          | `client/src/services/*Migration.test.js`, `scripts/*.test.js` | `node --test`        | 27                |
-| UI utils            | `client/src/utils/*.test.js`                                  | `node --test`        | 40+               |
-| Server HTTP         | `server/http.integration.test.js`                             | `node --test`        | 25                |
-| Server repo/service | `server/repositories/*.test.js`, `server/services/*.test.js`  | `node --test` + Jest | 200+              |
-| Perf budget         | `scripts/check-perf-budget.test.js`                           | `node --test`        | 10                |
+| Layer               | Location                                                                | Runner               | Count (Sprint 25) |
+| ------------------- | ----------------------------------------------------------------------- | -------------------- | ----------------- |
+| Engine pure         | `apps/client/src/services/*.test.js`                                    | `node --test`        | 100+              |
+| Engine golden       | `apps/client/src/services/*.golden.test.js`                             | `node --test`        | 22                |
+| Reducer contract    | `apps/client/src/context/spFieldReducer.test.js`                        | `node --test`        | 10                |
+| Migrations          | `apps/client/src/services/*Migration.test.js`, `apps/scripts/*.test.js` | `node --test`        | 27                |
+| UI utils            | `apps/client/src/utils/*.test.js`                                       | `node --test`        | 40+               |
+| Server HTTP         | `apps/server/http.integration.test.js`                                  | `node --test`        | 25                |
+| Server repo/service | `apps/server/repositories/*.test.js`, `apps/server/services/*.test.js`  | `node --test` + Jest | 200+              |
+| Perf budget         | `apps/scripts/check-perf-budget.test.js`                                | `node --test`        | 10                |
 
 **Running tests**
 
 ```sh
-cd client && npm test              # client-side (uses quoted glob — see note below)
-cd client && npm run typecheck     # @ts-check pass
-cd client && npm run analyze       # Sprint 32 — emit dist/bundle-stats.{html,json}
+cd apps/client && npm test              # client-side (uses quoted glob — see note below)
+cd apps/client && npm run typecheck     # @ts-check pass
+cd apps/client && npm run analyze       # Sprint 32 — emit dist/bundle-stats.{html,json}
 cd ..     && npm test              # server (Jest + node --test)
 cd ..     && npm run perf-budget   # post-build bundle budget gate
 cd ..     && npm run verify        # build + perf-budget + tests (end-to-end gate)
@@ -99,14 +99,14 @@ cd ..     && npm run verify        # build + perf-budget + tests (end-to-end gat
 
 ## 4. Schema versions
 
-### Standard state — `_schema_version: 1` ([`stdMigration.js`](../../client/src/services/stdMigration.js))
+### Standard state — `_schema_version: 1` ([`stdMigration.js`](../../apps/client/src/services/stdMigration.js))
 
 | Version       | Changes                                                                                                       | Date      |
 | ------------- | ------------------------------------------------------------------------------------------------------------- | --------- |
 | v0 (implicit) | Pre-Sprint 18 shape: no version marker                                                                        | —         |
 | v1            | Stamps version + `_mid` back-fill on materials + numeric defaults (`active_moq_idx`, `num_moq`, `extra_moqs`) | Sprint 18 |
 
-### Complex state — `_shape_version: 2` ([`cplxMigration.js`](../../client/src/services/cplxMigration.js))
+### Complex state — `_shape_version: 2` ([`cplxMigration.js`](../../apps/client/src/services/cplxMigration.js))
 
 | Version | Changes                                                                           |
 | ------- | --------------------------------------------------------------------------------- |
@@ -115,7 +115,7 @@ cd ..     && npm run verify        # build + perf-budget + tests (end-to-end gat
 
 ### Stored `result` shape (Sprint 14)
 
-Saved quote `result` now includes the full money breakdown (29 fields via `serializeResultForPersist`). Pre-Sprint 14 quotes had only `{gm, va, s_ttl}` — all historical rows were backfilled by `scripts/backfill-quote-results.js` (Sprint 15).
+Saved quote `result` now includes the full money breakdown (29 fields via `serializeResultForPersist`). Pre-Sprint 14 quotes had only `{gm, va, s_ttl}` — all historical rows were backfilled by `apps/scripts/backfill-quote-results.js` (Sprint 15).
 
 ### Migration flow at load
 
@@ -145,13 +145,13 @@ Where `run_labor_only = labor_cost_internal − setup_labor_total`. Setup labor 
 
 **Display convention**: `s_mat_cost` bundles raw material + ink. The Cost Breakdown UI uses `matCostExcludingInk()` + `inkCostTotal()` so columns sum to subtotal (Sprint 16). `s_mat_cost` is NOT split at the engine — only at display.
 
-**Why this matters**: any change to these formulas shifts every reported margin. Only modify with Finance sign-off. Golden tests in [`calcEngine.golden.test.js`](../../client/src/services/calcEngine.golden.test.js) lock each variant.
+**Why this matters**: any change to these formulas shifts every reported margin. Only modify with Finance sign-off. Golden tests in [`calcEngine.golden.test.js`](../../apps/client/src/services/calcEngine.golden.test.js) lock each variant.
 
 ---
 
 ## 6. Perf budgets
 
-Defined in [`scripts/check-perf-budget.js`](../../scripts/check-perf-budget.js). Rationale: ERP dashboards die from first-paint latency more than compute cost. Budgets enforce Sprint 24's build baseline + ~20% headroom.
+Defined in [`apps/scripts/check-perf-budget.js`](../../apps/scripts/check-perf-budget.js). Rationale: ERP dashboards die from first-paint latency more than compute cost. Budgets enforce Sprint 24's build baseline + ~20% headroom.
 
 | Chunk prefix      | Budget              | Sprint 24 actual | Headroom |
 | ----------------- | ------------------- | ---------------- | -------- |
@@ -170,10 +170,10 @@ Warn at 90% of budget. Wired into `npm run verify` — `npm run build` must land
 
 ## 7. Concurrency model
 
-**Writes are serialized per-resource via `withLock(key, fn)`** ([`server/utils/asyncLock.js`](../../server/utils/asyncLock.js)). Keys in use:
+**Writes are serialized per-resource via `withLock(key, fn)`** ([`apps/server/utils/asyncLock.js`](../../apps/server/utils/asyncLock.js)). Keys in use:
 
-- `quotes` — all quote array mutations ([`upsertQuote`](../../server/repositories/quotesStore.js), Sprint 11)
-- `quote:${id}` — approval transitions ([`shared.js`](../../server/routes/shared.js), Phase 6.2)
+- `quotes` — all quote array mutations ([`upsertQuote`](../../apps/server/repositories/quotesStore.js), Sprint 11)
+- `quote:${id}` — approval transitions ([`shared.js`](../../apps/server/routes/shared.js), Phase 6.2)
 - `notifications` — chat + notification appends
 
 **Sprint 34 — dual-layer mutex**:
@@ -183,9 +183,9 @@ Warn at 90% of budget. Wired into `npm run verify` — `npm run build` must land
 
 Safety guards: file-lock failures (disk full, permission) log a warning and degrade to in-process-only — caller contract still honored per-process. Key sanitization strips `:` `/` so `quote:123` can't escape the lock directory.
 
-**/save-all** ([`routes/costApi.js:1075+`](../../server/routes/costApi.js)) writes N datasets sequentially; Sprint 13 isolated each per-dataset failure so a bad write in one dataset doesn't abort the rest. Response now carries `saved_keys[]` + `failed_datasets[]` for retry-ability.
+**/save-all** ([`routes/costApi.js:1075+`](../../apps/server/routes/costApi.js)) writes N datasets sequentially; Sprint 13 isolated each per-dataset failure so a bad write in one dataset doesn't abort the rest. Response now carries `saved_keys[]` + `failed_datasets[]` for retry-ability.
 
-**Race fix** (Sprint 11): client used to do `GET history → mutate → POST full array`. Two concurrent saves → lost updates. Replaced with `POST /api/quotes` + `PATCH /api/quotes/:id` — server does read-modify-write under the `quotes` lock. Integration test in [`http.integration.test.js`](../../server/http.integration.test.js) fires 8 parallel POSTs and verifies all 8 ids land.
+**Race fix** (Sprint 11): client used to do `GET history → mutate → POST full array`. Two concurrent saves → lost updates. Replaced with `POST /api/quotes` + `PATCH /api/quotes/:id` — server does read-modify-write under the `quotes` lock. Integration test in [`http.integration.test.js`](../../apps/server/http.integration.test.js) fires 8 parallel POSTs and verifies all 8 ids land.
 
 **LibFinance conflict** (Sprint 33): `handleSgaReloadAfterConflict` now merges fresh server values + user's touched-site edits via `touchedSitesRef`. A `useEffect` re-syncs `sgaDraft` when the finance context changes externally while preserving unsaved touched-site edits — closes the silent-overwrite path that bypassed 409 protection.
 
@@ -193,7 +193,7 @@ Safety guards: file-lock failures (disk full, permission) log a warning and degr
 
 ## 8. Error boundaries (Sprint 17)
 
-Reusable class in [`components/Shared/ErrorBoundary.js`](../../client/src/components/Shared/ErrorBoundary.js). Props:
+Reusable class in [`components/Shared/ErrorBoundary.js`](../../apps/client/src/components/Shared/ErrorBoundary.js). Props:
 
 - `label`: shown in fallback UI
 - `resetKey`: auto-reset when value changes (pass active-tab id)
@@ -202,9 +202,9 @@ Reusable class in [`components/Shared/ErrorBoundary.js`](../../client/src/compon
 
 Deployed at:
 
-- **Top of app tree** ([`App.jsx`](../../client/src/App.jsx)) — catches layout / providers / AppBootstrap
-- **Per Cost tab** ([`CostModule.jsx`](../../client/src/modules/cost/CostModule.jsx)) with `resetKey={activeTab}`
-- **Per Planning tab** ([`PlanningModule.jsx`](client/src/modules/planning/PlanningModule.jsx))
+- **Top of app tree** ([`App.jsx`](../../apps/client/src/App.jsx)) — catches layout / providers / AppBootstrap
+- **Per Cost tab** ([`CostModule.jsx`](../../apps/client/src/modules/cost/CostModule.jsx)) with `resetKey={activeTab}`
+- **Per Planning tab** ([`PlanningModule.jsx`](apps/client/src/modules/planning/PlanningModule.jsx))
 - **Chat drawer** — silent fallback (`() => null`) so chat crash doesn't degrade quoting UI
 
 File is `.js` not `.jsx` (React.createElement instead of JSX) so `node --test` can import for pure-logic regression tests.
@@ -215,7 +215,7 @@ File is `.js` not `.jsx` (React.createElement instead of JSX) so `node --test` c
 
 Sprint 2 + Sprint 4 shipped payload-key-mismatch bugs ( `{spi, mi}` vs `{spIdx, idx}`, bare-number payload). Sprint 20 closed the loop at author-time:
 
-Callers MUST use creators from [`calcReducer.js`](../../client/src/context/calcReducer.js):
+Callers MUST use creators from [`calcReducer.js`](../../apps/client/src/context/calcReducer.js):
 
 ```js
 import { setSpMaterialField, removeSubProduct } from 'context/calcReducer';
@@ -241,7 +241,7 @@ Cost engineers spend hours a day in StandardCalc / ComplexCalc. The app already 
 
 Inside text inputs, the browser's native text-undo wins — the app yields so `Ctrl+Z` in a field behaves as expected. Outside inputs, state history engages.
 
-See [`calcHistory.js`](../../client/src/context/calcHistory.js) for the undo/redo reducer wrapper and [`CalcContext.jsx`](../../client/src/context/CalcContext.jsx) for the global key handler.
+See [`calcHistory.js`](../../apps/client/src/context/calcHistory.js) for the undo/redo reducer wrapper and [`CalcContext.jsx`](../../apps/client/src/context/CalcContext.jsx) for the global key handler.
 
 ## 10. Observed but deferred
 
@@ -266,19 +266,19 @@ Items closed in Sprints 26-34 moved to the Sprint 1-34 summary table (§12).
 
 1. Open the quote. Note `ccl_pn`, `id`, and displayed `va` / `gm`.
 2. Check the stored result: `jq '.[] | select(.id == N)' server/data/Library/QuoteHistory/quote_history.json`
-3. Verify against canonical (§5). If stored differs from canonical computed from breakdown fields → run `node scripts/migrate-quote-va.js --dry-run` to diff + `--apply` when confirmed.
+3. Verify against canonical (§5). If stored differs from canonical computed from breakdown fields → run `node apps/scripts/migrate-quote-va.js --dry-run` to diff + `--apply` when confirmed.
 4. Backup `.pre-va-migration-*` is created automatically.
 
 ### "Historical quote has no breakdown (thin result)"
 
-1. `node scripts/backfill-quote-results.js --dry-run`
+1. `node apps/scripts/backfill-quote-results.js --dry-run`
 2. If reasonable, `--apply`. Backup `.pre-backfill-*` preserves pre-state.
 
 ### "CI fails on perf-budget"
 
 1. `npm run perf-budget` locally — see which chunk overflowed.
-2. `cd client && npm run analyze` — emits `dist/bundle-stats.html` treemap. Open to see what's heavy inside the offending chunk.
-3. If legitimate growth (new feature): raise budget in [`scripts/check-perf-budget.js`](../../scripts/check-perf-budget.js), commit with rationale.
+2. `cd apps/client && npm run analyze` — emits `dist/bundle-stats.html` treemap. Open to see what's heavy inside the offending chunk.
+3. If legitimate growth (new feature): raise budget in [`apps/scripts/check-perf-budget.js`](../../apps/scripts/check-perf-budget.js), commit with rationale.
 4. If regression (accidental dep pull-in): use the JSON output `dist/bundle-stats.json` to diff against a prior baseline.
 
 ### "Two admins editing SGA rate collide (409)" — closed Sprint 33
@@ -288,8 +288,8 @@ Admin sees conflict banner. Click "Reload server values" — untouched sites pul
 ### "Audit log missing old entries after Sprint 30 cutover"
 
 1. Verify the SQLite table populated: `sqlite3 $OPS_DB_PATH 'SELECT COUNT(*) FROM audit_log;'`
-2. If 0 and `server/data/Library/Users/audit_log.json` has rows: `node scripts/backfill-audit-log.js --dry-run` then `--apply` (no flag).
-3. Check backfill ran: `node scripts/backfill-audit-log.js` — the "already populated" guard should now short-circuit.
+2. If 0 and `server/data/Library/Users/audit_log.json` has rows: `node apps/scripts/backfill-audit-log.js --dry-run` then `--apply` (no flag).
+3. Check backfill ran: `node apps/scripts/backfill-audit-log.js` — the "already populated" guard should now short-circuit.
 
 ### "Deploy multi-instance (pm2 cluster / Docker replicas)"
 
@@ -301,7 +301,7 @@ Admin sees conflict banner. Click "Reload server values" — untouched sites pul
 
 ### "VN user's decimal input silently dropped"
 
-Closed Sprint 28-29. Every on-change handler that previously did `parseFloat(e.target.value)` now uses `parseLocaleNumber` from [`client/src/utils/format.js`](../../client/src/utils/format.js). If a new PR reintroduces the raw pattern, `node --test client/src/utils/noRawParseFloat.lint.test.js` fails — guard runs as part of `npm test`.
+Closed Sprint 28-29. Every on-change handler that previously did `parseFloat(e.target.value)` now uses `parseLocaleNumber` from [`apps/client/src/utils/format.js`](../../apps/client/src/utils/format.js). If a new PR reintroduces the raw pattern, `node --test apps/client/src/utils/noRawParseFloat.lint.test.js` fails — guard runs as part of `npm test`.
 
 ---
 

@@ -24,7 +24,7 @@ No code change. Just monitor:
 
 - `/api/ping` response — check `uptime_sec` + `memory_mb` stable
 - Server log — `grep -c "shadowWrite.*failed"` = 0
-- Parity check: `node scripts/verify-parity.js` daily — expect 0 drift
+- Parity check: `node apps/scripts/verify-parity.js` daily — expect 0 drift
 
 ### Phase B — Per-dataset cutover (1 dataset/day)
 
@@ -74,7 +74,7 @@ Only after `OPS_DATA_BACKEND=sqlite` has run **14 continuous days** with zero ro
 | -------------------------------- | ---------------------------------------- | -------------------------- |
 | SQLite read latency p95          | `/api/ping` (add if needed)              | < 50 ms                    |
 | Shadow-write failure rate        | `grep 'shadowWrite' server.log \| wc -l` | 0                          |
-| Parity drift                     | `node scripts/verify-parity.js`          | 7/7 match                  |
+| Parity drift                     | `node apps/scripts/verify-parity.js`     | 7/7 match                  |
 | `/save-all` daily backup success | Check `Backup/SQLite/ops_*.sqlite`       | 1 new file per day         |
 | ops.db file growth               | `du -h server/data/ops.db`               | < 200 MB (alerts > 500 MB) |
 | WAL file size                    | `du -h server/data/ops.db-wal`           | < 64 MB (checkpoints auto) |

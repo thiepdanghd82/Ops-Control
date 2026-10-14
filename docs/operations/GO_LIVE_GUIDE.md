@@ -110,9 +110,9 @@
 
 ```bash
 cd <project-root>
-node scripts/build-windows-installers.mjs           # build cả 2
-node scripts/build-windows-installers.mjs server    # chỉ SERVER
-node scripts/build-windows-installers.mjs client    # chỉ CLIENT
+node apps/scripts/build-windows-installers.mjs           # build cả 2
+node apps/scripts/build-windows-installers.mjs server    # chỉ SERVER
+node apps/scripts/build-windows-installers.mjs client    # chỉ CLIENT
 ```
 
 **Cần có sẵn:**
@@ -208,7 +208,7 @@ App Electron tự chạy khi user login, NHƯNG nếu user logout, server sẽ d
 $OPSPATH = "$env:LOCALAPPDATA\Programs\Ops Control"
 cd "$OPSPATH\resources\app"
 
-# Bước 3: Tạo service trỏ vào server/index.js
+# Bước 3: Tạo service trỏ vào apps/server/index.js
 nssm install OpsControlServer "$OPSPATH\Ops Control.exe" --hidden
 nssm set OpsControlServer AppEnvironmentExtra ELECTRON_RUN_AS_NODE=1 OPS_PORT=3100 NODE_ENV=production
 nssm set OpsControlServer AppDirectory "$OPSPATH\resources\app"
@@ -648,7 +648,7 @@ Ops Control v1.2 satisfies:
 
 - **Copy 1:** Live data ở `~/Library/Application Support/ops-control-desktop/data` (macOS) hoặc `%APPDATA%\ops-control-desktop\data` (Windows)
 - **Copy 2:** Auto daily backup trong `data/Backup & restore/Data/auto_*.json` (giữ 30 ngày, prune tự động) + SQLite backup `data/Backup/SQLite/ops_*.sqlite`
-- **Copy 3:** Off-site qua `scripts/backup-offsite.sh` (rsync sang NAS / USB / SSH)
+- **Copy 3:** Off-site qua `apps/scripts/backup-offsite.sh` (rsync sang NAS / USB / SSH)
 
 ### 7.2 Verify scheduled backup hoạt động
 
@@ -715,13 +715,13 @@ Tháng 1 lần, làm restore drill:
 
 ### 7.5 Recovery scenarios
 
-| Sự cố                                      | Cách phục hồi                                                                                   |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| Server crash, không boot lại               | Cài lại app trên máy mới + copy folder `data/` từ backup mới nhất                               |
-| Database corrupt                           | Settings → Backup/Restore → restore từ SQLite backup gần nhất `data/Backup/SQLite/ops_*.sqlite` |
-| User xoá nhầm quote                        | Quote History → tab Trash → click Restore (soft-delete giữ 30 ngày)                             |
-| Mất TOTP key (lock all 2FA)                | SSH server → `OPS_TOTP_KEY=$(new_key) node scripts/reset-totp.js` (xem CLAUDE.md TOTP runbook)  |
-| Library file (rate.json, ddl.json) bị wipe | Restore từ `data/Backup/Library/library_*.tar.gz` daily snapshot                                |
+| Sự cố                                      | Cách phục hồi                                                                                       |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| Server crash, không boot lại               | Cài lại app trên máy mới + copy folder `data/` từ backup mới nhất                                   |
+| Database corrupt                           | Settings → Backup/Restore → restore từ SQLite backup gần nhất `data/Backup/SQLite/ops_*.sqlite`     |
+| User xoá nhầm quote                        | Quote History → tab Trash → click Restore (soft-delete giữ 30 ngày)                                 |
+| Mất TOTP key (lock all 2FA)                | SSH server → `OPS_TOTP_KEY=$(new_key) node apps/scripts/reset-totp.js` (xem CLAUDE.md TOTP runbook) |
+| Library file (rate.json, ddl.json) bị wipe | Restore từ `data/Backup/Library/library_*.tar.gz` daily snapshot                                    |
 
 ---
 
@@ -908,7 +908,7 @@ del "%APPDATA%\ops-control-desktop\ops-control-config.json"                     
 
 # Reset 2FA cho TẤT CẢ user (last resort)
 cd /Applications/Ops\ Control.app/Contents/Resources/app
-ELECTRON_RUN_AS_NODE=1 /Applications/Ops\ Control.app/Contents/MacOS/Ops\ Control scripts/reset-totp.js
+ELECTRON_RUN_AS_NODE=1 /Applications/Ops\ Control.app/Contents/MacOS/Ops\ Control apps/scripts/reset-totp.js
 ```
 
 ### 10.3 Environment variables (advanced)

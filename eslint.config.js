@@ -3,7 +3,7 @@
  *
  * Unified ESLint 9 config replacing the dual v8 (root) / v9 (client)
  * setup that lived in v1.2. Client/-specific rules still live in
- * `client/eslint.config.js` and merge from this base.
+ * `apps/client/eslint.config.js` and merge from this base.
  *
  * Philosophy:
  *   - error on real bugs (no-unused-vars, no-undef, eqeqeq)
@@ -18,11 +18,11 @@ export default [
   {
     ignores: [
       'node_modules/',
-      'client/node_modules/',
-      'desktop/node_modules/',
-      'client/dist/',
-      'desktop/dist-electron/',
-      'server/data/',
+      'apps/client/node_modules/',
+      'apps/desktop/node_modules/',
+      'apps/client/dist/',
+      'apps/desktop/dist-electron/',
+      'apps/server/data/',
       '_legacy/',
       'backup/',
       'dist/',
@@ -50,7 +50,7 @@ export default [
   js.configs.recommended,
   // 3. Server (Node) — CommonJS + ESM mixed
   {
-    files: ['server/**/*.js', 'scripts/**/*.{js,mjs}', 'tools/audit/**/*.{js,mjs}'],
+    files: ['apps/server/**/*.js', 'apps/scripts/**/*.{js,mjs}', 'tools/audit/**/*.{js,mjs}'],
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
@@ -78,10 +78,10 @@ export default [
   // real Node scripts.
   {
     files: [
-      'scripts/help/self-check.mjs',
-      'scripts/help/capture-screenshots.mjs',
-      'scripts/help/capture-subtabs.mjs',
-      'scripts/help/capture-with-demo.mjs',
+      'apps/scripts/help/self-check.mjs',
+      'apps/scripts/help/capture-screenshots.mjs',
+      'apps/scripts/help/capture-subtabs.mjs',
+      'apps/scripts/help/capture-with-demo.mjs',
     ],
     languageOptions: {
       globals: { ...globals.node, ...globals.browser, ...globals.es2024 },
@@ -114,7 +114,7 @@ export default [
       'no-empty': ['error', { allowEmptyCatch: true }],
     },
   },
-  // 3e. Client (React + Vite, browser globals). client/eslint.config.js
+  // 3e. Client (React + Vite, browser globals). apps/client/eslint.config.js
   // owns the per-package lint when run from inside client/; this block
   // applies when ESLint is invoked at the repo root (`npm run lint`)
   // so client files aren't linted under the bare js.configs.recommended
@@ -123,7 +123,7 @@ export default [
   // intentionally — keep both in sync until the client config is
   // consolidated here.
   {
-    files: ['client/src/**/*.{js,jsx}'],
+    files: ['apps/client/src/**/*.{js,jsx}'],
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
@@ -148,7 +148,7 @@ export default [
   },
   // 4. Desktop (Electron main process — CJS)
   {
-    files: ['desktop/**/*.{js,cjs}'],
+    files: ['apps/desktop/**/*.{js,cjs}'],
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'commonjs',

@@ -9,7 +9,7 @@
 
 ## Context
 
-v1.2 shipped a single monolithic `client/src/i18n/strings.js` file
+v1.2 shipped a single monolithic `apps/client/src/i18n/strings.js` file
 (~340 keys). Two problems compounded over Sprints 1–14:
 
 1. **Translator workflow** — every Vietnamese-string update touched
@@ -22,18 +22,18 @@ v1.3 had `domains/<name>/shared/i18n.js` planned in the
 ARCHITECTURE.md target, but v1.2 doesn't have a workspace setup.
 This ADR captures the in-place compromise: keep `strings.js` as a
 thin runtime store + extension point; move the actual key/value
-data into per-domain modules under `client/src/i18n/domains/`.
+data into per-domain modules under `apps/client/src/i18n/domains/`.
 
 ## Decision
 
 **Every domain that has more than 5 i18n keys MUST own a module
-in `client/src/i18n/domains/<name>.js`.**
+in `apps/client/src/i18n/domains/<name>.js`.**
 
 The module:
 
 - Side-effect imports `registerStrings` from `../strings.js`.
 - Calls `registerStrings({...})` with its slice at module load.
-- Is side-effect-imported from `client/src/main.jsx` so it runs
+- Is side-effect-imported from `apps/client/src/main.jsx` so it runs
   at boot.
 
 ### Module shape
@@ -88,7 +88,7 @@ obvious domain home:
 | `common.*` | Cross-domain UI atoms (Save, Cancel, Loading...)                                       |
 | `picker.*` | Library picker is shared between costing + library + sales — owned by no single domain |
 
-These can later move to `client/src/i18n/domains/platform.js` if
+These can later move to `apps/client/src/i18n/domains/platform.js` if
 a consensus emerges, but currently moving them would just split
 the platform shell across two files for no win.
 
@@ -147,7 +147,7 @@ unchanged.
 
 ## Alternatives considered
 
-### Domain-folder colocation (`client/src/modules/cost/i18n.js`)
+### Domain-folder colocation (`apps/client/src/modules/cost/i18n.js`)
 
 Rejected for v1.3-in-place. Would require import-side updates in
 every consumer and breaks the single `useI18n()` lookup. Saved
@@ -191,8 +191,8 @@ strings.js by design.
 
 ## References
 
-- `client/src/i18n/strings.js` — registry + `registerStrings()` extension point
-- `client/src/i18n/domains/{security,costing,sales,basis,mes,planning}.js` — domain modules
-- `client/src/main.jsx` — boot-time imports
-- `client/src/utils/useI18n.js` — consumer hook (unchanged from v1.2)
+- `apps/client/src/i18n/strings.js` — registry + `registerStrings()` extension point
+- `apps/client/src/i18n/domains/{security,costing,sales,basis,mes,planning}.js` — domain modules
+- `apps/client/src/main.jsx` — boot-time imports
+- `apps/client/src/utils/useI18n.js` — consumer hook (unchanged from v1.2)
 - ADR-0011 — domain router factory pattern (sibling — server-side)

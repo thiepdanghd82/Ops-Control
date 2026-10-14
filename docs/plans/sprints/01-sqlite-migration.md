@@ -292,13 +292,13 @@ Route handlers import from `repositories/`, never from file paths. Swapping back
 
 ### Week 1 — Foundation + shadow-write
 
-| Day   | Deliverable                                                                                                                                           | Exit criteria                                                                                                              |
-| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| **1** | `better-sqlite3` dep added; `server/db/init.js` creates `ops.db` with full DDL; repository skeleton (materials, bom, routing) with file backend wired | `node scripts/init-db.js` creates empty DB with all tables. All existing tests still green.                                |
-| **2** | Migration script `scripts/migrate-to-sqlite.js` for Materials + IFS Inventory. Dry-run mode prints insert count + SHA256 checksum without writing DB  | Dry-run matches source file row count exactly. Checksum stable across 3 runs.                                              |
-| **3** | Same for BOM + Routing Operations. Shadow-write wired: `upsertMaterials` writes to BOTH file AND SQLite when mode=`shadow-write`                      | `POST /api/import/materials` writes to `materials_data.js` + `materials` table. Both have identical row count + checksums. |
-| **4** | Shadow-write for Rate tables, DDL, Trackers, Quotes. Atomic TX wrapper for `/save-all` (only around the SQLite side)                                  | `POST /save-all` touches all 14 datasets; SQLite transaction rolls back on any write error.                                |
-| **5** | `scripts/verify-parity.js` script: walks every dataset, compares row count + SHA256 checksum between file vs DB; emits HTML report with drift rows    | Report shows 0 drift on fresh data. Seed 10 known-bad rows → report flags them.                                            |
+| Day   | Deliverable                                                                                                                                                | Exit criteria                                                                                                              |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **1** | `better-sqlite3` dep added; `apps/server/db/init.js` creates `ops.db` with full DDL; repository skeleton (materials, bom, routing) with file backend wired | `node scripts/init-db.js` creates empty DB with all tables. All existing tests still green.                                |
+| **2** | Migration script `apps/scripts/migrate-to-sqlite.js` for Materials + IFS Inventory. Dry-run mode prints insert count + SHA256 checksum without writing DB  | Dry-run matches source file row count exactly. Checksum stable across 3 runs.                                              |
+| **3** | Same for BOM + Routing Operations. Shadow-write wired: `upsertMaterials` writes to BOTH file AND SQLite when mode=`shadow-write`                           | `POST /api/import/materials` writes to `materials_data.js` + `materials` table. Both have identical row count + checksums. |
+| **4** | Shadow-write for Rate tables, DDL, Trackers, Quotes. Atomic TX wrapper for `/save-all` (only around the SQLite side)                                       | `POST /save-all` touches all 14 datasets; SQLite transaction rolls back on any write error.                                |
+| **5** | `apps/scripts/verify-parity.js` script: walks every dataset, compares row count + SHA256 checksum between file vs DB; emits HTML report with drift rows    | Report shows 0 drift on fresh data. Seed 10 known-bad rows → report flags them.                                            |
 
 **End of week 1 gate:** Stakeholder (user + Hana) signs off on the parity report. If drift > 0 rows, sprint pauses until resolved.
 
@@ -320,7 +320,7 @@ Route handlers import from `repositories/`, never from file paths. Swapping back
 
 Key risk: the JS files are parsed via regex (`parseJsDataFile` in `dataSync.js`) — not standard JSON. One malformed row = skipped row + silent data loss.
 
-**Guardrails in `scripts/migrate-to-sqlite.js`**:
+**Guardrails in `apps/scripts/migrate-to-sqlite.js`**:
 
 1. Parse source file → count rows
 2. Insert into SQLite inside ONE transaction
@@ -330,12 +330,12 @@ Key risk: the JS files are parsed via regex (`parseJsDataFile` in `dataSync.js`)
 6. Only on parity match, update `_migration_state` row
 
 ```bash
-node scripts/migrate-to-sqlite.js --dataset=materials --dry-run
+node apps/scripts/migrate-to-sqlite.js --dataset=materials --dry-run
 # DRY RUN: 2687 rows would be inserted
 # Checksum file: a3f8…
 # Checksum db:   (dry-run)
 
-node scripts/migrate-to-sqlite.js --dataset=materials --commit
+node apps/scripts/migrate-to-sqlite.js --dataset=materials --commit
 # Inserting 2687 rows…  [done in 340ms]
 # Checksum file: a3f8…
 # Checksum db:   a3f8…
@@ -396,7 +396,7 @@ Scripts go in `scripts/verify/` and produce HTML reports in `logs/verify/*.html`
 
 - [ ] All 10 datasets running on `OPS_DATA_BACKEND=sqlite` for 7 continuous days with no rollback.
 - [ ] Cold-start tab load times: Mfg Structures < 500ms (was ~2s), Routing Ops < 500ms.
-- [ ] `scripts/verify-parity.js` returns 0 drift across all datasets.
+- [ ] `apps/scripts/verify-parity.js` returns 0 drift across all datasets.
 - [ ] All saved quotes load + recalc to identical totals as pre-migration snapshot.
 - [ ] 5-user concurrent `/save-all` test: 0 row loss.
 - [ ] Daily `.backup` of `ops.db` running and retention pruning.
@@ -408,7 +408,7 @@ Scripts go in `scripts/verify/` and produce HTML reports in `logs/verify/*.html`
 ## 12. Open questions for sign-off
 
 1. **Do we keep the JS files indefinitely as read-only mirror?** Pros: easy disaster recovery; Cons: extra write, drift risk. Recommend: yes, for 30 days post-cutover, then stop.
-2. **Who owns `scripts/verify-parity.js` run schedule?** Proposal: cron daily during sprint, weekly post-cutover.
+2. **Who owns `apps/scripts/verify-parity.js` run schedule?** Proposal: cron daily during sprint, weekly post-cutover.
 3. **Should we take this opportunity to add a Quote `version` column + expose version history UI?** Adds 2 days. Not required for migration but zero-cost to add while we're already reshaping quotes table.
 4. **SSE vs polling for real-time quote updates?** Deferred — not required for SQLite migration, but SQLite makes it cheap later.
 
@@ -419,9 +419,9 @@ Scripts go in `scripts/verify/` and produce HTML reports in `logs/verify/*.html`
 Groundwork that doesn't touch production data:
 
 - [x] This plan doc
-- [ ] Write `server/db/init.js` + full DDL file (ready to run but not wired in)
-- [ ] Write `scripts/migrate-to-sqlite.js` in dry-run-only mode (reads JS files, prints stats, no DB write)
-- [ ] Write `scripts/verify-parity.js` skeleton
+- [ ] Write `apps/server/db/init.js` + full DDL file (ready to run but not wired in)
+- [ ] Write `apps/scripts/migrate-to-sqlite.js` in dry-run-only mode (reads JS files, prints stats, no DB write)
+- [ ] Write `apps/scripts/verify-parity.js` skeleton
 - [ ] Draft repository interface (`repositories/*Repo.js` method signatures) without implementation
 
 Say the word and I'll scaffold those artifacts into the repo so the sprint team hits the ground running. Everything above is **read-only** relative to production data.

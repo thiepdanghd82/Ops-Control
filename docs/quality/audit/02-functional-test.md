@@ -50,10 +50,10 @@ What I did instead, per finding:
 | Public metrics                 | `GET /metrics`                                  | `200 (Prometheus exposition format, 50+ counters)`      | ✅                          |
 | 404 control path               | `GET /api/info`                                 | `404 {"error":"not found"}`                             | ✅                          |
 
-| ID       | Severity     | Finding                                                                                                                                                                                                                                            | Evidence                                                                          |
-| -------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| **F2-1** | 🟠 **MAJOR** | **User enumeration vulnerability**. `/api/auth/login` returns `"❌ Username not found"` vs `"❌ Incorrect password"`, letting an attacker probe for valid usernames without credentials. OWASP recommends a single generic message for both cases. | `server/services/authService.js` (curl reproduction in `/tmp/`, transcript above) |
-| F2-2     | 🟢 OK        | Mutation routes correctly require auth (writeRateLimit + auth middleware ordering verified in Phase 1 §1.2.7). Without session cookie, every state-changing endpoint returns 401 before processing.                                                | `server/index.js:614` (writeRateLimit + auth chain)                               |
+| ID       | Severity     | Finding                                                                                                                                                                                                                                            | Evidence                                                                               |
+| -------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| **F2-1** | 🟠 **MAJOR** | **User enumeration vulnerability**. `/api/auth/login` returns `"❌ Username not found"` vs `"❌ Incorrect password"`, letting an attacker probe for valid usernames without credentials. OWASP recommends a single generic message for both cases. | `apps/server/services/authService.js` (curl reproduction in `/tmp/`, transcript above) |
+| F2-2     | 🟢 OK        | Mutation routes correctly require auth (writeRateLimit + auth middleware ordering verified in Phase 1 §1.2.7). Without session cookie, every state-changing endpoint returns 401 before processing.                                                | `apps/server/index.js:614` (writeRateLimit + auth chain)                               |
 
 ### 2.1.2 BOM Explosion — Reference test 30032013-0075 ✅ **PASS** (with caveat)
 
@@ -64,7 +64,7 @@ What I did instead, per finding:
 | `Library/IFS_Inventory/inventory_data.js`                 | `["30032013-0075","(FLD/RPC5/GZD/H0) 75mm x 1000M","Raw material",…,Width=75,Len=1000000,…]`           |
 | `Library/Manufacturing_Structures/mfg_structures_data.js` | `[80640087, …, "30032013-0075", …, QPA=0.01155, **Component Scrap=1.125**, **Scrap Factor (%)=3**, …]` |
 
-**Code path** ([client/src/modules/planning/tabs/BOMExplosion.jsx:119-124](client/src/modules/planning/tabs/BOMExplosion.jsx#L119-L124)):
+**Code path** ([apps/client/src/modules/planning/tabs/BOMExplosion.jsx:119-124](apps/client/src/modules/planning/tabs/BOMExplosion.jsx#L119-L124)):
 
 ```js
 const scrapPct = getNumField(comp, 'componentScrap') / 100; // reads 'Component Scrap' = 1.125 → 0.01125
@@ -88,7 +88,7 @@ const linearM = calcLinearM(required, widthMm); // m² / (75/1000) = m² × 13.3
 
 - The IFS canonical `Scrap Factor (%)` column (col 8) carries **value 3** for this part.
 - The code reads `Component Scrap` (col 7) **value 1.125** instead.
-- `server/repositories/shadowWrite.js:40-41` stores **both** columns (`scrap` and `scrap_pct`) into SQLite, but the BOM Explosion UI only reads `scrap`. The `scrap_pct=3` column is **dead data** in the read path.
+- `apps/server/repositories/shadowWrite.js:40-41` stores **both** columns (`scrap` and `scrap_pct`) into SQLite, but the BOM Explosion UI only reads `scrap`. The `scrap_pct=3` column is **dead data** in the read path.
 
 This means **per CCL Vietnam practice**, "Component Scrap" IS the operative percentage and the code is correct. But a new operator joining and assuming "Scrap Factor (%)" is the canonical IFS field would expect `5.95 m²`, not `5.84 m²`. **Document this explicitly** in the operator user guide and the schema comment.
 
@@ -98,13 +98,13 @@ This means **per CCL Vietnam practice**, "Component Scrap" IS the operative perc
 
 ### 2.1.3 BOM Explosion — three views (Per Order / All Orders Stacked / Consolidated) ✅
 
-[BOMExplosion.jsx:47](client/src/modules/planning/tabs/BOMExplosion.jsx#L47) declares three modes:
+[BOMExplosion.jsx:47](apps/client/src/modules/planning/tabs/BOMExplosion.jsx#L47) declares three modes:
 
 ```js
 const [viewMode, setViewMode] = useState('per-order'); // 'per-order' | 'stacked' | 'consolidated'
 ```
 
-**Width + Linear M render in all three views** (verified by grep at [lines 329-333, 418-420, 477-478](client/src/modules/planning/tabs/BOMExplosion.jsx#L329)):
+**Width + Linear M render in all three views** (verified by grep at [lines 329-333, 418-420, 477-478](apps/client/src/modules/planning/tabs/BOMExplosion.jsx#L329)):
 
 ```jsx
 <td className="text-right mono">{comp.widthMm ?? '—'}</td>
@@ -121,7 +121,7 @@ The Per-Order view at line 329, Stacked at line 418, Consolidated at line 477 al
 
 ### 2.1.4 Costing rollup (calc engine)
 
-[client/src/services/calcEngine.js:527-680](client/src/services/calcEngine.js#L527) — `calcAll(st, allSpResults, lib, subproducts)` is the rollup entry point. Cost categories aggregated:
+[apps/client/src/services/calcEngine.js:527-680](apps/client/src/services/calcEngine.js#L527) — `calcAll(st, allSpResults, lib, subproducts)` is the rollup entry point. Cost categories aggregated:
 
 | Category     | Source                                         | calcEngine field            |
 | ------------ | ---------------------------------------------- | --------------------------- |
@@ -175,7 +175,7 @@ CSV injection is consistently mitigated across **all** export endpoints I could 
 
 ### 2.1.6 File upload ✅
 
-[server/routes/import.js:73-91](server/routes/import.js#L73-L91):
+[apps/server/routes/import.js:73-91](apps/server/routes/import.js#L73-L91):
 
 - `multer` with `limits: { fileSize: (Number(process.env.OPS_IMPORT_MAX_MB) || 10) * 1024 * 1024 }` → 10 MB default
 - `fileFilter` checks MIME type
@@ -188,7 +188,7 @@ CSV injection is consistently mitigated across **all** export endpoints I could 
 
 ### 2.1.7 Concurrent edit / optimistic locking ✅
 
-[server/domains/sales/routes/quotes.js:116-117](server/domains/sales/routes/quotes.js#L116):
+[apps/server/domains/sales/routes/quotes.js:116-117](apps/server/domains/sales/routes/quotes.js#L116):
 
 ```js
 ok: false, error: 'version_conflict',
@@ -207,7 +207,7 @@ actual_version: err.actualVersion, current: err.current,
 
 ### 2.2.1 Empty state ✅
 
-**60 `<EmptyState>` callsites** across `client/src/`. Component primitive at `components/Shared/EmptyState`.
+**60 `<EmptyState>` callsites** across `apps/client/src/`. Component primitive at `components/Shared/EmptyState`.
 
 Sample uses:
 
@@ -290,15 +290,15 @@ const lim = Math.max(1, Math.min(Number(limit) || 50, 200));
 | 409    | Optimistic lock conflict | `{"ok":false,"error":"version_conflict","actual_version":N,"current":{…}}`                                     |
 | 500    | Server error             | `{"error":"<redacted>"}` via `safeError.js` redactor                                                           |
 
-`server/utils/safeError.js` redacts paths, stack traces, and PII before sending 5xx bodies. Logged-server-side preserves the raw error.
+`apps/server/utils/safeError.js` redacts paths, stack traces, and PII before sending 5xx bodies. Logged-server-side preserves the raw error.
 
 ### 2.3.2 Form validation
 
-Quick spot-check: [`OrderEntry.jsx`](client/src/modules/planning/tabs/OrderEntry.jsx) uses inline error messages from i18n (`form.validation.*` keys). Too large a surface to walk exhaustively without UI access; recommend operator UAT phase.
+Quick spot-check: [`OrderEntry.jsx`](apps/client/src/modules/planning/tabs/OrderEntry.jsx) uses inline error messages from i18n (`form.validation.*` keys). Too large a surface to walk exhaustively without UI access; recommend operator UAT phase.
 
 ### 2.3.3 Network offline
 
-[`client/src/components/Layout/ConnectionBanner.jsx`](client/src/components/Layout/ConnectionBanner.jsx) renders an offline banner when health-check fails. Per Phase 1 lint findings, it has a React-19 set-state-in-render warning (`Date.now()` called during render) but functionally works.
+[`apps/client/src/components/Layout/ConnectionBanner.jsx`](apps/client/src/components/Layout/ConnectionBanner.jsx) renders an offline banner when health-check fails. Per Phase 1 lint findings, it has a React-19 set-state-in-render warning (`Date.now()` called during render) but functionally works.
 
 | ID    | Severity | Finding                                                                                                                                                                               |
 | ----- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -37,7 +37,7 @@
 | --- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
 | ☐   | Node.js ≥ 20.x                                                                                           | `node --version`                                  |
 | ☐   | `package.json` version is `1.5.0`+ / phiên bản 1.5.0 trở lên                                             | `grep '"version"' package.json`                   |
-| ☐   | `client/dist/` exists / tồn tại with current build                                                       | `ls client/dist/index.html`                       |
+| ☐   | `apps/client/dist/` exists / tồn tại with current build                                                  | `ls apps/client/dist/index.html`                  |
 | ☐   | `.env` exists with valid `OPS_TOTP_KEY` (64 hex chars in production) / có `.env` với OPS_TOTP_KEY hợp lệ | `wc -c .env` ≥ 100                                |
 | ☐   | SQLite DB exists at DATA_DIR / DB tồn tại theo DATA_DIR                                                  | `ls $(grep ^DATA_DIR .env \| cut -d= -f2)/ops.db` |
 | ☐   | Backup taken in last 24h / có backup trong 24h gần nhất                                                  | `ls -lt server/data/Backup/ \| head -3`           |
@@ -308,7 +308,7 @@ Each scenario has positive + negative paths. Tick PASS only when ALL rows in BOT
 | --- | ------------------------------------------------------------- | ------------------------------------------------------------- | ------ | --- |
 | 1   | `grep "🌱" boot.log` after running suite with `NODE_ENV=test` | Empty (test-gated) / Trống                                    |        |     |
 | 2   | Visual scan of OPS_TOTP_KEY line / Quan sát dòng OPS_TOTP_KEY | Cannot see actual key value anywhere / Không thấy giá trị key |        |     |
-| 3   | `node --test server/utils/envSources.test.js`                 | 6/6 pass                                                      |        |     |
+| 3   | `node --test apps/server/utils/envSources.test.js`            | 6/6 pass                                                      |        |     |
 
 #### Notes / Issues
 
@@ -326,7 +326,7 @@ A single happy-path walkthrough exercising all 7 fixes together. Run AFTER each 
 
 | #   | Action / Hành động                                                        | Touches Fix | Expected                                                                                                                | ✓/✗ |
 | --- | ------------------------------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------- | --- |
-| 1   | `kill <prev-pid>; node server/index.js`                                   | 7           | Boot log starts `🌱 [env] resolved sources:` (8 lines, secrets masked) / Bắt đầu bằng dòng env (8 dòng, secret bị mask) |     |
+| 1   | `kill <prev-pid>; node apps/server/index.js`                              | 7           | Boot log starts `🌱 [env] resolved sources:` (8 lines, secrets masked) / Bắt đầu bằng dòng env (8 dòng, secret bị mask) |     |
 | 2   | Continue watching boot log / Tiếp tục xem log                             | 1, 2        | Later: `📁 Data directory: <path>` + `📦 [compression] enabled`                                                         |     |
 | 3   | Open `http://<host>:3000` in fresh browser / Mở trang trong browser mới   | 2           | Page loads visibly fast; DevTools shows JS bundles gzipped / Trang load nhanh, JS có gzip                               |     |
 | 4   | Try login with `user-uat` + wrong password / Thử login sai mật khẩu       | 3           | "Invalid credentials" / "Thông tin đăng nhập không hợp lệ"                                                              |     |
@@ -377,16 +377,16 @@ A single happy-path walkthrough exercising all 7 fixes together. Run AFTER each 
 
 ### Specific failure → fix mapping / Bảng tra cứu fail
 
-| If this scenario fails… / Nếu fail ở scenario… | Try this first / Thử trước                                                                                                                      | If that doesn't work… / Nếu vẫn không được…                                                                |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Scenario 1 (DATA_DIR)                          | Check `.env` not reverted / verify systemd unit not v1.0-era / Kiểm tra .env không bị revert                                                    | Roll back to last `releases/<ts>/` snapshot                                                                |
-| Scenario 2 (compression)                       | `npm install compression@^1.8.1` — verify `package.json` has dep / Cài lại lib                                                                  | Re-run `npm run build` to re-bundle / Build lại                                                            |
-| Scenario 3 (login unification)                 | Clear browser cache / PWA stale-cache window (≤ 5 min) / Xóa cache                                                                              | Server-side rollback nếu vẫn lỗi                                                                           |
-| Scenario 4 (a11y)                              | Check `client/dist/` rebuilt after `6b8542f` / Kiểm tra build sau commit                                                                        | Re-run `cd client && npm run build`                                                                        |
-| Scenario 5 (migration guide)                   | Wrong file? Confirm path is repo root `MIGRATION_GUIDE.md`, NOT `docs/archive/v1.3-readme-first/MIGRATION.md` (different scope) / Đọc đúng file | n/a — doc-only, no code rollback needed                                                                    |
-| Scenario 6 (hygiene)                           | Branch out of date — `git fetch && git log` / Check branch                                                                                      | Recovery from `wip-snapshot-20260504-082812` git tag                                                       |
-| Scenario 7 (env-source log)                    | Check `NODE_ENV=test` not accidentally set (test-gated) / Kiểm tra NODE_ENV                                                                     | If `server/utils/envSources.js` missing, deploy missed Fix 7 commit (`5fc6268`) / Nếu thiếu file, redeploy |
-| Smoke (composite)                              | Re-run scenario 6 first (hygiene) / Chạy lại scenario 6 trước                                                                                   | n/a — diagnose per row 1-7                                                                                 |
+| If this scenario fails… / Nếu fail ở scenario… | Try this first / Thử trước                                                                                                                      | If that doesn't work… / Nếu vẫn không được…                                                                     |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Scenario 1 (DATA_DIR)                          | Check `.env` not reverted / verify systemd unit not v1.0-era / Kiểm tra .env không bị revert                                                    | Roll back to last `releases/<ts>/` snapshot                                                                     |
+| Scenario 2 (compression)                       | `npm install compression@^1.8.1` — verify `package.json` has dep / Cài lại lib                                                                  | Re-run `npm run build` to re-bundle / Build lại                                                                 |
+| Scenario 3 (login unification)                 | Clear browser cache / PWA stale-cache window (≤ 5 min) / Xóa cache                                                                              | Server-side rollback nếu vẫn lỗi                                                                                |
+| Scenario 4 (a11y)                              | Check `apps/client/dist/` rebuilt after `6b8542f` / Kiểm tra build sau commit                                                                   | Re-run `cd apps/client && npm run build`                                                                        |
+| Scenario 5 (migration guide)                   | Wrong file? Confirm path is repo root `MIGRATION_GUIDE.md`, NOT `docs/archive/v1.3-readme-first/MIGRATION.md` (different scope) / Đọc đúng file | n/a — doc-only, no code rollback needed                                                                         |
+| Scenario 6 (hygiene)                           | Branch out of date — `git fetch && git log` / Check branch                                                                                      | Recovery from `wip-snapshot-20260504-082812` git tag                                                            |
+| Scenario 7 (env-source log)                    | Check `NODE_ENV=test` not accidentally set (test-gated) / Kiểm tra NODE_ENV                                                                     | If `apps/server/utils/envSources.js` missing, deploy missed Fix 7 commit (`5fc6268`) / Nếu thiếu file, redeploy |
+| Smoke (composite)                              | Re-run scenario 6 first (hygiene) / Chạy lại scenario 6 trước                                                                                   | n/a — diagnose per row 1-7                                                                                      |
 
 ### "Hard rollback" emergency procedure / Quy trình rollback khẩn
 

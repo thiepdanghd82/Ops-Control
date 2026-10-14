@@ -2,7 +2,7 @@
 
 **Date built:** 2026-05-29
 **Tag:** `v1.5.12` (commit `30db7d2`)
-**Artifact:** `desktop/dist-electron/Ops Control SERVER 1.5.12-arm64.dmg`
+**Artifact:** `apps/desktop/dist-electron/Ops Control SERVER 1.5.12-arm64.dmg`
 **Size:** 210 MB
 **SHA256:** `b2d540cf2de920f5c9ce51f5c19ccb4de3a00879e14a02af6ec12ea4bef1e303`
 
@@ -16,7 +16,7 @@
 ## Smoke verification (done locally)
 
 - ✅ PR #96 fix operator-verified on Mac DMG hardware 2026-05-29 (screenshot showed `12.25` typed cleanly in Tool Cost field)
-- ✅ DMG built clean via `node scripts/build-mac-installers.mjs server`
+- ✅ DMG built clean via `node apps/scripts/build-mac-installers.mjs server`
 - ✅ Lesson 28 better-sqlite3 binary parity: SHA256 `e8c5e5e4b5b2b8fec4eeaf3ca18df78d40271bde738ec57faddb19bcedda5eb1` matches at both `app/node_modules/.../better_sqlite3.node` AND `app.asar.unpacked/.../better_sqlite3.node`
 - ✅ Native overlay preflight clean: `better-sqlite3`, `node-hid`, `@serialport/bindings-cpp` all overlaid
 - ✅ 871 client tests pass
@@ -59,17 +59,17 @@ Same baseline as prior 9 admin-merged PRs in D-15 sprint:
 
 Closes the CLIENT-missing HALT from initial verify report.
 
-- **File:** `desktop/dist-electron/Ops Control CLIENT 1.5.12-arm64.dmg`
+- **File:** `apps/desktop/dist-electron/Ops Control CLIENT 1.5.12-arm64.dmg`
 - **Size:** 210 MB
 - **SHA256:** `88c138729c1f029f86a057e3ec66beedce30030a465e18730a40ec238e9e157b`
-- **Build command:** `node scripts/build-mac-installers.mjs client`
-- **Verification:** 7/7 programmatic checks PASS — see `desktop/dist-electron/VERIFY-REPORT-v1.5.12.md` CLIENT section
+- **Build command:** `node apps/scripts/build-mac-installers.mjs client`
+- **Verification:** 7/7 programmatic checks PASS — see `apps/desktop/dist-electron/VERIFY-REPORT-v1.5.12.md` CLIENT section
 - **build-role.json:** `{"role": "client"}` — defaults to thin mode + first-run wizard for SERVER URL
 - **Native parity:** better-sqlite3 SHA `e8c5e5e4…` identical to SERVER (same compiled binary, only role file differs between artifacts)
 
 ## Distribution checklist cho D-7
 
-- [ ] **Henry** smoke SERVER trên Lead's Mac per `desktop/dist-electron/SMOKE-CHECKLIST-v1.5.12.md` (14 steps, ~15 min)
+- [ ] **Henry** smoke SERVER trên Lead's Mac per `apps/desktop/dist-electron/SMOKE-CHECKLIST-v1.5.12.md` (14 steps, ~15 min)
 - [ ] **Henry** verify SERVER `/health` returns `version: 1.5.12` từ browser
 - [ ] **Henry** gửi CLIENT DMG cho 6 operator qua Zalo channel (kèm SHA256 cho cross-verify)
 - [ ] **Henry** distribute `SMOKE-CHECKLIST-CLIENT-v1.5.12.md` qua Zalo (operator-facing instructions tiếng Việt)
@@ -99,7 +99,7 @@ Closes Win parallel test gap for D-7 (2026-06-02).
 
 - **Chosen:** Local Mac cross-compile (Path M variant)
 - **NOT** new GHA workflow (would have cost ~95min vs ~15min cross-compile)
-- **Reasoning:** Investigation revealed (a) build pipeline `scripts/build-windows-installers.mjs` already complete + proven, (b) cross-compile from Mac arm64 → Win NSIS was already validated at v1.5.10 (`latest.yml` evidence May 27), (c) native modules use prebuilds (no Wine / MSBuild needed on Mac).
+- **Reasoning:** Investigation revealed (a) build pipeline `apps/scripts/build-windows-installers.mjs` already complete + proven, (b) cross-compile from Mac arm64 → Win NSIS was already validated at v1.5.10 (`latest.yml` evidence May 27), (c) native modules use prebuilds (no Wine / MSBuild needed on Mac).
 
 ### Artifacts
 
@@ -116,7 +116,7 @@ Closes Win parallel test gap for D-7 (2026-06-02).
 - Native modules + Lesson 28 dual-overlay: better-sqlite3 Win x64 SHA `b52f64ed…` parity confirmed ✅
 - Native prebuilds: node-hid + @serialport/bindings-cpp + argon2 all have Win x64 binaries ✅
 - Ad-hoc signed (no Authenticode cert — operator clicks "Run anyway" on SmartScreen) ℹ️ expected
-- Build evidence: see `desktop/dist-electron/WIN-BUILD-INVESTIGATION.md`
+- Build evidence: see `apps/desktop/dist-electron/WIN-BUILD-INVESTIGATION.md`
 
 ### Distribution cho D-7 Win parallel test
 

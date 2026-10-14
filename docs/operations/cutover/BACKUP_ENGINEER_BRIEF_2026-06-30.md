@@ -24,7 +24,7 @@
 
 Lead Engineer walks through:
 
-1. Repo structure overview — `server/`, `client/`, `desktop/`, `apps/kiosk/`
+1. Repo structure overview — `apps/server/`, `apps/client/`, `apps/desktop/`, `apps/kiosk/`
 2. Key docs:
    - `docs/operations/cutover/READINESS_AUDIT_D-6_2026-05-24.md`
    - `docs/operations/cutover/ROLLBACK-RUNBOOK-20260522.md`

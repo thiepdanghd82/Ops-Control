@@ -7,19 +7,19 @@ $env:SEMGREP_SEND_METRICS = 'off'
 $Ts  = Get-Date -Format 'yyyyMMdd-HHmmss'
 $Out = Join-Path $Root "tools\audit\reports\$Ts"
 New-Item -ItemType Directory -Force -Path $Out | Out-Null
-$ScanDirs = @('server','client/src','desktop','scripts')
+$ScanDirs = @('apps/server','apps/client/src','apps/desktop','apps/scripts')
 $Excl = @('--exclude','node_modules','--exclude','dist','--exclude','dist-electron','--exclude','build','--exclude','*.test.js','--exclude','*.test.mjs')
 function Have($cmd) { return [bool](Get-Command $cmd -ErrorAction SilentlyContinue) }
 
 Write-Host "`n== 1/5 npm audit =="
-foreach ($d in @('.','client','desktop')) {
+foreach ($d in @('.','apps/client','apps/desktop')) {
   $name = Split-Path (Resolve-Path $d) -Leaf
   Push-Location $d
   npm audit --omit=dev --audit-level=high *> (Join-Path $Out "npm-audit-$name.txt")
   Write-Host "  $name : exit $LASTEXITCODE (0 = sạch)"
   Pop-Location
 }
-if (Test-Path scripts/check-security-allowlist.mjs) { node scripts/check-security-allowlist.mjs *> (Join-Path $Out 'allowlist-check.txt') }
+if (Test-Path apps/scripts/check-security-allowlist.mjs) { node apps/scripts/check-security-allowlist.mjs *> (Join-Path $Out 'allowlist-check.txt') }
 
 Write-Host "`n== 2/5 Secrets =="
 if (Have gitleaks) {

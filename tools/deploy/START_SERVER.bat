@@ -30,17 +30,17 @@ if not exist "node_modules" (
     echo.
 )
 
-if not exist "client\node_modules" (
+if not exist "apps\client\node_modules" (
     echo   Installing client dependencies...
-    cd client && call npm install --silent && cd ..
+    cd apps\client && call npm install --silent && cd ..\..
     echo   Client dependencies installed
     echo.
 )
 
 :: Build client
-if not exist "client\dist" (
+if not exist "apps\client\dist" (
     echo   Building client...
-    cd client && call npx vite build --silent && cd ..
+    cd apps\client && call npx vite build --silent && cd ..\..
     echo   Client build done
     echo.
 )
@@ -55,7 +55,7 @@ start /b cmd /c "timeout /t 2 >nul & start http://localhost:3000"
 
 :: Start server
 set NODE_NO_WARNINGS=1
-node server/index.js
+node apps\server\index.js
 
 echo.
 echo   Stopped.

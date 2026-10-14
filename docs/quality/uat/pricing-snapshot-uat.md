@@ -662,4 +662,4 @@ P1+ FAILs not gating but must have MES-3-FIX ticket filed before go-live D-0 (20
 1. Filed bugs → MES-3-FIX-XX (raise via gh issue or directly into CLAUDE.md backlog section).
 2. If all 30 PASS → flip to admin-merge Phase 5 PR.
 3. CLAUDE.md sprint-history entry for S-SNAPSHOT phases 1–4 (Phase 5 entry added at merge time).
-4. Operator + admin docs (this PR) deployed to `client/public/help/` for in-app access.
+4. Operator + admin docs (this PR) deployed to `apps/client/public/help/` for in-app access.
