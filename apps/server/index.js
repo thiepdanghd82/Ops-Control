@@ -1217,7 +1217,8 @@ if (isEntryPoint) {
     import('child_process').then(({ spawn }) => {
       const child = spawn(process.execPath, [path.resolve(__dirname, '../scripts/seed-admin.js')], {
         stdio: 'inherit',
-        env: process.env,
+        // The resolved DATA_DIR: process.env may hold a relative one, or none.
+        env: { ...process.env, DATA_DIR },
       });
       child.on('exit', (code) => {
         if (code !== 0) console.warn(`[seed-admin] exited with ${code}`);

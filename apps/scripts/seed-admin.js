@@ -8,24 +8,27 @@
  * Idempotent: deletes the seed file after success. If the file
  * doesn't exist, exits 0 (nothing to do).
  *
- * Triggered automatically from `server/index.js` boot path; can also
- * be run manually:
- *   node scripts/seed-admin.js [seed-file-path]
+ * Triggered automatically from `server/index.js` boot path (with the
+ * server's resolved DATA_DIR); can also be run manually:
+ *   DATA_DIR=<data dir> node apps/scripts/seed-admin.js [seed-file-path]
+ * The seed defaults to <DATA_DIR>/../pending-admin-seed.json.
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { updateUsers, bcryptHash } from '../server/services/authService.js';
+import { init, updateUsers, bcryptHash } from '../server/services/authService.js';
 
-const DEFAULT_SEED_PATH =
-  process.env.OPS_USER_SEED ||
-  path.join(
-    process.env.HOME || '/tmp',
-    'Library/Application Support/Ops Control/pending-admin-seed.json'
-  );
+// The desktop wizard writes the seed to <userData>/pending-admin-seed.json and
+// the embedded server runs with DATA_DIR = <userData>/data, so the seed sits
+// next to DATA_DIR. OPS_USER_SEED (or argv[2]) overrides.
+function defaultSeedPath() {
+  if (process.env.OPS_USER_SEED) return process.env.OPS_USER_SEED;
+  if (!process.env.DATA_DIR) return null;
+  return path.join(path.dirname(path.resolve(process.env.DATA_DIR)), 'pending-admin-seed.json');
+}
 
 async function main() {
-  const seedPath = process.argv[2] || DEFAULT_SEED_PATH;
-  if (!fs.existsSync(seedPath)) {
+  const seedPath = process.argv[2] || defaultSeedPath();
+  if (!seedPath || !fs.existsSync(seedPath)) {
     console.log(`[seed-admin] no seed file at ${seedPath} — nothing to do`);
     return;
   }
@@ -44,6 +47,16 @@ async function main() {
     console.error('[seed-admin] seed missing username or password (min 12 chars) — skipping');
     return;
   }
+
+  // authService resolves users.json from init(DATA_DIR). Without it the path is
+  // relative and users.json lands in the process cwd (inside the app bundle).
+  if (!process.env.DATA_DIR) {
+    console.error(
+      '[seed-admin] DATA_DIR not set — refusing to write users.json outside the data dir'
+    );
+    process.exit(1);
+  }
+  init(path.resolve(process.env.DATA_DIR));
 
   // Hash outside the lock — argon2 is CPU heavy.
   const hash = await bcryptHash(password);

@@ -1012,7 +1012,11 @@ app.whenReady().then(async () => {
           // server boot. We persist the request and the server reads
           // it on first boot via scripts/seed-admin.js.
           const seedPath = path.join(app.getPath('userData'), 'pending-admin-seed.json');
-          fs.writeFileSync(seedPath, JSON.stringify({ username, password }, null, 2));
+          // Plaintext password until seed-admin consumes it — owner-only.
+          fs.writeFileSync(seedPath, JSON.stringify({ username, password }, null, 2), {
+            mode: 0o600,
+          });
+          fs.chmodSync(seedPath, 0o600);
         },
       });
       if (result.ok) {
