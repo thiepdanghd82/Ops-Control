@@ -37,7 +37,12 @@
 # "destination unreachable" and the job refused to run against a share that was
 # mounted and writable the whole time. Listing candidates costs nothing; being
 # wrong about which one is mounted costs a backup.
+# Since 2026-10-14 the USB drive comes first: the share began refusing chmod
+# that day (every file answered fchmodat EACCES, from a Terminal session too),
+# and macOS's openrsync aborts on that. The share stays as a fallback for when
+# its permissions are restored and the drive is not plugged in.
 DEST_VOLUME_CANDIDATES=(
+  '/Volumes/Henry_USB'                   # Henry's USB drive (exFAT, 64 GB)
   '/Volumes/Henry'                       # …/Departments$/NPI/Henry mounted directly
   '/Volumes/Departments$/NPI/Henry'      # share root mounted, mirror two levels down
 )

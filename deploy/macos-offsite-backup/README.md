@@ -23,8 +23,8 @@ sao chép (mirror) toàn bộ dữ liệu Ops Control ra **ổ ngoài** mỗi 4 
 
 ```bash
 tail -f ~/Library/Logs/ops-offsite-backup.log      # xem nhật ký
-ls -la /Volumes/OPSBACKUP/ops-control-mirror/       # nội dung mirror
-cat /Volumes/OPSBACKUP/ops-control-mirror/LAST_MIRROR_OK.txt   # lần mirror gần nhất
+ls -la /Volumes/Henry_USB/ops-control-mirror/       # nội dung mirror
+cat /Volumes/Henry_USB/ops-control-mirror/LAST_MIRROR_OK.txt   # lần mirror gần nhất
 ```
 
 ## Nội dung mirror
