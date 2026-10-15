@@ -162,6 +162,53 @@
   color: #b91c1c;
 }
 
+/* ─── Languages (GitHub-style bar) ────────────────── */
+.about-lang-bar {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.about-lang-seg {
+  flex-basis: 0;
+  min-width: 2px;
+}
+
+.about-lang-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+
+.about-lang-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.about-lang-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.about-lang-name {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.about-lang-pct {
+  color: var(--text-secondary);
+}
+
 /* ─── Footer ──────────────────────────────────────── */
 .about-foot {
   margin-top: 24px;

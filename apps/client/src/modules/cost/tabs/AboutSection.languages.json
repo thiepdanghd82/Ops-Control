@@ -1,0 +1,49 @@
+{
+  "measured_at": "2026-10-15",
+  "files": 821,
+  "total_bytes": 7509952,
+  "languages": [
+    {
+      "name": "JavaScript",
+      "color": "#f1e05a",
+      "bytes": 6789927,
+      "percent": 90.4
+    },
+    {
+      "name": "CSS",
+      "color": "#663399",
+      "bytes": 552043,
+      "percent": 7.4
+    },
+    {
+      "name": "Shell",
+      "color": "#89e051",
+      "bytes": 114321,
+      "percent": 1.5
+    },
+    {
+      "name": "PowerShell",
+      "color": "#012456",
+      "bytes": 27164,
+      "percent": 0.4
+    },
+    {
+      "name": "Batchfile",
+      "color": "#c1f12e",
+      "bytes": 18868,
+      "percent": 0.3
+    },
+    {
+      "name": "NSIS",
+      "color": "#cccccc",
+      "bytes": 6950,
+      "percent": 0.1
+    },
+    {
+      "name": "Other",
+      "color": "#ededed",
+      "bytes": 679,
+      "percent": 0
+    }
+  ]
+}

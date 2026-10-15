@@ -15,6 +15,9 @@
 import React, { useEffect, useState } from 'react';
 import { useI18n } from '../../../utils/useI18n';
 import desktop from '../../../services/desktopBridge';
+// Written by apps/scripts/measure-languages.mjs (`npm run languages`) — the
+// packaged app ships no source to measure at runtime.
+import LANGUAGE_STATS from './AboutSection.languages.json';
 import './AboutSection.css';
 
 // Sourced from Vite define block (see client/vite.config.js) — reads
@@ -24,6 +27,15 @@ import './AboutSection.css';
 // maintained version mirror in the codebase.
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev';
 const BUILD_TIMESTAMP = '2026-05-20 15:31 GMT+7';
+
+// The snapshot is fixed per build, so its labels and styles are built once.
+const LANGUAGES = LANGUAGE_STATS.languages.map((l) => ({
+  ...l,
+  share: formatShare(l.percent),
+  segStyle: { flexGrow: l.bytes, background: l.color },
+  dotStyle: { background: l.color },
+}));
+const LANGUAGES_LABEL = LANGUAGES.map((l) => `${l.name} ${l.share}`).join(', ');
 
 export default function AboutSection() {
   const { t } = useI18n();
@@ -201,6 +213,38 @@ export default function AboutSection() {
         </div>
       </div>
 
+      {/* ─── Languages (GitHub-style bar) ─── */}
+      {LANGUAGES.length > 0 && (
+        <div className="about-card">
+          <h3 className="about-card-title">{t('about.languages')}</h3>
+          <p className="about-card-desc">
+            {t('about.languages_hint', {
+              files: LANGUAGE_STATS.files,
+              date: LANGUAGE_STATS.measured_at,
+            })}
+          </p>
+          <div className="about-lang-bar" role="img" aria-label={LANGUAGES_LABEL}>
+            {LANGUAGES.map((l) => (
+              <span
+                key={l.name}
+                className="about-lang-seg"
+                style={l.segStyle}
+                title={`${l.name} ${l.share}`}
+              />
+            ))}
+          </div>
+          <ul className="about-lang-legend">
+            {LANGUAGES.map((l) => (
+              <li key={l.name} className="about-lang-item">
+                <span className="about-lang-dot" style={l.dotStyle} />
+                <span className="about-lang-name">{l.name}</span>
+                <span className="about-lang-pct">{l.share}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* ─── Runtime (Electron only) ─── */}
       {runtime?.isElectron && (
         <div className="about-card">
@@ -299,6 +343,11 @@ export default function AboutSection() {
       </div>
     </div>
   );
+}
+
+// "Other" can be a few bytes; GitHub never prints 0.0% for a visible slice.
+function formatShare(percent) {
+  return percent < 0.1 ? '<0.1%' : `${percent.toFixed(1)}%`;
 }
 
 function Row({ label, children }) {
