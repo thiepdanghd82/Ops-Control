@@ -980,12 +980,23 @@ app.get('/data/*', (req, res) => {
   const u = getSessionUser(token);
   if (!u) return res.status(401).json({ error: 'Unauthorized' });
 
+  // Only the layout/artwork tree is servable here — the same files any session
+  // can read through GET /api/layout/:filename. DATA_DIR also holds
+  // Library/Users (sessions.json bearer tokens, users.json hashes,
+  // totp_secrets.enc), ops.db, license.json and backups; none of that may be
+  // reachable by an arbitrary session.
   const relParts = req.params[0].split('/').filter((p) => p && p !== '..');
+  const layoutsDir = path.resolve(DATA_DIR, 'Products layout');
   const fpath = path.resolve(path.join(DATA_DIR, ...relParts));
-  if (!fpath.startsWith(path.resolve(DATA_DIR))) {
+  if (!fpath.startsWith(layoutsDir + path.sep)) {
     return res.status(403).json({ error: 'forbidden' });
   }
   if (!fs.existsSync(fpath)) return res.status(404).json({ error: 'not found' });
+  // A symlink inside the layouts tree must not lead back out of it.
+  const realLayouts = fs.existsSync(layoutsDir) ? fs.realpathSync(layoutsDir) : layoutsDir;
+  if (!fs.realpathSync(fpath).startsWith(realLayouts + path.sep)) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
   const ext = path.extname(fpath).toLowerCase();
   const mime =
     {

@@ -1805,22 +1805,29 @@ router.post(
   }
 );
 
-// POST /api/auth/verify-pwd
+// POST /api/auth/verify-pwd — re-confirm the CALLER's own password (modal
+// step-up). It needs a full session, checks exactly one hash, and shares
+// login's per-username lockout. It used to be unauthenticated and accept a
+// role or username filter, which made it a password oracle for any account
+// that also hashed once per matching user per request.
 router.post('/auth/verify-pwd', async (req, res) => {
   const ip = clientIp(req);
   if (!checkRateLimit(ip)) return res.status(429).json({ ok: false, msg: '⛔ Too many requests' });
-  const { password, role, username: userFilter } = req.body;
-  const users = loadUsers();
-  let matched = users;
-  if (role) matched = users.filter((u) => u.role === role);
-  else if (userFilter)
-    matched = users.filter((u) => u.username.toLowerCase() === userFilter.toLowerCase());
-  let ok = false;
-  for (const u of matched) {
-    if (await checkPassword(u, password || '')) {
-      ok = true;
-      break;
-    }
+  const caller = getSessionUser(getTokenFromHeader(req));
+  if (!caller) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  const lock = checkLoginLockout(caller.username);
+  if (!lock.allowed) {
+    res.set('Retry-After', String(Math.ceil(lock.retry_after_ms / 1000)));
+    return res.json({ ok: false });
+  }
+  const { password } = req.body || {};
+  const ok =
+    typeof password === 'string' && password.length > 0 && (await checkPassword(caller, password));
+  if (ok) {
+    clearLoginFailures(caller.username);
+  } else {
+    recordLoginFailure(caller.username);
+    audit('VERIFY_PWD_FAIL', caller.username, ip);
   }
   res.json({ ok });
 });
@@ -1851,8 +1858,11 @@ router.post('/auth/migrate-users', (req, res) => {
 
 router.get('/totp/secret/:username', (req, res) => {
   const tok = getTokenFromHeader(req);
-  const [, caller] = getPreauthSession(tok);
-  if (!caller) return res.status(401).json({ error: 'Unauthorized' });
+  // The seed IS the second factor: only a session that already completed it
+  // may read one. A password-only (preauth) session must never get it —
+  // first-time enrollment goes through POST /totp/enroll instead.
+  const caller = getSessionUser(tok);
+  if (!caller) return res.status(401).json({ error: 'Unauthorized — verify TOTP first' });
   const usernameReq = decodeURIComponent(req.params.username);
   if (roleLevel(caller) < 4 && caller.username.toLowerCase() !== usernameReq.toLowerCase()) {
     return res.status(403).json({ error: 'Forbidden' });
@@ -1905,7 +1915,10 @@ router.post(
     const [sess, caller] = getPreauthSession(tok);
     if (!sess || !caller) return res.status(401).json({ error: 'Unauthorized' });
     const { username, code } = req.body;
-    if (roleLevel(caller) < 4 && caller.username.toLowerCase() !== (username || '').toLowerCase()) {
+    const isSelf = caller.username.toLowerCase() === (username || '').toLowerCase();
+    // Checking someone else's code is an admin tool: it needs an admin session
+    // that has completed its own 2FA, and it never changes this session.
+    if (!isSelf && (roleLevel(caller) < 4 || sess.totp_verified !== true)) {
       return res.status(403).json({ error: 'Forbidden' });
     }
     const secs = loadTotpSecrets();
@@ -1913,7 +1926,7 @@ router.post(
       Object.entries(secs).find(([k]) => k.toLowerCase() === (username || '').toLowerCase())?.[1] ||
       null;
     const ok = totpVerify(sec, code);
-    if (ok) {
+    if (ok && isSelf) {
       sess.totp_verified = true;
       // Enrollment finalized — clear pending flag so subsequent requests
       // pass getSessionUser() and the user can access the app.
@@ -1923,7 +1936,7 @@ router.post(
       }
       persistSessions();
       console.log(`  🔐  TOTP verified: ${caller.username}`);
-    } else {
+    } else if (!ok) {
       audit(
         'TOTP_VERIFY_FAIL',
         caller.username,
@@ -3936,11 +3949,17 @@ router.post('/backup/delete', writeRateLimit, (req, res) => {
 router.get('/lib/*', (req, res) => {
   const u = getSessionUser(getTokenFromHeader(req));
   if (!u) return res.status(401).json({ error: 'Unauthorized' });
+  // Raw Library reads bypass the tab ACL that /load-all applies, so they are
+  // sys-only; and Library/Users (sessions, password hashes, TOTP secrets) is
+  // never served over HTTP, not even to sys.
+  if (!isSys(u)) return res.status(403).json({ error: 'forbidden' });
   const rel = req.params[0];
   const parts = rel.split('/').filter((p) => p && p !== '..');
+  if (parts.length > 0 && parts[0].toLowerCase() === 'users')
+    return res.status(403).json({ error: 'forbidden' });
   const fpath = path.join(getLibDir(), ...parts);
   const absPath = path.resolve(fpath);
-  if (!absPath.startsWith(path.resolve(getLibDir())))
+  if (!absPath.startsWith(path.resolve(getLibDir()) + path.sep))
     return res.status(403).json({ error: 'forbidden' });
   if (!fs.existsSync(fpath)) return res.status(404).json({ error: 'not found' });
   res.json(readJson(fpath));

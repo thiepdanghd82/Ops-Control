@@ -49,7 +49,6 @@ const PUBLIC_ALLOWLIST = new Set([
   'POST /auth/logout', // idempotent; verifies token before clearing
   'POST /totp/verify', // preauth session; verifies OTP
   'POST /totp/enroll', // preauth session; atomic verify-then-save
-  'POST /auth/verify-pwd', // explicit password re-check (used by modal gates)
 ]);
 
 function scanRouteFile(rel) {
