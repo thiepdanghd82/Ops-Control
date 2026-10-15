@@ -1,24 +1,19 @@
 /**
- * The product name appears in two DIFFERENT roles, and only one of them
- * was renamed. This pins the split so a future find-and-replace cannot
- * quietly cross it.
+ * The product was renamed "Ops Control" / "CCL - NPI Costing module" →
+ * "Quoted Module". This pins the new name so a future find-and-replace
+ * cannot quietly bring an old one back.
  *
  *  1. UI chrome — the name the operator reads on screen, and every
  *     reference to the PACKAGED desktop app (whose electron-builder
  *     productName is now "Quoted Module", so the install is
- *     "/Applications/Quoted Module.app"). Renamed to "Quoted Module";
- *     the earlier UI names "Ops Control" and "CCL - NPI Costing module"
- *     must not come back.
+ *     "/Applications/Quoted Module.app").
  *
- *  2. Identity — two places where "Ops Control" is not a caption but a
- *     reference to something that still carries that name:
- *       - the TOTP issuer baked into the otpauth:// URI. Authenticator
- *         apps show whatever the entry was created with, so renaming it
- *         would leave every already-enrolled operator looking at a name
- *         the app no longer uses (an orphaned entry), and the login help
- *         text that tells them to delete a stale "Ops Control" entry
- *         would be wrong;
- *       - that same login help text, which must keep matching the issuer.
+ *  2. The TOTP issuer baked into the otpauth:// URI is "Quoted Module" too
+ *     (renamed 2026-10-15). Authenticator apps keep the label an entry was
+ *     created with, so operators enrolled earlier still see "Ops Control" —
+ *     those entries keep working, since codes are checked against the seed
+ *     on the server. The login help text that tells a stuck operator which
+ *     entry to delete therefore names both.
  *
  * Runner: node --test src/appName.lint.test.js
  */
@@ -60,18 +55,19 @@ test('the previous UI name is gone from the client source', () => {
   assert.ok(!read('../index.html').includes(OLD_UI_NAME), 'index.html still has the old title');
 });
 
-test('the TOTP issuer is NOT renamed — it would orphan every enrolled authenticator', () => {
+test('new TOTP enrolments are issued as the current app name', () => {
   assert.match(
     read('components/Auth/TotpEnrollment.jsx'),
-    /const issuer = 'Ops Control';/,
-    'renaming the issuer changes what new enrolments show, splitting them from existing ones'
+    new RegExp(`const issuer = '${APP_NAME}';`),
+    'the otpauth:// issuer is what the authenticator app shows for new entries'
   );
 });
 
-test('the login help text still names the entry the authenticator actually shows', () => {
+test('the stuck-login help names both the new and the pre-rename authenticator entry', () => {
+  const login = read('components/Auth/LoginPage.jsx').replace(/\s+/g, ' ');
   assert.ok(
-    read('components/Auth/LoginPage.jsx').includes('Delete any "Ops Control" entry'),
-    'this sentence must match the TOTP issuer above, not the UI name'
+    login.includes(`Delete any "${APP_NAME}" or older "${OLD_APP_NAME}" entry`),
+    'operators enrolled before the rename still see the old issuer in their app'
   );
 });
 

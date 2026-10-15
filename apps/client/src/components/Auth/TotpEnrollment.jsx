@@ -51,7 +51,10 @@ export default function TotpEnrollment({ username, onComplete, onCancel }) {
   const [qrSvg, setQrSvg] = useState('');
 
   const otpauthUri = useMemo(() => {
-    const issuer = 'Ops Control';
+    // The label the authenticator app shows. It was "Ops Control" before the
+    // rename: entries enrolled then keep that label and keep working (codes
+    // are checked against the seed on the server, not the issuer).
+    const issuer = 'Quoted Module';
     const label = `${issuer}:${username}`;
     const params = new URLSearchParams({
       secret,

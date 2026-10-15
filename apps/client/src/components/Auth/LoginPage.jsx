@@ -725,9 +725,9 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
               {totpFailCount >= 3 && (
                 <div className="cb-totp-advisory" role="status" aria-live="polite">
                   <b>Stuck?</b> After 3 wrong codes, this usually means your authenticator app has a
-                  stale entry from a previous enrollment. Delete any "Ops Control" entry in Google
-                  Authenticator and ask IT to run <code>npm run reset-totp</code> so you can
-                  re-enroll with a fresh QR.
+                  stale entry from a previous enrollment. Delete any "Quoted Module" or older "Ops
+                  Control" entry in Google Authenticator and ask IT to run{' '}
+                  <code>npm run reset-totp</code> so you can re-enroll with a fresh QR.
                 </div>
               )}
 
