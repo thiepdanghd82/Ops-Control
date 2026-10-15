@@ -30,7 +30,6 @@
 const { app, BrowserWindow, Menu, Tray, ipcMain, shell, dialog, nativeImage } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
-const net = require('node:net');
 const { spawn } = require('node:child_process');
 const log = require('electron-log/main');
 const { isExternalUrlAllowed, isPermissionAllowed } = require('./utils/rendererPolicy');
@@ -41,6 +40,11 @@ const { registerNativeBridges } = require('./native');
 const license = require('./license.js');
 const smartClient = require('./smart-client.js');
 const { probeServer } = require('./utils/netProbe.js');
+const {
+  DEFAULT_SERVER_PORT,
+  resolveServerPort,
+  acquireServerPort,
+} = require('./utils/embeddedPort.js');
 const { connectThenLoad, activateAction } = require('./utils/mainWindowBoot');
 const { showClientFirstRunDialog } = require('./clientFirstRun.js');
 
@@ -152,7 +156,10 @@ const store = new Store({
     // before picking thin/smart. Hardcoding a factory IP locked every
     // out-of-factory install into trying to reach an IP they cannot route to.
     remoteUrl: process.env.OPS_REMOTE_URL || '',
-    embeddedPort: 0, // 0 = chọn tự do
+    // Fixed embedded-server port (utils/embeddedPort.js). A new key on
+    // purpose: the old `embeddedPort` value the wizard saved was never
+    // applied, so honouring it now would move existing servers off 3100.
+    serverPort: DEFAULT_SERVER_PORT,
     windowBounds: { width: 1440, height: 900 },
     zoomFactor: 1.0,
     // Tracks whether we already showed the role-specific first-run dialog.
@@ -187,13 +194,6 @@ const APP_ROOT = resolveAppRoot();
 log.info('[main] APP_ROOT:', APP_ROOT);
 log.info('[main] mode:', store.get('mode'));
 
-// ─── Tìm cổng tự do cho embedded server ────────────────────────────
-// Server gốc bind 0.0.0.0 (theo server/index.js:717). Để check chính
-// xác, ta cũng phải test bind trên 0.0.0.0 — bind 127.0.0.1 sẽ "free"
-// trong khi 0.0.0.0:port bị blocked nếu đã có process khác bind *:port.
-//
-// Range bắt đầu từ 3100 để tránh đụng server prod v1.0 đang chạy
-// thường xuyên ở 3000. User có thể override qua OPS_PORT.
 // Returns true if `host` matches any IPv4 address bound to one of this
 // machine's network interfaces. Used by the thin-mode self-loop guard
 // — if remoteUrl points at our own LAN IP, we know we're the server
@@ -234,21 +234,6 @@ function getLanIPv4Addresses() {
   return out;
 }
 
-async function findFreePort(startPort = 3100, endPort = 3199) {
-  for (let port = startPort; port <= endPort; port++) {
-    const free = await new Promise((resolve) => {
-      const tester = net.createServer();
-      tester.once('error', () => resolve(false));
-      tester.once('listening', () => {
-        tester.close(() => resolve(true));
-      });
-      tester.listen(port, '0.0.0.0');
-    });
-    if (free) return port;
-  }
-  throw new Error(`No free port in range ${startPort}-${endPort}`);
-}
-
 // ─── Operator runtime config (<userData>/.env) ─────────────────────
 // Ops can drop a `.env` file in app.getPath('userData') to inject env
 // vars (OPS_EXPORT_HMAC_KEY, etc.) without rebuilding the DMG. OS env
@@ -284,7 +269,8 @@ function loadUserEnv() {
 // ─── Khởi động Express server in-process (mode embedded) ──────────
 async function startEmbeddedServer() {
   loadUserEnv();
-  embeddedPort = await findFreePort();
+  // One fixed port — clients are configured with it (utils/embeddedPort.js).
+  embeddedPort = await acquireServerPort(resolveServerPort(store.get('serverPort')));
   log.info('[main] Starting embedded server on port', embeddedPort);
 
   // Set env vars cho server hiện hữu của Ops Control
@@ -1001,7 +987,7 @@ app.whenReady().then(async () => {
       const result = await setupWizard.showWizard(BUILD_ROLE, {
         onSetDataPath: async (dp) => store.set('dataDir', dp),
         onSetNet: async ({ port, bind }) => {
-          store.set('embeddedPort', port);
+          store.set('serverPort', resolveServerPort(port));
           store.set('embeddedBind', bind);
           process.env.OPS_PORT = String(port);
           process.env.OPS_BIND = String(bind);

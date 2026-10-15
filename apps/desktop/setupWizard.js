@@ -209,7 +209,7 @@ function renderServerWizard(installationId, existingIdentity) {
     <div id="alert-net"></div>
     <div class="field">
       <label>Port (1024–65535)</label>
-      <input id="port" type="number" min="1024" max="65535" value="3000" />
+      <input id="port" type="number" min="1024" max="65535" value="3100" />
     </div>
     <div class="field">
       <label>Bind address</label>
@@ -385,7 +385,7 @@ function renderClientWizard() {
     <div id="alert-conn"></div>
     <div class="field">
       <label>Server URL</label>
-      <input id="server-url" placeholder="http://10.102.3.61:3000" />
+      <input id="server-url" placeholder="http://10.102.3.61:3100" />
     </div>
     <div class="row">
       <button class="btn-primary" onclick="testAndNext()">Test connection</button>
