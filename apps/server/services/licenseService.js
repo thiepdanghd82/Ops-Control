@@ -261,28 +261,36 @@ export function verifyLicenseObject(raw) {
  */
 export function requireSeatAvailable({ countActiveUsers }) {
   return (req, res, next) => {
-    const lic = getLicense();
-    if (!lic.ok) {
-      return res.status(402).json({
-        error: 'LICENSE_INVALID',
-        reason: lic.reason,
-        detail: lic.detail,
-      });
-    }
-    const active = typeof countActiveUsers === 'function' ? Number(countActiveUsers()) : 0;
-    if (active >= lic.license.max_users) {
-      return res.status(402).json({
-        error: 'LICENSE_LIMIT_EXCEEDED',
-        tier: lic.license.tier,
-        max_users: lic.license.max_users,
-        active_users: active,
-        message:
-          `License tier ${lic.license.tier} cho phép tối đa ${lic.license.max_users} user. ` +
-          `Hiện đã có ${active} user. Liên hệ CCL HQ để nâng cấp tier.`,
-      });
-    }
+    const denied = seatLimitError({ countActiveUsers });
+    if (denied) return res.status(402).json(denied);
     next();
   };
+}
+
+/**
+ * The seat rule for every path that adds seat-taking users (create, bulk
+ * migrate, a role change off 'sys'). Returns null when `adding` more users
+ * fit under the license, else the 402 body. Callers authorise the request
+ * first and skip the check for accounts that take no seat (role 'sys').
+ */
+export function seatLimitError({ countActiveUsers, adding = 1 }) {
+  const lic = getLicense();
+  if (!lic.ok) {
+    return { error: 'LICENSE_INVALID', reason: lic.reason, detail: lic.detail };
+  }
+  const active = typeof countActiveUsers === 'function' ? Number(countActiveUsers()) : 0;
+  if (active + adding > lic.license.max_users) {
+    return {
+      error: 'LICENSE_LIMIT_EXCEEDED',
+      tier: lic.license.tier,
+      max_users: lic.license.max_users,
+      active_users: active,
+      message:
+        `License tier ${lic.license.tier} cho phép tối đa ${lic.license.max_users} user. ` +
+        `Hiện đã có ${active} user. Liên hệ CCL HQ để nâng cấp tier.`,
+    };
+  }
+  return null;
 }
 
 export const TIERS = TIER_LIMITS;

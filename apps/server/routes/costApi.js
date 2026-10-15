@@ -282,6 +282,7 @@ import {
   createSession,
   getSessionUser,
   getPreauthSession,
+  countSeatUsers,
   deleteSession,
   persistSessionsNow,
   getTokenFromHeader,
@@ -336,7 +337,7 @@ import {
 } from '../utils/authCookie.js';
 import { emitDataChange } from '../services/eventBus.js';
 import { inspectLogin } from '../services/loginAnomaly.js';
-import { requireSeatAvailable, getLicense } from '../services/licenseService.js'; // v1.3 P5.1
+import { seatLimitError } from '../services/licenseService.js'; // v1.3 P5.1
 
 const IS_PROD_AUTH = process.env.NODE_ENV === 'production';
 
@@ -866,7 +867,9 @@ router.post(
       }
 
       const users = loadUsers();
-      const user = users.find((u) => u.username.toLowerCase() === username);
+      // A soft-deleted (deleted_at) account is disabled: it takes no license
+      // seat, so it must not sign in either — same path as an unknown user.
+      const user = users.find((u) => u.username.toLowerCase() === username && !u.deleted_at);
       if (!user) {
         // Sprint S-P0-FIX-3 — equalize timing against argon2-migrated users.
         // MUST run BEFORE audit() + return so an attacker can't time the
@@ -1234,31 +1237,20 @@ router.get('/server-info', writeRateLimit, (req, res) => {
   });
 });
 
-// v1.3 P5.1 — license tier seat enforcement.
-// Counts: NOT-deleted users where role !== 'sys' (sys recovery accounts
-// don't count against the seat cap). The function reads users.json each
-// call so a freshly soft-deleted user instantly frees a seat.
-const countActiveUsers = () => {
-  try {
-    const fp = path.join(__dirname, '..', 'data', 'Library', 'Users', 'users.json');
-    if (!fs.existsSync(fp)) return 0;
-    const arr = JSON.parse(fs.readFileSync(fp, 'utf8'));
-    if (!Array.isArray(arr)) return 0;
-    return arr.filter((u) => u && !u.deleted_at && u.role !== 'sys').length;
-  } catch {
-    return 0;
-  }
-};
+// v1.3 P5.1 — license tier seat enforcement (seatLimitError). Every path
+// that adds a seat-taking user checks it: create, bulk migrate, and a role
+// change off 'sys'. Each checks only after the caller is known to be sys,
+// so an anonymous caller never learns the tier or seat count, and skips it
+// for accounts that take no seat. countSeatUsers reads users.json under
+// DATA_DIR; this used to read server/data beside the code, which inside the
+// packaged app is an empty path, so the cap never applied.
 
 // v1.3 P5.1 — license status moved to server/domains/security/routes/license.js
-// (mounted at /api/license/status by server/index.js). `getLicense` import
-// kept because requireSeatAvailable middleware below imports it implicitly
-// through licenseService.
+// (mounted at /api/license/status by server/index.js).
 
 // POST /api/auth/users (create user, sys only)
 router.post(
   '/auth/users',
-  requireSeatAvailable({ countActiveUsers }), // v1.3 P5.1 license tier gate
   validateBody({
     username: { type: 'string', required: true, min: 1, max: 64, pattern: /^[\w.\-@ ]+$/ },
     password: { type: 'string', max: 256 },
@@ -1279,10 +1271,19 @@ router.post(
       const newId = Math.max(...users.map((x) => x.id), 0) + 1;
       let newRole = pl.role || 'user';
       if (!VALID_ROLES.includes(newRole)) newRole = 'user';
+      const username = (pl.username || '').trim();
+      if (!username) return res.json({ ok: false, msg: 'Username is required' });
+      if (users.some((x) => x.username.toLowerCase() === username.toLowerCase())) {
+        return res.json({ ok: false, msg: 'Username already exists' });
+      }
+      if (newRole !== 'sys') {
+        const denied = seatLimitError({ countActiveUsers: countSeatUsers });
+        if (denied) return res.status(402).json(denied);
+      }
       const plainPwd = pl.password || 'changeme123';
       const newUser = {
         id: newId,
-        username: (pl.username || '').trim(),
+        username,
         role: newRole,
         pwd_bcrypt: await bcryptHash(plainPwd),
         lastPwdChange: new Date().toISOString(),
@@ -1297,10 +1298,6 @@ router.post(
         phone: pl.phone || '',
         modules: pl.modules || { cost: true },
       };
-      if (!newUser.username) return res.json({ ok: false, msg: 'Username is required' });
-      if (users.some((x) => x.username.toLowerCase() === newUser.username.toLowerCase())) {
-        return res.json({ ok: false, msg: 'Username already exists' });
-      }
       users.push(newUser);
       saveUsers(users);
       console.log(`  👤  New user: ${newUser.username} [${newUser.role}]`);
@@ -1354,6 +1351,11 @@ router.put(
       // or another to sys) — we want a record even if `saveUsers` succeeds.
       const prevRole = users[idx].role;
       if (pl.role && VALID_ROLES.includes(pl.role) && isSys(cu)) {
+        // A sys account takes no seat; turning one into any other role does.
+        if (prevRole === 'sys' && pl.role !== 'sys' && !users[idx].deleted_at) {
+          const denied = seatLimitError({ countActiveUsers: countSeatUsers });
+          if (denied) return res.status(402).json(denied);
+        }
         users[idx].role = pl.role;
         if (prevRole !== pl.role) {
           audit(
@@ -1839,17 +1841,25 @@ router.post('/auth/migrate-users', (req, res) => {
   const imported = req.body.users || [];
   const existing = loadUsers();
   const exNames = new Set(existing.map((x) => x.username.toLowerCase()));
-  let added = 0;
+  const toAdd = [];
   for (const nu of imported) {
     if (nu.username && !exNames.has(nu.username.toLowerCase())) {
-      nu.id = Math.max(...existing.map((x) => x.id), 0) + 1;
-      existing.push(nu);
+      toAdd.push(nu);
       exNames.add(nu.username.toLowerCase());
-      added++;
     }
   }
+  // All-or-nothing against the seat cap, counted the way countSeatUsers does.
+  const seated = toAdd.filter((nu) => !nu.deleted_at && nu.role !== 'sys').length;
+  if (seated > 0) {
+    const denied = seatLimitError({ countActiveUsers: countSeatUsers, adding: seated });
+    if (denied) return res.status(402).json(denied);
+  }
+  for (const nu of toAdd) {
+    nu.id = Math.max(...existing.map((x) => x.id), 0) + 1;
+    existing.push(nu);
+  }
   saveUsers(existing);
-  res.json({ ok: true, added });
+  res.json({ ok: true, added: toAdd.length });
 });
 
 // ═══════════════════════════════════════════════════════════════

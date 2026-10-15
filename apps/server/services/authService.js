@@ -539,6 +539,25 @@ function usersPath() {
   return path.join(USERS_DIR, 'users.json');
 }
 
+/**
+ * Users that take a license seat: not soft-deleted and not role 'sys' (sys
+ * recovery accounts never count, so the license can't lock out recovery).
+ * Reads users.json under DATA_DIR on every call, so a just-deleted user
+ * frees the seat at once, and never seeds a missing file the way
+ * loadUsers() does.
+ */
+export function countSeatUsers() {
+  try {
+    const fp = usersPath();
+    if (!fs.existsSync(fp)) return 0;
+    const arr = JSON.parse(fs.readFileSync(fp, 'utf8'));
+    if (!Array.isArray(arr)) return 0;
+    return arr.filter((u) => u && !u.deleted_at && u.role !== 'sys').length;
+  } catch {
+    return 0;
+  }
+}
+
 export function loadUsers() {
   const fp = usersPath();
   if (!fs.existsSync(fp)) {
@@ -808,7 +827,13 @@ export function getSessionUser(token) {
   // Single-session: keep last_activity fresh so the stale-takeover window is
   // measured from real use. In-memory only (not persisted on every request).
   s.last_activity = Date.now() / 1000;
-  return findUserById(s.user_id);
+  return activeUser(findUserById(s.user_id));
+}
+
+// A soft-deleted (deleted_at) account is disabled: countSeatUsers gives it
+// no license seat, so no session may act as it either.
+function activeUser(u) {
+  return u && !u.deleted_at ? u : null;
 }
 
 /**
@@ -838,7 +863,8 @@ export function getPreauthSession(token) {
     _sessions.delete(token);
     return [null, null];
   }
-  return [s, findUserById(s.user_id)];
+  const u = activeUser(findUserById(s.user_id));
+  return u ? [s, u] : [null, null];
 }
 
 export function deleteSession(token) {
