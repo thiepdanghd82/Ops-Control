@@ -547,15 +547,34 @@ function usersPath() {
  * loadUsers() does.
  */
 export function countSeatUsers() {
+  const arr = readUsersFile();
+  return arr ? arr.filter((u) => u && !u.deleted_at && u.role !== 'sys').length : 0;
+}
+
+// users.json as stored, or null when it is missing or unreadable. Unlike
+// loadUsers() it never seeds a first-run admin, so it is safe at boot and in
+// maintenance scripts.
+function readUsersFile() {
   try {
-    const fp = usersPath();
-    if (!fs.existsSync(fp)) return 0;
-    const arr = JSON.parse(fs.readFileSync(fp, 'utf8'));
-    if (!Array.isArray(arr)) return 0;
-    return arr.filter((u) => u && !u.deleted_at && u.role !== 'sys').length;
+    const arr = JSON.parse(fs.readFileSync(usersPath(), 'utf8'));
+    return Array.isArray(arr) ? arr : null;
   } catch {
-    return 0;
+    return null;
   }
+}
+
+/**
+ * Usernames that hold a TOTP seed but have no account (case-insensitive).
+ * Deleting a user used to leave the seed behind: it inflated the boot
+ * probe's "enrolled" count and kept a second factor waiting for anyone who
+ * re-created that username. Returns [] when either side can't be read, so
+ * an unreadable users.json never makes every seed look orphaned.
+ */
+export function findOrphanTotpUsernames(secrets) {
+  const users = readUsersFile();
+  if (!users || !secrets || isTotpSecretsUnavailable(secrets)) return [];
+  const known = new Set(users.map((u) => String(u?.username || '').toLowerCase()));
+  return Object.keys(secrets).filter((name) => !known.has(name.toLowerCase()));
 }
 
 export function loadUsers() {
@@ -1552,6 +1571,30 @@ export async function updateTotpSecrets(mutator) {
     saveTotpSecrets(toSave);
     return toSave;
   });
+}
+
+/**
+ * Drop the TOTP seeds of `usernames` (case-insensitive). Returns the stored
+ * names actually removed; writes nothing when none matched.
+ */
+export async function removeTotpSecrets(usernames) {
+  const drop = new Set(usernames.map((n) => String(n).toLowerCase()));
+  const removed = [];
+  const { withLock } = await import('../utils/asyncLock.js');
+  await withLock('totp_secrets', async () => {
+    const secs = loadTotpSecrets();
+    if (isTotpSecretsUnavailable(secs)) {
+      throw new Error('TOTP secrets file is unavailable; refusing to write');
+    }
+    for (const name of Object.keys(secs)) {
+      if (drop.has(name.toLowerCase())) {
+        delete secs[name];
+        removed.push(name);
+      }
+    }
+    if (removed.length) saveTotpSecrets(secs);
+  });
+  return removed;
 }
 
 export function totpVerify(secretB32, token) {

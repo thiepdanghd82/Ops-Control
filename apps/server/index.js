@@ -131,6 +131,7 @@ import {
   loadTotpSecrets,
   isTotpSecretsUnavailable,
   getTotpKeyFingerprint,
+  findOrphanTotpUsernames,
 } from './services/authService.js';
 initAuth(DATA_DIR);
 
@@ -151,10 +152,19 @@ try {
       `                              (b) npm run reset-totp   (wipes file, all users re-enroll)`
     );
   } else {
-    const users = Object.keys(probe).length;
+    // Seeds whose account is gone are not "enrolled users": report them by
+    // name instead of counting them (they are removed by a maintenance
+    // script, never automatically at boot).
+    const orphans = findOrphanTotpUsernames(probe);
+    const users = Object.keys(probe).length - orphans.length;
     console.log(
       `  🔐  TOTP boot probe OK — ${users} user(s) enrolled, key fp ${fpHex?.slice(0, 16) || 'n/a'}…`
     );
+    if (orphans.length) {
+      console.warn(
+        `  ⚠️   ${orphans.length} TOTP seed(s) with no account: ${orphans.join(', ')} — remove with: npm run prune-totp-orphans -- --apply`
+      );
+    }
   }
 } catch (e) {
   console.error(`  ⚠️   TOTP boot probe threw: ${e.message}`);

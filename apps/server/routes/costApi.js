@@ -283,6 +283,7 @@ import {
   getSessionUser,
   getPreauthSession,
   countSeatUsers,
+  removeTotpSecrets,
   deleteSession,
   persistSessionsNow,
   getTokenFromHeader,
@@ -1472,7 +1473,7 @@ router.put(
 );
 
 // DELETE /api/auth/users/:id
-router.delete('/auth/users/:id', writeRateLimit, (req, res) => {
+router.delete('/auth/users/:id', writeRateLimit, async (req, res) => {
   const cu = getSessionUser(getTokenFromHeader(req));
   if (!isSys(cu)) return res.status(403).json({ error: 'Forbidden' });
   const uid = parseInt(req.params.id);
@@ -1489,6 +1490,17 @@ router.delete('/auth/users/:id', writeRateLimit, (req, res) => {
   );
   // Kill any in-flight sessions for the deleted user.
   revokeSessionsForUser(uid);
+  // The TOTP seed goes with the account; left behind it would be waiting for
+  // whoever re-creates the username. The user is already deleted, so a seed
+  // file that can't be written is logged, not reported as a failed delete.
+  if (target) {
+    try {
+      const removed = await removeTotpSecrets([target.username]);
+      if (removed.length) audit('TOTP_SEED_REMOVED', cu.username, clientIp(req), target.username);
+    } catch (e) {
+      console.error(`[users] TOTP seed of deleted user ${target.username} not removed:`, e.message);
+    }
+  }
   res.json({ ok: true });
 });
 

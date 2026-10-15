@@ -17,6 +17,7 @@
     "check:deps": "node apps/scripts/check-runtime-deps.js",
     "check:sha": "node apps/scripts/sprint-history-sha.js",
     "reset-totp": "node apps/scripts/reset-totp.js",
+    "prune-totp-orphans": "node apps/scripts/prune-totp-orphans.js",
     "build:npi-parts": "node apps/scripts/build-npi-parts-snapshot.mjs",
     "languages": "node apps/scripts/measure-languages.mjs",
     "test": "node --test --test-concurrency=1 \"apps/server/**/*.test.js\" \"apps/scripts/**/*.test.js\" && cd apps/desktop && npm run test:license && npm run test:manifest && npm run test:utils",
