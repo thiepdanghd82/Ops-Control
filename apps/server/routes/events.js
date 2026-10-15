@@ -25,6 +25,20 @@ import { subscribeEvents, getSubscriberCount } from '../services/eventBus.js';
 
 const router = Router();
 
+// Open streams, so a shutdown can end them: an SSE response never finishes
+// on its own, and the HTTP server's close() waits for every connection.
+const openStreams = new Set();
+export function closeEventStreams() {
+  for (const res of openStreams) {
+    try {
+      res.end();
+    } catch {
+      /* already gone */
+    }
+  }
+  openStreams.clear();
+}
+
 // Mirror chat.js's SSE auth pattern: getTokenFromHeader manually parses the
 // `ops_session` cookie + Authorization Bearer header (no cookie-parser
 // middleware required — and none is mounted in server/index.js). The
@@ -48,6 +62,7 @@ router.get('/stream', (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no'); // nginx hint
   res.flushHeaders();
+  openStreams.add(res);
 
   // Send initial "ready" event so client knows stream is alive
   res.write(`event: ready\ndata: {"userId":${user.id},"ts":"${new Date().toISOString()}"}\n\n`);
@@ -90,6 +105,7 @@ router.get('/stream', (req, res) => {
 
   function cleanup() {
     clearInterval(heartbeat);
+    openStreams.delete(res);
     try {
       unsubscribe();
     } catch {

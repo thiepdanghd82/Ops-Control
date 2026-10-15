@@ -687,7 +687,7 @@ import sharedRouter from './routes/shared.js';
 import importRouter from './routes/import.js';
 import importWizardRouter from './routes/importWizard.js';
 import syncRouter from './routes/sync.js';
-import eventsRouter from './routes/events.js';
+import eventsRouter, { closeEventStreams } from './routes/events.js';
 import { authMiddleware, requireRole } from './middleware/auth.js';
 import auditRouter from './domains/security/routes/audit.js'; // v1.3 P3.1 — domain extraction
 import { createLicenseRouter } from './domains/security/routes/license.js'; // v1.3 P5.1
@@ -1287,14 +1287,19 @@ if (isEntryPoint) {
   // sends on deploy rolling-restart; SIGINT is Ctrl+C. Without this
   // handler, in-flight /save-all requests can be killed mid-write and
   // leave half-written JSON files. The contract:
-  //   1. Stop accepting new connections.
-  //   2. Let existing requests complete within SHUTDOWN_TIMEOUT_MS.
+  //   1. Stop accepting new connections; end SSE streams and close
+  //      keep-alive sockets as soon as they are idle (neither ends on its
+  //      own, and close() waits for every connection).
+  //   2. Let in-flight requests complete: up to SHUTDOWN_FORCE_EMBEDDED_MS
+  //      when the desktop app runs this server (it kills it at 8 s), else up
+  //      to SHUTDOWN_TIMEOUT_MS.
   //   3. Flush pending session persistence synchronously.
   //   4. Close the SQLite connection (WAL checkpoint before exit).
   //   5. Exit cleanly.
   // If deadline hits before drain, force-exit with a non-zero code so
   // orchestrators log the timeout.
   const SHUTDOWN_TIMEOUT_MS = 15_000;
+  const SHUTDOWN_FORCE_EMBEDDED_MS = 6_000;
   let shuttingDown = false;
   async function shutdown(signal) {
     if (shuttingDown) return;
@@ -1303,11 +1308,18 @@ if (isEntryPoint) {
 
     // (1) Stop accepting new requests. existing ones keep their handler.
     const closed = new Promise((resolve) => server.close(resolve));
+    closeEventStreams();
+    server.closeIdleConnections();
+    const idleSweep = setInterval(() => server.closeIdleConnections(), 250);
+    idleSweep.unref();
+    const forceAfter = process.send ? SHUTDOWN_FORCE_EMBEDDED_MS : SHUTDOWN_TIMEOUT_MS - 1000;
+    setTimeout(() => server.closeAllConnections(), forceAfter).unref();
     const deadline = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('shutdown timeout')), SHUTDOWN_TIMEOUT_MS)
     );
     try {
       await Promise.race([closed, deadline]);
+      clearInterval(idleSweep);
       console.log('  ✅ HTTP server drained');
     } catch {
       console.warn(`  ⚠️  Shutdown timeout after ${SHUTDOWN_TIMEOUT_MS}ms — forcing exit`);
@@ -1338,6 +1350,15 @@ if (isEntryPoint) {
   }
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
+  // The desktop app spawns this server with an IPC channel. If the app goes
+  // away without a clean SIGTERM (crash, force quit), the channel closes:
+  // stop with it rather than keep serving with no app around.
+  if (process.send) {
+    process.on('disconnect', () => shutdown('app exited'));
+    // The app may already be gone: an event emitted while this file was
+    // still booting had no listener to hear it.
+    if (!process.connected) shutdown('app exited');
+  }
 }
 
 export default app;
