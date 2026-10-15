@@ -48,6 +48,15 @@ const {
 const { connectThenLoad, activateAction } = require('./utils/mainWindowBoot');
 const { showClientFirstRunDialog } = require('./clientFirstRun.js');
 
+// ─── Data location ─────────────────────────────────────────────────
+// Everything the app keeps — license.json, .env, data/ (ops.db, users,
+// TOTP), the config store, cache — lives in userData. Electron derives it
+// from package.json productName || name, so a display-name change (the
+// product is "Quoted Module", formerly "Ops Control") must never move it:
+// pin it to the folder every install so far has used, before anything
+// reads it.
+app.setPath('userData', path.join(app.getPath('appData'), 'ops-control-desktop'));
+
 // ─── Logging ────────────────────────────────────────────────────────
 log.initialize({ preload: true });
 log.transports.file.level = 'info';
