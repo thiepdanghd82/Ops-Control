@@ -23,7 +23,7 @@ import ErrorBoundary from './components/Shared/ErrorBoundary';
 import ConnectionBanner from './components/Layout/ConnectionBanner';
 import ClientUpdateIndicator from './components/Layout/ClientUpdateIndicator';
 import { startConnectionMonitor } from './services/connectionHealth';
-import { startDataEventStream } from './services/dataEventBus';
+import { startDataEventStream, stopDataEventStream } from './services/dataEventBus';
 import './App.css';
 
 // Window manager desktop — lazy so react-rnd + all window chrome stay
@@ -33,12 +33,10 @@ const WindowLayer = lazy(() => import('./window/WindowLayer.jsx'));
 // v1.3 P0 — Start connection health monitor at module load time.
 // Singleton pattern; calling more than once is no-op. Uses /health
 // (or /api/health alias). Banner subscribes via context-free pub-sub.
-// v1.3 Đợt 2 — also boot the SSE data-event subscriber. Server pushes
-// quote.saved / rfq.updated / sample.updated / approval.transition;
-// tabs subscribe via subscribeDataEvents() to refetch instantly.
+// The SSE data-event stream is NOT started here: it needs a signed-in
+// session, so AppShell opens it on sign-in (see the effect there).
 if (typeof window !== 'undefined') {
   startConnectionMonitor({ endpoint: '/api/health' });
-  startDataEventStream();
 }
 
 // Persist the active module+tab to localStorage so a browser reload
@@ -214,6 +212,17 @@ function AppShell() {
     window.addEventListener('keydown', handleF1);
     return () => window.removeEventListener('keydown', handleF1);
   }, [activeTab, wmEnabled, wm]);
+
+  // v1.3 Đợt 2 SSE data events (quote.saved / rfq.updated / sample.updated
+  // / approval.transition; tabs refetch via subscribeDataEvents). The stream
+  // needs a fully verified session, so open it on sign-in — a new token after
+  // a re-login reopens it — and close it on sign-out so a signed-out tab
+  // stops receiving events. Wait for the session check before deciding.
+  useEffect(() => {
+    if (loading) return;
+    if (isAuthenticated) startDataEventStream();
+    else stopDataEventStream();
+  }, [isAuthenticated, loading]);
 
   // Đợt 5 — admins receive security.alert SSE events as a top-of-app
   // toast so suspicious logins surface even when they're working in
