@@ -38,7 +38,7 @@ export const STRINGS = {
   'common.status': { en: 'Status', vi: 'Trạng thái' },
   'common.detail': { en: 'Detail', vi: 'Chi tiết' },
   'common.done': { en: 'Done', vi: 'Xong' },
-  'common.clear': { en: 'Clear', vi: 'Xoá lọc' },
+  'common.clear': { en: 'Clear filters', vi: 'Xoá lọc' },
   'common.type': { en: 'Type', vi: 'Loại' },
   'common.actions': { en: 'Actions', vi: 'Thao tác' },
   'common.delete': { en: 'Delete', vi: 'Xóa' },

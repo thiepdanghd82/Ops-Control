@@ -217,12 +217,6 @@ export default function AboutSection() {
       {LANGUAGES.length > 0 && (
         <div className="about-card">
           <h3 className="about-card-title">{t('about.languages')}</h3>
-          <p className="about-card-desc">
-            {t('about.languages_hint', {
-              files: LANGUAGE_STATS.files,
-              date: LANGUAGE_STATS.measured_at,
-            })}
-          </p>
           <div className="about-lang-bar" role="img" aria-label={LANGUAGES_LABEL}>
             {LANGUAGES.map((l) => (
               <span

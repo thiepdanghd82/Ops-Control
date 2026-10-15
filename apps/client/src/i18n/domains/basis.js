@@ -291,10 +291,6 @@ registerStrings({
     vi: 'Chạy kiểm tra nhanh. Hữu ích khi báo lỗi cho nhà cung cấp.',
   },
   'about.languages': { en: 'Languages', vi: 'Ngôn ngữ lập trình' },
-  'about.languages_hint': {
-    en: 'What the app is written in: share of source code by language, measured the way GitHub does ({files} source files, measured {date}).',
-    vi: 'App được viết bằng gì: tỷ lệ mã nguồn theo ngôn ngữ, đo theo cách của GitHub ({files} file mã nguồn, đo ngày {date}).',
-  },
 
   // ─── Chat (Phase 10A-10F) ───
   // Admin recalling someone ELSE's message. Deliberately not worded as
