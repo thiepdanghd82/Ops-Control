@@ -45,6 +45,8 @@ const {
   resolveServerPort,
   acquireServerPort,
 } = require('./utils/embeddedPort.js');
+const { shouldQuitOnAllWindowsClosed, stopChildProcess } = require('./utils/serverLifecycle.js');
+const autostartGuard = require('./utils/autostartGuard.js');
 const { connectThenLoad, activateAction } = require('./utils/mainWindowBoot');
 const { showClientFirstRunDialog } = require('./clientFirstRun.js');
 
@@ -188,6 +190,21 @@ let startupDone = false;
 let tray = null;
 let embeddedServer = null;
 let embeddedPort = 0;
+let quittingForUpdate = false;
+// Quit sequence (see will-quit): the server is being / has been stopped, and
+// whether the app was asked to reopen meanwhile.
+let serverStopping = false;
+let serverStopped = false;
+let reopenAfterQuit = false;
+if (process.platform !== 'linux') {
+  try {
+    require('electron').autoUpdater.on('before-quit-for-update', () => {
+      quittingForUpdate = true;
+    });
+  } catch {
+    /* no native updater */
+  }
+}
 
 // ─── Resolve resource paths ────────────────────────────────────────
 // Trong dev: __dirname là folder desktop/, server ở ../server
@@ -401,7 +418,9 @@ async function startEmbeddedServer() {
       ...process.env,
       ELECTRON_RUN_AS_NODE: '1', // bảo Electron chạy như node thuần
     },
-    stdio: ['ignore', 'pipe', 'pipe'],
+    // 'ipc': the server stops when this channel closes, so a crashed or
+    // force-quit app never leaves it running on its own.
+    stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
   });
 
   embeddedServer.stdout.on('data', (chunk) => {
@@ -413,7 +432,8 @@ async function startEmbeddedServer() {
   embeddedServer.on('exit', (code, signal) => {
     log.warn(`[main] Embedded server exited code=${code} signal=${signal}`);
     embeddedServer = null;
-    if (mainWindow && !mainWindow.isDestroyed()) {
+    // Stopping it is part of quitting — only an unexpected exit is a crash.
+    if (!app.isQuitting && mainWindow && !mainWindow.isDestroyed()) {
       dialog
         .showMessageBox(mainWindow, {
           type: 'error',
@@ -745,14 +765,84 @@ function showConnectFailedDialog(url, err) {
         store.set('remoteUrl', '');
       }
       app.relaunch();
-      app.exit(0);
+      // quit, not exit: will-quit stops the embedded server first.
+      app.quit();
     } else if (choice === 1) {
-      app.exit(1);
+      app.quit();
     }
   }
 }
 
-// ─── Tray icon (chạy nền) ──────────────────────────────────────────
+// ─── No start with the computer (SERVER build) ─────────────────────
+// The server runs only while this app is open (utils/autostartGuard.js).
+// Undo an "open at login" registration (System Settings → Login Items, or an
+// older install) and switch off the launchd jobs our autostart scripts
+// install. Returns the job label when launchd itself started this launch.
+const launchdJobsToBootOutAtQuit = [];
+function launchctlBootout(label) {
+  // Detached: at quit the app exits right after spawning it.
+  spawn('/bin/launchctl', autostartGuard.bootoutArgs(label, process.getuid()), {
+    detached: true,
+    stdio: 'ignore',
+  }).unref();
+  log.info(`[main] launchd job ${label} booted out`);
+}
+function preventStartWithComputer() {
+  if (process.platform === 'darwin' || process.platform === 'win32') {
+    try {
+      if (app.getLoginItemSettings().openAtLogin) {
+        app.setLoginItemSettings({ openAtLogin: false });
+        log.info('[main] "Open at login" removed — the server runs only while the app is open');
+      }
+    } catch (err) {
+      log.warn('[main] login item check failed:', err.message);
+    }
+  }
+  if (process.platform !== 'darwin') return null;
+  const startedBy = autostartGuard.launchedByAgent(process.env);
+  const { userAgents, systemDaemons } = autostartGuard.findAutostart({
+    home: app.getPath('home'),
+    exists: fs.existsSync,
+  });
+  const moved = autostartGuard.moveAgentsAside(userAgents, {
+    mkdir: (d) => fs.mkdirSync(d, { recursive: true }),
+    rename: fs.renameSync,
+    exists: fs.existsSync,
+  });
+  for (const r of moved) {
+    if (r.error) log.warn(`[main] could not move ${r.plist} aside: ${r.error}`);
+    else log.info(`[main] auto-start job ${r.label} switched off — plist moved to ${r.movedTo}`);
+  }
+  // Unload the jobs too, or KeepAlive relaunches the app after it is closed.
+  // Not the job that started this app: booting it out now would SIGTERM the
+  // app itself, so that one goes at quit.
+  const labels = new Set([...userAgents.map((a) => a.label), ...(startedBy ? [startedBy] : [])]);
+  for (const label of labels) {
+    if (label === startedBy) launchdJobsToBootOutAtQuit.push(label);
+    else launchctlBootout(label);
+  }
+  if (systemDaemons.length) {
+    log.warn(
+      '[main] system auto-start daemon present:',
+      systemDaemons.map((d) => d.plist).join(', ')
+    );
+    dialog
+      .showMessageBox({
+        type: 'warning',
+        title: 'Quoted Module',
+        message: 'Máy này còn một server headless tự chạy khi khởi động máy.',
+        detail:
+          'Server chỉ nên chạy khi app Quoted Module đang mở. Gỡ nó (cần quyền admin) bằng ' +
+          'ops-server-uninstall.command, hoặc trong Terminal:\n\n' +
+          systemDaemons.flatMap(autostartGuard.daemonRemovalCommands).join('\n'),
+        buttons: ['OK'],
+      })
+      .catch(() => {});
+  }
+  return startedBy;
+}
+
+// ─── Tray icon ─────────────────────────────────────────────────────
 function createTray() {
   const iconPath = path.join(
     __dirname,
@@ -898,7 +988,7 @@ Lưu ý:
   • Chọn IP của Ethernet (ưu tiên) — bền hơn WiFi
   • Cài máy nhân viên: dùng "Quoted Module CLIENT Setup ${app.getVersion()}.exe" (bản Windows) hoặc DMG CLIENT (macOS) → app sẽ tự hỏi URL này
   • Để cố định IP máy chủ, vào Network Settings → Static IP (hướng dẫn ở Go-Live Guide §2.4)
-  • Để app server tự chạy 24/7 không cần login, cài NSSM service (Go-Live Guide §2.3)`;
+  • Server chỉ chạy khi app này đang mở: đóng app là server dừng (máy trạm mất kết nối tới khi mở lại). App không tự khởi động cùng máy.`;
 
   dialog.showMessageBoxSync(null, {
     type: 'info',
@@ -913,6 +1003,10 @@ Lưu ý:
 
 // ─── App lifecycle ─────────────────────────────────────────────────
 app.on('second-instance', () => {
+  if (serverStopping) {
+    reopenAfterQuit = true; // reopened while the app is closing
+    return;
+  }
   if (mainWindow) {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
@@ -929,6 +1023,13 @@ app.whenReady().then(async () => {
   buildAppMenu();
   registerNativeBridges(ipcMain, log);
   license.register(ipcMain);
+  if (BUILD_ROLE === 'server' && preventStartWithComputer()) {
+    // launchd started this app (login / KeepAlive), not the operator: the
+    // server must not start with the computer, so it is not started at all.
+    log.warn('[main] started by a launchd auto-start job — quitting without starting the server');
+    app.quit();
+    return;
+  }
 
   // Electron 41 + blob: URLs triggered via `a.download = filename` don't
   // always finalize the rename from Chromium's temp file
@@ -1166,13 +1267,29 @@ app.whenReady().then(async () => {
   }
 });
 
+// Closing the window closes the app — and with it the server — in the SERVER
+// build on macOS too, instead of lingering in the Dock (utils/serverLifecycle).
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  // Squirrel.Mac's quitAndInstall closes the windows itself, then installs
+  // and relaunches; quitting here as well would exit before it relaunches.
+  if (quittingForUpdate) return;
+  if (
+    shouldQuitOnAllWindowsClosed({
+      platform: process.platform,
+      buildRole: BUILD_ROLE,
+      startupDone,
+      hasEmbeddedServer: embeddedServer !== null,
+    })
+  ) {
     app.quit();
   }
 });
 
 app.on('activate', () => {
+  if (serverStopping) {
+    reopenAfterQuit = true; // reopened while the app is closing
+    return;
+  }
   const action = activateAction({
     startupDone,
     windowCount: BrowserWindow.getAllWindows().length,
@@ -1187,11 +1304,27 @@ app.on('activate', () => {
 app.on('before-quit', () => {
   app.isQuitting = true;
   smartClient.stop();
-  if (embeddedServer) {
-    log.info('[main] Stopping embedded server...');
-    embeddedServer.kill('SIGTERM');
-    setTimeout(() => embeddedServer?.kill('SIGKILL'), 3000).unref();
-  }
+});
+
+// Quitting waits for the server to stop — drain requests, flush sessions,
+// close SQLite — and only then lets the app exit. It used to send SIGTERM
+// and exit at once, so a server that took longer was left running alone.
+app.on('will-quit', (event) => {
+  if (!embeddedServer || serverStopped) return;
+  event.preventDefault();
+  if (serverStopping) return;
+  serverStopping = true;
+  log.info('[main] Stopping embedded server...');
+  stopChildProcess(embeddedServer, { graceMs: 8000 }).then((r) => {
+    log.info(`[main] Embedded server stopped${r.forced ? ' (killed after timeout)' : ''}`);
+    serverStopped = true;
+    if (reopenAfterQuit) app.relaunch();
+    app.quit();
+  });
+});
+
+app.on('quit', () => {
+  for (const label of launchdJobsToBootOutAtQuit) launchctlBootout(label);
 });
 
 // ─── IPC handlers (config) ─────────────────────────────────────────
