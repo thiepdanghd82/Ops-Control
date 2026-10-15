@@ -2,18 +2,18 @@
 REM Uninstall-Autostart-Windows.bat — double-click uninstaller wrapper
 REM
 REM Operators: double-click this file in File Explorer to remove the
-REM auto-start Scheduled Task. The Ops Control SERVER app itself is
+REM auto-start Scheduled Task. The Quoted Module SERVER app itself is
 REM NOT affected — only the auto-start mechanism is removed.
 
 cd /d "%~dp0"
 
 cls
 echo ===============================================================
-echo   OPS CONTROL SERVER -- Auto-start Uninstall (Windows)
+echo   QUOTED MODULE SERVER -- Auto-start Uninstall (Windows)
 echo ===============================================================
 echo.
-echo Script nay se GO Scheduled Task auto-start cho Ops Control SERVER.
-echo App Ops Control SERVER van con -- chi co che auto-start bi go.
+echo Script nay se GO Scheduled Task auto-start cho Quoted Module SERVER.
+echo App Quoted Module SERVER van con -- chi co che auto-start bi go.
 echo.
 echo Bat dau sau 3 giay / Starting in 3 seconds...
 echo (Nhan Ctrl+C de huy / Press Ctrl+C to cancel)

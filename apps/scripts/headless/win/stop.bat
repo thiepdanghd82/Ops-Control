@@ -1,6 +1,6 @@
 @echo off
 setlocal enableextensions
-title Ops Control SERVER - stop
+title Quoted Module SERVER - stop
 net session >nul 2>&1
 if %errorlevel% neq 0 (
   powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
@@ -9,7 +9,7 @@ if %errorlevel% neq 0 (
 set "TASKNAME=OpsControlServer"
 set "PORT=3000"
 
-echo Dung Ops Control SERVER nen...
+echo Dung Quoted Module SERVER nen...
 schtasks /End /TN "%TASKNAME%"
 echo   (Luu y: lan khoi dong may ke tiep dich vu se tu chay lai.)
 echo.

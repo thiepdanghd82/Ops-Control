@@ -1,5 +1,5 @@
 /**
- * Ops Control — Centralized Help Content
+ * Quoted Module — Centralized Help Content
  *
  * Single source of truth for both the in-app Help tab and the
  * exported Word user guide. Each entry follows the same 10-field
@@ -137,8 +137,8 @@ export const GLOSSARY = [
   },
   {
     term: 'SKU',
-    en: 'Stock Keeping Unit — unique product identifier. In Ops Control, the SKU is the primary key everywhere.',
-    vi: 'Mã sản phẩm — định danh duy nhất. Trong Ops Control, SKU là khoá chính.',
+    en: 'Stock Keeping Unit — unique product identifier. In Quoted Module, the SKU is the primary key everywhere.',
+    vi: 'Mã sản phẩm — định danh duy nhất. Trong Quoted Module, SKU là khoá chính.',
   },
   {
     term: 'S.TOTAL',
@@ -255,8 +255,8 @@ export const HELP_CONTENT = {
       'Trang dashboard ngay sau khi đăng nhập. Hiển thị khối lượng công việc hiện tại + quick actions cho thao tác thường dùng. Bố cục co giãn theo kích thước cửa sổ và trạng thái sidebar — chạy mượt từ laptop 13" đến màn 4K / ultrawide.'
     ),
     whenToUse: bi(
-      'Every login. Daily morning routine to scan workload + open the day plan. Click the "CCL - NPI Costing module" logo (top-left of the sidebar) anytime to return here from any other tab.',
-      'Mỗi lần đăng nhập. Routine buổi sáng để quét khối lượng công việc + mở kế hoạch ngày. Click logo "Ops Control" (góc trên-trái sidebar) bất cứ lúc nào để quay về Home từ bất kỳ tab nào.'
+      'Every login. Daily morning routine to scan workload + open the day plan. Click the "Quoted Module" logo (top-left of the sidebar) anytime to return here from any other tab.',
+      'Mỗi lần đăng nhập. Routine buổi sáng để quét khối lượng công việc + mở kế hoạch ngày. Click logo "Quoted Module" (góc trên-trái sidebar) bất cứ lúc nào để quay về Home từ bất kỳ tab nào.'
     ),
     preRequisites: [],
     features: [
@@ -281,8 +281,8 @@ export const HELP_CONTENT = {
         'Quick Actions (6 nút) — New Quote · New Order · RFQ Tracker · Approvals · IFS Inventory · Help. Theo quyền: ẩn nếu role không có truy cập.'
       ),
       feat(
-        'Sidebar logo → Home — click the "CCL - NPI Costing module" wordmark in the sidebar header to return to Home from any tab.',
-        'Logo sidebar → Home — click chữ "CCL - NPI Costing module" ở phần đầu sidebar để quay về Home từ tab bất kỳ.'
+        'Sidebar logo → Home — click the "Quoted Module" wordmark in the sidebar header to return to Home from any tab.',
+        'Logo sidebar → Home — click chữ "Quoted Module" ở phần đầu sidebar để quay về Home từ tab bất kỳ.'
       ),
       feat(
         'Auto-redirect after login — successful sign-in lands you on Home regardless of last-active-tab. Covers fresh logins + post-logout returns.',
@@ -308,8 +308,8 @@ export const HELP_CONTENT = {
         'Dùng lưới Modules HOẶC Quick Actions để vào workflow (vd New Quote).'
       ),
       bs(
-        'Click the "CCL - NPI Costing module" logo in the sidebar header anytime to return here.',
-        'Click logo "CCL - NPI Costing module" ở đầu sidebar bất kỳ lúc nào để quay lại đây.'
+        'Click the "Quoted Module" logo in the sidebar header anytime to return here.',
+        'Click logo "Quoted Module" ở đầu sidebar bất kỳ lúc nào để quay lại đây.'
       ),
     ],
     keyFields: [],
@@ -2378,8 +2378,8 @@ export const HELP_CONTENT = {
     ),
     preRequisites: [
       br(
-        'Ops Control Desktop App (web build shows a banner — browser sandbox blocks raw USB/Serial/TCP).',
-        'Ops Control Desktop App (bản web hiện banner — browser sandbox chặn USB/Serial/TCP raw).'
+        'Quoted Module Desktop App (web build shows a banner — browser sandbox blocks raw USB/Serial/TCP).',
+        'Quoted Module Desktop App (bản web hiện banner — browser sandbox chặn USB/Serial/TCP raw).'
       ),
       br(
         'Device drivers installed at the OS level (Windows printer driver, USB-Serial driver for the scale).',
@@ -2392,8 +2392,8 @@ export const HELP_CONTENT = {
         'UI song ngữ — toggle cờ (🇬🇧 EN / 🇻🇳 VN) ở góc trên-phải tiêu đề chuyển ngay mọi label. Cùng control với Settings → Appearance, đặt inline để operator lúc bàn giao đổi mà không cần rời tab.'
       ),
       feat(
-        'Label printer card: IP + port, Ping connection (round-trip latency), Send test label (minimal ZPL "Ops Control TEST").',
-        'Card máy in nhãn: IP + port, Ping kết nối (round-trip latency), Gửi nhãn test (ZPL tối giản "Ops Control TEST").'
+        'Label printer card: IP + port, Ping connection (round-trip latency), Send test label (minimal ZPL "Quoted Module TEST").',
+        'Card máy in nhãn: IP + port, Ping kết nối (round-trip latency), Gửi nhãn test (ZPL tối giản "Quoted Module TEST").'
       ),
       feat(
         'Scale card: COM port dropdown (auto-discovered), baud rate, Connect + read realtime (live weight stream from RS232/USB-Serial).',
@@ -2475,8 +2475,8 @@ export const HELP_CONTENT = {
     ),
     preRequisites: [
       br(
-        'Ops Control Desktop App (web build always behaves as Thin against the current host).',
-        'Ops Control Desktop App (bản web luôn hành xử như Thin với host hiện tại).'
+        'Quoted Module Desktop App (web build always behaves as Thin against the current host).',
+        'Quoted Module Desktop App (bản web luôn hành xử như Thin với host hiện tại).'
       ),
       br(
         "Network reachability to the chosen mode's server (LAN ping for Thin/Smart; localhost for Embedded).",
@@ -2835,8 +2835,8 @@ export const HELP_CONTENT = {
           'Click Print để in thẻ giấy A6 HOẶC Copy để gửi qua Slack DM. Đưa cho minh.'
         ),
         bs(
-          'Minh installs Ops Control CLIENT, opens app → first-run wizard asks for server URL → she types it from the card → test → save → login screen.',
-          'Minh cài Ops Control CLIENT, mở app → first-run wizard hỏi server URL → cô ấy gõ URL từ thẻ → test → save → màn login.'
+          'Minh installs Quoted Module CLIENT, opens app → first-run wizard asks for server URL → she types it from the card → test → save → login screen.',
+          'Minh cài Quoted Module CLIENT, mở app → first-run wizard hỏi server URL → cô ấy gõ URL từ thẻ → test → save → màn login.'
         ),
         bs(
           'Minh types her username — login form auto-flips to change-pwd mode + amber banner appears: "Admin đã cấp mật khẩu tạm". She types temp pwd + new pwd + confirm → Submit → in.',

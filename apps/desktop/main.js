@@ -1,5 +1,5 @@
 /**
- * Ops Control — Desktop Main Process
+ * Quoted Module — Desktop Main Process
  * ===================================
  *
  * Kiến trúc 3-tier (lấy cảm hứng từ SAP GUI / IFS Aurena):
@@ -102,7 +102,7 @@ process.on('uncaughtException', (err) => {
   try {
     if (app.isReady()) {
       dialog.showErrorBox(
-        'Ops Control — lỗi không mong muốn',
+        'Quoted Module — lỗi không mong muốn',
         `${err.message}\n\nXem chi tiết trong log:\n${log.transports.file.getFile().path}`
       );
     }
@@ -116,13 +116,13 @@ process.on('unhandledRejection', (reason) => {
 });
 
 // ─── Single-instance lock ───────────────────────────────────────────
-// Chống user mở 2 cửa sổ Ops Control làm khoá SQLite.
+// Chống user mở 2 cửa sổ Quoted Module làm khoá SQLite.
 // Đây là rule quan trọng — better-sqlite3 không an toàn với 2 process
 // cùng ghi vào file .db. Khi user double-click icon lần 2, ta focus
 // vào cửa sổ đang chạy thay vì spawn process mới.
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
-  log.warn('[main] Another Ops Control instance is running — exiting.');
+  log.warn('[main] Another Quoted Module instance is running — exiting.');
   app.quit();
   process.exit(0);
 }
@@ -282,7 +282,7 @@ async function startEmbeddedServer() {
   embeddedPort = await acquireServerPort(resolveServerPort(store.get('serverPort')));
   log.info('[main] Starting embedded server on port', embeddedPort);
 
-  // Set env vars cho server hiện hữu của Ops Control
+  // Set env vars cho server hiện hữu của Quoted Module
   process.env.OPS_PORT = String(embeddedPort);
   process.env.PORT = String(embeddedPort);
   process.env.NODE_ENV = process.env.NODE_ENV || 'production';
@@ -417,7 +417,7 @@ async function startEmbeddedServer() {
       dialog
         .showMessageBox(mainWindow, {
           type: 'error',
-          title: 'Ops Control',
+          title: 'Quoted Module',
           message: 'Server backend đã dừng đột ngột.',
           detail: `Exit code: ${code}\nVui lòng khởi động lại ứng dụng.`,
           buttons: ['Khởi động lại', 'Thoát'],
@@ -505,7 +505,7 @@ function connectingScreenHtml(url) {
   code{color:#8fb8ff;font-size:12px}
 </style></head><body><div class="wrap">
   <div class="spin"></div>
-  <h1>Đang kết nối máy chủ Ops Control…</h1>
+  <h1>Đang kết nối máy chủ Quoted Module…</h1>
   <p>Server connecting — máy chủ đang khởi động, vui lòng chờ.</p>
   <p><code>${String(url).replace(/[<>&"]/g, '')}</code></p>
 </div></body></html>`;
@@ -551,7 +551,7 @@ function createMainWindow() {
     height: bounds.height,
     minWidth: 1024,
     minHeight: 700,
-    title: 'Ops Control',
+    title: 'Quoted Module',
     icon: path.join(__dirname, 'build', 'icon.png'),
     backgroundColor: '#f5f5f5',
     show: false, // Ẩn cho đến khi load xong, tránh flash trắng
@@ -723,7 +723,7 @@ function showConnectFailedDialog(url, err) {
     const isClientBuild = BUILD_ROLE === 'client';
     const choice = dialog.showMessageBoxSync(mainWindow, {
       type: 'error',
-      title: 'Ops Control — không kết nối được server',
+      title: 'Quoted Module — không kết nối được server',
       message: `Không kết nối được tới ${url}`,
       detail: isClientBuild
         ? `${err.message}\n\nApp đang ở mode "${store.get('mode')}". Có thể SERVER LAN tắt, sai IP, hoặc firewall chặn.\n\nChọn "Chạy lại setup wizard" để nhập lại địa chỉ SERVER.`
@@ -763,10 +763,10 @@ function createTray() {
 
   const icon = nativeImage.createFromPath(iconPath);
   tray = new Tray(icon);
-  tray.setToolTip('Ops Control');
+  tray.setToolTip('Quoted Module');
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: 'Mở Ops Control', click: () => mainWindow?.show() },
+      { label: 'Mở Quoted Module', click: () => mainWindow?.show() },
       { type: 'separator' },
       { label: 'Kiểm tra cập nhật', click: () => initAutoUpdater(true) },
       { label: `Mode: ${store.get('mode')}`, enabled: false },
@@ -786,8 +786,33 @@ function createTray() {
 // ─── App Menu (Edit/View/Help) ─────────────────────────────────────
 function buildAppMenu() {
   const isMac = process.platform === 'darwin';
+  if (isMac) {
+    app.setAboutPanelOptions({
+      applicationName: 'Quoted Module',
+      applicationVersion: app.getVersion(),
+    });
+  }
   const template = [
-    ...(isMac ? [{ role: 'appMenu' }] : []),
+    // Explicit labels: role 'appMenu' would title About/Hide/Quit with
+    // app.name, which is the internal 'ops-control-desktop'.
+    ...(isMac
+      ? [
+          {
+            label: 'Quoted Module',
+            submenu: [
+              { role: 'about', label: 'Giới thiệu Quoted Module' },
+              { type: 'separator' },
+              { role: 'services', label: 'Dịch vụ' },
+              { type: 'separator' },
+              { role: 'hide', label: 'Ẩn Quoted Module' },
+              { role: 'hideOthers', label: 'Ẩn các ứng dụng khác' },
+              { role: 'unhide', label: 'Hiện tất cả' },
+              { type: 'separator' },
+              { role: 'quit', label: 'Thoát Quoted Module' },
+            ],
+          },
+        ]
+      : []),
     {
       label: 'Tệp',
       submenu: [
@@ -822,8 +847,8 @@ function buildAppMenu() {
           click: () =>
             dialog.showMessageBox(mainWindow, {
               type: 'info',
-              title: 'Ops Control',
-              message: `Ops Control Desktop v${app.getVersion()}`,
+              title: 'Quoted Module',
+              message: `Quoted Module Desktop v${app.getVersion()}`,
               detail: `Mode: ${store.get('mode')}\nElectron: ${process.versions.electron}\nNode: ${process.versions.node}\nChrome: ${process.versions.chrome}`,
             }),
         },
@@ -871,13 +896,13 @@ ${ipLines
 
 Lưu ý:
   • Chọn IP của Ethernet (ưu tiên) — bền hơn WiFi
-  • Cài máy nhân viên: dùng "Ops Control CLIENT Setup 1.5.10.exe" → app sẽ tự hỏi URL này
+  • Cài máy nhân viên: dùng "Quoted Module CLIENT Setup ${app.getVersion()}.exe" (bản Windows) hoặc DMG CLIENT (macOS) → app sẽ tự hỏi URL này
   • Để cố định IP máy chủ, vào Network Settings → Static IP (hướng dẫn ở Go-Live Guide §2.4)
   • Để app server tự chạy 24/7 không cần login, cài NSSM service (Go-Live Guide §2.3)`;
 
   dialog.showMessageBoxSync(null, {
     type: 'info',
-    title: 'Ops Control SERVER — cài đặt thành công',
+    title: 'Quoted Module SERVER — cài đặt thành công',
     message: 'Đây là URL server của anh',
     detail,
     buttons: ['Đã ghi lại — tiếp tục'],
@@ -1134,7 +1159,7 @@ app.whenReady().then(async () => {
   } catch (err) {
     log.error('[main] Startup failed:', err);
     dialog.showErrorBox(
-      'Ops Control — lỗi khởi động',
+      'Quoted Module — lỗi khởi động',
       `${err.message}\n\nXem log: ${log.transports.file.getFile().path}`
     );
     app.quit();

@@ -22,8 +22,8 @@ import { applyStyle } from './styles.js';
  */
 export function createWorkbook({ title, exportedBy }) {
   const wb = new ExcelJS.Workbook();
-  wb.creator = exportedBy || 'Ops Control';
-  wb.lastModifiedBy = exportedBy || 'Ops Control';
+  wb.creator = exportedBy || 'Quoted Module';
+  wb.lastModifiedBy = exportedBy || 'Quoted Module';
   wb.created = new Date();
   wb.modified = new Date();
   wb.title = title || 'Quote Export';

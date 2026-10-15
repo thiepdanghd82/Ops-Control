@@ -1,5 +1,5 @@
 /**
- * Ops Control — API Client
+ * Quoted Module — API Client
  * All data reads from /api/shared (Node.js reads files directly)
  *
  * Phase 9H — cookie-based auth with CSRF double-submit.

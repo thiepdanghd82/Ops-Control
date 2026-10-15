@@ -1196,7 +1196,7 @@ router.get('/server-info', writeRateLimit, (req, res) => {
   let identity = null;
   if (process.env.OPS_SERVER_ID) {
     identity = {
-      serverName: process.env.OPS_SERVER_NAME || 'Ops Control',
+      serverName: process.env.OPS_SERVER_NAME || 'Quoted Module',
       serverId: process.env.OPS_SERVER_ID,
       timezone: process.env.OPS_SERVER_TZ || 'UTC',
       language: process.env.OPS_SERVER_LANG || 'en',
@@ -1227,7 +1227,7 @@ router.get('/server-info', writeRateLimit, (req, res) => {
 
   res.json({
     ok: true,
-    serverName: identity?.serverName || 'Ops Control',
+    serverName: identity?.serverName || 'Quoted Module',
     serverId: identity?.serverId || null,
     timezone: identity?.timezone || 'UTC',
     language: identity?.language || 'en',

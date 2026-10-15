@@ -95,7 +95,7 @@ async function main() {
 
   console.log('');
   console.log(bold('══════════════════════════════════════════════════════════════'));
-  console.log(bold('  TOTP SECRETS RESET — Ops Control'));
+  console.log(bold('  TOTP SECRETS RESET — Quoted Module'));
   console.log(bold('══════════════════════════════════════════════════════════════'));
   console.log('');
   console.log(`  Data dir:       ${dim(DATA_DIR)}`);

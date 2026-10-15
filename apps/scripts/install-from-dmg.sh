@@ -26,8 +26,16 @@
 #   a specific build-id so a swap during transit is detectable.
 #
 # Usage:
-#   bash install-from-dmg.sh OpsControl-SERVER-v1.3.0-mac-arm64.dmg
-#   bash install-from-dmg.sh OpsControl-CLIENT-v1.3.0-mac-arm64.dmg
+#   bash install-from-dmg.sh "Quoted Module SERVER 1.6.0-arm64.dmg"
+#   bash install-from-dmg.sh "Quoted Module CLIENT 1.6.0-arm64.dmg"
+#   (DMGs built before the rename are named "Ops Control ..." /
+#   OpsControl-...; they install as "Ops Control.app" and work the same.)
+#
+# Renamed app: the bundle is now "Quoted Module.app"; installs made before
+# the rename are "/Applications/Ops Control.app" - the same app (same bundle
+# id, same data folder ~/Library/Application Support/ops-control-desktop).
+# The old copy is NOT deleted automatically, because an auto-start agent or
+# the headless server may still launch it by path; step 3 prints what to do.
 #
 # Exit codes:
 #   0 - installed
@@ -94,6 +102,27 @@ cp -R "$APP" "$TARGET" || {
   exit 3
 }
 echo "  [OK] Copied"
+
+# Pre-rename install left next to the new one? Only one of them can run at a
+# time (they share the data folder and its single-instance lock), so leaving
+# it is safe - but anything that launches it by path keeps running OLD code.
+LEGACY_APP="/Applications/Ops Control.app"
+if [[ "$TARGET" != "$LEGACY_APP" && -d "$LEGACY_APP" ]]; then
+  echo "  [WARN] Old-name install still present: ${LEGACY_APP}"
+  echo "         It is the same app under its pre-rename name; it was NOT removed."
+  for LAUNCHER in "${HOME}/Library/LaunchAgents/com.ccldesign.opscontrol-server.plist" \
+                  "${HOME}/Library/LaunchAgents/vn.ccldesign.opscontrol.server.plist" \
+                  "/Library/OpsControl/run-server.sh"; do
+    if [[ -f "$LAUNCHER" ]] && grep -q "Ops Control.app" "$LAUNCHER" 2>/dev/null; then
+      echo "         - ${LAUNCHER} still starts the OLD copy:"
+      echo "           re-run its install script so it points at ${TARGET}"
+    fi
+  done
+  if pgrep -x "Ops Control" >/dev/null 2>&1; then
+    echo "         - \"Ops Control\" is running right now: quit it first."
+  fi
+  echo "         Then remove the old copy:  rm -rf '${LEGACY_APP}'"
+fi
 
 # --- 4. Strip Gatekeeper quarantine ----------------------------------
 echo "[4/4] Removing Gatekeeper quarantine attribute ..."

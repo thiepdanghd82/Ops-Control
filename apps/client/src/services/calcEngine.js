@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Ops Control — Calculation Engine (extracted from COST V1.0 M02)
+ * Quoted Module — Calculation Engine (extracted from COST V1.0 M02)
  * Pure functions — zero DOM, zero React, zero global state.
  * Every function takes explicit (state, lib) parameters.
  *

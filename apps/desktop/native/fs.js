@@ -2,7 +2,7 @@
  * Sandboxed filesystem helpers — open/save dialog + read/write file.
  *
  * Renderer KHÔNG được quyền truy cập node `fs` trực tiếp (security).
- * File này expose 4 thao tác đủ dùng cho Ops Control:
+ * File này expose 4 thao tác đủ dùng cho Quoted Module:
  *
  *   - showSaveDialog → user chọn nơi save (PDF quote, Excel report)
  *   - showOpenDialog → user chọn file import (xlsx, csv)

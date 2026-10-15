@@ -1,6 +1,6 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════
-# Ops Control v1.2 — Deploy to Production Server (Linux)
+# Quoted Module v1.2 — Deploy to Production Server (Linux)
 # ═══════════════════════════════════════════════════════════════
 #
 # Usage:
@@ -28,7 +28,7 @@ PYTHON_PORT=5173
 
 echo ""
 echo "  ╔══════════════════════════════════════════════════╗"
-echo "  ║       Ops Control v1.2 — Deploy Script          ║"
+echo "  ║       Quoted Module v1.2 — Deploy Script        ║"
 echo "  ╚══════════════════════════════════════════════════╝"
 echo ""
 
@@ -217,7 +217,7 @@ ssh "$REMOTE" "cd $APP_DIR && npm install --production"
 echo "  ⚙️   Setting up systemd service..."
 ssh "$REMOTE" "cat > /tmp/$APP_NAME.service << 'UNIT'
 [Unit]
-Description=Ops Control v1.2
+Description=Quoted Module v1.2
 After=network.target
 
 [Service]

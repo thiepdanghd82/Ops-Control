@@ -1,6 +1,6 @@
 #!/bin/bash
 # ───────────────────────────────────────────────────────────────────────────
-# check-license.command — OpsControl fleet license audit (macOS)
+# check-license.command — Quoted Module fleet license audit (macOS)
 #
 # DOUBLE-CLICK to run. No install needed. Prints ONE status line:
 #   hostname | type | tier | expires_at | days-left
@@ -17,7 +17,7 @@ LIC="$HOME/Library/Application Support/ops-control-desktop/license.json"
 HOST=$(hostname)
 
 echo ""
-echo "OpsControl license check — $HOST"
+echo "Quoted Module license check — $HOST"
 echo "------------------------------------------------------------"
 
 if [ ! -f "$LIC" ]; then

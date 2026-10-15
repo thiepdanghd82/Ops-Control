@@ -10,7 +10,7 @@
  *   - UI chrome (buttons, labels, nav, toasts) → full Vietnamese
  *   - Industry acronyms (BOM, RFQ, MOQ, SGA, GM, VA) → kept English
  *     because operators speak them in English day-to-day
- *   - Proper nouns (IBM Plex, Ops Control product name) → English
+ *   - Proper nouns (IBM Plex, Quoted Module product name) → English
  *   - Customer-facing finance units ($, %) → unchanged
  *
  * Adding new strings:

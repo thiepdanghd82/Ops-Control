@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════
-# Ops Control v1.2 — Deploy to Production (Windows)
+# Quoted Module v1.2 — Deploy to Production (Windows)
 # ═══════════════════════════════════════════════════════════════
 #
 # PowerShell equivalent of deploy.sh. Use when the prod server is a
@@ -49,7 +49,7 @@ function Write-Warn($msg) { Write-Host "  $msg" -ForegroundColor Yellow }
 
 Write-Host ''
 Write-Host '  ╔══════════════════════════════════════════════════╗'
-Write-Host '  ║      Ops Control v1.2 — Deploy (Windows)        ║'
+Write-Host '  ║      Quoted Module v1.2 — Deploy (Windows)      ║'
 Write-Host '  ╚══════════════════════════════════════════════════╝'
 Write-Host ''
 

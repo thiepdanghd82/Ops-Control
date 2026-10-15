@@ -95,7 +95,7 @@ async function main() {
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   console.log('═══════════════════════════════════════════════════════════');
-  console.log('  Ops Control — Emergency Sys-User Recovery');
+  console.log('  Quoted Module — Emergency Sys-User Recovery');
   console.log('═══════════════════════════════════════════════════════════');
   console.log('  Use this ONLY when the web UI cannot mint a sys user');
   console.log('  (eg. all admin/sys accounts are deactivated or lost).');

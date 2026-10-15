@@ -2,8 +2,8 @@
  * build-mac-installers.mjs — produces TWO Mac DMG installers from one
  * electron-builder config:
  *
- *   • Ops Control SERVER 1.0.0-arm64.dmg
- *   • Ops Control CLIENT 1.0.0-arm64.dmg
+ *   • Quoted Module SERVER 1.0.0-arm64.dmg
+ *   • Quoted Module CLIENT 1.0.0-arm64.dmg
  *
  * Mirror of build-windows-installers.mjs but targets Apple Silicon DMG.
  * No NSIS post-install (Mac firewall is per-app prompt, not installer-
@@ -28,11 +28,11 @@ const ROLE_FILE = path.join(DESKTOP, 'build-role.json');
 
 const ROLES = {
   server: {
-    artifactName: 'Ops Control SERVER ${version}-${arch}.${ext}',
+    artifactName: 'Quoted Module SERVER ${version}-${arch}.${ext}',
     label: 'SERVER',
   },
   client: {
-    artifactName: 'Ops Control CLIENT ${version}-${arch}.${ext}',
+    artifactName: 'Quoted Module CLIENT ${version}-${arch}.${ext}',
     label: 'CLIENT',
   },
 };
@@ -52,7 +52,7 @@ async function buildRole(role) {
   if (!cfg) throw new Error(`Unknown role: ${role}`);
 
   console.log(`\n══════════════════════════════════════════════════════════`);
-  console.log(`  Building Ops Control ${cfg.label} (Mac DMG arm64)`);
+  console.log(`  Building Quoted Module ${cfg.label} (Mac DMG arm64)`);
   console.log(`══════════════════════════════════════════════════════════\n`);
 
   fs.writeFileSync(ROLE_FILE, JSON.stringify({ role }, null, 2) + '\n');

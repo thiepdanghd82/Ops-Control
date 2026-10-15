@@ -67,7 +67,7 @@ export function generateCsrfToken() {
  * flag — localhost dev must stay on http:// so we can't require it
  * globally. `sameSite: 'strict'` is the strongest CSRF protection;
  * fall back to 'lax' only if you need cross-site OAuth-style flows
- * (Ops Control doesn't).
+ * (Quoted Module doesn't).
  */
 export function setAuthCookies(res, { sessionToken, csrfToken, isProd, maxAgeMs }) {
   // Sprint 1.6 — caller passes maxAgeMs computed from the session TTL so

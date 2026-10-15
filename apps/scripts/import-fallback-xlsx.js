@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Re-imports operator-edited Fallback_Quote_Manual_*.xlsx +
- * Fallback_WorkOrder_Manual_*.xlsx into Ops Control after a
+ * Fallback_WorkOrder_Manual_*.xlsx into Quoted Module after a
  * Rollback Runbook B incident.
  *
  * CLI:

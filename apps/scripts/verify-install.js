@@ -144,7 +144,7 @@ if (process.env.DATA_DIR) {
 // ── Report ──
 const width = process.stdout.columns || 80;
 console.log('═'.repeat(Math.min(width, 60)));
-console.log('Ops Control — install verification');
+console.log('Quoted Module — install verification');
 console.log('═'.repeat(Math.min(width, 60)));
 for (const c of checks) {
   console.log(`  ${c.ok ? '✓' : '✗'}  ${c.label}${c.reason ? ` — ${c.reason}` : ''}`);

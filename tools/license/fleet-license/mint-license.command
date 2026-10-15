@@ -39,7 +39,7 @@ die() { echo ""; echo "✘ $1"; echo ""; read -r -p "Nhấn Enter để đóng..
 
 echo ""
 echo "════════════════════════════════════════════════════════════"
-echo "  OpsControl — Mint license (offline, máy Lead)"
+echo "  Quoted Module — Mint license (offline, máy Lead)"
 echo "════════════════════════════════════════════════════════════"
 
 # ── Preconditions ──────────────────────────────────────────────────────────
@@ -121,7 +121,7 @@ echo "Gửi operator 3 bước (kèm file license trên qua Zalo):"
 echo "  1) Cài bản DMG/EXE MỚI nhất TRƯỚC (bản có pubkey mới)."
 echo "  2) Đổi tên file vừa nhận thành 'license.json', copy đè vào:"
 echo "       $DEST"
-echo "  3) Mở (hoặc mở lại) app Ops Control — banner license biến mất."
+echo "  3) Mở (hoặc mở lại) app Quoted Module — banner license biến mất."
 echo ""
 echo "⚠️  Đừng quên: cập nhật registry docs/operations/licenses/ — chỉ metadata"
 echo "    (installation_id/tier/expires/issued_at), signature để REDACTED, KHÔNG"

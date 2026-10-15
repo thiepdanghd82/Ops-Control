@@ -5,7 +5,7 @@
  * bundled, macOS/Linux dùng `lp` command). Đây là cách tránh phải
  * implement riêng từng OS.
  *
- * Phù hợp cho: in phiếu công đoạn, báo cáo, quote PDF mà Ops Control
+ * Phù hợp cho: in phiếu công đoạn, báo cáo, quote PDF mà Quoted Module
  * sinh ra qua Puppeteer/docx.
  *
  * Lưu ý: trên Windows, lần đầu chạy có thể cần grant access
@@ -89,7 +89,7 @@ async function printPdfFile(pdfPath, opts = {}) {
     });
   }
   // macOS/Linux: shell to `lp` (CUPS). Limited option mapping — enough for
-  // A4 reports + quote PDFs, which is the current Ops Control scope.
+  // A4 reports + quote PDFs, which is the current Quoted Module scope.
   const args = [];
   if (opts.printer) args.push('-d', opts.printer);
   if (opts.copies && opts.copies > 1) args.push('-n', String(opts.copies));

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Ops Control SERVER — macOS LaunchAgent template
+  Quoted Module SERVER — macOS LaunchAgent template
   -------------------------------------------------
-  Auto-start the Ops Control SERVER Electron app at user login + auto-
+  Auto-start the Quoted Module SERVER Electron app at user login + auto-
   restart if the app crashes. Designed for the Mac mini physically at
   CCL Design Hai Phong that hosts the embedded Express + SQLite for
   operator CLIENT machines on the LAN.
@@ -15,6 +15,11 @@
       relaunch — operator can stop the SERVER for maintenance.
     - ThrottleInterval: minimum 30 seconds between restarts to avoid
       crash-loop runaway.
+
+  install-macos.sh fills in the two placeholders below: the user's home
+  folder, and the installed app's executable, normally
+  /Applications/Quoted Module.app/Contents/MacOS/Quoted Module
+  (Ops Control.app on a machine installed before the rename).
 
   Install:
     sh scripts/ops-autostart/install-macos.sh
@@ -40,7 +45,7 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/Applications/Ops Control.app/Contents/MacOS/Ops Control</string>
+        <string>__APP_PATH__</string>
     </array>
 
     <key>RunAtLoad</key>

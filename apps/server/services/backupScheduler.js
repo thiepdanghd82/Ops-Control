@@ -378,7 +378,7 @@ export async function runBackupCycle({ force = false } = {}) {
     // invisible outside `console.error` if the webhook env var wasn't
     // configured (audit finding §7).
     audit('BACKUP_FAILED', '-', '-', `sqlite: ${err.message}`);
-    await alertWebhook({ text: `🚨 Ops Control backup FAILED (sqlite): ${err.message}` });
+    await alertWebhook({ text: `🚨 Quoted Module backup FAILED (sqlite): ${err.message}` });
     // A: record the failed cycle as the last run so the UI doesn't show a
     // stale "success" while sqlite is actually broken.
     _lastRun = summary;
@@ -417,13 +417,13 @@ export async function runBackupCycle({ force = false } = {}) {
         if (Object.keys(drops).length > 0) {
           summary.steps.push({ name: 'sanity-check', ok: false, drops });
           await alertWebhook({
-            text: `⚠️ Ops Control backup row-count anomaly`,
+            text: `⚠️ Quoted Module backup row-count anomaly`,
             attachments: [{ text: JSON.stringify(drops, null, 2) }],
           });
         }
       }
       if (!verify.ok) {
-        await alertWebhook({ text: `🚨 Ops Control backup verify FAILED: ${verify.error}` });
+        await alertWebhook({ text: `🚨 Quoted Module backup verify FAILED: ${verify.error}` });
       }
     } catch (err) {
       summary.steps.push({ name: 'verify', ok: false, error: err.message });

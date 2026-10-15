@@ -4,7 +4,7 @@
  * subtree and renders a fallback UI with a Retry button, keeping the
  * rest of the app usable.
  *
- * Ops Control ships a per-tab boundary via CostModule; before this
+ * Quoted Module ships a per-tab boundary via CostModule; before this
  * shared component the app had three gaps:
  *   1. Top-of-tree: if Sidebar / TopBar / WarningBar crashed, the
  *      whole screen went blank.

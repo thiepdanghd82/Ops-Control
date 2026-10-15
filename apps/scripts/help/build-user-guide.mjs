@@ -571,7 +571,7 @@ const sectionMap = Object.fromEntries(HELP_SECTIONS.map((s) => [s.key, s]));
 const titlePage = [
   new Paragraph({
     children: [
-      new TextRun({ text: 'Ops Control', font: FONT, size: 64, bold: true, color: COLOR_ACCENT }),
+      new TextRun({ text: 'Quoted Module', font: FONT, size: 64, bold: true, color: COLOR_ACCENT }),
     ],
     spacing: { before: 1800, after: 180 },
     alignment: AlignmentType.CENTER,
@@ -679,7 +679,7 @@ const footer = new Footer({
     new Paragraph({
       children: [
         new TextRun({
-          text: 'Ops Control · User Guide · CCL Design Vietnam',
+          text: 'Quoted Module · User Guide · CCL Design Vietnam',
           font: FONT,
           size: 16,
           color: '6B7280',
@@ -696,8 +696,8 @@ const footer = new Footer({
 
 // Assemble
 const doc = new Document({
-  creator: 'CCL Design Vietnam · Ops Control',
-  title: 'Ops Control — User Guide',
+  creator: 'CCL Design Vietnam · Quoted Module',
+  title: 'Quoted Module — User Guide',
   description: 'Auto-generated from client/src/help/content.js',
   styles: {
     default: { document: { run: { font: FONT, size: 22 } } },

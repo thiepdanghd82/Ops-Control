@@ -22,7 +22,7 @@ import './ProvisioningCard.css';
 
 function buildPlainText({ serverUrl, username, fullName, tempPassword }) {
   return [
-    'OPS CONTROL — User handover / Bàn giao tài khoản',
+    'QUOTED MODULE — User handover / Bàn giao tài khoản',
     '─────────────────────────────────────────',
     `Server URL : ${serverUrl}`,
     `Username   : ${username}`,
@@ -99,7 +99,7 @@ export default function ProvisioningCard({
               <div className="prov-card-brand">
                 <div className="prov-card-brand-mark">⌬</div>
                 <div>
-                  <div className="prov-card-brand-name">OPS CONTROL</div>
+                  <div className="prov-card-brand-name">QUOTED MODULE</div>
                   <div className="prov-card-brand-tag">User handover · Bàn giao tài khoản</div>
                 </div>
               </div>
@@ -131,9 +131,9 @@ export default function ProvisioningCard({
 
             <ol className="prov-card-steps">
               <li>
-                <b>Open</b> the CCL - NPI Costing module app
+                <b>Open</b> the Quoted Module app
                 <br />
-                <span className="prov-card-steps-vi">Mở ứng dụng CCL - NPI Costing module</span>
+                <span className="prov-card-steps-vi">Mở ứng dụng Quoted Module</span>
               </li>
               <li>
                 <b>Sign in</b> with the username and temp password above

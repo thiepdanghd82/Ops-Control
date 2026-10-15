@@ -168,7 +168,7 @@ function AppShell() {
     return startFleetHeartbeat({
       onApplied: () =>
         window.alert(
-          'Đã nhận license mới cho máy này. Vui lòng khởi động lại Ops Control để áp dụng.'
+          'Đã nhận license mới cho máy này. Vui lòng khởi động lại Quoted Module để áp dụng.'
         ),
     });
   }, [isAuthenticated]);
@@ -380,7 +380,7 @@ export default function App() {
     // browser's blank page. The Cost / Planning module trees each have
     // their own inner boundaries for tab-level isolation; this one is
     // the last-resort net for anything above the modules.
-    <ErrorBoundary label="Ops Control">
+    <ErrorBoundary label="Quoted Module">
       {/* Top-of-app connection status (overlay; doesn't push content) */}
       <ConnectionBanner />
       {/* P0 client version nudge. Polls /api/version every 5 min; renders

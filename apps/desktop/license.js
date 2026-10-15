@@ -337,7 +337,7 @@ async function showLicenseDialog(reason, installationId) {
   const formatted = formatInstallationIdForDisplay(installationId);
   const result = await dialog.showMessageBox({
     type: 'warning',
-    title: 'Ops Control — License không hợp lệ',
+    title: 'Quoted Module — License không hợp lệ',
     message: `License không hợp lệ: ${reason}`,
     detail:
       `Installation ID của máy này (4 nhóm × 16 ký tự, bỏ space khi ký):\n${formatted}\n\n` +

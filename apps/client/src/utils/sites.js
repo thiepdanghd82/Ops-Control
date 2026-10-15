@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Single source of truth for the Ops Control site list.
+ * Single source of truth for the Quoted Module site list.
  *
  * Prior to Phase 9G.4 this array was duplicated in four places
  * (RfqInfoCard, LibRate, LibDDL, LibFinance). When Ops added a new

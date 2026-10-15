@@ -1,8 +1,8 @@
 @echo off
 setlocal enableextensions
-title Ops Control SERVER - cai dich vu nen
+title Quoted Module SERVER - cai dich vu nen
 rem ===========================================================================
-rem  ops-server-install-service.bat — cai Ops Control SERVER chay nen (Windows)
+rem  ops-server-install-service.bat — cai Quoted Module SERVER chay nen (Windows)
 rem
 rem  Co che: Windows Task Scheduler (built-in) — KHONG can cai them gi.
 rem  Vi sao khong dung Windows Service that: mot tien trinh Electron/node thuan
@@ -28,15 +28,23 @@ set "OPS_HOME=%ProgramData%\OpsControl"
 set "ENV_FILE=%OPS_HOME%\server.env"
 set "TASKXML=%OPS_HOME%\OpsControlServer.xml"
 set "PORT=3000"
-if not defined OPS_APP set "OPS_APP=%ProgramFiles%\Ops Control"
-set "ELECTRON=%OPS_APP%\Ops Control.exe"
+rem App doi ten tu "Ops Control": uu tien ten moi, khong co thi dung ten cu
+rem (may chua nang cap van cai duoc). Dat OPS_APP de chi dinh thu muc khac.
+if not defined OPS_APP if exist "%ProgramFiles%\Quoted Module\Quoted Module.exe" set "OPS_APP=%ProgramFiles%\Quoted Module"
+rem Cai de len ban cu thi giu thu muc cu, exe moi nam thang hoac long them mot cap.
+if not defined OPS_APP if exist "%ProgramFiles%\Ops Control\Quoted Module.exe" set "OPS_APP=%ProgramFiles%\Ops Control"
+if not defined OPS_APP if exist "%ProgramFiles%\Ops Control\Quoted Module\Quoted Module.exe" set "OPS_APP=%ProgramFiles%\Ops Control\Quoted Module"
+if not defined OPS_APP if exist "%ProgramFiles%\Ops Control\Ops Control.exe" set "OPS_APP=%ProgramFiles%\Ops Control"
+if not defined OPS_APP set "OPS_APP=%ProgramFiles%\Quoted Module"
+set "ELECTRON=%OPS_APP%\Quoted Module.exe"
+if not exist "%ELECTRON%" if exist "%OPS_APP%\Ops Control.exe" set "ELECTRON=%OPS_APP%\Ops Control.exe"
 set "SERVER=%OPS_APP%\resources\app\server\index.js"
 set "HELPER=%~dp0setup-service-files.cjs"
 set "MIGRATE=%~dp0..\migrate-datadir.cjs"
 set "MIGRATE_FAILED="
 
 echo ============================================================
-echo   Cai Ops Control SERVER dang dich vu nen (Task Scheduler)
+echo   Cai Quoted Module SERVER dang dich vu nen (Task Scheduler)
 echo ============================================================
 echo.
 
@@ -111,13 +119,13 @@ rem ── Migrate subroutine (labels, KHONG dung %errorlevel% trong ngoac) ─�
   if exist "%OLD_UDATA%\license.json" if not exist "%OPS_HOME%\data\license.json" copy /Y "%OLD_UDATA%\license.json" "%OPS_HOME%\data\license.json" >nul
   rem Vo hieu hoa DATA_DIR cu: doi ten -> app embedded khong chay nham DB cu
   move "%OLD_DATA%" "%OLD_DATA%.migrated-backup" >nul 2>&1
-  > "%OLD_UDATA%\READ-ME-SERVER-MOVED.txt" echo Ops Control SERVER da chuyen sang dich vu nen. Du lieu o %OPS_HOME%\data . KHONG mo app SERVER nua (se tao DB rong).
+  > "%OLD_UDATA%\READ-ME-SERVER-MOVED.txt" echo Quoted Module SERVER da chuyen sang dich vu nen. Du lieu o %OPS_HOME%\data . KHONG mo app SERVER nua (se tao DB rong).
   echo   OK da di tru + doi ten data cu -^> .migrated-backup
   goto :eof
 
 :noapp
 echo   FAIL: Khong thay app tai %OPS_APP%
-echo   Cai "Ops Control SERVER Setup ....exe" truoc (mac dinh C:\Program Files\Ops Control),
+echo   Cai "Quoted Module SERVER Setup ....exe" truoc (mac dinh C:\Program Files\Quoted Module),
 echo   hoac dat bien OPS_APP=^<duong dan app^> roi chay lai.
 
 :done

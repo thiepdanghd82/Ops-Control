@@ -7,8 +7,8 @@
 #   2. Build client (Vite)
 #   3. Build installer Windows (.exe) + macOS (.dmg) qua electron-builder
 #   4. rsync 3 file lên http://10.102.3.61/updates/:
-#        - Ops-Control-Setup-${VERSION}.exe
-#        - Ops-Control-${VERSION}.dmg (arm64)
+#        - Quoted-Module-Setup-${VERSION}.exe
+#        - Quoted-Module-${VERSION}.dmg (arm64)
 #        - latest.yml + latest-mac.yml (electron-updater manifest)
 #   5. Git tag + push reminder
 #
@@ -63,7 +63,7 @@ PUBLISH_DIR="/var/www/updates/"
 cd "$PROJECT_ROOT"
 
 # ─── Pre-flight ──────────────────────────────────────────────────────
-echo "═══ Ops Control release v$VERSION ═══"
+echo "═══ Quoted Module release v$VERSION ═══"
 echo
 
 if [[ -n "$(git status --porcelain 2>/dev/null || true)" ]]; then
@@ -129,17 +129,17 @@ if [[ -z "${CSC_LINK:-}" ]]; then
 
   # macOS: ad-hoc sign + clear quarantine
   if [[ "$WIN_ONLY" != "true" ]]; then
-    for app in desktop/dist-electron/mac-*/Ops*Control.app; do
+    for app in desktop/dist-electron/mac-*/Quoted*Module.app; do
       [[ -d "$app" ]] && ./scripts/sign-macos.sh "$app"
     done
-    for dmg in desktop/dist-electron/Ops*Control*.dmg; do
+    for dmg in desktop/dist-electron/Quoted*Module*.dmg; do
       [[ -f "$dmg" ]] && xattr -cr "$dmg" 2>/dev/null || true
     done
   fi
 
   # Windows: PowerShell self-sign (chỉ chạy nếu có pwsh — Windows hoặc PowerShell Core)
   if [[ "$MAC_ONLY" != "true" ]] && command -v pwsh > /dev/null; then
-    for exe in desktop/dist-electron/Ops-Control-Setup-*.exe; do
+    for exe in desktop/dist-electron/Quoted-Module-Setup-*.exe; do
       [[ -f "$exe" ]] && pwsh -File scripts/sign-windows.ps1 -InstallerPath "$exe"
     done
   elif [[ "$MAC_ONLY" != "true" ]]; then
@@ -160,9 +160,9 @@ fi
 
 echo "[4/5] Publishing to $PUBLISH_HOST:$PUBLISH_DIR"
 PUBLISH_FILES=()
-[[ -f "desktop/dist-electron/Ops-Control-Setup-$VERSION.exe" ]] && PUBLISH_FILES+=("desktop/dist-electron/Ops-Control-Setup-$VERSION.exe")
-[[ -f "desktop/dist-electron/Ops-Control-$VERSION.dmg" ]] && PUBLISH_FILES+=("desktop/dist-electron/Ops-Control-$VERSION.dmg")
-[[ -f "desktop/dist-electron/Ops-Control-$VERSION-arm64.dmg" ]] && PUBLISH_FILES+=("desktop/dist-electron/Ops-Control-$VERSION-arm64.dmg")
+[[ -f "desktop/dist-electron/Quoted-Module-Setup-$VERSION.exe" ]] && PUBLISH_FILES+=("desktop/dist-electron/Quoted-Module-Setup-$VERSION.exe")
+[[ -f "desktop/dist-electron/Quoted-Module-$VERSION.dmg" ]] && PUBLISH_FILES+=("desktop/dist-electron/Quoted-Module-$VERSION.dmg")
+[[ -f "desktop/dist-electron/Quoted-Module-$VERSION-arm64.dmg" ]] && PUBLISH_FILES+=("desktop/dist-electron/Quoted-Module-$VERSION-arm64.dmg")
 [[ -f "desktop/dist-electron/latest.yml" ]] && PUBLISH_FILES+=("desktop/dist-electron/latest.yml")
 [[ -f "desktop/dist-electron/latest-mac.yml" ]] && PUBLISH_FILES+=("desktop/dist-electron/latest-mac.yml")
 
@@ -190,7 +190,7 @@ fi
 echo "[5/5] Git tag v$VERSION"
 git add package.json desktop/package.json client/package.json
 git commit -m "chore: release v$VERSION"
-git tag -a "v$VERSION" -m "Ops Control v$VERSION"
+git tag -a "v$VERSION" -m "Quoted Module v$VERSION"
 
 echo
 echo "═══ Done ═══"

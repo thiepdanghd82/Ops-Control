@@ -71,7 +71,7 @@ curl_body() {
 }
 
 echo
-echo "${BOLD}═══ Ops Control v1.3 Runtime Smoke Test ═══${RESET}"
+echo "${BOLD}═══ Quoted Module v1.3 Runtime Smoke Test ═══${RESET}"
 echo "  target: $HOST"
 [[ -n "$TOKEN" ]] && echo "  token: ${TOKEN:0:8}…" || echo "  token: (none — auth-gated checks will show 401)"
 echo

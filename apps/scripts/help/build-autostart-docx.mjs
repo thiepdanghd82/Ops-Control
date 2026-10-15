@@ -1,6 +1,6 @@
 /**
  * Build Autostart_Setup_Guide.docx — operator-facing Word guide for the
- * Ops Control SERVER auto-start mechanism (macOS LaunchAgent + Windows
+ * Quoted Module SERVER auto-start mechanism (macOS LaunchAgent + Windows
  * Task Scheduler). Bilingual EN+VI.
  *
  * Outputs (BOTH locations):
@@ -190,7 +190,7 @@ function buildDocument() {
     new Paragraph({
       children: [
         new TextRun({
-          text: 'OPS CONTROL SERVER',
+          text: 'QUOTED MODULE SERVER',
           font: FONT,
           size: 40,
           bold: true,
@@ -239,7 +239,7 @@ function buildDocument() {
     })
   );
   sections.push(
-    p('CCL Design Hai Phong — Ops Control v1.6 go-live 2026-08-30', {
+    p('CCL Design Hai Phong — Quoted Module v1.6 go-live 2026-08-30', {
       alignment: AlignmentType.CENTER,
       italics: true,
       color: '6B7280',
@@ -250,13 +250,13 @@ function buildDocument() {
   sections.push(h1('1. Tổng quan · Overview'));
   sections.push(
     p(
-      'Tài liệu này hướng dẫn cài đặt cơ chế tự khởi động cho Ops Control SERVER. Sau khi cài xong, SERVER sẽ tự bật lại sau khi máy reboot (mất điện) và tự restart nếu app bị crash. Operator không cần đụng vào máy SERVER nữa.',
+      'Tài liệu này hướng dẫn cài đặt cơ chế tự khởi động cho Quoted Module SERVER. Sau khi cài xong, SERVER sẽ tự bật lại sau khi máy reboot (mất điện) và tự restart nếu app bị crash. Operator không cần đụng vào máy SERVER nữa.',
       { spacing: { before: 120, after: 120 } }
     )
   );
   sections.push(
     p(
-      'This guide installs the auto-start mechanism for Ops Control SERVER. After install, the SERVER auto-launches after OS reboot (post power loss) and auto-restarts on crash. Operators do not need to touch the SERVER machine.',
+      'This guide installs the auto-start mechanism for Quoted Module SERVER. After install, the SERVER auto-launches after OS reboot (post power loss) and auto-restarts on crash. Operators do not need to touch the SERVER machine.',
       { italics: true, color: '6B7280' }
     )
   );
@@ -376,7 +376,11 @@ function buildDocument() {
   sections.push(
     ...stepBlock(4, 'Navigate to scripts folder', 'Chuyển tới thư mục scripts', [
       p('Gõ lệnh sau (đường dẫn này có sẵn trong installed app, KHÔNG cần copy file từ dev box):'),
-      code('cd "/Applications/Ops Control.app/Contents/Resources/app"'),
+      code('cd "/Applications/Quoted Module.app/Contents/Resources/app"'),
+      p('Máy cài bản trước khi đổi tên: thay "Quoted Module" bằng "Ops Control".', {
+        italics: true,
+        color: '6B7280',
+      }),
     ])
   );
   sections.push(
@@ -391,7 +395,7 @@ function buildDocument() {
   sections.push(p('Chạy 3 lệnh để verify · Run 3 commands to verify:'));
   sections.push(code('launchctl list | grep com.ccldesign.opscontrol-server'));
   sections.push(p('Phải hiện: PID + "0" + tên agent. PID có thể là số khác.'));
-  sections.push(code('pgrep -fl "Ops Control SERVER"'));
+  sections.push(code('pgrep -fl "Quoted Module"'));
   sections.push(p('Phải hiện process ID + đường dẫn app.'));
   sections.push(code('curl -sS http://localhost:3100/health'));
   sections.push(p('Phải trả về: {"status":"ok",...}'));
@@ -423,7 +427,14 @@ function buildDocument() {
   sections.push(
     ...stepBlock(4, 'Navigate to scripts folder', 'Chuyển tới thư mục scripts', [
       p('Gõ lệnh (đường dẫn mặc định cho cài qua Setup.exe):'),
-      code('cd "$env:LOCALAPPDATA\\Programs\\Ops Control\\resources\\app"'),
+      code('cd "$env:LOCALAPPDATA\\Programs\\Quoted Module\\resources\\app"'),
+      p(
+        'Máy cài từ trước khi đổi tên (kể cả đã cập nhật lên Quoted Module) giữ thư mục "Ops Control": dùng "...\\Programs\\Ops Control\\resources\\app", hoặc "...\\Programs\\Ops Control\\Quoted Module\\resources\\app" nếu có thư mục con đó.',
+        {
+          italics: true,
+          color: '6B7280',
+        }
+      ),
     ])
   );
   sections.push(
@@ -440,7 +451,7 @@ function buildDocument() {
   sections.push(p('Chạy 3 lệnh trong PowerShell · Run 3 commands in PowerShell:'));
   sections.push(code('Get-ScheduledTask -TaskName OpsControlServer'));
   sections.push(p('Phải hiện: State = Ready'));
-  sections.push(code('Get-Process "Ops Control" -ErrorAction SilentlyContinue'));
+  sections.push(code('Get-Process "Quoted Module" -ErrorAction SilentlyContinue'));
   sections.push(p('Phải hiện process với PID + StartTime.'));
   sections.push(code('Invoke-RestMethod http://localhost:3100/health'));
   sections.push(p('Phải trả về: status = "ok"'));
@@ -456,11 +467,11 @@ function buildDocument() {
 
   sections.push(h2('Test 1 — Process crash → tự restart'));
   sections.push(p('Trên Mac:'));
-  sections.push(code('killall "Ops Control"\nsleep 35\npgrep -fl "Ops Control SERVER"'));
+  sections.push(code('killall "Quoted Module"\nsleep 35\npgrep -fl "Quoted Module"'));
   sections.push(p('Trên Windows (PowerShell):'));
   sections.push(
     code(
-      'Stop-Process -Name "Ops Control" -Force\nStart-Sleep -Seconds 65\nGet-Process "Ops Control"'
+      'Stop-Process -Name "Quoted Module" -Force\nStart-Sleep -Seconds 65\nGet-Process "Quoted Module"'
     )
   );
   sections.push(
@@ -473,7 +484,7 @@ function buildDocument() {
   );
 
   sections.push(h2('Test 2 — Clean quit → KHÔNG restart'));
-  sections.push(bullet('Mở Ops Control SERVER (đang chạy)'));
+  sections.push(bullet('Mở Quoted Module SERVER (đang chạy)'));
   sections.push(bullet('Quit qua menu (Cmd+Q trên Mac, đóng window thường trên Win)'));
   sections.push(bullet('Đợi 60 giây'));
   sections.push(
@@ -532,7 +543,7 @@ function buildDocument() {
     {
       symptom: 'App chạy nhưng curl /health bị refused',
       cause: 'Port 3100 đã bị process khác chiếm, hoặc embedded server crash khi boot',
-      fix: 'Quit Ops Control → mở lại manual → xem có error popup không',
+      fix: 'Quit Quoted Module → mở lại manual → xem có error popup không',
     },
     {
       symptom: 'Auto-restart không kick sau khi kill -9',
@@ -565,7 +576,7 @@ function buildDocument() {
   );
 
   sections.push(h2('🚫 KHÔNG được làm · DO NOT'));
-  sections.push(bullet('Đừng QUIT Ops Control SERVER (Cmd+Q) — CLIENT sẽ mất kết nối'));
+  sections.push(bullet('Đừng QUIT Quoted Module SERVER (Cmd+Q) — CLIENT sẽ mất kết nối'));
   sections.push(
     bullet('Đừng tắt nguồn Mac mini / Win box cứng khi không cần — gây SQLite corrupt nhẹ')
   );
@@ -602,9 +613,9 @@ function buildDocument() {
 // ════════════════════════════════════════════════════════════════
 async function main() {
   const doc = new Document({
-    creator: 'Ops Control · CCL Design',
+    creator: 'Quoted Module · CCL Design',
     title: 'Auto-start Setup Guide',
-    description: 'Operator guide for installing Ops Control SERVER auto-start (macOS + Windows)',
+    description: 'Operator guide for installing Quoted Module SERVER auto-start (macOS + Windows)',
     styles: {
       default: { document: { run: { font: FONT, size: 22 } } },
     },

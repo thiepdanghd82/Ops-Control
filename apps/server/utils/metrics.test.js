@@ -43,7 +43,7 @@ test('observeLatency fills buckets cumulatively in Prometheus output', () => {
 test('empty state renders a valid header with no series', () => {
   _resetMetrics();
   const out = renderPrometheus();
-  assert.ok(out.startsWith('# Ops Control metrics'));
+  assert.ok(out.startsWith('# Quoted Module metrics'));
   assert.ok(out.endsWith('\n'));
 });
 

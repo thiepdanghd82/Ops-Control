@@ -1,6 +1,6 @@
 #!/bin/bash
 # ───────────────────────────────────────────────────────────────────────────
-# ops-server-install-daemon.command — cài Ops Control SERVER chạy nền (macOS)
+# ops-server-install-daemon.command — cài Quoted Module SERVER chạy nền (macOS)
 #
 # DOUBLE-CLICK để cài. Server sẽ:
 #   • tự khởi động cùng máy (trước khi ai login)
@@ -15,7 +15,7 @@ cd "$(dirname "$0")"
 source "$(dirname "$0")/_common.sh"
 
 echo "════════════════════════════════════════════════════════════"
-echo "  Cài Ops Control SERVER dạng dịch vụ nền (LaunchDaemon)"
+echo "  Cài Quoted Module SERVER dạng dịch vụ nền (LaunchDaemon)"
 echo "════════════════════════════════════════════════════════════"
 
 # Ghi nhớ user gọi (để di trú license/data từ profile của họ sau khi lên root)
@@ -27,7 +27,7 @@ echo ""
 echo "[1/7] Kiểm tra app đã cài…"
 if [ ! -x "$ELECTRON_BIN" ] || [ ! -f "$SERVER_ENTRY" ]; then
   echo "  ✘ Không thấy app tại: $APP"
-  echo "    Cài bản 'Ops Control SERVER ….dmg' vào /Applications trước (kéo vào Applications)."
+  echo "    Cài bản 'Quoted Module SERVER ….dmg' vào /Applications trước (kéo vào Applications)."
   echo "    Nếu app ở chỗ khác: chạy lại với  OPS_APP=/duong/dan/App.app  trước lệnh."
   pause_close; exit 1
 fi
@@ -50,7 +50,7 @@ else
   TOTP_KEY="$(gen_key)"; KIOSK_KEY="$(gen_key)"; HMAC_KEY="$(gen_key)"
   umask 077
   cat > "$ENV_FILE" <<ENV
-# Ops Control headless SERVER — env (chmod 600, chỉ root). KHÔNG commit.
+# Quoted Module headless SERVER — env (chmod 600, chỉ root). KHÔNG commit.
 NODE_ENV=production
 OPS_PORT=${PORT}
 PORT=${PORT}
@@ -84,7 +84,7 @@ elif [ -f "$OLD_DATA/ops.db" ]; then
   echo "  Phát hiện dữ liệu app embedded tại:"
   echo "      $OLD_DATA"
   echo "  ⚠ BẮT BUỘC: app SERVER (cửa sổ) phải đã TẮT HẲN trước khi di trú (tránh hỏng DB"
-  echo "     do hai tiến trình mở cùng SQLite). Hãy thoát hẳn app Ops Control rồi tiếp tục."
+  echo "     do hai tiến trình mở cùng SQLite). Hãy thoát hẳn app ${APP_NAME} rồi tiếp tục."
   read -r -p "  App đã tắt — di trú + verify ngay bây giờ? [y/N] " ans 2>/dev/null || ans=N
   if [ "${ans:-N}" = "y" ] || [ "${ans:-N}" = "Y" ]; then
     echo "    \$ ELECTRON_RUN_AS_NODE=1 \"$ELECTRON_BIN\" migrate-datadir.cjs \"$OLD_DATA\" \"$DATA_DIR\" …"
@@ -101,7 +101,7 @@ elif [ -f "$OLD_DATA/ops.db" ]; then
     TS="$(date +%Y%m%d-%H%M%S)"
     run mv "$OLD_DATA" "$OLD_DATA.migrated-backup-$TS"
     cat > "$USER_UDATA/READ-ME-SERVER-MOVED.txt" <<EOF
-Ops Control SERVER da chuyen sang DICH VU NEN (LaunchDaemon) luc $TS.
+Quoted Module SERVER da chuyen sang DICH VU NEN (LaunchDaemon) luc $TS.
 - Du lieu dang dung (authoritative): $DATA_DIR
 - Backup du lieu cu:                 $OLD_DATA.migrated-backup-$TS
 KHONG mo app SERVER (cua so) nua — hay dung dich vu nen. Mo app se tao DB RONG moi.

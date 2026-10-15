@@ -50,7 +50,7 @@ function ok(msg) {
 
 console.log('');
 console.log('  ╔══════════════════════════════════════════════════╗');
-console.log('  ║         Ops Control — Backup Verifier            ║');
+console.log('  ║        Quoted Module — Backup Verifier           ║');
 console.log('  ╚══════════════════════════════════════════════════╝');
 console.log('');
 

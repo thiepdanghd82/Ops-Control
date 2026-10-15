@@ -1,5 +1,5 @@
 #!/bin/bash
-# Ops Control v1.0 — Installer (macOS)
+# Quoted Module v1.0 — Installer (macOS)
 # Double-click để cài đặt dependencies
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."  # repo root — this script lives in tools/deploy/
@@ -7,7 +7,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../.."  # repo root — this script lives in 
 clear
 echo ""
 echo "  ╔══════════════════════════════════════════════════╗"
-echo "  ║       Ops Control v1.0 — Installer              ║"
+echo "  ║       Quoted Module v1.0 — Installer            ║"
 echo "  ╚══════════════════════════════════════════════════╝"
 echo ""
 

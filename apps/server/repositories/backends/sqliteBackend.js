@@ -217,7 +217,7 @@ export default {
           deleted = conn.prepare('DELETE FROM quotes').run().changes;
         } else {
           // SQLite param limits: chunk the NOT IN to stay well under
-          // the 999-variable default cap. For Ops Control's <1k quotes
+          // the 999-variable default cap. For Quoted Module's <1k quotes
           // we never hit it, but defensive coding.
           const CHUNK = 500;
           const idArr = [...ids];

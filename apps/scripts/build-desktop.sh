@@ -3,7 +3,7 @@
 # build-desktop.sh — DEPRECATED (Issue #59).
 #
 # This generic wrapper never set OPS_BUILD_ROLE, so electron-builder's
-# artifactName template (`OpsControl-${env.OPS_BUILD_ROLE}-...`) failed,
+# artifactName template (`QuotedModule-${env.OPS_BUILD_ROLE}-...`) failed,
 # and it produced role-less DMGs with no `desktop/build-role.json` — the
 # app then booted as 'generic' instead of CLIENT / SERVER.
 #

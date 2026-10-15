@@ -2,8 +2,8 @@
  * build-windows-installers.mjs — produces TWO Windows NSIS installers
  * from one electron-builder config:
  *
- *   • Ops Control SERVER Setup 1.2.0.exe   (firewall 3100 inbound, server defaults)
- *   • Ops Control CLIENT Setup 1.2.0.exe   (no inbound, client defaults + URL prompt)
+ *   • Quoted Module SERVER Setup 1.2.0.exe   (firewall 3100 inbound, server defaults)
+ *   • Quoted Module CLIENT Setup 1.2.0.exe   (no inbound, client defaults + URL prompt)
  *
  * Both share the same productName / appId so a single machine can only
  * host one role at a time (intentional — avoids confusion for non-IT
@@ -35,12 +35,12 @@ const NSH_BACKUP = path.join(BUILD_DIR, '.installer.nsh.bak');
 
 const ROLES = {
   server: {
-    artifactName: 'Ops Control SERVER Setup ${version}.${ext}',
+    artifactName: 'Quoted Module SERVER Setup ${version}.${ext}',
     nshSource: 'installer-server.nsh',
     label: 'SERVER',
   },
   client: {
-    artifactName: 'Ops Control CLIENT Setup ${version}.${ext}',
+    artifactName: 'Quoted Module CLIENT Setup ${version}.${ext}',
     nshSource: 'installer-client.nsh',
     label: 'CLIENT',
   },
@@ -74,7 +74,7 @@ async function buildRole(role) {
   if (!cfg) throw new Error(`Unknown role: ${role}`);
 
   console.log(`\n══════════════════════════════════════════════════════════`);
-  console.log(`  Building Ops Control ${cfg.label} (Windows NSIS x64)`);
+  console.log(`  Building Quoted Module ${cfg.label} (Windows NSIS x64)`);
   console.log(`══════════════════════════════════════════════════════════\n`);
 
   // 1. Write the role marker the runtime reads at app boot

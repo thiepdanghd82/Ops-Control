@@ -33,7 +33,7 @@ async function showClientFirstRunDialog({ store, log }) {
       resizable: false,
       minimizable: false,
       maximizable: false,
-      title: 'Ops Control CLIENT — kết nối server',
+      title: 'Quoted Module CLIENT — kết nối server',
       webPreferences: {
         // Same posture as setupWizard.js: the page is a fixed inline string
         // with no remote content, and the renderer needs a real bridge to
@@ -72,7 +72,7 @@ async function showClientFirstRunDialog({ store, log }) {
   .status.ok{color:#0e6027}
   .status.err{color:#a2191f}
 </style></head><body>
-<h1>Kết nối tới server Ops Control</h1>
+<h1>Kết nối tới server Quoted Module</h1>
 <p>Máy này được cài làm <b>Client</b>. Nhập URL server (lấy từ người cài máy chủ).</p>
 <label>URL server</label>
 <div class="row">

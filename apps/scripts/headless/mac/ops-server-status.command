@@ -1,11 +1,11 @@
 #!/bin/bash
-# Trạng thái Ops Control SERVER nền (macOS). Double-click để xem.
+# Trạng thái Quoted Module SERVER nền (macOS). Double-click để xem.
 set -uo pipefail
 cd "$(dirname "$0")"
 source "$(dirname "$0")/_common.sh"
 
 echo "════════════════════════════════════════════════════════════"
-echo "  Ops Control SERVER — Trạng thái"
+echo "  Quoted Module SERVER — Trạng thái"
 echo "════════════════════════════════════════════════════════════"
 
 echo ""

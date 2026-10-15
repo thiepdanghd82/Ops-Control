@@ -230,7 +230,7 @@ router.get('/dashboard/export', async (req, res) => {
 
     // BOM + header metadata block (still tiny, fits in one chunk).
     res.write('\uFEFF');
-    writeRow(['# Ops Control Dashboard Export']);
+    writeRow(['# Quoted Module Dashboard Export']);
     writeRow(['# Range', rangeLabel]);
     writeRow(['# Generated', new Date().toISOString()]);
     writeRow(['# Exported by', user.username || '']);

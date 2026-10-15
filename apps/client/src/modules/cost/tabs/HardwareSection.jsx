@@ -134,7 +134,7 @@ function LabelPrinterCard({ config, onChange }) {
 
   const sendTest = async () => {
     // ZPL minimal: print 1 small label "TEST" — most Zebra ZD/ZT support
-    const zpl = `^XA^FO50,50^A0N,40,40^FDOps Control TEST^FS^XZ`;
+    const zpl = `^XA^FO50,50^A0N,40,40^FDQuoted Module TEST^FS^XZ`;
     try {
       await desktop.labelPrinter.sendZpl(host, port, zpl);
       alert(t('hw.lp.test_sent'));

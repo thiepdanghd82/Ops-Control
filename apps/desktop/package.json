@@ -1,7 +1,7 @@
 {
   "name": "ops-control-desktop",
   "version": "1.6.0",
-  "description": "Ops Control Desktop — Electron shell (smart client, IBM/SAP/IFS-style 3-tier)",
+  "description": "Quoted Module Desktop — Electron shell (smart client, IBM/SAP/IFS-style 3-tier)",
   "private": true,
   "main": "main.js",
   "type": "commonjs",
@@ -42,9 +42,9 @@
   },
   "build": {
     "appId": "vn.ccldesign.opscontrol",
-    "productName": "Ops Control",
+    "productName": "Quoted Module",
     "copyright": "Copyright © 2026 CCL Design Vietnam",
-    "artifactName": "OpsControl-${env.OPS_BUILD_ROLE}-v${version}-${os}-${arch}.${ext}",
+    "artifactName": "QuotedModule-${env.OPS_BUILD_ROLE}-v${version}-${os}-${arch}.${ext}",
     "asar": true,
     "afterPack": "./prune-dev-deps.js",
     "asarUnpack": [
@@ -153,7 +153,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Ops Control",
+      "shortcutName": "Quoted Module",
       "deleteAppDataOnUninstall": false,
       "include": "build/installer.nsh"
     },
@@ -174,7 +174,7 @@
       "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "dmg": {
-      "title": "Ops Control ${version}",
+      "title": "Quoted Module ${version}",
       "icon": "build/icon.icns"
     },
     "publish": [

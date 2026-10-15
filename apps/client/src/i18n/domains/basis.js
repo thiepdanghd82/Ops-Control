@@ -444,8 +444,8 @@ registerStrings({
 
   'appearance.title': { en: 'Appearance', vi: 'Giao diện' },
   'appearance.hint': {
-    en: 'Choose how Ops Control looks. The choice is saved in this browser only.',
-    vi: 'Chọn giao diện của Ops Control. Lựa chọn chỉ lưu trong trình duyệt này.',
+    en: 'Choose how Quoted Module looks. The choice is saved in this browser only.',
+    vi: 'Chọn giao diện của Quoted Module. Lựa chọn chỉ lưu trong trình duyệt này.',
   },
   'appearance.system': { en: 'Match system', vi: 'Theo hệ điều hành' },
   'appearance.system_hint': {

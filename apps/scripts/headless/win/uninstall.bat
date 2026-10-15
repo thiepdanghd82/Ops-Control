@@ -1,6 +1,6 @@
 @echo off
 setlocal enableextensions
-title Ops Control SERVER - go cai
+title Quoted Module SERVER - go cai
 net session >nul 2>&1
 if %errorlevel% neq 0 (
   powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
@@ -11,7 +11,7 @@ set "OPS_HOME=%ProgramData%\OpsControl"
 set "PORT=3000"
 
 echo ============================================================
-echo   Go Ops Control SERVER nen
+echo   Go Quoted Module SERVER nen
 echo ============================================================
 echo.
 echo [1/3] Dung task dang chay...

@@ -1,10 +1,10 @@
 #!/bin/bash
-# Khởi động (hoặc khởi động lại) Ops Control SERVER nền (macOS).
+# Khởi động (hoặc khởi động lại) Quoted Module SERVER nền (macOS).
 set -uo pipefail
 cd "$(dirname "$0")"
 source "$(dirname "$0")/_common.sh"
 
-echo "  Khởi động Ops Control SERVER nền…"
+echo "  Khởi động Quoted Module SERVER nền…"
 need_root "$@"
 
 if [ ! -f "$PLIST" ]; then

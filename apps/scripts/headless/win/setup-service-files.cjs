@@ -4,7 +4,7 @@
  * Electron binary in ELECTRON_RUN_AS_NODE mode (no separate Node needed):
  *
  *   set ELECTRON_RUN_AS_NODE=1
- *   "C:\Program Files\Ops Control\Ops Control.exe" setup-service-files.js <opsHome> <appDir> <port>
+ *   "C:\Program Files\Quoted Module\Quoted Module.exe" setup-service-files.js <opsHome> <appDir> <port>
  *
  * Writes (all under <opsHome> = C:\ProgramData\OpsControl):
  *   • server.env            — env + 64-hex secrets (only if absent; never
@@ -35,7 +35,12 @@ const logDir = path.join(opsHome, 'logs');
 const envFile = path.join(opsHome, 'server.env');
 const wrapper = path.join(opsHome, 'run-server.bat');
 const taskXml = path.join(opsHome, 'OpsControlServer.xml');
-const electron = path.join(appDir, 'Ops Control.exe');
+// The app was renamed from "Ops Control": prefer the new executable, fall
+// back to the old one so a machine that has not been upgraded yet keeps working.
+const electron =
+  ['Quoted Module.exe', 'Ops Control.exe']
+    .map((exe) => path.join(appDir, exe))
+    .find((p) => fs.existsSync(p)) || path.join(appDir, 'Quoted Module.exe');
 const serverEntry = path.join(appDir, 'resources', 'app', 'server', 'index.js');
 const appWork = path.join(appDir, 'resources', 'app');
 
@@ -45,7 +50,7 @@ fs.mkdirSync(logDir, { recursive: true });
 if (!fs.existsSync(serverEntry)) {
   console.error('ERROR: server entry not found: ' + serverEntry);
   console.error(
-    'Cai ban "Ops Control SERVER Setup ….exe" truoc (mac dinh C:\\Program Files\\Ops Control).'
+    'Cai ban "Quoted Module SERVER Setup ….exe" truoc (mac dinh C:\\Program Files\\Quoted Module).'
   );
   process.exit(2);
 }
@@ -56,7 +61,7 @@ if (fs.existsSync(envFile)) {
 } else {
   const key = () => crypto.randomBytes(32).toString('hex');
   const env = [
-    '# Ops Control headless SERVER env (admin-only). KHONG commit.',
+    '# Quoted Module headless SERVER env (admin-only). KHONG commit.',
     'NODE_ENV=production',
     'OPS_PORT=' + port,
     'PORT=' + port,
@@ -106,7 +111,7 @@ const xml = [
   '<?xml version="1.0" encoding="UTF-16"?>',
   '<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">',
   '  <RegistrationInfo>',
-  '    <Description>Ops Control headless SERVER (auto-start at boot, before login)</Description>',
+  '    <Description>Quoted Module headless SERVER (auto-start at boot, before login)</Description>',
   '  </RegistrationInfo>',
   '  <Triggers>',
   '    <BootTrigger><Enabled>true</Enabled></BootTrigger>',

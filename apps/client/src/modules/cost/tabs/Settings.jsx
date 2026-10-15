@@ -393,7 +393,7 @@ function ProfileSection({ user }) {
       </h3>
       <div className="settings-card about-card">
         <p>
-          <strong>CCL - NPI Costing module</strong> v
+          <strong>Quoted Module</strong> v
           {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'}
         </p>
         <p>{t('set.platform_tagline')}</p>
@@ -549,7 +549,7 @@ function AppearanceSection() {
           borderLeft: '3px solid var(--color-primary)',
         }}
       >
-        <b>{t('set.note_label')}</b> Most Ops Control surfaces use CSS tokens and flip
+        <b>{t('set.note_label')}</b> Most Quoted Module surfaces use CSS tokens and flip
         automatically. A few legacy tabs (Standard/Complex calculators, Settings → Account Control)
         are still being migrated and may appear light even in dark mode. Those will be addressed in
         a follow-up sprint.

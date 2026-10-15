@@ -1,6 +1,6 @@
 @echo off
 REM ===========================================================================
-REM  check-license.bat — OpsControl fleet license audit (Windows)
+REM  check-license.bat — Quoted Module fleet license audit (Windows)
 REM
 REM  DOUBLE-CLICK to run. No install needed (uses built-in PowerShell).
 REM  Prints ONE status line:

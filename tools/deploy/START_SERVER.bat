@@ -1,13 +1,13 @@
 @echo off
 chcp 65001 >nul
 setlocal enabledelayedexpansion
-title Ops Control v1.0
+title Quoted Module v1.0
 
 cd /d "%~dp0..\.."
 
 echo.
 echo  ╔══════════════════════════════════════════════════════╗
-echo  ║            Ops Control v1.0                          ║
+echo  ║            Quoted Module v1.0                        ║
 echo  ║            Cost Flow · Planning                      ║
 echo  ╚══════════════════════════════════════════════════════╝
 echo.
@@ -46,7 +46,7 @@ if not exist "apps\client\dist" (
 )
 
 echo.
-echo   Ops Control: http://localhost:3000
+echo   Quoted Module: http://localhost:3000
 echo   To STOP: Ctrl+C or close this window
 echo.
 

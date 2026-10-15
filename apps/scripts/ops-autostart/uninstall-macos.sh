@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# uninstall-macos.sh — remove Ops Control SERVER LaunchAgent
+# uninstall-macos.sh — remove Quoted Module SERVER LaunchAgent
 #
 # Stops auto-start + auto-restart. Does NOT touch the app, data, or
 # logs. Run this when retiring the SERVER role from this Mac, or when
@@ -27,6 +27,6 @@ rm -f "$TARGET_PATH"
 
 echo "✓ LaunchAgent removed: $TARGET_PATH"
 echo ""
-echo "Note: the Ops Control SERVER app itself is untouched. Quit it"
+echo "Note: the Quoted Module SERVER app itself is untouched. Quit it"
 echo "manually if you want it to stop now:"
-echo "  killall \"Ops Control\""
+echo "  killall \"Quoted Module\"   # \"Ops Control\" on an install from before the rename"

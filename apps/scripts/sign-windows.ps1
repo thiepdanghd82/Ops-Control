@@ -23,7 +23,7 @@
 #     bypass SmartScreen luôn, không cần reputation)
 #
 # Usage (chạy trên máy build Windows):
-#   pwsh -File scripts/sign-windows.ps1 -InstallerPath "dist-electron/Ops-Control-Setup-1.1.0.exe"
+#   pwsh -File scripts/sign-windows.ps1 -InstallerPath "dist-electron/Quoted Module SERVER Setup 1.6.0.exe"
 #
 # Hoặc với cert path tùy chỉnh:
 #   pwsh -File scripts/sign-windows.ps1 -InstallerPath "..." -CertPath "C:\certs\ops.pfx" -CertPassword "<pwd>"
@@ -42,7 +42,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-Write-Host "═══ Ops Control — Windows code signing ═══" -ForegroundColor Cyan
+Write-Host "═══ Quoted Module — Windows code signing ═══" -ForegroundColor Cyan
 Write-Host "Installer: $InstallerPath"
 
 if (-not (Test-Path $InstallerPath)) {

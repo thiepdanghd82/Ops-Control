@@ -621,7 +621,7 @@ export function loadUsers() {
       if (!fs.existsSync(readmePath)) {
         fs.writeFileSync(
           readmePath,
-          `Ops Control — First-run admin credential (per-install RANDOM)
+          `Quoted Module — First-run admin credential (per-install RANDOM)
 ================================================================
 
 This file was created the first time the server started and no

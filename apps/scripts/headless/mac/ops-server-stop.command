@@ -1,11 +1,11 @@
 #!/bin/bash
-# Dừng Ops Control SERVER nền (macOS). Vẫn tự chạy lại ở lần boot sau —
+# Dừng Quoted Module SERVER nền (macOS). Vẫn tự chạy lại ở lần boot sau —
 # muốn gỡ hẳn thì dùng ops-server-uninstall.command.
 set -uo pipefail
 cd "$(dirname "$0")"
 source "$(dirname "$0")/_common.sh"
 
-echo "  Dừng Ops Control SERVER nền…"
+echo "  Dừng Quoted Module SERVER nền…"
 need_root "$@"
 
 if ! is_loaded; then

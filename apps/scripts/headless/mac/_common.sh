@@ -1,6 +1,6 @@
 #!/bin/bash
 # ───────────────────────────────────────────────────────────────────────────
-# _common.sh — shared config + helpers for the Ops Control headless SERVER
+# _common.sh — shared config + helpers for the Quoted Module headless SERVER
 # (macOS LaunchDaemon). Sourced by every ops-server-*.command script.
 #
 # Design (see scripts/headless/README.md):
@@ -22,10 +22,29 @@
 LABEL="com.opscontrol.server"
 PLIST="/Library/LaunchDaemons/${LABEL}.plist"
 
-# Installed SERVER app (either DMG installs as "Ops Control.app"; both bundle
+# Installed SERVER app (either DMG installs as "Quoted Module.app"; both bundle
 # the same server/ code). Override with OPS_APP=/path/to/App.app if relocated.
-APP="${OPS_APP:-/Applications/Ops Control.app}"
-ELECTRON_BIN="$APP/Contents/MacOS/Ops Control"
+# The app was renamed from "Ops Control": prefer the new bundle, fall back to
+# the old one so a machine that has not been upgraded yet keeps working.
+if [ -n "${OPS_APP:-}" ]; then
+  APP="$OPS_APP"
+elif [ -d "/Applications/Quoted Module.app" ]; then
+  APP="/Applications/Quoted Module.app"
+elif [ -d "/Applications/Ops Control.app" ]; then
+  APP="/Applications/Ops Control.app"
+else
+  APP="/Applications/Quoted Module.app"
+fi
+# The executable inside the bundle is named after the productName the app was
+# built with; renaming or moving the .app folder does not change it.
+if [ -x "$APP/Contents/MacOS/Quoted Module" ]; then
+  ELECTRON_BIN="$APP/Contents/MacOS/Quoted Module"
+elif [ -x "$APP/Contents/MacOS/Ops Control" ]; then
+  ELECTRON_BIN="$APP/Contents/MacOS/Ops Control"
+else
+  ELECTRON_BIN="$APP/Contents/MacOS/Quoted Module"
+fi
+APP_NAME="$(basename "$ELECTRON_BIN")" # process name, for messages
 SERVER_ENTRY="$APP/Contents/Resources/app/server/index.js"
 APP_WORKDIR="$APP/Contents/Resources/app"
 

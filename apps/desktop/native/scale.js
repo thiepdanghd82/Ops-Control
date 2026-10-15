@@ -12,7 +12,7 @@
  *   - Push weight qua IPC sự kiện 'ops:scale.weight'
  *
  * Cấu hình protocol cụ thể (regex parse, command "S\r" hay "P\r")
- * nên để Ops Control config được trong settings — KHÔNG hardcode.
+ * nên để Quoted Module config được trong settings — KHÔNG hardcode.
  */
 
 'use strict';
@@ -32,7 +32,7 @@ let lastWeight = null;
 
 // Protocol mặc định: trích số float từ chuỗi (handle "12.345 kg",
 // "  12.345kg ST", "+0012.345g GS", ...). Operator có thể override
-// regex từ Ops Control settings.
+// regex từ Quoted Module settings.
 const DEFAULT_WEIGHT_REGEX = /([+-]?\d+(?:\.\d+)?)\s*(kg|g|lb)?/i;
 
 function parseWeight(line, regex = DEFAULT_WEIGHT_REGEX) {

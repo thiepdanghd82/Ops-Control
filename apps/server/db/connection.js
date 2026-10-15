@@ -1,5 +1,5 @@
 /**
- * SQLite connection singleton for Ops Control.
+ * SQLite connection singleton for Quoted Module.
  *
  * Single database file at server/data/ops.db. Opened lazily on first
  * getDb() call so unit tests / scripts can override the path via

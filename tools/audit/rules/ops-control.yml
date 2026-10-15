@@ -1,4 +1,4 @@
-# Rule Semgrep riêng cho Ops-Control (Express + Electron + SQLite)
+# Rule Semgrep riêng cho Quoted Module (Express + Electron + SQLite)
 # Chạy: semgrep --config tools/audit/rules/ops-control.yml .
 rules:
   - id: opsctl-electron-node-integration

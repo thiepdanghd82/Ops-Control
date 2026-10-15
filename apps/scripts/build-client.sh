@@ -9,10 +9,10 @@
 # `build:client:mac` script sets:
 #     OPS_BUILD_ROLE=Client
 #     --config.extraMetadata.opsMode=client
-#     --config.productName='OpsControl CLIENT'
+#     --config.productName='Quoted Module CLIENT'
 # The artifactName template (desktop/package.json) is
-#   OpsControl-${env.OPS_BUILD_ROLE}-v${version}-${os}-${arch}.${ext}
-# so OPS_BUILD_ROLE=Client yields  OpsControl-Client-v<ver>-mac-arm64.dmg.
+#   QuotedModule-${env.OPS_BUILD_ROLE}-v${version}-${os}-${arch}.${ext}
+# so OPS_BUILD_ROLE=Client yields  QuotedModule-Client-v<ver>-mac-arm64.dmg.
 #
 # It also: (1) fails fast with a clear hint if Node is not installed,
 # (2) builds client/dist (the Vite bundle that carries the audit fixes),
@@ -38,7 +38,7 @@ ROLE_LOWER="$(echo "$ROLE" | tr '[:upper:]' '[:lower:]')"
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TMP_DIR="/tmp/ops-build-${ROLE_LOWER}"
 
-echo "═══ Ops Control ${ROLE} Build ═══"
+echo "═══ Quoted Module ${ROLE} Build ═══"
 echo "Project: $PROJECT_ROOT"
 echo "Tmp:     $TMP_DIR"
 echo "Target:  ${PLATFORM}-${ARCH}  role=${ROLE}"
@@ -162,7 +162,7 @@ COMMON_FLAGS=(--config.npmRebuild=false
   # comes from the build-role.json baked above. Kept only for parity with
   # the legacy build:client:mac npm script.
   --config.extraMetadata.opsMode="$ROLE_LOWER"
-  --config.productName="OpsControl ${ROLE}"
+  --config.productName="Quoted Module ${ROLE}"
   --publish never)
 case "$PLATFORM" in
   mac)

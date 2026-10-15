@@ -1,7 +1,7 @@
 /* global console, process */
 /**
  * Data Consolidation Test — COST V1.0 vs Ops Cost Flow
- * Compares data served by the Ops Control API endpoints against
+ * Compares data served by the Quoted Module API endpoints against
  * the source JSON files in /server/data/Library/ to ensure
  * all COST V1.0 data is properly consolidated into the Ops flow.
  */

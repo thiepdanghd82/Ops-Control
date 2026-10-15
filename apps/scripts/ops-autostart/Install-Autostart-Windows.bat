@@ -14,16 +14,16 @@ cd /d "%~dp0"
 
 cls
 echo ===============================================================
-echo   OPS CONTROL SERVER -- Auto-start Install (Windows)
+echo   QUOTED MODULE SERVER -- Auto-start Install (Windows)
 echo   CCL Design Hai Phong -- v1.6.0
 echo ===============================================================
 echo.
-echo Script nay se cai Scheduled Task de Ops Control SERVER:
+echo Script nay se cai Scheduled Task de Quoted Module SERVER:
 echo   - Tu khoi dong sau khi Win reboot (mat dien)
 echo   - Tu restart neu app bi crash
 echo.
 echo Yeu cau truoc / Prereqs:
-echo   1. Ops Control SERVER Setup.exe da cai
+echo   1. Quoted Module SERVER Setup.exe da cai
 echo   2. Auto-login da bat (netplwiz)
 echo.
 echo Bat dau sau 3 giay / Starting in 3 seconds...
@@ -42,9 +42,9 @@ if %INSTALL_EXIT%==0 (
     echo.
     echo   Tiep theo / Next steps:
     echo     1. Test bang cach kill app + doi 65 giay + check lai:
-    echo        Stop-Process -Name "Ops Control" -Force
+    echo        Stop-Process -Name "Quoted Module" -Force
     echo        Start-Sleep -Seconds 65
-    echo        Get-Process "Ops Control"
+    echo        Get-Process "Quoted Module"
     echo.
     echo     2. Restart may + verify SERVER tu bat sau auto-login
     echo.

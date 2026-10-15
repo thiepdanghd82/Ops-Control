@@ -1,4 +1,4 @@
-# Ops-Control pre-release audit (Windows). Chạy từ gốc repo: .\tools\audit\run-audit.ps1
+# Quoted Module pre-release audit (Windows). Chạy từ gốc repo: .\tools\audit\run-audit.ps1
 # Cần: Node/npm; semgrep (pip install semgrep) tuỳ chọn; gitleaks (scoop install gitleaks) tuỳ chọn.
 $ErrorActionPreference = 'Continue'
 $Root = Resolve-Path (Join-Path $PSScriptRoot '..\..')

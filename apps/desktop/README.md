@@ -1,4 +1,6 @@
-# Ops Control — Desktop Shell (Electron)
+# Quoted Module — Desktop Shell (Electron)
+
+> Tên cũ: **Ops Control**. Chỉ tên hiển thị đổi (app `Quoted Module.app` / `Quoted Module.exe`); appId `vn.ccldesign.opscontrol` và thư mục dữ liệu `ops-control-desktop` giữ nguyên.
 
 Vỏ Electron đóng gói toàn bộ Ops Control v1.0 thành ứng dụng desktop chạy trên Windows + macOS, **không sửa code v1.0**.
 
@@ -34,19 +36,21 @@ Lưu ý:
 
 ## 3 mode vận hành
 
-| Mode       | Khi nào dùng                    | Cấu hình                                                                       |
-| ---------- | ------------------------------- | ------------------------------------------------------------------------------ |
-| `embedded` | Single-user, demo, làm tại nhà  | Server chạy in-process, DB ở `~/Library/Application Support/Ops Control/data/` |
-| `thin`     | Production nhà máy, mạng LAN ổn | UI gọi thẳng `http://10.102.3.61:3000`                                         |
-| `smart`    | Phase 2 — offline + cache       | Local cache SQLite + sync queue (xem `smart-client.js`)                        |
+| Mode       | Khi nào dùng                    | Cấu hình                                                                               |
+| ---------- | ------------------------------- | -------------------------------------------------------------------------------------- |
+| `embedded` | Single-user, demo, làm tại nhà  | Server chạy in-process, DB ở `~/Library/Application Support/ops-control-desktop/data/` |
+| `thin`     | Production nhà máy, mạng LAN ổn | UI gọi thẳng `http://10.102.3.61:3000`                                                 |
+| `smart`    | Phase 2 — offline + cache       | Local cache SQLite + sync queue (xem `smart-client.js`)                                |
 
 Đổi mode: env var `OPS_DESKTOP_MODE=<thin|embedded|smart>` hoặc Settings UI (Sprint 2).
 
 ## Build installer
 
 ```bash
-npm run build:win        # Output: dist-electron/Ops-Control-Setup-1.1.0.exe
-npm run build:mac        # Output: dist-electron/Ops-Control-1.1.0.dmg
+npm run build:server:win # Output: dist-electron/Quoted Module SERVER Setup <version>.exe
+npm run build:server:mac # Output: dist-electron/Quoted Module SERVER <version>-arm64.dmg
+npm run build:client:win # Output: dist-electron/Quoted Module CLIENT Setup <version>.exe
+npm run build:client:mac # Output: dist-electron/Quoted Module CLIENT <version>-arm64.dmg
 npm run build:all        # Cả Windows + macOS
 ```
 
@@ -136,7 +140,7 @@ if (desktop.isAvailable) {
 | Cân không trả weight                                                   | Wrong baud rate hoặc protocol                   | DevTools: `await window.ops.scale.read()` để xem raw data; chỉnh regex parser trong `native/scale.js` |
 | Zebra timeout sau 5 s                                                  | Sai IP/port hoặc firewall block                 | `await window.ops.labelPrinter.ping(host, port)` để verify; kiểm tra firewall trên cả PC + máy in     |
 | App refuse to start sau update                                         | asar integrity check fail                       | Restore từ backup, verify nguồn installer                                                             |
-| macOS "App is damaged"                                                 | Notarization chưa pass hoặc Gatekeeper cache cũ | `xattr -cr "/Applications/Ops Control.app"`                                                           |
+| macOS "App is damaged"                                                 | Notarization chưa pass hoặc Gatekeeper cache cũ | `xattr -cr "/Applications/Quoted Module.app"` (bản cài trước khi đổi tên: `Ops Control.app`)          |
 
 ## Liên kết
 

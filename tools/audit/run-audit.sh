@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ops-Control pre-release audit. Chạy từ gốc repo: ./tools/audit/run-audit.sh
+# Quoted Module pre-release audit. Chạy từ gốc repo: ./tools/audit/run-audit.sh
 # Không sửa code, chỉ đọc. Kết quả: tools/audit/reports/<timestamp>/
 set -u
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"

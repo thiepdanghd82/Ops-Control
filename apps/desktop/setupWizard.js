@@ -163,9 +163,9 @@ function renderServerWizard(installationId, existingIdentity) {
   };
   const isReRun = Boolean(existingIdentity);
 
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Ops Control · Setup (Server)</title>
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Quoted Module · Setup (Server)</title>
 <style>${STYLE}</style></head><body>
-  <h1>Ops Control — Server Setup</h1>
+  <h1>Quoted Module — Server Setup</h1>
   <p class="sub">Lần đầu khởi động — vui lòng hoàn tất 5 bước cấu hình.</p>
   <div class="progress">
     <div class="pill curr"></div><div class="pill"></div><div class="pill"></div><div class="pill"></div><div class="pill"></div>
@@ -371,9 +371,9 @@ async function createAdminAndDone() {
 
 // ─── Client wizard (2 steps) ──────────────────────────────────────
 function renderClientWizard() {
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Ops Control · Setup (Client)</title>
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Quoted Module · Setup (Client)</title>
 <style>${STYLE}</style></head><body>
-  <h1>Ops Control — Client Setup</h1>
+  <h1>Quoted Module — Client Setup</h1>
   <p class="sub">Nhập địa chỉ server LAN do quản trị viên cung cấp.</p>
   <div class="progress">
     <div class="pill curr"></div><div class="pill"></div>
@@ -394,10 +394,10 @@ function renderClientWizard() {
 
   <div class="step">
     <h2>Bước 2 / 2 — Hoàn tất</h2>
-    <div id="alert-done" class="alert alert-ok">Sẵn sàng. Click "Mở Ops Control" để vào màn hình đăng nhập.</div>
+    <div id="alert-done" class="alert alert-ok">Sẵn sàng. Click "Mở Quoted Module" để vào màn hình đăng nhập.</div>
     <div class="row">
       <button class="btn-secondary" onclick="go(0)">← Sửa địa chỉ</button>
-      <button class="btn-primary"   onclick="finish()">Mở Ops Control</button>
+      <button class="btn-primary"   onclick="finish()">Mở Quoted Module</button>
     </div>
   </div>
 
@@ -436,7 +436,7 @@ function showWizard(mode, deps = {}) {
     const win = new BrowserWindow({
       width: 720,
       height: 700,
-      title: 'Ops Control — Setup',
+      title: 'Quoted Module — Setup',
       resizable: false,
       minimizable: false,
       maximizable: false,

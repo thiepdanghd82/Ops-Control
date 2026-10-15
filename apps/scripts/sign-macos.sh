@@ -24,8 +24,8 @@
 #      bị set quarantine khi rsync qua một số tool)
 #
 # Usage:
-#   ./scripts/sign-macos.sh "desktop/dist-electron/Ops Control-1.1.0-arm64.dmg"
-#   ./scripts/sign-macos.sh "/Applications/Ops Control.app"
+#   ./scripts/sign-macos.sh "desktop/dist-electron/Quoted Module SERVER 1.6.0-arm64.dmg"
+#   ./scripts/sign-macos.sh "/Applications/Quoted Module.app"
 
 set -euo pipefail
 
@@ -44,7 +44,7 @@ if [[ ! -f "$ENTITLEMENTS" ]]; then
   exit 1
 fi
 
-echo "═══ Ops Control — macOS ad-hoc sign ═══"
+echo "═══ Quoted Module — macOS ad-hoc sign ═══"
 echo "Target:       $TARGET"
 echo "Entitlements: $ENTITLEMENTS"
 echo
@@ -93,5 +93,5 @@ echo "═══ Done ═══"
 echo "User next step:"
 echo "  - Nếu IT distribute qua MDM / file share / USB → cài + chạy được ngay."
 echo "  - Nếu user download qua browser → nhận quarantine, phải chạy:"
-echo "      xattr -cr '/Applications/Ops Control.app'"
+echo "      xattr -cr '/Applications/Quoted Module.app'"
 echo "    HOẶC right-click → Open lần đầu (Gatekeeper sẽ remember choice)."

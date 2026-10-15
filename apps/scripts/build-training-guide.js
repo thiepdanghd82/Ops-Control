@@ -1,5 +1,5 @@
 /**
- * build-training-guide.js — generates the Ops Control training workbooks
+ * build-training-guide.js — generates the Quoted Module training workbooks
  * (EN + VN) with the same visual format as the legacy CCL_Pricing_Training
  * reference file: dark-navy title banners, blue section headers, striped
  * body rows, thin gray borders on every data cell.
@@ -55,8 +55,8 @@ function sheetContents(lang) {
         {
           type: 'title',
           text: t(
-            'OPS CONTROL — TRAINING MANUAL v1.0\nReact Edition · Ops Cost · Planning',
-            'OPS CONTROL — TÀI LIỆU ĐÀO TẠO v1.0\nBản React · Ops Cost · Planning'
+            'QUOTED MODULE — TRAINING MANUAL v1.0\nReact Edition · Ops Cost · Planning',
+            'QUOTED MODULE — TÀI LIỆU ĐÀO TẠO v1.0\nBản React · Ops Cost · Planning'
           ),
           span: 3,
           height: 48,
@@ -64,8 +64,8 @@ function sheetContents(lang) {
         {
           type: 'note',
           text: t(
-            'Version: 1.0   ·   Date: April 2026   ·   Author: CCL Pricing Team\nThis manual covers the new Ops Control web app (client/server) that replaces the legacy single-HTML COST V1.0 calculator.',
-            'Phiên bản: 1.0   ·   Ngày: 04/2026   ·   Tác giả: CCL Pricing Team\nTài liệu này hướng dẫn ứng dụng web Ops Control (client/server) mới, thay thế bản COST V1.0 HTML cũ.'
+            'Version: 1.0   ·   Date: April 2026   ·   Author: CCL Pricing Team\nThis manual covers the new Quoted Module web app (client/server) that replaces the legacy single-HTML COST V1.0 calculator.',
+            'Phiên bản: 1.0   ·   Ngày: 04/2026   ·   Tác giả: CCL Pricing Team\nTài liệu này hướng dẫn ứng dụng web Quoted Module (client/server) mới, thay thế bản COST V1.0 HTML cũ.'
           ),
           span: 3,
           height: 42,
@@ -1736,7 +1736,7 @@ function renderBlock(ws, block, ncols, rowPointer) {
 
 function buildWorkbook(lang) {
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'Ops Control Training Generator';
+  wb.creator = 'Quoted Module Training Generator';
   wb.created = new Date();
 
   for (const sheet of sheetContents(lang)) {
@@ -1764,7 +1764,7 @@ async function writeOne(lang, filename) {
   console.log(`  ✓ ${filename}  (${wb.worksheets.length} sheets, ${(size / 1024).toFixed(1)} KB)`);
 }
 
-console.log('Generating Ops Control training workbooks (ExcelJS — full borders/fonts/fills)…');
+console.log('Generating Quoted Module training workbooks (ExcelJS — full borders/fonts/fills)…');
 await writeOne('en', 'OpsControl_Training_EN_v1.0.xlsx');
 await writeOne('vn', 'OpsControl_Training_VN_v1.0.xlsx');
 console.log(`\nSaved to: ${OUT_DIR}`);

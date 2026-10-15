@@ -18,8 +18,8 @@ registerStrings({
   },
   'hw.saved_at': { en: ' · Saved {time}', vi: ' · Đã lưu {time}' },
   'hw.banner.p1': {
-    en: 'This tab is only available in the <b>Ops Control Desktop App</b>. In a regular browser, raw USB / Serial / TCP devices cannot be accessed due to browser sandbox limits.',
-    vi: 'Tab này chỉ khả dụng trong <b>Ops Control Desktop App</b>. Trong trình duyệt thường, các thiết bị USB/Serial/TCP raw không truy cập được do giới hạn của browser sandbox.',
+    en: 'This tab is only available in the <b>Quoted Module Desktop App</b>. In a regular browser, raw USB / Serial / TCP devices cannot be accessed due to browser sandbox limits.',
+    vi: 'Tab này chỉ khả dụng trong <b>Quoted Module Desktop App</b>. Trong trình duyệt thường, các thiết bị USB/Serial/TCP raw không truy cập được do giới hạn của browser sandbox.',
   },
   'hw.banner.p2': {
     en: 'Please install the desktop build to use Zebra/TSC label printers, electronic scales, and barcode scanners (raw HID mode).',
@@ -92,8 +92,8 @@ registerStrings({
   // ─── Settings → Connection Mode (v1.2) ───
   'mode.title': { en: 'Connection Mode', vi: 'Chế độ kết nối' },
   'mode.banner.p1': {
-    en: 'This tab is only available in the <b>Ops Control Desktop App</b>. The web build always calls the current server (equivalent to <code>thin</code> mode).',
-    vi: 'Tab này chỉ khả dụng trong <b>Ops Control Desktop App</b>. Bản web mặc định gọi server hiện tại (tương đương mode <code>thin</code>).',
+    en: 'This tab is only available in the <b>Quoted Module Desktop App</b>. The web build always calls the current server (equivalent to <code>thin</code> mode).',
+    vi: 'Tab này chỉ khả dụng trong <b>Quoted Module Desktop App</b>. Bản web mặc định gọi server hiện tại (tương đương mode <code>thin</code>).',
   },
   'mode.loading': { en: 'Loading configuration…', vi: 'Đang tải cấu hình…' },
   'mode.current': { en: 'Current mode: ', vi: 'Chế độ hiện tại: ' },

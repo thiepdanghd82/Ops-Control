@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Ops Control SERVER Windows Task Scheduler template.
+  Quoted Module SERVER Windows Task Scheduler template.
 
   Why Task Scheduler instead of a Windows Service (NSSM, etc): Electron
   desktop apps need a GUI session and fail in Session 0. Task Scheduler
@@ -24,7 +24,7 @@
 <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo>
     <Author>CCL Design</Author>
-    <Description>Auto-start Ops Control SERVER at logon plus restart on failure (BCP).</Description>
+    <Description>Auto-start Quoted Module SERVER at logon plus restart on failure (BCP).</Description>
     <URI>\OpsControlServer</URI>
   </RegistrationInfo>
   <Triggers>

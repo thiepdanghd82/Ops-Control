@@ -28,7 +28,7 @@ export const platform = runtime?.platform || 'web';
 
 const notInDesktop = (op) =>
   Promise.reject(
-    new Error(`'${op}' không khả dụng trong web mode — cần chạy trong Ops Control desktop app`)
+    new Error(`'${op}' không khả dụng trong web mode — cần chạy trong Quoted Module desktop app`)
   );
 
 // Reusable web fallback: download blob qua <a download>

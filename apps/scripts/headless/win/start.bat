@@ -1,6 +1,6 @@
 @echo off
 setlocal enableextensions
-title Ops Control SERVER - start
+title Quoted Module SERVER - start
 net session >nul 2>&1
 if %errorlevel% neq 0 (
   powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
@@ -10,7 +10,7 @@ set "TASKNAME=OpsControlServer"
 set "OPS_HOME=%ProgramData%\OpsControl"
 set "PORT=3000"
 
-echo Khoi dong Ops Control SERVER nen...
+echo Khoi dong Quoted Module SERVER nen...
 schtasks /Run /TN "%TASKNAME%"
 if errorlevel 1 (
   echo   FAIL: chua cai task. Chay ops-server-install-service.bat truoc.

@@ -1,4 +1,4 @@
-# OpsControl — kiểm tra license máy (gửi operator qua Zalo)
+# Quoted Module — kiểm tra license máy (gửi operator qua Zalo)
 
 Mục đích: biết máy đang chạy license **thật** hay **TRIAL** (trial sẽ KHÓA app khi hết hạn).
 

@@ -80,7 +80,7 @@ function parseLabelKey(lk) {
 }
 
 export function renderPrometheus() {
-  const lines = [`# Ops Control metrics (generated ${new Date().toISOString()})`];
+  const lines = [`# Quoted Module metrics (generated ${new Date().toISOString()})`];
 
   const counterNames = new Set();
   for (const key of COUNTERS.keys()) counterNames.add(key.split('|', 1)[0]);

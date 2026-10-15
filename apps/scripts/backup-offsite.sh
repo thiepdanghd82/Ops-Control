@@ -78,7 +78,7 @@ notify_webhook() {
   # Slack-compatible payload — Teams accepts the same shape via
   # incoming-webhook connector.
   local payload
-  payload=$(printf '{"text":"%s — Ops Control off-site backup %s\\n%s"}' \
+  payload=$(printf '{"text":"%s — Quoted Module off-site backup %s\\n%s"}' \
     "$HOSTNAME_SHORT" "$status" "${msg//\"/\\\"}")
   # Best-effort, 5s timeout. Webhook failure must not abort the script.
   curl -sS -m 5 -X POST -H 'Content-Type: application/json' \

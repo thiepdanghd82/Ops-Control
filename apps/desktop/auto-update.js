@@ -91,10 +91,10 @@ function attachListeners() {
     dialog
       .showMessageBox(win, {
         type: 'info',
-        title: 'Ops Control — Cập nhật sẵn sàng',
+        title: 'Quoted Module — Cập nhật sẵn sàng',
         message: `Phiên bản ${info.version} đã tải xong.`,
         detail:
-          'Khởi động lại để cài đặt phiên bản mới.\n\nNếu chọn "Để sau", bản cập nhật sẽ tự cài khi anh thoát Ops Control.',
+          'Khởi động lại để cài đặt phiên bản mới.\n\nNếu chọn "Để sau", bản cập nhật sẽ tự cài khi anh thoát Quoted Module.',
         buttons: ['Khởi động lại', 'Để sau'],
         defaultId: 0,
         cancelId: 1,
@@ -121,7 +121,7 @@ function initAutoUpdater(userInitiated = false) {
     if (userInitiated) {
       dialog.showMessageBox({
         type: 'info',
-        title: 'Ops Control',
+        title: 'Quoted Module',
         message: 'Auto-update không hoạt động trong chế độ dev.',
       });
     }
@@ -135,7 +135,7 @@ function initAutoUpdater(userInitiated = false) {
         const win = BrowserWindow.getAllWindows()[0];
         dialog.showMessageBox(win, {
           type: 'info',
-          title: 'Ops Control',
+          title: 'Quoted Module',
           message: 'Đang dùng phiên bản mới nhất.',
           detail: `v${app.getVersion()}`,
         });
@@ -147,7 +147,7 @@ function initAutoUpdater(userInitiated = false) {
         const win = BrowserWindow.getAllWindows()[0];
         dialog.showMessageBox(win, {
           type: 'warning',
-          title: 'Ops Control',
+          title: 'Quoted Module',
           message: 'Không kiểm tra được cập nhật.',
           detail: err.message,
         });

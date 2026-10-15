@@ -282,7 +282,7 @@ const titlePage = [
   }),
   new Paragraph({
     children: [
-      new TextRun({ text: 'CCL Design Vietnam — Ops Control', font: FONT, size: 22, bold: true }),
+      new TextRun({ text: 'CCL Design Vietnam — Quoted Module', font: FONT, size: 22, bold: true }),
     ],
     spacing: { after: 80 },
     alignment: AlignmentType.CENTER,
@@ -1601,7 +1601,7 @@ const footer = new Footer({
     new Paragraph({
       children: [
         new TextRun({
-          text: 'Ops Control · Pricing Worksheet Legend · CCL Design Vietnam',
+          text: 'Quoted Module · Pricing Worksheet Legend · CCL Design Vietnam',
           font: FONT,
           size: 16,
           color: '6B7280',
@@ -1618,7 +1618,7 @@ const footer = new Footer({
 
 // ── Assemble the doc ──────────────────────────────────────────
 const doc = new Document({
-  creator: 'CCL Design Vietnam · Ops Control',
+  creator: 'CCL Design Vietnam · Quoted Module',
   title: 'Pricing Worksheet (Standard) — Legend',
   description:
     'Formula reference for the Standard Pricing Worksheet. Verified against calcEngine.js.',

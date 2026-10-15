@@ -1,12 +1,12 @@
 @echo off
 setlocal enableextensions
-title Ops Control SERVER - trang thai
+title Quoted Module SERVER - trang thai
 set "TASKNAME=OpsControlServer"
 set "OPS_HOME=%ProgramData%\OpsControl"
 set "PORT=3000"
 
 echo ============================================================
-echo   Ops Control SERVER - Trang thai
+echo   Quoted Module SERVER - Trang thai
 echo ============================================================
 echo.
 echo [Scheduled task]

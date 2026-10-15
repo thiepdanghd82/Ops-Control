@@ -3,7 +3,7 @@
  *
  * Hiển thị thông tin runtime + diagnostics buttons cho IT troubleshooting:
  *
- *   Version & build:     Ops Control 1.5.10, build timestamp, Electron/Node/Chrome
+ *   Version & build:     Quoted Module 1.5.10, build timestamp, Electron/Node/Chrome
  *   System:              Platform (macOS/Win/Linux), Mode hiện tại, embedded port
  *   License:             Customer, expires_at, installation_id (16 chars), features
  *   Live diagnostics:    4 test buttons (printer list, cache R/W, license check, HW fp)
@@ -192,12 +192,12 @@ export default function AboutSection() {
       ?.writeText(text)
       .then(() => alert('Đã copy diagnostic report vào clipboard'))
       .catch(() => alert('Copy thất bại — copy thủ công từ console'));
-    console.log('=== Ops Control diagnostic snapshot ===\n' + text);
+    console.log('=== Quoted Module diagnostic snapshot ===\n' + text);
   };
 
   return (
     <div className="about-section">
-      <h2 className="about-title">ℹ About — CCL - NPI Costing module</h2>
+      <h2 className="about-title">ℹ About — Quoted Module</h2>
 
       {/* ─── Version & Build ─── */}
       <div className="about-card">

@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════
--- Ops Control SQLite schema
+-- Quoted Module SQLite schema
 -- ═══════════════════════════════════════════════════════════════════
 --
 -- Phase-1 scope: typed reference data with UNIQUE constraints + indexes.

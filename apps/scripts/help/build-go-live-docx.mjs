@@ -370,7 +370,7 @@ const blocks = parse(md);
 
 const doc = new Document({
   creator: 'Henry Dang — NPI Manager',
-  title: 'Ops Control v1.2 — Hướng dẫn Go-Live toàn diện',
+  title: 'Quoted Module v1.2 — Hướng dẫn Go-Live toàn diện',
   description: 'CCL Design Vietnam — Integrated Cost & Planning Platform',
   styles: {
     default: {
@@ -407,7 +407,7 @@ const doc = new Document({
               alignment: AlignmentType.CENTER,
               children: [
                 new TextRun({
-                  text: 'Ops Control v1.2 — Go-Live Guide · Henry Dang — NPI Manager · CCL Design Vietnam · ',
+                  text: 'Quoted Module v1.2 — Go-Live Guide · Henry Dang — NPI Manager · CCL Design Vietnam · ',
                   font: FONT,
                   size: 16,
                   color: '6B7280',

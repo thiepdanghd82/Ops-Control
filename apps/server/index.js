@@ -90,7 +90,7 @@ if (process.env.NODE_ENV === 'production') {
     );
   }
   if (missing.length > 0) {
-    console.error('\n❌  Ops Control refuses to start in production:');
+    console.error('\n❌  Quoted Module refuses to start in production:');
     for (const m of missing) console.error('    • ' + m);
     console.error('\n    See .env.example for defaults.\n');
     process.exit(1);
@@ -1210,7 +1210,7 @@ app.use((err, req, res, _next) => {
 const isEntryPoint = process.argv[1] && path.resolve(process.argv[1]) === __filename;
 if (isEntryPoint) {
   const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🚀 Ops Control server running at http://localhost:${PORT}`);
+    console.log(`\n🚀 Quoted Module server running at http://localhost:${PORT}`);
     console.log(`📁 Data directory: ${DATA_DIR}`);
     console.log(`🔧 No Python dependency required`);
     console.log(`📦 [compression] enabled (threshold=1024, level=6, sse-excluded)\n`);
@@ -1260,7 +1260,7 @@ if (isEntryPoint) {
   });
 
   // ─── Double-run guard (headless daemon ↔ app embedded server) ───
-  // If another Ops Control server already owns this port, listen() emits
+  // If another Quoted Module server already owns this port, listen() emits
   // EADDRINUSE. Exit with a clear, actionable message instead of dumping a
   // raw stack trace. This prevents the confusing "two servers" state and,
   // when both point at the same DATA_DIR, guards the SQLite file from two
@@ -1270,7 +1270,7 @@ if (isEntryPoint) {
   server.on('error', (err) => {
     if (err && err.code === 'EADDRINUSE') {
       console.error(
-        `\n❌  Ops Control: cổng ${PORT} đang bận — Server đang chạy ở process khác ` +
+        `\n❌  Quoted Module: cổng ${PORT} đang bận — Server đang chạy ở process khác ` +
           `(daemon/service hoặc app SERVER).`
       );
       console.error(

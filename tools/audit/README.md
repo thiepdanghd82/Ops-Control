@@ -1,6 +1,6 @@
-# Ops-Control – Bộ audit trước khi đưa vào sử dụng
+# Quoted Module – Bộ audit trước khi đưa vào sử dụng
 
-Thư mục này chứa bộ công cụ kiểm tra bảo mật/rủi ro cho Ops-Control
+Thư mục này chứa bộ công cụ kiểm tra bảo mật/rủi ro cho Quoted Module
 (Express server + React client + Electron desktop + SQLite).
 Chạy trước mỗi lần phát hành (release) hoặc trước khi cài lên máy người dùng.
 

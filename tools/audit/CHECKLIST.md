@@ -1,4 +1,4 @@
-# Checklist kiểm tra tay trước khi đưa Ops-Control vào sử dụng
+# Checklist kiểm tra tay trước khi đưa Quoted Module vào sử dụng
 
 Đánh dấu `[x]` khi đã kiểm tra. Mục có **(chặn)** phải đạt mới được release.
 Kết quả tự động: xem `tools/audit/reports/<mới nhất>/SUMMARY.md`.

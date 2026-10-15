@@ -1,6 +1,6 @@
 # Headless SERVER — chạy nền, tự khởi động cùng máy (macOS + Windows)
 
-Đóng gói chế độ chạy Ops Control **SERVER không cần mở app**: chạy như dịch vụ
+Đóng gói chế độ chạy Quoted Module **SERVER không cần mở app**: chạy như dịch vụ
 nền, tự bật khi máy khởi động (trước khi ai login), tự restart khi crash, không
 cửa sổ.
 
@@ -24,7 +24,12 @@ cửa sổ.
   (`RunAtLoad` + `KeepAlive`), wrapper `/Library/OpsControl/run-server.sh`, `server.env`,
   log `/var/log/opscontrol/server.{out,err}.log`. Tự `exec sudo` + **in từng lệnh privileged**.
 - `ops-server-{status,start,stop,uninstall}.command` — quản lý qua `launchctl bootstrap/bootout/kickstart`.
-- `_common.sh` — path + helper dùng chung.
+- `_common.sh` — path + helper dùng chung. Tìm app ở `/Applications/Quoted Module.app`,
+  không có thì `/Applications/Ops Control.app` (tên cũ trước khi đổi tên); đặt `OPS_APP=` để chỉ định chỗ khác.
+
+> **Nâng cấp từ bản "Ops Control":** `run-server.sh` + plist ghi cứng đường dẫn app lúc cài.
+> Sau khi cài `Quoted Module.app`, chạy lại `ops-server-install-daemon.command` (giữ nguyên
+> `server.env` + dữ liệu, không di trú lại) **trước** khi xoá `Ops Control.app`.
 
 `KeepAlive=true` → launchd tự restart khi crash. `RunAtLoad=true` + LaunchDaemon → chạy lúc boot, trước login.
 
@@ -45,9 +50,12 @@ zero cài thêm.
   Log `C:\ProgramData\OpsControl\logs\server.{out,err}.log`.
 - `status.bat` / `start.bat` / `stop.bat` / `uninstall.bat` — quản lý qua `schtasks`.
 - `setup-service-files.cjs` — sinh file cấu hình bằng Node (tránh bẫy escaping `>>`/ngoặc của `.bat`).
+- App tìm ở `%ProgramFiles%\Quoted Module\Quoted Module.exe`, không có thì `%ProgramFiles%\Ops Control\Ops Control.exe`
+  (tên cũ); đặt `OPS_APP=` để chỉ định chỗ khác. Nâng cấp từ bản "Ops Control": `run-server.bat` ghi cứng đường dẫn
+  app lúc cài → chạy lại `ops-server-install-service.bat` sau khi cài bản mới, **trước** khi gỡ bản cũ.
 
 > **Tùy chọn "service thật" bằng nssm:** nếu muốn quản lý kiểu `sc`/Services.msc,
-> tải `nssm.exe` rồi: `nssm install OpsControlServer "C:\Program Files\Ops Control\Ops Control.exe" "…\server\index.js"`,
+> tải `nssm.exe` rồi: `nssm install OpsControlServer "C:\Program Files\Quoted Module\Quoted Module.exe" "…\server\index.js"`,
 > `nssm set OpsControlServer AppEnvironmentExtra ELECTRON_RUN_AS_NODE=1 …` (kèm các khóa).
 > Không kèm sẵn vì nssm là binary bên thứ ba.
 

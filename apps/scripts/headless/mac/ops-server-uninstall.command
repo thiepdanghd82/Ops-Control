@@ -1,12 +1,12 @@
 #!/bin/bash
-# Gỡ Ops Control SERVER nền (macOS): dừng + xóa plist + wrapper. Dữ liệu +
+# Gỡ Quoted Module SERVER nền (macOS): dừng + xóa plist + wrapper. Dữ liệu +
 # license + env GIỮ LẠI mặc định (hỏi nếu muốn xóa luôn).
 set -uo pipefail
 cd "$(dirname "$0")"
 source "$(dirname "$0")/_common.sh"
 
 echo "════════════════════════════════════════════════════════════"
-echo "  Gỡ Ops Control SERVER nền"
+echo "  Gỡ Quoted Module SERVER nền"
 echo "════════════════════════════════════════════════════════════"
 need_root "$@"
 

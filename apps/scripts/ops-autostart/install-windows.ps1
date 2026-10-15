@@ -1,10 +1,11 @@
 <#
 .SYNOPSIS
-    Install Ops Control SERVER as a Windows scheduled task — auto-start at
+    Install Quoted Module SERVER as a Windows scheduled task — auto-start at
     logon + restart on failure.
 
 .DESCRIPTION
-    Discovers the installed Ops Control SERVER executable, renders the
+    Discovers the installed Quoted Module SERVER executable (or, on a machine
+    installed before the rename, the Ops Control one), renders the
     OpsControlServer.Task.xml template with that path, and registers it
     with Task Scheduler. Idempotent: re-running replaces the task.
 
@@ -14,7 +15,7 @@
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File install-windows.ps1
-    powershell -ExecutionPolicy Bypass -File install-windows.ps1 -AppPath "D:\OpsControl\Ops Control.exe"
+    powershell -ExecutionPolicy Bypass -File install-windows.ps1 -AppPath "D:\QuotedModule\Quoted Module.exe"
 #>
 param(
     [string]$AppPath = $null
@@ -32,7 +33,20 @@ if (-not (Test-Path $Template)) {
 
 # 1. Discover the installer-deployed app path if not overridden
 if (-not $AppPath) {
+    # The app was renamed from "Ops Control": look for the new name first,
+    # then the old one so a machine that has not been upgraded yet installs.
+    # An install upgraded in place keeps its old folder with the new exe in
+    # it — flat after a silent update, nested after an interactive one.
     $candidates = @(
+        "$env:LOCALAPPDATA\Programs\Quoted Module\Quoted Module.exe",
+        "$env:ProgramFiles\Quoted Module\Quoted Module.exe",
+        "${env:ProgramFiles(x86)}\Quoted Module\Quoted Module.exe",
+        "$env:LOCALAPPDATA\Programs\Ops Control\Quoted Module.exe",
+        "$env:ProgramFiles\Ops Control\Quoted Module.exe",
+        "${env:ProgramFiles(x86)}\Ops Control\Quoted Module.exe",
+        "$env:LOCALAPPDATA\Programs\Ops Control\Quoted Module\Quoted Module.exe",
+        "$env:ProgramFiles\Ops Control\Quoted Module\Quoted Module.exe",
+        "${env:ProgramFiles(x86)}\Ops Control\Quoted Module\Quoted Module.exe",
         "$env:LOCALAPPDATA\Programs\Ops Control\Ops Control.exe",
         "$env:ProgramFiles\Ops Control\Ops Control.exe",
         "${env:ProgramFiles(x86)}\Ops Control\Ops Control.exe"
@@ -46,11 +60,13 @@ if (-not $AppPath) {
 }
 
 if (-not $AppPath -or -not (Test-Path $AppPath)) {
-    Write-Error "Ops Control SERVER app not found. Install the SERVER setup .exe first, or pass -AppPath explicitly."
+    Write-Error "Quoted Module SERVER app not found. Install the SERVER setup .exe first, or pass -AppPath explicitly."
     exit 1
 }
 
 Write-Host "Using app path: $AppPath"
+# Process name = executable name ("Quoted Module", or "Ops Control" before the rename).
+$ProcName = [System.IO.Path]::GetFileNameWithoutExtension($AppPath)
 
 # 2. Render template
 $xml = Get-Content -Raw -Path $Template
@@ -79,7 +95,7 @@ Write-Host "  Restart on failure: 3 attempts, 1-minute interval"
 Write-Host ""
 Write-Host "Test (will launch the app NOW + verify):"
 Write-Host "  Start-ScheduledTask -TaskName $TaskName"
-Write-Host "  Get-Process 'Ops Control'  # should show running process"
+Write-Host "  Get-Process '$ProcName'  # should show running process"
 Write-Host ""
 Write-Host "⚠ Reminder: enable auto-login (netplwiz → uncheck 'Users must enter"
 Write-Host "  a user name and password to use this computer') so the task triggers"

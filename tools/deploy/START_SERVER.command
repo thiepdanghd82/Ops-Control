@@ -1,5 +1,5 @@
 #!/bin/bash
-# Ops Control v1.0 — Server Launcher (macOS)
+# Quoted Module v1.0 — Server Launcher (macOS)
 # Double-click file này để khởi động server
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."  # repo root — this script lives in tools/deploy/
@@ -7,7 +7,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../.."  # repo root — this script lives in 
 clear
 echo ""
 echo "  ╔══════════════════════════════════════════════════╗"
-echo "  ║           Ops Control v1.0 — Server              ║"
+echo "  ║           Quoted Module v1.0 — Server            ║"
 echo "  ║           Cost Flow · Planning                   ║"
 echo "  ╚══════════════════════════════════════════════════╝"
 echo ""
@@ -88,7 +88,7 @@ fi
 echo ""
 echo "  ┌──────────────────────────────────────────────────┐"
 echo "  │                                                  │"
-echo "  │           🚀  OPS CONTROL v1.0                   │"
+echo "  │           🚀  QUOTED MODULE v1.0                 │"
 echo "  │                                                  │"
 if [ -n "$LOCAL_IP" ]; then
 echo "  │   👉  http://$LOCAL_IP:3000"
@@ -104,8 +104,8 @@ echo ""
 # ── Mở trình duyệt sau 2 giây ────────────────────────────
 (sleep 2 && open "http://localhost:3000") &
 
-# ── Khởi động Ops Control server ──────────────────────────
-echo "  ✓  Ops Control starting (Node.js only, no Python required)..."
+# ── Khởi động Quoted Module server ────────────────────────
+echo "  ✓  Quoted Module starting (Node.js only, no Python required)..."
 echo ""
 NODE_NO_WARNINGS=1 "$NODE" apps/server/index.js
 

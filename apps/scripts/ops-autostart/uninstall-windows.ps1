@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Remove the Ops Control SERVER scheduled task. Auto-start +
+    Remove the Quoted Module SERVER scheduled task. Auto-start +
     auto-restart stop; the app itself is untouched.
 
 .EXAMPLE
@@ -19,6 +19,6 @@ if (-not $existing) {
 Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
 Write-Host "✓ Scheduled task removed: $TaskName"
 Write-Host ""
-Write-Host "Note: the Ops Control SERVER app itself is untouched. Quit it"
+Write-Host "Note: the Quoted Module SERVER app itself is untouched. Quit it"
 Write-Host "manually if you want it to stop now:"
-Write-Host "  Stop-Process -Name 'Ops Control' -Force"
+Write-Host "  Stop-Process -Name 'Quoted Module' -Force   # 'Ops Control' on an install from before the rename"

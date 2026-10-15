@@ -13,7 +13,7 @@ const read = (f) => {
 const lines = [];
 const gate = []; // các mục chặn release
 
-lines.push(`# Ops-Control audit – ${path.basename(dir)}`, '');
+lines.push(`# Quoted Module audit – ${path.basename(dir)}`, '');
 
 // 1. npm audit
 lines.push('## 1. Thư viện phụ thuộc (npm audit, production)', '');
