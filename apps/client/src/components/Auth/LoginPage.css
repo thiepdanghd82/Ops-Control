@@ -431,15 +431,16 @@
   position: relative;
   z-index: 1;
 }
-.cb-hero-brand-mark {
-  width: 28px;
+/* CCL mark recoloured for the dark hero: light ink, brighter accent blue
+   (CCL blue #0057b8 is too dark on this navy). */
+.cb-hero-logo {
+  display: block;
   height: 28px;
-  background: #0f62fe;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  font-weight: 700;
-  font-size: 16px;
+  width: auto;
+  color: #f4f4f4;
+}
+.cb-hero-logo .ccl-logo-accent {
+  fill: #4589ff;
 }
 .cb-hero-body {
   position: relative;
@@ -465,18 +466,6 @@
 .cb-hero-title strong {
   font-weight: 600;
   color: #4589ff;
-}
-.cb-hero-desc {
-  font-size: 15px;
-  line-height: 1.55;
-  color: #c6c6c6;
-  max-width: 44ch;
-  margin: 0 0 24px;
-}
-.cb-hero-arrow {
-  font-size: 20px;
-  color: #c6c6c6;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
 }
 /* Bottom metadata block — groups version line + credit so they sit
    together at the bottom of the dark hero pane (Carbon login pattern).

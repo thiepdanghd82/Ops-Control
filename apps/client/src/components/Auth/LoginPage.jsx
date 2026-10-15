@@ -6,6 +6,7 @@ import { decideChangePwdDispatch, shouldDispatchAfterTotp } from './loginChangeP
 import PwdAgeBar from './PwdAgeBar';
 import LangFlagToggle from '../Shared/LangFlagToggle';
 import TotpEnrollment from './TotpEnrollment';
+import CclLogo from './CclLogo';
 import { showToast } from '../../utils/toast';
 import { formatLastActivity } from '../../services/singleSession';
 import './LoginPage.css';
@@ -613,7 +614,7 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
     <aside className="cb-hero" aria-hidden="true">
       <ParticleCanvas />
       <div className="cb-hero-brand">
-        <div className="cb-hero-brand-mark">⌬</div>
+        <CclLogo className="cb-hero-logo" />
         <span>CCL Design Vietnam</span>
       </div>
       <div className="cb-hero-body">
@@ -624,13 +625,8 @@ export default function LoginPage({ compact = false, reason = null } = {}) {
             tooling (Lighthouse, axe-core) flagged the DOM-order h2-before-h1.
             Visual treatment is fully CSS-driven via .cb-hero-title. */}
         <p className="cb-hero-title">
-          Cost, quote &amp; sample, <strong>online or off.</strong>
+          Cost, <strong>Quoted</strong>
         </p>
-        <p className="cb-hero-desc">
-          Quote, cost, and track samples from the floor. Local-first writes, automatic sync, single
-          source of truth for the NPI team.
-        </p>
-        <span className="cb-hero-arrow">→</span>
       </div>
       <div className="cb-hero-bottom">
         <div className="cb-hero-foot">
