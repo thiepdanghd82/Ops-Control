@@ -138,8 +138,12 @@ const BUILD_ROLE = readBuildRole();
 log.info(`[main] Build role = ${BUILD_ROLE}`);
 
 // ─── Global state ──────────────────────────────────────────────────
+// The store holds totpKey, kioskKey and exportHmacKey. conf writes the file
+// 0666 by default and rewrites it on every set, so pin it owner-only for
+// every write (configFileMode) and tighten a copy an older build left open.
 const store = new Store({
   name: 'ops-control-config',
+  configFileMode: 0o600,
   defaults: {
     // Server-role build defaults to embedded; client-role build defaults
     // to thin. OPS_DESKTOP_MODE env var still wins (dev override).
@@ -155,6 +159,11 @@ const store = new Store({
     firstRunCompleted: false,
   },
 });
+try {
+  fs.chmodSync(store.path, 0o600);
+} catch {
+  /* not written yet — the first write creates it 0600 */
+}
 
 let mainWindow = null;
 // Set once the startup path has created the main window; until then `activate`

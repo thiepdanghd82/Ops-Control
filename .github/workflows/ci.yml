@@ -193,10 +193,10 @@ jobs:
       - run: npm test
       # `--ignore-scripts` skips desktop postinstall (electron-builder
       # install-app-deps → node-gyp rebuild of node-hid + libusb). Ubuntu
-      # CI runner doesn't ship libusb-1.0-0-dev; test:license + test:manifest
+      # CI runner doesn't ship libusb-1.0-0-dev; test:license + test:manifest + test:utils
       # are pure JS, don't need rebuilt native binaries. Same pattern as
       # vulnerability scan job line 30.
-      - run: cd apps/desktop && npm ci --ignore-scripts && npm run test:license && npm run test:manifest
+      - run: cd apps/desktop && npm ci --ignore-scripts && npm run test:license && npm run test:manifest && npm run test:utils
 
   test-client:
     name: Client tests
